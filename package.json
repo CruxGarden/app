@@ -1,9 +1,9 @@
 {
   "name": "crux-garden-app",
   "main": "expo-router/entry",
-  "version": "1.0.0",
+  "version": "0.0.1",
   "scripts": {
-    "start": "expo start -p 8080",
+    "start:dev": "expo start -p 8080",
     "lint": "expo lint",
     "docker:app": "docker-compose -f docker/docker-compose.yml up --build"
   },
