@@ -46,15 +46,15 @@ export default function CruxNetworkGraph({ authorKey }: CruxNetworkGraphProps) {
 
     // Fetch graph data from API
     fetch(`${apiUrl}/authors/${authorKey}/graph`)
-      .then(res => {
+      .then((res) => {
         if (!res.ok) throw new Error('Failed to fetch graph data');
         return res.json();
       })
-      .then(data => {
+      .then((data) => {
         setGraphData(data);
         setLoading(false);
       })
-      .catch(err => {
+      .catch((err) => {
         setError(err.message);
         setLoading(false);
         setGraphReady(true);
@@ -83,10 +83,10 @@ export default function CruxNetworkGraph({ authorKey }: CruxNetworkGraphProps) {
   // Dimension type colors (using theme)
   const getLinkColor = (link: Link) => {
     const colors = {
-      gate: Colors.gate,       // Faded blue-gray - origins/sources
-      garden: Colors.garden,   // Faded mint green - creations/consequences
-      growth: Colors.growth,   // Faded amber-brown - evolution
-      graft: Colors.graft,     // Faded purple-gray - associations
+      gate: Colors.gate, // Faded blue-gray - origins/sources
+      garden: Colors.garden, // Faded mint green - creations/consequences
+      growth: Colors.growth, // Faded amber-brown - evolution
+      graft: Colors.graft, // Faded purple-gray - associations
     };
     return colors[link.type];
   };
@@ -100,20 +100,22 @@ export default function CruxNetworkGraph({ authorKey }: CruxNetworkGraphProps) {
 
   if (!ForceGraph || loading) {
     return (
-      <div style={{
-        width: '800px',
-        height: '600px',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        backgroundColor: Colors.background,
-        color: Colors.textPrimary,
-        margin: '0 auto',
-        borderRadius: '12px',
-        border: `1px solid ${Colors.border}`,
-        fontFamily: Fonts.body,
-        fontSize: `${FontSizes.lg}px`,
-      }}>
+      <div
+        style={{
+          width: '800px',
+          height: '600px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          backgroundColor: Colors.background,
+          color: Colors.textPrimary,
+          margin: '0 auto',
+          borderRadius: '12px',
+          border: `1px solid ${Colors.border}`,
+          fontFamily: Fonts.body,
+          fontSize: `${FontSizes.lg}px`,
+        }}
+      >
         Loading network...
       </div>
     );
@@ -121,20 +123,22 @@ export default function CruxNetworkGraph({ authorKey }: CruxNetworkGraphProps) {
 
   if (error) {
     return (
-      <div style={{
-        width: '800px',
-        height: '600px',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        backgroundColor: Colors.background,
-        color: Colors.error,
-        margin: '0 auto',
-        borderRadius: '12px',
-        border: `1px solid ${Colors.border}`,
-        fontFamily: Fonts.body,
-        fontSize: `${FontSizes.lg}px`,
-      }}>
+      <div
+        style={{
+          width: '800px',
+          height: '600px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          backgroundColor: Colors.background,
+          color: Colors.error,
+          margin: '0 auto',
+          borderRadius: '12px',
+          border: `1px solid ${Colors.border}`,
+          fontFamily: Fonts.body,
+          fontSize: `${FontSizes.lg}px`,
+        }}
+      >
         Error: {error}
       </div>
     );
@@ -142,20 +146,22 @@ export default function CruxNetworkGraph({ authorKey }: CruxNetworkGraphProps) {
 
   if (graphData.nodes.length === 0) {
     return (
-      <div style={{
-        width: '800px',
-        height: '600px',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        backgroundColor: Colors.background,
-        color: Colors.textTertiary,
-        margin: '0 auto',
-        borderRadius: '12px',
-        border: `1px solid ${Colors.border}`,
-        fontFamily: Fonts.body,
-        fontSize: `${FontSizes.lg}px`,
-      }}>
+      <div
+        style={{
+          width: '800px',
+          height: '600px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          backgroundColor: Colors.background,
+          color: Colors.textTertiary,
+          margin: '0 auto',
+          borderRadius: '12px',
+          border: `1px solid ${Colors.border}`,
+          fontFamily: Fonts.body,
+          fontSize: `${FontSizes.lg}px`,
+        }}
+      >
         No cruxes found
       </div>
     );
@@ -164,33 +170,37 @@ export default function CruxNetworkGraph({ authorKey }: CruxNetworkGraphProps) {
   const ForceGraphComponent = ForceGraph;
 
   return (
-    <div style={{
-      width: '800px',
-      height: '600px',
-      backgroundColor: Colors.background,
-      position: 'relative',
-      margin: '0 auto',
-      borderRadius: '12px',
-      border: `1px solid ${Colors.border}`,
-      overflow: 'hidden',
-    }}>
+    <div
+      style={{
+        width: '800px',
+        height: '600px',
+        backgroundColor: Colors.background,
+        position: 'relative',
+        margin: '0 auto',
+        borderRadius: '12px',
+        border: `1px solid ${Colors.border}`,
+        overflow: 'hidden',
+      }}
+    >
       {/* Loading overlay */}
       {!graphReady && (
-        <div style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          backgroundColor: Colors.background,
-          color: Colors.textPrimary,
-          zIndex: 10,
-          fontFamily: Fonts.body,
-          fontSize: `${FontSizes.lg}px`,
-        }}>
+        <div
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: Colors.background,
+            color: Colors.textPrimary,
+            zIndex: 10,
+            fontFamily: Fonts.body,
+            fontSize: `${FontSizes.lg}px`,
+          }}
+        >
           Loading network...
         </div>
       )}
@@ -238,33 +248,41 @@ export default function CruxNetworkGraph({ authorKey }: CruxNetworkGraphProps) {
       />
 
       {/* Legend */}
-      <div style={{
-        position: 'absolute',
-        top: 20,
-        right: 20,
-        backgroundColor: Colors.surfaceElevated,
-        padding: '16px',
-        borderRadius: '8px',
-        color: Colors.textPrimary,
-        fontSize: `${FontSizes.sm}px`,
-        border: `1px solid ${Colors.border}`,
-        fontFamily: Fonts.body,
-      }}>
+      <div
+        style={{
+          position: 'absolute',
+          top: 20,
+          right: 20,
+          backgroundColor: Colors.surfaceElevated,
+          padding: '16px',
+          borderRadius: '8px',
+          color: Colors.textPrimary,
+          fontSize: `${FontSizes.sm}px`,
+          border: `1px solid ${Colors.border}`,
+          fontFamily: Fonts.body,
+        }}
+      >
         <div style={{ fontWeight: 'bold', marginBottom: '8px' }}>Dimensions</div>
         <div style={{ display: 'flex', alignItems: 'center', marginBottom: '4px' }}>
           <div style={{ width: 20, height: 3, backgroundColor: Colors.gate, marginRight: 8 }}></div>
           Gate (origins)
         </div>
         <div style={{ display: 'flex', alignItems: 'center', marginBottom: '4px' }}>
-          <div style={{ width: 20, height: 3, backgroundColor: Colors.garden, marginRight: 8 }}></div>
+          <div
+            style={{ width: 20, height: 3, backgroundColor: Colors.garden, marginRight: 8 }}
+          ></div>
           Garden (creations)
         </div>
         <div style={{ display: 'flex', alignItems: 'center', marginBottom: '4px' }}>
-          <div style={{ width: 20, height: 3, backgroundColor: Colors.growth, marginRight: 8 }}></div>
+          <div
+            style={{ width: 20, height: 3, backgroundColor: Colors.growth, marginRight: 8 }}
+          ></div>
           Growth (evolution)
         </div>
         <div style={{ display: 'flex', alignItems: 'center' }}>
-          <div style={{ width: 20, height: 3, backgroundColor: Colors.graft, marginRight: 8 }}></div>
+          <div
+            style={{ width: 20, height: 3, backgroundColor: Colors.graft, marginRight: 8 }}
+          ></div>
           Graft (associations)
         </div>
       </div>

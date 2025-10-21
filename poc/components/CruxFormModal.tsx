@@ -37,7 +37,14 @@ export interface CruxFormModalProps {
   };
 }
 
-export default function CruxFormModal({ visible, onClose, onSubmit, sourceCrux, editMode = false, initialData }: CruxFormModalProps) {
+export default function CruxFormModal({
+  visible,
+  onClose,
+  onSubmit,
+  sourceCrux,
+  editMode = false,
+  initialData,
+}: CruxFormModalProps) {
   const [title, setTitle] = useState(initialData?.title || '');
   const [data, setData] = useState(initialData?.data || '');
   const [slug, setSlug] = useState(initialData?.slug || '');
@@ -136,7 +143,7 @@ export default function CruxFormModal({ visible, onClose, onSubmit, sourceCrux, 
           <Text style={styles.headerTitle}>{editMode ? 'Edit Crux' : 'Add Crux'}</Text>
           <TouchableOpacity onPress={handleSubmit} disabled={loading}>
             <Text style={[styles.submitButton, loading && styles.submitButtonDisabled]}>
-              {loading ? (editMode ? 'Saving...' : 'Creating...') : (editMode ? 'Save' : 'Create')}
+              {loading ? (editMode ? 'Saving...' : 'Creating...') : editMode ? 'Save' : 'Create'}
             </Text>
           </TouchableOpacity>
         </View>
@@ -144,9 +151,7 @@ export default function CruxFormModal({ visible, onClose, onSubmit, sourceCrux, 
         <ScrollView style={styles.form} contentContainerStyle={styles.formContent}>
           {!editMode && sourceCrux && (
             <View style={styles.sourceCruxContainer}>
-              {sourceCrux.title && (
-                <Text style={styles.sourceCruxTitle}>{sourceCrux.title}</Text>
-              )}
+              {sourceCrux.title && <Text style={styles.sourceCruxTitle}>{sourceCrux.title}</Text>}
               <Text style={styles.sourceCruxData} numberOfLines={2}>
                 {sourceCrux.data}
               </Text>
@@ -187,7 +192,8 @@ export default function CruxFormModal({ visible, onClose, onSubmit, sourceCrux, 
               </View>
               <Text style={styles.hint}>
                 {dimensionType === 'gate' && 'Origins and sources that influenced this crux'}
-                {dimensionType === 'garden' && 'Creations and consequences that emerged from this crux'}
+                {dimensionType === 'garden' &&
+                  'Creations and consequences that emerged from this crux'}
                 {dimensionType === 'growth' && 'How this crux developed and evolved over time'}
                 {dimensionType === 'graft' && 'Lateral connections and associations'}
               </Text>

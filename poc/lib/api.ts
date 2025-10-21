@@ -187,7 +187,10 @@ export const api = {
    * @param type - Optional dimension type filter (gate, garden, growth, graft)
    * @returns Array of Dimension objects
    */
-  async getDimensions(cruxKey: string, type?: 'gate' | 'garden' | 'growth' | 'graft'): Promise<Dimension[]> {
+  async getDimensions(
+    cruxKey: string,
+    type?: 'gate' | 'garden' | 'growth' | 'graft'
+  ): Promise<Dimension[]> {
     const params = type ? { type } : {};
     const response = await apiClient.get<Dimension[]>(`/cruxes/${cruxKey}/dimensions`, { params });
     return response.data;
@@ -199,8 +202,14 @@ export const api = {
    * @param dimensionData - Dimension creation data
    * @returns Created Dimension object
    */
-  async createDimension(cruxKey: string, dimensionData: CreateDimensionRequest): Promise<Dimension> {
-    const response = await apiClient.post<Dimension>(`/cruxes/${cruxKey}/dimensions`, dimensionData);
+  async createDimension(
+    cruxKey: string,
+    dimensionData: CreateDimensionRequest
+  ): Promise<Dimension> {
+    const response = await apiClient.post<Dimension>(
+      `/cruxes/${cruxKey}/dimensions`,
+      dimensionData
+    );
     return response.data;
   },
 

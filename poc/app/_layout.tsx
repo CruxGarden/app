@@ -1,6 +1,6 @@
-import { Stack, useRouter, usePathname } from "expo-router";
-import { TouchableOpacity, Text, StyleSheet } from "react-native";
-import { Colors, Fonts, FontSizes } from "@/constants/theme";
+import { Stack, useRouter, usePathname } from 'expo-router';
+import { TouchableOpacity, Text, StyleSheet } from 'react-native';
+import { Colors, Fonts, FontSizes } from '@/constants/theme';
 
 export default function RootLayout() {
   const router = useRouter();
@@ -34,10 +34,7 @@ export default function RootLayout() {
         headerShadowVisible: false,
         headerLeft: showBackButton
           ? () => (
-              <TouchableOpacity
-                onPress={handleBack}
-                style={styles.backButton}
-              >
+              <TouchableOpacity onPress={handleBack} style={styles.backButton}>
                 <Text style={styles.backButtonText}>← Back</Text>
               </TouchableOpacity>
             )

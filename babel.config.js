@@ -3,11 +3,14 @@ module.exports = function (api) {
   return {
     presets: ['babel-preset-expo'],
     plugins: [
-      ['react-native-unistyles/plugin', {
-        // Pass root folder of your application
-        // All files under this folder will be processed by the Babel plugin
-        root: './app',
-      }]
-    ]
+      [
+        'react-native-unistyles/plugin',
+        {
+          // Pass root folder of your application
+          // All files under this folder will be processed by the Babel plugin
+          root: './app',
+        },
+      ],
+    ],
   };
-}
+};

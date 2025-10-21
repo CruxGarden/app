@@ -7,40 +7,40 @@
 
 export const Colors = {
   // Backgrounds - Cool dark grays
-  background: '#0f1214',        // Very dark blue-black
-  surface: '#1a1d21',           // Card surfaces
-  surfaceElevated: '#22252a',   // Elevated cards/modals
+  background: '#0f1214', // Very dark blue-black
+  surface: '#1a1d21', // Card surfaces
+  surfaceElevated: '#22252a', // Elevated cards/modals
 
   // Borders and dividers
-  border: '#2f3338',            // Subtle borders
-  borderLight: '#272a2f',       // Even more subtle
+  border: '#2f3338', // Subtle borders
+  borderLight: '#272a2f', // Even more subtle
 
   // Text - Cool blue-gray tones
-  textPrimary: '#e8eef2',       // Main text - cool light gray
-  textSecondary: '#c2cad2',     // Secondary text - muted blue-gray
-  textTertiary: '#8b9199',      // Tertiary/disabled text - darker blue-gray
+  textPrimary: '#e8eef2', // Main text - cool light gray
+  textSecondary: '#c2cad2', // Secondary text - muted blue-gray
+  textTertiary: '#8b9199', // Tertiary/disabled text - darker blue-gray
 
   // Accents - Electric teal-green
-  accentPrimary: '#4dd9b8',     // Electric teal-green (vibrant)
-  accentSecondary: '#6de8ca',   // Lighter electric teal
-  accentTertiary: '#3dbfa0',    // Darker teal-green (hover/active)
-  accentMuted: '#357d6a',       // Muted teal for backgrounds
+  accentPrimary: '#4dd9b8', // Electric teal-green (vibrant)
+  accentSecondary: '#6de8ca', // Lighter electric teal
+  accentTertiary: '#3dbfa0', // Darker teal-green (hover/active)
+  accentMuted: '#357d6a', // Muted teal for backgrounds
 
   // Dimension type colors
-  gate: '#548185',              // Teal blue (origins)
-  garden: '#4dd9b8',            // Electric teal-green (creations)
-  growth: '#d9a85d',            // Warm gold (evolution)
-  graft: '#d97c4d',             // Burnt orange (associations)
+  gate: '#548185', // Teal blue (origins)
+  garden: '#4dd9b8', // Electric teal-green (creations)
+  growth: '#d9a85d', // Warm gold (evolution)
+  graft: '#d97c4d', // Burnt orange (associations)
 
   // States
-  error: '#e89881',             // Brighter coral red
-  errorBackground: '#3d2825',   // Dark reddish brown background
-  success: '#4dd9b8',           // Electric teal-green (matches accent)
-  warning: '#d9a85d',           // Brighter warm gold
+  error: '#e89881', // Brighter coral red
+  errorBackground: '#3d2825', // Dark reddish brown background
+  success: '#4dd9b8', // Electric teal-green (matches accent)
+  warning: '#d9a85d', // Brighter warm gold
 
   // Special
   overlay: 'rgba(0, 0, 0, 0.7)', // Modal overlays
-  shadow: 'rgba(0, 0, 0, 0.3)',  // Shadows
+  shadow: 'rgba(0, 0, 0, 0.3)', // Shadows
 };
 
 export const Fonts = {

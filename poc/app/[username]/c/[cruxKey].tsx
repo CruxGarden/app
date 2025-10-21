@@ -1,5 +1,12 @@
 import { useEffect, useState, useCallback } from 'react';
-import { ActivityIndicator, StyleSheet, Text, View, ScrollView, TouchableOpacity } from 'react-native';
+import {
+  ActivityIndicator,
+  StyleSheet,
+  Text,
+  View,
+  ScrollView,
+  TouchableOpacity,
+} from 'react-native';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import api, { Crux } from '@/lib/api';
 import CruxCard from '@/components/CruxCard';
@@ -119,7 +126,7 @@ export default function CruxDetail() {
     <>
       <Stack.Screen
         options={{
-          title: crux ? (crux.title || crux.slug) : 'Crux',
+          title: crux ? crux.title || crux.slug : 'Crux',
         }}
       />
       <ScrollView contentContainerStyle={styles.container}>
@@ -160,10 +167,7 @@ export default function CruxDetail() {
                   >
                     <Text style={styles.actionButtonText}>+ Add Crux</Text>
                   </TouchableOpacity>
-                  <TouchableOpacity
-                    style={styles.deleteButton}
-                    onPress={handleDeleteCrux}
-                  >
+                  <TouchableOpacity style={styles.deleteButton} onPress={handleDeleteCrux}>
                     <Text style={styles.deleteButtonText}>Delete</Text>
                   </TouchableOpacity>
                 </View>
@@ -178,10 +182,14 @@ export default function CruxDetail() {
         visible={modalVisible}
         onClose={() => setModalVisible(false)}
         onSubmit={handleCreateCrux}
-        sourceCrux={crux ? {
-          title: crux.title,
-          data: crux.data,
-        } : undefined}
+        sourceCrux={
+          crux
+            ? {
+                title: crux.title,
+                data: crux.data,
+              }
+            : undefined
+        }
       />
 
       {/* Edit Crux Modal */}
@@ -190,11 +198,15 @@ export default function CruxDetail() {
         onClose={() => setEditModalVisible(false)}
         onSubmit={handleEditCrux}
         editMode={true}
-        initialData={crux ? {
-          title: crux.title,
-          slug: crux.slug,
-          data: crux.data,
-        } : undefined}
+        initialData={
+          crux
+            ? {
+                title: crux.title,
+                slug: crux.slug,
+                data: crux.data,
+              }
+            : undefined
+        }
       />
     </>
   );

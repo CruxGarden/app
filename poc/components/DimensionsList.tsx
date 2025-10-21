@@ -9,7 +9,11 @@ export interface DimensionsListProps {
   authorUsername?: string;
 }
 
-export default function DimensionsList({ dimensions, loading, authorUsername }: DimensionsListProps) {
+export default function DimensionsList({
+  dimensions,
+  loading,
+  authorUsername,
+}: DimensionsListProps) {
   const router = useRouter();
 
   if (loading) {
@@ -26,10 +30,10 @@ export default function DimensionsList({ dimensions, loading, authorUsername }: 
 
   // Group dimensions by type
   const dimensionsByType = {
-    gate: dimensions.filter(d => d.type === 'gate'),
-    garden: dimensions.filter(d => d.type === 'garden'),
-    growth: dimensions.filter(d => d.type === 'growth'),
-    graft: dimensions.filter(d => d.type === 'graft'),
+    gate: dimensions.filter((d) => d.type === 'gate'),
+    garden: dimensions.filter((d) => d.type === 'garden'),
+    growth: dimensions.filter((d) => d.type === 'growth'),
+    graft: dimensions.filter((d) => d.type === 'graft'),
   };
 
   const typeLabels = {
@@ -95,9 +99,7 @@ export default function DimensionsList({ dimensions, loading, authorUsername }: 
                   {dimension.target.slug && (
                     <Text style={styles.dimensionSlug}>+{dimension.target.slug}</Text>
                   )}
-                  {dimension.note && (
-                    <Text style={styles.dimensionNote}>{dimension.note}</Text>
-                  )}
+                  {dimension.note && <Text style={styles.dimensionNote}>{dimension.note}</Text>}
                 </TouchableOpacity>
               ))}
             </View>

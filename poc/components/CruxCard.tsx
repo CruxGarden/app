@@ -15,7 +15,14 @@ export interface CruxCardProps {
   actions?: ReactNode;
 }
 
-export default function CruxCard({ cruxKey, title, data, showDimensions = false, authorUsername, actions }: CruxCardProps) {
+export default function CruxCard({
+  cruxKey,
+  title,
+  data,
+  showDimensions = false,
+  authorUsername,
+  actions,
+}: CruxCardProps) {
   const [dimensions, setDimensions] = useState<Dimension[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -41,21 +48,22 @@ export default function CruxCard({ cruxKey, title, data, showDimensions = false,
 
       {showDimensions ? (
         <View style={styles.dimensionsSection}>
-          <DimensionsList dimensions={dimensions} loading={loading} authorUsername={authorUsername} />
+          <DimensionsList
+            dimensions={dimensions}
+            loading={loading}
+            authorUsername={authorUsername}
+          />
         </View>
       ) : (
-        !loading && dimensions.length > 0 && (
+        !loading &&
+        dimensions.length > 0 && (
           <Text style={styles.dimensionCount}>
             {dimensions.length} {dimensions.length === 1 ? 'dimension' : 'dimensions'}
           </Text>
         )
       )}
 
-      {actions && (
-        <View style={styles.actionsSection}>
-          {actions}
-        </View>
-      )}
+      {actions && <View style={styles.actionsSection}>{actions}</View>}
     </View>
   );
 }
