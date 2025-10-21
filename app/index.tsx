@@ -1,7 +1,8 @@
 import { Stack, Link } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Text, View, FlatList, StyleSheet, TouchableOpacity } from 'react-native';
+import { ActivityIndicator, Text, View, FlatList, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import api, { Author } from '@/lib/api';
+import { Colors, Fonts, FontSizes } from '@/constants/theme';
 
 export default function Index() {
   const [authors, setAuthors] = useState<Author[]>([]);
@@ -27,15 +28,16 @@ export default function Index() {
 
   const renderAuthor = ({ item }: { item: Author }) => {
     const displayName = item.displayName || item.username || 'Unknown';
-    const avatarInitial = displayName.charAt(0).toUpperCase();
 
     return (
       <Link href={`/@${item.username}`} asChild>
         <TouchableOpacity style={styles.authorCard}>
           <View style={styles.authorAvatar}>
-            <Text style={styles.authorAvatarText}>
-              {avatarInitial}
-            </Text>
+            <Image
+              source={require('@/assets/images/crux.garden-icon-forest.png')}
+              style={styles.authorAvatarImage}
+              resizeMode="contain"
+            />
           </View>
           <View style={styles.authorInfo}>
             <Text style={styles.authorDisplayName}>{displayName}</Text>
@@ -61,7 +63,7 @@ export default function Index() {
       <View style={styles.container}>
         {loading && (
           <View style={styles.centerContent}>
-            <ActivityIndicator size="large" color="#12230F" />
+            <ActivityIndicator size="large" color={Colors.accentSecondary} />
             <Text style={styles.loadingText}>Loading authors...</Text>
           </View>
         )}
@@ -101,7 +103,7 @@ export default function Index() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: Colors.background,
   },
   centerContent: {
     flex: 1,
@@ -111,85 +113,90 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     marginTop: 12,
-    fontSize: 16,
-    color: '#666',
+    fontSize: FontSizes.lg,
+    color: Colors.textSecondary,
+    fontFamily: Fonts.body,
   },
   errorText: {
-    color: '#d32f2f',
-    fontSize: 16,
+    color: Colors.error,
+    fontSize: FontSizes.lg,
     textAlign: 'center',
+    fontFamily: Fonts.body,
   },
   header: {
     padding: 20,
-    backgroundColor: '#fff',
+    backgroundColor: Colors.surface,
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    borderBottomColor: Colors.border,
   },
   title: {
-    fontSize: 28,
+    fontSize: FontSizes.xxxxl,
     fontWeight: 'bold',
-    color: '#333',
+    color: Colors.textPrimary,
     marginBottom: 4,
+    fontFamily: Fonts.body,
   },
   subtitle: {
-    fontSize: 14,
-    color: '#666',
+    fontSize: FontSizes.base,
+    color: Colors.textSecondary,
+    fontFamily: Fonts.body,
   },
   listContent: {
     padding: 16,
   },
   authorCard: {
     flexDirection: 'row',
-    backgroundColor: '#fff',
+    backgroundColor: Colors.surface,
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    borderWidth: 1,
+    borderColor: Colors.border,
   },
   authorAvatar: {
     width: 60,
     height: 60,
     borderRadius: 30,
-    backgroundColor: '#12230F',
+    backgroundColor: Colors.accentPrimary,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 16,
+    overflow: 'hidden',
   },
-  authorAvatarText: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#fff',
+  authorAvatarImage: {
+    width: 60,
+    height: 60,
   },
   authorInfo: {
     flex: 1,
     justifyContent: 'center',
   },
   authorDisplayName: {
-    fontSize: 18,
+    fontSize: FontSizes.xl,
     fontWeight: 'bold',
-    color: '#333',
+    color: Colors.textPrimary,
     marginBottom: 2,
+    fontFamily: Fonts.body,
   },
   authorUsername: {
-    fontSize: 14,
-    color: '#666',
+    fontSize: FontSizes.base,
+    color: Colors.textSecondary,
     marginBottom: 4,
+    fontFamily: Fonts.body,
   },
   authorBio: {
-    fontSize: 14,
-    color: '#888',
-    lineHeight: 20,
+    fontSize: FontSizes.base,
+    color: Colors.textSecondary,
+    lineHeight: 24,
+    fontFamily: Fonts.body,
   },
   emptyState: {
     padding: 40,
     alignItems: 'center',
   },
   emptyText: {
-    fontSize: 16,
-    color: '#999',
+    fontSize: FontSizes.base,
+    color: Colors.textTertiary,
+    fontFamily: Fonts.body,
   },
 });

@@ -1,9 +1,15 @@
 import { useEffect, useState, useCallback } from 'react';
-import { ActivityIndicator, StyleSheet, Text, View, ScrollView, TouchableOpacity } from 'react-native';
+import { ActivityIndicator, StyleSheet, Text, View, ScrollView, TouchableOpacity, Platform, Image } from 'react-native';
 import { Stack, useLocalSearchParams } from 'expo-router';
 import api, { Author } from '@/lib/api';
 import CruxCard from '@/components/CruxCard';
 import CruxFormModal, { CruxFormData } from '@/components/CruxFormModal';
+import { Colors, Fonts, FontSizes } from '@/constants/theme';
+
+// Web-only import for force graph
+const CruxNetworkGraph = Platform.OS === 'web'
+  ? require('@/components/CruxNetworkGraph.web').default
+  : null;
 
 export default function AuthorProfile() {
   const { username } = useLocalSearchParams<{ username: string }>();
@@ -11,6 +17,7 @@ export default function AuthorProfile() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
+  const [activeTab, setActiveTab] = useState<'graph' | 'crux'>('crux');
 
   const fetchAuthor = useCallback(async () => {
     if (!username) {
@@ -72,7 +79,7 @@ export default function AuthorProfile() {
       <ScrollView contentContainerStyle={styles.container}>
         {loading && (
           <View style={styles.centerContent}>
-            <ActivityIndicator size="large" color="#0000ff" />
+            <ActivityIndicator size="large" color={Colors.accentSecondary} />
             <Text style={styles.loadingText}>Loading author...</Text>
           </View>
         )}
@@ -88,9 +95,11 @@ export default function AuthorProfile() {
             {/* Profile Header */}
             <View style={styles.header}>
               <View style={styles.avatarPlaceholder}>
-                <Text style={styles.avatarText}>
-                  {author.displayName.charAt(0).toUpperCase()}
-                </Text>
+                <Image
+                  source={require('@/assets/images/crux.garden-icon-forest.png')}
+                  style={styles.avatarImage}
+                  resizeMode="contain"
+                />
               </View>
               <Text style={styles.displayName}>{author.displayName}</Text>
               <Text style={styles.username}>@{author.username}</Text>
@@ -99,8 +108,38 @@ export default function AuthorProfile() {
               )}
             </View>
 
-            {/* Root Crux */}
-            {author.root && (
+            {/* Tab Buttons */}
+            <View style={styles.tabContainer}>
+              <TouchableOpacity
+                style={[styles.tabButton, activeTab === 'crux' && styles.tabButtonActive]}
+                onPress={() => setActiveTab('crux')}
+              >
+                <Text style={[styles.tabButtonText, activeTab === 'crux' && styles.tabButtonTextActive]}>
+                  Root
+                </Text>
+              </TouchableOpacity>
+              {Platform.OS === 'web' && CruxNetworkGraph && (
+                <TouchableOpacity
+                  style={[styles.tabButton, activeTab === 'graph' && styles.tabButtonActive]}
+                  onPress={() => setActiveTab('graph')}
+                >
+                  <Text style={[styles.tabButtonText, activeTab === 'graph' && styles.tabButtonTextActive]}>
+                    Graph
+                  </Text>
+                </TouchableOpacity>
+              )}
+            </View>
+
+            {/* Tab Content */}
+            {activeTab === 'graph' && Platform.OS === 'web' && CruxNetworkGraph && (
+              <View style={styles.graphContainer}>
+                <View style={styles.graphWrapper}>
+                  <CruxNetworkGraph authorKey={`@${author.username}`} />
+                </View>
+              </View>
+            )}
+
+            {activeTab === 'crux' && author.root && (
               <CruxCard
                 cruxKey={author.root.key}
                 title={author.root.title}
@@ -109,16 +148,16 @@ export default function AuthorProfile() {
                 status={author.root.status}
                 showDimensions={true}
                 authorUsername={author.username}
+                actions={
+                  <TouchableOpacity
+                    style={styles.actionButton}
+                    onPress={() => setModalVisible(true)}
+                  >
+                    <Text style={styles.actionButtonText}>+ Add Crux</Text>
+                  </TouchableOpacity>
+                }
               />
             )}
-
-            {/* Add Crux Button */}
-            <TouchableOpacity
-              style={styles.addButton}
-              onPress={() => setModalVisible(true)}
-            >
-              <Text style={styles.addButtonText}>+ Add Crux</Text>
-            </TouchableOpacity>
           </View>
         )}
       </ScrollView>
@@ -140,7 +179,7 @@ export default function AuthorProfile() {
 const styles = StyleSheet.create({
   container: {
     flexGrow: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: Colors.background,
   },
   centerContent: {
     flex: 1,
@@ -151,13 +190,15 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     marginTop: 12,
-    fontSize: 16,
-    color: '#666',
+    fontSize: FontSizes.lg,
+    color: Colors.textSecondary,
+    fontFamily: Fonts.body,
   },
   errorText: {
-    color: '#d32f2f',
-    fontSize: 16,
+    color: Colors.error,
+    fontSize: FontSizes.lg,
     textAlign: 'center',
+    fontFamily: Fonts.body,
   },
   profileContainer: {
     padding: 20,
@@ -168,53 +209,110 @@ const styles = StyleSheet.create({
   header: {
     alignItems: 'center',
     paddingVertical: 30,
-    backgroundColor: '#fff',
+    backgroundColor: Colors.surface,
     borderRadius: 12,
     marginBottom: 20,
+    borderWidth: 1,
+    borderColor: Colors.border,
   },
   avatarPlaceholder: {
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: '#12230F',
+    backgroundColor: Colors.surface,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 12,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: Colors.border,
   },
-  avatarText: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    color: '#fff',
+  avatarImage: {
+    width: 80,
+    height: 80,
   },
   displayName: {
-    fontSize: 24,
+    fontSize: FontSizes.xxxl,
     fontWeight: 'bold',
-    color: '#333',
+    color: Colors.textPrimary,
     marginBottom: 4,
+    fontFamily: Fonts.body,
   },
   username: {
-    fontSize: 16,
-    color: '#666',
+    fontSize: FontSizes.lg,
+    color: Colors.textSecondary,
     marginBottom: 8,
+    fontFamily: Fonts.body,
   },
   bioText: {
-    fontSize: 15,
-    color: '#666',
-    lineHeight: 22,
+    fontSize: FontSizes.base,
+    color: Colors.textSecondary,
+    lineHeight: 26,
     textAlign: 'center',
     paddingHorizontal: 20,
     marginTop: 8,
+    fontFamily: Fonts.body,
   },
-  addButton: {
-    backgroundColor: '#12230F',
-    borderRadius: 12,
-    padding: 16,
+  actionButton: {
+    backgroundColor: Colors.accentMuted,
+    borderRadius: 6,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
     alignItems: 'center',
-    marginTop: 4,
+    borderWidth: 1,
+    borderColor: Colors.accentPrimary,
+    alignSelf: 'flex-start',
   },
-  addButtonText: {
-    fontSize: 16,
+  actionButtonText: {
+    fontSize: FontSizes.sm,
     fontWeight: '600',
-    color: '#fff',
+    color: Colors.textPrimary,
+    fontFamily: Fonts.body,
+  },
+  graphContainer: {
+    backgroundColor: Colors.surface,
+    borderRadius: 12,
+    padding: 20,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  sectionTitle: {
+    fontSize: FontSizes.xxl,
+    fontWeight: 'bold',
+    color: Colors.textPrimary,
+    marginBottom: 16,
+    fontFamily: Fonts.body,
+  },
+  graphWrapper: {
+    height: 600,
+    borderRadius: 8,
+  },
+  tabContainer: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 20,
+  },
+  tabButton: {
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 6,
+    backgroundColor: Colors.surface,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    alignItems: 'center',
+  },
+  tabButtonActive: {
+    backgroundColor: Colors.accentMuted,
+    borderColor: Colors.accentPrimary,
+  },
+  tabButtonText: {
+    fontSize: FontSizes.lg,
+    fontWeight: '600',
+    color: Colors.textSecondary,
+    fontFamily: Fonts.body,
+  },
+  tabButtonTextActive: {
+    color: Colors.textPrimary,
   },
 });

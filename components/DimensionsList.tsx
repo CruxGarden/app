@@ -1,6 +1,7 @@
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Dimension } from '@/lib/api';
+import { Colors, Fonts, FontSizes } from '@/constants/theme';
 
 export interface DimensionsListProps {
   dimensions: Dimension[];
@@ -112,17 +113,19 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   loadingText: {
-    fontSize: 14,
-    color: '#999',
+    fontSize: FontSizes.base,
+    color: Colors.textTertiary,
     textAlign: 'center',
     padding: 20,
+    fontFamily: Fonts.body,
   },
   emptyText: {
-    fontSize: 14,
-    color: '#999',
+    fontSize: FontSizes.base,
+    color: Colors.textTertiary,
     textAlign: 'center',
     padding: 20,
     fontStyle: 'italic',
+    fontFamily: Fonts.body,
   },
   typeSection: {
     marginBottom: 24,
@@ -131,52 +134,59 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   typeTitle: {
-    fontSize: 18,
+    fontSize: FontSizes.xl,
     fontWeight: '700',
-    color: '#333',
+    color: Colors.textPrimary,
     marginBottom: 4,
+    fontFamily: Fonts.body,
   },
   typeDescription: {
-    fontSize: 13,
-    color: '#666',
+    fontSize: FontSizes.sm,
+    color: Colors.textSecondary,
     fontStyle: 'italic',
+    fontFamily: Fonts.body,
   },
   dimensionsList: {
     gap: 8,
   },
   dimensionCard: {
-    backgroundColor: '#f9f9f9',
+    backgroundColor: Colors.surfaceElevated,
     borderRadius: 8,
     padding: 12,
     borderLeftWidth: 3,
-    borderLeftColor: '#12230F',
+    borderLeftColor: Colors.accentPrimary,
+    borderWidth: 1,
+    borderColor: Colors.border,
   },
   dimensionTitle: {
-    fontSize: 16,
+    fontSize: FontSizes.lg,
     fontWeight: '600',
-    color: '#333',
+    color: Colors.textPrimary,
     marginBottom: 6,
+    fontFamily: Fonts.body,
   },
   dimensionPreview: {
-    fontSize: 14,
-    color: '#666',
-    lineHeight: 20,
+    fontSize: FontSizes.base,
+    color: Colors.textSecondary,
+    lineHeight: 24,
     marginBottom: 6,
+    fontFamily: Fonts.body,
   },
   dimensionSlug: {
-    fontSize: 12,
-    color: '#12230F',
-    fontFamily: 'monospace',
+    fontSize: FontSizes.xs,
+    color: Colors.accentSecondary,
+    fontFamily: Fonts.mono,
     marginBottom: 4,
   },
   dimensionNote: {
-    fontSize: 13,
-    color: '#999',
+    fontSize: FontSizes.sm,
+    color: Colors.textTertiary,
     fontStyle: 'italic',
-    lineHeight: 18,
+    lineHeight: 22,
     marginTop: 4,
     paddingTop: 8,
     borderTopWidth: 1,
-    borderTopColor: '#e0e0e0',
+    borderTopColor: Colors.borderLight,
+    fontFamily: Fonts.body,
   },
 });

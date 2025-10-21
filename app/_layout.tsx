@@ -1,5 +1,6 @@
 import { Stack, useRouter, usePathname } from "expo-router";
 import { TouchableOpacity, Text, StyleSheet } from "react-native";
+import { Colors, Fonts, FontSizes } from "@/constants/theme";
 
 export default function RootLayout() {
   const router = useRouter();
@@ -19,6 +20,18 @@ export default function RootLayout() {
   return (
     <Stack
       screenOptions={{
+        headerStyle: {
+          backgroundColor: Colors.surface,
+          borderBottomWidth: 1,
+          borderBottomColor: Colors.border,
+        },
+        headerTintColor: Colors.textPrimary,
+        headerTitleStyle: {
+          color: Colors.textPrimary,
+          fontFamily: Fonts.body,
+          fontSize: FontSizes.xl,
+        },
+        headerShadowVisible: false,
         headerLeft: showBackButton
           ? () => (
               <TouchableOpacity
@@ -40,8 +53,9 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
   },
   backButtonText: {
-    fontSize: 16,
-    color: '#12230F',
+    fontSize: FontSizes.lg,
+    color: Colors.accentSecondary,
     fontWeight: '600',
+    fontFamily: Fonts.body,
   },
 });
