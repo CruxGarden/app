@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, ReactNode } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import api, { Dimension } from '@/lib/api';
 import DimensionsList from './DimensionsList';
+import { Colors, Fonts, FontSizes } from '@/constants/theme';
 
 export interface CruxCardProps {
   cruxKey: string;
@@ -11,9 +12,10 @@ export interface CruxCardProps {
   status?: string;
   showDimensions?: boolean;
   authorUsername?: string;
+  actions?: ReactNode;
 }
 
-export default function CruxCard({ cruxKey, title, data, showDimensions = false, authorUsername }: CruxCardProps) {
+export default function CruxCard({ cruxKey, title, data, showDimensions = false, authorUsername, actions }: CruxCardProps) {
   const [dimensions, setDimensions] = useState<Dimension[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -48,35 +50,52 @@ export default function CruxCard({ cruxKey, title, data, showDimensions = false,
           </Text>
         )
       )}
+
+      {actions && (
+        <View style={styles.actionsSection}>
+          {actions}
+        </View>
+      )}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#fff',
+    backgroundColor: Colors.surface,
     borderRadius: 12,
     padding: 20,
     marginBottom: 16,
+    borderWidth: 1,
+    borderColor: Colors.border,
   },
   title: {
-    fontSize: 20,
+    fontSize: FontSizes.xxl,
     fontWeight: '700',
-    color: '#333',
+    color: Colors.textPrimary,
     marginBottom: 12,
+    fontFamily: Fonts.body,
   },
   data: {
-    fontSize: 16,
-    color: '#666',
-    lineHeight: 24,
+    fontSize: FontSizes.lg,
+    color: Colors.textSecondary,
+    lineHeight: 28,
+    fontFamily: Fonts.body,
   },
   dimensionCount: {
-    fontSize: 13,
-    color: '#999',
+    fontSize: FontSizes.sm,
+    color: Colors.textTertiary,
     marginTop: 12,
     fontStyle: 'italic',
+    fontFamily: Fonts.body,
   },
   dimensionsSection: {
     marginTop: 20,
+  },
+  actionsSection: {
+    marginTop: 16,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: Colors.borderLight,
   },
 });

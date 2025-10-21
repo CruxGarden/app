@@ -4,6 +4,7 @@ import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import api, { Crux } from '@/lib/api';
 import CruxCard from '@/components/CruxCard';
 import CruxFormModal, { CruxFormData } from '@/components/CruxFormModal';
+import { Colors, Fonts, FontSizes } from '@/constants/theme';
 
 export default function CruxDetail() {
   const router = useRouter();
@@ -124,7 +125,7 @@ export default function CruxDetail() {
       <ScrollView contentContainerStyle={styles.container}>
         {loading && (
           <View style={styles.centerContent}>
-            <ActivityIndicator size="large" color="#12230F" />
+            <ActivityIndicator size="large" color={Colors.accentSecondary} />
             <Text style={styles.loadingText}>Loading crux...</Text>
           </View>
         )}
@@ -145,31 +146,29 @@ export default function CruxDetail() {
               status={crux.status}
               showDimensions={true}
               authorUsername={username}
+              actions={
+                <View style={styles.buttonContainer}>
+                  <TouchableOpacity
+                    style={styles.actionButton}
+                    onPress={() => setEditModalVisible(true)}
+                  >
+                    <Text style={styles.actionButtonText}>Edit</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.actionButton}
+                    onPress={() => setModalVisible(true)}
+                  >
+                    <Text style={styles.actionButtonText}>+ Add Crux</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.deleteButton}
+                    onPress={handleDeleteCrux}
+                  >
+                    <Text style={styles.deleteButtonText}>Delete</Text>
+                  </TouchableOpacity>
+                </View>
+              }
             />
-
-            {/* Action Buttons */}
-            <View style={styles.buttonContainer}>
-              <TouchableOpacity
-                style={[styles.button, styles.editButton]}
-                onPress={() => setEditModalVisible(true)}
-              >
-                <Text style={styles.editButtonText}>Edit</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.button, styles.addButton]}
-                onPress={() => setModalVisible(true)}
-              >
-                <Text style={styles.addButtonText}>+ Add Crux</Text>
-              </TouchableOpacity>
-            </View>
-
-            {/* Delete Button */}
-            <TouchableOpacity
-              style={styles.deleteButton}
-              onPress={handleDeleteCrux}
-            >
-              <Text style={styles.deleteButtonText}>Delete Crux</Text>
-            </TouchableOpacity>
           </View>
         )}
       </ScrollView>
@@ -204,7 +203,7 @@ export default function CruxDetail() {
 const styles = StyleSheet.create({
   container: {
     flexGrow: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: Colors.background,
   },
   centerContent: {
     flex: 1,
@@ -215,13 +214,15 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     marginTop: 12,
-    fontSize: 16,
-    color: '#666',
+    fontSize: FontSizes.lg,
+    color: Colors.textSecondary,
+    fontFamily: Fonts.body,
   },
   errorText: {
-    color: '#d32f2f',
-    fontSize: 16,
+    color: Colors.error,
+    fontSize: FontSizes.lg,
     textAlign: 'center',
+    fontFamily: Fonts.body,
   },
   cruxContainer: {
     padding: 20,
@@ -231,45 +232,36 @@ const styles = StyleSheet.create({
   },
   buttonContainer: {
     flexDirection: 'row',
-    gap: 12,
-    marginTop: 4,
+    gap: 8,
   },
-  button: {
-    flex: 1,
-    borderRadius: 12,
-    padding: 16,
+  actionButton: {
+    backgroundColor: Colors.accentMuted,
+    borderRadius: 6,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: Colors.accentPrimary,
   },
-  editButton: {
-    backgroundColor: '#fff',
-    borderWidth: 2,
-    borderColor: '#12230F',
-  },
-  editButtonText: {
-    fontSize: 16,
+  actionButtonText: {
+    fontSize: FontSizes.sm,
     fontWeight: '600',
-    color: '#12230F',
-  },
-  addButton: {
-    backgroundColor: '#12230F',
-  },
-  addButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#fff',
+    color: Colors.textPrimary,
+    fontFamily: Fonts.body,
   },
   deleteButton: {
-    borderRadius: 12,
-    padding: 16,
+    backgroundColor: Colors.surface,
+    borderRadius: 6,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
     alignItems: 'center',
-    marginTop: 12,
-    backgroundColor: '#fff',
     borderWidth: 1,
-    borderColor: '#d32f2f',
+    borderColor: Colors.error,
   },
   deleteButtonText: {
-    fontSize: 16,
+    fontSize: FontSizes.sm,
     fontWeight: '600',
-    color: '#d32f2f',
+    color: Colors.error,
+    fontFamily: Fonts.body,
   },
 });
