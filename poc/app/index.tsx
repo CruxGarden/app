@@ -1,6 +1,14 @@
 import { Stack, Link } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Text, View, FlatList, StyleSheet, TouchableOpacity, Image } from 'react-native';
+import {
+  ActivityIndicator,
+  Text,
+  View,
+  FlatList,
+  StyleSheet,
+  TouchableOpacity,
+  Image,
+} from 'react-native';
 import api, { Author } from '@/lib/api';
 import { Colors, Fonts, FontSizes } from '@/constants/theme';
 
@@ -55,11 +63,13 @@ export default function Index() {
 
   return (
     <>
-      <Stack.Screen options={{
-        title: 'Crux Garden',
-        headerBackVisible: false,
-        headerLeft: () => null,
-      }} />
+      <Stack.Screen
+        options={{
+          title: 'Crux Garden',
+          headerBackVisible: false,
+          headerLeft: () => null,
+        }}
+      />
       <View style={styles.container}>
         {loading && (
           <View style={styles.centerContent}>

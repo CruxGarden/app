@@ -1,5 +1,14 @@
 import { useEffect, useState, useCallback } from 'react';
-import { ActivityIndicator, StyleSheet, Text, View, ScrollView, TouchableOpacity, Platform, Image } from 'react-native';
+import {
+  ActivityIndicator,
+  StyleSheet,
+  Text,
+  View,
+  ScrollView,
+  TouchableOpacity,
+  Platform,
+  Image,
+} from 'react-native';
 import { Stack, useLocalSearchParams } from 'expo-router';
 import api, { Author } from '@/lib/api';
 import CruxCard from '@/components/CruxCard';
@@ -7,9 +16,8 @@ import CruxFormModal, { CruxFormData } from '@/components/CruxFormModal';
 import { Colors, Fonts, FontSizes } from '@/constants/theme';
 
 // Web-only import for force graph
-const CruxNetworkGraph = Platform.OS === 'web'
-  ? require('@/components/CruxNetworkGraph.web').default
-  : null;
+const CruxNetworkGraph =
+  Platform.OS === 'web' ? require('@/components/CruxNetworkGraph.web').default : null;
 
 export default function AuthorProfile() {
   const { username } = useLocalSearchParams<{ username: string }>();
@@ -103,9 +111,7 @@ export default function AuthorProfile() {
               </View>
               <Text style={styles.displayName}>{author.displayName}</Text>
               <Text style={styles.username}>@{author.username}</Text>
-              {author.bio && (
-                <Text style={styles.bioText}>{author.bio}</Text>
-              )}
+              {author.bio && <Text style={styles.bioText}>{author.bio}</Text>}
             </View>
 
             {/* Tab Buttons */}
@@ -114,7 +120,9 @@ export default function AuthorProfile() {
                 style={[styles.tabButton, activeTab === 'crux' && styles.tabButtonActive]}
                 onPress={() => setActiveTab('crux')}
               >
-                <Text style={[styles.tabButtonText, activeTab === 'crux' && styles.tabButtonTextActive]}>
+                <Text
+                  style={[styles.tabButtonText, activeTab === 'crux' && styles.tabButtonTextActive]}
+                >
                   Root
                 </Text>
               </TouchableOpacity>
@@ -123,7 +131,12 @@ export default function AuthorProfile() {
                   style={[styles.tabButton, activeTab === 'graph' && styles.tabButtonActive]}
                   onPress={() => setActiveTab('graph')}
                 >
-                  <Text style={[styles.tabButtonText, activeTab === 'graph' && styles.tabButtonTextActive]}>
+                  <Text
+                    style={[
+                      styles.tabButtonText,
+                      activeTab === 'graph' && styles.tabButtonTextActive,
+                    ]}
+                  >
                     Graph
                   </Text>
                 </TouchableOpacity>
@@ -167,10 +180,14 @@ export default function AuthorProfile() {
         visible={modalVisible}
         onClose={() => setModalVisible(false)}
         onSubmit={handleCreateCrux}
-        sourceCrux={author?.root ? {
-          title: author.root.title,
-          data: author.root.data,
-        } : undefined}
+        sourceCrux={
+          author?.root
+            ? {
+                title: author.root.title,
+                data: author.root.data,
+              }
+            : undefined
+        }
       />
     </>
   );
