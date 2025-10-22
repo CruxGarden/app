@@ -8,7 +8,7 @@ module.exports = function (api) {
         {
           // Pass root folder of your application
           // All files under this folder will be processed by the Babel plugin
-          root: './app',
+          root: './src',
         },
       ],
     ],
