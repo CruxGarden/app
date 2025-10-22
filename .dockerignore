@@ -30,5 +30,5 @@ docker/docker-compose.yml
 README.md
 CLAUDE.md
 
-# Example code
-app-example/
+scripts/
+poc/
