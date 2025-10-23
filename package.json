@@ -4,6 +4,7 @@
   "version": "1.0.0",
   "scripts": {
     "start:dev": "expo start -p 8080",
+    "build:web": "expo export --platform web",
     "docker:app": "docker-compose -f docker/docker-compose.yml up --build",
     "lint": "expo lint",
     "clean": "./scripts/clean.sh",
