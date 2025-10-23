@@ -1,18 +1,29 @@
-import { Text, View } from 'react-native';
+import { View, Image } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
-import Editor from '../components/Editor';
 
 export default function Index() {
   return (
     <View style={styles.container}>
-      <Text>Hello world from Unistyles</Text>
-      <Editor />
+      <Image
+        source={require('../assets/images/banner.png')}
+        style={styles.banner}
+        resizeMode="contain"
+      />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: 'red',
+    flex: 1,
+    backgroundColor: '#0F1214',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  banner: {
+    width: '90%',
+    maxWidth: 1200,
+    height: undefined,
+    aspectRatio: 3 / 1,
   },
 });
