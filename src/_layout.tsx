@@ -1,12 +1,15 @@
 import { Stack } from 'expo-router';
+import { AppProvider } from './lib/_AppContext';
 
 export default function RootLayout() {
   return (
-    <Stack
-      screenOptions={{
-        headerShown: false,
-        title: 'Crux Garden',
-      }}
-    />
+    <AppProvider>
+      <Stack
+        screenOptions={{
+          headerShown: false,
+          title: 'Crux Garden',
+        }}
+      />
+    </AppProvider>
   );
 }
