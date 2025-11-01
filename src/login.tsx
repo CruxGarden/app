@@ -46,7 +46,9 @@ export default function LoginScreen() {
       Alert.alert('Code Sent', `An authentication code has been sent to ${email}`);
     } catch (err: any) {
       console.error('Request code error:', err);
-      setError(err.response?.data?.message || 'Failed to send authentication code. Please try again.');
+      setError(
+        err.response?.data?.message || 'Failed to send authentication code. Please try again.'
+      );
     } finally {
       setIsLoading(false);
     }
