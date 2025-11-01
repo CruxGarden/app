@@ -56,6 +56,24 @@ export interface Profile {
   } | null;
 }
 
+// Account types
+export interface Account {
+  id: string;
+  email: string;
+  role: 'admin' | 'author' | 'keeper';
+  homeId: string;
+  created: string;
+  updated: string;
+}
+
+export interface UpdateAccountRequest {
+  email?: string;
+}
+
+export interface DeleteAccountRequest {
+  confirmationText: string;
+}
+
 // Author types
 export interface Author {
   id: string;
@@ -72,6 +90,12 @@ export interface Author {
   created: string;
   updated: string;
   root?: any; // Embedded root crux (populated via embed=root query param)
+}
+
+export interface UpdateAuthorRequest {
+  username?: string;
+  displayName?: string;
+  bio?: string;
 }
 
 // Crux types
@@ -206,6 +230,48 @@ export const api = {
     await apiClient.delete('/auth/logout');
   },
 
+  // Account methods
+  /**
+   * Check if an email is available for use
+   * @param email - Email address to check
+   * @returns Object with available boolean
+   */
+  async checkEmailAvailability(email: string): Promise<{ available: boolean }> {
+    const response = await apiClient.get<{ available: boolean }>('/account/check-email', {
+      params: { email },
+    });
+    return response.data;
+  },
+
+  /**
+   * Get current user account (requires authentication)
+   * @returns Account information
+   */
+  async getAccount(): Promise<Account> {
+    const response = await apiClient.get<Account>('/account');
+    return response.data;
+  },
+
+  /**
+   * Update current user account (requires authentication)
+   * @param accountData - Account update data (currently supports email)
+   * @returns Updated Account object
+   */
+  async updateAccount(accountData: UpdateAccountRequest): Promise<Account> {
+    const response = await apiClient.patch<Account>('/account', accountData);
+    return response.data;
+  },
+
+  /**
+   * Delete current user account (requires authentication and confirmation)
+   * @param confirmationText - Must be exactly 'DELETE MY ACCOUNT'
+   */
+  async deleteAccount(confirmationText: string): Promise<void> {
+    await apiClient.delete('/account', {
+      data: { confirmationText },
+    });
+  },
+
   // Author methods
   /**
    * Fetch all authors
@@ -227,6 +293,29 @@ export const api = {
     const authorIdentifier = identifier.startsWith('@') ? identifier : `@${identifier}`;
     const params = embed ? { embed } : {};
     const response = await apiClient.get<Author>(`/authors/${authorIdentifier}`, { params });
+    return response.data;
+  },
+
+  /**
+   * Check if a username is available for use
+   * @param username - Username to check
+   * @returns Object with available boolean
+   */
+  async checkUsernameAvailability(username: string): Promise<{ available: boolean }> {
+    const response = await apiClient.get<{ available: boolean }>('/authors/check-username', {
+      params: { username },
+    });
+    return response.data;
+  },
+
+  /**
+   * Update an author profile (requires authentication)
+   * @param authorKey - Author key
+   * @param authorData - Author update data
+   * @returns Updated Author object
+   */
+  async updateAuthor(authorKey: string, authorData: UpdateAuthorRequest): Promise<Author> {
+    const response = await apiClient.patch<Author>(`/authors/${authorKey}`, authorData);
     return response.data;
   },
 

@@ -28,16 +28,27 @@ export default function Index() {
           <Text style={styles.welcomeText}>
             Welcome, {account?.author?.displayName || account?.email}
           </Text>
-          <TouchableOpacity style={styles.button} onPress={() => logout()}>
-            <Text style={styles.buttonText}>Sign Out</Text>
+          <View style={styles.buttonRow}>
+            <TouchableOpacity style={styles.button} onPress={() => router.push('/author')}>
+              <Text style={styles.buttonText}>Profile</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.button} onPress={() => router.push('/account')}>
+              <Text style={styles.buttonText}>Account</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.button} onPress={() => router.push('/settings')}>
+              <Text style={styles.buttonText}>Settings</Text>
+            </TouchableOpacity>
+          </View>
+          <TouchableOpacity
+            style={[styles.button, styles.secondaryButton]}
+            onPress={() => logout()}
+          >
+            <Text style={[styles.buttonText, styles.secondaryButtonText]}>Sign Out</Text>
           </TouchableOpacity>
         </View>
       ) : (
         <View style={styles.content}>
-          <TouchableOpacity
-            style={styles.button}
-            onPress={() => router.push('/login')}
-          >
+          <TouchableOpacity style={styles.button} onPress={() => router.push('/login')}>
             <Text style={styles.buttonText}>Sign In</Text>
           </TouchableOpacity>
         </View>
@@ -70,6 +81,10 @@ const styles = StyleSheet.create({
     color: '#e8eef2',
     marginBottom: 8,
   },
+  buttonRow: {
+    flexDirection: 'row',
+    gap: 12,
+  },
   button: {
     backgroundColor: '#4dd9b8',
     borderRadius: 8,
@@ -82,5 +97,13 @@ const styles = StyleSheet.create({
     color: '#0f1214',
     fontSize: 16,
     fontWeight: '600',
+  },
+  secondaryButton: {
+    backgroundColor: 'transparent',
+    borderWidth: 1,
+    borderColor: '#4dd9b8',
+  },
+  secondaryButtonText: {
+    color: '#4dd9b8',
   },
 });

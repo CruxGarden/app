@@ -8,7 +8,7 @@ import { api, Author } from './lib/api';
 export default function AuthorPage() {
   const { username } = useLocalSearchParams<{ username: string }>();
   const router = useRouter();
-  const { account, logout } = useApp();
+  const { account } = useApp();
 
   const [author, setAuthor] = useState<Author | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -70,9 +70,17 @@ export default function AuthorPage() {
 
       {isOwnPage && (
         <View style={styles.actions}>
-          <TouchableOpacity style={styles.button} onPress={() => logout()}>
-            <Text style={styles.buttonText}>Sign Out</Text>
-          </TouchableOpacity>
+          <View style={styles.buttonRow}>
+            <TouchableOpacity style={styles.button} onPress={() => router.push('/author')}>
+              <Text style={styles.buttonText}>Profile</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.button} onPress={() => router.push('/account')}>
+              <Text style={styles.buttonText}>Account</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.button} onPress={() => router.push('/settings')}>
+              <Text style={styles.buttonText}>Settings</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       )}
 
@@ -118,6 +126,10 @@ const styles = StyleSheet.create({
   },
   actions: {
     marginBottom: 24,
+  },
+  buttonRow: {
+    flexDirection: 'row',
+    gap: 12,
   },
   content: {
     flex: 1,
