@@ -41,6 +41,12 @@ export default function Index() {
           </View>
           <TouchableOpacity
             style={[styles.button, styles.secondaryButton]}
+            onPress={() => router.push('/bloom-examples')}
+          >
+            <Text style={[styles.buttonText, styles.secondaryButtonText]}>Bloom Gallery</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.button, styles.secondaryButton]}
             onPress={() => logout()}
           >
             <Text style={[styles.buttonText, styles.secondaryButtonText]}>Sign Out</Text>
@@ -50,6 +56,12 @@ export default function Index() {
         <View style={styles.content}>
           <TouchableOpacity style={styles.button} onPress={() => router.push('/login')}>
             <Text style={styles.buttonText}>Sign In</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.button, styles.secondaryButton]}
+            onPress={() => router.push('/bloom-examples')}
+          >
+            <Text style={[styles.buttonText, styles.secondaryButtonText]}>Bloom Gallery</Text>
           </TouchableOpacity>
         </View>
       )}
