@@ -52,6 +52,10 @@ export interface CruxBloomProps {
   circle4?: CircleStyle;
   /** Array of gradient definitions to use in fills */
   gradients?: GradientDefinition[];
+  /** Use stable viewBox that doesn't change with rotation (for animations) */
+  stableViewBox?: boolean;
+  /** Override maximum extent for stable viewBox (used by AnimatedBloom) */
+  maxExtentOverride?: number;
   /** Additional SVG props */
   style?: any;
   /** Test ID for testing */
@@ -216,6 +220,8 @@ export const CruxBloom: React.FC<CruxBloomProps> = ({
   circle3,
   circle4,
   gradients = [],
+  stableViewBox = false,
+  maxExtentOverride,
   style,
   testID = 'crux-bloom',
 }) => {
@@ -277,49 +283,85 @@ export const CruxBloom: React.FC<CruxBloomProps> = ({
   let minY = Infinity;
   let maxY = -Infinity;
 
-  circles.forEach((circle) => {
-    const cx = centerX + (circle.offsetX || 0);
-    const cy = centerY + (circle.offsetY || 0);
-    const r = circle.radius || 0;
-    const strokePadding = (circle.strokeWidth || 0) / 2;
-    const sides = circle.sides || 0;
+  if (stableViewBox) {
+    // For stable viewBox (used in animations), calculate the maximum extent from center
+    // This creates a square bounding box that contains the shape at any rotation
+    let maxExtent = 0;
 
-    let points: { x: number; y: number }[] = [];
-
-    if (sides >= 3) {
-      // Polygon - calculate actual vertices
-      const polygonPoints = calculatePolygonPoints(cx, cy, r, sides, circle.shapeRotation || 0);
-      // Add stroke padding to each vertex
-      polygonPoints.forEach((point) => {
-        const dx = point.x - cx;
-        const dy = point.y - cy;
-        const distance = Math.sqrt(dx * dx + dy * dy);
-        const scale = (distance + strokePadding) / distance;
-        points.push({
-          x: cx + dx * scale,
-          y: cy + dy * scale,
-        });
-      });
+    if (maxExtentOverride !== undefined) {
+      // Use the override value if provided (from AnimatedBloom)
+      maxExtent = maxExtentOverride;
     } else {
-      // Circle - use bounding box
-      const extent = r + strokePadding;
-      points = [
-        { x: cx - extent, y: cy - extent }, // top-left
-        { x: cx + extent, y: cy - extent }, // top-right
-        { x: cx - extent, y: cy + extent }, // bottom-left
-        { x: cx + extent, y: cy + extent }, // bottom-right
-      ];
+      // Calculate based on current values
+      circles.forEach((circle) => {
+        const cx = centerX + (circle.offsetX || 0);
+        const cy = centerY + (circle.offsetY || 0);
+        const r = circle.radius || 0;
+        const strokePadding = (circle.strokeWidth || 0) / 2;
+
+        // Calculate distance from center to this circle's furthest point
+        const distFromCenter = Math.sqrt(
+          Math.pow(cx - centerX, 2) + Math.pow(cy - centerY, 2)
+        );
+        const extent = distFromCenter + r + strokePadding;
+        maxExtent = Math.max(maxExtent, extent);
+      });
+
+      // Add 15% buffer to account for animated radius/offset changes
+      maxExtent = maxExtent * 1.15;
     }
 
-    // Apply global rotation to each point and update bounds
-    points.forEach((point) => {
-      const rotated = rotatePoint(point.x, point.y, rotate);
-      minX = Math.min(minX, rotated.x);
-      maxX = Math.max(maxX, rotated.x);
-      minY = Math.min(minY, rotated.y);
-      maxY = Math.max(maxY, rotated.y);
+    // Create square bounding box
+    minX = centerX - maxExtent;
+    maxX = centerX + maxExtent;
+    minY = centerY - maxExtent;
+    maxY = centerY + maxExtent;
+  } else {
+    // Normal bounding box calculation with rotation
+    circles.forEach((circle) => {
+      const cx = centerX + (circle.offsetX || 0);
+      const cy = centerY + (circle.offsetY || 0);
+      const r = circle.radius || 0;
+      const strokePadding = (circle.strokeWidth || 0) / 2;
+      const sides = circle.sides || 0;
+
+      let points: { x: number; y: number }[] = [];
+
+      if (sides >= 3) {
+        // Polygon - calculate actual vertices
+        const polygonPoints = calculatePolygonPoints(cx, cy, r, sides, circle.shapeRotation || 0);
+        // Add stroke padding to each vertex
+        polygonPoints.forEach((point) => {
+          const dx = point.x - cx;
+          const dy = point.y - cy;
+          const distance = Math.sqrt(dx * dx + dy * dy);
+          const scale = (distance + strokePadding) / distance;
+          points.push({
+            x: cx + dx * scale,
+            y: cy + dy * scale,
+          });
+        });
+      } else {
+        // Circle - use bounding box
+        const extent = r + strokePadding;
+        points = [
+          { x: cx - extent, y: cy - extent }, // top-left
+          { x: cx + extent, y: cy - extent }, // top-right
+          { x: cx - extent, y: cy + extent }, // bottom-left
+          { x: cx + extent, y: cy + extent }, // bottom-right
+        ];
+      }
+
+      // Apply global rotation to each point and update bounds
+      points.forEach((point) => {
+        const rotated = rotatePoint(point.x, point.y, rotate);
+        minX = Math.min(minX, rotated.x);
+        maxX = Math.max(maxX, rotated.x);
+        minY = Math.min(minY, rotated.y);
+        maxY = Math.max(maxY, rotated.y);
+      });
     });
-  });
+  }
 
   // Add a small safety margin
   const margin = 10;

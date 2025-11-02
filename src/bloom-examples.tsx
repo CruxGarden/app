@@ -3,6 +3,7 @@ import { View, ScrollView, Text, TouchableOpacity } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { useRouter } from 'expo-router';
 import { CruxBloom } from '@/components/CruxBloom';
+import { AnimatedBloom } from '@/components/CruxBloom/AnimatedBloom';
 import { PRESET_THEMES, PRESET_GRADIENTS, createMonochromaticTheme } from '@/components/CruxBloom/types';
 
 export default function BloomExamples() {
@@ -330,6 +331,152 @@ export default function BloomExamples() {
               circle2={{ fill: '#2980b9', sides: 6, stroke: '#ecf0f1', strokeWidth: 6 }}
               circle3={{ fill: '#2471a3', sides: 6, stroke: '#bdc3c7', strokeWidth: 4 }}
               circle4={{ fill: '#1f618d', sides: 6, stroke: '#95a5a6', strokeWidth: 2 }}
+            />
+          </View>
+        </View>
+
+        {/* Section: Animated */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Animated Blooms</Text>
+
+          {/* Rotate */}
+          <View style={styles.exampleCard}>
+            <Text style={styles.exampleTitle}>Continuous Rotation</Text>
+            <Text style={styles.exampleDescription}>
+              Bloom rotating continuously (with triangles to show rotation)
+            </Text>
+            <AnimatedBloom
+              preset="rotate"
+              size={150}
+              duration={3000}
+              circle1={{ fill: '#e74c3c', sides: 3 }}
+              circle2={{ fill: '#e67e22', sides: 3 }}
+              circle3={{ fill: '#f39c12', sides: 3 }}
+              circle4={{ fill: '#f1c40f', sides: 3 }}
+            />
+          </View>
+
+          {/* Pulse */}
+          <View style={styles.exampleCard}>
+            <Text style={styles.exampleTitle}>Pulse</Text>
+            <Text style={styles.exampleDescription}>
+              Inner circle pulsing in and out
+            </Text>
+            <AnimatedBloom preset="pulse" size={150} duration={1500} />
+          </View>
+
+          {/* Fade */}
+          <View style={styles.exampleCard}>
+            <Text style={styles.exampleTitle}>Fade</Text>
+            <Text style={styles.exampleDescription}>
+              Inner circle fading in and out
+            </Text>
+            <AnimatedBloom preset="fade" size={150} duration={2000} />
+          </View>
+
+          {/* Breathe */}
+          <View style={styles.exampleCard}>
+            <Text style={styles.exampleTitle}>Breathe</Text>
+            <Text style={styles.exampleDescription}>
+              Outer circle breathing (radius + opacity)
+            </Text>
+            <AnimatedBloom preset="breathe" size={150} duration={2500} />
+          </View>
+
+          {/* Orbit */}
+          <View style={styles.exampleCard}>
+            <Text style={styles.exampleTitle}>Orbit</Text>
+            <Text style={styles.exampleDescription}>
+              Inner circle orbiting around center
+            </Text>
+            <AnimatedBloom preset="orbit" size={150} duration={4000} />
+          </View>
+
+          {/* Rainbow */}
+          <View style={styles.exampleCard}>
+            <Text style={styles.exampleTitle}>Rainbow Cycle</Text>
+            <Text style={styles.exampleDescription}>
+              Inner circle cycling through rainbow colors
+            </Text>
+            <AnimatedBloom preset="rainbow" size={150} duration={7000} />
+          </View>
+
+          {/* Spin */}
+          <View style={styles.exampleCard}>
+            <Text style={styles.exampleTitle}>Spin</Text>
+            <Text style={styles.exampleDescription}>
+              Global rotation with counter-rotating inner triangle
+            </Text>
+            <AnimatedBloom
+              preset="spin"
+              size={150}
+              duration={4000}
+              circle1={{ fill: '#e74c3c', sides: 3 }}
+              circle2={{ fill: '#e67e22', sides: 3 }}
+              circle3={{ fill: '#f39c12', sides: 3 }}
+              circle4={{ fill: '#f1c40f', sides: 3 }}
+            />
+          </View>
+
+          {/* Glow */}
+          <View style={styles.exampleCard}>
+            <Text style={styles.exampleTitle}>Glow</Text>
+            <Text style={styles.exampleDescription}>
+              Cascading opacity glow effect
+            </Text>
+            <AnimatedBloom preset="glow" size={150} duration={2500} />
+          </View>
+
+          {/* Custom Color Animation */}
+          <View style={styles.exampleCard}>
+            <Text style={styles.exampleTitle}>Custom Color Fade</Text>
+            <Text style={styles.exampleDescription}>
+              Inner circle smoothly transitioning from red to blue
+            </Text>
+            <AnimatedBloom
+              size={150}
+              animatedCircle4={{
+                fill: { from: '#ff0000', to: '#0000ff', duration: 3000, reverse: true }
+              }}
+              loop
+            />
+          </View>
+
+          {/* Custom Multi-property */}
+          <View style={styles.exampleCard}>
+            <Text style={styles.exampleTitle}>Custom Multi-property</Text>
+            <Text style={styles.exampleDescription}>
+              Inner circle growing, fading, and color shifting
+            </Text>
+            <AnimatedBloom
+              size={150}
+              animatedCircle4={{
+                radius: { from: 250, to: 350, duration: 2000, reverse: true },
+                opacity: { from: 1, to: 0.3, duration: 2000, reverse: true },
+                fill: { from: '#2ecc71', to: '#e74c3c', duration: 2000, reverse: true }
+              }}
+              loop
+            />
+          </View>
+
+          {/* Rotating Triangles with Color */}
+          <View style={styles.exampleCard}>
+            <Text style={styles.exampleTitle}>Rotating Rainbow Triangles</Text>
+            <Text style={styles.exampleDescription}>
+              All circles as triangles, rotating with color cycle
+            </Text>
+            <AnimatedBloom
+              size={150}
+              duration={6000}
+              circle1={{ sides: 3 }}
+              circle2={{ sides: 3 }}
+              circle3={{ sides: 3 }}
+              circle4={{ sides: 3 }}
+              animatedRotate={{ from: 0, to: 360 }}
+              animatedCircle4={{
+                fill: { from: '#ff0000', to: '#0000ff' }
+              }}
+              loop
             />
           </View>
         </View>
