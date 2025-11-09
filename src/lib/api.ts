@@ -171,6 +171,73 @@ export interface CreateDimensionRequest {
   note?: string;
 }
 
+// Theme types
+export interface Theme {
+  id: string;
+  key: string;
+  title: string;
+  description?: string;
+  type?: string;
+  kind?: string;
+  primaryColor: string;
+  secondaryColor: string;
+  tertiaryColor: string;
+  quaternaryColor: string;
+  borderRadius?: string;
+  borderColor?: string;
+  borderWidth?: string;
+  backgroundColor?: string;
+  panelColor?: string;
+  textColor?: string;
+  font?: string;
+  mode?: string;
+  meta?: any;
+  authorId: string;
+  homeId: string;
+  created: string;
+  updated: string;
+}
+
+export interface CreateThemeRequest {
+  title: string;
+  description?: string;
+  type?: string;
+  kind?: string;
+  primaryColor: string;
+  secondaryColor: string;
+  tertiaryColor: string;
+  quaternaryColor: string;
+  borderRadius?: string;
+  borderColor?: string;
+  borderWidth?: string;
+  backgroundColor?: string;
+  panelColor?: string;
+  textColor?: string;
+  font?: string;
+  mode?: string;
+  meta?: any;
+}
+
+export interface UpdateThemeRequest {
+  title?: string;
+  description?: string;
+  type?: string;
+  kind?: string;
+  primaryColor?: string;
+  secondaryColor?: string;
+  tertiaryColor?: string;
+  quaternaryColor?: string;
+  borderRadius?: string;
+  borderColor?: string;
+  borderWidth?: string;
+  backgroundColor?: string;
+  panelColor?: string;
+  textColor?: string;
+  font?: string;
+  mode?: string;
+  meta?: any;
+}
+
 // Set auth token for all requests
 export const setAuthToken = (token: string | null) => {
   if (token) {
@@ -404,6 +471,56 @@ export const api = {
       dimensionData
     );
     return response.data;
+  },
+
+  // Theme methods
+  /**
+   * Get all themes (requires authentication)
+   * @returns Array of Theme objects
+   */
+  async getThemes(): Promise<Theme[]> {
+    const response = await apiClient.get<Theme[]>('/themes');
+    return response.data;
+  },
+
+  /**
+   * Get a theme by key
+   * @param themeKey - Theme key
+   * @returns Theme object
+   */
+  async getTheme(themeKey: string): Promise<Theme> {
+    const response = await apiClient.get<Theme>(`/themes/${themeKey}`);
+    return response.data;
+  },
+
+  /**
+   * Create a new theme (requires authentication)
+   * @param themeData - Theme creation data
+   * @returns Created Theme object
+   */
+  async createTheme(themeData: CreateThemeRequest): Promise<Theme> {
+    const response = await apiClient.post<Theme>('/themes', themeData);
+    return response.data;
+  },
+
+  /**
+   * Update an existing theme (requires authentication)
+   * @param themeKey - Theme key
+   * @param themeData - Theme update data
+   * @returns Updated Theme object
+   */
+  async updateTheme(themeKey: string, themeData: UpdateThemeRequest): Promise<Theme> {
+    const response = await apiClient.patch<Theme>(`/themes/${themeKey}`, themeData);
+    return response.data;
+  },
+
+  /**
+   * Delete a theme (requires authentication)
+   * @param themeKey - Theme key
+   * @returns void
+   */
+  async deleteTheme(themeKey: string): Promise<void> {
+    await apiClient.delete(`/themes/${themeKey}`);
   },
 
   /**
