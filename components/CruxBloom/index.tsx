@@ -1,5 +1,5 @@
 import React from 'react';
-import Svg, { Circle, Polygon, Defs, LinearGradient, Stop } from 'react-native-svg';
+import Svg, { Circle, Defs, LinearGradient, Stop } from 'react-native-svg';
 
 export interface CircleStyle {
   /** Fill color (solid color or gradient ID reference like "url(#gradient1)") */
@@ -10,16 +10,6 @@ export interface CircleStyle {
   strokeWidth?: number;
   /** Opacity (0-1) */
   opacity?: number;
-  /** Horizontal offset from center */
-  offsetX?: number;
-  /** Vertical offset from center */
-  offsetY?: number;
-  /** Radius of the circle/polygon */
-  radius?: number;
-  /** Number of sides (undefined or 0 = circle, 3 = triangle, 4 = square, 5 = pentagon, etc.) */
-  sides?: number;
-  /** Rotation of the shape itself in degrees (independent of global rotation) */
-  shapeRotation?: number;
 }
 
 export interface GradientDefinition {
@@ -40,143 +30,52 @@ export interface CruxBloomProps {
   height?: number;
   /** Size multiplier for responsive scaling */
   size?: number;
-  /** Global rotation in degrees */
-  rotate?: number;
-  /** Styles for circle 1 (outermost, default r=1000) */
-  circle1?: CircleStyle;
-  /** Styles for circle 2 (default r=750) */
-  circle2?: CircleStyle;
-  /** Styles for circle 3 (default r=500) */
-  circle3?: CircleStyle;
-  /** Styles for circle 4 (innermost, default r=250) */
-  circle4?: CircleStyle;
+  /** Styles for primary circle (outermost, default r=1000) */
+  primary?: CircleStyle;
+  /** Styles for secondary circle (default r=750) */
+  secondary?: CircleStyle;
+  /** Styles for tertiary circle (default r=500) */
+  tertiary?: CircleStyle;
+  /** Styles for quaternary circle (innermost, default r=250) */
+  quaternary?: CircleStyle;
   /** Array of gradient definitions to use in fills */
   gradients?: GradientDefinition[];
-  /** Use stable viewBox that doesn't change with rotation (for animations) */
-  stableViewBox?: boolean;
-  /** Override maximum extent for stable viewBox (used by AnimatedBloom) */
-  maxExtentOverride?: number;
   /** Additional SVG props */
   style?: any;
   /** Test ID for testing */
   testID?: string;
 }
 
-// Base offset ratios relative to the largest radius (for scaling)
-const BASE_OFFSET_RATIOS = [0, 0.137, 0.276, 0.421];
+// Fixed radii for each circle
+const CIRCLE_RADII = [1000, 750, 500, 250];
 
-const defaultCircle1: CircleStyle = {
+// Fixed offsets for cascade effect (calculated from largest radius)
+const CIRCLE_OFFSETS = [0, 137, 276, 421];
+
+const defaultPrimary: CircleStyle = {
   fill: '#2a3d2c',
-  radius: 1000,
-  offsetX: 0,
-  offsetY: 0, // Will be calculated based on radius
 };
 
-const defaultCircle2: CircleStyle = {
+const defaultSecondary: CircleStyle = {
   fill: '#426046',
-  radius: 750,
-  offsetX: 0,
-  offsetY: 0, // Will be calculated based on radius
 };
 
-const defaultCircle3: CircleStyle = {
+const defaultTertiary: CircleStyle = {
   fill: '#58825e',
-  radius: 500,
-  offsetX: 0,
-  offsetY: 0, // Will be calculated based on radius
 };
 
-const defaultCircle4: CircleStyle = {
+const defaultQuaternary: CircleStyle = {
   fill: '#73a079',
-  radius: 250,
-  offsetX: 0,
-  offsetY: 0, // Will be calculated based on radius
 };
 
-/**
- * Calculate points for a regular polygon
- * @param cx Center X coordinate
- * @param cy Center Y coordinate
- * @param radius Radius (distance from center to vertex)
- * @param sides Number of sides (3 = triangle, 4 = square, etc.)
- * @param rotation Rotation in degrees (0 = point at top)
- * @returns Array of {x, y} points
- */
-function calculatePolygonPoints(
-  cx: number,
-  cy: number,
-  radius: number,
-  sides: number,
-  rotation: number = 0
-): { x: number; y: number }[] {
-  const points: { x: number; y: number }[] = [];
-  const angleStep = (Math.PI * 2) / sides;
-  const startAngle = (rotation * Math.PI) / 180 - Math.PI / 2; // Start at top
-
-  for (let i = 0; i < sides; i++) {
-    const angle = startAngle + angleStep * i;
-    points.push({
-      x: cx + radius * Math.cos(angle),
-      y: cy + radius * Math.sin(angle),
-    });
-  }
-
-  return points;
-}
 
 /**
- * Convert polygon points to SVG points string
- */
-function pointsToString(points: { x: number; y: number }[]): string {
-  return points.map((p) => `${p.x},${p.y}`).join(' ');
-}
-
-/**
- * Render a shape (circle or polygon) based on the circle style
- */
-const RenderShape: React.FC<{
-  circle: CircleStyle;
-  centerX: number;
-  centerY: number;
-  transform?: string;
-}> = ({ circle, centerX, centerY, transform }) => {
-  const cx = centerX + (circle.offsetX ?? 0);
-  const cy = centerY + (circle.offsetY ?? 0);
-  const sides = circle.sides || 0;
-
-  const commonProps = {
-    fill: circle.fill,
-    stroke: circle.stroke,
-    strokeWidth: circle.strokeWidth,
-    opacity: circle.opacity,
-    transform,
-  };
-
-  if (sides >= 3) {
-    // Render polygon
-    const points = calculatePolygonPoints(
-      cx,
-      cy,
-      circle.radius || 0,
-      sides,
-      circle.shapeRotation || 0
-    );
-    return <Polygon points={pointsToString(points)} {...commonProps} />;
-  } else {
-    // Render circle
-    return <Circle cx={cx} cy={cy} r={circle.radius} {...commonProps} />;
-  }
-};
-
-/**
- * CruxBloom - A highly customizable four-circle icon component
+ * CruxBloom - A simple four-circle icon component
  *
- * This component renders the Crux Garden icon with extensive customization options:
+ * This component renders the Crux Garden icon with customization options for:
  * - Individual circle colors (solid or gradient)
  * - Border styles for each circle
- * - Position offsets for each circle
- * - Global transformations (skew, rotate, scale)
- * - Gradient support with multiple stops
+ * - Opacity for each circle
  *
  * @example
  * ```tsx
@@ -186,8 +85,14 @@ const RenderShape: React.FC<{
  * // Custom colors
  * <CruxBloom
  *   size={100}
- *   circle1={{ fill: '#ff0000' }}
- *   circle2={{ fill: '#00ff00' }}
+ *   primary={{ fill: '#ff0000' }}
+ *   secondary={{ fill: '#00ff00' }}
+ * />
+ *
+ * // With borders
+ * <CruxBloom
+ *   size={100}
+ *   primary={{ fill: '#ff0000', stroke: '#ffffff', strokeWidth: 4 }}
  * />
  *
  * // With gradients
@@ -200,13 +105,7 @@ const RenderShape: React.FC<{
  *       { color: '#feca57', offset: '100%' }
  *     ]
  *   }]}
- *   circle1={{ fill: 'url(#sunset)' }}
- * />
- *
- * // With rotation
- * <CruxBloom
- *   size={100}
- *   rotate={45}
+ *   primary={{ fill: 'url(#sunset)' }}
  * />
  * ```
  */
@@ -214,154 +113,49 @@ export const CruxBloom: React.FC<CruxBloomProps> = ({
   width = 2000,
   height = 2000,
   size = 100,
-  rotate = 0,
-  circle1,
-  circle2,
-  circle3,
-  circle4,
+  primary,
+  secondary,
+  tertiary,
+  quaternary,
   gradients = [],
-  stableViewBox = false,
-  maxExtentOverride,
   style,
   testID = 'crux-bloom',
 }) => {
-  // Check if we're using triangles
-  const hasTriangles =
-    (circle1?.sides === 3) ||
-    (circle2?.sides === 3) ||
-    (circle3?.sides === 3) ||
-    (circle4?.sides === 3);
-
-  // Calculate scaled offsets based on the largest radius for proportional scaling
-  const r1 = circle1?.radius ?? defaultCircle1.radius!;
-  const scaledOffsets = BASE_OFFSET_RATIOS.map(ratio => ratio * r1);
-
-  const defaults = hasTriangles
-    ? [
-        // For triangles: align all bases at the largest triangle's base, then cascade upward
-        { ...defaultCircle1, offsetY: 0 },
-        { ...defaultCircle2, offsetY: (r1 - (circle2?.radius ?? defaultCircle2.radius!)) * 0.5 - (scaledOffsets[1] / 2) },
-        { ...defaultCircle3, offsetY: (r1 - (circle3?.radius ?? defaultCircle3.radius!)) * 0.5 - (scaledOffsets[2] / 2) },
-        { ...defaultCircle4, offsetY: (r1 - (circle4?.radius ?? defaultCircle4.radius!)) * 0.5 - (scaledOffsets[3] / 2) },
-      ]
-    : [
-        // For circles/polygons: use scaled cascade offsets
-        { ...defaultCircle1, offsetY: scaledOffsets[0] },
-        { ...defaultCircle2, offsetY: scaledOffsets[1] },
-        { ...defaultCircle3, offsetY: scaledOffsets[2] },
-        { ...defaultCircle4, offsetY: scaledOffsets[3] },
-      ];
-
   // Merge custom styles with defaults
-  const c1 = { ...defaults[0], ...circle1 };
-  const c2 = { ...defaults[1], ...circle2 };
-  const c3 = { ...defaults[2], ...circle3 };
-  const c4 = { ...defaults[3], ...circle4 };
+  const c1 = { ...defaultPrimary, ...primary };
+  const c2 = { ...defaultSecondary, ...secondary };
+  const c3 = { ...defaultTertiary, ...tertiary };
+  const c4 = { ...defaultQuaternary, ...quaternary };
 
-  // Calculate center point (in the original coordinate space)
+  // Calculate center point
   const centerX = width / 2;
   const centerY = height / 2;
 
-  // Helper function to rotate a point around the center
-  const rotatePoint = (x: number, y: number, angle: number) => {
-    if (angle === 0) return { x, y };
-    const rad = (angle * Math.PI) / 180;
-    const cos = Math.cos(rad);
-    const sin = Math.sin(rad);
-    const dx = x - centerX;
-    const dy = y - centerY;
-    return {
-      x: centerX + dx * cos - dy * sin,
-      y: centerY + dx * sin + dy * cos,
-    };
-  };
+  // Calculate the bounding box needed for all circles
+  const circles = [
+    { ...c1, radius: CIRCLE_RADII[0], offsetY: CIRCLE_OFFSETS[0] },
+    { ...c2, radius: CIRCLE_RADII[1], offsetY: CIRCLE_OFFSETS[1] },
+    { ...c3, radius: CIRCLE_RADII[2], offsetY: CIRCLE_OFFSETS[2] },
+    { ...c4, radius: CIRCLE_RADII[3], offsetY: CIRCLE_OFFSETS[3] },
+  ];
 
-  // Calculate the bounding box needed for all circles (including offsets, radii, strokes, and rotation)
-  const circles = [c1, c2, c3, c4];
   let minX = Infinity;
   let maxX = -Infinity;
   let minY = Infinity;
   let maxY = -Infinity;
 
-  if (stableViewBox) {
-    // For stable viewBox (used in animations), calculate the maximum extent from center
-    // This creates a square bounding box that contains the shape at any rotation
-    let maxExtent = 0;
+  circles.forEach((circle) => {
+    const cx = centerX;
+    const cy = centerY + circle.offsetY;
+    const r = circle.radius;
+    const strokePadding = (circle.strokeWidth || 0) / 2;
+    const extent = r + strokePadding;
 
-    if (maxExtentOverride !== undefined) {
-      // Use the override value if provided (from AnimatedBloom)
-      maxExtent = maxExtentOverride;
-    } else {
-      // Calculate based on current values
-      circles.forEach((circle) => {
-        const cx = centerX + (circle.offsetX || 0);
-        const cy = centerY + (circle.offsetY || 0);
-        const r = circle.radius || 0;
-        const strokePadding = (circle.strokeWidth || 0) / 2;
-
-        // Calculate distance from center to this circle's furthest point
-        const distFromCenter = Math.sqrt(
-          Math.pow(cx - centerX, 2) + Math.pow(cy - centerY, 2)
-        );
-        const extent = distFromCenter + r + strokePadding;
-        maxExtent = Math.max(maxExtent, extent);
-      });
-
-      // Add 15% buffer to account for animated radius/offset changes
-      maxExtent = maxExtent * 1.15;
-    }
-
-    // Create square bounding box
-    minX = centerX - maxExtent;
-    maxX = centerX + maxExtent;
-    minY = centerY - maxExtent;
-    maxY = centerY + maxExtent;
-  } else {
-    // Normal bounding box calculation with rotation
-    circles.forEach((circle) => {
-      const cx = centerX + (circle.offsetX || 0);
-      const cy = centerY + (circle.offsetY || 0);
-      const r = circle.radius || 0;
-      const strokePadding = (circle.strokeWidth || 0) / 2;
-      const sides = circle.sides || 0;
-
-      let points: { x: number; y: number }[] = [];
-
-      if (sides >= 3) {
-        // Polygon - calculate actual vertices
-        const polygonPoints = calculatePolygonPoints(cx, cy, r, sides, circle.shapeRotation || 0);
-        // Add stroke padding to each vertex
-        polygonPoints.forEach((point) => {
-          const dx = point.x - cx;
-          const dy = point.y - cy;
-          const distance = Math.sqrt(dx * dx + dy * dy);
-          const scale = (distance + strokePadding) / distance;
-          points.push({
-            x: cx + dx * scale,
-            y: cy + dy * scale,
-          });
-        });
-      } else {
-        // Circle - use bounding box
-        const extent = r + strokePadding;
-        points = [
-          { x: cx - extent, y: cy - extent }, // top-left
-          { x: cx + extent, y: cy - extent }, // top-right
-          { x: cx - extent, y: cy + extent }, // bottom-left
-          { x: cx + extent, y: cy + extent }, // bottom-right
-        ];
-      }
-
-      // Apply global rotation to each point and update bounds
-      points.forEach((point) => {
-        const rotated = rotatePoint(point.x, point.y, rotate);
-        minX = Math.min(minX, rotated.x);
-        maxX = Math.max(maxX, rotated.x);
-        minY = Math.min(minY, rotated.y);
-        maxY = Math.max(maxY, rotated.y);
-      });
-    });
-  }
+    minX = Math.min(minX, cx - extent);
+    maxX = Math.max(maxX, cx + extent);
+    minY = Math.min(minY, cy - extent);
+    maxY = Math.max(maxY, cy + extent);
+  });
 
   // Add a small safety margin
   const margin = 10;
@@ -376,16 +170,12 @@ export const CruxBloom: React.FC<CruxBloomProps> = ({
   const viewBoxWidth = maxX - minX;
   const viewBoxHeight = maxY - minY;
 
-  // Calculate actual rendered dimensions proportional to viewBox expansion
-  // If content needs more space than the original width/height, expand the rendered size
+  // Calculate actual rendered dimensions
   const scaleX = viewBoxWidth / width;
   const scaleY = viewBoxHeight / height;
-  const renderScale = Math.max(scaleX, scaleY, 1); // At least 1, can be larger
+  const renderScale = Math.max(scaleX, scaleY, 1);
   const actualWidth = size * renderScale;
   const actualHeight = size * renderScale;
-
-  // Build transform string for rotation
-  const transform = rotate !== 0 ? `rotate(${rotate} ${centerX} ${centerY})` : undefined;
 
   // Helper to calculate gradient coordinates based on angle
   const getGradientCoords = (angle: number = 90) => {
@@ -434,11 +224,43 @@ export const CruxBloom: React.FC<CruxBloomProps> = ({
         </Defs>
       )}
 
-      {/* Shapes (Circles or Polygons) with Transformations */}
-      <RenderShape circle={c1} centerX={centerX} centerY={centerY} transform={transform} />
-      <RenderShape circle={c2} centerX={centerX} centerY={centerY} transform={transform} />
-      <RenderShape circle={c3} centerX={centerX} centerY={centerY} transform={transform} />
-      <RenderShape circle={c4} centerX={centerX} centerY={centerY} transform={transform} />
+      {/* Four Circles */}
+      <Circle
+        cx={centerX}
+        cy={centerY + circles[0].offsetY}
+        r={circles[0].radius}
+        fill={c1.fill}
+        stroke={c1.stroke}
+        strokeWidth={c1.strokeWidth}
+        opacity={c1.opacity}
+      />
+      <Circle
+        cx={centerX}
+        cy={centerY + circles[1].offsetY}
+        r={circles[1].radius}
+        fill={c2.fill}
+        stroke={c2.stroke}
+        strokeWidth={c2.strokeWidth}
+        opacity={c2.opacity}
+      />
+      <Circle
+        cx={centerX}
+        cy={centerY + circles[2].offsetY}
+        r={circles[2].radius}
+        fill={c3.fill}
+        stroke={c3.stroke}
+        strokeWidth={c3.strokeWidth}
+        opacity={c3.opacity}
+      />
+      <Circle
+        cx={centerX}
+        cy={centerY + circles[3].offsetY}
+        r={circles[3].radius}
+        fill={c4.fill}
+        stroke={c4.stroke}
+        strokeWidth={c4.strokeWidth}
+        opacity={c4.opacity}
+      />
     </Svg>
   );
 };

@@ -104,10 +104,10 @@ export const PRESET_THEMES: Record<string, CruxBloomTheme> = {
     name: 'Default',
     description: 'Original Crux Garden colors',
     config: {
-      circle1: { fill: '#2a3d2c' },
-      circle2: { fill: '#426046' },
-      circle3: { fill: '#58825e' },
-      circle4: { fill: '#73a079' },
+      primary: { fill: '#2a3d2c' },
+      secondary: { fill: '#426046' },
+      tertiary: { fill: '#58825e' },
+      quaternary: { fill: '#73a079' },
     },
   },
 
@@ -116,10 +116,10 @@ export const PRESET_THEMES: Record<string, CruxBloomTheme> = {
     description: 'Cool ocean-inspired gradients',
     config: {
       gradients: [PRESET_GRADIENTS.ocean],
-      circle1: { fill: 'url(#ocean)', opacity: 0.3 },
-      circle2: { fill: 'url(#ocean)', opacity: 0.5 },
-      circle3: { fill: 'url(#ocean)', opacity: 0.7 },
-      circle4: { fill: 'url(#ocean)', opacity: 1 },
+      primary: { fill: 'url(#ocean)', opacity: 0.3 },
+      secondary: { fill: 'url(#ocean)', opacity: 0.5 },
+      tertiary: { fill: 'url(#ocean)', opacity: 0.7 },
+      quaternary: { fill: 'url(#ocean)', opacity: 1 },
     },
   },
 
@@ -128,10 +128,10 @@ export const PRESET_THEMES: Record<string, CruxBloomTheme> = {
     description: 'Warm sunset colors with bloom effect',
     config: {
       gradients: [PRESET_GRADIENTS.sunset],
-      circle1: { fill: '#ff6b6b', opacity: 0.2 },
-      circle2: { fill: '#ff8787', opacity: 0.4 },
-      circle3: { fill: '#ffa07a', opacity: 0.6 },
-      circle4: { fill: 'url(#sunset)', opacity: 1 },
+      primary: { fill: '#ff6b6b', opacity: 0.2 },
+      secondary: { fill: '#ff8787', opacity: 0.4 },
+      tertiary: { fill: '#ffa07a', opacity: 0.6 },
+      quaternary: { fill: 'url(#sunset)', opacity: 1 },
     },
   },
 
@@ -139,10 +139,10 @@ export const PRESET_THEMES: Record<string, CruxBloomTheme> = {
     name: 'Forest Shadow',
     description: 'Deep forest greens with subtle borders',
     config: {
-      circle1: { fill: '#1a3a1a', stroke: '#2d5a2d', strokeWidth: 8 },
-      circle2: { fill: '#2d5a2d', stroke: '#3d7a3d', strokeWidth: 6 },
-      circle3: { fill: '#3d7a3d', stroke: '#4d9a4d', strokeWidth: 4 },
-      circle4: { fill: '#4d9a4d', stroke: '#ffffff', strokeWidth: 2 },
+      primary: { fill: '#1a3a1a', stroke: '#2d5a2d', strokeWidth: 8 },
+      secondary: { fill: '#2d5a2d', stroke: '#3d7a3d', strokeWidth: 6 },
+      tertiary: { fill: '#3d7a3d', stroke: '#4d9a4d', strokeWidth: 4 },
+      quaternary: { fill: '#4d9a4d', stroke: '#ffffff', strokeWidth: 2 },
     },
   },
 
@@ -151,22 +151,22 @@ export const PRESET_THEMES: Record<string, CruxBloomTheme> = {
     description: 'Ethereal twilight colors',
     config: {
       gradients: [PRESET_GRADIENTS.twilight],
-      circle1: { fill: 'url(#twilight)', opacity: 0.4 },
-      circle2: { fill: 'url(#twilight)', opacity: 0.6 },
-      circle3: { fill: 'url(#twilight)', opacity: 0.8 },
-      circle4: { fill: 'url(#twilight)', opacity: 1 },
+      primary: { fill: 'url(#twilight)', opacity: 0.4 },
+      secondary: { fill: 'url(#twilight)', opacity: 0.6 },
+      tertiary: { fill: 'url(#twilight)', opacity: 0.8 },
+      quaternary: { fill: 'url(#twilight)', opacity: 1 },
     },
   },
 
   fireBurst: {
     name: 'Fire Burst',
-    description: 'Explosive fire colors with offset',
+    description: 'Explosive fire colors',
     config: {
       gradients: [PRESET_GRADIENTS.fire],
-      circle1: { fill: '#1a0000', offsetY: 0 },
-      circle2: { fill: '#4d0000', offsetY: 100 },
-      circle3: { fill: '#800000', offsetY: 200 },
-      circle4: { fill: 'url(#fire)', offsetY: 350 },
+      primary: { fill: '#1a0000', opacity: 0.5 },
+      secondary: { fill: '#4d0000', opacity: 0.7 },
+      tertiary: { fill: '#800000', opacity: 0.9 },
+      quaternary: { fill: 'url(#fire)', opacity: 1 },
     },
   },
 
@@ -175,46 +175,45 @@ export const PRESET_THEMES: Record<string, CruxBloomTheme> = {
     description: 'Dark theme with glowing borders',
     config: {
       gradients: [PRESET_GRADIENTS.midnight],
-      circle1: { fill: 'url(#midnight)', stroke: '#ffffff', strokeWidth: 2, opacity: 0.8 },
-      circle2: { fill: 'url(#midnight)', stroke: '#cccccc', strokeWidth: 4, opacity: 0.9 },
-      circle3: { fill: 'url(#midnight)', stroke: '#aaaaaa', strokeWidth: 6, opacity: 0.95 },
-      circle4: { fill: '#ffffff', opacity: 1 },
+      primary: { fill: 'url(#midnight)', stroke: '#ffffff', strokeWidth: 2, opacity: 0.8 },
+      secondary: { fill: 'url(#midnight)', stroke: '#cccccc', strokeWidth: 4, opacity: 0.9 },
+      tertiary: { fill: 'url(#midnight)', stroke: '#aaaaaa', strokeWidth: 6, opacity: 0.95 },
+      quaternary: { fill: '#ffffff', opacity: 1 },
     },
   },
 
   auroraShift: {
     name: 'Aurora Shift',
-    description: 'Shifted circles with aurora gradient',
+    description: 'Aurora gradient with varying opacity',
     config: {
       gradients: [PRESET_GRADIENTS.aurora],
-      circle1: { fill: 'url(#aurora)', offsetX: -50, offsetY: -50 },
-      circle2: { fill: 'url(#aurora)', offsetX: 0, offsetY: 100 },
-      circle3: { fill: 'url(#aurora)', offsetX: 50, offsetY: 250 },
-      circle4: { fill: 'url(#aurora)', offsetX: 0, offsetY: 400 },
+      primary: { fill: 'url(#aurora)', opacity: 0.4 },
+      secondary: { fill: 'url(#aurora)', opacity: 0.6 },
+      tertiary: { fill: 'url(#aurora)', opacity: 0.8 },
+      quaternary: { fill: 'url(#aurora)', opacity: 1 },
     },
   },
 
-  lavenderRotate: {
-    name: 'Lavender Rotate',
-    description: 'Rotated lavender gradient',
+  lavenderDream: {
+    name: 'Lavender Dream',
+    description: 'Soft lavender gradient',
     config: {
       gradients: [PRESET_GRADIENTS.lavender],
-      rotate: 10,
-      circle1: { fill: 'url(#lavender)', opacity: 0.3 },
-      circle2: { fill: 'url(#lavender)', opacity: 0.5 },
-      circle3: { fill: 'url(#lavender)', opacity: 0.7 },
-      circle4: { fill: 'url(#lavender)', opacity: 1 },
+      primary: { fill: 'url(#lavender)', opacity: 0.3 },
+      secondary: { fill: 'url(#lavender)', opacity: 0.5 },
+      tertiary: { fill: 'url(#lavender)', opacity: 0.7 },
+      quaternary: { fill: 'url(#lavender)', opacity: 1 },
     },
   },
 
-  geometricShift: {
-    name: 'Geometric Shift',
-    description: 'Asymmetric layout with varied radii',
+  vibrantRainbow: {
+    name: 'Vibrant Rainbow',
+    description: 'Bold rainbow colors',
     config: {
-      circle1: { fill: '#e74c3c', radius: 900, offsetX: -100 },
-      circle2: { fill: '#3498db', radius: 600, offsetX: 100, offsetY: 200 },
-      circle3: { fill: '#2ecc71', radius: 400, offsetX: -50, offsetY: 350 },
-      circle4: { fill: '#f39c12', radius: 200, offsetX: 50, offsetY: 500 },
+      primary: { fill: '#e74c3c' },
+      secondary: { fill: '#f39c12' },
+      tertiary: { fill: '#2ecc71' },
+      quaternary: { fill: '#3498db' },
     },
   },
 };
@@ -253,42 +252,37 @@ export function createMonochromaticTheme(
   options?: {
     lighten?: boolean;
     withBorders?: boolean;
-    rotate?: number;
   }
 ): CruxBloomTheme {
-  const { lighten = true, withBorders = false, rotate } = options || {};
+  const { lighten = true, withBorders = false } = options || {};
 
-  // Simple color lightening (this is basic - you might want a proper color library)
+  // Simple color lightening using opacity
   const adjustOpacity = (index: number) => {
     return lighten ? 0.3 + index * 0.2 : 1 - index * 0.15;
   };
 
   const config: Omit<CruxBloomProps, 'size' | 'style' | 'testID'> = {
-    circle1: {
+    primary: {
       fill: baseColor,
       opacity: adjustOpacity(0),
       ...(withBorders && { stroke: baseColor, strokeWidth: 8 }),
     },
-    circle2: {
+    secondary: {
       fill: baseColor,
       opacity: adjustOpacity(1),
       ...(withBorders && { stroke: baseColor, strokeWidth: 6 }),
     },
-    circle3: {
+    tertiary: {
       fill: baseColor,
       opacity: adjustOpacity(2),
       ...(withBorders && { stroke: baseColor, strokeWidth: 4 }),
     },
-    circle4: {
+    quaternary: {
       fill: baseColor,
       opacity: adjustOpacity(3),
       ...(withBorders && { stroke: baseColor, strokeWidth: 2 }),
     },
   };
-
-  if (rotate !== undefined) {
-    config.rotate = rotate;
-  }
 
   return {
     name,
