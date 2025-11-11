@@ -7,6 +7,7 @@ This document outlines the implementation plan for four major enhancements to th
 2. Gradient support for background and panel
 3. Transparency/opacity controls for panel and button
 4. Font size adjustment (small/medium/large)
+5. Update the highlight text color
 
 ---
 
