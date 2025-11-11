@@ -80,6 +80,54 @@ Implementation finished successfully!
   - Updated `ThemeMeta` interface to include `solid?: string` property
   - Updated `dtoToFormData` to handle loading solid colors from JSON
 
+### Feature: Controls Section (Buttons and Links)
+
+- **New Section**: Added Controls section for button and link styling
+- **Type Updates**:
+  - Added button properties to `ThemeModeData`: `buttonBackgroundColor`, `buttonTextColor`, `buttonBorderColor`, `buttonBorderWidth`, `buttonBorderStyle`
+  - Added link properties to `ThemeModeData`: `linkColor`, `linkUnderlineStyle`
+  - Updated `ThemeMeta` to include `controls` section for light/dark modes
+- **UI Components**:
+  - Added Controls collapsible section with randomize button
+  - Button inputs: background color, text color, border color, border width (slider), border style (solid/dashed/dotted)
+  - Link inputs: color, underline style (none/underline/always)
+- **Randomization**:
+  - Created `randomizeControls` function - derives colors from palette with AAA contrast
+  - Updated `randomizeAll` to generate controls for both modes
+  - Updated `randomizeStyle` to generate controls for both modes
+- **Preview**:
+  - Added sample button to preview panel
+  - Added sample link to preview panel
+  - Both update in real-time with current mode settings
+- **Data Handling**:
+  - Controls saved/loaded in JSON via `formDataToDto` and `dtoToFormData`
+  - Per-mode support (different controls for light/dark)
+
+### Enhancement: Gradient Support for Buttons
+
+- **Created CruxButton Component** (`/app/components/CruxButton/index.tsx`):
+  - Custom button component using `Pressable` (as requested)
+  - Supports both solid colors and gradients (like CruxBloom)
+  - Uses `expo-linear-gradient` for gradient backgrounds
+  - Supports border color, width, style, and custom fonts
+  - Text color with proper contrast
+
+- **Updated Button Background Type**:
+  - Changed `buttonBackgroundColor` from `string` to `ColorValue` type
+  - Updated `ThemeMeta` interface to store button gradients/solids in JSON
+  - Updated `formDataToDto` and `dtoToFormData` converters
+
+- **Updated UI**:
+  - Button Background input now uses `ColorPicker` (supports gradient/solid toggle)
+  - Preview uses `CruxButton` component instead of native `Button`
+  - Displays gradient buttons in real-time
+
+- **Updated Randomization**:
+  - All randomize functions (`randomizeControls`, `randomizeStyle`, `randomizeAll`) now support gradients
+  - 25% chance to generate gradient buttons
+  - Gradient angles randomized
+  - Text color guarantees AAA contrast on gradient backgrounds
+
 ## Next Steps
 
 - Step 1: Restructure types.ts
