@@ -13,7 +13,7 @@ import { faker } from '@faker-js/faker';
 import { CruxBloom } from '@/components/CruxBloom';
 import { ColorPicker } from './ColorPicker';
 import { HexColorInput } from './HexColorInput';
-import type { ThemeFormData, ThemeDto, ColorValue } from './types';
+import type { ThemeFormData, ThemeDto, ColorValue, ThemeModeData } from './types';
 import { getDefaultThemeFormData, formDataToDto } from './types';
 
 export interface ThemeBuilderProps {
@@ -103,8 +103,22 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
-  const handleColorChange = (field: keyof Pick<ThemeFormData, 'primaryColor' | 'secondaryColor' | 'tertiaryColor' | 'quaternaryColor'>) => (value: ColorValue) => {
-    handleFieldChange(field, value);
+  // Mode-aware field change for per-mode fields
+  const handleModeFieldChange = <K extends keyof ThemeModeData>(
+    field: K,
+    value: ThemeModeData[K]
+  ) => {
+    setFormData((prev) => ({
+      ...prev,
+      [prev.activeMode]: {
+        ...prev[prev.activeMode],
+        [field]: value,
+      },
+    }));
+  };
+
+  const handleColorChange = (field: keyof Pick<ThemeModeData, 'primaryColor' | 'secondaryColor' | 'tertiaryColor' | 'quaternaryColor'>) => (value: ColorValue) => {
+    handleModeFieldChange(field, value);
   };
 
   const handleSave = async () => {
@@ -132,8 +146,9 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
     }
   };
 
-  // Helper to get bloom props from current form data
+  // Helper to get bloom props from current active mode
   const getBloomProps = () => {
+    const activeData = formData[formData.activeMode];
     const props: any = {
       size: 150,
       gradients: [],
@@ -151,25 +166,26 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
       }
 
       // Add border if specified
-      const borderWidth = parseInt(formData.bloomBorderWidth ?? '0');
+      const borderWidth = parseInt(activeData.bloomBorderWidth ?? '0');
       if (borderWidth > 0) {
-        circleProps.stroke = formData.bloomBorderColor || '#000000';
+        circleProps.stroke = activeData.bloomBorderColor || '#000000';
         circleProps.strokeWidth = borderWidth;
       }
 
       return circleProps;
     };
 
-    props.primary = convertColor(formData.primaryColor, 'primary');
-    props.secondary = convertColor(formData.secondaryColor, 'secondary');
-    props.tertiary = convertColor(formData.tertiaryColor, 'tertiary');
-    props.quaternary = convertColor(formData.quaternaryColor, 'quaternary');
+    props.primary = convertColor(activeData.primaryColor, 'primary');
+    props.secondary = convertColor(activeData.secondaryColor, 'secondary');
+    props.tertiary = convertColor(activeData.tertiaryColor, 'tertiary');
+    props.quaternary = convertColor(activeData.quaternaryColor, 'quaternary');
 
     return props;
   };
 
   const getFontFamily = () => {
-    switch (formData.font) {
+    const activeData = formData[formData.activeMode];
+    switch (activeData.font) {
       case 'monospace':
         return 'monospace';
       case 'serif':
@@ -272,13 +288,18 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
    */
   const generateBackgroundAndPanel = (isDark: boolean, uiHue: number, uiSat: number): { backgroundColor: string; panelColor: string } => {
     if (!CONSTRAIN_BACKGROUND_PANEL) {
-      // Unconstrained - use FULL lightness range (0-100%)
-      const backgroundColor = chroma.hsl(uiHue, uiSat, Math.random()).hex(); // Full 0-100%
+      // Unconstrained - use FULL lightness range but respect light vs dark mode
+      // Dark mode: 0-40% lightness, Light mode: 60-100% lightness
+      const backgroundColor = isDark
+        ? chroma.hsl(uiHue, uiSat, Math.random() * 0.4).hex() // 0-40%
+        : chroma.hsl(uiHue, uiSat, 0.6 + Math.random() * 0.4).hex(); // 60-100%
 
       // 40% chance panel = background
       const panelColor = Math.random() < 0.4
         ? backgroundColor
-        : chroma.hsl(uiHue, uiSat, Math.random()).hex(); // Full 0-100%
+        : isDark
+          ? chroma.hsl(uiHue, uiSat, Math.random() * 0.4).hex() // 0-40%
+          : chroma.hsl(uiHue, uiSat, 0.6 + Math.random() * 0.4).hex(); // 60-100%
 
       return { backgroundColor, panelColor };
     }
@@ -296,6 +317,48 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
         : chroma.hsl(uiHue, uiSat === 0 ? 0 : Math.min(1, uiSat + 0.05), LIGHT_PANEL_RANGE.min + Math.random() * (LIGHT_PANEL_RANGE.max - LIGHT_PANEL_RANGE.min)).hex();
 
     return { backgroundColor, panelColor };
+  };
+
+  /**
+   * Generate text color that GUARANTEES AAA (7.0:1) contrast ratio
+   * @param panelColor - The background color to contrast against
+   * @returns Text color with AAA contrast
+   */
+  const getAAATextColor = (panelColor: string): string => {
+    try {
+      // Try the smart colorful approach first
+      let textColor = getReadableTextColor(panelColor, 7.0);
+      let contrast = chroma.contrast(panelColor, textColor);
+
+      // If it passes AAA, return it
+      if (contrast >= 7.0) {
+        return textColor;
+      }
+
+      // Fallback: try pure black or white
+      const whiteContrast = chroma.contrast(panelColor, '#ffffff');
+      const blackContrast = chroma.contrast(panelColor, '#000000');
+
+      if (whiteContrast >= blackContrast) {
+        if (whiteContrast >= 7.0) return '#ffffff';
+      } else {
+        if (blackContrast >= 7.0) return '#000000';
+      }
+
+      // If neither pure black nor white gives AAA, use muted versions
+      // Slightly muted white and black
+      const mutedWhite = chroma.hsl(0, 0, 0.95).hex(); // 95% lightness
+      const mutedBlack = chroma.hsl(0, 0, 0.05).hex(); // 5% lightness
+
+      const mutedWhiteContrast = chroma.contrast(panelColor, mutedWhite);
+      const mutedBlackContrast = chroma.contrast(panelColor, mutedBlack);
+
+      // Return whichever has better contrast (prefer the one closer to AAA)
+      return mutedWhiteContrast >= mutedBlackContrast ? mutedWhite : mutedBlack;
+    } catch (e) {
+      // Absolute fallback
+      return '#000000';
+    }
   };
 
   const generatePaletteColors = (hue: number, saturation: number, lightness: number, harmonyType: 'monochromatic' | 'complementary' | 'analogous' | 'triadic' | 'split-complementary' | 'random'): string[] => {
@@ -408,24 +471,7 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
     const uiHue = bloomChroma.get('hsl.h');
     const uiSat = bloomChroma.get('hsl.s');
 
-    // Generate UI colors with more variation
-    const isDark = Math.random() > 0.5;
-
-    const { backgroundColor, panelColor } = generateBackgroundAndPanel(isDark, uiHue, uiSat);
-
-    // Generate readable text color based on panel color (aim for AAA: 7.0, fallback to AA: 4.5)
-    let textColor = getReadableTextColor(panelColor, 7.0);
-    // Verify contrast - if AAA fails, try AA
-    const contrast = chroma.contrast(panelColor, textColor);
-    if (contrast < 4.5) {
-      textColor = getReadableTextColor(panelColor, 4.5);
-    }
-
-    const borderColor = isDark
-      ? chroma.hsl(uiHue, uiSat === 0 ? 0 : Math.min(1, uiSat + 0.1), 0.2 + Math.random() * 0.15).hex() // 20-35%
-      : chroma.hsl(uiHue, uiSat === 0 ? 0 : Math.min(1, uiSat + 0.1), 0.75 + Math.random() * 0.15).hex(); // 75-90%
-
-    // Generate bloom border color
+    // Generate bloom border color (same for both modes)
     let bloomBorderColor: string;
     if (Math.random() < 0.25) {
       bloomBorderColor = '#000000';
@@ -455,17 +501,43 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
       return { type: 'solid', value: newColor };
     };
 
+    // Generate LIGHT mode UI colors
+    const lightBg = generateBackgroundAndPanel(false, uiHue, uiSat);
+    const lightTextColor = getAAATextColor(lightBg.panelColor);
+    const lightBorderColor = chroma.hsl(uiHue, uiSat === 0 ? 0 : Math.min(1, uiSat + 0.1), 0.75 + Math.random() * 0.15).hex();
+
+    // Generate DARK mode UI colors
+    const darkBg = generateBackgroundAndPanel(true, uiHue, uiSat);
+    const darkTextColor = getAAATextColor(darkBg.panelColor);
+    const darkBorderColor = chroma.hsl(uiHue, uiSat === 0 ? 0 : Math.min(1, uiSat + 0.1), 0.2 + Math.random() * 0.15).hex();
+
+    // Apply to BOTH modes
     setFormData((prev) => ({
       ...prev,
-      primaryColor: updateColorValue(prev.primaryColor, shuffled[0]),
-      secondaryColor: updateColorValue(prev.secondaryColor, shuffled[1]),
-      tertiaryColor: updateColorValue(prev.tertiaryColor, shuffled[2]),
-      quaternaryColor: updateColorValue(prev.quaternaryColor, shuffled[3]),
-      bloomBorderColor,
-      backgroundColor,
-      panelColor,
-      textColor,
-      borderColor,
+      light: {
+        ...prev.light,
+        primaryColor: updateColorValue(prev.light.primaryColor, shuffled[0]),
+        secondaryColor: updateColorValue(prev.light.secondaryColor, shuffled[1]),
+        tertiaryColor: updateColorValue(prev.light.tertiaryColor, shuffled[2]),
+        quaternaryColor: updateColorValue(prev.light.quaternaryColor, shuffled[3]),
+        bloomBorderColor,
+        backgroundColor: lightBg.backgroundColor,
+        panelColor: lightBg.panelColor,
+        textColor: lightTextColor,
+        borderColor: lightBorderColor,
+      },
+      dark: {
+        ...prev.dark,
+        primaryColor: updateColorValue(prev.dark.primaryColor, shuffled[0]),
+        secondaryColor: updateColorValue(prev.dark.secondaryColor, shuffled[1]),
+        tertiaryColor: updateColorValue(prev.dark.tertiaryColor, shuffled[2]),
+        quaternaryColor: updateColorValue(prev.dark.quaternaryColor, shuffled[3]),
+        bloomBorderColor,
+        backgroundColor: darkBg.backgroundColor,
+        panelColor: darkBg.panelColor,
+        textColor: darkTextColor,
+        borderColor: darkBorderColor,
+      },
     }));
   };
 
@@ -545,15 +617,27 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
     // Randomize border width (0-40, with bias toward 0)
     const bloomBorderWidth = Math.random() < 0.3 ? '0' : Math.floor(Math.random() * 41).toString();
 
-    setFormData({
-      ...formData,
+    // Generate identical bloom colors for both modes
+    const bloomData = {
       primaryColor: maybeGradient(shuffled[0], 0),
       secondaryColor: maybeGradient(shuffled[1], 1),
       tertiaryColor: maybeGradient(shuffled[2], 2),
       quaternaryColor: maybeGradient(shuffled[3], 3),
       bloomBorderColor,
       bloomBorderWidth,
-    });
+    };
+
+    setFormData((prev) => ({
+      ...prev,
+      light: {
+        ...prev.light,
+        ...bloomData,
+      },
+      dark: {
+        ...prev.dark,
+        ...bloomData,
+      },
+    }));
   };
 
   const randomizeDetails = () => {
@@ -593,12 +677,13 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
   };
 
   const randomizeStyle = () => {
-    // Pick a random bloom color to derive UI colors from
+    // Pick a random bloom color from current active mode to derive UI colors from
+    const activeData = formData[formData.activeMode];
     const bloomColors = [
-      getBloomColor(formData.primaryColor),
-      getBloomColor(formData.secondaryColor),
-      getBloomColor(formData.tertiaryColor),
-      getBloomColor(formData.quaternaryColor),
+      getBloomColor(activeData.primaryColor),
+      getBloomColor(activeData.secondaryColor),
+      getBloomColor(activeData.tertiaryColor),
+      getBloomColor(activeData.quaternaryColor),
     ];
     const selectedBloomColor = bloomColors[Math.floor(Math.random() * 4)];
 
@@ -607,38 +692,48 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
     const uiHue = bloomChroma.get('hsl.h');
     const uiSat = bloomChroma.get('hsl.s');
 
-    const isDark = Math.random() > 0.5;
-
-    const { backgroundColor, panelColor } = generateBackgroundAndPanel(isDark, uiHue, uiSat);
-
-    // Generate readable text color based on panel color (aim for AAA: 7.0, fallback to AA: 4.5)
-    let textColor = getReadableTextColor(panelColor, 7.0);
-    const contrast = chroma.contrast(panelColor, textColor);
-    if (contrast < 4.5) {
-      textColor = getReadableTextColor(panelColor, 4.5);
-    }
-
-    const borderColor = isDark
-      ? chroma.hsl(uiHue, uiSat === 0 ? 0 : Math.min(1, uiSat + 0.1), 0.16 + Math.random() * 0.08).hex()
-      : chroma.hsl(uiHue, uiSat === 0 ? 0 : Math.min(1, uiSat + 0.1), 0.76 + Math.random() * 0.08).hex();
-
+    // Generate shared styling (same for both modes)
     const fonts = ['sans-serif', 'serif', 'monospace'];
     const randomFont = fonts[Math.floor(Math.random() * fonts.length)];
-
     const borderStyles: Array<'solid' | 'dashed' | 'dotted'> = ['solid', 'dashed', 'dotted'];
     const randomBorderStyle = borderStyles[Math.floor(Math.random() * borderStyles.length)];
+    const borderWidth = Math.floor(Math.random() * 6).toString();
+    const borderRadius = Math.floor(Math.random() * 31).toString();
+
+    // Generate LIGHT mode
+    const lightBg = generateBackgroundAndPanel(false, uiHue, uiSat);
+    const lightTextColor = getAAATextColor(lightBg.panelColor);
+    const lightBorderColor = chroma.hsl(uiHue, uiSat === 0 ? 0 : Math.min(1, uiSat + 0.1), 0.76 + Math.random() * 0.08).hex();
+
+    // Generate DARK mode
+    const darkBg = generateBackgroundAndPanel(true, uiHue, uiSat);
+    const darkTextColor = getAAATextColor(darkBg.panelColor);
+    const darkBorderColor = chroma.hsl(uiHue, uiSat === 0 ? 0 : Math.min(1, uiSat + 0.1), 0.16 + Math.random() * 0.08).hex();
 
     setFormData((prev) => ({
       ...prev,
-      borderWidth: Math.floor(Math.random() * 6).toString(),
-      borderRadius: Math.floor(Math.random() * 31).toString(),
-      borderStyle: randomBorderStyle,
-      borderColor,
-      backgroundColor,
-      panelColor,
-      textColor,
-      font: randomFont,
-      mode: isDark ? 'dark' : 'light',
+      light: {
+        ...prev.light,
+        borderWidth,
+        borderRadius,
+        borderStyle: randomBorderStyle,
+        borderColor: lightBorderColor,
+        backgroundColor: lightBg.backgroundColor,
+        panelColor: lightBg.panelColor,
+        textColor: lightTextColor,
+        font: randomFont,
+      },
+      dark: {
+        ...prev.dark,
+        borderWidth,
+        borderRadius,
+        borderStyle: randomBorderStyle,
+        borderColor: darkBorderColor,
+        backgroundColor: darkBg.backgroundColor,
+        panelColor: darkBg.panelColor,
+        textColor: darkTextColor,
+        font: randomFont,
+      },
     }));
   };
 
@@ -684,25 +779,17 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
     const uiHue = bloomChroma.get('hsl.h');
     const uiSat = bloomChroma.get('hsl.s');
 
-    // Generate UI colors
-    const isDark = Math.random() > 0.5;
+    // Generate LIGHT mode UI colors
+    const lightBg = generateBackgroundAndPanel(false, uiHue, uiSat);
+    const lightTextColor = getAAATextColor(lightBg.panelColor);
+    const lightBorderColor = chroma.hsl(uiHue, uiSat === 0 ? 0 : Math.min(1, uiSat + 0.1), 0.75 + Math.random() * 0.15).hex();
 
-    const bgPanel = generateBackgroundAndPanel(isDark, uiHue, uiSat);
-    const backgroundColor = bgPanel.backgroundColor;
-    const panelColor = bgPanel.panelColor;
+    // Generate DARK mode UI colors
+    const darkBg = generateBackgroundAndPanel(true, uiHue, uiSat);
+    const darkTextColor = getAAATextColor(darkBg.panelColor);
+    const darkBorderColor = chroma.hsl(uiHue, uiSat === 0 ? 0 : Math.min(1, uiSat + 0.1), 0.2 + Math.random() * 0.15).hex();
 
-    const borderColor = isDark
-      ? chroma.hsl(uiHue, uiSat === 0 ? 0 : Math.min(1, uiSat + 0.1), 0.2 + Math.random() * 0.15).hex()
-      : chroma.hsl(uiHue, uiSat === 0 ? 0 : Math.min(1, uiSat + 0.1), 0.75 + Math.random() * 0.15).hex();
-
-    // Generate readable text color based on panel color (aim for AAA: 7.0, fallback to AA: 4.5)
-    let textColor = getReadableTextColor(panelColor, 7.0);
-    const textContrast = chroma.contrast(panelColor, textColor);
-    if (textContrast < 4.5) {
-      textColor = getReadableTextColor(panelColor, 4.5);
-    }
-
-    // Generate bloom border
+    // Generate bloom border (same for both modes)
     let bloomBorderColor: string;
     if (Math.random() < 0.25) {
       bloomBorderColor = '#000000';
@@ -760,32 +847,51 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
     const randomDescription = descriptionPatterns[Math.floor(Math.random() * descriptionPatterns.length)]();
     const description = randomDescription.charAt(0).toUpperCase() + randomDescription.slice(1);
 
+    // Shared styling (same for both modes)
     const fonts = ['sans-serif', 'serif', 'monospace'];
     const randomFont = fonts[Math.floor(Math.random() * fonts.length)];
-
     const borderStyles: Array<'solid' | 'dashed' | 'dotted'> = ['solid', 'dashed', 'dotted'];
     const randomBorderStyle = borderStyles[Math.floor(Math.random() * borderStyles.length)];
+    const borderWidth = Math.floor(Math.random() * 6).toString();
+    const borderRadius = Math.floor(Math.random() * 31).toString();
 
-    setFormData({
-      ...formData,
-      title,
-      description,
+    // Identical bloom colors for both modes
+    const bloomData = {
       primaryColor: maybeGradient(shuffled[0], 0),
       secondaryColor: maybeGradient(shuffled[1], 1),
       tertiaryColor: maybeGradient(shuffled[2], 2),
       quaternaryColor: maybeGradient(shuffled[3], 3),
       bloomBorderColor,
       bloomBorderWidth,
-      backgroundColor,
-      panelColor,
-      textColor,
-      borderColor,
-      borderWidth: Math.floor(Math.random() * 6).toString(),
-      borderRadius: Math.floor(Math.random() * 31).toString(),
-      borderStyle: randomBorderStyle,
-      font: randomFont,
-      mode: isDark ? 'dark' : 'light',
-    });
+    };
+
+    setFormData((prev) => ({
+      ...prev,
+      title,
+      description,
+      light: {
+        ...bloomData,
+        backgroundColor: lightBg.backgroundColor,
+        panelColor: lightBg.panelColor,
+        textColor: lightTextColor,
+        borderColor: lightBorderColor,
+        borderWidth,
+        borderRadius,
+        borderStyle: randomBorderStyle,
+        font: randomFont,
+      },
+      dark: {
+        ...bloomData,
+        backgroundColor: darkBg.backgroundColor,
+        panelColor: darkBg.panelColor,
+        textColor: darkTextColor,
+        borderColor: darkBorderColor,
+        borderWidth,
+        borderRadius,
+        borderStyle: randomBorderStyle,
+        font: randomFont,
+      },
+    }));
   };
 
   return (
@@ -793,12 +899,14 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
       {/* Left Side - Preview */}
       <View style={styles.leftPanel}>
         <ScrollView contentContainerStyle={styles.previewContent} style={styles.previewScroll}>
-          <Text style={styles.previewTitle}>Preview</Text>
+          <Text style={styles.previewTitle}>
+            Preview - {formData.activeMode === 'light' ? 'Light' : 'Dark'} Mode
+          </Text>
 
           <View
             style={[
               styles.previewContainer,
-              { backgroundColor: formData.backgroundColor || '#ffffff' },
+              { backgroundColor: formData[formData.activeMode].backgroundColor || '#ffffff' },
             ]}
           >
             {/* CruxBloom */}
@@ -811,11 +919,11 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
               style={[
                 styles.samplePanel,
                 {
-                  backgroundColor: formData.panelColor || '#f5f5f5',
-                  borderColor: formData.borderColor || '#cccccc',
-                  borderWidth: parseInt(formData.borderWidth ?? '1'),
-                  borderRadius: typeof formData.borderRadius === 'number' ? formData.borderRadius : parseInt(formData.borderRadius ?? '0'),
-                  borderStyle: formData.borderStyle || 'solid',
+                  backgroundColor: formData[formData.activeMode].panelColor || '#f5f5f5',
+                  borderColor: formData[formData.activeMode].borderColor || '#cccccc',
+                  borderWidth: parseInt(formData[formData.activeMode].borderWidth ?? '1'),
+                  borderRadius: typeof formData[formData.activeMode].borderRadius === 'number' ? formData[formData.activeMode].borderRadius : parseInt(formData[formData.activeMode].borderRadius ?? '0'),
+                  borderStyle: formData[formData.activeMode].borderStyle || 'solid',
                 },
               ]}
             >
@@ -823,9 +931,9 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
                 style={[
                   styles.sampleHeading,
                   {
-                    color: formData.textColor || '#000000',
+                    color: formData[formData.activeMode].textColor || '#000000',
                     fontFamily: getFontFamily(),
-                    fontSize: formData.font === 'monospace' ? 18 : 22,
+                    fontSize: formData[formData.activeMode].font === 'monospace' ? 18 : 22,
                   },
                 ]}
               >
@@ -835,10 +943,10 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
                 style={[
                   styles.sampleText,
                   {
-                    color: formData.textColor || '#000000',
+                    color: formData[formData.activeMode].textColor || '#000000',
                     fontFamily: getFontFamily(),
-                    fontSize: formData.font === 'monospace' ? 14 : 17,
-                    lineHeight: formData.font === 'monospace' ? 22 : 26,
+                    fontSize: formData[formData.activeMode].font === 'monospace' ? 14 : 17,
+                    lineHeight: formData[formData.activeMode].font === 'monospace' ? 22 : 26,
                   },
                 ]}
               >
@@ -848,10 +956,10 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
                 style={[
                   styles.sampleText,
                   {
-                    color: formData.textColor || '#000000',
+                    color: formData[formData.activeMode].textColor || '#000000',
                     fontFamily: getFontFamily(),
-                    fontSize: formData.font === 'monospace' ? 14 : 17,
-                    lineHeight: formData.font === 'monospace' ? 22 : 26,
+                    fontSize: formData[formData.activeMode].font === 'monospace' ? 14 : 17,
+                    lineHeight: formData[formData.activeMode].font === 'monospace' ? 22 : 26,
                   },
                 ]}
               >
@@ -861,10 +969,10 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
                 style={[
                   styles.sampleText,
                   {
-                    color: formData.textColor || '#000000',
+                    color: formData[formData.activeMode].textColor || '#000000',
                     fontFamily: getFontFamily(),
-                    fontSize: formData.font === 'monospace' ? 14 : 17,
-                    lineHeight: formData.font === 'monospace' ? 22 : 26,
+                    fontSize: formData[formData.activeMode].font === 'monospace' ? 14 : 17,
+                    lineHeight: formData[formData.activeMode].font === 'monospace' ? 22 : 26,
                   },
                 ]}
               >
@@ -950,6 +1058,41 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
         </View>
         </>
         )}
+      </View>
+
+      {/* Mode Switcher */}
+      <View style={styles.section}>
+        <Text style={styles.label}>Mode</Text>
+        <View style={styles.modeTabs}>
+          <TouchableOpacity
+            style={[
+              styles.modeTab,
+              formData.activeMode === 'light' && styles.modeTabActive,
+            ]}
+            onPress={() => setFormData((prev) => ({ ...prev, activeMode: 'light' }))}
+          >
+            <Text style={[
+              styles.modeTabText,
+              formData.activeMode === 'light' && styles.modeTabTextActive,
+            ]}>
+              ☀️ Light
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[
+              styles.modeTab,
+              formData.activeMode === 'dark' && styles.modeTabActive,
+            ]}
+            onPress={() => setFormData((prev) => ({ ...prev, activeMode: 'dark' }))}
+          >
+            <Text style={[
+              styles.modeTabText,
+              formData.activeMode === 'dark' && styles.modeTabTextActive,
+            ]}>
+              🌙 Dark
+            </Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* Palette Generator */}
@@ -1119,25 +1262,25 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
                 <View
                   style={[
                     styles.paletteColorBox,
-                    { backgroundColor: getBloomColor(formData.primaryColor) },
+                    { backgroundColor: getBloomColor(formData[formData.activeMode].primaryColor) },
                   ]}
                 />
                 <View
                   style={[
                     styles.paletteColorBox,
-                    { backgroundColor: getBloomColor(formData.secondaryColor) },
+                    { backgroundColor: getBloomColor(formData[formData.activeMode].secondaryColor) },
                   ]}
                 />
                 <View
                   style={[
                     styles.paletteColorBox,
-                    { backgroundColor: getBloomColor(formData.tertiaryColor) },
+                    { backgroundColor: getBloomColor(formData[formData.activeMode].tertiaryColor) },
                   ]}
                 />
                 <View
                   style={[
                     styles.paletteColorBox,
-                    { backgroundColor: getBloomColor(formData.quaternaryColor) },
+                    { backgroundColor: getBloomColor(formData[formData.activeMode].quaternaryColor) },
                   ]}
                 />
               </>
@@ -1232,22 +1375,22 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
         {/* Bloom Border Controls */}
         <HexColorInput
           label="Bloom Border Color"
-          value={formData.bloomBorderColor || ''}
-          onChange={(value) => handleFieldChange('bloomBorderColor', value)}
+          value={formData[formData.activeMode].bloomBorderColor || ''}
+          onChange={(value) => handleModeFieldChange('bloomBorderColor', value)}
           placeholder="#000000"
         />
 
         <View style={styles.field}>
           <Text style={styles.label}>
-            Bloom Border Width: {typeof formData.bloomBorderWidth === 'number' ? formData.bloomBorderWidth : parseInt(formData.bloomBorderWidth ?? '0')}
+            Bloom Border Width: {typeof formData[formData.activeMode].bloomBorderWidth === 'number' ? formData[formData.activeMode].bloomBorderWidth : parseInt(formData[formData.activeMode].bloomBorderWidth ?? '0')}
           </Text>
           <Slider
             style={styles.slider}
             minimumValue={0}
             maximumValue={75}
             step={1}
-            value={typeof formData.bloomBorderWidth === 'number' ? formData.bloomBorderWidth : parseInt(formData.bloomBorderWidth ?? '0')}
-            onValueChange={(val) => handleFieldChange('bloomBorderWidth', Math.round(val).toString())}
+            value={parseInt(formData[formData.activeMode].bloomBorderWidth?.toString() ?? '0')}
+            onValueChange={(val) => handleModeFieldChange('bloomBorderWidth', Math.round(val).toString())}
             minimumTrackTintColor="#4dd9b8"
             maximumTrackTintColor="#2a3138"
             thumbTintColor="#4dd9b8"
@@ -1260,7 +1403,7 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
             style={[
               styles.bloomTab,
               activeBloomTab === 'primary' && styles.bloomTabActive,
-              { borderBottomColor: getBloomColor(formData.primaryColor) },
+              { borderBottomColor: getBloomColor(formData[formData.activeMode].primaryColor) },
             ]}
             onPress={() => setActiveBloomTab('primary')}
           >
@@ -1272,7 +1415,7 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
             style={[
               styles.bloomTab,
               activeBloomTab === 'secondary' && styles.bloomTabActive,
-              { borderBottomColor: getBloomColor(formData.secondaryColor) },
+              { borderBottomColor: getBloomColor(formData[formData.activeMode].secondaryColor) },
             ]}
             onPress={() => setActiveBloomTab('secondary')}
           >
@@ -1284,7 +1427,7 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
             style={[
               styles.bloomTab,
               activeBloomTab === 'tertiary' && styles.bloomTabActive,
-              { borderBottomColor: getBloomColor(formData.tertiaryColor) },
+              { borderBottomColor: getBloomColor(formData[formData.activeMode].tertiaryColor) },
             ]}
             onPress={() => setActiveBloomTab('tertiary')}
           >
@@ -1296,7 +1439,7 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
             style={[
               styles.bloomTab,
               activeBloomTab === 'quaternary' && styles.bloomTabActive,
-              { borderBottomColor: getBloomColor(formData.quaternaryColor) },
+              { borderBottomColor: getBloomColor(formData[formData.activeMode].quaternaryColor) },
             ]}
             onPress={() => setActiveBloomTab('quaternary')}
           >
@@ -1311,28 +1454,28 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
           {activeBloomTab === 'primary' && (
             <ColorPicker
               label="Primary (Outermost)"
-              value={formData.primaryColor}
+              value={formData[formData.activeMode].primaryColor}
               onChange={handleColorChange('primaryColor')}
             />
           )}
           {activeBloomTab === 'secondary' && (
             <ColorPicker
               label="Secondary"
-              value={formData.secondaryColor}
+              value={formData[formData.activeMode].secondaryColor}
               onChange={handleColorChange('secondaryColor')}
             />
           )}
           {activeBloomTab === 'tertiary' && (
             <ColorPicker
               label="Tertiary"
-              value={formData.tertiaryColor}
+              value={formData[formData.activeMode].tertiaryColor}
               onChange={handleColorChange('tertiaryColor')}
             />
           )}
           {activeBloomTab === 'quaternary' && (
             <ColorPicker
               label="Quaternary (Innermost)"
-              value={formData.quaternaryColor}
+              value={formData[formData.activeMode].quaternaryColor}
               onChange={handleColorChange('quaternaryColor')}
             />
           )}
@@ -1367,22 +1510,22 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
 
         <HexColorInput
           label="Border Color"
-          value={formData.borderColor || ''}
-          onChange={(value) => handleFieldChange('borderColor', value)}
+          value={formData[formData.activeMode].borderColor || ''}
+          onChange={(value) => handleModeFieldChange('borderColor', value)}
           placeholder="#cccccc"
         />
 
         <View style={styles.field}>
           <Text style={styles.label}>
-            Border Width: {typeof formData.borderWidth === 'number' ? formData.borderWidth : parseInt(formData.borderWidth ?? '1')}px
+            Border Width: {typeof formData[formData.activeMode].borderWidth === 'number' ? formData[formData.activeMode].borderWidth : parseInt(formData[formData.activeMode].borderWidth ?? '1')}px
           </Text>
           <Slider
             style={styles.slider}
             minimumValue={0}
             maximumValue={10}
             step={1}
-            value={typeof formData.borderWidth === 'number' ? formData.borderWidth : parseInt(formData.borderWidth ?? '1')}
-            onValueChange={(val) => handleFieldChange('borderWidth', Math.round(val).toString())}
+            value={parseInt(formData[formData.activeMode].borderWidth?.toString() ?? '1')}
+            onValueChange={(val) => handleModeFieldChange('borderWidth', Math.round(val).toString())}
             minimumTrackTintColor="#4dd9b8"
             maximumTrackTintColor="#2a3138"
             thumbTintColor="#4dd9b8"
@@ -1391,15 +1534,15 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
 
         <View style={styles.field}>
           <Text style={styles.label}>
-            Border Radius: {typeof formData.borderRadius === 'number' ? formData.borderRadius : parseInt(formData.borderRadius ?? '0')}px
+            Border Radius: {typeof formData[formData.activeMode].borderRadius === 'number' ? formData[formData.activeMode].borderRadius : parseInt(formData[formData.activeMode].borderRadius ?? '0')}px
           </Text>
           <Slider
             style={styles.slider}
             minimumValue={0}
             maximumValue={50}
             step={1}
-            value={typeof formData.borderRadius === 'number' ? formData.borderRadius : parseInt(formData.borderRadius ?? '0')}
-            onValueChange={(val) => handleFieldChange('borderRadius', Math.round(val).toString())}
+            value={parseInt(formData[formData.activeMode].borderRadius?.toString() ?? '0')}
+            onValueChange={(val) => handleModeFieldChange('borderRadius', Math.round(val).toString())}
             minimumTrackTintColor="#4dd9b8"
             maximumTrackTintColor="#2a3138"
             thumbTintColor="#4dd9b8"
@@ -1412,14 +1555,14 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
             <TouchableOpacity
               style={[
                 styles.fontButton,
-                formData.borderStyle === 'solid' && styles.fontButtonActive,
+                formData[formData.activeMode].borderStyle === 'solid' && styles.fontButtonActive,
               ]}
-              onPress={() => handleFieldChange('borderStyle', 'solid')}
+              onPress={() => handleModeFieldChange('borderStyle', 'solid')}
             >
               <Text
                 style={[
                   styles.fontButtonText,
-                  formData.borderStyle === 'solid' && styles.fontButtonTextActive,
+                  formData[formData.activeMode].borderStyle === 'solid' && styles.fontButtonTextActive,
                 ]}
               >
                 Solid
@@ -1428,14 +1571,14 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
             <TouchableOpacity
               style={[
                 styles.fontButton,
-                formData.borderStyle === 'dashed' && styles.fontButtonActive,
+                formData[formData.activeMode].borderStyle === 'dashed' && styles.fontButtonActive,
               ]}
-              onPress={() => handleFieldChange('borderStyle', 'dashed')}
+              onPress={() => handleModeFieldChange('borderStyle', 'dashed')}
             >
               <Text
                 style={[
                   styles.fontButtonText,
-                  formData.borderStyle === 'dashed' && styles.fontButtonTextActive,
+                  formData[formData.activeMode].borderStyle === 'dashed' && styles.fontButtonTextActive,
                 ]}
               >
                 Dashed
@@ -1444,14 +1587,14 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
             <TouchableOpacity
               style={[
                 styles.fontButton,
-                formData.borderStyle === 'dotted' && styles.fontButtonActive,
+                formData[formData.activeMode].borderStyle === 'dotted' && styles.fontButtonActive,
               ]}
-              onPress={() => handleFieldChange('borderStyle', 'dotted')}
+              onPress={() => handleModeFieldChange('borderStyle', 'dotted')}
             >
               <Text
                 style={[
                   styles.fontButtonText,
-                  formData.borderStyle === 'dotted' && styles.fontButtonTextActive,
+                  formData[formData.activeMode].borderStyle === 'dotted' && styles.fontButtonTextActive,
                 ]}
               >
                 Dotted
@@ -1462,29 +1605,31 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
 
         <HexColorInput
           label="Background Color"
-          value={formData.backgroundColor || ''}
-          onChange={(value) => handleFieldChange('backgroundColor', value)}
+          value={formData[formData.activeMode].backgroundColor || ''}
+          onChange={(value) => handleModeFieldChange('backgroundColor', value)}
           placeholder="#ffffff"
         />
 
         <HexColorInput
           label="Panel Color"
-          value={formData.panelColor || ''}
-          onChange={(value) => handleFieldChange('panelColor', value)}
+          value={formData[formData.activeMode].panelColor || ''}
+          onChange={(value) => handleModeFieldChange('panelColor', value)}
           placeholder="#f5f5f5"
         />
 
         <HexColorInput
           label="Text Color"
-          value={formData.textColor || ''}
-          onChange={(value) => handleFieldChange('textColor', value)}
+          value={formData[formData.activeMode].textColor || ''}
+          onChange={(value) => handleModeFieldChange('textColor', value)}
           placeholder="#000000"
         />
 
         {/* Contrast Indicator */}
-        {formData.panelColor && formData.textColor && (() => {
+        {formData[formData.activeMode].panelColor && formData[formData.activeMode].textColor && (() => {
           try {
-            const ratio = chroma.contrast(formData.panelColor, formData.textColor);
+            const panelCol = formData[formData.activeMode].panelColor!;
+            const textCol = formData[formData.activeMode].textColor!;
+            const ratio = chroma.contrast(panelCol, textCol);
             const passAA = ratio >= 4.5;
             const passAAA = ratio >= 7;
             const closeAA = ratio >= 3.5 && ratio < 4.5; // Close to AA
@@ -1541,14 +1686,14 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
             <TouchableOpacity
               style={[
                 styles.fontButton,
-                formData.font === 'sans-serif' && styles.fontButtonActive,
+                formData[formData.activeMode].font === 'sans-serif' && styles.fontButtonActive,
               ]}
-              onPress={() => handleFieldChange('font', 'sans-serif')}
+              onPress={() => handleModeFieldChange('font', 'sans-serif')}
             >
               <Text
                 style={[
                   styles.fontButtonText,
-                  formData.font === 'sans-serif' && styles.fontButtonTextActive,
+                  formData[formData.activeMode].font === 'sans-serif' && styles.fontButtonTextActive,
                 ]}
               >
                 Sans Serif
@@ -1557,14 +1702,14 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
             <TouchableOpacity
               style={[
                 styles.fontButton,
-                formData.font === 'serif' && styles.fontButtonActive,
+                formData[formData.activeMode].font === 'serif' && styles.fontButtonActive,
               ]}
-              onPress={() => handleFieldChange('font', 'serif')}
+              onPress={() => handleModeFieldChange('font', 'serif')}
             >
               <Text
                 style={[
                   styles.fontButtonText,
-                  formData.font === 'serif' && styles.fontButtonTextActive,
+                  formData[formData.activeMode].font === 'serif' && styles.fontButtonTextActive,
                 ]}
               >
                 Serif
@@ -1573,31 +1718,20 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
             <TouchableOpacity
               style={[
                 styles.fontButton,
-                formData.font === 'monospace' && styles.fontButtonActive,
+                formData[formData.activeMode].font === 'monospace' && styles.fontButtonActive,
               ]}
-              onPress={() => handleFieldChange('font', 'monospace')}
+              onPress={() => handleModeFieldChange('font', 'monospace')}
             >
               <Text
                 style={[
                   styles.fontButtonText,
-                  formData.font === 'monospace' && styles.fontButtonTextActive,
+                  formData[formData.activeMode].font === 'monospace' && styles.fontButtonTextActive,
                 ]}
               >
                 Monospace
               </Text>
             </TouchableOpacity>
           </View>
-        </View>
-
-        <View style={styles.field}>
-          <Text style={styles.label}>Mode</Text>
-          <TextInput
-            style={styles.input}
-            value={formData.mode || ''}
-            onChangeText={(value) => handleFieldChange('mode', value)}
-            placeholder="e.g., light, dark, auto"
-            placeholderTextColor="#666"
-          />
         </View>
         </>
         )}
@@ -2010,6 +2144,33 @@ const styles = StyleSheet.create({
   },
   contrastBadgeTextFail: {
     color: '#e74c3c',
+  },
+  modeTabs: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 16,
+  },
+  modeTab: {
+    flex: 1,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#2a3138',
+    backgroundColor: '#1a1f24',
+    alignItems: 'center',
+  },
+  modeTabActive: {
+    backgroundColor: '#4dd9b8',
+    borderColor: '#4dd9b8',
+  },
+  modeTabText: {
+    fontSize: 14,
+    color: '#8b9298',
+    fontWeight: '600',
+  },
+  modeTabTextActive: {
+    color: '#0f1214',
   },
 });
 
