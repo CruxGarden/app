@@ -25,6 +25,25 @@ export interface ThemeBuilderProps {
   onCancel: () => void;
 }
 
+// ============================================================================
+// DEVELOPMENT CONFIGURATION - Background/Panel Constraints
+// ============================================================================
+// Toggle this to experiment with unconstrained vs constrained palette generation
+const CONSTRAIN_BACKGROUND_PANEL = false;
+
+// Constrained ranges (only used if CONSTRAIN_BACKGROUND_PANEL = true)
+const DARK_BG_RANGE = { min: 0.08, max: 0.16 };    // 8-16% lightness
+const LIGHT_BG_RANGE = { min: 0.92, max: 0.98 };   // 92-98% lightness
+const DARK_PANEL_RANGE = { min: 0.12, max: 0.20 }; // 12-20% lightness
+const LIGHT_PANEL_RANGE = { min: 0.95, max: 0.99 }; // 95-99% lightness
+
+// Full randomization mode - uses actual slider values without reductions
+const FULL_RANDOMIZATION = true;
+
+// NOTE: UI colors (background, panel, border) are always derived from one of
+// the 4 bloom palette colors for better visual cohesion
+// ============================================================================
+
 export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
   initialData,
   onSave,
@@ -50,7 +69,13 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
   const [baseHue, setBaseHue] = useState(180);
   const [baseSaturation, setBaseSaturation] = useState(65);
   const [baseLightness, setBaseLightness] = useState(50);
-  const [selectedHarmony, setSelectedHarmony] = useState<'monochromatic' | 'complementary' | 'analogous' | 'triadic' | 'split-complementary'>('monochromatic');
+  const [selectedHarmony, setSelectedHarmony] = useState<'monochromatic' | 'complementary' | 'analogous' | 'triadic' | 'split-complementary' | 'random'>('monochromatic');
+
+  // Preview palette colors (updates as sliders change, but doesn't apply to theme until button clicked)
+  const [previewPalette, setPreviewPalette] = useState<string[]>([]);
+
+  // Random seed to force regeneration when clicking Random harmony multiple times
+  const [randomSeed, setRandomSeed] = useState(0);
 
   const toggleSection = (section: 'details' | 'palette' | 'bloom' | 'style') => {
     setExpandedSections((prev) => ({ ...prev, [section]: !prev[section] }));
@@ -64,6 +89,12 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // Only run once on mount
+
+  // Update preview palette when HSL or harmony changes
+  useEffect(() => {
+    const bloomColors = generatePaletteColors(baseHue, baseSaturation, baseLightness, selectedHarmony);
+    setPreviewPalette(bloomColors);
+  }, [baseHue, baseSaturation, baseLightness, selectedHarmony, randomSeed]);
 
   const handleFieldChange = <K extends keyof ThemeFormData>(
     field: K,
@@ -236,24 +267,50 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
     }
   };
 
-  const generatePaletteColors = (hue: number, saturation: number, lightness: number, harmonyType: 'monochromatic' | 'complementary' | 'analogous' | 'triadic' | 'split-complementary'): string[] => {
+  /**
+   * Generate background and panel colors based on constraint settings
+   */
+  const generateBackgroundAndPanel = (isDark: boolean, uiHue: number, uiSat: number): { backgroundColor: string; panelColor: string } => {
+    if (!CONSTRAIN_BACKGROUND_PANEL) {
+      // Unconstrained - use FULL lightness range (0-100%)
+      const backgroundColor = chroma.hsl(uiHue, uiSat, Math.random()).hex(); // Full 0-100%
+
+      // 40% chance panel = background
+      const panelColor = Math.random() < 0.4
+        ? backgroundColor
+        : chroma.hsl(uiHue, uiSat, Math.random()).hex(); // Full 0-100%
+
+      return { backgroundColor, panelColor };
+    }
+
+    // Constrained - use specified ranges
+    const backgroundColor = isDark
+      ? chroma.hsl(uiHue, uiSat, DARK_BG_RANGE.min + Math.random() * (DARK_BG_RANGE.max - DARK_BG_RANGE.min)).hex()
+      : chroma.hsl(uiHue, uiSat, LIGHT_BG_RANGE.min + Math.random() * (LIGHT_BG_RANGE.max - LIGHT_BG_RANGE.min)).hex();
+
+    // 40% chance panel = background, otherwise use panel range
+    const panelColor = Math.random() < 0.4
+      ? backgroundColor
+      : isDark
+        ? chroma.hsl(uiHue, uiSat === 0 ? 0 : Math.min(1, uiSat + 0.05), DARK_PANEL_RANGE.min + Math.random() * (DARK_PANEL_RANGE.max - DARK_PANEL_RANGE.min)).hex()
+        : chroma.hsl(uiHue, uiSat === 0 ? 0 : Math.min(1, uiSat + 0.05), LIGHT_PANEL_RANGE.min + Math.random() * (LIGHT_PANEL_RANGE.max - LIGHT_PANEL_RANGE.min)).hex();
+
+    return { backgroundColor, panelColor };
+  };
+
+  const generatePaletteColors = (hue: number, saturation: number, lightness: number, harmonyType: 'monochromatic' | 'complementary' | 'analogous' | 'triadic' | 'split-complementary' | 'random'): string[] => {
     let bloomColors: string[] = [];
 
-    // Convert saturation from 0-100 to 0-1, with slight variation
+    // Convert saturation from 0-100 to 0-1
     const baseSat = saturation / 100;
     const baseLight = lightness / 100;
 
-    // Make variation proportional to base saturation (±10% of base value)
-    const randomSatVariation = () => {
-      if (baseSat === 0) return 0;
-      const variation = baseSat * (Math.random() * 0.2 - 0.1);
-      return Math.max(0, Math.min(1, baseSat + variation));
-    };
+    // Use base saturation without random variation
+    const useSat = () => baseSat;
 
-    // Generate lightness values around the base with variation
-    const randomLight = (offset: number) => {
-      const variation = (Math.random() * 0.2 - 0.1); // ±0.1 variation
-      return Math.max(0.1, Math.min(0.9, baseLight + offset + variation));
+    // Generate lightness values around the base without random variation
+    const useLight = (offset: number) => {
+      return Math.max(0.1, Math.min(0.9, baseLight + offset));
     };
 
     switch (harmonyType) {
@@ -261,10 +318,10 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
         // Single hue with varying lightness
         bloomColors = chroma
           .scale([
-            chroma.hsl(hue, randomSatVariation(), randomLight(-0.2)),
-            chroma.hsl(hue, randomSatVariation(), randomLight(-0.1)),
-            chroma.hsl(hue, randomSatVariation(), randomLight(0.1)),
-            chroma.hsl(hue, randomSatVariation(), randomLight(0.2)),
+            chroma.hsl(hue, useSat(), useLight(-0.2)),
+            chroma.hsl(hue, useSat(), useLight(-0.1)),
+            chroma.hsl(hue, useSat(), useLight(0.1)),
+            chroma.hsl(hue, useSat(), useLight(0.2)),
           ])
           .mode('lch')
           .colors(4);
@@ -274,20 +331,20 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
         // Base hue and its complement (180° opposite)
         const complement = (hue + 180) % 360;
         bloomColors = [
-          chroma.hsl(hue, randomSatVariation(), randomLight(-0.15)).hex(),
-          chroma.hsl(hue, randomSatVariation(), randomLight(-0.05)).hex(),
-          chroma.hsl(complement, randomSatVariation(), randomLight(0.05)).hex(),
-          chroma.hsl(complement, randomSatVariation(), randomLight(0.15)).hex(),
+          chroma.hsl(hue, useSat(), useLight(-0.15)).hex(),
+          chroma.hsl(hue, useSat(), useLight(-0.05)).hex(),
+          chroma.hsl(complement, useSat(), useLight(0.05)).hex(),
+          chroma.hsl(complement, useSat(), useLight(0.15)).hex(),
         ];
         break;
 
       case 'analogous':
         // Base hue with adjacent hues (±30°)
         bloomColors = [
-          chroma.hsl(hue, randomSatVariation(), randomLight(-0.15)).hex(),
-          chroma.hsl((hue + 30) % 360, randomSatVariation(), randomLight(-0.05)).hex(),
-          chroma.hsl((hue - 30 + 360) % 360, randomSatVariation(), randomLight(0.05)).hex(),
-          chroma.hsl(hue, randomSatVariation(), randomLight(0.15)).hex(),
+          chroma.hsl(hue, useSat(), useLight(-0.15)).hex(),
+          chroma.hsl((hue + 30) % 360, useSat(), useLight(-0.05)).hex(),
+          chroma.hsl((hue - 30 + 360) % 360, useSat(), useLight(0.05)).hex(),
+          chroma.hsl(hue, useSat(), useLight(0.15)).hex(),
         ];
         break;
 
@@ -296,10 +353,10 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
         const triad1 = (hue + 120) % 360;
         const triad2 = (hue + 240) % 360;
         bloomColors = [
-          chroma.hsl(hue, randomSatVariation(), randomLight(-0.1)).hex(),
-          chroma.hsl(triad1, randomSatVariation(), randomLight(0)).hex(),
-          chroma.hsl(triad2, randomSatVariation(), randomLight(0.05)).hex(),
-          chroma.hsl(hue, randomSatVariation(), randomLight(0.15)).hex(),
+          chroma.hsl(hue, useSat(), useLight(-0.1)).hex(),
+          chroma.hsl(triad1, useSat(), useLight(0)).hex(),
+          chroma.hsl(triad2, useSat(), useLight(0.05)).hex(),
+          chroma.hsl(hue, useSat(), useLight(0.15)).hex(),
         ];
         break;
 
@@ -308,126 +365,142 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
         const splitComp1 = (hue + 150) % 360;
         const splitComp2 = (hue + 210) % 360;
         bloomColors = [
-          chroma.hsl(hue, randomSatVariation(), randomLight(-0.15)).hex(),
-          chroma.hsl(hue, randomSatVariation(), randomLight(-0.05)).hex(),
-          chroma.hsl(splitComp1, randomSatVariation(), randomLight(0.05)).hex(),
-          chroma.hsl(splitComp2, randomSatVariation(), randomLight(0.15)).hex(),
+          chroma.hsl(hue, useSat(), useLight(-0.15)).hex(),
+          chroma.hsl(hue, useSat(), useLight(-0.05)).hex(),
+          chroma.hsl(splitComp1, useSat(), useLight(0.05)).hex(),
+          chroma.hsl(splitComp2, useSat(), useLight(0.15)).hex(),
         ];
+        break;
+
+      case 'random':
+        // Utterly random - generate 4 completely independent colors
+        // Use timestamp + index to ensure different seeds
+        const now = Date.now();
+        bloomColors = Array.from({ length: 4 }, (_, i) => {
+          // Create pseudo-random values using different offsets
+          const seed = (now + i * 1234567) % 360;
+          const hueRandom = (seed * 9301 + 49297) % 360;
+          const satRandom = ((seed * 7919 + 11317) % 80) / 100 + 0.2;
+          const lightRandom = ((seed * 5953 + 23459) % 70) / 100 + 0.15;
+
+          return chroma.hsl(hueRandom, satRandom, lightRandom).hex();
+        });
         break;
     }
 
     return bloomColors;
   };
 
-  const handleGeneratePalette = () => {
-    const bloomColors = generatePaletteColors(baseHue, baseSaturation, baseLightness, selectedHarmony);
+  const handleGenerateUIColors = () => {
+    // Use the preview palette colors (what the user sees) instead of regenerating
+    const bloomColors = previewPalette.length > 0
+      ? previewPalette
+      : generatePaletteColors(baseHue, baseSaturation, baseLightness, selectedHarmony);
 
-    // Shuffle bloom colors for variety
+    // Shuffle bloom colors for variety when applying (but keep preview in harmony order)
     const shuffled = [...bloomColors].sort(() => Math.random() - 0.5);
+
+    // Pick a random bloom color to derive UI colors from
+    const selectedBloomColor = shuffled[Math.floor(Math.random() * 4)];
+
+    // Extract HSL from the selected bloom color
+    const bloomChroma = chroma(selectedBloomColor);
+    const uiHue = bloomChroma.get('hsl.h');
+    const uiSat = bloomChroma.get('hsl.s');
 
     // Generate UI colors with more variation
     const isDark = Math.random() > 0.5;
 
-    // Vary the UI hue slightly from base hue for interest
-    const uiHue = (baseHue + (Math.random() * 60 - 30)) % 360;
+    const { backgroundColor, panelColor } = generateBackgroundAndPanel(isDark, uiHue, uiSat);
 
-    // UI saturation based on base saturation (proportional, 5-20% of base)
-    const baseSat = baseSaturation / 100;
-    const uiSat = baseSat === 0 ? 0 : Math.max(0.05, baseSat * (0.1 + Math.random() * 0.2)); // 10-30% of base
-
-    const backgroundColor = isDark
-      ? chroma.hsl(uiHue, uiSat, 0.08 + Math.random() * 0.08).hex() // 8-16%
-      : chroma.hsl(uiHue, uiSat, 0.92 + Math.random() * 0.06).hex(); // 92-98%
-
-    // 20% chance panel = background, otherwise slightly different
-    const panelColor = Math.random() < 0.2
-      ? backgroundColor
-      : isDark
-        ? chroma.hsl(uiHue, uiSat === 0 ? 0 : Math.min(1, uiSat + 0.05), 0.12 + Math.random() * 0.08).hex() // 12-20%
-        : chroma.hsl(uiHue, uiSat === 0 ? 0 : Math.min(1, uiSat + 0.05), 0.95 + Math.random() * 0.04).hex(); // 95-99%
-
-    // Generate readable text color based on panel color
-    const textColor = getReadableTextColor(panelColor, 4.5);
+    // Generate readable text color based on panel color (aim for AAA: 7.0, fallback to AA: 4.5)
+    let textColor = getReadableTextColor(panelColor, 7.0);
+    // Verify contrast - if AAA fails, try AA
+    const contrast = chroma.contrast(panelColor, textColor);
+    if (contrast < 4.5) {
+      textColor = getReadableTextColor(panelColor, 4.5);
+    }
 
     const borderColor = isDark
       ? chroma.hsl(uiHue, uiSat === 0 ? 0 : Math.min(1, uiSat + 0.1), 0.2 + Math.random() * 0.15).hex() // 20-35%
       : chroma.hsl(uiHue, uiSat === 0 ? 0 : Math.min(1, uiSat + 0.1), 0.75 + Math.random() * 0.15).hex(); // 75-90%
 
-    setFormData({
-      ...formData,
-      primaryColor: { type: 'solid', value: shuffled[0] },
-      secondaryColor: { type: 'solid', value: shuffled[1] },
-      tertiaryColor: { type: 'solid', value: shuffled[2] },
-      quaternaryColor: { type: 'solid', value: shuffled[3] },
+    // Generate bloom border color
+    let bloomBorderColor: string;
+    if (Math.random() < 0.25) {
+      bloomBorderColor = '#000000';
+    } else {
+      const borderBaseColor = chroma(shuffled[Math.floor(Math.random() * 4)]);
+      bloomBorderColor = borderBaseColor.darken(0.5 + Math.random() * 0.5).hex();
+    }
+
+    // Helper to preserve gradient/solid type when updating color
+    const updateColorValue = (currentColor: ColorValue, newColor: string): ColorValue => {
+      if (currentColor.type === 'gradient') {
+        // Preserve gradient structure, just update the colors
+        const baseChroma = chroma(newColor);
+        const color1 = baseChroma.brighten(0.3 + Math.random() * 0.3).hex();
+        const color2 = baseChroma.darken(0.3 + Math.random() * 0.3).hex();
+        return {
+          type: 'gradient',
+          value: {
+            ...currentColor.value,
+            stops: [
+              { color: color1, offset: '0%' },
+              { color: color2, offset: '100%' },
+            ],
+          },
+        };
+      }
+      return { type: 'solid', value: newColor };
+    };
+
+    setFormData((prev) => ({
+      ...prev,
+      primaryColor: updateColorValue(prev.primaryColor, shuffled[0]),
+      secondaryColor: updateColorValue(prev.secondaryColor, shuffled[1]),
+      tertiaryColor: updateColorValue(prev.tertiaryColor, shuffled[2]),
+      quaternaryColor: updateColorValue(prev.quaternaryColor, shuffled[3]),
+      bloomBorderColor,
       backgroundColor,
       panelColor,
       textColor,
       borderColor,
-    });
+    }));
   };
 
   const handleRandomize = () => {
-    // Generate random base hue
-    const randomHue = Math.random() * 360;
-    setBaseHue(randomHue);
+    // 15% chance of black and white palette
+    const isBlackAndWhite = Math.random() < 0.15;
 
-    // Generate random saturation (40-90%)
-    const randomSat = 40 + Math.random() * 50;
-    setBaseSaturation(randomSat);
+    if (isBlackAndWhite) {
+      // Black and white palette - zero saturation
+      setBaseHue(0);
+      setBaseSaturation(0);
+      setBaseLightness(50);
+      setSelectedHarmony('monochromatic');
+    } else {
+      // Colorful palette
+      // Generate random base hue
+      const randomHue = Math.random() * 360;
+      setBaseHue(randomHue);
 
-    // Generate random lightness (30-70%)
-    const randomLight = 30 + Math.random() * 40;
-    setBaseLightness(randomLight);
+      // Generate random saturation (40-90%)
+      const randomSat = 40 + Math.random() * 50;
+      setBaseSaturation(randomSat);
 
-    // Randomly select a color harmony type
-    const harmonyTypes: Array<'monochromatic' | 'complementary' | 'analogous' | 'triadic' | 'split-complementary'> = ['monochromatic', 'complementary', 'analogous', 'triadic', 'split-complementary'];
-    const randomHarmony = harmonyTypes[Math.floor(Math.random() * harmonyTypes.length)];
-    setSelectedHarmony(randomHarmony);
+      // Generate random lightness (30-70%)
+      const randomLight = 30 + Math.random() * 40;
+      setBaseLightness(randomLight);
 
-    const bloomColors = generatePaletteColors(randomHue, randomSat, randomLight, randomHarmony);
+      // Randomly select a color harmony type
+      const harmonyTypes: Array<'monochromatic' | 'complementary' | 'analogous' | 'triadic' | 'split-complementary' | 'random'> = ['monochromatic', 'complementary', 'analogous', 'triadic', 'split-complementary', 'random'];
+      const randomHarmony = harmonyTypes[Math.floor(Math.random() * harmonyTypes.length)];
+      setSelectedHarmony(randomHarmony);
+    }
 
-    // Shuffle bloom colors for variety
-    const shuffled = [...bloomColors].sort(() => Math.random() - 0.5);
-
-    // Generate UI colors with more variation
-    const isDark = Math.random() > 0.5;
-
-    // Vary the UI hue slightly from base hue for interest
-    const uiHue = (randomHue + (Math.random() * 60 - 30)) % 360;
-
-    // UI saturation based on random saturation (proportional, 10-30% of random)
-    const baseSat = randomSat / 100;
-    const uiSat = baseSat === 0 ? 0 : Math.max(0.05, baseSat * (0.1 + Math.random() * 0.2)); // 10-30% of random
-
-    const backgroundColor = isDark
-      ? chroma.hsl(uiHue, uiSat, 0.08 + Math.random() * 0.08).hex() // 8-16%
-      : chroma.hsl(uiHue, uiSat, 0.92 + Math.random() * 0.06).hex(); // 92-98%
-
-    // 20% chance panel = background, otherwise slightly different
-    const panelColor = Math.random() < 0.2
-      ? backgroundColor
-      : isDark
-        ? chroma.hsl(uiHue, uiSat === 0 ? 0 : Math.min(1, uiSat + 0.05), 0.12 + Math.random() * 0.08).hex() // 12-20%
-        : chroma.hsl(uiHue, uiSat === 0 ? 0 : Math.min(1, uiSat + 0.05), 0.95 + Math.random() * 0.04).hex(); // 95-99%
-
-    // Generate readable text color based on panel color
-    const textColor = getReadableTextColor(panelColor, 4.5);
-
-    const borderColor = isDark
-      ? chroma.hsl(uiHue, uiSat === 0 ? 0 : Math.min(1, uiSat + 0.1), 0.2 + Math.random() * 0.15).hex() // 20-35%
-      : chroma.hsl(uiHue, uiSat === 0 ? 0 : Math.min(1, uiSat + 0.1), 0.75 + Math.random() * 0.15).hex(); // 75-90%
-
-    setFormData({
-      ...formData,
-      primaryColor: { type: 'solid', value: shuffled[0] },
-      secondaryColor: { type: 'solid', value: shuffled[1] },
-      tertiaryColor: { type: 'solid', value: shuffled[2] },
-      quaternaryColor: { type: 'solid', value: shuffled[3] },
-      backgroundColor,
-      panelColor,
-      textColor,
-      borderColor,
-    });
+    // Note: Preview palette will auto-update via useEffect
+    // This randomize button will update sliders but not apply the palette
   };
 
   const randomizeBloom = () => {
@@ -520,30 +593,34 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
   };
 
   const randomizeStyle = () => {
+    // Pick a random bloom color to derive UI colors from
+    const bloomColors = [
+      getBloomColor(formData.primaryColor),
+      getBloomColor(formData.secondaryColor),
+      getBloomColor(formData.tertiaryColor),
+      getBloomColor(formData.quaternaryColor),
+    ];
+    const selectedBloomColor = bloomColors[Math.floor(Math.random() * 4)];
+
+    // Extract HSL from the selected bloom color
+    const bloomChroma = chroma(selectedBloomColor);
+    const uiHue = bloomChroma.get('hsl.h');
+    const uiSat = bloomChroma.get('hsl.s');
+
     const isDark = Math.random() > 0.5;
-    const randomHue = Math.floor(Math.random() * 360);
 
-    // UI saturation based on base saturation (proportional, 10-30% of base)
-    const baseSat = baseSaturation / 100;
-    const uiSat = baseSat === 0 ? 0 : Math.max(0.05, baseSat * (0.1 + Math.random() * 0.2));
+    const { backgroundColor, panelColor } = generateBackgroundAndPanel(isDark, uiHue, uiSat);
 
-    const backgroundColor = isDark
-      ? chroma.hsl(randomHue, uiSat, 0.08 + Math.random() * 0.08).hex()
-      : chroma.hsl(randomHue, uiSat, 0.92 + Math.random() * 0.06).hex();
-
-    // 20% chance panel = background, otherwise slightly different
-    const panelColor = Math.random() < 0.2
-      ? backgroundColor
-      : isDark
-        ? chroma.hsl(randomHue, uiSat === 0 ? 0 : Math.min(1, uiSat + 0.05), 0.12 + Math.random() * 0.08).hex()
-        : chroma.hsl(randomHue, uiSat === 0 ? 0 : Math.min(1, uiSat + 0.05), 0.88 + Math.random() * 0.06).hex();
-
-    // Generate readable text color based on panel color
-    const textColor = getReadableTextColor(panelColor, 4.5);
+    // Generate readable text color based on panel color (aim for AAA: 7.0, fallback to AA: 4.5)
+    let textColor = getReadableTextColor(panelColor, 7.0);
+    const contrast = chroma.contrast(panelColor, textColor);
+    if (contrast < 4.5) {
+      textColor = getReadableTextColor(panelColor, 4.5);
+    }
 
     const borderColor = isDark
-      ? chroma.hsl(randomHue, uiSat === 0 ? 0 : Math.min(1, uiSat + 0.1), 0.16 + Math.random() * 0.08).hex()
-      : chroma.hsl(randomHue, uiSat === 0 ? 0 : Math.min(1, uiSat + 0.1), 0.76 + Math.random() * 0.08).hex();
+      ? chroma.hsl(uiHue, uiSat === 0 ? 0 : Math.min(1, uiSat + 0.1), 0.16 + Math.random() * 0.08).hex()
+      : chroma.hsl(uiHue, uiSat === 0 ? 0 : Math.min(1, uiSat + 0.1), 0.76 + Math.random() * 0.08).hex();
 
     const fonts = ['sans-serif', 'serif', 'monospace'];
     const randomFont = fonts[Math.floor(Math.random() * fonts.length)];
@@ -572,97 +649,62 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
     let randomHue: number;
     let randomSat: number;
     let randomLight: number;
-    let randomHarmony: 'monochromatic' | 'complementary' | 'analogous' | 'triadic' | 'split-complementary';
-    let shuffled: string[];
+    let randomHarmony: 'monochromatic' | 'complementary' | 'analogous' | 'triadic' | 'split-complementary' | 'random';
 
     if (isBlackAndWhite) {
-      // Black and white theme - no saturation
+      // Black and white theme - zero saturation
       randomHue = 0;
       randomSat = 0;
       randomLight = 50;
       randomHarmony = 'monochromatic';
-
-      setBaseHue(randomHue);
-      setBaseSaturation(randomSat);
-      setBaseLightness(randomLight);
-      setSelectedHarmony(randomHarmony);
-
-      // Generate grayscale bloom colors
-      shuffled = [
-        chroma.hsl(0, 0, 0.15 + Math.random() * 0.1).hex(), // Dark gray
-        chroma.hsl(0, 0, 0.35 + Math.random() * 0.1).hex(), // Medium-dark gray
-        chroma.hsl(0, 0, 0.55 + Math.random() * 0.1).hex(), // Medium-light gray
-        chroma.hsl(0, 0, 0.75 + Math.random() * 0.1).hex(), // Light gray
-      ].sort(() => Math.random() - 0.5);
     } else {
       // Colorful theme
       randomHue = Math.random() * 360;
       randomSat = 40 + Math.random() * 50;
       randomLight = 30 + Math.random() * 40;
 
-      setBaseHue(randomHue);
-      setBaseSaturation(randomSat);
-      setBaseLightness(randomLight);
-
-      const harmonyTypes: Array<'monochromatic' | 'complementary' | 'analogous' | 'triadic' | 'split-complementary'> = ['monochromatic', 'complementary', 'analogous', 'triadic', 'split-complementary'];
+      const harmonyTypes: Array<'monochromatic' | 'complementary' | 'analogous' | 'triadic' | 'split-complementary' | 'random'> = ['monochromatic', 'complementary', 'analogous', 'triadic', 'split-complementary', 'random'];
       randomHarmony = harmonyTypes[Math.floor(Math.random() * harmonyTypes.length)];
-      setSelectedHarmony(randomHarmony);
-
-      const bloomColors = generatePaletteColors(randomHue, randomSat, randomLight, randomHarmony);
-      shuffled = [...bloomColors].sort(() => Math.random() - 0.5);
     }
+
+    setBaseHue(randomHue);
+    setBaseSaturation(randomSat);
+    setBaseLightness(randomLight);
+    setSelectedHarmony(randomHarmony);
+
+    const bloomColors = generatePaletteColors(randomHue, randomSat, randomLight, randomHarmony);
+    const shuffled = [...bloomColors].sort(() => Math.random() - 0.5);
+
+    // Update preview palette (keep in harmony order, not shuffled)
+    setPreviewPalette(bloomColors);
+
+    // Pick a random shuffled bloom color to derive UI colors from
+    const selectedBloomColor = shuffled[Math.floor(Math.random() * 4)];
+    const bloomChroma = chroma(selectedBloomColor);
+    const uiHue = bloomChroma.get('hsl.h');
+    const uiSat = bloomChroma.get('hsl.s');
 
     // Generate UI colors
     const isDark = Math.random() > 0.5;
 
-    let backgroundColor: string;
-    let panelColor: string;
-    let borderColor: string;
+    const bgPanel = generateBackgroundAndPanel(isDark, uiHue, uiSat);
+    const backgroundColor = bgPanel.backgroundColor;
+    const panelColor = bgPanel.panelColor;
 
-    if (isBlackAndWhite) {
-      // Black and white UI
-      backgroundColor = isDark
-        ? chroma.hsl(0, 0, 0.08 + Math.random() * 0.08).hex()
-        : chroma.hsl(0, 0, 0.92 + Math.random() * 0.06).hex();
+    const borderColor = isDark
+      ? chroma.hsl(uiHue, uiSat === 0 ? 0 : Math.min(1, uiSat + 0.1), 0.2 + Math.random() * 0.15).hex()
+      : chroma.hsl(uiHue, uiSat === 0 ? 0 : Math.min(1, uiSat + 0.1), 0.75 + Math.random() * 0.15).hex();
 
-      panelColor = Math.random() < 0.2
-        ? backgroundColor
-        : isDark
-          ? chroma.hsl(0, 0, 0.12 + Math.random() * 0.08).hex()
-          : chroma.hsl(0, 0, 0.95 + Math.random() * 0.04).hex();
-
-      borderColor = isDark
-        ? chroma.hsl(0, 0, 0.2 + Math.random() * 0.15).hex()
-        : chroma.hsl(0, 0, 0.75 + Math.random() * 0.15).hex();
-    } else {
-      // Colorful UI
-      const uiHue = (randomHue + (Math.random() * 60 - 30)) % 360;
-      const baseSat = randomSat / 100;
-      const uiSat = baseSat === 0 ? 0 : Math.max(0.05, baseSat * (0.1 + Math.random() * 0.2));
-
-      backgroundColor = isDark
-        ? chroma.hsl(uiHue, uiSat, 0.08 + Math.random() * 0.08).hex()
-        : chroma.hsl(uiHue, uiSat, 0.92 + Math.random() * 0.06).hex();
-
-      panelColor = Math.random() < 0.2
-        ? backgroundColor
-        : isDark
-          ? chroma.hsl(uiHue, uiSat === 0 ? 0 : Math.min(1, uiSat + 0.05), 0.12 + Math.random() * 0.08).hex()
-          : chroma.hsl(uiHue, uiSat === 0 ? 0 : Math.min(1, uiSat + 0.05), 0.95 + Math.random() * 0.04).hex();
-
-      borderColor = isDark
-        ? chroma.hsl(uiHue, uiSat === 0 ? 0 : Math.min(1, uiSat + 0.1), 0.2 + Math.random() * 0.15).hex()
-        : chroma.hsl(uiHue, uiSat === 0 ? 0 : Math.min(1, uiSat + 0.1), 0.75 + Math.random() * 0.15).hex();
+    // Generate readable text color based on panel color (aim for AAA: 7.0, fallback to AA: 4.5)
+    let textColor = getReadableTextColor(panelColor, 7.0);
+    const textContrast = chroma.contrast(panelColor, textColor);
+    if (textContrast < 4.5) {
+      textColor = getReadableTextColor(panelColor, 4.5);
     }
-
-    const textColor = getReadableTextColor(panelColor, 4.5);
 
     // Generate bloom border
     let bloomBorderColor: string;
-    if (isBlackAndWhite) {
-      // For B&W themes, use black or dark gray for border
-      bloomBorderColor = Math.random() < 0.7 ? '#000000' : chroma.hsl(0, 0, 0.15 + Math.random() * 0.1).hex();
-    } else if (Math.random() < 0.25) {
+    if (Math.random() < 0.25) {
       bloomBorderColor = '#000000';
     } else {
       const borderBaseColor = chroma(shuffled[Math.floor(Math.random() * 4)]);
@@ -783,6 +825,7 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
                   {
                     color: formData.textColor || '#000000',
                     fontFamily: getFontFamily(),
+                    fontSize: formData.font === 'monospace' ? 18 : 22,
                   },
                 ]}
               >
@@ -794,6 +837,8 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
                   {
                     color: formData.textColor || '#000000',
                     fontFamily: getFontFamily(),
+                    fontSize: formData.font === 'monospace' ? 14 : 17,
+                    lineHeight: formData.font === 'monospace' ? 22 : 26,
                   },
                 ]}
               >
@@ -805,6 +850,8 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
                   {
                     color: formData.textColor || '#000000',
                     fontFamily: getFontFamily(),
+                    fontSize: formData.font === 'monospace' ? 14 : 17,
+                    lineHeight: formData.font === 'monospace' ? 22 : 26,
                   },
                 ]}
               >
@@ -816,6 +863,8 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
                   {
                     color: formData.textColor || '#000000',
                     fontFamily: getFontFamily(),
+                    fontSize: formData.font === 'monospace' ? 14 : 17,
+                    lineHeight: formData.font === 'monospace' ? 22 : 26,
                   },
                 ]}
               >
@@ -1011,16 +1060,90 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
                 Split
               </Text>
             </TouchableOpacity>
+            <TouchableOpacity
+              style={[
+                styles.harmonyButton,
+                selectedHarmony === 'random' && styles.harmonyButtonActive,
+              ]}
+              onPress={() => {
+                setSelectedHarmony('random');
+                // Increment seed to force regeneration even if already selected
+                setRandomSeed(prev => prev + 1);
+              }}
+            >
+              <Text
+                style={[
+                  styles.harmonyButtonText,
+                  selectedHarmony === 'random' && styles.harmonyButtonTextActive,
+                ]}
+              >
+                Random
+              </Text>
+            </TouchableOpacity>
           </View>
         </View>
 
-        {/* Color Preview */}
-        <View
-          style={[
-            styles.palettePreview,
-            { backgroundColor: chroma.hsl(baseHue, baseSaturation / 100, baseLightness / 100).hex() },
-          ]}
-        />
+        {/* Palette Preview */}
+        <View style={styles.activePaletteContainer}>
+          <Text style={styles.activePaletteLabel}>Palette Preview</Text>
+          <View style={styles.activePaletteRow}>
+            {previewPalette.length > 0 ? (
+              <>
+                <View
+                  style={[
+                    styles.paletteColorBox,
+                    { backgroundColor: previewPalette[0] },
+                  ]}
+                />
+                <View
+                  style={[
+                    styles.paletteColorBox,
+                    { backgroundColor: previewPalette[1] },
+                  ]}
+                />
+                <View
+                  style={[
+                    styles.paletteColorBox,
+                    { backgroundColor: previewPalette[2] },
+                  ]}
+                />
+                <View
+                  style={[
+                    styles.paletteColorBox,
+                    { backgroundColor: previewPalette[3] },
+                  ]}
+                />
+              </>
+            ) : (
+              <>
+                <View
+                  style={[
+                    styles.paletteColorBox,
+                    { backgroundColor: getBloomColor(formData.primaryColor) },
+                  ]}
+                />
+                <View
+                  style={[
+                    styles.paletteColorBox,
+                    { backgroundColor: getBloomColor(formData.secondaryColor) },
+                  ]}
+                />
+                <View
+                  style={[
+                    styles.paletteColorBox,
+                    { backgroundColor: getBloomColor(formData.tertiaryColor) },
+                  ]}
+                />
+                <View
+                  style={[
+                    styles.paletteColorBox,
+                    { backgroundColor: getBloomColor(formData.quaternaryColor) },
+                  ]}
+                />
+              </>
+            )}
+          </View>
+        </View>
 
         {/* Base Hue Slider */}
         <View style={styles.field}>
@@ -1029,7 +1152,7 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
             style={styles.slider}
             minimumValue={0}
             maximumValue={360}
-            step={1}
+            step={0.1}
             value={baseHue}
             onValueChange={setBaseHue}
             minimumTrackTintColor="#4dd9b8"
@@ -1045,7 +1168,7 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
             style={styles.slider}
             minimumValue={0}
             maximumValue={100}
-            step={1}
+            step={0.1}
             value={baseSaturation}
             onValueChange={setBaseSaturation}
             minimumTrackTintColor="#4dd9b8"
@@ -1061,7 +1184,7 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
             style={styles.slider}
             minimumValue={0}
             maximumValue={100}
-            step={1}
+            step={0.1}
             value={baseLightness}
             onValueChange={setBaseLightness}
             minimumTrackTintColor="#4dd9b8"
@@ -1070,13 +1193,13 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
           />
         </View>
 
-        {/* Generate Button */}
+        {/* Apply Palette Button */}
         <TouchableOpacity
           style={styles.generateButton}
-          onPress={handleGeneratePalette}
+          onPress={handleGenerateUIColors}
           disabled={isSaving}
         >
-          <Text style={styles.generateButtonText}>Generate Palette</Text>
+          <Text style={styles.generateButtonText}>Apply Palette</Text>
         </TouchableOpacity>
         </>
         )}
@@ -1789,6 +1912,26 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: '#2a3138',
     marginBottom: 16,
+  },
+  activePaletteContainer: {
+    marginBottom: 16,
+  },
+  activePaletteLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#8b9298',
+    marginBottom: 8,
+  },
+  activePaletteRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  paletteColorBox: {
+    flex: 1,
+    height: 50,
+    borderRadius: 6,
+    borderWidth: 2,
+    borderColor: '#2a3138',
   },
   generateButton: {
     width: '100%',
