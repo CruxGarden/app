@@ -15,14 +15,9 @@ export type ColorValue =
   | { type: 'gradient'; value: GradientDefinition };
 
 /**
- * Theme form data
+ * Per-mode theme settings (light or dark)
  */
-export interface ThemeFormData {
-  title: string;
-  description?: string;
-  type?: string;
-  kind?: string;
-
+export interface ThemeModeData {
   // Bloom colors (can be solid or gradient)
   primaryColor: ColorValue;
   secondaryColor: ColorValue;
@@ -42,7 +37,24 @@ export interface ThemeFormData {
   panelColor?: string;
   textColor?: string;
   font?: string;
-  mode?: string;
+}
+
+/**
+ * Theme form data (supports both light and dark modes)
+ */
+export interface ThemeFormData {
+  // Shared across modes
+  title: string;
+  description?: string;
+  type?: string;
+  kind?: string;
+
+  // Per-mode data
+  light: ThemeModeData;
+  dark: ThemeModeData;
+
+  // UI state - which mode is currently being edited/previewed
+  activeMode: 'light' | 'dark';
 }
 
 /**
@@ -79,15 +91,19 @@ export interface ThemeMeta {
     light?: {
       primary?: {
         gradient?: GradientDefinition;
+        solid?: string;
       };
       secondary?: {
         gradient?: GradientDefinition;
+        solid?: string;
       };
       tertiary?: {
         gradient?: GradientDefinition;
+        solid?: string;
       };
       quaternary?: {
         gradient?: GradientDefinition;
+        solid?: string;
       };
       borderColor?: string;
       borderWidth?: string;
@@ -95,15 +111,19 @@ export interface ThemeMeta {
     dark?: {
       primary?: {
         gradient?: GradientDefinition;
+        solid?: string;
       };
       secondary?: {
         gradient?: GradientDefinition;
+        solid?: string;
       };
       tertiary?: {
         gradient?: GradientDefinition;
+        solid?: string;
       };
       quaternary?: {
         gradient?: GradientDefinition;
+        solid?: string;
       };
       borderColor?: string;
       borderWidth?: string;
@@ -137,9 +157,6 @@ export interface ThemeMeta {
  * Convert form data to API DTO
  */
 export function formDataToDto(formData: ThemeFormData): ThemeDto {
-  const isLightMode = formData.mode !== 'dark';
-  const modeKey = isLightMode ? 'light' : 'dark';
-
   // Extract color and gradient separately
   const extractColor = (colorValue: ColorValue): { color: string; gradient?: GradientDefinition } => {
     if (colorValue.type === 'solid') {
@@ -152,41 +169,56 @@ export function formDataToDto(formData: ThemeFormData): ThemeDto {
     }
   };
 
-  const primaryData = extractColor(formData.primaryColor);
-  const secondaryData = extractColor(formData.secondaryColor);
-  const tertiaryData = extractColor(formData.tertiaryColor);
-  const quaternaryData = extractColor(formData.quaternaryColor);
+  // Process both light and dark modes
+  const processMode = (modeData: ThemeModeData) => {
+    const primaryData = extractColor(modeData.primaryColor);
+    const secondaryData = extractColor(modeData.secondaryColor);
+    const tertiaryData = extractColor(modeData.tertiaryColor);
+    const quaternaryData = extractColor(modeData.quaternaryColor);
 
-  const meta: ThemeMeta = {
-    palette: {
-      [modeKey]: {
+    return {
+      palette: {
         primary: primaryData.color,
         secondary: secondaryData.color,
         tertiary: tertiaryData.color,
         quaternary: quaternaryData.color,
       },
+      bloom: {
+        primary: primaryData.gradient ? { gradient: primaryData.gradient } : { solid: primaryData.color },
+        secondary: secondaryData.gradient ? { gradient: secondaryData.gradient } : { solid: secondaryData.color },
+        tertiary: tertiaryData.gradient ? { gradient: tertiaryData.gradient } : { solid: tertiaryData.color },
+        quaternary: quaternaryData.gradient ? { gradient: quaternaryData.gradient } : { solid: quaternaryData.color },
+        borderColor: modeData.bloomBorderColor,
+        borderWidth: modeData.bloomBorderWidth,
+      },
+      content: {
+        backgroundColor: modeData.backgroundColor,
+        panelColor: modeData.panelColor,
+        textColor: modeData.textColor,
+        borderColor: modeData.borderColor,
+        borderWidth: modeData.borderWidth,
+        borderRadius: modeData.borderRadius,
+        borderStyle: modeData.borderStyle,
+        font: modeData.font,
+      },
+    };
+  };
+
+  const lightMode = processMode(formData.light);
+  const darkMode = processMode(formData.dark);
+
+  const meta: ThemeMeta = {
+    palette: {
+      light: lightMode.palette,
+      dark: darkMode.palette,
     },
     bloom: {
-      [modeKey]: {
-        primary: primaryData.gradient ? { gradient: primaryData.gradient } : undefined,
-        secondary: secondaryData.gradient ? { gradient: secondaryData.gradient } : undefined,
-        tertiary: tertiaryData.gradient ? { gradient: tertiaryData.gradient } : undefined,
-        quaternary: quaternaryData.gradient ? { gradient: quaternaryData.gradient } : undefined,
-        borderColor: formData.bloomBorderColor,
-        borderWidth: formData.bloomBorderWidth,
-      },
+      light: lightMode.bloom,
+      dark: darkMode.bloom,
     },
     content: {
-      [modeKey]: {
-        backgroundColor: formData.backgroundColor,
-        panelColor: formData.panelColor,
-        textColor: formData.textColor,
-        borderColor: formData.borderColor,
-        borderWidth: formData.borderWidth,
-        borderRadius: formData.borderRadius,
-        borderStyle: formData.borderStyle,
-        font: formData.font,
-      },
+      light: lightMode.content,
+      dark: darkMode.content,
     },
   };
 
@@ -205,43 +237,59 @@ export function formDataToDto(formData: ThemeFormData): ThemeDto {
 export function dtoToFormData(dto: ThemeDto): ThemeFormData {
   const meta = dto.meta;
 
-  // Prefer light mode, fall back to dark mode
-  const paletteColors = meta?.palette?.light || meta?.palette?.dark || {};
-  const bloomSettings = meta?.bloom?.light || meta?.bloom?.dark || {};
-  const contentSettings = meta?.content?.light || meta?.content?.dark || {};
-  const mode = meta?.palette?.light ? 'light' : 'dark';
-
-  // Helper to reconstruct ColorValue from palette + optional bloom gradient
+  // Helper to reconstruct ColorValue from palette + optional bloom data
   const reconstructColor = (
     paletteColor?: string,
-    bloomData?: { gradient?: GradientDefinition }
+    bloomData?: { gradient?: GradientDefinition; solid?: string }
   ): ColorValue => {
     if (bloomData?.gradient) {
       return { type: 'gradient', value: bloomData.gradient };
     }
-    return { type: 'solid', value: paletteColor || '#000000' };
+    // Use solid from bloom if present, otherwise use palette color
+    return { type: 'solid', value: bloomData?.solid || paletteColor || '#000000' };
   };
+
+  // Process a mode's data
+  const processMode = (
+    paletteColors: any = {},
+    bloomSettings: any = {},
+    contentSettings: any = {}
+  ): ThemeModeData => {
+    return {
+      primaryColor: reconstructColor(paletteColors.primary, bloomSettings.primary),
+      secondaryColor: reconstructColor(paletteColors.secondary, bloomSettings.secondary),
+      tertiaryColor: reconstructColor(paletteColors.tertiary, bloomSettings.tertiary),
+      quaternaryColor: reconstructColor(paletteColors.quaternary, bloomSettings.quaternary),
+      bloomBorderColor: bloomSettings?.borderColor,
+      bloomBorderWidth: bloomSettings?.borderWidth,
+      backgroundColor: contentSettings.backgroundColor,
+      panelColor: contentSettings.panelColor,
+      textColor: contentSettings.textColor,
+      borderColor: contentSettings.borderColor,
+      borderWidth: contentSettings.borderWidth,
+      borderRadius: contentSettings.borderRadius,
+      borderStyle: contentSettings.borderStyle,
+      font: contentSettings.font,
+    };
+  };
+
+  // Load both modes (use defaults if not present)
+  const defaults = getDefaultThemeFormData();
+  const light = meta?.palette?.light
+    ? processMode(meta.palette.light, meta.bloom?.light, meta.content?.light)
+    : defaults.light;
+  const dark = meta?.palette?.dark
+    ? processMode(meta.palette.dark, meta.bloom?.dark, meta.content?.dark)
+    : defaults.dark;
 
   return {
     title: dto.title,
     description: dto.description,
     type: dto.type,
     kind: dto.kind,
-    primaryColor: reconstructColor(paletteColors.primary, bloomSettings.primary),
-    secondaryColor: reconstructColor(paletteColors.secondary, bloomSettings.secondary),
-    tertiaryColor: reconstructColor(paletteColors.tertiary, bloomSettings.tertiary),
-    quaternaryColor: reconstructColor(paletteColors.quaternary, bloomSettings.quaternary),
-    bloomBorderColor: bloomSettings?.borderColor,
-    bloomBorderWidth: bloomSettings?.borderWidth,
-    backgroundColor: contentSettings.backgroundColor,
-    panelColor: contentSettings.panelColor,
-    textColor: contentSettings.textColor,
-    borderColor: contentSettings.borderColor,
-    borderWidth: contentSettings.borderWidth,
-    borderRadius: contentSettings.borderRadius,
-    borderStyle: contentSettings.borderStyle,
-    font: contentSettings.font,
-    mode,
+    light,
+    dark,
+    activeMode: 'light', // Default to light mode when loading
   };
 }
 
@@ -254,20 +302,38 @@ export function getDefaultThemeFormData(): ThemeFormData {
     description: '',
     type: '',
     kind: '',
-    primaryColor: { type: 'solid', value: '#2a3d2c' },
-    secondaryColor: { type: 'solid', value: '#426046' },
-    tertiaryColor: { type: 'solid', value: '#58825e' },
-    quaternaryColor: { type: 'solid', value: '#73a079' },
-    bloomBorderColor: '#000000',
-    bloomBorderWidth: '0',
-    borderWidth: '1',
-    borderRadius: '0',
-    borderColor: '#cccccc',
-    borderStyle: 'solid',
-    backgroundColor: '#ffffff',
-    panelColor: '#f5f5f5',
-    textColor: '#000000',
-    font: 'sans-serif',
-    mode: 'light',
+    light: {
+      primaryColor: { type: 'solid', value: '#2a3d2c' },
+      secondaryColor: { type: 'solid', value: '#426046' },
+      tertiaryColor: { type: 'solid', value: '#58825e' },
+      quaternaryColor: { type: 'solid', value: '#73a079' },
+      bloomBorderColor: '#000000',
+      bloomBorderWidth: '0',
+      borderWidth: '1',
+      borderRadius: '0',
+      borderColor: '#cccccc',
+      borderStyle: 'solid',
+      backgroundColor: '#ffffff',
+      panelColor: '#f5f5f5',
+      textColor: '#000000',
+      font: 'sans-serif',
+    },
+    dark: {
+      primaryColor: { type: 'solid', value: '#2a3d2c' },
+      secondaryColor: { type: 'solid', value: '#426046' },
+      tertiaryColor: { type: 'solid', value: '#58825e' },
+      quaternaryColor: { type: 'solid', value: '#73a079' },
+      bloomBorderColor: '#000000',
+      bloomBorderWidth: '0',
+      borderWidth: '1',
+      borderRadius: '0',
+      borderColor: '#333333',
+      borderStyle: 'solid',
+      backgroundColor: '#0f1214',
+      panelColor: '#1a1f24',
+      textColor: '#e8eef2',
+      font: 'sans-serif',
+    },
+    activeMode: 'light',
   };
 }
