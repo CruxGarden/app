@@ -37,6 +37,16 @@ export interface ThemeModeData {
   panelColor?: string;
   textColor?: string;
   font?: string;
+
+  // Controls styling
+  buttonBackgroundColor?: ColorValue;
+  buttonTextColor?: string;
+  buttonBorderColor?: string;
+  buttonBorderWidth?: string;
+  buttonBorderStyle?: 'solid' | 'dashed' | 'dotted';
+  buttonBorderRadius?: string;
+  linkColor?: string;
+  linkUnderlineStyle?: 'none' | 'underline' | 'always';
 }
 
 /**
@@ -151,6 +161,34 @@ export interface ThemeMeta {
       font?: string;
     };
   };
+  controls?: {
+    light?: {
+      buttonBackground?: {
+        gradient?: GradientDefinition;
+        solid?: string;
+      };
+      buttonTextColor?: string;
+      buttonBorderColor?: string;
+      buttonBorderWidth?: string;
+      buttonBorderStyle?: 'solid' | 'dashed' | 'dotted';
+      buttonBorderRadius?: string;
+      linkColor?: string;
+      linkUnderlineStyle?: 'none' | 'underline' | 'always';
+    };
+    dark?: {
+      buttonBackground?: {
+        gradient?: GradientDefinition;
+        solid?: string;
+      };
+      buttonTextColor?: string;
+      buttonBorderColor?: string;
+      buttonBorderWidth?: string;
+      buttonBorderStyle?: 'solid' | 'dashed' | 'dotted';
+      buttonBorderRadius?: string;
+      linkColor?: string;
+      linkUnderlineStyle?: 'none' | 'underline' | 'always';
+    };
+  };
 }
 
 /**
@@ -201,6 +239,20 @@ export function formDataToDto(formData: ThemeFormData): ThemeDto {
         borderStyle: modeData.borderStyle,
         font: modeData.font,
       },
+      controls: {
+        buttonBackground: modeData.buttonBackgroundColor
+          ? (modeData.buttonBackgroundColor.type === 'gradient'
+              ? { gradient: modeData.buttonBackgroundColor.value }
+              : { solid: modeData.buttonBackgroundColor.value })
+          : undefined,
+        buttonTextColor: modeData.buttonTextColor,
+        buttonBorderColor: modeData.buttonBorderColor,
+        buttonBorderWidth: modeData.buttonBorderWidth,
+        buttonBorderStyle: modeData.buttonBorderStyle,
+        buttonBorderRadius: modeData.buttonBorderRadius,
+        linkColor: modeData.linkColor,
+        linkUnderlineStyle: modeData.linkUnderlineStyle,
+      },
     };
   };
 
@@ -219,6 +271,10 @@ export function formDataToDto(formData: ThemeFormData): ThemeDto {
     content: {
       light: lightMode.content,
       dark: darkMode.content,
+    },
+    controls: {
+      light: lightMode.controls,
+      dark: darkMode.controls,
     },
   };
 
@@ -253,7 +309,8 @@ export function dtoToFormData(dto: ThemeDto): ThemeFormData {
   const processMode = (
     paletteColors: any = {},
     bloomSettings: any = {},
-    contentSettings: any = {}
+    contentSettings: any = {},
+    controlsSettings: any = {}
   ): ThemeModeData => {
     return {
       primaryColor: reconstructColor(paletteColors.primary, bloomSettings.primary),
@@ -270,16 +327,28 @@ export function dtoToFormData(dto: ThemeDto): ThemeFormData {
       borderRadius: contentSettings.borderRadius,
       borderStyle: contentSettings.borderStyle,
       font: contentSettings.font,
+      buttonBackgroundColor: controlsSettings.buttonBackground
+        ? (controlsSettings.buttonBackground.gradient
+            ? { type: 'gradient', value: controlsSettings.buttonBackground.gradient }
+            : { type: 'solid', value: controlsSettings.buttonBackground.solid || '#4dd9b8' })
+        : { type: 'solid', value: '#4dd9b8' },
+      buttonTextColor: controlsSettings.buttonTextColor,
+      buttonBorderColor: controlsSettings.buttonBorderColor,
+      buttonBorderWidth: controlsSettings.buttonBorderWidth,
+      buttonBorderStyle: controlsSettings.buttonBorderStyle,
+      buttonBorderRadius: controlsSettings.buttonBorderRadius,
+      linkColor: controlsSettings.linkColor,
+      linkUnderlineStyle: controlsSettings.linkUnderlineStyle,
     };
   };
 
   // Load both modes (use defaults if not present)
   const defaults = getDefaultThemeFormData();
   const light = meta?.palette?.light
-    ? processMode(meta.palette.light, meta.bloom?.light, meta.content?.light)
+    ? processMode(meta.palette.light, meta.bloom?.light, meta.content?.light, meta.controls?.light)
     : defaults.light;
   const dark = meta?.palette?.dark
-    ? processMode(meta.palette.dark, meta.bloom?.dark, meta.content?.dark)
+    ? processMode(meta.palette.dark, meta.bloom?.dark, meta.content?.dark, meta.controls?.dark)
     : defaults.dark;
 
   return {
@@ -317,6 +386,14 @@ export function getDefaultThemeFormData(): ThemeFormData {
       panelColor: '#f5f5f5',
       textColor: '#000000',
       font: 'sans-serif',
+      buttonBackgroundColor: { type: 'solid', value: '#4dd9b8' },
+      buttonTextColor: '#0f1214',
+      buttonBorderColor: '#4dd9b8',
+      buttonBorderWidth: '1',
+      buttonBorderStyle: 'solid',
+      buttonBorderRadius: '6',
+      linkColor: '#2563eb',
+      linkUnderlineStyle: 'underline',
     },
     dark: {
       primaryColor: { type: 'solid', value: '#2a3d2c' },
@@ -333,6 +410,14 @@ export function getDefaultThemeFormData(): ThemeFormData {
       panelColor: '#1a1f24',
       textColor: '#e8eef2',
       font: 'sans-serif',
+      buttonBackgroundColor: { type: 'solid', value: '#4dd9b8' },
+      buttonTextColor: '#0f1214',
+      buttonBorderColor: '#4dd9b8',
+      buttonBorderWidth: '1',
+      buttonBorderStyle: 'solid',
+      buttonBorderRadius: '6',
+      linkColor: '#60a5fa',
+      linkUnderlineStyle: 'underline',
     },
     activeMode: 'light',
   };

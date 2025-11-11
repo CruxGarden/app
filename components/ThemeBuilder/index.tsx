@@ -13,6 +13,7 @@ import { faker } from '@faker-js/faker';
 import { CruxBloom } from '@/components/CruxBloom';
 import { ColorPicker } from './ColorPicker';
 import { HexColorInput } from './HexColorInput';
+import { CruxButton } from '@/components/CruxButton';
 import type { ThemeFormData, ThemeDto, ColorValue, ThemeModeData } from './types';
 import { getDefaultThemeFormData, formDataToDto } from './types';
 
@@ -26,22 +27,13 @@ export interface ThemeBuilderProps {
 }
 
 // ============================================================================
-// DEVELOPMENT CONFIGURATION - Background/Panel Constraints
+// DEVELOPMENT CONFIGURATION
 // ============================================================================
-// Toggle this to experiment with unconstrained vs constrained palette generation
-const CONSTRAIN_BACKGROUND_PANEL = false;
-
-// Constrained ranges (only used if CONSTRAIN_BACKGROUND_PANEL = true)
-const DARK_BG_RANGE = { min: 0.08, max: 0.16 };    // 8-16% lightness
-const LIGHT_BG_RANGE = { min: 0.92, max: 0.98 };   // 92-98% lightness
-const DARK_PANEL_RANGE = { min: 0.12, max: 0.20 }; // 12-20% lightness
-const LIGHT_PANEL_RANGE = { min: 0.95, max: 0.99 }; // 95-99% lightness
-
 // Full randomization mode - uses actual slider values without reductions
 const FULL_RANDOMIZATION = true;
 
-// NOTE: UI colors (background, panel, border) are always derived from one of
-// the 4 bloom palette colors for better visual cohesion
+// NOTE: UI colors (background, panel, border) can be randomly derived from different palette colors
+// Each element has a 30% independent chance to use a different palette color for variety
 // ============================================================================
 
 export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
@@ -59,11 +51,13 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
     palette: boolean;
     bloom: boolean;
     style: boolean;
+    controls: boolean;
   }>({
     details: true,
     palette: false,
     bloom: false,
     style: false,
+    controls: false,
   });
 
   const [baseHue, setBaseHue] = useState(180);
@@ -74,10 +68,14 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
   // Preview palette colors (updates as sliders change, but doesn't apply to theme until button clicked)
   const [previewPalette, setPreviewPalette] = useState<string[]>([]);
 
+  // Palette color editing state
+  const [editingPaletteIndex, setEditingPaletteIndex] = useState<number | null>(null);
+  const [editingPaletteColor, setEditingPaletteColor] = useState<string>('#000000');
+
   // Random seed to force regeneration when clicking Random harmony multiple times
   const [randomSeed, setRandomSeed] = useState(0);
 
-  const toggleSection = (section: 'details' | 'palette' | 'bloom' | 'style') => {
+  const toggleSection = (section: 'details' | 'palette' | 'bloom' | 'style' | 'controls') => {
     setExpandedSections((prev) => ({ ...prev, [section]: !prev[section] }));
   };
 
@@ -284,42 +282,6 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
   };
 
   /**
-   * Generate background and panel colors based on constraint settings
-   */
-  const generateBackgroundAndPanel = (isDark: boolean, uiHue: number, uiSat: number): { backgroundColor: string; panelColor: string } => {
-    if (!CONSTRAIN_BACKGROUND_PANEL) {
-      // Unconstrained - use FULL lightness range but respect light vs dark mode
-      // Dark mode: 0-40% lightness, Light mode: 60-100% lightness
-      const backgroundColor = isDark
-        ? chroma.hsl(uiHue, uiSat, Math.random() * 0.4).hex() // 0-40%
-        : chroma.hsl(uiHue, uiSat, 0.6 + Math.random() * 0.4).hex(); // 60-100%
-
-      // 40% chance panel = background
-      const panelColor = Math.random() < 0.4
-        ? backgroundColor
-        : isDark
-          ? chroma.hsl(uiHue, uiSat, Math.random() * 0.4).hex() // 0-40%
-          : chroma.hsl(uiHue, uiSat, 0.6 + Math.random() * 0.4).hex(); // 60-100%
-
-      return { backgroundColor, panelColor };
-    }
-
-    // Constrained - use specified ranges
-    const backgroundColor = isDark
-      ? chroma.hsl(uiHue, uiSat, DARK_BG_RANGE.min + Math.random() * (DARK_BG_RANGE.max - DARK_BG_RANGE.min)).hex()
-      : chroma.hsl(uiHue, uiSat, LIGHT_BG_RANGE.min + Math.random() * (LIGHT_BG_RANGE.max - LIGHT_BG_RANGE.min)).hex();
-
-    // 40% chance panel = background, otherwise use panel range
-    const panelColor = Math.random() < 0.4
-      ? backgroundColor
-      : isDark
-        ? chroma.hsl(uiHue, uiSat === 0 ? 0 : Math.min(1, uiSat + 0.05), DARK_PANEL_RANGE.min + Math.random() * (DARK_PANEL_RANGE.max - DARK_PANEL_RANGE.min)).hex()
-        : chroma.hsl(uiHue, uiSat === 0 ? 0 : Math.min(1, uiSat + 0.05), LIGHT_PANEL_RANGE.min + Math.random() * (LIGHT_PANEL_RANGE.max - LIGHT_PANEL_RANGE.min)).hex();
-
-    return { backgroundColor, panelColor };
-  };
-
-  /**
    * Generate text color that GUARANTEES AAA (7.0:1) contrast ratio
    * @param panelColor - The background color to contrast against
    * @returns Text color with AAA contrast
@@ -466,11 +428,6 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
     // Pick a random bloom color to derive UI colors from
     const selectedBloomColor = shuffled[Math.floor(Math.random() * 4)];
 
-    // Extract HSL from the selected bloom color
-    const bloomChroma = chroma(selectedBloomColor);
-    const uiHue = bloomChroma.get('hsl.h');
-    const uiSat = bloomChroma.get('hsl.s');
-
     // Generate bloom border color (same for both modes)
     let bloomBorderColor: string;
     if (Math.random() < 0.25) {
@@ -502,14 +459,98 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
     };
 
     // Generate LIGHT mode UI colors
-    const lightBg = generateBackgroundAndPanel(false, uiHue, uiSat);
-    const lightTextColor = getAAATextColor(lightBg.panelColor);
-    const lightBorderColor = chroma.hsl(uiHue, uiSat === 0 ? 0 : Math.min(1, uiSat + 0.1), 0.75 + Math.random() * 0.15).hex();
+    // Randomly pick different colors for background/panel/border (30% chance each)
+    const lightBgColor = Math.random() < 0.3 ? shuffled[Math.floor(Math.random() * 4)] : selectedBloomColor;
+    const lightPanelColor = Math.random() < 0.3 ? shuffled[Math.floor(Math.random() * 4)] : lightBgColor;
+    const lightBorderColorBase = Math.random() < 0.3 ? shuffled[Math.floor(Math.random() * 4)] : lightPanelColor;
+
+    const lightBgChroma = chroma(lightBgColor);
+    const lightPanelChroma = chroma(lightPanelColor);
+    const lightBorderChroma = chroma(lightBorderColorBase);
+
+    const lightBgHue = lightBgChroma.get('hsl.h');
+    const lightBgSat = lightBgChroma.get('hsl.s');
+    const lightPanelHue = lightPanelChroma.get('hsl.h');
+    const lightPanelSat = lightPanelChroma.get('hsl.s');
+    const lightBorderHue = lightBorderChroma.get('hsl.h');
+    const lightBorderSat = lightBorderChroma.get('hsl.s');
+
+    const lightBackground = chroma.hsl(lightBgHue, lightBgSat, 0.6 + Math.random() * 0.4).hex();
+    const lightPanel = Math.random() < 0.4 ? lightBackground : chroma.hsl(lightPanelHue, lightPanelSat, 0.6 + Math.random() * 0.4).hex();
+    const lightTextColor = getAAATextColor(lightPanel);
+    const lightBorderColor = chroma.hsl(lightBorderHue, lightBorderSat === 0 ? 0 : Math.min(1, lightBorderSat + 0.1), 0.75 + Math.random() * 0.15).hex();
 
     // Generate DARK mode UI colors
-    const darkBg = generateBackgroundAndPanel(true, uiHue, uiSat);
-    const darkTextColor = getAAATextColor(darkBg.panelColor);
-    const darkBorderColor = chroma.hsl(uiHue, uiSat === 0 ? 0 : Math.min(1, uiSat + 0.1), 0.2 + Math.random() * 0.15).hex();
+    // Randomly pick different colors for background/panel/border (30% chance each)
+    const darkBgColor = Math.random() < 0.3 ? shuffled[Math.floor(Math.random() * 4)] : selectedBloomColor;
+    const darkPanelColor = Math.random() < 0.3 ? shuffled[Math.floor(Math.random() * 4)] : darkBgColor;
+    const darkBorderColorBase = Math.random() < 0.3 ? shuffled[Math.floor(Math.random() * 4)] : darkPanelColor;
+
+    const darkBgChroma = chroma(darkBgColor);
+    const darkPanelChroma = chroma(darkPanelColor);
+    const darkBorderChroma = chroma(darkBorderColorBase);
+
+    const darkBgHue = darkBgChroma.get('hsl.h');
+    const darkBgSat = darkBgChroma.get('hsl.s');
+    const darkPanelHue = darkPanelChroma.get('hsl.h');
+    const darkPanelSat = darkPanelChroma.get('hsl.s');
+    const darkBorderHue = darkBorderChroma.get('hsl.h');
+    const darkBorderSat = darkBorderChroma.get('hsl.s');
+
+    const darkBackground = chroma.hsl(darkBgHue, darkBgSat, Math.random() * 0.4).hex();
+    const darkPanel = Math.random() < 0.4 ? darkBackground : chroma.hsl(darkPanelHue, darkPanelSat, Math.random() * 0.4).hex();
+    const darkTextColor = getAAATextColor(darkPanel);
+    const darkBorderColor = chroma.hsl(darkBorderHue, darkBorderSat === 0 ? 0 : Math.min(1, darkBorderSat + 0.1), 0.2 + Math.random() * 0.15).hex();
+
+    // Generate controls (buttons and links) for both modes - pick from palette
+    const buttonPaletteColor = shuffled[Math.floor(Math.random() * 4)];
+    const buttonChroma = chroma(buttonPaletteColor);
+    const controlHue = buttonChroma.get('hsl.h');
+    const controlSat = buttonChroma.get('hsl.s');
+
+    // Helper to maybe create a gradient for button (25% chance)
+    const maybeButtonGradient = (baseColor: string): ColorValue => {
+      if (Math.random() < 0.25) {
+        const angle = Math.floor(Math.random() * 360);
+        const color1 = chroma(baseColor).brighten(0.3 + Math.random() * 0.3).hex();
+        const color2 = chroma(baseColor).darken(0.3 + Math.random() * 0.3).hex();
+        return {
+          type: 'gradient',
+          value: {
+            id: `button-gradient-${Date.now()}`,
+            stops: [
+              { color: color1, offset: '0%' },
+              { color: color2, offset: '100%' },
+            ],
+            angle,
+          },
+        };
+      }
+      return { type: 'solid', value: baseColor };
+    };
+
+    const lightButtonBgColor = chroma.hsl(controlHue, Math.min(1, controlSat + 0.1), 0.5 + Math.random() * 0.2).hex();
+    const lightButtonBg = maybeButtonGradient(lightButtonBgColor);
+    const lightButtonText = getAAATextColor(lightButtonBgColor);
+    const lightButtonBorder = Math.random() < 0.3
+      ? lightButtonBgColor
+      : chroma(lightButtonBgColor).darken(0.5 + Math.random() * 0.5).hex();
+    const lightLinkColor = chroma.hsl(controlHue, Math.min(1, controlSat + 0.2), 0.35 + Math.random() * 0.15).hex();
+
+    const darkButtonBgColor = chroma.hsl(controlHue, Math.min(1, controlSat + 0.1), 0.4 + Math.random() * 0.2).hex();
+    const darkButtonBg = maybeButtonGradient(darkButtonBgColor);
+    const darkButtonText = getAAATextColor(darkButtonBgColor);
+    const darkButtonBorder = Math.random() < 0.3
+      ? darkButtonBgColor
+      : chroma(darkButtonBgColor).brighten(0.5 + Math.random() * 0.5).hex();
+    const darkLinkColor = chroma.hsl(controlHue, Math.min(1, controlSat + 0.2), 0.55 + Math.random() * 0.15).hex();
+
+    const buttonBorderWidth = Math.floor(Math.random() * 4).toString();
+    const buttonBorderStyles: Array<'solid' | 'dashed' | 'dotted'> = ['solid', 'dashed', 'dotted'];
+    const buttonBorderStyle = buttonBorderStyles[Math.floor(Math.random() * buttonBorderStyles.length)];
+    const buttonBorderRadius = Math.floor(Math.random() * 51).toString();
+    const underlineStyles: Array<'none' | 'underline' | 'always'> = ['none', 'underline', 'always'];
+    const linkUnderlineStyle = underlineStyles[Math.floor(Math.random() * underlineStyles.length)];
 
     // Apply to BOTH modes
     setFormData((prev) => ({
@@ -521,10 +562,18 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
         tertiaryColor: updateColorValue(prev.light.tertiaryColor, shuffled[2]),
         quaternaryColor: updateColorValue(prev.light.quaternaryColor, shuffled[3]),
         bloomBorderColor,
-        backgroundColor: lightBg.backgroundColor,
-        panelColor: lightBg.panelColor,
+        backgroundColor: lightBackground,
+        panelColor: lightPanel,
         textColor: lightTextColor,
         borderColor: lightBorderColor,
+        buttonBackgroundColor: lightButtonBg,
+        buttonTextColor: lightButtonText,
+        buttonBorderColor: lightButtonBorder,
+        buttonBorderWidth,
+        buttonBorderStyle,
+        buttonBorderRadius,
+        linkColor: lightLinkColor,
+        linkUnderlineStyle,
       },
       dark: {
         ...prev.dark,
@@ -533,10 +582,18 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
         tertiaryColor: updateColorValue(prev.dark.tertiaryColor, shuffled[2]),
         quaternaryColor: updateColorValue(prev.dark.quaternaryColor, shuffled[3]),
         bloomBorderColor,
-        backgroundColor: darkBg.backgroundColor,
-        panelColor: darkBg.panelColor,
+        backgroundColor: darkBackground,
+        panelColor: darkPanel,
         textColor: darkTextColor,
         borderColor: darkBorderColor,
+        buttonBackgroundColor: darkButtonBg,
+        buttonTextColor: darkButtonText,
+        buttonBorderColor: darkButtonBorder,
+        buttonBorderWidth,
+        buttonBorderStyle,
+        buttonBorderRadius,
+        linkColor: darkLinkColor,
+        linkUnderlineStyle,
       },
     }));
   };
@@ -640,6 +697,60 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
     }));
   };
 
+  /**
+   * Handle clicking a palette preview color to edit it
+   */
+  const handlePaletteColorClick = (index: number) => {
+    const colors = previewPalette.length > 0
+      ? previewPalette
+      : [
+          getBloomColor(formData[formData.activeMode].primaryColor),
+          getBloomColor(formData[formData.activeMode].secondaryColor),
+          getBloomColor(formData[formData.activeMode].tertiaryColor),
+          getBloomColor(formData[formData.activeMode].quaternaryColor),
+        ];
+    setEditingPaletteIndex(index);
+    setEditingPaletteColor(colors[index]);
+  };
+
+  /**
+   * Handle saving the edited palette color
+   */
+  const handleSavePaletteColor = () => {
+    if (editingPaletteIndex === null) return;
+
+    // Validate hex color
+    if (!/^#[0-9A-Fa-f]{6}$/.test(editingPaletteColor)) {
+      alert('Please enter a valid hex color (e.g., #ff0000)');
+      return;
+    }
+
+    // Update preview palette
+    const colors = previewPalette.length > 0
+      ? [...previewPalette]
+      : [
+          getBloomColor(formData[formData.activeMode].primaryColor),
+          getBloomColor(formData[formData.activeMode].secondaryColor),
+          getBloomColor(formData[formData.activeMode].tertiaryColor),
+          getBloomColor(formData[formData.activeMode].quaternaryColor),
+        ];
+
+    colors[editingPaletteIndex] = editingPaletteColor;
+    setPreviewPalette(colors);
+
+    // Close editor
+    setEditingPaletteIndex(null);
+    setEditingPaletteColor('#000000');
+  };
+
+  /**
+   * Handle canceling palette color edit
+   */
+  const handleCancelPaletteEdit = () => {
+    setEditingPaletteIndex(null);
+    setEditingPaletteColor('#000000');
+  };
+
   const randomizeDetails = () => {
     // Generate weird but readable title (2-3 words)
     const titlePatterns = [
@@ -687,11 +798,6 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
     ];
     const selectedBloomColor = bloomColors[Math.floor(Math.random() * 4)];
 
-    // Extract HSL from the selected bloom color
-    const bloomChroma = chroma(selectedBloomColor);
-    const uiHue = bloomChroma.get('hsl.h');
-    const uiSat = bloomChroma.get('hsl.s');
-
     // Generate shared styling (same for both modes)
     const fonts = ['sans-serif', 'serif', 'monospace'];
     const randomFont = fonts[Math.floor(Math.random() * fonts.length)];
@@ -701,14 +807,98 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
     const borderRadius = Math.floor(Math.random() * 31).toString();
 
     // Generate LIGHT mode
-    const lightBg = generateBackgroundAndPanel(false, uiHue, uiSat);
-    const lightTextColor = getAAATextColor(lightBg.panelColor);
-    const lightBorderColor = chroma.hsl(uiHue, uiSat === 0 ? 0 : Math.min(1, uiSat + 0.1), 0.76 + Math.random() * 0.08).hex();
+    // Randomly pick different colors for background/panel/border (30% chance each)
+    const lightBgColor = Math.random() < 0.3 ? bloomColors[Math.floor(Math.random() * 4)] : selectedBloomColor;
+    const lightPanelColor = Math.random() < 0.3 ? bloomColors[Math.floor(Math.random() * 4)] : lightBgColor;
+    const lightBorderColorBase = Math.random() < 0.3 ? bloomColors[Math.floor(Math.random() * 4)] : lightPanelColor;
+
+    const lightBgChroma = chroma(lightBgColor);
+    const lightPanelChroma = chroma(lightPanelColor);
+    const lightBorderChroma = chroma(lightBorderColorBase);
+
+    const lightBgHue = lightBgChroma.get('hsl.h');
+    const lightBgSat = lightBgChroma.get('hsl.s');
+    const lightPanelHue = lightPanelChroma.get('hsl.h');
+    const lightPanelSat = lightPanelChroma.get('hsl.s');
+    const lightBorderHue = lightBorderChroma.get('hsl.h');
+    const lightBorderSat = lightBorderChroma.get('hsl.s');
+
+    const lightBackground = chroma.hsl(lightBgHue, lightBgSat, 0.6 + Math.random() * 0.4).hex();
+    const lightPanel = Math.random() < 0.4 ? lightBackground : chroma.hsl(lightPanelHue, lightPanelSat, 0.6 + Math.random() * 0.4).hex();
+    const lightTextColor = getAAATextColor(lightPanel);
+    const lightBorderColor = chroma.hsl(lightBorderHue, lightBorderSat === 0 ? 0 : Math.min(1, lightBorderSat + 0.1), 0.76 + Math.random() * 0.08).hex();
 
     // Generate DARK mode
-    const darkBg = generateBackgroundAndPanel(true, uiHue, uiSat);
-    const darkTextColor = getAAATextColor(darkBg.panelColor);
-    const darkBorderColor = chroma.hsl(uiHue, uiSat === 0 ? 0 : Math.min(1, uiSat + 0.1), 0.16 + Math.random() * 0.08).hex();
+    // Randomly pick different colors for background/panel/border (30% chance each)
+    const darkBgColor = Math.random() < 0.3 ? bloomColors[Math.floor(Math.random() * 4)] : selectedBloomColor;
+    const darkPanelColor = Math.random() < 0.3 ? bloomColors[Math.floor(Math.random() * 4)] : darkBgColor;
+    const darkBorderColorBase = Math.random() < 0.3 ? bloomColors[Math.floor(Math.random() * 4)] : darkPanelColor;
+
+    const darkBgChroma = chroma(darkBgColor);
+    const darkPanelChroma = chroma(darkPanelColor);
+    const darkBorderChroma = chroma(darkBorderColorBase);
+
+    const darkBgHue = darkBgChroma.get('hsl.h');
+    const darkBgSat = darkBgChroma.get('hsl.s');
+    const darkPanelHue = darkPanelChroma.get('hsl.h');
+    const darkPanelSat = darkPanelChroma.get('hsl.s');
+    const darkBorderHue = darkBorderChroma.get('hsl.h');
+    const darkBorderSat = darkBorderChroma.get('hsl.s');
+
+    const darkBackground = chroma.hsl(darkBgHue, darkBgSat, Math.random() * 0.4).hex();
+    const darkPanel = Math.random() < 0.4 ? darkBackground : chroma.hsl(darkPanelHue, darkPanelSat, Math.random() * 0.4).hex();
+    const darkTextColor = getAAATextColor(darkPanel);
+    const darkBorderColor = chroma.hsl(darkBorderHue, darkBorderSat === 0 ? 0 : Math.min(1, darkBorderSat + 0.1), 0.16 + Math.random() * 0.08).hex();
+
+    // Generate controls for both modes - pick a different bloom color for buttons
+    const buttonBloomColor = bloomColors[Math.floor(Math.random() * 4)];
+    const buttonChroma = chroma(buttonBloomColor);
+    const controlHue = buttonChroma.get('hsl.h');
+    const controlSat = buttonChroma.get('hsl.s');
+
+    // Helper to maybe create a gradient for button (25% chance)
+    const maybeButtonGradient = (baseColor: string): ColorValue => {
+      if (Math.random() < 0.25) {
+        const angle = Math.floor(Math.random() * 360);
+        const color1 = chroma(baseColor).brighten(0.3 + Math.random() * 0.3).hex();
+        const color2 = chroma(baseColor).darken(0.3 + Math.random() * 0.3).hex();
+        return {
+          type: 'gradient',
+          value: {
+            id: `button-gradient-${Date.now()}`,
+            stops: [
+              { color: color1, offset: '0%' },
+              { color: color2, offset: '100%' },
+            ],
+            angle,
+          },
+        };
+      }
+      return { type: 'solid', value: baseColor };
+    };
+
+    const lightButtonBgColor = chroma.hsl(controlHue, Math.min(1, controlSat + 0.1), 0.5 + Math.random() * 0.2).hex();
+    const lightButtonBg = maybeButtonGradient(lightButtonBgColor);
+    const lightButtonText = getAAATextColor(lightButtonBgColor);
+    const lightButtonBorder = Math.random() < 0.3
+      ? lightButtonBgColor
+      : chroma(lightButtonBgColor).darken(0.5 + Math.random() * 0.5).hex();
+    const lightLinkColor = chroma.hsl(controlHue, Math.min(1, controlSat + 0.2), 0.35 + Math.random() * 0.15).hex();
+
+    const darkButtonBgColor = chroma.hsl(controlHue, Math.min(1, controlSat + 0.1), 0.4 + Math.random() * 0.2).hex();
+    const darkButtonBg = maybeButtonGradient(darkButtonBgColor);
+    const darkButtonText = getAAATextColor(darkButtonBgColor);
+    const darkButtonBorder = Math.random() < 0.3
+      ? darkButtonBgColor
+      : chroma(darkButtonBgColor).brighten(0.5 + Math.random() * 0.5).hex();
+    const darkLinkColor = chroma.hsl(controlHue, Math.min(1, controlSat + 0.2), 0.55 + Math.random() * 0.15).hex();
+
+    const buttonBorderWidth = Math.floor(Math.random() * 4).toString();
+    const buttonBorderStyles: Array<'solid' | 'dashed' | 'dotted'> = ['solid', 'dashed', 'dotted'];
+    const buttonBorderStyle = buttonBorderStyles[Math.floor(Math.random() * buttonBorderStyles.length)];
+    const buttonBorderRadius = Math.floor(Math.random() * 51).toString();
+    const underlineStyles: Array<'none' | 'underline' | 'always'> = ['none', 'underline', 'always'];
+    const linkUnderlineStyle = underlineStyles[Math.floor(Math.random() * underlineStyles.length)];
 
     setFormData((prev) => ({
       ...prev,
@@ -718,10 +908,18 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
         borderRadius,
         borderStyle: randomBorderStyle,
         borderColor: lightBorderColor,
-        backgroundColor: lightBg.backgroundColor,
-        panelColor: lightBg.panelColor,
+        backgroundColor: lightBackground,
+        panelColor: lightPanel,
         textColor: lightTextColor,
         font: randomFont,
+        buttonBackgroundColor: lightButtonBg,
+        buttonTextColor: lightButtonText,
+        buttonBorderColor: lightButtonBorder,
+        buttonBorderWidth,
+        buttonBorderStyle,
+        buttonBorderRadius,
+        linkColor: lightLinkColor,
+        linkUnderlineStyle,
       },
       dark: {
         ...prev.dark,
@@ -729,10 +927,113 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
         borderRadius,
         borderStyle: randomBorderStyle,
         borderColor: darkBorderColor,
-        backgroundColor: darkBg.backgroundColor,
-        panelColor: darkBg.panelColor,
+        backgroundColor: darkBackground,
+        panelColor: darkPanel,
         textColor: darkTextColor,
         font: randomFont,
+        buttonBackgroundColor: darkButtonBg,
+        buttonTextColor: darkButtonText,
+        buttonBorderColor: darkButtonBorder,
+        buttonBorderWidth,
+        buttonBorderStyle,
+        buttonBorderRadius,
+        linkColor: darkLinkColor,
+        linkUnderlineStyle,
+      },
+    }));
+  };
+
+  const randomizeControls = () => {
+    // Pick a random bloom color from current active mode to derive control colors from
+    const activeData = formData[formData.activeMode];
+    const bloomColors = [
+      getBloomColor(activeData.primaryColor),
+      getBloomColor(activeData.secondaryColor),
+      getBloomColor(activeData.tertiaryColor),
+      getBloomColor(activeData.quaternaryColor),
+    ];
+    const selectedBloomColor = bloomColors[Math.floor(Math.random() * 4)];
+
+    // Extract HSL from the selected bloom color
+    const bloomChroma = chroma(selectedBloomColor);
+    const controlHue = bloomChroma.get('hsl.h');
+    const controlSat = bloomChroma.get('hsl.s');
+
+    // Helper to maybe create a gradient for button (25% chance)
+    const maybeButtonGradient = (baseColor: string): ColorValue => {
+      if (Math.random() < 0.25) {
+        // Create a gradient with 2 stops
+        const angle = Math.floor(Math.random() * 360);
+        const color1 = chroma(baseColor).brighten(0.3 + Math.random() * 0.3).hex();
+        const color2 = chroma(baseColor).darken(0.3 + Math.random() * 0.3).hex();
+
+        return {
+          type: 'gradient',
+          value: {
+            id: `button-gradient-${Date.now()}`,
+            stops: [
+              { color: color1, offset: '0%' },
+              { color: color2, offset: '100%' },
+            ],
+            angle,
+          },
+        };
+      }
+      return { type: 'solid', value: baseColor };
+    };
+
+    // Generate button colors for LIGHT mode
+    const lightButtonBgColor = chroma.hsl(controlHue, Math.min(1, controlSat + 0.1), 0.5 + Math.random() * 0.2).hex();
+    const lightButtonBg = maybeButtonGradient(lightButtonBgColor);
+    const lightButtonText = getAAATextColor(lightButtonBgColor);
+    const lightButtonBorder = Math.random() < 0.3
+      ? lightButtonBgColor
+      : chroma(lightButtonBgColor).darken(0.5 + Math.random() * 0.5).hex();
+    const lightLinkColor = chroma.hsl(controlHue, Math.min(1, controlSat + 0.2), 0.35 + Math.random() * 0.15).hex();
+
+    // Generate button colors for DARK mode
+    const darkButtonBgColor = chroma.hsl(controlHue, Math.min(1, controlSat + 0.1), 0.4 + Math.random() * 0.2).hex();
+    const darkButtonBg = maybeButtonGradient(darkButtonBgColor);
+    const darkButtonText = getAAATextColor(darkButtonBgColor);
+    const darkButtonBorder = Math.random() < 0.3
+      ? darkButtonBgColor
+      : chroma(darkButtonBgColor).brighten(0.5 + Math.random() * 0.5).hex();
+    const darkLinkColor = chroma.hsl(controlHue, Math.min(1, controlSat + 0.2), 0.55 + Math.random() * 0.15).hex();
+
+    // Shared button styling
+    const buttonBorderWidth = Math.floor(Math.random() * 4).toString();
+    const borderStyles: Array<'solid' | 'dashed' | 'dotted'> = ['solid', 'dashed', 'dotted'];
+    const buttonBorderStyle = borderStyles[Math.floor(Math.random() * borderStyles.length)];
+    // Button border radius: 0-50px, with higher values creating pill-shaped buttons
+    const buttonBorderRadius = Math.floor(Math.random() * 51).toString();
+
+    // Shared link styling
+    const underlineStyles: Array<'none' | 'underline' | 'always'> = ['none', 'underline', 'always'];
+    const linkUnderlineStyle = underlineStyles[Math.floor(Math.random() * underlineStyles.length)];
+
+    setFormData((prev) => ({
+      ...prev,
+      light: {
+        ...prev.light,
+        buttonBackgroundColor: lightButtonBg,
+        buttonTextColor: lightButtonText,
+        buttonBorderColor: lightButtonBorder,
+        buttonBorderWidth,
+        buttonBorderStyle,
+        buttonBorderRadius,
+        linkColor: lightLinkColor,
+        linkUnderlineStyle,
+      },
+      dark: {
+        ...prev.dark,
+        buttonBackgroundColor: darkButtonBg,
+        buttonTextColor: darkButtonText,
+        buttonBorderColor: darkButtonBorder,
+        buttonBorderWidth,
+        buttonBorderStyle,
+        buttonBorderRadius,
+        linkColor: darkLinkColor,
+        linkUnderlineStyle,
       },
     }));
   };
@@ -775,19 +1076,50 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
 
     // Pick a random shuffled bloom color to derive UI colors from
     const selectedBloomColor = shuffled[Math.floor(Math.random() * 4)];
-    const bloomChroma = chroma(selectedBloomColor);
-    const uiHue = bloomChroma.get('hsl.h');
-    const uiSat = bloomChroma.get('hsl.s');
 
     // Generate LIGHT mode UI colors
-    const lightBg = generateBackgroundAndPanel(false, uiHue, uiSat);
-    const lightTextColor = getAAATextColor(lightBg.panelColor);
-    const lightBorderColor = chroma.hsl(uiHue, uiSat === 0 ? 0 : Math.min(1, uiSat + 0.1), 0.75 + Math.random() * 0.15).hex();
+    // Randomly pick different colors for background/panel/border (30% chance each)
+    const lightBgColor = Math.random() < 0.3 ? shuffled[Math.floor(Math.random() * 4)] : selectedBloomColor;
+    const lightPanelColor = Math.random() < 0.3 ? shuffled[Math.floor(Math.random() * 4)] : lightBgColor;
+    const lightBorderColorBase = Math.random() < 0.3 ? shuffled[Math.floor(Math.random() * 4)] : lightPanelColor;
+
+    const lightBgChroma = chroma(lightBgColor);
+    const lightPanelChroma = chroma(lightPanelColor);
+    const lightBorderChroma = chroma(lightBorderColorBase);
+
+    const lightBgHue = lightBgChroma.get('hsl.h');
+    const lightBgSat = lightBgChroma.get('hsl.s');
+    const lightPanelHue = lightPanelChroma.get('hsl.h');
+    const lightPanelSat = lightPanelChroma.get('hsl.s');
+    const lightBorderHue = lightBorderChroma.get('hsl.h');
+    const lightBorderSat = lightBorderChroma.get('hsl.s');
+
+    const lightBackground = chroma.hsl(lightBgHue, lightBgSat, 0.6 + Math.random() * 0.4).hex();
+    const lightPanel = Math.random() < 0.4 ? lightBackground : chroma.hsl(lightPanelHue, lightPanelSat, 0.6 + Math.random() * 0.4).hex();
+    const lightTextColor = getAAATextColor(lightPanel);
+    const lightBorderColor = chroma.hsl(lightBorderHue, lightBorderSat === 0 ? 0 : Math.min(1, lightBorderSat + 0.1), 0.75 + Math.random() * 0.15).hex();
 
     // Generate DARK mode UI colors
-    const darkBg = generateBackgroundAndPanel(true, uiHue, uiSat);
-    const darkTextColor = getAAATextColor(darkBg.panelColor);
-    const darkBorderColor = chroma.hsl(uiHue, uiSat === 0 ? 0 : Math.min(1, uiSat + 0.1), 0.2 + Math.random() * 0.15).hex();
+    // Randomly pick different colors for background/panel/border (30% chance each)
+    const darkBgColor = Math.random() < 0.3 ? shuffled[Math.floor(Math.random() * 4)] : selectedBloomColor;
+    const darkPanelColor = Math.random() < 0.3 ? shuffled[Math.floor(Math.random() * 4)] : darkBgColor;
+    const darkBorderColorBase = Math.random() < 0.3 ? shuffled[Math.floor(Math.random() * 4)] : darkPanelColor;
+
+    const darkBgChroma = chroma(darkBgColor);
+    const darkPanelChroma = chroma(darkPanelColor);
+    const darkBorderChroma = chroma(darkBorderColorBase);
+
+    const darkBgHue = darkBgChroma.get('hsl.h');
+    const darkBgSat = darkBgChroma.get('hsl.s');
+    const darkPanelHue = darkPanelChroma.get('hsl.h');
+    const darkPanelSat = darkPanelChroma.get('hsl.s');
+    const darkBorderHue = darkBorderChroma.get('hsl.h');
+    const darkBorderSat = darkBorderChroma.get('hsl.s');
+
+    const darkBackground = chroma.hsl(darkBgHue, darkBgSat, Math.random() * 0.4).hex();
+    const darkPanel = Math.random() < 0.4 ? darkBackground : chroma.hsl(darkPanelHue, darkPanelSat, Math.random() * 0.4).hex();
+    const darkTextColor = getAAATextColor(darkPanel);
+    const darkBorderColor = chroma.hsl(darkBorderHue, darkBorderSat === 0 ? 0 : Math.min(1, darkBorderSat + 0.1), 0.2 + Math.random() * 0.15).hex();
 
     // Generate bloom border (same for both modes)
     let bloomBorderColor: string;
@@ -865,31 +1197,97 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
       bloomBorderWidth,
     };
 
+    // Generate controls (buttons and links) for both modes - pick from palette
+    const buttonPaletteColor = shuffled[Math.floor(Math.random() * 4)];
+    const buttonChroma = chroma(buttonPaletteColor);
+    const controlHue = buttonChroma.get('hsl.h');
+    const controlSat = buttonChroma.get('hsl.s');
+
+    // Helper to maybe create a gradient for button (25% chance)
+    const maybeButtonGradient = (baseColor: string): ColorValue => {
+      if (Math.random() < 0.25) {
+        const angle = Math.floor(Math.random() * 360);
+        const color1 = chroma(baseColor).brighten(0.3 + Math.random() * 0.3).hex();
+        const color2 = chroma(baseColor).darken(0.3 + Math.random() * 0.3).hex();
+        return {
+          type: 'gradient',
+          value: {
+            id: `button-gradient-${Date.now()}`,
+            stops: [
+              { color: color1, offset: '0%' },
+              { color: color2, offset: '100%' },
+            ],
+            angle,
+          },
+        };
+      }
+      return { type: 'solid', value: baseColor };
+    };
+
+    const lightButtonBgColor = chroma.hsl(controlHue, Math.min(1, controlSat + 0.1), 0.5 + Math.random() * 0.2).hex();
+    const lightButtonBg = maybeButtonGradient(lightButtonBgColor);
+    const lightButtonText = getAAATextColor(lightButtonBgColor);
+    const lightButtonBorder = Math.random() < 0.3
+      ? lightButtonBgColor
+      : chroma(lightButtonBgColor).darken(0.5 + Math.random() * 0.5).hex();
+    const lightLinkColor = chroma.hsl(controlHue, Math.min(1, controlSat + 0.2), 0.35 + Math.random() * 0.15).hex();
+
+    const darkButtonBgColor = chroma.hsl(controlHue, Math.min(1, controlSat + 0.1), 0.4 + Math.random() * 0.2).hex();
+    const darkButtonBg = maybeButtonGradient(darkButtonBgColor);
+    const darkButtonText = getAAATextColor(darkButtonBgColor);
+    const darkButtonBorder = Math.random() < 0.3
+      ? darkButtonBgColor
+      : chroma(darkButtonBgColor).brighten(0.5 + Math.random() * 0.5).hex();
+    const darkLinkColor = chroma.hsl(controlHue, Math.min(1, controlSat + 0.2), 0.55 + Math.random() * 0.15).hex();
+
+    const buttonBorderWidth = Math.floor(Math.random() * 4).toString();
+    const buttonBorderStyles: Array<'solid' | 'dashed' | 'dotted'> = ['solid', 'dashed', 'dotted'];
+    const buttonBorderStyle = buttonBorderStyles[Math.floor(Math.random() * buttonBorderStyles.length)];
+    const buttonBorderRadius = Math.floor(Math.random() * 51).toString();
+    const underlineStyles: Array<'none' | 'underline' | 'always'> = ['none', 'underline', 'always'];
+    const linkUnderlineStyle = underlineStyles[Math.floor(Math.random() * underlineStyles.length)];
+
     setFormData((prev) => ({
       ...prev,
       title,
       description,
       light: {
         ...bloomData,
-        backgroundColor: lightBg.backgroundColor,
-        panelColor: lightBg.panelColor,
+        backgroundColor: lightBackground,
+        panelColor: lightPanel,
         textColor: lightTextColor,
         borderColor: lightBorderColor,
         borderWidth,
         borderRadius,
         borderStyle: randomBorderStyle,
         font: randomFont,
+        buttonBackgroundColor: lightButtonBg,
+        buttonTextColor: lightButtonText,
+        buttonBorderColor: lightButtonBorder,
+        buttonBorderWidth,
+        buttonBorderStyle,
+        buttonBorderRadius,
+        linkColor: lightLinkColor,
+        linkUnderlineStyle,
       },
       dark: {
         ...bloomData,
-        backgroundColor: darkBg.backgroundColor,
-        panelColor: darkBg.panelColor,
+        backgroundColor: darkBackground,
+        panelColor: darkPanel,
         textColor: darkTextColor,
         borderColor: darkBorderColor,
         borderWidth,
         borderRadius,
         borderStyle: randomBorderStyle,
         font: randomFont,
+        buttonBackgroundColor: darkButtonBg,
+        buttonTextColor: darkButtonText,
+        buttonBorderColor: darkButtonBorder,
+        buttonBorderWidth,
+        buttonBorderStyle,
+        buttonBorderRadius,
+        linkColor: darkLinkColor,
+        linkUnderlineStyle,
       },
     }));
   };
@@ -978,6 +1376,37 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
               >
                 Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium doloremque laudantium, totam rem aperiam, eaque ipsa quae ab illo inventore veritatis et quasi architecto beatae vitae dicta sunt explicabo.
               </Text>
+
+              {/* Sample Button - Centered */}
+              <View style={styles.sampleControlsContainer}>
+                <View style={styles.sampleButtonWrapper}>
+                  <CruxButton
+                    title="Sample Button"
+                    backgroundColor={formData[formData.activeMode].buttonBackgroundColor || { type: 'solid', value: '#4dd9b8' }}
+                    textColor={formData[formData.activeMode].buttonTextColor || '#0f1214'}
+                    borderColor={formData[formData.activeMode].buttonBorderColor || '#4dd9b8'}
+                    borderWidth={parseInt(formData[formData.activeMode].buttonBorderWidth ?? '1')}
+                    borderStyle={formData[formData.activeMode].buttonBorderStyle || 'solid'}
+                    borderRadius={parseInt(formData[formData.activeMode].buttonBorderRadius ?? '6')}
+                    fontFamily={getFontFamily()}
+                    onPress={() => {}}
+                  />
+                </View>
+
+                {/* Sample Link - Centered */}
+                <Text
+                  style={[
+                    styles.sampleLink,
+                    {
+                      color: formData[formData.activeMode].linkColor || '#2563eb',
+                      fontFamily: getFontFamily(),
+                      textDecorationLine: formData[formData.activeMode].linkUnderlineStyle === 'always' || formData[formData.activeMode].linkUnderlineStyle === 'underline' ? 'underline' : 'none',
+                    },
+                  ]}
+                >
+                  Sample Link
+                </Text>
+              </View>
             </View>
           </View>
         </ScrollView>
@@ -1228,65 +1657,113 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
 
         {/* Palette Preview */}
         <View style={styles.activePaletteContainer}>
-          <Text style={styles.activePaletteLabel}>Palette Preview</Text>
+          <Text style={styles.activePaletteLabel}>Palette Preview (click to edit)</Text>
           <View style={styles.activePaletteRow}>
             {previewPalette.length > 0 ? (
               <>
-                <View
+                <TouchableOpacity
                   style={[
                     styles.paletteColorBox,
                     { backgroundColor: previewPalette[0] },
                   ]}
+                  onPress={() => handlePaletteColorClick(0)}
                 />
-                <View
+                <TouchableOpacity
                   style={[
                     styles.paletteColorBox,
                     { backgroundColor: previewPalette[1] },
                   ]}
+                  onPress={() => handlePaletteColorClick(1)}
                 />
-                <View
+                <TouchableOpacity
                   style={[
                     styles.paletteColorBox,
                     { backgroundColor: previewPalette[2] },
                   ]}
+                  onPress={() => handlePaletteColorClick(2)}
                 />
-                <View
+                <TouchableOpacity
                   style={[
                     styles.paletteColorBox,
                     { backgroundColor: previewPalette[3] },
                   ]}
+                  onPress={() => handlePaletteColorClick(3)}
                 />
               </>
             ) : (
               <>
-                <View
+                <TouchableOpacity
                   style={[
                     styles.paletteColorBox,
                     { backgroundColor: getBloomColor(formData[formData.activeMode].primaryColor) },
                   ]}
+                  onPress={() => handlePaletteColorClick(0)}
                 />
-                <View
+                <TouchableOpacity
                   style={[
                     styles.paletteColorBox,
                     { backgroundColor: getBloomColor(formData[formData.activeMode].secondaryColor) },
                   ]}
+                  onPress={() => handlePaletteColorClick(1)}
                 />
-                <View
+                <TouchableOpacity
                   style={[
                     styles.paletteColorBox,
                     { backgroundColor: getBloomColor(formData[formData.activeMode].tertiaryColor) },
                   ]}
+                  onPress={() => handlePaletteColorClick(2)}
                 />
-                <View
+                <TouchableOpacity
                   style={[
                     styles.paletteColorBox,
                     { backgroundColor: getBloomColor(formData[formData.activeMode].quaternaryColor) },
                   ]}
+                  onPress={() => handlePaletteColorClick(3)}
                 />
               </>
             )}
           </View>
         </View>
+
+        {/* Color Edit Modal */}
+        {editingPaletteIndex !== null && (
+          <View style={styles.colorEditModal}>
+            <View style={styles.colorEditContent}>
+              <Text style={styles.colorEditTitle}>Edit Palette Color {editingPaletteIndex + 1}</Text>
+
+              <View style={styles.colorEditPreview}>
+                <View
+                  style={[
+                    styles.colorEditPreviewBox,
+                    { backgroundColor: editingPaletteColor },
+                  ]}
+                />
+              </View>
+
+              <HexColorInput
+                label="Hex Color"
+                value={editingPaletteColor}
+                onChange={setEditingPaletteColor}
+                placeholder="#ff0000"
+              />
+
+              <View style={styles.colorEditButtons}>
+                <TouchableOpacity
+                  style={[styles.colorEditButton, styles.colorEditButtonCancel]}
+                  onPress={handleCancelPaletteEdit}
+                >
+                  <Text style={styles.colorEditButtonText}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.colorEditButton, styles.colorEditButtonSave]}
+                  onPress={handleSavePaletteColor}
+                >
+                  <Text style={styles.colorEditButtonText}>Save</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        )}
 
         {/* Base Hue Slider */}
         <View style={styles.field}>
@@ -1737,6 +2214,208 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
         )}
       </View>
 
+      {/* Controls */}
+      <View style={styles.section}>
+        <View style={styles.sectionHeaderRow}>
+          <TouchableOpacity
+            style={styles.sectionHeader}
+            onPress={() => toggleSection('controls')}
+          >
+            <Text style={styles.sectionTitle}>Controls</Text>
+            <Text style={styles.sectionToggle}>{expandedSections.controls ? '−' : '+'}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.sectionRandomize}
+            onPress={randomizeControls}
+          >
+            <Text style={styles.sectionRandomizeText}>⟳</Text>
+          </TouchableOpacity>
+        </View>
+
+        {expandedSections.controls && (
+        <>
+        <Text style={styles.sectionDescription}>
+          Button and link styling for interactive elements.
+        </Text>
+
+        {/* Button Styling */}
+        <Text style={[styles.label, { marginTop: 8, marginBottom: 12, fontSize: 16, color: '#4dd9b8' }]}>Button</Text>
+
+        <ColorPicker
+          label="Button Background"
+          value={formData[formData.activeMode].buttonBackgroundColor || { type: 'solid', value: '#4dd9b8' }}
+          onChange={(value) => handleModeFieldChange('buttonBackgroundColor', value)}
+        />
+
+        <HexColorInput
+          label="Button Text Color"
+          value={formData[formData.activeMode].buttonTextColor || ''}
+          onChange={(value) => handleModeFieldChange('buttonTextColor', value)}
+          placeholder="#0f1214"
+        />
+
+        <HexColorInput
+          label="Button Border Color"
+          value={formData[formData.activeMode].buttonBorderColor || ''}
+          onChange={(value) => handleModeFieldChange('buttonBorderColor', value)}
+          placeholder="#4dd9b8"
+        />
+
+        <View style={styles.field}>
+          <Text style={styles.label}>
+            Button Border Width: {typeof formData[formData.activeMode].buttonBorderWidth === 'number' ? formData[formData.activeMode].buttonBorderWidth : parseInt(formData[formData.activeMode].buttonBorderWidth ?? '1')}px
+          </Text>
+          <Slider
+            style={styles.slider}
+            minimumValue={0}
+            maximumValue={10}
+            step={1}
+            value={parseInt(formData[formData.activeMode].buttonBorderWidth?.toString() ?? '1')}
+            onValueChange={(val) => handleModeFieldChange('buttonBorderWidth', Math.round(val).toString())}
+            minimumTrackTintColor="#4dd9b8"
+            maximumTrackTintColor="#2a3138"
+            thumbTintColor="#4dd9b8"
+          />
+        </View>
+
+        <View style={styles.field}>
+          <Text style={styles.label}>Button Border Style</Text>
+          <View style={styles.fontToggle}>
+            <TouchableOpacity
+              style={[
+                styles.fontButton,
+                formData[formData.activeMode].buttonBorderStyle === 'solid' && styles.fontButtonActive,
+              ]}
+              onPress={() => handleModeFieldChange('buttonBorderStyle', 'solid')}
+            >
+              <Text
+                style={[
+                  styles.fontButtonText,
+                  formData[formData.activeMode].buttonBorderStyle === 'solid' && styles.fontButtonTextActive,
+                ]}
+              >
+                Solid
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[
+                styles.fontButton,
+                formData[formData.activeMode].buttonBorderStyle === 'dashed' && styles.fontButtonActive,
+              ]}
+              onPress={() => handleModeFieldChange('buttonBorderStyle', 'dashed')}
+            >
+              <Text
+                style={[
+                  styles.fontButtonText,
+                  formData[formData.activeMode].buttonBorderStyle === 'dashed' && styles.fontButtonTextActive,
+                ]}
+              >
+                Dashed
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[
+                styles.fontButton,
+                formData[formData.activeMode].buttonBorderStyle === 'dotted' && styles.fontButtonActive,
+              ]}
+              onPress={() => handleModeFieldChange('buttonBorderStyle', 'dotted')}
+            >
+              <Text
+                style={[
+                  styles.fontButtonText,
+                  formData[formData.activeMode].buttonBorderStyle === 'dotted' && styles.fontButtonTextActive,
+                ]}
+              >
+                Dotted
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        <View style={styles.field}>
+          <Text style={styles.label}>
+            Button Border Radius: {typeof formData[formData.activeMode].buttonBorderRadius === 'number' ? formData[formData.activeMode].buttonBorderRadius : parseInt(formData[formData.activeMode].buttonBorderRadius ?? '6')}px
+          </Text>
+          <Slider
+            style={styles.slider}
+            minimumValue={0}
+            maximumValue={50}
+            step={1}
+            value={parseInt(formData[formData.activeMode].buttonBorderRadius?.toString() ?? '6')}
+            onValueChange={(val) => handleModeFieldChange('buttonBorderRadius', Math.round(val).toString())}
+            minimumTrackTintColor="#4dd9b8"
+            maximumTrackTintColor="#2a3138"
+            thumbTintColor="#4dd9b8"
+          />
+        </View>
+
+        {/* Link Styling */}
+        <Text style={[styles.label, { marginTop: 16, marginBottom: 12, fontSize: 16, color: '#4dd9b8' }]}>Link</Text>
+
+        <HexColorInput
+          label="Link Color"
+          value={formData[formData.activeMode].linkColor || ''}
+          onChange={(value) => handleModeFieldChange('linkColor', value)}
+          placeholder="#2563eb"
+        />
+
+        <View style={styles.field}>
+          <Text style={styles.label}>Link Underline Style</Text>
+          <View style={styles.fontToggle}>
+            <TouchableOpacity
+              style={[
+                styles.fontButton,
+                formData[formData.activeMode].linkUnderlineStyle === 'none' && styles.fontButtonActive,
+              ]}
+              onPress={() => handleModeFieldChange('linkUnderlineStyle', 'none')}
+            >
+              <Text
+                style={[
+                  styles.fontButtonText,
+                  formData[formData.activeMode].linkUnderlineStyle === 'none' && styles.fontButtonTextActive,
+                ]}
+              >
+                None
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[
+                styles.fontButton,
+                formData[formData.activeMode].linkUnderlineStyle === 'underline' && styles.fontButtonActive,
+              ]}
+              onPress={() => handleModeFieldChange('linkUnderlineStyle', 'underline')}
+            >
+              <Text
+                style={[
+                  styles.fontButtonText,
+                  formData[formData.activeMode].linkUnderlineStyle === 'underline' && styles.fontButtonTextActive,
+                ]}
+              >
+                Underline
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[
+                styles.fontButton,
+                formData[formData.activeMode].linkUnderlineStyle === 'always' && styles.fontButtonActive,
+              ]}
+              onPress={() => handleModeFieldChange('linkUnderlineStyle', 'always')}
+            >
+              <Text
+                style={[
+                  styles.fontButtonText,
+                  formData[formData.activeMode].linkUnderlineStyle === 'always' && styles.fontButtonTextActive,
+                ]}
+              >
+                Always
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+        </>
+        )}
+      </View>
+
       {/* Actions */}
       <View style={styles.actions}>
         <TouchableOpacity
@@ -1821,6 +2500,18 @@ const styles = StyleSheet.create({
   },
   sampleSubtext: {
     fontSize: 14,
+  },
+  sampleControlsContainer: {
+    marginTop: 20,
+    alignItems: 'center',
+    gap: 16,
+  },
+  sampleButtonWrapper: {
+    minWidth: 150,
+  },
+  sampleLink: {
+    fontSize: 16,
+    textAlign: 'center',
   },
   fontToggle: {
     flexDirection: 'row',
@@ -2171,6 +2862,67 @@ const styles = StyleSheet.create({
   },
   modeTabTextActive: {
     color: '#0f1214',
+  },
+  colorEditModal: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1000,
+  },
+  colorEditContent: {
+    backgroundColor: '#1a1f24',
+    borderRadius: 12,
+    padding: 24,
+    width: 320,
+    maxWidth: '90%',
+    borderWidth: 1,
+    borderColor: '#2a3138',
+  },
+  colorEditTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#e8eef2',
+    marginBottom: 20,
+    textAlign: 'center',
+  },
+  colorEditPreview: {
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  colorEditPreviewBox: {
+    width: 80,
+    height: 80,
+    borderRadius: 8,
+    borderWidth: 2,
+    borderColor: '#2a3138',
+  },
+  colorEditButtons: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 20,
+  },
+  colorEditButton: {
+    flex: 1,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  colorEditButtonCancel: {
+    backgroundColor: '#2a3138',
+  },
+  colorEditButtonSave: {
+    backgroundColor: '#4dd9b8',
+  },
+  colorEditButtonText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#e8eef2',
   },
 });
 
