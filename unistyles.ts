@@ -12,7 +12,7 @@ const lightTheme = {
     semiBold: 'WorkSans_600SemiBold',
     bold: 'WorkSans_700Bold',
     mono: 'IBMPlexMono_400Regular',
-    serif: 'CrimsonPro_400Regular',
+    serif: 'CrimsonPro_300Light',
   },
 };
 
@@ -28,7 +28,7 @@ const otherTheme = {
     semiBold: 'WorkSans_600SemiBold',
     bold: 'WorkSans_700Bold',
     mono: 'IBMPlexMono_400Regular',
-    serif: 'CrimsonPro_400Regular',
+    serif: 'CrimsonPro_300Light',
   },
 };
 
