@@ -13,9 +13,11 @@ import { faker } from '@faker-js/faker';
 import { CruxBloom } from '@/components/CruxBloom';
 import { ColorPicker } from './ColorPicker';
 import { HexColorInput } from './HexColorInput';
+import { ShadowControls } from './ShadowControls';
 import { CruxButton } from '@/components/CruxButton';
 import type { ThemeFormData, ThemeDto, ColorValue, ThemeModeData } from './types';
 import { getDefaultThemeFormData, formDataToDto } from './types';
+import { getShadowStyleFromTheme } from '@/utils/shadow';
 
 export interface ThemeBuilderProps {
   /** Initial theme data for editing (optional) */
@@ -35,6 +37,23 @@ const FULL_RANDOMIZATION = true;
 // NOTE: UI colors (background, panel, border) can be randomly derived from different palette colors
 // Each element has a 30% independent chance to use a different palette color for variety
 // ============================================================================
+
+// Font size configuration for preview
+const FONT_SIZES: Record<'sans-serif' | 'serif' | 'monospace', { heading: number; body: number }> & { lineHeight: number } = {
+  'sans-serif': {
+    heading: 19,
+    body: 15,
+  },
+  serif: {
+    heading: 24,
+    body: 20,
+  },
+  monospace: {
+    heading: 18,
+    body: 14,
+  },
+  lineHeight: 26,
+};
 
 export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
   initialData,
@@ -185,12 +204,12 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
     const activeData = formData[formData.activeMode];
     switch (activeData.font) {
       case 'monospace':
-        return 'monospace';
+        return 'IBMPlexMono_400Regular';
       case 'serif':
-        return 'Georgia';
+        return 'CrimsonPro_300Light';
       case 'sans-serif':
       default:
-        return 'system-ui';
+        return 'WorkSans_400Regular';
     }
   };
 
@@ -674,6 +693,16 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
     // Randomize border width (0-40, with bias toward 0)
     const bloomBorderWidth = Math.random() < 0.3 ? '0' : Math.floor(Math.random() * 41).toString();
 
+    // Randomize shadow (50% chance to enable)
+    const bloomShadowEnabled = Math.random() < 0.5;
+    const bloomShadowColor = '#000000';
+    // 20% chance for cartoon shadow (solid, no blur)
+    const isCartoonShadow = Math.random() < 0.2;
+    const bloomShadowOffsetX = Math.floor(Math.random() * 13).toString(); // 0-12px
+    const bloomShadowOffsetY = Math.floor(Math.random() * 13).toString(); // 0-12px
+    const bloomShadowBlurRadius = isCartoonShadow ? '0' : Math.floor(Math.random() * 21).toString(); // 0-20px or forced 0 for cartoon
+    const bloomShadowOpacity = isCartoonShadow ? '0.95' : (0.2 + Math.random() * 0.5).toFixed(2); // 0.95 for cartoon, 0.2-0.7 otherwise (more visible)
+
     // Generate identical bloom colors for both modes
     const bloomData = {
       primaryColor: maybeGradient(shuffled[0], 0),
@@ -682,6 +711,12 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
       quaternaryColor: maybeGradient(shuffled[3], 3),
       bloomBorderColor,
       bloomBorderWidth,
+      bloomShadowEnabled,
+      bloomShadowColor,
+      bloomShadowOffsetX,
+      bloomShadowOffsetY,
+      bloomShadowBlurRadius,
+      bloomShadowOpacity,
     };
 
     setFormData((prev) => ({
@@ -900,6 +935,24 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
     const underlineStyles: Array<'none' | 'underline' | 'always'> = ['none', 'underline', 'always'];
     const linkUnderlineStyle = underlineStyles[Math.floor(Math.random() * underlineStyles.length)];
 
+    // Randomize panel shadow (15% chance to enable)
+    const panelShadowEnabled = Math.random() < 0.15;
+    const panelShadowColor = '#000000';
+    const isPanelCartoonShadow = Math.random() < 0.1; // 10% chance for cartoon shadow
+    const panelShadowOffsetX = Math.floor(Math.random() * 11).toString(); // 0-10px
+    const panelShadowOffsetY = Math.floor(Math.random() * 11).toString(); // 0-10px
+    const panelShadowBlurRadius = isPanelCartoonShadow ? '0' : Math.floor(Math.random() * 21).toString(); // 0 for cartoon, 0-20px otherwise
+    const panelShadowOpacity = isPanelCartoonShadow ? '0.95' : (0.1 + Math.random() * 0.35).toFixed(2); // 0.95 for cartoon, 0.1-0.45 otherwise
+
+    // Randomize button shadow (25% chance to enable)
+    const buttonShadowEnabled = Math.random() < 0.25;
+    const buttonShadowColor = '#000000';
+    const isButtonCartoonShadow = Math.random() < 0.1; // 10% chance for cartoon shadow
+    const buttonShadowOffsetX = Math.floor(Math.random() * 11).toString(); // 0-10px
+    const buttonShadowOffsetY = Math.floor(Math.random() * 11).toString(); // 0-10px
+    const buttonShadowBlurRadius = isButtonCartoonShadow ? '0' : Math.floor(Math.random() * 21).toString(); // 0 for cartoon, 0-20px otherwise
+    const buttonShadowOpacity = isButtonCartoonShadow ? '0.95' : (0.1 + Math.random() * 0.35).toFixed(2); // 0.95 for cartoon, 0.1-0.45 otherwise
+
     setFormData((prev) => ({
       ...prev,
       light: {
@@ -912,12 +965,24 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
         panelColor: lightPanel,
         textColor: lightTextColor,
         font: randomFont,
+        panelShadowEnabled,
+        panelShadowColor,
+        panelShadowOffsetX,
+        panelShadowOffsetY,
+        panelShadowBlurRadius,
+        panelShadowOpacity,
         buttonBackgroundColor: lightButtonBg,
         buttonTextColor: lightButtonText,
         buttonBorderColor: lightButtonBorder,
         buttonBorderWidth,
         buttonBorderStyle,
         buttonBorderRadius,
+        buttonShadowEnabled,
+        buttonShadowColor,
+        buttonShadowOffsetX,
+        buttonShadowOffsetY,
+        buttonShadowBlurRadius,
+        buttonShadowOpacity,
         linkColor: lightLinkColor,
         linkUnderlineStyle,
       },
@@ -931,12 +996,24 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
         panelColor: darkPanel,
         textColor: darkTextColor,
         font: randomFont,
+        panelShadowEnabled,
+        panelShadowColor,
+        panelShadowOffsetX,
+        panelShadowOffsetY,
+        panelShadowBlurRadius,
+        panelShadowOpacity,
         buttonBackgroundColor: darkButtonBg,
         buttonTextColor: darkButtonText,
         buttonBorderColor: darkButtonBorder,
         buttonBorderWidth,
         buttonBorderStyle,
         buttonBorderRadius,
+        buttonShadowEnabled,
+        buttonShadowColor,
+        buttonShadowOffsetX,
+        buttonShadowOffsetY,
+        buttonShadowBlurRadius,
+        buttonShadowOpacity,
         linkColor: darkLinkColor,
         linkUnderlineStyle,
       },
@@ -1011,6 +1088,15 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
     const underlineStyles: Array<'none' | 'underline' | 'always'> = ['none', 'underline', 'always'];
     const linkUnderlineStyle = underlineStyles[Math.floor(Math.random() * underlineStyles.length)];
 
+    // Randomize button shadow (25% chance to enable)
+    const buttonShadowEnabled = Math.random() < 0.25;
+    const buttonShadowColor = '#000000';
+    const isButtonCartoonShadow = Math.random() < 0.1; // 10% chance for cartoon shadow
+    const buttonShadowOffsetX = Math.floor(Math.random() * 11).toString(); // 0-10px
+    const buttonShadowOffsetY = Math.floor(Math.random() * 11).toString(); // 0-10px
+    const buttonShadowBlurRadius = isButtonCartoonShadow ? '0' : Math.floor(Math.random() * 21).toString(); // 0 for cartoon, 0-20px otherwise
+    const buttonShadowOpacity = isButtonCartoonShadow ? '0.95' : (0.1 + Math.random() * 0.35).toFixed(2); // 0.95 for cartoon, 0.1-0.45 otherwise
+
     setFormData((prev) => ({
       ...prev,
       light: {
@@ -1021,6 +1107,12 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
         buttonBorderWidth,
         buttonBorderStyle,
         buttonBorderRadius,
+        buttonShadowEnabled,
+        buttonShadowColor,
+        buttonShadowOffsetX,
+        buttonShadowOffsetY,
+        buttonShadowBlurRadius,
+        buttonShadowOpacity,
         linkColor: lightLinkColor,
         linkUnderlineStyle,
       },
@@ -1032,6 +1124,12 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
         buttonBorderWidth,
         buttonBorderStyle,
         buttonBorderRadius,
+        buttonShadowEnabled,
+        buttonShadowColor,
+        buttonShadowOffsetX,
+        buttonShadowOffsetY,
+        buttonShadowBlurRadius,
+        buttonShadowOpacity,
         linkColor: darkLinkColor,
         linkUnderlineStyle,
       },
@@ -1131,6 +1229,16 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
     }
     const bloomBorderWidth = Math.random() < 0.3 ? '0' : Math.floor(Math.random() * 41).toString();
 
+    // Randomize bloom shadow (50% chance to enable)
+    const bloomShadowEnabled = Math.random() < 0.5;
+    const bloomShadowColor = '#000000';
+    // 20% chance for cartoon shadow (solid, no blur)
+    const isBloomCartoonShadow = Math.random() < 0.2;
+    const bloomShadowOffsetX = Math.floor(Math.random() * 13).toString(); // 0-12px
+    const bloomShadowOffsetY = Math.floor(Math.random() * 13).toString(); // 0-12px
+    const bloomShadowBlurRadius = isBloomCartoonShadow ? '0' : Math.floor(Math.random() * 21).toString(); // 0 for cartoon, 0-20px otherwise
+    const bloomShadowOpacity = isBloomCartoonShadow ? '0.95' : (0.2 + Math.random() * 0.5).toFixed(2); // 0.95 for cartoon, 0.2-0.7 otherwise (more visible)
+
     // Helper to maybe create a gradient (25% chance)
     const maybeGradient = (baseColor: string, index: number): ColorValue => {
       if (Math.random() < 0.25) {
@@ -1195,6 +1303,12 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
       quaternaryColor: maybeGradient(shuffled[3], 3),
       bloomBorderColor,
       bloomBorderWidth,
+      bloomShadowEnabled,
+      bloomShadowColor,
+      bloomShadowOffsetX,
+      bloomShadowOffsetY,
+      bloomShadowBlurRadius,
+      bloomShadowOpacity,
     };
 
     // Generate controls (buttons and links) for both modes - pick from palette
@@ -1247,6 +1361,24 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
     const underlineStyles: Array<'none' | 'underline' | 'always'> = ['none', 'underline', 'always'];
     const linkUnderlineStyle = underlineStyles[Math.floor(Math.random() * underlineStyles.length)];
 
+    // Randomize panel shadow (15% chance to enable)
+    const panelShadowEnabled = Math.random() < 0.15;
+    const panelShadowColor = '#000000';
+    const isPanelCartoonShadow = Math.random() < 0.1; // 10% chance for cartoon shadow
+    const panelShadowOffsetX = Math.floor(Math.random() * 11).toString(); // 0-10px
+    const panelShadowOffsetY = Math.floor(Math.random() * 11).toString(); // 0-10px
+    const panelShadowBlurRadius = isPanelCartoonShadow ? '0' : Math.floor(Math.random() * 21).toString(); // 0 for cartoon, 0-20px otherwise
+    const panelShadowOpacity = isPanelCartoonShadow ? '0.95' : (0.1 + Math.random() * 0.35).toFixed(2); // 0.95 for cartoon, 0.1-0.45 otherwise
+
+    // Randomize button shadow (25% chance to enable)
+    const buttonShadowEnabled = Math.random() < 0.25;
+    const buttonShadowColor = '#000000';
+    const isButtonCartoonShadow = Math.random() < 0.1; // 10% chance for cartoon shadow
+    const buttonShadowOffsetX = Math.floor(Math.random() * 11).toString(); // 0-10px
+    const buttonShadowOffsetY = Math.floor(Math.random() * 11).toString(); // 0-10px
+    const buttonShadowBlurRadius = isButtonCartoonShadow ? '0' : Math.floor(Math.random() * 21).toString(); // 0 for cartoon, 0-20px otherwise
+    const buttonShadowOpacity = isButtonCartoonShadow ? '0.95' : (0.1 + Math.random() * 0.35).toFixed(2); // 0.95 for cartoon, 0.1-0.45 otherwise
+
     setFormData((prev) => ({
       ...prev,
       title,
@@ -1261,12 +1393,24 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
         borderRadius,
         borderStyle: randomBorderStyle,
         font: randomFont,
+        panelShadowEnabled,
+        panelShadowColor,
+        panelShadowOffsetX,
+        panelShadowOffsetY,
+        panelShadowBlurRadius,
+        panelShadowOpacity,
         buttonBackgroundColor: lightButtonBg,
         buttonTextColor: lightButtonText,
         buttonBorderColor: lightButtonBorder,
         buttonBorderWidth,
         buttonBorderStyle,
         buttonBorderRadius,
+        buttonShadowEnabled,
+        buttonShadowColor,
+        buttonShadowOffsetX,
+        buttonShadowOffsetY,
+        buttonShadowBlurRadius,
+        buttonShadowOpacity,
         linkColor: lightLinkColor,
         linkUnderlineStyle,
       },
@@ -1280,12 +1424,24 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
         borderRadius,
         borderStyle: randomBorderStyle,
         font: randomFont,
+        panelShadowEnabled,
+        panelShadowColor,
+        panelShadowOffsetX,
+        panelShadowOffsetY,
+        panelShadowBlurRadius,
+        panelShadowOpacity,
         buttonBackgroundColor: darkButtonBg,
         buttonTextColor: darkButtonText,
         buttonBorderColor: darkButtonBorder,
         buttonBorderWidth,
         buttonBorderStyle,
         buttonBorderRadius,
+        buttonShadowEnabled,
+        buttonShadowColor,
+        buttonShadowOffsetX,
+        buttonShadowOffsetY,
+        buttonShadowBlurRadius,
+        buttonShadowOpacity,
         linkColor: darkLinkColor,
         linkUnderlineStyle,
       },
@@ -1323,6 +1479,14 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
                   borderRadius: typeof formData[formData.activeMode].borderRadius === 'number' ? formData[formData.activeMode].borderRadius : parseInt(formData[formData.activeMode].borderRadius ?? '0'),
                   borderStyle: formData[formData.activeMode].borderStyle || 'solid',
                 },
+                getShadowStyleFromTheme(
+                  formData[formData.activeMode].panelShadowEnabled,
+                  formData[formData.activeMode].panelShadowColor,
+                  formData[formData.activeMode].panelShadowOffsetX,
+                  formData[formData.activeMode].panelShadowOffsetY,
+                  formData[formData.activeMode].panelShadowBlurRadius,
+                  formData[formData.activeMode].panelShadowOpacity
+                ),
               ]}
             >
               <Text
@@ -1331,7 +1495,7 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
                   {
                     color: formData[formData.activeMode].textColor || '#000000',
                     fontFamily: getFontFamily(),
-                    fontSize: formData[formData.activeMode].font === 'monospace' ? 18 : 22,
+                    fontSize: FONT_SIZES[(formData[formData.activeMode].font || 'sans-serif') as 'sans-serif' | 'serif' | 'monospace'].heading,
                   },
                 ]}
               >
@@ -1343,8 +1507,8 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
                   {
                     color: formData[formData.activeMode].textColor || '#000000',
                     fontFamily: getFontFamily(),
-                    fontSize: formData[formData.activeMode].font === 'monospace' ? 14 : 17,
-                    lineHeight: formData[formData.activeMode].font === 'monospace' ? 22 : 26,
+                    fontSize: FONT_SIZES[(formData[formData.activeMode].font || 'sans-serif') as 'sans-serif' | 'serif' | 'monospace'].body,
+                    lineHeight: FONT_SIZES.lineHeight,
                   },
                 ]}
               >
@@ -1356,8 +1520,8 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
                   {
                     color: formData[formData.activeMode].textColor || '#000000',
                     fontFamily: getFontFamily(),
-                    fontSize: formData[formData.activeMode].font === 'monospace' ? 14 : 17,
-                    lineHeight: formData[formData.activeMode].font === 'monospace' ? 22 : 26,
+                    fontSize: FONT_SIZES[(formData[formData.activeMode].font || 'sans-serif') as 'sans-serif' | 'serif' | 'monospace'].body,
+                    lineHeight: FONT_SIZES.lineHeight,
                   },
                 ]}
               >
@@ -1369,8 +1533,8 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
                   {
                     color: formData[formData.activeMode].textColor || '#000000',
                     fontFamily: getFontFamily(),
-                    fontSize: formData[formData.activeMode].font === 'monospace' ? 14 : 17,
-                    lineHeight: formData[formData.activeMode].font === 'monospace' ? 22 : 26,
+                    fontSize: FONT_SIZES[(formData[formData.activeMode].font || 'sans-serif') as 'sans-serif' | 'serif' | 'monospace'].body,
+                    lineHeight: FONT_SIZES.lineHeight,
                   },
                 ]}
               >
@@ -1388,6 +1552,13 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
                     borderWidth={parseInt(formData[formData.activeMode].buttonBorderWidth ?? '1')}
                     borderStyle={formData[formData.activeMode].buttonBorderStyle || 'solid'}
                     borderRadius={parseInt(formData[formData.activeMode].buttonBorderRadius ?? '6')}
+                    shadow={formData[formData.activeMode].buttonShadowEnabled ? {
+                      color: formData[formData.activeMode].buttonShadowColor || '#000000',
+                      offsetX: parseFloat(formData[formData.activeMode].buttonShadowOffsetX || '0'),
+                      offsetY: parseFloat(formData[formData.activeMode].buttonShadowOffsetY || '0'),
+                      blurRadius: parseFloat(formData[formData.activeMode].buttonShadowBlurRadius || '0'),
+                      opacity: parseFloat(formData[formData.activeMode].buttonShadowOpacity || '0'),
+                    } : undefined}
                     fontFamily={getFontFamily()}
                     onPress={() => {}}
                   />
@@ -2210,6 +2381,32 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
             </TouchableOpacity>
           </View>
         </View>
+
+        {/* Panel Shadow Controls */}
+        <ShadowControls
+          label="Panel Shadow"
+          enabled={formData[formData.activeMode].panelShadowEnabled}
+          color={formData[formData.activeMode].panelShadowColor}
+          offsetX={formData[formData.activeMode].panelShadowOffsetX}
+          offsetY={formData[formData.activeMode].panelShadowOffsetY}
+          blurRadius={formData[formData.activeMode].panelShadowBlurRadius}
+          opacity={formData[formData.activeMode].panelShadowOpacity}
+          onChange={(field, value) => {
+            if (field === 'enabled') {
+              handleModeFieldChange('panelShadowEnabled', value as boolean);
+            } else if (field === 'color') {
+              handleModeFieldChange('panelShadowColor', value as string);
+            } else if (field === 'offsetX') {
+              handleModeFieldChange('panelShadowOffsetX', value as string);
+            } else if (field === 'offsetY') {
+              handleModeFieldChange('panelShadowOffsetY', value as string);
+            } else if (field === 'blurRadius') {
+              handleModeFieldChange('panelShadowBlurRadius', value as string);
+            } else if (field === 'opacity') {
+              handleModeFieldChange('panelShadowOpacity', value as string);
+            }
+          }}
+        />
         </>
         )}
       </View>
@@ -2412,6 +2609,32 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
             </TouchableOpacity>
           </View>
         </View>
+
+        {/* Button Shadow Controls */}
+        <ShadowControls
+          label="Button Shadow"
+          enabled={formData[formData.activeMode].buttonShadowEnabled}
+          color={formData[formData.activeMode].buttonShadowColor}
+          offsetX={formData[formData.activeMode].buttonShadowOffsetX}
+          offsetY={formData[formData.activeMode].buttonShadowOffsetY}
+          blurRadius={formData[formData.activeMode].buttonShadowBlurRadius}
+          opacity={formData[formData.activeMode].buttonShadowOpacity}
+          onChange={(field, value) => {
+            if (field === 'enabled') {
+              handleModeFieldChange('buttonShadowEnabled', value as boolean);
+            } else if (field === 'color') {
+              handleModeFieldChange('buttonShadowColor', value as string);
+            } else if (field === 'offsetX') {
+              handleModeFieldChange('buttonShadowOffsetX', value as string);
+            } else if (field === 'offsetY') {
+              handleModeFieldChange('buttonShadowOffsetY', value as string);
+            } else if (field === 'blurRadius') {
+              handleModeFieldChange('buttonShadowBlurRadius', value as string);
+            } else if (field === 'opacity') {
+              handleModeFieldChange('buttonShadowOpacity', value as string);
+            }
+          }}
+        />
         </>
         )}
       </View>
