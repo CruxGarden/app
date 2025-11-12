@@ -6,6 +6,14 @@ const lightTheme = {
     secondary: '#1ff4ff',
   },
   gap: (v: number) => v * 8,
+  fonts: {
+    regular: 'WorkSans_400Regular',
+    medium: 'WorkSans_500Medium',
+    semiBold: 'WorkSans_600SemiBold',
+    bold: 'WorkSans_700Bold',
+    mono: 'IBMPlexMono_400Regular',
+    serif: 'CrimsonPro_400Regular',
+  },
 };
 
 const otherTheme = {
@@ -14,6 +22,14 @@ const otherTheme = {
     secondary: 'pink',
   },
   gap: (v: number) => v * 8,
+  fonts: {
+    regular: 'WorkSans_400Regular',
+    medium: 'WorkSans_500Medium',
+    semiBold: 'WorkSans_600SemiBold',
+    bold: 'WorkSans_700Bold',
+    mono: 'IBMPlexMono_400Regular',
+    serif: 'CrimsonPro_400Regular',
+  },
 };
 
 const appThemes = {

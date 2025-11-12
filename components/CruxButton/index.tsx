@@ -9,6 +9,8 @@ import React from 'react';
 import { Text, Pressable, StyleSheet } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import type { GradientDefinition } from '@/components/CruxBloom';
+import type { ShadowConfig } from '@/utils/shadow';
+import { getShadowStyle } from '@/utils/shadow';
 
 export type ButtonColorValue =
   | { type: 'solid'; value: string }
@@ -29,6 +31,8 @@ export interface CruxButtonProps {
   borderStyle?: 'solid' | 'dashed' | 'dotted';
   /** Border radius */
   borderRadius?: number;
+  /** Shadow configuration */
+  shadow?: ShadowConfig;
   /** onPress handler */
   onPress?: () => void;
   /** Font family */
@@ -43,14 +47,18 @@ export const CruxButton: React.FC<CruxButtonProps> = ({
   borderWidth = 0,
   borderStyle = 'solid',
   borderRadius = 6,
+  shadow,
   onPress,
   fontFamily,
 }) => {
+  const shadowStyle = shadow ? getShadowStyle(shadow) : {};
+
   const buttonStyle = {
     borderColor,
     borderWidth,
     borderStyle,
     borderRadius,
+    ...shadowStyle,
   };
 
   const textStyle = {

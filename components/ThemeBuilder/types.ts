@@ -28,6 +28,14 @@ export interface ThemeModeData {
   bloomBorderColor?: string;
   bloomBorderWidth?: string;
 
+  // Bloom shadow
+  bloomShadowEnabled?: boolean;
+  bloomShadowColor?: string;
+  bloomShadowOffsetX?: string;
+  bloomShadowOffsetY?: string;
+  bloomShadowBlurRadius?: string;
+  bloomShadowOpacity?: string;
+
   // UI styling
   borderRadius?: string;
   borderColor?: string;
@@ -38,6 +46,14 @@ export interface ThemeModeData {
   textColor?: string;
   font?: string;
 
+  // Panel shadow
+  panelShadowEnabled?: boolean;
+  panelShadowColor?: string;
+  panelShadowOffsetX?: string;
+  panelShadowOffsetY?: string;
+  panelShadowBlurRadius?: string;
+  panelShadowOpacity?: string;
+
   // Controls styling
   buttonBackgroundColor?: ColorValue;
   buttonTextColor?: string;
@@ -45,6 +61,15 @@ export interface ThemeModeData {
   buttonBorderWidth?: string;
   buttonBorderStyle?: 'solid' | 'dashed' | 'dotted';
   buttonBorderRadius?: string;
+
+  // Button shadow
+  buttonShadowEnabled?: boolean;
+  buttonShadowColor?: string;
+  buttonShadowOffsetX?: string;
+  buttonShadowOffsetY?: string;
+  buttonShadowBlurRadius?: string;
+  buttonShadowOpacity?: string;
+
   linkColor?: string;
   linkUnderlineStyle?: 'none' | 'underline' | 'always';
 }
@@ -117,6 +142,12 @@ export interface ThemeMeta {
       };
       borderColor?: string;
       borderWidth?: string;
+      shadowEnabled?: boolean;
+      shadowColor?: string;
+      shadowOffsetX?: string;
+      shadowOffsetY?: string;
+      shadowBlurRadius?: string;
+      shadowOpacity?: string;
     };
     dark?: {
       primary?: {
@@ -137,6 +168,12 @@ export interface ThemeMeta {
       };
       borderColor?: string;
       borderWidth?: string;
+      shadowEnabled?: boolean;
+      shadowColor?: string;
+      shadowOffsetX?: string;
+      shadowOffsetY?: string;
+      shadowBlurRadius?: string;
+      shadowOpacity?: string;
     };
   };
   content?: {
@@ -149,6 +186,12 @@ export interface ThemeMeta {
       borderRadius?: string;
       borderStyle?: 'solid' | 'dashed' | 'dotted';
       font?: string;
+      panelShadowEnabled?: boolean;
+      panelShadowColor?: string;
+      panelShadowOffsetX?: string;
+      panelShadowOffsetY?: string;
+      panelShadowBlurRadius?: string;
+      panelShadowOpacity?: string;
     };
     dark?: {
       backgroundColor?: string;
@@ -159,6 +202,12 @@ export interface ThemeMeta {
       borderRadius?: string;
       borderStyle?: 'solid' | 'dashed' | 'dotted';
       font?: string;
+      panelShadowEnabled?: boolean;
+      panelShadowColor?: string;
+      panelShadowOffsetX?: string;
+      panelShadowOffsetY?: string;
+      panelShadowBlurRadius?: string;
+      panelShadowOpacity?: string;
     };
   };
   controls?: {
@@ -172,6 +221,12 @@ export interface ThemeMeta {
       buttonBorderWidth?: string;
       buttonBorderStyle?: 'solid' | 'dashed' | 'dotted';
       buttonBorderRadius?: string;
+      buttonShadowEnabled?: boolean;
+      buttonShadowColor?: string;
+      buttonShadowOffsetX?: string;
+      buttonShadowOffsetY?: string;
+      buttonShadowBlurRadius?: string;
+      buttonShadowOpacity?: string;
       linkColor?: string;
       linkUnderlineStyle?: 'none' | 'underline' | 'always';
     };
@@ -185,6 +240,12 @@ export interface ThemeMeta {
       buttonBorderWidth?: string;
       buttonBorderStyle?: 'solid' | 'dashed' | 'dotted';
       buttonBorderRadius?: string;
+      buttonShadowEnabled?: boolean;
+      buttonShadowColor?: string;
+      buttonShadowOffsetX?: string;
+      buttonShadowOffsetY?: string;
+      buttonShadowBlurRadius?: string;
+      buttonShadowOpacity?: string;
       linkColor?: string;
       linkUnderlineStyle?: 'none' | 'underline' | 'always';
     };
@@ -228,6 +289,12 @@ export function formDataToDto(formData: ThemeFormData): ThemeDto {
         quaternary: quaternaryData.gradient ? { gradient: quaternaryData.gradient } : { solid: quaternaryData.color },
         borderColor: modeData.bloomBorderColor,
         borderWidth: modeData.bloomBorderWidth,
+        shadowEnabled: modeData.bloomShadowEnabled,
+        shadowColor: modeData.bloomShadowColor,
+        shadowOffsetX: modeData.bloomShadowOffsetX,
+        shadowOffsetY: modeData.bloomShadowOffsetY,
+        shadowBlurRadius: modeData.bloomShadowBlurRadius,
+        shadowOpacity: modeData.bloomShadowOpacity,
       },
       content: {
         backgroundColor: modeData.backgroundColor,
@@ -238,6 +305,12 @@ export function formDataToDto(formData: ThemeFormData): ThemeDto {
         borderRadius: modeData.borderRadius,
         borderStyle: modeData.borderStyle,
         font: modeData.font,
+        panelShadowEnabled: modeData.panelShadowEnabled,
+        panelShadowColor: modeData.panelShadowColor,
+        panelShadowOffsetX: modeData.panelShadowOffsetX,
+        panelShadowOffsetY: modeData.panelShadowOffsetY,
+        panelShadowBlurRadius: modeData.panelShadowBlurRadius,
+        panelShadowOpacity: modeData.panelShadowOpacity,
       },
       controls: {
         buttonBackground: modeData.buttonBackgroundColor
@@ -250,6 +323,12 @@ export function formDataToDto(formData: ThemeFormData): ThemeDto {
         buttonBorderWidth: modeData.buttonBorderWidth,
         buttonBorderStyle: modeData.buttonBorderStyle,
         buttonBorderRadius: modeData.buttonBorderRadius,
+        buttonShadowEnabled: modeData.buttonShadowEnabled,
+        buttonShadowColor: modeData.buttonShadowColor,
+        buttonShadowOffsetX: modeData.buttonShadowOffsetX,
+        buttonShadowOffsetY: modeData.buttonShadowOffsetY,
+        buttonShadowBlurRadius: modeData.buttonShadowBlurRadius,
+        buttonShadowOpacity: modeData.buttonShadowOpacity,
         linkColor: modeData.linkColor,
         linkUnderlineStyle: modeData.linkUnderlineStyle,
       },
@@ -319,6 +398,12 @@ export function dtoToFormData(dto: ThemeDto): ThemeFormData {
       quaternaryColor: reconstructColor(paletteColors.quaternary, bloomSettings.quaternary),
       bloomBorderColor: bloomSettings?.borderColor,
       bloomBorderWidth: bloomSettings?.borderWidth,
+      bloomShadowEnabled: bloomSettings?.shadowEnabled,
+      bloomShadowColor: bloomSettings?.shadowColor,
+      bloomShadowOffsetX: bloomSettings?.shadowOffsetX,
+      bloomShadowOffsetY: bloomSettings?.shadowOffsetY,
+      bloomShadowBlurRadius: bloomSettings?.shadowBlurRadius,
+      bloomShadowOpacity: bloomSettings?.shadowOpacity,
       backgroundColor: contentSettings.backgroundColor,
       panelColor: contentSettings.panelColor,
       textColor: contentSettings.textColor,
@@ -327,6 +412,12 @@ export function dtoToFormData(dto: ThemeDto): ThemeFormData {
       borderRadius: contentSettings.borderRadius,
       borderStyle: contentSettings.borderStyle,
       font: contentSettings.font,
+      panelShadowEnabled: contentSettings.panelShadowEnabled,
+      panelShadowColor: contentSettings.panelShadowColor,
+      panelShadowOffsetX: contentSettings.panelShadowOffsetX,
+      panelShadowOffsetY: contentSettings.panelShadowOffsetY,
+      panelShadowBlurRadius: contentSettings.panelShadowBlurRadius,
+      panelShadowOpacity: contentSettings.panelShadowOpacity,
       buttonBackgroundColor: controlsSettings.buttonBackground
         ? (controlsSettings.buttonBackground.gradient
             ? { type: 'gradient', value: controlsSettings.buttonBackground.gradient }
@@ -337,6 +428,12 @@ export function dtoToFormData(dto: ThemeDto): ThemeFormData {
       buttonBorderWidth: controlsSettings.buttonBorderWidth,
       buttonBorderStyle: controlsSettings.buttonBorderStyle,
       buttonBorderRadius: controlsSettings.buttonBorderRadius,
+      buttonShadowEnabled: controlsSettings.buttonShadowEnabled,
+      buttonShadowColor: controlsSettings.buttonShadowColor,
+      buttonShadowOffsetX: controlsSettings.buttonShadowOffsetX,
+      buttonShadowOffsetY: controlsSettings.buttonShadowOffsetY,
+      buttonShadowBlurRadius: controlsSettings.buttonShadowBlurRadius,
+      buttonShadowOpacity: controlsSettings.buttonShadowOpacity,
       linkColor: controlsSettings.linkColor,
       linkUnderlineStyle: controlsSettings.linkUnderlineStyle,
     };
@@ -378,6 +475,12 @@ export function getDefaultThemeFormData(): ThemeFormData {
       quaternaryColor: { type: 'solid', value: '#73a079' },
       bloomBorderColor: '#000000',
       bloomBorderWidth: '0',
+      bloomShadowEnabled: false,
+      bloomShadowColor: '#000000',
+      bloomShadowOffsetX: '2',
+      bloomShadowOffsetY: '4',
+      bloomShadowBlurRadius: '8',
+      bloomShadowOpacity: '0.15',
       borderWidth: '1',
       borderRadius: '0',
       borderColor: '#cccccc',
@@ -386,12 +489,24 @@ export function getDefaultThemeFormData(): ThemeFormData {
       panelColor: '#f5f5f5',
       textColor: '#000000',
       font: 'sans-serif',
+      panelShadowEnabled: false,
+      panelShadowColor: '#000000',
+      panelShadowOffsetX: '0',
+      panelShadowOffsetY: '1',
+      panelShadowBlurRadius: '3',
+      panelShadowOpacity: '0.05',
       buttonBackgroundColor: { type: 'solid', value: '#4dd9b8' },
       buttonTextColor: '#0f1214',
       buttonBorderColor: '#4dd9b8',
       buttonBorderWidth: '1',
       buttonBorderStyle: 'solid',
       buttonBorderRadius: '6',
+      buttonShadowEnabled: false,
+      buttonShadowColor: '#000000',
+      buttonShadowOffsetX: '0',
+      buttonShadowOffsetY: '2',
+      buttonShadowBlurRadius: '4',
+      buttonShadowOpacity: '0.1',
       linkColor: '#2563eb',
       linkUnderlineStyle: 'underline',
     },
@@ -402,6 +517,12 @@ export function getDefaultThemeFormData(): ThemeFormData {
       quaternaryColor: { type: 'solid', value: '#73a079' },
       bloomBorderColor: '#000000',
       bloomBorderWidth: '0',
+      bloomShadowEnabled: false,
+      bloomShadowColor: '#000000',
+      bloomShadowOffsetX: '2',
+      bloomShadowOffsetY: '4',
+      bloomShadowBlurRadius: '8',
+      bloomShadowOpacity: '0.15',
       borderWidth: '1',
       borderRadius: '0',
       borderColor: '#333333',
@@ -410,12 +531,24 @@ export function getDefaultThemeFormData(): ThemeFormData {
       panelColor: '#1a1f24',
       textColor: '#e8eef2',
       font: 'sans-serif',
+      panelShadowEnabled: false,
+      panelShadowColor: '#000000',
+      panelShadowOffsetX: '0',
+      panelShadowOffsetY: '1',
+      panelShadowBlurRadius: '3',
+      panelShadowOpacity: '0.05',
       buttonBackgroundColor: { type: 'solid', value: '#4dd9b8' },
       buttonTextColor: '#0f1214',
       buttonBorderColor: '#4dd9b8',
       buttonBorderWidth: '1',
       buttonBorderStyle: 'solid',
       buttonBorderRadius: '6',
+      buttonShadowEnabled: false,
+      buttonShadowColor: '#000000',
+      buttonShadowOffsetX: '0',
+      buttonShadowOffsetY: '2',
+      buttonShadowBlurRadius: '4',
+      buttonShadowOpacity: '0.1',
       linkColor: '#60a5fa',
       linkUnderlineStyle: 'underline',
     },
