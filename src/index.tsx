@@ -1,121 +1,67 @@
-import { View, Image, Text, TouchableOpacity, ActivityIndicator } from 'react-native';
-import { StyleSheet } from 'react-native-unistyles';
 import { useRouter } from 'expo-router';
 import { useApp } from './lib/_AppContext';
+import { Container, View, Text, Button, Loading, CruxBloom, Panel } from '@/components';
+import { useTheme } from '@/contexts/ThemeContext';
 
 export default function Index() {
   const router = useRouter();
   const { isAuthenticated, isLoading, account, logout } = useApp();
+  const { tokens } = useTheme();
 
   if (isLoading) {
-    return (
-      <View style={styles.container}>
-        <ActivityIndicator size="large" color="#4dd9b8" />
-      </View>
-    );
+    return <Loading />;
   }
 
   return (
-    <View style={styles.container}>
-      <Image
-        source={require('../assets/images/banner.png')}
-        style={styles.banner}
-        resizeMode="contain"
-      />
+    <Container centered>
+      <View style={{ marginBottom: 48, alignItems: 'center' }}>
+        <CruxBloom
+          theme={{
+            primary: tokens.colors.bloomPrimary,
+            secondary: tokens.colors.bloomSecondary,
+            tertiary: tokens.colors.bloomTertiary,
+            quaternary: tokens.colors.bloomQuaternary,
+            borderColor: tokens.colors.bloomBorder,
+            borderWidth: tokens.bloom.borderWidth,
+          }}
+          size={200}
+        />
+      </View>
 
       {isAuthenticated ? (
-        <View style={styles.content}>
-          <Text style={styles.welcomeText}>
+        <Panel style={{ alignItems: 'center', gap: 16, minWidth: 300 }}>
+          <Text style={{ marginBottom: 8 }}>
             Welcome, {account?.author?.displayName || account?.email}
           </Text>
-          <View style={styles.buttonRow}>
-            <TouchableOpacity style={styles.button} onPress={() => router.push('/author')}>
-              <Text style={styles.buttonText}>Profile</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.button} onPress={() => router.push('/account')}>
-              <Text style={styles.buttonText}>Account</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.button} onPress={() => router.push('/settings')}>
-              <Text style={styles.buttonText}>Settings</Text>
-            </TouchableOpacity>
+          <View style={{ flexDirection: 'row', gap: 12 }}>
+            <Button title="Profile" onPress={() => router.push('/author')} />
+            <Button title="Account" onPress={() => router.push('/account')} />
+            <Button title="Settings" onPress={() => router.push('/settings')} />
           </View>
-          <TouchableOpacity
-            style={[styles.button, styles.secondaryButton]}
+          <Button
+            title="Bloom Gallery"
+            variant="secondary"
+            fullWidth
             onPress={() => router.push('/bloom-examples')}
-          >
-            <Text style={[styles.buttonText, styles.secondaryButtonText]}>Bloom Gallery</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.button, styles.secondaryButton]}
+          />
+          <Button
+            title="Sign Out"
+            variant="secondary"
+            fullWidth
             onPress={() => logout()}
-          >
-            <Text style={[styles.buttonText, styles.secondaryButtonText]}>Sign Out</Text>
-          </TouchableOpacity>
-        </View>
+          />
+        </Panel>
       ) : (
-        <View style={styles.content}>
-          <TouchableOpacity style={styles.button} onPress={() => router.push('/login')}>
-            <Text style={styles.buttonText}>Sign In</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.button, styles.secondaryButton]}
+        <Panel style={{ alignItems: 'center', gap: 16, minWidth: 300 }}>
+          <Button title="Sign In" onPress={() => router.push('/login')} />
+          <Button
+            title="Bloom Gallery"
+            variant="secondary"
+            fullWidth
             onPress={() => router.push('/bloom-examples')}
-          >
-            <Text style={[styles.buttonText, styles.secondaryButtonText]}>Bloom Gallery</Text>
-          </TouchableOpacity>
-        </View>
+          />
+        </Panel>
       )}
-    </View>
+    </Container>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#0F1214',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 24,
-  },
-  banner: {
-    width: '90%',
-    maxWidth: 1200,
-    height: undefined,
-    aspectRatio: 3 / 1,
-    marginBottom: 48,
-  },
-  content: {
-    alignItems: 'center',
-    gap: 16,
-  },
-  welcomeText: {
-    fontSize: 16,
-    color: '#e8eef2',
-    marginBottom: 8,
-  },
-  buttonRow: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  button: {
-    backgroundColor: '#4dd9b8',
-    borderRadius: 8,
-    paddingVertical: 12,
-    paddingHorizontal: 32,
-    minWidth: 120,
-    alignItems: 'center',
-  },
-  buttonText: {
-    color: '#0f1214',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  secondaryButton: {
-    backgroundColor: 'transparent',
-    borderWidth: 1,
-    borderColor: '#4dd9b8',
-  },
-  secondaryButtonText: {
-    color: '#4dd9b8',
-  },
-});

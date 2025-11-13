@@ -1,21 +1,15 @@
 import { useState, useEffect, useRef } from 'react';
-import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  ActivityIndicator,
-  Alert,
-  ScrollView,
-} from 'react-native';
-import { StyleSheet } from 'react-native-unistyles';
+import { Alert, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useApp } from './lib/_AppContext';
 import api, { Account } from './lib/api';
+import { Container, ScrollView, View, Text, TextInput, Button, Panel, Section, Loading } from '@/components';
+import { useTheme } from '@/contexts/ThemeContext';
 
 export default function AccountScreen() {
   const router = useRouter();
   const { logout } = useApp();
+  const { tokens } = useTheme();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -24,7 +18,7 @@ export default function AccountScreen() {
   const [emailError, setEmailError] = useState('');
   const [checkingEmail, setCheckingEmail] = useState(false);
   const [deleteConfirmation, setDeleteConfirmation] = useState('');
-  const emailCheckTimeout = useRef<NodeJS.Timeout | null>(null);
+  const emailCheckTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     loadAccount();
@@ -53,14 +47,12 @@ export default function AccountScreen() {
   };
 
   const checkEmailAvailability = async (emailToCheck: string) => {
-    // Basic email validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(emailToCheck)) {
       setEmailError('Please enter a valid email address');
       return;
     }
 
-    // If email hasn't changed, clear error
     if (emailToCheck === account?.email) {
       setEmailError('');
       return;
@@ -76,7 +68,6 @@ export default function AccountScreen() {
       }
     } catch (error: any) {
       console.error('Failed to check email availability:', error);
-      // Don't show error for network issues - just allow submission
     } finally {
       setCheckingEmail(false);
     }
@@ -86,12 +77,10 @@ export default function AccountScreen() {
     setEmail(newEmail);
     setEmailError('');
 
-    // Clear previous timeout
     if (emailCheckTimeout.current) {
       clearTimeout(emailCheckTimeout.current);
     }
 
-    // Debounce email check (wait 500ms after user stops typing)
     emailCheckTimeout.current = setTimeout(() => {
       checkEmailAvailability(newEmail);
     }, 500);
@@ -102,20 +91,17 @@ export default function AccountScreen() {
       return;
     }
 
-    // Check if there's a validation error
     if (emailError) {
       Alert.alert('Invalid Email', emailError);
       return;
     }
 
-    // Basic email validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
       Alert.alert('Invalid Email', 'Please enter a valid email address');
       return;
     }
 
-    // Show confirmation prompt with the new email
     Alert.alert(
       'Confirm Email Change',
       `Are you sure you want to change your email to:\n\n${email}\n\nYou will be logged out and must log in again with this new email address. Make sure it's correct!`,
@@ -124,7 +110,6 @@ export default function AccountScreen() {
           text: 'Cancel',
           style: 'cancel',
           onPress: () => {
-            // Reset to original email
             setEmail(account?.email || '');
           },
         },
@@ -137,7 +122,6 @@ export default function AccountScreen() {
               await api.updateAccount({ email });
               setEmailError('');
 
-              // Email was updated successfully - tokens are now invalid, must re-login
               Alert.alert(
                 'Email Updated',
                 'Your email has been updated. Please log in again with your new email address.',
@@ -155,7 +139,6 @@ export default function AccountScreen() {
               console.error('Failed to update email:', error);
               const message = error.response?.data?.message || 'Failed to update email';
               Alert.alert('Error', message);
-              // Reset to original email on error
               setEmail(account?.email || '');
               setEmailError('');
             } finally {
@@ -212,232 +195,116 @@ export default function AccountScreen() {
   };
 
   if (loading) {
-    return (
-      <View style={styles.container}>
-        <ActivityIndicator size="large" color="#4dd9b8" />
-      </View>
-    );
+    return <Loading />;
   }
 
   return (
-    <ScrollView style={styles.scrollView} contentContainerStyle={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <Text style={styles.backButtonText}>← Back</Text>
-        </TouchableOpacity>
-        <Text style={styles.title}>Account Settings</Text>
-      </View>
-
-      {/* Account Information */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Account Information</Text>
-
-        <View style={styles.infoRow}>
-          <Text style={styles.label}>Account ID:</Text>
-          <Text style={styles.value}>{account?.id}</Text>
-        </View>
-
-        <View style={styles.infoRow}>
-          <Text style={styles.label}>Role:</Text>
-          <Text style={styles.value}>{account?.role}</Text>
-        </View>
-
-        <View style={styles.infoRow}>
-          <Text style={styles.label}>Created:</Text>
-          <Text style={styles.value}>
-            {account?.created ? new Date(account.created).toLocaleDateString() : 'N/A'}
-          </Text>
-        </View>
-
-        <View style={styles.infoRow}>
-          <Text style={styles.label}>Last Updated:</Text>
-          <Text style={styles.value}>
-            {account?.updated ? new Date(account.updated).toLocaleDateString() : 'N/A'}
-          </Text>
-        </View>
-      </View>
-
-      {/* Email Update */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Email Address</Text>
-        <View style={styles.inputWrapper}>
-          <TextInput
-            style={[styles.input, emailError && styles.inputError]}
-            value={email}
-            onChangeText={handleEmailChange}
-            placeholder="Enter email address"
-            placeholderTextColor="#666"
-            keyboardType="email-address"
-            autoCapitalize="none"
-            autoComplete="email"
+    <ScrollView>
+      <Container padded>
+        <View style={{ marginBottom: tokens.spacing.lg }}>
+          <Button
+            title="← Back"
+            variant="ghost"
+            onPress={() => router.back()}
+            style={{ alignSelf: 'flex-start', marginBottom: tokens.spacing.md }}
           />
-          {checkingEmail && (
-            <View style={styles.inputIcon}>
-              <ActivityIndicator size="small" color="#4dd9b8" />
-            </View>
-          )}
+          <Text variant="heading" weight="bold">
+            Account Settings
+          </Text>
         </View>
-        {emailError ? <Text style={styles.errorText}>{emailError}</Text> : null}
-        <TouchableOpacity
-          style={[
-            styles.button,
-            (saving || email === account?.email || !!emailError || checkingEmail) &&
-              styles.buttonDisabled,
-          ]}
-          onPress={handleUpdateEmail}
-          disabled={saving || email === account?.email || !!emailError || checkingEmail}
-        >
-          {saving ? (
-            <ActivityIndicator color="#0f1214" />
-          ) : (
-            <Text style={styles.buttonText}>Update Email</Text>
-          )}
-        </TouchableOpacity>
-      </View>
 
-      {/* Danger Zone */}
-      <View style={[styles.section, styles.dangerSection]}>
-        <Text style={[styles.sectionTitle, styles.dangerTitle]}>Danger Zone</Text>
-        <Text style={styles.dangerText}>
-          Deleting your account is permanent and cannot be undone. All your data will be removed.
-        </Text>
+        {/* Account Information */}
+        <Section title="Account Information">
+          <View style={{ gap: tokens.spacing.md }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+              <Text style={{ opacity: 0.7 }}>Account ID:</Text>
+              <Text>{account?.id}</Text>
+            </View>
 
-        <Text style={styles.label}>Type &quot;DELETE MY ACCOUNT&quot; to confirm:</Text>
-        <TextInput
-          style={styles.input}
-          value={deleteConfirmation}
-          onChangeText={setDeleteConfirmation}
-          placeholder="DELETE MY ACCOUNT"
-          placeholderTextColor="#666"
-          autoCapitalize="characters"
-        />
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+              <Text style={{ opacity: 0.7 }}>Role:</Text>
+              <Text>{account?.role}</Text>
+            </View>
 
-        <TouchableOpacity
-          style={[styles.button, styles.deleteButton, deleting && styles.buttonDisabled]}
-          onPress={handleDeleteAccount}
-          disabled={deleting || deleteConfirmation !== 'DELETE MY ACCOUNT'}
-        >
-          {deleting ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <Text style={styles.deleteButtonText}>Delete Account</Text>
-          )}
-        </TouchableOpacity>
-      </View>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+              <Text style={{ opacity: 0.7 }}>Created:</Text>
+              <Text>
+                {account?.created ? new Date(account.created).toLocaleDateString() : 'N/A'}
+              </Text>
+            </View>
+
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+              <Text style={{ opacity: 0.7 }}>Last Updated:</Text>
+              <Text>
+                {account?.updated ? new Date(account.updated).toLocaleDateString() : 'N/A'}
+              </Text>
+            </View>
+          </View>
+        </Section>
+
+        {/* Email Update */}
+        <Section title="Email Address">
+          <View style={{ position: 'relative', marginBottom: tokens.spacing.md }}>
+            <TextInput
+              value={email}
+              onChangeText={handleEmailChange}
+              placeholder="Enter email address"
+              keyboardType="email-address"
+              autoCapitalize="none"
+              autoComplete="email"
+              style={emailError ? { borderColor: '#e63946', borderWidth: 1 } : undefined}
+            />
+            {checkingEmail && (
+              <View style={{ position: 'absolute', right: 16, top: 12 }}>
+                <ActivityIndicator size="small" color={tokens.colors.buttonBackground} />
+              </View>
+            )}
+          </View>
+          {emailError ? (
+            <Text style={{ color: '#e63946', fontSize: 14, marginBottom: tokens.spacing.md }}>
+              {emailError}
+            </Text>
+          ) : null}
+          <Button
+            title="Update Email"
+            onPress={handleUpdateEmail}
+            disabled={saving || email === account?.email || !!emailError || checkingEmail}
+            loading={saving}
+            fullWidth
+          />
+        </Section>
+
+        {/* Danger Zone */}
+        <Panel style={{ borderColor: '#e63946', borderWidth: 1 }}>
+          <Text variant="heading" weight="bold" style={{ color: '#e63946', marginBottom: tokens.spacing.md }}>
+            Danger Zone
+          </Text>
+          <Text style={{ opacity: 0.7, marginBottom: tokens.spacing.lg }}>
+            Deleting your account is permanent and cannot be undone. All your data will be removed.
+          </Text>
+
+          <Text style={{ opacity: 0.7, marginBottom: tokens.spacing.sm }}>
+            Type "DELETE MY ACCOUNT" to confirm:
+          </Text>
+          <TextInput
+            value={deleteConfirmation}
+            onChangeText={setDeleteConfirmation}
+            placeholder="DELETE MY ACCOUNT"
+            autoCapitalize="characters"
+            style={{ marginBottom: tokens.spacing.md }}
+          />
+
+          <Button
+            title="Delete Account"
+            variant="secondary"
+            onPress={handleDeleteAccount}
+            disabled={deleting || deleteConfirmation !== 'DELETE MY ACCOUNT'}
+            loading={deleting}
+            fullWidth
+            style={{ backgroundColor: '#e63946' }}
+          />
+        </Panel>
+      </Container>
     </ScrollView>
   );
 }
-
-const styles = StyleSheet.create({
-  scrollView: {
-    flex: 1,
-    backgroundColor: '#0F1214',
-  },
-  container: {
-    padding: 24,
-  },
-  header: {
-    marginBottom: 24,
-  },
-  backButton: {
-    marginBottom: 16,
-  },
-  backButtonText: {
-    color: '#4dd9b8',
-    fontSize: 16,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#e8eef2',
-  },
-  section: {
-    marginBottom: 32,
-    padding: 16,
-    backgroundColor: '#1a1f24',
-    borderRadius: 8,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#e8eef2',
-    marginBottom: 16,
-  },
-  infoRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 12,
-  },
-  label: {
-    fontSize: 14,
-    color: '#a0aab5',
-    marginBottom: 8,
-  },
-  value: {
-    fontSize: 14,
-    color: '#e8eef2',
-  },
-  inputWrapper: {
-    position: 'relative',
-    marginBottom: 8,
-  },
-  input: {
-    backgroundColor: '#0f1214',
-    borderWidth: 1,
-    borderColor: '#2d3339',
-    borderRadius: 8,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    paddingRight: 48,
-    fontSize: 16,
-    color: '#e8eef2',
-  },
-  inputError: {
-    borderColor: '#e63946',
-  },
-  inputIcon: {
-    position: 'absolute',
-    right: 16,
-    top: 12,
-  },
-  errorText: {
-    color: '#e63946',
-    fontSize: 14,
-    marginBottom: 12,
-  },
-  button: {
-    backgroundColor: '#4dd9b8',
-    borderRadius: 8,
-    paddingVertical: 12,
-    paddingHorizontal: 32,
-    alignItems: 'center',
-  },
-  buttonDisabled: {
-    opacity: 0.5,
-  },
-  buttonText: {
-    color: '#0f1214',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  dangerSection: {
-    borderColor: '#e63946',
-    borderWidth: 1,
-  },
-  dangerTitle: {
-    color: '#e63946',
-  },
-  dangerText: {
-    color: '#a0aab5',
-    fontSize: 14,
-    marginBottom: 16,
-  },
-  deleteButton: {
-    backgroundColor: '#e63946',
-  },
-  deleteButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-});

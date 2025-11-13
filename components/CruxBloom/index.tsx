@@ -23,6 +23,19 @@ export interface GradientDefinition {
   type?: 'linear' | 'radial';
 }
 
+export type ColorValue =
+  | { type: 'solid'; value: string }
+  | { type: 'gradient'; value: GradientDefinition };
+
+export interface CruxBloomTheme {
+  primary: ColorValue;
+  secondary: ColorValue;
+  tertiary: ColorValue;
+  quaternary: ColorValue;
+  borderColor?: string;
+  borderWidth?: number;
+}
+
 export interface CruxBloomProps {
   /** Width of the SVG viewBox (default: 2000) */
   width?: number;
@@ -30,6 +43,8 @@ export interface CruxBloomProps {
   height?: number;
   /** Size multiplier for responsive scaling */
   size?: number;
+  /** Theme object with bloom colors (alternative to individual circle props) */
+  theme?: CruxBloomTheme;
   /** Styles for primary circle (outermost, default r=1000) */
   primary?: CircleStyle;
   /** Styles for secondary circle (default r=750) */
@@ -113,14 +128,52 @@ export const CruxBloom: React.FC<CruxBloomProps> = ({
   width = 2000,
   height = 2000,
   size = 100,
-  primary,
-  secondary,
-  tertiary,
-  quaternary,
-  gradients = [],
+  theme,
+  primary: primaryProp,
+  secondary: secondaryProp,
+  tertiary: tertiaryProp,
+  quaternary: quaternaryProp,
+  gradients: gradientsProp = [],
   style,
   testID = 'crux-bloom',
 }) => {
+  // Convert theme to circle props if provided
+  let primary = primaryProp;
+  let secondary = secondaryProp;
+  let tertiary = tertiaryProp;
+  let quaternary = quaternaryProp;
+  let gradients = gradientsProp;
+
+  if (theme) {
+    const themeGradients: GradientDefinition[] = [];
+
+    // Helper to convert ColorValue to CircleStyle
+    const convertColor = (colorValue: ColorValue): CircleStyle => {
+      const circleProps: CircleStyle = {};
+
+      if (colorValue.type === 'solid') {
+        circleProps.fill = colorValue.value;
+      } else {
+        themeGradients.push(colorValue.value);
+        circleProps.fill = `url(#${colorValue.value.id})`;
+      }
+
+      // Add border if specified
+      if (theme.borderWidth && theme.borderWidth > 0 && theme.borderColor) {
+        circleProps.stroke = theme.borderColor;
+        circleProps.strokeWidth = theme.borderWidth;
+      }
+
+      return circleProps;
+    };
+
+    primary = convertColor(theme.primary);
+    secondary = convertColor(theme.secondary);
+    tertiary = convertColor(theme.tertiary);
+    quaternary = convertColor(theme.quaternary);
+    gradients = themeGradients;
+  }
+
   // Merge custom styles with defaults
   const c1 = { ...defaultPrimary, ...primary };
   const c2 = { ...defaultSecondary, ...secondary };
