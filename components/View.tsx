@@ -1,11 +1,12 @@
 /**
  * Themed View Component
  *
- * Drop-in replacement for React Native View with automatic theme support
+ * Drop-in replacement for React Native View with automatic theme support and animated transitions
  */
 
 import React from 'react';
-import { View as RNView, ViewProps as RNViewProps } from 'react-native';
+import { ViewProps as RNViewProps } from 'react-native';
+import Animated, { useAnimatedStyle, withTiming } from 'react-native-reanimated';
 import { useTheme } from '@/contexts/ThemeContext';
 
 export interface ViewProps extends RNViewProps {
@@ -26,5 +27,9 @@ export const View: React.FC<ViewProps> = ({
   const defaultBackgroundColor = backgroundColor ||
     (variant === 'panel' ? tokens.colors.panel : tokens.colors.background);
 
-  return <RNView style={[{ backgroundColor: defaultBackgroundColor }, style]} {...props} />;
+  const animatedStyle = useAnimatedStyle(() => ({
+    backgroundColor: withTiming(defaultBackgroundColor, { duration: 300 }),
+  }));
+
+  return <Animated.View style={[animatedStyle, style]} {...props} />;
 };

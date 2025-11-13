@@ -19,6 +19,8 @@ import type { ThemeFormData, ThemeDto, ColorValue, ThemeModeData } from './types
 import { getDefaultThemeFormData, formDataToDto } from './types';
 import { getShadowStyleFromTheme } from '@/utils/shadow';
 import { FONT_SIZES, type FontType } from '@/constants/fontSizes';
+import { useTheme } from '@/contexts/ThemeContext';
+import type { Theme } from '@/utils/designTokens';
 
 export interface ThemeBuilderProps {
   /** Initial theme data for editing (optional) */
@@ -49,6 +51,7 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
   onSave,
   onCancel,
 }) => {
+  const { setTheme: setGlobalTheme } = useTheme();
   const [formData, setFormData] = useState<ThemeFormData>(
     initialData || getDefaultThemeFormData()
   );
@@ -181,6 +184,27 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
       Alert.alert('Error', error instanceof Error ? error.message : 'Failed to save theme');
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const handleApplyTheme = async () => {
+    try {
+      const dto = formDataToDto(formData);
+
+      // Convert DTO to Theme format
+      const theme: Theme = {
+        key: themeKey || 'preview',
+        title: formData.title || 'Preview Theme',
+        description: formData.description || 'Theme preview',
+        type: formData.type || 'custom',
+        kind: formData.kind || 'user',
+        meta: dto.meta,
+      };
+
+      await setGlobalTheme(theme);
+      Alert.alert('Theme Applied', 'The theme has been applied to the app. Toggle between light and dark mode to see both variants.');
+    } catch (error) {
+      Alert.alert('Error', error instanceof Error ? error.message : 'Failed to apply theme');
     }
   };
 
@@ -2704,6 +2728,14 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
         </TouchableOpacity>
 
         <TouchableOpacity
+          style={[styles.button, styles.applyButton]}
+          onPress={handleApplyTheme}
+          disabled={isSaving}
+        >
+          <Text style={styles.buttonText}>✨ Apply Theme</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
           style={[styles.button, styles.saveButton]}
           onPress={handleSave}
           disabled={isSaving}
@@ -2917,6 +2949,9 @@ const styles = StyleSheet.create({
   },
   randomizeAllButton: {
     backgroundColor: '#7c3aed',
+  },
+  applyButton: {
+    backgroundColor: '#f59e0b',
   },
   buttonText: {
     fontSize: 16,

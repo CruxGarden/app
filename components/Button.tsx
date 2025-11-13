@@ -1,11 +1,12 @@
 /**
  * Button Component
  *
- * Simple button with automatic theming and variants
+ * Simple button with automatic theming, variants, and animated transitions
  */
 
 import React from 'react';
 import { TouchableOpacity, TouchableOpacityProps, ActivityIndicator } from 'react-native';
+import Animated, { useAnimatedStyle, withTiming } from 'react-native-reanimated';
 import { useTheme } from '@/contexts/ThemeContext';
 import { Text } from './Text';
 
@@ -36,17 +37,7 @@ export const Button: React.FC<ButtonProps> = ({
   const isGhost = variant === 'ghost';
 
   const buttonStyle = {
-    backgroundColor: isGhost
-      ? 'transparent'
-      : isPrimary
-      ? tokens.colors.buttonBackground
-      : tokens.colors.panel,
     borderWidth: isGhost ? 0 : tokens.button.borderWidth,
-    borderColor: isGhost
-      ? 'transparent'
-      : isPrimary
-      ? tokens.colors.buttonBorder
-      : tokens.colors.border,
     borderRadius: tokens.button.borderRadius,
     borderStyle: tokens.button.borderStyle as 'solid' | 'dashed' | 'dotted',
     paddingVertical: tokens.spacing.sm + 4,
@@ -55,8 +46,26 @@ export const Button: React.FC<ButtonProps> = ({
     justifyContent: 'center' as const,
     opacity: disabled ? 0.5 : 1,
     minWidth: 100,
-    ...(fullWidth && { width: '100%' }),
   };
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    backgroundColor: withTiming(
+      isGhost
+        ? 'transparent'
+        : isPrimary
+        ? tokens.colors.buttonBackground
+        : tokens.colors.panel,
+      { duration: 300 }
+    ),
+    borderColor: withTiming(
+      isGhost
+        ? 'transparent'
+        : isPrimary
+        ? tokens.colors.buttonBorder
+        : tokens.colors.border,
+      { duration: 300 }
+    ),
+  }));
 
   const textColor = isPrimary
     ? tokens.colors.buttonText
@@ -65,24 +74,22 @@ export const Button: React.FC<ButtonProps> = ({
     : tokens.colors.text;
 
   return (
-    <TouchableOpacity
-      style={[buttonStyle, style]}
-      disabled={disabled || loading}
-      {...props}
-    >
-      {loading ? (
-        <ActivityIndicator color={textColor} size="small" />
-      ) : (
-        <Text
-          weight="semibold"
-          style={{
-            color: textColor,
-            fontSize: tokens.typography.fontSize.control,
-          }}
-        >
-          {title}
-        </Text>
-      )}
+    <TouchableOpacity disabled={disabled || loading} {...props}>
+      <Animated.View style={[buttonStyle, animatedStyle, fullWidth && { width: '100%' }, style]}>
+        {loading ? (
+          <ActivityIndicator color={textColor} size="small" />
+        ) : (
+          <Text
+            weight="semibold"
+            style={{
+              color: textColor,
+              fontSize: tokens.typography.fontSize.control,
+            }}
+          >
+            {title}
+          </Text>
+        )}
+      </Animated.View>
     </TouchableOpacity>
   );
 };
