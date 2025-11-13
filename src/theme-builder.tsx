@@ -42,38 +42,21 @@ export default function ThemeBuilderRoute() {
     }
   };
 
-  const handleSave = async (theme: ThemeDto) => {
+  const handleSave = async (theme: ThemeDto, key?: string) => {
     try {
-      if (themeKey) {
+      if (key) {
         // Update existing theme
-        await api.updateTheme(themeKey, theme);
-        Alert.alert(
-          'Success',
-          'Theme updated successfully!',
-          [
-            {
-              text: 'OK',
-              onPress: () => router.back(),
-            },
-          ]
-        );
+        const result = await api.updateTheme(key, theme);
+        console.log('Update successful:', result);
+        alert('Theme updated successfully!');
       } else {
         // Create new theme
         const created = await api.createTheme(theme);
-        Alert.alert(
-          'Success',
-          'Theme created successfully!',
-          [
-            {
-              text: 'OK',
-              onPress: () => router.back(),
-            },
-          ]
-        );
+        console.log('Create successful:', created);
+        alert('Theme created successfully!');
       }
-    } catch (error) {
-      console.error('Failed to save theme:', error);
-      throw error;
+    } catch (err) {
+      throw err;
     }
   };
 
@@ -119,6 +102,7 @@ export default function ThemeBuilderRoute() {
     <View style={styles.container}>
       <ThemeBuilder
         initialData={initialData}
+        themeKey={themeKey}
         onSave={handleSave}
         onCancel={handleCancel}
       />

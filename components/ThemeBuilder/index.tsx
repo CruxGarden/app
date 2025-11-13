@@ -5,7 +5,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, ScrollView, Alert } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, ScrollView, Alert, Platform } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import Slider from '@react-native-community/slider';
 import chroma from 'chroma-js';
@@ -18,12 +18,15 @@ import { CruxButton } from '@/components/CruxButton';
 import type { ThemeFormData, ThemeDto, ColorValue, ThemeModeData } from './types';
 import { getDefaultThemeFormData, formDataToDto } from './types';
 import { getShadowStyleFromTheme } from '@/utils/shadow';
+import { FONT_SIZES, type FontType } from '@/constants/fontSizes';
 
 export interface ThemeBuilderProps {
   /** Initial theme data for editing (optional) */
   initialData?: ThemeFormData;
-  /** Callback when theme is saved */
-  onSave: (theme: ThemeDto) => Promise<void>;
+  /** Theme key when editing an existing theme (optional) */
+  themeKey?: string;
+  /** Callback when theme is saved - receives DTO and optional themeKey for updates */
+  onSave: (theme: ThemeDto, themeKey?: string) => Promise<void>;
   /** Callback when cancelled */
   onCancel: () => void;
 }
@@ -38,25 +41,11 @@ const FULL_RANDOMIZATION = true;
 // Each element has a 30% independent chance to use a different palette color for variety
 // ============================================================================
 
-// Font size configuration for preview
-const FONT_SIZES: Record<'sans-serif' | 'serif' | 'monospace', { heading: number; body: number }> & { lineHeight: number } = {
-  'sans-serif': {
-    heading: 19,
-    body: 15,
-  },
-  serif: {
-    heading: 24,
-    body: 20,
-  },
-  monospace: {
-    heading: 18,
-    body: 14,
-  },
-  lineHeight: 26,
-};
+// Font sizes are now imported from @/constants/fontSizes
 
 export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
   initialData,
+  themeKey,
   onSave,
   onCancel,
 }) => {
@@ -64,6 +53,7 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
     initialData || getDefaultThemeFormData()
   );
   const [isSaving, setIsSaving] = useState(false);
+  const isEditMode = !!initialData;
   const [activeBloomTab, setActiveBloomTab] = useState<'primary' | 'secondary' | 'tertiary' | 'quaternary'>('primary');
   const [expandedSections, setExpandedSections] = useState<{
     details: boolean;
@@ -113,6 +103,40 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
     setPreviewPalette(bloomColors);
   }, [baseHue, baseSaturation, baseLightness, selectedHarmony, randomSeed]);
 
+  // Apply text selection color styling (web only)
+  useEffect(() => {
+    if (Platform.OS === 'web') {
+      const selectionColor = formData[formData.activeMode].selectionColor;
+      if (selectionColor) {
+        // Remove existing selection style if present
+        const existingStyle = document.getElementById('theme-builder-selection-style');
+        if (existingStyle) {
+          existingStyle.remove();
+        }
+
+        // Inject new selection style
+        const style = document.createElement('style');
+        style.id = 'theme-builder-selection-style';
+        style.innerHTML = `
+          #preview-panel ::selection {
+            background-color: ${selectionColor};
+          }
+        `;
+        document.head.appendChild(style);
+      }
+    }
+
+    // Cleanup function
+    return () => {
+      if (Platform.OS === 'web') {
+        const existingStyle = document.getElementById('theme-builder-selection-style');
+        if (existingStyle) {
+          existingStyle.remove();
+        }
+      }
+    };
+  }, [formData.activeMode, formData.light.selectionColor, formData.dark.selectionColor]);
+
   const handleFieldChange = <K extends keyof ThemeFormData>(
     field: K,
     value: ThemeFormData[K]
@@ -148,14 +172,11 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
     try {
       setIsSaving(true);
       const dto = formDataToDto(formData);
-      console.log('=== Theme DTO to be saved ===');
-      console.log(JSON.stringify(dto, null, 2));
-      console.log('============================');
 
-      // TODO: Uncomment when ready to actually save
-      // await onSave(dto);
-
-      Alert.alert('Preview', 'Theme data logged to console (not saved yet)');
+      // Pass both DTO and themeKey to onSave
+      // Parent component determines whether to create (POST) or update (PATCH)
+      // and shows appropriate success alert
+      await onSave(dto, themeKey);
     } catch (error) {
       Alert.alert('Error', error instanceof Error ? error.message : 'Failed to save theme');
     } finally {
@@ -172,7 +193,7 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
     };
 
     // Helper to convert ColorValue to bloom props
-    const convertColor = (colorValue: ColorValue, field: string) => {
+    const convertColor = (colorValue: ColorValue) => {
       const circleProps: any = {};
 
       if (colorValue.type === 'solid') {
@@ -192,10 +213,10 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
       return circleProps;
     };
 
-    props.primary = convertColor(activeData.primaryColor, 'primary');
-    props.secondary = convertColor(activeData.secondaryColor, 'secondary');
-    props.tertiary = convertColor(activeData.tertiaryColor, 'tertiary');
-    props.quaternary = convertColor(activeData.quaternaryColor, 'quaternary');
+    props.primary = convertColor(activeData.primaryColor);
+    props.secondary = convertColor(activeData.secondaryColor);
+    props.tertiary = convertColor(activeData.tertiaryColor);
+    props.quaternary = convertColor(activeData.quaternaryColor);
 
     return props;
   };
@@ -232,7 +253,11 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
     try {
       const bgColor = chroma(backgroundColor);
       const bgLuminance = bgColor.luminance();
-      const useColorfulText = Math.random() > 0.5; // 50% chance of colorful text
+      const bgSaturation = bgColor.get('hsl.s');
+
+      // If background is grayscale (saturation < 0.05), force grayscale text
+      const isGrayscale = bgSaturation < 0.05;
+      const useColorfulText = !isGrayscale && Math.random() > 0.5; // 50% chance of colorful text (only if bg has color)
 
       // Slightly muted white and black
       const mutedWhite = chroma.hsl(0, 0, 0.92 + Math.random() * 0.06).hex(); // 92-98% lightness
@@ -555,6 +580,7 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
       ? lightButtonBgColor
       : chroma(lightButtonBgColor).darken(0.5 + Math.random() * 0.5).hex();
     const lightLinkColor = chroma.hsl(controlHue, Math.min(1, controlSat + 0.2), 0.35 + Math.random() * 0.15).hex();
+    const lightSelectionColor = chroma.hsl(controlHue, Math.min(1, controlSat + 0.1), 0.70 + Math.random() * 0.15).hex();
 
     const darkButtonBgColor = chroma.hsl(controlHue, Math.min(1, controlSat + 0.1), 0.4 + Math.random() * 0.2).hex();
     const darkButtonBg = maybeButtonGradient(darkButtonBgColor);
@@ -563,6 +589,7 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
       ? darkButtonBgColor
       : chroma(darkButtonBgColor).brighten(0.5 + Math.random() * 0.5).hex();
     const darkLinkColor = chroma.hsl(controlHue, Math.min(1, controlSat + 0.2), 0.55 + Math.random() * 0.15).hex();
+    const darkSelectionColor = chroma.hsl(controlHue, Math.min(1, controlSat + 0.1), 0.45 + Math.random() * 0.15).hex();
 
     const buttonBorderWidth = Math.floor(Math.random() * 4).toString();
     const buttonBorderStyles: Array<'solid' | 'dashed' | 'dotted'> = ['solid', 'dashed', 'dotted'];
@@ -593,6 +620,7 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
         buttonBorderRadius,
         linkColor: lightLinkColor,
         linkUnderlineStyle,
+        selectionColor: lightSelectionColor,
       },
       dark: {
         ...prev.dark,
@@ -613,6 +641,7 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
         buttonBorderRadius,
         linkColor: darkLinkColor,
         linkUnderlineStyle,
+        selectionColor: darkSelectionColor,
       },
     }));
   };
@@ -919,6 +948,7 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
       ? lightButtonBgColor
       : chroma(lightButtonBgColor).darken(0.5 + Math.random() * 0.5).hex();
     const lightLinkColor = chroma.hsl(controlHue, Math.min(1, controlSat + 0.2), 0.35 + Math.random() * 0.15).hex();
+    const lightSelectionColor = chroma.hsl(controlHue, Math.min(1, controlSat + 0.1), 0.70 + Math.random() * 0.15).hex();
 
     const darkButtonBgColor = chroma.hsl(controlHue, Math.min(1, controlSat + 0.1), 0.4 + Math.random() * 0.2).hex();
     const darkButtonBg = maybeButtonGradient(darkButtonBgColor);
@@ -927,6 +957,7 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
       ? darkButtonBgColor
       : chroma(darkButtonBgColor).brighten(0.5 + Math.random() * 0.5).hex();
     const darkLinkColor = chroma.hsl(controlHue, Math.min(1, controlSat + 0.2), 0.55 + Math.random() * 0.15).hex();
+    const darkSelectionColor = chroma.hsl(controlHue, Math.min(1, controlSat + 0.1), 0.45 + Math.random() * 0.15).hex();
 
     const buttonBorderWidth = Math.floor(Math.random() * 4).toString();
     const buttonBorderStyles: Array<'solid' | 'dashed' | 'dotted'> = ['solid', 'dashed', 'dotted'];
@@ -985,6 +1016,7 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
         buttonShadowOpacity,
         linkColor: lightLinkColor,
         linkUnderlineStyle,
+        selectionColor: lightSelectionColor,
       },
       dark: {
         ...prev.dark,
@@ -1016,6 +1048,7 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
         buttonShadowOpacity,
         linkColor: darkLinkColor,
         linkUnderlineStyle,
+        selectionColor: darkSelectionColor,
       },
     }));
   };
@@ -1067,6 +1100,7 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
       ? lightButtonBgColor
       : chroma(lightButtonBgColor).darken(0.5 + Math.random() * 0.5).hex();
     const lightLinkColor = chroma.hsl(controlHue, Math.min(1, controlSat + 0.2), 0.35 + Math.random() * 0.15).hex();
+    const lightSelectionColor = chroma.hsl(controlHue, Math.min(1, controlSat + 0.1), 0.70 + Math.random() * 0.15).hex();
 
     // Generate button colors for DARK mode
     const darkButtonBgColor = chroma.hsl(controlHue, Math.min(1, controlSat + 0.1), 0.4 + Math.random() * 0.2).hex();
@@ -1076,6 +1110,7 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
       ? darkButtonBgColor
       : chroma(darkButtonBgColor).brighten(0.5 + Math.random() * 0.5).hex();
     const darkLinkColor = chroma.hsl(controlHue, Math.min(1, controlSat + 0.2), 0.55 + Math.random() * 0.15).hex();
+    const darkSelectionColor = chroma.hsl(controlHue, Math.min(1, controlSat + 0.1), 0.45 + Math.random() * 0.15).hex();
 
     // Shared button styling
     const buttonBorderWidth = Math.floor(Math.random() * 4).toString();
@@ -1115,6 +1150,7 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
         buttonShadowOpacity,
         linkColor: lightLinkColor,
         linkUnderlineStyle,
+        selectionColor: lightSelectionColor,
       },
       dark: {
         ...prev.dark,
@@ -1132,6 +1168,7 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
         buttonShadowOpacity,
         linkColor: darkLinkColor,
         linkUnderlineStyle,
+        selectionColor: darkSelectionColor,
       },
     }));
   };
@@ -1345,6 +1382,7 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
       ? lightButtonBgColor
       : chroma(lightButtonBgColor).darken(0.5 + Math.random() * 0.5).hex();
     const lightLinkColor = chroma.hsl(controlHue, Math.min(1, controlSat + 0.2), 0.35 + Math.random() * 0.15).hex();
+    const lightSelectionColor = chroma.hsl(controlHue, Math.min(1, controlSat + 0.1), 0.70 + Math.random() * 0.15).hex();
 
     const darkButtonBgColor = chroma.hsl(controlHue, Math.min(1, controlSat + 0.1), 0.4 + Math.random() * 0.2).hex();
     const darkButtonBg = maybeButtonGradient(darkButtonBgColor);
@@ -1353,6 +1391,7 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
       ? darkButtonBgColor
       : chroma(darkButtonBgColor).brighten(0.5 + Math.random() * 0.5).hex();
     const darkLinkColor = chroma.hsl(controlHue, Math.min(1, controlSat + 0.2), 0.55 + Math.random() * 0.15).hex();
+    const darkSelectionColor = chroma.hsl(controlHue, Math.min(1, controlSat + 0.1), 0.45 + Math.random() * 0.15).hex();
 
     const buttonBorderWidth = Math.floor(Math.random() * 4).toString();
     const buttonBorderStyles: Array<'solid' | 'dashed' | 'dotted'> = ['solid', 'dashed', 'dotted'];
@@ -1413,6 +1452,7 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
         buttonShadowOpacity,
         linkColor: lightLinkColor,
         linkUnderlineStyle,
+        selectionColor: lightSelectionColor,
       },
       dark: {
         ...bloomData,
@@ -1444,6 +1484,7 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
         buttonShadowOpacity,
         linkColor: darkLinkColor,
         linkUnderlineStyle,
+        selectionColor: darkSelectionColor,
       },
     }));
   };
@@ -1470,6 +1511,7 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
 
             {/* Sample Panel */}
             <View
+              nativeID="preview-panel"
               style={[
                 styles.samplePanel,
                 {
@@ -1560,6 +1602,7 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
                       opacity: parseFloat(formData[formData.activeMode].buttonShadowOpacity || '0'),
                     } : undefined}
                     fontFamily={getFontFamily()}
+                    fontSize={FONT_SIZES[(formData[formData.activeMode].font || 'sans-serif') as FontType].control}
                     onPress={() => {}}
                   />
                 </View>
@@ -1571,6 +1614,7 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
                     {
                       color: formData[formData.activeMode].linkColor || '#2563eb',
                       fontFamily: getFontFamily(),
+                      fontSize: FONT_SIZES[(formData[formData.activeMode].font || 'sans-serif') as FontType].control,
                       textDecorationLine: formData[formData.activeMode].linkUnderlineStyle === 'always' || formData[formData.activeMode].linkUnderlineStyle === 'underline' ? 'underline' : 'none',
                     },
                   ]}
@@ -2407,6 +2451,16 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
             }
           }}
         />
+
+        {/* Text Selection Styling */}
+        <Text style={[styles.label, { marginTop: 16, marginBottom: 12, fontSize: 16, color: '#4dd9b8' }]}>Text Selection</Text>
+
+        <HexColorInput
+          label="Selection Color"
+          value={formData[formData.activeMode].selectionColor || ''}
+          onChange={(value) => handleModeFieldChange('selectionColor', value)}
+          placeholder={formData.activeMode === 'light' ? '#b3d9ff' : '#4a9eff'}
+        />
         </>
         )}
       </View>
@@ -2654,7 +2708,9 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
           onPress={handleSave}
           disabled={isSaving}
         >
-          <Text style={styles.buttonText}>{isSaving ? 'Saving...' : 'Save Theme'}</Text>
+          <Text style={styles.buttonText}>
+            {isSaving ? 'Saving...' : (isEditMode ? 'Update Theme' : 'Create Theme')}
+          </Text>
         </TouchableOpacity>
       </View>
       </ScrollView>
@@ -2733,7 +2789,6 @@ const styles = StyleSheet.create({
     minWidth: 150,
   },
   sampleLink: {
-    fontSize: 16,
     textAlign: 'center',
   },
   fontToggle: {

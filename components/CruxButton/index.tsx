@@ -37,6 +37,8 @@ export interface CruxButtonProps {
   onPress?: () => void;
   /** Font family */
   fontFamily?: string;
+  /** Font size (defaults to 16 for sans-serif) */
+  fontSize?: number;
 }
 
 export const CruxButton: React.FC<CruxButtonProps> = ({
@@ -50,6 +52,7 @@ export const CruxButton: React.FC<CruxButtonProps> = ({
   shadow,
   onPress,
   fontFamily,
+  fontSize = 16,
 }) => {
   const shadowStyle = shadow ? getShadowStyle(shadow) : {};
 
@@ -64,6 +67,7 @@ export const CruxButton: React.FC<CruxButtonProps> = ({
   const textStyle = {
     color: textColor,
     fontFamily,
+    fontSize,
   };
 
   if (backgroundColor.type === 'gradient') {
@@ -126,7 +130,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   text: {
-    fontSize: 16,
     fontWeight: '600',
     textAlign: 'center',
   },
