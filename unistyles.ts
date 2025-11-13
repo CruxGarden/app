@@ -7,12 +7,22 @@ const lightTheme = {
   },
   gap: (v: number) => v * 8,
   fonts: {
-    regular: 'WorkSans_400Regular',
-    medium: 'WorkSans_500Medium',
-    semiBold: 'WorkSans_600SemiBold',
-    bold: 'WorkSans_700Bold',
+    // IBM Plex Sans - primary sans-serif
+    regular: 'IBMPlexSans_400Regular',
+    medium: 'IBMPlexSans_500Medium',
+    semiBold: 'IBMPlexSans_600SemiBold',
+    bold: 'IBMPlexSans_700Bold',
+    // IBM Plex Mono - monospace
     mono: 'IBMPlexMono_400Regular',
-    serif: 'CrimsonPro_300Light',
+    monoMedium: 'IBMPlexMono_500Medium',
+    monoSemiBold: 'IBMPlexMono_600SemiBold',
+    monoBold: 'IBMPlexMono_700Bold',
+    // IBM Plex Serif - serif
+    serif: 'IBMPlexSerif_300Light',
+    serifRegular: 'IBMPlexSerif_400Regular',
+    serifMedium: 'IBMPlexSerif_500Medium',
+    serifSemiBold: 'IBMPlexSerif_600SemiBold',
+    serifBold: 'IBMPlexSerif_700Bold',
   },
 };
 
@@ -23,12 +33,22 @@ const otherTheme = {
   },
   gap: (v: number) => v * 8,
   fonts: {
-    regular: 'WorkSans_400Regular',
-    medium: 'WorkSans_500Medium',
-    semiBold: 'WorkSans_600SemiBold',
-    bold: 'WorkSans_700Bold',
+    // IBM Plex Sans - primary sans-serif
+    regular: 'IBMPlexSans_400Regular',
+    medium: 'IBMPlexSans_500Medium',
+    semiBold: 'IBMPlexSans_600SemiBold',
+    bold: 'IBMPlexSans_700Bold',
+    // IBM Plex Mono - monospace
     mono: 'IBMPlexMono_400Regular',
-    serif: 'CrimsonPro_300Light',
+    monoMedium: 'IBMPlexMono_500Medium',
+    monoSemiBold: 'IBMPlexMono_600SemiBold',
+    monoBold: 'IBMPlexMono_700Bold',
+    // IBM Plex Serif - serif
+    serif: 'IBMPlexSerif_300Light',
+    serifRegular: 'IBMPlexSerif_400Regular',
+    serifMedium: 'IBMPlexSerif_500Medium',
+    serifSemiBold: 'IBMPlexSerif_600SemiBold',
+    serifBold: 'IBMPlexSerif_700Bold',
   },
 };
 

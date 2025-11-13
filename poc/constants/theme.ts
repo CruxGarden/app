@@ -44,9 +44,22 @@ export const Colors = {
 };
 
 export const Fonts = {
-  // Sans-serif fonts
-  body: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
-  mono: '"SF Mono", Monaco, "Cascadia Code", "Roboto Mono", Consolas, "Courier New", monospace',
+  // IBM Plex family - unified design language
+  body: 'IBMPlexSans_400Regular', // Primary sans-serif (was Work Sans)
+  bodyMedium: 'IBMPlexSans_500Medium',
+  bodySemiBold: 'IBMPlexSans_600SemiBold',
+  bodyBold: 'IBMPlexSans_700Bold',
+
+  serif: 'IBMPlexSerif_300Light', // Serif (was Crimson Pro)
+  serifRegular: 'IBMPlexSerif_400Regular',
+  serifMedium: 'IBMPlexSerif_500Medium',
+  serifSemiBold: 'IBMPlexSerif_600SemiBold',
+  serifBold: 'IBMPlexSerif_700Bold',
+
+  mono: 'IBMPlexMono_400Regular', // Monospace
+  monoMedium: 'IBMPlexMono_500Medium',
+  monoSemiBold: 'IBMPlexMono_600SemiBold',
+  monoBold: 'IBMPlexMono_700Bold',
 };
 
 export const FontSizes = {

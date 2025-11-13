@@ -72,6 +72,9 @@ export interface ThemeModeData {
 
   linkColor?: string;
   linkUnderlineStyle?: 'none' | 'underline' | 'always';
+
+  // Text selection
+  selectionColor?: string;
 }
 
 /**
@@ -101,7 +104,7 @@ export interface ThemeDto {
   description?: string;
   type?: string;
   kind?: string;
-  meta?: ThemeMeta;
+  meta: ThemeMeta;
 }
 
 /**
@@ -192,6 +195,7 @@ export interface ThemeMeta {
       panelShadowOffsetY?: string;
       panelShadowBlurRadius?: string;
       panelShadowOpacity?: string;
+      selectionColor?: string;
     };
     dark?: {
       backgroundColor?: string;
@@ -208,6 +212,7 @@ export interface ThemeMeta {
       panelShadowOffsetY?: string;
       panelShadowBlurRadius?: string;
       panelShadowOpacity?: string;
+      selectionColor?: string;
     };
   };
   controls?: {
@@ -261,9 +266,10 @@ export function formDataToDto(formData: ThemeFormData): ThemeDto {
     if (colorValue.type === 'solid') {
       return { color: colorValue.value };
     } else {
+      const { id, ...gradient } = colorValue.value;
       return {
         color: colorValue.value.stops[0].color,
-        gradient: colorValue.value,
+        gradient,
       };
     }
   };
@@ -311,11 +317,15 @@ export function formDataToDto(formData: ThemeFormData): ThemeDto {
         panelShadowOffsetY: modeData.panelShadowOffsetY,
         panelShadowBlurRadius: modeData.panelShadowBlurRadius,
         panelShadowOpacity: modeData.panelShadowOpacity,
+        selectionColor: modeData.selectionColor,
       },
       controls: {
         buttonBackground: modeData.buttonBackgroundColor
           ? (modeData.buttonBackgroundColor.type === 'gradient'
-              ? { gradient: modeData.buttonBackgroundColor.value }
+              ? (() => {
+                  const { id, ...gradient } = modeData.buttonBackgroundColor.value;
+                  return { gradient };
+                })()
               : { solid: modeData.buttonBackgroundColor.value })
           : undefined,
         buttonTextColor: modeData.buttonTextColor,
@@ -369,7 +379,7 @@ export function formDataToDto(formData: ThemeFormData): ThemeDto {
 /**
  * Convert API DTO to form data
  */
-export function dtoToFormData(dto: ThemeDto): ThemeFormData {
+export function dtoToFormData(dto: ThemeDto | { title: string; description?: string; type?: string; kind?: string; meta?: any }): ThemeFormData {
   const meta = dto.meta;
 
   // Helper to reconstruct ColorValue from palette + optional bloom data
@@ -418,6 +428,7 @@ export function dtoToFormData(dto: ThemeDto): ThemeFormData {
       panelShadowOffsetY: contentSettings.panelShadowOffsetY,
       panelShadowBlurRadius: contentSettings.panelShadowBlurRadius,
       panelShadowOpacity: contentSettings.panelShadowOpacity,
+      selectionColor: contentSettings.selectionColor,
       buttonBackgroundColor: controlsSettings.buttonBackground
         ? (controlsSettings.buttonBackground.gradient
             ? { type: 'gradient', value: controlsSettings.buttonBackground.gradient }
@@ -509,6 +520,7 @@ export function getDefaultThemeFormData(): ThemeFormData {
       buttonShadowOpacity: '0.1',
       linkColor: '#2563eb',
       linkUnderlineStyle: 'underline',
+      selectionColor: '#b3d9ff', // Light blue for text selection on light backgrounds
     },
     dark: {
       primaryColor: { type: 'solid', value: '#2a3d2c' },
@@ -551,6 +563,7 @@ export function getDefaultThemeFormData(): ThemeFormData {
       buttonShadowOpacity: '0.1',
       linkColor: '#60a5fa',
       linkUnderlineStyle: 'underline',
+      selectionColor: '#4a9eff', // Brighter blue for text selection on dark backgrounds
     },
     activeMode: 'light',
   };

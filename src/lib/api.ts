@@ -179,19 +179,8 @@ export interface Theme {
   description?: string;
   type?: string;
   kind?: string;
-  primaryColor: string;
-  secondaryColor: string;
-  tertiaryColor: string;
-  quaternaryColor: string;
-  borderRadius?: string;
-  borderColor?: string;
-  borderWidth?: string;
-  backgroundColor?: string;
-  panelColor?: string;
-  textColor?: string;
-  font?: string;
-  mode?: string;
-  meta?: any;
+  system: boolean;
+  meta: any; // Theme metadata with palette, bloom, content, controls sections
   authorId: string;
   homeId: string;
   created: string;
@@ -203,19 +192,7 @@ export interface CreateThemeRequest {
   description?: string;
   type?: string;
   kind?: string;
-  primaryColor: string;
-  secondaryColor: string;
-  tertiaryColor: string;
-  quaternaryColor: string;
-  borderRadius?: string;
-  borderColor?: string;
-  borderWidth?: string;
-  backgroundColor?: string;
-  panelColor?: string;
-  textColor?: string;
-  font?: string;
-  mode?: string;
-  meta?: any;
+  meta: any; // Theme metadata with palette, bloom, content, controls sections
 }
 
 export interface UpdateThemeRequest {
@@ -223,19 +200,7 @@ export interface UpdateThemeRequest {
   description?: string;
   type?: string;
   kind?: string;
-  primaryColor?: string;
-  secondaryColor?: string;
-  tertiaryColor?: string;
-  quaternaryColor?: string;
-  borderRadius?: string;
-  borderColor?: string;
-  borderWidth?: string;
-  backgroundColor?: string;
-  panelColor?: string;
-  textColor?: string;
-  font?: string;
-  mode?: string;
-  meta?: any;
+  meta?: any; // Theme metadata with palette, bloom, content, controls sections
 }
 
 // Set auth token for all requests
