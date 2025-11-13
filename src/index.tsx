@@ -45,6 +45,12 @@ export default function Index() {
             onPress={() => router.push('/bloom-examples')}
           />
           <Button
+            title="Theme Builder"
+            variant="secondary"
+            fullWidth
+            onPress={() => router.push('/theme-builder')}
+          />
+          <Button
             title="Sign Out"
             variant="secondary"
             fullWidth
@@ -59,6 +65,12 @@ export default function Index() {
             variant="secondary"
             fullWidth
             onPress={() => router.push('/bloom-examples')}
+          />
+          <Button
+            title="Theme Builder"
+            variant="secondary"
+            fullWidth
+            onPress={() => router.push('/theme-builder')}
           />
         </Panel>
       )}

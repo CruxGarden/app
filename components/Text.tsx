@@ -1,11 +1,12 @@
 /**
  * Themed Text Component
  *
- * Drop-in replacement for React Native Text with automatic theme support
+ * Drop-in replacement for React Native Text with automatic theme support and animated transitions
  */
 
 import React, { useMemo } from 'react';
-import { Text as RNText, TextProps as RNTextProps } from 'react-native';
+import { TextProps as RNTextProps } from 'react-native';
+import Animated, { useAnimatedStyle, withTiming } from 'react-native-reanimated';
 import { useTheme } from '@/contexts/ThemeContext';
 
 export interface TextProps extends RNTextProps {
@@ -59,12 +60,15 @@ export const Text: React.FC<TextProps> = ({
       : tokens.typography.fontSize.body;
 
     return {
-      color: color || tokens.colors.text,
       fontFamily,
       fontSize,
       lineHeight: tokens.typography.lineHeight,
     };
-  }, [color, variant, weight, tokens]);
+  }, [variant, weight, tokens]);
 
-  return <RNText style={[textStyle, style]} {...props} />;
+  const animatedStyle = useAnimatedStyle(() => ({
+    color: withTiming(color || tokens.colors.text, { duration: 300 }),
+  }));
+
+  return <Animated.Text style={[textStyle, animatedStyle, style]} {...props} />;
 };
