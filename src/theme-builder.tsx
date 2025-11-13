@@ -5,16 +5,18 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { View, Alert, ActivityIndicator, Text } from 'react-native';
-import { StyleSheet } from 'react-native-unistyles';
+import { Alert } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
+import { View, Text, Loading } from '@/components';
 import { ThemeBuilder, dtoToFormData } from '@/components/ThemeBuilder';
 import type { ThemeDto } from '@/components/ThemeBuilder';
 import { api } from '@/src/lib/api';
+import { useTheme } from '@/contexts/ThemeContext';
 
 export default function ThemeBuilderRoute() {
   const router = useRouter();
   const params = useLocalSearchParams();
+  const { tokens } = useTheme();
   const themeKey = typeof params.themeKey === 'string' ? params.themeKey : undefined;
 
   const [initialData, setInitialData] = useState<any>(null);
@@ -81,9 +83,9 @@ export default function ThemeBuilderRoute() {
   // Show loading state while fetching theme
   if (isLoading) {
     return (
-      <View style={[styles.container, styles.centered]}>
-        <ActivityIndicator size="large" color="#4dd9b8" />
-        <Text style={styles.loadingText}>Loading theme...</Text>
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: tokens.spacing.lg }}>
+        <Loading />
+        <Text style={{ marginTop: tokens.spacing.md, opacity: 0.7 }}>Loading theme...</Text>
       </View>
     );
   }
@@ -91,15 +93,17 @@ export default function ThemeBuilderRoute() {
   // Show error state if theme failed to load
   if (loadError) {
     return (
-      <View style={[styles.container, styles.centered]}>
-        <Text style={styles.errorText}>Error: {loadError}</Text>
-        <Text style={styles.errorHint}>Please try again or go back</Text>
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: tokens.spacing.lg }}>
+        <Text style={{ color: '#e63946', fontSize: 18, marginBottom: tokens.spacing.sm, textAlign: 'center' }}>
+          Error: {loadError}
+        </Text>
+        <Text style={{ opacity: 0.7, textAlign: 'center' }}>Please try again or go back</Text>
       </View>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <View style={{ flex: 1 }}>
       <ThemeBuilder
         initialData={initialData}
         themeKey={themeKey}
@@ -109,31 +113,3 @@ export default function ThemeBuilderRoute() {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#0F1214',
-  },
-  centered: {
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-  },
-  loadingText: {
-    marginTop: 16,
-    fontSize: 16,
-    color: '#8b9298',
-  },
-  errorText: {
-    fontSize: 18,
-    color: '#e74c3c',
-    marginBottom: 8,
-    textAlign: 'center',
-  },
-  errorHint: {
-    fontSize: 14,
-    color: '#8b9298',
-    textAlign: 'center',
-  },
-});

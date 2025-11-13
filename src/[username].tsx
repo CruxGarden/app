@@ -1,14 +1,15 @@
-import { View, Text, TouchableOpacity, ActivityIndicator } from 'react-native';
-import { StyleSheet } from 'react-native-unistyles';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState, useEffect } from 'react';
 import { useApp } from './lib/_AppContext';
 import { api, Author } from './lib/api';
+import { Container, View, Text, Button, Panel, Loading } from '@/components';
+import { useTheme } from '@/contexts/ThemeContext';
 
 export default function AuthorPage() {
   const { username } = useLocalSearchParams<{ username: string }>();
   const router = useRouter();
   const { account } = useApp();
+  const { tokens } = useTheme();
 
   const [author, setAuthor] = useState<Author | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -42,145 +43,82 @@ export default function AuthorPage() {
   const isOwnPage = account?.author?.username === cleanUsername;
 
   if (isLoading) {
-    return (
-      <View style={styles.container}>
-        <ActivityIndicator size="large" color="#4dd9b8" />
-      </View>
-    );
+    return <Loading />;
   }
 
   if (error || !author) {
     return (
-      <View style={styles.container}>
-        <Text style={styles.errorText}>{error || 'Author not found'}</Text>
-        <TouchableOpacity style={styles.button} onPress={() => router.back()}>
-          <Text style={styles.buttonText}>Go Back</Text>
-        </TouchableOpacity>
-      </View>
+      <Container centered>
+        <Text style={{ color: '#e63946', fontSize: 16, marginBottom: tokens.spacing.lg }}>
+          {error || 'Author not found'}
+        </Text>
+        <Button title="Go Back" onPress={() => router.back()} />
+      </Container>
     );
   }
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.username}>@{author.username}</Text>
-        <Text style={styles.displayName}>{author.displayName}</Text>
-        {author.bio && <Text style={styles.bio}>{author.bio}</Text>}
+    <Container padded>
+      <View style={{ marginBottom: tokens.spacing.xxl }}>
+        <Text
+          style={{
+            fontSize: 24,
+            fontWeight: 'bold',
+            color: tokens.colors.buttonBackground,
+            marginBottom: tokens.spacing.sm,
+          }}
+        >
+          @{author.username}
+        </Text>
+        <Text variant="heading" style={{ marginBottom: tokens.spacing.sm }}>
+          {author.displayName}
+        </Text>
+        {author.bio && (
+          <Text style={{ fontSize: 14, opacity: 0.7, lineHeight: 20 }}>{author.bio}</Text>
+        )}
       </View>
 
       {isOwnPage && (
-        <View style={styles.actions}>
-          <View style={styles.buttonRow}>
-            <TouchableOpacity style={styles.button} onPress={() => router.push('/author')}>
-              <Text style={styles.buttonText}>Profile</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.button} onPress={() => router.push('/account')}>
-              <Text style={styles.buttonText}>Account</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.button} onPress={() => router.push('/settings')}>
-              <Text style={styles.buttonText}>Settings</Text>
-            </TouchableOpacity>
+        <View style={{ marginBottom: tokens.spacing.lg }}>
+          <View style={{ flexDirection: 'row', gap: tokens.spacing.md }}>
+            <Button title="Profile" onPress={() => router.push('/author')} />
+            <Button title="Account" onPress={() => router.push('/account')} />
+            <Button title="Settings" onPress={() => router.push('/settings')} />
           </View>
         </View>
       )}
 
-      <View style={styles.content}>
+      <View style={{ flex: 1 }}>
         {author.root ? (
-          <View style={styles.rootCrux}>
-            <Text style={styles.rootLabel}>Root Crux</Text>
-            {author.root.title && <Text style={styles.rootTitle}>{author.root.title}</Text>}
-            <Text style={styles.rootData}>{author.root.data}</Text>
-          </View>
+          <Panel>
+            <Text
+              style={{
+                fontSize: 12,
+                opacity: 0.7,
+                textTransform: 'uppercase',
+                marginBottom: tokens.spacing.sm,
+                fontWeight: '600',
+              }}
+            >
+              Root Crux
+            </Text>
+            {author.root.title && (
+              <Text
+                variant="heading"
+                weight="bold"
+                style={{ marginBottom: tokens.spacing.sm }}
+              >
+                {author.root.title}
+              </Text>
+            )}
+            <Text style={{ opacity: 0.7, lineHeight: 20 }}>{author.root.data}</Text>
+          </Panel>
         ) : (
-          <Text style={styles.placeholder}>No root crux yet...</Text>
+          <Text style={{ opacity: 0.7, textAlign: 'center', marginTop: 40 }}>
+            No root crux yet...
+          </Text>
         )}
       </View>
-    </View>
+    </Container>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#0f1214',
-    padding: 24,
-  },
-  header: {
-    marginBottom: 32,
-  },
-  username: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#4dd9b8',
-    marginBottom: 8,
-  },
-  displayName: {
-    fontSize: 20,
-    color: '#e8eef2',
-    marginBottom: 8,
-  },
-  bio: {
-    fontSize: 14,
-    color: '#c2cad2',
-    lineHeight: 20,
-  },
-  actions: {
-    marginBottom: 24,
-  },
-  buttonRow: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  content: {
-    flex: 1,
-  },
-  rootCrux: {
-    backgroundColor: '#1a1d21',
-    borderRadius: 8,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: '#2f3338',
-  },
-  rootLabel: {
-    fontSize: 12,
-    color: '#8b9199',
-    textTransform: 'uppercase',
-    marginBottom: 8,
-    fontWeight: '600',
-  },
-  rootTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#e8eef2',
-    marginBottom: 8,
-  },
-  rootData: {
-    fontSize: 14,
-    color: '#c2cad2',
-    lineHeight: 20,
-  },
-  placeholder: {
-    fontSize: 14,
-    color: '#8b9199',
-    textAlign: 'center',
-    marginTop: 40,
-  },
-  button: {
-    backgroundColor: '#4dd9b8',
-    borderRadius: 8,
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    alignItems: 'center',
-  },
-  buttonText: {
-    color: '#0f1214',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  errorText: {
-    fontSize: 16,
-    color: '#e89881',
-    textAlign: 'center',
-    marginBottom: 24,
-  },
-});
