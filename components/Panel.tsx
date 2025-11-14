@@ -31,7 +31,7 @@ export const Panel: React.FC<PanelProps> = ({
 }) => {
   const { tokens } = useTheme();
 
-  // Static styles (don't animate)
+  // Static styles (don't animate) - includes shadows
   const staticStyle: ViewStyle = useMemo(() => {
     // Build shadow styles if enabled
     const shadowStyle: ViewStyle = {};

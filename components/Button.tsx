@@ -4,7 +4,7 @@
  * Simple button with automatic theming, variants, and animated transitions
  */
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { TouchableOpacity, TouchableOpacityProps, ActivityIndicator, View, StyleSheet } from 'react-native';
 import Animated, { useAnimatedStyle, withTiming } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -57,13 +57,31 @@ export const Button: React.FC<ButtonProps> = ({
         ],
       };
 
-  const buttonStyle = {
-    alignItems: 'center' as const,
-    justifyContent: 'center' as const,
-    opacity: disabled ? 0.5 : 1,
-    minWidth: 100,
-    overflow: 'hidden' as const, // Clip gradient to border radius
-  };
+  const buttonStyle = useMemo(() => {
+    // Build shadow styles if enabled
+    const shadowStyle: any = {};
+    if (tokens.shadows.button) {
+      const shadow = tokens.shadows.button;
+      shadowStyle.shadowColor = shadow.color;
+      shadowStyle.shadowOffset = {
+        width: shadow.offsetX,
+        height: shadow.offsetY,
+      };
+      shadowStyle.shadowOpacity = shadow.opacity;
+      shadowStyle.shadowRadius = shadow.blurRadius;
+      // Android elevation (approximate based on shadow)
+      shadowStyle.elevation = Math.max(shadow.offsetY, shadow.blurRadius / 2);
+    }
+
+    return {
+      alignItems: 'center' as const,
+      justifyContent: 'center' as const,
+      opacity: disabled ? 0.5 : 1,
+      minWidth: 100,
+      overflow: 'hidden' as const, // Clip gradient to border radius
+      ...shadowStyle,
+    };
+  }, [tokens, disabled]);
 
   const animatedStyle = useAnimatedStyle(() => ({
     borderWidth: withTiming(

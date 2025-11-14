@@ -27,6 +27,9 @@ export type { ImageProps } from './Image';
 export { Button } from './Button';
 export type { ButtonProps } from './Button';
 
+export { Link } from './Link';
+export type { LinkProps } from './Link';
+
 export { Loading } from './Loading';
 export type { LoadingProps } from './Loading';
 

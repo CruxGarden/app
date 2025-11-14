@@ -47,6 +47,9 @@ export interface ThemeContextValue {
 
 const ThemeContext = createContext<ThemeContextValue | undefined>(undefined);
 
+// Export the context for advanced usage (e.g., preview providers)
+export { ThemeContext };
+
 export interface ThemeProviderProps {
   children: React.ReactNode;
 }
