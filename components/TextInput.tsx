@@ -31,15 +31,29 @@ export const TextInput: React.FC<TextInputProps> = ({
 }) => {
   const { tokens } = useTheme();
 
-  const inputStyle = useMemo(() => ({
-    borderWidth: tokens.borders.width,
-    borderRadius: tokens.borders.radius,
-    borderStyle: tokens.borders.style as 'solid' | 'dotted' | 'dashed',
-    paddingHorizontal: tokens.spacing.md,
-    paddingVertical: tokens.spacing.sm,
-    fontFamily: 'IBMPlexSans_400Regular',
-    fontSize: tokens.typography.fontSize.body,
-  }), [tokens]);
+  const inputStyle = useMemo(() => {
+    // Determine font family from theme
+    const bodyFont = tokens.typography.fontFamily.body;
+    let fontFamily: string;
+
+    if (bodyFont.includes('Serif')) {
+      fontFamily = 'IBMPlexSerif_400Regular';
+    } else if (bodyFont.includes('Mono')) {
+      fontFamily = 'IBMPlexMono_400Regular';
+    } else {
+      fontFamily = 'IBMPlexSans_400Regular';
+    }
+
+    return {
+      borderWidth: tokens.borders.width,
+      borderRadius: tokens.borders.radius,
+      borderStyle: tokens.borders.style as 'solid' | 'dotted' | 'dashed',
+      paddingHorizontal: tokens.spacing.md,
+      paddingVertical: tokens.spacing.sm,
+      fontFamily,
+      fontSize: tokens.typography.fontSize.body,
+    };
+  }, [tokens]);
 
   const animatedStyle = useAnimatedStyle(() => ({
     color: withTiming(color || tokens.colors.text, { duration: 300 }),

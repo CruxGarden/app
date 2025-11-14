@@ -208,43 +208,6 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
     }
   };
 
-  // Helper to get bloom props from current active mode
-  const getBloomProps = () => {
-    const activeData = formData[formData.activeMode];
-    const props: any = {
-      size: 150,
-      gradients: [],
-    };
-
-    // Helper to convert ColorValue to bloom props
-    const convertColor = (colorValue: ColorValue) => {
-      const circleProps: any = {};
-
-      if (colorValue.type === 'solid') {
-        circleProps.fill = colorValue.value;
-      } else {
-        props.gradients.push(colorValue.value);
-        circleProps.fill = `url(#${colorValue.value.id})`;
-      }
-
-      // Add border if specified
-      const borderWidth = parseInt(activeData.bloomBorderWidth ?? '0');
-      if (borderWidth > 0) {
-        circleProps.stroke = activeData.bloomBorderColor || '#000000';
-        circleProps.strokeWidth = borderWidth;
-      }
-
-      return circleProps;
-    };
-
-    props.primary = convertColor(activeData.primaryColor);
-    props.secondary = convertColor(activeData.secondaryColor);
-    props.tertiary = convertColor(activeData.tertiaryColor);
-    props.quaternary = convertColor(activeData.quaternaryColor);
-
-    return props;
-  };
-
   const getFontFamily = () => {
     const activeData = formData[formData.activeMode];
     switch (activeData.font) {
@@ -704,13 +667,27 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
     // This randomize button will update sliders but not apply the palette
   };
 
+  // Helper to clone a ColorValue with a new ID (for duplicating between light/dark modes)
+  const cloneColorValueWithNewId = (color: ColorValue, mode: 'light' | 'dark', index: number): ColorValue => {
+    if (color.type === 'gradient') {
+      return {
+        type: 'gradient',
+        value: {
+          ...color.value,
+          id: `bloom-gradient-${mode}-${index}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        },
+      };
+    }
+    return color; // Solid colors don't need cloning
+  };
+
   const randomizeBloom = () => {
     // Generate random bloom colors using current palette settings
     const bloomColors = generatePaletteColors(baseHue, baseSaturation, baseLightness, selectedHarmony);
     const shuffled = [...bloomColors].sort(() => Math.random() - 0.5);
 
     // Helper to maybe create a gradient (25% chance)
-    const maybeGradient = (baseColor: string, index: number): ColorValue => {
+    const maybeGradient = (baseColor: string, index: number, mode: 'light' | 'dark'): ColorValue => {
       if (Math.random() < 0.25) {
         // Create a gradient with 2 stops
         const angle = Math.floor(Math.random() * 360);
@@ -722,7 +699,7 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
         return {
           type: 'gradient',
           value: {
-            id: `bloom-gradient-${index}-${Date.now()}`,
+            id: `bloom-gradient-${mode}-${index}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
             stops: [
               { color: color1, offset: '0%' },
               { color: color2, offset: '100%' },
@@ -756,12 +733,28 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
     const bloomShadowBlurRadius = isCartoonShadow ? '0' : Math.floor(Math.random() * 21).toString(); // 0-20px or forced 0 for cartoon
     const bloomShadowOpacity = isCartoonShadow ? '0.95' : (0.2 + Math.random() * 0.5).toFixed(2); // 0.95 for cartoon, 0.2-0.7 otherwise (more visible)
 
-    // Generate identical bloom colors for both modes
-    const bloomData = {
-      primaryColor: maybeGradient(shuffled[0], 0),
-      secondaryColor: maybeGradient(shuffled[1], 1),
-      tertiaryColor: maybeGradient(shuffled[2], 2),
-      quaternaryColor: maybeGradient(shuffled[3], 3),
+    // Generate bloom colors for light mode
+    const lightBloomData = {
+      primaryColor: maybeGradient(shuffled[0], 0, 'light'),
+      secondaryColor: maybeGradient(shuffled[1], 1, 'light'),
+      tertiaryColor: maybeGradient(shuffled[2], 2, 'light'),
+      quaternaryColor: maybeGradient(shuffled[3], 3, 'light'),
+      bloomBorderColor,
+      bloomBorderWidth,
+      bloomShadowEnabled,
+      bloomShadowColor,
+      bloomShadowOffsetX,
+      bloomShadowOffsetY,
+      bloomShadowBlurRadius,
+      bloomShadowOpacity,
+    };
+
+    // Clone for dark mode with unique gradient IDs (same colors, different IDs)
+    const darkBloomData = {
+      primaryColor: cloneColorValueWithNewId(lightBloomData.primaryColor, 'dark', 0),
+      secondaryColor: cloneColorValueWithNewId(lightBloomData.secondaryColor, 'dark', 1),
+      tertiaryColor: cloneColorValueWithNewId(lightBloomData.tertiaryColor, 'dark', 2),
+      quaternaryColor: cloneColorValueWithNewId(lightBloomData.quaternaryColor, 'dark', 3),
       bloomBorderColor,
       bloomBorderWidth,
       bloomShadowEnabled,
@@ -776,11 +769,11 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
       ...prev,
       light: {
         ...prev.light,
-        ...bloomData,
+        ...lightBloomData,
       },
       dark: {
         ...prev.dark,
-        ...bloomData,
+        ...darkBloomData,
       },
     }));
   };
@@ -1301,7 +1294,7 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
     const bloomShadowOpacity = isBloomCartoonShadow ? '0.95' : (0.2 + Math.random() * 0.5).toFixed(2); // 0.95 for cartoon, 0.2-0.7 otherwise (more visible)
 
     // Helper to maybe create a gradient (25% chance)
-    const maybeGradient = (baseColor: string, index: number): ColorValue => {
+    const maybeGradient = (baseColor: string, index: number, mode: 'light' | 'dark'): ColorValue => {
       if (Math.random() < 0.25) {
         // Create a gradient with 2 stops
         const angle = Math.floor(Math.random() * 360);
@@ -1313,7 +1306,7 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
         return {
           type: 'gradient',
           value: {
-            id: `bloom-gradient-${index}-${Date.now()}`,
+            id: `bloom-gradient-${mode}-${index}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
             stops: [
               { color: color1, offset: '0%' },
               { color: color2, offset: '100%' },
@@ -1356,12 +1349,28 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
     const borderWidth = Math.floor(Math.random() * 6).toString();
     const borderRadius = Math.floor(Math.random() * 31).toString();
 
-    // Identical bloom colors for both modes
-    const bloomData = {
-      primaryColor: maybeGradient(shuffled[0], 0),
-      secondaryColor: maybeGradient(shuffled[1], 1),
-      tertiaryColor: maybeGradient(shuffled[2], 2),
-      quaternaryColor: maybeGradient(shuffled[3], 3),
+    // Generate bloom colors for light mode
+    const lightBloomData = {
+      primaryColor: maybeGradient(shuffled[0], 0, 'light'),
+      secondaryColor: maybeGradient(shuffled[1], 1, 'light'),
+      tertiaryColor: maybeGradient(shuffled[2], 2, 'light'),
+      quaternaryColor: maybeGradient(shuffled[3], 3, 'light'),
+      bloomBorderColor,
+      bloomBorderWidth,
+      bloomShadowEnabled,
+      bloomShadowColor,
+      bloomShadowOffsetX,
+      bloomShadowOffsetY,
+      bloomShadowBlurRadius,
+      bloomShadowOpacity,
+    };
+
+    // Clone for dark mode with unique gradient IDs (same colors, different IDs)
+    const darkBloomData = {
+      primaryColor: cloneColorValueWithNewId(lightBloomData.primaryColor, 'dark', 0),
+      secondaryColor: cloneColorValueWithNewId(lightBloomData.secondaryColor, 'dark', 1),
+      tertiaryColor: cloneColorValueWithNewId(lightBloomData.tertiaryColor, 'dark', 2),
+      quaternaryColor: cloneColorValueWithNewId(lightBloomData.quaternaryColor, 'dark', 3),
       bloomBorderColor,
       bloomBorderWidth,
       bloomShadowEnabled,
@@ -1447,7 +1456,7 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
       title,
       description,
       light: {
-        ...bloomData,
+        ...lightBloomData,
         backgroundColor: lightBackground,
         panelColor: lightPanel,
         textColor: lightTextColor,
@@ -1479,7 +1488,7 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
         selectionColor: lightSelectionColor,
       },
       dark: {
-        ...bloomData,
+        ...darkBloomData,
         backgroundColor: darkBackground,
         panelColor: darkPanel,
         textColor: darkTextColor,
@@ -1530,7 +1539,17 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
           >
             {/* CruxBloom */}
             <View style={styles.bloomContainer}>
-              <CruxBloom {...getBloomProps()} />
+              <CruxBloom
+                size={150}
+                theme={{
+                  primary: formData[formData.activeMode].primaryColor,
+                  secondary: formData[formData.activeMode].secondaryColor,
+                  tertiary: formData[formData.activeMode].tertiaryColor,
+                  quaternary: formData[formData.activeMode].quaternaryColor,
+                  borderColor: formData[formData.activeMode].bloomBorderColor || undefined,
+                  borderWidth: parseInt(formData[formData.activeMode].bloomBorderWidth ?? '0'),
+                }}
+              />
             </View>
 
             {/* Sample Panel */}

@@ -4,7 +4,7 @@
  * Provides theme data and syncs with react-native-unistyles
  */
 
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import { Appearance } from 'react-native';
 import { UnistylesRuntime } from 'react-native-unistyles';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -154,8 +154,11 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
   const resolvedMode: 'light' | 'dark' = mode === 'auto' ? systemColorScheme : mode;
 
   // Compute design tokens from current theme and resolved mode
-  const activeTheme = theme || DEFAULT_THEME;
-  const tokens = computeDesignTokens(activeTheme, resolvedMode);
+  // Memoized to only recompute when theme or mode actually changes
+  const tokens = useMemo(
+    () => computeDesignTokens(theme || DEFAULT_THEME, resolvedMode),
+    [theme, resolvedMode]
+  );
 
   // Listen to system color scheme changes
   useEffect(() => {

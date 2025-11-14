@@ -40,7 +40,7 @@ export const Container: React.FC<ContainerProps> = ({
   };
 
   return (
-    <View style={[containerStyle, style]} {...props}>
+    <View backgroundColor={tokens.colors.background} style={[containerStyle, style]} {...props}>
       {children}
     </View>
   );

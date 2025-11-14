@@ -29,7 +29,7 @@ export interface DesignTokens {
     border: string;
 
     // Control colors
-    buttonBackground: string;
+    buttonBackground: ColorValue;
     buttonText: string;
     buttonBorder: string;
     link: string;
@@ -279,17 +279,32 @@ function getFontFamily(font?: string): { body: string; heading: string; mono: st
 
 /**
  * Convert bloom color data to ColorValue
+ * Ensures gradient IDs are unique by including mode information
  */
-function toColorValue(bloomColor?: { gradient?: any; solid?: string }): ColorValue {
+function toColorValue(
+  bloomColor?: { gradient?: any; solid?: string },
+  mode?: 'light' | 'dark',
+  colorName?: string,
+  defaultColor: string = '#000000'
+): ColorValue {
   if (!bloomColor) {
-    return { type: 'solid', value: '#000000' };
+    return { type: 'solid', value: defaultColor };
   }
 
   if (bloomColor.gradient) {
-    return { type: 'gradient', value: bloomColor.gradient };
+    const gradient = { ...bloomColor.gradient };
+
+    // Ensure gradient has a unique ID that includes the mode
+    // This prevents conflicts when both light and dark modes have gradients
+    if (!gradient.id || !gradient.id.includes(`-${mode}-`)) {
+      // Generate new ID with mode to ensure uniqueness
+      gradient.id = `bloom-${mode}-${colorName || 'color'}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    }
+
+    return { type: 'gradient', value: gradient };
   }
 
-  return { type: 'solid', value: bloomColor.solid || '#000000' };
+  return { type: 'solid', value: bloomColor.solid || defaultColor };
 }
 
 /**
@@ -349,7 +364,7 @@ export function computeDesignTokens(
 
   // Extract control colors
   const controls = meta.controls?.[modeData];
-  const buttonBackground = controls?.buttonBackground?.solid || '#4dd9b8';
+  const buttonBackground = toColorValue(controls?.buttonBackground, mode, 'button', '#4dd9b8');
   const buttonText = controls?.buttonTextColor || '#0f1214';
   const buttonBorder = controls?.buttonBorderColor || '#4dd9b8';
   const linkColor = controls?.linkColor || (mode === 'light' ? '#2563eb' : '#60a5fa');
@@ -362,10 +377,10 @@ export function computeDesignTokens(
 
   // Extract bloom colors
   const bloom = meta.bloom?.[modeData];
-  const bloomPrimary = toColorValue(bloom?.primary);
-  const bloomSecondary = toColorValue(bloom?.secondary);
-  const bloomTertiary = toColorValue(bloom?.tertiary);
-  const bloomQuaternary = toColorValue(bloom?.quaternary);
+  const bloomPrimary = toColorValue(bloom?.primary, mode, 'primary');
+  const bloomSecondary = toColorValue(bloom?.secondary, mode, 'secondary');
+  const bloomTertiary = toColorValue(bloom?.tertiary, mode, 'tertiary');
+  const bloomQuaternary = toColorValue(bloom?.quaternary, mode, 'quaternary');
   const bloomBorderColor = bloom?.borderColor;
   const bloomBorderWidth = parseFloat(bloom?.borderWidth || '0');
 
@@ -466,7 +481,7 @@ export function getDefaultTokens(): DesignTokens {
       panel: '#f5f5f5',
       text: '#000000',
       border: '#cccccc',
-      buttonBackground: '#4dd9b8',
+      buttonBackground: { type: 'solid', value: '#4dd9b8' },
       buttonText: '#0f1214',
       buttonBorder: '#4dd9b8',
       link: '#2563eb',
@@ -475,6 +490,7 @@ export function getDefaultTokens(): DesignTokens {
       bloomSecondary: { type: 'solid', value: '#426046' },
       bloomTertiary: { type: 'solid', value: '#58825e' },
       bloomQuaternary: { type: 'solid', value: '#73a079' },
+      bloomBorder: undefined,
     },
     spacing: DEFAULT_SPACING,
     typography: DEFAULT_TYPOGRAPHY,
