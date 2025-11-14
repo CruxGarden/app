@@ -24,12 +24,12 @@ export const FONT_SIZES: Record<FontType, FontSizeConfig> & { lineHeight: number
     control: 16,
   },
   serif: {
-    heading: 24,
-    body: 20,
-    control: 20,
+    heading: 19,
+    body: 16,
+    control: 16,
   },
   monospace: {
-    heading: 18,
+    heading: 19,
     body: 14,
     control: 14,
   },

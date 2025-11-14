@@ -5,6 +5,7 @@
  */
 
 import type { ColorValue } from '@/components/ThemeBuilder';
+import { FONT_SIZES, type FontType } from '@/constants/fontSizes';
 
 export interface ShadowStyle {
   color: string;
@@ -415,6 +416,11 @@ export function computeDesignTokens(
   // Get font family
   const fontFamily = getFontFamily(content?.font);
 
+  // Get font sizes based on font type
+  const fontType = (content?.font || 'sans-serif') as FontType;
+  const fontSize = FONT_SIZES[fontType];
+  const lineHeight = FONT_SIZES.lineHeight;
+
   return {
     colors: {
       primary,
@@ -439,8 +445,8 @@ export function computeDesignTokens(
     spacing: DEFAULT_SPACING,
     typography: {
       fontFamily,
-      fontSize: DEFAULT_TYPOGRAPHY.fontSize,
-      lineHeight: DEFAULT_TYPOGRAPHY.lineHeight,
+      fontSize,
+      lineHeight,
     },
     borders: {
       radius: borderRadius,
@@ -493,7 +499,11 @@ export function getDefaultTokens(): DesignTokens {
       bloomBorder: undefined,
     },
     spacing: DEFAULT_SPACING,
-    typography: DEFAULT_TYPOGRAPHY,
+    typography: {
+      fontFamily: DEFAULT_TYPOGRAPHY.fontFamily,
+      fontSize: FONT_SIZES['sans-serif'],
+      lineHeight: FONT_SIZES.lineHeight,
+    },
     borders: {
       radius: 0,
       width: 1,

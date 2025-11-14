@@ -4,23 +4,23 @@
  * A comprehensive builder for creating and editing themes
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { View, Text, TextInput, TouchableOpacity, ScrollView, Alert, Platform } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
+import Animated, { useAnimatedStyle, withTiming } from 'react-native-reanimated';
 import Slider from '@react-native-community/slider';
 import chroma from 'chroma-js';
 import { faker } from '@faker-js/faker';
 import { CruxBloom } from '@/components/CruxBloom';
+import { Panel, Text as ThemedText, Button as ThemedButton, Link } from '@/components';
 import { ColorPicker } from './ColorPicker';
 import { HexColorInput } from './HexColorInput';
 import { ShadowControls } from './ShadowControls';
-import { CruxButton } from '@/components/CruxButton';
 import type { ThemeFormData, ThemeDto, ColorValue, ThemeModeData } from './types';
 import { getDefaultThemeFormData, formDataToDto } from './types';
-import { getShadowStyleFromTheme } from '@/utils/shadow';
-import { FONT_SIZES, type FontType } from '@/constants/fontSizes';
-import { useTheme } from '@/contexts/ThemeContext';
+import { useTheme, ThemeContext } from '@/contexts/ThemeContext';
 import type { Theme } from '@/utils/designTokens';
+import { computeDesignTokens } from '@/utils/designTokens';
 
 export interface ThemeBuilderProps {
   /** Initial theme data for editing (optional) */
@@ -44,6 +44,82 @@ const FULL_RANDOMIZATION = true;
 // ============================================================================
 
 // Font sizes are now imported from @/constants/fontSizes
+
+// ============================================================================
+// ANIMATED PREVIEW CONTAINER
+// ============================================================================
+
+interface AnimatedPreviewContainerProps {
+  children: React.ReactNode;
+  formData: ThemeFormData;
+  mode: 'light' | 'dark';
+}
+
+/**
+ * Animated container that transitions background color
+ */
+const AnimatedPreviewContainer: React.FC<AnimatedPreviewContainerProps> = ({ children, formData, mode }) => {
+  const backgroundColor = formData[mode].backgroundColor || '#ffffff';
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    backgroundColor: withTiming(backgroundColor, { duration: 300 }),
+  }));
+
+  return (
+    <Animated.View style={[styles.previewContainer, animatedStyle]}>
+      {children}
+    </Animated.View>
+  );
+};
+
+// ============================================================================
+// PREVIEW THEME PROVIDER
+// ============================================================================
+
+interface PreviewThemeProviderProps {
+  children: React.ReactNode;
+  formData: ThemeFormData;
+  mode: 'light' | 'dark';
+}
+
+/**
+ * Provider that computes and provides theme tokens from formData for the preview
+ * This temporarily overrides the global theme context for preview components
+ */
+const PreviewThemeProvider: React.FC<PreviewThemeProviderProps> = ({ children, formData, mode }) => {
+  // Convert formData to Theme object
+  const previewTheme: Theme = useMemo(() => {
+    const dto = formDataToDto(formData);
+    return {
+      key: 'preview',
+      title: formData.title || 'Preview',
+      description: formData.description,
+      type: formData.type,
+      kind: formData.kind,
+      meta: dto.meta,
+    };
+  }, [formData]);
+
+  // Compute design tokens from preview theme
+  const tokens = useMemo(() => {
+    return computeDesignTokens(previewTheme, mode);
+  }, [previewTheme, mode]);
+
+  // Create context value that matches ThemeContextValue interface
+  const contextValue = useMemo(() => ({
+    theme: previewTheme,
+    mode: mode as 'light' | 'dark' | 'auto',
+    resolvedMode: mode,
+    tokens,
+    setTheme: async () => {},
+    setMode: async () => {},
+    reloadTheme: async () => {},
+    isLoading: false,
+  }), [previewTheme, mode, tokens]);
+
+  // Provide to ThemeContext to override parent context for preview
+  return <ThemeContext.Provider value={contextValue}>{children}</ThemeContext.Provider>;
+};
 
 export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
   initialData,
@@ -205,19 +281,6 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
       Alert.alert('Theme Applied', 'The theme has been applied to the app. Toggle between light and dark mode to see both variants.');
     } catch (error) {
       Alert.alert('Error', error instanceof Error ? error.message : 'Failed to apply theme');
-    }
-  };
-
-  const getFontFamily = () => {
-    const activeData = formData[formData.activeMode];
-    switch (activeData.font) {
-      case 'monospace':
-        return 'IBMPlexMono_400Regular';
-      case 'serif':
-        return 'CrimsonPro_300Light';
-      case 'sans-serif':
-      default:
-        return 'WorkSans_400Regular';
     }
   };
 
@@ -533,59 +596,7 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
     const darkTextColor = getAAATextColor(darkPanel);
     const darkBorderColor = chroma.hsl(darkBorderHue, darkBorderSat === 0 ? 0 : Math.min(1, darkBorderSat + 0.1), 0.2 + Math.random() * 0.15).hex();
 
-    // Generate controls (buttons and links) for both modes - pick from palette
-    const buttonPaletteColor = shuffled[Math.floor(Math.random() * 4)];
-    const buttonChroma = chroma(buttonPaletteColor);
-    const controlHue = buttonChroma.get('hsl.h');
-    const controlSat = buttonChroma.get('hsl.s');
-
-    // Helper to maybe create a gradient for button (25% chance)
-    const maybeButtonGradient = (baseColor: string): ColorValue => {
-      if (Math.random() < 0.25) {
-        const angle = Math.floor(Math.random() * 360);
-        const color1 = chroma(baseColor).brighten(0.3 + Math.random() * 0.3).hex();
-        const color2 = chroma(baseColor).darken(0.3 + Math.random() * 0.3).hex();
-        return {
-          type: 'gradient',
-          value: {
-            id: `button-gradient-${Date.now()}`,
-            stops: [
-              { color: color1, offset: '0%' },
-              { color: color2, offset: '100%' },
-            ],
-            angle,
-          },
-        };
-      }
-      return { type: 'solid', value: baseColor };
-    };
-
-    const lightButtonBgColor = chroma.hsl(controlHue, Math.min(1, controlSat + 0.1), 0.5 + Math.random() * 0.2).hex();
-    const lightButtonBg = maybeButtonGradient(lightButtonBgColor);
-    const lightButtonText = getAAATextColor(lightButtonBgColor);
-    const lightButtonBorder = Math.random() < 0.3
-      ? lightButtonBgColor
-      : chroma(lightButtonBgColor).darken(0.5 + Math.random() * 0.5).hex();
-    const lightLinkColor = chroma.hsl(controlHue, Math.min(1, controlSat + 0.2), 0.35 + Math.random() * 0.15).hex();
-    const lightSelectionColor = chroma.hsl(controlHue, Math.min(1, controlSat + 0.1), 0.70 + Math.random() * 0.15).hex();
-
-    const darkButtonBgColor = chroma.hsl(controlHue, Math.min(1, controlSat + 0.1), 0.4 + Math.random() * 0.2).hex();
-    const darkButtonBg = maybeButtonGradient(darkButtonBgColor);
-    const darkButtonText = getAAATextColor(darkButtonBgColor);
-    const darkButtonBorder = Math.random() < 0.3
-      ? darkButtonBgColor
-      : chroma(darkButtonBgColor).brighten(0.5 + Math.random() * 0.5).hex();
-    const darkLinkColor = chroma.hsl(controlHue, Math.min(1, controlSat + 0.2), 0.55 + Math.random() * 0.15).hex();
-    const darkSelectionColor = chroma.hsl(controlHue, Math.min(1, controlSat + 0.1), 0.45 + Math.random() * 0.15).hex();
-
-    const buttonBorderWidth = Math.floor(Math.random() * 4).toString();
-    const buttonBorderStyles: Array<'solid' | 'dashed' | 'dotted'> = ['solid', 'dashed', 'dotted'];
-    const buttonBorderStyle = buttonBorderStyles[Math.floor(Math.random() * buttonBorderStyles.length)];
-    const buttonBorderRadius = Math.floor(Math.random() * 51).toString();
-    const underlineStyles: Array<'none' | 'underline' | 'always'> = ['none', 'underline', 'always'];
-    const linkUnderlineStyle = underlineStyles[Math.floor(Math.random() * underlineStyles.length)];
-
-    // Apply to BOTH modes
+    // Apply palette and content colors to BOTH modes (NOT controls)
     setFormData((prev) => ({
       ...prev,
       light: {
@@ -599,15 +610,6 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
         panelColor: lightPanel,
         textColor: lightTextColor,
         borderColor: lightBorderColor,
-        buttonBackgroundColor: lightButtonBg,
-        buttonTextColor: lightButtonText,
-        buttonBorderColor: lightButtonBorder,
-        buttonBorderWidth,
-        buttonBorderStyle,
-        buttonBorderRadius,
-        linkColor: lightLinkColor,
-        linkUnderlineStyle,
-        selectionColor: lightSelectionColor,
       },
       dark: {
         ...prev.dark,
@@ -620,15 +622,6 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
         panelColor: darkPanel,
         textColor: darkTextColor,
         borderColor: darkBorderColor,
-        buttonBackgroundColor: darkButtonBg,
-        buttonTextColor: darkButtonText,
-        buttonBorderColor: darkButtonBorder,
-        buttonBorderWidth,
-        buttonBorderStyle,
-        buttonBorderRadius,
-        linkColor: darkLinkColor,
-        linkUnderlineStyle,
-        selectionColor: darkSelectionColor,
       },
     }));
   };
@@ -931,58 +924,6 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
     const darkTextColor = getAAATextColor(darkPanel);
     const darkBorderColor = chroma.hsl(darkBorderHue, darkBorderSat === 0 ? 0 : Math.min(1, darkBorderSat + 0.1), 0.16 + Math.random() * 0.08).hex();
 
-    // Generate controls for both modes - pick a different bloom color for buttons
-    const buttonBloomColor = bloomColors[Math.floor(Math.random() * 4)];
-    const buttonChroma = chroma(buttonBloomColor);
-    const controlHue = buttonChroma.get('hsl.h');
-    const controlSat = buttonChroma.get('hsl.s');
-
-    // Helper to maybe create a gradient for button (25% chance)
-    const maybeButtonGradient = (baseColor: string): ColorValue => {
-      if (Math.random() < 0.25) {
-        const angle = Math.floor(Math.random() * 360);
-        const color1 = chroma(baseColor).brighten(0.3 + Math.random() * 0.3).hex();
-        const color2 = chroma(baseColor).darken(0.3 + Math.random() * 0.3).hex();
-        return {
-          type: 'gradient',
-          value: {
-            id: `button-gradient-${Date.now()}`,
-            stops: [
-              { color: color1, offset: '0%' },
-              { color: color2, offset: '100%' },
-            ],
-            angle,
-          },
-        };
-      }
-      return { type: 'solid', value: baseColor };
-    };
-
-    const lightButtonBgColor = chroma.hsl(controlHue, Math.min(1, controlSat + 0.1), 0.5 + Math.random() * 0.2).hex();
-    const lightButtonBg = maybeButtonGradient(lightButtonBgColor);
-    const lightButtonText = getAAATextColor(lightButtonBgColor);
-    const lightButtonBorder = Math.random() < 0.3
-      ? lightButtonBgColor
-      : chroma(lightButtonBgColor).darken(0.5 + Math.random() * 0.5).hex();
-    const lightLinkColor = chroma.hsl(controlHue, Math.min(1, controlSat + 0.2), 0.35 + Math.random() * 0.15).hex();
-    const lightSelectionColor = chroma.hsl(controlHue, Math.min(1, controlSat + 0.1), 0.70 + Math.random() * 0.15).hex();
-
-    const darkButtonBgColor = chroma.hsl(controlHue, Math.min(1, controlSat + 0.1), 0.4 + Math.random() * 0.2).hex();
-    const darkButtonBg = maybeButtonGradient(darkButtonBgColor);
-    const darkButtonText = getAAATextColor(darkButtonBgColor);
-    const darkButtonBorder = Math.random() < 0.3
-      ? darkButtonBgColor
-      : chroma(darkButtonBgColor).brighten(0.5 + Math.random() * 0.5).hex();
-    const darkLinkColor = chroma.hsl(controlHue, Math.min(1, controlSat + 0.2), 0.55 + Math.random() * 0.15).hex();
-    const darkSelectionColor = chroma.hsl(controlHue, Math.min(1, controlSat + 0.1), 0.45 + Math.random() * 0.15).hex();
-
-    const buttonBorderWidth = Math.floor(Math.random() * 4).toString();
-    const buttonBorderStyles: Array<'solid' | 'dashed' | 'dotted'> = ['solid', 'dashed', 'dotted'];
-    const buttonBorderStyle = buttonBorderStyles[Math.floor(Math.random() * buttonBorderStyles.length)];
-    const buttonBorderRadius = Math.floor(Math.random() * 51).toString();
-    const underlineStyles: Array<'none' | 'underline' | 'always'> = ['none', 'underline', 'always'];
-    const linkUnderlineStyle = underlineStyles[Math.floor(Math.random() * underlineStyles.length)];
-
     // Randomize panel shadow (15% chance to enable)
     const panelShadowEnabled = Math.random() < 0.15;
     const panelShadowColor = '#000000';
@@ -992,15 +933,7 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
     const panelShadowBlurRadius = isPanelCartoonShadow ? '0' : Math.floor(Math.random() * 21).toString(); // 0 for cartoon, 0-20px otherwise
     const panelShadowOpacity = isPanelCartoonShadow ? '0.95' : (0.1 + Math.random() * 0.35).toFixed(2); // 0.95 for cartoon, 0.1-0.45 otherwise
 
-    // Randomize button shadow (25% chance to enable)
-    const buttonShadowEnabled = Math.random() < 0.25;
-    const buttonShadowColor = '#000000';
-    const isButtonCartoonShadow = Math.random() < 0.1; // 10% chance for cartoon shadow
-    const buttonShadowOffsetX = Math.floor(Math.random() * 11).toString(); // 0-10px
-    const buttonShadowOffsetY = Math.floor(Math.random() * 11).toString(); // 0-10px
-    const buttonShadowBlurRadius = isButtonCartoonShadow ? '0' : Math.floor(Math.random() * 21).toString(); // 0 for cartoon, 0-20px otherwise
-    const buttonShadowOpacity = isButtonCartoonShadow ? '0.95' : (0.1 + Math.random() * 0.35).toFixed(2); // 0.95 for cartoon, 0.1-0.45 otherwise
-
+    // Update style/content only (NOT controls)
     setFormData((prev) => ({
       ...prev,
       light: {
@@ -1019,21 +952,6 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
         panelShadowOffsetY,
         panelShadowBlurRadius,
         panelShadowOpacity,
-        buttonBackgroundColor: lightButtonBg,
-        buttonTextColor: lightButtonText,
-        buttonBorderColor: lightButtonBorder,
-        buttonBorderWidth,
-        buttonBorderStyle,
-        buttonBorderRadius,
-        buttonShadowEnabled,
-        buttonShadowColor,
-        buttonShadowOffsetX,
-        buttonShadowOffsetY,
-        buttonShadowBlurRadius,
-        buttonShadowOpacity,
-        linkColor: lightLinkColor,
-        linkUnderlineStyle,
-        selectionColor: lightSelectionColor,
       },
       dark: {
         ...prev.dark,
@@ -1051,21 +969,6 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
         panelShadowOffsetY,
         panelShadowBlurRadius,
         panelShadowOpacity,
-        buttonBackgroundColor: darkButtonBg,
-        buttonTextColor: darkButtonText,
-        buttonBorderColor: darkButtonBorder,
-        buttonBorderWidth,
-        buttonBorderStyle,
-        buttonBorderRadius,
-        buttonShadowEnabled,
-        buttonShadowColor,
-        buttonShadowOffsetX,
-        buttonShadowOffsetY,
-        buttonShadowBlurRadius,
-        buttonShadowOpacity,
-        linkColor: darkLinkColor,
-        linkUnderlineStyle,
-        selectionColor: darkSelectionColor,
       },
     }));
   };
@@ -1531,142 +1434,55 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
             Preview - {formData.activeMode === 'light' ? 'Light' : 'Dark'} Mode
           </Text>
 
-          <View
-            style={[
-              styles.previewContainer,
-              { backgroundColor: formData[formData.activeMode].backgroundColor || '#ffffff' },
-            ]}
-          >
-            {/* CruxBloom */}
-            <View style={styles.bloomContainer}>
-              <CruxBloom
-                size={150}
-                theme={{
-                  primary: formData[formData.activeMode].primaryColor,
-                  secondary: formData[formData.activeMode].secondaryColor,
-                  tertiary: formData[formData.activeMode].tertiaryColor,
-                  quaternary: formData[formData.activeMode].quaternaryColor,
-                  borderColor: formData[formData.activeMode].bloomBorderColor || undefined,
-                  borderWidth: parseInt(formData[formData.activeMode].bloomBorderWidth ?? '0'),
-                }}
-              />
-            </View>
+          <AnimatedPreviewContainer formData={formData} mode={formData.activeMode}>
+            {/* Wrap preview content with PreviewThemeProvider */}
+            <PreviewThemeProvider formData={formData} mode={formData.activeMode}>
+              {/* CruxBloom */}
+              <View style={styles.bloomContainer}>
+                <CruxBloom
+                  size={150}
+                  theme={{
+                    primary: formData[formData.activeMode].primaryColor,
+                    secondary: formData[formData.activeMode].secondaryColor,
+                    tertiary: formData[formData.activeMode].tertiaryColor,
+                    quaternary: formData[formData.activeMode].quaternaryColor,
+                    borderColor: formData[formData.activeMode].bloomBorderColor || undefined,
+                    borderWidth: parseInt(formData[formData.activeMode].bloomBorderWidth ?? '0'),
+                  }}
+                />
+              </View>
 
-            {/* Sample Panel */}
-            <View
-              nativeID="preview-panel"
-              style={[
-                styles.samplePanel,
-                {
-                  backgroundColor: formData[formData.activeMode].panelColor || '#f5f5f5',
-                  borderColor: formData[formData.activeMode].borderColor || '#cccccc',
-                  borderWidth: parseInt(formData[formData.activeMode].borderWidth ?? '1'),
-                  borderRadius: typeof formData[formData.activeMode].borderRadius === 'number' ? formData[formData.activeMode].borderRadius : parseInt(formData[formData.activeMode].borderRadius ?? '0'),
-                  borderStyle: formData[formData.activeMode].borderStyle || 'solid',
-                },
-                getShadowStyleFromTheme(
-                  formData[formData.activeMode].panelShadowEnabled,
-                  formData[formData.activeMode].panelShadowColor,
-                  formData[formData.activeMode].panelShadowOffsetX,
-                  formData[formData.activeMode].panelShadowOffsetY,
-                  formData[formData.activeMode].panelShadowBlurRadius,
-                  formData[formData.activeMode].panelShadowOpacity
-                ),
-              ]}
-            >
-              <Text
-                style={[
-                  styles.sampleHeading,
-                  {
-                    color: formData[formData.activeMode].textColor || '#000000',
-                    fontFamily: getFontFamily(),
-                    fontSize: FONT_SIZES[(formData[formData.activeMode].font || 'sans-serif') as 'sans-serif' | 'serif' | 'monospace'].heading,
-                  },
-                ]}
-              >
-                Lorem Ipsum Dolor Sit Amet
-              </Text>
-              <Text
-                style={[
-                  styles.sampleText,
-                  {
-                    color: formData[formData.activeMode].textColor || '#000000',
-                    fontFamily: getFontFamily(),
-                    fontSize: FONT_SIZES[(formData[formData.activeMode].font || 'sans-serif') as 'sans-serif' | 'serif' | 'monospace'].body,
-                    lineHeight: FONT_SIZES.lineHeight,
-                  },
-                ]}
-              >
-                Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
-              </Text>
-              <Text
-                style={[
-                  styles.sampleText,
-                  {
-                    color: formData[formData.activeMode].textColor || '#000000',
-                    fontFamily: getFontFamily(),
-                    fontSize: FONT_SIZES[(formData[formData.activeMode].font || 'sans-serif') as 'sans-serif' | 'serif' | 'monospace'].body,
-                    lineHeight: FONT_SIZES.lineHeight,
-                  },
-                ]}
-              >
-                Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
-              </Text>
-              <Text
-                style={[
-                  styles.sampleText,
-                  {
-                    color: formData[formData.activeMode].textColor || '#000000',
-                    fontFamily: getFontFamily(),
-                    fontSize: FONT_SIZES[(formData[formData.activeMode].font || 'sans-serif') as 'sans-serif' | 'serif' | 'monospace'].body,
-                    lineHeight: FONT_SIZES.lineHeight,
-                  },
-                ]}
-              >
-                Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium doloremque laudantium, totam rem aperiam, eaque ipsa quae ab illo inventore veritatis et quasi architecto beatae vitae dicta sunt explicabo.
-              </Text>
+              {/* Sample Panel - Using themed Panel component */}
+              <Panel nativeID="preview-panel" style={styles.samplePanel}>
+                <ThemedText variant="heading" style={styles.sampleHeading}>
+                  Lorem Ipsum Dolor Sit Amet
+                </ThemedText>
 
-              {/* Sample Button - Centered */}
-              <View style={styles.sampleControlsContainer}>
-                <View style={styles.sampleButtonWrapper}>
-                  <CruxButton
+                <ThemedText style={styles.sampleText}>
+                  Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
+                </ThemedText>
+
+                <ThemedText style={styles.sampleText}>
+                  Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
+                </ThemedText>
+
+                <ThemedText style={styles.sampleText}>
+                  Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium doloremque laudantium, totam rem aperiam, eaque ipsa quae ab illo inventore veritatis et quasi architecto beatae vitae dicta sunt explicabo.
+                </ThemedText>
+
+                {/* Sample Button and Link - Centered */}
+                <View style={styles.sampleControlsContainer}>
+                  <ThemedButton
                     title="Sample Button"
-                    backgroundColor={formData[formData.activeMode].buttonBackgroundColor || { type: 'solid', value: '#4dd9b8' }}
-                    textColor={formData[formData.activeMode].buttonTextColor || '#0f1214'}
-                    borderColor={formData[formData.activeMode].buttonBorderColor || '#4dd9b8'}
-                    borderWidth={parseInt(formData[formData.activeMode].buttonBorderWidth ?? '1')}
-                    borderStyle={formData[formData.activeMode].buttonBorderStyle || 'solid'}
-                    borderRadius={parseInt(formData[formData.activeMode].buttonBorderRadius ?? '6')}
-                    shadow={formData[formData.activeMode].buttonShadowEnabled ? {
-                      color: formData[formData.activeMode].buttonShadowColor || '#000000',
-                      offsetX: parseFloat(formData[formData.activeMode].buttonShadowOffsetX || '0'),
-                      offsetY: parseFloat(formData[formData.activeMode].buttonShadowOffsetY || '0'),
-                      blurRadius: parseFloat(formData[formData.activeMode].buttonShadowBlurRadius || '0'),
-                      opacity: parseFloat(formData[formData.activeMode].buttonShadowOpacity || '0'),
-                    } : undefined}
-                    fontFamily={getFontFamily()}
-                    fontSize={FONT_SIZES[(formData[formData.activeMode].font || 'sans-serif') as FontType].control}
                     onPress={() => {}}
                   />
+                  <Link onPress={() => {}}>
+                    Sample Link
+                  </Link>
                 </View>
-
-                {/* Sample Link - Centered */}
-                <Text
-                  style={[
-                    styles.sampleLink,
-                    {
-                      color: formData[formData.activeMode].linkColor || '#2563eb',
-                      fontFamily: getFontFamily(),
-                      fontSize: FONT_SIZES[(formData[formData.activeMode].font || 'sans-serif') as FontType].control,
-                      textDecorationLine: formData[formData.activeMode].linkUnderlineStyle === 'always' || formData[formData.activeMode].linkUnderlineStyle === 'underline' ? 'underline' : 'none',
-                    },
-                  ]}
-                >
-                  Sample Link
-                </Text>
-              </View>
-            </View>
-          </View>
+              </Panel>
+            </PreviewThemeProvider>
+          </AnimatedPreviewContainer>
         </ScrollView>
       </View>
 
@@ -2819,13 +2635,9 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   sampleHeading: {
-    fontSize: 22,
-    fontWeight: 'bold',
     marginBottom: 16,
   },
   sampleText: {
-    fontSize: 17,
-    lineHeight: 26,
     marginBottom: 16,
   },
   sampleSubtext: {
