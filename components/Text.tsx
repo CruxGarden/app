@@ -30,28 +30,61 @@ export const Text: React.FC<TextProps> = ({
   const textStyle = useMemo(() => {
     let fontFamily: string;
 
-    // Determine font family based on variant and weight
+    // Determine which font family to use based on variant and theme
+    // The theme tokens return names like 'IBMPlexSans-Regular', 'IBMPlexSerif-Regular', etc.
+    // We need to map these to the actual loaded Expo font names like 'IBMPlexSans_400Regular'
+
+    // Determine base font family from theme
+    let baseFontFamily: 'sans' | 'serif' | 'mono';
+
     if (variant === 'mono') {
+      baseFontFamily = 'mono';
+    } else if (variant === 'heading') {
+      // Check theme's heading font family
+      const headingFont = tokens.typography.fontFamily.heading;
+      if (headingFont.includes('Serif')) {
+        baseFontFamily = 'serif';
+      } else if (headingFont.includes('Mono')) {
+        baseFontFamily = 'mono';
+      } else {
+        baseFontFamily = 'sans';
+      }
+    } else {
+      // Body text - check theme's body font family
+      const bodyFont = tokens.typography.fontFamily.body;
+      if (bodyFont.includes('Serif')) {
+        baseFontFamily = 'serif';
+      } else if (bodyFont.includes('Mono')) {
+        baseFontFamily = 'mono';
+      } else {
+        baseFontFamily = 'sans';
+      }
+    }
+
+    // Now apply the weight to the determined font family
+    if (baseFontFamily === 'mono') {
       switch (weight) {
         case 'medium': fontFamily = 'IBMPlexMono_500Medium'; break;
         case 'semibold': fontFamily = 'IBMPlexMono_600SemiBold'; break;
         case 'bold': fontFamily = 'IBMPlexMono_700Bold'; break;
         default: fontFamily = 'IBMPlexMono_400Regular';
       }
-    } else if (variant === 'heading') {
+    } else if (baseFontFamily === 'serif') {
+      switch (weight) {
+        case 'regular': fontFamily = 'IBMPlexSerif_400Regular'; break;
+        case 'medium': fontFamily = 'IBMPlexSerif_500Medium'; break;
+        case 'semibold': fontFamily = 'IBMPlexSerif_600SemiBold'; break;
+        case 'bold': fontFamily = 'IBMPlexSerif_700Bold'; break;
+        default: fontFamily = variant === 'heading' ? 'IBMPlexSerif_600SemiBold' : 'IBMPlexSerif_400Regular';
+      }
+    } else {
+      // Sans-serif
       switch (weight) {
         case 'regular': fontFamily = 'IBMPlexSans_400Regular'; break;
         case 'medium': fontFamily = 'IBMPlexSans_500Medium'; break;
-        case 'bold': fontFamily = 'IBMPlexSans_700Bold'; break;
-        default: fontFamily = 'IBMPlexSans_600SemiBold'; // Headings default to semibold
-      }
-    } else {
-      // Body text
-      switch (weight) {
-        case 'medium': fontFamily = 'IBMPlexSans_500Medium'; break;
         case 'semibold': fontFamily = 'IBMPlexSans_600SemiBold'; break;
         case 'bold': fontFamily = 'IBMPlexSans_700Bold'; break;
-        default: fontFamily = 'IBMPlexSans_400Regular';
+        default: fontFamily = variant === 'heading' ? 'IBMPlexSans_600SemiBold' : 'IBMPlexSans_400Regular';
       }
     }
 

@@ -266,10 +266,9 @@ export function formDataToDto(formData: ThemeFormData): ThemeDto {
     if (colorValue.type === 'solid') {
       return { color: colorValue.value };
     } else {
-      const { id, ...gradient } = colorValue.value;
       return {
         color: colorValue.value.stops[0].color,
-        gradient,
+        gradient: colorValue.value, // Keep the full gradient including ID
       };
     }
   };
@@ -322,10 +321,7 @@ export function formDataToDto(formData: ThemeFormData): ThemeDto {
       controls: {
         buttonBackground: modeData.buttonBackgroundColor
           ? (modeData.buttonBackgroundColor.type === 'gradient'
-              ? (() => {
-                  const { id, ...gradient } = modeData.buttonBackgroundColor.value;
-                  return { gradient };
-                })()
+              ? { gradient: modeData.buttonBackgroundColor.value } // Keep the full gradient including ID
               : { solid: modeData.buttonBackgroundColor.value })
           : undefined,
         buttonTextColor: modeData.buttonTextColor,

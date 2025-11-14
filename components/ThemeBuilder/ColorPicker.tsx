@@ -33,10 +33,12 @@ export const ColorPicker: React.FC<ColorPickerProps> = ({ label, value, onChange
     } else {
       // Convert to gradient - use current color as first stop
       const color = value.type === 'solid' ? value.value : value.value.stops[0].color;
+      // Generate unique ID with label and timestamp + random component to avoid collisions
+      const uniqueId = `${label.toLowerCase().replace(/\s+/g, '-')}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
       onChange({
         type: 'gradient',
         value: {
-          id: `gradient-${Date.now()}`,
+          id: uniqueId,
           stops: [
             { color, offset: '0%' },
             { color: '#ffffff', offset: '100%' },

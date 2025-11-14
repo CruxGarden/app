@@ -1,5 +1,13 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import Svg, { Circle, Defs, LinearGradient, Stop } from 'react-native-svg';
+import Animated, { useAnimatedProps, withTiming } from 'react-native-reanimated';
+
+// Create animated versions of SVG components
+const AnimatedStop = Animated.createAnimatedComponent(Stop);
+const AnimatedCircle = Animated.createAnimatedComponent(Circle);
+const AnimatedLinearGradient = Animated.createAnimatedComponent(LinearGradient);
+
+const ANIMATION_DURATION = 300;
 
 export interface CircleStyle {
   /** Fill color (solid color or gradient ID reference like "url(#gradient1)") */
@@ -137,48 +145,154 @@ export const CruxBloom: React.FC<CruxBloomProps> = ({
   style,
   testID = 'crux-bloom',
 }) => {
-  // Convert theme to circle props if provided
-  let primary = primaryProp;
-  let secondary = secondaryProp;
-  let tertiary = tertiaryProp;
-  let quaternary = quaternaryProp;
-  let gradients = gradientsProp;
-
-  if (theme) {
-    const themeGradients: GradientDefinition[] = [];
-
-    // Helper to convert ColorValue to CircleStyle
-    const convertColor = (colorValue: ColorValue): CircleStyle => {
-      const circleProps: CircleStyle = {};
-
-      if (colorValue.type === 'solid') {
-        circleProps.fill = colorValue.value;
-      } else {
-        themeGradients.push(colorValue.value);
-        circleProps.fill = `url(#${colorValue.value.id})`;
+  // Convert all colors to gradient definitions (solids become gradients with matching stops)
+  // This allows smooth animation between any color changes
+  const gradientData = useMemo(() => {
+    const convertToGradient = (colorValue: ColorValue, fallback: string): GradientDefinition => {
+      if (colorValue.type === 'gradient') {
+        return colorValue.value;
       }
-
-      // Add border if specified
-      if (theme.borderWidth && theme.borderWidth > 0 && theme.borderColor) {
-        circleProps.stroke = theme.borderColor;
-        circleProps.strokeWidth = theme.borderWidth;
-      }
-
-      return circleProps;
+      // Convert solid to gradient with matching stops
+      return {
+        id: 'solid',
+        angle: 0,
+        stops: [
+          { color: colorValue.value || fallback, offset: '0%' },
+          { color: colorValue.value || fallback, offset: '100%' },
+        ],
+      };
     };
 
-    primary = convertColor(theme.primary);
-    secondary = convertColor(theme.secondary);
-    tertiary = convertColor(theme.tertiary);
-    quaternary = convertColor(theme.quaternary);
-    gradients = themeGradients;
-  }
+    if (theme) {
+      return {
+        primary: convertToGradient(theme.primary, '#2a3d2c'),
+        secondary: convertToGradient(theme.secondary, '#426046'),
+        tertiary: convertToGradient(theme.tertiary, '#58825e'),
+        quaternary: convertToGradient(theme.quaternary, '#73a079'),
+        borderColor: theme.borderColor || undefined,
+        borderWidth: theme.borderWidth || 0,
+      };
+    }
 
-  // Merge custom styles with defaults
-  const c1 = { ...defaultPrimary, ...primary };
-  const c2 = { ...defaultSecondary, ...secondary };
-  const c3 = { ...defaultTertiary, ...tertiary };
-  const c4 = { ...defaultQuaternary, ...quaternary };
+    // Use defaults
+    return {
+      primary: { id: 'default', angle: 0, stops: [{ color: '#2a3d2c', offset: '0%' }, { color: '#2a3d2c', offset: '100%' }] },
+      secondary: { id: 'default', angle: 0, stops: [{ color: '#426046', offset: '0%' }, { color: '#426046', offset: '100%' }] },
+      tertiary: { id: 'default', angle: 0, stops: [{ color: '#58825e', offset: '0%' }, { color: '#58825e', offset: '100%' }] },
+      quaternary: { id: 'default', angle: 0, stops: [{ color: '#73a079', offset: '0%' }, { color: '#73a079', offset: '100%' }] },
+      borderColor: undefined,
+      borderWidth: 0,
+    };
+  }, [theme]);
+
+  // Create animated props for gradient stops (color AND offset)
+  // Primary gradient stops
+  const primaryStop1Props = useAnimatedProps(() => ({
+    stopColor: withTiming(gradientData.primary.stops[0].color, { duration: ANIMATION_DURATION }),
+    offset: withTiming(gradientData.primary.stops[0].offset, { duration: ANIMATION_DURATION }),
+  }), [gradientData]);
+
+  const primaryStop2Props = useAnimatedProps(() => ({
+    stopColor: withTiming(gradientData.primary.stops[1].color, { duration: ANIMATION_DURATION }),
+    offset: withTiming(gradientData.primary.stops[1].offset, { duration: ANIMATION_DURATION }),
+  }), [gradientData]);
+
+  // Secondary gradient stops
+  const secondaryStop1Props = useAnimatedProps(() => ({
+    stopColor: withTiming(gradientData.secondary.stops[0].color, { duration: ANIMATION_DURATION }),
+    offset: withTiming(gradientData.secondary.stops[0].offset, { duration: ANIMATION_DURATION }),
+  }), [gradientData]);
+
+  const secondaryStop2Props = useAnimatedProps(() => ({
+    stopColor: withTiming(gradientData.secondary.stops[1].color, { duration: ANIMATION_DURATION }),
+    offset: withTiming(gradientData.secondary.stops[1].offset, { duration: ANIMATION_DURATION }),
+  }), [gradientData]);
+
+  // Tertiary gradient stops
+  const tertiaryStop1Props = useAnimatedProps(() => ({
+    stopColor: withTiming(gradientData.tertiary.stops[0].color, { duration: ANIMATION_DURATION }),
+    offset: withTiming(gradientData.tertiary.stops[0].offset, { duration: ANIMATION_DURATION }),
+  }), [gradientData]);
+
+  const tertiaryStop2Props = useAnimatedProps(() => ({
+    stopColor: withTiming(gradientData.tertiary.stops[1].color, { duration: ANIMATION_DURATION }),
+    offset: withTiming(gradientData.tertiary.stops[1].offset, { duration: ANIMATION_DURATION }),
+  }), [gradientData]);
+
+  // Quaternary gradient stops
+  const quaternaryStop1Props = useAnimatedProps(() => ({
+    stopColor: withTiming(gradientData.quaternary.stops[0].color, { duration: ANIMATION_DURATION }),
+    offset: withTiming(gradientData.quaternary.stops[0].offset, { duration: ANIMATION_DURATION }),
+  }), [gradientData]);
+
+  const quaternaryStop2Props = useAnimatedProps(() => ({
+    stopColor: withTiming(gradientData.quaternary.stops[1].color, { duration: ANIMATION_DURATION }),
+    offset: withTiming(gradientData.quaternary.stops[1].offset, { duration: ANIMATION_DURATION }),
+  }), [gradientData]);
+
+  // Create animated props for circle strokes
+  // Extract values outside the worklet for proper reactivity
+  const borderColor = gradientData.borderColor || '#000000';
+  const borderWidth = gradientData.borderWidth || 0;
+
+  const strokeWidthProps = useAnimatedProps(() => {
+    return {
+      strokeWidth: withTiming(borderWidth, { duration: ANIMATION_DURATION }),
+    };
+  }, [borderWidth]);
+
+  // Helper to calculate gradient coordinates as numbers (for animation)
+  const getGradientCoordsNumeric = (angle: number = 90) => {
+    const rad = ((angle - 90) * Math.PI) / 180;
+    return {
+      x1: 50 - 50 * Math.cos(rad),
+      y1: 50 - 50 * Math.sin(rad),
+      x2: 50 + 50 * Math.cos(rad),
+      y2: 50 + 50 * Math.sin(rad),
+    };
+  };
+
+  // Create animated props for gradient angles
+  // Extract coords outside worklet for proper reactivity
+  const primaryCoords = getGradientCoordsNumeric(gradientData.primary.angle || 0);
+  const primaryGradientProps = useAnimatedProps(() => {
+    return {
+      x1: `${primaryCoords.x1}%`,
+      y1: `${primaryCoords.y1}%`,
+      x2: `${primaryCoords.x2}%`,
+      y2: `${primaryCoords.y2}%`,
+    };
+  }, [primaryCoords]);
+
+  const secondaryCoords = getGradientCoordsNumeric(gradientData.secondary.angle || 0);
+  const secondaryGradientProps = useAnimatedProps(() => {
+    return {
+      x1: `${secondaryCoords.x1}%`,
+      y1: `${secondaryCoords.y1}%`,
+      x2: `${secondaryCoords.x2}%`,
+      y2: `${secondaryCoords.y2}%`,
+    };
+  }, [secondaryCoords]);
+
+  const tertiaryCoords = getGradientCoordsNumeric(gradientData.tertiary.angle || 0);
+  const tertiaryGradientProps = useAnimatedProps(() => {
+    return {
+      x1: `${tertiaryCoords.x1}%`,
+      y1: `${tertiaryCoords.y1}%`,
+      x2: `${tertiaryCoords.x2}%`,
+      y2: `${tertiaryCoords.y2}%`,
+    };
+  }, [tertiaryCoords]);
+
+  const quaternaryCoords = getGradientCoordsNumeric(gradientData.quaternary.angle || 0);
+  const quaternaryGradientProps = useAnimatedProps(() => {
+    return {
+      x1: `${quaternaryCoords.x1}%`,
+      y1: `${quaternaryCoords.y1}%`,
+      x2: `${quaternaryCoords.x2}%`,
+      y2: `${quaternaryCoords.y2}%`,
+    };
+  }, [quaternaryCoords]);
 
   // Calculate center point
   const centerX = width / 2;
@@ -186,10 +300,10 @@ export const CruxBloom: React.FC<CruxBloomProps> = ({
 
   // Calculate the bounding box needed for all circles
   const circles = [
-    { ...c1, radius: CIRCLE_RADII[0], offsetY: CIRCLE_OFFSETS[0] },
-    { ...c2, radius: CIRCLE_RADII[1], offsetY: CIRCLE_OFFSETS[1] },
-    { ...c3, radius: CIRCLE_RADII[2], offsetY: CIRCLE_OFFSETS[2] },
-    { ...c4, radius: CIRCLE_RADII[3], offsetY: CIRCLE_OFFSETS[3] },
+    { radius: CIRCLE_RADII[0], offsetY: CIRCLE_OFFSETS[0], strokeWidth: gradientData.borderWidth },
+    { radius: CIRCLE_RADII[1], offsetY: CIRCLE_OFFSETS[1], strokeWidth: gradientData.borderWidth },
+    { radius: CIRCLE_RADII[2], offsetY: CIRCLE_OFFSETS[2], strokeWidth: gradientData.borderWidth },
+    { radius: CIRCLE_RADII[3], offsetY: CIRCLE_OFFSETS[3], strokeWidth: gradientData.borderWidth },
   ];
 
   let minX = Infinity;
@@ -230,17 +344,6 @@ export const CruxBloom: React.FC<CruxBloomProps> = ({
   const actualWidth = size * renderScale;
   const actualHeight = size * renderScale;
 
-  // Helper to calculate gradient coordinates based on angle
-  const getGradientCoords = (angle: number = 90) => {
-    const rad = ((angle - 90) * Math.PI) / 180;
-    return {
-      x1: `${50 - 50 * Math.cos(rad)}%`,
-      y1: `${50 - 50 * Math.sin(rad)}%`,
-      x2: `${50 + 50 * Math.cos(rad)}%`,
-      y2: `${50 + 50 * Math.sin(rad)}%`,
-    };
-  };
-
   return (
     <Svg
       width={actualWidth}
@@ -249,70 +352,77 @@ export const CruxBloom: React.FC<CruxBloomProps> = ({
       style={style}
       testID={testID}
     >
-      {/* Gradient Definitions */}
-      {gradients.length > 0 && (
-        <Defs>
-          {gradients.map((gradient) => {
-            const coords = getGradientCoords(gradient.angle);
-            return (
-              <LinearGradient
-                key={gradient.id}
-                id={gradient.id}
-                x1={coords.x1}
-                y1={coords.y1}
-                x2={coords.x2}
-                y2={coords.y2}
-              >
-                {gradient.stops.map((stop, idx) => (
-                  <Stop
-                    key={idx}
-                    offset={stop.offset}
-                    stopColor={stop.color}
-                    stopOpacity={stop.opacity ?? 1}
-                  />
-                ))}
-              </LinearGradient>
-            );
-          })}
-        </Defs>
-      )}
+      {/* Gradient Definitions - Always use gradients with animated stops and angles */}
+      <Defs>
+        {/* Primary gradient */}
+        <AnimatedLinearGradient
+          id="bloom-primary"
+          animatedProps={primaryGradientProps}
+        >
+          <AnimatedStop animatedProps={primaryStop1Props} />
+          <AnimatedStop animatedProps={primaryStop2Props} />
+        </AnimatedLinearGradient>
 
-      {/* Four Circles */}
-      <Circle
+        {/* Secondary gradient */}
+        <AnimatedLinearGradient
+          id="bloom-secondary"
+          animatedProps={secondaryGradientProps}
+        >
+          <AnimatedStop animatedProps={secondaryStop1Props} />
+          <AnimatedStop animatedProps={secondaryStop2Props} />
+        </AnimatedLinearGradient>
+
+        {/* Tertiary gradient */}
+        <AnimatedLinearGradient
+          id="bloom-tertiary"
+          animatedProps={tertiaryGradientProps}
+        >
+          <AnimatedStop animatedProps={tertiaryStop1Props} />
+          <AnimatedStop animatedProps={tertiaryStop2Props} />
+        </AnimatedLinearGradient>
+
+        {/* Quaternary gradient */}
+        <AnimatedLinearGradient
+          id="bloom-quaternary"
+          animatedProps={quaternaryGradientProps}
+        >
+          <AnimatedStop animatedProps={quaternaryStop1Props} />
+          <AnimatedStop animatedProps={quaternaryStop2Props} />
+        </AnimatedLinearGradient>
+      </Defs>
+
+      {/* Four Circles - All use fixed gradient IDs and animated strokes */}
+      <AnimatedCircle
         cx={centerX}
         cy={centerY + circles[0].offsetY}
         r={circles[0].radius}
-        fill={c1.fill}
-        stroke={c1.stroke}
-        strokeWidth={c1.strokeWidth}
-        opacity={c1.opacity}
+        fill="url(#bloom-primary)"
+        stroke={borderColor}
+        animatedProps={strokeWidthProps}
       />
-      <Circle
+      <AnimatedCircle
         cx={centerX}
         cy={centerY + circles[1].offsetY}
         r={circles[1].radius}
-        fill={c2.fill}
-        stroke={c2.stroke}
-        strokeWidth={c2.strokeWidth}
-        opacity={c2.opacity}
+        fill="url(#bloom-secondary)"
+        stroke={borderColor}
+        animatedProps={strokeWidthProps}
       />
-      <Circle
+      <AnimatedCircle
         cx={centerX}
         cy={centerY + circles[2].offsetY}
         r={circles[2].radius}
-        fill={c3.fill}
-        stroke={c3.stroke}
-        strokeWidth={c3.strokeWidth}
-        opacity={c3.opacity}
+        fill="url(#bloom-tertiary)"
+        stroke={borderColor}
+        animatedProps={strokeWidthProps}
       />
-      <Circle
+      <AnimatedCircle
         cx={centerX}
         cy={centerY + circles[3].offsetY}
         r={circles[3].radius}
-        fill={c4.fill}
-        stroke={c4.stroke}
-        strokeWidth={c4.strokeWidth}
-        opacity={c4.opacity}
+        fill="url(#bloom-quaternary)"
+        stroke={borderColor}
+        animatedProps={strokeWidthProps}
       />
     </Svg>
   );

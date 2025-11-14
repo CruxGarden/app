@@ -4,10 +4,10 @@
  * Main themed container for grouping content with panel styling
  */
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { ViewProps, ViewStyle } from 'react-native';
+import Animated, { useAnimatedStyle, withTiming } from 'react-native-reanimated';
 import { useTheme } from '@/contexts/ThemeContext';
-import { View } from './View';
 
 export interface PanelProps extends ViewProps {
   /** Add padding inside the panel */
@@ -31,38 +31,53 @@ export const Panel: React.FC<PanelProps> = ({
 }) => {
   const { tokens } = useTheme();
 
-  // Build shadow styles if enabled
-  const shadowStyle: ViewStyle = {};
-  if (!noShadow && tokens.shadows.panel) {
-    const shadow = tokens.shadows.panel;
-    shadowStyle.shadowColor = shadow.color;
-    shadowStyle.shadowOffset = {
-      width: shadow.offsetX,
-      height: shadow.offsetY,
-    };
-    shadowStyle.shadowOpacity = shadow.opacity;
-    shadowStyle.shadowRadius = shadow.blurRadius;
-    // Android elevation (approximate based on shadow)
-    shadowStyle.elevation = Math.max(shadow.offsetY, shadow.blurRadius / 2);
-  }
+  // Static styles (don't animate)
+  const staticStyle: ViewStyle = useMemo(() => {
+    // Build shadow styles if enabled
+    const shadowStyle: ViewStyle = {};
+    if (!noShadow && tokens.shadows.panel) {
+      const shadow = tokens.shadows.panel;
+      shadowStyle.shadowColor = shadow.color;
+      shadowStyle.shadowOffset = {
+        width: shadow.offsetX,
+        height: shadow.offsetY,
+      };
+      shadowStyle.shadowOpacity = shadow.opacity;
+      shadowStyle.shadowRadius = shadow.blurRadius;
+      // Android elevation (approximate based on shadow)
+      shadowStyle.elevation = Math.max(shadow.offsetY, shadow.blurRadius / 2);
+    }
 
-  const panelStyle: ViewStyle = {
-    backgroundColor: tokens.colors.panel,
-    ...(!noBorder && {
-      borderWidth: tokens.borders.width,
-      borderColor: tokens.borders.color,
-      borderStyle: tokens.borders.style,
-      borderRadius: tokens.borders.radius,
-    }),
-    ...(padded && {
-      padding: padding ?? tokens.spacing.lg,
-    }),
-    ...shadowStyle,
-  };
+    return {
+      ...(padded && {
+        padding: padding ?? tokens.spacing.lg,
+      }),
+      ...shadowStyle,
+    };
+  }, [tokens, noBorder, noShadow, padded, padding]);
+
+  // Animated styles (colors and borders that change with theme)
+  const animatedStyle = useAnimatedStyle(() => ({
+    backgroundColor: withTiming(tokens.colors.panel, { duration: 300 }),
+    borderColor: withTiming(
+      noBorder ? 'transparent' : tokens.colors.border,
+      { duration: 300 }
+    ),
+    borderWidth: withTiming(
+      noBorder ? 0 : tokens.borders.width,
+      { duration: 300 }
+    ),
+    borderRadius: withTiming(
+      tokens.borders.radius,
+      { duration: 300 }
+    ),
+    // borderStyle can't be animated but will update
+    borderStyle: tokens.borders.style,
+  }));
 
   return (
-    <View style={[panelStyle, style]} {...props}>
+    <Animated.View style={[staticStyle, animatedStyle, style]} {...props}>
       {children}
-    </View>
+    </Animated.View>
   );
 };
