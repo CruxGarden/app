@@ -182,6 +182,20 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
     setPreviewPalette(bloomColors);
   }, [baseHue, baseSaturation, baseLightness, selectedHarmony, randomSeed]);
 
+  // Auto-randomization timer - runs every 3 seconds and toggles mode
+  useEffect(() => {
+    const interval = setInterval(() => {
+      randomizeAll();
+      // Toggle between light and dark mode
+      setFormData((prev) => ({
+        ...prev,
+        activeMode: prev.activeMode === 'light' ? 'dark' : 'light',
+      }));
+    }, 3000); // 3 seconds
+
+    return () => clearInterval(interval);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   // Apply text selection color styling (web only)
   useEffect(() => {
     if (Platform.OS === 'web') {
@@ -1455,29 +1469,37 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
               {/* Sample Panel - Using themed Panel component */}
               <Panel nativeID="preview-panel" style={styles.samplePanel}>
                 <ThemedText variant="heading" style={styles.sampleHeading}>
-                  Lorem Ipsum Dolor Sit Amet
+                  What is Crux Garden?
                 </ThemedText>
 
                 <ThemedText style={styles.sampleText}>
-                  Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
+                  Crux Garden models how ideas manifest and develop over time. At its core is the Crux, an atomic unit of thought which is captured as digital content: text, media, code, anything.
                 </ThemedText>
 
                 <ThemedText style={styles.sampleText}>
-                  Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
+                  Cruxes connect with each other through four dimensions: GATES (origins), GARDENS (consequences), GROWTH (evolution), and GRAFTS (associations).
                 </ThemedText>
 
                 <ThemedText style={styles.sampleText}>
-                  Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium doloremque laudantium, totam rem aperiam, eaque ipsa quae ab illo inventore veritatis et quasi architecto beatae vitae dicta sunt explicabo.
+                  These simple building blocks provide a foundation that is able to realize any kind of connected information: digital gardens, personal knowledge bases, home pages, blogs, interactive stories, product roadmaps, research networks, anything.
+                </ThemedText>
+
+                <ThemedText style={styles.sampleText}>
+                  To understand the goals and ambitions of Crux Garden, explore the history of the Digital Garden movement and read Vannevar Bush's 1945 essay As We May Think.
+                </ThemedText>
+
+                <ThemedText style={styles.sampleText}>
+                  Will Stepp, October 2025
                 </ThemedText>
 
                 {/* Sample Button and Link - Centered */}
                 <View style={styles.sampleControlsContainer}>
                   <ThemedButton
-                    title="Sample Button"
+                    title="The Digital Garden Movement"
                     onPress={() => {}}
                   />
                   <Link onPress={() => {}}>
-                    Sample Link
+                    As We May Think, 1945 - Vannevar Bush
                   </Link>
                 </View>
               </Panel>
