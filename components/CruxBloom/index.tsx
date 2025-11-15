@@ -169,11 +169,18 @@ export const CruxBloom: React.FC<CruxBloomProps> = ({
     const uniqueId = `bloom-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
     const convertToGradient = (colorValue: ColorValue, fallback: string, colorName: string): GradientDefinition => {
+      console.log(`CruxBloom convertToGradient ${colorName}:`, JSON.stringify(colorValue));
       if (colorValue.type === 'gradient') {
-        return colorValue.value;
+        // Use the gradient but regenerate the ID to avoid conflicts when multiple blooms on same page
+        const uniqueGradient = {
+          ...colorValue.value,
+          id: `${uniqueId}-${colorName}`,
+        };
+        console.log(`CruxBloom ${colorName} returning gradient with unique ID:`, JSON.stringify(uniqueGradient));
+        return uniqueGradient;
       }
       // Convert solid to gradient with matching stops - use unique ID per bloom instance
-      return {
+      const solidGradient = {
         id: `${uniqueId}-${colorName}`,
         angle: 0,
         stops: [
@@ -181,9 +188,12 @@ export const CruxBloom: React.FC<CruxBloomProps> = ({
           { color: colorValue.value || fallback, offset: '100%' },
         ],
       };
+      console.log(`CruxBloom ${colorName} returning solid as gradient:`, JSON.stringify(solidGradient));
+      return solidGradient;
     };
 
     if (actualTheme) {
+      console.log('CruxBloom actualTheme:', JSON.stringify(actualTheme));
       return {
         primary: convertToGradient(actualTheme.primary, '#2a3d2c', 'primary'),
         secondary: convertToGradient(actualTheme.secondary, '#426046', 'secondary'),

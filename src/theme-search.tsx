@@ -6,6 +6,7 @@ import { useTheme, DEFAULT_THEME } from '@/contexts/ThemeContext';
 import { api, type Theme as ApiTheme } from './lib/api';
 import type { Theme } from '@/utils/designTokens';
 import { computeDesignTokens } from '@/utils/designTokens';
+import { useApp } from './lib/_AppContext';
 
 interface ThemeSection {
   title: string;
@@ -28,6 +29,7 @@ const mapFontFamily = (fontFamily: string): string => {
 export default function ThemeSearchScreen() {
   const router = useRouter();
   const { tokens, theme: activeTheme, setTheme, resolvedMode } = useTheme();
+  const { account } = useApp();
   const [sections, setSections] = useState<ThemeSection[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSelecting, setIsSelecting] = useState(false);
@@ -45,7 +47,7 @@ export default function ThemeSearchScreen() {
       const builtInApiThemes = apiThemes.filter((t: ApiTheme) => t.system);
       const userApiThemes = apiThemes.filter((t: ApiTheme) => !t.system);
 
-      // Convert to app Theme format (include system field for proper labeling)
+      // Convert to app Theme format (include system and authorId fields)
       const builtInThemes: Theme[] = builtInApiThemes.map((apiTheme: ApiTheme) => ({
         key: apiTheme.key,
         title: apiTheme.title,
@@ -54,6 +56,7 @@ export default function ThemeSearchScreen() {
         kind: apiTheme.kind,
         meta: apiTheme.meta,
         system: apiTheme.system,
+        authorId: apiTheme.authorId,
       }));
 
       const userThemes: Theme[] = userApiThemes.map((apiTheme: ApiTheme) => ({
@@ -64,6 +67,7 @@ export default function ThemeSearchScreen() {
         kind: apiTheme.kind,
         meta: apiTheme.meta,
         system: apiTheme.system,
+        authorId: apiTheme.authorId,
       }));
 
       // Create sections
@@ -116,8 +120,41 @@ export default function ThemeSearchScreen() {
     }
   };
 
+  const handleDeleteTheme = async (theme: Theme) => {
+    console.log('handleDeleteTheme called for:', theme.title, theme.key);
+
+    // Use window.confirm for web compatibility
+    const confirmed = window.confirm(
+      `Are you sure you want to delete "${theme.title}"? This action cannot be undone.`
+    );
+
+    if (!confirmed) return;
+
+    try {
+      setIsSelecting(true);
+      await api.deleteTheme(theme.key);
+      // Remove from sections
+      setSections((prevSections) =>
+        prevSections
+          .map((section) => ({
+            ...section,
+            data: section.data.filter((t) => t.key !== theme.key),
+          }))
+          .filter((section) => section.data.length > 0)
+      );
+      Alert.alert('Success', 'Theme deleted successfully');
+    } catch (error) {
+      console.error('Failed to delete theme:', error);
+      Alert.alert('Error', 'Failed to delete theme. Please try again.');
+    } finally {
+      setIsSelecting(false);
+    }
+  };
+
   const renderThemeItem = ({ item }: { item: Theme }) => {
     const isActive = item.key === (activeTheme?.key || 'default');
+    const isOwner = (item as any).authorId === account?.author?.id;
+    const canEdit = isOwner && !(item as any).system;
 
     // Compute tokens for THIS theme (not the active theme)
     const itemTokens = computeDesignTokens(item, resolvedMode);
@@ -197,7 +234,7 @@ export default function ThemeSearchScreen() {
         </View>
 
         {/* Action Buttons */}
-        <View style={{ flexDirection: 'row', marginTop: tokens.spacing.md, gap: tokens.spacing.sm }}>
+        <View style={{ flexDirection: 'row', marginTop: tokens.spacing.md, flexWrap: 'wrap' }}>
           {/* Apply Button */}
           <Pressable
             onPress={() => handleSelectTheme(item)}
@@ -216,6 +253,8 @@ export default function ThemeSearchScreen() {
               opacity: isSelecting || isActive ? 0.5 : 1,
               alignItems: 'center',
               justifyContent: 'center',
+              marginRight: tokens.spacing.sm,
+              marginBottom: tokens.spacing.sm,
             }}
           >
             <Text
@@ -230,7 +269,39 @@ export default function ThemeSearchScreen() {
             </Text>
           </Pressable>
 
-          {/* Clone Button */}
+          {/* Edit button (only for owned non-system themes) */}
+          {canEdit && (
+            <Pressable
+              onPress={() => router.push(`/theme-builder?themeKey=${item.key}`)}
+              disabled={isSelecting}
+              style={{
+                paddingVertical: 8,
+                paddingHorizontal: 16,
+                borderRadius: 8,
+                backgroundColor: 'transparent',
+                borderWidth: 1,
+                borderColor: itemTokens.colors.border,
+                opacity: isSelecting ? 0.5 : 1,
+                alignItems: 'center',
+                justifyContent: 'center',
+                marginRight: tokens.spacing.sm,
+                marginBottom: tokens.spacing.sm,
+              }}
+            >
+              <Text
+                color={itemTokens.colors.text}
+                style={{
+                  fontFamily: mapFontFamily(itemTokens.typography.fontFamily.body),
+                  fontSize: 14,
+                  fontWeight: '600',
+                }}
+              >
+                Edit
+              </Text>
+            </Pressable>
+          )}
+
+          {/* Clone button (for everyone) */}
           <Pressable
             onPress={() => router.push(`/theme-builder?cloneFrom=${item.key}`)}
             disabled={isSelecting}
@@ -244,6 +315,8 @@ export default function ThemeSearchScreen() {
               opacity: isSelecting ? 0.5 : 1,
               alignItems: 'center',
               justifyContent: 'center',
+              marginRight: tokens.spacing.sm,
+              marginBottom: tokens.spacing.sm,
             }}
           >
             <Text
@@ -257,6 +330,37 @@ export default function ThemeSearchScreen() {
               Clone
             </Text>
           </Pressable>
+
+          {/* Delete button (only for owned non-system themes) */}
+          {canEdit && (
+            <Pressable
+              onPress={() => handleDeleteTheme(item)}
+              disabled={isSelecting}
+              style={{
+                paddingVertical: 8,
+                paddingHorizontal: 16,
+                borderRadius: 8,
+                backgroundColor: 'transparent',
+                borderWidth: 1,
+                borderColor: '#e63946',
+                opacity: isSelecting ? 0.5 : 1,
+                alignItems: 'center',
+                justifyContent: 'center',
+                marginBottom: tokens.spacing.sm,
+              }}
+            >
+              <Text
+                color="#e63946"
+                style={{
+                  fontFamily: mapFontFamily(itemTokens.typography.fontFamily.body),
+                  fontSize: 14,
+                  fontWeight: '600',
+                }}
+              >
+                Delete
+              </Text>
+            </Pressable>
+          )}
         </View>
       </View>
     );
