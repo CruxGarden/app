@@ -172,6 +172,12 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
   // Transition duration for animations (0 = instant for manual edits, 300 = animated for bulk changes)
   const [previewTransitionDuration, setPreviewTransitionDuration] = useState(0);
 
+  // Whether to update both modes (light and dark) or just the current active mode - per section
+  const [updateBothModesPalette, setUpdateBothModesPalette] = useState(false);
+  const [updateBothModesBloom, setUpdateBothModesBloom] = useState(false);
+  const [updateBothModesStyle, setUpdateBothModesStyle] = useState(false);
+  const [updateBothModesControls, setUpdateBothModesControls] = useState(false);
+
   /**
    * Executes a state update function with transitions enabled (300ms)
    * Use this for bulk operations like randomize/apply theme
@@ -260,21 +266,46 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
   };
 
   // Mode-aware field change for per-mode fields
+  // Respects the section-specific updateBothModes setting to apply changes to both modes or just the active one
   const handleModeFieldChange = <K extends keyof ThemeModeData>(
     field: K,
-    value: ThemeModeData[K]
+    value: ThemeModeData[K],
+    section: 'palette' | 'bloom' | 'style' | 'controls'
   ) => {
-    setFormData((prev) => ({
-      ...prev,
-      [prev.activeMode]: {
-        ...prev[prev.activeMode],
-        [field]: value,
-      },
-    }));
+    // Determine which state to check based on section
+    const updateBothModes =
+      section === 'palette' ? updateBothModesPalette :
+      section === 'bloom' ? updateBothModesBloom :
+      section === 'style' ? updateBothModesStyle :
+      updateBothModesControls;
+
+    if (updateBothModes) {
+      // Update both light and dark modes
+      setFormData((prev) => ({
+        ...prev,
+        light: {
+          ...prev.light,
+          [field]: value,
+        },
+        dark: {
+          ...prev.dark,
+          [field]: value,
+        },
+      }));
+    } else {
+      // Update only the active mode
+      setFormData((prev) => ({
+        ...prev,
+        [prev.activeMode]: {
+          ...prev[prev.activeMode],
+          [field]: value,
+        },
+      }));
+    }
   };
 
   const handleColorChange = (field: keyof Pick<ThemeModeData, 'primaryColor' | 'secondaryColor' | 'tertiaryColor' | 'quaternaryColor'>) => (value: ColorValue) => {
-    handleModeFieldChange(field, value);
+    handleModeFieldChange(field, value, 'bloom');
   };
 
   const handleSave = async () => {
@@ -679,14 +710,53 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
     const darkSelectionColor = chroma.hsl(controlHue, Math.min(1, controlSat + 0.1), 0.45 + Math.random() * 0.15).hex();
 
     // Apply palette and control COLORS only (no styling changes)
-    setFormData((prev) => ({
-      ...prev,
-      light: {
-        ...prev.light,
-        primaryColor: updateColorValue(prev.light.primaryColor, shuffled[0]),
-        secondaryColor: updateColorValue(prev.light.secondaryColor, shuffled[1]),
-        tertiaryColor: updateColorValue(prev.light.tertiaryColor, shuffled[2]),
-        quaternaryColor: updateColorValue(prev.light.quaternaryColor, shuffled[3]),
+    if (updateBothModesPalette) {
+      // Update both modes
+      setFormData((prev) => ({
+        ...prev,
+        light: {
+          ...prev.light,
+          primaryColor: updateColorValue(prev.light.primaryColor, shuffled[0]),
+          secondaryColor: updateColorValue(prev.light.secondaryColor, shuffled[1]),
+          tertiaryColor: updateColorValue(prev.light.tertiaryColor, shuffled[2]),
+          quaternaryColor: updateColorValue(prev.light.quaternaryColor, shuffled[3]),
+          bloomBorderColor,
+          backgroundColor: lightBackground,
+          panelColor: lightPanel,
+          textColor: lightTextColor,
+          borderColor: lightBorderColor,
+          buttonBackgroundColor: lightButtonBg,
+          buttonTextColor: lightButtonText,
+          buttonBorderColor: lightButtonBorder,
+          linkColor: lightLinkColor,
+          selectionColor: lightSelectionColor,
+        },
+        dark: {
+          ...prev.dark,
+          primaryColor: updateColorValue(prev.dark.primaryColor, shuffled[0]),
+          secondaryColor: updateColorValue(prev.dark.secondaryColor, shuffled[1]),
+          tertiaryColor: updateColorValue(prev.dark.tertiaryColor, shuffled[2]),
+          quaternaryColor: updateColorValue(prev.dark.quaternaryColor, shuffled[3]),
+          bloomBorderColor,
+          backgroundColor: darkBackground,
+          panelColor: darkPanel,
+          textColor: darkTextColor,
+          borderColor: darkBorderColor,
+          buttonBackgroundColor: darkButtonBg,
+          buttonTextColor: darkButtonText,
+          buttonBorderColor: darkButtonBorder,
+          linkColor: darkLinkColor,
+          selectionColor: darkSelectionColor,
+        },
+      }));
+    } else {
+      // Update only active mode
+      const activeMode = formData.activeMode;
+      const paletteData = activeMode === 'light' ? {
+        primaryColor: updateColorValue(formData.light.primaryColor, shuffled[0]),
+        secondaryColor: updateColorValue(formData.light.secondaryColor, shuffled[1]),
+        tertiaryColor: updateColorValue(formData.light.tertiaryColor, shuffled[2]),
+        quaternaryColor: updateColorValue(formData.light.quaternaryColor, shuffled[3]),
         bloomBorderColor,
         backgroundColor: lightBackground,
         panelColor: lightPanel,
@@ -697,13 +767,11 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
         buttonBorderColor: lightButtonBorder,
         linkColor: lightLinkColor,
         selectionColor: lightSelectionColor,
-      },
-      dark: {
-        ...prev.dark,
-        primaryColor: updateColorValue(prev.dark.primaryColor, shuffled[0]),
-        secondaryColor: updateColorValue(prev.dark.secondaryColor, shuffled[1]),
-        tertiaryColor: updateColorValue(prev.dark.tertiaryColor, shuffled[2]),
-        quaternaryColor: updateColorValue(prev.dark.quaternaryColor, shuffled[3]),
+      } : {
+        primaryColor: updateColorValue(formData.dark.primaryColor, shuffled[0]),
+        secondaryColor: updateColorValue(formData.dark.secondaryColor, shuffled[1]),
+        tertiaryColor: updateColorValue(formData.dark.tertiaryColor, shuffled[2]),
+        quaternaryColor: updateColorValue(formData.dark.quaternaryColor, shuffled[3]),
         bloomBorderColor,
         backgroundColor: darkBackground,
         panelColor: darkPanel,
@@ -714,8 +782,16 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
         buttonBorderColor: darkButtonBorder,
         linkColor: darkLinkColor,
         selectionColor: darkSelectionColor,
-      },
-    }));
+      };
+
+      setFormData((prev) => ({
+        ...prev,
+        [activeMode]: {
+          ...prev[activeMode],
+          ...paletteData,
+        },
+      }));
+    }
   };
 
   const handleRandomize = () => {
@@ -767,8 +843,14 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
   };
 
   const randomizeBloom = () => {
-    // Generate random bloom colors using current palette settings
-    const bloomColors = generatePaletteColors(baseHue, baseSaturation, baseLightness, selectedHarmony);
+    // Use current bloom colors from the active mode's palette
+    const activeData = formData[formData.activeMode];
+    const bloomColors = [
+      getBloomColor(activeData.primaryColor),
+      getBloomColor(activeData.secondaryColor),
+      getBloomColor(activeData.tertiaryColor),
+      getBloomColor(activeData.quaternaryColor),
+    ];
     const shuffled = [...bloomColors].sort(() => Math.random() - 0.5);
 
     // Helper to maybe create a gradient (25% chance)
@@ -850,17 +932,29 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
       bloomShadowOpacity,
     };
 
-    setFormData((prev) => ({
-      ...prev,
-      light: {
-        ...prev.light,
-        ...lightBloomData,
-      },
-      dark: {
-        ...prev.dark,
-        ...darkBloomData,
-      },
-    }));
+    if (updateBothModesBloom) {
+      // Update both modes
+      setFormData((prev) => ({
+        ...prev,
+        light: {
+          ...prev.light,
+          ...lightBloomData,
+        },
+        dark: {
+          ...prev.dark,
+          ...darkBloomData,
+        },
+      }));
+    } else {
+      // Update only active mode
+      setFormData((prev) => ({
+        ...prev,
+        [prev.activeMode]: {
+          ...prev[prev.activeMode],
+          ...(prev.activeMode === 'light' ? lightBloomData : darkBloomData),
+        },
+      }));
+    }
   };
 
   /**
@@ -1026,10 +1120,49 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
     const panelShadowOpacity = isPanelCartoonShadow ? '0.95' : (0.1 + Math.random() * 0.35).toFixed(2); // 0.95 for cartoon, 0.1-0.45 otherwise
 
     // Update style/content only (NOT controls)
-    setFormData((prev) => ({
-      ...prev,
-      light: {
-        ...prev.light,
+    if (updateBothModesStyle) {
+      // Update both modes
+      setFormData((prev) => ({
+        ...prev,
+        light: {
+          ...prev.light,
+          borderWidth,
+          borderRadius,
+          borderStyle: randomBorderStyle,
+          borderColor: lightBorderColor,
+          backgroundColor: lightBackground,
+          panelColor: lightPanel,
+          textColor: lightTextColor,
+          font: randomFont,
+          panelShadowEnabled,
+          panelShadowColor,
+          panelShadowOffsetX,
+          panelShadowOffsetY,
+          panelShadowBlurRadius,
+          panelShadowOpacity,
+        },
+        dark: {
+          ...prev.dark,
+          borderWidth,
+          borderRadius,
+          borderStyle: randomBorderStyle,
+          borderColor: darkBorderColor,
+          backgroundColor: darkBackground,
+          panelColor: darkPanel,
+          textColor: darkTextColor,
+          font: randomFont,
+          panelShadowEnabled,
+          panelShadowColor,
+          panelShadowOffsetX,
+          panelShadowOffsetY,
+          panelShadowBlurRadius,
+          panelShadowOpacity,
+        },
+      }));
+    } else {
+      // Update only active mode
+      const activeMode = formData.activeMode;
+      const styleData = activeMode === 'light' ? {
         borderWidth,
         borderRadius,
         borderStyle: randomBorderStyle,
@@ -1044,9 +1177,7 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
         panelShadowOffsetY,
         panelShadowBlurRadius,
         panelShadowOpacity,
-      },
-      dark: {
-        ...prev.dark,
+      } : {
         borderWidth,
         borderRadius,
         borderStyle: randomBorderStyle,
@@ -1061,8 +1192,16 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
         panelShadowOffsetY,
         panelShadowBlurRadius,
         panelShadowOpacity,
-      },
-    }));
+      };
+
+      setFormData((prev) => ({
+        ...prev,
+        [activeMode]: {
+          ...prev[activeMode],
+          ...styleData,
+        },
+      }));
+    }
   };
 
   const randomizeControls = () => {
@@ -1144,10 +1283,51 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
     const buttonShadowBlurRadius = isButtonCartoonShadow ? '0' : Math.floor(Math.random() * 21).toString(); // 0 for cartoon, 0-20px otherwise
     const buttonShadowOpacity = isButtonCartoonShadow ? '0.95' : (0.1 + Math.random() * 0.35).toFixed(2); // 0.95 for cartoon, 0.1-0.45 otherwise
 
-    setFormData((prev) => ({
-      ...prev,
-      light: {
-        ...prev.light,
+    if (updateBothModesControls) {
+      // Update both modes
+      setFormData((prev) => ({
+        ...prev,
+        light: {
+          ...prev.light,
+          buttonBackgroundColor: lightButtonBg,
+          buttonTextColor: lightButtonText,
+          buttonBorderColor: lightButtonBorder,
+          buttonBorderWidth,
+          buttonBorderStyle,
+          buttonBorderRadius,
+          buttonShadowEnabled,
+          buttonShadowColor,
+          buttonShadowOffsetX,
+          buttonShadowOffsetY,
+          buttonShadowBlurRadius,
+          buttonShadowOpacity,
+          linkColor: lightLinkColor,
+          linkUnderlineStyle,
+          selectionColor: lightSelectionColor,
+        },
+        dark: {
+          ...prev.dark,
+          buttonBackgroundColor: darkButtonBg,
+          buttonTextColor: darkButtonText,
+          buttonBorderColor: darkButtonBorder,
+          buttonBorderWidth,
+          buttonBorderStyle,
+          buttonBorderRadius,
+          buttonShadowEnabled,
+          buttonShadowColor,
+          buttonShadowOffsetX,
+          buttonShadowOffsetY,
+          buttonShadowBlurRadius,
+          buttonShadowOpacity,
+          linkColor: darkLinkColor,
+          linkUnderlineStyle,
+          selectionColor: darkSelectionColor,
+        },
+      }));
+    } else {
+      // Update only active mode
+      const activeMode = formData.activeMode;
+      const controlData = activeMode === 'light' ? {
         buttonBackgroundColor: lightButtonBg,
         buttonTextColor: lightButtonText,
         buttonBorderColor: lightButtonBorder,
@@ -1163,9 +1343,7 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
         linkColor: lightLinkColor,
         linkUnderlineStyle,
         selectionColor: lightSelectionColor,
-      },
-      dark: {
-        ...prev.dark,
+      } : {
         buttonBackgroundColor: darkButtonBg,
         buttonTextColor: darkButtonText,
         buttonBorderColor: darkButtonBorder,
@@ -1181,8 +1359,16 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
         linkColor: darkLinkColor,
         linkUnderlineStyle,
         selectionColor: darkSelectionColor,
-      },
-    }));
+      };
+
+      setFormData((prev) => ({
+        ...prev,
+        [activeMode]: {
+          ...prev[activeMode],
+          ...controlData,
+        },
+      }));
+    }
   };
 
   const randomizeAll = () => {
@@ -1719,6 +1905,21 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
 
         {expandedSections.palette && (
         <>
+        {/* Update Both Modes Checkbox */}
+        <TouchableOpacity
+          style={styles.modeCheckboxContainer}
+          onPress={() => setUpdateBothModesPalette(!updateBothModesPalette)}
+        >
+          <View style={[styles.checkbox, updateBothModesPalette && styles.checkboxChecked]}>
+            {updateBothModesPalette && <Text style={styles.checkboxCheck}>✓</Text>}
+          </View>
+          <Text style={styles.modeCheckboxLabel}>Update both modes (light and dark)</Text>
+        </TouchableOpacity>
+
+        <Text style={styles.sectionHelperText}>
+          Changes you make in this section will apply to {updateBothModesPalette ? 'both themes' : `${formData.activeMode} theme`}
+        </Text>
+
         <Text style={styles.sectionDescription}>
           Generate color palettes using color harmony theory.
         </Text>
@@ -2020,6 +2221,21 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
 
         {expandedSections.bloom && (
         <>
+        {/* Update Both Modes Checkbox */}
+        <TouchableOpacity
+          style={styles.modeCheckboxContainer}
+          onPress={() => setUpdateBothModesBloom(!updateBothModesBloom)}
+        >
+          <View style={[styles.checkbox, updateBothModesBloom && styles.checkboxChecked]}>
+            {updateBothModesBloom && <Text style={styles.checkboxCheck}>✓</Text>}
+          </View>
+          <Text style={styles.modeCheckboxLabel}>Update both modes (light and dark)</Text>
+        </TouchableOpacity>
+
+        <Text style={styles.sectionHelperText}>
+          Changes you make in this section will apply to {updateBothModesBloom ? 'both themes' : `${formData.activeMode} theme`}
+        </Text>
+
         <Text style={styles.sectionDescription}>
           These colors are used in the Crux bloom icon. You can use solid colors or gradients.
         </Text>
@@ -2028,7 +2244,7 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
         <HexColorInput
           label="Bloom Border Color"
           value={formData[formData.activeMode].bloomBorderColor || ''}
-          onChange={(value) => handleModeFieldChange('bloomBorderColor', value)}
+          onChange={(value) => handleModeFieldChange('bloomBorderColor', value, 'bloom')}
           placeholder="#000000"
         />
 
@@ -2042,7 +2258,7 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
             maximumValue={75}
             step={1}
             value={parseInt(formData[formData.activeMode].bloomBorderWidth?.toString() ?? '0')}
-            onValueChange={(val) => handleModeFieldChange('bloomBorderWidth', Math.round(val).toString())}
+            onValueChange={(val) => handleModeFieldChange('bloomBorderWidth', Math.round(val).toString(), 'bloom')}
             minimumTrackTintColor="#4dd9b8"
             maximumTrackTintColor="#2a3138"
             thumbTintColor="#4dd9b8"
@@ -2156,6 +2372,21 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
 
         {expandedSections.style && (
         <>
+        {/* Update Both Modes Checkbox */}
+        <TouchableOpacity
+          style={styles.modeCheckboxContainer}
+          onPress={() => setUpdateBothModesStyle(!updateBothModesStyle)}
+        >
+          <View style={[styles.checkbox, updateBothModesStyle && styles.checkboxChecked]}>
+            {updateBothModesStyle && <Text style={styles.checkboxCheck}>✓</Text>}
+          </View>
+          <Text style={styles.modeCheckboxLabel}>Update both modes (light and dark)</Text>
+        </TouchableOpacity>
+
+        <Text style={styles.sectionHelperText}>
+          Changes you make in this section will apply to {updateBothModesStyle ? 'both themes' : `${formData.activeMode} theme`}
+        </Text>
+
         <Text style={styles.sectionDescription}>
           Optional styling for your app's user interface.
         </Text>
@@ -2163,7 +2394,7 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
         <HexColorInput
           label="Border Color"
           value={formData[formData.activeMode].borderColor || ''}
-          onChange={(value) => handleModeFieldChange('borderColor', value)}
+          onChange={(value) => handleModeFieldChange('borderColor', value, 'style')}
           placeholder="#cccccc"
         />
 
@@ -2177,7 +2408,7 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
             maximumValue={10}
             step={1}
             value={parseInt(formData[formData.activeMode].borderWidth?.toString() ?? '1')}
-            onValueChange={(val) => handleModeFieldChange('borderWidth', Math.round(val).toString())}
+            onValueChange={(val) => handleModeFieldChange('borderWidth', Math.round(val).toString(), 'style')}
             minimumTrackTintColor="#4dd9b8"
             maximumTrackTintColor="#2a3138"
             thumbTintColor="#4dd9b8"
@@ -2194,7 +2425,7 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
             maximumValue={50}
             step={1}
             value={parseInt(formData[formData.activeMode].borderRadius?.toString() ?? '0')}
-            onValueChange={(val) => handleModeFieldChange('borderRadius', Math.round(val).toString())}
+            onValueChange={(val) => handleModeFieldChange('borderRadius', Math.round(val).toString(), 'style')}
             minimumTrackTintColor="#4dd9b8"
             maximumTrackTintColor="#2a3138"
             thumbTintColor="#4dd9b8"
@@ -2209,7 +2440,7 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
                 styles.fontButton,
                 formData[formData.activeMode].borderStyle === 'solid' && styles.fontButtonActive,
               ]}
-              onPress={() => handleModeFieldChange('borderStyle', 'solid')}
+              onPress={() => handleModeFieldChange('borderStyle', 'solid', 'style')}
             >
               <Text
                 style={[
@@ -2225,7 +2456,7 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
                 styles.fontButton,
                 formData[formData.activeMode].borderStyle === 'dashed' && styles.fontButtonActive,
               ]}
-              onPress={() => handleModeFieldChange('borderStyle', 'dashed')}
+              onPress={() => handleModeFieldChange('borderStyle', 'dashed', 'style')}
             >
               <Text
                 style={[
@@ -2241,7 +2472,7 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
                 styles.fontButton,
                 formData[formData.activeMode].borderStyle === 'dotted' && styles.fontButtonActive,
               ]}
-              onPress={() => handleModeFieldChange('borderStyle', 'dotted')}
+              onPress={() => handleModeFieldChange('borderStyle', 'dotted', 'style')}
             >
               <Text
                 style={[
@@ -2258,21 +2489,21 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
         <HexColorInput
           label="Background Color"
           value={formData[formData.activeMode].backgroundColor || ''}
-          onChange={(value) => handleModeFieldChange('backgroundColor', value)}
+          onChange={(value) => handleModeFieldChange('backgroundColor', value, 'style')}
           placeholder="#ffffff"
         />
 
         <HexColorInput
           label="Panel Color"
           value={formData[formData.activeMode].panelColor || ''}
-          onChange={(value) => handleModeFieldChange('panelColor', value)}
+          onChange={(value) => handleModeFieldChange('panelColor', value, 'style')}
           placeholder="#f5f5f5"
         />
 
         <HexColorInput
           label="Text Color"
           value={formData[formData.activeMode].textColor || ''}
-          onChange={(value) => handleModeFieldChange('textColor', value)}
+          onChange={(value) => handleModeFieldChange('textColor', value, 'style')}
           placeholder="#000000"
         />
 
@@ -2340,7 +2571,7 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
                 styles.fontButton,
                 formData[formData.activeMode].font === 'sans-serif' && styles.fontButtonActive,
               ]}
-              onPress={() => handleModeFieldChange('font', 'sans-serif')}
+              onPress={() => handleModeFieldChange('font', 'sans-serif', 'style')}
             >
               <Text
                 style={[
@@ -2356,7 +2587,7 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
                 styles.fontButton,
                 formData[formData.activeMode].font === 'serif' && styles.fontButtonActive,
               ]}
-              onPress={() => handleModeFieldChange('font', 'serif')}
+              onPress={() => handleModeFieldChange('font', 'serif', 'style')}
             >
               <Text
                 style={[
@@ -2372,7 +2603,7 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
                 styles.fontButton,
                 formData[formData.activeMode].font === 'monospace' && styles.fontButtonActive,
               ]}
-              onPress={() => handleModeFieldChange('font', 'monospace')}
+              onPress={() => handleModeFieldChange('font', 'monospace', 'style')}
             >
               <Text
                 style={[
@@ -2397,17 +2628,17 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
           opacity={formData[formData.activeMode].panelShadowOpacity}
           onChange={(field, value) => {
             if (field === 'enabled') {
-              handleModeFieldChange('panelShadowEnabled', value as boolean);
+              handleModeFieldChange('panelShadowEnabled', value as boolean, 'style');
             } else if (field === 'color') {
-              handleModeFieldChange('panelShadowColor', value as string);
+              handleModeFieldChange('panelShadowColor', value as string, 'style');
             } else if (field === 'offsetX') {
-              handleModeFieldChange('panelShadowOffsetX', value as string);
+              handleModeFieldChange('panelShadowOffsetX', value as string, 'style');
             } else if (field === 'offsetY') {
-              handleModeFieldChange('panelShadowOffsetY', value as string);
+              handleModeFieldChange('panelShadowOffsetY', value as string, 'style');
             } else if (field === 'blurRadius') {
-              handleModeFieldChange('panelShadowBlurRadius', value as string);
+              handleModeFieldChange('panelShadowBlurRadius', value as string, 'style');
             } else if (field === 'opacity') {
-              handleModeFieldChange('panelShadowOpacity', value as string);
+              handleModeFieldChange('panelShadowOpacity', value as string, 'style');
             }
           }}
         />
@@ -2418,7 +2649,7 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
         <HexColorInput
           label="Selection Color"
           value={formData[formData.activeMode].selectionColor || ''}
-          onChange={(value) => handleModeFieldChange('selectionColor', value)}
+          onChange={(value) => handleModeFieldChange('selectionColor', value, 'style')}
           placeholder={formData.activeMode === 'light' ? '#b3d9ff' : '#4a9eff'}
         />
         </>
@@ -2445,6 +2676,21 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
 
         {expandedSections.controls && (
         <>
+        {/* Update Both Modes Checkbox */}
+        <TouchableOpacity
+          style={styles.modeCheckboxContainer}
+          onPress={() => setUpdateBothModesControls(!updateBothModesControls)}
+        >
+          <View style={[styles.checkbox, updateBothModesControls && styles.checkboxChecked]}>
+            {updateBothModesControls && <Text style={styles.checkboxCheck}>✓</Text>}
+          </View>
+          <Text style={styles.modeCheckboxLabel}>Update both modes (light and dark)</Text>
+        </TouchableOpacity>
+
+        <Text style={styles.sectionHelperText}>
+          Changes you make in this section will apply to {updateBothModesControls ? 'both themes' : `${formData.activeMode} theme`}
+        </Text>
+
         <Text style={styles.sectionDescription}>
           Button and link styling for interactive elements.
         </Text>
@@ -2455,20 +2701,20 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
         <ColorPicker
           label="Button Background"
           value={formData[formData.activeMode].buttonBackgroundColor || { type: 'solid', value: '#4dd9b8' }}
-          onChange={(value) => handleModeFieldChange('buttonBackgroundColor', value)}
+          onChange={(value) => handleModeFieldChange('buttonBackgroundColor', value, 'controls')}
         />
 
         <HexColorInput
           label="Button Text Color"
           value={formData[formData.activeMode].buttonTextColor || ''}
-          onChange={(value) => handleModeFieldChange('buttonTextColor', value)}
+          onChange={(value) => handleModeFieldChange('buttonTextColor', value, 'controls')}
           placeholder="#0f1214"
         />
 
         <HexColorInput
           label="Button Border Color"
           value={formData[formData.activeMode].buttonBorderColor || ''}
-          onChange={(value) => handleModeFieldChange('buttonBorderColor', value)}
+          onChange={(value) => handleModeFieldChange('buttonBorderColor', value, 'controls')}
           placeholder="#4dd9b8"
         />
 
@@ -2482,7 +2728,7 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
             maximumValue={10}
             step={1}
             value={parseInt(formData[formData.activeMode].buttonBorderWidth?.toString() ?? '1')}
-            onValueChange={(val) => handleModeFieldChange('buttonBorderWidth', Math.round(val).toString())}
+            onValueChange={(val) => handleModeFieldChange('buttonBorderWidth', Math.round(val).toString(), 'controls')}
             minimumTrackTintColor="#4dd9b8"
             maximumTrackTintColor="#2a3138"
             thumbTintColor="#4dd9b8"
@@ -2497,7 +2743,7 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
                 styles.fontButton,
                 formData[formData.activeMode].buttonBorderStyle === 'solid' && styles.fontButtonActive,
               ]}
-              onPress={() => handleModeFieldChange('buttonBorderStyle', 'solid')}
+              onPress={() => handleModeFieldChange('buttonBorderStyle', 'solid', 'controls')}
             >
               <Text
                 style={[
@@ -2513,7 +2759,7 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
                 styles.fontButton,
                 formData[formData.activeMode].buttonBorderStyle === 'dashed' && styles.fontButtonActive,
               ]}
-              onPress={() => handleModeFieldChange('buttonBorderStyle', 'dashed')}
+              onPress={() => handleModeFieldChange('buttonBorderStyle', 'dashed', 'controls')}
             >
               <Text
                 style={[
@@ -2529,7 +2775,7 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
                 styles.fontButton,
                 formData[formData.activeMode].buttonBorderStyle === 'dotted' && styles.fontButtonActive,
               ]}
-              onPress={() => handleModeFieldChange('buttonBorderStyle', 'dotted')}
+              onPress={() => handleModeFieldChange('buttonBorderStyle', 'dotted', 'controls')}
             >
               <Text
                 style={[
@@ -2553,7 +2799,7 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
             maximumValue={50}
             step={1}
             value={parseInt(formData[formData.activeMode].buttonBorderRadius?.toString() ?? '6')}
-            onValueChange={(val) => handleModeFieldChange('buttonBorderRadius', Math.round(val).toString())}
+            onValueChange={(val) => handleModeFieldChange('buttonBorderRadius', Math.round(val).toString(), 'controls')}
             minimumTrackTintColor="#4dd9b8"
             maximumTrackTintColor="#2a3138"
             thumbTintColor="#4dd9b8"
@@ -2566,7 +2812,7 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
         <HexColorInput
           label="Link Color"
           value={formData[formData.activeMode].linkColor || ''}
-          onChange={(value) => handleModeFieldChange('linkColor', value)}
+          onChange={(value) => handleModeFieldChange('linkColor', value, 'controls')}
           placeholder="#2563eb"
         />
 
@@ -2578,7 +2824,7 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
                 styles.fontButton,
                 formData[formData.activeMode].linkUnderlineStyle === 'none' && styles.fontButtonActive,
               ]}
-              onPress={() => handleModeFieldChange('linkUnderlineStyle', 'none')}
+              onPress={() => handleModeFieldChange('linkUnderlineStyle', 'none', 'controls')}
             >
               <Text
                 style={[
@@ -2594,7 +2840,7 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
                 styles.fontButton,
                 formData[formData.activeMode].linkUnderlineStyle === 'underline' && styles.fontButtonActive,
               ]}
-              onPress={() => handleModeFieldChange('linkUnderlineStyle', 'underline')}
+              onPress={() => handleModeFieldChange('linkUnderlineStyle', 'underline', 'controls')}
             >
               <Text
                 style={[
@@ -2610,7 +2856,7 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
                 styles.fontButton,
                 formData[formData.activeMode].linkUnderlineStyle === 'always' && styles.fontButtonActive,
               ]}
-              onPress={() => handleModeFieldChange('linkUnderlineStyle', 'always')}
+              onPress={() => handleModeFieldChange('linkUnderlineStyle', 'always', 'controls')}
             >
               <Text
                 style={[
@@ -2635,17 +2881,17 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
           opacity={formData[formData.activeMode].buttonShadowOpacity}
           onChange={(field, value) => {
             if (field === 'enabled') {
-              handleModeFieldChange('buttonShadowEnabled', value as boolean);
+              handleModeFieldChange('buttonShadowEnabled', value as boolean, 'controls');
             } else if (field === 'color') {
-              handleModeFieldChange('buttonShadowColor', value as string);
+              handleModeFieldChange('buttonShadowColor', value as string, 'controls');
             } else if (field === 'offsetX') {
-              handleModeFieldChange('buttonShadowOffsetX', value as string);
+              handleModeFieldChange('buttonShadowOffsetX', value as string, 'controls');
             } else if (field === 'offsetY') {
-              handleModeFieldChange('buttonShadowOffsetY', value as string);
+              handleModeFieldChange('buttonShadowOffsetY', value as string, 'controls');
             } else if (field === 'blurRadius') {
-              handleModeFieldChange('buttonShadowBlurRadius', value as string);
+              handleModeFieldChange('buttonShadowBlurRadius', value as string, 'controls');
             } else if (field === 'opacity') {
-              handleModeFieldChange('buttonShadowOpacity', value as string);
+              handleModeFieldChange('buttonShadowOpacity', value as string, 'controls');
             }
           }}
         />
@@ -2829,6 +3075,12 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#8b9298',
     marginBottom: 16,
+  },
+  sectionHelperText: {
+    fontSize: 13,
+    color: '#4dd9b8',
+    marginBottom: 12,
+    fontStyle: 'italic',
   },
   field: {
     marginBottom: 16,
@@ -3168,6 +3420,36 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '600',
     color: '#e8eef2',
+  },
+  modeCheckboxContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+    marginTop: 4,
+  },
+  checkbox: {
+    width: 20,
+    height: 20,
+    borderRadius: 4,
+    borderWidth: 2,
+    borderColor: '#4dd9b8',
+    backgroundColor: '#1a1f24',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 10,
+  },
+  checkboxChecked: {
+    backgroundColor: '#4dd9b8',
+  },
+  checkboxCheck: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#0f1214',
+  },
+  modeCheckboxLabel: {
+    fontSize: 14,
+    color: '#e8eef2',
+    fontWeight: '500',
   },
 });
 
