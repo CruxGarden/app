@@ -32,6 +32,9 @@ export interface ThemeContextValue {
   /** Computed design tokens */
   tokens: DesignTokens;
 
+  /** Transition duration for theme changes (0 = instant) */
+  transitionDuration: number;
+
   /** Switch to a different theme */
   setTheme: (theme: Theme | null) => Promise<void>;
 
@@ -152,6 +155,7 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
     Appearance.getColorScheme() === 'dark' ? 'dark' : 'light'
   );
   const [isLoading, setIsLoading] = useState(true);
+  const [transitionDuration, setTransitionDuration] = useState(0);
 
   // Compute resolved mode from mode state
   const resolvedMode: 'light' | 'dark' = mode === 'auto' ? systemColorScheme : mode;
@@ -226,10 +230,12 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
   };
 
   /**
-   * Save theme to storage and update state
+   * Save theme to storage and update state with animation
    */
   const setTheme = useCallback(async (newTheme: Theme | null) => {
     try {
+      // Enable transitions for theme change
+      setTransitionDuration(300);
       setThemeState(newTheme);
 
       if (newTheme) {
@@ -237,16 +243,21 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
       } else {
         await AsyncStorage.removeItem(THEME_STORAGE_KEY);
       }
+
+      // Reset to instant updates after transition completes
+      setTimeout(() => setTransitionDuration(0), 350);
     } catch (err) {
       console.error('Failed to save theme:', err);
     }
   }, []);
 
   /**
-   * Save mode to storage and update Unistyles
+   * Save mode to storage and update Unistyles with animation
    */
   const setMode = useCallback(async (newMode: ThemeMode) => {
     try {
+      // Enable transitions for mode change
+      setTransitionDuration(300);
       setModeState(newMode);
       await AsyncStorage.setItem(MODE_STORAGE_KEY, newMode);
 
@@ -257,6 +268,9 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
       } else {
         UnistylesRuntime.setTheme(newMode);
       }
+
+      // Reset to instant updates after transition completes
+      setTimeout(() => setTransitionDuration(0), 350);
     } catch (err) {
       console.error('Failed to save mode:', err);
     }
@@ -274,6 +288,7 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
     mode,
     resolvedMode,
     tokens,
+    transitionDuration, // Dynamically controlled (0 normally, 300 during theme changes)
     setTheme,
     setMode,
     reloadTheme,

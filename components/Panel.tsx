@@ -29,7 +29,7 @@ export const Panel: React.FC<PanelProps> = ({
   children,
   ...props
 }) => {
-  const { tokens } = useTheme();
+  const { tokens, transitionDuration } = useTheme();
 
   // Static styles (don't animate) - includes shadows
   const staticStyle: ViewStyle = useMemo(() => {
@@ -58,22 +58,22 @@ export const Panel: React.FC<PanelProps> = ({
 
   // Animated styles (colors and borders that change with theme)
   const animatedStyle = useAnimatedStyle(() => ({
-    backgroundColor: withTiming(tokens.colors.panel, { duration: 300 }),
+    backgroundColor: withTiming(tokens.colors.panel, { duration: transitionDuration }),
     borderColor: withTiming(
       noBorder ? 'transparent' : tokens.colors.border,
-      { duration: 300 }
+      { duration: transitionDuration }
     ),
     borderWidth: withTiming(
       noBorder ? 0 : tokens.borders.width,
-      { duration: 300 }
+      { duration: transitionDuration }
     ),
     borderRadius: withTiming(
       tokens.borders.radius,
-      { duration: 300 }
+      { duration: transitionDuration }
     ),
     // borderStyle can't be animated but will update
     borderStyle: tokens.borders.style,
-  }));
+  }), [tokens, noBorder, transitionDuration]);
 
   return (
     <Animated.View style={[staticStyle, animatedStyle, style]} {...props}>

@@ -29,7 +29,7 @@ export const TextInput: React.FC<TextInputProps> = ({
   selectionColor,
   ...props
 }) => {
-  const { tokens } = useTheme();
+  const { tokens, transitionDuration } = useTheme();
 
   const inputStyle = useMemo(() => {
     // Determine font family from theme
@@ -56,10 +56,10 @@ export const TextInput: React.FC<TextInputProps> = ({
   }, [tokens]);
 
   const animatedStyle = useAnimatedStyle(() => ({
-    color: withTiming(color || tokens.colors.text, { duration: 300 }),
-    backgroundColor: withTiming(backgroundColor || tokens.colors.panel, { duration: 300 }),
-    borderColor: withTiming(borderColor || tokens.colors.border, { duration: 300 }),
-  }));
+    color: withTiming(color || tokens.colors.text, { duration: transitionDuration }),
+    backgroundColor: withTiming(backgroundColor || tokens.colors.panel, { duration: transitionDuration }),
+    borderColor: withTiming(borderColor || tokens.colors.border, { duration: transitionDuration }),
+  }), [color, tokens.colors.text, tokens.colors.panel, tokens.colors.border, backgroundColor, borderColor, transitionDuration]);
 
   return (
     <AnimatedTextInput

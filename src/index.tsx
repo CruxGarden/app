@@ -15,17 +15,7 @@ export default function Index() {
   return (
     <Container centered>
       <View style={{ marginBottom: 48, alignItems: 'center' }}>
-        <CruxBloom
-          theme={{
-            primary: tokens.colors.bloomPrimary,
-            secondary: tokens.colors.bloomSecondary,
-            tertiary: tokens.colors.bloomTertiary,
-            quaternary: tokens.colors.bloomQuaternary,
-            borderColor: tokens.colors.bloomBorder,
-            borderWidth: tokens.bloom.borderWidth,
-          }}
-          size={200}
-        />
+        <CruxBloom size={200} />
       </View>
 
       {isAuthenticated ? (

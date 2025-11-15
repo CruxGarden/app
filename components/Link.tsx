@@ -4,12 +4,10 @@
  * Themed link with automatic color, underline style, and animated transitions
  */
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Pressable, PressableProps } from 'react-native';
 import Animated, { useAnimatedStyle, withTiming } from 'react-native-reanimated';
 import { useTheme } from '@/contexts/ThemeContext';
-
-const ANIMATION_DURATION = 300;
 
 export interface LinkProps extends PressableProps {
   /** Link text */
@@ -33,7 +31,7 @@ export const Link: React.FC<LinkProps> = ({
   style,
   ...props
 }) => {
-  const { tokens } = useTheme();
+  const { tokens, transitionDuration } = useTheme();
   const [isHovered, setIsHovered] = React.useState(false);
   const [isPressed, setIsPressed] = React.useState(false);
 
@@ -95,15 +93,23 @@ export const Link: React.FC<LinkProps> = ({
     ? tokens.typography.fontSize.heading
     : tokens.typography.fontSize.body;
 
+  const fontFamily = useMemo(() => getFontFamily(), [variant, weight, tokens.typography.fontFamily.heading, tokens.typography.fontFamily.body]);
+
   // Determine underline visibility
   const showUnderline = linkUnderline === 'always' || (linkUnderline === 'underline' && isHovered);
 
   const animatedStyle = useAnimatedStyle(() => ({
-    color: withTiming(linkColor, { duration: ANIMATION_DURATION }),
+    color: withTiming(linkColor, { duration: transitionDuration }),
     opacity: withTiming(isPressed ? 0.7 : 1, { duration: 100 }),
-    textDecorationLine: showUnderline ? 'underline' : 'none',
+  }), [linkColor, isPressed, transitionDuration]);
+
+  const staticStyle = useMemo(() => ({
+    fontFamily,
+    fontSize,
+    lineHeight: tokens.typography.lineHeight,
+    textDecorationLine: showUnderline ? ('underline' as const) : ('none' as const),
     textDecorationColor: linkColor,
-  }));
+  }), [fontFamily, fontSize, tokens.typography.lineHeight, showUnderline, linkColor]);
 
   return (
     <Pressable
@@ -113,17 +119,7 @@ export const Link: React.FC<LinkProps> = ({
       onHoverOut={() => setIsHovered(false)}
       {...props}
     >
-      <Animated.Text
-        style={[
-          {
-            fontFamily: getFontFamily(),
-            fontSize,
-            lineHeight: tokens.typography.lineHeight,
-          },
-          animatedStyle,
-          style,
-        ]}
-      >
+      <Animated.Text style={[staticStyle, animatedStyle, style as any]}>
         {children}
       </Animated.Text>
     </Pressable>
