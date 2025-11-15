@@ -288,8 +288,6 @@ function toColorValue(
   colorName?: string,
   defaultColor: string = '#000000'
 ): ColorValue {
-  console.log(`toColorValue ${colorName}:`, JSON.stringify(bloomColor));
-
   if (!bloomColor) {
     return { type: 'solid', value: defaultColor };
   }
@@ -304,14 +302,10 @@ function toColorValue(
       gradient.id = `bloom-${mode}-${colorName || 'color'}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     }
 
-    const result: ColorValue = { type: 'gradient' as const, value: gradient };
-    console.log(`toColorValue ${colorName} returning:`, JSON.stringify(result));
-    return result;
+    return { type: 'gradient' as const, value: gradient };
   }
 
-  const result: ColorValue = { type: 'solid' as const, value: bloomColor.solid || defaultColor };
-  console.log(`toColorValue ${colorName} returning:`, JSON.stringify(result));
-  return result;
+  return { type: 'solid' as const, value: bloomColor.solid || defaultColor };
 }
 
 /**
