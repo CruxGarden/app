@@ -138,7 +138,7 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
     initialData || getDefaultThemeFormData()
   );
   const [isSaving, setIsSaving] = useState(false);
-  const isEditMode = !!initialData;
+  const isEditMode = !!themeKey;
   const [activeBloomTab, setActiveBloomTab] = useState<'primary' | 'secondary' | 'tertiary' | 'quaternary'>('primary');
   const [expandedSections, setExpandedSections] = useState<{
     details: boolean;

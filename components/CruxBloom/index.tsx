@@ -165,13 +165,16 @@ export const CruxBloom: React.FC<CruxBloomProps> = ({
   // Convert all colors to gradient definitions (solids become gradients with matching stops)
   // This allows smooth animation between any color changes
   const gradientData = useMemo(() => {
-    const convertToGradient = (colorValue: ColorValue, fallback: string): GradientDefinition => {
+    // Generate unique ID for this bloom instance to avoid conflicts when multiple blooms on same page
+    const uniqueId = `bloom-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
+    const convertToGradient = (colorValue: ColorValue, fallback: string, colorName: string): GradientDefinition => {
       if (colorValue.type === 'gradient') {
         return colorValue.value;
       }
-      // Convert solid to gradient with matching stops
+      // Convert solid to gradient with matching stops - use unique ID per bloom instance
       return {
-        id: 'solid',
+        id: `${uniqueId}-${colorName}`,
         angle: 0,
         stops: [
           { color: colorValue.value || fallback, offset: '0%' },
@@ -182,10 +185,10 @@ export const CruxBloom: React.FC<CruxBloomProps> = ({
 
     if (actualTheme) {
       return {
-        primary: convertToGradient(actualTheme.primary, '#2a3d2c'),
-        secondary: convertToGradient(actualTheme.secondary, '#426046'),
-        tertiary: convertToGradient(actualTheme.tertiary, '#58825e'),
-        quaternary: convertToGradient(actualTheme.quaternary, '#73a079'),
+        primary: convertToGradient(actualTheme.primary, '#2a3d2c', 'primary'),
+        secondary: convertToGradient(actualTheme.secondary, '#426046', 'secondary'),
+        tertiary: convertToGradient(actualTheme.tertiary, '#58825e', 'tertiary'),
+        quaternary: convertToGradient(actualTheme.quaternary, '#73a079', 'quaternary'),
         borderColor: actualTheme.borderColor || undefined,
         borderWidth: actualTheme.borderWidth || 0,
       };
@@ -371,36 +374,36 @@ export const CruxBloom: React.FC<CruxBloomProps> = ({
     >
       {/* Gradient Definitions - Always use gradients with animated stops and angles */}
       <Defs>
-        {/* Primary gradient */}
+        {/* Primary gradient - use dynamic ID */}
         <AnimatedLinearGradient
-          id="bloom-primary"
+          id={gradientData.primary.id}
           animatedProps={primaryGradientProps}
         >
           <AnimatedStop animatedProps={primaryStop1Props} />
           <AnimatedStop animatedProps={primaryStop2Props} />
         </AnimatedLinearGradient>
 
-        {/* Secondary gradient */}
+        {/* Secondary gradient - use dynamic ID */}
         <AnimatedLinearGradient
-          id="bloom-secondary"
+          id={gradientData.secondary.id}
           animatedProps={secondaryGradientProps}
         >
           <AnimatedStop animatedProps={secondaryStop1Props} />
           <AnimatedStop animatedProps={secondaryStop2Props} />
         </AnimatedLinearGradient>
 
-        {/* Tertiary gradient */}
+        {/* Tertiary gradient - use dynamic ID */}
         <AnimatedLinearGradient
-          id="bloom-tertiary"
+          id={gradientData.tertiary.id}
           animatedProps={tertiaryGradientProps}
         >
           <AnimatedStop animatedProps={tertiaryStop1Props} />
           <AnimatedStop animatedProps={tertiaryStop2Props} />
         </AnimatedLinearGradient>
 
-        {/* Quaternary gradient */}
+        {/* Quaternary gradient - use dynamic ID */}
         <AnimatedLinearGradient
-          id="bloom-quaternary"
+          id={gradientData.quaternary.id}
           animatedProps={quaternaryGradientProps}
         >
           <AnimatedStop animatedProps={quaternaryStop1Props} />
@@ -408,12 +411,12 @@ export const CruxBloom: React.FC<CruxBloomProps> = ({
         </AnimatedLinearGradient>
       </Defs>
 
-      {/* Four Circles - All use fixed gradient IDs and animated strokes */}
+      {/* Four Circles - Use dynamic gradient IDs from gradientData */}
       <AnimatedCircle
         cx={centerX}
         cy={centerY + circles[0].offsetY}
         r={circles[0].radius}
-        fill="url(#bloom-primary)"
+        fill={`url(#${gradientData.primary.id})`}
         stroke={borderColor}
         animatedProps={strokeWidthProps}
       />
@@ -421,7 +424,7 @@ export const CruxBloom: React.FC<CruxBloomProps> = ({
         cx={centerX}
         cy={centerY + circles[1].offsetY}
         r={circles[1].radius}
-        fill="url(#bloom-secondary)"
+        fill={`url(#${gradientData.secondary.id})`}
         stroke={borderColor}
         animatedProps={strokeWidthProps}
       />
@@ -429,7 +432,7 @@ export const CruxBloom: React.FC<CruxBloomProps> = ({
         cx={centerX}
         cy={centerY + circles[2].offsetY}
         r={circles[2].radius}
-        fill="url(#bloom-tertiary)"
+        fill={`url(#${gradientData.tertiary.id})`}
         stroke={borderColor}
         animatedProps={strokeWidthProps}
       />
@@ -437,7 +440,7 @@ export const CruxBloom: React.FC<CruxBloomProps> = ({
         cx={centerX}
         cy={centerY + circles[3].offsetY}
         r={circles[3].radius}
-        fill="url(#bloom-quaternary)"
+        fill={`url(#${gradientData.quaternary.id})`}
         stroke={borderColor}
         animatedProps={strokeWidthProps}
       />
