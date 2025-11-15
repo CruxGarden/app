@@ -7,7 +7,7 @@ import { useTheme } from '@/contexts/ThemeContext';
 
 export default function BloomExamples() {
   const router = useRouter();
-  const { tokens } = useTheme();
+  const { tokens, transitionDuration } = useTheme();
 
   return (
     <View style={{ flex: 1 }}>
@@ -58,7 +58,7 @@ export default function BloomExamples() {
               <Text style={{ fontSize: 14, opacity: 0.7, marginBottom: tokens.spacing.md, textAlign: 'center' }}>
                 The default Crux Garden bloom with original colors
               </Text>
-              <CruxBloom size={150} />
+              <CruxBloom size={150} transitionDuration={transitionDuration} />
             </Panel>
           </View>
 
@@ -85,7 +85,7 @@ export default function BloomExamples() {
                 <Text style={{ fontSize: 14, opacity: 0.7, marginBottom: tokens.spacing.md, textAlign: 'center' }}>
                   {theme.description}
                 </Text>
-                <CruxBloom size={150} {...theme.config} />
+                <CruxBloom size={150} {...theme.config} transitionDuration={transitionDuration} />
               </Panel>
             ))}
           </View>
@@ -120,6 +120,7 @@ export default function BloomExamples() {
                 secondary={{ fill: '#f39c12' }}
                 tertiary={{ fill: '#2ecc71' }}
                 quaternary={{ fill: '#3498db' }}
+                transitionDuration={transitionDuration}
               />
             </Panel>
 
@@ -137,6 +138,7 @@ export default function BloomExamples() {
                 secondary={{ fill: '#1a1a1a', stroke: '#00ff00', strokeWidth: 5, opacity: 0.85 }}
                 tertiary={{ fill: '#1a1a1a', stroke: '#ffff00', strokeWidth: 4, opacity: 0.9 }}
                 quaternary={{ fill: '#ffffff', stroke: '#ff00ff', strokeWidth: 3 }}
+                transitionDuration={transitionDuration}
               />
             </Panel>
 
@@ -151,6 +153,7 @@ export default function BloomExamples() {
               <CruxBloom
                 size={150}
                 {...createMonochromaticTheme('Blue', '#3498db', { lighten: true }).config}
+                transitionDuration={transitionDuration}
               />
             </Panel>
 

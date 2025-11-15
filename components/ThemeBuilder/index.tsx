@@ -39,6 +39,9 @@ export interface ThemeBuilderProps {
 // Full randomization mode - uses actual slider values without reductions
 const FULL_RANDOMIZATION = true;
 
+// Auto-randomize feature (randomizes theme on load and every 3 seconds)
+const AUTO_RANDOMIZE_ENABLED = false;
+
 // NOTE: UI colors (background, panel, border) can be randomly derived from different palette colors
 // Each element has a 30% independent chance to use a different palette color for variety
 // ============================================================================
@@ -53,17 +56,18 @@ interface AnimatedPreviewContainerProps {
   children: React.ReactNode;
   formData: ThemeFormData;
   mode: 'light' | 'dark';
+  transitionDuration: number;
 }
 
 /**
  * Animated container that transitions background color
  */
-const AnimatedPreviewContainer: React.FC<AnimatedPreviewContainerProps> = ({ children, formData, mode }) => {
+const AnimatedPreviewContainer: React.FC<AnimatedPreviewContainerProps> = ({ children, formData, mode, transitionDuration }) => {
   const backgroundColor = formData[mode].backgroundColor || '#ffffff';
 
   const animatedStyle = useAnimatedStyle(() => ({
-    backgroundColor: withTiming(backgroundColor, { duration: 300 }),
-  }));
+    backgroundColor: withTiming(backgroundColor, { duration: transitionDuration }),
+  }), [backgroundColor, transitionDuration]);
 
   return (
     <Animated.View style={[styles.previewContainer, animatedStyle]}>
@@ -80,13 +84,14 @@ interface PreviewThemeProviderProps {
   children: React.ReactNode;
   formData: ThemeFormData;
   mode: 'light' | 'dark';
+  transitionDuration: number;
 }
 
 /**
  * Provider that computes and provides theme tokens from formData for the preview
  * This temporarily overrides the global theme context for preview components
  */
-const PreviewThemeProvider: React.FC<PreviewThemeProviderProps> = ({ children, formData, mode }) => {
+const PreviewThemeProvider: React.FC<PreviewThemeProviderProps> = ({ children, formData, mode, transitionDuration }) => {
   // Convert formData to Theme object
   const previewTheme: Theme = useMemo(() => {
     const dto = formDataToDto(formData);
@@ -111,11 +116,12 @@ const PreviewThemeProvider: React.FC<PreviewThemeProviderProps> = ({ children, f
     mode: mode as 'light' | 'dark' | 'auto',
     resolvedMode: mode,
     tokens,
+    transitionDuration,
     setTheme: async () => {},
     setMode: async () => {},
     reloadTheme: async () => {},
     isLoading: false,
-  }), [previewTheme, mode, tokens]);
+  }), [previewTheme, mode, tokens, transitionDuration]);
 
   // Provide to ThemeContext to override parent context for preview
   return <ThemeContext.Provider value={contextValue}>{children}</ThemeContext.Provider>;
@@ -163,13 +169,27 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
   // Random seed to force regeneration when clicking Random harmony multiple times
   const [randomSeed, setRandomSeed] = useState(0);
 
+  // Transition duration for animations (0 = instant for manual edits, 300 = animated for bulk changes)
+  const [previewTransitionDuration, setPreviewTransitionDuration] = useState(0);
+
+  /**
+   * Executes a state update function with transitions enabled (300ms)
+   * Use this for bulk operations like randomize/apply theme
+   */
+  const withTransition = (updateFn: () => void) => {
+    setPreviewTransitionDuration(300);
+    updateFn();
+    // Reset to instant updates after transition completes
+    setTimeout(() => setPreviewTransitionDuration(0), 350);
+  };
+
   const toggleSection = (section: 'details' | 'palette' | 'bloom' | 'style' | 'controls') => {
     setExpandedSections((prev) => ({ ...prev, [section]: !prev[section] }));
   };
 
   // Auto-randomize on first load if no initialData
   useEffect(() => {
-    if (!initialData) {
+    if (AUTO_RANDOMIZE_ENABLED && !initialData) {
       // Randomize everything on first load
       randomizeAll();
     }
@@ -184,6 +204,8 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
 
   // Auto-randomization timer - runs every 3 seconds and toggles mode
   useEffect(() => {
+    if (!AUTO_RANDOMIZE_ENABLED) return;
+
     const interval = setInterval(() => {
       randomizeAll();
       // Toggle between light and dark mode
@@ -610,7 +632,53 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
     const darkTextColor = getAAATextColor(darkPanel);
     const darkBorderColor = chroma.hsl(darkBorderHue, darkBorderSat === 0 ? 0 : Math.min(1, darkBorderSat + 0.1), 0.2 + Math.random() * 0.15).hex();
 
-    // Apply palette and content colors to BOTH modes (NOT controls)
+    // Generate control colors based on the selected bloom color
+    const controlChroma = chroma(selectedBloomColor);
+    const controlHue = controlChroma.get('hsl.h');
+    const controlSat = controlChroma.get('hsl.s');
+
+    // Helper for button gradient
+    const maybeButtonGradient = (baseColor: string): ColorValue => {
+      if (Math.random() < 0.25) {
+        const angle = Math.floor(Math.random() * 360);
+        const color1 = chroma(baseColor).brighten(0.3 + Math.random() * 0.3).hex();
+        const color2 = chroma(baseColor).darken(0.3 + Math.random() * 0.3).hex();
+        return {
+          type: 'gradient',
+          value: {
+            id: `button-gradient-${Date.now()}`,
+            stops: [
+              { color: color1, offset: '0%' },
+              { color: color2, offset: '100%' },
+            ],
+            angle,
+          },
+        };
+      }
+      return { type: 'solid', value: baseColor };
+    };
+
+    // Light mode controls
+    const lightButtonBgColor = chroma.hsl(controlHue, Math.min(1, controlSat + 0.1), 0.5 + Math.random() * 0.2).hex();
+    const lightButtonBg = maybeButtonGradient(lightButtonBgColor);
+    const lightButtonText = getAAATextColor(lightButtonBgColor);
+    const lightButtonBorder = Math.random() < 0.3
+      ? lightButtonBgColor
+      : chroma(lightButtonBgColor).darken(0.5 + Math.random() * 0.5).hex();
+    const lightLinkColor = chroma.hsl(controlHue, Math.min(1, controlSat + 0.2), 0.35 + Math.random() * 0.15).hex();
+    const lightSelectionColor = chroma.hsl(controlHue, Math.min(1, controlSat + 0.1), 0.70 + Math.random() * 0.15).hex();
+
+    // Dark mode controls
+    const darkButtonBgColor = chroma.hsl(controlHue, Math.min(1, controlSat + 0.1), 0.4 + Math.random() * 0.2).hex();
+    const darkButtonBg = maybeButtonGradient(darkButtonBgColor);
+    const darkButtonText = getAAATextColor(darkButtonBgColor);
+    const darkButtonBorder = Math.random() < 0.3
+      ? darkButtonBgColor
+      : chroma(darkButtonBgColor).brighten(0.5 + Math.random() * 0.5).hex();
+    const darkLinkColor = chroma.hsl(controlHue, Math.min(1, controlSat + 0.2), 0.55 + Math.random() * 0.15).hex();
+    const darkSelectionColor = chroma.hsl(controlHue, Math.min(1, controlSat + 0.1), 0.45 + Math.random() * 0.15).hex();
+
+    // Apply palette and control COLORS only (no styling changes)
     setFormData((prev) => ({
       ...prev,
       light: {
@@ -624,6 +692,11 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
         panelColor: lightPanel,
         textColor: lightTextColor,
         borderColor: lightBorderColor,
+        buttonBackgroundColor: lightButtonBg,
+        buttonTextColor: lightButtonText,
+        buttonBorderColor: lightButtonBorder,
+        linkColor: lightLinkColor,
+        selectionColor: lightSelectionColor,
       },
       dark: {
         ...prev.dark,
@@ -636,6 +709,11 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
         panelColor: darkPanel,
         textColor: darkTextColor,
         borderColor: darkBorderColor,
+        buttonBackgroundColor: darkButtonBg,
+        buttonTextColor: darkButtonText,
+        buttonBorderColor: darkButtonBorder,
+        linkColor: darkLinkColor,
+        selectionColor: darkSelectionColor,
       },
     }));
   };
@@ -1448,9 +1526,9 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
             Preview - {formData.activeMode === 'light' ? 'Light' : 'Dark'} Mode
           </Text>
 
-          <AnimatedPreviewContainer formData={formData} mode={formData.activeMode}>
+          <AnimatedPreviewContainer formData={formData} mode={formData.activeMode} transitionDuration={previewTransitionDuration}>
             {/* Wrap preview content with PreviewThemeProvider */}
-            <PreviewThemeProvider formData={formData} mode={formData.activeMode}>
+            <PreviewThemeProvider formData={formData} mode={formData.activeMode} transitionDuration={previewTransitionDuration}>
               {/* CruxBloom */}
               <View style={styles.bloomContainer}>
                 <CruxBloom
@@ -1463,6 +1541,7 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
                     borderColor: formData[formData.activeMode].bloomBorderColor || undefined,
                     borderWidth: parseInt(formData[formData.activeMode].bloomBorderWidth ?? '0'),
                   }}
+                  transitionDuration={previewTransitionDuration}
                 />
               </View>
 
@@ -1524,7 +1603,7 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.sectionRandomize}
-            onPress={randomizeDetails}
+            onPress={() => withTransition(randomizeDetails)}
           >
             <Text style={styles.sectionRandomizeText}>⟳</Text>
           </TouchableOpacity>
@@ -1632,7 +1711,7 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.sectionRandomize}
-            onPress={handleRandomize}
+            onPress={() => withTransition(handleRandomize)}
           >
             <Text style={styles.sectionRandomizeText}>⟳</Text>
           </TouchableOpacity>
@@ -1912,7 +1991,7 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
         {/* Apply Palette Button */}
         <TouchableOpacity
           style={styles.generateButton}
-          onPress={handleGenerateUIColors}
+          onPress={() => withTransition(handleGenerateUIColors)}
           disabled={isSaving}
         >
           <Text style={styles.generateButtonText}>Apply Palette</Text>
@@ -1933,7 +2012,7 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.sectionRandomize}
-            onPress={randomizeBloom}
+            onPress={() => withTransition(randomizeBloom)}
           >
             <Text style={styles.sectionRandomizeText}>⟳</Text>
           </TouchableOpacity>
@@ -2069,7 +2148,7 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.sectionRandomize}
-            onPress={randomizeStyle}
+            onPress={() => withTransition(randomizeStyle)}
           >
             <Text style={styles.sectionRandomizeText}>⟳</Text>
           </TouchableOpacity>
@@ -2358,7 +2437,7 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.sectionRandomize}
-            onPress={randomizeControls}
+            onPress={() => withTransition(randomizeControls)}
           >
             <Text style={styles.sectionRandomizeText}>⟳</Text>
           </TouchableOpacity>
@@ -2578,7 +2657,7 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
       <View style={styles.actions}>
         <TouchableOpacity
           style={[styles.button, styles.randomizeAllButton]}
-          onPress={randomizeAll}
+          onPress={() => withTransition(randomizeAll)}
           disabled={isSaving}
         >
           <Text style={styles.randomizeAllButtonText}>🎲 Randomize All</Text>
@@ -2586,7 +2665,7 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
 
         <TouchableOpacity
           style={[styles.button, styles.applyButton]}
-          onPress={handleApplyTheme}
+          onPress={() => withTransition(handleApplyTheme)}
           disabled={isSaving}
         >
           <Text style={styles.buttonText}>✨ Apply Theme</Text>

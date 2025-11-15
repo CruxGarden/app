@@ -25,7 +25,7 @@ export const Text: React.FC<TextProps> = ({
   weight = 'regular',
   ...props
 }) => {
-  const { tokens } = useTheme();
+  const { tokens, transitionDuration } = useTheme();
 
   const textStyle = useMemo(() => {
     let fontFamily: string;
@@ -100,8 +100,8 @@ export const Text: React.FC<TextProps> = ({
   }, [variant, weight, tokens]);
 
   const animatedStyle = useAnimatedStyle(() => ({
-    color: withTiming(color || tokens.colors.text, { duration: 300 }),
-  }));
+    color: withTiming(color || tokens.colors.text, { duration: transitionDuration }),
+  }), [color, tokens.colors.text, transitionDuration]);
 
   return <Animated.Text style={[textStyle, animatedStyle, style]} {...props} />;
 };

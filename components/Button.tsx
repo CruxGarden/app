@@ -12,8 +12,6 @@ import { useTheme } from '@/contexts/ThemeContext';
 import { Text } from './Text';
 import type { ColorValue } from '@/components/ThemeBuilder';
 
-const ANIMATION_DURATION = 300;
-
 export interface ButtonProps extends TouchableOpacityProps {
   /** Button text */
   title: string;
@@ -34,7 +32,7 @@ export const Button: React.FC<ButtonProps> = ({
   style,
   ...props
 }) => {
-  const { tokens } = useTheme();
+  const { tokens, transitionDuration } = useTheme();
 
   const isPrimary = variant === 'primary';
   const isSecondary = variant === 'secondary';
@@ -86,11 +84,11 @@ export const Button: React.FC<ButtonProps> = ({
   const animatedStyle = useAnimatedStyle(() => ({
     borderWidth: withTiming(
       isGhost ? 0 : tokens.button.borderWidth,
-      { duration: ANIMATION_DURATION }
+      { duration: transitionDuration }
     ),
     borderRadius: withTiming(
       tokens.button.borderRadius,
-      { duration: ANIMATION_DURATION }
+      { duration: transitionDuration }
     ),
     borderColor: withTiming(
       isGhost
@@ -98,11 +96,11 @@ export const Button: React.FC<ButtonProps> = ({
         : isPrimary
         ? tokens.colors.buttonBorder
         : tokens.colors.border,
-      { duration: ANIMATION_DURATION }
+      { duration: transitionDuration }
     ),
     // Note: borderStyle can't be animated in React Native, but it will update
     borderStyle: tokens.button.borderStyle as 'solid' | 'dashed' | 'dotted',
-  }));
+  }), [isGhost, isPrimary, tokens, transitionDuration]);
 
   // Animated text color
   const textColor = isPrimary
@@ -123,8 +121,8 @@ export const Button: React.FC<ButtonProps> = ({
   };
 
   const textAnimatedStyle = useAnimatedStyle(() => ({
-    color: withTiming(textColor, { duration: ANIMATION_DURATION }),
-  }));
+    color: withTiming(textColor, { duration: transitionDuration }),
+  }), [textColor, transitionDuration]);
 
   const contentStyle = {
     paddingVertical: tokens.spacing.sm + 4,

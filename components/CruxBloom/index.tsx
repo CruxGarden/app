@@ -1,13 +1,12 @@
 import React, { useMemo } from 'react';
 import Svg, { Circle, Defs, LinearGradient, Stop } from 'react-native-svg';
 import Animated, { useAnimatedProps, withTiming } from 'react-native-reanimated';
+import { useTheme } from '@/contexts/ThemeContext';
 
 // Create animated versions of SVG components
 const AnimatedStop = Animated.createAnimatedComponent(Stop);
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 const AnimatedLinearGradient = Animated.createAnimatedComponent(LinearGradient);
-
-const ANIMATION_DURATION = 300;
 
 export interface CircleStyle {
   /** Fill color (solid color or gradient ID reference like "url(#gradient1)") */
@@ -51,7 +50,7 @@ export interface CruxBloomProps {
   height?: number;
   /** Size multiplier for responsive scaling */
   size?: number;
-  /** Theme object with bloom colors (alternative to individual circle props) */
+  /** Theme object with bloom colors (defaults to theme context, can override with individual circle props) */
   theme?: CruxBloomTheme;
   /** Styles for primary circle (outermost, default r=1000) */
   primary?: CircleStyle;
@@ -63,6 +62,8 @@ export interface CruxBloomProps {
   quaternary?: CircleStyle;
   /** Array of gradient definitions to use in fills */
   gradients?: GradientDefinition[];
+  /** Transition duration for color/style animations (0 = instant, defaults to theme context value) */
+  transitionDuration?: number;
   /** Additional SVG props */
   style?: any;
   /** Test ID for testing */
@@ -142,9 +143,25 @@ export const CruxBloom: React.FC<CruxBloomProps> = ({
   tertiary: tertiaryProp,
   quaternary: quaternaryProp,
   gradients: gradientsProp = [],
+  transitionDuration: transitionDurationProp,
   style,
   testID = 'crux-bloom',
 }) => {
+  // Use theme context for theme data and transitionDuration if not explicitly provided
+  const { tokens, transitionDuration: contextTransitionDuration } = useTheme();
+
+  // Use provided theme or fall back to context theme
+  const actualTheme = theme ?? {
+    primary: tokens.colors.bloomPrimary,
+    secondary: tokens.colors.bloomSecondary,
+    tertiary: tokens.colors.bloomTertiary,
+    quaternary: tokens.colors.bloomQuaternary,
+    borderColor: tokens.colors.bloomBorder,
+    borderWidth: tokens.bloom.borderWidth,
+  };
+
+  const transitionDuration = transitionDurationProp ?? contextTransitionDuration;
+
   // Convert all colors to gradient definitions (solids become gradients with matching stops)
   // This allows smooth animation between any color changes
   const gradientData = useMemo(() => {
@@ -163,14 +180,14 @@ export const CruxBloom: React.FC<CruxBloomProps> = ({
       };
     };
 
-    if (theme) {
+    if (actualTheme) {
       return {
-        primary: convertToGradient(theme.primary, '#2a3d2c'),
-        secondary: convertToGradient(theme.secondary, '#426046'),
-        tertiary: convertToGradient(theme.tertiary, '#58825e'),
-        quaternary: convertToGradient(theme.quaternary, '#73a079'),
-        borderColor: theme.borderColor || undefined,
-        borderWidth: theme.borderWidth || 0,
+        primary: convertToGradient(actualTheme.primary, '#2a3d2c'),
+        secondary: convertToGradient(actualTheme.secondary, '#426046'),
+        tertiary: convertToGradient(actualTheme.tertiary, '#58825e'),
+        quaternary: convertToGradient(actualTheme.quaternary, '#73a079'),
+        borderColor: actualTheme.borderColor || undefined,
+        borderWidth: actualTheme.borderWidth || 0,
       };
     }
 
@@ -183,51 +200,51 @@ export const CruxBloom: React.FC<CruxBloomProps> = ({
       borderColor: undefined,
       borderWidth: 0,
     };
-  }, [theme]);
+  }, [actualTheme]);
 
   // Create animated props for gradient stops (color AND offset)
   // Primary gradient stops
   const primaryStop1Props = useAnimatedProps(() => ({
-    stopColor: withTiming(gradientData.primary.stops[0].color, { duration: ANIMATION_DURATION }),
-    offset: withTiming(gradientData.primary.stops[0].offset, { duration: ANIMATION_DURATION }),
+    stopColor: withTiming(gradientData.primary.stops[0].color, { duration: transitionDuration }),
+    offset: withTiming(gradientData.primary.stops[0].offset, { duration: transitionDuration }),
   }), [gradientData]);
 
   const primaryStop2Props = useAnimatedProps(() => ({
-    stopColor: withTiming(gradientData.primary.stops[1].color, { duration: ANIMATION_DURATION }),
-    offset: withTiming(gradientData.primary.stops[1].offset, { duration: ANIMATION_DURATION }),
+    stopColor: withTiming(gradientData.primary.stops[1].color, { duration: transitionDuration }),
+    offset: withTiming(gradientData.primary.stops[1].offset, { duration: transitionDuration }),
   }), [gradientData]);
 
   // Secondary gradient stops
   const secondaryStop1Props = useAnimatedProps(() => ({
-    stopColor: withTiming(gradientData.secondary.stops[0].color, { duration: ANIMATION_DURATION }),
-    offset: withTiming(gradientData.secondary.stops[0].offset, { duration: ANIMATION_DURATION }),
+    stopColor: withTiming(gradientData.secondary.stops[0].color, { duration: transitionDuration }),
+    offset: withTiming(gradientData.secondary.stops[0].offset, { duration: transitionDuration }),
   }), [gradientData]);
 
   const secondaryStop2Props = useAnimatedProps(() => ({
-    stopColor: withTiming(gradientData.secondary.stops[1].color, { duration: ANIMATION_DURATION }),
-    offset: withTiming(gradientData.secondary.stops[1].offset, { duration: ANIMATION_DURATION }),
+    stopColor: withTiming(gradientData.secondary.stops[1].color, { duration: transitionDuration }),
+    offset: withTiming(gradientData.secondary.stops[1].offset, { duration: transitionDuration }),
   }), [gradientData]);
 
   // Tertiary gradient stops
   const tertiaryStop1Props = useAnimatedProps(() => ({
-    stopColor: withTiming(gradientData.tertiary.stops[0].color, { duration: ANIMATION_DURATION }),
-    offset: withTiming(gradientData.tertiary.stops[0].offset, { duration: ANIMATION_DURATION }),
+    stopColor: withTiming(gradientData.tertiary.stops[0].color, { duration: transitionDuration }),
+    offset: withTiming(gradientData.tertiary.stops[0].offset, { duration: transitionDuration }),
   }), [gradientData]);
 
   const tertiaryStop2Props = useAnimatedProps(() => ({
-    stopColor: withTiming(gradientData.tertiary.stops[1].color, { duration: ANIMATION_DURATION }),
-    offset: withTiming(gradientData.tertiary.stops[1].offset, { duration: ANIMATION_DURATION }),
+    stopColor: withTiming(gradientData.tertiary.stops[1].color, { duration: transitionDuration }),
+    offset: withTiming(gradientData.tertiary.stops[1].offset, { duration: transitionDuration }),
   }), [gradientData]);
 
   // Quaternary gradient stops
   const quaternaryStop1Props = useAnimatedProps(() => ({
-    stopColor: withTiming(gradientData.quaternary.stops[0].color, { duration: ANIMATION_DURATION }),
-    offset: withTiming(gradientData.quaternary.stops[0].offset, { duration: ANIMATION_DURATION }),
+    stopColor: withTiming(gradientData.quaternary.stops[0].color, { duration: transitionDuration }),
+    offset: withTiming(gradientData.quaternary.stops[0].offset, { duration: transitionDuration }),
   }), [gradientData]);
 
   const quaternaryStop2Props = useAnimatedProps(() => ({
-    stopColor: withTiming(gradientData.quaternary.stops[1].color, { duration: ANIMATION_DURATION }),
-    offset: withTiming(gradientData.quaternary.stops[1].offset, { duration: ANIMATION_DURATION }),
+    stopColor: withTiming(gradientData.quaternary.stops[1].color, { duration: transitionDuration }),
+    offset: withTiming(gradientData.quaternary.stops[1].offset, { duration: transitionDuration }),
   }), [gradientData]);
 
   // Create animated props for circle strokes
@@ -237,7 +254,7 @@ export const CruxBloom: React.FC<CruxBloomProps> = ({
 
   const strokeWidthProps = useAnimatedProps(() => {
     return {
-      strokeWidth: withTiming(borderWidth, { duration: ANIMATION_DURATION }),
+      strokeWidth: withTiming(borderWidth, { duration: transitionDuration }),
     };
   }, [borderWidth]);
 
