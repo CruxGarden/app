@@ -3,13 +3,14 @@ import { Switch, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useApp } from './lib/_AppContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Container, ScrollView, View, Text, Button, Panel, Section } from '@/components';
-import { useTheme } from '@/contexts/ThemeContext';
+import { Container, ScrollView, View, Text, Button, Panel, Section, ThemePreview } from '@/components';
+import { useTheme, DEFAULT_THEME } from '@/contexts/ThemeContext';
+import { computeDesignTokens } from '@/utils/designTokens';
 
 export default function SettingsScreen() {
   const router = useRouter();
   const { account, logout } = useApp();
-  const { tokens } = useTheme();
+  const { tokens, theme, resolvedMode } = useTheme();
 
   // App preferences (stored locally)
   const [enableNotifications, setEnableNotifications] = useState(true);
@@ -110,6 +111,37 @@ export default function SettingsScreen() {
           </View>
         </Section>
 
+        {/* Active Theme */}
+        <Section title="Active Theme">
+          {(() => {
+            const previewTheme = theme || DEFAULT_THEME;
+            const previewTokens = computeDesignTokens(previewTheme, resolvedMode);
+
+            return (
+              <>
+                <View
+                  style={{
+                    backgroundColor: previewTokens.colors.panel,
+                    borderRadius: 12,
+                    borderWidth: 2,
+                    borderColor: previewTokens.colors.border,
+                    padding: tokens.spacing.md,
+                    marginBottom: tokens.spacing.md,
+                  }}
+                >
+                  <ThemePreview theme={previewTheme} size="medium" showDetails={true} />
+                </View>
+                <Button
+                  title="Change Theme →"
+                  variant="secondary"
+                  onPress={() => router.push('/theme-search')}
+                  fullWidth
+                />
+              </>
+            );
+          })()}
+        </Section>
+
         {/* App Preferences */}
         <Section title="App Preferences">
           <View style={{ gap: tokens.spacing.lg }}>
@@ -132,7 +164,12 @@ export default function SettingsScreen() {
                   setDarkMode(value);
                   handleToggleSetting('darkMode', value);
                 }}
-                trackColor={{ false: tokens.colors.border, true: tokens.colors.buttonBackground }}
+                trackColor={{
+                  false: tokens.colors.border,
+                  true: tokens.colors.buttonBackground.type === 'solid'
+                    ? tokens.colors.buttonBackground.value
+                    : tokens.colors.primary
+                }}
                 thumbColor={tokens.colors.panel}
               />
             </View>
@@ -154,7 +191,12 @@ export default function SettingsScreen() {
                   setEnableNotifications(value);
                   handleToggleSetting('notifications', value);
                 }}
-                trackColor={{ false: tokens.colors.border, true: tokens.colors.buttonBackground }}
+                trackColor={{
+                  false: tokens.colors.border,
+                  true: tokens.colors.buttonBackground.type === 'solid'
+                    ? tokens.colors.buttonBackground.value
+                    : tokens.colors.primary
+                }}
                 thumbColor={tokens.colors.panel}
               />
             </View>
@@ -176,7 +218,12 @@ export default function SettingsScreen() {
                   setAutoSave(value);
                   handleToggleSetting('autoSave', value);
                 }}
-                trackColor={{ false: tokens.colors.border, true: tokens.colors.buttonBackground }}
+                trackColor={{
+                  false: tokens.colors.border,
+                  true: tokens.colors.buttonBackground.type === 'solid'
+                    ? tokens.colors.buttonBackground.value
+                    : tokens.colors.primary
+                }}
                 thumbColor={tokens.colors.panel}
               />
             </View>

@@ -51,3 +51,6 @@ export type { CruxButtonProps } from './CruxButton';
 
 export { ThemeBuilder } from './ThemeBuilder';
 export type { ThemeBuilderProps } from './ThemeBuilder';
+
+export { ThemePreview } from './ThemePreview';
+export type { ThemePreviewProps } from './ThemePreview';

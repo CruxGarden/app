@@ -18,17 +18,20 @@ export default function ThemeBuilderRoute() {
   const params = useLocalSearchParams();
   const { tokens } = useTheme();
   const themeKey = typeof params.themeKey === 'string' ? params.themeKey : undefined;
+  const cloneFrom = typeof params.cloneFrom === 'string' ? params.cloneFrom : undefined;
 
   const [initialData, setInitialData] = useState<any>(null);
-  const [isLoading, setIsLoading] = useState(!!themeKey);
+  const [isLoading, setIsLoading] = useState(!!themeKey || !!cloneFrom);
   const [loadError, setLoadError] = useState<string | null>(null);
 
-  // Fetch theme data if editing
+  // Fetch theme data if editing or cloning
   useEffect(() => {
     if (themeKey) {
       loadTheme();
+    } else if (cloneFrom) {
+      loadThemeForCloning();
     }
-  }, [themeKey]);
+  }, [themeKey, cloneFrom]);
 
   const loadTheme = async () => {
     try {
@@ -38,6 +41,22 @@ export default function ThemeBuilderRoute() {
       setInitialData(formData);
     } catch (error) {
       console.error('Failed to load theme:', error);
+      setLoadError(error instanceof Error ? error.message : 'Failed to load theme');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const loadThemeForCloning = async () => {
+    try {
+      setIsLoading(true);
+      const theme = await api.getTheme(cloneFrom!);
+      const formData = dtoToFormData(theme);
+      // Modify title to indicate it's a copy
+      formData.title = `${formData.title} (Copy)`;
+      setInitialData(formData);
+    } catch (error) {
+      console.error('Failed to load theme for cloning:', error);
       setLoadError(error instanceof Error ? error.message : 'Failed to load theme');
     } finally {
       setIsLoading(false);
