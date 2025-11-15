@@ -843,15 +843,25 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
   };
 
   const randomizeBloom = () => {
-    // Use current bloom colors from the active mode's palette
-    const activeData = formData[formData.activeMode];
-    const bloomColors = [
-      getBloomColor(activeData.primaryColor),
-      getBloomColor(activeData.secondaryColor),
-      getBloomColor(activeData.tertiaryColor),
-      getBloomColor(activeData.quaternaryColor),
+    // Get bloom colors from each mode's palette (not just active mode)
+    const lightBloomColors = [
+      getBloomColor(formData.light.primaryColor),
+      getBloomColor(formData.light.secondaryColor),
+      getBloomColor(formData.light.tertiaryColor),
+      getBloomColor(formData.light.quaternaryColor),
     ];
-    const shuffled = [...bloomColors].sort(() => Math.random() - 0.5);
+    const darkBloomColors = [
+      getBloomColor(formData.dark.primaryColor),
+      getBloomColor(formData.dark.secondaryColor),
+      getBloomColor(formData.dark.tertiaryColor),
+      getBloomColor(formData.dark.quaternaryColor),
+    ];
+
+    // Use active mode's colors if only updating one mode
+    const activeBloomColors = formData.activeMode === 'light' ? lightBloomColors : darkBloomColors;
+    const shuffled = updateBothModesBloom
+      ? [...activeBloomColors].sort(() => Math.random() - 0.5) // Will be overridden below
+      : [...activeBloomColors].sort(() => Math.random() - 0.5);
 
     // Helper to maybe create a gradient (25% chance)
     const maybeGradient = (baseColor: string, index: number, mode: 'light' | 'dark'): ColorValue => {
@@ -878,15 +888,7 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
       return { type: 'solid', value: baseColor };
     };
 
-    // 25% chance to use black, otherwise pick a color from palette and darken it
-    let bloomBorderColor: string;
-    if (Math.random() < 0.25) {
-      bloomBorderColor = '#000000';
-    } else {
-      const borderBaseColor = chroma(shuffled[Math.floor(Math.random() * 4)]);
-      bloomBorderColor = borderBaseColor.darken(0.5 + Math.random() * 0.5).hex(); // Darken by 0.5-1
-    }
-
+    // Generate shared styling (same for both modes)
     // Randomize border width (0-40, with bias toward 0)
     const bloomBorderWidth = Math.random() < 0.3 ? '0' : Math.floor(Math.random() * 41).toString();
 
@@ -900,13 +902,24 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
     const bloomShadowBlurRadius = isCartoonShadow ? '0' : Math.floor(Math.random() * 21).toString(); // 0-20px or forced 0 for cartoon
     const bloomShadowOpacity = isCartoonShadow ? '0.95' : (0.2 + Math.random() * 0.5).toFixed(2); // 0.95 for cartoon, 0.2-0.7 otherwise (more visible)
 
-    // Generate bloom colors for light mode
+    // Helper to generate border color from a palette
+    const generateBorderColor = (paletteColors: string[]) => {
+      if (Math.random() < 0.25) {
+        return '#000000';
+      } else {
+        const borderBaseColor = chroma(paletteColors[Math.floor(Math.random() * 4)]);
+        return borderBaseColor.darken(0.5 + Math.random() * 0.5).hex();
+      }
+    };
+
+    // Generate bloom data for light mode (using light mode's palette)
+    const lightShuffled = [...lightBloomColors].sort(() => Math.random() - 0.5);
     const lightBloomData = {
-      primaryColor: maybeGradient(shuffled[0], 0, 'light'),
-      secondaryColor: maybeGradient(shuffled[1], 1, 'light'),
-      tertiaryColor: maybeGradient(shuffled[2], 2, 'light'),
-      quaternaryColor: maybeGradient(shuffled[3], 3, 'light'),
-      bloomBorderColor,
+      primaryColor: maybeGradient(lightShuffled[0], 0, 'light'),
+      secondaryColor: maybeGradient(lightShuffled[1], 1, 'light'),
+      tertiaryColor: maybeGradient(lightShuffled[2], 2, 'light'),
+      quaternaryColor: maybeGradient(lightShuffled[3], 3, 'light'),
+      bloomBorderColor: generateBorderColor(lightBloomColors),
       bloomBorderWidth,
       bloomShadowEnabled,
       bloomShadowColor,
@@ -916,13 +929,14 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
       bloomShadowOpacity,
     };
 
-    // Clone for dark mode with unique gradient IDs (same colors, different IDs)
+    // Generate bloom data for dark mode (using dark mode's palette)
+    const darkShuffled = [...darkBloomColors].sort(() => Math.random() - 0.5);
     const darkBloomData = {
-      primaryColor: cloneColorValueWithNewId(lightBloomData.primaryColor, 'dark', 0),
-      secondaryColor: cloneColorValueWithNewId(lightBloomData.secondaryColor, 'dark', 1),
-      tertiaryColor: cloneColorValueWithNewId(lightBloomData.tertiaryColor, 'dark', 2),
-      quaternaryColor: cloneColorValueWithNewId(lightBloomData.quaternaryColor, 'dark', 3),
-      bloomBorderColor,
+      primaryColor: maybeGradient(darkShuffled[0], 0, 'dark'),
+      secondaryColor: maybeGradient(darkShuffled[1], 1, 'dark'),
+      tertiaryColor: maybeGradient(darkShuffled[2], 2, 'dark'),
+      quaternaryColor: maybeGradient(darkShuffled[3], 3, 'dark'),
+      bloomBorderColor: generateBorderColor(darkBloomColors),
       bloomBorderWidth,
       bloomShadowEnabled,
       bloomShadowColor,
@@ -1048,15 +1062,22 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
   };
 
   const randomizeStyle = () => {
-    // Pick a random bloom color from current active mode to derive UI colors from
-    const activeData = formData[formData.activeMode];
-    const bloomColors = [
-      getBloomColor(activeData.primaryColor),
-      getBloomColor(activeData.secondaryColor),
-      getBloomColor(activeData.tertiaryColor),
-      getBloomColor(activeData.quaternaryColor),
+    // Get bloom colors from each mode's palette
+    const lightBloomColors = [
+      getBloomColor(formData.light.primaryColor),
+      getBloomColor(formData.light.secondaryColor),
+      getBloomColor(formData.light.tertiaryColor),
+      getBloomColor(formData.light.quaternaryColor),
     ];
-    const selectedBloomColor = bloomColors[Math.floor(Math.random() * 4)];
+    const darkBloomColors = [
+      getBloomColor(formData.dark.primaryColor),
+      getBloomColor(formData.dark.secondaryColor),
+      getBloomColor(formData.dark.tertiaryColor),
+      getBloomColor(formData.dark.quaternaryColor),
+    ];
+
+    const selectedLightBloomColor = lightBloomColors[Math.floor(Math.random() * 4)];
+    const selectedDarkBloomColor = darkBloomColors[Math.floor(Math.random() * 4)];
 
     // Generate shared styling (same for both modes)
     const fonts = ['sans-serif', 'serif', 'monospace'];
@@ -1066,11 +1087,11 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
     const borderWidth = Math.floor(Math.random() * 6).toString();
     const borderRadius = Math.floor(Math.random() * 31).toString();
 
-    // Generate LIGHT mode
+    // Generate LIGHT mode (using light mode's palette)
     // Randomly pick different colors for background/panel/border (30% chance each)
-    const lightBgColor = Math.random() < 0.3 ? bloomColors[Math.floor(Math.random() * 4)] : selectedBloomColor;
-    const lightPanelColor = Math.random() < 0.3 ? bloomColors[Math.floor(Math.random() * 4)] : lightBgColor;
-    const lightBorderColorBase = Math.random() < 0.3 ? bloomColors[Math.floor(Math.random() * 4)] : lightPanelColor;
+    const lightBgColor = Math.random() < 0.3 ? lightBloomColors[Math.floor(Math.random() * 4)] : selectedLightBloomColor;
+    const lightPanelColor = Math.random() < 0.3 ? lightBloomColors[Math.floor(Math.random() * 4)] : lightBgColor;
+    const lightBorderColorBase = Math.random() < 0.3 ? lightBloomColors[Math.floor(Math.random() * 4)] : lightPanelColor;
 
     const lightBgChroma = chroma(lightBgColor);
     const lightPanelChroma = chroma(lightPanelColor);
@@ -1088,11 +1109,11 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
     const lightTextColor = getAAATextColor(lightPanel);
     const lightBorderColor = chroma.hsl(lightBorderHue, lightBorderSat === 0 ? 0 : Math.min(1, lightBorderSat + 0.1), 0.76 + Math.random() * 0.08).hex();
 
-    // Generate DARK mode
+    // Generate DARK mode (using dark mode's palette)
     // Randomly pick different colors for background/panel/border (30% chance each)
-    const darkBgColor = Math.random() < 0.3 ? bloomColors[Math.floor(Math.random() * 4)] : selectedBloomColor;
-    const darkPanelColor = Math.random() < 0.3 ? bloomColors[Math.floor(Math.random() * 4)] : darkBgColor;
-    const darkBorderColorBase = Math.random() < 0.3 ? bloomColors[Math.floor(Math.random() * 4)] : darkPanelColor;
+    const darkBgColor = Math.random() < 0.3 ? darkBloomColors[Math.floor(Math.random() * 4)] : selectedDarkBloomColor;
+    const darkPanelColor = Math.random() < 0.3 ? darkBloomColors[Math.floor(Math.random() * 4)] : darkBgColor;
+    const darkBorderColorBase = Math.random() < 0.3 ? darkBloomColors[Math.floor(Math.random() * 4)] : darkPanelColor;
 
     const darkBgChroma = chroma(darkBgColor);
     const darkPanelChroma = chroma(darkPanelColor);
@@ -1205,20 +1226,32 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
   };
 
   const randomizeControls = () => {
-    // Pick a random bloom color from current active mode to derive control colors from
-    const activeData = formData[formData.activeMode];
-    const bloomColors = [
-      getBloomColor(activeData.primaryColor),
-      getBloomColor(activeData.secondaryColor),
-      getBloomColor(activeData.tertiaryColor),
-      getBloomColor(activeData.quaternaryColor),
+    // Get bloom colors from each mode's palette
+    const lightBloomColors = [
+      getBloomColor(formData.light.primaryColor),
+      getBloomColor(formData.light.secondaryColor),
+      getBloomColor(formData.light.tertiaryColor),
+      getBloomColor(formData.light.quaternaryColor),
     ];
-    const selectedBloomColor = bloomColors[Math.floor(Math.random() * 4)];
+    const darkBloomColors = [
+      getBloomColor(formData.dark.primaryColor),
+      getBloomColor(formData.dark.secondaryColor),
+      getBloomColor(formData.dark.tertiaryColor),
+      getBloomColor(formData.dark.quaternaryColor),
+    ];
 
-    // Extract HSL from the selected bloom color
-    const bloomChroma = chroma(selectedBloomColor);
-    const controlHue = bloomChroma.get('hsl.h');
-    const controlSat = bloomChroma.get('hsl.s');
+    // Select random colors from each mode's palette
+    const selectedLightBloomColor = lightBloomColors[Math.floor(Math.random() * 4)];
+    const selectedDarkBloomColor = darkBloomColors[Math.floor(Math.random() * 4)];
+
+    // Extract HSL from the selected bloom colors
+    const lightBloomChroma = chroma(selectedLightBloomColor);
+    const lightControlHue = lightBloomChroma.get('hsl.h');
+    const lightControlSat = lightBloomChroma.get('hsl.s');
+
+    const darkBloomChroma = chroma(selectedDarkBloomColor);
+    const darkControlHue = darkBloomChroma.get('hsl.h');
+    const darkControlSat = darkBloomChroma.get('hsl.s');
 
     // Helper to maybe create a gradient for button (25% chance)
     const maybeButtonGradient = (baseColor: string): ColorValue => {
@@ -1243,25 +1276,25 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
       return { type: 'solid', value: baseColor };
     };
 
-    // Generate button colors for LIGHT mode
-    const lightButtonBgColor = chroma.hsl(controlHue, Math.min(1, controlSat + 0.1), 0.5 + Math.random() * 0.2).hex();
+    // Generate button colors for LIGHT mode (using light mode's palette)
+    const lightButtonBgColor = chroma.hsl(lightControlHue, Math.min(1, lightControlSat + 0.1), 0.5 + Math.random() * 0.2).hex();
     const lightButtonBg = maybeButtonGradient(lightButtonBgColor);
     const lightButtonText = getAAATextColor(lightButtonBgColor);
     const lightButtonBorder = Math.random() < 0.3
       ? lightButtonBgColor
       : chroma(lightButtonBgColor).darken(0.5 + Math.random() * 0.5).hex();
-    const lightLinkColor = chroma.hsl(controlHue, Math.min(1, controlSat + 0.2), 0.35 + Math.random() * 0.15).hex();
-    const lightSelectionColor = chroma.hsl(controlHue, Math.min(1, controlSat + 0.1), 0.70 + Math.random() * 0.15).hex();
+    const lightLinkColor = chroma.hsl(lightControlHue, Math.min(1, lightControlSat + 0.2), 0.35 + Math.random() * 0.15).hex();
+    const lightSelectionColor = chroma.hsl(lightControlHue, Math.min(1, lightControlSat + 0.1), 0.70 + Math.random() * 0.15).hex();
 
-    // Generate button colors for DARK mode
-    const darkButtonBgColor = chroma.hsl(controlHue, Math.min(1, controlSat + 0.1), 0.4 + Math.random() * 0.2).hex();
+    // Generate button colors for DARK mode (using dark mode's palette)
+    const darkButtonBgColor = chroma.hsl(darkControlHue, Math.min(1, darkControlSat + 0.1), 0.4 + Math.random() * 0.2).hex();
     const darkButtonBg = maybeButtonGradient(darkButtonBgColor);
     const darkButtonText = getAAATextColor(darkButtonBgColor);
     const darkButtonBorder = Math.random() < 0.3
       ? darkButtonBgColor
       : chroma(darkButtonBgColor).brighten(0.5 + Math.random() * 0.5).hex();
-    const darkLinkColor = chroma.hsl(controlHue, Math.min(1, controlSat + 0.2), 0.55 + Math.random() * 0.15).hex();
-    const darkSelectionColor = chroma.hsl(controlHue, Math.min(1, controlSat + 0.1), 0.45 + Math.random() * 0.15).hex();
+    const darkLinkColor = chroma.hsl(darkControlHue, Math.min(1, darkControlSat + 0.2), 0.55 + Math.random() * 0.15).hex();
+    const darkSelectionColor = chroma.hsl(darkControlHue, Math.min(1, darkControlSat + 0.1), 0.45 + Math.random() * 0.15).hex();
 
     // Shared button styling
     const buttonBorderWidth = Math.floor(Math.random() * 4).toString();
@@ -1905,6 +1938,10 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
 
         {expandedSections.palette && (
         <>
+        <Text style={styles.sectionHelperText}>
+          Changes you make in this section will apply to {updateBothModesPalette ? 'both themes' : `${formData.activeMode} theme`}
+        </Text>
+
         {/* Update Both Modes Checkbox */}
         <TouchableOpacity
           style={styles.modeCheckboxContainer}
@@ -1915,10 +1952,6 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
           </View>
           <Text style={styles.modeCheckboxLabel}>Update both modes (light and dark)</Text>
         </TouchableOpacity>
-
-        <Text style={styles.sectionHelperText}>
-          Changes you make in this section will apply to {updateBothModesPalette ? 'both themes' : `${formData.activeMode} theme`}
-        </Text>
 
         <Text style={styles.sectionDescription}>
           Generate color palettes using color harmony theory.
@@ -2221,6 +2254,10 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
 
         {expandedSections.bloom && (
         <>
+        <Text style={styles.sectionHelperText}>
+          Changes you make in this section will apply to {updateBothModesBloom ? 'both themes' : `${formData.activeMode} theme`}
+        </Text>
+
         {/* Update Both Modes Checkbox */}
         <TouchableOpacity
           style={styles.modeCheckboxContainer}
@@ -2231,10 +2268,6 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
           </View>
           <Text style={styles.modeCheckboxLabel}>Update both modes (light and dark)</Text>
         </TouchableOpacity>
-
-        <Text style={styles.sectionHelperText}>
-          Changes you make in this section will apply to {updateBothModesBloom ? 'both themes' : `${formData.activeMode} theme`}
-        </Text>
 
         <Text style={styles.sectionDescription}>
           These colors are used in the Crux bloom icon. You can use solid colors or gradients.
@@ -2372,6 +2405,10 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
 
         {expandedSections.style && (
         <>
+        <Text style={styles.sectionHelperText}>
+          Changes you make in this section will apply to {updateBothModesStyle ? 'both themes' : `${formData.activeMode} theme`}
+        </Text>
+
         {/* Update Both Modes Checkbox */}
         <TouchableOpacity
           style={styles.modeCheckboxContainer}
@@ -2382,10 +2419,6 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
           </View>
           <Text style={styles.modeCheckboxLabel}>Update both modes (light and dark)</Text>
         </TouchableOpacity>
-
-        <Text style={styles.sectionHelperText}>
-          Changes you make in this section will apply to {updateBothModesStyle ? 'both themes' : `${formData.activeMode} theme`}
-        </Text>
 
         <Text style={styles.sectionDescription}>
           Optional styling for your app's user interface.
@@ -2676,6 +2709,10 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
 
         {expandedSections.controls && (
         <>
+        <Text style={styles.sectionHelperText}>
+          Changes you make in this section will apply to {updateBothModesControls ? 'both themes' : `${formData.activeMode} theme`}
+        </Text>
+
         {/* Update Both Modes Checkbox */}
         <TouchableOpacity
           style={styles.modeCheckboxContainer}
@@ -2686,10 +2723,6 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
           </View>
           <Text style={styles.modeCheckboxLabel}>Update both modes (light and dark)</Text>
         </TouchableOpacity>
-
-        <Text style={styles.sectionHelperText}>
-          Changes you make in this section will apply to {updateBothModesControls ? 'both themes' : `${formData.activeMode} theme`}
-        </Text>
 
         <Text style={styles.sectionDescription}>
           Button and link styling for interactive elements.
@@ -3079,7 +3112,8 @@ const styles = StyleSheet.create({
   sectionHelperText: {
     fontSize: 13,
     color: '#4dd9b8',
-    marginBottom: 12,
+    marginTop: 4,
+    marginBottom: 8,
     fontStyle: 'italic',
   },
   field: {
