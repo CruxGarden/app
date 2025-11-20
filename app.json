@@ -1,16 +1,15 @@
 {
   "expo": {
-    "name": "crux-garden-app",
-    "slug": "crux-garden-app",
+    "name": "app",
+    "slug": "app",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "cruxgarden",
+    "scheme": "app",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true,
-      "bundleIdentifier": "com.crux.garden"
+      "supportsTablet": true
     },
     "android": {
       "adaptiveIcon": {
@@ -20,22 +19,14 @@
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false,
-      "package": "com.crux.garden"
+      "predictiveBackGestureEnabled": false
     },
     "web": {
-      "bundler": "metro",
       "output": "static",
-      "favicon": "./assets/images/favicon.png",
-      "ssr": false
+      "favicon": "./assets/images/favicon.png"
     },
     "plugins": [
-      [
-        "expo-router",
-        {
-          "root": "./src"
-        }
-      ],
+      "expo-router",
       [
         "expo-splash-screen",
         {

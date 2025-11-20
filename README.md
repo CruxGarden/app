@@ -1,27 +1,8 @@
-<div align="center">
-  <img src=".github/banner.jpg" alt="Crux Garden - Where Ideas Grow" width="100%">
-</div>
+# Welcome to your Expo app 👋
 
-## What is Crux Garden?
+This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
 
-Crux Garden is a model of how ideas manifest and develop over time. The heart of the model is the **Crux**, an atomic representation of an idea. In our implementation, a Crux can be text, media, code, or any digital content worth preserving. But Cruxes, just like ideas, don't exist in isolation. Ideas have origins. They lead to new ideas. They evolve. And often, they randomly connect. So it is with Cruxes. In Crux Garden, there are four types of relationships Cruxes can have with each other. These are called **Dimensions**:
-
-- **GATES** — Cruxes which influenced or inspired a Crux; its origins and sources.
-- **GARDENS** — Cruxes which emerged or grew from a Crux, its creations and consequences.
-- **GROWTH** — How a Crux developed over time, its transformation and refinement.
-- **GRAFTS** — Cruxes which connect to a Crux laterally, its associations and resonances.
-
-These four Dimensions capture the fundamental ways that Cruxes, or ideas, relate to one another.
-
-The power of a system that models ideas at such a primitive scale is that literally any idea or framework of ideas can be realized inside Crux Garden: interactive fiction with evolving storylines, personal knowledge bases connecting insights across domains, product development roadmaps linking requirements to releases, research systems tracking citations and discoveries, or anything else where ideas have origins, consequences, transformation, and connection.
-
-Along with Cruxes and Dimensions, there are several other types including Tags, Themes, and Paths. See the database schema in `db/schema.sql` or the API documentation at `/docs` for details.
-
-For further reading on the goals and ambitions of Crux Garden, explore the history of the [Digital Garden](https://maggieappleton.com/garden-history) movement and the 1945 essay [As We May Think](https://en.wikipedia.org/wiki/As_We_May_Think) by Vannevar Bush.
-
-Will Stepp, October 2025
-
-## Getting started
+## Get started
 
 1. Install dependencies
 
@@ -32,5 +13,38 @@ Will Stepp, October 2025
 2. Start the app
 
    ```bash
-   npm run start
+   npx expo start
    ```
+
+In the output, you'll find options to open the app in a
+
+- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
+- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
+- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
+- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+
+You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+
+## Get a fresh project
+
+When you're ready, run:
+
+```bash
+npm run reset-project
+```
+
+This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+
+## Learn more
+
+To learn more about developing your project with Expo, look at the following resources:
+
+- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
+- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+
+## Join the community
+
+Join our community of developers creating universal apps.
+
+- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
+- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
