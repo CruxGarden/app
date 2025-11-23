@@ -7,7 +7,7 @@ import React, {
   ReactNode,
 } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { api, setAuthToken, Profile } from '@/lib/api';
+import { api, setAuthToken, Profile } from '@/services/api';
 
 // Storage keys
 const ACCESS_TOKEN_KEY = 'cg:auth:access_token';

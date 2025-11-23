@@ -6,8 +6,7 @@ module.exports = function (api) {
       [
         'react-native-unistyles/plugin',
         {
-          // Pass root folder of your application
-          // All files under this folder will be processed by the Babel plugin
+          // All files under this folder will be processed by Babel
           root: './src',
         },
       ],

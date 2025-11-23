@@ -10,7 +10,7 @@ import {
   Image,
 } from 'react-native';
 import { Stack, useLocalSearchParams } from 'expo-router';
-import api, { Author } from '@/lib/api';
+import api, { Author } from '@/services/api';
 import CruxCard from '@/components/CruxCard';
 import CruxFormModal, { CruxFormData } from '@/components/CruxFormModal';
 import { Colors, Fonts, FontSizes } from '@/constants/theme';

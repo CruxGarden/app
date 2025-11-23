@@ -9,7 +9,7 @@ import {
   TouchableOpacity,
   Image,
 } from 'react-native';
-import api, { Author } from '@/lib/api';
+import api, { Author } from '@/services/api';
 import { Colors, Fonts, FontSizes } from '@/constants/theme';
 
 export default function Index() {
