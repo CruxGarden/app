@@ -62,18 +62,22 @@ interface AnimatedPreviewContainerProps {
 /**
  * Animated container that transitions background color
  */
-const AnimatedPreviewContainer: React.FC<AnimatedPreviewContainerProps> = ({ children, formData, mode, transitionDuration }) => {
+const AnimatedPreviewContainer: React.FC<AnimatedPreviewContainerProps> = ({
+  children,
+  formData,
+  mode,
+  transitionDuration,
+}) => {
   const backgroundColor = formData[mode].backgroundColor || '#ffffff';
 
-  const animatedStyle = useAnimatedStyle(() => ({
-    backgroundColor: withTiming(backgroundColor, { duration: transitionDuration }),
-  }), [backgroundColor, transitionDuration]);
-
-  return (
-    <Animated.View style={[styles.previewContainer, animatedStyle]}>
-      {children}
-    </Animated.View>
+  const animatedStyle = useAnimatedStyle(
+    () => ({
+      backgroundColor: withTiming(backgroundColor, { duration: transitionDuration }),
+    }),
+    [backgroundColor, transitionDuration]
   );
+
+  return <Animated.View style={[styles.previewContainer, animatedStyle]}>{children}</Animated.View>;
 };
 
 // ============================================================================
@@ -91,7 +95,12 @@ interface PreviewThemeProviderProps {
  * Provider that computes and provides theme tokens from formData for the preview
  * This temporarily overrides the global theme context for preview components
  */
-const PreviewThemeProvider: React.FC<PreviewThemeProviderProps> = ({ children, formData, mode, transitionDuration }) => {
+const PreviewThemeProvider: React.FC<PreviewThemeProviderProps> = ({
+  children,
+  formData,
+  mode,
+  transitionDuration,
+}) => {
   // Convert formData to Theme object
   const previewTheme: Theme = useMemo(() => {
     const dto = formDataToDto(formData);
@@ -111,17 +120,20 @@ const PreviewThemeProvider: React.FC<PreviewThemeProviderProps> = ({ children, f
   }, [previewTheme, mode]);
 
   // Create context value that matches ThemeContextValue interface
-  const contextValue = useMemo(() => ({
-    theme: previewTheme,
-    mode: mode as 'light' | 'dark' | 'auto',
-    resolvedMode: mode,
-    tokens,
-    transitionDuration,
-    setTheme: async () => {},
-    setMode: async () => {},
-    reloadTheme: async () => {},
-    isLoading: false,
-  }), [previewTheme, mode, tokens, transitionDuration]);
+  const contextValue = useMemo(
+    () => ({
+      theme: previewTheme,
+      mode: mode as 'light' | 'dark' | 'auto',
+      resolvedMode: mode,
+      tokens,
+      transitionDuration,
+      setTheme: async () => {},
+      setMode: async () => {},
+      reloadTheme: async () => {},
+      isLoading: false,
+    }),
+    [previewTheme, mode, tokens, transitionDuration]
+  );
 
   // Provide to ThemeContext to override parent context for preview
   return <ThemeContext.Provider value={contextValue}>{children}</ThemeContext.Provider>;
@@ -134,12 +146,12 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
   onCancel,
 }) => {
   const { setTheme: setGlobalTheme } = useTheme();
-  const [formData, setFormData] = useState<ThemeFormData>(
-    initialData || getDefaultThemeFormData()
-  );
+  const [formData, setFormData] = useState<ThemeFormData>(initialData || getDefaultThemeFormData());
   const [isSaving, setIsSaving] = useState(false);
   const isEditMode = !!themeKey;
-  const [activeBloomTab, setActiveBloomTab] = useState<'primary' | 'secondary' | 'tertiary' | 'quaternary'>('primary');
+  const [activeBloomTab, setActiveBloomTab] = useState<
+    'primary' | 'secondary' | 'tertiary' | 'quaternary'
+  >('primary');
   const [expandedSections, setExpandedSections] = useState<{
     details: boolean;
     palette: boolean;
@@ -157,7 +169,9 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
   const [baseHue, setBaseHue] = useState(180);
   const [baseSaturation, setBaseSaturation] = useState(65);
   const [baseLightness, setBaseLightness] = useState(50);
-  const [selectedHarmony, setSelectedHarmony] = useState<'monochromatic' | 'complementary' | 'analogous' | 'triadic' | 'split-complementary' | 'random'>('monochromatic');
+  const [selectedHarmony, setSelectedHarmony] = useState<
+    'monochromatic' | 'complementary' | 'analogous' | 'triadic' | 'split-complementary' | 'random'
+  >('monochromatic');
 
   // Preview palette colors (updates as sliders change, but doesn't apply to theme until button clicked)
   const [previewPalette, setPreviewPalette] = useState<string[]>([]);
@@ -204,7 +218,12 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
 
   // Update preview palette when HSL or harmony changes
   useEffect(() => {
-    const bloomColors = generatePaletteColors(baseHue, baseSaturation, baseLightness, selectedHarmony);
+    const bloomColors = generatePaletteColors(
+      baseHue,
+      baseSaturation,
+      baseLightness,
+      selectedHarmony
+    );
     setPreviewPalette(bloomColors);
   }, [baseHue, baseSaturation, baseLightness, selectedHarmony, randomSeed]);
 
@@ -258,10 +277,7 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
     };
   }, [formData.activeMode, formData.light.selectionColor, formData.dark.selectionColor]);
 
-  const handleFieldChange = <K extends keyof ThemeFormData>(
-    field: K,
-    value: ThemeFormData[K]
-  ) => {
+  const handleFieldChange = <K extends keyof ThemeFormData>(field: K, value: ThemeFormData[K]) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
@@ -274,10 +290,13 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
   ) => {
     // Determine which state to check based on section
     const updateBothModes =
-      section === 'palette' ? updateBothModesPalette :
-      section === 'bloom' ? updateBothModesBloom :
-      section === 'style' ? updateBothModesStyle :
-      updateBothModesControls;
+      section === 'palette'
+        ? updateBothModesPalette
+        : section === 'bloom'
+          ? updateBothModesBloom
+          : section === 'style'
+            ? updateBothModesStyle
+            : updateBothModesControls;
 
     if (updateBothModes) {
       // Update both light and dark modes
@@ -304,9 +323,16 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
     }
   };
 
-  const handleColorChange = (field: keyof Pick<ThemeModeData, 'primaryColor' | 'secondaryColor' | 'tertiaryColor' | 'quaternaryColor'>) => (value: ColorValue) => {
-    handleModeFieldChange(field, value, 'bloom');
-  };
+  const handleColorChange =
+    (
+      field: keyof Pick<
+        ThemeModeData,
+        'primaryColor' | 'secondaryColor' | 'tertiaryColor' | 'quaternaryColor'
+      >
+    ) =>
+    (value: ColorValue) => {
+      handleModeFieldChange(field, value, 'bloom');
+    };
 
   const handleSave = async () => {
     // Validate required fields
@@ -345,7 +371,10 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
       };
 
       await setGlobalTheme(theme);
-      Alert.alert('Theme Applied', 'The theme has been applied to the app. Toggle between light and dark mode to see both variants.');
+      Alert.alert(
+        'Theme Applied',
+        'The theme has been applied to the app. Toggle between light and dark mode to see both variants.'
+      );
     } catch (error) {
       Alert.alert('Error', error instanceof Error ? error.message : 'Failed to apply theme');
     }
@@ -484,7 +513,18 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
     }
   };
 
-  const generatePaletteColors = (hue: number, saturation: number, lightness: number, harmonyType: 'monochromatic' | 'complementary' | 'analogous' | 'triadic' | 'split-complementary' | 'random'): string[] => {
+  const generatePaletteColors = (
+    hue: number,
+    saturation: number,
+    lightness: number,
+    harmonyType:
+      | 'monochromatic'
+      | 'complementary'
+      | 'analogous'
+      | 'triadic'
+      | 'split-complementary'
+      | 'random'
+  ): string[] => {
     let bloomColors: string[] = [];
 
     // Convert saturation from 0-100 to 0-1
@@ -579,9 +619,10 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
 
   const handleGenerateUIColors = () => {
     // Use the preview palette colors (what the user sees) instead of regenerating
-    const bloomColors = previewPalette.length > 0
-      ? previewPalette
-      : generatePaletteColors(baseHue, baseSaturation, baseLightness, selectedHarmony);
+    const bloomColors =
+      previewPalette.length > 0
+        ? previewPalette
+        : generatePaletteColors(baseHue, baseSaturation, baseLightness, selectedHarmony);
 
     // Shuffle bloom colors for variety when applying (but keep preview in harmony order)
     const shuffled = [...bloomColors].sort(() => Math.random() - 0.5);
@@ -621,9 +662,12 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
 
     // Generate LIGHT mode UI colors
     // Randomly pick different colors for background/panel/border (30% chance each)
-    const lightBgColor = Math.random() < 0.3 ? shuffled[Math.floor(Math.random() * 4)] : selectedBloomColor;
-    const lightPanelColor = Math.random() < 0.3 ? shuffled[Math.floor(Math.random() * 4)] : lightBgColor;
-    const lightBorderColorBase = Math.random() < 0.3 ? shuffled[Math.floor(Math.random() * 4)] : lightPanelColor;
+    const lightBgColor =
+      Math.random() < 0.3 ? shuffled[Math.floor(Math.random() * 4)] : selectedBloomColor;
+    const lightPanelColor =
+      Math.random() < 0.3 ? shuffled[Math.floor(Math.random() * 4)] : lightBgColor;
+    const lightBorderColorBase =
+      Math.random() < 0.3 ? shuffled[Math.floor(Math.random() * 4)] : lightPanelColor;
 
     const lightBgChroma = chroma(lightBgColor);
     const lightPanelChroma = chroma(lightPanelColor);
@@ -637,15 +681,27 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
     const lightBorderSat = lightBorderChroma.get('hsl.s');
 
     const lightBackground = chroma.hsl(lightBgHue, lightBgSat, 0.6 + Math.random() * 0.4).hex();
-    const lightPanel = Math.random() < 0.4 ? lightBackground : chroma.hsl(lightPanelHue, lightPanelSat, 0.6 + Math.random() * 0.4).hex();
+    const lightPanel =
+      Math.random() < 0.4
+        ? lightBackground
+        : chroma.hsl(lightPanelHue, lightPanelSat, 0.6 + Math.random() * 0.4).hex();
     const lightTextColor = getAAATextColor(lightPanel);
-    const lightBorderColor = chroma.hsl(lightBorderHue, lightBorderSat === 0 ? 0 : Math.min(1, lightBorderSat + 0.1), 0.75 + Math.random() * 0.15).hex();
+    const lightBorderColor = chroma
+      .hsl(
+        lightBorderHue,
+        lightBorderSat === 0 ? 0 : Math.min(1, lightBorderSat + 0.1),
+        0.75 + Math.random() * 0.15
+      )
+      .hex();
 
     // Generate DARK mode UI colors
     // Randomly pick different colors for background/panel/border (30% chance each)
-    const darkBgColor = Math.random() < 0.3 ? shuffled[Math.floor(Math.random() * 4)] : selectedBloomColor;
-    const darkPanelColor = Math.random() < 0.3 ? shuffled[Math.floor(Math.random() * 4)] : darkBgColor;
-    const darkBorderColorBase = Math.random() < 0.3 ? shuffled[Math.floor(Math.random() * 4)] : darkPanelColor;
+    const darkBgColor =
+      Math.random() < 0.3 ? shuffled[Math.floor(Math.random() * 4)] : selectedBloomColor;
+    const darkPanelColor =
+      Math.random() < 0.3 ? shuffled[Math.floor(Math.random() * 4)] : darkBgColor;
+    const darkBorderColorBase =
+      Math.random() < 0.3 ? shuffled[Math.floor(Math.random() * 4)] : darkPanelColor;
 
     const darkBgChroma = chroma(darkBgColor);
     const darkPanelChroma = chroma(darkPanelColor);
@@ -659,9 +715,18 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
     const darkBorderSat = darkBorderChroma.get('hsl.s');
 
     const darkBackground = chroma.hsl(darkBgHue, darkBgSat, Math.random() * 0.4).hex();
-    const darkPanel = Math.random() < 0.4 ? darkBackground : chroma.hsl(darkPanelHue, darkPanelSat, Math.random() * 0.4).hex();
+    const darkPanel =
+      Math.random() < 0.4
+        ? darkBackground
+        : chroma.hsl(darkPanelHue, darkPanelSat, Math.random() * 0.4).hex();
     const darkTextColor = getAAATextColor(darkPanel);
-    const darkBorderColor = chroma.hsl(darkBorderHue, darkBorderSat === 0 ? 0 : Math.min(1, darkBorderSat + 0.1), 0.2 + Math.random() * 0.15).hex();
+    const darkBorderColor = chroma
+      .hsl(
+        darkBorderHue,
+        darkBorderSat === 0 ? 0 : Math.min(1, darkBorderSat + 0.1),
+        0.2 + Math.random() * 0.15
+      )
+      .hex();
 
     // Generate control colors based on the selected bloom color
     const controlChroma = chroma(selectedBloomColor);
@@ -672,8 +737,12 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
     const maybeButtonGradient = (baseColor: string): ColorValue => {
       if (Math.random() < 0.25) {
         const angle = Math.floor(Math.random() * 360);
-        const color1 = chroma(baseColor).brighten(0.3 + Math.random() * 0.3).hex();
-        const color2 = chroma(baseColor).darken(0.3 + Math.random() * 0.3).hex();
+        const color1 = chroma(baseColor)
+          .brighten(0.3 + Math.random() * 0.3)
+          .hex();
+        const color2 = chroma(baseColor)
+          .darken(0.3 + Math.random() * 0.3)
+          .hex();
         return {
           type: 'gradient',
           value: {
@@ -690,24 +759,42 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
     };
 
     // Light mode controls
-    const lightButtonBgColor = chroma.hsl(controlHue, Math.min(1, controlSat + 0.1), 0.5 + Math.random() * 0.2).hex();
+    const lightButtonBgColor = chroma
+      .hsl(controlHue, Math.min(1, controlSat + 0.1), 0.5 + Math.random() * 0.2)
+      .hex();
     const lightButtonBg = maybeButtonGradient(lightButtonBgColor);
     const lightButtonText = getAAATextColor(lightButtonBgColor);
-    const lightButtonBorder = Math.random() < 0.3
-      ? lightButtonBgColor
-      : chroma(lightButtonBgColor).darken(0.5 + Math.random() * 0.5).hex();
-    const lightLinkColor = chroma.hsl(controlHue, Math.min(1, controlSat + 0.2), 0.35 + Math.random() * 0.15).hex();
-    const lightSelectionColor = chroma.hsl(controlHue, Math.min(1, controlSat + 0.1), 0.70 + Math.random() * 0.15).hex();
+    const lightButtonBorder =
+      Math.random() < 0.3
+        ? lightButtonBgColor
+        : chroma(lightButtonBgColor)
+            .darken(0.5 + Math.random() * 0.5)
+            .hex();
+    const lightLinkColor = chroma
+      .hsl(controlHue, Math.min(1, controlSat + 0.2), 0.35 + Math.random() * 0.15)
+      .hex();
+    const lightSelectionColor = chroma
+      .hsl(controlHue, Math.min(1, controlSat + 0.1), 0.7 + Math.random() * 0.15)
+      .hex();
 
     // Dark mode controls
-    const darkButtonBgColor = chroma.hsl(controlHue, Math.min(1, controlSat + 0.1), 0.4 + Math.random() * 0.2).hex();
+    const darkButtonBgColor = chroma
+      .hsl(controlHue, Math.min(1, controlSat + 0.1), 0.4 + Math.random() * 0.2)
+      .hex();
     const darkButtonBg = maybeButtonGradient(darkButtonBgColor);
     const darkButtonText = getAAATextColor(darkButtonBgColor);
-    const darkButtonBorder = Math.random() < 0.3
-      ? darkButtonBgColor
-      : chroma(darkButtonBgColor).brighten(0.5 + Math.random() * 0.5).hex();
-    const darkLinkColor = chroma.hsl(controlHue, Math.min(1, controlSat + 0.2), 0.55 + Math.random() * 0.15).hex();
-    const darkSelectionColor = chroma.hsl(controlHue, Math.min(1, controlSat + 0.1), 0.45 + Math.random() * 0.15).hex();
+    const darkButtonBorder =
+      Math.random() < 0.3
+        ? darkButtonBgColor
+        : chroma(darkButtonBgColor)
+            .brighten(0.5 + Math.random() * 0.5)
+            .hex();
+    const darkLinkColor = chroma
+      .hsl(controlHue, Math.min(1, controlSat + 0.2), 0.55 + Math.random() * 0.15)
+      .hex();
+    const darkSelectionColor = chroma
+      .hsl(controlHue, Math.min(1, controlSat + 0.1), 0.45 + Math.random() * 0.15)
+      .hex();
 
     // Apply palette and control COLORS only (no styling changes)
     if (updateBothModesPalette) {
@@ -752,37 +839,40 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
     } else {
       // Update only active mode
       const activeMode = formData.activeMode;
-      const paletteData = activeMode === 'light' ? {
-        primaryColor: updateColorValue(formData.light.primaryColor, shuffled[0]),
-        secondaryColor: updateColorValue(formData.light.secondaryColor, shuffled[1]),
-        tertiaryColor: updateColorValue(formData.light.tertiaryColor, shuffled[2]),
-        quaternaryColor: updateColorValue(formData.light.quaternaryColor, shuffled[3]),
-        bloomBorderColor,
-        backgroundColor: lightBackground,
-        panelColor: lightPanel,
-        textColor: lightTextColor,
-        borderColor: lightBorderColor,
-        buttonBackgroundColor: lightButtonBg,
-        buttonTextColor: lightButtonText,
-        buttonBorderColor: lightButtonBorder,
-        linkColor: lightLinkColor,
-        selectionColor: lightSelectionColor,
-      } : {
-        primaryColor: updateColorValue(formData.dark.primaryColor, shuffled[0]),
-        secondaryColor: updateColorValue(formData.dark.secondaryColor, shuffled[1]),
-        tertiaryColor: updateColorValue(formData.dark.tertiaryColor, shuffled[2]),
-        quaternaryColor: updateColorValue(formData.dark.quaternaryColor, shuffled[3]),
-        bloomBorderColor,
-        backgroundColor: darkBackground,
-        panelColor: darkPanel,
-        textColor: darkTextColor,
-        borderColor: darkBorderColor,
-        buttonBackgroundColor: darkButtonBg,
-        buttonTextColor: darkButtonText,
-        buttonBorderColor: darkButtonBorder,
-        linkColor: darkLinkColor,
-        selectionColor: darkSelectionColor,
-      };
+      const paletteData =
+        activeMode === 'light'
+          ? {
+              primaryColor: updateColorValue(formData.light.primaryColor, shuffled[0]),
+              secondaryColor: updateColorValue(formData.light.secondaryColor, shuffled[1]),
+              tertiaryColor: updateColorValue(formData.light.tertiaryColor, shuffled[2]),
+              quaternaryColor: updateColorValue(formData.light.quaternaryColor, shuffled[3]),
+              bloomBorderColor,
+              backgroundColor: lightBackground,
+              panelColor: lightPanel,
+              textColor: lightTextColor,
+              borderColor: lightBorderColor,
+              buttonBackgroundColor: lightButtonBg,
+              buttonTextColor: lightButtonText,
+              buttonBorderColor: lightButtonBorder,
+              linkColor: lightLinkColor,
+              selectionColor: lightSelectionColor,
+            }
+          : {
+              primaryColor: updateColorValue(formData.dark.primaryColor, shuffled[0]),
+              secondaryColor: updateColorValue(formData.dark.secondaryColor, shuffled[1]),
+              tertiaryColor: updateColorValue(formData.dark.tertiaryColor, shuffled[2]),
+              quaternaryColor: updateColorValue(formData.dark.quaternaryColor, shuffled[3]),
+              bloomBorderColor,
+              backgroundColor: darkBackground,
+              panelColor: darkPanel,
+              textColor: darkTextColor,
+              borderColor: darkBorderColor,
+              buttonBackgroundColor: darkButtonBg,
+              buttonTextColor: darkButtonText,
+              buttonBorderColor: darkButtonBorder,
+              linkColor: darkLinkColor,
+              selectionColor: darkSelectionColor,
+            };
 
       setFormData((prev) => ({
         ...prev,
@@ -819,7 +909,21 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
       setBaseLightness(randomLight);
 
       // Randomly select a color harmony type
-      const harmonyTypes: Array<'monochromatic' | 'complementary' | 'analogous' | 'triadic' | 'split-complementary' | 'random'> = ['monochromatic', 'complementary', 'analogous', 'triadic', 'split-complementary', 'random'];
+      const harmonyTypes: Array<
+        | 'monochromatic'
+        | 'complementary'
+        | 'analogous'
+        | 'triadic'
+        | 'split-complementary'
+        | 'random'
+      > = [
+        'monochromatic',
+        'complementary',
+        'analogous',
+        'triadic',
+        'split-complementary',
+        'random',
+      ];
       const randomHarmony = harmonyTypes[Math.floor(Math.random() * harmonyTypes.length)];
       setSelectedHarmony(randomHarmony);
     }
@@ -829,7 +933,11 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
   };
 
   // Helper to clone a ColorValue with a new ID (for duplicating between light/dark modes)
-  const cloneColorValueWithNewId = (color: ColorValue, mode: 'light' | 'dark', index: number): ColorValue => {
+  const cloneColorValueWithNewId = (
+    color: ColorValue,
+    mode: 'light' | 'dark',
+    index: number
+  ): ColorValue => {
     if (color.type === 'gradient') {
       return {
         type: 'gradient',
@@ -864,14 +972,22 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
       : [...activeBloomColors].sort(() => Math.random() - 0.5);
 
     // Helper to maybe create a gradient (25% chance)
-    const maybeGradient = (baseColor: string, index: number, mode: 'light' | 'dark'): ColorValue => {
+    const maybeGradient = (
+      baseColor: string,
+      index: number,
+      mode: 'light' | 'dark'
+    ): ColorValue => {
       if (Math.random() < 0.25) {
         // Create a gradient with 2 stops
         const angle = Math.floor(Math.random() * 360);
 
         // Vary the base color slightly for gradient stops
-        const color1 = chroma(baseColor).brighten(0.3 + Math.random() * 0.3).hex();
-        const color2 = chroma(baseColor).darken(0.3 + Math.random() * 0.3).hex();
+        const color1 = chroma(baseColor)
+          .brighten(0.3 + Math.random() * 0.3)
+          .hex();
+        const color2 = chroma(baseColor)
+          .darken(0.3 + Math.random() * 0.3)
+          .hex();
 
         return {
           type: 'gradient',
@@ -975,14 +1091,15 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
    * Handle clicking a palette preview color to edit it
    */
   const handlePaletteColorClick = (index: number) => {
-    const colors = previewPalette.length > 0
-      ? previewPalette
-      : [
-          getBloomColor(formData[formData.activeMode].primaryColor),
-          getBloomColor(formData[formData.activeMode].secondaryColor),
-          getBloomColor(formData[formData.activeMode].tertiaryColor),
-          getBloomColor(formData[formData.activeMode].quaternaryColor),
-        ];
+    const colors =
+      previewPalette.length > 0
+        ? previewPalette
+        : [
+            getBloomColor(formData[formData.activeMode].primaryColor),
+            getBloomColor(formData[formData.activeMode].secondaryColor),
+            getBloomColor(formData[formData.activeMode].tertiaryColor),
+            getBloomColor(formData[formData.activeMode].quaternaryColor),
+          ];
     setEditingPaletteIndex(index);
     setEditingPaletteColor(colors[index]);
   };
@@ -1000,14 +1117,15 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
     }
 
     // Update preview palette
-    const colors = previewPalette.length > 0
-      ? [...previewPalette]
-      : [
-          getBloomColor(formData[formData.activeMode].primaryColor),
-          getBloomColor(formData[formData.activeMode].secondaryColor),
-          getBloomColor(formData[formData.activeMode].tertiaryColor),
-          getBloomColor(formData[formData.activeMode].quaternaryColor),
-        ];
+    const colors =
+      previewPalette.length > 0
+        ? [...previewPalette]
+        : [
+            getBloomColor(formData[formData.activeMode].primaryColor),
+            getBloomColor(formData[formData.activeMode].secondaryColor),
+            getBloomColor(formData[formData.activeMode].tertiaryColor),
+            getBloomColor(formData[formData.activeMode].quaternaryColor),
+          ];
 
     colors[editingPaletteIndex] = editingPaletteColor;
     setPreviewPalette(colors);
@@ -1038,18 +1156,24 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
     // Capitalize first letter of each word
     const title = randomTitle
       .split(' ')
-      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
       .join(' ');
 
     // Generate weird but readable description (nonsensical sentence)
     const descriptionPatterns = [
-      () => `${faker.word.adjective()} ${faker.word.noun()} ${faker.word.verb()} ${faker.word.adverb()} ${faker.word.preposition()} ${faker.word.noun()}`,
-      () => `${faker.word.verb()} the ${faker.word.adjective()} ${faker.word.noun()} ${faker.word.preposition()} ${faker.word.noun()}`,
-      () => `${faker.word.adjective()} ${faker.word.noun()} and ${faker.word.adjective()} ${faker.word.noun()} ${faker.word.verb()} together`,
-      () => `where ${faker.word.noun()} meets ${faker.word.noun()} in ${faker.word.adjective()} harmony`,
-      () => `${faker.word.adverb()} ${faker.word.verb()} through ${faker.word.adjective()} ${faker.word.noun()}`,
+      () =>
+        `${faker.word.adjective()} ${faker.word.noun()} ${faker.word.verb()} ${faker.word.adverb()} ${faker.word.preposition()} ${faker.word.noun()}`,
+      () =>
+        `${faker.word.verb()} the ${faker.word.adjective()} ${faker.word.noun()} ${faker.word.preposition()} ${faker.word.noun()}`,
+      () =>
+        `${faker.word.adjective()} ${faker.word.noun()} and ${faker.word.adjective()} ${faker.word.noun()} ${faker.word.verb()} together`,
+      () =>
+        `where ${faker.word.noun()} meets ${faker.word.noun()} in ${faker.word.adjective()} harmony`,
+      () =>
+        `${faker.word.adverb()} ${faker.word.verb()} through ${faker.word.adjective()} ${faker.word.noun()}`,
     ];
-    const randomDescription = descriptionPatterns[Math.floor(Math.random() * descriptionPatterns.length)]();
+    const randomDescription =
+      descriptionPatterns[Math.floor(Math.random() * descriptionPatterns.length)]();
 
     // Capitalize first letter
     const description = randomDescription.charAt(0).toUpperCase() + randomDescription.slice(1);
@@ -1089,9 +1213,14 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
 
     // Generate LIGHT mode (using light mode's palette)
     // Randomly pick different colors for background/panel/border (30% chance each)
-    const lightBgColor = Math.random() < 0.3 ? lightBloomColors[Math.floor(Math.random() * 4)] : selectedLightBloomColor;
-    const lightPanelColor = Math.random() < 0.3 ? lightBloomColors[Math.floor(Math.random() * 4)] : lightBgColor;
-    const lightBorderColorBase = Math.random() < 0.3 ? lightBloomColors[Math.floor(Math.random() * 4)] : lightPanelColor;
+    const lightBgColor =
+      Math.random() < 0.3
+        ? lightBloomColors[Math.floor(Math.random() * 4)]
+        : selectedLightBloomColor;
+    const lightPanelColor =
+      Math.random() < 0.3 ? lightBloomColors[Math.floor(Math.random() * 4)] : lightBgColor;
+    const lightBorderColorBase =
+      Math.random() < 0.3 ? lightBloomColors[Math.floor(Math.random() * 4)] : lightPanelColor;
 
     const lightBgChroma = chroma(lightBgColor);
     const lightPanelChroma = chroma(lightPanelColor);
@@ -1105,15 +1234,27 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
     const lightBorderSat = lightBorderChroma.get('hsl.s');
 
     const lightBackground = chroma.hsl(lightBgHue, lightBgSat, 0.6 + Math.random() * 0.4).hex();
-    const lightPanel = Math.random() < 0.4 ? lightBackground : chroma.hsl(lightPanelHue, lightPanelSat, 0.6 + Math.random() * 0.4).hex();
+    const lightPanel =
+      Math.random() < 0.4
+        ? lightBackground
+        : chroma.hsl(lightPanelHue, lightPanelSat, 0.6 + Math.random() * 0.4).hex();
     const lightTextColor = getAAATextColor(lightPanel);
-    const lightBorderColor = chroma.hsl(lightBorderHue, lightBorderSat === 0 ? 0 : Math.min(1, lightBorderSat + 0.1), 0.76 + Math.random() * 0.08).hex();
+    const lightBorderColor = chroma
+      .hsl(
+        lightBorderHue,
+        lightBorderSat === 0 ? 0 : Math.min(1, lightBorderSat + 0.1),
+        0.76 + Math.random() * 0.08
+      )
+      .hex();
 
     // Generate DARK mode (using dark mode's palette)
     // Randomly pick different colors for background/panel/border (30% chance each)
-    const darkBgColor = Math.random() < 0.3 ? darkBloomColors[Math.floor(Math.random() * 4)] : selectedDarkBloomColor;
-    const darkPanelColor = Math.random() < 0.3 ? darkBloomColors[Math.floor(Math.random() * 4)] : darkBgColor;
-    const darkBorderColorBase = Math.random() < 0.3 ? darkBloomColors[Math.floor(Math.random() * 4)] : darkPanelColor;
+    const darkBgColor =
+      Math.random() < 0.3 ? darkBloomColors[Math.floor(Math.random() * 4)] : selectedDarkBloomColor;
+    const darkPanelColor =
+      Math.random() < 0.3 ? darkBloomColors[Math.floor(Math.random() * 4)] : darkBgColor;
+    const darkBorderColorBase =
+      Math.random() < 0.3 ? darkBloomColors[Math.floor(Math.random() * 4)] : darkPanelColor;
 
     const darkBgChroma = chroma(darkBgColor);
     const darkPanelChroma = chroma(darkPanelColor);
@@ -1127,9 +1268,18 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
     const darkBorderSat = darkBorderChroma.get('hsl.s');
 
     const darkBackground = chroma.hsl(darkBgHue, darkBgSat, Math.random() * 0.4).hex();
-    const darkPanel = Math.random() < 0.4 ? darkBackground : chroma.hsl(darkPanelHue, darkPanelSat, Math.random() * 0.4).hex();
+    const darkPanel =
+      Math.random() < 0.4
+        ? darkBackground
+        : chroma.hsl(darkPanelHue, darkPanelSat, Math.random() * 0.4).hex();
     const darkTextColor = getAAATextColor(darkPanel);
-    const darkBorderColor = chroma.hsl(darkBorderHue, darkBorderSat === 0 ? 0 : Math.min(1, darkBorderSat + 0.1), 0.16 + Math.random() * 0.08).hex();
+    const darkBorderColor = chroma
+      .hsl(
+        darkBorderHue,
+        darkBorderSat === 0 ? 0 : Math.min(1, darkBorderSat + 0.1),
+        0.16 + Math.random() * 0.08
+      )
+      .hex();
 
     // Randomize panel shadow (15% chance to enable)
     const panelShadowEnabled = Math.random() < 0.15;
@@ -1137,8 +1287,12 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
     const isPanelCartoonShadow = Math.random() < 0.1; // 10% chance for cartoon shadow
     const panelShadowOffsetX = Math.floor(Math.random() * 11).toString(); // 0-10px
     const panelShadowOffsetY = Math.floor(Math.random() * 11).toString(); // 0-10px
-    const panelShadowBlurRadius = isPanelCartoonShadow ? '0' : Math.floor(Math.random() * 21).toString(); // 0 for cartoon, 0-20px otherwise
-    const panelShadowOpacity = isPanelCartoonShadow ? '0.95' : (0.1 + Math.random() * 0.35).toFixed(2); // 0.95 for cartoon, 0.1-0.45 otherwise
+    const panelShadowBlurRadius = isPanelCartoonShadow
+      ? '0'
+      : Math.floor(Math.random() * 21).toString(); // 0 for cartoon, 0-20px otherwise
+    const panelShadowOpacity = isPanelCartoonShadow
+      ? '0.95'
+      : (0.1 + Math.random() * 0.35).toFixed(2); // 0.95 for cartoon, 0.1-0.45 otherwise
 
     // Update style/content only (NOT controls)
     if (updateBothModesStyle) {
@@ -1183,37 +1337,40 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
     } else {
       // Update only active mode
       const activeMode = formData.activeMode;
-      const styleData = activeMode === 'light' ? {
-        borderWidth,
-        borderRadius,
-        borderStyle: randomBorderStyle,
-        borderColor: lightBorderColor,
-        backgroundColor: lightBackground,
-        panelColor: lightPanel,
-        textColor: lightTextColor,
-        font: randomFont,
-        panelShadowEnabled,
-        panelShadowColor,
-        panelShadowOffsetX,
-        panelShadowOffsetY,
-        panelShadowBlurRadius,
-        panelShadowOpacity,
-      } : {
-        borderWidth,
-        borderRadius,
-        borderStyle: randomBorderStyle,
-        borderColor: darkBorderColor,
-        backgroundColor: darkBackground,
-        panelColor: darkPanel,
-        textColor: darkTextColor,
-        font: randomFont,
-        panelShadowEnabled,
-        panelShadowColor,
-        panelShadowOffsetX,
-        panelShadowOffsetY,
-        panelShadowBlurRadius,
-        panelShadowOpacity,
-      };
+      const styleData =
+        activeMode === 'light'
+          ? {
+              borderWidth,
+              borderRadius,
+              borderStyle: randomBorderStyle,
+              borderColor: lightBorderColor,
+              backgroundColor: lightBackground,
+              panelColor: lightPanel,
+              textColor: lightTextColor,
+              font: randomFont,
+              panelShadowEnabled,
+              panelShadowColor,
+              panelShadowOffsetX,
+              panelShadowOffsetY,
+              panelShadowBlurRadius,
+              panelShadowOpacity,
+            }
+          : {
+              borderWidth,
+              borderRadius,
+              borderStyle: randomBorderStyle,
+              borderColor: darkBorderColor,
+              backgroundColor: darkBackground,
+              panelColor: darkPanel,
+              textColor: darkTextColor,
+              font: randomFont,
+              panelShadowEnabled,
+              panelShadowColor,
+              panelShadowOffsetX,
+              panelShadowOffsetY,
+              panelShadowBlurRadius,
+              panelShadowOpacity,
+            };
 
       setFormData((prev) => ({
         ...prev,
@@ -1258,8 +1415,12 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
       if (Math.random() < 0.25) {
         // Create a gradient with 2 stops
         const angle = Math.floor(Math.random() * 360);
-        const color1 = chroma(baseColor).brighten(0.3 + Math.random() * 0.3).hex();
-        const color2 = chroma(baseColor).darken(0.3 + Math.random() * 0.3).hex();
+        const color1 = chroma(baseColor)
+          .brighten(0.3 + Math.random() * 0.3)
+          .hex();
+        const color2 = chroma(baseColor)
+          .darken(0.3 + Math.random() * 0.3)
+          .hex();
 
         return {
           type: 'gradient',
@@ -1277,24 +1438,42 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
     };
 
     // Generate button colors for LIGHT mode (using light mode's palette)
-    const lightButtonBgColor = chroma.hsl(lightControlHue, Math.min(1, lightControlSat + 0.1), 0.5 + Math.random() * 0.2).hex();
+    const lightButtonBgColor = chroma
+      .hsl(lightControlHue, Math.min(1, lightControlSat + 0.1), 0.5 + Math.random() * 0.2)
+      .hex();
     const lightButtonBg = maybeButtonGradient(lightButtonBgColor);
     const lightButtonText = getAAATextColor(lightButtonBgColor);
-    const lightButtonBorder = Math.random() < 0.3
-      ? lightButtonBgColor
-      : chroma(lightButtonBgColor).darken(0.5 + Math.random() * 0.5).hex();
-    const lightLinkColor = chroma.hsl(lightControlHue, Math.min(1, lightControlSat + 0.2), 0.35 + Math.random() * 0.15).hex();
-    const lightSelectionColor = chroma.hsl(lightControlHue, Math.min(1, lightControlSat + 0.1), 0.70 + Math.random() * 0.15).hex();
+    const lightButtonBorder =
+      Math.random() < 0.3
+        ? lightButtonBgColor
+        : chroma(lightButtonBgColor)
+            .darken(0.5 + Math.random() * 0.5)
+            .hex();
+    const lightLinkColor = chroma
+      .hsl(lightControlHue, Math.min(1, lightControlSat + 0.2), 0.35 + Math.random() * 0.15)
+      .hex();
+    const lightSelectionColor = chroma
+      .hsl(lightControlHue, Math.min(1, lightControlSat + 0.1), 0.7 + Math.random() * 0.15)
+      .hex();
 
     // Generate button colors for DARK mode (using dark mode's palette)
-    const darkButtonBgColor = chroma.hsl(darkControlHue, Math.min(1, darkControlSat + 0.1), 0.4 + Math.random() * 0.2).hex();
+    const darkButtonBgColor = chroma
+      .hsl(darkControlHue, Math.min(1, darkControlSat + 0.1), 0.4 + Math.random() * 0.2)
+      .hex();
     const darkButtonBg = maybeButtonGradient(darkButtonBgColor);
     const darkButtonText = getAAATextColor(darkButtonBgColor);
-    const darkButtonBorder = Math.random() < 0.3
-      ? darkButtonBgColor
-      : chroma(darkButtonBgColor).brighten(0.5 + Math.random() * 0.5).hex();
-    const darkLinkColor = chroma.hsl(darkControlHue, Math.min(1, darkControlSat + 0.2), 0.55 + Math.random() * 0.15).hex();
-    const darkSelectionColor = chroma.hsl(darkControlHue, Math.min(1, darkControlSat + 0.1), 0.45 + Math.random() * 0.15).hex();
+    const darkButtonBorder =
+      Math.random() < 0.3
+        ? darkButtonBgColor
+        : chroma(darkButtonBgColor)
+            .brighten(0.5 + Math.random() * 0.5)
+            .hex();
+    const darkLinkColor = chroma
+      .hsl(darkControlHue, Math.min(1, darkControlSat + 0.2), 0.55 + Math.random() * 0.15)
+      .hex();
+    const darkSelectionColor = chroma
+      .hsl(darkControlHue, Math.min(1, darkControlSat + 0.1), 0.45 + Math.random() * 0.15)
+      .hex();
 
     // Shared button styling
     const buttonBorderWidth = Math.floor(Math.random() * 4).toString();
@@ -1313,8 +1492,12 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
     const isButtonCartoonShadow = Math.random() < 0.1; // 10% chance for cartoon shadow
     const buttonShadowOffsetX = Math.floor(Math.random() * 11).toString(); // 0-10px
     const buttonShadowOffsetY = Math.floor(Math.random() * 11).toString(); // 0-10px
-    const buttonShadowBlurRadius = isButtonCartoonShadow ? '0' : Math.floor(Math.random() * 21).toString(); // 0 for cartoon, 0-20px otherwise
-    const buttonShadowOpacity = isButtonCartoonShadow ? '0.95' : (0.1 + Math.random() * 0.35).toFixed(2); // 0.95 for cartoon, 0.1-0.45 otherwise
+    const buttonShadowBlurRadius = isButtonCartoonShadow
+      ? '0'
+      : Math.floor(Math.random() * 21).toString(); // 0 for cartoon, 0-20px otherwise
+    const buttonShadowOpacity = isButtonCartoonShadow
+      ? '0.95'
+      : (0.1 + Math.random() * 0.35).toFixed(2); // 0.95 for cartoon, 0.1-0.45 otherwise
 
     if (updateBothModesControls) {
       // Update both modes
@@ -1360,39 +1543,42 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
     } else {
       // Update only active mode
       const activeMode = formData.activeMode;
-      const controlData = activeMode === 'light' ? {
-        buttonBackgroundColor: lightButtonBg,
-        buttonTextColor: lightButtonText,
-        buttonBorderColor: lightButtonBorder,
-        buttonBorderWidth,
-        buttonBorderStyle,
-        buttonBorderRadius,
-        buttonShadowEnabled,
-        buttonShadowColor,
-        buttonShadowOffsetX,
-        buttonShadowOffsetY,
-        buttonShadowBlurRadius,
-        buttonShadowOpacity,
-        linkColor: lightLinkColor,
-        linkUnderlineStyle,
-        selectionColor: lightSelectionColor,
-      } : {
-        buttonBackgroundColor: darkButtonBg,
-        buttonTextColor: darkButtonText,
-        buttonBorderColor: darkButtonBorder,
-        buttonBorderWidth,
-        buttonBorderStyle,
-        buttonBorderRadius,
-        buttonShadowEnabled,
-        buttonShadowColor,
-        buttonShadowOffsetX,
-        buttonShadowOffsetY,
-        buttonShadowBlurRadius,
-        buttonShadowOpacity,
-        linkColor: darkLinkColor,
-        linkUnderlineStyle,
-        selectionColor: darkSelectionColor,
-      };
+      const controlData =
+        activeMode === 'light'
+          ? {
+              buttonBackgroundColor: lightButtonBg,
+              buttonTextColor: lightButtonText,
+              buttonBorderColor: lightButtonBorder,
+              buttonBorderWidth,
+              buttonBorderStyle,
+              buttonBorderRadius,
+              buttonShadowEnabled,
+              buttonShadowColor,
+              buttonShadowOffsetX,
+              buttonShadowOffsetY,
+              buttonShadowBlurRadius,
+              buttonShadowOpacity,
+              linkColor: lightLinkColor,
+              linkUnderlineStyle,
+              selectionColor: lightSelectionColor,
+            }
+          : {
+              buttonBackgroundColor: darkButtonBg,
+              buttonTextColor: darkButtonText,
+              buttonBorderColor: darkButtonBorder,
+              buttonBorderWidth,
+              buttonBorderStyle,
+              buttonBorderRadius,
+              buttonShadowEnabled,
+              buttonShadowColor,
+              buttonShadowOffsetX,
+              buttonShadowOffsetY,
+              buttonShadowBlurRadius,
+              buttonShadowOpacity,
+              linkColor: darkLinkColor,
+              linkUnderlineStyle,
+              selectionColor: darkSelectionColor,
+            };
 
       setFormData((prev) => ({
         ...prev,
@@ -1411,7 +1597,13 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
     let randomHue: number;
     let randomSat: number;
     let randomLight: number;
-    let randomHarmony: 'monochromatic' | 'complementary' | 'analogous' | 'triadic' | 'split-complementary' | 'random';
+    let randomHarmony:
+      | 'monochromatic'
+      | 'complementary'
+      | 'analogous'
+      | 'triadic'
+      | 'split-complementary'
+      | 'random';
 
     if (isBlackAndWhite) {
       // Black and white theme - zero saturation
@@ -1425,7 +1617,21 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
       randomSat = 40 + Math.random() * 50;
       randomLight = 30 + Math.random() * 40;
 
-      const harmonyTypes: Array<'monochromatic' | 'complementary' | 'analogous' | 'triadic' | 'split-complementary' | 'random'> = ['monochromatic', 'complementary', 'analogous', 'triadic', 'split-complementary', 'random'];
+      const harmonyTypes: Array<
+        | 'monochromatic'
+        | 'complementary'
+        | 'analogous'
+        | 'triadic'
+        | 'split-complementary'
+        | 'random'
+      > = [
+        'monochromatic',
+        'complementary',
+        'analogous',
+        'triadic',
+        'split-complementary',
+        'random',
+      ];
       randomHarmony = harmonyTypes[Math.floor(Math.random() * harmonyTypes.length)];
     }
 
@@ -1445,9 +1651,12 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
 
     // Generate LIGHT mode UI colors
     // Randomly pick different colors for background/panel/border (30% chance each)
-    const lightBgColor = Math.random() < 0.3 ? shuffled[Math.floor(Math.random() * 4)] : selectedBloomColor;
-    const lightPanelColor = Math.random() < 0.3 ? shuffled[Math.floor(Math.random() * 4)] : lightBgColor;
-    const lightBorderColorBase = Math.random() < 0.3 ? shuffled[Math.floor(Math.random() * 4)] : lightPanelColor;
+    const lightBgColor =
+      Math.random() < 0.3 ? shuffled[Math.floor(Math.random() * 4)] : selectedBloomColor;
+    const lightPanelColor =
+      Math.random() < 0.3 ? shuffled[Math.floor(Math.random() * 4)] : lightBgColor;
+    const lightBorderColorBase =
+      Math.random() < 0.3 ? shuffled[Math.floor(Math.random() * 4)] : lightPanelColor;
 
     const lightBgChroma = chroma(lightBgColor);
     const lightPanelChroma = chroma(lightPanelColor);
@@ -1461,15 +1670,27 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
     const lightBorderSat = lightBorderChroma.get('hsl.s');
 
     const lightBackground = chroma.hsl(lightBgHue, lightBgSat, 0.6 + Math.random() * 0.4).hex();
-    const lightPanel = Math.random() < 0.4 ? lightBackground : chroma.hsl(lightPanelHue, lightPanelSat, 0.6 + Math.random() * 0.4).hex();
+    const lightPanel =
+      Math.random() < 0.4
+        ? lightBackground
+        : chroma.hsl(lightPanelHue, lightPanelSat, 0.6 + Math.random() * 0.4).hex();
     const lightTextColor = getAAATextColor(lightPanel);
-    const lightBorderColor = chroma.hsl(lightBorderHue, lightBorderSat === 0 ? 0 : Math.min(1, lightBorderSat + 0.1), 0.75 + Math.random() * 0.15).hex();
+    const lightBorderColor = chroma
+      .hsl(
+        lightBorderHue,
+        lightBorderSat === 0 ? 0 : Math.min(1, lightBorderSat + 0.1),
+        0.75 + Math.random() * 0.15
+      )
+      .hex();
 
     // Generate DARK mode UI colors
     // Randomly pick different colors for background/panel/border (30% chance each)
-    const darkBgColor = Math.random() < 0.3 ? shuffled[Math.floor(Math.random() * 4)] : selectedBloomColor;
-    const darkPanelColor = Math.random() < 0.3 ? shuffled[Math.floor(Math.random() * 4)] : darkBgColor;
-    const darkBorderColorBase = Math.random() < 0.3 ? shuffled[Math.floor(Math.random() * 4)] : darkPanelColor;
+    const darkBgColor =
+      Math.random() < 0.3 ? shuffled[Math.floor(Math.random() * 4)] : selectedBloomColor;
+    const darkPanelColor =
+      Math.random() < 0.3 ? shuffled[Math.floor(Math.random() * 4)] : darkBgColor;
+    const darkBorderColorBase =
+      Math.random() < 0.3 ? shuffled[Math.floor(Math.random() * 4)] : darkPanelColor;
 
     const darkBgChroma = chroma(darkBgColor);
     const darkPanelChroma = chroma(darkPanelColor);
@@ -1483,9 +1704,18 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
     const darkBorderSat = darkBorderChroma.get('hsl.s');
 
     const darkBackground = chroma.hsl(darkBgHue, darkBgSat, Math.random() * 0.4).hex();
-    const darkPanel = Math.random() < 0.4 ? darkBackground : chroma.hsl(darkPanelHue, darkPanelSat, Math.random() * 0.4).hex();
+    const darkPanel =
+      Math.random() < 0.4
+        ? darkBackground
+        : chroma.hsl(darkPanelHue, darkPanelSat, Math.random() * 0.4).hex();
     const darkTextColor = getAAATextColor(darkPanel);
-    const darkBorderColor = chroma.hsl(darkBorderHue, darkBorderSat === 0 ? 0 : Math.min(1, darkBorderSat + 0.1), 0.2 + Math.random() * 0.15).hex();
+    const darkBorderColor = chroma
+      .hsl(
+        darkBorderHue,
+        darkBorderSat === 0 ? 0 : Math.min(1, darkBorderSat + 0.1),
+        0.2 + Math.random() * 0.15
+      )
+      .hex();
 
     // Generate bloom border (same for both modes)
     let bloomBorderColor: string;
@@ -1504,18 +1734,30 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
     const isBloomCartoonShadow = Math.random() < 0.2;
     const bloomShadowOffsetX = Math.floor(Math.random() * 13).toString(); // 0-12px
     const bloomShadowOffsetY = Math.floor(Math.random() * 13).toString(); // 0-12px
-    const bloomShadowBlurRadius = isBloomCartoonShadow ? '0' : Math.floor(Math.random() * 21).toString(); // 0 for cartoon, 0-20px otherwise
-    const bloomShadowOpacity = isBloomCartoonShadow ? '0.95' : (0.2 + Math.random() * 0.5).toFixed(2); // 0.95 for cartoon, 0.2-0.7 otherwise (more visible)
+    const bloomShadowBlurRadius = isBloomCartoonShadow
+      ? '0'
+      : Math.floor(Math.random() * 21).toString(); // 0 for cartoon, 0-20px otherwise
+    const bloomShadowOpacity = isBloomCartoonShadow
+      ? '0.95'
+      : (0.2 + Math.random() * 0.5).toFixed(2); // 0.95 for cartoon, 0.2-0.7 otherwise (more visible)
 
     // Helper to maybe create a gradient (25% chance)
-    const maybeGradient = (baseColor: string, index: number, mode: 'light' | 'dark'): ColorValue => {
+    const maybeGradient = (
+      baseColor: string,
+      index: number,
+      mode: 'light' | 'dark'
+    ): ColorValue => {
       if (Math.random() < 0.25) {
         // Create a gradient with 2 stops
         const angle = Math.floor(Math.random() * 360);
 
         // Vary the base color slightly for gradient stops
-        const color1 = chroma(baseColor).brighten(0.3 + Math.random() * 0.3).hex();
-        const color2 = chroma(baseColor).darken(0.3 + Math.random() * 0.3).hex();
+        const color1 = chroma(baseColor)
+          .brighten(0.3 + Math.random() * 0.3)
+          .hex();
+        const color2 = chroma(baseColor)
+          .darken(0.3 + Math.random() * 0.3)
+          .hex();
 
         return {
           type: 'gradient',
@@ -1542,17 +1784,23 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
     const randomTitle = titlePatterns[Math.floor(Math.random() * titlePatterns.length)]();
     const title = randomTitle
       .split(' ')
-      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
       .join(' ');
 
     const descriptionPatterns = [
-      () => `${faker.word.adjective()} ${faker.word.noun()} ${faker.word.verb()} ${faker.word.adverb()} ${faker.word.preposition()} ${faker.word.noun()}`,
-      () => `${faker.word.verb()} the ${faker.word.adjective()} ${faker.word.noun()} ${faker.word.preposition()} ${faker.word.noun()}`,
-      () => `${faker.word.adjective()} ${faker.word.noun()} and ${faker.word.adjective()} ${faker.word.noun()} ${faker.word.verb()} together`,
-      () => `where ${faker.word.noun()} meets ${faker.word.noun()} in ${faker.word.adjective()} harmony`,
-      () => `${faker.word.adverb()} ${faker.word.verb()} through ${faker.word.adjective()} ${faker.word.noun()}`,
+      () =>
+        `${faker.word.adjective()} ${faker.word.noun()} ${faker.word.verb()} ${faker.word.adverb()} ${faker.word.preposition()} ${faker.word.noun()}`,
+      () =>
+        `${faker.word.verb()} the ${faker.word.adjective()} ${faker.word.noun()} ${faker.word.preposition()} ${faker.word.noun()}`,
+      () =>
+        `${faker.word.adjective()} ${faker.word.noun()} and ${faker.word.adjective()} ${faker.word.noun()} ${faker.word.verb()} together`,
+      () =>
+        `where ${faker.word.noun()} meets ${faker.word.noun()} in ${faker.word.adjective()} harmony`,
+      () =>
+        `${faker.word.adverb()} ${faker.word.verb()} through ${faker.word.adjective()} ${faker.word.noun()}`,
     ];
-    const randomDescription = descriptionPatterns[Math.floor(Math.random() * descriptionPatterns.length)]();
+    const randomDescription =
+      descriptionPatterns[Math.floor(Math.random() * descriptionPatterns.length)]();
     const description = randomDescription.charAt(0).toUpperCase() + randomDescription.slice(1);
 
     // Shared styling (same for both modes)
@@ -1605,8 +1853,12 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
     const maybeButtonGradient = (baseColor: string): ColorValue => {
       if (Math.random() < 0.25) {
         const angle = Math.floor(Math.random() * 360);
-        const color1 = chroma(baseColor).brighten(0.3 + Math.random() * 0.3).hex();
-        const color2 = chroma(baseColor).darken(0.3 + Math.random() * 0.3).hex();
+        const color1 = chroma(baseColor)
+          .brighten(0.3 + Math.random() * 0.3)
+          .hex();
+        const color2 = chroma(baseColor)
+          .darken(0.3 + Math.random() * 0.3)
+          .hex();
         return {
           type: 'gradient',
           value: {
@@ -1622,27 +1874,46 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
       return { type: 'solid', value: baseColor };
     };
 
-    const lightButtonBgColor = chroma.hsl(controlHue, Math.min(1, controlSat + 0.1), 0.5 + Math.random() * 0.2).hex();
+    const lightButtonBgColor = chroma
+      .hsl(controlHue, Math.min(1, controlSat + 0.1), 0.5 + Math.random() * 0.2)
+      .hex();
     const lightButtonBg = maybeButtonGradient(lightButtonBgColor);
     const lightButtonText = getAAATextColor(lightButtonBgColor);
-    const lightButtonBorder = Math.random() < 0.3
-      ? lightButtonBgColor
-      : chroma(lightButtonBgColor).darken(0.5 + Math.random() * 0.5).hex();
-    const lightLinkColor = chroma.hsl(controlHue, Math.min(1, controlSat + 0.2), 0.35 + Math.random() * 0.15).hex();
-    const lightSelectionColor = chroma.hsl(controlHue, Math.min(1, controlSat + 0.1), 0.70 + Math.random() * 0.15).hex();
+    const lightButtonBorder =
+      Math.random() < 0.3
+        ? lightButtonBgColor
+        : chroma(lightButtonBgColor)
+            .darken(0.5 + Math.random() * 0.5)
+            .hex();
+    const lightLinkColor = chroma
+      .hsl(controlHue, Math.min(1, controlSat + 0.2), 0.35 + Math.random() * 0.15)
+      .hex();
+    const lightSelectionColor = chroma
+      .hsl(controlHue, Math.min(1, controlSat + 0.1), 0.7 + Math.random() * 0.15)
+      .hex();
 
-    const darkButtonBgColor = chroma.hsl(controlHue, Math.min(1, controlSat + 0.1), 0.4 + Math.random() * 0.2).hex();
+    const darkButtonBgColor = chroma
+      .hsl(controlHue, Math.min(1, controlSat + 0.1), 0.4 + Math.random() * 0.2)
+      .hex();
     const darkButtonBg = maybeButtonGradient(darkButtonBgColor);
     const darkButtonText = getAAATextColor(darkButtonBgColor);
-    const darkButtonBorder = Math.random() < 0.3
-      ? darkButtonBgColor
-      : chroma(darkButtonBgColor).brighten(0.5 + Math.random() * 0.5).hex();
-    const darkLinkColor = chroma.hsl(controlHue, Math.min(1, controlSat + 0.2), 0.55 + Math.random() * 0.15).hex();
-    const darkSelectionColor = chroma.hsl(controlHue, Math.min(1, controlSat + 0.1), 0.45 + Math.random() * 0.15).hex();
+    const darkButtonBorder =
+      Math.random() < 0.3
+        ? darkButtonBgColor
+        : chroma(darkButtonBgColor)
+            .brighten(0.5 + Math.random() * 0.5)
+            .hex();
+    const darkLinkColor = chroma
+      .hsl(controlHue, Math.min(1, controlSat + 0.2), 0.55 + Math.random() * 0.15)
+      .hex();
+    const darkSelectionColor = chroma
+      .hsl(controlHue, Math.min(1, controlSat + 0.1), 0.45 + Math.random() * 0.15)
+      .hex();
 
     const buttonBorderWidth = Math.floor(Math.random() * 4).toString();
     const buttonBorderStyles: Array<'solid' | 'dashed' | 'dotted'> = ['solid', 'dashed', 'dotted'];
-    const buttonBorderStyle = buttonBorderStyles[Math.floor(Math.random() * buttonBorderStyles.length)];
+    const buttonBorderStyle =
+      buttonBorderStyles[Math.floor(Math.random() * buttonBorderStyles.length)];
     const buttonBorderRadius = Math.floor(Math.random() * 51).toString();
     const underlineStyles: Array<'none' | 'underline' | 'always'> = ['none', 'underline', 'always'];
     const linkUnderlineStyle = underlineStyles[Math.floor(Math.random() * underlineStyles.length)];
@@ -1653,8 +1924,12 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
     const isPanelCartoonShadow = Math.random() < 0.1; // 10% chance for cartoon shadow
     const panelShadowOffsetX = Math.floor(Math.random() * 11).toString(); // 0-10px
     const panelShadowOffsetY = Math.floor(Math.random() * 11).toString(); // 0-10px
-    const panelShadowBlurRadius = isPanelCartoonShadow ? '0' : Math.floor(Math.random() * 21).toString(); // 0 for cartoon, 0-20px otherwise
-    const panelShadowOpacity = isPanelCartoonShadow ? '0.95' : (0.1 + Math.random() * 0.35).toFixed(2); // 0.95 for cartoon, 0.1-0.45 otherwise
+    const panelShadowBlurRadius = isPanelCartoonShadow
+      ? '0'
+      : Math.floor(Math.random() * 21).toString(); // 0 for cartoon, 0-20px otherwise
+    const panelShadowOpacity = isPanelCartoonShadow
+      ? '0.95'
+      : (0.1 + Math.random() * 0.35).toFixed(2); // 0.95 for cartoon, 0.1-0.45 otherwise
 
     // Randomize button shadow (25% chance to enable)
     const buttonShadowEnabled = Math.random() < 0.25;
@@ -1662,8 +1937,12 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
     const isButtonCartoonShadow = Math.random() < 0.1; // 10% chance for cartoon shadow
     const buttonShadowOffsetX = Math.floor(Math.random() * 11).toString(); // 0-10px
     const buttonShadowOffsetY = Math.floor(Math.random() * 11).toString(); // 0-10px
-    const buttonShadowBlurRadius = isButtonCartoonShadow ? '0' : Math.floor(Math.random() * 21).toString(); // 0 for cartoon, 0-20px otherwise
-    const buttonShadowOpacity = isButtonCartoonShadow ? '0.95' : (0.1 + Math.random() * 0.35).toFixed(2); // 0.95 for cartoon, 0.1-0.45 otherwise
+    const buttonShadowBlurRadius = isButtonCartoonShadow
+      ? '0'
+      : Math.floor(Math.random() * 21).toString(); // 0 for cartoon, 0-20px otherwise
+    const buttonShadowOpacity = isButtonCartoonShadow
+      ? '0.95'
+      : (0.1 + Math.random() * 0.35).toFixed(2); // 0.95 for cartoon, 0.1-0.45 otherwise
 
     setFormData((prev) => ({
       ...prev,
@@ -1745,9 +2024,17 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
             Preview - {formData.activeMode === 'light' ? 'Light' : 'Dark'} Mode
           </Text>
 
-          <AnimatedPreviewContainer formData={formData} mode={formData.activeMode} transitionDuration={previewTransitionDuration}>
+          <AnimatedPreviewContainer
+            formData={formData}
+            mode={formData.activeMode}
+            transitionDuration={previewTransitionDuration}
+          >
             {/* Wrap preview content with PreviewThemeProvider */}
-            <PreviewThemeProvider formData={formData} mode={formData.activeMode} transitionDuration={previewTransitionDuration}>
+            <PreviewThemeProvider
+              formData={formData}
+              mode={formData.activeMode}
+              transitionDuration={previewTransitionDuration}
+            >
               {/* CruxBloom */}
               <View style={styles.bloomContainer}>
                 <CruxBloom
@@ -1771,34 +2058,33 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
                 </ThemedText>
 
                 <ThemedText style={styles.sampleText}>
-                  Crux Garden models how ideas manifest and develop over time. At its core is the Crux, an atomic unit of thought which is captured as digital content: text, media, code, anything.
+                  Crux Garden models how ideas manifest and develop over time. At its core is the
+                  Crux, an atomic unit of thought which is captured as digital content: text, media,
+                  code, anything.
                 </ThemedText>
 
                 <ThemedText style={styles.sampleText}>
-                  Cruxes connect with each other through four dimensions: GATES (origins), GARDENS (consequences), GROWTH (evolution), and GRAFTS (associations).
+                  Cruxes connect with each other through four dimensions: GATES (origins), GARDENS
+                  (consequences), GROWTH (evolution), and GRAFTS (associations).
                 </ThemedText>
 
                 <ThemedText style={styles.sampleText}>
-                  These simple building blocks provide a foundation that is able to realize any kind of connected information: digital gardens, personal knowledge bases, home pages, blogs, interactive stories, product roadmaps, research networks, anything.
+                  These simple building blocks provide a foundation that is able to realize any kind
+                  of connected information: digital gardens, personal knowledge bases, home pages,
+                  blogs, interactive stories, product roadmaps, research networks, anything.
                 </ThemedText>
 
                 <ThemedText style={styles.sampleText}>
-                  To understand the goals and ambitions of Crux Garden, explore the history of the Digital Garden movement and read Vannevar Bush's 1945 essay As We May Think.
+                  To understand the goals and ambitions of Crux Garden, explore the history of the
+                  Digital Garden movement and read Vannevar Bush's 1945 essay As We May Think.
                 </ThemedText>
 
-                <ThemedText style={styles.sampleText}>
-                  Will Stepp, October 2025
-                </ThemedText>
+                <ThemedText style={styles.sampleText}>Will Stepp, October 2025</ThemedText>
 
                 {/* Sample Button and Link - Centered */}
                 <View style={styles.sampleControlsContainer}>
-                  <ThemedButton
-                    title="The Digital Garden Movement"
-                    onPress={() => {}}
-                  />
-                  <Link onPress={() => {}}>
-                    As We May Think, 1945 - Vannevar Bush
-                  </Link>
+                  <ThemedButton title="The Digital Garden Movement" onPress={() => {}} />
+                  <Link onPress={() => {}}>As We May Think, 1945 - Vannevar Bush</Link>
                 </View>
               </Panel>
             </PreviewThemeProvider>
@@ -1810,1156 +2096,1291 @@ export const ThemeBuilder: React.FC<ThemeBuilderProps> = ({
       <ScrollView style={styles.rightPanel} contentContainerStyle={styles.controlsContent}>
         <Text style={styles.title}>Theme Builder</Text>
 
-      {/* Basic Information */}
-      <View style={styles.section}>
-        <View style={styles.sectionHeaderRow}>
-          <TouchableOpacity
-            style={styles.sectionHeader}
-            onPress={() => toggleSection('details')}
-          >
-            <Text style={styles.sectionTitle}>Details</Text>
-            <Text style={styles.sectionToggle}>{expandedSections.details ? '−' : '+'}</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.sectionRandomize}
-            onPress={() => withTransition(randomizeDetails)}
-          >
-            <Text style={styles.sectionRandomizeText}>⟳</Text>
-          </TouchableOpacity>
-        </View>
-
-        {expandedSections.details && (
-        <>
-        <View style={styles.field}>
-          <Text style={styles.label}>
-            Title <Text style={styles.required}>*</Text>
-          </Text>
-          <TextInput
-            style={styles.input}
-            value={formData.title}
-            onChangeText={(value) => handleFieldChange('title', value)}
-            placeholder="e.g., Ocean Breeze"
-            placeholderTextColor="#666"
-          />
-        </View>
-
-        <View style={styles.field}>
-          <Text style={styles.label}>Description</Text>
-          <TextInput
-            style={[styles.input, styles.textarea]}
-            value={formData.description || ''}
-            onChangeText={(value) => handleFieldChange('description', value)}
-            placeholder="A brief description of your theme"
-            placeholderTextColor="#666"
-            multiline
-            numberOfLines={3}
-          />
-        </View>
-
-        <View style={styles.row}>
-          <View style={[styles.field, styles.flex1]}>
-            <Text style={styles.label}>Type</Text>
-            <TextInput
-              style={styles.input}
-              value={formData.type || ''}
-              onChangeText={(value) => handleFieldChange('type', value)}
-              placeholder="e.g., light, dark"
-              placeholderTextColor="#666"
-            />
-          </View>
-
-          <View style={[styles.field, styles.flex1]}>
-            <Text style={styles.label}>Kind</Text>
-            <TextInput
-              style={styles.input}
-              value={formData.kind || ''}
-              onChangeText={(value) => handleFieldChange('kind', value)}
-              placeholder="e.g., nature, tech"
-              placeholderTextColor="#666"
-            />
-          </View>
-        </View>
-        </>
-        )}
-      </View>
-
-      {/* Mode Switcher */}
-      <View style={styles.section}>
-        <Text style={styles.label}>Mode</Text>
-        <View style={styles.modeTabs}>
-          <TouchableOpacity
-            style={[
-              styles.modeTab,
-              formData.activeMode === 'light' && styles.modeTabActive,
-            ]}
-            onPress={() => setFormData((prev) => ({ ...prev, activeMode: 'light' }))}
-          >
-            <Text style={[
-              styles.modeTabText,
-              formData.activeMode === 'light' && styles.modeTabTextActive,
-            ]}>
-              ☀️ Light
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[
-              styles.modeTab,
-              formData.activeMode === 'dark' && styles.modeTabActive,
-            ]}
-            onPress={() => setFormData((prev) => ({ ...prev, activeMode: 'dark' }))}
-          >
-            <Text style={[
-              styles.modeTabText,
-              formData.activeMode === 'dark' && styles.modeTabTextActive,
-            ]}>
-              🌙 Dark
-            </Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      {/* Palette Generator */}
-      <View style={styles.section}>
-        <View style={styles.sectionHeaderRow}>
-          <TouchableOpacity
-            style={styles.sectionHeader}
-            onPress={() => toggleSection('palette')}
-          >
-            <Text style={styles.sectionTitle}>Palette</Text>
-            <Text style={styles.sectionToggle}>{expandedSections.palette ? '−' : '+'}</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.sectionRandomize}
-            onPress={() => withTransition(handleRandomize)}
-          >
-            <Text style={styles.sectionRandomizeText}>⟳</Text>
-          </TouchableOpacity>
-        </View>
-
-        {expandedSections.palette && (
-        <>
-        <Text style={styles.sectionHelperText}>
-          Changes you make in this section will apply to {updateBothModesPalette ? 'both themes' : `${formData.activeMode} theme`}
-        </Text>
-
-        {/* Update Both Modes Checkbox */}
-        <TouchableOpacity
-          style={styles.modeCheckboxContainer}
-          onPress={() => setUpdateBothModesPalette(!updateBothModesPalette)}
-        >
-          <View style={[styles.checkbox, updateBothModesPalette && styles.checkboxChecked]}>
-            {updateBothModesPalette && <Text style={styles.checkboxCheck}>✓</Text>}
-          </View>
-          <Text style={styles.modeCheckboxLabel}>Update both modes (light and dark)</Text>
-        </TouchableOpacity>
-
-        <Text style={styles.sectionDescription}>
-          Generate color palettes using color harmony theory.
-        </Text>
-
-        {/* Harmony Type Selector */}
-        <View style={styles.field}>
-          <Text style={styles.label}>Harmony Type</Text>
-          <View style={styles.harmonyButtons}>
-            <TouchableOpacity
-              style={[
-                styles.harmonyButton,
-                selectedHarmony === 'monochromatic' && styles.harmonyButtonActive,
-              ]}
-              onPress={() => setSelectedHarmony('monochromatic')}
-            >
-              <Text
-                style={[
-                  styles.harmonyButtonText,
-                  selectedHarmony === 'monochromatic' && styles.harmonyButtonTextActive,
-                ]}
-              >
-                Mono
-              </Text>
+        {/* Basic Information */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeaderRow}>
+            <TouchableOpacity style={styles.sectionHeader} onPress={() => toggleSection('details')}>
+              <Text style={styles.sectionTitle}>Details</Text>
+              <Text style={styles.sectionToggle}>{expandedSections.details ? '−' : '+'}</Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={[
-                styles.harmonyButton,
-                selectedHarmony === 'complementary' && styles.harmonyButtonActive,
-              ]}
-              onPress={() => setSelectedHarmony('complementary')}
+              style={styles.sectionRandomize}
+              onPress={() => withTransition(randomizeDetails)}
             >
-              <Text
-                style={[
-                  styles.harmonyButtonText,
-                  selectedHarmony === 'complementary' && styles.harmonyButtonTextActive,
-                ]}
-              >
-                Comp
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[
-                styles.harmonyButton,
-                selectedHarmony === 'analogous' && styles.harmonyButtonActive,
-              ]}
-              onPress={() => setSelectedHarmony('analogous')}
-            >
-              <Text
-                style={[
-                  styles.harmonyButtonText,
-                  selectedHarmony === 'analogous' && styles.harmonyButtonTextActive,
-                ]}
-              >
-                Analog
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[
-                styles.harmonyButton,
-                selectedHarmony === 'triadic' && styles.harmonyButtonActive,
-              ]}
-              onPress={() => setSelectedHarmony('triadic')}
-            >
-              <Text
-                style={[
-                  styles.harmonyButtonText,
-                  selectedHarmony === 'triadic' && styles.harmonyButtonTextActive,
-                ]}
-              >
-                Triad
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[
-                styles.harmonyButton,
-                selectedHarmony === 'split-complementary' && styles.harmonyButtonActive,
-              ]}
-              onPress={() => setSelectedHarmony('split-complementary')}
-            >
-              <Text
-                style={[
-                  styles.harmonyButtonText,
-                  selectedHarmony === 'split-complementary' && styles.harmonyButtonTextActive,
-                ]}
-              >
-                Split
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[
-                styles.harmonyButton,
-                selectedHarmony === 'random' && styles.harmonyButtonActive,
-              ]}
-              onPress={() => {
-                setSelectedHarmony('random');
-                // Increment seed to force regeneration even if already selected
-                setRandomSeed(prev => prev + 1);
-              }}
-            >
-              <Text
-                style={[
-                  styles.harmonyButtonText,
-                  selectedHarmony === 'random' && styles.harmonyButtonTextActive,
-                ]}
-              >
-                Random
-              </Text>
+              <Text style={styles.sectionRandomizeText}>⟳</Text>
             </TouchableOpacity>
           </View>
-        </View>
 
-        {/* Palette Preview */}
-        <View style={styles.activePaletteContainer}>
-          <Text style={styles.activePaletteLabel}>Palette Preview (click to edit)</Text>
-          <View style={styles.activePaletteRow}>
-            {previewPalette.length > 0 ? (
-              <>
-                <TouchableOpacity
-                  style={[
-                    styles.paletteColorBox,
-                    { backgroundColor: previewPalette[0] },
-                  ]}
-                  onPress={() => handlePaletteColorClick(0)}
-                />
-                <TouchableOpacity
-                  style={[
-                    styles.paletteColorBox,
-                    { backgroundColor: previewPalette[1] },
-                  ]}
-                  onPress={() => handlePaletteColorClick(1)}
-                />
-                <TouchableOpacity
-                  style={[
-                    styles.paletteColorBox,
-                    { backgroundColor: previewPalette[2] },
-                  ]}
-                  onPress={() => handlePaletteColorClick(2)}
-                />
-                <TouchableOpacity
-                  style={[
-                    styles.paletteColorBox,
-                    { backgroundColor: previewPalette[3] },
-                  ]}
-                  onPress={() => handlePaletteColorClick(3)}
-                />
-              </>
-            ) : (
-              <>
-                <TouchableOpacity
-                  style={[
-                    styles.paletteColorBox,
-                    { backgroundColor: getBloomColor(formData[formData.activeMode].primaryColor) },
-                  ]}
-                  onPress={() => handlePaletteColorClick(0)}
-                />
-                <TouchableOpacity
-                  style={[
-                    styles.paletteColorBox,
-                    { backgroundColor: getBloomColor(formData[formData.activeMode].secondaryColor) },
-                  ]}
-                  onPress={() => handlePaletteColorClick(1)}
-                />
-                <TouchableOpacity
-                  style={[
-                    styles.paletteColorBox,
-                    { backgroundColor: getBloomColor(formData[formData.activeMode].tertiaryColor) },
-                  ]}
-                  onPress={() => handlePaletteColorClick(2)}
-                />
-                <TouchableOpacity
-                  style={[
-                    styles.paletteColorBox,
-                    { backgroundColor: getBloomColor(formData[formData.activeMode].quaternaryColor) },
-                  ]}
-                  onPress={() => handlePaletteColorClick(3)}
-                />
-              </>
-            )}
-          </View>
-        </View>
-
-        {/* Color Edit Modal */}
-        {editingPaletteIndex !== null && (
-          <View style={styles.colorEditModal}>
-            <View style={styles.colorEditContent}>
-              <Text style={styles.colorEditTitle}>Edit Palette Color {editingPaletteIndex + 1}</Text>
-
-              <View style={styles.colorEditPreview}>
-                <View
-                  style={[
-                    styles.colorEditPreviewBox,
-                    { backgroundColor: editingPaletteColor },
-                  ]}
+          {expandedSections.details && (
+            <>
+              <View style={styles.field}>
+                <Text style={styles.label}>
+                  Title <Text style={styles.required}>*</Text>
+                </Text>
+                <TextInput
+                  style={styles.input}
+                  value={formData.title}
+                  onChangeText={(value) => handleFieldChange('title', value)}
+                  placeholder="e.g., Ocean Breeze"
+                  placeholderTextColor="#666"
                 />
               </View>
 
-              <HexColorInput
-                label="Hex Color"
-                value={editingPaletteColor}
-                onChange={setEditingPaletteColor}
-                placeholder="#ff0000"
-              />
-
-              <View style={styles.colorEditButtons}>
-                <TouchableOpacity
-                  style={[styles.colorEditButton, styles.colorEditButtonCancel]}
-                  onPress={handleCancelPaletteEdit}
-                >
-                  <Text style={styles.colorEditButtonText}>Cancel</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.colorEditButton, styles.colorEditButtonSave]}
-                  onPress={handleSavePaletteColor}
-                >
-                  <Text style={styles.colorEditButtonText}>Save</Text>
-                </TouchableOpacity>
+              <View style={styles.field}>
+                <Text style={styles.label}>Description</Text>
+                <TextInput
+                  style={[styles.input, styles.textarea]}
+                  value={formData.description || ''}
+                  onChangeText={(value) => handleFieldChange('description', value)}
+                  placeholder="A brief description of your theme"
+                  placeholderTextColor="#666"
+                  multiline
+                  numberOfLines={3}
+                />
               </View>
-            </View>
-          </View>
-        )}
 
-        {/* Base Hue Slider */}
-        <View style={styles.field}>
-          <Text style={styles.label}>Base Hue: {Math.round(baseHue)}°</Text>
-          <Slider
-            style={styles.slider}
-            minimumValue={0}
-            maximumValue={360}
-            step={0.1}
-            value={baseHue}
-            onValueChange={setBaseHue}
-            minimumTrackTintColor="#4dd9b8"
-            maximumTrackTintColor="#2a3138"
-            thumbTintColor="#4dd9b8"
-          />
-        </View>
+              <View style={styles.row}>
+                <View style={[styles.field, styles.flex1]}>
+                  <Text style={styles.label}>Type</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={formData.type || ''}
+                    onChangeText={(value) => handleFieldChange('type', value)}
+                    placeholder="e.g., light, dark"
+                    placeholderTextColor="#666"
+                  />
+                </View>
 
-        {/* Base Saturation Slider */}
-        <View style={styles.field}>
-          <Text style={styles.label}>Base Saturation: {Math.round(baseSaturation)}%</Text>
-          <Slider
-            style={styles.slider}
-            minimumValue={0}
-            maximumValue={100}
-            step={0.1}
-            value={baseSaturation}
-            onValueChange={setBaseSaturation}
-            minimumTrackTintColor="#4dd9b8"
-            maximumTrackTintColor="#2a3138"
-            thumbTintColor="#4dd9b8"
-          />
-        </View>
-
-        {/* Base Lightness Slider */}
-        <View style={styles.field}>
-          <Text style={styles.label}>Base Lightness: {Math.round(baseLightness)}%</Text>
-          <Slider
-            style={styles.slider}
-            minimumValue={0}
-            maximumValue={100}
-            step={0.1}
-            value={baseLightness}
-            onValueChange={setBaseLightness}
-            minimumTrackTintColor="#4dd9b8"
-            maximumTrackTintColor="#2a3138"
-            thumbTintColor="#4dd9b8"
-          />
-        </View>
-
-        {/* Apply Palette Button */}
-        <TouchableOpacity
-          style={styles.generateButton}
-          onPress={() => withTransition(handleGenerateUIColors)}
-          disabled={isSaving}
-        >
-          <Text style={styles.generateButtonText}>Apply Palette</Text>
-        </TouchableOpacity>
-        </>
-        )}
-      </View>
-
-      {/* Bloom Colors */}
-      <View style={styles.section}>
-        <View style={styles.sectionHeaderRow}>
-          <TouchableOpacity
-            style={styles.sectionHeader}
-            onPress={() => toggleSection('bloom')}
-          >
-            <Text style={styles.sectionTitle}>Bloom</Text>
-            <Text style={styles.sectionToggle}>{expandedSections.bloom ? '−' : '+'}</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.sectionRandomize}
-            onPress={() => withTransition(randomizeBloom)}
-          >
-            <Text style={styles.sectionRandomizeText}>⟳</Text>
-          </TouchableOpacity>
-        </View>
-
-        {expandedSections.bloom && (
-        <>
-        <Text style={styles.sectionHelperText}>
-          Changes you make in this section will apply to {updateBothModesBloom ? 'both themes' : `${formData.activeMode} theme`}
-        </Text>
-
-        {/* Update Both Modes Checkbox */}
-        <TouchableOpacity
-          style={styles.modeCheckboxContainer}
-          onPress={() => setUpdateBothModesBloom(!updateBothModesBloom)}
-        >
-          <View style={[styles.checkbox, updateBothModesBloom && styles.checkboxChecked]}>
-            {updateBothModesBloom && <Text style={styles.checkboxCheck}>✓</Text>}
-          </View>
-          <Text style={styles.modeCheckboxLabel}>Update both modes (light and dark)</Text>
-        </TouchableOpacity>
-
-        <Text style={styles.sectionDescription}>
-          These colors are used in the Crux bloom icon. You can use solid colors or gradients.
-        </Text>
-
-        {/* Bloom Border Controls */}
-        <HexColorInput
-          label="Bloom Border Color"
-          value={formData[formData.activeMode].bloomBorderColor || ''}
-          onChange={(value) => handleModeFieldChange('bloomBorderColor', value, 'bloom')}
-          placeholder="#000000"
-        />
-
-        <View style={styles.field}>
-          <Text style={styles.label}>
-            Bloom Border Width: {typeof formData[formData.activeMode].bloomBorderWidth === 'number' ? formData[formData.activeMode].bloomBorderWidth : parseInt(formData[formData.activeMode].bloomBorderWidth ?? '0')}
-          </Text>
-          <Slider
-            style={styles.slider}
-            minimumValue={0}
-            maximumValue={75}
-            step={1}
-            value={parseInt(formData[formData.activeMode].bloomBorderWidth?.toString() ?? '0')}
-            onValueChange={(val) => handleModeFieldChange('bloomBorderWidth', Math.round(val).toString(), 'bloom')}
-            minimumTrackTintColor="#4dd9b8"
-            maximumTrackTintColor="#2a3138"
-            thumbTintColor="#4dd9b8"
-          />
-        </View>
-
-        {/* Bloom Tabs */}
-        <View style={styles.bloomTabs}>
-          <TouchableOpacity
-            style={[
-              styles.bloomTab,
-              activeBloomTab === 'primary' && styles.bloomTabActive,
-              { borderBottomColor: getBloomColor(formData[formData.activeMode].primaryColor) },
-            ]}
-            onPress={() => setActiveBloomTab('primary')}
-          >
-            <Text style={[styles.bloomTabText, activeBloomTab === 'primary' && styles.bloomTabTextActive]}>
-              Primary
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[
-              styles.bloomTab,
-              activeBloomTab === 'secondary' && styles.bloomTabActive,
-              { borderBottomColor: getBloomColor(formData[formData.activeMode].secondaryColor) },
-            ]}
-            onPress={() => setActiveBloomTab('secondary')}
-          >
-            <Text style={[styles.bloomTabText, activeBloomTab === 'secondary' && styles.bloomTabTextActive]}>
-              Secondary
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[
-              styles.bloomTab,
-              activeBloomTab === 'tertiary' && styles.bloomTabActive,
-              { borderBottomColor: getBloomColor(formData[formData.activeMode].tertiaryColor) },
-            ]}
-            onPress={() => setActiveBloomTab('tertiary')}
-          >
-            <Text style={[styles.bloomTabText, activeBloomTab === 'tertiary' && styles.bloomTabTextActive]}>
-              Tertiary
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[
-              styles.bloomTab,
-              activeBloomTab === 'quaternary' && styles.bloomTabActive,
-              { borderBottomColor: getBloomColor(formData[formData.activeMode].quaternaryColor) },
-            ]}
-            onPress={() => setActiveBloomTab('quaternary')}
-          >
-            <Text style={[styles.bloomTabText, activeBloomTab === 'quaternary' && styles.bloomTabTextActive]}>
-              Quaternary
-            </Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Active Tab Content */}
-        <View style={styles.bloomTabContent}>
-          {activeBloomTab === 'primary' && (
-            <ColorPicker
-              label="Primary (Outermost)"
-              value={formData[formData.activeMode].primaryColor}
-              onChange={handleColorChange('primaryColor')}
-            />
-          )}
-          {activeBloomTab === 'secondary' && (
-            <ColorPicker
-              label="Secondary"
-              value={formData[formData.activeMode].secondaryColor}
-              onChange={handleColorChange('secondaryColor')}
-            />
-          )}
-          {activeBloomTab === 'tertiary' && (
-            <ColorPicker
-              label="Tertiary"
-              value={formData[formData.activeMode].tertiaryColor}
-              onChange={handleColorChange('tertiaryColor')}
-            />
-          )}
-          {activeBloomTab === 'quaternary' && (
-            <ColorPicker
-              label="Quaternary (Innermost)"
-              value={formData[formData.activeMode].quaternaryColor}
-              onChange={handleColorChange('quaternaryColor')}
-            />
+                <View style={[styles.field, styles.flex1]}>
+                  <Text style={styles.label}>Kind</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={formData.kind || ''}
+                    onChangeText={(value) => handleFieldChange('kind', value)}
+                    placeholder="e.g., nature, tech"
+                    placeholderTextColor="#666"
+                  />
+                </View>
+              </View>
+            </>
           )}
         </View>
-        </>
-        )}
-      </View>
 
-      {/* UI Styling */}
-      <View style={styles.section}>
-        <View style={styles.sectionHeaderRow}>
-          <TouchableOpacity
-            style={styles.sectionHeader}
-            onPress={() => toggleSection('style')}
-          >
-            <Text style={styles.sectionTitle}>Content</Text>
-            <Text style={styles.sectionToggle}>{expandedSections.style ? '−' : '+'}</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.sectionRandomize}
-            onPress={() => withTransition(randomizeStyle)}
-          >
-            <Text style={styles.sectionRandomizeText}>⟳</Text>
-          </TouchableOpacity>
-        </View>
-
-        {expandedSections.style && (
-        <>
-        <Text style={styles.sectionHelperText}>
-          Changes you make in this section will apply to {updateBothModesStyle ? 'both themes' : `${formData.activeMode} theme`}
-        </Text>
-
-        {/* Update Both Modes Checkbox */}
-        <TouchableOpacity
-          style={styles.modeCheckboxContainer}
-          onPress={() => setUpdateBothModesStyle(!updateBothModesStyle)}
-        >
-          <View style={[styles.checkbox, updateBothModesStyle && styles.checkboxChecked]}>
-            {updateBothModesStyle && <Text style={styles.checkboxCheck}>✓</Text>}
-          </View>
-          <Text style={styles.modeCheckboxLabel}>Update both modes (light and dark)</Text>
-        </TouchableOpacity>
-
-        <Text style={styles.sectionDescription}>
-          Optional styling for your app's user interface.
-        </Text>
-
-        <HexColorInput
-          label="Border Color"
-          value={formData[formData.activeMode].borderColor || ''}
-          onChange={(value) => handleModeFieldChange('borderColor', value, 'style')}
-          placeholder="#cccccc"
-        />
-
-        <View style={styles.field}>
-          <Text style={styles.label}>
-            Border Width: {typeof formData[formData.activeMode].borderWidth === 'number' ? formData[formData.activeMode].borderWidth : parseInt(formData[formData.activeMode].borderWidth ?? '1')}px
-          </Text>
-          <Slider
-            style={styles.slider}
-            minimumValue={0}
-            maximumValue={10}
-            step={1}
-            value={parseInt(formData[formData.activeMode].borderWidth?.toString() ?? '1')}
-            onValueChange={(val) => handleModeFieldChange('borderWidth', Math.round(val).toString(), 'style')}
-            minimumTrackTintColor="#4dd9b8"
-            maximumTrackTintColor="#2a3138"
-            thumbTintColor="#4dd9b8"
-          />
-        </View>
-
-        <View style={styles.field}>
-          <Text style={styles.label}>
-            Border Radius: {typeof formData[formData.activeMode].borderRadius === 'number' ? formData[formData.activeMode].borderRadius : parseInt(formData[formData.activeMode].borderRadius ?? '0')}px
-          </Text>
-          <Slider
-            style={styles.slider}
-            minimumValue={0}
-            maximumValue={50}
-            step={1}
-            value={parseInt(formData[formData.activeMode].borderRadius?.toString() ?? '0')}
-            onValueChange={(val) => handleModeFieldChange('borderRadius', Math.round(val).toString(), 'style')}
-            minimumTrackTintColor="#4dd9b8"
-            maximumTrackTintColor="#2a3138"
-            thumbTintColor="#4dd9b8"
-          />
-        </View>
-
-        <View style={styles.field}>
-          <Text style={styles.label}>Border Style</Text>
-          <View style={styles.fontToggle}>
+        {/* Mode Switcher */}
+        <View style={styles.section}>
+          <Text style={styles.label}>Mode</Text>
+          <View style={styles.modeTabs}>
             <TouchableOpacity
-              style={[
-                styles.fontButton,
-                formData[formData.activeMode].borderStyle === 'solid' && styles.fontButtonActive,
-              ]}
-              onPress={() => handleModeFieldChange('borderStyle', 'solid', 'style')}
+              style={[styles.modeTab, formData.activeMode === 'light' && styles.modeTabActive]}
+              onPress={() => setFormData((prev) => ({ ...prev, activeMode: 'light' }))}
             >
               <Text
                 style={[
-                  styles.fontButtonText,
-                  formData[formData.activeMode].borderStyle === 'solid' && styles.fontButtonTextActive,
+                  styles.modeTabText,
+                  formData.activeMode === 'light' && styles.modeTabTextActive,
                 ]}
               >
-                Solid
+                ☀️ Light
               </Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={[
-                styles.fontButton,
-                formData[formData.activeMode].borderStyle === 'dashed' && styles.fontButtonActive,
-              ]}
-              onPress={() => handleModeFieldChange('borderStyle', 'dashed', 'style')}
+              style={[styles.modeTab, formData.activeMode === 'dark' && styles.modeTabActive]}
+              onPress={() => setFormData((prev) => ({ ...prev, activeMode: 'dark' }))}
             >
               <Text
                 style={[
-                  styles.fontButtonText,
-                  formData[formData.activeMode].borderStyle === 'dashed' && styles.fontButtonTextActive,
+                  styles.modeTabText,
+                  formData.activeMode === 'dark' && styles.modeTabTextActive,
                 ]}
               >
-                Dashed
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[
-                styles.fontButton,
-                formData[formData.activeMode].borderStyle === 'dotted' && styles.fontButtonActive,
-              ]}
-              onPress={() => handleModeFieldChange('borderStyle', 'dotted', 'style')}
-            >
-              <Text
-                style={[
-                  styles.fontButtonText,
-                  formData[formData.activeMode].borderStyle === 'dotted' && styles.fontButtonTextActive,
-                ]}
-              >
-                Dotted
+                🌙 Dark
               </Text>
             </TouchableOpacity>
           </View>
         </View>
 
-        <HexColorInput
-          label="Background Color"
-          value={formData[formData.activeMode].backgroundColor || ''}
-          onChange={(value) => handleModeFieldChange('backgroundColor', value, 'style')}
-          placeholder="#ffffff"
-        />
+        {/* Palette Generator */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeaderRow}>
+            <TouchableOpacity style={styles.sectionHeader} onPress={() => toggleSection('palette')}>
+              <Text style={styles.sectionTitle}>Palette</Text>
+              <Text style={styles.sectionToggle}>{expandedSections.palette ? '−' : '+'}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.sectionRandomize}
+              onPress={() => withTransition(handleRandomize)}
+            >
+              <Text style={styles.sectionRandomizeText}>⟳</Text>
+            </TouchableOpacity>
+          </View>
 
-        <HexColorInput
-          label="Panel Color"
-          value={formData[formData.activeMode].panelColor || ''}
-          onChange={(value) => handleModeFieldChange('panelColor', value, 'style')}
-          placeholder="#f5f5f5"
-        />
+          {expandedSections.palette && (
+            <>
+              <Text style={styles.sectionHelperText}>
+                Changes you make in this section will apply to{' '}
+                {updateBothModesPalette ? 'both themes' : `${formData.activeMode} theme`}
+              </Text>
 
-        <HexColorInput
-          label="Text Color"
-          value={formData[formData.activeMode].textColor || ''}
-          onChange={(value) => handleModeFieldChange('textColor', value, 'style')}
-          placeholder="#000000"
-        />
+              {/* Update Both Modes Checkbox */}
+              <TouchableOpacity
+                style={styles.modeCheckboxContainer}
+                onPress={() => setUpdateBothModesPalette(!updateBothModesPalette)}
+              >
+                <View style={[styles.checkbox, updateBothModesPalette && styles.checkboxChecked]}>
+                  {updateBothModesPalette && <Text style={styles.checkboxCheck}>✓</Text>}
+                </View>
+                <Text style={styles.modeCheckboxLabel}>Update both modes (light and dark)</Text>
+              </TouchableOpacity>
 
-        {/* Contrast Indicator */}
-        {formData[formData.activeMode].panelColor && formData[formData.activeMode].textColor && (() => {
-          try {
-            const panelCol = formData[formData.activeMode].panelColor!;
-            const textCol = formData[formData.activeMode].textColor!;
-            const ratio = chroma.contrast(panelCol, textCol);
-            const passAA = ratio >= 4.5;
-            const passAAA = ratio >= 7;
-            const closeAA = ratio >= 3.5 && ratio < 4.5; // Close to AA
-            const closeAAA = ratio >= 6.0 && ratio < 7; // Close to AAA
+              <Text style={styles.sectionDescription}>
+                Generate color palettes using color harmony theory.
+              </Text>
 
-            return (
-              <View style={styles.contrastIndicator}>
-                <Text style={styles.contrastLabel}>Text Readability</Text>
-                <View style={styles.contrastInfo}>
-                  <Text style={styles.contrastRatio}>{ratio.toFixed(2)}:1</Text>
-                  <View style={styles.contrastBadges}>
-                    <View style={[
-                      styles.contrastBadge,
-                      passAA && styles.contrastBadgePass,
-                      closeAA && styles.contrastBadgeWarn,
-                      !passAA && !closeAA && styles.contrastBadgeFail
-                    ]}>
-                      <Text style={[
-                        styles.contrastBadgeText,
-                        passAA && styles.contrastBadgeTextPass,
-                        closeAA && styles.contrastBadgeTextWarn,
-                        !passAA && !closeAA && styles.contrastBadgeTextFail
-                      ]}>
-                        {passAA ? '✓' : closeAA ? '~' : '✗'} AA
-                      </Text>
+              {/* Harmony Type Selector */}
+              <View style={styles.field}>
+                <Text style={styles.label}>Harmony Type</Text>
+                <View style={styles.harmonyButtons}>
+                  <TouchableOpacity
+                    style={[
+                      styles.harmonyButton,
+                      selectedHarmony === 'monochromatic' && styles.harmonyButtonActive,
+                    ]}
+                    onPress={() => setSelectedHarmony('monochromatic')}
+                  >
+                    <Text
+                      style={[
+                        styles.harmonyButtonText,
+                        selectedHarmony === 'monochromatic' && styles.harmonyButtonTextActive,
+                      ]}
+                    >
+                      Mono
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[
+                      styles.harmonyButton,
+                      selectedHarmony === 'complementary' && styles.harmonyButtonActive,
+                    ]}
+                    onPress={() => setSelectedHarmony('complementary')}
+                  >
+                    <Text
+                      style={[
+                        styles.harmonyButtonText,
+                        selectedHarmony === 'complementary' && styles.harmonyButtonTextActive,
+                      ]}
+                    >
+                      Comp
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[
+                      styles.harmonyButton,
+                      selectedHarmony === 'analogous' && styles.harmonyButtonActive,
+                    ]}
+                    onPress={() => setSelectedHarmony('analogous')}
+                  >
+                    <Text
+                      style={[
+                        styles.harmonyButtonText,
+                        selectedHarmony === 'analogous' && styles.harmonyButtonTextActive,
+                      ]}
+                    >
+                      Analog
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[
+                      styles.harmonyButton,
+                      selectedHarmony === 'triadic' && styles.harmonyButtonActive,
+                    ]}
+                    onPress={() => setSelectedHarmony('triadic')}
+                  >
+                    <Text
+                      style={[
+                        styles.harmonyButtonText,
+                        selectedHarmony === 'triadic' && styles.harmonyButtonTextActive,
+                      ]}
+                    >
+                      Triad
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[
+                      styles.harmonyButton,
+                      selectedHarmony === 'split-complementary' && styles.harmonyButtonActive,
+                    ]}
+                    onPress={() => setSelectedHarmony('split-complementary')}
+                  >
+                    <Text
+                      style={[
+                        styles.harmonyButtonText,
+                        selectedHarmony === 'split-complementary' && styles.harmonyButtonTextActive,
+                      ]}
+                    >
+                      Split
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[
+                      styles.harmonyButton,
+                      selectedHarmony === 'random' && styles.harmonyButtonActive,
+                    ]}
+                    onPress={() => {
+                      setSelectedHarmony('random');
+                      // Increment seed to force regeneration even if already selected
+                      setRandomSeed((prev) => prev + 1);
+                    }}
+                  >
+                    <Text
+                      style={[
+                        styles.harmonyButtonText,
+                        selectedHarmony === 'random' && styles.harmonyButtonTextActive,
+                      ]}
+                    >
+                      Random
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+
+              {/* Palette Preview */}
+              <View style={styles.activePaletteContainer}>
+                <Text style={styles.activePaletteLabel}>Palette Preview (click to edit)</Text>
+                <View style={styles.activePaletteRow}>
+                  {previewPalette.length > 0 ? (
+                    <>
+                      <TouchableOpacity
+                        style={[styles.paletteColorBox, { backgroundColor: previewPalette[0] }]}
+                        onPress={() => handlePaletteColorClick(0)}
+                      />
+                      <TouchableOpacity
+                        style={[styles.paletteColorBox, { backgroundColor: previewPalette[1] }]}
+                        onPress={() => handlePaletteColorClick(1)}
+                      />
+                      <TouchableOpacity
+                        style={[styles.paletteColorBox, { backgroundColor: previewPalette[2] }]}
+                        onPress={() => handlePaletteColorClick(2)}
+                      />
+                      <TouchableOpacity
+                        style={[styles.paletteColorBox, { backgroundColor: previewPalette[3] }]}
+                        onPress={() => handlePaletteColorClick(3)}
+                      />
+                    </>
+                  ) : (
+                    <>
+                      <TouchableOpacity
+                        style={[
+                          styles.paletteColorBox,
+                          {
+                            backgroundColor: getBloomColor(
+                              formData[formData.activeMode].primaryColor
+                            ),
+                          },
+                        ]}
+                        onPress={() => handlePaletteColorClick(0)}
+                      />
+                      <TouchableOpacity
+                        style={[
+                          styles.paletteColorBox,
+                          {
+                            backgroundColor: getBloomColor(
+                              formData[formData.activeMode].secondaryColor
+                            ),
+                          },
+                        ]}
+                        onPress={() => handlePaletteColorClick(1)}
+                      />
+                      <TouchableOpacity
+                        style={[
+                          styles.paletteColorBox,
+                          {
+                            backgroundColor: getBloomColor(
+                              formData[formData.activeMode].tertiaryColor
+                            ),
+                          },
+                        ]}
+                        onPress={() => handlePaletteColorClick(2)}
+                      />
+                      <TouchableOpacity
+                        style={[
+                          styles.paletteColorBox,
+                          {
+                            backgroundColor: getBloomColor(
+                              formData[formData.activeMode].quaternaryColor
+                            ),
+                          },
+                        ]}
+                        onPress={() => handlePaletteColorClick(3)}
+                      />
+                    </>
+                  )}
+                </View>
+              </View>
+
+              {/* Color Edit Modal */}
+              {editingPaletteIndex !== null && (
+                <View style={styles.colorEditModal}>
+                  <View style={styles.colorEditContent}>
+                    <Text style={styles.colorEditTitle}>
+                      Edit Palette Color {editingPaletteIndex + 1}
+                    </Text>
+
+                    <View style={styles.colorEditPreview}>
+                      <View
+                        style={[
+                          styles.colorEditPreviewBox,
+                          { backgroundColor: editingPaletteColor },
+                        ]}
+                      />
                     </View>
-                    <View style={[
-                      styles.contrastBadge,
-                      passAAA && styles.contrastBadgePass,
-                      closeAAA && styles.contrastBadgeWarn,
-                      !passAAA && !closeAAA && styles.contrastBadgeFail
-                    ]}>
-                      <Text style={[
-                        styles.contrastBadgeText,
-                        passAAA && styles.contrastBadgeTextPass,
-                        closeAAA && styles.contrastBadgeTextWarn,
-                        !passAAA && !closeAAA && styles.contrastBadgeTextFail
-                      ]}>
-                        {passAAA ? '✓' : closeAAA ? '~' : '✗'} AAA
-                      </Text>
+
+                    <HexColorInput
+                      label="Hex Color"
+                      value={editingPaletteColor}
+                      onChange={setEditingPaletteColor}
+                      placeholder="#ff0000"
+                    />
+
+                    <View style={styles.colorEditButtons}>
+                      <TouchableOpacity
+                        style={[styles.colorEditButton, styles.colorEditButtonCancel]}
+                        onPress={handleCancelPaletteEdit}
+                      >
+                        <Text style={styles.colorEditButtonText}>Cancel</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={[styles.colorEditButton, styles.colorEditButtonSave]}
+                        onPress={handleSavePaletteColor}
+                      >
+                        <Text style={styles.colorEditButtonText}>Save</Text>
+                      </TouchableOpacity>
                     </View>
                   </View>
                 </View>
+              )}
+
+              {/* Base Hue Slider */}
+              <View style={styles.field}>
+                <Text style={styles.label}>Base Hue: {Math.round(baseHue)}°</Text>
+                <Slider
+                  style={styles.slider}
+                  minimumValue={0}
+                  maximumValue={360}
+                  step={0.1}
+                  value={baseHue}
+                  onValueChange={setBaseHue}
+                  minimumTrackTintColor="#4dd9b8"
+                  maximumTrackTintColor="#2a3138"
+                  thumbTintColor="#4dd9b8"
+                />
               </View>
-            );
-          } catch (e) {
-            return null;
-          }
-        })()}
 
-        <View style={styles.field}>
-          <Text style={styles.label}>Font Family</Text>
-          <View style={styles.fontToggle}>
-            <TouchableOpacity
-              style={[
-                styles.fontButton,
-                formData[formData.activeMode].font === 'sans-serif' && styles.fontButtonActive,
-              ]}
-              onPress={() => handleModeFieldChange('font', 'sans-serif', 'style')}
-            >
-              <Text
-                style={[
-                  styles.fontButtonText,
-                  formData[formData.activeMode].font === 'sans-serif' && styles.fontButtonTextActive,
-                ]}
+              {/* Base Saturation Slider */}
+              <View style={styles.field}>
+                <Text style={styles.label}>Base Saturation: {Math.round(baseSaturation)}%</Text>
+                <Slider
+                  style={styles.slider}
+                  minimumValue={0}
+                  maximumValue={100}
+                  step={0.1}
+                  value={baseSaturation}
+                  onValueChange={setBaseSaturation}
+                  minimumTrackTintColor="#4dd9b8"
+                  maximumTrackTintColor="#2a3138"
+                  thumbTintColor="#4dd9b8"
+                />
+              </View>
+
+              {/* Base Lightness Slider */}
+              <View style={styles.field}>
+                <Text style={styles.label}>Base Lightness: {Math.round(baseLightness)}%</Text>
+                <Slider
+                  style={styles.slider}
+                  minimumValue={0}
+                  maximumValue={100}
+                  step={0.1}
+                  value={baseLightness}
+                  onValueChange={setBaseLightness}
+                  minimumTrackTintColor="#4dd9b8"
+                  maximumTrackTintColor="#2a3138"
+                  thumbTintColor="#4dd9b8"
+                />
+              </View>
+
+              {/* Apply Palette Button */}
+              <TouchableOpacity
+                style={styles.generateButton}
+                onPress={() => withTransition(handleGenerateUIColors)}
+                disabled={isSaving}
               >
-                Sans Serif
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[
-                styles.fontButton,
-                formData[formData.activeMode].font === 'serif' && styles.fontButtonActive,
-              ]}
-              onPress={() => handleModeFieldChange('font', 'serif', 'style')}
-            >
-              <Text
-                style={[
-                  styles.fontButtonText,
-                  formData[formData.activeMode].font === 'serif' && styles.fontButtonTextActive,
-                ]}
-              >
-                Serif
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[
-                styles.fontButton,
-                formData[formData.activeMode].font === 'monospace' && styles.fontButtonActive,
-              ]}
-              onPress={() => handleModeFieldChange('font', 'monospace', 'style')}
-            >
-              <Text
-                style={[
-                  styles.fontButtonText,
-                  formData[formData.activeMode].font === 'monospace' && styles.fontButtonTextActive,
-                ]}
-              >
-                Monospace
-              </Text>
-            </TouchableOpacity>
-          </View>
+                <Text style={styles.generateButtonText}>Apply Palette</Text>
+              </TouchableOpacity>
+            </>
+          )}
         </View>
 
-        {/* Panel Shadow Controls */}
-        <ShadowControls
-          label="Panel Shadow"
-          enabled={formData[formData.activeMode].panelShadowEnabled}
-          color={formData[formData.activeMode].panelShadowColor}
-          offsetX={formData[formData.activeMode].panelShadowOffsetX}
-          offsetY={formData[formData.activeMode].panelShadowOffsetY}
-          blurRadius={formData[formData.activeMode].panelShadowBlurRadius}
-          opacity={formData[formData.activeMode].panelShadowOpacity}
-          onChange={(field, value) => {
-            if (field === 'enabled') {
-              handleModeFieldChange('panelShadowEnabled', value as boolean, 'style');
-            } else if (field === 'color') {
-              handleModeFieldChange('panelShadowColor', value as string, 'style');
-            } else if (field === 'offsetX') {
-              handleModeFieldChange('panelShadowOffsetX', value as string, 'style');
-            } else if (field === 'offsetY') {
-              handleModeFieldChange('panelShadowOffsetY', value as string, 'style');
-            } else if (field === 'blurRadius') {
-              handleModeFieldChange('panelShadowBlurRadius', value as string, 'style');
-            } else if (field === 'opacity') {
-              handleModeFieldChange('panelShadowOpacity', value as string, 'style');
-            }
-          }}
-        />
+        {/* Bloom Colors */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeaderRow}>
+            <TouchableOpacity style={styles.sectionHeader} onPress={() => toggleSection('bloom')}>
+              <Text style={styles.sectionTitle}>Bloom</Text>
+              <Text style={styles.sectionToggle}>{expandedSections.bloom ? '−' : '+'}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.sectionRandomize}
+              onPress={() => withTransition(randomizeBloom)}
+            >
+              <Text style={styles.sectionRandomizeText}>⟳</Text>
+            </TouchableOpacity>
+          </View>
 
-        {/* Text Selection Styling */}
-        <Text style={[styles.label, { marginTop: 16, marginBottom: 12, fontSize: 16, color: '#4dd9b8' }]}>Text Selection</Text>
+          {expandedSections.bloom && (
+            <>
+              <Text style={styles.sectionHelperText}>
+                Changes you make in this section will apply to{' '}
+                {updateBothModesBloom ? 'both themes' : `${formData.activeMode} theme`}
+              </Text>
 
-        <HexColorInput
-          label="Selection Color"
-          value={formData[formData.activeMode].selectionColor || ''}
-          onChange={(value) => handleModeFieldChange('selectionColor', value, 'style')}
-          placeholder={formData.activeMode === 'light' ? '#b3d9ff' : '#4a9eff'}
-        />
-        </>
-        )}
-      </View>
+              {/* Update Both Modes Checkbox */}
+              <TouchableOpacity
+                style={styles.modeCheckboxContainer}
+                onPress={() => setUpdateBothModesBloom(!updateBothModesBloom)}
+              >
+                <View style={[styles.checkbox, updateBothModesBloom && styles.checkboxChecked]}>
+                  {updateBothModesBloom && <Text style={styles.checkboxCheck}>✓</Text>}
+                </View>
+                <Text style={styles.modeCheckboxLabel}>Update both modes (light and dark)</Text>
+              </TouchableOpacity>
 
-      {/* Controls */}
-      <View style={styles.section}>
-        <View style={styles.sectionHeaderRow}>
+              <Text style={styles.sectionDescription}>
+                These colors are used in the Crux bloom icon. You can use solid colors or gradients.
+              </Text>
+
+              {/* Bloom Border Controls */}
+              <HexColorInput
+                label="Bloom Border Color"
+                value={formData[formData.activeMode].bloomBorderColor || ''}
+                onChange={(value) => handleModeFieldChange('bloomBorderColor', value, 'bloom')}
+                placeholder="#000000"
+              />
+
+              <View style={styles.field}>
+                <Text style={styles.label}>
+                  Bloom Border Width:{' '}
+                  {typeof formData[formData.activeMode].bloomBorderWidth === 'number'
+                    ? formData[formData.activeMode].bloomBorderWidth
+                    : parseInt(formData[formData.activeMode].bloomBorderWidth ?? '0')}
+                </Text>
+                <Slider
+                  style={styles.slider}
+                  minimumValue={0}
+                  maximumValue={75}
+                  step={1}
+                  value={parseInt(
+                    formData[formData.activeMode].bloomBorderWidth?.toString() ?? '0'
+                  )}
+                  onValueChange={(val) =>
+                    handleModeFieldChange('bloomBorderWidth', Math.round(val).toString(), 'bloom')
+                  }
+                  minimumTrackTintColor="#4dd9b8"
+                  maximumTrackTintColor="#2a3138"
+                  thumbTintColor="#4dd9b8"
+                />
+              </View>
+
+              {/* Bloom Tabs */}
+              <View style={styles.bloomTabs}>
+                <TouchableOpacity
+                  style={[
+                    styles.bloomTab,
+                    activeBloomTab === 'primary' && styles.bloomTabActive,
+                    {
+                      borderBottomColor: getBloomColor(formData[formData.activeMode].primaryColor),
+                    },
+                  ]}
+                  onPress={() => setActiveBloomTab('primary')}
+                >
+                  <Text
+                    style={[
+                      styles.bloomTabText,
+                      activeBloomTab === 'primary' && styles.bloomTabTextActive,
+                    ]}
+                  >
+                    Primary
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[
+                    styles.bloomTab,
+                    activeBloomTab === 'secondary' && styles.bloomTabActive,
+                    {
+                      borderBottomColor: getBloomColor(
+                        formData[formData.activeMode].secondaryColor
+                      ),
+                    },
+                  ]}
+                  onPress={() => setActiveBloomTab('secondary')}
+                >
+                  <Text
+                    style={[
+                      styles.bloomTabText,
+                      activeBloomTab === 'secondary' && styles.bloomTabTextActive,
+                    ]}
+                  >
+                    Secondary
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[
+                    styles.bloomTab,
+                    activeBloomTab === 'tertiary' && styles.bloomTabActive,
+                    {
+                      borderBottomColor: getBloomColor(formData[formData.activeMode].tertiaryColor),
+                    },
+                  ]}
+                  onPress={() => setActiveBloomTab('tertiary')}
+                >
+                  <Text
+                    style={[
+                      styles.bloomTabText,
+                      activeBloomTab === 'tertiary' && styles.bloomTabTextActive,
+                    ]}
+                  >
+                    Tertiary
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[
+                    styles.bloomTab,
+                    activeBloomTab === 'quaternary' && styles.bloomTabActive,
+                    {
+                      borderBottomColor: getBloomColor(
+                        formData[formData.activeMode].quaternaryColor
+                      ),
+                    },
+                  ]}
+                  onPress={() => setActiveBloomTab('quaternary')}
+                >
+                  <Text
+                    style={[
+                      styles.bloomTabText,
+                      activeBloomTab === 'quaternary' && styles.bloomTabTextActive,
+                    ]}
+                  >
+                    Quaternary
+                  </Text>
+                </TouchableOpacity>
+              </View>
+
+              {/* Active Tab Content */}
+              <View style={styles.bloomTabContent}>
+                {activeBloomTab === 'primary' && (
+                  <ColorPicker
+                    label="Primary (Outermost)"
+                    value={formData[formData.activeMode].primaryColor}
+                    onChange={handleColorChange('primaryColor')}
+                  />
+                )}
+                {activeBloomTab === 'secondary' && (
+                  <ColorPicker
+                    label="Secondary"
+                    value={formData[formData.activeMode].secondaryColor}
+                    onChange={handleColorChange('secondaryColor')}
+                  />
+                )}
+                {activeBloomTab === 'tertiary' && (
+                  <ColorPicker
+                    label="Tertiary"
+                    value={formData[formData.activeMode].tertiaryColor}
+                    onChange={handleColorChange('tertiaryColor')}
+                  />
+                )}
+                {activeBloomTab === 'quaternary' && (
+                  <ColorPicker
+                    label="Quaternary (Innermost)"
+                    value={formData[formData.activeMode].quaternaryColor}
+                    onChange={handleColorChange('quaternaryColor')}
+                  />
+                )}
+              </View>
+            </>
+          )}
+        </View>
+
+        {/* UI Styling */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeaderRow}>
+            <TouchableOpacity style={styles.sectionHeader} onPress={() => toggleSection('style')}>
+              <Text style={styles.sectionTitle}>Content</Text>
+              <Text style={styles.sectionToggle}>{expandedSections.style ? '−' : '+'}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.sectionRandomize}
+              onPress={() => withTransition(randomizeStyle)}
+            >
+              <Text style={styles.sectionRandomizeText}>⟳</Text>
+            </TouchableOpacity>
+          </View>
+
+          {expandedSections.style && (
+            <>
+              <Text style={styles.sectionHelperText}>
+                Changes you make in this section will apply to{' '}
+                {updateBothModesStyle ? 'both themes' : `${formData.activeMode} theme`}
+              </Text>
+
+              {/* Update Both Modes Checkbox */}
+              <TouchableOpacity
+                style={styles.modeCheckboxContainer}
+                onPress={() => setUpdateBothModesStyle(!updateBothModesStyle)}
+              >
+                <View style={[styles.checkbox, updateBothModesStyle && styles.checkboxChecked]}>
+                  {updateBothModesStyle && <Text style={styles.checkboxCheck}>✓</Text>}
+                </View>
+                <Text style={styles.modeCheckboxLabel}>Update both modes (light and dark)</Text>
+              </TouchableOpacity>
+
+              <Text style={styles.sectionDescription}>
+                Optional styling for your app's user interface.
+              </Text>
+
+              <HexColorInput
+                label="Border Color"
+                value={formData[formData.activeMode].borderColor || ''}
+                onChange={(value) => handleModeFieldChange('borderColor', value, 'style')}
+                placeholder="#cccccc"
+              />
+
+              <View style={styles.field}>
+                <Text style={styles.label}>
+                  Border Width:{' '}
+                  {typeof formData[formData.activeMode].borderWidth === 'number'
+                    ? formData[formData.activeMode].borderWidth
+                    : parseInt(formData[formData.activeMode].borderWidth ?? '1')}
+                  px
+                </Text>
+                <Slider
+                  style={styles.slider}
+                  minimumValue={0}
+                  maximumValue={10}
+                  step={1}
+                  value={parseInt(formData[formData.activeMode].borderWidth?.toString() ?? '1')}
+                  onValueChange={(val) =>
+                    handleModeFieldChange('borderWidth', Math.round(val).toString(), 'style')
+                  }
+                  minimumTrackTintColor="#4dd9b8"
+                  maximumTrackTintColor="#2a3138"
+                  thumbTintColor="#4dd9b8"
+                />
+              </View>
+
+              <View style={styles.field}>
+                <Text style={styles.label}>
+                  Border Radius:{' '}
+                  {typeof formData[formData.activeMode].borderRadius === 'number'
+                    ? formData[formData.activeMode].borderRadius
+                    : parseInt(formData[formData.activeMode].borderRadius ?? '0')}
+                  px
+                </Text>
+                <Slider
+                  style={styles.slider}
+                  minimumValue={0}
+                  maximumValue={50}
+                  step={1}
+                  value={parseInt(formData[formData.activeMode].borderRadius?.toString() ?? '0')}
+                  onValueChange={(val) =>
+                    handleModeFieldChange('borderRadius', Math.round(val).toString(), 'style')
+                  }
+                  minimumTrackTintColor="#4dd9b8"
+                  maximumTrackTintColor="#2a3138"
+                  thumbTintColor="#4dd9b8"
+                />
+              </View>
+
+              <View style={styles.field}>
+                <Text style={styles.label}>Border Style</Text>
+                <View style={styles.fontToggle}>
+                  <TouchableOpacity
+                    style={[
+                      styles.fontButton,
+                      formData[formData.activeMode].borderStyle === 'solid' &&
+                        styles.fontButtonActive,
+                    ]}
+                    onPress={() => handleModeFieldChange('borderStyle', 'solid', 'style')}
+                  >
+                    <Text
+                      style={[
+                        styles.fontButtonText,
+                        formData[formData.activeMode].borderStyle === 'solid' &&
+                          styles.fontButtonTextActive,
+                      ]}
+                    >
+                      Solid
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[
+                      styles.fontButton,
+                      formData[formData.activeMode].borderStyle === 'dashed' &&
+                        styles.fontButtonActive,
+                    ]}
+                    onPress={() => handleModeFieldChange('borderStyle', 'dashed', 'style')}
+                  >
+                    <Text
+                      style={[
+                        styles.fontButtonText,
+                        formData[formData.activeMode].borderStyle === 'dashed' &&
+                          styles.fontButtonTextActive,
+                      ]}
+                    >
+                      Dashed
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[
+                      styles.fontButton,
+                      formData[formData.activeMode].borderStyle === 'dotted' &&
+                        styles.fontButtonActive,
+                    ]}
+                    onPress={() => handleModeFieldChange('borderStyle', 'dotted', 'style')}
+                  >
+                    <Text
+                      style={[
+                        styles.fontButtonText,
+                        formData[formData.activeMode].borderStyle === 'dotted' &&
+                          styles.fontButtonTextActive,
+                      ]}
+                    >
+                      Dotted
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+
+              <HexColorInput
+                label="Background Color"
+                value={formData[formData.activeMode].backgroundColor || ''}
+                onChange={(value) => handleModeFieldChange('backgroundColor', value, 'style')}
+                placeholder="#ffffff"
+              />
+
+              <HexColorInput
+                label="Panel Color"
+                value={formData[formData.activeMode].panelColor || ''}
+                onChange={(value) => handleModeFieldChange('panelColor', value, 'style')}
+                placeholder="#f5f5f5"
+              />
+
+              <HexColorInput
+                label="Text Color"
+                value={formData[formData.activeMode].textColor || ''}
+                onChange={(value) => handleModeFieldChange('textColor', value, 'style')}
+                placeholder="#000000"
+              />
+
+              {/* Contrast Indicator */}
+              {formData[formData.activeMode].panelColor &&
+                formData[formData.activeMode].textColor &&
+                (() => {
+                  try {
+                    const panelCol = formData[formData.activeMode].panelColor!;
+                    const textCol = formData[formData.activeMode].textColor!;
+                    const ratio = chroma.contrast(panelCol, textCol);
+                    const passAA = ratio >= 4.5;
+                    const passAAA = ratio >= 7;
+                    const closeAA = ratio >= 3.5 && ratio < 4.5; // Close to AA
+                    const closeAAA = ratio >= 6.0 && ratio < 7; // Close to AAA
+
+                    return (
+                      <View style={styles.contrastIndicator}>
+                        <Text style={styles.contrastLabel}>Text Readability</Text>
+                        <View style={styles.contrastInfo}>
+                          <Text style={styles.contrastRatio}>{ratio.toFixed(2)}:1</Text>
+                          <View style={styles.contrastBadges}>
+                            <View
+                              style={[
+                                styles.contrastBadge,
+                                passAA && styles.contrastBadgePass,
+                                closeAA && styles.contrastBadgeWarn,
+                                !passAA && !closeAA && styles.contrastBadgeFail,
+                              ]}
+                            >
+                              <Text
+                                style={[
+                                  styles.contrastBadgeText,
+                                  passAA && styles.contrastBadgeTextPass,
+                                  closeAA && styles.contrastBadgeTextWarn,
+                                  !passAA && !closeAA && styles.contrastBadgeTextFail,
+                                ]}
+                              >
+                                {passAA ? '✓' : closeAA ? '~' : '✗'} AA
+                              </Text>
+                            </View>
+                            <View
+                              style={[
+                                styles.contrastBadge,
+                                passAAA && styles.contrastBadgePass,
+                                closeAAA && styles.contrastBadgeWarn,
+                                !passAAA && !closeAAA && styles.contrastBadgeFail,
+                              ]}
+                            >
+                              <Text
+                                style={[
+                                  styles.contrastBadgeText,
+                                  passAAA && styles.contrastBadgeTextPass,
+                                  closeAAA && styles.contrastBadgeTextWarn,
+                                  !passAAA && !closeAAA && styles.contrastBadgeTextFail,
+                                ]}
+                              >
+                                {passAAA ? '✓' : closeAAA ? '~' : '✗'} AAA
+                              </Text>
+                            </View>
+                          </View>
+                        </View>
+                      </View>
+                    );
+                  } catch (e) {
+                    return null;
+                  }
+                })()}
+
+              <View style={styles.field}>
+                <Text style={styles.label}>Font Family</Text>
+                <View style={styles.fontToggle}>
+                  <TouchableOpacity
+                    style={[
+                      styles.fontButton,
+                      formData[formData.activeMode].font === 'sans-serif' &&
+                        styles.fontButtonActive,
+                    ]}
+                    onPress={() => handleModeFieldChange('font', 'sans-serif', 'style')}
+                  >
+                    <Text
+                      style={[
+                        styles.fontButtonText,
+                        formData[formData.activeMode].font === 'sans-serif' &&
+                          styles.fontButtonTextActive,
+                      ]}
+                    >
+                      Sans Serif
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[
+                      styles.fontButton,
+                      formData[formData.activeMode].font === 'serif' && styles.fontButtonActive,
+                    ]}
+                    onPress={() => handleModeFieldChange('font', 'serif', 'style')}
+                  >
+                    <Text
+                      style={[
+                        styles.fontButtonText,
+                        formData[formData.activeMode].font === 'serif' &&
+                          styles.fontButtonTextActive,
+                      ]}
+                    >
+                      Serif
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[
+                      styles.fontButton,
+                      formData[formData.activeMode].font === 'monospace' && styles.fontButtonActive,
+                    ]}
+                    onPress={() => handleModeFieldChange('font', 'monospace', 'style')}
+                  >
+                    <Text
+                      style={[
+                        styles.fontButtonText,
+                        formData[formData.activeMode].font === 'monospace' &&
+                          styles.fontButtonTextActive,
+                      ]}
+                    >
+                      Monospace
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+
+              {/* Panel Shadow Controls */}
+              <ShadowControls
+                label="Panel Shadow"
+                enabled={formData[formData.activeMode].panelShadowEnabled}
+                color={formData[formData.activeMode].panelShadowColor}
+                offsetX={formData[formData.activeMode].panelShadowOffsetX}
+                offsetY={formData[formData.activeMode].panelShadowOffsetY}
+                blurRadius={formData[formData.activeMode].panelShadowBlurRadius}
+                opacity={formData[formData.activeMode].panelShadowOpacity}
+                onChange={(field, value) => {
+                  if (field === 'enabled') {
+                    handleModeFieldChange('panelShadowEnabled', value as boolean, 'style');
+                  } else if (field === 'color') {
+                    handleModeFieldChange('panelShadowColor', value as string, 'style');
+                  } else if (field === 'offsetX') {
+                    handleModeFieldChange('panelShadowOffsetX', value as string, 'style');
+                  } else if (field === 'offsetY') {
+                    handleModeFieldChange('panelShadowOffsetY', value as string, 'style');
+                  } else if (field === 'blurRadius') {
+                    handleModeFieldChange('panelShadowBlurRadius', value as string, 'style');
+                  } else if (field === 'opacity') {
+                    handleModeFieldChange('panelShadowOpacity', value as string, 'style');
+                  }
+                }}
+              />
+
+              {/* Text Selection Styling */}
+              <Text
+                style={[
+                  styles.label,
+                  { marginTop: 16, marginBottom: 12, fontSize: 16, color: '#4dd9b8' },
+                ]}
+              >
+                Text Selection
+              </Text>
+
+              <HexColorInput
+                label="Selection Color"
+                value={formData[formData.activeMode].selectionColor || ''}
+                onChange={(value) => handleModeFieldChange('selectionColor', value, 'style')}
+                placeholder={formData.activeMode === 'light' ? '#b3d9ff' : '#4a9eff'}
+              />
+            </>
+          )}
+        </View>
+
+        {/* Controls */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeaderRow}>
+            <TouchableOpacity
+              style={styles.sectionHeader}
+              onPress={() => toggleSection('controls')}
+            >
+              <Text style={styles.sectionTitle}>Controls</Text>
+              <Text style={styles.sectionToggle}>{expandedSections.controls ? '−' : '+'}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.sectionRandomize}
+              onPress={() => withTransition(randomizeControls)}
+            >
+              <Text style={styles.sectionRandomizeText}>⟳</Text>
+            </TouchableOpacity>
+          </View>
+
+          {expandedSections.controls && (
+            <>
+              <Text style={styles.sectionHelperText}>
+                Changes you make in this section will apply to{' '}
+                {updateBothModesControls ? 'both themes' : `${formData.activeMode} theme`}
+              </Text>
+
+              {/* Update Both Modes Checkbox */}
+              <TouchableOpacity
+                style={styles.modeCheckboxContainer}
+                onPress={() => setUpdateBothModesControls(!updateBothModesControls)}
+              >
+                <View style={[styles.checkbox, updateBothModesControls && styles.checkboxChecked]}>
+                  {updateBothModesControls && <Text style={styles.checkboxCheck}>✓</Text>}
+                </View>
+                <Text style={styles.modeCheckboxLabel}>Update both modes (light and dark)</Text>
+              </TouchableOpacity>
+
+              <Text style={styles.sectionDescription}>
+                Button and link styling for interactive elements.
+              </Text>
+
+              {/* Button Styling */}
+              <Text
+                style={[
+                  styles.label,
+                  { marginTop: 8, marginBottom: 12, fontSize: 16, color: '#4dd9b8' },
+                ]}
+              >
+                Button
+              </Text>
+
+              <ColorPicker
+                label="Button Background"
+                value={
+                  formData[formData.activeMode].buttonBackgroundColor || {
+                    type: 'solid',
+                    value: '#4dd9b8',
+                  }
+                }
+                onChange={(value) =>
+                  handleModeFieldChange('buttonBackgroundColor', value, 'controls')
+                }
+              />
+
+              <HexColorInput
+                label="Button Text Color"
+                value={formData[formData.activeMode].buttonTextColor || ''}
+                onChange={(value) => handleModeFieldChange('buttonTextColor', value, 'controls')}
+                placeholder="#0f1214"
+              />
+
+              <HexColorInput
+                label="Button Border Color"
+                value={formData[formData.activeMode].buttonBorderColor || ''}
+                onChange={(value) => handleModeFieldChange('buttonBorderColor', value, 'controls')}
+                placeholder="#4dd9b8"
+              />
+
+              <View style={styles.field}>
+                <Text style={styles.label}>
+                  Button Border Width:{' '}
+                  {typeof formData[formData.activeMode].buttonBorderWidth === 'number'
+                    ? formData[formData.activeMode].buttonBorderWidth
+                    : parseInt(formData[formData.activeMode].buttonBorderWidth ?? '1')}
+                  px
+                </Text>
+                <Slider
+                  style={styles.slider}
+                  minimumValue={0}
+                  maximumValue={10}
+                  step={1}
+                  value={parseInt(
+                    formData[formData.activeMode].buttonBorderWidth?.toString() ?? '1'
+                  )}
+                  onValueChange={(val) =>
+                    handleModeFieldChange(
+                      'buttonBorderWidth',
+                      Math.round(val).toString(),
+                      'controls'
+                    )
+                  }
+                  minimumTrackTintColor="#4dd9b8"
+                  maximumTrackTintColor="#2a3138"
+                  thumbTintColor="#4dd9b8"
+                />
+              </View>
+
+              <View style={styles.field}>
+                <Text style={styles.label}>Button Border Style</Text>
+                <View style={styles.fontToggle}>
+                  <TouchableOpacity
+                    style={[
+                      styles.fontButton,
+                      formData[formData.activeMode].buttonBorderStyle === 'solid' &&
+                        styles.fontButtonActive,
+                    ]}
+                    onPress={() => handleModeFieldChange('buttonBorderStyle', 'solid', 'controls')}
+                  >
+                    <Text
+                      style={[
+                        styles.fontButtonText,
+                        formData[formData.activeMode].buttonBorderStyle === 'solid' &&
+                          styles.fontButtonTextActive,
+                      ]}
+                    >
+                      Solid
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[
+                      styles.fontButton,
+                      formData[formData.activeMode].buttonBorderStyle === 'dashed' &&
+                        styles.fontButtonActive,
+                    ]}
+                    onPress={() => handleModeFieldChange('buttonBorderStyle', 'dashed', 'controls')}
+                  >
+                    <Text
+                      style={[
+                        styles.fontButtonText,
+                        formData[formData.activeMode].buttonBorderStyle === 'dashed' &&
+                          styles.fontButtonTextActive,
+                      ]}
+                    >
+                      Dashed
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[
+                      styles.fontButton,
+                      formData[formData.activeMode].buttonBorderStyle === 'dotted' &&
+                        styles.fontButtonActive,
+                    ]}
+                    onPress={() => handleModeFieldChange('buttonBorderStyle', 'dotted', 'controls')}
+                  >
+                    <Text
+                      style={[
+                        styles.fontButtonText,
+                        formData[formData.activeMode].buttonBorderStyle === 'dotted' &&
+                          styles.fontButtonTextActive,
+                      ]}
+                    >
+                      Dotted
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+
+              <View style={styles.field}>
+                <Text style={styles.label}>
+                  Button Border Radius:{' '}
+                  {typeof formData[formData.activeMode].buttonBorderRadius === 'number'
+                    ? formData[formData.activeMode].buttonBorderRadius
+                    : parseInt(formData[formData.activeMode].buttonBorderRadius ?? '6')}
+                  px
+                </Text>
+                <Slider
+                  style={styles.slider}
+                  minimumValue={0}
+                  maximumValue={50}
+                  step={1}
+                  value={parseInt(
+                    formData[formData.activeMode].buttonBorderRadius?.toString() ?? '6'
+                  )}
+                  onValueChange={(val) =>
+                    handleModeFieldChange(
+                      'buttonBorderRadius',
+                      Math.round(val).toString(),
+                      'controls'
+                    )
+                  }
+                  minimumTrackTintColor="#4dd9b8"
+                  maximumTrackTintColor="#2a3138"
+                  thumbTintColor="#4dd9b8"
+                />
+              </View>
+
+              {/* Link Styling */}
+              <Text
+                style={[
+                  styles.label,
+                  { marginTop: 16, marginBottom: 12, fontSize: 16, color: '#4dd9b8' },
+                ]}
+              >
+                Link
+              </Text>
+
+              <HexColorInput
+                label="Link Color"
+                value={formData[formData.activeMode].linkColor || ''}
+                onChange={(value) => handleModeFieldChange('linkColor', value, 'controls')}
+                placeholder="#2563eb"
+              />
+
+              <View style={styles.field}>
+                <Text style={styles.label}>Link Underline Style</Text>
+                <View style={styles.fontToggle}>
+                  <TouchableOpacity
+                    style={[
+                      styles.fontButton,
+                      formData[formData.activeMode].linkUnderlineStyle === 'none' &&
+                        styles.fontButtonActive,
+                    ]}
+                    onPress={() => handleModeFieldChange('linkUnderlineStyle', 'none', 'controls')}
+                  >
+                    <Text
+                      style={[
+                        styles.fontButtonText,
+                        formData[formData.activeMode].linkUnderlineStyle === 'none' &&
+                          styles.fontButtonTextActive,
+                      ]}
+                    >
+                      None
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[
+                      styles.fontButton,
+                      formData[formData.activeMode].linkUnderlineStyle === 'underline' &&
+                        styles.fontButtonActive,
+                    ]}
+                    onPress={() =>
+                      handleModeFieldChange('linkUnderlineStyle', 'underline', 'controls')
+                    }
+                  >
+                    <Text
+                      style={[
+                        styles.fontButtonText,
+                        formData[formData.activeMode].linkUnderlineStyle === 'underline' &&
+                          styles.fontButtonTextActive,
+                      ]}
+                    >
+                      Underline
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[
+                      styles.fontButton,
+                      formData[formData.activeMode].linkUnderlineStyle === 'always' &&
+                        styles.fontButtonActive,
+                    ]}
+                    onPress={() =>
+                      handleModeFieldChange('linkUnderlineStyle', 'always', 'controls')
+                    }
+                  >
+                    <Text
+                      style={[
+                        styles.fontButtonText,
+                        formData[formData.activeMode].linkUnderlineStyle === 'always' &&
+                          styles.fontButtonTextActive,
+                      ]}
+                    >
+                      Always
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+
+              {/* Button Shadow Controls */}
+              <ShadowControls
+                label="Button Shadow"
+                enabled={formData[formData.activeMode].buttonShadowEnabled}
+                color={formData[formData.activeMode].buttonShadowColor}
+                offsetX={formData[formData.activeMode].buttonShadowOffsetX}
+                offsetY={formData[formData.activeMode].buttonShadowOffsetY}
+                blurRadius={formData[formData.activeMode].buttonShadowBlurRadius}
+                opacity={formData[formData.activeMode].buttonShadowOpacity}
+                onChange={(field, value) => {
+                  if (field === 'enabled') {
+                    handleModeFieldChange('buttonShadowEnabled', value as boolean, 'controls');
+                  } else if (field === 'color') {
+                    handleModeFieldChange('buttonShadowColor', value as string, 'controls');
+                  } else if (field === 'offsetX') {
+                    handleModeFieldChange('buttonShadowOffsetX', value as string, 'controls');
+                  } else if (field === 'offsetY') {
+                    handleModeFieldChange('buttonShadowOffsetY', value as string, 'controls');
+                  } else if (field === 'blurRadius') {
+                    handleModeFieldChange('buttonShadowBlurRadius', value as string, 'controls');
+                  } else if (field === 'opacity') {
+                    handleModeFieldChange('buttonShadowOpacity', value as string, 'controls');
+                  }
+                }}
+              />
+            </>
+          )}
+        </View>
+
+        {/* Actions */}
+        <View style={styles.actions}>
           <TouchableOpacity
-            style={styles.sectionHeader}
-            onPress={() => toggleSection('controls')}
+            style={[styles.button, styles.randomizeAllButton]}
+            onPress={() => withTransition(randomizeAll)}
+            disabled={isSaving}
           >
-            <Text style={styles.sectionTitle}>Controls</Text>
-            <Text style={styles.sectionToggle}>{expandedSections.controls ? '−' : '+'}</Text>
+            <Text style={styles.randomizeAllButtonText}>🎲 Randomize All</Text>
           </TouchableOpacity>
+
           <TouchableOpacity
-            style={styles.sectionRandomize}
-            onPress={() => withTransition(randomizeControls)}
+            style={[styles.button, styles.applyButton]}
+            onPress={() => withTransition(handleApplyTheme)}
+            disabled={isSaving}
           >
-            <Text style={styles.sectionRandomizeText}>⟳</Text>
+            <Text style={styles.buttonText}>✨ Apply Theme</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.button, styles.saveButton]}
+            onPress={handleSave}
+            disabled={isSaving}
+          >
+            <Text style={styles.buttonText}>
+              {isSaving ? 'Saving...' : isEditMode ? 'Update Theme' : 'Create Theme'}
+            </Text>
           </TouchableOpacity>
         </View>
-
-        {expandedSections.controls && (
-        <>
-        <Text style={styles.sectionHelperText}>
-          Changes you make in this section will apply to {updateBothModesControls ? 'both themes' : `${formData.activeMode} theme`}
-        </Text>
-
-        {/* Update Both Modes Checkbox */}
-        <TouchableOpacity
-          style={styles.modeCheckboxContainer}
-          onPress={() => setUpdateBothModesControls(!updateBothModesControls)}
-        >
-          <View style={[styles.checkbox, updateBothModesControls && styles.checkboxChecked]}>
-            {updateBothModesControls && <Text style={styles.checkboxCheck}>✓</Text>}
-          </View>
-          <Text style={styles.modeCheckboxLabel}>Update both modes (light and dark)</Text>
-        </TouchableOpacity>
-
-        <Text style={styles.sectionDescription}>
-          Button and link styling for interactive elements.
-        </Text>
-
-        {/* Button Styling */}
-        <Text style={[styles.label, { marginTop: 8, marginBottom: 12, fontSize: 16, color: '#4dd9b8' }]}>Button</Text>
-
-        <ColorPicker
-          label="Button Background"
-          value={formData[formData.activeMode].buttonBackgroundColor || { type: 'solid', value: '#4dd9b8' }}
-          onChange={(value) => handleModeFieldChange('buttonBackgroundColor', value, 'controls')}
-        />
-
-        <HexColorInput
-          label="Button Text Color"
-          value={formData[formData.activeMode].buttonTextColor || ''}
-          onChange={(value) => handleModeFieldChange('buttonTextColor', value, 'controls')}
-          placeholder="#0f1214"
-        />
-
-        <HexColorInput
-          label="Button Border Color"
-          value={formData[formData.activeMode].buttonBorderColor || ''}
-          onChange={(value) => handleModeFieldChange('buttonBorderColor', value, 'controls')}
-          placeholder="#4dd9b8"
-        />
-
-        <View style={styles.field}>
-          <Text style={styles.label}>
-            Button Border Width: {typeof formData[formData.activeMode].buttonBorderWidth === 'number' ? formData[formData.activeMode].buttonBorderWidth : parseInt(formData[formData.activeMode].buttonBorderWidth ?? '1')}px
-          </Text>
-          <Slider
-            style={styles.slider}
-            minimumValue={0}
-            maximumValue={10}
-            step={1}
-            value={parseInt(formData[formData.activeMode].buttonBorderWidth?.toString() ?? '1')}
-            onValueChange={(val) => handleModeFieldChange('buttonBorderWidth', Math.round(val).toString(), 'controls')}
-            minimumTrackTintColor="#4dd9b8"
-            maximumTrackTintColor="#2a3138"
-            thumbTintColor="#4dd9b8"
-          />
-        </View>
-
-        <View style={styles.field}>
-          <Text style={styles.label}>Button Border Style</Text>
-          <View style={styles.fontToggle}>
-            <TouchableOpacity
-              style={[
-                styles.fontButton,
-                formData[formData.activeMode].buttonBorderStyle === 'solid' && styles.fontButtonActive,
-              ]}
-              onPress={() => handleModeFieldChange('buttonBorderStyle', 'solid', 'controls')}
-            >
-              <Text
-                style={[
-                  styles.fontButtonText,
-                  formData[formData.activeMode].buttonBorderStyle === 'solid' && styles.fontButtonTextActive,
-                ]}
-              >
-                Solid
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[
-                styles.fontButton,
-                formData[formData.activeMode].buttonBorderStyle === 'dashed' && styles.fontButtonActive,
-              ]}
-              onPress={() => handleModeFieldChange('buttonBorderStyle', 'dashed', 'controls')}
-            >
-              <Text
-                style={[
-                  styles.fontButtonText,
-                  formData[formData.activeMode].buttonBorderStyle === 'dashed' && styles.fontButtonTextActive,
-                ]}
-              >
-                Dashed
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[
-                styles.fontButton,
-                formData[formData.activeMode].buttonBorderStyle === 'dotted' && styles.fontButtonActive,
-              ]}
-              onPress={() => handleModeFieldChange('buttonBorderStyle', 'dotted', 'controls')}
-            >
-              <Text
-                style={[
-                  styles.fontButtonText,
-                  formData[formData.activeMode].buttonBorderStyle === 'dotted' && styles.fontButtonTextActive,
-                ]}
-              >
-                Dotted
-              </Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        <View style={styles.field}>
-          <Text style={styles.label}>
-            Button Border Radius: {typeof formData[formData.activeMode].buttonBorderRadius === 'number' ? formData[formData.activeMode].buttonBorderRadius : parseInt(formData[formData.activeMode].buttonBorderRadius ?? '6')}px
-          </Text>
-          <Slider
-            style={styles.slider}
-            minimumValue={0}
-            maximumValue={50}
-            step={1}
-            value={parseInt(formData[formData.activeMode].buttonBorderRadius?.toString() ?? '6')}
-            onValueChange={(val) => handleModeFieldChange('buttonBorderRadius', Math.round(val).toString(), 'controls')}
-            minimumTrackTintColor="#4dd9b8"
-            maximumTrackTintColor="#2a3138"
-            thumbTintColor="#4dd9b8"
-          />
-        </View>
-
-        {/* Link Styling */}
-        <Text style={[styles.label, { marginTop: 16, marginBottom: 12, fontSize: 16, color: '#4dd9b8' }]}>Link</Text>
-
-        <HexColorInput
-          label="Link Color"
-          value={formData[formData.activeMode].linkColor || ''}
-          onChange={(value) => handleModeFieldChange('linkColor', value, 'controls')}
-          placeholder="#2563eb"
-        />
-
-        <View style={styles.field}>
-          <Text style={styles.label}>Link Underline Style</Text>
-          <View style={styles.fontToggle}>
-            <TouchableOpacity
-              style={[
-                styles.fontButton,
-                formData[formData.activeMode].linkUnderlineStyle === 'none' && styles.fontButtonActive,
-              ]}
-              onPress={() => handleModeFieldChange('linkUnderlineStyle', 'none', 'controls')}
-            >
-              <Text
-                style={[
-                  styles.fontButtonText,
-                  formData[formData.activeMode].linkUnderlineStyle === 'none' && styles.fontButtonTextActive,
-                ]}
-              >
-                None
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[
-                styles.fontButton,
-                formData[formData.activeMode].linkUnderlineStyle === 'underline' && styles.fontButtonActive,
-              ]}
-              onPress={() => handleModeFieldChange('linkUnderlineStyle', 'underline', 'controls')}
-            >
-              <Text
-                style={[
-                  styles.fontButtonText,
-                  formData[formData.activeMode].linkUnderlineStyle === 'underline' && styles.fontButtonTextActive,
-                ]}
-              >
-                Underline
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[
-                styles.fontButton,
-                formData[formData.activeMode].linkUnderlineStyle === 'always' && styles.fontButtonActive,
-              ]}
-              onPress={() => handleModeFieldChange('linkUnderlineStyle', 'always', 'controls')}
-            >
-              <Text
-                style={[
-                  styles.fontButtonText,
-                  formData[formData.activeMode].linkUnderlineStyle === 'always' && styles.fontButtonTextActive,
-                ]}
-              >
-                Always
-              </Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        {/* Button Shadow Controls */}
-        <ShadowControls
-          label="Button Shadow"
-          enabled={formData[formData.activeMode].buttonShadowEnabled}
-          color={formData[formData.activeMode].buttonShadowColor}
-          offsetX={formData[formData.activeMode].buttonShadowOffsetX}
-          offsetY={formData[formData.activeMode].buttonShadowOffsetY}
-          blurRadius={formData[formData.activeMode].buttonShadowBlurRadius}
-          opacity={formData[formData.activeMode].buttonShadowOpacity}
-          onChange={(field, value) => {
-            if (field === 'enabled') {
-              handleModeFieldChange('buttonShadowEnabled', value as boolean, 'controls');
-            } else if (field === 'color') {
-              handleModeFieldChange('buttonShadowColor', value as string, 'controls');
-            } else if (field === 'offsetX') {
-              handleModeFieldChange('buttonShadowOffsetX', value as string, 'controls');
-            } else if (field === 'offsetY') {
-              handleModeFieldChange('buttonShadowOffsetY', value as string, 'controls');
-            } else if (field === 'blurRadius') {
-              handleModeFieldChange('buttonShadowBlurRadius', value as string, 'controls');
-            } else if (field === 'opacity') {
-              handleModeFieldChange('buttonShadowOpacity', value as string, 'controls');
-            }
-          }}
-        />
-        </>
-        )}
-      </View>
-
-      {/* Actions */}
-      <View style={styles.actions}>
-        <TouchableOpacity
-          style={[styles.button, styles.randomizeAllButton]}
-          onPress={() => withTransition(randomizeAll)}
-          disabled={isSaving}
-        >
-          <Text style={styles.randomizeAllButtonText}>🎲 Randomize All</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[styles.button, styles.applyButton]}
-          onPress={() => withTransition(handleApplyTheme)}
-          disabled={isSaving}
-        >
-          <Text style={styles.buttonText}>✨ Apply Theme</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[styles.button, styles.saveButton]}
-          onPress={handleSave}
-          disabled={isSaving}
-        >
-          <Text style={styles.buttonText}>
-            {isSaving ? 'Saving...' : (isEditMode ? 'Update Theme' : 'Create Theme')}
-          </Text>
-        </TouchableOpacity>
-      </View>
       </ScrollView>
     </View>
   );

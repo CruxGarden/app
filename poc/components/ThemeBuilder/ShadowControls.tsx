@@ -26,7 +26,10 @@ export interface ShadowControlsProps {
   /** Opacity as string (0-1) */
   opacity?: string;
   /** Callback when any value changes */
-  onChange: (field: 'enabled' | 'color' | 'offsetX' | 'offsetY' | 'blurRadius' | 'opacity', value: string | boolean) => void;
+  onChange: (
+    field: 'enabled' | 'color' | 'offsetX' | 'offsetY' | 'blurRadius' | 'opacity',
+    value: string | boolean
+  ) => void;
 }
 
 export const ShadowControls: React.FC<ShadowControlsProps> = ({
@@ -67,9 +70,7 @@ export const ShadowControls: React.FC<ShadowControlsProps> = ({
 
           {/* X Offset Slider */}
           <View style={styles.field}>
-            <Text style={styles.label}>
-              X Offset: {parseInt(offsetX || '0')}px
-            </Text>
+            <Text style={styles.label}>X Offset: {parseInt(offsetX || '0')}px</Text>
             <Slider
               style={styles.slider}
               minimumValue={-20}
@@ -85,9 +86,7 @@ export const ShadowControls: React.FC<ShadowControlsProps> = ({
 
           {/* Y Offset Slider */}
           <View style={styles.field}>
-            <Text style={styles.label}>
-              Y Offset: {parseInt(offsetY || '0')}px
-            </Text>
+            <Text style={styles.label}>Y Offset: {parseInt(offsetY || '0')}px</Text>
             <Slider
               style={styles.slider}
               minimumValue={-20}
@@ -103,9 +102,7 @@ export const ShadowControls: React.FC<ShadowControlsProps> = ({
 
           {/* Blur Radius Slider */}
           <View style={styles.field}>
-            <Text style={styles.label}>
-              Blur Radius: {parseInt(blurRadius || '0')}px
-            </Text>
+            <Text style={styles.label}>Blur Radius: {parseInt(blurRadius || '0')}px</Text>
             <Slider
               style={styles.slider}
               minimumValue={0}

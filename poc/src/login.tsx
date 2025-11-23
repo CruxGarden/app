@@ -90,9 +90,7 @@ export default function LoginScreen() {
             <Text variant="heading" weight="bold" style={{ marginBottom: tokens.spacing.sm }}>
               CruxGarden
             </Text>
-            <Text>
-              {step === 'email' ? 'Sign in to continue' : 'Enter your code'}
-            </Text>
+            <Text>{step === 'email' ? 'Sign in to continue' : 'Enter your code'}</Text>
           </View>
 
           {/* Form */}

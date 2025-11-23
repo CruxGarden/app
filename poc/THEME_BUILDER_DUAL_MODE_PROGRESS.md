@@ -5,6 +5,7 @@
 ## Completed Steps
 
 Step 1: Restructure Types in types.ts
+
 - Added ThemeModeData interface
 - Updated ThemeFormData to have light/dark/activeMode
 - Updated formDataToDto to save both modes
@@ -12,20 +13,24 @@ Step 1: Restructure Types in types.ts
 - Updated getDefaultThemeFormData to initialize both modes
 
 Step 2: Update helper functions and preview
+
 - Updated getBloomProps to use activeMode
 - Updated getFontFamily to use activeMode
 - Updated preview title to show "Preview - Light Mode" or "Preview - Dark Mode"
 - Updated preview container and sample panel to use formData[activeMode]
 
 Step 3: Add mode switcher UI
+
 - Added Light/Dark tabs between Details and Palette sections
 - Tabs update formData.activeMode when clicked
 
 Step 4: Update handlers
+
 - Added handleModeFieldChange for per-mode fields
 - Updated handleColorChange to use handleModeFieldChange
 
 Step 5: Update all form inputs to use activeMode
+
 - Updated bloom border controls
 - Updated bloom color pickers and tabs
 - Updated all Content section inputs (border, background, panel, text, font)
@@ -33,12 +38,14 @@ Step 5: Update all form inputs to use activeMode
 - Added styles for mode tabs
 
 Step 6: Update randomization functions
+
 - Updated randomizeStyle() to generate both light and dark modes intelligently
 - Updated randomizeBloom() to generate identical bloom colors for both modes
 - Updated handleGenerateUIColors() (Apply Palette) to apply to current active mode only
 - Updated randomizeAll() to generate complete dual-mode themes from one palette
 
 Step 7: Fix TypeScript errors
+
 - Fixed slider type issues for borderWidth, borderRadius, bloomBorderWidth
 - Fixed chroma.contrast type issue with null assertions
 
@@ -49,12 +56,14 @@ Implementation finished successfully!
 ## Recent Updates (Post-Initial Implementation)
 
 ### Fix 1: Light/Dark Mode Inversion
+
 - **Issue**: Dark Mode was showing light backgrounds and vice versa
 - **Fix**: Updated `generateBackgroundAndPanel` to respect `isDark` parameter even in unconstrained mode
   - Dark Mode: 0-40% lightness
   - Light Mode: 60-100% lightness
 
 ### Fix 2: Apply Palette Now Affects Both Modes
+
 - **Issue**: Apply Palette only affected the active mode, inconsistent with randomize buttons
 - **Fix**: Updated `handleGenerateUIColors` to generate both light and dark modes simultaneously
   - Same bloom colors for both modes
@@ -62,6 +71,7 @@ Implementation finished successfully!
   - Identical bloom border for both modes
 
 ### Fix 3: AAA Contrast Guarantee
+
 - **Issue**: Auto-generated palettes didn't guarantee WCAG AAA (7.0:1) contrast
 - **Fix**: Created `getAAATextColor` helper function that guarantees AAA contrast
   - Updated `handleGenerateUIColors` (Apply Palette)

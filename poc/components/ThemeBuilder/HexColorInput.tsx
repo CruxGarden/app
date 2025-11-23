@@ -51,10 +51,7 @@ export const HexColorInput: React.FC<HexColorInputProps> = ({
       {showPicker && (
         <View style={styles.pickerContainer}>
           <HexColorPicker color={value || '#000000'} onChange={onChange} />
-          <TouchableOpacity
-            style={styles.doneButton}
-            onPress={() => setShowPicker(false)}
-          >
+          <TouchableOpacity style={styles.doneButton} onPress={() => setShowPicker(false)}>
             <Text style={styles.doneButtonText}>Done</Text>
           </TouchableOpacity>
         </View>

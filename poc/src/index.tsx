@@ -40,12 +40,7 @@ export default function Index() {
             fullWidth
             onPress={() => router.push('/theme-builder')}
           />
-          <Button
-            title="Sign Out"
-            variant="secondary"
-            fullWidth
-            onPress={() => logout()}
-          />
+          <Button title="Sign Out" variant="secondary" fullWidth onPress={() => logout()} />
         </Panel>
       ) : (
         <Panel style={{ alignItems: 'center', gap: 16, minWidth: 300 }}>

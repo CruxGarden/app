@@ -40,12 +40,7 @@ function MyThemeEditor() {
     router.back();
   };
 
-  return (
-    <ThemeBuilder
-      onSave={handleSave}
-      onCancel={handleCancel}
-    />
-  );
+  return <ThemeBuilder onSave={handleSave} onCancel={handleCancel} />;
 }
 ```
 
@@ -57,13 +52,7 @@ import { dtoToFormData } from '@/components/ThemeBuilder';
 function EditTheme({ existingTheme }: { existingTheme: ThemeDto }) {
   const initialData = dtoToFormData(existingTheme);
 
-  return (
-    <ThemeBuilder
-      initialData={initialData}
-      onSave={handleSave}
-      onCancel={handleCancel}
-    />
-  );
+  return <ThemeBuilder initialData={initialData} onSave={handleSave} onCancel={handleCancel} />;
 }
 ```
 
@@ -133,7 +122,7 @@ primaryColor: {
 interface ThemeFormData {
   title: string;
   description?: string;
-  primaryColor: ColorValue;  // Can be solid or gradient
+  primaryColor: ColorValue; // Can be solid or gradient
   secondaryColor: ColorValue;
   tertiaryColor: ColorValue;
   quaternaryColor: ColorValue;
@@ -151,10 +140,10 @@ interface ThemeFormData {
 interface ThemeDto {
   title: string;
   description?: string;
-  primaryColor: string;    // Hex only
-  secondaryColor: string;   // Hex only
-  tertiaryColor: string;    // Hex only
-  quaternaryColor: string;  // Hex only
+  primaryColor: string; // Hex only
+  secondaryColor: string; // Hex only
+  tertiaryColor: string; // Hex only
+  quaternaryColor: string; // Hex only
   borderRadius?: string;
   borderColor?: string;
   borderWidth?: string;
@@ -163,7 +152,7 @@ interface ThemeDto {
   textColor?: string;
   font?: string;
   mode?: string;
-  meta?: ThemeMeta;         // Gradients stored here
+  meta?: ThemeMeta; // Gradients stored here
 }
 ```
 
@@ -290,7 +279,7 @@ const handleSave = async (theme: ThemeDto) => {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`,
+      Authorization: `Bearer ${token}`,
     },
     body: JSON.stringify(theme),
   });

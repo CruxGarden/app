@@ -25,11 +25,7 @@ export const Loading: React.FC<LoadingProps> = ({
   const { tokens } = useTheme();
 
   const indicator = (
-    <ActivityIndicator
-      color={color || tokens.colors.primary}
-      size={size}
-      {...props}
-    />
+    <ActivityIndicator color={color || tokens.colors.primary} size={size} {...props} />
   );
 
   if (centered) {

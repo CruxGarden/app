@@ -26,7 +26,7 @@ import CruxBloom from '@/components/CruxBloom';
 import { CruxBloom } from '@/components/CruxBloom';
 
 // Default bloom with custom size
-<CruxBloom size={100} />
+<CruxBloom size={100} />;
 ```
 
 ## Customization Examples
@@ -77,10 +77,10 @@ import { CruxBloom } from '@/components/CruxBloom';
       id: 'sunset',
       stops: [
         { color: '#ff6b6b', offset: '0%' },
-        { color: '#feca57', offset: '100%' }
+        { color: '#feca57', offset: '100%' },
       ],
-      angle: 135
-    }
+      angle: 135,
+    },
   ]}
   primary={{ fill: 'url(#sunset)', opacity: 0.4 }}
   secondary={{ fill: 'url(#sunset)', opacity: 0.6 }}
@@ -152,7 +152,7 @@ const myTheme = createCruxBloomTheme(
 );
 
 // Use it
-<CruxBloom size={150} {...myTheme.config} />
+<CruxBloom size={150} {...myTheme.config} />;
 
 // Create a monochromatic theme
 const blueTheme = createMonochromaticTheme('Blue Theme', '#3498db', {
@@ -160,7 +160,7 @@ const blueTheme = createMonochromaticTheme('Blue Theme', '#3498db', {
   withBorders: true,
 });
 
-<CruxBloom size={150} {...blueTheme.config} />
+<CruxBloom size={150} {...blueTheme.config} />;
 ```
 
 ## Advanced: Multiple Gradients
@@ -180,7 +180,7 @@ import { PRESET_GRADIENTS } from '@/components/CruxBloom/types';
   secondary={{ fill: 'url(#ocean)' }}
   tertiary={{ fill: 'url(#forest)' }}
   quaternary={{ fill: 'url(#lavender)' }}
-/>
+/>;
 ```
 
 ## Available Preset Gradients
@@ -198,36 +198,36 @@ import { PRESET_GRADIENTS } from '@/components/CruxBloom/types';
 
 ### CruxBloomProps
 
-| Prop | Type | Default | Description |
-|------|------|---------|-------------|
-| `size` | `number` | `100` | Size in pixels (width/height) |
-| `width` | `number` | `2000` | ViewBox width |
-| `height` | `number` | `2000` | ViewBox height |
-| `primary` | `CircleStyle` | See defaults | Outermost circle (r=1000) |
-| `secondary` | `CircleStyle` | See defaults | Second circle (r=750) |
-| `tertiary` | `CircleStyle` | See defaults | Third circle (r=500) |
-| `quaternary` | `CircleStyle` | See defaults | Innermost circle (r=250) |
-| `gradients` | `GradientDefinition[]` | `[]` | Array of gradient definitions |
-| `style` | `any` | - | Additional SVG styles |
-| `testID` | `string` | `'crux-bloom'` | Test identifier |
+| Prop         | Type                   | Default        | Description                   |
+| ------------ | ---------------------- | -------------- | ----------------------------- |
+| `size`       | `number`               | `100`          | Size in pixels (width/height) |
+| `width`      | `number`               | `2000`         | ViewBox width                 |
+| `height`     | `number`               | `2000`         | ViewBox height                |
+| `primary`    | `CircleStyle`          | See defaults   | Outermost circle (r=1000)     |
+| `secondary`  | `CircleStyle`          | See defaults   | Second circle (r=750)         |
+| `tertiary`   | `CircleStyle`          | See defaults   | Third circle (r=500)          |
+| `quaternary` | `CircleStyle`          | See defaults   | Innermost circle (r=250)      |
+| `gradients`  | `GradientDefinition[]` | `[]`           | Array of gradient definitions |
+| `style`      | `any`                  | -              | Additional SVG styles         |
+| `testID`     | `string`               | `'crux-bloom'` | Test identifier               |
 
 ### CircleStyle
 
-| Property | Type | Description |
-|----------|------|-------------|
-| `fill` | `string` | Fill color or gradient reference (`url(#id)`) |
-| `stroke` | `string` | Border color |
-| `strokeWidth` | `number` | Border width |
-| `opacity` | `number` | Opacity (0-1) |
+| Property      | Type     | Description                                   |
+| ------------- | -------- | --------------------------------------------- |
+| `fill`        | `string` | Fill color or gradient reference (`url(#id)`) |
+| `stroke`      | `string` | Border color                                  |
+| `strokeWidth` | `number` | Border width                                  |
+| `opacity`     | `number` | Opacity (0-1)                                 |
 
 ### GradientDefinition
 
-| Property | Type | Description |
-|----------|------|-------------|
-| `id` | `string` | Unique gradient ID |
-| `stops` | `Array<{color, offset, opacity?}>` | Gradient color stops |
-| `angle` | `number` | Gradient angle in degrees (0=→, 90=↓) |
-| `type` | `'linear' \| 'radial'` | Gradient type (linear only for now) |
+| Property | Type                               | Description                           |
+| -------- | ---------------------------------- | ------------------------------------- |
+| `id`     | `string`                           | Unique gradient ID                    |
+| `stops`  | `Array<{color, offset, opacity?}>` | Gradient color stops                  |
+| `angle`  | `number`                           | Gradient angle in degrees (0=→, 90=↓) |
+| `type`   | `'linear' \| 'radial'`             | Gradient type (linear only for now)   |
 
 ## Default Circle Positions
 

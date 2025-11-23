@@ -5,7 +5,13 @@
  */
 
 import React, { useMemo } from 'react';
-import { TouchableOpacity, TouchableOpacityProps, ActivityIndicator, View, StyleSheet } from 'react-native';
+import {
+  TouchableOpacity,
+  TouchableOpacityProps,
+  ActivityIndicator,
+  View,
+  StyleSheet,
+} from 'react-native';
 import Animated, { useAnimatedStyle, withTiming } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '@/contexts/ThemeContext';
@@ -44,16 +50,17 @@ export const Button: React.FC<ButtonProps> = ({
     : { type: 'solid', value: isGhost ? 'transparent' : tokens.colors.panel };
 
   // Convert solid colors to gradient format (same color for both stops)
-  const gradientData = backgroundColorValue.type === 'gradient'
-    ? backgroundColorValue.value
-    : {
-        id: 'solid',
-        angle: 0,
-        stops: [
-          { color: backgroundColorValue.value, offset: '0%' },
-          { color: backgroundColorValue.value, offset: '100%' },
-        ],
-      };
+  const gradientData =
+    backgroundColorValue.type === 'gradient'
+      ? backgroundColorValue.value
+      : {
+          id: 'solid',
+          angle: 0,
+          stops: [
+            { color: backgroundColorValue.value, offset: '0%' },
+            { color: backgroundColorValue.value, offset: '100%' },
+          ],
+        };
 
   const buttonStyle = useMemo(() => {
     // Build shadow styles if enabled
@@ -81,33 +88,28 @@ export const Button: React.FC<ButtonProps> = ({
     };
   }, [tokens, disabled]);
 
-  const animatedStyle = useAnimatedStyle(() => ({
-    borderWidth: withTiming(
-      isGhost ? 0 : tokens.button.borderWidth,
-      { duration: transitionDuration }
-    ),
-    borderRadius: withTiming(
-      tokens.button.borderRadius,
-      { duration: transitionDuration }
-    ),
-    borderColor: withTiming(
-      isGhost
-        ? 'transparent'
-        : isPrimary
-        ? tokens.colors.buttonBorder
-        : tokens.colors.border,
-      { duration: transitionDuration }
-    ),
-    // Note: borderStyle can't be animated in React Native, but it will update
-    borderStyle: tokens.button.borderStyle as 'solid' | 'dashed' | 'dotted',
-  }), [isGhost, isPrimary, tokens, transitionDuration]);
+  const animatedStyle = useAnimatedStyle(
+    () => ({
+      borderWidth: withTiming(isGhost ? 0 : tokens.button.borderWidth, {
+        duration: transitionDuration,
+      }),
+      borderRadius: withTiming(tokens.button.borderRadius, { duration: transitionDuration }),
+      borderColor: withTiming(
+        isGhost ? 'transparent' : isPrimary ? tokens.colors.buttonBorder : tokens.colors.border,
+        { duration: transitionDuration }
+      ),
+      // Note: borderStyle can't be animated in React Native, but it will update
+      borderStyle: tokens.button.borderStyle as 'solid' | 'dashed' | 'dotted',
+    }),
+    [isGhost, isPrimary, tokens, transitionDuration]
+  );
 
   // Animated text color
   const textColor = isPrimary
     ? tokens.colors.buttonText
     : isGhost
-    ? tokens.colors.link
-    : tokens.colors.text;
+      ? tokens.colors.link
+      : tokens.colors.text;
 
   // Map theme font to actual font family with semibold weight
   const getFontFamily = () => {
@@ -120,9 +122,12 @@ export const Button: React.FC<ButtonProps> = ({
     return 'IBMPlexSans_600SemiBold';
   };
 
-  const textAnimatedStyle = useAnimatedStyle(() => ({
-    color: withTiming(textColor, { duration: transitionDuration }),
-  }), [textColor, transitionDuration]);
+  const textAnimatedStyle = useAnimatedStyle(
+    () => ({
+      color: withTiming(textColor, { duration: transitionDuration }),
+    }),
+    [textColor, transitionDuration]
+  );
 
   const contentStyle = {
     paddingVertical: tokens.spacing.sm + 4,
@@ -145,7 +150,11 @@ export const Button: React.FC<ButtonProps> = ({
   };
 
   // Extract colors from gradient stops
-  const gradientColors = gradientData.stops.map(stop => stop.color) as [string, string, ...string[]];
+  const gradientColors = gradientData.stops.map((stop) => stop.color) as [
+    string,
+    string,
+    ...string[],
+  ];
 
   return (
     <TouchableOpacity disabled={disabled || loading} {...props}>

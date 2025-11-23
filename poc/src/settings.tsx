@@ -3,7 +3,16 @@ import { Switch, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useApp } from './lib/_AppContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Container, ScrollView, View, Text, Button, Panel, Section, ThemePreview } from '@/components';
+import {
+  Container,
+  ScrollView,
+  View,
+  Text,
+  Button,
+  Panel,
+  Section,
+  ThemePreview,
+} from '@/components';
 import { useTheme, DEFAULT_THEME } from '@/contexts/ThemeContext';
 import { computeDesignTokens } from '@/utils/designTokens';
 
@@ -166,9 +175,10 @@ export default function SettingsScreen() {
                 }}
                 trackColor={{
                   false: tokens.colors.border,
-                  true: tokens.colors.buttonBackground.type === 'solid'
-                    ? tokens.colors.buttonBackground.value
-                    : tokens.colors.primary
+                  true:
+                    tokens.colors.buttonBackground.type === 'solid'
+                      ? tokens.colors.buttonBackground.value
+                      : tokens.colors.primary,
                 }}
                 thumbColor={tokens.colors.panel}
               />
@@ -193,9 +203,10 @@ export default function SettingsScreen() {
                 }}
                 trackColor={{
                   false: tokens.colors.border,
-                  true: tokens.colors.buttonBackground.type === 'solid'
-                    ? tokens.colors.buttonBackground.value
-                    : tokens.colors.primary
+                  true:
+                    tokens.colors.buttonBackground.type === 'solid'
+                      ? tokens.colors.buttonBackground.value
+                      : tokens.colors.primary,
                 }}
                 thumbColor={tokens.colors.panel}
               />
@@ -220,9 +231,10 @@ export default function SettingsScreen() {
                 }}
                 trackColor={{
                   false: tokens.colors.border,
-                  true: tokens.colors.buttonBackground.type === 'solid'
-                    ? tokens.colors.buttonBackground.value
-                    : tokens.colors.primary
+                  true:
+                    tokens.colors.buttonBackground.type === 'solid'
+                      ? tokens.colors.buttonBackground.value
+                      : tokens.colors.primary,
                 }}
                 thumbColor={tokens.colors.panel}
               />
@@ -232,12 +244,7 @@ export default function SettingsScreen() {
 
         {/* Storage & Cache */}
         <Section title="Storage & Cache">
-          <Button
-            title="Clear Cache"
-            variant="secondary"
-            onPress={handleClearCache}
-            fullWidth
-          />
+          <Button title="Clear Cache" variant="secondary" onPress={handleClearCache} fullWidth />
         </Section>
 
         {/* About */}
@@ -256,12 +263,7 @@ export default function SettingsScreen() {
 
         {/* Sign Out */}
         <Panel>
-          <Button
-            title="Sign Out"
-            variant="secondary"
-            onPress={handleLogout}
-            fullWidth
-          />
+          <Button title="Sign Out" variant="secondary" onPress={handleLogout} fullWidth />
         </Panel>
       </Container>
     </ScrollView>

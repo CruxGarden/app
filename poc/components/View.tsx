@@ -26,12 +26,15 @@ export const View: React.FC<ViewProps> = ({
 
   // Only apply background color if explicitly set or variant is 'panel'
   const shouldApplyBackground = backgroundColor !== undefined || variant === 'panel';
-  const defaultBackgroundColor = backgroundColor ||
-    (variant === 'panel' ? tokens.colors.panel : 'transparent');
+  const defaultBackgroundColor =
+    backgroundColor || (variant === 'panel' ? tokens.colors.panel : 'transparent');
 
-  const animatedStyle = useAnimatedStyle(() => ({
-    backgroundColor: withTiming(defaultBackgroundColor, { duration: transitionDuration }),
-  }), [defaultBackgroundColor, transitionDuration]);
+  const animatedStyle = useAnimatedStyle(
+    () => ({
+      backgroundColor: withTiming(defaultBackgroundColor, { duration: transitionDuration }),
+    }),
+    [defaultBackgroundColor, transitionDuration]
+  );
 
   return <Animated.View style={[animatedStyle, style]} {...props} />;
 };

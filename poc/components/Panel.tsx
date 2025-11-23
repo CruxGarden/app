@@ -57,23 +57,21 @@ export const Panel: React.FC<PanelProps> = ({
   }, [tokens, noBorder, noShadow, padded, padding]);
 
   // Animated styles (colors and borders that change with theme)
-  const animatedStyle = useAnimatedStyle(() => ({
-    backgroundColor: withTiming(tokens.colors.panel, { duration: transitionDuration }),
-    borderColor: withTiming(
-      noBorder ? 'transparent' : tokens.colors.border,
-      { duration: transitionDuration }
-    ),
-    borderWidth: withTiming(
-      noBorder ? 0 : tokens.borders.width,
-      { duration: transitionDuration }
-    ),
-    borderRadius: withTiming(
-      tokens.borders.radius,
-      { duration: transitionDuration }
-    ),
-    // borderStyle can't be animated but will update
-    borderStyle: tokens.borders.style,
-  }), [tokens, noBorder, transitionDuration]);
+  const animatedStyle = useAnimatedStyle(
+    () => ({
+      backgroundColor: withTiming(tokens.colors.panel, { duration: transitionDuration }),
+      borderColor: withTiming(noBorder ? 'transparent' : tokens.colors.border, {
+        duration: transitionDuration,
+      }),
+      borderWidth: withTiming(noBorder ? 0 : tokens.borders.width, {
+        duration: transitionDuration,
+      }),
+      borderRadius: withTiming(tokens.borders.radius, { duration: transitionDuration }),
+      // borderStyle can't be animated but will update
+      borderStyle: tokens.borders.style,
+    }),
+    [tokens, noBorder, transitionDuration]
+  );
 
   return (
     <Animated.View style={[staticStyle, animatedStyle, style]} {...props}>
