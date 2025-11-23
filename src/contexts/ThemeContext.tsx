@@ -10,8 +10,8 @@ import { UnistylesRuntime } from 'react-native-unistyles';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { computeDesignTokens, type DesignTokens, type Theme } from '@/utils/designTokens';
 
-const THEME_STORAGE_KEY = 'cg:active_theme';
-const MODE_STORAGE_KEY = 'cg:theme_mode';
+const THEME_STORAGE_KEY = 'cg:theme:active';
+const MODE_STORAGE_KEY = 'cg:theme:mode';
 
 export type ThemeMode = 'light' | 'dark' | 'auto';
 

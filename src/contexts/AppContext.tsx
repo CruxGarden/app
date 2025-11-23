@@ -10,8 +10,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { api, setAuthToken, Profile } from '@/lib/api';
 
 // Storage keys
-const ACCESS_TOKEN_KEY = '@cruxgarden:accessToken';
-const REFRESH_TOKEN_KEY = '@cruxgarden:refreshToken';
+const ACCESS_TOKEN_KEY = 'cg:auth:access_token';
+const REFRESH_TOKEN_KEY = 'cg:auth:refresh_token';
 
 // App context type
 interface AppContextType {
