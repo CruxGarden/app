@@ -56,18 +56,22 @@ export function tokensToUnistylesTheme(tokens: DesignTokens) {
       selection: tokens.colors.selection,
 
       // Bloom colors (store solid values for Unistyles)
-      bloomPrimary: tokens.colors.bloomPrimary.type === 'solid'
-        ? tokens.colors.bloomPrimary.value
-        : tokens.colors.bloomPrimary.value.stops[0].color,
-      bloomSecondary: tokens.colors.bloomSecondary.type === 'solid'
-        ? tokens.colors.bloomSecondary.value
-        : tokens.colors.bloomSecondary.value.stops[0].color,
-      bloomTertiary: tokens.colors.bloomTertiary.type === 'solid'
-        ? tokens.colors.bloomTertiary.value
-        : tokens.colors.bloomTertiary.value.stops[0].color,
-      bloomQuaternary: tokens.colors.bloomQuaternary.type === 'solid'
-        ? tokens.colors.bloomQuaternary.value
-        : tokens.colors.bloomQuaternary.value.stops[0].color,
+      bloomPrimary:
+        tokens.colors.bloomPrimary.type === 'solid'
+          ? tokens.colors.bloomPrimary.value
+          : tokens.colors.bloomPrimary.value.stops[0].color,
+      bloomSecondary:
+        tokens.colors.bloomSecondary.type === 'solid'
+          ? tokens.colors.bloomSecondary.value
+          : tokens.colors.bloomSecondary.value.stops[0].color,
+      bloomTertiary:
+        tokens.colors.bloomTertiary.type === 'solid'
+          ? tokens.colors.bloomTertiary.value
+          : tokens.colors.bloomTertiary.value.stops[0].color,
+      bloomQuaternary:
+        tokens.colors.bloomQuaternary.type === 'solid'
+          ? tokens.colors.bloomQuaternary.value
+          : tokens.colors.bloomQuaternary.value.stops[0].color,
       bloomBorder: tokens.colors.bloomBorder,
     },
     spacing: tokens.spacing,

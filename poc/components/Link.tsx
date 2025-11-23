@@ -67,49 +67,69 @@ export const Link: React.FC<LinkProps> = ({
     // Apply weight
     if (baseFontFamily === 'mono') {
       switch (weight) {
-        case 'medium': return 'IBMPlexMono_500Medium';
-        case 'semibold': return 'IBMPlexMono_600SemiBold';
-        case 'bold': return 'IBMPlexMono_700Bold';
-        default: return 'IBMPlexMono_400Regular';
+        case 'medium':
+          return 'IBMPlexMono_500Medium';
+        case 'semibold':
+          return 'IBMPlexMono_600SemiBold';
+        case 'bold':
+          return 'IBMPlexMono_700Bold';
+        default:
+          return 'IBMPlexMono_400Regular';
       }
     } else if (baseFontFamily === 'serif') {
       switch (weight) {
-        case 'medium': return 'IBMPlexSerif_500Medium';
-        case 'semibold': return 'IBMPlexSerif_600SemiBold';
-        case 'bold': return 'IBMPlexSerif_700Bold';
-        default: return 'IBMPlexSerif_400Regular';
+        case 'medium':
+          return 'IBMPlexSerif_500Medium';
+        case 'semibold':
+          return 'IBMPlexSerif_600SemiBold';
+        case 'bold':
+          return 'IBMPlexSerif_700Bold';
+        default:
+          return 'IBMPlexSerif_400Regular';
       }
     } else {
       switch (weight) {
-        case 'medium': return 'IBMPlexSans_500Medium';
-        case 'semibold': return 'IBMPlexSans_600SemiBold';
-        case 'bold': return 'IBMPlexSans_700Bold';
-        default: return 'IBMPlexSans_400Regular';
+        case 'medium':
+          return 'IBMPlexSans_500Medium';
+        case 'semibold':
+          return 'IBMPlexSans_600SemiBold';
+        case 'bold':
+          return 'IBMPlexSans_700Bold';
+        default:
+          return 'IBMPlexSans_400Regular';
       }
     }
   };
 
-  const fontSize = variant === 'heading'
-    ? tokens.typography.fontSize.heading
-    : tokens.typography.fontSize.body;
+  const fontSize =
+    variant === 'heading' ? tokens.typography.fontSize.heading : tokens.typography.fontSize.body;
 
-  const fontFamily = useMemo(() => getFontFamily(), [variant, weight, tokens.typography.fontFamily.heading, tokens.typography.fontFamily.body]);
+  const fontFamily = useMemo(
+    () => getFontFamily(),
+    [variant, weight, tokens.typography.fontFamily.heading, tokens.typography.fontFamily.body]
+  );
 
   // Determine underline visibility
   const showUnderline = linkUnderline === 'always' || (linkUnderline === 'underline' && isHovered);
 
-  const animatedStyle = useAnimatedStyle(() => ({
-    color: withTiming(linkColor, { duration: transitionDuration }),
-    opacity: withTiming(isPressed ? 0.7 : 1, { duration: 100 }),
-  }), [linkColor, isPressed, transitionDuration]);
+  const animatedStyle = useAnimatedStyle(
+    () => ({
+      color: withTiming(linkColor, { duration: transitionDuration }),
+      opacity: withTiming(isPressed ? 0.7 : 1, { duration: 100 }),
+    }),
+    [linkColor, isPressed, transitionDuration]
+  );
 
-  const staticStyle = useMemo(() => ({
-    fontFamily,
-    fontSize,
-    lineHeight: tokens.typography.lineHeight,
-    textDecorationLine: showUnderline ? ('underline' as const) : ('none' as const),
-    textDecorationColor: linkColor,
-  }), [fontFamily, fontSize, tokens.typography.lineHeight, showUnderline, linkColor]);
+  const staticStyle = useMemo(
+    () => ({
+      fontFamily,
+      fontSize,
+      lineHeight: tokens.typography.lineHeight,
+      textDecorationLine: showUnderline ? ('underline' as const) : ('none' as const),
+      textDecorationColor: linkColor,
+    }),
+    [fontFamily, fontSize, tokens.typography.lineHeight, showUnderline, linkColor]
+  );
 
   return (
     <Pressable
@@ -119,9 +139,7 @@ export const Link: React.FC<LinkProps> = ({
       onHoverOut={() => setIsHovered(false)}
       {...props}
     >
-      <Animated.Text style={[staticStyle, animatedStyle, style as any]}>
-        {children}
-      </Animated.Text>
+      <Animated.Text style={[staticStyle, animatedStyle, style as any]}>{children}</Animated.Text>
     </Pressable>
   );
 };

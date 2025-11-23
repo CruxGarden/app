@@ -333,10 +333,7 @@ function extractShadow(
 /**
  * Compute design tokens from a theme and mode
  */
-export function computeDesignTokens(
-  theme: Theme | null,
-  mode: 'light' | 'dark'
-): DesignTokens {
+export function computeDesignTokens(theme: Theme | null, mode: 'light' | 'dark'): DesignTokens {
   // If no theme, return defaults
   if (!theme) {
     return getDefaultTokens();

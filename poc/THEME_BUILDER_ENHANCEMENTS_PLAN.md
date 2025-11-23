@@ -3,6 +3,7 @@
 ## Overview
 
 This document outlines the implementation plan for four major enhancements to the Theme Builder:
+
 1. Drop shadows on bloom, button, and panel
 2. Gradient support for background and panel
 3. Transparency/opacity controls for panel and button
@@ -14,6 +15,7 @@ This document outlines the implementation plan for four major enhancements to th
 ## 1. Drop Shadow Support
 
 ### Affected Components
+
 - CruxBloom (bloom shadows)
 - CruxButton (button shadows)
 - Preview panel (panel shadows)
@@ -21,7 +23,9 @@ This document outlines the implementation plan for four major enhancements to th
 ### Implementation Steps
 
 #### Step 1.1: Update Types (`types.ts`)
+
 Add shadow properties to `ThemeModeData`:
+
 ```typescript
 // Bloom shadow
 bloomShadowEnabled?: boolean;
@@ -53,12 +57,15 @@ Add to `ThemeMeta` interface for JSON serialization.
 Update `formDataToDto` and `dtoToFormData` converters.
 
 Update `getDefaultThemeFormData` with sensible defaults:
+
 - Bloom: subtle shadow (2px, 4px, 8px blur, 0.15 opacity)
 - Button: medium shadow (0px, 2px, 4px blur, 0.1 opacity)
 - Panel: light shadow (0px, 1px, 3px blur, 0.05 opacity)
 
 #### Step 1.2: Update CruxBloom Component
+
 Add shadow props to `CruxBloomProps`:
+
 ```typescript
 shadowEnabled?: boolean;
 shadowColor?: string;
@@ -70,12 +77,15 @@ shadowOpacity?: number;
 Apply shadow using React Native's `shadow*` style properties (iOS) and `elevation` (Android).
 
 #### Step 1.3: Update CruxButton Component
+
 Add same shadow props as CruxBloom.
 
 Apply shadow styling to Pressable wrapper.
 
 #### Step 1.4: Update ThemeBuilder UI
+
 Add collapsible "Shadows" section with three subsections:
+
 - **Bloom Shadow**
   - Enable toggle
   - Shadow color picker (HexColorInput)
@@ -90,12 +100,15 @@ Add collapsible "Shadows" section with three subsections:
   - Same controls as bloom
 
 #### Step 1.5: Update Preview
+
 Apply panel shadow to sample panel container in preview.
 
 Update CruxBloom and CruxButton usage to include shadow props.
 
 #### Step 1.6: Update Randomization Functions
+
 All randomize functions should generate:
+
 - Random enable/disable (50% chance for bloom/button, 30% for panel)
 - Shadow color: black with 0.1-0.3 opacity
 - Offset: 0-8px for X, 2-6px for Y
@@ -109,13 +122,16 @@ All randomize functions should generate:
 ### Implementation Steps
 
 #### Step 2.1: Update Types (`types.ts`)
+
 Change `backgroundColor` and `panelColor` from `string` to `ColorValue`:
+
 ```typescript
 backgroundColor?: ColorValue;  // Was: string
 panelColor?: ColorValue;       // Was: string
 ```
 
 Update JSON serialization in `ThemeMeta`:
+
 ```typescript
 content?: {
   light?: {
@@ -136,18 +152,22 @@ content?: {
 Update converters (`formDataToDto`, `dtoToFormData`).
 
 #### Step 2.2: Update ThemeBuilder UI
+
 Replace `HexColorInput` with `ColorPicker` for:
+
 - Background Color
 - Panel Color
 
 Users can now toggle between solid and gradient for each.
 
 #### Step 2.3: Update Preview Rendering
+
 Background: Use LinearGradient component if gradient, otherwise solid View.
 
 Panel: Same approach - wrap in LinearGradient if needed.
 
 Extract helper function to render gradient or solid background:
+
 ```typescript
 const renderBackground = (colorValue: ColorValue, style: any) => {
   if (colorValue.type === 'gradient') {
@@ -158,7 +178,9 @@ const renderBackground = (colorValue: ColorValue, style: any) => {
 ```
 
 #### Step 2.4: Update Randomization Functions
+
 Background/panel gradients:
+
 - 15% chance for gradients (vs 25% for blooms/buttons)
 - Vertical or diagonal angles (90°, 135°, 180°)
 - Use palette colors for gradient stops
@@ -170,7 +192,9 @@ Background/panel gradients:
 ### Implementation Steps
 
 #### Step 3.1: Update Types (`types.ts`)
+
 Add opacity properties:
+
 ```typescript
 panelOpacity?: string;        // 0-1 as string
 buttonOpacity?: string;       // 0-1 as string
@@ -181,28 +205,35 @@ Add to `ThemeMeta` for JSON serialization.
 Update converters.
 
 Defaults:
+
 - Panel opacity: 1.0 (fully opaque)
 - Button opacity: 1.0 (fully opaque)
 
 #### Step 3.2: Update CruxButton Component
+
 Add `opacity?: number` prop.
 
 Apply to Pressable wrapper style.
 
 #### Step 3.3: Update ThemeBuilder UI
+
 Add opacity sliders:
+
 - In **Content** section: Panel Opacity (0-1, step 0.05)
 - In **Controls** section: Button Opacity (0-1, step 0.05)
 
 Display as percentage in label (e.g., "Panel Opacity: 85%").
 
 #### Step 3.4: Update Preview
+
 Apply `panelOpacity` to sample panel container.
 
 Pass `buttonOpacity` to CruxButton component.
 
 #### Step 3.5: Update Randomization Functions
+
 Random opacity:
+
 - 80% chance: fully opaque (1.0)
 - 20% chance: 0.85-0.95 (slight transparency)
 
@@ -215,7 +246,9 @@ This keeps most themes solid while allowing occasional transparency effects.
 ### Implementation Steps
 
 #### Step 4.1: Update Types (`types.ts`)
+
 Add to `ThemeModeData`:
+
 ```typescript
 fontSize?: 'small' | 'medium' | 'large';
 ```
@@ -227,7 +260,9 @@ Update converters.
 Default: `'medium'`
 
 #### Step 4.2: Define Font Size Scales
+
 In ThemeBuilder component, define size mappings:
+
 ```typescript
 const fontSizes = {
   small: {
@@ -249,13 +284,17 @@ const fontSizes = {
 ```
 
 #### Step 4.3: Update ThemeBuilder UI
+
 Add to **Content** section:
+
 - Font Size toggle (similar to Font Family)
 - Three buttons: Small / Medium / Large
 - Highlight active selection
 
 #### Step 4.4: Update Preview Rendering
+
 Create helper function to get font size:
+
 ```typescript
 const getFontSize = (type: 'base' | 'heading' | 'subheading') => {
   const size = formData[formData.activeMode].fontSize || 'medium';
@@ -264,6 +303,7 @@ const getFontSize = (type: 'base' | 'heading' | 'subheading') => {
 ```
 
 Apply to all text in preview:
+
 - Title: heading size
 - Description: base size
 - Sample text: base size
@@ -271,12 +311,15 @@ Apply to all text in preview:
 - Link text: base size
 
 #### Step 4.5: Add to JSON Output
+
 Include `fontSize` in meta content for both modes.
 
 **Note**: This is a display preference, not actually stored text sizes. Apps consuming the theme can use this to scale their typography.
 
 #### Step 4.6: Update Randomization Functions
+
 Random font size:
+
 - 40% small
 - 40% medium
 - 20% large
@@ -286,13 +329,16 @@ Random font size:
 ## Implementation Order
 
 ### Phase 1: Low Complexity
+
 1. **Font Size Adjustment** (simplest - just string property + toggle)
 2. **Transparency Controls** (simple - just opacity sliders)
 
 ### Phase 2: Medium Complexity
+
 3. **Background/Panel Gradients** (moderate - reuse existing ColorPicker)
 
 ### Phase 3: High Complexity
+
 4. **Drop Shadows** (most complex - many properties, platform differences)
 
 ---
@@ -300,6 +346,7 @@ Random font size:
 ## Testing Checklist
 
 ### For Each Feature
+
 - [ ] Light mode works correctly
 - [ ] Dark mode works correctly
 - [ ] Apply Palette button respects setting
@@ -310,6 +357,7 @@ Random font size:
 - [ ] Default values are sensible
 
 ### Cross-Feature Testing
+
 - [ ] Gradient backgrounds with transparent panels
 - [ ] Shadows work with gradients
 - [ ] Font sizes scale consistently
@@ -320,24 +368,28 @@ Random font size:
 ## Notes
 
 ### React Native Shadow Limitations
+
 - iOS uses `shadow*` properties
 - Android uses `elevation`
 - May need platform-specific handling
 - Consider using `react-native-shadow-2` for consistent cross-platform shadows
 
 ### Performance Considerations
+
 - Gradients are heavier than solid colors
 - Too many shadows can impact performance
 - Consider debouncing opacity slider updates
 - Limit simultaneous gradients in preview
 
 ### Accessibility
+
 - Ensure sufficient contrast with transparency
 - Font sizes should have meaningful differences
 - Shadow colors should enhance, not obscure
 - Test with various color schemes
 
 ### Future Enhancements
+
 - Shadow presets (none, subtle, medium, strong)
 - Gradient presets (vertical, horizontal, radial, angled)
 - Font size custom values (not just S/M/L)

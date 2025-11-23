@@ -168,10 +168,7 @@ export const ColorPicker: React.FC<ColorPickerProps> = ({ label, value, onChange
           {showSolidPicker && (
             <View style={styles.pickerContainer}>
               <HexColorPicker color={value.value} onChange={handleSolidColorChange} />
-              <TouchableOpacity
-                style={styles.doneButton}
-                onPress={() => setShowSolidPicker(false)}
-              >
+              <TouchableOpacity style={styles.doneButton} onPress={() => setShowSolidPicker(false)}>
                 <Text style={styles.doneButtonText}>Done</Text>
               </TouchableOpacity>
             </View>
@@ -185,7 +182,10 @@ export const ColorPicker: React.FC<ColorPickerProps> = ({ label, value, onChange
           {/* Gradient Colors - Always exactly 2 */}
           <Text style={styles.sectionLabel}>Color Stops</Text>
           {[0, 1].map((index) => {
-            const stop = value.value.stops[index] || { color: '#000000', offset: index === 0 ? '0%' : '100%' };
+            const stop = value.value.stops[index] || {
+              color: '#000000',
+              offset: index === 0 ? '0%' : '100%',
+            };
             const offsetValue = parseInt(stop.offset) || (index === 0 ? 0 : 100);
 
             return (

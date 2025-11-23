@@ -23,10 +23,13 @@ export const Pressable: React.FC<PressableProps> = ({
 }) => {
   const { tokens } = useTheme();
 
-  const defaultBackgroundColor = backgroundColor ||
-    (variant === 'button' ? tokens.colors.buttonBackground :
-     variant === 'panel' ? tokens.colors.panel :
-     'transparent');
+  const defaultBackgroundColor =
+    backgroundColor ||
+    (variant === 'button'
+      ? tokens.colors.buttonBackground
+      : variant === 'panel'
+        ? tokens.colors.panel
+        : 'transparent');
 
   return (
     <RNPressable

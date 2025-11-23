@@ -7,6 +7,7 @@ Automatically derive semantic UI colors (primary, secondary, accent) from the th
 ## Current State
 
 ### Existing Color System
+
 - `background` - App background color
 - `panel` - Surface color for cards/panels
 - `text` - Text color
@@ -17,6 +18,7 @@ Automatically derive semantic UI colors (primary, secondary, accent) from the th
 - Bloom colors: `primary`, `secondary`, `tertiary`, `quaternary`
 
 ### Issues
+
 - ❌ UI colors disconnected from bloom identity
 - ❌ Manual color picking for every element
 - ❌ Hard to create cohesive themes
@@ -43,6 +45,7 @@ content.borderColor      → colors.outline
 ```
 
 ### Benefits
+
 - ✅ Automatic cohesion - Bloom identity flows through entire UI
 - ✅ Fewer decisions - Focus on bloom + surfaces
 - ✅ Smart defaults - Brightness guides usage
@@ -56,6 +59,7 @@ content.borderColor      → colors.outline
 **File:** `app/utils/colorUtils.ts` (new)
 
 Create helper functions:
+
 - `calculateLuminance(hexColor: string): number` - Calculate relative luminance
 - `getContrastColor(bgColor: string): string` - Return '#000000' or '#ffffff' for best contrast
 - `hexToRgb(hex: string): { r, g, b }` - Convert hex to RGB
@@ -85,39 +89,39 @@ Update `DesignTokens` interface:
 export interface DesignTokens {
   colors: {
     // Semantic colors (new)
-    primary: string,           // Derived from bloom.quaternary
-    onPrimary: string,         // Auto-calculated contrast
-    secondary: string,         // Derived from bloom.tertiary
-    onSecondary: string,       // Auto-calculated contrast
-    accent: string,            // Derived from bloom.secondary
-    onAccent: string,          // Auto-calculated contrast
+    primary: string; // Derived from bloom.quaternary
+    onPrimary: string; // Auto-calculated contrast
+    secondary: string; // Derived from bloom.tertiary
+    onSecondary: string; // Auto-calculated contrast
+    accent: string; // Derived from bloom.secondary
+    onAccent: string; // Auto-calculated contrast
 
     // Surface system (existing)
-    background: string,
-    surface: string,
-    surfaceVariant: string,
-    onBackground: string,
-    onSurface: string,
-    outline: string,
-    outlineVariant: string,
+    background: string;
+    surface: string;
+    surfaceVariant: string;
+    onBackground: string;
+    onSurface: string;
+    outline: string;
+    outlineVariant: string;
 
     // Legacy aliases (for backward compatibility)
-    panel: string,             // → surface
-    text: string,              // → onSurface
-    border: string,            // → outline
-    buttonBackground: string,  // → primary
-    buttonText: string,        // → onPrimary
-    linkColor: string,         // → primary
+    panel: string; // → surface
+    text: string; // → onSurface
+    border: string; // → outline
+    buttonBackground: string; // → primary
+    buttonText: string; // → onPrimary
+    linkColor: string; // → primary
 
     // Bloom colors (pass-through for CruxBloom component)
-    bloomPrimary: ColorValue,
-    bloomSecondary: ColorValue,
-    bloomTertiary: ColorValue,
-    bloomQuaternary: ColorValue,
-    bloomBorder?: string,
+    bloomPrimary: ColorValue;
+    bloomSecondary: ColorValue;
+    bloomTertiary: ColorValue;
+    bloomQuaternary: ColorValue;
+    bloomBorder?: string;
 
     // Other (keep existing)
-    selection: string,
+    selection: string;
   };
   // ... rest of tokens
 }
@@ -126,10 +130,7 @@ export interface DesignTokens {
 Update `computeDesignTokens()`:
 
 ```typescript
-export function computeDesignTokens(
-  theme: Theme,
-  mode: 'light' | 'dark'
-): DesignTokens {
+export function computeDesignTokens(theme: Theme, mode: 'light' | 'dark'): DesignTokens {
   const palette = theme.meta.palette?.[mode];
   const bloom = theme.meta.bloom?.[mode];
   const content = theme.meta.content?.[mode];
@@ -206,30 +207,34 @@ function extractSolidColor(colorValue?: ColorValue): string | undefined {
 Update components to use semantic colors:
 
 **Button** (`app/components/Button.tsx`)
+
 ```typescript
 // Before:
-backgroundColor: isPrimary ? tokens.colors.buttonBackground : tokens.colors.panel
+backgroundColor: isPrimary ? tokens.colors.buttonBackground : tokens.colors.panel;
 
 // After:
-backgroundColor: isPrimary ? tokens.colors.primary : tokens.colors.surface
-textColor: isPrimary ? tokens.colors.onPrimary : tokens.colors.onSurface
+backgroundColor: isPrimary ? tokens.colors.primary : tokens.colors.surface;
+textColor: isPrimary ? tokens.colors.onPrimary : tokens.colors.onSurface;
 ```
 
 **Panel** (`app/components/Panel.tsx`)
+
 ```typescript
 // Use semantic names
-backgroundColor: tokens.colors.surface
-borderColor: tokens.colors.outline
+backgroundColor: tokens.colors.surface;
+borderColor: tokens.colors.outline;
 ```
 
 **TextInput** (`app/components/TextInput.tsx`)
+
 ```typescript
 // Could use surfaceVariant for inputs
-backgroundColor: tokens.colors.surfaceVariant || tokens.colors.surface
-borderColor: tokens.colors.outline
+backgroundColor: tokens.colors.surfaceVariant || tokens.colors.surface;
+borderColor: tokens.colors.outline;
 ```
 
 **Links/Text with color**
+
 ```typescript
 // Links use primary color
 <Text color={tokens.colors.primary}>Link</Text>
@@ -341,12 +346,14 @@ describe('Semantic Color Derivation', () => {
 ## Future Enhancements
 
 ### Phase 2 (Optional)
+
 - Add manual override option in theme builder
 - "Use custom action colors" checkbox
 - Smart color suggestions based on bloom
 - Accessibility score (WCAG contrast checker)
 
 ### Phase 3 (Optional)
+
 - Color harmony analysis
 - Suggest complementary accents
 - Auto-generate color variations
@@ -355,9 +362,11 @@ describe('Semantic Color Derivation', () => {
 ## Files to Create/Modify
 
 ### New Files
+
 - [ ] `app/utils/colorUtils.ts` - Color calculation helpers
 
 ### Modified Files
+
 - [ ] `app/utils/designTokens.ts` - Update token computation
 - [ ] `app/components/Button.tsx` - Use semantic colors
 - [ ] `app/components/Panel.tsx` - Use semantic colors
@@ -366,6 +375,7 @@ describe('Semantic Color Derivation', () => {
 - [ ] Other components as needed
 
 ### Documentation
+
 - [ ] Add examples to `ThemeBuilder/README.md`
 - [ ] Update this plan with implementation notes
 

@@ -236,10 +236,7 @@ export function createCruxBloomTheme(
 /**
  * Helper function to blend two circle styles
  */
-export function blendCircleStyles(
-  base: CircleStyle,
-  override: Partial<CircleStyle>
-): CircleStyle {
+export function blendCircleStyles(base: CircleStyle, override: Partial<CircleStyle>): CircleStyle {
   return { ...base, ...override };
 }
 

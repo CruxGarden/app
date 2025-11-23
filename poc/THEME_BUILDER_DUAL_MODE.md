@@ -1,11 +1,13 @@
 # ThemeBuilder: Dual Light/Dark Mode Support
 
 ## Overview
+
 Feasibility analysis for adding a mode switcher that allows editing both light and dark modes simultaneously, with smart randomization that generates both modes from a single palette.
 
 ---
 
 ## Current State
+
 - Form holds one mode at a time (`mode: 'light' | 'dark'`)
 - Saving only persists the current mode to DTO
 - Preview shows current mode only
@@ -16,6 +18,7 @@ Feasibility analysis for adding a mode switcher that allows editing both light a
 ## Proposed Changes
 
 ### 1. UI: Mode Switcher - Easy ✅
+
 Add a Light/Dark tab below the Details section that switches which mode you're viewing/editing. Similar to the existing bloom color tabs (Primary/Secondary/Tertiary/Quaternary).
 
 **Location:** Between Details section and Palette section
@@ -67,6 +70,7 @@ interface ThemeFormData {
 ```
 
 **Refactoring needed:**
+
 - Update all `handleFieldChange` calls to target `formData[activeMode].field`
 - Update all form inputs to read/write from `formData[activeMode]`
 - Update preview to use `formData[activeMode]`
@@ -103,19 +107,26 @@ const randomizeAll = () => {
   // 4. Bloom colors: shared OR slightly adjusted
   // Option A: Use same bloom colors for both modes
   // Option B: Brighten bloom colors 10-20% for dark mode (better contrast)
-  const darkBloomColors = bloomColors.map(c =>
-    chroma(c).brighten(0.1 + Math.random() * 0.1).hex()
+  const darkBloomColors = bloomColors.map((c) =>
+    chroma(c)
+      .brighten(0.1 + Math.random() * 0.1)
+      .hex()
   );
 
   setFormData({
     ...formData,
-    light: { /* light mode data */ },
-    dark: { /* dark mode data */ },
+    light: {
+      /* light mode data */
+    },
+    dark: {
+      /* dark mode data */
+    },
   });
 };
 ```
 
 **Benefits:**
+
 - Both modes are harmonious (same base palette)
 - Both modes are readable (getReadableTextColor ensures contrast)
 - Variation adds visual interest between modes
@@ -126,6 +137,7 @@ const randomizeAll = () => {
 ## Effort Estimate: **3-5 hours**
 
 ### Breakdown:
+
 1. ✏️ **Restructure FormData** (~1 hour)
    - Update interface
    - Add mode state management
@@ -163,12 +175,14 @@ const randomizeAll = () => {
 ### ✅ Worth Doing!
 
 **Pros:**
+
 - DTO structure is already set up for it (meta.palette.light/dark, etc.)
 - Powerful feature - design once, get two modes
 - Refactoring is straightforward, not tricky
 - Randomization can be smart and generate harmonious pairs
 
 **Cons:**
+
 - Moderate amount of work
 - Need to be careful with state management
 - More UI complexity
@@ -180,11 +194,13 @@ const randomizeAll = () => {
 If you want to ship faster, start with:
 
 **Phase 1: "Generate Dark Mode from Light" button**
+
 - Keep single-mode editing
 - Add a button that auto-inverts current colors to generate the other mode
 - 1-2 hours of work
 
 **Phase 2 (later): Full dual-mode editing**
+
 - Expand to full tab-based editing when needed
 - Incremental improvement
 

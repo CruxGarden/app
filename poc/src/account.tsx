@@ -3,7 +3,17 @@ import { Alert, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useApp } from './lib/_AppContext';
 import api, { Account } from './lib/api';
-import { Container, ScrollView, View, Text, TextInput, Button, Panel, Section, Loading } from '@/components';
+import {
+  Container,
+  ScrollView,
+  View,
+  Text,
+  TextInput,
+  Button,
+  Panel,
+  Section,
+  Loading,
+} from '@/components';
 import { useTheme } from '@/contexts/ThemeContext';
 
 export default function AccountScreen() {
@@ -276,7 +286,11 @@ export default function AccountScreen() {
 
         {/* Danger Zone */}
         <Panel style={{ borderColor: '#e63946', borderWidth: 1 }}>
-          <Text variant="heading" weight="bold" style={{ color: '#e63946', marginBottom: tokens.spacing.md }}>
+          <Text
+            variant="heading"
+            weight="bold"
+            style={{ color: '#e63946', marginBottom: tokens.spacing.md }}
+          >
             Danger Zone
           </Text>
           <Text style={{ opacity: 0.7, marginBottom: tokens.spacing.lg }}>

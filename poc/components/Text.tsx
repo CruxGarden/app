@@ -64,33 +64,58 @@ export const Text: React.FC<TextProps> = ({
     // Now apply the weight to the determined font family
     if (baseFontFamily === 'mono') {
       switch (weight) {
-        case 'medium': fontFamily = 'IBMPlexMono_500Medium'; break;
-        case 'semibold': fontFamily = 'IBMPlexMono_600SemiBold'; break;
-        case 'bold': fontFamily = 'IBMPlexMono_700Bold'; break;
-        default: fontFamily = 'IBMPlexMono_400Regular';
+        case 'medium':
+          fontFamily = 'IBMPlexMono_500Medium';
+          break;
+        case 'semibold':
+          fontFamily = 'IBMPlexMono_600SemiBold';
+          break;
+        case 'bold':
+          fontFamily = 'IBMPlexMono_700Bold';
+          break;
+        default:
+          fontFamily = 'IBMPlexMono_400Regular';
       }
     } else if (baseFontFamily === 'serif') {
       switch (weight) {
-        case 'regular': fontFamily = 'IBMPlexSerif_400Regular'; break;
-        case 'medium': fontFamily = 'IBMPlexSerif_500Medium'; break;
-        case 'semibold': fontFamily = 'IBMPlexSerif_600SemiBold'; break;
-        case 'bold': fontFamily = 'IBMPlexSerif_700Bold'; break;
-        default: fontFamily = variant === 'heading' ? 'IBMPlexSerif_600SemiBold' : 'IBMPlexSerif_400Regular';
+        case 'regular':
+          fontFamily = 'IBMPlexSerif_400Regular';
+          break;
+        case 'medium':
+          fontFamily = 'IBMPlexSerif_500Medium';
+          break;
+        case 'semibold':
+          fontFamily = 'IBMPlexSerif_600SemiBold';
+          break;
+        case 'bold':
+          fontFamily = 'IBMPlexSerif_700Bold';
+          break;
+        default:
+          fontFamily =
+            variant === 'heading' ? 'IBMPlexSerif_600SemiBold' : 'IBMPlexSerif_400Regular';
       }
     } else {
       // Sans-serif
       switch (weight) {
-        case 'regular': fontFamily = 'IBMPlexSans_400Regular'; break;
-        case 'medium': fontFamily = 'IBMPlexSans_500Medium'; break;
-        case 'semibold': fontFamily = 'IBMPlexSans_600SemiBold'; break;
-        case 'bold': fontFamily = 'IBMPlexSans_700Bold'; break;
-        default: fontFamily = variant === 'heading' ? 'IBMPlexSans_600SemiBold' : 'IBMPlexSans_400Regular';
+        case 'regular':
+          fontFamily = 'IBMPlexSans_400Regular';
+          break;
+        case 'medium':
+          fontFamily = 'IBMPlexSans_500Medium';
+          break;
+        case 'semibold':
+          fontFamily = 'IBMPlexSans_600SemiBold';
+          break;
+        case 'bold':
+          fontFamily = 'IBMPlexSans_700Bold';
+          break;
+        default:
+          fontFamily = variant === 'heading' ? 'IBMPlexSans_600SemiBold' : 'IBMPlexSans_400Regular';
       }
     }
 
-    const fontSize = variant === 'heading'
-      ? tokens.typography.fontSize.heading
-      : tokens.typography.fontSize.body;
+    const fontSize =
+      variant === 'heading' ? tokens.typography.fontSize.heading : tokens.typography.fontSize.body;
 
     return {
       fontFamily,
@@ -99,9 +124,12 @@ export const Text: React.FC<TextProps> = ({
     };
   }, [variant, weight, tokens]);
 
-  const animatedStyle = useAnimatedStyle(() => ({
-    color: withTiming(color || tokens.colors.text, { duration: transitionDuration }),
-  }), [color, tokens.colors.text, transitionDuration]);
+  const animatedStyle = useAnimatedStyle(
+    () => ({
+      color: withTiming(color || tokens.colors.text, { duration: transitionDuration }),
+    }),
+    [color, tokens.colors.text, transitionDuration]
+  );
 
   return <Animated.Text style={[textStyle, animatedStyle, style]} {...props} />;
 };

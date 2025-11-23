@@ -8,11 +8,7 @@ import React, { createContext, useContext, useState, useEffect, useCallback, use
 import { Appearance } from 'react-native';
 import { UnistylesRuntime } from 'react-native-unistyles';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import {
-  computeDesignTokens,
-  type DesignTokens,
-  type Theme,
-} from '@/utils/designTokens';
+import { computeDesignTokens, type DesignTokens, type Theme } from '@/utils/designTokens';
 
 const THEME_STORAGE_KEY = '@crux_garden:active_theme';
 const MODE_STORAGE_KEY = '@crux_garden:theme_mode';

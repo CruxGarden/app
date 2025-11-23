@@ -50,7 +50,6 @@ export const ThemePreview: React.FC<ThemePreviewProps> = ({
   const bloomSize = size === 'small' ? 60 : size === 'medium' ? 100 : 150;
   const containerSize = size === 'small' ? 80 : size === 'medium' ? 120 : 180;
 
-
   return (
     <View style={style}>
       {/* Bloom Preview on theme background with themed border */}

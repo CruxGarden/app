@@ -55,7 +55,14 @@ export default function BloomExamples() {
               <Text weight="bold" style={{ marginBottom: tokens.spacing.sm }}>
                 Original Icon
               </Text>
-              <Text style={{ fontSize: 14, opacity: 0.7, marginBottom: tokens.spacing.md, textAlign: 'center' }}>
+              <Text
+                style={{
+                  fontSize: 14,
+                  opacity: 0.7,
+                  marginBottom: tokens.spacing.md,
+                  textAlign: 'center',
+                }}
+              >
                 The default Crux Garden bloom with original colors
               </Text>
               <CruxBloom size={150} transitionDuration={transitionDuration} />
@@ -82,7 +89,14 @@ export default function BloomExamples() {
                 <Text weight="bold" style={{ marginBottom: tokens.spacing.sm }}>
                   {theme.name}
                 </Text>
-                <Text style={{ fontSize: 14, opacity: 0.7, marginBottom: tokens.spacing.md, textAlign: 'center' }}>
+                <Text
+                  style={{
+                    fontSize: 14,
+                    opacity: 0.7,
+                    marginBottom: tokens.spacing.md,
+                    textAlign: 'center',
+                  }}
+                >
                   {theme.description}
                 </Text>
                 <CruxBloom size={150} {...theme.config} transitionDuration={transitionDuration} />
@@ -111,7 +125,14 @@ export default function BloomExamples() {
               <Text weight="bold" style={{ marginBottom: tokens.spacing.sm }}>
                 Rainbow
               </Text>
-              <Text style={{ fontSize: 14, opacity: 0.7, marginBottom: tokens.spacing.md, textAlign: 'center' }}>
+              <Text
+                style={{
+                  fontSize: 14,
+                  opacity: 0.7,
+                  marginBottom: tokens.spacing.md,
+                  textAlign: 'center',
+                }}
+              >
                 Vibrant rainbow colors
               </Text>
               <CruxBloom
@@ -129,7 +150,14 @@ export default function BloomExamples() {
               <Text weight="bold" style={{ marginBottom: tokens.spacing.sm }}>
                 Glowing Rings
               </Text>
-              <Text style={{ fontSize: 14, opacity: 0.7, marginBottom: tokens.spacing.md, textAlign: 'center' }}>
+              <Text
+                style={{
+                  fontSize: 14,
+                  opacity: 0.7,
+                  marginBottom: tokens.spacing.md,
+                  textAlign: 'center',
+                }}
+              >
                 Dark background with bright borders
               </Text>
               <CruxBloom
@@ -147,7 +175,14 @@ export default function BloomExamples() {
               <Text weight="bold" style={{ marginBottom: tokens.spacing.sm }}>
                 Monochromatic Blue
               </Text>
-              <Text style={{ fontSize: 14, opacity: 0.7, marginBottom: tokens.spacing.md, textAlign: 'center' }}>
+              <Text
+                style={{
+                  fontSize: 14,
+                  opacity: 0.7,
+                  marginBottom: tokens.spacing.md,
+                  textAlign: 'center',
+                }}
+              >
                 Generated using the monochromatic theme helper
               </Text>
               <CruxBloom

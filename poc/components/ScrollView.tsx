@@ -23,8 +23,8 @@ export const ScrollView: React.FC<ScrollViewProps> = ({
 }) => {
   const { tokens } = useTheme();
 
-  const defaultBackgroundColor = backgroundColor ||
-    (variant === 'panel' ? tokens.colors.panel : tokens.colors.background);
+  const defaultBackgroundColor =
+    backgroundColor || (variant === 'panel' ? tokens.colors.panel : tokens.colors.background);
 
   return <RNScrollView style={[{ backgroundColor: defaultBackgroundColor }, style]} {...props} />;
 };

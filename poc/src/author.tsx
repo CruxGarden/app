@@ -3,7 +3,16 @@ import { Alert, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useApp } from './lib/_AppContext';
 import api, { Author } from './lib/api';
-import { Container, ScrollView, View, Text, TextInput, Button, Section, Loading } from '@/components';
+import {
+  Container,
+  ScrollView,
+  View,
+  Text,
+  TextInput,
+  Button,
+  Section,
+  Loading,
+} from '@/components';
 import { useTheme } from '@/contexts/ThemeContext';
 
 export default function AuthorScreen() {
@@ -205,16 +214,12 @@ export default function AuthorScreen() {
 
             <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
               <Text style={{ opacity: 0.7 }}>Created:</Text>
-              <Text>
-                {author.created ? new Date(author.created).toLocaleDateString() : 'N/A'}
-              </Text>
+              <Text>{author.created ? new Date(author.created).toLocaleDateString() : 'N/A'}</Text>
             </View>
 
             <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
               <Text style={{ opacity: 0.7 }}>Last Updated:</Text>
-              <Text>
-                {author.updated ? new Date(author.updated).toLocaleDateString() : 'N/A'}
-              </Text>
+              <Text>{author.updated ? new Date(author.updated).toLocaleDateString() : 'N/A'}</Text>
             </View>
           </View>
         </Section>

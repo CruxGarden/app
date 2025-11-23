@@ -82,27 +82,30 @@ export default function ThemeBuilderRoute() {
   };
 
   const handleCancel = () => {
-    Alert.alert(
-      'Cancel',
-      'Are you sure you want to discard your changes?',
-      [
-        {
-          text: 'No',
-          style: 'cancel',
-        },
-        {
-          text: 'Yes',
-          style: 'destructive',
-          onPress: () => router.back(),
-        },
-      ]
-    );
+    Alert.alert('Cancel', 'Are you sure you want to discard your changes?', [
+      {
+        text: 'No',
+        style: 'cancel',
+      },
+      {
+        text: 'Yes',
+        style: 'destructive',
+        onPress: () => router.back(),
+      },
+    ]);
   };
 
   // Show loading state while fetching theme
   if (isLoading) {
     return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: tokens.spacing.lg }}>
+      <View
+        style={{
+          flex: 1,
+          justifyContent: 'center',
+          alignItems: 'center',
+          padding: tokens.spacing.lg,
+        }}
+      >
         <Loading />
         <Text style={{ marginTop: tokens.spacing.md, opacity: 0.7 }}>Loading theme...</Text>
       </View>
@@ -112,8 +115,22 @@ export default function ThemeBuilderRoute() {
   // Show error state if theme failed to load
   if (loadError) {
     return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: tokens.spacing.lg }}>
-        <Text style={{ color: '#e63946', fontSize: 18, marginBottom: tokens.spacing.sm, textAlign: 'center' }}>
+      <View
+        style={{
+          flex: 1,
+          justifyContent: 'center',
+          alignItems: 'center',
+          padding: tokens.spacing.lg,
+        }}
+      >
+        <Text
+          style={{
+            color: '#e63946',
+            fontSize: 18,
+            marginBottom: tokens.spacing.sm,
+            textAlign: 'center',
+          }}
+        >
           Error: {loadError}
         </Text>
         <Text style={{ opacity: 0.7, textAlign: 'center' }}>Please try again or go back</Text>

@@ -246,8 +246,8 @@ export default function ThemeSearchScreen() {
               backgroundColor: isActive
                 ? 'transparent'
                 : itemTokens.colors.buttonBackground.type === 'solid'
-                ? itemTokens.colors.buttonBackground.value
-                : itemTokens.colors.primary,
+                  ? itemTokens.colors.buttonBackground.value
+                  : itemTokens.colors.primary,
               borderWidth: isActive ? 1 : 0,
               borderColor: itemTokens.colors.border,
               opacity: isSelecting || isActive ? 0.5 : 1,

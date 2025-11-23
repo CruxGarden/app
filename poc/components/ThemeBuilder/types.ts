@@ -262,7 +262,9 @@ export interface ThemeMeta {
  */
 export function formDataToDto(formData: ThemeFormData): ThemeDto {
   // Extract color and gradient separately
-  const extractColor = (colorValue: ColorValue): { color: string; gradient?: GradientDefinition } => {
+  const extractColor = (
+    colorValue: ColorValue
+  ): { color: string; gradient?: GradientDefinition } => {
     if (colorValue.type === 'solid') {
       return { color: colorValue.value };
     } else {
@@ -288,10 +290,18 @@ export function formDataToDto(formData: ThemeFormData): ThemeDto {
         quaternary: quaternaryData.color,
       },
       bloom: {
-        primary: primaryData.gradient ? { gradient: primaryData.gradient } : { solid: primaryData.color },
-        secondary: secondaryData.gradient ? { gradient: secondaryData.gradient } : { solid: secondaryData.color },
-        tertiary: tertiaryData.gradient ? { gradient: tertiaryData.gradient } : { solid: tertiaryData.color },
-        quaternary: quaternaryData.gradient ? { gradient: quaternaryData.gradient } : { solid: quaternaryData.color },
+        primary: primaryData.gradient
+          ? { gradient: primaryData.gradient }
+          : { solid: primaryData.color },
+        secondary: secondaryData.gradient
+          ? { gradient: secondaryData.gradient }
+          : { solid: secondaryData.color },
+        tertiary: tertiaryData.gradient
+          ? { gradient: tertiaryData.gradient }
+          : { solid: tertiaryData.color },
+        quaternary: quaternaryData.gradient
+          ? { gradient: quaternaryData.gradient }
+          : { solid: quaternaryData.color },
         borderColor: modeData.bloomBorderColor,
         borderWidth: modeData.bloomBorderWidth,
         shadowEnabled: modeData.bloomShadowEnabled,
@@ -320,9 +330,9 @@ export function formDataToDto(formData: ThemeFormData): ThemeDto {
       },
       controls: {
         buttonBackground: modeData.buttonBackgroundColor
-          ? (modeData.buttonBackgroundColor.type === 'gradient'
-              ? { gradient: modeData.buttonBackgroundColor.value } // Keep the full gradient including ID
-              : { solid: modeData.buttonBackgroundColor.value })
+          ? modeData.buttonBackgroundColor.type === 'gradient'
+            ? { gradient: modeData.buttonBackgroundColor.value } // Keep the full gradient including ID
+            : { solid: modeData.buttonBackgroundColor.value }
           : undefined,
         buttonTextColor: modeData.buttonTextColor,
         buttonBorderColor: modeData.buttonBorderColor,
@@ -375,7 +385,9 @@ export function formDataToDto(formData: ThemeFormData): ThemeDto {
 /**
  * Convert API DTO to form data
  */
-export function dtoToFormData(dto: ThemeDto | { title: string; description?: string; type?: string; kind?: string; meta?: any }): ThemeFormData {
+export function dtoToFormData(
+  dto: ThemeDto | { title: string; description?: string; type?: string; kind?: string; meta?: any }
+): ThemeFormData {
   const meta = dto.meta;
 
   // Helper to reconstruct ColorValue from palette + optional bloom data
@@ -426,9 +438,9 @@ export function dtoToFormData(dto: ThemeDto | { title: string; description?: str
       panelShadowOpacity: contentSettings.panelShadowOpacity,
       selectionColor: contentSettings.selectionColor,
       buttonBackgroundColor: controlsSettings.buttonBackground
-        ? (controlsSettings.buttonBackground.gradient
-            ? { type: 'gradient', value: controlsSettings.buttonBackground.gradient }
-            : { type: 'solid', value: controlsSettings.buttonBackground.solid || '#4dd9b8' })
+        ? controlsSettings.buttonBackground.gradient
+          ? { type: 'gradient', value: controlsSettings.buttonBackground.gradient }
+          : { type: 'solid', value: controlsSettings.buttonBackground.solid || '#4dd9b8' }
         : { type: 'solid', value: '#4dd9b8' },
       buttonTextColor: controlsSettings.buttonTextColor,
       buttonBorderColor: controlsSettings.buttonBorderColor,

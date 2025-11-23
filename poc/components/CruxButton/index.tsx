@@ -73,7 +73,7 @@ export const CruxButton: React.FC<CruxButtonProps> = ({
   if (backgroundColor.type === 'gradient') {
     // Extract gradient colors and angle
     const gradient = backgroundColor.value;
-    const colors = gradient.stops.map(stop => stop.color) as [string, string, ...string[]];
+    const colors = gradient.stops.map((stop) => stop.color) as [string, string, ...string[]];
 
     // Convert angle to start/end points for LinearGradient
     // LinearGradient uses [x, y] coordinates where 0,0 is top-left
@@ -88,16 +88,8 @@ export const CruxButton: React.FC<CruxButtonProps> = ({
     };
 
     return (
-      <Pressable
-        onPress={onPress}
-        style={[styles.button, buttonStyle]}
-      >
-        <LinearGradient
-          colors={colors}
-          start={start}
-          end={end}
-          style={styles.gradient}
-        >
+      <Pressable onPress={onPress} style={[styles.button, buttonStyle]}>
+        <LinearGradient colors={colors} start={start} end={end} style={styles.gradient}>
           <Text style={[styles.text, textStyle]}>{title}</Text>
         </LinearGradient>
       </Pressable>
@@ -108,11 +100,7 @@ export const CruxButton: React.FC<CruxButtonProps> = ({
   return (
     <Pressable
       onPress={onPress}
-      style={[
-        styles.button,
-        buttonStyle,
-        { backgroundColor: backgroundColor.value },
-      ]}
+      style={[styles.button, buttonStyle, { backgroundColor: backgroundColor.value }]}
     >
       <Text style={[styles.text, styles.solidText, textStyle]}>{title}</Text>
     </Pressable>

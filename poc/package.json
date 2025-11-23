@@ -19,6 +19,7 @@
     "@expo-google-fonts/work-sans": "^0.4.2",
     "@expo/metro-runtime": "~6.1.2",
     "@expo/vector-icons": "^15.0.2",
+    "@faker-js/faker": "^10.1.0",
     "@react-native-async-storage/async-storage": "^2.2.0",
     "@react-native-community/slider": "^5.1.1",
     "@react-navigation/bottom-tabs": "^7.4.0",
@@ -58,7 +59,6 @@
     "react-native-worklets": "0.5.1"
   },
   "devDependencies": {
-    "@faker-js/faker": "^10.1.0",
     "@types/chroma-js": "^3.1.2",
     "@types/react": "^19.2.2",
     "@types/react-dom": "^19.2.2",

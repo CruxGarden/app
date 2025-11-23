@@ -103,11 +103,7 @@ export default function AuthorPage() {
               Root Crux
             </Text>
             {author.root.title && (
-              <Text
-                variant="heading"
-                weight="bold"
-                style={{ marginBottom: tokens.spacing.sm }}
-              >
+              <Text variant="heading" weight="bold" style={{ marginBottom: tokens.spacing.sm }}>
                 {author.root.title}
               </Text>
             )}
