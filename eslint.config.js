@@ -18,8 +18,6 @@ module.exports = defineConfig([
     },
     rules: {
       'prettier/prettier': 'error',
-      // Add your custom rule overrides here
-      // Example: 'no-console': 'warn',
     },
   },
 ]);

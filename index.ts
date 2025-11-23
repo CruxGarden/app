@@ -1,2 +1,2 @@
 import 'expo-router/entry';
-import './src/utils/unistyles';
+import '@/utils/unistyles';

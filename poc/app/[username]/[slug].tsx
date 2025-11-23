@@ -8,7 +8,7 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import api, { Crux } from '@/lib/api';
+import api, { Crux } from '@/services/api';
 import CruxCard from '@/components/CruxCard';
 import CruxFormModal, { CruxFormData } from '@/components/CruxFormModal';
 import { Colors, Fonts, FontSizes } from '@/constants/theme';
