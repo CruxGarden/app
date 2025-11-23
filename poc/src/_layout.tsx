@@ -35,7 +35,7 @@ import {
 import { AppProvider } from './lib/_AppContext';
 import { ThemeProvider, useTheme } from '@/contexts/ThemeContext';
 import { View, Button } from '@/components';
-import '@/unistyles'; // Import Unistyles configuration
+import '@/utils/unistyles'; // Import Unistyles configuration
 
 function AppLayout() {
   const { setMode, resolvedMode } = useTheme();

@@ -21,7 +21,7 @@ import {
 } from '@expo-google-fonts/ibm-plex-serif';
 import { AppProvider } from '@/contexts/AppContext';
 import { ThemeProvider, useTheme } from '@/contexts/ThemeContext';
-import '@/unistyles';
+import '@/utils/unistyles';
 
 function AppLayout() {
   const { setMode, resolvedMode } = useTheme();
