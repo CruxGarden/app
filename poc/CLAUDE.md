@@ -29,52 +29,35 @@ npm run reset-project
 # Moves starter code to app-example directory and creates blank app directory
 ```
 
-### Docker Deployment (Web)
+### Local Docker (Web)
+
+Docker files in `docker/` can still be used for local development:
 
 ```bash
-# Build and run with npm script
 npm run docker:app
-
-# Or with docker-compose directly
-docker-compose -f docker/docker-compose.yml up --build
-
-# Or build and run manually
-docker build -f docker/Dockerfile -t crux-garden-app .
-docker run -p 8080:80 crux-garden-app
-
 # Access at http://localhost:8080
 ```
-
-All Docker files are located in the `docker/` directory. The Docker setup uses a multi-stage build that:
-
-1. Builds the Expo web app using `expo export --platform web`
-2. Serves the static output with nginx
-3. Includes caching, gzip compression, and client-side routing support
 
 ## CI/CD
 
 ### GitHub Actions
 
-The project uses GitHub Actions to automatically build Docker images on pushes to main, pull requests, and releases.
+**Workflow:** `.github/workflows/deploy-web.yml`
 
-**Workflow:** `.github/workflows/docker-build.yml`
+On push to main, the app is built and deployed to AWS S3:
 
-- Builds multi-platform Docker images (linux/amd64, linux/arm64)
-- Pushes to GitHub Container Registry (ghcr.io) on main branch and releases
-- Uses Docker layer caching for faster builds
-- Generates artifact attestations for build provenance (security)
-- Automatic tagging:
-  - `latest` for main branch
-  - Semver tags for releases (e.g., `v1.2.3`, `v1.2`, `v1`)
-  - Branch name and commit SHA
+- Runs `npm run build:web` (Expo web export)
+- Syncs `dist/` to S3 with cache headers:
+  - Static assets: 1-year immutable cache
+  - HTML/JSON: no-cache (must-revalidate)
+- Optionally invalidates CloudFront cache
 
-**Accessing built images:**
+**Required GitHub secrets:**
+- `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_REGION`
+- `AWS_S3_BUCKET_NAME`
 
-```bash
-docker pull ghcr.io/[username]/crux-garden-app:latest
-```
-
-Images are published to GitHub Packages and require authentication with GitHub token.
+**Optional GitHub variable:**
+- `AWS_CLOUDFRONT_DISTRIBUTION_ID` — for CDN cache invalidation
 
 ## Architecture
 
