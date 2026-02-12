@@ -1,14 +1,9 @@
 name: Docker Build & Publish
 
+# Disabled: App is now deployed to S3 via deploy-web.yml
+# Kept for manual use if Docker images are needed
 on:
-  push:
-    branches:
-      - main
-  pull_request:
-    branches:
-      - main
-  release:
-    types: [published]
+  workflow_dispatch:
 
 env:
   REGISTRY: ghcr.io
