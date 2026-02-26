@@ -31,10 +31,10 @@ export function useChat() {
       const userMsg: ChatMessage = { role: 'user', content };
       addMessage(userMsg);
 
-      // Prepare message history for API
+      // Prepare message history for API (Anthropic rejects empty content)
       const apiMessages = [...messages, userMsg].map((m) => ({
         role: m.role as 'user' | 'assistant',
-        content: m.content,
+        content: m.content || (m.toolCalls ? '[used tools]' : '...'),
       }));
 
       setStreaming(true);
@@ -107,8 +107,8 @@ export function useChat() {
         }
       }
 
-      // Add assistant message with full content
-      if (fullContent) {
+      // Add assistant message (always, to prevent consecutive user messages)
+      if (fullContent || toolCalls.length > 0) {
         const assistantMsg: ChatMessage = {
           role: 'assistant',
           content: fullContent,
