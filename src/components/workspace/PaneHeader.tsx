@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { cn } from '@/lib/cn';
 import { usePaneDrag } from './DragContext';
-import type { PaneType } from '@/stores/uiStore';
+import { PANE_COLORS, type PaneType } from '@/stores/uiStore';
 
 interface PaneHeaderProps {
   paneType: PaneType;
@@ -16,6 +16,7 @@ export default function PaneHeader({ paneType, icon, label, actions, children }:
 
   const isDragging = dragSource === paneType;
   const isDropTarget = dropTarget === paneType && dragSource !== paneType;
+  const paneColor = PANE_COLORS[paneType];
 
   return (
     <div
@@ -28,8 +29,9 @@ export default function PaneHeader({ paneType, icon, label, actions, children }:
       onDragEnd={() => {
         endDrag();
       }}
+      style={{ borderTopColor: paneColor }}
       className={cn(
-        'flex items-center justify-between px-4 h-10 border-b border-border shrink-0',
+        'flex items-center justify-between px-4 h-10 border-t-2 border-b border-border shrink-0',
         'cursor-grab active:cursor-grabbing select-none',
         'transition-colors duration-150',
         isDragging && 'opacity-40',
@@ -37,7 +39,7 @@ export default function PaneHeader({ paneType, icon, label, actions, children }:
       )}
     >
       {children ?? (
-        <div className="flex items-center gap-2 text-text-muted">
+        <div className="flex items-center gap-2" style={{ color: paneColor }}>
           {icon}
           <span className="text-xs font-mono uppercase tracking-wider">{label}</span>
         </div>

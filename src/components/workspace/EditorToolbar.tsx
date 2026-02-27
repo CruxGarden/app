@@ -1,5 +1,5 @@
 import { cn } from '@/lib/cn';
-import { getExtension, isPreviewable } from '@/lib/monacoLanguages';
+import { isPreviewable } from '@/lib/monacoLanguages';
 import type { EditorTab, EditorViewMode } from '@/stores/uiStore';
 
 interface EditorToolbarProps {
@@ -10,7 +10,6 @@ interface EditorToolbarProps {
 }
 
 export default function EditorToolbar({ tab, hasContent, onViewModeChange, onSave }: EditorToolbarProps) {
-  const ext = getExtension(tab.path);
   const canPreview = isPreviewable(tab.path) && hasContent;
 
   return (
@@ -44,19 +43,7 @@ export default function EditorToolbar({ tab, hasContent, onViewModeChange, onSav
               active={tab.viewMode === 'preview'}
               onClick={() => onViewModeChange('preview')}
             />
-            <ModeButton
-              label="Diff"
-              active={tab.viewMode === 'diff'}
-              onClick={() => onViewModeChange('diff')}
-            />
           </div>
-        )}
-
-        {/* Extension badge */}
-        {ext && (
-          <span className="text-[10px] font-mono text-text-muted uppercase">
-            {ext}
-          </span>
         )}
       </div>
     </div>

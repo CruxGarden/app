@@ -1,8 +1,9 @@
-import { useEffect, useMemo, useRef, useCallback } from 'react';
-import Editor, { DiffEditor } from '@monaco-editor/react';
+import { useEffect, useMemo, useRef, useCallback, useState } from 'react';
+import Editor from '@monaco-editor/react';
 import type * as Monaco from 'monaco-editor';
 import { useThemeStore } from '@/stores/themeStore';
 import { useUIStore } from '@/stores/uiStore';
+import { useCruxStore } from '@/stores/cruxStore';
 import { useFileContent, isImageMime } from '@/hooks/useFileContent';
 import { getMonacoLanguage, getExtension, isPreviewable } from '@/lib/monacoLanguages';
 import { registerCruxGardenThemes } from '@/lib/monacoTheme';
@@ -20,13 +21,15 @@ interface EditorContentProps {
 }
 
 export default function EditorContent({ tab, artifact, cruxId, saveRef }: EditorContentProps) {
-  const { content, blobUrl, loading, setContent } = useFileContent(cruxId, artifact);
-  const { setTabDirty } = useUIStore();
+  const { content, blobUrl, loading, contentVersion, setContent, refetch } = useFileContent(cruxId, artifact);
+  const { setTabDirty, setTabScrollTop } = useUIStore();
   const resolved = useThemeStore((s) => s.resolved);
   const monacoRef = useRef<typeof Monaco | null>(null);
   const editorRef = useRef<Monaco.editor.IStandaloneCodeEditor | null>(null);
   const contentRef = useRef<string | null>(null);
   const saveHandlerRef = useRef<() => void>(() => {});
+  const scrollRafRef = useRef<number | null>(null);
+  const disposedRef = useRef(false);
 
   const path = artifact.meta?.path || artifact.filename || artifact.id;
   const ext = getExtension(path);
@@ -50,10 +53,15 @@ export default function EditorContent({ tab, artifact, cruxId, saveRef }: Editor
   const handleSave = useCallback(async () => {
     const current = contentRef.current;
     if (current === null) return;
-    const blob = new Blob([current], { type: mime });
-    const file = new File([blob], artifact.filename || 'file', { type: mime });
-    await cruxes.updateAttachment(artifact.id, file);
-    setTabDirty(tab.id, false);
+    try {
+      const blob = new Blob([current], { type: mime });
+      const file = new File([blob], artifact.filename || 'file', { type: mime });
+      await cruxes.updateAttachment(artifact.id, file);
+      setTabDirty(tab.id, false);
+    } catch (err: unknown) {
+      const axiosErr = err as { response?: { data?: { message?: string } } };
+      console.error('Save failed:', axiosErr.response?.data?.message ?? err);
+    }
   }, [mime, artifact.id, artifact.filename, tab.id, setTabDirty]);
 
   // Keep save ref stable for Monaco keybinding (avoids stale closure)
@@ -88,12 +96,26 @@ export default function EditorContent({ tab, artifact, cruxId, saveRef }: Editor
       registerCruxGardenThemes(monaco);
       monaco.editor.setTheme(themeName);
 
+      // Restore scroll position
+      if (tab.scrollTop > 0) {
+        editor.setScrollTop(tab.scrollTop);
+      }
+
+      // Track scroll position (debounced via rAF)
+      let rafId: number | null = null;
+      editor.onDidScrollChange(() => {
+        if (rafId) cancelAnimationFrame(rafId);
+        rafId = requestAnimationFrame(() => {
+          setTabScrollTop(tab.id, editor.getScrollTop());
+        });
+      });
+
       // Cmd+S keybinding — uses ref so it always calls the latest save handler
       editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => {
         saveHandlerRef.current();
       });
     },
-    [themeName],
+    [themeName, tab.id, tab.scrollTop, setTabScrollTop],
   );
 
   // Handle content changes — update ref + state (state needed for preview modes)
@@ -136,6 +158,7 @@ export default function EditorContent({ tab, artifact, cruxId, saveRef }: Editor
     return (
       <div className="flex-1 min-h-0">
         <Editor
+          key={contentVersion}
           height="100%"
           language={language}
           defaultValue={content ?? ''}
@@ -196,16 +219,12 @@ export default function EditorContent({ tab, artifact, cruxId, saveRef }: Editor
     }
   }
 
-  // ── Diff mode ──
-  if (tab.viewMode === 'diff' && content !== null) {
-    return <DiffView content={content} language={language} themeName={themeName} />;
-  }
-
   // ── Image display ──
   if (blobUrl && isImageMime(mime)) {
     return (
-      <div className="flex-1 overflow-auto p-4 flex items-center justify-center bg-[rgba(0,0,0,0.2)]">
-        <img src={blobUrl} alt={path} className="max-w-full max-h-full object-contain rounded" />
+      <div className="flex-1 overflow-auto p-4 flex flex-col items-center justify-center gap-3 bg-[rgba(0,0,0,0.2)]">
+        <img src={blobUrl} alt={path} className="max-w-full max-h-[calc(100%-3rem)] object-contain rounded" />
+        <ReplaceFileButton artifactId={artifact.id} onReplaced={refetch} />
       </div>
     );
   }
@@ -217,13 +236,16 @@ export default function EditorContent({ tab, artifact, cruxId, saveRef }: Editor
         <div className="text-text-muted text-sm">
           Binary file ({mime}, {formatSize(artifact.size)})
         </div>
-        <a
-          href={blobUrl}
-          download={path.split('/').pop() || 'file'}
-          className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-[var(--radius-sm)] bg-accent text-bg hover:brightness-110 transition-all"
-        >
-          Download
-        </a>
+        <div className="flex items-center gap-2">
+          <a
+            href={blobUrl}
+            download={path.split('/').pop() || 'file'}
+            className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-[var(--radius-sm)] bg-accent text-bg hover:brightness-110 transition-all"
+          >
+            Download
+          </a>
+          <ReplaceFileButton artifactId={artifact.id} onReplaced={refetch} />
+        </div>
       </div>
     );
   }
@@ -236,57 +258,49 @@ export default function EditorContent({ tab, artifact, cruxId, saveRef }: Editor
   );
 }
 
-// ── Diff subcomponent ──
+// ── Replace file button ──
 
-function DiffView({
-  content,
-  language,
-  themeName,
-}: {
-  content: string;
-  language: string;
-  themeName: string;
-}) {
-  const monacoRef = useRef<typeof Monaco | null>(null);
+function ReplaceFileButton({ artifactId, onReplaced }: { artifactId: string; onReplaced: () => void }) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [replacing, setReplacing] = useState(false);
+  const updateArtifact = useCruxStore((s) => s.updateArtifact);
 
-  // For now, diff against empty — in the future this will diff against gate snapshots
-  const handleDiffMount = useCallback(
-    (_editor: Monaco.editor.IStandaloneDiffEditor, monaco: typeof Monaco) => {
-      monacoRef.current = monaco;
-      registerCruxGardenThemes(monaco);
-      monaco.editor.setTheme(themeName);
-    },
-    [themeName],
-  );
-
-  const resolved = useThemeStore((s) => s.resolved);
-  useEffect(() => {
-    if (monacoRef.current) {
-      monacoRef.current.editor.setTheme(
-        resolved === 'dark' ? 'crux-garden-dark' : 'crux-garden-light',
-      );
+  const handleReplace = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setReplacing(true);
+    try {
+      const updated = await cruxes.updateAttachment(artifactId, file);
+      updateArtifact(artifactId, updated);
+      onReplaced();
+    } catch (err) {
+      console.error('Replace failed:', err);
+    } finally {
+      setReplacing(false);
+      e.target.value = '';
     }
-  }, [resolved]);
+  }, [artifactId, updateArtifact, onReplaced]);
 
   return (
-    <div className="flex-1 min-h-0">
-      <DiffEditor
-        height="100%"
-        language={language}
-        original=""
-        modified={content}
-        theme={themeName}
-        onMount={handleDiffMount}
-        options={{
-          readOnly: true,
-          minimap: { enabled: false },
-          fontSize: 13,
-          fontFamily: "'JetBrains Mono', monospace",
-          renderSideBySide: true,
-          scrollBeyondLastLine: false,
-        }}
-      />
-    </div>
+    <>
+      <input ref={inputRef} type="file" className="hidden" onChange={handleReplace} />
+      <button
+        onClick={() => inputRef.current?.click()}
+        disabled={replacing}
+        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-[var(--radius-sm)] border border-border text-text-muted hover:text-text hover:bg-surface transition-colors disabled:opacity-50"
+      >
+        {replacing ? (
+          <Spinner size={12} />
+        ) : (
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+            <polyline points="17 8 12 3 7 8" />
+            <line x1="12" y1="3" x2="12" y2="15" />
+          </svg>
+        )}
+        Replace
+      </button>
+    </>
   );
 }
 

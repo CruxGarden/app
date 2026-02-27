@@ -17,7 +17,7 @@ export default function NavigationPane() {
 
   return (
     <div className="flex flex-col h-full">
-      <PaneHeader paneType="navigation" icon={<StackIcon />} label="History" />
+      <PaneHeader paneType="history" icon={<StackIcon />} label="History" />
 
       <div className="flex-1 overflow-y-auto min-h-0">
         <GateTimeline

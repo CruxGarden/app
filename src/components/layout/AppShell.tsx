@@ -24,7 +24,7 @@ export default function AppShell() {
       <MeshBackground />
 
       {/* Top bar */}
-      <div className="relative z-10 shrink-0">
+      <div className="relative z-20 shrink-0">
         <TopBar />
       </div>
 
