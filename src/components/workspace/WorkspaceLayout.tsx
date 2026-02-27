@@ -8,6 +8,7 @@ import NavigationPane from './NavigationPane';
 import ChatPane from './ChatPane';
 import ArtifactsPane from './ArtifactsPane';
 import EditorPane from './EditorPane';
+import MetadataPane from './MetadataPane';
 import ContextMenu from './ContextMenu';
 import MobilePaneSwitcher from './MobilePaneSwitcher';
 import { useCruxStore } from '@/stores/cruxStore';
@@ -25,6 +26,7 @@ const PANE_CONFIG: Record<PaneType, PaneConfig> = {
   chat:       { minSize: 20, defaultSize: 40, collapsible: false },
   artifacts:  { minSize: 10, defaultSize: 16, collapsible: true },
   editor:     { minSize: 15, defaultSize: 26, collapsible: true },
+  metadata:   { minSize: 10, defaultSize: 16, collapsible: true },
 };
 
 const PANE_COMPONENTS: Record<PaneType, React.ComponentType> = {
@@ -32,6 +34,7 @@ const PANE_COMPONENTS: Record<PaneType, React.ComponentType> = {
   chat: ChatPane,
   artifacts: ArtifactsPane,
   editor: EditorPane,
+  metadata: MetadataPane,
 };
 
 // ── Resize handle ───────────────────────────────────────

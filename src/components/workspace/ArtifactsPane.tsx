@@ -34,7 +34,13 @@ function TreeIcon() {
 
 export default function ArtifactsPane() {
   const artifacts = useCruxStore((s) => s.artifacts);
-  const { openFile, setPaneVisible, paneVisibility, editor, startFileOperation, showContextMenu } = useUIStore();
+  const createFile = useCruxStore((s) => s.createFile);
+  const renameArtifact = useCruxStore((s) => s.renameArtifact);
+  const {
+    openFile, setPaneVisible, paneVisibility, editor,
+    startFileOperation, activeFileOperation, cancelFileOperation,
+    showContextMenu,
+  } = useUIStore();
 
   const handleSelect = (id: string) => {
     const artifact = artifacts.find((a) => a.id === id);
@@ -58,6 +64,39 @@ export default function ArtifactsPane() {
     });
   };
 
+  const handleCreateFile = async (name: string) => {
+    const parentPath = activeFileOperation?.parentPath;
+    const fullPath = parentPath ? `${parentPath}/${name}` : name;
+    cancelFileOperation();
+    const attachment = await createFile(fullPath);
+    openFile(attachment.id, fullPath);
+    if (!paneVisibility.editor) setPaneVisible('editor', true);
+  };
+
+  const handleCreateFolder = async (name: string) => {
+    const parentPath = activeFileOperation?.parentPath;
+    const fullPath = parentPath ? `${parentPath}/${name}/.keep` : `${name}/.keep`;
+    cancelFileOperation();
+    await createFile(fullPath, '');
+  };
+
+  const handleRename = async (newName: string) => {
+    if (!activeFileOperation?.targetPath) return;
+    const oldPath = activeFileOperation.targetPath;
+    const parts = oldPath.split('/');
+    parts[parts.length - 1] = newName;
+    const newPath = parts.join('/');
+
+    // Find the artifact by path
+    const artifact = artifacts.find(
+      (a) => (a.meta?.path || a.filename) === oldPath,
+    );
+    cancelFileOperation();
+    if (artifact) {
+      await renameArtifact(artifact.id, newPath);
+    }
+  };
+
   const actionButtons = (
     <>
       <button
@@ -77,17 +116,27 @@ export default function ArtifactsPane() {
     </>
   );
 
+  const showTree = artifacts.length > 0 || (
+    activeFileOperation &&
+    (activeFileOperation.type === 'create-file' || activeFileOperation.type === 'create-folder')
+  );
+
   return (
     <div className="flex flex-col h-full">
       <PaneHeader paneType="artifacts" icon={<TreeIcon />} label="Artifacts" actions={actionButtons} />
 
       <div className="flex-1 overflow-y-auto min-h-0">
-        {artifacts.length > 0 ? (
+        {showTree ? (
           <FileTree
             artifacts={artifacts}
             selectedId={editor.activeTabId}
             onSelect={handleSelect}
             onContextMenu={handleContextMenu}
+            activeFileOperation={activeFileOperation}
+            onCreateFile={handleCreateFile}
+            onCreateFolder={handleCreateFolder}
+            onRename={handleRename}
+            onCancelOperation={cancelFileOperation}
           />
         ) : (
           <div className="flex flex-col items-center justify-center py-8 text-text-muted">

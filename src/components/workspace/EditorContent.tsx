@@ -16,20 +16,28 @@ interface EditorContentProps {
   tab: EditorTab;
   artifact: Attachment;
   cruxId: string;
+  saveRef?: React.MutableRefObject<(() => void) | null>;
 }
 
-export default function EditorContent({ tab, artifact, cruxId }: EditorContentProps) {
+export default function EditorContent({ tab, artifact, cruxId, saveRef }: EditorContentProps) {
   const { content, blobUrl, loading, setContent } = useFileContent(cruxId, artifact);
   const { setTabDirty } = useUIStore();
   const resolved = useThemeStore((s) => s.resolved);
   const monacoRef = useRef<typeof Monaco | null>(null);
   const editorRef = useRef<Monaco.editor.IStandaloneCodeEditor | null>(null);
+  const contentRef = useRef<string | null>(null);
+  const saveHandlerRef = useRef<() => void>(() => {});
 
   const path = artifact.meta?.path || artifact.filename || artifact.id;
   const ext = getExtension(path);
   const mime = artifact.mimeType || 'text/plain';
   const language = getMonacoLanguage(path);
   const themeName = resolved === 'dark' ? 'crux-garden-dark' : 'crux-garden-light';
+
+  // Keep ref in sync when content loads
+  useEffect(() => {
+    contentRef.current = content;
+  }, [content]);
 
   // Sync theme changes
   useEffect(() => {
@@ -38,32 +46,40 @@ export default function EditorContent({ tab, artifact, cruxId }: EditorContentPr
     }
   }, [themeName]);
 
-  // Save handler
+  // Save handler — reads from ref to avoid re-creating on every keystroke
   const handleSave = useCallback(async () => {
-    if (content === null) return;
-    const blob = new Blob([content], { type: mime });
+    const current = contentRef.current;
+    if (current === null) return;
+    const blob = new Blob([current], { type: mime });
     const file = new File([blob], artifact.filename || 'file', { type: mime });
-    try {
-      await cruxes.updateAttachment(artifact.id, file);
-      setTabDirty(tab.id, false);
-    } catch (err) {
-      console.error('[EditorContent] Save failed:', err);
-    }
-  }, [content, mime, artifact.id, artifact.filename, tab.id, setTabDirty]);
+    await cruxes.updateAttachment(artifact.id, file);
+    setTabDirty(tab.id, false);
+  }, [mime, artifact.id, artifact.filename, tab.id, setTabDirty]);
+
+  // Keep save ref stable for Monaco keybinding (avoids stale closure)
+  useEffect(() => {
+    saveHandlerRef.current = handleSave;
+  }, [handleSave]);
+
+  // Expose save to parent via ref
+  useEffect(() => {
+    if (saveRef) saveRef.current = handleSave;
+    return () => { if (saveRef) saveRef.current = null; };
+  }, [handleSave, saveRef]);
 
   // Global Cmd+S
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === 's') {
         e.preventDefault();
-        handleSave();
+        saveHandlerRef.current();
       }
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [handleSave]);
+  }, []);
 
-  // Monaco editor mount
+  // Monaco editor mount — stable callback, uses refs to avoid stale closures
   const handleEditorMount = useCallback(
     (editor: Monaco.editor.IStandaloneCodeEditor, monaco: typeof Monaco) => {
       monacoRef.current = monaco;
@@ -72,18 +88,20 @@ export default function EditorContent({ tab, artifact, cruxId }: EditorContentPr
       registerCruxGardenThemes(monaco);
       monaco.editor.setTheme(themeName);
 
-      // Cmd+S keybinding within editor
+      // Cmd+S keybinding — uses ref so it always calls the latest save handler
       editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => {
-        handleSave();
+        saveHandlerRef.current();
       });
     },
-    [themeName, handleSave],
+    [themeName],
   );
 
-  // Handle content changes from Monaco
+  // Handle content changes — update ref + state (state needed for preview modes)
+  // Using defaultValue means React re-renders won't cause Monaco to re-apply content
   const handleEditorChange = useCallback(
     (value: string | undefined) => {
       if (value !== undefined) {
+        contentRef.current = value;
         setContent(value);
         setTabDirty(tab.id, true);
       }
@@ -120,7 +138,7 @@ export default function EditorContent({ tab, artifact, cruxId }: EditorContentPr
         <Editor
           height="100%"
           language={language}
-          value={content}
+          defaultValue={content ?? ''}
           theme={themeName}
           onChange={handleEditorChange}
           onMount={handleEditorMount}
@@ -137,9 +155,6 @@ export default function EditorContent({ tab, artifact, cruxId }: EditorContentPr
             autoIndent: 'full',
             formatOnPaste: true,
             tabSize: 2,
-            smoothScrolling: true,
-            cursorBlinking: 'smooth',
-            cursorSmoothCaretAnimation: 'on',
           }}
         />
       </div>

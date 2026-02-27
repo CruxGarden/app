@@ -1,3 +1,4 @@
+import { useRef } from 'react';
 import { useUIStore } from '@/stores/uiStore';
 import { useCruxStore } from '@/stores/cruxStore';
 import PaneHeader from './PaneHeader';
@@ -19,6 +20,7 @@ export default function EditorPane() {
   const artifacts = useCruxStore((s) => s.artifacts);
   const { editor, setActiveTab, closeTab, setTabViewMode } = useUIStore();
   const { tabs, activeTabId } = editor;
+  const saveRef = useRef<(() => void) | null>(null);
 
   const activeTab = tabs.find((t) => t.id === activeTabId) ?? null;
   const activeArtifact = activeTab
@@ -55,11 +57,14 @@ export default function EditorPane() {
             tab={activeTab}
             hasContent={true}
             onViewModeChange={(mode) => setTabViewMode(activeTab.id, mode)}
+            onSave={() => saveRef.current?.()}
           />
           <EditorContent
+            key={activeTab.id}
             tab={activeTab}
             artifact={activeArtifact}
             cruxId={crux.id}
+            saveRef={saveRef}
           />
         </>
       )}
