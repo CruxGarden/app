@@ -176,7 +176,7 @@ export default function MetadataPane() {
   if (!crux) {
     return (
       <div className="flex flex-col h-full">
-        <PaneHeader paneType="metadata" icon={<InfoIcon />} label="Details" />
+        <PaneHeader paneType="details" icon={<InfoIcon />} label="Metadata" />
         <div className="flex-1 flex items-center justify-center text-text-muted">
           <p className="text-xs">No crux loaded.</p>
         </div>
@@ -186,7 +186,7 @@ export default function MetadataPane() {
 
   return (
     <div className="flex flex-col h-full">
-      <PaneHeader paneType="metadata" icon={<InfoIcon />} label="Details" />
+      <PaneHeader paneType="details" icon={<InfoIcon />} label="Metadata" />
 
       <div className="flex-1 overflow-y-auto min-h-0 p-3 flex flex-col gap-3">
         {/* ── Crux Metadata ── */}

@@ -30,7 +30,7 @@ export default function EditorPane() {
   if (tabs.length === 0) {
     return (
       <div className="flex flex-col h-full">
-        <PaneHeader paneType="editor" icon={<CodeIcon />} label="Editor" />
+        <PaneHeader paneType="workshop" icon={<CodeIcon />} label="Workshop" />
         <div className="flex-1 flex flex-col items-center justify-center text-text-muted">
           <CodeIcon />
           <p className="text-xs mt-2 text-center px-4">
@@ -43,14 +43,13 @@ export default function EditorPane() {
 
   return (
     <div className="flex flex-col h-full">
-      <PaneHeader paneType="editor">
-        <EditorTabBar
-          tabs={tabs}
-          activeId={activeTabId}
-          onSelect={setActiveTab}
-          onClose={closeTab}
-        />
-      </PaneHeader>
+      <PaneHeader paneType="workshop" icon={<CodeIcon />} label="Workshop" />
+      <EditorTabBar
+        tabs={tabs}
+        activeId={activeTabId}
+        onSelect={setActiveTab}
+        onClose={closeTab}
+      />
       {activeTab && activeArtifact && crux && (
         <>
           <EditorToolbar

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import type { Attachment } from '@/api/types';
 import { cruxes } from '@/api';
 
@@ -25,15 +25,24 @@ interface UseFileContentResult {
   content: string | null;
   blobUrl: string | null;
   loading: boolean;
+  /** Increments each time content is loaded from the server (use as Editor key) */
+  contentVersion: number;
   setContent: (value: string) => void;
+  refetch: () => void;
 }
 
 export function useFileContent(cruxId: string, artifact: Attachment): UseFileContentResult {
   const [content, setContent] = useState<string | null>(null);
   const [blobUrl, setBlobUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [fetchKey, setFetchKey] = useState(0);
+  const [contentVersion, setContentVersion] = useState(0);
 
   const mime = artifact.mimeType || 'text/plain';
+
+  const refetch = useCallback(() => {
+    setFetchKey((k) => k + 1);
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -49,12 +58,14 @@ export function useFileContent(cruxId: string, artifact: Attachment): UseFileCon
           blob.text().then((text) => {
             if (!cancelled) {
               setContent(text);
+              setContentVersion((v) => v + 1);
               setLoading(false);
             }
           });
         } else {
           const url = URL.createObjectURL(blob);
           setBlobUrl(url);
+          setContentVersion((v) => v + 1);
           setLoading(false);
         }
       })
@@ -68,7 +79,7 @@ export function useFileContent(cruxId: string, artifact: Attachment): UseFileCon
     return () => {
       cancelled = true;
     };
-  }, [artifact.id, cruxId, mime]);
+  }, [artifact.id, artifact.updated, cruxId, mime, fetchKey]);
 
   // Clean up blob URLs
   useEffect(() => {
@@ -77,5 +88,5 @@ export function useFileContent(cruxId: string, artifact: Attachment): UseFileCon
     };
   }, [blobUrl]);
 
-  return { content, blobUrl, loading, setContent };
+  return { content, blobUrl, loading, contentVersion, setContent, refetch };
 }

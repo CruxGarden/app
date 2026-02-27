@@ -82,7 +82,11 @@ export function useChat() {
                   event.data.name === 'write_file' ||
                   event.data.name === 'read_file'
                 ) {
-                  cruxes.getAttachments(crux.id).then(setArtifacts);
+                  const currentCruxId = useCruxStore.getState().crux?.id ?? crux.id;
+                  cruxes.getAttachments(currentCruxId).then(
+                    (arts) => useCruxStore.getState().setArtifacts(arts),
+                    (err) => console.error('Failed to refresh artifacts:', err),
+                  );
                 }
 
                 // Track write_file for gate creation

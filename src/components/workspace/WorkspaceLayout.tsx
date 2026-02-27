@@ -9,6 +9,8 @@ import ChatPane from './ChatPane';
 import ArtifactsPane from './ArtifactsPane';
 import EditorPane from './EditorPane';
 import MetadataPane from './MetadataPane';
+import SyncPane from './SyncPane';
+import PublishPane from './PublishPane';
 import ContextMenu from './ContextMenu';
 import MobilePaneSwitcher from './MobilePaneSwitcher';
 import { useCruxStore } from '@/stores/cruxStore';
@@ -22,19 +24,23 @@ interface PaneConfig {
 }
 
 const PANE_CONFIG: Record<PaneType, PaneConfig> = {
-  navigation: { minSize: 10, defaultSize: 18, collapsible: true },
-  chat:       { minSize: 20, defaultSize: 40, collapsible: false },
-  artifacts:  { minSize: 10, defaultSize: 16, collapsible: true },
-  editor:     { minSize: 15, defaultSize: 26, collapsible: true },
-  metadata:   { minSize: 10, defaultSize: 16, collapsible: true },
+  history:       { minSize: 10, defaultSize: 18, collapsible: true },
+  collaboration: { minSize: 20, defaultSize: 40, collapsible: false },
+  artifacts:     { minSize: 10, defaultSize: 16, collapsible: true },
+  workshop:      { minSize: 15, defaultSize: 26, collapsible: true },
+  details:       { minSize: 10, defaultSize: 16, collapsible: true },
+  sync:          { minSize: 10, defaultSize: 16, collapsible: true },
+  publish:       { minSize: 10, defaultSize: 16, collapsible: true },
 };
 
 const PANE_COMPONENTS: Record<PaneType, React.ComponentType> = {
-  navigation: NavigationPane,
-  chat: ChatPane,
+  history: NavigationPane,
+  collaboration: ChatPane,
   artifacts: ArtifactsPane,
-  editor: EditorPane,
-  metadata: MetadataPane,
+  workshop: EditorPane,
+  details: MetadataPane,
+  sync: SyncPane,
+  publish: PublishPane,
 };
 
 // ── Resize handle ───────────────────────────────────────
@@ -61,7 +67,7 @@ function DraggablePane({ paneType, children }: { paneType: PaneType; children: R
 
   return (
     <div
-      className={cn('h-full', isDragging && 'opacity-50')}
+      className={cn('h-full border border-accent/20 rounded-[var(--radius-sm)]', isDragging && 'opacity-50')}
       onDragOver={(e) => {
         e.preventDefault();
         e.dataTransfer.dropEffect = 'move';
@@ -134,7 +140,7 @@ export default function WorkspaceLayout() {
     if (!artifact) return;
     const path = artifact.meta?.path || artifact.filename || artifact.id;
     openFile(id, path);
-    if (!paneVisibility.editor) setPaneVisible('editor', true);
+    if (!paneVisibility.workshop) setPaneVisible('workshop', true);
   };
 
   const handleReorder = useCallback(

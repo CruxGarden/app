@@ -1,30 +1,9 @@
 import { useNavigate } from 'react-router-dom';
-import { useThemeStore } from '@/stores/themeStore';
-import { useUIStore } from '@/stores/uiStore';
+import { useUIStore, PANE_COLORS } from '@/stores/uiStore';
 import { useCruxStore } from '@/stores/cruxStore';
+import { useAuthStore } from '@/stores/authStore';
 import IconButton from '@/components/ui/IconButton';
 import UserMenu from '@/components/auth/UserMenu';
-import PublishButton from '@/components/chat/PublishButton';
-import { PaneLayoutMenu } from '@/components/workspace';
-import Logo from '@/components/brand/Logo';
-import CruxBloom from '@/components/brand/CruxBloom';
-
-function SunIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-      <circle cx="12" cy="12" r="5" />
-      <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" />
-    </svg>
-  );
-}
-
-function MoonIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
-    </svg>
-  );
-}
 
 function StackIcon() {
   return (
@@ -71,63 +50,81 @@ function InfoIcon() {
   );
 }
 
-function PlusIcon() {
+function SyncIcon() {
   return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M12 5v14" />
-      <path d="M5 12h14" />
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="23 4 23 10 17 10" />
+      <polyline points="1 20 1 14 7 14" />
+      <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
     </svg>
   );
 }
 
-interface TopBarProps {
-  title?: string;
+function PublishIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" />
+      <polyline points="16 6 12 2 8 6" />
+      <line x1="12" y1="2" x2="12" y2="15" />
+    </svg>
+  );
 }
 
-export default function TopBar({ title }: TopBarProps) {
-  const navigate = useNavigate();
-  const { resolved, setMode } = useThemeStore();
-  const { paneVisibility, togglePane } = useUIStore();
-  const crux = useCruxStore((s) => s.crux);
-  const createCrux = useCruxStore((s) => s.createCrux);
+function ChevronIcon() {
+  return (
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="9 18 15 12 9 6" />
+    </svg>
+  );
+}
 
-  const handleNewCrux = async () => {
-    const newCrux = await createCrux();
-    navigate(`/crux/${newCrux.id}`);
-  };
+export default function TopBar() {
+  const navigate = useNavigate();
+  const { paneVisibility, togglePane, activeCruxId } = useUIStore();
+  const cruxTitle = useCruxStore((s) => s.crux?.title);
+  const username = useAuthStore((s) => s.author?.username);
 
   return (
     <header className="flex items-center justify-between h-12 px-3 border-b border-border bg-surface/30 backdrop-blur-[var(--glass-blur)]">
-      {/* Left: branding + nav */}
-      <div className="flex items-center gap-1">
-        <IconButton label="Garden" size="sm" onClick={() => navigate('/garden')}>
-          <CruxBloom size={16} />
-        </IconButton>
-        <Logo size="sm" className="hidden sm:inline mr-1" />
-        <IconButton label="New crux" size="sm" onClick={handleNewCrux}>
-          <PlusIcon />
-        </IconButton>
-        {title ? (
-          <h1 className="text-xs font-medium font-display text-text-muted ml-2 truncate max-w-[200px]">{title}</h1>
+      {/* Left: branding + breadcrumb */}
+      <div className="flex items-center gap-1.5 min-w-0">
+        <button
+          onClick={() => navigate('/garden')}
+          className="shrink-0 hover:opacity-80 transition-opacity cursor-pointer text-sm font-display font-medium text-text whitespace-nowrap"
+        >
+          {username ? `${username}'s Garden` : 'crux.garden'}
+        </button>
+        {activeCruxId ? (
+          <>
+            <span className="text-text-muted shrink-0"><ChevronIcon /></span>
+            <button
+              onClick={() => navigate(`/crux/${activeCruxId}`)}
+              className="text-xs font-medium font-display text-text-muted hover:text-text transition-colors cursor-pointer whitespace-nowrap"
+            >
+              {cruxTitle || 'Untitled'}
+            </button>
+          </>
         ) : null}
       </div>
 
-      {/* Right: pane toggles + actions */}
+      {/* Right: pane toggles + user menu */}
       <div className="flex items-center gap-1">
-        {crux && <PublishButton />}
+        <div className="flex items-center gap-1">
         <IconButton
           label="Toggle history"
           size="sm"
-          onClick={() => togglePane('navigation')}
-          active={paneVisibility.navigation}
+          onClick={() => togglePane('history')}
+          active={paneVisibility.history}
+          activeColor={PANE_COLORS.history}
         >
           <StackIcon />
         </IconButton>
         <IconButton
-          label="Toggle conversation"
+          label="Toggle collaboration"
           size="sm"
-          onClick={() => togglePane('chat')}
-          active={paneVisibility.chat}
+          onClick={() => togglePane('collaboration')}
+          active={paneVisibility.collaboration}
+          activeColor={PANE_COLORS.collaboration}
         >
           <ChatIcon />
         </IconButton>
@@ -136,33 +133,48 @@ export default function TopBar({ title }: TopBarProps) {
           size="sm"
           onClick={() => togglePane('artifacts')}
           active={paneVisibility.artifacts}
+          activeColor={PANE_COLORS.artifacts}
         >
           <FolderIcon />
         </IconButton>
         <IconButton
-          label="Toggle editor"
+          label="Toggle workshop"
           size="sm"
-          onClick={() => togglePane('editor')}
-          active={paneVisibility.editor}
+          onClick={() => togglePane('workshop')}
+          active={paneVisibility.workshop}
+          activeColor={PANE_COLORS.workshop}
         >
           <CodeIcon />
         </IconButton>
         <IconButton
           label="Toggle details"
           size="sm"
-          onClick={() => togglePane('metadata')}
-          active={paneVisibility.metadata}
+          onClick={() => togglePane('details')}
+          active={paneVisibility.details}
+          activeColor={PANE_COLORS.details}
         >
           <InfoIcon />
         </IconButton>
-        <PaneLayoutMenu />
         <IconButton
-          label="Toggle theme"
+          label="Toggle sync"
           size="sm"
-          onClick={() => setMode(resolved === 'dark' ? 'light' : 'dark')}
+          onClick={() => togglePane('sync')}
+          active={paneVisibility.sync}
+          activeColor={PANE_COLORS.sync}
         >
-          {resolved === 'dark' ? <SunIcon /> : <MoonIcon />}
+          <SyncIcon />
         </IconButton>
+        <IconButton
+          label="Toggle publish"
+          size="sm"
+          onClick={() => togglePane('publish')}
+          active={paneVisibility.publish}
+          activeColor={PANE_COLORS.publish}
+        >
+          <PublishIcon />
+        </IconButton>
+        </div>
+        <div className="w-px h-5 bg-border mx-1" />
         <UserMenu />
       </div>
     </header>

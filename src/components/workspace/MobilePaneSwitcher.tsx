@@ -1,19 +1,19 @@
 import { cn } from '@/lib/cn';
-import { useUIStore, type PaneType } from '@/stores/uiStore';
+import { useUIStore, PANE_COLORS, type PaneType } from '@/stores/uiStore';
 
 const PANE_ICONS: Record<PaneType, { label: string; icon: React.ReactNode }> = {
-  navigation: {
-    label: 'Nav',
+  history: {
+    label: 'History',
     icon: (
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M12 22V8" />
-        <path d="M5 12H2a10 10 0 0 0 20 0h-3" />
-        <circle cx="12" cy="5" r="3" />
+        <path d="M12 2L2 7l10 5 10-5-10-5z" />
+        <path d="M2 17l10 5 10-5" />
+        <path d="M2 12l10 5 10-5" />
       </svg>
     ),
   },
-  chat: {
-    label: 'Chat',
+  collaboration: {
+    label: 'Collab',
     icon: (
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
         <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
@@ -28,8 +28,8 @@ const PANE_ICONS: Record<PaneType, { label: string; icon: React.ReactNode }> = {
       </svg>
     ),
   },
-  editor: {
-    label: 'Edit',
+  workshop: {
+    label: 'Workshop',
     icon: (
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
         <polyline points="16 18 22 12 16 6" />
@@ -37,13 +37,33 @@ const PANE_ICONS: Record<PaneType, { label: string; icon: React.ReactNode }> = {
       </svg>
     ),
   },
-  metadata: {
-    label: 'Info',
+  details: {
+    label: 'Details',
     icon: (
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
         <circle cx="12" cy="12" r="10" />
         <path d="M12 16v-4" />
         <path d="M12 8h.01" />
+      </svg>
+    ),
+  },
+  sync: {
+    label: 'Sync',
+    icon: (
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        <polyline points="23 4 23 10 17 10" />
+        <polyline points="1 20 1 14 7 14" />
+        <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
+      </svg>
+    ),
+  },
+  publish: {
+    label: 'Publish',
+    icon: (
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" />
+        <polyline points="16 6 12 2 8 6" />
+        <line x1="12" y1="2" x2="12" y2="15" />
       </svg>
     ),
   },
@@ -62,11 +82,10 @@ export default function MobilePaneSwitcher() {
           <button
             key={pane}
             onClick={() => setMobileActivePane(pane)}
+            style={isActive ? { color: PANE_COLORS[pane] } : undefined}
             className={cn(
               'flex flex-col items-center gap-0.5 px-3 py-1 rounded-[var(--radius-sm)] transition-colors cursor-pointer',
-              isActive
-                ? 'text-accent'
-                : 'text-text-muted',
+              !isActive && 'text-text-muted',
             )}
           >
             {icon}

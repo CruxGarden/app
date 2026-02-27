@@ -39,6 +39,8 @@ interface CruxState {
 
   // File CRUD actions
   createFile: (path: string, content?: string) => Promise<Attachment>;
+  uploadFile: (file: File, parentPath?: string) => Promise<Attachment>;
+  moveArtifact: (id: string, newParentPath: string | null) => Promise<void>;
   renameArtifact: (id: string, newPath: string) => Promise<void>;
   deleteArtifact: (id: string) => Promise<void>;
   saveArtifactContent: (id: string, content: string) => Promise<void>;
@@ -209,6 +211,32 @@ export const useCruxStore = create<CruxState>((set, get) => ({
     const attachment = await cruxes.uploadAttachment(crux.id, file, { path, type: 'file', kind: 'artifact' });
     set((state) => ({ artifacts: [...state.artifacts, attachment] }));
     return attachment;
+  },
+
+  uploadFile: async (file: File, parentPath?: string) => {
+    const { crux } = get();
+    if (!crux) throw new Error('No active crux');
+    const path = parentPath ? `${parentPath}/${file.name}` : file.name;
+    const attachment = await cruxes.uploadAttachment(crux.id, file, { path, type: 'file', kind: 'artifact' });
+    set((state) => ({ artifacts: [...state.artifacts, attachment] }));
+    return attachment;
+  },
+
+  moveArtifact: async (id: string, newParentPath: string | null) => {
+    const { artifacts } = get();
+    const artifact = artifacts.find((a) => a.id === id);
+    if (!artifact) return;
+    const oldPath = artifact.meta?.path || artifact.filename || '';
+    const filename = oldPath.split('/').pop() || artifact.filename;
+    const newPath = newParentPath ? `${newParentPath}/${filename}` : filename;
+    await cruxes.updateAttachment(id, undefined, { path: newPath });
+    set((state) => ({
+      artifacts: state.artifacts.map((a) =>
+        a.id === id
+          ? { ...a, meta: { ...a.meta, path: newPath }, filename: newPath.split('/').pop() || a.filename }
+          : a,
+      ),
+    }));
   },
 
   renameArtifact: async (id: string, newPath: string) => {
