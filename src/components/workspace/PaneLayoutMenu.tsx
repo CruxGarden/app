@@ -7,6 +7,7 @@ const PANE_LABELS: Record<PaneType, string> = {
   chat: 'Chat',
   artifacts: 'Artifacts',
   editor: 'Editor',
+  metadata: 'Details',
 };
 
 function LayoutIcon() {

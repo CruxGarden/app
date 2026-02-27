@@ -1,13 +1,20 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { cn } from '@/lib/cn';
 import type { Attachment } from '@/api/types';
+import type { FileOperation } from '@/stores/uiStore';
 import { getFileIcon, FolderIcon, FolderOpenIcon, ChevronIcon } from './fileIcons';
+import InlineRename from '@/components/workspace/InlineRename';
 
 interface FileTreeProps {
   artifacts: Attachment[];
   selectedId: string | null;
   onSelect: (id: string) => void;
   onContextMenu?: (e: React.MouseEvent, info: { id: string | null; path: string; isFolder: boolean }) => void;
+  activeFileOperation?: FileOperation | null;
+  onCreateFile?: (name: string) => void;
+  onCreateFolder?: (name: string) => void;
+  onRename?: (newName: string) => void;
+  onCancelOperation?: () => void;
 }
 
 interface TreeNode {
@@ -57,6 +64,29 @@ function getSortedChildren(node: TreeNode): TreeNode[] {
   return [...dirs, ...files];
 }
 
+/** Inline input row for creating a new file or folder */
+function InlineCreateRow({
+  depth,
+  isFolder,
+  onCommit,
+  onCancel,
+}: {
+  depth: number;
+  isFolder: boolean;
+  onCommit: (name: string) => void;
+  onCancel: () => void;
+}) {
+  return (
+    <div
+      className="flex items-center gap-1.5 py-1 text-xs font-mono"
+      style={{ paddingLeft: `${isFolder ? depth * 12 + 8 : depth * 12 + 20}px` }}
+    >
+      {isFolder ? <FolderIcon /> : <span className="text-text-muted">+</span>}
+      <InlineRename initialValue="" onCommit={onCommit} onCancel={onCancel} />
+    </div>
+  );
+}
+
 function TreeNodeItem({
   node,
   depth,
@@ -65,6 +95,11 @@ function TreeNodeItem({
   openDirs,
   toggleDir,
   onContextMenu,
+  activeFileOperation,
+  onCreateFile,
+  onCreateFolder,
+  onRename,
+  onCancelOperation,
 }: {
   node: TreeNode;
   depth: number;
@@ -73,10 +108,28 @@ function TreeNodeItem({
   openDirs: Set<string>;
   toggleDir: (path: string) => void;
   onContextMenu?: (e: React.MouseEvent, info: { id: string | null; path: string; isFolder: boolean }) => void;
+  activeFileOperation?: FileOperation | null;
+  onCreateFile?: (name: string) => void;
+  onCreateFolder?: (name: string) => void;
+  onRename?: (newName: string) => void;
+  onCancelOperation?: () => void;
 }) {
   const isDir = node.children.size > 0 && !node.artifact;
   const isOpen = openDirs.has(node.fullPath);
   const isSelected = node.artifact?.id === selectedId;
+
+  // Check if this node is being renamed
+  const isRenaming =
+    activeFileOperation?.type === 'rename' &&
+    activeFileOperation.targetPath === node.fullPath;
+
+  // Check if a new item is being created inside this directory
+  const isCreatingInside =
+    isDir &&
+    isOpen &&
+    activeFileOperation &&
+    (activeFileOperation.type === 'create-file' || activeFileOperation.type === 'create-folder') &&
+    activeFileOperation.parentPath === node.fullPath;
 
   if (isDir) {
     return (
@@ -96,25 +149,54 @@ function TreeNodeItem({
         >
           <ChevronIcon open={isOpen} />
           {isOpen ? <FolderOpenIcon /> : <FolderIcon />}
-          <span className="truncate">{node.name}</span>
-        </button>
-        {isOpen &&
-          getSortedChildren(node).map((child) => (
-            <TreeNodeItem
-              key={child.fullPath}
-              node={child}
-              depth={depth + 1}
-              selectedId={selectedId}
-              onSelect={onSelect}
-              openDirs={openDirs}
-              toggleDir={toggleDir}
-              onContextMenu={onContextMenu}
+          {isRenaming ? (
+            <InlineRename
+              initialValue={node.name}
+              onCommit={(name) => onRename?.(name)}
+              onCancel={() => onCancelOperation?.()}
             />
-          ))}
+          ) : (
+            <span className="truncate">{node.name}</span>
+          )}
+        </button>
+        {isOpen && (
+          <>
+            {getSortedChildren(node).map((child) => (
+              <TreeNodeItem
+                key={child.fullPath}
+                node={child}
+                depth={depth + 1}
+                selectedId={selectedId}
+                onSelect={onSelect}
+                openDirs={openDirs}
+                toggleDir={toggleDir}
+                onContextMenu={onContextMenu}
+                activeFileOperation={activeFileOperation}
+                onCreateFile={onCreateFile}
+                onCreateFolder={onCreateFolder}
+                onRename={onRename}
+                onCancelOperation={onCancelOperation}
+              />
+            ))}
+            {isCreatingInside && (
+              <InlineCreateRow
+                depth={depth + 1}
+                isFolder={activeFileOperation.type === 'create-folder'}
+                onCommit={(name) =>
+                  activeFileOperation.type === 'create-folder'
+                    ? onCreateFolder?.(name)
+                    : onCreateFile?.(name)
+                }
+                onCancel={() => onCancelOperation?.()}
+              />
+            )}
+          </>
+        )}
       </>
     );
   }
 
+  // File node
   return (
     <button
       onClick={() => node.artifact && onSelect(node.artifact.id)}
@@ -133,12 +215,30 @@ function TreeNodeItem({
       title={node.fullPath}
     >
       {getFileIcon(node.name)}
-      <span className="truncate">{node.name}</span>
+      {isRenaming ? (
+        <InlineRename
+          initialValue={node.name}
+          onCommit={(name) => onRename?.(name)}
+          onCancel={() => onCancelOperation?.()}
+        />
+      ) : (
+        <span className="truncate">{node.name}</span>
+      )}
     </button>
   );
 }
 
-export default function FileTree({ artifacts, selectedId, onSelect, onContextMenu }: FileTreeProps) {
+export default function FileTree({
+  artifacts,
+  selectedId,
+  onSelect,
+  onContextMenu,
+  activeFileOperation,
+  onCreateFile,
+  onCreateFolder,
+  onRename,
+  onCancelOperation,
+}: FileTreeProps) {
   const tree = useMemo(() => buildTree(artifacts), [artifacts]);
 
   // Collect all directory paths to initialize them as open
@@ -156,6 +256,18 @@ export default function FileTree({ artifacts, selectedId, onSelect, onContextMen
 
   const [openDirs, setOpenDirs] = useState<Set<string>>(allDirs);
 
+  // Auto-expand the parent directory when a file operation targets it
+  useEffect(() => {
+    if (activeFileOperation?.parentPath) {
+      setOpenDirs((prev) => {
+        if (prev.has(activeFileOperation.parentPath!)) return prev;
+        const next = new Set(prev);
+        next.add(activeFileOperation.parentPath!);
+        return next;
+      });
+    }
+  }, [activeFileOperation?.parentPath]);
+
   const toggleDir = (path: string) => {
     setOpenDirs((prev) => {
       const next = new Set(prev);
@@ -168,7 +280,13 @@ export default function FileTree({ artifacts, selectedId, onSelect, onContextMen
     });
   };
 
-  if (artifacts.length === 0) {
+  // Check if creating at root level (no parentPath)
+  const isCreatingAtRoot =
+    activeFileOperation &&
+    (activeFileOperation.type === 'create-file' || activeFileOperation.type === 'create-folder') &&
+    !activeFileOperation.parentPath;
+
+  if (artifacts.length === 0 && !isCreatingAtRoot) {
     return (
       <div className="p-3 text-xs text-text-muted">
         No files yet. Ask the AI to create one.
@@ -188,8 +306,25 @@ export default function FileTree({ artifacts, selectedId, onSelect, onContextMen
           openDirs={openDirs}
           toggleDir={toggleDir}
           onContextMenu={onContextMenu}
+          activeFileOperation={activeFileOperation}
+          onCreateFile={onCreateFile}
+          onCreateFolder={onCreateFolder}
+          onRename={onRename}
+          onCancelOperation={onCancelOperation}
         />
       ))}
+      {isCreatingAtRoot && (
+        <InlineCreateRow
+          depth={0}
+          isFolder={activeFileOperation.type === 'create-folder'}
+          onCommit={(name) =>
+            activeFileOperation.type === 'create-folder'
+              ? onCreateFolder?.(name)
+              : onCreateFile?.(name)
+          }
+          onCancel={() => onCancelOperation?.()}
+        />
+      )}
     </div>
   );
 }

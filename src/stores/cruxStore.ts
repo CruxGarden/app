@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { Crux, ChatMessage, Attachment, CruxSummary, Dimension } from '@/api/types';
+import type { Crux, ChatMessage, Attachment, CruxSummary, Dimension, UpdateCruxDto } from '@/api/types';
 import type { Palette } from '@/lib/palette';
 import { applyPalette, resetPalette } from '@/lib/palette';
 import { cruxes } from '@/api';
@@ -34,6 +34,7 @@ interface CruxState {
   setModel: (model: string) => void;
   setPalette: (palette: Partial<Palette>) => void;
   saveMeta: () => Promise<void>;
+  updateCrux: (dto: UpdateCruxDto) => Promise<void>;
   reset: () => void;
 
   // File CRUD actions
@@ -165,6 +166,13 @@ export const useCruxStore = create<CruxState>((set, get) => ({
     });
   },
 
+  updateCrux: async (dto: UpdateCruxDto) => {
+    const { crux } = get();
+    if (!crux) return;
+    const updated = await cruxes.update(crux.id, dto);
+    set({ crux: { ...crux, ...updated } });
+  },
+
   reset: () => {
     resetPalette();
     set({
@@ -198,7 +206,7 @@ export const useCruxStore = create<CruxState>((set, get) => ({
     const filename = path.split('/').pop() || 'file';
     const blob = new Blob([text], { type: mime });
     const file = new File([blob], filename, { type: mime });
-    const attachment = await cruxes.uploadAttachment(crux.id, file, { path });
+    const attachment = await cruxes.uploadAttachment(crux.id, file, { path, type: 'file', kind: 'artifact' });
     set((state) => ({ artifacts: [...state.artifacts, attachment] }));
     return attachment;
   },

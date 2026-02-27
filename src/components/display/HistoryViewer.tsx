@@ -32,7 +32,7 @@ export default function HistoryViewer({ messages, summary, onClose }: HistoryVie
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
             <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
           </svg>
-          <span className="text-xs font-mono uppercase tracking-wider">Conversation</span>
+          <span className="text-xs font-mono uppercase tracking-wider">Collaboration</span>
         </div>
         <button
           onClick={onClose}

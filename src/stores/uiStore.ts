@@ -2,7 +2,7 @@ import { create } from 'zustand';
 
 // ── Pane Types ──────────────────────────────────────────
 
-export type PaneType = 'navigation' | 'chat' | 'artifacts' | 'editor';
+export type PaneType = 'navigation' | 'chat' | 'artifacts' | 'editor' | 'metadata';
 
 export type EditorViewMode = 'source' | 'preview' | 'diff';
 
@@ -98,12 +98,13 @@ function nameFromPath(path: string): string {
   return segments[segments.length - 1] || path;
 }
 
-const DEFAULT_PANE_ORDER: PaneType[] = ['navigation', 'chat', 'artifacts', 'editor'];
+const DEFAULT_PANE_ORDER: PaneType[] = ['navigation', 'chat', 'artifacts', 'editor', 'metadata'];
 const DEFAULT_VISIBILITY: Record<PaneType, boolean> = {
   navigation: false,
   chat: true,
   artifacts: false,
   editor: false,
+  metadata: false,
 };
 
 const DEFAULT_CONTEXT_MENU: ContextMenuState = {

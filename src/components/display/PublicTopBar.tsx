@@ -51,7 +51,7 @@ export default function PublicTopBar({ title, username, showHistory, onToggleHis
           `}
         >
           <HistoryIcon />
-          <span className="hidden sm:inline">Conversation</span>
+          <span className="hidden sm:inline">Collaboration</span>
         </button>
         <Link
           to="/garden"

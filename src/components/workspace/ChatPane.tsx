@@ -12,7 +12,7 @@ function ChatIcon() {
 export default function ChatPane() {
   return (
     <div className="flex flex-col h-full">
-      <PaneHeader paneType="chat" icon={<ChatIcon />} label="Conversation" />
+      <PaneHeader paneType="chat" icon={<ChatIcon />} label="Collaboration" />
 
       <div className="flex-1 min-h-0">
         <ChatPanel />

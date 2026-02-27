@@ -6,9 +6,10 @@ interface EditorToolbarProps {
   tab: EditorTab;
   hasContent: boolean;
   onViewModeChange: (mode: EditorViewMode) => void;
+  onSave?: () => void;
 }
 
-export default function EditorToolbar({ tab, hasContent, onViewModeChange }: EditorToolbarProps) {
+export default function EditorToolbar({ tab, hasContent, onViewModeChange, onSave }: EditorToolbarProps) {
   const ext = getExtension(tab.path);
   const canPreview = isPreviewable(tab.path) && hasContent;
 
@@ -20,6 +21,16 @@ export default function EditorToolbar({ tab, hasContent, onViewModeChange }: Edi
       </span>
 
       <div className="flex items-center gap-2 shrink-0">
+        {/* Save button */}
+        {tab.dirty && onSave && (
+          <button
+            onClick={onSave}
+            className="px-2 py-0.5 text-[10px] font-mono rounded-[var(--radius-sm)] bg-accent text-bg hover:brightness-110 transition-colors cursor-pointer"
+          >
+            Save
+          </button>
+        )}
+
         {/* View mode toggle */}
         {canPreview && (
           <div className="flex bg-bg rounded-[var(--radius-sm)] p-0.5">
