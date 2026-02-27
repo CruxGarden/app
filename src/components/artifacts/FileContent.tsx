@@ -1,11 +1,46 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
+import hljs from 'highlight.js/lib/core';
+import typescript from 'highlight.js/lib/languages/typescript';
+import javascript from 'highlight.js/lib/languages/javascript';
+import css from 'highlight.js/lib/languages/css';
+import xml from 'highlight.js/lib/languages/xml';
+import json from 'highlight.js/lib/languages/json';
+import markdown from 'highlight.js/lib/languages/markdown';
+import python from 'highlight.js/lib/languages/python';
+import bash from 'highlight.js/lib/languages/bash';
+import { cn } from '@/lib/cn';
 import type { Attachment } from '@/api/types';
 import { cruxes } from '@/api';
+import MarkdownRenderer from '@/components/chat/MarkdownRenderer';
 
-interface FileContentProps {
-  artifact: Attachment;
-  cruxId: string;
-}
+hljs.registerLanguage('typescript', typescript);
+hljs.registerLanguage('javascript', javascript);
+hljs.registerLanguage('css', css);
+hljs.registerLanguage('xml', xml);
+hljs.registerLanguage('json', json);
+hljs.registerLanguage('markdown', markdown);
+hljs.registerLanguage('python', python);
+hljs.registerLanguage('bash', bash);
+
+const EXT_TO_LANG: Record<string, string> = {
+  ts: 'typescript',
+  tsx: 'typescript',
+  js: 'javascript',
+  jsx: 'javascript',
+  mjs: 'javascript',
+  css: 'css',
+  html: 'xml',
+  htm: 'xml',
+  xml: 'xml',
+  svg: 'xml',
+  json: 'json',
+  md: 'markdown',
+  mdx: 'markdown',
+  py: 'python',
+  sh: 'bash',
+  bash: 'bash',
+  zsh: 'bash',
+};
 
 const IMAGE_TYPES = new Set([
   'image/png',
@@ -31,14 +66,31 @@ function isImageMime(mime: string): boolean {
   return IMAGE_TYPES.has(mime) || mime === 'image/svg+xml';
 }
 
+type ViewMode = 'source' | 'preview';
+
+const PREVIEWABLE_EXTS = new Set(['html', 'htm', 'svg', 'md', 'mdx']);
+
+interface FileContentProps {
+  artifact: Attachment;
+  cruxId: string;
+}
+
 export default function FileContent({ artifact, cruxId }: FileContentProps) {
   const [content, setContent] = useState<string | null>(null);
   const [blobUrl, setBlobUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   const path = artifact.meta?.path || artifact.filename || artifact.id;
-  const ext = path.split('.').pop() || '';
+  const ext = path.split('.').pop()?.toLowerCase() || '';
   const mime = artifact.mimeType || 'text/plain';
+  const hasPreview = PREVIEWABLE_EXTS.has(ext);
+
+  const [viewMode, setViewMode] = useState<ViewMode>(hasPreview ? 'preview' : 'source');
+
+  // Reset view mode when switching files
+  useEffect(() => {
+    setViewMode(hasPreview ? 'preview' : 'source');
+  }, [artifact.id, hasPreview]);
 
   useEffect(() => {
     let cancelled = false;
@@ -78,6 +130,33 @@ export default function FileContent({ artifact, cruxId }: FileContentProps) {
     };
   }, [artifact.id, cruxId, mime]);
 
+  const highlighted = useMemo(() => {
+    if (!content) return null;
+    const lang = EXT_TO_LANG[ext];
+    if (lang && hljs.getLanguage(lang)) {
+      try {
+        return hljs.highlight(content, { language: lang }).value;
+      } catch {
+        return null;
+      }
+    }
+    return null;
+  }, [content, ext]);
+
+  // Create SVG blob URL from text content for preview
+  const svgPreviewUrl = useMemo(() => {
+    if (ext === 'svg' && content) {
+      return URL.createObjectURL(new Blob([content], { type: 'image/svg+xml' }));
+    }
+    return null;
+  }, [content, ext]);
+
+  useEffect(() => {
+    return () => {
+      if (svgPreviewUrl) URL.revokeObjectURL(svgPreviewUrl);
+    };
+  }, [svgPreviewUrl]);
+
   if (loading) {
     return (
       <div className="p-4 text-sm text-text-muted animate-pulse">
@@ -88,23 +167,91 @@ export default function FileContent({ artifact, cruxId }: FileContentProps) {
 
   return (
     <div className="flex flex-col h-full">
-      <div className="flex items-center justify-between px-3 py-2 border-b border-border">
-        <span className="text-xs font-mono text-text-muted truncate">
+      {/* Header */}
+      <div className="flex items-center justify-between px-3 py-2 border-b border-border gap-2">
+        <span className="text-xs font-mono text-text-muted truncate flex-1">
           {path}
         </span>
-        <span className="text-[10px] font-mono text-text-muted uppercase">
-          {ext}
-        </span>
+        <div className="flex items-center gap-2 shrink-0">
+          {hasPreview && content !== null && (
+            <div className="flex bg-bg rounded-[var(--radius-sm)] p-0.5">
+              <button
+                onClick={() => setViewMode('preview')}
+                className={cn(
+                  'px-2 py-0.5 text-[10px] font-mono rounded-[var(--radius-sm)] transition-colors cursor-pointer',
+                  viewMode === 'preview'
+                    ? 'bg-accent-muted text-accent'
+                    : 'text-text-muted hover:text-text',
+                )}
+              >
+                Preview
+              </button>
+              <button
+                onClick={() => setViewMode('source')}
+                className={cn(
+                  'px-2 py-0.5 text-[10px] font-mono rounded-[var(--radius-sm)] transition-colors cursor-pointer',
+                  viewMode === 'source'
+                    ? 'bg-accent-muted text-accent'
+                    : 'text-text-muted hover:text-text',
+                )}
+              >
+                Source
+              </button>
+            </div>
+          )}
+          <span className="text-[10px] font-mono text-text-muted uppercase">
+            {ext}
+          </span>
+        </div>
       </div>
 
-      {/* Text content */}
-      {content !== null && (
-        <pre className="flex-1 overflow-auto p-3 text-xs font-mono text-text leading-relaxed">
-          {content}
-        </pre>
+      {/* HTML preview */}
+      {content !== null && viewMode === 'preview' && (ext === 'html' || ext === 'htm') && (
+        <iframe
+          srcDoc={content}
+          sandbox="allow-scripts"
+          className="flex-1 w-full bg-white rounded-b-[var(--radius-sm)]"
+          title={path}
+        />
       )}
 
-      {/* Image preview */}
+      {/* SVG preview */}
+      {content !== null && viewMode === 'preview' && ext === 'svg' && svgPreviewUrl && (
+        <div className="flex-1 overflow-auto p-4 flex items-center justify-center bg-[rgba(0,0,0,0.2)]">
+          <img
+            src={svgPreviewUrl}
+            alt={path}
+            className="max-w-full max-h-full object-contain"
+          />
+        </div>
+      )}
+
+      {/* Markdown preview */}
+      {content !== null && viewMode === 'preview' && (ext === 'md' || ext === 'mdx') && (
+        <div className="flex-1 overflow-auto p-4">
+          <div className="max-w-prose mx-auto text-sm">
+            <MarkdownRenderer content={content} />
+          </div>
+        </div>
+      )}
+
+      {/* Source view with syntax highlighting */}
+      {content !== null && (viewMode === 'source' || !hasPreview) && (
+        <div className="flex-1 overflow-auto">
+          <pre className="p-3 text-xs leading-relaxed font-mono">
+            <code
+              className={highlighted ? `hljs language-${EXT_TO_LANG[ext]}` : 'text-text'}
+              dangerouslySetInnerHTML={
+                highlighted ? { __html: highlighted } : undefined
+              }
+            >
+              {highlighted ? undefined : content}
+            </code>
+          </pre>
+        </div>
+      )}
+
+      {/* Image preview (raster) */}
       {blobUrl && isImageMime(mime) && (
         <div className="flex-1 overflow-auto p-4 flex items-center justify-center bg-[rgba(0,0,0,0.2)]">
           <img
@@ -115,7 +262,7 @@ export default function FileContent({ artifact, cruxId }: FileContentProps) {
         </div>
       )}
 
-      {/* Other binary — download prompt */}
+      {/* Binary download */}
       {blobUrl && !isImageMime(mime) && (
         <div className="flex-1 flex flex-col items-center justify-center gap-3 p-6">
           <div className="text-text-muted text-sm">

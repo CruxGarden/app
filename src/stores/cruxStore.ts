@@ -36,6 +36,12 @@ interface CruxState {
   saveMeta: () => Promise<void>;
   reset: () => void;
 
+  // File CRUD actions
+  createFile: (path: string, content?: string) => Promise<Attachment>;
+  renameArtifact: (id: string, newPath: string) => Promise<void>;
+  deleteArtifact: (id: string) => Promise<void>;
+  saveArtifactContent: (id: string, content: string) => Promise<void>;
+
   // Gate actions
   loadGates: () => Promise<void>;
   addGate: (gate: Dimension) => void;
@@ -173,6 +179,59 @@ export const useCruxStore = create<CruxState>((set, get) => ({
       isCreatingGate: false,
       pendingGateCreation: false,
     });
+  },
+
+  // File CRUD actions
+  createFile: async (path: string, content?: string) => {
+    const { crux } = get();
+    if (!crux) throw new Error('No active crux');
+    const text = content ?? '';
+    const ext = path.split('.').pop()?.toLowerCase() || 'txt';
+    const mimeMap: Record<string, string> = {
+      html: 'text/html', htm: 'text/html', css: 'text/css',
+      js: 'application/javascript', ts: 'application/javascript',
+      jsx: 'application/javascript', tsx: 'application/javascript',
+      json: 'application/json', md: 'text/markdown', txt: 'text/plain',
+      py: 'text/x-python', svg: 'image/svg+xml', xml: 'application/xml',
+    };
+    const mime = mimeMap[ext] || 'text/plain';
+    const filename = path.split('/').pop() || 'file';
+    const blob = new Blob([text], { type: mime });
+    const file = new File([blob], filename, { type: mime });
+    const attachment = await cruxes.uploadAttachment(crux.id, file, { path });
+    set((state) => ({ artifacts: [...state.artifacts, attachment] }));
+    return attachment;
+  },
+
+  renameArtifact: async (id: string, newPath: string) => {
+    await cruxes.updateAttachment(id, undefined, { path: newPath });
+    set((state) => ({
+      artifacts: state.artifacts.map((a) =>
+        a.id === id
+          ? { ...a, meta: { ...a.meta, path: newPath }, filename: newPath.split('/').pop() || a.filename }
+          : a,
+      ),
+    }));
+  },
+
+  deleteArtifact: async (id: string) => {
+    await cruxes.deleteAttachment(id);
+    set((state) => ({
+      artifacts: state.artifacts.filter((a) => a.id !== id),
+    }));
+    // Also close any editor tab for this file
+    const { useUIStore } = await import('@/stores/uiStore');
+    useUIStore.getState().closeTab(id);
+  },
+
+  saveArtifactContent: async (id: string, content: string) => {
+    const { artifacts } = get();
+    const artifact = artifacts.find((a) => a.id === id);
+    if (!artifact) return;
+    const mime = artifact.mimeType || 'text/plain';
+    const blob = new Blob([content], { type: mime });
+    const file = new File([blob], artifact.filename || 'file', { type: mime });
+    await cruxes.updateAttachment(id, file);
   },
 
   // Gate actions

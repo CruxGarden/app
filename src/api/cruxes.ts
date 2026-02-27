@@ -124,6 +124,24 @@ export async function downloadAttachment(cruxId: string, attachmentId: string): 
   return res.data as Blob;
 }
 
+export async function updateAttachment(
+  attachmentId: string,
+  file?: File,
+  meta?: Record<string, unknown>,
+): Promise<Attachment> {
+  const form = new FormData();
+  if (file) form.append('file', file);
+  if (meta) form.append('meta', JSON.stringify(meta));
+  const res = await client.put<Attachment>(`/attachments/${attachmentId}`, form, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+  return res.data;
+}
+
+export async function deleteAttachment(attachmentId: string): Promise<void> {
+  await client.delete(`/attachments/${attachmentId}`);
+}
+
 // ── Tags ──────────────────────────────────────────────
 
 export async function getTags(cruxId: string): Promise<Tag[]> {

@@ -6,19 +6,8 @@ import GateDetail from './GateDetail';
 
 interface GateTimelineProps {
   gates: Dimension[];
-  gateCount: number;
   summary: CruxSummaryType | null;
   isCreatingGate: boolean;
-}
-
-function GateIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M12 22V8" />
-      <path d="M5 12H2a10 10 0 0 0 20 0h-3" />
-      <circle cx="12" cy="5" r="3" />
-    </svg>
-  );
 }
 
 function SpinnerSmall() {
@@ -32,7 +21,6 @@ function SpinnerSmall() {
 
 export default function GateTimeline({
   gates,
-  gateCount,
   summary,
   isCreatingGate,
 }: GateTimelineProps) {
@@ -42,18 +30,6 @@ export default function GateTimeline({
 
   return (
     <div className="flex flex-col h-full">
-      {/* Header */}
-      <div className="flex items-center justify-between px-4 h-10 border-b border-border shrink-0">
-        <div className="flex items-center gap-2 text-text-muted">
-          <GateIcon />
-          <span className="text-xs font-mono uppercase tracking-wider">Gates</span>
-        </div>
-        <span className="text-[10px] text-text-muted font-mono">
-          {gateCount}
-        </span>
-      </div>
-
-      {/* Content */}
       <div className="flex-1 overflow-y-auto min-h-0">
         {activeGate && activeGateIndex !== null ? (
           <GateDetail
@@ -96,7 +72,11 @@ export default function GateTimeline({
             ) : (
               !isCreatingGate && (
                 <div className="flex flex-col items-center justify-center py-8 text-text-muted">
-                  <GateIcon />
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M12 2L2 7l10 5 10-5-10-5z" />
+                    <path d="M2 17l10 5 10-5" />
+                    <path d="M2 12l10 5 10-5" />
+                  </svg>
                   <p className="text-xs mt-2 text-center px-4">
                     Gates appear here as artifacts are created during your conversation.
                   </p>

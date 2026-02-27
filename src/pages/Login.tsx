@@ -7,6 +7,11 @@ export default function Login() {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
 
   if (isAuthenticated) {
+    const redirect = sessionStorage.getItem('cruxgarden:publishRedirect');
+    if (redirect) {
+      sessionStorage.removeItem('cruxgarden:publishRedirect');
+      return <Navigate to={redirect} replace />;
+    }
     return <Navigate to="/garden" replace />;
   }
 

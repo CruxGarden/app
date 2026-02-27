@@ -7,6 +7,7 @@ import Login from '@/pages/Login';
 import Garden from '@/pages/Garden';
 import CruxPage from '@/pages/Crux';
 import Settings from '@/pages/Settings';
+import PublicCrux from '@/pages/PublicCrux';
 import NotFound from '@/pages/NotFound';
 
 export default function App() {
@@ -17,6 +18,7 @@ export default function App() {
           {/* Public */}
           <Route path="/" element={<Landing />} />
           <Route path="/login" element={<Login />} />
+          <Route path="/:username/:slug" element={<ErrorBoundary><PublicCrux /></ErrorBoundary>} />
 
           {/* Protected */}
           <Route element={<AuthGuard />}>

@@ -3,36 +3,40 @@ import { useParams } from 'react-router-dom';
 import { useCruxStore } from '@/stores/cruxStore';
 import { useUIStore } from '@/stores/uiStore';
 import { useGates } from '@/hooks/useGates';
-import { cn } from '@/lib/cn';
-import { ChatPanel } from '@/components/chat';
-import { FileViewer } from '@/components/artifacts';
-import { GateTimeline } from '@/components/gates';
+import { WorkspaceLayout } from '@/components/workspace';
 import { Spinner } from '@/components/ui';
 
 export default function Crux() {
   const { id } = useParams<{ id: string }>();
   const { crux, loadCrux, reset, artifacts } = useCruxStore();
-  const { fileViewerOpen, setFileViewer, timelineOpen, setTimeline } = useUIStore();
-  const { gates, gateCount, isCreatingGate, summary } = useGates();
+  const { paneVisibility, setPaneVisible, setActiveCrux } = useUIStore();
+  const { gateCount } = useGates();
 
   useEffect(() => {
-    if (id) loadCrux(id);
-    return () => reset();
-  }, [id, loadCrux, reset]);
-
-  // Auto-show file viewer when artifacts appear
-  useEffect(() => {
-    if (artifacts.length > 0 && !fileViewerOpen) {
-      setFileViewer(true);
+    if (id) {
+      loadCrux(id);
+      setActiveCrux(id);
     }
-  }, [artifacts.length, fileViewerOpen, setFileViewer]);
+    return () => {
+      reset();
+      setActiveCrux(null);
+    };
+  }, [id, loadCrux, reset, setActiveCrux]);
 
-  // Auto-show timeline when first gate is created
+  // Auto-show editor pane when artifacts appear
   useEffect(() => {
-    if (gateCount > 0 && !timelineOpen) {
-      setTimeline(true);
+    if (artifacts.length > 0 && !paneVisibility.artifacts && !paneVisibility.editor) {
+      setPaneVisible('artifacts', true);
+      setPaneVisible('editor', true);
     }
-  }, [gateCount, timelineOpen, setTimeline]);
+  }, [artifacts.length, paneVisibility.artifacts, paneVisibility.editor, setPaneVisible]);
+
+  // Auto-show navigation when first gate is created
+  useEffect(() => {
+    if (gateCount > 0 && !paneVisibility.navigation) {
+      setPaneVisible('navigation', true);
+    }
+  }, [gateCount, paneVisibility.navigation, setPaneVisible]);
 
   if (!crux) {
     return (
@@ -42,43 +46,5 @@ export default function Crux() {
     );
   }
 
-  return (
-    <div className="flex h-full min-h-0">
-      {/* Gate Timeline — left panel (hidden on mobile) */}
-      {timelineOpen && (
-        <div
-          className={cn(
-            'hidden md:flex',
-            'w-72 border-r border-border bg-surface/30 backdrop-blur-[var(--glass-blur)]',
-            'flex-col min-h-0',
-          )}
-        >
-          <GateTimeline
-            gates={gates}
-            gateCount={gateCount}
-            summary={summary}
-            isCreatingGate={isCreatingGate}
-          />
-        </div>
-      )}
-
-      {/* Chat — center panel */}
-      <div className="flex-1 min-w-0">
-        <ChatPanel />
-      </div>
-
-      {/* File Viewer — right panel (hidden on mobile) */}
-      {fileViewerOpen && (
-        <div
-          className={cn(
-            'hidden md:flex',
-            'w-80 border-l border-border bg-surface/30 backdrop-blur-[var(--glass-blur)]',
-            'flex-col min-h-0',
-          )}
-        >
-          <FileViewer />
-        </div>
-      )}
-    </div>
-  );
+  return <WorkspaceLayout />;
 }
