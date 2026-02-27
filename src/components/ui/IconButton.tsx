@@ -4,6 +4,7 @@ import { cn } from '@/lib/cn';
 interface IconButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   label: string;
   size?: 'sm' | 'md';
+  active?: boolean;
 }
 
 const sizes = {
@@ -14,6 +15,7 @@ const sizes = {
 export default function IconButton({
   label,
   size = 'md',
+  active,
   className,
   children,
   ...props
@@ -23,9 +25,11 @@ export default function IconButton({
       aria-label={label}
       className={cn(
         'inline-flex items-center justify-center rounded-[var(--radius-sm)]',
-        'text-text-muted hover:text-text hover:bg-accent-muted',
         'transition-colors duration-150 cursor-pointer',
         'disabled:opacity-50 disabled:cursor-not-allowed',
+        active
+          ? 'text-accent bg-accent-muted'
+          : 'text-text-muted hover:text-text hover:bg-accent-muted',
         sizes[size],
         className,
       )}

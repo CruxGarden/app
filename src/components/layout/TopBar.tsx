@@ -1,7 +1,13 @@
+import { useNavigate } from 'react-router-dom';
 import { useThemeStore } from '@/stores/themeStore';
 import { useUIStore } from '@/stores/uiStore';
+import { useCruxStore } from '@/stores/cruxStore';
 import IconButton from '@/components/ui/IconButton';
 import UserMenu from '@/components/auth/UserMenu';
+import PublishButton from '@/components/chat/PublishButton';
+import { PaneLayoutMenu } from '@/components/workspace';
+import Logo from '@/components/brand/Logo';
+import CruxBloom from '@/components/brand/CruxBloom';
 
 function SunIcon() {
   return (
@@ -20,29 +26,46 @@ function MoonIcon() {
   );
 }
 
-function MenuIcon() {
+function StackIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 2L2 7l10 5 10-5-10-5z" />
+      <path d="M2 17l10 5 10-5" />
+      <path d="M2 12l10 5 10-5" />
+    </svg>
+  );
+}
+
+function ChatIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+    </svg>
+  );
+}
+
+function FolderIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
+    </svg>
+  );
+}
+
+function CodeIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="16 18 22 12 16 6" />
+      <polyline points="8 6 2 12 8 18" />
+    </svg>
+  );
+}
+
+function PlusIcon() {
   return (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M3 12h18M3 6h18M3 18h18" />
-    </svg>
-  );
-}
-
-function GateIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M12 22V8" />
-      <path d="M5 12H2a10 10 0 0 0 20 0h-3" />
-      <circle cx="12" cy="5" r="3" />
-    </svg>
-  );
-}
-
-function FileIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-      <polyline points="14 2 14 8 20 8" />
+      <path d="M12 5v14" />
+      <path d="M5 12h14" />
     </svg>
   );
 }
@@ -52,29 +75,69 @@ interface TopBarProps {
 }
 
 export default function TopBar({ title }: TopBarProps) {
+  const navigate = useNavigate();
   const { resolved, setMode } = useThemeStore();
-  const { sidebarOpen, toggleSidebar, toggleTimeline, toggleFileViewer } = useUIStore();
+  const { paneVisibility, togglePane } = useUIStore();
+  const crux = useCruxStore((s) => s.crux);
+  const createCrux = useCruxStore((s) => s.createCrux);
+
+  const handleNewCrux = async () => {
+    const newCrux = await createCrux();
+    navigate(`/crux/${newCrux.id}`);
+  };
 
   return (
-    <header className="flex items-center justify-between h-14 px-4 border-b border-border bg-surface/30 backdrop-blur-[var(--glass-blur)]">
-      <div className="flex items-center gap-2">
-        {!sidebarOpen && (
-          <IconButton label="Toggle sidebar" size="sm" onClick={toggleSidebar}>
-            <MenuIcon />
-          </IconButton>
-        )}
+    <header className="flex items-center justify-between h-12 px-3 border-b border-border bg-surface/30 backdrop-blur-[var(--glass-blur)]">
+      {/* Left: branding + nav */}
+      <div className="flex items-center gap-1">
+        <IconButton label="Garden" size="sm" onClick={() => navigate('/garden')}>
+          <CruxBloom size={16} />
+        </IconButton>
+        <Logo size="sm" className="hidden sm:inline mr-1" />
+        <IconButton label="New crux" size="sm" onClick={handleNewCrux}>
+          <PlusIcon />
+        </IconButton>
         {title ? (
-          <h1 className="text-sm font-medium font-display text-text">{title}</h1>
+          <h1 className="text-xs font-medium font-display text-text-muted ml-2 truncate max-w-[200px]">{title}</h1>
         ) : null}
       </div>
 
+      {/* Right: pane toggles + actions */}
       <div className="flex items-center gap-1">
-        <IconButton label="Toggle gate timeline" size="sm" onClick={toggleTimeline}>
-          <GateIcon />
+        {crux && <PublishButton />}
+        <IconButton
+          label="Toggle history"
+          size="sm"
+          onClick={() => togglePane('navigation')}
+          active={paneVisibility.navigation}
+        >
+          <StackIcon />
         </IconButton>
-        <IconButton label="Toggle file viewer" size="sm" onClick={toggleFileViewer}>
-          <FileIcon />
+        <IconButton
+          label="Toggle conversation"
+          size="sm"
+          onClick={() => togglePane('chat')}
+          active={paneVisibility.chat}
+        >
+          <ChatIcon />
         </IconButton>
+        <IconButton
+          label="Toggle artifacts"
+          size="sm"
+          onClick={() => togglePane('artifacts')}
+          active={paneVisibility.artifacts}
+        >
+          <FolderIcon />
+        </IconButton>
+        <IconButton
+          label="Toggle editor"
+          size="sm"
+          onClick={() => togglePane('editor')}
+          active={paneVisibility.editor}
+        >
+          <CodeIcon />
+        </IconButton>
+        <PaneLayoutMenu />
         <IconButton
           label="Toggle theme"
           size="sm"
