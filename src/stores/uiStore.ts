@@ -2,7 +2,7 @@ import { create } from 'zustand';
 
 // ── Pane Types ──────────────────────────────────────────
 
-export type PaneType = 'history' | 'collaboration' | 'artifacts' | 'workshop' | 'details' | 'sync' | 'publish';
+export type PaneType = 'history' | 'collaboration' | 'artifacts' | 'workshop' | 'details' | 'sync' | 'publish' | 'export';
 
 /** Neon highlight color for each pane (bright, like the green accent) */
 export const PANE_COLORS: Record<PaneType, string> = {
@@ -13,6 +13,7 @@ export const PANE_COLORS: Record<PaneType, string> = {
   details:       '#a07cc8', // purple
   sync:          '#d46b6b', // red
   publish:       '#d4944c', // orange
+  export:        '#a0aeb8', // silver (matches history)
 };
 
 export type EditorViewMode = 'source' | 'preview';
@@ -64,6 +65,9 @@ interface UIState {
   // Context menu
   contextMenu: ContextMenuState;
 
+  // Folder open/close state (persisted per crux)
+  folderOpenState: Record<string, boolean>;
+
   // Mobile
   mobileActivePane: PaneType;
 
@@ -82,6 +86,9 @@ interface UIState {
   setTabScrollTop: (id: string, scrollTop: number) => void;
   setDiffTarget: (id: string | null) => void;
   closeAllTabs: () => void;
+
+  // ── Folder state ──
+  setFolderOpen: (folderId: string, isOpen: boolean) => void;
 
   // ── File operations ──
   startFileOperation: (op: FileOperation) => void;
@@ -110,7 +117,7 @@ function nameFromPath(path: string): string {
   return segments[segments.length - 1] || path;
 }
 
-const DEFAULT_PANE_ORDER: PaneType[] = ['history', 'collaboration', 'artifacts', 'workshop', 'details', 'sync', 'publish'];
+const DEFAULT_PANE_ORDER: PaneType[] = ['history', 'collaboration', 'artifacts', 'workshop', 'details', 'sync', 'publish', 'export'];
 const DEFAULT_VISIBILITY: Record<PaneType, boolean> = {
   history: false,
   collaboration: true,
@@ -119,6 +126,7 @@ const DEFAULT_VISIBILITY: Record<PaneType, boolean> = {
   details: false,
   sync: false,
   publish: false,
+  export: false,
 };
 
 const DEFAULT_CONTEXT_MENU: ContextMenuState = {
@@ -140,6 +148,7 @@ interface PersistedLayout {
 const GLOBAL_LAYOUT_KEY = 'cruxgarden:layout:global';
 const cruxLayoutKey = (id: string) => `cruxgarden:layout:${id}`;
 const editorTabsKey = (id: string) => `cruxgarden:editor-tabs:${id}`;
+const folderStateKey = (id: string) => `cruxgarden:folder-state:${id}`;
 
 interface PersistedEditorTab {
   id: string;
@@ -173,6 +182,19 @@ function saveEditorTabs(cruxId: string, editor: EditorPaneState) {
     activeTabId: editor.activeTabId,
   };
   localStorage.setItem(editorTabsKey(cruxId), JSON.stringify(data));
+}
+
+function loadFolderState(cruxId: string): Record<string, boolean> | null {
+  try {
+    const raw = localStorage.getItem(folderStateKey(cruxId));
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+
+function saveFolderState(cruxId: string, state: Record<string, boolean>) {
+  localStorage.setItem(folderStateKey(cruxId), JSON.stringify(state));
 }
 
 /** Map old pane type names to current names */
@@ -265,6 +287,15 @@ function resolveLayout(cruxId: string): { paneOrder: PaneType[]; paneVisibility:
   return { paneOrder: [...DEFAULT_PANE_ORDER], paneVisibility: { ...DEFAULT_VISIBILITY } };
 }
 
+/** Debounced save for scroll position updates (avoid thrashing localStorage) */
+let scrollSaveTimer: ReturnType<typeof setTimeout> | null = null;
+function debouncedSaveEditorTabs(cruxId: string, editor: EditorPaneState) {
+  if (scrollSaveTimer) clearTimeout(scrollSaveTimer);
+  scrollSaveTimer = setTimeout(() => {
+    saveEditorTabs(cruxId, editor);
+  }, 500);
+}
+
 const initialLayout = getInitialLayout();
 
 // ── Store ───────────────────────────────────────────────
@@ -283,16 +314,27 @@ export const useUIStore = create<UIState>()(
       },
 
       activeFileOperation: null,
+      folderOpenState: {},
       contextMenu: { ...DEFAULT_CONTEXT_MENU },
       mobileActivePane: 'collaboration' as PaneType,
 
       // ── Layout actions ──
 
       setActiveCrux: (id) => {
-        // Save current editor tabs before switching
+        // Flush any pending debounced scroll save
+        if (scrollSaveTimer) {
+          clearTimeout(scrollSaveTimer);
+          scrollSaveTimer = null;
+        }
+        // Save current state before switching
         const prev = get();
-        if (prev.activeCruxId && prev.editor.tabs.length > 0) {
-          saveEditorTabs(prev.activeCruxId, prev.editor);
+        if (prev.activeCruxId) {
+          if (prev.editor.tabs.length > 0) {
+            saveEditorTabs(prev.activeCruxId, prev.editor);
+          }
+          if (Object.keys(prev.folderOpenState).length > 0) {
+            saveFolderState(prev.activeCruxId, prev.folderOpenState);
+          }
         }
 
         if (id) {
@@ -311,6 +353,9 @@ export const useUIStore = create<UIState>()(
             : [];
           const restoredActiveId = saved?.activeTabId ?? null;
 
+          // Restore folder open/close state
+          const savedFolders = loadFolderState(id);
+
           set({
             activeCruxId: id,
             paneOrder: layout.paneOrder,
@@ -320,6 +365,7 @@ export const useUIStore = create<UIState>()(
               activeTabId: restoredActiveId,
               diffTargetId: null,
             },
+            folderOpenState: savedFolders ?? {},
           });
         } else {
           const global = loadLayout(GLOBAL_LAYOUT_KEY);
@@ -331,6 +377,7 @@ export const useUIStore = create<UIState>()(
             paneOrder: layout.paneOrder,
             paneVisibility: layout.paneVisibility,
             editor: { tabs: [], activeTabId: null, diffTargetId: null },
+            folderOpenState: {},
           });
         }
       },
@@ -434,7 +481,7 @@ export const useUIStore = create<UIState>()(
         if (s.activeCruxId) saveEditorTabs(s.activeCruxId, s.editor);
       },
 
-      setTabScrollTop: (id, scrollTop) =>
+      setTabScrollTop: (id, scrollTop) => {
         set((s) => ({
           editor: {
             ...s.editor,
@@ -442,7 +489,10 @@ export const useUIStore = create<UIState>()(
               t.id === id ? { ...t, scrollTop } : t,
             ),
           },
-        })),
+        }));
+        const s = get();
+        if (s.activeCruxId) debouncedSaveEditorTabs(s.activeCruxId, s.editor);
+      },
 
       setDiffTarget: (id) =>
         set((s) => ({ editor: { ...s.editor, diffTargetId: id } })),
@@ -453,6 +503,16 @@ export const useUIStore = create<UIState>()(
         }));
         const s = get();
         if (s.activeCruxId) saveEditorTabs(s.activeCruxId, s.editor);
+      },
+
+      // ── Folder state ──
+
+      setFolderOpen: (folderId, isOpen) => {
+        set((s) => ({
+          folderOpenState: { ...s.folderOpenState, [folderId]: isOpen },
+        }));
+        const s = get();
+        if (s.activeCruxId) saveFolderState(s.activeCruxId, s.folderOpenState);
       },
 
       // ── File operations ──

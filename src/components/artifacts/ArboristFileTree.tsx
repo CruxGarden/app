@@ -23,6 +23,7 @@ import InlineRename from '@/components/workspace/InlineRename';
 
 export interface ArboristFileTreeHandle {
   startRename: (nodeId: string) => void;
+  getFocusedFolder: () => string | undefined;
 }
 
 type ContextMenuHandler = (
@@ -42,18 +43,53 @@ interface ArboristFileTreeProps {
   onCreateFile?: (name: string) => void;
   onCreateFolder?: (name: string) => void;
   onCancelOperation?: () => void;
+  initialOpenState?: Record<string, boolean>;
+  onFolderToggle?: (folderId: string, isOpen: boolean) => void;
 }
 
 // ── Context for passing handlers to memoized node renderer ──
 
 const TreeContextMenuContext = createContext<ContextMenuHandler | undefined>(undefined);
 
+const SENTINEL_CREATE_ID = '__inline_create__';
+
+interface CreateCallbacks {
+  isFolder: boolean;
+  onCommit: (name: string) => void;
+  onCancel: () => void;
+}
+
+const CreateCallbacksContext = createContext<CreateCallbacks | null>(null);
+
+function formatFileSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
 // ── Node renderer (stable component reference) ──────────
 
 const NodeRenderer = memo(function NodeRenderer({ node, style, dragHandle }: NodeRendererProps<TreeNodeData>) {
-  const isFolder = node.isInternal;
   const data = node.data;
   const onContextMenu = useContext(TreeContextMenuContext);
+  const createCallbacks = useContext(CreateCallbacksContext);
+
+  // Render inline create input for sentinel node
+  if (data.id === SENTINEL_CREATE_ID && createCallbacks) {
+    return (
+      <div
+        style={style}
+        className="flex items-center gap-1.5 py-0.5 pr-2 text-xs font-mono"
+        onKeyDown={(e) => e.stopPropagation()}
+        onMouseDown={(e) => e.stopPropagation()}
+      >
+        {createCallbacks.isFolder ? <FolderIcon /> : <span className="text-text-muted">+</span>}
+        <InlineRename initialValue="" onCommit={createCallbacks.onCommit} onCancel={createCallbacks.onCancel} />
+      </div>
+    );
+  }
+
+  const isFolder = node.isInternal;
 
   const handleContextMenu = useCallback(
     (e: React.MouseEvent) => {
@@ -68,12 +104,16 @@ const NodeRenderer = memo(function NodeRenderer({ node, style, dragHandle }: Nod
     [onContextMenu, data.attachment?.id, data.path, isFolder],
   );
 
+  const fileSize = !isFolder && data.attachment?.size
+    ? formatFileSize(Number(data.attachment.size))
+    : null;
+
   return (
     <div
       ref={dragHandle}
       style={style}
       className={cn(
-        'flex items-center gap-1.5 py-0.5 pr-2 text-xs font-mono',
+        'group/node flex items-center gap-1.5 py-0.5 pr-2 text-xs font-mono',
         'cursor-pointer select-none',
         node.isSelected
           ? 'bg-accent-muted text-accent'
@@ -81,7 +121,9 @@ const NodeRenderer = memo(function NodeRenderer({ node, style, dragHandle }: Nod
         node.willReceiveDrop && 'bg-accent/10 ring-1 ring-accent/30',
       )}
       onClick={() => node.handleClick}
+      onDoubleClick={() => { if (isFolder) node.toggle(); }}
       onContextMenu={handleContextMenu}
+      title={fileSize ? `${data.path} (${fileSize})` : data.path}
     >
       {/* Chevron for folders */}
       {isFolder ? (
@@ -117,35 +159,14 @@ const NodeRenderer = memo(function NodeRenderer({ node, style, dragHandle }: Nod
           onCancel={() => node.reset()}
         />
       ) : (
-        <span className="truncate">{data.name}</span>
+        <>
+          <span className="truncate">{data.name}</span>
+          {fileSize && <span className={cn('ml-auto shrink-0 text-[10px] text-text-muted/50 transition-opacity', node.isSelected ? 'opacity-100' : 'opacity-0 group-hover/node:opacity-100')}>{fileSize}</span>}
+        </>
       )}
     </div>
   );
 });
-
-// ── Inline create row ────────────────────────────────────
-
-function InlineCreateRow({
-  indent,
-  isFolder,
-  onCommit,
-  onCancel,
-}: {
-  indent: number;
-  isFolder: boolean;
-  onCommit: (name: string) => void;
-  onCancel: () => void;
-}) {
-  return (
-    <div
-      className="flex items-center gap-1.5 py-1 text-xs font-mono"
-      style={{ paddingLeft: `${indent}px` }}
-    >
-      {isFolder ? <FolderIcon /> : <span className="text-text-muted">+</span>}
-      <InlineRename initialValue="" onCommit={onCommit} onCancel={onCancel} />
-    </div>
-  );
-}
 
 // ── Upload icon ──────────────────────────────────────────
 
@@ -189,6 +210,8 @@ const ArboristFileTree = forwardRef<ArboristFileTreeHandle, ArboristFileTreeProp
       onCreateFile,
       onCreateFolder,
       onCancelOperation,
+      initialOpenState,
+      onFolderToggle,
     },
     ref,
   ) {
@@ -207,6 +230,13 @@ const ArboristFileTree = forwardRef<ArboristFileTreeHandle, ArboristFileTreeProp
     useImperativeHandle(ref, () => ({
       startRename: (nodeId: string) => {
         treeRef.current?.edit(nodeId);
+      },
+      getFocusedFolder: () => {
+        const node = treeRef.current?.focusedNode;
+        if (!node) return undefined;
+        if (node.isInternal) return node.data.path;
+        if (node.parent && !node.parent.isRoot) return node.parent.data.path;
+        return undefined;
       },
     }));
 
@@ -291,6 +321,16 @@ const ArboristFileTree = forwardRef<ArboristFileTreeHandle, ArboristFileTreeProp
       [onRename],
     );
 
+    const handleToggle = useCallback(
+      (id: string) => {
+        if (!onFolderToggle) return;
+        // onToggle fires after the internal state updates
+        const node = treeRef.current?.get(id);
+        if (node) onFolderToggle(id, node.isOpen);
+      },
+      [onFolderToggle],
+    );
+
     const handleContextMenu = useCallback(
       (e: React.MouseEvent) => {
         if (!onContextMenu) return;
@@ -360,30 +400,66 @@ const ArboristFileTree = forwardRef<ArboristFileTreeHandle, ArboristFileTreeProp
       [onUploadFiles],
     );
 
-    // Check if creating at root level
-    const isCreatingAtRoot =
+    // ── Inline create: inject sentinel into tree data ──
+
+    const isCreating =
       activeFileOperation &&
       (activeFileOperation.type === 'create-file' ||
-        activeFileOperation.type === 'create-folder') &&
-      !activeFileOperation.parentPath;
+        activeFileOperation.type === 'create-folder');
 
-    // Check if creating inside a folder
-    const isCreatingInFolder =
-      activeFileOperation &&
-      (activeFileOperation.type === 'create-file' ||
-        activeFileOperation.type === 'create-folder') &&
-      activeFileOperation.parentPath;
+    const treeDataWithCreate = useMemo(() => {
+      if (!isCreating) return treeData;
 
-    // Calculate indent for inline create rows
-    const createIndent = isCreatingInFolder
-      ? (activeFileOperation.parentPath!.split('/').length + 1) * 20
-      : 20;
+      const sentinel: TreeNodeData = {
+        id: SENTINEL_CREATE_ID,
+        name: '',
+        path: activeFileOperation!.parentPath
+          ? `${activeFileOperation!.parentPath}/__new__`
+          : '__new__',
+      };
 
-    const isCreating = isCreatingAtRoot || isCreatingInFolder;
-    const INLINE_ROW_HEIGHT = 30;
-    const treeHeight = isCreating
-      ? Math.max(containerHeight - INLINE_ROW_HEIGHT, 0)
-      : containerHeight;
+      if (!activeFileOperation!.parentPath) {
+        return [...treeData, sentinel];
+      }
+
+      const targetFolderId = `folder:${activeFileOperation!.parentPath}`;
+
+      function injectSentinel(nodes: TreeNodeData[]): TreeNodeData[] {
+        return nodes.map((node) => {
+          if (node.id === targetFolderId) {
+            return { ...node, children: [...(node.children || []), sentinel] };
+          }
+          if (node.children) {
+            return { ...node, children: injectSentinel(node.children) };
+          }
+          return node;
+        });
+      }
+
+      return injectSentinel(treeData);
+    }, [treeData, isCreating, activeFileOperation]);
+
+    const createCallbacks = useMemo<CreateCallbacks | null>(() => {
+      if (!isCreating) return null;
+      const isFolderOp = activeFileOperation!.type === 'create-folder';
+      return {
+        isFolder: isFolderOp,
+        onCommit: (name: string) =>
+          isFolderOp ? onCreateFolder?.(name) : onCreateFile?.(name),
+        onCancel: () => onCancelOperation?.(),
+      };
+    }, [isCreating, activeFileOperation, onCreateFile, onCreateFolder, onCancelOperation]);
+
+    // Auto-open parent folder and scroll to sentinel when creating inside a folder
+    useEffect(() => {
+      if (isCreating && activeFileOperation?.parentPath && treeRef.current) {
+        const folderId = `folder:${activeFileOperation.parentPath}`;
+        treeRef.current.open(folderId);
+        setTimeout(() => {
+          treeRef.current?.scrollTo(SENTINEL_CREATE_ID);
+        }, 50);
+      }
+    }, [isCreating, activeFileOperation]);
 
     if (artifacts.length === 0 && !isCreating) {
       return (
@@ -404,56 +480,32 @@ const ArboristFileTree = forwardRef<ArboristFileTreeHandle, ArboristFileTreeProp
       >
         {isDraggingFiles && <UploadDropOverlay />}
 
-        {treeData.length > 0 && (
-          <div className="flex-1 min-h-0">
-            <TreeContextMenuContext.Provider value={onContextMenu}>
-              <Tree<TreeNodeData>
-                ref={treeRef}
-                data={treeData}
-                width="100%"
-                height={treeHeight}
-                indent={20}
-                rowHeight={26}
-                openByDefault
-                selection={selectedId ?? undefined}
-                disableMultiSelection
-                onActivate={handleActivate}
-                onMove={handleMove}
-                onRename={handleRename}
-                onContextMenu={handleContextMenu}
-              >
-                {NodeRenderer}
-              </Tree>
-            </TreeContextMenuContext.Provider>
+        {treeDataWithCreate.length > 0 && (
+          <div className="flex-1 min-h-0 pl-2 pt-2">
+            <CreateCallbacksContext.Provider value={createCallbacks}>
+              <TreeContextMenuContext.Provider value={onContextMenu}>
+                <Tree<TreeNodeData>
+                  ref={treeRef}
+                  data={treeDataWithCreate}
+                  width="100%"
+                  height={containerHeight}
+                  indent={20}
+                  rowHeight={26}
+                  openByDefault
+                  initialOpenState={initialOpenState}
+                  selection={selectedId ?? undefined}
+                  disableMultiSelection
+                  onActivate={handleActivate}
+                  onMove={handleMove}
+                  onRename={handleRename}
+                  onToggle={handleToggle}
+                  onContextMenu={handleContextMenu}
+                >
+                  {NodeRenderer}
+                </Tree>
+              </TreeContextMenuContext.Provider>
+            </CreateCallbacksContext.Provider>
           </div>
-        )}
-
-        {/* Inline create inside folder */}
-        {isCreatingInFolder && (
-          <InlineCreateRow
-            indent={createIndent}
-            isFolder={activeFileOperation.type === 'create-folder'}
-            onCommit={(name) =>
-              activeFileOperation.type === 'create-folder'
-                ? onCreateFolder?.(name)
-                : onCreateFile?.(name)
-            }
-            onCancel={() => onCancelOperation?.()}
-          />
-        )}
-
-        {/* Inline create at root */}
-        {isCreatingAtRoot && (
-          <InlineCreateRow
-            indent={20}
-            isFolder={activeFileOperation.type === 'create-folder'}
-            onCommit={(name) =>
-              activeFileOperation.type === 'create-folder'
-                ? onCreateFolder?.(name)
-                : onCreateFile?.(name)
-            }
-            onCancel={() => onCancelOperation?.()}
-          />
         )}
       </div>
     );

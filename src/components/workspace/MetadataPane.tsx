@@ -15,15 +15,6 @@ function InfoIcon() {
   );
 }
 
-function CopyIcon() {
-  return (
-    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
-      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
-    </svg>
-  );
-}
-
 // ── Helpers ──────────────────────────────────────────
 
 function formatSize(bytes: number): string {
@@ -147,18 +138,10 @@ export default function MetadataPane() {
   const gateCount = useCruxStore((s) => s.gateCount);
   const artifacts = useCruxStore((s) => s.artifacts);
   const activeTabId = useUIStore((s) => s.editor.activeTabId);
-  const [copied, setCopied] = useState(false);
 
   const selectedArtifact = activeTabId
     ? artifacts.find((a) => a.id === activeTabId)
     : null;
-
-  const handleCopySlug = () => {
-    if (!crux) return;
-    navigator.clipboard.writeText(crux.slug);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 1500);
-  };
 
   const cycleVisibility = () => {
     if (!crux) return;
@@ -204,22 +187,11 @@ export default function MetadataPane() {
             multiline
           />
 
-          <FieldRow label="Slug">
-            <div className="flex items-center gap-1">
-              <span className="truncate">{crux.slug}</span>
-              <button
-                onClick={handleCopySlug}
-                className="shrink-0 p-0.5 text-text-muted hover:text-text transition-colors cursor-pointer"
-                title="Copy slug"
-              >
-                {copied ? (
-                  <span className="text-[10px] text-accent">copied</span>
-                ) : (
-                  <CopyIcon />
-                )}
-              </button>
-            </div>
-          </FieldRow>
+          <EditableField
+            label="Slug"
+            value={crux.slug}
+            onSave={(slug) => updateCrux({ slug })}
+          />
 
           <FieldRow label="Visibility">
             <button

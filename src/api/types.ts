@@ -100,6 +100,7 @@ export interface CreateCruxDto {
 
 export interface UpdateCruxDto {
   title?: string;
+  slug?: string;
   description?: string;
   data?: string;
   type?: string;

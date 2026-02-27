@@ -41,6 +41,11 @@ export default function UserMenu() {
   }, [open]);
 
   const initial = author?.displayName?.charAt(0)?.toUpperCase() ?? '?';
+  const avatarUrl = (() => {
+    if (!author?.meta?.avatarUrl) return null;
+    const base = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+    return `${base}${author.meta.avatarUrl}?v=${author.updated}`;
+  })();
 
   const handleLogout = async () => {
     setOpen(false);
@@ -53,12 +58,16 @@ export default function UserMenu() {
       <button
         onClick={() => setOpen(!open)}
         className={cn(
-          'w-7 h-7 rounded-full flex items-center justify-center',
-          'bg-accent-muted text-accent text-xs font-display font-bold',
-          'hover:ring-2 hover:ring-accent/30 transition-shadow cursor-pointer',
+          'w-6 h-6 rounded-full flex items-center justify-center overflow-hidden',
+          !avatarUrl && 'bg-accent-muted text-accent text-[10px] font-display font-bold',
+          'hover:ring-1 hover:ring-accent/40 transition-shadow cursor-pointer',
         )}
       >
-        {initial}
+        {avatarUrl ? (
+          <img src={avatarUrl} alt="" className="w-full h-full object-cover rounded-full" />
+        ) : (
+          initial
+        )}
       </button>
 
       {open ? (

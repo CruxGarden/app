@@ -1,3 +1,4 @@
+import { useState, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useUIStore, PANE_COLORS } from '@/stores/uiStore';
 import { useCruxStore } from '@/stores/cruxStore';
@@ -70,6 +71,16 @@ function PublishIcon() {
   );
 }
 
+function ExportIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+      <polyline points="7 10 12 15 17 10" />
+      <line x1="12" y1="15" x2="12" y2="3" />
+    </svg>
+  );
+}
+
 function ChevronIcon() {
   return (
     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -82,27 +93,73 @@ export default function TopBar() {
   const navigate = useNavigate();
   const { paneVisibility, togglePane, activeCruxId } = useUIStore();
   const cruxTitle = useCruxStore((s) => s.crux?.title);
+  const updateCrux = useCruxStore((s) => s.updateCrux);
   const username = useAuthStore((s) => s.author?.username);
+
+  const [editingTitle, setEditingTitle] = useState(false);
+  const [titleDraft, setTitleDraft] = useState('');
+  const titleInputRef = useRef<HTMLInputElement>(null);
+
+  const startEditTitle = useCallback(() => {
+    setTitleDraft(cruxTitle || '');
+    setEditingTitle(true);
+    setTimeout(() => titleInputRef.current?.select(), 0);
+  }, [cruxTitle]);
+
+  const commitTitle = useCallback(() => {
+    setEditingTitle(false);
+    const trimmed = titleDraft.trim();
+    if (trimmed && trimmed !== cruxTitle) {
+      updateCrux({ title: trimmed });
+    }
+  }, [titleDraft, cruxTitle, updateCrux]);
 
   return (
     <header className="flex items-center justify-between h-12 px-3 border-b border-border bg-surface/30 backdrop-blur-[var(--glass-blur)]">
       {/* Left: branding + breadcrumb */}
       <div className="flex items-center gap-1.5 min-w-0">
         <button
-          onClick={() => navigate('/garden')}
+          onClick={() => navigate('/')}
           className="shrink-0 hover:opacity-80 transition-opacity cursor-pointer text-sm font-display font-medium text-text whitespace-nowrap"
         >
-          {username ? `${username}'s Garden` : 'crux.garden'}
+          crux.garden
         </button>
-        {activeCruxId ? (
+        {username ? (
           <>
             <span className="text-text-muted shrink-0"><ChevronIcon /></span>
             <button
-              onClick={() => navigate(`/crux/${activeCruxId}`)}
-              className="text-xs font-medium font-display text-text-muted hover:text-text transition-colors cursor-pointer whitespace-nowrap"
+              onClick={() => navigate('/garden')}
+              className="shrink-0 text-xs font-medium font-display text-text-muted hover:text-text transition-colors cursor-pointer whitespace-nowrap"
             >
-              {cruxTitle || 'Untitled'}
+              @{username}
             </button>
+          </>
+        ) : null}
+        {activeCruxId ? (
+          <>
+            <span className="text-text-muted shrink-0"><ChevronIcon /></span>
+            {editingTitle ? (
+              <input
+                ref={titleInputRef}
+                value={titleDraft}
+                onChange={(e) => setTitleDraft(e.target.value)}
+                onBlur={commitTitle}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') { e.preventDefault(); commitTitle(); }
+                  if (e.key === 'Escape') { setEditingTitle(false); }
+                }}
+                className="text-xs font-medium font-display text-text bg-transparent border-b border-accent outline-none w-32"
+              />
+            ) : (
+              <button
+                onClick={() => navigate(`/crux/${activeCruxId}`)}
+                onDoubleClick={(e) => { e.preventDefault(); startEditTitle(); }}
+                className="text-xs font-medium font-display text-text-muted hover:text-text transition-colors cursor-pointer whitespace-nowrap"
+                title="Double-click to rename"
+              >
+                {cruxTitle || 'Untitled'}
+              </button>
+            )}
           </>
         ) : null}
       </div>
@@ -172,6 +229,15 @@ export default function TopBar() {
           activeColor={PANE_COLORS.publish}
         >
           <PublishIcon />
+        </IconButton>
+        <IconButton
+          label="Toggle export"
+          size="sm"
+          onClick={() => togglePane('export')}
+          active={paneVisibility.export}
+          activeColor={PANE_COLORS.export}
+        >
+          <ExportIcon />
         </IconButton>
         </div>
         <div className="w-px h-5 bg-border mx-1" />

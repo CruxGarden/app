@@ -15,6 +15,7 @@ interface ContextMenuProps {
   onRename: (id: string, path: string) => void;
   onDelete: (id: string, path: string) => void;
   onOpen: (id: string) => void;
+  onCopyUrl?: (id: string) => void;
 }
 
 export default function ContextMenu({
@@ -23,8 +24,10 @@ export default function ContextMenu({
   onRename,
   onDelete,
   onOpen,
+  onCopyUrl,
 }: ContextMenuProps) {
-  const { contextMenu, hideContextMenu } = useUIStore();
+  const contextMenu = useUIStore((s) => s.contextMenu);
+  const hideContextMenu = useUIStore((s) => s.hideContextMenu);
   const ref = useRef<HTMLDivElement>(null);
 
   // Close on click outside or Escape
@@ -68,6 +71,7 @@ export default function ContextMenu({
   } else if (targetId) {
     items.push(
       { label: 'Open', action: () => { onOpen(targetId); hideContextMenu(); } },
+      { label: 'Copy URL', action: () => { onCopyUrl?.(targetId); hideContextMenu(); }, disabled: !onCopyUrl },
       { label: 'Rename', action: () => { onRename(targetId, targetPath); hideContextMenu(); } },
       { label: 'Delete', action: () => { onDelete(targetId, targetPath); hideContextMenu(); }, destructive: true },
     );

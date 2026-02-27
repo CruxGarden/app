@@ -120,6 +120,7 @@ export async function uploadAttachment(
 export async function downloadAttachment(cruxId: string, attachmentId: string): Promise<Blob> {
   const res = await client.get(`/cruxes/${cruxId}/attachments/${attachmentId}/download`, {
     responseType: 'blob',
+    params: { v: Date.now() },
   });
   return res.data as Blob;
 }
@@ -140,6 +141,18 @@ export async function updateAttachment(
 
 export async function deleteAttachment(attachmentId: string): Promise<void> {
   await client.delete(`/attachments/${attachmentId}`);
+}
+
+// ── Publishing ────────────────────────────────────────
+
+export async function publish(cruxId: string): Promise<Crux> {
+  const res = await client.post<Crux>(`/cruxes/${cruxId}/publish`);
+  return res.data;
+}
+
+export async function unpublish(cruxId: string): Promise<Crux> {
+  const res = await client.post<Crux>(`/cruxes/${cruxId}/unpublish`);
+  return res.data;
 }
 
 // ── Tags ──────────────────────────────────────────────

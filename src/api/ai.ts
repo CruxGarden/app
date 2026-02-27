@@ -16,13 +16,20 @@ export async function streamChat(
 ): Promise<void> {
   const tokens = getStoredTokens();
 
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    Authorization: `Bearer ${tokens.accessToken}`,
+    'api-version': '0.0.1',
+  };
+
+  const userApiKey = localStorage.getItem('cruxgarden:anthropicApiKey');
+  if (userApiKey) {
+    headers['X-Anthropic-Key'] = userApiKey;
+  }
+
   const res = await fetch(`${API_BASE_URL}/ai/chat`, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${tokens.accessToken}`,
-      'api-version': '0.0.1',
-    },
+    headers,
     body: JSON.stringify({ cruxId, messages, model }),
     signal,
   });

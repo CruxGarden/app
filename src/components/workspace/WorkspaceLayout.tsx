@@ -11,9 +11,12 @@ import EditorPane from './EditorPane';
 import MetadataPane from './MetadataPane';
 import SyncPane from './SyncPane';
 import PublishPane from './PublishPane';
+import ExportPane from './ExportPane';
 import ContextMenu from './ContextMenu';
 import MobilePaneSwitcher from './MobilePaneSwitcher';
 import { useCruxStore } from '@/stores/cruxStore';
+import { useAuthStore } from '@/stores/authStore';
+import { getDownloadUrl } from '@/api/public';
 
 // ── Pane configuration ──────────────────────────────────
 
@@ -31,6 +34,7 @@ const PANE_CONFIG: Record<PaneType, PaneConfig> = {
   details:       { minSize: 10, defaultSize: 16, collapsible: true },
   sync:          { minSize: 10, defaultSize: 16, collapsible: true },
   publish:       { minSize: 10, defaultSize: 16, collapsible: true },
+  export:        { minSize: 10, defaultSize: 16, collapsible: true },
 };
 
 const PANE_COMPONENTS: Record<PaneType, React.ComponentType> = {
@@ -41,6 +45,7 @@ const PANE_COMPONENTS: Record<PaneType, React.ComponentType> = {
   details: MetadataPane,
   sync: SyncPane,
   publish: PublishPane,
+  export: ExportPane,
 };
 
 // ── Resize handle ───────────────────────────────────────
@@ -87,9 +92,16 @@ function DraggablePane({ paneType, children }: { paneType: PaneType; children: R
 // ── Main layout ─────────────────────────────────────────
 
 export default function WorkspaceLayout() {
-  const { paneOrder, paneVisibility, reorderPanes, setPaneVisible, mobileActivePane, openFile } = useUIStore();
-  const { deleteArtifact } = useCruxStore();
+  const paneOrder = useUIStore((s) => s.paneOrder);
+  const paneVisibility = useUIStore((s) => s.paneVisibility);
+  const reorderPanes = useUIStore((s) => s.reorderPanes);
+  const setPaneVisible = useUIStore((s) => s.setPaneVisible);
+  const mobileActivePane = useUIStore((s) => s.mobileActivePane);
+  const openFile = useUIStore((s) => s.openFile);
+  const deleteArtifact = useCruxStore((s) => s.deleteArtifact);
   const artifacts = useCruxStore((s) => s.artifacts);
+  const crux = useCruxStore((s) => s.crux);
+  const author = useAuthStore((s) => s.author);
 
   // Visible panes in order
   const visiblePanes = useMemo(
@@ -132,6 +144,15 @@ export default function WorkspaceLayout() {
   const handleDelete = async (id: string) => {
     if (confirm('Delete this file?')) {
       await deleteArtifact(id);
+    }
+  };
+
+  const handleCopyUrl = (id: string) => {
+    const username = author?.username;
+    const slug = crux?.slug;
+    if (username && slug) {
+      const url = getDownloadUrl(username, slug, id);
+      navigator.clipboard.writeText(url);
     }
   };
 
@@ -215,6 +236,7 @@ export default function WorkspaceLayout() {
         onRename={handleRename}
         onDelete={handleDelete}
         onOpen={handleOpen}
+        onCopyUrl={handleCopyUrl}
       />
     </>
   );

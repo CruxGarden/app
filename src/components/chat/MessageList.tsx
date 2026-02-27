@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import type { ChatMessage } from '@/api/types';
-import MessageBubble from './MessageBubble';
+import { useAuthStore } from '@/stores/authStore';
+import MessageBubble, { ClaudeAvatar } from './MessageBubble';
 import MarkdownRenderer from './MarkdownRenderer';
 
 interface MessageListProps {
@@ -15,6 +16,14 @@ export default function MessageList({
   isStreaming,
 }: MessageListProps) {
   const bottomRef = useRef<HTMLDivElement>(null);
+  const author = useAuthStore((s) => s.author);
+
+  const userInitial = author?.displayName?.charAt(0)?.toUpperCase() ?? '?';
+  const avatarUrl = (() => {
+    if (!author?.meta?.avatarUrl) return null;
+    const base = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+    return `${base}${author.meta.avatarUrl}?v=${author.updated}`;
+  })();
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -31,11 +40,12 @@ export default function MessageList({
       )}
 
       {messages.map((msg, i) => (
-        <MessageBubble key={i} message={msg} />
+        <MessageBubble key={i} message={msg} avatarUrl={avatarUrl} userInitial={userInitial} />
       ))}
 
       {isStreaming && streamingContent && (
-        <div className="flex justify-start">
+        <div className="flex items-end gap-2 justify-start">
+          <ClaudeAvatar />
           <div className="max-w-[80%] rounded-[var(--radius)] px-4 py-3 text-sm bg-surface text-text">
             <MarkdownRenderer content={streamingContent} />
             <span className="inline-block w-1.5 h-4 bg-accent/60 animate-pulse ml-0.5 align-text-bottom" />
@@ -44,7 +54,8 @@ export default function MessageList({
       )}
 
       {isStreaming && !streamingContent && (
-        <div className="flex justify-start">
+        <div className="flex items-end gap-2 justify-start">
+          <ClaudeAvatar />
           <div className="rounded-[var(--radius)] px-4 py-3 bg-surface">
             <div className="flex gap-1">
               <span className="w-1.5 h-1.5 rounded-full bg-text-muted animate-bounce [animation-delay:0ms]" />
