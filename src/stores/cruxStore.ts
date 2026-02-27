@@ -15,6 +15,9 @@ interface CruxState {
   isStreaming: boolean;
   streamingContent: string;
 
+  // Publish state
+  hasUnpublishedChanges: boolean;
+
   // Gate state
   gates: Dimension[];
   gateCount: number;
@@ -36,6 +39,10 @@ interface CruxState {
   saveMeta: () => Promise<void>;
   updateCrux: (dto: UpdateCruxDto) => Promise<void>;
   reset: () => void;
+
+  // Publish actions
+  publishCrux: () => Promise<void>;
+  unpublishCrux: () => Promise<void>;
 
   // File CRUD actions
   createFile: (path: string, content?: string) => Promise<Attachment>;
@@ -62,6 +69,7 @@ export const useCruxStore = create<CruxState>((set, get) => ({
   streamingContent: '',
   gates: [],
   gateCount: 0,
+  hasUnpublishedChanges: false,
   isCreatingGate: false,
   pendingGateCreation: false,
 
@@ -73,12 +81,30 @@ export const useCruxStore = create<CruxState>((set, get) => ({
       applyPalette(crux.meta.settings.palette);
     }
 
+    // Detect if anything was modified after the last publish
+    let hasChanges = false;
+    const publishedAt = crux.meta?.publishedAt as string | undefined;
+    if (publishedAt) {
+      const publishedMs = new Date(publishedAt).getTime();
+      // Check if crux metadata (title, slug, etc.) changed after publish
+      if (new Date(crux.updated).getTime() > publishedMs) {
+        hasChanges = true;
+      }
+      // Check if any attachment was modified after publish
+      if (!hasChanges && attachments.length > 0) {
+        hasChanges = attachments.some(
+          (a) => new Date(a.updated).getTime() > publishedMs,
+        );
+      }
+    }
+
     set({
       crux,
       messages: crux.meta?.messages || [],
       artifacts: attachments,
       summary: crux.meta?.summary || null,
       gateCount: crux.meta?.gateCount || 0,
+      hasUnpublishedChanges: hasChanges,
     });
   },
 
@@ -130,11 +156,11 @@ export const useCruxStore = create<CruxState>((set, get) => ({
   },
 
   setArtifacts: (artifacts: Attachment[]) => {
-    set({ artifacts });
+    set({ artifacts, hasUnpublishedChanges: true });
   },
 
   addArtifact: (artifact: Attachment) => {
-    set((state) => ({ artifacts: [...state.artifacts, artifact] }));
+    set((state) => ({ artifacts: [...state.artifacts, artifact], hasUnpublishedChanges: true }));
   },
 
   updateArtifact: (id: string, updates: Partial<Attachment>) => {
@@ -146,10 +172,11 @@ export const useCruxStore = create<CruxState>((set, get) => ({
   },
 
   setModel: (model: string) => {
-    const { crux } = get();
+    const { crux, saveMeta } = get();
     if (!crux) return;
     const meta = { ...crux.meta, settings: { ...crux.meta?.settings, model } };
     set({ crux: { ...crux, meta } });
+    saveMeta();
   },
 
   setPalette: (palette: Partial<Palette>) => {
@@ -172,7 +199,11 @@ export const useCruxStore = create<CruxState>((set, get) => ({
     const { crux } = get();
     if (!crux) return;
     const updated = await cruxes.update(crux.id, dto);
-    set({ crux: { ...crux, ...updated } });
+    const isPublished = crux.meta?.publishedAt != null;
+    set({
+      crux: { ...crux, ...updated },
+      ...(isPublished ? { hasUnpublishedChanges: true } : {}),
+    });
   },
 
   reset: () => {
@@ -186,9 +217,26 @@ export const useCruxStore = create<CruxState>((set, get) => ({
       streamingContent: '',
       gates: [],
       gateCount: 0,
+      hasUnpublishedChanges: false,
       isCreatingGate: false,
       pendingGateCreation: false,
     });
+  },
+
+  // Publish actions
+  publishCrux: async () => {
+    const { crux, saveMeta } = get();
+    if (!crux) return;
+    await saveMeta();
+    const updated = await cruxes.publish(crux.id);
+    set({ crux: { ...crux, ...updated }, hasUnpublishedChanges: false });
+  },
+
+  unpublishCrux: async () => {
+    const { crux } = get();
+    if (!crux) return;
+    const updated = await cruxes.unpublish(crux.id);
+    set({ crux: { ...crux, ...updated } });
   },
 
   // File CRUD actions
@@ -209,7 +257,7 @@ export const useCruxStore = create<CruxState>((set, get) => ({
     const blob = new Blob([text], { type: mime });
     const file = new File([blob], filename, { type: mime });
     const attachment = await cruxes.uploadAttachment(crux.id, file, { path, type: 'file', kind: 'artifact' });
-    set((state) => ({ artifacts: [...state.artifacts, attachment] }));
+    set((state) => ({ artifacts: [...state.artifacts, attachment], hasUnpublishedChanges: true }));
     return attachment;
   },
 
@@ -218,7 +266,7 @@ export const useCruxStore = create<CruxState>((set, get) => ({
     if (!crux) throw new Error('No active crux');
     const path = parentPath ? `${parentPath}/${file.name}` : file.name;
     const attachment = await cruxes.uploadAttachment(crux.id, file, { path, type: 'file', kind: 'artifact' });
-    set((state) => ({ artifacts: [...state.artifacts, attachment] }));
+    set((state) => ({ artifacts: [...state.artifacts, attachment], hasUnpublishedChanges: true }));
     return attachment;
   },
 
@@ -236,6 +284,7 @@ export const useCruxStore = create<CruxState>((set, get) => ({
           ? { ...a, meta: { ...a.meta, path: newPath }, filename: newPath.split('/').pop() || a.filename }
           : a,
       ),
+      hasUnpublishedChanges: true,
     }));
   },
 
@@ -247,6 +296,7 @@ export const useCruxStore = create<CruxState>((set, get) => ({
           ? { ...a, meta: { ...a.meta, path: newPath }, filename: newPath.split('/').pop() || a.filename }
           : a,
       ),
+      hasUnpublishedChanges: true,
     }));
   },
 
@@ -254,6 +304,7 @@ export const useCruxStore = create<CruxState>((set, get) => ({
     await cruxes.deleteAttachment(id);
     set((state) => ({
       artifacts: state.artifacts.filter((a) => a.id !== id),
+      hasUnpublishedChanges: true,
     }));
     // Also close any editor tab for this file
     const { useUIStore } = await import('@/stores/uiStore');
@@ -268,6 +319,7 @@ export const useCruxStore = create<CruxState>((set, get) => ({
     const blob = new Blob([content], { type: mime });
     const file = new File([blob], artifact.filename || 'file', { type: mime });
     await cruxes.updateAttachment(id, file);
+    set({ hasUnpublishedChanges: true });
   },
 
   // Gate actions

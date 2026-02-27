@@ -29,6 +29,20 @@ export async function getCruxBySlug(username: string, slug: string): Promise<Cru
   return res.data;
 }
 
+export async function uploadAvatar(authorId: string, file: File): Promise<Author> {
+  const formData = new FormData();
+  formData.append('file', file);
+  const res = await client.post<Author>(`/authors/${authorId}/avatar`, formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+  return res.data;
+}
+
+export async function removeAvatar(authorId: string): Promise<Author> {
+  const res = await client.delete<Author>(`/authors/${authorId}/avatar`);
+  return res.data;
+}
+
 export async function checkUsername(username: string): Promise<{ available: boolean }> {
   const res = await client.get<{ available: boolean }>('/authors/check-username', {
     params: { username },

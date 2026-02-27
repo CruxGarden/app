@@ -1,4 +1,4 @@
-import { useRef, useCallback } from 'react';
+import { useRef, useCallback, useMemo } from 'react';
 import { useCruxStore } from '@/stores/cruxStore';
 import { useUIStore } from '@/stores/uiStore';
 import ArboristFileTree, { type ArboristFileTreeHandle } from '@/components/artifacts/ArboristFileTree';
@@ -56,9 +56,27 @@ export default function ArtifactsPane() {
   const activeFileOperation = useUIStore((s) => s.activeFileOperation);
   const cancelFileOperation = useUIStore((s) => s.cancelFileOperation);
   const showContextMenu = useUIStore((s) => s.showContextMenu);
+  const folderOpenState = useUIStore((s) => s.folderOpenState);
+  const setFolderOpen = useUIStore((s) => s.setFolderOpen);
 
   const treeRef = useRef<ArboristFileTreeHandle>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Derive parent folder from tree focus or active tab selection
+  const getParentPath = useCallback(() => {
+    // Try tree focus first (works when a folder/file is focused in the tree)
+    const treeFocused = treeRef.current?.getFocusedFolder();
+    if (treeFocused) return treeFocused;
+
+    // Fall back to the selected file's parent folder
+    const tabId = useUIStore.getState().editor.activeTabId;
+    if (!tabId) return undefined;
+    const artifact = useCruxStore.getState().artifacts.find((a) => a.id === tabId);
+    if (!artifact) return undefined;
+    const path = (artifact.meta?.path || artifact.filename || '') as string;
+    const lastSlash = path.lastIndexOf('/');
+    return lastSlash > 0 ? path.slice(0, lastSlash) : undefined;
+  }, []);
 
   const handleSelect = useCallback((id: string) => {
     const artifact = useCruxStore.getState().artifacts.find((a) => a.id === id);
@@ -162,24 +180,29 @@ export default function ArtifactsPane() {
   const handleFileInputChange = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
     if (files.length === 0) return;
+    const parentPath = getParentPath();
     for (const file of files) {
-      await uploadFile(file);
+      await uploadFile(file, parentPath);
     }
     // Reset input so the same file can be re-uploaded
     e.target.value = '';
-  }, [uploadFile]);
+  }, [uploadFile, getParentPath]);
 
   const actionButtons = (
     <>
       <button
-        onClick={() => startFileOperation({ type: 'create-file' })}
+        onClick={() => {
+          startFileOperation({ type: 'create-file', parentPath: getParentPath() });
+        }}
         className="p-1 text-text-muted hover:text-text transition-colors cursor-pointer"
         title="New file"
       >
         <FilePlusIcon />
       </button>
       <button
-        onClick={() => startFileOperation({ type: 'create-folder' })}
+        onClick={() => {
+          startFileOperation({ type: 'create-folder', parentPath: getParentPath() });
+        }}
         className="p-1 text-text-muted hover:text-text transition-colors cursor-pointer"
         title="New folder"
       >
@@ -199,6 +222,13 @@ export default function ArtifactsPane() {
     activeFileOperation &&
     (activeFileOperation.type === 'create-file' || activeFileOperation.type === 'create-folder')
   );
+
+  const totalSize = useMemo(() => {
+    const bytes = artifacts.reduce((sum, a) => sum + (Number(a.size) || 0), 0);
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  }, [artifacts]);
 
   return (
     <div className="flex flex-col h-full">
@@ -228,6 +258,8 @@ export default function ArtifactsPane() {
             onCreateFile={handleCreateFile}
             onCreateFolder={handleCreateFolder}
             onCancelOperation={cancelFileOperation}
+            initialOpenState={folderOpenState}
+            onFolderToggle={setFolderOpen}
           />
         ) : (
           <div className="flex flex-col items-center justify-center py-8 text-text-muted">
@@ -238,6 +270,13 @@ export default function ArtifactsPane() {
           </div>
         )}
       </div>
+
+      {artifacts.length > 0 && (
+        <div className="shrink-0 px-3 py-1.5 border-t border-border text-[10px] font-mono text-text-muted flex justify-between">
+          <span>{artifacts.length} artifact{artifacts.length !== 1 ? 's' : ''}</span>
+          <span>{totalSize}</span>
+        </div>
+      )}
     </div>
   );
 }

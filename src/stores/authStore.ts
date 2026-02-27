@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import * as authApi from '@/api/auth';
+import * as authorsApi from '@/api/authors';
 import { getStoredTokens, storeTokens, clearTokens } from '@/api/client';
 import type { Profile, Author } from '@/api/types';
 
@@ -20,6 +21,12 @@ interface AuthState {
 
   /** Logout and clear tokens */
   logout: () => Promise<void>;
+
+  /** Upload avatar and update local author */
+  uploadAvatar: (file: File) => Promise<Author>;
+
+  /** Remove avatar */
+  removeAvatar: () => Promise<void>;
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
@@ -87,5 +94,20 @@ export const useAuthStore = create<AuthState>((set) => ({
     }
     clearTokens();
     set({ account: null, author: null, isAuthenticated: false });
+  },
+
+  uploadAvatar: async (file: File) => {
+    const { author } = useAuthStore.getState();
+    if (!author) throw new Error('No author');
+    const updated = await authorsApi.uploadAvatar(author.id, file);
+    set({ author: updated });
+    return updated;
+  },
+
+  removeAvatar: async () => {
+    const { author } = useAuthStore.getState();
+    if (!author) throw new Error('No author');
+    const updated = await authorsApi.removeAvatar(author.id);
+    set({ author: updated });
   },
 }));

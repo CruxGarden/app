@@ -1,7 +1,8 @@
-import { useEffect } from 'react';
+import { useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useGardenStore } from '@/stores/gardenStore';
 import { useCruxStore } from '@/stores/cruxStore';
+import { cruxes } from '@/api';
 
 export function useGarden() {
   const {
@@ -39,6 +40,11 @@ export function useGarden() {
     setPage(offset);
   };
 
+  const deleteCrux = useCallback(async (id: string) => {
+    await cruxes.remove(id);
+    load();
+  }, [load]);
+
   return {
     cruxList,
     loading,
@@ -50,6 +56,7 @@ export function useGarden() {
     goToPage,
     handleNewCrux,
     handleClearSearch,
+    deleteCrux,
     refresh: load,
   };
 }

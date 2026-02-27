@@ -1,4 +1,5 @@
 import { useEffect, useState, useMemo } from 'react';
+import { getDownloadUrl } from '@/api/public';
 import hljs from 'highlight.js/lib/core';
 import typescript from 'highlight.js/lib/languages/typescript';
 import javascript from 'highlight.js/lib/languages/javascript';
@@ -70,12 +71,58 @@ type ViewMode = 'source' | 'preview';
 
 const PREVIEWABLE_EXTS = new Set(['html', 'htm', 'svg', 'md', 'mdx']);
 
+/**
+ * Rewrite relative src/href in HTML to point at the public attachment download endpoint.
+ * Uses the same URL pattern as published display mode (no auth required).
+ */
+function rewriteUrls(
+  html: string,
+  username: string,
+  slug: string,
+  attachments: Attachment[],
+): string {
+  if (attachments.length === 0 || !username || !slug) return html;
+
+  const pathMap = new Map<string, string>();
+  for (const a of attachments) {
+    const path = a.meta?.path || a.filename || a.id;
+    pathMap.set(path, a.id);
+    if (path.startsWith('/')) pathMap.set(path.slice(1), a.id);
+    const filename = path.split('/').pop();
+    if (filename && !pathMap.has(filename)) pathMap.set(filename, a.id);
+  }
+
+  return html.replace(
+    /(src|href)=(["'])([^"']+)\2/gi,
+    (match, attr: string, quote: string, value: string) => {
+      if (
+        value.startsWith('http://') ||
+        value.startsWith('https://') ||
+        value.startsWith('data:') ||
+        value.startsWith('#') ||
+        value.startsWith('//')
+      ) {
+        return match;
+      }
+      const cleaned = value.startsWith('./') ? value.slice(2) : value;
+      const id = pathMap.get(cleaned) || pathMap.get(value);
+      if (id) {
+        return `${attr}=${quote}${getDownloadUrl(username, slug, id)}${quote}`;
+      }
+      return match;
+    },
+  );
+}
+
 interface FileContentProps {
   artifact: Attachment;
   cruxId: string;
+  artifacts?: Attachment[];
+  username?: string;
+  slug?: string;
 }
 
-export default function FileContent({ artifact, cruxId }: FileContentProps) {
+export default function FileContent({ artifact, cruxId, artifacts = [], username = '', slug = '' }: FileContentProps) {
   const [content, setContent] = useState<string | null>(null);
   const [blobUrl, setBlobUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -208,7 +255,7 @@ export default function FileContent({ artifact, cruxId }: FileContentProps) {
       {/* HTML preview */}
       {content !== null && viewMode === 'preview' && (ext === 'html' || ext === 'htm') && (
         <iframe
-          srcDoc={content}
+          srcDoc={rewriteUrls(content, username, slug, artifacts)}
           sandbox="allow-scripts"
           className="flex-1 w-full bg-white rounded-b-[var(--radius-sm)]"
           title={path}

@@ -1,12 +1,11 @@
 import { useEffect, useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { publicApi } from '@/api';
 import type { Crux, Attachment } from '@/api/types';
 import { applyPalette, resetPalette } from '@/lib/palette';
 import MeshBackground from '@/components/layout/MeshBackground';
-import CruxBloom from '@/components/brand/CruxBloom';
-import { Button, Spinner } from '@/components/ui';
-import { PublicTopBar, ArtifactRenderer, HistoryViewer } from '@/components/display';
+import { Spinner } from '@/components/ui';
+import { PublicTopBar, ArtifactRenderer } from '@/components/display';
 
 type LoadState = 'loading' | 'ready' | 'not-found' | 'error';
 
@@ -20,7 +19,6 @@ export default function PublicCrux() {
   const [crux, setCrux] = useState<Crux | null>(null);
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [state, setState] = useState<LoadState>('loading');
-  const [showHistory, setShowHistory] = useState(false);
 
   // Fetch crux + attachments
   useEffect(() => {
@@ -69,7 +67,7 @@ export default function PublicCrux() {
   // Set document title
   useEffect(() => {
     if (crux?.title) {
-      document.title = `${crux.title} — Crux Garden`;
+      document.title = crux.title;
     }
     return () => {
       document.title = 'Crux Garden';
@@ -90,12 +88,8 @@ export default function PublicCrux() {
       <div className="relative min-h-screen flex flex-col items-center justify-center px-4">
         <MeshBackground />
         <div className="relative z-10 text-center">
-          <CruxBloom size={64} className="mx-auto mb-6 opacity-30" />
           <h1 className="font-display text-4xl font-bold text-text mb-2">Not found</h1>
-          <p className="text-text-muted mb-8">This creation doesn't exist or is private</p>
-          <Link to="/garden">
-            <Button variant="secondary">Create your own</Button>
-          </Link>
+          <p className="text-text-muted">This creation doesn't exist or is private</p>
         </div>
       </div>
     );
@@ -106,12 +100,8 @@ export default function PublicCrux() {
       <div className="relative min-h-screen flex flex-col items-center justify-center px-4">
         <MeshBackground />
         <div className="relative z-10 text-center">
-          <CruxBloom size={64} className="mx-auto mb-6 opacity-30" />
           <h1 className="font-display text-4xl font-bold text-text mb-2">Something went wrong</h1>
-          <p className="text-text-muted mb-8">We couldn't load this creation</p>
-          <Link to="/">
-            <Button variant="secondary">Return home</Button>
-          </Link>
+          <p className="text-text-muted">We couldn't load this creation</p>
         </div>
       </div>
     );
@@ -123,30 +113,14 @@ export default function PublicCrux() {
       <PublicTopBar
         title={crux?.title}
         username={username || ''}
-        showHistory={showHistory}
-        onToggleHistory={() => setShowHistory((v) => !v)}
       />
 
-      <div className="flex flex-1 min-h-0 relative z-10">
-        {/* Main content */}
-        <div className="flex-1 min-w-0">
-          <ArtifactRenderer
-            attachments={attachments}
-            username={username || ''}
-            slug={slug || ''}
-          />
-        </div>
-
-        {/* History panel */}
-        {showHistory && (
-          <div className="hidden md:flex w-96 border-l border-border bg-surface/30 backdrop-blur-[var(--glass-blur)] flex-col min-h-0">
-            <HistoryViewer
-              messages={crux?.meta?.messages}
-              summary={crux?.meta?.summary}
-              onClose={() => setShowHistory(false)}
-            />
-          </div>
-        )}
+      <div className="flex-1 min-h-0 relative z-10">
+        <ArtifactRenderer
+          attachments={attachments}
+          username={username || ''}
+          slug={slug || ''}
+        />
       </div>
     </div>
   );

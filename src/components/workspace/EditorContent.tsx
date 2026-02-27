@@ -27,6 +27,7 @@ export default function EditorContent({ tab, artifact, cruxId, saveRef }: Editor
   const monacoRef = useRef<typeof Monaco | null>(null);
   const editorRef = useRef<Monaco.editor.IStandaloneCodeEditor | null>(null);
   const contentRef = useRef<string | null>(null);
+  const dirtyRef = useRef(false);
   const saveHandlerRef = useRef<() => void>(() => {});
   const scrollRafRef = useRef<number | null>(null);
   const disposedRef = useRef(false);
@@ -54,15 +55,14 @@ export default function EditorContent({ tab, artifact, cruxId, saveRef }: Editor
     const current = contentRef.current;
     if (current === null) return;
     try {
-      const blob = new Blob([current], { type: mime });
-      const file = new File([blob], artifact.filename || 'file', { type: mime });
-      await cruxes.updateAttachment(artifact.id, file);
+      await useCruxStore.getState().saveArtifactContent(artifact.id, current);
+      dirtyRef.current = false;
       setTabDirty(tab.id, false);
     } catch (err: unknown) {
       const axiosErr = err as { response?: { data?: { message?: string } } };
       console.error('Save failed:', axiosErr.response?.data?.message ?? err);
     }
-  }, [mime, artifact.id, artifact.filename, tab.id, setTabDirty]);
+  }, [artifact.id, tab.id, setTabDirty]);
 
   // Keep save ref stable for Monaco keybinding (avoids stale closure)
   useEffect(() => {
@@ -74,6 +74,22 @@ export default function EditorContent({ tab, artifact, cruxId, saveRef }: Editor
     if (saveRef) saveRef.current = handleSave;
     return () => { if (saveRef) saveRef.current = null; };
   }, [handleSave, saveRef]);
+
+  // Cleanup: auto-save dirty content, cancel pending scroll rAF, mark disposed
+  useEffect(() => {
+    disposedRef.current = false;
+    return () => {
+      disposedRef.current = true;
+      if (scrollRafRef.current) {
+        cancelAnimationFrame(scrollRafRef.current);
+        scrollRafRef.current = null;
+      }
+      // Auto-save dirty content on unmount (fire-and-forget)
+      if (dirtyRef.current) {
+        saveHandlerRef.current();
+      }
+    };
+  }, []);
 
   // Global Cmd+S
   useEffect(() => {
@@ -101,12 +117,14 @@ export default function EditorContent({ tab, artifact, cruxId, saveRef }: Editor
         editor.setScrollTop(tab.scrollTop);
       }
 
-      // Track scroll position (debounced via rAF)
-      let rafId: number | null = null;
+      // Track scroll position (debounced via rAF, guarded against unmount)
       editor.onDidScrollChange(() => {
-        if (rafId) cancelAnimationFrame(rafId);
-        rafId = requestAnimationFrame(() => {
-          setTabScrollTop(tab.id, editor.getScrollTop());
+        if (disposedRef.current) return;
+        if (scrollRafRef.current) cancelAnimationFrame(scrollRafRef.current);
+        scrollRafRef.current = requestAnimationFrame(() => {
+          if (!disposedRef.current) {
+            setTabScrollTop(tab.id, editor.getScrollTop());
+          }
         });
       });
 
@@ -124,6 +142,7 @@ export default function EditorContent({ tab, artifact, cruxId, saveRef }: Editor
     (value: string | undefined) => {
       if (value !== undefined) {
         contentRef.current = value;
+        dirtyRef.current = true;
         setContent(value);
         setTabDirty(tab.id, true);
       }
@@ -272,6 +291,7 @@ function ReplaceFileButton({ artifactId, onReplaced }: { artifactId: string; onR
     try {
       const updated = await cruxes.updateAttachment(artifactId, file);
       updateArtifact(artifactId, updated);
+      useCruxStore.setState({ hasUnpublishedChanges: true });
       onReplaced();
     } catch (err) {
       console.error('Replace failed:', err);
