@@ -1,4 +1,4 @@
-import { useRef } from 'react';
+import { useRef, useEffect } from 'react';
 
 interface GardenSearchProps {
   value: string;
@@ -27,6 +27,13 @@ export default function GardenSearch({ value, onChange }: GardenSearchProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
+  // Sync input when value is externally cleared
+  useEffect(() => {
+    if (!value && inputRef.current && inputRef.current.value !== '') {
+      inputRef.current.value = '';
+    }
+  }, [value]);
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const query = e.target.value;
     clearTimeout(debounceRef.current);
@@ -45,7 +52,7 @@ export default function GardenSearch({ value, onChange }: GardenSearchProps) {
         type="text"
         defaultValue={value}
         onChange={handleChange}
-        placeholder="Search..."
+        placeholder="Search cruxes..."
         className="w-full px-3 pr-8 py-2 text-sm bg-surface/50 border border-border rounded-[var(--radius-sm)] text-text placeholder:text-text-muted/50 focus:outline-none focus:border-accent/40 transition-colors font-body"
       />
       {value && (

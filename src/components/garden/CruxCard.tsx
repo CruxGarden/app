@@ -1,13 +1,13 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/cn';
-import { useAuthStore } from '@/stores/authStore';
 import type { Crux } from '@/api/types';
 
 interface CruxCardProps {
   crux: Crux;
   linkTo?: string;
   onDelete?: (id: string) => void;
+  sortBy?: 'created' | 'updated';
 }
 
 function MoreIcon() {
@@ -20,51 +20,26 @@ function MoreIcon() {
   );
 }
 
-function formatRelativeTime(dateStr: string): string {
-  const now = Date.now();
-  const then = new Date(dateStr).getTime();
-  const seconds = Math.floor((now - then) / 1000);
-
-  if (seconds < 60) return 'just now';
-  const minutes = Math.floor(seconds / 60);
-  if (minutes < 60) return `${minutes}m ago`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h ago`;
-  const days = Math.floor(hours / 24);
-  if (days < 30) return `${days}d ago`;
-  return new Date(dateStr).toLocaleDateString();
+function formatDateTime(dateStr: string): string {
+  const d = new Date(dateStr);
+  const date = d.toLocaleDateString(undefined, {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  });
+  const time = d.toLocaleTimeString(undefined, {
+    hour: 'numeric',
+    minute: '2-digit',
+  });
+  return `${date}, ${time}`;
 }
 
-function GateIcon() {
-  return (
-    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M12 22V8" />
-      <path d="M5 12H2a10 10 0 0 0 20 0h-3" />
-      <circle cx="12" cy="5" r="3" />
-    </svg>
-  );
-}
-
-function FileIcon() {
-  return (
-    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-      <polyline points="14 2 14 8 20 8" />
-    </svg>
-  );
-}
-
-export default function CruxCard({ crux, linkTo, onDelete }: CruxCardProps) {
+export default function CruxCard({ crux, linkTo, onDelete, sortBy = 'created' }: CruxCardProps) {
   const navigate = useNavigate();
-  const author = useAuthStore((s) => s.author);
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
-  const isPublished = crux.meta?.publishedAt != null;
-  const publicUrl = isPublished && author ? `/@${author.username}/${crux.slug}` : null;
 
-  const gateCount = crux.meta?.gateCount || 0;
-  const summary = crux.meta?.summary;
-  const lastGateLabel = summary?.stage;
+  const description = crux.meta?.summary?.purpose || crux.description;
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -83,8 +58,8 @@ export default function CruxCard({ crux, linkTo, onDelete }: CruxCardProps) {
         onClick={() => navigate(linkTo || `/crux/${crux.id}`)}
         className={cn(
           'bg-panel border border-border rounded-[var(--radius)] p-4 text-left',
-          'hover:border-accent/30 hover:bg-surface/50 transition-all duration-200 cursor-pointer',
-          'w-full flex flex-col gap-2',
+          'group-hover:bg-accent-muted group-hover:text-accent group-hover:border-accent transition-all duration-200 cursor-pointer',
+          'w-full h-36 flex flex-col',
         )}
       >
         {/* Title */}
@@ -92,37 +67,21 @@ export default function CruxCard({ crux, linkTo, onDelete }: CruxCardProps) {
           {crux.title || crux.slug}
         </h3>
 
-        {/* Summary purpose or description */}
-        {(summary?.purpose || crux.description) && (
-          <p className="text-xs text-text-muted line-clamp-2 leading-relaxed">
-            {summary?.purpose || crux.description}
+        {/* Description */}
+        {description && (
+          <p className="text-xs text-text-muted line-clamp-2 leading-relaxed mt-1.5">
+            {description}
           </p>
         )}
 
-        {/* Last gate label */}
-        {lastGateLabel && (
-          <p className="text-[11px] text-accent/70 font-mono truncate">
-            {lastGateLabel}
-          </p>
-        )}
+        {/* Spacer */}
+        <div className="flex-1" />
 
-        {/* Footer: stats + timestamp */}
-        <div className="flex items-center justify-between mt-1 text-[10px] text-text-muted font-mono">
-          <div className="flex items-center gap-3">
-            {gateCount > 0 && (
-              <span className="flex items-center gap-1">
-                <GateIcon />
-                {gateCount}
-              </span>
-            )}
-            {crux.meta?.messages && crux.meta.messages.length > 0 && (
-              <span className="flex items-center gap-1">
-                <FileIcon />
-                {crux.meta.messages.filter((m) => m.toolCalls?.some((tc) => tc.name === 'write_file')).length}
-              </span>
-            )}
-          </div>
-          <span>{formatRelativeTime(crux.updated)}</span>
+        {/* Footer */}
+        <div className="text-[10px] text-text-muted font-mono">
+          {sortBy === 'updated'
+            ? `Updated ${formatDateTime(crux.updated)}`
+            : `Created ${formatDateTime(crux.created)}`}
         </div>
       </button>
 
@@ -143,17 +102,6 @@ export default function CruxCard({ crux, linkTo, onDelete }: CruxCardProps) {
           </button>
           {menuOpen && (
             <div className="absolute right-0 top-full mt-1 w-32 bg-surface-solid border border-border rounded-[var(--radius-sm)] shadow-xl py-1 z-50">
-              {publicUrl && (
-                <a
-                  href={publicUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  onClick={(e) => e.stopPropagation()}
-                  className="block w-full px-3 py-1.5 text-left text-xs text-text hover:bg-accent-muted/20 transition-colors cursor-pointer"
-                >
-                  View public
-                </a>
-              )}
               <button
                 onClick={(e) => {
                   e.stopPropagation();
