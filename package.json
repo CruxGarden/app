@@ -20,6 +20,7 @@
     "react-arborist": "^3.4.3",
     "react-dom": "^19.0.0",
     "react-markdown": "^10.1.0",
+    "react-photo-view": "^1.2.7",
     "react-resizable-panels": "^4.6.5",
     "react-router": "^7.1.0",
     "react-router-dom": "^7.1.0",

@@ -4,16 +4,16 @@ import { create } from 'zustand';
 
 export type PaneType = 'history' | 'collaboration' | 'artifacts' | 'workshop' | 'details' | 'sync' | 'publish' | 'export';
 
-/** Neon highlight color for each pane (bright, like the green accent) */
+/** Rainbow gradient colors for each pane (follows default order: rose → violet) */
 export const PANE_COLORS: Record<PaneType, string> = {
-  history:       '#a0aeb8', // silver
-  collaboration: '#c8a84c', // yellow
-  artifacts:     '#7db3a3', // green (matches accent)
-  workshop:      '#5b9ed4', // blue
-  details:       '#a07cc8', // purple
-  sync:          '#d46b6b', // red
-  publish:       '#d4944c', // orange
-  export:        '#a0aeb8', // silver (matches history)
+  history:       '#d47080', // rose
+  collaboration: '#d4944c', // orange
+  artifacts:     '#c8a84c', // gold
+  workshop:      '#5cb87a', // green
+  details:       '#4cb8b0', // teal
+  sync:          '#5b9ed4', // blue
+  publish:       '#8c7cc8', // indigo
+  export:        '#c87ca8', // violet
 };
 
 export type EditorViewMode = 'source' | 'preview';
@@ -117,7 +117,7 @@ function nameFromPath(path: string): string {
   return segments[segments.length - 1] || path;
 }
 
-const DEFAULT_PANE_ORDER: PaneType[] = ['history', 'collaboration', 'artifacts', 'workshop', 'details', 'sync', 'publish', 'export'];
+export const DEFAULT_PANE_ORDER: PaneType[] = ['history', 'collaboration', 'artifacts', 'workshop', 'details', 'sync', 'publish', 'export'];
 const DEFAULT_VISIBILITY: Record<PaneType, boolean> = {
   history: false,
   collaboration: true,
@@ -383,12 +383,16 @@ export const useUIStore = create<UIState>()(
       },
 
       togglePane: (pane) => {
-        set((s) => ({
-          paneVisibility: {
-            ...s.paneVisibility,
-            [pane]: !s.paneVisibility[pane],
-          },
-        }));
+        const prev = get();
+        const wasVisible = prev.paneVisibility[pane];
+        const newVisibility = { ...prev.paneVisibility, [pane]: !wasVisible };
+
+        // When enabling a pane, move it to the end of paneOrder
+        const newOrder = !wasVisible
+          ? [...prev.paneOrder.filter((p) => p !== pane), pane]
+          : prev.paneOrder;
+
+        set({ paneVisibility: newVisibility, paneOrder: newOrder });
         const s = get();
         const layout = { paneOrder: s.paneOrder, paneVisibility: s.paneVisibility };
         saveLayout(s.activeCruxId ? cruxLayoutKey(s.activeCruxId) : GLOBAL_LAYOUT_KEY, layout);

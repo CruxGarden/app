@@ -11,7 +11,7 @@ export default function PublicTopBar({ title, username }: PublicTopBarProps) {
           crux.garden
         </a>
         <span className="text-text-muted/40">/</span>
-        <span className="shrink-0 text-text-muted">@{username}</span>
+        <a href={`/@${username}`} className="shrink-0 text-text-muted hover:text-text transition-colors">@{username}</a>
         {title && (
           <>
             <span className="text-text-muted/40">/</span>

@@ -72,7 +72,7 @@ function DraggablePane({ paneType, children }: { paneType: PaneType; children: R
 
   return (
     <div
-      className={cn('h-full border border-accent/20 rounded-[var(--radius-sm)]', isDragging && 'opacity-50')}
+      className={cn('h-full border border-accent/20 rounded-[var(--radius-sm)] group/pane', isDragging && 'opacity-50')}
       onDragOver={(e) => {
         e.preventDefault();
         e.dataTransfer.dropEffect = 'move';
@@ -220,7 +220,7 @@ export default function WorkspaceLayout() {
 
       {/* Mobile layout */}
       <div className="flex md:hidden flex-col h-full min-h-0">
-        <div className="flex-1 min-h-0">
+        <div className="flex-1 min-h-0 group/pane">
           {(() => {
             const PaneComponent = PANE_COMPONENTS[mobileActivePane];
             return <PaneComponent />;

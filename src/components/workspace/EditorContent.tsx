@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useRef, useCallback, useState } from 'react';
 import Editor from '@monaco-editor/react';
 import type * as Monaco from 'monaco-editor';
+import { PhotoProvider, PhotoView } from 'react-photo-view';
+import 'react-photo-view/dist/react-photo-view.css';
 import { useThemeStore } from '@/stores/themeStore';
 import { useUIStore } from '@/stores/uiStore';
 import { useCruxStore } from '@/stores/cruxStore';
@@ -9,9 +11,19 @@ import { getMonacoLanguage, getExtension, isPreviewable } from '@/lib/monacoLang
 import { registerCruxGardenThemes } from '@/lib/monacoTheme';
 import { cruxes } from '@/api';
 import MarkdownRenderer from '@/components/chat/MarkdownRenderer';
+import { usePreviewUrl } from '@/hooks/usePreviewUrl';
 import type { Attachment } from '@/api/types';
 import type { EditorTab } from '@/stores/uiStore';
 import { Spinner } from '@/components/ui';
+
+// ── Save handler registry (module-level, accessible from outside) ──
+const editorSaveHandlers = new Map<string, () => Promise<void>>();
+
+/** Save all dirty editors. Awaitable — resolves when all saves complete. */
+export async function saveAllDirtyEditors(): Promise<void> {
+  const promises = Array.from(editorSaveHandlers.values()).map((fn) => fn());
+  await Promise.all(promises);
+}
 
 interface EditorContentProps {
   tab: EditorTab;
@@ -50,24 +62,33 @@ export default function EditorContent({ tab, artifact, cruxId, saveRef }: Editor
     }
   }, [themeName]);
 
-  // Save handler — reads from ref to avoid re-creating on every keystroke
+  // Save handler — calls API directly (no store dependency, survives reset)
   const handleSave = useCallback(async () => {
     const current = contentRef.current;
-    if (current === null) return;
+    if (current === null || !dirtyRef.current) return;
     try {
-      await useCruxStore.getState().saveArtifactContent(artifact.id, current);
+      const blob = new Blob([current], { type: mime });
+      const file = new File([blob], artifact.filename || 'file', { type: mime });
+      await cruxes.updateAttachment(artifact.id, file);
       dirtyRef.current = false;
       setTabDirty(tab.id, false);
+      useCruxStore.setState({ hasUnpublishedChanges: true });
     } catch (err: unknown) {
       const axiosErr = err as { response?: { data?: { message?: string } } };
       console.error('Save failed:', axiosErr.response?.data?.message ?? err);
     }
-  }, [artifact.id, tab.id, setTabDirty]);
+  }, [artifact.id, artifact.filename, mime, tab.id, setTabDirty]);
 
   // Keep save ref stable for Monaco keybinding (avoids stale closure)
   useEffect(() => {
     saveHandlerRef.current = handleSave;
   }, [handleSave]);
+
+  // Register save handler in module-level map (for saveAllDirtyEditors)
+  useEffect(() => {
+    editorSaveHandlers.set(tab.id, handleSave);
+    return () => { editorSaveHandlers.delete(tab.id); };
+  }, [tab.id, handleSave]);
 
   // Expose save to parent via ref
   useEffect(() => {
@@ -150,6 +171,10 @@ export default function EditorContent({ tab, artifact, cruxId, saveRef }: Editor
     [tab.id, setContent, setTabDirty],
   );
 
+  // HTML preview via service worker virtual file server
+  const isHtmlPreview = tab.viewMode === 'preview' && (ext === 'html' || ext === 'htm');
+  const previewUrl = usePreviewUrl(content, cruxId, path, isHtmlPreview);
+
   // SVG preview URL
   const svgPreviewUrl = useMemo(() => {
     if (ext === 'svg' && content) {
@@ -205,12 +230,20 @@ export default function EditorContent({ tab, artifact, cruxId, saveRef }: Editor
 
   // ── Preview mode ──
   if (tab.viewMode === 'preview' && content !== null && isPreviewable(path)) {
-    // HTML
+    // HTML — served by preview service worker
     if (ext === 'html' || ext === 'htm') {
+      if (!previewUrl) {
+        return (
+          <div className="flex-1 flex items-center justify-center">
+            <Spinner size={24} />
+          </div>
+        );
+      }
       return (
         <iframe
-          srcDoc={content}
-          sandbox="allow-scripts"
+          key={previewUrl}
+          src={previewUrl}
+          sandbox="allow-scripts allow-same-origin"
           className="flex-1 w-full bg-white"
           title={path}
         />
@@ -240,12 +273,7 @@ export default function EditorContent({ tab, artifact, cruxId, saveRef }: Editor
 
   // ── Image display ──
   if (blobUrl && isImageMime(mime)) {
-    return (
-      <div className="flex-1 overflow-auto p-4 flex flex-col items-center justify-center gap-3 bg-[rgba(0,0,0,0.2)]">
-        <img src={blobUrl} alt={path} className="max-w-full max-h-[calc(100%-3rem)] object-contain rounded" />
-        <ReplaceFileButton artifactId={artifact.id} onReplaced={refetch} />
-      </div>
-    );
+    return <ImageViewer blobUrl={blobUrl} path={path} artifact={artifact} refetch={refetch} />;
   }
 
   // ── Binary download ──
@@ -274,6 +302,39 @@ export default function EditorContent({ tab, artifact, cruxId, saveRef }: Editor
     <div className="flex-1 flex items-center justify-center text-text-muted text-sm">
       Unable to display this file
     </div>
+  );
+}
+
+// ── Image viewer with lightbox ──
+
+function ImageViewer({ blobUrl, path, artifact, refetch }: { blobUrl: string; path: string; artifact: Attachment; refetch: () => void }) {
+  const [dimensions, setDimensions] = useState<string | null>(null);
+  const filename = path.split('/').pop() || 'image';
+
+  const handleLoad = useCallback((e: React.SyntheticEvent<HTMLImageElement>) => {
+    const img = e.currentTarget;
+    setDimensions(`${img.naturalWidth} × ${img.naturalHeight}`);
+  }, []);
+
+  return (
+    <PhotoProvider>
+      <div className="flex-1 overflow-auto p-4 flex flex-col items-center justify-center gap-3 bg-[rgba(0,0,0,0.2)]">
+        <PhotoView src={blobUrl}>
+          <img
+            src={blobUrl}
+            alt={path}
+            className="max-w-full max-h-[calc(100%-5rem)] object-contain rounded cursor-zoom-in"
+            onLoad={handleLoad}
+          />
+        </PhotoView>
+        <div className="flex items-center gap-3 text-[10px] font-mono text-text-muted">
+          <span>{filename}</span>
+          {dimensions && <span>{dimensions}</span>}
+          <span>{formatSize(artifact.size)}</span>
+        </div>
+        <ReplaceFileButton artifactId={artifact.id} onReplaced={refetch} />
+      </div>
+    </PhotoProvider>
   );
 }
 
