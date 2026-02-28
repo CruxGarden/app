@@ -200,7 +200,7 @@ export default function WorkspaceLayout() {
                       minSize={config.minSize}
                       defaultSize={config.defaultSize}
                       collapsible={config.collapsible}
-                      className="bg-surface/30 backdrop-blur-[var(--glass-blur)]"
+                      className="bg-surface-solid"
                     >
                       <DraggablePane paneType={paneType}>
                         <PaneComponent />
@@ -212,8 +212,8 @@ export default function WorkspaceLayout() {
             </Group>
           </DragProvider>
         ) : (
-          <div className="flex-1 flex items-center justify-center text-text-muted text-sm">
-            No panes visible. Use the layout menu to show panes.
+          <div className="flex-1 flex items-center justify-center text-text-muted text-xs font-mono">
+            Toggle a pane from the toolbar to get started.
           </div>
         )}
       </div>

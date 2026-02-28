@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/cn';
+import { useAuthStore } from '@/stores/authStore';
 import type { Crux } from '@/api/types';
 
 interface CruxCardProps {
@@ -55,8 +56,11 @@ function FileIcon() {
 
 export default function CruxCard({ crux, linkTo, onDelete }: CruxCardProps) {
   const navigate = useNavigate();
+  const author = useAuthStore((s) => s.author);
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const isPublished = crux.meta?.publishedAt != null;
+  const publicUrl = isPublished && author ? `/@${author.username}/${crux.slug}` : null;
 
   const gateCount = crux.meta?.gateCount || 0;
   const summary = crux.meta?.summary;
@@ -78,7 +82,7 @@ export default function CruxCard({ crux, linkTo, onDelete }: CruxCardProps) {
       <button
         onClick={() => navigate(linkTo || `/crux/${crux.id}`)}
         className={cn(
-          'bg-panel backdrop-blur-[var(--panel-blur)] border border-border rounded-[var(--radius)] p-4 text-left',
+          'bg-panel border border-border rounded-[var(--radius)] p-4 text-left',
           'hover:border-accent/30 hover:bg-surface/50 transition-all duration-200 cursor-pointer',
           'w-full flex flex-col gap-2',
         )}
@@ -139,6 +143,17 @@ export default function CruxCard({ crux, linkTo, onDelete }: CruxCardProps) {
           </button>
           {menuOpen && (
             <div className="absolute right-0 top-full mt-1 w-32 bg-surface-solid border border-border rounded-[var(--radius-sm)] shadow-xl py-1 z-50">
+              {publicUrl && (
+                <a
+                  href={publicUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={(e) => e.stopPropagation()}
+                  className="block w-full px-3 py-1.5 text-left text-xs text-text hover:bg-accent-muted/20 transition-colors cursor-pointer"
+                >
+                  View public
+                </a>
+              )}
               <button
                 onClick={(e) => {
                   e.stopPropagation();

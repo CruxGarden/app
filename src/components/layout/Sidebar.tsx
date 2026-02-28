@@ -48,7 +48,7 @@ export default function Sidebar() {
   };
 
   return (
-    <aside className="flex flex-col w-56 h-full border-r border-border bg-surface/50 backdrop-blur-[var(--glass-blur)]">
+    <aside className="flex flex-col w-56 h-full border-r border-border bg-surface-solid">
       {/* Logo */}
       <div className="flex items-center justify-between px-4 h-14 border-b border-border">
         <Logo size="sm" />

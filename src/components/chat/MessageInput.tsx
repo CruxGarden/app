@@ -46,7 +46,7 @@ export default function MessageInput({
   };
 
   return (
-    <div className="p-3 bg-surface/30 backdrop-blur-[var(--glass-blur)]">
+    <div className="p-3 bg-surface/30">
       <div className="flex items-end gap-2">
         <textarea
           ref={textareaRef}

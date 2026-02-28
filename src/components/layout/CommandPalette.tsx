@@ -87,7 +87,7 @@ export default function CommandPalette({ open, onClose }: CommandPaletteProps) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center pt-[20vh]" onClick={onClose}>
-      <div className="fixed inset-0 bg-bg/60 backdrop-blur-[var(--glass-blur)]" />
+      <div className="fixed inset-0 bg-bg/60" />
       <div
         className="relative w-full max-w-lg bg-surface border border-border rounded-[var(--radius)] shadow-2xl overflow-hidden"
         onClick={(e) => e.stopPropagation()}

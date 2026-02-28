@@ -117,7 +117,7 @@ const NodeRenderer = memo(function NodeRenderer({ node, style, dragHandle }: Nod
         'cursor-pointer select-none',
         node.isSelected
           ? 'bg-accent-muted text-accent'
-          : 'text-text-muted hover:text-text hover:bg-surface',
+          : 'text-text-muted hover:text-text hover:bg-white/[0.06]',
         node.willReceiveDrop && 'bg-accent/10 ring-1 ring-accent/30',
       )}
       onClick={() => node.handleClick}

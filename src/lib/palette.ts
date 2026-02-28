@@ -6,8 +6,8 @@
  * palette via the `set_palette` tool to customize the workspace in real-time.
  * Palettes are stored per-crux in `crux.meta.settings.palette`.
  *
- * Beyond colors, the palette controls glass blur, mesh background, border
- * radius, and font stacks — giving the AI full visual control.
+ * Beyond colors, the palette controls mesh background, border radius,
+ * and font stacks — giving the AI full visual control.
  *
  * To apply a palette, call `applyPalette()` which sets CSS custom properties
  * on <html>. To restore defaults, call `resetPalette()`.
@@ -26,20 +26,18 @@ export interface Palette {
   accentMuted: string;
   error: string;
   errorMuted: string;
+  meshBg1: string;
+  meshBg2: string;
   mesh1: string;
   mesh2: string;
   mesh3: string;
   mesh4: string;
-
-  // Glass
-  glassBlur: string;
-  panelBlur: string;
+  mesh5: string;
 
   // Mesh
   meshOpacity: string;
   meshBlur: string;
   meshSpeed: string;
-  meshScale: string;
 
   // Shape
   radius: string;
@@ -53,9 +51,9 @@ export interface Palette {
 
 export const DARK_PALETTE: Palette = {
   bg: '#0b0d0c',
-  surface: 'rgba(18, 21, 19, 0.7)',
+  surface: 'rgba(18, 21, 19, 0.93)',
   surfaceSolid: '#131514',
-  panel: 'rgba(20, 24, 22, 0.6)',
+  panel: 'rgba(20, 24, 22, 0.95)',
   text: '#e2e4e3',
   textMuted: '#8b908d',
   border: 'rgba(82, 96, 86, 0.18)',
@@ -63,16 +61,16 @@ export const DARK_PALETTE: Palette = {
   accentMuted: 'rgba(125, 179, 163, 0.12)',
   error: '#e63946',
   errorMuted: 'rgba(230, 57, 70, 0.15)',
-  mesh1: '#0e1a16',
-  mesh2: '#172220',
-  mesh3: '#0d1512',
-  mesh4: '#131c18',
-  glassBlur: '12px',
-  panelBlur: '16px',
-  meshOpacity: '0.6',
-  meshBlur: '120px',
+  meshBg1: '#0a1810',
+  meshBg2: '#060d08',
+  mesh1: '#1a5a99',
+  mesh2: '#8a4a99',
+  mesh3: '#4a8a99',
+  mesh4: '#994a3a',
+  mesh5: '#7a7a3a',
+  meshOpacity: '1',
+  meshBlur: '60px',
   meshSpeed: '1',
-  meshScale: '1',
   radius: '0.5rem',
   radiusSm: '0.375rem',
   fontDisplay: "'JetBrains Mono', monospace",
@@ -82,9 +80,9 @@ export const DARK_PALETTE: Palette = {
 
 export const LIGHT_PALETTE: Palette = {
   bg: '#eaeceb',
-  surface: 'rgba(214, 218, 215, 0.7)',
+  surface: 'rgba(214, 218, 215, 0.93)',
   surfaceSolid: '#d6d9d7',
-  panel: 'rgba(220, 224, 221, 0.6)',
+  panel: 'rgba(220, 224, 221, 0.95)',
   text: '#1c211d',
   textMuted: '#616864',
   border: 'rgba(82, 96, 86, 0.2)',
@@ -92,16 +90,16 @@ export const LIGHT_PALETTE: Palette = {
   accentMuted: 'rgba(74, 128, 116, 0.12)',
   error: '#c5303b',
   errorMuted: 'rgba(197, 48, 59, 0.12)',
-  mesh1: '#cdd2ce',
-  mesh2: '#c0c6c2',
-  mesh3: '#d3d7d4',
-  mesh4: '#c6ccc8',
-  glassBlur: '12px',
-  panelBlur: '16px',
-  meshOpacity: '0.6',
-  meshBlur: '120px',
+  meshBg1: '#0a1810',
+  meshBg2: '#060d08',
+  mesh1: '#1a5a99',
+  mesh2: '#8a4a99',
+  mesh3: '#4a8a99',
+  mesh4: '#994a3a',
+  mesh5: '#7a7a3a',
+  meshOpacity: '1',
+  meshBlur: '60px',
   meshSpeed: '1',
-  meshScale: '1',
   radius: '0.5rem',
   radiusSm: '0.375rem',
   fontDisplay: "'JetBrains Mono', monospace",
@@ -122,16 +120,16 @@ const KEY_TO_VAR: Record<keyof Palette, string> = {
   accentMuted: '--accent-muted',
   error: '--error',
   errorMuted: '--error-muted',
+  meshBg1: '--mesh-bg1',
+  meshBg2: '--mesh-bg2',
   mesh1: '--mesh-1',
   mesh2: '--mesh-2',
   mesh3: '--mesh-3',
   mesh4: '--mesh-4',
-  glassBlur: '--glass-blur',
-  panelBlur: '--panel-blur',
+  mesh5: '--mesh-5',
   meshOpacity: '--mesh-opacity',
   meshBlur: '--mesh-blur',
   meshSpeed: '--mesh-speed',
-  meshScale: '--mesh-scale',
   radius: '--radius',
   radiusSm: '--radius-sm',
   fontDisplay: '--font-display',

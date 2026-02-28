@@ -13,7 +13,7 @@ export default function EditorTabBar({ tabs, activeId, onSelect, onClose }: Edit
   if (tabs.length === 0) return null;
 
   return (
-    <div className="flex items-center overflow-x-auto bg-bg/30">
+    <div className="flex items-center overflow-x-auto bg-surface-solid">
       {tabs.map((tab) => {
         const isActive = tab.id === activeId;
         return (

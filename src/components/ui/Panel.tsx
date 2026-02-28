@@ -21,7 +21,7 @@ export default function Panel({
   return (
     <div
       className={cn(
-        'bg-panel backdrop-blur-[var(--panel-blur)]',
+        'bg-panel',
         'border border-border rounded-[var(--radius)]',
         'shadow-lg shadow-black/5',
         paddings[padding],
