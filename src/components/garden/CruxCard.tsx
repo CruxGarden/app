@@ -5,6 +5,7 @@ import type { Crux } from '@/api/types';
 
 interface CruxCardProps {
   crux: Crux;
+  linkTo?: string;
   onDelete?: (id: string) => void;
 }
 
@@ -52,7 +53,7 @@ function FileIcon() {
   );
 }
 
-export default function CruxCard({ crux, onDelete }: CruxCardProps) {
+export default function CruxCard({ crux, linkTo, onDelete }: CruxCardProps) {
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -75,7 +76,7 @@ export default function CruxCard({ crux, onDelete }: CruxCardProps) {
   return (
     <div className="relative group">
       <button
-        onClick={() => navigate(`/crux/${crux.id}`)}
+        onClick={() => navigate(linkTo || `/crux/${crux.id}`)}
         className={cn(
           'bg-panel backdrop-blur-[var(--panel-blur)] border border-border rounded-[var(--radius)] p-4 text-left',
           'hover:border-accent/30 hover:bg-surface/50 transition-all duration-200 cursor-pointer',

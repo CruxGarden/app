@@ -1,14 +1,17 @@
-import { useEffect } from 'react';
-import { useParams } from 'react-router-dom';
+import { useEffect, useCallback } from 'react';
+import { useParams, useBlocker } from 'react-router-dom';
 import { useCruxStore } from '@/stores/cruxStore';
 import { useUIStore } from '@/stores/uiStore';
 import { WorkspaceLayout } from '@/components/workspace';
-import { Spinner } from '@/components/ui';
+import { saveAllDirtyEditors } from '@/components/workspace/EditorContent';
+import { Spinner, Modal } from '@/components/ui';
+import { cn } from '@/lib/cn';
 
 export default function Crux() {
   const { id } = useParams<{ id: string }>();
   const { crux, loadCrux, reset, artifacts } = useCruxStore();
   const { paneVisibility, setPaneVisible, setActiveCrux } = useUIStore();
+  const hasDirtyTabs = useUIStore((s) => s.editor.tabs.some((t) => t.dirty));
 
   useEffect(() => {
     if (id) {
@@ -29,6 +32,32 @@ export default function Crux() {
     }
   }, [artifacts.length, paneVisibility.artifacts, paneVisibility.workshop, setPaneVisible]);
 
+  // Page title
+  useEffect(() => {
+    if (crux?.title) {
+      document.title = crux.title;
+    }
+    return () => { document.title = 'crux.garden'; };
+  }, [crux?.title]);
+
+  // Warn before closing browser tab with unsaved files
+  useEffect(() => {
+    if (!hasDirtyTabs) return;
+    const handler = (e: BeforeUnloadEvent) => { e.preventDefault(); };
+    window.addEventListener('beforeunload', handler);
+    return () => window.removeEventListener('beforeunload', handler);
+  }, [hasDirtyTabs]);
+
+  // Block in-app navigation with unsaved files
+  const blocker = useBlocker(hasDirtyTabs);
+
+  // Discard: clear dirty flags so auto-save on unmount is skipped
+  const handleDiscard = useCallback(() => {
+    const { editor, setTabDirty } = useUIStore.getState();
+    editor.tabs.forEach((t) => { if (t.dirty) setTabDirty(t.id, false); });
+    blocker.proceed?.();
+  }, [blocker]);
+
   if (!crux) {
     return (
       <div className="flex items-center justify-center h-full">
@@ -37,5 +66,45 @@ export default function Crux() {
     );
   }
 
-  return <WorkspaceLayout />;
+  return (
+    <>
+      <WorkspaceLayout />
+
+      {/* Unsaved changes — navigation blocked */}
+      <Modal open={blocker.state === 'blocked'} onClose={() => blocker.reset?.()}>
+        <h2 className="font-display text-sm font-medium text-text mb-2">
+          Unsaved changes
+        </h2>
+        <p className="text-xs text-text-muted mb-4">
+          You have unsaved file edits. What would you like to do?
+        </p>
+        <div className="flex justify-end gap-2">
+          <button
+            onClick={() => blocker.reset?.()}
+            className="px-3 py-1.5 text-xs font-mono text-text-muted hover:text-text transition-colors cursor-pointer"
+          >
+            Stay
+          </button>
+          <button
+            onClick={handleDiscard}
+            className="px-3 py-1.5 text-xs font-mono text-text-muted hover:text-text transition-colors cursor-pointer"
+          >
+            Discard & leave
+          </button>
+          <button
+            onClick={async () => {
+              await saveAllDirtyEditors();
+              blocker.proceed?.();
+            }}
+            className={cn(
+              'px-3 py-1.5 text-xs font-mono rounded-[var(--radius-sm)]',
+              'bg-accent text-bg hover:brightness-110 transition-all cursor-pointer',
+            )}
+          >
+            Save & leave
+          </button>
+        </div>
+      </Modal>
+    </>
+  );
 }

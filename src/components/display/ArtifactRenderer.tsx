@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { Attachment } from '@/api/types';
 import { publicApi } from '@/api';
+import { usePublicPreviewUrl } from '@/hooks/usePublicPreviewUrl';
 import MarkdownRenderer from '@/components/chat/MarkdownRenderer';
 import { getFileIcon } from '@/components/artifacts/fileIcons';
 
@@ -64,81 +65,14 @@ function resolveMain(attachments: Attachment[]): MainFile | null {
 }
 
 /**
- * Rewrite relative src/href attributes in HTML to point at public download URLs.
+ * HTML renderer using the preview service worker.
+ *
+ * All attachments are cached at /__preview/ paths and the iframe loads via src=.
+ * The browser handles all relative path resolution natively — linked CSS,
+ * images, multi-page <a href> navigation all just work.
+ *
+ * External links open in new tabs via sandbox="allow-popups".
  */
-function rewriteUrls(
-  html: string,
-  attachments: Attachment[],
-  getUrl: (id: string) => string,
-): string {
-  // Build a map of path → attachmentId
-  const pathMap = new Map<string, string>();
-  for (const a of attachments) {
-    const path = a.meta?.path || a.filename || a.id;
-    pathMap.set(path, a.id);
-    // Also map without leading slash
-    if (path.startsWith('/')) pathMap.set(path.slice(1), a.id);
-    // Map just the filename portion
-    const filename = path.split('/').pop();
-    if (filename && !pathMap.has(filename)) pathMap.set(filename, a.id);
-  }
-
-  return html.replace(
-    /(src|href)=(["'])([^"']+)\2/gi,
-    (_match, attr: string, quote: string, value: string) => {
-      // Skip absolute URLs, data URLs, fragment-only, and protocol-relative
-      if (
-        value.startsWith('http://') ||
-        value.startsWith('https://') ||
-        value.startsWith('data:') ||
-        value.startsWith('#') ||
-        value.startsWith('//')
-      ) {
-        return `${attr}=${quote}${value}${quote}`;
-      }
-
-      // Strip leading ./ for matching
-      const cleaned = value.startsWith('./') ? value.slice(2) : value;
-      const id = pathMap.get(cleaned) || pathMap.get(value);
-
-      if (id) {
-        return `${attr}=${quote}${getUrl(id)}${quote}`;
-      }
-
-      return `${attr}=${quote}${value}${quote}`;
-    },
-  );
-}
-
-/**
- * Navigation script injected into every HTML page rendered in the iframe.
- * Intercepts link clicks:
- *  - Internal links (matching a known attachment path) → postMessage to parent for client-side nav
- *  - External links (http/https) → open in new tab
- *  - Hash links → handle normally
- */
-const NAV_SCRIPT = `<script>(function(){
-document.addEventListener("click",function(e){
-  var a=e.target.closest?e.target.closest("a"):null;
-  if(!a)return;
-  var h=a.getAttribute("href");
-  if(!h)return;
-  if(h.startsWith("http://")||h.startsWith("https://")||h.startsWith("//")||h.startsWith("data:"))
-    {e.preventDefault();window.open(h,"_blank");return;}
-  if(h.startsWith("#"))return;
-  e.preventDefault();
-  var c=h.startsWith("./")?h.substring(2):h;
-  window.parent.postMessage({type:"crux-navigate",path:c},"*");
-});
-})();<\/script>`;
-
-function injectNavScript(html: string): string {
-  if (html.includes('</body>')) {
-    return html.replace('</body>', NAV_SCRIPT + '</body>');
-  }
-  return html + NAV_SCRIPT;
-}
-
 function HtmlRenderer({
   attachment,
   attachments,
@@ -150,70 +84,9 @@ function HtmlRenderer({
   username: string;
   slug: string;
 }) {
-  const [currentId, setCurrentId] = useState(attachment.id);
-  const [html, setHtml] = useState<string | null>(null);
+  const previewUrl = usePublicPreviewUrl(attachments, attachment.id, username, slug);
 
-  // Reset when the main attachment changes (e.g. navigating to a different crux)
-  useEffect(() => {
-    setCurrentId(attachment.id);
-  }, [attachment.id]);
-
-  // Build path → attachment ID lookup
-  const pathMap = useMemo(() => {
-    const map = new Map<string, string>();
-    for (const a of attachments) {
-      const path = a.meta?.path || a.filename || a.id;
-      map.set(path, a.id);
-      if (path.startsWith('/')) map.set(path.slice(1), a.id);
-      const filename = path.split('/').pop();
-      if (filename && !map.has(filename)) map.set(filename, a.id);
-    }
-    return map;
-  }, [attachments]);
-
-  // Fetch current page content
-  useEffect(() => {
-    let cancelled = false;
-    setHtml(null);
-    publicApi
-      .downloadAttachment(username, slug, currentId)
-      .then((blob) => blob.text())
-      .then((text) => {
-        if (!cancelled) setHtml(text);
-      })
-      .catch(() => {
-        if (!cancelled) setHtml('<p>Error loading content</p>');
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [currentId, username, slug]);
-
-  // Listen for navigation messages from the iframe
-  useEffect(() => {
-    function handleMessage(e: MessageEvent) {
-      if (e.data?.type === 'crux-navigate') {
-        const path: string = e.data.path;
-        const id = pathMap.get(path) || pathMap.get(path.replace(/^\.\//, ''));
-        if (id) {
-          setCurrentId(id);
-        }
-      }
-    }
-    window.addEventListener('message', handleMessage);
-    return () => window.removeEventListener('message', handleMessage);
-  }, [pathMap]);
-
-  // Rewrite URLs and inject navigation script
-  const rewritten = useMemo(() => {
-    if (!html) return null;
-    const urlRewritten = rewriteUrls(html, attachments, (id) =>
-      publicApi.getDownloadUrl(username, slug, id),
-    );
-    return injectNavScript(urlRewritten);
-  }, [html, attachments, username, slug]);
-
-  if (!rewritten) {
+  if (!previewUrl) {
     return (
       <div className="flex items-center justify-center h-full text-text-muted text-sm animate-pulse">
         Loading...
@@ -223,8 +96,9 @@ function HtmlRenderer({
 
   return (
     <iframe
-      srcDoc={rewritten}
-      sandbox="allow-scripts allow-popups"
+      key={previewUrl}
+      src={previewUrl}
+      sandbox="allow-scripts allow-same-origin allow-popups"
       className="w-full h-full border-0 bg-white"
       title="Published creation"
     />

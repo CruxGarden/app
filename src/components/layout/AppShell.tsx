@@ -3,16 +3,34 @@ import { Outlet } from 'react-router-dom';
 import TopBar from './TopBar';
 import MeshBackground from './MeshBackground';
 import CommandPalette from './CommandPalette';
+import { useUIStore, type PaneType } from '@/stores/uiStore';
+
+const PANE_SHORTCUTS: PaneType[] = [
+  'history', 'collaboration', 'artifacts', 'workshop',
+  'details', 'sync', 'publish', 'export',
+];
 
 export default function AppShell() {
   const [commandOpen, setCommandOpen] = useState(false);
 
-  // Global Cmd+K shortcut
+  // Global keyboard shortcuts
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+      if (!(e.metaKey || e.ctrlKey)) return;
+
+      // Cmd+K — command palette
+      if (e.key === 'k') {
         e.preventDefault();
         setCommandOpen((prev) => !prev);
+        return;
+      }
+
+      // Cmd+1..8 — toggle panes
+      const num = parseInt(e.key, 10);
+      const pane = PANE_SHORTCUTS[num - 1];
+      if (pane && useUIStore.getState().activeCruxId) {
+        e.preventDefault();
+        useUIStore.getState().togglePane(pane);
       }
     };
     window.addEventListener('keydown', handler);

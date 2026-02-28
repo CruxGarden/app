@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useUIStore, PANE_COLORS } from '@/stores/uiStore';
+import { useUIStore, PANE_COLORS, DEFAULT_PANE_ORDER, type PaneType } from '@/stores/uiStore';
 import { useCruxStore } from '@/stores/cruxStore';
 import { useAuthStore } from '@/stores/authStore';
 import IconButton from '@/components/ui/IconButton';
@@ -89,9 +89,27 @@ function ChevronIcon() {
   );
 }
 
+// ── Pane button config ──────────────────────────────────
+
+const PANE_BUTTONS: { type: PaneType; icon: React.FC; label: string }[] = [
+  { type: 'history', icon: StackIcon, label: 'History' },
+  { type: 'collaboration', icon: ChatIcon, label: 'Collaboration' },
+  { type: 'artifacts', icon: FolderIcon, label: 'Artifacts' },
+  { type: 'workshop', icon: CodeIcon, label: 'Workshop' },
+  { type: 'details', icon: InfoIcon, label: 'Details' },
+  { type: 'sync', icon: SyncIcon, label: 'Sync' },
+  { type: 'publish', icon: PublishIcon, label: 'Publish' },
+  { type: 'export', icon: ExportIcon, label: 'Export' },
+];
+
+const SHORTCUT_MAP: Record<PaneType, string> = {
+  history: '1', collaboration: '2', artifacts: '3', workshop: '4',
+  details: '5', sync: '6', publish: '7', export: '8',
+};
+
 export default function TopBar() {
   const navigate = useNavigate();
-  const { paneVisibility, togglePane, activeCruxId } = useUIStore();
+  const { paneOrder, paneVisibility, togglePane, activeCruxId } = useUIStore();
   const cruxTitle = useCruxStore((s) => s.crux?.title);
   const updateCrux = useCruxStore((s) => s.updateCrux);
   const username = useAuthStore((s) => s.author?.username);
@@ -99,6 +117,10 @@ export default function TopBar() {
   const [editingTitle, setEditingTitle] = useState(false);
   const [titleDraft, setTitleDraft] = useState('');
   const titleInputRef = useRef<HTMLInputElement>(null);
+
+  // Split panes into enabled (in paneOrder) and disabled (in default order)
+  const enabledPanes = paneOrder.filter((p) => paneVisibility[p]);
+  const disabledPanes = DEFAULT_PANE_ORDER.filter((p) => !paneVisibility[p]);
 
   const startEditTitle = useCallback(() => {
     setTitleDraft(cruxTitle || '');
@@ -166,81 +188,55 @@ export default function TopBar() {
 
       {/* Right: pane toggles + user menu */}
       <div className="flex items-center gap-1">
-        <div className="flex items-center gap-1">
-        <IconButton
-          label="Toggle history"
-          size="sm"
-          onClick={() => togglePane('history')}
-          active={paneVisibility.history}
-          activeColor={PANE_COLORS.history}
-        >
-          <StackIcon />
-        </IconButton>
-        <IconButton
-          label="Toggle collaboration"
-          size="sm"
-          onClick={() => togglePane('collaboration')}
-          active={paneVisibility.collaboration}
-          activeColor={PANE_COLORS.collaboration}
-        >
-          <ChatIcon />
-        </IconButton>
-        <IconButton
-          label="Toggle artifacts"
-          size="sm"
-          onClick={() => togglePane('artifacts')}
-          active={paneVisibility.artifacts}
-          activeColor={PANE_COLORS.artifacts}
-        >
-          <FolderIcon />
-        </IconButton>
-        <IconButton
-          label="Toggle workshop"
-          size="sm"
-          onClick={() => togglePane('workshop')}
-          active={paneVisibility.workshop}
-          activeColor={PANE_COLORS.workshop}
-        >
-          <CodeIcon />
-        </IconButton>
-        <IconButton
-          label="Toggle details"
-          size="sm"
-          onClick={() => togglePane('details')}
-          active={paneVisibility.details}
-          activeColor={PANE_COLORS.details}
-        >
-          <InfoIcon />
-        </IconButton>
-        <IconButton
-          label="Toggle sync"
-          size="sm"
-          onClick={() => togglePane('sync')}
-          active={paneVisibility.sync}
-          activeColor={PANE_COLORS.sync}
-        >
-          <SyncIcon />
-        </IconButton>
-        <IconButton
-          label="Toggle publish"
-          size="sm"
-          onClick={() => togglePane('publish')}
-          active={paneVisibility.publish}
-          activeColor={PANE_COLORS.publish}
-        >
-          <PublishIcon />
-        </IconButton>
-        <IconButton
-          label="Toggle export"
-          size="sm"
-          onClick={() => togglePane('export')}
-          active={paneVisibility.export}
-          activeColor={PANE_COLORS.export}
-        >
-          <ExportIcon />
-        </IconButton>
-        </div>
-        <div className="w-px h-5 bg-border mx-1" />
+        {activeCruxId && (
+          <div className="flex items-center">
+            {/* Enabled panes — in paneOrder */}
+            <div className="flex items-center gap-0.5">
+              {enabledPanes.map((paneType) => {
+                const config = PANE_BUTTONS.find((b) => b.type === paneType)!;
+                const Icon = config.icon;
+                return (
+                  <IconButton
+                    key={paneType}
+                    label={`Toggle ${config.label.toLowerCase()}`}
+                    size="sm"
+                    onClick={() => togglePane(paneType)}
+                    active
+                    activeColor={PANE_COLORS[paneType]}
+                    tooltip={{ label: config.label, shortcut: SHORTCUT_MAP[paneType] }}
+                  >
+                    <Icon />
+                  </IconButton>
+                );
+              })}
+            </div>
+
+            {/* Divider between enabled and disabled */}
+            <div className="w-px h-5 bg-text-muted/20 mx-1.5" />
+
+            {/* Disabled panes — fixed default order, not draggable */}
+            <div className="flex items-center gap-0.5">
+              {disabledPanes.map((paneType) => {
+                const config = PANE_BUTTONS.find((b) => b.type === paneType)!;
+                const Icon = config.icon;
+                return (
+                  <IconButton
+                    key={paneType}
+                    label={`Toggle ${config.label.toLowerCase()}`}
+                    size="sm"
+                    onClick={() => togglePane(paneType)}
+                    active={false}
+                    activeColor={PANE_COLORS[paneType]}
+                    tooltip={{ label: config.label, shortcut: SHORTCUT_MAP[paneType] }}
+                  >
+                    <Icon />
+                  </IconButton>
+                );
+              })}
+            </div>
+          </div>
+        )}
+        {activeCruxId && <div className="w-px h-5 bg-text-muted/30 mx-1" />}
         <UserMenu />
       </div>
     </header>

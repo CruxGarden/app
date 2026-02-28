@@ -19,3 +19,8 @@ createRoot(document.getElementById('root')!).render(
     <Bootstrap />
   </StrictMode>,
 );
+
+// Register preview service worker (serves cached artifact files for HTML preview)
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/preview-sw.js').catch(() => {});
+}

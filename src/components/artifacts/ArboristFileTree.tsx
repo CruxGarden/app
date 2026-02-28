@@ -217,6 +217,7 @@ const ArboristFileTree = forwardRef<ArboristFileTreeHandle, ArboristFileTreeProp
   ) {
     const treeRef = useRef<TreeApi<TreeNodeData>>(null);
     const containerRef = useRef<HTMLDivElement>(null);
+    const [dndRoot, setDndRoot] = useState<HTMLDivElement | null>(null);
     const [containerHeight, setContainerHeight] = useState(400);
     const [isDraggingFiles, setIsDraggingFiles] = useState(false);
 
@@ -481,28 +482,31 @@ const ArboristFileTree = forwardRef<ArboristFileTreeHandle, ArboristFileTreeProp
         {isDraggingFiles && <UploadDropOverlay />}
 
         {treeDataWithCreate.length > 0 && (
-          <div className="flex-1 min-h-0 pl-2 pt-2">
+          <div ref={setDndRoot} className="flex-1 min-h-0 pl-2 pt-2">
             <CreateCallbacksContext.Provider value={createCallbacks}>
               <TreeContextMenuContext.Provider value={onContextMenu}>
-                <Tree<TreeNodeData>
-                  ref={treeRef}
-                  data={treeDataWithCreate}
-                  width="100%"
-                  height={containerHeight}
-                  indent={20}
-                  rowHeight={26}
-                  openByDefault
-                  initialOpenState={initialOpenState}
-                  selection={selectedId ?? undefined}
-                  disableMultiSelection
-                  onActivate={handleActivate}
-                  onMove={handleMove}
-                  onRename={handleRename}
-                  onToggle={handleToggle}
-                  onContextMenu={handleContextMenu}
-                >
-                  {NodeRenderer}
-                </Tree>
+                {dndRoot && (
+                  <Tree<TreeNodeData>
+                    ref={treeRef}
+                    data={treeDataWithCreate}
+                    width="100%"
+                    height={containerHeight}
+                    indent={20}
+                    rowHeight={26}
+                    openByDefault
+                    initialOpenState={initialOpenState}
+                    selection={selectedId ?? undefined}
+                    disableMultiSelection
+                    dndRootElement={dndRoot}
+                    onActivate={handleActivate}
+                    onMove={handleMove}
+                    onRename={handleRename}
+                    onToggle={handleToggle}
+                    onContextMenu={handleContextMenu}
+                  >
+                    {NodeRenderer}
+                  </Tree>
+                )}
               </TreeContextMenuContext.Provider>
             </CreateCallbacksContext.Provider>
           </div>
