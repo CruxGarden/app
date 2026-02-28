@@ -6,6 +6,7 @@ interface MessageInputProps {
   onStop?: () => void;
   isStreaming: boolean;
   disabled?: boolean;
+  history?: string[];
 }
 
 export default function MessageInput({
@@ -13,9 +14,12 @@ export default function MessageInput({
   onStop,
   isStreaming,
   disabled,
+  history = [],
 }: MessageInputProps) {
   const [value, setValue] = useState('');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const historyIndexRef = useRef(-1);
+  const savedInputRef = useRef('');
 
   const handleSubmit = useCallback(() => {
     const trimmed = value.trim();
@@ -23,6 +27,8 @@ export default function MessageInput({
 
     onSend(trimmed);
     setValue('');
+    historyIndexRef.current = -1;
+    savedInputRef.current = '';
 
     // Reset textarea height
     if (textareaRef.current) {
@@ -35,6 +41,26 @@ export default function MessageInput({
       e.preventDefault();
       if (isStreaming) return;
       handleSubmit();
+    }
+
+    if (e.key === 'ArrowUp' && history.length > 0) {
+      const el = textareaRef.current;
+      if (el && (el.selectionStart === 0 || !value.includes('\n'))) {
+        e.preventDefault();
+        if (historyIndexRef.current === -1) {
+          savedInputRef.current = value;
+        }
+        const next = Math.min(historyIndexRef.current + 1, history.length - 1);
+        historyIndexRef.current = next;
+        setValue(history[next]);
+      }
+    }
+
+    if (e.key === 'ArrowDown' && historyIndexRef.current >= 0) {
+      e.preventDefault();
+      const next = historyIndexRef.current - 1;
+      historyIndexRef.current = next;
+      setValue(next < 0 ? savedInputRef.current : history[next]);
     }
   };
 
@@ -92,7 +118,7 @@ export default function MessageInput({
         )}
       </div>
       <p className="text-[11px] text-text-muted mt-1.5 px-1">
-        Enter to send, Shift+Enter for new line
+        Enter to send · Shift+Enter for new line · ↑ for history
       </p>
     </div>
   );

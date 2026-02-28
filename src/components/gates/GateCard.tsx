@@ -27,7 +27,7 @@ function formatTime(dateStr: string): string {
 }
 
 export default function GateCard({ gate, index, isActive, onClick }: GateCardProps) {
-  const title = gate.target?.title || `Gate ${index + 1}`;
+  const title = gate.target?.title || `Snapshot ${index + 1}`;
 
   return (
     <button

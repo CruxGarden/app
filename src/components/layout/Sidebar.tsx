@@ -1,6 +1,7 @@
 import { NavLink, useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/cn';
 import { useCruxStore } from '@/stores/cruxStore';
+import { DEFAULT_PANE_ORDER } from '@/stores/uiStore';
 import Logo from '@/components/brand/Logo';
 import CruxBloom from '@/components/brand/CruxBloom';
 
@@ -44,6 +45,25 @@ export default function Sidebar() {
 
   const handleNewCrux = async () => {
     const crux = await createCrux();
+
+    // Set initial pane layout based on whether user has an API key
+    const hasApiKey = !!localStorage.getItem('cruxgarden:anthropicApiKey');
+    const visibility: Record<string, boolean> = {};
+    for (const pane of DEFAULT_PANE_ORDER) visibility[pane] = false;
+
+    if (hasApiKey) {
+      visibility.collaboration = true;
+      visibility.details = true;
+    } else {
+      visibility.artifacts = true;
+      visibility.workshop = true;
+    }
+
+    localStorage.setItem(
+      `cruxgarden:layout:${crux.id}`,
+      JSON.stringify({ paneOrder: DEFAULT_PANE_ORDER, paneVisibility: visibility }),
+    );
+
     navigate(`/crux/${crux.id}`);
   };
 

@@ -1,6 +1,11 @@
 import type * as Monaco from 'monaco-editor';
 
+let registered = false;
+
 export function registerCruxGardenThemes(monaco: typeof Monaco): void {
+  if (registered) return;
+  registered = true;
+
   monaco.editor.defineTheme('crux-garden-dark', {
     base: 'vs-dark',
     inherit: true,

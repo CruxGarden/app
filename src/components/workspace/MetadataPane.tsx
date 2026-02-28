@@ -119,10 +119,16 @@ function EditableField({
     <FieldRow label={label}>
       <button
         onClick={() => { setDraft(value); setEditing(true); }}
-        className="text-left hover:text-accent transition-colors cursor-pointer w-full truncate"
+        className="text-left hover:text-accent transition-colors cursor-pointer w-full flex items-start gap-1.5 group"
         title="Click to edit"
       >
-        {value || <span className="text-text-muted italic">empty</span>}
+        <span className="truncate flex-1">
+          {value || <span className="text-text-muted italic">empty</span>}
+        </span>
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-text-muted shrink-0 mt-0.5">
+          <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
+          <path d="m15 5 4 4" />
+        </svg>
       </button>
     </FieldRow>
   );
@@ -134,7 +140,6 @@ export default function MetadataPane() {
   const crux = useCruxStore((s) => s.crux);
   const updateCrux = useCruxStore((s) => s.updateCrux);
   const summary = useCruxStore((s) => s.summary);
-  const gateCount = useCruxStore((s) => s.gateCount);
   const artifacts = useCruxStore((s) => s.artifacts);
   const activeTabId = useUIStore((s) => s.editor.activeTabId);
 
@@ -159,8 +164,8 @@ export default function MetadataPane() {
     return (
       <div className="flex flex-col h-full">
         <PaneHeader paneType="details" icon={<TagIcon />} label="Metadata" />
-        <div className="flex-1 flex items-center justify-center text-text-muted">
-          <p className="text-xs">No crux loaded.</p>
+        <div className="text-text-muted p-4">
+          <p className="text-xs text-center">No crux loaded</p>
         </div>
       </div>
     );
@@ -225,10 +230,6 @@ export default function MetadataPane() {
               <span className="truncate">{crux.meta.settings.model}</span>
             </FieldRow>
           )}
-
-          <FieldRow label="Gates">
-            <span>{gateCount}</span>
-          </FieldRow>
 
           <FieldRow label="Created">
             <span>{formatDate(crux.created)}</span>

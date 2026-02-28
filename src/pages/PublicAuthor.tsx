@@ -3,7 +3,6 @@ import { useParams } from 'react-router-dom';
 import { publicApi } from '@/api';
 import type { Author, Crux } from '@/api/types';
 import { API_BASE_URL } from '@/api/client';
-import MeshBackground from '@/components/layout/MeshBackground';
 import { PublicTopBar } from '@/components/display';
 import { GardenGrid, GardenSearch } from '@/components/garden';
 import { Spinner, Button } from '@/components/ui';
@@ -94,7 +93,6 @@ export default function PublicAuthor() {
   if (state === 'loading') {
     return (
       <div className="relative min-h-screen flex items-center justify-center">
-        <MeshBackground />
         <Spinner size={32} />
       </div>
     );
@@ -103,7 +101,6 @@ export default function PublicAuthor() {
   if (state === 'not-found') {
     return (
       <div className="relative min-h-screen flex flex-col items-center justify-center px-4">
-        <MeshBackground />
         <div className="relative z-10 text-center">
           <h1 className="font-display text-4xl font-bold text-text mb-2">Not found</h1>
           <p className="text-text-muted">This author doesn't exist</p>
@@ -115,7 +112,6 @@ export default function PublicAuthor() {
   if (state === 'error') {
     return (
       <div className="relative min-h-screen flex flex-col items-center justify-center px-4">
-        <MeshBackground />
         <div className="relative z-10 text-center">
           <h1 className="font-display text-4xl font-bold text-text mb-2">Something went wrong</h1>
           <p className="text-text-muted">We couldn't load this profile</p>
@@ -126,7 +122,6 @@ export default function PublicAuthor() {
 
   return (
     <div className="flex flex-col min-h-screen">
-      <MeshBackground />
       <PublicTopBar username={username || ''} />
 
       <div className="relative z-10 flex-1 overflow-y-auto p-4 sm:p-6 max-w-5xl mx-auto w-full">

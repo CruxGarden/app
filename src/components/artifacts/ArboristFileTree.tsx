@@ -78,7 +78,7 @@ const NodeRenderer = memo(function NodeRenderer({ node, style, dragHandle }: Nod
   if (data.id === SENTINEL_CREATE_ID && createCallbacks) {
     return (
       <div
-        style={style}
+        style={{ ...style, paddingLeft: ((style.paddingLeft as number) || 0) + 8 }}
         className="flex items-center gap-1.5 py-0.5 pr-2 text-xs font-mono"
         onKeyDown={(e) => e.stopPropagation()}
         onMouseDown={(e) => e.stopPropagation()}
@@ -111,7 +111,7 @@ const NodeRenderer = memo(function NodeRenderer({ node, style, dragHandle }: Nod
   return (
     <div
       ref={dragHandle}
-      style={style}
+      style={{ ...style, paddingLeft: ((style.paddingLeft as number) || 0) + 8 }}
       className={cn(
         'group/node flex items-center gap-1.5 py-0.5 pr-2 text-xs font-mono',
         'cursor-pointer select-none',
@@ -482,7 +482,7 @@ const ArboristFileTree = forwardRef<ArboristFileTreeHandle, ArboristFileTreeProp
         {isDraggingFiles && <UploadDropOverlay />}
 
         {treeDataWithCreate.length > 0 && (
-          <div ref={setDndRoot} className="flex-1 min-h-0 pl-2 pt-2">
+          <div ref={setDndRoot} className="flex-1 min-h-0 pt-2">
             <CreateCallbacksContext.Provider value={createCallbacks}>
               <TreeContextMenuContext.Provider value={onContextMenu}>
                 {dndRoot && (

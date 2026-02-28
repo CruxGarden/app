@@ -1,6 +1,7 @@
 import { createBrowserRouter, RouterProvider } from 'react-router-dom';
 import AuthGuard from '@/components/auth/AuthGuard';
 import AppShell from '@/components/layout/AppShell';
+import MeshBackground from '@/components/layout/MeshBackground';
 import { ErrorBoundary } from '@/components/ui';
 import Landing from '@/pages/Landing';
 import Login from '@/pages/Login';
@@ -40,6 +41,7 @@ const router = createBrowserRouter([
 export default function App() {
   return (
     <ErrorBoundary>
+      <MeshBackground />
       <RouterProvider router={router} />
     </ErrorBoundary>
   );

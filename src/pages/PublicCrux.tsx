@@ -3,7 +3,6 @@ import { useParams } from 'react-router-dom';
 import { publicApi } from '@/api';
 import type { Crux, Attachment } from '@/api/types';
 import { applyPalette, resetPalette } from '@/lib/palette';
-import MeshBackground from '@/components/layout/MeshBackground';
 import { Spinner } from '@/components/ui';
 import { PublicTopBar, ArtifactRenderer } from '@/components/display';
 
@@ -77,7 +76,6 @@ export default function PublicCrux() {
   if (state === 'loading') {
     return (
       <div className="relative min-h-screen flex items-center justify-center">
-        <MeshBackground />
         <Spinner size={32} />
       </div>
     );
@@ -86,7 +84,6 @@ export default function PublicCrux() {
   if (state === 'not-found') {
     return (
       <div className="relative min-h-screen flex flex-col items-center justify-center px-4">
-        <MeshBackground />
         <div className="relative z-10 text-center">
           <h1 className="font-display text-4xl font-bold text-text mb-2">Not found</h1>
           <p className="text-text-muted">This creation doesn't exist or is private</p>
@@ -98,7 +95,6 @@ export default function PublicCrux() {
   if (state === 'error') {
     return (
       <div className="relative min-h-screen flex flex-col items-center justify-center px-4">
-        <MeshBackground />
         <div className="relative z-10 text-center">
           <h1 className="font-display text-4xl font-bold text-text mb-2">Something went wrong</h1>
           <p className="text-text-muted">We couldn't load this creation</p>
@@ -109,7 +105,6 @@ export default function PublicCrux() {
 
   return (
     <div className="flex flex-col h-screen">
-      <MeshBackground />
       <PublicTopBar
         title={crux?.title}
         username={username || ''}

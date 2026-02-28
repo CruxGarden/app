@@ -1,6 +1,5 @@
 import { Link } from 'react-router-dom';
 import { useAuthStore } from '@/stores/authStore';
-import MeshBackground from '@/components/layout/MeshBackground';
 import CruxBloom from '@/components/brand/CruxBloom';
 import { Button } from '@/components/ui';
 
@@ -9,8 +8,6 @@ export default function Landing() {
 
   return (
     <div className="relative min-h-screen flex items-center justify-center">
-      <MeshBackground />
-
       <div className="relative z-10 flex flex-col items-center bg-surface-solid border border-border rounded-[var(--radius)] px-12 py-10">
         <CruxBloom size={64} className="text-accent mb-6" />
 

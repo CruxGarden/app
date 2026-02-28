@@ -48,6 +48,12 @@
   initial-value: #b4b432;
 }
 
+@property --mesh-6 {
+  syntax: '<color>';
+  inherits: true;
+  initial-value: #32b496;
+}
+
 /* ── Container ─────────────────────────────────────────── */
 
 .mesh-background {
@@ -70,10 +76,10 @@
 .mesh-blob {
   position: absolute;
   mix-blend-mode: screen;
-  width: 80%;
-  height: 80%;
-  top: calc(50% - 80% / 2);
-  left: calc(50% - 80% / 2);
+  width: 100%;
+  height: 100%;
+  top: calc(50% - 100% / 2);
+  left: calc(50% - 100% / 2);
   opacity: var(--mesh-opacity, 1);
 }
 
@@ -82,7 +88,7 @@
   background: radial-gradient(
     circle at center,
     color-mix(in srgb, var(--mesh-1) 80%, transparent) 0,
-    transparent 50%
+    transparent 70%
   ) no-repeat;
   transform-origin: center center;
   animation: moveVertical calc(224s / var(--mesh-speed, 1)) ease infinite;
@@ -93,7 +99,7 @@
   background: radial-gradient(
     circle at center,
     color-mix(in srgb, var(--mesh-2) 80%, transparent) 0,
-    transparent 50%
+    transparent 70%
   ) no-repeat;
   transform-origin: calc(50% - 400px);
   animation: moveInCircle calc(150s / var(--mesh-speed, 1)) reverse infinite;
@@ -104,7 +110,7 @@
   background: radial-gradient(
     circle at center,
     color-mix(in srgb, var(--mesh-3) 80%, transparent) 0,
-    transparent 50%
+    transparent 70%
   ) no-repeat;
   top: calc(50% - 80% / 2 + 200px);
   left: calc(50% - 80% / 2 - 500px);
@@ -117,7 +123,7 @@
   background: radial-gradient(
     circle at center,
     color-mix(in srgb, var(--mesh-4) 80%, transparent) 0,
-    transparent 50%
+    transparent 70%
   ) no-repeat;
   transform-origin: calc(50% - 200px);
   animation: moveHorizontal calc(300s / var(--mesh-speed, 1)) ease infinite;
@@ -129,7 +135,7 @@
   background: radial-gradient(
     circle at center,
     color-mix(in srgb, var(--mesh-5) 80%, transparent) 0,
-    transparent 50%
+    transparent 70%
   ) no-repeat;
   width: 160%;
   height: 160%;
@@ -137,6 +143,21 @@
   left: calc(50% - 80%);
   transform-origin: calc(50% - 800px) calc(50% + 200px);
   animation: moveInCircle calc(150s / var(--mesh-speed, 1)) ease infinite;
+}
+
+/* ── Blob 6 — right-side circle ───────────────────────── */
+.mesh-blob-6 {
+  background: radial-gradient(
+    circle at center,
+    color-mix(in srgb, var(--mesh-6) 80%, transparent) 0,
+    transparent 70%
+  ) no-repeat;
+  width: 100%;
+  height: 100%;
+  top: calc(50% - 50% + 5%);
+  left: calc(50% - 50% + 15%);
+  transform-origin: calc(50% + 300px) calc(50% - 100px);
+  animation: moveInCircle calc(200s / var(--mesh-speed, 1)) reverse infinite;
 }
 
 /* ── Animations ────────────────────────────────────────── */
@@ -170,5 +191,5 @@ html.palette-transition .mesh-background {
 
 html.palette-transition .mesh-blob {
   transition: --mesh-1 0.4s ease, --mesh-2 0.4s ease, --mesh-3 0.4s ease,
-    --mesh-4 0.4s ease, --mesh-5 0.4s ease, opacity 0.4s ease !important;
+    --mesh-4 0.4s ease, --mesh-5 0.4s ease, --mesh-6 0.4s ease, opacity 0.4s ease !important;
 }

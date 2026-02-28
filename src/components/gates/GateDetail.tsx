@@ -33,7 +33,7 @@ function CloseIcon() {
 }
 
 export default function GateDetail({ gate, index, onClose }: GateDetailProps) {
-  const title = gate.target?.title || `Gate ${index + 1}`;
+  const title = gate.target?.title || `Snapshot ${index + 1}`;
   const snapshot = tryParseSnapshot(gate);
 
   return (
@@ -42,7 +42,7 @@ export default function GateDetail({ gate, index, onClose }: GateDetailProps) {
       <div className="flex items-start justify-between">
         <div>
           <span className="text-[11px] font-mono text-accent/70 uppercase">
-            Gate #{index + 1}
+            #{index + 1}
           </span>
           <h3 className="text-sm font-display font-medium text-text mt-0.5">
             {title}

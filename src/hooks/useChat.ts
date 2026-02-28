@@ -19,6 +19,7 @@ export function useChat() {
     saveMeta,
     setPendingGateCreation,
     setPalette,
+    addPendingDelete,
   } = useCruxStore();
 
   const abortRef = useRef<AbortController | null>(null);
@@ -80,6 +81,8 @@ export function useChat() {
                 // Refresh artifacts after file operations
                 if (
                   event.data.name === 'write_file' ||
+                  event.data.name === 'edit_file' ||
+                  event.data.name === 'delete_file' ||
                   event.data.name === 'read_file'
                 ) {
                   const currentCruxId = useCruxStore.getState().crux?.id ?? crux.id;
@@ -89,12 +92,19 @@ export function useChat() {
                   );
                 }
 
-                // Track write_file for gate creation
-                if (event.data.name === 'write_file') {
+                // Track file mutations for gate creation
+                if (
+                  event.data.name === 'write_file' ||
+                  event.data.name === 'edit_file' ||
+                  event.data.name === 'delete_file'
+                ) {
                   hadWriteFile = true;
                 }
                 break;
               }
+              case 'delete_request':
+                addPendingDelete(event.data.attachmentId, event.data.path);
+                break;
               case 'error':
                 fullContent += `\n\n*Error: ${event.data.message}*`;
                 break;
@@ -116,6 +126,7 @@ export function useChat() {
         const assistantMsg: ChatMessage = {
           role: 'assistant',
           content: fullContent,
+          model: crux.meta?.settings?.model,
           toolCalls: toolCalls.length > 0 ? toolCalls : undefined,
         };
         addMessage(assistantMsg);
@@ -145,6 +156,7 @@ export function useChat() {
       saveMeta,
       setPendingGateCreation,
       setPalette,
+      addPendingDelete,
     ],
   );
 

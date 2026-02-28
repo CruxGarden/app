@@ -37,23 +37,19 @@ export default function GateTimeline({
             index={activeGateIndex}
             onClose={() => setActiveGateIndex(null)}
           />
-        ) : (
+        ) : gates.length > 0 || isCreatingGate || summary ? (
           <div className="flex flex-col gap-2 p-2">
-            {/* Summary */}
             {summary && <CruxSummary summary={summary} className="mb-1" />}
 
-            {/* Gate creating indicator */}
             {isCreatingGate && (
               <div className="flex items-center gap-2 px-3 py-2 text-accent">
                 <SpinnerSmall />
-                <span className="text-xs font-mono">Capturing gate...</span>
+                <span className="text-xs font-mono">Capturing snapshot...</span>
               </div>
             )}
 
-            {/* Timeline */}
-            {gates.length > 0 ? (
+            {gates.length > 0 && (
               <div className="flex flex-col">
-                {/* Vertical line */}
                 <div className="relative">
                   <div className="absolute left-[17px] top-0 bottom-0 w-px bg-border" />
                   <div className="relative flex flex-col gap-0.5">
@@ -69,20 +65,13 @@ export default function GateTimeline({
                   </div>
                 </div>
               </div>
-            ) : (
-              !isCreatingGate && (
-                <div className="flex flex-col items-center justify-center py-8 text-text-muted">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M12 2L2 7l10 5 10-5-10-5z" />
-                    <path d="M2 17l10 5 10-5" />
-                    <path d="M2 12l10 5 10-5" />
-                  </svg>
-                  <p className="text-xs mt-2 text-center px-4">
-                    Gates appear here as artifacts are created during your conversation.
-                  </p>
-                </div>
-              )
             )}
+          </div>
+        ) : (
+          <div className="text-text-muted p-4">
+            <p className="text-xs text-center">
+              Snapshots appear here as you collaborate
+            </p>
           </div>
         )}
       </div>

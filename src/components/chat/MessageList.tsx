@@ -32,10 +32,8 @@ export default function MessageList({
   return (
     <div className="flex-1 overflow-y-auto p-4 space-y-4">
       {messages.length === 0 && !isStreaming && (
-        <div className="flex flex-col items-center justify-center h-full text-center">
-          <p className="text-text-muted text-sm">
-            Start a conversation to begin collaborating.
-          </p>
+        <div className="text-text-muted">
+          <p className="text-xs text-center">Start a conversation to begin collaborating</p>
         </div>
       )}
 

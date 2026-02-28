@@ -190,31 +190,49 @@ export default function ArtifactsPane() {
 
   const actionButtons = (
     <>
-      <button
-        onClick={() => {
-          startFileOperation({ type: 'create-file', parentPath: getParentPath() });
-        }}
-        className="p-1 text-text-muted hover:text-text transition-colors cursor-pointer"
-        title="New file"
-      >
-        <FilePlusIcon />
-      </button>
-      <button
-        onClick={() => {
-          startFileOperation({ type: 'create-folder', parentPath: getParentPath() });
-        }}
-        className="p-1 text-text-muted hover:text-text transition-colors cursor-pointer"
-        title="New folder"
-      >
-        <FolderPlusIcon />
-      </button>
-      <button
-        onClick={handleUploadClick}
-        className="p-1 text-text-muted hover:text-text transition-colors cursor-pointer"
-        title="Upload files"
-      >
-        <UploadIcon />
-      </button>
+      <div className="relative group/btn">
+        <button
+          onClick={() => {
+            startFileOperation({ type: 'create-file', parentPath: getParentPath() });
+          }}
+          className="p-1 text-text-muted hover:text-text transition-colors cursor-pointer"
+        >
+          <FilePlusIcon />
+        </button>
+        <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 z-50 pointer-events-none hidden group-hover/btn:block">
+          <div className="px-2.5 py-1.5 rounded-[var(--radius)] bg-surface-solid border border-border shadow-lg whitespace-nowrap">
+            <span className="text-xs font-medium text-text">New file</span>
+          </div>
+        </div>
+      </div>
+      <div className="relative group/btn">
+        <button
+          onClick={() => {
+            startFileOperation({ type: 'create-folder', parentPath: getParentPath() });
+          }}
+          className="p-1 text-text-muted hover:text-text transition-colors cursor-pointer"
+        >
+          <FolderPlusIcon />
+        </button>
+        <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 z-50 pointer-events-none hidden group-hover/btn:block">
+          <div className="px-2.5 py-1.5 rounded-[var(--radius)] bg-surface-solid border border-border shadow-lg whitespace-nowrap">
+            <span className="text-xs font-medium text-text">New folder</span>
+          </div>
+        </div>
+      </div>
+      <div className="relative group/btn">
+        <button
+          onClick={handleUploadClick}
+          className="p-1 text-text-muted hover:text-text transition-colors cursor-pointer"
+        >
+          <UploadIcon />
+        </button>
+        <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 z-50 pointer-events-none hidden group-hover/btn:block">
+          <div className="px-2.5 py-1.5 rounded-[var(--radius)] bg-surface-solid border border-border shadow-lg whitespace-nowrap">
+            <span className="text-xs font-medium text-text">Import</span>
+          </div>
+        </div>
+      </div>
     </>
   );
 
@@ -274,11 +292,8 @@ export default function ArtifactsPane() {
             onFolderToggle={setFolderOpen}
           />
         ) : (
-          <div className="flex flex-col items-center justify-center py-8 text-text-muted">
-            <TreeIcon />
-            <p className="text-xs mt-2 text-center px-4">
-              Artifacts will appear here as you create with the AI.
-            </p>
+          <div className="text-text-muted p-4">
+            <p className="text-xs text-center">Create or import an artifact to get started</p>
           </div>
         )}
       </div>

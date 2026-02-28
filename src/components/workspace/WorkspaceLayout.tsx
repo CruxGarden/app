@@ -1,6 +1,7 @@
 import { Fragment, useCallback, useMemo } from 'react';
 import { Group, Panel, Separator, useDefaultLayout } from 'react-resizable-panels';
 import { cn } from '@/lib/cn';
+import { Panel as UIPanel } from '@/components/ui';
 import { useUIStore, type PaneType } from '@/stores/uiStore';
 import { DragProvider } from './DragContext';
 import { usePaneDrag } from './DragContext';
@@ -212,8 +213,10 @@ export default function WorkspaceLayout() {
             </Group>
           </DragProvider>
         ) : (
-          <div className="flex-1 flex items-center justify-center text-text-muted text-xs font-mono">
-            Toggle a pane from the toolbar to get started.
+          <div className="flex-1 flex items-center justify-center p-8">
+            <UIPanel padding="md" className="text-text-muted text-xs font-mono text-center">
+              Toggle a pane from the toolbar to proceed
+            </UIPanel>
           </div>
         )}
       </div>

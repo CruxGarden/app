@@ -15,11 +15,8 @@ export default function SyncPane() {
   return (
     <div className="flex flex-col h-full">
       <PaneHeader paneType="sync" icon={<SyncIcon />} label="Sync" />
-      <div className="flex-1 flex flex-col items-center justify-center text-text-muted gap-3 p-6">
-        <SyncIcon />
-        <p className="text-xs text-center">
-          Sync is coming soon.
-        </p>
+      <div className="text-text-muted p-4">
+        <p className="text-xs text-center">Coming soon</p>
       </div>
     </div>
   );

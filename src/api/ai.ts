@@ -1,7 +1,7 @@
 import { API_BASE_URL, getStoredTokens } from './client';
 
 export interface SSEEvent {
-  event: 'text' | 'tool_start' | 'tool_result' | 'done' | 'error';
+  event: 'text' | 'tool_start' | 'tool_result' | 'delete_request' | 'done' | 'error';
   data: any;
 }
 
