@@ -1,4 +1,4 @@
-import { useEffect, useCallback } from 'react';
+import { useEffect, useCallback, useRef } from 'react';
 import { useParams, useBlocker } from 'react-router-dom';
 import { useCruxStore } from '@/stores/cruxStore';
 import { useUIStore } from '@/stores/uiStore';
@@ -10,7 +10,7 @@ import { cn } from '@/lib/cn';
 export default function Crux() {
   const { id } = useParams<{ id: string }>();
   const { crux, loadCrux, reset, artifacts } = useCruxStore();
-  const { paneVisibility, setPaneVisible, setActiveCrux } = useUIStore();
+  const { setPaneVisible, setActiveCrux } = useUIStore();
   const hasDirtyTabs = useUIStore((s) => s.editor.tabs.some((t) => t.dirty));
 
   useEffect(() => {
@@ -24,13 +24,24 @@ export default function Crux() {
     };
   }, [id, loadCrux, reset, setActiveCrux]);
 
-  // Auto-show workshop pane when artifacts appear
+  // Auto-show artifact + workshop panes ONLY when the first artifact is
+  // created during a live session (not on page load with existing artifacts).
+  // We gate on `crux` so the ref isn't set until loadCrux resolves (which
+  // sets crux + artifacts in the same Zustand set() call, same render).
+  const prevArtifactCount = useRef<number | null>(null);
+  useEffect(() => { prevArtifactCount.current = null; }, [id]);
   useEffect(() => {
-    if (artifacts.length > 0 && !paneVisibility.artifacts && !paneVisibility.workshop) {
-      setPaneVisible('artifacts', true);
-      setPaneVisible('workshop', true);
+    if (!crux) return; // Don't track until the crux is loaded
+    const prev = prevArtifactCount.current;
+    prevArtifactCount.current = artifacts.length;
+    if (prev === 0 && artifacts.length > 0) {
+      const vis = useUIStore.getState().paneVisibility;
+      if (!vis.artifacts && !vis.workshop) {
+        setPaneVisible('artifacts', true);
+        setPaneVisible('workshop', true);
+      }
     }
-  }, [artifacts.length, paneVisibility.artifacts, paneVisibility.workshop, setPaneVisible]);
+  }, [crux, artifacts.length, setPaneVisible, id]);
 
   // Page title
   useEffect(() => {

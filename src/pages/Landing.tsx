@@ -105,7 +105,7 @@ export default function Landing() {
 
 function FeatureCard({ title, description }: { title: string; description: string }) {
   return (
-    <div className="bg-panel backdrop-blur-[var(--panel-blur)] border border-border rounded-[var(--radius)] p-5 text-left">
+    <div className="bg-panel border border-border rounded-[var(--radius)] p-5 text-left">
       <h3 className="font-display text-sm font-medium text-accent mb-2">{title}</h3>
       <p className="text-sm text-text-muted leading-relaxed">{description}</p>
     </div>

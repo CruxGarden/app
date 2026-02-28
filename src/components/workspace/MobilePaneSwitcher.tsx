@@ -83,7 +83,7 @@ export default function MobilePaneSwitcher() {
   const { mobileActivePane, setMobileActivePane } = useUIStore();
 
   return (
-    <div className="flex items-center justify-around h-12 border-t border-border bg-surface/30 backdrop-blur-[var(--glass-blur)] shrink-0">
+    <div className="flex items-center justify-around h-12 border-t border-border bg-surface/30 shrink-0">
       {(Object.keys(PANE_ICONS) as PaneType[]).map((pane) => {
         const { label, icon } = PANE_ICONS[pane];
         const isActive = mobileActivePane === pane;

@@ -1,4 +1,54 @@
 /* ── Animated Mesh Gradient Background ─────────────────── */
+/* Based on gradients-bg (github.com/baunov/gradients-bg).  */
+/* SVG goo filter + CSS animations for organic morphing.    */
+/* All colors driven by CSS custom properties so they can   */
+/* be changed at runtime and transition smoothly.           */
+
+/* ── @property — register as <color> so browsers can interpolate ── */
+
+@property --mesh-bg1 {
+  syntax: '<color>';
+  inherits: true;
+  initial-value: #0a1810;
+}
+
+@property --mesh-bg2 {
+  syntax: '<color>';
+  inherits: true;
+  initial-value: #060d08;
+}
+
+@property --mesh-1 {
+  syntax: '<color>';
+  inherits: true;
+  initial-value: #1271ff;
+}
+
+@property --mesh-2 {
+  syntax: '<color>';
+  inherits: true;
+  initial-value: #dd4aff;
+}
+
+@property --mesh-3 {
+  syntax: '<color>';
+  inherits: true;
+  initial-value: #64dcff;
+}
+
+@property --mesh-4 {
+  syntax: '<color>';
+  inherits: true;
+  initial-value: #c83232;
+}
+
+@property --mesh-5 {
+  syntax: '<color>';
+  inherits: true;
+  initial-value: #b4b432;
+}
+
+/* ── Container ─────────────────────────────────────────── */
 
 .mesh-background {
   position: fixed;
@@ -6,72 +56,119 @@
   z-index: 0;
   overflow: hidden;
   pointer-events: none;
+  background: linear-gradient(40deg, var(--mesh-bg1), var(--mesh-bg2));
 }
 
-.mesh-background::before,
-.mesh-background::after {
-  content: '';
+.mesh-blobs {
+  filter: url(#goo) blur(var(--mesh-blur, 40px));
+  width: 100%;
+  height: 100%;
+}
+
+/* ── Base blob ─────────────────────────────────────────── */
+
+.mesh-blob {
   position: absolute;
-  border-radius: 50%;
-  filter: blur(var(--mesh-blur));
-  opacity: var(--mesh-opacity);
-  will-change: transform;
+  mix-blend-mode: screen;
+  width: 80%;
+  height: 80%;
+  top: calc(50% - 80% / 2);
+  left: calc(50% - 80% / 2);
+  opacity: var(--mesh-opacity, 1);
 }
 
-.mesh-background::before {
-  width: calc(60vmax * var(--mesh-scale));
-  height: calc(60vmax * var(--mesh-scale));
-  top: -20%;
-  left: -10%;
+/* ── Blob 1 — vertical movement ────────────────────────── */
+.mesh-blob-1 {
   background: radial-gradient(
-    circle,
-    var(--mesh-1) 0%,
-    var(--mesh-2) 50%,
-    transparent 70%
-  );
-  animation: mesh-drift-1 calc(25s / max(var(--mesh-speed), 0.01)) ease-in-out infinite alternate;
+    circle at center,
+    color-mix(in srgb, var(--mesh-1) 80%, transparent) 0,
+    transparent 50%
+  ) no-repeat;
+  transform-origin: center center;
+  animation: moveVertical calc(224s / var(--mesh-speed, 1)) ease infinite;
 }
 
-.mesh-background::after {
-  width: calc(50vmax * var(--mesh-scale));
-  height: calc(50vmax * var(--mesh-scale));
-  bottom: -15%;
-  right: -10%;
+/* ── Blob 2 — reverse circle ───────────────────────────── */
+.mesh-blob-2 {
   background: radial-gradient(
-    circle,
-    var(--mesh-3) 0%,
-    var(--mesh-4) 50%,
-    transparent 70%
-  );
-  animation: mesh-drift-2 calc(30s / max(var(--mesh-speed), 0.01)) ease-in-out infinite alternate;
+    circle at center,
+    color-mix(in srgb, var(--mesh-2) 80%, transparent) 0,
+    transparent 50%
+  ) no-repeat;
+  transform-origin: calc(50% - 400px);
+  animation: moveInCircle calc(150s / var(--mesh-speed, 1)) reverse infinite;
 }
 
-@keyframes mesh-drift-1 {
-  0% {
-    transform: translate(0, 0) scale(1);
-  }
-  33% {
-    transform: translate(5%, 8%) scale(1.05);
-  }
-  66% {
-    transform: translate(-3%, 4%) scale(0.97);
-  }
-  100% {
-    transform: translate(2%, -3%) scale(1.02);
-  }
+/* ── Blob 3 — offset circle ────────────────────────────── */
+.mesh-blob-3 {
+  background: radial-gradient(
+    circle at center,
+    color-mix(in srgb, var(--mesh-3) 80%, transparent) 0,
+    transparent 50%
+  ) no-repeat;
+  top: calc(50% - 80% / 2 + 200px);
+  left: calc(50% - 80% / 2 - 500px);
+  transform-origin: calc(50% + 400px);
+  animation: moveInCircle calc(300s / var(--mesh-speed, 1)) linear infinite;
 }
 
-@keyframes mesh-drift-2 {
-  0% {
-    transform: translate(0, 0) scale(1);
-  }
-  33% {
-    transform: translate(-4%, -6%) scale(1.03);
-  }
-  66% {
-    transform: translate(6%, -2%) scale(0.98);
-  }
-  100% {
-    transform: translate(-2%, 5%) scale(1.04);
-  }
+/* ── Blob 4 — horizontal movement ──────────────────────── */
+.mesh-blob-4 {
+  background: radial-gradient(
+    circle at center,
+    color-mix(in srgb, var(--mesh-4) 80%, transparent) 0,
+    transparent 50%
+  ) no-repeat;
+  transform-origin: calc(50% - 200px);
+  animation: moveHorizontal calc(300s / var(--mesh-speed, 1)) ease infinite;
+  opacity: calc(var(--mesh-opacity, 1) * 0.7);
+}
+
+/* ── Blob 5 — large circle ─────────────────────────────── */
+.mesh-blob-5 {
+  background: radial-gradient(
+    circle at center,
+    color-mix(in srgb, var(--mesh-5) 80%, transparent) 0,
+    transparent 50%
+  ) no-repeat;
+  width: 160%;
+  height: 160%;
+  top: calc(50% - 80%);
+  left: calc(50% - 80%);
+  transform-origin: calc(50% - 800px) calc(50% + 200px);
+  animation: moveInCircle calc(150s / var(--mesh-speed, 1)) ease infinite;
+}
+
+/* ── Animations ────────────────────────────────────────── */
+
+@keyframes moveInCircle {
+  0%   { transform: rotate(0deg); }
+  50%  { transform: rotate(180deg); }
+  100% { transform: rotate(360deg); }
+}
+
+@keyframes moveVertical {
+  0%   { transform: translateY(-50%); }
+  50%  { transform: translateY(50%); }
+  100% { transform: translateY(-50%); }
+}
+
+@keyframes moveHorizontal {
+  0%   { transform: translateX(-50%) translateY(-10%); }
+  50%  { transform: translateX(50%) translateY(10%); }
+  100% { transform: translateX(-50%) translateY(-10%); }
+}
+
+/* ── Palette transitions ───────────────────────────────── */
+/* Scoped under .palette-transition so they only fire when  */
+/* applyPalette() triggers a change. More specific than the */
+/* global `html.palette-transition *` rule so these win.    */
+
+html.palette-transition .mesh-background {
+  transition: --mesh-bg1 0.4s ease, --mesh-bg2 0.4s ease !important;
+}
+
+html.palette-transition .mesh-blob {
+  transition: --mesh-1 0.4s ease, --mesh-2 0.4s ease, --mesh-3 0.4s ease,
+    --mesh-4 0.4s ease, --mesh-5 0.4s ease, opacity 0.4s ease !important;
 }

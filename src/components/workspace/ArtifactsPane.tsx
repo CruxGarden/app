@@ -243,7 +243,19 @@ export default function ArtifactsPane() {
         onChange={handleFileInputChange}
       />
 
-      <div className="flex-1 overflow-hidden min-h-0">
+      <div
+        className="flex-1 overflow-hidden min-h-0"
+        onContextMenu={(e) => {
+          e.preventDefault();
+          showContextMenu({
+            x: e.clientX,
+            y: e.clientY,
+            targetId: null,
+            targetPath: '',
+            isFolder: true,
+          });
+        }}
+      >
         {showTree ? (
           <ArboristFileTree
             ref={treeRef}

@@ -177,9 +177,21 @@ export default function Garden() {
           <h1 className="font-display text-xl sm:text-2xl font-bold text-text truncate">
             {author ? `@${author.username}` : 'Garden'}
           </h1>
-          <p className="text-sm text-text-muted mt-1">
-            Your cruxes and creative history
-          </p>
+          <div className="flex items-center gap-3 mt-1">
+            <p className="text-sm text-text-muted">
+              Your cruxes and creative history
+            </p>
+            {author && (
+              <a
+                href={`/@${author.username}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs font-mono text-accent hover:underline"
+              >
+                View public
+              </a>
+            )}
+          </div>
         </div>
         <div className="flex items-center gap-2">
           <Button

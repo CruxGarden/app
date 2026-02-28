@@ -21,7 +21,7 @@ export default function CruxSummary({ summary, className }: CruxSummaryProps) {
   return (
     <div
       className={cn(
-        'bg-surface/50 backdrop-blur-[var(--glass-blur)] border border-border rounded-[var(--radius-sm)] p-3',
+        'bg-surface/50 border border-border rounded-[var(--radius-sm)] p-3',
         'flex flex-col gap-1.5',
         className,
       )}

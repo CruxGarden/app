@@ -41,12 +41,11 @@ function CodeIcon() {
   );
 }
 
-function InfoIcon() {
+function TagIcon() {
   return (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-      <circle cx="12" cy="12" r="10" />
-      <path d="M12 16v-4" />
-      <path d="M12 8h.01" />
+      <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z" />
+      <line x1="7" y1="7" x2="7.01" y2="7" />
     </svg>
   );
 }
@@ -54,9 +53,10 @@ function InfoIcon() {
 function SyncIcon() {
   return (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-      <polyline points="23 4 23 10 17 10" />
-      <polyline points="1 20 1 14 7 14" />
-      <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
+      <line x1="7" y1="20" x2="7" y2="4" />
+      <polyline points="3 8 7 4 11 8" />
+      <line x1="17" y1="4" x2="17" y2="20" />
+      <polyline points="13 16 17 20 21 16" />
     </svg>
   );
 }
@@ -64,9 +64,10 @@ function SyncIcon() {
 function PublishIcon() {
   return (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" />
-      <polyline points="16 6 12 2 8 6" />
-      <line x1="12" y1="2" x2="12" y2="15" />
+      <circle cx="18" cy="5" r="3" />
+      <circle cx="6" cy="5" r="3" />
+      <circle cx="12" cy="19" r="3" />
+      <path d="M8.59 7.41L12 16M15.41 7.41L12 16" />
     </svg>
   );
 }
@@ -92,19 +93,19 @@ function ChevronIcon() {
 // ── Pane button config ──────────────────────────────────
 
 const PANE_BUTTONS: { type: PaneType; icon: React.FC; label: string }[] = [
-  { type: 'history', icon: StackIcon, label: 'History' },
   { type: 'collaboration', icon: ChatIcon, label: 'Collaboration' },
   { type: 'artifacts', icon: FolderIcon, label: 'Artifacts' },
   { type: 'workshop', icon: CodeIcon, label: 'Workshop' },
-  { type: 'details', icon: InfoIcon, label: 'Details' },
+  { type: 'details', icon: TagIcon, label: 'Metadata' },
+  { type: 'history', icon: StackIcon, label: 'History' },
+  { type: 'export', icon: ExportIcon, label: 'Export' },
   { type: 'sync', icon: SyncIcon, label: 'Sync' },
   { type: 'publish', icon: PublishIcon, label: 'Publish' },
-  { type: 'export', icon: ExportIcon, label: 'Export' },
 ];
 
 const SHORTCUT_MAP: Record<PaneType, string> = {
-  history: '1', collaboration: '2', artifacts: '3', workshop: '4',
-  details: '5', sync: '6', publish: '7', export: '8',
+  collaboration: '1', artifacts: '2', workshop: '3', details: '4',
+  history: '5', export: '6', sync: '7', publish: '8',
 };
 
 export default function TopBar() {
@@ -137,12 +138,12 @@ export default function TopBar() {
   }, [titleDraft, cruxTitle, updateCrux]);
 
   return (
-    <header className="flex items-center justify-between h-12 px-3 border-b border-border bg-surface/30 backdrop-blur-[var(--glass-blur)]">
+    <header className="flex items-center justify-between h-12 px-3 border-b border-border bg-surface-solid">
       {/* Left: branding + breadcrumb */}
       <div className="flex items-center gap-1.5 min-w-0">
         <button
           onClick={() => navigate('/')}
-          className="shrink-0 hover:opacity-80 transition-opacity cursor-pointer text-sm font-display font-medium text-text whitespace-nowrap"
+          className="shrink-0 cursor-pointer text-sm font-display font-medium text-text whitespace-nowrap hover:underline"
         >
           crux.garden
         </button>
@@ -151,7 +152,7 @@ export default function TopBar() {
             <span className="text-text-muted shrink-0"><ChevronIcon /></span>
             <button
               onClick={() => navigate('/garden')}
-              className="shrink-0 text-xs font-medium font-display text-text-muted hover:text-text transition-colors cursor-pointer whitespace-nowrap"
+              className="shrink-0 text-xs font-medium font-display text-accent cursor-pointer whitespace-nowrap hover:underline"
             >
               @{username}
             </button>
@@ -173,14 +174,13 @@ export default function TopBar() {
                 className="text-xs font-medium font-display text-text bg-transparent border-b border-accent outline-none w-32"
               />
             ) : (
-              <button
-                onClick={() => navigate(`/crux/${activeCruxId}`)}
+              <span
                 onDoubleClick={(e) => { e.preventDefault(); startEditTitle(); }}
-                className="text-xs font-medium font-display text-text-muted hover:text-text transition-colors cursor-pointer whitespace-nowrap"
+                className="text-xs font-medium font-display text-text-muted cursor-default whitespace-nowrap"
                 title="Double-click to rename"
               >
                 {cruxTitle || 'Untitled'}
-              </button>
+              </span>
             )}
           </>
         ) : null}
@@ -212,28 +212,32 @@ export default function TopBar() {
             </div>
 
             {/* Divider between enabled and disabled */}
-            <div className="w-px h-5 bg-text-muted/20 mx-1.5" />
+            {disabledPanes.length > 0 && enabledPanes.length > 0 && (
+              <div className="w-px h-5 bg-text-muted/20 mx-1.5" />
+            )}
 
             {/* Disabled panes — fixed default order, not draggable */}
-            <div className="flex items-center gap-0.5">
-              {disabledPanes.map((paneType) => {
-                const config = PANE_BUTTONS.find((b) => b.type === paneType)!;
-                const Icon = config.icon;
-                return (
-                  <IconButton
-                    key={paneType}
-                    label={`Toggle ${config.label.toLowerCase()}`}
-                    size="sm"
-                    onClick={() => togglePane(paneType)}
-                    active={false}
-                    activeColor={PANE_COLORS[paneType]}
-                    tooltip={{ label: config.label, shortcut: SHORTCUT_MAP[paneType] }}
-                  >
-                    <Icon />
-                  </IconButton>
-                );
-              })}
-            </div>
+            {disabledPanes.length > 0 && (
+              <div className="flex items-center gap-0.5">
+                {disabledPanes.map((paneType) => {
+                  const config = PANE_BUTTONS.find((b) => b.type === paneType)!;
+                  const Icon = config.icon;
+                  return (
+                    <IconButton
+                      key={paneType}
+                      label={`Toggle ${config.label.toLowerCase()}`}
+                      size="sm"
+                      onClick={() => togglePane(paneType)}
+                      active={false}
+                      activeColor={PANE_COLORS[paneType]}
+                      tooltip={{ label: config.label, shortcut: SHORTCUT_MAP[paneType] }}
+                    >
+                      <Icon />
+                    </IconButton>
+                  );
+                })}
+              </div>
+            )}
           </div>
         )}
         {activeCruxId && <div className="w-px h-5 bg-text-muted/30 mx-1" />}

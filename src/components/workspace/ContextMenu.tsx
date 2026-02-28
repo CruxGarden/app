@@ -80,7 +80,7 @@ export default function ContextMenu({
   return (
     <div
       ref={ref}
-      className="fixed z-50 min-w-[140px] bg-surface border border-border rounded-[var(--radius-sm)] shadow-lg py-1 overflow-hidden"
+      className="fixed z-50 min-w-[140px] bg-surface-solid border border-border rounded-[var(--radius-sm)] shadow-lg py-1 overflow-hidden"
       style={{ left: x, top: y }}
     >
       {items.map((item) => (

@@ -63,8 +63,8 @@ export default function IconButton({
         {children}
       </button>
       {tooltip && (
-        <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 z-50 pointer-events-none opacity-0 group-hover/btn:opacity-100 transition-opacity duration-100">
-          <div className="flex items-center gap-2.5 px-3 py-2 rounded-[var(--radius)] bg-surface border border-border shadow-lg whitespace-nowrap">
+        <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 z-50 pointer-events-none hidden group-hover/btn:block">
+          <div className="flex items-center gap-2.5 px-3 py-2 rounded-[var(--radius)] bg-surface-solid border border-border shadow-lg whitespace-nowrap">
             <span className="text-xs font-medium text-text">{tooltip.label}</span>
             {tooltip.shortcut && (
               <kbd className="text-[11px] font-mono text-text-muted px-1.5 py-0.5 rounded-[var(--radius-sm)] bg-bg border border-border min-w-[1.5rem] text-center">

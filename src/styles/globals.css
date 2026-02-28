@@ -61,9 +61,9 @@
 :root,
 .dark {
   --bg: #0b0d0c;
-  --surface: rgba(18, 21, 19, 0.7);
+  --surface: rgba(18, 21, 19, 0.93);
   --surface-solid: #131514;
-  --panel: rgba(20, 24, 22, 0.6);
+  --panel: rgba(20, 24, 22, 0.95);
   --text: #e2e4e3;
   --text-muted: #8b908d;
   --border: rgba(82, 96, 86, 0.18);
@@ -72,17 +72,17 @@
   --error: #e63946;
   --error-muted: rgba(230, 57, 70, 0.15);
 
-  --mesh-1: #0e1a16;
-  --mesh-2: #172220;
-  --mesh-3: #0d1512;
-  --mesh-4: #131c18;
+  --mesh-bg1: #0a1810;
+  --mesh-bg2: #060d08;
+  --mesh-1: #1a5a99;
+  --mesh-2: #8a4a99;
+  --mesh-3: #4a8a99;
+  --mesh-4: #994a3a;
+  --mesh-5: #7a7a3a;
 
-  --glass-blur: 12px;
-  --panel-blur: 16px;
-  --mesh-opacity: 0.6;
-  --mesh-blur: 120px;
+  --mesh-opacity: 1;
+  --mesh-blur: 60px;
   --mesh-speed: 1;
-  --mesh-scale: 1;
   --radius: 0.5rem;
   --radius-sm: 0.375rem;
 
@@ -93,9 +93,9 @@
 
 .light {
   --bg: #eaeceb;
-  --surface: rgba(214, 218, 215, 0.7);
+  --surface: rgba(214, 218, 215, 0.93);
   --surface-solid: #d6d9d7;
-  --panel: rgba(220, 224, 221, 0.6);
+  --panel: rgba(220, 224, 221, 0.95);
   --text: #1c211d;
   --text-muted: #616864;
   --border: rgba(82, 96, 86, 0.2);
@@ -104,17 +104,17 @@
   --error: #c5303b;
   --error-muted: rgba(197, 48, 59, 0.12);
 
-  --mesh-1: #cdd2ce;
-  --mesh-2: #c0c6c2;
-  --mesh-3: #d3d7d4;
-  --mesh-4: #c6ccc8;
+  --mesh-bg1: #0a1810;
+  --mesh-bg2: #060d08;
+  --mesh-1: #1a5a99;
+  --mesh-2: #8a4a99;
+  --mesh-3: #4a8a99;
+  --mesh-4: #994a3a;
+  --mesh-5: #7a7a3a;
 
-  --glass-blur: 12px;
-  --panel-blur: 16px;
-  --mesh-opacity: 0.6;
-  --mesh-blur: 120px;
+  --mesh-opacity: 1;
+  --mesh-blur: 60px;
   --mesh-speed: 1;
-  --mesh-scale: 1;
   --radius: 0.5rem;
   --radius-sm: 0.375rem;
 

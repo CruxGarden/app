@@ -6,14 +6,14 @@ export type PaneType = 'history' | 'collaboration' | 'artifacts' | 'workshop' | 
 
 /** Rainbow gradient colors for each pane (follows default order: rose → violet) */
 export const PANE_COLORS: Record<PaneType, string> = {
-  history:       '#d47080', // rose
-  collaboration: '#d4944c', // orange
-  artifacts:     '#c8a84c', // gold
-  workshop:      '#5cb87a', // green
-  details:       '#4cb8b0', // teal
-  sync:          '#5b9ed4', // blue
-  publish:       '#8c7cc8', // indigo
-  export:        '#c87ca8', // violet
+  collaboration: '#d47080', // rose
+  artifacts:     '#d4944c', // orange
+  workshop:      '#c8a84c', // gold
+  details:       '#5cb87a', // green
+  history:       '#4cb8b0', // teal
+  export:        '#5b9ed4', // blue
+  sync:          '#8c7cc8', // indigo
+  publish:       '#c87ca8', // violet
 };
 
 export type EditorViewMode = 'source' | 'preview';
@@ -117,7 +117,7 @@ function nameFromPath(path: string): string {
   return segments[segments.length - 1] || path;
 }
 
-export const DEFAULT_PANE_ORDER: PaneType[] = ['history', 'collaboration', 'artifacts', 'workshop', 'details', 'sync', 'publish', 'export'];
+export const DEFAULT_PANE_ORDER: PaneType[] = ['collaboration', 'artifacts', 'workshop', 'details', 'history', 'export', 'sync', 'publish'];
 const DEFAULT_VISIBILITY: Record<PaneType, boolean> = {
   history: false,
   collaboration: true,

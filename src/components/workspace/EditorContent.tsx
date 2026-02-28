@@ -273,7 +273,7 @@ export default function EditorContent({ tab, artifact, cruxId, saveRef }: Editor
 
   // ── Image display ──
   if (blobUrl && isImageMime(mime)) {
-    return <ImageViewer blobUrl={blobUrl} path={path} artifact={artifact} refetch={refetch} />;
+    return <ImageViewer blobUrl={blobUrl} path={path} artifact={artifact} />;
   }
 
   // ── Binary download ──
@@ -307,7 +307,7 @@ export default function EditorContent({ tab, artifact, cruxId, saveRef }: Editor
 
 // ── Image viewer with lightbox ──
 
-function ImageViewer({ blobUrl, path, artifact, refetch }: { blobUrl: string; path: string; artifact: Attachment; refetch: () => void }) {
+function ImageViewer({ blobUrl, path, artifact }: { blobUrl: string; path: string; artifact: Attachment }) {
   const [dimensions, setDimensions] = useState<string | null>(null);
   const filename = path.split('/').pop() || 'image';
 
@@ -332,7 +332,6 @@ function ImageViewer({ blobUrl, path, artifact, refetch }: { blobUrl: string; pa
           {dimensions && <span>{dimensions}</span>}
           <span>{formatSize(artifact.size)}</span>
         </div>
-        <ReplaceFileButton artifactId={artifact.id} onReplaced={refetch} />
       </div>
     </PhotoProvider>
   );
