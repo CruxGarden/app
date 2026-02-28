@@ -154,7 +154,7 @@ export default function TopBar() {
               onClick={() => navigate('/garden')}
               className="shrink-0 text-xs font-medium font-display text-accent cursor-pointer whitespace-nowrap hover:underline"
             >
-              @{username}
+              {username}
             </button>
           </>
         ) : null}

@@ -64,12 +64,12 @@ export default function LoginForm() {
   };
 
   return (
-    <Panel padding="lg" className="w-full max-w-sm">
+    <Panel padding="lg" className="w-full max-w-md">
       {/* Header */}
       <div className="flex flex-col items-center mb-8">
         <Logo size="lg" className="mb-4" />
         <p className="text-sm text-text-muted">
-          {step === 'email' ? 'Sign in to continue' : 'Enter your code'}
+          {step === 'email' ? 'Log in to continue' : 'Enter your code'}
         </p>
       </div>
 
@@ -86,18 +86,18 @@ export default function LoginForm() {
             disabled={loading}
           />
           <Button type="submit" loading={loading} fullWidth>
-            Continue
+            Send code
           </Button>
         </form>
       ) : (
         <form onSubmit={handleLogin} className="flex flex-col gap-4">
           <div className="mb-1">
-            <p className="text-xs text-text-muted mb-0.5">Sending code to:</p>
+            <p className="text-xs text-text-muted mb-0.5">Sent to:</p>
             <p className="text-sm font-medium text-text">{email}</p>
           </div>
 
           <Input
-            placeholder="Authentication code"
+            placeholder="Auth Code"
             value={code}
             onChange={(e) => setCode(e.target.value)}
             autoFocus
@@ -105,7 +105,7 @@ export default function LoginForm() {
           />
 
           <Button type="submit" loading={loading} fullWidth>
-            Sign In
+            Log in
           </Button>
 
           <Button
@@ -128,11 +128,11 @@ export default function LoginForm() {
       ) : null}
 
       {/* Footer */}
-      <p className="mt-6 text-xs text-text-muted text-center">
-        {step === 'email'
-          ? 'Enter your email to receive a sign-in code'
-          : 'Check your email for your authentication code'}
-      </p>
+      {step === 'email' && (
+        <p className="mt-6 text-xs text-text-muted text-center">
+          Enter your email to receive an Auth Code
+        </p>
+      )}
     </Panel>
   );
 }

@@ -40,16 +40,13 @@ export default function GardenSearch({ value, onChange }: GardenSearchProps) {
 
   return (
     <div className="relative">
-      <div className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none">
-        <SearchIcon />
-      </div>
       <input
         ref={inputRef}
         type="text"
         defaultValue={value}
         onChange={handleChange}
-        placeholder="Search cruxes..."
-        className="w-full pl-9 pr-8 py-2 text-sm bg-surface/50 border border-border rounded-[var(--radius-sm)] text-text placeholder:text-text-muted/50 focus:outline-none focus:border-accent/40 transition-colors font-body"
+        placeholder="Search..."
+        className="w-full px-3 pr-8 py-2 text-sm bg-surface/50 border border-border rounded-[var(--radius-sm)] text-text placeholder:text-text-muted/50 focus:outline-none focus:border-accent/40 transition-colors font-body"
       />
       {value && (
         <button

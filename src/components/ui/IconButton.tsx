@@ -3,7 +3,7 @@ import { cn } from '@/lib/cn';
 
 interface IconButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   label: string;
-  size?: 'sm' | 'md';
+  size?: 'sm' | 'md' | 'lg';
   active?: boolean;
   /** Override accent color when active (hex string) */
   activeColor?: string;
@@ -14,6 +14,7 @@ interface IconButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 const sizes = {
   sm: 'w-7 h-7',
   md: 'w-9 h-9',
+  lg: 'w-12 h-12',
 };
 
 const isMac = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.userAgent);
