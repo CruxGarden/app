@@ -2,11 +2,43 @@ import { useState, useCallback, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import JSZip from 'jszip';
 import { useAuthStore } from '@/stores/authStore';
+
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 import { useGarden } from '@/hooks/useGarden';
 import { cruxes } from '@/api';
 import { GardenGrid, GardenSearch, GardenEmpty } from '@/components/garden';
-import { Button, Spinner, Modal } from '@/components/ui';
+import { IconButton, Spinner, Modal } from '@/components/ui';
 import { cn } from '@/lib/cn';
+
+function GlobeIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="10" />
+      <line x1="2" y1="12" x2="22" y2="12" />
+      <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+    </svg>
+  );
+}
+
+function ImportIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+      <polyline points="17 8 12 3 7 8" />
+      <line x1="12" y1="3" x2="12" y2="15" />
+    </svg>
+  );
+}
+
+function PlusCircleIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="10" />
+      <line x1="12" y1="8" x2="12" y2="16" />
+      <line x1="8" y1="12" x2="16" y2="12" />
+    </svg>
+  );
+}
 
 const MIME_MAP: Record<string, string> = {
   html: 'text/html', htm: 'text/html', css: 'text/css',
@@ -156,7 +188,7 @@ export default function Garden() {
 
   // Page title
   useEffect(() => {
-    document.title = author ? `@${author.username}` : 'Garden';
+    document.title = author ? author.username : 'Garden';
     return () => { document.title = 'crux.garden'; };
   }, [author]);
 
@@ -171,42 +203,69 @@ export default function Garden() {
         onChange={handleImportInput}
       />
 
-      {/* Header */}
-      <div className="flex items-center justify-between mb-4 sm:mb-6 gap-3">
-        <div className="min-w-0">
-          <h1 className="font-display text-xl sm:text-2xl font-bold text-text truncate">
-            {author ? `@${author.username}` : 'Garden'}
-          </h1>
-          <div className="flex items-center gap-3 mt-1">
-            <p className="text-sm text-text-muted">
-              Your cruxes and creative history
-            </p>
+      {/* Header + Search panel */}
+      <div className="bg-panel border border-border rounded-[var(--radius)] p-4 sm:p-5 mb-6">
+        <div className="flex items-center justify-between gap-3 mb-4">
+          <div className="flex items-center gap-3 min-w-0">
             {author && (
-              <a
-                href={`/@${author.username}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-xs font-mono text-accent hover:underline"
-              >
-                View public
-              </a>
+              <div className="w-12 h-12 rounded-full overflow-hidden flex items-center justify-center shrink-0 bg-accent-muted">
+                {author.meta?.avatarUrl ? (
+                  <img
+                    src={`${API_BASE_URL}${author.meta.avatarUrl}?v=${author.updated}`}
+                    alt={author.displayName}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <span className="text-sm font-medium text-accent">
+                    {author.displayName?.charAt(0)?.toUpperCase() ?? '?'}
+                  </span>
+                )}
+              </div>
             )}
+            <div className="min-w-0">
+              <h1 className="font-display text-lg font-medium text-text truncate">
+                {author ? author.username : 'Garden'}
+              </h1>
+              <div className="flex items-center gap-1.5 mt-0.5">
+                <p className="text-sm text-text-muted">
+                  Private Garden
+                </p>
+                {author && (
+                  <a
+                    href={`/@${author.username}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    <IconButton label="Public Garden" size="sm" tooltip={{ label: 'Public Garden' }}>
+                      <GlobeIcon />
+                    </IconButton>
+                  </a>
+                )}
+              </div>
+            </div>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <IconButton
+              label="Import Crux"
+              size="lg"
+              tooltip={{ label: 'Import Crux' }}
+              onClick={() => importInputRef.current?.click()}
+              disabled={importing}
+              className="bg-surface text-text-muted hover:bg-accent-muted hover:text-accent"
+            >
+              <ImportIcon />
+            </IconButton>
+            <IconButton
+              label="New Crux"
+              size="lg"
+              tooltip={{ label: 'New Crux' }}
+              onClick={handleNewCrux}
+              className="bg-surface text-text-muted hover:bg-accent-muted hover:text-accent"
+            >
+              <PlusCircleIcon />
+            </IconButton>
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          <Button
-            variant="secondary"
-            onClick={() => importInputRef.current?.click()}
-            loading={importing}
-          >
-            {importing ? importProgress || 'Importing...' : 'Import'}
-          </Button>
-          <Button onClick={handleNewCrux}>New Crux</Button>
-        </div>
-      </div>
-
-      {/* Search */}
-      <div className="mb-6">
         <GardenSearch value={search} onChange={setSearch} />
       </div>
 
