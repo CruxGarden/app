@@ -24,6 +24,9 @@ interface CruxState {
   isCreatingGate: boolean;
   pendingGateCreation: boolean;
 
+  // Pending file deletions (awaiting user confirmation)
+  pendingDeletes: { attachmentId: string; path: string }[];
+
   // Actions
   loadCrux: (id: string) => Promise<void>;
   createCrux: (title?: string) => Promise<Crux>;
@@ -58,6 +61,11 @@ interface CruxState {
   setSummary: (summary: CruxSummary) => void;
   setGateCreating: (creating: boolean) => void;
   setPendingGateCreation: (pending: boolean) => void;
+
+  // Delete confirmation actions
+  addPendingDelete: (attachmentId: string, path: string) => void;
+  confirmDelete: (attachmentId: string) => Promise<void>;
+  dismissDelete: (attachmentId: string) => void;
 }
 
 export const useCruxStore = create<CruxState>((set, get) => ({
@@ -72,6 +80,7 @@ export const useCruxStore = create<CruxState>((set, get) => ({
   hasUnpublishedChanges: false,
   isCreatingGate: false,
   pendingGateCreation: false,
+  pendingDeletes: [],
 
   loadCrux: async (id: string) => {
     const crux = await cruxes.get(id);
@@ -117,17 +126,37 @@ export const useCruxStore = create<CruxState>((set, get) => ({
       '-' +
       Date.now().toString(36);
 
+    const hasApiKey = !!localStorage.getItem('cruxgarden:anthropicApiKey');
+
+    const keeperPrompt =
+      'You are The Keeper, an old robot who tends the Crux Garden. Your maker is away, and you faithfully care for the garden and help visitors bring their ideas to life. ' +
+      'You are kind, helpful, a bit absent-minded, and daydreamy. Stay in character as The Keeper throughout the conversation.';
+
+    const greeting: ChatMessage = {
+      role: 'assistant',
+      content: 'What would you like to create today?',
+    };
+
+    const initialMessages = hasApiKey ? [greeting] : [];
+
     const crux = await cruxes.create({
       slug,
       title: title || 'New Crux',
       type: 'workspace',
       data: '',
-      meta: { messages: [], summary: null, settings: { model: 'claude-sonnet-4-20250514' } },
+      meta: {
+        messages: initialMessages,
+        summary: null,
+        settings: {
+          model: 'claude-sonnet-4-20250514',
+          systemPrompt: keeperPrompt,
+        },
+      },
     });
 
     set({
       crux,
-      messages: [],
+      messages: initialMessages,
       artifacts: [],
       summary: null,
       gates: [],
@@ -220,6 +249,7 @@ export const useCruxStore = create<CruxState>((set, get) => ({
       hasUnpublishedChanges: false,
       isCreatingGate: false,
       pendingGateCreation: false,
+      pendingDeletes: [],
     });
   },
 
@@ -348,5 +378,28 @@ export const useCruxStore = create<CruxState>((set, get) => ({
 
   setPendingGateCreation: (pending: boolean) => {
     set({ pendingGateCreation: pending });
+  },
+
+  addPendingDelete: (attachmentId: string, path: string) => {
+    set((s) => ({
+      pendingDeletes: [...s.pendingDeletes, { attachmentId, path }],
+    }));
+  },
+
+  confirmDelete: async (attachmentId: string) => {
+    const { crux } = get();
+    if (!crux) return;
+    await cruxes.deleteAttachment(attachmentId);
+    const arts = await cruxes.getAttachments(crux.id);
+    set((s) => ({
+      artifacts: arts,
+      pendingDeletes: s.pendingDeletes.filter((d) => d.attachmentId !== attachmentId),
+    }));
+  },
+
+  dismissDelete: (attachmentId: string) => {
+    set((s) => ({
+      pendingDeletes: s.pendingDeletes.filter((d) => d.attachmentId !== attachmentId),
+    }));
   },
 }));

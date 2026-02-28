@@ -4,6 +4,7 @@ import { useCruxStore } from '@/stores/cruxStore';
 import { useAuthStore } from '@/stores/authStore';
 import { cruxes } from '@/api';
 import { cn } from '@/lib/cn';
+import { usePaneWidth } from '@/hooks/usePaneWidth';
 import PaneHeader from './PaneHeader';
 
 function ExportIcon() {
@@ -127,14 +128,25 @@ export default function ExportPane() {
   const totalSize = artifacts.reduce((sum, a) => sum + (Number(a.size) || 0), 0);
   const messageCount = messages.length;
 
+  const { ref, isTooNarrow } = usePaneWidth(200);
+
   return (
-    <div className="flex flex-col h-full">
+    <div ref={ref} className="flex flex-col h-full">
       <PaneHeader paneType="export" icon={<ExportIcon />} label="Export" />
 
+      {isTooNarrow ? (
+        <div className="text-text-muted p-4">
+          <p className="text-xs text-center">Enlarge pane to view contents</p>
+        </div>
+      ) : (
       <div className="flex-1 overflow-y-auto min-h-0 p-3 flex flex-col gap-4">
         {!crux ? (
-          <div className="flex-1 flex items-center justify-center text-text-muted">
-            <p className="text-xs">No crux loaded.</p>
+          <div className="text-text-muted p-1">
+            <p className="text-xs text-center">No crux loaded</p>
+          </div>
+        ) : artifacts.length === 0 && messageCount === 0 ? (
+          <div className="text-text-muted p-1">
+            <p className="text-xs text-center">Nothing to export yet</p>
           </div>
         ) : (
           <>
@@ -175,7 +187,7 @@ export default function ExportPane() {
               )}
             >
               <ExportIcon />
-              {exporting ? 'Exporting...' : 'Export as .crux'}
+              {exporting ? 'Exporting...' : 'Export Crux'}
             </button>
 
             {/* Progress */}
@@ -187,6 +199,7 @@ export default function ExportPane() {
           </>
         )}
       </div>
+      )}
     </div>
   );
 }

@@ -1,10 +1,22 @@
-import { useRef } from 'react';
+import { useRef, Component, type ReactNode } from 'react';
 import { useUIStore } from '@/stores/uiStore';
 import { useCruxStore } from '@/stores/cruxStore';
 import PaneHeader from './PaneHeader';
 import EditorTabBar from './EditorTabBar';
 import EditorToolbar from './EditorToolbar';
 import EditorContent from './EditorContent';
+
+/** Auto-recovery boundary for Monaco disposal errors during pane reorder */
+class EditorErrorBoundary extends Component<{ children: ReactNode }, { retryKey: number }> {
+  state = { retryKey: 0 };
+  static getDerivedStateFromError() { return {}; }
+  componentDidCatch() {
+    this.setState((prev) => ({ retryKey: prev.retryKey + 1 }));
+  }
+  render() {
+    return <div key={this.state.retryKey} className="contents">{this.props.children}</div>;
+  }
+}
 
 function CodeIcon() {
   return (
@@ -31,11 +43,8 @@ export default function EditorPane() {
     return (
       <div className="flex flex-col h-full">
         <PaneHeader paneType="workshop" icon={<CodeIcon />} label="Workshop" />
-        <div className="flex-1 flex flex-col items-center justify-center text-text-muted">
-          <CodeIcon />
-          <p className="text-xs mt-2 text-center px-4">
-            Select a file from Artifacts to open it here.
-          </p>
+        <div className="text-text-muted p-4">
+          <p className="text-xs text-center">Select a file from Artifacts to work on it here</p>
         </div>
       </div>
     );
@@ -58,13 +67,15 @@ export default function EditorPane() {
             onViewModeChange={(mode) => setTabViewMode(activeTab.id, mode)}
             onSave={() => saveRef.current?.()}
           />
-          <EditorContent
-            key={activeTab.id}
-            tab={activeTab}
-            artifact={activeArtifact}
-            cruxId={crux.id}
-            saveRef={saveRef}
-          />
+          <EditorErrorBoundary>
+            <EditorContent
+              key={activeTab.id}
+              tab={activeTab}
+              artifact={activeArtifact}
+              cruxId={crux.id}
+              saveRef={saveRef}
+            />
+          </EditorErrorBoundary>
         </>
       )}
     </div>

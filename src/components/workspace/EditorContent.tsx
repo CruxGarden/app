@@ -96,6 +96,14 @@ export default function EditorContent({ tab, artifact, cruxId, saveRef }: Editor
     return () => { if (saveRef) saveRef.current = null; };
   }, [handleSave, saveRef]);
 
+  // Defer Monaco mount by one frame so any disposed editor's async cleanup
+  // (rAF, rIC) completes before the new editor tries to initialise
+  const [editorReady, setEditorReady] = useState(false);
+  useEffect(() => {
+    const id = requestAnimationFrame(() => setEditorReady(true));
+    return () => { cancelAnimationFrame(id); setEditorReady(false); };
+  }, []);
+
   // Cleanup: auto-save dirty content, cancel pending scroll rAF, mark disposed
   useEffect(() => {
     disposedRef.current = false;
@@ -127,6 +135,8 @@ export default function EditorContent({ tab, artifact, cruxId, saveRef }: Editor
   // Monaco editor mount — stable callback, uses refs to avoid stale closures
   const handleEditorMount = useCallback(
     (editor: Monaco.editor.IStandaloneCodeEditor, monaco: typeof Monaco) => {
+      if (disposedRef.current) return;
+
       monacoRef.current = monaco;
       editorRef.current = editor;
 
@@ -189,7 +199,7 @@ export default function EditorContent({ tab, artifact, cruxId, saveRef }: Editor
     };
   }, [svgPreviewUrl]);
 
-  if (loading) {
+  if (loading || !editorReady) {
     return (
       <div className="flex-1 flex items-center justify-center">
         <Spinner size={24} />

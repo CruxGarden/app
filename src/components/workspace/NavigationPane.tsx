@@ -13,18 +13,11 @@ function StackIcon() {
 }
 
 export default function NavigationPane() {
-  const { gates, isCreatingGate, summary } = useGates();
-
   return (
     <div className="flex flex-col h-full">
       <PaneHeader paneType="history" icon={<StackIcon />} label="History" />
-
-      <div className="flex-1 overflow-y-auto min-h-0">
-        <GateTimeline
-          gates={gates}
-          summary={summary}
-          isCreatingGate={isCreatingGate}
-        />
+      <div className="text-text-muted p-4">
+        <p className="text-xs text-center">Coming soon</p>
       </div>
     </div>
   );

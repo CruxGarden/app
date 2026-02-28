@@ -1,4 +1,14 @@
+import { useMemo } from 'react';
+
+const BLOB_COUNT = 6;
+
 export default function MeshBackground() {
+  // Random negative delays so each blob starts at a different point in its cycle
+  const delays = useMemo(
+    () => Array.from({ length: BLOB_COUNT }, () => -(Math.random() * 300)),
+    [],
+  );
+
   return (
     <div className="mesh-background" aria-hidden="true">
       <svg xmlns="http://www.w3.org/2000/svg" style={{ position: 'absolute', width: 0, height: 0 }}>
@@ -16,11 +26,13 @@ export default function MeshBackground() {
         </defs>
       </svg>
       <div className="mesh-blobs">
-        <div className="mesh-blob mesh-blob-1" />
-        <div className="mesh-blob mesh-blob-2" />
-        <div className="mesh-blob mesh-blob-3" />
-        <div className="mesh-blob mesh-blob-4" />
-        <div className="mesh-blob mesh-blob-5" />
+        {Array.from({ length: BLOB_COUNT }, (_, i) => (
+          <div
+            key={i}
+            className={`mesh-blob mesh-blob-${i + 1}`}
+            style={{ animationDelay: `${delays[i]}s` }}
+          />
+        ))}
       </div>
     </div>
   );

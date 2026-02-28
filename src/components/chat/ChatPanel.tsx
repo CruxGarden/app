@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { useChat } from '@/hooks/useChat';
 import { useCruxStore } from '@/stores/cruxStore';
 import MessageList from './MessageList';
@@ -8,6 +9,12 @@ export default function ChatPanel() {
   const { messages, isStreaming, streamingContent, send, stop } = useChat();
   const model = useCruxStore((s) => s.crux?.meta?.settings?.model || 'claude-sonnet-4-20250514');
   const setModel = useCruxStore((s) => s.setModel);
+
+  // User message history in reverse order (most recent first) for arrow-up recall
+  const history = useMemo(
+    () => messages.filter((m) => m.role === 'user').map((m) => m.content).reverse(),
+    [messages],
+  );
 
   return (
     <div className="flex flex-col h-full">
@@ -22,6 +29,7 @@ export default function ChatPanel() {
           onSend={send}
           onStop={stop}
           isStreaming={isStreaming}
+          history={history}
         />
       </div>
     </div>

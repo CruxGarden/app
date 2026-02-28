@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/stores/authStore';
 import { useCruxStore } from '@/stores/cruxStore';
 import { cn } from '@/lib/cn';
+import { usePaneWidth } from '@/hooks/usePaneWidth';
 import CreateAuthorModal from '@/components/auth/CreateAuthorModal';
 import PaneHeader from './PaneHeader';
 
@@ -70,6 +71,8 @@ export default function PublishPane() {
   const [publishing, setPublishing] = useState(false);
   const [copied, setCopied] = useState(false);
 
+  const { ref, isTooNarrow } = usePaneWidth(270);
+
   const isPublished = crux?.meta?.publishedAt != null;
 
   const lastEditedAt = useMemo(() => {
@@ -133,10 +136,10 @@ export default function PublishPane() {
 
   if (!crux) {
     return (
-      <div className="flex flex-col h-full">
+      <div ref={ref} className="flex flex-col h-full">
         <PaneHeader paneType="publish" icon={<PublishIcon />} label="Publish" />
-        <div className="flex-1 flex items-center justify-center text-text-muted">
-          <p className="text-xs">No crux loaded.</p>
+        <div className="text-text-muted p-4">
+          <p className="text-xs text-center">No crux loaded</p>
         </div>
       </div>
     );
@@ -145,10 +148,26 @@ export default function PublishPane() {
   const publishedVersion = crux.meta?.publishedVersion as number | undefined;
   const publishedAt = crux.meta?.publishedAt as string | undefined;
 
+  if (artifacts.length === 0 && !isPublished) {
+    return (
+      <div ref={ref} className="flex flex-col h-full">
+        <PaneHeader paneType="publish" icon={<PublishIcon />} label="Publish" />
+        <div className="text-text-muted p-4">
+          <p className="text-xs text-center">Nothing to publish yet</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="flex flex-col h-full">
+    <div ref={ref} className="flex flex-col h-full">
       <PaneHeader paneType="publish" icon={<PublishIcon />} label="Publish" />
 
+      {isTooNarrow ? (
+        <div className="text-text-muted p-4">
+          <p className="text-xs text-center">Enlarge pane to view contents</p>
+        </div>
+      ) : (
       <div className="flex-1 overflow-y-auto min-h-0 p-3 flex flex-col gap-4">
         {/* Version info */}
         {isPublished && publishedAt && (
@@ -241,6 +260,7 @@ export default function PublishPane() {
           </button>
         )}
       </div>
+      )}
 
       <CreateAuthorModal
         open={showAuthorModal}

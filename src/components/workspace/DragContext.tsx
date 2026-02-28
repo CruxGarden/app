@@ -40,7 +40,7 @@ export function DragProvider({ onReorder, children }: DragProviderProps) {
   const endDrag = useCallback(() => {
     setState((prev) => {
       if (prev.dragSource && prev.dropTarget && prev.dragSource !== prev.dropTarget) {
-        onReorder(prev.dragSource, prev.dropTarget);
+        queueMicrotask(() => onReorder(prev.dragSource!, prev.dropTarget!));
       }
       return { dragSource: null, dropTarget: null };
     });

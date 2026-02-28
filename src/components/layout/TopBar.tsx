@@ -103,11 +103,6 @@ const PANE_BUTTONS: { type: PaneType; icon: React.FC; label: string }[] = [
   { type: 'publish', icon: PublishIcon, label: 'Publish' },
 ];
 
-const SHORTCUT_MAP: Record<PaneType, string> = {
-  collaboration: '1', artifacts: '2', workshop: '3', details: '4',
-  history: '5', export: '6', sync: '7', publish: '8',
-};
-
 export default function TopBar() {
   const navigate = useNavigate();
   const { paneOrder, paneVisibility, togglePane, activeCruxId } = useUIStore();
@@ -203,7 +198,7 @@ export default function TopBar() {
                     onClick={() => togglePane(paneType)}
                     active
                     activeColor={PANE_COLORS[paneType]}
-                    tooltip={{ label: config.label, shortcut: SHORTCUT_MAP[paneType] }}
+                    tooltip={{ label: config.label }}
                   >
                     <Icon />
                   </IconButton>
@@ -230,7 +225,7 @@ export default function TopBar() {
                       onClick={() => togglePane(paneType)}
                       active={false}
                       activeColor={PANE_COLORS[paneType]}
-                      tooltip={{ label: config.label, shortcut: SHORTCUT_MAP[paneType] }}
+                      tooltip={{ label: config.label }}
                     >
                       <Icon />
                     </IconButton>
