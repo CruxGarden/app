@@ -66,10 +66,9 @@ export default function Garden() {
     cruxList,
     loading,
     search,
-    totalPages,
-    currentPage,
+    sortBy,
     setSearch,
-    goToPage,
+    setSortBy,
     handleNewCrux,
     handleClearSearch,
     deleteCrux,
@@ -212,12 +211,12 @@ export default function Garden() {
                 {author.meta?.avatarUrl ? (
                   <img
                     src={`${API_BASE_URL}${author.meta.avatarUrl}?v=${author.updated}`}
-                    alt={author.displayName}
+                    alt={author.username}
                     className="w-full h-full object-cover"
                   />
                 ) : (
                   <span className="text-sm font-medium text-accent">
-                    {author.displayName?.charAt(0)?.toUpperCase() ?? '?'}
+                    {author.username?.charAt(0)?.toUpperCase() ?? '?'}
                   </span>
                 )}
               </div>
@@ -228,7 +227,7 @@ export default function Garden() {
               </h1>
               <div className="flex items-center gap-1.5 mt-0.5">
                 <p className="text-sm text-text-muted">
-                  Private Garden
+                  Home Garden
                 </p>
                 {author && (
                   <a
@@ -266,7 +265,32 @@ export default function Garden() {
             </IconButton>
           </div>
         </div>
-        <GardenSearch value={search} onChange={setSearch} />
+        <div className="flex items-center gap-3 mt-6">
+          <div className="flex-1">
+            <GardenSearch value={search} onChange={setSearch} />
+          </div>
+          <div className="flex items-center gap-1 text-xs font-mono text-text-muted shrink-0">
+            <span>Sort by</span>
+            <button
+              onClick={() => setSortBy('created')}
+              className={cn(
+                'px-2 py-0.5 rounded-[var(--radius-sm)] transition-colors cursor-pointer',
+                sortBy === 'created' ? 'text-text bg-surface' : 'hover:text-text',
+              )}
+            >
+              Created
+            </button>
+            <button
+              onClick={() => setSortBy('updated')}
+              className={cn(
+                'px-2 py-0.5 rounded-[var(--radius-sm)] transition-colors cursor-pointer',
+                sortBy === 'updated' ? 'text-text bg-surface' : 'hover:text-text',
+              )}
+            >
+              Updated
+            </button>
+          </div>
+        </div>
       </div>
 
       {/* Content */}
@@ -281,32 +305,7 @@ export default function Garden() {
           onClearSearch={handleClearSearch}
         />
       ) : (
-        <>
-          <GardenGrid cruxes={cruxList} onDelete={setDeletingId} />
-
-          {/* Pagination */}
-          {totalPages > 1 && (
-            <div className="flex items-center justify-center gap-2 mt-8">
-              <button
-                onClick={() => goToPage(currentPage - 1)}
-                disabled={currentPage <= 1}
-                className="px-3 py-1.5 text-xs font-mono text-text-muted hover:text-text disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer"
-              >
-                Prev
-              </button>
-              <span className="text-xs font-mono text-text-muted">
-                {currentPage} / {totalPages}
-              </span>
-              <button
-                onClick={() => goToPage(currentPage + 1)}
-                disabled={currentPage >= totalPages}
-                className="px-3 py-1.5 text-xs font-mono text-text-muted hover:text-text disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer"
-              >
-                Next
-              </button>
-            </div>
-          )}
-        </>
+        <GardenGrid cruxes={cruxList} onDelete={setDeletingId} sortBy={sortBy} />
       )}
 
       {/* Delete confirmation modal */}

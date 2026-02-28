@@ -22,6 +22,9 @@ interface AuthState {
   /** Logout and clear tokens */
   logout: () => Promise<void>;
 
+  /** Update author fields (username, displayName, etc.) */
+  updateAuthor: (dto: { username?: string; displayName?: string; bio?: string }) => Promise<Author>;
+
   /** Upload avatar and update local author */
   uploadAvatar: (file: File) => Promise<Author>;
 
@@ -94,6 +97,14 @@ export const useAuthStore = create<AuthState>((set) => ({
     }
     clearTokens();
     set({ account: null, author: null, isAuthenticated: false });
+  },
+
+  updateAuthor: async (dto) => {
+    const { author } = useAuthStore.getState();
+    if (!author) throw new Error('No author');
+    const updated = await authorsApi.update(author.id, dto);
+    set({ author: updated });
+    return updated;
   },
 
   uploadAvatar: async (file: File) => {

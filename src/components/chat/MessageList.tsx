@@ -18,7 +18,7 @@ export default function MessageList({
   const bottomRef = useRef<HTMLDivElement>(null);
   const author = useAuthStore((s) => s.author);
 
-  const userInitial = author?.displayName?.charAt(0)?.toUpperCase() ?? '?';
+  const userInitial = author?.username?.charAt(0)?.toUpperCase() ?? '?';
   const avatarUrl = (() => {
     if (!author?.meta?.avatarUrl) return null;
     const base = import.meta.env.VITE_API_URL || 'http://localhost:3000';

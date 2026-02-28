@@ -21,10 +21,20 @@ function MoonIcon() {
   );
 }
 
+function MonitorIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="2" y="3" width="20" height="14" rx="2" ry="2" />
+      <line x1="8" y1="21" x2="16" y2="21" />
+      <line x1="12" y1="17" x2="12" y2="21" />
+    </svg>
+  );
+}
+
 export default function UserMenu() {
   const navigate = useNavigate();
   const { author, logout } = useAuthStore();
-  const { resolved, setMode } = useThemeStore();
+  const { mode, setMode } = useThemeStore();
   const [open, setOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -40,7 +50,7 @@ export default function UserMenu() {
     return () => document.removeEventListener('mousedown', handler);
   }, [open]);
 
-  const initial = author?.displayName?.charAt(0)?.toUpperCase() ?? '?';
+  const initial = author?.username?.charAt(0)?.toUpperCase() ?? '?';
   const avatarUrl = (() => {
     if (!author?.meta?.avatarUrl) return null;
     const base = import.meta.env.VITE_API_URL || 'http://localhost:3000';
@@ -79,37 +89,64 @@ export default function UserMenu() {
           )}
         >
           {author ? (
-            <div className="px-3 py-2 border-b border-border">
+            <button
+              onClick={() => { setOpen(false); navigate('/garden'); }}
+              className="w-full px-3 py-2 border-b border-border text-left hover:bg-accent-muted transition-colors cursor-pointer"
+            >
               <p className="text-sm font-medium text-text truncate">
-                {author.displayName}
+                {author.username}
               </p>
-              <p className="text-xs text-text-muted truncate">@{author.username}</p>
-            </div>
+              <p className="text-xs text-text-muted truncate">Home Garden</p>
+            </button>
           ) : null}
 
           <button
             onClick={() => { setOpen(false); navigate('/settings'); }}
-            className="w-full px-3 py-2 text-left text-sm text-text-muted hover:text-text hover:bg-surface transition-colors"
+            className="w-full px-3 py-2 text-left text-sm text-text-muted hover:text-text hover:bg-accent-muted transition-colors cursor-pointer"
           >
             Settings
           </button>
 
+          <div className="border-t border-border my-1" />
+
           <button
-            onClick={() => {
-              setMode(resolved === 'dark' ? 'light' : 'dark');
-              setOpen(false);
-            }}
-            className="w-full px-3 py-2 text-left text-sm text-text-muted hover:text-text hover:bg-surface transition-colors flex items-center gap-2"
+            onClick={() => setMode('light')}
+            className={cn(
+              'w-full px-3 py-2 text-left text-sm hover:bg-accent-muted transition-colors flex items-center gap-2 cursor-pointer',
+              mode === 'light' ? 'text-text' : 'text-text-muted hover:text-text',
+            )}
           >
-            {resolved === 'dark' ? <SunIcon /> : <MoonIcon />}
-            {resolved === 'dark' ? 'Light mode' : 'Dark mode'}
+            <SunIcon />
+            Light
           </button>
+          <button
+            onClick={() => setMode('dark')}
+            className={cn(
+              'w-full px-3 py-2 text-left text-sm hover:bg-accent-muted transition-colors flex items-center gap-2 cursor-pointer',
+              mode === 'dark' ? 'text-text' : 'text-text-muted hover:text-text',
+            )}
+          >
+            <MoonIcon />
+            Dark
+          </button>
+          <button
+            onClick={() => setMode('auto')}
+            className={cn(
+              'w-full px-3 py-2 text-left text-sm hover:bg-accent-muted transition-colors flex items-center gap-2 cursor-pointer',
+              mode === 'auto' ? 'text-text' : 'text-text-muted hover:text-text',
+            )}
+          >
+            <MonitorIcon />
+            System
+          </button>
+
+          <div className="border-t border-border my-1" />
 
           <button
             onClick={handleLogout}
-            className="w-full px-3 py-2 text-left text-sm text-error hover:bg-error-muted transition-colors"
+            className="w-full px-3 py-2 text-left text-sm text-error hover:bg-error-muted transition-colors cursor-pointer"
           >
-            Sign out
+            Log out
           </button>
         </div>
       ) : null}

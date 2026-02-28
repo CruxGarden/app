@@ -9,9 +9,11 @@ export function useGarden() {
     cruxList,
     loading,
     search,
+    sortBy,
     pagination,
     load,
     setSearch,
+    setSortBy,
     setPage,
   } = useGardenStore();
 
@@ -32,7 +34,9 @@ export function useGarden() {
     setSearch('');
   };
 
-  const totalPages = Math.max(1, Math.ceil(pagination.total / pagination.limit));
+  // When searching client-side, base pagination on filtered results
+  const effectiveTotal = search ? cruxList.length : pagination.total;
+  const totalPages = Math.max(1, Math.ceil(effectiveTotal / pagination.limit));
   const currentPage = Math.floor(pagination.offset / pagination.limit) + 1;
 
   const goToPage = (page: number) => {
@@ -49,10 +53,12 @@ export function useGarden() {
     cruxList,
     loading,
     search,
+    sortBy,
     pagination,
     totalPages,
     currentPage,
     setSearch,
+    setSortBy,
     goToPage,
     handleNewCrux,
     handleClearSearch,

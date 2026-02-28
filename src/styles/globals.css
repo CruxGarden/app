@@ -61,14 +61,14 @@
 :root,
 .dark {
   --bg: #0b0d0c;
-  --surface: rgba(18, 21, 19, 0.93);
+  --surface: #121513;
   --surface-solid: #131514;
-  --panel: rgba(20, 24, 22, 0.95);
+  --panel: #141816;
   --text: #e2e4e3;
   --text-muted: #8b908d;
   --border: rgba(82, 96, 86, 0.18);
   --accent: #7db3a3;
-  --accent-muted: rgba(125, 179, 163, 0.12);
+  --accent-muted: #1a2723;
   --error: #e63946;
   --error-muted: rgba(230, 57, 70, 0.15);
 
@@ -93,14 +93,14 @@
 
 .light {
   --bg: #eaeceb;
-  --surface: rgba(214, 218, 215, 0.93);
+  --surface: #d6dad7;
   --surface-solid: #d6d9d7;
-  --panel: rgba(220, 224, 221, 0.95);
+  --panel: #dce0dd;
   --text: #1c211d;
   --text-muted: #616864;
   --border: rgba(82, 96, 86, 0.2);
   --accent: #4a8074;
-  --accent-muted: rgba(74, 128, 116, 0.12);
+  --accent-muted: #d0ddd9;
   --error: #c5303b;
   --error-muted: rgba(197, 48, 59, 0.12);
 
