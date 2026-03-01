@@ -5,6 +5,69 @@ import { cruxes } from '@/api';
 import { applyPalette } from '@/lib/palette';
 import type { ChatMessage, ToolCall } from '@/api/types';
 
+/**
+ * Build Anthropic-compatible messages with proper tool_use / tool_result blocks.
+ * Without this, past tool calls are lost and the model stops using tools.
+ */
+function buildApiMessages(allMessages: ChatMessage[]) {
+  const result: { role: string; content: unknown }[] = [];
+
+  for (let i = 0; i < allMessages.length; i++) {
+    const m = allMessages[i]!;
+
+    if (m.role === 'assistant' && m.toolCalls?.length) {
+      // Assistant message with tool calls → content block array
+      const blocks: Record<string, unknown>[] = [];
+      if (m.content?.trim()) {
+        blocks.push({ type: 'text', text: m.content });
+      }
+      for (let t = 0; t < m.toolCalls.length; t++) {
+        const tc = m.toolCalls[t]!;
+        blocks.push({
+          type: 'tool_use',
+          id: tc.id || `toolu_hist_${i}_${t}`,
+          name: tc.name,
+          input: tc.input || {},
+        });
+      }
+      result.push({ role: 'assistant', content: blocks });
+
+      // Build tool_result blocks
+      const toolResults = m.toolCalls.map((tc, t) => {
+        const raw = tc.result || 'Done.';
+        // Truncate large results (e.g. read_file of big files)
+        const truncated =
+          raw.length > 1200 ? raw.slice(0, 1200) + '\n…(truncated)' : raw;
+        return {
+          type: 'tool_result' as const,
+          tool_use_id: tc.id || `toolu_hist_${i}_${t}`,
+          content: truncated,
+        };
+      });
+
+      // Merge tool results with the NEXT user message to keep roles alternating
+      const next = allMessages[i + 1];
+      if (next?.role === 'user') {
+        const merged: Record<string, unknown>[] = [...toolResults];
+        if (next.content?.trim()) {
+          merged.push({ type: 'text', text: next.content });
+        }
+        result.push({ role: 'user', content: merged });
+        i++; // skip the next message, we merged it
+      } else {
+        result.push({ role: 'user', content: toolResults });
+      }
+    } else if (m.role === 'user') {
+      result.push({ role: 'user', content: m.content || '...' });
+    } else {
+      // Plain assistant text
+      result.push({ role: 'assistant', content: m.content || '...' });
+    }
+  }
+
+  return result;
+}
+
 export function useChat() {
   const {
     crux,
@@ -32,11 +95,8 @@ export function useChat() {
       const userMsg: ChatMessage = { role: 'user', content };
       addMessage(userMsg);
 
-      // Prepare message history for API (Anthropic rejects empty content)
-      const apiMessages = [...messages, userMsg].map((m) => ({
-        role: m.role as 'user' | 'assistant',
-        content: m.content || (m.toolCalls ? '[used tools]' : '...'),
-      }));
+      // Build message history with proper tool_use / tool_result blocks
+      const apiMessages = buildApiMessages([...messages, userMsg]);
 
       setStreaming(true);
       clearStreamContent();
