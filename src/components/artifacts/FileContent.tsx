@@ -80,6 +80,7 @@ function rewriteUrls(
   username: string,
   slug: string,
   attachments: Attachment[],
+  cacheBust?: number,
 ): string {
   if (attachments.length === 0 || !username || !slug) return html;
 
@@ -92,6 +93,7 @@ function rewriteUrls(
     if (filename && !pathMap.has(filename)) pathMap.set(filename, a.id);
   }
 
+  const suffix = cacheBust ? `?v=${cacheBust}` : '';
   return html.replace(
     /(src|href)=(["'])([^"']+)\2/gi,
     (match, attr: string, quote: string, value: string) => {
@@ -107,7 +109,7 @@ function rewriteUrls(
       const cleaned = value.startsWith('./') ? value.slice(2) : value;
       const id = pathMap.get(cleaned) || pathMap.get(value);
       if (id) {
-        return `${attr}=${quote}${getDownloadUrl(username, slug, id)}${quote}`;
+        return `${attr}=${quote}${getDownloadUrl(username, slug, id)}${suffix}${quote}`;
       }
       return match;
     },
@@ -175,7 +177,7 @@ export default function FileContent({ artifact, cruxId, artifacts = [], username
       cancelled = true;
       if (blobUrl) URL.revokeObjectURL(blobUrl);
     };
-  }, [artifact.id, cruxId, mime]);
+  }, [artifact.id, artifact.updated, cruxId, mime]);
 
   const highlighted = useMemo(() => {
     if (!content) return null;
@@ -255,7 +257,7 @@ export default function FileContent({ artifact, cruxId, artifacts = [], username
       {/* HTML preview */}
       {content !== null && viewMode === 'preview' && (ext === 'html' || ext === 'htm') && (
         <iframe
-          srcDoc={rewriteUrls(content, username, slug, artifacts)}
+          srcDoc={rewriteUrls(content, username, slug, artifacts, Date.now())}
           sandbox="allow-scripts"
           className="flex-1 w-full bg-white rounded-b-[var(--radius-sm)]"
           title={path}

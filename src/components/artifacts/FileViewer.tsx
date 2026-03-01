@@ -14,7 +14,7 @@ function TreeIcon() {
 }
 
 export default function FileViewer() {
-  const { crux, artifacts } = useCruxStore();
+  const { crux, artifacts, artifactsVersion } = useCruxStore();
   const author = useAuthStore((s) => s.author);
   const [openTabs, setOpenTabs] = useState<string[]>([]);
   const [activeTab, setActiveTab] = useState<string | null>(null);
@@ -104,6 +104,7 @@ export default function FileViewer() {
         {activeArtifact && crux && (
           <div className="flex-1 min-h-0 overflow-hidden">
             <FileContent
+              key={`${activeArtifact.id}-${artifactsVersion}`}
               artifact={activeArtifact}
               cruxId={crux.id}
               artifacts={artifacts}

@@ -17,6 +17,7 @@ interface CruxState {
 
   // Publish state
   hasUnpublishedChanges: boolean;
+  artifactsVersion: number;
 
   // Gate state
   gates: Dimension[];
@@ -78,6 +79,7 @@ export const useCruxStore = create<CruxState>((set, get) => ({
   gates: [],
   gateCount: 0,
   hasUnpublishedChanges: false,
+  artifactsVersion: 0,
   isCreatingGate: false,
   pendingGateCreation: false,
   pendingDeletes: [],
@@ -185,7 +187,7 @@ export const useCruxStore = create<CruxState>((set, get) => ({
   },
 
   setArtifacts: (artifacts: Attachment[]) => {
-    set({ artifacts, hasUnpublishedChanges: true });
+    set((s) => ({ artifacts, hasUnpublishedChanges: true, artifactsVersion: s.artifactsVersion + 1 }));
   },
 
   addArtifact: (artifact: Attachment) => {
