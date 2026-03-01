@@ -64,7 +64,7 @@ export default function CruxCard({ crux, linkTo, onDelete, sortBy = 'created' }:
   return (
     <div className="relative group">
       <button
-        onClick={() => navigate(linkTo || `/crux/${crux.id}`)}
+        onClick={() => navigate(linkTo || `/c/${crux.id}`)}
         className={cn(
           'bg-panel border border-border rounded-[var(--radius)] p-4 text-left',
           'group-hover:bg-accent-muted group-hover:text-accent group-hover:border-accent transition-all duration-200 cursor-pointer',

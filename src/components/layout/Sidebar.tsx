@@ -67,7 +67,7 @@ export default function Sidebar() {
       JSON.stringify({ paneOrder: DEFAULT_PANE_ORDER, paneVisibility: visibility }),
     );
 
-    navigate(`/crux/${crux.id}`);
+    navigate(`/c/${crux.id}`);
   };
 
   return (

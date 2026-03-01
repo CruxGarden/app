@@ -63,7 +63,7 @@ export default function CommandPalette({ open, onClose }: CommandPaletteProps) {
   const handleSelect = useCallback(
     (crux: Crux) => {
       onClose();
-      navigate(`/crux/${crux.id}`);
+      navigate(`/c/${crux.id}`);
     },
     [navigate, onClose],
   );
