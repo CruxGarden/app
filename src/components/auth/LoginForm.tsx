@@ -47,7 +47,7 @@ export default function LoginForm() {
 
     try {
       await login(email, code);
-      navigate('/garden', { replace: true });
+      navigate('/home', { replace: true });
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Invalid code. Please try again.';
       setError(msg);

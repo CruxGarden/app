@@ -119,7 +119,7 @@ export default function UserMenu() {
             <button
               onClick={() => {
                 setOpen(false);
-                navigate('/garden');
+                navigate('/home');
               }}
               className="w-full px-3 py-2 border-b border-border text-left hover:bg-accent-muted transition-colors cursor-pointer"
             >

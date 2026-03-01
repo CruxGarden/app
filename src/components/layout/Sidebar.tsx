@@ -79,7 +79,7 @@ export default function Sidebar() {
 
       {/* Navigation */}
       <nav className="flex-1 flex flex-col gap-1 p-3">
-        <SidebarLink to="/garden">
+        <SidebarLink to="/home">
           <CruxBloom size={18} />
           Garden
         </SidebarLink>

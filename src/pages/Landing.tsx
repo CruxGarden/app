@@ -15,7 +15,7 @@ export default function Landing() {
 
         <p className="text-text-muted text-lg mt-1">where ideas grow</p>
 
-        <Link to={isAuthenticated ? '/garden' : '/login'} className="mt-6">
+        <Link to={isAuthenticated ? '/home' : '/login'} className="mt-6">
           <Button size="sm">Enter</Button>
         </Link>
       </div>

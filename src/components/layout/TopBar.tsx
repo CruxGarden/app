@@ -229,7 +229,7 @@ export default function TopBar() {
               <ChevronIcon />
             </span>
             <button
-              onClick={() => navigate('/garden')}
+              onClick={() => navigate('/home')}
               className="shrink-0 text-xs font-medium font-display text-accent cursor-pointer whitespace-nowrap hover:underline"
             >
               {username}
