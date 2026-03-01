@@ -33,7 +33,10 @@ interface EditorContentProps {
 }
 
 export default function EditorContent({ tab, artifact, cruxId, saveRef }: EditorContentProps) {
-  const { content, blobUrl, loading, contentVersion, setContent, refetch } = useFileContent(cruxId, artifact);
+  const { content, blobUrl, loading, contentVersion, setContent, refetch } = useFileContent(
+    cruxId,
+    artifact,
+  );
   const { setTabDirty, setTabScrollTop } = useUIStore();
   const resolved = useThemeStore((s) => s.resolved);
   const monacoRef = useRef<typeof Monaco | null>(null);
@@ -87,13 +90,17 @@ export default function EditorContent({ tab, artifact, cruxId, saveRef }: Editor
   // Register save handler in module-level map (for saveAllDirtyEditors)
   useEffect(() => {
     editorSaveHandlers.set(tab.id, handleSave);
-    return () => { editorSaveHandlers.delete(tab.id); };
+    return () => {
+      editorSaveHandlers.delete(tab.id);
+    };
   }, [tab.id, handleSave]);
 
   // Expose save to parent via ref
   useEffect(() => {
     if (saveRef) saveRef.current = handleSave;
-    return () => { if (saveRef) saveRef.current = null; };
+    return () => {
+      if (saveRef) saveRef.current = null;
+    };
   }, [handleSave, saveRef]);
 
   // Defer Monaco mount by one frame so any disposed editor's async cleanup
@@ -101,7 +108,10 @@ export default function EditorContent({ tab, artifact, cruxId, saveRef }: Editor
   const [editorReady, setEditorReady] = useState(false);
   useEffect(() => {
     const id = requestAnimationFrame(() => setEditorReady(true));
-    return () => { cancelAnimationFrame(id); setEditorReady(false); };
+    return () => {
+      cancelAnimationFrame(id);
+      setEditorReady(false);
+    };
   }, []);
 
   // Cleanup: auto-save dirty content, cancel pending scroll rAF, mark disposed
@@ -317,7 +327,15 @@ export default function EditorContent({ tab, artifact, cruxId, saveRef }: Editor
 
 // ── Image viewer with lightbox ──
 
-function ImageViewer({ blobUrl, path, artifact }: { blobUrl: string; path: string; artifact: Attachment }) {
+function ImageViewer({
+  blobUrl,
+  path,
+  artifact,
+}: {
+  blobUrl: string;
+  path: string;
+  artifact: Attachment;
+}) {
   const [dimensions, setDimensions] = useState<string | null>(null);
   const filename = path.split('/').pop() || 'image';
 
@@ -349,27 +367,36 @@ function ImageViewer({ blobUrl, path, artifact }: { blobUrl: string; path: strin
 
 // ── Replace file button ──
 
-function ReplaceFileButton({ artifactId, onReplaced }: { artifactId: string; onReplaced: () => void }) {
+function ReplaceFileButton({
+  artifactId,
+  onReplaced,
+}: {
+  artifactId: string;
+  onReplaced: () => void;
+}) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [replacing, setReplacing] = useState(false);
   const updateArtifact = useCruxStore((s) => s.updateArtifact);
 
-  const handleReplace = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setReplacing(true);
-    try {
-      const updated = await cruxes.updateAttachment(artifactId, file);
-      updateArtifact(artifactId, updated);
-      useCruxStore.setState({ hasUnpublishedChanges: true });
-      onReplaced();
-    } catch (err) {
-      console.error('Replace failed:', err);
-    } finally {
-      setReplacing(false);
-      e.target.value = '';
-    }
-  }, [artifactId, updateArtifact, onReplaced]);
+  const handleReplace = useCallback(
+    async (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      setReplacing(true);
+      try {
+        const updated = await cruxes.updateAttachment(artifactId, file);
+        updateArtifact(artifactId, updated);
+        useCruxStore.setState({ hasUnpublishedChanges: true });
+        onReplaced();
+      } catch (err) {
+        console.error('Replace failed:', err);
+      } finally {
+        setReplacing(false);
+        e.target.value = '';
+      }
+    },
+    [artifactId, updateArtifact, onReplaced],
+  );
 
   return (
     <>
@@ -382,7 +409,16 @@ function ReplaceFileButton({ artifactId, onReplaced }: { artifactId: string; onR
         {replacing ? (
           <Spinner size={12} />
         ) : (
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <svg
+            width="12"
+            height="12"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
             <polyline points="17 8 12 3 7 8" />
             <line x1="12" y1="3" x2="12" y2="15" />

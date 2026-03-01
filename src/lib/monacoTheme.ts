@@ -58,7 +58,7 @@ export function registerCruxGardenThemes(monaco: typeof Monaco): void {
       'input.background': '#131514',
       'input.border': '#52605630',
       'input.foreground': '#e2e4e3',
-      'focusBorder': '#7db3a350',
+      focusBorder: '#7db3a350',
     },
   });
 

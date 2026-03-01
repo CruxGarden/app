@@ -29,10 +29,7 @@ export default function PublicCrux() {
     let cancelled = false;
     setState('loading');
 
-    Promise.all([
-      publicApi.getCruxBySlug(username, slug),
-      publicApi.getAttachments(username, slug),
-    ])
+    Promise.all([publicApi.getCruxBySlug(username, slug), publicApi.getAttachments(username, slug)])
       .then(([cruxData, attachmentData]) => {
         if (cancelled) return;
         setCrux(cruxData);
@@ -105,17 +102,10 @@ export default function PublicCrux() {
 
   return (
     <div className="flex flex-col h-screen">
-      <PublicTopBar
-        title={crux?.title}
-        username={username || ''}
-      />
+      <PublicTopBar title={crux?.title} username={username || ''} />
 
       <div className="flex-1 min-h-0 relative z-10">
-        <ArtifactRenderer
-          attachments={attachments}
-          username={username || ''}
-          slug={slug || ''}
-        />
+        <ArtifactRenderer attachments={attachments} username={username || ''} slug={slug || ''} />
       </div>
     </div>
   );

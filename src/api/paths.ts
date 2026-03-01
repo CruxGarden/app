@@ -9,9 +9,7 @@ interface ListParams {
   offset?: number;
 }
 
-export async function list(
-  params?: ListParams,
-): Promise<{ data: Path[]; meta: PaginationMeta }> {
+export async function list(params?: ListParams): Promise<{ data: Path[]; meta: PaginationMeta }> {
   const query: Record<string, string> = {};
   if (params?.search) query.search = params.search;
   if (params?.limit) query.limit = String(params.limit);

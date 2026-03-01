@@ -7,7 +7,16 @@ import PaneHeader from './PaneHeader';
 
 function TagIcon() {
   return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+    <svg
+      width="14"
+      height="14"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
       <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z" />
       <line x1="7" y1="7" x2="7.01" y2="7" />
     </svg>
@@ -44,7 +53,9 @@ const VISIBILITY_COLORS: Record<CruxVisibility, string> = {
 function FieldRow({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="flex flex-col gap-0.5">
-      <span className="text-[10px] font-mono uppercase tracking-wider text-text-muted">{label}</span>
+      <span className="text-[10px] font-mono uppercase tracking-wider text-text-muted">
+        {label}
+      </span>
       <div className="text-xs font-mono text-text">{children}</div>
     </div>
   );
@@ -83,7 +94,8 @@ function EditableField({
   };
 
   if (editing) {
-    const inputClass = 'w-full px-1 py-0.5 text-xs font-mono bg-bg border border-accent rounded-[var(--radius-sm)] text-text outline-none';
+    const inputClass =
+      'w-full px-1 py-0.5 text-xs font-mono bg-bg border border-accent rounded-[var(--radius-sm)] text-text outline-none';
     return (
       <FieldRow label={label}>
         {multiline ? (
@@ -118,14 +130,27 @@ function EditableField({
   return (
     <FieldRow label={label}>
       <button
-        onClick={() => { setDraft(value); setEditing(true); }}
+        onClick={() => {
+          setDraft(value);
+          setEditing(true);
+        }}
         className="text-left hover:text-accent transition-colors cursor-pointer w-full flex items-start gap-1.5 group"
         title="Click to edit"
       >
         <span className="truncate flex-1">
           {value || <span className="text-text-muted italic">empty</span>}
         </span>
-        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-text-muted shrink-0 mt-0.5">
+        <svg
+          width="10"
+          height="10"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          className="text-text-muted shrink-0 mt-0.5"
+        >
           <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
           <path d="m15 5 4 4" />
         </svg>
@@ -143,9 +168,7 @@ export default function MetadataPane() {
   const artifacts = useCruxStore((s) => s.artifacts);
   const activeTabId = useUIStore((s) => s.editor.activeTabId);
 
-  const selectedArtifact = activeTabId
-    ? artifacts.find((a) => a.id === activeTabId)
-    : null;
+  const selectedArtifact = activeTabId ? artifacts.find((a) => a.id === activeTabId) : null;
 
   const cycleVisibility = () => {
     if (!crux) return;
@@ -191,11 +214,7 @@ export default function MetadataPane() {
             multiline
           />
 
-          <EditableField
-            label="Slug"
-            value={crux.slug}
-            onSave={(slug) => updateCrux({ slug })}
-          />
+          <EditableField label="Slug" value={crux.slug} onSave={(slug) => updateCrux({ slug })} />
 
           <FieldRow label="Visibility">
             <button
@@ -245,7 +264,9 @@ export default function MetadataPane() {
           <>
             <div className="border-t border-border" />
             <div className="flex flex-col gap-2">
-              <span className="text-[10px] font-mono uppercase tracking-wider text-text-muted">AI Summary</span>
+              <span className="text-[10px] font-mono uppercase tracking-wider text-text-muted">
+                AI Summary
+              </span>
               {summary.purpose && (
                 <FieldRow label="Purpose">
                   <span className="whitespace-pre-wrap">{summary.purpose}</span>
@@ -270,7 +291,9 @@ export default function MetadataPane() {
           <>
             <div className="border-t border-border" />
             <div className="flex flex-col gap-2">
-              <span className="text-[10px] font-mono uppercase tracking-wider text-text-muted">Selected File</span>
+              <span className="text-[10px] font-mono uppercase tracking-wider text-text-muted">
+                Selected File
+              </span>
               <FieldRow label="Filename">
                 <span className="truncate">{selectedArtifact.filename}</span>
               </FieldRow>

@@ -28,14 +28,14 @@ interface PaneConfig {
 }
 
 const PANE_CONFIG: Record<PaneType, PaneConfig> = {
-  history:       { minSize: 10, defaultSize: 18, collapsible: true },
+  history: { minSize: 10, defaultSize: 18, collapsible: true },
   collaboration: { minSize: 20, defaultSize: 40, collapsible: false },
-  artifacts:     { minSize: 10, defaultSize: 16, collapsible: true },
-  workshop:      { minSize: 15, defaultSize: 26, collapsible: true },
-  details:       { minSize: 10, defaultSize: 16, collapsible: true },
-  sync:          { minSize: 10, defaultSize: 16, collapsible: true },
-  publish:       { minSize: 10, defaultSize: 16, collapsible: true },
-  export:        { minSize: 10, defaultSize: 16, collapsible: true },
+  artifacts: { minSize: 10, defaultSize: 16, collapsible: true },
+  workshop: { minSize: 15, defaultSize: 26, collapsible: true },
+  details: { minSize: 10, defaultSize: 16, collapsible: true },
+  sync: { minSize: 10, defaultSize: 16, collapsible: true },
+  publish: { minSize: 10, defaultSize: 16, collapsible: true },
+  export: { minSize: 10, defaultSize: 16, collapsible: true },
 };
 
 const PANE_COMPONENTS: Record<PaneType, React.ComponentType> = {
@@ -73,7 +73,10 @@ function DraggablePane({ paneType, children }: { paneType: PaneType; children: R
 
   return (
     <div
-      className={cn('h-full border border-accent/20 rounded-[var(--radius-sm)] group/pane', isDragging && 'opacity-50')}
+      className={cn(
+        'h-full border border-accent/20 rounded-[var(--radius-sm)] group/pane',
+        isDragging && 'opacity-50',
+      )}
       onDragOver={(e) => {
         e.preventDefault();
         e.dataTransfer.dropEffect = 'move';

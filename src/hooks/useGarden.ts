@@ -5,17 +5,8 @@ import { useCruxStore } from '@/stores/cruxStore';
 import { cruxes } from '@/api';
 
 export function useGarden() {
-  const {
-    cruxList,
-    loading,
-    search,
-    sortBy,
-    pagination,
-    load,
-    setSearch,
-    setSortBy,
-    setPage,
-  } = useGardenStore();
+  const { cruxList, loading, search, sortBy, pagination, load, setSearch, setSortBy, setPage } =
+    useGardenStore();
 
   const createCrux = useCruxStore((s) => s.createCrux);
   const navigate = useNavigate();
@@ -44,10 +35,13 @@ export function useGarden() {
     setPage(offset);
   };
 
-  const deleteCrux = useCallback(async (id: string) => {
-    await cruxes.remove(id);
-    load();
-  }, [load]);
+  const deleteCrux = useCallback(
+    async (id: string) => {
+      await cruxes.remove(id);
+      load();
+    },
+    [load],
+  );
 
   return {
     cruxList,

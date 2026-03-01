@@ -9,15 +9,18 @@ interface EditorToolbarProps {
   onSave?: () => void;
 }
 
-export default function EditorToolbar({ tab, hasContent, onViewModeChange, onSave }: EditorToolbarProps) {
+export default function EditorToolbar({
+  tab,
+  hasContent,
+  onViewModeChange,
+  onSave,
+}: EditorToolbarProps) {
   const canPreview = isPreviewable(tab.path) && hasContent;
 
   return (
     <div className="flex items-center justify-between px-3 py-1.5 border-b border-border gap-2 shrink-0">
       {/* Breadcrumb */}
-      <span className="text-xs font-mono text-text-muted truncate flex-1">
-        {tab.path}
-      </span>
+      <span className="text-xs font-mono text-text-muted truncate flex-1">{tab.path}</span>
 
       <div className="flex items-center gap-2 shrink-0">
         {/* Save button */}
@@ -64,9 +67,7 @@ function ModeButton({
       onClick={onClick}
       className={cn(
         'px-2 py-0.5 text-[10px] font-mono rounded-[var(--radius-sm)] transition-colors cursor-pointer',
-        active
-          ? 'bg-accent-muted text-accent'
-          : 'text-text-muted hover:text-text',
+        active ? 'bg-accent-muted text-accent' : 'text-text-muted hover:text-text',
       )}
     >
       {label}

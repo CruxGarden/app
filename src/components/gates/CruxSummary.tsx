@@ -26,9 +26,7 @@ export default function CruxSummary({ summary, className }: CruxSummaryProps) {
         className,
       )}
     >
-      <div className="text-text font-display text-sm font-medium mb-0.5">
-        {summary.crux}
-      </div>
+      <div className="text-text font-display text-sm font-medium mb-0.5">{summary.crux}</div>
       <SummaryField label="Purpose" value={summary.purpose} />
       <SummaryField label="Stage" value={summary.stage} />
       <SummaryField label="Themes" value={summary.themes} />

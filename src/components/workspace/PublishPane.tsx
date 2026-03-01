@@ -9,7 +9,16 @@ import PaneHeader from './PaneHeader';
 
 function PublishIcon() {
   return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+    <svg
+      width="14"
+      height="14"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
       <circle cx="18" cy="5" r="3" />
       <circle cx="6" cy="5" r="3" />
       <circle cx="12" cy="19" r="3" />
@@ -20,7 +29,16 @@ function PublishIcon() {
 
 function CopyIcon() {
   return (
-    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg
+      width="12"
+      height="12"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
       <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
       <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
     </svg>
@@ -29,7 +47,16 @@ function CopyIcon() {
 
 function CheckIcon() {
   return (
-    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg
+      width="12"
+      height="12"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
       <polyline points="20 6 9 17 4 12" />
     </svg>
   );
@@ -37,7 +64,16 @@ function CheckIcon() {
 
 function ExternalLinkIcon() {
   return (
-    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg
+      width="12"
+      height="12"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
       <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
       <polyline points="15 3 21 3 21 9" />
       <line x1="10" y1="14" x2="21" y2="3" />
@@ -83,9 +119,8 @@ export default function PublishPane() {
     return latest.updated;
   }, [artifacts]);
 
-  const publicUrl = author && crux
-    ? `${window.location.origin}/@${author.username}/${crux.slug}`
-    : null;
+  const publicUrl =
+    author && crux ? `${window.location.origin}/@${author.username}/${crux.slug}` : null;
 
   const doPublish = useCallback(async () => {
     if (!crux) return;
@@ -168,98 +203,102 @@ export default function PublishPane() {
           <p className="text-xs text-center">Enlarge pane to view contents</p>
         </div>
       ) : (
-      <div className="flex-1 overflow-y-auto min-h-0 p-3 flex flex-col gap-4">
-        {/* Version info */}
-        {isPublished && publishedAt && (
-          <div className="flex flex-col gap-1.5">
-            <span className="text-[10px] font-mono uppercase tracking-wider text-text-muted">Version</span>
-            <div className="text-[11px] font-mono text-text-muted space-y-1">
-              <div className="flex justify-between">
-                <span>Published</span>
-                <span className="text-text">v{publishedVersion}</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Published at</span>
-                <span className="text-text">{formatDate(publishedAt)}</span>
-              </div>
-              {hasUnpublishedChanges && lastEditedAt && (
-                <div className="flex justify-between text-yellow-400 mt-1">
-                  <div className="flex items-center gap-1.5">
-                    <span className="w-1.5 h-1.5 rounded-full bg-yellow-400 shrink-0" />
-                    <span>Last edited</span>
-                  </div>
-                  <span>{formatDate(lastEditedAt)}</span>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* Publish / Republish action */}
-        <button
-          onClick={handlePublish}
-          disabled={publishing || (isPublished && !hasUnpublishedChanges)}
-          className={cn(
-            'w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-[var(--radius-sm)]',
-            'text-sm font-medium font-body transition-all cursor-pointer',
-            'bg-accent text-bg hover:brightness-110',
-            'disabled:opacity-50 disabled:cursor-not-allowed',
-          )}
-        >
-          <PublishIcon />
-          {publishing
-            ? 'Publishing...'
-            : isPublished
-              ? hasUnpublishedChanges
-                ? 'Publish Changes'
-                : 'Published'
-              : 'Publish'}
-        </button>
-
-        {/* Published URL */}
-        {isPublished && publicUrl && (
-          <div className="flex flex-col gap-1.5">
-            <span className="text-[10px] font-mono uppercase tracking-wider text-text-muted">Public URL</span>
-            <div className="flex items-center gap-1.5 bg-bg rounded-[var(--radius-sm)] p-2 border border-border">
-              <span className="text-[11px] font-mono text-accent truncate flex-1">
-                {publicUrl}
+        <div className="flex-1 overflow-y-auto min-h-0 p-3 flex flex-col gap-4">
+          {/* Version info */}
+          {isPublished && publishedAt && (
+            <div className="flex flex-col gap-1.5">
+              <span className="text-[10px] font-mono uppercase tracking-wider text-text-muted">
+                Version
               </span>
-              <button
-                onClick={handleCopyUrl}
-                className="shrink-0 p-1 text-text-muted hover:text-text transition-colors cursor-pointer"
-                title={copied ? 'Copied!' : 'Copy URL'}
-              >
-                {copied ? <CheckIcon /> : <CopyIcon />}
-              </button>
-              <a
-                href={publicUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="shrink-0 p-1 text-text-muted hover:text-text transition-colors"
-                title="Open in new tab"
-              >
-                <ExternalLinkIcon />
-              </a>
+              <div className="text-[11px] font-mono text-text-muted space-y-1">
+                <div className="flex justify-between">
+                  <span>Published</span>
+                  <span className="text-text">v{publishedVersion}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Published at</span>
+                  <span className="text-text">{formatDate(publishedAt)}</span>
+                </div>
+                {hasUnpublishedChanges && lastEditedAt && (
+                  <div className="flex justify-between text-yellow-400 mt-1">
+                    <div className="flex items-center gap-1.5">
+                      <span className="w-1.5 h-1.5 rounded-full bg-yellow-400 shrink-0" />
+                      <span>Last edited</span>
+                    </div>
+                    <span>{formatDate(lastEditedAt)}</span>
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
-        )}
+          )}
 
-        {/* Unpublish action */}
-        {isPublished && (
+          {/* Publish / Republish action */}
           <button
-            onClick={handleUnpublish}
-            disabled={publishing}
+            onClick={handlePublish}
+            disabled={publishing || (isPublished && !hasUnpublishedChanges)}
             className={cn(
-              'w-full flex items-center justify-center gap-2 px-4 py-2 rounded-[var(--radius-sm)]',
-              'text-xs font-mono transition-colors cursor-pointer',
-              'text-text-muted hover:text-error border border-border hover:border-error/40',
+              'w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-[var(--radius-sm)]',
+              'text-sm font-medium font-body transition-all cursor-pointer',
+              'bg-accent text-bg hover:brightness-110',
               'disabled:opacity-50 disabled:cursor-not-allowed',
             )}
           >
-            Unpublish
+            <PublishIcon />
+            {publishing
+              ? 'Publishing...'
+              : isPublished
+                ? hasUnpublishedChanges
+                  ? 'Publish Changes'
+                  : 'Published'
+                : 'Publish'}
           </button>
-        )}
-      </div>
+
+          {/* Published URL */}
+          {isPublished && publicUrl && (
+            <div className="flex flex-col gap-1.5">
+              <span className="text-[10px] font-mono uppercase tracking-wider text-text-muted">
+                Public URL
+              </span>
+              <div className="flex items-center gap-1.5 bg-bg rounded-[var(--radius-sm)] p-2 border border-border">
+                <span className="text-[11px] font-mono text-accent truncate flex-1">
+                  {publicUrl}
+                </span>
+                <button
+                  onClick={handleCopyUrl}
+                  className="shrink-0 p-1 text-text-muted hover:text-text transition-colors cursor-pointer"
+                  title={copied ? 'Copied!' : 'Copy URL'}
+                >
+                  {copied ? <CheckIcon /> : <CopyIcon />}
+                </button>
+                <a
+                  href={publicUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="shrink-0 p-1 text-text-muted hover:text-text transition-colors"
+                  title="Open in new tab"
+                >
+                  <ExternalLinkIcon />
+                </a>
+              </div>
+            </div>
+          )}
+
+          {/* Unpublish action */}
+          {isPublished && (
+            <button
+              onClick={handleUnpublish}
+              disabled={publishing}
+              className={cn(
+                'w-full flex items-center justify-center gap-2 px-4 py-2 rounded-[var(--radius-sm)]',
+                'text-xs font-mono transition-colors cursor-pointer',
+                'text-text-muted hover:text-error border border-border hover:border-error/40',
+                'disabled:opacity-50 disabled:cursor-not-allowed',
+              )}
+            >
+              Unpublish
+            </button>
+          )}
+        </div>
       )}
 
       <CreateAuthorModal

@@ -42,7 +42,9 @@ export function usePreviewUrl(
     waitForServiceWorker().then((ready) => {
       if (!cancelled) setSwReady(ready);
     });
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   // Effect 1: Download all non-HTML artifacts when the artifact list changes
@@ -80,7 +82,9 @@ export function usePreviewUrl(
       setArtifactsCached(true);
     });
 
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [cruxId, filePath, enabled, artifacts, swReady]);
 
   // Effect 2: Cache everything (initial) or just update HTML (subsequent changes)
@@ -112,7 +116,9 @@ export function usePreviewUrl(
       setUrl(getPreviewUrl(cruxId, filePath, versionRef.current));
     })();
 
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [html, cruxId, filePath, enabled, swReady, artifactsCached]);
 
   // Cleanup cache on unmount or cruxId change

@@ -59,21 +59,78 @@ export default function ContextMenu({
 
   if (isFolder) {
     items.push(
-      { label: 'New File', action: () => { onNewFile(targetPath); hideContextMenu(); } },
-      { label: 'New Folder', action: () => { onNewFolder(targetPath); hideContextMenu(); } },
+      {
+        label: 'New File',
+        action: () => {
+          onNewFile(targetPath);
+          hideContextMenu();
+        },
+      },
+      {
+        label: 'New Folder',
+        action: () => {
+          onNewFolder(targetPath);
+          hideContextMenu();
+        },
+      },
     );
     if (targetPath) {
       items.push(
-        { label: 'Rename', action: () => { if (targetId) { onRename(targetId, targetPath); } hideContextMenu(); }, disabled: !targetId },
-        { label: 'Delete', action: () => { if (targetId) { onDelete(targetId, targetPath); } hideContextMenu(); }, destructive: true, disabled: !targetId },
+        {
+          label: 'Rename',
+          action: () => {
+            if (targetId) {
+              onRename(targetId, targetPath);
+            }
+            hideContextMenu();
+          },
+          disabled: !targetId,
+        },
+        {
+          label: 'Delete',
+          action: () => {
+            if (targetId) {
+              onDelete(targetId, targetPath);
+            }
+            hideContextMenu();
+          },
+          destructive: true,
+          disabled: !targetId,
+        },
       );
     }
   } else if (targetId) {
     items.push(
-      { label: 'Open', action: () => { onOpen(targetId); hideContextMenu(); } },
-      { label: 'Copy URL', action: () => { onCopyUrl?.(targetId); hideContextMenu(); }, disabled: !onCopyUrl },
-      { label: 'Rename', action: () => { onRename(targetId, targetPath); hideContextMenu(); } },
-      { label: 'Delete', action: () => { onDelete(targetId, targetPath); hideContextMenu(); }, destructive: true },
+      {
+        label: 'Open',
+        action: () => {
+          onOpen(targetId);
+          hideContextMenu();
+        },
+      },
+      {
+        label: 'Copy URL',
+        action: () => {
+          onCopyUrl?.(targetId);
+          hideContextMenu();
+        },
+        disabled: !onCopyUrl,
+      },
+      {
+        label: 'Rename',
+        action: () => {
+          onRename(targetId, targetPath);
+          hideContextMenu();
+        },
+      },
+      {
+        label: 'Delete',
+        action: () => {
+          onDelete(targetId, targetPath);
+          hideContextMenu();
+        },
+        destructive: true,
+      },
     );
   }
 

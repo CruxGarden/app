@@ -8,7 +8,16 @@ import UserMenu from '@/components/auth/UserMenu';
 
 function StackIcon() {
   return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
       <path d="M12 2L2 7l10 5 10-5-10-5z" />
       <path d="M2 17l10 5 10-5" />
       <path d="M2 12l10 5 10-5" />
@@ -18,7 +27,16 @@ function StackIcon() {
 
 function ChatIcon() {
   return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
       <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
     </svg>
   );
@@ -26,7 +44,16 @@ function ChatIcon() {
 
 function FolderIcon() {
   return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
       <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
     </svg>
   );
@@ -34,7 +61,16 @@ function FolderIcon() {
 
 function CodeIcon() {
   return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
       <polyline points="16 18 22 12 16 6" />
       <polyline points="8 6 2 12 8 18" />
     </svg>
@@ -43,7 +79,16 @@ function CodeIcon() {
 
 function TagIcon() {
   return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
       <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z" />
       <line x1="7" y1="7" x2="7.01" y2="7" />
     </svg>
@@ -52,7 +97,16 @@ function TagIcon() {
 
 function SyncIcon() {
   return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
       <line x1="7" y1="20" x2="7" y2="4" />
       <polyline points="3 8 7 4 11 8" />
       <line x1="17" y1="4" x2="17" y2="20" />
@@ -63,7 +117,16 @@ function SyncIcon() {
 
 function PublishIcon() {
   return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
       <circle cx="18" cy="5" r="3" />
       <circle cx="6" cy="5" r="3" />
       <circle cx="12" cy="19" r="3" />
@@ -74,7 +137,16 @@ function PublishIcon() {
 
 function ExportIcon() {
   return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
       <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
       <polyline points="7 10 12 15 17 10" />
       <line x1="12" y1="15" x2="12" y2="3" />
@@ -84,7 +156,16 @@ function ExportIcon() {
 
 function ChevronIcon() {
   return (
-    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg
+      width="12"
+      height="12"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
       <polyline points="9 18 15 12 9 6" />
     </svg>
   );
@@ -144,7 +225,9 @@ export default function TopBar() {
         </button>
         {username ? (
           <>
-            <span className="text-text-muted shrink-0"><ChevronIcon /></span>
+            <span className="text-text-muted shrink-0">
+              <ChevronIcon />
+            </span>
             <button
               onClick={() => navigate('/garden')}
               className="shrink-0 text-xs font-medium font-display text-accent cursor-pointer whitespace-nowrap hover:underline"
@@ -155,7 +238,9 @@ export default function TopBar() {
         ) : null}
         {activeCruxId ? (
           <>
-            <span className="text-text-muted shrink-0"><ChevronIcon /></span>
+            <span className="text-text-muted shrink-0">
+              <ChevronIcon />
+            </span>
             {editingTitle ? (
               <input
                 ref={titleInputRef}
@@ -163,14 +248,22 @@ export default function TopBar() {
                 onChange={(e) => setTitleDraft(e.target.value)}
                 onBlur={commitTitle}
                 onKeyDown={(e) => {
-                  if (e.key === 'Enter') { e.preventDefault(); commitTitle(); }
-                  if (e.key === 'Escape') { setEditingTitle(false); }
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    commitTitle();
+                  }
+                  if (e.key === 'Escape') {
+                    setEditingTitle(false);
+                  }
                 }}
                 className="text-xs font-medium font-display text-text bg-transparent border-b border-accent outline-none w-32"
               />
             ) : (
               <span
-                onDoubleClick={(e) => { e.preventDefault(); startEditTitle(); }}
+                onDoubleClick={(e) => {
+                  e.preventDefault();
+                  startEditTitle();
+                }}
                 className="text-xs font-medium font-display text-text-muted cursor-default whitespace-nowrap"
                 title="Double-click to rename"
               >

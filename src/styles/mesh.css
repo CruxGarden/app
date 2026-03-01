@@ -86,10 +86,11 @@
 /* ── Blob 1 — vertical movement ────────────────────────── */
 .mesh-blob-1 {
   background: radial-gradient(
-    circle at center,
-    color-mix(in srgb, var(--mesh-1) 80%, transparent) 0,
-    transparent 70%
-  ) no-repeat;
+      circle at center,
+      color-mix(in srgb, var(--mesh-1) 80%, transparent) 0,
+      transparent 70%
+    )
+    no-repeat;
   transform-origin: center center;
   animation: moveVertical calc(224s / var(--mesh-speed, 1)) ease infinite;
 }
@@ -97,10 +98,11 @@
 /* ── Blob 2 — reverse circle ───────────────────────────── */
 .mesh-blob-2 {
   background: radial-gradient(
-    circle at center,
-    color-mix(in srgb, var(--mesh-2) 80%, transparent) 0,
-    transparent 70%
-  ) no-repeat;
+      circle at center,
+      color-mix(in srgb, var(--mesh-2) 80%, transparent) 0,
+      transparent 70%
+    )
+    no-repeat;
   transform-origin: calc(50% - 400px);
   animation: moveInCircle calc(150s / var(--mesh-speed, 1)) reverse infinite;
 }
@@ -108,10 +110,11 @@
 /* ── Blob 3 — offset circle ────────────────────────────── */
 .mesh-blob-3 {
   background: radial-gradient(
-    circle at center,
-    color-mix(in srgb, var(--mesh-3) 80%, transparent) 0,
-    transparent 70%
-  ) no-repeat;
+      circle at center,
+      color-mix(in srgb, var(--mesh-3) 80%, transparent) 0,
+      transparent 70%
+    )
+    no-repeat;
   top: calc(50% - 80% / 2 + 200px);
   left: calc(50% - 80% / 2 - 500px);
   transform-origin: calc(50% + 400px);
@@ -121,10 +124,11 @@
 /* ── Blob 4 — horizontal movement ──────────────────────── */
 .mesh-blob-4 {
   background: radial-gradient(
-    circle at center,
-    color-mix(in srgb, var(--mesh-4) 80%, transparent) 0,
-    transparent 70%
-  ) no-repeat;
+      circle at center,
+      color-mix(in srgb, var(--mesh-4) 80%, transparent) 0,
+      transparent 70%
+    )
+    no-repeat;
   transform-origin: calc(50% - 200px);
   animation: moveHorizontal calc(300s / var(--mesh-speed, 1)) ease infinite;
   opacity: calc(var(--mesh-opacity, 1) * 0.7);
@@ -133,10 +137,11 @@
 /* ── Blob 5 — large circle ─────────────────────────────── */
 .mesh-blob-5 {
   background: radial-gradient(
-    circle at center,
-    color-mix(in srgb, var(--mesh-5) 80%, transparent) 0,
-    transparent 70%
-  ) no-repeat;
+      circle at center,
+      color-mix(in srgb, var(--mesh-5) 80%, transparent) 0,
+      transparent 70%
+    )
+    no-repeat;
   width: 160%;
   height: 160%;
   top: calc(50% - 80%);
@@ -148,10 +153,11 @@
 /* ── Blob 6 — right-side circle ───────────────────────── */
 .mesh-blob-6 {
   background: radial-gradient(
-    circle at center,
-    color-mix(in srgb, var(--mesh-6) 80%, transparent) 0,
-    transparent 70%
-  ) no-repeat;
+      circle at center,
+      color-mix(in srgb, var(--mesh-6) 80%, transparent) 0,
+      transparent 70%
+    )
+    no-repeat;
   width: 100%;
   height: 100%;
   top: calc(50% - 50% + 5%);
@@ -163,21 +169,39 @@
 /* ── Animations ────────────────────────────────────────── */
 
 @keyframes moveInCircle {
-  0%   { transform: rotate(0deg); }
-  50%  { transform: rotate(180deg); }
-  100% { transform: rotate(360deg); }
+  0% {
+    transform: rotate(0deg);
+  }
+  50% {
+    transform: rotate(180deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
 }
 
 @keyframes moveVertical {
-  0%   { transform: translateY(-50%); }
-  50%  { transform: translateY(50%); }
-  100% { transform: translateY(-50%); }
+  0% {
+    transform: translateY(-50%);
+  }
+  50% {
+    transform: translateY(50%);
+  }
+  100% {
+    transform: translateY(-50%);
+  }
 }
 
 @keyframes moveHorizontal {
-  0%   { transform: translateX(-50%) translateY(-10%); }
-  50%  { transform: translateX(50%) translateY(10%); }
-  100% { transform: translateX(-50%) translateY(-10%); }
+  0% {
+    transform: translateX(-50%) translateY(-10%);
+  }
+  50% {
+    transform: translateX(50%) translateY(10%);
+  }
+  100% {
+    transform: translateX(-50%) translateY(-10%);
+  }
 }
 
 /* ── Palette transitions ───────────────────────────────── */
@@ -186,10 +210,18 @@
 /* global `html.palette-transition *` rule so these win.    */
 
 html.palette-transition .mesh-background {
-  transition: --mesh-bg1 0.4s ease, --mesh-bg2 0.4s ease !important;
+  transition:
+    --mesh-bg1 0.4s ease,
+    --mesh-bg2 0.4s ease !important;
 }
 
 html.palette-transition .mesh-blob {
-  transition: --mesh-1 0.4s ease, --mesh-2 0.4s ease, --mesh-3 0.4s ease,
-    --mesh-4 0.4s ease, --mesh-5 0.4s ease, --mesh-6 0.4s ease, opacity 0.4s ease !important;
+  transition:
+    --mesh-1 0.4s ease,
+    --mesh-2 0.4s ease,
+    --mesh-3 0.4s ease,
+    --mesh-4 0.4s ease,
+    --mesh-5 0.4s ease,
+    --mesh-6 0.4s ease,
+    opacity 0.4s ease !important;
 }

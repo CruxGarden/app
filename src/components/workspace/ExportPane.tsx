@@ -9,7 +9,16 @@ import PaneHeader from './PaneHeader';
 
 function ExportIcon() {
   return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+    <svg
+      width="14"
+      height="14"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
       <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
       <polyline points="7 10 12 15 17 10" />
       <line x1="12" y1="15" x2="12" y2="3" />
@@ -54,11 +63,18 @@ export default function ExportPane() {
       }
 
       // manifest.json
-      zip.file('manifest.json', JSON.stringify({
-        version: '1.0',
-        exportedAt: new Date().toISOString(),
-        author: author ? { username: author.username, displayName: author.displayName } : null,
-      }, null, 2));
+      zip.file(
+        'manifest.json',
+        JSON.stringify(
+          {
+            version: '1.0',
+            exportedAt: new Date().toISOString(),
+            author: author ? { username: author.username, displayName: author.displayName } : null,
+          },
+          null,
+          2,
+        ),
+      );
 
       // crux.json — entity + settings (exclude messages to avoid duplication)
       const cruxData = {
@@ -139,66 +155,68 @@ export default function ExportPane() {
           <p className="text-xs text-center">Enlarge pane to view contents</p>
         </div>
       ) : (
-      <div className="flex-1 overflow-y-auto min-h-0 p-3 flex flex-col gap-4">
-        {!crux ? (
-          <div className="text-text-muted p-1">
-            <p className="text-xs text-center">No crux loaded</p>
-          </div>
-        ) : artifacts.length === 0 && messageCount === 0 ? (
-          <div className="text-text-muted p-1">
-            <p className="text-xs text-center">Nothing to export yet</p>
-          </div>
-        ) : (
-          <>
-            {/* Contents summary */}
-            <div className="flex flex-col gap-1.5">
-              <span className="text-[10px] font-mono uppercase tracking-wider text-text-muted">Contents</span>
-              <div className="text-[11px] font-mono text-text-muted space-y-1">
-                <div className="flex justify-between">
-                  <span>Files</span>
-                  <span className="text-text">{artifacts.length}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Messages</span>
-                  <span className="text-text">{messageCount}</span>
-                </div>
-                {gateCount > 0 && (
+        <div className="flex-1 overflow-y-auto min-h-0 p-3 flex flex-col gap-4">
+          {!crux ? (
+            <div className="text-text-muted p-1">
+              <p className="text-xs text-center">No crux loaded</p>
+            </div>
+          ) : artifacts.length === 0 && messageCount === 0 ? (
+            <div className="text-text-muted p-1">
+              <p className="text-xs text-center">Nothing to export yet</p>
+            </div>
+          ) : (
+            <>
+              {/* Contents summary */}
+              <div className="flex flex-col gap-1.5">
+                <span className="text-[10px] font-mono uppercase tracking-wider text-text-muted">
+                  Contents
+                </span>
+                <div className="text-[11px] font-mono text-text-muted space-y-1">
                   <div className="flex justify-between">
-                    <span>Gates</span>
-                    <span className="text-text">{gateCount}</span>
+                    <span>Files</span>
+                    <span className="text-text">{artifacts.length}</span>
                   </div>
-                )}
-                <div className="flex justify-between">
-                  <span>Total file size</span>
-                  <span className="text-text">{formatBytes(totalSize)}</span>
+                  <div className="flex justify-between">
+                    <span>Messages</span>
+                    <span className="text-text">{messageCount}</span>
+                  </div>
+                  {gateCount > 0 && (
+                    <div className="flex justify-between">
+                      <span>Gates</span>
+                      <span className="text-text">{gateCount}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between">
+                    <span>Total file size</span>
+                    <span className="text-text">{formatBytes(totalSize)}</span>
+                  </div>
                 </div>
               </div>
-            </div>
 
-            {/* Export button */}
-            <button
-              onClick={handleExport}
-              disabled={exporting}
-              className={cn(
-                'w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-[var(--radius-sm)]',
-                'text-sm font-medium font-body transition-all cursor-pointer',
-                'bg-accent text-bg hover:brightness-110',
-                'disabled:opacity-50 disabled:cursor-not-allowed',
+              {/* Export button */}
+              <button
+                onClick={handleExport}
+                disabled={exporting}
+                className={cn(
+                  'w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-[var(--radius-sm)]',
+                  'text-sm font-medium font-body transition-all cursor-pointer',
+                  'bg-accent text-bg hover:brightness-110',
+                  'disabled:opacity-50 disabled:cursor-not-allowed',
+                )}
+              >
+                <ExportIcon />
+                {exporting ? 'Exporting...' : 'Export Crux'}
+              </button>
+
+              {/* Progress */}
+              {progress && (
+                <p className="text-[11px] font-mono text-text-muted text-center truncate">
+                  {progress}
+                </p>
               )}
-            >
-              <ExportIcon />
-              {exporting ? 'Exporting...' : 'Export Crux'}
-            </button>
-
-            {/* Progress */}
-            {progress && (
-              <p className="text-[11px] font-mono text-text-muted text-center truncate">
-                {progress}
-              </p>
-            )}
-          </>
-        )}
-      </div>
+            </>
+          )}
+        </div>
       )}
     </div>
   );

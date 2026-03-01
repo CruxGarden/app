@@ -37,30 +37,16 @@ export default function MarkdownRenderer({ content }: MarkdownRendererProps) {
           return <ul className="list-disc pl-5 mb-2 space-y-1">{children}</ul>;
         },
         ol({ children }) {
-          return (
-            <ol className="list-decimal pl-5 mb-2 space-y-1">{children}</ol>
-          );
+          return <ol className="list-decimal pl-5 mb-2 space-y-1">{children}</ol>;
         },
         h1({ children }) {
-          return (
-            <h1 className="text-lg font-display font-bold mt-4 mb-2">
-              {children}
-            </h1>
-          );
+          return <h1 className="text-lg font-display font-bold mt-4 mb-2">{children}</h1>;
         },
         h2({ children }) {
-          return (
-            <h2 className="text-base font-display font-bold mt-3 mb-2">
-              {children}
-            </h2>
-          );
+          return <h2 className="text-base font-display font-bold mt-3 mb-2">{children}</h2>;
         },
         h3({ children }) {
-          return (
-            <h3 className="text-sm font-display font-bold mt-2 mb-1">
-              {children}
-            </h3>
-          );
+          return <h3 className="text-sm font-display font-bold mt-2 mb-1">{children}</h3>;
         },
         a({ href, children }) {
           return (
@@ -96,9 +82,7 @@ export default function MarkdownRenderer({ content }: MarkdownRendererProps) {
           );
         },
         td({ children }) {
-          return (
-            <td className="border border-border px-3 py-1.5">{children}</td>
-          );
+          return <td className="border border-border px-3 py-1.5">{children}</td>;
         },
       }}
     >

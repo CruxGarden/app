@@ -14,7 +14,10 @@ function ClaudeIcon() {
   );
 }
 
-function buildAvatarUrl(author: { id: string; meta?: Record<string, unknown> } | null, bust: number): string | null {
+function buildAvatarUrl(
+  author: { id: string; meta?: Record<string, unknown> } | null,
+  bust: number,
+): string | null {
   if (!author?.meta?.avatarUrl) return null;
   const base = import.meta.env.VITE_API_URL || 'http://localhost:3000';
   return `${base}${author.meta.avatarUrl}?v=${bust}`;
@@ -140,16 +143,14 @@ export default function Settings() {
         <div className="flex items-center gap-4 mb-4">
           <div className="relative">
             {avatar ? (
-              <img
-                src={avatar}
-                alt="Avatar"
-                className="w-14 h-14 rounded-full object-cover"
-              />
+              <img src={avatar} alt="Avatar" className="w-14 h-14 rounded-full object-cover" />
             ) : (
-              <div className={cn(
-                'w-14 h-14 rounded-full flex items-center justify-center',
-                'bg-accent-muted text-accent text-lg font-display font-bold',
-              )}>
+              <div
+                className={cn(
+                  'w-14 h-14 rounded-full flex items-center justify-center',
+                  'bg-accent-muted text-accent text-lg font-display font-bold',
+                )}
+              >
                 {initial}
               </div>
             )}
@@ -203,7 +204,10 @@ export default function Settings() {
                   ref={usernameRef}
                   type="text"
                   value={usernameValue}
-                  onChange={(e) => { setUsernameValue(e.target.value); setUsernameError(''); }}
+                  onChange={(e) => {
+                    setUsernameValue(e.target.value);
+                    setUsernameError('');
+                  }}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter') handleSaveUsername();
                     if (e.key === 'Escape') cancelEditingUsername();
@@ -238,7 +242,17 @@ export default function Settings() {
                 className="text-text hover:text-accent transition-colors cursor-pointer flex items-center gap-1.5 group"
               >
                 {author?.username ?? '—'}
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-text-muted">
+                <svg
+                  width="12"
+                  height="12"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="text-text-muted"
+                >
                   <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
                   <path d="m15 5 4 4" />
                 </svg>
@@ -250,9 +264,7 @@ export default function Settings() {
               Be aware. Changing your username also changes your public garden URL
             </p>
           )}
-          {usernameError && (
-            <p className="text-xs text-error text-right">{usernameError}</p>
-          )}
+          {usernameError && <p className="text-xs text-error text-right">{usernameError}</p>}
           <div className="flex justify-between">
             <span className="text-text-muted">Email</span>
             <span className="text-text">{account?.email ?? '—'}</span>
@@ -270,13 +282,15 @@ export default function Settings() {
 
         <div className="space-y-3">
           <div className="flex items-center gap-2">
-            <span className="text-sm text-text-muted flex items-center gap-1.5"><ClaudeIcon /> Claude</span>
-            <span className={cn(
-              'text-xs font-mono px-1.5 py-0.5 rounded-[var(--radius-sm)]',
-              apiKeyHint
-                ? 'text-accent bg-accent-muted'
-                : 'text-text-muted bg-surface',
-            )}>
+            <span className="text-sm text-text-muted flex items-center gap-1.5">
+              <ClaudeIcon /> Claude
+            </span>
+            <span
+              className={cn(
+                'text-xs font-mono px-1.5 py-0.5 rounded-[var(--radius-sm)]',
+                apiKeyHint ? 'text-accent bg-accent-muted' : 'text-text-muted bg-surface',
+              )}
+            >
               {apiKeyHint || 'Not configured'}
             </span>
           </div>
@@ -286,7 +300,9 @@ export default function Settings() {
               type="password"
               value={apiKey}
               onChange={(e) => setApiKey(e.target.value)}
-              onKeyDown={(e) => { if (e.key === 'Enter') handleSaveApiKey(); }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') handleSaveApiKey();
+              }}
               placeholder={apiKeyHint ? 'Replace key...' : 'sk-ant-...'}
               className={cn(
                 'flex-1 px-3 py-1.5 text-xs font-mono rounded-[var(--radius-sm)]',

@@ -43,23 +43,14 @@ export default function GateCard({ gate, index, isActive, onClick }: GateCardPro
       <div className="flex items-start gap-2.5">
         {/* Timeline dot */}
         <div className="flex flex-col items-center pt-1.5 shrink-0">
-          <div
-            className={cn(
-              'w-2 h-2 rounded-full',
-              isActive ? 'bg-accent' : 'bg-border',
-            )}
-          />
+          <div className={cn('w-2 h-2 rounded-full', isActive ? 'bg-accent' : 'bg-border')} />
         </div>
 
         {/* Content */}
         <div className="flex-1 min-w-0">
           <div className="flex items-baseline justify-between gap-2">
-            <span className="text-[11px] font-mono text-accent/70 uppercase">
-              #{index + 1}
-            </span>
-            <span className="text-[10px] text-text-muted shrink-0">
-              {formatTime(gate.created)}
-            </span>
+            <span className="text-[11px] font-mono text-accent/70 uppercase">#{index + 1}</span>
+            <span className="text-[10px] text-text-muted shrink-0">{formatTime(gate.created)}</span>
           </div>
           <div className="text-sm font-body mt-0.5 truncate">{title}</div>
         </div>

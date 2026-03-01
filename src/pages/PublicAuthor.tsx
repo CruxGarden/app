@@ -65,19 +65,17 @@ export default function PublicAuthor() {
     };
   }, [author?.username]);
 
-  const linkBuilder = useCallback(
-    (crux: Crux) => `/@${username}/${crux.slug}`,
-    [username],
-  );
+  const linkBuilder = useCallback((crux: Crux) => `/@${username}/${crux.slug}`, [username]);
 
   // Client-side search + sort
   const filteredCruxes = useMemo(() => {
     const needle = search.toLowerCase();
     const filtered = needle
-      ? cruxes.filter((c) =>
-          (c.title || '').toLowerCase().includes(needle) ||
-          (c.slug || '').toLowerCase().includes(needle) ||
-          (c.description || '').toLowerCase().includes(needle),
+      ? cruxes.filter(
+          (c) =>
+            (c.title || '').toLowerCase().includes(needle) ||
+            (c.slug || '').toLowerCase().includes(needle) ||
+            (c.description || '').toLowerCase().includes(needle),
         )
       : cruxes;
     return [...filtered].sort(
@@ -144,9 +142,7 @@ export default function PublicAuthor() {
               <h1 className="font-display text-lg font-medium text-text truncate">
                 {author?.username || username}
               </h1>
-              <p className="text-sm text-text-muted">
-                Public Garden
-              </p>
+              <p className="text-sm text-text-muted">Public Garden</p>
             </div>
           </div>
           <div className="flex items-center gap-3 mt-6">

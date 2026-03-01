@@ -172,8 +172,13 @@ html.palette-transition,
 html.palette-transition *,
 html.palette-transition *::before,
 html.palette-transition *::after {
-  transition: color 0.4s ease, background-color 0.4s ease, border-color 0.4s ease,
-    opacity 0.4s ease, filter 0.4s ease, backdrop-filter 0.4s ease !important;
+  transition:
+    color 0.4s ease,
+    background-color 0.4s ease,
+    border-color 0.4s ease,
+    opacity 0.4s ease,
+    filter 0.4s ease,
+    backdrop-filter 0.4s ease !important;
 }
 
 /* ── Selection ─────────────────────────────────────────── */

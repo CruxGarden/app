@@ -69,7 +69,11 @@ function formatFileSize(bytes: number): string {
 
 // ── Node renderer (stable component reference) ──────────
 
-const NodeRenderer = memo(function NodeRenderer({ node, style, dragHandle }: NodeRendererProps<TreeNodeData>) {
+const NodeRenderer = memo(function NodeRenderer({
+  node,
+  style,
+  dragHandle,
+}: NodeRendererProps<TreeNodeData>) {
   const data = node.data;
   const onContextMenu = useContext(TreeContextMenuContext);
   const createCallbacks = useContext(CreateCallbacksContext);
@@ -84,7 +88,11 @@ const NodeRenderer = memo(function NodeRenderer({ node, style, dragHandle }: Nod
         onMouseDown={(e) => e.stopPropagation()}
       >
         {createCallbacks.isFolder ? <FolderIcon /> : <span className="text-text-muted">+</span>}
-        <InlineRename initialValue="" onCommit={createCallbacks.onCommit} onCancel={createCallbacks.onCancel} />
+        <InlineRename
+          initialValue=""
+          onCommit={createCallbacks.onCommit}
+          onCancel={createCallbacks.onCancel}
+        />
       </div>
     );
   }
@@ -104,9 +112,8 @@ const NodeRenderer = memo(function NodeRenderer({ node, style, dragHandle }: Nod
     [onContextMenu, data.attachment?.id, data.path, isFolder],
   );
 
-  const fileSize = !isFolder && data.attachment?.size
-    ? formatFileSize(Number(data.attachment.size))
-    : null;
+  const fileSize =
+    !isFolder && data.attachment?.size ? formatFileSize(Number(data.attachment.size)) : null;
 
   return (
     <div
@@ -121,7 +128,9 @@ const NodeRenderer = memo(function NodeRenderer({ node, style, dragHandle }: Nod
         node.willReceiveDrop && 'bg-accent/10 ring-1 ring-accent/30',
       )}
       onClick={() => node.handleClick}
-      onDoubleClick={() => { if (isFolder) node.toggle(); }}
+      onDoubleClick={() => {
+        if (isFolder) node.toggle();
+      }}
       onContextMenu={handleContextMenu}
       title={fileSize ? `${data.path} (${fileSize})` : data.path}
     >
@@ -141,15 +150,7 @@ const NodeRenderer = memo(function NodeRenderer({ node, style, dragHandle }: Nod
       )}
 
       {/* Icon */}
-      {isFolder ? (
-        node.isOpen ? (
-          <FolderOpenIcon />
-        ) : (
-          <FolderIcon />
-        )
-      ) : (
-        getFileIcon(data.name)
-      )}
+      {isFolder ? node.isOpen ? <FolderOpenIcon /> : <FolderIcon /> : getFileIcon(data.name)}
 
       {/* Name or inline edit */}
       {node.isEditing ? (
@@ -161,7 +162,16 @@ const NodeRenderer = memo(function NodeRenderer({ node, style, dragHandle }: Nod
       ) : (
         <>
           <span className="truncate">{data.name}</span>
-          {fileSize && <span className={cn('ml-auto shrink-0 text-[10px] text-text-muted/50 transition-opacity', node.isSelected ? 'opacity-100' : 'opacity-0 group-hover/node:opacity-100')}>{fileSize}</span>}
+          {fileSize && (
+            <span
+              className={cn(
+                'ml-auto shrink-0 text-[10px] text-text-muted/50 transition-opacity',
+                node.isSelected ? 'opacity-100' : 'opacity-0 group-hover/node:opacity-100',
+              )}
+            >
+              {fileSize}
+            </span>
+          )}
         </>
       )}
     </div>
@@ -222,10 +232,7 @@ const ArboristFileTree = forwardRef<ArboristFileTreeHandle, ArboristFileTreeProp
     const [isDraggingFiles, setIsDraggingFiles] = useState(false);
 
     // Convert flat attachments to tree data
-    const treeData = useMemo(
-      () => attachmentsToTreeData(artifacts),
-      [artifacts],
-    );
+    const treeData = useMemo(() => attachmentsToTreeData(artifacts), [artifacts]);
 
     // Expose imperative handle
     useImperativeHandle(ref, () => ({
@@ -405,8 +412,7 @@ const ArboristFileTree = forwardRef<ArboristFileTreeHandle, ArboristFileTreeProp
 
     const isCreating =
       activeFileOperation &&
-      (activeFileOperation.type === 'create-file' ||
-        activeFileOperation.type === 'create-folder');
+      (activeFileOperation.type === 'create-file' || activeFileOperation.type === 'create-folder');
 
     const treeDataWithCreate = useMemo(() => {
       if (!isCreating) return treeData;
@@ -445,8 +451,7 @@ const ArboristFileTree = forwardRef<ArboristFileTreeHandle, ArboristFileTreeProp
       const isFolderOp = activeFileOperation!.type === 'create-folder';
       return {
         isFolder: isFolderOp,
-        onCommit: (name: string) =>
-          isFolderOp ? onCreateFolder?.(name) : onCreateFile?.(name),
+        onCommit: (name: string) => (isFolderOp ? onCreateFolder?.(name) : onCreateFile?.(name)),
         onCancel: () => onCancelOperation?.(),
       };
     }, [isCreating, activeFileOperation, onCreateFile, onCreateFolder, onCancelOperation]);
@@ -464,9 +469,7 @@ const ArboristFileTree = forwardRef<ArboristFileTreeHandle, ArboristFileTreeProp
 
     if (artifacts.length === 0 && !isCreating) {
       return (
-        <div className="p-3 text-xs text-text-muted">
-          No files yet. Ask the AI to create one.
-        </div>
+        <div className="p-3 text-xs text-text-muted">No files yet. Ask the AI to create one.</div>
       );
     }
 

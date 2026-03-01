@@ -12,12 +12,7 @@ const paddings = {
   lg: 'p-8',
 };
 
-export default function Panel({
-  padding = 'md',
-  className,
-  children,
-  ...props
-}: PanelProps) {
+export default function Panel({ padding = 'md', className, children, ...props }: PanelProps) {
   return (
     <div
       className={cn(

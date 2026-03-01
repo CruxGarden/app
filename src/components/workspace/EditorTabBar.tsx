@@ -30,9 +30,7 @@ export default function EditorTabBar({ tabs, activeId, onSelect, onClose }: Edit
             )}
             title={tab.path}
           >
-            {tab.dirty && (
-              <span className="w-1.5 h-1.5 rounded-full bg-accent shrink-0" />
-            )}
+            {tab.dirty && <span className="w-1.5 h-1.5 rounded-full bg-accent shrink-0" />}
             {getFileIcon(tab.name)}
             <span className="truncate max-w-[120px]">{tab.name}</span>
             <span
@@ -54,7 +52,15 @@ export default function EditorTabBar({ tabs, activeId, onSelect, onClose }: Edit
                 'hover:bg-error-muted hover:text-error',
               )}
             >
-              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+              <svg
+                width="10"
+                height="10"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+              >
                 <path d="M18 6L6 18M6 6l12 12" />
               </svg>
             </span>

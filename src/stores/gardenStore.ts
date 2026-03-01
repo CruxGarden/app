@@ -38,10 +38,11 @@ export const useGardenStore = create<GardenState>((set, get) => ({
       // Filter client-side (API doesn't support search yet)
       const needle = search.toLowerCase();
       const filtered = needle
-        ? data.filter((c) =>
-            (c.title || '').toLowerCase().includes(needle) ||
-            (c.slug || '').toLowerCase().includes(needle) ||
-            (c.description || '').toLowerCase().includes(needle),
+        ? data.filter(
+            (c) =>
+              (c.title || '').toLowerCase().includes(needle) ||
+              (c.slug || '').toLowerCase().includes(needle) ||
+              (c.description || '').toLowerCase().includes(needle),
           )
         : data;
       // Sort client-side (newest first)

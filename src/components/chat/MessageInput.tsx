@@ -52,7 +52,7 @@ export default function MessageInput({
         }
         const next = Math.min(historyIndexRef.current + 1, history.length - 1);
         historyIndexRef.current = next;
-        setValue(history[next]);
+        setValue(history[next] ?? '');
       }
     }
 
@@ -60,7 +60,7 @@ export default function MessageInput({
       e.preventDefault();
       const next = historyIndexRef.current - 1;
       historyIndexRef.current = next;
-      setValue(next < 0 ? savedInputRef.current : history[next]);
+      setValue(next < 0 ? savedInputRef.current : history[next] ?? '');
     }
   };
 

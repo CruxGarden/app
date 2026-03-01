@@ -107,8 +107,7 @@ function tryResolve(
   baseDir: string,
   resolver: (relativePath: string) => string | null,
 ): string | null {
-  return resolver(resolveRelative(value, baseDir))
-    ?? resolver(normalizePath(value));
+  return resolver(resolveRelative(value, baseDir)) ?? resolver(normalizePath(value));
 }
 
 /** Rewrite src/href attributes in an HTML string. */
@@ -117,18 +116,13 @@ function rewriteAttrs(
   baseDir: string,
   resolver: (relativePath: string) => string | null,
 ): string {
-  return html.replace(
-    ATTR_RE,
-    (_match, attr: string, quote: string, value: string) => {
-      if (isAbsoluteUrl(value)) {
-        return `${attr}=${quote}${value}${quote}`;
-      }
-      const resolved = tryResolve(value, baseDir, resolver);
-      return resolved
-        ? `${attr}=${quote}${resolved}${quote}`
-        : `${attr}=${quote}${value}${quote}`;
-    },
-  );
+  return html.replace(ATTR_RE, (_match, attr: string, quote: string, value: string) => {
+    if (isAbsoluteUrl(value)) {
+      return `${attr}=${quote}${value}${quote}`;
+    }
+    const resolved = tryResolve(value, baseDir, resolver);
+    return resolved ? `${attr}=${quote}${resolved}${quote}` : `${attr}=${quote}${value}${quote}`;
+  });
 }
 
 /** Rewrite CSS url() references in a string (inline styles, <style> blocks). */
@@ -137,18 +131,13 @@ function rewriteCssUrls(
   baseDir: string,
   resolver: (relativePath: string) => string | null,
 ): string {
-  return css.replace(
-    CSS_URL_RE,
-    (_match, quote: string, value: string) => {
-      if (isAbsoluteUrl(value)) {
-        return `url(${quote}${value}${quote})`;
-      }
-      const resolved = tryResolve(value, baseDir, resolver);
-      return resolved
-        ? `url(${quote}${resolved}${quote})`
-        : `url(${quote}${value}${quote})`;
-    },
-  );
+  return css.replace(CSS_URL_RE, (_match, quote: string, value: string) => {
+    if (isAbsoluteUrl(value)) {
+      return `url(${quote}${value}${quote})`;
+    }
+    const resolved = tryResolve(value, baseDir, resolver);
+    return resolved ? `url(${quote}${resolved}${quote})` : `url(${quote}${value}${quote})`;
+  });
 }
 
 /**
