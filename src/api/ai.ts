@@ -9,7 +9,7 @@ export type SSEHandler = (event: SSEEvent) => void;
 
 export async function streamChat(
   cruxId: string,
-  messages: { role: 'user' | 'assistant'; content: string }[],
+  messages: { role: string; content: unknown }[],
   onEvent: SSEHandler,
   model?: string,
   signal?: AbortSignal,
