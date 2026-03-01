@@ -2,26 +2,34 @@ import { create } from 'zustand';
 
 // ── Pane Types ──────────────────────────────────────────
 
-export type PaneType = 'history' | 'collaboration' | 'artifacts' | 'workshop' | 'details' | 'sync' | 'publish' | 'export';
+export type PaneType =
+  | 'history'
+  | 'collaboration'
+  | 'artifacts'
+  | 'workshop'
+  | 'details'
+  | 'sync'
+  | 'publish'
+  | 'export';
 
 /** Rainbow gradient colors for each pane (follows default order: rose → violet) */
 export const PANE_COLORS: Record<PaneType, string> = {
   collaboration: '#d47080', // rose
-  artifacts:     '#d4944c', // orange
-  workshop:      '#c8a84c', // gold
-  details:       '#5cb87a', // green
-  history:       '#4cb8b0', // teal
-  export:        '#5b9ed4', // blue
-  sync:          '#8c7cc8', // indigo
-  publish:       '#c87ca8', // violet
+  artifacts: '#d4944c', // orange
+  workshop: '#c8a84c', // gold
+  details: '#5cb87a', // green
+  history: '#4cb8b0', // teal
+  export: '#5b9ed4', // blue
+  sync: '#8c7cc8', // indigo
+  publish: '#c87ca8', // violet
 };
 
 export type EditorViewMode = 'source' | 'preview';
 
 export interface EditorTab {
-  id: string;          // attachment ID
-  path: string;        // file path (from meta.path or filename)
-  name: string;        // display name (last segment)
+  id: string; // attachment ID
+  path: string; // file path (from meta.path or filename)
+  name: string; // display name (last segment)
   dirty: boolean;
   viewMode: EditorViewMode;
   scrollTop: number;
@@ -117,7 +125,16 @@ function nameFromPath(path: string): string {
   return segments[segments.length - 1] || path;
 }
 
-export const DEFAULT_PANE_ORDER: PaneType[] = ['collaboration', 'artifacts', 'workshop', 'details', 'history', 'export', 'sync', 'publish'];
+export const DEFAULT_PANE_ORDER: PaneType[] = [
+  'collaboration',
+  'artifacts',
+  'workshop',
+  'details',
+  'history',
+  'export',
+  'sync',
+  'publish',
+];
 const DEFAULT_VISIBILITY: Record<PaneType, boolean> = {
   history: false,
   collaboration: true,
@@ -206,7 +223,10 @@ const RENAME_MAP: Record<string, PaneType> = {
 };
 
 /** Validate and migrate a persisted layout to match current PaneType values */
-function validateLayout(layout: PersistedLayout): { paneOrder: PaneType[]; paneVisibility: Record<PaneType, boolean> } {
+function validateLayout(layout: PersistedLayout): {
+  paneOrder: PaneType[];
+  paneVisibility: Record<PaneType, boolean>;
+} {
   const allPanes = new Set<PaneType>(DEFAULT_PANE_ORDER);
 
   // Rename old pane types in order
@@ -245,7 +265,10 @@ function loadLayout(key: string): PersistedLayout | null {
   }
 }
 
-function saveLayout(key: string, layout: { paneOrder: PaneType[]; paneVisibility: Record<PaneType, boolean> }) {
+function saveLayout(
+  key: string,
+  layout: { paneOrder: PaneType[]; paneVisibility: Record<PaneType, boolean> },
+) {
   localStorage.setItem(key, JSON.stringify(layout));
 }
 
@@ -268,7 +291,9 @@ function getInitialLayout(): { paneOrder: PaneType[]; paneVisibility: Record<Pan
         return migrated;
       }
     }
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
 
   return {
     paneOrder: [...DEFAULT_PANE_ORDER],
@@ -277,7 +302,10 @@ function getInitialLayout(): { paneOrder: PaneType[]; paneVisibility: Record<Pan
 }
 
 /** Resolve layout for a crux: crux-specific → global → defaults */
-function resolveLayout(cruxId: string): { paneOrder: PaneType[]; paneVisibility: Record<PaneType, boolean> } {
+function resolveLayout(cruxId: string): {
+  paneOrder: PaneType[];
+  paneVisibility: Record<PaneType, boolean>;
+} {
   const cruxLayout = loadLayout(cruxLayoutKey(cruxId));
   if (cruxLayout) return validateLayout(cruxLayout);
 
@@ -300,276 +328,265 @@ const initialLayout = getInitialLayout();
 
 // ── Store ───────────────────────────────────────────────
 
-export const useUIStore = create<UIState>()(
-    (set, get) => ({
-      // ── Initial state ──
-      paneOrder: initialLayout.paneOrder,
-      paneVisibility: initialLayout.paneVisibility,
-      activeCruxId: null,
+export const useUIStore = create<UIState>()((set, get) => ({
+  // ── Initial state ──
+  paneOrder: initialLayout.paneOrder,
+  paneVisibility: initialLayout.paneVisibility,
+  activeCruxId: null,
 
-      editor: {
-        tabs: [],
-        activeTabId: null,
-        diffTargetId: null,
-      },
+  editor: {
+    tabs: [],
+    activeTabId: null,
+    diffTargetId: null,
+  },
 
-      activeFileOperation: null,
-      folderOpenState: {},
-      contextMenu: { ...DEFAULT_CONTEXT_MENU },
-      mobileActivePane: 'collaboration' as PaneType,
+  activeFileOperation: null,
+  folderOpenState: {},
+  contextMenu: { ...DEFAULT_CONTEXT_MENU },
+  mobileActivePane: 'collaboration' as PaneType,
 
-      // ── Layout actions ──
+  // ── Layout actions ──
 
-      setActiveCrux: (id) => {
-        // Flush any pending debounced scroll save
-        if (scrollSaveTimer) {
-          clearTimeout(scrollSaveTimer);
-          scrollSaveTimer = null;
-        }
-        // Save current state before switching
-        const prev = get();
-        if (prev.activeCruxId) {
-          if (prev.editor.tabs.length > 0) {
-            saveEditorTabs(prev.activeCruxId, prev.editor);
-          }
-          if (Object.keys(prev.folderOpenState).length > 0) {
-            saveFolderState(prev.activeCruxId, prev.folderOpenState);
-          }
-        }
+  setActiveCrux: (id) => {
+    // Flush any pending debounced scroll save
+    if (scrollSaveTimer) {
+      clearTimeout(scrollSaveTimer);
+      scrollSaveTimer = null;
+    }
+    // Save current state before switching
+    const prev = get();
+    if (prev.activeCruxId) {
+      if (prev.editor.tabs.length > 0) {
+        saveEditorTabs(prev.activeCruxId, prev.editor);
+      }
+      if (Object.keys(prev.folderOpenState).length > 0) {
+        saveFolderState(prev.activeCruxId, prev.folderOpenState);
+      }
+    }
 
-        if (id) {
-          const layout = resolveLayout(id);
-          // Restore editor tabs for this crux
-          const saved = loadEditorTabs(id);
-          const restoredTabs: EditorTab[] = saved
-            ? saved.tabs.map((t) => ({
-                id: t.id,
-                path: t.path,
-                name: nameFromPath(t.path),
-                dirty: false,
-                viewMode: t.viewMode ?? 'source',
-                scrollTop: t.scrollTop ?? 0,
-              }))
-            : [];
-          const restoredActiveId = saved?.activeTabId ?? null;
-
-          // Restore folder open/close state
-          const savedFolders = loadFolderState(id);
-
-          set({
-            activeCruxId: id,
-            paneOrder: layout.paneOrder,
-            paneVisibility: layout.paneVisibility,
-            editor: {
-              tabs: restoredTabs,
-              activeTabId: restoredActiveId,
-              diffTargetId: null,
-            },
-            folderOpenState: savedFolders ?? {},
-          });
-        } else {
-          const global = loadLayout(GLOBAL_LAYOUT_KEY);
-          const layout = global
-            ? validateLayout(global)
-            : { paneOrder: [...DEFAULT_PANE_ORDER], paneVisibility: { ...DEFAULT_VISIBILITY } };
-          set({
-            activeCruxId: null,
-            paneOrder: layout.paneOrder,
-            paneVisibility: layout.paneVisibility,
-            editor: { tabs: [], activeTabId: null, diffTargetId: null },
-            folderOpenState: {},
-          });
-        }
-      },
-
-      togglePane: (pane) => {
-        const prev = get();
-        const wasVisible = prev.paneVisibility[pane];
-        const newVisibility = { ...prev.paneVisibility, [pane]: !wasVisible };
-
-        // When enabling a pane, move it to the end of paneOrder
-        const newOrder = !wasVisible
-          ? [...prev.paneOrder.filter((p) => p !== pane), pane]
-          : prev.paneOrder;
-
-        set({ paneVisibility: newVisibility, paneOrder: newOrder });
-        const s = get();
-        const layout = { paneOrder: s.paneOrder, paneVisibility: s.paneVisibility };
-        saveLayout(s.activeCruxId ? cruxLayoutKey(s.activeCruxId) : GLOBAL_LAYOUT_KEY, layout);
-      },
-
-      setPaneVisible: (pane, visible) => {
-        set((s) => ({
-          paneVisibility: { ...s.paneVisibility, [pane]: visible },
-        }));
-        const s = get();
-        const layout = { paneOrder: s.paneOrder, paneVisibility: s.paneVisibility };
-        saveLayout(s.activeCruxId ? cruxLayoutKey(s.activeCruxId) : GLOBAL_LAYOUT_KEY, layout);
-      },
-
-      reorderPanes: (newOrder) => {
-        set({ paneOrder: newOrder });
-        const s = get();
-        const layout = { paneOrder: s.paneOrder, paneVisibility: s.paneVisibility };
-        saveLayout(s.activeCruxId ? cruxLayoutKey(s.activeCruxId) : GLOBAL_LAYOUT_KEY, layout);
-      },
-
-      // ── Editor tab actions ──
-
-      openFile: (id, path) => {
-        set((s) => {
-          const existing = s.editor.tabs.find((t) => t.id === id);
-          if (existing) {
-            return { editor: { ...s.editor, activeTabId: id } };
-          }
-          const tab: EditorTab = {
-            id,
-            path,
-            name: nameFromPath(path),
+    if (id) {
+      const layout = resolveLayout(id);
+      // Restore editor tabs for this crux
+      const saved = loadEditorTabs(id);
+      const restoredTabs: EditorTab[] = saved
+        ? saved.tabs.map((t) => ({
+            id: t.id,
+            path: t.path,
+            name: nameFromPath(t.path),
             dirty: false,
-            viewMode: 'source',
-            scrollTop: 0,
-          };
-          return {
-            editor: {
-              ...s.editor,
-              tabs: [...s.editor.tabs, tab],
-              activeTabId: id,
-            },
-          };
-        });
-        const s = get();
-        if (s.activeCruxId) saveEditorTabs(s.activeCruxId, s.editor);
+            viewMode: t.viewMode ?? 'source',
+            scrollTop: t.scrollTop ?? 0,
+          }))
+        : [];
+      const restoredActiveId = saved?.activeTabId ?? null;
+
+      // Restore folder open/close state
+      const savedFolders = loadFolderState(id);
+
+      set({
+        activeCruxId: id,
+        paneOrder: layout.paneOrder,
+        paneVisibility: layout.paneVisibility,
+        editor: {
+          tabs: restoredTabs,
+          activeTabId: restoredActiveId,
+          diffTargetId: null,
+        },
+        folderOpenState: savedFolders ?? {},
+      });
+    } else {
+      const global = loadLayout(GLOBAL_LAYOUT_KEY);
+      const layout = global
+        ? validateLayout(global)
+        : { paneOrder: [...DEFAULT_PANE_ORDER], paneVisibility: { ...DEFAULT_VISIBILITY } };
+      set({
+        activeCruxId: null,
+        paneOrder: layout.paneOrder,
+        paneVisibility: layout.paneVisibility,
+        editor: { tabs: [], activeTabId: null, diffTargetId: null },
+        folderOpenState: {},
+      });
+    }
+  },
+
+  togglePane: (pane) => {
+    const prev = get();
+    const wasVisible = prev.paneVisibility[pane];
+    const newVisibility = { ...prev.paneVisibility, [pane]: !wasVisible };
+
+    // When enabling a pane, move it to the end of paneOrder
+    const newOrder = !wasVisible
+      ? [...prev.paneOrder.filter((p) => p !== pane), pane]
+      : prev.paneOrder;
+
+    set({ paneVisibility: newVisibility, paneOrder: newOrder });
+    const s = get();
+    const layout = { paneOrder: s.paneOrder, paneVisibility: s.paneVisibility };
+    saveLayout(s.activeCruxId ? cruxLayoutKey(s.activeCruxId) : GLOBAL_LAYOUT_KEY, layout);
+  },
+
+  setPaneVisible: (pane, visible) => {
+    set((s) => ({
+      paneVisibility: { ...s.paneVisibility, [pane]: visible },
+    }));
+    const s = get();
+    const layout = { paneOrder: s.paneOrder, paneVisibility: s.paneVisibility };
+    saveLayout(s.activeCruxId ? cruxLayoutKey(s.activeCruxId) : GLOBAL_LAYOUT_KEY, layout);
+  },
+
+  reorderPanes: (newOrder) => {
+    set({ paneOrder: newOrder });
+    const s = get();
+    const layout = { paneOrder: s.paneOrder, paneVisibility: s.paneVisibility };
+    saveLayout(s.activeCruxId ? cruxLayoutKey(s.activeCruxId) : GLOBAL_LAYOUT_KEY, layout);
+  },
+
+  // ── Editor tab actions ──
+
+  openFile: (id, path) => {
+    set((s) => {
+      const existing = s.editor.tabs.find((t) => t.id === id);
+      if (existing) {
+        return { editor: { ...s.editor, activeTabId: id } };
+      }
+      const tab: EditorTab = {
+        id,
+        path,
+        name: nameFromPath(path),
+        dirty: false,
+        viewMode: 'source',
+        scrollTop: 0,
+      };
+      return {
+        editor: {
+          ...s.editor,
+          tabs: [...s.editor.tabs, tab],
+          activeTabId: id,
+        },
+      };
+    });
+    const s = get();
+    if (s.activeCruxId) saveEditorTabs(s.activeCruxId, s.editor);
+  },
+
+  closeTab: (id) => {
+    set((s) => {
+      const tabs = s.editor.tabs.filter((t) => t.id !== id);
+      let activeTabId = s.editor.activeTabId;
+      if (activeTabId === id) {
+        const closedIndex = s.editor.tabs.findIndex((t) => t.id === id);
+        activeTabId = tabs[Math.min(closedIndex, tabs.length - 1)]?.id ?? null;
+      }
+      return { editor: { ...s.editor, tabs, activeTabId } };
+    });
+    const s = get();
+    if (s.activeCruxId) saveEditorTabs(s.activeCruxId, s.editor);
+  },
+
+  setActiveTab: (id) => {
+    set((s) => ({ editor: { ...s.editor, activeTabId: id } }));
+    const s = get();
+    if (s.activeCruxId) saveEditorTabs(s.activeCruxId, s.editor);
+  },
+
+  setTabDirty: (id, dirty) =>
+    set((s) => ({
+      editor: {
+        ...s.editor,
+        tabs: s.editor.tabs.map((t) => (t.id === id ? { ...t, dirty } : t)),
       },
+    })),
 
-      closeTab: (id) => {
-        set((s) => {
-          const tabs = s.editor.tabs.filter((t) => t.id !== id);
-          let activeTabId = s.editor.activeTabId;
-          if (activeTabId === id) {
-            const closedIndex = s.editor.tabs.findIndex((t) => t.id === id);
-            activeTabId = tabs[Math.min(closedIndex, tabs.length - 1)]?.id ?? null;
-          }
-          return { editor: { ...s.editor, tabs, activeTabId } };
-        });
-        const s = get();
-        if (s.activeCruxId) saveEditorTabs(s.activeCruxId, s.editor);
+  setTabViewMode: (id, mode) => {
+    set((s) => ({
+      editor: {
+        ...s.editor,
+        tabs: s.editor.tabs.map((t) => (t.id === id ? { ...t, viewMode: mode } : t)),
       },
+    }));
+    const s = get();
+    if (s.activeCruxId) saveEditorTabs(s.activeCruxId, s.editor);
+  },
 
-      setActiveTab: (id) => {
-        set((s) => ({ editor: { ...s.editor, activeTabId: id } }));
-        const s = get();
-        if (s.activeCruxId) saveEditorTabs(s.activeCruxId, s.editor);
+  setTabScrollTop: (id, scrollTop) => {
+    set((s) => ({
+      editor: {
+        ...s.editor,
+        tabs: s.editor.tabs.map((t) => (t.id === id ? { ...t, scrollTop } : t)),
       },
+    }));
+    const s = get();
+    if (s.activeCruxId) debouncedSaveEditorTabs(s.activeCruxId, s.editor);
+  },
 
-      setTabDirty: (id, dirty) =>
-        set((s) => ({
-          editor: {
-            ...s.editor,
-            tabs: s.editor.tabs.map((t) =>
-              t.id === id ? { ...t, dirty } : t,
-            ),
-          },
-        })),
+  setDiffTarget: (id) => set((s) => ({ editor: { ...s.editor, diffTargetId: id } })),
 
-      setTabViewMode: (id, mode) => {
-        set((s) => ({
-          editor: {
-            ...s.editor,
-            tabs: s.editor.tabs.map((t) =>
-              t.id === id ? { ...t, viewMode: mode } : t,
-            ),
-          },
-        }));
-        const s = get();
-        if (s.activeCruxId) saveEditorTabs(s.activeCruxId, s.editor);
-      },
+  closeAllTabs: () => {
+    set((s) => ({
+      editor: { ...s.editor, tabs: [], activeTabId: null, diffTargetId: null },
+    }));
+    const s = get();
+    if (s.activeCruxId) saveEditorTabs(s.activeCruxId, s.editor);
+  },
 
-      setTabScrollTop: (id, scrollTop) => {
-        set((s) => ({
-          editor: {
-            ...s.editor,
-            tabs: s.editor.tabs.map((t) =>
-              t.id === id ? { ...t, scrollTop } : t,
-            ),
-          },
-        }));
-        const s = get();
-        if (s.activeCruxId) debouncedSaveEditorTabs(s.activeCruxId, s.editor);
-      },
+  // ── Folder state ──
 
-      setDiffTarget: (id) =>
-        set((s) => ({ editor: { ...s.editor, diffTargetId: id } })),
+  setFolderOpen: (folderId, isOpen) => {
+    set((s) => ({
+      folderOpenState: { ...s.folderOpenState, [folderId]: isOpen },
+    }));
+    const s = get();
+    if (s.activeCruxId) saveFolderState(s.activeCruxId, s.folderOpenState);
+  },
 
-      closeAllTabs: () => {
-        set((s) => ({
-          editor: { ...s.editor, tabs: [], activeTabId: null, diffTargetId: null },
-        }));
-        const s = get();
-        if (s.activeCruxId) saveEditorTabs(s.activeCruxId, s.editor);
-      },
+  // ── File operations ──
 
-      // ── Folder state ──
+  startFileOperation: (op) => set({ activeFileOperation: op }),
+  cancelFileOperation: () => set({ activeFileOperation: null }),
 
-      setFolderOpen: (folderId, isOpen) => {
-        set((s) => ({
-          folderOpenState: { ...s.folderOpenState, [folderId]: isOpen },
-        }));
-        const s = get();
-        if (s.activeCruxId) saveFolderState(s.activeCruxId, s.folderOpenState);
-      },
+  // ── Context menu ──
 
-      // ── File operations ──
+  showContextMenu: (state) => set({ contextMenu: { ...state, visible: true } }),
+  hideContextMenu: () => set({ contextMenu: { ...DEFAULT_CONTEXT_MENU } }),
 
-      startFileOperation: (op) => set({ activeFileOperation: op }),
-      cancelFileOperation: () => set({ activeFileOperation: null }),
+  // ── Mobile ──
 
-      // ── Context menu ──
+  setMobileActivePane: (pane) => set({ mobileActivePane: pane }),
 
-      showContextMenu: (state) =>
-        set({ contextMenu: { ...state, visible: true } }),
-      hideContextMenu: () =>
-        set({ contextMenu: { ...DEFAULT_CONTEXT_MENU } }),
+  // ── Legacy compatibility (derived from pane system) ──
 
-      // ── Mobile ──
+  get fileViewerOpen() {
+    const s = get();
+    return s.paneVisibility.artifacts || s.paneVisibility.workshop;
+  },
+  get timelineOpen() {
+    return get().paneVisibility.history;
+  },
 
-      setMobileActivePane: (pane) => set({ mobileActivePane: pane }),
-
-      // ── Legacy compatibility (derived from pane system) ──
-
-      get fileViewerOpen() {
-        const s = get();
-        return s.paneVisibility.artifacts || s.paneVisibility.workshop;
-      },
-      get timelineOpen() {
-        return get().paneVisibility.history;
-      },
-
-      toggleFileViewer: () => {
-        const s = get();
-        if (s.paneVisibility.artifacts) {
-          set((prev) => ({
-            paneVisibility: { ...prev.paneVisibility, artifacts: false, workshop: false },
-          }));
-        } else {
-          set((prev) => ({
-            paneVisibility: { ...prev.paneVisibility, artifacts: true },
-          }));
-        }
-      },
-      toggleTimeline: () => {
-        const s = get();
-        set((prev) => ({
-          paneVisibility: { ...prev.paneVisibility, history: !s.paneVisibility.history },
-        }));
-      },
-      setFileViewer: (open) =>
-        set((s) => ({
-          paneVisibility: { ...s.paneVisibility, workshop: open },
-        })),
-      setTimeline: (open) =>
-        set((s) => ({
-          paneVisibility: { ...s.paneVisibility, history: open },
-        })),
-    }),
-);
+  toggleFileViewer: () => {
+    const s = get();
+    if (s.paneVisibility.artifacts) {
+      set((prev) => ({
+        paneVisibility: { ...prev.paneVisibility, artifacts: false, workshop: false },
+      }));
+    } else {
+      set((prev) => ({
+        paneVisibility: { ...prev.paneVisibility, artifacts: true },
+      }));
+    }
+  },
+  toggleTimeline: () => {
+    const s = get();
+    set((prev) => ({
+      paneVisibility: { ...prev.paneVisibility, history: !s.paneVisibility.history },
+    }));
+  },
+  setFileViewer: (open) =>
+    set((s) => ({
+      paneVisibility: { ...s.paneVisibility, workshop: open },
+    })),
+  setTimeline: (open) =>
+    set((s) => ({
+      paneVisibility: { ...s.paneVisibility, history: open },
+    })),
+}));

@@ -16,8 +16,22 @@ const router = createBrowserRouter([
   // Public
   { path: '/', element: <Landing /> },
   { path: '/login', element: <Login /> },
-  { path: '/:username/:slug', element: <ErrorBoundary><PublicCrux /></ErrorBoundary> },
-  { path: '/:username', element: <ErrorBoundary><PublicAuthor /></ErrorBoundary> },
+  {
+    path: '/:username/:slug',
+    element: (
+      <ErrorBoundary>
+        <PublicCrux />
+      </ErrorBoundary>
+    ),
+  },
+  {
+    path: '/:username',
+    element: (
+      <ErrorBoundary>
+        <PublicAuthor />
+      </ErrorBoundary>
+    ),
+  },
 
   // Protected
   {
@@ -26,9 +40,30 @@ const router = createBrowserRouter([
       {
         element: <AppShell />,
         children: [
-          { path: '/garden', element: <ErrorBoundary><Garden /></ErrorBoundary> },
-          { path: '/crux/:id', element: <ErrorBoundary><CruxPage /></ErrorBoundary> },
-          { path: '/settings', element: <ErrorBoundary><Settings /></ErrorBoundary> },
+          {
+            path: '/garden',
+            element: (
+              <ErrorBoundary>
+                <Garden />
+              </ErrorBoundary>
+            ),
+          },
+          {
+            path: '/crux/:id',
+            element: (
+              <ErrorBoundary>
+                <CruxPage />
+              </ErrorBoundary>
+            ),
+          },
+          {
+            path: '/settings',
+            element: (
+              <ErrorBoundary>
+                <Settings />
+              </ErrorBoundary>
+            ),
+          },
         ],
       },
     ],

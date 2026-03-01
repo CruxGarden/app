@@ -5,7 +5,16 @@ import { useUIStore, PANE_COLORS, type PaneType } from '@/stores/uiStore';
 
 function CloseIcon() {
   return (
-    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg
+      width="12"
+      height="12"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
       <line x1="18" y1="6" x2="6" y2="18" />
       <line x1="6" y1="6" x2="18" y2="18" />
     </svg>
@@ -39,10 +48,12 @@ export default function PaneHeader({ paneType, icon, label, actions, children }:
       onDragEnd={() => {
         endDrag();
       }}
-      style={{
-        borderTopColor: paneColor,
-        '--pane-color': paneColor,
-      } as React.CSSProperties}
+      style={
+        {
+          borderTopColor: paneColor,
+          '--pane-color': paneColor,
+        } as React.CSSProperties
+      }
       className={cn(
         'flex items-center justify-between px-4 h-10 border-t-2 border-b border-border shrink-0',
         'cursor-grab active:cursor-grabbing select-none',
@@ -58,10 +69,12 @@ export default function PaneHeader({ paneType, icon, label, actions, children }:
           <span className="text-xs font-mono uppercase tracking-wider">{label}</span>
         </div>
       )}
-      <div className={cn(
-        'flex items-center gap-1 transition-opacity duration-150',
-        'md:opacity-0 md:group-hover/pane:opacity-100',
-      )}>
+      <div
+        className={cn(
+          'flex items-center gap-1 transition-opacity duration-150',
+          'md:opacity-0 md:group-hover/pane:opacity-100',
+        )}
+      >
         {actions}
         <button
           onClick={(e) => {

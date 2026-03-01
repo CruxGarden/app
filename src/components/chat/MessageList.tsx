@@ -10,11 +10,7 @@ interface MessageListProps {
   isStreaming: boolean;
 }
 
-export default function MessageList({
-  messages,
-  streamingContent,
-  isStreaming,
-}: MessageListProps) {
+export default function MessageList({ messages, streamingContent, isStreaming }: MessageListProps) {
   const bottomRef = useRef<HTMLDivElement>(null);
   const author = useAuthStore((s) => s.author);
 

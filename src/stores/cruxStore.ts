@@ -1,5 +1,12 @@
 import { create } from 'zustand';
-import type { Crux, ChatMessage, Attachment, CruxSummary, Dimension, UpdateCruxDto } from '@/api/types';
+import type {
+  Crux,
+  ChatMessage,
+  Attachment,
+  CruxSummary,
+  Dimension,
+  UpdateCruxDto,
+} from '@/api/types';
 import type { Palette } from '@/lib/palette';
 import { applyPalette, resetPalette } from '@/lib/palette';
 import { cruxes } from '@/api';
@@ -103,9 +110,7 @@ export const useCruxStore = create<CruxState>((set, get) => ({
       }
       // Check if any attachment was modified after publish
       if (!hasChanges && attachments.length > 0) {
-        hasChanges = attachments.some(
-          (a) => new Date(a.updated).getTime() > publishedMs,
-        );
+        hasChanges = attachments.some((a) => new Date(a.updated).getTime() > publishedMs);
       }
     }
 
@@ -187,7 +192,11 @@ export const useCruxStore = create<CruxState>((set, get) => ({
   },
 
   setArtifacts: (artifacts: Attachment[]) => {
-    set((s) => ({ artifacts, hasUnpublishedChanges: true, artifactsVersion: s.artifactsVersion + 1 }));
+    set((s) => ({
+      artifacts,
+      hasUnpublishedChanges: true,
+      artifactsVersion: s.artifactsVersion + 1,
+    }));
   },
 
   addArtifact: (artifact: Attachment) => {
@@ -196,9 +205,7 @@ export const useCruxStore = create<CruxState>((set, get) => ({
 
   updateArtifact: (id: string, updates: Partial<Attachment>) => {
     set((state) => ({
-      artifacts: state.artifacts.map((a) =>
-        a.id === id ? { ...a, ...updates } : a,
-      ),
+      artifacts: state.artifacts.map((a) => (a.id === id ? { ...a, ...updates } : a)),
     }));
   },
 
@@ -278,17 +285,29 @@ export const useCruxStore = create<CruxState>((set, get) => ({
     const text = content ?? '';
     const ext = path.split('.').pop()?.toLowerCase() || 'txt';
     const mimeMap: Record<string, string> = {
-      html: 'text/html', htm: 'text/html', css: 'text/css',
-      js: 'application/javascript', ts: 'application/javascript',
-      jsx: 'application/javascript', tsx: 'application/javascript',
-      json: 'application/json', md: 'text/markdown', txt: 'text/plain',
-      py: 'text/x-python', svg: 'image/svg+xml', xml: 'application/xml',
+      html: 'text/html',
+      htm: 'text/html',
+      css: 'text/css',
+      js: 'application/javascript',
+      ts: 'application/javascript',
+      jsx: 'application/javascript',
+      tsx: 'application/javascript',
+      json: 'application/json',
+      md: 'text/markdown',
+      txt: 'text/plain',
+      py: 'text/x-python',
+      svg: 'image/svg+xml',
+      xml: 'application/xml',
     };
     const mime = mimeMap[ext] || 'text/plain';
     const filename = path.split('/').pop() || 'file';
     const blob = new Blob([text], { type: mime });
     const file = new File([blob], filename, { type: mime });
-    const attachment = await cruxes.uploadAttachment(crux.id, file, { path, type: 'file', kind: 'artifact' });
+    const attachment = await cruxes.uploadAttachment(crux.id, file, {
+      path,
+      type: 'file',
+      kind: 'artifact',
+    });
     set((state) => ({ artifacts: [...state.artifacts, attachment], hasUnpublishedChanges: true }));
     return attachment;
   },
@@ -297,7 +316,11 @@ export const useCruxStore = create<CruxState>((set, get) => ({
     const { crux } = get();
     if (!crux) throw new Error('No active crux');
     const path = parentPath ? `${parentPath}/${file.name}` : file.name;
-    const attachment = await cruxes.uploadAttachment(crux.id, file, { path, type: 'file', kind: 'artifact' });
+    const attachment = await cruxes.uploadAttachment(crux.id, file, {
+      path,
+      type: 'file',
+      kind: 'artifact',
+    });
     set((state) => ({ artifacts: [...state.artifacts, attachment], hasUnpublishedChanges: true }));
     return attachment;
   },
@@ -313,7 +336,11 @@ export const useCruxStore = create<CruxState>((set, get) => ({
     set((state) => ({
       artifacts: state.artifacts.map((a) =>
         a.id === id
-          ? { ...a, meta: { ...a.meta, path: newPath }, filename: newPath.split('/').pop() || a.filename }
+          ? {
+              ...a,
+              meta: { ...a.meta, path: newPath },
+              filename: newPath.split('/').pop() || a.filename,
+            }
           : a,
       ),
       hasUnpublishedChanges: true,
@@ -325,7 +352,11 @@ export const useCruxStore = create<CruxState>((set, get) => ({
     set((state) => ({
       artifacts: state.artifacts.map((a) =>
         a.id === id
-          ? { ...a, meta: { ...a.meta, path: newPath }, filename: newPath.split('/').pop() || a.filename }
+          ? {
+              ...a,
+              meta: { ...a.meta, path: newPath },
+              filename: newPath.split('/').pop() || a.filename,
+            }
           : a,
       ),
       hasUnpublishedChanges: true,

@@ -19,9 +19,7 @@ interface ListParams {
   offset?: number;
 }
 
-export async function list(
-  params?: ListParams,
-): Promise<{ data: Crux[]; meta: PaginationMeta }> {
+export async function list(params?: ListParams): Promise<{ data: Crux[]; meta: PaginationMeta }> {
   const query: Record<string, string> = {};
   if (params?.search) query.search = params.search;
   if (params?.limit) query.limit = String(params.limit);
@@ -86,10 +84,7 @@ export async function getDimensions(
   return res.data;
 }
 
-export async function createDimension(
-  cruxId: string,
-  dto: CreateDimensionDto,
-): Promise<Dimension> {
+export async function createDimension(cruxId: string, dto: CreateDimensionDto): Promise<Dimension> {
   const res = await client.post<Dimension>(`/cruxes/${cruxId}/dimensions`, dto);
   return res.data;
 }

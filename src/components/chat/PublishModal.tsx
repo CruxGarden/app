@@ -9,7 +9,16 @@ interface PublishModalProps {
 
 function CheckIcon() {
   return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
       <polyline points="20 6 9 17 4 12" />
     </svg>
   );
@@ -17,7 +26,16 @@ function CheckIcon() {
 
 function CopyIcon() {
   return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+    <svg
+      width="14"
+      height="14"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
       <rect width="14" height="14" x="8" y="8" rx="2" />
       <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" />
     </svg>
@@ -50,9 +68,7 @@ export default function PublishModal({ open, onClose, url }: PublishModalProps) 
         </div>
 
         <div className="flex items-center gap-2 bg-bg rounded-[var(--radius-sm)] p-2">
-          <span className="text-sm font-mono text-accent truncate flex-1 text-left">
-            {url}
-          </span>
+          <span className="text-sm font-mono text-accent truncate flex-1 text-left">{url}</span>
           <button
             onClick={handleCopy}
             className="shrink-0 p-1.5 rounded-[var(--radius-sm)] text-text-muted hover:text-text hover:bg-surface/50 transition-colors cursor-pointer"

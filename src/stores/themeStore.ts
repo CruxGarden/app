@@ -20,7 +20,9 @@ function applyToDOM(resolved: 'dark' | 'light') {
   html.classList.add(resolved);
 }
 
-const stored = (typeof localStorage !== 'undefined' ? localStorage.getItem('cruxgarden:theme') : null) as Mode | null;
+const stored = (
+  typeof localStorage !== 'undefined' ? localStorage.getItem('cruxgarden:theme') : null
+) as Mode | null;
 const initial = stored ?? 'dark';
 const initialResolved = resolveMode(initial);
 

@@ -20,7 +20,8 @@ createRoot(document.getElementById('root')!, {
   // the editor's InstantiationService gets disposed on the first unmount and
   // fails to recreate on remount. The error boundary recovers silently.
   onCaughtError: (error) => {
-    if (error instanceof Error && error.message.includes('InstantiationService has been disposed')) return;
+    if (error instanceof Error && error.message.includes('InstantiationService has been disposed'))
+      return;
     console.error(error);
   },
 }).render(

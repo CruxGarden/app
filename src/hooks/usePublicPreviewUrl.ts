@@ -40,7 +40,9 @@ export function usePublicPreviewUrl(
     waitForServiceWorker().then((ready) => {
       if (!cancelled) setSwReady(ready);
     });
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   // Download all attachments and cache (once per crux)
@@ -83,7 +85,9 @@ export function usePublicPreviewUrl(
       setUrl(getPreviewUrl(cacheKey, entryPath, versionRef.current));
     })();
 
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [attachments, entryId, username, slug, swReady, cacheKey]);
 
   // Cleanup cache on unmount

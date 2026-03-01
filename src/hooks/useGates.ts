@@ -18,10 +18,7 @@ OPEN: [unresolved questions or tensions]
 
 Respond ONLY with the snapshot in this format. No preamble, no explanation.`;
 
-function buildSummaryPrompt(
-  existing: CruxSummary | null,
-  snapshot: GateSnapshot,
-): string {
+function buildSummaryPrompt(existing: CruxSummary | null, snapshot: GateSnapshot): string {
   const current = existing
     ? `Current summary:\nCRUX: ${existing.crux}\nPURPOSE: ${existing.purpose}\nSTAGE: ${existing.stage}\nTHEMES: ${existing.themes}\nSTACK: ${existing.stack}`
     : 'No summary exists yet. Create one from scratch.';
@@ -93,9 +90,14 @@ async function collectStreamText(
   model?: string,
 ): Promise<string> {
   let text = '';
-  await streamChat(cruxId, messages, (event) => {
-    if (event.event === 'text') text += event.data.content;
-  }, model);
+  await streamChat(
+    cruxId,
+    messages,
+    (event) => {
+      if (event.event === 'text') text += event.data.content;
+    },
+    model,
+  );
   return text;
 }
 
@@ -169,9 +171,7 @@ export function useGates() {
     const currentArtifacts = useCruxStore.getState().artifacts;
 
     // Determine message range (messages since last gate)
-    const lastGateMessageTo = currentGateCount > 0
-      ? findLastGateMessageEnd()
-      : 0;
+    const lastGateMessageTo = currentGateCount > 0 ? findLastGateMessageEnd() : 0;
     const fromIndex = Math.max(0, lastGateMessageTo);
 
     try {
@@ -179,10 +179,12 @@ export function useGates() {
       const conversationExcerpt = formatConversation(currentMessages, fromIndex);
       const snapshotResponse = await collectStreamText(
         crux.id,
-        [{
-          role: 'user' as const,
-          content: `The following is a recent conversation excerpt. Based on it, generate a gate snapshot.\n\n---\n${conversationExcerpt}\n---\n\n${SNAPSHOT_PROMPT}`,
-        }],
+        [
+          {
+            role: 'user' as const,
+            content: `The following is a recent conversation excerpt. Based on it, generate a gate snapshot.\n\n---\n${conversationExcerpt}\n---\n\n${SNAPSHOT_PROMPT}`,
+          },
+        ],
         model,
       );
 
@@ -216,15 +218,20 @@ export function useGates() {
       });
 
       // Add to local state immediately
-      addGate({ ...dimension, target: { id: gateCrux.id, slug: gateSlug, title: snapshot.gate, data: gateCrux.data } });
+      addGate({
+        ...dimension,
+        target: { id: gateCrux.id, slug: gateSlug, title: snapshot.gate, data: gateCrux.data },
+      });
 
       // Step 4: Generate updated summary
       const summaryResponse = await collectStreamText(
         crux.id,
-        [{
-          role: 'user' as const,
-          content: buildSummaryPrompt(currentSummary, snapshot),
-        }],
+        [
+          {
+            role: 'user' as const,
+            content: buildSummaryPrompt(currentSummary, snapshot),
+          },
+        ],
         model,
       );
 
@@ -269,10 +276,12 @@ export function useGates() {
 
       const response = await collectStreamText(
         crux.id,
-        [{
-          role: 'user' as const,
-          content: `Regenerate the crux summary from scratch based on the complete gate chain below. Follow this EXACT format:\n\nCRUX: [project name]\nPURPOSE: [what this is trying to achieve]\nSTAGE: [where we are]\nTHEMES: [recurring ideas, patterns]\nSTACK: [tools, technologies]\n\nGate chain:\n${snapshotChain}\n\nRespond ONLY with the summary. No preamble.`,
-        }],
+        [
+          {
+            role: 'user' as const,
+            content: `Regenerate the crux summary from scratch based on the complete gate chain below. Follow this EXACT format:\n\nCRUX: [project name]\nPURPOSE: [what this is trying to achieve]\nSTAGE: [where we are]\nTHEMES: [recurring ideas, patterns]\nSTACK: [tools, technologies]\n\nGate chain:\n${snapshotChain}\n\nRespond ONLY with the summary. No preamble.`,
+          },
+        ],
         model,
       );
 

@@ -12,7 +12,11 @@ export default function ChatPanel() {
 
   // User message history in reverse order (most recent first) for arrow-up recall
   const history = useMemo(
-    () => messages.filter((m) => m.role === 'user').map((m) => m.content).reverse(),
+    () =>
+      messages
+        .filter((m) => m.role === 'user')
+        .map((m) => m.content)
+        .reverse(),
     [messages],
   );
 
@@ -25,12 +29,7 @@ export default function ChatPanel() {
       />
       <div className="border-t border-border">
         <ModelSelector value={model} onChange={setModel} disabled={isStreaming} />
-        <MessageInput
-          onSend={send}
-          onStop={stop}
-          isStreaming={isStreaming}
-          history={history}
-        />
+        <MessageInput onSend={send} onStop={stop} isStreaming={isStreaming} history={history} />
       </div>
     </div>
   );

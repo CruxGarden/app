@@ -47,8 +47,14 @@ export default function IconButton({
       <button
         aria-label={label}
         style={colorStyle}
-        onMouseEnter={(e) => { setHovered(true); onMouseEnter?.(e); }}
-        onMouseLeave={(e) => { setHovered(false); onMouseLeave?.(e); }}
+        onMouseEnter={(e) => {
+          setHovered(true);
+          onMouseEnter?.(e);
+        }}
+        onMouseLeave={(e) => {
+          setHovered(false);
+          onMouseLeave?.(e);
+        }}
         className={cn(
           'inline-flex items-center justify-center rounded-[var(--radius-sm)]',
           'transition-colors duration-150 cursor-pointer',
@@ -69,7 +75,8 @@ export default function IconButton({
             <span className="text-xs font-medium text-text">{tooltip.label}</span>
             {tooltip.shortcut && (
               <kbd className="text-[11px] font-mono text-text-muted px-1.5 py-0.5 rounded-[var(--radius-sm)] bg-bg border border-border min-w-[1.5rem] text-center">
-                {modKey}{tooltip.shortcut}
+                {modKey}
+                {tooltip.shortcut}
               </kbd>
             )}
           </div>

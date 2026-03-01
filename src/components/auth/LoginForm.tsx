@@ -28,8 +28,7 @@ export default function LoginForm() {
       await requestCode(email);
       setStep('code');
     } catch (err: unknown) {
-      const msg =
-        err instanceof Error ? err.message : 'Failed to send code. Please try again.';
+      const msg = err instanceof Error ? err.message : 'Failed to send code. Please try again.';
       setError(msg);
     } finally {
       setLoading(false);
@@ -108,13 +107,7 @@ export default function LoginForm() {
             Log in
           </Button>
 
-          <Button
-            type="button"
-            variant="ghost"
-            onClick={handleBack}
-            disabled={loading}
-            fullWidth
-          >
+          <Button type="button" variant="ghost" onClick={handleBack} disabled={loading} fullWidth>
             Use a different email
           </Button>
         </form>

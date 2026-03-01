@@ -55,9 +55,7 @@ function resolveMain(attachments: Attachment[]): MainFile | null {
   if (anyMd) return { attachment: anyMd, mode: 'markdown' };
 
   // 6. Single image
-  const images = attachments.filter((a) =>
-    a.mimeType?.startsWith('image/'),
-  );
+  const images = attachments.filter((a) => a.mimeType?.startsWith('image/'));
   if (images.length === 1) return { attachment: images[0]!, mode: 'image' };
 
   // 7. Fallback: listing
@@ -245,21 +243,9 @@ export default function ArtifactRenderer({ attachments, username, slug }: Artifa
         />
       );
     case 'markdown':
-      return (
-        <MarkdownRendererView
-          attachment={main.attachment}
-          username={username}
-          slug={slug}
-        />
-      );
+      return <MarkdownRendererView attachment={main.attachment} username={username} slug={slug} />;
     case 'image':
-      return (
-        <ImageRenderer
-          attachment={main.attachment}
-          username={username}
-          slug={slug}
-        />
-      );
+      return <ImageRenderer attachment={main.attachment} username={username} slug={slug} />;
     default:
       return <FileListing attachments={attachments} username={username} slug={slug} />;
   }

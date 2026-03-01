@@ -36,21 +36,27 @@ export default function CommandPalette({ open, onClose }: CommandPaletteProps) {
     if (!query.trim()) {
       // Load recent cruxes when no query
       setLoading(true);
-      cruxes.list({ limit: 8 }).then(({ data }) => {
-        setResults(data);
-        setSelected(0);
-        setLoading(false);
-      }).catch(() => setLoading(false));
+      cruxes
+        .list({ limit: 8 })
+        .then(({ data }) => {
+          setResults(data);
+          setSelected(0);
+          setLoading(false);
+        })
+        .catch(() => setLoading(false));
       return;
     }
 
     debounceRef.current = setTimeout(() => {
       setLoading(true);
-      cruxes.list({ search: query, limit: 8 }).then(({ data }) => {
-        setResults(data);
-        setSelected(0);
-        setLoading(false);
-      }).catch(() => setLoading(false));
+      cruxes
+        .list({ search: query, limit: 8 })
+        .then(({ data }) => {
+          setResults(data);
+          setSelected(0);
+          setLoading(false);
+        })
+        .catch(() => setLoading(false));
     }, 200);
   }, [query, open]);
 
@@ -144,9 +150,17 @@ export default function CommandPalette({ open, onClose }: CommandPaletteProps) {
 
         {/* Footer hint */}
         <div className="flex items-center gap-3 px-4 py-2 border-t border-border text-[10px] font-mono text-text-muted">
-          <span><kbd className="px-1 py-0.5 bg-surface-solid rounded border border-border">↑↓</kbd> navigate</span>
-          <span><kbd className="px-1 py-0.5 bg-surface-solid rounded border border-border">↵</kbd> open</span>
-          <span><kbd className="px-1 py-0.5 bg-surface-solid rounded border border-border">esc</kbd> close</span>
+          <span>
+            <kbd className="px-1 py-0.5 bg-surface-solid rounded border border-border">↑↓</kbd>{' '}
+            navigate
+          </span>
+          <span>
+            <kbd className="px-1 py-0.5 bg-surface-solid rounded border border-border">↵</kbd> open
+          </span>
+          <span>
+            <kbd className="px-1 py-0.5 bg-surface-solid rounded border border-border">esc</kbd>{' '}
+            close
+          </span>
         </div>
       </div>
     </div>
@@ -155,7 +169,17 @@ export default function CommandPalette({ open, onClose }: CommandPaletteProps) {
 
 function SearchIcon() {
   return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-text-muted">
+    <svg
+      width="14"
+      height="14"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className="text-text-muted"
+    >
       <circle cx="11" cy="11" r="8" />
       <path d="M21 21l-4.35-4.35" />
     </svg>
@@ -164,7 +188,17 @@ function SearchIcon() {
 
 function CruxIcon() {
   return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-text-muted shrink-0">
+    <svg
+      width="14"
+      height="14"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className="text-text-muted shrink-0"
+    >
       <circle cx="12" cy="12" r="3" />
       <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" />
     </svg>

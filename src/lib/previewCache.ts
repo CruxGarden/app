@@ -17,17 +17,36 @@ const PREVIEW_PREFIX = '/__preview/';
 
 /** MIME types by file extension. */
 const MIME_MAP: Record<string, string> = {
-  html: 'text/html', htm: 'text/html', css: 'text/css',
-  js: 'application/javascript', mjs: 'application/javascript',
-  ts: 'application/javascript', tsx: 'application/javascript', jsx: 'application/javascript',
-  json: 'application/json', md: 'text/markdown', txt: 'text/plain',
-  svg: 'image/svg+xml', xml: 'application/xml',
-  png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', gif: 'image/gif',
-  webp: 'image/webp', ico: 'image/x-icon', bmp: 'image/bmp',
+  html: 'text/html',
+  htm: 'text/html',
+  css: 'text/css',
+  js: 'application/javascript',
+  mjs: 'application/javascript',
+  ts: 'application/javascript',
+  tsx: 'application/javascript',
+  jsx: 'application/javascript',
+  json: 'application/json',
+  md: 'text/markdown',
+  txt: 'text/plain',
+  svg: 'image/svg+xml',
+  xml: 'application/xml',
+  png: 'image/png',
+  jpg: 'image/jpeg',
+  jpeg: 'image/jpeg',
+  gif: 'image/gif',
+  webp: 'image/webp',
+  ico: 'image/x-icon',
+  bmp: 'image/bmp',
   pdf: 'application/pdf',
-  mp3: 'audio/mpeg', wav: 'audio/wav', ogg: 'audio/ogg',
-  mp4: 'video/mp4', webm: 'video/webm',
-  woff: 'font/woff', woff2: 'font/woff2', ttf: 'font/ttf', otf: 'font/otf',
+  mp3: 'audio/mpeg',
+  wav: 'audio/wav',
+  ogg: 'audio/ogg',
+  mp4: 'video/mp4',
+  webm: 'video/webm',
+  woff: 'font/woff',
+  woff2: 'font/woff2',
+  ttf: 'font/ttf',
+  otf: 'font/otf',
 };
 
 function guessMime(filename: string): string {
@@ -52,10 +71,7 @@ export interface PreviewFile {
  * Each file is stored at `/__preview/{cruxId}/{normalizedPath}` — the same
  * URL pattern the service worker intercepts.
  */
-export async function cachePreviewFiles(
-  cruxId: string,
-  files: PreviewFile[],
-): Promise<void> {
+export async function cachePreviewFiles(cruxId: string, files: PreviewFile[]): Promise<void> {
   const cacheName = `crux-preview-${cruxId}`;
 
   // Clear previous cache for this crux
@@ -80,10 +96,7 @@ export async function cachePreviewFiles(
  * Update (or add) a single file in the cache without clearing other entries.
  * Used for hot-updating the current HTML file without re-downloading everything.
  */
-export async function updatePreviewFile(
-  cruxId: string,
-  file: PreviewFile,
-): Promise<void> {
+export async function updatePreviewFile(cruxId: string, file: PreviewFile): Promise<void> {
   const cacheName = `crux-preview-${cruxId}`;
   const cache = await caches.open(cacheName);
   const norm = normalizePath(file.path);
@@ -106,11 +119,7 @@ export async function clearPreviewCache(cruxId: string): Promise<void> {
  * Get the preview URL for a file. Append `?v=N` to force iframe reload
  * (the SW uses exact pathname matching, ignoring query params).
  */
-export function getPreviewUrl(
-  cruxId: string,
-  filePath: string,
-  version?: number,
-): string {
+export function getPreviewUrl(cruxId: string, filePath: string, version?: number): string {
   const norm = normalizePath(filePath);
   const base = `${PREVIEW_PREFIX}${cruxId}/${norm}`;
   return version != null ? `${base}?v=${version}` : base;

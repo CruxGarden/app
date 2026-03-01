@@ -3,10 +3,7 @@ export interface CruxBloomProps {
   className?: string;
 }
 
-export default function CruxBloom({
-  size = 48,
-  className,
-}: CruxBloomProps) {
+export default function CruxBloom({ size = 48, className }: CruxBloomProps) {
   return (
     <svg
       width={size}

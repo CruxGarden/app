@@ -9,7 +9,10 @@ interface FileTreeProps {
   artifacts: Attachment[];
   selectedId: string | null;
   onSelect: (id: string) => void;
-  onContextMenu?: (e: React.MouseEvent, info: { id: string | null; path: string; isFolder: boolean }) => void;
+  onContextMenu?: (
+    e: React.MouseEvent,
+    info: { id: string | null; path: string; isFolder: boolean },
+  ) => void;
   activeFileOperation?: FileOperation | null;
   onCreateFile?: (name: string) => void;
   onCreateFolder?: (name: string) => void;
@@ -107,7 +110,10 @@ function TreeNodeItem({
   onSelect: (id: string) => void;
   openDirs: Set<string>;
   toggleDir: (path: string) => void;
-  onContextMenu?: (e: React.MouseEvent, info: { id: string | null; path: string; isFolder: boolean }) => void;
+  onContextMenu?: (
+    e: React.MouseEvent,
+    info: { id: string | null; path: string; isFolder: boolean },
+  ) => void;
   activeFileOperation?: FileOperation | null;
   onCreateFile?: (name: string) => void;
   onCreateFolder?: (name: string) => void;
@@ -120,8 +126,7 @@ function TreeNodeItem({
 
   // Check if this node is being renamed
   const isRenaming =
-    activeFileOperation?.type === 'rename' &&
-    activeFileOperation.targetPath === node.fullPath;
+    activeFileOperation?.type === 'rename' && activeFileOperation.targetPath === node.fullPath;
 
   // Check if a new item is being created inside this directory
   const isCreatingInside =
@@ -138,7 +143,11 @@ function TreeNodeItem({
           onClick={() => toggleDir(node.fullPath)}
           onContextMenu={(e) => {
             e.preventDefault();
-            onContextMenu?.(e, { id: node.artifact?.id ?? null, path: node.fullPath, isFolder: true });
+            onContextMenu?.(e, {
+              id: node.artifact?.id ?? null,
+              path: node.fullPath,
+              isFolder: true,
+            });
           }}
           className={cn(
             'w-full flex items-center gap-1.5 py-1 text-xs font-mono',
@@ -288,9 +297,7 @@ export default function FileTree({
 
   if (artifacts.length === 0 && !isCreatingAtRoot) {
     return (
-      <div className="p-3 text-xs text-text-muted">
-        No files yet. Ask the AI to create one.
-      </div>
+      <div className="p-3 text-xs text-text-muted">No files yet. Ask the AI to create one.</div>
     );
   }
 

@@ -29,7 +29,16 @@ export default function HistoryViewer({ messages, summary, onClose }: HistoryVie
       {/* Header */}
       <div className="flex items-center justify-between px-4 h-10 border-b border-border shrink-0">
         <div className="flex items-center gap-2 text-text-muted">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
             <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
           </svg>
           <span className="text-xs font-mono uppercase tracking-wider">Collaboration</span>
@@ -38,7 +47,15 @@ export default function HistoryViewer({ messages, summary, onClose }: HistoryVie
           onClick={onClose}
           className="text-text-muted hover:text-text transition-colors cursor-pointer"
         >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+          >
             <path d="M18 6L6 18M6 6l12 12" />
           </svg>
         </button>
@@ -51,9 +68,7 @@ export default function HistoryViewer({ messages, summary, onClose }: HistoryVie
           <div className="p-3 rounded-[var(--radius-sm)] bg-accent-muted/30 border border-accent-muted">
             <p className="text-xs font-mono text-accent mb-1 font-medium">{summary.crux}</p>
             <p className="text-sm text-text leading-relaxed">{summary.purpose}</p>
-            {summary.stack && (
-              <p className="text-xs text-text-muted mt-2">{summary.stack}</p>
-            )}
+            {summary.stack && <p className="text-xs text-text-muted mt-2">{summary.stack}</p>}
           </div>
         )}
 
@@ -104,9 +119,7 @@ export default function HistoryViewer({ messages, summary, onClose }: HistoryVie
             ))}
           </div>
         ) : (
-          <p className="text-sm text-text-muted">
-            No conversation available for this creation.
-          </p>
+          <p className="text-sm text-text-muted">No conversation available for this creation.</p>
         )}
       </div>
     </div>

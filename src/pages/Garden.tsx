@@ -12,7 +12,16 @@ import { cn } from '@/lib/cn';
 
 function GlobeIcon() {
   return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
       <circle cx="12" cy="12" r="10" />
       <line x1="2" y1="12" x2="22" y2="12" />
       <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
@@ -22,7 +31,16 @@ function GlobeIcon() {
 
 function ImportIcon() {
   return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+    <svg
+      width="20"
+      height="20"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
       <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
       <polyline points="17 8 12 3 7 8" />
       <line x1="12" y1="3" x2="12" y2="15" />
@@ -32,7 +50,16 @@ function ImportIcon() {
 
 function PlusCircleIcon() {
   return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+    <svg
+      width="20"
+      height="20"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
       <circle cx="12" cy="12" r="10" />
       <line x1="12" y1="8" x2="12" y2="16" />
       <line x1="8" y1="12" x2="16" y2="12" />
@@ -41,17 +68,38 @@ function PlusCircleIcon() {
 }
 
 const MIME_MAP: Record<string, string> = {
-  html: 'text/html', htm: 'text/html', css: 'text/css',
-  js: 'application/javascript', mjs: 'application/javascript',
-  ts: 'application/javascript', tsx: 'application/javascript', jsx: 'application/javascript',
-  json: 'application/json', md: 'text/markdown', txt: 'text/plain',
-  py: 'text/x-python', svg: 'image/svg+xml', xml: 'application/xml',
-  png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', gif: 'image/gif',
-  webp: 'image/webp', ico: 'image/x-icon', bmp: 'image/bmp',
-  pdf: 'application/pdf', zip: 'application/zip',
-  mp3: 'audio/mpeg', wav: 'audio/wav', ogg: 'audio/ogg',
-  mp4: 'video/mp4', webm: 'video/webm',
-  woff: 'font/woff', woff2: 'font/woff2', ttf: 'font/ttf', otf: 'font/otf',
+  html: 'text/html',
+  htm: 'text/html',
+  css: 'text/css',
+  js: 'application/javascript',
+  mjs: 'application/javascript',
+  ts: 'application/javascript',
+  tsx: 'application/javascript',
+  jsx: 'application/javascript',
+  json: 'application/json',
+  md: 'text/markdown',
+  txt: 'text/plain',
+  py: 'text/x-python',
+  svg: 'image/svg+xml',
+  xml: 'application/xml',
+  png: 'image/png',
+  jpg: 'image/jpeg',
+  jpeg: 'image/jpeg',
+  gif: 'image/gif',
+  webp: 'image/webp',
+  ico: 'image/x-icon',
+  bmp: 'image/bmp',
+  pdf: 'application/pdf',
+  zip: 'application/zip',
+  mp3: 'audio/mpeg',
+  wav: 'audio/wav',
+  ogg: 'audio/ogg',
+  mp4: 'video/mp4',
+  webm: 'video/webm',
+  woff: 'font/woff',
+  woff2: 'font/woff2',
+  ttf: 'font/ttf',
+  otf: 'font/otf',
 };
 
 function guessMime(filename: string): string {
@@ -81,7 +129,7 @@ export default function Garden() {
   // Import state
   const importInputRef = useRef<HTMLInputElement>(null);
   const [importing, setImporting] = useState(false);
-  const [importProgress, setImportProgress] = useState('');
+  const [, setImportProgress] = useState('');
 
   const handleConfirmDelete = useCallback(async () => {
     if (!deletingId) return;
@@ -89,106 +137,118 @@ export default function Garden() {
     setDeletingId(null);
   }, [deletingId, deleteCrux]);
 
-  const handleImport = useCallback(async (file: File) => {
-    setImporting(true);
-    setImportProgress('Reading file...');
+  const handleImport = useCallback(
+    async (file: File) => {
+      setImporting(true);
+      setImportProgress('Reading file...');
 
-    try {
-      const zip = await JSZip.loadAsync(file);
+      try {
+        const zip = await JSZip.loadAsync(file);
 
-      // Read crux.json
-      const cruxJsonFile = zip.file('crux.json');
-      if (!cruxJsonFile) {
-        alert('Invalid .crux file: missing crux.json');
-        return;
-      }
-      const cruxData = JSON.parse(await cruxJsonFile.async('text'));
+        // Read crux.json
+        const cruxJsonFile = zip.file('crux.json');
+        if (!cruxJsonFile) {
+          alert('Invalid .crux file: missing crux.json');
+          return;
+        }
+        const cruxData = JSON.parse(await cruxJsonFile.async('text'));
 
-      // Generate fresh slug
-      const title = cruxData.title || 'Imported Crux';
-      const slug =
-        title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') +
-        '-' + Date.now().toString(36);
+        // Generate fresh slug
+        const title = cruxData.title || 'Imported Crux';
+        const slug =
+          title
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, '-')
+            .replace(/^-|-$/g, '') +
+          '-' +
+          Date.now().toString(36);
 
-      // Create new crux
-      setImportProgress('Creating crux...');
-      const newCrux = await cruxes.create({
-        slug,
-        title,
-        type: 'workspace',
-        data: cruxData.description || '',
-        meta: {
-          messages: [],
-          summary: cruxData.summary || null,
-          settings: cruxData.settings || { model: 'claude-sonnet-4-20250514' },
-        },
-      });
-
-      // Read and save messages
-      const messagesFile = zip.file('messages.json');
-      if (messagesFile) {
-        setImportProgress('Restoring messages...');
-        const messages = JSON.parse(await messagesFile.async('text'));
-        await cruxes.update(newCrux.id, {
+        // Create new crux
+        setImportProgress('Creating crux...');
+        const newCrux = await cruxes.create({
+          slug,
+          title,
+          type: 'workspace',
+          data: cruxData.description || '',
           meta: {
-            ...newCrux.meta,
-            messages,
+            messages: [],
             summary: cruxData.summary || null,
-            gateCount: 0,
+            settings: cruxData.settings || { model: 'claude-sonnet-4-20250514' },
           },
         });
-      }
 
-      // Upload artifact files
-      const artifactFiles: { path: string; zipEntry: JSZip.JSZipObject }[] = [];
-      zip.folder('artifacts')?.forEach((relativePath, entry) => {
-        if (!entry.dir) {
-          artifactFiles.push({ path: relativePath, zipEntry: entry });
+        // Read and save messages
+        const messagesFile = zip.file('messages.json');
+        if (messagesFile) {
+          setImportProgress('Restoring messages...');
+          const messages = JSON.parse(await messagesFile.async('text'));
+          await cruxes.update(newCrux.id, {
+            meta: {
+              ...newCrux.meta,
+              messages,
+              summary: cruxData.summary || null,
+              gateCount: 0,
+            },
+          });
         }
-      });
 
-      if (artifactFiles.length > 0) {
-        for (let i = 0; i < artifactFiles.length; i++) {
-          const { path, zipEntry } = artifactFiles[i]!;
-          setImportProgress(`Importing files... (${i + 1}/${artifactFiles.length})`);
-          try {
-            const blob = await zipEntry.async('blob');
-            const filename = path.split('/').pop() || 'file';
-            const mime = guessMime(filename);
-            const fileObj = new File([blob], filename, { type: mime });
-            await cruxes.uploadAttachment(newCrux.id, fileObj, {
-              path,
-              type: 'file',
-              kind: 'artifact',
-            });
-          } catch (err) {
-            console.warn(`Failed to import: ${path}`, err);
+        // Upload artifact files
+        const artifactFiles: { path: string; zipEntry: JSZip.JSZipObject }[] = [];
+        zip.folder('artifacts')?.forEach((relativePath, entry) => {
+          if (!entry.dir) {
+            artifactFiles.push({ path: relativePath, zipEntry: entry });
+          }
+        });
+
+        if (artifactFiles.length > 0) {
+          for (let i = 0; i < artifactFiles.length; i++) {
+            const { path, zipEntry } = artifactFiles[i]!;
+            setImportProgress(`Importing files... (${i + 1}/${artifactFiles.length})`);
+            try {
+              const blob = await zipEntry.async('blob');
+              const filename = path.split('/').pop() || 'file';
+              const mime = guessMime(filename);
+              const fileObj = new File([blob], filename, { type: mime });
+              await cruxes.uploadAttachment(newCrux.id, fileObj, {
+                path,
+                type: 'file',
+                kind: 'artifact',
+              });
+            } catch (err) {
+              console.warn(`Failed to import: ${path}`, err);
+            }
           }
         }
+
+        setImportProgress('');
+        refresh();
+        navigate(`/crux/${newCrux.id}`);
+      } catch (err) {
+        console.error('Import failed:', err);
+        alert('Failed to import .crux file. Make sure it is a valid export.');
+      } finally {
+        setImporting(false);
+        setImportProgress('');
       }
+    },
+    [navigate, refresh],
+  );
 
-      setImportProgress('');
-      refresh();
-      navigate(`/crux/${newCrux.id}`);
-    } catch (err) {
-      console.error('Import failed:', err);
-      alert('Failed to import .crux file. Make sure it is a valid export.');
-    } finally {
-      setImporting(false);
-      setImportProgress('');
-    }
-  }, [navigate, refresh]);
-
-  const handleImportInput = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) handleImport(file);
-    e.target.value = '';
-  }, [handleImport]);
+  const handleImportInput = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (file) handleImport(file);
+      e.target.value = '';
+    },
+    [handleImport],
+  );
 
   // Page title
   useEffect(() => {
     document.title = author ? author.username : 'Garden';
-    return () => { document.title = 'crux.garden'; };
+    return () => {
+      document.title = 'crux.garden';
+    };
   }, [author]);
 
   return (
@@ -226,16 +286,14 @@ export default function Garden() {
                 {author ? author.username : 'Garden'}
               </h1>
               <div className="flex items-center gap-1.5 mt-0.5">
-                <p className="text-sm text-text-muted">
-                  Home Garden
-                </p>
+                <p className="text-sm text-text-muted">Home Garden</p>
                 {author && (
-                  <a
-                    href={`/@${author.username}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    <IconButton label="Public Garden" size="sm" tooltip={{ label: 'Public Garden' }}>
+                  <a href={`/@${author.username}`} target="_blank" rel="noopener noreferrer">
+                    <IconButton
+                      label="Public Garden"
+                      size="sm"
+                      tooltip={{ label: 'Public Garden' }}
+                    >
                       <GlobeIcon />
                     </IconButton>
                   </a>
@@ -310,11 +368,10 @@ export default function Garden() {
 
       {/* Delete confirmation modal */}
       <Modal open={deletingId !== null} onClose={() => setDeletingId(null)}>
-        <h2 className="font-display text-sm font-medium text-text mb-2">
-          Delete crux
-        </h2>
+        <h2 className="font-display text-sm font-medium text-text mb-2">Delete crux</h2>
         <p className="text-xs text-text-muted mb-4">
-          Are you sure you want to delete <span className="text-text font-medium">{deletingCrux?.title || 'this crux'}</span>?
+          Are you sure you want to delete{' '}
+          <span className="text-text font-medium">{deletingCrux?.title || 'this crux'}</span>?
         </p>
         <div className="flex justify-end gap-2">
           <button

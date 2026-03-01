@@ -29,7 +29,9 @@ export default function Crux() {
   // We gate on `crux` so the ref isn't set until loadCrux resolves (which
   // sets crux + artifacts in the same Zustand set() call, same render).
   const prevArtifactCount = useRef<number | null>(null);
-  useEffect(() => { prevArtifactCount.current = null; }, [id]);
+  useEffect(() => {
+    prevArtifactCount.current = null;
+  }, [id]);
   useEffect(() => {
     if (!crux) return; // Don't track until the crux is loaded
     const prev = prevArtifactCount.current;
@@ -48,13 +50,17 @@ export default function Crux() {
     if (crux?.title) {
       document.title = crux.title;
     }
-    return () => { document.title = 'crux.garden'; };
+    return () => {
+      document.title = 'crux.garden';
+    };
   }, [crux?.title]);
 
   // Warn before closing browser tab with unsaved files
   useEffect(() => {
     if (!hasDirtyTabs) return;
-    const handler = (e: BeforeUnloadEvent) => { e.preventDefault(); };
+    const handler = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+    };
     window.addEventListener('beforeunload', handler);
     return () => window.removeEventListener('beforeunload', handler);
   }, [hasDirtyTabs]);
@@ -65,7 +71,9 @@ export default function Crux() {
   // Discard: clear dirty flags so auto-save on unmount is skipped
   const handleDiscard = useCallback(() => {
     const { editor, setTabDirty } = useUIStore.getState();
-    editor.tabs.forEach((t) => { if (t.dirty) setTabDirty(t.id, false); });
+    editor.tabs.forEach((t) => {
+      if (t.dirty) setTabDirty(t.id, false);
+    });
     blocker.proceed?.();
   }, [blocker]);
 
@@ -83,9 +91,7 @@ export default function Crux() {
 
       {/* Unsaved changes — navigation blocked */}
       <Modal open={blocker.state === 'blocked'} onClose={() => blocker.reset?.()}>
-        <h2 className="font-display text-sm font-medium text-text mb-2">
-          Unsaved changes
-        </h2>
+        <h2 className="font-display text-sm font-medium text-text mb-2">Unsaved changes</h2>
         <p className="text-xs text-text-muted mb-4">
           You have unsaved file edits. What would you like to do?
         </p>
