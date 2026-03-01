@@ -237,7 +237,7 @@ export default function Garden() {
 
         setImportProgress('');
         refresh();
-        navigate(`/crux/${newCrux.id}`);
+        navigate(`/c/${newCrux.id}`);
       } catch (err) {
         console.error('Import failed:', err);
         alert('Failed to import .crux file. Make sure it is a valid export.');

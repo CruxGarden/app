@@ -49,7 +49,7 @@ const router = createBrowserRouter([
             ),
           },
           {
-            path: '/crux/:id',
+            path: '/c/:id',
             element: (
               <ErrorBoundary>
                 <CruxPage />

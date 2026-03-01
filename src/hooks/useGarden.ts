@@ -18,7 +18,7 @@ export function useGarden() {
 
   const handleNewCrux = async () => {
     const crux = await createCrux();
-    navigate(`/crux/${crux.id}`);
+    navigate(`/c/${crux.id}`);
   };
 
   const handleClearSearch = () => {
