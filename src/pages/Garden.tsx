@@ -6,9 +6,12 @@ import { useAuthStore } from '@/stores/authStore';
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 import { useGarden } from '@/hooks/useGarden';
 import { cruxes } from '@/api';
-import { GardenGrid, GardenSearch, GardenEmpty } from '@/components/garden';
-import { IconButton, Spinner, Modal } from '@/components/ui';
+import { GardenGrid, GardenSearch } from '@/components/garden';
+import { ApiKeySetup, IconButton, Spinner, Modal } from '@/components/ui';
+import { API_KEY_STORAGE } from '@/components/ui/ApiKeySetup';
 import { cn } from '@/lib/cn';
+
+const DISMISS_KEY = 'cruxgarden:apiKeyBannerDismissed';
 
 function GlobeIcon() {
   return (
@@ -125,6 +128,18 @@ export default function Garden() {
 
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const deletingCrux = deletingId ? cruxList.find((c) => c.id === deletingId) : null;
+
+  // API key banner
+  const [showApiKeyBanner, setShowApiKeyBanner] = useState(() => {
+    const hasKey = !!localStorage.getItem(API_KEY_STORAGE);
+    const dismissed = !!localStorage.getItem(DISMISS_KEY);
+    return !hasKey && !dismissed;
+  });
+
+  const handleDismissBanner = () => {
+    localStorage.setItem(DISMISS_KEY, '1');
+    setShowApiKeyBanner(false);
+  };
 
   // Import state
   const importInputRef = useRef<HTMLInputElement>(null);
@@ -351,17 +366,42 @@ export default function Garden() {
         </div>
       </div>
 
+      {/* API key setup banner */}
+      {showApiKeyBanner && (
+        <div className="relative bg-panel border border-border rounded-[var(--radius)] p-4 sm:p-5 mb-6">
+          <button
+            onClick={handleDismissBanner}
+            className="absolute top-3 right-3 text-text-muted hover:text-text transition-colors cursor-pointer p-0.5"
+            title="Dismiss"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M18 6L6 18" />
+              <path d="M6 6l12 12" />
+            </svg>
+          </button>
+          <p className="text-xs text-text-muted mb-3">
+            Add your Claude API key to enable AI collaboration in your cruxes.
+            Your key is stored locally in this browser and never saved to our servers.
+          </p>
+          <ApiKeySetup compact onKeySaved={handleDismissBanner} />
+        </div>
+      )}
+
       {/* Content */}
       {loading ? (
         <div className="flex justify-center py-16">
           <Spinner size={32} />
         </div>
-      ) : cruxList.length === 0 ? (
-        <GardenEmpty
-          hasSearch={search.length > 0}
-          onNewCrux={handleNewCrux}
-          onClearSearch={handleClearSearch}
-        />
+      ) : cruxList.length === 0 && search.length > 0 ? (
+        <div className="bg-panel border border-border rounded-[var(--radius)] flex flex-col items-center py-10">
+          <p className="text-sm text-text-muted mb-3">No cruxes match your search</p>
+          <button
+            onClick={handleClearSearch}
+            className="text-sm text-accent hover:text-text transition-colors cursor-pointer"
+          >
+            Clear search
+          </button>
+        </div>
       ) : (
         <GardenGrid cruxes={cruxList} onDelete={setDeletingId} sortBy={sortBy} />
       )}

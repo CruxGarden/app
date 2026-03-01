@@ -41,7 +41,7 @@ const router = createBrowserRouter([
         element: <AppShell />,
         children: [
           {
-            path: '/garden',
+            path: '/home',
             element: (
               <ErrorBoundary>
                 <Garden />

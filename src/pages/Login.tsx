@@ -11,7 +11,7 @@ export default function Login() {
       sessionStorage.removeItem('cruxgarden:publishRedirect');
       return <Navigate to={redirect} replace />;
     }
-    return <Navigate to="/garden" replace />;
+    return <Navigate to="/home" replace />;
   }
 
   return (
