@@ -1,10 +1,9 @@
 import { useEffect, useState } from 'react';
 import MeshBackground from './MeshBackground';
 import StarfieldBackground from './StarfieldBackground';
-import SkyBackground from './SkyBackground';
 
 /**
- * Switches between MeshBackground, StarfieldBackground, and SkyBackground
+ * Switches between MeshBackground and StarfieldBackground
  * based on the --background-type CSS variable (set via the palette system).
  */
 const BG_STORAGE_KEY = 'cruxgarden:backgroundType';
@@ -53,6 +52,5 @@ export default function AnimatedBackground() {
   }, []);
 
   if (bgType === 'starfield') return <StarfieldBackground />;
-  if (bgType === 'sky') return <SkyBackground />;
   return <MeshBackground />;
 }

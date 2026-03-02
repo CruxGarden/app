@@ -4,18 +4,18 @@ import { getCurrentPalette, type Palette } from '@/lib/palette';
 import { Panel, Toggle } from '@/components/ui';
 import { cn } from '@/lib/cn';
 
-type BgType = 'mesh' | 'starfield' | 'sky';
+type BgType = 'mesh' | 'starfield';
 
 const BG_STORAGE_KEY = 'cruxgarden:backgroundType';
 
 function getBackgroundType(): BgType {
   const saved = localStorage.getItem(BG_STORAGE_KEY);
-  if (saved === 'mesh' || saved === 'starfield' || saved === 'sky') return saved;
+  if (saved === 'mesh' || saved === 'starfield') return saved;
   const css =
     getComputedStyle(document.documentElement)
       .getPropertyValue('--background-type')
       .trim();
-  if (css === 'starfield' || css === 'sky') return css;
+  if (css === 'starfield') return css;
   return 'mesh';
 }
 
@@ -124,16 +124,6 @@ function StarfieldPreview() {
   );
 }
 
-function SkyPreview() {
-  return (
-    <svg width="20" height="14" viewBox="0 0 20 14" className="shrink-0">
-      <rect width="20" height="14" rx="1" fill="var(--accent)" opacity="0.15" />
-      <ellipse cx="7" cy="9" rx="4" ry="2" fill="currentColor" opacity="0.2" />
-      <ellipse cx="14" cy="7" rx="3.5" ry="1.5" fill="currentColor" opacity="0.15" />
-    </svg>
-  );
-}
-
 // ── Palette Table ──────────────────────────────────
 
 type PaletteGroup = { label: string; keys: { key: keyof Palette; name: string }[] };
@@ -182,14 +172,6 @@ const PALETTE_GROUPS: PaletteGroup[] = [
   {
     label: 'Starfield',
     keys: [{ key: 'starColor', name: 'starColor' }],
-  },
-  {
-    label: 'Sky',
-    keys: [
-      { key: 'skyTop', name: 'skyTop' },
-      { key: 'skyBottom', name: 'skyBottom' },
-      { key: 'cloudColor', name: 'cloudColor' },
-    ],
   },
   {
     label: 'Syntax',
@@ -318,12 +300,6 @@ export default function MoodSettings() {
               onClick={() => handleBgChange('starfield')}
               icon={<StarfieldPreview />}
               label="Stars"
-            />
-            <OptionButton
-              active={bgType === 'sky'}
-              onClick={() => handleBgChange('sky')}
-              icon={<SkyPreview />}
-              label="Sky"
             />
           </div>
         </div>

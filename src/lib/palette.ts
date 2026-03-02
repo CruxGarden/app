@@ -64,13 +64,6 @@ export interface Palette {
   starSpeed: string;
   starDensity: string;
 
-  // Sky
-  skyTop: string;
-  skyBottom: string;
-  cloudColor: string;
-  cloudOpacity: string;
-  cloudSpeed: string;
-
   // Shape
   radius: string;
   radiusSm: string;
