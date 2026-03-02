@@ -44,8 +44,8 @@ function formatDate(iso: string): string {
 const VISIBILITY_ORDER: CruxVisibility[] = ['public', 'unlisted', 'private'];
 const VISIBILITY_COLORS: Record<CruxVisibility, string> = {
   public: 'bg-accent/20 text-accent',
-  unlisted: 'bg-yellow-500/20 text-yellow-400',
-  private: 'bg-red-500/20 text-red-400',
+  unlisted: 'bg-accent-muted text-text-muted',
+  private: 'bg-error-muted text-error',
 };
 
 // ── Field Components ─────────────────────────────────

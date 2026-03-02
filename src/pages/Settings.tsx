@@ -3,6 +3,7 @@ import { useAuthStore } from '@/stores/authStore';
 import { authors as authorsApi } from '@/api';
 import { ApiKeySetup, Panel, Spinner } from '@/components/ui';
 import { cn } from '@/lib/cn';
+import MoodSettings from '@/components/settings/MoodSettings';
 
 function buildAvatarUrl(
   author: { id: string; meta?: Record<string, unknown> } | null,
@@ -247,6 +248,10 @@ export default function Settings() {
         <h2 className="font-display text-sm font-medium text-accent mb-4">API Keys</h2>
         <ApiKeySetup />
       </Panel>
+
+      <div className="mt-6">
+        <MoodSettings />
+      </div>
     </div>
   );
 }

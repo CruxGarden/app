@@ -103,7 +103,7 @@ export default function ExportPane() {
 
       // Download artifact files
       if (artifacts.length > 0) {
-        setProgress('Downloading files...');
+        setProgress('Downloading artifacts...');
         let i = 0;
         for (const artifact of artifacts) {
           i++;
@@ -173,11 +173,11 @@ export default function ExportPane() {
                 </span>
                 <div className="text-[11px] font-mono text-text-muted space-y-1">
                   <div className="flex justify-between">
-                    <span>Files</span>
+                    <span>Artifacts</span>
                     <span className="text-text">{artifacts.length}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span>Messages</span>
+                    <span>Collaboration</span>
                     <span className="text-text">{messageCount}</span>
                   </div>
                   {gateCount > 0 && (
@@ -186,8 +186,8 @@ export default function ExportPane() {
                       <span className="text-text">{gateCount}</span>
                     </div>
                   )}
-                  <div className="flex justify-between">
-                    <span>Total file size</span>
+                <div className="flex justify-between">
+                    <span>Total size</span>
                     <span className="text-text">{formatBytes(totalSize)}</span>
                   </div>
                 </div>

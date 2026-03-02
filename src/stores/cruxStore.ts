@@ -8,7 +8,6 @@ import type {
   UpdateCruxDto,
 } from '@/api/types';
 import type { Palette } from '@/lib/palette';
-import { applyPalette, resetPalette } from '@/lib/palette';
 import { cruxes } from '@/api';
 
 interface CruxState {
@@ -94,10 +93,8 @@ export const useCruxStore = create<CruxState>((set, get) => ({
   loadCrux: async (id: string) => {
     const crux = await cruxes.get(id);
     const attachments = await cruxes.getAttachments(id);
-    // Apply stored palette before setting state
-    if (crux.meta?.settings?.palette) {
-      applyPalette(crux.meta.settings.palette);
-    }
+    // NOTE: crux.meta.settings.palette stores per-crux palette data for future use,
+    // but themes are currently global — don't override the user's active theme on load.
 
     // Detect if anything was modified after the last publish
     let hasChanges = false;
@@ -245,7 +242,6 @@ export const useCruxStore = create<CruxState>((set, get) => ({
   },
 
   reset: () => {
-    resetPalette();
     set({
       crux: null,
       messages: [],

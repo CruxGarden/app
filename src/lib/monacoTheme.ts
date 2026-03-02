@@ -1,99 +1,140 @@
 import type * as Monaco from 'monaco-editor';
 
-let registered = false;
+/** Read a CSS custom property value from computed styles */
+function cssVar(name: string): string {
+  return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+}
 
+/** Convert any CSS color value to a 6-digit hex string (RRGGBB, no alpha).
+ *  Alpha is stripped because Monaco theme colors add their own alpha suffixes. */
+function toHex(value: string): string {
+  if (!value) return '000000';
+  // Already hex — strip # and take only the first 6 chars (drop alpha if present)
+  if (value.startsWith('#')) return value.replace('#', '').slice(0, 6);
+  // Parse rgba/rgb — ignore alpha channel
+  const match = value.match(
+    /rgba?\(\s*(\d+),\s*(\d+),\s*(\d+)/,
+  );
+  if (match) {
+    const r = parseInt(match[1]!).toString(16).padStart(2, '0');
+    const g = parseInt(match[2]!).toString(16).padStart(2, '0');
+    const b = parseInt(match[3]!).toString(16).padStart(2, '0');
+    return `${r}${g}${b}`;
+  }
+  return '000000';
+}
+
+/** Read a CSS var and return as hex (without #) for Monaco token rules */
+function tokenHex(name: string): string {
+  return toHex(cssVar(name));
+}
+
+/** Read a CSS var and return as #hex for Monaco editor colors */
+function colorHex(name: string): string {
+  return `#${toHex(cssVar(name))}`;
+}
+
+/**
+ * Build and register the Monaco theme from current CSS variable values.
+ * Call this on mount and again whenever the palette changes.
+ */
 export function registerCruxGardenThemes(monaco: typeof Monaco): void {
-  if (registered) return;
-  registered = true;
+  const bg = colorHex('--bg');
+  const text = colorHex('--text');
+  const textMuted = colorHex('--text-muted');
+  const accent = colorHex('--accent');
+  const surfaceSolid = colorHex('--surface-solid');
+  const border = colorHex('--border');
+
+  const comment = tokenHex('--syntax-comment');
+  const keyword = tokenHex('--syntax-keyword');
+  const string = tokenHex('--syntax-string');
+  const number = tokenHex('--syntax-number');
+  const type = tokenHex('--syntax-type');
+  const func = tokenHex('--syntax-function');
+  const punct = tokenHex('--syntax-punctuation');
+  const variable = tokenHex('--text');
+
+  const isDark =
+    getComputedStyle(document.documentElement).colorScheme !== 'light';
+
+  const rules: Monaco.editor.ITokenThemeRule[] = [
+    { token: 'comment', foreground: comment, fontStyle: 'italic' },
+    { token: 'keyword', foreground: keyword },
+    { token: 'keyword.control', foreground: keyword },
+    { token: 'string', foreground: string },
+    { token: 'string.escape', foreground: number },
+    { token: 'number', foreground: number },
+    { token: 'type', foreground: type },
+    { token: 'type.identifier', foreground: type },
+    { token: 'function', foreground: func },
+    { token: 'variable', foreground: variable },
+    { token: 'variable.predefined', foreground: type },
+    { token: 'constant', foreground: number },
+    { token: 'tag', foreground: keyword },
+    { token: 'attribute.name', foreground: type },
+    { token: 'attribute.value', foreground: string },
+    { token: 'delimiter', foreground: punct },
+    { token: 'delimiter.bracket', foreground: punct },
+    { token: 'operator', foreground: punct },
+    { token: 'regexp', foreground: number },
+    { token: 'annotation', foreground: type },
+    { token: 'meta', foreground: comment },
+  ];
 
   monaco.editor.defineTheme('crux-garden-dark', {
-    base: 'vs-dark',
+    base: isDark ? 'vs-dark' : 'vs',
     inherit: true,
-    rules: [
-      { token: 'comment', foreground: '6a7a6e', fontStyle: 'italic' },
-      { token: 'keyword', foreground: '7db3a3' },
-      { token: 'keyword.control', foreground: '7db3a3' },
-      { token: 'string', foreground: 'a8d4c4' },
-      { token: 'string.escape', foreground: 'c4956a' },
-      { token: 'number', foreground: 'c4956a' },
-      { token: 'type', foreground: '9bc4b6' },
-      { token: 'type.identifier', foreground: '9bc4b6' },
-      { token: 'function', foreground: 'b8d8ca' },
-      { token: 'variable', foreground: 'e2e4e3' },
-      { token: 'variable.predefined', foreground: '9bc4b6' },
-      { token: 'constant', foreground: 'c4956a' },
-      { token: 'tag', foreground: '7db3a3' },
-      { token: 'attribute.name', foreground: '9bc4b6' },
-      { token: 'attribute.value', foreground: 'a8d4c4' },
-      { token: 'delimiter', foreground: '8b908d' },
-      { token: 'delimiter.bracket', foreground: '8b908d' },
-      { token: 'operator', foreground: '8b908d' },
-      { token: 'regexp', foreground: 'c4956a' },
-      { token: 'annotation', foreground: '9bc4b6' },
-      { token: 'meta', foreground: '6a7a6e' },
-    ],
+    rules,
     colors: {
-      'editor.background': '#0b0d0c',
-      'editor.foreground': '#e2e4e3',
-      'editor.lineHighlightBackground': '#15181712',
-      'editor.selectionBackground': '#7db3a326',
-      'editor.inactiveSelectionBackground': '#7db3a312',
-      'editorCursor.foreground': '#7db3a3',
-      'editorLineNumber.foreground': '#52605680',
-      'editorLineNumber.activeForeground': '#8b908d',
-      'editorIndentGuide.background': '#52605618',
-      'editorIndentGuide.activeBackground': '#52605638',
-      'editorWidget.background': '#131514',
-      'editorWidget.border': '#52605630',
-      'editor.wordHighlightBackground': '#7db3a312',
-      'editorBracketMatch.background': '#7db3a320',
-      'editorBracketMatch.border': '#7db3a340',
+      'editor.background': bg,
+      'editor.foreground': text,
+      'editor.lineHighlightBackground': `${surfaceSolid}12`,
+      'editor.selectionBackground': `${accent}26`,
+      'editor.inactiveSelectionBackground': `${accent}12`,
+      'editorCursor.foreground': accent,
+      'editorLineNumber.foreground': `${border}80`,
+      'editorLineNumber.activeForeground': textMuted,
+      'editorIndentGuide.background': `${border}18`,
+      'editorIndentGuide.activeBackground': `${border}38`,
+      'editorWidget.background': surfaceSolid,
+      'editorWidget.border': `${border}30`,
+      'editor.wordHighlightBackground': `${accent}12`,
+      'editorBracketMatch.background': `${accent}20`,
+      'editorBracketMatch.border': `${accent}40`,
       'scrollbar.shadow': '#00000000',
-      'scrollbarSlider.background': '#52605630',
-      'scrollbarSlider.hoverBackground': '#8b908d50',
-      'scrollbarSlider.activeBackground': '#8b908d70',
-      'editorGutter.background': '#0b0d0c',
+      'scrollbarSlider.background': `${border}30`,
+      'scrollbarSlider.hoverBackground': `${textMuted}50`,
+      'scrollbarSlider.activeBackground': `${textMuted}70`,
+      'editorGutter.background': bg,
       'editorOverviewRuler.border': '#00000000',
-      'minimap.background': '#0b0d0c',
-      'input.background': '#131514',
-      'input.border': '#52605630',
-      'input.foreground': '#e2e4e3',
-      focusBorder: '#7db3a350',
+      'minimap.background': bg,
+      'input.background': surfaceSolid,
+      'input.border': `${border}30`,
+      'input.foreground': text,
+      focusBorder: `${accent}50`,
     },
   });
 
+  // Light theme reuses the same dynamic approach
   monaco.editor.defineTheme('crux-garden-light', {
-    base: 'vs',
+    base: isDark ? 'vs-dark' : 'vs',
     inherit: true,
-    rules: [
-      { token: 'comment', foreground: '616864', fontStyle: 'italic' },
-      { token: 'keyword', foreground: '4a8074' },
-      { token: 'string', foreground: '3a7060' },
-      { token: 'number', foreground: '9a6840' },
-      { token: 'type', foreground: '507a6e' },
-      { token: 'function', foreground: '3a7060' },
-      { token: 'variable', foreground: '1c211d' },
-      { token: 'constant', foreground: '9a6840' },
-      { token: 'tag', foreground: '4a8074' },
-      { token: 'attribute.name', foreground: '507a6e' },
-      { token: 'attribute.value', foreground: '3a7060' },
-      { token: 'delimiter', foreground: '616864' },
-      { token: 'operator', foreground: '616864' },
-    ],
+    rules,
     colors: {
-      'editor.background': '#eaeceb',
-      'editor.foreground': '#1c211d',
-      'editor.lineHighlightBackground': '#d8dad910',
-      'editor.selectionBackground': '#4a80741f',
-      'editor.inactiveSelectionBackground': '#4a80740f',
-      'editorCursor.foreground': '#4a8074',
-      'editorLineNumber.foreground': '#61686440',
-      'editorLineNumber.activeForeground': '#616864',
-      'editorIndentGuide.background': '#61686418',
-      'editorWidget.background': '#e0e2e1',
+      'editor.background': bg,
+      'editor.foreground': text,
+      'editor.lineHighlightBackground': `${surfaceSolid}10`,
+      'editor.selectionBackground': `${accent}1f`,
+      'editor.inactiveSelectionBackground': `${accent}0f`,
+      'editorCursor.foreground': accent,
+      'editorLineNumber.foreground': `${textMuted}40`,
+      'editorLineNumber.activeForeground': textMuted,
+      'editorIndentGuide.background': `${textMuted}18`,
+      'editorWidget.background': surfaceSolid,
       'scrollbar.shadow': '#00000000',
-      'scrollbarSlider.background': '#61686420',
-      'editorGutter.background': '#eaeceb',
+      'scrollbarSlider.background': `${textMuted}20`,
+      'editorGutter.background': bg,
       'editorOverviewRuler.border': '#00000000',
     },
   });

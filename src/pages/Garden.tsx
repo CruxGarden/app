@@ -218,7 +218,7 @@ export default function Garden() {
         if (artifactFiles.length > 0) {
           for (let i = 0; i < artifactFiles.length; i++) {
             const { path, zipEntry } = artifactFiles[i]!;
-            setImportProgress(`Importing files... (${i + 1}/${artifactFiles.length})`);
+            setImportProgress(`Importing artifacts... (${i + 1}/${artifactFiles.length})`);
             try {
               const blob = await zipEntry.async('blob');
               const filename = path.split('/').pop() || 'file';
@@ -257,6 +257,26 @@ export default function Garden() {
     },
     [handleImport],
   );
+
+  // Background type toggle (persisted)
+  const BG_STORAGE_KEY = 'cruxgarden:backgroundType';
+  const [bgType, setBgType] = useState<string>(() => {
+    return localStorage.getItem(BG_STORAGE_KEY) || 'mesh';
+  });
+
+  // Apply saved preference on mount
+  useEffect(() => {
+    const saved = localStorage.getItem(BG_STORAGE_KEY);
+    if (saved && saved !== 'mesh') {
+      document.documentElement.style.setProperty('--background-type', saved);
+    }
+  }, []);
+
+  const toggleBg = useCallback((type: string) => {
+    document.documentElement.style.setProperty('--background-type', type);
+    setBgType(type);
+    localStorage.setItem(BG_STORAGE_KEY, type);
+  }, []);
 
   // Page title
   useEffect(() => {
@@ -405,6 +425,50 @@ export default function Garden() {
       ) : (
         <GardenGrid cruxes={cruxList} onDelete={setDeletingId} sortBy={sortBy} />
       )}
+
+      {/* Background toggle — bottom right */}
+      <div className="fixed bottom-4 right-4 z-30 flex items-center gap-1 p-1 rounded-[var(--radius)] bg-panel border border-border">
+        <div className="relative group/mesh">
+          <button
+            onClick={() => toggleBg('mesh')}
+            className={cn(
+              'p-1.5 rounded-[var(--radius-sm)] transition-colors cursor-pointer',
+              bgType === 'mesh' ? 'text-text bg-surface' : 'text-text-muted hover:text-text',
+            )}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="4" />
+              <circle cx="6" cy="6" r="2.5" opacity="0.5" />
+              <circle cx="18" cy="8" r="3" opacity="0.5" />
+              <circle cx="8" cy="18" r="2.5" opacity="0.5" />
+              <circle cx="18" cy="17" r="2" opacity="0.5" />
+            </svg>
+          </button>
+          <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-50 pointer-events-none hidden group-hover/mesh:block">
+            <div className="px-2.5 py-1.5 rounded-[var(--radius)] bg-surface-solid border border-border shadow-lg whitespace-nowrap">
+              <span className="text-xs font-medium text-text">Mesh</span>
+            </div>
+          </div>
+        </div>
+        <div className="relative group/star">
+          <button
+            onClick={() => toggleBg('starfield')}
+            className={cn(
+              'p-1.5 rounded-[var(--radius-sm)] transition-colors cursor-pointer',
+              bgType === 'starfield' ? 'text-text bg-surface' : 'text-text-muted hover:text-text',
+            )}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+              <polygon points="12,2 15,9 22,9 16.5,14 18.5,21 12,17 5.5,21 7.5,14 2,9 9,9" />
+            </svg>
+          </button>
+          <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-50 pointer-events-none hidden group-hover/star:block">
+            <div className="px-2.5 py-1.5 rounded-[var(--radius)] bg-surface-solid border border-border shadow-lg whitespace-nowrap">
+              <span className="text-xs font-medium text-text">Starfield</span>
+            </div>
+          </div>
+        </div>
+      </div>
 
       {/* Delete confirmation modal */}
       <Modal open={deletingId !== null} onClose={() => setDeletingId(null)}>

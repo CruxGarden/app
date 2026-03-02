@@ -1,16 +1,11 @@
 /**
- * Dynamic palette system.
+ * Palette type definitions and constants.
  *
  * Every UI property is a CSS custom property (--bg, --text, --accent, etc.).
- * A Palette object maps these keys to values. The AI can send a partial
- * palette via the `set_palette` tool to customize the workspace in real-time.
- * Palettes are stored per-crux in `crux.meta.settings.palette`.
+ * A Palette object maps these keys to values.
  *
- * Beyond colors, the palette controls mesh background, border radius,
- * and font stacks — giving the AI full visual control.
- *
- * To apply a palette, call `applyPalette()` which sets CSS custom properties
- * on <html>. To restore defaults, call `resetPalette()`.
+ * Runtime palette overrides are disabled for now — the CSS-defined defaults
+ * in globals.css are the source of truth.
  */
 
 export interface Palette {
@@ -26,6 +21,26 @@ export interface Palette {
   accentMuted: string;
   error: string;
   errorMuted: string;
+
+  // Chrome
+  contrast: string;
+  overlay: string;
+  previewBg: string;
+
+  // Brand
+  brandAi: string;
+
+  // Pane indicator colors
+  paneCollaboration: string;
+  paneArtifacts: string;
+  paneWorkshop: string;
+  paneDetails: string;
+  paneHistory: string;
+  paneExport: string;
+  paneSync: string;
+  panePublish: string;
+
+  // Mesh gradient
   meshBg1: string;
   meshBg2: string;
   mesh1: string;
@@ -33,11 +48,28 @@ export interface Palette {
   mesh3: string;
   mesh4: string;
   mesh5: string;
+  mesh6: string;
 
-  // Mesh
+  // Mesh animation
   meshOpacity: string;
   meshBlur: string;
   meshSpeed: string;
+
+  // Background type
+  backgroundType: string;
+
+  // Starfield
+  starColor: string;
+  starOpacity: string;
+  starSpeed: string;
+  starDensity: string;
+
+  // Sky
+  skyTop: string;
+  skyBottom: string;
+  cloudColor: string;
+  cloudOpacity: string;
+  cloudSpeed: string;
 
   // Shape
   radius: string;
@@ -47,6 +79,15 @@ export interface Palette {
   fontDisplay: string;
   fontBody: string;
   fontMono: string;
+
+  // Syntax highlighting
+  syntaxComment: string;
+  syntaxKeyword: string;
+  syntaxString: string;
+  syntaxNumber: string;
+  syntaxType: string;
+  syntaxFunction: string;
+  syntaxPunctuation: string;
 }
 
 export const DARK_PALETTE: Palette = {
@@ -61,6 +102,18 @@ export const DARK_PALETTE: Palette = {
   accentMuted: 'rgba(125, 179, 163, 0.12)',
   error: '#e63946',
   errorMuted: 'rgba(230, 57, 70, 0.15)',
+  contrast: '#ffffff',
+  overlay: 'rgba(0, 0, 0, 0.5)',
+  previewBg: 'rgba(0, 0, 0, 0.2)',
+  brandAi: '#D97757',
+  paneCollaboration: '#d47080',
+  paneArtifacts: '#d4944c',
+  paneWorkshop: '#c8a84c',
+  paneDetails: '#5cb87a',
+  paneHistory: '#4cb8b0',
+  paneExport: '#5b9ed4',
+  paneSync: '#8c7cc8',
+  panePublish: '#c87ca8',
   meshBg1: '#0a1810',
   meshBg2: '#060d08',
   mesh1: '#1a5a99',
@@ -68,14 +121,32 @@ export const DARK_PALETTE: Palette = {
   mesh3: '#4a8a99',
   mesh4: '#994a3a',
   mesh5: '#7a7a3a',
+  mesh6: '#3a8a7a',
   meshOpacity: '1',
   meshBlur: '60px',
   meshSpeed: '1',
+  backgroundType: 'mesh',
+  starColor: '#e0e7ff',
+  starOpacity: '0.8',
+  starSpeed: '1',
+  starDensity: '150',
+  skyTop: '#0a1628',
+  skyBottom: '#1a3a5c',
+  cloudColor: '#ffffff',
+  cloudOpacity: '0.08',
+  cloudSpeed: '1',
   radius: '0.5rem',
   radiusSm: '0.375rem',
   fontDisplay: "'JetBrains Mono', monospace",
   fontBody: "'Outfit', sans-serif",
   fontMono: "'JetBrains Mono', monospace",
+  syntaxComment: '#6a7a6e',
+  syntaxKeyword: '#7db3a3',
+  syntaxString: '#a8d4c4',
+  syntaxNumber: '#c4956a',
+  syntaxType: '#9bc4b6',
+  syntaxFunction: '#b8d8ca',
+  syntaxPunctuation: '#8b908d',
 };
 
 export const LIGHT_PALETTE: Palette = {
@@ -90,6 +161,18 @@ export const LIGHT_PALETTE: Palette = {
   accentMuted: 'rgba(74, 128, 116, 0.12)',
   error: '#c5303b',
   errorMuted: 'rgba(197, 48, 59, 0.12)',
+  contrast: '#ffffff',
+  overlay: 'rgba(0, 0, 0, 0.4)',
+  previewBg: 'rgba(0, 0, 0, 0.06)',
+  brandAi: '#D97757',
+  paneCollaboration: '#c45868',
+  paneArtifacts: '#c47c3c',
+  paneWorkshop: '#b8903c',
+  paneDetails: '#4a9e68',
+  paneHistory: '#3a9e98',
+  paneExport: '#4a86bc',
+  paneSync: '#7a6ab8',
+  panePublish: '#b06a98',
   meshBg1: '#0a1810',
   meshBg2: '#060d08',
   mesh1: '#1a5a99',
@@ -97,14 +180,32 @@ export const LIGHT_PALETTE: Palette = {
   mesh3: '#4a8a99',
   mesh4: '#994a3a',
   mesh5: '#7a7a3a',
+  mesh6: '#3a8a7a',
   meshOpacity: '1',
   meshBlur: '60px',
   meshSpeed: '1',
+  backgroundType: 'mesh',
+  starColor: '#c8d0e0',
+  starOpacity: '0.6',
+  starSpeed: '1',
+  starDensity: '120',
+  skyTop: '#4a90d9',
+  skyBottom: '#87ceeb',
+  cloudColor: '#ffffff',
+  cloudOpacity: '0.9',
+  cloudSpeed: '1',
   radius: '0.5rem',
   radiusSm: '0.375rem',
   fontDisplay: "'JetBrains Mono', monospace",
   fontBody: "'Outfit', sans-serif",
   fontMono: "'JetBrains Mono', monospace",
+  syntaxComment: '#616864',
+  syntaxKeyword: '#4a8074',
+  syntaxString: '#3a7060',
+  syntaxNumber: '#9a6840',
+  syntaxType: '#507a6e',
+  syntaxFunction: '#3a7060',
+  syntaxPunctuation: '#616864',
 };
 
 /** Map camelCase palette keys to CSS custom property names */
@@ -120,6 +221,18 @@ const KEY_TO_VAR: Record<keyof Palette, string> = {
   accentMuted: '--accent-muted',
   error: '--error',
   errorMuted: '--error-muted',
+  contrast: '--contrast',
+  overlay: '--overlay',
+  previewBg: '--preview-bg',
+  brandAi: '--brand-ai',
+  paneCollaboration: '--pane-collaboration',
+  paneArtifacts: '--pane-artifacts',
+  paneWorkshop: '--pane-workshop',
+  paneDetails: '--pane-details',
+  paneHistory: '--pane-history',
+  paneExport: '--pane-export',
+  paneSync: '--pane-sync',
+  panePublish: '--pane-publish',
   meshBg1: '--mesh-bg1',
   meshBg2: '--mesh-bg2',
   mesh1: '--mesh-1',
@@ -127,36 +240,33 @@ const KEY_TO_VAR: Record<keyof Palette, string> = {
   mesh3: '--mesh-3',
   mesh4: '--mesh-4',
   mesh5: '--mesh-5',
+  mesh6: '--mesh-6',
   meshOpacity: '--mesh-opacity',
   meshBlur: '--mesh-blur',
   meshSpeed: '--mesh-speed',
+  backgroundType: '--background-type',
+  starColor: '--star-color',
+  starOpacity: '--star-opacity',
+  starSpeed: '--star-speed',
+  starDensity: '--star-density',
+  skyTop: '--sky-top',
+  skyBottom: '--sky-bottom',
+  cloudColor: '--cloud-color',
+  cloudOpacity: '--cloud-opacity',
+  cloudSpeed: '--cloud-speed',
   radius: '--radius',
   radiusSm: '--radius-sm',
   fontDisplay: '--font-display',
   fontBody: '--font-body',
   fontMono: '--font-mono',
+  syntaxComment: '--syntax-comment',
+  syntaxKeyword: '--syntax-keyword',
+  syntaxString: '--syntax-string',
+  syntaxNumber: '--syntax-number',
+  syntaxType: '--syntax-type',
+  syntaxFunction: '--syntax-function',
+  syntaxPunctuation: '--syntax-punctuation',
 };
-
-/** Apply a full or partial palette to the document */
-export function applyPalette(palette: Partial<Palette>): void {
-  const el = document.documentElement;
-  el.classList.add('palette-transition');
-  for (const [key, value] of Object.entries(palette)) {
-    const cssVar = KEY_TO_VAR[key as keyof Palette];
-    if (cssVar && value) {
-      el.style.setProperty(cssVar, value);
-    }
-  }
-  setTimeout(() => el.classList.remove('palette-transition'), 500);
-}
-
-/** Remove all inline palette overrides, restoring CSS-defined defaults */
-export function resetPalette(): void {
-  const el = document.documentElement;
-  for (const cssVar of Object.values(KEY_TO_VAR)) {
-    el.style.removeProperty(cssVar);
-  }
-}
 
 /** Get the current resolved palette from computed styles */
 export function getCurrentPalette(): Palette {
