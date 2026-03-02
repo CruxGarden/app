@@ -27,7 +27,7 @@ export default function Toggle({ checked, onChange, label, disabled }: TogglePro
       >
         <span
           className={cn(
-            'absolute top-0.5 left-0.5 w-4.5 h-4.5 rounded-full bg-white shadow-sm',
+            'absolute top-0.5 left-0.5 w-4.5 h-4.5 rounded-full bg-contrast shadow-sm',
             'transition-transform duration-200',
             checked && 'translate-x-[18px]',
           )}

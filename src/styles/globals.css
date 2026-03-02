@@ -54,6 +54,9 @@
   --color-accent-muted: var(--accent-muted);
   --color-error: var(--error);
   --color-error-muted: var(--error-muted);
+  --color-contrast: var(--contrast);
+  --color-overlay: var(--overlay);
+  --color-preview-bg: var(--preview-bg);
 }
 
 /* ── Dark mode (default) — "midnight in the garden" ───── */
@@ -72,6 +75,20 @@
   --error: #e63946;
   --error-muted: rgba(230, 57, 70, 0.15);
 
+  --contrast: #ffffff;
+  --overlay: rgba(0, 0, 0, 0.5);
+  --preview-bg: rgba(0, 0, 0, 0.2);
+  --brand-ai: #D97757;
+
+  --pane-collaboration: #d47080;
+  --pane-artifacts: #d4944c;
+  --pane-workshop: #c8a84c;
+  --pane-details: #5cb87a;
+  --pane-history: #4cb8b0;
+  --pane-export: #5b9ed4;
+  --pane-sync: #8c7cc8;
+  --pane-publish: #c87ca8;
+
   --mesh-bg1: #0a1810;
   --mesh-bg2: #060d08;
   --mesh-1: #1a5a99;
@@ -84,8 +101,29 @@
   --mesh-opacity: 1;
   --mesh-blur: 120px;
   --mesh-speed: 1;
+
+  --background-type: mesh;
+  --star-color: #e0e7ff;
+  --star-opacity: 0.8;
+  --star-speed: 1;
+  --star-density: 150;
+
+  --sky-top: #0a1628;
+  --sky-bottom: #1a3a5c;
+  --cloud-color: #ffffff;
+  --cloud-opacity: 0.08;
+  --cloud-speed: 1;
+
   --radius: 0.5rem;
   --radius-sm: 0.375rem;
+
+  --syntax-comment: #6a7a6e;
+  --syntax-keyword: var(--accent);
+  --syntax-string: #a8d4c4;
+  --syntax-number: #c4956a;
+  --syntax-type: #9bc4b6;
+  --syntax-function: #b8d8ca;
+  --syntax-punctuation: var(--text-muted);
 
   color-scheme: dark;
 }
@@ -93,17 +131,31 @@
 /* ── Light mode — "forest canopy" ─────────────────────── */
 
 .light {
-  --bg: #eaeceb;
-  --surface: #d6dad7;
-  --surface-solid: #d6d9d7;
-  --panel: #dce0dd;
+  --bg: #e0e3e1;
+  --surface: #ced3cf;
+  --surface-solid: #cfd2d0;
+  --panel: #d5d9d6;
   --text: #1c211d;
-  --text-muted: #616864;
-  --border: rgba(82, 96, 86, 0.2);
-  --accent: #4a8074;
-  --accent-muted: #d0ddd9;
+  --text-muted: #505650;
+  --border: rgba(60, 72, 64, 0.25);
+  --accent: #3a7064;
+  --accent-muted: #c2d5ce;
   --error: #c5303b;
   --error-muted: rgba(197, 48, 59, 0.12);
+
+  --contrast: #ffffff;
+  --overlay: rgba(0, 0, 0, 0.4);
+  --preview-bg: rgba(0, 0, 0, 0.06);
+  --brand-ai: #D97757;
+
+  --pane-collaboration: #c45868;
+  --pane-artifacts: #c47c3c;
+  --pane-workshop: #b8903c;
+  --pane-details: #4a9e68;
+  --pane-history: #3a9e98;
+  --pane-export: #4a86bc;
+  --pane-sync: #7a6ab8;
+  --pane-publish: #b06a98;
 
   --mesh-bg1: #4a8074;
   --mesh-bg2: #3a6a5e;
@@ -117,8 +169,29 @@
   --mesh-opacity: 1;
   --mesh-blur: 120px;
   --mesh-speed: 1;
+
+  --background-type: mesh;
+  --star-color: #2a3a4a;
+  --star-opacity: 0.5;
+  --star-speed: 1;
+  --star-density: 120;
+
+  --sky-top: #4a90d9;
+  --sky-bottom: #87ceeb;
+  --cloud-color: #ffffff;
+  --cloud-opacity: 0.9;
+  --cloud-speed: 1;
+
   --radius: 0.5rem;
   --radius-sm: 0.375rem;
+
+  --syntax-comment: var(--text-muted);
+  --syntax-keyword: var(--accent);
+  --syntax-string: #3a7060;
+  --syntax-number: #9a6840;
+  --syntax-type: #507a6e;
+  --syntax-function: #3a7060;
+  --syntax-punctuation: var(--text-muted);
 
   color-scheme: light;
 }
@@ -186,4 +259,75 @@ html.palette-transition *::after {
 ::selection {
   background: var(--accent-muted);
   color: var(--text);
+}
+
+/* ── highlight.js palette overrides ───────────────────── */
+
+.hljs {
+  color: var(--text);
+  background: var(--bg);
+}
+
+.hljs-comment,
+.hljs-quote,
+.hljs-meta {
+  color: var(--syntax-comment);
+  font-style: italic;
+}
+
+.hljs-keyword,
+.hljs-selector-tag,
+.hljs-tag,
+.hljs-selector-id {
+  color: var(--syntax-keyword);
+}
+
+.hljs-string,
+.hljs-attr,
+.hljs-selector-attr,
+.hljs-selector-class {
+  color: var(--syntax-string);
+}
+
+.hljs-number,
+.hljs-literal,
+.hljs-regexp,
+.hljs-link {
+  color: var(--syntax-number);
+}
+
+.hljs-type,
+.hljs-built_in,
+.hljs-title.class_,
+.hljs-params {
+  color: var(--syntax-type);
+}
+
+.hljs-title,
+.hljs-title.function_ {
+  color: var(--syntax-function);
+}
+
+.hljs-punctuation,
+.hljs-operator,
+.hljs-symbol {
+  color: var(--syntax-punctuation);
+}
+
+.hljs-variable,
+.hljs-template-variable,
+.hljs-name,
+.hljs-property,
+.hljs-section {
+  color: var(--text);
+}
+
+.hljs-addition {
+  color: var(--accent);
+  background: var(--accent-muted);
+}
+
+.hljs-deletion {
+  color: var(--error);
+  background: var(--error-muted);
 }

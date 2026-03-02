@@ -23,7 +23,7 @@ export default function Modal({ open, onClose, children, className }: ModalProps
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
-      <div className="absolute inset-0 bg-black/50" onClick={onClose} />
+      <div className="absolute inset-0 bg-overlay" onClick={onClose} />
       <Panel padding="lg" className={cn('relative z-10 max-w-md w-full mx-4', className)}>
         {children}
       </Panel>

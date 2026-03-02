@@ -2,7 +2,6 @@ import { useCallback, useRef } from 'react';
 import { useCruxStore } from '@/stores/cruxStore';
 import { streamChat } from '@/api/ai';
 import { cruxes } from '@/api';
-import { applyPalette } from '@/lib/palette';
 import type { ChatMessage, ToolCall } from '@/api/types';
 
 /**
@@ -81,7 +80,6 @@ export function useChat() {
     setArtifacts,
     saveMeta,
     setPendingGateCreation,
-    setPalette,
     addPendingDelete,
   } = useCruxStore();
 
@@ -127,11 +125,6 @@ export function useChat() {
                   result: undefined,
                 });
 
-                // Apply palette immediately on tool_start
-                if (event.data.name === 'set_palette') {
-                  applyPalette(event.data.input);
-                  setPalette(event.data.input);
-                }
                 break;
               case 'tool_result': {
                 // Update the tool call with result
@@ -215,7 +208,6 @@ export function useChat() {
       setArtifacts,
       saveMeta,
       setPendingGateCreation,
-      setPalette,
       addPendingDelete,
     ],
   );

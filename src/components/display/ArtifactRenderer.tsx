@@ -97,7 +97,7 @@ function HtmlRenderer({
       key={previewUrl}
       src={previewUrl}
       sandbox="allow-scripts allow-same-origin allow-popups"
-      className="w-full h-full border-0 bg-white"
+      className="w-full h-full border-0 bg-contrast"
       title="Published creation"
     />
   );

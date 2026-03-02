@@ -2,9 +2,8 @@ import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { publicApi } from '@/api';
 import type { Crux, Attachment } from '@/api/types';
-import { applyPalette, resetPalette } from '@/lib/palette';
 import { Spinner } from '@/components/ui';
-import { PublicTopBar, ArtifactRenderer } from '@/components/display';
+import { PublicTopBar, ArtifactRenderer, HistoryViewer } from '@/components/display';
 
 type LoadState = 'loading' | 'ready' | 'not-found' | 'error';
 
@@ -18,6 +17,9 @@ export default function PublicCrux() {
   const [crux, setCrux] = useState<Crux | null>(null);
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [state, setState] = useState<LoadState>('loading');
+  const [historyOpen, setHistoryOpen] = useState(false);
+
+  const hasHistory = (crux?.meta?.messages?.length ?? 0) > 0;
 
   // Fetch crux + attachments
   useEffect(() => {
@@ -49,16 +51,6 @@ export default function PublicCrux() {
       cancelled = true;
     };
   }, [username, slug]);
-
-  // Apply palette from crux settings
-  useEffect(() => {
-    if (crux?.meta?.settings?.palette) {
-      applyPalette(crux.meta.settings.palette);
-    }
-    return () => {
-      resetPalette();
-    };
-  }, [crux]);
 
   // Set document title
   useEffect(() => {
@@ -102,10 +94,28 @@ export default function PublicCrux() {
 
   return (
     <div className="flex flex-col h-screen">
-      <PublicTopBar title={crux?.title} username={username || ''} />
+      <PublicTopBar
+        title={crux?.title}
+        username={username || ''}
+        hasHistory={hasHistory}
+        historyOpen={historyOpen}
+        onToggleHistory={() => setHistoryOpen((v) => !v)}
+      />
 
-      <div className="flex-1 min-h-0 relative z-10">
-        <ArtifactRenderer attachments={attachments} username={username || ''} slug={slug || ''} />
+      <div className="flex-1 min-h-0 relative z-10 flex">
+        <div className={`flex-1 min-w-0 ${historyOpen ? 'hidden sm:block' : ''}`}>
+          <ArtifactRenderer attachments={attachments} username={username || ''} slug={slug || ''} />
+        </div>
+
+        {historyOpen && (
+          <div className="w-full sm:w-[380px] sm:max-w-[50%] shrink-0 border-l border-border bg-bg overflow-hidden">
+            <HistoryViewer
+              messages={crux?.meta?.messages}
+              summary={crux?.meta?.summary}
+              onClose={() => setHistoryOpen(false)}
+            />
+          </div>
+        )}
       </div>
     </div>
   );

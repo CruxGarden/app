@@ -6,6 +6,27 @@ import { useAuthStore } from '@/stores/authStore';
 import IconButton from '@/components/ui/IconButton';
 import UserMenu from '@/components/auth/UserMenu';
 
+function KeeperIcon() {
+  return (
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <rect x="5" y="8" width="14" height="12" rx="2" />
+      <circle cx="9.5" cy="14" r="1.5" />
+      <circle cx="14.5" cy="14" r="1.5" />
+      <path d="M12 8V4" />
+      <circle cx="12" cy="3" r="1" />
+    </svg>
+  );
+}
+
 function StackIcon() {
   return (
     <svg
@@ -329,6 +350,14 @@ export default function TopBar() {
           </div>
         )}
         {activeCruxId && <div className="w-px h-5 bg-text-muted/30 mx-1" />}
+        <IconButton
+          label="Open Keeper Console"
+          size="sm"
+          onClick={() => useUIStore.getState().toggleKeeper()}
+          tooltip={{ label: 'The Keeper (Esc)' }}
+        >
+          <KeeperIcon />
+        </IconButton>
         <UserMenu />
       </div>
     </header>

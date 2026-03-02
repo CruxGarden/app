@@ -65,6 +65,18 @@ export default function EditorContent({ tab, artifact, cruxId, saveRef }: Editor
     }
   }, [themeName]);
 
+  // Re-register Monaco theme when palette changes (CSS vars → hex)
+  useEffect(() => {
+    const handler = () => {
+      if (monacoRef.current) {
+        registerCruxGardenThemes(monacoRef.current);
+        monacoRef.current.editor.setTheme(themeName);
+      }
+    };
+    document.addEventListener('palette-change', handler);
+    return () => document.removeEventListener('palette-change', handler);
+  }, [themeName]);
+
   // Save handler — calls API directly (no store dependency, survives reset)
   const handleSave = useCallback(async () => {
     const current = contentRef.current;
@@ -264,7 +276,7 @@ export default function EditorContent({ tab, artifact, cruxId, saveRef }: Editor
           key={previewUrl}
           src={previewUrl}
           sandbox="allow-scripts allow-same-origin"
-          className="flex-1 w-full bg-white"
+          className="flex-1 w-full bg-contrast"
           title={path}
         />
       );
@@ -273,7 +285,7 @@ export default function EditorContent({ tab, artifact, cruxId, saveRef }: Editor
     // SVG
     if (ext === 'svg' && svgPreviewUrl) {
       return (
-        <div className="flex-1 overflow-auto p-4 flex items-center justify-center bg-[rgba(0,0,0,0.2)]">
+        <div className="flex-1 overflow-auto p-4 flex items-center justify-center bg-preview-bg">
           <img src={svgPreviewUrl} alt={path} className="max-w-full max-h-full object-contain" />
         </div>
       );
@@ -346,7 +358,7 @@ function ImageViewer({
 
   return (
     <PhotoProvider>
-      <div className="flex-1 overflow-auto p-4 flex flex-col items-center justify-center gap-3 bg-[rgba(0,0,0,0.2)]">
+      <div className="flex-1 overflow-auto p-4 flex flex-col items-center justify-center gap-3 bg-preview-bg">
         <PhotoView src={blobUrl}>
           <img
             src={blobUrl}

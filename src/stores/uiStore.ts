@@ -12,16 +12,16 @@ export type PaneType =
   | 'publish'
   | 'export';
 
-/** Rainbow gradient colors for each pane (follows default order: rose → violet) */
+/** Rainbow gradient colors for each pane — reads from CSS custom properties set by the palette system */
 export const PANE_COLORS: Record<PaneType, string> = {
-  collaboration: '#d47080', // rose
-  artifacts: '#d4944c', // orange
-  workshop: '#c8a84c', // gold
-  details: '#5cb87a', // green
-  history: '#4cb8b0', // teal
-  export: '#5b9ed4', // blue
-  sync: '#8c7cc8', // indigo
-  publish: '#c87ca8', // violet
+  collaboration: 'var(--pane-collaboration)',
+  artifacts: 'var(--pane-artifacts)',
+  workshop: 'var(--pane-workshop)',
+  details: 'var(--pane-details)',
+  history: 'var(--pane-history)',
+  export: 'var(--pane-export)',
+  sync: 'var(--pane-sync)',
+  publish: 'var(--pane-publish)',
 };
 
 export type EditorViewMode = 'source' | 'preview';
@@ -79,6 +79,9 @@ interface UIState {
   // Mobile
   mobileActivePane: PaneType;
 
+  // Keeper Console
+  keeperOpen: boolean;
+
   // ── Layout actions ──
   setActiveCrux: (id: string | null) => void;
   togglePane: (pane: PaneType) => void;
@@ -108,6 +111,10 @@ interface UIState {
 
   // ── Mobile ──
   setMobileActivePane: (pane: PaneType) => void;
+
+  // ── Keeper Console ──
+  setKeeperOpen: (open: boolean) => void;
+  toggleKeeper: () => void;
 
   // ── Legacy compatibility ──
   fileViewerOpen: boolean;
@@ -344,6 +351,7 @@ export const useUIStore = create<UIState>()((set, get) => ({
   folderOpenState: {},
   contextMenu: { ...DEFAULT_CONTEXT_MENU },
   mobileActivePane: 'collaboration' as PaneType,
+  keeperOpen: false,
 
   // ── Layout actions ──
 
@@ -552,6 +560,11 @@ export const useUIStore = create<UIState>()((set, get) => ({
   // ── Mobile ──
 
   setMobileActivePane: (pane) => set({ mobileActivePane: pane }),
+
+  // ── Keeper Console ──
+
+  setKeeperOpen: (open) => set({ keeperOpen: open }),
+  toggleKeeper: () => set((s) => ({ keeperOpen: !s.keeperOpen })),
 
   // ── Legacy compatibility (derived from pane system) ──
 

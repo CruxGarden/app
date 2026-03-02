@@ -257,14 +257,14 @@ export default function FileContent({
         <iframe
           srcDoc={rewriteUrls(content, username, slug, artifacts, Date.now())}
           sandbox="allow-scripts"
-          className="flex-1 w-full bg-white rounded-b-[var(--radius-sm)]"
+          className="flex-1 w-full bg-contrast rounded-b-[var(--radius-sm)]"
           title={path}
         />
       )}
 
       {/* SVG preview */}
       {content !== null && viewMode === 'preview' && ext === 'svg' && svgPreviewUrl && (
-        <div className="flex-1 overflow-auto p-4 flex items-center justify-center bg-[rgba(0,0,0,0.2)]">
+        <div className="flex-1 overflow-auto p-4 flex items-center justify-center bg-preview-bg">
           <img src={svgPreviewUrl} alt={path} className="max-w-full max-h-full object-contain" />
         </div>
       )}
@@ -294,7 +294,7 @@ export default function FileContent({
 
       {/* Image preview (raster) */}
       {blobUrl && isImageMime(mime) && (
-        <div className="flex-1 overflow-auto p-4 flex items-center justify-center bg-[rgba(0,0,0,0.2)]">
+        <div className="flex-1 overflow-auto p-4 flex items-center justify-center bg-preview-bg">
           <img src={blobUrl} alt={path} className="max-w-full max-h-full object-contain rounded" />
         </div>
       )}
