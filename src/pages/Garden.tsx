@@ -6,6 +6,7 @@ import { useAuthStore } from '@/stores/authStore';
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 import { useGarden } from '@/hooks/useGarden';
 import { cruxes } from '@/api';
+import { APP_NAME } from '@/lib/constants';
 import { GardenGrid, GardenSearch } from '@/components/garden';
 import { ApiKeySetup, IconButton, Spinner, Modal } from '@/components/ui';
 import { API_KEY_STORAGE } from '@/components/ui/ApiKeySetup';
@@ -282,7 +283,7 @@ export default function Garden() {
   useEffect(() => {
     document.title = author ? author.username : 'Garden';
     return () => {
-      document.title = 'Crux Garden';
+      document.title = APP_NAME;
     };
   }, [author]);
 

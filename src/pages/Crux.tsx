@@ -6,6 +6,7 @@ import { WorkspaceLayout } from '@/components/workspace';
 import { saveAllDirtyEditors } from '@/components/workspace/EditorContent';
 import { Spinner, Modal } from '@/components/ui';
 import { cn } from '@/lib/cn';
+import { APP_NAME } from '@/lib/constants';
 
 export default function Crux() {
   const { id } = useParams<{ id: string }>();
@@ -51,7 +52,7 @@ export default function Crux() {
       document.title = crux.title;
     }
     return () => {
-      document.title = 'Crux Garden';
+      document.title = APP_NAME;
     };
   }, [crux?.title]);
 

@@ -1,3 +1,5 @@
+import { APP_NAME } from '@/lib/constants';
+
 export interface CruxBloomProps {
   size?: number;
   className?: string;
@@ -15,7 +17,7 @@ export default function CruxBloom({ size = 48, className }: CruxBloomProps) {
       strokeLinecap="round"
       strokeLinejoin="round"
       className={className}
-      aria-label="Crux Garden"
+      aria-label={APP_NAME}
     >
       <circle cx="12" cy="12" r="10" />
       <path d="M12 8v8" />
