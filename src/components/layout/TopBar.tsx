@@ -6,27 +6,8 @@ import { useAuthStore } from '@/stores/authStore';
 import IconButton from '@/components/ui/IconButton';
 import UserMenu from '@/components/auth/UserMenu';
 import { APP_NAME } from '@/lib/constants';
-
-function KeeperIcon() {
-  return (
-    <svg
-      width="16"
-      height="16"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.5"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <rect x="5" y="8" width="14" height="12" rx="2" />
-      <circle cx="9.5" cy="14" r="1.5" />
-      <circle cx="14.5" cy="14" r="1.5" />
-      <path d="M12 8V4" />
-      <circle cx="12" cy="3" r="1" />
-    </svg>
-  );
-}
+import { cn } from '@/lib/cn';
+import { KeeperAvatar } from '@/components/keeper/KeeperConsole';
 
 function StackIcon() {
   return (
@@ -298,14 +279,16 @@ export default function TopBar() {
 
       {/* Right: keeper + pane toggles + user menu */}
       <div className="flex items-center gap-1">
-        <IconButton
-          label="Open Keeper Console"
-          size="sm"
+        <button
           onClick={() => useUIStore.getState().toggleKeeper()}
-          tooltip={{ label: 'The Keeper (Esc)' }}
+          title="The Keeper (Esc)"
+          className={cn(
+            'w-6 h-6 rounded-full overflow-hidden',
+            'hover:ring-1 hover:ring-accent/40 transition-shadow cursor-pointer',
+          )}
         >
-          <KeeperIcon />
-        </IconButton>
+          <KeeperAvatar className="w-6 h-6" />
+        </button>
         {activeCruxId && (
           <>
             <div className="w-px h-5 bg-text-muted/20 mx-1" />

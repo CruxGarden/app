@@ -1,7 +1,15 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { cn } from '@/lib/cn';
-import { ClaudeAvatar } from '@/components/chat/MessageBubble';
 import MarkdownRenderer from '@/components/chat/MarkdownRenderer';
+import keeperAvatarUrl from '@/images/keeper-avatar.png';
+
+export function KeeperAvatar({ className = 'w-6 h-6' }: { className?: string }) {
+  return (
+    <div className={`${className} shrink-0 rounded-full overflow-hidden`}>
+      <img src={keeperAvatarUrl} alt="The Keeper" className="w-full h-full object-cover" />
+    </div>
+  );
+}
 
 const API_KEY_STORAGE = 'cruxgarden:anthropicApiKey';
 const HISTORY_STORAGE = 'cruxgarden:keeper-history';
@@ -333,7 +341,7 @@ export default function KeeperConsole({ open, onClose }: KeeperConsoleProps) {
       >
         {/* Header */}
         <div className="flex items-center gap-2 px-4 py-3 border-b border-border">
-          <ClaudeAvatar />
+          <KeeperAvatar />
           <span className="text-sm font-display font-medium text-text">The Keeper</span>
           <span className="text-[10px] font-mono text-text-muted">console</span>
           <div className="flex-1" />
@@ -366,7 +374,7 @@ export default function KeeperConsole({ open, onClose }: KeeperConsoleProps) {
 
           {displayMessages.map((msg, i) => (
             <div key={i} className={cn('flex gap-2', msg.role === 'user' ? 'justify-end' : 'justify-start')}>
-              {msg.role === 'assistant' && <ClaudeAvatar />}
+              {msg.role === 'assistant' && <KeeperAvatar />}
               <div
                 className={cn(
                   'max-w-[85%] rounded-[var(--radius)] px-3 py-2 text-sm',
@@ -385,7 +393,7 @@ export default function KeeperConsole({ open, onClose }: KeeperConsoleProps) {
           {/* Streaming text */}
           {streaming && streamContent && (
             <div className="flex gap-2 justify-start">
-              <ClaudeAvatar />
+              <KeeperAvatar />
               <div className="max-w-[85%] rounded-[var(--radius)] px-3 py-2 text-sm bg-surface text-text">
                 <MarkdownRenderer content={streamContent} />
                 <span className="inline-block w-1.5 h-4 bg-accent/60 animate-pulse ml-0.5 align-text-bottom" />
@@ -396,7 +404,7 @@ export default function KeeperConsole({ open, onClose }: KeeperConsoleProps) {
           {/* Tool activity indicator */}
           {streaming && toolActivity && (
             <div className="flex gap-2 justify-start">
-              <ClaudeAvatar />
+              <KeeperAvatar />
               <div className="rounded-[var(--radius)] px-3 py-2 bg-surface text-xs text-text-muted italic">
                 {toolActivity}
               </div>
@@ -406,7 +414,7 @@ export default function KeeperConsole({ open, onClose }: KeeperConsoleProps) {
           {/* Loading dots */}
           {streaming && !streamContent && !toolActivity && (
             <div className="flex gap-2 justify-start">
-              <ClaudeAvatar />
+              <KeeperAvatar />
               <div className="rounded-[var(--radius)] px-3 py-2 bg-surface">
                 <div className="flex gap-1">
                   <span className="w-1.5 h-1.5 rounded-full bg-text-muted animate-bounce [animation-delay:0ms]" />
