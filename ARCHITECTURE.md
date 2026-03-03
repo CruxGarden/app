@@ -803,7 +803,96 @@ The result is that the iframe loads `/__preview/{key}/index.html?v=1` via `src=`
 
 ---
 
-## 12. Styling System
+## 12. Data Preservation: Snapshots, Publishing & Export
+
+Three mechanisms preserve crux data at different scopes. Understanding which data each mechanism captures (and which it doesn't) is essential for reasoning about the system.
+
+### Design Intent
+
+- **Snapshots (Gates)** — a point-in-time record of a crux's data and artifacts, including the actual file binaries. Created automatically when the AI modifies files.
+- **Publishing** — copies working artifact content to a separate attachment namespace (`kind: 'published-snapshot'`), so the published version is frozen even if the author keeps editing.
+- **Export/Import** — a complete portable archive at a specific point in time, containing everything needed to fully recreate the crux. The only thing an export should *not* contain is other snapshots (gate history is included for reference only).
+
+### What Each Mechanism Captures
+
+| Data | Snapshots (Gates) | Publishing | Export (.crux) |
+| --- | --- | --- | --- |
+| Crux metadata (title, slug, status) | Partial (snapshot fields) | Inherits from crux | `crux.json` |
+| Conversation history | `messageRange` (start/end indices) | Not copied | Full `messages.json` |
+| Artifact references | `artifactRefs[]` (UUIDs) | Not applicable | Not applicable |
+| Artifact file content (binaries) | Not copied (see gap below) | Copied (S3 file copy) | Downloaded blobs |
+| AI-generated summary | Triggers summary regeneration | In crux meta | In `crux.json` |
+| Gate/snapshot history | Is the history | Not included | `gates.json` |
+| Settings (model, prompt, palette) | Not captured | In crux meta | In `crux.json` |
+
+### Current Implementation Gap
+
+Gates currently store only artifact UUIDs (`meta.artifactRefs[]`), not file content. If an artifact is later modified, the gate's reference points to the current version — not the version at snapshot time. The intended design is for snapshots to be full point-in-time records including actual file binaries. This is a known gap to be addressed in a future version.
+
+### Server-Side Publishing
+
+**File:** `api/src/crux/crux.service.ts`
+
+`publishCrux()` performs a real content copy:
+
+1. Deletes any existing `kind: 'published-snapshot'` attachments for the crux
+2. Fetches all `kind: 'artifact'` attachments (the working files)
+3. Copies each artifact to a new attachment with `kind: 'published-snapshot'` — this copies the actual S3 file content, not just a reference
+4. Sets `meta.publishedAt` (ISO timestamp) and `meta.publishedVersion` (incrementing integer), visibility to `public`
+
+`unpublishCrux()`:
+
+1. Deletes all `kind: 'published-snapshot'` attachments
+2. Removes `publishedAt` / `publishedVersion` from meta
+3. Sets visibility to `private`
+
+`getPublishedAttachments()` returns `kind: 'published-snapshot'` attachments if the crux has been published; falls back to `kind: 'artifact'` (working files) if no snapshots exist. The workspace view (`getCrux()`) filters out `kind !== 'artifact'` so published snapshots don't appear in the file tree.
+
+### Attachment Kinds
+
+| `kind` | Purpose | Created by |
+| --- | --- | --- |
+| `artifact` | Working file in the crux workspace | AI tool calls, file upload, import |
+| `published-snapshot` | Frozen copy of an artifact at publish time | `publishCrux()` server-side copy |
+
+### Export Format (.crux)
+
+**File:** `components/workspace/ExportPane.tsx`
+
+The export is a client-side JSZip archive with the `.crux` extension:
+
+```text
+my-project.crux (ZIP)
+├── manifest.json     # { version, exportedAt, author }
+├── crux.json         # Entity data + summary + settings
+├── messages.json     # Full conversation history
+├── gates.json        # Gate snapshots (if any exist)
+└── artifacts/        # Actual file blobs at their virtual paths
+    ├── index.html
+    ├── style.css
+    └── images/
+        └── logo.png
+```
+
+Each artifact is downloaded via `cruxes.downloadAttachment()` and stored at its `meta.path` inside the `artifacts/` directory. The export captures everything needed to fully recreate the crux — metadata, conversation, settings, and all file content.
+
+### Import Process
+
+**File:** `pages/Garden.tsx` (`handleImport()`)
+
+Importing a `.crux` file creates a new crux from the archive:
+
+1. Reads the ZIP and parses `crux.json` and `messages.json`
+2. Creates a new crux via `POST /cruxes` with the imported title and metadata
+3. Restores the conversation by saving messages to the crux's meta
+4. Iterates through the `artifacts/` directory, uploading each file via `POST /cruxes/{id}/attachments`
+5. Navigates to the newly created crux
+
+The import always creates a fresh crux — it does not overwrite an existing one. Gate history from `gates.json` is included in the archive for reference but is not re-created as linked gate cruxes on import.
+
+---
+
+## 13. Styling System
 
 ### CSS Architecture
 
@@ -863,7 +952,7 @@ Controlled by `--background-type` CSS property.
 
 ---
 
-## 13. Hooks Reference
+## 14. Hooks Reference
 
 | Hook | File | Purpose |
 |------|------|---------|
@@ -877,7 +966,7 @@ Controlled by `--background-type` CSS property.
 
 ---
 
-## 14. Component Directory
+## 15. Component Directory
 
 ### `components/layout/`
 
@@ -960,7 +1049,7 @@ Reusable primitives: `Button`, `IconButton`, `Input`, `Toggle`, `Modal`, `Panel`
 
 ---
 
-## 15. Data Model
+## 16. Data Model
 
 The API uses a flexible schema — most entities have `type`, `kind`, and `meta` (JSONB) columns that the app fills with specific shapes. This diagram shows both the database tables and the actual data structures the app stores inside them.
 
@@ -1268,7 +1357,7 @@ Workspace Crux (type=workspace)
 
 ---
 
-## 16. Full Data Flow: Login to Published Crux
+## 17. Full Data Flow: Login to Published Crux
 
 A complete trace through every layer, from opening the app to a visitor viewing your published creation.
 
@@ -1445,7 +1534,7 @@ Every 10 gates, `reconcileSummary()` rebuilds the summary from the entire gate c
 
 ---
 
-## 16. localStorage Keys
+## 18. localStorage Keys
 
 | Key | Purpose | Scope |
 |-----|---------|-------|
@@ -1460,7 +1549,7 @@ Every 10 gates, `reconcileSummary()` rebuilds the summary from the entire gate c
 
 ---
 
-## 17. Dependencies
+## 19. Dependencies
 
 | Package | Version | Purpose |
 |---------|---------|---------|
@@ -1485,7 +1574,7 @@ Every 10 gates, `reconcileSummary()` rebuilds the summary from the entire gate c
 
 ---
 
-## 18. Build & Dev
+## 20. Build & Dev
 
 ```bash
 npm run dev           # Vite dev server on port 8080
