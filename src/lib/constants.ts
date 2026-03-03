@@ -1,1 +1,1 @@
-export const APP_NAME = 'crux.garden';
+export const APP_NAME = 'Crux Garden';
