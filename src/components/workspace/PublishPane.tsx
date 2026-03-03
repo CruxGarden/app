@@ -45,11 +45,11 @@ function CopyIcon() {
   );
 }
 
-function CheckIcon() {
+function CheckIcon({ size = 12 }: { size?: number }) {
   return (
     <svg
-      width="12"
-      height="12"
+      width={size}
+      height={size}
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
@@ -173,8 +173,8 @@ export default function PublishPane() {
     return (
       <div ref={ref} className="flex flex-col h-full">
         <PaneHeader paneType="publish" icon={<PublishIcon />} label="Publish" />
-        <div className="text-text-muted p-4">
-          <p className="text-xs text-center">No crux loaded</p>
+        <div className="flex-1 flex items-center justify-center p-4">
+          <p className="text-xs text-text-muted">No crux loaded</p>
         </div>
       </div>
     );
@@ -187,8 +187,8 @@ export default function PublishPane() {
     return (
       <div ref={ref} className="flex flex-col h-full">
         <PaneHeader paneType="publish" icon={<PublishIcon />} label="Publish" />
-        <div className="text-text-muted p-4">
-          <p className="text-xs text-center">Nothing to publish yet</p>
+        <div className="flex-1 flex items-center justify-center p-4">
+          <p className="text-xs text-text-muted">Nothing to publish yet</p>
         </div>
       </div>
     );
@@ -199,67 +199,84 @@ export default function PublishPane() {
       <PaneHeader paneType="publish" icon={<PublishIcon />} label="Publish" />
 
       {isTooNarrow ? (
-        <div className="text-text-muted p-4">
-          <p className="text-xs text-center">Enlarge pane to view contents</p>
+        <div className="flex-1 flex items-center justify-center p-4">
+          <p className="text-xs text-text-muted">Enlarge pane to view contents</p>
         </div>
       ) : (
-        <div className="flex-1 overflow-y-auto min-h-0 p-3 flex flex-col gap-4">
-          {/* Version info */}
-          {isPublished && publishedAt && (
-            <div className="flex flex-col gap-1.5">
-              <span className="text-[10px] font-mono uppercase tracking-wider text-text-muted">
-                Version
-              </span>
-              <div className="text-[11px] font-mono text-text-muted space-y-1">
-                <div className="flex justify-between">
-                  <span>Published</span>
-                  <span className="text-text">v{publishedVersion}</span>
+        <div className="flex-1 overflow-y-auto min-h-0 p-3 flex flex-col gap-3">
+          {/* Status card */}
+          {isPublished && publishedAt ? (
+            <div className="rounded-[var(--radius-sm)] border border-border bg-surface/50 p-3 flex flex-col gap-2">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-accent shrink-0" />
+                  <span className="text-[11px] font-mono text-accent">Published</span>
                 </div>
-                <div className="flex justify-between">
-                  <span>Published at</span>
-                  <span className="text-text">{formatDate(publishedAt)}</span>
-                </div>
-                {hasUnpublishedChanges && lastEditedAt && new Date(lastEditedAt) > new Date(publishedAt) && (
-                  <div className="flex justify-between text-error mt-1">
-                    <div className="flex items-center gap-1.5">
-                      <span className="w-1.5 h-1.5 rounded-full bg-error shrink-0" />
-                      <span>Last edited</span>
-                    </div>
-                    <span>{formatDate(lastEditedAt)}</span>
-                  </div>
-                )}
+                <span className="text-[11px] font-mono text-text-muted">v{publishedVersion}</span>
               </div>
+              <div className="text-[10px] font-mono text-text-muted">
+                {formatDate(publishedAt)}
+              </div>
+              {hasUnpublishedChanges && lastEditedAt && new Date(lastEditedAt) > new Date(publishedAt) && (
+                <div className="flex items-center gap-1.5 pt-1.5 border-t border-border">
+                  <span className="w-1.5 h-1.5 rounded-full bg-error shrink-0" />
+                  <span className="text-[10px] font-mono text-error">
+                    Edited {formatDate(lastEditedAt)}
+                  </span>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="rounded-[var(--radius-sm)] border border-border/60 border-dashed p-3">
+              <p className="text-[11px] font-mono text-text-muted text-center">Not published</p>
             </div>
           )}
 
-          {/* Publish / Republish action */}
-          <button
-            onClick={handlePublish}
-            disabled={publishing || (isPublished && !hasUnpublishedChanges)}
-            className={cn(
-              'w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-[var(--radius-sm)]',
-              'text-sm font-medium font-body transition-all cursor-pointer',
-              'bg-accent text-bg hover:brightness-110',
-              'disabled:opacity-50 disabled:cursor-not-allowed',
-            )}
-          >
-            <PublishIcon />
-            {publishing
-              ? 'Publishing...'
-              : isPublished
-                ? hasUnpublishedChanges
-                  ? 'Publish Changes'
-                  : 'Published'
-                : 'Publish'}
-          </button>
+          {/* Action button — state-aware, no disabled green */}
+          {publishing ? (
+            <button
+              disabled
+              className={cn(
+                'w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-[var(--radius-sm)]',
+                'text-sm font-medium font-body',
+                'bg-accent/70 text-bg cursor-wait',
+              )}
+            >
+              <span className="inline-block w-3 h-3 border-2 border-bg/30 border-t-bg rounded-full animate-spin" />
+              Publishing...
+            </button>
+          ) : isPublished && !hasUnpublishedChanges ? (
+            <div
+              className={cn(
+                'w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-[var(--radius-sm)]',
+                'text-sm font-medium font-body',
+                'border border-accent/25 text-accent/60',
+              )}
+            >
+              <CheckIcon size={14} />
+              Up to date
+            </div>
+          ) : (
+            <button
+              onClick={handlePublish}
+              className={cn(
+                'w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-[var(--radius-sm)]',
+                'text-sm font-medium font-body transition-all cursor-pointer',
+                'bg-accent text-bg hover:brightness-110',
+              )}
+            >
+              <PublishIcon />
+              {isPublished ? 'Publish Changes' : 'Publish'}
+            </button>
+          )}
 
-          {/* Published URL */}
+          {/* Public URL */}
           {isPublished && publicUrl && (
             <div className="flex flex-col gap-1.5">
               <span className="text-[10px] font-mono uppercase tracking-wider text-text-muted">
                 Public URL
               </span>
-              <div className="flex items-center gap-1.5 bg-bg rounded-[var(--radius-sm)] p-2 border border-border">
+              <div className="flex items-center gap-1 rounded-[var(--radius-sm)] bg-bg border border-border px-2.5 py-1.5">
                 <span className="text-[11px] font-mono text-accent truncate flex-1">
                   {publicUrl}
                 </span>
@@ -283,16 +300,19 @@ export default function PublishPane() {
             </div>
           )}
 
-          {/* Unpublish action */}
+          {/* Spacer pushes unpublish to bottom */}
+          <div className="flex-1" />
+
+          {/* Unpublish — de-emphasized */}
           {isPublished && (
             <button
               onClick={handleUnpublish}
               disabled={publishing}
               className={cn(
-                'w-full flex items-center justify-center gap-2 px-4 py-2 rounded-[var(--radius-sm)]',
-                'text-xs font-mono transition-colors cursor-pointer',
-                'text-text-muted hover:text-error border border-border hover:border-error/40',
-                'disabled:opacity-50 disabled:cursor-not-allowed',
+                'w-full py-1.5 text-center',
+                'text-[11px] font-mono transition-colors cursor-pointer',
+                'text-text-muted/50 hover:text-error',
+                'disabled:cursor-not-allowed',
               )}
             >
               Unpublish

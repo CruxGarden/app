@@ -143,6 +143,7 @@ export default function ExportPane() {
 
   const totalSize = artifacts.reduce((sum, a) => sum + (Number(a.size) || 0), 0);
   const messageCount = messages.length;
+  const hasContent = artifacts.length > 0 || messageCount > 0;
 
   const { ref, isTooNarrow } = usePaneWidth(200);
 
@@ -151,70 +152,81 @@ export default function ExportPane() {
       <PaneHeader paneType="export" icon={<ExportIcon />} label="Export" />
 
       {isTooNarrow ? (
-        <div className="text-text-muted p-4">
-          <p className="text-xs text-center">Enlarge pane to view contents</p>
+        <div className="flex-1 flex items-center justify-center p-4">
+          <p className="text-xs text-text-muted">Enlarge pane to view contents</p>
+        </div>
+      ) : !crux ? (
+        <div className="flex-1 flex items-center justify-center p-4">
+          <p className="text-xs text-text-muted">No crux loaded</p>
+        </div>
+      ) : !hasContent ? (
+        <div className="flex-1 flex items-center justify-center p-4">
+          <p className="text-xs text-text-muted">Nothing to export yet</p>
         </div>
       ) : (
-        <div className="flex-1 overflow-y-auto min-h-0 p-3 flex flex-col gap-4">
-          {!crux ? (
-            <div className="text-text-muted p-1">
-              <p className="text-xs text-center">No crux loaded</p>
-            </div>
-          ) : artifacts.length === 0 && messageCount === 0 ? (
-            <div className="text-text-muted p-1">
-              <p className="text-xs text-center">Nothing to export yet</p>
-            </div>
-          ) : (
-            <>
-              {/* Contents summary */}
-              <div className="flex flex-col gap-1.5">
-                <span className="text-[10px] font-mono uppercase tracking-wider text-text-muted">
-                  Contents
-                </span>
-                <div className="text-[11px] font-mono text-text-muted space-y-1">
-                  <div className="flex justify-between">
-                    <span>Artifacts</span>
-                    <span className="text-text">{artifacts.length}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Collaboration</span>
-                    <span className="text-text">{messageCount}</span>
-                  </div>
-                  {gateCount > 0 && (
-                    <div className="flex justify-between">
-                      <span>Gates</span>
-                      <span className="text-text">{gateCount}</span>
-                    </div>
-                  )}
-                <div className="flex justify-between">
-                    <span>Total size</span>
-                    <span className="text-text">{formatBytes(totalSize)}</span>
-                  </div>
-                </div>
+        <div className="flex-1 overflow-y-auto min-h-0 p-3 flex flex-col gap-3">
+          {/* Contents card */}
+          <div className="rounded-[var(--radius-sm)] border border-border bg-surface/50 p-3 flex flex-col gap-2">
+            <span className="text-[10px] font-mono uppercase tracking-wider text-text-muted">
+              Contents
+            </span>
+            <div className="text-[11px] font-mono text-text-muted space-y-1">
+              <div className="flex justify-between">
+                <span>Artifacts</span>
+                <span className="text-text">{artifacts.length}</span>
               </div>
-
-              {/* Export button */}
-              <button
-                onClick={handleExport}
-                disabled={exporting}
-                className={cn(
-                  'w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-[var(--radius-sm)]',
-                  'text-sm font-medium font-body transition-all cursor-pointer',
-                  'bg-accent text-bg hover:brightness-110',
-                  'disabled:opacity-50 disabled:cursor-not-allowed',
-                )}
-              >
-                <ExportIcon />
-                {exporting ? 'Exporting...' : 'Export Crux'}
-              </button>
-
-              {/* Progress */}
-              {progress && (
-                <p className="text-[11px] font-mono text-text-muted text-center truncate">
-                  {progress}
-                </p>
+              <div className="flex justify-between">
+                <span>Collaboration</span>
+                <span className="text-text">{messageCount}</span>
+              </div>
+              {gateCount > 0 && (
+                <div className="flex justify-between">
+                  <span>Gates</span>
+                  <span className="text-text">{gateCount}</span>
+                </div>
               )}
-            </>
+              <div className="flex justify-between pt-1 border-t border-border">
+                <span>Total size</span>
+                <span className="text-text">{formatBytes(totalSize)}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Export button — state-aware */}
+          {exporting ? (
+            <button
+              disabled
+              className={cn(
+                'w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-[var(--radius-sm)]',
+                'text-sm font-medium font-body',
+                'bg-accent/70 text-bg cursor-wait',
+              )}
+            >
+              <span className="inline-block w-3 h-3 border-2 border-bg/30 border-t-bg rounded-full animate-spin" />
+              Exporting...
+            </button>
+          ) : (
+            <button
+              onClick={handleExport}
+              className={cn(
+                'w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-[var(--radius-sm)]',
+                'text-sm font-medium font-body transition-all cursor-pointer',
+                'bg-accent text-bg hover:brightness-110',
+              )}
+            >
+              <ExportIcon />
+              Export .crux
+            </button>
+          )}
+
+          {/* Progress */}
+          {progress && (
+            <p className={cn(
+              'text-[11px] font-mono text-center truncate',
+              progress === 'Export failed' ? 'text-error' : 'text-text-muted',
+            )}>
+              {progress}
+            </p>
           )}
         </div>
       )}

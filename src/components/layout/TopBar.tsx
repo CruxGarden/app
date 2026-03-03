@@ -277,29 +277,10 @@ export default function TopBar() {
         ) : null}
       </div>
 
-      {/* Right: keeper + pane toggles + user menu */}
+      {/* Right: pane toggles + keeper + user menu */}
       <div className="flex items-center gap-1">
-        <div className="relative group/btn flex items-center">
-          <button
-            onClick={() => useUIStore.getState().toggleKeeper()}
-            aria-label="The Keeper"
-            className={cn(
-              'w-6 h-6 rounded-full overflow-hidden',
-              'ring-1 ring-text-muted/20 hover:ring-accent/40 transition-shadow cursor-pointer',
-            )}
-          >
-            <KeeperAvatar className="w-6 h-6" />
-          </button>
-          <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 z-50 pointer-events-none hidden group-hover/btn:block">
-            <div className="flex items-center gap-2.5 px-3 py-2 rounded-[var(--radius)] bg-surface-solid border border-border shadow-lg whitespace-nowrap">
-              <span className="text-xs font-medium text-text">The Keeper</span>
-              <kbd className="text-[11px] font-mono text-text-muted px-1.5 py-0.5 rounded-[var(--radius-sm)] bg-bg border border-border min-w-[1.5rem] text-center">Esc</kbd>
-            </div>
-          </div>
-        </div>
         {activeCruxId && (
           <>
-            <div className="w-px h-5 bg-text-muted/20 mx-1" />
             <div className="flex items-center">
               {/* Enabled panes — in paneOrder */}
               <div className="flex items-center gap-1">
@@ -350,8 +331,27 @@ export default function TopBar() {
                 </div>
               )}
             </div>
+            <div className="w-px h-5 bg-text-muted/20 mx-1" />
           </>
         )}
+        <div className="relative group/btn flex items-center">
+          <button
+            onClick={() => useUIStore.getState().toggleKeeper()}
+            aria-label="The Keeper"
+            className={cn(
+              'w-6 h-6 rounded-full overflow-hidden',
+              'ring-1 ring-text-muted/20 hover:ring-accent/40 transition-shadow cursor-pointer',
+            )}
+          >
+            <KeeperAvatar className="w-6 h-6" />
+          </button>
+          <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 z-50 pointer-events-none hidden group-hover/btn:block">
+            <div className="flex items-center gap-2.5 px-3 py-2 rounded-[var(--radius)] bg-surface-solid border border-border shadow-lg whitespace-nowrap">
+              <span className="text-xs font-medium text-text">The Keeper</span>
+              <kbd className="text-[11px] font-mono text-text-muted px-1.5 py-0.5 rounded-[var(--radius-sm)] bg-bg border border-border min-w-[1.5rem] text-center">Esc</kbd>
+            </div>
+          </div>
+        </div>
         <div className="w-px h-5 bg-text-muted/20 mx-1" />
         <UserMenu />
       </div>
