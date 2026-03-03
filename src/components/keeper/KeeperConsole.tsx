@@ -1,12 +1,16 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { cn } from '@/lib/cn';
 import MarkdownRenderer from '@/components/chat/MarkdownRenderer';
-import keeperAvatarUrl from '@/images/keeper-avatar.png';
+import keeperAvatarDark from '@/images/keeper-avatar-dark.jpg';
+import keeperAvatarLight from '@/images/keeper-avatar-light.jpg';
+import { useThemeStore } from '@/stores/themeStore';
 
 export function KeeperAvatar({ className = 'w-6 h-6' }: { className?: string }) {
+  const resolved = useThemeStore((s) => s.resolved);
+  const src = resolved === 'dark' ? keeperAvatarDark : keeperAvatarLight;
   return (
     <div className={`${className} shrink-0 rounded-full overflow-hidden`}>
-      <img src={keeperAvatarUrl} alt="The Keeper" className="w-full h-full object-cover" />
+      <img src={src} alt="The Keeper" className="w-full h-full object-cover" />
     </div>
   );
 }
