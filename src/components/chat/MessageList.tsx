@@ -12,6 +12,7 @@ interface MessageListProps {
 
 export default function MessageList({ messages, streamingContent, isStreaming }: MessageListProps) {
   const bottomRef = useRef<HTMLDivElement>(null);
+  const hasScrolledRef = useRef(false);
   const author = useAuthStore((s) => s.author);
 
   const userInitial = author?.username?.charAt(0)?.toUpperCase() ?? '?';
@@ -22,7 +23,13 @@ export default function MessageList({ messages, streamingContent, isStreaming }:
   })();
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+    if (!hasScrolledRef.current) {
+      // First render: jump to bottom instantly
+      bottomRef.current?.scrollIntoView({ behavior: 'instant' });
+      hasScrolledRef.current = true;
+    } else {
+      bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }
   }, [messages, streamingContent]);
 
   return (
