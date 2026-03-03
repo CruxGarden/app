@@ -144,10 +144,10 @@ export const DARK_PALETTE: Palette = {
 };
 
 export const LIGHT_PALETTE: Palette = {
-  bg: '#eaeceb',
-  surface: 'rgba(214, 218, 215, 0.93)',
-  surfaceSolid: '#d6d9d7',
-  panel: 'rgba(220, 224, 221, 0.95)',
+  bg: '#e4e4da',
+  surface: 'rgba(222, 222, 211, 0.93)',
+  surfaceSolid: '#dfdfd5',
+  panel: 'rgba(226, 225, 214, 0.95)',
   text: '#1c211d',
   textMuted: '#616864',
   border: 'rgba(82, 96, 86, 0.2)',

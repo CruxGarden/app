@@ -120,7 +120,7 @@ export default function PublishPane() {
   }, [artifacts]);
 
   const publicUrl =
-    author && crux ? `${window.location.origin}/@${author.username}/${crux.slug}` : null;
+    author && crux ? `${window.location.origin}/${author.username}/${crux.slug}` : null;
 
   const doPublish = useCallback(async () => {
     if (!crux) return;

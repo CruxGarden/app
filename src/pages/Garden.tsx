@@ -324,7 +324,7 @@ export default function Garden() {
               <div className="flex items-center gap-1.5 mt-0.5">
                 <p className="text-sm text-text-muted">Home Garden</p>
                 {author && (
-                  <a href={`/@${author.username}`} target="_blank" rel="noopener noreferrer">
+                  <a href={`/${author.username}`} target="_blank" rel="noopener noreferrer">
                     <IconButton
                       label="Public Garden"
                       size="sm"
@@ -446,29 +446,6 @@ export default function Garden() {
           <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-50 pointer-events-none hidden group-hover/bloom:block">
             <div className="px-2.5 py-1.5 rounded-[var(--radius)] bg-surface-solid border border-border shadow-lg whitespace-nowrap">
               <span className="text-xs font-medium text-text">Bloom</span>
-            </div>
-          </div>
-        </div>
-        <div className="relative group/star">
-          <button
-            onClick={() => toggleBg('starfield')}
-            className={cn(
-              'p-1.5 rounded-[var(--radius-sm)] transition-colors cursor-pointer',
-              bgType === 'starfield' ? 'text-text bg-surface' : 'text-text-muted hover:text-text hover:bg-surface',
-            )}
-          >
-            <svg width="18" height="14" viewBox="0 0 20 14" className="shrink-0">
-              <circle cx="3" cy="3" r="0.8" fill="currentColor" opacity="0.7" />
-              <circle cx="10" cy="6" r="0.6" fill="currentColor" opacity="0.5" />
-              <circle cx="17" cy="2" r="0.8" fill="currentColor" opacity="0.8" />
-              <circle cx="7" cy="11" r="0.6" fill="currentColor" opacity="0.4" />
-              <circle cx="14" cy="10" r="0.7" fill="currentColor" opacity="0.6" />
-              <circle cx="5" cy="7" r="0.5" fill="currentColor" opacity="0.3" />
-            </svg>
-          </button>
-          <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-50 pointer-events-none hidden group-hover/star:block">
-            <div className="px-2.5 py-1.5 rounded-[var(--radius)] bg-surface-solid border border-border shadow-lg whitespace-nowrap">
-              <span className="text-xs font-medium text-text">Starfield</span>
             </div>
           </div>
         </div>

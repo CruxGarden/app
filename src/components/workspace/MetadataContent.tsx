@@ -241,14 +241,9 @@ export default function MetadataContent({
             )}
             {collaborators.length > 0 && (
               <FieldRow label="Collaborators">
-                <div className="flex flex-col gap-1">
-                  {collaborators.map((model) => (
-                    <span key={model} className="flex items-center gap-1.5">
-                      <span className="w-1.5 h-1.5 rounded-full bg-brand-ai shrink-0" />
-                      {formatModel(model)}
-                    </span>
-                  ))}
-                </div>
+                {collaborators.map((model) => (
+                  <span key={model}>{formatModel(model)}</span>
+                ))}
               </FieldRow>
             )}
           </div>
