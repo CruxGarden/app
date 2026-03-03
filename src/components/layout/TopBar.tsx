@@ -242,7 +242,7 @@ export default function TopBar() {
           onClick={() => navigate('/')}
           className="shrink-0 cursor-pointer text-sm font-display font-medium text-text whitespace-nowrap hover:underline"
         >
-          crux.garden
+          Crux Garden
         </button>
         {username ? (
           <>
@@ -295,61 +295,8 @@ export default function TopBar() {
         ) : null}
       </div>
 
-      {/* Right: pane toggles + user menu */}
+      {/* Right: keeper + pane toggles + user menu */}
       <div className="flex items-center gap-1">
-        {activeCruxId && (
-          <div className="flex items-center">
-            {/* Enabled panes — in paneOrder */}
-            <div className="flex items-center gap-0.5">
-              {enabledPanes.map((paneType) => {
-                const config = PANE_BUTTONS.find((b) => b.type === paneType)!;
-                const Icon = config.icon;
-                return (
-                  <IconButton
-                    key={paneType}
-                    label={`Toggle ${config.label.toLowerCase()}`}
-                    size="sm"
-                    onClick={() => togglePane(paneType)}
-                    active
-                    activeColor={PANE_COLORS[paneType]}
-                    tooltip={{ label: config.label }}
-                  >
-                    <Icon />
-                  </IconButton>
-                );
-              })}
-            </div>
-
-            {/* Divider between enabled and disabled */}
-            {disabledPanes.length > 0 && enabledPanes.length > 0 && (
-              <div className="w-px h-5 bg-text-muted/20 mx-1.5" />
-            )}
-
-            {/* Disabled panes — fixed default order, not draggable */}
-            {disabledPanes.length > 0 && (
-              <div className="flex items-center gap-0.5">
-                {disabledPanes.map((paneType) => {
-                  const config = PANE_BUTTONS.find((b) => b.type === paneType)!;
-                  const Icon = config.icon;
-                  return (
-                    <IconButton
-                      key={paneType}
-                      label={`Toggle ${config.label.toLowerCase()}`}
-                      size="sm"
-                      onClick={() => togglePane(paneType)}
-                      active={false}
-                      activeColor={PANE_COLORS[paneType]}
-                      tooltip={{ label: config.label }}
-                    >
-                      <Icon />
-                    </IconButton>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        )}
-        {activeCruxId && <div className="w-px h-5 bg-text-muted/30 mx-1" />}
         <IconButton
           label="Open Keeper Console"
           size="sm"
@@ -358,6 +305,62 @@ export default function TopBar() {
         >
           <KeeperIcon />
         </IconButton>
+        {activeCruxId && (
+          <>
+            <div className="w-px h-5 bg-text-muted/20 mx-1" />
+            <div className="flex items-center">
+              {/* Enabled panes — in paneOrder */}
+              <div className="flex items-center gap-1">
+                {enabledPanes.map((paneType) => {
+                  const config = PANE_BUTTONS.find((b) => b.type === paneType)!;
+                  const Icon = config.icon;
+                  return (
+                    <IconButton
+                      key={paneType}
+                      label={`Toggle ${config.label.toLowerCase()}`}
+                      size="sm"
+                      onClick={() => togglePane(paneType)}
+                      active
+                      activeColor={PANE_COLORS[paneType]}
+                      tooltip={{ label: config.label }}
+                    >
+                      <Icon />
+                    </IconButton>
+                  );
+                })}
+              </div>
+
+              {/* Divider between enabled and disabled */}
+              {disabledPanes.length > 0 && enabledPanes.length > 0 && (
+                <div className="w-px h-5 bg-text-muted/20 mx-1.5" />
+              )}
+
+              {/* Disabled panes — fixed default order, not draggable */}
+              {disabledPanes.length > 0 && (
+                <div className="flex items-center gap-1">
+                  {disabledPanes.map((paneType) => {
+                    const config = PANE_BUTTONS.find((b) => b.type === paneType)!;
+                    const Icon = config.icon;
+                    return (
+                      <IconButton
+                        key={paneType}
+                        label={`Toggle ${config.label.toLowerCase()}`}
+                        size="sm"
+                        onClick={() => togglePane(paneType)}
+                        active={false}
+                        activeColor={PANE_COLORS[paneType]}
+                        tooltip={{ label: config.label }}
+                      >
+                        <Icon />
+                      </IconButton>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </>
+        )}
+        <div className="w-px h-5 bg-text-muted/20 mx-1" />
         <UserMenu />
       </div>
     </header>

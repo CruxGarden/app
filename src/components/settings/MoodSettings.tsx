@@ -4,19 +4,19 @@ import { getCurrentPalette, type Palette } from '@/lib/palette';
 import { Panel, Toggle } from '@/components/ui';
 import { cn } from '@/lib/cn';
 
-type BgType = 'mesh' | 'starfield';
+type BgType = 'bloom' | 'starfield' | 'flowfield';
 
 const BG_STORAGE_KEY = 'cruxgarden:backgroundType';
 
 function getBackgroundType(): BgType {
   const saved = localStorage.getItem(BG_STORAGE_KEY);
-  if (saved === 'mesh' || saved === 'starfield') return saved;
+  if (saved === 'bloom' || saved === 'starfield' || saved === 'flowfield') return saved;
   const css =
     getComputedStyle(document.documentElement)
       .getPropertyValue('--background-type')
       .trim();
-  if (css === 'starfield') return css;
-  return 'mesh';
+  if (css === 'starfield' || css === 'flowfield') return css as BgType;
+  return 'bloom';
 }
 
 function setBackgroundType(type: BgType) {
@@ -101,7 +101,7 @@ function OptionButton({
 
 // ── Background Previews ────────────────────────────
 
-function MeshPreview() {
+function BloomPreview() {
   return (
     <svg width="20" height="14" viewBox="0 0 20 14" className="shrink-0">
       <circle cx="6" cy="5" r="4" fill="var(--accent)" opacity="0.4" />
@@ -120,6 +120,16 @@ function StarfieldPreview() {
       <circle cx="7" cy="11" r="0.6" fill="currentColor" opacity="0.4" />
       <circle cx="14" cy="10" r="0.7" fill="currentColor" opacity="0.6" />
       <circle cx="5" cy="7" r="0.5" fill="currentColor" opacity="0.3" />
+    </svg>
+  );
+}
+
+function FlowFieldPreview() {
+  return (
+    <svg width="20" height="14" viewBox="0 0 20 14" className="shrink-0">
+      <path d="M2 8 C5 4, 8 4, 10 7 S15 12, 18 8" stroke="var(--accent)" strokeWidth="0.8" fill="none" opacity="0.6" />
+      <path d="M1 11 C4 7, 7 6, 10 9 S14 14, 19 10" stroke="var(--accent)" strokeWidth="0.6" fill="none" opacity="0.35" />
+      <path d="M3 5 C6 2, 9 2, 12 5 S16 9, 19 5" stroke="var(--accent)" strokeWidth="0.6" fill="none" opacity="0.4" />
     </svg>
   );
 }
@@ -158,20 +168,24 @@ const PALETTE_GROUPS: PaletteGroup[] = [
     keys: [{ key: 'brandAi', name: 'brandAi' }],
   },
   {
-    label: 'Mesh',
+    label: 'Bloom',
     keys: [
-      { key: 'meshBg1', name: 'meshBg1' },
-      { key: 'meshBg2', name: 'meshBg2' },
-      { key: 'mesh1', name: 'mesh1' },
-      { key: 'mesh2', name: 'mesh2' },
-      { key: 'mesh3', name: 'mesh3' },
-      { key: 'mesh4', name: 'mesh4' },
-      { key: 'mesh5', name: 'mesh5' },
+      { key: 'bloomBg1', name: 'bloomBg1' },
+      { key: 'bloomBg2', name: 'bloomBg2' },
+      { key: 'bloom1', name: 'bloom1' },
+      { key: 'bloom2', name: 'bloom2' },
+      { key: 'bloom3', name: 'bloom3' },
+      { key: 'bloom4', name: 'bloom4' },
+      { key: 'bloom5', name: 'bloom5' },
     ],
   },
   {
     label: 'Starfield',
     keys: [{ key: 'starColor', name: 'starColor' }],
+  },
+  {
+    label: 'Flow Field',
+    keys: [{ key: 'flowColor', name: 'flowColor' }],
   },
   {
     label: 'Syntax',
@@ -248,6 +262,7 @@ function PaletteTable() {
 export default function MoodSettings() {
   const { mode, setMode } = useThemeStore();
   const bgType = getBackgroundType();
+  const [collapsed, setCollapsed] = useState(true);
 
   const handleBgChange = (type: BgType) => {
     setBackgroundType(type);
@@ -257,9 +272,30 @@ export default function MoodSettings() {
 
   return (
     <Panel padding="md">
-      <h2 className="font-display text-sm font-medium text-accent mb-5">Mood</h2>
+      <button
+        onClick={() => setCollapsed((v) => !v)}
+        className="flex items-center gap-2 w-full cursor-pointer group"
+      >
+        <svg
+          width="12"
+          height="12"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          className={cn(
+            'text-text-muted transition-transform duration-150',
+            collapsed ? '-rotate-90' : 'rotate-0',
+          )}
+        >
+          <polyline points="6 9 12 15 18 9" />
+        </svg>
+        <h2 className="font-display text-sm font-medium text-accent">Mood</h2>
+      </button>
 
-      <div className="flex flex-col gap-5">
+      {!collapsed && <div className="flex flex-col gap-5 mt-5">
         {/* ── Theme ── */}
         <div className="flex flex-col gap-2">
           <SectionLabel>Theme</SectionLabel>
@@ -290,16 +326,22 @@ export default function MoodSettings() {
           <SectionLabel>Background</SectionLabel>
           <div className="flex items-center gap-2">
             <OptionButton
-              active={bgType === 'mesh'}
-              onClick={() => handleBgChange('mesh')}
-              icon={<MeshPreview />}
-              label="Mesh"
+              active={bgType === 'bloom'}
+              onClick={() => handleBgChange('bloom')}
+              icon={<BloomPreview />}
+              label="Bloom"
             />
             <OptionButton
               active={bgType === 'starfield'}
               onClick={() => handleBgChange('starfield')}
               icon={<StarfieldPreview />}
               label="Stars"
+            />
+            <OptionButton
+              active={bgType === 'flowfield'}
+              onClick={() => handleBgChange('flowfield')}
+              icon={<FlowFieldPreview />}
+              label="Flow"
             />
           </div>
         </div>
@@ -319,7 +361,7 @@ export default function MoodSettings() {
           <SectionLabel>Palette</SectionLabel>
           <PaletteTable />
         </div>
-      </div>
+      </div>}
     </Panel>
   );
 }

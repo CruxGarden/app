@@ -261,13 +261,13 @@ export default function Garden() {
   // Background type toggle (persisted)
   const BG_STORAGE_KEY = 'cruxgarden:backgroundType';
   const [bgType, setBgType] = useState<string>(() => {
-    return localStorage.getItem(BG_STORAGE_KEY) || 'mesh';
+    return localStorage.getItem(BG_STORAGE_KEY) || 'bloom';
   });
 
   // Apply saved preference on mount
   useEffect(() => {
     const saved = localStorage.getItem(BG_STORAGE_KEY);
-    if (saved && saved !== 'mesh') {
+    if (saved && saved !== 'bloom') {
       document.documentElement.style.setProperty('--background-type', saved);
     }
   }, []);
@@ -282,7 +282,7 @@ export default function Garden() {
   useEffect(() => {
     document.title = author ? author.username : 'Garden';
     return () => {
-      document.title = 'crux.garden';
+      document.title = 'Crux Garden';
     };
   }, [author]);
 
@@ -428,25 +428,23 @@ export default function Garden() {
 
       {/* Background toggle — bottom right */}
       <div className="fixed bottom-4 right-4 z-30 flex items-center gap-1 p-1 rounded-[var(--radius)] bg-panel border border-border">
-        <div className="relative group/mesh">
+        <div className="relative group/bloom">
           <button
-            onClick={() => toggleBg('mesh')}
+            onClick={() => toggleBg('bloom')}
             className={cn(
               'p-1.5 rounded-[var(--radius-sm)] transition-colors cursor-pointer',
-              bgType === 'mesh' ? 'text-text bg-surface' : 'text-text-muted hover:text-text',
+              bgType === 'bloom' ? 'text-text bg-surface' : 'text-text-muted hover:text-text hover:bg-surface',
             )}
           >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="12" cy="12" r="4" />
-              <circle cx="6" cy="6" r="2.5" opacity="0.5" />
-              <circle cx="18" cy="8" r="3" opacity="0.5" />
-              <circle cx="8" cy="18" r="2.5" opacity="0.5" />
-              <circle cx="18" cy="17" r="2" opacity="0.5" />
+            <svg width="18" height="14" viewBox="0 0 20 14" className="shrink-0">
+              <circle cx="6" cy="5" r="4" fill="var(--accent)" opacity="0.4" />
+              <circle cx="14" cy="9" r="4" fill="var(--accent)" opacity="0.25" />
+              <circle cx="10" cy="4" r="3" fill="var(--accent)" opacity="0.15" />
             </svg>
           </button>
-          <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-50 pointer-events-none hidden group-hover/mesh:block">
+          <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-50 pointer-events-none hidden group-hover/bloom:block">
             <div className="px-2.5 py-1.5 rounded-[var(--radius)] bg-surface-solid border border-border shadow-lg whitespace-nowrap">
-              <span className="text-xs font-medium text-text">Mesh</span>
+              <span className="text-xs font-medium text-text">Bloom</span>
             </div>
           </div>
         </div>
@@ -455,16 +453,41 @@ export default function Garden() {
             onClick={() => toggleBg('starfield')}
             className={cn(
               'p-1.5 rounded-[var(--radius-sm)] transition-colors cursor-pointer',
-              bgType === 'starfield' ? 'text-text bg-surface' : 'text-text-muted hover:text-text',
+              bgType === 'starfield' ? 'text-text bg-surface' : 'text-text-muted hover:text-text hover:bg-surface',
             )}
           >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-              <polygon points="12,2 15,9 22,9 16.5,14 18.5,21 12,17 5.5,21 7.5,14 2,9 9,9" />
+            <svg width="18" height="14" viewBox="0 0 20 14" className="shrink-0">
+              <circle cx="3" cy="3" r="0.8" fill="currentColor" opacity="0.7" />
+              <circle cx="10" cy="6" r="0.6" fill="currentColor" opacity="0.5" />
+              <circle cx="17" cy="2" r="0.8" fill="currentColor" opacity="0.8" />
+              <circle cx="7" cy="11" r="0.6" fill="currentColor" opacity="0.4" />
+              <circle cx="14" cy="10" r="0.7" fill="currentColor" opacity="0.6" />
+              <circle cx="5" cy="7" r="0.5" fill="currentColor" opacity="0.3" />
             </svg>
           </button>
           <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-50 pointer-events-none hidden group-hover/star:block">
             <div className="px-2.5 py-1.5 rounded-[var(--radius)] bg-surface-solid border border-border shadow-lg whitespace-nowrap">
               <span className="text-xs font-medium text-text">Starfield</span>
+            </div>
+          </div>
+        </div>
+        <div className="relative group/flow">
+          <button
+            onClick={() => toggleBg('flowfield')}
+            className={cn(
+              'p-1.5 rounded-[var(--radius-sm)] transition-colors cursor-pointer',
+              bgType === 'flowfield' ? 'text-text bg-surface' : 'text-text-muted hover:text-text hover:bg-surface',
+            )}
+          >
+            <svg width="18" height="14" viewBox="0 0 20 14" className="shrink-0">
+              <path d="M2 8 C5 4, 8 4, 10 7 S15 12, 18 8" stroke="var(--accent)" strokeWidth="0.8" fill="none" opacity="0.6" />
+              <path d="M1 11 C4 7, 7 6, 10 9 S14 14, 19 10" stroke="var(--accent)" strokeWidth="0.6" fill="none" opacity="0.35" />
+              <path d="M3 5 C6 2, 9 2, 12 5 S16 9, 19 5" stroke="var(--accent)" strokeWidth="0.6" fill="none" opacity="0.4" />
+            </svg>
+          </button>
+          <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-50 pointer-events-none hidden group-hover/flow:block">
+            <div className="px-2.5 py-1.5 rounded-[var(--radius)] bg-surface-solid border border-border shadow-lg whitespace-nowrap">
+              <span className="text-xs font-medium text-text">Flow</span>
             </div>
           </div>
         </div>

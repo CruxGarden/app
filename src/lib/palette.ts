@@ -40,20 +40,20 @@ export interface Palette {
   paneSync: string;
   panePublish: string;
 
-  // Mesh gradient
-  meshBg1: string;
-  meshBg2: string;
-  mesh1: string;
-  mesh2: string;
-  mesh3: string;
-  mesh4: string;
-  mesh5: string;
-  mesh6: string;
+  // Bloom gradient
+  bloomBg1: string;
+  bloomBg2: string;
+  bloom1: string;
+  bloom2: string;
+  bloom3: string;
+  bloom4: string;
+  bloom5: string;
+  bloom6: string;
 
-  // Mesh animation
-  meshOpacity: string;
-  meshBlur: string;
-  meshSpeed: string;
+  // Bloom animation
+  bloomOpacity: string;
+  bloomBlur: string;
+  bloomSpeed: string;
 
   // Background type
   backgroundType: string;
@@ -63,6 +63,10 @@ export interface Palette {
   starOpacity: string;
   starSpeed: string;
   starDensity: string;
+
+  // Flow field
+  flowColor: string;
+  flowSpeed: string;
 
   // Shape
   radius: string;
@@ -107,22 +111,24 @@ export const DARK_PALETTE: Palette = {
   paneExport: '#5b9ed4',
   paneSync: '#8c7cc8',
   panePublish: '#c87ca8',
-  meshBg1: '#0a1810',
-  meshBg2: '#060d08',
-  mesh1: '#1a5a99',
-  mesh2: '#8a4a99',
-  mesh3: '#4a8a99',
-  mesh4: '#994a3a',
-  mesh5: '#7a7a3a',
-  mesh6: '#3a8a7a',
-  meshOpacity: '1',
-  meshBlur: '60px',
-  meshSpeed: '1',
-  backgroundType: 'mesh',
+  bloomBg1: '#0a1810',
+  bloomBg2: '#060d08',
+  bloom1: '#1a5a99',
+  bloom2: '#8a4a99',
+  bloom3: '#4a8a99',
+  bloom4: '#994a3a',
+  bloom5: '#7a7a3a',
+  bloom6: '#3a8a7a',
+  bloomOpacity: '1',
+  bloomBlur: '60px',
+  bloomSpeed: '1',
+  backgroundType: 'bloom',
   starColor: '#e0e7ff',
   starOpacity: '0.8',
   starSpeed: '1',
   starDensity: '150',
+  flowColor: '#7db3a3',
+  flowSpeed: '1',
   radius: '0.5rem',
   radiusSm: '0.375rem',
   fontDisplay: "'JetBrains Mono', monospace",
@@ -161,22 +167,24 @@ export const LIGHT_PALETTE: Palette = {
   paneExport: '#4a86bc',
   paneSync: '#7a6ab8',
   panePublish: '#b06a98',
-  meshBg1: '#0a1810',
-  meshBg2: '#060d08',
-  mesh1: '#1a5a99',
-  mesh2: '#8a4a99',
-  mesh3: '#4a8a99',
-  mesh4: '#994a3a',
-  mesh5: '#7a7a3a',
-  mesh6: '#3a8a7a',
-  meshOpacity: '1',
-  meshBlur: '60px',
-  meshSpeed: '1',
-  backgroundType: 'mesh',
+  bloomBg1: '#0a1810',
+  bloomBg2: '#060d08',
+  bloom1: '#1a5a99',
+  bloom2: '#8a4a99',
+  bloom3: '#4a8a99',
+  bloom4: '#994a3a',
+  bloom5: '#7a7a3a',
+  bloom6: '#3a8a7a',
+  bloomOpacity: '1',
+  bloomBlur: '60px',
+  bloomSpeed: '1',
+  backgroundType: 'bloom',
   starColor: '#c8d0e0',
   starOpacity: '0.6',
   starSpeed: '1',
   starDensity: '120',
+  flowColor: '#3a7064',
+  flowSpeed: '1',
   radius: '0.5rem',
   radiusSm: '0.375rem',
   fontDisplay: "'JetBrains Mono', monospace",
@@ -216,22 +224,24 @@ const KEY_TO_VAR: Record<keyof Palette, string> = {
   paneExport: '--pane-export',
   paneSync: '--pane-sync',
   panePublish: '--pane-publish',
-  meshBg1: '--mesh-bg1',
-  meshBg2: '--mesh-bg2',
-  mesh1: '--mesh-1',
-  mesh2: '--mesh-2',
-  mesh3: '--mesh-3',
-  mesh4: '--mesh-4',
-  mesh5: '--mesh-5',
-  mesh6: '--mesh-6',
-  meshOpacity: '--mesh-opacity',
-  meshBlur: '--mesh-blur',
-  meshSpeed: '--mesh-speed',
+  bloomBg1: '--bloom-bg1',
+  bloomBg2: '--bloom-bg2',
+  bloom1: '--bloom-1',
+  bloom2: '--bloom-2',
+  bloom3: '--bloom-3',
+  bloom4: '--bloom-4',
+  bloom5: '--bloom-5',
+  bloom6: '--bloom-6',
+  bloomOpacity: '--bloom-opacity',
+  bloomBlur: '--bloom-blur',
+  bloomSpeed: '--bloom-speed',
   backgroundType: '--background-type',
   starColor: '--star-color',
   starOpacity: '--star-opacity',
   starSpeed: '--star-speed',
   starDensity: '--star-density',
+  flowColor: '--flow-color',
+  flowSpeed: '--flow-speed',
   radius: '--radius',
   radiusSm: '--radius-sm',
   fontDisplay: '--font-display',
