@@ -249,9 +249,20 @@ export default function FlowFieldBackground() {
     };
 
     let colors = readColors();
+    let isLightBg = (colors.bgColor[0] * 0.299 + colors.bgColor[1] * 0.587 + colors.bgColor[2] * 0.114) > 0.5;
 
-    const onPaletteChange = () => { colors = readColors(); };
+    const onPaletteChange = () => {
+      colors = readColors();
+      isLightBg = (colors.bgColor[0] * 0.299 + colors.bgColor[1] * 0.587 + colors.bgColor[2] * 0.114) > 0.5;
+    };
     document.addEventListener('palette-change', onPaletteChange);
+
+    // Re-read colors when theme class changes (light ↔ dark)
+    const themeObserver = new MutationObserver(() => {
+      colors = readColors();
+      isLightBg = (colors.bgColor[0] * 0.299 + colors.bgColor[1] * 0.587 + colors.bgColor[2] * 0.114) > 0.5;
+    });
+    themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
 
     // Compile shaders
     const particleProg = linkProgram(gl, PARTICLE_VS, PARTICLE_FS);
@@ -376,8 +387,12 @@ export default function FlowFieldBackground() {
         particleData[i * 3 + 2] = alpha * 0.25;
       }
 
-      // ── Draw particles (additive) ──
-      gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
+      // ── Draw particles ──
+      if (isLightBg) {
+        gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+      } else {
+        gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
+      }
 
       gl.useProgram(particleProg);
       gl.bindBuffer(gl.ARRAY_BUFFER, particleBuf);
@@ -398,6 +413,7 @@ export default function FlowFieldBackground() {
       cancelAnimationFrame(animFrame);
       window.removeEventListener('resize', handleResize);
       document.removeEventListener('palette-change', onPaletteChange);
+      themeObserver.disconnect();
     };
   }, []);
 

@@ -128,10 +128,10 @@
 /* ── Light mode — "forest canopy" ─────────────────────── */
 
 .light {
-  --bg: #e0e3e1;
-  --surface: #ced3cf;
-  --surface-solid: #cfd2d0;
-  --panel: #d5d9d6;
+  --bg: #e4e4da;
+  --surface: #deded3;
+  --surface-solid: #dfdfd5;
+  --panel: #e2e1d6;
   --text: #1c211d;
   --text-muted: #505650;
   --border: rgba(60, 72, 64, 0.25);

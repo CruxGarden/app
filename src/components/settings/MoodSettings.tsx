@@ -4,18 +4,18 @@ import { getCurrentPalette, type Palette } from '@/lib/palette';
 import { Panel, Toggle } from '@/components/ui';
 import { cn } from '@/lib/cn';
 
-type BgType = 'bloom' | 'starfield' | 'flowfield';
+type BgType = 'bloom' | 'flowfield';
 
 const BG_STORAGE_KEY = 'cruxgarden:backgroundType';
 
 function getBackgroundType(): BgType {
   const saved = localStorage.getItem(BG_STORAGE_KEY);
-  if (saved === 'bloom' || saved === 'starfield' || saved === 'flowfield') return saved;
+  if (saved === 'bloom' || saved === 'flowfield') return saved;
   const css =
     getComputedStyle(document.documentElement)
       .getPropertyValue('--background-type')
       .trim();
-  if (css === 'starfield' || css === 'flowfield') return css as BgType;
+  if (css === 'flowfield') return css;
   return 'bloom';
 }
 
@@ -111,19 +111,6 @@ function BloomPreview() {
   );
 }
 
-function StarfieldPreview() {
-  return (
-    <svg width="20" height="14" viewBox="0 0 20 14" className="shrink-0">
-      <circle cx="3" cy="3" r="0.8" fill="currentColor" opacity="0.7" />
-      <circle cx="10" cy="6" r="0.6" fill="currentColor" opacity="0.5" />
-      <circle cx="17" cy="2" r="0.8" fill="currentColor" opacity="0.8" />
-      <circle cx="7" cy="11" r="0.6" fill="currentColor" opacity="0.4" />
-      <circle cx="14" cy="10" r="0.7" fill="currentColor" opacity="0.6" />
-      <circle cx="5" cy="7" r="0.5" fill="currentColor" opacity="0.3" />
-    </svg>
-  );
-}
-
 function FlowFieldPreview() {
   return (
     <svg width="20" height="14" viewBox="0 0 20 14" className="shrink-0">
@@ -178,10 +165,6 @@ const PALETTE_GROUPS: PaletteGroup[] = [
       { key: 'bloom4', name: 'bloom4' },
       { key: 'bloom5', name: 'bloom5' },
     ],
-  },
-  {
-    label: 'Starfield',
-    keys: [{ key: 'starColor', name: 'starColor' }],
   },
   {
     label: 'Flow Field',
@@ -330,12 +313,6 @@ export default function MoodSettings() {
               onClick={() => handleBgChange('bloom')}
               icon={<BloomPreview />}
               label="Bloom"
-            />
-            <OptionButton
-              active={bgType === 'starfield'}
-              onClick={() => handleBgChange('starfield')}
-              icon={<StarfieldPreview />}
-              label="Stars"
             />
             <OptionButton
               active={bgType === 'flowfield'}

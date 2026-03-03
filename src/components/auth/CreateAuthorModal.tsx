@@ -70,7 +70,7 @@ export default function CreateAuthorModal({ open, onClose, onCreated }: CreateAu
         <div>
           <h2 className="text-lg font-display font-medium text-text">Choose a username</h2>
           <p className="text-sm text-text-muted mt-1">
-            Your creations will live at crux.garden/@username
+            Your creations will live at crux.garden/username
           </p>
         </div>
 

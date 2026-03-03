@@ -9,19 +9,22 @@ import FlowFieldBackground from './FlowFieldBackground';
  */
 const BG_STORAGE_KEY = 'cruxgarden:backgroundType';
 
+function pickRandomDefault(): string {
+  const choice = Math.random() < 0.5 ? 'bloom' : 'flowfield';
+  localStorage.setItem(BG_STORAGE_KEY, choice);
+  document.documentElement.style.setProperty('--background-type', choice);
+  return choice;
+}
+
 export default function AnimatedBackground() {
   const [bgType, setBgType] = useState<string>(() => {
-    // Prefer localStorage, then CSS variable, then default
+    // Prefer localStorage, then assign a random default
     const saved = localStorage.getItem(BG_STORAGE_KEY);
     if (saved) {
       document.documentElement.style.setProperty('--background-type', saved);
       return saved;
     }
-    return (
-      getComputedStyle(document.documentElement)
-        .getPropertyValue('--background-type')
-        .trim() || 'bloom'
-    );
+    return pickRandomDefault();
   });
 
   useEffect(() => {
@@ -40,7 +43,7 @@ export default function AnimatedBackground() {
       const val =
         getComputedStyle(document.documentElement)
           .getPropertyValue('--background-type')
-          .trim() || 'bloom';
+          .trim() || localStorage.getItem(BG_STORAGE_KEY) || 'bloom';
       setBgType((prev) => (prev !== val ? val : prev));
     });
 

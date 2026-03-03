@@ -13,10 +13,7 @@ type LoadState = 'loading' | 'ready' | 'not-found' | 'error';
 type SortField = 'created' | 'updated';
 
 export default function PublicAuthor() {
-  const { username: rawUsername } = useParams<{ username: string }>();
-
-  const hasAtPrefix = rawUsername?.startsWith('@') ?? false;
-  const username = hasAtPrefix ? rawUsername!.slice(1) : rawUsername;
+  const { username } = useParams<{ username: string }>();
 
   const [author, setAuthor] = useState<Author | null>(null);
   const [cruxes, setCruxes] = useState<Crux[]>([]);
@@ -25,7 +22,7 @@ export default function PublicAuthor() {
   const [sortBy, setSortBy] = useState<SortField>('created');
 
   useEffect(() => {
-    if (!username || !hasAtPrefix) {
+    if (!username) {
       setState('not-found');
       return;
     }
@@ -55,7 +52,7 @@ export default function PublicAuthor() {
     return () => {
       cancelled = true;
     };
-  }, [username, hasAtPrefix]);
+  }, [username]);
 
   useEffect(() => {
     if (author?.username) {
@@ -66,7 +63,7 @@ export default function PublicAuthor() {
     };
   }, [author?.username]);
 
-  const linkBuilder = useCallback((crux: Crux) => `/@${username}/${crux.slug}`, [username]);
+  const linkBuilder = useCallback((crux: Crux) => `/${username}/${crux.slug}`, [username]);
 
   // Client-side search + sort
   const filteredCruxes = useMemo(() => {

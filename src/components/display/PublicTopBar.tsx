@@ -22,7 +22,7 @@ export default function PublicTopBar({
           {APP_NAME}
         </a>
         <span className="text-text-muted/40">/</span>
-        <a href={`/@${username}`} className="shrink-0 text-text-muted hover:underline">
+        <a href={`/${username}`} className="shrink-0 text-text-muted hover:underline">
           {username}
         </a>
         {title && (

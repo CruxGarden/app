@@ -10,11 +10,7 @@ import MetadataContent from '@/components/workspace/MetadataContent';
 type LoadState = 'loading' | 'ready' | 'not-found' | 'error';
 
 export default function PublicCrux() {
-  const { username: rawUsername, slug } = useParams<{ username: string; slug: string }>();
-
-  // Route is /:username/:slug — require @ prefix for public crux URLs
-  const hasAtPrefix = rawUsername?.startsWith('@') ?? false;
-  const username = hasAtPrefix ? rawUsername!.slice(1) : rawUsername;
+  const { username, slug } = useParams<{ username: string; slug: string }>();
 
   const [crux, setCrux] = useState<Crux | null>(null);
   const [attachments, setAttachments] = useState<Attachment[]>([]);
@@ -25,7 +21,7 @@ export default function PublicCrux() {
 
   // Fetch crux + attachments
   useEffect(() => {
-    if (!username || !slug || !hasAtPrefix) {
+    if (!username || !slug) {
       setState('not-found');
       return;
     }

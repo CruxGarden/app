@@ -49,7 +49,7 @@ export default function PublishButton() {
       // Set visibility to public
       await cruxes.update(crux.id, { visibility: 'public' });
 
-      const url = `${window.location.origin}/@${currentAuthor.username}/${crux.slug}`;
+      const url = `${window.location.origin}/${currentAuthor.username}/${crux.slug}`;
       setPublishedUrl(url);
       setShowPublishModal(true);
     } catch {
