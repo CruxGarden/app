@@ -5,6 +5,21 @@ import { cruxes } from '@/api';
 import type { ChatMessage, ToolCall } from '@/api/types';
 
 /**
+ * Truncate large tool results preserving the beginning and end.
+ * Better than a flat cut — the model can see the start of the file
+ * and the end, with a note about what was omitted.
+ */
+function truncateToolResult(raw: string, maxLength = 1500): string {
+  if (raw.length <= maxLength) return raw;
+  const headSize = Math.floor(maxLength * 0.6);
+  const tailSize = Math.floor(maxLength * 0.3);
+  const head = raw.slice(0, headSize);
+  const tail = raw.slice(-tailSize);
+  const omitted = raw.length - headSize - tailSize;
+  return `${head}\n\n…(${omitted} characters omitted — use read_file to see full contents)…\n\n${tail}`;
+}
+
+/**
  * Build Anthropic-compatible messages with proper tool_use / tool_result blocks.
  * Without this, past tool calls are lost and the model stops using tools.
  */
@@ -34,13 +49,10 @@ function buildApiMessages(allMessages: ChatMessage[]) {
       // Build tool_result blocks
       const toolResults = m.toolCalls.map((tc, t) => {
         const raw = tc.result || 'Done.';
-        // Truncate large results (e.g. read_file of big files)
-        const truncated =
-          raw.length > 1200 ? raw.slice(0, 1200) + '\n…(truncated)' : raw;
         return {
           type: 'tool_result' as const,
           tool_use_id: tc.id || `toolu_hist_${i}_${t}`,
-          content: truncated,
+          content: truncateToolResult(raw),
         };
       });
 
@@ -157,6 +169,9 @@ export function useChat() {
               }
               case 'delete_request':
                 addPendingDelete(event.data.attachmentId, event.data.path);
+                break;
+              case 'info':
+                console.log('[SSE info]', event.data.message);
                 break;
               case 'error':
                 fullContent += `\n\n*Error: ${event.data.message}*`;

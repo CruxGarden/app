@@ -46,17 +46,26 @@ export default function MessageBubble({
 
         {message.toolCalls && message.toolCalls.length > 0 && (
           <div className="mt-2 space-y-1">
-            {message.toolCalls.map((tc, i) => (
-              <div
-                key={tc.id || i}
-                className="text-xs font-mono text-text-muted bg-bg rounded px-2 py-1"
-              >
-                {tc.name === 'write_file' && <span>Wrote {String(tc.input?.path ?? '')}</span>}
-                {tc.name === 'read_file' && <span>Read {String(tc.input?.path ?? '')}</span>}
-                {tc.name === 'list_files' && <span>Listed files</span>}
-                {tc.name === 'set_palette' && <span>Applied palette</span>}
-              </div>
-            ))}
+            {message.toolCalls.map((tc, i) => {
+              const label =
+                tc.name === 'write_file' ? `Wrote ${String(tc.input?.path ?? '')}` :
+                tc.name === 'edit_file' ? `Edited ${String(tc.input?.path ?? '')}` :
+                tc.name === 'read_file' ? `Read ${String(tc.input?.path ?? '')}` :
+                tc.name === 'delete_file' ? `Deleted ${String(tc.input?.path ?? '')}` :
+                tc.name === 'list_files' ? 'Listed files' :
+                tc.name === 'set_palette' ? 'Applied palette' :
+                tc.name === 'get_palette' ? 'Read palette' :
+                null;
+              if (!label) return null;
+              return (
+                <div
+                  key={tc.id || i}
+                  className="text-xs font-mono text-text-muted bg-bg rounded px-2 py-1"
+                >
+                  {label}
+                </div>
+              );
+            })}
           </div>
         )}
       </div>

@@ -337,6 +337,9 @@ export default function MetadataContent({
             <FieldRow label="Created">
               <span>{formatDate(selectedArtifact.created)}</span>
             </FieldRow>
+            <FieldRow label="Updated">
+              <span>{formatDate(selectedArtifact.updated)}</span>
+            </FieldRow>
           </div>
         </>
       )}
