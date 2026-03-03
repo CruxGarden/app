@@ -1,7 +1,6 @@
 import { Fragment, useCallback, useMemo } from 'react';
 import { Group, Panel, Separator, useDefaultLayout } from 'react-resizable-panels';
 import { cn } from '@/lib/cn';
-import { Panel as UIPanel } from '@/components/ui';
 import { useUIStore, type PaneType } from '@/stores/uiStore';
 import { DragProvider } from './DragContext';
 import { usePaneDrag } from './DragContext';
