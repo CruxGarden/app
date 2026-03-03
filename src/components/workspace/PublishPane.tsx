@@ -219,7 +219,7 @@ export default function PublishPane() {
                   <span>Published at</span>
                   <span className="text-text">{formatDate(publishedAt)}</span>
                 </div>
-                {hasUnpublishedChanges && lastEditedAt && (
+                {hasUnpublishedChanges && lastEditedAt && new Date(lastEditedAt) > new Date(publishedAt) && (
                   <div className="flex justify-between text-error mt-1">
                     <div className="flex items-center gap-1.5">
                       <span className="w-1.5 h-1.5 rounded-full bg-error shrink-0" />

@@ -35,6 +35,7 @@ export function usePreviewUrl(
   const [artifactsCached, setArtifactsCached] = useState(false);
   const versionRef = useRef(0);
   const artifactBlobsRef = useRef<PreviewFile[]>([]);
+  const needsFullRecacheRef = useRef(true);
 
   // Wait for the service worker to be ready (once)
   useEffect(() => {
@@ -59,6 +60,7 @@ export function usePreviewUrl(
 
     if (others.length === 0) {
       artifactBlobsRef.current = [];
+      needsFullRecacheRef.current = true;
       setArtifactsCached(true);
       return;
     }
@@ -79,6 +81,7 @@ export function usePreviewUrl(
         if (r.status === 'fulfilled') files.push(r.value);
       }
       artifactBlobsRef.current = files;
+      needsFullRecacheRef.current = true;
       setArtifactsCached(true);
     });
 
@@ -103,11 +106,12 @@ export function usePreviewUrl(
     };
 
     (async () => {
-      if (versionRef.current === 0) {
-        // First render: cache all files together
+      if (needsFullRecacheRef.current) {
+        // Full re-cache: first render or supporting files changed (e.g. AI updated CSS/JS)
         await cachePreviewFiles(cruxId, [htmlFile, ...artifactBlobsRef.current]);
+        needsFullRecacheRef.current = false;
       } else {
-        // Subsequent: just update the HTML entry
+        // Only HTML changed (e.g. user typing in editor): update just that entry
         await updatePreviewFile(cruxId, htmlFile);
       }
       if (cancelled) return;
