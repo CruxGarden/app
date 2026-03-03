@@ -243,7 +243,8 @@ export default function FlowFieldBackground() {
     const readColors = () => {
       const flowVar = readCSSVar('--flow-color', '');
       const flowColor = parseCSSColor(flowVar || readCSSVar('--accent', '#7db3a3'));
-      const bgColor = parseCSSColor(readCSSVar('--bg', '#0b0d0c'));
+      const flowBgVar = readCSSVar('--flow-bg', '');
+      const bgColor = parseCSSColor(flowBgVar || readCSSVar('--bg', '#0b0d0c'));
       const speed = parseFloat(readCSSVar('--flow-speed', '1')) || 1;
       return { flowColor, bgColor, speed };
     };

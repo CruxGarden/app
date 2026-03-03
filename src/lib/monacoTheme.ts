@@ -59,27 +59,51 @@ export function registerCruxGardenThemes(monaco: typeof Monaco): void {
     getComputedStyle(document.documentElement).colorScheme !== 'light';
 
   const rules: Monaco.editor.ITokenThemeRule[] = [
+    // Default — prevents base vs/vs-dark colors from bleeding through
+    { token: '', foreground: variable },
+
     { token: 'comment', foreground: comment, fontStyle: 'italic' },
     { token: 'keyword', foreground: keyword },
     { token: 'keyword.control', foreground: keyword },
+    { token: 'keyword.operator', foreground: punct },
     { token: 'string', foreground: string },
+    { token: 'string.key', foreground: string },
+    { token: 'string.value', foreground: string },
     { token: 'string.escape', foreground: number },
     { token: 'number', foreground: number },
+    { token: 'number.float', foreground: number },
+    { token: 'number.hex', foreground: number },
     { token: 'type', foreground: type },
     { token: 'type.identifier', foreground: type },
     { token: 'function', foreground: func },
     { token: 'variable', foreground: variable },
     { token: 'variable.predefined', foreground: type },
+    { token: 'identifier', foreground: variable },
     { token: 'constant', foreground: number },
     { token: 'tag', foreground: keyword },
+    { token: 'tag.id', foreground: keyword },
+    { token: 'tag.class', foreground: keyword },
     { token: 'attribute.name', foreground: type },
     { token: 'attribute.value', foreground: string },
     { token: 'delimiter', foreground: punct },
     { token: 'delimiter.bracket', foreground: punct },
+    { token: 'delimiter.parenthesis', foreground: punct },
+    { token: 'delimiter.square', foreground: punct },
+    { token: 'delimiter.angle', foreground: punct },
+    { token: 'delimiter.html', foreground: punct },
+    { token: 'delimiter.css', foreground: punct },
+    { token: 'delimiter.ts', foreground: punct },
+    { token: 'delimiter.js', foreground: punct },
+    { token: 'metatag', foreground: keyword },
+    { token: 'metatag.html', foreground: keyword },
+    { token: 'metatag.content.html', foreground: keyword },
     { token: 'operator', foreground: punct },
     { token: 'regexp', foreground: number },
     { token: 'annotation', foreground: type },
     { token: 'meta', foreground: comment },
+    { token: 'meta.content', foreground: variable },
+    { token: 'predefined', foreground: type },
+    { token: 'support', foreground: type },
   ];
 
   monaco.editor.defineTheme('crux-garden-dark', {
@@ -96,7 +120,7 @@ export function registerCruxGardenThemes(monaco: typeof Monaco): void {
       'editorLineNumber.foreground': `${border}80`,
       'editorLineNumber.activeForeground': textMuted,
       'editorIndentGuide.background': `${border}18`,
-      'editorIndentGuide.activeBackground': `${border}38`,
+      'editorIndentGuide.activeBackground': `${border}30`,
       'editorWidget.background': surfaceSolid,
       'editorWidget.border': `${border}30`,
       'editor.wordHighlightBackground': `${accent}12`,
@@ -116,13 +140,14 @@ export function registerCruxGardenThemes(monaco: typeof Monaco): void {
     },
   });
 
-  // Light theme reuses the same dynamic approach
+  // Light theme — white editor background for readability
+  const contrast = colorHex('--contrast');
   monaco.editor.defineTheme('crux-garden-light', {
     base: isDark ? 'vs-dark' : 'vs',
-    inherit: true,
+    inherit: false,
     rules,
     colors: {
-      'editor.background': bg,
+      'editor.background': contrast,
       'editor.foreground': text,
       'editor.lineHighlightBackground': `${surfaceSolid}10`,
       'editor.selectionBackground': `${accent}1f`,
@@ -131,11 +156,21 @@ export function registerCruxGardenThemes(monaco: typeof Monaco): void {
       'editorLineNumber.foreground': `${textMuted}40`,
       'editorLineNumber.activeForeground': textMuted,
       'editorIndentGuide.background': `${textMuted}18`,
+      'editorIndentGuide.activeBackground': `${textMuted}30`,
       'editorWidget.background': surfaceSolid,
       'scrollbar.shadow': '#00000000',
       'scrollbarSlider.background': `${textMuted}20`,
-      'editorGutter.background': bg,
+      'editorGutter.background': contrast,
       'editorOverviewRuler.border': '#00000000',
+      'editorBracketMatch.background': `${accent}20`,
+      'editorBracketMatch.border': `${accent}40`,
+      'editorBracketHighlight.foreground1': '#6a7a88',
+      'editorBracketHighlight.foreground2': '#7a6a50',
+      'editorBracketHighlight.foreground3': '#5a7a6a',
+      'editorBracketHighlight.foreground4': '#6a6a7a',
+      'editorBracketHighlight.foreground5': '#7a6a6a',
+      'editorBracketHighlight.foreground6': '#5a6a7a',
+      'editorBracketHighlight.unexpectedBracket.foreground': '#9a5a5a',
     },
   });
 }

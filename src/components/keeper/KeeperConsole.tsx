@@ -341,7 +341,7 @@ export default function KeeperConsole({ open, onClose }: KeeperConsoleProps) {
       >
         {/* Header */}
         <div className="flex items-center gap-2 px-4 py-3 border-b border-border">
-          <KeeperAvatar />
+          <KeeperAvatar className="w-9 h-9" />
           <span className="text-sm font-display font-medium text-text">The Keeper</span>
           <span className="text-[10px] font-mono text-text-muted">console</span>
           <div className="flex-1" />

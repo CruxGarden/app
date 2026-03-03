@@ -155,7 +155,7 @@ export const LIGHT_PALETTE: Palette = {
   accentMuted: 'rgba(74, 128, 116, 0.12)',
   error: '#c5303b',
   errorMuted: 'rgba(197, 48, 59, 0.12)',
-  contrast: '#ffffff',
+  contrast: '#f5f5f0',
   overlay: 'rgba(0, 0, 0, 0.4)',
   previewBg: 'rgba(0, 0, 0, 0.06)',
   brandAi: '#D97757',
@@ -192,11 +192,11 @@ export const LIGHT_PALETTE: Palette = {
   fontMono: "'JetBrains Mono', monospace",
   syntaxComment: '#616864',
   syntaxKeyword: '#4a8074',
-  syntaxString: '#3a7060',
+  syntaxString: '#8a5e30',
   syntaxNumber: '#9a6840',
-  syntaxType: '#507a6e',
-  syntaxFunction: '#3a7060',
-  syntaxPunctuation: '#616864',
+  syntaxType: '#2a6a80',
+  syntaxFunction: '#5a6e40',
+  syntaxPunctuation: '#6a7a88',
 };
 
 /** Map camelCase palette keys to CSS custom property names */
