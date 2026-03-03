@@ -251,9 +251,11 @@ export default function EditorContent({ tab, artifact, cruxId, saveRef }: Editor
             padding: { top: 8, bottom: 8 },
             renderLineHighlight: 'line',
             bracketPairColorization: { enabled: true },
+            guides: { indentation: true, highlightActiveIndentation: true },
             autoIndent: 'full',
             formatOnPaste: true,
             tabSize: 2,
+            detectIndentation: false,
           }}
         />
       </div>

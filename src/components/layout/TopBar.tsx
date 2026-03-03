@@ -279,13 +279,13 @@ export default function TopBar() {
 
       {/* Right: keeper + pane toggles + user menu */}
       <div className="flex items-center gap-1">
-        <div className="relative group/btn">
+        <div className="relative group/btn flex items-center">
           <button
             onClick={() => useUIStore.getState().toggleKeeper()}
             aria-label="The Keeper"
             className={cn(
               'w-6 h-6 rounded-full overflow-hidden',
-              'hover:ring-1 hover:ring-accent/40 transition-shadow cursor-pointer',
+              'ring-1 ring-text-muted/20 hover:ring-accent/40 transition-shadow cursor-pointer',
             )}
           >
             <KeeperAvatar className="w-6 h-6" />
