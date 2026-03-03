@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { publicApi } from '@/api';
 import type { Crux, Attachment } from '@/api/types';
+import { APP_NAME } from '@/lib/constants';
 import { Spinner } from '@/components/ui';
 import { PublicTopBar, ArtifactRenderer } from '@/components/display';
 import MetadataContent from '@/components/workspace/MetadataContent';
@@ -59,7 +60,7 @@ export default function PublicCrux() {
       document.title = crux.title;
     }
     return () => {
-      document.title = 'Crux Garden';
+      document.title = APP_NAME;
     };
   }, [crux?.title]);
 

@@ -1,3 +1,5 @@
+import { APP_NAME } from '@/lib/constants';
+
 interface PublicTopBarProps {
   title?: string;
   username: string;
@@ -17,7 +19,7 @@ export default function PublicTopBar({
     <header className="relative z-20 flex items-center justify-between h-8 px-3 border-b border-border bg-surface-solid shrink-0">
       <div className="flex items-center gap-1.5 min-w-0 text-[10px] font-mono">
         <a href="https://crux.garden" className="shrink-0 text-text-muted hover:underline">
-          Crux Garden
+          {APP_NAME}
         </a>
         <span className="text-text-muted/40">/</span>
         <a href={`/@${username}`} className="shrink-0 text-text-muted hover:underline">

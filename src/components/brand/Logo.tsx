@@ -1,4 +1,5 @@
 import { cn } from '@/lib/cn';
+import { APP_NAME } from '@/lib/constants';
 
 interface LogoProps {
   size?: 'sm' | 'md' | 'lg';
@@ -14,7 +15,7 @@ const sizes = {
 export default function Logo({ size = 'md', className }: LogoProps) {
   return (
     <span className={cn('font-display font-medium text-text', sizes[size], className)}>
-      Crux Garden
+      {APP_NAME}
     </span>
   );
 }

@@ -7,6 +7,7 @@ import { PublicTopBar } from '@/components/display';
 import { GardenGrid, GardenSearch } from '@/components/garden';
 import { Spinner, Button } from '@/components/ui';
 import { cn } from '@/lib/cn';
+import { APP_NAME } from '@/lib/constants';
 
 type LoadState = 'loading' | 'ready' | 'not-found' | 'error';
 type SortField = 'created' | 'updated';
@@ -58,10 +59,10 @@ export default function PublicAuthor() {
 
   useEffect(() => {
     if (author?.username) {
-      document.title = `${author.username} — Crux Garden`;
+      document.title = `${author.username} — ${APP_NAME}`;
     }
     return () => {
-      document.title = 'Crux Garden';
+      document.title = APP_NAME;
     };
   }, [author?.username]);
 

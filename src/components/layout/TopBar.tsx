@@ -5,6 +5,7 @@ import { useCruxStore } from '@/stores/cruxStore';
 import { useAuthStore } from '@/stores/authStore';
 import IconButton from '@/components/ui/IconButton';
 import UserMenu from '@/components/auth/UserMenu';
+import { APP_NAME } from '@/lib/constants';
 
 function KeeperIcon() {
   return (
@@ -242,7 +243,7 @@ export default function TopBar() {
           onClick={() => navigate('/')}
           className="shrink-0 cursor-pointer text-sm font-display font-medium text-text whitespace-nowrap hover:underline"
         >
-          Crux Garden
+          {APP_NAME}
         </button>
         {username ? (
           <>
