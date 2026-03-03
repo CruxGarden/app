@@ -51,7 +51,7 @@ export default function Crux() {
       document.title = crux.title;
     }
     return () => {
-      document.title = 'crux.garden';
+      document.title = 'Crux Garden';
     };
   }, [crux?.title]);
 

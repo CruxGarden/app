@@ -39,7 +39,7 @@ export default function IconButton({
   const showColor = useCustomColor && (active || hovered);
 
   const colorStyle = showColor
-    ? { color: activeColor, backgroundColor: `${activeColor}${active ? '18' : '10'}`, ...style }
+    ? { color: activeColor, backgroundColor: `color-mix(in srgb, ${activeColor} ${active ? '15%' : '10%'}, transparent)`, ...style }
     : style;
 
   return (

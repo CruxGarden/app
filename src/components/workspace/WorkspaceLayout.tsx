@@ -215,13 +215,7 @@ export default function WorkspaceLayout() {
               })}
             </Group>
           </DragProvider>
-        ) : (
-          <div className="flex-1 flex items-center justify-center p-8">
-            <UIPanel padding="md" className="text-text-muted text-xs font-mono text-center">
-              Toggle a pane from the toolbar to proceed
-            </UIPanel>
-          </div>
-        )}
+        ) : null}
       </div>
 
       {/* Mobile layout */}

@@ -188,6 +188,15 @@ export default function KeeperConsole({ open, onClose }: KeeperConsoleProps) {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [displayMessages, streamContent, toolActivity]);
 
+  // Scroll to bottom when opening with existing history
+  useEffect(() => {
+    if (open && displayMessages.length > 0) {
+      requestAnimationFrame(() => {
+        bottomRef.current?.scrollIntoView({ behavior: 'instant' });
+      });
+    }
+  }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
+
   useEffect(() => {
     if (!open) return;
     const handler = (e: KeyboardEvent) => {
@@ -329,18 +338,21 @@ export default function KeeperConsole({ open, onClose }: KeeperConsoleProps) {
           <span className="text-[10px] font-mono text-text-muted">console</span>
           <div className="flex-1" />
           {displayMessages.length > 0 && !streaming && (
-            <button
-              onClick={clearHistory}
-              className="text-text-muted hover:text-text transition-colors cursor-pointer text-xs font-mono"
-            >
-              clear
-            </button>
+            <>
+              <button
+                onClick={clearHistory}
+                className="text-text-muted hover:text-text transition-colors cursor-pointer text-xs font-mono"
+              >
+                clear
+              </button>
+              <div className="w-px h-4 bg-text-muted/20" />
+            </>
           )}
           <button
             onClick={onClose}
             className="text-text-muted hover:text-text transition-colors cursor-pointer text-xs font-mono"
           >
-            esc
+            close
           </button>
         </div>
 

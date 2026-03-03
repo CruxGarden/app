@@ -1,27 +1,27 @@
 interface PublicTopBarProps {
   title?: string;
   username: string;
-  hasHistory?: boolean;
-  historyOpen?: boolean;
-  onToggleHistory?: () => void;
+  hasMetadata?: boolean;
+  metadataOpen?: boolean;
+  onToggleMetadata?: () => void;
 }
 
 export default function PublicTopBar({
   title,
   username,
-  hasHistory,
-  historyOpen,
-  onToggleHistory,
+  hasMetadata,
+  metadataOpen,
+  onToggleMetadata,
 }: PublicTopBarProps) {
   return (
     <header className="relative z-20 flex items-center justify-between h-8 px-3 border-b border-border bg-surface-solid shrink-0">
       <div className="flex items-center gap-1.5 min-w-0 text-[10px] font-mono">
         <a href="https://crux.garden" className="shrink-0 text-text-muted hover:underline">
-          crux.garden
+          Crux Garden
         </a>
         <span className="text-text-muted/40">/</span>
         <a href={`/@${username}`} className="shrink-0 text-text-muted hover:underline">
-          @{username}
+          {username}
         </a>
         {title && (
           <>
@@ -31,18 +31,20 @@ export default function PublicTopBar({
         )}
       </div>
 
-      {hasHistory && onToggleHistory && (
+      {hasMetadata && onToggleMetadata && (
         <button
-          onClick={onToggleHistory}
-          className={`shrink-0 flex items-center gap-1 text-[10px] font-mono px-2 py-0.5 rounded-sm transition-colors cursor-pointer ${
-            historyOpen
-              ? 'text-accent bg-accent-muted'
+          onClick={onToggleMetadata}
+          aria-label="Metadata"
+          title="Metadata"
+          className={`shrink-0 p-1 rounded-sm transition-colors cursor-pointer ${
+            metadataOpen
+              ? 'text-text bg-surface'
               : 'text-text-muted hover:text-text hover:bg-surface'
           }`}
         >
           <svg
-            width="12"
-            height="12"
+            width="14"
+            height="14"
             viewBox="0 0 24 24"
             fill="none"
             stroke="currentColor"
@@ -50,9 +52,9 @@ export default function PublicTopBar({
             strokeLinecap="round"
             strokeLinejoin="round"
           >
-            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+            <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z" />
+            <line x1="7" y1="7" x2="7.01" y2="7" />
           </svg>
-          How was this made?
         </button>
       )}
     </header>

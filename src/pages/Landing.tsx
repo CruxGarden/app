@@ -11,7 +11,7 @@ export default function Landing() {
       <div className="relative z-10 flex flex-col items-center bg-surface-solid border border-border rounded-[var(--radius)] px-12 py-10">
         <CruxBloom size={64} className="text-accent mb-6" />
 
-        <h1 className="font-display text-4xl font-medium text-text">crux.garden</h1>
+        <h1 className="font-display text-4xl font-medium text-text">Crux Garden</h1>
 
         <p className="text-text-muted text-lg mt-1">where ideas grow</p>
 

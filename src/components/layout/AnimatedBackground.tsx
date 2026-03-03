@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
-import MeshBackground from './MeshBackground';
+import BloomBackground from './BloomBackground';
 import StarfieldBackground from './StarfieldBackground';
+import FlowFieldBackground from './FlowFieldBackground';
 
 /**
- * Switches between MeshBackground and StarfieldBackground
+ * Switches between BloomBackground and StarfieldBackground
  * based on the --background-type CSS variable (set via the palette system).
  */
 const BG_STORAGE_KEY = 'cruxgarden:backgroundType';
@@ -19,7 +20,7 @@ export default function AnimatedBackground() {
     return (
       getComputedStyle(document.documentElement)
         .getPropertyValue('--background-type')
-        .trim() || 'mesh'
+        .trim() || 'bloom'
     );
   });
 
@@ -39,7 +40,7 @@ export default function AnimatedBackground() {
       const val =
         getComputedStyle(document.documentElement)
           .getPropertyValue('--background-type')
-          .trim() || 'mesh';
+          .trim() || 'bloom';
       setBgType((prev) => (prev !== val ? val : prev));
     });
 
@@ -52,5 +53,6 @@ export default function AnimatedBackground() {
   }, []);
 
   if (bgType === 'starfield') return <StarfieldBackground />;
-  return <MeshBackground />;
+  if (bgType === 'flowfield') return <FlowFieldBackground />;
+  return <BloomBackground />;
 }
