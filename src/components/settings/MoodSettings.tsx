@@ -4,18 +4,18 @@ import { getCurrentPalette, type Palette } from '@/lib/palette';
 import { Panel, Toggle } from '@/components/ui';
 import { cn } from '@/lib/cn';
 
-type BgType = 'bloom' | 'flowfield';
+type BgType = 'bloom' | 'flowfield' | 'drift';
 
 const BG_STORAGE_KEY = 'cruxgarden:backgroundType';
 
 function getBackgroundType(): BgType {
   const saved = localStorage.getItem(BG_STORAGE_KEY);
-  if (saved === 'bloom' || saved === 'flowfield') return saved;
+  if (saved === 'bloom' || saved === 'flowfield' || saved === 'drift') return saved;
   const css =
     getComputedStyle(document.documentElement)
       .getPropertyValue('--background-type')
       .trim();
-  if (css === 'flowfield') return css;
+  if (css === 'flowfield' || css === 'drift') return css;
   return 'bloom';
 }
 
@@ -121,6 +121,19 @@ function FlowFieldPreview() {
   );
 }
 
+function DriftPreview() {
+  return (
+    <svg width="20" height="14" viewBox="0 0 20 14" className="shrink-0">
+      <circle cx="4" cy="3" r="1" fill="var(--accent)" opacity="0.7" />
+      <circle cx="16" cy="11" r="0.8" fill="var(--accent)" opacity="0.5" />
+      <circle cx="10" cy="7" r="1.5" fill="var(--accent)" opacity="0.4" />
+      <circle cx="14" cy="2" r="0.6" fill="var(--accent)" opacity="0.3" />
+      <circle cx="7" cy="11" r="0.7" fill="var(--accent)" opacity="0.6" />
+      <circle cx="17" cy="6" r="0.5" fill="var(--accent)" opacity="0.35" />
+    </svg>
+  );
+}
+
 // ── Palette Table ──────────────────────────────────
 
 type PaletteGroup = { label: string; keys: { key: keyof Palette; name: string }[] };
@@ -169,6 +182,14 @@ const PALETTE_GROUPS: PaletteGroup[] = [
   {
     label: 'Flow Field',
     keys: [{ key: 'flowColor', name: 'flowColor' }],
+  },
+  {
+    label: 'Drift',
+    keys: [
+      { key: 'driftColor', name: 'driftColor' },
+      { key: 'driftGlow', name: 'driftGlow' },
+      { key: 'driftBg', name: 'driftBg' },
+    ],
   },
   {
     label: 'Syntax',
@@ -244,12 +265,12 @@ function PaletteTable() {
 
 export default function MoodSettings() {
   const { mode, setMode } = useThemeStore();
-  const bgType = getBackgroundType();
+  const [bgType, setBgType] = useState<BgType>(getBackgroundType);
   const [collapsed, setCollapsed] = useState(true);
 
   const handleBgChange = (type: BgType) => {
     setBackgroundType(type);
-    // Force a re-render by dispatching the palette-change event
+    setBgType(type);
     document.dispatchEvent(new Event('palette-change'));
   };
 
@@ -319,6 +340,12 @@ export default function MoodSettings() {
               onClick={() => handleBgChange('flowfield')}
               icon={<FlowFieldPreview />}
               label="Flow"
+            />
+            <OptionButton
+              active={bgType === 'drift'}
+              onClick={() => handleBgChange('drift')}
+              icon={<DriftPreview />}
+              label="Drift"
             />
           </div>
         </div>

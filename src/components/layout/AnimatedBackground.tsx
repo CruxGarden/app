@@ -11,7 +11,8 @@ import DriftBackground from './DriftBackground';
 const BG_STORAGE_KEY = 'cruxgarden:backgroundType';
 
 function pickRandomDefault(): string {
-  const choice = Math.random() < 0.5 ? 'bloom' : 'flowfield';
+  const r = Math.random();
+  const choice = r < 0.34 ? 'bloom' : r < 0.67 ? 'flowfield' : 'drift';
   localStorage.setItem(BG_STORAGE_KEY, choice);
   document.documentElement.style.setProperty('--background-type', choice);
   return choice;
