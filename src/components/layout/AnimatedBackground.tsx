@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import BloomBackground from './BloomBackground';
 import StarfieldBackground from './StarfieldBackground';
 import FlowFieldBackground from './FlowFieldBackground';
+import DriftBackground from './DriftBackground';
 
 /**
  * Switches between BloomBackground and StarfieldBackground
@@ -57,5 +58,6 @@ export default function AnimatedBackground() {
 
   if (bgType === 'starfield') return <StarfieldBackground />;
   if (bgType === 'flowfield') return <FlowFieldBackground />;
+  if (bgType === 'drift') return <DriftBackground />;
   return <BloomBackground />;
 }

@@ -287,6 +287,14 @@ export default function Garden() {
     };
   }, [author]);
 
+  if (loading) {
+    return (
+      <div className="relative min-h-screen flex items-center justify-center">
+        <Spinner size={32} />
+      </div>
+    );
+  }
+
   return (
     <div className="p-4 sm:p-6 max-w-5xl mx-auto">
       {/* Hidden file input for import */}
@@ -409,11 +417,7 @@ export default function Garden() {
       )}
 
       {/* Content */}
-      {loading ? (
-        <div className="flex justify-center py-16">
-          <Spinner size={32} />
-        </div>
-      ) : cruxList.length === 0 && search.length > 0 ? (
+      {cruxList.length === 0 && search.length > 0 ? (
         <div className="bg-panel border border-border rounded-[var(--radius)] flex flex-col items-center py-10">
           <p className="text-sm text-text-muted mb-3">No cruxes match your search</p>
           <button
@@ -466,6 +470,30 @@ export default function Garden() {
           <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-50 pointer-events-none hidden group-hover/flow:block">
             <div className="px-2.5 py-1.5 rounded-[var(--radius)] bg-surface-solid border border-border shadow-lg whitespace-nowrap">
               <span className="text-xs font-medium text-text">Flow</span>
+            </div>
+          </div>
+        </div>
+        <div className="relative group/drift">
+          <button
+            onClick={() => toggleBg('drift')}
+            className={cn(
+              'p-1.5 rounded-[var(--radius-sm)] transition-colors cursor-pointer',
+              bgType === 'drift' ? 'text-text bg-surface' : 'text-text-muted hover:text-text hover:bg-surface',
+            )}
+          >
+            <svg width="18" height="14" viewBox="0 0 20 14" className="shrink-0">
+              <circle cx="4" cy="3" r="1" fill="var(--accent)" opacity="0.7" />
+              <circle cx="16" cy="11" r="0.8" fill="var(--accent)" opacity="0.5" />
+              <circle cx="10" cy="7" r="1.5" fill="var(--accent)" opacity="0.4" />
+              <circle cx="14" cy="4" r="0.6" fill="var(--accent)" opacity="0.3" />
+              <circle cx="7" cy="10" r="0.7" fill="var(--accent)" opacity="0.5" />
+              <circle cx="17" cy="7" r="0.5" fill="var(--accent)" opacity="0.2" />
+              <circle cx="3" cy="8" r="0.4" fill="var(--accent)" opacity="0.25" />
+            </svg>
+          </button>
+          <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-50 pointer-events-none hidden group-hover/drift:block">
+            <div className="px-2.5 py-1.5 rounded-[var(--radius)] bg-surface-solid border border-border shadow-lg whitespace-nowrap">
+              <span className="text-xs font-medium text-text">Drift</span>
             </div>
           </div>
         </div>
