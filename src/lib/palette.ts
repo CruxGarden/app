@@ -73,6 +73,7 @@ export interface Palette {
   driftSpeed: string;
   driftDensity: string;
   driftGlow: string;
+  driftBg: string;
 
   // Shape
   radius: string;
@@ -139,6 +140,7 @@ export const DARK_PALETTE: Palette = {
   driftSpeed: '1',
   driftDensity: '400',
   driftGlow: '#4a6aff',
+  driftBg: '',
   radius: '0.5rem',
   radiusSm: '0.375rem',
   fontDisplay: "'JetBrains Mono', monospace",
@@ -195,10 +197,11 @@ export const LIGHT_PALETTE: Palette = {
   starDensity: '120',
   flowColor: '#3a7064',
   flowSpeed: '1',
-  driftColor: '#2a3a5a',
+  driftColor: '#c8d4cc',
   driftSpeed: '1',
   driftDensity: '300',
-  driftGlow: '#6a8acc',
+  driftGlow: '#7aaa90',
+  driftBg: '#405143',
   radius: '0.5rem',
   radiusSm: '0.375rem',
   fontDisplay: "'JetBrains Mono', monospace",
@@ -260,6 +263,7 @@ const KEY_TO_VAR: Record<keyof Palette, string> = {
   driftSpeed: '--drift-speed',
   driftDensity: '--drift-density',
   driftGlow: '--drift-glow',
+  driftBg: '--drift-bg',
   radius: '--radius',
   radiusSm: '--radius-sm',
   fontDisplay: '--font-display',
