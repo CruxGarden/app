@@ -111,6 +111,11 @@
   --flow-color: #7db3a3;
   --flow-speed: 1;
 
+  --drift-color: #c8d4ff;
+  --drift-speed: 1;
+  --drift-density: 400;
+  --drift-glow: #4a6aff;
+
   --radius: 0.5rem;
   --radius-sm: 0.375rem;
 
@@ -176,6 +181,11 @@
   --flow-color: #3a7064;
   --flow-bg: #c8c7b4;
   --flow-speed: 1;
+
+  --drift-color: #2a3a5a;
+  --drift-speed: 1;
+  --drift-density: 300;
+  --drift-glow: #6a8acc;
 
   --radius: 0.5rem;
   --radius-sm: 0.375rem;

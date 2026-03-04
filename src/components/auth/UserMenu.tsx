@@ -108,77 +108,73 @@ export default function UserMenu() {
       </button>
 
       {open ? (
-        <div
-          className={cn(
-            'absolute right-0 top-full mt-2 w-48',
-            'bg-surface-solid border border-border rounded-[var(--radius)] shadow-xl',
-            'py-1 z-50',
-          )}
-        >
-          {author ? (
+        <div className="absolute right-0 top-full w-48 pt-2 z-50">
+          <div className="bg-surface-solid border border-border rounded-[var(--radius)] shadow-xl py-1">
+            {author ? (
+              <button
+                onClick={() => {
+                  setOpen(false);
+                  navigate('/home');
+                }}
+                className="w-full px-3 py-2 border-b border-border text-left hover:bg-accent-muted transition-colors cursor-pointer"
+              >
+                <p className="text-sm font-medium text-text truncate">{author.username}</p>
+                <p className="text-xs text-text-muted truncate">Home Garden</p>
+              </button>
+            ) : null}
+
             <button
               onClick={() => {
                 setOpen(false);
-                navigate('/home');
+                navigate('/settings');
               }}
-              className="w-full px-3 py-2 border-b border-border text-left hover:bg-accent-muted transition-colors cursor-pointer"
+              className="w-full px-3 py-2 text-left text-sm text-text-muted hover:text-text hover:bg-accent-muted transition-colors cursor-pointer"
             >
-              <p className="text-sm font-medium text-text truncate">{author.username}</p>
-              <p className="text-xs text-text-muted truncate">Home Garden</p>
+              Settings
             </button>
-          ) : null}
 
-          <button
-            onClick={() => {
-              setOpen(false);
-              navigate('/settings');
-            }}
-            className="w-full px-3 py-2 text-left text-sm text-text-muted hover:text-text hover:bg-accent-muted transition-colors cursor-pointer"
-          >
-            Settings
-          </button>
+            <div className="border-t border-border my-1" />
 
-          <div className="border-t border-border my-1" />
+            <button
+              onClick={() => setMode('light')}
+              className={cn(
+                'w-full px-3 py-2 text-left text-sm hover:bg-accent-muted transition-colors flex items-center gap-2 cursor-pointer',
+                mode === 'light' ? 'text-text' : 'text-text-muted hover:text-text',
+              )}
+            >
+              <SunIcon />
+              Light
+            </button>
+            <button
+              onClick={() => setMode('dark')}
+              className={cn(
+                'w-full px-3 py-2 text-left text-sm hover:bg-accent-muted transition-colors flex items-center gap-2 cursor-pointer',
+                mode === 'dark' ? 'text-text' : 'text-text-muted hover:text-text',
+              )}
+            >
+              <MoonIcon />
+              Dark
+            </button>
+            <button
+              onClick={() => setMode('auto')}
+              className={cn(
+                'w-full px-3 py-2 text-left text-sm hover:bg-accent-muted transition-colors flex items-center gap-2 cursor-pointer',
+                mode === 'auto' ? 'text-text' : 'text-text-muted hover:text-text',
+              )}
+            >
+              <MonitorIcon />
+              System
+            </button>
 
-          <button
-            onClick={() => setMode('light')}
-            className={cn(
-              'w-full px-3 py-2 text-left text-sm hover:bg-accent-muted transition-colors flex items-center gap-2 cursor-pointer',
-              mode === 'light' ? 'text-text' : 'text-text-muted hover:text-text',
-            )}
-          >
-            <SunIcon />
-            Light
-          </button>
-          <button
-            onClick={() => setMode('dark')}
-            className={cn(
-              'w-full px-3 py-2 text-left text-sm hover:bg-accent-muted transition-colors flex items-center gap-2 cursor-pointer',
-              mode === 'dark' ? 'text-text' : 'text-text-muted hover:text-text',
-            )}
-          >
-            <MoonIcon />
-            Dark
-          </button>
-          <button
-            onClick={() => setMode('auto')}
-            className={cn(
-              'w-full px-3 py-2 text-left text-sm hover:bg-accent-muted transition-colors flex items-center gap-2 cursor-pointer',
-              mode === 'auto' ? 'text-text' : 'text-text-muted hover:text-text',
-            )}
-          >
-            <MonitorIcon />
-            System
-          </button>
+            <div className="border-t border-border my-1" />
 
-          <div className="border-t border-border my-1" />
-
-          <button
-            onClick={handleLogout}
-            className="w-full px-3 py-2 text-left text-sm text-error hover:bg-error-muted transition-colors cursor-pointer"
-          >
-            Log out
-          </button>
+            <button
+              onClick={handleLogout}
+              className="w-full px-3 py-2 text-left text-sm text-error hover:bg-error-muted transition-colors cursor-pointer"
+            >
+              Log out
+            </button>
+          </div>
         </div>
       ) : null}
     </div>

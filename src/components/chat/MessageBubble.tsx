@@ -30,7 +30,7 @@ export default function MessageBubble({
   const isUser = message.role === 'user';
 
   return (
-    <div className={cn('flex gap-2', isUser ? 'justify-end' : 'justify-start')}>
+    <div className={cn('flex gap-2 items-end', isUser ? 'justify-end' : 'justify-start')}>
       {!isUser && <KeeperAvatar />}
       <div
         className={cn(

@@ -2,7 +2,6 @@ import { useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/stores/authStore';
 import { Button, Input, Panel } from '@/components/ui';
-import Logo from '@/components/brand/Logo';
 
 export default function LoginForm() {
   const navigate = useNavigate();
@@ -64,14 +63,6 @@ export default function LoginForm() {
 
   return (
     <Panel padding="lg" className="w-full max-w-md">
-      {/* Header */}
-      <div className="flex flex-col items-center mb-8">
-        <Logo size="lg" className="mb-4" />
-        <p className="text-sm text-text-muted">
-          {step === 'email' ? 'Log in to continue' : 'Enter your code'}
-        </p>
-      </div>
-
       {/* Form */}
       {step === 'email' ? (
         <form onSubmit={handleRequestCode} className="flex flex-col gap-4">
