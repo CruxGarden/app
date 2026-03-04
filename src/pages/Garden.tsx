@@ -433,23 +433,27 @@ export default function Garden() {
 
       {/* Background toggle — bottom right */}
       <div className="fixed bottom-4 right-4 z-30 flex items-center gap-1 p-1 rounded-[var(--radius)] bg-panel border border-border">
-        <div className="relative group/bloom">
+        <div className="relative group/drift">
           <button
-            onClick={() => toggleBg('bloom')}
+            onClick={() => toggleBg('drift')}
             className={cn(
               'p-1.5 rounded-[var(--radius-sm)] transition-colors cursor-pointer',
-              bgType === 'bloom' ? 'text-text bg-surface' : 'text-text-muted hover:text-text hover:bg-surface',
+              bgType === 'drift' ? 'text-text bg-surface' : 'text-text-muted hover:text-text hover:bg-surface',
             )}
           >
             <svg width="18" height="14" viewBox="0 0 20 14" className="shrink-0">
-              <circle cx="6" cy="5" r="4" fill="var(--accent)" opacity="0.4" />
-              <circle cx="14" cy="9" r="4" fill="var(--accent)" opacity="0.25" />
-              <circle cx="10" cy="4" r="3" fill="var(--accent)" opacity="0.15" />
+              <circle cx="4" cy="3" r="1" fill="var(--accent)" opacity="0.7" />
+              <circle cx="16" cy="11" r="0.8" fill="var(--accent)" opacity="0.5" />
+              <circle cx="10" cy="7" r="1.5" fill="var(--accent)" opacity="0.4" />
+              <circle cx="14" cy="4" r="0.6" fill="var(--accent)" opacity="0.3" />
+              <circle cx="7" cy="10" r="0.7" fill="var(--accent)" opacity="0.5" />
+              <circle cx="17" cy="7" r="0.5" fill="var(--accent)" opacity="0.2" />
+              <circle cx="3" cy="8" r="0.4" fill="var(--accent)" opacity="0.25" />
             </svg>
           </button>
-          <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-50 pointer-events-none hidden group-hover/bloom:block">
+          <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-50 pointer-events-none hidden group-hover/drift:block">
             <div className="px-2.5 py-1.5 rounded-[var(--radius)] bg-surface-solid border border-border shadow-lg whitespace-nowrap">
-              <span className="text-xs font-medium text-text">Bloom</span>
+              <span className="text-xs font-medium text-text">Drift</span>
             </div>
           </div>
         </div>
@@ -473,27 +477,23 @@ export default function Garden() {
             </div>
           </div>
         </div>
-        <div className="relative group/drift">
+        <div className="relative group/bloom">
           <button
-            onClick={() => toggleBg('drift')}
+            onClick={() => toggleBg('bloom')}
             className={cn(
               'p-1.5 rounded-[var(--radius-sm)] transition-colors cursor-pointer',
-              bgType === 'drift' ? 'text-text bg-surface' : 'text-text-muted hover:text-text hover:bg-surface',
+              bgType === 'bloom' ? 'text-text bg-surface' : 'text-text-muted hover:text-text hover:bg-surface',
             )}
           >
             <svg width="18" height="14" viewBox="0 0 20 14" className="shrink-0">
-              <circle cx="4" cy="3" r="1" fill="var(--accent)" opacity="0.7" />
-              <circle cx="16" cy="11" r="0.8" fill="var(--accent)" opacity="0.5" />
-              <circle cx="10" cy="7" r="1.5" fill="var(--accent)" opacity="0.4" />
-              <circle cx="14" cy="4" r="0.6" fill="var(--accent)" opacity="0.3" />
-              <circle cx="7" cy="10" r="0.7" fill="var(--accent)" opacity="0.5" />
-              <circle cx="17" cy="7" r="0.5" fill="var(--accent)" opacity="0.2" />
-              <circle cx="3" cy="8" r="0.4" fill="var(--accent)" opacity="0.25" />
+              <circle cx="6" cy="5" r="4" fill="var(--accent)" opacity="0.4" />
+              <circle cx="14" cy="9" r="4" fill="var(--accent)" opacity="0.25" />
+              <circle cx="10" cy="4" r="3" fill="var(--accent)" opacity="0.15" />
             </svg>
           </button>
-          <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-50 pointer-events-none hidden group-hover/drift:block">
+          <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-50 pointer-events-none hidden group-hover/bloom:block">
             <div className="px-2.5 py-1.5 rounded-[var(--radius)] bg-surface-solid border border-border shadow-lg whitespace-nowrap">
-              <span className="text-xs font-medium text-text">Drift</span>
+              <span className="text-xs font-medium text-text">Bloom</span>
             </div>
           </div>
         </div>

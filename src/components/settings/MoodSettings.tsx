@@ -330,10 +330,10 @@ export default function MoodSettings() {
           <SectionLabel>Background</SectionLabel>
           <div className="flex items-center gap-2">
             <OptionButton
-              active={bgType === 'bloom'}
-              onClick={() => handleBgChange('bloom')}
-              icon={<BloomPreview />}
-              label="Bloom"
+              active={bgType === 'drift'}
+              onClick={() => handleBgChange('drift')}
+              icon={<DriftPreview />}
+              label="Drift"
             />
             <OptionButton
               active={bgType === 'flowfield'}
@@ -342,10 +342,10 @@ export default function MoodSettings() {
               label="Flow"
             />
             <OptionButton
-              active={bgType === 'drift'}
-              onClick={() => handleBgChange('drift')}
-              icon={<DriftPreview />}
-              label="Drift"
+              active={bgType === 'bloom'}
+              onClick={() => handleBgChange('bloom')}
+              icon={<BloomPreview />}
+              label="Bloom"
             />
           </div>
         </div>
