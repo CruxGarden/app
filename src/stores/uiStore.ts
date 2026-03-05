@@ -54,6 +54,7 @@ export interface ContextMenuState {
   targetId: string | null;
   targetPath: string;
   isFolder: boolean;
+  selectedIds: string[];
 }
 
 // ── Full UI State ───────────────────────────────────────
@@ -160,6 +161,7 @@ const DEFAULT_CONTEXT_MENU: ContextMenuState = {
   targetId: null,
   targetPath: '',
   isFolder: false,
+  selectedIds: [],
 };
 
 // ── Layout persistence ──────────────────────────────────

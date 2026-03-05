@@ -102,6 +102,7 @@ export default function WorkspaceLayout() {
   const mobileActivePane = useUIStore((s) => s.mobileActivePane);
   const openFile = useUIStore((s) => s.openFile);
   const deleteArtifact = useCruxStore((s) => s.deleteArtifact);
+  const deleteArtifacts = useCruxStore((s) => s.deleteArtifacts);
   const artifacts = useCruxStore((s) => s.artifacts);
   const crux = useCruxStore((s) => s.crux);
   const author = useAuthStore((s) => s.author);
@@ -147,6 +148,13 @@ export default function WorkspaceLayout() {
   const handleDelete = async (id: string) => {
     if (confirm('Delete this file?')) {
       await deleteArtifact(id);
+    }
+  };
+
+  const handleDeleteMultiple = async (ids: string[]) => {
+    const count = ids.length;
+    if (confirm(`Delete ${count} item${count !== 1 ? 's' : ''}?`)) {
+      await deleteArtifacts(ids);
     }
   };
 
@@ -234,6 +242,7 @@ export default function WorkspaceLayout() {
         onNewFolder={handleNewFolder}
         onRename={handleRename}
         onDelete={handleDelete}
+        onDeleteMultiple={handleDeleteMultiple}
         onOpen={handleOpen}
         onCopyUrl={handleCopyUrl}
       />

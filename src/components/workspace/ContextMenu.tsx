@@ -14,6 +14,7 @@ interface ContextMenuProps {
   onNewFolder: (parentPath: string) => void;
   onRename: (id: string, path: string) => void;
   onDelete: (id: string, path: string) => void;
+  onDeleteMultiple: (ids: string[]) => void;
   onOpen: (id: string) => void;
   onCopyUrl?: (id: string) => void;
 }
@@ -23,6 +24,7 @@ export default function ContextMenu({
   onNewFolder,
   onRename,
   onDelete,
+  onDeleteMultiple,
   onOpen,
   onCopyUrl,
 }: ContextMenuProps) {
@@ -53,11 +55,22 @@ export default function ContextMenu({
 
   if (!contextMenu.visible) return null;
 
-  const { x, y, targetId, targetPath, isFolder } = contextMenu;
+  const { x, y, targetId, targetPath, isFolder, selectedIds } = contextMenu;
+  const isMultiSelect = selectedIds.length > 1;
 
   const items: MenuItem[] = [];
 
-  if (isFolder) {
+  // Multi-select: only show batch delete
+  if (isMultiSelect) {
+    items.push({
+      label: `Delete ${selectedIds.length} items`,
+      action: () => {
+        onDeleteMultiple(selectedIds);
+        hideContextMenu();
+      },
+      destructive: true,
+    });
+  } else if (isFolder) {
     items.push(
       {
         label: 'New File',

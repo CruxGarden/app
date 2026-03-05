@@ -146,7 +146,7 @@ export default function Garden() {
   // Import state
   const importInputRef = useRef<HTMLInputElement>(null);
   const [importing, setImporting] = useState(false);
-  const [, setImportProgress] = useState('');
+  const [importProgress, setImportProgress] = useState({ done: 0, total: 0 });
 
   const handleConfirmDelete = useCallback(async () => {
     if (!deletingId) return;
@@ -157,7 +157,7 @@ export default function Garden() {
   const handleImport = useCallback(
     async (file: File) => {
       setImporting(true);
-      setImportProgress('Reading archive...');
+      setImportProgress({ done: 0, total: 0 });
 
       try {
         const zip = await JSZip.loadAsync(file);
@@ -186,8 +186,20 @@ export default function Garden() {
         const gatesFile = zip.file('gates.json');
         const gates = gatesFile ? JSON.parse(await gatesFile.async('text')) : [];
 
+        // Count artifact files
+        const artifactFiles: { path: string; zipEntry: JSZip.JSZipObject }[] = [];
+        zip.folder('artifacts')?.forEach((relativePath, entry) => {
+          if (!entry.dir) {
+            artifactFiles.push({ path: relativePath, zipEntry: entry });
+          }
+        });
+
+        // Total steps: 1 (create crux) + artifacts + gates + 1 (final update)
+        const total = 1 + artifactFiles.length + gates.length + 1;
+        let done = 0;
+        setImportProgress({ done, total });
+
         // Create new crux with full metadata restored
-        setImportProgress('Creating crux...');
         const newCrux = await cruxes.create({
           slug,
           title,
@@ -203,6 +215,8 @@ export default function Garden() {
             gateCount: 0,
           },
         });
+        done++;
+        setImportProgress({ done, total });
 
         // Restore tags via syncTags (tags are a separate table, not a crux column)
         const tags = Array.isArray(cruxData.tags) ? cruxData.tags : [];
@@ -213,17 +227,9 @@ export default function Garden() {
         }
 
         // Upload artifact files
-        const artifactFiles: { path: string; zipEntry: JSZip.JSZipObject }[] = [];
-        zip.folder('artifacts')?.forEach((relativePath, entry) => {
-          if (!entry.dir) {
-            artifactFiles.push({ path: relativePath, zipEntry: entry });
-          }
-        });
-
         if (artifactFiles.length > 0) {
           for (let i = 0; i < artifactFiles.length; i++) {
             const { path, zipEntry } = artifactFiles[i]!;
-            setImportProgress(`Artifacts ${i + 1}/${artifactFiles.length}: ${path}`);
             try {
               const blob = await zipEntry.async('blob');
               const filename = path.split('/').pop() || 'file';
@@ -237,19 +243,18 @@ export default function Garden() {
             } catch (err) {
               console.warn(`Failed to import artifact: ${path}`, err);
             }
+            done++;
+            setImportProgress({ done, total });
           }
         }
 
         // Restore gates (version history)
         let restoredGateCount = 0;
         if (gates.length > 0) {
-          setImportProgress('Restoring version history...');
           for (let i = 0; i < gates.length; i++) {
             const gate = gates[i];
             const targetData = gate.target || {};
-            setImportProgress(`Gates ${i + 1}/${gates.length}`);
             try {
-              // Create the gate crux (snapshot)
               const gateSlug = `gate-${i + 1}-${Date.now().toString(36)}`;
               const gateCrux = await cruxes.create({
                 slug: gateSlug,
@@ -259,7 +264,6 @@ export default function Garden() {
                 meta: gate.meta || targetData.meta || {},
               });
 
-              // Link gate to parent via dimension
               await cruxes.createDimension(newCrux.id, {
                 targetId: gateCrux.id,
                 type: 'gate',
@@ -270,6 +274,8 @@ export default function Garden() {
             } catch (err) {
               console.warn(`Failed to import gate ${i + 1}`, err);
             }
+            done++;
+            setImportProgress({ done, total });
           }
         }
 
@@ -283,8 +289,42 @@ export default function Garden() {
             gateCount: restoredGateCount,
           },
         });
+        done++;
+        setImportProgress({ done, total });
 
-        setImportProgress('');
+        // Restore workspace layout into localStorage for the new crux
+        if (cruxData.layout) {
+          const layout = cruxData.layout;
+          if (layout.paneOrder && layout.paneVisibility) {
+            localStorage.setItem(
+              `cruxgarden:layout:${newCrux.id}`,
+              JSON.stringify({ paneOrder: layout.paneOrder, paneVisibility: layout.paneVisibility }),
+            );
+          }
+          if (layout.editorTabs) {
+            localStorage.setItem(
+              `cruxgarden:editor-tabs:${newCrux.id}`,
+              JSON.stringify(layout.editorTabs),
+            );
+          }
+          if (layout.folderState) {
+            localStorage.setItem(
+              `cruxgarden:folder-state:${newCrux.id}`,
+              JSON.stringify(layout.folderState),
+            );
+          }
+        }
+
+        // Restore theme preferences
+        if (cruxData.theme) {
+          if (cruxData.theme.mode) {
+            localStorage.setItem('cruxgarden:theme', cruxData.theme.mode);
+          }
+          if (cruxData.theme.tint) {
+            localStorage.setItem('cruxgarden:tint', cruxData.theme.tint);
+          }
+        }
+
         refresh();
         navigate(`/c/${newCrux.id}`);
       } catch (err) {
@@ -292,7 +332,7 @@ export default function Garden() {
         alert('Failed to import .crux file. Make sure it is a valid export.');
       } finally {
         setImporting(false);
-        setImportProgress('');
+        setImportProgress({ done: 0, total: 0 });
       }
     },
     [navigate, refresh],
@@ -375,16 +415,46 @@ export default function Garden() {
             </div>
           </div>
           <div className="flex items-center gap-1.5">
-            <IconButton
-              label="Import Crux"
-              size="lg"
-              tooltip={{ label: 'Import Crux' }}
-              onClick={() => importInputRef.current?.click()}
-              disabled={importing}
-              className="bg-surface text-text-muted hover:bg-accent-muted hover:text-accent"
-            >
-              <ImportIcon />
-            </IconButton>
+            {importing ? (
+              <div className="relative w-9 h-9 flex items-center justify-center">
+                <svg width="28" height="28" viewBox="0 0 28 28" className="-rotate-90">
+                  <circle
+                    cx="14" cy="14" r="12"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    className="text-border"
+                  />
+                  <circle
+                    cx="14" cy="14" r="12"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    className="text-accent transition-[stroke-dashoffset] duration-300"
+                    strokeDasharray={2 * Math.PI * 12}
+                    strokeDashoffset={
+                      importProgress.total > 0
+                        ? 2 * Math.PI * 12 * (1 - importProgress.done / importProgress.total)
+                        : 2 * Math.PI * 12
+                    }
+                  />
+                </svg>
+                <span className="absolute text-[9px] font-mono text-text-muted">
+                  {importProgress.total > 0 ? Math.round((importProgress.done / importProgress.total) * 100) : 0}
+                </span>
+              </div>
+            ) : (
+              <IconButton
+                label="Import Crux"
+                size="lg"
+                tooltip={{ label: 'Import Crux' }}
+                onClick={() => importInputRef.current?.click()}
+                className="bg-surface text-text-muted hover:bg-accent-muted hover:text-accent"
+              >
+                <ImportIcon />
+              </IconButton>
+            )}
             <IconButton
               label="New Crux"
               size="lg"

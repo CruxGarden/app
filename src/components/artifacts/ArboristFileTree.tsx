@@ -31,14 +31,21 @@ type ContextMenuHandler = (
   info: { id: string | null; path: string; isFolder: boolean },
 ) => void;
 
+export interface UploadFileEntry {
+  file: File;
+  path: string;
+}
+
 interface ArboristFileTreeProps {
   artifacts: Attachment[];
   selectedId: string | null;
   onSelect: (id: string) => void;
+  onSelectionChange?: (ids: string[]) => void;
   onContextMenu?: ContextMenuHandler;
   onMove?: (id: string, newParentPath: string | null) => void;
   onRename?: (id: string, newName: string) => void;
-  onUploadFiles?: (files: File[], parentPath: string | null) => void;
+  onUploadFiles?: (files: UploadFileEntry[], parentPath: string | null) => void;
+  onDelete?: (ids: string[]) => void;
   activeFileOperation?: FileOperation | null;
   onCreateFile?: (name: string) => void;
   onCreateFolder?: (name: string) => void;
@@ -204,6 +211,44 @@ function UploadDropOverlay() {
   );
 }
 
+// ── Folder drop helpers ──────────────────────────────────
+
+async function walkEntry(
+  entry: FileSystemEntry,
+  basePath: string,
+): Promise<UploadFileEntry[]> {
+  if (entry.isFile) {
+    const file = await new Promise<File>((resolve, reject) =>
+      (entry as FileSystemFileEntry).file(resolve, reject),
+    );
+    return [{ file, path: basePath + entry.name }];
+  }
+  const dirReader = (entry as FileSystemDirectoryEntry).createReader();
+  const children = await readAllEntries(dirReader);
+  const results: UploadFileEntry[] = [];
+  for (const child of children) {
+    results.push(...(await walkEntry(child, basePath + entry.name + '/')));
+  }
+  return results;
+}
+
+function readAllEntries(reader: FileSystemDirectoryReader): Promise<FileSystemEntry[]> {
+  return new Promise((resolve, reject) => {
+    const all: FileSystemEntry[] = [];
+    function readBatch() {
+      reader.readEntries((entries) => {
+        if (entries.length === 0) {
+          resolve(all);
+        } else {
+          all.push(...entries);
+          readBatch(); // readEntries may return partial results
+        }
+      }, reject);
+    }
+    readBatch();
+  });
+}
+
 // ── Main component ───────────────────────────────────────
 
 const ArboristFileTree = forwardRef<ArboristFileTreeHandle, ArboristFileTreeProps>(
@@ -212,10 +257,12 @@ const ArboristFileTree = forwardRef<ArboristFileTreeHandle, ArboristFileTreeProp
       artifacts,
       selectedId,
       onSelect,
+      onSelectionChange,
       onContextMenu,
       onMove,
       onRename,
       onUploadFiles,
+      onDelete,
       activeFileOperation,
       onCreateFile,
       onCreateFolder,
@@ -297,10 +344,25 @@ const ArboristFileTree = forwardRef<ArboristFileTreeHandle, ArboristFileTreeProp
     const handleActivate = useCallback(
       (node: { data: TreeNodeData }) => {
         if (node.data.attachment) {
-          onSelect(node.data.attachment.id);
+          // Only open in editor if single selection
+          const selectedCount = treeRef.current?.selectedIds.size ?? 0;
+          if (selectedCount <= 1) {
+            onSelect(node.data.attachment.id);
+          }
         }
       },
       [onSelect],
+    );
+
+    // Track selection changes for multi-select awareness
+    const handleSelect = useCallback(
+      (nodes: { data: TreeNodeData }[]) => {
+        const ids = nodes
+          .map((n) => n.data.attachment?.id ?? n.data.id)
+          .filter(Boolean) as string[];
+        onSelectionChange?.(ids);
+      },
+      [onSelectionChange],
     );
 
     const handleMove = useCallback(
@@ -385,14 +447,12 @@ const ArboristFileTree = forwardRef<ArboristFileTreeHandle, ArboristFileTreeProp
     }, []);
 
     const handleDrop = useCallback(
-      (e: React.DragEvent) => {
+      async (e: React.DragEvent) => {
         e.preventDefault();
         dragCountRef.current = 0;
         setIsDraggingFiles(false);
 
         if (!onUploadFiles) return;
-        const files = Array.from(e.dataTransfer.files);
-        if (files.length === 0) return;
 
         // Determine drop target folder
         const focusedNode = treeRef.current?.focusedNode;
@@ -403,7 +463,31 @@ const ArboristFileTree = forwardRef<ArboristFileTreeHandle, ArboristFileTreeProp
           parentPath = focusedNode.parent.data.path;
         }
 
-        onUploadFiles(files, parentPath);
+        // Try webkitGetAsEntry for folder support
+        const items = Array.from(e.dataTransfer.items);
+        const entries = items
+          .map((item) => item.webkitGetAsEntry?.())
+          .filter((entry): entry is FileSystemEntry => entry != null);
+
+        if (entries.length > 0) {
+          const fileEntries: UploadFileEntry[] = [];
+          for (const entry of entries) {
+            fileEntries.push(...(await walkEntry(entry, '')));
+          }
+          if (fileEntries.length > 0) {
+            onUploadFiles(fileEntries, parentPath);
+            return;
+          }
+        }
+
+        // Fallback: plain file list (no folder structure)
+        const files = Array.from(e.dataTransfer.files);
+        if (files.length > 0) {
+          onUploadFiles(
+            files.map((f) => ({ file: f, path: f.name })),
+            parentPath,
+          );
+        }
       },
       [onUploadFiles],
     );
@@ -467,6 +551,37 @@ const ArboristFileTree = forwardRef<ArboristFileTreeHandle, ArboristFileTreeProp
       }
     }, [isCreating, activeFileOperation]);
 
+    // ── Keyboard shortcuts ──
+
+    const handleKeyDown = useCallback(
+      (e: React.KeyboardEvent) => {
+        const tree = treeRef.current;
+        if (!tree) return;
+
+        // Don't intercept when editing inline
+        if (tree.isEditing) return;
+
+        if (e.key === 'Delete' || e.key === 'Backspace') {
+          e.preventDefault();
+          const selectedIds = Array.from(tree.selectedIds);
+          if (selectedIds.length > 0 && onDelete) {
+            onDelete(selectedIds);
+          }
+        } else if (e.key === 'a' && (e.metaKey || e.ctrlKey)) {
+          e.preventDefault();
+          tree.selectAll();
+        } else if (e.key === 'F2') {
+          e.preventDefault();
+          const focused = tree.focusedNode;
+          if (focused) tree.edit(focused.id);
+        } else if (e.key === 'Escape') {
+          e.preventDefault();
+          tree.deselectAll();
+        }
+      },
+      [onDelete],
+    );
+
     if (artifacts.length === 0 && !isCreating) {
       return (
         <div className="p-3 text-xs text-text-muted">No files yet. Ask the AI to create one.</div>
@@ -476,7 +591,9 @@ const ArboristFileTree = forwardRef<ArboristFileTreeHandle, ArboristFileTreeProp
     return (
       <div
         ref={containerRef}
-        className="relative flex-1 min-h-0 flex flex-col"
+        className="relative flex-1 min-h-0 flex flex-col outline-none"
+        tabIndex={0}
+        onKeyDown={handleKeyDown}
         onDragEnter={handleDragEnter}
         onDragLeave={handleDragLeave}
         onDragOver={handleDragOver}
@@ -485,7 +602,7 @@ const ArboristFileTree = forwardRef<ArboristFileTreeHandle, ArboristFileTreeProp
         {isDraggingFiles && <UploadDropOverlay />}
 
         {treeDataWithCreate.length > 0 && (
-          <div ref={setDndRoot} className="flex-1 min-h-0 pt-2">
+          <div ref={setDndRoot} className="flex-1 min-h-0 pt-2 pb-2">
             <CreateCallbacksContext.Provider value={createCallbacks}>
               <TreeContextMenuContext.Provider value={onContextMenu}>
                 {dndRoot && (
@@ -499,9 +616,9 @@ const ArboristFileTree = forwardRef<ArboristFileTreeHandle, ArboristFileTreeProp
                     openByDefault
                     initialOpenState={initialOpenState}
                     selection={selectedId ?? undefined}
-                    disableMultiSelection
                     dndRootElement={dndRoot}
                     onActivate={handleActivate}
+                    onSelect={handleSelect}
                     onMove={handleMove}
                     onRename={handleRename}
                     onToggle={handleToggle}

@@ -2,6 +2,8 @@ import { useState, useCallback } from 'react';
 import JSZip from 'jszip';
 import { useCruxStore } from '@/stores/cruxStore';
 import { useAuthStore } from '@/stores/authStore';
+import { useUIStore } from '@/stores/uiStore';
+import { useThemeStore } from '@/stores/themeStore';
 import { cruxes } from '@/api';
 import { cn } from '@/lib/cn';
 import { usePaneWidth } from '@/hooks/usePaneWidth';
@@ -41,6 +43,12 @@ export default function ExportPane() {
   const summary = useCruxStore((s) => s.summary);
   const gateCount = useCruxStore((s) => s.gateCount);
   const author = useAuthStore((s) => s.author);
+  const paneOrder = useUIStore((s) => s.paneOrder);
+  const paneVisibility = useUIStore((s) => s.paneVisibility);
+  const editor = useUIStore((s) => s.editor);
+  const folderOpenState = useUIStore((s) => s.folderOpenState);
+  const themeMode = useThemeStore((s) => s.mode);
+  const themeTint = useThemeStore((s) => s.tint);
 
   const [exporting, setExporting] = useState(false);
   const [progress, setProgress] = useState('');
@@ -93,6 +101,23 @@ export default function ExportPane() {
         settings: crux.meta?.settings ?? null,
         publishedAt: crux.meta?.publishedAt ?? null,
         tags: tags.map((t) => t.label),
+        layout: {
+          paneOrder,
+          paneVisibility,
+          editorTabs: {
+            tabs: editor.tabs.map((t) => ({
+              id: t.id,
+              path: t.path,
+              viewMode: t.viewMode,
+            })),
+            activeTabId: editor.activeTabId,
+          },
+          folderState: folderOpenState,
+        },
+        theme: {
+          mode: themeMode,
+          tint: themeTint,
+        },
       };
       zip.file('crux.json', JSON.stringify(cruxData, null, 2));
 
@@ -149,7 +174,7 @@ export default function ExportPane() {
     } finally {
       setExporting(false);
     }
-  }, [crux, messages, summary, gateCount, author]);
+  }, [crux, messages, summary, gateCount, author, paneOrder, paneVisibility, editor, folderOpenState, themeMode, themeTint]);
 
   const totalSize = artifacts.reduce((sum, a) => sum + (Number(a.size) || 0), 0);
   const messageCount = messages.length;
