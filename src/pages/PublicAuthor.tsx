@@ -126,7 +126,7 @@ export default function PublicAuthor() {
           <div className="flex items-center gap-3">
             <div
               className={cn(
-                'w-12 h-12 rounded-full overflow-hidden flex items-center justify-center shrink-0',
+                'w-12 h-12 rounded-[var(--radius)] overflow-hidden flex items-center justify-center shrink-0 ring-1 ring-text-muted/20',
                 !avatarUrl && 'bg-accent-muted',
               )}
             >

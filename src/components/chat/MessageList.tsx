@@ -48,7 +48,7 @@ export default function MessageList({ messages, streamingContent, isStreaming }:
       {isStreaming && streamingContent && (
         <div className="flex gap-2 items-end justify-start">
           <KeeperAvatar />
-          <div className="max-w-[85%] rounded-[var(--radius)] px-3 py-2 text-sm bg-panel text-text">
+          <div className="max-w-[85%] rounded-[var(--radius)] px-3 py-2 text-sm bg-[color-mix(in_srgb,var(--panel),var(--text)_8%)] text-text">
             <MarkdownRenderer content={streamingContent} />
             <span className="inline-block w-1.5 h-4 bg-accent/60 animate-pulse ml-0.5 align-text-bottom" />
           </div>
@@ -58,7 +58,7 @@ export default function MessageList({ messages, streamingContent, isStreaming }:
       {isStreaming && !streamingContent && (
         <div className="flex gap-2 items-end justify-start">
           <KeeperAvatar />
-          <div className="rounded-[var(--radius)] px-3 py-2 bg-panel">
+          <div className="rounded-[var(--radius)] px-3 py-2 bg-[color-mix(in_srgb,var(--panel),var(--text)_8%)]">
             <div className="flex gap-1">
               <span className="w-1.5 h-1.5 rounded-full bg-text-muted animate-bounce [animation-delay:0ms]" />
               <span className="w-1.5 h-1.5 rounded-full bg-text-muted animate-bounce [animation-delay:150ms]" />

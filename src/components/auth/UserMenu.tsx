@@ -95,13 +95,13 @@ export default function UserMenu() {
       <button
         onClick={() => setOpen(!open)}
         className={cn(
-          'w-6 h-6 rounded-full flex items-center justify-center overflow-hidden',
+          'w-6 h-6 rounded-[var(--radius-sm)] flex items-center justify-center overflow-hidden',
           !avatarUrl && 'bg-accent-muted text-accent text-[10px] font-display font-bold',
           'ring-1 ring-text-muted/20 hover:ring-accent/40 transition-shadow cursor-pointer',
         )}
       >
         {avatarUrl ? (
-          <img src={avatarUrl} alt="" className="w-full h-full object-cover rounded-full" />
+          <img src={avatarUrl} alt="" className="w-full h-full object-cover" />
         ) : (
           initial
         )}

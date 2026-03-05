@@ -4,18 +4,18 @@ import { getCurrentPalette, type Palette } from '@/lib/palette';
 import { Panel, Toggle } from '@/components/ui';
 import { cn } from '@/lib/cn';
 
-type BgType = 'bloom' | 'flowfield' | 'drift';
+type BgType = 'bloom' | 'flowfield' | 'drift' | 'blank';
 
 const BG_STORAGE_KEY = 'cruxgarden:backgroundType';
 
 function getBackgroundType(): BgType {
   const saved = localStorage.getItem(BG_STORAGE_KEY);
-  if (saved === 'bloom' || saved === 'flowfield' || saved === 'drift') return saved;
+  if (saved === 'bloom' || saved === 'flowfield' || saved === 'drift' || saved === 'blank') return saved;
   const css =
     getComputedStyle(document.documentElement)
       .getPropertyValue('--background-type')
       .trim();
-  if (css === 'flowfield' || css === 'drift') return css;
+  if (css === 'flowfield' || css === 'drift' || css === 'blank') return css;
   return 'bloom';
 }
 
@@ -90,7 +90,7 @@ function OptionButton({
         'flex items-center gap-1.5 px-3 py-1.5 text-xs font-mono rounded-[var(--radius-sm)] transition-colors cursor-pointer',
         active
           ? 'bg-accent-muted text-accent border border-accent/30'
-          : 'bg-surface border border-border text-text-muted hover:text-text hover:bg-surface-solid',
+          : 'bg-surface border border-border text-text-muted hover:bg-accent-muted hover:text-accent hover:border-accent/30',
       )}
     >
       {icon}
@@ -134,6 +134,14 @@ function DriftPreview() {
   );
 }
 
+function BlankPreview() {
+  return (
+    <svg width="20" height="14" viewBox="0 0 20 14" className="shrink-0">
+      <rect x="1" y="1" width="18" height="12" rx="2" fill="none" stroke="var(--accent)" strokeWidth="0.8" opacity="0.4" />
+    </svg>
+  );
+}
+
 // ── Palette Table ──────────────────────────────────
 
 type PaletteGroup = { label: string; keys: { key: keyof Palette; name: string }[] };
@@ -168,6 +176,19 @@ const PALETTE_GROUPS: PaletteGroup[] = [
     keys: [{ key: 'brandAi', name: 'brandAi' }],
   },
   {
+    label: 'Panes',
+    keys: [
+      { key: 'paneCollaboration', name: 'paneCollaboration' },
+      { key: 'paneArtifacts', name: 'paneArtifacts' },
+      { key: 'paneWorkshop', name: 'paneWorkshop' },
+      { key: 'paneDetails', name: 'paneDetails' },
+      { key: 'paneHistory', name: 'paneHistory' },
+      { key: 'paneExport', name: 'paneExport' },
+      { key: 'paneSync', name: 'paneSync' },
+      { key: 'panePublish', name: 'panePublish' },
+    ],
+  },
+  {
     label: 'Bloom',
     keys: [
       { key: 'bloomBg1', name: 'bloomBg1' },
@@ -177,6 +198,7 @@ const PALETTE_GROUPS: PaletteGroup[] = [
       { key: 'bloom3', name: 'bloom3' },
       { key: 'bloom4', name: 'bloom4' },
       { key: 'bloom5', name: 'bloom5' },
+      { key: 'bloom6', name: 'bloom6' },
     ],
   },
   {
@@ -264,7 +286,7 @@ function PaletteTable() {
 // ── Main Component ─────────────────────────────────
 
 export default function MoodSettings() {
-  const { mode, setMode } = useThemeStore();
+  const { mode, resolved, setMode } = useThemeStore();
   const [bgType, setBgType] = useState<BgType>(getBackgroundType);
   const [collapsed, setCollapsed] = useState(true);
 
@@ -328,19 +350,29 @@ export default function MoodSettings() {
         {/* ── Background ── */}
         <div className="flex flex-col gap-2">
           <SectionLabel>Background</SectionLabel>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <OptionButton
-              active={bgType === 'drift'}
-              onClick={() => handleBgChange('drift')}
-              icon={<DriftPreview />}
-              label="Drift"
+              active={bgType === 'blank'}
+              onClick={() => handleBgChange('blank')}
+              icon={<BlankPreview />}
+              label="Blank"
             />
-            <OptionButton
-              active={bgType === 'flowfield'}
-              onClick={() => handleBgChange('flowfield')}
-              icon={<FlowFieldPreview />}
-              label="Flow"
-            />
+            {resolved === 'dark' && (
+              <>
+                <OptionButton
+                  active={bgType === 'drift'}
+                  onClick={() => handleBgChange('drift')}
+                  icon={<DriftPreview />}
+                  label="Drift"
+                />
+                <OptionButton
+                  active={bgType === 'flowfield'}
+                  onClick={() => handleBgChange('flowfield')}
+                  icon={<FlowFieldPreview />}
+                  label="Flow"
+                />
+              </>
+            )}
             <OptionButton
               active={bgType === 'bloom'}
               onClick={() => handleBgChange('bloom')}

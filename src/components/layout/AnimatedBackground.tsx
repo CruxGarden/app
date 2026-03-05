@@ -1,13 +1,10 @@
 import { useEffect, useState } from 'react';
+import { useThemeStore } from '@/stores/themeStore';
 import BloomBackground from './BloomBackground';
 import StarfieldBackground from './StarfieldBackground';
 import FlowFieldBackground from './FlowFieldBackground';
 import DriftBackground from './DriftBackground';
 
-/**
- * Switches between BloomBackground and StarfieldBackground
- * based on the --background-type CSS variable (set via the palette system).
- */
 const BG_STORAGE_KEY = 'cruxgarden:backgroundType';
 
 function pickRandomDefault(): string {
@@ -19,8 +16,9 @@ function pickRandomDefault(): string {
 }
 
 export default function AnimatedBackground() {
+  const resolved = useThemeStore((s) => s.resolved);
+
   const [bgType, setBgType] = useState<string>(() => {
-    // Prefer localStorage, then assign a random default
     const saved = localStorage.getItem(BG_STORAGE_KEY);
     if (saved) {
       document.documentElement.style.setProperty('--background-type', saved);
@@ -30,12 +28,10 @@ export default function AnimatedBackground() {
   });
 
   useEffect(() => {
-    // Watch for inline style changes on <html> (palette applies via style.setProperty)
     const observer = new MutationObserver(() => {
       const inline = document.documentElement.style.getPropertyValue('--background-type').trim();
       const saved = localStorage.getItem(BG_STORAGE_KEY);
 
-      // If inline was cleared (e.g. resetPalette) but user has a saved preference, re-apply it
       if (!inline && saved) {
         document.documentElement.style.setProperty('--background-type', saved);
         setBgType(saved);
@@ -56,6 +52,28 @@ export default function AnimatedBackground() {
 
     return () => observer.disconnect();
   }, []);
+
+  // Blank = solid background, no animation
+  // Dark: just the existing --bg. Light: soft gray-green tinted from accent.
+  if (bgType === 'blank') {
+    if (resolved === 'light') {
+      return (
+        <div
+          aria-hidden="true"
+          className="fixed inset-0 w-full h-full"
+          style={{
+            zIndex: 0,
+            pointerEvents: 'none',
+            background: 'color-mix(in srgb, var(--accent) 15%, color-mix(in srgb, black 12%, var(--bg)))',
+          }}
+        />
+      );
+    }
+    return null;
+  }
+
+  // Light mode: only bloom is available (flow/drift are dark-only)
+  if (resolved === 'light') return <BloomBackground />;
 
   if (bgType === 'starfield') return <StarfieldBackground />;
   if (bgType === 'flowfield') return <FlowFieldBackground />;

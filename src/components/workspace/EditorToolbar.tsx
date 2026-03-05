@@ -27,7 +27,7 @@ export default function EditorToolbar({
         {tab.dirty && onSave && (
           <button
             onClick={onSave}
-            className="px-2 py-0.5 text-[10px] font-mono rounded-[var(--radius-sm)] bg-accent text-bg hover:brightness-110 transition-colors cursor-pointer"
+            className="px-2 py-0.5 text-[10px] font-mono rounded-[var(--radius-sm)] bg-accent-muted text-accent border border-accent/20 hover:border-accent transition-colors cursor-pointer"
           >
             Save
           </button>

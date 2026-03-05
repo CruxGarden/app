@@ -10,7 +10,7 @@ export function KeeperAvatar({ className = 'w-6 h-6' }: { className?: string }) 
   const resolved = useThemeStore((s) => s.resolved);
   const src = resolved === 'dark' ? keeperAvatarDark : keeperAvatarLight;
   return (
-    <div className={`${className} shrink-0 rounded-full overflow-hidden`}>
+    <div className={`${className} shrink-0 rounded-[var(--radius-sm)] overflow-hidden`}>
       <img src={src} alt="The Keeper" className="w-full h-full object-cover" />
     </div>
   );
@@ -364,7 +364,7 @@ export default function KeeperConsole({ open, onClose }: KeeperConsoleProps) {
       <div
         className={cn(
           'relative z-10 w-full max-w-lg mx-4 mb-4 sm:mb-0',
-          'bg-panel border border-border rounded-[var(--radius)] shadow-xl',
+          'bg-surface-solid border border-border rounded-[var(--radius)] shadow-xl',
           'flex flex-col h-[60vh] max-h-[480px]',
         )}
       >
@@ -400,7 +400,7 @@ export default function KeeperConsole({ open, onClose }: KeeperConsoleProps) {
 
         {/* About overlay */}
         {showAbout && (
-          <div className="absolute inset-0 z-20 rounded-[var(--radius)] bg-panel flex flex-col items-center justify-center gap-4">
+          <div className="absolute inset-0 z-20 rounded-[var(--radius)] bg-surface-solid flex flex-col items-center justify-center gap-4">
             <KeeperAvatar className="w-64 h-64" />
             <div className="text-center">
               <p className="text-lg font-display font-medium text-text">The Keeper</p>
@@ -438,7 +438,7 @@ export default function KeeperConsole({ open, onClose }: KeeperConsoleProps) {
               <div
                 className={cn(
                   'max-w-[85%] rounded-[var(--radius)] px-3 py-2 text-sm',
-                  msg.role === 'user' ? 'bg-accent-muted text-text' : 'bg-surface text-text',
+                  msg.role === 'user' ? 'bg-accent-muted text-text' : 'bg-[color-mix(in_srgb,var(--panel),var(--text)_8%)] text-text',
                 )}
               >
                 {msg.role === 'user' ? (
@@ -457,7 +457,7 @@ export default function KeeperConsole({ open, onClose }: KeeperConsoleProps) {
               <button onClick={() => setShowAbout(true)} className="cursor-pointer shrink-0 mb-0.5 rounded-full ring-1 ring-transparent hover:ring-accent/40 transition-shadow">
                 <KeeperAvatar />
               </button>
-              <div className="max-w-[85%] rounded-[var(--radius)] px-3 py-2 text-sm bg-surface text-text">
+              <div className="max-w-[85%] rounded-[var(--radius)] px-3 py-2 text-sm bg-[color-mix(in_srgb,var(--panel),var(--text)_8%)] text-text">
                 <MarkdownRenderer content={streamContent} />
                 <span className="inline-block w-1.5 h-4 bg-accent/60 animate-pulse ml-0.5 align-text-bottom" />
               </div>
@@ -470,7 +470,7 @@ export default function KeeperConsole({ open, onClose }: KeeperConsoleProps) {
               <button onClick={() => setShowAbout(true)} className="cursor-pointer shrink-0 mb-0.5 rounded-full ring-1 ring-transparent hover:ring-accent/40 transition-shadow">
                 <KeeperAvatar />
               </button>
-              <div className="rounded-[var(--radius)] px-3 py-2 bg-surface text-xs text-text-muted italic">
+              <div className="rounded-[var(--radius)] px-3 py-2 bg-[color-mix(in_srgb,var(--panel),var(--text)_8%)] text-xs text-text-muted italic">
                 {toolActivity}
               </div>
             </div>
@@ -482,7 +482,7 @@ export default function KeeperConsole({ open, onClose }: KeeperConsoleProps) {
               <button onClick={() => setShowAbout(true)} className="cursor-pointer shrink-0 mb-0.5 rounded-full ring-1 ring-transparent hover:ring-accent/40 transition-shadow">
                 <KeeperAvatar />
               </button>
-              <div className="rounded-[var(--radius)] px-3 py-2 bg-surface">
+              <div className="rounded-[var(--radius)] px-3 py-2 bg-[color-mix(in_srgb,var(--panel),var(--text)_8%)]">
                 <div className="flex gap-1">
                   <span className="w-1.5 h-1.5 rounded-full bg-text-muted animate-bounce [animation-delay:0ms]" />
                   <span className="w-1.5 h-1.5 rounded-full bg-text-muted animate-bounce [animation-delay:150ms]" />
@@ -513,9 +513,9 @@ export default function KeeperConsole({ open, onClose }: KeeperConsoleProps) {
               placeholder="Talk to The Keeper..."
               rows={1}
               className={cn(
-                'flex-1 resize-none bg-bg border border-border rounded-[var(--radius-sm)] px-3 py-2',
+                'flex-1 resize-none bg-bg border border-accent/20 rounded-[var(--radius-sm)] px-3 py-2',
                 'text-sm text-text placeholder:text-text-muted',
-                'focus:outline-none focus:border-accent/40',
+                'focus:outline-none focus:border-accent',
                 'font-body leading-relaxed max-h-[100px]',
               )}
               onInput={(e) => {
@@ -541,8 +541,8 @@ export default function KeeperConsole({ open, onClose }: KeeperConsoleProps) {
                 disabled={!input.trim()}
                 className={cn(
                   'px-3 py-2 rounded-[var(--radius-sm)] text-sm font-body',
-                  'bg-accent text-bg font-medium',
-                  'hover:opacity-90 transition-opacity cursor-pointer',
+                  'bg-accent-muted text-accent border border-accent/20',
+                  'hover:border-accent transition-colors cursor-pointer',
                   'disabled:opacity-40 disabled:cursor-not-allowed',
                 )}
               >

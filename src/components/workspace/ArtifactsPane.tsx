@@ -254,7 +254,7 @@ export default function ArtifactsPane() {
           onClick={() => {
             startFileOperation({ type: 'create-file', parentPath: getParentPath() });
           }}
-          className="p-1 text-text-muted hover:text-text transition-colors cursor-pointer"
+          className="p-1 opacity-60 hover:opacity-100 transition-opacity cursor-pointer"
         >
           <FilePlusIcon />
         </button>
@@ -269,7 +269,7 @@ export default function ArtifactsPane() {
           onClick={() => {
             startFileOperation({ type: 'create-folder', parentPath: getParentPath() });
           }}
-          className="p-1 text-text-muted hover:text-text transition-colors cursor-pointer"
+          className="p-1 opacity-60 hover:opacity-100 transition-opacity cursor-pointer"
         >
           <FolderPlusIcon />
         </button>
@@ -282,7 +282,7 @@ export default function ArtifactsPane() {
       <div className="relative group/btn">
         <button
           onClick={handleUploadClick}
-          className="p-1 text-text-muted hover:text-text transition-colors cursor-pointer"
+          className="p-1 opacity-60 hover:opacity-100 transition-opacity cursor-pointer"
         >
           <UploadIcon />
         </button>

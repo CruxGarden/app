@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import JSZip from 'jszip';
 import { useAuthStore } from '@/stores/authStore';
+import MoodBar from '@/components/layout/MoodBar';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 import { useGarden } from '@/hooks/useGarden';
@@ -156,7 +157,7 @@ export default function Garden() {
   const handleImport = useCallback(
     async (file: File) => {
       setImporting(true);
-      setImportProgress('Reading file...');
+      setImportProgress('Reading archive...');
 
       try {
         const zip = await JSZip.loadAsync(file);
@@ -179,33 +180,36 @@ export default function Garden() {
           '-' +
           Date.now().toString(36);
 
-        // Create new crux
+        // Read messages + gates from archive
+        const messagesFile = zip.file('messages.json');
+        const messages = messagesFile ? JSON.parse(await messagesFile.async('text')) : [];
+        const gatesFile = zip.file('gates.json');
+        const gates = gatesFile ? JSON.parse(await gatesFile.async('text')) : [];
+
+        // Create new crux with full metadata restored
         setImportProgress('Creating crux...');
         const newCrux = await cruxes.create({
           slug,
           title,
+          description: cruxData.description || '',
           type: 'workspace',
-          data: cruxData.description || '',
+          status: cruxData.status || 'living',
+          visibility: cruxData.visibility || 'private',
+          data: cruxData.description || ' ',
           meta: {
-            messages: [],
+            messages,
             summary: cruxData.summary || null,
-            settings: cruxData.settings || { model: 'claude-sonnet-4-20250514' },
+            settings: cruxData.settings || {},
+            gateCount: 0,
           },
         });
 
-        // Read and save messages
-        const messagesFile = zip.file('messages.json');
-        if (messagesFile) {
-          setImportProgress('Restoring messages...');
-          const messages = JSON.parse(await messagesFile.async('text'));
-          await cruxes.update(newCrux.id, {
-            meta: {
-              ...newCrux.meta,
-              messages,
-              summary: cruxData.summary || null,
-              gateCount: 0,
-            },
-          });
+        // Restore tags via syncTags (tags are a separate table, not a crux column)
+        const tags = Array.isArray(cruxData.tags) ? cruxData.tags : [];
+        if (tags.length > 0) {
+          await cruxes.syncTags(newCrux.id, tags).catch((err) =>
+            console.warn('Failed to restore tags', err),
+          );
         }
 
         // Upload artifact files
@@ -219,7 +223,7 @@ export default function Garden() {
         if (artifactFiles.length > 0) {
           for (let i = 0; i < artifactFiles.length; i++) {
             const { path, zipEntry } = artifactFiles[i]!;
-            setImportProgress(`Importing artifacts... (${i + 1}/${artifactFiles.length})`);
+            setImportProgress(`Artifacts ${i + 1}/${artifactFiles.length}: ${path}`);
             try {
               const blob = await zipEntry.async('blob');
               const filename = path.split('/').pop() || 'file';
@@ -231,10 +235,54 @@ export default function Garden() {
                 kind: 'artifact',
               });
             } catch (err) {
-              console.warn(`Failed to import: ${path}`, err);
+              console.warn(`Failed to import artifact: ${path}`, err);
             }
           }
         }
+
+        // Restore gates (version history)
+        let restoredGateCount = 0;
+        if (gates.length > 0) {
+          setImportProgress('Restoring version history...');
+          for (let i = 0; i < gates.length; i++) {
+            const gate = gates[i];
+            const targetData = gate.target || {};
+            setImportProgress(`Gates ${i + 1}/${gates.length}`);
+            try {
+              // Create the gate crux (snapshot)
+              const gateSlug = `gate-${i + 1}-${Date.now().toString(36)}`;
+              const gateCrux = await cruxes.create({
+                slug: gateSlug,
+                title: targetData.title || `Gate ${i + 1}`,
+                type: 'gate',
+                data: targetData.data || '',
+                meta: gate.meta || targetData.meta || {},
+              });
+
+              // Link gate to parent via dimension
+              await cruxes.createDimension(newCrux.id, {
+                targetId: gateCrux.id,
+                type: 'gate',
+                weight: gate.weight ?? i + 1,
+                note: gate.note || undefined,
+              });
+              restoredGateCount++;
+            } catch (err) {
+              console.warn(`Failed to import gate ${i + 1}`, err);
+            }
+          }
+        }
+
+        // Final meta update with accurate gateCount
+        await cruxes.update(newCrux.id, {
+          meta: {
+            ...newCrux.meta,
+            messages,
+            summary: cruxData.summary || null,
+            settings: cruxData.settings || {},
+            gateCount: restoredGateCount,
+          },
+        });
 
         setImportProgress('');
         refresh();
@@ -259,25 +307,6 @@ export default function Garden() {
     [handleImport],
   );
 
-  // Background type toggle (persisted)
-  const BG_STORAGE_KEY = 'cruxgarden:backgroundType';
-  const [bgType, setBgType] = useState<string>(() => {
-    return localStorage.getItem(BG_STORAGE_KEY) || 'bloom';
-  });
-
-  // Apply saved preference on mount
-  useEffect(() => {
-    const saved = localStorage.getItem(BG_STORAGE_KEY);
-    if (saved && saved !== 'bloom') {
-      document.documentElement.style.setProperty('--background-type', saved);
-    }
-  }, []);
-
-  const toggleBg = useCallback((type: string) => {
-    document.documentElement.style.setProperty('--background-type', type);
-    setBgType(type);
-    localStorage.setItem(BG_STORAGE_KEY, type);
-  }, []);
 
   // Page title
   useEffect(() => {
@@ -311,7 +340,7 @@ export default function Garden() {
         <div className="flex items-center justify-between gap-3 mb-4">
           <div className="flex items-center gap-3 min-w-0">
             {author && (
-              <div className="w-12 h-12 rounded-full overflow-hidden flex items-center justify-center shrink-0 bg-accent-muted">
+              <div className="w-12 h-12 rounded-[var(--radius)] overflow-hidden flex items-center justify-center shrink-0 bg-accent-muted ring-1 ring-text-muted/20">
                 {author.meta?.avatarUrl ? (
                   <img
                     src={`${API_BASE_URL}${author.meta.avatarUrl}?v=${author.updated}`}
@@ -431,73 +460,7 @@ export default function Garden() {
         <GardenGrid cruxes={cruxList} onDelete={setDeletingId} sortBy={sortBy} />
       )}
 
-      {/* Background toggle — bottom right */}
-      <div className="fixed bottom-4 right-4 z-30 flex items-center gap-1 p-1 rounded-[var(--radius)] bg-panel border border-border">
-        <div className="relative group/drift">
-          <button
-            onClick={() => toggleBg('drift')}
-            className={cn(
-              'p-1.5 rounded-[var(--radius-sm)] transition-colors cursor-pointer',
-              bgType === 'drift' ? 'text-text bg-surface' : 'text-text-muted hover:text-text hover:bg-surface',
-            )}
-          >
-            <svg width="18" height="14" viewBox="0 0 20 14" className="shrink-0">
-              <circle cx="4" cy="3" r="1" fill="var(--accent)" opacity="0.7" />
-              <circle cx="16" cy="11" r="0.8" fill="var(--accent)" opacity="0.5" />
-              <circle cx="10" cy="7" r="1.5" fill="var(--accent)" opacity="0.4" />
-              <circle cx="14" cy="4" r="0.6" fill="var(--accent)" opacity="0.3" />
-              <circle cx="7" cy="10" r="0.7" fill="var(--accent)" opacity="0.5" />
-              <circle cx="17" cy="7" r="0.5" fill="var(--accent)" opacity="0.2" />
-              <circle cx="3" cy="8" r="0.4" fill="var(--accent)" opacity="0.25" />
-            </svg>
-          </button>
-          <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-50 pointer-events-none hidden group-hover/drift:block">
-            <div className="px-2.5 py-1.5 rounded-[var(--radius)] bg-surface-solid border border-border shadow-lg whitespace-nowrap">
-              <span className="text-xs font-medium text-text">Drift</span>
-            </div>
-          </div>
-        </div>
-        <div className="relative group/flow">
-          <button
-            onClick={() => toggleBg('flowfield')}
-            className={cn(
-              'p-1.5 rounded-[var(--radius-sm)] transition-colors cursor-pointer',
-              bgType === 'flowfield' ? 'text-text bg-surface' : 'text-text-muted hover:text-text hover:bg-surface',
-            )}
-          >
-            <svg width="18" height="14" viewBox="0 0 20 14" className="shrink-0">
-              <path d="M2 8 C5 4, 8 4, 10 7 S15 12, 18 8" stroke="var(--accent)" strokeWidth="0.8" fill="none" opacity="0.6" />
-              <path d="M1 11 C4 7, 7 6, 10 9 S14 14, 19 10" stroke="var(--accent)" strokeWidth="0.6" fill="none" opacity="0.35" />
-              <path d="M3 5 C6 2, 9 2, 12 5 S16 9, 19 5" stroke="var(--accent)" strokeWidth="0.6" fill="none" opacity="0.4" />
-            </svg>
-          </button>
-          <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-50 pointer-events-none hidden group-hover/flow:block">
-            <div className="px-2.5 py-1.5 rounded-[var(--radius)] bg-surface-solid border border-border shadow-lg whitespace-nowrap">
-              <span className="text-xs font-medium text-text">Flow</span>
-            </div>
-          </div>
-        </div>
-        <div className="relative group/bloom">
-          <button
-            onClick={() => toggleBg('bloom')}
-            className={cn(
-              'p-1.5 rounded-[var(--radius-sm)] transition-colors cursor-pointer',
-              bgType === 'bloom' ? 'text-text bg-surface' : 'text-text-muted hover:text-text hover:bg-surface',
-            )}
-          >
-            <svg width="18" height="14" viewBox="0 0 20 14" className="shrink-0">
-              <circle cx="6" cy="5" r="4" fill="var(--accent)" opacity="0.4" />
-              <circle cx="14" cy="9" r="4" fill="var(--accent)" opacity="0.25" />
-              <circle cx="10" cy="4" r="3" fill="var(--accent)" opacity="0.15" />
-            </svg>
-          </button>
-          <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-50 pointer-events-none hidden group-hover/bloom:block">
-            <div className="px-2.5 py-1.5 rounded-[var(--radius)] bg-surface-solid border border-border shadow-lg whitespace-nowrap">
-              <span className="text-xs font-medium text-text">Bloom</span>
-            </div>
-          </div>
-        </div>
-      </div>
+      <MoodBar />
 
       {/* Delete confirmation modal */}
       <Modal open={deletingId !== null} onClose={() => setDeletingId(null)}>
