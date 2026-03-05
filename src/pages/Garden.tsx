@@ -9,7 +9,7 @@ import { useGarden } from '@/hooks/useGarden';
 import { cruxes } from '@/api';
 import { APP_NAME } from '@/lib/constants';
 import { GardenGrid, GardenSearch } from '@/components/garden';
-import { ApiKeySetup, IconButton, Spinner, Modal } from '@/components/ui';
+import { ApiKeySetup, IconButton, Spinner, Modal, Button } from '@/components/ui';
 import { API_KEY_STORAGE } from '@/components/ui/ApiKeySetup';
 import { cn } from '@/lib/cn';
 
@@ -534,27 +534,23 @@ export default function Garden() {
 
       {/* Delete confirmation modal */}
       <Modal open={deletingId !== null} onClose={() => setDeletingId(null)}>
-        <h2 className="font-display text-sm font-medium text-text mb-2">Delete crux</h2>
-        <p className="text-xs text-text-muted mb-4">
-          Are you sure you want to delete{' '}
-          <span className="text-text font-medium">{deletingCrux?.title || 'this crux'}</span>?
-        </p>
-        <div className="flex justify-end gap-2">
-          <button
-            onClick={() => setDeletingId(null)}
-            className="px-3 py-1.5 text-xs font-mono text-text-muted hover:text-text transition-colors cursor-pointer"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={handleConfirmDelete}
-            className={cn(
-              'px-3 py-1.5 text-xs font-mono rounded-[var(--radius-sm)]',
-              'bg-error text-bg hover:brightness-110 transition-all cursor-pointer',
-            )}
-          >
-            Delete
-          </button>
+        <div className="space-y-4">
+          <div>
+            <h2 className="text-lg font-display font-medium text-text">Delete crux</h2>
+            <p className="text-sm text-text-muted mt-1">
+              Are you sure you want to delete{' '}
+              <span className="text-text font-medium">{deletingCrux?.title || 'this crux'}</span>?
+              This action cannot be undone.
+            </p>
+          </div>
+          <div className="flex gap-2 justify-end">
+            <Button variant="ghost" onClick={() => setDeletingId(null)}>
+              Cancel
+            </Button>
+            <Button variant="danger" onClick={handleConfirmDelete}>
+              Delete
+            </Button>
+          </div>
         </div>
       </Modal>
     </div>
