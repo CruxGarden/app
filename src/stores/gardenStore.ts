@@ -5,6 +5,9 @@ import type { Crux, PaginationMeta } from '@/api/types';
 export type SortField = 'created' | 'updated';
 
 interface GardenState {
+  /** Raw list from API (unfiltered, unsorted) */
+  allCruxes: Crux[];
+  /** Filtered + sorted for display */
   cruxList: Crux[];
   loading: boolean;
   search: string;
@@ -20,7 +23,23 @@ interface GardenState {
 
 const DEFAULT_LIMIT = 1000;
 
+function filterAndSort(cruxes: Crux[], search: string, sortBy: SortField): Crux[] {
+  const needle = search.toLowerCase();
+  const filtered = needle
+    ? cruxes.filter(
+        (c) =>
+          (c.title || '').toLowerCase().includes(needle) ||
+          (c.slug || '').toLowerCase().includes(needle) ||
+          (c.description || '').toLowerCase().includes(needle),
+      )
+    : cruxes;
+  return [...filtered].sort(
+    (a, b) => new Date(b[sortBy]).getTime() - new Date(a[sortBy]).getTime(),
+  );
+}
+
 export const useGardenStore = create<GardenState>((set, get) => ({
+  allCruxes: [],
   cruxList: [],
   loading: true,
   search: '',
@@ -35,21 +54,7 @@ export const useGardenStore = create<GardenState>((set, get) => ({
         limit: pagination.limit,
         offset: pagination.offset,
       });
-      // Filter client-side (API doesn't support search yet)
-      const needle = search.toLowerCase();
-      const filtered = needle
-        ? data.filter(
-            (c) =>
-              (c.title || '').toLowerCase().includes(needle) ||
-              (c.slug || '').toLowerCase().includes(needle) ||
-              (c.description || '').toLowerCase().includes(needle),
-          )
-        : data;
-      // Sort client-side (newest first)
-      const sorted = [...filtered].sort(
-        (a, b) => new Date(b[sortBy]).getTime() - new Date(a[sortBy]).getTime(),
-      );
-      set({ cruxList: sorted, pagination: meta });
+      set({ allCruxes: data, cruxList: filterAndSort(data, search, sortBy), pagination: meta });
     } catch (err) {
       console.error('[gardenStore] Failed to load cruxes:', err);
     } finally {
@@ -58,13 +63,17 @@ export const useGardenStore = create<GardenState>((set, get) => ({
   },
 
   setSearch: (query: string) => {
-    set({ search: query, pagination: { ...get().pagination, offset: 0 } });
-    get().load();
+    const { allCruxes, sortBy, pagination } = get();
+    set({
+      search: query,
+      cruxList: filterAndSort(allCruxes, query, sortBy),
+      pagination: { ...pagination, offset: 0 },
+    });
   },
 
   setSortBy: (field: SortField) => {
-    set({ sortBy: field });
-    get().load();
+    const { allCruxes, search } = get();
+    set({ sortBy: field, cruxList: filterAndSort(allCruxes, search, field) });
   },
 
   setPage: (offset: number) => {
