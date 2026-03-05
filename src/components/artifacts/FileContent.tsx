@@ -52,15 +52,37 @@ const IMAGE_TYPES = new Set([
   'image/x-icon',
 ]);
 
-const TEXT_TYPES = new Set([
+const TEXT_PREFIXES = [
   'text/',
   'application/json',
   'application/javascript',
+  'application/typescript',
+  'application/xml',
   'image/svg+xml',
+];
+
+const TEXT_EXTENSIONS = new Set([
+  'md', 'mdx', 'txt', 'csv', 'log',
+  'js', 'mjs', 'cjs', 'jsx', 'ts', 'tsx',
+  'json', 'jsonc', 'json5',
+  'html', 'htm', 'xml', 'svg', 'css', 'scss', 'less',
+  'py', 'rb', 'rs', 'go', 'java', 'c', 'cpp', 'h', 'hpp',
+  'sh', 'bash', 'zsh', 'fish',
+  'yaml', 'yml', 'toml', 'ini', 'cfg', 'conf', 'env',
+  'sql', 'graphql', 'gql',
+  'vue', 'svelte', 'astro',
+  'makefile', 'dockerfile',
 ]);
 
-function isTextMime(mime: string): boolean {
-  return [...TEXT_TYPES].some((t) => mime.startsWith(t));
+function isTextMime(mime: string, filename?: string): boolean {
+  if (TEXT_PREFIXES.some((t) => mime.startsWith(t))) return true;
+  if (filename) {
+    const ext = filename.split('.').pop()?.toLowerCase() || '';
+    if (TEXT_EXTENSIONS.has(ext)) return true;
+    const base = filename.split('/').pop()?.toLowerCase() || '';
+    if (TEXT_EXTENSIONS.has(base)) return true;
+  }
+  return false;
 }
 
 function isImageMime(mime: string): boolean {
@@ -156,7 +178,7 @@ export default function FileContent({
       .then((blob) => {
         if (cancelled) return;
 
-        if (isTextMime(mime)) {
+        if (isTextMime(mime, path)) {
           blob.text().then((text) => {
             if (!cancelled) {
               setContent(text);

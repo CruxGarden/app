@@ -1,8 +1,9 @@
-import { useRef, useCallback, useMemo } from 'react';
+import { useRef, useState, useCallback, useMemo } from 'react';
 import { useCruxStore } from '@/stores/cruxStore';
 import { useUIStore } from '@/stores/uiStore';
 import ArboristFileTree, {
   type ArboristFileTreeHandle,
+  type UploadFileEntry,
 } from '@/components/artifacts/ArboristFileTree';
 import PaneHeader from './PaneHeader';
 
@@ -84,9 +85,12 @@ function TreeIcon() {
 export default function ArtifactsPane() {
   const artifacts = useCruxStore((s) => s.artifacts);
   const createFile = useCruxStore((s) => s.createFile);
+  const uploadFiles = useCruxStore((s) => s.uploadFiles);
   const uploadFile = useCruxStore((s) => s.uploadFile);
+  const uploadProgress = useCruxStore((s) => s.uploadProgress);
   const moveArtifact = useCruxStore((s) => s.moveArtifact);
   const renameArtifact = useCruxStore((s) => s.renameArtifact);
+  const deleteArtifacts = useCruxStore((s) => s.deleteArtifacts);
   const openFile = useUIStore((s) => s.openFile);
   const setPaneVisible = useUIStore((s) => s.setPaneVisible);
   const activeTabId = useUIStore((s) => s.editor.activeTabId);
@@ -99,6 +103,9 @@ export default function ArtifactsPane() {
 
   const treeRef = useRef<ArboristFileTreeHandle>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const folderInputRef = useRef<HTMLInputElement>(null);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [importMenuOpen, setImportMenuOpen] = useState(false);
 
   // Derive parent folder from tree focus or active tab selection
   const getParentPath = useCallback(() => {
@@ -127,6 +134,10 @@ export default function ArtifactsPane() {
     [openFile, setPaneVisible],
   );
 
+  const handleSelectionChange = useCallback((ids: string[]) => {
+    setSelectedIds(ids);
+  }, []);
+
   const handleContextMenu = useCallback(
     (e: React.MouseEvent, info: { id: string | null; path: string; isFolder: boolean }) => {
       e.preventDefault();
@@ -136,9 +147,10 @@ export default function ArtifactsPane() {
         targetId: info.id,
         targetPath: info.path,
         isFolder: info.isFolder,
+        selectedIds,
       });
     },
-    [showContextMenu],
+    [showContextMenu, selectedIds],
   );
 
   const handleCreateFile = useCallback(
@@ -221,16 +233,29 @@ export default function ArtifactsPane() {
   );
 
   const handleUploadFiles = useCallback(
-    async (files: File[], parentPath: string | null) => {
-      for (const file of files) {
-        await uploadFile(file, parentPath ?? undefined);
+    async (files: UploadFileEntry[], parentPath: string | null) => {
+      const entries = files.map((f) => ({
+        file: f.file,
+        path: parentPath ? `${parentPath}/${f.path}` : f.path,
+      }));
+      await uploadFiles(entries);
+    },
+    [uploadFiles],
+  );
+
+  const handleDelete = useCallback(
+    async (ids: string[]) => {
+      const count = ids.length;
+      const msg = count === 1 ? 'Delete this file?' : `Delete ${count} items?`;
+      if (confirm(msg)) {
+        await deleteArtifacts(ids);
       }
     },
-    [uploadFile],
+    [deleteArtifacts],
   );
 
   const handleUploadClick = useCallback(() => {
-    fileInputRef.current?.click();
+    setImportMenuOpen((v) => !v);
   }, []);
 
   const handleFileInputChange = useCallback(
@@ -238,13 +263,34 @@ export default function ArtifactsPane() {
       const files = Array.from(e.target.files || []);
       if (files.length === 0) return;
       const parentPath = getParentPath();
-      for (const file of files) {
-        await uploadFile(file, parentPath);
+      if (files.length === 1) {
+        await uploadFile(files[0]!, parentPath);
+      } else {
+        const entries = files.map((f) => ({
+          file: f,
+          path: parentPath ? `${parentPath}/${f.name}` : f.name,
+        }));
+        await uploadFiles(entries);
       }
-      // Reset input so the same file can be re-uploaded
       e.target.value = '';
     },
-    [uploadFile, getParentPath],
+    [uploadFile, uploadFiles, getParentPath],
+  );
+
+  const handleFolderInputChange = useCallback(
+    async (e: React.ChangeEvent<HTMLInputElement>) => {
+      const files = Array.from(e.target.files || []);
+      if (files.length === 0) return;
+      const parentPath = getParentPath();
+      // webkitRelativePath preserves folder structure: "folderName/sub/file.txt"
+      const entries = files.map((f) => ({
+        file: f,
+        path: parentPath ? `${parentPath}/${f.webkitRelativePath || f.name}` : (f.webkitRelativePath || f.name),
+      }));
+      await uploadFiles(entries);
+      e.target.value = '';
+    },
+    [uploadFiles, getParentPath],
   );
 
   const actionButtons = (
@@ -279,18 +325,47 @@ export default function ArtifactsPane() {
           </div>
         </div>
       </div>
-      <div className="relative group/btn">
-        <button
-          onClick={handleUploadClick}
-          className="p-1 opacity-60 hover:opacity-100 transition-opacity cursor-pointer"
-        >
-          <UploadIcon />
-        </button>
-        <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 z-50 pointer-events-none hidden group-hover/btn:block">
-          <div className="px-2.5 py-1.5 rounded-[var(--radius)] bg-surface-solid border border-border shadow-lg whitespace-nowrap">
-            <span className="text-xs font-medium text-text">Import</span>
-          </div>
+      <div className="relative">
+        <div className="relative group/btn">
+          <button
+            onClick={handleUploadClick}
+            className="p-1 opacity-60 hover:opacity-100 transition-opacity cursor-pointer"
+          >
+            <UploadIcon />
+          </button>
+          {!importMenuOpen && (
+            <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 z-50 pointer-events-none hidden group-hover/btn:block">
+              <div className="px-2.5 py-1.5 rounded-[var(--radius)] bg-surface-solid border border-border shadow-lg whitespace-nowrap">
+                <span className="text-xs font-medium text-text">Import</span>
+              </div>
+            </div>
+          )}
         </div>
+        {importMenuOpen && (
+          <>
+            <div className="fixed inset-0 z-40" onClick={() => setImportMenuOpen(false)} />
+            <div className="absolute top-full right-0 mt-1 z-50 bg-surface-solid border border-border rounded-[var(--radius-sm)] shadow-lg py-1 min-w-[100px]">
+              <button
+                onClick={() => {
+                  setImportMenuOpen(false);
+                  fileInputRef.current?.click();
+                }}
+                className="w-full text-left px-3 py-1.5 text-xs font-mono text-text hover:bg-accent-muted/20 transition-colors cursor-pointer"
+              >
+                Files
+              </button>
+              <button
+                onClick={() => {
+                  setImportMenuOpen(false);
+                  folderInputRef.current?.click();
+                }}
+                className="w-full text-left px-3 py-1.5 text-xs font-mono text-text hover:bg-accent-muted/20 transition-colors cursor-pointer"
+              >
+                Folder
+              </button>
+            </div>
+          </>
+        )}
       </div>
     </>
   );
@@ -316,7 +391,7 @@ export default function ArtifactsPane() {
         actions={actionButtons}
       />
 
-      {/* Hidden file input for upload button */}
+      {/* Hidden file inputs */}
       <input
         ref={fileInputRef}
         type="file"
@@ -324,9 +399,16 @@ export default function ArtifactsPane() {
         className="hidden"
         onChange={handleFileInputChange}
       />
+      <input
+        ref={folderInputRef}
+        type="file"
+        className="hidden"
+        onChange={handleFolderInputChange}
+        {...({ webkitdirectory: '' } as React.InputHTMLAttributes<HTMLInputElement>)}
+      />
 
       <div
-        className="flex-1 overflow-hidden min-h-0"
+        className="flex-1 overflow-hidden min-h-0 flex flex-col"
         onContextMenu={(e) => {
           e.preventDefault();
           showContextMenu({
@@ -335,6 +417,7 @@ export default function ArtifactsPane() {
             targetId: null,
             targetPath: '',
             isFolder: true,
+            selectedIds,
           });
         }}
       >
@@ -344,10 +427,12 @@ export default function ArtifactsPane() {
             artifacts={artifacts}
             selectedId={activeTabId}
             onSelect={handleSelect}
+            onSelectionChange={handleSelectionChange}
             onContextMenu={handleContextMenu}
             onMove={handleMove}
             onRename={handleRename}
             onUploadFiles={handleUploadFiles}
+            onDelete={handleDelete}
             activeFileOperation={activeFileOperation}
             onCreateFile={handleCreateFile}
             onCreateFolder={handleCreateFolder}
@@ -362,14 +447,30 @@ export default function ArtifactsPane() {
         )}
       </div>
 
-      {artifacts.length > 0 && (
+      {/* Footer: upload progress or stats */}
+      {uploadProgress ? (
+        <div className="shrink-0 border-t border-border">
+          <div className="px-3 py-1.5 text-[10px] font-mono text-accent flex justify-between">
+            <span className="truncate mr-2">
+              {uploadProgress.completed + 1}/{uploadProgress.total}: {uploadProgress.currentFile}
+            </span>
+            <span className="shrink-0">{Math.round(((uploadProgress.completed) / uploadProgress.total) * 100)}%</span>
+          </div>
+          <div className="h-0.5 bg-border">
+            <div
+              className="h-full bg-accent transition-all duration-200"
+              style={{ width: `${(uploadProgress.completed / uploadProgress.total) * 100}%` }}
+            />
+          </div>
+        </div>
+      ) : artifacts.length > 0 ? (
         <div className="shrink-0 px-3 py-1.5 border-t border-border text-[10px] font-mono text-text-muted flex justify-between">
           <span>
             {artifacts.length} artifact{artifacts.length !== 1 ? 's' : ''}
           </span>
           <span>{totalSize}</span>
         </div>
-      )}
+      ) : null}
     </div>
   );
 }

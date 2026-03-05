@@ -11,10 +11,38 @@ const IMAGE_TYPES = new Set([
   'image/x-icon',
 ]);
 
-const TEXT_PREFIXES = ['text/', 'application/json', 'application/javascript', 'image/svg+xml'];
+const TEXT_PREFIXES = [
+  'text/',
+  'application/json',
+  'application/javascript',
+  'application/typescript',
+  'application/xml',
+  'image/svg+xml',
+];
 
-function isTextMime(mime: string): boolean {
-  return TEXT_PREFIXES.some((t) => mime.startsWith(t));
+const TEXT_EXTENSIONS = new Set([
+  'md', 'mdx', 'txt', 'csv', 'log',
+  'js', 'mjs', 'cjs', 'jsx', 'ts', 'tsx',
+  'json', 'jsonc', 'json5',
+  'html', 'htm', 'xml', 'svg', 'css', 'scss', 'less',
+  'py', 'rb', 'rs', 'go', 'java', 'c', 'cpp', 'h', 'hpp',
+  'sh', 'bash', 'zsh', 'fish',
+  'yaml', 'yml', 'toml', 'ini', 'cfg', 'conf', 'env',
+  'sql', 'graphql', 'gql',
+  'vue', 'svelte', 'astro',
+  'makefile', 'dockerfile',
+]);
+
+function isTextMime(mime: string, filename?: string): boolean {
+  if (TEXT_PREFIXES.some((t) => mime.startsWith(t))) return true;
+  if (filename) {
+    const ext = filename.split('.').pop()?.toLowerCase() || '';
+    if (TEXT_EXTENSIONS.has(ext)) return true;
+    // Files without extensions named like common dotfiles
+    const base = filename.split('/').pop()?.toLowerCase() || '';
+    if (TEXT_EXTENSIONS.has(base)) return true;
+  }
+  return false;
 }
 
 export function isImageMime(mime: string): boolean {
@@ -39,6 +67,7 @@ export function useFileContent(cruxId: string, artifact: Attachment): UseFileCon
   const [contentVersion, setContentVersion] = useState(0);
 
   const mime = artifact.mimeType || 'text/plain';
+  const filename = (artifact.meta?.path as string) || artifact.filename || '';
 
   const refetch = useCallback(() => {
     setFetchKey((k) => k + 1);
@@ -54,7 +83,7 @@ export function useFileContent(cruxId: string, artifact: Attachment): UseFileCon
       .downloadAttachment(cruxId, artifact.id)
       .then((blob) => {
         if (cancelled) return;
-        if (isTextMime(mime)) {
+        if (isTextMime(mime, filename)) {
           blob.text().then((text) => {
             if (!cancelled) {
               setContent(text);

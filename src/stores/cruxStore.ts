@@ -54,12 +54,17 @@ interface CruxState {
   publishCrux: () => Promise<void>;
   unpublishCrux: () => Promise<void>;
 
+  // Upload progress
+  uploadProgress: { total: number; completed: number; currentFile: string } | null;
+
   // File CRUD actions
   createFile: (path: string, content?: string) => Promise<Attachment>;
   uploadFile: (file: File, parentPath?: string) => Promise<Attachment>;
+  uploadFiles: (files: { file: File; path: string }[]) => Promise<void>;
   moveArtifact: (id: string, newParentPath: string | null) => Promise<void>;
   renameArtifact: (id: string, newPath: string) => Promise<void>;
   deleteArtifact: (id: string) => Promise<void>;
+  deleteArtifacts: (ids: string[]) => Promise<void>;
   saveArtifactContent: (id: string, content: string) => Promise<void>;
 
   // Gate actions
@@ -89,6 +94,7 @@ export const useCruxStore = create<CruxState>((set, get) => ({
   isCreatingGate: false,
   pendingGateCreation: false,
   pendingDeletes: [],
+  uploadProgress: null,
 
   loadCrux: async (id: string) => {
     const crux = await cruxes.get(id);
@@ -368,6 +374,48 @@ export const useCruxStore = create<CruxState>((set, get) => ({
     // Also close any editor tab for this file
     const { useUIStore } = await import('@/stores/uiStore');
     useUIStore.getState().closeTab(id);
+  },
+
+  deleteArtifacts: async (ids: string[]) => {
+    // Delete all in parallel
+    await Promise.allSettled(ids.map((id) => cruxes.deleteAttachment(id)));
+    const idSet = new Set(ids);
+    set((state) => ({
+      artifacts: state.artifacts.filter((a) => !idSet.has(a.id)),
+      hasUnpublishedChanges: true,
+    }));
+    // Close editor tabs for all deleted files
+    const { useUIStore } = await import('@/stores/uiStore');
+    const uiStore = useUIStore.getState();
+    for (const id of ids) {
+      uiStore.closeTab(id);
+    }
+  },
+
+  uploadFiles: async (files: { file: File; path: string }[]) => {
+    const { crux } = get();
+    if (!crux) throw new Error('No active crux');
+    set({ uploadProgress: { total: files.length, completed: 0, currentFile: files[0]?.path || '' } });
+    const newAttachments: Attachment[] = [];
+    for (let i = 0; i < files.length; i++) {
+      const { file, path } = files[i]!;
+      set({ uploadProgress: { total: files.length, completed: i, currentFile: path } });
+      try {
+        const attachment = await cruxes.uploadAttachment(crux.id, file, {
+          path,
+          type: 'file',
+          kind: 'artifact',
+        });
+        newAttachments.push(attachment);
+      } catch (err) {
+        console.warn(`Failed to upload: ${path}`, err);
+      }
+    }
+    set((state) => ({
+      artifacts: [...state.artifacts, ...newAttachments],
+      hasUnpublishedChanges: true,
+      uploadProgress: null,
+    }));
   },
 
   saveArtifactContent: async (id: string, content: string) => {
