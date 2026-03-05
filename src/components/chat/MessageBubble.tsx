@@ -13,7 +13,7 @@ function UserAvatar({ avatarUrl, initial }: { avatarUrl?: string | null; initial
   return (
     <div
       className={cn(
-        'w-6 h-6 shrink-0 rounded-full overflow-hidden flex items-center justify-center',
+        'w-6 h-6 shrink-0 rounded-[var(--radius-sm)] overflow-hidden flex items-center justify-center ring-1 ring-border',
         !avatarUrl && 'bg-accent-muted text-accent text-[10px] font-display font-bold',
       )}
     >

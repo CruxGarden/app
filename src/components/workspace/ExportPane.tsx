@@ -200,12 +200,27 @@ export default function ExportPane() {
         </div>
       ) : (
         <div className="flex-1 overflow-y-auto min-h-0 p-3 flex flex-col gap-3">
-          {/* Archive contents */}
-          <div className="rounded-[var(--radius-sm)] border border-border bg-surface/50 p-3 flex flex-col gap-2">
-            <span className="text-[10px] font-mono uppercase tracking-wider text-text-muted">
-              Archive contents
-            </span>
-            <div className="text-[11px] font-mono text-text-muted space-y-0.5">
+          {/* Archive contents (collapsible) */}
+          <details className="rounded-[var(--radius-sm)] border border-border bg-surface/50 group">
+            <summary className="px-3 py-2 flex items-center justify-between cursor-pointer select-none list-none [&::-webkit-details-marker]:hidden">
+              <span className="text-[10px] font-mono uppercase tracking-wider text-text-muted">
+                Archive contents
+              </span>
+              <svg
+                width="10"
+                height="10"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="text-text-muted transition-transform group-open:rotate-180"
+              >
+                <polyline points="6 9 12 15 18 9" />
+              </svg>
+            </summary>
+            <div className="px-3 pb-3 text-[11px] font-mono text-text-muted space-y-0.5">
               <div className="text-text">manifest.json</div>
               <div className="text-text">crux.json</div>
               <div className="flex justify-between">
@@ -239,7 +254,7 @@ export default function ExportPane() {
                 <span className="text-text">{formatBytes(totalSize)}</span>
               </div>
             </div>
-          </div>
+          </details>
 
           {/* Export button — state-aware */}
           {exporting ? (
