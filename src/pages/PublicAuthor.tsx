@@ -8,6 +8,7 @@ import { GardenGrid, GardenSearch } from '@/components/garden';
 import { Spinner, Button } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import { APP_NAME } from '@/lib/constants';
+import MoodBar from '@/components/layout/MoodBar';
 
 type LoadState = 'loading' | 'ready' | 'not-found' | 'error';
 type SortField = 'created' | 'updated';
@@ -187,6 +188,7 @@ export default function PublicAuthor() {
           <GardenGrid cruxes={filteredCruxes} linkBuilder={linkBuilder} sortBy={sortBy} />
         )}
       </div>
+      <MoodBar />
     </div>
   );
 }
