@@ -63,7 +63,10 @@ export default function PublicCrux() {
   if (state === 'loading') {
     return (
       <div className="relative min-h-screen flex items-center justify-center">
-        <Spinner size={32} />
+        <div className="flex items-center gap-3 px-5 py-3 rounded-lg bg-surface-solid/80 backdrop-blur-sm border border-border text-text-muted text-sm">
+          <Spinner size={16} />
+          Loading...
+        </div>
       </div>
     );
   }

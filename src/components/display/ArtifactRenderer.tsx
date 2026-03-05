@@ -4,6 +4,7 @@ import { publicApi } from '@/api';
 import { usePublicPreviewUrl } from '@/hooks/usePublicPreviewUrl';
 import MarkdownRenderer from '@/components/chat/MarkdownRenderer';
 import { getFileIcon } from '@/components/artifacts/fileIcons';
+import { Spinner } from '@/components/ui';
 
 interface ArtifactRendererProps {
   attachments: Attachment[];
@@ -86,8 +87,11 @@ function HtmlRenderer({
 
   if (!previewUrl) {
     return (
-      <div className="flex items-center justify-center h-full text-text-muted text-sm animate-pulse">
-        Loading...
+      <div className="flex items-center justify-center h-full">
+        <div className="flex items-center gap-3 px-5 py-3 rounded-lg bg-surface-solid/80 backdrop-blur-sm border border-border text-text-muted text-sm">
+          <Spinner size={16} />
+          Loading...
+        </div>
       </div>
     );
   }
@@ -132,8 +136,11 @@ function MarkdownRendererView({
 
   if (!content) {
     return (
-      <div className="flex items-center justify-center h-full text-text-muted text-sm animate-pulse">
-        Loading...
+      <div className="flex items-center justify-center h-full">
+        <div className="flex items-center gap-3 px-5 py-3 rounded-lg bg-surface-solid/80 backdrop-blur-sm border border-border text-text-muted text-sm">
+          <Spinner size={16} />
+          Loading...
+        </div>
       </div>
     );
   }
