@@ -57,7 +57,7 @@ export default function PublicAuthor() {
 
   useEffect(() => {
     if (author?.username) {
-      document.title = `${author.username} — ${APP_NAME}`;
+      document.title = `${author.username} - ${APP_NAME}`;
     }
     return () => {
       document.title = APP_NAME;
