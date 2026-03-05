@@ -84,10 +84,10 @@ export default function MessageInput({
           rows={1}
           disabled={disabled}
           className={cn(
-            'flex-1 resize-none bg-bg border border-border rounded-[var(--radius-sm)] px-3 py-2',
-            'text-sm text-text placeholder:text-text-muted',
-            'focus:outline-none focus:border-accent/40',
-            'font-body leading-relaxed',
+            'flex-1 resize-none bg-bg border border-accent/20 rounded-[var(--radius-sm)] px-3 py-2',
+            'text-sm text-text placeholder:text-text-muted leading-[1.35]',
+            'focus:outline-none focus:border-accent',
+            'font-body',
             'max-h-[200px]',
           )}
         />
@@ -108,8 +108,8 @@ export default function MessageInput({
             disabled={!value.trim() || disabled}
             className={cn(
               'px-3 py-2 rounded-[var(--radius-sm)] text-sm font-body',
-              'bg-accent text-bg font-medium',
-              'hover:opacity-90 transition-opacity cursor-pointer',
+              'bg-accent-muted text-accent border border-accent/20',
+              'hover:border-accent transition-colors cursor-pointer',
               'disabled:opacity-40 disabled:cursor-not-allowed',
             )}
           >

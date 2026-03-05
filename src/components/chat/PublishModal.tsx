@@ -83,7 +83,7 @@ export default function PublishModal({ open, onClose, url }: PublishModalProps) 
             href={url}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center justify-center h-10 px-4 text-sm font-medium font-body rounded-[var(--radius-sm)] bg-accent text-bg hover:brightness-110 transition-all"
+            className="inline-flex items-center justify-center h-10 px-4 text-sm font-medium font-body rounded-[var(--radius-sm)] bg-accent-muted text-accent border border-accent/20 hover:border-accent transition-all"
           >
             Open in new tab
           </a>

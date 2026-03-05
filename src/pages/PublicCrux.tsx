@@ -6,6 +6,7 @@ import { APP_NAME } from '@/lib/constants';
 import { Spinner } from '@/components/ui';
 import { PublicTopBar, ArtifactRenderer } from '@/components/display';
 import MetadataContent from '@/components/workspace/MetadataContent';
+import MoodBar from '@/components/layout/MoodBar';
 
 type LoadState = 'loading' | 'ready' | 'not-found' | 'error';
 
@@ -122,6 +123,7 @@ export default function PublicCrux() {
           </div>
         )}
       </div>
+      <MoodBar />
     </div>
   );
 }

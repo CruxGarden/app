@@ -49,25 +49,26 @@ export default function ExportPane() {
     if (!crux) return;
 
     setExporting(true);
-    setProgress('Fetching history...');
+    setProgress('Fetching data...');
 
     try {
       const zip = new JSZip();
 
-      // Fetch gate dimensions
-      let gates: unknown[] = [];
-      try {
-        gates = await cruxes.getDimensions(crux.id, 'gate', 'target');
-      } catch {
-        // Gates may not exist
-      }
+      // Fetch all data fresh from the API in parallel
+      const [freshArtifacts, gates, tags] = await Promise.all([
+        cruxes.getAttachments(crux.id),
+        cruxes.getDimensions(crux.id, 'gate', 'target').catch(() => [] as unknown[]),
+        cruxes.getTags(crux.id).catch(() => []),
+      ]);
+
+      setProgress('Building archive...');
 
       // manifest.json
       zip.file(
         'manifest.json',
         JSON.stringify(
           {
-            version: '1.0',
+            version: '1.1',
             exportedAt: new Date().toISOString(),
             author: author ? { username: author.username, displayName: author.displayName } : null,
           },
@@ -76,7 +77,7 @@ export default function ExportPane() {
         ),
       );
 
-      // crux.json — entity + settings (exclude messages to avoid duplication)
+      // crux.json — complete snapshot of crux state
       const cruxData = {
         id: crux.id,
         slug: crux.slug,
@@ -89,7 +90,9 @@ export default function ExportPane() {
         updated: crux.updated,
         summary,
         gateCount,
-        settings: crux.meta?.settings,
+        settings: crux.meta?.settings ?? null,
+        publishedAt: crux.meta?.publishedAt ?? null,
+        tags: tags.map((t) => t.label),
       };
       zip.file('crux.json', JSON.stringify(cruxData, null, 2));
 
@@ -102,19 +105,20 @@ export default function ExportPane() {
       }
 
       // Download artifact files
-      if (artifacts.length > 0) {
+      const failed: string[] = [];
+      if (freshArtifacts.length > 0) {
         setProgress('Downloading artifacts...');
-        let i = 0;
-        for (const artifact of artifacts) {
-          i++;
-          const path = (artifact.meta?.path as string) || artifact.filename || `file-${i}`;
-          setProgress(`${i}/${artifacts.length}: ${path}`);
+        for (let i = 0; i < freshArtifacts.length; i++) {
+          const artifact = freshArtifacts[i]!;
+          const path = (artifact.meta?.path as string) || artifact.filename || `file-${i + 1}`;
+          setProgress(`${i + 1}/${freshArtifacts.length}: ${path}`);
 
           try {
             const blob = await cruxes.downloadAttachment(crux.id, artifact.id);
             zip.file(`artifacts/${path}`, blob);
-          } catch {
-            console.warn(`Failed to download: ${path}`);
+          } catch (err) {
+            console.warn(`Failed to download: ${path}`, err);
+            failed.push(path);
           }
         }
       }
@@ -126,20 +130,26 @@ export default function ExportPane() {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `${crux.slug || 'crux'}.crux`;
+      const now = new Date();
+      const ts = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}`;
+      a.download = `${crux.slug || 'crux'}-${ts}.crux`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
 
-      setProgress('');
+      if (failed.length > 0) {
+        setProgress(`Done — ${failed.length} file${failed.length > 1 ? 's' : ''} failed to download`);
+      } else {
+        setProgress('');
+      }
     } catch (err) {
       console.error('Export failed:', err);
       setProgress('Export failed');
     } finally {
       setExporting(false);
     }
-  }, [crux, artifacts, messages, summary, gateCount, author]);
+  }, [crux, messages, summary, gateCount, author]);
 
   const totalSize = artifacts.reduce((sum, a) => sum + (Number(a.size) || 0), 0);
   const messageCount = messages.length;
@@ -165,28 +175,42 @@ export default function ExportPane() {
         </div>
       ) : (
         <div className="flex-1 overflow-y-auto min-h-0 p-3 flex flex-col gap-3">
-          {/* Contents card */}
+          {/* Archive contents */}
           <div className="rounded-[var(--radius-sm)] border border-border bg-surface/50 p-3 flex flex-col gap-2">
             <span className="text-[10px] font-mono uppercase tracking-wider text-text-muted">
-              Contents
+              Archive contents
             </span>
-            <div className="text-[11px] font-mono text-text-muted space-y-1">
+            <div className="text-[11px] font-mono text-text-muted space-y-0.5">
+              <div className="text-text">manifest.json</div>
+              <div className="text-text">crux.json</div>
               <div className="flex justify-between">
-                <span>Artifacts</span>
-                <span className="text-text">{artifacts.length}</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Collaboration</span>
-                <span className="text-text">{messageCount}</span>
+                <span className="text-text">messages.json</span>
+                <span>{messageCount} msgs</span>
               </div>
               {gateCount > 0 && (
                 <div className="flex justify-between">
-                  <span>Gates</span>
-                  <span className="text-text">{gateCount}</span>
+                  <span className="text-text">gates.json</span>
+                  <span>{gateCount} gates</span>
                 </div>
               )}
-              <div className="flex justify-between pt-1 border-t border-border">
-                <span>Total size</span>
+              {artifacts.length > 0 && (
+                <>
+                  <div className="pt-1 mt-1 border-t border-border/50">
+                    <span className="text-text-muted">artifacts/</span>
+                  </div>
+                  {artifacts.map((a, i) => {
+                    const path = (a.meta?.path as string) || a.filename || `file-${i + 1}`;
+                    return (
+                      <div key={a.id} className="flex justify-between pl-3">
+                        <span className="text-text truncate mr-2">{path}</span>
+                        <span className="shrink-0">{formatBytes(Number(a.size) || 0)}</span>
+                      </div>
+                    );
+                  })}
+                </>
+              )}
+              <div className="flex justify-between pt-1 mt-1 border-t border-border">
+                <span>Total</span>
                 <span className="text-text">{formatBytes(totalSize)}</span>
               </div>
             </div>
@@ -199,10 +223,10 @@ export default function ExportPane() {
               className={cn(
                 'w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-[var(--radius-sm)]',
                 'text-sm font-medium font-body',
-                'bg-accent/70 text-bg cursor-wait',
+                'bg-accent-muted text-accent border border-accent/20 cursor-wait',
               )}
             >
-              <span className="inline-block w-3 h-3 border-2 border-bg/30 border-t-bg rounded-full animate-spin" />
+              <span className="inline-block w-3 h-3 border-2 border-accent/30 border-t-accent rounded-full animate-spin" />
               Exporting...
             </button>
           ) : (
@@ -211,7 +235,7 @@ export default function ExportPane() {
               className={cn(
                 'w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-[var(--radius-sm)]',
                 'text-sm font-medium font-body transition-all cursor-pointer',
-                'bg-accent text-bg hover:brightness-110',
+                'bg-accent-muted text-accent border border-accent/20 hover:border-accent',
               )}
             >
               <ExportIcon />

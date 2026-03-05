@@ -239,10 +239,10 @@ export default function PublishPane() {
               className={cn(
                 'w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-[var(--radius-sm)]',
                 'text-sm font-medium font-body',
-                'bg-accent/70 text-bg cursor-wait',
+                'bg-accent-muted text-accent border border-accent/20 cursor-wait',
               )}
             >
-              <span className="inline-block w-3 h-3 border-2 border-bg/30 border-t-bg rounded-full animate-spin" />
+              <span className="inline-block w-3 h-3 border-2 border-accent/30 border-t-accent rounded-full animate-spin" />
               Publishing...
             </button>
           ) : isPublished && !hasUnpublishedChanges ? (
@@ -262,7 +262,7 @@ export default function PublishPane() {
               className={cn(
                 'w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-[var(--radius-sm)]',
                 'text-sm font-medium font-body transition-all cursor-pointer',
-                'bg-accent text-bg hover:brightness-110',
+                'bg-accent-muted text-accent border border-accent/20 hover:border-accent',
               )}
             >
               <PublishIcon />

@@ -116,7 +116,7 @@ export default function Crux() {
             }}
             className={cn(
               'px-3 py-1.5 text-xs font-mono rounded-[var(--radius-sm)]',
-              'bg-accent text-bg hover:brightness-110 transition-all cursor-pointer',
+              'bg-accent-muted text-accent border border-accent/20 hover:border-accent transition-all cursor-pointer',
             )}
           >
             Save & leave

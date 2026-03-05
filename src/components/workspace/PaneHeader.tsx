@@ -73,6 +73,7 @@ export default function PaneHeader({ paneType, icon, label, actions, children }:
         className={cn(
           'flex items-center gap-1 transition-opacity duration-150',
           'md:opacity-0 md:group-hover/pane:opacity-100',
+          'text-[var(--pane-color)]',
         )}
       >
         {actions}
@@ -81,7 +82,7 @@ export default function PaneHeader({ paneType, icon, label, actions, children }:
             e.stopPropagation();
             setPaneVisible(paneType, false);
           }}
-          className="p-1 text-text-muted hover:text-text transition-colors cursor-pointer"
+          className="p-1 opacity-60 hover:opacity-100 transition-opacity cursor-pointer"
           title={`Close ${label || paneType}`}
         >
           <CloseIcon />

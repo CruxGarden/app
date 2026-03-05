@@ -60,17 +60,19 @@ function linkProgram(gl: WebGLRenderingContext, vsSrc: string, fsSrc: string): W
 
 function parseCSSColor(raw: string): [number, number, number] {
   raw = raw.trim();
+  if (!raw) return [0.8, 0.8, 0.8]; // safe fallback — light gray
   const rgbMatch = raw.match(/rgba?\(\s*(\d+),\s*(\d+),\s*(\d+)/);
   if (rgbMatch && rgbMatch[1] && rgbMatch[2] && rgbMatch[3]) {
     return [parseInt(rgbMatch[1]) / 255, parseInt(rgbMatch[2]) / 255, parseInt(rgbMatch[3]) / 255];
   }
   let hex = raw.replace('#', '');
   if (hex.length === 3) hex = hex.charAt(0) + hex.charAt(0) + hex.charAt(1) + hex.charAt(1) + hex.charAt(2) + hex.charAt(2);
-  return [
-    parseInt(hex.slice(0, 2), 16) / 255,
-    parseInt(hex.slice(2, 4), 16) / 255,
-    parseInt(hex.slice(4, 6), 16) / 255,
-  ];
+  if (hex.length < 6) return [0.8, 0.8, 0.8]; // malformed — safe fallback
+  const r = parseInt(hex.slice(0, 2), 16) / 255;
+  const g = parseInt(hex.slice(2, 4), 16) / 255;
+  const b = parseInt(hex.slice(4, 6), 16) / 255;
+  if (isNaN(r) || isNaN(g) || isNaN(b)) return [0.8, 0.8, 0.8];
+  return [r, g, b];
 }
 
 function readCSSVar(name: string, fallback: string): string {
@@ -129,9 +131,9 @@ export default function DriftBackground() {
 
     // Read palette
     const readColors = () => {
-      const starColor = parseCSSColor(readCSSVar('--drift-color', '') || readCSSVar('--star-color', '#c8d4ff'));
-      const glowColor = parseCSSColor(readCSSVar('--drift-glow', '') || readCSSVar('--accent', '#4a6aff'));
-      const bgColor = parseCSSColor(readCSSVar('--drift-bg', '') || readCSSVar('--bg', '#0b0d0c'));
+      const starColor = parseCSSColor(readCSSVar('--drift-color', '#d0d0d0'));
+      const glowColor = parseCSSColor(readCSSVar('--drift-glow', '#4a6aff'));
+      const bgColor = parseCSSColor(readCSSVar('--bg', '#0b0d0c'));
       const speed = parseFloat(readCSSVar('--drift-speed', '1')) || 1;
       const density = parseInt(readCSSVar('--drift-density', '400'), 10) || 400;
       return { starColor, glowColor, bgColor, speed, density };

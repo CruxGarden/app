@@ -339,7 +339,7 @@ export default function TopBar() {
             onClick={() => useUIStore.getState().toggleKeeper()}
             aria-label="The Keeper"
             className={cn(
-              'w-6 h-6 rounded-full overflow-hidden',
+              'w-6 h-6 rounded-[var(--radius-sm)] overflow-hidden',
               'ring-1 ring-text-muted/20 hover:ring-accent/40 transition-shadow cursor-pointer',
             )}
           >
