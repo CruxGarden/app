@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import type { Crux } from '@/api/types';
 import CruxCard from './CruxCard';
 
@@ -8,7 +9,7 @@ interface GardenGridProps {
   sortBy?: 'created' | 'updated';
 }
 
-export default function GardenGrid({ cruxes, linkBuilder, onDelete, sortBy }: GardenGridProps) {
+export default memo(function GardenGrid({ cruxes, linkBuilder, onDelete, sortBy }: GardenGridProps) {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
       {cruxes.map((crux) => (
@@ -22,4 +23,4 @@ export default function GardenGrid({ cruxes, linkBuilder, onDelete, sortBy }: Ga
       ))}
     </div>
   );
-}
+})
