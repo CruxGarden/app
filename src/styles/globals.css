@@ -264,7 +264,7 @@ html.palette-transition *::after {
 
 ::selection {
   background: var(--accent-muted);
-  color: var(--text);
+  color: var(--accent);
 }
 
 /* ── highlight.js palette overrides ───────────────────── */

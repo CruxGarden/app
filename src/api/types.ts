@@ -86,12 +86,15 @@ export interface Crux {
   updated: string;
 }
 
+export type CruxKind = 'webapp' | 'page' | 'document' | 'image';
+
 export interface CreateCruxDto {
   slug: string;
   title?: string;
   description?: string;
   data: string;
   type?: string;
+  kind?: CruxKind;
   status?: CruxStatus;
   visibility?: CruxVisibility;
   tags?: string[];
@@ -104,6 +107,7 @@ export interface UpdateCruxDto {
   description?: string;
   data?: string;
   type?: string;
+  kind?: CruxKind | null;
   status?: CruxStatus;
   visibility?: CruxVisibility;
   tags?: string[];

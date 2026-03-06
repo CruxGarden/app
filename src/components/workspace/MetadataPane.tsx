@@ -1,6 +1,5 @@
 import { useCruxStore } from '@/stores/cruxStore';
 import { useAuthStore } from '@/stores/authStore';
-import { useUIStore } from '@/stores/uiStore';
 import PaneHeader from './PaneHeader';
 import MetadataContent from './MetadataContent';
 
@@ -27,11 +26,7 @@ export default function MetadataPane() {
   const updateCrux = useCruxStore((s) => s.updateCrux);
   const summary = useCruxStore((s) => s.summary);
   const messages = useCruxStore((s) => s.messages);
-  const artifacts = useCruxStore((s) => s.artifacts);
   const author = useAuthStore((s) => s.author);
-  const activeTabId = useUIStore((s) => s.editor.activeTabId);
-
-  const selectedArtifact = activeTabId ? artifacts.find((a) => a.id === activeTabId) : null;
 
   if (!crux) {
     return (
@@ -50,7 +45,6 @@ export default function MetadataPane() {
       <MetadataContent
         crux={crux}
         summary={summary}
-        selectedArtifact={selectedArtifact}
         authorName={author?.displayName || author?.username}
         messages={messages}
         onUpdate={updateCrux}

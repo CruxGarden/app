@@ -10,7 +10,7 @@ import MetadataContent from '@/components/workspace/MetadataContent';
 type LoadState = 'loading' | 'ready' | 'not-found' | 'error';
 
 export default function PublicCrux() {
-  const { username, slug } = useParams<{ username: string; slug: string }>();
+  const { username, slug, '*': subPath } = useParams<{ username: string; slug: string; '*': string }>();
 
   const [crux, setCrux] = useState<Crux | null>(null);
   const [attachments, setAttachments] = useState<Attachment[]>([]);
@@ -73,10 +73,10 @@ export default function PublicCrux() {
 
   if (state === 'not-found') {
     return (
-      <div className="relative min-h-screen flex flex-col items-center justify-center px-4">
-        <div className="relative z-10 text-center">
-          <h1 className="font-display text-4xl font-bold text-text mb-2">Not found</h1>
-          <p className="text-text-muted">This creation doesn't exist or is private</p>
+      <div className="relative min-h-screen flex items-center justify-center">
+        <div className="flex flex-col items-center gap-1 px-6 py-4 rounded-lg bg-surface-solid/80 backdrop-blur-sm border border-border text-sm">
+          <span className="font-display font-bold text-text">Not found</span>
+          <span className="text-text-muted">This creation doesn't exist or is private</span>
         </div>
       </div>
     );
@@ -84,10 +84,10 @@ export default function PublicCrux() {
 
   if (state === 'error') {
     return (
-      <div className="relative min-h-screen flex flex-col items-center justify-center px-4">
-        <div className="relative z-10 text-center">
-          <h1 className="font-display text-4xl font-bold text-text mb-2">Something went wrong</h1>
-          <p className="text-text-muted">We couldn't load this creation</p>
+      <div className="relative min-h-screen flex items-center justify-center">
+        <div className="flex flex-col items-center gap-1 px-6 py-4 rounded-lg bg-surface-solid/80 backdrop-blur-sm border border-border text-sm">
+          <span className="font-display font-bold text-text">Something went wrong</span>
+          <span className="text-text-muted">We couldn't load this creation</span>
         </div>
       </div>
     );
@@ -105,7 +105,7 @@ export default function PublicCrux() {
 
       <div className="flex-1 min-h-0 relative z-10 flex">
         <div className={`flex-1 min-w-0 ${metadataOpen ? 'hidden sm:block' : ''}`}>
-          <ArtifactRenderer attachments={attachments} username={username || ''} slug={slug || ''} />
+          <ArtifactRenderer attachments={attachments} username={username || ''} slug={slug || ''} authorId={crux?.authorId || ''} subPath={subPath} />
         </div>
 
         {metadataOpen && crux && (

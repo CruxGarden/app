@@ -17,7 +17,7 @@ const router = createBrowserRouter([
   { path: '/', element: <Landing /> },
   { path: '/login', element: <Login /> },
   {
-    path: '/:username/:slug',
+    path: '/:username/:slug/*',
     element: (
       <ErrorBoundary>
         <PublicCrux />

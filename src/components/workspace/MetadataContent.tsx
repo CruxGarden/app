@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { cn } from '@/lib/cn';
-import type { Crux, CruxSummary, CruxVisibility, Attachment, ChatMessage } from '@/api/types';
+import type { Crux, CruxSummary, CruxKind, CruxVisibility, ChatMessage } from '@/api/types';
 
 // ── Helpers ──────────────────────────────────────────
 
@@ -25,6 +25,14 @@ const VISIBILITY_COLORS: Record<CruxVisibility, string> = {
   public: 'bg-accent/20 text-accent',
   unlisted: 'bg-accent-muted text-text-muted',
   private: 'bg-error-muted text-error',
+};
+
+const KIND_OPTIONS: (CruxKind | undefined)[] = [undefined, 'webapp', 'page', 'document', 'image'];
+const KIND_LABELS: Record<string, string> = {
+  webapp: 'Web App',
+  page: 'Page',
+  document: 'Document',
+  image: 'Image',
 };
 
 // ── Field Components ─────────────────────────────────
@@ -153,7 +161,6 @@ function ReadonlyField({ label, value }: { label: string; value: string }) {
 interface MetadataContentProps {
   crux: Crux;
   summary?: CruxSummary | null;
-  selectedArtifact?: Attachment | null;
   authorName?: string;
   messages?: ChatMessage[];
   readOnly?: boolean;
@@ -173,7 +180,6 @@ function formatModel(model: string): string {
 export default function MetadataContent({
   crux,
   summary,
-  selectedArtifact,
   authorName,
   messages,
   readOnly,
@@ -197,6 +203,14 @@ export default function MetadataContent({
     const idx = VISIBILITY_ORDER.indexOf(crux.visibility);
     const next = VISIBILITY_ORDER[(idx + 1) % VISIBILITY_ORDER.length]!;
     onUpdate({ visibility: next });
+  };
+
+  const cycleKind = () => {
+    if (readOnly || !onUpdate) return;
+    const current = crux.kind || undefined; // normalize null to undefined
+    const idx = KIND_OPTIONS.indexOf(current as CruxKind | undefined);
+    const next = KIND_OPTIONS[((idx === -1 ? 0 : idx) + 1) % KIND_OPTIONS.length];
+    onUpdate({ kind: next ?? null });
   };
 
 
@@ -276,6 +290,31 @@ export default function MetadataContent({
           )}
         </FieldRow>
 
+        <FieldRow label="Type">
+          <span className="px-2 py-0.5 rounded-full text-[10px] font-mono uppercase inline-block bg-text-muted/15 text-text-muted">
+            {crux.type || 'text'}
+          </span>
+        </FieldRow>
+
+        <FieldRow label="Kind">
+          {readOnly ? (
+            <span className="px-2 py-0.5 rounded-full text-[10px] font-mono uppercase inline-block bg-text-muted/15 text-text-muted">
+              {crux.kind ? KIND_LABELS[crux.kind] || crux.kind : 'auto'}
+            </span>
+          ) : (
+            <button
+              onClick={cycleKind}
+              className={cn(
+                'px-2 py-0.5 rounded-full text-[10px] font-mono uppercase cursor-pointer transition-colors',
+                crux.kind ? 'bg-accent/20 text-accent' : 'bg-text-muted/15 text-text-muted',
+              )}
+              title="Click to change"
+            >
+              {crux.kind ? KIND_LABELS[crux.kind] || crux.kind : 'auto'}
+            </button>
+          )}
+        </FieldRow>
+
         <FieldRow label="Created">
           <span>{formatDate(crux.created)}</span>
         </FieldRow>
@@ -312,37 +351,6 @@ export default function MetadataContent({
         </>
       )}
 
-      {/* ── Selected File Metadata ── */}
-      {selectedArtifact && (
-        <>
-          <div className="border-t border-border" />
-          <div className="flex flex-col gap-2">
-            <span className="text-[10px] font-mono uppercase tracking-wider text-text-muted">
-              Selected File
-            </span>
-            <FieldRow label="Filename">
-              <span className="truncate">{selectedArtifact.filename}</span>
-            </FieldRow>
-            {selectedArtifact.meta?.path && (
-              <FieldRow label="Path">
-                <span className="truncate">{selectedArtifact.meta.path as string}</span>
-              </FieldRow>
-            )}
-            <FieldRow label="Size">
-              <span>{formatSize(selectedArtifact.size)}</span>
-            </FieldRow>
-            <FieldRow label="Type">
-              <span>{selectedArtifact.mimeType}</span>
-            </FieldRow>
-            <FieldRow label="Created">
-              <span>{formatDate(selectedArtifact.created)}</span>
-            </FieldRow>
-            <FieldRow label="Updated">
-              <span>{formatDate(selectedArtifact.updated)}</span>
-            </FieldRow>
-          </div>
-        </>
-      )}
     </div>
   );
 }
