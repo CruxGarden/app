@@ -141,12 +141,16 @@ export async function deleteAttachment(attachmentId: string): Promise<void> {
 // ── Publishing ────────────────────────────────────────
 
 export async function publish(cruxId: string): Promise<Crux> {
-  const res = await client.post<Crux>(`/cruxes/${cruxId}/publish`);
+  const res = await client.post<Crux>(`/cruxes/${cruxId}/publish`, {}, {
+    timeout: 120000,
+  });
   return res.data;
 }
 
 export async function unpublish(cruxId: string): Promise<Crux> {
-  const res = await client.post<Crux>(`/cruxes/${cruxId}/unpublish`);
+  const res = await client.post<Crux>(`/cruxes/${cruxId}/unpublish`, {}, {
+    timeout: 60000,
+  });
   return res.data;
 }
 

@@ -5,6 +5,7 @@ import ArboristFileTree, {
   type ArboristFileTreeHandle,
   type UploadFileEntry,
 } from '@/components/artifacts/ArboristFileTree';
+import { FieldRow, formatSize, formatDate } from './MetadataContent';
 import PaneHeader from './PaneHeader';
 
 function FolderPlusIcon() {
@@ -106,6 +107,11 @@ export default function ArtifactsPane() {
   const folderInputRef = useRef<HTMLInputElement>(null);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [importMenuOpen, setImportMenuOpen] = useState(false);
+  const [fileInfoOpen, setFileInfoOpen] = useState(false);
+
+  const selectedArtifact = selectedIds.length === 1
+    ? artifacts.find((a) => a.id === selectedIds[0])
+    : null;
 
   // Derive parent folder from tree focus or active tab selection
   const getParentPath = useCallback(() => {
@@ -446,6 +452,47 @@ export default function ArtifactsPane() {
           </div>
         )}
       </div>
+
+      {/* ── Selected file info ── */}
+      {selectedArtifact && (
+        <div className="shrink-0 border-t border-border">
+          <button
+            onClick={() => setFileInfoOpen((v) => !v)}
+            className="w-full flex items-center justify-between px-3 py-1.5 text-[10px] font-mono uppercase tracking-wider text-text-muted hover:text-text transition-colors cursor-pointer"
+          >
+            <span className="truncate">{selectedArtifact.meta?.path || selectedArtifact.filename}</span>
+            <svg
+              width="10"
+              height="10"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className={`shrink-0 ml-1 transition-transform ${fileInfoOpen ? 'rotate-180' : ''}`}
+            >
+              <polyline points="6 9 12 15 18 9" />
+            </svg>
+          </button>
+          {fileInfoOpen && (
+            <div className="px-3 pb-2 flex flex-col gap-1.5">
+              <FieldRow label="Size">
+                <span>{formatSize(selectedArtifact.size)}</span>
+              </FieldRow>
+              <FieldRow label="Type">
+                <span>{selectedArtifact.mimeType}</span>
+              </FieldRow>
+              <FieldRow label="Created">
+                <span>{formatDate(selectedArtifact.created)}</span>
+              </FieldRow>
+              <FieldRow label="Updated">
+                <span>{formatDate(selectedArtifact.updated)}</span>
+              </FieldRow>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Footer: upload progress or stats */}
       {uploadProgress ? (

@@ -6,10 +6,14 @@ import MarkdownRenderer from '@/components/chat/MarkdownRenderer';
 import { getFileIcon } from '@/components/artifacts/fileIcons';
 import { Spinner } from '@/components/ui';
 
+const PUBLISHED_CONTENT_URL = import.meta.env.VITE_PUBLISHED_CONTENT_URL || '';
+
 interface ArtifactRendererProps {
   attachments: Attachment[];
   username: string;
   slug: string;
+  authorId: string;
+  subPath?: string;
 }
 
 type RenderMode = 'html' | 'markdown' | 'image' | 'listing';
@@ -73,6 +77,58 @@ function resolveMain(attachments: Attachment[]): MainFile | null {
  * External links open in new tabs via sandbox="allow-popups".
  */
 function HtmlRenderer({
+  attachment,
+  attachments,
+  authorId,
+  username,
+  slug,
+  subPath,
+}: {
+  attachment: Attachment;
+  attachments: Attachment[];
+  authorId: string;
+  username: string;
+  slug: string;
+  subPath?: string;
+}) {
+  // When S3 publishing is configured, use direct URL (origin-isolated, CDN-cached)
+  // S3 paths use authorId (immutable) rather than username (can change)
+  // Listen for navigation messages from the iframe and update the parent URL
+  useEffect(() => {
+    const basePath = `/${username}/${slug}`;
+    const handler = (e: MessageEvent) => {
+      if (e.data?.type === 'crux:navigate' && typeof e.data.path === 'string') {
+        const newPath = e.data.path === '/' ? basePath : `${basePath}${e.data.path}`;
+        if (window.location.pathname !== newPath) {
+          window.history.replaceState(null, '', newPath);
+        }
+      }
+    };
+    window.addEventListener('message', handler);
+    return () => window.removeEventListener('message', handler);
+  }, [username, slug]);
+
+  if (PUBLISHED_CONTENT_URL) {
+    // If a sub-path is provided (deep link), use it directly — CloudFront Function
+    // will rewrite non-file paths to index.html for SPA support
+    const entryPath = subPath || attachment.meta?.path || attachment.filename || 'index.html';
+    const src = `${PUBLISHED_CONTENT_URL}/${authorId}/${slug}/${entryPath}`;
+
+    return (
+      <iframe
+        src={src}
+        sandbox="allow-scripts allow-same-origin allow-popups"
+        className="w-full h-full border-0 bg-contrast"
+        title="Published creation"
+      />
+    );
+  }
+
+  // Fallback: service worker approach (local dev without S3)
+  return <ServiceWorkerHtmlRenderer attachment={attachment} attachments={attachments} username={username} slug={slug} />;
+}
+
+function ServiceWorkerHtmlRenderer({
   attachment,
   attachments,
   username,
@@ -232,7 +288,7 @@ function formatSize(bytes?: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-export default function ArtifactRenderer({ attachments, username, slug }: ArtifactRendererProps) {
+export default function ArtifactRenderer({ attachments, username, slug, authorId, subPath }: ArtifactRendererProps) {
   const main = useMemo(() => resolveMain(attachments), [attachments]);
 
   if (!main) {
@@ -245,8 +301,10 @@ export default function ArtifactRenderer({ attachments, username, slug }: Artifa
         <HtmlRenderer
           attachment={main.attachment}
           attachments={attachments}
+          authorId={authorId}
           username={username}
           slug={slug}
+          subPath={subPath}
         />
       );
     case 'markdown':

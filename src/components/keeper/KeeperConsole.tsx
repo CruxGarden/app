@@ -371,9 +371,9 @@ export default function KeeperConsole({ open, onClose }: KeeperConsoleProps) {
         {/* Sidebar portrait */}
         <div className="hidden sm:flex w-44 shrink-0 flex-col border-r border-border">
           <div className="flex-1 min-h-0 overflow-hidden rounded-tl-[var(--radius)]">
-            <KeeperAvatar className="w-full h-full" />
+            <KeeperAvatar className="w-full h-full !rounded-none !ring-0" />
           </div>
-          <div className="px-3 py-2.5 text-center">
+          <div className="px-3 pt-3.5 pb-3 text-center border-t border-border">
             <p className="text-sm font-display font-medium text-text">The Keeper</p>
             <div className="flex items-center justify-center gap-1.5 mt-1">
               <svg width="12" height="12" viewBox="0 0 16 16" fill="var(--brand-ai)">
@@ -391,7 +391,7 @@ export default function KeeperConsole({ open, onClose }: KeeperConsoleProps) {
             {/* Show small avatar on mobile where sidebar is hidden */}
             <KeeperAvatar className="w-7 h-7 sm:hidden" />
             <span className="text-sm font-display font-medium text-text sm:hidden">The Keeper</span>
-            <span className="text-[10px] font-mono text-text-muted">console</span>
+            <span className="text-[10px] font-mono text-text-muted">Console</span>
             <div className="flex-1" />
             {displayMessages.length > 0 && !streaming && (
               <>
