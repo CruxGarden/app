@@ -102,18 +102,25 @@ export const useCruxStore = create<CruxState>((set, get) => ({
     // NOTE: crux.meta.settings.palette stores per-crux palette data for future use,
     // but themes are currently global — don't override the user's active theme on load.
 
-    // Detect if anything was modified after the last publish
+    // Detect if anything was modified after the last publish.
+    // The publish operation itself updates the crux row (setting `updated`), so
+    // `crux.updated` is always slightly after `publishedAt` (which is computed before
+    // the DB write). A 5-second tolerance ignores that publish-induced update while
+    // still detecting any real edits made after publishing.
     let hasChanges = false;
     const publishedAt = crux.meta?.publishedAt as string | undefined;
     if (publishedAt) {
       const publishedMs = new Date(publishedAt).getTime();
+      const tolerance = 5000; // 5 seconds
       // Check if crux metadata (title, slug, etc.) changed after publish
-      if (new Date(crux.updated).getTime() > publishedMs) {
+      if (new Date(crux.updated).getTime() > publishedMs + tolerance) {
         hasChanges = true;
       }
       // Check if any attachment was modified after publish
       if (!hasChanges && attachments.length > 0) {
-        hasChanges = attachments.some((a) => new Date(a.updated).getTime() > publishedMs);
+        hasChanges = attachments.some(
+          (a) => new Date(a.updated).getTime() > publishedMs + tolerance,
+        );
       }
     }
 

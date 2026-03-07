@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html>
+<head><title>Crux Preview</title></head>
+<body>
+<script>
+(async () => {
+  // Register the preview service worker on this origin
+  const reg = await navigator.serviceWorker.register('/preview-sw.js');
+  await navigator.serviceWorker.ready;
+
+  // Tell the parent app we're ready to receive files
+  window.parent.postMessage({ type: 'crux:preview-ready' }, '*');
+
+  window.addEventListener('message', async (e) => {
+    const { type } = e.data || {};
+
+    // Cache all files for a crux (clears previous cache first)
+    if (type === 'crux:cache-files') {
+      const { cacheKey, files } = e.data;
+      const cacheName = 'crux-preview-' + cacheKey;
+      await caches.delete(cacheName);
+      const cache = await caches.open(cacheName);
+      await Promise.all(files.map(f => {
+        const url = '/__preview/' + cacheKey + '/' + f.path;
+        const resp = new Response(f.buffer, {
+          headers: { 'Content-Type': f.mimeType }
+        });
+        return cache.put(url, resp);
+      }));
+      window.parent.postMessage({ type: 'crux:cache-complete', cacheKey }, '*');
+    }
+
+    // Update a single file in the cache (hot update)
+    if (type === 'crux:cache-file') {
+      const { cacheKey, path, buffer, mimeType } = e.data;
+      const cache = await caches.open('crux-preview-' + cacheKey);
+      const url = '/__preview/' + cacheKey + '/' + path;
+      const resp = new Response(buffer, {
+        headers: { 'Content-Type': mimeType }
+      });
+      await cache.put(url, resp);
+      window.parent.postMessage({ type: 'crux:cache-file-complete', cacheKey, path }, '*');
+    }
+
+    // Clear the cache for a crux
+    if (type === 'crux:cache-clear') {
+      const { cacheKey } = e.data;
+      await caches.delete('crux-preview-' + cacheKey);
+      window.parent.postMessage({ type: 'crux:cache-clear-complete', cacheKey }, '*');
+    }
+  });
+})();
+</script>
+</body>
+</html>
