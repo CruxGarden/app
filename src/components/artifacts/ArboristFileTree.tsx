@@ -134,8 +134,7 @@ const NodeRenderer = memo(function NodeRenderer({
           : 'text-text-muted hover:text-text hover:bg-accent-muted',
         node.willReceiveDrop && 'bg-accent/10 ring-1 ring-accent/30',
       )}
-      onClick={() => node.handleClick}
-      onDoubleClick={() => {
+      onClick={() => {
         if (isFolder) node.toggle();
       }}
       onContextMenu={handleContextMenu}

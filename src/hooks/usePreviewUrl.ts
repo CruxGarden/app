@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useMemo } from 'react';
 import { useCruxStore } from '@/stores/cruxStore';
 import { cruxes } from '@/api';
 import { normalizePath } from '@/lib/rewriteUrls';
@@ -8,6 +8,7 @@ import {
   clearPreviewCache,
   getPreviewUrl,
   waitForServiceWorker,
+  injectPreviewScripts,
   type PreviewFile,
 } from '@/lib/previewCache';
 
@@ -30,6 +31,19 @@ export function usePreviewUrl(
   enabled: boolean,
 ): string | null {
   const artifacts = useCruxStore((s) => s.artifacts);
+  const cruxKind = useCruxStore((s) => s.crux?.kind);
+
+  // Determine if this crux is a webapp (explicit kind or auto-detect from index.html)
+  const isWebApp = useMemo(() => {
+    if (cruxKind === 'webapp') return true;
+    if (cruxKind) return false; // explicit non-webapp kind
+    // Auto-detect: has an index.html
+    return artifacts.some((a) => {
+      const p = normalizePath(a.meta?.path || a.filename || '');
+      return p === 'index.html';
+    });
+  }, [cruxKind, artifacts]);
+
   const [url, setUrl] = useState<string | null>(null);
   const [swReady, setSwReady] = useState(false);
   const [artifactsCached, setArtifactsCached] = useState(false);
@@ -99,9 +113,10 @@ export function usePreviewUrl(
 
     let cancelled = false;
     const norm = normalizePath(filePath);
+    const injectedHtml = injectPreviewScripts(html, cruxId, isWebApp);
     const htmlFile: PreviewFile = {
       path: norm,
-      blob: new Blob([html], { type: 'text/html' }),
+      blob: new Blob([injectedHtml], { type: 'text/html' }),
       mimeType: 'text/html',
     };
 
@@ -123,7 +138,7 @@ export function usePreviewUrl(
     return () => {
       cancelled = true;
     };
-  }, [html, cruxId, filePath, enabled, swReady, artifactsCached]);
+  }, [html, cruxId, filePath, enabled, swReady, artifactsCached, isWebApp]);
 
   // Cleanup cache on unmount or cruxId change
   useEffect(() => {

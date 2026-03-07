@@ -41,7 +41,12 @@ window.addEventListener('error', (e) => {
   }
 });
 
-// Register preview service worker (serves cached artifact files for HTML preview)
-if ('serviceWorker' in navigator) {
+// Preview system initialization:
+// - Cross-origin (VITE_PREVIEW_ORIGIN set): load hidden receiver iframe on preview.crux.garden
+//   The receiver registers its own SW. No same-origin SW needed.
+// - Same-origin (no VITE_PREVIEW_ORIGIN): register SW on this origin (local dev fallback)
+if (import.meta.env.VITE_PREVIEW_ORIGIN) {
+  import('@/lib/previewCache').then(({ initPreviewReceiver }) => initPreviewReceiver());
+} else if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('/preview-sw.js').catch(() => {});
 }
