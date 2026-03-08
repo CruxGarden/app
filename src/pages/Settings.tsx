@@ -11,9 +11,13 @@ function buildAvatarUrl(
   author: { id: string; meta?: Record<string, unknown> } | null,
   bust: number,
 ): string | null {
-  if (!author?.meta?.avatarUrl) return null;
+  const url = author?.meta?.avatarUrl;
+  if (!url || typeof url !== 'string') return null;
+  // Data URLs (local mode) are already complete
+  if (url.startsWith('data:')) return url;
+  // API URLs are relative — prepend the API base
   const base = import.meta.env.VITE_API_URL || 'http://localhost:3000';
-  return `${base}${author.meta.avatarUrl}?v=${bust}`;
+  return `${base}${url}?v=${bust}`;
 }
 
 export default function Settings() {

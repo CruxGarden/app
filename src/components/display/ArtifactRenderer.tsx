@@ -8,12 +8,16 @@ import { Spinner } from '@/components/ui';
 
 const PUBLISHED_CONTENT_URL = import.meta.env.VITE_PUBLISHED_CONTENT_URL || '';
 
+/** Fetch a blob by attachment ID — defaults to publicApi if not provided */
+type DownloadBlobFn = (attachmentId: string) => Promise<Blob>;
+
 interface ArtifactRendererProps {
   attachments: Attachment[];
   username: string;
   slug: string;
   authorId: string;
   subPath?: string;
+  downloadBlob?: DownloadBlobFn;
 }
 
 type RenderMode = 'html' | 'markdown' | 'image' | 'listing';
@@ -83,6 +87,7 @@ function HtmlRenderer({
   username,
   slug,
   subPath,
+  downloadBlob,
 }: {
   attachment: Attachment;
   attachments: Attachment[];
@@ -90,6 +95,7 @@ function HtmlRenderer({
   username: string;
   slug: string;
   subPath?: string;
+  downloadBlob: DownloadBlobFn;
 }) {
   // When S3 publishing is configured, use direct URL (origin-isolated, CDN-cached)
   // S3 paths use authorId (immutable) rather than username (can change)
@@ -125,7 +131,7 @@ function HtmlRenderer({
   }
 
   // Fallback: service worker approach (local dev without S3)
-  return <ServiceWorkerHtmlRenderer attachment={attachment} attachments={attachments} username={username} slug={slug} />;
+  return <ServiceWorkerHtmlRenderer attachment={attachment} attachments={attachments} username={username} slug={slug} downloadBlob={downloadBlob} />;
 }
 
 function ServiceWorkerHtmlRenderer({
@@ -133,13 +139,15 @@ function ServiceWorkerHtmlRenderer({
   attachments,
   username,
   slug,
+  downloadBlob,
 }: {
   attachment: Attachment;
   attachments: Attachment[];
   username: string;
   slug: string;
+  downloadBlob: DownloadBlobFn;
 }) {
-  const previewUrl = usePublicPreviewUrl(attachments, attachment.id, username, slug);
+  const previewUrl = usePublicPreviewUrl(attachments, attachment.id, username, slug, downloadBlob);
 
   if (!previewUrl) {
     return (
@@ -165,19 +173,16 @@ function ServiceWorkerHtmlRenderer({
 
 function MarkdownRendererView({
   attachment,
-  username,
-  slug,
+  downloadBlob,
 }: {
   attachment: Attachment;
-  username: string;
-  slug: string;
+  downloadBlob: DownloadBlobFn;
 }) {
   const [content, setContent] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
-    publicApi
-      .downloadAttachment(username, slug, attachment.id)
+    downloadBlob(attachment.id)
       .then((blob) => blob.text())
       .then((text) => {
         if (!cancelled) setContent(text);
@@ -188,7 +193,7 @@ function MarkdownRendererView({
     return () => {
       cancelled = true;
     };
-  }, [attachment.id, username, slug]);
+  }, [attachment.id, downloadBlob]);
 
   if (!content) {
     return (
@@ -212,20 +217,42 @@ function MarkdownRendererView({
 
 function ImageRenderer({
   attachment,
-  username,
-  slug,
+  downloadBlob,
 }: {
   attachment: Attachment;
-  username: string;
-  slug: string;
+  downloadBlob: DownloadBlobFn;
 }) {
-  const url = publicApi.getDownloadUrl(username, slug, attachment.id);
+  const [objectUrl, setObjectUrl] = useState<string | null>(null);
   const path = attachment.meta?.path || attachment.filename || attachment.id;
+
+  useEffect(() => {
+    let url: string | null = null;
+    downloadBlob(attachment.id)
+      .then((blob) => {
+        url = URL.createObjectURL(blob);
+        setObjectUrl(url);
+      })
+      .catch(() => {});
+    return () => {
+      if (url) URL.revokeObjectURL(url);
+    };
+  }, [attachment.id, downloadBlob]);
+
+  if (!objectUrl) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <div className="flex items-center gap-3 px-5 py-3 rounded-lg bg-surface-solid/80 backdrop-blur-sm border border-border text-text-muted text-sm">
+          <Spinner size={16} />
+          Loading...
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex items-center justify-center h-full p-8">
       <img
-        src={url}
+        src={objectUrl}
         alt={path}
         className="max-w-full max-h-full object-contain rounded-[var(--radius)]"
       />
@@ -235,18 +262,28 @@ function ImageRenderer({
 
 function FileListing({
   attachments,
-  username,
-  slug,
+  downloadBlob,
 }: {
   attachments: Attachment[];
   username: string;
   slug: string;
+  downloadBlob: DownloadBlobFn;
 }) {
   const sorted = [...attachments].sort((a, b) => {
     const pa = a.meta?.path || a.filename || a.id;
     const pb = b.meta?.path || b.filename || b.id;
     return pa.localeCompare(pb);
   });
+
+  const handleDownload = async (a: Attachment) => {
+    const blob = await downloadBlob(a.id);
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = a.filename || a.meta?.path || a.id;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
 
   return (
     <div className="flex-1 overflow-auto p-6 md:p-12">
@@ -256,14 +293,11 @@ function FileListing({
           {sorted.map((a) => {
             const path = a.meta?.path || a.filename || a.id;
             const name = path.split('/').pop() || path;
-            const url = publicApi.getDownloadUrl(username, slug, a.id);
             return (
-              <a
+              <button
                 key={a.id}
-                href={url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-2 px-3 py-2 rounded-[var(--radius-sm)] hover:bg-surface/50 transition-colors group"
+                onClick={() => handleDownload(a)}
+                className="flex items-center gap-2 px-3 py-2 rounded-[var(--radius-sm)] hover:bg-surface/50 transition-colors group w-full text-left"
               >
                 <span className="text-text-muted shrink-0">{getFileIcon(name)}</span>
                 <span className="text-sm font-mono text-text group-hover:text-accent truncate">
@@ -272,7 +306,7 @@ function FileListing({
                 <span className="text-xs text-text-muted ml-auto shrink-0">
                   {formatSize(a.size)}
                 </span>
-              </a>
+              </button>
             );
           })}
         </div>
@@ -288,11 +322,14 @@ function formatSize(bytes?: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-export default function ArtifactRenderer({ attachments, username, slug, authorId, subPath }: ArtifactRendererProps) {
+export default function ArtifactRenderer({ attachments, username, slug, authorId, subPath, downloadBlob }: ArtifactRendererProps) {
   const main = useMemo(() => resolveMain(attachments), [attachments]);
 
+  // Default download function uses publicApi
+  const dl = downloadBlob || ((id: string) => publicApi.downloadAttachment(username, slug, id));
+
   if (!main) {
-    return <FileListing attachments={attachments} username={username} slug={slug} />;
+    return <FileListing attachments={attachments} username={username} slug={slug} downloadBlob={dl} />;
   }
 
   switch (main.mode) {
@@ -305,13 +342,14 @@ export default function ArtifactRenderer({ attachments, username, slug, authorId
           username={username}
           slug={slug}
           subPath={subPath}
+          downloadBlob={dl}
         />
       );
     case 'markdown':
-      return <MarkdownRendererView attachment={main.attachment} username={username} slug={slug} />;
+      return <MarkdownRendererView attachment={main.attachment} downloadBlob={dl} />;
     case 'image':
-      return <ImageRenderer attachment={main.attachment} username={username} slug={slug} />;
+      return <ImageRenderer attachment={main.attachment} downloadBlob={dl} />;
     default:
-      return <FileListing attachments={attachments} username={username} slug={slug} />;
+      return <FileListing attachments={attachments} username={username} slug={slug} downloadBlob={dl} />;
   }
 }

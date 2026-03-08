@@ -1,12 +1,13 @@
-import 'fake-indexeddb/auto';
-import { afterEach } from 'vitest';
-import Dexie from 'dexie';
+import { afterEach, beforeEach } from 'vitest';
+import { createTestSqliteClient } from './sqlite-client';
+import { setSqliteClient, resetSqliteClient } from '@/services/sqlite/client';
 
-// Reset IndexedDB between tests to prevent state leaking
-afterEach(async () => {
-  // Delete all Dexie databases
-  const dbs = await Dexie.getDatabaseNames();
-  for (const name of dbs) {
-    await Dexie.delete(name);
-  }
+// Provide a fresh in-memory SQLite database for each test
+beforeEach(async () => {
+  const client = await createTestSqliteClient();
+  setSqliteClient(client);
+});
+
+afterEach(() => {
+  resetSqliteClient();
 });

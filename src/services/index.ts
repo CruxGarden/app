@@ -3,7 +3,7 @@ import type { IAttachmentService } from './attachment.service';
 import type { IDimensionService } from './dimension.service';
 import type { IAuthorService } from './author.service';
 import type { IPublishService } from './publish.service';
-import { db } from './dexie/schema';
+import { getSqliteClient } from './sqlite/client';
 
 export interface Services {
   crux: ICruxService;
@@ -13,17 +13,19 @@ export interface Services {
   publish: IPublishService;
 }
 
-export type Backend = 'dexie' | 'api';
+export type Backend = 'local' | 'api';
 
 let services: Services | null = null;
 let currentBackend: Backend | null = null;
 
 export async function getBackendSetting(): Promise<Backend> {
   try {
-    const row = await db.settings.get('backend');
-    return (row?.value as Backend) || 'dexie';
+    const row = await getSqliteClient().get<{ value: string }>(
+      "SELECT value FROM settings WHERE key = 'backend'",
+    );
+    return (row?.value as Backend) || 'local';
   } catch {
-    return 'dexie';
+    return 'local';
   }
 }
 
@@ -45,17 +47,17 @@ export async function initServices(backend?: Backend): Promise<Services> {
       publish: new ApiPublishService(),
     };
   } else {
-    const { DexieCruxService } = await import('./dexie/crux.service');
-    const { DexieAttachmentService } = await import('./dexie/attachment.service');
-    const { DexieDimensionService } = await import('./dexie/dimension.service');
-    const { DexieAuthorService } = await import('./dexie/author.service');
+    const { SqliteCruxService } = await import('./sqlite/crux.service');
+    const { SqliteAttachmentService } = await import('./sqlite/attachment.service');
+    const { SqliteDimensionService } = await import('./sqlite/dimension.service');
+    const { SqliteAuthorService } = await import('./sqlite/author.service');
     const { ApiPublishService } = await import('./api/publish.service');
 
     services = {
-      crux: new DexieCruxService(),
-      attachment: new DexieAttachmentService(),
-      dimension: new DexieDimensionService(),
-      author: new DexieAuthorService(),
+      crux: new SqliteCruxService(),
+      attachment: new SqliteAttachmentService(),
+      dimension: new SqliteDimensionService(),
+      author: new SqliteAuthorService(),
       publish: new ApiPublishService(), // always talks to API
     };
   }
@@ -80,15 +82,22 @@ export function getBackend(): Backend {
   return currentBackend;
 }
 
+export function isServicesReady(): boolean {
+  return services !== null;
+}
+
 /**
- * Ensure a local author exists in Dexie (for local-first mode).
+ * Ensure a local author exists (for local-first mode).
  * Returns the existing or newly created author.
  */
 export async function ensureLocalAuthor(): Promise<import('./types').Author> {
-  const existing = await db.settings.get('localAuthorId');
+  const db = getSqliteClient();
+  const existing = await db.get<{ value: string }>(
+    "SELECT value FROM settings WHERE key = 'localAuthorId'",
+  );
   if (existing?.value) {
     try {
-      return await services!.author.findById(existing.value as string);
+      return await services!.author.findById(existing.value);
     } catch {
       // Author was deleted — fall through to create a new one
     }
@@ -99,7 +108,10 @@ export async function ensureLocalAuthor(): Promise<import('./types').Author> {
     username: `wanderer-${shortId}`,
     displayName: 'Wanderer',
   });
-  await db.settings.put({ key: 'localAuthorId', value: author.id });
+  await db.run(
+    "INSERT OR REPLACE INTO settings (key, value) VALUES ('localAuthorId', ?)",
+    [author.id],
+  );
   return author;
 }
 

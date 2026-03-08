@@ -1,6 +1,5 @@
 import { useState, useRef, useCallback } from 'react';
-import { exportDB, importInto } from 'dexie-export-import';
-import { db } from '@/services/dexie/schema';
+import { getSqliteClient } from '@/services/sqlite/client';
 import { ensureLocalAuthor } from '@/services';
 import { useAuthStore } from '@/stores/authStore';
 import { Panel, Spinner } from '@/components/ui';
@@ -26,7 +25,8 @@ export default function DataSettings() {
     setError('');
     setStatus('Exporting...');
     try {
-      const blob = await exportDB(db);
+      const data = await getSqliteClient().export();
+      const blob = new Blob([data], { type: 'application/x-sqlite3' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
@@ -37,7 +37,7 @@ export default function DataSettings() {
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
-      setStatus(`Exported ${formatBytes(blob.size)}`);
+      setStatus(`Exported ${formatBytes(data.byteLength)}`);
     } catch (err) {
       console.error('Garden export failed:', err);
       setError('Export failed');
@@ -54,9 +54,8 @@ export default function DataSettings() {
     setError('');
     setStatus('Importing...');
     try {
-      await db.delete();
-      await db.open();
-      await importInto(db, file, { overwriteValues: true });
+      const data = await file.arrayBuffer();
+      await getSqliteClient().import(data);
 
       // Re-ensure local author exists after import
       const author = await ensureLocalAuthor();
@@ -109,7 +108,7 @@ export default function DataSettings() {
         <input
           ref={importRef}
           type="file"
-          accept=".garden,.json"
+          accept=".garden"
           className="hidden"
           onChange={handleImport}
         />

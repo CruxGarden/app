@@ -3,6 +3,7 @@ import { useParams } from 'react-router-dom';
 import { publicApi } from '@/api';
 import type { Author, Crux } from '@/api/types';
 import { API_BASE_URL } from '@/api/client';
+import { isServicesReady, initServices, getServices } from '@/services';
 import { PublicTopBar } from '@/components/display';
 import { GardenGrid, GardenSearch } from '@/components/garden';
 import { Spinner, Button } from '@/components/ui';
@@ -12,6 +13,25 @@ import MoodBar from '@/components/layout/MoodBar';
 
 type LoadState = 'loading' | 'ready' | 'not-found' | 'error';
 type SortField = 'created' | 'updated';
+
+/** Load author + cruxes from local SQLite if services are available, otherwise from API */
+async function loadLocal(username: string): Promise<{ author: Author; cruxes: Crux[] }> {
+  if (!isServicesReady()) await initServices();
+  const { author: authorService, crux: cruxService } = getServices();
+  const author = await authorService.findByUsername(username);
+  const cruxes = await cruxService.listByAuthor(author.id);
+  // Public garden shows only public cruxes
+  const publicCruxes = cruxes.filter((c) => c.visibility === 'public');
+  return { author, cruxes: publicCruxes };
+}
+
+async function loadRemote(username: string): Promise<{ author: Author; cruxes: Crux[] }> {
+  const [author, cruxData] = await Promise.all([
+    publicApi.getAuthor(username),
+    publicApi.getAuthorCruxes(username, { page: 1, perPage: 1000 }),
+  ]);
+  return { author, cruxes: cruxData.cruxes };
+}
 
 export default function PublicAuthor() {
   const { username } = useParams<{ username: string }>();
@@ -31,19 +51,18 @@ export default function PublicAuthor() {
     let cancelled = false;
     setState('loading');
 
-    Promise.all([
-      publicApi.getAuthor(username),
-      publicApi.getAuthorCruxes(username, { page: 1, perPage: 1000 }),
-    ])
-      .then(([authorData, cruxData]) => {
+    // Try local services first, fall back to API
+    loadLocal(username)
+      .catch(() => loadRemote(username))
+      .then((data) => {
         if (cancelled) return;
-        setAuthor(authorData);
-        setCruxes(cruxData.cruxes);
+        setAuthor(data.author);
+        setCruxes(data.cruxes);
         setState('ready');
       })
       .catch((err) => {
         if (cancelled) return;
-        if (err.message?.includes('404')) {
+        if (err.message?.includes('404') || err.message?.includes('not found')) {
           setState('not-found');
         } else {
           setState('error');
@@ -82,9 +101,12 @@ export default function PublicAuthor() {
     );
   }, [cruxes, search, sortBy]);
 
-  const avatarUrl = author?.meta?.avatarUrl
-    ? `${API_BASE_URL}${author.meta.avatarUrl}?v=${author.updated}`
-    : null;
+  const avatarUrl = (() => {
+    const url = author?.meta?.avatarUrl;
+    if (!url || typeof url !== 'string') return null;
+    if (url.startsWith('data:')) return url;
+    return `${API_BASE_URL}${url}?v=${author.updated}`;
+  })();
   const initial = author?.username?.charAt(0)?.toUpperCase() ?? '?';
 
   if (state === 'loading') {

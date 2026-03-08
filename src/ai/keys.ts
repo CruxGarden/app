@@ -1,42 +1,50 @@
-import { db } from '@/services/dexie/schema';
+import { getSqliteClient } from '@/services/sqlite/client';
 
 /**
- * Get an API key from Dexie settings.
- * Keys are stored in IndexedDB (not localStorage) because IndexedDB is
- * origin-scoped — the preview iframe on a different origin can't access them.
+ * Get an API key from SQLite settings.
+ * Keys are stored in SQLite (via OPFS) — the preview iframe on a different
+ * origin can't access them.
  */
 export async function getApiKey(providerId: string): Promise<string | null> {
-  const row = await db.settings.get(`apiKey:${providerId}`);
-  return (row?.value as string) || null;
+  const row = await getSqliteClient().get<{ value: string }>(
+    'SELECT value FROM settings WHERE key = ?',
+    [`apiKey:${providerId}`],
+  );
+  return row?.value || null;
 }
 
-/** Save an API key to Dexie settings */
-export async function setApiKey(
-  providerId: string,
-  key: string,
-): Promise<void> {
-  await db.settings.put({ key: `apiKey:${providerId}`, value: key });
+/** Save an API key to SQLite settings */
+export async function setApiKey(providerId: string, key: string): Promise<void> {
+  await getSqliteClient().run(
+    'INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)',
+    [`apiKey:${providerId}`, key],
+  );
 }
 
-/** Remove an API key from Dexie settings */
+/** Remove an API key from SQLite settings */
 export async function removeApiKey(providerId: string): Promise<void> {
-  await db.settings.delete(`apiKey:${providerId}`);
+  await getSqliteClient().run('DELETE FROM settings WHERE key = ?', [`apiKey:${providerId}`]);
 }
 
 /** Get the default model from settings, or return the fallback */
 export async function getDefaultModel(): Promise<string> {
-  const row = await db.settings.get('defaultModel');
-  return (row?.value as string) || 'claude-sonnet-4-20250514';
+  const row = await getSqliteClient().get<{ value: string }>(
+    "SELECT value FROM settings WHERE key = 'defaultModel'",
+  );
+  return row?.value || 'claude-sonnet-4-20250514';
 }
 
 /** Save the default model to settings */
 export async function setDefaultModel(model: string): Promise<void> {
-  await db.settings.put({ key: 'defaultModel', value: model });
+  await getSqliteClient().run(
+    "INSERT OR REPLACE INTO settings (key, value) VALUES ('defaultModel', ?)",
+    [model],
+  );
 }
 
 /**
- * Migrate API key from localStorage to Dexie settings.
- * Called once on first Dexie init. Removes from localStorage after migration.
+ * Migrate API key from localStorage to SQLite settings.
+ * Called once on first init. Removes from localStorage after migration.
  */
 export async function migrateApiKeyFromLocalStorage(): Promise<void> {
   const legacyKey = localStorage.getItem('cruxgarden:anthropicApiKey');
