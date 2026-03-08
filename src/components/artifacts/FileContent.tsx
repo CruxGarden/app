@@ -11,7 +11,7 @@ import python from 'highlight.js/lib/languages/python';
 import bash from 'highlight.js/lib/languages/bash';
 import { cn } from '@/lib/cn';
 import type { Attachment } from '@/api/types';
-import { cruxes } from '@/api';
+import { getServices } from '@/services';
 import MarkdownRenderer from '@/components/chat/MarkdownRenderer';
 
 hljs.registerLanguage('typescript', typescript);
@@ -173,8 +173,9 @@ export default function FileContent({
     let cancelled = false;
     setLoading(true);
 
-    cruxes
-      .downloadAttachment(cruxId, artifact.id)
+    const { attachment } = getServices();
+    attachment
+      .downloadBlob(artifact.id)
       .then((blob) => {
         if (cancelled) return;
 

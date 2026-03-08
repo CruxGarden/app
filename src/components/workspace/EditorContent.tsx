@@ -9,7 +9,7 @@ import { useCruxStore } from '@/stores/cruxStore';
 import { useFileContent, isImageMime } from '@/hooks/useFileContent';
 import { getMonacoLanguage, getExtension, isPreviewable } from '@/lib/monacoLanguages';
 import { registerCruxGardenThemes } from '@/lib/monacoTheme';
-import { cruxes } from '@/api';
+import { getServices } from '@/services';
 import MarkdownRenderer from '@/components/chat/MarkdownRenderer';
 import { usePreviewUrl } from '@/hooks/usePreviewUrl';
 import type { Attachment } from '@/api/types';
@@ -83,16 +83,20 @@ export default function EditorContent({ tab, artifact, cruxId, saveRef }: Editor
     if (current === null || !dirtyRef.current) return;
     try {
       const blob = new Blob([current], { type: mime });
-      const file = new File([blob], artifact.filename || 'file', { type: mime });
-      await cruxes.updateAttachment(artifact.id, file);
+      const { attachment } = getServices();
+      await attachment.upload({
+        resourceId: cruxId,
+        blob,
+        mimeType: mime,
+        meta: { path: artifact.meta?.path || artifact.filename || 'file' },
+      });
       dirtyRef.current = false;
       setTabDirty(tab.id, false);
       useCruxStore.setState({ hasUnpublishedChanges: true });
     } catch (err: unknown) {
-      const axiosErr = err as { response?: { data?: { message?: string } } };
-      console.error('Save failed:', axiosErr.response?.data?.message ?? err);
+      console.error('Save failed:', err);
     }
-  }, [artifact.id, artifact.filename, mime, tab.id, setTabDirty]);
+  }, [artifact.id, artifact.filename, mime, tab.id, cruxId, setTabDirty]);
 
   // Keep save ref stable for Monaco keybinding (avoids stale closure)
   useEffect(() => {
@@ -325,7 +329,7 @@ export default function EditorContent({ tab, artifact, cruxId, saveRef }: Editor
           >
             Download
           </a>
-          <ReplaceFileButton artifactId={artifact.id} onReplaced={refetch} />
+          <ReplaceFileButton artifactId={artifact.id} cruxId={cruxId} onReplaced={refetch} />
         </div>
       </div>
     );
@@ -383,9 +387,11 @@ function ImageViewer({
 
 function ReplaceFileButton({
   artifactId,
+  cruxId,
   onReplaced,
 }: {
   artifactId: string;
+  cruxId: string;
   onReplaced: () => void;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
@@ -398,7 +404,12 @@ function ReplaceFileButton({
       if (!file) return;
       setReplacing(true);
       try {
-        const updated = await cruxes.updateAttachment(artifactId, file);
+        const { attachment } = getServices();
+        const updated = await attachment.upload({
+          resourceId: cruxId,
+          blob: file,
+          mimeType: file.type,
+        });
         updateArtifact(artifactId, updated);
         useCruxStore.setState({ hasUnpublishedChanges: true });
         onReplaced();
@@ -409,7 +420,7 @@ function ReplaceFileButton({
         e.target.value = '';
       }
     },
-    [artifactId, updateArtifact, onReplaced],
+    [artifactId, cruxId, updateArtifact, onReplaced],
   );
 
   return (

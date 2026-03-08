@@ -6,11 +6,11 @@ import MoodBar from '@/components/layout/MoodBar';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 import { useGarden } from '@/hooks/useGarden';
-import { cruxes } from '@/api';
+import { getServices } from '@/services';
 import { APP_NAME } from '@/lib/constants';
 import { GardenGrid, GardenSearch } from '@/components/garden';
 import { ApiKeySetup, IconButton, Spinner, Modal, Button } from '@/components/ui';
-import { API_KEY_STORAGE } from '@/components/ui/ApiKeySetup';
+import { getApiKey } from '@/ai/keys';
 import { cn } from '@/lib/cn';
 
 const DISMISS_KEY = 'cruxgarden:apiKeyBannerDismissed';
@@ -132,11 +132,15 @@ export default function Garden() {
   const deletingCrux = deletingId ? cruxList.find((c) => c.id === deletingId) : null;
 
   // API key banner
-  const [showApiKeyBanner, setShowApiKeyBanner] = useState(() => {
-    const hasKey = !!localStorage.getItem(API_KEY_STORAGE);
+  const [showApiKeyBanner, setShowApiKeyBanner] = useState(false);
+
+  useEffect(() => {
     const dismissed = !!localStorage.getItem(DISMISS_KEY);
-    return !hasKey && !dismissed;
-  });
+    if (dismissed) return;
+    getApiKey('anthropic').then((key) => {
+      if (!key) setShowApiKeyBanner(true);
+    });
+  }, []);
 
   const handleDismissBanner = () => {
     localStorage.setItem(DISMISS_KEY, '1');
@@ -180,19 +184,51 @@ export default function Garden() {
           '-' +
           Date.now().toString(36);
 
-        // Read messages + gates from archive
+        // Detect format version
+        const manifestFile = zip.file('manifest.json');
+        const manifest = manifestFile ? JSON.parse(await manifestFile.async('text')) : { version: '1.0' };
+        const isV2 = manifest.version === '2.0';
+
+        // Read messages
         const messagesFile = zip.file('messages.json');
         const messages = messagesFile ? JSON.parse(await messagesFile.async('text')) : [];
-        const gatesFile = zip.file('gates.json');
-        const gates = gatesFile ? JSON.parse(await gatesFile.async('text')) : [];
+
+        // Read gates/dimensions based on format version
+        let gates: any[] = [];
+        if (isV2) {
+          const dimFile = zip.file('dimensions.json');
+          gates = dimFile ? JSON.parse(await dimFile.async('text')) : [];
+        } else {
+          const gatesFile = zip.file('gates.json');
+          gates = gatesFile ? JSON.parse(await gatesFile.async('text')) : [];
+        }
+
+        // Read attachment metadata (v2.0) for ID-keyed artifacts
+        let attachmentMeta: any[] = [];
+        if (isV2) {
+          const attFile = zip.file('attachments.json');
+          attachmentMeta = attFile ? JSON.parse(await attFile.async('text')) : [];
+        }
 
         // Count artifact files
-        const artifactFiles: { path: string; zipEntry: JSZip.JSZipObject }[] = [];
-        zip.folder('artifacts')?.forEach((relativePath, entry) => {
-          if (!entry.dir) {
-            artifactFiles.push({ path: relativePath, zipEntry: entry });
+        const artifactFiles: { path: string; zipEntry: JSZip.JSZipObject; meta?: any }[] = [];
+        if (isV2 && attachmentMeta.length > 0) {
+          // v2.0: artifacts keyed by ID, metadata in attachments.json
+          for (const att of attachmentMeta) {
+            const entry = zip.file(`artifacts/${att.id}/content`);
+            if (entry) {
+              const filePath = att.meta?.path || att.filename || att.id;
+              artifactFiles.push({ path: filePath, zipEntry: entry, meta: att });
+            }
           }
-        });
+        } else {
+          // v1.x: artifacts keyed by path
+          zip.folder('artifacts')?.forEach((relativePath, entry) => {
+            if (!entry.dir) {
+              artifactFiles.push({ path: relativePath, zipEntry: entry });
+            }
+          });
+        }
 
         // Total steps: 1 (create crux) + artifacts + gates + 1 (final update)
         const total = 1 + artifactFiles.length + gates.length + 1;
@@ -200,45 +236,34 @@ export default function Garden() {
         setImportProgress({ done, total });
 
         // Create new crux with full metadata restored
-        const newCrux = await cruxes.create({
+        const { crux: cruxService, attachment, dimension: dimService } = getServices();
+        const restoredMeta = isV2
+          ? { ...(cruxData.meta || {}), messages, gateCount: 0 }
+          : { messages, summary: cruxData.summary || null, settings: cruxData.settings || {}, gateCount: 0 };
+        const newCrux = await cruxService.create({
           slug,
           title,
           description: cruxData.description || '',
           type: 'workspace',
-          status: cruxData.status || 'living',
-          visibility: cruxData.visibility || 'private',
-          data: cruxData.description || ' ',
-          meta: {
-            messages,
-            summary: cruxData.summary || null,
-            settings: cruxData.settings || {},
-            gateCount: 0,
-          },
+          meta: restoredMeta,
         });
         done++;
         setImportProgress({ done, total });
 
-        // Restore tags via syncTags (tags are a separate table, not a crux column)
-        const tags = Array.isArray(cruxData.tags) ? cruxData.tags : [];
-        if (tags.length > 0) {
-          await cruxes.syncTags(newCrux.id, tags).catch((err) =>
-            console.warn('Failed to restore tags', err),
-          );
-        }
-
         // Upload artifact files
         if (artifactFiles.length > 0) {
           for (let i = 0; i < artifactFiles.length; i++) {
-            const { path, zipEntry } = artifactFiles[i]!;
+            const { path, zipEntry, meta: attMeta } = artifactFiles[i]!;
             try {
               const blob = await zipEntry.async('blob');
               const filename = path.split('/').pop() || 'file';
-              const mime = guessMime(filename);
+              const mime = attMeta?.mimeType || guessMime(filename);
               const fileObj = new File([blob], filename, { type: mime });
-              await cruxes.uploadAttachment(newCrux.id, fileObj, {
-                path,
-                type: 'file',
-                kind: 'artifact',
+              await attachment.upload({
+                resourceId: newCrux.id,
+                blob: fileObj,
+                mimeType: mime,
+                meta: attMeta?.meta || { path },
               });
             } catch (err) {
               console.warn(`Failed to import artifact: ${path}`, err);
@@ -256,7 +281,7 @@ export default function Garden() {
             const targetData = gate.target || {};
             try {
               const gateSlug = `gate-${i + 1}-${Date.now().toString(36)}`;
-              const gateCrux = await cruxes.create({
+              const gateCrux = await cruxService.create({
                 slug: gateSlug,
                 title: targetData.title || `Gate ${i + 1}`,
                 type: 'gate',
@@ -264,7 +289,8 @@ export default function Garden() {
                 meta: gate.meta || targetData.meta || {},
               });
 
-              await cruxes.createDimension(newCrux.id, {
+              await dimService.create({
+                sourceId: newCrux.id,
                 targetId: gateCrux.id,
                 type: 'gate',
                 weight: gate.weight ?? i + 1,
@@ -280,15 +306,10 @@ export default function Garden() {
         }
 
         // Final meta update with accurate gateCount
-        await cruxes.update(newCrux.id, {
-          meta: {
-            ...newCrux.meta,
-            messages,
-            summary: cruxData.summary || null,
-            settings: cruxData.settings || {},
-            gateCount: restoredGateCount,
-          },
-        });
+        const finalMeta = isV2
+          ? { ...(cruxData.meta || {}), messages, gateCount: restoredGateCount }
+          : { ...newCrux.meta, messages, summary: cruxData.summary || null, settings: cruxData.settings || {}, gateCount: restoredGateCount };
+        await cruxService.update(newCrux.id, { meta: finalMeta });
         done++;
         setImportProgress({ done, total });
 

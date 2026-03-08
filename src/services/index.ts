@@ -80,6 +80,29 @@ export function getBackend(): Backend {
   return currentBackend;
 }
 
+/**
+ * Ensure a local author exists in Dexie (for local-first mode).
+ * Returns the existing or newly created author.
+ */
+export async function ensureLocalAuthor(): Promise<import('./types').Author> {
+  const existing = await db.settings.get('localAuthorId');
+  if (existing?.value) {
+    try {
+      return await services!.author.findById(existing.value as string);
+    } catch {
+      // Author was deleted — fall through to create a new one
+    }
+  }
+
+  const shortId = crypto.randomUUID().slice(0, 8);
+  const author = await services!.author.create({
+    username: `wanderer-${shortId}`,
+    displayName: 'Wanderer',
+  });
+  await db.settings.put({ key: 'localAuthorId', value: author.id });
+  return author;
+}
+
 // Re-export interfaces for convenience
 export type { ICruxService } from './crux.service';
 export type { IAttachmentService } from './attachment.service';

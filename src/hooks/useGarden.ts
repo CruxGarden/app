@@ -2,10 +2,10 @@ import { useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useGardenStore } from '@/stores/gardenStore';
 import { useCruxStore } from '@/stores/cruxStore';
-import { cruxes } from '@/api';
+import { getServices } from '@/services';
 
 export function useGarden() {
-  const { cruxList, loading, search, sortBy, pagination, load, setSearch, setSortBy, setPage } =
+  const { cruxList, loading, search, sortBy, load, setSearch, setSortBy } =
     useGardenStore();
 
   const createCrux = useCruxStore((s) => s.createCrux);
@@ -25,19 +25,10 @@ export function useGarden() {
     setSearch('');
   };
 
-  // When searching client-side, base pagination on filtered results
-  const effectiveTotal = search ? cruxList.length : pagination.total;
-  const totalPages = Math.max(1, Math.ceil(effectiveTotal / pagination.limit));
-  const currentPage = Math.floor(pagination.offset / pagination.limit) + 1;
-
-  const goToPage = (page: number) => {
-    const offset = (page - 1) * pagination.limit;
-    setPage(offset);
-  };
-
   const deleteCrux = useCallback(
     async (id: string) => {
-      await cruxes.remove(id);
+      const { crux: cruxService } = getServices();
+      await cruxService.delete(id);
       load();
     },
     [load],
@@ -48,12 +39,8 @@ export function useGarden() {
     loading,
     search,
     sortBy,
-    pagination,
-    totalPages,
-    currentPage,
     setSearch,
     setSortBy,
-    goToPage,
     handleNewCrux,
     handleClearSearch,
     deleteCrux,

@@ -1,5 +1,4 @@
 import { createBrowserRouter, RouterProvider } from 'react-router-dom';
-import AuthGuard from '@/components/auth/AuthGuard';
 import AppShell from '@/components/layout/AppShell';
 import AnimatedBackground from '@/components/layout/AnimatedBackground';
 import { ErrorBoundary } from '@/components/ui';
@@ -33,38 +32,33 @@ const router = createBrowserRouter([
     ),
   },
 
-  // Protected
+  // App routes — auth optional (local-first: works without account)
   {
-    element: <AuthGuard />,
+    element: <AppShell />,
     children: [
       {
-        element: <AppShell />,
-        children: [
-          {
-            path: '/home',
-            element: (
-              <ErrorBoundary>
-                <Garden />
-              </ErrorBoundary>
-            ),
-          },
-          {
-            path: '/c/:id',
-            element: (
-              <ErrorBoundary>
-                <CruxPage />
-              </ErrorBoundary>
-            ),
-          },
-          {
-            path: '/settings',
-            element: (
-              <ErrorBoundary>
-                <Settings />
-              </ErrorBoundary>
-            ),
-          },
-        ],
+        path: '/home',
+        element: (
+          <ErrorBoundary>
+            <Garden />
+          </ErrorBoundary>
+        ),
+      },
+      {
+        path: '/c/:id',
+        element: (
+          <ErrorBoundary>
+            <CruxPage />
+          </ErrorBoundary>
+        ),
+      },
+      {
+        path: '/settings',
+        element: (
+          <ErrorBoundary>
+            <Settings />
+          </ErrorBoundary>
+        ),
       },
     ],
   },

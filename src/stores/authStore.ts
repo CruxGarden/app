@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import * as authApi from '@/api/auth';
 import * as authorsApi from '@/api/authors';
 import { getStoredTokens, storeTokens, clearTokens } from '@/api/client';
+import { getServices, getBackend } from '@/services';
 import type { Profile, Author } from '@/api/types';
 
 interface AuthState {
@@ -102,7 +103,12 @@ export const useAuthStore = create<AuthState>((set) => ({
   updateAuthor: async (dto) => {
     const { author } = useAuthStore.getState();
     if (!author) throw new Error('No author');
-    const updated = await authorsApi.update(author.id, dto);
+    let updated: Author;
+    if (getBackend() === 'dexie') {
+      updated = await getServices().author.update(author.id, dto);
+    } else {
+      updated = await authorsApi.update(author.id, dto);
+    }
     set({ author: updated });
     return updated;
   },

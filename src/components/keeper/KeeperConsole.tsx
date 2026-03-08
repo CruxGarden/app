@@ -5,6 +5,7 @@ import keeperAvatarDark from '@/images/keeper-avatar-dark.jpg';
 import keeperAvatarLight from '@/images/keeper-avatar-light.jpg';
 import { useThemeStore } from '@/stores/themeStore';
 import { useAuthStore } from '@/stores/authStore';
+import { getApiKey } from '@/ai/keys';
 
 export function KeeperAvatar({ className = 'w-6 h-6' }: { className?: string }) {
   const resolved = useThemeStore((s) => s.resolved);
@@ -16,7 +17,6 @@ export function KeeperAvatar({ className = 'w-6 h-6' }: { className?: string }) 
   );
 }
 
-const API_KEY_STORAGE = 'cruxgarden:anthropicApiKey';
 const HISTORY_STORAGE = 'cruxgarden:keeper-history';
 const MAX_TOOL_ROUNDS = 5;
 const KEEPER_MODEL = 'claude-sonnet-4-20250514';
@@ -251,7 +251,7 @@ export default function KeeperConsole({ open, onClose }: KeeperConsoleProps) {
     const trimmed = input.trim();
     if (!trimmed || streaming) return;
 
-    const apiKey = localStorage.getItem(API_KEY_STORAGE);
+    const apiKey = await getApiKey('anthropic');
     if (!apiKey) {
       setError('Add your Anthropic API key in Settings to chat with The Keeper.');
       return;

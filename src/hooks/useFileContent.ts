@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { Attachment } from '@/api/types';
-import { cruxes } from '@/api';
+import { getServices } from '@/services';
 
 const IMAGE_TYPES = new Set([
   'image/png',
@@ -59,7 +59,7 @@ interface UseFileContentResult {
   refetch: () => void;
 }
 
-export function useFileContent(cruxId: string, artifact: Attachment): UseFileContentResult {
+export function useFileContent(_cruxId: string, artifact: Attachment): UseFileContentResult {
   const [content, setContent] = useState<string | null>(null);
   const [blobUrl, setBlobUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -79,8 +79,9 @@ export function useFileContent(cruxId: string, artifact: Attachment): UseFileCon
     setContent(null);
     setBlobUrl(null);
 
-    cruxes
-      .downloadAttachment(cruxId, artifact.id)
+    const { attachment } = getServices();
+    attachment
+      .downloadBlob(artifact.id)
       .then((blob) => {
         if (cancelled) return;
         if (isTextMime(mime, filename)) {
@@ -108,7 +109,7 @@ export function useFileContent(cruxId: string, artifact: Attachment): UseFileCon
     return () => {
       cancelled = true;
     };
-  }, [artifact.id, artifact.updated, cruxId, mime, fetchKey]);
+  }, [artifact.id, artifact.updated, mime, fetchKey]);
 
   // Clean up blob URLs
   useEffect(() => {
