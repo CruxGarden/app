@@ -2,7 +2,7 @@ import { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/stores/authStore';
 import { useCruxStore } from '@/stores/cruxStore';
-import { cruxes } from '@/api';
+import { getServices } from '@/services';
 import { Button } from '@/components/ui';
 import CreateAuthorModal from '@/components/auth/CreateAuthorModal';
 import PublishModal from './PublishModal';
@@ -46,8 +46,10 @@ export default function PublishButton() {
     try {
       // Save latest meta (messages, summary, etc.)
       await saveMeta();
-      // Set visibility to public
-      await cruxes.update(crux.id, { visibility: 'public' });
+      // Set visibility to public and publish
+      const { crux: cruxService, publish } = getServices();
+      await cruxService.update(crux.id, { visibility: 'public' });
+      await publish.publish(crux.id);
 
       const url = `${window.location.origin}/${currentAuthor.username}/${crux.slug}`;
       setPublishedUrl(url);

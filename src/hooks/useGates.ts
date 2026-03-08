@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { useCruxStore } from '@/stores/cruxStore';
 import { streamChat } from '@/api/ai';
-import { cruxes } from '@/api';
+import { getServices } from '@/services';
 import type { ChatMessage, GateSnapshot, CruxSummary } from '@/api/types';
 
 // ── Prompt templates ─────────────────────────────────────
@@ -195,9 +195,10 @@ export function useGates() {
       }
 
       // Step 2: Create gate crux
+      const { crux: cruxService, dimension: dimService } = getServices();
       const gateNumber = currentGateCount + 1;
       const gateSlug = `gate-${gateNumber}-${Date.now().toString(36)}`;
-      const gateCrux = await cruxes.create({
+      const gateCrux = await cruxService.create({
         slug: gateSlug,
         title: snapshot.gate,
         type: 'gate',
@@ -211,7 +212,8 @@ export function useGates() {
       });
 
       // Step 3: Link gate via dimension
-      const dimension = await cruxes.createDimension(crux.id, {
+      const dimension = await dimService.create({
+        sourceId: crux.id,
         targetId: gateCrux.id,
         type: 'gate',
         weight: gateNumber,
@@ -244,7 +246,7 @@ export function useGates() {
         summary: newSummary || currentSummary,
         gateCount: gateNumber,
       };
-      await cruxes.update(crux.id, { meta: updatedMeta });
+      await cruxService.update(crux.id, { meta: updatedMeta });
 
       if (newSummary) setSummary(newSummary);
 
@@ -288,7 +290,8 @@ export function useGates() {
       const reconciled = parseSummary(response);
       if (reconciled) {
         setSummary(reconciled);
-        await cruxes.update(crux.id, {
+        const { crux: cruxService } = getServices();
+        await cruxService.update(crux.id, {
           meta: { ...crux.meta, summary: reconciled, gateCount: gateNumber },
         });
       }

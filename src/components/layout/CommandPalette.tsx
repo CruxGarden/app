@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/cn';
-import { cruxes } from '@/api';
+import { getServices } from '@/services';
 import type { Crux } from '@/api/types';
 
 interface CommandPaletteProps {
@@ -33,13 +33,15 @@ export default function CommandPalette({ open, onClose }: CommandPaletteProps) {
     if (!open) return;
     clearTimeout(debounceRef.current);
 
+    const { crux: cruxService } = getServices();
+
     if (!query.trim()) {
       // Load recent cruxes when no query
       setLoading(true);
-      cruxes
-        .list({ limit: 8 })
-        .then(({ data }) => {
-          setResults(data);
+      cruxService
+        .listAll()
+        .then((all) => {
+          setResults(all.slice(0, 8));
           setSelected(0);
           setLoading(false);
         })
@@ -49,15 +51,23 @@ export default function CommandPalette({ open, onClose }: CommandPaletteProps) {
 
     debounceRef.current = setTimeout(() => {
       setLoading(true);
-      cruxes
-        .list({ search: query, limit: 8 })
-        .then(({ data }) => {
-          setResults(data);
+      const q = query.toLowerCase();
+      cruxService
+        .listAll()
+        .then((all) => {
+          const filtered = all
+            .filter((c) =>
+              (c.title || c.slug || '').toLowerCase().includes(q),
+            )
+            .slice(0, 8);
+          setResults(filtered);
           setSelected(0);
           setLoading(false);
         })
         .catch(() => setLoading(false));
     }, 200);
+
+    return () => clearTimeout(debounceRef.current);
   }, [query, open]);
 
   const handleSelect = useCallback(

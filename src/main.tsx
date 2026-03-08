@@ -1,16 +1,31 @@
-import { StrictMode, useEffect } from 'react';
+import { StrictMode, useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { useAuthStore } from '@/stores/authStore';
+import { initServices, ensureLocalAuthor, getBackend } from '@/services';
+import { migrateApiKeyFromLocalStorage } from '@/ai/keys';
 import App from './App';
 import './styles/globals.css';
 
 function Bootstrap() {
   const init = useAuthStore((s) => s.init);
+  const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    init();
+    initServices().then(async () => {
+      await init();
+      migrateApiKeyFromLocalStorage().catch(() => {});
+
+      // In local-first mode, ensure a local author exists
+      if (getBackend() === 'dexie' && !useAuthStore.getState().author) {
+        const localAuthor = await ensureLocalAuthor();
+        useAuthStore.setState({ author: localAuthor });
+      }
+
+      setReady(true);
+    });
   }, [init]);
 
+  if (!ready) return null;
   return <App />;
 }
 

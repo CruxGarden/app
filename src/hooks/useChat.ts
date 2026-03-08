@@ -1,8 +1,13 @@
 import { useCallback, useRef } from 'react';
 import { useCruxStore } from '@/stores/cruxStore';
-import { streamChat } from '@/api/ai';
-import { cruxes } from '@/api';
+import { getServices } from '@/services';
+import { runConversation } from '@/ai/engine';
+import { getAdapter } from '@/ai/adapters';
+import { createToolExecutor } from '@/ai/tools';
+import { getApiKey } from '@/ai/keys';
+import { getProviderForModel } from '@/ai/providers';
 import type { ChatMessage, ToolCall } from '@/api/types';
+import type { NormalizedMessage } from '@/services/types';
 
 /**
  * Truncate large tool results preserving the beginning and end.
@@ -20,18 +25,19 @@ function truncateToolResult(raw: string, maxLength = 1500): string {
 }
 
 /**
- * Build Anthropic-compatible messages with proper tool_use / tool_result blocks.
- * Without this, past tool calls are lost and the model stops using tools.
+ * Build normalized messages with proper tool_use / tool_result blocks.
+ * Converts ChatMessage[] (with toolCalls array) to NormalizedMessage[]
+ * (with content block arrays) for the conversation engine.
  */
-function buildApiMessages(allMessages: ChatMessage[]) {
-  const result: { role: string; content: unknown }[] = [];
+function buildNormalizedMessages(allMessages: ChatMessage[]): NormalizedMessage[] {
+  const result: NormalizedMessage[] = [];
 
   for (let i = 0; i < allMessages.length; i++) {
     const m = allMessages[i]!;
 
     if (m.role === 'assistant' && m.toolCalls?.length) {
       // Assistant message with tool calls → content block array
-      const blocks: Record<string, unknown>[] = [];
+      const blocks: NormalizedMessage['content'] = [];
       if (m.content?.trim()) {
         blocks.push({ type: 'text', text: m.content });
       }
@@ -47,19 +53,16 @@ function buildApiMessages(allMessages: ChatMessage[]) {
       result.push({ role: 'assistant', content: blocks });
 
       // Build tool_result blocks
-      const toolResults = m.toolCalls.map((tc, t) => {
-        const raw = tc.result || 'Done.';
-        return {
-          type: 'tool_result' as const,
-          tool_use_id: tc.id || `toolu_hist_${i}_${t}`,
-          content: truncateToolResult(raw),
-        };
-      });
+      const toolResults = m.toolCalls.map((tc, t) => ({
+        type: 'tool_result' as const,
+        tool_use_id: tc.id || `toolu_hist_${i}_${t}`,
+        content: truncateToolResult(tc.result || 'Done.'),
+      }));
 
       // Merge tool results with the NEXT user message to keep roles alternating
       const next = allMessages[i + 1];
       if (next?.role === 'user') {
-        const merged: Record<string, unknown>[] = [...toolResults];
+        const merged: NormalizedMessage['content'] = [...toolResults];
         if (next.content?.trim()) {
           merged.push({ type: 'text', text: next.content });
         }
@@ -92,7 +95,6 @@ export function useChat() {
     setArtifacts,
     saveMeta,
     setPendingGateCreation,
-    addPendingDelete,
   } = useCruxStore();
 
   const abortRef = useRef<AbortController | null>(null);
@@ -101,12 +103,24 @@ export function useChat() {
     async (content: string) => {
       if (!crux || isStreaming) return;
 
+      const model = crux.meta?.settings?.model || 'claude-sonnet-4-20250514';
+      const providerId = getProviderForModel(model);
+      const apiKey = await getApiKey(providerId);
+
+      if (!apiKey) {
+        addMessage({
+          role: 'assistant',
+          content: `No API key configured for ${providerId}. Add one in Settings to start chatting.`,
+        });
+        return;
+      }
+
       // Add user message
       const userMsg: ChatMessage = { role: 'user', content };
       addMessage(userMsg);
 
-      // Build message history with proper tool_use / tool_result blocks
-      const apiMessages = buildApiMessages([...messages, userMsg]);
+      // Build normalized message history
+      const normalizedMessages = buildNormalizedMessages([...messages, userMsg]);
 
       setStreaming(true);
       clearStreamContent();
@@ -116,73 +130,70 @@ export function useChat() {
 
       let fullContent = '';
       const toolCalls: ToolCall[] = [];
-      let hadWriteFile = false;
+      let hadMutation = false;
 
       try {
-        await streamChat(
+        const adapter = await getAdapter(model);
+        const executeToolFn = createToolExecutor(crux.id, async (_path) => {
+          // Delete confirmation — deny in streaming context; user confirms via UI
+          return false;
+        });
+
+        for await (const event of runConversation(
+          adapter,
+          apiKey,
           crux.id,
-          apiMessages,
-          (event) => {
-            console.log('[SSE]', event.event, event.data);
-            switch (event.event) {
-              case 'text':
-                fullContent += event.data.content;
-                appendStreamContent(event.data.content);
-                break;
-              case 'tool_start':
-                toolCalls.push({
-                  name: event.data.name,
-                  id: event.data.id,
-                  input: event.data.input,
-                  result: undefined,
-                });
-
-                break;
-              case 'tool_result': {
-                // Update the tool call with result
-                const tc = toolCalls.find((t) => t.id === event.data.id);
-                if (tc) tc.result = event.data.result;
-
-                // Refresh artifacts after file operations
-                if (
-                  event.data.name === 'write_file' ||
-                  event.data.name === 'edit_file' ||
-                  event.data.name === 'delete_file' ||
-                  event.data.name === 'read_file'
-                ) {
-                  const currentCruxId = useCruxStore.getState().crux?.id ?? crux.id;
-                  cruxes.getAttachments(currentCruxId).then(
-                    (arts) => useCruxStore.getState().setArtifacts(arts),
-                    (err) => console.error('Failed to refresh artifacts:', err),
-                  );
-                }
-
-                // Track file mutations for gate creation
-                if (
-                  event.data.name === 'write_file' ||
-                  event.data.name === 'edit_file' ||
-                  event.data.name === 'delete_file'
-                ) {
-                  hadWriteFile = true;
-                }
-                break;
-              }
-              case 'delete_request':
-                addPendingDelete(event.data.attachmentId, event.data.path);
-                break;
-              case 'info':
-                console.log('[SSE info]', event.data.message);
-                break;
-              case 'error':
-                fullContent += `\n\n*Error: ${event.data.message}*`;
-                break;
-              case 'done':
-                break;
-            }
-          },
-          crux.meta?.settings?.model,
+          normalizedMessages,
+          model,
+          executeToolFn,
           controller.signal,
-        );
+        )) {
+          switch (event.type) {
+            case 'text':
+              fullContent += event.content;
+              appendStreamContent(event.content);
+              break;
+
+            case 'tool_start':
+              toolCalls.push({
+                name: event.name,
+                id: event.id,
+                input: event.input,
+                result: undefined,
+              });
+              break;
+
+            case 'tool_result': {
+              // Update the tool call with result
+              const tc = toolCalls.find((t) => t.id === event.id);
+              if (tc) tc.result = event.result;
+
+              // Refresh artifacts after file operations
+              if (
+                event.name === 'write_file' ||
+                event.name === 'edit_file' ||
+                event.name === 'delete_file' ||
+                event.name === 'read_file'
+              ) {
+                const { attachment } = getServices();
+                const currentCruxId = useCruxStore.getState().crux?.id ?? crux.id;
+                attachment.findByResource('crux', currentCruxId).then(
+                  (arts) => useCruxStore.getState().setArtifacts(arts),
+                  (err) => console.error('Failed to refresh artifacts:', err),
+                );
+              }
+              break;
+            }
+
+            case 'done':
+              hadMutation = event.hadMutation;
+              break;
+
+            case 'error':
+              fullContent += `\n\n*Error: ${event.message}*`;
+              break;
+          }
+        }
       } catch (err: any) {
         if (err.name !== 'AbortError') {
           fullContent += `\n\n*Error: ${err.message}*`;
@@ -194,7 +205,7 @@ export function useChat() {
         const assistantMsg: ChatMessage = {
           role: 'assistant',
           content: fullContent,
-          model: crux.meta?.settings?.model,
+          model,
           toolCalls: toolCalls.length > 0 ? toolCalls : undefined,
         };
         addMessage(assistantMsg);
@@ -207,8 +218,8 @@ export function useChat() {
       // Save messages to crux meta
       await saveMeta();
 
-      // Signal gate creation if artifacts were written
-      if (hadWriteFile) {
+      // Signal gate creation if artifacts were mutated
+      if (hadMutation) {
         setPendingGateCreation(true);
       }
     },
@@ -223,7 +234,6 @@ export function useChat() {
       setArtifacts,
       saveMeta,
       setPendingGateCreation,
-      addPendingDelete,
     ],
   );
 

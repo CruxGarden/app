@@ -91,11 +91,12 @@ export interface UpdateDimensionInput {
 export interface CreateAuthorInput {
   username: string;
   displayName: string;
-  accountId: string;
-  homeId: string;
+  accountId?: string;
+  homeId?: string;
 }
 
 export interface UpdateAuthorInput {
+  username?: string;
   displayName?: string;
   bio?: string;
   meta?: Record<string, unknown>;

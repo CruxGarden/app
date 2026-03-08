@@ -2,9 +2,7 @@ import { useState, useCallback } from 'react';
 import JSZip from 'jszip';
 import { useCruxStore } from '@/stores/cruxStore';
 import { useAuthStore } from '@/stores/authStore';
-import { useUIStore } from '@/stores/uiStore';
-import { useThemeStore } from '@/stores/themeStore';
-import { cruxes } from '@/api';
+import { getServices } from '@/services';
 import { cn } from '@/lib/cn';
 import { usePaneWidth } from '@/hooks/usePaneWidth';
 import PaneHeader from './PaneHeader';
@@ -43,12 +41,6 @@ export default function ExportPane() {
   const summary = useCruxStore((s) => s.summary);
   const gateCount = useCruxStore((s) => s.gateCount);
   const author = useAuthStore((s) => s.author);
-  const paneOrder = useUIStore((s) => s.paneOrder);
-  const paneVisibility = useUIStore((s) => s.paneVisibility);
-  const editor = useUIStore((s) => s.editor);
-  const folderOpenState = useUIStore((s) => s.folderOpenState);
-  const themeMode = useThemeStore((s) => s.mode);
-  const themeTint = useThemeStore((s) => s.tint);
 
   const [exporting, setExporting] = useState(false);
   const [progress, setProgress] = useState('');
@@ -62,21 +54,21 @@ export default function ExportPane() {
     try {
       const zip = new JSZip();
 
-      // Fetch all data fresh from the API in parallel
-      const [freshArtifacts, gates, tags] = await Promise.all([
-        cruxes.getAttachments(crux.id),
-        cruxes.getDimensions(crux.id, 'gate', 'target').catch(() => [] as unknown[]),
-        cruxes.getTags(crux.id).catch(() => []),
+      // Fetch all data fresh from service layer in parallel
+      const { attachment, dimension } = getServices();
+      const [freshArtifacts, gates] = await Promise.all([
+        attachment.findByResource('crux', crux.id),
+        dimension.findBySourceAndType(crux.id, 'gate').catch(() => []),
       ]);
 
       setProgress('Building archive...');
 
-      // manifest.json
+      // manifest.json (v2.0 format)
       zip.file(
         'manifest.json',
         JSON.stringify(
           {
-            version: '1.1',
+            version: '2.0',
             exportedAt: new Date().toISOString(),
             author: author ? { username: author.username, displayName: author.displayName } : null,
           },
@@ -85,65 +77,67 @@ export default function ExportPane() {
         ),
       );
 
-      // crux.json — complete snapshot of crux state
+      // crux.json — complete Crux record
       const cruxData = {
         id: crux.id,
         slug: crux.slug,
         title: crux.title,
         description: crux.description,
         type: crux.type,
+        kind: crux.meta?.kind ?? null,
         status: crux.status,
         visibility: crux.visibility,
+        authorId: crux.authorId ?? null,
+        homeId: crux.homeId ?? null,
+        meta: {
+          ...(crux.meta ?? {}),
+          summary,
+          gateCount,
+        },
         created: crux.created,
         updated: crux.updated,
-        summary,
-        gateCount,
-        settings: crux.meta?.settings ?? null,
-        publishedAt: crux.meta?.publishedAt ?? null,
-        tags: tags.map((t) => t.label),
-        layout: {
-          paneOrder,
-          paneVisibility,
-          editorTabs: {
-            tabs: editor.tabs.map((t) => ({
-              id: t.id,
-              path: t.path,
-              viewMode: t.viewMode,
-            })),
-            activeTabId: editor.activeTabId,
-          },
-          folderState: folderOpenState,
-        },
-        theme: {
-          mode: themeMode,
-          tint: themeTint,
-        },
       };
       zip.file('crux.json', JSON.stringify(cruxData, null, 2));
 
-      // messages.json
+      // messages.json — conversation history
       zip.file('messages.json', JSON.stringify(messages, null, 2));
 
-      // gates.json
+      // attachments.json — metadata for all attachments (no content)
+      const attachmentMeta = freshArtifacts.map((a) => ({
+        id: a.id,
+        resourceId: a.resourceId,
+        resourceType: a.resourceType,
+        filename: a.filename,
+        mimeType: a.mimeType,
+        size: a.size,
+        type: a.type,
+        kind: a.kind,
+        meta: a.meta,
+        created: a.created,
+        updated: a.updated,
+      }));
+      zip.file('attachments.json', JSON.stringify(attachmentMeta, null, 2));
+
+      // dimensions.json — gate snapshots
       if (gates.length > 0) {
-        zip.file('gates.json', JSON.stringify(gates, null, 2));
+        zip.file('dimensions.json', JSON.stringify(gates, null, 2));
       }
 
-      // Download artifact files
+      // artifacts/{id}/content — raw file content keyed by attachment ID
       const failed: string[] = [];
       if (freshArtifacts.length > 0) {
         setProgress('Downloading artifacts...');
         for (let i = 0; i < freshArtifacts.length; i++) {
           const artifact = freshArtifacts[i]!;
-          const path = (artifact.meta?.path as string) || artifact.filename || `file-${i + 1}`;
-          setProgress(`${i + 1}/${freshArtifacts.length}: ${path}`);
+          const displayPath = (artifact.meta?.path as string) || artifact.filename || `file-${i + 1}`;
+          setProgress(`${i + 1}/${freshArtifacts.length}: ${displayPath}`);
 
           try {
-            const blob = await cruxes.downloadAttachment(crux.id, artifact.id);
-            zip.file(`artifacts/${path}`, blob);
+            const blob = await attachment.downloadBlob(artifact.id);
+            zip.file(`artifacts/${artifact.id}/content`, blob);
           } catch (err) {
-            console.warn(`Failed to download: ${path}`, err);
-            failed.push(path);
+            console.warn(`Failed to download: ${displayPath}`, err);
+            failed.push(displayPath);
           }
         }
       }
@@ -174,7 +168,7 @@ export default function ExportPane() {
     } finally {
       setExporting(false);
     }
-  }, [crux, messages, summary, gateCount, author, paneOrder, paneVisibility, editor, folderOpenState, themeMode, themeTint]);
+  }, [crux, messages, summary, gateCount, author]);
 
   const totalSize = artifacts.reduce((sum, a) => sum + (Number(a.size) || 0), 0);
   const messageCount = messages.length;
@@ -229,7 +223,7 @@ export default function ExportPane() {
               </div>
               {gateCount > 0 && (
                 <div className="flex justify-between">
-                  <span className="text-text">gates.json</span>
+                  <span className="text-text">dimensions.json</span>
                   <span>{gateCount} gates</span>
                 </div>
               )}

@@ -1,9 +1,11 @@
 import { useState, useRef } from 'react';
 import { useAuthStore } from '@/stores/authStore';
 import { authors as authorsApi } from '@/api';
+import { getBackend } from '@/services';
 import { ApiKeySetup, Panel, Spinner } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import MoodSettings from '@/components/settings/MoodSettings';
+import DataSettings from '@/components/settings/DataSettings';
 
 function buildAvatarUrl(
   author: { id: string; meta?: Record<string, unknown> } | null,
@@ -53,7 +55,8 @@ export default function Settings() {
     setUsernameError('');
     try {
       const lower = trimmed.toLowerCase();
-      if (lower !== author?.username?.toLowerCase()) {
+      // Only check username availability against the API when using the API backend
+      if (getBackend() === 'api' && lower !== author?.username?.toLowerCase()) {
         const { available } = await authorsApi.checkUsername(lower);
         if (!available) {
           setUsernameError('Username is taken');
@@ -251,6 +254,10 @@ export default function Settings() {
 
       <div className="mt-6">
         <MoodSettings />
+      </div>
+
+      <div className="mt-6">
+        <DataSettings />
       </div>
     </div>
   );

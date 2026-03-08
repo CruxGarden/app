@@ -5,10 +5,27 @@ import type {
   Attachment,
   CruxSummary,
   Dimension,
-  UpdateCruxDto,
 } from '@/api/types';
+import type { UpdateCruxInput } from '@/services/types';
 import type { Palette } from '@/lib/palette';
-import { cruxes } from '@/api';
+import { getServices } from '@/services';
+import { getApiKey } from '@/ai/keys';
+
+const MIME_MAP: Record<string, string> = {
+  html: 'text/html',
+  htm: 'text/html',
+  css: 'text/css',
+  js: 'application/javascript',
+  ts: 'application/javascript',
+  jsx: 'application/javascript',
+  tsx: 'application/javascript',
+  json: 'application/json',
+  md: 'text/markdown',
+  txt: 'text/plain',
+  py: 'text/x-python',
+  svg: 'image/svg+xml',
+  xml: 'application/xml',
+};
 
 interface CruxState {
   // Active workspace
@@ -47,7 +64,7 @@ interface CruxState {
   setModel: (model: string) => void;
   setPalette: (palette: Partial<Palette>) => void;
   saveMeta: () => Promise<void>;
-  updateCrux: (dto: UpdateCruxDto) => Promise<void>;
+  updateCrux: (dto: UpdateCruxInput) => Promise<void>;
   reset: () => void;
 
   // Publish actions
@@ -97,8 +114,9 @@ export const useCruxStore = create<CruxState>((set, get) => ({
   uploadProgress: null,
 
   loadCrux: async (id: string) => {
-    const crux = await cruxes.get(id);
-    const attachments = await cruxes.getAttachments(id);
+    const { crux: cruxService, attachment } = getServices();
+    const crux = await cruxService.findById(id);
+    const attachments = await attachment.findByResource('crux', id);
     // NOTE: crux.meta.settings.palette stores per-crux palette data for future use,
     // but themes are currently global — don't override the user's active theme on load.
 
@@ -135,6 +153,8 @@ export const useCruxStore = create<CruxState>((set, get) => ({
   },
 
   createCrux: async (title?: string) => {
+    const { crux: cruxService } = getServices();
+
     const slug =
       (title || 'untitled')
         .toLowerCase()
@@ -143,7 +163,7 @@ export const useCruxStore = create<CruxState>((set, get) => ({
       '-' +
       Date.now().toString(36);
 
-    const hasApiKey = !!localStorage.getItem('cruxgarden:anthropicApiKey');
+    const hasApiKey = !!(await getApiKey('anthropic'));
 
     const keeperPrompt =
       'You are The Keeper, an outdated robot model who tends the Crux Garden. ' +
@@ -168,7 +188,7 @@ export const useCruxStore = create<CruxState>((set, get) => ({
 
     const initialMessages = hasApiKey ? [greeting] : [];
 
-    const crux = await cruxes.create({
+    const crux = await cruxService.create({
       slug,
       title: title || 'New Crux',
       type: 'workspace',
@@ -250,15 +270,17 @@ export const useCruxStore = create<CruxState>((set, get) => ({
   saveMeta: async () => {
     const { crux, messages, summary, gateCount } = get();
     if (!crux) return;
-    await cruxes.update(crux.id, {
+    const { crux: cruxService } = getServices();
+    await cruxService.update(crux.id, {
       meta: { ...crux.meta, messages, summary, gateCount },
     });
   },
 
-  updateCrux: async (dto: UpdateCruxDto) => {
+  updateCrux: async (dto: UpdateCruxInput) => {
     const { crux } = get();
     if (!crux) return;
-    const updated = await cruxes.update(crux.id, dto);
+    const { crux: cruxService } = getServices();
+    const updated = await cruxService.update(crux.id, dto);
     const isPublished = crux.meta?.publishedAt != null;
     set({
       crux: { ...crux, ...updated },
@@ -288,14 +310,16 @@ export const useCruxStore = create<CruxState>((set, get) => ({
     const { crux, saveMeta } = get();
     if (!crux) return;
     await saveMeta();
-    const updated = await cruxes.publish(crux.id);
+    const { publish } = getServices();
+    const updated = await publish.publish(crux.id);
     set({ crux: { ...crux, ...updated }, hasUnpublishedChanges: false });
   },
 
   unpublishCrux: async () => {
     const { crux } = get();
     if (!crux) return;
-    const updated = await cruxes.unpublish(crux.id);
+    const { publish } = getServices();
+    const updated = await publish.unpublish(crux.id);
     set({ crux: { ...crux, ...updated } });
   },
 
@@ -303,57 +327,44 @@ export const useCruxStore = create<CruxState>((set, get) => ({
   createFile: async (path: string, content?: string) => {
     const { crux } = get();
     if (!crux) throw new Error('No active crux');
+    const { attachment } = getServices();
     const text = content ?? '';
     const ext = path.split('.').pop()?.toLowerCase() || 'txt';
-    const mimeMap: Record<string, string> = {
-      html: 'text/html',
-      htm: 'text/html',
-      css: 'text/css',
-      js: 'application/javascript',
-      ts: 'application/javascript',
-      jsx: 'application/javascript',
-      tsx: 'application/javascript',
-      json: 'application/json',
-      md: 'text/markdown',
-      txt: 'text/plain',
-      py: 'text/x-python',
-      svg: 'image/svg+xml',
-      xml: 'application/xml',
-    };
-    const mime = mimeMap[ext] || 'text/plain';
-    const filename = path.split('/').pop() || 'file';
-    const blob = new Blob([text], { type: mime });
-    const file = new File([blob], filename, { type: mime });
-    const attachment = await cruxes.uploadAttachment(crux.id, file, {
-      path,
-      type: 'file',
-      kind: 'artifact',
+    const mime = MIME_MAP[ext] || 'text/plain';
+    const newAttachment = await attachment.create({
+      resourceId: crux.id,
+      content: text,
+      mimeType: mime,
+      meta: { path },
     });
-    set((state) => ({ artifacts: [...state.artifacts, attachment], hasUnpublishedChanges: true }));
-    return attachment;
+    set((state) => ({ artifacts: [...state.artifacts, newAttachment], hasUnpublishedChanges: true }));
+    return newAttachment;
   },
 
   uploadFile: async (file: File, parentPath?: string) => {
     const { crux } = get();
     if (!crux) throw new Error('No active crux');
+    const { attachment } = getServices();
     const path = parentPath ? `${parentPath}/${file.name}` : file.name;
-    const attachment = await cruxes.uploadAttachment(crux.id, file, {
-      path,
-      type: 'file',
-      kind: 'artifact',
+    const newAttachment = await attachment.upload({
+      resourceId: crux.id,
+      blob: file,
+      mimeType: file.type || undefined,
+      meta: { path },
     });
-    set((state) => ({ artifacts: [...state.artifacts, attachment], hasUnpublishedChanges: true }));
-    return attachment;
+    set((state) => ({ artifacts: [...state.artifacts, newAttachment], hasUnpublishedChanges: true }));
+    return newAttachment;
   },
 
   moveArtifact: async (id: string, newParentPath: string | null) => {
     const { artifacts } = get();
-    const artifact = artifacts.find((a) => a.id === id);
-    if (!artifact) return;
-    const oldPath = artifact.meta?.path || artifact.filename || '';
-    const filename = oldPath.split('/').pop() || artifact.filename;
+    const { attachment } = getServices();
+    const art = artifacts.find((a) => a.id === id);
+    if (!art) return;
+    const oldPath = art.meta?.path || art.filename || '';
+    const filename = oldPath.split('/').pop() || art.filename;
     const newPath = newParentPath ? `${newParentPath}/${filename}` : filename;
-    await cruxes.updateAttachment(id, undefined, { path: newPath });
+    await attachment.update(id, { meta: { path: newPath } });
     set((state) => ({
       artifacts: state.artifacts.map((a) =>
         a.id === id
@@ -369,7 +380,8 @@ export const useCruxStore = create<CruxState>((set, get) => ({
   },
 
   renameArtifact: async (id: string, newPath: string) => {
-    await cruxes.updateAttachment(id, undefined, { path: newPath });
+    const { attachment } = getServices();
+    await attachment.update(id, { meta: { path: newPath } });
     set((state) => ({
       artifacts: state.artifacts.map((a) =>
         a.id === id
@@ -385,7 +397,8 @@ export const useCruxStore = create<CruxState>((set, get) => ({
   },
 
   deleteArtifact: async (id: string) => {
-    await cruxes.deleteAttachment(id);
+    const { attachment } = getServices();
+    await attachment.delete(id);
     set((state) => ({
       artifacts: state.artifacts.filter((a) => a.id !== id),
       hasUnpublishedChanges: true,
@@ -396,8 +409,9 @@ export const useCruxStore = create<CruxState>((set, get) => ({
   },
 
   deleteArtifacts: async (ids: string[]) => {
+    const { attachment } = getServices();
     // Delete all in parallel
-    await Promise.allSettled(ids.map((id) => cruxes.deleteAttachment(id)));
+    await Promise.allSettled(ids.map((id) => attachment.delete(id)));
     const idSet = new Set(ids);
     set((state) => ({
       artifacts: state.artifacts.filter((a) => !idSet.has(a.id)),
@@ -414,18 +428,20 @@ export const useCruxStore = create<CruxState>((set, get) => ({
   uploadFiles: async (files: { file: File; path: string }[]) => {
     const { crux } = get();
     if (!crux) throw new Error('No active crux');
+    const { attachment } = getServices();
     set({ uploadProgress: { total: files.length, completed: 0, currentFile: files[0]?.path || '' } });
     const newAttachments: Attachment[] = [];
     for (let i = 0; i < files.length; i++) {
       const { file, path } = files[i]!;
       set({ uploadProgress: { total: files.length, completed: i, currentFile: path } });
       try {
-        const attachment = await cruxes.uploadAttachment(crux.id, file, {
-          path,
-          type: 'file',
-          kind: 'artifact',
+        const newAttachment = await attachment.upload({
+          resourceId: crux.id,
+          blob: file,
+          mimeType: file.type || undefined,
+          meta: { path },
         });
-        newAttachments.push(attachment);
+        newAttachments.push(newAttachment);
       } catch (err) {
         console.warn(`Failed to upload: ${path}`, err);
       }
@@ -439,20 +455,29 @@ export const useCruxStore = create<CruxState>((set, get) => ({
 
   saveArtifactContent: async (id: string, content: string) => {
     const { artifacts } = get();
-    const artifact = artifacts.find((a) => a.id === id);
-    if (!artifact) return;
-    const mime = artifact.mimeType || 'text/plain';
+    const { attachment } = getServices();
+    const art = artifacts.find((a) => a.id === id);
+    if (!art) return;
+    const mime = art.mimeType || 'text/plain';
     const blob = new Blob([content], { type: mime });
-    const file = new File([blob], artifact.filename || 'file', { type: mime });
-    await cruxes.updateAttachment(id, file);
-    set({ hasUnpublishedChanges: true });
+    const updated = await attachment.upload({
+      resourceId: art.resourceId,
+      blob,
+      mimeType: mime,
+      meta: { path: art.meta?.path },
+    });
+    set((state) => ({
+      artifacts: state.artifacts.map((a) => (a.id === id ? { ...a, ...updated } : a)),
+      hasUnpublishedChanges: true,
+    }));
   },
 
   // Gate actions
   loadGates: async () => {
     const { crux } = get();
     if (!crux) return;
-    const dimensions = await cruxes.getDimensions(crux.id, 'gate', 'target');
+    const { dimension } = getServices();
+    const dimensions = await dimension.findBySourceAndType(crux.id, 'gate');
     const sorted = dimensions.sort((a, b) => (a.weight ?? 0) - (b.weight ?? 0));
     set({ gates: sorted });
   },
@@ -485,8 +510,9 @@ export const useCruxStore = create<CruxState>((set, get) => ({
   confirmDelete: async (attachmentId: string) => {
     const { crux } = get();
     if (!crux) return;
-    await cruxes.deleteAttachment(attachmentId);
-    const arts = await cruxes.getAttachments(crux.id);
+    const { attachment } = getServices();
+    await attachment.delete(attachmentId);
+    const arts = await attachment.findByResource('crux', crux.id);
     set((s) => ({
       artifacts: arts,
       pendingDeletes: s.pendingDeletes.filter((d) => d.attachmentId !== attachmentId),

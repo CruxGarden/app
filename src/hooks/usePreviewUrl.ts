@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, useMemo } from 'react';
 import { useCruxStore } from '@/stores/cruxStore';
-import { cruxes } from '@/api';
+import { getServices } from '@/services';
 import { normalizePath } from '@/lib/rewriteUrls';
 import {
   cachePreviewFiles,
@@ -82,9 +82,10 @@ export function usePreviewUrl(
     let cancelled = false;
     setArtifactsCached(false);
 
+    const { attachment } = getServices();
     Promise.allSettled(
       others.map(async (a) => {
-        const blob = await cruxes.downloadAttachment(cruxId, a.id);
+        const blob = await attachment.downloadBlob(a.id);
         const path = a.meta?.path || a.filename || a.id;
         return { path, blob, mimeType: a.mimeType } as PreviewFile;
       }),
