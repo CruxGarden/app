@@ -8,15 +8,15 @@ describe('Service Factory', () => {
   });
 
   describe('getBackendSetting', () => {
-    it('defaults to dexie when no setting exists', async () => {
+    it('defaults to local when no setting exists', async () => {
       const backend = await getBackendSetting();
-      expect(backend).toBe('dexie');
+      expect(backend).toBe('local');
     });
   });
 
   describe('initServices', () => {
-    it('initializes with dexie backend by default', async () => {
-      const services = await initServices('dexie');
+    it('initializes with local backend by default', async () => {
+      const services = await initServices('local');
 
       expect(services.crux).toBeDefined();
       expect(services.attachment).toBeDefined();
@@ -36,14 +36,14 @@ describe('Service Factory', () => {
     });
 
     it('makes services available via getServices()', async () => {
-      await initServices('dexie');
+      await initServices('local');
       const services = getServices();
       expect(services.crux).toBeDefined();
     });
 
     it('tracks the active backend', async () => {
-      await initServices('dexie');
-      expect(getBackend()).toBe('dexie');
+      await initServices('local');
+      expect(getBackend()).toBe('local');
 
       await initServices('api');
       expect(getBackend()).toBe('api');
@@ -59,9 +59,9 @@ describe('Service Factory', () => {
     });
   });
 
-  describe('Dexie backend integration', () => {
+  describe('Local backend integration', () => {
     it('can create and retrieve a crux through the service layer', async () => {
-      const services = await initServices('dexie');
+      const services = await initServices('local');
 
       const crux = await services.crux.create({ title: 'Integration Test' });
       expect(crux.id).toBeDefined();
@@ -72,7 +72,7 @@ describe('Service Factory', () => {
     });
 
     it('can create and read an attachment through the service layer', async () => {
-      const services = await initServices('dexie');
+      const services = await initServices('local');
 
       const crux = await services.crux.create({ title: 'Files Test' });
 
@@ -90,7 +90,7 @@ describe('Service Factory', () => {
     });
 
     it('can create dimensions and query by type', async () => {
-      const services = await initServices('dexie');
+      const services = await initServices('local');
 
       const crux = await services.crux.create({ title: 'Dims Test' });
 
@@ -113,8 +113,8 @@ describe('Service Factory', () => {
     });
 
     it('publish service is always the API implementation', async () => {
-      const services = await initServices('dexie');
-      // The publish service should exist even in dexie mode
+      const services = await initServices('local');
+      // The publish service should exist even in local mode
       expect(services.publish).toBeDefined();
       expect(services.publish.publish).toBeTypeOf('function');
       expect(services.publish.unpublish).toBeTypeOf('function');

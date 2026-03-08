@@ -1,19 +1,20 @@
 import type { IAuthorService } from '../author.service';
 import type { Author, CreateAuthorInput, UpdateAuthorInput } from '../types';
 import { NotFoundError } from '../types';
-import { db } from './schema';
+import { getSqliteClient } from './client';
+import { fromRow, buildInsert, buildUpdate } from './helpers';
 
-export class DexieAuthorService implements IAuthorService {
+export class SqliteAuthorService implements IAuthorService {
   async findById(id: string): Promise<Author> {
-    const row = await db.authors.get(id);
+    const row = await getSqliteClient().get('SELECT * FROM authors WHERE id = ?', [id]);
     if (!row) throw new NotFoundError('Author not found');
-    return row;
+    return fromRow<Author>(row);
   }
 
   async findByUsername(username: string): Promise<Author> {
-    const row = await db.authors.where('username').equals(username).first();
+    const row = await getSqliteClient().get('SELECT * FROM authors WHERE username = ?', [username]);
     if (!row) throw new NotFoundError('Author not found');
-    return row;
+    return fromRow<Author>(row);
   }
 
   async create(input: CreateAuthorInput): Promise<Author> {
@@ -28,7 +29,8 @@ export class DexieAuthorService implements IAuthorService {
       created: now,
       updated: now,
     };
-    await db.authors.add(author);
+    const { sql, params } = buildInsert('authors', { ...author });
+    await getSqliteClient().run(sql, params);
     return author;
   }
 
@@ -39,7 +41,8 @@ export class DexieAuthorService implements IAuthorService {
     if (updates.displayName !== undefined) changes.displayName = updates.displayName;
     if (updates.bio !== undefined) changes.bio = updates.bio;
     if (updates.meta !== undefined) changes.meta = { ...existing.meta, ...updates.meta };
-    await db.authors.update(id, changes);
+    const { sql, params } = buildUpdate('authors', id, changes);
+    await getSqliteClient().run(sql, params);
     return this.findById(id);
   }
 }

@@ -5,6 +5,15 @@ import { getStoredTokens, storeTokens, clearTokens } from '@/api/client';
 import { getServices, getBackend } from '@/services';
 import type { Profile, Author } from '@/api/types';
 
+function fileToDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
 interface AuthState {
   account: Profile | null;
   author: Author | null;
@@ -104,7 +113,7 @@ export const useAuthStore = create<AuthState>((set) => ({
     const { author } = useAuthStore.getState();
     if (!author) throw new Error('No author');
     let updated: Author;
-    if (getBackend() === 'dexie') {
+    if (getBackend() === 'local') {
       updated = await getServices().author.update(author.id, dto);
     } else {
       updated = await authorsApi.update(author.id, dto);
@@ -116,6 +125,14 @@ export const useAuthStore = create<AuthState>((set) => ({
   uploadAvatar: async (file: File) => {
     const { author } = useAuthStore.getState();
     if (!author) throw new Error('No author');
+    if (getBackend() === 'local') {
+      const dataUrl = await fileToDataUrl(file);
+      const updated = await getServices().author.update(author.id, {
+        meta: { ...author.meta, avatarUrl: dataUrl },
+      });
+      set({ author: updated });
+      return updated;
+    }
     const updated = await authorsApi.uploadAvatar(author.id, file);
     set({ author: updated });
     return updated;
@@ -124,6 +141,12 @@ export const useAuthStore = create<AuthState>((set) => ({
   removeAvatar: async () => {
     const { author } = useAuthStore.getState();
     if (!author) throw new Error('No author');
+    if (getBackend() === 'local') {
+      const meta = { ...author.meta, avatarUrl: null };
+      const updated = await getServices().author.update(author.id, { meta });
+      set({ author: updated });
+      return;
+    }
     const updated = await authorsApi.removeAvatar(author.id);
     set({ author: updated });
   },

@@ -4,11 +4,29 @@ import TopBar from './TopBar';
 import CommandPalette from './CommandPalette';
 import KeeperConsole from '@/components/keeper/KeeperConsole';
 import { useUIStore } from '@/stores/uiStore';
+import { isServicesReady, initServices, ensureLocalAuthor, getBackend } from '@/services';
+import { migrateApiKeyFromLocalStorage } from '@/ai/keys';
+import { useAuthStore } from '@/stores/authStore';
 
 export default function AppShell() {
   const [commandOpen, setCommandOpen] = useState(false);
+  const [servicesOk, setServicesOk] = useState(isServicesReady());
   const keeperOpen = useUIStore((s) => s.keeperOpen);
   const setKeeperOpen = useUIStore((s) => s.setKeeperOpen);
+
+  // Lazily initialize local services when entering app routes
+  useEffect(() => {
+    if (servicesOk) return;
+    (async () => {
+      await initServices();
+      migrateApiKeyFromLocalStorage().catch(() => {});
+      if (getBackend() === 'local' && !useAuthStore.getState().author) {
+        const localAuthor = await ensureLocalAuthor();
+        useAuthStore.setState({ author: localAuthor });
+      }
+      setServicesOk(true);
+    })();
+  }, [servicesOk]);
 
   // Global keyboard shortcuts
   useEffect(() => {
@@ -39,7 +57,11 @@ export default function AppShell() {
 
       {/* Main content */}
       <main className="relative z-10 flex-1 min-h-0 overflow-y-auto">
-        <Outlet />
+        {servicesOk ? <Outlet /> : (
+          <div className="flex items-center justify-center h-full">
+            <span className="text-text-muted font-mono text-sm">Loading...</span>
+          </div>
+        )}
       </main>
 
       {/* Command palette */}

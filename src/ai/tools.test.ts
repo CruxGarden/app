@@ -36,7 +36,7 @@ describe('createToolExecutor', () => {
   const cruxId = 'test-crux';
 
   beforeEach(async () => {
-    await initServices('dexie');
+    await initServices('local');
     // Create the crux so the executor has something to work with
     const services = (await import('@/services')).getServices();
     await services.crux.create({ title: 'Test' });

@@ -34,7 +34,7 @@ export default function MessageBubble({
       {!isUser && <KeeperAvatar />}
       <div
         className={cn(
-          'max-w-[85%] rounded-[var(--radius)] px-3 py-2 text-sm',
+          'max-w-[85%] rounded-[var(--radius)] px-3 py-2 text-sm break-words',
           isUser ? 'bg-accent-muted text-text' : 'bg-[color-mix(in_srgb,var(--panel),var(--text)_8%)] text-text',
         )}
       >

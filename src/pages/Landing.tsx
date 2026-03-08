@@ -1,5 +1,4 @@
 import { useNavigate } from 'react-router-dom';
-import { useAuthStore } from '@/stores/authStore';
 import { IconButton } from '@/components/ui';
 import { APP_NAME } from '@/lib/constants';
 
@@ -22,7 +21,6 @@ function PlusCircleIcon() {
 }
 
 export default function Landing() {
-  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const navigate = useNavigate();
 
   return (
@@ -36,7 +34,7 @@ export default function Landing() {
           <IconButton
             label="Enter"
             size="lg"
-            onClick={() => navigate(isAuthenticated ? '/home' : '/login')}
+            onClick={() => navigate('/home')}
             className="!w-14 !h-14 bg-surface !text-accent hover:bg-accent-muted"
           >
             <PlusCircleIcon />

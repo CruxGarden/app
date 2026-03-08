@@ -14,6 +14,12 @@ export default defineConfig({
   server: {
     port: 8080,
   },
+  optimizeDeps: {
+    exclude: ['wa-sqlite'],
+  },
+  worker: {
+    format: 'es',
+  },
   build: {
     outDir: 'dist',
     sourcemap: true,

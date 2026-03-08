@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from 'react';
-import { publicApi } from '@/api';
 import type { Attachment } from '@/api/types';
 import {
   cachePreviewFiles,
@@ -9,22 +8,27 @@ import {
   type PreviewFile,
 } from '@/lib/previewCache';
 
+type DownloadBlobFn = (attachmentId: string) => Promise<Blob>;
+
 /**
- * Downloads all public attachments, caches them via the preview service worker,
- * and returns an iframe-ready URL for the published display mode.
+ * Downloads all attachments, caches them via the preview service worker,
+ * and returns an iframe-ready URL for the display mode.
  *
  * Downloads once per crux — does not re-download unless username/slug changes.
+ * Accepts a `downloadBlob` function so it works with both local and remote data.
  *
- * @param attachments — all attachments for the crux
- * @param entryId     — attachment ID of the entry page (e.g. index.html)
- * @param username    — author username (for public API)
- * @param slug        — crux slug (for public API)
+ * @param attachments  — all attachments for the crux
+ * @param entryId      — attachment ID of the entry page (e.g. index.html)
+ * @param username     — author username (for cache key)
+ * @param slug         — crux slug (for cache key)
+ * @param downloadBlob — function to fetch a blob by attachment ID
  */
 export function usePublicPreviewUrl(
   attachments: Attachment[],
   entryId: string,
   username: string,
   slug: string,
+  downloadBlob: DownloadBlobFn,
 ): string | null {
   const [url, setUrl] = useState<string | null>(null);
   const [swReady, setSwReady] = useState(false);
@@ -57,7 +61,7 @@ export function usePublicPreviewUrl(
     (async () => {
       const results = await Promise.allSettled(
         attachments.map(async (a) => {
-          const blob = await publicApi.downloadAttachment(username, slug, a.id);
+          const blob = await downloadBlob(a.id);
           const path = a.meta?.path || a.filename || a.id;
           return { path, blob, mimeType: a.mimeType } as PreviewFile;
         }),
@@ -88,7 +92,7 @@ export function usePublicPreviewUrl(
     return () => {
       cancelled = true;
     };
-  }, [attachments, entryId, username, slug, swReady, cacheKey]);
+  }, [attachments, entryId, swReady, cacheKey, downloadBlob]);
 
   // Cleanup cache on unmount
   useEffect(() => {

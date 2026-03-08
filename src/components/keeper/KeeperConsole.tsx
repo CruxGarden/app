@@ -176,9 +176,11 @@ interface KeeperConsoleProps {
 function UserAvatar() {
   const author = useAuthStore((s) => s.author);
   const avatarUrl = (() => {
-    if (!author?.meta?.avatarUrl) return null;
+    const url = author?.meta?.avatarUrl;
+    if (!url || typeof url !== 'string') return null;
+    if (url.startsWith('data:')) return url;
     const base = import.meta.env.VITE_API_URL || 'http://localhost:3000';
-    return `${base}${author.meta.avatarUrl}?v=${author.updated}`;
+    return `${base}${url}?v=${author.updated}`;
   })();
   const initial = author?.username?.charAt(0)?.toUpperCase() ?? '?';
 

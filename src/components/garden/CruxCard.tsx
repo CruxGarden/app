@@ -1,6 +1,7 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/cn';
+import { exportCrux } from '@/lib/exportCrux';
 import type { Crux } from '@/api/types';
 
 interface CruxCardProps {
@@ -46,9 +47,22 @@ function formatDateTime(dateStr: string): string {
 export default function CruxCard({ crux, linkTo, onDelete, sortBy = 'created' }: CruxCardProps) {
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [exportingId, setExportingId] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
   const description = crux.meta?.summary?.purpose || crux.description;
+
+  const handleExport = useCallback(async () => {
+    setExportingId(true);
+    setMenuOpen(false);
+    try {
+      await exportCrux(crux);
+    } catch (err) {
+      console.error('Export failed:', err);
+    } finally {
+      setExportingId(false);
+    }
+  }, [crux]);
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -95,22 +109,31 @@ export default function CruxCard({ crux, linkTo, onDelete, sortBy = 'created' }:
       </button>
 
       {/* Three-dot menu */}
-      {onDelete && (
-        <div ref={menuRef} className="absolute top-3 right-3 z-10">
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              setMenuOpen(!menuOpen);
-            }}
-            className={cn(
-              'p-1 rounded text-text-muted hover:text-text hover:bg-surface transition-all cursor-pointer',
-              menuOpen ? 'opacity-100' : 'opacity-0 group-hover:opacity-100',
-            )}
-          >
-            <MoreIcon />
-          </button>
-          {menuOpen && (
-            <div className="absolute right-0 top-full mt-1 w-32 bg-surface-solid border border-border rounded-[var(--radius-sm)] shadow-xl py-1 z-50">
+      <div ref={menuRef} className="absolute top-3 right-3 z-10">
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            setMenuOpen(!menuOpen);
+          }}
+          className={cn(
+            'p-1 rounded text-text-muted hover:text-text hover:bg-surface transition-all cursor-pointer',
+            menuOpen ? 'opacity-100' : 'opacity-0 group-hover:opacity-100',
+          )}
+        >
+          {exportingId ? <span className="block w-3.5 h-3.5 border-2 border-text-muted border-t-transparent rounded-full animate-spin" /> : <MoreIcon />}
+        </button>
+        {menuOpen && (
+          <div className="absolute right-0 top-full mt-1 w-32 bg-surface-solid border border-border rounded-[var(--radius-sm)] shadow-xl py-1 z-50">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                handleExport();
+              }}
+              className="w-full px-3 py-1.5 text-left text-xs text-text hover:bg-accent-muted transition-colors cursor-pointer"
+            >
+              Export
+            </button>
+            {onDelete && (
               <button
                 onClick={(e) => {
                   e.stopPropagation();
@@ -121,10 +144,10 @@ export default function CruxCard({ crux, linkTo, onDelete, sortBy = 'created' }:
               >
                 Delete
               </button>
-            </div>
-          )}
-        </div>
-      )}
+            )}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

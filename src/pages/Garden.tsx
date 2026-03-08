@@ -6,7 +6,7 @@ import MoodBar from '@/components/layout/MoodBar';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 import { useGarden } from '@/hooks/useGarden';
-import { getServices } from '@/services';
+import { getServices, getBackend } from '@/services';
 import { APP_NAME } from '@/lib/constants';
 import { GardenGrid, GardenSearch } from '@/components/garden';
 import { ApiKeySetup, IconButton, Spinner, Modal, Button } from '@/components/ui';
@@ -14,6 +14,11 @@ import { getApiKey } from '@/ai/keys';
 import { cn } from '@/lib/cn';
 
 const DISMISS_KEY = 'cruxgarden:apiKeyBannerDismissed';
+
+// Track whether the garden has ever rendered content in this page session.
+// On full page refresh the module re-evaluates (false → show loading).
+// On SPA navigation the module is already loaded (true → skip loading).
+let hasLoaded = false;
 
 function GlobeIcon() {
   return (
@@ -378,12 +383,16 @@ export default function Garden() {
   }, [author]);
 
   if (loading) {
+    if (hasLoaded) return null; // SPA navigation — data loads instantly, skip loading
     return (
       <div className="relative min-h-screen flex items-center justify-center">
-        <Spinner size={32} />
+        {getBackend() === 'local'
+          ? <span className="text-text-muted font-mono text-sm">Loading...</span>
+          : <Spinner size={32} />}
       </div>
     );
   }
+  hasLoaded = true;
 
   return (
     <div className="p-4 sm:p-6 max-w-5xl mx-auto">
@@ -404,7 +413,7 @@ export default function Garden() {
               <div className="w-12 h-12 rounded-[var(--radius)] overflow-hidden flex items-center justify-center shrink-0 bg-accent-muted ring-1 ring-text-muted/20">
                 {author.meta?.avatarUrl ? (
                   <img
-                    src={`${API_BASE_URL}${author.meta.avatarUrl}?v=${author.updated}`}
+                    src={typeof author.meta.avatarUrl === 'string' && author.meta.avatarUrl.startsWith('data:') ? author.meta.avatarUrl : `${API_BASE_URL}${author.meta.avatarUrl}?v=${author.updated}`}
                     alt={author.username}
                     className="w-full h-full object-cover"
                   />
@@ -422,15 +431,14 @@ export default function Garden() {
               <div className="flex items-center gap-1.5 mt-0.5">
                 <p className="text-sm text-text-muted">Home Garden</p>
                 {author && (
-                  <a href={`/${author.username}`} target="_blank" rel="noopener noreferrer">
-                    <IconButton
-                      label="Public Garden"
-                      size="sm"
-                      tooltip={{ label: 'Public Garden' }}
-                    >
-                      <GlobeIcon />
-                    </IconButton>
-                  </a>
+                  <IconButton
+                    label="Public Garden"
+                    size="sm"
+                    tooltip={{ label: 'Public Garden' }}
+                    onClick={() => navigate(`/${author.username}`)}
+                  >
+                    <GlobeIcon />
+                  </IconButton>
                 )}
               </div>
             </div>
