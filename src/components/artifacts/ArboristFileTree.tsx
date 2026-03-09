@@ -12,6 +12,7 @@ import {
 } from 'react';
 import { Tree, type NodeRendererProps } from 'react-arborist';
 import type { TreeApi } from 'react-arborist';
+import { useDragDropManager } from 'react-dnd';
 import { cn } from '@/lib/cn';
 import type { Attachment } from '@/api/types';
 import type { FileOperation } from '@/stores/uiStore';
@@ -274,6 +275,7 @@ const ArboristFileTree = forwardRef<ArboristFileTreeHandle, ArboristFileTreeProp
   ) {
     const treeRef = useRef<TreeApi<TreeNodeData>>(null);
     const containerRef = useRef<HTMLDivElement>(null);
+    const dndManager = useDragDropManager();
     const [dndRoot, setDndRoot] = useState<HTMLDivElement | null>(null);
     const [containerHeight, setContainerHeight] = useState(400);
     const [isDraggingFiles, setIsDraggingFiles] = useState(false);
@@ -617,6 +619,7 @@ const ArboristFileTree = forwardRef<ArboristFileTreeHandle, ArboristFileTreeProp
                     initialOpenState={initialOpenState}
                     selection={selectedId ?? undefined}
                     dndRootElement={dndRoot}
+                    dndManager={dndManager}
                     onActivate={handleActivate}
                     onSelect={handleSelect}
                     onMove={handleMove}

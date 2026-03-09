@@ -11,7 +11,8 @@
     "format": "prettier --write \"src/**/*.{ts,tsx,css}\"",
     "format:check": "prettier --check \"src/**/*.{ts,tsx,css}\"",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "postinstall": "patch-package"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.78.0",
@@ -22,10 +23,12 @@
     "openai": "^6.27.0",
     "react": "^19.0.0",
     "react-arborist": "^3.4.3",
+    "react-dnd": "^16.0.1",
+    "react-dnd-html5-backend": "^16.0.1",
     "react-dom": "^19.0.0",
     "react-markdown": "^10.1.0",
+    "react-mosaic-component": "^6.1.1",
     "react-photo-view": "^1.2.7",
-    "react-resizable-panels": "^4.6.5",
     "react-router": "^7.1.0",
     "react-router-dom": "^7.1.0",
     "rehype-highlight": "^7.0.2",
@@ -33,6 +36,10 @@
     "tailwind-merge": "^2.6.0",
     "wa-sqlite": "^1.0.0",
     "zustand": "^5.0.3"
+  },
+  "overrides": {
+    "react-dnd": "$react-dnd",
+    "react-dnd-html5-backend": "$react-dnd-html5-backend"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
@@ -44,6 +51,7 @@
     "eslint": "^10.0.3",
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-react-refresh": "^0.5.2",
+    "patch-package": "^8.0.1",
     "prettier": "^3.4.2",
     "sql.js": "^1.14.1",
     "tailwindcss": "^4.0.0",

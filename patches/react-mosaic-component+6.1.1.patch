@@ -1,0 +1,91 @@
+diff --git a/node_modules/react-mosaic-component/lib/Split.js b/node_modules/react-mosaic-component/lib/Split.js
+index 6841ebb..cc7a8b7 100644
+--- a/node_modules/react-mosaic-component/lib/Split.js
++++ b/node_modules/react-mosaic-component/lib/Split.js
+@@ -32,10 +32,8 @@ Object.defineProperty(exports, "__esModule", { value: true });
+ exports.Split = void 0;
+ var classnames_1 = __importDefault(require("classnames"));
+ var clamp_1 = __importDefault(require("lodash/clamp"));
+-var throttle_1 = __importDefault(require("lodash/throttle"));
+ var react_1 = __importDefault(require("react"));
+ var BoundingBox_1 = require("./util/BoundingBox");
+-var RESIZE_THROTTLE_MS = 1000 / 30; // 30 fps
+ var TOUCH_EVENT_OPTIONS = {
+     capture: true,
+     passive: false,
+@@ -46,6 +44,9 @@ var Split = /** @class */ (function (_super) {
+         var _this = _super !== null && _super.apply(this, arguments) || this;
+         _this.rootElement = react_1.default.createRef();
+         _this.listenersBound = false;
++        _this._rafId = 0;
++        _this._cachedParentBBox = null;
++        _this._lastEvent = null;
+         _this.onMouseDown = function (event) {
+             if (!isTouchEvent(event)) {
+                 if (event.button !== 0) {
+@@ -53,23 +54,48 @@ var Split = /** @class */ (function (_super) {
+                 }
+             }
+             event.preventDefault();
++            // Cache parent bounding rect once at drag start (avoids layout thrash per frame)
++            _this._cachedParentBBox = _this.rootElement.current.parentElement.getBoundingClientRect();
++            // Disable pointer-events on all tiles during resize to prevent child hover re-renders
++            var root = _this.rootElement.current.closest('.mosaic-root');
++            if (root) {
++                root.classList.add('mosaic-resizing');
++            }
+             _this.bindListeners();
+         };
+         _this.onMouseUp = function (event) {
++            // Cancel any pending rAF
++            if (_this._rafId) {
++                cancelAnimationFrame(_this._rafId);
++                _this._rafId = 0;
++            }
+             _this.unbindListeners();
++            _this._cachedParentBBox = null;
++            _this._lastEvent = null;
++            // Remove pointer-events suppression
++            var root = _this.rootElement.current && _this.rootElement.current.closest('.mosaic-root');
++            if (root) {
++                root.classList.remove('mosaic-resizing');
++            }
+             var percentage = _this.calculateRelativePercentage(event);
+             _this.props.onRelease(percentage);
+         };
+         _this.onMouseMove = function (event) {
+             event.preventDefault();
+-            _this.throttledUpdatePercentage(event);
+-        };
+-        _this.throttledUpdatePercentage = (0, throttle_1.default)(function (event) {
+-            var percentage = _this.calculateRelativePercentage(event);
+-            if (percentage !== _this.props.splitPercentage) {
+-                _this.props.onChange(percentage);
++            // Store latest event coords (rAF will use them)
++            _this._lastEvent = event;
++            if (!_this._rafId) {
++                _this._rafId = requestAnimationFrame(function () {
++                    _this._rafId = 0;
++                    if (_this._lastEvent) {
++                        var percentage = _this.calculateRelativePercentage(_this._lastEvent);
++                        if (percentage !== _this.props.splitPercentage) {
++                            _this.props.onChange(percentage);
++                        }
++                    }
++                });
+             }
+-        }, RESIZE_THROTTLE_MS);
++        };
+         return _this;
+     }
+     Split.prototype.render = function () {
+@@ -116,7 +142,8 @@ var Split = /** @class */ (function (_super) {
+     };
+     Split.prototype.calculateRelativePercentage = function (event) {
+         var _a = this.props, minimumPaneSizePercentage = _a.minimumPaneSizePercentage, direction = _a.direction, boundingBox = _a.boundingBox;
+-        var parentBBox = this.rootElement.current.parentElement.getBoundingClientRect();
++        // Use cached bounding rect during drag, fallback to live measurement
++        var parentBBox = this._cachedParentBBox || this.rootElement.current.parentElement.getBoundingClientRect();
+         var location = isTouchEvent(event) ? event.changedTouches[0] : event;
+         var absolutePercentage;
+         if (direction === 'column') {

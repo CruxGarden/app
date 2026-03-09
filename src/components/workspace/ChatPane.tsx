@@ -1,24 +1,6 @@
 import { ChatPanel } from '@/components/chat';
 import { useCruxStore } from '@/stores/cruxStore';
 import { cn } from '@/lib/cn';
-import PaneHeader from './PaneHeader';
-
-function ChatIcon() {
-  return (
-    <svg
-      width="14"
-      height="14"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.5"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-    </svg>
-  );
-}
 
 function DeleteConfirmations() {
   const pendingDeletes = useCruxStore((s) => s.pendingDeletes);
@@ -63,8 +45,6 @@ function DeleteConfirmations() {
 export default function ChatPane() {
   return (
     <div className="flex flex-col h-full">
-      <PaneHeader paneType="collaboration" icon={<ChatIcon />} label="Collaboration" />
-
       <div className="flex-1 min-h-0">
         <ChatPanel />
       </div>
