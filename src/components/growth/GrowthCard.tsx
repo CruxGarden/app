@@ -1,8 +1,8 @@
 import { cn } from '@/lib/cn';
 import type { Dimension } from '@/api/types';
 
-interface GateCardProps {
-  gate: Dimension;
+interface GrowthCardProps {
+  growth: Dimension;
   index: number;
   isActive: boolean;
   onClick: () => void;
@@ -26,8 +26,8 @@ function formatTime(dateStr: string): string {
   return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 }
 
-export default function GateCard({ gate, index, isActive, onClick }: GateCardProps) {
-  const title = gate.target?.title || `Snapshot ${index + 1}`;
+export default function GrowthCard({ growth, index, isActive, onClick }: GrowthCardProps) {
+  const title = growth.target?.title || `Snapshot ${index + 1}`;
 
   return (
     <button
@@ -50,7 +50,7 @@ export default function GateCard({ gate, index, isActive, onClick }: GateCardPro
         <div className="flex-1 min-w-0">
           <div className="flex items-baseline justify-between gap-2">
             <span className="text-[11px] font-mono text-accent/70 uppercase">#{index + 1}</span>
-            <span className="text-[10px] text-text-muted shrink-0">{formatTime(gate.created)}</span>
+            <span className="text-[10px] text-text-muted shrink-0">{formatTime(growth.created)}</span>
           </div>
           <div className="text-sm font-body mt-0.5 truncate">{title}</div>
         </div>

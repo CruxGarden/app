@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { getSetting, setSetting } from '@/services/settings';
 
 // ── Pane Types ──────────────────────────────────────────
 
@@ -190,7 +191,7 @@ interface PersistedEditorTabs {
 
 function loadEditorTabs(cruxId: string): PersistedEditorTabs | null {
   try {
-    const raw = localStorage.getItem(editorTabsKey(cruxId));
+    const raw = getSetting(editorTabsKey(cruxId));
     return raw ? JSON.parse(raw) : null;
   } catch {
     return null;
@@ -207,12 +208,12 @@ function saveEditorTabs(cruxId: string, editor: EditorPaneState) {
     })),
     activeTabId: editor.activeTabId,
   };
-  localStorage.setItem(editorTabsKey(cruxId), JSON.stringify(data));
+  setSetting(editorTabsKey(cruxId), JSON.stringify(data));
 }
 
 function loadFolderState(cruxId: string): Record<string, boolean> | null {
   try {
-    const raw = localStorage.getItem(folderStateKey(cruxId));
+    const raw = getSetting(folderStateKey(cruxId));
     return raw ? JSON.parse(raw) : null;
   } catch {
     return null;
@@ -220,7 +221,7 @@ function loadFolderState(cruxId: string): Record<string, boolean> | null {
 }
 
 function saveFolderState(cruxId: string, state: Record<string, boolean>) {
-  localStorage.setItem(folderStateKey(cruxId), JSON.stringify(state));
+  setSetting(folderStateKey(cruxId), JSON.stringify(state));
 }
 
 /** Map old pane type names to current names */
@@ -267,7 +268,7 @@ function validateLayout(layout: PersistedLayout): {
 
 function loadLayout(key: string): PersistedLayout | null {
   try {
-    const raw = localStorage.getItem(key);
+    const raw = getSetting(key);
     return raw ? JSON.parse(raw) : null;
   } catch {
     return null;
@@ -278,7 +279,7 @@ function saveLayout(
   key: string,
   layout: { paneOrder: PaneType[]; paneVisibility: Record<PaneType, boolean> },
 ) {
-  localStorage.setItem(key, JSON.stringify(layout));
+  setSetting(key, JSON.stringify(layout));
 }
 
 /** Load global layout, migrating from old Zustand persist key if needed */
@@ -288,7 +289,7 @@ function getInitialLayout(): { paneOrder: PaneType[]; paneVisibility: Record<Pan
 
   // Migrate from old persist key (cruxgarden:ui)
   try {
-    const old = localStorage.getItem('cruxgarden:ui');
+    const old = getSetting('cruxgarden:ui');
     if (old) {
       const parsed = JSON.parse(old);
       if (parsed.state?.paneOrder) {

@@ -4,7 +4,7 @@ import { publicApi } from '@/api';
 import { usePublicPreviewUrl } from '@/hooks/usePublicPreviewUrl';
 import MarkdownRenderer from '@/components/chat/MarkdownRenderer';
 import { getFileIcon } from '@/components/artifacts/fileIcons';
-import { Spinner } from '@/components/ui';
+import { LoadingPanel } from '@/components/ui';
 
 const PUBLISHED_CONTENT_URL = import.meta.env.VITE_PUBLISHED_CONTENT_URL || '';
 
@@ -124,6 +124,7 @@ function HtmlRenderer({
       <iframe
         src={src}
         sandbox="allow-scripts allow-same-origin allow-popups"
+        allow="geolocation; camera; microphone; accelerometer; gyroscope; autoplay; fullscreen"
         className="w-full h-full border-0 bg-contrast"
         title="Published creation"
       />
@@ -152,10 +153,7 @@ function ServiceWorkerHtmlRenderer({
   if (!previewUrl) {
     return (
       <div className="flex items-center justify-center h-full">
-        <div className="flex items-center gap-3 px-5 py-3 rounded-lg bg-surface-solid/80 backdrop-blur-sm border border-border text-text-muted text-sm">
-          <Spinner size={16} />
-          Loading...
-        </div>
+        <LoadingPanel />
       </div>
     );
   }
@@ -165,6 +163,7 @@ function ServiceWorkerHtmlRenderer({
       key={previewUrl}
       src={previewUrl}
       sandbox="allow-scripts allow-same-origin allow-popups"
+      allow="geolocation; camera; microphone; accelerometer; gyroscope; autoplay; fullscreen"
       className="w-full h-full border-0 bg-contrast"
       title="Published creation"
     />
@@ -198,10 +197,7 @@ function MarkdownRendererView({
   if (!content) {
     return (
       <div className="flex items-center justify-center h-full">
-        <div className="flex items-center gap-3 px-5 py-3 rounded-lg bg-surface-solid/80 backdrop-blur-sm border border-border text-text-muted text-sm">
-          <Spinner size={16} />
-          Loading...
-        </div>
+        <LoadingPanel />
       </div>
     );
   }
@@ -241,10 +237,7 @@ function ImageRenderer({
   if (!objectUrl) {
     return (
       <div className="flex items-center justify-center h-full">
-        <div className="flex items-center gap-3 px-5 py-3 rounded-lg bg-surface-solid/80 backdrop-blur-sm border border-border text-text-muted text-sm">
-          <Spinner size={16} />
-          Loading...
-        </div>
+        <LoadingPanel />
       </div>
     );
   }

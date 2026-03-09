@@ -27,7 +27,7 @@ export function fromRow<T>(row: Record<string, unknown>): T {
   for (const [k, v] of Object.entries(row)) {
     const key = toCamel(k);
     if (key === 'meta' && typeof v === 'string') {
-      obj[key] = JSON.parse(v || '{}');
+      try { obj[key] = JSON.parse(v || '{}'); } catch { obj[key] = {}; }
     } else {
       obj[key] = v;
     }
@@ -37,12 +37,11 @@ export function fromRow<T>(row: Record<string, unknown>): T {
 
 // ── Attachment helpers ───────────────────────────────
 
-/** Convert artifact row to Attachment (strips internal content/fingerprint/path columns) */
+/** Convert artifact row to Attachment (strips internal content/path columns, keeps fingerprint) */
 export function toAttachment(row: Record<string, unknown>): Attachment {
   const entity = fromRow<Record<string, unknown>>(row);
   delete entity.content;
   delete entity.path;
-  delete entity.fingerprint;
   return entity as unknown as Attachment;
 }
 

@@ -1,5 +1,7 @@
 import { getServices } from '@/services';
 import type { ToolDefinition } from './adapters/types';
+import { validateToolInput } from './validation';
+import { formatToolError } from './errors';
 
 /**
  * Tool definitions — ported from api/src/ai/ai.tools.ts.
@@ -130,31 +132,57 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
   },
 ];
 
-/** MIME type map for common file extensions */
+/** MIME type map — matches api/src/ai/ai.service.ts getMimeType */
 const MIME_MAP: Record<string, string> = {
-  html: 'text/html',
-  css: 'text/css',
+  // Text / code
+  ts: 'text/typescript',
+  tsx: 'text/typescript',
   js: 'application/javascript',
+  jsx: 'application/javascript',
   mjs: 'application/javascript',
   json: 'application/json',
-  svg: 'image/svg+xml',
   md: 'text/markdown',
+  css: 'text/css',
+  html: 'text/html',
+  htm: 'text/html',
   txt: 'text/plain',
-  xml: 'application/xml',
+  py: 'text/x-python',
+  rs: 'text/x-rust',
+  go: 'text/x-go',
+  yaml: 'text/yaml',
+  yml: 'text/yaml',
+  toml: 'text/toml',
+  sql: 'text/sql',
+  sh: 'text/x-shellscript',
+  xml: 'text/xml',
+  csv: 'text/csv',
+  // Images
+  svg: 'image/svg+xml',
   png: 'image/png',
   jpg: 'image/jpeg',
   jpeg: 'image/jpeg',
   gif: 'image/gif',
   webp: 'image/webp',
   ico: 'image/x-icon',
+  bmp: 'image/bmp',
+  // Documents
+  pdf: 'application/pdf',
+  // Archives
+  zip: 'application/zip',
+  tar: 'application/x-tar',
+  gz: 'application/gzip',
+  // Audio
+  mp3: 'audio/mpeg',
+  wav: 'audio/wav',
+  ogg: 'audio/ogg',
+  // Video
+  mp4: 'video/mp4',
+  webm: 'video/webm',
+  // Fonts
   woff: 'font/woff',
   woff2: 'font/woff2',
   ttf: 'font/ttf',
   otf: 'font/otf',
-  pdf: 'application/pdf',
-  mp3: 'audio/mpeg',
-  mp4: 'video/mp4',
-  webm: 'video/webm',
 };
 
 function guessMimeType(path: string): string {
@@ -162,20 +190,27 @@ function guessMimeType(path: string): string {
   return MIME_MAP[ext] || 'application/octet-stream';
 }
 
-/** Truncate large tool results to prevent context bloat */
-function truncateToolResult(result: string, maxLength = 1500): string {
-  if (result.length <= maxLength) return result;
-  const headSize = Math.floor(maxLength * 0.6);
-  const tailSize = Math.floor(maxLength * 0.3);
-  const head = result.slice(0, headSize);
-  const tail = result.slice(-tailSize);
-  const omitted = result.length - headSize - tailSize;
-  return `${head}\n\n…(${omitted} characters omitted — use read_file to see full contents)…\n\n${tail}`;
+/** Check if a MIME type represents a binary file (matches API's isBinaryMime) */
+function isBinaryMime(mimeType: string): boolean {
+  if (mimeType.startsWith('text/')) return false;
+  if (mimeType === 'application/json') return false;
+  if (mimeType === 'application/javascript') return false;
+  if (mimeType === 'image/svg+xml') return false;
+  return true;
 }
 
 /**
  * Create a tool executor bound to a specific crux.
  * Uses the service layer so tool execution routes to the correct backend.
+ *
+ * Ported from api/src/ai/ai.service.ts — includes:
+ * - Input validation (validateToolInput)
+ * - Error formatting with recovery guidance (formatToolError)
+ * - Line ending normalization for edit_file
+ * - Whitespace-trim fallback for edit_file
+ * - File preview on edit failure
+ * - Stale-read clearing after mutations
+ * - Read-before-edit/write enforcement
  *
  * @param cruxId - The crux to operate on
  * @param onDeleteRequest - Callback for delete confirmation (yields to UI)
@@ -191,140 +226,292 @@ export function createToolExecutor(
     toolName: string,
     input: Record<string, unknown>,
   ): Promise<string> {
-    try {
-      switch (toolName) {
-        case 'write_file': {
-          const path = input.path as string;
-          const content = input.content as string;
-          const encoding = (input.encoding as string) || 'utf-8';
+    // Validate inputs before execution
+    const validation = validateToolInput(toolName, input);
+    if (!validation.valid) {
+      return formatToolError(toolName, validation.error!);
+    }
 
-          // Read-before-write enforcement
-          const artifacts = await attachmentService.findByResource('crux', cruxId);
-          const existing = artifacts.find(
-            (a) => (a.meta?.path || a.filename) === path,
-          );
-          if (existing && !recentlyReadFiles.has(path)) {
-            return `File ${path} already exists. Read it first before overwriting, or use edit_file for targeted changes.`;
-          }
+    // Track read_file calls for read-before-edit enforcement
+    if (toolName === 'read_file' && input.path) {
+      const path = input.path as string;
+      recentlyReadFiles.add(path);
+      recentlyReadFiles.add(path.replace(/^\//, ''));
+    }
 
-          if (encoding === 'base64') {
-            // Binary content via base64
-            const binary = Uint8Array.from(atob(content), (c) =>
-              c.charCodeAt(0),
-            );
-            const blob = new Blob([binary], { type: guessMimeType(path) });
-            await attachmentService.upload({
-              resourceId: cruxId,
-              resourceType: 'crux',
-              blob,
-              meta: { path },
-            });
-          } else {
-            await attachmentService.create({
-              resourceId: cruxId,
-              resourceType: 'crux',
-              content,
-              mimeType: guessMimeType(path),
-              meta: { path },
-            });
-          }
-          return `Wrote ${path}`;
-        }
+    // Hard-enforce read-before-edit
+    const normPath = (input.path as string | undefined)?.replace(/^\//, '');
+    const hasBeenRead =
+      input.path &&
+      (recentlyReadFiles.has(input.path as string) ||
+        recentlyReadFiles.has(normPath!));
 
-        case 'edit_file': {
-          const path = input.path as string;
-          const oldString = input.old_string as string;
-          const newString = input.new_string as string;
-          const replaceAll = input.replace_all as boolean | undefined;
+    if (toolName === 'edit_file' && input.path && !hasBeenRead) {
+      return formatToolError(
+        'edit_file',
+        `You must call read_file on "${normPath}" before editing it. Read the file first to get its current contents, then retry.`,
+      );
+    }
 
-          const artifacts = await attachmentService.findByResource('crux', cruxId);
-          const match = artifacts.find(
-            (a) => (a.meta?.path || a.filename) === path,
-          );
-          if (!match) return `File not found: ${path}`;
-          if (match.encoding === 'binary')
-            return `Cannot edit binary file: ${path}`;
-
-          const content = await attachmentService.readContent(match.id);
-          const occurrences = content.split(oldString).length - 1;
-
-          if (occurrences === 0) {
-            return `old_string not found in ${path}. Call read_file to get the current contents, then retry.`;
-          }
-          if (occurrences > 1 && !replaceAll) {
-            return `Multiple matches (${occurrences}) for old_string in ${path}. Include more context to make it unique, or set replace_all: true.`;
-          }
-
-          const newContent = replaceAll
-            ? content.replaceAll(oldString, newString)
-            : content.replace(oldString, newString);
-
-          await attachmentService.create({
-            resourceId: cruxId,
-            resourceType: 'crux',
-            content: newContent,
-            mimeType: match.mimeType,
-            meta: { path },
-          });
-          return `Edited ${path}`;
-        }
-
-        case 'read_file': {
-          const path = input.path as string;
-          recentlyReadFiles.add(path);
-
-          const artifacts = await attachmentService.findByResource('crux', cruxId);
-          const match = artifacts.find(
-            (a) => (a.meta?.path || a.filename) === path,
-          );
-          if (!match) return `File not found: ${path}`;
-
-          if (match.encoding === 'binary') {
-            const blob = await attachmentService.downloadBlob(match.id);
-            const buffer = await blob.arrayBuffer();
-            const base64 = btoa(
-              String.fromCharCode(...new Uint8Array(buffer)),
-            );
-            return `base64:${base64}`;
-          }
-
-          const content = await attachmentService.readContent(match.id);
-          return truncateToolResult(content);
-        }
-
-        case 'delete_file': {
-          const path = input.path as string;
-
-          if (onDeleteRequest) {
-            const confirmed = await onDeleteRequest(path);
-            if (!confirmed) return `Delete cancelled by user: ${path}`;
-          }
-
-          const artifacts = await attachmentService.findByResource('crux', cruxId);
-          const match = artifacts.find(
-            (a) => (a.meta?.path || a.filename) === path,
-          );
-          if (match) {
-            await attachmentService.delete(match.id);
-          }
-          return `Deleted ${path}`;
-        }
-
-        case 'list_files': {
-          const artifacts = await attachmentService.findByResource('crux', cruxId);
-          const files = artifacts
-            .filter((a) => a.type === 'artifact')
-            .map((a) => a.meta?.path || a.filename);
-          return files.join('\n') || 'No files yet.';
-        }
-
-        default:
-          return `Unknown tool: ${toolName}`;
+    // Hard-enforce read-before-write for existing files
+    if (toolName === 'write_file' && input.path && !hasBeenRead) {
+      const artifacts = await attachmentService.findByResource('crux', cruxId);
+      const existing = findArtifactByPath(artifacts, input.path as string);
+      if (existing) {
+        return formatToolError(
+          'write_file',
+          `File "${normPath}" already exists. You must call read_file before overwriting an existing file. Read it first, then use edit_file for targeted changes or write_file for a full rewrite.`,
+        );
       }
-    } catch (err: any) {
-      return `Error executing ${toolName}: ${err.message}`;
+    }
+
+    try {
+      let result: string;
+
+      switch (toolName) {
+        case 'write_file':
+          result = await toolWriteFile(input, cruxId, attachmentService);
+          break;
+        case 'edit_file':
+          result = await toolEditFile(input, cruxId, attachmentService);
+          break;
+        case 'read_file':
+          result = await toolReadFile(input, cruxId, attachmentService);
+          break;
+        case 'delete_file':
+          result = await toolDeleteFile(
+            input,
+            cruxId,
+            attachmentService,
+            onDeleteRequest,
+          );
+          break;
+        case 'list_files':
+          result = await toolListFiles(cruxId, attachmentService);
+          break;
+        default:
+          return formatToolError(toolName, `Unknown tool: ${toolName}`);
+      }
+
+      // Clear read tracking for mutated files (content changed, stale)
+      if (toolName === 'write_file' || toolName === 'edit_file') {
+        recentlyReadFiles.delete(input.path as string);
+        recentlyReadFiles.delete(normPath!);
+      }
+
+      return result;
+    } catch (err: unknown) {
+      return formatToolError(toolName, err as Error);
     }
   };
+}
+
+// ── Tool implementations ────────────────────────────────────
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- service layer type
+type AttachmentService = any;
+
+async function toolWriteFile(
+  input: Record<string, unknown>,
+  cruxId: string,
+  attachmentService: AttachmentService,
+): Promise<string> {
+  const path = input.path as string;
+  const content = input.content as string;
+  const encoding = (input.encoding as string) || 'utf-8';
+
+  // Check if file already exists (for response message)
+  const artifacts = await attachmentService.findByResource('crux', cruxId);
+  const existing = findArtifactByPath(artifacts, path);
+
+  if (encoding === 'base64') {
+    const binary = Uint8Array.from(atob(content), (c) => c.charCodeAt(0));
+    const blob = new Blob([binary], { type: guessMimeType(path) });
+    await attachmentService.upload({
+      resourceId: cruxId,
+      resourceType: 'crux',
+      blob,
+      meta: { path },
+    });
+  } else {
+    await attachmentService.create({
+      resourceId: cruxId,
+      resourceType: 'crux',
+      content,
+      mimeType: guessMimeType(path),
+      meta: { path },
+    });
+  }
+  return existing ? `Updated file: ${path}` : `Created file: ${path}`;
+}
+
+async function toolEditFile(
+  input: Record<string, unknown>,
+  cruxId: string,
+  attachmentService: AttachmentService,
+): Promise<string> {
+  const path = input.path as string;
+  const oldString = input.old_string as string;
+  const newString = input.new_string as string;
+  const replaceAll = (input.replace_all as boolean) ?? false;
+
+  const artifacts = await attachmentService.findByResource('crux', cruxId);
+  const match = findArtifactByPath(artifacts, path);
+  if (!match) return formatToolError('edit_file', `File not found: ${path}`);
+  if (isBinaryMime(match.mimeType || ''))
+    return formatToolError('edit_file', `Cannot edit binary file: ${path}`);
+
+  const rawContent = await attachmentService.readContent(match.id);
+
+  // Normalize line endings to \n for reliable matching (matches API behavior)
+  const content = rawContent.replace(/\r\n/g, '\n');
+  const normalizedOld = oldString.replace(/\r\n/g, '\n');
+
+  let matchCount = content.split(normalizedOld).length - 1;
+
+  // Fallback: try with trailing whitespace trimmed per line (matches API behavior)
+  let effectiveOld = normalizedOld;
+  if (matchCount === 0) {
+    const trimmedOld = normalizedOld
+      .split('\n')
+      .map((line: string) => line.trimEnd())
+      .join('\n');
+    const trimmedContent = content
+      .split('\n')
+      .map((line: string) => line.trimEnd())
+      .join('\n');
+    const trimmedCount = trimmedContent.split(trimmedOld).length - 1;
+    if (trimmedCount === 1) {
+      // Find the actual substring in the original content by matching line-by-line
+      const oldLines = trimmedOld.split('\n');
+      const contentLines = content.split('\n');
+      for (let i = 0; i <= contentLines.length - oldLines.length; i++) {
+        const slice = contentLines.slice(i, i + oldLines.length);
+        const sliceTrimmed = slice.map((l: string) => l.trimEnd()).join('\n');
+        if (sliceTrimmed === trimmedOld) {
+          effectiveOld = slice.join('\n');
+          matchCount = 1;
+          break;
+        }
+      }
+    }
+  }
+
+  if (matchCount === 0) {
+    // Include a snippet of the actual file so the model can retry without another read_file
+    const preview =
+      content.length <= 800
+        ? content
+        : content.slice(0, 400) + '\n…\n' + content.slice(-400);
+    return (
+      formatToolError('edit_file', `old_string not found in ${path}`) +
+      `\n\nCurrent file contents:\n\`\`\`\n${preview}\n\`\`\``
+    );
+  }
+  if (matchCount > 1 && !replaceAll) {
+    return formatToolError(
+      'edit_file',
+      `old_string matches ${matchCount} locations in ${path}. Either include more surrounding context to make it unique, or set replace_all to true.`,
+    );
+  }
+
+  // Use a replacer function to avoid $ pattern interpretation in newString
+  const normalizedNew = newString.replace(/\r\n/g, '\n');
+  let updatedContent: string;
+  if (replaceAll) {
+    updatedContent = content.split(effectiveOld).join(normalizedNew);
+  } else {
+    updatedContent = content.replace(effectiveOld, () => normalizedNew);
+  }
+
+  await attachmentService.create({
+    resourceId: cruxId,
+    resourceType: 'crux',
+    content: updatedContent,
+    mimeType: match.mimeType,
+    meta: { path },
+  });
+
+  if (replaceAll && matchCount > 1) {
+    return `Edited file: ${path} (replaced ${matchCount} occurrences)`;
+  }
+  return `Edited file: ${path}`;
+}
+
+async function toolReadFile(
+  input: Record<string, unknown>,
+  cruxId: string,
+  attachmentService: AttachmentService,
+): Promise<string> {
+  const path = input.path as string;
+
+  const artifacts = await attachmentService.findByResource('crux', cruxId);
+  const match = findArtifactByPath(artifacts, path);
+  if (!match) return formatToolError('read_file', `File not found: ${path}`);
+
+  if (match.encoding === 'binary' || isBinaryMime(match.mimeType || '')) {
+    const blob = await attachmentService.downloadBlob(match.id);
+    const buffer = await blob.arrayBuffer();
+    const base64 = btoa(String.fromCharCode(...new Uint8Array(buffer)));
+    return `[Binary file: ${path} (${match.mimeType}, ${buffer.byteLength} bytes)] base64:${base64}`;
+  }
+
+  // Return full content — no truncation (matches API behavior)
+  const content = await attachmentService.readContent(match.id);
+  return content;
+}
+
+async function toolDeleteFile(
+  input: Record<string, unknown>,
+  cruxId: string,
+  attachmentService: AttachmentService,
+  onDeleteRequest?: (path: string) => Promise<boolean>,
+): Promise<string> {
+  const path = input.path as string;
+
+  if (onDeleteRequest) {
+    const confirmed = await onDeleteRequest(path);
+    if (!confirmed) return `Delete cancelled by user: ${path}`;
+  }
+
+  const artifacts = await attachmentService.findByResource('crux', cruxId);
+  const match = findArtifactByPath(artifacts, path);
+  if (!match) return formatToolError('delete_file', `File not found: ${path}`);
+
+  await attachmentService.delete(match.id);
+  return `Deleted file: ${path}`;
+}
+
+async function toolListFiles(
+  cruxId: string,
+  attachmentService: AttachmentService,
+): Promise<string> {
+  const artifacts = await attachmentService.findByResource('crux', cruxId);
+  const files = artifacts
+    .filter((a: { type: string }) => a.type === 'artifact')
+    .map(
+      (a: { meta?: { path?: string }; filename: string }) =>
+        a.meta?.path || a.filename,
+    );
+  return files.join('\n') || 'No files yet.';
+}
+
+/**
+ * Find an artifact by path, matching the API's findAttachmentByPath.
+ * Checks meta.path AND filename independently, with normalized path (no leading slash).
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- artifact shape varies by service layer
+function findArtifactByPath(artifacts: any[], path: string): any | null {
+  const normalized = path.replace(/^\//, '');
+  return (
+    artifacts.find(
+      (a: { meta?: { path?: string }; filename?: string }) =>
+        a.meta?.path === path ||
+        a.meta?.path === normalized ||
+        a.filename === path ||
+        a.filename === normalized,
+    ) || null
+  );
 }
 
 /** Tool names that mutate files (trigger system prompt refresh) */

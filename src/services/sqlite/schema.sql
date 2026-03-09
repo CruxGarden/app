@@ -42,6 +42,7 @@ CREATE TABLE IF NOT EXISTS artifacts (
 CREATE UNIQUE INDEX IF NOT EXISTS idx_artifacts_resource_path ON artifacts(resource_id, path) WHERE path IS NOT NULL AND path != '';
 CREATE INDEX IF NOT EXISTS idx_artifacts_resource ON artifacts(resource_id);
 CREATE INDEX IF NOT EXISTS idx_artifacts_type ON artifacts(type);
+CREATE INDEX IF NOT EXISTS idx_artifacts_fingerprint ON artifacts(fingerprint);
 
 CREATE TABLE IF NOT EXISTS dimensions (
   id TEXT PRIMARY KEY,
@@ -77,3 +78,8 @@ CREATE TABLE IF NOT EXISTS settings (
   key TEXT PRIMARY KEY,
   value TEXT
 );
+
+CREATE TABLE IF NOT EXISTS schema_version (
+  version INTEGER PRIMARY KEY
+);
+INSERT OR IGNORE INTO schema_version (version) VALUES (1);

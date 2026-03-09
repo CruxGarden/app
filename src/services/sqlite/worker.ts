@@ -4,7 +4,7 @@ import * as SQLite from 'wa-sqlite';
 // @ts-expect-error — wa-sqlite examples aren't typed
 import { AccessHandlePoolVFS } from 'wa-sqlite/src/examples/AccessHandlePoolVFS.js';
 
-// @ts-expect-error — wa-sqlite examples aren't typed
+// @ts-ignore — wa-sqlite examples aren't typed
 import { MemoryAsyncVFS } from 'wa-sqlite/src/examples/MemoryAsyncVFS.js';
 import SCHEMA from './schema.sql?raw';
 
@@ -195,15 +195,24 @@ async function importDb(data: ArrayBuffer): Promise<void> {
     data: data,
   });
 
-  // Attach the imported database and copy data
+  // Attach the imported database and copy data inside a transaction
+  // so a failure mid-import doesn't leave the database partially deleted.
   await exec(`ATTACH '${EXPORT_URI}' AS import_db`);
 
   const tables = ['cruxes', 'artifacts', 'dimensions', 'authors', 'settings'];
-  for (const table of tables) {
-    await run(`DELETE FROM ${table}`);
-  }
-  for (const table of tables) {
-    await run(`INSERT OR REPLACE INTO main.${table} SELECT * FROM import_db.${table}`);
+  try {
+    await exec('BEGIN TRANSACTION');
+    for (const table of tables) {
+      await run(`DELETE FROM ${table}`);
+    }
+    for (const table of tables) {
+      await run(`INSERT OR REPLACE INTO main.${table} SELECT * FROM import_db.${table}`);
+    }
+    await exec('COMMIT');
+  } catch (err) {
+    await exec('ROLLBACK');
+    await exec('DETACH import_db');
+    throw err;
   }
 
   await exec('DETACH import_db');

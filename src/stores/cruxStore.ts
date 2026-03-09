@@ -42,11 +42,10 @@ interface CruxState {
   hasUnpublishedChanges: boolean;
   artifactsVersion: number;
 
-  // Gate state
-  gates: Dimension[];
-  gateCount: number;
-  isCreatingGate: boolean;
-  pendingGateCreation: boolean;
+  // Growth state
+  growths: Dimension[];
+  growthCount: number;
+  isCreatingGrowth: boolean;
 
   // Pending file deletions (awaiting user confirmation)
   pendingDeletes: { attachmentId: string; path: string }[];
@@ -84,12 +83,11 @@ interface CruxState {
   deleteArtifacts: (ids: string[]) => Promise<void>;
   saveArtifactContent: (id: string, content: string) => Promise<void>;
 
-  // Gate actions
-  loadGates: () => Promise<void>;
-  addGate: (gate: Dimension) => void;
+  // Growth actions
+  loadGrowths: () => Promise<void>;
+  addGrowth: (growth: Dimension) => void;
   setSummary: (summary: CruxSummary) => void;
-  setGateCreating: (creating: boolean) => void;
-  setPendingGateCreation: (pending: boolean) => void;
+  setGrowthCreating: (creating: boolean) => void;
 
   // Delete confirmation actions
   addPendingDelete: (attachmentId: string, path: string) => void;
@@ -104,12 +102,11 @@ export const useCruxStore = create<CruxState>((set, get) => ({
   summary: null,
   isStreaming: false,
   streamingContent: '',
-  gates: [],
-  gateCount: 0,
+  growths: [],
+  growthCount: 0,
   hasUnpublishedChanges: false,
   artifactsVersion: 0,
-  isCreatingGate: false,
-  pendingGateCreation: false,
+  isCreatingGrowth: false,
   pendingDeletes: [],
   uploadProgress: null,
 
@@ -147,9 +144,12 @@ export const useCruxStore = create<CruxState>((set, get) => ({
       messages: crux.meta?.messages || [],
       artifacts: attachments,
       summary: crux.meta?.summary || null,
-      gateCount: crux.meta?.gateCount || 0,
+      growthCount: crux.meta?.growthCount || 0,
       hasUnpublishedChanges: hasChanges,
     });
+
+    // Load growth dimensions (version history)
+    get().loadGrowths();
   },
 
   createCrux: async (title?: string) => {
@@ -208,8 +208,8 @@ export const useCruxStore = create<CruxState>((set, get) => ({
       messages: initialMessages,
       artifacts: [],
       summary: null,
-      gates: [],
-      gateCount: 0,
+      growths: [],
+      growthCount: 0,
     });
 
     return crux;
@@ -268,11 +268,11 @@ export const useCruxStore = create<CruxState>((set, get) => ({
   },
 
   saveMeta: async () => {
-    const { crux, messages, summary, gateCount } = get();
+    const { crux, messages, summary, growthCount } = get();
     if (!crux) return;
     const { crux: cruxService } = getServices();
     await cruxService.update(crux.id, {
-      meta: { ...crux.meta, messages, summary, gateCount },
+      meta: { ...crux.meta, messages, summary, growthCount },
     });
   },
 
@@ -296,11 +296,10 @@ export const useCruxStore = create<CruxState>((set, get) => ({
       summary: null,
       isStreaming: false,
       streamingContent: '',
-      gates: [],
-      gateCount: 0,
+      growths: [],
+      growthCount: 0,
       hasUnpublishedChanges: false,
-      isCreatingGate: false,
-      pendingGateCreation: false,
+      isCreatingGrowth: false,
       pendingDeletes: [],
     });
   },
@@ -472,20 +471,20 @@ export const useCruxStore = create<CruxState>((set, get) => ({
     }));
   },
 
-  // Gate actions
-  loadGates: async () => {
+  // Growth actions
+  loadGrowths: async () => {
     const { crux } = get();
     if (!crux) return;
     const { dimension } = getServices();
-    const dimensions = await dimension.findBySourceAndType(crux.id, 'gate');
+    const dimensions = await dimension.findBySourceAndType(crux.id, 'growth');
     const sorted = dimensions.sort((a, b) => (a.weight ?? 0) - (b.weight ?? 0));
-    set({ gates: sorted });
+    set({ growths: sorted });
   },
 
-  addGate: (gate: Dimension) => {
+  addGrowth: (growth: Dimension) => {
     set((state) => ({
-      gates: [...state.gates, gate].sort((a, b) => (a.weight ?? 0) - (b.weight ?? 0)),
-      gateCount: state.gateCount + 1,
+      growths: [...state.growths, growth].sort((a, b) => (a.weight ?? 0) - (b.weight ?? 0)),
+      growthCount: state.growthCount + 1,
     }));
   },
 
@@ -493,12 +492,8 @@ export const useCruxStore = create<CruxState>((set, get) => ({
     set({ summary });
   },
 
-  setGateCreating: (creating: boolean) => {
-    set({ isCreatingGate: creating });
-  },
-
-  setPendingGateCreation: (pending: boolean) => {
-    set({ pendingGateCreation: pending });
+  setGrowthCreating: (creating: boolean) => {
+    set({ isCreatingGrowth: creating });
   },
 
   addPendingDelete: (attachmentId: string, path: string) => {

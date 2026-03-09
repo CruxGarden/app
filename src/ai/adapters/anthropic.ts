@@ -17,13 +17,16 @@ export class AnthropicAdapter implements ProviderAdapter {
     const textParts: string[] = [];
     const toolCalls: ToolUseBlock[] = [];
     const fullContent: ContentBlock[] = [];
+    // eslint-disable-next-line no-useless-assignment -- reassigned after stream completes
     let stopReason = 'end_turn';
 
     const stream = client.messages.stream({
       model: opts.model,
       max_tokens: opts.maxTokens ?? 16384,
       system: opts.systemPrompt,
-      messages: opts.messages as any, // NormalizedMessage matches Anthropic's MessageParam
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- SDK type boundary
+      messages: opts.messages as any,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- SDK type boundary
       tools: opts.tools as any,
     });
 
@@ -34,6 +37,7 @@ export class AnthropicAdapter implements ProviderAdapter {
 
     for await (const event of stream) {
       if (event.type === 'content_block_delta') {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- SDK delta union type
         const delta = event.delta as any;
         if (delta.type === 'text_delta') {
           textParts.push(delta.text);
@@ -43,6 +47,7 @@ export class AnthropicAdapter implements ProviderAdapter {
         }
       } else if (event.type === 'content_block_stop') {
         // Finalize the block
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- internal SDK property
         const snapshot = (stream as any).currentMessage;
         if (snapshot) {
           const block = snapshot.content?.[event.index];

@@ -49,7 +49,7 @@ describe('createToolExecutor', () => {
         path: 'index.html',
         content: '<h1>Hello</h1>',
       });
-      expect(result).toBe('Wrote index.html');
+      expect(result).toBe('Created file: index.html');
     });
 
     it('blocks overwrite without prior read', async () => {
@@ -62,7 +62,7 @@ describe('createToolExecutor', () => {
         content: 'v2',
       });
       expect(result).toContain('already exists');
-      expect(result).toContain('Read it first');
+      expect(result).toContain('read_file');
     });
 
     it('allows overwrite after read', async () => {
@@ -72,7 +72,7 @@ describe('createToolExecutor', () => {
         path: 'style.css',
         content: 'v2',
       });
-      expect(result).toBe('Wrote style.css');
+      expect(result).toBe('Updated file: style.css');
     });
   });
 
@@ -95,13 +95,14 @@ describe('createToolExecutor', () => {
         path: 'page.html',
         content: '<h1>Old Title</h1>',
       });
-      // edit_file implicitly reads, so no need for read_file first
+      // Must read before edit (read-before-edit enforcement)
+      await execute('read_file', { path: 'page.html' });
       const result = await execute('edit_file', {
         path: 'page.html',
         old_string: 'Old Title',
         new_string: 'New Title',
       });
-      expect(result).toBe('Edited page.html');
+      expect(result).toBe('Edited file: page.html');
 
       // Verify the edit
       const content = await execute('read_file', { path: 'page.html' });
@@ -113,6 +114,7 @@ describe('createToolExecutor', () => {
         path: 'data.txt',
         content: 'actual content',
       });
+      await execute('read_file', { path: 'data.txt' });
       const result = await execute('edit_file', {
         path: 'data.txt',
         old_string: 'nonexistent',
@@ -121,13 +123,26 @@ describe('createToolExecutor', () => {
       expect(result).toContain('not found');
     });
 
-    it('returns error for nonexistent file', async () => {
+    it('returns error when editing without reading first', async () => {
       const result = await execute('edit_file', {
         path: 'ghost.txt',
         old_string: 'a',
         new_string: 'b',
       });
-      expect(result).toContain('File not found');
+      expect(result).toContain('read_file');
+    });
+
+    it('returns error for nonexistent file after read', async () => {
+      // Read a different file, then try to edit a nonexistent one
+      await execute('write_file', { path: 'other.txt', content: 'x' });
+      await execute('read_file', { path: 'other.txt' });
+      // ghost.txt was never read, so enforcement catches it
+      const result = await execute('edit_file', {
+        path: 'ghost.txt',
+        old_string: 'a',
+        new_string: 'b',
+      });
+      expect(result).toContain('read_file');
     });
 
     it('handles multiple matches with replace_all', async () => {
@@ -135,14 +150,18 @@ describe('createToolExecutor', () => {
         path: 'vars.js',
         content: 'const foo = 1;\nconst foo = 2;',
       });
+      await execute('read_file', { path: 'vars.js' });
 
-      // Without replace_all — should error
+      // Without replace_all — should error about multiple matches
       const result1 = await execute('edit_file', {
         path: 'vars.js',
         old_string: 'foo',
         new_string: 'bar',
       });
-      expect(result1).toContain('Multiple matches');
+      expect(result1).toContain('matches');
+
+      // Need to re-read after failed edit (stale read cleared on success only)
+      await execute('read_file', { path: 'vars.js' });
 
       // With replace_all — should succeed
       const result2 = await execute('edit_file', {
@@ -151,7 +170,7 @@ describe('createToolExecutor', () => {
         new_string: 'bar',
         replace_all: true,
       });
-      expect(result2).toBe('Edited vars.js');
+      expect(result2).toContain('Edited file: vars.js');
 
       const content = await execute('read_file', { path: 'vars.js' });
       expect(content).toBe('const bar = 1;\nconst bar = 2;');
@@ -178,7 +197,7 @@ describe('createToolExecutor', () => {
     it('deletes a file when no confirmation callback', async () => {
       await execute('write_file', { path: 'temp.txt', content: 'delete me' });
       const result = await execute('delete_file', { path: 'temp.txt' });
-      expect(result).toBe('Deleted temp.txt');
+      expect(result).toBe('Deleted file: temp.txt');
 
       // Verify deleted
       const listResult = await execute('list_files', {});
@@ -196,7 +215,7 @@ describe('createToolExecutor', () => {
       const execWithConfirm = createToolExecutor(cruxId, async () => true);
       await execute('write_file', { path: 'remove.txt', content: 'bye' });
       const result = await execWithConfirm('delete_file', { path: 'remove.txt' });
-      expect(result).toBe('Deleted remove.txt');
+      expect(result).toBe('Deleted file: remove.txt');
     });
   });
 

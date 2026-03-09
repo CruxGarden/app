@@ -35,7 +35,7 @@ export class SqliteCruxService implements ICruxService {
     const identity = await getLocalIdentity();
     const now = new Date().toISOString();
     const crux: Crux = {
-      id: crypto.randomUUID(),
+      id: input.id || crypto.randomUUID(),
       slug: input.slug || generateSlug(input.title),
       title: input.title || '',
       description: input.description || '',

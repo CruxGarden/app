@@ -86,7 +86,7 @@ export interface Crux {
   updated: string;
 }
 
-export type CruxKind = 'webapp' | 'page' | 'document' | 'image';
+export type CruxKind = 'webapp' | 'page' | 'document' | 'image' | 'snapshot';
 
 export interface CreateCruxDto {
   slug: string;
@@ -124,8 +124,8 @@ export interface CruxSummary {
   stack: string;
 }
 
-export interface GateSnapshot {
-  gate: string;
+export interface GrowthSnapshot {
+  title: string;
   state: string;
   decision: string;
   rejected: string;
@@ -157,8 +157,8 @@ export interface CruxMeta {
     systemPrompt?: string;
     palette?: Record<string, string>;
   };
-  gateCount?: number;
-  snapshot?: GateSnapshot;
+  growthCount?: number;
+  snapshot?: GrowthSnapshot;
   artifactRefs?: string[];
   messageRange?: { from: number; to: number };
   parentCruxId?: string;
@@ -271,7 +271,7 @@ export interface Attachment {
   id: string;
   type: string;
   kind: string;
-  meta?: { path?: string; gateId?: string; [key: string]: unknown };
+  meta?: { path?: string; growthId?: string; [key: string]: unknown };
   resourceId: string;
   resourceType: string;
   authorId: string;
@@ -280,6 +280,7 @@ export interface Attachment {
   mimeType: string;
   filename: string;
   size: number;
+  fingerprint?: string;
   created: string;
   updated: string;
 }

@@ -1,17 +1,9 @@
 import { useState, useRef, useCallback } from 'react';
-import { getSqliteClient } from '@/services/sqlite/client';
 import { ensureLocalAuthor } from '@/services';
+import { exportGarden, importGarden } from '@/services/garden-io';
 import { useAuthStore } from '@/stores/authStore';
 import { Panel, Spinner } from '@/components/ui';
 import { cn } from '@/lib/cn';
-
-function formatBytes(bytes: number): string {
-  if (!bytes || bytes <= 0) return '0 B';
-  const k = 1024;
-  const sizes = ['B', 'KB', 'MB', 'GB'];
-  const i = Math.min(Math.floor(Math.log(bytes) / Math.log(k)), sizes.length - 1);
-  return `${parseFloat((bytes / Math.pow(k, i)).toFixed(1))} ${sizes[i]}`;
-}
 
 export default function DataSettings() {
   const [exporting, setExporting] = useState(false);
@@ -23,21 +15,19 @@ export default function DataSettings() {
   const handleExport = useCallback(async () => {
     setExporting(true);
     setError('');
-    setStatus('Exporting...');
     try {
-      const data = await getSqliteClient().export();
-      const blob = new Blob([data], { type: 'application/x-sqlite3' });
-      const url = URL.createObjectURL(blob);
+      const result = await exportGarden({ onProgress: setStatus });
+
+      const url = URL.createObjectURL(result.blob);
       const a = document.createElement('a');
       a.href = url;
-      const now = new Date();
-      const ts = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`;
-      a.download = `crux-garden-${ts}.garden`;
+      a.download = result.filename;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
-      setStatus(`Exported ${formatBytes(data.byteLength)}`);
+
+      setStatus('Export complete');
     } catch (err) {
       console.error('Garden export failed:', err);
       setError('Export failed');
@@ -52,10 +42,8 @@ export default function DataSettings() {
     if (!file) return;
     setImporting(true);
     setError('');
-    setStatus('Importing...');
     try {
-      const data = await file.arrayBuffer();
-      await getSqliteClient().import(data);
+      await importGarden({ data: file, onProgress: setStatus });
 
       // Re-ensure local author exists after import
       const author = await ensureLocalAuthor();
@@ -64,7 +52,7 @@ export default function DataSettings() {
       setStatus('Import complete — reload recommended');
     } catch (err) {
       console.error('Garden import failed:', err);
-      setError('Import failed — the file may be corrupted');
+      setError(err instanceof Error ? err.message : 'Import failed — the file may be corrupted');
       setStatus('');
     } finally {
       setImporting(false);

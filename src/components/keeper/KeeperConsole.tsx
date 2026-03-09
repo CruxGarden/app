@@ -6,6 +6,7 @@ import keeperAvatarLight from '@/images/keeper-avatar-light.jpg';
 import { useThemeStore } from '@/stores/themeStore';
 import { useAuthStore } from '@/stores/authStore';
 import { getApiKey } from '@/ai/keys';
+import { getSetting, setSetting, removeSetting } from '@/services/settings';
 
 export function KeeperAvatar({ className = 'w-6 h-6' }: { className?: string }) {
   const resolved = useThemeStore((s) => s.resolved);
@@ -39,14 +40,14 @@ const KEEPER_SYSTEM_PROMPT =
   'You are always available to help with questions about the app, creative ideas, or just to chat.';
 
 // No tools — The Keeper is a conversational-only assistant for now.
-const KEEPER_TOOLS: any[] = [];
+const KEEPER_TOOLS: Record<string, unknown>[] = [];
 
 // ── Streaming helper ──
 
 interface ToolCallResult {
   id: string;
   name: string;
-  input: Record<string, any>;
+  input: Record<string, unknown>;
 }
 
 interface StreamResult {
@@ -57,7 +58,7 @@ interface StreamResult {
 
 async function streamApiCall(
   apiKey: string,
-  messages: any[],
+  messages: ApiMessage[],
   signal: AbortSignal,
   onTextDelta: (fullText: string) => void,
 ): Promise<StreamResult> {
@@ -138,7 +139,7 @@ async function streamApiCall(
   // Parse accumulated tool inputs
   const toolCalls: ToolCallResult[] = [];
   for (const tb of toolBlocks.values()) {
-    let input: Record<string, any> = {};
+    let input: Record<string, unknown> = {};
     if (tb.inputJson) {
       try {
         input = JSON.parse(tb.inputJson);
@@ -156,7 +157,7 @@ async function streamApiCall(
 
 type ContentBlock =
   | { type: 'text'; text: string }
-  | { type: 'tool_use'; id: string; name: string; input: Record<string, any> }
+  | { type: 'tool_use'; id: string; name: string; input: Record<string, unknown> }
   | { type: 'tool_result'; tool_use_id: string; content: string };
 
 type ApiMessage = { role: 'user' | 'assistant'; content: string | ContentBlock[] };
@@ -198,14 +199,14 @@ function UserAvatar() {
 export default function KeeperConsole({ open, onClose }: KeeperConsoleProps) {
   const [apiMessages, setApiMessages] = useState<ApiMessage[]>(() => {
     try {
-      const saved = localStorage.getItem(HISTORY_STORAGE);
+      const saved = getSetting(HISTORY_STORAGE);
       if (saved) return JSON.parse(saved).apiMessages || [];
     } catch { /* ignore */ }
     return [];
   });
   const [displayMessages, setDisplayMessages] = useState<DisplayMessage[]>(() => {
     try {
-      const saved = localStorage.getItem(HISTORY_STORAGE);
+      const saved = getSetting(HISTORY_STORAGE);
       if (saved) return JSON.parse(saved).displayMessages || [];
     } catch { /* ignore */ }
     return [];
@@ -326,11 +327,12 @@ export default function KeeperConsole({ open, onClose }: KeeperConsoleProps) {
 
       // Persist conversation history
       try {
-        localStorage.setItem(HISTORY_STORAGE, JSON.stringify({ apiMessages: msgs, displayMessages: currentDisplay }));
+        setSetting(HISTORY_STORAGE, JSON.stringify({ apiMessages: msgs, displayMessages: currentDisplay }));
       } catch { /* ignore */ }
-    } catch (err: any) {
-      if (err.name !== 'AbortError') {
-        setError(err.message);
+    } catch (err: unknown) {
+      const e = err as Error;
+      if (e.name !== 'AbortError') {
+        setError(e.message);
       }
     } finally {
       setStreaming(false);
@@ -338,7 +340,7 @@ export default function KeeperConsole({ open, onClose }: KeeperConsoleProps) {
       setToolActivity('');
       abortRef.current = null;
     }
-  }, [input, streaming, apiMessages]);
+  }, [input, streaming, apiMessages, displayMessages]);
 
   const stop = useCallback(() => {
     abortRef.current?.abort();
@@ -347,7 +349,7 @@ export default function KeeperConsole({ open, onClose }: KeeperConsoleProps) {
   const clearHistory = useCallback(() => {
     setApiMessages([]);
     setDisplayMessages([]);
-    try { localStorage.removeItem(HISTORY_STORAGE); } catch { /* ignore */ }
+    try { removeSetting(HISTORY_STORAGE); } catch { /* ignore */ }
   }, []);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {

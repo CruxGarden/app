@@ -1,10 +1,11 @@
 import { Fragment, useCallback, useMemo } from 'react';
 import { Group, Panel, Separator, useDefaultLayout } from 'react-resizable-panels';
 import { cn } from '@/lib/cn';
+import { getSetting, setSetting } from '@/services/settings';
 import { useUIStore, type PaneType } from '@/stores/uiStore';
 import { DragProvider } from './DragContext';
 import { usePaneDrag } from './DragContext';
-import NavigationPane from './NavigationPane';
+import HistoryPane from './HistoryPane';
 import ChatPane from './ChatPane';
 import ArtifactsPane from './ArtifactsPane';
 import EditorPane from './EditorPane';
@@ -38,7 +39,7 @@ const PANE_CONFIG: Record<PaneType, PaneConfig> = {
 };
 
 const PANE_COMPONENTS: Record<PaneType, React.ComponentType> = {
-  history: NavigationPane,
+  history: HistoryPane,
   collaboration: ChatPane,
   artifacts: ArtifactsPane,
   workshop: EditorPane,
@@ -116,11 +117,25 @@ export default function WorkspaceLayout() {
   // Panel ids for layout persistence
   const panelIds = useMemo(() => visiblePanes.map(String), [visiblePanes]);
 
+  // Storage adapter that routes react-resizable-panels through settings service,
+  // stripping the library's internal "react-resizable-panels:" prefix from keys
+  const panelStorage = useMemo<Storage>(() => {
+    const clean = (key: string) => key.replace(/^react-resizable-panels:/, '');
+    return {
+      get length() { return 0; },
+      key() { return null; },
+      clear() {},
+      getItem(key: string) { return getSetting(`cruxgarden:panel:${clean(key)}`); },
+      setItem(key: string, value: string) { setSetting(`cruxgarden:panel:${clean(key)}`, value); },
+      removeItem() {},
+    };
+  }, []);
+
   // Persist layout across page reloads
   const { defaultLayout, onLayoutChanged } = useDefaultLayout({
-    id: 'cruxgarden-workspace',
+    id: 'workspace',
     panelIds,
-    storage: localStorage,
+    storage: panelStorage,
   });
 
   // Context menu handlers

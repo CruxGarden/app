@@ -84,6 +84,20 @@ const NodeRenderer = memo(function NodeRenderer({
   const data = node.data;
   const onContextMenu = useContext(TreeContextMenuContext);
   const createCallbacks = useContext(CreateCallbacksContext);
+  const isFolder = node.isInternal;
+
+  const handleContextMenu = useCallback(
+    (e: React.MouseEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      onContextMenu?.(e, {
+        id: data.attachment?.id ?? null,
+        path: data.path,
+        isFolder,
+      });
+    },
+    [onContextMenu, data.attachment?.id, data.path, isFolder],
+  );
 
   // Render inline create input for sentinel node
   if (data.id === SENTINEL_CREATE_ID && createCallbacks) {
@@ -104,21 +118,6 @@ const NodeRenderer = memo(function NodeRenderer({
     );
   }
 
-  const isFolder = node.isInternal;
-
-  const handleContextMenu = useCallback(
-    (e: React.MouseEvent) => {
-      e.preventDefault();
-      e.stopPropagation();
-      onContextMenu?.(e, {
-        id: data.attachment?.id ?? null,
-        path: data.path,
-        isFolder,
-      });
-    },
-    [onContextMenu, data.attachment?.id, data.path, isFolder],
-  );
-
   const fileSize =
     !isFolder && data.attachment?.size ? formatFileSize(Number(data.attachment.size)) : null;
 
@@ -130,8 +129,8 @@ const NodeRenderer = memo(function NodeRenderer({
         'group/node flex items-center gap-1.5 py-0.5 pr-2 text-xs font-mono',
         'cursor-pointer select-none',
         node.isSelected
-          ? 'bg-accent-muted text-accent'
-          : 'text-text-muted hover:text-text hover:bg-accent-muted',
+          ? 'bg-accent-muted text-text'
+          : 'text-text/70 hover:text-text hover:bg-accent-muted',
         node.willReceiveDrop && 'bg-accent/10 ring-1 ring-accent/30',
       )}
       onClick={() => {
@@ -156,7 +155,9 @@ const NodeRenderer = memo(function NodeRenderer({
       )}
 
       {/* Icon */}
-      {isFolder ? node.isOpen ? <FolderOpenIcon /> : <FolderIcon /> : getFileIcon(data.name)}
+      <span className={cn('flex-shrink-0', node.isSelected ? '' : 'opacity-60 group-hover/node:opacity-100')}>
+        {isFolder ? node.isOpen ? <FolderOpenIcon /> : <FolderIcon /> : getFileIcon(data.name)}
+      </span>
 
       {/* Name or inline edit */}
       {node.isEditing ? (

@@ -206,6 +206,7 @@ export default function FileContent({
       cancelled = true;
       if (blobUrl) URL.revokeObjectURL(blobUrl);
     };
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- blobUrl/path excluded to avoid infinite loop
   }, [artifact.id, artifact.updated, cruxId, mime]);
 
   const highlighted = useMemo(() => {
@@ -235,9 +236,7 @@ export default function FileContent({
     };
   }, [svgPreviewUrl]);
 
-  if (loading) {
-    return <div className="p-4 text-sm text-text-muted animate-pulse">Loading...</div>;
-  }
+  if (loading) return null;
 
   return (
     <div className="flex flex-col h-full">
@@ -279,7 +278,8 @@ export default function FileContent({
       {content !== null && viewMode === 'preview' && (ext === 'html' || ext === 'htm') && (
         <iframe
           srcDoc={rewriteUrls(content, username, slug, artifacts, Date.now())}
-          sandbox="allow-scripts"
+          sandbox="allow-scripts allow-same-origin allow-popups"
+          allow="geolocation; camera; microphone; accelerometer; gyroscope; autoplay; fullscreen"
           className="flex-1 w-full bg-contrast rounded-b-[var(--radius-sm)]"
           title={path}
         />

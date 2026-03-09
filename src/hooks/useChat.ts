@@ -53,10 +53,15 @@ function buildNormalizedMessages(allMessages: ChatMessage[]): NormalizedMessage[
       result.push({ role: 'assistant', content: blocks });
 
       // Build tool_result blocks
+      // Never truncate read_file results — the AI needs exact file content
+      // to construct accurate old_string matches for edit_file.
       const toolResults = m.toolCalls.map((tc, t) => ({
         type: 'tool_result' as const,
         tool_use_id: tc.id || `toolu_hist_${i}_${t}`,
-        content: truncateToolResult(tc.result || 'Done.'),
+        content:
+          tc.name === 'read_file'
+            ? (tc.result || 'Done.')
+            : truncateToolResult(tc.result || 'Done.'),
       }));
 
       // Merge tool results with the NEXT user message to keep roles alternating
@@ -92,12 +97,11 @@ export function useChat() {
     setStreaming,
     appendStreamContent,
     clearStreamContent,
-    setArtifacts,
     saveMeta,
-    setPendingGateCreation,
   } = useCruxStore();
 
   const abortRef = useRef<AbortController | null>(null);
+  const refreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const send = useCallback(
     async (content: string) => {
@@ -116,7 +120,7 @@ export function useChat() {
       }
 
       // Add user message
-      const userMsg: ChatMessage = { role: 'user', content };
+      const userMsg: ChatMessage = { role: 'user', content, timestamp: new Date().toISOString() };
       addMessage(userMsg);
 
       // Build normalized message history
@@ -130,13 +134,13 @@ export function useChat() {
 
       let fullContent = '';
       const toolCalls: ToolCall[] = [];
-      let hadMutation = false;
 
       try {
         const adapter = await getAdapter(model);
         const executeToolFn = createToolExecutor(crux.id, async (_path) => {
-          // Delete confirmation — deny in streaming context; user confirms via UI
-          return false;
+          // Auto-approve: the AI is instructed to confirm with the user in chat
+          // before calling delete_file, so the user's reply is the confirmation.
+          return true;
         });
 
         for await (const event of runConversation(
@@ -168,25 +172,32 @@ export function useChat() {
               const tc = toolCalls.find((t) => t.id === event.id);
               if (tc) tc.result = event.result;
 
-              // Refresh artifacts after file operations
+              // Refresh artifacts after mutation operations (debounced to coalesce rapid tool calls)
               if (
                 event.name === 'write_file' ||
                 event.name === 'edit_file' ||
-                event.name === 'delete_file' ||
-                event.name === 'read_file'
+                event.name === 'delete_file'
               ) {
-                const { attachment } = getServices();
-                const currentCruxId = useCruxStore.getState().crux?.id ?? crux.id;
-                attachment.findByResource('crux', currentCruxId).then(
-                  (arts) => useCruxStore.getState().setArtifacts(arts),
-                  (err) => console.error('Failed to refresh artifacts:', err),
-                );
+                if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current);
+                refreshTimerRef.current = setTimeout(() => {
+                  refreshTimerRef.current = null;
+                  const { attachment } = getServices();
+                  const currentCruxId = useCruxStore.getState().crux?.id ?? crux.id;
+                  attachment.findByResource('crux', currentCruxId).then(
+                    (arts) => useCruxStore.getState().setArtifacts(arts),
+                    (err) => console.error('Failed to refresh artifacts:', err),
+                  );
+                }, 150);
               }
               break;
             }
 
             case 'done':
-              hadMutation = event.hadMutation;
+              break;
+
+            case 'info':
+              // Informational messages (e.g., context trimming) — show inline
+              fullContent += `\n\n*${event.message}*`;
               break;
 
             case 'error':
@@ -194,9 +205,10 @@ export function useChat() {
               break;
           }
         }
-      } catch (err: any) {
-        if (err.name !== 'AbortError') {
-          fullContent += `\n\n*Error: ${err.message}*`;
+      } catch (err: unknown) {
+        const e = err as Error;
+        if (e.name !== 'AbortError') {
+          fullContent += `\n\n*Error: ${e.message}*`;
         }
       }
 
@@ -206,6 +218,7 @@ export function useChat() {
           role: 'assistant',
           content: fullContent,
           model,
+          timestamp: new Date().toISOString(),
           toolCalls: toolCalls.length > 0 ? toolCalls : undefined,
         };
         addMessage(assistantMsg);
@@ -218,10 +231,6 @@ export function useChat() {
       // Save messages to crux meta
       await saveMeta();
 
-      // Signal gate creation if artifacts were mutated
-      if (hadMutation) {
-        setPendingGateCreation(true);
-      }
     },
     [
       crux,
@@ -231,9 +240,7 @@ export function useChat() {
       setStreaming,
       appendStreamContent,
       clearStreamContent,
-      setArtifacts,
       saveMeta,
-      setPendingGateCreation,
     ],
   );
 

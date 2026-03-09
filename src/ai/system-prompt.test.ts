@@ -121,10 +121,10 @@ describe('buildSystemPromptFromData', () => {
 });
 
 describe('estimateTokens', () => {
-  it('estimates ~4 chars per token', () => {
-    expect(estimateTokens('hello world')).toBe(3); // 11 / 4 = 2.75, ceil = 3
+  it('estimates ~3.5 chars per token', () => {
+    expect(estimateTokens('hello world')).toBe(4); // 11 / 3.5 = 3.14, ceil = 4
     expect(estimateTokens('')).toBe(0);
-    expect(estimateTokens('a'.repeat(100))).toBe(25);
+    expect(estimateTokens('a'.repeat(100))).toBe(29); // 100 / 3.5 = 28.57, ceil = 29
   });
 });
 

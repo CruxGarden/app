@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import { useMemo, useState } from 'react';
 import { cn } from '@/lib/cn';
 import type { Crux, CruxSummary, CruxKind, CruxVisibility, ChatMessage } from '@/api/types';

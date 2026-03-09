@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 const iconProps = {
   width: 14,
   height: 14,

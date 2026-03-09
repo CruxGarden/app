@@ -23,12 +23,13 @@ export type {
 // Intentionally minimal — services fill in defaults.
 
 export interface CreateCruxInput {
+  id?: string;
   title?: string;
   slug?: string;
   description?: string;
   data?: string;
   type?: string;
-  kind?: 'webapp' | 'page' | 'document' | 'image';
+  kind?: 'webapp' | 'page' | 'document' | 'image' | 'snapshot';
   authorId?: string;
   homeId?: string;
   meta?: Record<string, unknown>;
@@ -40,7 +41,7 @@ export interface UpdateCruxInput {
   description?: string;
   data?: string;
   type?: string;
-  kind?: 'webapp' | 'page' | 'document' | 'image' | null;
+  kind?: 'webapp' | 'page' | 'document' | 'image' | 'snapshot' | null;
   status?: 'living' | 'frozen';
   visibility?: 'public' | 'private' | 'unlisted';
   meta?: Record<string, unknown>;

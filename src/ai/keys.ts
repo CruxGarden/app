@@ -8,7 +8,7 @@ import { getSqliteClient } from '@/services/sqlite/client';
 export async function getApiKey(providerId: string): Promise<string | null> {
   const row = await getSqliteClient().get<{ value: string }>(
     'SELECT value FROM settings WHERE key = ?',
-    [`apiKey:${providerId}`],
+    [`cruxgarden:apiKey:${providerId}`],
   );
   return row?.value || null;
 }
@@ -17,19 +17,19 @@ export async function getApiKey(providerId: string): Promise<string | null> {
 export async function setApiKey(providerId: string, key: string): Promise<void> {
   await getSqliteClient().run(
     'INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)',
-    [`apiKey:${providerId}`, key],
+    [`cruxgarden:apiKey:${providerId}`, key],
   );
 }
 
 /** Remove an API key from SQLite settings */
 export async function removeApiKey(providerId: string): Promise<void> {
-  await getSqliteClient().run('DELETE FROM settings WHERE key = ?', [`apiKey:${providerId}`]);
+  await getSqliteClient().run('DELETE FROM settings WHERE key = ?', [`cruxgarden:apiKey:${providerId}`]);
 }
 
 /** Get the default model from settings, or return the fallback */
 export async function getDefaultModel(): Promise<string> {
   const row = await getSqliteClient().get<{ value: string }>(
-    "SELECT value FROM settings WHERE key = 'defaultModel'",
+    "SELECT value FROM settings WHERE key = 'cruxgarden:defaultModel'",
   );
   return row?.value || 'claude-sonnet-4-20250514';
 }
@@ -37,7 +37,7 @@ export async function getDefaultModel(): Promise<string> {
 /** Save the default model to settings */
 export async function setDefaultModel(model: string): Promise<void> {
   await getSqliteClient().run(
-    "INSERT OR REPLACE INTO settings (key, value) VALUES ('defaultModel', ?)",
+    "INSERT OR REPLACE INTO settings (key, value) VALUES ('cruxgarden:defaultModel', ?)",
     [model],
   );
 }

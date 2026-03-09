@@ -6,7 +6,7 @@ import { API_BASE_URL } from '@/api/client';
 import { isServicesReady, initServices, getServices } from '@/services';
 import { PublicTopBar } from '@/components/display';
 import { GardenGrid, GardenSearch } from '@/components/garden';
-import { Spinner, Button } from '@/components/ui';
+import { Button } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import { APP_NAME } from '@/lib/constants';
 import MoodBar from '@/components/layout/MoodBar';
@@ -49,7 +49,6 @@ export default function PublicAuthor() {
     }
 
     let cancelled = false;
-    setState('loading');
 
     // Try local services first, fall back to API
     loadLocal(username)
@@ -107,16 +106,6 @@ export default function PublicAuthor() {
     if (url.startsWith('data:')) return url;
     return `${API_BASE_URL}${url}?v=${author.updated}`;
   })();
-  const initial = author?.username?.charAt(0)?.toUpperCase() ?? '?';
-
-  if (state === 'loading') {
-    return (
-      <div className="relative min-h-screen flex items-center justify-center">
-        <Spinner size={32} />
-      </div>
-    );
-  }
-
   if (state === 'not-found') {
     return (
       <div className="relative min-h-screen flex flex-col items-center justify-center px-4">
@@ -148,15 +137,10 @@ export default function PublicAuthor() {
         <div className="bg-panel border border-border rounded-[var(--radius)] p-4 sm:p-5 mb-6">
           <div className="flex items-center gap-3">
             <div
-              className={cn(
-                'w-12 h-12 rounded-[var(--radius)] overflow-hidden flex items-center justify-center shrink-0 ring-1 ring-text-muted/20',
-                !avatarUrl && 'bg-accent-muted',
-              )}
+              className="w-12 h-12 rounded-[var(--radius)] overflow-hidden flex items-center justify-center shrink-0 ring-1 ring-text-muted/20 bg-surface"
             >
-              {avatarUrl ? (
+              {avatarUrl && (
                 <img src={avatarUrl} alt="" className="w-full h-full object-cover" />
-              ) : (
-                <span className="text-sm font-medium text-accent">{initial}</span>
               )}
             </div>
             <div className="min-w-0">

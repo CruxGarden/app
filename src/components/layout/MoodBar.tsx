@@ -1,18 +1,19 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useThemeStore } from '@/stores/themeStore';
+import { getSetting, setSetting } from '@/services/settings';
 import { cn } from '@/lib/cn';
 
-const BG_STORAGE_KEY = 'cruxgarden:backgroundType';
+const BG_KEY = 'cruxgarden:backgroundType';
 
 export default function MoodBar() {
   const resolved = useThemeStore((s) => s.resolved);
 
   const [bgType, setBgType] = useState<string>(() => {
-    return localStorage.getItem(BG_STORAGE_KEY) || 'bloom';
+    return getSetting(BG_KEY) || 'bloom';
   });
 
   useEffect(() => {
-    const saved = localStorage.getItem(BG_STORAGE_KEY);
+    const saved = getSetting(BG_KEY);
     if (saved && saved !== 'bloom') {
       document.documentElement.style.setProperty('--background-type', saved);
     }
@@ -21,7 +22,7 @@ export default function MoodBar() {
   const toggleBg = useCallback((type: string) => {
     document.documentElement.style.setProperty('--background-type', type);
     setBgType(type);
-    localStorage.setItem(BG_STORAGE_KEY, type);
+    setSetting(BG_KEY, type);
   }, []);
 
   return (

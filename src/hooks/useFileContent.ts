@@ -109,7 +109,7 @@ export function useFileContent(_cruxId: string, artifact: Attachment): UseFileCo
     return () => {
       cancelled = true;
     };
-  }, [artifact.id, artifact.updated, mime, fetchKey]);
+  }, [artifact.id, artifact.updated, mime, filename, fetchKey]);
 
   // Clean up blob URLs
   useEffect(() => {

@@ -1,6 +1,6 @@
 import type { ICruxService } from '../crux.service';
 import type { Crux, CreateCruxInput, UpdateCruxInput } from '../types';
-import { NotFoundError } from '../types';
+import { toServiceError } from './errors';
 import * as cruxes from '@/api/cruxes';
 
 const PAGE_SIZE = 50;
@@ -9,16 +9,16 @@ export class ApiCruxService implements ICruxService {
   async findById(id: string): Promise<Crux> {
     try {
       return await cruxes.get(id);
-    } catch {
-      throw new NotFoundError('Crux not found');
+    } catch (err) {
+      throw toServiceError(err, 'Crux not found');
     }
   }
 
   async findBySlug(slug: string): Promise<Crux> {
     try {
       return await cruxes.get(slug);
-    } catch {
-      throw new NotFoundError('Crux not found');
+    } catch (err) {
+      throw toServiceError(err, 'Crux not found');
     }
   }
 

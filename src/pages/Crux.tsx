@@ -4,15 +4,9 @@ import { useCruxStore } from '@/stores/cruxStore';
 import { useUIStore } from '@/stores/uiStore';
 import { WorkspaceLayout } from '@/components/workspace';
 import { saveAllDirtyEditors } from '@/components/workspace/EditorContent';
-import { Spinner, Modal } from '@/components/ui';
-import { getBackend } from '@/services';
+import { Modal } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import { APP_NAME } from '@/lib/constants';
-
-// Track whether a crux has ever rendered in this page session.
-// On full page refresh the module re-evaluates (false → show loading).
-// On SPA navigation the module is already loaded (true → skip loading).
-let hasLoaded = false;
 
 export default function Crux() {
   const { id } = useParams<{ id: string }>();
@@ -84,17 +78,7 @@ export default function Crux() {
     blocker.proceed?.();
   }, [blocker]);
 
-  if (!crux) {
-    if (hasLoaded) return null; // SPA navigation — skip loading
-    return (
-      <div className="flex items-center justify-center h-full">
-        {getBackend() === 'local'
-          ? <span className="text-text-muted font-mono text-sm">Loading...</span>
-          : <Spinner size={32} />}
-      </div>
-    );
-  }
-  hasLoaded = true;
+  if (!crux) return null;
 
   return (
     <>

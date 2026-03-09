@@ -18,7 +18,8 @@ export type ConversationEvent =
     }
   | { type: 'tool_result'; name: string; id: string; result: string }
   | { type: 'done'; textContent: string; hadMutation: boolean }
-  | { type: 'error'; message: string };
+  | { type: 'error'; message: string }
+  | { type: 'info'; message: string };
 
 const MAX_ROUNDS = 10;
 
@@ -54,15 +55,21 @@ export async function* runConversation(
   let fullTextContent = '';
   let hadMutation = false;
 
-  for (let round = 0; round < MAX_ROUNDS; round++) {
-    // Trim messages if needed to fit context window
-    const systemTokens = estimateTokens(systemPrompt);
-    const { messages: trimmedMessages } = trimMessagesIfNeeded(
-      currentMessages as { role: string; content: unknown }[],
-      systemTokens,
-    );
+  // Trim messages if needed to fit context window
+  const systemTokens = estimateTokens(systemPrompt);
+  const { messages: trimmedMessages, trimmed } = trimMessagesIfNeeded(
+    currentMessages as { role: string; content: unknown }[],
+    systemTokens,
+  );
+  if (trimmed) {
     currentMessages = trimmedMessages as NormalizedMessage[];
+    yield {
+      type: 'info',
+      message: 'Older messages were trimmed to fit the context window.',
+    };
+  }
 
+  for (let round = 0; round < MAX_ROUNDS; round++) {
     // Stream the response
     let response;
     try {
@@ -78,9 +85,37 @@ export async function* runConversation(
         },
         signal,
       });
-    } catch (err: any) {
-      if (err.name === 'AbortError') return;
-      yield { type: 'error', message: err.message };
+    } catch (err: unknown) {
+      const e = err as Error;
+      if (e.name === 'AbortError') return;
+
+      // Anthropic rate limit or overload that survived SDK retries
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- HTTP error status
+      const status = (e as any).status;
+      if (status === 429 || status === 529) {
+        yield {
+          type: 'error',
+          message:
+            'The AI service is temporarily overloaded. Please try again in a moment.',
+        };
+        return;
+      }
+
+      yield { type: 'error', message: e.message };
+      return;
+    }
+
+    // Detect max_tokens truncation with no usable content
+    if (
+      response.stopReason === 'max_tokens' &&
+      response.toolCalls.length === 0 &&
+      !response.textContent
+    ) {
+      yield {
+        type: 'error',
+        message:
+          'Response was truncated (max_tokens reached with no usable content). The file may be too large for a single operation.',
+      };
       return;
     }
 
@@ -100,10 +135,57 @@ export async function* runConversation(
       return;
     }
 
-    // Process tool calls
-    const toolResults: ContentBlock[] = [];
-    let roundHadMutation = false;
+    // Process tool calls — parallel across independent path groups,
+    // sequential within same-path groups (mirrors API's groupToolCallsByPath)
+    const groups = groupToolCallsByPath(response.toolCalls);
 
+    // Execute each group as a sequential chain, all groups in parallel
+    const groupResults = await Promise.all(
+      [...groups.values()].map(async (chain) => {
+        const events: ConversationEvent[] = [];
+        const results: { toolId: string; content: string; name: string }[] = [];
+        let chainHadMutation = false;
+
+        for (const toolUse of chain) {
+          events.push({
+            type: 'tool_start',
+            name: toolUse.name,
+            id: toolUse.id,
+            input: toolUse.input,
+          });
+
+          const result = await executeToolFn(toolUse.name, toolUse.input);
+
+          events.push({
+            type: 'tool_result',
+            name: toolUse.name,
+            id: toolUse.id,
+            result,
+          });
+
+          results.push({ toolId: toolUse.id, content: result, name: toolUse.name });
+
+          if (MUTATING_TOOLS.includes(toolUse.name)) {
+            chainHadMutation = true;
+          }
+        }
+
+        return { events, results, chainHadMutation };
+      }),
+    );
+
+    // Yield events in original tool call order and aggregate results
+    const resultMap = new Map<string, string>();
+    let roundHadMutation = false;
+    for (const gr of groupResults) {
+      if (gr.chainHadMutation) {
+        roundHadMutation = true;
+        hadMutation = true;
+      }
+      for (const r of gr.results) resultMap.set(r.toolId, r.content);
+    }
+
+    // Yield events in original tool call order for consistent UI
     for (const toolUse of response.toolCalls) {
       yield {
         type: 'tool_start',
@@ -111,39 +193,37 @@ export async function* runConversation(
         id: toolUse.id,
         input: toolUse.input,
       };
-
-      const result = await executeToolFn(toolUse.name, toolUse.input);
-
       yield {
         type: 'tool_result',
         name: toolUse.name,
         id: toolUse.id,
-        result,
+        result: resultMap.get(toolUse.id) || 'Error: no result',
       };
-
-      toolResults.push({
-        type: 'tool_result',
-        tool_use_id: toolUse.id,
-        content: result,
-      });
-
-      if (MUTATING_TOOLS.includes(toolUse.name)) {
-        roundHadMutation = true;
-        hadMutation = true;
-      }
     }
+
+    const toolResults: ContentBlock[] = response.toolCalls.map((tc) => ({
+      type: 'tool_result',
+      tool_use_id: tc.id,
+      content: resultMap.get(tc.id) || 'Error: no result',
+    }));
 
     // Refresh system prompt after mutations so AI sees updated file listing
     if (roundHadMutation) {
       systemPrompt = await buildSystemPrompt(cruxId);
     }
 
-    // Append assistant response + tool results for next round
-    currentMessages = [
+    // Re-trim after adding tool results if conversation is growing
+    const newSystemTokens = estimateTokens(systemPrompt);
+    const updatedMessages = [
       ...currentMessages,
-      { role: 'assistant', content: response.fullContent },
-      { role: 'user', content: toolResults },
+      { role: 'assistant' as const, content: response.fullContent },
+      { role: 'user' as const, content: toolResults },
     ];
+    const retrim = trimMessagesIfNeeded(
+      updatedMessages as { role: string; content: unknown }[],
+      newSystemTokens,
+    );
+    currentMessages = retrim.messages as NormalizedMessage[];
   }
 
   // Ran out of rounds
@@ -152,4 +232,29 @@ export async function* runConversation(
     textContent: fullTextContent,
     hadMutation,
   };
+}
+
+/**
+ * Group tool calls by file path so same-path operations stay sequential
+ * while different-path operations can run in parallel.
+ * Ported from api/src/ai/ai.service.ts groupToolCallsByPath.
+ */
+function groupToolCallsByPath(
+  toolCalls: { id: string; name: string; input: Record<string, unknown> }[],
+): Map<string, { id: string; name: string; input: Record<string, unknown> }[]> {
+  const groups = new Map<
+    string,
+    { id: string; name: string; input: Record<string, unknown> }[]
+  >();
+
+  for (const tc of toolCalls) {
+    const path = tc.input?.path as string | undefined;
+    // Tools without a path (list_files) get their own independent group
+    const key = path ? path.replace(/^\//, '') : `__no_path_${tc.id}`;
+    const group = groups.get(key) || [];
+    group.push(tc);
+    groups.set(key, group);
+  }
+
+  return groups;
 }

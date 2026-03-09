@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Outlet } from 'react-router-dom';
 import TopBar from './TopBar';
 import CommandPalette from './CommandPalette';
+import { LoadingPanel } from '@/components/ui';
 import KeeperConsole from '@/components/keeper/KeeperConsole';
 import { useUIStore } from '@/stores/uiStore';
 import { isServicesReady, initServices, ensureLocalAuthor, getBackend } from '@/services';
@@ -59,7 +60,7 @@ export default function AppShell() {
       <main className="relative z-10 flex-1 min-h-0 overflow-y-auto">
         {servicesOk ? <Outlet /> : (
           <div className="flex items-center justify-center h-full">
-            <span className="text-text-muted font-mono text-sm">Loading...</span>
+            <LoadingPanel />
           </div>
         )}
       </main>

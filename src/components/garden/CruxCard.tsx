@@ -1,7 +1,8 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/cn';
-import { exportCrux } from '@/lib/exportCrux';
+import { Spinner } from '@/components/ui';
+import { exportCrux } from '@/services/crux-io';
 import type { Crux } from '@/api/types';
 
 interface CruxCardProps {
@@ -56,7 +57,20 @@ export default function CruxCard({ crux, linkTo, onDelete, sortBy = 'created' }:
     setExportingId(true);
     setMenuOpen(false);
     try {
-      await exportCrux(crux);
+      const result = await exportCrux({
+        cruxId: crux.id,
+        messages: (crux.meta?.messages as unknown[]) || [],
+        summary: crux.meta?.summary || null,
+      });
+
+      const url = URL.createObjectURL(result.blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = result.filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
     } catch (err) {
       console.error('Export failed:', err);
     } finally {
@@ -120,7 +134,7 @@ export default function CruxCard({ crux, linkTo, onDelete, sortBy = 'created' }:
             menuOpen ? 'opacity-100' : 'opacity-0 group-hover:opacity-100',
           )}
         >
-          {exportingId ? <span className="block w-3.5 h-3.5 border-2 border-text-muted border-t-transparent rounded-full animate-spin" /> : <MoreIcon />}
+          {exportingId ? <Spinner size={14} /> : <MoreIcon />}
         </button>
         {menuOpen && (
           <div className="absolute right-0 top-full mt-1 w-32 bg-surface-solid border border-border rounded-[var(--radius-sm)] shadow-xl py-1 z-50">

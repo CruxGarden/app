@@ -1,24 +1,21 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import JSZip from 'jszip';
 import { useAuthStore } from '@/stores/authStore';
 import MoodBar from '@/components/layout/MoodBar';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 import { useGarden } from '@/hooks/useGarden';
-import { getServices, getBackend } from '@/services';
+import { peekImport, importCrux, type ImportConflictInfo } from '@/services/crux-io';
+import { importGarden } from '@/services/garden-io';
+import { ensureLocalAuthor } from '@/services';
 import { APP_NAME } from '@/lib/constants';
 import { GardenGrid, GardenSearch } from '@/components/garden';
-import { ApiKeySetup, IconButton, Spinner, Modal, Button } from '@/components/ui';
+import { ApiKeySetup, IconButton, Modal, Button } from '@/components/ui';
 import { getApiKey } from '@/ai/keys';
+import { getSetting, setSetting } from '@/services/settings';
 import { cn } from '@/lib/cn';
 
 const DISMISS_KEY = 'cruxgarden:apiKeyBannerDismissed';
-
-// Track whether the garden has ever rendered content in this page session.
-// On full page refresh the module re-evaluates (false → show loading).
-// On SPA navigation the module is already loaded (true → skip loading).
-let hasLoaded = false;
 
 function GlobeIcon() {
   return (
@@ -77,46 +74,6 @@ function PlusCircleIcon() {
   );
 }
 
-const MIME_MAP: Record<string, string> = {
-  html: 'text/html',
-  htm: 'text/html',
-  css: 'text/css',
-  js: 'application/javascript',
-  mjs: 'application/javascript',
-  ts: 'application/javascript',
-  tsx: 'application/javascript',
-  jsx: 'application/javascript',
-  json: 'application/json',
-  md: 'text/markdown',
-  txt: 'text/plain',
-  py: 'text/x-python',
-  svg: 'image/svg+xml',
-  xml: 'application/xml',
-  png: 'image/png',
-  jpg: 'image/jpeg',
-  jpeg: 'image/jpeg',
-  gif: 'image/gif',
-  webp: 'image/webp',
-  ico: 'image/x-icon',
-  bmp: 'image/bmp',
-  pdf: 'application/pdf',
-  zip: 'application/zip',
-  mp3: 'audio/mpeg',
-  wav: 'audio/wav',
-  ogg: 'audio/ogg',
-  mp4: 'video/mp4',
-  webm: 'video/webm',
-  woff: 'font/woff',
-  woff2: 'font/woff2',
-  ttf: 'font/ttf',
-  otf: 'font/otf',
-};
-
-function guessMime(filename: string): string {
-  const ext = filename.split('.').pop()?.toLowerCase() || '';
-  return MIME_MAP[ext] || 'application/octet-stream';
-}
-
 export default function Garden() {
   const author = useAuthStore((s) => s.author);
   const navigate = useNavigate();
@@ -140,7 +97,7 @@ export default function Garden() {
   const [showApiKeyBanner, setShowApiKeyBanner] = useState(false);
 
   useEffect(() => {
-    const dismissed = !!localStorage.getItem(DISMISS_KEY);
+    const dismissed = !!getSetting(DISMISS_KEY);
     if (dismissed) return;
     getApiKey('anthropic').then((key) => {
       if (!key) setShowApiKeyBanner(true);
@@ -148,7 +105,7 @@ export default function Garden() {
   }, []);
 
   const handleDismissBanner = () => {
-    localStorage.setItem(DISMISS_KEY, '1');
+    setSetting(DISMISS_KEY, '1');
     setShowApiKeyBanner(false);
   };
 
@@ -156,6 +113,10 @@ export default function Garden() {
   const importInputRef = useRef<HTMLInputElement>(null);
   const [importing, setImporting] = useState(false);
   const [importProgress, setImportProgress] = useState({ done: 0, total: 0 });
+
+  // Import conflict resolution
+  const [importConflict, setImportConflict] = useState<ImportConflictInfo | null>(null);
+  const conflictResolverRef = useRef<((choice: 'replace' | 'clone' | 'cancel') => void) | null>(null);
 
   const handleConfirmDelete = useCallback(async () => {
     if (!deletingId) return;
@@ -169,193 +130,71 @@ export default function Garden() {
       setImportProgress({ done: 0, total: 0 });
 
       try {
-        const zip = await JSZip.loadAsync(file);
+        // Peek at the ZIP to check for conflicts
+        const { conflict } = await peekImport(file);
 
-        // Read crux.json
-        const cruxJsonFile = zip.file('crux.json');
-        if (!cruxJsonFile) {
-          alert('Invalid .crux file: missing crux.json');
-          return;
-        }
-        const cruxData = JSON.parse(await cruxJsonFile.async('text'));
-
-        // Generate fresh slug
-        const title = cruxData.title || 'Imported Crux';
-        const slug =
-          title
-            .toLowerCase()
-            .replace(/[^a-z0-9]+/g, '-')
-            .replace(/^-|-$/g, '') +
-          '-' +
-          Date.now().toString(36);
-
-        // Detect format version
-        const manifestFile = zip.file('manifest.json');
-        const manifest = manifestFile ? JSON.parse(await manifestFile.async('text')) : { version: '1.0' };
-        const isV2 = manifest.version === '2.0';
-
-        // Read messages
-        const messagesFile = zip.file('messages.json');
-        const messages = messagesFile ? JSON.parse(await messagesFile.async('text')) : [];
-
-        // Read gates/dimensions based on format version
-        let gates: any[] = [];
-        if (isV2) {
-          const dimFile = zip.file('dimensions.json');
-          gates = dimFile ? JSON.parse(await dimFile.async('text')) : [];
-        } else {
-          const gatesFile = zip.file('gates.json');
-          gates = gatesFile ? JSON.parse(await gatesFile.async('text')) : [];
-        }
-
-        // Read attachment metadata (v2.0) for ID-keyed artifacts
-        let attachmentMeta: any[] = [];
-        if (isV2) {
-          const attFile = zip.file('attachments.json');
-          attachmentMeta = attFile ? JSON.parse(await attFile.async('text')) : [];
-        }
-
-        // Count artifact files
-        const artifactFiles: { path: string; zipEntry: JSZip.JSZipObject; meta?: any }[] = [];
-        if (isV2 && attachmentMeta.length > 0) {
-          // v2.0: artifacts keyed by ID, metadata in attachments.json
-          for (const att of attachmentMeta) {
-            const entry = zip.file(`artifacts/${att.id}/content`);
-            if (entry) {
-              const filePath = att.meta?.path || att.filename || att.id;
-              artifactFiles.push({ path: filePath, zipEntry: entry, meta: att });
-            }
-          }
-        } else {
-          // v1.x: artifacts keyed by path
-          zip.folder('artifacts')?.forEach((relativePath, entry) => {
-            if (!entry.dir) {
-              artifactFiles.push({ path: relativePath, zipEntry: entry });
-            }
+        let mode: 'restore' | 'replace' | 'clone' = 'restore';
+        if (conflict) {
+          const choice = await new Promise<'replace' | 'clone' | 'cancel'>((resolve) => {
+            conflictResolverRef.current = resolve;
+            setImportConflict(conflict);
           });
+          setImportConflict(null);
+          conflictResolverRef.current = null;
+          if (choice === 'cancel') return;
+          mode = choice;
         }
 
-        // Total steps: 1 (create crux) + artifacts + gates + 1 (final update)
-        const total = 1 + artifactFiles.length + gates.length + 1;
-        let done = 0;
-        setImportProgress({ done, total });
-
-        // Create new crux with full metadata restored
-        const { crux: cruxService, attachment, dimension: dimService } = getServices();
-        const restoredMeta = isV2
-          ? { ...(cruxData.meta || {}), messages, gateCount: 0 }
-          : { messages, summary: cruxData.summary || null, settings: cruxData.settings || {}, gateCount: 0 };
-        const newCrux = await cruxService.create({
-          slug,
-          title,
-          description: cruxData.description || '',
-          type: 'workspace',
-          meta: restoredMeta,
+        // Run the import
+        const result = await importCrux({
+          data: file,
+          mode,
+          onProgress: (done, total) => setImportProgress({ done, total }),
         });
-        done++;
-        setImportProgress({ done, total });
 
-        // Upload artifact files
-        if (artifactFiles.length > 0) {
-          for (let i = 0; i < artifactFiles.length; i++) {
-            const { path, zipEntry, meta: attMeta } = artifactFiles[i]!;
-            try {
-              const blob = await zipEntry.async('blob');
-              const filename = path.split('/').pop() || 'file';
-              const mime = attMeta?.mimeType || guessMime(filename);
-              const fileObj = new File([blob], filename, { type: mime });
-              await attachment.upload({
-                resourceId: newCrux.id,
-                blob: fileObj,
-                mimeType: mime,
-                meta: attMeta?.meta || { path },
-              });
-            } catch (err) {
-              console.warn(`Failed to import artifact: ${path}`, err);
-            }
-            done++;
-            setImportProgress({ done, total });
-          }
-        }
-
-        // Restore gates (version history)
-        let restoredGateCount = 0;
-        if (gates.length > 0) {
-          for (let i = 0; i < gates.length; i++) {
-            const gate = gates[i];
-            const targetData = gate.target || {};
-            try {
-              const gateSlug = `gate-${i + 1}-${Date.now().toString(36)}`;
-              const gateCrux = await cruxService.create({
-                slug: gateSlug,
-                title: targetData.title || `Gate ${i + 1}`,
-                type: 'gate',
-                data: targetData.data || '',
-                meta: gate.meta || targetData.meta || {},
-              });
-
-              await dimService.create({
-                sourceId: newCrux.id,
-                targetId: gateCrux.id,
-                type: 'gate',
-                weight: gate.weight ?? i + 1,
-                note: gate.note || undefined,
-              });
-              restoredGateCount++;
-            } catch (err) {
-              console.warn(`Failed to import gate ${i + 1}`, err);
-            }
-            done++;
-            setImportProgress({ done, total });
-          }
-        }
-
-        // Final meta update with accurate gateCount
-        const finalMeta = isV2
-          ? { ...(cruxData.meta || {}), messages, gateCount: restoredGateCount }
-          : { ...newCrux.meta, messages, summary: cruxData.summary || null, settings: cruxData.settings || {}, gateCount: restoredGateCount };
-        await cruxService.update(newCrux.id, { meta: finalMeta });
-        done++;
-        setImportProgress({ done, total });
-
-        // Restore workspace layout into localStorage for the new crux
-        if (cruxData.layout) {
-          const layout = cruxData.layout;
+        // Restore workspace layout (UI-specific settings)
+        if (result.layout) {
+          const layout = result.layout;
           if (layout.paneOrder && layout.paneVisibility) {
-            localStorage.setItem(
-              `cruxgarden:layout:${newCrux.id}`,
+            setSetting(
+              `cruxgarden:layout:${result.cruxId}`,
               JSON.stringify({ paneOrder: layout.paneOrder, paneVisibility: layout.paneVisibility }),
             );
           }
           if (layout.editorTabs) {
-            localStorage.setItem(
-              `cruxgarden:editor-tabs:${newCrux.id}`,
+            setSetting(
+              `cruxgarden:editor-tabs:${result.cruxId}`,
               JSON.stringify(layout.editorTabs),
             );
           }
           if (layout.folderState) {
-            localStorage.setItem(
-              `cruxgarden:folder-state:${newCrux.id}`,
+            setSetting(
+              `cruxgarden:folder-state:${result.cruxId}`,
               JSON.stringify(layout.folderState),
             );
           }
         }
 
         // Restore theme preferences
-        if (cruxData.theme) {
-          if (cruxData.theme.mode) {
-            localStorage.setItem('cruxgarden:theme', cruxData.theme.mode);
+        if (result.theme) {
+          if (result.theme.mode) {
+            setSetting('cruxgarden:theme', result.theme.mode);
           }
-          if (cruxData.theme.tint) {
-            localStorage.setItem('cruxgarden:tint', cruxData.theme.tint);
+          if (result.theme.tint) {
+            setSetting('cruxgarden:tint', result.theme.tint);
           }
         }
 
+        if (result.failedArtifacts.length > 0) {
+          console.warn('Some artifacts failed to import:', result.failedArtifacts);
+          alert(`Import completed with ${result.failedArtifacts.length} file${result.failedArtifacts.length > 1 ? 's' : ''} that could not be restored.`);
+        }
+
         refresh();
-        navigate(`/c/${newCrux.id}`);
+        navigate(`/c/${result.cruxId}`);
       } catch (err) {
         console.error('Import failed:', err);
-        alert('Failed to import .crux file. Make sure it is a valid export.');
+        alert(`Failed to import .crux file: ${err instanceof Error ? err.message : 'Make sure it is a valid export.'}`);
       } finally {
         setImporting(false);
         setImportProgress({ done: 0, total: 0 });
@@ -364,13 +203,44 @@ export default function Garden() {
     [navigate, refresh],
   );
 
+  const handleGardenImport = useCallback(
+    async (file: File) => {
+      setImporting(true);
+      try {
+        await importGarden({
+          data: file,
+          onProgress: (status) => setImportProgress({ done: 0, total: 0, status } as typeof importProgress),
+        });
+
+        // Re-ensure local author exists after full garden replacement
+        const author = await ensureLocalAuthor();
+        useAuthStore.setState({ author });
+
+        alert('Garden imported successfully. Reload recommended.');
+        refresh();
+      } catch (err) {
+        console.error('Garden import failed:', err);
+        alert(`Failed to import .garden file: ${err instanceof Error ? err.message : 'The file may be corrupted.'}`);
+      } finally {
+        setImporting(false);
+        setImportProgress({ done: 0, total: 0 });
+      }
+    },
+    [refresh],
+  );
+
   const handleImportInput = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0];
-      if (file) handleImport(file);
+      if (!file) return;
+      if (file.name.endsWith('.garden')) {
+        handleGardenImport(file);
+      } else {
+        handleImport(file);
+      }
       e.target.value = '';
     },
-    [handleImport],
+    [handleImport, handleGardenImport],
   );
 
 
@@ -382,17 +252,7 @@ export default function Garden() {
     };
   }, [author]);
 
-  if (loading) {
-    if (hasLoaded) return null; // SPA navigation — data loads instantly, skip loading
-    return (
-      <div className="relative min-h-screen flex items-center justify-center">
-        {getBackend() === 'local'
-          ? <span className="text-text-muted font-mono text-sm">Loading...</span>
-          : <Spinner size={32} />}
-      </div>
-    );
-  }
-  hasLoaded = true;
+  if (loading) return null;
 
   return (
     <div className="p-4 sm:p-6 max-w-5xl mx-auto">
@@ -400,7 +260,7 @@ export default function Garden() {
       <input
         ref={importInputRef}
         type="file"
-        accept=".crux,.zip"
+        accept=".crux,.garden,.zip"
         className="hidden"
         onChange={handleImportInput}
       />
@@ -578,6 +438,82 @@ export default function Garden() {
             </Button>
             <Button variant="danger" onClick={handleConfirmDelete}>
               Delete
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Import conflict modal */}
+      <Modal
+        open={importConflict !== null}
+        onClose={() => {
+          conflictResolverRef.current?.('cancel');
+          setImportConflict(null);
+          conflictResolverRef.current = null;
+        }}
+      >
+        <div className="space-y-4">
+          <div>
+            <h2 className="text-lg font-display font-medium text-text">Crux already exists</h2>
+            <p className="text-sm text-text-muted mt-1">
+              <span className="text-text font-medium">{importConflict?.title}</span>{' '}
+              already exists in your garden.
+            </p>
+          </div>
+
+          {importConflict && (
+            <div className="grid grid-cols-2 gap-3 text-xs font-mono">
+              <div className="rounded-[var(--radius-sm)] border border-border bg-surface/50 p-2.5">
+                <div className="text-[10px] uppercase tracking-wider text-text-muted mb-1.5">Installed</div>
+                <div className="text-text">v{importConflict.installedVersion}</div>
+                {importConflict.installedUpdated && (
+                  <div className="text-text-muted mt-0.5">
+                    {new Date(importConflict.installedUpdated).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+                  </div>
+                )}
+              </div>
+              <div className="rounded-[var(--radius-sm)] border border-border bg-surface/50 p-2.5">
+                <div className="text-[10px] uppercase tracking-wider text-text-muted mb-1.5">Incoming</div>
+                <div className="text-text">v{importConflict.incomingVersion}</div>
+                {importConflict.incomingUpdated && (
+                  <div className="text-text-muted mt-0.5">
+                    {new Date(importConflict.incomingUpdated).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          <div className="flex gap-2 justify-end">
+            <Button
+              variant="ghost"
+              onClick={() => {
+                conflictResolverRef.current?.('cancel');
+                setImportConflict(null);
+                conflictResolverRef.current = null;
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="ghost"
+              onClick={() => {
+                conflictResolverRef.current?.('clone');
+                setImportConflict(null);
+                conflictResolverRef.current = null;
+              }}
+            >
+              Clone
+            </Button>
+            <Button
+              variant="danger"
+              onClick={() => {
+                conflictResolverRef.current?.('replace');
+                setImportConflict(null);
+                conflictResolverRef.current = null;
+              }}
+            >
+              Replace
             </Button>
           </div>
         </div>
