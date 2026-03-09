@@ -337,3 +337,121 @@ html.palette-transition *::after {
   color: var(--error);
   background: var(--error-muted);
 }
+
+/* ── react-mosaic custom theme ────────────────────────── */
+
+.mosaic.crux-mosaic-theme {
+  background: transparent;
+}
+
+.mosaic.crux-mosaic-theme .mosaic-tile {
+  margin: 4px;
+  will-change: width, height;
+}
+
+.mosaic.crux-mosaic-theme .mosaic-root {
+  top: 4px;
+  right: 4px;
+  bottom: 4px;
+  left: 4px;
+}
+
+.mosaic.crux-mosaic-theme .mosaic-window,
+.mosaic.crux-mosaic-theme .mosaic-preview {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: none;
+  background: var(--panel);
+}
+
+/* Clip overflow on body (not window) so drop target overlays remain visible */
+.mosaic.crux-mosaic-theme .mosaic-window .mosaic-window-body {
+  overflow: hidden;
+  contain: layout style;
+  background: var(--panel);
+}
+
+.mosaic.crux-mosaic-theme .mosaic-window .mosaic-window-toolbar {
+  height: auto;
+  padding: 6px;
+  background: transparent;
+  border-bottom: none;
+  box-shadow: none;
+  cursor: grab;
+}
+.mosaic.crux-mosaic-theme .mosaic-window .mosaic-window-toolbar:active {
+  cursor: grabbing;
+}
+.mosaic.crux-mosaic-theme .mosaic-window .pane-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  height: 28px;
+  padding: 0 10px;
+  border-radius: var(--radius-sm);
+  border: none;
+  transition: filter 150ms;
+}
+.mosaic.crux-mosaic-theme .mosaic-window:hover .pane-toolbar {
+  filter: brightness(1.4);
+}
+.mosaic.crux-mosaic-theme .mosaic-window .mosaic-window-title {
+  display: none;
+}
+.mosaic.crux-mosaic-theme .mosaic-window .mosaic-window-controls {
+  display: none;
+}
+
+/* Resize handles */
+.mosaic.crux-mosaic-theme .mosaic-split:hover {
+  background: none;
+}
+
+.mosaic.crux-mosaic-theme .mosaic-split.-row {
+  width: 3px;
+  margin-left: -1.5px;
+}
+
+.mosaic.crux-mosaic-theme .mosaic-split.-column {
+  height: 3px;
+  margin-top: -1.5px;
+}
+
+.mosaic.crux-mosaic-theme .mosaic-split .mosaic-split-line {
+  background: transparent;
+  transition: background-color 150ms;
+}
+
+.mosaic.crux-mosaic-theme .mosaic-split:hover .mosaic-split-line {
+  background: color-mix(in srgb, var(--accent) 30%, transparent);
+  box-shadow: none;
+}
+
+.mosaic.crux-mosaic-theme .mosaic-split:active .mosaic-split-line {
+  background: color-mix(in srgb, var(--accent) 50%, transparent);
+}
+
+/* Suppress pointer-events on pane content during resize (prevents child hover re-renders) */
+.mosaic-root.mosaic-resizing .mosaic-tile {
+  pointer-events: none;
+}
+
+/* Drop targets for drag rearrangement */
+.mosaic.crux-mosaic-theme .mosaic-drop-target .drop-target-container .drop-target {
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+  border: 2px solid var(--accent);
+  border-radius: var(--radius-sm);
+  opacity: 0;
+  transition: opacity 100ms;
+}
+
+.mosaic.crux-mosaic-theme .mosaic-drop-target .drop-target-container .drop-target.drop-target-hover {
+  opacity: 1;
+}
+
+/* Zero state (no panes visible) */
+.mosaic.crux-mosaic-theme .mosaic-zero-state {
+  background: transparent;
+  box-shadow: none;
+}

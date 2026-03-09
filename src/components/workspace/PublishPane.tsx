@@ -6,8 +6,6 @@ import { cn } from '@/lib/cn';
 import { Spinner } from '@/components/ui';
 import { usePaneWidth } from '@/hooks/usePaneWidth';
 import CreateAuthorModal from '@/components/auth/CreateAuthorModal';
-import PaneHeader from './PaneHeader';
-
 function PublishIcon() {
   return (
     <svg
@@ -173,7 +171,6 @@ export default function PublishPane() {
   if (!crux) {
     return (
       <div ref={ref} className="flex flex-col h-full">
-        <PaneHeader paneType="publish" icon={<PublishIcon />} label="Publish" />
         <div className="flex-1 flex items-center justify-center p-4">
           <p className="text-xs text-text-muted">No crux loaded</p>
         </div>
@@ -187,7 +184,6 @@ export default function PublishPane() {
   if (artifacts.length === 0 && !isPublished) {
     return (
       <div ref={ref} className="flex flex-col h-full">
-        <PaneHeader paneType="publish" icon={<PublishIcon />} label="Publish" />
         <div className="flex-1 flex items-center justify-center p-4">
           <p className="text-xs text-text-muted">Nothing to publish yet</p>
         </div>
@@ -197,8 +193,6 @@ export default function PublishPane() {
 
   return (
     <div ref={ref} className="flex flex-col h-full">
-      <PaneHeader paneType="publish" icon={<PublishIcon />} label="Publish" />
-
       {isTooNarrow ? (
         <div className="flex-1 flex items-center justify-center p-4">
           <p className="text-xs text-text-muted">Enlarge pane to view contents</p>

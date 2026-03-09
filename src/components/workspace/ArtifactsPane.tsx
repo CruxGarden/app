@@ -6,7 +6,6 @@ import ArboristFileTree, {
   type UploadFileEntry,
 } from '@/components/artifacts/ArboristFileTree';
 import { FieldRow, formatSize, formatDate } from './MetadataContent';
-import PaneHeader from './PaneHeader';
 
 function FolderPlusIcon() {
   return (
@@ -62,23 +61,6 @@ function UploadIcon() {
       <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
       <polyline points="17 8 12 3 7 8" />
       <line x1="12" y1="3" x2="12" y2="15" />
-    </svg>
-  );
-}
-
-function TreeIcon() {
-  return (
-    <svg
-      width="14"
-      height="14"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.5"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
     </svg>
   );
 }
@@ -390,12 +372,10 @@ export default function ArtifactsPane() {
 
   return (
     <div className="flex flex-col h-full">
-      <PaneHeader
-        paneType="artifacts"
-        icon={<TreeIcon />}
-        label="Artifacts"
-        actions={actionButtons}
-      />
+      {/* Action toolbar */}
+      <div className="flex items-center justify-end gap-0.5 px-2 py-1 border-b border-border shrink-0 text-text-muted">
+        {actionButtons}
+      </div>
 
       {/* Hidden file inputs */}
       <input

@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { getSetting, setSetting } from '@/services/settings';
+import type { MosaicNode } from 'react-mosaic-component';
 
 // ── Pane Types ──────────────────────────────────────────
 
@@ -64,6 +65,7 @@ interface UIState {
   // Pane system
   paneOrder: PaneType[];
   paneVisibility: Record<PaneType, boolean>;
+  mosaicLayout: MosaicNode<PaneType> | null;
   activeCruxId: string | null;
 
   // Editor
@@ -89,6 +91,7 @@ interface UIState {
   togglePane: (pane: PaneType) => void;
   setPaneVisible: (pane: PaneType, visible: boolean) => void;
   reorderPanes: (newOrder: PaneType[]) => void;
+  setMosaicLayout: (layout: MosaicNode<PaneType> | null) => void;
 
   // ── Editor tab actions ──
   openFile: (id: string, path: string) => void;
@@ -155,6 +158,58 @@ const DEFAULT_VISIBILITY: Record<PaneType, boolean> = {
   export: false,
 };
 
+// ── Mosaic layout helpers ────────────────────────────────
+
+/** Get all leaf pane types from a mosaic tree */
+export function getMosaicLeaves(node: MosaicNode<PaneType> | null): PaneType[] {
+  if (node === null) return [];
+  if (typeof node === 'string') return [node];
+  return [...getMosaicLeaves(node.first), ...getMosaicLeaves(node.second)];
+}
+
+/** Build a balanced mosaic tree from a list of visible panes */
+function buildMosaicTree(panes: PaneType[]): MosaicNode<PaneType> | null {
+  if (panes.length === 0) return null;
+  if (panes.length === 1) return panes[0]!;
+  const mid = Math.ceil(panes.length / 2);
+  return {
+    direction: 'row',
+    first: buildMosaicTree(panes.slice(0, mid))!,
+    second: buildMosaicTree(panes.slice(mid))!,
+    splitPercentage: (mid / panes.length) * 100,
+  };
+}
+
+/** Add a pane to an existing mosaic tree */
+function addPaneToMosaic(
+  tree: MosaicNode<PaneType> | null,
+  pane: PaneType,
+): MosaicNode<PaneType> {
+  if (tree === null) return pane;
+  return {
+    direction: 'row',
+    first: tree,
+    second: pane,
+    splitPercentage: 75,
+  };
+}
+
+/** Remove a pane from a mosaic tree */
+function removePaneFromMosaic(
+  node: MosaicNode<PaneType>,
+  pane: PaneType,
+): MosaicNode<PaneType> | null {
+  if (typeof node === 'string') {
+    return node === pane ? null : node;
+  }
+  const first = removePaneFromMosaic(node.first, pane);
+  const second = removePaneFromMosaic(node.second, pane);
+  if (first === null && second === null) return null;
+  if (first === null) return second;
+  if (second === null) return first;
+  return { ...node, first, second };
+}
+
 const DEFAULT_CONTEXT_MENU: ContextMenuState = {
   visible: false,
   x: 0,
@@ -170,6 +225,7 @@ const DEFAULT_CONTEXT_MENU: ContextMenuState = {
 interface PersistedLayout {
   paneOrder: string[];
   paneVisibility: Record<string, boolean>;
+  mosaicLayout?: MosaicNode<string> | null;
 }
 
 const GLOBAL_LAYOUT_KEY = 'cruxgarden:layout:global';
@@ -232,11 +288,38 @@ const RENAME_MAP: Record<string, PaneType> = {
   metadata: 'details',
 };
 
-/** Validate and migrate a persisted layout to match current PaneType values */
-function validateLayout(layout: PersistedLayout): {
+/** Rename pane types in a mosaic tree */
+function renameMosaicPanes(node: MosaicNode<string>): MosaicNode<string> {
+  if (typeof node === 'string') return RENAME_MAP[node] ?? node;
+  return {
+    ...node,
+    first: renameMosaicPanes(node.first),
+    second: renameMosaicPanes(node.second),
+  };
+}
+
+/** Remove unknown pane types from a mosaic tree */
+function filterMosaicPanes(
+  node: MosaicNode<string>,
+  valid: Set<string>,
+): MosaicNode<string> | null {
+  if (typeof node === 'string') return valid.has(node) ? node : null;
+  const first = filterMosaicPanes(node.first, valid);
+  const second = filterMosaicPanes(node.second, valid);
+  if (first === null && second === null) return null;
+  if (first === null) return second;
+  if (second === null) return first;
+  return { ...node, first, second };
+}
+
+interface ValidatedLayout {
   paneOrder: PaneType[];
   paneVisibility: Record<PaneType, boolean>;
-} {
+  mosaicLayout: MosaicNode<PaneType> | null;
+}
+
+/** Validate and migrate a persisted layout to match current PaneType values */
+function validateLayout(layout: PersistedLayout): ValidatedLayout {
   const allPanes = new Set<PaneType>(DEFAULT_PANE_ORDER);
 
   // Rename old pane types in order
@@ -263,7 +346,20 @@ function validateLayout(layout: PersistedLayout): {
     validVisibility[pane] = renamedVisibility[pane] ?? DEFAULT_VISIBILITY[pane];
   }
 
-  return { paneOrder: validOrder, paneVisibility: validVisibility };
+  // Restore or build mosaic layout
+  let mosaicLayout: MosaicNode<PaneType> | null = null;
+  if (layout.mosaicLayout) {
+    // Migrate saved mosaic tree: rename panes, remove unknown ones
+    const renamed = renameMosaicPanes(layout.mosaicLayout);
+    mosaicLayout = filterMosaicPanes(renamed, allPanes as Set<string>) as MosaicNode<PaneType> | null;
+  }
+  if (!mosaicLayout) {
+    // Build from visible panes in order
+    const visiblePanes = validOrder.filter((p) => validVisibility[p]);
+    mosaicLayout = buildMosaicTree(visiblePanes);
+  }
+
+  return { paneOrder: validOrder, paneVisibility: validVisibility, mosaicLayout };
 }
 
 function loadLayout(key: string): PersistedLayout | null {
@@ -277,13 +373,25 @@ function loadLayout(key: string): PersistedLayout | null {
 
 function saveLayout(
   key: string,
-  layout: { paneOrder: PaneType[]; paneVisibility: Record<PaneType, boolean> },
+  layout: { paneOrder: PaneType[]; paneVisibility: Record<PaneType, boolean>; mosaicLayout?: MosaicNode<PaneType> | null },
 ) {
   setSetting(key, JSON.stringify(layout));
 }
 
+/** Debounced layout persistence — avoids writes on every resize frame */
+let _saveTimer: ReturnType<typeof setTimeout> | null = null;
+function debouncedSaveLayout(getState: () => UIState) {
+  if (_saveTimer) clearTimeout(_saveTimer);
+  _saveTimer = setTimeout(() => {
+    _saveTimer = null;
+    const s = getState();
+    const layout = { paneOrder: s.paneOrder, paneVisibility: s.paneVisibility, mosaicLayout: s.mosaicLayout };
+    saveLayout(s.activeCruxId ? cruxLayoutKey(s.activeCruxId) : GLOBAL_LAYOUT_KEY, layout);
+  }, 300);
+}
+
 /** Load global layout, migrating from old Zustand persist key if needed */
-function getInitialLayout(): { paneOrder: PaneType[]; paneVisibility: Record<PaneType, boolean> } {
+function getInitialLayout(): ValidatedLayout {
   const global = loadLayout(GLOBAL_LAYOUT_KEY);
   if (global) return validateLayout(global);
 
@@ -305,24 +413,28 @@ function getInitialLayout(): { paneOrder: PaneType[]; paneVisibility: Record<Pan
     /* ignore */
   }
 
+  const visiblePanes = DEFAULT_PANE_ORDER.filter((p) => DEFAULT_VISIBILITY[p]);
   return {
     paneOrder: [...DEFAULT_PANE_ORDER],
     paneVisibility: { ...DEFAULT_VISIBILITY },
+    mosaicLayout: buildMosaicTree(visiblePanes),
   };
 }
 
 /** Resolve layout for a crux: crux-specific → global → defaults */
-function resolveLayout(cruxId: string): {
-  paneOrder: PaneType[];
-  paneVisibility: Record<PaneType, boolean>;
-} {
+function resolveLayout(cruxId: string): ValidatedLayout {
   const cruxLayout = loadLayout(cruxLayoutKey(cruxId));
   if (cruxLayout) return validateLayout(cruxLayout);
 
   const globalLayout = loadLayout(GLOBAL_LAYOUT_KEY);
   if (globalLayout) return validateLayout(globalLayout);
 
-  return { paneOrder: [...DEFAULT_PANE_ORDER], paneVisibility: { ...DEFAULT_VISIBILITY } };
+  const visiblePanes = DEFAULT_PANE_ORDER.filter((p) => DEFAULT_VISIBILITY[p]);
+  return {
+    paneOrder: [...DEFAULT_PANE_ORDER],
+    paneVisibility: { ...DEFAULT_VISIBILITY },
+    mosaicLayout: buildMosaicTree(visiblePanes),
+  };
 }
 
 /** Debounced save for scroll position updates (avoid thrashing localStorage) */
@@ -342,6 +454,7 @@ export const useUIStore = create<UIState>()((set, get) => ({
   // ── Initial state ──
   paneOrder: initialLayout.paneOrder,
   paneVisibility: initialLayout.paneVisibility,
+  mosaicLayout: initialLayout.mosaicLayout,
   activeCruxId: null,
 
   editor: {
@@ -398,6 +511,7 @@ export const useUIStore = create<UIState>()((set, get) => ({
         activeCruxId: id,
         paneOrder: layout.paneOrder,
         paneVisibility: layout.paneVisibility,
+        mosaicLayout: layout.mosaicLayout,
         editor: {
           tabs: restoredTabs,
           activeTabId: restoredActiveId,
@@ -409,11 +523,12 @@ export const useUIStore = create<UIState>()((set, get) => ({
       const global = loadLayout(GLOBAL_LAYOUT_KEY);
       const layout = global
         ? validateLayout(global)
-        : { paneOrder: [...DEFAULT_PANE_ORDER], paneVisibility: { ...DEFAULT_VISIBILITY } };
+        : getInitialLayout();
       set({
         activeCruxId: null,
         paneOrder: layout.paneOrder,
         paneVisibility: layout.paneVisibility,
+        mosaicLayout: layout.mosaicLayout,
         editor: { tabs: [], activeTabId: null, diffTargetId: null },
         folderOpenState: {},
       });
@@ -425,31 +540,75 @@ export const useUIStore = create<UIState>()((set, get) => ({
     const wasVisible = prev.paneVisibility[pane];
     const newVisibility = { ...prev.paneVisibility, [pane]: !wasVisible };
 
-    // When enabling a pane, move it to the end of paneOrder
-    const newOrder = !wasVisible
-      ? [...prev.paneOrder.filter((p) => p !== pane), pane]
-      : prev.paneOrder;
+    // Update mosaic tree: add or remove the pane
+    let newMosaic: MosaicNode<PaneType> | null;
+    if (!wasVisible) {
+      newMosaic = addPaneToMosaic(prev.mosaicLayout, pane);
+    } else {
+      newMosaic = prev.mosaicLayout
+        ? removePaneFromMosaic(prev.mosaicLayout, pane)
+        : null;
+    }
 
-    set({ paneVisibility: newVisibility, paneOrder: newOrder });
+    // Derive pane order from the mosaic tree leaves
+    const newOrder = newMosaic ? getMosaicLeaves(newMosaic) : prev.paneOrder;
+
+    set({ paneVisibility: newVisibility, paneOrder: newOrder, mosaicLayout: newMosaic });
     const s = get();
-    const layout = { paneOrder: s.paneOrder, paneVisibility: s.paneVisibility };
+    const layout = { paneOrder: s.paneOrder, paneVisibility: s.paneVisibility, mosaicLayout: s.mosaicLayout };
     saveLayout(s.activeCruxId ? cruxLayoutKey(s.activeCruxId) : GLOBAL_LAYOUT_KEY, layout);
   },
 
   setPaneVisible: (pane, visible) => {
-    set((s) => ({
-      paneVisibility: { ...s.paneVisibility, [pane]: visible },
-    }));
+    const prev = get();
+    let newMosaic = prev.mosaicLayout;
+    if (visible && !prev.paneVisibility[pane]) {
+      newMosaic = addPaneToMosaic(newMosaic, pane);
+    } else if (!visible && prev.paneVisibility[pane]) {
+      newMosaic = newMosaic ? removePaneFromMosaic(newMosaic, pane) : null;
+    }
+    const newOrder = newMosaic ? getMosaicLeaves(newMosaic) : prev.paneOrder;
+    set({
+      paneVisibility: { ...prev.paneVisibility, [pane]: visible },
+      mosaicLayout: newMosaic,
+      paneOrder: newOrder,
+    });
     const s = get();
-    const layout = { paneOrder: s.paneOrder, paneVisibility: s.paneVisibility };
+    const layout = { paneOrder: s.paneOrder, paneVisibility: s.paneVisibility, mosaicLayout: s.mosaicLayout };
     saveLayout(s.activeCruxId ? cruxLayoutKey(s.activeCruxId) : GLOBAL_LAYOUT_KEY, layout);
   },
 
   reorderPanes: (newOrder) => {
     set({ paneOrder: newOrder });
     const s = get();
-    const layout = { paneOrder: s.paneOrder, paneVisibility: s.paneVisibility };
+    const layout = { paneOrder: s.paneOrder, paneVisibility: s.paneVisibility, mosaicLayout: s.mosaicLayout };
     saveLayout(s.activeCruxId ? cruxLayoutKey(s.activeCruxId) : GLOBAL_LAYOUT_KEY, layout);
+  },
+
+  setMosaicLayout: (newLayout) => {
+    const prev = get();
+    // Fast path: if leaves haven't changed (resize only), just update the tree
+    const prevLeaves = getMosaicLeaves(prev.mosaicLayout);
+    const newLeaves = getMosaicLeaves(newLayout);
+    const leavesChanged =
+      prevLeaves.length !== newLeaves.length ||
+      prevLeaves.some((l, i) => l !== newLeaves[i]);
+
+    if (leavesChanged) {
+      // Leaves changed (pane added/removed) — full sync
+      const newVisibility = { ...prev.paneVisibility };
+      const leafSet = new Set(newLeaves);
+      for (const pane of DEFAULT_PANE_ORDER) {
+        newVisibility[pane] = leafSet.has(pane);
+      }
+      set({ mosaicLayout: newLayout, paneVisibility: newVisibility, paneOrder: newLeaves });
+    } else {
+      // Resize only — just update the tree, skip visibility/order
+      set({ mosaicLayout: newLayout });
+    }
+
+    // Debounce persistence to avoid writes on every resize frame
+    debouncedSaveLayout(get);
   },
 
   // ── Editor tab actions ──
@@ -582,27 +741,16 @@ export const useUIStore = create<UIState>()((set, get) => ({
   toggleFileViewer: () => {
     const s = get();
     if (s.paneVisibility.artifacts) {
-      set((prev) => ({
-        paneVisibility: { ...prev.paneVisibility, artifacts: false, workshop: false },
-      }));
+      get().setPaneVisible('artifacts', false);
+      get().setPaneVisible('workshop', false);
     } else {
-      set((prev) => ({
-        paneVisibility: { ...prev.paneVisibility, artifacts: true },
-      }));
+      get().setPaneVisible('artifacts', true);
     }
   },
   toggleTimeline: () => {
     const s = get();
-    set((prev) => ({
-      paneVisibility: { ...prev.paneVisibility, history: !s.paneVisibility.history },
-    }));
+    get().setPaneVisible('history', !s.paneVisibility.history);
   },
-  setFileViewer: (open) =>
-    set((s) => ({
-      paneVisibility: { ...s.paneVisibility, workshop: open },
-    })),
-  setTimeline: (open) =>
-    set((s) => ({
-      paneVisibility: { ...s.paneVisibility, history: open },
-    })),
+  setFileViewer: (open) => get().setPaneVisible('workshop', open),
+  setTimeline: (open) => get().setPaneVisible('history', open),
 }));

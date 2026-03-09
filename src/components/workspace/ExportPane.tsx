@@ -5,8 +5,6 @@ import { exportCrux } from '@/services/crux-io';
 import { cn } from '@/lib/cn';
 import { Spinner } from '@/components/ui';
 import { usePaneWidth } from '@/hooks/usePaneWidth';
-import PaneHeader from './PaneHeader';
-
 function ExportIcon() {
   return (
     <svg
@@ -91,8 +89,6 @@ export default function ExportPane() {
 
   return (
     <div ref={ref} className="flex flex-col h-full">
-      <PaneHeader paneType="export" icon={<ExportIcon />} label="Export" />
-
       {isTooNarrow ? (
         <div className="flex-1 flex items-center justify-center p-4">
           <p className="text-xs text-text-muted">Enlarge pane to view contents</p>
