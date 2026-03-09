@@ -1,15 +1,16 @@
 import { useState, useEffect } from 'react';
 import { useThemeStore } from '@/stores/themeStore';
 import { getCurrentPalette, type Palette } from '@/lib/palette';
+import { getSetting, setSetting } from '@/services/settings';
 import { Panel, Toggle } from '@/components/ui';
 import { cn } from '@/lib/cn';
 
 type BgType = 'bloom' | 'flowfield' | 'drift' | 'blank';
 
-const BG_STORAGE_KEY = 'cruxgarden:backgroundType';
+const BG_KEY = 'cruxgarden:backgroundType';
 
 function getBackgroundType(): BgType {
-  const saved = localStorage.getItem(BG_STORAGE_KEY);
+  const saved = getSetting(BG_KEY);
   if (saved === 'bloom' || saved === 'flowfield' || saved === 'drift' || saved === 'blank') return saved;
   const css =
     getComputedStyle(document.documentElement)
@@ -20,7 +21,7 @@ function getBackgroundType(): BgType {
 }
 
 function setBackgroundType(type: BgType) {
-  localStorage.setItem(BG_STORAGE_KEY, type);
+  setSetting(BG_KEY, type);
   document.documentElement.style.setProperty('--background-type', type);
 }
 

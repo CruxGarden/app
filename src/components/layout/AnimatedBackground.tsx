@@ -1,16 +1,17 @@
 import { useEffect, useState } from 'react';
 import { useThemeStore } from '@/stores/themeStore';
+import { getSetting, setSetting } from '@/services/settings';
 import BloomBackground from './BloomBackground';
 import StarfieldBackground from './StarfieldBackground';
 import FlowFieldBackground from './FlowFieldBackground';
 import DriftBackground from './DriftBackground';
 
-const BG_STORAGE_KEY = 'cruxgarden:backgroundType';
+const BG_KEY = 'cruxgarden:backgroundType';
 
 function pickRandomDefault(): string {
   const r = Math.random();
   const choice = r < 0.34 ? 'bloom' : r < 0.67 ? 'flowfield' : 'drift';
-  localStorage.setItem(BG_STORAGE_KEY, choice);
+  setSetting(BG_KEY, choice);
   document.documentElement.style.setProperty('--background-type', choice);
   return choice;
 }
@@ -19,7 +20,7 @@ export default function AnimatedBackground() {
   const resolved = useThemeStore((s) => s.resolved);
 
   const [bgType, setBgType] = useState<string>(() => {
-    const saved = localStorage.getItem(BG_STORAGE_KEY);
+    const saved = getSetting(BG_KEY);
     if (saved) {
       document.documentElement.style.setProperty('--background-type', saved);
       return saved;
@@ -30,7 +31,7 @@ export default function AnimatedBackground() {
   useEffect(() => {
     const observer = new MutationObserver(() => {
       const inline = document.documentElement.style.getPropertyValue('--background-type').trim();
-      const saved = localStorage.getItem(BG_STORAGE_KEY);
+      const saved = getSetting(BG_KEY);
 
       if (!inline && saved) {
         document.documentElement.style.setProperty('--background-type', saved);
@@ -41,7 +42,7 @@ export default function AnimatedBackground() {
       const val =
         getComputedStyle(document.documentElement)
           .getPropertyValue('--background-type')
-          .trim() || localStorage.getItem(BG_STORAGE_KEY) || 'bloom';
+          .trim() || getSetting(BG_KEY) || 'bloom';
       setBgType((prev) => (prev !== val ? val : prev));
     });
 

@@ -1,6 +1,6 @@
 import { Navigate, Outlet } from 'react-router-dom';
 import { useAuthStore } from '@/stores/authStore';
-import { Spinner } from '@/components/ui';
+import { LoadingPanel } from '@/components/ui';
 
 export default function AuthGuard() {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
@@ -9,7 +9,7 @@ export default function AuthGuard() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-screen">
-        <Spinner size={24} className="text-accent" />
+        <LoadingPanel />
       </div>
     );
   }

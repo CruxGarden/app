@@ -38,8 +38,8 @@ export function buildSystemPromptFromData(
   const sections: string[] = [];
 
   // ── Identity ──────────────────────────────────────────
-  const meta = crux.meta as Record<string, any> | undefined;
-  const customPrompt = meta?.settings?.systemPrompt;
+  const meta = crux.meta as Record<string, Record<string, unknown>> | undefined;
+  const customPrompt = meta?.settings?.systemPrompt as string | undefined;
   sections.push('## Identity\n' + (customPrompt || DEFAULT_KEEPER_PERSONA));
 
   // ── Capabilities ──────────────────────────────────────
@@ -148,9 +148,9 @@ function buildFileList(artifacts: Attachment[]): string {
 
 // ── Token Estimation ──────────────────────────────────────
 
-/** Conservative token estimate: ~4 chars per token */
+/** Conservative token estimate: ~3.5 chars per token for English text */
 export function estimateTokens(text: string): number {
-  return Math.ceil(text.length / 4);
+  return Math.ceil(text.length / 3.5);
 }
 
 /** Estimate tokens for a message array */

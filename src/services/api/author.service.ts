@@ -1,22 +1,22 @@
 import type { IAuthorService } from '../author.service';
 import type { Author, CreateAuthorInput, UpdateAuthorInput } from '../types';
-import { NotFoundError } from '../types';
+import { toServiceError } from './errors';
 import * as authors from '@/api/authors';
 
 export class ApiAuthorService implements IAuthorService {
   async findById(id: string): Promise<Author> {
     try {
       return await authors.get(id);
-    } catch {
-      throw new NotFoundError('Author not found');
+    } catch (err) {
+      throw toServiceError(err, 'Author not found');
     }
   }
 
   async findByUsername(username: string): Promise<Author> {
     try {
       return await authors.get(username);
-    } catch {
-      throw new NotFoundError('Author not found');
+    } catch (err) {
+      throw toServiceError(err, 'Author not found');
     }
   }
 

@@ -1,9 +1,9 @@
 import { useState, useCallback } from 'react';
-import JSZip from 'jszip';
 import { useCruxStore } from '@/stores/cruxStore';
 import { useAuthStore } from '@/stores/authStore';
-import { getServices } from '@/services';
+import { exportCrux } from '@/services/crux-io';
 import { cn } from '@/lib/cn';
+import { Spinner } from '@/components/ui';
 import { usePaneWidth } from '@/hooks/usePaneWidth';
 import PaneHeader from './PaneHeader';
 
@@ -39,7 +39,7 @@ export default function ExportPane() {
   const artifacts = useCruxStore((s) => s.artifacts);
   const messages = useCruxStore((s) => s.messages);
   const summary = useCruxStore((s) => s.summary);
-  const gateCount = useCruxStore((s) => s.gateCount);
+  const growthCount = useCruxStore((s) => s.growthCount);
   const author = useAuthStore((s) => s.author);
 
   const [exporting, setExporting] = useState(false);
@@ -52,113 +52,26 @@ export default function ExportPane() {
     setProgress('Fetching data...');
 
     try {
-      const zip = new JSZip();
-
-      // Fetch all data fresh from service layer in parallel
-      const { attachment, dimension } = getServices();
-      const [freshArtifacts, gates] = await Promise.all([
-        attachment.findByResource('crux', crux.id),
-        dimension.findBySourceAndType(crux.id, 'gate').catch(() => []),
-      ]);
-
-      setProgress('Building archive...');
-
-      // manifest.json (v2.0 format)
-      zip.file(
-        'manifest.json',
-        JSON.stringify(
-          {
-            version: '2.0',
-            exportedAt: new Date().toISOString(),
-            author: author ? { username: author.username, displayName: author.displayName } : null,
-          },
-          null,
-          2,
-        ),
-      );
-
-      // crux.json — complete Crux record
-      const cruxData = {
-        id: crux.id,
-        slug: crux.slug,
-        title: crux.title,
-        description: crux.description,
-        type: crux.type,
-        kind: crux.meta?.kind ?? null,
-        status: crux.status,
-        visibility: crux.visibility,
-        authorId: crux.authorId ?? null,
-        homeId: crux.homeId ?? null,
-        meta: {
-          ...(crux.meta ?? {}),
-          summary,
-          gateCount,
-        },
-        created: crux.created,
-        updated: crux.updated,
-      };
-      zip.file('crux.json', JSON.stringify(cruxData, null, 2));
-
-      // messages.json — conversation history
-      zip.file('messages.json', JSON.stringify(messages, null, 2));
-
-      // attachments.json — metadata for all attachments (no content)
-      const attachmentMeta = freshArtifacts.map((a) => ({
-        id: a.id,
-        resourceId: a.resourceId,
-        resourceType: a.resourceType,
-        filename: a.filename,
-        mimeType: a.mimeType,
-        size: a.size,
-        type: a.type,
-        kind: a.kind,
-        meta: a.meta,
-        created: a.created,
-        updated: a.updated,
-      }));
-      zip.file('attachments.json', JSON.stringify(attachmentMeta, null, 2));
-
-      // dimensions.json — gate snapshots
-      if (gates.length > 0) {
-        zip.file('dimensions.json', JSON.stringify(gates, null, 2));
-      }
-
-      // artifacts/{id}/content — raw file content keyed by attachment ID
-      const failed: string[] = [];
-      if (freshArtifacts.length > 0) {
-        setProgress('Downloading artifacts...');
-        for (let i = 0; i < freshArtifacts.length; i++) {
-          const artifact = freshArtifacts[i]!;
-          const displayPath = (artifact.meta?.path as string) || artifact.filename || `file-${i + 1}`;
-          setProgress(`${i + 1}/${freshArtifacts.length}: ${displayPath}`);
-
-          try {
-            const blob = await attachment.downloadBlob(artifact.id);
-            zip.file(`artifacts/${artifact.id}/content`, blob);
-          } catch (err) {
-            console.warn(`Failed to download: ${displayPath}`, err);
-            failed.push(displayPath);
-          }
-        }
-      }
-
-      setProgress('Compressing...');
-      const blob = await zip.generateAsync({ type: 'blob' });
+      const result = await exportCrux({
+        cruxId: crux.id,
+        messages,
+        summary,
+        author: author ? { username: author.username, displayName: author.displayName } : null,
+        onProgress: setProgress,
+      });
 
       // Trigger download
-      const url = URL.createObjectURL(blob);
+      const url = URL.createObjectURL(result.blob);
       const a = document.createElement('a');
       a.href = url;
-      const now = new Date();
-      const ts = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}`;
-      a.download = `${crux.slug || 'crux'}-${ts}.crux`;
+      a.download = result.filename;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
 
-      if (failed.length > 0) {
-        setProgress(`Done — ${failed.length} file${failed.length > 1 ? 's' : ''} failed to download`);
+      if (result.failed.length > 0) {
+        setProgress(`Done — ${result.failed.length} file${result.failed.length > 1 ? 's' : ''} failed`);
       } else {
         setProgress('');
       }
@@ -168,7 +81,7 @@ export default function ExportPane() {
     } finally {
       setExporting(false);
     }
-  }, [crux, messages, summary, gateCount, author]);
+  }, [crux, messages, summary, author]);
 
   const totalSize = artifacts.reduce((sum, a) => sum + (Number(a.size) || 0), 0);
   const messageCount = messages.length;
@@ -221,10 +134,10 @@ export default function ExportPane() {
                 <span className="text-text">messages.json</span>
                 <span>{messageCount} msgs</span>
               </div>
-              {gateCount > 0 && (
+              {growthCount > 0 && (
                 <div className="flex justify-between">
-                  <span className="text-text">dimensions.json</span>
-                  <span>{gateCount} gates</span>
+                  <span className="text-text">versions/</span>
+                  <span>{growthCount} snapshots</span>
                 </div>
               )}
               {artifacts.length > 0 && (
@@ -260,7 +173,7 @@ export default function ExportPane() {
                 'bg-accent-muted text-accent border border-accent/20 cursor-wait',
               )}
             >
-              <span className="inline-block w-3 h-3 border-2 border-accent/30 border-t-accent rounded-full animate-spin" />
+              <Spinner size={14} />
               Exporting...
             </button>
           ) : (

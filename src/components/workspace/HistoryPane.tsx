@@ -1,3 +1,6 @@
+import { useCruxStore } from '@/stores/cruxStore';
+import { useGrowthCreation } from '@/hooks/useGrowthCreation';
+import { GrowthTimeline } from '@/components/growth';
 import PaneHeader from './PaneHeader';
 
 function StackIcon() {
@@ -19,13 +22,20 @@ function StackIcon() {
   );
 }
 
-export default function NavigationPane() {
+export default function HistoryPane() {
+  const growths = useCruxStore((s) => s.growths);
+  const summary = useCruxStore((s) => s.summary);
+  const { createSnapshot, isCreatingGrowth } = useGrowthCreation();
+
   return (
     <div className="flex flex-col h-full">
       <PaneHeader paneType="history" icon={<StackIcon />} label="History" />
-      <div className="text-text-muted p-4">
-        <p className="text-xs text-center">Coming soon</p>
-      </div>
+      <GrowthTimeline
+        growths={growths}
+        summary={summary}
+        isCreatingGrowth={isCreatingGrowth}
+        onCreateSnapshot={createSnapshot}
+      />
     </div>
   );
 }

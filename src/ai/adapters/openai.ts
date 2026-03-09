@@ -116,7 +116,9 @@ export class OpenAIAdapter implements ProviderAdapter {
   private convertMessages(
     systemPrompt: string,
     messages: StreamOptions['messages'],
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- OpenAI SDK message format
   ): any[] {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- OpenAI SDK message format
     const result: any[] = [{ role: 'system', content: systemPrompt }];
 
     for (const msg of messages) {
@@ -158,6 +160,7 @@ export class OpenAIAdapter implements ProviderAdapter {
             .map((b) => ('text' in b ? b.text : ''));
           const toolUses = msg.content.filter((b) => b.type === 'tool_use');
 
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any -- OpenAI SDK message format
           const assistantMsg: any = {
             role: 'assistant',
             content: textParts.join('') || null,

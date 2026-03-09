@@ -4,7 +4,6 @@ import { publicApi } from '@/api';
 import type { Crux, Attachment } from '@/api/types';
 import { isServicesReady, initServices, getServices } from '@/services';
 import { APP_NAME } from '@/lib/constants';
-import { Spinner } from '@/components/ui';
 import { PublicTopBar, ArtifactRenderer } from '@/components/display';
 import MetadataContent from '@/components/workspace/MetadataContent';
 
@@ -106,17 +105,6 @@ export default function PublicCrux() {
       document.title = APP_NAME;
     };
   }, [crux?.title]);
-
-  if (state === 'loading') {
-    return (
-      <div className="relative min-h-screen flex items-center justify-center">
-        <div className="flex items-center gap-3 px-5 py-3 rounded-lg bg-surface-solid/80 backdrop-blur-sm border border-border text-text-muted text-sm">
-          <Spinner size={16} />
-          Loading...
-        </div>
-      </div>
-    );
-  }
 
   if (state === 'not-found') {
     return (

@@ -10,6 +10,10 @@ import { getSqliteClient } from './client';
 import { getLocalIdentity } from './identity';
 import { toAttachment, guessMimeType, hashContent, buildInsert } from './helpers';
 
+function byteLength(str: string): number {
+  return new TextEncoder().encode(str).byteLength;
+}
+
 export class SqliteAttachmentService implements IAttachmentService {
   async findById(id: string): Promise<Attachment> {
     const row = await getSqliteClient().get(
@@ -47,7 +51,7 @@ export class SqliteAttachmentService implements IAttachmentService {
             input.content,
             'utf-8',
             input.mimeType || (existing.mime_type as string),
-            input.content.length,
+            byteLength(input.content),
             fingerprint,
             new Date().toISOString(),
             existing.id,
@@ -72,7 +76,7 @@ export class SqliteAttachmentService implements IAttachmentService {
       encoding: 'utf-8',
       mimeType: input.mimeType || guessMimeType(filePath),
       filename: filePath.split('/').pop() || 'unnamed',
-      size: input.content.length,
+      size: byteLength(input.content),
       fingerprint,
       content: input.content,
       created: now,
@@ -189,5 +193,52 @@ export class SqliteAttachmentService implements IAttachmentService {
     }
     // Text content stored as string
     return new Blob([row.content as string], { type: row.mime_type });
+  }
+
+  async computeSnapshotFingerprint(resourceId: string): Promise<string> {
+    const db = getSqliteClient();
+    const rows = await db.all<{ path: string; fingerprint: string }>(
+      "SELECT path, fingerprint FROM artifacts WHERE resource_id = ? AND type = 'artifact' ORDER BY path",
+      [resourceId],
+    );
+    const manifest = rows.map((r) => `${r.path}:${r.fingerprint}`).join('\n');
+    return hashContent(manifest);
+  }
+
+  async cloneArtifactsToSnapshot(sourceId: string, snapshotId: string): Promise<void> {
+    const db = getSqliteClient();
+    const identity = await getLocalIdentity();
+    const now = new Date().toISOString();
+
+    // Get all workspace artifacts with content
+    const rows = await db.all<Record<string, unknown>>(
+      "SELECT * FROM artifacts WHERE resource_id = ? AND type = 'artifact'",
+      [sourceId],
+    );
+
+    for (const row of rows) {
+      const record = {
+        id: crypto.randomUUID(),
+        type: 'artifact',
+        kind: (row.kind as string) || 'file',
+        path: row.path as string,
+        meta: row.meta, // Already JSON string from DB
+        resourceId: snapshotId,
+        resourceType: 'crux',
+        authorId: identity.authorId,
+        homeId: identity.homeId,
+        encoding: row.encoding as string,
+        mimeType: row.mime_type as string,
+        filename: row.filename as string,
+        size: row.size as number,
+        fingerprint: row.fingerprint as string,
+        content: row.content,
+        created: now,
+        updated: now,
+      };
+
+      const { sql, params } = buildInsert('artifacts', record);
+      await db.run(sql, params);
+    }
   }
 }

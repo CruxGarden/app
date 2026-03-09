@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/stores/authStore';
 import { useCruxStore } from '@/stores/cruxStore';
 import { cn } from '@/lib/cn';
+import { Spinner } from '@/components/ui';
 import { usePaneWidth } from '@/hooks/usePaneWidth';
 import CreateAuthorModal from '@/components/auth/CreateAuthorModal';
 import PaneHeader from './PaneHeader';
@@ -242,7 +243,7 @@ export default function PublishPane() {
                 'bg-accent-muted text-accent border border-accent/20 cursor-wait',
               )}
             >
-              <span className="inline-block w-3 h-3 border-2 border-accent/30 border-t-accent rounded-full animate-spin" />
+              <Spinner size={14} />
               Publishing...
             </button>
           ) : isPublished && !hasUnpublishedChanges ? (

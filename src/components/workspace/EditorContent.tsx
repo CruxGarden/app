@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import { useEffect, useMemo, useRef, useCallback, useState } from 'react';
 import Editor from '@monaco-editor/react';
 import type * as Monaco from 'monaco-editor';
@@ -14,7 +15,7 @@ import MarkdownRenderer from '@/components/chat/MarkdownRenderer';
 import { usePreviewUrl } from '@/hooks/usePreviewUrl';
 import type { Attachment } from '@/api/types';
 import type { EditorTab } from '@/stores/uiStore';
-import { Spinner } from '@/components/ui';
+import { LoadingPanel, Spinner } from '@/components/ui';
 
 // ── Save handler registry (module-level, accessible from outside) ──
 const editorSaveHandlers = new Map<string, () => Promise<void>>();
@@ -96,7 +97,7 @@ export default function EditorContent({ tab, artifact, cruxId, saveRef }: Editor
     } catch (err: unknown) {
       console.error('Save failed:', err);
     }
-  }, [artifact.id, artifact.filename, mime, tab.id, cruxId, setTabDirty]);
+  }, [artifact.filename, artifact.meta?.path, mime, tab.id, cruxId, setTabDirty]);
 
   // Keep save ref stable for Monaco keybinding (avoids stale closure)
   useEffect(() => {
@@ -225,13 +226,7 @@ export default function EditorContent({ tab, artifact, cruxId, saveRef }: Editor
     };
   }, [svgPreviewUrl]);
 
-  if (loading || !editorReady) {
-    return (
-      <div className="flex-1 flex items-center justify-center">
-        <Spinner size={24} />
-      </div>
-    );
-  }
+  if (loading || !editorReady) return null;
 
   // ── Source mode: Monaco Editor ──
   if (tab.viewMode === 'source' && content !== null) {
@@ -243,6 +238,7 @@ export default function EditorContent({ tab, artifact, cruxId, saveRef }: Editor
           language={language}
           defaultValue={content ?? ''}
           theme={themeName}
+          loading={null}
           onChange={handleEditorChange}
           onMount={handleEditorMount}
           options={{
@@ -273,7 +269,7 @@ export default function EditorContent({ tab, artifact, cruxId, saveRef }: Editor
       if (!previewUrl) {
         return (
           <div className="flex-1 flex items-center justify-center">
-            <Spinner size={24} />
+            <LoadingPanel />
           </div>
         );
       }
@@ -281,7 +277,8 @@ export default function EditorContent({ tab, artifact, cruxId, saveRef }: Editor
         <iframe
           key={previewUrl}
           src={previewUrl}
-          sandbox="allow-scripts allow-same-origin"
+          sandbox="allow-scripts allow-same-origin allow-popups"
+          allow="geolocation; camera; microphone; accelerometer; gyroscope; autoplay; fullscreen"
           className="flex-1 w-full bg-contrast"
           title={path}
         />

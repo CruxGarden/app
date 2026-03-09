@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { applyTint, type TintName } from '@/lib/palette';
+import { getSetting, setSetting } from '@/services/settings';
 
 type Mode = 'dark' | 'light' | 'auto';
 
@@ -23,18 +24,9 @@ function applyToDOM(resolved: 'dark' | 'light') {
   html.classList.add(resolved);
 }
 
-const TINT_STORAGE_KEY = 'cruxgarden:tint';
-
-const stored = (
-  typeof localStorage !== 'undefined' ? localStorage.getItem('cruxgarden:theme') : null
-) as Mode | null;
-const initial = stored ?? 'dark';
+const initial = (getSetting('cruxgarden:theme') as Mode | null) ?? 'dark';
 const initialResolved = resolveMode(initial);
-
-const storedTint = (
-  typeof localStorage !== 'undefined' ? localStorage.getItem(TINT_STORAGE_KEY) : null
-) as TintName | null;
-const initialTint: TintName = storedTint ?? 'gray';
+const initialTint: TintName = (getSetting('cruxgarden:tint') as TintName | null) ?? 'gray';
 
 // Apply immediately to prevent flash
 if (typeof document !== 'undefined') {
@@ -48,13 +40,13 @@ export const useThemeStore = create<ThemeState>((set, get) => ({
   tint: initialTint,
   setMode: (mode) => {
     const resolved = resolveMode(mode);
-    localStorage.setItem('cruxgarden:theme', mode);
+    setSetting('cruxgarden:theme', mode);
     applyToDOM(resolved);
     applyTint(get().tint, resolved);
     set({ mode, resolved });
   },
   setTint: (tint) => {
-    localStorage.setItem(TINT_STORAGE_KEY, tint);
+    setSetting('cruxgarden:tint', tint);
     applyTint(tint, get().resolved);
     set({ tint });
   },

@@ -8,13 +8,26 @@ import type {
 import { NotFoundError } from '../types';
 import * as cruxes from '@/api/cruxes';
 
+const MAX_CACHE_SIZE = 500;
+
 export class ApiAttachmentService implements IAttachmentService {
   // Cache of attachments seen via findByResource, keyed by attachment ID.
   // This lets findById and downloadBlob resolve the resourceId needed for
   // API calls without requiring callers to pass it explicitly.
   // The cache is populated by findByResource (the primary fetch path) and
   // by create/upload (which return the new attachment).
+  // Capped at MAX_CACHE_SIZE; oldest entries evicted when full.
   private attachmentCache = new Map<string, Attachment>();
+
+  private cacheSet(id: string, attachment: Attachment) {
+    // Delete first so re-insertion moves to end (Map preserves insertion order)
+    this.attachmentCache.delete(id);
+    this.attachmentCache.set(id, attachment);
+    if (this.attachmentCache.size > MAX_CACHE_SIZE) {
+      const oldest = this.attachmentCache.keys().next().value;
+      if (oldest) this.attachmentCache.delete(oldest);
+    }
+  }
 
   async findById(id: string): Promise<Attachment> {
     const cached = this.attachmentCache.get(id);
@@ -29,7 +42,7 @@ export class ApiAttachmentService implements IAttachmentService {
   async findByResource(_resourceType: string, resourceId: string): Promise<Attachment[]> {
     const attachments = await cruxes.getAttachments(resourceId);
     for (const a of attachments) {
-      this.attachmentCache.set(a.id, a);
+      this.cacheSet(a.id, a);
     }
     return attachments;
   }
@@ -43,7 +56,7 @@ export class ApiAttachmentService implements IAttachmentService {
     const attachment = await cruxes.uploadAttachment(input.resourceId, file, {
       path: input.meta?.path,
     });
-    this.attachmentCache.set(attachment.id, attachment);
+    this.cacheSet(attachment.id, attachment);
     return attachment;
   }
 
@@ -57,7 +70,7 @@ export class ApiAttachmentService implements IAttachmentService {
       kind: input.kind,
       path: input.meta?.path,
     });
-    this.attachmentCache.set(attachment.id, attachment);
+    this.cacheSet(attachment.id, attachment);
     return attachment;
   }
 
@@ -66,7 +79,7 @@ export class ApiAttachmentService implements IAttachmentService {
     if (updates.mimeType) meta.mimeType = updates.mimeType;
     if (updates.filename) meta.filename = updates.filename;
     const attachment = await cruxes.updateAttachment(id, undefined, meta);
-    this.attachmentCache.set(attachment.id, attachment);
+    this.cacheSet(attachment.id, attachment);
     return attachment;
   }
 
@@ -88,5 +101,13 @@ export class ApiAttachmentService implements IAttachmentService {
       );
     }
     return cruxes.downloadAttachment(cached.resourceId, id);
+  }
+
+  async computeSnapshotFingerprint(_resourceId: string): Promise<string> {
+    throw new Error('computeSnapshotFingerprint is only available in local-first mode');
+  }
+
+  async cloneArtifactsToSnapshot(_sourceId: string, _snapshotId: string): Promise<void> {
+    throw new Error('cloneArtifactsToSnapshot is only available in local-first mode');
   }
 }

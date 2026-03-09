@@ -4,6 +4,7 @@ import type { IDimensionService } from './dimension.service';
 import type { IAuthorService } from './author.service';
 import type { IPublishService } from './publish.service';
 import { getSqliteClient } from './sqlite/client';
+import { initSettings } from './settings';
 
 export interface Services {
   crux: ICruxService;
@@ -17,11 +18,12 @@ export type Backend = 'local' | 'api';
 
 let services: Services | null = null;
 let currentBackend: Backend | null = null;
+let initPromise: Promise<Services> | null = null;
 
 export async function getBackendSetting(): Promise<Backend> {
   try {
     const row = await getSqliteClient().get<{ value: string }>(
-      "SELECT value FROM settings WHERE key = 'backend'",
+      "SELECT value FROM settings WHERE key = 'cruxgarden:backend'",
     );
     return (row?.value as Backend) || 'local';
   } catch {
@@ -29,7 +31,14 @@ export async function getBackendSetting(): Promise<Backend> {
   }
 }
 
-export async function initServices(backend?: Backend): Promise<Services> {
+export function initServices(backend?: Backend): Promise<Services> {
+  if (services) return Promise.resolve(services);
+  if (initPromise) return initPromise;
+  initPromise = doInitServices(backend).finally(() => { initPromise = null; });
+  return initPromise;
+}
+
+async function doInitServices(backend?: Backend): Promise<Services> {
   const resolvedBackend = backend ?? (await getBackendSetting());
 
   if (resolvedBackend === 'api') {
@@ -63,6 +72,10 @@ export async function initServices(backend?: Backend): Promise<Services> {
   }
 
   currentBackend = resolvedBackend;
+
+  // Populate settings cache from SQLite + migrate localStorage values
+  await initSettings();
+
   return services;
 }
 
@@ -93,7 +106,7 @@ export function isServicesReady(): boolean {
 export async function ensureLocalAuthor(): Promise<import('./types').Author> {
   const db = getSqliteClient();
   const existing = await db.get<{ value: string }>(
-    "SELECT value FROM settings WHERE key = 'localAuthorId'",
+    "SELECT value FROM settings WHERE key = 'cruxgarden:localAuthorId'",
   );
   if (existing?.value) {
     try {
@@ -109,7 +122,7 @@ export async function ensureLocalAuthor(): Promise<import('./types').Author> {
     displayName: 'Wanderer',
   });
   await db.run(
-    "INSERT OR REPLACE INTO settings (key, value) VALUES ('localAuthorId', ?)",
+    "INSERT OR REPLACE INTO settings (key, value) VALUES ('cruxgarden:localAuthorId', ?)",
     [author.id],
   );
   return author;

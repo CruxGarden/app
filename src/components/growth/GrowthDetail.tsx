@@ -1,8 +1,8 @@
 import { cn } from '@/lib/cn';
-import type { Dimension, GateSnapshot } from '@/api/types';
+import type { Dimension, GrowthSnapshot } from '@/api/types';
 
-interface GateDetailProps {
-  gate: Dimension;
+interface GrowthDetailProps {
+  growth: Dimension;
   index: number;
   onClose: () => void;
 }
@@ -49,9 +49,9 @@ function CloseIcon() {
   );
 }
 
-export default function GateDetail({ gate, index, onClose }: GateDetailProps) {
-  const title = gate.target?.title || `Snapshot ${index + 1}`;
-  const snapshot = tryParseSnapshot(gate);
+export default function GrowthDetail({ growth, index, onClose }: GrowthDetailProps) {
+  const title = growth.target?.title || `Snapshot ${index + 1}`;
+  const snapshot = tryParseSnapshot(growth);
 
   return (
     <div className="flex flex-col gap-3 p-3">
@@ -61,7 +61,7 @@ export default function GateDetail({ gate, index, onClose }: GateDetailProps) {
           <span className="text-[11px] font-mono text-accent/70 uppercase">#{index + 1}</span>
           <h3 className="text-sm font-display font-medium text-text mt-0.5">{title}</h3>
           <span className="text-[10px] text-text-muted">
-            {new Date(gate.created).toLocaleString()}
+            {new Date(growth.created).toLocaleString()}
           </span>
         </div>
         <button
@@ -87,22 +87,17 @@ export default function GateDetail({ gate, index, onClose }: GateDetailProps) {
         </div>
       ) : (
         <p className="text-sm text-text-muted">
-          {gate.target?.data || 'No snapshot data available.'}
+          {growth.target?.data || 'No snapshot data available.'}
         </p>
       )}
     </div>
   );
 }
 
-function tryParseSnapshot(gate: Dimension): GateSnapshot | null {
-  // The target embed only includes id, slug, title, data
-  // The actual snapshot is in the gate crux's meta.snapshot
-  // We can't access it through the embed, but if the data field
-  // contains parseable snapshot text, we try that
-  const data = gate.target?.data;
+function tryParseSnapshot(growth: Dimension): GrowthSnapshot | null {
+  const data = growth.target?.data;
   if (!data) return null;
 
-  // If it looks like structured snapshot text, try to parse
   const fields: Record<string, string> = {};
   const keys = ['state', 'decision', 'rejected', 'reason', 'artifacts', 'open'];
 
@@ -114,7 +109,7 @@ function tryParseSnapshot(gate: Dimension): GateSnapshot | null {
   }
 
   if (keys.every((k) => fields[k])) {
-    return { gate: gate.target?.title ?? '', ...fields } as unknown as GateSnapshot;
+    return { title: growth.target?.title ?? '', ...fields } as unknown as GrowthSnapshot;
   }
 
   return null;
