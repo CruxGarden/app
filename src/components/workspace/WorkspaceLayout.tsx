@@ -42,9 +42,11 @@ const MemoizedPaneContent = memo(function MemoizedPaneContent({
 }) {
   const PaneComponent = PANE_COMPONENTS[paneType];
   return (
-    <Suspense fallback={null}>
-      <PaneComponent />
-    </Suspense>
+    <div className="pane-freeze-wrapper">
+      <Suspense fallback={null}>
+        <PaneComponent />
+      </Suspense>
+    </div>
   );
 });
 
