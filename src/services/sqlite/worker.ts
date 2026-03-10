@@ -4,7 +4,7 @@ import * as SQLite from 'wa-sqlite';
 // @ts-expect-error — wa-sqlite examples aren't typed
 import { AccessHandlePoolVFS } from 'wa-sqlite/src/examples/AccessHandlePoolVFS.js';
 
-// @ts-ignore — wa-sqlite examples aren't typed
+// @ts-expect-error — wa-sqlite examples aren't typed
 import { MemoryAsyncVFS } from 'wa-sqlite/src/examples/MemoryAsyncVFS.js';
 import SCHEMA from './schema.sql?raw';
 

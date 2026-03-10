@@ -432,7 +432,13 @@ html.palette-transition *::after {
   background: color-mix(in srgb, var(--accent) 50%, transparent);
 }
 
-/* Suppress pointer-events on pane content during resize (prevents child hover re-renders) */
+/* Pane content wrapper — fills parent, frozen to pixel size during resize by Split.js patch */
+.pane-freeze-wrapper {
+  width: 100%;
+  height: 100%;
+}
+
+/* During resize: suppress pointer-events on tiles */
 .mosaic-root.mosaic-resizing .mosaic-tile {
   pointer-events: none;
 }
