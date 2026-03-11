@@ -4,6 +4,9 @@ import { GrowthTimeline } from '@/components/growth';
 export default function HistoryPane() {
   const growths = useCruxStore((s) => s.growths);
   const summary = useCruxStore((s) => s.summary);
+  const viewingSnapshotIndex = useCruxStore((s) => s.viewingSnapshotIndex);
+  const viewSnapshot = useCruxStore((s) => s.viewSnapshot);
+  const exitSnapshotView = useCruxStore((s) => s.exitSnapshotView);
   const { createSnapshot, isCreatingGrowth } = useGrowthCreation();
 
   return (
@@ -13,6 +16,9 @@ export default function HistoryPane() {
         summary={summary}
         isCreatingGrowth={isCreatingGrowth}
         onCreateSnapshot={createSnapshot}
+        viewingSnapshotIndex={viewingSnapshotIndex}
+        onViewSnapshot={viewSnapshot}
+        onExitSnapshot={exitSnapshotView}
       />
     </div>
   );

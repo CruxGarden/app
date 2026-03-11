@@ -10,8 +10,21 @@ import { getSqliteClient } from './client';
 import { getLocalIdentity } from './identity';
 import { toAttachment, guessMimeType, hashContent, buildInsert } from './helpers';
 
-function byteLength(str: string): number {
-  return new TextEncoder().encode(str).byteLength;
+
+/**
+ * If no other artifact row references this fingerprint, delete the OPFS blob.
+ * Safe to call even if the blob doesn't exist (blobDelete is a no-op).
+ */
+async function cleanupOrphanedBlob(fingerprint: string | null): Promise<void> {
+  if (!fingerprint) return;
+  const db = getSqliteClient();
+  const row = await db.get<{ count: number }>(
+    'SELECT COUNT(*) as count FROM artifacts WHERE fingerprint = ?',
+    [fingerprint],
+  );
+  if ((row?.count ?? 0) === 0) {
+    await db.blobDelete(fingerprint);
+  }
 }
 
 export class SqliteAttachmentService implements IAttachmentService {
@@ -36,32 +49,38 @@ export class SqliteAttachmentService implements IAttachmentService {
     const identity = await getLocalIdentity();
     const filePath = input.meta?.path || '';
     const db = getSqliteClient();
+    const contentBytes = new TextEncoder().encode(input.content);
+    const fingerprint = await hashContent(contentBytes);
 
-    // Check for existing artifact at same path (not version snapshots)
+    // Check for existing artifact at same path (dedup — update in place)
     if (filePath) {
       const existing = await db.get<Record<string, unknown>>(
-        "SELECT id, mime_type FROM artifacts WHERE resource_id = ? AND path = ? AND type = 'artifact'",
+        "SELECT id, fingerprint, mime_type FROM artifacts WHERE resource_id = ? AND path = ? AND type = 'artifact'",
         [input.resourceId, filePath],
       );
       if (existing) {
-        const fingerprint = await hashContent(input.content);
+        const oldFingerprint = existing.fingerprint as string | null;
+        await db.blobWrite(fingerprint, contentBytes);
         await db.run(
-          'UPDATE artifacts SET content = ?, encoding = ?, mime_type = ?, size = ?, fingerprint = ?, updated = ? WHERE id = ?',
+          'UPDATE artifacts SET encoding = ?, mime_type = ?, size = ?, fingerprint = ?, updated = ? WHERE id = ?',
           [
-            input.content,
             'utf-8',
             input.mimeType || (existing.mime_type as string),
-            byteLength(input.content),
+            contentBytes.byteLength,
             fingerprint,
             new Date().toISOString(),
             existing.id,
           ],
         );
+        if (oldFingerprint && oldFingerprint !== fingerprint) {
+          await cleanupOrphanedBlob(oldFingerprint);
+        }
         return this.findById(existing.id as string);
       }
     }
 
-    const fingerprint = await hashContent(input.content);
+    await db.blobWrite(fingerprint, contentBytes);
+
     const now = new Date().toISOString();
     const record = {
       id: crypto.randomUUID(),
@@ -76,9 +95,8 @@ export class SqliteAttachmentService implements IAttachmentService {
       encoding: 'utf-8',
       mimeType: input.mimeType || guessMimeType(filePath),
       filename: filePath.split('/').pop() || 'unnamed',
-      size: byteLength(input.content),
+      size: contentBytes.byteLength,
       fingerprint,
-      content: input.content,
       created: now,
       updated: now,
     };
@@ -92,21 +110,23 @@ export class SqliteAttachmentService implements IAttachmentService {
     const filePath = input.meta?.path || '';
     const db = getSqliteClient();
 
-    // Convert Blob to Uint8Array for SQLite BLOB storage
     const contentBytes = new Uint8Array(await input.blob.arrayBuffer());
     const fingerprint = await hashContent(contentBytes);
+
+    // Write blob to OPFS (always — idempotent by fingerprint)
+    await db.blobWrite(fingerprint, contentBytes);
 
     // When type is 'version', skip dedup — always create a new record.
     if (input.type !== 'version' && filePath) {
       const existing = await db.get<Record<string, unknown>>(
-        "SELECT id, mime_type FROM artifacts WHERE resource_id = ? AND path = ? AND type = 'artifact'",
+        "SELECT id, fingerprint, mime_type FROM artifacts WHERE resource_id = ? AND path = ? AND type = 'artifact'",
         [input.resourceId, filePath],
       );
       if (existing) {
+        const oldFingerprint = existing.fingerprint as string | null;
         await db.run(
-          'UPDATE artifacts SET content = ?, encoding = ?, mime_type = ?, size = ?, fingerprint = ?, updated = ? WHERE id = ?',
+          'UPDATE artifacts SET encoding = ?, mime_type = ?, size = ?, fingerprint = ?, updated = ? WHERE id = ?',
           [
-            contentBytes,
             'binary',
             input.mimeType || (existing.mime_type as string),
             input.blob.size,
@@ -115,6 +135,9 @@ export class SqliteAttachmentService implements IAttachmentService {
             existing.id,
           ],
         );
+        if (oldFingerprint && oldFingerprint !== fingerprint) {
+          await cleanupOrphanedBlob(oldFingerprint);
+        }
         return this.findById(existing.id as string);
       }
     }
@@ -135,7 +158,6 @@ export class SqliteAttachmentService implements IAttachmentService {
       filename: filePath.split('/').pop() || 'unnamed',
       size: input.blob.size,
       fingerprint,
-      content: contentBytes,
       created: now,
       updated: now,
     };
@@ -167,32 +189,37 @@ export class SqliteAttachmentService implements IAttachmentService {
   }
 
   async delete(id: string): Promise<void> {
-    await getSqliteClient().run('DELETE FROM artifacts WHERE id = ?', [id]);
+    const db = getSqliteClient();
+    const row = await db.get<{ fingerprint: string | null }>('SELECT fingerprint FROM artifacts WHERE id = ?', [id]);
+    await db.run('DELETE FROM artifacts WHERE id = ?', [id]);
+    if (row?.fingerprint) {
+      await cleanupOrphanedBlob(row.fingerprint);
+    }
   }
 
   async readContent(id: string): Promise<string> {
-    const row = await getSqliteClient().get<{ content: unknown; encoding: string }>(
-      'SELECT content, encoding FROM artifacts WHERE id = ?',
+    const row = await getSqliteClient().get<{ encoding: string; fingerprint: string | null }>(
+      'SELECT encoding, fingerprint FROM artifacts WHERE id = ?',
       [id],
     );
     if (!row) throw new NotFoundError('Attachment not found');
     if (row.encoding === 'binary') {
       throw new Error('Cannot read binary content as string — use downloadBlob()');
     }
-    return row.content as string;
+    if (!row.fingerprint) throw new Error('Attachment has no content (missing fingerprint)');
+    const bytes = await getSqliteClient().blobRead(row.fingerprint);
+    return new TextDecoder().decode(bytes);
   }
 
   async downloadBlob(id: string): Promise<Blob> {
-    const row = await getSqliteClient().get<{ content: unknown; mime_type: string; encoding: string }>(
-      'SELECT content, mime_type, encoding FROM artifacts WHERE id = ?',
+    const row = await getSqliteClient().get<{ mime_type: string; fingerprint: string | null }>(
+      'SELECT mime_type, fingerprint FROM artifacts WHERE id = ?',
       [id],
     );
     if (!row) throw new NotFoundError('Attachment not found');
-    if (row.content instanceof Uint8Array) {
-      return new Blob([row.content as BlobPart], { type: row.mime_type });
-    }
-    // Text content stored as string
-    return new Blob([row.content as string], { type: row.mime_type });
+    if (!row.fingerprint) throw new Error('Attachment has no content (missing fingerprint)');
+    const bytes = await getSqliteClient().blobRead(row.fingerprint);
+    return new Blob([bytes], { type: row.mime_type });
   }
 
   async computeSnapshotFingerprint(resourceId: string): Promise<string> {
@@ -205,12 +232,16 @@ export class SqliteAttachmentService implements IAttachmentService {
     return hashContent(manifest);
   }
 
+  /**
+   * Clone workspace artifacts to a snapshot — metadata only.
+   * No content is copied. Both rows reference the same OPFS blob
+   * via fingerprint. Instant regardless of file count or size.
+   */
   async cloneArtifactsToSnapshot(sourceId: string, snapshotId: string): Promise<void> {
     const db = getSqliteClient();
     const identity = await getLocalIdentity();
     const now = new Date().toISOString();
 
-    // Get all workspace artifacts with content
     const rows = await db.all<Record<string, unknown>>(
       "SELECT * FROM artifacts WHERE resource_id = ? AND type = 'artifact'",
       [sourceId],
@@ -222,7 +253,7 @@ export class SqliteAttachmentService implements IAttachmentService {
         type: 'artifact',
         kind: (row.kind as string) || 'file',
         path: row.path as string,
-        meta: row.meta, // Already JSON string from DB
+        meta: row.meta,
         resourceId: snapshotId,
         resourceType: 'crux',
         authorId: identity.authorId,
@@ -232,7 +263,6 @@ export class SqliteAttachmentService implements IAttachmentService {
         filename: row.filename as string,
         size: row.size as number,
         fingerprint: row.fingerprint as string,
-        content: row.content,
         created: now,
         updated: now,
       };

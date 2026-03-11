@@ -144,7 +144,10 @@ function postToReceiver(
  * @returns HTML with injected scripts, or original HTML if not a webapp
  */
 export function injectPreviewScripts(html: string, cruxId: string, isWebApp: boolean): string {
-  if (!isWebApp) return html;
+  // Always inject the capture listener (for thumbnail screenshots)
+  const result = injectCaptureScript(html);
+
+  if (!isWebApp) return result;
 
   const basename = `${PREVIEW_PREFIX}${cruxId}`;
 
@@ -166,6 +169,102 @@ export function injectPreviewScripts(html: string, cruxId: string, isWebApp: boo
     history.replaceState=function(){OR.apply(this,arguments);notify();};
     window.addEventListener('popstate',notify);
     notify();
+  }
+})();
+</script>`;
+
+  if (result.includes('</head>')) {
+    return result.replace('</head>', `${script}\n</head>`);
+  }
+  if (result.includes('</body>')) {
+    return result.replace('</body>', `${script}\n</body>`);
+  }
+  return result + `\n${script}`;
+}
+
+/**
+ * Inject a self-contained capture script into HTML.
+ * Listens for `crux:capture` postMessage, screenshots the page via
+ * SVG foreignObject → canvas → PNG, and sends the blob back.
+ */
+function injectCaptureScript(html: string): string {
+  const script = `<script data-crux-capture>
+(function(){
+  if(window.__cruxCaptureReady)return;
+  window.__cruxCaptureReady=true;
+  window.addEventListener('message',function(e){
+    if(e.data&&e.data.type==='crux:capture')setTimeout(doCapture,0);
+  });
+  async function doCapture(){
+    try{
+      var doc=document.documentElement;
+      var w=Math.min(doc.scrollWidth||800,1280);
+      var h=Math.min(doc.scrollHeight||600,900);
+      var clone=doc.cloneNode(true);
+      // Collect all CSS rules into a single style block
+      var css='';
+      for(var i=0;i<document.styleSheets.length;i++){
+        try{var rules=document.styleSheets[i].cssRules;
+          for(var j=0;j<rules.length;j++)css+=rules[j].cssText+'\\n';
+        }catch(e){}
+      }
+      // Remove external stylesheets and scripts from clone
+      clone.querySelectorAll('link[rel="stylesheet"],script').forEach(function(el){el.remove();});
+      var styleEl=document.createElement('style');
+      styleEl.textContent=css;
+      var head=clone.querySelector('head');
+      if(head)head.appendChild(styleEl);
+      else clone.insertBefore(styleEl,clone.firstChild);
+      // Convert same-origin images to data URIs
+      var origImgs=document.querySelectorAll('img');
+      var cloneImgs=clone.querySelectorAll('img');
+      for(var i=0;i<origImgs.length;i++){
+        if(origImgs[i].complete&&origImgs[i].naturalWidth>0){
+          try{var c=document.createElement('canvas');
+            c.width=origImgs[i].naturalWidth;c.height=origImgs[i].naturalHeight;
+            c.getContext('2d').drawImage(origImgs[i],0,0);
+            cloneImgs[i].setAttribute('src',c.toDataURL());
+          }catch(e){}
+        }
+      }
+      // Convert canvas elements to images
+      var origCanvas=document.querySelectorAll('canvas');
+      var cloneCanvas=clone.querySelectorAll('canvas');
+      for(var i=origCanvas.length-1;i>=0;i--){
+        try{var img=document.createElement('img');
+          img.setAttribute('src',origCanvas[i].toDataURL());
+          img.setAttribute('width',origCanvas[i].width);
+          img.setAttribute('height',origCanvas[i].height);
+          cloneCanvas[i].replaceWith(img);
+        }catch(e){}
+      }
+      clone.setAttribute('xmlns','http://www.w3.org/1999/xhtml');
+      var serialized=new XMLSerializer().serializeToString(clone);
+      var svg='<svg xmlns="http://www.w3.org/2000/svg" width="'+w+'" height="'+h+'">'
+        +'<foreignObject width="100%" height="100%">'+serialized+'</foreignObject></svg>';
+      var canvas=document.createElement('canvas');
+      canvas.width=w;canvas.height=h;
+      var ctx=canvas.getContext('2d');
+      var img=new Image();
+      img.onload=function(){
+        ctx.drawImage(img,0,0);
+        canvas.toBlob(function(blob){
+          if(blob){
+            blob.arrayBuffer().then(function(buf){
+              window.parent.postMessage({type:'crux:capture-result',buffer:buf},'*',[buf]);
+            });
+          }else{
+            window.parent.postMessage({type:'crux:capture-error',error:'toBlob failed'},'*');
+          }
+        },'image/jpeg',1);
+      };
+      img.onerror=function(){
+        window.parent.postMessage({type:'crux:capture-error',error:'SVG render failed'},'*');
+      };
+      img.src='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svg);
+    }catch(e){
+      window.parent.postMessage({type:'crux:capture-error',error:e.message||'capture failed'},'*');
+    }
   }
 })();
 </script>`;

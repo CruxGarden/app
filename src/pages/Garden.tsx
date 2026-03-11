@@ -6,8 +6,7 @@ import MoodBar from '@/components/layout/MoodBar';
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 import { useGarden } from '@/hooks/useGarden';
 import { peekImport, importCrux, type ImportConflictInfo } from '@/services/crux-io';
-import { importGarden } from '@/services/garden-io';
-import { ensureLocalAuthor } from '@/services';
+
 import { APP_NAME } from '@/lib/constants';
 import { GardenGrid, GardenSearch } from '@/components/garden';
 import { ApiKeySetup, IconButton, Modal, Button } from '@/components/ui';
@@ -203,44 +202,14 @@ export default function Garden() {
     [navigate, refresh],
   );
 
-  const handleGardenImport = useCallback(
-    async (file: File) => {
-      setImporting(true);
-      try {
-        await importGarden({
-          data: file,
-          onProgress: (status) => setImportProgress({ done: 0, total: 0, status } as typeof importProgress),
-        });
-
-        // Re-ensure local author exists after full garden replacement
-        const author = await ensureLocalAuthor();
-        useAuthStore.setState({ author });
-
-        alert('Garden imported successfully. Reload recommended.');
-        refresh();
-      } catch (err) {
-        console.error('Garden import failed:', err);
-        alert(`Failed to import .garden file: ${err instanceof Error ? err.message : 'The file may be corrupted.'}`);
-      } finally {
-        setImporting(false);
-        setImportProgress({ done: 0, total: 0 });
-      }
-    },
-    [refresh],
-  );
-
   const handleImportInput = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0];
       if (!file) return;
-      if (file.name.endsWith('.garden')) {
-        handleGardenImport(file);
-      } else {
-        handleImport(file);
-      }
+      handleImport(file);
       e.target.value = '';
     },
-    [handleImport, handleGardenImport],
+    [handleImport],
   );
 
 
@@ -260,7 +229,7 @@ export default function Garden() {
       <input
         ref={importInputRef}
         type="file"
-        accept=".crux,.garden,.zip"
+        accept=".crux,.zip"
         className="hidden"
         onChange={handleImportInput}
       />
