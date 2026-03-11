@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { useCruxStore } from '@/stores/cruxStore';
 import { useAuthStore } from '@/stores/authStore';
 import { exportCrux } from '@/services/crux-io';
@@ -35,7 +35,9 @@ function formatBytes(bytes: number): string {
 export default function ExportPane() {
   const crux = useCruxStore((s) => s.crux);
   const artifacts = useCruxStore((s) => s.artifacts);
-  const messages = useCruxStore((s) => s.messages);
+  const allMessages = useCruxStore((s) => s.messages);
+  const messageSegmentStart = useCruxStore((s) => s.messageSegmentStart);
+  const messages = useMemo(() => allMessages.slice(messageSegmentStart), [allMessages, messageSegmentStart]);
   const summary = useCruxStore((s) => s.summary);
   const growthCount = useCruxStore((s) => s.growthCount);
   const author = useAuthStore((s) => s.author);

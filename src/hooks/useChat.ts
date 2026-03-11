@@ -6,8 +6,17 @@ import { getAdapter } from '@/ai/adapters';
 import { createToolExecutor } from '@/ai/tools';
 import { getApiKey } from '@/ai/keys';
 import { getProviderForModel } from '@/ai/providers';
+import { createSnapshot } from '@/services/growth.service';
 import type { ChatMessage, ToolCall } from '@/api/types';
 import type { NormalizedMessage } from '@/services/types';
+
+type SnapshotFrequency = 'ai-turn' | '2m' | '5m' | '10m' | 'manual';
+
+const FREQUENCY_DELAYS: Record<string, number> = {
+  '2m': 2 * 60_000,
+  '5m': 5 * 60_000,
+  '10m': 10 * 60_000,
+};
 
 /**
  * Truncate large tool results preserving the beginning and end.
@@ -102,6 +111,7 @@ export function useChat() {
 
   const abortRef = useRef<AbortController | null>(null);
   const refreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const snapshotTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const send = useCallback(
     async (content: string) => {
@@ -230,6 +240,34 @@ export function useChat() {
 
       // Save messages to crux meta
       await saveMeta();
+
+      // Auto-snapshot trigger — only if this turn had file mutations
+      const hadMutations = toolCalls.some((tc) =>
+        tc.name === 'write_file' || tc.name === 'edit_file' || tc.name === 'delete_file',
+      );
+      if (hadMutations) {
+        // Read frequency from store (not closure) to respect runtime changes
+        const currentFreq = (useCruxStore.getState().crux?.meta?.settings?.snapshotFrequency as SnapshotFrequency) || 'ai-turn';
+        if (currentFreq === 'ai-turn') {
+          // Snapshot immediately (fire-and-forget)
+          createSnapshot({ silent: false }).catch((err) =>
+            console.warn('Auto-snapshot failed:', err),
+          );
+        } else if (currentFreq !== 'manual') {
+          // Timer-based: reset the timer on each mutation turn
+          if (snapshotTimerRef.current) clearTimeout(snapshotTimerRef.current);
+          const delay = FREQUENCY_DELAYS[currentFreq] ?? 5 * 60_000;
+          snapshotTimerRef.current = setTimeout(() => {
+            snapshotTimerRef.current = null;
+            // Re-check frequency at fire time — user may have changed it
+            const fireFreq = (useCruxStore.getState().crux?.meta?.settings?.snapshotFrequency as SnapshotFrequency) || 'ai-turn';
+            if (fireFreq === 'manual') return;
+            createSnapshot({ silent: false }).catch((err) =>
+              console.warn('Auto-snapshot failed:', err),
+            );
+          }, delay);
+        }
+      }
 
     },
     [

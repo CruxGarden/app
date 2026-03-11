@@ -69,7 +69,8 @@ export function usePreviewUrl(
     const norm = normalizePath(filePath);
     const others = artifacts.filter((a) => {
       const aPath = normalizePath(a.meta?.path || a.filename || a.id);
-      return aPath !== norm;
+      // Skip the current HTML file and metadata files not needed for preview
+      return aPath !== norm && aPath !== 'preview.jpg';
     });
 
     if (others.length === 0) {

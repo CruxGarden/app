@@ -30,7 +30,8 @@ const MIME_MAP: Record<string, string> = {
 interface CruxState {
   // Active workspace
   crux: Crux | null;
-  messages: ChatMessage[];
+  messages: ChatMessage[]; // Full conversation (all segments concatenated)
+  messageSegmentStart: number; // Index where the current workspace segment begins
   artifacts: Attachment[];
   summary: CruxSummary | null;
 
@@ -46,6 +47,14 @@ interface CruxState {
   growths: Dimension[];
   growthCount: number;
   isCreatingGrowth: boolean;
+
+  // Snapshot viewing state (filmstrip mode)
+  viewingSnapshotId: string | null;
+  viewingSnapshotIndex: number | null;
+  workspaceArtifacts: Attachment[] | null; // stashed while viewing snapshot
+  workspaceMessages: ChatMessage[] | null; // stashed while viewing snapshot
+  workspaceSegmentStart: number | null; // stashed while viewing snapshot
+  snapshotMessageCount: number | null; // how many messages to show for this snapshot
 
   // Pending file deletions (awaiting user confirmation)
   pendingDeletes: { attachmentId: string; path: string }[];
@@ -89,6 +98,14 @@ interface CruxState {
   setSummary: (summary: CruxSummary) => void;
   setGrowthCreating: (creating: boolean) => void;
 
+  // Snapshot viewing actions
+  viewSnapshot: (snapshotId: string, index: number) => Promise<void>;
+  exitSnapshotView: () => Promise<void>;
+  revertToSnapshot: (snapshotId: string) => Promise<void>;
+
+  // Branching actions
+  branchFromSnapshot: (snapshotId: string, label: string) => Promise<void>;
+
   // Delete confirmation actions
   addPendingDelete: (attachmentId: string, path: string) => void;
   confirmDelete: (attachmentId: string) => Promise<void>;
@@ -98,6 +115,7 @@ interface CruxState {
 export const useCruxStore = create<CruxState>((set, get) => ({
   crux: null,
   messages: [],
+  messageSegmentStart: 0,
   artifacts: [],
   summary: null,
   isStreaming: false,
@@ -107,6 +125,12 @@ export const useCruxStore = create<CruxState>((set, get) => ({
   hasUnpublishedChanges: false,
   artifactsVersion: 0,
   isCreatingGrowth: false,
+  viewingSnapshotId: null,
+  viewingSnapshotIndex: null,
+  workspaceArtifacts: null,
+  workspaceMessages: null,
+  workspaceSegmentStart: null,
+  snapshotMessageCount: null,
   pendingDeletes: [],
   uploadProgress: null,
 
@@ -139,17 +163,67 @@ export const useCruxStore = create<CruxState>((set, get) => ({
       }
     }
 
+    // Load growth dimensions first so we can reconstruct the full conversation
+    const { dimension } = getServices();
+    const growthDimensions = await dimension.findBySourceAndType(id, 'growth');
+    const sortedGrowths = growthDimensions.sort((a, b) => (a.weight ?? 0) - (b.weight ?? 0));
+
+    // Reconstruct full conversation from snapshot chain + workspace segment.
+    // Branch-aware: walk parentCruxId from the tip backwards to build the
+    // correct chain, then concatenate messages in chronological order.
+    const workspaceMessages: ChatMessage[] = crux.meta?.messages || [];
+    let priorMessages: ChatMessage[] = [];
+
+    if (sortedGrowths.length > 0) {
+      // Build a map of targetId → snapshotCrux for efficient lookup
+      const snapshotCruxes = new Map<string, { messages: ChatMessage[]; parentCruxId: string | null }>();
+      for (const growth of sortedGrowths) {
+        try {
+          const snapshotCrux = await cruxService.findById(growth.targetId);
+          snapshotCruxes.set(growth.targetId, {
+            messages: snapshotCrux.meta?.messages || [],
+            parentCruxId: (snapshotCrux.meta?.parentCruxId as string) || null,
+          });
+        } catch {
+          // Snapshot may have been deleted — skip
+        }
+      }
+
+      // Find the active tip: the workspace's activeBranch setting, or the latest snapshot
+      const activeBranchTip = (crux.meta?.settings?.activeBranch as string) || null;
+      const tipId = activeBranchTip && snapshotCruxes.has(activeBranchTip)
+        ? activeBranchTip
+        : sortedGrowths[sortedGrowths.length - 1]!.targetId;
+
+      // Walk backwards from tip via parentCruxId to build the chain
+      const chain: string[] = [];
+      let current: string | null = tipId;
+      while (current && snapshotCruxes.has(current)) {
+        chain.push(current);
+        current = snapshotCruxes.get(current)!.parentCruxId;
+      }
+      chain.reverse(); // chronological order
+
+      // Concatenate messages from the chain
+      for (const snapshotId of chain) {
+        const data = snapshotCruxes.get(snapshotId);
+        if (data) priorMessages = priorMessages.concat(data.messages);
+      }
+    }
+
+    const fullMessages = priorMessages.concat(workspaceMessages);
+    const segmentStart = priorMessages.length;
+
     set({
       crux,
-      messages: crux.meta?.messages || [],
+      messages: fullMessages,
+      messageSegmentStart: segmentStart,
       artifacts: attachments,
       summary: crux.meta?.summary || null,
       growthCount: crux.meta?.growthCount || 0,
+      growths: sortedGrowths,
       hasUnpublishedChanges: hasChanges,
     });
-
-    // Load growth dimensions (version history)
-    get().loadGrowths();
   },
 
   createCrux: async (title?: string) => {
@@ -268,11 +342,13 @@ export const useCruxStore = create<CruxState>((set, get) => ({
   },
 
   saveMeta: async () => {
-    const { crux, messages, summary, growthCount } = get();
+    const { crux, messages, messageSegmentStart, summary, growthCount } = get();
     if (!crux) return;
     const { crux: cruxService } = getServices();
+    // Only persist the current workspace segment, not prior snapshot messages
+    const currentSegment = messages.slice(messageSegmentStart);
     await cruxService.update(crux.id, {
-      meta: { ...crux.meta, messages, summary, growthCount },
+      meta: { ...crux.meta, messages: currentSegment, summary, growthCount },
     });
   },
 
@@ -292,6 +368,7 @@ export const useCruxStore = create<CruxState>((set, get) => ({
     set({
       crux: null,
       messages: [],
+      messageSegmentStart: 0,
       artifacts: [],
       summary: null,
       isStreaming: false,
@@ -300,6 +377,12 @@ export const useCruxStore = create<CruxState>((set, get) => ({
       growthCount: 0,
       hasUnpublishedChanges: false,
       isCreatingGrowth: false,
+      viewingSnapshotId: null,
+      viewingSnapshotIndex: null,
+      workspaceArtifacts: null,
+      workspaceMessages: null,
+      workspaceSegmentStart: null,
+      snapshotMessageCount: null,
       pendingDeletes: [],
     });
   },
@@ -494,6 +577,197 @@ export const useCruxStore = create<CruxState>((set, get) => ({
 
   setGrowthCreating: (creating: boolean) => {
     set({ isCreatingGrowth: creating });
+  },
+
+  // Snapshot viewing actions
+  viewSnapshot: async (snapshotId: string, index: number) => {
+    const { crux, artifacts, messages, messageSegmentStart, workspaceArtifacts, workspaceMessages } = get();
+    if (!crux) return;
+    const { attachment, crux: cruxService } = getServices();
+    const snapshotArtifacts = await attachment.findByResource('crux', snapshotId);
+
+    // Load snapshot crux to get its cumulative message count
+    const snapshotCrux = await cruxService.findById(snapshotId);
+    // Use cumulativeMessageCount (new format) or fall back to messages.length (old format where full conversation was stored)
+    const cumulativeCount = (snapshotCrux.meta?.cumulativeMessageCount as number)
+      ?? (snapshotCrux.meta?.messages as ChatMessage[] | undefined)?.length
+      ?? 0;
+
+    set({
+      viewingSnapshotId: snapshotId,
+      viewingSnapshotIndex: index,
+      artifacts: snapshotArtifacts,
+      snapshotMessageCount: cumulativeCount,
+      // Stash workspace state only if not already viewing a snapshot
+      workspaceArtifacts: workspaceArtifacts ?? artifacts,
+      workspaceMessages: workspaceMessages ?? messages,
+      workspaceSegmentStart: get().workspaceSegmentStart ?? messageSegmentStart,
+    });
+
+    // Re-select the same file (by path) in the new artifact set
+    const { useUIStore } = await import('@/stores/uiStore');
+    const activeTabId = useUIStore.getState().editor.activeTabId;
+    if (activeTabId) {
+      const sourceArtifacts = workspaceArtifacts ?? artifacts;
+      const prev = sourceArtifacts.find((a) => a.id === activeTabId);
+      if (prev) {
+        const prevPath = (prev.meta?.path || prev.filename || '') as string;
+        const match = snapshotArtifacts.find((a) => (a.meta?.path || a.filename || '') === prevPath);
+        if (match) {
+          useUIStore.getState().openFile(match.id, prevPath);
+        }
+      }
+    }
+  },
+
+  exitSnapshotView: async () => {
+    const { workspaceArtifacts, workspaceMessages, workspaceSegmentStart, artifacts } = get();
+
+    // Capture active tab path before swapping artifacts
+    const { useUIStore } = await import('@/stores/uiStore');
+    const activeTabId = useUIStore.getState().editor.activeTabId;
+    const prevPath = activeTabId
+      ? ((artifacts.find((a) => a.id === activeTabId)?.meta?.path ||
+          artifacts.find((a) => a.id === activeTabId)?.filename || '') as string)
+      : null;
+
+    set({
+      viewingSnapshotId: null,
+      viewingSnapshotIndex: null,
+      artifacts: workspaceArtifacts ?? [],
+      messages: workspaceMessages ?? [],
+      messageSegmentStart: workspaceSegmentStart ?? 0,
+      workspaceArtifacts: null,
+      workspaceMessages: null,
+      workspaceSegmentStart: null,
+      snapshotMessageCount: null,
+    });
+
+    // Re-select the same file (by path) in workspace artifacts
+    if (prevPath && workspaceArtifacts) {
+      const match = workspaceArtifacts.find((a) => (a.meta?.path || a.filename || '') === prevPath);
+      if (match) {
+        useUIStore.getState().openFile(match.id, prevPath);
+      }
+    }
+  },
+
+  revertToSnapshot: async (snapshotId: string) => {
+    const { crux } = get();
+    if (!crux) return;
+    const { attachment, crux: cruxService } = getServices();
+
+    // Auto-snapshot current state as a safety net before reverting
+    try {
+      const { createSnapshot } = await import('@/services/growth.service');
+      await createSnapshot({ label: 'Before revert', silent: true });
+    } catch (err) {
+      console.warn('Failed to auto-snapshot before revert:', err);
+    }
+
+    // Delete all current workspace artifacts
+    const currentArtifacts = await attachment.findByResource('crux', crux.id);
+    await Promise.allSettled(currentArtifacts.map((a) => attachment.delete(a.id)));
+
+    // Clone snapshot artifacts to workspace
+    await attachment.cloneArtifactsToSnapshot(snapshotId, crux.id);
+
+    // Rebuild conversation by walking the parentCruxId chain from this snapshot
+    const snapshotCrux = await cruxService.findById(snapshotId);
+    const snapshotMessages: ChatMessage[] = snapshotCrux.meta?.messages || [];
+
+    // Walk the parent chain backwards to collect all segments
+    const chain: ChatMessage[][] = [snapshotMessages];
+    let parentId = (snapshotCrux.meta?.parentCruxId as string) || null;
+    while (parentId) {
+      try {
+        const parentCrux = await cruxService.findById(parentId);
+        chain.push(parentCrux.meta?.messages || []);
+        parentId = (parentCrux.meta?.parentCruxId as string) || null;
+      } catch {
+        break; // deleted snapshot — stop walking
+      }
+    }
+    chain.reverse(); // chronological order
+    const priorMessages = chain.flat();
+
+    // Reload workspace artifacts
+    const newWorkspaceArtifacts = await attachment.findByResource('crux', crux.id);
+
+    set({
+      viewingSnapshotId: null,
+      viewingSnapshotIndex: null,
+      artifacts: newWorkspaceArtifacts,
+      workspaceArtifacts: null,
+      workspaceMessages: null,
+      workspaceSegmentStart: null,
+      snapshotMessageCount: null,
+      messages: priorMessages,
+      messageSegmentStart: priorMessages.length,
+    });
+
+    // Persist the reverted state — workspace now has empty segment going forward
+    const { saveMeta } = get();
+    await saveMeta();
+  },
+
+  branchFromSnapshot: async (snapshotId: string, label: string) => {
+    const { crux } = get();
+    if (!crux) return;
+    const { attachment, crux: cruxService } = getServices();
+
+    // Auto-snapshot current state first
+    try {
+      const { createSnapshot } = await import('@/services/growth.service');
+      await createSnapshot({ label: 'Before branch', silent: true });
+    } catch (err) {
+      console.warn('Failed to auto-snapshot before branch:', err);
+    }
+
+    // Delete current workspace artifacts
+    const currentArtifacts = await attachment.findByResource('crux', crux.id);
+    await Promise.allSettled(currentArtifacts.map((a) => attachment.delete(a.id)));
+
+    // Clone snapshot artifacts to workspace
+    await attachment.cloneArtifactsToSnapshot(snapshotId, crux.id);
+
+    // Load snapshot messages — these become the conversation base for the branch
+    const snapshotCrux = await cruxService.findById(snapshotId);
+    const snapshotMessages: ChatMessage[] = snapshotCrux.meta?.messages || [];
+
+    // Reload workspace artifacts
+    const newWorkspaceArtifacts = await attachment.findByResource('crux', crux.id);
+
+    // Set activeBranch to snapshotId — new snapshots will chain from here
+    const meta = {
+      ...crux.meta,
+      messages: [],
+      settings: { ...crux.meta?.settings, activeBranch: snapshotId },
+    };
+
+    // Inject a system message to orient the AI about the branch
+    const branchMessage: ChatMessage = {
+      role: 'user',
+      content: `[System: Branching from snapshot "${label}". The workspace files have been restored to that point. Continue from here on a new branch.]`,
+      timestamp: new Date().toISOString(),
+    };
+
+    set({
+      viewingSnapshotId: null,
+      viewingSnapshotIndex: null,
+      artifacts: newWorkspaceArtifacts,
+      workspaceArtifacts: null,
+      workspaceMessages: null,
+      workspaceSegmentStart: null,
+      snapshotMessageCount: null,
+      messages: [...snapshotMessages, branchMessage],
+      messageSegmentStart: snapshotMessages.length,
+      crux: { ...crux, meta },
+    });
+
+    // Persist
+    const { saveMeta } = get();
+    await saveMeta();
   },
 
   addPendingDelete: (attachmentId: string, path: string) => {

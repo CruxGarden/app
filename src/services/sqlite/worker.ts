@@ -4,7 +4,6 @@ import * as SQLite from 'wa-sqlite';
 // @ts-expect-error — wa-sqlite examples aren't typed
 import { AccessHandlePoolVFS } from 'wa-sqlite/src/examples/AccessHandlePoolVFS.js';
 
-// @ts-expect-error — wa-sqlite examples aren't typed
 import { MemoryAsyncVFS } from 'wa-sqlite/src/examples/MemoryAsyncVFS.js';
 import SCHEMA from './schema.sql?raw';
 
@@ -15,7 +14,12 @@ export type WorkerRequest =
   | { id: string; method: 'all'; sql: string; params?: unknown[] }
   | { id: string; method: 'export' }
   | { id: string; method: 'import'; data: ArrayBuffer }
-  | { id: string; method: 'close' };
+  | { id: string; method: 'close' }
+  | { id: string; method: 'blob-write'; fingerprint: string; data: Uint8Array }
+  | { id: string; method: 'blob-read'; fingerprint: string }
+  | { id: string; method: 'blob-delete'; fingerprint: string }
+  | { id: string; method: 'blob-exists'; fingerprint: string }
+  | { id: string; method: 'blob-wipe-all' };
 
 export type WorkerResponse = {
   id: string;
@@ -28,6 +32,75 @@ let sqlite3: any;
 let dbHandle: number;
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 let memoryVfs: any;
+
+// ── OPFS blob storage ──────────────────────────────────
+
+let blobsDir: FileSystemDirectoryHandle | null = null;
+
+async function initBlobs(): Promise<void> {
+  const root = await navigator.storage.getDirectory();
+  blobsDir = await root.getDirectoryHandle('crux-blobs', { create: true });
+}
+
+async function blobWrite(fingerprint: string, data: Uint8Array): Promise<void> {
+  if (!blobsDir) throw new Error('Blob storage not initialized');
+  const fileHandle = await blobsDir.getFileHandle(fingerprint, { create: true });
+  const handle = await fileHandle.createSyncAccessHandle();
+  try {
+    handle.truncate(0);
+    handle.write(data);
+    handle.flush();
+  } finally {
+    handle.close();
+  }
+}
+
+async function blobRead(fingerprint: string): Promise<Uint8Array> {
+  if (!blobsDir) throw new Error('Blob storage not initialized');
+  const fileHandle = await blobsDir.getFileHandle(fingerprint);
+  const handle = await fileHandle.createSyncAccessHandle();
+  try {
+    const size = handle.getSize();
+    const buffer = new Uint8Array(size);
+    handle.read(buffer);
+    return buffer;
+  } finally {
+    handle.close();
+  }
+}
+
+async function blobDelete(fingerprint: string): Promise<void> {
+  if (!blobsDir) throw new Error('Blob storage not initialized');
+  try {
+    await blobsDir.removeEntry(fingerprint);
+  } catch {
+    // File doesn't exist — that's fine
+  }
+}
+
+async function blobExists(fingerprint: string): Promise<boolean> {
+  if (!blobsDir) throw new Error('Blob storage not initialized');
+  try {
+    await blobsDir.getFileHandle(fingerprint);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function blobWipeAll(): Promise<void> {
+  if (!blobsDir) throw new Error('Blob storage not initialized');
+  const entries: string[] = [];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- OPFS keys() not in all TS lib defs
+  for await (const name of (blobsDir as any).keys()) {
+    entries.push(name);
+  }
+  for (const name of entries) {
+    await blobsDir.removeEntry(name);
+  }
+}
+
+// ── SQLite core ────────────────────────────────────────
 
 const MAX_INIT_RETRIES = 4;
 const INIT_DELAYS = [100, 300, 800, 1500]; // ms — escalating backoff
@@ -57,6 +130,9 @@ async function init() {
 
       await exec('PRAGMA journal_mode=WAL');
       await exec(SCHEMA);
+
+      // Initialize OPFS blob storage + run migrations
+      await migrate();
       return;
     } catch (err) {
       if (attempt === MAX_INIT_RETRIES - 1) throw err;
@@ -64,6 +140,72 @@ async function init() {
     }
   }
 }
+
+// ── Migration ──────────────────────────────────────────
+
+async function hashBytes(data: Uint8Array): Promise<string> {
+  const digest = await crypto.subtle.digest('SHA-256', data);
+  return Array.from(new Uint8Array(digest), (b) => b.toString(16).padStart(2, '0')).join('');
+}
+
+async function migrate(): Promise<void> {
+  const versionRow = await get('SELECT version FROM schema_version');
+  const currentVersion = versionRow ? (versionRow.version as number) : 0;
+
+  if (currentVersion < 2) {
+    await initBlobs();
+
+    // Check if content column exists (old databases created with schema v1)
+    const tableInfo = await all("PRAGMA table_info('artifacts')");
+    const hasContentColumn = tableInfo.some((col) => col.name === 'content');
+
+    if (hasContentColumn) {
+      // Migrate all content from SQLite to OPFS blobs
+      const rows = await all(
+        'SELECT id, fingerprint, content, encoding FROM artifacts WHERE content IS NOT NULL',
+      );
+
+      for (const row of rows) {
+        const content = row.content;
+        if (content === null || content === undefined) continue;
+
+        let data: Uint8Array;
+        if (content instanceof Uint8Array) {
+          data = content;
+        } else if (typeof content === 'string') {
+          data = new TextEncoder().encode(content);
+        } else {
+          continue;
+        }
+
+        // Compute fingerprint if missing
+        let fp = row.fingerprint as string | null;
+        if (!fp) {
+          fp = await hashBytes(data);
+          await run('UPDATE artifacts SET fingerprint = ? WHERE id = ?', [fp, row.id]);
+        }
+
+        // Write to OPFS (idempotent — same fingerprint overwrites)
+        await blobWrite(fp, data);
+      }
+
+      // Drop the content column — data now lives in OPFS
+      await exec('ALTER TABLE artifacts DROP COLUMN content');
+    }
+
+    // Set schema version to 2
+    if (currentVersion === 0) {
+      await run('INSERT INTO schema_version (version) VALUES (2)');
+    } else {
+      await run('UPDATE schema_version SET version = 2 WHERE version = 1');
+    }
+  } else {
+    // Schema is current — just make sure blob storage is ready
+    await initBlobs();
+  }
+}
+
+// ── SQL execution helpers ──────────────────────────────
 
 async function exec(sql: string): Promise<void> {
   for await (const stmt of sqlite3.statements(dbHandle, sql)) {
@@ -140,6 +282,8 @@ async function all(sql: string, params: unknown[] = []): Promise<Record<string, 
   }
   return rows;
 }
+
+// ── Database export/import ─────────────────────────────
 
 const EXPORT_URI = `file:export.db?vfs=crux-mem`;
 
@@ -221,11 +365,22 @@ async function importDb(data: ArrayBuffer): Promise<void> {
   memoryVfs.mapNameToFile.clear();
 }
 
+// ── Message handler ────────────────────────────────────
+
 // Lazy init — deferred until the first message arrives, giving the browser
 // time to release OPFS file handles from a previous page load.
 let ready: Promise<void> | null = null;
 
-self.onmessage = async (e: MessageEvent<WorkerRequest>) => {
+// Serialize all message processing to prevent concurrent OPFS access.
+// Without this, two async handlers (e.g., from React StrictMode double-invoke)
+// can race on createSyncAccessHandle for the same fingerprint.
+let queue: Promise<void> = Promise.resolve();
+
+self.onmessage = (e: MessageEvent<WorkerRequest>) => {
+  queue = queue.then(() => handleMessage(e));
+};
+
+async function handleMessage(e: MessageEvent<WorkerRequest>) {
   if (!ready) ready = init();
   await ready;
   const msg = e.data;
@@ -259,10 +414,34 @@ self.onmessage = async (e: MessageEvent<WorkerRequest>) => {
         await sqlite3.close(dbHandle);
         result = undefined;
         break;
+      case 'blob-write':
+        await blobWrite(msg.fingerprint, msg.data instanceof Uint8Array ? msg.data : new Uint8Array(msg.data));
+        result = undefined;
+        break;
+      case 'blob-read': {
+        const data = await blobRead(msg.fingerprint);
+        result = data;
+        (self as unknown as Worker).postMessage(
+          { id: msg.id, result } as WorkerResponse,
+          [data.buffer as ArrayBuffer],
+        );
+        return; // already posted with transfer
+      }
+      case 'blob-delete':
+        await blobDelete(msg.fingerprint);
+        result = undefined;
+        break;
+      case 'blob-exists':
+        result = await blobExists(msg.fingerprint);
+        break;
+      case 'blob-wipe-all':
+        await blobWipeAll();
+        result = undefined;
+        break;
     }
     (self as unknown as Worker).postMessage({ id: msg.id, result } as WorkerResponse);
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     (self as unknown as Worker).postMessage({ id: msg.id, error: message } as WorkerResponse);
   }
-};
+}

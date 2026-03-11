@@ -76,8 +76,6 @@ export function useFileContent(_cruxId: string, artifact: Attachment): UseFileCo
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
-    setContent(null);
-    setBlobUrl(null);
 
     const { attachment } = getServices();
     attachment
@@ -99,8 +97,9 @@ export function useFileContent(_cruxId: string, artifact: Attachment): UseFileCo
           setLoading(false);
         }
       })
-      .catch(() => {
+      .catch((err) => {
         if (!cancelled) {
+          console.error('Failed to load file:', artifact.id, err);
           setContent('// Error loading file');
           setLoading(false);
         }

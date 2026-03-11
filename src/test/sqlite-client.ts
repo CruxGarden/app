@@ -7,6 +7,7 @@ const SCHEMA = readFileSync(resolve(__dirname, '../services/sqlite/schema.sql'),
 
 export class TestSqliteClient implements ISqliteClient {
   private db: Database;
+  private blobs = new Map<string, Uint8Array>();
 
   constructor(db: Database) {
     this.db = db;
@@ -65,6 +66,30 @@ export class TestSqliteClient implements ISqliteClient {
 
   async close(): Promise<void> {
     this.db.close();
+  }
+
+  // ── OPFS blob storage (Map-based for tests) ────────
+
+  async blobWrite(fingerprint: string, data: Uint8Array): Promise<void> {
+    this.blobs.set(fingerprint, new Uint8Array(data));
+  }
+
+  async blobRead(fingerprint: string): Promise<Uint8Array> {
+    const data = this.blobs.get(fingerprint);
+    if (!data) throw new Error(`Blob not found: ${fingerprint}`);
+    return new Uint8Array(data);
+  }
+
+  async blobDelete(fingerprint: string): Promise<void> {
+    this.blobs.delete(fingerprint);
+  }
+
+  async blobExists(fingerprint: string): Promise<boolean> {
+    return this.blobs.has(fingerprint);
+  }
+
+  async blobWipeAll(): Promise<void> {
+    this.blobs.clear();
   }
 }
 

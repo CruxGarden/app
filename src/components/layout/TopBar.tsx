@@ -8,6 +8,7 @@ import UserMenu from '@/components/auth/UserMenu';
 import { APP_NAME } from '@/lib/constants';
 import { cn } from '@/lib/cn';
 import { KeeperAvatar } from '@/components/keeper/KeeperConsole';
+import SnapshotBanner from '@/components/growth/SnapshotBanner';
 
 function StackIcon() {
   return (
@@ -217,6 +218,7 @@ export default function TopBar() {
   }, [titleDraft, cruxTitle, updateCrux]);
 
   return (
+    <>
     <header className="flex items-center justify-between h-12 px-3 border-b border-border bg-surface-solid">
       {/* Left: branding + breadcrumb */}
       <div className="flex items-center gap-1.5 min-w-0">
@@ -356,5 +358,7 @@ export default function TopBar() {
         <UserMenu />
       </div>
     </header>
+    <SnapshotBanner />
+    </>
   );
 }

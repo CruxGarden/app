@@ -35,7 +35,6 @@ CREATE TABLE IF NOT EXISTS artifacts (
   size INTEGER DEFAULT 0,
   fingerprint TEXT,
   path TEXT,
-  content BLOB,
   created TEXT NOT NULL,
   updated TEXT NOT NULL
 );
@@ -82,4 +81,4 @@ CREATE TABLE IF NOT EXISTS settings (
 CREATE TABLE IF NOT EXISTS schema_version (
   version INTEGER PRIMARY KEY
 );
-INSERT OR IGNORE INTO schema_version (version) VALUES (1);
+-- Version managed by worker.ts migrate() — do not insert here

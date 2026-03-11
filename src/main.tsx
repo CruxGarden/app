@@ -35,14 +35,16 @@ createRoot(document.getElementById('root')!, {
 
 // Suppress Monaco's async disposal errors (domNode, setClassName).
 // These fire via setTimeout/rAF after the editor is disposed and can't be caught by React.
-window.addEventListener('error', (e) => {
-  if (e.filename?.includes('monaco-editor') || e.filename?.includes('editor.api')) {
-    const msg = e.message || '';
-    if (msg.includes('domNode') || msg.includes('setClassName') || msg.includes('disposed')) {
-      e.preventDefault();
-    }
-  }
-});
+function isMonacoDisposalError(e: ErrorEvent | PromiseRejectionEvent): boolean {
+  const err = 'reason' in e ? e.reason : e.error;
+  const msg = (err instanceof Error ? err.message : String(err ?? '')) + ('message' in e ? e.message : '');
+  const filename = 'filename' in e ? e.filename : '';
+  const isMonacoFile = filename?.includes('monaco-editor') || filename?.includes('editor.api');
+  const isMonacoMsg = msg.includes('domNode') || msg.includes('setClassName') || msg.includes('disposed');
+  return isMonacoFile || isMonacoMsg;
+}
+window.addEventListener('error', (e) => { if (isMonacoDisposalError(e)) e.preventDefault(); });
+window.addEventListener('unhandledrejection', (e) => { if (isMonacoDisposalError(e)) e.preventDefault(); });
 
 // Preview system initialization:
 // - Cross-origin (VITE_PREVIEW_ORIGIN set): load hidden receiver iframe on preview.crux.garden

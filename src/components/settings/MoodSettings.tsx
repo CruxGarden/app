@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useThemeStore } from '@/stores/themeStore';
 import { getCurrentPalette, type Palette } from '@/lib/palette';
 import { getSetting, setSetting } from '@/services/settings';
@@ -251,8 +251,8 @@ function PaletteTable() {
         </thead>
         <tbody>
           {PALETTE_GROUPS.map((group) => (
-            <>
-              <tr key={`h-${group.label}`} className="border-t border-border/50">
+            <React.Fragment key={group.label}>
+              <tr className="border-t border-border/50">
                 <td
                   colSpan={3}
                   className="px-2 py-1 text-[9px] uppercase tracking-wider text-text-muted/60 bg-surface/50"
@@ -276,7 +276,7 @@ function PaletteTable() {
                   </tr>
                 );
               })}
-            </>
+            </React.Fragment>
           ))}
         </tbody>
       </table>

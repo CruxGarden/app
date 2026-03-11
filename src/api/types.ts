@@ -156,11 +156,12 @@ export interface CruxMeta {
     model?: string;
     systemPrompt?: string;
     palette?: Record<string, string>;
+    snapshotFrequency?: string;
+    activeBranch?: string;
   };
   growthCount?: number;
   snapshot?: GrowthSnapshot;
   artifactRefs?: string[];
-  messageRange?: { from: number; to: number };
   parentCruxId?: string;
   [key: string]: unknown;
 }

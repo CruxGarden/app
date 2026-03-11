@@ -9,6 +9,18 @@ export interface ISqliteClient {
   export(): Promise<ArrayBuffer>;
   import(data: ArrayBuffer): Promise<void>;
   close(): Promise<void>;
+
+  // ── OPFS blob storage ──────────────────────────────
+  /** Write raw bytes to OPFS `blobs/{fingerprint}`. Idempotent — same fingerprint overwrites. */
+  blobWrite(fingerprint: string, data: Uint8Array): Promise<void>;
+  /** Read raw bytes from OPFS `blobs/{fingerprint}`. Throws if not found. */
+  blobRead(fingerprint: string): Promise<Uint8Array>;
+  /** Delete OPFS blob by fingerprint. No-op if it doesn't exist. */
+  blobDelete(fingerprint: string): Promise<void>;
+  /** Check if an OPFS blob exists for the given fingerprint. */
+  blobExists(fingerprint: string): Promise<boolean>;
+  /** Delete all OPFS blobs. */
+  blobWipeAll(): Promise<void>;
 }
 
 type Pending = {
@@ -129,6 +141,28 @@ export class SqliteClient implements ISqliteClient {
     await this.send({ method: 'close' });
     this.worker.terminate();
     this.worker = null;
+  }
+
+  // ── OPFS blob storage ──────────────────────────────
+
+  async blobWrite(fingerprint: string, data: Uint8Array): Promise<void> {
+    await this.send({ method: 'blob-write', fingerprint, data }, [data.buffer as ArrayBuffer]);
+  }
+
+  async blobRead(fingerprint: string): Promise<Uint8Array> {
+    return (await this.sendWithRetry({ method: 'blob-read', fingerprint })) as Uint8Array;
+  }
+
+  async blobDelete(fingerprint: string): Promise<void> {
+    await this.sendWithRetry({ method: 'blob-delete', fingerprint });
+  }
+
+  async blobExists(fingerprint: string): Promise<boolean> {
+    return (await this.sendWithRetry({ method: 'blob-exists', fingerprint })) as boolean;
+  }
+
+  async blobWipeAll(): Promise<void> {
+    await this.sendWithRetry({ method: 'blob-wipe-all' });
   }
 }
 

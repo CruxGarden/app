@@ -9,9 +9,10 @@ interface MessageListProps {
   messages: ChatMessage[];
   streamingContent: string;
   isStreaming: boolean;
+  truncatedAfter?: number;
 }
 
-export default function MessageList({ messages, streamingContent, isStreaming }: MessageListProps) {
+export default function MessageList({ messages, streamingContent, isStreaming, truncatedAfter }: MessageListProps) {
   const bottomRef = useRef<HTMLDivElement>(null);
   const hasScrolledRef = useRef(false);
   const author = useAuthStore((s) => s.author);
@@ -46,6 +47,16 @@ export default function MessageList({ messages, streamingContent, isStreaming }:
       {messages.map((msg, i) => (
         <MessageBubble key={i} message={msg} avatarUrl={avatarUrl} userInitial={userInitial} />
       ))}
+
+      {truncatedAfter != null && truncatedAfter > 0 && (
+        <div className="flex items-center gap-2 py-2">
+          <div className="flex-1 border-t border-accent/30" />
+          <span className="text-[10px] font-mono text-accent/70 shrink-0">
+            snapshot taken here — {truncatedAfter} message{truncatedAfter !== 1 ? 's' : ''} after
+          </span>
+          <div className="flex-1 border-t border-accent/30" />
+        </div>
+      )}
 
       {isStreaming && streamingContent && (
         <div className="flex gap-2 items-end justify-start">

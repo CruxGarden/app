@@ -31,9 +31,10 @@ interface EditorContentProps {
   artifact: Attachment;
   cruxId: string;
   saveRef?: React.MutableRefObject<(() => void) | null>;
+  captureRef?: React.MutableRefObject<(() => void) | null>;
 }
 
-export default function EditorContent({ tab, artifact, cruxId, saveRef }: EditorContentProps) {
+export default function EditorContent({ tab, artifact, cruxId, saveRef, captureRef }: EditorContentProps) {
   const { content, blobUrl, loading, contentVersion, setContent, refetch } = useFileContent(
     cruxId,
     artifact,
@@ -47,12 +48,14 @@ export default function EditorContent({ tab, artifact, cruxId, saveRef }: Editor
   const saveHandlerRef = useRef<() => void>(() => {});
   const scrollRafRef = useRef<number | null>(null);
   const disposedRef = useRef(false);
+  const previewIframeRef = useRef<HTMLIFrameElement | null>(null);
 
   const path = artifact.meta?.path || artifact.filename || artifact.id;
   const ext = getExtension(path);
   const mime = artifact.mimeType || 'text/plain';
   const language = getMonacoLanguage(path);
   const themeName = resolved === 'dark' ? 'crux-garden-dark' : 'crux-garden-light';
+  const isHtmlFile = ext === 'html' || ext === 'htm';
 
   // Keep ref in sync when content loads
   useEffect(() => {
@@ -119,6 +122,160 @@ export default function EditorContent({ tab, artifact, cruxId, saveRef }: Editor
       if (saveRef) saveRef.current = null;
     };
   }, [handleSave, saveRef]);
+
+  // Save a JPEG blob as preview.jpg (create or replace)
+  const savePreviewBlob = useCallback((blob: Blob) => {
+    const { attachment } = getServices();
+    const artifacts = useCruxStore.getState().artifacts;
+    const existing = artifacts.find((a) => {
+      const p = (a.meta?.path || a.filename || '').toLowerCase();
+      return p === 'preview.jpg';
+    });
+    const uploadOpts = { resourceId: cruxId, blob, mimeType: 'image/jpeg', meta: { path: 'preview.jpg' } };
+    if (existing) {
+      attachment.upload(uploadOpts)
+        .then((updated) => {
+          useCruxStore.setState((state) => ({
+            artifacts: state.artifacts.map((a) => (a.id === existing.id ? { ...a, ...updated } : a)),
+            hasUnpublishedChanges: true,
+          }));
+        })
+        .catch((err) => console.error('Thumbnail save failed:', err));
+    } else {
+      attachment.upload(uploadOpts)
+        .then((newArt) => {
+          useCruxStore.setState((state) => ({
+            artifacts: [...state.artifacts, newArt],
+            hasUnpublishedChanges: true,
+          }));
+        })
+        .catch((err) => console.error('Thumbnail save failed:', err));
+    }
+  }, [cruxId]);
+
+  // HTML capture — sends postMessage to preview iframe
+  const handleHtmlCapture = useCallback(() => {
+    const iframe = previewIframeRef.current;
+    if (!iframe?.contentWindow) return;
+
+    function onMessage(e: MessageEvent) {
+      if (!e.data) return;
+      if (e.data.type === 'crux:capture-result') {
+        window.removeEventListener('message', onMessage);
+        savePreviewBlob(new Blob([e.data.buffer], { type: 'image/jpeg' }));
+      }
+      if (e.data.type === 'crux:capture-error') {
+        window.removeEventListener('message', onMessage);
+        console.error('Capture failed:', e.data.error);
+      }
+    }
+
+    window.addEventListener('message', onMessage);
+    setTimeout(() => window.removeEventListener('message', onMessage), 10000);
+    iframe.contentWindow.postMessage({ type: 'crux:capture' }, '*');
+  }, [savePreviewBlob]);
+
+  // Image capture — scale image to canvas, export as JPEG
+  const handleImageCapture = useCallback(() => {
+    if (!blobUrl) return;
+    const img = new Image();
+    img.onload = () => {
+      const maxW = 1280, maxH = 900;
+      let w = img.naturalWidth, h = img.naturalHeight;
+      if (w > maxW || h > maxH) {
+        const scale = Math.min(maxW / w, maxH / h);
+        w = Math.round(w * scale);
+        h = Math.round(h * scale);
+      }
+      const canvas = document.createElement('canvas');
+      canvas.width = w;
+      canvas.height = h;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return;
+      ctx.drawImage(img, 0, 0, w, h);
+      canvas.toBlob((blob) => {
+        if (blob) savePreviewBlob(blob);
+      }, 'image/jpeg', 1);
+    };
+    img.src = blobUrl;
+  }, [blobUrl, savePreviewBlob]);
+
+  // Video capture — seek to 1s, grab frame
+  const handleVideoCapture = useCallback(() => {
+    if (!blobUrl) return;
+    const video = document.createElement('video');
+    video.crossOrigin = 'anonymous';
+    video.muted = true;
+    video.preload = 'auto';
+
+    video.onloadeddata = () => {
+      // Seek to 1s or 0 if shorter
+      video.currentTime = Math.min(1, video.duration || 0);
+    };
+    video.onseeked = () => {
+      const maxW = 1280, maxH = 900;
+      let w = video.videoWidth, h = video.videoHeight;
+      if (w > maxW || h > maxH) {
+        const scale = Math.min(maxW / w, maxH / h);
+        w = Math.round(w * scale);
+        h = Math.round(h * scale);
+      }
+      const canvas = document.createElement('canvas');
+      canvas.width = w;
+      canvas.height = h;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return;
+      ctx.drawImage(video, 0, 0, w, h);
+      canvas.toBlob((blob) => {
+        if (blob) savePreviewBlob(blob);
+        URL.revokeObjectURL(video.src);
+      }, 'image/jpeg', 1);
+    };
+    video.onerror = () => {
+      URL.revokeObjectURL(video.src);
+    };
+
+    video.src = blobUrl;
+  }, [blobUrl, savePreviewBlob]);
+
+  // Unified capture dispatcher — picks strategy based on file type
+  const isImage = isImageMime(mime);
+  const isVideo = mime.startsWith('video/');
+  const handleCapture = useCallback(() => {
+    if (isHtmlFile) handleHtmlCapture();
+    else if (isImage) handleImageCapture();
+    else if (isVideo) handleVideoCapture();
+  }, [isHtmlFile, isImage, isVideo, handleHtmlCapture, handleImageCapture, handleVideoCapture]);
+
+  // Expose capture to parent via ref
+  useEffect(() => {
+    if (captureRef) captureRef.current = handleCapture;
+    return () => {
+      if (captureRef) captureRef.current = null;
+    };
+  }, [handleCapture, captureRef]);
+
+  // Auto-capture: triggered when contentVersion changes (file saved or AI-written)
+  const isPreviewFile = path.toLowerCase() === 'preview.jpg';
+  const canAutoCapture = (isHtmlFile || isImage || isVideo) && !isPreviewFile;
+  const autoCaptureTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const initialVersionRef = useRef(contentVersion);
+  useEffect(() => {
+    // Skip the initial load — only capture on subsequent version changes
+    if (contentVersion <= initialVersionRef.current) return;
+    if (!canAutoCapture) return;
+
+    // HTML needs longer delay for iframe to settle; image/video are instant
+    const delay = isHtmlFile ? 3000 : 500;
+    if (autoCaptureTimerRef.current) clearTimeout(autoCaptureTimerRef.current);
+    autoCaptureTimerRef.current = setTimeout(() => {
+      handleCapture();
+    }, delay);
+
+    return () => {
+      if (autoCaptureTimerRef.current) clearTimeout(autoCaptureTimerRef.current);
+    };
+  }, [contentVersion, canAutoCapture, isHtmlFile, handleCapture]);
 
   // Defer Monaco mount by one frame so any disposed editor's async cleanup
   // (rAF, rIC) completes before the new editor tries to initialise
@@ -209,8 +366,8 @@ export default function EditorContent({ tab, artifact, cruxId, saveRef }: Editor
   );
 
   // HTML preview via service worker virtual file server
-  const isHtmlPreview = tab.viewMode === 'preview' && (ext === 'html' || ext === 'htm');
-  const previewUrl = usePreviewUrl(content, cruxId, path, isHtmlPreview);
+  // Always enabled for HTML files so the background iframe stays warm for auto-capture
+  const previewUrl = usePreviewUrl(content, cruxId, path, isHtmlFile);
 
   // SVG preview URL
   const svgPreviewUrl = useMemo(() => {
@@ -228,9 +385,15 @@ export default function EditorContent({ tab, artifact, cruxId, saveRef }: Editor
 
   if (loading || !editorReady) return null;
 
-  // ── Source mode: Monaco Editor ──
+  const isInPreviewMode = tab.viewMode === 'preview';
+  const showPreviewIframe = isHtmlFile && isInPreviewMode && previewUrl;
+
+  // ── Determine main content ──
+  let mainContent: React.ReactNode = null;
+
   if (tab.viewMode === 'source' && content !== null) {
-    return (
+    // Source mode: Monaco Editor
+    mainContent = (
       <div className="flex-1 min-h-0">
         <Editor
           key={contentVersion}
@@ -260,43 +423,25 @@ export default function EditorContent({ tab, artifact, cruxId, saveRef }: Editor
         />
       </div>
     );
-  }
-
-  // ── Preview mode ──
-  if (tab.viewMode === 'preview' && content !== null && isPreviewable(path)) {
-    // HTML — served by preview service worker
-    if (ext === 'html' || ext === 'htm') {
+  } else if (isInPreviewMode && content !== null && isPreviewable(path)) {
+    if (isHtmlFile) {
+      // HTML preview — handled by the always-on iframe below
       if (!previewUrl) {
-        return (
+        mainContent = (
           <div className="flex-1 flex items-center justify-center">
             <LoadingPanel />
           </div>
         );
       }
-      return (
-        <iframe
-          key={previewUrl}
-          src={previewUrl}
-          sandbox="allow-scripts allow-same-origin allow-popups"
-          allow="geolocation; camera; microphone; accelerometer; gyroscope; autoplay; fullscreen"
-          className="flex-1 w-full bg-contrast"
-          title={path}
-        />
-      );
-    }
-
-    // SVG
-    if (ext === 'svg' && svgPreviewUrl) {
-      return (
+      // else: mainContent stays null, the iframe below is the visible content
+    } else if (ext === 'svg' && svgPreviewUrl) {
+      mainContent = (
         <div className="flex-1 overflow-auto p-4 flex items-center justify-center bg-preview-bg">
           <img src={svgPreviewUrl} alt={path} className="max-w-full max-h-full object-contain" />
         </div>
       );
-    }
-
-    // Markdown
-    if (ext === 'md' || ext === 'mdx') {
-      return (
+    } else if (ext === 'md' || ext === 'mdx') {
+      mainContent = (
         <div className="flex-1 overflow-auto p-4">
           <div className="max-w-prose mx-auto text-sm">
             <MarkdownRenderer content={content} />
@@ -304,16 +449,10 @@ export default function EditorContent({ tab, artifact, cruxId, saveRef }: Editor
         </div>
       );
     }
-  }
-
-  // ── Image display ──
-  if (blobUrl && isImageMime(mime)) {
-    return <ImageViewer blobUrl={blobUrl} path={path} artifact={artifact} />;
-  }
-
-  // ── Binary download ──
-  if (blobUrl) {
-    return (
+  } else if (blobUrl && isImageMime(mime)) {
+    mainContent = <ImageViewer blobUrl={blobUrl} path={path} artifact={artifact} />;
+  } else if (blobUrl) {
+    mainContent = (
       <div className="flex-1 flex flex-col items-center justify-center gap-3 p-6">
         <div className="text-text-muted text-sm">
           Binary file ({mime}, {formatSize(artifact.size)})
@@ -330,13 +469,33 @@ export default function EditorContent({ tab, artifact, cruxId, saveRef }: Editor
         </div>
       </div>
     );
+  } else {
+    mainContent = (
+      <div className="flex-1 flex items-center justify-center text-text-muted text-sm">
+        Unable to display this file
+      </div>
+    );
   }
 
-  // ── Fallback ──
   return (
-    <div className="flex-1 flex items-center justify-center text-text-muted text-sm">
-      Unable to display this file
-    </div>
+    <>
+      {mainContent}
+      {/* Always-on preview iframe for HTML files — visible in preview mode, off-screen otherwise for auto-capture */}
+      {isHtmlFile && previewUrl && (
+        <iframe
+          ref={previewIframeRef}
+          key={previewUrl}
+          src={previewUrl}
+          sandbox="allow-scripts allow-same-origin allow-popups"
+          allow="geolocation; camera; microphone; accelerometer; gyroscope; autoplay; fullscreen"
+          className={showPreviewIframe
+            ? 'flex-1 w-full bg-contrast'
+            : 'fixed -left-[9999px] w-[1280px] h-[900px] pointer-events-none'
+          }
+          title={path}
+        />
+      )}
+    </>
   );
 }
 

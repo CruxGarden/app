@@ -4,10 +4,10 @@ import { initServices, type Services } from './index';
 import { exportCrux, importCrux, peekImport } from './crux-io';
 
 /**
- * Export/Import round-trip tests.
+ * Export/Import round-trip tests — v3.1 format.
  *
  * These tests exercise the service-layer functions in crux-io.ts.
- * The TestSqliteClient (in-memory) is injected by test/setup.ts.
+ * The TestSqliteClient (in-memory + Map-based blob storage) is injected by test/setup.ts.
  */
 
 // ── Tests ───────────────────────────────────────────────
@@ -69,20 +69,26 @@ describe('Export / Import', () => {
       expect(content).toBe('<h1>Hello</h1>');
     });
 
-    it('preserves messages through round-trip', async () => {
+    it('preserves messages through round-trip via version manifests', async () => {
       const crux = await svc.crux.create({ title: 'Chat Test', type: 'workspace' });
       const messages = [
         { role: 'user', content: 'Hello' },
         { role: 'assistant', content: 'Hi there!' },
       ];
 
-      // Export with messages
+      // Export with messages (current segment)
       const result = await exportCrux({ cruxId: crux.id, messages });
       await svc.crux.delete(crux.id);
 
       const imported = await importCrux({ data: result.blob });
       const importedCrux = await svc.crux.findById(imported.cruxId);
       expect(importedCrux.meta?.messages).toEqual(messages);
+
+      // Verify messages are in the version manifest, not a flat file
+      const ab = await result.blob.arrayBuffer();
+      const zip = await JSZip.loadAsync(ab);
+      const currentManifest = JSON.parse(await zip.file('versions/current.json')!.async('text'));
+      expect(currentManifest.messages).toEqual(messages);
     });
   });
 
@@ -98,12 +104,13 @@ describe('Export / Import', () => {
         meta: { path: 'index.html' },
       });
 
-      // Take snapshot 1
+      // Take snapshot 1 with messages
       const snap1 = await svc.crux.create({
         slug: 'snapshot-1',
         title: 'Snapshot 1',
         type: 'crux',
         kind: 'snapshot',
+        meta: { messages: [{ role: 'user', content: 'First turn' }] },
       });
       await svc.attachment.cloneArtifactsToSnapshot(crux.id, snap1.id);
       await svc.dimension.create({
@@ -126,6 +133,7 @@ describe('Export / Import', () => {
         title: 'Snapshot 2',
         type: 'crux',
         kind: 'snapshot',
+        meta: { messages: [{ role: 'user', content: 'Second turn' }], parentCruxId: snap1.id },
       });
       await svc.attachment.cloneArtifactsToSnapshot(crux.id, snap2.id);
       await svc.dimension.create({
@@ -165,6 +173,68 @@ describe('Export / Import', () => {
       const importedCrux = await svc.crux.findById(imported.cruxId);
       expect(importedCrux.meta?.growthCount).toBe(2);
       expect(imported.growthCount).toBe(2);
+
+      // Verify snapshot messages survived the round-trip
+      const snap1Crux = await svc.crux.findById(sorted[0]!.targetId);
+      expect(snap1Crux.meta?.messages).toEqual([{ role: 'user', content: 'First turn' }]);
+
+      const snap2Crux = await svc.crux.findById(sorted[1]!.targetId);
+      expect(snap2Crux.meta?.messages).toEqual([{ role: 'user', content: 'Second turn' }]);
+    });
+
+    it('preserves parentIndex through round-trip', async () => {
+      const crux = await svc.crux.create({ title: 'Parent Test', type: 'workspace' });
+
+      const snap1 = await svc.crux.create({
+        slug: 'snapshot-1',
+        title: 'Snapshot 1',
+        type: 'crux',
+        kind: 'snapshot',
+        meta: { messages: [] },
+      });
+      await svc.dimension.create({
+        sourceId: crux.id,
+        targetId: snap1.id,
+        type: 'growth',
+        weight: 1,
+      });
+
+      const snap2 = await svc.crux.create({
+        slug: 'snapshot-2',
+        title: 'Snapshot 2',
+        type: 'crux',
+        kind: 'snapshot',
+        meta: { messages: [], parentCruxId: snap1.id },
+      });
+      await svc.dimension.create({
+        sourceId: crux.id,
+        targetId: snap2.id,
+        type: 'growth',
+        weight: 2,
+      });
+
+      // Export and check version manifests
+      const result = await exportCrux({ cruxId: crux.id });
+      const ab = await result.blob.arrayBuffer();
+      const zip = await JSZip.loadAsync(ab);
+
+      const v0 = JSON.parse(await zip.file('versions/0.json')!.async('text'));
+      const v1 = JSON.parse(await zip.file('versions/1.json')!.async('text'));
+      expect(v0.parentIndex).toBeNull(); // first snapshot has no parent
+      expect(v1.parentIndex).toBe(0); // second snapshot's parent is snapshot 0
+
+      // Delete and re-import
+      await svc.crux.delete(crux.id);
+      await svc.crux.delete(snap1.id);
+      await svc.crux.delete(snap2.id);
+
+      const imported = await importCrux({ data: result.blob });
+      const growths = await svc.dimension.findBySourceAndType(imported.cruxId, 'growth');
+      const sorted = growths.sort((a, b) => (a.weight ?? 0) - (b.weight ?? 0));
+
+      // Verify parentCruxId was restored from parentIndex
+      const restoredSnap2 = await svc.crux.findById(sorted[1]!.targetId);
+      expect(restoredSnap2.meta?.parentCruxId).toBe(sorted[0]!.targetId);
     });
 
     it('deduplicates identical artifacts across snapshots', async () => {
@@ -205,6 +275,124 @@ describe('Export / Import', () => {
         artifactFiles.push(relativePath);
       });
       expect(artifactFiles).toHaveLength(1); // single fingerprint
+    });
+  });
+
+  describe('dimensions.json', () => {
+    it('exports dimensions with metadata', async () => {
+      const crux = await svc.crux.create({ title: 'Dim Test', type: 'workspace' });
+
+      const snap1 = await svc.crux.create({
+        slug: 'snapshot-1',
+        title: 'Snapshot 1',
+        type: 'crux',
+        kind: 'snapshot',
+      });
+      await svc.dimension.create({
+        sourceId: crux.id,
+        targetId: snap1.id,
+        type: 'growth',
+        weight: 1,
+        meta: {
+          summary: 'Created initial landing page',
+          artifactCount: 2,
+          preview: { type: 'html', path: 'index.html', mimeType: 'text/html' },
+        },
+      });
+
+      const result = await exportCrux({ cruxId: crux.id });
+      const ab = await result.blob.arrayBuffer();
+      const zip = await JSZip.loadAsync(ab);
+
+      const dimensions = JSON.parse(await zip.file('dimensions.json')!.async('text'));
+      expect(dimensions).toHaveLength(1);
+      expect(dimensions[0].sourceIndex).toBe('current');
+      expect(dimensions[0].targetIndex).toBe(0);
+      expect(dimensions[0].type).toBe('growth');
+      expect(dimensions[0].weight).toBe(1);
+      expect(dimensions[0].meta.summary).toBe('Created initial landing page');
+      expect(dimensions[0].meta.artifactCount).toBe(2);
+      expect(dimensions[0].meta.preview.type).toBe('html');
+    });
+
+    it('preserves dimension metadata through round-trip', async () => {
+      const crux = await svc.crux.create({ title: 'Meta Round-Trip', type: 'workspace' });
+
+      const snap = await svc.crux.create({
+        slug: 'snapshot-1',
+        title: 'Snap',
+        type: 'crux',
+        kind: 'snapshot',
+      });
+      await svc.dimension.create({
+        sourceId: crux.id,
+        targetId: snap.id,
+        type: 'growth',
+        weight: 1,
+        meta: {
+          summary: 'Added dark mode',
+          artifactCount: 5,
+        },
+      });
+
+      const result = await exportCrux({ cruxId: crux.id });
+      await svc.crux.delete(crux.id);
+      await svc.crux.delete(snap.id);
+
+      const imported = await importCrux({ data: result.blob });
+      const growths = await svc.dimension.findBySourceAndType(imported.cruxId, 'growth');
+      expect(growths).toHaveLength(1);
+      expect(growths[0]!.meta?.summary).toBe('Added dark mode');
+      expect(growths[0]!.meta?.artifactCount).toBe(5);
+    });
+
+    it('converts thumbnailId to thumbnailPath and back', async () => {
+      const crux = await svc.crux.create({ title: 'Thumb Test', type: 'workspace' });
+
+      // Create a preview.jpg artifact
+      await svc.attachment.upload({
+        resourceId: crux.id,
+        blob: new File([new Uint8Array([0xff, 0xd8, 0xff])], 'preview.jpg', { type: 'image/jpeg' }),
+        mimeType: 'image/jpeg',
+        meta: { path: 'preview.jpg' },
+      });
+
+      const snap = await svc.crux.create({
+        slug: 'snapshot-1',
+        title: 'Snap',
+        type: 'crux',
+        kind: 'snapshot',
+      });
+      await svc.attachment.cloneArtifactsToSnapshot(crux.id, snap.id);
+
+      // Get the snapshot's preview.jpg attachment ID
+      const snapArtifacts = await svc.attachment.findByResource('crux', snap.id);
+      const thumbArt = snapArtifacts.find((a) => a.meta?.path === 'preview.jpg')!;
+
+      await svc.dimension.create({
+        sourceId: crux.id,
+        targetId: snap.id,
+        type: 'growth',
+        weight: 1,
+        meta: { thumbnailId: thumbArt.id },
+      });
+
+      // Export — should convert thumbnailId → thumbnailPath
+      const result = await exportCrux({ cruxId: crux.id });
+      const ab = await result.blob.arrayBuffer();
+      const zip = await JSZip.loadAsync(ab);
+      const dimensions = JSON.parse(await zip.file('dimensions.json')!.async('text'));
+      expect(dimensions[0].meta.thumbnailPath).toBe('preview.jpg');
+      expect(dimensions[0].meta.thumbnailId).toBeUndefined();
+
+      // Delete and re-import — should convert thumbnailPath → thumbnailId
+      await svc.crux.delete(crux.id);
+      await svc.crux.delete(snap.id);
+
+      const imported = await importCrux({ data: result.blob });
+      const growths = await svc.dimension.findBySourceAndType(imported.cruxId, 'growth');
+      expect(growths[0]!.meta?.thumbnailId).toBeDefined();
+      expect(growths[0]!.meta?.thumbnailPath).toBeUndefined();
     });
   });
 
@@ -354,11 +542,11 @@ describe('Export / Import', () => {
       const result = await exportCrux({ cruxId: crux.id });
       await svc.crux.delete(crux.id);
 
-      // Patch manifest to v3.1
+      // Patch manifest to v3.2
       const ab = await result.blob.arrayBuffer();
       const zip = await JSZip.loadAsync(ab);
       const manifest = JSON.parse(await zip.file('manifest.json')!.async('text'));
-      manifest.version = '3.1';
+      manifest.version = '3.2';
       zip.file('manifest.json', JSON.stringify(manifest));
       const patched = await zip.generateAsync({ type: 'arraybuffer' });
 
@@ -372,7 +560,7 @@ describe('Export / Import', () => {
     it('does not leave orphaned cruxes when import errors before crux creation', async () => {
       // Tamper: valid manifest but missing crux.json → fails before any DB writes
       const zip = new JSZip();
-      zip.file('manifest.json', JSON.stringify({ version: '3.0' }));
+      zip.file('manifest.json', JSON.stringify({ version: '3.1' }));
       const ab = await zip.generateAsync({ type: 'arraybuffer' });
 
       await expect(importCrux({ data: ab })).rejects.toThrow('missing crux.json');
@@ -393,7 +581,6 @@ describe('Export / Import', () => {
 
       // Spy on cruxService.update to throw ONCE — this is the final meta update step,
       // which runs AFTER the delete + create succeed, triggering the rollback path.
-      // Must only throw once so the backup restore's own update call succeeds.
       const originalUpdate = svc.crux.update.bind(svc.crux);
       let shouldFail = true;
       svc.crux.update = async (...args) => {
@@ -422,11 +609,9 @@ describe('Export / Import', () => {
       const result = await exportCrux({ cruxId: crux.id });
 
       // Don't delete — try restore mode with the same ID still in DB
-      // cruxService.create with a duplicate ID should fail (UNIQUE constraint)
-      // This exercises the rollback path since the error happens inside the try block
       await expect(importCrux({ data: result.blob, mode: 'restore' })).rejects.toThrow();
 
-      // The original crux should still be intact (not corrupted by partial import)
+      // The original crux should still be intact
       const existing = await svc.crux.findById(crux.id);
       expect(existing.title).toBe('Already Here');
     });
@@ -481,7 +666,7 @@ describe('Export / Import', () => {
       expect(result.failed.length).toBeGreaterThan(0);
       expect(result.failed.some((f) => f.includes('snapshot'))).toBe(true);
 
-      // manifest snapshotCount should be 0 (the snapshot failed to export)
+      // manifest snapshotCount should be 0
       const ab = await result.blob.arrayBuffer();
       const zip = await JSZip.loadAsync(ab);
       const manifest = JSON.parse(await zip.file('manifest.json')!.async('text'));
@@ -505,11 +690,11 @@ describe('Export / Import', () => {
 
       expect(zip.file('manifest.json')).not.toBeNull();
       expect(zip.file('crux.json')).not.toBeNull();
-      expect(zip.file('messages.json')).not.toBeNull();
+      expect(zip.file('dimensions.json')).not.toBeNull();
       expect(zip.file('versions/current.json')).not.toBeNull();
     });
 
-    it('manifest.json has correct v3.0 format', async () => {
+    it('manifest.json has correct v3.1 format', async () => {
       const crux = await svc.crux.create({ title: 'Manifest Test', type: 'workspace' });
 
       const result = await exportCrux({ cruxId: crux.id });
@@ -517,10 +702,21 @@ describe('Export / Import', () => {
       const zip = await JSZip.loadAsync(ab);
       const manifest = JSON.parse(await zip.file('manifest.json')!.async('text'));
 
-      expect(manifest.version).toBe('3.0');
+      expect(manifest.version).toBe('3.1');
       expect(manifest.exportedAt).toBeDefined();
       expect(typeof manifest.artifactCount).toBe('number');
       expect(typeof manifest.snapshotCount).toBe('number');
+    });
+
+    it('crux.json does not contain messages (they live in version manifests)', async () => {
+      const crux = await svc.crux.create({ title: 'No Messages', type: 'workspace' });
+      const result = await exportCrux({ cruxId: crux.id, messages: [{ role: 'user', content: 'test' }] });
+      const ab = await result.blob.arrayBuffer();
+      const zip = await JSZip.loadAsync(ab);
+      const cruxJson = JSON.parse(await zip.file('crux.json')!.async('text'));
+
+      // messages should not be in crux.json meta
+      expect(cruxJson.meta.messages).toBeUndefined();
     });
 
     it('crux.json contains workspace metadata', async () => {
@@ -539,6 +735,219 @@ describe('Export / Import', () => {
       expect(cruxJson.title).toBe('Meta Test');
       expect(cruxJson.description).toBe('A test crux');
       expect(cruxJson.type).toBe('workspace');
+    });
+  });
+
+  describe('format efficiency', () => {
+    it('snapshot version manifests do not duplicate messages in crux.meta', async () => {
+      const crux = await svc.crux.create({ title: 'No Dup', type: 'workspace' });
+      const snapMessages = [{ role: 'user', content: 'hello' }, { role: 'assistant', content: 'hi' }];
+
+      const snap = await svc.crux.create({
+        slug: 'snapshot-1',
+        title: 'Snap',
+        type: 'crux',
+        kind: 'snapshot',
+        meta: { messages: snapMessages, fingerprint: 'abc', cumulativeMessageCount: 2 },
+      });
+      await svc.dimension.create({
+        sourceId: crux.id,
+        targetId: snap.id,
+        type: 'growth',
+        weight: 1,
+      });
+
+      const result = await exportCrux({ cruxId: crux.id });
+      const ab = await result.blob.arrayBuffer();
+      const zip = await JSZip.loadAsync(ab);
+      const v0 = JSON.parse(await zip.file('versions/0.json')!.async('text'));
+
+      // messages should be at the top level, NOT inside crux.meta
+      expect(v0.messages).toEqual(snapMessages);
+      expect(v0.crux.meta.messages).toBeUndefined();
+    });
+
+    it('snapshot version manifests do not duplicate parentCruxId in crux.meta', async () => {
+      const crux = await svc.crux.create({ title: 'No Dup Parent', type: 'workspace' });
+
+      const snap1 = await svc.crux.create({
+        slug: 'snapshot-1',
+        title: 'Snap 1',
+        type: 'crux',
+        kind: 'snapshot',
+        meta: { messages: [] },
+      });
+      await svc.dimension.create({
+        sourceId: crux.id,
+        targetId: snap1.id,
+        type: 'growth',
+        weight: 1,
+      });
+
+      const snap2 = await svc.crux.create({
+        slug: 'snapshot-2',
+        title: 'Snap 2',
+        type: 'crux',
+        kind: 'snapshot',
+        meta: { messages: [], parentCruxId: snap1.id },
+      });
+      await svc.dimension.create({
+        sourceId: crux.id,
+        targetId: snap2.id,
+        type: 'growth',
+        weight: 2,
+      });
+
+      const result = await exportCrux({ cruxId: crux.id });
+      const ab = await result.blob.arrayBuffer();
+      const zip = await JSZip.loadAsync(ab);
+      const v1 = JSON.parse(await zip.file('versions/1.json')!.async('text'));
+
+      // parentIndex should be at the top level, parentCruxId should NOT be in crux.meta
+      expect(v1.parentIndex).toBe(0);
+      expect(v1.crux.meta.parentCruxId).toBeUndefined();
+    });
+
+    it('cumulativeMessageCount survives round-trip in crux.meta', async () => {
+      const crux = await svc.crux.create({ title: 'Cumulative', type: 'workspace' });
+
+      const snap = await svc.crux.create({
+        slug: 'snapshot-1',
+        title: 'Snap',
+        type: 'crux',
+        kind: 'snapshot',
+        meta: { messages: [{ role: 'user', content: 'a' }], cumulativeMessageCount: 5 },
+      });
+      await svc.dimension.create({
+        sourceId: crux.id,
+        targetId: snap.id,
+        type: 'growth',
+        weight: 1,
+      });
+
+      const result = await exportCrux({ cruxId: crux.id });
+      await svc.crux.delete(crux.id);
+      await svc.crux.delete(snap.id);
+
+      const imported = await importCrux({ data: result.blob });
+      const growths = await svc.dimension.findBySourceAndType(imported.cruxId, 'growth');
+      const restoredSnap = await svc.crux.findById(growths[0]!.targetId);
+      expect(restoredSnap.meta?.cumulativeMessageCount).toBe(5);
+    });
+
+    it('binary blobs are fully deduped across current + snapshots', async () => {
+      const crux = await svc.crux.create({ title: 'Full Dedup', type: 'workspace' });
+
+      // Same content used across workspace + 3 snapshots
+      const sharedContent = 'shared file content that appears everywhere';
+      await svc.attachment.upload({
+        resourceId: crux.id,
+        blob: new File([sharedContent], 'shared.txt', { type: 'text/plain' }),
+        mimeType: 'text/plain',
+        meta: { path: 'shared.txt' },
+      });
+
+      for (let i = 1; i <= 3; i++) {
+        const snap = await svc.crux.create({
+          slug: `snapshot-${i}`,
+          title: `Snap ${i}`,
+          type: 'crux',
+          kind: 'snapshot',
+          meta: { messages: [] },
+        });
+        await svc.attachment.cloneArtifactsToSnapshot(crux.id, snap.id);
+        await svc.dimension.create({
+          sourceId: crux.id,
+          targetId: snap.id,
+          type: 'growth',
+          weight: i,
+        });
+      }
+
+      const result = await exportCrux({ cruxId: crux.id });
+      const ab = await result.blob.arrayBuffer();
+      const zip = await JSZip.loadAsync(ab);
+
+      // Count files in artifacts/ — should be exactly 1 (same fingerprint everywhere)
+      const artifactFiles: string[] = [];
+      zip.folder('artifacts')?.forEach((p) => artifactFiles.push(p));
+      expect(artifactFiles).toHaveLength(1);
+
+      // But all 4 version manifests (current + 3 snapshots) reference it
+      const current = JSON.parse(await zip.file('versions/current.json')!.async('text'));
+      expect(Object.keys(current.artifacts)).toHaveLength(1);
+      for (let i = 0; i < 3; i++) {
+        const sv = JSON.parse(await zip.file(`versions/${i}.json`)!.async('text'));
+        expect(Object.keys(sv.artifacts)).toHaveLength(1);
+        // All reference the same fingerprint
+        expect(Object.values(sv.artifacts)[0]).toEqual(Object.values(current.artifacts)[0]);
+      }
+    });
+
+    it('version manifests reference artifacts by path → fingerprint (not embedded content)', async () => {
+      const crux = await svc.crux.create({ title: 'Ref Check', type: 'workspace' });
+
+      await svc.attachment.upload({
+        resourceId: crux.id,
+        blob: new File(['<h1>hi</h1>'], 'index.html', { type: 'text/html' }),
+        mimeType: 'text/html',
+        meta: { path: 'index.html' },
+      });
+      await svc.attachment.upload({
+        resourceId: crux.id,
+        blob: new File(['body{}'], 'style.css', { type: 'text/css' }),
+        mimeType: 'text/css',
+        meta: { path: 'style.css' },
+      });
+
+      const result = await exportCrux({ cruxId: crux.id });
+      const ab = await result.blob.arrayBuffer();
+      const zip = await JSZip.loadAsync(ab);
+      const current = JSON.parse(await zip.file('versions/current.json')!.async('text'));
+
+      // Each artifact entry has fingerprint, mimeType, size — no content
+      for (const [_path, info] of Object.entries(current.artifacts) as [string, Record<string, unknown>][]) {
+        expect(typeof info.fingerprint).toBe('string');
+        expect(info.fingerprint).toMatch(/^[0-9a-f]{64}$/); // SHA-256 hex
+        expect(typeof info.mimeType).toBe('string');
+        expect(typeof info.size).toBe('number');
+        // No content field
+        expect(info.content).toBeUndefined();
+      }
+
+      // Fingerprints correspond to actual files in artifacts/
+      for (const info of Object.values(current.artifacts) as { fingerprint: string }[]) {
+        expect(zip.file(`artifacts/${info.fingerprint}`)).not.toBeNull();
+      }
+    });
+
+    it('import creates correct encoding for text vs binary artifacts', async () => {
+      const crux = await svc.crux.create({ title: 'Encoding Test', type: 'workspace' });
+
+      await svc.attachment.upload({
+        resourceId: crux.id,
+        blob: new File(['hello'], 'readme.txt', { type: 'text/plain' }),
+        mimeType: 'text/plain',
+        meta: { path: 'readme.txt' },
+      });
+      await svc.attachment.upload({
+        resourceId: crux.id,
+        blob: new File([new Uint8Array([0xff, 0xd8, 0xff])], 'photo.jpg', { type: 'image/jpeg' }),
+        mimeType: 'image/jpeg',
+        meta: { path: 'photo.jpg' },
+      });
+
+      const result = await exportCrux({ cruxId: crux.id });
+      await svc.crux.delete(crux.id);
+
+      const imported = await importCrux({ data: result.blob });
+      const arts = await svc.attachment.findByResource('crux', imported.cruxId);
+
+      const txt = arts.find((a) => a.meta?.path === 'readme.txt')!;
+      const jpg = arts.find((a) => a.meta?.path === 'photo.jpg')!;
+
+      expect(txt.encoding).toBe('utf-8');
+      expect(jpg.encoding).toBe('binary');
     });
   });
 });

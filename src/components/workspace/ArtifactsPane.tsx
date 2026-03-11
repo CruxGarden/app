@@ -74,6 +74,7 @@ export default function ArtifactsPane() {
   const moveArtifact = useCruxStore((s) => s.moveArtifact);
   const renameArtifact = useCruxStore((s) => s.renameArtifact);
   const deleteArtifacts = useCruxStore((s) => s.deleteArtifacts);
+  const isViewingSnapshot = useCruxStore((s) => s.viewingSnapshotId !== null);
   const openFile = useUIStore((s) => s.openFile);
   const setPaneVisible = useUIStore((s) => s.setPaneVisible);
   const activeTabId = useUIStore((s) => s.editor.activeTabId);
@@ -372,10 +373,12 @@ export default function ArtifactsPane() {
 
   return (
     <div className="flex flex-col h-full">
-      {/* Action toolbar */}
-      <div className="flex items-center justify-end gap-0.5 px-2 py-1 border-b border-border shrink-0 text-text-muted">
-        {actionButtons}
-      </div>
+      {/* Action toolbar — hidden while viewing a snapshot */}
+      {!isViewingSnapshot && (
+        <div className="flex items-center justify-end gap-0.5 px-2 py-1 border-b border-border shrink-0 text-text-muted">
+          {actionButtons}
+        </div>
+      )}
 
       {/* Hidden file inputs */}
       <input
