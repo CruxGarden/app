@@ -1,5 +1,5 @@
 /* eslint-disable react-refresh/only-export-components */
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useRef, useCallback } from 'react';
 import { cn } from '@/lib/cn';
 import type { Crux, CruxSummary, CruxKind, CruxVisibility, ChatMessage } from '@/api/types';
 
@@ -157,6 +157,98 @@ function ReadonlyField({ label, value }: { label: string; value: string }) {
   );
 }
 
+// ── Tag Input ────────────────────────────────────────
+
+function toKebab(s: string): string {
+  return s
+    .toLowerCase()
+    .replace(/[^a-z0-9\s-]/g, '')
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '');
+}
+
+function TagInput({
+  tags,
+  onChange,
+  readOnly,
+}: {
+  tags: string[];
+  onChange: (tags: string[]) => void;
+  readOnly?: boolean;
+}) {
+  const [input, setInput] = useState('');
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const addTag = useCallback(
+    (raw: string) => {
+      const tag = toKebab(raw);
+      if (!tag || tag.length > 50 || tags.includes(tag)) return;
+      onChange([...tags, tag]);
+    },
+    [tags, onChange],
+  );
+
+  const removeTag = useCallback(
+    (tag: string) => {
+      onChange(tags.filter((t) => t !== tag));
+    },
+    [tags, onChange],
+  );
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if ((e.key === 'Enter' || e.key === ',') && input.trim()) {
+      e.preventDefault();
+      addTag(input);
+      setInput('');
+    } else if (e.key === 'Backspace' && !input && tags.length > 0) {
+      removeTag(tags[tags.length - 1]!);
+    }
+  };
+
+  return (
+    <FieldRow label="Tags">
+      <div className="flex flex-wrap gap-1">
+        {tags.map((tag) => (
+          <span
+            key={tag}
+            className={cn(
+              'inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-mono',
+              'bg-accent/15 text-accent',
+            )}
+          >
+            {tag}
+            {!readOnly && (
+              <button
+                onClick={() => removeTag(tag)}
+                className="hover:text-error transition-colors cursor-pointer ml-0.5"
+              >
+                &times;
+              </button>
+            )}
+          </span>
+        ))}
+        {!readOnly && (
+          <input
+            ref={inputRef}
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={handleKeyDown}
+            onBlur={() => {
+              if (input.trim()) {
+                addTag(input);
+                setInput('');
+              }
+            }}
+            placeholder={tags.length === 0 ? 'add tags...' : ''}
+            className="bg-transparent text-xs font-mono text-text outline-none min-w-[60px] flex-1 py-0.5 placeholder:text-text-muted/50"
+          />
+        )}
+      </div>
+    </FieldRow>
+  );
+}
+
 // ── Main Content ─────────────────────────────────────
 
 interface MetadataContentProps {
@@ -242,6 +334,11 @@ export default function MetadataContent({
       <div className="flex flex-col gap-3">
         <Field label="Title" value={crux.title ?? ''} />
         <Field label="Description" value={crux.description ?? ''} multiline />
+        <TagInput
+          tags={(crux.meta?.tags as string[]) || []}
+          onChange={(tags) => onUpdate?.({ meta: { tags } })}
+          readOnly={readOnly}
+        />
       </div>
 
       {/* ── Contributors ── */}

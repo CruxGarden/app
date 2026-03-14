@@ -1,12 +1,12 @@
 import { useState, useMemo, useEffect } from 'react';
 import { cn } from '@/lib/cn';
-import type { Attachment } from '@/api/types';
+import type { Artifact } from '@/api/types';
 import type { FileOperation } from '@/stores/uiStore';
 import { getFileIcon, FolderIcon, FolderOpenIcon, ChevronIcon } from './fileIcons';
 import InlineRename from '@/components/workspace/InlineRename';
 
 interface FileTreeProps {
-  artifacts: Attachment[];
+  artifacts: Artifact[];
   selectedId: string | null;
   onSelect: (id: string) => void;
   onContextMenu?: (
@@ -24,10 +24,10 @@ interface TreeNode {
   name: string;
   fullPath: string;
   children: Map<string, TreeNode>;
-  artifact?: Attachment;
+  artifact?: Artifact;
 }
 
-function buildTree(artifacts: Attachment[]): TreeNode {
+function buildTree(artifacts: Artifact[]): TreeNode {
   const root: TreeNode = { name: '', fullPath: '', children: new Map() };
 
   for (const a of artifacts) {

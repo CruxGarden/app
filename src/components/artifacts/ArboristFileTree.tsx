@@ -14,10 +14,10 @@ import { Tree, type NodeRendererProps } from 'react-arborist';
 import type { TreeApi } from 'react-arborist';
 import { useDragDropManager } from 'react-dnd';
 import { cn } from '@/lib/cn';
-import type { Attachment } from '@/api/types';
+import type { Artifact } from '@/api/types';
 import type { FileOperation } from '@/stores/uiStore';
 import { getFileIcon, FolderIcon, FolderOpenIcon, ChevronIcon } from './fileIcons';
-import { attachmentsToTreeData, type TreeNodeData } from './treeData';
+import { artifactsToTreeData, type TreeNodeData } from './treeData';
 import InlineRename from '@/components/workspace/InlineRename';
 
 // ── Types ────────────────────────────────────────────────
@@ -38,7 +38,7 @@ export interface UploadFileEntry {
 }
 
 interface ArboristFileTreeProps {
-  artifacts: Attachment[];
+  artifacts: Artifact[];
   selectedId: string | null;
   onSelect: (id: string) => void;
   onSelectionChange?: (ids: string[]) => void;
@@ -92,12 +92,12 @@ const NodeRenderer = memo(function NodeRenderer({
       e.preventDefault();
       e.stopPropagation();
       onContextMenu?.(e, {
-        id: data.attachment?.id ?? null,
+        id: data.artifact?.id ?? null,
         path: data.path,
         isFolder,
       });
     },
-    [onContextMenu, data.attachment?.id, data.path, isFolder],
+    [onContextMenu, data.artifact?.id, data.path, isFolder],
   );
 
   // Render inline create input for sentinel node
@@ -120,7 +120,7 @@ const NodeRenderer = memo(function NodeRenderer({
   }
 
   const fileSize =
-    !isFolder && data.attachment?.size ? formatFileSize(Number(data.attachment.size)) : null;
+    !isFolder && data.artifact?.size ? formatFileSize(Number(data.artifact.size)) : null;
 
   return (
     <div
@@ -281,7 +281,7 @@ const ArboristFileTree = forwardRef<ArboristFileTreeHandle, ArboristFileTreeProp
     const [isDraggingFiles, setIsDraggingFiles] = useState(false);
 
     // Convert flat attachments to tree data
-    const treeData = useMemo(() => attachmentsToTreeData(artifacts), [artifacts]);
+    const treeData = useMemo(() => artifactsToTreeData(artifacts), [artifacts]);
 
     // Expose imperative handle
     useImperativeHandle(ref, () => ({
@@ -345,11 +345,11 @@ const ArboristFileTree = forwardRef<ArboristFileTreeHandle, ArboristFileTreeProp
 
     const handleActivate = useCallback(
       (node: { data: TreeNodeData }) => {
-        if (node.data.attachment) {
+        if (node.data.artifact) {
           // Only open in editor if single selection
           const selectedCount = treeRef.current?.selectedIds.size ?? 0;
           if (selectedCount <= 1) {
-            onSelect(node.data.attachment.id);
+            onSelect(node.data.artifact.id);
           }
         }
       },
@@ -360,7 +360,7 @@ const ArboristFileTree = forwardRef<ArboristFileTreeHandle, ArboristFileTreeProp
     const handleSelect = useCallback(
       (nodes: { data: TreeNodeData }[]) => {
         const ids = nodes
-          .map((n) => n.data.attachment?.id ?? n.data.id)
+          .map((n) => n.data.artifact?.id ?? n.data.id)
           .filter(Boolean) as string[];
         onSelectionChange?.(ids);
       },

@@ -151,7 +151,7 @@ export function useChat() {
           // Auto-approve: the AI is instructed to confirm with the user in chat
           // before calling delete_file, so the user's reply is the confirmation.
           return true;
-        });
+        }, model);
 
         for await (const event of runConversation(
           adapter,
@@ -186,14 +186,15 @@ export function useChat() {
               if (
                 event.name === 'write_file' ||
                 event.name === 'edit_file' ||
-                event.name === 'delete_file'
+                event.name === 'delete_file' ||
+                event.name === 'generate_image'
               ) {
                 if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current);
                 refreshTimerRef.current = setTimeout(() => {
                   refreshTimerRef.current = null;
-                  const { attachment } = getServices();
+                  const { artifact } = getServices();
                   const currentCruxId = useCruxStore.getState().crux?.id ?? crux.id;
-                  attachment.findByResource('crux', currentCruxId).then(
+                  artifact.findByResource('crux', currentCruxId).then(
                     (arts) => useCruxStore.getState().setArtifacts(arts),
                     (err) => console.error('Failed to refresh artifacts:', err),
                   );
@@ -243,7 +244,7 @@ export function useChat() {
 
       // Auto-snapshot trigger — only if this turn had file mutations
       const hadMutations = toolCalls.some((tc) =>
-        tc.name === 'write_file' || tc.name === 'edit_file' || tc.name === 'delete_file',
+        tc.name === 'write_file' || tc.name === 'edit_file' || tc.name === 'delete_file' || tc.name === 'generate_image',
       );
       if (hadMutations) {
         // Read frequency from store (not closure) to respect runtime changes

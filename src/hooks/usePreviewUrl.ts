@@ -83,10 +83,10 @@ export function usePreviewUrl(
     let cancelled = false;
     setArtifactsCached(false);
 
-    const { attachment } = getServices();
+    const { artifact } = getServices();
     Promise.allSettled(
       others.map(async (a) => {
-        const blob = await attachment.downloadBlob(a.id);
+        const blob = await artifact.downloadBlob(a.id);
         const path = a.meta?.path || a.filename || a.id;
         return { path, blob, mimeType: a.mimeType } as PreviewFile;
       }),

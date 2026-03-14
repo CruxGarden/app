@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { publicApi } from '@/api';
-import type { Crux, Attachment } from '@/api/types';
+import type { Crux, Artifact } from '@/api/types';
 import { isServicesReady, initServices, getServices } from '@/services';
 import { APP_NAME } from '@/lib/constants';
 import { PublicTopBar, ArtifactRenderer } from '@/components/display';
@@ -10,33 +10,33 @@ import MetadataContent from '@/components/workspace/MetadataContent';
 type LoadState = 'loading' | 'ready' | 'not-found' | 'error';
 type DataSource = 'local' | 'api';
 
-/** Load crux + attachments from local SQLite */
+/** Load crux + artifacts from local SQLite */
 async function loadLocal(username: string, slug: string) {
   if (!isServicesReady()) await initServices();
-  const { crux: cruxService, attachment: attachmentService, author: authorService } = getServices();
+  const { crux: cruxService, artifact: artifactService, author: authorService } = getServices();
   // Verify author matches
   const author = await authorService.findByUsername(username);
   const crux = await cruxService.findBySlug(slug);
   if (crux.authorId !== author.id) throw new Error('not found');
   if (crux.visibility !== 'public') throw new Error('not found');
-  const attachments = await attachmentService.findByResource('crux', crux.id);
-  return { crux, attachments };
+  const artifacts = await artifactService.findByResource('crux', crux.id);
+  return { crux, artifacts };
 }
 
-/** Load crux + attachments from REST API */
+/** Load crux + artifacts from REST API */
 async function loadRemote(username: string, slug: string) {
-  const [crux, attachments] = await Promise.all([
+  const [crux, artifacts] = await Promise.all([
     publicApi.getCruxBySlug(username, slug),
-    publicApi.getAttachments(username, slug),
+    publicApi.getArtifacts(username, slug),
   ]);
-  return { crux, attachments };
+  return { crux, artifacts };
 }
 
 export default function PublicCrux() {
   const { username, slug, '*': subPath } = useParams<{ username: string; slug: string; '*': string }>();
 
   const [crux, setCrux] = useState<Crux | null>(null);
-  const [attachments, setAttachments] = useState<Attachment[]>([]);
+  const [artifacts, setArtifacts] = useState<Artifact[]>([]);
   const [state, setState] = useState<LoadState>('loading');
   const [metadataOpen, setMetadataOpen] = useState(false);
   const [source, setSource] = useState<DataSource>('api');
@@ -45,17 +45,17 @@ export default function PublicCrux() {
 
   // Download function: local uses service layer, API uses publicApi
   const downloadBlob = useCallback(
-    async (attachmentId: string): Promise<Blob> => {
+    async (artifactId: string): Promise<Blob> => {
       if (source === 'local') {
-        const { attachment } = getServices();
-        return attachment.downloadBlob(attachmentId);
+        const { artifact } = getServices();
+        return artifact.downloadBlob(artifactId);
       }
-      return publicApi.downloadAttachment(username || '', slug || '', attachmentId);
+      return publicApi.downloadArtifact(username || '', slug || '', artifactId);
     },
     [source, username, slug],
   );
 
-  // Fetch crux + attachments (local first, API fallback)
+  // Fetch crux + artifacts (local first, API fallback)
   useEffect(() => {
     if (!username || !slug) {
       setState('not-found');
@@ -79,7 +79,7 @@ export default function PublicCrux() {
       .then((data) => {
         if (cancelled || !data) return;
         setCrux(data.crux);
-        setAttachments(data.attachments);
+        setArtifacts(data.artifacts);
         setState('ready');
       })
       .catch((err) => {
@@ -140,7 +140,7 @@ export default function PublicCrux() {
 
       <div className="flex-1 min-h-0 relative z-10 flex">
         <div className={`flex-1 min-w-0 ${metadataOpen ? 'hidden sm:block' : ''}`}>
-          <ArtifactRenderer attachments={attachments} username={username || ''} slug={slug || ''} authorId={crux?.authorId || ''} subPath={subPath} downloadBlob={downloadBlob} />
+          <ArtifactRenderer artifacts={artifacts} username={username || ''} slug={slug || ''} authorId={crux?.authorId || ''} subPath={subPath} downloadBlob={downloadBlob} />
         </div>
 
         {metadataOpen && crux && (

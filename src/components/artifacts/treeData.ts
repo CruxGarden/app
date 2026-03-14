@@ -1,27 +1,27 @@
-import type { Attachment } from '@/api/types';
+import type { Artifact } from '@/api/types';
 
 export interface TreeNodeData {
   id: string;
   name: string;
   path: string;
   children?: TreeNodeData[];
-  attachment?: Attachment;
+  artifact?: Artifact;
 }
 
 /**
- * Converts a flat array of attachments into a nested tree structure
+ * Converts a flat array of artifacts into a nested tree structure
  * compatible with react-arborist.
  *
  * - Folder nodes have `children: [...]` (even if empty)
  * - File nodes have `children: undefined`
  * - Folders sort first (alphabetically), then files (alphabetically)
  */
-export function attachmentsToTreeData(artifacts: Attachment[]): TreeNodeData[] {
+export function artifactsToTreeData(artifacts: Artifact[]): TreeNodeData[] {
   interface BuildNode {
     name: string;
     path: string;
     children: Map<string, BuildNode>;
-    attachment?: Attachment;
+    artifact?: Artifact;
   }
 
   const root: BuildNode = { name: '', path: '', children: new Map() };
@@ -41,10 +41,10 @@ export function attachmentsToTreeData(artifacts: Attachment[]): TreeNodeData[] {
           name: part,
           path: fullPath,
           children: new Map(),
-          attachment: isFile ? a : undefined,
+          artifact: isFile ? a : undefined,
         });
       } else if (isFile) {
-        current.children.get(part)!.attachment = a;
+        current.children.get(part)!.artifact = a;
       }
 
       current = current.children.get(part)!;
@@ -53,19 +53,19 @@ export function attachmentsToTreeData(artifacts: Attachment[]): TreeNodeData[] {
 
   function toTreeNodes(node: BuildNode): TreeNodeData[] {
     const entries = Array.from(node.children.values());
-    const dirs = entries.filter((c) => c.children.size > 0 && !c.attachment);
-    const files = entries.filter((c) => c.attachment || c.children.size === 0);
+    const dirs = entries.filter((c) => c.children.size > 0 && !c.artifact);
+    const files = entries.filter((c) => c.artifact || c.children.size === 0);
     dirs.sort((a, b) => a.name.localeCompare(b.name));
     files.sort((a, b) => a.name.localeCompare(b.name));
 
     return [...dirs, ...files].map((child) => {
-      const isFolder = child.children.size > 0 && !child.attachment;
+      const isFolder = child.children.size > 0 && !child.artifact;
       return {
-        id: child.attachment?.id || `folder:${child.path}`,
+        id: child.artifact?.id || `folder:${child.path}`,
         name: child.name,
         path: child.path,
         children: isFolder ? toTreeNodes(child) : undefined,
-        attachment: child.attachment,
+        artifact: child.artifact,
       };
     });
   }

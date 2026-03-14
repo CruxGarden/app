@@ -1,16 +1,7 @@
+import { useState, useRef, useEffect } from 'react';
+import { PROVIDERS } from '@/ai/providers';
+import { PROVIDER_ICONS } from '@/components/ui/ProviderIcons';
 import { cn } from '@/lib/cn';
-
-interface ModelOption {
-  id: string;
-  label: string;
-  description: string;
-}
-
-const MODELS: ModelOption[] = [
-  { id: 'claude-sonnet-4-20250514', label: 'Sonnet 4', description: 'Fast and capable' },
-  { id: 'claude-opus-4-20250514', label: 'Opus 4', description: 'Most intelligent' },
-  { id: 'claude-haiku-3-5-20241022', label: 'Haiku 3.5', description: 'Quick and light' },
-];
 
 interface ModelSelectorProps {
   value: string;
@@ -18,28 +9,122 @@ interface ModelSelectorProps {
   disabled?: boolean;
 }
 
+/** Flatten all provider models into a grouped list */
+function getAllModels() {
+  return Object.values(PROVIDERS).map((provider) => ({
+    provider: provider.name,
+    providerId: provider.id,
+    models: provider.models,
+  }));
+}
+
+/** Find display label for a model ID */
+function getModelLabel(modelId: string): string {
+  for (const provider of Object.values(PROVIDERS)) {
+    const model = provider.models.find((m) => m.id === modelId);
+    if (model) return model.name;
+  }
+  return modelId;
+}
+
+/** Find provider ID for a model ID */
+function getProviderId(modelId: string): string {
+  for (const provider of Object.values(PROVIDERS)) {
+    if (provider.models.some((m) => m.id === modelId)) return provider.id;
+  }
+  return '';
+}
+
+/** Find provider name for a model ID */
+function getProviderLabel(modelId: string): string {
+  for (const provider of Object.values(PROVIDERS)) {
+    if (provider.models.some((m) => m.id === modelId)) return provider.name;
+  }
+  return '';
+}
+
 export default function ModelSelector({ value, onChange, disabled }: ModelSelectorProps) {
-  const current = MODELS.find((m) => m.id === value) ?? MODELS[0]!;
+  const [open, setOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [open]);
+
+  const groups = getAllModels();
+  const label = getModelLabel(value);
+  const provider = getProviderLabel(value);
+  const providerId = getProviderId(value);
+  const SelectedIcon = PROVIDER_ICONS[providerId];
 
   return (
-    <div className="flex items-center gap-1 px-3 pt-2 pb-1">
-      {MODELS.map((model) => (
-        <button
-          key={model.id}
-          onClick={() => onChange(model.id)}
-          disabled={disabled}
-          title={model.description}
-          className={cn(
-            'px-2 py-0.5 text-[11px] font-mono rounded transition-colors cursor-pointer',
-            'disabled:cursor-not-allowed disabled:opacity-50',
-            model.id === current.id
-              ? 'bg-accent-muted text-accent'
-              : 'text-text-muted hover:text-text hover:bg-surface',
-          )}
+    <div ref={menuRef} className="relative px-3 pt-2 pb-1">
+      <button
+        onClick={() => !disabled && setOpen(!open)}
+        disabled={disabled}
+        className={cn(
+          'flex items-center gap-1.5 px-2 py-0.5 text-[11px] font-mono rounded transition-colors cursor-pointer',
+          'bg-accent-muted text-accent',
+          'disabled:cursor-not-allowed disabled:opacity-50',
+        )}
+      >
+        {SelectedIcon && <SelectedIcon size={12} />}
+        <span className="text-text-muted">{provider}</span>
+        <span>{label}</span>
+        <svg
+          width="8"
+          height="8"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2.5"
+          className={cn('transition-transform', open && 'rotate-180')}
         >
-          {model.label}
-        </button>
-      ))}
+          <path d="m6 9 6 6 6-6" />
+        </svg>
+      </button>
+
+      {open && (
+        <div className="absolute left-3 bottom-full mb-1 z-50 min-w-48 max-h-[60vh] overflow-y-auto bg-surface-solid border border-border rounded-[var(--radius-sm)] shadow-xl py-1">
+          {groups.map((group) => (
+            <div key={group.providerId}>
+              {(() => {
+                const Icon = PROVIDER_ICONS[group.providerId];
+                return (
+                  <div className="px-3 py-1 text-[10px] font-mono text-text-muted uppercase tracking-wider flex items-center gap-1.5">
+                    {Icon && <Icon size={10} />}
+                    {group.provider}
+                  </div>
+                );
+              })()}
+              {group.models.map((model) => (
+                <button
+                  key={model.id}
+                  onClick={() => {
+                    onChange(model.id);
+                    setOpen(false);
+                  }}
+                  className={cn(
+                    'w-full px-3 py-1.5 text-left text-xs font-mono transition-colors cursor-pointer',
+                    model.id === value
+                      ? 'text-accent bg-accent-muted'
+                      : 'text-text hover:bg-accent-muted',
+                  )}
+                >
+                  {model.name}
+                </button>
+              ))}
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

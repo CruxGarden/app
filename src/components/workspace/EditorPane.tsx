@@ -51,6 +51,9 @@ export default function EditorPane() {
   const activeTab = tabs.find((t) => t.id === activeTabId) ?? null;
   const activeArtifact = activeTab ? (artifacts.find((a) => a.id === activeTab.id) ?? null) : null;
 
+  // Check if the crux has a form schema (set during template creation)
+  const hasFormSchema = !!(crux?.meta as Record<string, unknown> | undefined)?.formSchema;
+
   if (tabs.length === 0) {
     return (
       <div className="flex flex-col h-full">
@@ -69,6 +72,7 @@ export default function EditorPane() {
           <EditorToolbar
             tab={activeTab}
             hasContent={true}
+            hasFormSchema={hasFormSchema}
             onViewModeChange={(mode) => setTabViewMode(activeTab.id, mode)}
             onSave={() => saveRef.current?.()}
             onCapture={() => {

@@ -78,6 +78,7 @@ export interface Crux {
   kind?: string;
   status: CruxStatus;
   visibility: CruxVisibility;
+  discoverable: boolean;
   authorId: string;
   homeId: string;
   themeId?: string;
@@ -110,6 +111,7 @@ export interface UpdateCruxDto {
   kind?: CruxKind | null;
   status?: CruxStatus;
   visibility?: CruxVisibility;
+  discoverable?: boolean;
   tags?: string[];
   meta?: Record<string, unknown>;
 }
@@ -161,6 +163,7 @@ export interface CruxMeta {
   };
   growthCount?: number;
   snapshot?: GrowthSnapshot;
+  tags?: string[];
   artifactRefs?: string[];
   parentCruxId?: string;
   [key: string]: unknown;
@@ -266,9 +269,9 @@ export interface Tag {
   updated: string;
 }
 
-// ── Attachment ────────────────────────────────────────
+// ── Artifact ────────────────────────────────────────
 
-export interface Attachment {
+export interface Artifact {
   id: string;
   type: string;
   kind: string;

@@ -17,6 +17,10 @@ export async function getAdapter(model: string): Promise<ProviderAdapter> {
       const { OpenAIAdapter } = await import('./openai');
       return new OpenAIAdapter();
     }
+    case 'google': {
+      const { GoogleAdapter } = await import('./google');
+      return new GoogleAdapter();
+    }
     default:
       throw new Error(`Unknown provider: ${providerId}`);
   }

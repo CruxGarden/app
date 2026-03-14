@@ -1,4 +1,4 @@
-import type { Attachment } from '../types';
+import type { Artifact } from '../types';
 
 // ── Case conversion ──────────────────────────────────
 
@@ -28,6 +28,8 @@ export function fromRow<T>(row: Record<string, unknown>): T {
     const key = toCamel(k);
     if (key === 'meta' && typeof v === 'string') {
       try { obj[key] = JSON.parse(v || '{}'); } catch { obj[key] = {}; }
+    } else if (key === 'discoverable' || key === 'system') {
+      obj[key] = !!v;
     } else {
       obj[key] = v;
     }
@@ -35,14 +37,14 @@ export function fromRow<T>(row: Record<string, unknown>): T {
   return obj as T;
 }
 
-// ── Attachment helpers ───────────────────────────────
+// ── Artifact helpers ───────────────────────────────
 
-/** Convert artifact row to Attachment (strips internal content/path columns, keeps fingerprint) */
-export function toAttachment(row: Record<string, unknown>): Attachment {
+/** Convert artifact row to Artifact (strips internal content/path columns, keeps fingerprint) */
+export function toArtifact(row: Record<string, unknown>): Artifact {
   const entity = fromRow<Record<string, unknown>>(row);
   delete entity.content;
   delete entity.path;
-  return entity as unknown as Attachment;
+  return entity as unknown as Artifact;
 }
 
 // ── Slug generation ──────────────────────────────────

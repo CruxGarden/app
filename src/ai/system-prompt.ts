@@ -1,5 +1,5 @@
 import { getServices } from '@/services';
-import type { Crux, Attachment } from '@/services/types';
+import type { Crux, Artifact } from '@/services/types';
 
 const DEFAULT_KEEPER_PERSONA =
   'You are The Keeper, an outdated robot model who tends the Crux Garden. ' +
@@ -22,10 +22,10 @@ const DEFAULT_KEEPER_PERSONA =
  * Ported from api/src/ai/ai.prompt.ts — same sections, same structure.
  */
 export async function buildSystemPrompt(cruxId: string): Promise<string> {
-  const { crux: cruxService, attachment: attachmentService } = getServices();
+  const { crux: cruxService, artifact: artifactService } = getServices();
 
   const crux = await cruxService.findById(cruxId);
-  const artifacts = await attachmentService.findByResource('crux', cruxId);
+  const artifacts = await artifactService.findByResource('crux', cruxId);
 
   return buildSystemPromptFromData(crux, artifacts);
 }
@@ -33,7 +33,7 @@ export async function buildSystemPrompt(cruxId: string): Promise<string> {
 /** Pure function for building the prompt — easier to test */
 export function buildSystemPromptFromData(
   crux: Crux,
-  artifacts: Attachment[],
+  artifacts: Artifact[],
 ): string {
   const sections: string[] = [];
 
@@ -50,7 +50,9 @@ export function buildSystemPromptFromData(
       '- **edit_file** — Replace a specific string in an existing file. Preferred for targeted changes. Set replace_all: true to rename across a file.\n' +
       '- **read_file** — Read the contents of a file. MUST use before edit_file or write_file on existing files.\n' +
       '- **delete_file** — Request deletion of a file (user must confirm).\n' +
-      '- **list_files** — List all workspace files. The current list is already in your context below; call this only if files may have changed.',
+      '- **list_files** — List all workspace files. The current list is already in your context below; call this only if files may have changed.\n' +
+      '- **generate_image** — Generate an image using AI (OpenAI gpt-image-1) and save it as a workspace file. Provide a detailed prompt, a file path (e.g. "images/hero.png"), and an optional size (1024x1024, 1024x1536, or 1536x1024).\n\n' +
+      'IMPORTANT: You CAN generate images. When the user asks for an image, illustration, icon, logo, photo, or artwork, call the generate_image tool. Do NOT say you cannot generate images — you have this capability.',
   );
 
   // ── Process ───────────────────────────────────────────
@@ -133,7 +135,7 @@ export function buildSystemPromptFromData(
 }
 
 /** Build the file listing for the system prompt */
-function buildFileList(artifacts: Attachment[]): string {
+function buildFileList(artifacts: Artifact[]): string {
   if (artifacts.length === 0) return 'No files yet.';
 
   return artifacts

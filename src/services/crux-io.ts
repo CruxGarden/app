@@ -26,6 +26,18 @@ export interface ExportResult {
   failed: string[];
 }
 
+export interface ArtifactsZipOptions {
+  cruxSlug?: string;
+  artifacts: { fingerprint?: string; filename: string; meta?: { path?: string; [key: string]: unknown } }[];
+  onProgress?: (status: string) => void;
+}
+
+export interface ArtifactsZipResult {
+  blob: Blob;
+  filename: string;
+  failed: string[];
+}
+
 export type ImportMode = 'restore' | 'replace' | 'clone';
 
 export interface ImportConflictInfo {
@@ -118,7 +130,7 @@ export async function peekImport(data: Blob | ArrayBuffer): Promise<{
 
 export async function exportCrux(options: ExportOptions): Promise<ExportResult> {
   const { cruxId, messages, summary = null, author = null, onProgress } = options;
-  const { crux: cruxService, attachment, dimension } = getServices();
+  const { crux: cruxService, artifact, dimension } = getServices();
   const db = getSqliteClient();
   const crux = await cruxService.findById(cruxId);
 
@@ -126,7 +138,7 @@ export async function exportCrux(options: ExportOptions): Promise<ExportResult> 
 
   onProgress?.('Fetching data...');
   const [freshArtifacts, growths] = await Promise.all([
-    attachment.findByResource('crux', cruxId),
+    artifact.findByResource('crux', cruxId),
     dimension.findBySourceAndType(cruxId, 'growth').catch(() => []),
   ]);
   const sortedGrowths = growths.sort((a, b) => (a.weight ?? 0) - (b.weight ?? 0));
@@ -146,7 +158,7 @@ export async function exportCrux(options: ExportOptions): Promise<ExportResult> 
     }
   }
 
-  const currentSnapshotFingerprint = await attachment.computeSnapshotFingerprint(cruxId);
+  const currentSnapshotFingerprint = await artifact.computeSnapshotFingerprint(cruxId);
   // Use provided messages (current segment from store) or fall back to meta.messages
   const currentMessages = messages ?? crux.meta?.messages ?? [];
 
@@ -176,7 +188,7 @@ export async function exportCrux(options: ExportOptions): Promise<ExportResult> 
 
     try {
       const snapshotCrux = await cruxService.findById(growth.targetId);
-      const snapshotArtifacts = await attachment.findByResource('crux', growth.targetId);
+      const snapshotArtifacts = await artifact.findByResource('crux', growth.targetId);
 
       snapshotIdToIndex.set(growth.targetId, i);
 
@@ -239,10 +251,10 @@ export async function exportCrux(options: ExportOptions): Promise<ExportResult> 
     const meta = { ...(growth.meta || {}) };
     if (meta.thumbnailId) {
       try {
-        const thumbAttachment = await attachment.findById(meta.thumbnailId as string);
-        meta.thumbnailPath = (thumbAttachment.meta?.path || thumbAttachment.filename) as string;
+        const thumbArtifact = await artifact.findById(meta.thumbnailId as string);
+        meta.thumbnailPath = (thumbArtifact.meta?.path || thumbArtifact.filename) as string;
       } catch {
-        // Thumbnail attachment not found — skip
+        // Thumbnail artifact not found — skip
       }
       delete meta.thumbnailId;
     }
@@ -318,12 +330,47 @@ export async function exportCrux(options: ExportOptions): Promise<ExportResult> 
   return { blob, filename, failed };
 }
 
+// ── Artifacts-only ZIP export ────────────────────────────
+
+export async function exportArtifactsZip(options: ArtifactsZipOptions): Promise<ArtifactsZipResult> {
+  const { cruxSlug, artifacts, onProgress } = options;
+  const db = getSqliteClient();
+  const zip = new JSZip();
+  const failed: string[] = [];
+
+  for (let i = 0; i < artifacts.length; i++) {
+    const a = artifacts[i]!;
+    const fp = a.fingerprint;
+    if (!fp) continue;
+
+    const path = (a.meta?.path as string) || a.filename || `file-${i + 1}`;
+    onProgress?.(`${i + 1}/${artifacts.length} files`);
+
+    try {
+      const bytes = await db.blobRead(fp);
+      zip.file(path, bytes, { binary: true });
+    } catch (err) {
+      console.warn(`Failed to read blob: ${fp}`, err);
+      failed.push(path);
+    }
+  }
+
+  onProgress?.('Compressing...');
+  const blob = await zip.generateAsync({ type: 'blob' });
+
+  const now = new Date();
+  const ts = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}`;
+  const filename = `${cruxSlug || 'crux'}-${ts}.zip`;
+
+  return { blob, filename, failed };
+}
+
 // ── Import ──────────────────────────────────────────────
 
 export async function importCrux(options: ImportOptions): Promise<ImportResult> {
   const { data, mode = 'restore', onProgress } = options;
   const zip = await JSZip.loadAsync(await toArrayBuffer(data));
-  const { crux: cruxService, attachment: _attachment, dimension: dimService } = getServices();
+  const { crux: cruxService, artifact: _artifact, dimension: dimService } = getServices();
   const db = getSqliteClient();
 
   // ── Validate manifest ──────────────────────────────

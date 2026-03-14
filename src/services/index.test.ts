@@ -19,7 +19,7 @@ describe('Service Factory', () => {
       const services = await initServices('local');
 
       expect(services.crux).toBeDefined();
-      expect(services.attachment).toBeDefined();
+      expect(services.artifact).toBeDefined();
       expect(services.dimension).toBeDefined();
       expect(services.author).toBeDefined();
       expect(services.publish).toBeDefined();
@@ -29,7 +29,7 @@ describe('Service Factory', () => {
       const services = await initServices('api');
 
       expect(services.crux).toBeDefined();
-      expect(services.attachment).toBeDefined();
+      expect(services.artifact).toBeDefined();
       expect(services.dimension).toBeDefined();
       expect(services.author).toBeDefined();
       expect(services.publish).toBeDefined();
@@ -71,21 +71,21 @@ describe('Service Factory', () => {
       expect(found.title).toBe('Integration Test');
     });
 
-    it('can create and read an attachment through the service layer', async () => {
+    it('can create and read an artifact through the service layer', async () => {
       const services = await initServices('local');
 
       const crux = await services.crux.create({ title: 'Files Test' });
 
-      const attachment = await services.attachment.create({
+      const artifact = await services.artifact.create({
         resourceId: crux.id,
         content: '<h1>Hello</h1>',
         meta: { path: 'index.html' },
       });
 
-      expect(attachment.resourceId).toBe(crux.id);
-      expect(attachment.meta?.path).toBe('index.html');
+      expect(artifact.resourceId).toBe(crux.id);
+      expect(artifact.meta?.path).toBe('index.html');
 
-      const content = await services.attachment.readContent(attachment.id);
+      const content = await services.artifact.readContent(artifact.id);
       expect(content).toBe('<h1>Hello</h1>');
     });
 

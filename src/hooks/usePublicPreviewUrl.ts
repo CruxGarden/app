@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import type { Attachment } from '@/api/types';
+import type { Artifact } from '@/api/types';
 import {
   cachePreviewFiles,
   clearPreviewCache,
@@ -8,23 +8,23 @@ import {
   type PreviewFile,
 } from '@/lib/previewCache';
 
-type DownloadBlobFn = (attachmentId: string) => Promise<Blob>;
+type DownloadBlobFn = (artifactId: string) => Promise<Blob>;
 
 /**
- * Downloads all attachments, caches them via the preview service worker,
+ * Downloads all artifacts, caches them via the preview service worker,
  * and returns an iframe-ready URL for the display mode.
  *
  * Downloads once per crux — does not re-download unless username/slug changes.
  * Accepts a `downloadBlob` function so it works with both local and remote data.
  *
- * @param attachments  — all attachments for the crux
- * @param entryId      — attachment ID of the entry page (e.g. index.html)
+ * @param attachments  — all artifacts for the crux
+ * @param entryId      — artifact ID of the entry page (e.g. index.html)
  * @param username     — author username (for cache key)
  * @param slug         — crux slug (for cache key)
- * @param downloadBlob — function to fetch a blob by attachment ID
+ * @param downloadBlob — function to fetch a blob by artifact ID
  */
 export function usePublicPreviewUrl(
-  attachments: Attachment[],
+  artifacts: Artifact[],
   entryId: string,
   username: string,
   slug: string,
@@ -49,9 +49,9 @@ export function usePublicPreviewUrl(
     };
   }, []);
 
-  // Download all attachments and cache (once per crux)
+  // Download all artifacts and cache (once per crux)
   useEffect(() => {
-    if (!swReady || attachments.length === 0) return;
+    if (!swReady || artifacts.length === 0) return;
 
     // Skip if already cached for this crux
     if (cachedKeyRef.current === cacheKey) return;
@@ -60,7 +60,7 @@ export function usePublicPreviewUrl(
 
     (async () => {
       const results = await Promise.allSettled(
-        attachments.map(async (a) => {
+        artifacts.map(async (a) => {
           const blob = await downloadBlob(a.id);
           const path = a.meta?.path || a.filename || a.id;
           return { path, blob, mimeType: a.mimeType } as PreviewFile;
@@ -82,7 +82,7 @@ export function usePublicPreviewUrl(
       cachedKeyRef.current = cacheKey;
 
       // Find the entry file's path
-      const entry = attachments.find((a) => a.id === entryId);
+      const entry = artifacts.find((a) => a.id === entryId);
       const entryPath = entry?.meta?.path || entry?.filename || 'index.html';
 
       versionRef.current += 1;
@@ -92,7 +92,7 @@ export function usePublicPreviewUrl(
     return () => {
       cancelled = true;
     };
-  }, [attachments, entryId, swReady, cacheKey, downloadBlob]);
+  }, [artifacts, entryId, swReady, cacheKey, downloadBlob]);
 
   // Cleanup cache on unmount
   useEffect(() => {

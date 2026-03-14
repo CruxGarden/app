@@ -1,14 +1,14 @@
-import type { IAttachmentService } from '../attachment.service';
+import type { IArtifactService } from '../artifact.service';
 import type {
-  Attachment,
-  CreateAttachmentInput,
-  UploadAttachmentInput,
-  UpdateAttachmentInput,
+  Artifact,
+  CreateArtifactInput,
+  UploadArtifactInput,
+  UpdateArtifactInput,
 } from '../types';
 import { NotFoundError } from '../types';
 import { getSqliteClient } from './client';
 import { getLocalIdentity } from './identity';
-import { toAttachment, guessMimeType, hashContent, buildInsert } from './helpers';
+import { toArtifact, guessMimeType, hashContent, buildInsert } from './helpers';
 
 
 /**
@@ -27,25 +27,25 @@ async function cleanupOrphanedBlob(fingerprint: string | null): Promise<void> {
   }
 }
 
-export class SqliteAttachmentService implements IAttachmentService {
-  async findById(id: string): Promise<Attachment> {
+export class SqliteArtifactService implements IArtifactService {
+  async findById(id: string): Promise<Artifact> {
     const row = await getSqliteClient().get(
       'SELECT * FROM artifacts WHERE id = ?',
       [id],
     );
-    if (!row) throw new NotFoundError('Attachment not found');
-    return toAttachment(row);
+    if (!row) throw new NotFoundError('Artifact not found');
+    return toArtifact(row);
   }
 
-  async findByResource(resourceType: string, resourceId: string): Promise<Attachment[]> {
+  async findByResource(resourceType: string, resourceId: string): Promise<Artifact[]> {
     const rows = await getSqliteClient().all(
       'SELECT * FROM artifacts WHERE resource_id = ? AND resource_type = ?',
       [resourceId, resourceType],
     );
-    return rows.map(toAttachment);
+    return rows.map(toArtifact);
   }
 
-  async create(input: CreateAttachmentInput): Promise<Attachment> {
+  async create(input: CreateArtifactInput): Promise<Artifact> {
     const identity = await getLocalIdentity();
     const filePath = input.meta?.path || '';
     const db = getSqliteClient();
@@ -105,7 +105,7 @@ export class SqliteAttachmentService implements IAttachmentService {
     return this.findById(record.id);
   }
 
-  async upload(input: UploadAttachmentInput): Promise<Attachment> {
+  async upload(input: UploadArtifactInput): Promise<Artifact> {
     const identity = await getLocalIdentity();
     const filePath = input.meta?.path || '';
     const db = getSqliteClient();
@@ -166,7 +166,7 @@ export class SqliteAttachmentService implements IAttachmentService {
     return this.findById(record.id);
   }
 
-  async update(id: string, updates: UpdateAttachmentInput): Promise<Attachment> {
+  async update(id: string, updates: UpdateArtifactInput): Promise<Artifact> {
     const existing = await this.findById(id);
     const changes: Record<string, unknown> = { updated: new Date().toISOString() };
     if (updates.meta) changes.meta = { ...existing.meta, ...updates.meta };
@@ -202,11 +202,11 @@ export class SqliteAttachmentService implements IAttachmentService {
       'SELECT encoding, fingerprint FROM artifacts WHERE id = ?',
       [id],
     );
-    if (!row) throw new NotFoundError('Attachment not found');
+    if (!row) throw new NotFoundError('Artifact not found');
     if (row.encoding === 'binary') {
       throw new Error('Cannot read binary content as string — use downloadBlob()');
     }
-    if (!row.fingerprint) throw new Error('Attachment has no content (missing fingerprint)');
+    if (!row.fingerprint) throw new Error('Artifact has no content (missing fingerprint)');
     const bytes = await getSqliteClient().blobRead(row.fingerprint);
     return new TextDecoder().decode(bytes);
   }
@@ -216,8 +216,8 @@ export class SqliteAttachmentService implements IAttachmentService {
       'SELECT mime_type, fingerprint FROM artifacts WHERE id = ?',
       [id],
     );
-    if (!row) throw new NotFoundError('Attachment not found');
-    if (!row.fingerprint) throw new Error('Attachment has no content (missing fingerprint)');
+    if (!row) throw new NotFoundError('Artifact not found');
+    if (!row.fingerprint) throw new Error('Artifact has no content (missing fingerprint)');
     const bytes = await getSqliteClient().blobRead(row.fingerprint);
     return new Blob([bytes], { type: row.mime_type });
   }

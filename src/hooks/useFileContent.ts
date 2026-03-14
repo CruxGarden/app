@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import type { Attachment } from '@/api/types';
+import type { Artifact } from '@/api/types';
 import { getServices } from '@/services';
 
 const IMAGE_TYPES = new Set([
@@ -59,7 +59,7 @@ interface UseFileContentResult {
   refetch: () => void;
 }
 
-export function useFileContent(_cruxId: string, artifact: Attachment): UseFileContentResult {
+export function useFileContent(_cruxId: string, artifact: Artifact): UseFileContentResult {
   const [content, setContent] = useState<string | null>(null);
   const [blobUrl, setBlobUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -77,8 +77,8 @@ export function useFileContent(_cruxId: string, artifact: Attachment): UseFileCo
     let cancelled = false;
     setLoading(true);
 
-    const { attachment } = getServices();
-    attachment
+    const { artifact: artifactService } = getServices();
+    artifactService
       .downloadBlob(artifact.id)
       .then((blob) => {
         if (cancelled) return;

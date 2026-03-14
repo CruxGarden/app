@@ -9,6 +9,7 @@ import { peekImport, importCrux, type ImportConflictInfo } from '@/services/crux
 
 import { APP_NAME } from '@/lib/constants';
 import { GardenGrid, GardenSearch } from '@/components/garden';
+import NewCruxModal from '@/components/garden/NewCruxModal';
 import { ApiKeySetup, IconButton, Modal, Button } from '@/components/ui';
 import { getApiKey } from '@/ai/keys';
 import { getSetting, setSetting } from '@/services/settings';
@@ -83,11 +84,12 @@ export default function Garden() {
     sortBy,
     setSearch,
     setSortBy,
-    handleNewCrux,
     handleClearSearch,
     deleteCrux,
     refresh,
   } = useGarden();
+
+  const [showNewCrux, setShowNewCrux] = useState(false);
 
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const deletingCrux = deletingId ? cruxList.find((c) => c.id === deletingId) : null;
@@ -317,7 +319,7 @@ export default function Garden() {
               label="New Crux"
               size="lg"
               tooltip={{ label: 'New Crux' }}
-              onClick={handleNewCrux}
+              onClick={() => setShowNewCrux(true)}
               className="bg-surface text-text-muted hover:bg-accent-muted hover:text-accent"
             >
               <PlusCircleIcon />
@@ -411,6 +413,9 @@ export default function Garden() {
           </div>
         </div>
       </Modal>
+
+      {/* New crux modal */}
+      <NewCruxModal open={showNewCrux} onClose={() => setShowNewCrux(false)} />
 
       {/* Import conflict modal */}
       <Modal

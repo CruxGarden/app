@@ -32,6 +32,12 @@ interface AuthState {
   /** Logout and clear tokens */
   logout: () => Promise<void>;
 
+  /** Connect local device to a crux.garden account (stays local-first) */
+  connectAccount: (email: string, code: string) => Promise<Profile>;
+
+  /** Disconnect from crux.garden account */
+  disconnectAccount: () => Promise<void>;
+
   /** Update author fields (username, displayName, etc.) */
   updateAuthor: (dto: { username?: string; displayName?: string; bio?: string }) => Promise<Author>;
 
@@ -76,10 +82,51 @@ export const useAuthStore = create<AuthState>((set) => ({
           isLoading: false,
         });
       } catch {
+        // Tokens invalid — silently clear and stay disconnected
         clearTokens();
         set({ account: null, author: null, isAuthenticated: false, isLoading: false });
       }
     }
+  },
+
+  connectAccount: async (email: string, code: string) => {
+    const creds = await authApi.login(email, code);
+    storeTokens(creds.accessToken, creds.refreshToken);
+
+    const profile = await authApi.getProfile();
+
+    // Update local author with API identity if in local mode
+    if (getBackend() === 'local' && profile.author) {
+      const { author: localAuthor } = useAuthStore.getState();
+      if (localAuthor) {
+        try {
+          await getServices().author.update(localAuthor.id, {
+            username: profile.author.username,
+            displayName: profile.author.displayName,
+          });
+        } catch {
+          // Non-fatal — local author update failed but connection still works
+        }
+      }
+    }
+
+    set((state) => ({
+      account: profile,
+      author: profile.author ?? state.author,
+      isAuthenticated: true,
+    }));
+    return profile;
+  },
+
+  disconnectAccount: async () => {
+    try {
+      await authApi.logout();
+    } catch {
+      // Ignore — clear local state regardless
+    }
+    clearTokens();
+    set({ account: null, isAuthenticated: false });
+    // Keep author as-is — preserves username/displayName from API
   },
 
   requestCode: async (email: string) => {

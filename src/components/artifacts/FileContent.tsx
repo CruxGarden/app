@@ -10,7 +10,7 @@ import markdown from 'highlight.js/lib/languages/markdown';
 import python from 'highlight.js/lib/languages/python';
 import bash from 'highlight.js/lib/languages/bash';
 import { cn } from '@/lib/cn';
-import type { Attachment } from '@/api/types';
+import type { Artifact } from '@/api/types';
 import { getServices } from '@/services';
 import MarkdownRenderer from '@/components/chat/MarkdownRenderer';
 
@@ -101,7 +101,7 @@ function rewriteUrls(
   html: string,
   username: string,
   slug: string,
-  attachments: Attachment[],
+  attachments: Artifact[],
   cacheBust?: number,
 ): string {
   if (attachments.length === 0 || !username || !slug) return html;
@@ -139,9 +139,9 @@ function rewriteUrls(
 }
 
 interface FileContentProps {
-  artifact: Attachment;
+  artifact: Artifact;
   cruxId: string;
-  artifacts?: Attachment[];
+  artifacts?: Artifact[];
   username?: string;
   slug?: string;
 }
@@ -173,8 +173,8 @@ export default function FileContent({
     let cancelled = false;
     setLoading(true);
 
-    const { attachment } = getServices();
-    attachment
+    const { artifact: artifactService } = getServices();
+    artifactService
       .downloadBlob(artifact.id)
       .then((blob) => {
         if (cancelled) return;

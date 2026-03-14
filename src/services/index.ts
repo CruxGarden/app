@@ -1,5 +1,5 @@
 import type { ICruxService } from './crux.service';
-import type { IAttachmentService } from './attachment.service';
+import type { IArtifactService } from './artifact.service';
 import type { IDimensionService } from './dimension.service';
 import type { IAuthorService } from './author.service';
 import type { IPublishService } from './publish.service';
@@ -8,7 +8,7 @@ import { initSettings } from './settings';
 
 export interface Services {
   crux: ICruxService;
-  attachment: IAttachmentService;
+  artifact: IArtifactService;
   dimension: IDimensionService;
   author: IAuthorService;
   publish: IPublishService;
@@ -43,28 +43,28 @@ async function doInitServices(backend?: Backend): Promise<Services> {
 
   if (resolvedBackend === 'api') {
     const { ApiCruxService } = await import('./api/crux.service');
-    const { ApiAttachmentService } = await import('./api/attachment.service');
+    const { ApiArtifactService } = await import('./api/artifact.service');
     const { ApiDimensionService } = await import('./api/dimension.service');
     const { ApiAuthorService } = await import('./api/author.service');
     const { ApiPublishService } = await import('./api/publish.service');
 
     services = {
       crux: new ApiCruxService(),
-      attachment: new ApiAttachmentService(),
+      artifact: new ApiArtifactService(),
       dimension: new ApiDimensionService(),
       author: new ApiAuthorService(),
       publish: new ApiPublishService(),
     };
   } else {
     const { SqliteCruxService } = await import('./sqlite/crux.service');
-    const { SqliteAttachmentService } = await import('./sqlite/attachment.service');
+    const { SqliteArtifactService } = await import('./sqlite/artifact.service');
     const { SqliteDimensionService } = await import('./sqlite/dimension.service');
     const { SqliteAuthorService } = await import('./sqlite/author.service');
     const { ApiPublishService } = await import('./api/publish.service');
 
     services = {
       crux: new SqliteCruxService(),
-      attachment: new SqliteAttachmentService(),
+      artifact: new SqliteArtifactService(),
       dimension: new SqliteDimensionService(),
       author: new SqliteAuthorService(),
       publish: new ApiPublishService(), // always talks to API
@@ -130,7 +130,7 @@ export async function ensureLocalAuthor(): Promise<import('./types').Author> {
 
 // Re-export interfaces for convenience
 export type { ICruxService } from './crux.service';
-export type { IAttachmentService } from './attachment.service';
+export type { IArtifactService } from './artifact.service';
 export type { IDimensionService } from './dimension.service';
 export type { IAuthorService } from './author.service';
 export type { IPublishService } from './publish.service';

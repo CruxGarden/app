@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { PhotoProvider, PhotoView } from 'react-photo-view';
 import 'react-photo-view/dist/react-photo-view.css';
 import { cn } from '@/lib/cn';
-import type { Dimension, Attachment } from '@/api/types';
+import type { Dimension, Artifact } from '@/api/types';
 import { getServices } from '@/services';
 
 interface GrowthCardProps {
@@ -17,7 +17,7 @@ interface GrowthCardProps {
 interface PreviewInfo {
   type: 'html' | 'image' | 'markdown' | 'code' | 'text';
   path: string;
-  attachmentId: string;
+  artifactId: string;
   mimeType: string;
 }
 
@@ -40,7 +40,7 @@ function formatTime(dateStr: string): string {
 }
 
 /** Detect primary artifact from a list — same logic as useGrowthCreation */
-function detectPreview(artifacts: Attachment[]): PreviewInfo | null {
+function detectPreview(artifacts: Artifact[]): PreviewInfo | null {
   if (artifacts.length === 0) return null;
 
   const indexHtml = artifacts.find((a) => {
@@ -48,12 +48,12 @@ function detectPreview(artifacts: Attachment[]): PreviewInfo | null {
     return p === 'index.html' || p.endsWith('/index.html');
   });
   if (indexHtml) {
-    return { type: 'html', path: (indexHtml.meta?.path || indexHtml.filename) as string, attachmentId: indexHtml.id, mimeType: indexHtml.mimeType };
+    return { type: 'html', path: (indexHtml.meta?.path || indexHtml.filename) as string, artifactId: indexHtml.id, mimeType: indexHtml.mimeType };
   }
 
   const firstImage = artifacts.find((a) => a.mimeType?.startsWith('image/'));
   if (firstImage) {
-    return { type: 'image', path: (firstImage.meta?.path || firstImage.filename) as string, attachmentId: firstImage.id, mimeType: firstImage.mimeType };
+    return { type: 'image', path: (firstImage.meta?.path || firstImage.filename) as string, artifactId: firstImage.id, mimeType: firstImage.mimeType };
   }
 
   const readme = artifacts.find((a) => {
@@ -61,14 +61,14 @@ function detectPreview(artifacts: Attachment[]): PreviewInfo | null {
     return p === 'readme.md' || p.endsWith('/readme.md');
   });
   if (readme) {
-    return { type: 'markdown', path: (readme.meta?.path || readme.filename) as string, attachmentId: readme.id, mimeType: readme.mimeType };
+    return { type: 'markdown', path: (readme.meta?.path || readme.filename) as string, artifactId: readme.id, mimeType: readme.mimeType };
   }
 
   const firstText = artifacts.find((a) => a.encoding === 'utf-8' && !((a.meta?.path || '') as string).endsWith('.keep'));
   if (firstText) {
     const mime = firstText.mimeType || '';
     const isCode = mime.includes('javascript') || mime.includes('python') || mime.includes('css') || mime.includes('json') || mime.includes('xml');
-    return { type: isCode ? 'code' : 'text', path: (firstText.meta?.path || firstText.filename) as string, attachmentId: firstText.id, mimeType: firstText.mimeType };
+    return { type: isCode ? 'code' : 'text', path: (firstText.meta?.path || firstText.filename) as string, artifactId: firstText.id, mimeType: firstText.mimeType };
   }
 
   return null;
@@ -101,8 +101,8 @@ function usePreview(growth: Dimension): PreviewInfo | null {
 
     (async () => {
       try {
-        const { attachment } = getServices();
-        const arts = await attachment.findByResource('crux', growth.targetId);
+        const { artifact } = getServices();
+        const arts = await artifact.findByResource('crux', growth.targetId);
         if (cancelled) return;
         const p = detectPreview(arts);
         if (p) setDiscovered(p);
@@ -129,8 +129,8 @@ function useThumbnail(growth: Dimension): string | null {
 
     (async () => {
       try {
-        const { attachment } = getServices();
-        const blob = await attachment.downloadBlob(thumbnailId);
+        const { artifact } = getServices();
+        const blob = await artifact.downloadBlob(thumbnailId);
         if (cancelled) return;
         objectUrl = URL.createObjectURL(blob);
         setUrl(objectUrl);
