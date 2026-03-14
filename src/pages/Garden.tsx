@@ -1,11 +1,10 @@
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/stores/authStore';
 import MoodBar from '@/components/layout/MoodBar';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 import { useGarden } from '@/hooks/useGarden';
-import { peekImport, importCrux, type ImportConflictInfo } from '@/services/crux-io';
 
 import { APP_NAME } from '@/lib/constants';
 import { GardenGrid, GardenSearch } from '@/components/garden';
@@ -32,25 +31,6 @@ function GlobeIcon() {
       <circle cx="12" cy="12" r="10" />
       <line x1="2" y1="12" x2="22" y2="12" />
       <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
-    </svg>
-  );
-}
-
-function ImportIcon() {
-  return (
-    <svg
-      width="20"
-      height="20"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.5"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-      <polyline points="17 8 12 3 7 8" />
-      <line x1="12" y1="3" x2="12" y2="15" />
     </svg>
   );
 }
@@ -86,7 +66,6 @@ export default function Garden() {
     setSortBy,
     handleClearSearch,
     deleteCrux,
-    refresh,
   } = useGarden();
 
   const [showNewCrux, setShowNewCrux] = useState(false);
@@ -110,110 +89,11 @@ export default function Garden() {
     setShowApiKeyBanner(false);
   };
 
-  // Import state
-  const importInputRef = useRef<HTMLInputElement>(null);
-  const [importing, setImporting] = useState(false);
-  const [importProgress, setImportProgress] = useState({ done: 0, total: 0 });
-
-  // Import conflict resolution
-  const [importConflict, setImportConflict] = useState<ImportConflictInfo | null>(null);
-  const conflictResolverRef = useRef<((choice: 'replace' | 'clone' | 'cancel') => void) | null>(null);
-
   const handleConfirmDelete = useCallback(async () => {
     if (!deletingId) return;
     await deleteCrux(deletingId);
     setDeletingId(null);
   }, [deletingId, deleteCrux]);
-
-  const handleImport = useCallback(
-    async (file: File) => {
-      setImporting(true);
-      setImportProgress({ done: 0, total: 0 });
-
-      try {
-        // Peek at the ZIP to check for conflicts
-        const { conflict } = await peekImport(file);
-
-        let mode: 'restore' | 'replace' | 'clone' = 'restore';
-        if (conflict) {
-          const choice = await new Promise<'replace' | 'clone' | 'cancel'>((resolve) => {
-            conflictResolverRef.current = resolve;
-            setImportConflict(conflict);
-          });
-          setImportConflict(null);
-          conflictResolverRef.current = null;
-          if (choice === 'cancel') return;
-          mode = choice;
-        }
-
-        // Run the import
-        const result = await importCrux({
-          data: file,
-          mode,
-          onProgress: (done, total) => setImportProgress({ done, total }),
-        });
-
-        // Restore workspace layout (UI-specific settings)
-        if (result.layout) {
-          const layout = result.layout;
-          if (layout.paneOrder && layout.paneVisibility) {
-            setSetting(
-              `cruxgarden:layout:${result.cruxId}`,
-              JSON.stringify({ paneOrder: layout.paneOrder, paneVisibility: layout.paneVisibility }),
-            );
-          }
-          if (layout.editorTabs) {
-            setSetting(
-              `cruxgarden:editor-tabs:${result.cruxId}`,
-              JSON.stringify(layout.editorTabs),
-            );
-          }
-          if (layout.folderState) {
-            setSetting(
-              `cruxgarden:folder-state:${result.cruxId}`,
-              JSON.stringify(layout.folderState),
-            );
-          }
-        }
-
-        // Restore theme preferences
-        if (result.theme) {
-          if (result.theme.mode) {
-            setSetting('cruxgarden:theme', result.theme.mode);
-          }
-          if (result.theme.tint) {
-            setSetting('cruxgarden:tint', result.theme.tint);
-          }
-        }
-
-        if (result.failedArtifacts.length > 0) {
-          console.warn('Some artifacts failed to import:', result.failedArtifacts);
-          alert(`Import completed with ${result.failedArtifacts.length} file${result.failedArtifacts.length > 1 ? 's' : ''} that could not be restored.`);
-        }
-
-        refresh();
-        navigate(`/c/${result.cruxId}`);
-      } catch (err) {
-        console.error('Import failed:', err);
-        alert(`Failed to import .crux file: ${err instanceof Error ? err.message : 'Make sure it is a valid export.'}`);
-      } finally {
-        setImporting(false);
-        setImportProgress({ done: 0, total: 0 });
-      }
-    },
-    [navigate, refresh],
-  );
-
-  const handleImportInput = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
-      const file = e.target.files?.[0];
-      if (!file) return;
-      handleImport(file);
-      e.target.value = '';
-    },
-    [handleImport],
-  );
-
 
   // Page title
   useEffect(() => {
@@ -227,15 +107,6 @@ export default function Garden() {
 
   return (
     <div className="p-4 sm:p-6 max-w-5xl mx-auto">
-      {/* Hidden file input for import */}
-      <input
-        ref={importInputRef}
-        type="file"
-        accept=".crux,.zip"
-        className="hidden"
-        onChange={handleImportInput}
-      />
-
       {/* Header + Search panel */}
       <div className="bg-panel border border-border rounded-[var(--radius)] p-4 sm:p-5 mb-6">
         <div className="flex items-center justify-between gap-3 mb-4">
@@ -274,57 +145,15 @@ export default function Garden() {
               </div>
             </div>
           </div>
-          <div className="flex items-center gap-1.5">
-            {importing ? (
-              <div className="relative w-9 h-9 flex items-center justify-center">
-                <svg width="28" height="28" viewBox="0 0 28 28" className="-rotate-90">
-                  <circle
-                    cx="14" cy="14" r="12"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    className="text-border"
-                  />
-                  <circle
-                    cx="14" cy="14" r="12"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    className="text-accent transition-[stroke-dashoffset] duration-300"
-                    strokeDasharray={2 * Math.PI * 12}
-                    strokeDashoffset={
-                      importProgress.total > 0
-                        ? 2 * Math.PI * 12 * (1 - importProgress.done / importProgress.total)
-                        : 2 * Math.PI * 12
-                    }
-                  />
-                </svg>
-                <span className="absolute text-[9px] font-mono text-text-muted">
-                  {importProgress.total > 0 ? Math.round((importProgress.done / importProgress.total) * 100) : 0}
-                </span>
-              </div>
-            ) : (
-              <IconButton
-                label="Import Crux"
-                size="lg"
-                tooltip={{ label: 'Import Crux' }}
-                onClick={() => importInputRef.current?.click()}
-                className="bg-surface text-text-muted hover:bg-accent-muted hover:text-accent"
-              >
-                <ImportIcon />
-              </IconButton>
-            )}
-            <IconButton
-              label="New Crux"
-              size="lg"
-              tooltip={{ label: 'New Crux' }}
-              onClick={() => setShowNewCrux(true)}
-              className="bg-surface text-text-muted hover:bg-accent-muted hover:text-accent"
-            >
-              <PlusCircleIcon />
-            </IconButton>
-          </div>
+          <IconButton
+            label="Add Crux"
+            size="lg"
+            tooltip={{ label: 'Add Crux' }}
+            onClick={() => setShowNewCrux(true)}
+            className="bg-surface text-text-muted hover:bg-accent-muted hover:text-accent"
+          >
+            <PlusCircleIcon />
+          </IconButton>
         </div>
         <div className="flex items-center gap-3 mt-6">
           <div className="flex-1">
@@ -416,82 +245,6 @@ export default function Garden() {
 
       {/* New crux modal */}
       <NewCruxModal open={showNewCrux} onClose={() => setShowNewCrux(false)} />
-
-      {/* Import conflict modal */}
-      <Modal
-        open={importConflict !== null}
-        onClose={() => {
-          conflictResolverRef.current?.('cancel');
-          setImportConflict(null);
-          conflictResolverRef.current = null;
-        }}
-      >
-        <div className="space-y-4">
-          <div>
-            <h2 className="text-lg font-display font-medium text-text">Crux already exists</h2>
-            <p className="text-sm text-text-muted mt-1">
-              <span className="text-text font-medium">{importConflict?.title}</span>{' '}
-              already exists in your garden.
-            </p>
-          </div>
-
-          {importConflict && (
-            <div className="grid grid-cols-2 gap-3 text-xs font-mono">
-              <div className="rounded-[var(--radius-sm)] border border-border bg-surface/50 p-2.5">
-                <div className="text-[10px] uppercase tracking-wider text-text-muted mb-1.5">Installed</div>
-                <div className="text-text">v{importConflict.installedVersion}</div>
-                {importConflict.installedUpdated && (
-                  <div className="text-text-muted mt-0.5">
-                    {new Date(importConflict.installedUpdated).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
-                  </div>
-                )}
-              </div>
-              <div className="rounded-[var(--radius-sm)] border border-border bg-surface/50 p-2.5">
-                <div className="text-[10px] uppercase tracking-wider text-text-muted mb-1.5">Incoming</div>
-                <div className="text-text">v{importConflict.incomingVersion}</div>
-                {importConflict.incomingUpdated && (
-                  <div className="text-text-muted mt-0.5">
-                    {new Date(importConflict.incomingUpdated).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-
-          <div className="flex gap-2 justify-end">
-            <Button
-              variant="ghost"
-              onClick={() => {
-                conflictResolverRef.current?.('cancel');
-                setImportConflict(null);
-                conflictResolverRef.current = null;
-              }}
-            >
-              Cancel
-            </Button>
-            <Button
-              variant="ghost"
-              onClick={() => {
-                conflictResolverRef.current?.('clone');
-                setImportConflict(null);
-                conflictResolverRef.current = null;
-              }}
-            >
-              Clone
-            </Button>
-            <Button
-              variant="danger"
-              onClick={() => {
-                conflictResolverRef.current?.('replace');
-                setImportConflict(null);
-                conflictResolverRef.current = null;
-              }}
-            >
-              Replace
-            </Button>
-          </div>
-        </div>
-      </Modal>
     </div>
   );
 }

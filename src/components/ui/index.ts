@@ -9,3 +9,5 @@ export { default as Toggle } from './Toggle';
 export { default as Badge } from './Badge';
 export { default as IconButton } from './IconButton';
 export { default as ErrorBoundary } from './ErrorBoundary';
+export { default as PixelGrid } from './PixelGrid';
+export { default as KeeperPixelAvatar } from './KeeperPixelAvatar';

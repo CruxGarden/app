@@ -222,25 +222,21 @@ export default function TopBar() {
     <header className="flex items-center justify-between h-12 px-3 border-b border-border bg-surface-solid">
       {/* Left: branding + breadcrumb */}
       <div className="flex items-center gap-1.5 min-w-0">
-        <button
-          onClick={() => navigate('/')}
-          className="shrink-0 cursor-pointer text-sm font-display font-medium text-text whitespace-nowrap hover:underline"
-        >
-          {APP_NAME}
-        </button>
         {username ? (
-          <>
-            <span className="text-text-muted shrink-0">
-              <ChevronIcon />
-            </span>
-            <button
-              onClick={() => navigate('/home')}
-              className="shrink-0 text-xs font-medium font-display text-accent cursor-pointer whitespace-nowrap hover:underline"
-            >
-              {username}
-            </button>
-          </>
-        ) : null}
+          <button
+            onClick={() => navigate('/home')}
+            className="shrink-0 text-xs font-medium font-display text-accent cursor-pointer whitespace-nowrap hover:underline"
+          >
+            {username}
+          </button>
+        ) : (
+          <button
+            onClick={() => navigate('/')}
+            className="shrink-0 cursor-pointer text-sm font-display font-medium text-text whitespace-nowrap hover:underline"
+          >
+            {APP_NAME}
+          </button>
+        )}
         {activeCruxId ? (
           <>
             <span className="text-text-muted shrink-0">
