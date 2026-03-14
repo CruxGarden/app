@@ -5,7 +5,7 @@ import {
   estimateMessageTokens,
   trimMessagesIfNeeded,
 } from './system-prompt';
-import type { Crux, Attachment } from '@/services/types';
+import type { Crux, Artifact } from '@/services/types';
 
 function makeCrux(overrides: Partial<Crux> = {}): Crux {
   return {
@@ -15,6 +15,7 @@ function makeCrux(overrides: Partial<Crux> = {}): Crux {
     data: '',
     status: 'living',
     visibility: 'private',
+    discoverable: false,
     authorId: 'author-1',
     homeId: 'home-1',
     created: new Date().toISOString(),
@@ -23,7 +24,7 @@ function makeCrux(overrides: Partial<Crux> = {}): Crux {
   };
 }
 
-function makeAttachment(path: string, overrides: Partial<Attachment> = {}): Attachment {
+function makeArtifact(path: string, overrides: Partial<Artifact> = {}): Artifact {
   return {
     id: `att-${path}`,
     type: 'artifact',
@@ -73,8 +74,8 @@ describe('buildSystemPromptFromData', () => {
 
   it('lists artifact files in Current Files section', () => {
     const artifacts = [
-      makeAttachment('index.html'),
-      makeAttachment('styles.css'),
+      makeArtifact('index.html'),
+      makeArtifact('styles.css'),
     ];
     const prompt = buildSystemPromptFromData(makeCrux(), artifacts);
     expect(prompt).toContain('- index.html');
@@ -86,10 +87,10 @@ describe('buildSystemPromptFromData', () => {
     expect(prompt).toContain('No files yet.');
   });
 
-  it('excludes version attachments from file listing', () => {
+  it('excludes version artifacts from file listing', () => {
     const artifacts = [
-      makeAttachment('index.html'),
-      makeAttachment('snapshot.html', { type: 'version' }),
+      makeArtifact('index.html'),
+      makeArtifact('snapshot.html', { type: 'version' }),
     ];
     const prompt = buildSystemPromptFromData(makeCrux(), artifacts);
     expect(prompt).toContain('- index.html');

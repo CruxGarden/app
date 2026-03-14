@@ -22,6 +22,8 @@ export function validateToolInput(
       return validatePathOnly(input);
     case 'list_files':
       return { valid: true };
+    case 'generate_image':
+      return validateGenerateImage(input);
     default:
       return { valid: false, error: `Unknown tool: ${toolName}` };
   }
@@ -100,6 +102,21 @@ function validatePathOnly(input: Record<string, unknown>): ValidationResult {
   const pathIssue = validatePath(input.path as string);
   if (pathIssue) return pathIssue;
 
+  return { valid: true };
+}
+
+function validateGenerateImage(input: Record<string, unknown>): ValidationResult {
+  if (!input.prompt || typeof input.prompt !== 'string') {
+    return { valid: false, error: 'prompt is required and must be a string.' };
+  }
+  if (!input.path || typeof input.path !== 'string') {
+    return { valid: false, error: 'path is required and must be a string.' };
+  }
+  const pathIssue = validatePath(input.path);
+  if (pathIssue) return pathIssue;
+  if (input.size && !['1024x1024', '1536x1024', '1024x1536'].includes(input.size as string)) {
+    return { valid: false, error: `Invalid size "${input.size}". Use "1024x1024", "1536x1024", or "1024x1536".` };
+  }
   return { valid: true };
 }
 

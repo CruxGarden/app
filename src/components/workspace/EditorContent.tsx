@@ -12,9 +12,11 @@ import { getMonacoLanguage, getExtension, isPreviewable } from '@/lib/monacoLang
 import { registerCruxGardenThemes } from '@/lib/monacoTheme';
 import { getServices } from '@/services';
 import MarkdownRenderer from '@/components/chat/MarkdownRenderer';
+import TemplateForm from '@/components/workspace/TemplateForm';
 import { usePreviewUrl } from '@/hooks/usePreviewUrl';
-import type { Attachment } from '@/api/types';
+import type { Artifact } from '@/api/types';
 import type { EditorTab } from '@/stores/uiStore';
+import type { FormSchema } from '@/templates';
 import { LoadingPanel, Spinner } from '@/components/ui';
 
 // ── Save handler registry (module-level, accessible from outside) ──
@@ -28,7 +30,7 @@ export async function saveAllDirtyEditors(): Promise<void> {
 
 interface EditorContentProps {
   tab: EditorTab;
-  artifact: Attachment;
+  artifact: Artifact;
   cruxId: string;
   saveRef?: React.MutableRefObject<(() => void) | null>;
   captureRef?: React.MutableRefObject<(() => void) | null>;
@@ -56,6 +58,37 @@ export default function EditorContent({ tab, artifact, cruxId, saveRef, captureR
   const language = getMonacoLanguage(path);
   const themeName = resolved === 'dark' ? 'crux-garden-dark' : 'crux-garden-light';
   const isHtmlFile = ext === 'html' || ext === 'htm';
+  const isConfigJson = /^config\.json$/i.test(path.split('/').pop() || '');
+
+  // Form schema from crux meta (set during template creation)
+  const formSchema = useCruxStore((s) => {
+    const meta = s.crux?.meta as Record<string, unknown> | undefined;
+    return (meta?.formSchema as FormSchema | undefined) ?? null;
+  });
+
+  // Form data change handler — updates content as pretty JSON, marks dirty, triggers save
+  const handleFormChange = useCallback(
+    (newData: Record<string, unknown>) => {
+      const json = JSON.stringify(newData, null, 2);
+      contentRef.current = json;
+      dirtyRef.current = true;
+      setContent(json);
+      setTabDirty(tab.id, true);
+      // Auto-save immediately so preview refreshes
+      saveHandlerRef.current();
+    },
+    [tab.id, setContent, setTabDirty],
+  );
+
+  // Auto-switch config.json to form mode on first open when schema exists
+  const { setTabViewMode } = useUIStore();
+  useEffect(() => {
+    if (isConfigJson && formSchema && tab.viewMode === 'source') {
+      setTabViewMode(tab.id, 'form');
+    }
+    // Only run on mount (tab.id is the key prop, so this runs once per tab)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Keep ref in sync when content loads
   useEffect(() => {
@@ -87,8 +120,8 @@ export default function EditorContent({ tab, artifact, cruxId, saveRef, captureR
     if (current === null || !dirtyRef.current) return;
     try {
       const blob = new Blob([current], { type: mime });
-      const { attachment } = getServices();
-      await attachment.upload({
+      const { artifact: artifactService } = getServices();
+      await artifactService.upload({
         resourceId: cruxId,
         blob,
         mimeType: mime,
@@ -125,7 +158,7 @@ export default function EditorContent({ tab, artifact, cruxId, saveRef, captureR
 
   // Save a JPEG blob as preview.jpg (create or replace)
   const savePreviewBlob = useCallback((blob: Blob) => {
-    const { attachment } = getServices();
+    const { artifact: artifactService } = getServices();
     const artifacts = useCruxStore.getState().artifacts;
     const existing = artifacts.find((a) => {
       const p = (a.meta?.path || a.filename || '').toLowerCase();
@@ -133,7 +166,7 @@ export default function EditorContent({ tab, artifact, cruxId, saveRef, captureR
     });
     const uploadOpts = { resourceId: cruxId, blob, mimeType: 'image/jpeg', meta: { path: 'preview.jpg' } };
     if (existing) {
-      attachment.upload(uploadOpts)
+      artifactService.upload(uploadOpts)
         .then((updated) => {
           useCruxStore.setState((state) => ({
             artifacts: state.artifacts.map((a) => (a.id === existing.id ? { ...a, ...updated } : a)),
@@ -142,7 +175,7 @@ export default function EditorContent({ tab, artifact, cruxId, saveRef, captureR
         })
         .catch((err) => console.error('Thumbnail save failed:', err));
     } else {
-      attachment.upload(uploadOpts)
+      artifactService.upload(uploadOpts)
         .then((newArt) => {
           useCruxStore.setState((state) => ({
             artifacts: [...state.artifacts, newArt],
@@ -257,7 +290,7 @@ export default function EditorContent({ tab, artifact, cruxId, saveRef, captureR
 
   // Auto-capture: triggered when contentVersion changes (file saved or AI-written)
   const isPreviewFile = path.toLowerCase() === 'preview.jpg';
-  const canAutoCapture = (isHtmlFile || isImage || isVideo) && !isPreviewFile;
+  const canAutoCapture = isHtmlFile && !isPreviewFile;
   const autoCaptureTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const initialVersionRef = useRef(contentVersion);
   useEffect(() => {
@@ -391,7 +424,18 @@ export default function EditorContent({ tab, artifact, cruxId, saveRef, captureR
   // ── Determine main content ──
   let mainContent: React.ReactNode = null;
 
-  if (tab.viewMode === 'source' && content !== null) {
+  if (tab.viewMode === 'form' && isConfigJson && formSchema && content !== null) {
+    // Form mode: render schema-based form for config.json
+    let parsedData: Record<string, unknown> = {};
+    try {
+      parsedData = JSON.parse(content);
+    } catch {
+      // If JSON is malformed, show an error hint
+    }
+    mainContent = (
+      <TemplateForm schema={formSchema} data={parsedData} onChange={handleFormChange} />
+    );
+  } else if (tab.viewMode === 'source' && content !== null) {
     // Source mode: Monaco Editor
     mainContent = (
       <div className="flex-1 min-h-0">
@@ -508,7 +552,7 @@ function ImageViewer({
 }: {
   blobUrl: string;
   path: string;
-  artifact: Attachment;
+  artifact: Artifact;
 }) {
   const [dimensions, setDimensions] = useState<string | null>(null);
   const filename = path.split('/').pop() || 'image';
@@ -560,8 +604,8 @@ function ReplaceFileButton({
       if (!file) return;
       setReplacing(true);
       try {
-        const { attachment } = getServices();
-        const updated = await attachment.upload({
+        const { artifact: artifactService } = getServices();
+        const updated = await artifactService.upload({
           resourceId: cruxId,
           blob: file,
           mimeType: file.type,

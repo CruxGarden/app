@@ -1,6 +1,7 @@
 import JSZip from 'jszip';
 import { getSqliteClient } from './sqlite/client';
 import { hashContent } from './sqlite/helpers';
+import { clearAllSettings } from './settings';
 
 // ── Constants ────────────────────────────────────────────
 
@@ -48,6 +49,9 @@ export async function wipeGarden(onProgress?: (status: string) => void): Promise
 
   onProgress?.('Removing all files...');
   await db.blobWipeAll();
+
+  onProgress?.('Clearing settings...');
+  clearAllSettings();
 
   onProgress?.('Wipe complete');
 }
@@ -297,4 +301,54 @@ export async function importGarden(options: GardenImportOptions): Promise<Garden
     cruxCount: cruxCountRow?.count ?? 0,
     artifactCount: artifactCountRow?.count ?? 0,
   };
+}
+
+// ── Confirm + Import ────────────────────────────────────
+// Shared safety flow used by both file import (DataSettings)
+// and cloud pull (SyncSettings). Returns false if the user cancelled.
+
+export interface ConfirmAndImportOptions {
+  data: Blob | ArrayBuffer;
+  onProgress?: (status: string) => void;
+  /** Called after successful import to reconcile auth state */
+  onPostImport?: () => Promise<void>;
+}
+
+export async function confirmAndImportGarden(
+  options: ConfirmAndImportOptions,
+): Promise<boolean> {
+  const { data, onProgress, onPostImport } = options;
+
+  // Offer to export current garden as a backup first
+  const wantBackup = confirm(
+    'Importing a garden will replace ALL existing data.\n\nWould you like to export your current garden first as a backup?',
+  );
+  if (wantBackup) {
+    try {
+      const backup = await exportGarden({ onProgress });
+      const url = URL.createObjectURL(backup.blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = backup.filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('Backup export failed:', err);
+      const proceed = confirm('Backup export failed. Continue with import anyway?');
+      if (!proceed) return false;
+    }
+  }
+
+  // Final confirmation
+  if (!confirm('This will replace your entire garden. Continue?')) return false;
+
+  await importGarden({ data, onProgress });
+  await onPostImport?.();
+
+  onProgress?.('Redirecting...');
+  setTimeout(() => { window.location.href = '/'; }, 600);
+
+  return true;
 }

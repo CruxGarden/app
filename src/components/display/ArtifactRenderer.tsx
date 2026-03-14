@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import type { Attachment } from '@/api/types';
+import type { Artifact } from '@/api/types';
 import { publicApi } from '@/api';
 import { usePublicPreviewUrl } from '@/hooks/usePublicPreviewUrl';
 import MarkdownRenderer from '@/components/chat/MarkdownRenderer';
@@ -8,11 +8,11 @@ import { LoadingPanel } from '@/components/ui';
 
 const PUBLISHED_CONTENT_URL = import.meta.env.VITE_PUBLISHED_CONTENT_URL || '';
 
-/** Fetch a blob by attachment ID — defaults to publicApi if not provided */
-type DownloadBlobFn = (attachmentId: string) => Promise<Blob>;
+/** Fetch a blob by artifact ID — defaults to publicApi if not provided */
+type DownloadBlobFn = (artifactId: string) => Promise<Blob>;
 
 interface ArtifactRendererProps {
-  attachments: Attachment[];
+  artifacts: Artifact[];
   username: string;
   slug: string;
   authorId: string;
@@ -23,49 +23,49 @@ interface ArtifactRendererProps {
 type RenderMode = 'html' | 'markdown' | 'image' | 'listing';
 
 interface MainFile {
-  attachment: Attachment;
+  artifact: Artifact;
   mode: RenderMode;
 }
 
-function resolveMain(attachments: Attachment[]): MainFile | null {
-  if (attachments.length === 0) return null;
+function resolveMain(artifacts: Artifact[]): MainFile | null {
+  if (artifacts.length === 0) return null;
 
-  const byPath = (a: Attachment) => a.meta?.path || a.filename || a.id;
-  const ext = (a: Attachment) => byPath(a).split('.').pop()?.toLowerCase() || '';
+  const byPath = (a: Artifact) => a.meta?.path || a.filename || a.id;
+  const ext = (a: Artifact) => byPath(a).split('.').pop()?.toLowerCase() || '';
 
   // 1. index.html at root
-  const indexHtml = attachments.find((a) => {
+  const indexHtml = artifacts.find((a) => {
     const p = byPath(a).toLowerCase();
     return p === 'index.html' || p === '/index.html';
   });
-  if (indexHtml) return { attachment: indexHtml, mode: 'html' };
+  if (indexHtml) return { artifact: indexHtml, mode: 'html' };
 
   // 2. Any root-level .html
-  const rootHtml = attachments.find((a) => {
+  const rootHtml = artifacts.find((a) => {
     const p = byPath(a);
     const parts = p.split('/').filter(Boolean);
     return parts.length === 1 && (ext(a) === 'html' || ext(a) === 'htm');
   });
-  if (rootHtml) return { attachment: rootHtml, mode: 'html' };
+  if (rootHtml) return { artifact: rootHtml, mode: 'html' };
 
   // 3. Any .html file
-  const anyHtml = attachments.find((a) => ext(a) === 'html' || ext(a) === 'htm');
-  if (anyHtml) return { attachment: anyHtml, mode: 'html' };
+  const anyHtml = artifacts.find((a) => ext(a) === 'html' || ext(a) === 'htm');
+  if (anyHtml) return { artifact: anyHtml, mode: 'html' };
 
   // 4. README.md at root
-  const readme = attachments.find((a) => {
+  const readme = artifacts.find((a) => {
     const p = byPath(a).toLowerCase();
     return p === 'readme.md' || p === '/readme.md';
   });
-  if (readme) return { attachment: readme, mode: 'markdown' };
+  if (readme) return { artifact: readme, mode: 'markdown' };
 
   // 5. Any .md file
-  const anyMd = attachments.find((a) => ext(a) === 'md' || ext(a) === 'mdx');
-  if (anyMd) return { attachment: anyMd, mode: 'markdown' };
+  const anyMd = artifacts.find((a) => ext(a) === 'md' || ext(a) === 'mdx');
+  if (anyMd) return { artifact: anyMd, mode: 'markdown' };
 
   // 6. Single image
-  const images = attachments.filter((a) => a.mimeType?.startsWith('image/'));
-  if (images.length === 1) return { attachment: images[0]!, mode: 'image' };
+  const images = artifacts.filter((a) => a.mimeType?.startsWith('image/'));
+  if (images.length === 1) return { artifact: images[0]!, mode: 'image' };
 
   // 7. Fallback: listing
   return null;
@@ -74,23 +74,23 @@ function resolveMain(attachments: Attachment[]): MainFile | null {
 /**
  * HTML renderer using the preview service worker.
  *
- * All attachments are cached at /__preview/ paths and the iframe loads via src=.
+ * All artifacts are cached at /__preview/ paths and the iframe loads via src=.
  * The browser handles all relative path resolution natively — linked CSS,
  * images, multi-page <a href> navigation all just work.
  *
  * External links open in new tabs via sandbox="allow-popups".
  */
 function HtmlRenderer({
-  attachment,
-  attachments,
+  artifact,
+  artifacts,
   authorId,
   username,
   slug,
   subPath,
   downloadBlob,
 }: {
-  attachment: Attachment;
-  attachments: Attachment[];
+  artifact: Artifact;
+  artifacts: Artifact[];
   authorId: string;
   username: string;
   slug: string;
@@ -117,7 +117,7 @@ function HtmlRenderer({
   if (PUBLISHED_CONTENT_URL) {
     // If a sub-path is provided (deep link), use it directly — CloudFront Function
     // will rewrite non-file paths to index.html for SPA support
-    const entryPath = subPath || attachment.meta?.path || attachment.filename || 'index.html';
+    const entryPath = subPath || artifact.meta?.path || artifact.filename || 'index.html';
     const src = `${PUBLISHED_CONTENT_URL}/${authorId}/${slug}/${entryPath}`;
 
     return (
@@ -132,23 +132,23 @@ function HtmlRenderer({
   }
 
   // Fallback: service worker approach (local dev without S3)
-  return <ServiceWorkerHtmlRenderer attachment={attachment} attachments={attachments} username={username} slug={slug} downloadBlob={downloadBlob} />;
+  return <ServiceWorkerHtmlRenderer artifact={artifact} artifacts={artifacts} username={username} slug={slug} downloadBlob={downloadBlob} />;
 }
 
 function ServiceWorkerHtmlRenderer({
-  attachment,
-  attachments,
+  artifact,
+  artifacts,
   username,
   slug,
   downloadBlob,
 }: {
-  attachment: Attachment;
-  attachments: Attachment[];
+  artifact: Artifact;
+  artifacts: Artifact[];
   username: string;
   slug: string;
   downloadBlob: DownloadBlobFn;
 }) {
-  const previewUrl = usePublicPreviewUrl(attachments, attachment.id, username, slug, downloadBlob);
+  const previewUrl = usePublicPreviewUrl(artifacts, artifact.id, username, slug, downloadBlob);
 
   if (!previewUrl) {
     return (
@@ -171,17 +171,17 @@ function ServiceWorkerHtmlRenderer({
 }
 
 function MarkdownRendererView({
-  attachment,
+  artifact,
   downloadBlob,
 }: {
-  attachment: Attachment;
+  artifact: Artifact;
   downloadBlob: DownloadBlobFn;
 }) {
   const [content, setContent] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
-    downloadBlob(attachment.id)
+    downloadBlob(artifact.id)
       .then((blob) => blob.text())
       .then((text) => {
         if (!cancelled) setContent(text);
@@ -192,7 +192,7 @@ function MarkdownRendererView({
     return () => {
       cancelled = true;
     };
-  }, [attachment.id, downloadBlob]);
+  }, [artifact.id, downloadBlob]);
 
   if (!content) {
     return (
@@ -212,18 +212,18 @@ function MarkdownRendererView({
 }
 
 function ImageRenderer({
-  attachment,
+  artifact,
   downloadBlob,
 }: {
-  attachment: Attachment;
+  artifact: Artifact;
   downloadBlob: DownloadBlobFn;
 }) {
   const [objectUrl, setObjectUrl] = useState<string | null>(null);
-  const path = attachment.meta?.path || attachment.filename || attachment.id;
+  const path = artifact.meta?.path || artifact.filename || artifact.id;
 
   useEffect(() => {
     let url: string | null = null;
-    downloadBlob(attachment.id)
+    downloadBlob(artifact.id)
       .then((blob) => {
         url = URL.createObjectURL(blob);
         setObjectUrl(url);
@@ -232,7 +232,7 @@ function ImageRenderer({
     return () => {
       if (url) URL.revokeObjectURL(url);
     };
-  }, [attachment.id, downloadBlob]);
+  }, [artifact.id, downloadBlob]);
 
   if (!objectUrl) {
     return (
@@ -254,21 +254,21 @@ function ImageRenderer({
 }
 
 function FileListing({
-  attachments,
+  artifacts,
   downloadBlob,
 }: {
-  attachments: Attachment[];
+  artifacts: Artifact[];
   username: string;
   slug: string;
   downloadBlob: DownloadBlobFn;
 }) {
-  const sorted = [...attachments].sort((a, b) => {
+  const sorted = [...artifacts].sort((a, b) => {
     const pa = a.meta?.path || a.filename || a.id;
     const pb = b.meta?.path || b.filename || b.id;
     return pa.localeCompare(pb);
   });
 
-  const handleDownload = async (a: Attachment) => {
+  const handleDownload = async (a: Artifact) => {
     const blob = await downloadBlob(a.id);
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
@@ -315,22 +315,22 @@ function formatSize(bytes?: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-export default function ArtifactRenderer({ attachments, username, slug, authorId, subPath, downloadBlob }: ArtifactRendererProps) {
-  const main = useMemo(() => resolveMain(attachments), [attachments]);
+export default function ArtifactRenderer({ artifacts, username, slug, authorId, subPath, downloadBlob }: ArtifactRendererProps) {
+  const main = useMemo(() => resolveMain(artifacts), [artifacts]);
 
   // Default download function uses publicApi
-  const dl = downloadBlob || ((id: string) => publicApi.downloadAttachment(username, slug, id));
+  const dl = downloadBlob || ((id: string) => publicApi.downloadArtifact(username, slug, id));
 
   if (!main) {
-    return <FileListing attachments={attachments} username={username} slug={slug} downloadBlob={dl} />;
+    return <FileListing artifacts={artifacts} username={username} slug={slug} downloadBlob={dl} />;
   }
 
   switch (main.mode) {
     case 'html':
       return (
         <HtmlRenderer
-          attachment={main.attachment}
-          attachments={attachments}
+          artifact={main.artifact}
+          artifacts={artifacts}
           authorId={authorId}
           username={username}
           slug={slug}
@@ -339,10 +339,10 @@ export default function ArtifactRenderer({ attachments, username, slug, authorId
         />
       );
     case 'markdown':
-      return <MarkdownRendererView attachment={main.attachment} downloadBlob={dl} />;
+      return <MarkdownRendererView artifact={main.artifact} downloadBlob={dl} />;
     case 'image':
-      return <ImageRenderer attachment={main.attachment} downloadBlob={dl} />;
+      return <ImageRenderer artifact={main.artifact} downloadBlob={dl} />;
     default:
-      return <FileListing attachments={attachments} username={username} slug={slug} downloadBlob={dl} />;
+      return <FileListing artifacts={artifacts} username={username} slug={slug} downloadBlob={dl} />;
   }
 }

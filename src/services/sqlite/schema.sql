@@ -8,6 +8,7 @@ CREATE TABLE IF NOT EXISTS cruxes (
   kind TEXT,
   status TEXT DEFAULT 'living',
   visibility TEXT DEFAULT 'private',
+  discoverable INTEGER DEFAULT 0,
   author_id TEXT NOT NULL,
   home_id TEXT NOT NULL,
   meta TEXT DEFAULT '{}',

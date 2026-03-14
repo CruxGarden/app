@@ -2,14 +2,13 @@ import { create } from 'zustand';
 import type {
   Crux,
   ChatMessage,
-  Attachment,
+  Artifact,
   CruxSummary,
   Dimension,
 } from '@/api/types';
 import type { UpdateCruxInput } from '@/services/types';
 import type { Palette } from '@/lib/palette';
 import { getServices } from '@/services';
-import { getApiKey } from '@/ai/keys';
 
 const MIME_MAP: Record<string, string> = {
   html: 'text/html',
@@ -32,7 +31,7 @@ interface CruxState {
   crux: Crux | null;
   messages: ChatMessage[]; // Full conversation (all segments concatenated)
   messageSegmentStart: number; // Index where the current workspace segment begins
-  artifacts: Attachment[];
+  artifacts: Artifact[];
   summary: CruxSummary | null;
 
   // Streaming state
@@ -51,13 +50,13 @@ interface CruxState {
   // Snapshot viewing state (filmstrip mode)
   viewingSnapshotId: string | null;
   viewingSnapshotIndex: number | null;
-  workspaceArtifacts: Attachment[] | null; // stashed while viewing snapshot
+  workspaceArtifacts: Artifact[] | null; // stashed while viewing snapshot
   workspaceMessages: ChatMessage[] | null; // stashed while viewing snapshot
   workspaceSegmentStart: number | null; // stashed while viewing snapshot
   snapshotMessageCount: number | null; // how many messages to show for this snapshot
 
   // Pending file deletions (awaiting user confirmation)
-  pendingDeletes: { attachmentId: string; path: string }[];
+  pendingDeletes: { artifactId: string; path: string }[];
 
   // Actions
   loadCrux: (id: string) => Promise<void>;
@@ -66,9 +65,9 @@ interface CruxState {
   setStreaming: (streaming: boolean) => void;
   appendStreamContent: (content: string) => void;
   clearStreamContent: () => void;
-  setArtifacts: (artifacts: Attachment[]) => void;
-  addArtifact: (artifact: Attachment) => void;
-  updateArtifact: (id: string, updates: Partial<Attachment>) => void;
+  setArtifacts: (artifacts: Artifact[]) => void;
+  addArtifact: (artifact: Artifact) => void;
+  updateArtifact: (id: string, updates: Partial<Artifact>) => void;
   setModel: (model: string) => void;
   setPalette: (palette: Partial<Palette>) => void;
   saveMeta: () => Promise<void>;
@@ -83,8 +82,8 @@ interface CruxState {
   uploadProgress: { total: number; completed: number; currentFile: string } | null;
 
   // File CRUD actions
-  createFile: (path: string, content?: string) => Promise<Attachment>;
-  uploadFile: (file: File, parentPath?: string) => Promise<Attachment>;
+  createFile: (path: string, content?: string) => Promise<Artifact>;
+  uploadFile: (file: File, parentPath?: string) => Promise<Artifact>;
   uploadFiles: (files: { file: File; path: string }[]) => Promise<void>;
   moveArtifact: (id: string, newParentPath: string | null) => Promise<void>;
   renameArtifact: (id: string, newPath: string) => Promise<void>;
@@ -107,9 +106,9 @@ interface CruxState {
   branchFromSnapshot: (snapshotId: string, label: string) => Promise<void>;
 
   // Delete confirmation actions
-  addPendingDelete: (attachmentId: string, path: string) => void;
-  confirmDelete: (attachmentId: string) => Promise<void>;
-  dismissDelete: (attachmentId: string) => void;
+  addPendingDelete: (artifactId: string, path: string) => void;
+  confirmDelete: (artifactId: string) => Promise<void>;
+  dismissDelete: (artifactId: string) => void;
 }
 
 export const useCruxStore = create<CruxState>((set, get) => ({
@@ -135,9 +134,9 @@ export const useCruxStore = create<CruxState>((set, get) => ({
   uploadProgress: null,
 
   loadCrux: async (id: string) => {
-    const { crux: cruxService, attachment } = getServices();
+    const { crux: cruxService, artifact } = getServices();
     const crux = await cruxService.findById(id);
-    const attachments = await attachment.findByResource('crux', id);
+    const artifacts = await artifact.findByResource('crux', id);
     // NOTE: crux.meta.settings.palette stores per-crux palette data for future use,
     // but themes are currently global — don't override the user's active theme on load.
 
@@ -155,9 +154,9 @@ export const useCruxStore = create<CruxState>((set, get) => ({
       if (new Date(crux.updated).getTime() > publishedMs + tolerance) {
         hasChanges = true;
       }
-      // Check if any attachment was modified after publish
-      if (!hasChanges && attachments.length > 0) {
-        hasChanges = attachments.some(
+      // Check if any artifact was modified after publish
+      if (!hasChanges && artifacts.length > 0) {
+        hasChanges = artifacts.some(
           (a) => new Date(a.updated).getTime() > publishedMs + tolerance,
         );
       }
@@ -218,7 +217,7 @@ export const useCruxStore = create<CruxState>((set, get) => ({
       crux,
       messages: fullMessages,
       messageSegmentStart: segmentStart,
-      artifacts: attachments,
+      artifacts,
       summary: crux.meta?.summary || null,
       growthCount: crux.meta?.growthCount || 0,
       growths: sortedGrowths,
@@ -236,8 +235,6 @@ export const useCruxStore = create<CruxState>((set, get) => ({
         .replace(/^-|-$/g, '') +
       '-' +
       Date.now().toString(36);
-
-    const hasApiKey = !!(await getApiKey('anthropic'));
 
     const keeperPrompt =
       'You are The Keeper, an outdated robot model who tends the Crux Garden. ' +
@@ -260,7 +257,7 @@ export const useCruxStore = create<CruxState>((set, get) => ({
       content: 'What would you like to create today?',
     };
 
-    const initialMessages = hasApiKey ? [greeting] : [];
+    const initialMessages = [greeting];
 
     const crux = await cruxService.create({
       slug,
@@ -307,7 +304,7 @@ export const useCruxStore = create<CruxState>((set, get) => ({
     set({ streamingContent: '' });
   },
 
-  setArtifacts: (artifacts: Attachment[]) => {
+  setArtifacts: (artifacts: Artifact[]) => {
     set((s) => ({
       artifacts,
       hasUnpublishedChanges: true,
@@ -315,11 +312,11 @@ export const useCruxStore = create<CruxState>((set, get) => ({
     }));
   },
 
-  addArtifact: (artifact: Attachment) => {
+  addArtifact: (artifact: Artifact) => {
     set((state) => ({ artifacts: [...state.artifacts, artifact], hasUnpublishedChanges: true }));
   },
 
-  updateArtifact: (id: string, updates: Partial<Attachment>) => {
+  updateArtifact: (id: string, updates: Partial<Artifact>) => {
     set((state) => ({
       artifacts: state.artifacts.map((a) => (a.id === id ? { ...a, ...updates } : a)),
     }));
@@ -395,6 +392,21 @@ export const useCruxStore = create<CruxState>((set, get) => ({
     const { publish } = getServices();
     const updated = await publish.publish(crux.id);
     set({ crux: { ...crux, ...updated }, hasUnpublishedChanges: false });
+
+    // Sync discoverable state and tags to server
+    try {
+      const { cruxes } = await import('@/api');
+      await cruxes.update(crux.id, { discoverable: crux.discoverable });
+      if (crux.discoverable) {
+        const tags = (crux.meta?.tags as string[]) || [];
+        await cruxes.syncTags(crux.id, tags);
+      } else {
+        // Ghost mode: clear tags on server
+        await cruxes.syncTags(crux.id, []);
+      }
+    } catch {
+      // Best-effort — publish itself succeeded
+    }
   },
 
   unpublishCrux: async () => {
@@ -403,50 +415,59 @@ export const useCruxStore = create<CruxState>((set, get) => ({
     const { publish } = getServices();
     const updated = await publish.unpublish(crux.id);
     set({ crux: { ...crux, ...updated } });
+
+    // Clean up discover state on server
+    try {
+      const { cruxes } = await import('@/api');
+      await cruxes.update(crux.id, { discoverable: false });
+      await cruxes.syncTags(crux.id, []);
+    } catch {
+      // Best-effort — unpublish itself succeeded
+    }
   },
 
   // File CRUD actions
   createFile: async (path: string, content?: string) => {
     const { crux } = get();
     if (!crux) throw new Error('No active crux');
-    const { attachment } = getServices();
+    const { artifact } = getServices();
     const text = content ?? '';
     const ext = path.split('.').pop()?.toLowerCase() || 'txt';
     const mime = MIME_MAP[ext] || 'text/plain';
-    const newAttachment = await attachment.create({
+    const newArtifact = await artifact.create({
       resourceId: crux.id,
       content: text,
       mimeType: mime,
       meta: { path },
     });
-    set((state) => ({ artifacts: [...state.artifacts, newAttachment], hasUnpublishedChanges: true }));
-    return newAttachment;
+    set((state) => ({ artifacts: [...state.artifacts, newArtifact], hasUnpublishedChanges: true }));
+    return newArtifact;
   },
 
   uploadFile: async (file: File, parentPath?: string) => {
     const { crux } = get();
     if (!crux) throw new Error('No active crux');
-    const { attachment } = getServices();
+    const { artifact } = getServices();
     const path = parentPath ? `${parentPath}/${file.name}` : file.name;
-    const newAttachment = await attachment.upload({
+    const newArtifact = await artifact.upload({
       resourceId: crux.id,
       blob: file,
       mimeType: file.type || undefined,
       meta: { path },
     });
-    set((state) => ({ artifacts: [...state.artifacts, newAttachment], hasUnpublishedChanges: true }));
-    return newAttachment;
+    set((state) => ({ artifacts: [...state.artifacts, newArtifact], hasUnpublishedChanges: true }));
+    return newArtifact;
   },
 
   moveArtifact: async (id: string, newParentPath: string | null) => {
     const { artifacts } = get();
-    const { attachment } = getServices();
+    const { artifact } = getServices();
     const art = artifacts.find((a) => a.id === id);
     if (!art) return;
     const oldPath = art.meta?.path || art.filename || '';
     const filename = oldPath.split('/').pop() || art.filename;
     const newPath = newParentPath ? `${newParentPath}/${filename}` : filename;
-    await attachment.update(id, { meta: { path: newPath } });
+    await artifact.update(id, { meta: { path: newPath } });
     set((state) => ({
       artifacts: state.artifacts.map((a) =>
         a.id === id
@@ -462,8 +483,8 @@ export const useCruxStore = create<CruxState>((set, get) => ({
   },
 
   renameArtifact: async (id: string, newPath: string) => {
-    const { attachment } = getServices();
-    await attachment.update(id, { meta: { path: newPath } });
+    const { artifact } = getServices();
+    await artifact.update(id, { meta: { path: newPath } });
     set((state) => ({
       artifacts: state.artifacts.map((a) =>
         a.id === id
@@ -479,8 +500,8 @@ export const useCruxStore = create<CruxState>((set, get) => ({
   },
 
   deleteArtifact: async (id: string) => {
-    const { attachment } = getServices();
-    await attachment.delete(id);
+    const { artifact } = getServices();
+    await artifact.delete(id);
     set((state) => ({
       artifacts: state.artifacts.filter((a) => a.id !== id),
       hasUnpublishedChanges: true,
@@ -491,9 +512,9 @@ export const useCruxStore = create<CruxState>((set, get) => ({
   },
 
   deleteArtifacts: async (ids: string[]) => {
-    const { attachment } = getServices();
+    const { artifact } = getServices();
     // Delete all in parallel
-    await Promise.allSettled(ids.map((id) => attachment.delete(id)));
+    await Promise.allSettled(ids.map((id) => artifact.delete(id)));
     const idSet = new Set(ids);
     set((state) => ({
       artifacts: state.artifacts.filter((a) => !idSet.has(a.id)),
@@ -510,26 +531,26 @@ export const useCruxStore = create<CruxState>((set, get) => ({
   uploadFiles: async (files: { file: File; path: string }[]) => {
     const { crux } = get();
     if (!crux) throw new Error('No active crux');
-    const { attachment } = getServices();
+    const { artifact } = getServices();
     set({ uploadProgress: { total: files.length, completed: 0, currentFile: files[0]?.path || '' } });
-    const newAttachments: Attachment[] = [];
+    const newArtifacts: Artifact[] = [];
     for (let i = 0; i < files.length; i++) {
       const { file, path } = files[i]!;
       set({ uploadProgress: { total: files.length, completed: i, currentFile: path } });
       try {
-        const newAttachment = await attachment.upload({
+        const newArtifact = await artifact.upload({
           resourceId: crux.id,
           blob: file,
           mimeType: file.type || undefined,
           meta: { path },
         });
-        newAttachments.push(newAttachment);
+        newArtifacts.push(newArtifact);
       } catch (err) {
         console.warn(`Failed to upload: ${path}`, err);
       }
     }
     set((state) => ({
-      artifacts: [...state.artifacts, ...newAttachments],
+      artifacts: [...state.artifacts, ...newArtifacts],
       hasUnpublishedChanges: true,
       uploadProgress: null,
     }));
@@ -537,12 +558,12 @@ export const useCruxStore = create<CruxState>((set, get) => ({
 
   saveArtifactContent: async (id: string, content: string) => {
     const { artifacts } = get();
-    const { attachment } = getServices();
+    const { artifact } = getServices();
     const art = artifacts.find((a) => a.id === id);
     if (!art) return;
     const mime = art.mimeType || 'text/plain';
     const blob = new Blob([content], { type: mime });
-    const updated = await attachment.upload({
+    const updated = await artifact.upload({
       resourceId: art.resourceId,
       blob,
       mimeType: mime,
@@ -583,8 +604,8 @@ export const useCruxStore = create<CruxState>((set, get) => ({
   viewSnapshot: async (snapshotId: string, index: number) => {
     const { crux, artifacts, messages, messageSegmentStart, workspaceArtifacts, workspaceMessages } = get();
     if (!crux) return;
-    const { attachment, crux: cruxService } = getServices();
-    const snapshotArtifacts = await attachment.findByResource('crux', snapshotId);
+    const { artifact, crux: cruxService } = getServices();
+    const snapshotArtifacts = await artifact.findByResource('crux', snapshotId);
 
     // Load snapshot crux to get its cumulative message count
     const snapshotCrux = await cruxService.findById(snapshotId);
@@ -655,7 +676,7 @@ export const useCruxStore = create<CruxState>((set, get) => ({
   revertToSnapshot: async (snapshotId: string) => {
     const { crux } = get();
     if (!crux) return;
-    const { attachment, crux: cruxService } = getServices();
+    const { artifact, crux: cruxService } = getServices();
 
     // Auto-snapshot current state as a safety net before reverting
     try {
@@ -666,11 +687,11 @@ export const useCruxStore = create<CruxState>((set, get) => ({
     }
 
     // Delete all current workspace artifacts
-    const currentArtifacts = await attachment.findByResource('crux', crux.id);
-    await Promise.allSettled(currentArtifacts.map((a) => attachment.delete(a.id)));
+    const currentArtifacts = await artifact.findByResource('crux', crux.id);
+    await Promise.allSettled(currentArtifacts.map((a) => artifact.delete(a.id)));
 
     // Clone snapshot artifacts to workspace
-    await attachment.cloneArtifactsToSnapshot(snapshotId, crux.id);
+    await artifact.cloneArtifactsToSnapshot(snapshotId, crux.id);
 
     // Rebuild conversation by walking the parentCruxId chain from this snapshot
     const snapshotCrux = await cruxService.findById(snapshotId);
@@ -692,7 +713,7 @@ export const useCruxStore = create<CruxState>((set, get) => ({
     const priorMessages = chain.flat();
 
     // Reload workspace artifacts
-    const newWorkspaceArtifacts = await attachment.findByResource('crux', crux.id);
+    const newWorkspaceArtifacts = await artifact.findByResource('crux', crux.id);
 
     set({
       viewingSnapshotId: null,
@@ -714,7 +735,7 @@ export const useCruxStore = create<CruxState>((set, get) => ({
   branchFromSnapshot: async (snapshotId: string, label: string) => {
     const { crux } = get();
     if (!crux) return;
-    const { attachment, crux: cruxService } = getServices();
+    const { artifact, crux: cruxService } = getServices();
 
     // Auto-snapshot current state first
     try {
@@ -725,18 +746,18 @@ export const useCruxStore = create<CruxState>((set, get) => ({
     }
 
     // Delete current workspace artifacts
-    const currentArtifacts = await attachment.findByResource('crux', crux.id);
-    await Promise.allSettled(currentArtifacts.map((a) => attachment.delete(a.id)));
+    const currentArtifacts = await artifact.findByResource('crux', crux.id);
+    await Promise.allSettled(currentArtifacts.map((a) => artifact.delete(a.id)));
 
     // Clone snapshot artifacts to workspace
-    await attachment.cloneArtifactsToSnapshot(snapshotId, crux.id);
+    await artifact.cloneArtifactsToSnapshot(snapshotId, crux.id);
 
     // Load snapshot messages — these become the conversation base for the branch
     const snapshotCrux = await cruxService.findById(snapshotId);
     const snapshotMessages: ChatMessage[] = snapshotCrux.meta?.messages || [];
 
     // Reload workspace artifacts
-    const newWorkspaceArtifacts = await attachment.findByResource('crux', crux.id);
+    const newWorkspaceArtifacts = await artifact.findByResource('crux', crux.id);
 
     // Set activeBranch to snapshotId — new snapshots will chain from here
     const meta = {
@@ -770,27 +791,27 @@ export const useCruxStore = create<CruxState>((set, get) => ({
     await saveMeta();
   },
 
-  addPendingDelete: (attachmentId: string, path: string) => {
+  addPendingDelete: (artifactId: string, path: string) => {
     set((s) => ({
-      pendingDeletes: [...s.pendingDeletes, { attachmentId, path }],
+      pendingDeletes: [...s.pendingDeletes, { artifactId, path }],
     }));
   },
 
-  confirmDelete: async (attachmentId: string) => {
+  confirmDelete: async (artifactId: string) => {
     const { crux } = get();
     if (!crux) return;
-    const { attachment } = getServices();
-    await attachment.delete(attachmentId);
-    const arts = await attachment.findByResource('crux', crux.id);
+    const { artifact } = getServices();
+    await artifact.delete(artifactId);
+    const arts = await artifact.findByResource('crux', crux.id);
     set((s) => ({
       artifacts: arts,
-      pendingDeletes: s.pendingDeletes.filter((d) => d.attachmentId !== attachmentId),
+      pendingDeletes: s.pendingDeletes.filter((d) => d.artifactId !== artifactId),
     }));
   },
 
-  dismissDelete: (attachmentId: string) => {
+  dismissDelete: (artifactId: string) => {
     set((s) => ({
-      pendingDeletes: s.pendingDeletes.filter((d) => d.attachmentId !== attachmentId),
+      pendingDeletes: s.pendingDeletes.filter((d) => d.artifactId !== artifactId),
     }));
   },
 }));

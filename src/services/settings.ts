@@ -131,3 +131,17 @@ export async function initSettings(): Promise<void> {
 export function isSettingsReady(): boolean {
   return ready;
 }
+
+/** Clear the in-memory cache and remove all cruxgarden: keys from localStorage. */
+export function clearAllSettings(): void {
+  cache.clear();
+
+  if (typeof localStorage !== 'undefined') {
+    const toRemove: string[] = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key?.startsWith('cruxgarden:')) toRemove.push(key);
+    }
+    for (const key of toRemove) localStorage.removeItem(key);
+  }
+}

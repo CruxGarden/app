@@ -6,7 +6,7 @@ import type {
   Dimension,
   DimensionType,
   CreateDimensionDto,
-  Attachment,
+  Artifact,
   Tag,
   PaginationMeta,
 } from './types';
@@ -91,51 +91,51 @@ export async function createDimension(cruxId: string, dto: CreateDimensionDto): 
 
 // ── Attachments ───────────────────────────────────────
 
-export async function getAttachments(cruxId: string): Promise<Attachment[]> {
-  const res = await client.get<Attachment[]>(`/cruxes/${cruxId}/attachments`);
+export async function getArtifacts(cruxId: string): Promise<Artifact[]> {
+  const res = await client.get<Artifact[]>(`/cruxes/${cruxId}/artifacts`);
   return res.data;
 }
 
-export async function uploadAttachment(
+export async function uploadArtifact(
   cruxId: string,
   file: File,
   meta?: { type?: string; kind?: string; path?: string },
-): Promise<Attachment> {
+): Promise<Artifact> {
   const form = new FormData();
   form.append('file', file);
   if (meta?.type) form.append('type', meta.type);
   if (meta?.kind) form.append('kind', meta.kind);
   if (meta?.path) form.append('meta', JSON.stringify({ path: meta.path }));
-  const res = await client.post<Attachment>(`/cruxes/${cruxId}/attachments`, form, {
+  const res = await client.post<Artifact>(`/cruxes/${cruxId}/artifacts`, form, {
     headers: { 'Content-Type': 'multipart/form-data' },
   });
   return res.data;
 }
 
-export async function downloadAttachment(cruxId: string, attachmentId: string): Promise<Blob> {
-  const res = await client.get(`/cruxes/${cruxId}/attachments/${attachmentId}/download`, {
+export async function downloadArtifact(cruxId: string, artifactId: string): Promise<Blob> {
+  const res = await client.get(`/cruxes/${cruxId}/artifacts/${artifactId}/download`, {
     responseType: 'blob',
     params: { v: Date.now() },
   });
   return res.data as Blob;
 }
 
-export async function updateAttachment(
-  attachmentId: string,
+export async function updateArtifact(
+  artifactId: string,
   file?: File,
   meta?: Record<string, unknown>,
-): Promise<Attachment> {
+): Promise<Artifact> {
   const form = new FormData();
   if (file) form.append('file', file);
   if (meta) form.append('meta', JSON.stringify(meta));
-  const res = await client.put<Attachment>(`/attachments/${attachmentId}`, form, {
+  const res = await client.put<Artifact>(`/artifacts/${artifactId}`, form, {
     headers: { 'Content-Type': 'multipart/form-data' },
   });
   return res.data;
 }
 
-export async function deleteAttachment(attachmentId: string): Promise<void> {
-  await client.delete(`/attachments/${attachmentId}`);
+export async function deleteArtifact(artifactId: string): Promise<void> {
+  await client.delete(`/artifacts/${artifactId}`);
 }
 
 // ── Publishing ────────────────────────────────────────

@@ -1,7 +1,7 @@
 import { useState, useCallback, useMemo } from 'react';
 import { useCruxStore } from '@/stores/cruxStore';
 import { useAuthStore } from '@/stores/authStore';
-import { exportCrux } from '@/services/crux-io';
+import { exportCrux, exportArtifactsZip } from '@/services/crux-io';
 import { cn } from '@/lib/cn';
 import { Spinner } from '@/components/ui';
 import { usePaneWidth } from '@/hooks/usePaneWidth';
@@ -20,6 +20,25 @@ function ExportIcon() {
       <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
       <polyline points="7 10 12 15 17 10" />
       <line x1="12" y1="15" x2="12" y2="3" />
+    </svg>
+  );
+}
+
+function ZipIcon() {
+  return (
+    <svg
+      width="14"
+      height="14"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
+      <line x1="12" y1="11" x2="12" y2="17" />
+      <polyline points="9 14 12 17 15 14" />
     </svg>
   );
 }
@@ -43,6 +62,7 @@ export default function ExportPane() {
   const author = useAuthStore((s) => s.author);
 
   const [exporting, setExporting] = useState(false);
+  const [exportingZip, setExportingZip] = useState(false);
   const [progress, setProgress] = useState('');
 
   const handleExport = useCallback(async () => {
@@ -82,6 +102,41 @@ export default function ExportPane() {
       setExporting(false);
     }
   }, [crux, messages, summary, author]);
+
+  const handleExportZip = useCallback(async () => {
+    if (!crux || artifacts.length === 0) return;
+
+    setExportingZip(true);
+    setProgress('Packing artifacts...');
+
+    try {
+      const result = await exportArtifactsZip({
+        cruxSlug: crux.slug,
+        artifacts,
+        onProgress: setProgress,
+      });
+
+      const url = URL.createObjectURL(result.blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = result.filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      if (result.failed.length > 0) {
+        setProgress(`Done — ${result.failed.length} file${result.failed.length > 1 ? 's' : ''} failed`);
+      } else {
+        setProgress('');
+      }
+    } catch (err) {
+      console.error('ZIP export failed:', err);
+      setProgress('Export failed');
+    } finally {
+      setExportingZip(false);
+    }
+  }, [crux, artifacts]);
 
   const totalSize = artifacts.reduce((sum, a) => sum + (Number(a.size) || 0), 0);
   const messageCount = messages.length;
@@ -161,32 +216,74 @@ export default function ExportPane() {
             </div>
           </details>
 
-          {/* Export button — state-aware */}
-          {exporting ? (
-            <button
-              disabled
-              className={cn(
-                'w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-[var(--radius-sm)]',
-                'text-sm font-medium font-body',
-                'bg-accent-muted text-accent border border-accent/20 cursor-wait',
+          {/* Export buttons */}
+          <div className="flex flex-col gap-3">
+            <div className="flex flex-col gap-1.5">
+              {exporting ? (
+                <button
+                  disabled
+                  className={cn(
+                    'w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-[var(--radius-sm)]',
+                    'text-sm font-medium font-body',
+                    'bg-accent-muted text-accent border border-accent/20 cursor-wait',
+                  )}
+                >
+                  <Spinner size={14} />
+                  Exporting...
+                </button>
+              ) : (
+                <button
+                  onClick={handleExport}
+                  className={cn(
+                    'w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-[var(--radius-sm)]',
+                    'text-sm font-medium font-body transition-all cursor-pointer',
+                    'bg-accent-muted text-accent border border-accent/20 hover:border-accent',
+                  )}
+                >
+                  <ExportIcon />
+                  Export Crux
+                </button>
               )}
-            >
-              <Spinner size={14} />
-              Exporting...
-            </button>
-          ) : (
-            <button
-              onClick={handleExport}
-              className={cn(
-                'w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-[var(--radius-sm)]',
-                'text-sm font-medium font-body transition-all cursor-pointer',
-                'bg-accent-muted text-accent border border-accent/20 hover:border-accent',
-              )}
-            >
-              <ExportIcon />
-              Export .crux
-            </button>
-          )}
+              <p className="text-[10px] text-text-muted text-center">
+                Full archive — artifacts, conversation, and version history
+              </p>
+            </div>
+
+            {artifacts.length > 0 && (
+              <div className="flex flex-col gap-1.5">
+                {exportingZip ? (
+                  <button
+                    disabled
+                    className={cn(
+                      'w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-[var(--radius-sm)]',
+                      'text-sm font-medium font-body',
+                      'bg-surface text-text-muted border border-border cursor-wait',
+                    )}
+                  >
+                    <Spinner size={14} />
+                    Exporting...
+                  </button>
+                ) : (
+                  <button
+                    onClick={handleExportZip}
+                    disabled={exporting}
+                    className={cn(
+                      'w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-[var(--radius-sm)]',
+                      'text-sm font-medium font-body transition-all cursor-pointer',
+                      'bg-surface text-text-muted border border-border hover:border-text-muted hover:text-text',
+                      exporting && 'opacity-50 cursor-not-allowed',
+                    )}
+                  >
+                    <ZipIcon />
+                    Export Artifacts
+                  </button>
+                )}
+                <p className="text-[10px] text-text-muted text-center">
+                  Just the files — ready to unzip and use
+                </p>
+              </div>
+            )}
+          </div>
 
           {/* Progress */}
           {progress && (

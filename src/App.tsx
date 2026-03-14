@@ -9,12 +9,21 @@ import CruxPage from '@/pages/Crux';
 import Settings from '@/pages/Settings';
 import PublicCrux from '@/pages/PublicCrux';
 import PublicAuthor from '@/pages/PublicAuthor';
+import Discover from '@/pages/Discover';
 import NotFound from '@/pages/NotFound';
 
 const router = createBrowserRouter([
   // Public
   { path: '/', element: <Landing /> },
   { path: '/login', element: <Login /> },
+  {
+    path: '/discover',
+    element: (
+      <ErrorBoundary>
+        <Discover />
+      </ErrorBoundary>
+    ),
+  },
   {
     path: '/:username/:slug/*',
     element: (

@@ -46,6 +46,7 @@ export class SqliteCruxService implements ICruxService {
       kind: input.kind,
       status: 'living',
       visibility: 'private',
+      discoverable: false,
       authorId: input.authorId || identity.authorId,
       homeId: input.homeId || identity.homeId,
       meta: input.meta || {},
@@ -68,6 +69,7 @@ export class SqliteCruxService implements ICruxService {
     if (updates.kind !== undefined) changes.kind = updates.kind;
     if (updates.status !== undefined) changes.status = updates.status;
     if (updates.visibility !== undefined) changes.visibility = updates.visibility;
+    if (updates.discoverable !== undefined) changes.discoverable = updates.discoverable;
     if (updates.remoteId !== undefined) changes.remoteId = updates.remoteId;
     if (updates.meta !== undefined) changes.meta = { ...existing.meta, ...updates.meta };
 

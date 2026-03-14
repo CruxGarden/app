@@ -1,4 +1,4 @@
-import type { Attachment } from '@/api/types';
+import type { Artifact } from '@/api/types';
 
 // ── Path utilities ──────────────────────────────────────
 
@@ -41,12 +41,12 @@ export function dirname(filePath: string): string {
 // ── Path map ────────────────────────────────────────────
 
 /**
- * Build a map of normalized path → attachment ID.
+ * Build a map of normalized path → artifact ID.
  * Registers each artifact under its full normalized path and its filename.
  */
-export function buildPathMap(attachments: Attachment[]): Map<string, string> {
+export function buildPathMap(artifacts: Artifact[]): Map<string, string> {
   const map = new Map<string, string>();
-  for (const a of attachments) {
+  for (const a of artifacts) {
     const raw = a.meta?.path || a.filename || a.id;
     const norm = normalizePath(raw);
     map.set(norm, a.id);

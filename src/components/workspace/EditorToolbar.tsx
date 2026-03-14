@@ -5,6 +5,7 @@ import type { EditorTab, EditorViewMode } from '@/stores/uiStore';
 interface EditorToolbarProps {
   tab: EditorTab;
   hasContent: boolean;
+  hasFormSchema: boolean;
   onViewModeChange: (mode: EditorViewMode) => void;
   onSave?: () => void;
   onCapture?: () => void;
@@ -14,6 +15,7 @@ interface EditorToolbarProps {
 export default function EditorToolbar({
   tab,
   hasContent,
+  hasFormSchema,
   onViewModeChange,
   onSave,
   onCapture,
@@ -21,6 +23,10 @@ export default function EditorToolbar({
 }: EditorToolbarProps) {
   const canPreview = isPreviewable(tab.path) && hasContent;
   const inPreview = tab.viewMode === 'preview' && canPreview;
+
+  // Show form button for config.json when a form schema exists
+  const isConfigFile = /^config\.json$/i.test(tab.path.split('/').pop() || '');
+  const canForm = isConfigFile && hasFormSchema && hasContent;
 
   return (
     <div className="flex items-center justify-between px-3 py-1.5 border-b border-border gap-2 shrink-0">
@@ -59,18 +65,27 @@ export default function EditorToolbar({
         )}
 
         {/* View mode toggle */}
-        {canPreview && (
+        {(canPreview || canForm) && (
           <div className="flex bg-bg rounded-[var(--radius-sm)] p-0.5">
             <ModeButton
               label="Source"
               active={tab.viewMode === 'source'}
               onClick={() => onViewModeChange('source')}
             />
-            <ModeButton
-              label="Preview"
-              active={tab.viewMode === 'preview'}
-              onClick={() => onViewModeChange('preview')}
-            />
+            {canForm && (
+              <ModeButton
+                label="Form"
+                active={tab.viewMode === 'form'}
+                onClick={() => onViewModeChange('form')}
+              />
+            )}
+            {canPreview && (
+              <ModeButton
+                label="Preview"
+                active={tab.viewMode === 'preview'}
+                onClick={() => onViewModeChange('preview')}
+              />
+            )}
           </div>
         )}
       </div>

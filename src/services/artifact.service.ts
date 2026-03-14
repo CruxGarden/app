@@ -1,16 +1,16 @@
 import type {
-  Attachment,
-  CreateAttachmentInput,
-  UploadAttachmentInput,
-  UpdateAttachmentInput,
+  Artifact,
+  CreateArtifactInput,
+  UploadArtifactInput,
+  UpdateArtifactInput,
 } from './types';
 
-export interface IAttachmentService {
-  findById(id: string): Promise<Attachment>;
-  findByResource(resourceType: string, resourceId: string): Promise<Attachment[]>;
-  create(input: CreateAttachmentInput): Promise<Attachment>;
-  upload(input: UploadAttachmentInput): Promise<Attachment>;
-  update(id: string, updates: UpdateAttachmentInput): Promise<Attachment>;
+export interface IArtifactService {
+  findById(id: string): Promise<Artifact>;
+  findByResource(resourceType: string, resourceId: string): Promise<Artifact[]>;
+  create(input: CreateArtifactInput): Promise<Artifact>;
+  upload(input: UploadArtifactInput): Promise<Artifact>;
+  update(id: string, updates: UpdateArtifactInput): Promise<Artifact>;
   delete(id: string): Promise<void>;
   readContent(id: string): Promise<string>;
   downloadBlob(id: string): Promise<Blob>;

@@ -1,12 +1,12 @@
 import { getServices } from '@/services';
 import { useCruxStore } from '@/stores/cruxStore';
-import type { Attachment, ChatMessage } from '@/api/types';
+import type { Artifact, ChatMessage } from '@/api/types';
 
 /** Detect the "primary" artifact for preview/thumbnail purposes */
-function detectPreviewArtifact(artifacts: Attachment[]): {
+function detectPreviewArtifact(artifacts: Artifact[]): {
   type: 'html' | 'image' | 'markdown' | 'code' | 'text';
   path: string;
-  attachmentId: string;
+  artifactId: string;
   mimeType: string;
 } | null {
   if (artifacts.length === 0) return null;
@@ -19,7 +19,7 @@ function detectPreviewArtifact(artifacts: Attachment[]): {
     return {
       type: 'html',
       path: (indexHtml.meta?.path || indexHtml.filename) as string,
-      attachmentId: indexHtml.id,
+      artifactId: indexHtml.id,
       mimeType: indexHtml.mimeType,
     };
   }
@@ -29,7 +29,7 @@ function detectPreviewArtifact(artifacts: Attachment[]): {
     return {
       type: 'image',
       path: (firstImage.meta?.path || firstImage.filename) as string,
-      attachmentId: firstImage.id,
+      artifactId: firstImage.id,
       mimeType: firstImage.mimeType,
     };
   }
@@ -42,7 +42,7 @@ function detectPreviewArtifact(artifacts: Attachment[]): {
     return {
       type: 'markdown',
       path: (readme.meta?.path || readme.filename) as string,
-      attachmentId: readme.id,
+      artifactId: readme.id,
       mimeType: readme.mimeType,
     };
   }
@@ -59,7 +59,7 @@ function detectPreviewArtifact(artifacts: Attachment[]): {
     return {
       type: isCode ? 'code' : 'text',
       path: (firstText.meta?.path || firstText.filename) as string,
-      attachmentId: firstText.id,
+      artifactId: firstText.id,
       mimeType: firstText.mimeType,
     };
   }
@@ -145,11 +145,11 @@ export async function createSnapshot(options: CreateSnapshotOptions = {}): Promi
   const { crux } = state;
   if (!crux) return;
 
-  const { crux: cruxService, attachment, dimension } = getServices();
+  const { crux: cruxService, artifact, dimension } = getServices();
   const { growthCount, messages, growths, artifacts, messageSegmentStart } = state;
 
   // Compute snapshot fingerprint
-  const fingerprint = await attachment.computeSnapshotFingerprint(crux.id);
+  const fingerprint = await artifact.computeSnapshotFingerprint(crux.id);
 
   // Determine parent: use activeBranch if set (after branching), otherwise most recent snapshot
   const activeBranch = crux.meta?.settings?.activeBranch as string | undefined;
@@ -174,10 +174,10 @@ export async function createSnapshot(options: CreateSnapshotOptions = {}): Promi
   });
 
   // Clone all workspace artifacts to the snapshot
-  await attachment.cloneArtifactsToSnapshot(crux.id, snapshotCrux.id);
+  await artifact.cloneArtifactsToSnapshot(crux.id, snapshotCrux.id);
 
   // Detect preview from snapshot's artifacts
-  const snapshotArtifacts = await attachment.findByResource('crux', snapshotCrux.id);
+  const snapshotArtifacts = await artifact.findByResource('crux', snapshotCrux.id);
   const preview = detectPreviewArtifact(snapshotArtifacts);
   const artifactNames = snapshotArtifacts
     .filter((a) => !a.filename?.endsWith('.keep'))

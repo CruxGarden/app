@@ -26,10 +26,10 @@ export const PANE_COLORS: Record<PaneType, string> = {
   publish: 'var(--pane-publish)',
 };
 
-export type EditorViewMode = 'source' | 'preview';
+export type EditorViewMode = 'source' | 'preview' | 'form';
 
 export interface EditorTab {
-  id: string; // attachment ID
+  id: string; // artifact ID
   path: string; // file path (from meta.path or filename)
   name: string; // display name (last segment)
   dirty: boolean;

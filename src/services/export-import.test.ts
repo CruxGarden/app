@@ -38,13 +38,13 @@ describe('Export / Import', () => {
     it('exports and re-imports a crux with artifacts', async () => {
       const crux = await svc.crux.create({ title: 'With Files', type: 'workspace' });
 
-      await svc.attachment.upload({
+      await svc.artifact.upload({
         resourceId: crux.id,
         blob: new File(['<h1>Hello</h1>'], 'index.html', { type: 'text/html' }),
         mimeType: 'text/html',
         meta: { path: 'index.html' },
       });
-      await svc.attachment.upload({
+      await svc.artifact.upload({
         resourceId: crux.id,
         blob: new File(['body { color: red }'], 'style.css', { type: 'text/css' }),
         mimeType: 'text/css',
@@ -55,7 +55,7 @@ describe('Export / Import', () => {
       await svc.crux.delete(crux.id);
 
       const imported = await importCrux({ data: result.blob });
-      const importedArtifacts = await svc.attachment.findByResource('crux', imported.cruxId);
+      const importedArtifacts = await svc.artifact.findByResource('crux', imported.cruxId);
 
       expect(importedArtifacts).toHaveLength(2);
       expect(imported.failedArtifacts).toEqual([]);
@@ -64,7 +64,7 @@ describe('Export / Import', () => {
 
       // Verify content survived the round-trip
       const htmlArt = importedArtifacts.find((a) => a.meta?.path === 'index.html')!;
-      const contentBlob = await svc.attachment.downloadBlob(htmlArt.id);
+      const contentBlob = await svc.artifact.downloadBlob(htmlArt.id);
       const content = await contentBlob.text();
       expect(content).toBe('<h1>Hello</h1>');
     });
@@ -97,7 +97,7 @@ describe('Export / Import', () => {
       const crux = await svc.crux.create({ title: 'Versioned', type: 'workspace' });
 
       // Add an artifact
-      await svc.attachment.upload({
+      await svc.artifact.upload({
         resourceId: crux.id,
         blob: new File(['v1'], 'index.html', { type: 'text/html' }),
         mimeType: 'text/html',
@@ -112,7 +112,7 @@ describe('Export / Import', () => {
         kind: 'snapshot',
         meta: { messages: [{ role: 'user', content: 'First turn' }] },
       });
-      await svc.attachment.cloneArtifactsToSnapshot(crux.id, snap1.id);
+      await svc.artifact.cloneArtifactsToSnapshot(crux.id, snap1.id);
       await svc.dimension.create({
         sourceId: crux.id,
         targetId: snap1.id,
@@ -121,7 +121,7 @@ describe('Export / Import', () => {
       });
 
       // Modify workspace and take snapshot 2
-      await svc.attachment.upload({
+      await svc.artifact.upload({
         resourceId: crux.id,
         blob: new File(['body{}'], 'style.css', { type: 'text/css' }),
         mimeType: 'text/css',
@@ -135,7 +135,7 @@ describe('Export / Import', () => {
         kind: 'snapshot',
         meta: { messages: [{ role: 'user', content: 'Second turn' }], parentCruxId: snap1.id },
       });
-      await svc.attachment.cloneArtifactsToSnapshot(crux.id, snap2.id);
+      await svc.artifact.cloneArtifactsToSnapshot(crux.id, snap2.id);
       await svc.dimension.create({
         sourceId: crux.id,
         targetId: snap2.id,
@@ -163,10 +163,10 @@ describe('Export / Import', () => {
       expect(sorted[1]!.weight).toBe(2);
 
       // Verify snapshot cruxes exist and have artifacts
-      const snap1Artifacts = await svc.attachment.findByResource('crux', sorted[0]!.targetId);
+      const snap1Artifacts = await svc.artifact.findByResource('crux', sorted[0]!.targetId);
       expect(snap1Artifacts).toHaveLength(1); // only index.html at snapshot 1
 
-      const snap2Artifacts = await svc.attachment.findByResource('crux', sorted[1]!.targetId);
+      const snap2Artifacts = await svc.artifact.findByResource('crux', sorted[1]!.targetId);
       expect(snap2Artifacts).toHaveLength(2); // index.html + style.css at snapshot 2
 
       // Verify growthCount in meta and result
@@ -241,7 +241,7 @@ describe('Export / Import', () => {
       const crux = await svc.crux.create({ title: 'Dedup Test', type: 'workspace' });
 
       // Upload a file
-      await svc.attachment.upload({
+      await svc.artifact.upload({
         resourceId: crux.id,
         blob: new File(['same content'], 'file.txt', { type: 'text/plain' }),
         mimeType: 'text/plain',
@@ -256,7 +256,7 @@ describe('Export / Import', () => {
           type: 'crux',
           kind: 'snapshot',
         });
-        await svc.attachment.cloneArtifactsToSnapshot(crux.id, snap.id);
+        await svc.artifact.cloneArtifactsToSnapshot(crux.id, snap.id);
         await svc.dimension.create({
           sourceId: crux.id,
           targetId: snap.id,
@@ -350,7 +350,7 @@ describe('Export / Import', () => {
       const crux = await svc.crux.create({ title: 'Thumb Test', type: 'workspace' });
 
       // Create a preview.jpg artifact
-      await svc.attachment.upload({
+      await svc.artifact.upload({
         resourceId: crux.id,
         blob: new File([new Uint8Array([0xff, 0xd8, 0xff])], 'preview.jpg', { type: 'image/jpeg' }),
         mimeType: 'image/jpeg',
@@ -363,10 +363,10 @@ describe('Export / Import', () => {
         type: 'crux',
         kind: 'snapshot',
       });
-      await svc.attachment.cloneArtifactsToSnapshot(crux.id, snap.id);
+      await svc.artifact.cloneArtifactsToSnapshot(crux.id, snap.id);
 
-      // Get the snapshot's preview.jpg attachment ID
-      const snapArtifacts = await svc.attachment.findByResource('crux', snap.id);
+      // Get the snapshot's preview.jpg artifact ID
+      const snapArtifacts = await svc.artifact.findByResource('crux', snap.id);
       const thumbArt = snapArtifacts.find((a) => a.meta?.path === 'preview.jpg')!;
 
       await svc.dimension.create({
@@ -401,7 +401,7 @@ describe('Export / Import', () => {
       const crux = await svc.crux.create({ title: 'Original', type: 'workspace' });
       const originalId = crux.id;
 
-      await svc.attachment.upload({
+      await svc.artifact.upload({
         resourceId: crux.id,
         blob: new File(['hello'], 'file.txt', { type: 'text/plain' }),
         mimeType: 'text/plain',
@@ -426,8 +426,8 @@ describe('Export / Import', () => {
       expect(cloned.slug).not.toBe(original.slug);
 
       // Both should have artifacts
-      const originalArts = await svc.attachment.findByResource('crux', originalId);
-      const clonedArts = await svc.attachment.findByResource('crux', imported.cruxId);
+      const originalArts = await svc.artifact.findByResource('crux', originalId);
+      const clonedArts = await svc.artifact.findByResource('crux', imported.cruxId);
       expect(originalArts).toHaveLength(1);
       expect(clonedArts).toHaveLength(1);
     });
@@ -436,7 +436,7 @@ describe('Export / Import', () => {
       const crux = await svc.crux.create({ title: 'To Replace', type: 'workspace' });
       const originalId = crux.id;
 
-      await svc.attachment.upload({
+      await svc.artifact.upload({
         resourceId: crux.id,
         blob: new File(['original'], 'file.txt', { type: 'text/plain' }),
         mimeType: 'text/plain',
@@ -569,7 +569,7 @@ describe('Export / Import', () => {
     it('restores original crux from backup when replace mode fails mid-import', async () => {
       // Create original crux with an artifact
       const crux = await svc.crux.create({ title: 'Original', type: 'workspace' });
-      await svc.attachment.upload({
+      await svc.artifact.upload({
         resourceId: crux.id,
         blob: new File(['original content'], 'readme.txt', { type: 'text/plain' }),
         mimeType: 'text/plain',
@@ -677,7 +677,7 @@ describe('Export / Import', () => {
   describe('ZIP structure validation', () => {
     it('exported ZIP contains all required files', async () => {
       const crux = await svc.crux.create({ title: 'Structure Test', type: 'workspace' });
-      await svc.attachment.upload({
+      await svc.artifact.upload({
         resourceId: crux.id,
         blob: new File(['test'], 'test.txt', { type: 'text/plain' }),
         mimeType: 'text/plain',
@@ -840,7 +840,7 @@ describe('Export / Import', () => {
 
       // Same content used across workspace + 3 snapshots
       const sharedContent = 'shared file content that appears everywhere';
-      await svc.attachment.upload({
+      await svc.artifact.upload({
         resourceId: crux.id,
         blob: new File([sharedContent], 'shared.txt', { type: 'text/plain' }),
         mimeType: 'text/plain',
@@ -855,7 +855,7 @@ describe('Export / Import', () => {
           kind: 'snapshot',
           meta: { messages: [] },
         });
-        await svc.attachment.cloneArtifactsToSnapshot(crux.id, snap.id);
+        await svc.artifact.cloneArtifactsToSnapshot(crux.id, snap.id);
         await svc.dimension.create({
           sourceId: crux.id,
           targetId: snap.id,
@@ -887,13 +887,13 @@ describe('Export / Import', () => {
     it('version manifests reference artifacts by path → fingerprint (not embedded content)', async () => {
       const crux = await svc.crux.create({ title: 'Ref Check', type: 'workspace' });
 
-      await svc.attachment.upload({
+      await svc.artifact.upload({
         resourceId: crux.id,
         blob: new File(['<h1>hi</h1>'], 'index.html', { type: 'text/html' }),
         mimeType: 'text/html',
         meta: { path: 'index.html' },
       });
-      await svc.attachment.upload({
+      await svc.artifact.upload({
         resourceId: crux.id,
         blob: new File(['body{}'], 'style.css', { type: 'text/css' }),
         mimeType: 'text/css',
@@ -924,13 +924,13 @@ describe('Export / Import', () => {
     it('import creates correct encoding for text vs binary artifacts', async () => {
       const crux = await svc.crux.create({ title: 'Encoding Test', type: 'workspace' });
 
-      await svc.attachment.upload({
+      await svc.artifact.upload({
         resourceId: crux.id,
         blob: new File(['hello'], 'readme.txt', { type: 'text/plain' }),
         mimeType: 'text/plain',
         meta: { path: 'readme.txt' },
       });
-      await svc.attachment.upload({
+      await svc.artifact.upload({
         resourceId: crux.id,
         blob: new File([new Uint8Array([0xff, 0xd8, 0xff])], 'photo.jpg', { type: 'image/jpeg' }),
         mimeType: 'image/jpeg',
@@ -941,7 +941,7 @@ describe('Export / Import', () => {
       await svc.crux.delete(crux.id);
 
       const imported = await importCrux({ data: result.blob });
-      const arts = await svc.attachment.findByResource('crux', imported.cruxId);
+      const arts = await svc.artifact.findByResource('crux', imported.cruxId);
 
       const txt = arts.find((a) => a.meta?.path === 'readme.txt')!;
       const jpg = arts.find((a) => a.meta?.path === 'photo.jpg')!;

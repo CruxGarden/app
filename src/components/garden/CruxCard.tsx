@@ -1,8 +1,7 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/cn';
-import { Spinner } from '@/components/ui';
-import { exportCrux } from '@/services/crux-io';
+import ExportModal from '@/components/garden/ExportModal';
 import type { Crux } from '@/api/types';
 
 interface CruxCardProps {
@@ -48,35 +47,10 @@ function formatDateTime(dateStr: string): string {
 export default function CruxCard({ crux, linkTo, onDelete, sortBy = 'created' }: CruxCardProps) {
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
-  const [exportingId, setExportingId] = useState(false);
+  const [exportOpen, setExportOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
   const description = crux.meta?.summary?.purpose || crux.description;
-
-  const handleExport = useCallback(async () => {
-    setExportingId(true);
-    setMenuOpen(false);
-    try {
-      const result = await exportCrux({
-        cruxId: crux.id,
-        messages: (crux.meta?.messages as unknown[]) || [],
-        summary: crux.meta?.summary || null,
-      });
-
-      const url = URL.createObjectURL(result.blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = result.filename;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-    } catch (err) {
-      console.error('Export failed:', err);
-    } finally {
-      setExportingId(false);
-    }
-  }, [crux]);
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -134,18 +108,19 @@ export default function CruxCard({ crux, linkTo, onDelete, sortBy = 'created' }:
             menuOpen ? 'opacity-100' : 'opacity-0 group-hover:opacity-100',
           )}
         >
-          {exportingId ? <Spinner size={14} /> : <MoreIcon />}
+          <MoreIcon />
         </button>
         {menuOpen && (
           <div className="absolute right-0 top-full mt-1 w-32 bg-surface-solid border border-border rounded-[var(--radius-sm)] shadow-xl py-1 z-50">
             <button
               onClick={(e) => {
                 e.stopPropagation();
-                handleExport();
+                setMenuOpen(false);
+                setExportOpen(true);
               }}
               className="w-full px-3 py-1.5 text-left text-xs text-text hover:bg-accent-muted transition-colors cursor-pointer"
             >
-              Export
+              Export...
             </button>
             {onDelete && (
               <button
@@ -162,6 +137,8 @@ export default function CruxCard({ crux, linkTo, onDelete, sortBy = 'created' }:
           </div>
         )}
       </div>
+
+      <ExportModal open={exportOpen} onClose={() => setExportOpen(false)} crux={crux} />
     </div>
   );
 }

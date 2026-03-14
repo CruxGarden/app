@@ -50,13 +50,13 @@ describe('Garden Export / Import', () => {
 
     it('round-trips cruxes with artifacts', async () => {
       const crux = await svc.crux.create({ title: 'With Files', type: 'workspace' });
-      await svc.attachment.upload({
+      await svc.artifact.upload({
         resourceId: crux.id,
         blob: new File(['<h1>Hello</h1>'], 'index.html', { type: 'text/html' }),
         mimeType: 'text/html',
         meta: { path: 'index.html' },
       });
-      await svc.attachment.upload({
+      await svc.artifact.upload({
         resourceId: crux.id,
         blob: new File(['body { color: red }'], 'style.css', { type: 'text/css' }),
         mimeType: 'text/css',
@@ -111,13 +111,13 @@ describe('Garden Export / Import', () => {
 
       // Upload identical content to both cruxes
       const content = 'same content across cruxes';
-      await svc.attachment.upload({
+      await svc.artifact.upload({
         resourceId: cruxA.id,
         blob: new File([content], 'file.txt', { type: 'text/plain' }),
         mimeType: 'text/plain',
         meta: { path: 'file.txt' },
       });
-      await svc.attachment.upload({
+      await svc.artifact.upload({
         resourceId: cruxB.id,
         blob: new File([content], 'file.txt', { type: 'text/plain' }),
         mimeType: 'text/plain',

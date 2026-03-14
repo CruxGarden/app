@@ -108,6 +108,7 @@ export default function PublishPane() {
 
   const { ref, isTooNarrow } = usePaneWidth(270);
 
+  const updateCrux = useCruxStore((s) => s.updateCrux);
   const isPublished = crux?.meta?.publishedAt != null;
 
   const lastEditedAt = useMemo(() => {
@@ -226,6 +227,30 @@ export default function PublishPane() {
               <p className="text-[11px] font-mono text-text-muted text-center">Not published</p>
             </div>
           )}
+
+          {/* Discoverable toggle */}
+          <label className="flex items-center gap-2 cursor-pointer select-none group">
+            <button
+              onClick={() => updateCrux({ discoverable: !crux.discoverable })}
+              className={cn(
+                'relative w-7 h-4 rounded-full transition-colors shrink-0 cursor-pointer',
+                crux.discoverable ? 'bg-accent' : 'bg-border',
+              )}
+            >
+              <span
+                className={cn(
+                  'absolute top-0.5 left-0.5 w-3 h-3 rounded-full bg-white transition-transform',
+                  crux.discoverable && 'translate-x-3',
+                )}
+              />
+            </button>
+            <div className="flex flex-col">
+              <span className="text-xs font-body text-text">Discoverable</span>
+              <span className="text-[10px] text-text-muted">
+                {crux.discoverable ? 'Visible in search on crux.garden' : 'Only accessible by direct link'}
+              </span>
+            </div>
+          </label>
 
           {/* Action button — state-aware, no disabled green */}
           {publishing ? (

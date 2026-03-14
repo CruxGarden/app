@@ -11,7 +11,7 @@ export type {
   CruxSummary,
   ChatMessage,
   ToolCall,
-  Attachment,
+  Artifact,
   Dimension,
   DimensionType,
   Author,
@@ -44,11 +44,12 @@ export interface UpdateCruxInput {
   kind?: 'webapp' | 'page' | 'document' | 'image' | 'snapshot' | null;
   status?: 'living' | 'frozen';
   visibility?: 'public' | 'private' | 'unlisted';
+  discoverable?: boolean;
   meta?: Record<string, unknown>;
   remoteId?: string;
 }
 
-export interface CreateAttachmentInput {
+export interface CreateArtifactInput {
   resourceId: string;
   resourceType?: string;
   content: string;
@@ -56,7 +57,7 @@ export interface CreateAttachmentInput {
   meta?: { path?: string; [key: string]: unknown };
 }
 
-export interface UploadAttachmentInput {
+export interface UploadArtifactInput {
   resourceId: string;
   resourceType?: string;
   blob: Blob;
@@ -66,7 +67,7 @@ export interface UploadAttachmentInput {
   meta?: { path?: string; growthId?: string; [key: string]: unknown };
 }
 
-export interface UpdateAttachmentInput {
+export interface UpdateArtifactInput {
   meta?: { path?: string; [key: string]: unknown };
   mimeType?: string;
   filename?: string;

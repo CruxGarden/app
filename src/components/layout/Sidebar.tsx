@@ -1,11 +1,9 @@
-import { NavLink, useNavigate } from 'react-router-dom';
+import { useState } from 'react';
+import { NavLink } from 'react-router-dom';
 import { cn } from '@/lib/cn';
-import { useCruxStore } from '@/stores/cruxStore';
-import { DEFAULT_PANE_ORDER } from '@/stores/uiStore';
-import { setSetting } from '@/services/settings';
-import { getApiKey } from '@/ai/keys';
 import Logo from '@/components/brand/Logo';
 import CruxBloom from '@/components/brand/CruxBloom';
+import NewCruxModal from '@/components/garden/NewCruxModal';
 
 function PlusIcon() {
   return (
@@ -45,32 +43,7 @@ function SidebarLink({ to, children }: { to: string; children: React.ReactNode }
 }
 
 export default function Sidebar() {
-  const navigate = useNavigate();
-  const createCrux = useCruxStore((s) => s.createCrux);
-
-  const handleNewCrux = async () => {
-    const crux = await createCrux();
-
-    // Set initial pane layout based on whether user has an API key
-    const hasApiKey = !!(await getApiKey('anthropic'));
-    const visibility: Record<string, boolean> = {};
-    for (const pane of DEFAULT_PANE_ORDER) visibility[pane] = false;
-
-    if (hasApiKey) {
-      visibility.collaboration = true;
-      visibility.details = true;
-    } else {
-      visibility.artifacts = true;
-      visibility.workshop = true;
-    }
-
-    setSetting(
-      `cruxgarden:layout:${crux.id}`,
-      JSON.stringify({ paneOrder: DEFAULT_PANE_ORDER, paneVisibility: visibility }),
-    );
-
-    navigate(`/c/${crux.id}`);
-  };
+  const [showNewCrux, setShowNewCrux] = useState(false);
 
   return (
     <aside className="flex flex-col w-56 h-full border-r border-border bg-surface-solid">
@@ -87,7 +60,7 @@ export default function Sidebar() {
         </SidebarLink>
 
         <button
-          onClick={handleNewCrux}
+          onClick={() => setShowNewCrux(true)}
           className={cn(
             'flex items-center gap-3 px-3 py-2 rounded-[var(--radius-sm)] text-sm font-body',
             'text-text-muted hover:text-text hover:bg-surface',
@@ -99,6 +72,8 @@ export default function Sidebar() {
           New Crux
         </button>
       </nav>
+
+      <NewCruxModal open={showNewCrux} onClose={() => setShowNewCrux(false)} />
     </aside>
   );
 }

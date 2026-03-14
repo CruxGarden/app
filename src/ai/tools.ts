@@ -130,6 +130,37 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
       additionalProperties: false,
     },
   },
+  {
+    name: 'generate_image',
+    description:
+      'Generate an image using AI and save it to the workspace as a file. ' +
+      'USE WHEN: The user asks you to create, generate, or design an image, icon, illustration, logo, photo, or graphic. ' +
+      'This calls an image generation model (OpenAI) and saves the result as a PNG file in the workspace. ' +
+      'Provide a detailed, descriptive prompt for best results. The image is saved at the specified path.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        prompt: {
+          type: 'string',
+          description:
+            'Detailed description of the image to generate. Be specific about style, composition, colors, and content.',
+        },
+        path: {
+          type: 'string',
+          description:
+            'File path to save the generated image. Should end in .png. Example: "images/hero.png", "logo.png".',
+        },
+        size: {
+          type: 'string',
+          enum: ['1024x1024', '1536x1024', '1024x1536'],
+          description:
+            'Image dimensions. Default: "1024x1024". Use "1536x1024" for landscape, "1024x1536" for portrait.',
+        },
+      },
+      required: ['prompt', 'path'],
+      additionalProperties: false,
+    },
+  },
 ];
 
 /** MIME type map — matches api/src/ai/ai.service.ts getMimeType */
@@ -218,8 +249,9 @@ function isBinaryMime(mimeType: string): boolean {
 export function createToolExecutor(
   cruxId: string,
   onDeleteRequest?: (path: string) => Promise<boolean>,
+  chatModel?: string,
 ) {
-  const { attachment: attachmentService } = getServices();
+  const { artifact: artifactService } = getServices();
   const recentlyReadFiles = new Set<string>();
 
   return async function executeTool(
@@ -255,7 +287,7 @@ export function createToolExecutor(
 
     // Hard-enforce read-before-write for existing files
     if (toolName === 'write_file' && input.path && !hasBeenRead) {
-      const artifacts = await attachmentService.findByResource('crux', cruxId);
+      const artifacts = await artifactService.findByResource('crux', cruxId);
       const existing = findArtifactByPath(artifacts, input.path as string);
       if (existing) {
         return formatToolError(
@@ -270,24 +302,27 @@ export function createToolExecutor(
 
       switch (toolName) {
         case 'write_file':
-          result = await toolWriteFile(input, cruxId, attachmentService);
+          result = await toolWriteFile(input, cruxId, artifactService);
           break;
         case 'edit_file':
-          result = await toolEditFile(input, cruxId, attachmentService);
+          result = await toolEditFile(input, cruxId, artifactService);
           break;
         case 'read_file':
-          result = await toolReadFile(input, cruxId, attachmentService);
+          result = await toolReadFile(input, cruxId, artifactService);
           break;
         case 'delete_file':
           result = await toolDeleteFile(
             input,
             cruxId,
-            attachmentService,
+            artifactService,
             onDeleteRequest,
           );
           break;
         case 'list_files':
-          result = await toolListFiles(cruxId, attachmentService);
+          result = await toolListFiles(cruxId, artifactService);
+          break;
+        case 'generate_image':
+          result = await toolGenerateImage(input, cruxId, artifactService, chatModel);
           break;
         default:
           return formatToolError(toolName, `Unknown tool: ${toolName}`);
@@ -309,32 +344,32 @@ export function createToolExecutor(
 // ── Tool implementations ────────────────────────────────────
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- service layer type
-type AttachmentService = any;
+type ArtifactService = any;
 
 async function toolWriteFile(
   input: Record<string, unknown>,
   cruxId: string,
-  attachmentService: AttachmentService,
+  artifactService: ArtifactService,
 ): Promise<string> {
   const path = input.path as string;
   const content = input.content as string;
   const encoding = (input.encoding as string) || 'utf-8';
 
   // Check if file already exists (for response message)
-  const artifacts = await attachmentService.findByResource('crux', cruxId);
+  const artifacts = await artifactService.findByResource('crux', cruxId);
   const existing = findArtifactByPath(artifacts, path);
 
   if (encoding === 'base64') {
     const binary = Uint8Array.from(atob(content), (c) => c.charCodeAt(0));
     const blob = new Blob([binary], { type: guessMimeType(path) });
-    await attachmentService.upload({
+    await artifactService.upload({
       resourceId: cruxId,
       resourceType: 'crux',
       blob,
       meta: { path },
     });
   } else {
-    await attachmentService.create({
+    await artifactService.create({
       resourceId: cruxId,
       resourceType: 'crux',
       content,
@@ -348,20 +383,20 @@ async function toolWriteFile(
 async function toolEditFile(
   input: Record<string, unknown>,
   cruxId: string,
-  attachmentService: AttachmentService,
+  artifactService: ArtifactService,
 ): Promise<string> {
   const path = input.path as string;
   const oldString = input.old_string as string;
   const newString = input.new_string as string;
   const replaceAll = (input.replace_all as boolean) ?? false;
 
-  const artifacts = await attachmentService.findByResource('crux', cruxId);
+  const artifacts = await artifactService.findByResource('crux', cruxId);
   const match = findArtifactByPath(artifacts, path);
   if (!match) return formatToolError('edit_file', `File not found: ${path}`);
   if (isBinaryMime(match.mimeType || ''))
     return formatToolError('edit_file', `Cannot edit binary file: ${path}`);
 
-  const rawContent = await attachmentService.readContent(match.id);
+  const rawContent = await artifactService.readContent(match.id);
 
   // Normalize line endings to \n for reliable matching (matches API behavior)
   const content = rawContent.replace(/\r\n/g, '\n');
@@ -424,7 +459,7 @@ async function toolEditFile(
     updatedContent = content.replace(effectiveOld, () => normalizedNew);
   }
 
-  await attachmentService.create({
+  await artifactService.create({
     resourceId: cruxId,
     resourceType: 'crux',
     content: updatedContent,
@@ -441,30 +476,30 @@ async function toolEditFile(
 async function toolReadFile(
   input: Record<string, unknown>,
   cruxId: string,
-  attachmentService: AttachmentService,
+  artifactService: ArtifactService,
 ): Promise<string> {
   const path = input.path as string;
 
-  const artifacts = await attachmentService.findByResource('crux', cruxId);
+  const artifacts = await artifactService.findByResource('crux', cruxId);
   const match = findArtifactByPath(artifacts, path);
   if (!match) return formatToolError('read_file', `File not found: ${path}`);
 
   if (match.encoding === 'binary' || isBinaryMime(match.mimeType || '')) {
-    const blob = await attachmentService.downloadBlob(match.id);
+    const blob = await artifactService.downloadBlob(match.id);
     const buffer = await blob.arrayBuffer();
     const base64 = btoa(String.fromCharCode(...new Uint8Array(buffer)));
     return `[Binary file: ${path} (${match.mimeType}, ${buffer.byteLength} bytes)] base64:${base64}`;
   }
 
   // Return full content — no truncation (matches API behavior)
-  const content = await attachmentService.readContent(match.id);
+  const content = await artifactService.readContent(match.id);
   return content;
 }
 
 async function toolDeleteFile(
   input: Record<string, unknown>,
   cruxId: string,
-  attachmentService: AttachmentService,
+  artifactService: ArtifactService,
   onDeleteRequest?: (path: string) => Promise<boolean>,
 ): Promise<string> {
   const path = input.path as string;
@@ -474,19 +509,19 @@ async function toolDeleteFile(
     if (!confirmed) return `Delete cancelled by user: ${path}`;
   }
 
-  const artifacts = await attachmentService.findByResource('crux', cruxId);
+  const artifacts = await artifactService.findByResource('crux', cruxId);
   const match = findArtifactByPath(artifacts, path);
   if (!match) return formatToolError('delete_file', `File not found: ${path}`);
 
-  await attachmentService.delete(match.id);
+  await artifactService.delete(match.id);
   return `Deleted file: ${path}`;
 }
 
 async function toolListFiles(
   cruxId: string,
-  attachmentService: AttachmentService,
+  artifactService: ArtifactService,
 ): Promise<string> {
-  const artifacts = await attachmentService.findByResource('crux', cruxId);
+  const artifacts = await artifactService.findByResource('crux', cruxId);
   const files = artifacts
     .filter((a: { type: string }) => a.type === 'artifact')
     .map(
@@ -494,6 +529,173 @@ async function toolListFiles(
         a.meta?.path || a.filename,
     );
   return files.join('\n') || 'No files yet.';
+}
+
+async function toolGenerateImage(
+  input: Record<string, unknown>,
+  cruxId: string,
+  artifactService: ArtifactService,
+  chatModel?: string,
+): Promise<string> {
+  const prompt = input.prompt as string;
+  const path = input.path as string;
+  const size = (input.size as string) || '1024x1024';
+
+  if (!prompt) return formatToolError('generate_image', 'prompt is required');
+  if (!path) return formatToolError('generate_image', 'path is required');
+
+  const { getApiKey } = await import('./keys');
+  const { getProviderForModel } = await import('./providers');
+  const { PROVIDERS } = await import('./providers');
+
+  // Determine which provider to use for image generation:
+  // 1. If the current chat provider supports images, use it
+  // 2. Otherwise fall back to any provider that supports images
+  const chatProvider = chatModel ? getProviderForModel(chatModel) : null;
+  const chatProviderInfo = chatProvider ? PROVIDERS[chatProvider] : null;
+  const chatSupportsImages = chatProviderInfo?.capabilities.includes('Images');
+
+  let imageProvider: string | null = null;
+  let imageApiKey: string | null = null;
+
+  if (chatSupportsImages && chatProvider) {
+    const key = await getApiKey(chatProvider);
+    if (key) {
+      imageProvider = chatProvider;
+      imageApiKey = key;
+    }
+  }
+
+  // Fallback: try any provider that supports images
+  if (!imageApiKey) {
+    for (const [id, info] of Object.entries(PROVIDERS)) {
+      if (info.capabilities.includes('Images')) {
+        const key = await getApiKey(id);
+        if (key) {
+          imageProvider = id;
+          imageApiKey = key;
+          break;
+        }
+      }
+    }
+  }
+
+  if (!imageApiKey || !imageProvider) {
+    return formatToolError(
+      'generate_image',
+      'No API key configured for a provider that supports image generation (OpenAI or Google Gemini). Add one in Settings.',
+    );
+  }
+
+  // Build ordered list of providers to try: current provider first, then fallbacks
+  const attempts: { provider: string; apiKey: string }[] = [
+    { provider: imageProvider, apiKey: imageApiKey },
+  ];
+  // Add other image-capable providers as fallbacks
+  for (const [id, info] of Object.entries(PROVIDERS)) {
+    if (id !== imageProvider && info.capabilities.includes('Images')) {
+      const key = await getApiKey(id);
+      if (key) attempts.push({ provider: id, apiKey: key });
+    }
+  }
+
+  const errors: string[] = [];
+
+  for (const attempt of attempts) {
+    try {
+      let imageBlob: Blob;
+
+      if (attempt.provider === 'openai') {
+        imageBlob = await generateImageOpenAI(attempt.apiKey, prompt, size);
+      } else if (attempt.provider === 'google') {
+        imageBlob = await generateImageGemini(attempt.apiKey, prompt);
+      } else {
+        continue;
+      }
+
+      await artifactService.upload({
+        resourceId: cruxId,
+        resourceType: 'crux',
+        blob: imageBlob,
+        meta: { path },
+      });
+
+      return `Generated and saved image: ${path}`;
+    } catch (err: unknown) {
+      const msg = (err as Error).message || String(err);
+      errors.push(`${attempt.provider}: ${msg}`);
+      // Continue to next provider
+    }
+  }
+
+  return formatToolError('generate_image', `All image providers failed:\n${errors.join('\n')}`);
+}
+
+async function generateImageOpenAI(apiKey: string, prompt: string, size: string): Promise<Blob> {
+  const { default: OpenAI } = await import('openai');
+  const client = new OpenAI({ apiKey, dangerouslyAllowBrowser: true });
+
+  const response = await client.images.generate({
+    model: 'gpt-image-1',
+    prompt,
+    n: 1,
+    size: size as '1024x1024' | '1536x1024' | '1024x1536',
+    output_format: 'png',
+  });
+
+  const imageData = response.data?.[0];
+  if (!imageData?.b64_json) {
+    throw new Error('No image data returned from OpenAI');
+  }
+
+  const binary = Uint8Array.from(atob(imageData.b64_json), (c) => c.charCodeAt(0));
+  return new Blob([binary], { type: 'image/png' });
+}
+
+async function generateImageGemini(apiKey: string, prompt: string): Promise<Blob> {
+  const { GoogleGenAI } = await import('@google/genai');
+  const client = new GoogleGenAI({ apiKey });
+
+  // Try 1: Imagen (requires paid plan)
+  try {
+    const response = await client.models.generateImages({
+      model: 'imagen-4.0-generate-001',
+      prompt,
+      config: { numberOfImages: 1 },
+    });
+
+    const image = response.generatedImages?.[0];
+    if (image?.image?.imageBytes) {
+      const binary = Uint8Array.from(atob(image.image.imageBytes), (c) => c.charCodeAt(0));
+      return new Blob([binary], { type: 'image/png' });
+    }
+  } catch {
+    // Imagen failed (likely paid plan required) — try native Gemini
+  }
+
+  // Try 2: Native Gemini image generation via generateContent with responseModalities
+  const response = await client.models.generateContent({
+    model: 'gemini-2.0-flash',
+    contents: [{ role: 'user', parts: [{ text: `Generate an image: ${prompt}` }] }],
+    config: {
+      responseModalities: ['IMAGE', 'TEXT'],
+    },
+  });
+
+  // Extract inline image from response parts
+  const parts = response.candidates?.[0]?.content?.parts;
+  if (parts) {
+    for (const part of parts) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- SDK inline image type
+      const inlineData = (part as any).inlineData;
+      if (inlineData?.data && inlineData?.mimeType?.startsWith('image/')) {
+        const binary = Uint8Array.from(atob(inlineData.data), (c) => c.charCodeAt(0));
+        return new Blob([binary], { type: inlineData.mimeType });
+      }
+    }
+  }
+
+  throw new Error('No image data returned from Google Gemini (tried Imagen and native generation)');
 }
 
 /**
@@ -515,4 +717,4 @@ function findArtifactByPath(artifacts: any[], path: string): any | null {
 }
 
 /** Tool names that mutate files (trigger system prompt refresh) */
-export const MUTATING_TOOLS = ['write_file', 'edit_file', 'delete_file'];
+export const MUTATING_TOOLS = ['write_file', 'edit_file', 'delete_file', 'generate_image'];

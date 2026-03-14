@@ -16,6 +16,7 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.78.0",
+    "@google/genai": "^1.45.0",
     "@monaco-editor/react": "^4.7.0",
     "axios": "^1.7.9",
     "clsx": "^2.1.1",

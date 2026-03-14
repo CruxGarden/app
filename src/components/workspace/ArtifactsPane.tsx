@@ -147,8 +147,8 @@ export default function ArtifactsPane() {
       const parentPath = useUIStore.getState().activeFileOperation?.parentPath;
       const fullPath = parentPath ? `${parentPath}/${name}` : name;
       cancelFileOperation();
-      const attachment = await createFile(fullPath);
-      openFile(attachment.id, fullPath);
+      const newFile = await createFile(fullPath);
+      openFile(newFile.id, fullPath);
       if (!useUIStore.getState().paneVisibility.workshop) setPaneVisible('workshop', true);
     },
     [createFile, cancelFileOperation, openFile, setPaneVisible],
