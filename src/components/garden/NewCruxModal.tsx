@@ -1,9 +1,11 @@
-import { useState } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCruxStore } from '@/stores/cruxStore';
 import { DEFAULT_PANE_ORDER } from '@/stores/uiStore';
 import { setSetting } from '@/services/settings';
 import { getApiKey } from '@/ai/keys';
+import { peekImport, importCrux, type ImportConflictInfo } from '@/services/crux-io';
+import { useGarden } from '@/hooks/useGarden';
 import { Modal, Button } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import { loadTemplate } from '@/templates';
@@ -290,6 +292,16 @@ function RockIcon() {
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
       <path d="M3 17l4-8 4 3 5-7 5 12z" />
       <path d="M3 17h18" />
+    </svg>
+  );
+}
+
+function ImportIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+      <polyline points="17 8 12 3 7 8" />
+      <line x1="12" y1="3" x2="12" y2="15" />
     </svg>
   );
 }
@@ -831,10 +843,18 @@ interface NewCruxModalProps {
 export default function NewCruxModal({ open, onClose }: NewCruxModalProps) {
   const navigate = useNavigate();
   const createCrux = useCruxStore((s) => s.createCrux);
+  const { refresh } = useGarden();
 
   const [title, setTitle] = useState('');
   const [selectedTemplate, setSelectedTemplate] = useState<string>('blank');
   const [creating, setCreating] = useState(false);
+
+  // Import state
+  const importInputRef = useRef<HTMLInputElement>(null);
+  const [importing, setImporting] = useState(false);
+  const [importProgress, setImportProgress] = useState({ done: 0, total: 0 });
+  const [importConflict, setImportConflict] = useState<ImportConflictInfo | null>(null);
+  const conflictResolverRef = useRef<((choice: 'replace' | 'clone' | 'cancel') => void) | null>(null);
 
   // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
   const template = (TEMPLATES.find((t) => t.id === selectedTemplate) ?? TEMPLATES[0])!;
@@ -844,6 +864,86 @@ export default function NewCruxModal({ open, onClose }: NewCruxModalProps) {
     setSelectedTemplate('blank');
     setCreating(false);
   };
+
+  const handleImport = useCallback(
+    async (file: File) => {
+      setImporting(true);
+      setImportProgress({ done: 0, total: 0 });
+
+      try {
+        const { conflict } = await peekImport(file);
+
+        let mode: 'restore' | 'replace' | 'clone' = 'restore';
+        if (conflict) {
+          const choice = await new Promise<'replace' | 'clone' | 'cancel'>((resolve) => {
+            conflictResolverRef.current = resolve;
+            setImportConflict(conflict);
+          });
+          setImportConflict(null);
+          conflictResolverRef.current = null;
+          if (choice === 'cancel') {
+            setImporting(false);
+            return;
+          }
+          mode = choice;
+        }
+
+        const result = await importCrux({
+          data: file,
+          mode,
+          onProgress: (done, total) => setImportProgress({ done, total }),
+        });
+
+        if (result.layout) {
+          const layout = result.layout;
+          if (layout.paneOrder && layout.paneVisibility) {
+            setSetting(
+              `cruxgarden:layout:${result.cruxId}`,
+              JSON.stringify({ paneOrder: layout.paneOrder, paneVisibility: layout.paneVisibility }),
+            );
+          }
+          if (layout.editorTabs) {
+            setSetting(`cruxgarden:editor-tabs:${result.cruxId}`, JSON.stringify(layout.editorTabs));
+          }
+          if (layout.folderState) {
+            setSetting(`cruxgarden:folder-state:${result.cruxId}`, JSON.stringify(layout.folderState));
+          }
+        }
+
+        if (result.theme) {
+          if (result.theme.mode) setSetting('cruxgarden:theme', result.theme.mode);
+          if (result.theme.tint) setSetting('cruxgarden:tint', result.theme.tint);
+        }
+
+        if (result.failedArtifacts.length > 0) {
+          console.warn('Some artifacts failed to import:', result.failedArtifacts);
+          alert(`Import completed with ${result.failedArtifacts.length} file${result.failedArtifacts.length > 1 ? 's' : ''} that could not be restored.`);
+        }
+
+        refresh();
+        reset();
+        onClose();
+        navigate(`/c/${result.cruxId}`);
+      } catch (err) {
+        console.error('Import failed:', err);
+        alert(`Failed to import .crux file: ${err instanceof Error ? err.message : 'Make sure it is a valid export.'}`);
+      } finally {
+        setImporting(false);
+        setImportProgress({ done: 0, total: 0 });
+      }
+    },
+    [navigate, refresh, onClose],
+  );
+
+  const handleImportInput = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      handleImport(file);
+      e.target.value = '';
+    },
+    [handleImport],
+  );
 
   const handleCreate = async (quickStart = false) => {
     setCreating(true);
@@ -946,7 +1046,7 @@ export default function NewCruxModal({ open, onClose }: NewCruxModalProps) {
   };
 
   const handleClose = () => {
-    if (creating) return;
+    if (creating || importing) return;
     reset();
     onClose();
   };
@@ -1040,16 +1140,115 @@ export default function NewCruxModal({ open, onClose }: NewCruxModalProps) {
           />
         </div>
 
+        {/* Import */}
+        <div className="border-t border-border pt-4">
+          <input
+            ref={importInputRef}
+            type="file"
+            accept=".crux,.zip"
+            className="hidden"
+            onChange={handleImportInput}
+          />
+          {importing ? (
+            <div className="flex items-center gap-3">
+              <div className="relative w-7 h-7 flex items-center justify-center shrink-0">
+                <svg width="24" height="24" viewBox="0 0 28 28" className="-rotate-90">
+                  <circle cx="14" cy="14" r="12" fill="none" stroke="currentColor" strokeWidth="2" className="text-border" />
+                  <circle
+                    cx="14" cy="14" r="12"
+                    fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"
+                    className="text-accent transition-[stroke-dashoffset] duration-300"
+                    strokeDasharray={2 * Math.PI * 12}
+                    strokeDashoffset={importProgress.total > 0 ? 2 * Math.PI * 12 * (1 - importProgress.done / importProgress.total) : 2 * Math.PI * 12}
+                  />
+                </svg>
+                <span className="absolute text-[8px] font-mono text-text-muted">
+                  {importProgress.total > 0 ? Math.round((importProgress.done / importProgress.total) * 100) : 0}
+                </span>
+              </div>
+              <span className="text-xs font-mono text-text-muted">Importing...</span>
+            </div>
+          ) : (
+            <button
+              onClick={() => importInputRef.current?.click()}
+              disabled={creating}
+              className={cn(
+                'flex items-center gap-2 text-xs font-mono text-text-muted',
+                'hover:text-accent transition-colors cursor-pointer',
+                'disabled:opacity-50 disabled:cursor-not-allowed',
+              )}
+            >
+              <ImportIcon />
+              Import .crux file
+            </button>
+          )}
+        </div>
+
         {/* Actions */}
         <div className="flex gap-2 justify-end pt-1">
-          <Button variant="ghost" onClick={handleClose} disabled={creating}>
+          <Button variant="ghost" onClick={handleClose} disabled={creating || importing}>
             Cancel
           </Button>
-          <Button onClick={() => handleCreate()} loading={creating}>
+          <Button onClick={() => handleCreate()} loading={creating} disabled={importing}>
             Create
           </Button>
         </div>
       </div>
+
+      {/* Import conflict modal */}
+      <Modal
+        open={importConflict !== null}
+        onClose={() => {
+          conflictResolverRef.current?.('cancel');
+          setImportConflict(null);
+          conflictResolverRef.current = null;
+        }}
+      >
+        <div className="space-y-4">
+          <div>
+            <h2 className="text-lg font-display font-medium text-text">Crux already exists</h2>
+            <p className="text-sm text-text-muted mt-1">
+              <span className="text-text font-medium">{importConflict?.title}</span>{' '}
+              already exists in your garden.
+            </p>
+          </div>
+
+          {importConflict && (
+            <div className="grid grid-cols-2 gap-3 text-xs font-mono">
+              <div className="rounded-[var(--radius-sm)] border border-border bg-surface/50 p-2.5">
+                <div className="text-[10px] uppercase tracking-wider text-text-muted mb-1.5">Installed</div>
+                <div className="text-text">v{importConflict.installedVersion}</div>
+                {importConflict.installedUpdated && (
+                  <div className="text-text-muted mt-0.5">
+                    {new Date(importConflict.installedUpdated).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+                  </div>
+                )}
+              </div>
+              <div className="rounded-[var(--radius-sm)] border border-border bg-surface/50 p-2.5">
+                <div className="text-[10px] uppercase tracking-wider text-text-muted mb-1.5">Incoming</div>
+                <div className="text-text">v{importConflict.incomingVersion}</div>
+                {importConflict.incomingUpdated && (
+                  <div className="text-text-muted mt-0.5">
+                    {new Date(importConflict.incomingUpdated).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          <div className="flex gap-2 justify-end">
+            <Button variant="ghost" onClick={() => { conflictResolverRef.current?.('cancel'); setImportConflict(null); conflictResolverRef.current = null; }}>
+              Cancel
+            </Button>
+            <Button variant="ghost" onClick={() => { conflictResolverRef.current?.('clone'); setImportConflict(null); conflictResolverRef.current = null; }}>
+              Clone
+            </Button>
+            <Button variant="danger" onClick={() => { conflictResolverRef.current?.('replace'); setImportConflict(null); conflictResolverRef.current = null; }}>
+              Replace
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </Modal>
   );
 }

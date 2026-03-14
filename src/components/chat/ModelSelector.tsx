@@ -65,7 +65,7 @@ export default function ModelSelector({ value, onChange, disabled }: ModelSelect
   const SelectedIcon = PROVIDER_ICONS[providerId];
 
   return (
-    <div ref={menuRef} className="relative px-3 pt-2 pb-1">
+    <div ref={menuRef} className="relative">
       <button
         onClick={() => !disabled && setOpen(!open)}
         disabled={disabled}
@@ -92,7 +92,7 @@ export default function ModelSelector({ value, onChange, disabled }: ModelSelect
       </button>
 
       {open && (
-        <div className="absolute left-3 bottom-full mb-1 z-50 min-w-48 max-h-[60vh] overflow-y-auto bg-surface-solid border border-border rounded-[var(--radius-sm)] shadow-xl py-1">
+        <div className="absolute left-0 bottom-full mb-1 z-50 min-w-48 max-h-[60vh] overflow-y-auto bg-surface-solid border border-border rounded-[var(--radius-sm)] shadow-xl py-1">
           {groups.map((group) => (
             <div key={group.providerId}>
               {(() => {

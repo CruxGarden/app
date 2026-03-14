@@ -50,7 +50,9 @@ export default function ChatPanel() {
         </div>
       ) : (
         <div className="border-t border-border">
-          <ModelSelector value={model} onChange={setModel} disabled={isStreaming} />
+          <div className="px-3 pt-2.5 pb-1">
+            <ModelSelector value={model} onChange={setModel} disabled={isStreaming} />
+          </div>
           <MessageInput onSend={send} onStop={stop} isStreaming={isStreaming} history={history} />
         </div>
       )}
