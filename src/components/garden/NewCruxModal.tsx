@@ -5,7 +5,7 @@ import { DEFAULT_PANE_ORDER } from '@/stores/uiStore';
 import { setSetting } from '@/services/settings';
 import { getApiKey } from '@/ai/keys';
 import { peekImport, importCrux, type ImportConflictInfo } from '@/services/crux-io';
-import { useGarden } from '@/hooks/useGarden';
+import { useGardenStore } from '@/stores/gardenStore';
 import { Modal, Button } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import { loadTemplate } from '@/templates';
@@ -843,7 +843,7 @@ interface NewCruxModalProps {
 export default function NewCruxModal({ open, onClose }: NewCruxModalProps) {
   const navigate = useNavigate();
   const createCrux = useCruxStore((s) => s.createCrux);
-  const { refresh } = useGarden();
+  const refresh = useGardenStore((s) => s.load);
 
   const [title, setTitle] = useState('');
   const [selectedTemplate, setSelectedTemplate] = useState<string>('blank');
