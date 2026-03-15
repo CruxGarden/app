@@ -1,16 +1,19 @@
+import { lazy, Suspense } from 'react';
 import { createBrowserRouter, RouterProvider } from 'react-router-dom';
 import AppShell from '@/components/layout/AppShell';
 import AnimatedBackground from '@/components/layout/AnimatedBackground';
 import { ErrorBoundary } from '@/components/ui';
-import Landing from '@/pages/Landing';
-import Login from '@/pages/Login';
-import Garden from '@/pages/Garden';
-import CruxPage from '@/pages/Crux';
-import Settings from '@/pages/Settings';
-import PublicCrux from '@/pages/PublicCrux';
-import PublicAuthor from '@/pages/PublicAuthor';
-import Discover from '@/pages/Discover';
-import NotFound from '@/pages/NotFound';
+
+// Lazy-load all page components so only the active route's code is downloaded
+const Landing = lazy(() => import('@/pages/Landing'));
+const Login = lazy(() => import('@/pages/Login'));
+const Garden = lazy(() => import('@/pages/Garden'));
+const CruxPage = lazy(() => import('@/pages/Crux'));
+const Settings = lazy(() => import('@/pages/Settings'));
+const PublicCrux = lazy(() => import('@/pages/PublicCrux'));
+const PublicAuthor = lazy(() => import('@/pages/PublicAuthor'));
+const Discover = lazy(() => import('@/pages/Discover'));
+const NotFound = lazy(() => import('@/pages/NotFound'));
 
 const router = createBrowserRouter([
   // Public
@@ -80,7 +83,9 @@ export default function App() {
   return (
     <ErrorBoundary>
       <AnimatedBackground />
-      <RouterProvider router={router} />
+      <Suspense fallback={null}>
+        <RouterProvider router={router} />
+      </Suspense>
     </ErrorBoundary>
   );
 }

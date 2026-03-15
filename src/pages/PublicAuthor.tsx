@@ -3,7 +3,6 @@ import { useParams } from 'react-router-dom';
 import { publicApi } from '@/api';
 import type { Author, Crux } from '@/api/types';
 import { resolveAvatarUrl } from '@/stores/authStore';
-import { isServicesReady, initServices, getServices } from '@/services';
 import { PublicTopBar } from '@/components/display';
 import { GardenGrid, GardenSearch } from '@/components/garden';
 import { Button, LoadingPanel } from '@/components/ui';
@@ -14,18 +13,7 @@ import { APP_NAME } from '@/lib/constants';
 type LoadState = 'loading' | 'ready' | 'not-found' | 'error';
 type SortField = 'created' | 'updated';
 
-/** Load author + cruxes from local SQLite if services are available, otherwise from API */
-async function loadLocal(username: string): Promise<{ author: Author; cruxes: Crux[] }> {
-  if (!isServicesReady()) await initServices();
-  const { author: authorService, crux: cruxService } = getServices();
-  const author = await authorService.findByUsername(username);
-  const cruxes = await cruxService.listByAuthor(author.id);
-  // Public garden shows only public cruxes
-  const publicCruxes = cruxes.filter((c) => c.visibility === 'public');
-  return { author, cruxes: publicCruxes };
-}
-
-async function loadRemote(username: string): Promise<{ author: Author; cruxes: Crux[] }> {
+async function loadAuthorData(username: string): Promise<{ author: Author; cruxes: Crux[] }> {
   const [author, cruxData] = await Promise.all([
     publicApi.getAuthor(username),
     publicApi.getAuthorCruxes(username, { page: 1, perPage: 1000 }),
@@ -50,9 +38,8 @@ export default function PublicAuthor() {
 
     let cancelled = false;
 
-    // Try API first, fall back to local (for unpublished previews)
-    loadRemote(username)
-      .catch(() => loadLocal(username))
+    // Load from API only — no local database access on public pages
+    loadAuthorData(username)
       .then((data) => {
         if (cancelled) return;
         setAuthor(data.author);

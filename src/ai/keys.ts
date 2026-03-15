@@ -1,4 +1,8 @@
-import { getSqliteClient } from '@/services/sqlite/client';
+// Lazy import to avoid pulling SQLite worker into public pages
+async function db() {
+  const { getSqliteClient } = await import('@/services/sqlite/client');
+  return getSqliteClient();
+}
 
 /**
  * Get an API key from SQLite settings.
@@ -6,7 +10,7 @@ import { getSqliteClient } from '@/services/sqlite/client';
  * origin can't access them.
  */
 export async function getApiKey(providerId: string): Promise<string | null> {
-  const row = await getSqliteClient().get<{ value: string }>(
+  const row = await (await db()).get<{ value: string }>(
     'SELECT value FROM settings WHERE key = ?',
     [`cruxgarden:apiKey:${providerId}`],
   );
@@ -15,7 +19,7 @@ export async function getApiKey(providerId: string): Promise<string | null> {
 
 /** Save an API key to SQLite settings */
 export async function setApiKey(providerId: string, key: string): Promise<void> {
-  await getSqliteClient().run(
+  await (await db()).run(
     'INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)',
     [`cruxgarden:apiKey:${providerId}`, key],
   );
@@ -23,12 +27,12 @@ export async function setApiKey(providerId: string, key: string): Promise<void> 
 
 /** Remove an API key from SQLite settings */
 export async function removeApiKey(providerId: string): Promise<void> {
-  await getSqliteClient().run('DELETE FROM settings WHERE key = ?', [`cruxgarden:apiKey:${providerId}`]);
+  await (await db()).run('DELETE FROM settings WHERE key = ?', [`cruxgarden:apiKey:${providerId}`]);
 }
 
 /** Get the default model from settings, or return the fallback */
 export async function getDefaultModel(): Promise<string> {
-  const row = await getSqliteClient().get<{ value: string }>(
+  const row = await (await db()).get<{ value: string }>(
     "SELECT value FROM settings WHERE key = 'cruxgarden:defaultModel'",
   );
   return row?.value || 'claude-sonnet-4-20250514';
@@ -36,7 +40,7 @@ export async function getDefaultModel(): Promise<string> {
 
 /** Save the default model to settings */
 export async function setDefaultModel(model: string): Promise<void> {
-  await getSqliteClient().run(
+  await (await db()).run(
     "INSERT OR REPLACE INTO settings (key, value) VALUES ('cruxgarden:defaultModel', ?)",
     [model],
   );

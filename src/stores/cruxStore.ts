@@ -141,7 +141,9 @@ export const useCruxStore = create<CruxState>((set, get) => ({
   addTokenUsage: (input: number, output: number) => {
     set((s) => ({
       tokenUsage: {
-        inputTokens: s.tokenUsage.inputTokens + input,
+        // Input tokens = latest value (represents current conversation size, not cumulative)
+        inputTokens: input,
+        // Output tokens accumulate across the session
         outputTokens: s.tokenUsage.outputTokens + output,
       },
     }));
@@ -236,7 +238,11 @@ export const useCruxStore = create<CruxState>((set, get) => ({
       growthCount: crux.meta?.growthCount || 0,
       growths: sortedGrowths,
       hasUnpublishedChanges: hasChanges,
-      tokenUsage: { inputTokens: 0, outputTokens: 0 },
+      // Estimate initial token usage from message history until first real API response
+      tokenUsage: {
+        inputTokens: fullMessages.reduce((sum, m) => sum + Math.ceil((m.content?.length || 0) / 3.5) + 4, 0),
+        outputTokens: 0,
+      },
     });
   },
 
