@@ -97,7 +97,7 @@ export default function MessageBubble({
 
   return (
     <div className={cn('flex gap-2 items-end', isUser ? 'justify-end' : 'justify-start')}>
-      {!isUser && <KeeperAvatar />}
+      {!isUser && <KeeperAvatar bordered />}
       <div
         className={cn(
           'max-w-[85%] rounded-[var(--radius)] px-3 py-2 text-sm break-words',

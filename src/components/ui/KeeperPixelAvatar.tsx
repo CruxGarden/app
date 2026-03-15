@@ -3,6 +3,7 @@ import PixelGrid, { type ColorMode } from './PixelGrid';
 import keeperData from '@/images/keeper.pxl.json';
 import keeperWeatheredData from '@/images/keeper-weathered.pxl.json';
 import keeperLightData from '@/images/keeper-light.pxl.json';
+import keeperEyeData from '@/images/keeper-eye.pxl.json';
 
 /**
  * 128×128 pixel-art portrait of the Keeper, loaded from palette-indexed
@@ -87,17 +88,18 @@ const VARIANTS = {
   default: keeperData as PxlData,
   weathered: keeperWeatheredData as PxlData,
   light: keeperLightData as PxlData,
+  eye: keeperEyeData as PxlData,
 };
 
 export type KeeperVariant = keyof typeof VARIANTS;
 
-// Eye center and antenna tip coordinates (128×128 grid)
-const EYE_CX = 64;
-const EYE_CY = 48;
-const EYE_R = 14;
-const ANTENNA_X1 = 62;
-const ANTENNA_X2 = 63;
-const ANTENNA_Y = 4;
+// Animation coordinates per variant
+const ANIM_COORDS = {
+  default:   { eyeCx: 64, eyeCy: 48, eyeR: 14, antennaX1: 62, antennaX2: 63, antennaY: 4 },
+  weathered: { eyeCx: 64, eyeCy: 48, eyeR: 14, antennaX1: 62, antennaX2: 63, antennaY: 4 },
+  light:     { eyeCx: 64, eyeCy: 38, eyeR: 14, antennaX1: 62, antennaX2: 63, antennaY: 4 },
+  eye:       { eyeCx: 24, eyeCy: 24, eyeR: 14, antennaX1: -1, antennaX2: -1, antennaY: -1 },
+};
 
 interface KeeperPixelAvatarProps {
   /** Which variant to render (default: 'default') */
@@ -114,7 +116,7 @@ interface KeeperPixelAvatarProps {
 }
 
 export default function KeeperPixelAvatar({
-  variant = 'default',
+  variant = 'eye',
   scale = 3,
   className = '',
   gridLines = false,
@@ -163,6 +165,7 @@ export default function KeeperPixelAvatar({
       scale={scale}
       className={className}
       gridLines={gridLines}
+      variant={resolvedVariant}
     />
   );
 }
@@ -173,9 +176,10 @@ interface AnimatedCanvasProps {
   scale: number;
   className: string;
   gridLines: boolean;
+  variant: KeeperVariant;
 }
 
-function AnimatedCanvas({ basePixels, size, scale, className, gridLines }: AnimatedCanvasProps) {
+function AnimatedCanvas({ basePixels, size, scale, className, gridLines, variant }: AnimatedCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const rafRef = useRef<number>(0);
   const frameRef = useRef(new Uint8Array(size * size * 3));
@@ -201,16 +205,18 @@ function AnimatedCanvas({ basePixels, size, scale, className, gridLines }: Anima
       frame.set(basePixels);
 
       // ── Eye glow pulse — slow sine wave brightness ──
+      const coords = ANIM_COORDS[variant] || ANIM_COORDS.eye;
+      const { eyeCx, eyeCy, eyeR, antennaX1, antennaX2, antennaY } = coords;
       const pulse = Math.sin(t * 0.0015) * 0.12 + Math.sin(t * 0.004) * 0.05;
-      for (let dy = -EYE_R; dy <= EYE_R; dy++) {
-        for (let dx = -EYE_R; dx <= EYE_R; dx++) {
+      for (let dy = -eyeR; dy <= eyeR; dy++) {
+        for (let dx = -eyeR; dx <= eyeR; dx++) {
           const dist = Math.sqrt(dx * dx + dy * dy);
-          if (dist > EYE_R) continue;
-          const px = EYE_CX + dx;
-          const py = EYE_CY + dy;
+          if (dist > eyeR) continue;
+          const px = eyeCx + dx;
+          const py = eyeCy + dy;
           if (px < 0 || px >= size || py < 0 || py >= size) continue;
 
-          const falloff = 1 - dist / EYE_R;
+          const falloff = 1 - dist / eyeR;
           const boost = pulse * falloff * falloff;
           const oi = (py * size + px) * 3;
           frame[oi] = Math.min(255, Math.round(frame[oi]! + boost * 60));
@@ -238,10 +244,10 @@ function AnimatedCanvas({ basePixels, size, scale, className, gridLines }: Anima
       // ── Antenna tip blink — intermittent soft flash ──
       const blinkCycle = (t % 3000) / 3000; // 3s cycle
       const blinkOn = blinkCycle < 0.15 || (blinkCycle > 0.25 && blinkCycle < 0.35);
-      if (blinkOn) {
+      if (blinkOn && antennaX1 >= 0) {
         const blinkBright = Math.sin(blinkCycle * Math.PI * 10) * 0.5 + 0.5;
-        for (let ax = ANTENNA_X1; ax <= ANTENNA_X2; ax++) {
-          const oi = (ANTENNA_Y * size + ax) * 3;
+        for (let ax = antennaX1; ax <= antennaX2; ax++) {
+          const oi = (antennaY * size + ax) * 3;
           frame[oi] = Math.min(255, Math.round(frame[oi]! + blinkBright * 30));
           frame[oi + 1] = Math.min(255, Math.round(frame[oi + 1]! + blinkBright * 100));
           frame[oi + 2] = Math.min(255, Math.round(frame[oi + 2]! + blinkBright * 50));

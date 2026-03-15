@@ -11,10 +11,10 @@ import { useAuthStore, resolveAvatarUrl } from '@/stores/authStore';
 import { getApiKey } from '@/ai/keys';
 import { getSetting, setSetting, removeSetting } from '@/services/settings';
 
-export function KeeperAvatar({ className = 'w-6 h-6', animate = false }: { className?: string; animate?: boolean }) {
+export function KeeperAvatar({ className = 'w-6 h-6', animate = false, bordered = false }: { className?: string; animate?: boolean; bordered?: boolean }) {
   return (
-    <div className={`${className} shrink-0 rounded-[var(--radius-sm)] overflow-hidden ring-1 ring-border`}>
-      <KeeperPixelAvatar variant="weathered" scale={2} className="w-full h-full" gridLines={false} animate={animate} />
+    <div className={`${className} shrink-0 overflow-hidden ${bordered ? 'rounded-[var(--radius-sm)] ring-1 ring-border' : ''}`}>
+      <KeeperPixelAvatar scale={2} className="w-full h-full" gridLines={false} animate={animate} />
     </div>
   );
 }
@@ -372,7 +372,9 @@ export default function KeeperConsole({ open, onClose }: KeeperConsoleProps) {
         {/* Sidebar — portrait + conversation history */}
         <div className="hidden sm:flex w-48 shrink-0 flex-col border-r border-border">
           <div className="aspect-square w-full overflow-hidden rounded-tl-[var(--radius)]">
-            <KeeperAvatar className="w-full h-full !rounded-none !ring-0" animate />
+            <div className="w-full h-full overflow-hidden">
+              <KeeperPixelAvatar variant="weathered" scale={3} className="w-full h-full" gridLines={false} animate />
+            </div>
           </div>
           {/* Conversation history */}
           <div className="flex-1 min-h-0 overflow-y-auto border-t border-border bg-keeper-console-sidebar">
