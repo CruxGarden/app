@@ -96,15 +96,19 @@ section hr::before { content: '* * *'; color: #ccc; letter-spacing: 0.5em; }`,
 fetch('./config.json')
   .then((r) => r.json())
   .then((data) => {
-    // Title
+    // Main title in header
     const titleEl = document.getElementById('title');
     titleEl.textContent = data.title || 'Untitled Story';
-    document.title = data.title || 'Untitled Story';
+
+    // Update page title
+    document.title = (data.title || 'Untitled Story') + ' - Literary Story';
 
     // Author
     const authorEl = document.getElementById('author');
-    if (data.author) {
-      authorEl.textContent = 'by ' + data.author;
+    if (data.author && data.author !== 'You') {
+      authorEl.textContent = data.author;
+    } else {
+      authorEl.textContent = 'Your Name';
     }
 
     // Subtitle
@@ -119,11 +123,14 @@ fetch('./config.json')
     const container = document.getElementById('chapters');
     container.innerHTML = '';
 
-    for (const chapter of data.chapters || []) {
-      const section = document.createElement('section');
+    for (let i = 0; i < (data.chapters || []).length; i++) {
+      const chapter = data.chapters[i];
+      const section = document.createElement('div');
+      section.className = 'chapter';
 
       if (chapter.title) {
         const h2 = document.createElement('h2');
+        h2.className = 'chapter-title';
         h2.textContent = chapter.title;
         section.appendChild(h2);
       }
@@ -133,16 +140,48 @@ fetch('./config.json')
         const trimmed = para.trim();
         if (!trimmed) continue;
         const p = document.createElement('p');
-        p.innerHTML = escapeHtml(trimmed);
+        p.innerHTML = formatText(trimmed);
         section.appendChild(p);
       }
 
       container.appendChild(section);
+
+      // Add section break between chapters (except after the last one)
+      if (i < data.chapters.length - 1) {
+        const sectionBreak = document.createElement('div');
+        sectionBreak.className = 'section-break';
+        container.appendChild(sectionBreak);
+      }
     }
   })
   .catch((err) => console.warn('render.js: could not load config.json', err));
 
-function escapeHtml(str) {
+// Theme toggle functionality
+document.addEventListener('DOMContentLoaded', function() {
+  const themeToggle = document.getElementById('themeToggle');
+  const html = document.documentElement;
+
+  // Check for saved theme preference or default to light mode
+  const currentTheme = localStorage.getItem('theme') || 'light';
+  html.setAttribute('data-theme', currentTheme);
+
+  if (themeToggle) {
+    themeToggle.addEventListener('click', function() {
+      const currentTheme = html.getAttribute('data-theme');
+      const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+
+      html.setAttribute('data-theme', newTheme);
+      localStorage.setItem('theme', newTheme);
+    });
+  }
+});
+
+function formatText(str) {
+  // Convert basic quotes to smart quotes
+  str = str.replace(/"/g, '\\u201c').replace(/"/g, '\\u201d');
+  str = str.replace(/'/g, '\\u2018').replace(/'/g, '\\u2019');
+
+  // Escape HTML but preserve basic formatting
   const div = document.createElement('div');
   div.textContent = str;
   return div.innerHTML;

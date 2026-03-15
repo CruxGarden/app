@@ -1,9 +1,11 @@
-import { useMemo, useRef, useEffect, useCallback, useState } from 'react';
+import { useMemo, useRef, useEffect, useCallback } from 'react';
 import PixelGrid, { type ColorMode } from './PixelGrid';
 import keeperData from '@/images/keeper.pxl.json';
 import keeperWeatheredData from '@/images/keeper-weathered.pxl.json';
 import keeperLightData from '@/images/keeper-light.pxl.json';
 import keeperEyeData from '@/images/keeper-eye.pxl.json';
+import keeperAvatarDarkData from '@/images/keeper-avatar-dark.pxl.json';
+import keeperAvatarLightData from '@/images/keeper-avatar-light.pxl.json';
 
 /**
  * 128×128 pixel-art portrait of the Keeper, loaded from palette-indexed
@@ -24,61 +26,23 @@ interface PxlData {
   pixels: string;
 }
 
-/** Parse a hex color to [r, g, b] */
-function hexToRgb(hex: string): [number, number, number] {
-  const h = hex.replace('#', '');
-  return [parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4, 6), 16)];
-}
 
-/** Read --accent and --bg from computed styles */
-function getAccentColor(): [number, number, number] {
-  if (typeof document === 'undefined') return [0, 230, 118];
-  const val = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim();
-  if (val && val.startsWith('#') && val.length >= 7) return hexToRgb(val);
-  return [0, 230, 118];
-}
-
-function isLightMode(): boolean {
-  if (typeof document === 'undefined') return false;
-  const bg = getComputedStyle(document.documentElement).getPropertyValue('--bg').trim();
-  if (!bg || !bg.startsWith('#') || bg.length < 7) return false;
-  const [r, g, b] = hexToRgb(bg);
-  return (0.299 * r + 0.587 * g + 0.114 * b) / 255 > 0.5;
-}
-
-function decodePixelArt(data: PxlData, greenscale = false, tint?: [number, number, number], invert = false): Uint8Array {
+function decodePixelArt(data: PxlData): Uint8Array {
   const { size, palette, pixels } = data;
-  const indices = Uint8Array.from(atob(pixels), (c) => c.charCodeAt(0));
+  // Support both 8-bit (≤255 colors) and 16-bit (>255 colors) palette indices
+  const raw = Uint8Array.from(atob(pixels), (c) => c.charCodeAt(0));
+  const depth = (data as PxlData & { depth?: number }).depth;
+  const indices = depth === 16
+    ? new Uint16Array(raw.buffer, raw.byteOffset, raw.byteLength / 2)
+    : raw;
   const rgb = new Uint8Array(size * size * 3);
 
   for (let i = 0; i < size * size; i++) {
     const color = palette[indices[i]!]!;
     const oi = i * 3;
-
-    if (greenscale) {
-      const [tr, tg, tb] = tint || [0, 230, 118];
-      const lum = (0.299 * color[0]! + 0.587 * color[1]! + 0.114 * color[2]!) / 255;
-
-      if (invert) {
-        // Light mode: bright pixels → dark accent, dark pixels → light/faded
-        // Map lum 0→1 to output range where high lum = full accent, low lum = pale wash
-        const strength = lum * lum; // square for more contrast in highlights
-        const pale = 220; // light base for shadows
-        rgb[oi] = Math.round(pale * (1 - strength) + tr * strength);
-        rgb[oi + 1] = Math.round(pale * (1 - strength) + tg * strength);
-        rgb[oi + 2] = Math.round(pale * (1 - strength) + tb * strength);
-      } else {
-        const grey = lum * 255;
-        // Dark mode: blend 35% accent tint with 65% grey
-        rgb[oi] = Math.round(grey * 0.65 + lum * tr * 0.35);
-        rgb[oi + 1] = Math.round(grey * 0.65 + lum * tg * 0.35);
-        rgb[oi + 2] = Math.round(grey * 0.65 + lum * tb * 0.35);
-      }
-    } else {
-      rgb[oi] = color[0]!;
-      rgb[oi + 1] = color[1]!;
-      rgb[oi + 2] = color[2]!;
-    }
+    rgb[oi] = color[0]!;
+    rgb[oi + 1] = color[1]!;
+    rgb[oi + 2] = color[2]!;
   }
 
   return rgb;
@@ -89,6 +53,8 @@ const VARIANTS = {
   weathered: keeperWeatheredData as PxlData,
   light: keeperLightData as PxlData,
   eye: keeperEyeData as PxlData,
+  'avatar-dark': keeperAvatarDarkData as PxlData,
+  'avatar-light': keeperAvatarLightData as PxlData,
 };
 
 export type KeeperVariant = keyof typeof VARIANTS;
@@ -97,20 +63,22 @@ export type KeeperVariant = keyof typeof VARIANTS;
 const ANIM_COORDS = {
   default:   { eyeCx: 64, eyeCy: 48, eyeR: 14, antennaX1: 62, antennaX2: 63, antennaY: 4 },
   weathered: { eyeCx: 64, eyeCy: 48, eyeR: 14, antennaX1: 62, antennaX2: 63, antennaY: 4 },
-  light:     { eyeCx: 64, eyeCy: 38, eyeR: 14, antennaX1: 62, antennaX2: 63, antennaY: 4 },
-  eye:       { eyeCx: 24, eyeCy: 24, eyeR: 14, antennaX1: -1, antennaX2: -1, antennaY: -1 },
+  light:          { eyeCx: 64, eyeCy: 38, eyeR: 14, antennaX1: 62, antennaX2: 63, antennaY: 4 },
+  eye:            { eyeCx: 24, eyeCy: 24, eyeR: 14, antennaX1: -1, antennaX2: -1, antennaY: -1 },
+  'avatar-dark':  { eyeCx: 64, eyeCy: 48, eyeR: 14, antennaX1: -1, antennaX2: -1, antennaY: -1 },
+  'avatar-light': { eyeCx: 64, eyeCy: 48, eyeR: 14, antennaX1: -1, antennaX2: -1, antennaY: -1 },
 };
 
 interface KeeperPixelAvatarProps {
-  /** Which variant to render (default: 'default') */
+  /** Which variant to render (default: 'eye') */
   variant?: KeeperVariant;
   /** CSS pixel multiplier (default 3 → 384px) */
   scale?: number;
   className?: string;
   /** Show grid lines (default false) */
   gridLines?: boolean;
-  /** Render as green phosphor monochrome (default true) */
-  greenscale?: boolean;
+  /** Apply accent color tint via CSS (default true) */
+  tinted?: boolean;
   /** Enable subtle animation — eye pulse, scanline, antenna blink (default false) */
   animate?: boolean;
 }
@@ -120,53 +88,51 @@ export default function KeeperPixelAvatar({
   scale = 3,
   className = '',
   gridLines = false,
-  greenscale = true,
+  tinted = true,
   animate = false,
 }: KeeperPixelAvatarProps) {
-  // Re-read accent and mode when palette changes
-  const [accentRgb, setAccentRgb] = useState<[number, number, number]>(() => getAccentColor());
-  const [light, setLight] = useState(() => isLightMode());
+  const data = VARIANTS[variant];
 
-  // Use the light variant image when in light mode
-  const resolvedVariant = light ? 'light' : variant;
-  const data = VARIANTS[resolvedVariant];
-  useEffect(() => {
-    const handler = () => {
-      setAccentRgb(getAccentColor());
-      setLight(isLightMode());
-    };
-    document.addEventListener('palette-change', handler);
-    return () => document.removeEventListener('palette-change', handler);
-  }, []);
+  // Decode with original colors — no pixel-level tinting
+  const basePixels = useMemo(() => decodePixelArt(data), [data]);
 
-  // Light variant has its own colors — no greenscale inversion needed
-  const useGreenscale = light ? false : greenscale;
-  const basePixels = useMemo(() => decodePixelArt(data, useGreenscale, accentRgb, false), [data, useGreenscale, accentRgb]);
+  // CSS tint: accent-colored overlay on top of grayscaled image
+  const tintClass = tinted ? 'grayscale' : '';
 
   // Static render — no animation
   if (!animate) {
     return (
-      <PixelGrid
-        pixels={basePixels}
-        size={data.size}
-        mode={'rgb' as ColorMode}
-        scale={scale}
-        className={className}
-        gridLines={gridLines}
-      />
+      <div className="relative">
+        <div className={tintClass}>
+          <PixelGrid
+            pixels={basePixels}
+            size={data.size}
+            mode={'rgb' as ColorMode}
+            scale={scale}
+            className={className}
+            gridLines={gridLines}
+          />
+        </div>
+        {tinted && <div className="absolute inset-0 opacity-40" style={{ backgroundColor: 'var(--accent)', mixBlendMode: 'color' }} />}
+      </div>
     );
   }
 
   // Animated render — own canvas + rAF loop
   return (
-    <AnimatedCanvas
-      basePixels={basePixels}
-      size={data.size}
-      scale={scale}
-      className={className}
-      gridLines={gridLines}
-      variant={resolvedVariant}
-    />
+    <div className="relative">
+      <div className={tintClass}>
+        <AnimatedCanvas
+          basePixels={basePixels}
+          size={data.size}
+          scale={scale}
+          className={className}
+          gridLines={gridLines}
+          variant={variant}
+        />
+      </div>
+      {tinted && <div className="absolute inset-0 opacity-40" style={{ backgroundColor: 'var(--accent)', mixBlendMode: 'color' }} />}
+    </div>
   );
 }
 
@@ -318,7 +284,6 @@ function AnimatedCanvas({ basePixels, size, scale, className, gridLines, variant
           ? { width: cssSize, height: cssSize }
           : {}),
         imageRendering: 'pixelated',
-        borderRadius: 'var(--radius)',
       }}
     />
   );

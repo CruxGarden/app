@@ -7,14 +7,33 @@ import type { NormalizedMessage } from '@/services/types';
 import MarkdownRenderer from '@/components/chat/MarkdownRenderer';
 import ModelSelector from '@/components/chat/ModelSelector';
 import KeeperPixelAvatar from '@/components/ui/KeeperPixelAvatar';
+import type { KeeperVariant } from '@/components/ui/KeeperPixelAvatar';
 import { useAuthStore, resolveAvatarUrl } from '@/stores/authStore';
+import { useThemeStore } from '@/stores/themeStore';
 import { getApiKey } from '@/ai/keys';
 import { getSetting, setSetting, removeSetting } from '@/services/settings';
 
+function useKeeperVariant(): KeeperVariant {
+  const resolved = useThemeStore((s) => s.resolved);
+  return resolved === 'light' ? 'avatar-light' : 'avatar-dark';
+}
+
 export function KeeperAvatar({ className = 'w-6 h-6', animate = false, bordered = false }: { className?: string; animate?: boolean; bordered?: boolean }) {
+  const variant = useKeeperVariant();
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [scale, setScale] = useState(0.1875);
+
+  useEffect(() => {
+    if (!containerRef.current) return;
+    const size = containerRef.current.clientWidth;
+    if (size > 0) setScale(size / 128);
+  }, [className]);
+
   return (
-    <div className={`${className} shrink-0 overflow-hidden ${bordered ? 'rounded-[var(--radius-sm)] ring-1 ring-border' : ''}`}>
-      <KeeperPixelAvatar scale={2} className="w-full h-full" gridLines={false} animate={animate} />
+    <div ref={containerRef} className={`${className} aspect-square shrink-0 overflow-hidden ${bordered ? 'rounded-[var(--radius-sm)] ring-1 ring-border' : ''}`}>
+      <div className="origin-top-left" style={{ width: 128, height: 128, transform: `scale(${scale})` }}>
+        <KeeperPixelAvatar variant={variant} scale={1} gridLines={false} animate={animate} />
+      </div>
     </div>
   );
 }
@@ -159,6 +178,7 @@ function UserAvatar() {
 }
 
 export default function KeeperConsole({ open, onClose }: KeeperConsoleProps) {
+  const keeperVariant = useKeeperVariant();
   const [conversations, setConversations] = useState<Conversation[]>(() => loadConversations());
   const [activeId, setActiveId] = useState<string | null>(() => {
     const convos = loadConversations();
@@ -371,9 +391,9 @@ export default function KeeperConsole({ open, onClose }: KeeperConsoleProps) {
       >
         {/* Sidebar — portrait + conversation history */}
         <div className="hidden sm:flex w-48 shrink-0 flex-col border-r border-border">
-          <div className="aspect-square w-full overflow-hidden rounded-tl-[var(--radius)]">
+          <div className="aspect-square w-full overflow-hidden rounded-tl-[calc(var(--radius)-1px)]">
             <div className="w-full h-full overflow-hidden">
-              <KeeperPixelAvatar variant="weathered" scale={3} className="w-full h-full" gridLines={false} animate />
+              <KeeperPixelAvatar variant={keeperVariant} scale={3} className="w-full h-full" gridLines={false} animate />
             </div>
           </div>
           {/* Conversation history */}
