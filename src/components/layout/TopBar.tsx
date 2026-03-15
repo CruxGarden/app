@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useUIStore, PANE_COLORS, DEFAULT_PANE_ORDER, type PaneType } from '@/stores/uiStore';
+import { useUIStore, DEFAULT_PANE_ORDER, type PaneType } from '@/stores/uiStore';
 import { useCruxStore } from '@/stores/cruxStore';
 import { useAuthStore } from '@/stores/authStore';
 import IconButton from '@/components/ui/IconButton';

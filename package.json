@@ -52,6 +52,7 @@
     "eslint": "^10.0.3",
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-react-refresh": "^0.5.2",
+    "monaco-editor": "^0.55.1",
     "patch-package": "^8.0.1",
     "prettier": "^3.4.2",
     "sql.js": "^1.14.1",

@@ -1,8 +1,7 @@
-import React, { useState, useCallback, useEffect, useRef } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { cn } from '@/lib/cn';
 import { getCurrentMoodPalette, getVar, GARDEN_DARK, type MoodPalette } from '@/lib/moods';
 import { useMoodStore, type MoodMeta, type MoodPersona } from '@/stores/moodStore';
-import type { Crux } from '@/api/types';
 
 // ── Types ────────────────────────────────────────────
 
@@ -174,7 +173,7 @@ function PaletteSection({
         <table className="w-full text-sm font-mono">
           <tbody>
             {block.tokens.map(({ key, label }, i) => {
-              const value = draft[key] || basePalette[key];
+              const value = draft[key] || basePalette[key] || '';
               const isHex = /^#[0-9a-fA-F]{3,8}$/.test(value);
               return (
                 <tr key={key} className={i % 2 === 0 ? 'bg-[#202020]' : 'bg-[#1a1a1a]'}>
@@ -525,9 +524,6 @@ export default function MoodEditorModal({ open, onClose, moodId }: MoodEditorMod
 
       if (moodId) {
         await updateMood(moodId, meta);
-        // Also update crux-level fields
-        const { crux } = await import('@/services');
-        const svc = crux;
         // Update title/description via crux service
         const services = (await import('@/services')).getServices();
         await services.crux.update(moodId, { title, description });

@@ -88,8 +88,8 @@ export function getCurrentMoodPalette(): MoodPalette {
   const cs = getComputedStyle(el);
   const result = {} as Record<string, string>;
   for (const key of Object.keys(GARDEN_DARK)) {
-    const cssVar = VAR_MAP[key];
-    result[key] = cs.getPropertyValue(cssVar).trim() || (GARDEN_DARK as Record<string, string>)[key];
+    const cssVar = VAR_MAP[key] || camelToVar(key);
+    result[key] = cs.getPropertyValue(cssVar).trim() || (GARDEN_DARK as Record<string, string>)[key] || '';
   }
   return result as unknown as MoodPalette;
 }

@@ -213,7 +213,7 @@ export async function exportCrux(options: ExportOptions): Promise<ExportResult> 
         crux: {
           id: snapshotCrux.id,
           slug: snapshotCrux.slug,
-          title: snapshotCrux.title,
+          title: snapshotCrux.title ?? '',
           kind: 'snapshot',
           meta: cleanMeta,
         },

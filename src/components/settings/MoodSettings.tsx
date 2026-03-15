@@ -286,7 +286,7 @@ function PaletteDisplay() {
           </div>
           <div className="flex flex-wrap gap-2">
             {block.tokens.map(({ key, label }) => {
-              const value = palette[key];
+              const value = palette[key] || '';
               return (
                 <div
                   key={key}

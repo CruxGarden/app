@@ -1,8 +1,8 @@
-import { useState, useRef, useCallback, useEffect } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Panel, Spinner, Button, IconButton, ApiKeySetup } from '@/components/ui';
 import { APP_NAME } from '@/lib/constants';
-import { initServices, isServicesReady, ensureLocalAuthor, getBackend, getServices } from '@/services';
+import { initServices, isServicesReady, ensureLocalAuthor, getServices } from '@/services';
 import { getSqliteClient } from '@/services/sqlite/client';
 import { useAuthStore } from '@/stores/authStore';
 import { importGarden } from '@/services/garden-io';
