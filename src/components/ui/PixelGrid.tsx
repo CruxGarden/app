@@ -148,7 +148,6 @@ export default function PixelGrid({
           ? { width: cssSize, height: cssSize }
           : {}),
         imageRendering: 'pixelated',
-        borderRadius: 'var(--radius)',
       }}
     />
   );

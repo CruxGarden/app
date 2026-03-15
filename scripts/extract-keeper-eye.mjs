@@ -13,7 +13,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 function extractEye(inputPath, outputPath, cx, cy, cropSize) {
   const data = JSON.parse(readFileSync(inputPath, 'utf8'));
   const { size, palette, pixels } = data;
-  const indices = Uint8Array.from(atob(pixels), (c) => c.charCodeAt(0));
+  const indices = Uint8Array.from(Buffer.from(pixels, 'base64'));
 
   const half = Math.floor(cropSize / 2);
   const startX = cx - half;
@@ -61,16 +61,9 @@ const EYE_X = 64;
 const EYE_Y = 48;
 const CROP = 48; // 48x48 square centered on eye
 
-// Dark variant
+// Weathered (dark) variant only
 extractEye(
   resolve(__dirname, '../src/images/keeper-weathered.pxl.json'),
-  resolve(__dirname, '../src/images/keeper-eye-dark.pxl.json'),
-  EYE_X, EYE_Y, CROP,
-);
-
-// Light variant
-extractEye(
-  resolve(__dirname, '../src/images/keeper-light.pxl.json'),
-  resolve(__dirname, '../src/images/keeper-eye-light.pxl.json'),
+  resolve(__dirname, '../src/images/keeper-eye.pxl.json'),
   EYE_X, EYE_Y, CROP,
 );
