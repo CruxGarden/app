@@ -69,7 +69,7 @@ export default function CruxCard({ crux, linkTo, onDelete, sortBy = 'created' }:
         onClick={() => navigate(linkTo || `/c/${crux.id}`)}
         className={cn(
           'bg-garden-card border border-garden-card-border rounded-[var(--radius)] p-4 text-left',
-          'group-hover:bg-garden-card-hover group-hover:border-garden-card-border-hover transition-all duration-200 cursor-pointer',
+          'hover:bg-garden-card-hover hover:border-garden-card-border-hover hover:text-garden-card-title cursor-pointer',
           'w-full h-36 flex flex-col',
         )}
       >

@@ -1,7 +1,8 @@
-import { useMemo, useRef, useEffect, useCallback } from 'react';
+import { useMemo, useRef, useEffect, useCallback, useState } from 'react';
 import PixelGrid, { type ColorMode } from './PixelGrid';
 import keeperData from '@/images/keeper.pxl.json';
 import keeperWeatheredData from '@/images/keeper-weathered.pxl.json';
+import keeperLightData from '@/images/keeper-light.pxl.json';
 
 /**
  * 128×128 pixel-art portrait of the Keeper, loaded from palette-indexed
@@ -28,15 +29,23 @@ function hexToRgb(hex: string): [number, number, number] {
   return [parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4, 6), 16)];
 }
 
-/** Read --accent from computed styles */
+/** Read --accent and --bg from computed styles */
 function getAccentColor(): [number, number, number] {
   if (typeof document === 'undefined') return [0, 230, 118];
   const val = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim();
   if (val && val.startsWith('#') && val.length >= 7) return hexToRgb(val);
-  return [0, 230, 118]; // fallback
+  return [0, 230, 118];
 }
 
-function decodePixelArt(data: PxlData, greenscale = false, tint?: [number, number, number]): Uint8Array {
+function isLightMode(): boolean {
+  if (typeof document === 'undefined') return false;
+  const bg = getComputedStyle(document.documentElement).getPropertyValue('--bg').trim();
+  if (!bg || !bg.startsWith('#') || bg.length < 7) return false;
+  const [r, g, b] = hexToRgb(bg);
+  return (0.299 * r + 0.587 * g + 0.114 * b) / 255 > 0.5;
+}
+
+function decodePixelArt(data: PxlData, greenscale = false, tint?: [number, number, number], invert = false): Uint8Array {
   const { size, palette, pixels } = data;
   const indices = Uint8Array.from(atob(pixels), (c) => c.charCodeAt(0));
   const rgb = new Uint8Array(size * size * 3);
@@ -48,11 +57,22 @@ function decodePixelArt(data: PxlData, greenscale = false, tint?: [number, numbe
     if (greenscale) {
       const [tr, tg, tb] = tint || [0, 230, 118];
       const lum = (0.299 * color[0]! + 0.587 * color[1]! + 0.114 * color[2]!) / 255;
-      const grey = lum * 255;
-      // Blend 35% accent tint with 65% grey
-      rgb[oi] = Math.round(grey * 0.65 + lum * tr * 0.35);
-      rgb[oi + 1] = Math.round(grey * 0.65 + lum * tg * 0.35);
-      rgb[oi + 2] = Math.round(grey * 0.65 + lum * tb * 0.35);
+
+      if (invert) {
+        // Light mode: bright pixels → dark accent, dark pixels → light/faded
+        // Map lum 0→1 to output range where high lum = full accent, low lum = pale wash
+        const strength = lum * lum; // square for more contrast in highlights
+        const pale = 220; // light base for shadows
+        rgb[oi] = Math.round(pale * (1 - strength) + tr * strength);
+        rgb[oi + 1] = Math.round(pale * (1 - strength) + tg * strength);
+        rgb[oi + 2] = Math.round(pale * (1 - strength) + tb * strength);
+      } else {
+        const grey = lum * 255;
+        // Dark mode: blend 35% accent tint with 65% grey
+        rgb[oi] = Math.round(grey * 0.65 + lum * tr * 0.35);
+        rgb[oi + 1] = Math.round(grey * 0.65 + lum * tg * 0.35);
+        rgb[oi + 2] = Math.round(grey * 0.65 + lum * tb * 0.35);
+      }
     } else {
       rgb[oi] = color[0]!;
       rgb[oi + 1] = color[1]!;
@@ -66,6 +86,7 @@ function decodePixelArt(data: PxlData, greenscale = false, tint?: [number, numbe
 const VARIANTS = {
   default: keeperData as PxlData,
   weathered: keeperWeatheredData as PxlData,
+  light: keeperLightData as PxlData,
 };
 
 export type KeeperVariant = keyof typeof VARIANTS;
@@ -100,9 +121,25 @@ export default function KeeperPixelAvatar({
   greenscale = true,
   animate = false,
 }: KeeperPixelAvatarProps) {
-  const data = VARIANTS[variant];
-  const accentRgb = useMemo(() => getAccentColor(), []);
-  const basePixels = useMemo(() => decodePixelArt(data, greenscale, accentRgb), [data, greenscale, accentRgb]);
+  // Re-read accent and mode when palette changes
+  const [accentRgb, setAccentRgb] = useState<[number, number, number]>(() => getAccentColor());
+  const [light, setLight] = useState(() => isLightMode());
+
+  // Use the light variant image when in light mode
+  const resolvedVariant = light ? 'light' : variant;
+  const data = VARIANTS[resolvedVariant];
+  useEffect(() => {
+    const handler = () => {
+      setAccentRgb(getAccentColor());
+      setLight(isLightMode());
+    };
+    document.addEventListener('palette-change', handler);
+    return () => document.removeEventListener('palette-change', handler);
+  }, []);
+
+  // Light variant has its own colors — no greenscale inversion needed
+  const useGreenscale = light ? false : greenscale;
+  const basePixels = useMemo(() => decodePixelArt(data, useGreenscale, accentRgb, false), [data, useGreenscale, accentRgb]);
 
   // Static render — no animation
   if (!animate) {
