@@ -104,6 +104,12 @@ export class AnthropicAdapter implements ProviderAdapter {
       toolCalls,
       textContent: textParts.join(''),
       fullContent,
+      usage: finalMessage.usage
+        ? {
+            inputTokens: finalMessage.usage.input_tokens,
+            outputTokens: finalMessage.usage.output_tokens,
+          }
+        : undefined,
     };
   }
 }

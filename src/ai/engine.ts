@@ -19,7 +19,8 @@ export type ConversationEvent =
   | { type: 'tool_result'; name: string; id: string; result: string }
   | { type: 'done'; textContent: string; hadMutation: boolean }
   | { type: 'error'; message: string }
-  | { type: 'info'; message: string };
+  | { type: 'info'; message: string }
+  | { type: 'usage'; inputTokens: number; outputTokens: number };
 
 const MAX_ROUNDS = 10;
 
@@ -117,6 +118,15 @@ export async function* runConversation(
           'Response was truncated (max_tokens reached with no usable content). The file may be too large for a single operation.',
       };
       return;
+    }
+
+    // Yield usage from this round
+    if (response.usage) {
+      yield {
+        type: 'usage',
+        inputTokens: response.usage.inputTokens,
+        outputTokens: response.usage.outputTokens,
+      };
     }
 
     // Yield the text content
