@@ -386,22 +386,90 @@ export const useCruxStore = create<CruxState>((set, get) => ({
 
   // Publish actions
   publishCrux: async () => {
-    const { crux, saveMeta } = get();
+    const { crux, artifacts, saveMeta } = get();
     if (!crux) return;
     await saveMeta();
+
+    const { cruxes } = await import('@/api');
+    const { artifact: artifactService } = getServices();
+
+    // 1. Upsert crux to API (create if not exists, update if it does)
+    try {
+      await cruxes.get(crux.id);
+      // Crux exists — update it
+      await cruxes.update(crux.id, {
+        title: crux.title,
+        slug: crux.slug,
+        description: crux.description,
+        data: crux.data,
+        type: crux.type,
+        kind: crux.kind as 'webapp' | 'page' | 'document' | 'image' | undefined,
+        discoverable: crux.discoverable,
+        meta: crux.meta as Record<string, unknown>,
+      });
+    } catch {
+      // Crux doesn't exist — create it
+      await cruxes.create({
+        id: crux.id,
+        slug: crux.slug,
+        title: crux.title,
+        description: crux.description,
+        data: crux.data || '',
+        type: crux.type,
+        kind: crux.kind as 'webapp' | 'page' | 'document' | 'image' | undefined,
+        discoverable: crux.discoverable,
+        meta: crux.meta as Record<string, unknown>,
+      });
+    }
+
+    // 2. Clear existing working artifacts on API, then upload current set
+    try {
+      const remoteArtifacts = await cruxes.getArtifacts(crux.id);
+      for (const ra of remoteArtifacts.filter((a) => a.kind !== 'published-snapshot')) {
+        await cruxes.deleteArtifact(ra.id);
+      }
+    } catch {
+      // First publish — no remote artifacts to clear
+    }
+
+    const workingArtifacts = (artifacts || []).filter(
+      (a) => a.type === 'artifact',
+    );
+    for (const art of workingArtifacts) {
+      try {
+        const blob = await artifactService.downloadBlob(art.id);
+        const path = art.meta?.path || art.filename || 'file';
+        const fileName = path.split('/').pop() || 'file';
+        const file = new File([blob], fileName, { type: art.mimeType });
+        await cruxes.uploadArtifact(crux.id, file, {
+          type: art.type,
+          kind: art.kind,
+          path,
+        });
+      } catch {
+        // Skip artifacts that fail to upload — publish will use what's available
+      }
+    }
+
+    // 3. Publish on API (snapshots to S3)
     const { publish } = getServices();
     const updated = await publish.publish(crux.id);
-    set({ crux: { ...crux, ...updated }, hasUnpublishedChanges: false });
 
-    // Sync discoverable state and tags to server
+    // Merge API publish metadata into local crux (preserve local-only meta fields)
+    const mergedMeta = { ...crux.meta, ...updated.meta };
+    const mergedCrux = { ...crux, ...updated, meta: mergedMeta };
+    set({ crux: mergedCrux, hasUnpublishedChanges: false });
+
+    // Persist publish metadata locally
+    const { crux: cruxService } = getServices();
+    await cruxService.update(crux.id, { meta: mergedMeta });
+
+    // 4. Sync discoverable state and tags to server
     try {
-      const { cruxes } = await import('@/api');
-      await cruxes.update(crux.id, { discoverable: crux.discoverable });
       if (crux.discoverable) {
         const tags = (crux.meta?.tags as string[]) || [];
         await cruxes.syncTags(crux.id, tags);
       } else {
-        // Ghost mode: clear tags on server
         await cruxes.syncTags(crux.id, []);
       }
     } catch {
@@ -412,18 +480,16 @@ export const useCruxStore = create<CruxState>((set, get) => ({
   unpublishCrux: async () => {
     const { crux } = get();
     if (!crux) return;
-    const { publish } = getServices();
-    const updated = await publish.unpublish(crux.id);
-    set({ crux: { ...crux, ...updated } });
 
-    // Clean up discover state on server
-    try {
-      const { cruxes } = await import('@/api');
-      await cruxes.update(crux.id, { discoverable: false });
-      await cruxes.syncTags(crux.id, []);
-    } catch {
-      // Best-effort — unpublish itself succeeded
-    }
+    // Unpublish — removes S3 files and hard-deletes crux + all related entities from API
+    const { publish } = getServices();
+    await publish.unpublish(crux.id);
+
+    // Update local state
+    const meta = { ...crux.meta };
+    delete meta.publishedAt;
+    delete meta.publishedVersion;
+    set({ crux: { ...crux, meta, visibility: 'private' as const } });
   },
 
   // File CRUD actions

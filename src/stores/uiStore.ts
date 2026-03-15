@@ -86,6 +86,9 @@ interface UIState {
   // Keeper Console
   keeperOpen: boolean;
 
+  // Mood Editor
+  moodEditorOpen: boolean;
+
   // ── Layout actions ──
   setActiveCrux: (id: string | null) => void;
   togglePane: (pane: PaneType) => void;
@@ -120,6 +123,10 @@ interface UIState {
   // ── Keeper Console ──
   setKeeperOpen: (open: boolean) => void;
   toggleKeeper: () => void;
+
+  // ── Mood Editor ──
+  setMoodEditorOpen: (open: boolean) => void;
+  toggleMoodEditor: () => void;
 
   // ── Legacy compatibility ──
   fileViewerOpen: boolean;
@@ -468,6 +475,7 @@ export const useUIStore = create<UIState>()((set, get) => ({
   contextMenu: { ...DEFAULT_CONTEXT_MENU },
   mobileActivePane: 'collaboration' as PaneType,
   keeperOpen: false,
+  moodEditorOpen: false,
 
   // ── Layout actions ──
 
@@ -727,6 +735,8 @@ export const useUIStore = create<UIState>()((set, get) => ({
 
   setKeeperOpen: (open) => set({ keeperOpen: open }),
   toggleKeeper: () => set((s) => ({ keeperOpen: !s.keeperOpen })),
+  setMoodEditorOpen: (open) => set({ moodEditorOpen: open }),
+  toggleMoodEditor: () => set((s) => ({ moodEditorOpen: !s.moodEditorOpen })),
 
   // ── Legacy compatibility (derived from pane system) ──
 

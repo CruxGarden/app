@@ -221,7 +221,17 @@ export default function WorkspaceLayout() {
   // Render each tile with custom toolbar containing icon + label + close
   const renderTile = useCallback(
     (paneType: PaneType, path: MosaicBranch[]) => {
-      const paneColor = PANE_COLORS[paneType];
+      // Pane header tokens — read directly from CSS vars set by the mood palette
+      const prefix = {
+        collaboration: '--pane-collaboration',
+        artifacts: '--pane-artifacts',
+        workshop: '--pane-workshop',
+        details: '--pane-details',
+        history: '--pane-history',
+        export: '--pane-export',
+        sync: '--pane-sync',
+        publish: '--pane-publish',
+      }[paneType];
 
       return (
         <MosaicWindow<PaneType>
@@ -232,14 +242,16 @@ export default function WorkspaceLayout() {
             <div
               className="pane-toolbar"
               style={{
-                backgroundColor: `color-mix(in srgb, ${paneColor} 15%, transparent)`,
-                borderColor: `color-mix(in srgb, ${paneColor} 20%, transparent)`,
+                backgroundColor: `var(${prefix}-header)`,
+                borderColor: `var(${prefix}-header-border)`,
                 borderWidth: 1,
                 borderStyle: 'solid',
               }}
             >
-              <div className="flex items-center gap-2" style={{ color: paneColor }}>
-                {PANE_ICONS[paneType]}
+              <div className="flex items-center gap-2" style={{ color: `var(${prefix}-header-text)` }}>
+                <span style={{ color: `var(${prefix}-header-icon)` }}>
+                  {PANE_ICONS[paneType]}
+                </span>
                 <span className="text-[11px] font-mono uppercase tracking-wider">
                   {PANE_LABELS[paneType]}
                 </span>
@@ -249,8 +261,8 @@ export default function WorkspaceLayout() {
                   e.stopPropagation();
                   setPaneVisible(paneType, false);
                 }}
-                className="p-1 opacity-60 hover:opacity-100 transition-opacity cursor-pointer"
-                style={{ color: paneColor }}
+                className="p-1 hover:opacity-80 transition-opacity cursor-pointer"
+                style={{ color: `var(${prefix}-header-close)` }}
                 title={`Close ${PANE_LABELS[paneType]}`}
               >
                 <CloseIcon />

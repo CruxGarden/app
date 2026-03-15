@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/stores/authStore';
-import MoodBar from '@/components/layout/MoodBar';
+
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 import { useGarden } from '@/hooks/useGarden';
@@ -218,8 +218,6 @@ export default function Garden() {
       ) : (
         <GardenGrid cruxes={cruxList} onDelete={setDeletingId} sortBy={sortBy} />
       )}
-
-      <MoodBar />
 
       {/* Delete confirmation modal */}
       <Modal open={deletingId !== null} onClose={() => setDeletingId(null)}>

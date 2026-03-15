@@ -16,7 +16,7 @@ export default function LoadingPanel({ label, className }: LoadingPanelProps) {
     <div
       className={cn(
         'flex items-center gap-3 px-5 py-3 rounded-lg',
-        'bg-surface border border-border text-text-muted text-sm',
+        'bg-surface border border-surface-border text-surface-text-muted text-sm',
         className,
       )}
     >

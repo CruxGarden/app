@@ -31,6 +31,11 @@ export class ApiCruxService implements ICruxService {
     return this.fetchAllPages();
   }
 
+  async listByType(_type: string): Promise<Crux[]> {
+    // API doesn't have a type filter endpoint yet — return empty for now
+    return [];
+  }
+
   async create(input: CreateCruxInput): Promise<Crux> {
     return cruxes.create({
       slug: input.slug || crypto.randomUUID().slice(0, 8),

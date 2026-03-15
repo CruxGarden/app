@@ -72,7 +72,7 @@ export default function MessageInput({
   };
 
   return (
-    <div className="p-3 bg-surface/30">
+    <div className="p-3 bg-chat/30">
       <div className="flex items-end gap-2">
         <textarea
           ref={textareaRef}
@@ -84,9 +84,9 @@ export default function MessageInput({
           rows={1}
           disabled={disabled}
           className={cn(
-            'flex-1 resize-none bg-bg border border-accent/20 rounded-[var(--radius-sm)] px-3 py-2',
-            'text-sm text-text placeholder:text-text-muted leading-[1.35]',
-            'focus:outline-none focus:border-accent',
+            'flex-1 resize-none bg-chat-input border border-chat-input-border rounded-[var(--radius-sm)] px-3 py-2',
+            'text-sm text-chat-input-text placeholder:text-chat-input-placeholder leading-[1.35]',
+            'focus:outline-none focus:border-chat-input-border-focus',
             'font-body',
             'max-h-[200px]',
           )}
@@ -96,8 +96,8 @@ export default function MessageInput({
             onClick={onStop}
             className={cn(
               'px-3 py-2 rounded-[var(--radius-sm)] text-sm font-body',
-              'bg-error-muted text-error border border-error/20',
-              'hover:bg-error/20 transition-colors cursor-pointer',
+              'bg-danger-button text-danger-button-text border border-danger-button-border',
+              'hover:bg-danger-button-hover transition-colors cursor-pointer',
             )}
           >
             Stop
@@ -108,8 +108,8 @@ export default function MessageInput({
             disabled={!value.trim() || disabled}
             className={cn(
               'px-3 py-2 rounded-[var(--radius-sm)] text-sm font-body',
-              'bg-accent-muted text-accent border border-accent/20',
-              'hover:border-accent transition-colors cursor-pointer',
+              'bg-chat-send-button text-chat-send-button-icon border border-chat-send-button/20',
+              'hover:bg-chat-send-button-hover transition-colors cursor-pointer',
               'disabled:opacity-40 disabled:cursor-not-allowed',
             )}
           >
@@ -117,7 +117,7 @@ export default function MessageInput({
           </button>
         )}
       </div>
-      <p className="text-[11px] text-text-muted mt-1.5 px-1">
+      <p className="text-[11px] text-chat-text-muted mt-1.5 px-1">
         Enter to send · Shift+Enter for new line · ↑ for history
       </p>
     </div>

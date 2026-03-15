@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import type { ChatMessage } from '@/api/types';
-import { useAuthStore } from '@/stores/authStore';
+import { useAuthStore, resolveAvatarUrl } from '@/stores/authStore';
 import MessageBubble from './MessageBubble';
 import { KeeperAvatar } from '@/components/keeper/KeeperConsole';
 import MarkdownRenderer from './MarkdownRenderer';
@@ -18,13 +18,7 @@ export default function MessageList({ messages, streamingContent, isStreaming, t
   const author = useAuthStore((s) => s.author);
 
   const userInitial = author?.username?.charAt(0)?.toUpperCase() ?? '?';
-  const avatarUrl = (() => {
-    const url = author?.meta?.avatarUrl;
-    if (!url || typeof url !== 'string') return null;
-    if (url.startsWith('data:')) return url;
-    const base = import.meta.env.VITE_API_URL || 'http://localhost:3000';
-    return `${base}${url}?v=${author.updated}`;
-  })();
+  const avatarUrl = resolveAvatarUrl(author);
 
   useEffect(() => {
     if (!hasScrolledRef.current) {

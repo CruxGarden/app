@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Panel, Spinner, Button, IconButton, ApiKeySetup } from '@/components/ui';
 import { APP_NAME } from '@/lib/constants';
@@ -86,22 +86,20 @@ export default function Landing() {
       if (!isServicesReady()) await initServices();
 
       const db = getSqliteClient();
-      const row = await db.get<{ count: number }>(
-        "SELECT COUNT(*) as count FROM cruxes WHERE type = 'workspace'",
+      const row = await db.get<{ value: string }>(
+        "SELECT value FROM settings WHERE key = 'cruxgarden:localAuthorId'",
       );
-      if (row && row.count > 0) {
-        // Existing garden — go straight home
-        if (getBackend() === 'local' && !useAuthStore.getState().author) {
+      if (row?.value) {
+        if (!useAuthStore.getState().author) {
           const author = await ensureLocalAuthor();
           useAuthStore.setState({ author });
         }
         navigate('/home', { replace: true });
       } else {
-        // No garden — show the wizard
         setStep('choose');
       }
-    } catch {
-      // If something goes wrong, still show the wizard
+    } catch (err) {
+      console.error('Landing garden check failed:', err);
       setStep('choose');
     }
   };
@@ -111,9 +109,9 @@ export default function Landing() {
       <div className="w-full max-w-md flex flex-col items-center gap-6">
         {/* Landing banner — only on entry */}
         {(step === 'banner' || step === 'checking') && (
-          <div className="relative z-10 flex flex-col items-center bg-surface-solid border border-border rounded-[var(--radius)] px-12 py-10">
-            <h1 className="font-display text-4xl font-medium text-text">{APP_NAME}</h1>
-            <p className="text-text-muted text-lg mt-1">where ideas grow</p>
+          <div className="relative z-10 flex flex-col items-center bg-landing-panel border border-landing-panel-border rounded-[var(--radius)] px-12 py-10">
+            <h1 className="font-display text-4xl font-medium text-landing-title">{APP_NAME}</h1>
+            <p className="text-landing-subtitle text-lg mt-1">where ideas grow</p>
 
             <div className="mt-6">
               <IconButton

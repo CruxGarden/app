@@ -16,19 +16,19 @@ export default function PublicTopBar({
   onToggleMetadata,
 }: PublicTopBarProps) {
   return (
-    <header className="relative z-20 flex items-center justify-between h-8 px-3 border-b border-border bg-surface-solid shrink-0">
+    <header className="relative z-20 flex items-center justify-between h-8 px-3 border-b border-public-top-bar-border bg-public-top-bar shrink-0">
       <div className="flex items-center gap-1.5 min-w-0 text-[10px] font-mono">
-        <a href="https://crux.garden" className="shrink-0 text-text-muted hover:underline">
+        <a href="https://crux.garden" className="shrink-0 text-public-top-bar-link hover:text-public-top-bar-link-hover hover:underline">
           {APP_NAME}
         </a>
-        <span className="text-text-muted/40">/</span>
-        <a href={`/${username}`} className="shrink-0 text-text-muted hover:underline">
+        <span className="text-public-top-bar-text-muted/40">/</span>
+        <a href={`/${username}`} className="shrink-0 text-public-top-bar-link hover:text-public-top-bar-link-hover hover:underline">
           {username}
         </a>
         {title && (
           <>
-            <span className="text-text-muted/40">/</span>
-            <span className="text-text truncate">{title}</span>
+            <span className="text-public-top-bar-text-muted/40">/</span>
+            <span className="text-public-top-bar-text truncate">{title}</span>
           </>
         )}
       </div>

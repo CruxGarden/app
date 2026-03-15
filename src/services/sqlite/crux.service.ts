@@ -28,7 +28,15 @@ export class SqliteCruxService implements ICruxService {
 
   async listAll(): Promise<Crux[]> {
     const rows = await getSqliteClient().all(
-      "SELECT * FROM cruxes WHERE kind IS NULL OR kind != 'snapshot' ORDER BY updated DESC",
+      "SELECT * FROM cruxes WHERE (kind IS NULL OR kind != 'snapshot') AND type != 'mood' ORDER BY updated DESC",
+    );
+    return rows.map((r) => fromRow<Crux>(r));
+  }
+
+  async listByType(type: string): Promise<Crux[]> {
+    const rows = await getSqliteClient().all(
+      "SELECT * FROM cruxes WHERE type = ? AND (kind IS NULL OR kind != 'snapshot') ORDER BY updated DESC",
+      [type],
     );
     return rows.map((r) => fromRow<Crux>(r));
   }

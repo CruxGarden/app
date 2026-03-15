@@ -1,20 +1,9 @@
 import { useState, useRef } from 'react';
-import { useAuthStore } from '@/stores/authStore';
+import { useAuthStore, resolveAvatarUrl } from '@/stores/authStore';
 import { authors as authorsApi } from '@/api';
 import { getBackend } from '@/services';
 import { Panel, Spinner } from '@/components/ui';
 import { cn } from '@/lib/cn';
-
-function buildAvatarUrl(
-  author: { id: string; meta?: Record<string, unknown> } | null,
-  bust: number,
-): string | null {
-  const url = author?.meta?.avatarUrl;
-  if (!url || typeof url !== 'string') return null;
-  if (url.startsWith('data:')) return url;
-  const base = import.meta.env.VITE_API_URL || 'http://localhost:3000';
-  return `${base}${url}?v=${bust}`;
-}
 
 const btnClass = cn(
   'px-3 py-1.5 text-xs font-mono rounded-[var(--radius-sm)]',
@@ -26,7 +15,6 @@ export default function AccountSettings() {
   const { account, author, isAuthenticated, uploadAvatar, removeAvatar, updateAuthor, connectAccount, disconnectAccount } = useAuthStore();
   const fileRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
-  const [avatarBust, setAvatarBust] = useState(Date.now());
 
   // Username editing
   const [editingUsername, setEditingUsername] = useState(false);
@@ -134,7 +122,6 @@ export default function AccountSettings() {
     setUploading(true);
     try {
       await uploadAvatar(file);
-      setAvatarBust(Date.now());
     } catch (err) {
       console.error('Avatar upload failed:', err);
     } finally {
@@ -155,11 +142,11 @@ export default function AccountSettings() {
   };
 
   const initial = author?.username?.charAt(0)?.toUpperCase() ?? '?';
-  const avatar = buildAvatarUrl(author, avatarBust);
+  const avatar = resolveAvatarUrl(author);
 
   return (
     <Panel padding="md">
-      <h2 className="font-display text-sm font-medium text-accent mb-4">Account</h2>
+      <h2 className="font-display text-sm font-medium text-settings-label mb-4">Account</h2>
 
       {/* Avatar + profile (always shown) */}
       <div className="flex items-center gap-4 mb-4">

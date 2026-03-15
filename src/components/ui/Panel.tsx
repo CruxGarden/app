@@ -16,8 +16,8 @@ export default function Panel({ padding = 'md', className, children, ...props }:
   return (
     <div
       className={cn(
-        'bg-panel',
-        'border border-border rounded-[var(--radius)]',
+        'bg-panel text-panel-text',
+        'border border-panel-border rounded-[var(--radius)]',
         'shadow-lg shadow-black/5',
         paddings[padding],
         className,

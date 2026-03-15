@@ -105,11 +105,11 @@ export default function CommandPalette({ open, onClose }: CommandPaletteProps) {
     <div className="fixed inset-0 z-50 flex items-start justify-center pt-[20vh]" onClick={onClose}>
       <div className="fixed inset-0 bg-bg/60" />
       <div
-        className="relative w-full max-w-lg bg-surface border border-border rounded-[var(--radius)] shadow-2xl overflow-hidden"
+        className="relative w-full max-w-lg bg-command-palette border border-command-palette-border rounded-[var(--radius)] shadow-2xl overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Search input */}
-        <div className="flex items-center gap-2 px-4 py-3 border-b border-border">
+        <div className="flex items-center gap-2 px-4 py-3 border-b border-command-palette-border">
           <SearchIcon />
           <input
             ref={inputRef}
@@ -117,9 +117,9 @@ export default function CommandPalette({ open, onClose }: CommandPaletteProps) {
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder="Search cruxes..."
-            className="flex-1 bg-transparent text-sm text-text placeholder:text-text-muted focus:outline-none font-body"
+            className="flex-1 bg-transparent text-sm text-command-palette-input-text placeholder:text-command-palette-item-icon focus:outline-none font-body"
           />
-          <kbd className="text-[10px] font-mono text-text-muted bg-surface-solid px-1.5 py-0.5 rounded border border-border">
+          <kbd className="text-[10px] font-mono text-command-palette-item-icon bg-command-palette-input px-1.5 py-0.5 rounded border border-command-palette-border">
             esc
           </kbd>
         </div>
@@ -127,9 +127,9 @@ export default function CommandPalette({ open, onClose }: CommandPaletteProps) {
         {/* Results */}
         <div className="max-h-64 overflow-y-auto py-1">
           {loading && results.length === 0 ? (
-            <div className="px-4 py-6 text-xs text-text-muted text-center">Searching...</div>
+            <div className="px-4 py-6 text-xs text-command-palette-item-icon text-center">Searching...</div>
           ) : results.length === 0 ? (
-            <div className="px-4 py-6 text-xs text-text-muted text-center">
+            <div className="px-4 py-6 text-xs text-command-palette-item-icon text-center">
               {query ? 'No cruxes found' : 'No cruxes yet'}
             </div>
           ) : (
@@ -139,16 +139,16 @@ export default function CommandPalette({ open, onClose }: CommandPaletteProps) {
                 onClick={() => handleSelect(crux)}
                 className={cn(
                   'w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors cursor-pointer',
-                  i === selected ? 'bg-accent-muted' : 'hover:bg-surface-solid',
+                  i === selected ? 'bg-command-palette-item-hover' : 'hover:bg-command-palette-item-hover/50',
                 )}
               >
                 <CruxIcon />
                 <div className="min-w-0 flex-1">
-                  <div className="text-sm font-body text-text truncate">
+                  <div className="text-sm font-body text-command-palette-item-text truncate">
                     {crux.title || crux.slug}
                   </div>
                   {crux.meta?.summary?.purpose && (
-                    <div className="text-xs text-text-muted truncate mt-0.5">
+                    <div className="text-xs text-command-palette-item-icon truncate mt-0.5">
                       {crux.meta.summary.purpose}
                     </div>
                   )}
@@ -159,16 +159,16 @@ export default function CommandPalette({ open, onClose }: CommandPaletteProps) {
         </div>
 
         {/* Footer hint */}
-        <div className="flex items-center gap-3 px-4 py-2 border-t border-border text-[10px] font-mono text-text-muted">
+        <div className="flex items-center gap-3 px-4 py-2 border-t border-command-palette-border text-[10px] font-mono text-command-palette-item-icon">
           <span>
-            <kbd className="px-1 py-0.5 bg-surface-solid rounded border border-border">↑↓</kbd>{' '}
+            <kbd className="px-1 py-0.5 bg-command-palette-input rounded border border-command-palette-border">↑↓</kbd>{' '}
             navigate
           </span>
           <span>
-            <kbd className="px-1 py-0.5 bg-surface-solid rounded border border-border">↵</kbd> open
+            <kbd className="px-1 py-0.5 bg-command-palette-input rounded border border-command-palette-border">↵</kbd> open
           </span>
           <span>
-            <kbd className="px-1 py-0.5 bg-surface-solid rounded border border-border">esc</kbd>{' '}
+            <kbd className="px-1 py-0.5 bg-command-palette-input rounded border border-command-palette-border">esc</kbd>{' '}
             close
           </span>
         </div>
@@ -188,7 +188,7 @@ function SearchIcon() {
       strokeWidth="2"
       strokeLinecap="round"
       strokeLinejoin="round"
-      className="text-text-muted"
+      className="text-command-palette-item-icon"
     >
       <circle cx="11" cy="11" r="8" />
       <path d="M21 21l-4.35-4.35" />
@@ -207,7 +207,7 @@ function CruxIcon() {
       strokeWidth="1.5"
       strokeLinecap="round"
       strokeLinejoin="round"
-      className="text-text-muted shrink-0"
+      className="text-command-palette-item-icon shrink-0"
     >
       <circle cx="12" cy="12" r="3" />
       <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" />

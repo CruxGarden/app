@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuthStore } from '@/stores/authStore';
+import { useAuthStore, resolveAvatarUrl } from '@/stores/authStore';
 import { useThemeStore } from '@/stores/themeStore';
 import { cn } from '@/lib/cn';
 
@@ -78,13 +78,7 @@ export default function UserMenu() {
   }, [open]);
 
   const initial = author?.username?.charAt(0)?.toUpperCase() ?? '?';
-  const avatarUrl = (() => {
-    const url = author?.meta?.avatarUrl;
-    if (!url || typeof url !== 'string') return null;
-    if (url.startsWith('data:')) return url;
-    const base = import.meta.env.VITE_API_URL || 'http://localhost:3000';
-    return `${base}${url}?v=${author.updated}`;
-  })();
+  const avatarUrl = resolveAvatarUrl(author);
 
   const handleLogout = async () => {
     setOpen(false);
@@ -98,8 +92,8 @@ export default function UserMenu() {
         onClick={() => setOpen(!open)}
         className={cn(
           'w-6 h-6 rounded-[var(--radius-sm)] flex items-center justify-center overflow-hidden',
-          !avatarUrl && 'bg-accent-muted text-accent text-[10px] font-display font-bold',
-          'ring-1 ring-text-muted/20 hover:ring-accent/40 transition-shadow cursor-pointer',
+          !avatarUrl && 'bg-profile-button text-profile-button-icon text-[10px] font-display font-bold',
+          'ring-1 ring-profile-button-border hover:ring-profile-button-hover transition-shadow cursor-pointer',
         )}
       >
         {avatarUrl ? (
@@ -111,7 +105,7 @@ export default function UserMenu() {
 
       {open ? (
         <div className="absolute right-0 top-full w-48 pt-2 z-50">
-          <div className="bg-surface-solid border border-border rounded-[var(--radius)] shadow-xl py-1">
+          <div className="bg-overlay-panel border border-overlay-border rounded-[var(--radius)] shadow-xl py-1">
             {author ? (
               <button
                 onClick={() => {

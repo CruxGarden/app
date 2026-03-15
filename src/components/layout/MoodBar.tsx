@@ -26,13 +26,13 @@ export default function MoodBar() {
   }, []);
 
   return (
-    <div className="fixed bottom-4 right-4 z-30 flex items-center gap-1 p-1 rounded-[var(--radius)] bg-panel border border-border">
+    <div className="fixed bottom-4 right-4 z-30 flex items-center gap-1 p-1 rounded-[var(--radius)] bg-panel border border-panel-border">
       <div className="relative group/blank">
         <button
           onClick={() => toggleBg('blank')}
           className={cn(
             'p-1.5 rounded-[var(--radius-sm)] transition-colors cursor-pointer',
-            bgType === 'blank' ? 'text-accent bg-accent-muted' : 'text-text-muted hover:text-accent hover:bg-accent-muted',
+            bgType === 'blank' ? 'text-accent bg-accent-muted' : 'text-panel-text-muted hover:text-accent hover:bg-accent-muted',
           )}
         >
           <svg width="18" height="14" viewBox="0 0 20 14" className="shrink-0">
@@ -40,8 +40,8 @@ export default function MoodBar() {
           </svg>
         </button>
         <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-50 pointer-events-none hidden group-hover/blank:block">
-          <div className="px-2.5 py-1.5 rounded-[var(--radius)] bg-surface-solid border border-border shadow-lg whitespace-nowrap">
-            <span className="text-xs font-medium text-text">Blank</span>
+          <div className="px-2.5 py-1.5 rounded-[var(--radius)] bg-tooltip border border-tooltip-border shadow-lg whitespace-nowrap">
+            <span className="text-xs font-medium text-tooltip-text">Blank</span>
           </div>
         </div>
       </div>
@@ -52,7 +52,7 @@ export default function MoodBar() {
               onClick={() => toggleBg('drift')}
               className={cn(
                 'p-1.5 rounded-[var(--radius-sm)] transition-colors cursor-pointer',
-                bgType === 'drift' ? 'text-accent bg-accent-muted' : 'text-text-muted hover:text-accent hover:bg-accent-muted',
+                bgType === 'drift' ? 'text-accent bg-accent-muted' : 'text-panel-text-muted hover:text-accent hover:bg-accent-muted',
               )}
             >
               <svg width="18" height="14" viewBox="0 0 20 14" className="shrink-0">
@@ -66,8 +66,8 @@ export default function MoodBar() {
               </svg>
             </button>
             <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-50 pointer-events-none hidden group-hover/drift:block">
-              <div className="px-2.5 py-1.5 rounded-[var(--radius)] bg-surface-solid border border-border shadow-lg whitespace-nowrap">
-                <span className="text-xs font-medium text-text">Drift</span>
+              <div className="px-2.5 py-1.5 rounded-[var(--radius)] bg-tooltip border border-tooltip-border shadow-lg whitespace-nowrap">
+                <span className="text-xs font-medium text-tooltip-text">Drift</span>
               </div>
             </div>
           </div>
@@ -76,7 +76,7 @@ export default function MoodBar() {
               onClick={() => toggleBg('flowfield')}
               className={cn(
                 'p-1.5 rounded-[var(--radius-sm)] transition-colors cursor-pointer',
-                bgType === 'flowfield' ? 'text-accent bg-accent-muted' : 'text-text-muted hover:text-accent hover:bg-accent-muted',
+                bgType === 'flowfield' ? 'text-accent bg-accent-muted' : 'text-panel-text-muted hover:text-accent hover:bg-accent-muted',
               )}
             >
               <svg width="18" height="14" viewBox="0 0 20 14" className="shrink-0">
@@ -86,8 +86,8 @@ export default function MoodBar() {
               </svg>
             </button>
             <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-50 pointer-events-none hidden group-hover/flow:block">
-              <div className="px-2.5 py-1.5 rounded-[var(--radius)] bg-surface-solid border border-border shadow-lg whitespace-nowrap">
-                <span className="text-xs font-medium text-text">Flow</span>
+              <div className="px-2.5 py-1.5 rounded-[var(--radius)] bg-tooltip border border-tooltip-border shadow-lg whitespace-nowrap">
+                <span className="text-xs font-medium text-tooltip-text">Flow</span>
               </div>
             </div>
           </div>
@@ -98,7 +98,7 @@ export default function MoodBar() {
           onClick={() => toggleBg('bloom')}
           className={cn(
             'p-1.5 rounded-[var(--radius-sm)] transition-colors cursor-pointer',
-            bgType === 'bloom' ? 'text-accent bg-accent-muted' : 'text-text-muted hover:text-accent hover:bg-accent-muted',
+            bgType === 'bloom' ? 'text-accent bg-accent-muted' : 'text-panel-text-muted hover:text-accent hover:bg-accent-muted',
           )}
         >
           <svg width="18" height="14" viewBox="0 0 20 14" className="shrink-0">
@@ -108,8 +108,8 @@ export default function MoodBar() {
           </svg>
         </button>
         <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-50 pointer-events-none hidden group-hover/bloom:block">
-          <div className="px-2.5 py-1.5 rounded-[var(--radius)] bg-surface-solid border border-border shadow-lg whitespace-nowrap">
-            <span className="text-xs font-medium text-text">Bloom</span>
+          <div className="px-2.5 py-1.5 rounded-[var(--radius)] bg-tooltip border border-tooltip-border shadow-lg whitespace-nowrap">
+            <span className="text-xs font-medium text-tooltip-text">Bloom</span>
           </div>
         </div>
       </div>
