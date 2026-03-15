@@ -2,7 +2,11 @@ import { create } from 'zustand';
 import * as authApi from '@/api/auth';
 import * as authorsApi from '@/api/authors';
 import { getStoredTokens, storeTokens, clearTokens } from '@/api/client';
-import { getServices } from '@/services';
+// Lazy import to avoid pulling SQLite worker into public pages
+async function lazyGetServices() {
+  const { getServices } = await import('@/services');
+  return getServices();
+}
 import type { Profile, Author } from '@/api/types';
 
 function fileToDataUrl(file: File): Promise<string> {
@@ -243,7 +247,7 @@ export const useAuthStore = create<AuthState>((set) => ({
     const { author, isAuthenticated } = useAuthStore.getState();
     if (!author) throw new Error('No author');
 
-    const updated = await getServices().author.update(author.id, dto);
+    const updated = await (await lazyGetServices()).author.update(author.id, dto);
     set({ author: updated });
     if (isAuthenticated) syncAuthorToApi(updated);
     return updated;
@@ -254,7 +258,7 @@ export const useAuthStore = create<AuthState>((set) => ({
     if (!author) throw new Error('No author');
 
     const dataUrl = await fileToDataUrl(file);
-    const updated = await getServices().author.update(author.id, {
+    const updated = await (await lazyGetServices()).author.update(author.id, {
       meta: { ...author.meta, avatarUrl: dataUrl },
     });
     set({ author: updated });
@@ -267,7 +271,7 @@ export const useAuthStore = create<AuthState>((set) => ({
     if (!author) throw new Error('No author');
 
     const meta = { ...author.meta, avatarUrl: null };
-    const updated = await getServices().author.update(author.id, { meta });
+    const updated = await (await lazyGetServices()).author.update(author.id, { meta });
     set({ author: updated });
     if (isAuthenticated) {
       syncAuthorToApi(updated);

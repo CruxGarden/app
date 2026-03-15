@@ -2,36 +2,12 @@ import { useCallback, useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { publicApi } from '@/api';
 import type { Crux, Artifact } from '@/api/types';
-import { isServicesReady, initServices, getServices } from '@/services';
 import { APP_NAME } from '@/lib/constants';
 import { PublicTopBar, ArtifactRenderer } from '@/components/display';
 import { LoadingPanel } from '@/components/ui';
 import MetadataContent from '@/components/workspace/MetadataContent';
 
 type LoadState = 'loading' | 'ready' | 'not-found' | 'error';
-type DataSource = 'local' | 'api';
-
-/** Load crux + artifacts from local SQLite */
-async function loadLocal(username: string, slug: string) {
-  if (!isServicesReady()) await initServices();
-  const { crux: cruxService, artifact: artifactService, author: authorService } = getServices();
-  // Verify author matches
-  const author = await authorService.findByUsername(username);
-  const crux = await cruxService.findBySlug(slug);
-  if (crux.authorId !== author.id) throw new Error('not found');
-  if (crux.visibility !== 'public') throw new Error('not found');
-  const artifacts = await artifactService.findByResource('crux', crux.id);
-  return { crux, artifacts };
-}
-
-/** Load crux + artifacts from REST API */
-async function loadRemote(username: string, slug: string) {
-  const [crux, artifacts] = await Promise.all([
-    publicApi.getCruxBySlug(username, slug),
-    publicApi.getArtifacts(username, slug),
-  ]);
-  return { crux, artifacts };
-}
 
 export default function PublicCrux() {
   const { username, slug, '*': subPath } = useParams<{ username: string; slug: string; '*': string }>();
@@ -40,23 +16,18 @@ export default function PublicCrux() {
   const [artifacts, setArtifacts] = useState<Artifact[]>([]);
   const [state, setState] = useState<LoadState>('loading');
   const [metadataOpen, setMetadataOpen] = useState(false);
-  const [source, setSource] = useState<DataSource>('api');
 
   const hasMetadata = !!crux;
 
-  // Download function: local uses service layer, API uses publicApi
+  // Download function: always from API for public pages
   const downloadBlob = useCallback(
     async (artifactId: string): Promise<Blob> => {
-      if (source === 'local') {
-        const { artifact } = getServices();
-        return artifact.downloadBlob(artifactId);
-      }
       return publicApi.downloadArtifact(username || '', slug || '', artifactId);
     },
-    [source, username, slug],
+    [username, slug],
   );
 
-  // Fetch crux + artifacts (API first, local fallback for unpublished previews)
+  // Fetch crux + artifacts from API only — no local database access
   useEffect(() => {
     if (!username || !slug) {
       setState('not-found');
@@ -66,21 +37,14 @@ export default function PublicCrux() {
     let cancelled = false;
     setState('loading');
 
-    loadRemote(username, slug)
-      .then((data) => {
+    Promise.all([
+      publicApi.getCruxBySlug(username, slug),
+      publicApi.getArtifacts(username, slug),
+    ])
+      .then(([cruxData, artifactsData]) => {
         if (cancelled) return;
-        setSource('api');
-        return data;
-      })
-      .catch(() => {
-        if (cancelled) return undefined;
-        setSource('local');
-        return loadLocal(username, slug);
-      })
-      .then((data) => {
-        if (cancelled || !data) return;
-        setCrux(data.crux);
-        setArtifacts(data.artifacts);
+        setCrux(cruxData);
+        setArtifacts(artifactsData);
         setState('ready');
       })
       .catch((err) => {

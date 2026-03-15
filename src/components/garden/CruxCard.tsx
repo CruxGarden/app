@@ -1,7 +1,7 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, lazy, Suspense } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/cn';
-import ExportModal from '@/components/garden/ExportModal';
+const ExportModal = lazy(() => import('@/components/garden/ExportModal'));
 import type { Crux } from '@/api/types';
 
 interface CruxCardProps {
@@ -138,7 +138,11 @@ export default function CruxCard({ crux, linkTo, onDelete, sortBy = 'created' }:
         )}
       </div>
 
-      <ExportModal open={exportOpen} onClose={() => setExportOpen(false)} crux={crux} />
+      {exportOpen && (
+        <Suspense fallback={null}>
+          <ExportModal open={exportOpen} onClose={() => setExportOpen(false)} crux={crux} />
+        </Suspense>
+      )}
     </div>
   );
 }

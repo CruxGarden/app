@@ -135,7 +135,18 @@ async function init() {
       await migrate();
       return;
     } catch (err) {
-      if (attempt === MAX_INIT_RETRIES - 1) throw err;
+      if (attempt === MAX_INIT_RETRIES - 1) {
+        // All retries failed — fall back to in-memory database
+        // This happens when another tab holds the OPFS lock
+        // Silently fall back — this is expected when another tab holds the OPFS lock
+        const vfs = new MemoryAsyncVFS();
+        sqlite3.vfs_register(vfs, true);
+        const flags = SQLite.SQLITE_OPEN_CREATE | SQLite.SQLITE_OPEN_READWRITE | SQLite.SQLITE_OPEN_URI;
+        dbHandle = await sqlite3.open_v2('cruxgarden.db', flags);
+        await exec('PRAGMA journal_mode=WAL');
+        await exec(SCHEMA);
+        return;
+      }
       // Silent retry — OPFS handle contention on refresh is expected
     }
   }
