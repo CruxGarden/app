@@ -30,6 +30,9 @@ export class GoogleAdapter implements ProviderAdapter {
     const toolCalls: ToolUseBlock[] = [];
     const fullContent: ContentBlock[] = [];
 
+    let inputTokens = 0;
+    let outputTokens = 0;
+
     try {
       const response = await client.models.generateContentStream({
         model: opts.model,
@@ -42,8 +45,6 @@ export class GoogleAdapter implements ProviderAdapter {
       });
 
       let toolCallIndex = 0;
-      let inputTokens = 0;
-      let outputTokens = 0;
 
       for await (const chunk of response) {
         // Capture usage metadata (available on each chunk, use latest)
