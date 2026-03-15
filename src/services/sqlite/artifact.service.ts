@@ -219,7 +219,7 @@ export class SqliteArtifactService implements IArtifactService {
     if (!row) throw new NotFoundError('Artifact not found');
     if (!row.fingerprint) throw new Error('Artifact has no content (missing fingerprint)');
     const bytes = await getSqliteClient().blobRead(row.fingerprint);
-    return new Blob([bytes], { type: row.mime_type });
+    return new Blob([bytes as BlobPart], { type: row.mime_type });
   }
 
   async computeSnapshotFingerprint(resourceId: string): Promise<string> {

@@ -3,7 +3,7 @@ import { DndProvider } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
 import { MosaicWithoutDragDropContext, MosaicWindow } from 'react-mosaic-component';
 import type { MosaicBranch, MosaicNode } from 'react-mosaic-component';
-import { useUIStore, PANE_COLORS, type PaneType } from '@/stores/uiStore';
+import { useUIStore, type PaneType } from '@/stores/uiStore';
 
 const HistoryPane = lazy(() => import('./HistoryPane'));
 const ChatPane = lazy(() => import('./ChatPane'));

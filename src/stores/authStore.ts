@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import * as authApi from '@/api/auth';
 import * as authorsApi from '@/api/authors';
 import { getStoredTokens, storeTokens, clearTokens } from '@/api/client';
-import { getServices, getBackend } from '@/services';
+import { getServices } from '@/services';
 import type { Profile, Author } from '@/api/types';
 
 function fileToDataUrl(file: File): Promise<string> {

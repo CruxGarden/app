@@ -12,17 +12,6 @@ export interface MoodPresetDef {
   overrides: Record<string, string>;
 }
 
-/** Mix two hex colors: result = bg blended with (amount)% of fg */
-function mix(bg: string, fg: string, amount: number): string {
-  const t = amount / 100;
-  const br = parseInt(bg.slice(1,3),16), bg2 = parseInt(bg.slice(3,5),16), bb = parseInt(bg.slice(5,7),16);
-  const fr = parseInt(fg.slice(1,3),16), fg2 = parseInt(fg.slice(3,5),16), fb = parseInt(fg.slice(5,7),16);
-  const r = Math.round(br + (fr - br) * t).toString(16).padStart(2,'0');
-  const g = Math.round(bg2 + (fg2 - bg2) * t).toString(16).padStart(2,'0');
-  const b = Math.round(bb + (fb - bb) * t).toString(16).padStart(2,'0');
-  return `#${r}${g}${b}`;
-}
-
 // Helper: generate pane header/button overrides for a "solid header" style
 function solidPanes(panes: Record<string, string>, textOnColor = '#ffffff', textOnLight = '#000000') {
   const result: Record<string, string> = {};
@@ -77,7 +66,7 @@ function ghostPanes(panes: Record<string, string>, headerBg: string, closeMuted:
 }
 
 // Helper: "uniform" style — all panes same color
-function uniformPanes(color: string, headerBg: string, text: string, closeMuted: string) {
+function uniformPanes(color: string, headerBg: string, _text: string, closeMuted: string) {
   const panes = {
     paneCollaboration: color, paneArtifacts: color, paneWorkshop: color, paneDetails: color,
     paneHistory: color, paneExport: color, paneSync: color, panePublish: color,

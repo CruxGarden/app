@@ -13,6 +13,10 @@ export class TestSqliteClient implements ISqliteClient {
     this.db = db;
   }
 
+  async init(): Promise<void> {
+    // No-op for tests — the in-memory database is ready immediately
+  }
+
   async run(sql: string, params?: unknown[]): Promise<{ changes: number }> {
     this.db.run(sql, params as initSqlJs.BindParams);
     return { changes: this.db.getRowsModified() };
