@@ -473,6 +473,31 @@ async function toolEditFile(
   return `Edited file: ${path}`;
 }
 
+async function extractPdfText(blob: Blob): Promise<string> {
+  const { getDocument, GlobalWorkerOptions } = await import('pdfjs-dist');
+  // Use fake worker to avoid separate worker file
+  GlobalWorkerOptions.workerSrc = '';
+  const buffer = await blob.arrayBuffer();
+  const pdf = await getDocument({ data: new Uint8Array(buffer) }).promise;
+  const pages: string[] = [];
+  for (let i = 1; i <= pdf.numPages; i++) {
+    const page = await pdf.getPage(i);
+    const textContent = await page.getTextContent();
+    const text = textContent.items
+      .map((item: { str?: string }) => item.str || '')
+      .join(' ');
+    if (text.trim()) pages.push(`--- Page ${i} ---\n${text}`);
+  }
+  return pages.join('\n\n');
+}
+
+async function extractDocxText(blob: Blob): Promise<string> {
+  const mammoth = await import('mammoth');
+  const buffer = await blob.arrayBuffer();
+  const result = await mammoth.extractRawText({ arrayBuffer: buffer });
+  return result.value;
+}
+
 async function toolReadFile(
   input: Record<string, unknown>,
   cruxId: string,
@@ -486,9 +511,41 @@ async function toolReadFile(
 
   if (match.encoding === 'binary' || isBinaryMime(match.mimeType || '')) {
     const blob = await artifactService.downloadBlob(match.id);
+    const mime = match.mimeType || '';
+
+    // Extract text from PDFs
+    if (mime === 'application/pdf' || path.endsWith('.pdf')) {
+      try {
+        const text = await extractPdfText(blob);
+        if (text.trim()) {
+          return `[Extracted text from PDF: ${path}]\n\n${text}`;
+        }
+        return `[PDF file: ${path} — no extractable text (may be scanned/image-based)]`;
+      } catch {
+        return `[PDF file: ${path} — text extraction failed. Binary file, ${blob.size} bytes]`;
+      }
+    }
+
+    // Extract text from DOCX
+    if (
+      mime === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
+      path.endsWith('.docx')
+    ) {
+      try {
+        const text = await extractDocxText(blob);
+        if (text.trim()) {
+          return `[Extracted text from DOCX: ${path}]\n\n${text}`;
+        }
+        return `[DOCX file: ${path} — no extractable text]`;
+      } catch {
+        return `[DOCX file: ${path} — text extraction failed. Binary file, ${blob.size} bytes]`;
+      }
+    }
+
+    // Other binary files — return base64
     const buffer = await blob.arrayBuffer();
     const base64 = btoa(String.fromCharCode(...new Uint8Array(buffer)));
-    return `[Binary file: ${path} (${match.mimeType}, ${buffer.byteLength} bytes)] base64:${base64}`;
+    return `[Binary file: ${path} (${mime}, ${buffer.byteLength} bytes)] base64:${base64}`;
   }
 
   // Return full content — no truncation (matches API behavior)
