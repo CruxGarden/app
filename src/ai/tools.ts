@@ -484,7 +484,7 @@ async function extractPdfText(blob: Blob): Promise<string> {
     const page = await pdf.getPage(i);
     const textContent = await page.getTextContent();
     const text = textContent.items
-      .map((item: { str?: string }) => item.str || '')
+      .map((item) => ('str' in item ? (item as { str: string }).str : ''))
       .join(' ');
     if (text.trim()) pages.push(`--- Page ${i} ---\n${text}`);
   }

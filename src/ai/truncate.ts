@@ -23,9 +23,9 @@ function messageTokens(msg: NormalizedMessage): number {
     } else if (block.type === 'tool_use') {
       tokens += estimateTokens(JSON.stringify(block.input)) + 20;
     } else if (block.type === 'tool_result') {
-      tokens += estimateTokens(typeof block.content === 'string' ? block.content : JSON.stringify(block.content)) + 10;
-    } else if (block.type === 'image') {
-      tokens += 1000; // rough estimate for image tokens
+      tokens += estimateTokens(block.content) + 10;
+    } else {
+      tokens += 100; // unknown block type fallback
     }
   }
   return tokens;
