@@ -10,6 +10,31 @@ import type { UpdateCruxInput } from '@/services/types';
 import type { Palette } from '@/lib/palette';
 import { getServices } from '@/services';
 
+/** Build a fingerprint snapshot from artifacts: { path: fingerprint } */
+function buildFingerprintMap(artifacts: Artifact[]): Record<string, string> {
+  const map: Record<string, string> = {};
+  for (const a of artifacts) {
+    if (a.type !== 'artifact' || !a.fingerprint) continue;
+    const path = (a.meta?.path as string) || a.filename;
+    map[path] = a.fingerprint;
+  }
+  return map;
+}
+
+/** Check if current artifacts match the published fingerprint snapshot */
+function hasContentChanged(artifacts: Artifact[], publishedFingerprints: Record<string, string> | undefined): boolean {
+  if (!publishedFingerprints) return true; // never published
+  const current = buildFingerprintMap(artifacts);
+  const currentKeys = Object.keys(current).sort();
+  const publishedKeys = Object.keys(publishedFingerprints).sort();
+  if (currentKeys.length !== publishedKeys.length) return true;
+  for (let i = 0; i < currentKeys.length; i++) {
+    if (currentKeys[i] !== publishedKeys[i]) return true;
+    if (current[currentKeys[i]!] !== publishedFingerprints[currentKeys[i]!]) return true;
+  }
+  return false;
+}
+
 const MIME_MAP: Record<string, string> = {
   html: 'text/html',
   htm: 'text/html',
@@ -156,27 +181,11 @@ export const useCruxStore = create<CruxState>((set, get) => ({
     // NOTE: crux.meta.settings.palette stores per-crux palette data for future use,
     // but themes are currently global — don't override the user's active theme on load.
 
-    // Detect if anything was modified after the last publish.
-    // The publish operation itself updates the crux row (setting `updated`), so
-    // `crux.updated` is always slightly after `publishedAt` (which is computed before
-    // the DB write). A 5-second tolerance ignores that publish-induced update while
-    // still detecting any real edits made after publishing.
-    let hasChanges = false;
-    const publishedAt = crux.meta?.publishedAt as string | undefined;
-    if (publishedAt) {
-      const publishedMs = new Date(publishedAt).getTime();
-      const tolerance = 5000; // 5 seconds
-      // Check if crux metadata (title, slug, etc.) changed after publish
-      if (new Date(crux.updated).getTime() > publishedMs + tolerance) {
-        hasChanges = true;
-      }
-      // Check if any artifact was modified after publish
-      if (!hasChanges && artifacts.length > 0) {
-        hasChanges = artifacts.some(
-          (a) => new Date(a.updated).getTime() > publishedMs + tolerance,
-        );
-      }
-    }
+    // Compare current artifact fingerprints against the published snapshot
+    const hasChanges = hasContentChanged(
+      artifacts,
+      crux.meta?.publishedFingerprints as Record<string, string> | undefined,
+    );
 
     // Load growth dimensions first so we can reconstruct the full conversation
     const { dimension } = getServices();
@@ -338,9 +347,16 @@ export const useCruxStore = create<CruxState>((set, get) => ({
   },
 
   updateArtifact: (id: string, updates: Partial<Artifact>) => {
-    set((state) => ({
-      artifacts: state.artifacts.map((a) => (a.id === id ? { ...a, ...updates } : a)),
-    }));
+    set((state) => {
+      const newArtifacts = state.artifacts.map((a) => (a.id === id ? { ...a, ...updates } : a));
+      return {
+        artifacts: newArtifacts,
+        hasUnpublishedChanges: hasContentChanged(
+          newArtifacts,
+          state.crux?.meta?.publishedFingerprints as Record<string, string> | undefined,
+        ),
+      };
+    });
   },
 
   setModel: (model: string) => {
@@ -478,13 +494,16 @@ export const useCruxStore = create<CruxState>((set, get) => ({
     const updated = await publish.publish(crux.id);
 
     // Merge API publish metadata into local crux (preserve local-only meta fields)
-    const mergedMeta = { ...crux.meta, ...updated.meta };
-    const mergedCrux = { ...crux, ...updated, meta: mergedMeta };
-    set({ crux: mergedCrux, hasUnpublishedChanges: false });
+    // Snapshot artifact fingerprints at publish time for change detection
+    const publishedFingerprints = buildFingerprintMap(artifacts || []);
+    const mergedMeta = { ...crux.meta, ...updated.meta, publishedFingerprints };
 
     // Persist publish metadata locally
     const { crux: cruxService } = getServices();
     await cruxService.update(crux.id, { meta: mergedMeta });
+
+    const mergedCrux = { ...crux, ...updated, meta: mergedMeta };
+    set({ crux: mergedCrux, hasUnpublishedChanges: false });
 
     // 4. Sync discoverable state and tags to server
     try {
