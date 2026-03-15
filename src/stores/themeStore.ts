@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { applyMoodPalette } from '@/lib/moods';
+import { MOOD_PRESETS } from '@/lib/moods/presets';
 import { getSetting, setSetting } from '@/services/settings';
 
 type Mode = 'dark' | 'light' | 'auto';
@@ -25,10 +26,16 @@ function applyToDOM(resolved: 'dark' | 'light') {
 const initial = (getSetting('cruxgarden:theme') as Mode | null) ?? 'dark';
 const initialResolved = resolveMode(initial);
 
-// Apply mood palette immediately to prevent flash
+// Apply saved mood preset immediately to prevent flash
 if (typeof document !== 'undefined') {
   applyToDOM(initialResolved);
-  applyMoodPalette({});
+  const moodKey = initialResolved === 'light' ? 'cruxgarden:moodPresetLight' : 'cruxgarden:moodPresetDark';
+  const expectedSection = initialResolved === 'light' ? 'Light' : 'Dark';
+  const savedId = getSetting(moodKey) as string | null;
+  let preset = savedId ? MOOD_PRESETS.find((p) => p.id === savedId) : null;
+  // If saved mood is wrong section (e.g. light mood saved as dark), ignore it
+  if (preset && preset.section !== expectedSection) preset = null;
+  applyMoodPalette(preset?.overrides || {});
 }
 
 export const useThemeStore = create<ThemeState>((set) => ({
@@ -38,7 +45,13 @@ export const useThemeStore = create<ThemeState>((set) => ({
     const resolved = resolveMode(mode);
     setSetting('cruxgarden:theme', mode);
     applyToDOM(resolved);
-    applyMoodPalette({});
+    // Apply the mood preset for the new mode
+    const key = resolved === 'light' ? 'cruxgarden:moodPresetLight' : 'cruxgarden:moodPresetDark';
+    const section = resolved === 'light' ? 'Light' : 'Dark';
+    const id = getSetting(key) as string | null;
+    let preset = id ? MOOD_PRESETS.find((p) => p.id === id) : null;
+    if (preset && preset.section !== section) preset = null;
+    applyMoodPalette(preset?.overrides || {});
     set({ mode, resolved });
   },
 }));

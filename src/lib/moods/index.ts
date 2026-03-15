@@ -41,11 +41,31 @@ for (const key of Object.keys(GARDEN_DARK)) {
  * Sets CSS custom properties for every token.
  * Pass a partial palette to override only specific tokens.
  */
+/** Mix two hex colors: bg blended with amount% of fg */
+function mixHex(bg: string, fg: string, amount: number): string {
+  if (!bg.startsWith('#') || !fg.startsWith('#')) return bg;
+  const t = amount / 100;
+  const br = parseInt(bg.slice(1,3),16), bg2 = parseInt(bg.slice(3,5),16), bb = parseInt(bg.slice(5,7),16);
+  const fr = parseInt(fg.slice(1,3),16), fg2 = parseInt(fg.slice(3,5),16), fb = parseInt(fg.slice(5,7),16);
+  const r = Math.round(br + (fr - br) * t).toString(16).padStart(2,'0');
+  const g = Math.round(bg2 + (fg2 - bg2) * t).toString(16).padStart(2,'0');
+  const b = Math.round(bb + (fb - bb) * t).toString(16).padStart(2,'0');
+  return `#${r}${g}${b}`;
+}
+
 export function applyMoodPalette(
   palette: Partial<MoodPalette>,
   base: MoodPalette = GARDEN_DARK,
 ) {
   const el = document.documentElement;
+
+  // Auto-compute accentMuted if accent and bg are provided but accentMuted is not
+  const bg = palette.bg ?? base.bg;
+  const accent = palette.accent ?? base.accent;
+  if (!palette.accentMuted && typeof bg === 'string' && typeof accent === 'string' && bg.startsWith('#') && accent.startsWith('#')) {
+    palette = { ...palette, accentMuted: mixHex(bg, accent, 15) };
+  }
+
   for (const key of Object.keys(base) as MoodPaletteKey[]) {
     const value = palette[key] ?? base[key];
     const cssVar = VAR_MAP[key];
@@ -53,6 +73,11 @@ export function applyMoodPalette(
       el.style.setProperty(cssVar, String(value));
     }
   }
+  // Notify Monaco and other listeners that the palette changed
+  // Delay slightly so var() references resolve before Monaco reads computed styles
+  requestAnimationFrame(() => {
+    document.dispatchEvent(new Event('palette-change'));
+  });
 }
 
 /**

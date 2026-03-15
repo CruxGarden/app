@@ -55,8 +55,12 @@ export function registerCruxGardenThemes(monaco: typeof Monaco): void {
   const punct = tokenHex('--syntax-punctuation');
   const variable = tokenHex('--text');
 
-  const isDark =
-    getComputedStyle(document.documentElement).colorScheme !== 'light';
+  // Determine base from actual bg luminance — mood system controls dark/light
+  const bgR = parseInt(bg.slice(1, 3), 16);
+  const bgG = parseInt(bg.slice(3, 5), 16);
+  const bgB = parseInt(bg.slice(5, 7), 16);
+  const bgLum = (0.299 * bgR + 0.587 * bgG + 0.114 * bgB) / 255;
+  const isDark = bgLum < 0.5;
 
   const rules: Monaco.editor.ITokenThemeRule[] = [
     // Default — prevents base vs/vs-dark colors from bleeding through
@@ -140,37 +144,39 @@ export function registerCruxGardenThemes(monaco: typeof Monaco): void {
     },
   });
 
-  // Light theme — white editor background for readability
-  const contrast = colorHex('--contrast');
+  // Light theme — same as dark but reads from the same CSS vars
+  // The mood system sets appropriate colors for light/dark
   monaco.editor.defineTheme('crux-garden-light', {
     base: isDark ? 'vs-dark' : 'vs',
-    inherit: false,
+    inherit: true,
     rules,
     colors: {
-      'editor.background': contrast,
+      'editor.background': bg,
       'editor.foreground': text,
-      'editor.lineHighlightBackground': `${surfaceSolid}10`,
-      'editor.selectionBackground': `${accent}1f`,
-      'editor.inactiveSelectionBackground': `${accent}0f`,
+      'editor.lineHighlightBackground': `${surfaceSolid}12`,
+      'editor.selectionBackground': `${accent}26`,
+      'editor.inactiveSelectionBackground': `${accent}12`,
       'editorCursor.foreground': accent,
-      'editorLineNumber.foreground': `${textMuted}40`,
+      'editorLineNumber.foreground': `${border}80`,
       'editorLineNumber.activeForeground': textMuted,
-      'editorIndentGuide.background': `${textMuted}18`,
-      'editorIndentGuide.activeBackground': `${textMuted}30`,
+      'editorIndentGuide.background': `${border}18`,
+      'editorIndentGuide.activeBackground': `${border}30`,
       'editorWidget.background': surfaceSolid,
-      'scrollbar.shadow': '#00000000',
-      'scrollbarSlider.background': `${textMuted}20`,
-      'editorGutter.background': contrast,
-      'editorOverviewRuler.border': '#00000000',
+      'editorWidget.border': `${border}30`,
+      'editor.wordHighlightBackground': `${accent}12`,
       'editorBracketMatch.background': `${accent}20`,
       'editorBracketMatch.border': `${accent}40`,
-      'editorBracketHighlight.foreground1': '#6a7a88',
-      'editorBracketHighlight.foreground2': '#7a6a50',
-      'editorBracketHighlight.foreground3': '#5a7a6a',
-      'editorBracketHighlight.foreground4': '#6a6a7a',
-      'editorBracketHighlight.foreground5': '#7a6a6a',
-      'editorBracketHighlight.foreground6': '#5a6a7a',
-      'editorBracketHighlight.unexpectedBracket.foreground': '#9a5a5a',
+      'scrollbar.shadow': '#00000000',
+      'scrollbarSlider.background': `${border}30`,
+      'scrollbarSlider.hoverBackground': `${textMuted}50`,
+      'scrollbarSlider.activeBackground': `${textMuted}70`,
+      'editorGutter.background': bg,
+      'editorOverviewRuler.border': '#00000000',
+      'minimap.background': bg,
+      'input.background': surfaceSolid,
+      'input.border': `${border}30`,
+      'input.foreground': text,
+      focusBorder: `${accent}50`,
     },
   });
 }
