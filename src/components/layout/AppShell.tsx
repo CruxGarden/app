@@ -4,10 +4,12 @@ import TopBar from './TopBar';
 import CommandPalette from './CommandPalette';
 import { LoadingPanel } from '@/components/ui';
 import KeeperConsole from '@/components/keeper/KeeperConsole';
+import MoodBar, { applySavedMoodSettings } from '@/components/mood/MoodEditorPanel';
 import { useUIStore } from '@/stores/uiStore';
 import { isServicesReady, initServices, ensureLocalAuthor, getBackend } from '@/services';
 import { migrateApiKeyFromLocalStorage } from '@/ai/keys';
 import { useAuthStore } from '@/stores/authStore';
+import { useMoodStore } from '@/stores/moodStore';
 
 export default function AppShell() {
   const [commandOpen, setCommandOpen] = useState(false);
@@ -25,6 +27,8 @@ export default function AppShell() {
         const localAuthor = await ensureLocalAuthor();
         useAuthStore.setState({ author: localAuthor });
       }
+      useMoodStore.getState().loadMoods().catch(() => {});
+      applySavedMoodSettings();
       setServicesOk(true);
     })();
   }, [servicesOk]);
@@ -70,6 +74,9 @@ export default function AppShell() {
 
       {/* Keeper Console */}
       <KeeperConsole open={keeperOpen} onClose={() => setKeeperOpen(false)} />
+
+      {/* Mood Editor Panel */}
+      <MoodBar />
     </div>
   );
 }

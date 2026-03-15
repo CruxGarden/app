@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useThemeStore } from '@/stores/themeStore';
-import { getCurrentPalette, type Palette } from '@/lib/palette';
+import { useMoodStore } from '@/stores/moodStore';
+import { getCurrentMoodPalette, type MoodPalette } from '@/lib/moods';
 import { getSetting, setSetting } from '@/services/settings';
 import { Panel, Toggle } from '@/components/ui';
 import { cn } from '@/lib/cn';
+import MoodEditorModal from '@/components/mood/MoodEditorModal';
 
 type BgType = 'bloom' | 'flowfield' | 'drift' | 'blank';
 
@@ -143,143 +145,161 @@ function BlankPreview() {
   );
 }
 
-// ── Palette Table ──────────────────────────────────
+// ── Palette Display ───────────────────────────────
 
-type PaletteGroup = { label: string; keys: { key: keyof Palette; name: string }[] };
+interface PaletteBlock {
+  label: string;
+  description: string;
+  tokens: { key: keyof MoodPalette; label: string }[];
+}
 
-const PALETTE_GROUPS: PaletteGroup[] = [
+const PALETTE_BLOCKS: PaletteBlock[] = [
   {
-    label: 'Colors',
-    keys: [
-      { key: 'bg', name: 'bg' },
-      { key: 'surface', name: 'surface' },
-      { key: 'surfaceSolid', name: 'surfaceSolid' },
-      { key: 'panel', name: 'panel' },
-      { key: 'text', name: 'text' },
-      { key: 'textMuted', name: 'textMuted' },
-      { key: 'border', name: 'border' },
-      { key: 'accent', name: 'accent' },
-      { key: 'accentMuted', name: 'accentMuted' },
-      { key: 'error', name: 'error' },
-      { key: 'errorMuted', name: 'errorMuted' },
+    label: 'Page',
+    description: 'Canvas and root-level text',
+    tokens: [
+      { key: 'bg', label: 'bg' },
+      { key: 'text', label: 'text' },
+      { key: 'textMuted', label: 'text muted' },
+      { key: 'border', label: 'border' },
     ],
   },
   {
-    label: 'Chrome',
-    keys: [
-      { key: 'contrast', name: 'contrast' },
-      { key: 'overlay', name: 'overlay' },
-      { key: 'previewBg', name: 'previewBg' },
+    label: 'Surface',
+    description: 'Cards and containers',
+    tokens: [
+      { key: 'surface', label: 'bg' },
+      { key: 'surfaceSolid', label: 'bg solid' },
     ],
   },
   {
-    label: 'Brand',
-    keys: [{ key: 'brandAi', name: 'brandAi' }],
+    label: 'Panel',
+    description: 'Sidebars, modals, content areas',
+    tokens: [
+      { key: 'panel', label: 'bg' },
+    ],
   },
   {
-    label: 'Panes',
-    keys: [
-      { key: 'paneCollaboration', name: 'paneCollaboration' },
-      { key: 'paneArtifacts', name: 'paneArtifacts' },
-      { key: 'paneWorkshop', name: 'paneWorkshop' },
-      { key: 'paneDetails', name: 'paneDetails' },
-      { key: 'paneHistory', name: 'paneHistory' },
-      { key: 'paneExport', name: 'paneExport' },
-      { key: 'paneSync', name: 'paneSync' },
-      { key: 'panePublish', name: 'panePublish' },
+    label: 'Accent',
+    description: 'Interactive elements, highlights',
+    tokens: [
+      { key: 'accent', label: 'color' },
+      { key: 'accentMuted', label: 'muted' },
+    ],
+  },
+  {
+    label: 'Feedback',
+    description: 'Error and status colors',
+    tokens: [
+      { key: 'error', label: 'error' },
+      { key: 'errorMuted', label: 'error muted' },
+    ],
+  },
+  {
+    label: 'Toolbar Panes',
+    description: 'Per-pane identity colors',
+    tokens: [
+      { key: 'paneCollaboration', label: 'Collaboration' },
+      { key: 'paneArtifacts', label: 'Artifacts' },
+      { key: 'paneWorkshop', label: 'Workshop' },
+      { key: 'paneDetails', label: 'Metadata' },
+      { key: 'paneHistory', label: 'History' },
+      { key: 'paneExport', label: 'Export' },
+      { key: 'paneSync', label: 'Sync' },
+      { key: 'panePublish', label: 'Publish' },
+    ],
+  },
+  {
+    label: 'Code',
+    description: 'Syntax highlighting',
+    tokens: [
+      { key: 'syntaxComment', label: 'comment' },
+      { key: 'syntaxKeyword', label: 'keyword' },
+      { key: 'syntaxString', label: 'string' },
+      { key: 'syntaxNumber', label: 'number' },
+      { key: 'syntaxType', label: 'type' },
+      { key: 'syntaxFunction', label: 'function' },
+      { key: 'syntaxPunctuation', label: 'punctuation' },
     ],
   },
   {
     label: 'Bloom',
-    keys: [
-      { key: 'bloomBg1', name: 'bloomBg1' },
-      { key: 'bloomBg2', name: 'bloomBg2' },
-      { key: 'bloom1', name: 'bloom1' },
-      { key: 'bloom2', name: 'bloom2' },
-      { key: 'bloom3', name: 'bloom3' },
-      { key: 'bloom4', name: 'bloom4' },
-      { key: 'bloom5', name: 'bloom5' },
-      { key: 'bloom6', name: 'bloom6' },
+    description: 'Background gradient blobs',
+    tokens: [
+      { key: 'bloom1', label: '1' },
+      { key: 'bloom2', label: '2' },
+      { key: 'bloom3', label: '3' },
+      { key: 'bloom4', label: '4' },
+      { key: 'bloom5', label: '5' },
+      { key: 'bloom6', label: '6' },
+      { key: 'bloomBg1', label: 'bg 1' },
+      { key: 'bloomBg2', label: 'bg 2' },
     ],
   },
   {
-    label: 'Flow Field',
-    keys: [{ key: 'flowColor', name: 'flowColor' }],
-  },
-  {
-    label: 'Drift',
-    keys: [
-      { key: 'driftColor', name: 'driftColor' },
-      { key: 'driftGlow', name: 'driftGlow' },
-      { key: 'driftBg', name: 'driftBg' },
+    label: 'Ambient',
+    description: 'Other background effects',
+    tokens: [
+      { key: 'flowColor', label: 'flow' },
+      { key: 'driftColor', label: 'drift' },
+      { key: 'driftGlow', label: 'drift glow' },
+      { key: 'driftBg', label: 'drift bg' },
     ],
   },
   {
-    label: 'Syntax',
-    keys: [
-      { key: 'syntaxComment', name: 'syntaxComment' },
-      { key: 'syntaxKeyword', name: 'syntaxKeyword' },
-      { key: 'syntaxString', name: 'syntaxString' },
-      { key: 'syntaxNumber', name: 'syntaxNumber' },
-      { key: 'syntaxType', name: 'syntaxType' },
-      { key: 'syntaxFunction', name: 'syntaxFunction' },
-      { key: 'syntaxPunctuation', name: 'syntaxPunctuation' },
+    label: 'Chrome',
+    description: 'Overlays and brand',
+    tokens: [
+      { key: 'contrast', label: 'contrast' },
+      { key: 'overlay', label: 'overlay' },
+      { key: 'brandAi', label: 'AI brand' },
     ],
   },
 ];
 
-function PaletteTable() {
-  const [palette, setPalette] = useState<Palette>(getCurrentPalette);
+function ColorSwatch({ value }: { value: string }) {
+  return (
+    <div
+      className="w-5 h-5 rounded-[3px] border border-border/40 shrink-0"
+      style={{ backgroundColor: value }}
+      title={value}
+    />
+  );
+}
+
+function PaletteDisplay() {
+  const [palette, setPalette] = useState<MoodPalette>(getCurrentMoodPalette);
 
   useEffect(() => {
-    const handler = () => setPalette(getCurrentPalette());
+    const handler = () => setPalette(getCurrentMoodPalette());
     document.addEventListener('palette-change', handler);
     return () => document.removeEventListener('palette-change', handler);
   }, []);
 
-  let rowIndex = 0;
-
   return (
-    <div className="border border-border rounded-[var(--radius)] overflow-hidden">
-      <table className="w-full text-[11px] font-mono">
-        <thead>
-          <tr className="border-b border-border">
-            <th className="text-left px-2 py-1.5 text-text-muted font-normal w-6" />
-            <th className="text-left px-2 py-1.5 text-text-muted font-normal">Name</th>
-            <th className="text-left px-2 py-1.5 text-text-muted font-normal">Value</th>
-          </tr>
-        </thead>
-        <tbody>
-          {PALETTE_GROUPS.map((group) => (
-            <React.Fragment key={group.label}>
-              <tr className="border-t border-border/50">
-                <td
-                  colSpan={3}
-                  className="px-2 py-1 text-[9px] uppercase tracking-wider text-text-muted/60 bg-surface/50"
+    <div className="flex flex-col gap-4">
+      {PALETTE_BLOCKS.map((block) => (
+        <div key={block.label}>
+          <div className="flex items-baseline gap-2 mb-2">
+            <span className="text-xs font-display font-medium text-text">{block.label}</span>
+            <span className="text-[10px] text-text-muted">{block.description}</span>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {block.tokens.map(({ key, label }) => {
+              const value = palette[key];
+              return (
+                <div
+                  key={key}
+                  className="flex items-center gap-1.5 px-2 py-1 rounded-[var(--radius-sm)] bg-surface/50 border border-border/30"
                 >
-                  {group.label}
-                </td>
-              </tr>
-              {group.keys.map(({ key, name }) => {
-                const value = palette[key];
-                const even = rowIndex++ % 2 === 0;
-                return (
-                  <tr key={key} className={even ? 'bg-transparent' : 'bg-surface/30'}>
-                    <td className="px-2 py-1">
-                      <div
-                        className="w-4 h-4 rounded-[3px] border border-border/50 shrink-0"
-                        style={{ backgroundColor: value }}
-                      />
-                    </td>
-                    <td className="px-2 py-1 text-text">{name}</td>
-                    <td className="px-2 py-1 text-text-muted truncate max-w-[180px]">{value}</td>
-                  </tr>
-                );
-              })}
-            </React.Fragment>
-          ))}
-        </tbody>
-      </table>
+                  <ColorSwatch value={value} />
+                  <span className="text-[10px] font-mono text-text-muted">{label}</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      ))}
     </div>
   );
 }
@@ -319,7 +339,7 @@ export default function MoodSettings() {
         >
           <polyline points="6 9 12 15 18 9" />
         </svg>
-        <h2 className="font-display text-sm font-medium text-accent">Mood</h2>
+        <h2 className="font-display text-sm font-medium text-settings-label">Mood</h2>
       </button>
 
       {!collapsed && <div className="flex flex-col gap-5 mt-5">
@@ -396,9 +416,115 @@ export default function MoodSettings() {
         {/* ── Palette ── */}
         <div className="flex flex-col gap-2">
           <SectionLabel>Palette</SectionLabel>
-          <PaletteTable />
+          <PaletteDisplay />
         </div>
+
+        {/* ── Mood Library ── */}
+        <MoodLibrary />
       </div>}
     </Panel>
+  );
+}
+
+// ── Mood Library ──────────────────────────────────
+
+function MoodLibrary() {
+  const { moods, activeMoodId, setActiveMood, deleteMood, loaded } = useMoodStore();
+  const [editorOpen, setEditorOpen] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+
+  const handleNew = () => {
+    setEditingId(null);
+    setEditorOpen(true);
+  };
+
+  const handleEdit = (id: string) => {
+    setEditingId(id);
+    setEditorOpen(true);
+  };
+
+  const handleDelete = async (id: string) => {
+    await deleteMood(id);
+  };
+
+  const handleActivate = async (id: string) => {
+    if (activeMoodId === id) {
+      await setActiveMood(null);
+    } else {
+      await setActiveMood(id);
+    }
+  };
+
+  return (
+    <>
+      <div className="flex flex-col gap-2">
+        <div className="flex items-center justify-between">
+          <SectionLabel>Moods</SectionLabel>
+          <button
+            onClick={handleNew}
+            className="px-2.5 py-1 text-[10px] font-mono text-accent border border-accent/30 rounded-[var(--radius-sm)] hover:bg-accent-muted transition-colors cursor-pointer"
+          >
+            + New Mood
+          </button>
+        </div>
+
+        {loaded && moods.length === 0 && (
+          <p className="text-[10px] text-text-muted/60">
+            No moods yet. Create one to customize your workspace.
+          </p>
+        )}
+
+        {moods.length > 0 && (
+          <div className="flex flex-col gap-1.5">
+            {moods.map((mood) => {
+              const isActive = activeMoodId === mood.id;
+              return (
+                <div
+                  key={mood.id}
+                  className={cn(
+                    'flex items-center gap-2 px-3 py-2 rounded-[var(--radius-sm)] border transition-colors',
+                    isActive
+                      ? 'bg-accent-muted border-accent/30'
+                      : 'bg-surface border-border/30',
+                  )}
+                >
+                  <button
+                    onClick={() => handleActivate(mood.id)}
+                    className={cn(
+                      'w-3 h-3 rounded-full border-2 shrink-0 cursor-pointer transition-colors',
+                      isActive
+                        ? 'border-accent bg-accent'
+                        : 'border-text-muted/40 hover:border-accent/60',
+                    )}
+                    title={isActive ? 'Deactivate' : 'Activate'}
+                  />
+                  <span className="text-xs font-mono text-text flex-1 truncate">
+                    {mood.title || 'Untitled'}
+                  </span>
+                  <button
+                    onClick={() => handleEdit(mood.id)}
+                    className="text-[10px] font-mono text-text-muted hover:text-accent transition-colors cursor-pointer"
+                  >
+                    edit
+                  </button>
+                  <button
+                    onClick={() => handleDelete(mood.id)}
+                    className="text-[10px] font-mono text-text-muted hover:text-error transition-colors cursor-pointer"
+                  >
+                    delete
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      <MoodEditorModal
+        open={editorOpen}
+        onClose={() => setEditorOpen(false)}
+        moodId={editingId}
+      />
+    </>
   );
 }

@@ -59,9 +59,9 @@ export default function IconButton({
           'inline-flex items-center justify-center rounded-[var(--radius-sm)]',
           'transition-colors duration-150 cursor-pointer',
           'disabled:opacity-50 disabled:cursor-not-allowed',
-          active && !useCustomColor && 'text-accent bg-accent-muted',
-          !active && !useCustomColor && 'text-text-muted hover:text-text hover:bg-accent-muted',
-          !showColor && useCustomColor && 'text-accent',
+          active && !useCustomColor && 'text-icon-button-icon-hover bg-icon-button-hover',
+          !active && !useCustomColor && 'text-icon-button-icon hover:text-icon-button-icon-hover hover:bg-icon-button-hover',
+          !showColor && useCustomColor && 'text-icon-button-icon',
           sizes[size],
           className,
         )}
@@ -71,10 +71,10 @@ export default function IconButton({
       </button>
       {tooltip && (
         <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 z-50 pointer-events-none hidden group-hover/btn:block">
-          <div className="flex items-center gap-2.5 px-3 py-2 rounded-[var(--radius)] bg-surface-solid border border-border shadow-lg whitespace-nowrap">
-            <span className="text-xs font-medium text-text">{tooltip.label}</span>
+          <div className="flex items-center gap-2.5 px-3 py-2 rounded-[var(--radius)] bg-tooltip border border-tooltip-border shadow-lg whitespace-nowrap">
+            <span className="text-xs font-medium text-tooltip-text">{tooltip.label}</span>
             {tooltip.shortcut && (
-              <kbd className="text-[11px] font-mono text-text-muted px-1.5 py-0.5 rounded-[var(--radius-sm)] bg-bg border border-border min-w-[1.5rem] text-center">
+              <kbd className="text-[11px] font-mono text-tooltip-text px-1.5 py-0.5 rounded-[var(--radius-sm)] bg-bg border border-tooltip-border min-w-[1.5rem] text-center">
                 {modKey}
                 {tooltip.shortcut}
               </kbd>

@@ -26,7 +26,7 @@ function UserAvatar({ avatarUrl, initial }: { avatarUrl?: string | null; initial
     <div
       className={cn(
         'w-6 h-6 shrink-0 rounded-[var(--radius-sm)] overflow-hidden flex items-center justify-center ring-1 ring-border',
-        !avatarUrl && 'bg-accent-muted text-accent text-[10px] font-display font-bold',
+        !avatarUrl && 'bg-chat-user-bubble text-chat-user-bubble-text text-[10px] font-display font-bold',
       )}
     >
       {avatarUrl ? <img src={avatarUrl} alt="" className="w-full h-full object-cover" /> : initial}
@@ -59,9 +59,9 @@ function ToolCallItem({ tc }: { tc: ToolCall }) {
       <button
         onClick={() => hasResult && setExpanded((v) => !v)}
         className={cn(
-          'text-xs font-mono bg-bg rounded px-2 py-1 flex items-center gap-1.5 w-full text-left transition-colors',
-          hasResult ? 'cursor-pointer hover:bg-accent-muted/30' : 'cursor-default',
-          isError ? 'text-error/70' : 'text-text-muted',
+          'text-xs font-mono bg-code-block rounded px-2 py-1 flex items-center gap-1.5 w-full text-left transition-colors',
+          hasResult ? 'cursor-pointer hover:bg-surface-hover' : 'cursor-default',
+          isError ? 'text-error/70' : 'text-chat-text-muted',
         )}
       >
         {hasResult && (
@@ -80,7 +80,7 @@ function ToolCallItem({ tc }: { tc: ToolCall }) {
         <span className="truncate">{label}</span>
       </button>
       {expanded && tc.result && (
-        <pre className="mt-1 mx-1 px-2 py-1.5 text-[10px] font-mono leading-relaxed bg-bg rounded border border-border text-text-muted overflow-x-auto max-h-48 overflow-y-auto whitespace-pre-wrap break-words">
+        <pre className="mt-1 mx-1 px-2 py-1.5 text-[10px] font-mono leading-relaxed bg-code-block rounded border border-code-block-border text-chat-text-muted overflow-x-auto max-h-48 overflow-y-auto whitespace-pre-wrap break-words">
           {tc.result}
         </pre>
       )}
@@ -101,7 +101,7 @@ export default function MessageBubble({
       <div
         className={cn(
           'max-w-[85%] rounded-[var(--radius)] px-3 py-2 text-sm break-words',
-          isUser ? 'bg-accent-muted text-text' : 'bg-[color-mix(in_srgb,var(--panel),var(--text)_8%)] text-text',
+          isUser ? 'bg-chat-user-bubble text-chat-user-bubble-text' : 'bg-chat-ai-bubble text-chat-ai-bubble-text',
         )}
       >
         {isUser ? (
@@ -120,7 +120,7 @@ export default function MessageBubble({
 
         {/* Model badge for assistant messages */}
         {!isUser && message.model && (
-          <div className="mt-1.5 text-[10px] font-mono text-text-muted/50 text-right">
+          <div className="mt-1.5 text-[10px] font-mono text-chat-text-muted/50 text-right">
             {getModelShortName(message.model) || message.model}
           </div>
         )}

@@ -14,6 +14,81 @@ function fileToDataUrl(file: File): Promise<string> {
   });
 }
 
+/**
+ * Reconcile local author ID with API author ID.
+ * Updates the author row and all references (cruxes, artifacts, dimensions).
+ */
+async function reconcileAuthorId(
+  oldId: string,
+  apiAuthor: Author,
+  accountId: string,
+): Promise<Author> {
+  try {
+    const db = (await import('@/services/sqlite/client')).getSqliteClient();
+    const newId = apiAuthor.id;
+
+    await db.run('UPDATE cruxes SET author_id = ? WHERE author_id = ?', [newId, oldId]);
+    await db.run('UPDATE artifacts SET author_id = ? WHERE author_id = ?', [newId, oldId]);
+    await db.run('UPDATE dimensions SET author_id = ? WHERE author_id = ?', [newId, oldId]);
+    await db.run(
+      'UPDATE authors SET id = ?, username = ?, display_name = ?, account_id = ?, updated = ? WHERE id = ?',
+      [newId, apiAuthor.username, apiAuthor.displayName, accountId, new Date().toISOString(), oldId],
+    );
+    await db.run(
+      "INSERT OR REPLACE INTO settings (key, value) VALUES ('cruxgarden:localAuthorId', ?)",
+      [newId],
+    );
+
+    // Return the reconciled local author
+    const { getServices: gs } = await import('@/services');
+    return gs().author.findById(newId);
+  } catch {
+    // Non-fatal — return API author as fallback
+    return apiAuthor;
+  }
+}
+
+/**
+ * Sync local author data to the API (username, displayName, bio, avatar).
+ * Runs in the background — failures are non-fatal.
+ */
+async function syncAuthorToApi(author: Author): Promise<void> {
+  try {
+    // Sync profile fields
+    await authorsApi.update(author.id, {
+      username: author.username,
+      displayName: author.displayName,
+      bio: author.bio,
+    });
+
+    // Sync avatar if it's a local data URL
+    const avatarUrl = author.meta?.avatarUrl;
+    if (typeof avatarUrl === 'string' && avatarUrl.startsWith('data:')) {
+      const res = await fetch(avatarUrl);
+      const blob = await res.blob();
+      const file = new File([blob], 'avatar', { type: blob.type });
+      await authorsApi.uploadAvatar(author.id, file);
+    }
+  } catch {
+    // Non-fatal — will retry on next sync opportunity
+  }
+}
+
+/**
+ * Resolve an author's avatar URL for display.
+ * Local authors use data URLs; API authors use relative paths.
+ */
+export function resolveAvatarUrl(
+  author: { meta?: Record<string, unknown>; updated?: string } | null,
+): string | null {
+  const url = author?.meta?.avatarUrl || author?.meta?.avatar_url;
+  if (!url || typeof url !== 'string') return null;
+  if (url.startsWith('data:') || url.startsWith('http')) return url;
+  // API-relative path (for public pages viewing other authors)
+  const base = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+  return `${base}${url}?v=${author?.updated || ''}`;
+}
+
 interface AuthState {
   account: Profile | null;
   author: Author | null;
@@ -55,36 +130,50 @@ export const useAuthStore = create<AuthState>((set) => ({
   isLoading: true,
 
   init: async () => {
+    // Always load local author first (source of truth for avatar, etc.)
+    let localAuthor: Author | null = null;
+    try {
+      const { ensureLocalAuthor } = await import('@/services');
+      localAuthor = await ensureLocalAuthor();
+    } catch {
+      // Services not ready yet — will be set later
+    }
+
     const { accessToken, refreshToken } = getStoredTokens();
     if (!accessToken || !refreshToken) {
-      set({ isLoading: false });
+      set({ author: localAuthor, isLoading: false });
       return;
     }
 
-    try {
-      const profile = await authApi.getProfile();
+    const finalize = async (profile: Profile) => {
+      // Reconcile local author ID with API author if mismatched
+      if (localAuthor && profile.author && localAuthor.id !== profile.author.id) {
+        localAuthor = await reconcileAuthorId(localAuthor.id, profile.author, profile.id);
+      }
+      // Always prefer local author — never use API author object directly
       set({
         account: profile,
-        author: profile.author ?? null,
+        author: localAuthor,
         isAuthenticated: true,
         isLoading: false,
       });
+      if (localAuthor) syncAuthorToApi(localAuthor);
+    };
+
+    try {
+      const profile = await authApi.getProfile();
+      await finalize(profile);
     } catch {
       // Access token may be expired — try refresh
       try {
         const creds = await authApi.refreshToken(refreshToken);
         storeTokens(creds.accessToken, creds.refreshToken);
         const profile = await authApi.getProfile();
-        set({
-          account: profile,
-          author: profile.author ?? null,
-          isAuthenticated: true,
-          isLoading: false,
-        });
+        await finalize(profile);
       } catch {
         // Tokens invalid — silently clear and stay disconnected
         clearTokens();
-        set({ account: null, author: null, isAuthenticated: false, isLoading: false });
+        set({ account: null, author: localAuthor, isAuthenticated: false, isLoading: false });
       }
     }
   },
@@ -95,26 +184,20 @@ export const useAuthStore = create<AuthState>((set) => ({
 
     const profile = await authApi.getProfile();
 
-    // Update local author with API identity if in local mode
-    if (getBackend() === 'local' && profile.author) {
+    // Reconcile local author ID with API author
+    let author: Author | null = profile.author ?? null;
+    if (profile.author) {
       const { author: localAuthor } = useAuthStore.getState();
-      if (localAuthor) {
-        try {
-          await getServices().author.update(localAuthor.id, {
-            username: profile.author.username,
-            displayName: profile.author.displayName,
-          });
-        } catch {
-          // Non-fatal — local author update failed but connection still works
-        }
+      if (localAuthor && localAuthor.id !== profile.author.id) {
+        author = await reconcileAuthorId(localAuthor.id, profile.author, profile.id);
       }
     }
 
-    set((state) => ({
+    set({
       account: profile,
-      author: profile.author ?? state.author,
+      author,
       isAuthenticated: true,
-    }));
+    });
     return profile;
   },
 
@@ -157,44 +240,39 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
 
   updateAuthor: async (dto) => {
-    const { author } = useAuthStore.getState();
+    const { author, isAuthenticated } = useAuthStore.getState();
     if (!author) throw new Error('No author');
-    let updated: Author;
-    if (getBackend() === 'local') {
-      updated = await getServices().author.update(author.id, dto);
-    } else {
-      updated = await authorsApi.update(author.id, dto);
-    }
+
+    const updated = await getServices().author.update(author.id, dto);
     set({ author: updated });
+    if (isAuthenticated) syncAuthorToApi(updated);
     return updated;
   },
 
   uploadAvatar: async (file: File) => {
-    const { author } = useAuthStore.getState();
+    const { author, isAuthenticated } = useAuthStore.getState();
     if (!author) throw new Error('No author');
-    if (getBackend() === 'local') {
-      const dataUrl = await fileToDataUrl(file);
-      const updated = await getServices().author.update(author.id, {
-        meta: { ...author.meta, avatarUrl: dataUrl },
-      });
-      set({ author: updated });
-      return updated;
-    }
-    const updated = await authorsApi.uploadAvatar(author.id, file);
+
+    const dataUrl = await fileToDataUrl(file);
+    const updated = await getServices().author.update(author.id, {
+      meta: { ...author.meta, avatarUrl: dataUrl },
+    });
     set({ author: updated });
+    if (isAuthenticated) syncAuthorToApi(updated);
     return updated;
   },
 
   removeAvatar: async () => {
-    const { author } = useAuthStore.getState();
+    const { author, isAuthenticated } = useAuthStore.getState();
     if (!author) throw new Error('No author');
-    if (getBackend() === 'local') {
-      const meta = { ...author.meta, avatarUrl: null };
-      const updated = await getServices().author.update(author.id, { meta });
-      set({ author: updated });
-      return;
-    }
-    const updated = await authorsApi.removeAvatar(author.id);
+
+    const meta = { ...author.meta, avatarUrl: null };
+    const updated = await getServices().author.update(author.id, { meta });
     set({ author: updated });
+    if (isAuthenticated) {
+      syncAuthorToApi(updated);
+      // Also remove the avatar file from API storage
+      authorsApi.removeAvatar(author.id).catch(() => {});
+    }
   },
 }));

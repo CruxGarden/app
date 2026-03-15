@@ -7,9 +7,9 @@ interface BadgeProps {
 }
 
 const variants = {
-  default: 'bg-surface-solid text-text border-border',
-  accent: 'bg-accent-muted text-accent border-accent/20',
-  muted: 'bg-surface text-text-muted border-border',
+  default: 'bg-badge text-badge-text border-badge-border',
+  accent: 'bg-badge text-badge-text border-badge-border',
+  muted: 'bg-surface text-surface-text-muted border-surface-border',
 };
 
 export default function Badge({ children, variant = 'default', className }: BadgeProps) {

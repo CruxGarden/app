@@ -22,7 +22,21 @@ interface PxlData {
   pixels: string;
 }
 
-function decodePixelArt(data: PxlData, greenscale = false): Uint8Array {
+/** Parse a hex color to [r, g, b] */
+function hexToRgb(hex: string): [number, number, number] {
+  const h = hex.replace('#', '');
+  return [parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4, 6), 16)];
+}
+
+/** Read --accent from computed styles */
+function getAccentColor(): [number, number, number] {
+  if (typeof document === 'undefined') return [0, 230, 118];
+  const val = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim();
+  if (val && val.startsWith('#') && val.length >= 7) return hexToRgb(val);
+  return [0, 230, 118]; // fallback
+}
+
+function decodePixelArt(data: PxlData, greenscale = false, tint?: [number, number, number]): Uint8Array {
   const { size, palette, pixels } = data;
   const indices = Uint8Array.from(atob(pixels), (c) => c.charCodeAt(0));
   const rgb = new Uint8Array(size * size * 3);
@@ -32,13 +46,13 @@ function decodePixelArt(data: PxlData, greenscale = false): Uint8Array {
     const oi = i * 3;
 
     if (greenscale) {
-      // Luminance → desaturated accent green
+      const [tr, tg, tb] = tint || [0, 230, 118];
       const lum = (0.299 * color[0]! + 0.587 * color[1]! + 0.114 * color[2]!) / 255;
       const grey = lum * 255;
-      // Blend 35% accent green (0,230,118) with 65% grey
-      rgb[oi] = Math.round(grey * 0.65);
-      rgb[oi + 1] = Math.round(grey * 0.65 + lum * 230 * 0.35);
-      rgb[oi + 2] = Math.round(grey * 0.65 + lum * 118 * 0.35);
+      // Blend 35% accent tint with 65% grey
+      rgb[oi] = Math.round(grey * 0.65 + lum * tr * 0.35);
+      rgb[oi + 1] = Math.round(grey * 0.65 + lum * tg * 0.35);
+      rgb[oi + 2] = Math.round(grey * 0.65 + lum * tb * 0.35);
     } else {
       rgb[oi] = color[0]!;
       rgb[oi + 1] = color[1]!;
@@ -87,7 +101,8 @@ export default function KeeperPixelAvatar({
   animate = false,
 }: KeeperPixelAvatarProps) {
   const data = VARIANTS[variant];
-  const basePixels = useMemo(() => decodePixelArt(data, greenscale), [data, greenscale]);
+  const accentRgb = useMemo(() => getAccentColor(), []);
+  const basePixels = useMemo(() => decodePixelArt(data, greenscale, accentRgb), [data, greenscale, accentRgb]);
 
   // Static render — no animation
   if (!animate) {

@@ -5,6 +5,7 @@ import type { Crux, Artifact } from '@/api/types';
 import { isServicesReady, initServices, getServices } from '@/services';
 import { APP_NAME } from '@/lib/constants';
 import { PublicTopBar, ArtifactRenderer } from '@/components/display';
+import { LoadingPanel } from '@/components/ui';
 import MetadataContent from '@/components/workspace/MetadataContent';
 
 type LoadState = 'loading' | 'ready' | 'not-found' | 'error';
@@ -55,7 +56,7 @@ export default function PublicCrux() {
     [source, username, slug],
   );
 
-  // Fetch crux + artifacts (local first, API fallback)
+  // Fetch crux + artifacts (API first, local fallback for unpublished previews)
   useEffect(() => {
     if (!username || !slug) {
       setState('not-found');
@@ -65,16 +66,16 @@ export default function PublicCrux() {
     let cancelled = false;
     setState('loading');
 
-    loadLocal(username, slug)
+    loadRemote(username, slug)
       .then((data) => {
         if (cancelled) return;
-        setSource('local');
+        setSource('api');
         return data;
       })
       .catch(() => {
         if (cancelled) return undefined;
-        setSource('api');
-        return loadRemote(username, slug);
+        setSource('local');
+        return loadLocal(username, slug);
       })
       .then((data) => {
         if (cancelled || !data) return;
@@ -105,6 +106,14 @@ export default function PublicCrux() {
       document.title = APP_NAME;
     };
   }, [crux?.title]);
+
+  if (state === 'loading') {
+    return (
+      <div className="min-h-screen bg-bg flex items-center justify-center">
+        <LoadingPanel />
+      </div>
+    );
+  }
 
   if (state === 'not-found') {
     return (
@@ -140,7 +149,7 @@ export default function PublicCrux() {
 
       <div className="flex-1 min-h-0 relative z-10 flex">
         <div className={`flex-1 min-w-0 ${metadataOpen ? 'hidden sm:block' : ''}`}>
-          <ArtifactRenderer artifacts={artifacts} username={username || ''} slug={slug || ''} authorId={crux?.authorId || ''} subPath={subPath} downloadBlob={downloadBlob} />
+          <ArtifactRenderer artifacts={artifacts} username={username || ''} slug={slug || ''} authorId={crux?.authorId || ''} cruxId={crux?.id || ''} subPath={subPath} downloadBlob={downloadBlob} />
         </div>
 
         {metadataOpen && crux && (

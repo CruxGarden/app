@@ -16,6 +16,7 @@ interface ArtifactRendererProps {
   username: string;
   slug: string;
   authorId: string;
+  cruxId: string;
   subPath?: string;
   downloadBlob?: DownloadBlobFn;
 }
@@ -84,6 +85,7 @@ function HtmlRenderer({
   artifact,
   artifacts,
   authorId,
+  cruxId,
   username,
   slug,
   subPath,
@@ -92,6 +94,7 @@ function HtmlRenderer({
   artifact: Artifact;
   artifacts: Artifact[];
   authorId: string;
+  cruxId: string;
   username: string;
   slug: string;
   subPath?: string;
@@ -118,7 +121,7 @@ function HtmlRenderer({
     // If a sub-path is provided (deep link), use it directly — CloudFront Function
     // will rewrite non-file paths to index.html for SPA support
     const entryPath = subPath || artifact.meta?.path || artifact.filename || 'index.html';
-    const src = `${PUBLISHED_CONTENT_URL}/${authorId}/${slug}/${entryPath}`;
+    const src = `${PUBLISHED_CONTENT_URL}/${authorId}/${cruxId}/${entryPath}`;
 
     return (
       <iframe
@@ -315,7 +318,7 @@ function formatSize(bytes?: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-export default function ArtifactRenderer({ artifacts, username, slug, authorId, subPath, downloadBlob }: ArtifactRendererProps) {
+export default function ArtifactRenderer({ artifacts, username, slug, authorId, cruxId, subPath, downloadBlob }: ArtifactRendererProps) {
   const main = useMemo(() => resolveMain(artifacts), [artifacts]);
 
   // Default download function uses publicApi
@@ -332,6 +335,7 @@ export default function ArtifactRenderer({ artifacts, username, slug, authorId, 
           artifact={main.artifact}
           artifacts={artifacts}
           authorId={authorId}
+          cruxId={cruxId}
           username={username}
           slug={slug}
           subPath={subPath}

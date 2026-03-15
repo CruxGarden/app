@@ -90,6 +90,7 @@ export interface Crux {
 export type CruxKind = 'webapp' | 'page' | 'document' | 'image' | 'snapshot';
 
 export interface CreateCruxDto {
+  id?: string;
   slug: string;
   title?: string;
   description?: string;
@@ -98,6 +99,7 @@ export interface CreateCruxDto {
   kind?: CruxKind;
   status?: CruxStatus;
   visibility?: CruxVisibility;
+  discoverable?: boolean;
   tags?: string[];
   meta?: Record<string, unknown>;
 }

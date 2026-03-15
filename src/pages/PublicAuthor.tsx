@@ -2,14 +2,14 @@ import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useParams } from 'react-router-dom';
 import { publicApi } from '@/api';
 import type { Author, Crux } from '@/api/types';
-import { API_BASE_URL } from '@/api/client';
+import { resolveAvatarUrl } from '@/stores/authStore';
 import { isServicesReady, initServices, getServices } from '@/services';
 import { PublicTopBar } from '@/components/display';
 import { GardenGrid, GardenSearch } from '@/components/garden';
-import { Button } from '@/components/ui';
+import { Button, LoadingPanel } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import { APP_NAME } from '@/lib/constants';
-import MoodBar from '@/components/layout/MoodBar';
+
 
 type LoadState = 'loading' | 'ready' | 'not-found' | 'error';
 type SortField = 'created' | 'updated';
@@ -50,9 +50,9 @@ export default function PublicAuthor() {
 
     let cancelled = false;
 
-    // Try local services first, fall back to API
-    loadLocal(username)
-      .catch(() => loadRemote(username))
+    // Try API first, fall back to local (for unpublished previews)
+    loadRemote(username)
+      .catch(() => loadLocal(username))
       .then((data) => {
         if (cancelled) return;
         setAuthor(data.author);
@@ -100,12 +100,15 @@ export default function PublicAuthor() {
     );
   }, [cruxes, search, sortBy]);
 
-  const avatarUrl = (() => {
-    const url = author?.meta?.avatarUrl;
-    if (!url || typeof url !== 'string') return null;
-    if (url.startsWith('data:')) return url;
-    return `${API_BASE_URL}${url}?v=${author.updated}`;
-  })();
+  const avatarUrl = resolveAvatarUrl(author);
+  if (state === 'loading') {
+    return (
+      <div className="relative min-h-screen flex items-center justify-center bg-bg">
+        <LoadingPanel />
+      </div>
+    );
+  }
+
   if (state === 'not-found') {
     return (
       <div className="relative min-h-screen flex flex-col items-center justify-center px-4">
@@ -194,7 +197,6 @@ export default function PublicAuthor() {
           <GardenGrid cruxes={filteredCruxes} linkBuilder={linkBuilder} sortBy={sortBy} />
         )}
       </div>
-      <MoodBar />
     </div>
   );
 }

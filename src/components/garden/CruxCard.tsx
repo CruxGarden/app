@@ -68,19 +68,19 @@ export default function CruxCard({ crux, linkTo, onDelete, sortBy = 'created' }:
       <button
         onClick={() => navigate(linkTo || `/c/${crux.id}`)}
         className={cn(
-          'bg-panel border border-border rounded-[var(--radius)] p-4 text-left',
-          'group-hover:bg-accent-muted group-hover:text-accent group-hover:border-accent transition-all duration-200 cursor-pointer',
+          'bg-garden-card border border-garden-card-border rounded-[var(--radius)] p-4 text-left',
+          'group-hover:bg-garden-card-hover group-hover:border-garden-card-border-hover transition-all duration-200 cursor-pointer',
           'w-full h-36 flex flex-col',
         )}
       >
         {/* Title */}
-        <h3 className="font-display text-sm font-medium text-text truncate pr-6">
+        <h3 className="font-display text-sm font-medium text-garden-card-title truncate pr-6">
           {crux.title || crux.slug}
         </h3>
 
         {/* Description */}
         {description && (
-          <p className="text-xs text-text-muted line-clamp-2 leading-relaxed mt-1.5">
+          <p className="text-xs text-garden-card-text line-clamp-2 leading-relaxed mt-1.5">
             {description}
           </p>
         )}
@@ -89,7 +89,7 @@ export default function CruxCard({ crux, linkTo, onDelete, sortBy = 'created' }:
         <div className="flex-1" />
 
         {/* Footer */}
-        <div className="text-[10px] text-text-muted font-mono">
+        <div className="text-[10px] text-garden-card-meta font-mono">
           {sortBy === 'updated'
             ? `Updated ${formatDateTime(crux.updated)}`
             : `Created ${formatDateTime(crux.created)}`}

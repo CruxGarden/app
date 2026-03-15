@@ -10,12 +10,12 @@ import type {
 import { Button } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import { APP_NAME } from '@/lib/constants';
-import MoodBar from '@/components/layout/MoodBar';
+
 
 type ResultType = 'cruxes' | 'authors';
 
 function resolveAvatarUrl(meta?: Record<string, unknown>): string | null {
-  const url = meta?.avatarUrl;
+  const url = meta?.avatarUrl || meta?.avatar_url;
   if (!url || typeof url !== 'string') return null;
   if (url.startsWith('data:')) return url;
   return `${API_BASE_URL}${url}`;
@@ -468,7 +468,6 @@ export default function Discover() {
           </>
         )}
       </div>
-      <MoodBar />
     </div>
   );
 }

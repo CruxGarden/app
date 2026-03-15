@@ -158,6 +158,45 @@ function ExportIcon() {
   );
 }
 
+function SearchIcon() {
+  return (
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <circle cx="11" cy="11" r="8" />
+      <line x1="21" y1="21" x2="16.65" y2="16.65" />
+    </svg>
+  );
+}
+
+function PaletteIcon() {
+  return (
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <circle cx="13.5" cy="6.5" r="2.5" />
+      <circle cx="17.5" cy="10.5" r="1.5" />
+      <circle cx="8.5" cy="7.5" r="1.5" />
+      <circle cx="6.5" cy="12.5" r="1.5" />
+      <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.93 0 1.5-.75 1.5-1.5 0-.39-.15-.74-.39-1.04-.24-.3-.39-.65-.39-1.04 0-.83.67-1.5 1.5-1.5H16c3.31 0 6-2.69 6-6 0-5.5-4.5-9.58-10-10z" />
+    </svg>
+  );
+}
+
 function ChevronIcon() {
   return (
     <svg
@@ -174,6 +213,19 @@ function ChevronIcon() {
     </svg>
   );
 }
+
+// ── Pane CSS var prefixes ────────────────────────────────
+
+const PANE_VAR_PREFIX: Record<PaneType, string> = {
+  collaboration: '--pane-collaboration',
+  artifacts: '--pane-artifacts',
+  workshop: '--pane-workshop',
+  details: '--pane-details',
+  history: '--pane-history',
+  export: '--pane-export',
+  sync: '--pane-sync',
+  publish: '--pane-publish',
+};
 
 // ── Pane button config ──────────────────────────────────
 
@@ -219,7 +271,7 @@ export default function TopBar() {
 
   return (
     <>
-    <header className="flex items-center justify-between h-12 px-3 border-b border-border bg-surface-solid">
+    <header className="flex items-center justify-between h-12 px-3 border-b border-toolbar-border bg-toolbar">
       {/* Left: branding + breadcrumb */}
       <div className="flex items-center gap-1.5 min-w-0">
         {username ? (
@@ -232,14 +284,14 @@ export default function TopBar() {
         ) : (
           <button
             onClick={() => navigate('/')}
-            className="shrink-0 cursor-pointer text-sm font-display font-medium text-text whitespace-nowrap hover:underline"
+            className="shrink-0 cursor-pointer text-sm font-display font-medium text-toolbar-text whitespace-nowrap hover:underline"
           >
             {APP_NAME}
           </button>
         )}
         {activeCruxId ? (
           <>
-            <span className="text-text-muted shrink-0">
+            <span className="text-toolbar-text-muted shrink-0">
               <ChevronIcon />
             </span>
             {editingTitle ? (
@@ -257,7 +309,7 @@ export default function TopBar() {
                     setEditingTitle(false);
                   }
                 }}
-                className="text-xs font-medium font-display text-text bg-transparent border-b border-accent outline-none w-32"
+                className="text-xs font-medium font-display text-toolbar-text bg-transparent border-b border-input-border-active outline-none w-32"
               />
             ) : (
               <span
@@ -265,7 +317,7 @@ export default function TopBar() {
                   e.preventDefault();
                   startEditTitle();
                 }}
-                className="text-xs font-medium font-display text-text-muted cursor-default whitespace-nowrap"
+                className="text-xs font-medium font-display text-toolbar-text-muted cursor-default whitespace-nowrap"
                 title="Double-click to rename"
               >
                 {cruxTitle || 'Untitled'}
@@ -285,6 +337,7 @@ export default function TopBar() {
                 {enabledPanes.map((paneType) => {
                   const config = PANE_BUTTONS.find((b) => b.type === paneType)!;
                   const Icon = config.icon;
+                  const prefix = PANE_VAR_PREFIX[paneType];
                   return (
                     <IconButton
                       key={paneType}
@@ -292,7 +345,11 @@ export default function TopBar() {
                       size="sm"
                       onClick={() => togglePane(paneType)}
                       active
-                      activeColor={PANE_COLORS[paneType]}
+                      style={{
+                        color: `var(${prefix}-button-icon-active)`,
+                        backgroundColor: `var(${prefix}-button-active)`,
+                        borderColor: `var(${prefix}-button-border-active)`,
+                      }}
                       tooltip={{ label: config.label }}
                     >
                       <Icon />
@@ -303,7 +360,7 @@ export default function TopBar() {
 
               {/* Divider between enabled and disabled */}
               {disabledPanes.length > 0 && enabledPanes.length > 0 && (
-                <div className="w-px h-5 bg-text-muted/20 mx-1.5" />
+                <div className="w-px h-5 bg-toolbar-divider mx-1.5" />
               )}
 
               {/* Disabled panes — fixed default order, not draggable */}
@@ -312,6 +369,7 @@ export default function TopBar() {
                   {disabledPanes.map((paneType) => {
                     const config = PANE_BUTTONS.find((b) => b.type === paneType)!;
                     const Icon = config.icon;
+                    const prefix = PANE_VAR_PREFIX[paneType];
                     return (
                       <IconButton
                         key={paneType}
@@ -319,7 +377,7 @@ export default function TopBar() {
                         size="sm"
                         onClick={() => togglePane(paneType)}
                         active={false}
-                        activeColor={PANE_COLORS[paneType]}
+                        style={{ color: `var(${prefix}-button-icon)` }}
                         tooltip={{ label: config.label }}
                       >
                         <Icon />
@@ -329,9 +387,26 @@ export default function TopBar() {
                 </div>
               )}
             </div>
-            <div className="w-px h-5 bg-text-muted/20 mx-1" />
+            <div className="w-px h-5 bg-toolbar-divider mx-1" />
           </>
         )}
+        <IconButton
+          label="Discover"
+          size="sm"
+          onClick={() => navigate('/discover')}
+          tooltip={{ label: 'Discover' }}
+        >
+          <SearchIcon />
+        </IconButton>
+        <IconButton
+          label="Mood"
+          size="sm"
+          onClick={() => useUIStore.getState().toggleMoodEditor()}
+          tooltip={{ label: 'Mood' }}
+        >
+          <PaletteIcon />
+        </IconButton>
+        <div className="w-px h-5 bg-toolbar-divider mx-1" />
         <div className="relative group/btn flex items-center">
           <button
             onClick={() => useUIStore.getState().toggleKeeper()}
@@ -344,13 +419,13 @@ export default function TopBar() {
             <KeeperAvatar className="w-6 h-6" />
           </button>
           <div className="absolute top-full right-0 mt-2 z-50 pointer-events-none hidden group-hover/btn:block">
-            <div className="flex items-center gap-2.5 px-3 py-2 rounded-[var(--radius)] bg-surface-solid border border-border shadow-lg whitespace-nowrap">
-              <span className="text-xs font-medium text-text">The Keeper</span>
-              <kbd className="text-[11px] font-mono text-text-muted px-1.5 py-0.5 rounded-[var(--radius-sm)] bg-bg border border-border min-w-[1.5rem] text-center">Esc</kbd>
+            <div className="flex items-center gap-2.5 px-3 py-2 rounded-[var(--radius)] bg-tooltip border border-tooltip-border shadow-lg whitespace-nowrap">
+              <span className="text-xs font-medium text-tooltip-text">The Keeper</span>
+              <kbd className="text-[11px] font-mono text-tooltip-text px-1.5 py-0.5 rounded-[var(--radius-sm)] bg-bg border border-tooltip-border min-w-[1.5rem] text-center">Esc</kbd>
             </div>
           </div>
         </div>
-        <div className="w-px h-5 bg-text-muted/20 mx-1" />
+        <div className="w-px h-5 bg-toolbar-divider mx-1" />
         <UserMenu />
       </div>
     </header>

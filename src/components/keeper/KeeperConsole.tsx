@@ -7,7 +7,7 @@ import type { NormalizedMessage } from '@/services/types';
 import MarkdownRenderer from '@/components/chat/MarkdownRenderer';
 import ModelSelector from '@/components/chat/ModelSelector';
 import KeeperPixelAvatar from '@/components/ui/KeeperPixelAvatar';
-import { useAuthStore } from '@/stores/authStore';
+import { useAuthStore, resolveAvatarUrl } from '@/stores/authStore';
 import { getApiKey } from '@/ai/keys';
 import { getSetting, setSetting, removeSetting } from '@/services/settings';
 
@@ -144,13 +144,7 @@ interface KeeperConsoleProps {
 
 function UserAvatar() {
   const author = useAuthStore((s) => s.author);
-  const avatarUrl = (() => {
-    const url = author?.meta?.avatarUrl;
-    if (!url || typeof url !== 'string') return null;
-    if (url.startsWith('data:')) return url;
-    const base = import.meta.env.VITE_API_URL || 'http://localhost:3000';
-    return `${base}${url}?v=${author.updated}`;
-  })();
+  const avatarUrl = resolveAvatarUrl(author);
   const initial = author?.username?.charAt(0)?.toUpperCase() ?? '?';
 
   return (
@@ -371,7 +365,7 @@ export default function KeeperConsole({ open, onClose }: KeeperConsoleProps) {
       <div
         className={cn(
           'relative z-10 w-full max-w-2xl mx-4 mb-4 sm:mb-0',
-          'bg-surface-solid border border-border rounded-[var(--radius)] shadow-xl',
+          'bg-keeper-console border border-keeper-console-border rounded-[var(--radius)] shadow-xl',
           'flex flex-row h-[60vh] max-h-[520px]',
         )}
       >
@@ -381,7 +375,7 @@ export default function KeeperConsole({ open, onClose }: KeeperConsoleProps) {
             <KeeperAvatar className="w-full h-full !rounded-none !ring-0" animate />
           </div>
           {/* Conversation history */}
-          <div className="flex-1 min-h-0 overflow-y-auto border-t border-border bg-bg">
+          <div className="flex-1 min-h-0 overflow-y-auto border-t border-border bg-keeper-console-sidebar">
             <div className="p-2">
               <button
                 onClick={startNewConversation}
