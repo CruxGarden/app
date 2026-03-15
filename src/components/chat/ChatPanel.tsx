@@ -4,6 +4,7 @@ import { useCruxStore } from '@/stores/cruxStore';
 import MessageList from './MessageList';
 import MessageInput from './MessageInput';
 import ModelSelector from './ModelSelector';
+import ModelInfoPanel from './ModelInfoPanel';
 
 export default function ChatPanel() {
   const { messages, isStreaming, streamingContent, send, stop } = useChat();
@@ -50,8 +51,9 @@ export default function ChatPanel() {
         </div>
       ) : (
         <div className="border-t border-border">
-          <div className="px-3 pt-2.5 pb-1">
+          <div className="px-3 pt-2.5 pb-1 space-y-1">
             <ModelSelector value={model} onChange={setModel} disabled={isStreaming} />
+            <ModelInfoPanel model={model} />
           </div>
           <MessageInput onSend={send} onStop={stop} isStreaming={isStreaming} history={history} />
         </div>

@@ -409,6 +409,7 @@ export const useCruxStore = create<CruxState>((set, get) => ({
       });
     } catch {
       // Crux doesn't exist — create it
+      // The API handles slug conflicts by hard-deleting stale records
       await cruxes.create({
         id: crux.id,
         slug: crux.slug,
