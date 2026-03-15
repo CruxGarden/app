@@ -19,12 +19,19 @@ export interface ToolUseBlock {
   input: Record<string, unknown>;
 }
 
+/** Token usage reported by the provider */
+export interface TokenUsage {
+  inputTokens: number;
+  outputTokens: number;
+}
+
 /** Normalized response from a provider's streaming call */
 export interface StreamResponse {
   stopReason: string; // 'end_turn' | 'tool_use' | 'max_tokens'
   toolCalls: ToolUseBlock[];
   textContent: string;
   fullContent: ContentBlock[]; // Raw blocks for next round
+  usage?: TokenUsage;
 }
 
 /** Options passed to the adapter's stream method */

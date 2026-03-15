@@ -42,8 +42,16 @@ export class GoogleAdapter implements ProviderAdapter {
       });
 
       let toolCallIndex = 0;
+      let inputTokens = 0;
+      let outputTokens = 0;
 
       for await (const chunk of response) {
+        // Capture usage metadata (available on each chunk, use latest)
+        if (chunk.usageMetadata) {
+          inputTokens = chunk.usageMetadata.promptTokenCount || 0;
+          outputTokens = chunk.usageMetadata.candidatesTokenCount || 0;
+        }
+
         if (!chunk.candidates?.[0]?.content?.parts) continue;
 
         for (const part of chunk.candidates[0].content.parts) {
@@ -90,7 +98,15 @@ export class GoogleAdapter implements ProviderAdapter {
     // Determine stop reason
     const stopReason = toolCalls.length > 0 ? 'tool_use' : 'end_turn';
 
-    return { stopReason, toolCalls, textContent: text, fullContent };
+    return {
+      stopReason,
+      toolCalls,
+      textContent: text,
+      fullContent,
+      usage: inputTokens > 0
+        ? { inputTokens, outputTokens }
+        : undefined,
+    };
   }
 
   private convertMessages(

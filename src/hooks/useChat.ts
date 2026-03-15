@@ -206,6 +206,10 @@ export function useChat() {
             case 'done':
               break;
 
+            case 'usage':
+              useCruxStore.getState().addTokenUsage(event.inputTokens, event.outputTokens);
+              break;
+
             case 'info':
               // Informational messages (e.g., context trimming) — show inline
               fullContent += `\n\n*${event.message}*`;

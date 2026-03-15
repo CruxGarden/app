@@ -81,6 +81,10 @@ interface CruxState {
   // Upload progress
   uploadProgress: { total: number; completed: number; currentFile: string } | null;
 
+  // Token usage tracking (cumulative for the session)
+  tokenUsage: { inputTokens: number; outputTokens: number };
+  addTokenUsage: (input: number, output: number) => void;
+
   // File CRUD actions
   createFile: (path: string, content?: string) => Promise<Artifact>;
   uploadFile: (file: File, parentPath?: string) => Promise<Artifact>;
@@ -132,6 +136,16 @@ export const useCruxStore = create<CruxState>((set, get) => ({
   snapshotMessageCount: null,
   pendingDeletes: [],
   uploadProgress: null,
+  tokenUsage: { inputTokens: 0, outputTokens: 0 },
+
+  addTokenUsage: (input: number, output: number) => {
+    set((s) => ({
+      tokenUsage: {
+        inputTokens: s.tokenUsage.inputTokens + input,
+        outputTokens: s.tokenUsage.outputTokens + output,
+      },
+    }));
+  },
 
   loadCrux: async (id: string) => {
     const { crux: cruxService, artifact } = getServices();
@@ -222,6 +236,7 @@ export const useCruxStore = create<CruxState>((set, get) => ({
       growthCount: crux.meta?.growthCount || 0,
       growths: sortedGrowths,
       hasUnpublishedChanges: hasChanges,
+      tokenUsage: { inputTokens: 0, outputTokens: 0 },
     });
   },
 

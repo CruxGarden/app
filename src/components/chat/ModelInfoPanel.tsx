@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
 import { getModelInfo, PROVIDERS, getProviderForModel } from '@/ai/providers';
 import { TOOL_DEFINITIONS } from '@/ai/tools';
 import { useCruxStore } from '@/stores/cruxStore';
@@ -14,14 +14,6 @@ function formatTokens(n: number): string {
   return String(n);
 }
 
-function estimateMessageTokens(messages: { content: string }[]): number {
-  let total = 0;
-  for (const msg of messages) {
-    total += Math.ceil((msg.content?.length || 0) / 3.5) + 4;
-  }
-  return total;
-}
-
 const TOOL_ICONS: Record<string, string> = {
   write_file: '✏',
   edit_file: '✎',
@@ -33,18 +25,14 @@ const TOOL_ICONS: Record<string, string> = {
 
 export default function ModelInfoPanel({ model }: ModelInfoPanelProps) {
   const [expanded, setExpanded] = useState(false);
-  const messages = useCruxStore((s) => s.messages);
+  const tokenUsage = useCruxStore((s) => s.tokenUsage);
 
   const info = getModelInfo(model);
   const providerId = getProviderForModel(model);
   const provider = PROVIDERS[providerId];
 
-  const usageEstimate = useMemo(() => {
-    if (!info || !messages.length) return 0;
-    return estimateMessageTokens(messages);
-  }, [messages, info]);
-
-  const usagePercent = info ? Math.min((usageEstimate / info.contextWindow) * 100, 100) : 0;
+  const totalTokens = tokenUsage.inputTokens + tokenUsage.outputTokens;
+  const usagePercent = info ? Math.min((tokenUsage.inputTokens / info.contextWindow) * 100, 100) : 0;
 
   if (!info || !provider) return null;
 
@@ -68,11 +56,11 @@ export default function ModelInfoPanel({ model }: ModelInfoPanelProps) {
           <path d="m9 6 6 6-6 6" />
         </svg>
         <span>model info</span>
-        {usagePercent > 0 && (
+        {totalTokens > 0 && (
           <span className={cn(
             usagePercent > 80 ? 'text-error' : usagePercent > 50 ? 'text-amber-400' : 'text-text-muted/40',
           )}>
-            {usagePercent.toFixed(0)}% context
+            {formatTokens(totalTokens)} tokens used
           </span>
         )}
       </button>
@@ -91,15 +79,15 @@ export default function ModelInfoPanel({ model }: ModelInfoPanelProps) {
             </div>
 
             {/* Usage bar */}
-            {usageEstimate > 0 && (
+            {totalTokens > 0 && (
               <div className="space-y-0.5">
                 <div className="flex justify-between">
-                  <span>usage estimate</span>
-                  <span className={cn(
-                    usagePercent > 80 ? 'text-error' : 'text-text-muted',
-                  )}>
-                    ~{formatTokens(usageEstimate)} / {formatTokens(info.contextWindow)}
-                  </span>
+                  <span>input</span>
+                  <span className="text-text-muted">{formatTokens(tokenUsage.inputTokens)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>output</span>
+                  <span className="text-text-muted">{formatTokens(tokenUsage.outputTokens)}</span>
                 </div>
                 <div className="h-1 bg-surface rounded-full overflow-hidden">
                   <div

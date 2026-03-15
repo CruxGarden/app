@@ -44,13 +44,22 @@ export class OpenAIAdapter implements ProviderAdapter {
         messages,
         tools,
         stream: true,
+        stream_options: { include_usage: true },
       },
       { signal: opts.signal },
     );
 
     let finishReason = 'stop';
+    let inputTokens = 0;
+    let outputTokens = 0;
 
     for await (const chunk of stream) {
+      // Capture usage from final chunk
+      if (chunk.usage) {
+        inputTokens = chunk.usage.prompt_tokens || 0;
+        outputTokens = chunk.usage.completion_tokens || 0;
+      }
+
       const choice = chunk.choices[0];
       if (!choice) continue;
 
@@ -110,7 +119,15 @@ export class OpenAIAdapter implements ProviderAdapter {
     // Map OpenAI finish_reason to our stopReason
     const stopReason = finishReason === 'tool_calls' ? 'tool_use' : 'end_turn';
 
-    return { stopReason, toolCalls, textContent: text, fullContent };
+    return {
+      stopReason,
+      toolCalls,
+      textContent: text,
+      fullContent,
+      usage: inputTokens > 0
+        ? { inputTokens, outputTokens }
+        : undefined,
+    };
   }
 
   private convertMessages(
