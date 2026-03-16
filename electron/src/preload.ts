@@ -28,4 +28,15 @@ contextBridge.exposeInMainWorld('electronAPI', {
       ipcRenderer.invoke('sqlite:blob-exists', fingerprint),
     blobWipeAll: () => ipcRenderer.invoke('sqlite:blob-wipe-all'),
   },
+
+  ffmpeg: {
+    available: () => ipcRenderer.invoke('ffmpeg:available') as Promise<boolean>,
+    transcode: (opts: { inputData: Uint8Array; inputName: string; isAudio: boolean }) =>
+      ipcRenderer.invoke('ffmpeg:transcode', opts) as Promise<Array<{ name: string; data: Uint8Array; mimeType: string }>>,
+    onProgress: (callback: (progress: number) => void) => {
+      const handler = (_event: unknown, progress: number) => callback(progress);
+      ipcRenderer.on('ffmpeg:progress', handler);
+      return () => ipcRenderer.removeListener('ffmpeg:progress', handler);
+    },
+  },
 });

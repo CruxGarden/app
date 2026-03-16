@@ -34,6 +34,7 @@ jobs:
         run: npm run build
         env:
           VITE_API_URL: ${{ vars.VITE_API_URL || 'https://api.crux.garden' }}
+          VITE_PUBLISHED_CONTENT_URL: ${{ vars.VITE_PUBLISHED_CONTENT_URL || 'https://publish.crux.garden' }}
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4

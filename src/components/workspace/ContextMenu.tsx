@@ -15,8 +15,12 @@ interface ContextMenuProps {
   onRename: (id: string, path: string) => void;
   onDelete: (id: string, path: string) => void;
   onDeleteMultiple: (ids: string[]) => void;
+  onDeleteFolder: (folderPath: string) => void;
   onOpen: (id: string) => void;
   onCopyUrl?: (id: string) => void;
+  onTranscode?: (id: string) => void;
+  isMediaFile?: (id: string) => boolean;
+  ffmpegAvailable?: boolean;
 }
 
 export default function ContextMenu({
@@ -25,8 +29,12 @@ export default function ContextMenu({
   onRename,
   onDelete,
   onDeleteMultiple,
+  onDeleteFolder,
   onOpen,
   onCopyUrl,
+  onTranscode,
+  isMediaFile,
+  ffmpegAvailable,
 }: ContextMenuProps) {
   const contextMenu = useUIStore((s) => s.contextMenu);
   const hideContextMenu = useUIStore((s) => s.hideContextMenu);
@@ -100,15 +108,12 @@ export default function ContextMenu({
           disabled: !targetId,
         },
         {
-          label: 'Delete',
+          label: 'Delete Folder',
           action: () => {
-            if (targetId) {
-              onDelete(targetId, targetPath);
-            }
+            onDeleteFolder(targetPath);
             hideContextMenu();
           },
           destructive: true,
-          disabled: !targetId,
         },
       );
     }
@@ -129,6 +134,18 @@ export default function ContextMenu({
         },
         disabled: !onCopyUrl,
       },
+    );
+    // Transcode option for media files in Electron
+    if (ffmpegAvailable && isMediaFile?.(targetId)) {
+      items.push({
+        label: 'Transcode for Streaming',
+        action: () => {
+          onTranscode?.(targetId);
+          hideContextMenu();
+        },
+      });
+    }
+    items.push(
       {
         label: 'Rename',
         action: () => {
