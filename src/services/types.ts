@@ -137,7 +137,17 @@ export interface NormalizedMessage {
   content: string | ContentBlock[];
 }
 
+export type ImageSource = {
+  type: 'base64';
+  media_type: string;
+  data: string;
+};
+
+export type ToolResultContent =
+  | string
+  | Array<{ type: 'text'; text: string } | { type: 'image'; source: ImageSource }>;
+
 export type ContentBlock =
   | { type: 'text'; text: string }
   | { type: 'tool_use'; id: string; name: string; input: Record<string, unknown> }
-  | { type: 'tool_result'; tool_use_id: string; content: string };
+  | { type: 'tool_result'; tool_use_id: string; content: ToolResultContent };

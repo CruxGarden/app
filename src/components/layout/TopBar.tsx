@@ -271,9 +271,15 @@ export default function TopBar() {
 
   return (
     <>
-    <header className="flex items-center justify-between h-12 px-3 border-b border-toolbar-border bg-toolbar">
+    <header
+      className={cn(
+        'flex items-center justify-between px-3 border-b border-toolbar-border bg-toolbar',
+        window.electronAPI ? 'h-12 pl-24' : 'h-12', // left padding for macOS traffic lights
+      )}
+      style={window.electronAPI ? { WebkitAppRegion: 'drag' } as React.CSSProperties : undefined}
+    >
       {/* Left: branding + breadcrumb */}
-      <div className="flex items-center gap-1.5 min-w-0">
+      <div className="flex items-center gap-1.5 min-w-0" style={window.electronAPI ? { WebkitAppRegion: 'no-drag' } as React.CSSProperties : undefined}>
         {username ? (
           <button
             onClick={() => navigate('/home')}
@@ -328,7 +334,7 @@ export default function TopBar() {
       </div>
 
       {/* Right: pane toggles + keeper + user menu */}
-      <div className="flex items-center gap-1">
+      <div className="flex items-center gap-1" style={window.electronAPI ? { WebkitAppRegion: 'no-drag' } as React.CSSProperties : undefined}>
         {activeCruxId && (
           <>
             <div className="flex items-center">

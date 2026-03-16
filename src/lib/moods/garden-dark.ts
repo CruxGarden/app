@@ -185,7 +185,7 @@ export const GARDEN_DARK = {
   gardenCardThumbnail: 'var(--bg)',
   contrast: '#ffffff',
   previewBg: 'color-mix(in srgb, var(--bg) 80%, transparent)',
-  overlay: 'color-mix(in srgb, var(--bg) 50%, transparent)',
+  overlay: 'color-mix(in srgb, var(--bg) 65%, transparent)',
 
   // ── From surface ─────────────────────────────────────
   surfaceSolid: 'color-mix(in srgb, var(--surface) 95%, white)',
