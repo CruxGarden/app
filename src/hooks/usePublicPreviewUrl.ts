@@ -14,8 +14,8 @@ type DownloadBlobFn = (artifactId: string) => Promise<Blob>;
  * Downloads all artifacts, caches them via the preview service worker,
  * and returns an iframe-ready URL for the display mode.
  *
- * Downloads once per crux — does not re-download unless username/slug changes.
- * Accepts a `downloadBlob` function so it works with both local and remote data.
+ * This is the LOCAL DEV fallback — only used when VITE_PUBLISHED_CONTENT_URL
+ * is not set. In production, the iframe points directly to S3/CloudFront.
  *
  * @param attachments  — all artifacts for the crux
  * @param entryId      — artifact ID of the entry page (e.g. index.html)

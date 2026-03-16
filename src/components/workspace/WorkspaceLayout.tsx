@@ -194,6 +194,18 @@ export default function WorkspaceLayout() {
     }
   };
 
+  const handleDeleteFolder = async (folderPath: string) => {
+    const children = artifacts.filter((a) => {
+      const p = (a.meta?.path || a.filename || '') as string;
+      return p.startsWith(folderPath + '/') || p === folderPath;
+    });
+    if (children.length === 0) return;
+    const folderName = folderPath.split('/').pop() || folderPath;
+    if (confirm(`Delete "${folderName}" and ${children.length} file${children.length !== 1 ? 's' : ''}?`)) {
+      await deleteArtifacts(children.map((a) => a.id));
+    }
+  };
+
   const handleCopyUrl = (id: string) => {
     const username = author?.username;
     const slug = crux?.slug;
@@ -202,6 +214,64 @@ export default function WorkspaceLayout() {
       navigator.clipboard.writeText(url);
     }
   };
+
+  // Media file detection for transcode context menu
+  const STREAMING_MEDIA_TYPES = new Set([
+    'video/mp4', 'video/webm', 'video/quicktime', 'video/x-msvideo', 'video/x-matroska',
+    'video/mpeg', 'video/ogg', 'video/3gpp',
+    'audio/mpeg', 'audio/wav', 'audio/ogg', 'audio/flac', 'audio/aac',
+    'audio/x-m4a', 'audio/mp4', 'audio/webm',
+  ]);
+  // Already streaming-friendly formats don't need transcoding
+  const STREAMING_READY = new Set(['video/mp4', 'video/webm', 'audio/mp4', 'audio/webm', 'audio/aac']);
+
+  const isMediaFile = useCallback((id: string) => {
+    const artifact = artifacts.find((a) => a.id === id);
+    if (!artifact) return false;
+    const mime = artifact.mimeType || '';
+    const path = (artifact.meta?.path || artifact.filename || '') as string;
+    // Don't offer transcode for files already in streaming/ dir or already streaming-ready
+    if (path.startsWith('streaming/')) return false;
+    if (STREAMING_READY.has(mime)) return false;
+    return STREAMING_MEDIA_TYPES.has(mime);
+  }, [artifacts]);
+
+  const ffmpegAvailable = !!(window as any).electronAPI?.ffmpeg;
+
+  const handleTranscode = useCallback(async (id: string) => {
+    const artifact = artifacts.find((a) => a.id === id);
+    if (!artifact?.fingerprint) return;
+    const electronAPI = (window as any).electronAPI;
+    if (!electronAPI?.ffmpeg) return;
+
+    const { getSqliteClient } = await import('@/services/sqlite/client');
+    const content = await getSqliteClient().blobRead(artifact.fingerprint);
+    if (!content || content.length === 0) return;
+
+    const filePath = (artifact.meta?.path || artifact.filename || 'media') as string;
+    const baseName = filePath.split('/').pop()!.replace(/\.[^.]+$/, '');
+    const mime = artifact.mimeType || '';
+    const isAudio = mime.startsWith('audio/');
+
+    try {
+      const results: Array<{ name: string; data: Uint8Array; mimeType: string }> =
+        await electronAPI.ffmpeg.transcode({
+          inputData: content,
+          inputName: filePath.split('/').pop()!,
+          isAudio,
+        });
+
+      const uploadFile = useCruxStore.getState().uploadFile;
+      for (const result of results) {
+        const blob = new Blob([new Uint8Array(result.data)], { type: result.mimeType });
+        const file = new File([blob], result.name, { type: result.mimeType });
+        await uploadFile(file, `streaming/${baseName}`);
+      }
+    } catch (err) {
+      console.error('Transcode failed:', err);
+      alert('Transcode failed: ' + (err as Error).message);
+    }
+  }, [artifacts]);
 
   const handleOpen = (id: string) => {
     const artifact = artifacts.find((a) => a.id === id);
@@ -314,8 +384,12 @@ export default function WorkspaceLayout() {
         onRename={handleRename}
         onDelete={handleDelete}
         onDeleteMultiple={handleDeleteMultiple}
+        onDeleteFolder={handleDeleteFolder}
         onOpen={handleOpen}
         onCopyUrl={handleCopyUrl}
+        onTranscode={handleTranscode}
+        isMediaFile={isMediaFile}
+        ffmpegAvailable={ffmpegAvailable}
       />
     </DndProvider>
   );

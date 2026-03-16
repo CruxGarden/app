@@ -68,6 +68,6 @@ window.addEventListener('unhandledrejection', (e) => { if (isMonacoDisposalError
 // - Same-origin (no VITE_PREVIEW_ORIGIN): register SW on this origin (local dev fallback)
 if (import.meta.env.VITE_PREVIEW_ORIGIN) {
   import('@/lib/previewCache').then(({ initPreviewReceiver }) => initPreviewReceiver());
-} else if ('serviceWorker' in navigator) {
+} else if ('serviceWorker' in navigator && navigator.serviceWorker) {
   navigator.serviceWorker.register('/preview-sw.js').catch(() => {});
 }

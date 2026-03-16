@@ -4,11 +4,18 @@ const path = require('path');
 
 // Use the same schema as the web app's WASM SQLite
 function loadSchema(): string {
-  // Try relative to dist/ (compiled), then relative to src/ (dev)
   const candidates = [
+    // Dev: relative to electron/dist/
     path.join(__dirname, '../../src/services/sqlite/schema.sql'),
     path.join(__dirname, '../../../src/services/sqlite/schema.sql'),
   ];
+  // Packaged: in extraResources
+  try {
+    const { app } = require('electron');
+    if (app.isPackaged) {
+      candidates.unshift(path.join(process.resourcesPath, 'schema.sql'));
+    }
+  } catch {}
   for (const p of candidates) {
     if (fs.existsSync(p)) return fs.readFileSync(p, 'utf-8');
   }

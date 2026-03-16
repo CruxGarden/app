@@ -5,7 +5,9 @@ COPY package*.json ./
 RUN npm ci --legacy-peer-deps
 COPY . .
 ARG VITE_API_URL=http://localhost:3000
+ARG VITE_PUBLISHED_CONTENT_URL=
 ENV VITE_API_URL=$VITE_API_URL
+ENV VITE_PUBLISHED_CONTENT_URL=$VITE_PUBLISHED_CONTENT_URL
 RUN npm run build
 
 # Stage 2: Serve

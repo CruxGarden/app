@@ -64,5 +64,6 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           build-args: |
             VITE_API_URL=${{ vars.VITE_API_URL || 'https://api.crux.garden' }}
+            VITE_PUBLISHED_CONTENT_URL=${{ vars.VITE_PUBLISHED_CONTENT_URL || 'https://publish.crux.garden' }}
           cache-from: type=gha
           cache-to: type=gha,mode=max

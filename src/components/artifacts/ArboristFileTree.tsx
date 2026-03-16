@@ -25,6 +25,8 @@ import InlineRename from '@/components/workspace/InlineRename';
 export interface ArboristFileTreeHandle {
   startRename: (nodeId: string) => void;
   getFocusedFolder: () => string | undefined;
+  openAll: () => void;
+  closeAll: () => void;
 }
 
 type ContextMenuHandler = (
@@ -294,6 +296,12 @@ const ArboristFileTree = forwardRef<ArboristFileTreeHandle, ArboristFileTreeProp
         if (node.isInternal) return node.data.path;
         if (node.parent && !node.parent.isRoot) return node.parent.data.path;
         return undefined;
+      },
+      openAll: () => {
+        treeRef.current?.openAll();
+      },
+      closeAll: () => {
+        treeRef.current?.closeAll();
       },
     }));
 

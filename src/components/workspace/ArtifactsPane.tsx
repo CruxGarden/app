@@ -46,6 +46,17 @@ function FilePlusIcon() {
   );
 }
 
+function CollapseAllIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="4 14 10 14 10 20" />
+      <polyline points="20 10 14 10 14 4" />
+      <line x1="14" y1="10" x2="21" y2="3" />
+      <line x1="3" y1="21" x2="10" y2="14" />
+    </svg>
+  );
+}
+
 function UploadIcon() {
   return (
     <svg
@@ -243,6 +254,7 @@ export default function ArtifactsPane() {
     [deleteArtifacts],
   );
 
+
   const handleUploadClick = useCallback(() => {
     setImportMenuOpen((v) => !v);
   }, []);
@@ -284,6 +296,20 @@ export default function ArtifactsPane() {
 
   const actionButtons = (
     <>
+      <div className="relative group/btn">
+        <button
+          onClick={() => treeRef.current?.closeAll()}
+          className="p-1 opacity-60 hover:opacity-100 transition-opacity cursor-pointer"
+        >
+          <CollapseAllIcon />
+        </button>
+        <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 z-50 pointer-events-none hidden group-hover/btn:block">
+          <div className="px-2.5 py-1.5 rounded-[var(--radius)] bg-surface-solid border border-border shadow-lg whitespace-nowrap">
+            <span className="text-xs font-medium text-text">Collapse folders</span>
+          </div>
+        </div>
+      </div>
+      <div className="w-px h-3 bg-border mx-0.5" />
       <div className="relative group/btn">
         <button
           onClick={() => {
