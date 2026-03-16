@@ -1,7 +1,12 @@
 import { getServices } from '@/services';
+import type { ToolResultContent } from '@/services/types';
 import type { ToolDefinition } from './adapters/types';
 import { validateToolInput } from './validation';
 import { formatToolError } from './errors';
+
+const IMAGE_MIMES = new Set([
+  'image/png', 'image/jpeg', 'image/jpg', 'image/gif', 'image/webp', 'image/svg+xml',
+]);
 
 /**
  * Tool definitions — ported from api/src/ai/ai.tools.ts.
@@ -257,7 +262,7 @@ export function createToolExecutor(
   return async function executeTool(
     toolName: string,
     input: Record<string, unknown>,
-  ): Promise<string> {
+  ): Promise<string | ToolResultContent> {
     // Validate inputs before execution
     const validation = validateToolInput(toolName, input);
     if (!validation.valid) {
@@ -298,7 +303,7 @@ export function createToolExecutor(
     }
 
     try {
-      let result: string;
+      let result: string | ToolResultContent;
 
       switch (toolName) {
         case 'write_file':
@@ -502,7 +507,7 @@ async function toolReadFile(
   input: Record<string, unknown>,
   cruxId: string,
   artifactService: ArtifactService,
-): Promise<string> {
+): Promise<string | ToolResultContent> {
   const path = input.path as string;
 
   const artifacts = await artifactService.findByResource('crux', cruxId);
@@ -540,6 +545,21 @@ async function toolReadFile(
       } catch {
         return `[DOCX file: ${path} — text extraction failed. Binary file, ${blob.size} bytes]`;
       }
+    }
+
+    // Images — return as image content block so the AI can see them
+    if (IMAGE_MIMES.has(mime)) {
+      const buffer = await blob.arrayBuffer();
+      const bytes = new Uint8Array(buffer);
+      let base64 = '';
+      for (let i = 0; i < bytes.length; i++) {
+        base64 += String.fromCharCode(bytes[i]!);
+      }
+      base64 = btoa(base64);
+      return [
+        { type: 'text', text: `[Image: ${path} (${mime}, ${buffer.byteLength} bytes)]` },
+        { type: 'image', source: { type: 'base64', media_type: mime, data: base64 } },
+      ];
     }
 
     // Other binary files — return base64

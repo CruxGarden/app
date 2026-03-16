@@ -23,7 +23,14 @@ function messageTokens(msg: NormalizedMessage): number {
     } else if (block.type === 'tool_use') {
       tokens += estimateTokens(JSON.stringify(block.input)) + 20;
     } else if (block.type === 'tool_result') {
-      tokens += estimateTokens(block.content) + 10;
+      if (typeof block.content === 'string') {
+        tokens += estimateTokens(block.content) + 10;
+      } else if (Array.isArray(block.content)) {
+        for (const part of block.content) {
+          if (part.type === 'text') tokens += estimateTokens(part.text);
+          else if (part.type === 'image') tokens += 1000; // rough image token estimate
+        }
+      }
     } else {
       tokens += 100; // unknown block type fallback
     }

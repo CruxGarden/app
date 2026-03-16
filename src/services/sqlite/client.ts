@@ -1,4 +1,5 @@
 import type { WorkerResponse } from './worker';
+import { ElectronSqliteClient } from './electron-client';
 
 export interface ISqliteClient {
   /** Initialize the worker + OPFS VFS. Resolves when the database is ready. */
@@ -168,7 +169,12 @@ export class SqliteClient implements ISqliteClient {
 
 export function getSqliteClient(): ISqliteClient {
   if (!instance) {
-    instance = new SqliteClient();
+    // Auto-detect Electron and use native SQLite via IPC instead of WASM/OPFS
+    if (typeof window !== 'undefined' && window.electronAPI?.sqlite) {
+      instance = new ElectronSqliteClient();
+    } else {
+      instance = new SqliteClient();
+    }
   }
   return instance;
 }

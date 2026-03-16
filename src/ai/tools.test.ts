@@ -32,7 +32,7 @@ describe('MUTATING_TOOLS', () => {
 });
 
 describe('createToolExecutor', () => {
-  let execute: (name: string, input: Record<string, unknown>) => Promise<string>;
+  let execute: ReturnType<typeof createToolExecutor>;
   const cruxId = 'test-crux';
 
   beforeEach(async () => {

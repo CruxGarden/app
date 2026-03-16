@@ -1,5 +1,5 @@
 import type { ProviderAdapter } from './adapters/types';
-import type { NormalizedMessage, ContentBlock } from '@/services/types';
+import type { NormalizedMessage, ContentBlock, ToolResultContent } from '@/services/types';
 import { TOOL_DEFINITIONS, MUTATING_TOOLS } from './tools';
 import {
   buildSystemPrompt,
@@ -48,7 +48,7 @@ export async function* runConversation(
   executeToolFn: (
     name: string,
     input: Record<string, unknown>,
-  ) => Promise<string>,
+  ) => Promise<string | ToolResultContent>,
   signal?: AbortSignal,
 ): AsyncGenerator<ConversationEvent> {
   let systemPrompt = await buildSystemPrompt(cruxId);
@@ -153,7 +153,7 @@ export async function* runConversation(
     const groupResults = await Promise.all(
       [...groups.values()].map(async (chain) => {
         const events: ConversationEvent[] = [];
-        const results: { toolId: string; content: string; name: string }[] = [];
+        const results: { toolId: string; content: string | ToolResultContent; name: string }[] = [];
         let chainHadMutation = false;
 
         for (const toolUse of chain) {
@@ -166,11 +166,14 @@ export async function* runConversation(
 
           const result = await executeToolFn(toolUse.name, toolUse.input);
 
+          const displayResult = typeof result === 'string'
+            ? result
+            : result.filter((b) => b.type === 'text').map((b) => 'text' in b ? b.text : '').join('\n');
           events.push({
             type: 'tool_result',
             name: toolUse.name,
             id: toolUse.id,
-            result,
+            result: displayResult,
           });
 
           results.push({ toolId: toolUse.id, content: result, name: toolUse.name });
@@ -185,7 +188,7 @@ export async function* runConversation(
     );
 
     // Yield events in original tool call order and aggregate results
-    const resultMap = new Map<string, string>();
+    const resultMap = new Map<string, string | ToolResultContent>();
     let roundHadMutation = false;
     for (const gr of groupResults) {
       if (gr.chainHadMutation) {
@@ -203,14 +206,20 @@ export async function* runConversation(
         id: toolUse.id,
         input: toolUse.input,
       };
+      const rawResult = resultMap.get(toolUse.id) || 'Error: no result';
+      // Yield string version for UI display
+      const displayResult = typeof rawResult === 'string'
+        ? rawResult
+        : rawResult.filter((b) => b.type === 'text').map((b) => 'text' in b ? b.text : '').join('\n');
       yield {
         type: 'tool_result',
         name: toolUse.name,
         id: toolUse.id,
-        result: resultMap.get(toolUse.id) || 'Error: no result',
+        result: displayResult,
       };
     }
 
+    // Pass rich content (including images) to the API for the next round
     const toolResults: ContentBlock[] = response.toolCalls.map((tc) => ({
       type: 'tool_result',
       tool_use_id: tc.id,
