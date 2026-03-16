@@ -5,13 +5,29 @@ import { useAuthStore } from '@/stores/authStore';
 import App from './App';
 import './styles/globals.css';
 
+function isPublicRoute(): boolean {
+  const path = window.location.pathname;
+  return (
+    path.startsWith('/discover') ||
+    // Public author/crux routes: /:username or /:username/:slug
+    // Exclude app routes: /home, /login, /settings, /c/
+    (!path.startsWith('/home') &&
+     !path.startsWith('/login') &&
+     !path.startsWith('/settings') &&
+     !path.startsWith('/c/') &&
+     path !== '/' &&
+     path.split('/').filter(Boolean).length >= 1)
+  );
+}
+
 function Bootstrap() {
   const init = useAuthStore((s) => s.init);
-  const [ready, setReady] = useState(false);
+  const [ready, setReady] = useState(() => isPublicRoute());
 
   useEffect(() => {
+    if (ready) return; // Public routes skip auth init
     init().then(() => setReady(true));
-  }, [init]);
+  }, [init, ready]);
 
   if (!ready) return null;
   return <App />;

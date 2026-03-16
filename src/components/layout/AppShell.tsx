@@ -3,6 +3,7 @@ import { Outlet } from 'react-router-dom';
 import TopBar from './TopBar';
 import CommandPalette from './CommandPalette';
 import { LoadingPanel } from '@/components/ui';
+import AnimatedBackground from './AnimatedBackground';
 import KeeperConsole from '@/components/keeper/KeeperConsole';
 import MoodBar, { applySavedMoodSettings } from '@/components/mood/MoodEditorPanel';
 import { useUIStore } from '@/stores/uiStore';
@@ -55,6 +56,7 @@ export default function AppShell() {
 
   return (
     <div className="flex flex-col h-screen overflow-hidden">
+      <AnimatedBackground />
       {/* Top bar */}
       <div className="relative z-20 shrink-0">
         <TopBar />

@@ -34,9 +34,10 @@ async function reconcileAuthorId(
     await db.run('UPDATE cruxes SET author_id = ? WHERE author_id = ?', [newId, oldId]);
     await db.run('UPDATE artifacts SET author_id = ? WHERE author_id = ?', [newId, oldId]);
     await db.run('UPDATE dimensions SET author_id = ? WHERE author_id = ?', [newId, oldId]);
+    // Keep local username and display_name (source of truth), only update id and account_id
     await db.run(
-      'UPDATE authors SET id = ?, username = ?, display_name = ?, account_id = ?, updated = ? WHERE id = ?',
-      [newId, apiAuthor.username, apiAuthor.displayName, accountId, new Date().toISOString(), oldId],
+      'UPDATE authors SET id = ?, account_id = ?, updated = ? WHERE id = ?',
+      [newId, accountId, new Date().toISOString(), oldId],
     );
     await db.run(
       "INSERT OR REPLACE INTO settings (key, value) VALUES ('cruxgarden:localAuthorId', ?)",

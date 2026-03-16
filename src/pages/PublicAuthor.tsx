@@ -5,7 +5,7 @@ import type { Author, Crux } from '@/api/types';
 import { resolveAvatarUrl } from '@/stores/authStore';
 import { PublicTopBar } from '@/components/display';
 import { GardenGrid, GardenSearch } from '@/components/garden';
-import { Button, LoadingPanel } from '@/components/ui';
+import { Button } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import { APP_NAME } from '@/lib/constants';
 
@@ -89,11 +89,7 @@ export default function PublicAuthor() {
 
   const avatarUrl = resolveAvatarUrl(author);
   if (state === 'loading') {
-    return (
-      <div className="relative min-h-screen flex items-center justify-center bg-bg">
-        <LoadingPanel />
-      </div>
-    );
+    return <div className="min-h-screen bg-bg" />;
   }
 
   if (state === 'not-found') {
