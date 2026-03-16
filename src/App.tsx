@@ -1,10 +1,8 @@
 import { lazy, Suspense } from 'react';
 import { createBrowserRouter, RouterProvider } from 'react-router-dom';
-import AppShell from '@/components/layout/AppShell';
-import AnimatedBackground from '@/components/layout/AnimatedBackground';
-import { ErrorBoundary } from '@/components/ui';
+import ErrorBoundary from '@/components/ui/ErrorBoundary';
 
-// Lazy-load all page components so only the active route's code is downloaded
+const AppShell = lazy(() => import('@/components/layout/AppShell'));
 const Landing = lazy(() => import('@/pages/Landing'));
 const Login = lazy(() => import('@/pages/Login'));
 const Garden = lazy(() => import('@/pages/Garden'));
@@ -82,7 +80,6 @@ const router = createBrowserRouter([
 export default function App() {
   return (
     <ErrorBoundary>
-      <AnimatedBackground />
       <Suspense fallback={null}>
         <RouterProvider router={router} />
       </Suspense>

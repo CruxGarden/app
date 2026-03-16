@@ -11,8 +11,8 @@ import type { Author, Crux, Artifact } from './types';
 const base = API_BASE_URL;
 
 function authorPath(username: string): string {
-  const id = username.startsWith('@') ? username : `@${username}`;
-  return `${base}/authors/${id}`;
+  const clean = username.startsWith('@') ? username.slice(1) : username;
+  return `${base}/authors/${clean}`;
 }
 
 export async function getAuthor(username: string): Promise<Author> {

@@ -4,7 +4,6 @@ import { publicApi } from '@/api';
 import type { Crux, Artifact } from '@/api/types';
 import { APP_NAME } from '@/lib/constants';
 import { PublicTopBar, ArtifactRenderer } from '@/components/display';
-import { LoadingPanel } from '@/components/ui';
 import MetadataContent from '@/components/workspace/MetadataContent';
 
 type LoadState = 'loading' | 'ready' | 'not-found' | 'error';
@@ -36,7 +35,6 @@ export default function PublicCrux() {
 
     let cancelled = false;
     setState('loading');
-
     Promise.all([
       publicApi.getCruxBySlug(username, slug),
       publicApi.getArtifacts(username, slug),
@@ -72,11 +70,7 @@ export default function PublicCrux() {
   }, [crux?.title]);
 
   if (state === 'loading') {
-    return (
-      <div className="min-h-screen bg-bg flex items-center justify-center">
-        <LoadingPanel />
-      </div>
-    );
+    return <div className="min-h-screen bg-bg" />;
   }
 
   if (state === 'not-found') {
