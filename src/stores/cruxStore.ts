@@ -431,9 +431,15 @@ export const useCruxStore = create<CruxState>((set, get) => ({
     const { artifact: artifactService } = getServices();
 
     // 1. Upsert crux to API (create if not exists, update if it does)
+    let cruxExistsOnApi = false;
     try {
       await cruxes.get(crux.id);
-      // Crux exists — update it
+      cruxExistsOnApi = true;
+    } catch {
+      // 404 — crux not yet on API
+    }
+
+    if (cruxExistsOnApi) {
       await cruxes.update(crux.id, {
         title: crux.title,
         slug: crux.slug,
@@ -444,8 +450,7 @@ export const useCruxStore = create<CruxState>((set, get) => ({
         discoverable: crux.discoverable,
         meta: crux.meta as Record<string, unknown>,
       });
-    } catch {
-      // Crux doesn't exist — create it
+    } else {
       // The API handles slug conflicts by hard-deleting stale records
       await cruxes.create({
         id: crux.id,
