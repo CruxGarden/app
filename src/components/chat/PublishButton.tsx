@@ -2,7 +2,6 @@ import { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/stores/authStore';
 import { useCruxStore } from '@/stores/cruxStore';
-import { getServices } from '@/services';
 import { Button } from '@/components/ui';
 import CreateAuthorModal from '@/components/auth/CreateAuthorModal';
 import PublishModal from './PublishModal';
@@ -31,7 +30,7 @@ function PublishIcon() {
 export default function PublishButton() {
   const navigate = useNavigate();
   const { isAuthenticated, author } = useAuthStore();
-  const { crux, saveMeta } = useCruxStore();
+  const { crux, publishCrux } = useCruxStore();
   const [showAuthorModal, setShowAuthorModal] = useState(false);
   const [showPublishModal, setShowPublishModal] = useState(false);
   const [publishedUrl, setPublishedUrl] = useState('');
@@ -44,13 +43,7 @@ export default function PublishButton() {
 
     setPublishing(true);
     try {
-      // Save latest meta (messages, summary, etc.)
-      await saveMeta();
-      // Set visibility to public and publish
-      const { crux: cruxService, publish } = getServices();
-      await cruxService.update(crux.id, { visibility: 'public' });
-      await publish.publish(crux.id);
-
+      await publishCrux();
       const url = `${window.location.origin}/${currentAuthor.username}/${crux.slug}`;
       setPublishedUrl(url);
       setShowPublishModal(true);
@@ -59,7 +52,7 @@ export default function PublishButton() {
     } finally {
       setPublishing(false);
     }
-  }, [crux, saveMeta]);
+  }, [crux, publishCrux]);
 
   const handleClick = useCallback(() => {
     // Step 1: Must be logged in
