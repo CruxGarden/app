@@ -140,8 +140,23 @@ export async function deleteArtifact(artifactId: string): Promise<void> {
 
 // ── Publishing ────────────────────────────────────────
 
-export async function publish(cruxId: string): Promise<Crux> {
-  const res = await client.post<Crux>(`/cruxes/${cruxId}/publish`, {}, {
+export async function publish(
+  cruxId: string,
+  files: Array<{ blob: Blob; path: string; type?: string; kind?: string; mimeType: string }>,
+): Promise<Crux> {
+  const form = new FormData();
+  const metas: Array<{ path: string; type?: string; kind?: string }> = [];
+
+  for (const { blob, path, type, kind, mimeType } of files) {
+    const fileName = path.split('/').pop() || 'file';
+    form.append('files', new File([blob], fileName, { type: mimeType }));
+    metas.push({ path, type, kind });
+  }
+
+  form.append('meta', JSON.stringify(metas));
+
+  const res = await client.post<Crux>(`/cruxes/${cruxId}/publish`, form, {
+    headers: { 'Content-Type': 'multipart/form-data' },
     timeout: 120000,
   });
   return res.data;

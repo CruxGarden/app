@@ -20,12 +20,22 @@ function isPublicRoute(): boolean {
   );
 }
 
+function dismissSplash() {
+  const splash = document.getElementById('splash');
+  if (!splash) return;
+  splash.style.opacity = '0';
+  setTimeout(() => splash.remove(), 300);
+}
+
 function Bootstrap() {
   const init = useAuthStore((s) => s.init);
   const [ready, setReady] = useState(() => isPublicRoute());
 
   useEffect(() => {
-    if (ready) return; // Public routes skip auth init
+    if (ready) {
+      dismissSplash();
+      return;
+    }
     init().then(() => setReady(true));
   }, [init, ready]);
 

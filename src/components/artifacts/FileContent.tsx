@@ -278,7 +278,7 @@ export default function FileContent({
       {content !== null && viewMode === 'preview' && (ext === 'html' || ext === 'htm') && (
         <iframe
           srcDoc={rewriteUrls(content, username, slug, artifacts, Date.now())}
-          sandbox="allow-scripts allow-same-origin allow-popups"
+          sandbox="allow-scripts allow-same-origin allow-popups allow-modals"
           allow="geolocation; camera; microphone; accelerometer; gyroscope; autoplay; fullscreen"
           className="flex-1 w-full bg-contrast rounded-b-[var(--radius-sm)]"
           title={path}
