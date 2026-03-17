@@ -12,6 +12,7 @@ import { useAuthStore, resolveAvatarUrl } from '@/stores/authStore';
 import { useThemeStore } from '@/stores/themeStore';
 import { getApiKey } from '@/ai/keys';
 import { getSetting, setSetting, removeSetting } from '@/services/settings';
+import { getPersona, type PersonaSettings } from '@/components/mood/MoodEditorPanel';
 
 function useKeeperVariant(): KeeperVariant {
   const resolved = useThemeStore((s) => s.resolved);
@@ -177,8 +178,25 @@ function UserAvatar() {
   );
 }
 
+function PersonaAvatar({ persona, className = 'w-6 h-6' }: { persona: PersonaSettings; className?: string }) {
+  if (persona.thumbnailDataUrl) {
+    return (
+      <div className={`${className} shrink-0 rounded-[var(--radius-sm)] overflow-hidden`}>
+        <img src={persona.thumbnailDataUrl} alt="" className="w-full h-full object-cover" />
+      </div>
+    );
+  }
+  return <KeeperAvatar className={className} />;
+}
+
 export default function KeeperConsole({ open, onClose }: KeeperConsoleProps) {
   const keeperVariant = useKeeperVariant();
+  const [persona, setPersona] = useState<PersonaSettings>(() => getPersona());
+
+  // Re-read persona when panel opens (user may have changed it)
+  useEffect(() => {
+    if (open) setPersona(getPersona());
+  }, [open]);
   const [conversations, setConversations] = useState<Conversation[]>(() => loadConversations());
   const [activeId, setActiveId] = useState<string | null>(() => {
     const convos = loadConversations();
@@ -320,7 +338,7 @@ export default function KeeperConsole({ open, onClose }: KeeperConsoleProps) {
 
       const response = await adapter.stream({
         apiKey,
-        systemPrompt: KEEPER_SYSTEM_PROMPT,
+        systemPrompt: persona.systemPrompt || KEEPER_SYSTEM_PROMPT,
         messages: normalizedMsgs,
         model,
         tools: [],
@@ -358,7 +376,7 @@ export default function KeeperConsole({ open, onClose }: KeeperConsoleProps) {
       setToolActivity('');
       abortRef.current = null;
     }
-  }, [input, streaming, displayMessages, activeId, model]);
+  }, [input, streaming, displayMessages, activeId, model, persona]);
 
   const stop = useCallback(() => {
     abortRef.current?.abort();
@@ -392,9 +410,13 @@ export default function KeeperConsole({ open, onClose }: KeeperConsoleProps) {
         {/* Sidebar — portrait + conversation history */}
         <div className="hidden sm:flex w-48 shrink-0 flex-col border-r border-border">
           <div className="aspect-square w-full overflow-hidden rounded-tl-[calc(var(--radius)-1px)]">
-            <div className="w-full h-full overflow-hidden">
-              <KeeperPixelAvatar variant={keeperVariant} scale={3} className="w-full h-full" gridLines={false} animate />
-            </div>
+            {persona.thumbnailDataUrl ? (
+              <img src={persona.thumbnailDataUrl} alt="" className="w-full h-full object-cover" />
+            ) : (
+              <div className="w-full h-full overflow-hidden">
+                <KeeperPixelAvatar variant={keeperVariant} scale={3} className="w-full h-full" gridLines={false} animate />
+              </div>
+            )}
           </div>
           {/* Conversation history */}
           <div className="flex-1 min-h-0 overflow-y-auto border-t border-border bg-keeper-console-sidebar">
@@ -434,8 +456,8 @@ export default function KeeperConsole({ open, onClose }: KeeperConsoleProps) {
         <div className="flex-1 flex flex-col min-w-0">
           {/* Header */}
           <div className="flex items-center gap-2 px-4 py-3 border-b border-border">
-            <KeeperAvatar className="w-7 h-7 sm:hidden" />
-            <span className="text-sm font-display font-medium text-text">The Keeper</span>
+            <PersonaAvatar persona={persona} className="w-7 h-7 sm:hidden" />
+            <span className="text-sm font-display font-medium text-text">{persona.name || 'The Keeper'}</span>
             <div className="flex-1" />
             <button
               onClick={onClose}
@@ -452,7 +474,7 @@ export default function KeeperConsole({ open, onClose }: KeeperConsoleProps) {
           <div className="flex-1 overflow-y-auto p-4 space-y-3 min-h-0">
             {displayMessages.length === 0 && !streaming && (
               <p className="text-xs text-text-muted text-center py-4">
-                The Keeper tends the garden. Ask anything.
+                {persona.greeting || 'The Keeper tends the garden. Ask anything.'}
               </p>
             )}
 

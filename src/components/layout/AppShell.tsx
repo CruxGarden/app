@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import { Outlet } from 'react-router-dom';
 import TopBar from './TopBar';
 import CommandPalette from './CommandPalette';
-import { LoadingPanel } from '@/components/ui';
 import AnimatedBackground from './AnimatedBackground';
 import KeeperConsole from '@/components/keeper/KeeperConsole';
 import MoodBar, { applySavedMoodSettings } from '@/components/mood/MoodEditorPanel';
@@ -64,11 +63,7 @@ export default function AppShell() {
 
       {/* Main content */}
       <main className="relative z-10 flex-1 min-h-0 overflow-y-auto">
-        {servicesOk ? <Outlet /> : (
-          <div className="flex items-center justify-center h-full">
-            <LoadingPanel />
-          </div>
-        )}
+        {servicesOk ? <Outlet /> : null}
       </main>
 
       {/* Command palette */}

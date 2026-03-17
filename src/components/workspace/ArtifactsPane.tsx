@@ -1,4 +1,42 @@
 import { useRef, useState, useCallback, useMemo } from 'react';
+
+// ── OS drag-and-drop helpers ──────────────────────────────
+
+async function walkEntry(
+  entry: FileSystemEntry,
+  basePath: string,
+): Promise<{ file: File; path: string }[]> {
+  if (entry.isFile) {
+    const file = await new Promise<File>((resolve, reject) =>
+      (entry as FileSystemFileEntry).file(resolve, reject),
+    );
+    return [{ file, path: basePath + entry.name }];
+  }
+  const dirReader = (entry as FileSystemDirectoryEntry).createReader();
+  const children = await readAllEntries(dirReader);
+  const results: { file: File; path: string }[] = [];
+  for (const child of children) {
+    results.push(...(await walkEntry(child, basePath + entry.name + '/')));
+  }
+  return results;
+}
+
+function readAllEntries(reader: FileSystemDirectoryReader): Promise<FileSystemEntry[]> {
+  return new Promise((resolve, reject) => {
+    const all: FileSystemEntry[] = [];
+    function readBatch() {
+      reader.readEntries((entries) => {
+        if (entries.length === 0) {
+          resolve(all);
+        } else {
+          all.push(...entries);
+          readBatch();
+        }
+      }, reject);
+    }
+    readBatch();
+  });
+}
 import { useCruxStore } from '@/stores/cruxStore';
 import { useUIStore } from '@/stores/uiStore';
 import ArboristFileTree, {
@@ -98,10 +136,10 @@ export default function ArtifactsPane() {
 
   const treeRef = useRef<ArboristFileTreeHandle>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const folderInputRef = useRef<HTMLInputElement>(null);
+  const emptyDragCountRef = useRef(0);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
-  const [importMenuOpen, setImportMenuOpen] = useState(false);
   const [fileInfoOpen, setFileInfoOpen] = useState(false);
+  const [isDraggingOverEmpty, setIsDraggingOverEmpty] = useState(false);
 
   const selectedArtifact = selectedIds.length === 1
     ? artifacts.find((a) => a.id === selectedIds[0])
@@ -139,7 +177,7 @@ export default function ArtifactsPane() {
   }, []);
 
   const handleContextMenu = useCallback(
-    (e: React.MouseEvent, info: { id: string | null; path: string; isFolder: boolean }) => {
+    (e: React.MouseEvent, info: { id: string | null; path: string; isFolder: boolean; selectedIds?: string[] }) => {
       e.preventDefault();
       showContextMenu({
         x: e.clientX,
@@ -147,7 +185,9 @@ export default function ArtifactsPane() {
         targetId: info.id,
         targetPath: info.path,
         isFolder: info.isFolder,
-        selectedIds,
+        // Prefer the live selection from the tree node over React state,
+        // which may be stale if arborist reset it on mousedown.
+        selectedIds: info.selectedIds ?? selectedIds,
       });
     },
     [showContextMenu, selectedIds],
@@ -232,6 +272,21 @@ export default function ArtifactsPane() {
     [renameArtifact],
   );
 
+  // Close any newly-created folders after an import (folders not yet in saved state
+  // would open by default due to openByDefault=true — we want them collapsed).
+  const closeFoldersFromPaths = useCallback((paths: string[]) => {
+    const current = useUIStore.getState().folderOpenState;
+    const toClose = new Set<string>();
+    for (const path of paths) {
+      const parts = path.split('/');
+      for (let i = 1; i < parts.length; i++) {
+        const folderId = `folder:${parts.slice(0, i).join('/')}`;
+        if (!(folderId in current)) toClose.add(folderId);
+      }
+    }
+    for (const folderId of toClose) setFolderOpen(folderId, false);
+  }, [setFolderOpen]);
+
   const handleUploadFiles = useCallback(
     async (files: UploadFileEntry[], parentPath: string | null) => {
       const entries = files.map((f) => ({
@@ -239,8 +294,9 @@ export default function ArtifactsPane() {
         path: parentPath ? `${parentPath}/${f.path}` : f.path,
       }));
       await uploadFiles(entries);
+      closeFoldersFromPaths(entries.map((e) => e.path));
     },
-    [uploadFiles],
+    [uploadFiles, closeFoldersFromPaths],
   );
 
   const handleDelete = useCallback(
@@ -255,43 +311,81 @@ export default function ArtifactsPane() {
   );
 
 
-  const handleUploadClick = useCallback(() => {
-    setImportMenuOpen((v) => !v);
-  }, []);
-
   const handleFileInputChange = useCallback(
     async (e: React.ChangeEvent<HTMLInputElement>) => {
       const files = Array.from(e.target.files || []);
       if (files.length === 0) return;
       const parentPath = getParentPath();
       if (files.length === 1) {
+        const path = parentPath ? `${parentPath}/${files[0]!.name}` : files[0]!.name;
         await uploadFile(files[0]!, parentPath);
+        closeFoldersFromPaths([path]);
       } else {
         const entries = files.map((f) => ({
           file: f,
           path: parentPath ? `${parentPath}/${f.name}` : f.name,
         }));
         await uploadFiles(entries);
+        closeFoldersFromPaths(entries.map((e) => e.path));
       }
       e.target.value = '';
     },
-    [uploadFile, uploadFiles, getParentPath],
+    [uploadFile, uploadFiles, getParentPath, closeFoldersFromPaths],
   );
 
-  const handleFolderInputChange = useCallback(
-    async (e: React.ChangeEvent<HTMLInputElement>) => {
-      const files = Array.from(e.target.files || []);
-      if (files.length === 0) return;
-      const parentPath = getParentPath();
-      // webkitRelativePath preserves folder structure: "folderName/sub/file.txt"
-      const entries = files.map((f) => ({
-        file: f,
-        path: parentPath ? `${parentPath}/${f.webkitRelativePath || f.name}` : (f.webkitRelativePath || f.name),
-      }));
-      await uploadFiles(entries);
-      e.target.value = '';
+  const handleEmptyDragEnter = useCallback((e: React.DragEvent) => {
+    if (e.dataTransfer.types.includes('Files')) {
+      emptyDragCountRef.current += 1;
+      setIsDraggingOverEmpty(true);
+    }
+  }, []);
+
+  const handleEmptyDragLeave = useCallback(() => {
+    emptyDragCountRef.current -= 1;
+    if (emptyDragCountRef.current <= 0) {
+      emptyDragCountRef.current = 0;
+      setIsDraggingOverEmpty(false);
+    }
+  }, []);
+
+  const handleEmptyDragOver = useCallback((e: React.DragEvent) => {
+    if (e.dataTransfer.types.includes('Files')) {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'copy';
+    }
+  }, []);
+
+  const handleEmptyDrop = useCallback(
+    async (e: React.DragEvent) => {
+      e.preventDefault();
+      emptyDragCountRef.current = 0;
+      setIsDraggingOverEmpty(false);
+
+      const items = Array.from(e.dataTransfer.items);
+      const entries = items
+        .map((item) => item.webkitGetAsEntry?.())
+        .filter((entry): entry is FileSystemEntry => entry != null);
+
+      if (entries.length > 0) {
+        const fileEntries: { file: File; path: string }[] = [];
+        for (const entry of entries) {
+          fileEntries.push(...(await walkEntry(entry, '')));
+        }
+        if (fileEntries.length > 0) {
+          await handleUploadFiles(fileEntries, null);
+          return;
+        }
+      }
+
+      const files = Array.from(e.dataTransfer.files);
+      if (files.length > 0) {
+        await handleUploadFiles(
+          files.map((f) => ({ file: f, path: f.name })),
+          null,
+        );
+      }
     },
-    [uploadFiles, getParentPath],
+    [handleUploadFiles],
   );
 
   const actionButtons = (
@@ -340,47 +434,18 @@ export default function ArtifactsPane() {
           </div>
         </div>
       </div>
-      <div className="relative">
-        <div className="relative group/btn">
-          <button
-            onClick={handleUploadClick}
-            className="p-1 opacity-60 hover:opacity-100 transition-opacity cursor-pointer"
-          >
-            <UploadIcon />
-          </button>
-          {!importMenuOpen && (
-            <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 z-50 pointer-events-none hidden group-hover/btn:block">
-              <div className="px-2.5 py-1.5 rounded-[var(--radius)] bg-surface-solid border border-border shadow-lg whitespace-nowrap">
-                <span className="text-xs font-medium text-text">Import</span>
-              </div>
-            </div>
-          )}
+      <div className="relative group/btn">
+        <button
+          onClick={() => fileInputRef.current?.click()}
+          className="p-1 opacity-60 hover:opacity-100 transition-opacity cursor-pointer"
+        >
+          <UploadIcon />
+        </button>
+        <div className="absolute top-full right-0 mt-2 z-50 pointer-events-none hidden group-hover/btn:block">
+          <div className="px-2.5 py-1.5 rounded-[var(--radius)] bg-surface-solid border border-border shadow-lg whitespace-nowrap">
+            <span className="text-xs font-medium text-text">Import files</span>
+          </div>
         </div>
-        {importMenuOpen && (
-          <>
-            <div className="fixed inset-0 z-40" onClick={() => setImportMenuOpen(false)} />
-            <div className="absolute top-full right-0 mt-1 z-50 bg-surface-solid border border-border rounded-[var(--radius-sm)] shadow-lg py-1 min-w-[100px]">
-              <button
-                onClick={() => {
-                  setImportMenuOpen(false);
-                  fileInputRef.current?.click();
-                }}
-                className="w-full text-left px-3 py-1.5 text-xs font-mono text-text hover:bg-accent-muted/20 transition-colors cursor-pointer"
-              >
-                Files
-              </button>
-              <button
-                onClick={() => {
-                  setImportMenuOpen(false);
-                  folderInputRef.current?.click();
-                }}
-                className="w-full text-left px-3 py-1.5 text-xs font-mono text-text hover:bg-accent-muted/20 transition-colors cursor-pointer"
-              >
-                Folder
-              </button>
-            </div>
-          </>
-        )}
       </div>
     </>
   );
@@ -406,20 +471,13 @@ export default function ArtifactsPane() {
         </div>
       )}
 
-      {/* Hidden file inputs */}
+      {/* Hidden file input — folders are imported via drag-and-drop */}
       <input
         ref={fileInputRef}
         type="file"
         multiple
         className="hidden"
         onChange={handleFileInputChange}
-      />
-      <input
-        ref={folderInputRef}
-        type="file"
-        className="hidden"
-        onChange={handleFolderInputChange}
-        {...({ webkitdirectory: '' } as React.InputHTMLAttributes<HTMLInputElement>)}
       />
 
       <div
@@ -456,8 +514,27 @@ export default function ArtifactsPane() {
             onFolderToggle={setFolderOpen}
           />
         ) : (
-          <div className="text-text-muted p-4">
-            <p className="text-xs text-center">Create or import an artifact to get started</p>
+          <div
+            className="relative flex-1 flex items-center justify-center"
+            onDragEnter={handleEmptyDragEnter}
+            onDragLeave={handleEmptyDragLeave}
+            onDragOver={handleEmptyDragOver}
+            onDrop={handleEmptyDrop}
+          >
+            {isDraggingOverEmpty ? (
+              <div className="absolute inset-0 z-10 flex items-center justify-center bg-accent/5 border-2 border-dashed border-accent/40 rounded-[var(--radius)] pointer-events-none">
+                <div className="flex flex-col items-center gap-1 text-accent">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                    <polyline points="17 8 12 3 7 8" />
+                    <line x1="12" y1="3" x2="12" y2="15" />
+                  </svg>
+                  <span className="text-xs font-mono">Drop files or folders here</span>
+                </div>
+              </div>
+            ) : (
+              <p className="text-xs text-center text-text-muted">Create or import an artifact to get started</p>
+            )}
           </div>
         )}
       </div>

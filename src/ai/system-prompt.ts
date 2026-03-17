@@ -1,5 +1,6 @@
 import { getServices } from '@/services';
 import type { Crux, Artifact } from '@/services/types';
+import { getPersona } from '@/components/mood/MoodEditorPanel';
 
 const DEFAULT_KEEPER_PERSONA =
   'You are The Keeper, an outdated robot model who tends the Crux Garden. ' +
@@ -40,7 +41,8 @@ export function buildSystemPromptFromData(
   // ── Identity ──────────────────────────────────────────
   const meta = crux.meta as Record<string, Record<string, unknown>> | undefined;
   const customPrompt = meta?.settings?.systemPrompt as string | undefined;
-  sections.push('## Identity\n' + (customPrompt || DEFAULT_KEEPER_PERSONA));
+  const persona = getPersona();
+  sections.push('## Identity\n' + (customPrompt || persona.systemPrompt || DEFAULT_KEEPER_PERSONA));
 
   // ── Capabilities ──────────────────────────────────────
   sections.push(
@@ -101,7 +103,9 @@ export function buildSystemPromptFromData(
       '- For any npm package, add it to the import map: "package-name": "https://esm.sh/package-name@version"\n' +
       '- The preview iframe serves files via a Service Worker — relative paths work automatically.\n' +
       '- Structure multi-file projects with clear directories: components/, lib/, assets/\n' +
-      '- Every .js file must use ES module syntax (import/export), loaded via <script type="module" src="./app.js">',
+      '- Every .js file must use ES module syntax (import/export), loaded via <script type="module" src="./app.js">\n' +
+      '- If creating a Vite project, always set `base: "./"` in vite.config.ts — published and previewed sites are served from a subdirectory, not the domain root.\n' +
+      '- If using React Router, read `window.__CRUX_BASENAME__` for the basename: `createBrowserRouter([...], { basename: window.__CRUX_BASENAME__ || "/" })`',
   );
 
   // ── Edge Cases ────────────────────────────────────────

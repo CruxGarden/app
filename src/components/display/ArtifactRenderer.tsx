@@ -126,7 +126,7 @@ function HtmlRenderer({
     return (
       <iframe
         src={src}
-        sandbox="allow-scripts allow-same-origin allow-popups"
+        sandbox="allow-scripts allow-same-origin allow-popups allow-modals"
         allow="geolocation; camera; microphone; accelerometer; gyroscope; autoplay; fullscreen"
         className="w-full h-full border-0 bg-contrast"
         title="Published creation"
@@ -165,7 +165,7 @@ function ServiceWorkerHtmlRenderer({
     <iframe
       key={previewUrl}
       src={previewUrl}
-      sandbox="allow-scripts allow-same-origin allow-popups"
+      sandbox="allow-scripts allow-same-origin allow-popups allow-modals"
       allow="geolocation; camera; microphone; accelerometer; gyroscope; autoplay; fullscreen"
       className="w-full h-full border-0 bg-contrast"
       title="Published creation"

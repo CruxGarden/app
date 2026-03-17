@@ -31,7 +31,7 @@ export interface ArboristFileTreeHandle {
 
 type ContextMenuHandler = (
   e: React.MouseEvent,
-  info: { id: string | null; path: string; isFolder: boolean },
+  info: { id: string | null; path: string; isFolder: boolean; selectedIds?: string[] },
 ) => void;
 
 export interface UploadFileEntry {
@@ -93,13 +93,17 @@ const NodeRenderer = memo(function NodeRenderer({
     (e: React.MouseEvent) => {
       e.preventDefault();
       e.stopPropagation();
+      // Pass the tree's live selectedIds so multi-select is preserved even if
+      // arborist fires a selection-change on mousedown before this event fires.
+      const selectedIds = Array.from(node.tree.selectedIds);
       onContextMenu?.(e, {
         id: data.artifact?.id ?? null,
         path: data.path,
         isFolder,
+        selectedIds,
       });
     },
-    [onContextMenu, data.artifact?.id, data.path, isFolder],
+    [onContextMenu, data.artifact?.id, data.path, isFolder, node.tree],
   );
 
   // Render inline create input for sentinel node
@@ -136,8 +140,10 @@ const NodeRenderer = memo(function NodeRenderer({
           : 'text-text/70 hover:text-text hover:bg-accent-muted',
         node.willReceiveDrop && 'bg-accent/10 ring-1 ring-accent/30',
       )}
-      onClick={() => {
-        if (isFolder) node.toggle();
+      onClick={(e) => {
+        // Only toggle folder open/close on plain click — not when modifier
+        // keys are held (Ctrl/Cmd/Shift) since those are used for multi-select.
+        if (isFolder && !e.metaKey && !e.ctrlKey && !e.shiftKey) node.toggle();
       }}
       onContextMenu={handleContextMenu}
       title={fileSize ? `${data.path} (${fileSize})` : data.path}
@@ -403,10 +409,17 @@ const ArboristFileTree = forwardRef<ArboristFileTreeHandle, ArboristFileTreeProp
 
     const handleToggle = useCallback(
       (id: string) => {
-        if (!onFolderToggle) return;
-        // onToggle fires after the internal state updates
-        const node = treeRef.current?.get(id);
-        if (node) onFolderToggle(id, node.isOpen);
+        if (!onFolderToggle || !treeRef.current) return;
+        // Read the NEW open state directly from arborist's Redux store.
+        // arborist dispatches the state change synchronously BEFORE firing
+        // onToggle, so treeRef.current.isOpen(id) already reflects the new state.
+        // This is correct for all sources: user clicks, node.toggle(),
+        // treeRef.current.open()/close()/closeAll(), and scrollTo() (which
+        // calls openParents() internally) — all fire onToggle with the same
+        // semantics. Reading arborist's own state avoids the stale-closure
+        // problem of deriving new state from our persisted folderOpenState.
+        const isNowOpen = treeRef.current.isOpen(id);
+        onFolderToggle(id, isNowOpen);
       },
       [onFolderToggle],
     );
@@ -623,7 +636,7 @@ const ArboristFileTree = forwardRef<ArboristFileTreeHandle, ArboristFileTreeProp
                     height={containerHeight}
                     indent={20}
                     rowHeight={26}
-                    openByDefault
+                    openByDefault={false}
                     initialOpenState={initialOpenState}
                     selection={selectedId ?? undefined}
                     dndRootElement={dndRoot}

@@ -13,8 +13,14 @@ const PublicAuthor = lazy(() => import('@/pages/PublicAuthor'));
 const Discover = lazy(() => import('@/pages/Discover'));
 const NotFound = lazy(() => import('@/pages/NotFound'));
 
+// When running inside a Crux Garden preview or published at a subdirectory,
+// the preview system injects window.__CRUX_BASENAME__ so the router knows
+// its path prefix (e.g. "/__preview/{cruxId}" or "/{authorId}/{cruxId}").
+const basename = (window as unknown as { __CRUX_BASENAME__?: string }).__CRUX_BASENAME__ || '/';
+
 const router = createBrowserRouter([
   // Public
+
   { path: '/', element: <Landing /> },
   { path: '/login', element: <Login /> },
   {
@@ -75,7 +81,7 @@ const router = createBrowserRouter([
 
   // Catch-all
   { path: '*', element: <NotFound /> },
-]);
+], { basename });
 
 export default function App() {
   return (

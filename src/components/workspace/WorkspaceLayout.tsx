@@ -188,9 +188,26 @@ export default function WorkspaceLayout() {
   };
 
   const handleDeleteMultiple = async (ids: string[]) => {
-    const count = ids.length;
+    // ids may contain folder virtual IDs ("folder:path") alongside real artifact UUIDs.
+    // Expand folders to their children before deleting.
+    const artifactIds = new Set<string>();
+    for (const id of ids) {
+      if (id.startsWith('folder:')) {
+        const folderPath = id.slice('folder:'.length);
+        artifacts
+          .filter((a) => {
+            const p = (a.meta?.path || a.filename || '') as string;
+            return p.startsWith(folderPath + '/') || p === folderPath;
+          })
+          .forEach((a) => artifactIds.add(a.id));
+      } else {
+        artifactIds.add(id);
+      }
+    }
+    const count = artifactIds.size;
+    if (count === 0) return;
     if (confirm(`Delete ${count} item${count !== 1 ? 's' : ''}?`)) {
-      await deleteArtifacts(ids);
+      await deleteArtifacts([...artifactIds]);
     }
   };
 

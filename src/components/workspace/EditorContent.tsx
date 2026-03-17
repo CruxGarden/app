@@ -530,7 +530,7 @@ export default function EditorContent({ tab, artifact, cruxId, saveRef, captureR
           ref={previewIframeRef}
           key={previewUrl}
           src={previewUrl}
-          sandbox="allow-scripts allow-same-origin allow-popups"
+          sandbox="allow-scripts allow-same-origin allow-popups allow-modals"
           allow="geolocation; camera; microphone; accelerometer; gyroscope; autoplay; fullscreen"
           className={showPreviewIframe
             ? 'flex-1 w-full bg-contrast'

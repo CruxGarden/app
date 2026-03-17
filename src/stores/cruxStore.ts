@@ -460,38 +460,36 @@ export const useCruxStore = create<CruxState>((set, get) => ({
       });
     }
 
-    // 2. Clear existing working artifacts on API, then upload current set
-    try {
-      const remoteArtifacts = await cruxes.getArtifacts(crux.id);
-      for (const ra of remoteArtifacts.filter((a) => a.kind !== 'published-snapshot')) {
-        await cruxes.deleteArtifact(ra.id);
-      }
-    } catch {
-      // First publish — no remote artifacts to clear
-    }
-
+    // 2. Collect all working artifacts and publish in one request
     const workingArtifacts = (artifacts || []).filter(
       (a) => a.type === 'artifact',
     );
+    const filesToPublish: Array<{
+      blob: Blob;
+      path: string;
+      type?: string;
+      kind?: string;
+      mimeType: string;
+    }> = [];
     for (const art of workingArtifacts) {
       try {
         const blob = await artifactService.downloadBlob(art.id);
         const path = art.meta?.path || art.filename || 'file';
-        const fileName = path.split('/').pop() || 'file';
-        const file = new File([blob], fileName, { type: art.mimeType });
-        await cruxes.uploadArtifact(crux.id, file, {
-          type: art.type,
-          kind: art.kind,
+        filesToPublish.push({
+          blob,
           path,
+          type: art.type,
+          kind: art.kind || undefined,
+          mimeType: art.mimeType,
         });
       } catch {
-        // Skip artifacts that fail to upload — publish will use what's available
+        // Skip artifacts that fail to load — publish will use what's available
       }
     }
 
-    // 3. Publish on API (snapshots to S3)
+    // 3. Publish — sends all files in one multipart request
     const { publish } = getServices();
-    const updated = await publish.publish(crux.id);
+    const updated = await publish.publish(crux.id, filesToPublish);
 
     // Merge API publish metadata into local crux (preserve local-only meta fields)
     // Snapshot artifact fingerprints at publish time for change detection
