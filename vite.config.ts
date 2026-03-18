@@ -5,7 +5,6 @@ import tailwindcss from '@tailwindcss/vite';
 import path from 'path';
 
 export default defineConfig({
-  base: './', // depth-relative — works from any subdirectory
   plugins: [react(), tailwindcss()],
   resolve: {
     alias: {
