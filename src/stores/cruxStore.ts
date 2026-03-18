@@ -565,7 +565,12 @@ export const useCruxStore = create<CruxState>((set, get) => ({
       mimeType: file.type || undefined,
       meta: { path },
     });
-    set((state) => ({ artifacts: [...state.artifacts, newArtifact], hasUnpublishedChanges: true }));
+    set((state) => ({
+      artifacts: state.artifacts.some((a) => a.id === newArtifact.id)
+        ? state.artifacts.map((a) => (a.id === newArtifact.id ? newArtifact : a))
+        : [...state.artifacts, newArtifact],
+      hasUnpublishedChanges: true,
+    }));
     return newArtifact;
   },
 
@@ -659,11 +664,15 @@ export const useCruxStore = create<CruxState>((set, get) => ({
         console.warn(`Failed to upload: ${path}`, err);
       }
     }
-    set((state) => ({
-      artifacts: [...state.artifacts, ...newArtifacts],
-      hasUnpublishedChanges: true,
-      uploadProgress: null,
-    }));
+    set((state) => {
+      const merged = [...state.artifacts];
+      for (const a of newArtifacts) {
+        const idx = merged.findIndex((e) => e.id === a.id);
+        if (idx >= 0) merged[idx] = a;
+        else merged.push(a);
+      }
+      return { artifacts: merged, hasUnpublishedChanges: true, uploadProgress: null };
+    });
   },
 
   saveArtifactContent: async (id: string, content: string) => {

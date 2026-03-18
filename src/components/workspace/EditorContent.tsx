@@ -17,7 +17,7 @@ import { usePreviewUrl } from '@/hooks/usePreviewUrl';
 import type { Artifact } from '@/api/types';
 import type { EditorTab } from '@/stores/uiStore';
 import type { FormSchema } from '@/templates';
-import { LoadingPanel, Spinner } from '@/components/ui';
+import { LoadingPanel } from '@/components/ui';
 
 // ── Save handler registry (module-level, accessible from outside) ──
 const editorSaveHandlers = new Map<string, () => Promise<void>>();
@@ -37,7 +37,7 @@ interface EditorContentProps {
 }
 
 export default function EditorContent({ tab, artifact, cruxId, saveRef, captureRef }: EditorContentProps) {
-  const { content, blobUrl, loading, contentVersion, setContent, refetch } = useFileContent(
+  const { content, blobUrl, loading, contentVersion, setContent } = useFileContent(
     cruxId,
     artifact,
   );
@@ -95,20 +95,28 @@ export default function EditorContent({ tab, artifact, cruxId, saveRef, captureR
     contentRef.current = content;
   }, [content]);
 
-  // Sync theme changes
+  // Sync theme changes — rAF ensures the call lands after any in-progress
+  // editor mount completes (setTheme is global and broadcasts to all instances)
   useEffect(() => {
-    if (monacoRef.current) {
-      monacoRef.current.editor.setTheme(themeName);
-    }
+    if (!monacoRef.current) return;
+    const id = requestAnimationFrame(() => {
+      if (!disposedRef.current && monacoRef.current) {
+        monacoRef.current.editor.setTheme(themeName);
+      }
+    });
+    return () => cancelAnimationFrame(id);
   }, [themeName]);
 
   // Re-register Monaco theme when palette changes (CSS vars → hex)
   useEffect(() => {
     const handler = () => {
-      if (monacoRef.current) {
-        registerCruxGardenThemes(monacoRef.current);
-        monacoRef.current.editor.setTheme(themeName);
-      }
+      if (!monacoRef.current) return;
+      requestAnimationFrame(() => {
+        if (!disposedRef.current && monacoRef.current) {
+          registerCruxGardenThemes(monacoRef.current);
+          monacoRef.current.editor.setTheme(themeName);
+        }
+      });
     };
     document.addEventListener('palette-change', handler);
     return () => document.removeEventListener('palette-change', handler);
@@ -358,7 +366,11 @@ export default function EditorContent({ tab, artifact, cruxId, saveRef, captureR
       editorRef.current = editor;
 
       registerCruxGardenThemes(monaco);
-      monaco.editor.setTheme(themeName);
+      // Defer setTheme by one frame — it broadcasts to all instances and can
+      // crash if another editor's view layer isn't fully initialized yet
+      requestAnimationFrame(() => {
+        if (!disposedRef.current) monaco.editor.setTheme(themeName);
+      });
 
       // Restore scroll position
       if (tab.scrollTop > 0) {
@@ -501,16 +513,13 @@ export default function EditorContent({ tab, artifact, cruxId, saveRef, captureR
         <div className="text-text-muted text-sm">
           Binary file ({mime}, {formatSize(artifact.size)})
         </div>
-        <div className="flex items-center gap-2">
-          <a
-            href={blobUrl}
-            download={path.split('/').pop() || 'file'}
-            className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-[var(--radius-sm)] bg-accent-muted text-accent border border-accent/20 hover:border-accent transition-all"
-          >
-            Download
-          </a>
-          <ReplaceFileButton artifactId={artifact.id} cruxId={cruxId} onReplaced={refetch} />
-        </div>
+        <a
+          href={blobUrl}
+          download={path.split('/').pop() || 'file'}
+          className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-[var(--radius-sm)] bg-accent-muted text-accent border border-accent/20 hover:border-accent transition-all"
+        >
+          Download
+        </a>
       </div>
     );
   } else {
@@ -583,77 +592,6 @@ function ImageViewer({
   );
 }
 
-// ── Replace file button ──
-
-function ReplaceFileButton({
-  artifactId,
-  cruxId,
-  onReplaced,
-}: {
-  artifactId: string;
-  cruxId: string;
-  onReplaced: () => void;
-}) {
-  const inputRef = useRef<HTMLInputElement>(null);
-  const [replacing, setReplacing] = useState(false);
-  const updateArtifact = useCruxStore((s) => s.updateArtifact);
-
-  const handleReplace = useCallback(
-    async (e: React.ChangeEvent<HTMLInputElement>) => {
-      const file = e.target.files?.[0];
-      if (!file) return;
-      setReplacing(true);
-      try {
-        const { artifact: artifactService } = getServices();
-        const updated = await artifactService.upload({
-          resourceId: cruxId,
-          blob: file,
-          mimeType: file.type,
-        });
-        updateArtifact(artifactId, updated);
-        useCruxStore.setState({ hasUnpublishedChanges: true });
-        onReplaced();
-      } catch (err) {
-        console.error('Replace failed:', err);
-      } finally {
-        setReplacing(false);
-        e.target.value = '';
-      }
-    },
-    [artifactId, cruxId, updateArtifact, onReplaced],
-  );
-
-  return (
-    <>
-      <input ref={inputRef} type="file" className="hidden" onChange={handleReplace} />
-      <button
-        onClick={() => inputRef.current?.click()}
-        disabled={replacing}
-        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-[var(--radius-sm)] border border-border text-text-muted hover:text-text hover:bg-surface transition-colors disabled:opacity-50"
-      >
-        {replacing ? (
-          <Spinner size={12} />
-        ) : (
-          <svg
-            width="12"
-            height="12"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-            <polyline points="17 8 12 3 7 8" />
-            <line x1="12" y1="3" x2="12" y2="15" />
-          </svg>
-        )}
-        Replace
-      </button>
-    </>
-  );
-}
 
 function formatSize(bytes?: number): string {
   if (!bytes) return 'unknown size';
