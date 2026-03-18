@@ -1,4 +1,4 @@
-import { useRef, useState, useCallback, useMemo } from 'react';
+import { useRef, useState, useCallback, useMemo, useEffect } from 'react';
 
 // ── OS drag-and-drop helpers ──────────────────────────────
 
@@ -136,8 +136,11 @@ export default function ArtifactsPane() {
 
   const treeRef = useRef<ArboristFileTreeHandle>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const folderInputRef = useRef<HTMLInputElement>(null);
+  const uploadDropdownRef = useRef<HTMLDivElement>(null);
   const emptyDragCountRef = useRef(0);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [uploadMenuOpen, setUploadMenuOpen] = useState(false);
   const [fileInfoOpen, setFileInfoOpen] = useState(false);
   const [isDraggingOverEmpty, setIsDraggingOverEmpty] = useState(false);
 
@@ -208,32 +211,62 @@ export default function ArtifactsPane() {
   const handleCreateFolder = useCallback(
     async (name: string) => {
       const parentPath = useUIStore.getState().activeFileOperation?.parentPath;
-      const fullPath = parentPath ? `${parentPath}/${name}/.keep` : `${name}/.keep`;
+      const folderPath = parentPath ? `${parentPath}/${name}` : name;
       cancelFileOperation();
-      await createFile(fullPath, '');
+      const alreadyExists = useCruxStore.getState().artifacts.some((a) =>
+        (a.meta?.path || a.filename || '').startsWith(folderPath + '/'),
+      );
+      if (alreadyExists) return;
+      await createFile(`${folderPath}/.keep`, '');
     },
     [createFile, cancelFileOperation],
   );
 
   const handleMove = useCallback(
     async (id: string, newParentPath: string | null) => {
+      const { artifacts } = useCruxStore.getState();
+      const existingPaths = new Set(artifacts.map((a) => (a.meta?.path || a.filename || '') as string));
+
       // If it's a folder (id starts with "folder:"), move all children
       if (id.startsWith('folder:')) {
         const folderPath = id.replace('folder:', '');
-        const children = useCruxStore.getState().artifacts.filter((a) => {
+        const children = artifacts.filter((a) => {
           const p = a.meta?.path || a.filename || '';
           return p.startsWith(folderPath + '/');
         });
-        for (const child of children) {
+        const folderName = folderPath.split('/').pop() || '';
+        const destFolderPath = newParentPath ? `${newParentPath}/${folderName}` : folderName;
+        const newPaths = children.map((child) => {
           const oldPath = child.meta?.path || child.filename || '';
-          const relativePath = oldPath.slice(folderPath.length); // includes leading /
-          const folderName = folderPath.split('/').pop() || '';
-          const newPath = newParentPath
+          const relativePath = oldPath.slice(folderPath.length);
+          return newParentPath
             ? `${newParentPath}/${folderName}${relativePath}`
             : `${folderName}${relativePath}`;
-          await renameArtifact(child.id, newPath);
+        });
+        const destFolderExists = destFolderPath !== folderPath &&
+          artifacts.some((a) => (a.meta?.path || a.filename || '').startsWith(destFolderPath + '/'));
+        const fileConflicts = newPaths.filter((p) => existingPaths.has(p) && !children.some((c) => (c.meta?.path || c.filename || '') === p));
+        if (destFolderExists || fileConflicts.length > 0) {
+          const msg = destFolderExists
+            ? `A folder named "${folderName}" already exists at the destination. Merge contents?`
+            : fileConflicts.length === 1
+              ? `"${fileConflicts[0]}" already exists. Replace it?`
+              : `${fileConflicts.length} files already exist. Replace them?`;
+          if (!confirm(msg)) return;
+        }
+        for (let i = 0; i < children.length; i++) {
+          await renameArtifact(children[i]!.id, newPaths[i]!);
         }
       } else {
+        const art = artifacts.find((a) => a.id === id);
+        if (art) {
+          const oldPath = art.meta?.path || art.filename || '';
+          const filename = oldPath.split('/').pop() || art.filename;
+          const newPath = newParentPath ? `${newParentPath}/${filename}` : filename;
+          if (newPath !== oldPath && existingPaths.has(newPath)) {
+            if (!confirm(`"${newPath}" already exists. Replace it?`)) return;
+          }
+        }
         await moveArtifact(id, newParentPath);
       }
     },
@@ -287,16 +320,30 @@ export default function ArtifactsPane() {
     for (const folderId of toClose) setFolderOpen(folderId, false);
   }, [setFolderOpen]);
 
+  const confirmOverwrite = useCallback((entries: { path: string }[]): boolean => {
+    const existingPaths = new Set(
+      useCruxStore.getState().artifacts.map((a) => (a.meta?.path || a.filename || '') as string),
+    );
+    const conflicts = entries.filter((e) => existingPaths.has(e.path));
+    if (conflicts.length === 0) return true;
+    const msg =
+      conflicts.length === 1
+        ? `"${conflicts[0]!.path}" already exists. Replace it?`
+        : `${conflicts.length} files already exist. Replace them?`;
+    return confirm(msg);
+  }, []);
+
   const handleUploadFiles = useCallback(
     async (files: UploadFileEntry[], parentPath: string | null) => {
       const entries = files.map((f) => ({
         file: f.file,
         path: parentPath ? `${parentPath}/${f.path}` : f.path,
       }));
+      if (!confirmOverwrite(entries)) return;
       await uploadFiles(entries);
       closeFoldersFromPaths(entries.map((e) => e.path));
     },
-    [uploadFiles, closeFoldersFromPaths],
+    [uploadFiles, closeFoldersFromPaths, confirmOverwrite],
   );
 
   const handleDelete = useCallback(
@@ -316,22 +363,51 @@ export default function ArtifactsPane() {
       const files = Array.from(e.target.files || []);
       if (files.length === 0) return;
       const parentPath = getParentPath();
-      if (files.length === 1) {
-        const path = parentPath ? `${parentPath}/${files[0]!.name}` : files[0]!.name;
-        await uploadFile(files[0]!, parentPath);
-        closeFoldersFromPaths([path]);
+      const entries = files.map((f) => ({
+        file: f,
+        path: parentPath ? `${parentPath}/${f.name}` : f.name,
+      }));
+      if (!confirmOverwrite(entries)) { e.target.value = ''; return; }
+      if (entries.length === 1) {
+        await uploadFile(entries[0]!.file, parentPath);
       } else {
-        const entries = files.map((f) => ({
-          file: f,
-          path: parentPath ? `${parentPath}/${f.name}` : f.name,
-        }));
         await uploadFiles(entries);
-        closeFoldersFromPaths(entries.map((e) => e.path));
       }
+      closeFoldersFromPaths(entries.map((en) => en.path));
       e.target.value = '';
     },
-    [uploadFile, uploadFiles, getParentPath, closeFoldersFromPaths],
+    [uploadFile, uploadFiles, getParentPath, closeFoldersFromPaths, confirmOverwrite],
   );
+
+  const handleFolderInputChange = useCallback(
+    async (e: React.ChangeEvent<HTMLInputElement>) => {
+      const files = Array.from(e.target.files || []);
+      if (files.length === 0) return;
+      const parentPath = getParentPath();
+      const entries = files.map((f) => ({
+        file: f,
+        path: parentPath
+          ? `${parentPath}/${f.webkitRelativePath || f.name}`
+          : (f.webkitRelativePath || f.name),
+      }));
+      if (!confirmOverwrite(entries)) { e.target.value = ''; return; }
+      await uploadFiles(entries);
+      closeFoldersFromPaths(entries.map((en) => en.path));
+      e.target.value = '';
+    },
+    [uploadFiles, getParentPath, closeFoldersFromPaths, confirmOverwrite],
+  );
+
+  useEffect(() => {
+    if (!uploadMenuOpen) return;
+    const handler = (e: MouseEvent) => {
+      if (uploadDropdownRef.current && !uploadDropdownRef.current.contains(e.target as Node)) {
+        setUploadMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [uploadMenuOpen]);
 
   const handleEmptyDragEnter = useCallback((e: React.DragEvent) => {
     if (e.dataTransfer.types.includes('Files')) {
@@ -372,20 +448,22 @@ export default function ArtifactsPane() {
           fileEntries.push(...(await walkEntry(entry, '')));
         }
         if (fileEntries.length > 0) {
-          await handleUploadFiles(fileEntries, null);
+          if (!confirmOverwrite(fileEntries)) return;
+          await uploadFiles(fileEntries);
+          closeFoldersFromPaths(fileEntries.map((e) => e.path));
           return;
         }
       }
 
       const files = Array.from(e.dataTransfer.files);
       if (files.length > 0) {
-        await handleUploadFiles(
-          files.map((f) => ({ file: f, path: f.name })),
-          null,
-        );
+        const fileEntries = files.map((f) => ({ file: f, path: f.name }));
+        if (!confirmOverwrite(fileEntries)) return;
+        await uploadFiles(fileEntries);
+        closeFoldersFromPaths(fileEntries.map((e) => e.path));
       }
     },
-    [handleUploadFiles],
+    [uploadFiles, closeFoldersFromPaths, confirmOverwrite],
   );
 
   const actionButtons = (
@@ -434,18 +512,29 @@ export default function ArtifactsPane() {
           </div>
         </div>
       </div>
-      <div className="relative group/btn">
+      <div className="relative" ref={uploadDropdownRef}>
         <button
-          onClick={() => fileInputRef.current?.click()}
+          onClick={() => setUploadMenuOpen((v) => !v)}
           className="p-1 opacity-60 hover:opacity-100 transition-opacity cursor-pointer"
         >
           <UploadIcon />
         </button>
-        <div className="absolute top-full right-0 mt-2 z-50 pointer-events-none hidden group-hover/btn:block">
-          <div className="px-2.5 py-1.5 rounded-[var(--radius)] bg-surface-solid border border-border shadow-lg whitespace-nowrap">
-            <span className="text-xs font-medium text-text">Import files</span>
+        {uploadMenuOpen && (
+          <div className="absolute top-full right-0 mt-1 z-50 bg-surface-solid border border-border rounded-[var(--radius-sm)] shadow-lg overflow-hidden">
+            <button
+              className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-text hover:bg-surface transition-colors whitespace-nowrap cursor-pointer"
+              onClick={() => { setUploadMenuOpen(false); fileInputRef.current?.click(); }}
+            >
+              Files…
+            </button>
+            <button
+              className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-text hover:bg-surface transition-colors whitespace-nowrap cursor-pointer"
+              onClick={() => { setUploadMenuOpen(false); const el = folderInputRef.current; if (el) { el.setAttribute('webkitdirectory', ''); el.click(); } }}
+            >
+              Folder…
+            </button>
           </div>
-        </div>
+        )}
       </div>
     </>
   );
@@ -471,14 +560,8 @@ export default function ArtifactsPane() {
         </div>
       )}
 
-      {/* Hidden file input — folders are imported via drag-and-drop */}
-      <input
-        ref={fileInputRef}
-        type="file"
-        multiple
-        className="hidden"
-        onChange={handleFileInputChange}
-      />
+      <input ref={fileInputRef} type="file" multiple className="hidden" onChange={handleFileInputChange} />
+      <input ref={folderInputRef} type="file" className="hidden" onChange={handleFolderInputChange} />
 
       <div
         className="flex-1 overflow-hidden min-h-0 flex flex-col"
