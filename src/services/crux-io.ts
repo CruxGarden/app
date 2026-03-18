@@ -620,6 +620,10 @@ export async function importCrux(options: ImportOptions): Promise<ImportResult> 
 
     // ── Final meta update ────────────────────────────
     const finalMeta = { ...(cruxData.meta || {}), messages: workspaceMessages, growthCount: restoredGrowthCount };
+    // When cloning, preserve the original ID so the lineage is traceable
+    if (!useOriginalIds && cruxData.id) {
+      finalMeta.sourceId = cruxData.id;
+    }
     await cruxService.update(newCrux.id, { meta: finalMeta });
     done++;
     onProgress?.(done, total);

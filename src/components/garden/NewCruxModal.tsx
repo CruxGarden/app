@@ -4,7 +4,7 @@ import { useCruxStore } from '@/stores/cruxStore';
 import { DEFAULT_PANE_ORDER } from '@/stores/uiStore';
 import { setSetting } from '@/services/settings';
 import { getApiKey } from '@/ai/keys';
-import { peekImport, importCrux, type ImportConflictInfo } from '@/services/crux-io';
+import { importCrux } from '@/services/crux-io';
 import { useGardenStore } from '@/stores/gardenStore';
 import { Modal, Button } from '@/components/ui';
 import { cn } from '@/lib/cn';
@@ -853,8 +853,7 @@ export default function NewCruxModal({ open, onClose }: NewCruxModalProps) {
   const importInputRef = useRef<HTMLInputElement>(null);
   const [importing, setImporting] = useState(false);
   const [importProgress, setImportProgress] = useState({ done: 0, total: 0 });
-  const [importConflict, setImportConflict] = useState<ImportConflictInfo | null>(null);
-  const conflictResolverRef = useRef<((choice: 'replace' | 'clone' | 'cancel') => void) | null>(null);
+
 
   // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
   const template = (TEMPLATES.find((t) => t.id === selectedTemplate) ?? TEMPLATES[0])!;
@@ -871,26 +870,9 @@ export default function NewCruxModal({ open, onClose }: NewCruxModalProps) {
       setImportProgress({ done: 0, total: 0 });
 
       try {
-        const { conflict } = await peekImport(file);
-
-        let mode: 'restore' | 'replace' | 'clone' = 'restore';
-        if (conflict) {
-          const choice = await new Promise<'replace' | 'clone' | 'cancel'>((resolve) => {
-            conflictResolverRef.current = resolve;
-            setImportConflict(conflict);
-          });
-          setImportConflict(null);
-          conflictResolverRef.current = null;
-          if (choice === 'cancel') {
-            setImporting(false);
-            return;
-          }
-          mode = choice;
-        }
-
         const result = await importCrux({
           data: file,
-          mode,
+          mode: 'clone',
           onProgress: (done, total) => setImportProgress({ done, total }),
         });
 
@@ -1195,60 +1177,6 @@ export default function NewCruxModal({ open, onClose }: NewCruxModalProps) {
         </div>
       </div>
 
-      {/* Import conflict modal */}
-      <Modal
-        open={importConflict !== null}
-        onClose={() => {
-          conflictResolverRef.current?.('cancel');
-          setImportConflict(null);
-          conflictResolverRef.current = null;
-        }}
-      >
-        <div className="space-y-4">
-          <div>
-            <h2 className="text-lg font-display font-medium text-text">Crux already exists</h2>
-            <p className="text-sm text-text-muted mt-1">
-              <span className="text-text font-medium">{importConflict?.title}</span>{' '}
-              already exists in your garden.
-            </p>
-          </div>
-
-          {importConflict && (
-            <div className="grid grid-cols-2 gap-3 text-xs font-mono">
-              <div className="rounded-[var(--radius-sm)] border border-border bg-surface/50 p-2.5">
-                <div className="text-[10px] uppercase tracking-wider text-text-muted mb-1.5">Installed</div>
-                <div className="text-text">v{importConflict.installedVersion}</div>
-                {importConflict.installedUpdated && (
-                  <div className="text-text-muted mt-0.5">
-                    {new Date(importConflict.installedUpdated).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
-                  </div>
-                )}
-              </div>
-              <div className="rounded-[var(--radius-sm)] border border-border bg-surface/50 p-2.5">
-                <div className="text-[10px] uppercase tracking-wider text-text-muted mb-1.5">Incoming</div>
-                <div className="text-text">v{importConflict.incomingVersion}</div>
-                {importConflict.incomingUpdated && (
-                  <div className="text-text-muted mt-0.5">
-                    {new Date(importConflict.incomingUpdated).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-
-          <div className="flex gap-2 justify-end">
-            <Button variant="ghost" onClick={() => { conflictResolverRef.current?.('cancel'); setImportConflict(null); conflictResolverRef.current = null; }}>
-              Cancel
-            </Button>
-            <Button variant="ghost" onClick={() => { conflictResolverRef.current?.('clone'); setImportConflict(null); conflictResolverRef.current = null; }}>
-              Clone
-            </Button>
-            <Button variant="danger" onClick={() => { conflictResolverRef.current?.('replace'); setImportConflict(null); conflictResolverRef.current = null; }}>
-              Replace
-            </Button>
-          </div>
-        </div>
-      </Modal>
     </Modal>
   );
 }
