@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { Artifact } from '@/api/types';
 import { publicApi } from '@/api';
 import { usePublicPreviewUrl } from '@/hooks/usePublicPreviewUrl';
@@ -119,27 +119,33 @@ function HtmlRenderer({
     return () => window.removeEventListener('message', handler);
   }, [username, slug]);
 
-  // Send crux:session to the iframe so the injected store client knows the crux ID and auth state
-  const sendSession = useCallback(
-    (iframe: HTMLIFrameElement) => {
-      if (!iframe.contentWindow) return;
+  // Handshake: iframe sends crux:ready when the store client is initialized,
+  // parent responds with crux:session containing auth + crux ID + API base.
+  // This guarantees both sides are ready regardless of load order.
+  useEffect(() => {
+    function buildSession() {
       const { accessToken } = getStoredTokens();
       const author = useAuthStore.getState().author;
-      iframe.contentWindow.postMessage(
-        {
-          type: 'crux:session',
-          token: accessToken ?? null,
-          mode: 'live',
-          cruxId,
-          apiBase: import.meta.env.VITE_API_URL || '',
-          visitorId: author?.id ?? null,
-          visitorName: author?.displayName ?? null,
-        },
-        '*',
-      );
-    },
-    [cruxId],
-  );
+      return {
+        type: 'crux:session',
+        token: accessToken ?? null,
+        mode: 'live',
+        cruxId,
+        apiBase: import.meta.env.VITE_API_URL || '',
+        visitorId: author?.id ?? null,
+        visitorName: author?.displayName ?? null,
+      };
+    }
+
+    function handler(e: MessageEvent) {
+      if (e.data?.type === 'crux:ready' && e.source) {
+        (e.source as Window).postMessage(buildSession(), '*');
+      }
+    }
+
+    window.addEventListener('message', handler);
+    return () => window.removeEventListener('message', handler);
+  }, [cruxId]);
 
   if (PUBLISHED_CONTENT_URL) {
     // If a sub-path is provided (deep link), use it directly — CloudFront Function
@@ -150,7 +156,6 @@ function HtmlRenderer({
     return (
       <iframe
         src={src}
-        onLoad={(e) => sendSession(e.currentTarget)}
         sandbox="allow-scripts allow-same-origin allow-popups allow-modals"
         allow="geolocation; camera; microphone; accelerometer; gyroscope; autoplay; fullscreen"
         className="w-full h-full border-0 bg-contrast"
@@ -160,7 +165,7 @@ function HtmlRenderer({
   }
 
   // Fallback: service worker approach (local dev without S3)
-  return <ServiceWorkerHtmlRenderer artifact={artifact} artifacts={artifacts} username={username} slug={slug} cruxId={cruxId} downloadBlob={downloadBlob} sendSession={sendSession} />;
+  return <ServiceWorkerHtmlRenderer artifact={artifact} artifacts={artifacts} username={username} slug={slug} cruxId={cruxId} downloadBlob={downloadBlob} />;
 }
 
 function ServiceWorkerHtmlRenderer({
@@ -168,9 +173,7 @@ function ServiceWorkerHtmlRenderer({
   artifacts,
   username,
   slug,
-  cruxId: _cruxId,
   downloadBlob,
-  sendSession,
 }: {
   artifact: Artifact;
   artifacts: Artifact[];
@@ -178,7 +181,6 @@ function ServiceWorkerHtmlRenderer({
   slug: string;
   cruxId: string;
   downloadBlob: DownloadBlobFn;
-  sendSession: (iframe: HTMLIFrameElement) => void;
 }) {
   const previewUrl = usePublicPreviewUrl(artifacts, artifact.id, username, slug, downloadBlob);
 
@@ -194,7 +196,6 @@ function ServiceWorkerHtmlRenderer({
     <iframe
       key={previewUrl}
       src={previewUrl}
-      onLoad={(e) => sendSession(e.currentTarget)}
       sandbox="allow-scripts allow-same-origin allow-popups allow-modals"
       allow="geolocation; camera; microphone; accelerometer; gyroscope; autoplay; fullscreen"
       className="w-full h-full border-0 bg-contrast"

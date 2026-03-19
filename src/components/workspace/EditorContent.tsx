@@ -415,14 +415,15 @@ export default function EditorContent({ tab, artifact, cruxId, saveRef, captureR
   // Always enabled for HTML files so the background iframe stays warm for auto-capture
   const previewUrl = usePreviewUrl(content, cruxId, path, isHtmlFile);
 
-  // Navigate the existing iframe in-place when the preview URL changes,
-  // instead of remounting (which causes a flash)
+  // When preview URL changes, reload the iframe content.
+  // For the initial load, src handles it. For subsequent updates,
+  // the service worker cache is already updated — just reload in place.
   useEffect(() => {
     if (!previewUrl) return;
     const iframe = previewIframeRef.current;
     if (previewUrlRef.current && iframe?.contentWindow) {
-      // Already mounted — navigate in-place
-      iframe.contentWindow.location.replace(previewUrl);
+      // Same base path — service worker cache was updated, just reload
+      iframe.contentWindow.location.reload();
     }
     previewUrlRef.current = previewUrl;
   }, [previewUrl]);
@@ -554,8 +555,20 @@ export default function EditorContent({ tab, artifact, cruxId, saveRef, captureR
           src={previewUrl}
           sandbox="allow-scripts allow-same-origin allow-popups allow-modals"
           allow="geolocation; camera; microphone; accelerometer; gyroscope; autoplay; fullscreen"
+          onLoad={(e) => {
+            try {
+              const doc = e.currentTarget.contentDocument;
+              if (!doc) return;
+              const bg = getComputedStyle(doc.documentElement).backgroundColor
+                || getComputedStyle(doc.body).backgroundColor;
+              if (bg && bg !== 'rgba(0, 0, 0, 0)' && bg !== 'transparent') {
+                e.currentTarget.style.backgroundColor = bg;
+              }
+            } catch { /* cross-origin — ignore */ }
+          }}
+          style={{ backgroundColor: '#000' }}
           className={showPreviewIframe
-            ? 'flex-1 w-full bg-contrast'
+            ? 'flex-1 w-full'
             : 'fixed -left-[9999px] w-[1280px] h-[900px] pointer-events-none'
           }
           title={path}
