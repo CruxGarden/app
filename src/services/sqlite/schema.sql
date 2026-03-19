@@ -74,6 +74,24 @@ CREATE TABLE IF NOT EXISTS authors (
   updated TEXT NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS store (
+  id TEXT PRIMARY KEY,
+  crux_id TEXT NOT NULL,
+  visitor_id TEXT,
+  key TEXT NOT NULL,
+  value TEXT NOT NULL,
+  mode TEXT NOT NULL DEFAULT 'protected',
+  created TEXT NOT NULL,
+  updated TEXT NOT NULL
+);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_store_public
+  ON store (crux_id, key)
+  WHERE visitor_id IS NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS idx_store_protected
+  ON store (crux_id, visitor_id, key)
+  WHERE visitor_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_store_crux ON store(crux_id);
+
 CREATE TABLE IF NOT EXISTS settings (
   key TEXT PRIMARY KEY,
   value TEXT

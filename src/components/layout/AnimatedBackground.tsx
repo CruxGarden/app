@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useThemeStore } from '@/stores/themeStore';
+import { useMoodStore } from '@/stores/moodStore';
 import { getSetting, setSetting } from '@/services/settings';
 import BloomBackground from './BloomBackground';
 import StarfieldBackground from './StarfieldBackground';
@@ -18,6 +19,7 @@ function pickRandomDefault(): string {
 
 export default function AnimatedBackground() {
   const resolved = useThemeStore((s) => s.resolved);
+  const backgroundUrl = useMoodStore((s) => s.backgroundUrl);
 
   const [bgType, setBgType] = useState<string>(() => {
     const saved = getSetting(BG_KEY);
@@ -53,6 +55,24 @@ export default function AnimatedBackground() {
 
     return () => observer.disconnect();
   }, []);
+
+  // Image = uploaded pixelated background
+  if (bgType === 'image' && backgroundUrl) {
+    return (
+      <div
+        aria-hidden="true"
+        className="fixed inset-0 w-full h-full"
+        style={{
+          zIndex: 0,
+          pointerEvents: 'none',
+          backgroundImage: `url(${backgroundUrl})`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          imageRendering: 'pixelated',
+        }}
+      />
+    );
+  }
 
   // Blank = solid background, no animation
   // Dark: just the existing --bg. Light: soft gray-green tinted from accent.

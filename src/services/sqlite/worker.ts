@@ -214,6 +214,29 @@ async function migrate(): Promise<void> {
     // Schema is current — just make sure blob storage is ready
     await initBlobs();
   }
+
+  // v2 → v3: store table (created by schema.sql for new databases,
+  // but existing databases need the table added explicitly)
+  const v3Row = await get('SELECT version FROM schema_version');
+  const v3Version = v3Row ? (v3Row.version as number) : 0;
+  if (v3Version < 3) {
+    await exec(`
+      CREATE TABLE IF NOT EXISTS store (
+        id TEXT PRIMARY KEY,
+        crux_id TEXT NOT NULL,
+        visitor_id TEXT,
+        key TEXT NOT NULL,
+        value TEXT NOT NULL,
+        mode TEXT NOT NULL DEFAULT 'protected',
+        created TEXT NOT NULL,
+        updated TEXT NOT NULL
+      )
+    `);
+    await exec(`CREATE UNIQUE INDEX IF NOT EXISTS idx_store_public ON store (crux_id, key) WHERE visitor_id IS NULL`);
+    await exec(`CREATE UNIQUE INDEX IF NOT EXISTS idx_store_protected ON store (crux_id, visitor_id, key) WHERE visitor_id IS NOT NULL`);
+    await exec(`CREATE INDEX IF NOT EXISTS idx_store_crux ON store(crux_id)`);
+    await run('UPDATE schema_version SET version = 3');
+  }
 }
 
 // ── SQL execution helpers ──────────────────────────────
@@ -354,7 +377,7 @@ async function importDb(data: ArrayBuffer): Promise<void> {
   // so a failure mid-import doesn't leave the database partially deleted.
   await exec(`ATTACH '${EXPORT_URI}' AS import_db`);
 
-  const tables = ['cruxes', 'artifacts', 'dimensions', 'authors', 'settings'];
+  const tables = ['cruxes', 'artifacts', 'dimensions', 'authors', 'settings', 'store'];
   try {
     await exec('BEGIN TRANSACTION');
     for (const table of tables) {

@@ -51,6 +51,7 @@ export default function EditorContent({ tab, artifact, cruxId, saveRef, captureR
   const scrollRafRef = useRef<number | null>(null);
   const disposedRef = useRef(false);
   const previewIframeRef = useRef<HTMLIFrameElement | null>(null);
+  const previewUrlRef = useRef<string | null>(null);
 
   const path = artifact.meta?.path || artifact.filename || artifact.id;
   const ext = getExtension(path);
@@ -414,6 +415,18 @@ export default function EditorContent({ tab, artifact, cruxId, saveRef, captureR
   // Always enabled for HTML files so the background iframe stays warm for auto-capture
   const previewUrl = usePreviewUrl(content, cruxId, path, isHtmlFile);
 
+  // Navigate the existing iframe in-place when the preview URL changes,
+  // instead of remounting (which causes a flash)
+  useEffect(() => {
+    if (!previewUrl) return;
+    const iframe = previewIframeRef.current;
+    if (previewUrlRef.current && iframe?.contentWindow) {
+      // Already mounted — navigate in-place
+      iframe.contentWindow.location.replace(previewUrl);
+    }
+    previewUrlRef.current = previewUrl;
+  }, [previewUrl]);
+
   // SVG preview URL
   const svgPreviewUrl = useMemo(() => {
     if (ext === 'svg' && content) {
@@ -537,7 +550,7 @@ export default function EditorContent({ tab, artifact, cruxId, saveRef, captureR
       {isHtmlFile && previewUrl && (
         <iframe
           ref={previewIframeRef}
-          key={previewUrl}
+          key="preview"
           src={previewUrl}
           sandbox="allow-scripts allow-same-origin allow-popups allow-modals"
           allow="geolocation; camera; microphone; accelerometer; gyroscope; autoplay; fullscreen"

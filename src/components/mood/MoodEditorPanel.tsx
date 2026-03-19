@@ -3,10 +3,14 @@ import { cn } from '@/lib/cn';
 import { applyMoodPalette, GARDEN_DARK } from '@/lib/moods';
 import { MOOD_PRESETS, type MoodPresetDef } from '@/lib/moods/presets';
 import { useUIStore } from '@/stores/uiStore';
+import { useMoodStore } from '@/stores/moodStore';
 import { getSetting, setSetting } from '@/services/settings';
+import { pixelateImageToDataURL } from '@/lib/pixelate';
 
-type BgType = 'bloom' | 'blank';
+type BgType = 'bloom' | 'flowfield' | 'drift' | 'blank' | 'image';
 const BG_KEY = 'cruxgarden:backgroundType';
+const BG_IMAGE_KEY = 'cruxgarden:backgroundImage';
+const BG_BLOCK_KEY = 'cruxgarden:backgroundBlockSize';
 
 const DARK_MOOD_KEY = 'cruxgarden:moodPresetDark';
 const LIGHT_MOOD_KEY = 'cruxgarden:moodPresetLight';
@@ -77,6 +81,17 @@ export function applySavedMoodSettings() {
   const id = getActiveMoodId();
   const preset = MOOD_PRESETS.find((p) => p.id === id);
   if (preset) applyMoodPalette(preset.overrides);
+
+  // Restore background image URL if saved
+  const savedBgType = getSetting(BG_KEY) as string | null;
+  if (savedBgType === 'image') {
+    const savedImage = getSetting(BG_IMAGE_KEY) as string | null;
+    if (savedImage) {
+      import('@/stores/moodStore').then(({ useMoodStore }) => {
+        useMoodStore.setState({ backgroundUrl: savedImage });
+      });
+    }
+  }
 }
 
 // ── Preset thumbnail ─────────────────────────────────
@@ -261,9 +276,149 @@ function PersonaTab() {
   );
 }
 
+// ── Tab: Background ──────────────────────────────────
+
+function BackgroundTabContent({
+  bgType,
+  onChangeBgType,
+  bgImagePreview,
+  bgBlockSize,
+  onBgImageSelect,
+  onBgBlockSizeChange,
+  onBgImageClear,
+  bgGenerating,
+}: {
+  bgType: BgType;
+  onChangeBgType: (t: BgType) => void;
+  bgImagePreview: string | null;
+  bgBlockSize: number;
+  onBgImageSelect: (file: File) => void;
+  onBgBlockSizeChange: (size: number) => void;
+  onBgImageClear: () => void;
+  bgGenerating: boolean;
+}) {
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  const animatedOptions: { value: BgType; label: string; description: string }[] = [
+    { value: 'bloom', label: 'Bloom', description: 'Animated gradient blobs' },
+    { value: 'drift', label: 'Drift', description: 'Floating particles' },
+    { value: 'flowfield', label: 'Flow', description: 'Organic wave patterns' },
+    { value: 'blank', label: 'Blank', description: 'Solid background color' },
+  ];
+
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-1.5">
+        <div className="text-[9px] font-mono uppercase tracking-wider text-text-muted">Animated</div>
+        <div className="grid grid-cols-2 gap-2">
+          {animatedOptions.map(({ value, label, description }) => (
+            <button
+              key={value}
+              onClick={() => onChangeBgType(value)}
+              className={cn(
+                'flex flex-col gap-0.5 px-3 py-2.5 rounded-[var(--radius-sm)] border text-left transition-colors cursor-pointer',
+                bgType === value
+                  ? 'bg-surface text-text border-accent/30'
+                  : 'bg-transparent border-border text-text-muted hover:border-accent/20 hover:text-text',
+              )}
+            >
+              <span className="text-xs font-mono font-medium">{label}</span>
+              <span className="text-[10px] opacity-60">{description}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="flex flex-col gap-1.5">
+        <div className="text-[9px] font-mono uppercase tracking-wider text-text-muted">Image</div>
+        <button
+          onClick={() => {
+            onChangeBgType('image');
+            if (!bgImagePreview) fileRef.current?.click();
+          }}
+          className={cn(
+            'flex flex-col gap-0.5 px-3 py-2.5 rounded-[var(--radius-sm)] border text-left transition-colors cursor-pointer',
+            bgType === 'image'
+              ? 'bg-surface text-text border-accent/30'
+              : 'bg-transparent border-border text-text-muted hover:border-accent/20 hover:text-text',
+          )}
+        >
+          <span className="text-xs font-mono font-medium">Image</span>
+          <span className="text-[10px] opacity-60">Upload a pixelated background</span>
+        </button>
+        <input
+          ref={fileRef}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            if (file) onBgImageSelect(file);
+            if (fileRef.current) fileRef.current.value = '';
+          }}
+        />
+
+        {bgType === 'image' && bgImagePreview && (
+          <div className="flex flex-col gap-2 mt-1 p-3 bg-bg border border-border/50 rounded-[var(--radius-sm)]">
+            <div className="relative w-full h-28 rounded-[var(--radius-sm)] overflow-hidden">
+              <img
+                src={bgImagePreview}
+                alt="Background preview"
+                className="w-full h-full object-cover"
+                style={{ imageRendering: 'pixelated' }}
+              />
+              {bgGenerating && (
+                <div className="absolute inset-0 flex items-center justify-center bg-bg/60">
+                  <div className="w-4 h-4 border-2 border-accent border-t-transparent rounded-full animate-spin" />
+                </div>
+              )}
+            </div>
+            <div className="flex items-center gap-2">
+              <label className="text-xs text-text-muted font-mono shrink-0">Pixel size</label>
+              <input
+                type="range"
+                min={2}
+                max={32}
+                step={1}
+                value={bgBlockSize}
+                onChange={(e) => onBgBlockSizeChange(Number(e.target.value))}
+                className="flex-1 accent-[var(--accent)]"
+              />
+              <span className="text-xs text-text-muted font-mono w-6 text-right">{bgBlockSize}</span>
+            </div>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => fileRef.current?.click()}
+                className="text-[10px] text-accent hover:text-accent/80 transition-colors cursor-pointer"
+              >
+                Change image
+              </button>
+              <button
+                onClick={onBgImageClear}
+                className="text-[10px] text-error hover:text-error/80 transition-colors cursor-pointer"
+              >
+                Remove
+              </button>
+            </div>
+          </div>
+        )}
+
+        {bgType === 'image' && !bgImagePreview && (
+          <button
+            onClick={() => fileRef.current?.click()}
+            className="text-xs text-accent hover:text-accent/80 transition-colors cursor-pointer mt-1"
+          >
+            Choose an image...
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ── Main Component ───────────────────────────────────
 
-type Tab = 'palette' | 'persona';
+type Tab = 'palette' | 'background' | 'persona';
 
 export default function MoodBar() {
   const open = useUIStore((s) => s.moodEditorOpen);
@@ -281,14 +436,62 @@ export default function MoodBar() {
   }, [open]);
   const [bgType, setBgType] = useState<BgType>(() => {
     const saved = getSetting(BG_KEY) as string | null;
-    if (saved === 'bloom' || saved === 'blank') return saved;
+    if (saved === 'bloom' || saved === 'blank' || saved === 'drift' || saved === 'flowfield' || saved === 'image') return saved;
     return 'bloom';
   });
+  const [bgImagePreview, setBgImagePreview] = useState<string | null>(() => getSetting(BG_IMAGE_KEY) as string | null);
+  const [bgBlockSize, setBgBlockSize] = useState(() => Number(getSetting(BG_BLOCK_KEY)) || 8);
+  const [bgGenerating, setBgGenerating] = useState(false);
+  const bgOriginalFile = useRef<File | null>(null);
 
   const handleBgChange = (type: BgType) => {
     setBgType(type);
     setSetting(BG_KEY, type);
     document.documentElement.style.setProperty('--background-type', type);
+    // If switching to image, set the background URL from saved data URL
+    if (type === 'image' && bgImagePreview) {
+      useMoodStore.setState({ backgroundUrl: bgImagePreview });
+    }
+  };
+
+  const handleBgImageSelect = async (file: File) => {
+    bgOriginalFile.current = file;
+    setBgGenerating(true);
+    try {
+      const dataUrl = await pixelateImageToDataURL(file, { blockSize: bgBlockSize });
+      setBgImagePreview(dataUrl);
+      setSetting(BG_IMAGE_KEY, dataUrl);
+      setSetting(BG_KEY, 'image');
+      setBgType('image');
+      document.documentElement.style.setProperty('--background-type', 'image');
+      useMoodStore.setState({ backgroundUrl: dataUrl });
+    } finally {
+      setBgGenerating(false);
+    }
+  };
+
+  const handleBgBlockSizeChange = async (size: number) => {
+    setBgBlockSize(size);
+    setSetting(BG_BLOCK_KEY, String(size));
+    const source = bgOriginalFile.current || bgImagePreview;
+    if (!source) return;
+    setBgGenerating(true);
+    try {
+      const dataUrl = await pixelateImageToDataURL(source, { blockSize: size });
+      setBgImagePreview(dataUrl);
+      setSetting(BG_IMAGE_KEY, dataUrl);
+      useMoodStore.setState({ backgroundUrl: dataUrl });
+    } finally {
+      setBgGenerating(false);
+    }
+  };
+
+  const handleBgImageClear = () => {
+    bgOriginalFile.current = null;
+    setBgImagePreview(null);
+    setSetting(BG_IMAGE_KEY, '');
+    handleBgChange('bloom');
+    useMoodStore.setState({ backgroundUrl: null });
   };
 
   const handleSelect = (preset: MoodPresetDef) => {
@@ -325,7 +528,7 @@ export default function MoodBar() {
       {/* Header with tabs */}
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-1">
-          {(['palette', 'persona'] as const).map((t) => (
+          {([['palette', 'Palette'], ['background', 'Background'], ['persona', 'Persona']] as const).map(([t, label]) => (
             <button
               key={t}
               onClick={() => setTab(t)}
@@ -336,7 +539,7 @@ export default function MoodBar() {
                   : 'text-text-muted hover:text-text',
               )}
             >
-              {t === 'palette' ? 'Palette' : 'Persona'}
+              {label}
             </button>
           ))}
         </div>
@@ -347,33 +550,9 @@ export default function MoodBar() {
         </button>
       </div>
 
-      {/* Both tabs rendered in same grid cell — taller one sets panel height */}
+      {/* All tabs rendered in same grid cell — taller one sets panel height */}
       <div className="grid [&>*]:col-start-1 [&>*]:row-start-1">
         <div className={tab !== 'palette' ? 'invisible pointer-events-none' : undefined}>
-          {/* Background */}
-          <div className="mb-4">
-            <div className="text-[9px] font-mono uppercase tracking-wider text-text-muted mb-2">Background</div>
-            <div className="flex gap-1.5">
-              {([
-                { value: 'blank' as BgType, label: 'Blank' },
-                { value: 'bloom' as BgType, label: 'Bloom' },
-              ]).map(({ value, label }) => (
-                <button
-                  key={value}
-                  onClick={() => handleBgChange(value)}
-                  className={cn(
-                    'px-2.5 py-1 text-[10px] font-mono rounded-[3px] border cursor-pointer transition-colors',
-                    bgType === value
-                      ? 'bg-surface text-text border-border'
-                      : 'text-text-muted border-border hover:text-text hover:border-accent',
-                  )}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
-          </div>
-
           {/* Presets */}
           {(['Dark', 'Light'] as const).map((section) => {
             const sectionPresets = MOOD_PRESETS.filter((p) => p.section === section);
@@ -402,6 +581,18 @@ export default function MoodBar() {
               </div>
             );
           })}
+        </div>
+        <div className={tab !== 'background' ? 'invisible pointer-events-none' : undefined}>
+          <BackgroundTabContent
+            bgType={bgType}
+            onChangeBgType={handleBgChange}
+            bgImagePreview={bgImagePreview}
+            bgBlockSize={bgBlockSize}
+            onBgImageSelect={handleBgImageSelect}
+            onBgBlockSizeChange={handleBgBlockSizeChange}
+            onBgImageClear={handleBgImageClear}
+            bgGenerating={bgGenerating}
+          />
         </div>
         <div className={tab !== 'persona' ? 'invisible pointer-events-none' : undefined}>
           <PersonaTab />
