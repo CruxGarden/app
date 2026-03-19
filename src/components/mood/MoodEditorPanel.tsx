@@ -82,14 +82,12 @@ export function applySavedMoodSettings() {
   const preset = MOOD_PRESETS.find((p) => p.id === id);
   if (preset) applyMoodPalette(preset.overrides);
 
-  // Restore background image URL if saved
+  // Restore background image URL if saved (synchronous — no flash)
   const savedBgType = getSetting(BG_KEY) as string | null;
   if (savedBgType === 'image') {
     const savedImage = getSetting(BG_IMAGE_KEY) as string | null;
     if (savedImage) {
-      import('@/stores/moodStore').then(({ useMoodStore }) => {
-        useMoodStore.setState({ backgroundUrl: savedImage });
-      });
+      useMoodStore.setState({ backgroundUrl: savedImage });
     }
   }
 }

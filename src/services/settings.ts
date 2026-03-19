@@ -20,6 +20,10 @@ const SYNC_KEYS = new Set([
   'cruxgarden:theme',
   'cruxgarden:tint',
   'cruxgarden:backgroundType',
+  'cruxgarden:backgroundImage',
+  'cruxgarden:backgroundBlockSize',
+  'cruxgarden:moodPresetDark',
+  'cruxgarden:moodPresetLight',
 ]);
 
 // ── Public API ──────────────────────────────────────────────────────────────

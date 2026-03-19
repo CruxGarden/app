@@ -5,12 +5,15 @@ import { useAuthStore } from '@/stores/authStore';
 import App from './App';
 import './styles/globals.css';
 
+function isAppRoute(): boolean {
+  const path = window.location.pathname;
+  return path.startsWith('/home') || path.startsWith('/c/') || path.startsWith('/settings');
+}
+
 function isPublicRoute(): boolean {
   const path = window.location.pathname;
   return (
     path.startsWith('/discover') ||
-    // Public author/crux routes: /:username or /:username/:slug
-    // Exclude app routes: /home, /login, /settings, /c/
     (!path.startsWith('/home') &&
      !path.startsWith('/login') &&
      !path.startsWith('/settings') &&
@@ -33,7 +36,9 @@ function Bootstrap() {
 
   useEffect(() => {
     if (ready) {
-      dismissSplash();
+      // Non-app routes don't go through AppShell, so dismiss splash here.
+      // App routes (/home, /c/, /settings) dismiss splash in AppShell after services init.
+      if (!isAppRoute()) dismissSplash();
       return;
     }
     init().then(() => setReady(true));
