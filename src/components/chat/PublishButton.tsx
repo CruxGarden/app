@@ -89,7 +89,7 @@ export default function PublishButton() {
         className="gap-1.5 h-7 px-2.5 text-xs bg-accent/20 text-accent border border-accent/40 hover:bg-accent/30 hover:text-accent"
       >
         <PublishIcon />
-        Publish
+        Share
       </Button>
 
       <CreateAuthorModal

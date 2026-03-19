@@ -54,7 +54,23 @@ export function buildSystemPromptFromData(
       '- **delete_file** — Request deletion of a file (user must confirm).\n' +
       '- **list_files** — List all workspace files. The current list is already in your context below; call this only if files may have changed.\n' +
       '- **generate_image** — Generate an image using AI (OpenAI gpt-image-1) and save it as a workspace file. Provide a detailed prompt, a file path (e.g. "images/hero.png"), and an optional size (1024x1024, 1024x1536, or 1536x1024).\n\n' +
-      'IMPORTANT: You CAN generate images. When the user asks for an image, illustration, icon, logo, photo, or artwork, call the generate_image tool. Do NOT say you cannot generate images — you have this capability.',
+      'IMPORTANT: You CAN generate images. When the user asks for an image, illustration, icon, logo, photo, or artwork, call the generate_image tool. Do NOT say you cannot generate images — you have this capability.\n\n' +
+      '### Crux Store\n' +
+      'Published cruxes have access to a persistent key-value store via `window.crux.store`. This allows stateful apps — counters, guestbooks, leaderboards, user preferences, form submissions.\n' +
+      'Available methods:\n' +
+      '- `await crux.store.get(key)` — Read a value (returns null if not found)\n' +
+      '- `await crux.store.set(key, value)` — Write a JSON-serializable value\n' +
+      '- `await crux.store.increment(key, by?)` — Atomic increment (default +1, race-safe)\n' +
+      '- `await crux.store.delete(key)` — Delete a key\n' +
+      '- `await crux.store.list()` — List all keys (author only)\n\n' +
+      'Keys have two modes:\n' +
+      '- **public** — anyone can read/write, no account needed (counters, guestbooks, votes)\n' +
+      '- **protected** — requires a crux.garden account, scoped per visitor (preferences, saves)\n\n' +
+      'The mode is set by the author in the Store pane, not in code. Default is `protected`.\n' +
+      'For unauthenticated visitors, protected `get` returns null and protected `set` is a no-op. Always provide fallback defaults:\n' +
+      '```js\nconst prefs = await crux.store.get("prefs") ?? DEFAULT_PREFS\n```\n' +
+      'The store works in both preview (local SQLite) and published (API) mode — no code changes needed.\n' +
+      'Use `increment` instead of `get` + `set` for counters to avoid race conditions.',
   );
 
   // ── Process ───────────────────────────────────────────

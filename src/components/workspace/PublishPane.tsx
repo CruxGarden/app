@@ -186,7 +186,7 @@ export default function PublishPane() {
     return (
       <div ref={ref} className="flex flex-col h-full">
         <div className="flex-1 flex items-center justify-center p-4">
-          <p className="text-xs text-text-muted">Nothing to publish yet</p>
+          <p className="text-xs text-text-muted">Nothing to share yet</p>
         </div>
       </div>
     );
@@ -206,7 +206,7 @@ export default function PublishPane() {
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-1.5">
                   <span className="w-1.5 h-1.5 rounded-full bg-accent shrink-0" />
-                  <span className="text-[11px] font-mono text-accent">Published</span>
+                  <span className="text-[11px] font-mono text-accent">Shared</span>
                 </div>
                 <span className="text-[11px] font-mono text-text-muted">v{publishedVersion}</span>
               </div>
@@ -224,7 +224,7 @@ export default function PublishPane() {
             </div>
           ) : (
             <div className="rounded-[var(--radius-sm)] border border-border/60 border-dashed p-3">
-              <p className="text-[11px] font-mono text-text-muted text-center">Not published</p>
+              <p className="text-[11px] font-mono text-text-muted text-center">Not shared</p>
             </div>
           )}
 
@@ -263,7 +263,7 @@ export default function PublishPane() {
               )}
             >
               <Spinner size={14} />
-              Publishing...
+              Sharing...
             </button>
           ) : isPublished && !hasUnpublishedChanges ? (
             <div
@@ -286,7 +286,7 @@ export default function PublishPane() {
               )}
             >
               <PublishIcon />
-              {isPublished ? 'Publish Changes' : 'Publish'}
+              {isPublished ? 'Update' : 'Share'}
             </button>
           )}
 
@@ -335,7 +335,7 @@ export default function PublishPane() {
                 'disabled:cursor-not-allowed',
               )}
             >
-              Unpublish
+              Unshare
             </button>
           )}
         </div>

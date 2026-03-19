@@ -1,6 +1,5 @@
 import AccountSettings from '@/components/settings/AccountSettings';
 import SyncSettings from '@/components/settings/SyncSettings';
-import MoodSettings from '@/components/settings/MoodSettings';
 import DataSettings from '@/components/settings/DataSettings';
 import AiSettings from '@/components/settings/AiSettings';
 
@@ -17,10 +16,6 @@ export default function Settings() {
 
       <div className="mt-6">
         <SyncSettings />
-      </div>
-
-      <div className="mt-6">
-        <MoodSettings />
       </div>
 
       <div className="mt-6">

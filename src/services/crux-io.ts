@@ -305,6 +305,20 @@ export async function exportCrux(options: ExportOptions): Promise<ExportResult> 
   }, null, 2);
   zip.file('crux.json', cruxJsonContent);
 
+  // ── store.json ──────────────────────────────────
+  try {
+    const { store } = getServices();
+    const entries = await store.list(cruxId);
+    if (entries.length > 0) {
+      zip.file('store.json', JSON.stringify(
+        entries.map((e) => ({ key: e.key, value: e.value, mode: e.mode })),
+        null, 2,
+      ));
+    }
+  } catch {
+    // Store service may not be ready — skip silently
+  }
+
   // ── Archive integrity fingerprint ────────────────
   const archiveFingerprint = await hashContent(
     [currentSnapshotFingerprint, cruxJsonContent, dimensionsJsonContent].join('\n'),
@@ -616,6 +630,24 @@ export async function importCrux(options: ImportOptions): Promise<ImportResult> 
       }
       done++;
       onProgress?.(done, total);
+    }
+
+    // ── Restore store data ──────────────────────────
+    const storeFile = zip.file('store.json');
+    if (storeFile) {
+      try {
+        const storeEntries = JSON.parse(await storeFile.async('text')) as {
+          key: string;
+          value: unknown;
+          mode: 'public' | 'protected';
+        }[];
+        const { store } = getServices();
+        for (const entry of storeEntries) {
+          await store.set(newCrux.id, entry.key, entry.value, entry.mode);
+        }
+      } catch (err) {
+        console.warn('Failed to restore store data:', err);
+      }
     }
 
     // ── Final meta update ────────────────────────────

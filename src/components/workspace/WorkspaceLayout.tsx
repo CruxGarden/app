@@ -4,6 +4,7 @@ import { HTML5Backend } from 'react-dnd-html5-backend';
 import { MosaicWithoutDragDropContext, MosaicWindow } from 'react-mosaic-component';
 import type { MosaicBranch, MosaicNode } from 'react-mosaic-component';
 import { useUIStore, type PaneType } from '@/stores/uiStore';
+import { useStoreProxy } from '@/hooks/useStoreProxy';
 
 const HistoryPane = lazy(() => import('./HistoryPane'));
 const ChatPane = lazy(() => import('./ChatPane'));
@@ -13,6 +14,7 @@ const MetadataPane = lazy(() => import('./MetadataPane'));
 const SyncPane = lazy(() => import('./SyncPane'));
 const PublishPane = lazy(() => import('./PublishPane'));
 const ExportPane = lazy(() => import('./ExportPane'));
+const StorePane = lazy(() => import('./StorePane'));
 import ContextMenu from './ContextMenu';
 import MobilePaneSwitcher from './MobilePaneSwitcher';
 import { useCruxStore } from '@/stores/cruxStore';
@@ -31,6 +33,7 @@ const PANE_COMPONENTS: Record<PaneType, React.ComponentType> = {
   sync: SyncPane,
   publish: PublishPane,
   export: ExportPane,
+  store: StorePane,
 };
 
 // Memoized pane content — prevents React from re-diffing heavy subtrees
@@ -57,8 +60,9 @@ const PANE_LABELS: Record<PaneType, string> = {
   workshop: 'WORKSHOP',
   details: 'METADATA',
   sync: 'SYNC',
-  publish: 'PUBLISH',
+  publish: 'SHARE',
   export: 'EXPORT',
+  store: 'STORE',
 };
 
 // ── Pane icons ───────────────────────────────────────────
@@ -124,6 +128,13 @@ const PANE_ICONS: Record<PaneType, React.ReactNode> = {
       <line x1="12" y1="15" x2="12" y2="3" />
     </svg>
   ),
+  store: (
+    <svg {...iconProps}>
+      <ellipse cx="12" cy="5" rx="9" ry="3" />
+      <path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3" />
+      <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5" />
+    </svg>
+  ),
 };
 
 function CloseIcon() {
@@ -158,6 +169,9 @@ export default function WorkspaceLayout() {
   const artifacts = useCruxStore((s) => s.artifacts);
   const crux = useCruxStore((s) => s.crux);
   const author = useAuthStore((s) => s.author);
+
+  // Proxy crux:store:* postMessages from preview iframe to local SQLite
+  useStoreProxy(crux?.id ?? null);
 
   // Context menu handlers
   const handleNewFile = (parentPath: string) => {
@@ -318,6 +332,7 @@ export default function WorkspaceLayout() {
         export: '--pane-export',
         sync: '--pane-sync',
         publish: '--pane-publish',
+        store: '--pane-store',
       }[paneType];
 
       return (

@@ -7,6 +7,7 @@ import KeeperConsole from '@/components/keeper/KeeperConsole';
 import MoodBar, { applySavedMoodSettings } from '@/components/mood/MoodEditorPanel';
 import { useUIStore } from '@/stores/uiStore';
 import { isServicesReady, initServices, ensureLocalAuthor, getBackend } from '@/services';
+import { seedTutorialCrux } from '@/services/seedTutorial';
 import { migrateApiKeyFromLocalStorage } from '@/ai/keys';
 import { useAuthStore } from '@/stores/authStore';
 import { useMoodStore } from '@/stores/moodStore';
@@ -29,6 +30,7 @@ export default function AppShell() {
       }
       useMoodStore.getState().loadMoods().catch(() => {});
       applySavedMoodSettings();
+      seedTutorialCrux().catch(() => {});
       setServicesOk(true);
     })();
   }, [servicesOk]);

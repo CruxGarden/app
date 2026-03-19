@@ -137,6 +137,16 @@ function LinkIcon() {
   );
 }
 
+function BoardIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="3" width="18" height="18" rx="2" />
+      <path d="M7 8c2 3 4 1 6 4s3 0 5 2" />
+      <circle cx="8" cy="16" r="1" fill="currentColor" />
+    </svg>
+  );
+}
+
 function GamepadIcon() {
   return (
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
@@ -670,6 +680,21 @@ function GameThumb() {
   );
 }
 
+function BoardThumb() {
+  return (
+    <div style={{ ...T.wrap, background: '#111', ...T.center }}>
+      <div style={{ width: 40, height: 28, background: '#1a1a1a', borderRadius: 3, position: 'relative', overflow: 'hidden' }}>
+        {/* Strokes */}
+        <svg width="40" height="28" viewBox="0 0 40 28" style={{ position: 'absolute', inset: 0 }}>
+          <path d="M8 20 C12 10, 18 8, 22 14 S30 22, 35 16" stroke="#4ade80" strokeWidth="1.5" fill="none" opacity="0.7" />
+          <path d="M5 12 C10 18, 16 6, 24 10" stroke="#60a5fa" strokeWidth="1.5" fill="none" opacity="0.5" />
+          <circle cx="30" cy="8" r="1.5" fill="#fbbf24" opacity="0.6" />
+        </svg>
+      </div>
+    </div>
+  );
+}
+
 function RansomThumb() {
   return (
     <div style={{ ...T.wrap, background: '#e8d5a3', ...T.pad(6) }}>
@@ -824,6 +849,7 @@ const TEMPLATES: Template[] = [
   { id: 'tutorial', label: 'Tutorial', description: 'Step-by-step how-to guide', icon: <TutorialIcon />, thumb: <TutorialThumb />, kind: 'webapp', defaultTitle: 'How To' },
   { id: 'slides', label: 'Slide Deck', description: 'Web-based presentation', icon: <SlidesIcon />, thumb: <SlidesThumb />, kind: 'webapp', defaultTitle: 'My Presentation' },
   { id: 'game', label: 'Game', description: 'Interactive web game', icon: <GamepadIcon />, thumb: <GameThumb />, kind: 'webapp', defaultTitle: 'My Game' },
+  { id: 'board', label: 'The Board', description: 'Collaborative canvas with Crux Store', icon: <BoardIcon />, thumb: <BoardThumb />, kind: 'webapp', defaultTitle: 'Tutorial - The Board' },
   // ── Silly / Fun / Weird ──
   { id: 'ransom', label: 'Ransom Note', description: 'Cut-out magazine letter message', icon: <ScissorsIcon />, thumb: <RansomThumb />, kind: 'page', defaultTitle: 'A Message' },
   { id: 'conspiracy', label: 'Conspiracy', description: 'Corkboard with red strings', icon: <PushpinIcon />, thumb: <ConspiracyThumb />, kind: 'webapp', defaultTitle: 'The Board' },

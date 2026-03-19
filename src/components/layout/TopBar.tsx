@@ -214,6 +214,25 @@ function ChevronIcon() {
   );
 }
 
+function StoreIcon() {
+  return (
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <ellipse cx="12" cy="5" rx="9" ry="3" />
+      <path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3" />
+      <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5" />
+    </svg>
+  );
+}
+
 // ── Pane CSS var prefixes ────────────────────────────────
 
 const PANE_VAR_PREFIX: Record<PaneType, string> = {
@@ -225,6 +244,7 @@ const PANE_VAR_PREFIX: Record<PaneType, string> = {
   export: '--pane-export',
   sync: '--pane-sync',
   publish: '--pane-publish',
+  store: '--pane-store',
 };
 
 // ── Pane button config ──────────────────────────────────
@@ -237,7 +257,8 @@ const PANE_BUTTONS: { type: PaneType; icon: React.FC; label: string }[] = [
   { type: 'history', icon: StackIcon, label: 'History' },
   { type: 'export', icon: ExportIcon, label: 'Export' },
   { type: 'sync', icon: SyncIcon, label: 'Sync' },
-  { type: 'publish', icon: PublishIcon, label: 'Publish' },
+  { type: 'publish', icon: PublishIcon, label: 'Share' },
+  { type: 'store', icon: StoreIcon, label: 'Store' },
 ];
 
 export default function TopBar() {

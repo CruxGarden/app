@@ -1,9 +1,10 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import { useAuthStore, resolveAvatarUrl } from '@/stores/authStore';
 import { authors as authorsApi } from '@/api';
 import { getBackend } from '@/services';
 import { Panel, Spinner } from '@/components/ui';
 import { cn } from '@/lib/cn';
+import { pixelateImageToDataURL } from '@/lib/pixelate';
 
 const btnClass = cn(
   'px-3 py-1.5 text-xs font-mono rounded-[var(--radius-sm)]',
@@ -15,6 +16,12 @@ export default function AccountSettings() {
   const { account, author, isAuthenticated, uploadAvatar, removeAvatar, updateAuthor, connectAccount, disconnectAccount } = useAuthStore();
   const fileRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
+
+  // Pixelation preview
+  const [pendingFile, setPendingFile] = useState<File | null>(null);
+  const [blockSize, setBlockSize] = useState(8);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [generating, setGenerating] = useState(false);
 
   // Username editing
   const [editingUsername, setEditingUsername] = useState(false);
@@ -116,18 +123,56 @@ export default function AccountSettings() {
     }
   };
 
+  const generatePreview = useCallback(async (file: File, size: number) => {
+    setGenerating(true);
+    try {
+      const url = await pixelateImageToDataURL(file, {
+        blockSize: size,
+        outputSize: { width: 256, height: 256 },
+      });
+      setPreviewUrl(url);
+    } catch (err) {
+      console.error('Pixelation failed:', err);
+    } finally {
+      setGenerating(false);
+    }
+  }, []);
+
   const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    if (fileRef.current) fileRef.current.value = '';
+    setPendingFile(file);
+    setBlockSize(8);
+    await generatePreview(file, 8);
+  };
+
+  const handleConfirmAvatar = async () => {
+    if (!previewUrl) return;
     setUploading(true);
     try {
+      // Convert the pixelated data URL to a File and upload
+      const res = await fetch(previewUrl);
+      const blob = await res.blob();
+      const file = new File([blob], 'avatar.png', { type: 'image/png' });
       await uploadAvatar(file);
     } catch (err) {
       console.error('Avatar upload failed:', err);
     } finally {
       setUploading(false);
-      if (fileRef.current) fileRef.current.value = '';
+      setPendingFile(null);
+      setPreviewUrl(null);
     }
+  };
+
+  const handleCancelAvatar = () => {
+    setPendingFile(null);
+    setPreviewUrl(null);
+  };
+
+  const handleBlockSizeChange = async (size: number) => {
+    setBlockSize(size);
+    if (pendingFile) await generatePreview(pendingFile, size);
   };
 
   const handleRemoveAvatar = async () => {
@@ -189,6 +234,57 @@ export default function AccountSettings() {
           <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleAvatarChange} />
         </div>
       </div>
+
+      {/* Pixelation preview */}
+      {pendingFile && (
+        <div className="flex items-start gap-4 mb-4 p-3 bg-surface border border-border rounded-[var(--radius-sm)]">
+          <div className="relative shrink-0">
+            {previewUrl ? (
+              <img
+                src={previewUrl}
+                alt="Preview"
+                className="w-20 h-20 rounded-full object-cover"
+                style={{ imageRendering: 'pixelated' }}
+              />
+            ) : (
+              <div className="w-20 h-20 rounded-full bg-accent-muted flex items-center justify-center">
+                <Spinner size={16} />
+              </div>
+            )}
+            {generating && (
+              <div className="absolute inset-0 flex items-center justify-center rounded-full bg-bg/60">
+                <Spinner size={16} />
+              </div>
+            )}
+          </div>
+          <div className="flex-1 flex flex-col gap-2">
+            <div className="flex items-center gap-2">
+              <label className="text-xs text-text-muted font-mono shrink-0">Pixel size</label>
+              <input
+                type="range"
+                min={2}
+                max={32}
+                step={1}
+                value={blockSize}
+                onChange={(e) => handleBlockSizeChange(Number(e.target.value))}
+                className="flex-1 accent-[var(--accent)]"
+              />
+              <span className="text-xs text-text-muted font-mono w-6 text-right">{blockSize}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <button onClick={handleConfirmAvatar} disabled={uploading || generating} className={btnClass}>
+                {uploading ? 'Saving...' : 'Save'}
+              </button>
+              <button
+                onClick={handleCancelAvatar}
+                className="text-xs text-text-muted hover:text-text transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="space-y-3 text-sm">
         {/* Username */}
@@ -252,7 +348,7 @@ export default function AccountSettings() {
 
       {/* Cloud connection */}
       <div className="border-t border-border my-5" />
-      <h3 className="font-display text-sm font-medium text-accent mb-2">Cloud Connection</h3>
+      <h3 className="font-display text-sm font-medium text-accent mb-2">Connection</h3>
 
       {isAuthenticated ? (
         <div className="flex items-center justify-between">
@@ -266,7 +362,7 @@ export default function AccountSettings() {
       ) : (
         <div className="space-y-3">
           <p className="text-xs text-text-muted">
-            Connect to your crux.garden account to enable cloud sync.
+            Connect to your crux.garden account to enable sync and sharing.
           </p>
           <div className="flex items-center gap-2">
             <input

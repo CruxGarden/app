@@ -2,6 +2,8 @@ import { useState, useCallback, useEffect, useRef } from 'react';
 import { cn } from '@/lib/cn';
 import { getCurrentMoodPalette, getVar, GARDEN_DARK, type MoodPalette } from '@/lib/moods';
 import { useMoodStore, type MoodMeta, type MoodPersona } from '@/stores/moodStore';
+import { pixelateImageToDataURL } from '@/lib/pixelate';
+import { Spinner } from '@/components/ui';
 
 // ── Types ────────────────────────────────────────────
 
@@ -78,6 +80,7 @@ const PALETTE_BLOCKS: PaletteBlock[] = [
   buildBlock('pane-export', 'Export Pane', 'Export pane colors', 'paneExport', ALL_KEYS),
   buildBlock('pane-sync', 'Sync Pane', 'Sync pane colors', 'paneSync', ALL_KEYS),
   buildBlock('pane-publish', 'Publish Pane', 'Publish pane colors', 'panePublish', ALL_KEYS),
+  buildBlock('pane-store', 'Store Pane', 'Store pane colors', 'paneStore', ALL_KEYS),
   buildBlock('tooltip', 'Tooltip', 'Tooltips and hints', 'tooltip', ALL_KEYS),
   buildBlock('mood-bar', 'Mood Bar', 'Background selector bar', 'moodBar', ALL_KEYS),
   buildBlock('badge', 'Badge', 'Tags, chips, indicators', 'badge', ALL_KEYS),
@@ -299,11 +302,25 @@ type BgType = 'bloom' | 'flowfield' | 'drift' | 'blank' | 'image';
 function BackgroundTab({
   bgType,
   onChangeBgType,
+  bgImagePreview,
+  bgBlockSize,
+  onBgImageSelect,
+  onBgBlockSizeChange,
+  onBgImageClear,
+  bgGenerating,
 }: {
   bgType: BgType;
   onChangeBgType: (t: BgType) => void;
+  bgImagePreview: string | null;
+  bgBlockSize: number;
+  onBgImageSelect: (file: File) => void;
+  onBgBlockSizeChange: (size: number) => void;
+  onBgImageClear: () => void;
+  bgGenerating: boolean;
 }) {
-  const options: { value: BgType; label: string; description: string }[] = [
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  const animatedOptions: { value: BgType; label: string; description: string }[] = [
     { value: 'bloom', label: 'Bloom', description: 'Animated gradient blobs' },
     { value: 'drift', label: 'Drift', description: 'Floating particles' },
     { value: 'flowfield', label: 'Flow', description: 'Organic wave patterns' },
@@ -313,9 +330,9 @@ function BackgroundTab({
   return (
     <div className="flex flex-col gap-4 overflow-y-auto pr-1">
       <div className="flex flex-col gap-1.5">
-        <label className="text-[10px] font-mono uppercase tracking-wider text-text-muted">Type</label>
+        <label className="text-[10px] font-mono uppercase tracking-wider text-text-muted">Animated</label>
         <div className="grid grid-cols-2 gap-2">
-          {options.map(({ value, label, description }) => (
+          {animatedOptions.map(({ value, label, description }) => (
             <button
               key={value}
               onClick={() => onChangeBgType(value)}
@@ -334,8 +351,79 @@ function BackgroundTab({
       </div>
 
       <div className="flex flex-col gap-1.5">
-        <label className="text-[10px] font-mono uppercase tracking-wider text-text-muted">Background Image</label>
-        <p className="text-[10px] text-text-muted/60">Coming soon — upload a custom background image</p>
+        <label className="text-[10px] font-mono uppercase tracking-wider text-text-muted">Image</label>
+        <button
+          onClick={() => {
+            onChangeBgType('image');
+            fileRef.current?.click();
+          }}
+          className={cn(
+            'flex flex-col gap-0.5 px-3 py-2.5 rounded-[var(--radius-sm)] border text-left transition-colors cursor-pointer',
+            bgType === 'image'
+              ? 'bg-accent-muted border-accent/30 text-accent'
+              : 'bg-surface border-border text-text-muted hover:border-accent/20 hover:text-text',
+          )}
+        >
+          <span className="text-xs font-mono font-medium">Image</span>
+          <span className="text-[10px] opacity-60">Upload a pixelated background</span>
+        </button>
+        <input
+          ref={fileRef}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            if (file) onBgImageSelect(file);
+            if (fileRef.current) fileRef.current.value = '';
+          }}
+        />
+
+        {bgType === 'image' && bgImagePreview && (
+          <div className="flex flex-col gap-2 mt-1 p-3 bg-[#202020] border border-border/50 rounded-[var(--radius-sm)]">
+            <div className="relative w-full h-28 rounded-[var(--radius-sm)] overflow-hidden">
+              <img
+                src={bgImagePreview}
+                alt="Background preview"
+                className="w-full h-full object-cover"
+                style={{ imageRendering: 'pixelated' }}
+              />
+              {bgGenerating && (
+                <div className="absolute inset-0 flex items-center justify-center bg-bg/60">
+                  <Spinner size={16} />
+                </div>
+              )}
+            </div>
+            <div className="flex items-center gap-2">
+              <label className="text-xs text-text-muted font-mono shrink-0">Pixel size</label>
+              <input
+                type="range"
+                min={2}
+                max={32}
+                step={1}
+                value={bgBlockSize}
+                onChange={(e) => onBgBlockSizeChange(Number(e.target.value))}
+                className="flex-1 accent-[var(--accent)]"
+              />
+              <span className="text-xs text-text-muted font-mono w-6 text-right">{bgBlockSize}</span>
+            </div>
+            <button
+              onClick={onBgImageClear}
+              className="self-start text-xs text-error hover:text-error/80 transition-colors cursor-pointer"
+            >
+              Remove image
+            </button>
+          </div>
+        )}
+
+        {bgType === 'image' && !bgImagePreview && (
+          <button
+            onClick={() => fileRef.current?.click()}
+            className="text-xs text-accent hover:text-accent/80 transition-colors cursor-pointer mt-1"
+          >
+            Choose an image...
+          </button>
+        )}
       </div>
     </div>
   );
@@ -463,6 +551,12 @@ export default function MoodEditorModal({ open, onClose, moodId }: MoodEditorMod
   const [bgType, setBgType] = useState<BgType>('bloom');
   const [tags, setTags] = useState<string[]>([]);
 
+  // Background image
+  const [bgPendingFile, setBgPendingFile] = useState<File | null>(null);
+  const [bgImagePreview, setBgImagePreview] = useState<string | null>(null);
+  const [bgBlockSize, setBgBlockSize] = useState(8);
+  const [bgGenerating, setBgGenerating] = useState(false);
+
   const basePalette = useRef(getCurrentMoodPalette()).current;
 
   // Load existing mood data when editing
@@ -483,6 +577,13 @@ export default function MoodEditorModal({ open, onClose, moodId }: MoodEditorMod
         });
         setBgType((meta?.backgroundType as BgType) || 'bloom');
         setTags(meta?.tags || []);
+        // Load existing background image from mood artifacts
+        setBgPendingFile(null);
+        setBgImagePreview(null);
+        if (meta?.backgroundType === 'image') {
+          const { backgroundUrl } = useMoodStore.getState();
+          if (backgroundUrl) setBgImagePreview(backgroundUrl);
+        }
       }
     } else {
       // Reset for new mood
@@ -497,6 +598,8 @@ export default function MoodEditorModal({ open, onClose, moodId }: MoodEditorMod
       });
       setBgType('bloom');
       setTags([]);
+      setBgPendingFile(null);
+      setBgImagePreview(null);
     }
     setTab('palette');
   }, [open, moodId, moods]);
@@ -512,6 +615,35 @@ export default function MoodEditorModal({ open, onClose, moodId }: MoodEditorMod
     setPersona((prev) => ({ ...prev, ...p }));
   }, []);
 
+  const generateBgPreview = useCallback(async (file: File, size: number) => {
+    setBgGenerating(true);
+    try {
+      const url = await pixelateImageToDataURL(file, { blockSize: size });
+      setBgImagePreview(url);
+    } catch (err) {
+      console.error('Background pixelation failed:', err);
+    } finally {
+      setBgGenerating(false);
+    }
+  }, []);
+
+  const handleBgImageSelect = useCallback(async (file: File) => {
+    setBgPendingFile(file);
+    setBgBlockSize(8);
+    setBgType('image');
+    await generateBgPreview(file, 8);
+  }, [generateBgPreview]);
+
+  const handleBgBlockSizeChange = useCallback(async (size: number) => {
+    setBgBlockSize(size);
+    if (bgPendingFile) await generateBgPreview(bgPendingFile, size);
+  }, [bgPendingFile, generateBgPreview]);
+
+  const handleBgImageClear = useCallback(() => {
+    setBgPendingFile(null);
+    setBgImagePreview(null);
+  }, []);
+
   const handleSave = async () => {
     setSaving(true);
     try {
@@ -522,11 +654,13 @@ export default function MoodEditorModal({ open, onClose, moodId }: MoodEditorMod
         tags: tags.length > 0 ? tags : undefined,
       };
 
+      let targetMoodId: string;
+
       if (moodId) {
         await updateMood(moodId, meta);
-        // Update title/description via crux service
         const services = (await import('@/services')).getServices();
         await services.crux.update(moodId, { title, description });
+        targetMoodId = moodId;
       } else {
         const mood = await createMood(title);
         await updateMood(mood.id, meta);
@@ -534,6 +668,21 @@ export default function MoodEditorModal({ open, onClose, moodId }: MoodEditorMod
           const services = (await import('@/services')).getServices();
           await services.crux.update(mood.id, { description });
         }
+        targetMoodId = mood.id;
+      }
+
+      // Save background image as mood artifact
+      if (bgType === 'image' && bgImagePreview && bgPendingFile) {
+        const services = (await import('@/services')).getServices();
+        const res = await fetch(bgImagePreview);
+        const blob = await res.blob();
+        const file = new File([blob], 'background.png', { type: 'image/png' });
+        await services.artifact.upload({
+          resourceId: targetMoodId,
+          blob: file,
+          mimeType: 'image/png',
+          meta: { path: 'background.png' },
+        });
       }
 
       onClose();
@@ -626,7 +775,16 @@ export default function MoodEditorModal({ open, onClose, moodId }: MoodEditorMod
             <PersonaTab persona={persona} onChange={handleChangePersona} />
           )}
           {tab === 'background' && (
-            <BackgroundTab bgType={bgType} onChangeBgType={setBgType} />
+            <BackgroundTab
+              bgType={bgType}
+              onChangeBgType={setBgType}
+              bgImagePreview={bgImagePreview}
+              bgBlockSize={bgBlockSize}
+              onBgImageSelect={handleBgImageSelect}
+              onBgBlockSizeChange={handleBgBlockSizeChange}
+              onBgImageClear={handleBgImageClear}
+              bgGenerating={bgGenerating}
+            />
           )}
           {tab === 'details' && (
             <DetailsTab

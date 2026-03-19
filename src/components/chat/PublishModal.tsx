@@ -63,7 +63,7 @@ export default function PublishModal({ open, onClose, url }: PublishModalProps) 
         </div>
 
         <div>
-          <h2 className="text-lg font-display font-medium text-text">Published!</h2>
+          <h2 className="text-lg font-display font-medium text-text">Shared!</h2>
           <p className="text-sm text-text-muted mt-1">Your creation is live</p>
         </div>
 

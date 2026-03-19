@@ -145,7 +145,9 @@ function postToReceiver(
  */
 export function injectPreviewScripts(html: string, cruxId: string, isWebApp: boolean): string {
   // Always inject the capture listener (for thumbnail screenshots)
-  const result = injectCaptureScript(html);
+  // and the store client (for local crux store testing)
+  let result = injectCaptureScript(html);
+  result = injectStoreClient(result);
 
   if (!isWebApp) return result;
 
@@ -266,6 +268,49 @@ function injectCaptureScript(html: string): string {
       window.parent.postMessage({type:'crux:capture-error',error:e.message||'capture failed'},'*');
     }
   }
+})();
+</script>`;
+
+  if (html.includes('</head>')) {
+    return html.replace('</head>', `${script}\n</head>`);
+  }
+  if (html.includes('</body>')) {
+    return html.replace('</body>', `${script}\n</body>`);
+  }
+  return html + `\n${script}`;
+}
+
+/**
+ * Inject the crux.store client for local preview mode.
+ * All calls route back to the parent workspace via postMessage.
+ */
+function injectStoreClient(html: string): string {
+  const script = `<script data-crux-store>
+(function(){
+  if(window.crux&&window.crux.store)return;
+  window.crux=window.crux||{};
+  function localCall(type,payload){
+    return new Promise(function(res){
+      var id=Math.random().toString(36).slice(2);
+      var timeout=setTimeout(function(){window.removeEventListener('message',h);res(null);},5000);
+      function h(e){
+        if(e.data&&e.data.id===id&&e.data.type===type+':res'){
+          clearTimeout(timeout);
+          window.removeEventListener('message',h);
+          res(e.data.value!==undefined?e.data.value:e.data.keys||null);
+        }
+      }
+      window.addEventListener('message',h);
+      window.parent.postMessage(Object.assign({type:type,id:id},payload),'*');
+    });
+  }
+  window.crux.store={
+    get:function(key){return localCall('crux:store:get',{key:key});},
+    set:function(key,value){window.parent.postMessage({type:'crux:store:set',key:key,value:value},'*');return Promise.resolve();},
+    increment:function(key,by){return localCall('crux:store:inc',{key:key,by:by||1});},
+    delete:function(key){window.parent.postMessage({type:'crux:store:del',key:key},'*');return Promise.resolve();},
+    list:function(){return localCall('crux:store:list',{});}
+  };
 })();
 </script>`;
 

@@ -3,6 +3,7 @@ import type { IArtifactService } from './artifact.service';
 import type { IDimensionService } from './dimension.service';
 import type { IAuthorService } from './author.service';
 import type { IPublishService } from './publish.service';
+import type { IStoreService } from './sqlite/store.service';
 import { getSqliteClient } from './sqlite/client';
 import { initSettings } from './settings';
 
@@ -12,6 +13,7 @@ export interface Services {
   dimension: IDimensionService;
   author: IAuthorService;
   publish: IPublishService;
+  store: IStoreService;
 }
 
 export type Backend = 'local' | 'api';
@@ -41,6 +43,10 @@ export function initServices(backend?: Backend): Promise<Services> {
 async function doInitServices(backend?: Backend): Promise<Services> {
   const resolvedBackend = backend ?? (await getBackendSetting());
 
+  // Store service is always local SQLite (even in API backend mode — store is local-first)
+  const { SqliteStoreService } = await import('./sqlite/store.service');
+  const storeService = new SqliteStoreService();
+
   if (resolvedBackend === 'api') {
     const { ApiCruxService } = await import('./api/crux.service');
     const { ApiArtifactService } = await import('./api/artifact.service');
@@ -54,6 +60,7 @@ async function doInitServices(backend?: Backend): Promise<Services> {
       dimension: new ApiDimensionService(),
       author: new ApiAuthorService(),
       publish: new ApiPublishService(),
+      store: storeService,
     };
   } else {
     const { SqliteCruxService } = await import('./sqlite/crux.service');
@@ -68,6 +75,7 @@ async function doInitServices(backend?: Backend): Promise<Services> {
       dimension: new SqliteDimensionService(),
       author: new SqliteAuthorService(),
       publish: new ApiPublishService(), // always talks to API
+      store: storeService,
     };
   }
 
@@ -134,3 +142,4 @@ export type { IArtifactService } from './artifact.service';
 export type { IDimensionService } from './dimension.service';
 export type { IAuthorService } from './author.service';
 export type { IPublishService } from './publish.service';
+export type { IStoreService } from './sqlite/store.service';

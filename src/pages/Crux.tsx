@@ -25,6 +25,33 @@ export default function Crux() {
     };
   }, [id, loadCrux, reset, setActiveCrux]);
 
+  // Auto-open index.html in preview mode on first load (no saved tabs)
+  const autoOpenedRef = useRef(false);
+  useEffect(() => {
+    if (!crux || autoOpenedRef.current) return;
+    autoOpenedRef.current = true;
+
+    const { editor, openFile, setTabViewMode, setPaneVisible } = useUIStore.getState();
+    // Only auto-open if there are no restored tabs
+    if (editor.tabs.length > 0) return;
+
+    const index = artifacts.find((a) => {
+      const p = (a.meta?.path || a.filename || '').toLowerCase().replace(/^\//, '');
+      return p === 'index.html';
+    });
+    if (index) {
+      const path = (index.meta?.path || index.filename || 'index.html') as string;
+      openFile(index.id, path);
+      // Defer viewMode set so the tab exists first
+      requestAnimationFrame(() => {
+        setTabViewMode(index.id, 'preview');
+      });
+      // Ensure workshop pane is visible
+      const vis = useUIStore.getState().paneVisibility;
+      if (!vis.workshop) setPaneVisible('workshop', true);
+    }
+  }, [crux, artifacts]);
+
   // Auto-show artifact + workshop panes ONLY when the first artifact is
   // created during a live session (not on page load with existing artifacts).
   // We gate on `crux` so the ref isn't set until loadCrux resolves (which
@@ -32,6 +59,7 @@ export default function Crux() {
   const prevArtifactCount = useRef<number | null>(null);
   useEffect(() => {
     prevArtifactCount.current = null;
+    autoOpenedRef.current = false;
   }, [id]);
   useEffect(() => {
     if (!crux) return; // Don't track until the crux is loaded
