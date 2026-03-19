@@ -48,6 +48,7 @@ export function usePreviewUrl(
   const [swReady, setSwReady] = useState(false);
   const [artifactsCached, setArtifactsCached] = useState(false);
   const versionRef = useRef(0);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const artifactBlobsRef = useRef<PreviewFile[]>([]);
   const needsFullRecacheRef = useRef(true);
 
@@ -61,6 +62,12 @@ export function usePreviewUrl(
       cancelled = true;
     };
   }, []);
+
+  // Stable fingerprint of the artifact list — only re-download when files actually change
+  const artifactKey = useMemo(
+    () => artifacts.map((a) => `${a.id}:${a.fingerprint || a.updated}`).join(','),
+    [artifacts],
+  );
 
   // Effect 1: Download all non-HTML artifacts when the artifact list changes
   useEffect(() => {
@@ -104,7 +111,8 @@ export function usePreviewUrl(
     return () => {
       cancelled = true;
     };
-  }, [cruxId, filePath, enabled, artifacts, swReady]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps — artifactKey is a stable proxy for artifacts
+  }, [cruxId, filePath, enabled, artifactKey, swReady]);
 
   // Effect 2: Cache everything (initial) or just update HTML (subsequent changes)
   useEffect(() => {
@@ -123,7 +131,8 @@ export function usePreviewUrl(
     };
 
     (async () => {
-      if (needsFullRecacheRef.current) {
+      const wasFullRecache = needsFullRecacheRef.current;
+      if (wasFullRecache) {
         // Full re-cache: first render or supporting files changed (e.g. AI updated CSS/JS)
         await cachePreviewFiles(cruxId, [htmlFile, ...artifactBlobsRef.current]);
         needsFullRecacheRef.current = false;
@@ -134,11 +143,19 @@ export function usePreviewUrl(
       if (cancelled) return;
 
       versionRef.current += 1;
-      setUrl(getPreviewUrl(cruxId, filePath, versionRef.current));
+      const newUrl = getPreviewUrl(cruxId, filePath, versionRef.current);
+
+      // Debounce all URL updates to prevent flash during rapid changes.
+      // Full recache (AI wrote a file) gets a short delay; HTML-only edits get longer.
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+      debounceRef.current = setTimeout(() => {
+        if (!cancelled) setUrl(newUrl);
+      }, wasFullRecache ? 100 : 300);
     })();
 
     return () => {
       cancelled = true;
+      if (debounceRef.current) clearTimeout(debounceRef.current);
     };
   }, [html, cruxId, filePath, enabled, swReady, artifactsCached, isWebApp]);
 
