@@ -77,7 +77,16 @@ export const useMoodStore = create<MoodState>((set, get) => ({
   activeMoodId: null,
   activeMood: null,
   avatarUrl: null,
-  backgroundUrl: null,
+  backgroundUrl: (() => {
+    // Read from localStorage synchronously so first render has the right background
+    try {
+      const bgType = localStorage.getItem('cruxgarden:backgroundType');
+      if (bgType === 'image') {
+        return localStorage.getItem('cruxgarden:backgroundImage') || null;
+      }
+    } catch { /* SSR or no localStorage */ }
+    return null;
+  })(),
   moods: [],
   loaded: false,
 

@@ -12,6 +12,10 @@ import { migrateApiKeyFromLocalStorage } from '@/ai/keys';
 import { useAuthStore } from '@/stores/authStore';
 import { useMoodStore } from '@/stores/moodStore';
 
+// Apply mood palette at module load time — before first React render.
+// Reads from localStorage (synchronous), so no flash.
+applySavedMoodSettings();
+
 export default function AppShell() {
   const [commandOpen, setCommandOpen] = useState(false);
   const [servicesOk, setServicesOk] = useState(isServicesReady());
@@ -22,16 +26,28 @@ export default function AppShell() {
   useEffect(() => {
     if (servicesOk) return;
     (async () => {
+      const t0 = performance.now();
       await initServices();
+      console.log(`[init] initServices: ${(performance.now() - t0).toFixed(0)}ms`);
+      const t1 = performance.now();
       migrateApiKeyFromLocalStorage().catch(() => {});
       if (getBackend() === 'local' && !useAuthStore.getState().author) {
         const localAuthor = await ensureLocalAuthor();
         useAuthStore.setState({ author: localAuthor });
       }
+      console.log(`[init] ensureLocalAuthor: ${(performance.now() - t1).toFixed(0)}ms`);
+      const t2 = performance.now();
       useMoodStore.getState().loadMoods().catch(() => {});
-      applySavedMoodSettings();
       seedTutorialCrux().catch(() => {});
+      console.log(`[init] loadMoods+seed: ${(performance.now() - t2).toFixed(0)}ms`);
+      console.log(`[init] TOTAL: ${(performance.now() - t0).toFixed(0)}ms`);
       setServicesOk(true);
+      // Dismiss the HTML splash now that everything is ready
+      const splash = document.getElementById('splash');
+      if (splash) {
+        splash.style.opacity = '0';
+        setTimeout(() => splash.remove(), 300);
+      }
     })();
   }, [servicesOk]);
 
@@ -58,6 +74,7 @@ export default function AppShell() {
   return (
     <div className="flex flex-col h-screen overflow-hidden">
       <AnimatedBackground />
+
       {/* Top bar */}
       <div className="relative z-20 shrink-0">
         <TopBar />
