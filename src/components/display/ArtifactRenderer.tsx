@@ -112,6 +112,8 @@ function HtmlRenderer({
       ? new URL(`${PUBLISHED_CONTENT_URL}/${cruxId}/`).origin
       : window.location.origin;
 
+  const [iframeLoaded, setIframeLoaded] = useState(false);
+
   // Listen for navigation messages from the iframe and update the parent URL
   useEffect(() => {
     const basePath = `/${username}/${slug}`;
@@ -187,13 +189,21 @@ function HtmlRenderer({
       : `${PUBLISHED_CONTENT_URL}/${cruxId}/${entryPath}`;
 
     return (
-      <iframe
-        src={src}
-        sandbox="allow-scripts allow-same-origin allow-popups allow-modals"
-        allow="geolocation; camera; microphone; accelerometer; gyroscope; autoplay; fullscreen"
-        className="w-full h-full border-0 bg-contrast"
-        title="Published creation"
-      />
+      <div className="w-full h-full relative">
+        {!iframeLoaded && (
+          <div className="absolute inset-0 flex items-center justify-center bg-bg">
+            <div className="w-6 h-6 border-2 border-accent border-t-transparent rounded-full animate-spin" />
+          </div>
+        )}
+        <iframe
+          src={src}
+          sandbox="allow-scripts allow-same-origin allow-popups allow-modals"
+          allow="geolocation; camera; microphone; accelerometer; gyroscope; autoplay; fullscreen"
+          className={`w-full h-full border-0 transition-opacity duration-150 ${iframeLoaded ? 'opacity-100' : 'opacity-0'}`}
+          onLoad={() => setIframeLoaded(true)}
+          title="Published creation"
+        />
+      </div>
     );
   }
 
