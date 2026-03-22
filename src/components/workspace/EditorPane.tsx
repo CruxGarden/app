@@ -35,7 +35,9 @@ export default function EditorPane() {
   // Listen for capture completion to reset the capturing state
   useEffect(() => {
     if (!isCapturing) return;
+    const previewOrigin = import.meta.env.VITE_PREVIEW_ORIGIN || window.location.origin;
     function onMessage(e: MessageEvent) {
+      if (e.origin !== previewOrigin) return;
       if (e.data?.type === 'crux:capture-result' || e.data?.type === 'crux:capture-error') {
         setIsCapturing(false);
       }

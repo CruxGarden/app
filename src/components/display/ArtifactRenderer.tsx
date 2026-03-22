@@ -8,6 +8,9 @@ import MarkdownRenderer from '@/components/chat/MarkdownRenderer';
 import { getFileIcon } from '@/components/artifacts/fileIcons';
 import { LoadingPanel } from '@/components/ui';
 
+// Template for per-crux isolated subdomain: https://{cruxId}.publish.crux.garden
+const PUBLISH_ORIGIN_TEMPLATE = import.meta.env.VITE_PUBLISH_ORIGIN_TEMPLATE || '';
+// Legacy flat URL fallback (deprecated): https://publish.crux.garden
 const PUBLISHED_CONTENT_URL = import.meta.env.VITE_PUBLISHED_CONTENT_URL || '';
 
 /** Fetch a blob by artifact ID — defaults to publicApi if not provided */
@@ -17,7 +20,6 @@ interface ArtifactRendererProps {
   artifacts: Artifact[];
   username: string;
   slug: string;
-  authorId: string;
   cruxId: string;
   subPath?: string;
   downloadBlob?: DownloadBlobFn;
@@ -86,7 +88,6 @@ function resolveMain(artifacts: Artifact[]): MainFile | null {
 function HtmlRenderer({
   artifact,
   artifacts,
-  authorId,
   cruxId,
   username,
   slug,
@@ -95,19 +96,27 @@ function HtmlRenderer({
 }: {
   artifact: Artifact;
   artifacts: Artifact[];
-  authorId: string;
   cruxId: string;
   username: string;
   slug: string;
   subPath?: string;
   downloadBlob: DownloadBlobFn;
 }) {
-  // When S3 publishing is configured, use direct URL (origin-isolated, CDN-cached)
-  // S3 paths use authorId (immutable) rather than username (can change)
+  // Compute the expected iframe origin for postMessage validation.
+  // Per-crux subdomain: https://{cruxId}.publish.crux.garden
+  // Legacy flat URL: https://publish.crux.garden/{cruxId}/
+  // Local dev: same origin
+  const iframeOrigin = PUBLISH_ORIGIN_TEMPLATE
+    ? PUBLISH_ORIGIN_TEMPLATE.replace('{cruxId}', cruxId)
+    : PUBLISHED_CONTENT_URL
+      ? new URL(`${PUBLISHED_CONTENT_URL}/${cruxId}/`).origin
+      : window.location.origin;
+
   // Listen for navigation messages from the iframe and update the parent URL
   useEffect(() => {
     const basePath = `/${username}/${slug}`;
     const handler = (e: MessageEvent) => {
+      if (e.origin !== iframeOrigin) return;
       if (e.data?.type === 'crux:navigate' && typeof e.data.path === 'string') {
         const newPath = e.data.path === '/' ? basePath : `${basePath}${e.data.path}`;
         if (window.location.pathname !== newPath) {
@@ -117,7 +126,7 @@ function HtmlRenderer({
     };
     window.addEventListener('message', handler);
     return () => window.removeEventListener('message', handler);
-  }, [username, slug]);
+  }, [username, slug, iframeOrigin]);
 
   // Handshake: iframe sends crux:ready when the store client is initialized,
   // parent responds with crux:session containing auth + crux ID + API base.
@@ -138,20 +147,25 @@ function HtmlRenderer({
     }
 
     function handler(e: MessageEvent) {
+      if (e.origin !== iframeOrigin) return;
       if (e.data?.type === 'crux:ready' && e.source) {
-        (e.source as Window).postMessage(buildSession(), '*');
+        (e.source as Window).postMessage(buildSession(), iframeOrigin);
       }
     }
 
     window.addEventListener('message', handler);
     return () => window.removeEventListener('message', handler);
-  }, [cruxId]);
+  }, [cruxId, iframeOrigin]);
 
-  if (PUBLISHED_CONTENT_URL) {
+  if (PUBLISH_ORIGIN_TEMPLATE || PUBLISHED_CONTENT_URL) {
     // If a sub-path is provided (deep link), use it directly — CloudFront Function
     // will rewrite non-file paths to index.html for SPA support
     const entryPath = subPath || artifact.meta?.path || artifact.filename || 'index.html';
-    const src = `${PUBLISHED_CONTENT_URL}/${authorId}/${cruxId}/${entryPath}`;
+    // Per-crux subdomain: https://{cruxId}.publish.crux.garden/{entryPath}
+    // Legacy flat URL: https://publish.crux.garden/{cruxId}/{entryPath}
+    const src = PUBLISH_ORIGIN_TEMPLATE
+      ? `${PUBLISH_ORIGIN_TEMPLATE.replace('{cruxId}', cruxId)}/${entryPath}`
+      : `${PUBLISHED_CONTENT_URL}/${cruxId}/${entryPath}`;
 
     return (
       <iframe
@@ -349,7 +363,7 @@ function formatSize(bytes?: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-export default function ArtifactRenderer({ artifacts, username, slug, authorId, cruxId, subPath, downloadBlob }: ArtifactRendererProps) {
+export default function ArtifactRenderer({ artifacts, username, slug, cruxId, subPath, downloadBlob }: ArtifactRendererProps) {
   const main = useMemo(() => resolveMain(artifacts), [artifacts]);
 
   // Default download function uses publicApi
@@ -365,7 +379,6 @@ export default function ArtifactRenderer({ artifacts, username, slug, authorId, 
         <HtmlRenderer
           artifact={main.artifact}
           artifacts={artifacts}
-          authorId={authorId}
           cruxId={cruxId}
           username={username}
           slug={slug}

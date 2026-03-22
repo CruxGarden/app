@@ -1,6 +1,8 @@
 import { useEffect } from 'react';
 import { getServices, isServicesReady } from '@/services';
 
+const PREVIEW_ORIGIN = import.meta.env.VITE_PREVIEW_ORIGIN || window.location.origin;
+
 /**
  * Listens for crux:store:* postMessages from the preview iframe
  * and proxies them to the local SQLite store service.
@@ -12,10 +14,12 @@ export function useStoreProxy(cruxId: string | null) {
     if (!cruxId) return;
 
     function reply(source: MessageEventSource | null, type: string, id: string, data: Record<string, unknown>) {
-      source?.postMessage({ type, id, ...data }, { targetOrigin: '*' });
+      source?.postMessage({ type, id, ...data }, { targetOrigin: PREVIEW_ORIGIN });
     }
 
     function handleMessage(e: MessageEvent) {
+      // Only accept messages from the preview iframe origin
+      if (e.origin !== PREVIEW_ORIGIN) return;
       if (!e.data?.type?.startsWith('crux:store:')) return;
       if (!isServicesReady()) return;
 
@@ -30,7 +34,7 @@ export function useStoreProxy(cruxId: string | null) {
           break;
 
         case 'crux:store:set':
-          store.set(cruxId!, key, value, 'protected').catch(() => {});
+          store.set(cruxId!, key, value, 'public').catch(() => {});
           break;
 
         case 'crux:store:inc':
