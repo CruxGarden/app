@@ -100,8 +100,9 @@ interface AuthState {
   isAuthenticated: boolean;
   isLoading: boolean;
 
-  /** Initialize auth from stored tokens on app mount */
-  init: () => Promise<void>;
+  /** Initialize auth from stored tokens on app mount.
+   *  Pass { lightweight: true } on public pages to skip SQLite/services init. */
+  init: (opts?: { lightweight?: boolean }) => Promise<void>;
 
   /** Request email code */
   requestCode: (email: string) => Promise<void>;
@@ -134,14 +135,16 @@ export const useAuthStore = create<AuthState>((set) => ({
   isAuthenticated: false,
   isLoading: true,
 
-  init: async () => {
-    // Always load local author first (source of truth for avatar, etc.)
+  init: async (opts) => {
+    // Load local author unless lightweight mode (public pages skip SQLite)
     let localAuthor: Author | null = null;
-    try {
-      const { ensureLocalAuthor } = await import('@/services');
-      localAuthor = await ensureLocalAuthor();
-    } catch {
-      // Services not ready yet — will be set later
+    if (!opts?.lightweight) {
+      try {
+        const { ensureLocalAuthor } = await import('@/services');
+        localAuthor = await ensureLocalAuthor();
+      } catch {
+        // Services not ready yet — will be set later
+      }
     }
 
     const { accessToken, refreshToken } = getStoredTokens();

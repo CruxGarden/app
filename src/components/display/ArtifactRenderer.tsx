@@ -135,21 +135,40 @@ function HtmlRenderer({
     function buildSession() {
       const { accessToken } = getStoredTokens();
       const author = useAuthStore.getState().author;
+      const apiBase = import.meta.env.VITE_API_URL || '';
+      // Use local postMessage proxy when API is on localhost — browsers block
+      // public origins from fetching private/loopback addresses (Private Network Access).
+      const isLocalApi = apiBase.includes('localhost') || apiBase.includes('127.0.0.1');
       return {
         type: 'crux:session',
         token: accessToken ?? null,
-        mode: 'live',
+        mode: isLocalApi ? 'local' : 'live',
         cruxId,
-        apiBase: import.meta.env.VITE_API_URL || '',
+        apiBase,
         visitorId: author?.id ?? null,
         visitorName: author?.displayName ?? null,
       };
     }
 
+    function sendWhenReady(source: Window) {
+      // If auth is still initializing (token refresh in progress), wait for it
+      const { isLoading } = useAuthStore.getState();
+      if (isLoading) {
+        const unsub = useAuthStore.subscribe((state) => {
+          if (!state.isLoading) {
+            unsub();
+            source.postMessage(buildSession(), iframeOrigin);
+          }
+        });
+      } else {
+        source.postMessage(buildSession(), iframeOrigin);
+      }
+    }
+
     function handler(e: MessageEvent) {
       if (e.origin !== iframeOrigin) return;
       if (e.data?.type === 'crux:ready' && e.source) {
-        (e.source as Window).postMessage(buildSession(), iframeOrigin);
+        sendWhenReady(e.source as Window);
       }
     }
 
