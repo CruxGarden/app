@@ -134,7 +134,7 @@ async function init() {
       // Initialize OPFS blob storage + run migrations
       await migrate();
       return;
-    } catch (err) {
+    } catch {
       if (attempt === MAX_INIT_RETRIES - 1) {
         // All retries failed — fall back to in-memory database
         // This happens when another tab holds the OPFS lock

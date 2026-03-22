@@ -469,8 +469,8 @@ function CloudStep({ onBack }: { onBack: () => void }) {
 
       setStatus('Redirecting...');
       setTimeout(() => { window.location.href = '/home'; }, 400);
-    } catch (err: any) {
-      if (err?.response?.status === 404) {
+    } catch (err: unknown) {
+      if ((err as { response?: { status?: number } })?.response?.status === 404) {
         setNoCloud(true);
         setError('');
       } else {

@@ -693,14 +693,14 @@ export default function MoodEditorModal({ open, onClose, moodId }: MoodEditorMod
     }
   };
 
-  const handleClose = () => {
+  const handleClose = useCallback(() => {
     // Revert live preview changes — re-apply active mood or defaults
     import('@/stores/moodStore').then(({ useMoodStore }) => {
       const { activeMood, applyMood } = useMoodStore.getState();
       applyMood(activeMood);
     });
     onClose();
-  };
+  }, [onClose]);
 
   // Escape key
   useEffect(() => {
@@ -710,7 +710,7 @@ export default function MoodEditorModal({ open, onClose, moodId }: MoodEditorMod
     };
     document.addEventListener('keydown', handler);
     return () => document.removeEventListener('keydown', handler);
-  }, [open]);
+  }, [open, handleClose]);
 
   if (!open) return null;
 
