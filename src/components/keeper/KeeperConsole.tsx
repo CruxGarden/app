@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { cn } from '@/lib/cn';
 import type { ChatMessage } from '@/api/types';
 import { PROVIDERS, getProviderForModel } from '@/ai/providers';
@@ -204,7 +204,7 @@ export default function KeeperConsole({ open, onClose }: KeeperConsoleProps) {
   });
 
   const active = conversations.find((c) => c.id === activeId) ?? null;
-  const displayMessages = active?.messages ?? [];
+  const displayMessages = useMemo(() => active?.messages ?? [], [active?.messages]);
 
   const startNewConversation = useCallback(() => {
     const id = crypto.randomUUID();

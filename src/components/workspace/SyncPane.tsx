@@ -68,6 +68,7 @@ export default function SyncPane() {
       if (entry) setLastSynced({ at: entry.updatedAt, size: entry.size });
     }).catch(() => { /* non-critical */ });
     return () => { cancelled = true; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [crux?.id, isAuthenticated]);
 
   const handlePush = useCallback(async () => {
@@ -121,7 +122,7 @@ export default function SyncPane() {
       setTimeout(() => window.location.reload(), 800);
     } catch (err: unknown) {
       console.error('Crux pull failed:', err);
-      const status = (err as any)?.response?.status;
+      const status = (err as { response?: { status?: number } })?.response?.status;
       if (status === 404) {
         setError('No cloud version found for this crux');
       } else {

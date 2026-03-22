@@ -881,7 +881,6 @@ export default function NewCruxModal({ open, onClose }: NewCruxModalProps) {
   const [importProgress, setImportProgress] = useState({ done: 0, total: 0 });
 
 
-  // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
   const template = (TEMPLATES.find((t) => t.id === selectedTemplate) ?? TEMPLATES[0])!;
 
   const reset = () => {

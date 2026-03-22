@@ -4,7 +4,7 @@ import reactHooks from 'eslint-plugin-react-hooks';
 import reactRefresh from 'eslint-plugin-react-refresh';
 
 export default tseslint.config(
-  { ignores: ['dist', 'public', 'poc', 'preview-origin'] },
+  { ignores: ['dist', 'public', 'poc', 'preview-origin', 'electron/dist', 'scripts'] },
   js.configs.recommended,
   ...tseslint.configs.recommended,
   {
@@ -28,6 +28,24 @@ export default tseslint.config(
       // Practical relaxations
       '@typescript-eslint/no-explicit-any': 'warn',
       '@typescript-eslint/no-empty-object-type': 'off',
+    },
+  },
+  {
+    files: [
+      'src/components/mood/MoodEditorPanel.tsx',
+      'src/components/ui/PixelGrid.tsx',
+      'src/components/ui/ProviderIcons.tsx',
+    ],
+    rules: {
+      'react-refresh/only-export-components': 'off',
+    },
+  },
+  {
+    files: ['electron/src/**/*.ts'],
+    rules: {
+      '@typescript-eslint/no-require-imports': 'off',
+      '@typescript-eslint/no-explicit-any': 'off',
+      'no-empty': 'off',
     },
   },
 );

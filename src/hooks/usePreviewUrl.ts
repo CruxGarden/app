@@ -111,7 +111,7 @@ export function usePreviewUrl(
     return () => {
       cancelled = true;
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps — artifactKey is a stable proxy for artifacts
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cruxId, filePath, enabled, artifactKey, swReady]);
 
   // Effect 2: Cache everything (initial) or just update HTML (subsequent changes)

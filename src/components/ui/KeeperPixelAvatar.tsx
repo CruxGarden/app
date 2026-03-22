@@ -265,7 +265,7 @@ function AnimatedCanvas({ basePixels, size, scale, className, gridLines, variant
 
       rafRef.current = requestAnimationFrame(drawFrame);
     },
-    [basePixels, size, scale, gridLines],
+    [basePixels, size, scale, gridLines, variant],
   );
 
   useEffect(() => {

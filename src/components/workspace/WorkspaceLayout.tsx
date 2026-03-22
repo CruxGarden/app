@@ -22,6 +22,17 @@ import { useAuthStore } from '@/stores/authStore';
 import { getDownloadUrl } from '@/api/public';
 import 'react-mosaic-component/react-mosaic-component.css';
 
+// ── Media transcoding constants ──────────────────────────
+
+const STREAMING_MEDIA_TYPES = new Set([
+  'video/mp4', 'video/webm', 'video/quicktime', 'video/x-msvideo', 'video/x-matroska',
+  'video/mpeg', 'video/ogg', 'video/3gpp',
+  'audio/mpeg', 'audio/wav', 'audio/ogg', 'audio/flac', 'audio/aac',
+  'audio/x-m4a', 'audio/mp4', 'audio/webm',
+]);
+
+const STREAMING_READY = new Set(['video/mp4', 'video/webm', 'audio/mp4', 'audio/webm', 'audio/aac']);
+
 // ── Pane component registry ─────────────────────────────
 
 const PANE_COMPONENTS: Record<PaneType, React.ComponentType> = {
@@ -246,15 +257,6 @@ export default function WorkspaceLayout() {
     }
   };
 
-  // Media file detection for transcode context menu
-  const STREAMING_MEDIA_TYPES = new Set([
-    'video/mp4', 'video/webm', 'video/quicktime', 'video/x-msvideo', 'video/x-matroska',
-    'video/mpeg', 'video/ogg', 'video/3gpp',
-    'audio/mpeg', 'audio/wav', 'audio/ogg', 'audio/flac', 'audio/aac',
-    'audio/x-m4a', 'audio/mp4', 'audio/webm',
-  ]);
-  // Already streaming-friendly formats don't need transcoding
-  const STREAMING_READY = new Set(['video/mp4', 'video/webm', 'audio/mp4', 'audio/webm', 'audio/aac']);
 
   const isMediaFile = useCallback((id: string) => {
     const artifact = artifacts.find((a) => a.id === id);
@@ -267,11 +269,13 @@ export default function WorkspaceLayout() {
     return STREAMING_MEDIA_TYPES.has(mime);
   }, [artifacts]);
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const ffmpegAvailable = !!(window as any).electronAPI?.ffmpeg;
 
   const handleTranscode = useCallback(async (id: string) => {
     const artifact = artifacts.find((a) => a.id === id);
     if (!artifact?.fingerprint) return;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const electronAPI = (window as any).electronAPI;
     if (!electronAPI?.ffmpeg) return;
 

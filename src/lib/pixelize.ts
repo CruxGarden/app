@@ -123,7 +123,7 @@ function medianCut(
 
   // Recursive subdivision
   type Bucket = typeof uniqueColors;
-  let buckets: Bucket[] = [uniqueColors];
+  const buckets: Bucket[] = [uniqueColors];
 
   while (buckets.length < maxColors) {
     // Find the bucket with the widest range
