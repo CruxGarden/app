@@ -87,7 +87,7 @@ export interface Crux {
   updated: string;
 }
 
-export type CruxKind = 'webapp' | 'page' | 'document' | 'image' | 'snapshot';
+export type CruxKind = 'webapp' | 'page' | 'document' | 'image' | 'snapshot' | 'notes';
 
 export interface CreateCruxDto {
   id?: string;

@@ -5,6 +5,7 @@ import { MosaicWithoutDragDropContext, MosaicWindow } from 'react-mosaic-compone
 import type { MosaicBranch, MosaicNode } from 'react-mosaic-component';
 import { useUIStore, type PaneType } from '@/stores/uiStore';
 import { useStoreProxy } from '@/hooks/useStoreProxy';
+import { useNotesManifest } from '@/hooks/useNotesManifest';
 
 const HistoryPane = lazy(() => import('./HistoryPane'));
 const ChatPane = lazy(() => import('./ChatPane'));
@@ -183,6 +184,9 @@ export default function WorkspaceLayout() {
 
   // Proxy crux:store:* postMessages from preview iframe to local SQLite
   useStoreProxy(crux?.id ?? null);
+
+  // Auto-generate manifest.json for notes-type cruxes
+  useNotesManifest();
 
   // Context menu handlers
   const handleNewFile = (parentPath: string) => {

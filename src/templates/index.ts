@@ -150,6 +150,7 @@ const loaders: Record<string, () => Promise<{ default: TemplateDefinition }>> = 
   geocities: () => import('./geocities'),
   petrock: () => import('./petrock'),
   board: () => import('./board'),
+  vault: () => import('./vault'),
 };
 
 export async function loadTemplate(id: string): Promise<TemplateDefinition | null> {
