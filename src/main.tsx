@@ -39,6 +39,10 @@ function Bootstrap() {
       // Non-app routes don't go through AppShell, so dismiss splash here.
       // App routes (/home, /c/, /settings) dismiss splash in AppShell after services init.
       if (!isAppRoute()) dismissSplash();
+      // Public routes: init auth in background (non-blocking) so tokens
+      // get refreshed and crux:session handshake has a valid token.
+      // Lightweight mode skips SQLite/services init.
+      if (isPublicRoute()) init({ lightweight: true }).catch(() => {});
       return;
     }
     init().then(() => setReady(true));

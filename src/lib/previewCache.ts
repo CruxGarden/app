@@ -306,7 +306,7 @@ function injectStoreClient(html: string): string {
   }
   window.crux.store={
     get:function(key){return localCall('crux:store:get',{key:key});},
-    set:function(key,value){window.parent.postMessage({type:'crux:store:set',key:key,value:value},'*');return Promise.resolve();},
+    set:function(key,value,opts){var m=(opts&&opts.mode)||'protected';window.parent.postMessage({type:'crux:store:set',key:key,value:value,mode:m},'*');return Promise.resolve();},
     increment:function(key,by){return localCall('crux:store:inc',{key:key,by:by||1});},
     delete:function(key){window.parent.postMessage({type:'crux:store:del',key:key},'*');return Promise.resolve();},
     list:function(){return localCall('crux:store:list',{});}

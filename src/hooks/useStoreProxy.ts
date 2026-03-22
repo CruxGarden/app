@@ -24,7 +24,7 @@ export function useStoreProxy(cruxId: string | null) {
       if (!isServicesReady()) return;
 
       const { store } = getServices();
-      const { type, id, key, value, by } = e.data;
+      const { type, id, key, value, by, mode } = e.data;
 
       switch (type) {
         case 'crux:store:get':
@@ -34,7 +34,7 @@ export function useStoreProxy(cruxId: string | null) {
           break;
 
         case 'crux:store:set':
-          store.set(cruxId!, key, value, 'public').catch(() => {});
+          store.set(cruxId!, key, value, mode || 'protected').catch(() => {});
           break;
 
         case 'crux:store:inc':
