@@ -306,6 +306,17 @@ function RockIcon() {
   );
 }
 
+function VaultIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+      <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
+      <path d="M8 7h8" />
+      <path d="M8 11h6" />
+    </svg>
+  );
+}
+
 function ImportIcon() {
   return (
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
@@ -695,6 +706,37 @@ function BoardThumb() {
   );
 }
 
+function VaultThumb() {
+  return (
+    <div style={{ ...T.wrap, background: '#111', ...T.pad(4) }}>
+      <div style={{ display: 'flex', gap: 3, height: '100%' }}>
+        {/* Sidebar */}
+        <div style={{ width: '30%', ...T.col(2), background: '#161616', borderRadius: 2, padding: 3 }}>
+          <div style={T.line('80%', 1.5, '#333')} />
+          <div style={{ marginLeft: 4, ...T.col(1.5) }}>
+            <div style={T.line('70%', 1, '#2a2a2a')} />
+            <div style={T.line('60%', 1, '#2a2a2a')} />
+          </div>
+          <div style={T.line('80%', 1.5, '#333')} />
+          <div style={{ marginLeft: 4, ...T.col(1.5) }}>
+            <div style={T.line('50%', 1, '#2a2a2a')} />
+          </div>
+        </div>
+        {/* Content */}
+        <div style={{ flex: 1, ...T.col(3), padding: 3 }}>
+          <div style={T.bar('60%', 3, '#7db3a3')} />
+          <div style={T.line('90%', 1.5, '#2a2a2a')} />
+          <div style={T.line('80%', 1.5, '#2a2a2a')} />
+          <div style={T.line('85%', 1.5, '#2a2a2a')} />
+          <div style={{ height: 2 }} />
+          <div style={T.bar('45%', 2, '#555')} />
+          <div style={T.line('70%', 1.5, '#2a2a2a')} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function RansomThumb() {
   return (
     <div style={{ ...T.wrap, background: '#e8d5a3', ...T.pad(6) }}>
@@ -849,6 +891,7 @@ const TEMPLATES: Template[] = [
   { id: 'tutorial', label: 'Tutorial', description: 'Step-by-step how-to guide', icon: <TutorialIcon />, thumb: <TutorialThumb />, kind: 'webapp', defaultTitle: 'How To' },
   { id: 'slides', label: 'Slide Deck', description: 'Web-based presentation', icon: <SlidesIcon />, thumb: <SlidesThumb />, kind: 'webapp', defaultTitle: 'My Presentation' },
   { id: 'game', label: 'Game', description: 'Interactive web game', icon: <GamepadIcon />, thumb: <GameThumb />, kind: 'webapp', defaultTitle: 'My Game' },
+  { id: 'vault', label: 'Vault', description: 'Markdown notes as a website', icon: <VaultIcon />, thumb: <VaultThumb />, kind: 'notes', defaultTitle: 'My Vault' },
   { id: 'board', label: 'The Board', description: 'Collaborative canvas with Crux Store', icon: <BoardIcon />, thumb: <BoardThumb />, kind: 'webapp', defaultTitle: 'Tutorial - The Board' },
   // ── Silly / Fun / Weird ──
   { id: 'ransom', label: 'Ransom Note', description: 'Cut-out magazine letter message', icon: <ScissorsIcon />, thumb: <RansomThumb />, kind: 'page', defaultTitle: 'A Message' },
