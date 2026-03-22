@@ -200,7 +200,10 @@ export default function EditorContent({ tab, artifact, cruxId, saveRef, captureR
     const iframe = previewIframeRef.current;
     if (!iframe?.contentWindow) return;
 
+    const previewOrigin = import.meta.env.VITE_PREVIEW_ORIGIN || window.location.origin;
+
     function onMessage(e: MessageEvent) {
+      if (e.origin !== previewOrigin) return;
       if (!e.data) return;
       if (e.data.type === 'crux:capture-result') {
         window.removeEventListener('message', onMessage);
@@ -214,7 +217,7 @@ export default function EditorContent({ tab, artifact, cruxId, saveRef, captureR
 
     window.addEventListener('message', onMessage);
     setTimeout(() => window.removeEventListener('message', onMessage), 10000);
-    iframe.contentWindow.postMessage({ type: 'crux:capture' }, '*');
+    iframe.contentWindow.postMessage({ type: 'crux:capture' }, previewOrigin);
   }, [savePreviewBlob]);
 
   // Image capture — scale image to canvas, export as JPEG

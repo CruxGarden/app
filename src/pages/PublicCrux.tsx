@@ -107,7 +107,7 @@ export default function PublicCrux() {
 
       <div className="flex-1 min-h-0 relative z-10 flex">
         <div className={`flex-1 min-w-0 ${metadataOpen ? 'hidden sm:block' : ''}`}>
-          <ArtifactRenderer artifacts={artifacts} username={username || ''} slug={slug || ''} authorId={crux?.authorId || ''} cruxId={crux?.id || ''} subPath={subPath} downloadBlob={downloadBlob} />
+          <ArtifactRenderer artifacts={artifacts} username={username || ''} slug={slug || ''} cruxId={crux?.id || ''} subPath={subPath} downloadBlob={downloadBlob} />
         </div>
 
         {metadataOpen && crux && (
