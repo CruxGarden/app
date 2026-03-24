@@ -47,7 +47,7 @@ function Bootstrap() {
       return;
     }
     init().then(() => setReady(true));
-  }, [init, ready]);
+  }, [init, ready, publicRoute]);
 
   if (!ready) return null;
   return <App />;
