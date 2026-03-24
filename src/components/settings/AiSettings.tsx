@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Panel, ApiKeySetup, Toggle } from '@/components/ui';
 import { getSetting, setSetting } from '@/services/settings';
 import { SettingsKey } from '@/lib/constants';
+import { useUIStore } from '@/stores/uiStore';
 import { cn } from '@/lib/cn';
 
 export default function AiSettings() {
@@ -11,6 +12,7 @@ export default function AiSettings() {
   const handleAiToggle = (enabled: boolean) => {
     setAiEnabled(enabled);
     setSetting(SettingsKey.AiEnabled, enabled ? 'true' : 'false');
+    useUIStore.getState().setAiEnabled(enabled);
   };
 
   return (

@@ -8,7 +8,7 @@ import MarkdownRenderer from '@/components/chat/MarkdownRenderer';
 import ModelSelector from '@/components/chat/ModelSelector';
 import KeeperPixelAvatar from '@/components/ui/KeeperPixelAvatar';
 import type { KeeperVariant } from '@/components/ui/KeeperPixelAvatar';
-import { resolveAvatarUrl } from '@/stores/authStore';
+import { useAvatarUrl } from '@/hooks/useAvatarUrl';
 import { useAppStore } from '@/stores/appStore';
 import { useThemeStore } from '@/stores/themeStore';
 import { getApiKey } from '@/ai/keys';
@@ -165,7 +165,7 @@ interface KeeperConsoleProps {
 
 function UserAvatar() {
   const author = useAppStore((s) => s.author);
-  const avatarUrl = resolveAvatarUrl(author);
+  const avatarUrl = useAvatarUrl(author);
   const initial = author?.username?.charAt(0)?.toUpperCase() ?? '?';
 
   return (
@@ -399,7 +399,7 @@ export default function KeeperConsole({ open, onClose }: KeeperConsoleProps) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center">
-      <div className="absolute inset-0 bg-overlay" onClick={onClose} />
+      <div className="absolute inset-0 bg-overlay/80 backdrop-blur-sm" onClick={onClose} />
 
       <div
         className={cn(

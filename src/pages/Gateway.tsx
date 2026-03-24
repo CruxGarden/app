@@ -1,17 +1,17 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Panel, Spinner, Button, IconButton, ApiKeySetup, Toggle } from '@/components/ui';
 import { PlusCircleIcon, CloudIcon, FileUploadIcon, SproutIcon, ArrowLeftIcon } from '@/components/ui/icons';
 import ConnectAccount from '@/components/auth/ConnectAccount';
 import AvatarUpload from '@/components/auth/AvatarUpload';
-import { APP_NAME } from '@/lib/constants';
+import { APP_NAME, SettingsKey } from '@/lib/constants';
 import { initServices, isServicesReady } from '@/services';
 import { PROVIDERS } from '@/ai/providers';
 import { getApiKey } from '@/ai/keys';
 import { getSetting, setSetting } from '@/services/settings';
-import { SettingsKey } from '@/lib/constants';
 import { useAuthStore } from '@/stores/authStore';
 import { useAppStore } from '@/stores/appStore';
+import { useUIStore } from '@/stores/uiStore';
 import { importGarden } from '@/services/garden-io';
 import * as syncApi from '@/api/sync';
 import { cn } from '@/lib/cn';
@@ -25,7 +25,6 @@ enum Step {
   Setup = 'setup',
   Cloud = 'cloud',
   Import = 'import',
-  Creating = 'creating',
 }
 
 // ── Main Component ─────────────────────────────────────
@@ -48,7 +47,6 @@ export default function Gateway() {
         {step === Step.Setup && <SetupStep onBack={() => setStep(Step.Choose)} />}
         {step === Step.Cloud && <CloudStep onBack={() => setStep(Step.Choose)} />}
         {step === Step.Import && <ImportStep onBack={() => setStep(Step.Choose)} />}
-        {step === Step.Creating && <CreatingStep />}
       </div>
     </div>
   );
@@ -116,20 +114,20 @@ function ChooseStep({ onChoice }: { onChoice: (s: Step) => void }) {
       <div className="flex flex-col gap-3">
         <OptionCard
           icon={<SproutIcon size={28} />}
-          title="Start a new garden"
+          title="Plant a new garden"
           description="Begin fresh with an empty workspace"
           onClick={() => onChoice(Step.Setup)}
         />
         <OptionCard
           icon={<CloudIcon size={28} />}
-          title="Sign in & pull from cloud"
+          title="Log in and restore from crux.garden"
           description="Connect your account and restore your garden"
           onClick={() => onChoice(Step.Cloud)}
         />
         <OptionCard
           icon={<FileUploadIcon size={28} />}
-          title="Import from file"
-          description="Restore from a .garden backup file"
+          title="Restore from .garden file"
+          description="Import a backup file and restore your garden"
           onClick={() => onChoice(Step.Import)}
         />
       </div>
@@ -194,6 +192,7 @@ function SetupStep({ onBack }: { onBack: () => void }) {
   const handleAiToggle = (enabled: boolean) => {
     setAiEnabled(enabled);
     setSetting(SettingsKey.AiEnabled, enabled ? 'true' : 'false');
+    useUIStore.getState().setAiEnabled(enabled);
   };
 
   const checkApiKeys = async () => {
@@ -206,14 +205,52 @@ function SetupStep({ onBack }: { onBack: () => void }) {
   const toggle = (section: SetupSection) =>
     setOpenSection((prev) => (prev === section ? null : section));
 
-  // Validate username against the API when connected
+  // Inline format validation (runs on every keystroke)
+  const validateFormat = (name: string): string => {
+    if (!name) return '';
+    if (name.length < 3) return 'At least 3 characters';
+    if (!/^[a-zA-Z0-9_-]+$/.test(name)) return 'Letters, numbers, hyphens, underscores only';
+    return '';
+  };
+
+  // Debounced API availability check
+  const debounceRef = useRef<ReturnType<typeof setTimeout>>(null);
+  const checkAvailability = (name: string) => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    if (!name || name.length < 3 || !isAuthenticated) return;
+    debounceRef.current = setTimeout(async () => {
+      try {
+        const { authors } = await import('@/api');
+        const { available } = await authors.checkUsername(name.toLowerCase());
+        // Only set error if the username hasn't changed since the check started
+        if (useAppStore.getState().author?.username !== name) {
+          setUsernameError((prev) => prev || (available ? '' : 'Username is taken at crux.garden'));
+        }
+        if (!available) setUsernameError('Username is taken at crux.garden');
+      } catch { /* API unavailable — skip check */ }
+    }, 400);
+  };
+
+  const handleUsernameChange = (value: string) => {
+    setUsername(value);
+    const formatError = validateFormat(value.trim());
+    setUsernameError(formatError);
+    if (!formatError) checkAvailability(value.trim());
+  };
+
+  // Cleanup debounce timer
+  useEffect(() => () => { if (debounceRef.current) clearTimeout(debounceRef.current); }, []);
+
+  // Validate username against the API when connected (used by handleFinish)
   const validateUsername = async (name: string): Promise<boolean> => {
-    if (!name || !isAuthenticated) return true;
+    const formatError = validateFormat(name);
+    if (formatError) { setUsernameError(formatError); setOpenSection(SetupSection.Username); return false; }
+    if (!isAuthenticated) return true;
     try {
       const { authors } = await import('@/api');
       const { available } = await authors.checkUsername(name.toLowerCase());
       if (!available) {
-        setUsernameError('Username is taken');
+        setUsernameError('Username is taken at crux.garden');
         setOpenSection(SetupSection.Username);
         return false;
       }
@@ -223,26 +260,15 @@ function SetupStep({ onBack }: { onBack: () => void }) {
 
   const handleFinish = async () => {
     const trimmed = username.trim();
-    if (trimmed && trimmed.length < 3) {
-      setUsernameError('At least 3 characters');
-      setOpenSection(SetupSection.Username);
-      return;
-    }
-    if (trimmed && !/^[a-zA-Z0-9_-]+$/.test(trimmed)) {
-      setUsernameError('Letters, numbers, hyphens, underscores only');
-      setOpenSection(SetupSection.Username);
-      return;
-    }
 
     setSaving(true);
     try {
-      // Validate against API if connected
+      // Final validation (format + API availability)
       if (!(await validateUsername(trimmed))) {
         setSaving(false);
         return;
       }
 
-      if (!isServicesReady()) await initServices();
       await useAppStore.getState().ensureAuthor();
 
       if (trimmed) {
@@ -270,17 +296,16 @@ function SetupStep({ onBack }: { onBack: () => void }) {
           open={openSection === SetupSection.Username}
           onToggle={() => toggle(SetupSection.Username)}
           summary={username || 'Required'}
-          completed={!!username}
-          required={!username}
+          completed={!!username && !usernameError}
+          required={!username || !!usernameError}
         />
         {openSection === SetupSection.Username && (
           <div className="pt-3 pb-4 px-1">
             <input
               type="text"
               value={username}
-              onChange={(e) => { setUsername(e.target.value); setUsernameError(''); }}
+              onChange={(e) => handleUsernameChange(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleFinish()}
-              onBlur={() => { if (username.trim()) validateUsername(username.trim()); }}
               placeholder="wanderer"
               disabled={saving}
               className={cn(
@@ -300,8 +325,8 @@ function SetupStep({ onBack }: { onBack: () => void }) {
           label="Upload Avatar"
           open={openSection === SetupSection.Avatar}
           onToggle={() => toggle(SetupSection.Avatar)}
-          summary={author?.meta?.avatarUrl ? 'Uploaded' : 'Optional'}
-          completed={!!author?.meta?.avatarUrl}
+          summary={author?.meta?.avatarFingerprint ? 'Uploaded' : 'Optional'}
+          completed={!!author?.meta?.avatarFingerprint}
         />
         {openSection === SetupSection.Avatar && (
           <div className="pt-3 pb-4 px-1">
@@ -325,7 +350,7 @@ function SetupStep({ onBack }: { onBack: () => void }) {
             {aiEnabled && (
               <div className="mt-3">
                 <p className="text-xs text-text-muted mb-3">
-                  Add your own API key to start creating with AI. Keys stay in your browser
+                  Add one or more API keys to build with AI agents. Keys stay in your browser
                 </p>
                 <ApiKeySetup compact autoFocus onKeyChange={checkApiKeys} />
               </div>
@@ -347,6 +372,10 @@ function SetupStep({ onBack }: { onBack: () => void }) {
               compact
               autoFocus
               description="Enables storage, sync, and share features"
+              onDisconnected={() => {
+                // Clear API-specific errors — username is only local now
+                if (usernameError.includes('crux.garden')) setUsernameError('');
+              }}
               onConnected={async () => {
                 const apiAuthor = useAppStore.getState().author;
                 if (!apiAuthor) return;
@@ -358,9 +387,18 @@ function SetupStep({ onBack }: { onBack: () => void }) {
                   return;
                 }
 
-                // New account — validate the locally chosen username
-                if (username.trim()) {
-                  await validateUsername(username.trim());
+                // New account — validate the locally chosen username against the API
+                // Read isAuthenticated directly from store since the closure value may be stale
+                const trimmed = username.trim();
+                if (trimmed && useAuthStore.getState().isAuthenticated) {
+                  try {
+                    const { authors } = await import('@/api');
+                    const { available } = await authors.checkUsername(trimmed.toLowerCase());
+                    if (!available) {
+                      setUsernameError('Username is taken at crux.garden');
+                      setOpenSection(SetupSection.Username);
+                    }
+                  } catch { /* API unavailable */ }
                 }
               }}
             />
@@ -431,6 +469,7 @@ function AccordionHeader({
 
 function CloudStep({ onBack }: { onBack: () => void }) {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const email = useAuthStore((s) => s.account?.email);
   const [pulling, setPulling] = useState(false);
   const [noCloud, setNoCloud] = useState(false);
   const [error, setError] = useState('');
@@ -464,17 +503,17 @@ function CloudStep({ onBack }: { onBack: () => void }) {
     <Panel padding="lg" className="w-full animate-in fade-in slide-in-from-bottom-2 duration-300">
       <BackButton onClick={onBack} disabled={pulling} />
 
-      <h2 className="font-display text-sm font-medium text-accent mb-4">Sign in to your account</h2>
+      <h2 className="font-display text-sm font-medium text-accent mb-4">Log in to your account</h2>
 
       {!isAuthenticated ? (
-        <ConnectAccount description="Connect to pull your garden from the cloud." />
+        <ConnectAccount description="Connect to restore your garden from crux.garden" />
       ) : noCloud ? (
         <div className="flex flex-col gap-4">
           <p className="text-sm text-text-muted">
-            Connected as <span className="font-mono text-text">{useAuthStore.getState().account?.email}</span>
+            Connected — <span className="font-mono text-text">{email}</span>
           </p>
           <p className="text-sm text-text-muted">
-            No garden found in the cloud. You may need to push from another device first.
+            No garden backup found at crux.garden. You may need to push from another device first
           </p>
           <Button variant="secondary" onClick={onBack} fullWidth>
             Back to options
@@ -483,10 +522,10 @@ function CloudStep({ onBack }: { onBack: () => void }) {
       ) : (
         <div className="flex flex-col gap-4">
           <p className="text-sm text-text-muted">
-            Connected as <span className="font-mono text-text">{useAuthStore.getState().account?.email}</span>
+            Connected — <span className="font-mono text-text">{email}</span>
           </p>
           <Button onClick={handlePull} loading={pulling} fullWidth>
-            Pull garden from cloud
+            Restore garden
           </Button>
         </div>
       )}
@@ -513,7 +552,6 @@ function ImportStep({ onBack }: { onBack: () => void }) {
     setError('');
     setStatus('Importing garden...');
     try {
-      if (!isServicesReady()) await initServices();
       await importGarden({ data: file, onProgress: setStatus });
       await useAppStore.getState().ensureAuthor();
 
@@ -535,6 +573,10 @@ function ImportStep({ onBack }: { onBack: () => void }) {
     setDragOver(false);
     const file = e.dataTransfer.files[0];
     if (file) {
+      if (!file.name.endsWith('.garden')) {
+        setError('Please drop a .garden file');
+        return;
+      }
       const dt = new DataTransfer();
       dt.items.add(file);
       if (fileRef.current) {
@@ -548,7 +590,7 @@ function ImportStep({ onBack }: { onBack: () => void }) {
     <Panel padding="lg" className="w-full animate-in fade-in slide-in-from-bottom-2 duration-300">
       <BackButton onClick={onBack} disabled={importing} />
 
-      <h2 className="font-display text-sm font-medium text-accent mb-4">Import from file</h2>
+      <h2 className="font-display text-sm font-medium text-accent mb-4">Restore from .garden file</h2>
 
       <div
         onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
@@ -584,19 +626,6 @@ function ImportStep({ onBack }: { onBack: () => void }) {
 
       {status && <p className="text-xs font-mono text-text-muted mt-3">{status}</p>}
       {error && <p className="text-xs text-error mt-3">{error}</p>}
-    </Panel>
-  );
-}
-
-// ── Step: Creating (brief transition) ──────────────────
-
-function CreatingStep() {
-  return (
-    <Panel padding="lg" className="w-full animate-in fade-in slide-in-from-bottom-2 duration-300">
-      <div className="flex items-center justify-center gap-3 py-4">
-        <Spinner size={16} />
-        <span className="text-sm text-text-muted">Preparing your garden...</span>
-      </div>
     </Panel>
   );
 }

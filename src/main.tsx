@@ -5,11 +5,6 @@ import { useAppStore } from '@/stores/appStore';
 import App from './App';
 import './styles/globals.css';
 
-function isAppRoute(): boolean {
-  const path = window.location.pathname;
-  return path.startsWith('/home') || path.startsWith('/c/') || path.startsWith('/settings');
-}
-
 function isPublicRoute(): boolean {
   const path = window.location.pathname;
   // Gateway (/) renders immediately — it handles its own init via handleEnter
@@ -37,9 +32,10 @@ function Bootstrap() {
 
   useEffect(() => {
     if (ready) {
-      // Non-app routes don't go through Shell, so dismiss splash here.
-      // App routes (/home, /c/, /settings) dismiss splash in Shell after services init.
-      if (!isAppRoute()) dismissSplash();
+      // Dismiss splash once the app is ready to render.
+      // Shell may also dismiss it after its own init, but this ensures
+      // it's removed even if Shell's init encounters issues.
+      dismissSplash();
       // Public routes: init auth in background (non-blocking) so tokens
       // get refreshed and crux:session handshake has a valid token.
       // Lightweight mode skips SQLite/services init.

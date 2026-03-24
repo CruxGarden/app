@@ -14,6 +14,8 @@ interface ConnectAccountProps {
   description?: string;
   /** Called after a successful connection */
   onConnected?: () => void;
+  /** Called after disconnecting */
+  onDisconnected?: () => void;
   /** Compact mode — no description, tighter spacing */
   compact?: boolean;
   /** Auto-focus the email input on mount */
@@ -24,7 +26,7 @@ interface ConnectAccountProps {
  * Reusable email + code connect form.
  * Used in Settings, PublishPane, SyncPane, and anywhere auth is needed inline.
  */
-export default function ConnectAccount({ description, onConnected, compact, autoFocus }: ConnectAccountProps) {
+export default function ConnectAccount({ description, onConnected, onDisconnected, compact, autoFocus }: ConnectAccountProps) {
   const { isAuthenticated, account, connectAccount, disconnectAccount } = useAuthStore();
 
   const [email, setEmail] = useState('');
@@ -71,6 +73,7 @@ export default function ConnectAccount({ description, onConnected, compact, auto
     setConnecting(true);
     try {
       await disconnectAccount();
+      onDisconnected?.();
     } finally {
       setConnecting(false);
     }
@@ -80,7 +83,7 @@ export default function ConnectAccount({ description, onConnected, compact, auto
     return (
       <div className="flex items-center justify-between gap-3">
         <p className="text-xs text-text-muted">
-          Connected <span className="text-text font-mono ml-1">{account?.email}</span>
+          Connected — <span className="text-text font-mono ml-1">{account?.email}</span>
         </p>
         <button
           onClick={handleDisconnect}

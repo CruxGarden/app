@@ -7,6 +7,7 @@ import { clearAllSettings } from './settings';
 
 const SUPPORTED_MANIFEST_MAJOR = '1';
 
+
 // ── Types ───────────────────────────────────────────────
 
 export interface GardenExportOptions {
@@ -84,9 +85,13 @@ export async function exportGarden(options: GardenExportOptions = {}): Promise<G
   );
   const cruxCount = cruxCountRow?.count ?? 0;
 
-  // Get unique fingerprints from all artifacts
+  // Get unique fingerprints from all artifacts + author avatars
   const fingerprintRows = await db.all<{ fingerprint: string }>(
-    'SELECT DISTINCT fingerprint FROM artifacts WHERE fingerprint IS NOT NULL',
+    `SELECT DISTINCT fingerprint FROM artifacts WHERE fingerprint IS NOT NULL
+     UNION
+     SELECT DISTINCT json_extract(meta, '$.avatarFingerprint') AS fingerprint
+     FROM authors
+     WHERE json_extract(meta, '$.avatarFingerprint') IS NOT NULL`,
   );
 
   const zip = new JSZip();
@@ -238,7 +243,11 @@ export async function importGarden(options: GardenImportOptions): Promise<Garden
   try {
     backupSqlite = await db.export();
     const fpRows = await db.all<{ fingerprint: string }>(
-      'SELECT DISTINCT fingerprint FROM artifacts WHERE fingerprint IS NOT NULL',
+      `SELECT DISTINCT fingerprint FROM artifacts WHERE fingerprint IS NOT NULL
+       UNION
+       SELECT DISTINCT json_extract(meta, '$.avatarFingerprint') AS fingerprint
+       FROM authors
+       WHERE json_extract(meta, '$.avatarFingerprint') IS NOT NULL`,
     );
     backupFingerprints = fpRows.map((r) => r.fingerprint);
     for (const fp of backupFingerprints) {

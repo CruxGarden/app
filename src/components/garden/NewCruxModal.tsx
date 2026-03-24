@@ -14,13 +14,6 @@ import type { CruxKind } from '@/api/types';
 
 // ── Icons ────────────────────────────────────────────────
 
-function ZapIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
-    </svg>
-  );
-}
 
 function BlogIcon() {
   return (
@@ -314,16 +307,6 @@ function VaultIcon() {
       <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
       <path d="M8 7h8" />
       <path d="M8 11h6" />
-    </svg>
-  );
-}
-
-function ImportIcon() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-      <polyline points="17 8 12 3 7 8" />
-      <line x1="12" y1="3" x2="12" y2="15" />
     </svg>
   );
 }
@@ -865,7 +848,7 @@ function PetRockThumb() {
 
 const TEMPLATES: Template[] = [
   // ── Start here ──
-  { id: 'blank', label: 'Blank', description: 'Empty workspace', icon: <LayoutIcon />, thumb: <BlankThumb />, kind: 'webapp', defaultTitle: '' },
+  { id: 'blank', label: 'Blank', description: 'Empty workspace', icon: <LayoutIcon />, thumb: <BlankThumb />, kind: 'webapp', defaultTitle: 'My Crux' },
   // ── Creative / Personal ──
   { id: 'blog', label: 'Blog', description: 'Write and publish posts', icon: <BlogIcon />, thumb: <BlogThumb />, kind: 'page', defaultTitle: 'My Blog' },
   { id: 'story', label: 'Story', description: 'Write fiction or narrative', icon: <BookIcon />, thumb: <StoryThumb />, kind: 'document', defaultTitle: 'Untitled Story' },
@@ -915,7 +898,7 @@ export default function NewCruxModal({ open, onClose }: NewCruxModalProps) {
   const createCrux = useCruxStore((s) => s.createCrux);
   const refresh = useGardenStore((s) => s.load);
 
-  const [title, setTitle] = useState('');
+  const [title, setTitle] = useState('My Crux');
   const [selectedTemplate, setSelectedTemplate] = useState<string>('blank');
   const [creating, setCreating] = useState(false);
 
@@ -928,7 +911,7 @@ export default function NewCruxModal({ open, onClose }: NewCruxModalProps) {
   const template = (TEMPLATES.find((t) => t.id === selectedTemplate) ?? TEMPLATES[0])!;
 
   const reset = () => {
-    setTitle('');
+    setTitle('My Crux');
     setSelectedTemplate('blank');
     setCreating(false);
   };
@@ -1110,72 +1093,10 @@ export default function NewCruxModal({ open, onClose }: NewCruxModalProps) {
   );
 
   return (
-    <Modal open={open} onClose={handleClose} className="max-w-xl">
-      <div className="space-y-5">
-        {/* Header with quick start */}
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <h2 className="font-display text-lg font-medium text-text">New Crux</h2>
-            <p className="text-xs text-text-muted mt-0.5">Choose a starting point</p>
-          </div>
-          <button
-            onClick={() => handleCreate(true)}
-            disabled={creating}
-            className={cn(
-              'flex items-center gap-1.5 px-3 py-1.5 text-xs font-mono rounded-[var(--radius-sm)]',
-              'text-text-muted hover:text-accent hover:bg-accent-muted border border-border',
-              'transition-colors cursor-pointer',
-              'disabled:opacity-50 disabled:cursor-not-allowed',
-            )}
-          >
-            <ZapIcon />
-            Quick start
-          </button>
-        </div>
-
-        {/* Template selector */}
-        <div>
-          <label className="block text-xs font-mono text-text-muted uppercase tracking-wider mb-2">
-            Template
-          </label>
-          <div className="grid grid-cols-4 gap-2 max-h-[280px] overflow-y-auto pr-0.5">
-            {TEMPLATES.map((t) => (
-              <button
-                key={t.id}
-                onClick={() => {
-                  setSelectedTemplate(t.id);
-                  // Pre-fill title from template if name field is empty
-                  if (!title.trim() && t.defaultTitle) {
-                    setTitle(t.defaultTitle);
-                  }
-                }}
-                disabled={creating}
-                className={cn(
-                  'flex flex-col rounded-[var(--radius-sm)] overflow-hidden',
-                  'border transition-all cursor-pointer text-center',
-                  'disabled:opacity-50 disabled:cursor-not-allowed',
-                  selectedTemplate === t.id
-                    ? 'border-accent ring-1 ring-accent/30'
-                    : 'border-border hover:border-text-muted/40',
-                )}
-              >
-                <div className="w-full">{t.thumb}</div>
-                <span className={cn(
-                  'text-[10px] font-mono leading-tight py-1.5 w-full transition-colors',
-                  selectedTemplate === t.id ? 'text-accent bg-accent-muted' : 'text-text-muted',
-                )}>
-                  {t.label}
-                </span>
-              </button>
-            ))}
-          </div>
-          {template.id !== 'blank' && (
-            <p className="text-[11px] text-text-muted mt-1.5">{template.description}</p>
-          )}
-        </div>
-
-        {/* Title */}
-        <div>
+    <Modal open={open} onClose={handleClose} size="screen" title="New Crux">
+      <div className="flex flex-col h-full gap-5">
+        {/* Name */}
+        <div className="shrink-0">
           <label className="block text-xs font-mono text-text-muted uppercase tracking-wider mb-2">
             Name
           </label>
@@ -1184,15 +1105,58 @@ export default function NewCruxModal({ open, onClose }: NewCruxModalProps) {
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleCreate()}
-            placeholder={template.defaultTitle || 'My new creation'}
+            onFocus={(e) => e.target.select()}
+            placeholder={template.defaultTitle || 'My Crux'}
             disabled={creating}
             className={inputClass}
             autoFocus
           />
         </div>
 
-        {/* Import */}
-        <div className="border-t border-border pt-4">
+        {/* Template selector — scrollable */}
+        <div className="flex-1 min-h-0 flex flex-col">
+          <label className="block text-xs font-mono text-text-muted uppercase tracking-wider mb-2 shrink-0">
+            Template
+          </label>
+          <div className="overflow-y-auto flex-1 min-h-0 pr-0.5">
+            <div className="grid grid-cols-4 gap-2 auto-rows-min">
+              {TEMPLATES.map((t) => (
+                <button
+                  key={t.id}
+                  onClick={() => {
+                    setSelectedTemplate(t.id);
+                    if (!title.trim() && t.defaultTitle) {
+                      setTitle(t.defaultTitle);
+                    }
+                  }}
+                  disabled={creating}
+                  className={cn(
+                    'flex flex-col rounded-[var(--radius-sm)] overflow-hidden',
+                    'border cursor-pointer text-center',
+                    'disabled:opacity-50 disabled:cursor-not-allowed',
+                    selectedTemplate === t.id
+                      ? 'border-accent ring-1 ring-accent/30'
+                      : 'border-border hover:border-text-muted/40',
+                  )}
+                >
+                  <div className="w-full">{t.thumb}</div>
+                  <span className={cn(
+                    'text-[10px] font-mono leading-tight py-1.5 w-full',
+                    selectedTemplate === t.id ? 'text-accent bg-accent-muted' : 'text-text-muted',
+                  )}>
+                    {t.label}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
+          {template.id !== 'blank' && (
+            <p className="text-[11px] text-text-muted mt-1.5 shrink-0">{template.description}</p>
+          )}
+        </div>
+
+        {/* Actions — pinned to bottom */}
+        <div className="shrink-0 flex flex-col gap-2 border-t border-border pt-4">
           <input
             ref={importInputRef}
             type="file"
@@ -1200,8 +1164,11 @@ export default function NewCruxModal({ open, onClose }: NewCruxModalProps) {
             className="hidden"
             onChange={handleImportInput}
           />
+          <Button onClick={() => handleCreate()} loading={creating} disabled={importing} fullWidth>
+            Create
+          </Button>
           {importing ? (
-            <div className="flex items-center gap-3">
+            <div className="flex items-center justify-center gap-3 py-1.5">
               <div className="relative w-7 h-7 flex items-center justify-center shrink-0">
                 <svg width="24" height="24" viewBox="0 0 28 28" className="-rotate-90">
                   <circle cx="14" cy="14" r="12" fill="none" stroke="currentColor" strokeWidth="2" className="text-border" />
@@ -1220,29 +1187,15 @@ export default function NewCruxModal({ open, onClose }: NewCruxModalProps) {
               <span className="text-xs font-mono text-text-muted">Importing...</span>
             </div>
           ) : (
-            <button
+            <Button
+              variant="ghost"
               onClick={() => importInputRef.current?.click()}
               disabled={creating}
-              className={cn(
-                'flex items-center gap-2 text-xs font-mono text-text-muted',
-                'hover:text-accent transition-colors cursor-pointer',
-                'disabled:opacity-50 disabled:cursor-not-allowed',
-              )}
+              fullWidth
             >
-              <ImportIcon />
               Import .crux file
-            </button>
+            </Button>
           )}
-        </div>
-
-        {/* Actions */}
-        <div className="flex gap-2 justify-end pt-1">
-          <Button variant="ghost" onClick={handleClose} disabled={creating || importing}>
-            Cancel
-          </Button>
-          <Button onClick={() => handleCreate()} loading={creating} disabled={importing}>
-            Create
-          </Button>
         </div>
       </div>
 

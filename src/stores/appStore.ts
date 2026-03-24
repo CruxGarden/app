@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { useAuthStore } from './authStore';
+import { useAuthStore, _avatarUrlCache } from './authStore';
 import * as authorsApi from '@/api/authors';
 import type { Author } from '@/api/types';
 
@@ -9,14 +9,17 @@ async function lazyGetServices() {
   return getServices();
 }
 
-function fileToDataUrl(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result as string);
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
+async function lazyGetDb() {
+  const { getSqliteClient } = await import('@/services/sqlite/client');
+  return getSqliteClient();
 }
+
+async function lazyHashContent(content: Uint8Array): Promise<string> {
+  const { hashContent } = await import('@/services/sqlite/helpers');
+  return hashContent(content);
+}
+
+// Re-use the shared avatar URL cache from authStore
 
 /**
  * Sync local author data to the API (username, displayName, bio, avatar).
@@ -31,12 +34,14 @@ export async function syncAuthorToApi(author: Author): Promise<void> {
       bio: author.bio,
     });
 
-    // Sync avatar if it's a local data URL
-    const avatarUrl = author.meta?.avatarUrl;
-    if (typeof avatarUrl === 'string' && avatarUrl.startsWith('data:')) {
-      const res = await fetch(avatarUrl);
-      const blob = await res.blob();
-      const file = new File([blob], 'avatar', { type: blob.type });
+    // Sync avatar if stored in OPFS
+    const fingerprint = author.meta?.avatarFingerprint;
+    if (typeof fingerprint === 'string') {
+      const db = await lazyGetDb();
+      const data = await db.blobRead(fingerprint);
+      const mimeType = (author.meta?.avatarMimeType as string) || 'image/jpeg';
+      const blob = new Blob([data.buffer as ArrayBuffer], { type: mimeType });
+      const file = new File([blob], 'avatar', { type: mimeType });
       await authorsApi.uploadAvatar(author.id, file);
     }
   } catch {
@@ -119,9 +124,24 @@ export const useAppStore = create<AppState>((set, get) => ({
     const { isAuthenticated } = useAuthStore.getState();
     if (!author) throw new Error('No author');
 
-    const dataUrl = await fileToDataUrl(file);
+    // Write avatar to OPFS blob store (content-addressable)
+    const buffer = new Uint8Array(await file.arrayBuffer());
+    const fingerprint = await lazyHashContent(buffer);
+    const db = await lazyGetDb();
+    await db.blobWrite(fingerprint, buffer);
+
+    // Delete old blob if fingerprint changed
+    const oldFingerprint = author.meta?.avatarFingerprint;
+    if (typeof oldFingerprint === 'string' && oldFingerprint !== fingerprint) {
+      db.blobDelete(oldFingerprint).catch(() => {});
+    }
+
+    // Revoke old object URL if cached
+    const oldUrl = _avatarUrlCache.get(oldFingerprint as string);
+    if (oldUrl) { URL.revokeObjectURL(oldUrl); _avatarUrlCache.delete(oldFingerprint as string); }
+
     const updated = await (await lazyGetServices()).author.update(author.id, {
-      meta: { ...author.meta, avatarUrl: dataUrl },
+      meta: { ...author.meta, avatarFingerprint: fingerprint, avatarMimeType: file.type, avatarUrl: null },
     });
     set({ author: updated });
     if (isAuthenticated) syncAuthorToApi(updated);
@@ -133,12 +153,20 @@ export const useAppStore = create<AppState>((set, get) => ({
     const { isAuthenticated } = useAuthStore.getState();
     if (!author) throw new Error('No author');
 
-    const meta = { ...author.meta, avatarUrl: null };
+    // Delete OPFS blob
+    const fingerprint = author.meta?.avatarFingerprint;
+    if (typeof fingerprint === 'string') {
+      const db = await lazyGetDb();
+      db.blobDelete(fingerprint).catch(() => {});
+      const oldUrl = _avatarUrlCache.get(fingerprint);
+      if (oldUrl) { URL.revokeObjectURL(oldUrl); _avatarUrlCache.delete(fingerprint); }
+    }
+
+    const meta = { ...author.meta, avatarFingerprint: null, avatarMimeType: null, avatarUrl: null };
     const updated = await (await lazyGetServices()).author.update(author.id, { meta });
     set({ author: updated });
     if (isAuthenticated) {
       syncAuthorToApi(updated);
-      // Also remove the avatar file from API storage
       authorsApi.removeAvatar(author.id).catch(() => {});
     }
   },

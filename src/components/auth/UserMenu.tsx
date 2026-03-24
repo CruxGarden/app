@@ -1,6 +1,8 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuthStore, resolveAvatarUrl } from '@/stores/authStore';
+import { useAuthStore } from '@/stores/authStore';
+import { useUIStore } from '@/stores/uiStore';
+import { useAvatarUrl } from '@/hooks/useAvatarUrl';
 import { useAppStore } from '@/stores/appStore';
 import { useThemeStore } from '@/stores/themeStore';
 import { ThemeMode } from '@/lib/types';
@@ -81,7 +83,7 @@ export default function UserMenu() {
   }, [open]);
 
   const initial = author?.username?.charAt(0)?.toUpperCase() ?? '?';
-  const avatarUrl = resolveAvatarUrl(author);
+  const avatarUrl = useAvatarUrl(author);
 
   const handleLogout = async () => {
     setOpen(false);
@@ -125,7 +127,7 @@ export default function UserMenu() {
             <button
               onClick={() => {
                 setOpen(false);
-                navigate('/settings');
+                useUIStore.getState().setSettingsOpen(true);
               }}
               className="w-full px-3 py-2 text-left text-sm text-text-muted hover:text-text hover:bg-accent-muted transition-colors cursor-pointer"
             >

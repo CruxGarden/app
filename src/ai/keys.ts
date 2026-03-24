@@ -1,64 +1,48 @@
 import { SettingsKey } from '@/lib/constants';
+import { getSetting, setSetting, removeSetting } from '@/services/settings';
 
-// Lazy import to avoid pulling SQLite worker into public pages
-async function db() {
-  const { getSqliteClient } = await import('@/services/sqlite/client');
-  return getSqliteClient();
-}
+const KEY_PREFIX = 'cruxgarden:apiKey:';
 
 /**
- * Get an API key from SQLite settings.
- * Keys are stored in SQLite (via OPFS) — the preview iframe on a different
- * origin can't access them.
+ * Get an API key from localStorage.
+ * Falls back to SQLite settings for migration from the old storage location.
  */
 export async function getApiKey(providerId: string): Promise<string | null> {
-  const row = await (await db()).get<{ value: string }>(
-    'SELECT value FROM settings WHERE key = ?',
-    [`cruxgarden:apiKey:${providerId}`],
-  );
-  return row?.value || null;
+  const key = KEY_PREFIX + providerId;
+  const value = localStorage.getItem(key);
+  if (value) return value;
+
+  // Migration fallback: check SQLite settings (old location)
+  try {
+    const sqliteValue = getSetting(key);
+    if (sqliteValue) {
+      // Migrate to localStorage and remove from SQLite
+      localStorage.setItem(key, sqliteValue);
+      removeSetting(key);
+      return sqliteValue;
+    }
+  } catch { /* SQLite not ready — skip migration */ }
+
+  return null;
 }
 
-/** Save an API key to SQLite settings */
-export async function setApiKey(providerId: string, key: string): Promise<void> {
-  await (await db()).run(
-    'INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)',
-    [`cruxgarden:apiKey:${providerId}`, key],
-  );
+/** Save an API key to localStorage */
+export async function setApiKey(providerId: string, apiKey: string): Promise<void> {
+  localStorage.setItem(KEY_PREFIX + providerId, apiKey);
 }
 
-/** Remove an API key from SQLite settings */
+/** Remove an API key from localStorage */
 export async function removeApiKey(providerId: string): Promise<void> {
-  await (await db()).run('DELETE FROM settings WHERE key = ?', [`cruxgarden:apiKey:${providerId}`]);
+  localStorage.removeItem(KEY_PREFIX + providerId);
 }
 
 /** Get the default model from settings, or return the fallback */
 export async function getDefaultModel(): Promise<string> {
-  const row = await (await db()).get<{ value: string }>(
-    `SELECT value FROM settings WHERE key = '${SettingsKey.DefaultModel}'`,
-  );
-  return row?.value || 'claude-sonnet-4-20250514';
+  return getSetting(SettingsKey.DefaultModel) || 'claude-sonnet-4-20250514';
 }
 
 /** Save the default model to settings */
 export async function setDefaultModel(model: string): Promise<void> {
-  await (await db()).run(
-    `INSERT OR REPLACE INTO settings (key, value) VALUES ('${SettingsKey.DefaultModel}', ?)`,
-    [model],
-  );
+  setSetting(SettingsKey.DefaultModel, model);
 }
 
-/**
- * Migrate API key from localStorage to SQLite settings.
- * Called once on first init. Removes from localStorage after migration.
- */
-export async function migrateApiKeyFromLocalStorage(): Promise<void> {
-  const legacyKey = localStorage.getItem(SettingsKey.LegacyAnthropicApiKey);
-  if (legacyKey) {
-    const existing = await getApiKey('anthropic');
-    if (!existing) {
-      await setApiKey('anthropic', legacyKey);
-    }
-    localStorage.removeItem(SettingsKey.LegacyAnthropicApiKey);
-  }
-}
