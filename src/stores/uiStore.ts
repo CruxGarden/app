@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { getSetting, setSetting } from '@/services/settings';
+import { SettingsKey } from '@/lib/constants';
 import type { MosaicNode } from 'react-mosaic-component';
 
 // ── Pane Types ──────────────────────────────────────────
@@ -239,7 +240,7 @@ interface PersistedLayout {
   mosaicLayout?: MosaicNode<string> | null;
 }
 
-const GLOBAL_LAYOUT_KEY = 'cruxgarden:layout:global';
+const GLOBAL_LAYOUT_KEY = SettingsKey.GlobalLayout;
 const cruxLayoutKey = (id: string) => `cruxgarden:layout:${id}`;
 const editorTabsKey = (id: string) => `cruxgarden:editor-tabs:${id}`;
 const folderStateKey = (id: string) => `cruxgarden:folder-state:${id}`;
@@ -408,7 +409,7 @@ function getInitialLayout(): ValidatedLayout {
 
   // Migrate from old persist key (cruxgarden:ui)
   try {
-    const old = getSetting('cruxgarden:ui');
+    const old = getSetting(SettingsKey.LegacyUi);
     if (old) {
       const parsed = JSON.parse(old);
       if (parsed.state?.paneOrder) {

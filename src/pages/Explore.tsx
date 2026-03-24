@@ -2,10 +2,10 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { publicApi, API_BASE_URL } from '@/api';
 import type {
-  DiscoverCrux,
-  DiscoverAuthor,
-  DiscoverTag,
-  DiscoverParams,
+  ExploreCrux,
+  ExploreAuthor,
+  ExploreTag,
+  ExploreParams,
 } from '@/api/public';
 import { Button } from '@/components/ui';
 import { cn } from '@/lib/cn';
@@ -83,7 +83,7 @@ function ClearIcon() {
 
 /* ── Crux result card ─────────────────────────────────── */
 
-function CruxResultCard({ crux }: { crux: DiscoverCrux }) {
+function CruxResultCard({ crux }: { crux: ExploreCrux }) {
   const navigate = useNavigate();
   const href = `/${crux.author_username}/${crux.slug}`;
   const avatarUrl = resolveAvatarUrl(crux.author_meta);
@@ -119,7 +119,7 @@ function CruxResultCard({ crux }: { crux: DiscoverCrux }) {
 
 /* ── Author result card ────────────────────────────────── */
 
-function AuthorResultCard({ author }: { author: DiscoverAuthor }) {
+function AuthorResultCard({ author }: { author: ExploreAuthor }) {
   const navigate = useNavigate();
   const avatarUrl = resolveAvatarUrl(author.meta);
 
@@ -156,7 +156,7 @@ function AuthorResultCard({ author }: { author: DiscoverAuthor }) {
 
 /* ── Main page ──────────────────────────────────────────── */
 
-export default function Discover() {
+export default function Explore() {
   const [searchParams, setSearchParams] = useSearchParams();
 
   // Read initial state from URL
@@ -171,9 +171,9 @@ export default function Discover() {
   const [activeTags, setActiveTags] = useState<string[]>(initialTags);
   const [page, setPage] = useState(1);
 
-  const [results, setResults] = useState<(DiscoverCrux | DiscoverAuthor)[]>([]);
+  const [results, setResults] = useState<(ExploreCrux | ExploreAuthor)[]>([]);
   const [totalPages, setTotalPages] = useState(1);
-  const [tags, setTags] = useState<DiscoverTag[]>([]);
+  const [tags, setTags] = useState<ExploreTag[]>([]);
   const [loading, setLoading] = useState(true);
   const [, setTagsLoading] = useState(true);
 
@@ -182,7 +182,7 @@ export default function Discover() {
 
   // Page title
   useEffect(() => {
-    document.title = `Discover - ${APP_NAME}`;
+    document.title = `Explore - ${APP_NAME}`;
     return () => {
       document.title = APP_NAME;
     };
@@ -192,7 +192,7 @@ export default function Discover() {
   useEffect(() => {
     setTagsLoading(true);
     publicApi
-      .discoverTags(50)
+      .exploreTags(50)
       .then(setTags)
       .catch(() => setTags([]))
       .finally(() => setTagsLoading(false));
@@ -214,7 +214,7 @@ export default function Discover() {
     let cancelled = false;
     setLoading(true);
 
-    const params: DiscoverParams = {
+    const params: ExploreParams = {
       type: resultType,
       sort,
       page,
@@ -224,7 +224,7 @@ export default function Discover() {
     if (activeTags.length > 0) params.tag = activeTags;
 
     publicApi
-      .discover(params)
+      .explore(params)
       .then((data) => {
         if (cancelled) return;
         setResults(data.items);
@@ -287,7 +287,7 @@ export default function Discover() {
             {APP_NAME}
           </a>
           <span className="text-text-muted/40">/</span>
-          <span className="text-text">Discover</span>
+          <span className="text-text">Explore</span>
         </div>
       </header>
 
@@ -295,7 +295,7 @@ export default function Discover() {
         {/* Header panel */}
         <div className="bg-panel border border-border rounded-[var(--radius)] p-4 sm:p-5 mb-6">
           <div className="flex items-center justify-between mb-4">
-            <h1 className="font-display text-lg font-medium text-text">Discover</h1>
+            <h1 className="font-display text-lg font-medium text-text">Explore</h1>
             {hasFilters && (
               <button
                 onClick={clearFilters}
@@ -435,10 +435,10 @@ export default function Discover() {
           <>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {resultType === 'cruxes'
-                ? (results as DiscoverCrux[]).map((crux) => (
+                ? (results as ExploreCrux[]).map((crux) => (
                     <CruxResultCard key={crux.id} crux={crux} />
                   ))
-                : (results as DiscoverAuthor[]).map((author) => (
+                : (results as ExploreAuthor[]).map((author) => (
                     <AuthorResultCard key={author.id} author={author} />
                   ))}
             </div>

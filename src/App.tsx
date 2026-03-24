@@ -1,33 +1,32 @@
 import { lazy, Suspense } from 'react';
 import { createBrowserRouter, RouterProvider } from 'react-router-dom';
 import ErrorBoundary from '@/components/ui/ErrorBoundary';
+import AnimatedBackground from '@/components/layout/AnimatedBackground';
 
-const AppShell = lazy(() => import('@/components/layout/AppShell'));
-const Landing = lazy(() => import('@/pages/Landing'));
-const Login = lazy(() => import('@/pages/Login'));
-const Garden = lazy(() => import('@/pages/Garden'));
-const CruxPage = lazy(() => import('@/pages/Crux'));
+const Shell = lazy(() => import('@/components/layout/Shell'));
+const Gateway = lazy(() => import('@/pages/Gateway'));
+const HomeGarden = lazy(() => import('@/pages/HomeGarden'));
+const CruxBuilder = lazy(() => import('@/pages/CruxBuilder'));
 const Settings = lazy(() => import('@/pages/Settings'));
 const PublicCrux = lazy(() => import('@/pages/PublicCrux'));
-const PublicAuthor = lazy(() => import('@/pages/PublicAuthor'));
-const Discover = lazy(() => import('@/pages/Discover'));
+const PublicGarden = lazy(() => import('@/pages/PublicGarden'));
+const Explore = lazy(() => import('@/pages/Explore'));
 const NotFound = lazy(() => import('@/pages/NotFound'));
 
-// When running inside a Crux Garden preview or published at a subdirectory,
-// the preview system injects window.__CRUX_BASENAME__ so the router knows
-// its path prefix (e.g. "/__preview/{cruxId}" or "/{authorId}/{cruxId}").
+// When running inside a workspace preview iframe, the preview system injects
+// window.__CRUX_BASENAME__ so the router knows its path prefix
+// (e.g. "/__preview/{cruxId}"). Published cruxes use per-crux subdomains
+// where the basename is "/", so this only matters for preview mode.
 const basename = (window as unknown as { __CRUX_BASENAME__?: string }).__CRUX_BASENAME__ || '/';
 
 const router = createBrowserRouter([
   // Public
-
-  { path: '/', element: <Landing /> },
-  { path: '/login', element: <Login /> },
+  { path: '/', element: <Gateway /> },
   {
-    path: '/discover',
+    path: '/explore',
     element: (
       <ErrorBoundary>
-        <Discover />
+        <Explore />
       </ErrorBoundary>
     ),
   },
@@ -43,20 +42,20 @@ const router = createBrowserRouter([
     path: '/:username',
     element: (
       <ErrorBoundary>
-        <PublicAuthor />
+        <PublicGarden />
       </ErrorBoundary>
     ),
   },
 
-  // App routes — auth optional (local-first: works without account)
+  // App
   {
-    element: <AppShell />,
+    element: <Shell />,
     children: [
       {
         path: '/home',
         element: (
           <ErrorBoundary>
-            <Garden />
+            <HomeGarden />
           </ErrorBoundary>
         ),
       },
@@ -64,7 +63,7 @@ const router = createBrowserRouter([
         path: '/c/:id',
         element: (
           <ErrorBoundary>
-            <CruxPage />
+            <CruxBuilder />
           </ErrorBoundary>
         ),
       },
@@ -86,6 +85,7 @@ const router = createBrowserRouter([
 export default function App() {
   return (
     <ErrorBoundary>
+      <AnimatedBackground />
       <Suspense fallback={null}>
         <RouterProvider router={router} />
       </Suspense>

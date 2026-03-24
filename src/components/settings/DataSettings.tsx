@@ -1,7 +1,6 @@
 import { useState, useRef, useCallback } from 'react';
-import { ensureLocalAuthor } from '@/services';
+import { useAppStore } from '@/stores/appStore';
 import { exportGarden, confirmAndImportGarden, wipeGarden } from '@/services/garden-io';
-import { useAuthStore } from '@/stores/authStore';
 import { Panel, Spinner } from '@/components/ui';
 import { cn } from '@/lib/cn';
 
@@ -52,10 +51,7 @@ export default function DataSettings() {
       const imported = await confirmAndImportGarden({
         data: file,
         onProgress: setStatus,
-        onPostImport: async () => {
-          const author = await ensureLocalAuthor();
-          useAuthStore.setState({ author });
-        },
+        onPostImport: async () => { await useAppStore.getState().ensureAuthor(); },
       });
 
       if (!imported) {

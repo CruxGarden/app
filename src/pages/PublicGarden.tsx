@@ -21,7 +21,7 @@ async function loadAuthorData(username: string): Promise<{ author: Author; cruxe
   return { author, cruxes: cruxData.cruxes };
 }
 
-export default function PublicAuthor() {
+export default function PublicGarden() {
   const { username } = useParams<{ username: string }>();
 
   const [author, setAuthor] = useState<Author | null>(null);

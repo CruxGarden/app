@@ -1,5 +1,5 @@
 import { useCruxStore } from '@/stores/cruxStore';
-import { useAuthStore } from '@/stores/authStore';
+import { useAppStore } from '@/stores/appStore';
 import MetadataContent from './MetadataContent';
 
 export default function MetadataPane() {
@@ -7,7 +7,7 @@ export default function MetadataPane() {
   const updateCrux = useCruxStore((s) => s.updateCrux);
   const summary = useCruxStore((s) => s.summary);
   const messages = useCruxStore((s) => s.messages);
-  const author = useAuthStore((s) => s.author);
+  const author = useAppStore((s) => s.author);
 
   if (!crux) {
     return (

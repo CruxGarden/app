@@ -1,11 +1,12 @@
 import { useState, useMemo, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/stores/authStore';
+import { useAppStore } from '@/stores/appStore';
 import { useCruxStore } from '@/stores/cruxStore';
 import { cn } from '@/lib/cn';
 import { Spinner } from '@/components/ui';
 import { usePaneWidth } from '@/hooks/usePaneWidth';
 import CreateAuthorModal from '@/components/auth/CreateAuthorModal';
+import ConnectAccount from '@/components/auth/ConnectAccount';
 function PublishIcon() {
   return (
     <svg
@@ -90,12 +91,10 @@ function formatDate(iso: string): string {
   });
 }
 
-const REDIRECT_KEY = 'cruxgarden:publishRedirect';
 
 export default function PublishPane() {
-  const navigate = useNavigate();
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
-  const author = useAuthStore((s) => s.author);
+  const author = useAppStore((s) => s.author);
   const crux = useCruxStore((s) => s.crux);
   const artifacts = useCruxStore((s) => s.artifacts);
   const publishCrux = useCruxStore((s) => s.publishCrux);
@@ -103,6 +102,7 @@ export default function PublishPane() {
   const hasUnpublishedChanges = useCruxStore((s) => s.hasUnpublishedChanges);
 
   const [showAuthorModal, setShowAuthorModal] = useState(false);
+  const [showConnect, setShowConnect] = useState(false);
   const [publishing, setPublishing] = useState(false);
   const [copied, setCopied] = useState(false);
 
@@ -124,7 +124,7 @@ export default function PublishPane() {
 
   const doPublish = useCallback(async () => {
     if (!crux) return;
-    const currentAuthor = useAuthStore.getState().author;
+    const currentAuthor = useAppStore.getState().author;
     if (!currentAuthor) return;
 
     setPublishing(true);
@@ -137,8 +137,7 @@ export default function PublishPane() {
 
   const handlePublish = useCallback(() => {
     if (!isAuthenticated) {
-      sessionStorage.setItem(REDIRECT_KEY, window.location.pathname);
-      navigate('/login');
+      setShowConnect(true);
       return;
     }
     if (!author) {
@@ -146,7 +145,7 @@ export default function PublishPane() {
       return;
     }
     doPublish();
-  }, [isAuthenticated, author, doPublish, navigate]);
+  }, [isAuthenticated, author, doPublish]);
 
   const handleAuthorCreated = useCallback(() => {
     setShowAuthorModal(false);
@@ -275,6 +274,14 @@ export default function PublishPane() {
             >
               <CheckIcon size={14} />
               Up to date
+            </div>
+          ) : showConnect ? (
+            <div className="rounded-[var(--radius-sm)] border border-border bg-surface/50 p-3">
+              <ConnectAccount
+                compact
+                description="Connect your account to share this crux."
+                onConnected={() => { setShowConnect(false); doPublish(); }}
+              />
             </div>
           ) : (
             <button

@@ -7,17 +7,8 @@ import { useMoodStore } from '@/stores/moodStore';
 import { getSetting, setSetting } from '@/services/settings';
 import { pixelateImageToDataURL } from '@/lib/pixelate';
 
-type BgType = 'bloom' | 'flowfield' | 'drift' | 'blank' | 'image';
-const BG_KEY = 'cruxgarden:backgroundType';
-const BG_IMAGE_KEY = 'cruxgarden:backgroundImage';
-const BG_BLOCK_KEY = 'cruxgarden:backgroundBlockSize';
-
-const DARK_MOOD_KEY = 'cruxgarden:moodPresetDark';
-const LIGHT_MOOD_KEY = 'cruxgarden:moodPresetLight';
-
-// ── Persona persistence ─────────────────────────────
-
-export const PERSONA_KEY = 'cruxgarden:persona';
+import { BG_CSS_VAR, SettingsKey } from '@/lib/constants';
+import { BgType, ThemeMode } from '@/lib/types';
 
 export interface PersonaSettings {
   name: string;
@@ -36,7 +27,7 @@ const DEFAULT_PERSONA: PersonaSettings = {
 /** Read saved persona (returns defaults for any missing fields). */
 export function getPersona(): PersonaSettings {
   try {
-    const raw = getSetting(PERSONA_KEY);
+    const raw = getSetting(SettingsKey.Persona);
     if (raw) {
       const parsed = JSON.parse(raw);
       return { ...DEFAULT_PERSONA, ...parsed };
@@ -47,7 +38,7 @@ export function getPersona(): PersonaSettings {
 
 /** Save persona to settings (SQLite + cache). */
 function savePersona(persona: PersonaSettings) {
-  setSetting(PERSONA_KEY, JSON.stringify(persona));
+  setSetting(SettingsKey.Persona, JSON.stringify(persona));
 }
 
 // ── Mood helpers ────────────────────────────────────
@@ -59,7 +50,7 @@ function getResolvedMode(): 'Dark' | 'Light' {
 
 /** Get the settings key for the current mode */
 function getMoodKey(): string {
-  return getResolvedMode() === 'Light' ? LIGHT_MOOD_KEY : DARK_MOOD_KEY;
+  return getResolvedMode() === 'Light' ? SettingsKey.MoodPresetLight : SettingsKey.MoodPresetDark;
 }
 
 /** Get the active preset ID for the current mode */
@@ -74,8 +65,8 @@ export function getActiveMoodId(): string {
 export function applySavedMoodSettings() {
   // Clean up legacy keys from old mood system
   try {
-    setSetting('cruxgarden:moodPreset', '');
-    setSetting('cruxgarden:moodOverrides', '');
+    setSetting(SettingsKey.LegacyMoodPreset, '');
+    setSetting(SettingsKey.LegacyMoodOverrides, '');
   } catch { /* ignore if settings not ready */ }
 
   const id = getActiveMoodId();
@@ -83,9 +74,9 @@ export function applySavedMoodSettings() {
   if (preset) applyMoodPalette(preset.overrides);
 
   // Restore background image URL if saved (synchronous — no flash)
-  const savedBgType = getSetting(BG_KEY) as string | null;
+  const savedBgType = getSetting(SettingsKey.BackgroundType) as string | null;
   if (savedBgType === 'image') {
-    const savedImage = getSetting(BG_IMAGE_KEY) as string | null;
+    const savedImage = getSetting(SettingsKey.BackgroundImage) as string | null;
     if (savedImage) {
       useMoodStore.setState({ backgroundUrl: savedImage });
     }
@@ -298,10 +289,10 @@ function BackgroundTabContent({
   const fileRef = useRef<HTMLInputElement>(null);
 
   const animatedOptions: { value: BgType; label: string; description: string }[] = [
-    { value: 'bloom', label: 'Bloom', description: 'Animated gradient blobs' },
-    { value: 'drift', label: 'Drift', description: 'Floating particles' },
-    { value: 'flowfield', label: 'Flow', description: 'Organic wave patterns' },
-    { value: 'blank', label: 'Blank', description: 'Solid background color' },
+    { value: BgType.Bloom, label: 'Bloom', description: 'Animated gradient blobs' },
+    { value: BgType.Drift, label: 'Drift', description: 'Floating particles' },
+    { value: BgType.Flow, label: 'Flow', description: 'Organic wave patterns' },
+    { value: BgType.Blank, label: 'Blank', description: 'Solid background color' },
   ];
 
   return (
@@ -331,7 +322,7 @@ function BackgroundTabContent({
         <div className="text-[9px] font-mono uppercase tracking-wider text-text-muted">Image</div>
         <button
           onClick={() => {
-            onChangeBgType('image');
+            onChangeBgType(BgType.Image);
             if (!bgImagePreview) fileRef.current?.click();
           }}
           className={cn(
@@ -422,30 +413,30 @@ export default function MoodBar() {
   const open = useUIStore((s) => s.moodEditorOpen);
   const close = useCallback(() => useUIStore.getState().setMoodEditorOpen(false), []);
   const [tab, setTab] = useState<Tab>('palette');
-  const [activeDarkId, setActiveDarkId] = useState(() => (getSetting(DARK_MOOD_KEY) as string) || 'garden');
-  const [activeLightId, setActiveLightId] = useState(() => (getSetting(LIGHT_MOOD_KEY) as string) || 'parchment');
+  const [activeDarkId, setActiveDarkId] = useState(() => (getSetting(SettingsKey.MoodPresetDark) as string) || 'garden');
+  const [activeLightId, setActiveLightId] = useState(() => (getSetting(SettingsKey.MoodPresetLight) as string) || 'parchment');
 
   // Re-sync when panel opens
   useEffect(() => {
     if (open) {
-      setActiveDarkId((getSetting(DARK_MOOD_KEY) as string) || 'garden');
-      setActiveLightId((getSetting(LIGHT_MOOD_KEY) as string) || 'parchment');
+      setActiveDarkId((getSetting(SettingsKey.MoodPresetDark) as string) || 'garden');
+      setActiveLightId((getSetting(SettingsKey.MoodPresetLight) as string) || 'parchment');
     }
   }, [open]);
   const [bgType, setBgType] = useState<BgType>(() => {
-    const saved = getSetting(BG_KEY) as string | null;
-    if (saved === 'bloom' || saved === 'blank' || saved === 'drift' || saved === 'flowfield' || saved === 'image') return saved;
-    return 'bloom';
+    const saved = getSetting(SettingsKey.BackgroundType) as string | null;
+    if (saved === 'bloom' || saved === 'blank' || saved === 'drift' || saved === 'flow' || saved === 'image') return saved as BgType;
+    return BgType.Bloom;
   });
-  const [bgImagePreview, setBgImagePreview] = useState<string | null>(() => getSetting(BG_IMAGE_KEY) as string | null);
-  const [bgBlockSize, setBgBlockSize] = useState(() => Number(getSetting(BG_BLOCK_KEY)) || 8);
+  const [bgImagePreview, setBgImagePreview] = useState<string | null>(() => getSetting(SettingsKey.BackgroundImage) as string | null);
+  const [bgBlockSize, setBgBlockSize] = useState(() => Number(getSetting(SettingsKey.BackgroundBlockSize)) || 8);
   const [bgGenerating, setBgGenerating] = useState(false);
   const bgOriginalFile = useRef<File | null>(null);
 
   const handleBgChange = (type: BgType) => {
     setBgType(type);
-    setSetting(BG_KEY, type);
-    document.documentElement.style.setProperty('--background-type', type);
+    setSetting(SettingsKey.BackgroundType, type);
+    document.documentElement.style.setProperty(BG_CSS_VAR, type);
     // If switching to image, set the background URL from saved data URL
     if (type === 'image' && bgImagePreview) {
       useMoodStore.setState({ backgroundUrl: bgImagePreview });
@@ -458,10 +449,10 @@ export default function MoodBar() {
     try {
       const dataUrl = await pixelateImageToDataURL(file, { blockSize: bgBlockSize });
       setBgImagePreview(dataUrl);
-      setSetting(BG_IMAGE_KEY, dataUrl);
-      setSetting(BG_KEY, 'image');
-      setBgType('image');
-      document.documentElement.style.setProperty('--background-type', 'image');
+      setSetting(SettingsKey.BackgroundImage, dataUrl);
+      setSetting(SettingsKey.BackgroundType, 'image');
+      setBgType(BgType.Image);
+      document.documentElement.style.setProperty(BG_CSS_VAR, 'image');
       useMoodStore.setState({ backgroundUrl: dataUrl });
     } finally {
       setBgGenerating(false);
@@ -470,14 +461,14 @@ export default function MoodBar() {
 
   const handleBgBlockSizeChange = async (size: number) => {
     setBgBlockSize(size);
-    setSetting(BG_BLOCK_KEY, String(size));
+    setSetting(SettingsKey.BackgroundBlockSize, String(size));
     const source = bgOriginalFile.current || bgImagePreview;
     if (!source) return;
     setBgGenerating(true);
     try {
       const dataUrl = await pixelateImageToDataURL(source, { blockSize: size });
       setBgImagePreview(dataUrl);
-      setSetting(BG_IMAGE_KEY, dataUrl);
+      setSetting(SettingsKey.BackgroundImage, dataUrl);
       useMoodStore.setState({ backgroundUrl: dataUrl });
     } finally {
       setBgGenerating(false);
@@ -487,8 +478,8 @@ export default function MoodBar() {
   const handleBgImageClear = () => {
     bgOriginalFile.current = null;
     setBgImagePreview(null);
-    setSetting(BG_IMAGE_KEY, '');
-    handleBgChange('bloom');
+    setSetting(SettingsKey.BackgroundImage, '');
+    handleBgChange(BgType.Bloom);
     useMoodStore.setState({ backgroundUrl: null });
   };
 
@@ -496,16 +487,16 @@ export default function MoodBar() {
     // Save to the correct mode key
     if (preset.section === 'Light') {
       setActiveLightId(preset.id);
-      setSetting(LIGHT_MOOD_KEY, preset.id);
+      setSetting(SettingsKey.MoodPresetLight, preset.id);
     } else {
       setActiveDarkId(preset.id);
-      setSetting(DARK_MOOD_KEY, preset.id);
+      setSetting(SettingsKey.MoodPresetDark, preset.id);
     }
     // Switch mode if needed, otherwise just apply
     const currentMode = getResolvedMode();
     if (preset.section !== currentMode) {
       import('@/stores/themeStore').then(({ useThemeStore }) => {
-        useThemeStore.getState().setMode(preset.section === 'Light' ? 'light' : 'dark');
+        useThemeStore.getState().setMode(preset.section === 'Light' ? ThemeMode.Light : ThemeMode.Dark);
       });
     } else {
       applyMoodPalette(preset.overrides);

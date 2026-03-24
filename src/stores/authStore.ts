@@ -1,22 +1,8 @@
 import { create } from 'zustand';
 import * as authApi from '@/api/auth';
-import * as authorsApi from '@/api/authors';
 import { getStoredTokens, storeTokens, clearTokens } from '@/api/client';
-// Lazy import to avoid pulling SQLite worker into public pages
-async function lazyGetServices() {
-  const { getServices } = await import('@/services');
-  return getServices();
-}
 import type { Profile, Author } from '@/api/types';
-
-function fileToDataUrl(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result as string);
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
-}
+import { SettingsKey } from '@/lib/constants';
 
 /**
  * Reconcile local author ID with API author ID.
@@ -40,7 +26,7 @@ async function reconcileAuthorId(
       [newId, accountId, new Date().toISOString(), oldId],
     );
     await db.run(
-      "INSERT OR REPLACE INTO settings (key, value) VALUES ('cruxgarden:localAuthorId', ?)",
+      `INSERT OR REPLACE INTO settings (key, value) VALUES ('${SettingsKey.LocalAuthorId}', ?)`,
       [newId],
     );
 
@@ -50,32 +36,6 @@ async function reconcileAuthorId(
   } catch {
     // Non-fatal — return API author as fallback
     return apiAuthor;
-  }
-}
-
-/**
- * Sync local author data to the API (username, displayName, bio, avatar).
- * Runs in the background — failures are non-fatal.
- */
-async function syncAuthorToApi(author: Author): Promise<void> {
-  try {
-    // Sync profile fields
-    await authorsApi.update(author.id, {
-      username: author.username,
-      displayName: author.displayName,
-      bio: author.bio,
-    });
-
-    // Sync avatar if it's a local data URL
-    const avatarUrl = author.meta?.avatarUrl;
-    if (typeof avatarUrl === 'string' && avatarUrl.startsWith('data:')) {
-      const res = await fetch(avatarUrl);
-      const blob = await res.blob();
-      const file = new File([blob], 'avatar', { type: blob.type });
-      await authorsApi.uploadAvatar(author.id, file);
-    }
-  } catch {
-    // Non-fatal — will retry on next sync opportunity
   }
 }
 
@@ -96,13 +56,12 @@ export function resolveAvatarUrl(
 
 interface AuthState {
   account: Profile | null;
-  author: Author | null;
   isAuthenticated: boolean;
   isLoading: boolean;
 
-  /** Initialize auth from stored tokens on app mount.
-   *  Pass { lightweight: true } on public pages to skip SQLite/services init. */
-  init: (opts?: { lightweight?: boolean }) => Promise<void>;
+  /** Check stored tokens and restore auth state. Called by appStore.init().
+   *  Pass { lightweight: true } on public pages to skip author reconciliation. */
+  checkAuth: (opts?: { lightweight?: boolean }) => Promise<void>;
 
   /** Request email code */
   requestCode: (email: string) => Promise<void>;
@@ -118,54 +77,38 @@ interface AuthState {
 
   /** Disconnect from crux.garden account */
   disconnectAccount: () => Promise<void>;
-
-  /** Update author fields (username, displayName, etc.) */
-  updateAuthor: (dto: { username?: string; displayName?: string; bio?: string }) => Promise<Author>;
-
-  /** Upload avatar and update local author */
-  uploadAvatar: (file: File) => Promise<Author>;
-
-  /** Remove avatar */
-  removeAvatar: () => Promise<void>;
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
   account: null,
-  author: null,
   isAuthenticated: false,
   isLoading: true,
 
-  init: async (opts) => {
-    // Load local author unless lightweight mode (public pages skip SQLite)
-    let localAuthor: Author | null = null;
-    if (!opts?.lightweight) {
-      try {
-        const { ensureLocalAuthor } = await import('@/services');
-        localAuthor = await ensureLocalAuthor();
-      } catch {
-        // Services not ready yet — will be set later
-      }
-    }
-
+  checkAuth: async (opts) => {
     const { accessToken, refreshToken } = getStoredTokens();
     if (!accessToken || !refreshToken) {
-      set({ author: localAuthor, isLoading: false });
+      set({ isLoading: false });
       return;
     }
 
+    // Lazy import to avoid circular dependency at module load time
+    const { useAppStore } = await import('./appStore');
+    const { syncAuthorToApi } = await import('./appStore');
+    const localAuthor = useAppStore.getState().author;
+
     const finalize = async (profile: Profile) => {
-      // Reconcile local author ID with API author if mismatched
-      if (localAuthor && profile.author && localAuthor.id !== profile.author.id) {
-        localAuthor = await reconcileAuthorId(localAuthor.id, profile.author, profile.id);
+      let author = localAuthor;
+      // Reconcile local author ID with API author if mismatched (skip in lightweight mode)
+      if (!opts?.lightweight && author && profile.author && author.id !== profile.author.id) {
+        author = await reconcileAuthorId(author.id, profile.author, profile.id);
       }
-      // Always prefer local author — never use API author object directly
       set({
         account: profile,
-        author: localAuthor,
         isAuthenticated: true,
         isLoading: false,
       });
-      if (localAuthor) syncAuthorToApi(localAuthor);
+      useAppStore.setState({ author });
+      if (author) syncAuthorToApi(author);
     };
 
     try {
@@ -181,7 +124,7 @@ export const useAuthStore = create<AuthState>((set) => ({
       } catch {
         // Tokens invalid — silently clear and stay disconnected
         clearTokens();
-        set({ account: null, author: localAuthor, isAuthenticated: false, isLoading: false });
+        set({ account: null, isAuthenticated: false, isLoading: false });
       }
     }
   },
@@ -192,20 +135,41 @@ export const useAuthStore = create<AuthState>((set) => ({
 
     const profile = await authApi.getProfile();
 
+    // Lazy import to avoid circular dependency at module load time
+    const { useAppStore } = await import('./appStore');
+    const { syncAuthorToApi } = await import('./appStore');
+
     // Reconcile local author ID with API author
     let author: Author | null = profile.author ?? null;
-    if (profile.author) {
-      const { author: localAuthor } = useAuthStore.getState();
-      if (localAuthor && localAuthor.id !== profile.author.id) {
+    const localAuthor = useAppStore.getState().author;
+
+    if (profile.author && localAuthor) {
+      if (localAuthor.id !== profile.author.id) {
         author = await reconcileAuthorId(localAuthor.id, profile.author, profile.id);
+      }
+
+      // If the API account already has a username, prefer it over the local one.
+      // The user chose it previously (possibly on another device).
+      const apiUsername = profile.author.username;
+      const apiDisplayName = profile.author.displayName;
+      if (apiUsername && author) {
+        try {
+          const svc = (await import('@/services')).getServices();
+          author = await svc.author.update(author.id, {
+            username: apiUsername,
+            ...(apiDisplayName ? { displayName: apiDisplayName } : {}),
+          });
+        } catch { /* non-fatal */ }
       }
     }
 
     set({
       account: profile,
-      author,
       isAuthenticated: true,
     });
+    useAppStore.setState({ author });
+    // Sync local data the API doesn't have yet (avatar, bio)
+    if (author) syncAuthorToApi(author);
     return profile;
   },
 
@@ -229,11 +193,15 @@ export const useAuthStore = create<AuthState>((set) => ({
     storeTokens(creds.accessToken, creds.refreshToken);
 
     const profile = await authApi.getProfile();
+
+    // Lazy import to avoid circular dependency at module load time
+    const { useAppStore } = await import('./appStore');
+
     set({
       account: profile,
-      author: profile.author ?? null,
       isAuthenticated: true,
     });
+    useAppStore.setState({ author: profile.author ?? null });
     return profile;
   },
 
@@ -244,43 +212,11 @@ export const useAuthStore = create<AuthState>((set) => ({
       // Ignore — clear local state regardless
     }
     clearTokens();
-    set({ account: null, author: null, isAuthenticated: false });
-  },
 
-  updateAuthor: async (dto) => {
-    const { author, isAuthenticated } = useAuthStore.getState();
-    if (!author) throw new Error('No author');
+    // Lazy import to avoid circular dependency at module load time
+    const { useAppStore } = await import('./appStore');
 
-    const updated = await (await lazyGetServices()).author.update(author.id, dto);
-    set({ author: updated });
-    if (isAuthenticated) syncAuthorToApi(updated);
-    return updated;
-  },
-
-  uploadAvatar: async (file: File) => {
-    const { author, isAuthenticated } = useAuthStore.getState();
-    if (!author) throw new Error('No author');
-
-    const dataUrl = await fileToDataUrl(file);
-    const updated = await (await lazyGetServices()).author.update(author.id, {
-      meta: { ...author.meta, avatarUrl: dataUrl },
-    });
-    set({ author: updated });
-    if (isAuthenticated) syncAuthorToApi(updated);
-    return updated;
-  },
-
-  removeAvatar: async () => {
-    const { author, isAuthenticated } = useAuthStore.getState();
-    if (!author) throw new Error('No author');
-
-    const meta = { ...author.meta, avatarUrl: null };
-    const updated = await (await lazyGetServices()).author.update(author.id, { meta });
-    set({ author: updated });
-    if (isAuthenticated) {
-      syncAuthorToApi(updated);
-      // Also remove the avatar file from API storage
-      authorsApi.removeAvatar(author.id).catch(() => {});
-    }
+    set({ account: null, isAuthenticated: false });
+    useAppStore.setState({ author: null });
   },
 }));

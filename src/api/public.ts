@@ -65,9 +65,9 @@ export async function downloadArtifact(
   return res.blob();
 }
 
-// ── Discover ───────────────────────────────────────────
+// ── Explore ───────────────────────────────────────────
 
-export interface DiscoverParams {
+export interface ExploreParams {
   q?: string;
   type?: 'cruxes' | 'authors';
   tag?: string[];
@@ -76,7 +76,7 @@ export interface DiscoverParams {
   perPage?: number;
 }
 
-export interface DiscoverCrux {
+export interface ExploreCrux {
   id: string;
   slug: string;
   title?: string;
@@ -90,7 +90,7 @@ export interface DiscoverCrux {
   author_meta?: Record<string, unknown>;
 }
 
-export interface DiscoverAuthor {
+export interface ExploreAuthor {
   id: string;
   username: string;
   display_name: string;
@@ -99,15 +99,15 @@ export interface DiscoverAuthor {
   created: string;
 }
 
-export interface DiscoverTag {
+export interface ExploreTag {
   label: string;
   count: number;
 }
 
-export async function discover(
-  params?: DiscoverParams,
-): Promise<{ items: (DiscoverCrux | DiscoverAuthor)[]; totalPages: number; currentPage: number }> {
-  const url = new URL(`${base}/discover`);
+export async function explore(
+  params?: ExploreParams,
+): Promise<{ items: (ExploreCrux | ExploreAuthor)[]; totalPages: number; currentPage: number }> {
+  const url = new URL(`${base}/explore`);
   if (params?.q) url.searchParams.set('q', params.q);
   if (params?.type) url.searchParams.set('type', params.type);
   if (params?.sort) url.searchParams.set('sort', params.sort);
@@ -117,7 +117,7 @@ export async function discover(
     for (const t of params.tag) url.searchParams.append('tag', t);
   }
   const res = await fetch(url.toString());
-  if (!res.ok) throw new Error(`Discover failed (${res.status})`);
+  if (!res.ok) throw new Error(`Explore failed (${res.status})`);
   const items = await res.json();
   const pagination = JSON.parse(res.headers.get('Pagination') || '{}');
   return {
@@ -127,8 +127,8 @@ export async function discover(
   };
 }
 
-export async function discoverTags(limit?: number): Promise<DiscoverTag[]> {
-  const url = new URL(`${base}/discover/tags`);
+export async function exploreTags(limit?: number): Promise<ExploreTag[]> {
+  const url = new URL(`${base}/explore/tags`);
   if (limit) url.searchParams.set('limit', String(limit));
   const res = await fetch(url.toString());
   if (!res.ok) throw new Error(`Tags failed (${res.status})`);

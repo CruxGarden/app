@@ -53,6 +53,17 @@ export async function wipeGarden(onProgress?: (status: string) => void): Promise
   onProgress?.('Clearing settings...');
   clearAllSettings();
 
+  // Clear cruxgarden:* keys from localStorage to prevent initSettings()
+  // from migrating them back into the freshly wiped SQLite database.
+  if (typeof localStorage !== 'undefined') {
+    const keysToRemove: string[] = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key?.startsWith('cruxgarden:')) keysToRemove.push(key);
+    }
+    for (const key of keysToRemove) localStorage.removeItem(key);
+  }
+
   onProgress?.('Wipe complete');
 }
 

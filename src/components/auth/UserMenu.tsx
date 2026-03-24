@@ -1,7 +1,9 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore, resolveAvatarUrl } from '@/stores/authStore';
+import { useAppStore } from '@/stores/appStore';
 import { useThemeStore } from '@/stores/themeStore';
+import { ThemeMode } from '@/lib/types';
 import { cn } from '@/lib/cn';
 
 function SunIcon() {
@@ -60,7 +62,8 @@ function MonitorIcon() {
 
 export default function UserMenu() {
   const navigate = useNavigate();
-  const { author, logout } = useAuthStore();
+  const { logout } = useAuthStore();
+  const author = useAppStore((s) => s.author);
   const { mode, setMode } = useThemeStore();
   const [open, setOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -83,7 +86,7 @@ export default function UserMenu() {
   const handleLogout = async () => {
     setOpen(false);
     await logout();
-    navigate('/login', { replace: true });
+    navigate('/home', { replace: true });
   };
 
   return (
@@ -132,7 +135,7 @@ export default function UserMenu() {
             <div className="border-t border-border my-1" />
 
             <button
-              onClick={() => setMode('light')}
+              onClick={() => setMode(ThemeMode.Light)}
               className={cn(
                 'w-full px-3 py-2 text-left text-sm hover:bg-accent-muted transition-colors flex items-center gap-2 cursor-pointer',
                 mode === 'light' ? 'text-text' : 'text-text-muted hover:text-text',
@@ -142,7 +145,7 @@ export default function UserMenu() {
               Light
             </button>
             <button
-              onClick={() => setMode('dark')}
+              onClick={() => setMode(ThemeMode.Dark)}
               className={cn(
                 'w-full px-3 py-2 text-left text-sm hover:bg-accent-muted transition-colors flex items-center gap-2 cursor-pointer',
                 mode === 'dark' ? 'text-text' : 'text-text-muted hover:text-text',
@@ -152,7 +155,7 @@ export default function UserMenu() {
               Dark
             </button>
             <button
-              onClick={() => setMode('auto')}
+              onClick={() => setMode(ThemeMode.Auto)}
               className={cn(
                 'w-full px-3 py-2 text-left text-sm hover:bg-accent-muted transition-colors flex items-center gap-2 cursor-pointer',
                 mode === 'auto' ? 'text-text' : 'text-text-muted hover:text-text',

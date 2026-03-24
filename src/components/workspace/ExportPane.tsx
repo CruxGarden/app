@@ -1,6 +1,6 @@
 import { useState, useCallback, useMemo } from 'react';
 import { useCruxStore } from '@/stores/cruxStore';
-import { useAuthStore } from '@/stores/authStore';
+import { useAppStore } from '@/stores/appStore';
 import { exportCrux, exportArtifactsZip } from '@/services/crux-io';
 import { cn } from '@/lib/cn';
 import { Spinner } from '@/components/ui';
@@ -59,7 +59,7 @@ export default function ExportPane() {
   const messages = useMemo(() => allMessages.slice(messageSegmentStart), [allMessages, messageSegmentStart]);
   const summary = useCruxStore((s) => s.summary);
   const growthCount = useCruxStore((s) => s.growthCount);
-  const author = useAuthStore((s) => s.author);
+  const author = useAppStore((s) => s.author);
 
   const [exporting, setExporting] = useState(false);
   const [exportingZip, setExportingZip] = useState(false);

@@ -2,21 +2,19 @@ import { useEffect, useState } from 'react';
 import { Outlet } from 'react-router-dom';
 import TopBar from './TopBar';
 import CommandPalette from './CommandPalette';
-import AnimatedBackground from './AnimatedBackground';
 import KeeperConsole from '@/components/keeper/KeeperConsole';
 import MoodBar, { applySavedMoodSettings } from '@/components/mood/MoodEditorPanel';
 import { useUIStore } from '@/stores/uiStore';
-import { isServicesReady, initServices, ensureLocalAuthor, getBackend } from '@/services';
+import { isServicesReady, initServices } from '@/services';
 import { seedTutorialCrux } from '@/services/seedTutorial';
 import { migrateApiKeyFromLocalStorage } from '@/ai/keys';
-import { useAuthStore } from '@/stores/authStore';
 import { useMoodStore } from '@/stores/moodStore';
 
 // Apply mood palette at module load time — before first React render.
 // Reads from localStorage (synchronous), so no flash.
 applySavedMoodSettings();
 
-export default function AppShell() {
+export default function Shell() {
   const [commandOpen, setCommandOpen] = useState(false);
   const [servicesOk, setServicesOk] = useState(isServicesReady());
   const keeperOpen = useUIStore((s) => s.keeperOpen);
@@ -31,11 +29,7 @@ export default function AppShell() {
       console.log(`[init] initServices: ${(performance.now() - t0).toFixed(0)}ms`);
       const t1 = performance.now();
       migrateApiKeyFromLocalStorage().catch(() => {});
-      if (getBackend() === 'local' && !useAuthStore.getState().author) {
-        const localAuthor = await ensureLocalAuthor();
-        useAuthStore.setState({ author: localAuthor });
-      }
-      console.log(`[init] ensureLocalAuthor: ${(performance.now() - t1).toFixed(0)}ms`);
+      console.log(`[init] post-init: ${(performance.now() - t1).toFixed(0)}ms`);
       const t2 = performance.now();
       useMoodStore.getState().loadMoods().catch(() => {});
       seedTutorialCrux().catch(() => {});
@@ -73,8 +67,6 @@ export default function AppShell() {
 
   return (
     <div className="flex flex-col h-screen overflow-hidden">
-      <AnimatedBackground />
-
       {/* Top bar */}
       <div className="relative z-20 shrink-0">
         <TopBar />

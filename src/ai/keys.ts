@@ -1,3 +1,5 @@
+import { SettingsKey } from '@/lib/constants';
+
 // Lazy import to avoid pulling SQLite worker into public pages
 async function db() {
   const { getSqliteClient } = await import('@/services/sqlite/client');
@@ -33,7 +35,7 @@ export async function removeApiKey(providerId: string): Promise<void> {
 /** Get the default model from settings, or return the fallback */
 export async function getDefaultModel(): Promise<string> {
   const row = await (await db()).get<{ value: string }>(
-    "SELECT value FROM settings WHERE key = 'cruxgarden:defaultModel'",
+    `SELECT value FROM settings WHERE key = '${SettingsKey.DefaultModel}'`,
   );
   return row?.value || 'claude-sonnet-4-20250514';
 }
@@ -41,7 +43,7 @@ export async function getDefaultModel(): Promise<string> {
 /** Save the default model to settings */
 export async function setDefaultModel(model: string): Promise<void> {
   await (await db()).run(
-    "INSERT OR REPLACE INTO settings (key, value) VALUES ('cruxgarden:defaultModel', ?)",
+    `INSERT OR REPLACE INTO settings (key, value) VALUES ('${SettingsKey.DefaultModel}', ?)`,
     [model],
   );
 }
@@ -51,12 +53,12 @@ export async function setDefaultModel(model: string): Promise<void> {
  * Called once on first init. Removes from localStorage after migration.
  */
 export async function migrateApiKeyFromLocalStorage(): Promise<void> {
-  const legacyKey = localStorage.getItem('cruxgarden:anthropicApiKey');
+  const legacyKey = localStorage.getItem(SettingsKey.LegacyAnthropicApiKey);
   if (legacyKey) {
     const existing = await getApiKey('anthropic');
     if (!existing) {
       await setApiKey('anthropic', legacyKey);
     }
-    localStorage.removeItem('cruxgarden:anthropicApiKey');
+    localStorage.removeItem(SettingsKey.LegacyAnthropicApiKey);
   }
 }

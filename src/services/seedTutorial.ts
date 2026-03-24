@@ -1,28 +1,27 @@
 import { getServices } from '@/services';
 import { getSetting, setSetting } from '@/services/settings';
 import { loadTemplate } from '@/templates';
-
-const SEEDED_KEY = 'cruxgarden:tutorialSeeded';
+import { SettingsKey } from '@/lib/constants';
 
 /**
  * Seed the "Tutorial - The Board" crux into a new garden.
  * Runs once — sets a flag in settings so it doesn't re-run.
  */
 export async function seedTutorialCrux(): Promise<void> {
-  if (getSetting(SEEDED_KEY)) return;
+  if (getSetting(SettingsKey.TutorialSeeded)) return;
 
   const { crux: cruxService, artifact: artifactService } = getServices();
 
   // Check if garden already has cruxes (returning user, imported data, etc.)
   const existing = await cruxService.listAll();
   if (existing.length > 0) {
-    setSetting(SEEDED_KEY, 'true');
+    setSetting(SettingsKey.TutorialSeeded, 'true');
     return;
   }
 
   const template = await loadTemplate('board');
   if (!template) {
-    setSetting(SEEDED_KEY, 'true');
+    setSetting(SettingsKey.TutorialSeeded, 'true');
     return;
   }
 
@@ -58,5 +57,5 @@ export async function seedTutorialCrux(): Promise<void> {
     });
   }
 
-  setSetting(SEEDED_KEY, 'true');
+  setSetting(SettingsKey.TutorialSeeded, 'true');
 }

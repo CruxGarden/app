@@ -7,24 +7,23 @@ import { Panel, Toggle } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import MoodEditorModal from '@/components/mood/MoodEditorModal';
 
-type BgType = 'bloom' | 'flowfield' | 'drift' | 'blank';
-
-const BG_KEY = 'cruxgarden:backgroundType';
+import { BG_CSS_VAR, SettingsKey } from '@/lib/constants';
+import { BgType, ThemeMode } from '@/lib/types';
 
 function getBackgroundType(): BgType {
-  const saved = getSetting(BG_KEY);
-  if (saved === 'bloom' || saved === 'flowfield' || saved === 'drift' || saved === 'blank') return saved;
+  const saved = getSetting(SettingsKey.BackgroundType);
+  if (saved === 'bloom' || saved === 'flow' || saved === 'drift' || saved === 'blank') return saved as BgType;
   const css =
     getComputedStyle(document.documentElement)
-      .getPropertyValue('--background-type')
+      .getPropertyValue(BG_CSS_VAR)
       .trim();
-  if (css === 'flowfield' || css === 'drift' || css === 'blank') return css;
-  return 'bloom';
+  if (css === 'flow' || css === 'drift' || css === 'blank') return css as BgType;
+  return BgType.Bloom;
 }
 
 function setBackgroundType(type: BgType) {
-  setSetting(BG_KEY, type);
-  document.documentElement.style.setProperty('--background-type', type);
+  setSetting(SettingsKey.BackgroundType, type);
+  document.documentElement.style.setProperty(BG_CSS_VAR, type);
 }
 
 // ── Icons ──────────────────────────────────────────
@@ -307,7 +306,7 @@ function PaletteDisplay() {
 // ── Main Component ─────────────────────────────────
 
 export default function MoodSettings() {
-  const { mode, resolved, setMode } = useThemeStore();
+  const { mode, activeMode, setMode } = useThemeStore();
   const [bgType, setBgType] = useState<BgType>(getBackgroundType);
   const [collapsed, setCollapsed] = useState(true);
 
@@ -349,19 +348,19 @@ export default function MoodSettings() {
           <div className="flex items-center gap-2">
             <OptionButton
               active={mode === 'dark'}
-              onClick={() => setMode('dark')}
+              onClick={() => setMode(ThemeMode.Dark)}
               icon={<MoonIcon />}
               label="Dark"
             />
             <OptionButton
               active={mode === 'light'}
-              onClick={() => setMode('light')}
+              onClick={() => setMode(ThemeMode.Light)}
               icon={<SunIcon />}
               label="Light"
             />
             <OptionButton
               active={mode === 'auto'}
-              onClick={() => setMode('auto')}
+              onClick={() => setMode(ThemeMode.Auto)}
               icon={<MonitorIcon />}
               label="System"
             />
@@ -374,21 +373,21 @@ export default function MoodSettings() {
           <div className="flex items-center gap-2 flex-wrap">
             <OptionButton
               active={bgType === 'blank'}
-              onClick={() => handleBgChange('blank')}
+              onClick={() => handleBgChange(BgType.Blank)}
               icon={<BlankPreview />}
               label="Blank"
             />
-            {resolved === 'dark' && (
+            {activeMode === 'dark' && (
               <>
                 <OptionButton
                   active={bgType === 'drift'}
-                  onClick={() => handleBgChange('drift')}
+                  onClick={() => handleBgChange(BgType.Drift)}
                   icon={<DriftPreview />}
                   label="Drift"
                 />
                 <OptionButton
-                  active={bgType === 'flowfield'}
-                  onClick={() => handleBgChange('flowfield')}
+                  active={bgType === 'flow'}
+                  onClick={() => handleBgChange(BgType.Flow)}
                   icon={<FlowFieldPreview />}
                   label="Flow"
                 />
@@ -396,7 +395,7 @@ export default function MoodSettings() {
             )}
             <OptionButton
               active={bgType === 'bloom'}
-              onClick={() => handleBgChange('bloom')}
+              onClick={() => handleBgChange(BgType.Bloom)}
               icon={<BloomPreview />}
               label="Bloom"
             />

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useCruxStore } from '@/stores/cruxStore';
 import { DEFAULT_PANE_ORDER } from '@/stores/uiStore';
 import { setSetting } from '@/services/settings';
+import { SettingsKey } from '@/lib/constants';
 import { getApiKey } from '@/ai/keys';
 import { importCrux } from '@/services/crux-io';
 import { useGardenStore } from '@/stores/gardenStore';
@@ -961,8 +962,8 @@ export default function NewCruxModal({ open, onClose }: NewCruxModalProps) {
         }
 
         if (result.theme) {
-          if (result.theme.mode) setSetting('cruxgarden:theme', result.theme.mode);
-          if (result.theme.tint) setSetting('cruxgarden:tint', result.theme.tint);
+          if (result.theme.mode) setSetting(SettingsKey.Theme, result.theme.mode);
+          if (result.theme.tint) setSetting(SettingsKey.Tint, result.theme.tint);
         }
 
         if (result.failedArtifacts.length > 0) {

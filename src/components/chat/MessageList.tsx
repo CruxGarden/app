@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import type { ChatMessage } from '@/api/types';
-import { useAuthStore, resolveAvatarUrl } from '@/stores/authStore';
+import { resolveAvatarUrl } from '@/stores/authStore';
+import { useAppStore } from '@/stores/appStore';
 import MessageBubble from './MessageBubble';
 import { KeeperAvatar } from '@/components/keeper/KeeperConsole';
 import MarkdownRenderer from './MarkdownRenderer';
@@ -15,7 +16,7 @@ interface MessageListProps {
 export default function MessageList({ messages, streamingContent, isStreaming, truncatedAfter }: MessageListProps) {
   const bottomRef = useRef<HTMLDivElement>(null);
   const hasScrolledRef = useRef(false);
-  const author = useAuthStore((s) => s.author);
+  const author = useAppStore((s) => s.author);
 
   const userInitial = author?.username?.charAt(0)?.toUpperCase() ?? '?';
   const avatarUrl = resolveAvatarUrl(author);

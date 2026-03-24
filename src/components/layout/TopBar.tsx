@@ -2,7 +2,7 @@ import { useState, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useUIStore, DEFAULT_PANE_ORDER, type PaneType } from '@/stores/uiStore';
 import { useCruxStore } from '@/stores/cruxStore';
-import { useAuthStore } from '@/stores/authStore';
+import { useAppStore } from '@/stores/appStore';
 import IconButton from '@/components/ui/IconButton';
 import UserMenu from '@/components/auth/UserMenu';
 import { APP_NAME } from '@/lib/constants';
@@ -266,7 +266,7 @@ export default function TopBar() {
   const { paneOrder, paneVisibility, togglePane, activeCruxId } = useUIStore();
   const cruxTitle = useCruxStore((s) => s.crux?.title);
   const updateCrux = useCruxStore((s) => s.updateCrux);
-  const username = useAuthStore((s) => s.author?.username);
+  const username = useAppStore((s) => s.author?.username);
 
   const [editingTitle, setEditingTitle] = useState(false);
   const [titleDraft, setTitleDraft] = useState('');
@@ -418,10 +418,10 @@ export default function TopBar() {
           </>
         )}
         <IconButton
-          label="Discover"
+          label="Explore"
           size="sm"
-          onClick={() => navigate('/discover')}
-          tooltip={{ label: 'Discover' }}
+          onClick={() => navigate('/explore')}
+          tooltip={{ label: 'Explore' }}
         >
           <SearchIcon />
         </IconButton>

@@ -10,20 +10,21 @@
  */
 
 import { getSqliteClient } from './sqlite/client';
+import { SettingsKey } from '@/lib/constants';
 
 const cache = new Map<string, string>();
 let ready = false;
 
 // Keys that must be readable synchronously before services init (written to
 // localStorage as a cache so the first paint uses the right theme/background).
-const SYNC_KEYS = new Set([
-  'cruxgarden:theme',
-  'cruxgarden:tint',
-  'cruxgarden:backgroundType',
-  'cruxgarden:backgroundImage',
-  'cruxgarden:backgroundBlockSize',
-  'cruxgarden:moodPresetDark',
-  'cruxgarden:moodPresetLight',
+const SYNC_KEYS: Set<string> = new Set([
+  SettingsKey.Theme,
+  SettingsKey.Tint,
+  SettingsKey.BackgroundType,
+  SettingsKey.BackgroundImage,
+  SettingsKey.BackgroundBlockSize,
+  SettingsKey.MoodPresetDark,
+  SettingsKey.MoodPresetLight,
 ]);
 
 // ── Public API ──────────────────────────────────────────────────────────────
@@ -84,12 +85,12 @@ export async function initSettings(): Promise<void> {
 
   // 2. Migrate unprefixed SQLite keys → cruxgarden: prefixed (one-time)
   const LEGACY_KEY_MAP: [string, string][] = [
-    ['local:authorId', 'cruxgarden:local:authorId'],
-    ['local:homeId', 'cruxgarden:local:homeId'],
-    ['backend', 'cruxgarden:backend'],
-    ['localAuthorId', 'cruxgarden:localAuthorId'],
-    ['defaultModel', 'cruxgarden:defaultModel'],
-    ['apiKey:anthropic', 'cruxgarden:apiKey:anthropic'],
+    ['local:authorId', SettingsKey.LocalAuthorIdLegacy],
+    ['local:homeId', SettingsKey.LocalHomeId],
+    ['backend', SettingsKey.Backend],
+    ['localAuthorId', SettingsKey.LocalAuthorId],
+    ['defaultModel', SettingsKey.DefaultModel],
+    ['apiKey:anthropic', SettingsKey.ApiKeyAnthropic],
   ];
   for (const [oldKey, newKey] of LEGACY_KEY_MAP) {
     if (cache.has(oldKey) && !cache.has(newKey)) {
@@ -109,9 +110,9 @@ export async function initSettings(): Promise<void> {
       const key = localStorage.key(i);
       if (!key || !key.startsWith('cruxgarden:')) continue;
       // Skip auth tokens — not user data
-      if (key === 'cruxgarden:accessToken' || key === 'cruxgarden:refreshToken') continue;
+      if (key === SettingsKey.AccessToken || key === SettingsKey.RefreshToken) continue;
       // Skip legacy keys that no longer exist
-      if (key === 'cruxgarden:anthropicApiKey' || key === 'cruxgarden:ui') continue;
+      if (key === SettingsKey.LegacyAnthropicApiKey || key === SettingsKey.LegacyUi) continue;
 
       if (!cache.has(key)) {
         const value = localStorage.getItem(key);

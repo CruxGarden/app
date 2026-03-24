@@ -1,4 +1,5 @@
 import axios, { type InternalAxiosRequestConfig } from 'axios';
+import { SettingsKey } from '@/lib/constants';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
@@ -10,24 +11,21 @@ const client = axios.create({
 
 // ── Token management ──────────────────────────────────
 
-const TOKEN_KEY = 'cruxgarden:accessToken';
-const REFRESH_KEY = 'cruxgarden:refreshToken';
-
 export function getStoredTokens() {
   return {
-    accessToken: localStorage.getItem(TOKEN_KEY),
-    refreshToken: localStorage.getItem(REFRESH_KEY),
+    accessToken: localStorage.getItem(SettingsKey.AccessToken),
+    refreshToken: localStorage.getItem(SettingsKey.RefreshToken),
   };
 }
 
 export function storeTokens(accessToken: string, refreshToken: string) {
-  localStorage.setItem(TOKEN_KEY, accessToken);
-  localStorage.setItem(REFRESH_KEY, refreshToken);
+  localStorage.setItem(SettingsKey.AccessToken, accessToken);
+  localStorage.setItem(SettingsKey.RefreshToken, refreshToken);
 }
 
 export function clearTokens() {
-  localStorage.removeItem(TOKEN_KEY);
-  localStorage.removeItem(REFRESH_KEY);
+  localStorage.removeItem(SettingsKey.AccessToken);
+  localStorage.removeItem(SettingsKey.RefreshToken);
 }
 
 // ── Request interceptor: attach JWT ───────────────────

@@ -8,7 +8,7 @@ import { Modal } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import { APP_NAME } from '@/lib/constants';
 
-export default function Crux() {
+export default function CruxBuilder() {
   const { id } = useParams<{ id: string }>();
   const { crux, loadCrux, reset, artifacts } = useCruxStore();
   const { setPaneVisible, setActiveCrux } = useUIStore();

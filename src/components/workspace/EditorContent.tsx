@@ -42,7 +42,7 @@ export default function EditorContent({ tab, artifact, cruxId, saveRef, captureR
     artifact,
   );
   const { setTabDirty, setTabScrollTop } = useUIStore();
-  const resolved = useThemeStore((s) => s.resolved);
+  const activeMode = useThemeStore((s) => s.activeMode);
   const monacoRef = useRef<typeof Monaco | null>(null);
   const editorRef = useRef<Monaco.editor.IStandaloneCodeEditor | null>(null);
   const contentRef = useRef<string | null>(null);
@@ -57,7 +57,7 @@ export default function EditorContent({ tab, artifact, cruxId, saveRef, captureR
   const ext = getExtension(path);
   const mime = artifact.mimeType || 'text/plain';
   const language = getMonacoLanguage(path);
-  const themeName = resolved === 'dark' ? 'crux-garden-dark' : 'crux-garden-light';
+  const themeName = activeMode === 'dark' ? 'crux-garden-dark' : 'crux-garden-light';
   const isHtmlFile = ext === 'html' || ext === 'htm';
   const isConfigJson = /^config\.json$/i.test(path.split('/').pop() || '');
 

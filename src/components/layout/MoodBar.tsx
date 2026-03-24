@@ -1,28 +1,27 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useThemeStore } from '@/stores/themeStore';
 import { getSetting, setSetting } from '@/services/settings';
+import { BG_CSS_VAR, SettingsKey } from '@/lib/constants';
 import { cn } from '@/lib/cn';
 
-const BG_KEY = 'cruxgarden:backgroundType';
-
 export default function MoodBar() {
-  const resolved = useThemeStore((s) => s.resolved);
+  const activeMode = useThemeStore((s) => s.activeMode);
 
   const [bgType, setBgType] = useState<string>(() => {
-    return getSetting(BG_KEY) || 'bloom';
+    return getSetting(SettingsKey.BackgroundType) || 'bloom';
   });
 
   useEffect(() => {
-    const saved = getSetting(BG_KEY);
+    const saved = getSetting(SettingsKey.BackgroundType);
     if (saved && saved !== 'bloom') {
-      document.documentElement.style.setProperty('--background-type', saved);
+      document.documentElement.style.setProperty(BG_CSS_VAR, saved);
     }
   }, []);
 
   const toggleBg = useCallback((type: string) => {
-    document.documentElement.style.setProperty('--background-type', type);
+    document.documentElement.style.setProperty(BG_CSS_VAR, type);
     setBgType(type);
-    setSetting(BG_KEY, type);
+    setSetting(SettingsKey.BackgroundType, type);
   }, []);
 
   return (
@@ -45,7 +44,7 @@ export default function MoodBar() {
           </div>
         </div>
       </div>
-      {resolved === 'dark' && (
+      {activeMode === 'dark' && (
         <>
           <div className="relative group/drift">
             <button
@@ -73,10 +72,10 @@ export default function MoodBar() {
           </div>
           <div className="relative group/flow">
             <button
-              onClick={() => toggleBg('flowfield')}
+              onClick={() => toggleBg('flow')}
               className={cn(
                 'p-1.5 rounded-[var(--radius-sm)] transition-colors cursor-pointer',
-                bgType === 'flowfield' ? 'text-accent bg-accent-muted' : 'text-panel-text-muted hover:text-accent hover:bg-accent-muted',
+                bgType === 'flow' ? 'text-accent bg-accent-muted' : 'text-panel-text-muted hover:text-accent hover:bg-accent-muted',
               )}
             >
               <svg width="18" height="14" viewBox="0 0 20 14" className="shrink-0">

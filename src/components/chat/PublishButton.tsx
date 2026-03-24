@@ -1,12 +1,11 @@
 import { useState, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/stores/authStore';
+import { useAppStore } from '@/stores/appStore';
 import { useCruxStore } from '@/stores/cruxStore';
+import { useUIStore } from '@/stores/uiStore';
 import { Button } from '@/components/ui';
 import CreateAuthorModal from '@/components/auth/CreateAuthorModal';
 import PublishModal from './PublishModal';
-
-const REDIRECT_KEY = 'cruxgarden:publishRedirect';
 
 function PublishIcon() {
   return (
@@ -28,8 +27,8 @@ function PublishIcon() {
 }
 
 export default function PublishButton() {
-  const navigate = useNavigate();
-  const { isAuthenticated, author } = useAuthStore();
+  const { isAuthenticated } = useAuthStore();
+  const author = useAppStore((s) => s.author);
   const { crux, publishCrux } = useCruxStore();
   const [showAuthorModal, setShowAuthorModal] = useState(false);
   const [showPublishModal, setShowPublishModal] = useState(false);
@@ -38,7 +37,7 @@ export default function PublishButton() {
 
   const doPublish = useCallback(async () => {
     if (!crux) return;
-    const currentAuthor = useAuthStore.getState().author;
+    const currentAuthor = useAppStore.getState().author;
     if (!currentAuthor) return;
 
     setPublishing(true);
@@ -55,22 +54,21 @@ export default function PublishButton() {
   }, [crux, publishCrux]);
 
   const handleClick = useCallback(() => {
-    // Step 1: Must be logged in
+    // Not connected — open the Share pane which has the inline connect form
     if (!isAuthenticated) {
-      sessionStorage.setItem(REDIRECT_KEY, window.location.pathname);
-      navigate('/login');
+      useUIStore.getState().setPaneVisible('publish', true);
       return;
     }
 
-    // Step 2: Must have an author profile
+    // Must have an author profile
     if (!author) {
       setShowAuthorModal(true);
       return;
     }
 
-    // Step 3: Publish
+    // Publish
     doPublish();
-  }, [isAuthenticated, author, doPublish, navigate]);
+  }, [isAuthenticated, author, doPublish]);
 
   const handleAuthorCreated = useCallback(() => {
     setShowAuthorModal(false);

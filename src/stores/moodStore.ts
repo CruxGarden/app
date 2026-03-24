@@ -1,10 +1,10 @@
 import { create } from 'zustand';
 import type { Crux } from '@/api/types';
+import type { BgType } from '@/lib/types';
 import { applyMoodPalette, type MoodPalette } from '@/lib/moods';
 import { getServices } from '@/services';
 import { getSetting, setSetting } from '@/services/settings';
-
-const ACTIVE_MOOD_KEY = 'cruxgarden:activeMoodId';
+import { BG_CSS_VAR, SettingsKey } from '@/lib/constants';
 
 /**
  * MoodMeta — the meta shape for a mood crux (type: 'mood').
@@ -18,7 +18,7 @@ export interface MoodPersona {
 
 export interface MoodMeta {
   palette?: Partial<MoodPalette>;
-  backgroundType?: 'bloom' | 'flowfield' | 'drift' | 'blank' | 'image';
+  backgroundType?: BgType;
   themeMode?: 'dark' | 'light' | null;
   persona?: MoodPersona;
   tags?: string[];
@@ -80,9 +80,9 @@ export const useMoodStore = create<MoodState>((set, get) => ({
   backgroundUrl: (() => {
     // Read from localStorage synchronously so first render has the right background
     try {
-      const bgType = localStorage.getItem('cruxgarden:backgroundType');
+      const bgType = localStorage.getItem(SettingsKey.BackgroundType);
       if (bgType === 'image') {
-        return localStorage.getItem('cruxgarden:backgroundImage') || null;
+        return localStorage.getItem(SettingsKey.BackgroundImage) || null;
       }
     } catch { /* SSR or no localStorage */ }
     return null;
@@ -93,7 +93,7 @@ export const useMoodStore = create<MoodState>((set, get) => ({
   loadMoods: async () => {
     const { crux } = getServices();
     const moods = await crux.listByType('mood');
-    const savedId = getSetting(ACTIVE_MOOD_KEY) as string | null;
+    const savedId = getSetting(SettingsKey.ActiveMoodId) as string | null;
 
     set({ moods, loaded: true });
 
@@ -105,7 +105,7 @@ export const useMoodStore = create<MoodState>((set, get) => ({
         set({ activeMoodId: savedId, activeMood: mood, avatarUrl, backgroundUrl });
         get().applyMood(mood);
       } else {
-        setSetting(ACTIVE_MOOD_KEY, '');
+        setSetting(SettingsKey.ActiveMoodId, '');
       }
     }
   },
@@ -117,7 +117,7 @@ export const useMoodStore = create<MoodState>((set, get) => ({
     if (oldBg) URL.revokeObjectURL(oldBg);
 
     if (!moodId) {
-      setSetting(ACTIVE_MOOD_KEY, '');
+      setSetting(SettingsKey.ActiveMoodId, '');
       set({ activeMoodId: null, activeMood: null, avatarUrl: null, backgroundUrl: null });
       get().applyMood(null);
       return;
@@ -128,11 +128,11 @@ export const useMoodStore = create<MoodState>((set, get) => ({
       const mood = await crux.findById(moodId);
       const { avatarUrl, backgroundUrl } = await loadMoodArtifacts(moodId);
 
-      setSetting(ACTIVE_MOOD_KEY, moodId);
+      setSetting(SettingsKey.ActiveMoodId, moodId);
       set({ activeMoodId: moodId, activeMood: mood, avatarUrl, backgroundUrl });
       get().applyMood(mood);
     } catch {
-      setSetting(ACTIVE_MOOD_KEY, '');
+      setSetting(SettingsKey.ActiveMoodId, '');
       set({ activeMoodId: null, activeMood: null, avatarUrl: null, backgroundUrl: null });
     }
   },
@@ -197,7 +197,7 @@ export const useMoodStore = create<MoodState>((set, get) => ({
 
     // Apply background type
     if (meta.backgroundType) {
-      document.documentElement.style.setProperty('--background-type', meta.backgroundType);
+      document.documentElement.style.setProperty(BG_CSS_VAR, meta.backgroundType);
     }
   },
 }));

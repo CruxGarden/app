@@ -6,35 +6,151 @@
     <link rel="icon" type="image/png" sizes="192x192" href="/favicon-192.png" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="preload" href="/fonts/JetBrainsMono-Medium.woff2" as="font" type="font/woff2" crossorigin />
     <meta name="description" content="Crux Garden — where ideas grow. A creative platform that captures the evolution of ideas, solo or by collaborating with other people and AI agents." />
     <title>Crux Garden</title>
+    <style>
+      /* #0a0c0b matches the default dark palette --bg in src/styles/globals.css (garden preset).
+         Hardcoded here because CSS custom properties aren't available before globals.css loads.
+         If the default --bg changes, update this value to match. */
+      body { margin: 0; background: #0a0c0b; }
+      #splash {
+        position: fixed;
+        inset: 0;
+        z-index: 9999;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        transition: opacity 0.3s ease;
+      }
+      #splash-inner {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 16px;
+      }
+      /* JetBrains Mono is the display/mono font. Defined as @font-face in src/styles/globals.css,
+         preloaded via <link rel="preload"> above. Fallback to monospace if not yet loaded. */
+      #splash-title {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 20px;
+        font-weight: 600;
+        letter-spacing: 0.08em;
+      }
+      #splash-spinner {
+        width: 20px;
+        height: 20px;
+        border: 2px solid;
+        border-top-color: transparent;
+        border-radius: 50%;
+        animation: spin 0.8s linear infinite;
+      }
+      @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
   </head>
-  <body style="margin:0;background:#0a0c0b">
-    <div id="splash" style="position:fixed;inset:0;z-index:9999;display:none;align-items:center;justify-content:center;transition:opacity 0.3s ease">
-      <div style="display:flex;flex-direction:column;align-items:center;gap:16px">
-        <span id="splash-title" style="font-family:'JetBrains Mono',monospace;font-size:20px;font-weight:600;letter-spacing:0.08em">Crux Garden</span>
-        <div id="splash-spinner" style="width:20px;height:20px;border:2px solid;border-top-color:transparent;border-radius:50%;animation:spin 0.8s linear infinite"></div>
+  <body>
+    <div id="splash">
+      <div id="splash-inner">
+        <span id="splash-title">Crux Garden</span>
+        <div id="splash-spinner"></div>
       </div>
-      <style>@keyframes spin{to{transform:rotate(360deg)}}</style>
     </div>
     <script>
-      // Match splash colors to the active mood palette (read from localStorage, synchronous)
-      (function(){
-        var p=location.pathname;
-        if(!(p.startsWith('/home')||p.startsWith('/c/')||p.startsWith('/settings')))return;
-        var P={garden:['#0a0c0b','#4ade80','#c4cec5'],void:['#000000','#ffffff','#888888'],snowblack:['#060606','#888888','#666666'],neon:['#020204','#00ffaa','#80ffd5'],abyss:['#040810','#40c8c0','#a0d0cc'],hearth:['#100804','#e8a040','#d0b888'],regal:['#0a0610','#d4a840','#c0a870'],cafe:['#1a1410','#d8a860','#c0a878'],darkroom:['#1e1e1e','#2d9cdb','#a0c8e8'],terminal:['#000800','#00ff00','#80ff80'],solaris:['#002830','#b58900','#d4b040'],bunker:['#0c0e08','#c8b878','#b0a878'],snowgray:['#484848','#b0b0b0','#d0d0d0'],geocities:['#008080','#ffff00','#ffffff'],velvet:['#10080c','#e888a8','#e0b0c0'],parchment:['#f4ece0','#886838','#4a3820'],sky:['#e8f0f8','#2870c0','#1a4878'],blossom:['#f8eff2','#c06888','#804058'],snowwhite:['#ffffff','#222222','#333333'],candy:['#f8f0f8','#e040a0','#a03070'],cubicle:['#c8c0b0','#486898','#2a3e5c'],meadow:['#ecf4e8','#488038','#2c5020'],pearl:['#f0eff4','#7060a0','#483868'],sand:['#f0e8d8','#906830','#604020'],frost:['#eef4f6','#2888a0','#1a5868'],cotton:['#f6f2f0','#a07060','#684840'],mint:['#e8f4f0','#288870','#1a5848'],sunrise:['#f8f0e4','#d07030','#904818'],lemonade:['#f8f6e0','#908020','#605510'],ivory:['#f8f4ee','#606050','#404038']};
-        var mode=localStorage.getItem('cruxgarden:theme')==='light'?'Light':'Dark';
-        var key=mode==='Light'?'cruxgarden:moodPresetLight':'cruxgarden:moodPresetDark';
-        var id=localStorage.getItem(key)||(mode==='Light'?'parchment':'garden');
-        var c=P[id]||P.garden;
-        var s=document.getElementById('splash');
-        s.style.background=c[0];
-        document.body.style.background=c[0];
-        document.getElementById('splash-title').style.color=c[2];
-        var sp=document.getElementById('splash-spinner');
-        sp.style.borderColor=c[1];
-        sp.style.borderTopColor='transparent';
-        s.style.display='flex';
+      /*
+       * Splash screen color matching.
+       *
+       * This script runs synchronously before React loads. Its job is to
+       * color the splash screen to match the user's active mood preset,
+       * so the loading screen feels like part of the app — not a jarring
+       * flash of wrong colors.
+       *
+       * It only runs on app routes (/home, /c/, /settings) because those
+       * are the pages that need SQLite init time. Landing, login, and
+       * public pages skip the splash entirely.
+       *
+       * The mood preset colors are duplicated here from lib/moods/presets.ts
+       * because this script runs before any app code loads. If a preset
+       * is added or its colors change, both places need updating.
+       *
+       * Each preset is [background, accent, text]. These map to:
+       *   - background → splash + body background
+       *   - accent     → spinner border color
+       *   - text       → "Crux Garden" title color
+       */
+      (function () {
+        var path = location.pathname;
+
+        // Only show splash on app routes — these need SQLite init time.
+        // Landing, login, and public pages render immediately with no splash.
+        var isAppRoute = (
+          path.startsWith('/home') ||
+          path.startsWith('/c/') ||
+          path.startsWith('/settings')
+        );
+        if (!isAppRoute) return;
+
+        // All 30 mood presets: [background, accent, text].
+        // Source of truth: lib/moods/presets.ts — keep in sync.
+        var presets = {
+          // Dark presets
+          garden:   ['#0a0c0b', '#4ade80', '#c4cec5'],
+          void:     ['#000000', '#ffffff', '#888888'],
+          snowblack:['#060606', '#888888', '#666666'],
+          neon:     ['#020204', '#00ffaa', '#80ffd5'],
+          abyss:    ['#040810', '#40c8c0', '#a0d0cc'],
+          hearth:   ['#100804', '#e8a040', '#d0b888'],
+          regal:    ['#0a0610', '#d4a840', '#c0a870'],
+          cafe:     ['#1a1410', '#d8a860', '#c0a878'],
+          darkroom: ['#1e1e1e', '#2d9cdb', '#a0c8e8'],
+          terminal: ['#000800', '#00ff00', '#80ff80'],
+          solaris:  ['#002830', '#b58900', '#d4b040'],
+          bunker:   ['#0c0e08', '#c8b878', '#b0a878'],
+          snowgray: ['#484848', '#b0b0b0', '#d0d0d0'],
+          geocities:['#008080', '#ffff00', '#ffffff'],
+          velvet:   ['#10080c', '#e888a8', '#e0b0c0'],
+          // Light presets
+          parchment:['#f4ece0', '#886838', '#4a3820'],
+          sky:      ['#e8f0f8', '#2870c0', '#1a4878'],
+          blossom:  ['#f8eff2', '#c06888', '#804058'],
+          snowwhite:['#ffffff', '#222222', '#333333'],
+          candy:    ['#f8f0f8', '#e040a0', '#a03070'],
+          cubicle:  ['#c8c0b0', '#486898', '#2a3e5c'],
+          meadow:   ['#ecf4e8', '#488038', '#2c5020'],
+          pearl:    ['#f0eff4', '#7060a0', '#483868'],
+          sand:     ['#f0e8d8', '#906830', '#604020'],
+          frost:    ['#eef4f6', '#2888a0', '#1a5868'],
+          cotton:   ['#f6f2f0', '#a07060', '#684840'],
+          mint:     ['#e8f4f0', '#288870', '#1a5848'],
+          sunrise:  ['#f8f0e4', '#d07030', '#904818'],
+          lemonade: ['#f8f6e0', '#908020', '#605510'],
+          ivory:    ['#f8f4ee', '#606050', '#404038']
+        };
+
+        // Read the user's theme mode (dark or light) from localStorage.
+        var isLight = localStorage.getItem('cruxgarden:theme') === 'light';
+
+        // Read which mood preset is active for the current mode.
+        // Falls back to 'garden' (dark) or 'parchment' (light) if not set.
+        var presetKey = isLight ? 'cruxgarden:moodPresetLight' : 'cruxgarden:moodPresetDark';
+        var presetId = localStorage.getItem(presetKey) || (isLight ? 'parchment' : 'garden');
+
+        // Look up the colors. Fall back to garden if the preset ID is unknown.
+        var colors = presets[presetId] || presets.garden;
+
+        // Apply the colors to the splash elements.
+        var splash = document.getElementById('splash');
+        var title = document.getElementById('splash-title');
+        var spinner = document.getElementById('splash-spinner');
+
+        splash.style.background = colors[0];
+        document.body.style.background = colors[0];
+        title.style.color = colors[2];
+        spinner.style.borderColor = colors[1];
+        spinner.style.borderTopColor = 'transparent'; // one transparent side = spinning effect
+
+        // Show the splash. It stays visible until AppShell dismisses it
+        // after SQLite and services finish initializing.
+        splash.style.display = 'flex';
       })();
     </script>
     <div id="root"></div>

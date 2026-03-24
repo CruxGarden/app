@@ -1,12 +1,12 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuthStore } from '@/stores/authStore';
+import { useAppStore } from '@/stores/appStore';
 
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 import { useGarden } from '@/hooks/useGarden';
 
-import { APP_NAME } from '@/lib/constants';
+import { APP_NAME, SettingsKey } from '@/lib/constants';
 import { GardenGrid, GardenSearch } from '@/components/garden';
 import NewCruxModal from '@/components/garden/NewCruxModal';
 import { ApiKeySetup, IconButton, Modal, Button } from '@/components/ui';
@@ -14,7 +14,6 @@ import { getApiKey } from '@/ai/keys';
 import { getSetting, setSetting } from '@/services/settings';
 import { cn } from '@/lib/cn';
 
-const DISMISS_KEY = 'cruxgarden:apiKeyBannerDismissed';
 
 function GlobeIcon() {
   return (
@@ -54,8 +53,8 @@ function PlusCircleIcon() {
   );
 }
 
-export default function Garden() {
-  const author = useAuthStore((s) => s.author);
+export default function HomeGarden() {
+  const author = useAppStore((s) => s.author);
   const navigate = useNavigate();
   const {
     cruxList,
@@ -77,7 +76,7 @@ export default function Garden() {
   const [showApiKeyBanner, setShowApiKeyBanner] = useState(false);
 
   useEffect(() => {
-    const dismissed = !!getSetting(DISMISS_KEY);
+    const dismissed = !!getSetting(SettingsKey.ApiKeyBannerDismissed);
     if (dismissed) return;
     getApiKey('anthropic').then((key) => {
       if (!key) setShowApiKeyBanner(true);
@@ -85,7 +84,7 @@ export default function Garden() {
   }, []);
 
   const handleDismissBanner = () => {
-    setSetting(DISMISS_KEY, '1');
+    setSetting(SettingsKey.ApiKeyBannerDismissed, '1');
     setShowApiKeyBanner(false);
   };
 
