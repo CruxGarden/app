@@ -1,9 +1,17 @@
 import { useState } from 'react';
-import { Panel, ApiKeySetup } from '@/components/ui';
+import { Panel, ApiKeySetup, Toggle } from '@/components/ui';
+import { getSetting, setSetting } from '@/services/settings';
+import { SettingsKey } from '@/lib/constants';
 import { cn } from '@/lib/cn';
 
 export default function AiSettings() {
   const [collapsed, setCollapsed] = useState(true);
+  const [aiEnabled, setAiEnabled] = useState(() => getSetting(SettingsKey.AiEnabled) === 'true');
+
+  const handleAiToggle = (enabled: boolean) => {
+    setAiEnabled(enabled);
+    setSetting(SettingsKey.AiEnabled, enabled ? 'true' : 'false');
+  };
 
   return (
     <Panel padding="md">
@@ -20,10 +28,7 @@ export default function AiSettings() {
           strokeWidth="2"
           strokeLinecap="round"
           strokeLinejoin="round"
-          className={cn(
-            'text-text-muted transition-transform duration-150',
-            collapsed ? '-rotate-90' : 'rotate-0',
-          )}
+          className={cn('text-text-muted', collapsed ? '-rotate-90' : 'rotate-0')}
         >
           <polyline points="6 9 12 15 18 9" />
         </svg>
@@ -31,8 +36,11 @@ export default function AiSettings() {
       </button>
 
       {!collapsed && (
-        <div className="mt-5">
-          <ApiKeySetup />
+        <div className="mt-5 space-y-4">
+          <div className="flex items-center justify-between">
+            <Toggle checked={aiEnabled} onChange={handleAiToggle} label="Enable AI Tools" />
+          </div>
+          {aiEnabled && <ApiKeySetup />}
         </div>
       )}
     </Panel>

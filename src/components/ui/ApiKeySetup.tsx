@@ -13,9 +13,11 @@ const PROVIDER_PLACEHOLDERS: Record<string, string> = {
 interface ApiKeySetupProps {
   compact?: boolean;
   onKeySaved?: () => void;
+  onKeyChange?: () => void;
+  autoFocus?: boolean;
 }
 
-export default function ApiKeySetup({ compact, onKeySaved }: ApiKeySetupProps) {
+export default function ApiKeySetup({ compact, onKeySaved, onKeyChange, autoFocus }: ApiKeySetupProps) {
   const providerIds = Object.keys(PROVIDERS);
   const [hints, setHints] = useState<Record<string, string>>({});
   const [inputs, setInputs] = useState<Record<string, string>>({});
@@ -44,6 +46,7 @@ export default function ApiKeySetup({ compact, onKeySaved }: ApiKeySetupProps) {
     setHints((h) => ({ ...h, [providerId]: `${trimmed.slice(0, 7)}...${trimmed.slice(-4)}` }));
     setInputs((v) => ({ ...v, [providerId]: '' }));
     onKeySaved?.();
+    onKeyChange?.();
   };
 
   const handleRemove = async (providerId: string) => {
@@ -54,11 +57,12 @@ export default function ApiKeySetup({ compact, onKeySaved }: ApiKeySetupProps) {
       return next;
     });
     setInputs((v) => ({ ...v, [providerId]: '' }));
+    onKeyChange?.();
   };
 
   return (
     <div className="space-y-3">
-      {providerIds.map((providerId) => {
+      {providerIds.map((providerId, idx) => {
         const provider = PROVIDERS[providerId]!;
         const Icon = PROVIDER_ICONS[providerId];
         const hint = hints[providerId];
@@ -77,7 +81,7 @@ export default function ApiKeySetup({ compact, onKeySaved }: ApiKeySetupProps) {
                   href={provider.keyUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-sm font-display font-medium text-text hover:text-accent transition-colors underline decoration-text-muted/30 underline-offset-2 hover:decoration-accent"
+                  className="text-sm font-display font-medium text-text hover:text-accent  underline decoration-text-muted/30 underline-offset-2 hover:decoration-accent"
                 >
                   {provider.name}
                 </a>
@@ -108,6 +112,7 @@ export default function ApiKeySetup({ compact, onKeySaved }: ApiKeySetupProps) {
               <input
                 type="password"
                 value={input}
+                autoFocus={autoFocus && idx === 0}
                 onChange={(e) => setInputs((v) => ({ ...v, [providerId]: e.target.value }))}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') handleSave(providerId);
@@ -116,7 +121,7 @@ export default function ApiKeySetup({ compact, onKeySaved }: ApiKeySetupProps) {
                 className={cn(
                   'flex-1 px-3 py-1.5 text-xs font-mono rounded-[var(--radius-sm)]',
                   'bg-bg border border-border text-text placeholder:text-text-muted/50',
-                  'outline-none focus:border-accent transition-colors',
+                  'outline-none focus:border-accent ',
                 )}
               />
               <button
@@ -124,7 +129,7 @@ export default function ApiKeySetup({ compact, onKeySaved }: ApiKeySetupProps) {
                 disabled={!input.trim()}
                 className={cn(
                   'px-3 py-1.5 text-xs font-mono rounded-[var(--radius-sm)]',
-                  'bg-surface border border-border text-text hover:bg-accent-muted transition-colors cursor-pointer',
+                  'bg-surface border border-border text-text hover:bg-accent-muted  cursor-pointer',
                   'disabled:opacity-50 disabled:cursor-not-allowed',
                 )}
               >
@@ -135,7 +140,7 @@ export default function ApiKeySetup({ compact, onKeySaved }: ApiKeySetupProps) {
                   onClick={() => handleRemove(providerId)}
                   className={cn(
                     'px-3 py-1.5 text-xs font-mono rounded-[var(--radius-sm)]',
-                    'text-error hover:bg-error-muted transition-colors cursor-pointer',
+                    'text-error hover:bg-error-muted  cursor-pointer',
                   )}
                 >
                   Remove

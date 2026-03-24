@@ -11,7 +11,7 @@ export default function Toggle({ checked, onChange, label, disabled }: TogglePro
   return (
     <label
       className={cn(
-        'inline-flex items-center gap-2 cursor-pointer',
+        'inline-flex items-center gap-2 cursor-pointer select-none',
         disabled && 'opacity-50 cursor-not-allowed',
       )}
     >
@@ -21,19 +21,18 @@ export default function Toggle({ checked, onChange, label, disabled }: TogglePro
         disabled={disabled}
         onClick={() => onChange(!checked)}
         className={cn(
-          'relative w-10 h-5.5 rounded-full transition-colors duration-200',
+          'relative w-7 h-4 rounded-full shrink-0 cursor-pointer',
           checked ? 'bg-accent' : 'bg-border',
         )}
       >
         <span
           className={cn(
-            'absolute top-0.5 left-0.5 w-4.5 h-4.5 rounded-full bg-contrast shadow-sm',
-            'transition-transform duration-200',
-            checked && 'translate-x-[18px]',
+            'absolute top-0.5 left-0.5 w-3 h-3 rounded-full bg-white',
+            checked && 'translate-x-3',
           )}
         />
       </button>
-      {label ? <span className="text-sm text-text">{label}</span> : null}
+      {label && <span className="text-xs text-text-muted">{label}</span>}
     </label>
   );
 }

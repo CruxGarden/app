@@ -250,13 +250,13 @@
   --color-garden-card-meta: var(--garden-card-meta);
   --color-garden-card-thumbnail: var(--garden-card-thumbnail);
 
-  /* ── V3: Landing ──────────────────────────────────── */
-  --color-landing-panel: var(--landing-panel);
-  --color-landing-panel-border: var(--landing-panel-border);
-  --color-landing-title: var(--landing-title);
-  --color-landing-subtitle: var(--landing-subtitle);
-  --color-landing-button: var(--landing-button);
-  --color-landing-button-hover: var(--landing-button-hover);
+  /* ── V3: Gateway ──────────────────────────────────── */
+  --color-gateway-panel: var(--gateway-panel);
+  --color-gateway-panel-border: var(--gateway-panel-border);
+  --color-gateway-title: var(--gateway-title);
+  --color-gateway-subtitle: var(--gateway-subtitle);
+  --color-gateway-button: var(--gateway-button);
+  --color-gateway-button-hover: var(--gateway-button-hover);
 
   /* ── V3: Settings ─────────────────────────────────── */
   --color-settings-panel: var(--settings-panel);
@@ -394,12 +394,12 @@
   --garden-card-text: #8b908d;
   --garden-card-meta: #6a6e6b;
   --garden-card-thumbnail: #0b0d0c;
-  --landing-panel: #131514;
-  --landing-panel-border: rgba(82, 96, 86, 0.18);
-  --landing-title: #e2e4e3;
-  --landing-subtitle: #8b908d;
-  --landing-button: #7db3a3;
-  --landing-button-hover: #6da393;
+  --gateway-panel: #131514;
+  --gateway-panel-border: rgba(82, 96, 86, 0.18);
+  --gateway-title: #e2e4e3;
+  --gateway-subtitle: #8b908d;
+  --gateway-button: #7db3a3;
+  --gateway-button-hover: #6da393;
   --settings-panel: #141816;
   --settings-panel-border: rgba(82, 96, 86, 0.18);
   --settings-label: #7db3a3;

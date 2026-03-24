@@ -24,6 +24,7 @@ my-crux-202603101430.crux
 ├── manifest.json              # Format version, metadata, integrity
 ├── crux.json                  # Workspace identity and settings
 ├── dimensions.json            # Dimension graph with metadata
+├── store.json                 # Crux Store entries (key-value data)
 ├── versions/
 │   ├── current.json           # Current workspace state + message segment
 │   ├── 0.json                 # First snapshot + message segment
@@ -107,7 +108,7 @@ The workspace's identity — who it is, not what it contains.
 | `title` | `string` | Human-readable workspace name. |
 | `description` | `string` | Optional description. |
 | `type` | `string` | Always `"workspace"` for the main crux. Snapshots have type `"crux"`. |
-| `kind` | `string \| null` | Controls publish behavior: `"webapp"`, `"page"`, `"document"`, `"image"`, or `null` (auto-detect from files). |
+| `kind` | `string \| null` | Controls publish behavior: `"webapp"`, `"page"`, `"document"`, `"image"`, `"notes"`, or `null` (auto-detect from files). Snapshots use `"snapshot"`. |
 | `status` | `string` | Lifecycle status. Typically `"living"`. |
 | `visibility` | `string` | `"private"` or `"public"`. |
 | `authorId` | `string \| null` | UUID of the author who owns this crux. |
@@ -183,6 +184,38 @@ Each entry represents a dimension (relationship) between two version manifests:
 **Why index-based, not UUID-based:** In clone mode, all UUIDs are regenerated. Indices are stable within the archive and map directly to version manifest filenames.
 
 **Why `thumbnailPath` instead of `thumbnailId`:** Attachment IDs are transient — they change on every import. The path is portable and can be resolved to the new attachment ID after the snapshot's artifacts are uploaded.
+
+---
+
+### store.json
+
+Per-crux key-value store entries. Optional — only present if the crux has store data.
+
+```json
+[
+  {
+    "key": "views",
+    "value": 42,
+    "mode": "public",
+    "updated": "2026-03-20T10:00:00.000Z"
+  },
+  {
+    "key": "user-prefs",
+    "value": { "theme": "dark", "lang": "en" },
+    "mode": "protected",
+    "updated": "2026-03-20T10:05:00.000Z"
+  }
+]
+```
+
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| `key` | `string` | The store key name. |
+| `value` | `any` | JSON-serializable value (string, number, boolean, object, array). |
+| `mode` | `string` | `"public"` (one shared value) or `"protected"` (per-visitor). |
+| `updated` | `string` | ISO 8601 timestamp of last modification. |
+
+On import, store entries are inserted into the local SQLite `store` table. The `crux_id` is set to the imported crux's ID.
 
 ---
 

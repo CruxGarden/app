@@ -8,15 +8,17 @@ import MarkdownRenderer from '@/components/chat/MarkdownRenderer';
 import ModelSelector from '@/components/chat/ModelSelector';
 import KeeperPixelAvatar from '@/components/ui/KeeperPixelAvatar';
 import type { KeeperVariant } from '@/components/ui/KeeperPixelAvatar';
-import { useAuthStore, resolveAvatarUrl } from '@/stores/authStore';
+import { resolveAvatarUrl } from '@/stores/authStore';
+import { useAppStore } from '@/stores/appStore';
 import { useThemeStore } from '@/stores/themeStore';
 import { getApiKey } from '@/ai/keys';
 import { getSetting, setSetting, removeSetting } from '@/services/settings';
+import { SettingsKey } from '@/lib/constants';
 import { getPersona, type PersonaSettings } from '@/components/mood/MoodEditorPanel';
 
 function useKeeperVariant(): KeeperVariant {
-  const resolved = useThemeStore((s) => s.resolved);
-  return resolved === 'light' ? 'avatar-light' : 'avatar-dark';
+  const activeMode = useThemeStore((s) => s.activeMode);
+  return activeMode === 'light' ? 'avatar-light' : 'avatar-dark';
 }
 
 export function KeeperAvatar({ className = 'w-6 h-6', animate = false, bordered = false }: { className?: string; animate?: boolean; bordered?: boolean }) {
@@ -39,7 +41,6 @@ export function KeeperAvatar({ className = 'w-6 h-6', animate = false, bordered 
   );
 }
 
-const CONVERSATIONS_KEY = 'cruxgarden:keeper-conversations';
 const MAX_CONVERSATIONS = 20;
 const KEEPER_MODEL = 'claude-sonnet-4-20250514';
 
@@ -77,7 +78,7 @@ interface Conversation {
 
 function loadConversations(): Conversation[] {
   try {
-    const raw = getSetting(CONVERSATIONS_KEY);
+    const raw = getSetting(SettingsKey.KeeperConversations);
     if (raw) {
       const convos = JSON.parse(raw);
       if (!Array.isArray(convos)) return [];
@@ -90,7 +91,7 @@ function loadConversations(): Conversation[] {
       }));
     }
     // Migrate old single-conversation format
-    const old = getSetting('cruxgarden:keeper-history');
+    const old = getSetting(SettingsKey.LegacyKeeperHistory);
     if (old) {
       const parsed = JSON.parse(old);
       const msgs = parsed.displayMessages || [];
@@ -106,7 +107,7 @@ function loadConversations(): Conversation[] {
           })),
         };
         saveConversations([migrated]);
-        removeSetting('cruxgarden:keeper-history');
+        removeSetting(SettingsKey.LegacyKeeperHistory);
         return [migrated];
       }
     }
@@ -116,7 +117,7 @@ function loadConversations(): Conversation[] {
 
 function saveConversations(convos: Conversation[]) {
   try {
-    setSetting(CONVERSATIONS_KEY, JSON.stringify(convos.slice(0, MAX_CONVERSATIONS)));
+    setSetting(SettingsKey.KeeperConversations, JSON.stringify(convos.slice(0, MAX_CONVERSATIONS)));
   } catch { /* ignore */ }
 }
 
@@ -163,7 +164,7 @@ interface KeeperConsoleProps {
 }
 
 function UserAvatar() {
-  const author = useAuthStore((s) => s.author);
+  const author = useAppStore((s) => s.author);
   const avatarUrl = resolveAvatarUrl(author);
   const initial = author?.username?.charAt(0)?.toUpperCase() ?? '?';
 
@@ -241,7 +242,7 @@ export default function KeeperConsole({ open, onClose }: KeeperConsoleProps) {
   const [streamContent, setStreamContent] = useState('');
   const [toolActivity, setToolActivity] = useState('');
   const [error, setError] = useState('');
-  const [model, setModel] = useState(() => getSetting('cruxgarden:keeper-model') || KEEPER_MODEL);
+  const [model, setModel] = useState(() => getSetting(SettingsKey.KeeperModel) || KEEPER_MODEL);
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const abortRef = useRef<AbortController | null>(null);
@@ -384,7 +385,7 @@ export default function KeeperConsole({ open, onClose }: KeeperConsoleProps) {
 
   const changeModel = useCallback((m: string) => {
     setModel(m);
-    try { setSetting('cruxgarden:keeper-model', m); } catch { /* ignore */ }
+    try { setSetting(SettingsKey.KeeperModel, m); } catch { /* ignore */ }
   }, []);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {

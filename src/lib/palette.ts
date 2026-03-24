@@ -8,6 +8,8 @@
  * in globals.css are the source of truth.
  */
 
+import { BG_CSS_VAR } from './constants';
+
 export interface Palette {
   // ── Page ─────────────────────────────────────────
   bg: string;
@@ -976,7 +978,7 @@ export const KEY_TO_VAR: Record<keyof Palette, string> = {
   bloomOpacity: '--bloom-opacity',
   bloomBlur: '--bloom-blur',
   bloomSpeed: '--bloom-speed',
-  backgroundType: '--background-type',
+  backgroundType: BG_CSS_VAR,
 
   // Starfield
   starColor: '--star-color',

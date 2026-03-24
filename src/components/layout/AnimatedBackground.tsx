@@ -2,49 +2,39 @@ import { useEffect, useState } from 'react';
 import { useThemeStore } from '@/stores/themeStore';
 import { useMoodStore } from '@/stores/moodStore';
 import { getSetting, setSetting } from '@/services/settings';
+import { BG_CSS_VAR, SettingsKey } from '@/lib/constants';
+import { BgType, ThemeMode } from '@/lib/types';
 import BloomBackground from './BloomBackground';
-import StarfieldBackground from './StarfieldBackground';
-import FlowFieldBackground from './FlowFieldBackground';
+import FlowBackground from './FlowBackground';
 import DriftBackground from './DriftBackground';
 
-const BG_KEY = 'cruxgarden:backgroundType';
-
-function pickRandomDefault(): string {
-  const r = Math.random();
-  const choice = r < 0.34 ? 'bloom' : r < 0.67 ? 'flowfield' : 'drift';
-  setSetting(BG_KEY, choice);
-  document.documentElement.style.setProperty('--background-type', choice);
-  return choice;
+function getDefault(): BgType {
+  setSetting(SettingsKey.BackgroundType, BgType.Bloom);
+  document.documentElement.style.setProperty(BG_CSS_VAR, BgType.Bloom);
+  return BgType.Bloom;
 }
 
 export default function AnimatedBackground() {
-  const resolved = useThemeStore((s) => s.resolved);
+  const activeMode = useThemeStore((s) => s.activeMode);
   const backgroundUrl = useMoodStore((s) => s.backgroundUrl);
 
-  const [bgType, setBgType] = useState<string>(() => {
-    const saved = getSetting(BG_KEY);
+  const [bgType, setBgType] = useState<BgType>(() => {
+    const saved = getSetting(SettingsKey.BackgroundType) as BgType | null;
     if (saved) {
-      document.documentElement.style.setProperty('--background-type', saved);
+      document.documentElement.style.setProperty(BG_CSS_VAR, saved);
       return saved;
     }
-    return pickRandomDefault();
+    return getDefault();
   });
 
+  // Watch for external changes to --background-type (e.g. mood system)
   useEffect(() => {
     const observer = new MutationObserver(() => {
-      const inline = document.documentElement.style.getPropertyValue('--background-type').trim();
-      const saved = getSetting(BG_KEY);
-
-      if (!inline && saved) {
-        document.documentElement.style.setProperty('--background-type', saved);
-        setBgType(saved);
-        return;
-      }
-
-      const val =
+      const val = (
         getComputedStyle(document.documentElement)
-          .getPropertyValue('--background-type')
-          .trim() || getSetting(BG_KEY) || 'bloom';
+          .getPropertyValue(BG_CSS_VAR)
+          .trim() || getSetting(SettingsKey.BackgroundType) || BgType.Bloom
+      ) as BgType;
       setBgType((prev) => (prev !== val ? val : prev));
     });
 
@@ -56,48 +46,25 @@ export default function AnimatedBackground() {
     return () => observer.disconnect();
   }, []);
 
-  // Image = uploaded pixelated background
-  if (bgType === 'image' && backgroundUrl) {
-    return (
-      <div
-        aria-hidden="true"
-        className="fixed inset-0 w-full h-full"
-        style={{
-          zIndex: 0,
-          pointerEvents: 'none',
-          backgroundImage: `url(${backgroundUrl})`,
-          backgroundSize: 'cover',
-          backgroundPosition: 'center',
-          imageRendering: 'pixelated',
-        }}
-      />
-    );
+  // Image overlays a background image
+  if (bgType === BgType.Image && backgroundUrl) {
+    return <div aria-hidden="true" className="fixed inset-0 -z-10 pointer-events-none bg-cover bg-center" style={{ backgroundImage: `url(${backgroundUrl})` }} />;
   }
 
-  // Blank = solid background, no animation
-  // Dark: just the existing --bg. Light: soft gray-green tinted from accent.
-  if (bgType === 'blank') {
-    if (resolved === 'light') {
-      return (
-        <div
-          aria-hidden="true"
-          className="fixed inset-0 w-full h-full"
-          style={{
-            zIndex: 0,
-            pointerEvents: 'none',
-            background: 'color-mix(in srgb, var(--accent) 15%, color-mix(in srgb, black 12%, var(--bg)))',
-          }}
-        />
-      );
-    }
-    return null;
+  // Blank uses the body --bg
+  if (bgType === BgType.Blank) return null;
+
+  // Light mode has only bloom
+  if (activeMode === ThemeMode.Light) return <BloomBackground />;
+
+  switch (bgType) {
+    case BgType.Bloom:
+      return <BloomBackground />;
+    case BgType.Flow:
+      return <FlowBackground />;
+    case BgType.Drift:
+      return <DriftBackground />;
+    default:
+      return <BloomBackground />;
   }
-
-  // Light mode: only bloom is available (flow/drift are dark-only)
-  if (resolved === 'light') return <BloomBackground />;
-
-  if (bgType === 'starfield') return <StarfieldBackground />;
-  if (bgType === 'flowfield') return <FlowFieldBackground />;
-  if (bgType === 'drift') return <DriftBackground />;
-  return <BloomBackground />;
 }

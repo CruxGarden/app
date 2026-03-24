@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import { useCruxStore } from '@/stores/cruxStore';
-import { useAuthStore } from '@/stores/authStore';
+import { useAppStore } from '@/stores/appStore';
 import FileTree from './FileTree';
 import FileContent from './FileContent';
 import FileTabs from './FileTabs';
@@ -24,7 +24,7 @@ function TreeIcon() {
 
 export default function FileViewer() {
   const { crux, artifacts, artifactsVersion } = useCruxStore();
-  const author = useAuthStore((s) => s.author);
+  const author = useAppStore((s) => s.author);
   const [openTabs, setOpenTabs] = useState<string[]>([]);
   const [activeTab, setActiveTab] = useState<string | null>(null);
   const [treeVisible, setTreeVisible] = useState(true);

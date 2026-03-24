@@ -19,7 +19,7 @@ const StorePane = lazy(() => import('./StorePane'));
 import ContextMenu from './ContextMenu';
 import MobilePaneSwitcher from './MobilePaneSwitcher';
 import { useCruxStore } from '@/stores/cruxStore';
-import { useAuthStore } from '@/stores/authStore';
+import { useAppStore } from '@/stores/appStore';
 import { getDownloadUrl } from '@/api/public';
 import 'react-mosaic-component/react-mosaic-component.css';
 
@@ -180,7 +180,7 @@ export default function WorkspaceLayout() {
   const deleteArtifacts = useCruxStore((s) => s.deleteArtifacts);
   const artifacts = useCruxStore((s) => s.artifacts);
   const crux = useCruxStore((s) => s.crux);
-  const author = useAuthStore((s) => s.author);
+  const author = useAppStore((s) => s.author);
 
   // Proxy crux:store:* postMessages from preview iframe to local SQLite
   useStoreProxy(crux?.id ?? null);

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import type { Artifact } from '@/api/types';
 import { publicApi } from '@/api';
 import { usePublicPreviewUrl } from '@/hooks/usePublicPreviewUrl';
+import { useAppStore } from '@/stores/appStore';
 import { useAuthStore } from '@/stores/authStore';
 import { getStoredTokens } from '@/api/client';
 import MarkdownRenderer from '@/components/chat/MarkdownRenderer';
@@ -136,7 +137,7 @@ function HtmlRenderer({
   useEffect(() => {
     function buildSession() {
       const { accessToken } = getStoredTokens();
-      const author = useAuthStore.getState().author;
+      const author = useAppStore.getState().author;
       const apiBase = import.meta.env.VITE_API_URL || '';
       // Use local postMessage proxy when API is on localhost — browsers block
       // public origins from fetching private/loopback addresses (Private Network Access).

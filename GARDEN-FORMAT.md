@@ -284,7 +284,7 @@ CREATE INDEX IF NOT EXISTS idx_cruxes_updated ON cruxes(updated);
 
 ### artifacts
 
-File storage. Every artifact belongs to a crux (via `resource_id`) and contains the actual file content as a BLOB.
+File storage. Every artifact belongs to a crux (via `resource_id`). File content is stored in OPFS blobs (`crux-blobs/{fingerprint}`), not in the SQLite `content` column. The `content` column exists in the schema but is unused — OPFS is the canonical blob store. The `fingerprint` column links metadata to the OPFS blob.
 
 ```sql
 CREATE TABLE IF NOT EXISTS artifacts (
@@ -330,7 +330,7 @@ CREATE INDEX IF NOT EXISTS idx_artifacts_fingerprint ON artifacts(fingerprint);
 | `size` | INTEGER | File size in bytes. |
 | `fingerprint` | TEXT | SHA-256 hex hash of the file content. Used for deduplication in exports and snapshot cloning. |
 | `path` | TEXT | Internal storage path. Matches `meta.path`. Used by the unique index for dedup-by-path. |
-| `content` | BLOB | The raw file bytes. Text files are stored as UTF-8 encoded BLOBs. Binary files stored as-is. |
+| `content` | BLOB | Legacy column — unused. File content lives in OPFS at `crux-blobs/{fingerprint}`. |
 | `created` | TEXT | ISO 8601 creation timestamp. |
 | `updated` | TEXT | ISO 8601 last-modified timestamp. |
 
@@ -365,7 +365,7 @@ CREATE INDEX IF NOT EXISTS idx_dimensions_source_type ON dimensions(source_id, t
 | `id` | TEXT | UUID v4 primary key. |
 | `source_id` | TEXT | UUID of the source crux. For growth dimensions, this is the workspace. |
 | `target_id` | TEXT | UUID of the target crux. For growth dimensions, this is the snapshot. |
-| `type` | TEXT | One of: `"gate"`, `"garden"`, `"growth"`, `"graft"`. |
+| `type` | TEXT | One of: `"growth"`, `"garden"`, `"graft"`. Only `"growth"` is actively used. |
 | `weight` | REAL | Ordering weight. For growth dimensions, this is the 1-based snapshot index. |
 | `author_id` | TEXT | UUID of the author. |
 | `home_id` | TEXT | UUID of the home. |
@@ -435,6 +435,37 @@ All settings keys are prefixed with `cruxgarden:`. A migration in `initSettings(
 
 ---
 
+### store
+
+Per-crux key-value store. Enables persistent data in published cruxes (view counters, user preferences, game saves, etc.).
+
+```sql
+CREATE TABLE IF NOT EXISTS store (
+  id TEXT PRIMARY KEY,
+  crux_id TEXT NOT NULL,
+  key TEXT NOT NULL,
+  value TEXT NOT NULL,
+  mode TEXT NOT NULL DEFAULT 'protected',
+  created TEXT NOT NULL,
+  updated TEXT NOT NULL
+);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_store_crux_key
+  ON store(crux_id, key);
+CREATE INDEX IF NOT EXISTS idx_store_crux ON store(crux_id);
+```
+
+| Column | Type | Description |
+| ------ | ---- | ----------- |
+| `id` | TEXT | UUID v4 primary key. |
+| `crux_id` | TEXT | UUID of the crux this entry belongs to. |
+| `key` | TEXT | Store key name (e.g. `"views"`, `"user-prefs"`). |
+| `value` | TEXT | JSON-serialized value. |
+| `mode` | TEXT | `"public"` (one shared value per key) or `"protected"` (per-visitor, requires auth). |
+| `created` | TEXT | ISO 8601 creation timestamp. |
+| `updated` | TEXT | ISO 8601 last-modified timestamp. |
+
+---
+
 ### schema_version
 
 Tracks the database schema version for future migrations.
@@ -475,6 +506,11 @@ Current version: **1**.
         |artifacts |<-------------------+
         |(files)   |     (snapshots also
         +----------+      have artifacts)
+
+        +----------+
+        |  store   |--- crux_id --> cruxes
+        | (kv data)|
+        +----------+
 ```
 
 ---

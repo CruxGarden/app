@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect, useMemo } from 'react';
 import { useCruxStore } from '@/stores/cruxStore';
 import { useAuthStore } from '@/stores/authStore';
+import { useAppStore } from '@/stores/appStore';
 import { exportCrux, importCrux } from '@/services/crux-io';
 import * as syncApi from '@/api/sync';
 import { cn } from '@/lib/cn';
@@ -47,7 +48,7 @@ export default function SyncPane() {
   const messageSegmentStart = useCruxStore((s) => s.messageSegmentStart);
   const messages = useMemo(() => allMessages.slice(messageSegmentStart), [allMessages, messageSegmentStart]);
   const summary = useCruxStore((s) => s.summary);
-  const author = useAuthStore((s) => s.author);
+  const author = useAppStore((s) => s.author);
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
 
   const [pushing, setPushing] = useState(false);

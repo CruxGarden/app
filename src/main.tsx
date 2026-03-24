@@ -1,7 +1,7 @@
 /* eslint-disable react-refresh/only-export-components */
 import { StrictMode, useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
-import { useAuthStore } from '@/stores/authStore';
+import { useAppStore } from '@/stores/appStore';
 import App from './App';
 import './styles/globals.css';
 
@@ -12,13 +12,13 @@ function isAppRoute(): boolean {
 
 function isPublicRoute(): boolean {
   const path = window.location.pathname;
+  // Gateway (/) renders immediately — it handles its own init via handleEnter
+  if (path === '/') return true;
   return (
-    path.startsWith('/discover') ||
+    path.startsWith('/explore') ||
     (!path.startsWith('/home') &&
-     !path.startsWith('/login') &&
      !path.startsWith('/settings') &&
      !path.startsWith('/c/') &&
-     path !== '/' &&
      path.split('/').filter(Boolean).length >= 1)
   );
 }
@@ -31,18 +31,19 @@ function dismissSplash() {
 }
 
 function Bootstrap() {
-  const init = useAuthStore((s) => s.init);
-  const [ready, setReady] = useState(() => isPublicRoute());
+  const init = useAppStore((s) => s.init);
+  const publicRoute = isPublicRoute();
+  const [ready, setReady] = useState(() => publicRoute);
 
   useEffect(() => {
     if (ready) {
-      // Non-app routes don't go through AppShell, so dismiss splash here.
-      // App routes (/home, /c/, /settings) dismiss splash in AppShell after services init.
+      // Non-app routes don't go through Shell, so dismiss splash here.
+      // App routes (/home, /c/, /settings) dismiss splash in Shell after services init.
       if (!isAppRoute()) dismissSplash();
       // Public routes: init auth in background (non-blocking) so tokens
       // get refreshed and crux:session handshake has a valid token.
       // Lightweight mode skips SQLite/services init.
-      if (isPublicRoute()) init({ lightweight: true }).catch(() => {});
+      if (publicRoute) init({ lightweight: true }).catch(() => {});
       return;
     }
     init().then(() => setReady(true));

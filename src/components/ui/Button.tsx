@@ -13,7 +13,7 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 const variants: Record<Variant, string> = {
-  primary: 'bg-primary-button text-primary-button-text border border-primary-button-border hover:bg-primary-button-hover active:brightness-95',
+  primary: 'bg-primary-button text-primary-button-text border border-primary-button-border hover:brightness-110 active:brightness-95',
   secondary:
     'bg-action-button text-action-button-text border border-action-button-border hover:bg-action-button-hover hover:text-action-button-text-hover active:brightness-95',
   ghost:
@@ -43,8 +43,8 @@ export default function Button({
       disabled={disabled || loading}
       className={cn(
         'inline-flex items-center justify-center font-medium rounded-[var(--radius-sm)]',
-        'transition-all duration-150 cursor-pointer',
-        'disabled:opacity-50 disabled:cursor-not-allowed',
+        'cursor-pointer',
+        'disabled:bg-border disabled:text-text-muted disabled:border-transparent disabled:cursor-not-allowed',
         'font-body',
         variants[variant],
         sizes[size],

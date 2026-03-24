@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { authors } from '@/api';
-import { useAuthStore } from '@/stores/authStore';
+import { useAppStore } from '@/stores/appStore';
 import { Modal, Button, Input } from '@/components/ui';
 
 interface CreateAuthorModalProps {
@@ -52,7 +52,7 @@ export default function CreateAuthorModal({ open, onClose, onCreated }: CreateAu
           displayName: displayName || username,
         });
         // Update auth store with new author
-        useAuthStore.setState({ author });
+        useAppStore.setState({ author });
         onCreated();
       } catch (err: unknown) {
         const message = err instanceof Error ? err.message : 'Failed to create author';

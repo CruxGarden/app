@@ -92,7 +92,7 @@ const PALETTE_BLOCKS: PaletteBlock[] = [
   buildBlock('warning', 'Warning', 'Caution states', 'warning', ALL_KEYS),
   buildBlock('success', 'Success', 'Positive states', 'success', ALL_KEYS),
   buildBlock('bloom', 'Bloom', 'Background gradient blobs', 'bloom', ALL_KEYS),
-  buildBlock('ambient', 'Ambient', 'Flow, drift, starfield', 'flow', [...ALL_KEYS.filter(k => k.startsWith('flow') || k.startsWith('drift') || k.startsWith('star'))]),
+  buildBlock('ambient', 'Ambient', 'Flow, drift', 'flow', [...ALL_KEYS.filter(k => k.startsWith('flow') || k.startsWith('drift'))]),
   buildBlock('chrome', 'Chrome', 'Contrast, brand, misc', 'contrast', ['contrast', 'previewBg', 'brandAi', 'accent', 'accentMuted']),
   buildBlock('public-top-bar', 'Public Top Bar', 'Public display header', 'publicTopBar', ALL_KEYS),
   buildBlock('toggle', 'Toggle', 'Switch controls', 'toggle', ALL_KEYS),
@@ -102,7 +102,7 @@ const PALETTE_BLOCKS: PaletteBlock[] = [
   buildBlock('command-palette', 'Command Palette', 'Cmd+K search', 'commandPalette', ALL_KEYS),
   buildBlock('avatar', 'Avatar', 'User/AI avatars', 'avatar', ALL_KEYS),
   buildBlock('markdown', 'Markdown', 'Rendered markdown content', 'markdown', ALL_KEYS),
-  buildBlock('landing', 'Landing Page', 'Welcome/setup screen', 'landing', ALL_KEYS),
+  buildBlock('gateway', 'Gateway', 'Welcome/setup screen', 'gateway', ALL_KEYS),
   buildBlock('settings', 'Settings', 'Settings page sections', 'settings', ALL_KEYS),
 ].filter(b => b.tokens.length > 0);
 
@@ -297,7 +297,7 @@ function PersonaTab({
 
 // ── Tab: Background ──────────────────────────────────
 
-type BgType = 'bloom' | 'flowfield' | 'drift' | 'blank' | 'image';
+import { BgType } from '@/lib/types';
 
 function BackgroundTab({
   bgType,
@@ -321,10 +321,10 @@ function BackgroundTab({
   const fileRef = useRef<HTMLInputElement>(null);
 
   const animatedOptions: { value: BgType; label: string; description: string }[] = [
-    { value: 'bloom', label: 'Bloom', description: 'Animated gradient blobs' },
-    { value: 'drift', label: 'Drift', description: 'Floating particles' },
-    { value: 'flowfield', label: 'Flow', description: 'Organic wave patterns' },
-    { value: 'blank', label: 'Blank', description: 'Solid background color' },
+    { value: BgType.Bloom, label: 'Bloom', description: 'Animated gradient blobs' },
+    { value: BgType.Drift, label: 'Drift', description: 'Floating particles' },
+    { value: BgType.Flow, label: 'Flow', description: 'Organic wave patterns' },
+    { value: BgType.Blank, label: 'Blank', description: 'Solid background color' },
   ];
 
   return (
@@ -354,7 +354,7 @@ function BackgroundTab({
         <label className="text-[10px] font-mono uppercase tracking-wider text-text-muted">Image</label>
         <button
           onClick={() => {
-            onChangeBgType('image');
+            onChangeBgType(BgType.Image);
             fileRef.current?.click();
           }}
           className={cn(
@@ -548,7 +548,7 @@ export default function MoodEditorModal({ open, onClose, moodId }: MoodEditorMod
     systemPrompt: '',
     greeting: 'What would you like to create today?',
   });
-  const [bgType, setBgType] = useState<BgType>('bloom');
+  const [bgType, setBgType] = useState<BgType>(BgType.Bloom);
   const [tags, setTags] = useState<string[]>([]);
 
   // Background image
@@ -575,7 +575,7 @@ export default function MoodEditorModal({ open, onClose, moodId }: MoodEditorMod
           systemPrompt: '',
           greeting: 'What would you like to create today?',
         });
-        setBgType((meta?.backgroundType as BgType) || 'bloom');
+        setBgType((meta?.backgroundType as BgType) || BgType.Bloom);
         setTags(meta?.tags || []);
         // Load existing background image from mood artifacts
         setBgPendingFile(null);
@@ -596,7 +596,7 @@ export default function MoodEditorModal({ open, onClose, moodId }: MoodEditorMod
         systemPrompt: '',
         greeting: 'What would you like to create today?',
       });
-      setBgType('bloom');
+      setBgType(BgType.Bloom);
       setTags([]);
       setBgPendingFile(null);
       setBgImagePreview(null);
@@ -630,7 +630,7 @@ export default function MoodEditorModal({ open, onClose, moodId }: MoodEditorMod
   const handleBgImageSelect = useCallback(async (file: File) => {
     setBgPendingFile(file);
     setBgBlockSize(8);
-    setBgType('image');
+    setBgType(BgType.Image);
     await generateBgPreview(file, 8);
   }, [generateBgPreview]);
 

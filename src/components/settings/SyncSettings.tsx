@@ -1,8 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useAuthStore } from '@/stores/authStore';
+import { useAppStore } from '@/stores/appStore';
 import * as syncApi from '@/api/sync';
 import { exportGarden, confirmAndImportGarden } from '@/services/garden-io';
-import { ensureLocalAuthor } from '@/services';
 import { Panel, Spinner } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import type { GardenStatus, SyncedCrux } from '@/api/sync';
@@ -87,10 +87,7 @@ export default function SyncSettings() {
       const imported = await confirmAndImportGarden({
         data: blob,
         onProgress: setStatus,
-        onPostImport: async () => {
-          const author = await ensureLocalAuthor();
-          useAuthStore.setState({ author });
-        },
+        onPostImport: async () => { await useAppStore.getState().ensureAuthor(); },
       });
 
       if (!imported) {

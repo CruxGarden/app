@@ -6,6 +6,7 @@ import type { IPublishService } from './publish.service';
 import type { IStoreService } from './sqlite/store.service';
 import { getSqliteClient } from './sqlite/client';
 import { initSettings } from './settings';
+import { SettingsKey } from '@/lib/constants';
 
 export interface Services {
   crux: ICruxService;
@@ -25,7 +26,7 @@ let initPromise: Promise<Services> | null = null;
 export async function getBackendSetting(): Promise<Backend> {
   try {
     const row = await getSqliteClient().get<{ value: string }>(
-      "SELECT value FROM settings WHERE key = 'cruxgarden:backend'",
+      `SELECT value FROM settings WHERE key = '${SettingsKey.Backend}'`,
     );
     return (row?.value as Backend) || 'local';
   } catch {
@@ -114,7 +115,7 @@ export function isServicesReady(): boolean {
 export async function ensureLocalAuthor(): Promise<import('./types').Author> {
   const db = getSqliteClient();
   const existing = await db.get<{ value: string }>(
-    "SELECT value FROM settings WHERE key = 'cruxgarden:localAuthorId'",
+    `SELECT value FROM settings WHERE key = '${SettingsKey.LocalAuthorId}'`,
   );
   if (existing?.value) {
     try {
@@ -130,7 +131,7 @@ export async function ensureLocalAuthor(): Promise<import('./types').Author> {
     displayName: 'Wanderer',
   });
   await db.run(
-    "INSERT OR REPLACE INTO settings (key, value) VALUES ('cruxgarden:localAuthorId', ?)",
+    `INSERT OR REPLACE INTO settings (key, value) VALUES ('${SettingsKey.LocalAuthorId}', ?)`,
     [author.id],
   );
   return author;
