@@ -5,8 +5,7 @@ import AiSettings from '@/components/settings/AiSettings';
 
 export default function Settings() {
   return (
-    <div className="p-6 max-w-2xl mx-auto">
-      <h1 className="font-display text-2xl font-bold text-text mb-8">Settings</h1>
+    <div className="overflow-y-auto flex-1 py-2">
 
       <AccountSettings />
 

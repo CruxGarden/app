@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useAuthStore } from '@/stores/authStore';
 import { useAppStore } from '@/stores/appStore';
 import { authors as authorsApi } from '@/api';
@@ -23,7 +23,38 @@ export default function AccountSettings() {
   const [usernameError, setUsernameError] = useState('');
   const [savingUsername, setSavingUsername] = useState(false);
   const usernameRef = useRef<HTMLInputElement>(null);
+  const debounceRef = useRef<ReturnType<typeof setTimeout>>(null);
 
+  // Inline format validation
+  const validateFormat = (name: string): string => {
+    if (!name) return '';
+    if (name.length < 3) return 'At least 3 characters';
+    if (!/^[a-zA-Z0-9_-]+$/.test(name)) return 'Letters, numbers, hyphens, underscores only';
+    return '';
+  };
+
+  // Debounced API availability check
+  const checkAvailability = (name: string) => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    if (!name || name.length < 3 || !isAuthenticated) return;
+    if (name.toLowerCase() === author?.username?.toLowerCase()) return;
+    debounceRef.current = setTimeout(async () => {
+      try {
+        const { available } = await authorsApi.checkUsername(name.toLowerCase());
+        if (!available) setUsernameError('Username is taken at crux.garden');
+      } catch { /* API unavailable */ }
+    }, 400);
+  };
+
+  const handleUsernameChange = (value: string) => {
+    setUsernameValue(value);
+    const formatError = validateFormat(value.trim());
+    setUsernameError(formatError);
+    if (!formatError) checkAvailability(value.trim());
+  };
+
+  // Cleanup debounce timer
+  useEffect(() => () => { if (debounceRef.current) clearTimeout(debounceRef.current); }, []);
 
   const startEditingUsername = () => {
     setUsernameValue(author?.username ?? '');
@@ -44,12 +75,9 @@ export default function AccountSettings() {
       setEditingUsername(false);
       return;
     }
-    if (trimmed.length < 3) {
-      setUsernameError('At least 3 characters');
-      return;
-    }
-    if (!/^[a-zA-Z0-9_-]+$/.test(trimmed)) {
-      setUsernameError('Letters, numbers, hyphens, underscores only');
+    const formatError = validateFormat(trimmed);
+    if (formatError) {
+      setUsernameError(formatError);
       return;
     }
     setSavingUsername(true);
@@ -59,7 +87,7 @@ export default function AccountSettings() {
       if (isAuthenticated && lower !== author?.username?.toLowerCase()) {
         const { available } = await authorsApi.checkUsername(lower);
         if (!available) {
-          setUsernameError('Username is taken');
+          setUsernameError('Username is taken at crux.garden');
           setSavingUsername(false);
           return;
         }
@@ -92,7 +120,7 @@ export default function AccountSettings() {
                 ref={usernameRef}
                 type="text"
                 value={usernameValue}
-                onChange={(e) => { setUsernameValue(e.target.value); setUsernameError(''); }}
+                onChange={(e) => handleUsernameChange(e.target.value)}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') handleSaveUsername();
                   if (e.key === 'Escape') cancelEditingUsername();

@@ -5,6 +5,22 @@ import * as syncApi from '@/api/sync';
 import { exportGarden, confirmAndImportGarden } from '@/services/garden-io';
 import { Panel, Spinner } from '@/components/ui';
 import { cn } from '@/lib/cn';
+
+const ChevronIcon = ({ collapsed }: { collapsed: boolean }) => (
+  <svg
+    width="12"
+    height="12"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    className={cn('text-text-muted', collapsed ? '-rotate-90' : 'rotate-0')}
+  >
+    <polyline points="6 9 12 15 18 9" />
+  </svg>
+);
 import type { GardenStatus, SyncedCrux } from '@/api/sync';
 
 const btnClass = cn(
@@ -28,10 +44,12 @@ export default function SyncSettings() {
 
   const [gardenStatus, setGardenStatus] = useState<GardenStatus | null>(null);
   const [syncedCruxes, setSyncedCruxes] = useState<SyncedCrux[]>([]);
+  const [collapsed, setCollapsed] = useState(true);
   const [loading, setLoading] = useState(true);
   const [pushing, setPushing] = useState(false);
   const [pulling, setPulling] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [deletingGarden, setDeletingGarden] = useState(false);
   const [status, setStatus] = useState('');
   const [error, setError] = useState('');
 
@@ -114,12 +132,35 @@ export default function SyncSettings() {
     }
   };
 
-  const busy = pushing || pulling;
+  const handleDeleteGarden = async () => {
+    if (!confirm('Delete your cloud garden backup? This cannot be undone. Your local garden is not affected.')) return;
+    setDeletingGarden(true);
+    setError('');
+    try {
+      await syncApi.deleteGarden();
+      setGardenStatus(null);
+      setStatus('Cloud backup deleted');
+    } catch {
+      setError('Failed to delete cloud backup');
+    } finally {
+      setDeletingGarden(false);
+    }
+  };
+
+  const busy = pushing || pulling || deletingGarden;
 
   return (
     <Panel padding="md">
-      <h2 className="font-display text-sm font-medium text-accent mb-4">Cloud Sync</h2>
+      <button
+        onClick={() => setCollapsed((v) => !v)}
+        className="flex items-center gap-2 w-full cursor-pointer group"
+      >
+        <ChevronIcon collapsed={collapsed} />
+        <h2 className="font-display text-sm font-medium text-accent">Sync</h2>
+      </button>
 
+      {!collapsed && (
+      <div className="mt-5">
       {/* Garden backup */}
       <h3 className="text-xs font-mono text-text-muted mb-2 uppercase tracking-wider">Garden Backup</h3>
 
@@ -136,6 +177,19 @@ export default function SyncSettings() {
         <button onClick={handlePull} disabled={busy} className={btnClass}>
           {pulling ? <><Spinner size={12} /> Pulling...</> : 'Pull garden'}
         </button>
+        {gardenStatus && (
+          <button
+            onClick={handleDeleteGarden}
+            disabled={busy}
+            className={cn(
+              'px-3 py-1.5 text-xs font-mono rounded-[var(--radius-sm)]',
+              'text-error hover:bg-error-muted cursor-pointer',
+              'disabled:opacity-50 disabled:cursor-not-allowed',
+            )}
+          >
+            {deletingGarden ? <><Spinner size={12} /> Deleting...</> : 'Delete backup'}
+          </button>
+        )}
       </div>
 
       {/* Synced cruxes */}
@@ -172,6 +226,8 @@ export default function SyncSettings() {
 
       {status && <p className="text-xs font-mono text-text-muted mt-3">{status}</p>}
       {error && <p className="text-xs font-mono text-error mt-3">{error}</p>}
+      </div>
+      )}
     </Panel>
   );
 }

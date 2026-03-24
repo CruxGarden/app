@@ -44,6 +44,10 @@ export async function getGardenStatus(): Promise<GardenStatus | null> {
   }
 }
 
+export async function deleteGarden(): Promise<void> {
+  await client.delete('/sync/garden');
+}
+
 // --- Crux ---
 
 export async function pushCrux(

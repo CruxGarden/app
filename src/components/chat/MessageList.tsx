@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import type { ChatMessage } from '@/api/types';
-import { resolveAvatarUrl } from '@/stores/authStore';
+import { useAvatarUrl } from '@/hooks/useAvatarUrl';
 import { useAppStore } from '@/stores/appStore';
 import MessageBubble from './MessageBubble';
 import { KeeperAvatar } from '@/components/keeper/KeeperConsole';
@@ -19,7 +19,7 @@ export default function MessageList({ messages, streamingContent, isStreaming, t
   const author = useAppStore((s) => s.author);
 
   const userInitial = author?.username?.charAt(0)?.toUpperCase() ?? '?';
-  const avatarUrl = resolveAvatarUrl(author);
+  const avatarUrl = useAvatarUrl(author);
 
   useEffect(() => {
     if (!hasScrolledRef.current) {

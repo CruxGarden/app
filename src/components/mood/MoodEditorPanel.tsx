@@ -1,8 +1,7 @@
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { cn } from '@/lib/cn';
 import { applyMoodPalette, GARDEN_DARK } from '@/lib/moods';
 import { MOOD_PRESETS, type MoodPresetDef } from '@/lib/moods/presets';
-import { useUIStore } from '@/stores/uiStore';
 import { useMoodStore } from '@/stores/moodStore';
 import { getSetting, setSetting } from '@/services/settings';
 import { pixelateImageToDataURL } from '@/lib/pixelate';
@@ -409,20 +408,16 @@ function BackgroundTabContent({
 
 type Tab = 'palette' | 'background' | 'persona';
 
-export default function MoodBar() {
-  const open = useUIStore((s) => s.moodEditorOpen);
-  const close = useCallback(() => useUIStore.getState().setMoodEditorOpen(false), []);
+export default function MoodEditor() {
   const [tab, setTab] = useState<Tab>('palette');
   const [activeDarkId, setActiveDarkId] = useState(() => (getSetting(SettingsKey.MoodPresetDark) as string) || 'garden');
   const [activeLightId, setActiveLightId] = useState(() => (getSetting(SettingsKey.MoodPresetLight) as string) || 'parchment');
 
-  // Re-sync when panel opens
+  // Sync preset IDs on mount (component only renders when modal is open)
   useEffect(() => {
-    if (open) {
-      setActiveDarkId((getSetting(SettingsKey.MoodPresetDark) as string) || 'garden');
-      setActiveLightId((getSetting(SettingsKey.MoodPresetLight) as string) || 'parchment');
-    }
-  }, [open]);
+    setActiveDarkId((getSetting(SettingsKey.MoodPresetDark) as string) || 'garden');
+    setActiveLightId((getSetting(SettingsKey.MoodPresetLight) as string) || 'parchment');
+  }, []);
   const [bgType, setBgType] = useState<BgType>(() => {
     const saved = getSetting(SettingsKey.BackgroundType) as string | null;
     if (saved === 'bloom' || saved === 'blank' || saved === 'drift' || saved === 'flow' || saved === 'image') return saved as BgType;
@@ -503,40 +498,24 @@ export default function MoodBar() {
     }
   };
 
-  useEffect(() => {
-    if (!open) return;
-    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') close(); };
-    document.addEventListener('keydown', handler);
-    return () => document.removeEventListener('keydown', handler);
-  }, [open, close]);
-
-  if (!open) return null;
-
   return (
-    <div className="fixed bottom-4 right-4 z-[60] bg-panel border border-panel-border rounded-[var(--radius)] shadow-2xl p-4 select-none w-[400px] max-h-[80vh] overflow-y-auto">
-      {/* Header with tabs */}
-      <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center gap-1">
-          {([['palette', 'Palette'], ['background', 'Background'], ['persona', 'Persona']] as const).map(([t, label]) => (
-            <button
-              key={t}
-              onClick={() => setTab(t)}
-              className={cn(
-                'px-2.5 py-1 text-xs font-display font-medium rounded-[var(--radius-sm)] cursor-pointer transition-colors',
-                tab === t
-                  ? 'text-text bg-surface'
-                  : 'text-text-muted hover:text-text',
-              )}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-        <button onClick={close} className="text-text-muted hover:text-text cursor-pointer transition-colors">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-            <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
-          </svg>
-        </button>
+    <div className="select-none overflow-y-auto flex-1">
+      {/* Tabs */}
+      <div className="flex items-center gap-1 mb-3">
+        {([['palette', 'Palette'], ['background', 'Background'], ['persona', 'Persona']] as const).map(([t, label]) => (
+          <button
+            key={t}
+            onClick={() => setTab(t)}
+            className={cn(
+              'px-2.5 py-1 text-xs font-display font-medium rounded-[var(--radius-sm)] cursor-pointer',
+              tab === t
+                ? 'text-text bg-surface'
+                : 'text-text-muted hover:text-text',
+            )}
+          >
+            {label}
+          </button>
+        ))}
       </div>
 
       {/* All tabs rendered in same grid cell — taller one sets panel height */}

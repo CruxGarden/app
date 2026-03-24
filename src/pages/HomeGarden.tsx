@@ -1,17 +1,12 @@
 import { useState, useCallback, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { useAppStore } from '@/stores/appStore';
-
-
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+import { useAvatarUrl } from '@/hooks/useAvatarUrl';
 import { useGarden } from '@/hooks/useGarden';
 
-import { APP_NAME, SettingsKey } from '@/lib/constants';
+import { APP_NAME } from '@/lib/constants';
 import { GardenGrid, GardenSearch } from '@/components/garden';
 import NewCruxModal from '@/components/garden/NewCruxModal';
-import { ApiKeySetup, IconButton, Modal, Button } from '@/components/ui';
-import { getApiKey } from '@/ai/keys';
-import { getSetting, setSetting } from '@/services/settings';
+import { IconButton, Modal, Button } from '@/components/ui';
 import { cn } from '@/lib/cn';
 
 
@@ -55,7 +50,7 @@ function PlusCircleIcon() {
 
 export default function HomeGarden() {
   const author = useAppStore((s) => s.author);
-  const navigate = useNavigate();
+  const avatarUrl = useAvatarUrl(author);
   const {
     cruxList,
     loading,
@@ -72,21 +67,6 @@ export default function HomeGarden() {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const deletingCrux = deletingId ? cruxList.find((c) => c.id === deletingId) : null;
 
-  // API key banner
-  const [showApiKeyBanner, setShowApiKeyBanner] = useState(false);
-
-  useEffect(() => {
-    const dismissed = !!getSetting(SettingsKey.ApiKeyBannerDismissed);
-    if (dismissed) return;
-    getApiKey('anthropic').then((key) => {
-      if (!key) setShowApiKeyBanner(true);
-    });
-  }, []);
-
-  const handleDismissBanner = () => {
-    setSetting(SettingsKey.ApiKeyBannerDismissed, '1');
-    setShowApiKeyBanner(false);
-  };
 
   const handleConfirmDelete = useCallback(async () => {
     if (!deletingId) return;
@@ -112,9 +92,9 @@ export default function HomeGarden() {
           <div className="flex items-center gap-3 min-w-0">
             {author && (
               <div className="w-12 h-12 rounded-[var(--radius)] overflow-hidden flex items-center justify-center shrink-0 bg-accent-muted ring-1 ring-text-muted/20">
-                {author.meta?.avatarUrl ? (
+                {avatarUrl ? (
                   <img
-                    src={typeof author.meta.avatarUrl === 'string' && author.meta.avatarUrl.startsWith('data:') ? author.meta.avatarUrl : `${API_BASE_URL}${author.meta.avatarUrl}?v=${author.updated}`}
+                    src={avatarUrl}
                     alt={author.username}
                     className="w-full h-full object-cover"
                   />
@@ -136,7 +116,7 @@ export default function HomeGarden() {
                     label="Public Garden"
                     size="sm"
                     tooltip={{ label: 'Public Garden' }}
-                    onClick={() => navigate(`/${author.username}`)}
+                    onClick={() => window.open(`/${author.username}`, '_blank')}
                   >
                     <GlobeIcon />
                   </IconButton>
@@ -181,27 +161,6 @@ export default function HomeGarden() {
           </div>
         </div>
       </div>
-
-      {/* API key setup banner */}
-      {showApiKeyBanner && (
-        <div className="relative bg-panel border border-border rounded-[var(--radius)] p-4 sm:p-5 mb-6">
-          <button
-            onClick={handleDismissBanner}
-            className="absolute top-3 right-3 text-text-muted hover:text-text transition-colors cursor-pointer p-0.5"
-            title="Dismiss"
-          >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M18 6L6 18" />
-              <path d="M6 6l12 12" />
-            </svg>
-          </button>
-          <p className="text-xs text-text-muted mb-3">
-            Add your Claude API key to enable AI collaboration in your cruxes.
-            Your key is stored locally in this browser and never saved to our servers.
-          </p>
-          <ApiKeySetup compact onKeySaved={handleDismissBanner} />
-        </div>
-      )}
 
       {/* Content */}
       {cruxList.length === 0 && search.length > 0 ? (

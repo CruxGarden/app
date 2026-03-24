@@ -1,69 +1,66 @@
-import { useEffect, useState } from 'react';
+import { lazy, Suspense, useEffect, useState } from 'react';
 import { Outlet } from 'react-router-dom';
 import TopBar from './TopBar';
-import CommandPalette from './CommandPalette';
 import KeeperConsole from '@/components/keeper/KeeperConsole';
-import MoodBar, { applySavedMoodSettings } from '@/components/mood/MoodEditorPanel';
+import { applySavedMoodSettings } from '@/components/mood/MoodEditorPanel';
+import { Modal } from '@/components/ui';
 import { useUIStore } from '@/stores/uiStore';
 import { isServicesReady, initServices } from '@/services';
+import { getSetting } from '@/services/settings';
+import { SettingsKey } from '@/lib/constants';
 import { seedTutorialCrux } from '@/services/seedTutorial';
-import { migrateApiKeyFromLocalStorage } from '@/ai/keys';
 import { useMoodStore } from '@/stores/moodStore';
 
-// Apply mood palette at module load time — before first React render.
-// Reads from localStorage (synchronous), so no flash.
-applySavedMoodSettings();
+const Settings = lazy(() => import('@/pages/Settings'));
+const Explore = lazy(() => import('@/pages/Explore'));
+const MoodEditor = lazy(() => import('@/components/mood/MoodEditorPanel'));
+
+const hideSplashScreen = () => {
+  const splash = document.getElementById('splash');
+  if (splash) {
+    splash.style.opacity = '0';
+    setTimeout(() => splash.remove(), 300);
+  }
+};
 
 export default function Shell() {
-  const [commandOpen, setCommandOpen] = useState(false);
-  const [servicesOk, setServicesOk] = useState(isServicesReady());
+  const [servicesReady, setServicesReady] = useState(isServicesReady());
+  const aiEnabled = useUIStore((s) => s.aiEnabled);
   const keeperOpen = useUIStore((s) => s.keeperOpen);
   const setKeeperOpen = useUIStore((s) => s.setKeeperOpen);
+  const settingsOpen = useUIStore((s) => s.settingsOpen);
+  const exploreOpen = useUIStore((s) => s.exploreOpen);
+  const moodEditorOpen = useUIStore((s) => s.moodEditorOpen);
 
-  // Lazily initialize local services when entering app routes
+  // Initialize services and apply mood settings
   useEffect(() => {
-    if (servicesOk) return;
+    if (servicesReady) {
+      applySavedMoodSettings();
+      useUIStore.getState().setAiEnabled(getSetting(SettingsKey.AiEnabled) === 'true');
+      return;
+    }
+
     (async () => {
-      const t0 = performance.now();
+      applySavedMoodSettings();
       await initServices();
-      console.log(`[init] initServices: ${(performance.now() - t0).toFixed(0)}ms`);
-      const t1 = performance.now();
-      migrateApiKeyFromLocalStorage().catch(() => {});
-      console.log(`[init] post-init: ${(performance.now() - t1).toFixed(0)}ms`);
-      const t2 = performance.now();
-      useMoodStore.getState().loadMoods().catch(() => {});
-      seedTutorialCrux().catch(() => {});
-      console.log(`[init] loadMoods+seed: ${(performance.now() - t2).toFixed(0)}ms`);
-      console.log(`[init] TOTAL: ${(performance.now() - t0).toFixed(0)}ms`);
-      setServicesOk(true);
-      // Dismiss the HTML splash now that everything is ready
-      const splash = document.getElementById('splash');
-      if (splash) {
-        splash.style.opacity = '0';
-        setTimeout(() => splash.remove(), 300);
-      }
+      useMoodStore.getState().loadMoods();
+      seedTutorialCrux();
+      useUIStore.getState().setAiEnabled(getSetting(SettingsKey.AiEnabled) === 'true');
+      setServicesReady(true);
+      hideSplashScreen();
     })();
-  }, [servicesOk]);
+  }, [servicesReady]);
 
   // Global keyboard shortcuts
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      // Cmd+K — command palette
-      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
-        e.preventDefault();
-        setCommandOpen((prev) => !prev);
-        return;
-      }
-
-      // Escape — open Keeper Console (when nothing else is open)
-      // Note: when Keeper IS open, its own capture-phase handler closes it
-      if (e.key === 'Escape' && !keeperOpen && !commandOpen) {
+      if (e.key === 'Escape' && !keeperOpen && aiEnabled) {
         setKeeperOpen(true);
       }
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [keeperOpen, commandOpen, setKeeperOpen]);
+  }, [keeperOpen, setKeeperOpen, aiEnabled]);
 
   return (
     <div className="flex flex-col h-screen overflow-hidden">
@@ -72,19 +69,49 @@ export default function Shell() {
         <TopBar />
       </div>
 
-      {/* Main content */}
-      <main className="relative z-10 flex-1 min-h-0 overflow-y-auto">
-        {servicesOk ? <Outlet /> : null}
+      {/* Main */}
+      <main className="relative flex-1 min-h-0 overflow-y-auto">
+        {servicesReady ? <Outlet /> : null}
       </main>
 
-      {/* Command palette */}
-      <CommandPalette open={commandOpen} onClose={() => setCommandOpen(false)} />
+      {/* Keeper Console — hidden when AI tools are disabled */}
+      {aiEnabled && <KeeperConsole open={keeperOpen} onClose={() => setKeeperOpen(false)} />}
 
-      {/* Keeper Console */}
-      <KeeperConsole open={keeperOpen} onClose={() => setKeeperOpen(false)} />
+      {/* Mood Editor Modal */}
+      <Modal
+        open={moodEditorOpen}
+        onClose={() => useUIStore.getState().setMoodEditorOpen(false)}
+        size="screen"
+        title="Mood"
+      >
+        <Suspense fallback={null}>
+          <MoodEditor />
+        </Suspense>
+      </Modal>
 
-      {/* Mood Editor Panel */}
-      <MoodBar />
+      {/* Settings Modal */}
+      <Modal
+        open={settingsOpen}
+        onClose={() => useUIStore.getState().setSettingsOpen(false)}
+        size="screen"
+        title="Settings"
+      >
+        <Suspense fallback={null}>
+          <Settings />
+        </Suspense>
+      </Modal>
+
+      {/* Explore Modal */}
+      <Modal
+        open={exploreOpen}
+        onClose={() => useUIStore.getState().setExploreOpen(false)}
+        size="screen"
+        title="Explore"
+      >
+        <Suspense fallback={null}>
+          <Explore onNavigate={() => useUIStore.getState().setExploreOpen(false)} />
+        </Suspense>
+      </Modal>
     </div>
   );
 }

@@ -41,18 +41,69 @@ async function reconcileAuthorId(
 
 /**
  * Resolve an author's avatar URL for display.
- * Local authors use data URLs; API authors use relative paths.
+ *
+ * Priority:
+ * 1. OPFS blob (local authors) — avatarFingerprint in meta → object URL from blob
+ * 2. Data URL (legacy) — avatarUrl starting with "data:"
+ * 3. API-relative path (public pages viewing other authors) — avatarUrl like "/authors/123/avatar"
+ * 4. Full URL — avatarUrl starting with "http"
+ *
+ * For OPFS blobs, call resolveAvatarUrlAsync() instead — this sync version
+ * returns null for fingerprint-based avatars that haven't been loaded yet.
  */
 export function resolveAvatarUrl(
   author: { meta?: Record<string, unknown>; updated?: string } | null,
 ): string | null {
+  // Check OPFS fingerprint — if present, check the cache for a pre-loaded object URL
+  const fingerprint = author?.meta?.avatarFingerprint;
+  if (typeof fingerprint === 'string') {
+    // Import the cache from appStore (shared module-level Map)
+    const cached = _avatarUrlCache.get(fingerprint);
+    return cached ?? null;
+  }
+
+  // Legacy data URL or full URL
   const url = author?.meta?.avatarUrl || author?.meta?.avatar_url;
   if (!url || typeof url !== 'string') return null;
   if (url.startsWith('data:') || url.startsWith('http')) return url;
+
   // API-relative path (for public pages viewing other authors)
   const base = import.meta.env.VITE_API_URL || 'http://localhost:3000';
   return `${base}${url}?v=${author?.updated || ''}`;
 }
+
+/**
+ * Async version that loads the avatar blob from OPFS if needed.
+ * Returns an object URL that should NOT be revoked by callers
+ * (the cache manages lifecycle).
+ */
+export async function resolveAvatarUrlAsync(
+  author: { meta?: Record<string, unknown>; updated?: string } | null,
+): Promise<string | null> {
+  const fingerprint = author?.meta?.avatarFingerprint;
+  if (typeof fingerprint === 'string') {
+    const cached = _avatarUrlCache.get(fingerprint);
+    if (cached) return cached;
+
+    try {
+      const { getSqliteClient } = await import('@/services/sqlite/client');
+      const db = getSqliteClient();
+      const data = await db.blobRead(fingerprint);
+      const mimeType = (author?.meta?.avatarMimeType as string) || 'image/jpeg';
+      const blob = new Blob([data.buffer as ArrayBuffer], { type: mimeType });
+      const url = URL.createObjectURL(blob);
+      _avatarUrlCache.set(fingerprint, url);
+      return url;
+    } catch {
+      return null;
+    }
+  }
+
+  return resolveAvatarUrl(author);
+}
+
+// Shared cache for avatar object URLs (fingerprint → objectURL)
+export const _avatarUrlCache = new Map<string, string>();
 
 interface AuthState {
   account: Profile | null;

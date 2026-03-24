@@ -8,7 +8,6 @@ import UserMenu from '@/components/auth/UserMenu';
 import { APP_NAME } from '@/lib/constants';
 import { cn } from '@/lib/cn';
 import { KeeperAvatar } from '@/components/keeper/KeeperConsole';
-import SnapshotBanner from '@/components/growth/SnapshotBanner';
 
 function StackIcon() {
   return (
@@ -176,7 +175,7 @@ function SearchIcon() {
   );
 }
 
-function PaletteIcon() {
+function MoodIcon() {
   return (
     <svg
       width="16"
@@ -188,11 +187,9 @@ function PaletteIcon() {
       strokeLinecap="round"
       strokeLinejoin="round"
     >
-      <circle cx="13.5" cy="6.5" r="2.5" />
-      <circle cx="17.5" cy="10.5" r="1.5" />
-      <circle cx="8.5" cy="7.5" r="1.5" />
-      <circle cx="6.5" cy="12.5" r="1.5" />
-      <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.93 0 1.5-.75 1.5-1.5 0-.39-.15-.74-.39-1.04-.24-.3-.39-.65-.39-1.04 0-.83.67-1.5 1.5-1.5H16c3.31 0 6-2.69 6-6 0-5.5-4.5-9.58-10-10z" />
+      <rect width="18" height="18" x="3" y="3" rx="2" ry="2" />
+      <circle cx="9" cy="9" r="2" />
+      <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21" />
     </svg>
   );
 }
@@ -267,6 +264,7 @@ export default function TopBar() {
   const cruxTitle = useCruxStore((s) => s.crux?.title);
   const updateCrux = useCruxStore((s) => s.updateCrux);
   const username = useAppStore((s) => s.author?.username);
+  const aiEnabled = useUIStore((s) => s.aiEnabled);
 
   const [editingTitle, setEditingTitle] = useState(false);
   const [titleDraft, setTitleDraft] = useState('');
@@ -291,7 +289,6 @@ export default function TopBar() {
   }, [titleDraft, cruxTitle, updateCrux]);
 
   return (
-    <>
     <header
       className={cn(
         'flex items-center justify-between px-3 border-b border-toolbar-border bg-toolbar',
@@ -420,7 +417,7 @@ export default function TopBar() {
         <IconButton
           label="Explore"
           size="sm"
-          onClick={() => navigate('/explore')}
+          onClick={() => useUIStore.getState().setExploreOpen(true)}
           tooltip={{ label: 'Explore' }}
         >
           <SearchIcon />
@@ -431,32 +428,34 @@ export default function TopBar() {
           onClick={() => useUIStore.getState().toggleMoodEditor()}
           tooltip={{ label: 'Mood' }}
         >
-          <PaletteIcon />
+          <MoodIcon />
         </IconButton>
-        <div className="w-px h-5 bg-toolbar-divider mx-1" />
-        <div className="relative group/btn flex items-center">
-          <button
-            onClick={() => useUIStore.getState().toggleKeeper()}
-            aria-label="The Keeper"
-            className={cn(
-              'w-6 h-6 rounded-[var(--radius-sm)] overflow-hidden',
-              'ring-1 ring-text-muted/20 hover:ring-accent/40 transition-shadow cursor-pointer',
-            )}
-          >
-            <KeeperAvatar className="w-6 h-6" />
-          </button>
-          <div className="absolute top-full right-0 mt-2 z-50 pointer-events-none hidden group-hover/btn:block">
-            <div className="flex items-center gap-2.5 px-3 py-2 rounded-[var(--radius)] bg-tooltip border border-tooltip-border shadow-lg whitespace-nowrap">
-              <span className="text-xs font-medium text-tooltip-text">The Keeper</span>
-              <kbd className="text-[11px] font-mono text-tooltip-text px-1.5 py-0.5 rounded-[var(--radius-sm)] bg-bg border border-tooltip-border min-w-[1.5rem] text-center">Esc</kbd>
+        {aiEnabled && (
+          <>
+            <div className="w-px h-5 bg-toolbar-divider mx-1" />
+            <div className="relative group/btn flex items-center">
+              <button
+                onClick={() => useUIStore.getState().toggleKeeper()}
+                aria-label="The Keeper"
+                className={cn(
+                  'w-6 h-6 rounded-[var(--radius-sm)] overflow-hidden',
+                  'ring-1 ring-text-muted/20 hover:ring-accent/40 transition-shadow cursor-pointer',
+                )}
+              >
+                <KeeperAvatar className="w-6 h-6" />
+              </button>
+              <div className="absolute top-full right-0 mt-2 z-50 pointer-events-none hidden group-hover/btn:block">
+                <div className="flex items-center gap-2.5 px-3 py-2 rounded-[var(--radius)] bg-tooltip border border-tooltip-border shadow-lg whitespace-nowrap">
+                  <span className="text-xs font-medium text-tooltip-text">The Keeper</span>
+                  <kbd className="text-[11px] font-mono text-tooltip-text px-1.5 py-0.5 rounded-[var(--radius-sm)] bg-bg border border-tooltip-border min-w-[1.5rem] text-center">Esc</kbd>
+                </div>
+              </div>
             </div>
-          </div>
-        </div>
+          </>
+        )}
         <div className="w-px h-5 bg-toolbar-divider mx-1" />
         <UserMenu />
       </div>
     </header>
-    <SnapshotBanner />
-    </>
   );
 }

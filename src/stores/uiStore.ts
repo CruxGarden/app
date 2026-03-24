@@ -86,8 +86,20 @@ interface UIState {
   // Mobile
   mobileActivePane: PaneType;
 
+  // AI Tools
+  aiEnabled: boolean;
+  setAiEnabled: (enabled: boolean) => void;
+
   // Keeper Console
   keeperOpen: boolean;
+
+  // Settings modal
+  settingsOpen: boolean;
+  setSettingsOpen: (open: boolean) => void;
+
+  // Explore modal
+  exploreOpen: boolean;
+  setExploreOpen: (open: boolean) => void;
 
   // Mood Editor
   moodEditorOpen: boolean;
@@ -479,7 +491,13 @@ export const useUIStore = create<UIState>()((set, get) => ({
   folderOpenState: {},
   contextMenu: { ...DEFAULT_CONTEXT_MENU },
   mobileActivePane: 'collaboration' as PaneType,
+  aiEnabled: false,
+  setAiEnabled: (enabled) => set({ aiEnabled: enabled }),
   keeperOpen: false,
+  settingsOpen: false,
+  setSettingsOpen: (open) => set({ settingsOpen: open }),
+  exploreOpen: false,
+  setExploreOpen: (open) => set({ exploreOpen: open }),
   moodEditorOpen: false,
 
   // ── Layout actions ──

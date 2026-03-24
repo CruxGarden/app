@@ -5,6 +5,7 @@ import { useUIStore } from '@/stores/uiStore';
 import { WorkspaceLayout } from '@/components/workspace';
 import { saveAllDirtyEditors } from '@/components/workspace/EditorContent';
 import { Modal } from '@/components/ui';
+import SnapshotBanner from '@/components/growth/SnapshotBanner';
 import { cn } from '@/lib/cn';
 import { APP_NAME } from '@/lib/constants';
 
@@ -110,6 +111,7 @@ export default function CruxBuilder() {
 
   return (
     <>
+      <SnapshotBanner />
       <WorkspaceLayout />
 
       {/* Unsaved changes — navigation blocked */}

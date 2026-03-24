@@ -1,7 +1,6 @@
 import { useState, useRef } from 'react';
 import { useAppStore } from '@/stores/appStore';
-import { resolveAvatarUrl } from '@/stores/authStore';
-import { initServices, isServicesReady } from '@/services';
+import { useAvatarUrl } from '@/hooks/useAvatarUrl';
 import { Spinner } from '@/components/ui';
 import { cn } from '@/lib/cn';
 
@@ -30,7 +29,7 @@ export default function AvatarUpload({ compact }: AvatarUploadProps) {
 
   const avatarSize = compact ? 'w-10 h-10' : 'w-14 h-14';
   const initial = author?.username?.charAt(0)?.toUpperCase() ?? '?';
-  const avatar = resolveAvatarUrl(author);
+  const avatar = useAvatarUrl(author);
 
   const MAX_AVATAR_SIZE = 10 * 1024 * 1024; // 10MB
 
@@ -44,8 +43,7 @@ export default function AvatarUpload({ compact }: AvatarUploadProps) {
     }
     setUploading(true);
     try {
-      // Ensure services + author exist (Gateway setup may not have created them yet)
-      if (!isServicesReady()) await initServices();
+      // Ensure author exists (defensive — should already be created by Banner step or Shell init)
       if (!useAppStore.getState().author) await useAppStore.getState().ensureAuthor();
       await uploadAvatar(file);
     } catch (err) {

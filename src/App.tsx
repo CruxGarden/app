@@ -7,10 +7,11 @@ const Shell = lazy(() => import('@/components/layout/Shell'));
 const Gateway = lazy(() => import('@/pages/Gateway'));
 const HomeGarden = lazy(() => import('@/pages/HomeGarden'));
 const CruxBuilder = lazy(() => import('@/pages/CruxBuilder'));
-const Settings = lazy(() => import('@/pages/Settings'));
 const PublicCrux = lazy(() => import('@/pages/PublicCrux'));
 const PublicGarden = lazy(() => import('@/pages/PublicGarden'));
-const Explore = lazy(() => import('@/pages/Explore'));
+const ExplorePage = lazy(() =>
+  import('@/pages/Explore').then((m) => ({ default: m.ExplorePage })),
+);
 const NotFound = lazy(() => import('@/pages/NotFound'));
 
 // When running inside a workspace preview iframe, the preview system injects
@@ -21,12 +22,19 @@ const basename = (window as unknown as { __CRUX_BASENAME__?: string }).__CRUX_BA
 
 const router = createBrowserRouter([
   // Public
-  { path: '/', element: <Gateway /> },
+  { 
+    path: '/', 
+    element: (
+      <ErrorBoundary>
+        <Gateway />
+      </ErrorBoundary>
+    ),
+  },
   {
     path: '/explore',
     element: (
       <ErrorBoundary>
-        <Explore />
+        <ExplorePage />
       </ErrorBoundary>
     ),
   },
@@ -64,14 +72,6 @@ const router = createBrowserRouter([
         element: (
           <ErrorBoundary>
             <CruxBuilder />
-          </ErrorBoundary>
-        ),
-      },
-      {
-        path: '/settings',
-        element: (
-          <ErrorBoundary>
-            <Settings />
           </ErrorBoundary>
         ),
       },

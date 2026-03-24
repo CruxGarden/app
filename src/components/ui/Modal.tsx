@@ -2,14 +2,29 @@ import { type ReactNode, useEffect } from 'react';
 import { cn } from '@/lib/cn';
 import Panel from './Panel';
 
+type ModalSize = 'sm' | 'md' | 'lg' | 'xl' | 'screen' | 'full';
+
+const SIZE_CLASSES: Record<ModalSize, string> = {
+  sm: 'max-w-sm w-full mx-4',
+  md: 'max-w-md w-full mx-4',
+  lg: 'max-w-2xl w-full mx-4',
+  xl: 'max-w-5xl w-full mx-4',
+  screen: 'w-[calc(100vw-6rem)] max-w-3xl h-[calc(100vh-6rem)]',
+  full: 'w-[calc(100vw-3rem)] h-[calc(100vh-3rem)]',
+};
+
 interface ModalProps {
   open: boolean;
   onClose: () => void;
   children: ReactNode;
   className?: string;
+  /** Modal size — defaults to 'md' */
+  size?: ModalSize;
+  /** Title displayed at the top of the modal */
+  title?: string;
 }
 
-export default function Modal({ open, onClose, children, className }: ModalProps) {
+export default function Modal({ open, onClose, children, className, size = 'md', title }: ModalProps) {
   useEffect(() => {
     if (!open) return;
     const handler = (e: KeyboardEvent) => {
@@ -23,9 +38,26 @@ export default function Modal({ open, onClose, children, className }: ModalProps
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
-      <div className="absolute inset-0 bg-overlay" onClick={onClose} />
-      <Panel padding="lg" className={cn('relative z-10 max-w-md w-full mx-4', className)}>
-        {children}
+      <div className="absolute inset-0 bg-overlay/80 backdrop-blur-sm" onClick={onClose} />
+      <Panel padding="lg" className={cn('relative z-10 flex flex-col', SIZE_CLASSES[size], className)}>
+        {title && (
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="font-display text-sm font-medium text-accent">{title}</h2>
+            <button
+              onClick={onClose}
+              className="text-text-muted hover:text-text cursor-pointer"
+              aria-label="Close"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M18 6L6 18" />
+                <path d="M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+        )}
+        <div className={cn((size === 'full' || size === 'screen') && 'flex-1 min-h-0 flex flex-col overflow-hidden')}>
+          {children}
+        </div>
       </Panel>
     </div>
   );

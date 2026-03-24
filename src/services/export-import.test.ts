@@ -536,17 +536,17 @@ describe('Export / Import', () => {
       await expect(importCrux({ data: ab })).rejects.toThrow('Unsupported .crux format version');
     });
 
-    it('accepts v3.x manifest versions', async () => {
-      // Build a minimal valid v3 ZIP
-      const crux = await svc.crux.create({ title: 'V3 Compat', type: 'workspace' });
+    it('accepts v1.x manifest versions', async () => {
+      // Build a minimal valid v1 ZIP
+      const crux = await svc.crux.create({ title: 'V1 Compat', type: 'workspace' });
       const result = await exportCrux({ cruxId: crux.id });
       await svc.crux.delete(crux.id);
 
-      // Patch manifest to v3.2
+      // Patch manifest to v1.2
       const ab = await result.blob.arrayBuffer();
       const zip = await JSZip.loadAsync(ab);
       const manifest = JSON.parse(await zip.file('manifest.json')!.async('text'));
-      manifest.version = '3.2';
+      manifest.version = '1.2';
       zip.file('manifest.json', JSON.stringify(manifest));
       const patched = await zip.generateAsync({ type: 'arraybuffer' });
 
@@ -560,7 +560,7 @@ describe('Export / Import', () => {
     it('does not leave orphaned cruxes when import errors before crux creation', async () => {
       // Tamper: valid manifest but missing crux.json → fails before any DB writes
       const zip = new JSZip();
-      zip.file('manifest.json', JSON.stringify({ version: '3.1' }));
+      zip.file('manifest.json', JSON.stringify({ version: '1.0' }));
       const ab = await zip.generateAsync({ type: 'arraybuffer' });
 
       await expect(importCrux({ data: ab })).rejects.toThrow('missing crux.json');
@@ -702,7 +702,7 @@ describe('Export / Import', () => {
       const zip = await JSZip.loadAsync(ab);
       const manifest = JSON.parse(await zip.file('manifest.json')!.async('text'));
 
-      expect(manifest.version).toBe('3.1');
+      expect(manifest.version).toBe('1.0');
       expect(manifest.exportedAt).toBeDefined();
       expect(typeof manifest.artifactCount).toBe('number');
       expect(typeof manifest.snapshotCount).toBe('number');

@@ -6,8 +6,8 @@ import { getLocalIdentity } from './sqlite/identity';
 
 // ── Constants ────────────────────────────────────────────
 
-const FORMAT_VERSION = '3.1';
-const SUPPORTED_MANIFEST_MAJOR = '3';
+const FORMAT_VERSION = '1.0';
+const SUPPORTED_MANIFEST_MAJOR = '1';
 
 // ── Types ───────────────────────────────────────────────
 
