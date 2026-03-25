@@ -1,262 +1,15 @@
 import { useState, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useUIStore, DEFAULT_PANE_ORDER, type PaneType } from '@/stores/uiStore';
+import { useUIStore, DEFAULT_PANE_ORDER } from '@/stores/uiStore';
 import { useCruxStore } from '@/stores/cruxStore';
 import { useAppStore } from '@/stores/appStore';
 import IconButton from '@/components/ui/IconButton';
 import UserMenu from '@/components/auth/UserMenu';
 import { APP_NAME } from '@/lib/constants';
 import { cn } from '@/lib/cn';
-import { KeeperAvatar } from '@/components/keeper/KeeperConsole';
-
-function StackIcon() {
-  return (
-    <svg
-      width="16"
-      height="16"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.5"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M12 2L2 7l10 5 10-5-10-5z" />
-      <path d="M2 17l10 5 10-5" />
-      <path d="M2 12l10 5 10-5" />
-    </svg>
-  );
-}
-
-function ChatIcon() {
-  return (
-    <svg
-      width="16"
-      height="16"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.5"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-    </svg>
-  );
-}
-
-function FolderIcon() {
-  return (
-    <svg
-      width="16"
-      height="16"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.5"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
-    </svg>
-  );
-}
-
-function CodeIcon() {
-  return (
-    <svg
-      width="16"
-      height="16"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.5"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <polyline points="16 18 22 12 16 6" />
-      <polyline points="8 6 2 12 8 18" />
-    </svg>
-  );
-}
-
-function TagIcon() {
-  return (
-    <svg
-      width="16"
-      height="16"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.5"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z" />
-      <line x1="7" y1="7" x2="7.01" y2="7" />
-    </svg>
-  );
-}
-
-function SyncIcon() {
-  return (
-    <svg
-      width="16"
-      height="16"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.5"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <line x1="7" y1="20" x2="7" y2="4" />
-      <polyline points="3 8 7 4 11 8" />
-      <line x1="17" y1="4" x2="17" y2="20" />
-      <polyline points="13 16 17 20 21 16" />
-    </svg>
-  );
-}
-
-function PublishIcon() {
-  return (
-    <svg
-      width="16"
-      height="16"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.5"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <circle cx="18" cy="5" r="3" />
-      <circle cx="6" cy="5" r="3" />
-      <circle cx="12" cy="19" r="3" />
-      <path d="M8.59 7.41L12 16M15.41 7.41L12 16" />
-    </svg>
-  );
-}
-
-function ExportIcon() {
-  return (
-    <svg
-      width="16"
-      height="16"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.5"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-      <polyline points="7 10 12 15 17 10" />
-      <line x1="12" y1="15" x2="12" y2="3" />
-    </svg>
-  );
-}
-
-function SearchIcon() {
-  return (
-    <svg
-      width="16"
-      height="16"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.5"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <circle cx="11" cy="11" r="8" />
-      <line x1="21" y1="21" x2="16.65" y2="16.65" />
-    </svg>
-  );
-}
-
-function MoodIcon() {
-  return (
-    <svg
-      width="16"
-      height="16"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.5"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <rect width="18" height="18" x="3" y="3" rx="2" ry="2" />
-      <circle cx="9" cy="9" r="2" />
-      <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21" />
-    </svg>
-  );
-}
-
-function ChevronIcon() {
-  return (
-    <svg
-      width="12"
-      height="12"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <polyline points="9 18 15 12 9 6" />
-    </svg>
-  );
-}
-
-function StoreIcon() {
-  return (
-    <svg
-      width="16"
-      height="16"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.5"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <ellipse cx="12" cy="5" rx="9" ry="3" />
-      <path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3" />
-      <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5" />
-    </svg>
-  );
-}
-
-// ── Pane CSS var prefixes ────────────────────────────────
-
-const PANE_VAR_PREFIX: Record<PaneType, string> = {
-  collaboration: '--pane-collaboration',
-  artifacts: '--pane-artifacts',
-  workshop: '--pane-workshop',
-  details: '--pane-details',
-  history: '--pane-history',
-  export: '--pane-export',
-  sync: '--pane-sync',
-  publish: '--pane-publish',
-  store: '--pane-store',
-};
-
-// ── Pane button config ──────────────────────────────────
-
-const PANE_BUTTONS: { type: PaneType; icon: React.FC; label: string }[] = [
-  { type: 'collaboration', icon: ChatIcon, label: 'Collaboration' },
-  { type: 'artifacts', icon: FolderIcon, label: 'Artifacts' },
-  { type: 'workshop', icon: CodeIcon, label: 'Workshop' },
-  { type: 'details', icon: TagIcon, label: 'Metadata' },
-  { type: 'history', icon: StackIcon, label: 'History' },
-  { type: 'export', icon: ExportIcon, label: 'Export' },
-  { type: 'sync', icon: SyncIcon, label: 'Sync' },
-  { type: 'publish', icon: PublishIcon, label: 'Share' },
-  { type: 'store', icon: StoreIcon, label: 'Store' },
-];
+import { ConsoleAvatar } from '@/components/keeper/Console';
+import { SearchIcon, MoodIcon, ChevronRightIcon } from '@/components/ui/icons';
+import { PANE_VAR_PREFIX, PANE_BUTTONS } from '@/components/workspace/paneConfig';
 
 export default function TopBar() {
   const navigate = useNavigate();
@@ -316,7 +69,7 @@ export default function TopBar() {
         {activeCruxId ? (
           <>
             <span className="text-toolbar-text-muted shrink-0">
-              <ChevronIcon />
+              <ChevronRightIcon />
             </span>
             {editingTitle ? (
               <input
@@ -351,7 +104,7 @@ export default function TopBar() {
         ) : null}
       </div>
 
-      {/* Right: pane toggles + keeper + user menu */}
+      {/* Right: pane toggles + console + user menu */}
       <div className="flex items-center gap-1" style={window.electronAPI ? { WebkitAppRegion: 'no-drag' } as React.CSSProperties : undefined}>
         {activeCruxId && (
           <>
@@ -418,15 +171,15 @@ export default function TopBar() {
           label="Explore"
           size="sm"
           onClick={() => useUIStore.getState().setExploreOpen(true)}
-          tooltip={{ label: 'Explore' }}
+          tooltip={{ label: 'Explore', shortcut: 'E' }}
         >
           <SearchIcon />
         </IconButton>
         <IconButton
           label="Mood"
           size="sm"
-          onClick={() => useUIStore.getState().toggleMoodEditor()}
-          tooltip={{ label: 'Mood' }}
+          onClick={() => useUIStore.getState().toggleMoodPanel()}
+          tooltip={{ label: 'Mood', shortcut: 'M' }}
         >
           <MoodIcon />
         </IconButton>
@@ -435,18 +188,18 @@ export default function TopBar() {
             <div className="w-px h-5 bg-toolbar-divider mx-1" />
             <div className="relative group/btn flex items-center">
               <button
-                onClick={() => useUIStore.getState().toggleKeeper()}
-                aria-label="The Keeper"
+                onClick={() => useUIStore.getState().toggleConsole()}
+                aria-label="Console"
                 className={cn(
                   'w-6 h-6 rounded-[var(--radius-sm)] overflow-hidden',
                   'ring-1 ring-text-muted/20 hover:ring-accent/40 transition-shadow cursor-pointer',
                 )}
               >
-                <KeeperAvatar className="w-6 h-6" />
+                <ConsoleAvatar className="w-6 h-6" />
               </button>
               <div className="absolute top-full right-0 mt-2 z-50 pointer-events-none hidden group-hover/btn:block">
                 <div className="flex items-center gap-2.5 px-3 py-2 rounded-[var(--radius)] bg-tooltip border border-tooltip-border shadow-lg whitespace-nowrap">
-                  <span className="text-xs font-medium text-tooltip-text">The Keeper</span>
+                  <span className="text-xs font-medium text-tooltip-text">Console</span>
                   <kbd className="text-[11px] font-mono text-tooltip-text px-1.5 py-0.5 rounded-[var(--radius-sm)] bg-bg border border-tooltip-border min-w-[1.5rem] text-center">Esc</kbd>
                 </div>
               </div>

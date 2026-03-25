@@ -68,14 +68,14 @@ export default function AvatarUpload({ compact }: AvatarUploadProps) {
     <div className="flex items-center gap-3">
       <div className="relative shrink-0">
         {avatar ? (
-          <img src={avatar} alt="Avatar" className={cn(avatarSize, 'rounded-full object-cover')} />
+          <img src={avatar} alt="Avatar" className={cn(avatarSize, 'rounded-[var(--radius)] object-cover')} />
         ) : (
-          <div className={cn(avatarSize, 'rounded-full flex items-center justify-center bg-accent-muted text-accent font-display font-bold', compact ? 'text-sm' : 'text-lg')}>
+          <div className={cn(avatarSize, 'rounded-[var(--radius)] flex items-center justify-center bg-accent-muted text-accent font-display font-bold', compact ? 'text-sm' : 'text-lg')}>
             {initial}
           </div>
         )}
         {uploading && (
-          <div className="absolute inset-0 flex items-center justify-center rounded-full bg-bg/60">
+          <div className="absolute inset-0 flex items-center justify-center rounded-[var(--radius)] bg-bg/60">
             <Spinner size={compact ? 12 : 16} />
           </div>
         )}

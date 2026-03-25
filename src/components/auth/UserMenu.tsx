@@ -131,7 +131,10 @@ export default function UserMenu() {
               }}
               className="w-full px-3 py-2 text-left text-sm text-text-muted hover:text-text hover:bg-accent-muted transition-colors cursor-pointer"
             >
-              Settings
+              <span className="flex items-center justify-between w-full">
+                Settings
+                <kbd className="text-[11px] font-mono text-text-muted ml-4">⌘,</kbd>
+              </span>
             </button>
 
             <div className="border-t border-border my-1" />

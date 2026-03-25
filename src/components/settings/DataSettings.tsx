@@ -1,7 +1,7 @@
 import { useState, useRef, useCallback } from 'react';
 import { useAppStore } from '@/stores/appStore';
 import { exportGarden, confirmAndImportGarden, wipeGarden } from '@/services/garden-io';
-import { Panel, Spinner } from '@/components/ui';
+import { Panel, Button } from '@/components/ui';
 import { cn } from '@/lib/cn';
 
 const WIPE_CONFIRMATION = 'delete me';
@@ -108,7 +108,7 @@ export default function DataSettings() {
         >
           <polyline points="6 9 12 15 18 9" />
         </svg>
-        <h2 className="font-display text-sm font-medium text-accent">Data</h2>
+        <h2 className="font-display text-sm font-medium text-accent">Garden</h2>
       </button>
 
       {!collapsed && (
@@ -118,28 +118,12 @@ export default function DataSettings() {
           </p>
 
           <div className="flex items-center gap-2">
-            <button
-              onClick={handleExport}
-              disabled={busy}
-              className={cn(
-                'px-3 py-1.5 text-xs font-mono rounded-[var(--radius-sm)]',
-                'bg-surface border border-border text-text hover:bg-accent-muted transition-colors cursor-pointer',
-                'disabled:opacity-50 disabled:cursor-not-allowed',
-              )}
-            >
-              {exporting ? <><Spinner size={12} /> Exporting...</> : 'Export garden'}
-            </button>
-            <button
-              onClick={() => importRef.current?.click()}
-              disabled={busy}
-              className={cn(
-                'px-3 py-1.5 text-xs font-mono rounded-[var(--radius-sm)]',
-                'bg-surface border border-border text-text hover:bg-accent-muted transition-colors cursor-pointer',
-                'disabled:opacity-50 disabled:cursor-not-allowed',
-              )}
-            >
-              {importing ? <><Spinner size={12} /> Importing...</> : 'Import garden'}
-            </button>
+            <Button variant="secondary" size="sm" onClick={handleExport} disabled={busy} loading={exporting}>
+              {exporting ? 'Exporting...' : 'Export garden'}
+            </Button>
+            <Button variant="secondary" size="sm" onClick={() => importRef.current?.click()} disabled={busy} loading={importing}>
+              {importing ? 'Importing...' : 'Import garden'}
+            </Button>
             <input
               ref={importRef}
               type="file"
@@ -171,17 +155,9 @@ export default function DataSettings() {
                 'disabled:opacity-50',
               )}
             />
-            <button
-              onClick={handleWipe}
-              disabled={busy || wipeConfirm !== WIPE_CONFIRMATION}
-              className={cn(
-                'px-3 py-1.5 text-xs font-mono rounded-[var(--radius-sm)]',
-                'bg-error/10 border border-error text-error hover:bg-error/20 transition-colors cursor-pointer',
-                'disabled:opacity-30 disabled:cursor-not-allowed',
-              )}
-            >
-              {wiping ? <><Spinner size={12} /> Wiping...</> : 'Wipe garden'}
-            </button>
+            <Button variant="danger" size="sm" onClick={handleWipe} disabled={busy || wipeConfirm !== WIPE_CONFIRMATION} loading={wiping}>
+              Wipe garden
+            </Button>
           </div>
 
           {status && <p className="text-xs font-mono text-text-muted mt-2">{status}</p>}

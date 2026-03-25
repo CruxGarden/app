@@ -1,6 +1,6 @@
 import { getServices } from '@/services';
 import type { Crux, Artifact } from '@/services/types';
-import { getPersona } from '@/components/mood/MoodEditorPanel';
+import { getPersona } from '@/components/mood/mood-helpers';
 
 const DEFAULT_KEEPER_PERSONA =
   'You are The Keeper, an outdated robot model who tends the Crux Garden. ' +

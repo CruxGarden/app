@@ -1,28 +1,10 @@
 import { useState, useCallback, useEffect } from 'react';
 import { cn } from '@/lib/cn';
-import { Spinner } from '@/components/ui';
+import { Spinner, Button } from '@/components/ui';
 import Modal from '@/components/ui/Modal';
 import { exportCrux, exportArtifactsZip } from '@/services/crux-io';
 import { getServices } from '@/services';
 import type { Crux, Artifact } from '@/api/types';
-
-function CloseIcon() {
-  return (
-    <svg
-      width="14"
-      height="14"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M18 6L6 18" />
-      <path d="M6 6l12 12" />
-    </svg>
-  );
-}
 
 function formatBytes(bytes: number): string {
   if (!bytes || bytes <= 0) return '0 B';
@@ -111,93 +93,48 @@ export default function ExportModal({ open, onClose, crux }: ExportModalProps) {
   const totalSize = artifacts.reduce((sum, a) => sum + (Number(a.size) || 0), 0);
   const busy = exporting !== null;
 
+  const subtitle = !loading && artifacts.length > 0
+    ? `${crux.title || crux.slug} — ${artifacts.length} file${artifacts.length !== 1 ? 's' : ''}, ${formatBytes(totalSize)}`
+    : crux.title || crux.slug;
+
   return (
-    <Modal open={open} onClose={busy ? () => {} : onClose}>
-      <div className="flex flex-col gap-4">
-        <div className="flex items-start justify-between">
-          <div>
-            <h2 className="text-sm font-display font-medium text-text">Export</h2>
-            <p className="text-xs text-text-muted mt-1">
-              {crux.title || crux.slug}
-              {!loading && artifacts.length > 0 && (
-                <span className="ml-1">
-                  — {artifacts.length} file{artifacts.length !== 1 ? 's' : ''}, {formatBytes(totalSize)}
-                </span>
-              )}
+    <Modal open={open} onClose={busy ? () => {} : onClose} title="Export" subtitle={subtitle}>
+      {loading ? (
+        <div className="flex items-center justify-center py-6">
+          <Spinner size={18} />
+        </div>
+      ) : (
+        <div className="flex flex-col gap-4">
+          <div className="flex flex-col gap-1.5">
+            <Button onClick={handleExportCrux} loading={exporting === 'crux'} disabled={busy} fullWidth>
+              Export Crux
+            </Button>
+            <p className="text-[10px] text-text-muted text-center">
+              Full archive — artifacts, collaboration, and snapshot history
             </p>
           </div>
-          <button
-            onClick={onClose}
-            disabled={busy}
-            className={cn(
-              'text-text-muted hover:text-text transition-colors p-1 cursor-pointer',
-              busy && 'opacity-30 cursor-not-allowed',
-            )}
-          >
-            <CloseIcon />
-          </button>
-        </div>
 
-        {loading ? (
-          <div className="flex items-center justify-center py-6">
-            <Spinner size={18} />
-          </div>
-        ) : (
-          <div className="flex flex-col gap-3">
+          {artifacts.length > 0 && (
             <div className="flex flex-col gap-1.5">
-              <button
-                onClick={handleExportCrux}
-                disabled={busy}
-                className={cn(
-                  'w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-[var(--radius-sm)]',
-                  'text-sm font-medium font-body transition-all',
-                  busy
-                    ? 'bg-accent-muted text-accent border border-accent/20 cursor-wait'
-                    : 'bg-accent-muted text-accent border border-accent/20 hover:border-accent cursor-pointer',
-                )}
-              >
-                {exporting === 'crux' ? <Spinner size={14} /> : null}
-                Export Crux
-              </button>
+              <Button variant="secondary" onClick={handleExportZip} loading={exporting === 'zip'} disabled={busy} fullWidth>
+                Export Artifacts
+              </Button>
               <p className="text-[10px] text-text-muted text-center">
-                Full archive — artifacts, conversation, and version history
+                Just the files — ready to unzip and use
               </p>
             </div>
+          )}
+        </div>
+      )}
 
-            {artifacts.length > 0 && (
-              <div className="flex flex-col gap-1.5">
-                <button
-                  onClick={handleExportZip}
-                  disabled={busy}
-                  className={cn(
-                    'w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-[var(--radius-sm)]',
-                    'text-sm font-medium font-body transition-all',
-                    busy
-                      ? 'bg-surface text-text-muted border border-border cursor-wait'
-                      : 'bg-surface text-text-muted border border-border hover:border-text-muted hover:text-text cursor-pointer',
-                  )}
-                >
-                  {exporting === 'zip' ? <Spinner size={14} /> : null}
-                  Export Artifacts
-                </button>
-                <p className="text-[10px] text-text-muted text-center">
-                  Just the files — ready to unzip and use
-                </p>
-              </div>
-            )}
-          </div>
-        )}
-
-        {progress && (
-          <p className={cn(
-            'text-[11px] font-mono text-center truncate',
-            progress === 'Export failed' ? 'text-error' : 'text-text-muted',
-          )}>
-            {progress}
-          </p>
-        )}
-
-      </div>
+      {progress && (
+        <p className={cn(
+          'text-[11px] font-mono text-center truncate mt-3',
+          progress === 'Export failed' ? 'text-error' : 'text-text-muted',
+        )}>
+          {progress}
+        </p>
+      )}
     </Modal>
   );
 }

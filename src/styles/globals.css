@@ -265,15 +265,15 @@
   --color-settings-value: var(--settings-value);
   --color-settings-divider: var(--settings-divider);
 
-  /* ── V3: Keeper Console ───────────────────────────── */
-  --color-keeper-console: var(--keeper-console);
-  --color-keeper-console-border: var(--keeper-console-border);
-  --color-keeper-console-text: var(--keeper-console-text);
-  --color-keeper-console-text-muted: var(--keeper-console-text-muted);
-  --color-keeper-console-sidebar: var(--keeper-console-sidebar);
-  --color-keeper-console-sidebar-border: var(--keeper-console-sidebar-border);
-  --color-keeper-console-input: var(--keeper-console-input);
-  --color-keeper-console-input-border: var(--keeper-console-input-border);
+  /* ── V3: Console ──────────────────────────────────── */
+  --color-console: var(--console);
+  --color-console-border: var(--console-border);
+  --color-console-text: var(--console-text);
+  --color-console-text-muted: var(--console-text-muted);
+  --color-console-sidebar: var(--console-sidebar);
+  --color-console-sidebar-border: var(--console-sidebar-border);
+  --color-console-input: var(--console-input);
+  --color-console-input-border: var(--console-input-border);
 
   /* ── V3: Command Palette ──────────────────────────── */
   --color-command-palette: var(--command-palette);
@@ -405,14 +405,14 @@
   --settings-label: #7db3a3;
   --settings-value: #e2e4e3;
   --settings-divider: rgba(82, 96, 86, 0.18);
-  --keeper-console: #141816;
-  --keeper-console-border: rgba(82, 96, 86, 0.18);
-  --keeper-console-text: #e2e4e3;
-  --keeper-console-text-muted: #8b908d;
-  --keeper-console-sidebar: #121513;
-  --keeper-console-sidebar-border: rgba(82, 96, 86, 0.18);
-  --keeper-console-input: #131514;
-  --keeper-console-input-border: rgba(82, 96, 86, 0.18);
+  --console: #141816;
+  --console-border: rgba(82, 96, 86, 0.18);
+  --console-text: #e2e4e3;
+  --console-text-muted: #8b908d;
+  --console-sidebar: #121513;
+  --console-sidebar-border: rgba(82, 96, 86, 0.18);
+  --console-input: #131514;
+  --console-input-border: rgba(82, 96, 86, 0.18);
   --command-palette: #141816;
   --command-palette-border: rgba(82, 96, 86, 0.18);
   --command-palette-input: #131514;

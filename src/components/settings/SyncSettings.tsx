@@ -3,7 +3,7 @@ import { useAuthStore } from '@/stores/authStore';
 import { useAppStore } from '@/stores/appStore';
 import * as syncApi from '@/api/sync';
 import { exportGarden, confirmAndImportGarden } from '@/services/garden-io';
-import { Panel, Spinner } from '@/components/ui';
+import { Panel, Spinner, Button } from '@/components/ui';
 import { cn } from '@/lib/cn';
 
 const ChevronIcon = ({ collapsed }: { collapsed: boolean }) => (
@@ -22,12 +22,6 @@ const ChevronIcon = ({ collapsed }: { collapsed: boolean }) => (
   </svg>
 );
 import type { GardenStatus, SyncedCrux } from '@/api/sync';
-
-const btnClass = cn(
-  'px-3 py-1.5 text-xs font-mono rounded-[var(--radius-sm)]',
-  'bg-surface border border-border text-text hover:bg-accent-muted transition-colors cursor-pointer',
-  'disabled:opacity-50 disabled:cursor-not-allowed',
-);
 
 function formatSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
@@ -171,24 +165,16 @@ export default function SyncSettings() {
       )}
 
       <div className="flex items-center gap-2 mb-4">
-        <button onClick={handlePush} disabled={busy} className={btnClass}>
-          {pushing ? <><Spinner size={12} /> Pushing...</> : 'Push garden'}
-        </button>
-        <button onClick={handlePull} disabled={busy} className={btnClass}>
-          {pulling ? <><Spinner size={12} /> Pulling...</> : 'Pull garden'}
-        </button>
+        <Button variant="secondary" size="sm" onClick={handlePush} disabled={busy} loading={pushing}>
+          {pushing ? 'Pushing...' : 'Push garden'}
+        </Button>
+        <Button variant="secondary" size="sm" onClick={handlePull} disabled={busy} loading={pulling}>
+          {pulling ? 'Pulling...' : 'Pull garden'}
+        </Button>
         {gardenStatus && (
-          <button
-            onClick={handleDeleteGarden}
-            disabled={busy}
-            className={cn(
-              'px-3 py-1.5 text-xs font-mono rounded-[var(--radius-sm)]',
-              'text-error hover:bg-error-muted cursor-pointer',
-              'disabled:opacity-50 disabled:cursor-not-allowed',
-            )}
-          >
-            {deletingGarden ? <><Spinner size={12} /> Deleting...</> : 'Delete backup'}
-          </button>
+          <Button variant="danger" size="sm" onClick={handleDeleteGarden} disabled={busy} loading={deletingGarden}>
+            {deletingGarden ? 'Deleting...' : 'Delete backup'}
+          </Button>
         )}
       </div>
 
@@ -212,13 +198,15 @@ export default function SyncSettings() {
                   {formatSize(c.size)} &middot; {formatDate(c.updatedAt)}
                 </span>
               </div>
-              <button
+              <Button
+                variant="danger"
+                size="sm"
                 onClick={() => handleDeleteCrux(c.cruxId)}
                 disabled={deletingId === c.cruxId}
-                className="text-error hover:text-error/80 transition-colors cursor-pointer"
+                loading={deletingId === c.cruxId}
               >
-                {deletingId === c.cruxId ? <Spinner size={10} /> : 'Remove'}
-              </button>
+                Remove
+              </Button>
             </div>
           ))}
         </div>
