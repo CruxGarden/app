@@ -178,24 +178,20 @@ export default function HomeGarden() {
       )}
 
       {/* Delete confirmation modal */}
-      <Modal open={deletingId !== null} onClose={() => setDeletingId(null)}>
-        <div className="space-y-4">
-          <div>
-            <h2 className="text-lg font-display font-medium text-text">Delete crux</h2>
-            <p className="text-sm text-text-muted mt-1">
-              Are you sure you want to delete{' '}
-              <span className="text-text font-medium">{deletingCrux?.title || 'this crux'}</span>?
-              This action cannot be undone.
-            </p>
-          </div>
-          <div className="flex gap-2 justify-end">
-            <Button variant="ghost" onClick={() => setDeletingId(null)}>
-              Cancel
-            </Button>
-            <Button variant="danger" onClick={handleConfirmDelete}>
-              Delete
-            </Button>
-          </div>
+      <Modal
+        open={deletingId !== null}
+        onClose={() => setDeletingId(null)}
+        title="Delete Crux"
+      >
+        <p className="text-sm text-text-muted mb-4">
+          Are you sure you want to delete{' '}
+          <span className="text-text font-medium">{deletingCrux?.title || 'this crux'}</span>?
+          This action cannot be undone
+        </p>
+        <div className="flex justify-end">
+          <Button variant="danger" onClick={handleConfirmDelete}>
+            Delete
+          </Button>
         </div>
       </Modal>
 

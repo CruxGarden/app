@@ -90,8 +90,8 @@ interface UIState {
   aiEnabled: boolean;
   setAiEnabled: (enabled: boolean) => void;
 
-  // Keeper Console
-  keeperOpen: boolean;
+  // Console
+  consoleOpen: boolean;
 
   // Settings modal
   settingsOpen: boolean;
@@ -102,7 +102,7 @@ interface UIState {
   setExploreOpen: (open: boolean) => void;
 
   // Mood Editor
-  moodEditorOpen: boolean;
+  moodPanelOpen: boolean;
 
   // ── Layout actions ──
   setActiveCrux: (id: string | null) => void;
@@ -136,12 +136,12 @@ interface UIState {
   setMobileActivePane: (pane: PaneType) => void;
 
   // ── Keeper Console ──
-  setKeeperOpen: (open: boolean) => void;
-  toggleKeeper: () => void;
+  setConsoleOpen: (open: boolean) => void;
+  toggleConsole: () => void;
 
   // ── Mood Editor ──
-  setMoodEditorOpen: (open: boolean) => void;
-  toggleMoodEditor: () => void;
+  setMoodPanelOpen: (open: boolean) => void;
+  toggleMoodPanel: () => void;
 
   // ── Legacy compatibility ──
   fileViewerOpen: boolean;
@@ -493,12 +493,12 @@ export const useUIStore = create<UIState>()((set, get) => ({
   mobileActivePane: 'collaboration' as PaneType,
   aiEnabled: false,
   setAiEnabled: (enabled) => set({ aiEnabled: enabled }),
-  keeperOpen: false,
+  consoleOpen: false,
   settingsOpen: false,
   setSettingsOpen: (open) => set({ settingsOpen: open }),
   exploreOpen: false,
   setExploreOpen: (open) => set({ exploreOpen: open }),
-  moodEditorOpen: false,
+  moodPanelOpen: false,
 
   // ── Layout actions ──
 
@@ -756,10 +756,10 @@ export const useUIStore = create<UIState>()((set, get) => ({
 
   // ── Keeper Console ──
 
-  setKeeperOpen: (open) => set({ keeperOpen: open }),
-  toggleKeeper: () => set((s) => ({ keeperOpen: !s.keeperOpen })),
-  setMoodEditorOpen: (open) => set({ moodEditorOpen: open }),
-  toggleMoodEditor: () => set((s) => ({ moodEditorOpen: !s.moodEditorOpen })),
+  setConsoleOpen: (open) => set({ consoleOpen: open }),
+  toggleConsole: () => set((s) => ({ consoleOpen: !s.consoleOpen })),
+  setMoodPanelOpen: (open) => set({ moodPanelOpen: open }),
+  toggleMoodPanel: () => set((s) => ({ moodPanelOpen: !s.moodPanelOpen })),
 
   // ── Legacy compatibility (derived from pane system) ──
 

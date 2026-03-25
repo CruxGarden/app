@@ -3,7 +3,7 @@ import { cn } from '@/lib/cn';
 import type { ChatMessage, ToolCall } from '@/api/types';
 import { PROVIDERS } from '@/ai/providers';
 import MarkdownRenderer from './MarkdownRenderer';
-import { KeeperAvatar } from '@/components/keeper/KeeperConsole';
+import { ConsoleAvatar } from '@/components/keeper/Console';
 
 /** Get short display name for a model ID (e.g. "claude-sonnet-4-20250514" → "Sonnet 4") */
 function getModelShortName(modelId?: string): string | null {
@@ -97,7 +97,7 @@ export default function MessageBubble({
 
   return (
     <div className={cn('flex gap-2 items-end', isUser ? 'justify-end' : 'justify-start')}>
-      {!isUser && <KeeperAvatar bordered />}
+      {!isUser && <ConsoleAvatar bordered />}
       <div
         className={cn(
           'max-w-[85%] rounded-[var(--radius)] px-3 py-2 text-sm break-words',

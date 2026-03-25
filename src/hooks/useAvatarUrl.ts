@@ -24,6 +24,7 @@ export function useAvatarUrl(
       });
       return () => { cancelled = true; };
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- author ref changes on every render; we depend on specific fields only
   }, [fingerprint, author?.meta?.avatarUrl, author?.meta?.avatar_url, author?.updated]);
 
   return url;

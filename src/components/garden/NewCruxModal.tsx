@@ -1093,7 +1093,7 @@ export default function NewCruxModal({ open, onClose }: NewCruxModalProps) {
   );
 
   return (
-    <Modal open={open} onClose={handleClose} size="screen" title="New Crux">
+    <Modal open={open} onClose={handleClose} size="screen" title="Add Crux">
       <div className="flex flex-col h-full gap-5">
         {/* Name */}
         <div className="shrink-0">
@@ -1156,7 +1156,7 @@ export default function NewCruxModal({ open, onClose }: NewCruxModalProps) {
         </div>
 
         {/* Actions — pinned to bottom */}
-        <div className="shrink-0 flex flex-col gap-2 border-t border-border pt-4">
+        <div className="shrink-0 flex items-center justify-between border-t border-border pt-4">
           <input
             ref={importInputRef}
             type="file"
@@ -1164,11 +1164,8 @@ export default function NewCruxModal({ open, onClose }: NewCruxModalProps) {
             className="hidden"
             onChange={handleImportInput}
           />
-          <Button onClick={() => handleCreate()} loading={creating} disabled={importing} fullWidth>
-            Create
-          </Button>
           {importing ? (
-            <div className="flex items-center justify-center gap-3 py-1.5">
+            <div className="flex items-center gap-3">
               <div className="relative w-7 h-7 flex items-center justify-center shrink-0">
                 <svg width="24" height="24" viewBox="0 0 28 28" className="-rotate-90">
                   <circle cx="14" cy="14" r="12" fill="none" stroke="currentColor" strokeWidth="2" className="text-border" />
@@ -1191,11 +1188,13 @@ export default function NewCruxModal({ open, onClose }: NewCruxModalProps) {
               variant="ghost"
               onClick={() => importInputRef.current?.click()}
               disabled={creating}
-              fullWidth
             >
               Import .crux file
             </Button>
           )}
+          <Button onClick={() => handleCreate()} loading={creating} disabled={importing}>
+            Create
+          </Button>
         </div>
       </div>
 

@@ -5,21 +5,11 @@ import AiSettings from '@/components/settings/AiSettings';
 
 export default function Settings() {
   return (
-    <div className="overflow-y-auto flex-1 py-2">
-
+    <div className="overflow-y-auto flex-1 flex flex-col gap-4">
       <AccountSettings />
-
-      <div className="mt-6">
-        <AiSettings />
-      </div>
-
-      <div className="mt-6">
-        <SyncSettings />
-      </div>
-
-      <div className="mt-6">
-        <DataSettings />
-      </div>
+      <AiSettings />
+      <SyncSettings />
+      <DataSettings />
     </div>
   );
 }

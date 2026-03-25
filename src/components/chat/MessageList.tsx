@@ -3,7 +3,7 @@ import type { ChatMessage } from '@/api/types';
 import { useAvatarUrl } from '@/hooks/useAvatarUrl';
 import { useAppStore } from '@/stores/appStore';
 import MessageBubble from './MessageBubble';
-import { KeeperAvatar } from '@/components/keeper/KeeperConsole';
+import { ConsoleAvatar } from '@/components/keeper/Console';
 import MarkdownRenderer from './MarkdownRenderer';
 
 interface MessageListProps {
@@ -55,7 +55,7 @@ export default function MessageList({ messages, streamingContent, isStreaming, t
 
       {isStreaming && streamingContent && (
         <div className="flex gap-2 items-end justify-start">
-          <KeeperAvatar />
+          <ConsoleAvatar />
           <div className="max-w-[85%] rounded-[var(--radius)] px-3 py-2 text-sm bg-[color-mix(in_srgb,var(--panel),var(--text)_8%)] text-text">
             <MarkdownRenderer content={streamingContent} />
             <span className="inline-block w-1.5 h-4 bg-accent/60 animate-pulse ml-0.5 align-text-bottom" />
@@ -65,7 +65,7 @@ export default function MessageList({ messages, streamingContent, isStreaming, t
 
       {isStreaming && !streamingContent && (
         <div className="flex gap-2 items-end justify-start">
-          <KeeperAvatar />
+          <ConsoleAvatar />
           <div className="rounded-[var(--radius)] px-3 py-2 bg-[color-mix(in_srgb,var(--panel),var(--text)_8%)]">
             <div className="flex gap-1">
               <span className="w-1.5 h-1.5 rounded-full bg-text-muted animate-bounce [animation-delay:0ms]" />

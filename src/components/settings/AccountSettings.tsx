@@ -2,16 +2,10 @@ import { useState, useRef, useEffect } from 'react';
 import { useAuthStore } from '@/stores/authStore';
 import { useAppStore } from '@/stores/appStore';
 import { authors as authorsApi } from '@/api';
-import { Panel } from '@/components/ui';
+import { Panel, Button } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import ConnectAccount from '@/components/auth/ConnectAccount';
 import AvatarUpload from '@/components/auth/AvatarUpload';
-
-const btnClass = cn(
-  'px-3 py-1.5 text-xs font-mono rounded-[var(--radius-sm)]',
-  'bg-surface border border-border text-text hover:bg-accent-muted transition-colors cursor-pointer',
-  'disabled:opacity-50 disabled:cursor-not-allowed',
-);
 
 export default function AccountSettings() {
   const { account, isAuthenticated } = useAuthStore();
@@ -131,9 +125,9 @@ export default function AccountSettings() {
                   usernameError ? 'border-error' : 'border-border focus:border-accent',
                 )}
               />
-              <button onClick={handleSaveUsername} disabled={savingUsername} className={btnClass}>
+              <Button variant="secondary" size="sm" onClick={handleSaveUsername} disabled={savingUsername}>
                 {savingUsername ? '...' : 'Save'}
-              </button>
+              </Button>
               <button onClick={cancelEditingUsername} className="text-xs text-text-muted hover:text-text transition-colors cursor-pointer">
                 Cancel
               </button>
@@ -172,7 +166,9 @@ export default function AccountSettings() {
 
       {/* Connection */}
       <div className="border-t border-border my-5" />
-      <h3 className="font-display text-sm font-medium text-accent mb-2">Connection</h3>
+      <h3 className="font-display text-sm font-medium text-accent mb-2">
+        Connection{isAuthenticated ? ' (crux.garden)' : ''}
+      </h3>
       <ConnectAccount description="Connect to your crux.garden account to enable sync and sharing." />
     </Panel>
   );

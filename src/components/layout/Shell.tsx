@@ -1,8 +1,7 @@
 import { lazy, Suspense, useEffect, useState } from 'react';
 import { Outlet } from 'react-router-dom';
 import TopBar from './TopBar';
-import KeeperConsole from '@/components/keeper/KeeperConsole';
-import { applySavedMoodSettings } from '@/components/mood/MoodEditorPanel';
+import { applySavedMoodSettings } from '@/components/mood/mood-helpers';
 import { Modal } from '@/components/ui';
 import { useUIStore } from '@/stores/uiStore';
 import { isServicesReady, initServices } from '@/services';
@@ -11,9 +10,10 @@ import { SettingsKey } from '@/lib/constants';
 import { seedTutorialCrux } from '@/services/seedTutorial';
 import { useMoodStore } from '@/stores/moodStore';
 
+const Console = lazy(() => import('@/components/keeper/Console'));
 const Settings = lazy(() => import('@/pages/Settings'));
 const Explore = lazy(() => import('@/pages/Explore'));
-const MoodEditor = lazy(() => import('@/components/mood/MoodEditorPanel'));
+const Mood = lazy(() => import('@/components/mood/Mood'));
 
 const hideSplashScreen = () => {
   const splash = document.getElementById('splash');
@@ -26,41 +26,64 @@ const hideSplashScreen = () => {
 export default function Shell() {
   const [servicesReady, setServicesReady] = useState(isServicesReady());
   const aiEnabled = useUIStore((s) => s.aiEnabled);
-  const keeperOpen = useUIStore((s) => s.keeperOpen);
-  const setKeeperOpen = useUIStore((s) => s.setKeeperOpen);
+  const consoleOpen = useUIStore((s) => s.consoleOpen);
+  const setConsoleOpen = useUIStore((s) => s.setConsoleOpen);
   const settingsOpen = useUIStore((s) => s.settingsOpen);
   const exploreOpen = useUIStore((s) => s.exploreOpen);
-  const moodEditorOpen = useUIStore((s) => s.moodEditorOpen);
+  const moodPanelOpen = useUIStore((s) => s.moodPanelOpen);
 
-  // Initialize services and apply mood settings
   useEffect(() => {
-    if (servicesReady) {
-      applySavedMoodSettings();
-      useUIStore.getState().setAiEnabled(getSetting(SettingsKey.AiEnabled) === 'true');
-      return;
-    }
+    applySavedMoodSettings();
+    useUIStore.getState().setAiEnabled(
+      getSetting(SettingsKey.AiEnabled) === 'true'
+    );
+
+    if (servicesReady) return;
 
     (async () => {
-      applySavedMoodSettings();
       await initServices();
       useMoodStore.getState().loadMoods();
       seedTutorialCrux();
-      useUIStore.getState().setAiEnabled(getSetting(SettingsKey.AiEnabled) === 'true');
-      setServicesReady(true);
       hideSplashScreen();
+      setServicesReady(true);
     })();
   }, [servicesReady]);
 
   // Global keyboard shortcuts
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && !keeperOpen && aiEnabled) {
-        setKeeperOpen(true);
+      const meta = e.metaKey || e.ctrlKey;
+
+      // Escape → open console (when AI enabled and console not already open)
+      if (e.key === 'Escape' && !consoleOpen && aiEnabled) {
+        setConsoleOpen(true);
+        return;
+      }
+
+      // Cmd+E → toggle explore
+      if (meta && e.key === 'e') {
+        e.preventDefault();
+        useUIStore.getState().setExploreOpen(!useUIStore.getState().exploreOpen);
+        return;
+      }
+
+      // Cmd+M → toggle mood
+      if (meta && e.key === 'm') {
+        e.preventDefault();
+        useUIStore.getState().setMoodPanelOpen(!useUIStore.getState().moodPanelOpen);
+        return;
+      }
+
+      // Cmd+, → toggle settings
+      if (meta && e.key === ',') {
+        e.preventDefault();
+        useUIStore.getState().setSettingsOpen(!useUIStore.getState().settingsOpen);
+        return;
       }
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [keeperOpen, setKeeperOpen, aiEnabled]);
+  }, [consoleOpen, setConsoleOpen, aiEnabled]);
 
   return (
     <div className="flex flex-col h-screen overflow-hidden">
@@ -74,18 +97,31 @@ export default function Shell() {
         {servicesReady ? <Outlet /> : null}
       </main>
 
-      {/* Keeper Console — hidden when AI tools are disabled */}
-      {aiEnabled && <KeeperConsole open={keeperOpen} onClose={() => setKeeperOpen(false)} />}
+      {/* Console Modal */}
+      {aiEnabled && (
+        <Modal
+          open={consoleOpen}
+          onClose={() => setConsoleOpen(false)}
+          size="lg"
+          title="Console — The Keeper"
+          className="h-[min(520px,70vh)]"
+          flush
+        >
+          <Suspense fallback={null}>
+            <Console />
+          </Suspense>
+        </Modal>
+      )}
 
-      {/* Mood Editor Modal */}
+      {/* Mood Modal */}
       <Modal
-        open={moodEditorOpen}
-        onClose={() => useUIStore.getState().setMoodEditorOpen(false)}
+        open={moodPanelOpen}
+        onClose={() => useUIStore.getState().setMoodPanelOpen(false)}
         size="screen"
         title="Mood"
       >
         <Suspense fallback={null}>
-          <MoodEditor />
+          <Mood />
         </Suspense>
       </Modal>
 

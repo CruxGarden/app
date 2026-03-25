@@ -6,38 +6,34 @@ import { getAdapter } from '@/ai/adapters';
 import type { NormalizedMessage } from '@/services/types';
 import MarkdownRenderer from '@/components/chat/MarkdownRenderer';
 import ModelSelector from '@/components/chat/ModelSelector';
-import KeeperPixelAvatar from '@/components/ui/KeeperPixelAvatar';
-import type { KeeperVariant } from '@/components/ui/KeeperPixelAvatar';
 import { useAvatarUrl } from '@/hooks/useAvatarUrl';
 import { useAppStore } from '@/stores/appStore';
 import { useThemeStore } from '@/stores/themeStore';
 import { getApiKey } from '@/ai/keys';
 import { getSetting, setSetting, removeSetting } from '@/services/settings';
 import { SettingsKey } from '@/lib/constants';
-import { getPersona, type PersonaSettings } from '@/components/mood/MoodEditorPanel';
+import { getPersona, type PersonaSettings } from '@/components/mood/mood-helpers';
+import keeperAvatarDark from '@/images/keeper-avatar-dark.jpg';
+import keeperAvatarLight from '@/images/keeper-avatar-light.jpg';
 
-function useKeeperVariant(): KeeperVariant {
+function useKeeperAvatar(): string {
   const activeMode = useThemeStore((s) => s.activeMode);
-  return activeMode === 'light' ? 'avatar-light' : 'avatar-dark';
+  return activeMode === 'light' ? keeperAvatarLight : keeperAvatarDark;
 }
 
-export function KeeperAvatar({ className = 'w-6 h-6', animate = false, bordered = false }: { className?: string; animate?: boolean; bordered?: boolean }) {
-  const variant = useKeeperVariant();
-  const containerRef = useRef<HTMLDivElement>(null);
-  const [scale, setScale] = useState(0.1875);
-
-  useEffect(() => {
-    if (!containerRef.current) return;
-    const size = containerRef.current.clientWidth;
-    if (size > 0) setScale(size / 128);
-  }, [className]);
-
+export function ConsoleAvatar({ className = 'w-6 h-6', bordered = false }: { className?: string; bordered?: boolean }) {
+  const src = useKeeperAvatar();
   return (
-    <div ref={containerRef} className={`${className} aspect-square shrink-0 overflow-hidden ${bordered ? 'rounded-[var(--radius-sm)] ring-1 ring-border' : ''}`}>
-      <div className="origin-top-left" style={{ width: 128, height: 128, transform: `scale(${scale})` }}>
-        <KeeperPixelAvatar variant={variant} scale={1} gridLines={false} animate={animate} />
-      </div>
-    </div>
+    <img
+      src={src}
+      alt="Console"
+      className={cn(
+        className,
+        'aspect-square shrink-0 object-cover',
+        '[image-rendering:pixelated]',
+        bordered ? 'rounded-[var(--radius-sm)] ring-1 ring-border' : '',
+      )}
+    />
   );
 }
 
@@ -158,10 +154,7 @@ function getModelShortName(modelId?: string): string | null {
 
 // ── Component ──
 
-interface KeeperConsoleProps {
-  open: boolean;
-  onClose: () => void;
-}
+// No props — visibility controlled by Modal wrapper in Shell
 
 function UserAvatar() {
   const author = useAppStore((s) => s.author);
@@ -179,25 +172,14 @@ function UserAvatar() {
   );
 }
 
-function PersonaAvatar({ persona, className = 'w-6 h-6' }: { persona: PersonaSettings; className?: string }) {
-  if (persona.thumbnailDataUrl) {
-    return (
-      <div className={`${className} shrink-0 rounded-[var(--radius-sm)] overflow-hidden`}>
-        <img src={persona.thumbnailDataUrl} alt="" className="w-full h-full object-cover" />
-      </div>
-    );
-  }
-  return <KeeperAvatar className={className} />;
-}
-
-export default function KeeperConsole({ open, onClose }: KeeperConsoleProps) {
-  const keeperVariant = useKeeperVariant();
+export default function Console() {
+  const keeperAvatarSrc = useKeeperAvatar();
   const [persona, setPersona] = useState<PersonaSettings>(() => getPersona());
 
-  // Re-read persona when panel opens (user may have changed it)
+  // Read persona on mount (Modal only mounts content when open)
   useEffect(() => {
-    if (open) setPersona(getPersona());
-  }, [open]);
+    setPersona(getPersona());
+  }, []);
   const [conversations, setConversations] = useState<Conversation[]>(() => loadConversations());
   const [activeId, setActiveId] = useState<string | null>(() => {
     const convos = loadConversations();
@@ -247,35 +229,23 @@ export default function KeeperConsole({ open, onClose }: KeeperConsoleProps) {
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const abortRef = useRef<AbortController | null>(null);
 
+  // Auto-focus input on mount
   useEffect(() => {
-    if (open) setTimeout(() => inputRef.current?.focus(), 100);
-  }, [open]);
+    setTimeout(() => inputRef.current?.focus(), 100);
+  }, []);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [displayMessages, streamContent, toolActivity]);
 
-  // Scroll to bottom when opening with existing history
+  // Scroll to bottom on mount when there's existing history
   useEffect(() => {
-    if (open && displayMessages.length > 0) {
+    if (displayMessages.length > 0) {
       requestAnimationFrame(() => {
         bottomRef.current?.scrollIntoView({ behavior: 'instant' });
       });
     }
-  }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  useEffect(() => {
-    if (!open) return;
-    const handler = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        e.preventDefault();
-        e.stopPropagation();
-        onClose();
-      }
-    };
-    document.addEventListener('keydown', handler, true);
-    return () => document.removeEventListener('keydown', handler, true);
-  }, [open, onClose]);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const send = useCallback(async () => {
     const trimmed = input.trim();
@@ -395,32 +365,19 @@ export default function KeeperConsole({ open, onClose }: KeeperConsoleProps) {
     }
   };
 
-  if (!open) return null;
-
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center">
-      <div className="absolute inset-0 bg-overlay/80 backdrop-blur-sm" onClick={onClose} />
-
-      <div
-        className={cn(
-          'relative z-10 w-full max-w-2xl mx-4 mb-4 sm:mb-0',
-          'bg-keeper-console border border-keeper-console-border rounded-[var(--radius)] shadow-xl',
-          'flex flex-row h-[60vh] max-h-[520px]',
-        )}
-      >
+    <div className="flex flex-row h-full">
         {/* Sidebar — portrait + conversation history */}
         <div className="hidden sm:flex w-48 shrink-0 flex-col border-r border-border">
           <div className="aspect-square w-full overflow-hidden rounded-tl-[calc(var(--radius)-1px)]">
             {persona.thumbnailDataUrl ? (
               <img src={persona.thumbnailDataUrl} alt="" className="w-full h-full object-cover" />
             ) : (
-              <div className="w-full h-full overflow-hidden">
-                <KeeperPixelAvatar variant={keeperVariant} scale={3} className="w-full h-full" gridLines={false} animate />
-              </div>
+              <img src={keeperAvatarSrc} alt="Console" className="w-full h-full object-cover [image-rendering:pixelated]" />
             )}
           </div>
           {/* Conversation history */}
-          <div className="flex-1 min-h-0 overflow-y-auto border-t border-border bg-keeper-console-sidebar">
+          <div className="flex-1 min-h-0 overflow-y-auto border-t border-border">
             <div className="p-2">
               <button
                 onClick={startNewConversation}
@@ -455,22 +412,6 @@ export default function KeeperConsole({ open, onClose }: KeeperConsoleProps) {
 
         {/* Chat column */}
         <div className="flex-1 flex flex-col min-w-0">
-          {/* Header */}
-          <div className="flex items-center gap-2 px-4 py-3 border-b border-border">
-            <PersonaAvatar persona={persona} className="w-7 h-7 sm:hidden" />
-            <span className="text-sm font-display font-medium text-text">{persona.name || 'The Keeper'}</span>
-            <div className="flex-1" />
-            <button
-              onClick={onClose}
-              className="text-text-muted hover:text-text transition-colors cursor-pointer"
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <line x1="18" y1="6" x2="6" y2="18" />
-                <line x1="6" y1="6" x2="18" y2="18" />
-              </svg>
-            </button>
-          </div>
-
           {/* Messages */}
           <div className="flex-1 overflow-y-auto p-4 space-y-3 min-h-0">
             {displayMessages.length === 0 && !streaming && (
@@ -600,7 +541,6 @@ export default function KeeperConsole({ open, onClose }: KeeperConsoleProps) {
             </div>
           </div>
         </div>
-      </div>
     </div>
   );
 }

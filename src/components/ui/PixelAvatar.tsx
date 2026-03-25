@@ -69,7 +69,7 @@ const ANIM_COORDS = {
   'avatar-light': { eyeCx: 64, eyeCy: 48, eyeR: 14, antennaX1: -1, antennaX2: -1, antennaY: -1 },
 };
 
-interface KeeperPixelAvatarProps {
+interface PixelAvatarProps {
   /** Which variant to render (default: 'eye') */
   variant?: KeeperVariant;
   /** CSS pixel multiplier (default 3 → 384px) */
@@ -83,14 +83,14 @@ interface KeeperPixelAvatarProps {
   animate?: boolean;
 }
 
-export default function KeeperPixelAvatar({
+export default function PixelAvatar({
   variant = 'eye',
   scale = 3,
   className = '',
   gridLines = false,
   tinted = true,
   animate = false,
-}: KeeperPixelAvatarProps) {
+}: PixelAvatarProps) {
   const data = VARIANTS[variant];
 
   // Decode with original colors — no pixel-level tinting

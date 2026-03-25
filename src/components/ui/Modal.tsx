@@ -22,9 +22,13 @@ interface ModalProps {
   size?: ModalSize;
   /** Title displayed at the top of the modal */
   title?: string;
+  /** Subtitle displayed below the title */
+  subtitle?: string;
+  /** Remove inner content padding (e.g. for edge-to-edge layouts) */
+  flush?: boolean;
 }
 
-export default function Modal({ open, onClose, children, className, size = 'md', title }: ModalProps) {
+export default function Modal({ open, onClose, children, className, size = 'md', title, subtitle, flush }: ModalProps) {
   useEffect(() => {
     if (!open) return;
     const handler = (e: KeyboardEvent) => {
@@ -39,10 +43,13 @@ export default function Modal({ open, onClose, children, className, size = 'md',
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div className="absolute inset-0 bg-overlay/80 backdrop-blur-sm" onClick={onClose} />
-      <Panel padding="lg" className={cn('relative z-10 flex flex-col', SIZE_CLASSES[size], className)}>
+      <Panel padding="md" className={cn('relative z-10 flex flex-col', SIZE_CLASSES[size], className)}>
         {title && (
           <div className="flex items-center justify-between mb-4">
-            <h2 className="font-display text-sm font-medium text-accent">{title}</h2>
+            <div>
+              <h2 className="font-display text-sm font-medium text-accent">{title}</h2>
+              {subtitle && <p className="text-xs text-text-muted mt-0.5">{subtitle}</p>}
+            </div>
             <button
               onClick={onClose}
               className="text-text-muted hover:text-text cursor-pointer"
@@ -55,7 +62,7 @@ export default function Modal({ open, onClose, children, className, size = 'md',
             </button>
           </div>
         )}
-        <div className={cn((size === 'full' || size === 'screen') && 'flex-1 min-h-0 flex flex-col overflow-hidden')}>
+        <div className={cn('flex-1 min-h-0 flex flex-col overflow-hidden bg-bg/50 rounded-[var(--radius-sm)]', !flush && 'p-4')}>
           {children}
         </div>
       </Panel>
