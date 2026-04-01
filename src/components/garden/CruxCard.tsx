@@ -9,6 +9,8 @@ interface CruxCardProps {
   linkTo?: string;
   onDelete?: (id: string) => void;
   sortBy?: 'created' | 'updated';
+  /** Hide the three-dot action menu (e.g. on public pages) */
+  hideMenu?: boolean;
 }
 
 function MoreIcon() {
@@ -44,7 +46,7 @@ function formatDateTime(dateStr: string): string {
   return `${date}, ${time}`;
 }
 
-export default function CruxCard({ crux, linkTo, onDelete, sortBy = 'created' }: CruxCardProps) {
+export default function CruxCard({ crux, linkTo, onDelete, sortBy = 'created', hideMenu }: CruxCardProps) {
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
@@ -64,47 +66,35 @@ export default function CruxCard({ crux, linkTo, onDelete, sortBy = 'created' }:
   }, [menuOpen]);
 
   return (
-    <div className="relative group">
+    <div className="relative group last:border-b-0 border-b border-border">
       <button
         onClick={() => navigate(linkTo || `/c/${crux.id}`)}
-        className={cn(
-          'bg-garden-card border border-garden-card-border rounded-[var(--radius)] p-4 text-left',
-          'hover:bg-garden-card-hover hover:border-garden-card-border-hover hover:text-garden-card-title cursor-pointer',
-          'w-full h-36 flex flex-col',
-        )}
+        className={cn("w-full pl-4 py-3 text-left hover:bg-accent-muted/30 cursor-pointer group/row flex items-center gap-3", hideMenu ? 'pr-4' : 'pr-10')}
       >
-        {/* Title */}
-        <h3 className="font-display text-sm font-medium text-garden-card-title truncate pr-6">
-          {crux.title || crux.slug}
-        </h3>
-
-        {/* Description */}
-        {description && (
-          <p className="text-xs text-garden-card-text line-clamp-2 leading-relaxed mt-1.5">
-            {description}
-          </p>
-        )}
-
-        {/* Spacer */}
-        <div className="flex-1" />
-
-        {/* Footer */}
-        <div className="text-[10px] text-garden-card-meta font-mono">
+        <div className="flex-1 min-w-0">
+          <h3 className="font-display text-sm font-medium text-text group-hover/row:text-accent truncate">
+            {crux.title || crux.slug}
+          </h3>
+          {description && (
+            <p className="text-xs text-text-muted truncate">{description}</p>
+          )}
+        </div>
+        <div className="text-[10px] text-text-muted font-mono shrink-0">
           {sortBy === 'updated'
-            ? `Updated ${formatDateTime(crux.updated)}`
-            : `Created ${formatDateTime(crux.created)}`}
+            ? formatDateTime(crux.updated)
+            : formatDateTime(crux.created)}
         </div>
       </button>
 
       {/* Three-dot menu */}
-      <div ref={menuRef} className="absolute top-3 right-3 z-10">
+      {!hideMenu && <div ref={menuRef} className="absolute top-1/2 -translate-y-1/2 right-2 z-10">
         <button
           onClick={(e) => {
             e.stopPropagation();
             setMenuOpen(!menuOpen);
           }}
           className={cn(
-            'p-1 rounded text-text-muted hover:text-text hover:bg-surface transition-all cursor-pointer',
+            'p-1 rounded text-text-muted hover:text-text hover:bg-surface cursor-pointer',
             menuOpen ? 'opacity-100' : 'opacity-0 group-hover:opacity-100',
           )}
         >
@@ -136,7 +126,7 @@ export default function CruxCard({ crux, linkTo, onDelete, sortBy = 'created' }:
             )}
           </div>
         )}
-      </div>
+      </div>}
 
       {exportOpen && (
         <Suspense fallback={null}>

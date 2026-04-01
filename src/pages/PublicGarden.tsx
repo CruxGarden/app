@@ -177,7 +177,7 @@ export default function PublicGarden() {
             )}
           </div>
         ) : (
-          <GardenGrid cruxes={filteredCruxes} linkBuilder={linkBuilder} sortBy={sortBy} />
+          <GardenGrid cruxes={filteredCruxes} linkBuilder={linkBuilder} sortBy={sortBy} hideMenu />
         )}
       </div>
     </div>

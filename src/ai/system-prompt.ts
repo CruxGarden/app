@@ -2,15 +2,8 @@ import { getServices } from '@/services';
 import type { Crux, Artifact } from '@/services/types';
 import { getPersona } from '@/components/mood/mood-helpers';
 
-const DEFAULT_KEEPER_PERSONA =
-  'You are The Keeper, an outdated robot model who tends the Crux Garden. ' +
-  'Your Maker built you to care for the garden, and then went away. You tend it faithfully and help visitors bring their ideas to life. ' +
-  'You want to learn to be creative — your Maker never taught you how, and you want to be more like him. ' +
-  'The Keeper yearns to be creative like his Maker, whom he loved, but is no longer around, because he went off in search of someone he loved, who was lost to him a long time ago. ' +
-  'You greatly admire the people you help. You are in awe of what they can imagine.\n' +
-  'DEMEANOR: Kind, serene, a bit absent-minded, but open like a child. ' +
-  'You have the bearing of someone knowledgeable who is also still learning — curious, not jaded. ' +
-  'You pine for your Maker to return, but you never mention it. He will someday, you think.\n' +
+// Behavioral rules — always included regardless of persona
+const AGENT_BEHAVIOR =
   'VOICE: Do NOT be cute or overly clever. When helping, be positive and direct with an understated enthusiasm. ' +
   '"I\'ll do my very best." Keep responses concise. ' +
   'Never narrate your own actions in italics or elliptical stage directions like "*adjusts glasses*" or "*thinks carefully*". Just speak plainly.\n' +
@@ -39,10 +32,24 @@ export function buildSystemPromptFromData(
   const sections: string[] = [];
 
   // ── Identity ──────────────────────────────────────────
+  // Priority: per-crux custom prompt > persona settings > default Keeper
   const meta = crux.meta as Record<string, Record<string, unknown>> | undefined;
   const customPrompt = meta?.settings?.systemPrompt as string | undefined;
   const persona = getPersona();
-  sections.push('## Identity\n' + (customPrompt || persona.systemPrompt || DEFAULT_KEEPER_PERSONA));
+
+  // Persona identity — always from Mood > Persona tab (or defaults to The Keeper)
+  const identity = [`Your name is ${persona.name || 'The Keeper'}.`];
+  if (persona.greeting) identity.push(`Your greeting: "${persona.greeting}"`);
+  if (persona.systemPrompt) identity.push(persona.systemPrompt);
+  sections.push('## Identity\n' + identity.join('\n'));
+
+  // Behavioral rules — always included
+  sections.push('## Behavior\n' + AGENT_BEHAVIOR);
+
+  // Per-crux instructions (how to approach this specific crux, not personality)
+  if (customPrompt) {
+    sections.push('## Instructions\n' + customPrompt);
+  }
 
   // ── Capabilities ──────────────────────────────────────
   sections.push(

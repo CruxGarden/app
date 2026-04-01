@@ -10,10 +10,10 @@
     <meta name="description" content="Crux Garden — where ideas grow. A creative platform that captures the evolution of ideas, solo or by collaborating with other people and AI agents." />
     <title>Crux Garden</title>
     <style>
-      /* #0a0c0b matches the default dark palette --bg in src/styles/globals.css (garden preset).
+      /* #0a0a0c matches the default dark palette --bg (obsidian preset).
          Hardcoded here because CSS custom properties aren't available before globals.css loads.
          If the default --bg changes, update this value to match. */
-      body { margin: 0; background: #0a0c0b; }
+      body { margin: 0; background: #0a0a0c; }
       #splash {
         position: fixed;
         inset: 0;
@@ -89,53 +89,33 @@
         );
         if (!isAppRoute) return;
 
-        // All 30 mood presets: [background, accent, text].
+        // 10 mood presets: [background, accent, text].
         // Source of truth: lib/moods/presets.ts — keep in sync.
         var presets = {
           // Dark presets
-          garden:   ['#0a0c0b', '#4ade80', '#c4cec5'],
-          void:     ['#000000', '#ffffff', '#888888'],
-          snowblack:['#060606', '#888888', '#666666'],
-          neon:     ['#020204', '#00ffaa', '#80ffd5'],
-          abyss:    ['#040810', '#40c8c0', '#a0d0cc'],
-          hearth:   ['#100804', '#e8a040', '#d0b888'],
-          regal:    ['#0a0610', '#d4a840', '#c0a870'],
-          cafe:     ['#1a1410', '#d8a860', '#c0a878'],
-          darkroom: ['#1e1e1e', '#2d9cdb', '#a0c8e8'],
-          terminal: ['#000800', '#00ff00', '#80ff80'],
-          solaris:  ['#002830', '#b58900', '#d4b040'],
-          bunker:   ['#0c0e08', '#c8b878', '#b0a878'],
-          snowgray: ['#484848', '#b0b0b0', '#d0d0d0'],
-          geocities:['#008080', '#ffff00', '#ffffff'],
-          velvet:   ['#10080c', '#e888a8', '#e0b0c0'],
+          cafe:     ['#1a1410', '#d8a860', '#e0d0b8'],
+          ember:    ['#181010', '#b87068', '#d8ccc8'],
+          moss:     ['#141610', '#88a878', '#d0d8c8'],
+          slate:    ['#141618', '#7098b8', '#c8d0d8'],
+          obsidian: ['#0a0a0c', '#a0a0a8', '#d4d4d8'],
           // Light presets
-          parchment:['#f4ece0', '#886838', '#4a3820'],
-          sky:      ['#e8f0f8', '#2870c0', '#1a4878'],
-          blossom:  ['#f8eff2', '#c06888', '#804058'],
-          snowwhite:['#ffffff', '#222222', '#333333'],
-          candy:    ['#f8f0f8', '#e040a0', '#a03070'],
-          cubicle:  ['#c8c0b0', '#486898', '#2a3e5c'],
-          meadow:   ['#ecf4e8', '#488038', '#2c5020'],
-          pearl:    ['#f0eff4', '#7060a0', '#483868'],
-          sand:     ['#f0e8d8', '#906830', '#604020'],
-          frost:    ['#eef4f6', '#2888a0', '#1a5868'],
-          cotton:   ['#f6f2f0', '#a07060', '#684840'],
-          mint:     ['#e8f4f0', '#288870', '#1a5848'],
-          sunrise:  ['#f8f0e4', '#d07030', '#904818'],
-          lemonade: ['#f8f6e0', '#908020', '#605510'],
-          ivory:    ['#f8f4ee', '#606050', '#404038']
+          parchment:['#f4ece0', '#886838', '#2c2010'],
+          rose:     ['#f6eeee', '#a06070', '#2c1818'],
+          sage:     ['#eff4ec', '#507848', '#1c2418'],
+          mist:     ['#eef2f6', '#486888', '#181c24'],
+          ivory:    ['#f8f4ee', '#606050', '#303028']
         };
 
         // Read the user's theme mode (dark or light) from localStorage.
         var isLight = localStorage.getItem('cruxgarden:theme') === 'light';
 
         // Read which mood preset is active for the current mode.
-        // Falls back to 'garden' (dark) or 'parchment' (light) if not set.
+        // Falls back to 'cafe' (dark) or 'parchment' (light) if not set.
         var presetKey = isLight ? 'cruxgarden:moodPresetLight' : 'cruxgarden:moodPresetDark';
-        var presetId = localStorage.getItem(presetKey) || (isLight ? 'parchment' : 'garden');
+        var presetId = localStorage.getItem(presetKey) || (isLight ? 'ivory' : 'obsidian');
 
         // Look up the colors. Fall back to garden if the preset ID is unknown.
-        var colors = presets[presetId] || presets.garden;
+        var colors = presets[presetId] || presets.cafe;
 
         // Apply the colors to the splash elements.
         var splash = document.getElementById('splash');

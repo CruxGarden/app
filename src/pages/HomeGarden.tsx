@@ -129,7 +129,7 @@ export default function HomeGarden() {
             size="lg"
             tooltip={{ label: 'Add Crux' }}
             onClick={() => setShowNewCrux(true)}
-            className="bg-surface text-text-muted hover:bg-accent-muted hover:text-accent"
+            className="bg-panel text-text-muted hover:bg-accent/20 hover:text-accent"
           >
             <PlusCircleIcon />
           </IconButton>

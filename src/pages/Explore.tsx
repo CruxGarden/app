@@ -197,26 +197,20 @@ export default function Explore({ onNavigate }: { onNavigate?: () => void }) {
     return (
       <button
         onClick={() => handleNavigate(href)}
-        className={cn(
-          'bg-panel border border-border rounded-[var(--radius)] p-4',
-          'text-left hover:border-accent/40 cursor-pointer group',
-          'flex flex-col gap-2',
-        )}
+        className="w-full px-4 py-3 text-left hover:bg-accent-muted/30 cursor-pointer group flex items-center gap-3 border-b border-border last:border-b-0"
       >
-        <div className="flex items-center gap-2">
-          <Avatar url={avatarUrl} />
-          <span className="text-xs font-mono text-text-muted truncate">{crux.author_username}</span>
+        <Avatar url={avatarUrl} />
+        <div className="flex-1 min-w-0">
+          <div className="font-display text-sm font-medium text-text group-hover:text-accent truncate">
+            {crux.title}
+          </div>
+          {crux.description && (
+            <p className="text-xs text-text-muted truncate">{crux.description}</p>
+          )}
         </div>
-        <div className="font-display text-sm font-medium text-text group-hover:text-accent truncate">
-          {crux.title}
-        </div>
-        {crux.description && (
-          <p className="text-xs text-text-muted line-clamp-2">{crux.description}</p>
-        )}
-        <div className="flex items-center gap-3 mt-auto pt-1">
-          <span className="text-[10px] text-text-muted font-mono">
-            {formatDate(crux.created)}
-          </span>
+        <div className="flex items-center gap-3 shrink-0">
+          <span className="text-[10px] font-mono text-text-muted">{crux.author_username}</span>
+          <span className="text-[10px] font-mono text-text-muted">{formatDate(crux.created)}</span>
         </div>
       </button>
     );
@@ -227,11 +221,7 @@ export default function Explore({ onNavigate }: { onNavigate?: () => void }) {
     return (
       <button
         onClick={() => handleNavigate(`/${author.username}`)}
-        className={cn(
-          'bg-panel border border-border rounded-[var(--radius)] p-4',
-          'text-left hover:border-accent/40 cursor-pointer group',
-          'flex items-center gap-3',
-        )}
+        className="w-full px-4 py-3 text-left hover:bg-accent-muted/30 cursor-pointer group flex items-center gap-3 border-b border-border last:border-b-0"
       >
         <Avatar url={avatarUrl} size="md" />
         <div className="flex-1 min-w-0">
@@ -240,7 +230,7 @@ export default function Explore({ onNavigate }: { onNavigate?: () => void }) {
           </div>
           <div className="text-xs font-mono text-text-muted truncate">@{author.username}</div>
         </div>
-        <div className="text-[10px] text-text-muted font-mono">
+        <div className="text-[10px] text-text-muted font-mono shrink-0">
           Joined {formatDate(author.created)}
         </div>
       </button>
@@ -373,7 +363,7 @@ export default function Explore({ onNavigate }: { onNavigate?: () => void }) {
         </div>
       ) : (
         <>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="flex flex-col">
             {resultType === 'cruxes'
               ? (results as ExploreCrux[]).map((crux) => (
                   <CruxCard key={crux.id} crux={crux} />

@@ -144,6 +144,10 @@ export interface ChatMessage {
   timestamp?: string;
   model?: string;
   toolCalls?: ToolCall[];
+  /** Persona identity fingerprint — messages without a matching fingerprint are excluded from AI context */
+  personaFingerprint?: string;
+  /** Author UUID for user messages — resolved via crux.meta.authorSnapshots */
+  authorId?: string;
 }
 
 export interface ToolCall {

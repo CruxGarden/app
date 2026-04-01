@@ -4,6 +4,26 @@ import type { ChatMessage, ToolCall } from '@/api/types';
 import { PROVIDERS } from '@/ai/providers';
 import MarkdownRenderer from './MarkdownRenderer';
 import { ConsoleAvatar } from '@/components/keeper/Console';
+import { useCruxStore } from '@/stores/cruxStore';
+import { useBlobUrl } from '@/hooks/useBlobUrl';
+
+/** Resolve persona snapshot from crux meta by fingerprint */
+function usePersonaSnapshot(fingerprint?: string) {
+  const meta = useCruxStore((s) => s.crux?.meta) as Record<string, unknown> | undefined;
+  const snapshots = meta?.personaSnapshots as Record<string, { name?: string; thumbnailFingerprint?: string; thumbnailDataUrl?: string }> | undefined;
+  const snapshot = fingerprint ? snapshots?.[fingerprint] : undefined;
+  return snapshot && typeof snapshot === 'object' ? snapshot : null;
+}
+
+/** Look up the persona avatar for a message — resolves OPFS blob by fingerprint */
+function MessageAvatar({ fingerprint }: { fingerprint?: string }) {
+  const snapshot = usePersonaSnapshot(fingerprint);
+  const blobUrl = useBlobUrl(snapshot?.thumbnailFingerprint);
+  if (blobUrl) {
+    return <img src={blobUrl} alt="" className="w-6 h-6 aspect-square shrink-0 object-cover [image-rendering:pixelated] rounded-[var(--radius-sm)] ring-1 ring-border" />;
+  }
+  return <ConsoleAvatar bordered />;
+}
 
 /** Get short display name for a model ID (e.g. "claude-sonnet-4-20250514" → "Sonnet 4") */
 function getModelShortName(modelId?: string): string | null {
@@ -21,7 +41,20 @@ interface MessageBubbleProps {
   userInitial?: string;
 }
 
-function UserAvatar({ avatarUrl, initial }: { avatarUrl?: string | null; initial: string }) {
+/** Resolve author info from crux.meta.authorSnapshots */
+function useAuthorSnapshot(authorId?: string) {
+  const meta = useCruxStore((s) => s.crux?.meta) as Record<string, unknown> | undefined;
+  const snapshots = meta?.authorSnapshots as Record<string, { username?: string; avatarFingerprint?: string }> | undefined;
+  const snapshot = authorId ? snapshots?.[authorId] : undefined;
+  return snapshot && typeof snapshot === 'object' ? snapshot : null;
+}
+
+function UserAvatar({ message, fallbackUrl, fallbackInitial }: { message: ChatMessage; fallbackUrl?: string | null; fallbackInitial: string }) {
+  const authorSnapshot = useAuthorSnapshot(message.authorId);
+  const blobUrl = useBlobUrl(authorSnapshot?.avatarFingerprint);
+  const avatarUrl = blobUrl || (!authorSnapshot?.avatarFingerprint ? fallbackUrl : null);
+  const initial = authorSnapshot?.username?.charAt(0)?.toUpperCase() || fallbackInitial;
+
   return (
     <div
       className={cn(
@@ -95,15 +128,26 @@ export default function MessageBubble({
 }: MessageBubbleProps) {
   const isUser = message.role === 'user';
 
+  const personaSnapshot = usePersonaSnapshot(message.personaFingerprint);
+  const authorSnapshot = useAuthorSnapshot(message.authorId);
+  const personaName = !isUser ? (personaSnapshot?.name || 'The Keeper') : null;
+  const authorName = isUser ? (authorSnapshot?.username || null) : null;
+
   return (
     <div className={cn('flex gap-2 items-end', isUser ? 'justify-end' : 'justify-start')}>
-      {!isUser && <ConsoleAvatar bordered />}
+      {!isUser && <MessageAvatar fingerprint={message.personaFingerprint} />}
       <div
         className={cn(
           'max-w-[85%] rounded-[var(--radius)] px-3 py-2 text-sm break-words',
           isUser ? 'bg-chat-user-bubble text-chat-user-bubble-text' : 'bg-chat-ai-bubble text-chat-ai-bubble-text',
         )}
       >
+        {personaName && (
+          <div className="text-[10px] font-mono text-accent mb-1">{personaName}</div>
+        )}
+        {authorName && (
+          <div className="text-[10px] font-mono text-accent mb-1">{authorName}</div>
+        )}
         {isUser ? (
           <p className="whitespace-pre-wrap">{message.content}</p>
         ) : (
@@ -125,7 +169,7 @@ export default function MessageBubble({
           </div>
         )}
       </div>
-      {isUser && <UserAvatar avatarUrl={avatarUrl} initial={userInitial} />}
+      {isUser && <UserAvatar message={message} fallbackUrl={avatarUrl} fallbackInitial={userInitial} />}
     </div>
   );
 }
