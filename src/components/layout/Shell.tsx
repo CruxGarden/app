@@ -60,8 +60,8 @@ export default function Shell() {
         return;
       }
 
-      // Cmd+E → toggle explore
-      if (meta && e.key === 'e') {
+      // Cmd+K → toggle explore
+      if (meta && e.key === 'k') {
         e.preventDefault();
         useUIStore.getState().setExploreOpen(!useUIStore.getState().exploreOpen);
         return;

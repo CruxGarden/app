@@ -1119,7 +1119,7 @@ export default function NewCruxModal({ open, onClose }: NewCruxModalProps) {
             Template
           </label>
           <div className="overflow-y-auto flex-1 min-h-0 pr-0.5">
-            <div className="grid grid-cols-4 gap-2 auto-rows-min">
+            <div className="flex flex-col">
               {TEMPLATES.map((t) => (
                 <button
                   key={t.id}
@@ -1131,21 +1131,30 @@ export default function NewCruxModal({ open, onClose }: NewCruxModalProps) {
                   }}
                   disabled={creating}
                   className={cn(
-                    'flex flex-col rounded-[var(--radius-sm)] overflow-hidden',
-                    'border cursor-pointer text-center',
+                    'w-full px-3 py-2.5 text-left cursor-pointer',
+                    'flex items-center gap-3 border-b border-border last:border-b-0',
                     'disabled:opacity-50 disabled:cursor-not-allowed',
                     selectedTemplate === t.id
-                      ? 'border-accent ring-1 ring-accent/30'
-                      : 'border-border hover:border-text-muted/40',
+                      ? 'bg-accent-muted/30'
+                      : 'hover:bg-accent-muted/15',
                   )}
                 >
-                  <div className="w-full">{t.thumb}</div>
-                  <span className={cn(
-                    'text-[10px] font-mono leading-tight py-1.5 w-full',
-                    selectedTemplate === t.id ? 'text-accent bg-accent-muted' : 'text-text-muted',
-                  )}>
-                    {t.label}
-                  </span>
+                  <div className="w-10 h-10 shrink-0 rounded-[var(--radius-sm)] overflow-hidden border border-border">
+                    {t.thumb}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <span className={cn(
+                      'text-sm font-mono block truncate',
+                      selectedTemplate === t.id ? 'text-accent' : 'text-text',
+                    )}>
+                      {t.label}
+                    </span>
+                    {t.description && (
+                      <span className="text-[11px] text-text-muted block truncate">
+                        {t.description}
+                      </span>
+                    )}
+                  </div>
                 </button>
               ))}
             </div>

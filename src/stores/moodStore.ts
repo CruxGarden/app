@@ -77,16 +77,8 @@ export const useMoodStore = create<MoodState>((set, get) => ({
   activeMoodId: null,
   activeMood: null,
   avatarUrl: null,
-  backgroundUrl: (() => {
-    // Read from localStorage synchronously so first render has the right background
-    try {
-      const bgType = localStorage.getItem(SettingsKey.BackgroundType);
-      if (bgType === 'image') {
-        return localStorage.getItem(SettingsKey.BackgroundImage) || null;
-      }
-    } catch { /* SSR or no localStorage */ }
-    return null;
-  })(),
+  // Background images are in OPFS — resolved async by applySavedMoodSettings()
+  backgroundUrl: null,
   moods: [],
   loaded: false,
 

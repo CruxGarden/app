@@ -4,6 +4,7 @@ import { guessMimeType, hashContent, buildInsert } from './sqlite/helpers';
 import { getSqliteClient } from './sqlite/client';
 import { getLocalIdentity } from './sqlite/identity';
 
+
 // ── Constants ────────────────────────────────────────────
 
 const FORMAT_VERSION = '1.0';
@@ -269,6 +270,27 @@ export async function exportCrux(options: ExportOptions): Promise<ExportResult> 
   }
   const dimensionsJsonContent = JSON.stringify(exportedDimensions, null, 2);
   zip.file('dimensions.json', dimensionsJsonContent);
+
+  // ── Collect persona thumbnail fingerprints ─────────
+  const personaSnapshots = crux.meta?.personaSnapshots as Record<string, { thumbnailFingerprint?: string; thumbnailFingerprintLight?: string }> | undefined;
+  if (personaSnapshots) {
+    for (const snap of Object.values(personaSnapshots)) {
+      if (snap && typeof snap === 'object') {
+        if (snap.thumbnailFingerprint) allFingerprints.add(snap.thumbnailFingerprint);
+        if (snap.thumbnailFingerprintLight) allFingerprints.add(snap.thumbnailFingerprintLight);
+      }
+    }
+  }
+
+  // ── Collect author avatar fingerprints from authorSnapshots ─────────
+  const authorSnapshots = crux.meta?.authorSnapshots as Record<string, { avatarFingerprint?: string }> | undefined;
+  if (authorSnapshots) {
+    for (const snap of Object.values(authorSnapshots)) {
+      if (snap && typeof snap === 'object' && snap.avatarFingerprint) {
+        allFingerprints.add(snap.avatarFingerprint);
+      }
+    }
+  }
 
   // ── Download artifact blobs by fingerprint ───────
   const uniqueFingerprints = Array.from(allFingerprints);

@@ -4,10 +4,10 @@ import { applyMoodPalette, GARDEN_DARK } from '@/lib/moods';
 import { MOOD_PRESETS, type MoodPresetDef } from '@/lib/moods/presets';
 import { useMoodStore } from '@/stores/moodStore';
 import { getSetting, setSetting } from '@/services/settings';
-import { pixelateImageToDataURL } from '@/lib/pixelate';
 import { BG_CSS_VAR, SettingsKey } from '@/lib/constants';
 import { BgType, ThemeMode } from '@/lib/types';
 import { getPersona, savePersona, DEFAULT_PERSONA, getResolvedMode, type PersonaSettings } from './mood-helpers';
+import { useBlobUrl } from '@/hooks/useBlobUrl';
 
 
 // ── Preset thumbnail ─────────────────────────────────
@@ -51,9 +51,15 @@ function PresetThumb({ preset, active }: { preset: MoodPresetDef; active: boolea
 
 // ── Persona Tab ──────────────────────────────────────
 
+import keeperAvatarDark from '@/images/keeper-avatar-pixel-dark.jpg';
+import keeperAvatarLight from '@/images/keeper-avatar-pixel-light.jpg';
+
 function PersonaTab() {
   const [persona, setPersona] = useState<PersonaSettings>(() => getPersona());
   const fileRef = useRef<HTMLInputElement>(null);
+  const fileLightRef = useRef<HTMLInputElement>(null);
+  const darkThumbUrl = useBlobUrl(persona.thumbnailFingerprint);
+  const lightThumbUrl = useBlobUrl(persona.thumbnailFingerprintLight);
 
   const update = (patch: Partial<PersonaSettings>) => {
     const next = { ...persona, ...patch };
@@ -61,30 +67,44 @@ function PersonaTab() {
     savePersona(next);
   };
 
-  const handleThumbnailUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleThumbnailUpload = (field: 'thumbnailFingerprint' | 'thumbnailFingerprintLight') => async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    // Limit to 256KB for settings storage
-    if (file.size > 256 * 1024) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      // Resize to 128x128 for compact storage
-      const img = new Image();
-      img.onload = () => {
-        const canvas = document.createElement('canvas');
-        canvas.width = 128;
-        canvas.height = 128;
-        const ctx = canvas.getContext('2d')!;
-        // Cover-fit: crop to square from center
-        const size = Math.min(img.width, img.height);
-        const sx = (img.width - size) / 2;
-        const sy = (img.height - size) / 2;
-        ctx.drawImage(img, sx, sy, size, size, 0, 0, 128, 128);
-        update({ thumbnailDataUrl: canvas.toDataURL('image/webp', 0.8) });
+    if (file.size > 10 * 1024 * 1024) return;
+
+    // Resize to 128x128 square
+    const dataUrl = await new Promise<string>((resolve) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          canvas.width = 128;
+          canvas.height = 128;
+          const ctx = canvas.getContext('2d')!;
+          const size = Math.min(img.width, img.height);
+          const sx = (img.width - size) / 2;
+          const sy = (img.height - size) / 2;
+          ctx.drawImage(img, sx, sy, size, size, 0, 0, 128, 128);
+          resolve(canvas.toDataURL('image/webp', 0.8));
+        };
+        img.src = reader.result as string;
       };
-      img.src = reader.result as string;
-    };
-    reader.readAsDataURL(file);
+      reader.readAsDataURL(file);
+    });
+
+    // Write to OPFS blob store
+    const res = await fetch(dataUrl);
+    const buffer = new Uint8Array(await res.arrayBuffer());
+    const { hashContent } = await import('@/services/sqlite/helpers');
+    const fp = await hashContent(buffer);
+    const { getSqliteClient } = await import('@/services/sqlite/client');
+    const db = getSqliteClient();
+    await db.blobWrite(fp, buffer);
+
+    // Clear legacy data URL field if present
+    const legacyField = field === 'thumbnailFingerprint' ? 'thumbnailDataUrl' : 'thumbnailDataUrlLight';
+    update({ [field]: fp, [legacyField]: null });
     e.target.value = '';
   };
 
@@ -94,7 +114,7 @@ function PersonaTab() {
     savePersona(fresh);
   };
 
-  const hasCustomizations = persona.name || persona.greeting || persona.systemPrompt || persona.thumbnailDataUrl;
+  const isCustomized = persona.name !== DEFAULT_PERSONA.name || persona.greeting !== DEFAULT_PERSONA.greeting || persona.systemPrompt !== DEFAULT_PERSONA.systemPrompt || !!persona.thumbnailFingerprint || !!persona.thumbnailFingerprintLight;
 
   const inputClass = cn(
     'w-full bg-bg border border-border rounded-[var(--radius-sm)] px-2.5 py-1.5',
@@ -103,91 +123,90 @@ function PersonaTab() {
   );
 
   return (
-    <div className="space-y-4">
-      {/* Thumbnail */}
-      <div>
-        <div className="text-[9px] font-mono uppercase tracking-wider text-text-muted mb-2">Thumbnail</div>
-        <div className="flex items-center gap-3">
-          <button
-            onClick={() => fileRef.current?.click()}
-            className="w-16 h-16 shrink-0 rounded-[var(--radius)] border border-border overflow-hidden bg-surface hover:border-accent transition-colors cursor-pointer flex items-center justify-center"
-          >
-            {persona.thumbnailDataUrl ? (
-              <img src={persona.thumbnailDataUrl} alt="" className="w-full h-full object-cover" />
-            ) : (
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-text-muted">
-                <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
-                <circle cx="8.5" cy="8.5" r="1.5" />
-                <polyline points="21 15 16 10 5 21" />
-              </svg>
-            )}
-          </button>
-          <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleThumbnailUpload} />
-          <div className="flex-1 min-w-0">
-            <p className="text-[10px] text-text-muted">Click to upload a custom avatar for your AI companion.</p>
-            {persona.thumbnailDataUrl && (
-              <button
-                onClick={() => update({ thumbnailDataUrl: null })}
-                className="text-[10px] text-error hover:text-text cursor-pointer transition-colors mt-1"
-              >
-                Remove
-              </button>
+    <div className="flex flex-col gap-4 h-full">
+      {/* Thumbnails */}
+      <div className="shrink-0">
+        <div className="text-[9px] font-mono uppercase tracking-wider text-text-muted mb-2">Avatar</div>
+        <div className="flex items-start gap-4">
+          <div className="flex flex-col items-center gap-1">
+            <button
+              onClick={() => fileRef.current?.click()}
+              className="w-16 h-16 shrink-0 rounded-[var(--radius)] border border-border overflow-hidden bg-surface hover:border-accent cursor-pointer"
+            >
+              <img src={darkThumbUrl || keeperAvatarDark} alt="" className="w-full h-full object-cover [image-rendering:pixelated]" />
+            </button>
+            <span className="text-[9px] font-mono text-text-muted">Dark</span>
+            {persona.thumbnailFingerprint && (
+              <button onClick={() => update({ thumbnailFingerprint: null, thumbnailDataUrl: null })} className="text-[9px] text-error hover:text-text cursor-pointer">Remove</button>
             )}
           </div>
+          <div className="flex flex-col items-center gap-1">
+            <button
+              onClick={() => fileLightRef.current?.click()}
+              className="w-16 h-16 shrink-0 rounded-[var(--radius)] border border-border overflow-hidden bg-surface hover:border-accent cursor-pointer"
+            >
+              <img src={lightThumbUrl || keeperAvatarLight} alt="" className="w-full h-full object-cover [image-rendering:pixelated]" />
+            </button>
+            <span className="text-[9px] font-mono text-text-muted">Light</span>
+            {persona.thumbnailFingerprintLight && (
+              <button onClick={() => update({ thumbnailFingerprintLight: null, thumbnailDataUrlLight: null })} className="text-[9px] text-error hover:text-text cursor-pointer">Remove</button>
+            )}
+          </div>
+          <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleThumbnailUpload('thumbnailFingerprint')} />
+          <input ref={fileLightRef} type="file" accept="image/*" className="hidden" onChange={handleThumbnailUpload('thumbnailFingerprintLight')} />
         </div>
       </div>
 
       {/* Name */}
-      <div>
+      <div className="shrink-0">
         <div className="text-[9px] font-mono uppercase tracking-wider text-text-muted mb-1.5">Name</div>
         <input
           type="text"
           value={persona.name}
           onChange={(e) => update({ name: e.target.value })}
-          placeholder="The Keeper"
+          placeholder="Persona name"
           className={inputClass}
           maxLength={50}
         />
       </div>
 
       {/* Greeting */}
-      <div>
+      <div className="shrink-0">
         <div className="text-[9px] font-mono uppercase tracking-wider text-text-muted mb-1.5">Greeting</div>
         <input
           type="text"
           value={persona.greeting}
           onChange={(e) => update({ greeting: e.target.value })}
-          placeholder="The Keeper tends the garden. Ask anything."
+          placeholder="A greeting shown when the console opens"
           className={inputClass}
           maxLength={200}
         />
       </div>
 
       {/* System Prompt */}
-      <div>
-        <div className="text-[9px] font-mono uppercase tracking-wider text-text-muted mb-1.5">System Prompt</div>
+      <div className="flex-1 min-h-0 flex flex-col">
+        <div className="text-[9px] font-mono uppercase tracking-wider text-text-muted mb-1.5 shrink-0">System Prompt</div>
         <textarea
           value={persona.systemPrompt}
           onChange={(e) => update({ systemPrompt: e.target.value })}
           placeholder="Custom instructions for the AI persona..."
-          rows={4}
-          className={cn(inputClass, 'resize-none')}
+          className={cn(inputClass, 'resize-none flex-1 min-h-[80px]')}
           maxLength={4000}
         />
-        <p className="text-[9px] text-text-muted/50 mt-1">
-          {persona.systemPrompt ? `${persona.systemPrompt.length}/4000` : 'Leave blank for the default Keeper persona.'}
-        </p>
+        <div className="flex items-center justify-between mt-1 shrink-0">
+          <p className="text-[9px] text-text-muted/50">
+            {persona.systemPrompt ? `${persona.systemPrompt.length}/4000` : ''}
+          </p>
+          {isCustomized && (
+            <button
+              onClick={handleReset}
+              className="text-[10px] font-mono text-text-muted hover:text-error cursor-pointer"
+            >
+              Revert to Default
+            </button>
+          )}
+        </div>
       </div>
-
-      {/* Reset */}
-      {hasCustomizations && (
-        <button
-          onClick={handleReset}
-          className="text-[10px] font-mono text-text-muted hover:text-error cursor-pointer transition-colors"
-        >
-          Reset to defaults
-        </button>
-      )}
     </div>
   );
 }
@@ -198,27 +217,24 @@ function BackgroundTabContent({
   bgType,
   onChangeBgType,
   bgImagePreview,
-  bgBlockSize,
   onBgImageSelect,
-  onBgBlockSizeChange,
   onBgImageClear,
   bgGenerating,
 }: {
   bgType: BgType;
   onChangeBgType: (t: BgType) => void;
   bgImagePreview: string | null;
-  bgBlockSize: number;
   onBgImageSelect: (file: File) => void;
-  onBgBlockSizeChange: (size: number) => void;
   onBgImageClear: () => void;
   bgGenerating: boolean;
 }) {
   const fileRef = useRef<HTMLInputElement>(null);
+  const isLight = getResolvedMode() === 'Light';
 
-  const animatedOptions: { value: BgType; label: string; description: string }[] = [
+  const animatedOptions: { value: BgType; label: string; description: string; darkOnly?: boolean }[] = [
     { value: BgType.Bloom, label: 'Bloom', description: 'Animated gradient blobs' },
-    { value: BgType.Drift, label: 'Drift', description: 'Floating particles' },
-    { value: BgType.Flow, label: 'Flow', description: 'Organic wave patterns' },
+    { value: BgType.Drift, label: 'Drift', description: 'Floating particles', darkOnly: true },
+    { value: BgType.Flow, label: 'Flow', description: 'Organic wave patterns', darkOnly: true },
     { value: BgType.Blank, label: 'Blank', description: 'Solid background color' },
   ];
 
@@ -227,21 +243,27 @@ function BackgroundTabContent({
       <div className="flex flex-col gap-1.5">
         <div className="text-[9px] font-mono uppercase tracking-wider text-text-muted">Animated</div>
         <div className="grid grid-cols-2 gap-2">
-          {animatedOptions.map(({ value, label, description }) => (
-            <button
-              key={value}
-              onClick={() => onChangeBgType(value)}
-              className={cn(
-                'flex flex-col gap-0.5 px-3 py-2.5 rounded-[var(--radius-sm)] border text-left transition-colors cursor-pointer',
-                bgType === value
-                  ? 'bg-surface text-text border-accent/30'
-                  : 'bg-transparent border-border text-text-muted hover:border-accent/20 hover:text-text',
-              )}
-            >
-              <span className="text-xs font-mono font-medium">{label}</span>
-              <span className="text-[10px] opacity-60">{description}</span>
-            </button>
-          ))}
+          {animatedOptions.map(({ value, label, description, darkOnly }) => {
+            const disabled = darkOnly && isLight;
+            return (
+              <button
+                key={value}
+                onClick={() => !disabled && onChangeBgType(value)}
+                disabled={disabled}
+                className={cn(
+                  'flex flex-col gap-0.5 px-3 py-2.5 rounded-[var(--radius-sm)] border text-left transition-colors',
+                  disabled
+                    ? 'opacity-30 cursor-not-allowed border-border'
+                    : bgType === value
+                      ? 'bg-surface text-text border-accent/30 cursor-pointer'
+                      : 'bg-transparent border-border text-text-muted hover:border-accent/20 hover:text-text cursor-pointer',
+                )}
+              >
+                <span className="text-xs font-mono font-medium">{label}</span>
+                <span className="text-[10px] opacity-60">{description}</span>
+              </button>
+            );
+          })}
         </div>
       </div>
 
@@ -260,7 +282,7 @@ function BackgroundTabContent({
           )}
         >
           <span className="text-xs font-mono font-medium">Image</span>
-          <span className="text-[10px] opacity-60">Upload a pixelated background</span>
+          <span className="text-[10px] opacity-60">Upload a background image</span>
         </button>
         <input
           ref={fileRef}
@@ -281,26 +303,12 @@ function BackgroundTabContent({
                 src={bgImagePreview}
                 alt="Background preview"
                 className="w-full h-full object-cover"
-                style={{ imageRendering: 'pixelated' }}
               />
               {bgGenerating && (
                 <div className="absolute inset-0 flex items-center justify-center bg-bg/60">
                   <div className="w-4 h-4 border-2 border-accent border-t-transparent rounded-full animate-spin" />
                 </div>
               )}
-            </div>
-            <div className="flex items-center gap-2">
-              <label className="text-xs text-text-muted font-mono shrink-0">Pixel size</label>
-              <input
-                type="range"
-                min={2}
-                max={32}
-                step={1}
-                value={bgBlockSize}
-                onChange={(e) => onBgBlockSizeChange(Number(e.target.value))}
-                className="flex-1 accent-[var(--accent)]"
-              />
-              <span className="text-xs text-text-muted font-mono w-6 text-right">{bgBlockSize}</span>
             </div>
             <div className="flex items-center gap-3">
               <button
@@ -338,12 +346,12 @@ type Tab = 'palette' | 'background' | 'persona';
 
 export default function MoodEditor() {
   const [tab, setTab] = useState<Tab>('palette');
-  const [activeDarkId, setActiveDarkId] = useState(() => (getSetting(SettingsKey.MoodPresetDark) as string) || 'garden');
+  const [activeDarkId, setActiveDarkId] = useState(() => (getSetting(SettingsKey.MoodPresetDark) as string) || 'obsidian');
   const [activeLightId, setActiveLightId] = useState(() => (getSetting(SettingsKey.MoodPresetLight) as string) || 'parchment');
 
   // Sync preset IDs on mount (component only renders when modal is open)
   useEffect(() => {
-    setActiveDarkId((getSetting(SettingsKey.MoodPresetDark) as string) || 'garden');
+    setActiveDarkId((getSetting(SettingsKey.MoodPresetDark) as string) || 'obsidian');
     setActiveLightId((getSetting(SettingsKey.MoodPresetLight) as string) || 'parchment');
   }, []);
   const [bgType, setBgType] = useState<BgType>(() => {
@@ -351,28 +359,45 @@ export default function MoodEditor() {
     if (saved === 'bloom' || saved === 'blank' || saved === 'drift' || saved === 'flow' || saved === 'image') return saved as BgType;
     return BgType.Bloom;
   });
-  const [bgImagePreview, setBgImagePreview] = useState<string | null>(() => getSetting(SettingsKey.BackgroundImage) as string | null);
-  const [bgBlockSize, setBgBlockSize] = useState(() => Number(getSetting(SettingsKey.BackgroundBlockSize)) || 8);
+  const [bgImagePreview, setBgImagePreview] = useState<string | null>(null);
+  // Resolve background image fingerprint to blob URL on mount
+  useEffect(() => {
+    const fp = getSetting(SettingsKey.BackgroundImage) as string | null;
+    if (!fp) return;
+    (async () => {
+      const { getSqliteClient } = await import('@/services/sqlite/client');
+      const data = await getSqliteClient().blobRead(fp);
+      if (data) setBgImagePreview(URL.createObjectURL(new Blob([data as unknown as BlobPart])));
+    })();
+  }, []);
   const [bgGenerating, setBgGenerating] = useState(false);
-  const bgOriginalFile = useRef<File | null>(null);
 
   const handleBgChange = (type: BgType) => {
     setBgType(type);
     setSetting(SettingsKey.BackgroundType, type);
     document.documentElement.style.setProperty(BG_CSS_VAR, type);
-    // If switching to image, set the background URL from saved data URL
     if (type === 'image' && bgImagePreview) {
       useMoodStore.setState({ backgroundUrl: bgImagePreview });
     }
   };
 
   const handleBgImageSelect = async (file: File) => {
-    bgOriginalFile.current = file;
     setBgGenerating(true);
     try {
-      const dataUrl = await pixelateImageToDataURL(file, { blockSize: bgBlockSize });
+      // Read file as data URL for preview
+      const dataUrl = await new Promise<string>((resolve) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result as string);
+        reader.readAsDataURL(file);
+      });
+      // Write to OPFS, store fingerprint in settings
+      const buffer = new Uint8Array(await file.arrayBuffer());
+      const { hashContent } = await import('@/services/sqlite/helpers');
+      const fp = await hashContent(buffer);
+      const { getSqliteClient } = await import('@/services/sqlite/client');
+      await getSqliteClient().blobWrite(fp, buffer);
       setBgImagePreview(dataUrl);
-      setSetting(SettingsKey.BackgroundImage, dataUrl);
+      setSetting(SettingsKey.BackgroundImage, fp);
       setSetting(SettingsKey.BackgroundType, 'image');
       setBgType(BgType.Image);
       document.documentElement.style.setProperty(BG_CSS_VAR, 'image');
@@ -382,24 +407,7 @@ export default function MoodEditor() {
     }
   };
 
-  const handleBgBlockSizeChange = async (size: number) => {
-    setBgBlockSize(size);
-    setSetting(SettingsKey.BackgroundBlockSize, String(size));
-    const source = bgOriginalFile.current || bgImagePreview;
-    if (!source) return;
-    setBgGenerating(true);
-    try {
-      const dataUrl = await pixelateImageToDataURL(source, { blockSize: size });
-      setBgImagePreview(dataUrl);
-      setSetting(SettingsKey.BackgroundImage, dataUrl);
-      useMoodStore.setState({ backgroundUrl: dataUrl });
-    } finally {
-      setBgGenerating(false);
-    }
-  };
-
   const handleBgImageClear = () => {
-    bgOriginalFile.current = null;
     setBgImagePreview(null);
     setSetting(SettingsKey.BackgroundImage, '');
     handleBgChange(BgType.Bloom);
@@ -427,9 +435,9 @@ export default function MoodEditor() {
   };
 
   return (
-    <div className="select-none overflow-y-auto flex-1">
+    <div className="select-none flex-1 flex flex-col min-h-0">
       {/* Tabs */}
-      <div className="flex items-center gap-1 mb-3">
+      <div className="flex items-center gap-1 pb-3 mb-3 border-b border-border shrink-0">
         {([['palette', 'Palette'], ['background', 'Background'], ['persona', 'Persona']] as const).map(([t, label]) => (
           <button
             key={t}
@@ -446,53 +454,50 @@ export default function MoodEditor() {
         ))}
       </div>
 
-      {/* All tabs rendered in same grid cell — taller one sets panel height */}
-      <div className="grid [&>*]:col-start-1 [&>*]:row-start-1">
-        <div className={tab !== 'palette' ? 'invisible pointer-events-none' : undefined}>
-          {/* Presets */}
-          {(['Dark', 'Light'] as const).map((section) => {
-            const sectionPresets = MOOD_PRESETS.filter((p) => p.section === section);
-            const activeForSection = section === 'Dark' ? activeDarkId : activeLightId;
-            if (sectionPresets.length === 0) return null;
-            return (
-              <div key={section} className={section !== 'Dark' ? 'mt-4' : ''}>
-                <div className="text-[9px] font-mono uppercase tracking-wider text-text-muted mb-2">{section}</div>
-                <div className="grid grid-cols-5 gap-2">
-                  {sectionPresets.map((preset) => (
-                    <button
-                      key={preset.id}
-                      onClick={() => handleSelect(preset)}
-                      className="flex flex-col items-center gap-1.5 cursor-pointer group"
-                    >
-                      <PresetThumb preset={preset} active={activeForSection === preset.id} />
-                      <span className={cn(
-                        'text-[10px] font-mono transition-colors',
-                        activeForSection === preset.id ? 'text-text' : 'text-text-muted group-hover:text-text',
-                      )}>
-                        {preset.name}
-                      </span>
-                    </button>
-                  ))}
+      {/* Active tab content */}
+      <div className="flex-1 min-h-0 flex flex-col overflow-y-auto">
+        {tab === 'palette' && (
+          <div>
+            {(['Dark', 'Light'] as const).map((section) => {
+              const sectionPresets = MOOD_PRESETS.filter((p) => p.section === section);
+              const activeForSection = section === 'Dark' ? activeDarkId : activeLightId;
+              if (sectionPresets.length === 0) return null;
+              return (
+                <div key={section} className={section !== 'Dark' ? 'mt-4' : ''}>
+                  <div className="text-[9px] font-mono uppercase tracking-wider text-text-muted mb-2">{section}</div>
+                  <div className="grid grid-cols-5 gap-2">
+                    {sectionPresets.map((preset) => (
+                      <button
+                        key={preset.id}
+                        onClick={() => handleSelect(preset)}
+                        className="flex flex-col items-center gap-1.5 cursor-pointer group"
+                      >
+                        <PresetThumb preset={preset} active={activeForSection === preset.id} />
+                        <span className={cn(
+                          'text-[10px] font-mono transition-colors',
+                          activeForSection === preset.id ? 'text-text' : 'text-text-muted group-hover:text-text',
+                        )}>
+                          {preset.name}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            );
-          })}
-        </div>
-        <div className={tab !== 'background' ? 'invisible pointer-events-none' : undefined}>
+              );
+            })}
+          </div>
+        )}
+        {tab === 'background' && (
           <BackgroundTabContent
             bgType={bgType}
             onChangeBgType={handleBgChange}
             bgImagePreview={bgImagePreview}
-            bgBlockSize={bgBlockSize}
             onBgImageSelect={handleBgImageSelect}
-            onBgBlockSizeChange={handleBgBlockSizeChange}
             onBgImageClear={handleBgImageClear}
             bgGenerating={bgGenerating}
           />
-        </div>
-        <div className={tab !== 'persona' ? 'invisible pointer-events-none' : undefined}>
-          <PersonaTab />
-        </div>
+        )}
+        {tab === 'persona' && <PersonaTab />}
       </div>
     </div>
   );

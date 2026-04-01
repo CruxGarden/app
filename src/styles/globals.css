@@ -353,6 +353,7 @@
   --pane-export: #5b9ed4;
   --pane-sync: #8c7cc8;
   --pane-publish: #c87ca8;
+  --pane-store: #c0a070;
   --bloom-bg1: #0a1810;
   --bloom-bg2: #060d08;
   --bloom-1: #1a5a99;
@@ -498,6 +499,11 @@
   --pane-publish-button-icon: #c87ca8;
   --pane-publish-button-icon-active: #c87ca8;
   --pane-publish-button-border-active: rgba(200, 124, 168, 0.30);
+  --pane-store-button: #c0a070;
+  --pane-store-button-active: rgba(192, 160, 112, 0.15);
+  --pane-store-button-icon: #c0a070;
+  --pane-store-button-icon-active: #c0a070;
+  --pane-store-button-border-active: rgba(192, 160, 112, 0.30);
 
   /* Pane header tokens */
   --pane-collaboration-header: rgba(212, 112, 128, 0.15);
@@ -540,6 +546,11 @@
   --pane-publish-header-text: #c87ca8;
   --pane-publish-header-icon: #c87ca8;
   --pane-publish-header-close: #c87ca8;
+  --pane-store-header: rgba(192, 160, 112, 0.15);
+  --pane-store-header-border: rgba(192, 160, 112, 0.20);
+  --pane-store-header-text: #c0a070;
+  --pane-store-header-icon: #c0a070;
+  --pane-store-header-close: #c0a070;
   color-scheme: dark;
 }
 
@@ -705,9 +716,14 @@ html.palette-transition *::after {
   left: 4px;
 }
 
-.mosaic.crux-mosaic-theme .mosaic-window,
-.mosaic.crux-mosaic-theme .mosaic-preview {
+.mosaic.crux-mosaic-theme .mosaic-window {
   border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: none;
+  background: var(--panel);
+}
+.mosaic.crux-mosaic-theme .mosaic-preview {
+  border: none;
   border-radius: var(--radius);
   box-shadow: none;
   background: var(--panel);

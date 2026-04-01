@@ -257,6 +257,7 @@ export const GARDEN_DARK = {
   paneExport: '#5b9ed4',
   paneSync: '#8c7cc8',
   panePublish: '#c87ca8',
+  paneStore: '#c0a070',
 
   // ── Pane derived (all reference their base) ──────────
   ...paneTokens('paneCollaboration'),
@@ -267,6 +268,7 @@ export const GARDEN_DARK = {
   ...paneTokens('paneExport'),
   ...paneTokens('paneSync'),
   ...paneTokens('panePublish'),
+  ...paneTokens('paneStore'),
 
   // ── Markdown ─────────────────────────────────────────
   markdownText: 'var(--text)',

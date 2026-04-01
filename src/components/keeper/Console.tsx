@@ -7,14 +7,15 @@ import type { NormalizedMessage } from '@/services/types';
 import MarkdownRenderer from '@/components/chat/MarkdownRenderer';
 import ModelSelector from '@/components/chat/ModelSelector';
 import { useAvatarUrl } from '@/hooks/useAvatarUrl';
+import { useBlobUrl } from '@/hooks/useBlobUrl';
 import { useAppStore } from '@/stores/appStore';
 import { useThemeStore } from '@/stores/themeStore';
 import { getApiKey } from '@/ai/keys';
 import { getSetting, setSetting, removeSetting } from '@/services/settings';
 import { SettingsKey } from '@/lib/constants';
 import { getPersona, type PersonaSettings } from '@/components/mood/mood-helpers';
-import keeperAvatarDark from '@/images/keeper-avatar-dark.jpg';
-import keeperAvatarLight from '@/images/keeper-avatar-light.jpg';
+import keeperAvatarDark from '@/images/keeper-avatar-pixel-dark.jpg';
+import keeperAvatarLight from '@/images/keeper-avatar-pixel-light.jpg';
 
 function useKeeperAvatar(): string {
   const activeMode = useThemeStore((s) => s.activeMode);
@@ -22,7 +23,18 @@ function useKeeperAvatar(): string {
 }
 
 export function ConsoleAvatar({ className = 'w-6 h-6', bordered = false }: { className?: string; bordered?: boolean }) {
-  const src = useKeeperAvatar();
+  const keeperSrc = useKeeperAvatar();
+  const activeMode = useThemeStore((s) => s.activeMode);
+  const [, forceUpdate] = useState(0);
+  useEffect(() => {
+    const handler = () => forceUpdate((n) => n + 1);
+    window.addEventListener('crux:persona-changed', handler);
+    return () => window.removeEventListener('crux:persona-changed', handler);
+  }, []);
+  const persona = getPersona();
+  const fp = activeMode === 'light' ? persona.thumbnailFingerprintLight : persona.thumbnailFingerprint;
+  const blobUrl = useBlobUrl(fp);
+  const src = blobUrl || keeperSrc;
   return (
     <img
       src={src}
@@ -174,7 +186,10 @@ function UserAvatar() {
 
 export default function Console() {
   const keeperAvatarSrc = useKeeperAvatar();
+  const activeMode = useThemeStore((s) => s.activeMode);
   const [persona, setPersona] = useState<PersonaSettings>(() => getPersona());
+  const sidebarThumbFp = activeMode === 'light' ? persona.thumbnailFingerprintLight : persona.thumbnailFingerprint;
+  const sidebarThumbUrl = useBlobUrl(sidebarThumbFp);
 
   // Read persona on mount (Modal only mounts content when open)
   useEffect(() => {
@@ -370,11 +385,11 @@ export default function Console() {
         {/* Sidebar — portrait + conversation history */}
         <div className="hidden sm:flex w-48 shrink-0 flex-col border-r border-border">
           <div className="aspect-square w-full overflow-hidden rounded-tl-[calc(var(--radius)-1px)]">
-            {persona.thumbnailDataUrl ? (
-              <img src={persona.thumbnailDataUrl} alt="" className="w-full h-full object-cover" />
-            ) : (
-              <img src={keeperAvatarSrc} alt="Console" className="w-full h-full object-cover [image-rendering:pixelated]" />
-            )}
+            <img
+              src={sidebarThumbUrl || keeperAvatarSrc}
+              alt="Console"
+              className="w-full h-full object-cover [image-rendering:pixelated]"
+            />
           </div>
           {/* Conversation history */}
           <div className="flex-1 min-h-0 overflow-y-auto border-t border-border">

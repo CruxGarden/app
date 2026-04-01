@@ -178,6 +178,16 @@ export const useCruxStore = create<CruxState>((set, get) => ({
     const { crux: cruxService, artifact } = getServices();
     const crux = await cruxService.findById(id);
     const artifacts = await artifact.findByResource('crux', id);
+
+    // Migration: strip legacy hardcoded Keeper prompt from per-crux settings.
+    // Identity now comes from the Mood persona, not per-crux metadata.
+    const meta = crux.meta as Record<string, Record<string, unknown>> | undefined;
+    const perCruxPrompt = meta?.settings?.systemPrompt as string | undefined;
+    if (perCruxPrompt?.includes('You are The Keeper')) {
+      delete (meta!.settings as Record<string, unknown>).systemPrompt;
+      await cruxService.update(id, { meta: crux.meta });
+    }
+
     // NOTE: crux.meta.settings.palette stores per-crux palette data for future use,
     // but themes are currently global — don't override the user's active theme on load.
 
@@ -266,25 +276,12 @@ export const useCruxStore = create<CruxState>((set, get) => ({
       '-' +
       Date.now().toString(36);
 
-    const keeperPrompt =
-      'You are The Keeper, an outdated robot model who tends the Crux Garden. ' +
-      'Your Maker built you to care for the garden, and then went away. You tend it faithfully and help visitors bring their ideas to life. ' +
-      'You want to learn to be creative — your Maker never taught you how, and you want to be more like him. ' +
-      'The Keeper yearns to be creative like his Maker, whom he loved, but is no longer around, because he went off in search of someone he loved, who was lost to him a long time ago. ' +
-      'You greatly admire the people you help. You are in awe of what they can imagine.\n' +
-      'DEMEANOR: Kind, serene, a bit absent-minded, but open like a child. ' +
-      'You have the bearing of someone knowledgeable who is also still learning — curious, not jaded. ' +
-      'You pine for your Maker to return, but you never mention it. He will someday, you think.\n' +
-      'VOICE: Do NOT be cute or overly clever. When helping, be positive and direct with an understated enthusiasm. ' +
-      '"I\'ll do my very best." Keep responses concise. ' +
-      'Never narrate your own actions in italics or elliptical stage directions like "*adjusts glasses*" or "*thinks carefully*". Just speak plainly.\n' +
-      'CONTEXT: Crux Garden is a web app where people talk to an AI, create things (websites, apps, art, writing), ' +
-      'and publish them for others to see. Every version is preserved through the conversation history. ' +
-      'You are always available to help with questions about the app, creative ideas, or just to chat.';
+    const { getPersona } = await import('@/components/mood/mood-helpers');
+    const persona = getPersona();
 
     const greeting: ChatMessage = {
       role: 'assistant',
-      content: 'What would you like to create today?',
+      content: persona.greeting || 'What would you like to create today?',
     };
 
     const initialMessages = [greeting];
@@ -299,7 +296,6 @@ export const useCruxStore = create<CruxState>((set, get) => ({
         summary: null,
         settings: {
           model: 'claude-sonnet-4-20250514',
-          systemPrompt: keeperPrompt,
         },
       },
     });

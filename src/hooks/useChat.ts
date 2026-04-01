@@ -9,6 +9,8 @@ import { getProviderForModel } from '@/ai/providers';
 import { createSnapshot } from '@/services/growth.service';
 import type { ChatMessage, ToolCall } from '@/api/types';
 import type { NormalizedMessage } from '@/services/types';
+import { getPersona, getPersonaFingerprint } from '@/components/mood/mood-helpers';
+import { useAppStore } from '@/stores/appStore';
 
 type SnapshotFrequency = 'ai-turn' | '2m' | '5m' | '10m' | 'manual';
 
@@ -129,12 +131,61 @@ export function useChat() {
         return;
       }
 
-      // Add user message
-      const userMsg: ChatMessage = { role: 'user', content, timestamp: new Date().toISOString() };
+      // Add user message stamped with current persona + author ID
+      const persona = getPersona();
+      const pf = getPersonaFingerprint(persona);
+      const author = useAppStore.getState().author;
+      const userMsg: ChatMessage = {
+        role: 'user',
+        content,
+        timestamp: new Date().toISOString(),
+        personaFingerprint: pf,
+        authorId: author?.id,
+      };
       addMessage(userMsg);
 
-      // Build normalized message history
-      const normalizedMessages = buildNormalizedMessages([...messages, userMsg]);
+      // Register persona + author snapshots in crux meta (keyed, stored once).
+      // Thumbnails/avatars go to OPFS blobs — only fingerprint references in metadata.
+      const cruxMeta = useCruxStore.getState().crux?.meta as Record<string, unknown> | undefined;
+      let metaChanged = false;
+
+      // Persona snapshot (keyed by persona fingerprint)
+      const personaMap = { ...((cruxMeta?.personaSnapshots as Record<string, unknown>) || {}) };
+      if (!personaMap[pf]) {
+        personaMap[pf] = {
+          name: persona.name,
+          greeting: persona.greeting,
+          systemPrompt: persona.systemPrompt,
+          thumbnailFingerprint: persona.thumbnailFingerprint || null,
+          thumbnailFingerprintLight: persona.thumbnailFingerprintLight || null,
+        };
+        metaChanged = true;
+      }
+
+      // Author snapshot (keyed by author UUID)
+      const authorMap = { ...((cruxMeta?.authorSnapshots as Record<string, unknown>) || {}) };
+      if (author?.id && !authorMap[author.id]) {
+        authorMap[author.id] = {
+          username: author.username,
+          avatarFingerprint: author.meta?.avatarFingerprint || null,
+        };
+        metaChanged = true;
+      }
+
+      if (metaChanged) {
+        const updatedCrux = { ...useCruxStore.getState().crux!, meta: { ...cruxMeta, personaSnapshots: personaMap, authorSnapshots: authorMap } };
+        useCruxStore.setState({ crux: updatedCrux });
+      }
+
+      // Build normalized message history — only include messages from the current persona.
+      // If any fingerprinted message exists with a different persona, exclude all
+      // unfingerpinted (legacy) messages too — they belong to the old persona.
+      const allMessages = [...messages, userMsg];
+      const hasOtherPersona = allMessages.some((m) => m.personaFingerprint && m.personaFingerprint !== pf);
+      const personaMessages = allMessages.filter((m) =>
+        m.personaFingerprint === pf || (!m.personaFingerprint && !hasOtherPersona),
+      );
+      const normalizedMessages = buildNormalizedMessages(personaMessages);
 
       setStreaming(true);
       clearStreamContent();
@@ -235,6 +286,7 @@ export function useChat() {
           model,
           timestamp: new Date().toISOString(),
           toolCalls: toolCalls.length > 0 ? toolCalls : undefined,
+          personaFingerprint: pf,
         };
         addMessage(assistantMsg);
       }
