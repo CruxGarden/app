@@ -62,7 +62,7 @@ export default function Modal({ open, onClose, children, className, size = 'md',
             </button>
           </div>
         )}
-        <div className={cn('flex-1 min-h-0 flex flex-col overflow-hidden bg-bg/50 rounded-[var(--radius-sm)]', !flush && 'p-4')}>
+        <div className={cn('flex-1 min-h-0 flex flex-col overflow-hidden bg-bg/50 rounded-[var(--radius-sm)] border border-border', !flush && 'p-4')}>
           {children}
         </div>
       </Panel>
