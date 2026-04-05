@@ -10,10 +10,10 @@
     <meta name="description" content="Crux Garden — where ideas grow. A creative platform that captures the evolution of ideas, solo or by collaborating with other people and AI agents." />
     <title>Crux Garden</title>
     <style>
-      /* #0a0a0c matches the default dark palette --bg (obsidian preset).
+      /* #121314 matches the default dark palette --bg (obsidian preset).
          Hardcoded here because CSS custom properties aren't available before globals.css loads.
          If the default --bg changes, update this value to match. */
-      body { margin: 0; background: #0a0a0c; }
+      body { margin: 0; background: #121314; }
       #splash {
         position: fixed;
         inset: 0;
@@ -93,17 +93,17 @@
         // Source of truth: lib/moods/presets.ts — keep in sync.
         var presets = {
           // Dark presets
-          cafe:     ['#1a1410', '#d8a860', '#e0d0b8'],
-          ember:    ['#181010', '#b87068', '#d8ccc8'],
-          moss:     ['#141610', '#88a878', '#d0d8c8'],
-          slate:    ['#141618', '#7098b8', '#c8d0d8'],
-          obsidian: ['#0a0a0c', '#a0a0a8', '#d4d4d8'],
+          cafe:     ['#141312', '#C0A070', '#C0BEB8'],
+          ember:    ['#141213', '#B88880', '#C0BCBC'],
+          moss:     ['#121413', '#88A888', '#BCC0BC'],
+          slate:    ['#121316', '#8098B8', '#BCC0C8'],
+          obsidian: ['#121314', '#BFBFBF', '#BCBEBF'],
           // Light presets
-          parchment:['#f4ece0', '#886838', '#2c2010'],
-          rose:     ['#f6eeee', '#a06070', '#2c1818'],
-          sage:     ['#eff4ec', '#507848', '#1c2418'],
-          mist:     ['#eef2f6', '#486888', '#181c24'],
-          ivory:    ['#f8f4ee', '#606050', '#303028']
+          parchment:['#f4ece0', '#6E4E28', '#1C1408'],
+          rose:     ['#F4EEEE', '#884050', '#1C0C10'],
+          sage:     ['#EEF2EC', '#3E6838', '#0C1808'],
+          mist:     ['#EEF0F4', '#3E5878', '#0C1018'],
+          ivory:    ['#F2F0EC', '#505048', '#141410']
         };
 
         // Read the user's theme mode (dark or light) from localStorage.

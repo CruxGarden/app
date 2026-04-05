@@ -759,7 +759,10 @@ html.palette-transition *::after {
   transition: filter 150ms;
 }
 .mosaic.crux-mosaic-theme .mosaic-window:hover .pane-toolbar {
-  filter: brightness(1.4);
+  filter: brightness(1.15);
+}
+.light .mosaic.crux-mosaic-theme .mosaic-window:hover .pane-toolbar {
+  filter: brightness(0.95);
 }
 .mosaic.crux-mosaic-theme .mosaic-window .mosaic-window-title {
   display: none;

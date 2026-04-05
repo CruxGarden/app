@@ -1,8 +1,18 @@
 import type * as Monaco from 'monaco-editor';
 
-/** Read a CSS custom property value from computed styles */
+/** Read a CSS custom property value, fully resolved to a computed color.
+ *  Uses a temporary element to force the browser to resolve var() chains. */
 function cssVar(name: string): string {
-  return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  const raw = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  // If it's already a concrete value (hex, rgb), return as-is
+  if (raw && !raw.startsWith('var(') && !raw.startsWith('color-mix(')) return raw;
+  // Force resolution by applying as a color and reading back
+  const el = document.createElement('div');
+  el.style.color = `var(${name})`;
+  document.body.appendChild(el);
+  const resolved = getComputedStyle(el).color;
+  el.remove();
+  return resolved || raw || '';
 }
 
 /** Convert any CSS color value to a 6-digit hex string (RRGGBB, no alpha).
@@ -108,6 +118,15 @@ export function registerCruxGardenThemes(monaco: typeof Monaco): void {
     { token: 'meta.content', foreground: variable },
     { token: 'predefined', foreground: type },
     { token: 'support', foreground: type },
+    // Catch-all: prevent VS Dark/VS Light default blues from bleeding through
+    { token: 'key', foreground: string },
+    { token: 'string.key.json', foreground: keyword },
+    { token: 'string.value.json', foreground: string },
+    { token: 'entity', foreground: keyword },
+    { token: 'entity.name', foreground: keyword },
+    { token: 'entity.other', foreground: type },
+    { token: 'storage', foreground: keyword },
+    { token: 'storage.type', foreground: keyword },
   ];
 
   monaco.editor.defineTheme('crux-garden-dark', {
