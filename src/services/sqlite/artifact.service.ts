@@ -9,6 +9,11 @@ import { NotFoundError } from '../types';
 import { getSqliteClient } from './client';
 import { getLocalIdentity } from './identity';
 import { toArtifact, guessMimeType, hashContent, buildInsert } from './helpers';
+import {
+  writeThroughArtifact,
+  deleteThroughArtifact,
+  renameThroughArtifact,
+} from '../project-folder';
 
 
 /**
@@ -75,6 +80,12 @@ export class SqliteArtifactService implements IArtifactService {
         if (oldFingerprint && oldFingerprint !== fingerprint) {
           await cleanupOrphanedBlob(oldFingerprint);
         }
+        // Desktop: keep the Project Folder in sync (ADR 0001 write-through)
+        await writeThroughArtifact(
+          input.resourceId,
+          { filename: filePath.split('/').pop() || 'unnamed', meta: { path: filePath } },
+          contentBytes,
+        );
         return this.findById(existing.id as string);
       }
     }
@@ -102,6 +113,7 @@ export class SqliteArtifactService implements IArtifactService {
     };
     const { sql, params } = buildInsert('artifacts', record);
     await db.run(sql, params);
+    await writeThroughArtifact(input.resourceId, record, contentBytes);
     return this.findById(record.id);
   }
 
@@ -138,6 +150,11 @@ export class SqliteArtifactService implements IArtifactService {
         if (oldFingerprint && oldFingerprint !== fingerprint) {
           await cleanupOrphanedBlob(oldFingerprint);
         }
+        await writeThroughArtifact(
+          input.resourceId,
+          { filename: filePath.split('/').pop() || 'unnamed', meta: { path: filePath } },
+          contentBytes,
+        );
         return this.findById(existing.id as string);
       }
     }
@@ -163,6 +180,10 @@ export class SqliteArtifactService implements IArtifactService {
     };
     const { sql, params } = buildInsert('artifacts', record);
     await db.run(sql, params);
+    // Snapshot content ('version' type) never touches the Project Folder
+    if (record.type === 'artifact') {
+      await writeThroughArtifact(input.resourceId, record, contentBytes);
+    }
     return this.findById(record.id);
   }
 
@@ -172,6 +193,14 @@ export class SqliteArtifactService implements IArtifactService {
     if (updates.meta) changes.meta = { ...existing.meta, ...updates.meta };
     if (updates.mimeType !== undefined) changes.mimeType = updates.mimeType;
     if (updates.filename !== undefined) changes.filename = updates.filename;
+
+    // Desktop: a path/filename change is a file rename in the Project Folder
+    const oldRel = (existing.meta?.path as string | undefined) || existing.filename;
+    const newPath = updates.meta?.path as string | undefined;
+    const newRel = newPath || (updates.filename !== undefined ? updates.filename : oldRel);
+    if (existing.type === 'artifact' && newRel && newRel !== oldRel) {
+      await renameThroughArtifact(existing.resourceId, oldRel, newRel);
+    }
 
     const sets = Object.keys(changes)
       .map((k) => {
@@ -190,10 +219,22 @@ export class SqliteArtifactService implements IArtifactService {
 
   async delete(id: string): Promise<void> {
     const db = getSqliteClient();
-    const row = await db.get<{ fingerprint: string | null }>('SELECT fingerprint FROM artifacts WHERE id = ?', [id]);
+    const row = await db.get<{
+      fingerprint: string | null;
+      type: string;
+      resource_id: string;
+      path: string | null;
+      filename: string;
+    }>('SELECT fingerprint, type, resource_id, path, filename FROM artifacts WHERE id = ?', [id]);
     await db.run('DELETE FROM artifacts WHERE id = ?', [id]);
     if (row?.fingerprint) {
       await cleanupOrphanedBlob(row.fingerprint);
+    }
+    if (row && row.type === 'artifact') {
+      await deleteThroughArtifact(row.resource_id, {
+        filename: row.filename,
+        meta: { path: row.path || undefined },
+      });
     }
   }
 

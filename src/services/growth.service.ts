@@ -141,6 +141,12 @@ export interface CreateSnapshotOptions {
  */
 export async function createSnapshot(options: CreateSnapshotOptions = {}): Promise<void> {
   const { label, silent } = options;
+
+  // Desktop (ADR 0001): external edits may still be mid-ingest — a snapshot
+  // must never capture a half-observed state. Resolves immediately on web.
+  const { flushIngestion } = await import('./ingestion');
+  await flushIngestion();
+
   const state = useCruxStore.getState();
   const { crux } = state;
   if (!crux) return;

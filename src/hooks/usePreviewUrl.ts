@@ -2,6 +2,8 @@ import { useEffect, useRef, useState, useMemo } from 'react';
 import { useCruxStore } from '@/stores/cruxStore';
 import { getServices } from '@/services';
 import { normalizePath } from '@/lib/rewriteUrls';
+import { Capability, can } from '@/lib/platform';
+import { folderForCrux } from '@/services/project-folder';
 import {
   cachePreviewFiles,
   updatePreviewFile,
@@ -11,6 +13,86 @@ import {
   injectPreviewScripts,
   type PreviewFile,
 } from '@/lib/previewCache';
+
+interface PreviewBridge {
+  start(folder: string): Promise<string>;
+  stop(folder: string): Promise<void>;
+}
+
+function previewBridge(): PreviewBridge | null {
+  if (!can(Capability.PreviewServer)) return null;
+  return (window as unknown as { electronAPI: { preview: PreviewBridge } }).electronAPI.preview;
+}
+
+/**
+ * Desktop preview (ADR 0003): a local static server serves the Project Folder
+ * verbatim — no caching layer, no injection. The disk is already current
+ * (editor auto-saves + write-through + external edits), so this hook only
+ * manages the server lifecycle and bumps a version to reload the iframe.
+ */
+function useDesktopPreviewUrl(
+  html: string | null,
+  cruxId: string,
+  filePath: string,
+  enabled: boolean,
+): string | null {
+  const artifacts = useCruxStore((s) => s.artifacts);
+  const [base, setBase] = useState<string | null>(null);
+  const [url, setUrl] = useState<string | null>(null);
+  const versionRef = useRef(0);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const artifactKey = useMemo(
+    () => artifacts.map((a) => `${a.id}:${a.fingerprint || a.updated}`).join(','),
+    [artifacts],
+  );
+
+  // Server lifecycle — one server per open crux, stopped when leaving it
+  useEffect(() => {
+    if (!enabled) return;
+    const bridge = previewBridge();
+    if (!bridge) return;
+
+    let cancelled = false;
+    let startedFolder: string | null = null;
+
+    (async () => {
+      const folder = await folderForCrux(cruxId);
+      if (!folder || cancelled) return;
+      try {
+        const serverUrl = await bridge.start(folder);
+        startedFolder = folder;
+        if (!cancelled) setBase(serverUrl);
+      } catch (err) {
+        console.error('[preview] failed to start server:', err);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+      setBase(null);
+      if (startedFolder) bridge.stop(startedFolder).catch(() => {});
+    };
+  }, [cruxId, enabled]);
+
+  // Reload the iframe when content changes (editor writes land on disk via
+  // write-through; external edits announce via ingestion → artifacts refresh)
+  useEffect(() => {
+    if (!enabled || !base || !html) {
+      if (!enabled || !html) setUrl(null);
+      return;
+    }
+    versionRef.current += 1;
+    const next = `${base}/${normalizePath(filePath)}?v=${versionRef.current}`;
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => setUrl(next), 200);
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, [html, base, filePath, enabled, artifactKey]);
+
+  return enabled ? url : null;
+}
 
 /**
  * Downloads all workspace artifacts, caches them via the preview service worker,
@@ -30,6 +112,12 @@ export function usePreviewUrl(
   filePath: string,
   enabled: boolean,
 ): string | null {
+  // Desktop: local static server over the Project Folder (ADR 0003).
+  // Both hooks run unconditionally (rules of hooks); exactly one is enabled.
+  const desktop = can(Capability.PreviewServer);
+  const desktopUrl = useDesktopPreviewUrl(html, cruxId, filePath, enabled && desktop);
+  const webEnabled = enabled && !desktop;
+
   const artifacts = useCruxStore((s) => s.artifacts);
   const cruxKind = useCruxStore((s) => s.crux?.kind);
 
@@ -52,8 +140,9 @@ export function usePreviewUrl(
   const artifactBlobsRef = useRef<PreviewFile[]>([]);
   const needsFullRecacheRef = useRef(true);
 
-  // Wait for the service worker to be ready (once)
+  // Wait for the service worker to be ready (once; web only)
   useEffect(() => {
+    if (desktop) return;
     let cancelled = false;
     waitForServiceWorker().then((ready) => {
       if (!cancelled) setSwReady(ready);
@@ -61,7 +150,7 @@ export function usePreviewUrl(
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [desktop]);
 
   // Stable fingerprint of the artifact list — only re-download when files actually change
   const artifactKey = useMemo(
@@ -71,7 +160,7 @@ export function usePreviewUrl(
 
   // Effect 1: Download all non-HTML artifacts when the artifact list changes
   useEffect(() => {
-    if (!enabled || !swReady) return;
+    if (!webEnabled || !swReady) return;
 
     const norm = normalizePath(filePath);
     const others = artifacts.filter((a) => {
@@ -112,12 +201,12 @@ export function usePreviewUrl(
       cancelled = true;
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [cruxId, filePath, enabled, artifactKey, swReady]);
+  }, [cruxId, filePath, webEnabled, artifactKey, swReady]);
 
   // Effect 2: Cache everything (initial) or just update HTML (subsequent changes)
   useEffect(() => {
-    if (!enabled || !html || !swReady || !artifactsCached) {
-      if (!enabled || !html) setUrl(null);
+    if (!webEnabled || !html || !swReady || !artifactsCached) {
+      if (!webEnabled || !html) setUrl(null);
       return;
     }
 
@@ -157,14 +246,16 @@ export function usePreviewUrl(
       cancelled = true;
       if (debounceRef.current) clearTimeout(debounceRef.current);
     };
-  }, [html, cruxId, filePath, enabled, swReady, artifactsCached, isWebApp]);
+  }, [html, cruxId, filePath, webEnabled, swReady, artifactsCached, isWebApp]);
 
-  // Cleanup cache on unmount or cruxId change
+  // Cleanup cache on unmount or cruxId change (web only)
   useEffect(() => {
+    if (desktop) return;
     return () => {
       clearPreviewCache(cruxId).catch(() => {});
     };
-  }, [cruxId]);
+  }, [cruxId, desktop]);
 
-  return enabled ? url : null;
+  if (desktop) return desktopUrl;
+  return webEnabled ? url : null;
 }

@@ -10,7 +10,7 @@
  */
 
 import { getSqliteClient } from './sqlite/client';
-import { SettingsKey } from '@/lib/constants';
+import { SettingsKey, isSecretSettingKey } from '@/lib/constants';
 
 const cache = new Map<string, string>();
 let ready = false;
@@ -31,7 +31,9 @@ const SYNC_KEYS: Set<string> = new Set([
 
 /** Read a setting synchronously from the in-memory cache. */
 export function getSetting(key: string): string | null {
-  if (ready) return cache.get(key) ?? null;
+  // Cache is authoritative once a value is present (covers pre-init writes)
+  if (cache.has(key)) return cache.get(key)!;
+  if (ready) return null;
   // Before init, fall back to localStorage for sync keys
   if (typeof localStorage !== 'undefined') {
     return localStorage.getItem(key);
@@ -41,6 +43,13 @@ export function getSetting(key: string): string | null {
 
 /** Write a setting to cache + SQLite (async) + localStorage (sync fallback). */
 export function setSetting(key: string, value: string): void {
+  // Secrets never enter the SQLite settings table (it is serialized wholesale
+  // into garden backups/exports) — store in localStorage only. See ai/keys.ts.
+  if (isSecretSettingKey(key)) {
+    if (typeof localStorage !== 'undefined') localStorage.setItem(key, value);
+    return;
+  }
+
   cache.set(key, value);
 
   // Sync fallback for pre-init reads
@@ -84,13 +93,13 @@ export async function initSettings(): Promise<void> {
   }
 
   // 2. Migrate unprefixed SQLite keys → cruxgarden: prefixed (one-time)
+  // Secrets are deliberately absent — they are purged from SQLite below.
   const LEGACY_KEY_MAP: [string, string][] = [
     ['local:authorId', SettingsKey.LocalAuthorIdLegacy],
     ['local:homeId', SettingsKey.LocalHomeId],
     ['backend', SettingsKey.Backend],
     ['localAuthorId', SettingsKey.LocalAuthorId],
     ['defaultModel', SettingsKey.DefaultModel],
-    ['apiKey:anthropic', SettingsKey.ApiKeyAnthropic],
   ];
   for (const [oldKey, newKey] of LEGACY_KEY_MAP) {
     if (cache.has(oldKey) && !cache.has(newKey)) {
@@ -102,17 +111,34 @@ export async function initSettings(): Promise<void> {
     }
   }
 
-  // 3. Migrate localStorage → SQLite (one-time: only if key isn't already in SQLite)
+  // 3. Purge secrets from SQLite. API keys were historically swept into the
+  // settings table (and thus into every garden backup via db.export()) —
+  // lift them back to localStorage, then delete the rows so no export
+  // surface can ever contain them.
+  for (const [key, value] of [...cache.entries()]) {
+    if (!isSecretSettingKey(key)) continue;
+    if (typeof localStorage !== 'undefined') {
+      // Preserve under the canonical prefixed name; never clobber a newer value
+      const canonical = key === 'apiKey:anthropic' ? SettingsKey.ApiKeyAnthropic : key;
+      if (key !== SettingsKey.LegacyAnthropicApiKey && !localStorage.getItem(canonical)) {
+        localStorage.setItem(canonical, value);
+      }
+    }
+    cache.delete(key);
+    await db.run('DELETE FROM settings WHERE key = ?', [key]);
+  }
+
+  // 4. Migrate localStorage → SQLite (one-time: only if key isn't already in SQLite)
   if (typeof localStorage !== 'undefined') {
     const toMigrate: [string, string][] = [];
 
     for (let i = 0; i < localStorage.length; i++) {
       const key = localStorage.key(i);
       if (!key || !key.startsWith('cruxgarden:')) continue;
-      // Skip auth tokens — not user data
-      if (key === SettingsKey.AccessToken || key === SettingsKey.RefreshToken) continue;
+      // Secrets (API keys, auth tokens) never enter SQLite — see isSecretSettingKey
+      if (isSecretSettingKey(key)) continue;
       // Skip legacy keys that no longer exist
-      if (key === SettingsKey.LegacyAnthropicApiKey || key === SettingsKey.LegacyUi) continue;
+      if (key === SettingsKey.LegacyUi) continue;
 
       if (!cache.has(key)) {
         const value = localStorage.getItem(key);

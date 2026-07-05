@@ -1,23 +1,23 @@
-import { SettingsKey } from '@/lib/constants';
+import { SettingsKey, API_KEY_PREFIX } from '@/lib/constants';
 import { getSetting, setSetting, removeSetting } from '@/services/settings';
-
-const KEY_PREFIX = 'cruxgarden:apiKey:';
+import { getSecret, setSecret, deleteSecret } from '@/services/secrets';
 
 /**
- * Get an API key from localStorage.
- * Falls back to SQLite settings for migration from the old storage location.
+ * Get an API key from the platform secret store (safeStorage on desktop,
+ * localStorage on web). Falls back to SQLite settings for migration from
+ * the old storage location.
  */
 export async function getApiKey(providerId: string): Promise<string | null> {
-  const key = KEY_PREFIX + providerId;
-  const value = localStorage.getItem(key);
+  const key = API_KEY_PREFIX + providerId;
+  const value = await getSecret(key);
   if (value) return value;
 
   // Migration fallback: check SQLite settings (old location)
   try {
     const sqliteValue = getSetting(key);
     if (sqliteValue) {
-      // Migrate to localStorage and remove from SQLite
-      localStorage.setItem(key, sqliteValue);
+      // Migrate to the secret store and remove from SQLite
+      await setSecret(key, sqliteValue);
       removeSetting(key);
       return sqliteValue;
     }
@@ -26,14 +26,14 @@ export async function getApiKey(providerId: string): Promise<string | null> {
   return null;
 }
 
-/** Save an API key to localStorage */
+/** Save an API key to the platform secret store */
 export async function setApiKey(providerId: string, apiKey: string): Promise<void> {
-  localStorage.setItem(KEY_PREFIX + providerId, apiKey);
+  await setSecret(API_KEY_PREFIX + providerId, apiKey);
 }
 
-/** Remove an API key from localStorage */
+/** Remove an API key from the platform secret store */
 export async function removeApiKey(providerId: string): Promise<void> {
-  localStorage.removeItem(KEY_PREFIX + providerId);
+  await deleteSecret(API_KEY_PREFIX + providerId);
 }
 
 /** Get the default model from settings, or return the fallback */

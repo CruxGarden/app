@@ -1,6 +1,24 @@
 export const APP_NAME = 'Crux Garden';
 export const BG_CSS_VAR = '--background-type';
 
+/** Prefix for per-provider BYOK API keys (localStorage / OS keychain only). */
+export const API_KEY_PREFIX = 'cruxgarden:apiKey:';
+
+/**
+ * Secrets must never reach the SQLite settings table: the garden backup,
+ * sync, and export surfaces serialize that table wholesale (`db.export()`),
+ * so exclusion happens here, by construction, not per-consumer.
+ */
+export function isSecretSettingKey(key: string): boolean {
+  return (
+    key.startsWith(API_KEY_PREFIX) ||
+    key === 'apiKey:anthropic' || // legacy unprefixed SQLite row
+    key === SettingsKey.AccessToken ||
+    key === SettingsKey.RefreshToken ||
+    key === SettingsKey.LegacyAnthropicApiKey
+  );
+}
+
 /** All settings keys used in getSetting/setSetting. */
 export enum SettingsKey {
   // Identity

@@ -14,6 +14,7 @@ import { getServices } from '@/services';
 import MarkdownRenderer from '@/components/chat/MarkdownRenderer';
 import TemplateForm from '@/components/workspace/TemplateForm';
 import { usePreviewUrl } from '@/hooks/usePreviewUrl';
+import { useSitePreview } from '@/hooks/useSitePreview';
 import type { Artifact } from '@/api/types';
 import type { EditorTab } from '@/stores/uiStore';
 import type { FormSchema } from '@/templates';
@@ -414,9 +415,11 @@ export default function EditorContent({ tab, artifact, cruxId, saveRef, captureR
     [tab.id, setContent, setTabDirty],
   );
 
-  // HTML preview via service worker virtual file server
-  // Always enabled for HTML files so the background iframe stays warm for auto-capture
-  const previewUrl = usePreviewUrl(content, cruxId, path, isHtmlFile);
+  // Site cruxes (Astro): preview = the project's own dev server with HMR.
+  // Plain cruxes: static preview (local server on desktop, SW cache on web).
+  const site = useSitePreview(cruxId, path, isPreviewable(path));
+  const previewUrl = usePreviewUrl(content, cruxId, path, isHtmlFile && !site.isSite);
+  const effectivePreviewUrl = site.isSite ? site.url : previewUrl;
 
   // When preview URL changes, reload the iframe content.
   // For the initial load, src handles it. For subsequent updates,
@@ -448,7 +451,11 @@ export default function EditorContent({ tab, artifact, cruxId, saveRef, captureR
   if (loading || !editorReady) return null;
 
   const isInPreviewMode = tab.viewMode === 'preview';
-  const showPreviewIframe = isHtmlFile && isInPreviewMode && previewUrl;
+  const showPreviewIframe = site.isSite
+    ? isInPreviewMode && !!site.url
+    : isHtmlFile && isInPreviewMode && !!previewUrl;
+  // Site crux, preview requested, dev server not up yet → status panel
+  const showSiteStatus = site.isSite && isInPreviewMode && !site.url;
 
   // ── Determine main content ──
   let mainContent: React.ReactNode = null;
@@ -547,15 +554,64 @@ export default function EditorContent({ tab, artifact, cruxId, saveRef, captureR
     );
   }
 
+  const isLocalPreview = effectivePreviewUrl?.startsWith('http://127.0.0.1:') ?? false;
+  const localPreviewBase = isLocalPreview ? effectivePreviewUrl!.split('?')[0] : null;
+
   return (
     <>
       {mainContent}
+      {/* Desktop: the preview is a real local URL — show it, copy it, open it */}
+      {showPreviewIframe && localPreviewBase && (
+        <div className="shrink-0 flex items-center gap-1.5 px-2 py-1 border-b border-border bg-surface text-[10px] font-mono text-text-muted">
+          <span className="truncate flex-1" title={localPreviewBase}>{localPreviewBase}</span>
+          <button
+            onClick={() => navigator.clipboard?.writeText(localPreviewBase!)}
+            className="shrink-0 px-1.5 py-0.5 rounded-[var(--radius-sm)] hover:text-text hover:bg-surface-solid transition-colors cursor-pointer"
+            title="Copy URL"
+          >
+            Copy
+          </button>
+          <button
+            onClick={() => {
+              import('@/services/desktop').then(({ openExternal }) => openExternal(localPreviewBase!));
+            }}
+            className="shrink-0 px-1.5 py-0.5 rounded-[var(--radius-sm)] hover:text-text hover:bg-surface-solid transition-colors cursor-pointer"
+            title="Open in browser"
+          >
+            Open ↗
+          </button>
+        </div>
+      )}
+      {/* Site crux: dev server is installing/starting (or failed) */}
+      {showSiteStatus && (
+        <div className="flex-1 flex flex-col items-center justify-center gap-3 p-6 text-center">
+          {site.phase !== 'error' ? (
+            <>
+              <div className="w-5 h-5 border-2 border-accent border-t-transparent rounded-full animate-spin" />
+              <p className="text-xs text-text-muted">
+                {site.phase === 'installing' ? 'Preparing project (first run installs dependencies)…' : 'Starting dev server…'}
+              </p>
+              {site.detail && (
+                <p className="text-[10px] font-mono text-text-muted/70 max-w-md truncate">{site.detail}</p>
+              )}
+            </>
+          ) : (
+            <>
+              <p className="text-xs text-error">Dev server failed to start</p>
+              <pre className="text-[10px] font-mono text-text-muted max-w-md max-h-40 overflow-auto whitespace-pre-wrap text-left">
+                {site.detail}
+              </pre>
+            </>
+          )}
+        </div>
+      )}
+
       {/* Always-on preview iframe for HTML files — visible in preview mode, off-screen otherwise for auto-capture */}
-      {isHtmlFile && previewUrl && (
+      {((isHtmlFile && !site.isSite) || (site.isSite && site.url)) && effectivePreviewUrl && (
         <iframe
           ref={previewIframeRef}
           key="preview"
-          src={previewUrl}
+          src={effectivePreviewUrl}
           sandbox="allow-scripts allow-same-origin allow-popups allow-modals"
           allow="geolocation; camera; microphone; accelerometer; gyroscope; autoplay; fullscreen"
           onLoad={(e) => {

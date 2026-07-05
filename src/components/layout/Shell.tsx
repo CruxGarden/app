@@ -7,7 +7,6 @@ import { useUIStore } from '@/stores/uiStore';
 import { isServicesReady, initServices } from '@/services';
 import { getSetting } from '@/services/settings';
 import { SettingsKey } from '@/lib/constants';
-import { seedTutorialCrux } from '@/services/seedTutorial';
 import { useMoodStore } from '@/stores/moodStore';
 
 const Console = lazy(() => import('@/components/keeper/Console'));
@@ -43,7 +42,6 @@ export default function Shell() {
     (async () => {
       await initServices();
       useMoodStore.getState().loadMoods();
-      seedTutorialCrux();
       hideSplashScreen();
       setServicesReady(true);
     })();

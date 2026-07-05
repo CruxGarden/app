@@ -101,6 +101,11 @@ export const useAppStore = create<AppState>((set, get) => ({
       const { initServices } = await import('@/services');
       await initServices();
       await get().ensureAuthor();
+
+      // Desktop: start recording external Project Folder edits (ADR 0001)
+      const { initIngestion } = await import('@/services/ingestion');
+      initIngestion();
+
       set({ ready: true });
     }
 

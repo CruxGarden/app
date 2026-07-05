@@ -8,6 +8,7 @@ const EXT_TO_MONACO: Record<string, string> = {
   scss: 'scss',
   less: 'less',
   html: 'html',
+  astro: 'html',
   htm: 'html',
   json: 'json',
   jsonc: 'json',
@@ -52,7 +53,7 @@ export function getExtension(filename: string): string {
   return filename.split('.').pop()?.toLowerCase() || '';
 }
 
-const PREVIEWABLE_EXTS = new Set(['html', 'htm', 'svg', 'md', 'mdx']);
+const PREVIEWABLE_EXTS = new Set(['html', 'htm', 'svg', 'md', 'mdx', 'astro']);
 
 export function isPreviewable(filename: string): boolean {
   return PREVIEWABLE_EXTS.has(getExtension(filename));
