@@ -15,6 +15,8 @@ import { useUIStore } from '@/stores/uiStore';
 import { importGarden } from '@/services/garden-io';
 import * as syncApi from '@/api/sync';
 import { cn } from '@/lib/cn';
+import { isDesktop } from '@/lib/platform';
+import { getGardenRoot, chooseGardenRoot, shortenHomePath } from '@/services/desktop';
 
 // ── Types ──────────────────────────────────────────────
 
@@ -35,6 +37,14 @@ export default function Gateway() {
 
   return (
     <div className="relative min-h-screen flex items-center justify-center p-4">
+      {/* Desktop: Gateway renders outside the Shell (no TopBar), so provide a
+          drag region or the frameless window can't be moved */}
+      {isDesktop() && (
+        <div
+          className="fixed top-0 left-0 right-0 h-10 z-50"
+          style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}
+        />
+      )}
       <div className="w-full max-w-md flex flex-col items-center gap-6">
         {(step === Step.Banner || step === Step.Checking) && (
           <BannerStep
@@ -176,6 +186,7 @@ enum SetupSection {
   Avatar = 'avatar',
   Connect = 'connect',
   Keys = 'keys',
+  GardenRoot = 'gardenRoot',
 }
 
 function SetupStep({ onBack }: { onBack: () => void }) {
@@ -188,6 +199,18 @@ function SetupStep({ onBack }: { onBack: () => void }) {
   const [openSection, setOpenSection] = useState<SetupSection | null>(SetupSection.Username);
   const [aiEnabled, setAiEnabled] = useState(() => getSetting(SettingsKey.AiEnabled) === 'true');
   const [keysConfigured, setKeysConfigured] = useState(false);
+  const desktop = isDesktop();
+  const [gardenRoot, setGardenRoot] = useState<string | null>(null);
+
+  // Desktop: show where Project Folders will live
+  useEffect(() => {
+    if (desktop) getGardenRoot().then(setGardenRoot);
+  }, [desktop]);
+
+  const handleChooseGardenRoot = async () => {
+    const chosen = await chooseGardenRoot();
+    if (chosen) setGardenRoot(chosen);
+  };
 
   const handleAiToggle = (enabled: boolean) => {
     setAiEnabled(enabled);
@@ -295,12 +318,15 @@ function SetupStep({ onBack }: { onBack: () => void }) {
           label="Pick Username"
           open={openSection === SetupSection.Username}
           onToggle={() => toggle(SetupSection.Username)}
-          summary={username || 'Required'}
+          summary={username || 'Optional'}
           completed={!!username && !usernameError}
-          required={!username || !!usernameError}
+          required={!!usernameError}
         />
         {openSection === SetupSection.Username && (
           <div className="pt-3 pb-4 px-1">
+            <p className="text-xs text-text-muted mb-2">
+              Optional — you can pick one when you publish or connect
+            </p>
             <input
               type="text"
               value={username}
@@ -318,6 +344,35 @@ function SetupStep({ onBack }: { onBack: () => void }) {
             />
             {usernameError && <p className="text-xs text-error mt-1">{usernameError}</p>}
           </div>
+        )}
+
+        {/* Garden Location (desktop only) */}
+        {desktop && (
+          <>
+            <AccordionHeader
+              label="Garden Location"
+              open={openSection === SetupSection.GardenRoot}
+              onToggle={() => toggle(SetupSection.GardenRoot)}
+              summary={gardenRoot ? shortenHomePath(gardenRoot) : '…'}
+              completed={!!gardenRoot}
+            />
+            {openSection === SetupSection.GardenRoot && (
+              <div className="pt-3 pb-4 px-1">
+                <p className="text-xs text-text-muted mb-3">
+                  Every crux you create becomes a real folder here — open them in Finder,
+                  your editor, or any tool. You can move this later in Settings.
+                </p>
+                <div className="flex items-center gap-2">
+                  <code className="flex-1 px-3 py-2 text-xs font-mono rounded-[var(--radius-sm)] bg-surface-solid border border-border text-text truncate">
+                    {gardenRoot ? shortenHomePath(gardenRoot) : 'Loading…'}
+                  </code>
+                  <Button variant="secondary" size="sm" onClick={handleChooseGardenRoot} disabled={saving}>
+                    Choose…
+                  </Button>
+                </div>
+              </div>
+            )}
+          </>
         )}
 
         {/* Avatar */}
@@ -350,7 +405,9 @@ function SetupStep({ onBack }: { onBack: () => void }) {
             {aiEnabled && (
               <div className="mt-3">
                 <p className="text-xs text-text-muted mb-3">
-                  Add one or more API keys to build with AI agents. Keys stay in your browser
+                  {isDesktop()
+                    ? 'Add one or more API keys to build with AI agents. Keys are encrypted in your Mac’s Keychain'
+                    : 'Add one or more API keys to build with AI agents. Keys stay in your browser'}
                 </p>
                 <ApiKeySetup compact autoFocus onKeyChange={checkApiKeys} />
               </div>
@@ -408,7 +465,7 @@ function SetupStep({ onBack }: { onBack: () => void }) {
 
       {/* Continue */}
       <div className="mt-6">
-        <Button onClick={handleFinish} loading={saving} disabled={!username.trim() || !!usernameError} fullWidth size="md">
+        <Button onClick={handleFinish} loading={saving} disabled={!!usernameError} fullWidth size="md">
           Welcome
         </Button>
       </div>

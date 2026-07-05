@@ -64,6 +64,7 @@ export function generateSlug(title?: string): string {
 
 const MIME_MAP: Record<string, string> = {
   '.html': 'text/html',
+  '.astro': 'text/plain',
   '.htm': 'text/html',
   '.css': 'text/css',
   '.js': 'application/javascript',

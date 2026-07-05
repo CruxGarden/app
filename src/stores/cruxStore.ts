@@ -83,8 +83,12 @@ interface CruxState {
   // Pending file deletions (awaiting user confirmation)
   pendingDeletes: { artifactId: string; path: string }[];
 
+  // Desktop: the crux's Project Folder is registered but missing on disk
+  folderMissing: boolean;
+
   // Actions
   loadCrux: (id: string) => Promise<void>;
+  restoreProjectFolder: () => Promise<void>;
   createCrux: (title?: string) => Promise<Crux>;
   addMessage: (message: ChatMessage) => void;
   setStreaming: (streaming: boolean) => void;
@@ -160,6 +164,7 @@ export const useCruxStore = create<CruxState>((set, get) => ({
   workspaceSegmentStart: null,
   snapshotMessageCount: null,
   pendingDeletes: [],
+  folderMissing: false,
   uploadProgress: null,
   tokenUsage: { inputTokens: 0, outputTokens: 0 },
 
@@ -263,6 +268,25 @@ export const useCruxStore = create<CruxState>((set, get) => ({
         outputTokens: 0,
       },
     });
+
+    // Desktop: the folder may have been deleted while the app was closed —
+    // the watcher can't see that, so check on open (never cascades; the user
+    // chooses whether to restore from history).
+    try {
+      const { projectFolderExists } = await import('@/services/project-folder');
+      const exists = await projectFolderExists(id);
+      set({ folderMissing: exists === false });
+    } catch {
+      set({ folderMissing: false });
+    }
+  },
+
+  restoreProjectFolder: async () => {
+    const { crux } = get();
+    if (!crux) return;
+    const { projectAllArtifacts } = await import('@/services/project-folder');
+    await projectAllArtifacts(crux.id);
+    set({ folderMissing: false });
   },
 
   createCrux: async (title?: string) => {
@@ -461,30 +485,41 @@ export const useCruxStore = create<CruxState>((set, get) => ({
       });
     }
 
-    // 2. Collect all working artifacts and publish in one request
-    const workingArtifacts = (artifacts || []).filter(
-      (a) => a.type === 'artifact',
-    );
-    const filesToPublish: Array<{
+    // 2. Collect the files to publish.
+    // Site cruxes (ADR 0005): build in-app and ship dist/ — sources stay in
+    // history, visitors get the built output. A failed build fails the
+    // publish; nothing half-deploys.
+    const { isSiteCrux, buildForPublish } = await import('@/services/site');
+    let filesToPublish: Array<{
       blob: Blob;
       path: string;
       type?: string;
       kind?: string;
       mimeType: string;
-    }> = [];
-    for (const art of workingArtifacts) {
-      try {
-        const blob = await artifactService.downloadBlob(art.id);
-        const path = art.meta?.path || art.filename || 'file';
-        filesToPublish.push({
-          blob,
-          path,
-          type: art.type,
-          kind: art.kind || undefined,
-          mimeType: art.mimeType,
-        });
-      } catch {
-        // Skip artifacts that fail to load — publish will use what's available
+    }>;
+
+    if (isSiteCrux(artifacts || [])) {
+      filesToPublish = await buildForPublish(crux.id);
+    } else {
+      // Plain cruxes: publish the working artifacts as-is
+      const workingArtifacts = (artifacts || []).filter(
+        (a) => a.type === 'artifact',
+      );
+      filesToPublish = [];
+      for (const art of workingArtifacts) {
+        try {
+          const blob = await artifactService.downloadBlob(art.id);
+          const path = art.meta?.path || art.filename || 'file';
+          filesToPublish.push({
+            blob,
+            path,
+            type: art.type,
+            kind: art.kind || undefined,
+            mimeType: art.mimeType,
+          });
+        } catch {
+          // Skip artifacts that fail to load — publish will use what's available
+        }
       }
     }
 
@@ -930,3 +965,29 @@ export const useCruxStore = create<CruxState>((set, get) => ({
     }));
   },
 }));
+
+// Desktop (ADR 0001): when the ingestion service records external Project
+// Folder edits for the open crux, refresh the artifacts panel in place.
+if (typeof window !== 'undefined') {
+  window.addEventListener('crux:external-change', async (e) => {
+    const { cruxId } = (e as CustomEvent<{ cruxId: string }>).detail;
+    const { crux } = useCruxStore.getState();
+    if (!crux || crux.id !== cruxId) return;
+    try {
+      const { artifact } = getServices();
+      const arts = await artifact.findByResource('crux', cruxId);
+      useCruxStore.getState().setArtifacts(arts);
+    } catch {
+      /* services not ready — panel refreshes on next load */
+    }
+  });
+
+  // A Project Folder disappeared at runtime — offer restore, never delete
+  window.addEventListener('crux:folder-missing', (e) => {
+    const { cruxId } = (e as CustomEvent<{ cruxId: string | null }>).detail;
+    const { crux } = useCruxStore.getState();
+    if (crux && crux.id === cruxId) {
+      useCruxStore.setState({ folderMissing: true });
+    }
+  });
+}

@@ -44,6 +44,17 @@ import ArboristFileTree, {
   type UploadFileEntry,
 } from '@/components/artifacts/ArboristFileTree';
 import { FieldRow, formatSize, formatDate } from './MetadataContent';
+import { Capability, can } from '@/lib/platform';
+import { revealProjectFolder } from '@/services/project-folder';
+
+function RevealIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
+      <path d="M10 13l2 2 4-4" />
+    </svg>
+  );
+}
 
 function FolderPlusIcon() {
   return (
@@ -116,6 +127,10 @@ function UploadIcon() {
 
 export default function ArtifactsPane() {
   const artifacts = useCruxStore((s) => s.artifacts);
+  const cruxId = useCruxStore((s) => s.crux?.id);
+  const folderMissing = useCruxStore((s) => s.folderMissing);
+  const restoreProjectFolder = useCruxStore((s) => s.restoreProjectFolder);
+  const hasProjectFolder = can(Capability.ProjectFolder);
   const createFile = useCruxStore((s) => s.createFile);
   const uploadFiles = useCruxStore((s) => s.uploadFiles);
   const uploadFile = useCruxStore((s) => s.uploadFile);
@@ -468,6 +483,24 @@ export default function ArtifactsPane() {
 
   const actionButtons = (
     <>
+      {hasProjectFolder && cruxId && (
+        <>
+          <div className="relative group/btn">
+            <button
+              onClick={() => revealProjectFolder(cruxId)}
+              className="p-1 opacity-60 hover:opacity-100 transition-opacity cursor-pointer"
+            >
+              <RevealIcon />
+            </button>
+            <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 z-50 pointer-events-none hidden group-hover/btn:block">
+              <div className="px-2.5 py-1.5 rounded-[var(--radius)] bg-surface-solid border border-border shadow-lg whitespace-nowrap">
+                <span className="text-xs font-medium text-text">Reveal in Finder</span>
+              </div>
+            </div>
+          </div>
+          <div className="w-px h-3 bg-border mx-0.5" />
+        </>
+      )}
       <div className="relative group/btn">
         <button
           onClick={() => treeRef.current?.closeAll()}
@@ -553,6 +586,21 @@ export default function ArtifactsPane() {
 
   return (
     <div className="flex flex-col h-full">
+      {/* Desktop: registered Project Folder is missing on disk */}
+      {folderMissing && (
+        <div className="shrink-0 px-3 py-2 border-b border-border bg-error/10 flex items-center justify-between gap-2">
+          <span className="text-xs text-text">
+            Project folder is missing on disk. Your files are safe in history.
+          </span>
+          <button
+            onClick={() => restoreProjectFolder()}
+            className="shrink-0 px-2 py-1 text-xs font-medium rounded-[var(--radius-sm)] bg-accent text-bg hover:opacity-90 transition-opacity cursor-pointer"
+          >
+            Restore folder
+          </button>
+        </div>
+      )}
+
       {/* Action toolbar — hidden while viewing a snapshot */}
       {!isViewingSnapshot && (
         <div className="flex items-center justify-end gap-0.5 px-2 py-1 border-b border-border shrink-0 text-text-muted">

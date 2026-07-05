@@ -114,7 +114,7 @@ interface UIState {
   // ── Editor tab actions ──
   openFile: (id: string, path: string) => void;
   closeTab: (id: string) => void;
-  setActiveTab: (id: string) => void;
+  setActiveTab: (id: string | null) => void;
   setTabDirty: (id: string, dirty: boolean) => void;
   setTabViewMode: (id: string, mode: EditorViewMode) => void;
   setTabScrollTop: (id: string, scrollTop: number) => void;

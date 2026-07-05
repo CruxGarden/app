@@ -4,6 +4,7 @@ import { NotFoundError } from '../types';
 import { getSqliteClient } from './client';
 import { getLocalIdentity } from './identity';
 import { fromRow, buildInsert, buildUpdate, generateSlug } from './helpers';
+import { createProjectFolder } from '../project-folder';
 
 export class SqliteCruxService implements ICruxService {
   async findById(id: string): Promise<Crux> {
@@ -44,9 +45,23 @@ export class SqliteCruxService implements ICruxService {
   async create(input: CreateCruxInput): Promise<Crux> {
     const identity = await getLocalIdentity();
     const now = new Date().toISOString();
+    const slug = input.slug || generateSlug(input.title);
+
+    // Desktop (ADR 0001): every workspace crux gets a real Project Folder at
+    // creation — never lazily. No-op on web (createProjectFolder returns null).
+    let meta = input.meta || {};
+    if (input.type === 'workspace' && input.kind !== 'snapshot' && !meta.projectFolder) {
+      try {
+        const folder = await createProjectFolder(slug);
+        if (folder) meta = { ...meta, projectFolder: folder };
+      } catch (err) {
+        console.error('[crux] Project Folder creation failed:', err);
+      }
+    }
+
     const crux: Crux = {
       id: input.id || crypto.randomUUID(),
-      slug: input.slug || generateSlug(input.title),
+      slug,
       title: input.title || '',
       description: input.description || '',
       data: input.data || '',
@@ -57,7 +72,7 @@ export class SqliteCruxService implements ICruxService {
       discoverable: false,
       authorId: input.authorId || identity.authorId,
       homeId: input.homeId || identity.homeId,
-      meta: input.meta || {},
+      meta,
       created: now,
       updated: now,
     };

@@ -109,6 +109,54 @@ export const LAYOUT_VISUAL: TemplateLayout = {
   },
 };
 
+// ── Content model (see TEMPLATE-CONTENT-MODEL.md) ──
+// A template declares what the user MAKES inside it; the app renders generic
+// friendly UI (the Builder — the Workshop's home view) from the declaration.
+// Stored in crux.meta.contentModel at creation, so it travels with export,
+// clone, and future Template Cruxes.
+
+export interface ContentCollection {
+  /** Plural display name — "Posts" */
+  name: string;
+  /** Singular — powers the "New Post" button */
+  singular: string;
+  /** Where items live — 'src/pages/posts/*.md' (single-star, one dir level) */
+  glob: string;
+  /** Preview route prefix — '/posts/' (item slug appended) */
+  routeBase?: string;
+  /** Frontmatter fields, rendered as a form above the body */
+  fields: FormField[];
+  /** New-item recipe. '{slug}', '{title}', '{today}' interpolate. */
+  new: {
+    pathTemplate: string;
+    frontmatter: Record<string, string>;
+    body?: string;
+  };
+  /** List ordering */
+  sort?: { field: string; dir: 'asc' | 'desc' };
+}
+
+export interface BuilderAction {
+  label: string;
+  /** Emoji or short glyph shown on the button */
+  icon?: string;
+  do:
+    | { type: 'new-item'; collection: string }
+    | { type: 'edit-settings' }
+    | { type: 'open-file'; path: string }
+    | { type: 'ai'; prompt: string }
+    | { type: 'add-image' }
+    | { type: 'publish' };
+}
+
+export interface ContentModel {
+  collections: ContentCollection[];
+  /** Site identity file (imported by the site's pages), edited as a form */
+  settings?: { path: string; fields: FormField[] };
+  /** Extra builder actions, merged after the derived ones */
+  actions?: BuilderAction[];
+}
+
 export interface TemplateDefinition {
   files: TemplateFile[];
   context: string;
@@ -118,39 +166,25 @@ export interface TemplateDefinition {
   schema?: FormSchema;
   /** Optional workspace layout — controls which panes open and their sizes */
   layout?: TemplateLayout;
+  /**
+   * Script-driven setup (desktop only): pnpm args run in the Project Folder
+   * after `files` are written. This is how ecosystem templates scaffold, e.g.
+   * `['dlx', 'create-astro@latest', '.', '--template', 'blog', '--no-install',
+   * '--no-git', '--yes']` — the scaffold writes real files to disk and the
+   * watcher/ingestion pipeline records them as artifacts automatically.
+   */
+  scaffold?: { pnpmArgs: string[] };
+  /** What the user makes here — drives the Builder (Workshop home view) */
+  contentModel?: ContentModel;
 }
 
 // Lazy-load template files to keep the modal bundle small
+// Starting afresh (ADR 0006): the old bundled library is retired. Built-ins
+// are the Empty Crux (blank) plus real toolchain projects; the library of
+// dozens/hundreds lives on crux.garden as clonable Template Cruxes, and
+// ecosystem templates arrive via TemplateDefinition.scaffold scripts.
 const loaders: Record<string, () => Promise<{ default: TemplateDefinition }>> = {
-  blog: () => import('./blog'),
-  story: () => import('./story'),
-  zine: () => import('./zine'),
-  album: () => import('./album'),
-  portfolio: () => import('./portfolio'),
-  journal: () => import('./journal'),
-  homepage: () => import('./homepage'),
-  business: () => import('./business'),
-  resume: () => import('./resume'),
-  links: () => import('./links'),
-  event: () => import('./event'),
-  tribute: () => import('./tribute'),
-  classified: () => import('./classified'),
-  product: () => import('./product'),
-  recipes: () => import('./recipes'),
-  menu: () => import('./menu'),
-  tutorial: () => import('./tutorial'),
-  slides: () => import('./slides'),
-  game: () => import('./game'),
-  video: () => import('./video'),
-  social: () => import('./social'),
-  ransom: () => import('./ransom'),
-  conspiracy: () => import('./conspiracy'),
-  fortune: () => import('./fortune'),
-  wanted: () => import('./wanted'),
-  geocities: () => import('./geocities'),
-  petrock: () => import('./petrock'),
-  board: () => import('./board'),
-  vault: () => import('./vault'),
+  'astro-blog': () => import('./astro-blog'),
 };
 
 export async function loadTemplate(id: string): Promise<TemplateDefinition | null> {

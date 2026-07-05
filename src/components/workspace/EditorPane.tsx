@@ -4,6 +4,8 @@ import { useCruxStore } from '@/stores/cruxStore';
 import EditorTabBar from './EditorTabBar';
 import EditorToolbar from './EditorToolbar';
 import EditorContent from './EditorContent';
+import BuilderView from './BuilderView';
+import { cn } from '@/lib/cn';
 
 /** Auto-recovery boundary for Monaco disposal errors during pane reorder */
 class EditorErrorBoundary extends Component<{ children: ReactNode }, { retryKey: number }> {
@@ -55,8 +57,18 @@ export default function EditorPane() {
 
   // Check if the crux has a form schema (set during template creation)
   const hasFormSchema = !!(crux?.meta as Record<string, unknown> | undefined)?.formSchema;
+  // Content-model cruxes get the Builder as the Workshop's home view
+  const hasBuilder = !!(crux?.meta as Record<string, unknown> | undefined)?.contentModel;
+  const showBuilder = hasBuilder && !activeTab;
 
   if (tabs.length === 0) {
+    if (hasBuilder) {
+      return (
+        <div className="flex flex-col h-full">
+          <BuilderView />
+        </div>
+      );
+    }
     return (
       <div className="flex flex-col h-full">
         <div className="text-text-muted p-4">
@@ -68,7 +80,26 @@ export default function EditorPane() {
 
   return (
     <div className="flex flex-col h-full">
-      <EditorTabBar tabs={tabs} activeId={activeTabId} onSelect={setActiveTab} onClose={closeTab} />
+      <div className="flex items-stretch shrink-0">
+        {hasBuilder && (
+          <button
+            onClick={() => setActiveTab(null)}
+            title="Builder"
+            className={cn(
+              'shrink-0 px-3 text-xs border-b border-r border-border transition-colors cursor-pointer',
+              showBuilder
+                ? 'text-accent bg-surface'
+                : 'text-text-muted hover:text-text',
+            )}
+          >
+            ⌂
+          </button>
+        )}
+        <div className="flex-1 min-w-0">
+          <EditorTabBar tabs={tabs} activeId={activeTabId} onSelect={setActiveTab} onClose={closeTab} />
+        </div>
+      </div>
+      {showBuilder && <BuilderView />}
       {activeTab && activeArtifact && crux && (
         <>
           <EditorToolbar

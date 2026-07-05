@@ -1,8 +1,10 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { useAppStore } from '@/stores/appStore';
 import { exportGarden, confirmAndImportGarden, wipeGarden } from '@/services/garden-io';
 import { Panel, Button } from '@/components/ui';
 import { cn } from '@/lib/cn';
+import { isDesktop } from '@/lib/platform';
+import { getGardenRoot, chooseGardenRoot, shortenHomePath } from '@/services/desktop';
 
 const WIPE_CONFIRMATION = 'delete me';
 
@@ -15,6 +17,17 @@ export default function DataSettings() {
   const [status, setStatus] = useState('');
   const [error, setError] = useState('');
   const importRef = useRef<HTMLInputElement>(null);
+  const desktop = isDesktop();
+  const [gardenRoot, setGardenRoot] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (desktop) getGardenRoot().then(setGardenRoot);
+  }, [desktop]);
+
+  const handleChooseGardenRoot = useCallback(async () => {
+    const chosen = await chooseGardenRoot();
+    if (chosen) setGardenRoot(chosen);
+  }, []);
 
   const handleExport = useCallback(async () => {
     setExporting(true);
@@ -132,6 +145,25 @@ export default function DataSettings() {
               onChange={handleImport}
             />
           </div>
+
+          {desktop && (
+            <>
+              <hr className="border-border my-6" />
+              <h3 className="font-display text-sm font-medium text-text mb-2">Garden location</h3>
+              <p className="text-xs text-text-muted mb-3">
+                New cruxes create their project folders here. Existing folders stay where they
+                are and keep working.
+              </p>
+              <div className="flex items-center gap-2">
+                <code className="flex-1 px-3 py-2 text-xs font-mono rounded-[var(--radius-sm)] bg-surface-solid border border-border text-text truncate">
+                  {gardenRoot ? shortenHomePath(gardenRoot) : 'Loading…'}
+                </code>
+                <Button variant="secondary" size="sm" onClick={handleChooseGardenRoot} disabled={busy}>
+                  Choose…
+                </Button>
+              </div>
+            </>
+          )}
 
           <hr className="border-border my-6" />
 

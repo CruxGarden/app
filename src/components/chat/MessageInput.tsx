@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { cn } from '@/lib/cn';
 
 interface MessageInputProps {
@@ -20,6 +20,17 @@ export default function MessageInput({
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const historyIndexRef = useRef(-1);
   const savedInputRef = useRef('');
+
+  // Builder actions can hand the user to the AI mid-sentence
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const { prompt } = (e as CustomEvent<{ prompt: string }>).detail;
+      setValue(prompt);
+      textareaRef.current?.focus();
+    };
+    window.addEventListener('crux:ai-prompt', handler);
+    return () => window.removeEventListener('crux:ai-prompt', handler);
+  }, []);
 
   const handleSubmit = useCallback(() => {
     const trimmed = value.trim();
