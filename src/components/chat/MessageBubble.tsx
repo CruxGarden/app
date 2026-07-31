@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { cn } from '@/lib/cn';
 import type { ChatMessage, ToolCall } from '@/api/types';
-import { PROVIDERS } from '@/ai/providers';
+import { getModelShortName } from '@/ai/providers';
 import MarkdownRenderer from './MarkdownRenderer';
 import { ConsoleAvatar } from '@/components/keeper/Console';
 import { useCruxStore } from '@/stores/cruxStore';
@@ -23,16 +23,6 @@ function MessageAvatar({ fingerprint }: { fingerprint?: string }) {
     return <img src={blobUrl} alt="" className="w-6 h-6 aspect-square shrink-0 object-cover [image-rendering:pixelated] rounded-[var(--radius-sm)] ring-1 ring-border" />;
   }
   return <ConsoleAvatar bordered />;
-}
-
-/** Get short display name for a model ID (e.g. "claude-sonnet-4-20250514" → "Sonnet 4") */
-function getModelShortName(modelId?: string): string | null {
-  if (!modelId) return null;
-  for (const provider of Object.values(PROVIDERS)) {
-    const model = provider.models.find((m) => m.id === modelId);
-    if (model) return model.name;
-  }
-  return null;
 }
 
 interface MessageBubbleProps {

@@ -9,47 +9,23 @@ import type {
 import type { UpdateCruxInput } from '@/services/types';
 import type { Palette } from '@/lib/palette';
 import { getServices } from '@/services';
-
-/** Build a fingerprint snapshot from artifacts: { path: fingerprint } */
-function buildFingerprintMap(artifacts: Artifact[]): Record<string, string> {
-  const map: Record<string, string> = {};
-  for (const a of artifacts) {
-    if (a.type !== 'artifact' || !a.fingerprint) continue;
-    const path = (a.meta?.path as string) || a.filename;
-    map[path] = a.fingerprint;
-  }
-  return map;
-}
-
-/** Check if current artifacts match the published fingerprint snapshot */
-function hasContentChanged(artifacts: Artifact[], publishedFingerprints: Record<string, string> | undefined): boolean {
-  if (!publishedFingerprints) return true; // never published
-  const current = buildFingerprintMap(artifacts);
-  const currentKeys = Object.keys(current).sort();
-  const publishedKeys = Object.keys(publishedFingerprints).sort();
-  if (currentKeys.length !== publishedKeys.length) return true;
-  for (let i = 0; i < currentKeys.length; i++) {
-    if (currentKeys[i] !== publishedKeys[i]) return true;
-    if (current[currentKeys[i]!] !== publishedFingerprints[currentKeys[i]!]) return true;
-  }
-  return false;
-}
-
-const MIME_MAP: Record<string, string> = {
-  html: 'text/html',
-  htm: 'text/html',
-  css: 'text/css',
-  js: 'application/javascript',
-  ts: 'application/javascript',
-  jsx: 'application/javascript',
-  tsx: 'application/javascript',
-  json: 'application/json',
-  md: 'text/markdown',
-  txt: 'text/plain',
-  py: 'text/x-python',
-  svg: 'image/svg+xml',
-  xml: 'application/xml',
-};
+import { guessMimeType } from '@/lib/mime';
+import { hasContentChanged } from '@/services/publish';
+import {
+  walkSnapshotChain,
+  collectChainMessages,
+  chainLookupFromService,
+  createSnapshotCore,
+  defaultGrowthDeps,
+  generateSnapshotSummary,
+  type SnapshotChainNode,
+  type CreateSnapshotOptions,
+} from '@/services/growth';
+import { publishPipeline, unpublishPipeline } from '@/services/publish';
+import { projectFolderExists, projectAllArtifacts } from '@/services/project-folder';
+import { flushIngestion } from '@/services/ingestion';
+import { getPersona } from '@/components/mood/mood-helpers';
+import { useUIStore } from '@/stores/uiStore';
 
 interface CruxState {
   // Active workspace
@@ -91,11 +67,16 @@ interface CruxState {
   restoreProjectFolder: () => Promise<void>;
   createCrux: (title?: string) => Promise<Crux>;
   addMessage: (message: ChatMessage) => void;
+  setMessages: (messages: ChatMessage[]) => void;
+  /** Shallow-merge a patch into crux.meta in memory (persist with saveMeta). */
+  patchCruxMeta: (patch: Record<string, unknown>) => void;
   setStreaming: (streaming: boolean) => void;
   appendStreamContent: (content: string) => void;
   clearStreamContent: () => void;
   setArtifacts: (artifacts: Artifact[]) => void;
   addArtifact: (artifact: Artifact) => void;
+  /** Merge an artifact into state by id (insert or replace). */
+  upsertArtifact: (artifact: Artifact) => void;
   updateArtifact: (id: string, updates: Partial<Artifact>) => void;
   setModel: (model: string) => void;
   setPalette: (palette: Partial<Palette>) => void;
@@ -129,6 +110,7 @@ interface CruxState {
   addGrowth: (growth: Dimension) => void;
   setSummary: (summary: CruxSummary) => void;
   setGrowthCreating: (creating: boolean) => void;
+  createSnapshot: (options?: CreateSnapshotOptions) => Promise<void>;
 
   // Snapshot viewing actions
   viewSnapshot: (snapshotId: string, index: number) => Promise<void>;
@@ -214,12 +196,14 @@ export const useCruxStore = create<CruxState>((set, get) => ({
     let priorMessages: ChatMessage[] = [];
 
     if (sortedGrowths.length > 0) {
-      // Build a map of targetId → snapshotCrux for efficient lookup
-      const snapshotCruxes = new Map<string, { messages: ChatMessage[]; parentCruxId: string | null }>();
+      // Prefetch snapshot nodes, then walk the chain (single implementation
+      // in the Growth module) from the active tip.
+      const snapshotNodes = new Map<string, SnapshotChainNode>();
       for (const growth of sortedGrowths) {
         try {
           const snapshotCrux = await cruxService.findById(growth.targetId);
-          snapshotCruxes.set(growth.targetId, {
+          snapshotNodes.set(growth.targetId, {
+            id: growth.targetId,
             messages: snapshotCrux.meta?.messages || [],
             parentCruxId: (snapshotCrux.meta?.parentCruxId as string) || null,
           });
@@ -228,26 +212,14 @@ export const useCruxStore = create<CruxState>((set, get) => ({
         }
       }
 
-      // Find the active tip: the workspace's activeBranch setting, or the latest snapshot
+      // Active tip: the workspace's activeBranch setting, or the latest snapshot
       const activeBranchTip = (crux.meta?.settings?.activeBranch as string) || null;
-      const tipId = activeBranchTip && snapshotCruxes.has(activeBranchTip)
+      const tipId = activeBranchTip && snapshotNodes.has(activeBranchTip)
         ? activeBranchTip
         : sortedGrowths[sortedGrowths.length - 1]!.targetId;
 
-      // Walk backwards from tip via parentCruxId to build the chain
-      const chain: string[] = [];
-      let current: string | null = tipId;
-      while (current && snapshotCruxes.has(current)) {
-        chain.push(current);
-        current = snapshotCruxes.get(current)!.parentCruxId;
-      }
-      chain.reverse(); // chronological order
-
-      // Concatenate messages from the chain
-      for (const snapshotId of chain) {
-        const data = snapshotCruxes.get(snapshotId);
-        if (data) priorMessages = priorMessages.concat(data.messages);
-      }
+      const chain = await walkSnapshotChain(tipId, async (id) => snapshotNodes.get(id) ?? null);
+      priorMessages = chain.flatMap((n) => n.messages);
     }
 
     const fullMessages = priorMessages.concat(workspaceMessages);
@@ -273,7 +245,6 @@ export const useCruxStore = create<CruxState>((set, get) => ({
     // the watcher can't see that, so check on open (never cascades; the user
     // chooses whether to restore from history).
     try {
-      const { projectFolderExists } = await import('@/services/project-folder');
       const exists = await projectFolderExists(id);
       set({ folderMissing: exists === false });
     } catch {
@@ -284,7 +255,6 @@ export const useCruxStore = create<CruxState>((set, get) => ({
   restoreProjectFolder: async () => {
     const { crux } = get();
     if (!crux) return;
-    const { projectAllArtifacts } = await import('@/services/project-folder');
     await projectAllArtifacts(crux.id);
     set({ folderMissing: false });
   },
@@ -300,7 +270,6 @@ export const useCruxStore = create<CruxState>((set, get) => ({
       '-' +
       Date.now().toString(36);
 
-    const { getPersona } = await import('@/components/mood/mood-helpers');
     const persona = getPersona();
 
     const greeting: ChatMessage = {
@@ -340,6 +309,17 @@ export const useCruxStore = create<CruxState>((set, get) => ({
     set((state) => ({ messages: [...state.messages, message] }));
   },
 
+  setMessages: (messages: ChatMessage[]) => {
+    set({ messages });
+  },
+
+  patchCruxMeta: (patch: Record<string, unknown>) => {
+    set((state) => {
+      if (!state.crux) return state;
+      return { crux: { ...state.crux, meta: { ...state.crux.meta, ...patch } } };
+    });
+  },
+
   setStreaming: (streaming: boolean) => {
     set({ isStreaming: streaming });
   },
@@ -364,6 +344,14 @@ export const useCruxStore = create<CruxState>((set, get) => ({
 
   addArtifact: (artifact: Artifact) => {
     set((state) => ({ artifacts: [...state.artifacts, artifact], hasUnpublishedChanges: true }));
+  },
+
+  upsertArtifact: (artifact: Artifact) => {
+    set((state) => ({
+      artifacts: state.artifacts.some((a) => a.id === artifact.id)
+        ? state.artifacts.map((a) => (a.id === artifact.id ? artifact : a))
+        : [...state.artifacts, artifact],
+    }));
   },
 
   updateArtifact: (id: string, updates: Partial<Artifact>) => {
@@ -441,130 +429,21 @@ export const useCruxStore = create<CruxState>((set, get) => ({
     });
   },
 
-  // Publish actions
+  // Publish actions — the pipeline lives in services/publish (deep module);
+  // the store only hands in state and stores the result.
   publishCrux: async () => {
     const { crux, artifacts, saveMeta } = get();
     if (!crux) return;
     await saveMeta();
-
-    const { cruxes } = await import('@/api');
-    const { artifact: artifactService } = getServices();
-
-    // 1. Upsert crux to API (create if not exists, update if it does)
-    let cruxExistsOnApi = false;
-    try {
-      await cruxes.get(crux.id);
-      cruxExistsOnApi = true;
-    } catch {
-      // 404 — crux not yet on API
-    }
-
-    if (cruxExistsOnApi) {
-      await cruxes.update(crux.id, {
-        title: crux.title,
-        slug: crux.slug,
-        description: crux.description,
-        data: crux.data,
-        type: crux.type,
-        kind: crux.kind as 'webapp' | 'page' | 'document' | 'image' | undefined,
-        discoverable: crux.discoverable,
-        meta: crux.meta as Record<string, unknown>,
-      });
-    } else {
-      // The API handles slug conflicts by hard-deleting stale records
-      await cruxes.create({
-        id: crux.id,
-        slug: crux.slug,
-        title: crux.title,
-        description: crux.description,
-        data: crux.data || '',
-        type: crux.type,
-        kind: crux.kind as 'webapp' | 'page' | 'document' | 'image' | undefined,
-        discoverable: crux.discoverable,
-        meta: crux.meta as Record<string, unknown>,
-      });
-    }
-
-    // 2. Collect the files to publish.
-    // Site cruxes (ADR 0005): build in-app and ship dist/ — sources stay in
-    // history, visitors get the built output. A failed build fails the
-    // publish; nothing half-deploys.
-    const { isSiteCrux, buildForPublish } = await import('@/services/site');
-    let filesToPublish: Array<{
-      blob: Blob;
-      path: string;
-      type?: string;
-      kind?: string;
-      mimeType: string;
-    }>;
-
-    if (isSiteCrux(artifacts || [])) {
-      filesToPublish = await buildForPublish(crux.id);
-    } else {
-      // Plain cruxes: publish the working artifacts as-is
-      const workingArtifacts = (artifacts || []).filter(
-        (a) => a.type === 'artifact',
-      );
-      filesToPublish = [];
-      for (const art of workingArtifacts) {
-        try {
-          const blob = await artifactService.downloadBlob(art.id);
-          const path = art.meta?.path || art.filename || 'file';
-          filesToPublish.push({
-            blob,
-            path,
-            type: art.type,
-            kind: art.kind || undefined,
-            mimeType: art.mimeType,
-          });
-        } catch {
-          // Skip artifacts that fail to load — publish will use what's available
-        }
-      }
-    }
-
-    // 3. Publish — sends all files in one multipart request
-    const { publish } = getServices();
-    const updated = await publish.publish(crux.id, filesToPublish);
-
-    // Merge API publish metadata into local crux (preserve local-only meta fields)
-    // Snapshot artifact fingerprints at publish time for change detection
-    const publishedFingerprints = buildFingerprintMap(artifacts || []);
-    const mergedMeta = { ...crux.meta, ...updated.meta, publishedFingerprints };
-
-    // Persist publish metadata locally
-    const { crux: cruxService } = getServices();
-    await cruxService.update(crux.id, { meta: mergedMeta });
-
-    const mergedCrux = { ...crux, ...updated, meta: mergedMeta };
+    const mergedCrux = await publishPipeline(crux, artifacts || []);
     set({ crux: mergedCrux, hasUnpublishedChanges: false });
-
-    // 4. Sync discoverable state and tags to server
-    try {
-      if (crux.discoverable) {
-        const tags = (crux.meta?.tags as string[]) || [];
-        await cruxes.syncTags(crux.id, tags);
-      } else {
-        await cruxes.syncTags(crux.id, []);
-      }
-    } catch {
-      // Best-effort — publish itself succeeded
-    }
   },
 
   unpublishCrux: async () => {
     const { crux } = get();
     if (!crux) return;
-
-    // Unpublish — removes S3 files and hard-deletes crux + all related entities from API
-    const { publish } = getServices();
-    await publish.unpublish(crux.id);
-
-    // Update local state
-    const meta = { ...crux.meta };
-    delete meta.publishedAt;
-    delete meta.publishedVersion;
-    set({ crux: { ...crux, meta, visibility: 'private' as const } });
+    const updated = await unpublishPipeline(crux);
+    set({ crux: updated });
   },
 
   // File CRUD actions
@@ -573,8 +452,9 @@ export const useCruxStore = create<CruxState>((set, get) => ({
     if (!crux) throw new Error('No active crux');
     const { artifact } = getServices();
     const text = content ?? '';
-    const ext = path.split('.').pop()?.toLowerCase() || 'txt';
-    const mime = MIME_MAP[ext] || 'text/plain';
+    const guessed = guessMimeType(path);
+    // User-created files default to editable text, not opaque bytes
+    const mime = guessed === 'application/octet-stream' ? 'text/plain' : guessed;
     const newArtifact = await artifact.create({
       resourceId: crux.id,
       content: text,
@@ -653,7 +533,6 @@ export const useCruxStore = create<CruxState>((set, get) => ({
       hasUnpublishedChanges: true,
     }));
     // Also close any editor tab for this file
-    const { useUIStore } = await import('@/stores/uiStore');
     useUIStore.getState().closeTab(id);
   },
 
@@ -667,7 +546,6 @@ export const useCruxStore = create<CruxState>((set, get) => ({
       hasUnpublishedChanges: true,
     }));
     // Close editor tabs for all deleted files
-    const { useUIStore } = await import('@/stores/uiStore');
     const uiStore = useUIStore.getState();
     for (const id of ids) {
       uiStore.closeTab(id);
@@ -750,6 +628,48 @@ export const useCruxStore = create<CruxState>((set, get) => ({
     set({ isCreatingGrowth: creating });
   },
 
+  // The snapshot lifecycle lives in services/growth (deep module); this action
+  // gathers workspace state, runs the core, and applies the result.
+  createSnapshot: async (options = {}) => {
+    // Desktop (ADR 0001): external edits may still be mid-ingest — a snapshot
+    // must never capture a half-observed state. Resolves immediately on web.
+    await flushIngestion();
+
+    const { crux, messages, messageSegmentStart, growths, growthCount, artifacts } = get();
+    if (!crux) return;
+
+    const deps = await defaultGrowthDeps();
+    const result = await createSnapshotCore(
+      { crux, messages, messageSegmentStart, growths, growthCount, artifactCount: artifacts.length },
+      options,
+      deps,
+    );
+
+    get().addGrowth(result.growth);
+    // Advance segment start so saveMeta only persists new messages going forward
+    set({ messageSegmentStart: get().messages.length });
+    await get().saveMeta();
+
+    // Fire-and-forget AI summary
+    if (!options.silent) {
+      const model = crux.meta?.settings?.model || 'claude-sonnet-4-20250514';
+      void generateSnapshotSummary({
+        dimensionId: result.growth.id,
+        messages,
+        artifactNames: result.artifactNames,
+        model,
+        previousSummary: result.previousSummary,
+        deps,
+        onApplied: (dimensionId, summary) =>
+          set((s) => ({
+            growths: s.growths.map((g) =>
+              g.id === dimensionId ? { ...g, meta: { ...g.meta, summary } } : g,
+            ),
+          })),
+      });
+    }
+  },
+
   // Snapshot viewing actions
   viewSnapshot: async (snapshotId: string, index: number) => {
     const { crux, artifacts, messages, messageSegmentStart, workspaceArtifacts, workspaceMessages } = get();
@@ -776,7 +696,6 @@ export const useCruxStore = create<CruxState>((set, get) => ({
     });
 
     // Re-select the same file (by path) in the new artifact set
-    const { useUIStore } = await import('@/stores/uiStore');
     const activeTabId = useUIStore.getState().editor.activeTabId;
     if (activeTabId) {
       const sourceArtifacts = workspaceArtifacts ?? artifacts;
@@ -795,7 +714,6 @@ export const useCruxStore = create<CruxState>((set, get) => ({
     const { workspaceArtifacts, workspaceMessages, workspaceSegmentStart, artifacts } = get();
 
     // Capture active tab path before swapping artifacts
-    const { useUIStore } = await import('@/stores/uiStore');
     const activeTabId = useUIStore.getState().editor.activeTabId;
     const prevPath = activeTabId
       ? ((artifacts.find((a) => a.id === activeTabId)?.meta?.path ||
@@ -830,8 +748,7 @@ export const useCruxStore = create<CruxState>((set, get) => ({
 
     // Auto-snapshot current state as a safety net before reverting
     try {
-      const { createSnapshot } = await import('@/services/growth.service');
-      await createSnapshot({ label: 'Before revert', silent: true });
+      await get().createSnapshot({ label: 'Before revert', silent: true });
     } catch (err) {
       console.warn('Failed to auto-snapshot before revert:', err);
     }
@@ -843,24 +760,11 @@ export const useCruxStore = create<CruxState>((set, get) => ({
     // Clone snapshot artifacts to workspace
     await artifact.cloneArtifactsToSnapshot(snapshotId, crux.id);
 
-    // Rebuild conversation by walking the parentCruxId chain from this snapshot
-    const snapshotCrux = await cruxService.findById(snapshotId);
-    const snapshotMessages: ChatMessage[] = snapshotCrux.meta?.messages || [];
-
-    // Walk the parent chain backwards to collect all segments
-    const chain: ChatMessage[][] = [snapshotMessages];
-    let parentId = (snapshotCrux.meta?.parentCruxId as string) || null;
-    while (parentId) {
-      try {
-        const parentCrux = await cruxService.findById(parentId);
-        chain.push(parentCrux.meta?.messages || []);
-        parentId = (parentCrux.meta?.parentCruxId as string) || null;
-      } catch {
-        break; // deleted snapshot — stop walking
-      }
-    }
-    chain.reverse(); // chronological order
-    const priorMessages = chain.flat();
+    // Rebuild conversation via the chain walk (Growth module, single impl)
+    const priorMessages = await collectChainMessages(
+      snapshotId,
+      chainLookupFromService({ findById: (id) => cruxService.findById(id) }),
+    );
 
     // Reload workspace artifacts
     const newWorkspaceArtifacts = await artifact.findByResource('crux', crux.id);
@@ -889,8 +793,7 @@ export const useCruxStore = create<CruxState>((set, get) => ({
 
     // Auto-snapshot current state first
     try {
-      const { createSnapshot } = await import('@/services/growth.service');
-      await createSnapshot({ label: 'Before branch', silent: true });
+      await get().createSnapshot({ label: 'Before branch', silent: true });
     } catch (err) {
       console.warn('Failed to auto-snapshot before branch:', err);
     }

@@ -7,23 +7,17 @@
  * Existing localStorage values are migrated into safeStorage on first read.
  */
 
-interface ElectronSecretsAPI {
-  available(): Promise<boolean>;
-  get(key: string): Promise<string | null>;
-  set(key: string, value: string): Promise<void>;
-  delete(key: string): Promise<void>;
-}
+import type { SecretsBridge } from '@/lib/platform';
 
-function electronSecrets(): ElectronSecretsAPI | null {
+function electronSecrets(): SecretsBridge | null {
   if (typeof window === 'undefined') return null;
-  return (window as unknown as { electronAPI?: { secrets?: ElectronSecretsAPI } }).electronAPI
-    ?.secrets ?? null;
+  return window.electronAPI?.secrets ?? null;
 }
 
-let availabilityCheck: Promise<ElectronSecretsAPI | null> | null = null;
+let availabilityCheck: Promise<SecretsBridge | null> | null = null;
 
 /** The safeStorage-backed API, or null when unavailable (web, or no keychain). */
-function backend(): Promise<ElectronSecretsAPI | null> {
+function backend(): Promise<SecretsBridge | null> {
   if (!availabilityCheck) {
     availabilityCheck = (async () => {
       const api = electronSecrets();

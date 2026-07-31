@@ -10,6 +10,7 @@ import { cn } from '@/lib/cn';
 import { ConsoleAvatar } from '@/components/keeper/Console';
 import { SearchIcon, MoodIcon, ChevronRightIcon } from '@/components/ui/icons';
 import { PANE_VAR_PREFIX, PANE_BUTTONS } from '@/components/workspace/paneConfig';
+import { Capability, can } from '@/lib/platform';
 
 export default function TopBar() {
   const navigate = useNavigate();
@@ -41,16 +42,18 @@ export default function TopBar() {
     }
   }, [titleDraft, cruxTitle, updateCrux]);
 
+  const desktopChrome = can(Capability.DesktopChrome);
+
   return (
     <header
       className={cn(
         'flex items-center justify-between px-3 border-b border-toolbar-border bg-toolbar',
-        window.electronAPI ? 'h-12 pl-24' : 'h-12', // left padding for macOS traffic lights
+        desktopChrome ? 'h-12 pl-24' : 'h-12', // left padding for macOS traffic lights
       )}
-      style={window.electronAPI ? { WebkitAppRegion: 'drag' } as React.CSSProperties : undefined}
+      style={desktopChrome ? { WebkitAppRegion: 'drag' } as React.CSSProperties : undefined}
     >
       {/* Left: branding + breadcrumb */}
-      <div className="flex items-center gap-1.5 min-w-0" style={window.electronAPI ? { WebkitAppRegion: 'no-drag' } as React.CSSProperties : undefined}>
+      <div className="flex items-center gap-1.5 min-w-0" style={desktopChrome ? { WebkitAppRegion: 'no-drag' } as React.CSSProperties : undefined}>
         {username ? (
           <button
             onClick={() => navigate('/home')}
@@ -105,7 +108,7 @@ export default function TopBar() {
       </div>
 
       {/* Right: pane toggles + console + user menu */}
-      <div className="flex items-center gap-1" style={window.electronAPI ? { WebkitAppRegion: 'no-drag' } as React.CSSProperties : undefined}>
+      <div className="flex items-center gap-1" style={desktopChrome ? { WebkitAppRegion: 'no-drag' } as React.CSSProperties : undefined}>
         {activeCruxId && (
           <>
             <div className="flex items-center">

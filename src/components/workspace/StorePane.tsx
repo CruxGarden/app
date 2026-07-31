@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useCruxStore } from '@/stores/cruxStore';
 import { getServices, isServicesReady } from '@/services';
+import { formatBytes } from '@/lib/format';
 import type { StoreEntry } from '@/services/sqlite/store.service';
 
 type EditingCell = { key: string; field: 'key' | 'value' | 'mode' } | null;
@@ -107,11 +108,6 @@ export default function StorePane() {
     const v = typeof e.value === 'string' ? e.value : JSON.stringify(e.value);
     return sum + new TextEncoder().encode(v).length;
   }, 0);
-
-  const formatSize = (bytes: number) => {
-    if (bytes < 1024) return `${bytes} B`;
-    return `${(bytes / 1024).toFixed(1)} KB`;
-  };
 
   if (!crux) {
     return (
@@ -240,7 +236,7 @@ export default function StorePane() {
 
       {/* Footer */}
       <div className="flex items-center justify-between px-3 py-1.5 border-t border-[var(--border)] text-[var(--text-muted)] text-xs">
-        <span>{entries.length} key{entries.length !== 1 ? 's' : ''} · {formatSize(totalSize)}</span>
+        <span>{entries.length} key{entries.length !== 1 ? 's' : ''} · {formatBytes(totalSize)}</span>
         {entries.length > 0 && (
           <button onClick={handleClearAll} className="hover:text-[var(--error)] transition-colors">
             Clear all

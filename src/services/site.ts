@@ -7,53 +7,31 @@
  */
 
 import type { Artifact } from '@/api/types';
-import { Capability, can } from '@/lib/platform';
+import {
+  Capability,
+  can,
+  type ToolchainBridge,
+  type DevServerBridge,
+  type ProjectBridge,
+} from '@/lib/platform';
 import { folderForCrux } from './project-folder';
-import { guessMimeType } from './sqlite/helpers';
-
-interface ToolchainBridge {
-  isInstalled(folder: string): Promise<boolean>;
-  hasPackageJson(folder: string): Promise<boolean>;
-  install(folder: string): Promise<{ code: number; log: string }>;
-  build(folder: string): Promise<{ code: number; log: string; distFiles: string[] }>;
-  scaffold(folder: string, args: string[]): Promise<{ code: number; log: string }>;
-  onOutput(cb: (data: { folder: string; line: string }) => void): () => void;
-}
-
-interface DevServerBridge {
-  start(folder: string): Promise<string>;
-  stop(folder: string): Promise<void>;
-  status(folder: string): Promise<{ status: string; url: string | null }>;
-  log(folder: string): Promise<string>;
-  onStatus(cb: (data: { folder: string; status: string; url: string | null }) => void): () => void;
-}
-
-interface ProjectReadBridge {
-  readFile(folder: string, relPath: string): Promise<Uint8Array>;
-}
+import { guessMimeType } from '@/lib/mime';
+import { pathOf } from '@/lib/artifact-path';
 
 function bridges(): {
   toolchain: ToolchainBridge;
   devserver: DevServerBridge;
-  project: ProjectReadBridge;
+  project: ProjectBridge;
 } | null {
   if (!can(Capability.Build)) return null;
-  const api = (window as unknown as {
-    electronAPI: {
-      toolchain: ToolchainBridge;
-      devserver: DevServerBridge;
-      project: ProjectReadBridge;
-    };
-  }).electronAPI;
+  const api = window.electronAPI;
+  if (!api) return null;
   return { toolchain: api.toolchain, devserver: api.devserver, project: api.project };
 }
 
 /** A crux whose files include an Astro config is a Site Crux. */
 export function isSiteCrux(artifacts: Artifact[]): boolean {
-  return artifacts.some((a) => {
-    const p = (a.meta?.path as string | undefined) || a.filename || '';
-    return /^astro\.config\.(mjs|js|ts|cjs)$/.test(p);
-  });
+  return artifacts.some((a) => /^astro\.config\.(mjs|js|ts|cjs)$/.test(pathOf(a)));
 }
 
 export class SiteBuildError extends Error {

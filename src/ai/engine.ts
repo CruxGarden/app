@@ -24,6 +24,14 @@ export type ConversationEvent =
 
 const MAX_ROUNDS = 10;
 
+/** Optional overrides — used by callers that aren't the crux workspace (e.g. the Keeper Console). */
+export interface ConversationOptions {
+  /** Use this system prompt verbatim instead of building the crux workspace prompt. */
+  systemPrompt?: string;
+  /** Tool set to offer the model. Pass [] for a plain chat with no tools. */
+  tools?: typeof TOOL_DEFINITIONS;
+}
+
 /**
  * Run the AI conversation loop.
  *
@@ -36,8 +44,9 @@ const MAX_ROUNDS = 10;
  * @param cruxId - The crux being worked on (for system prompt + tools)
  * @param messages - Conversation history
  * @param model - Model ID to use
- * @param executeToolFn - Tool executor (bound to cruxId via createToolExecutor)
+ * @param executeToolFn - Tool executor (bound to cruxId via createToolExecutor); omit for tool-less chats
  * @param signal - AbortSignal for cancellation
+ * @param options - System prompt / tool overrides for non-workspace callers
  */
 export async function* runConversation(
   adapter: ProviderAdapter,
@@ -45,13 +54,15 @@ export async function* runConversation(
   cruxId: string,
   messages: NormalizedMessage[],
   model: string,
-  executeToolFn: (
+  executeToolFn?: (
     name: string,
     input: Record<string, unknown>,
   ) => Promise<string | ToolResultContent>,
   signal?: AbortSignal,
+  options?: ConversationOptions,
 ): AsyncGenerator<ConversationEvent> {
-  let systemPrompt = await buildSystemPrompt(cruxId);
+  const tools = options?.tools ?? TOOL_DEFINITIONS;
+  let systemPrompt = options?.systemPrompt ?? (await buildSystemPrompt(cruxId));
   let currentMessages = [...messages];
   let fullTextContent = '';
   let hadMutation = false;
@@ -79,7 +90,7 @@ export async function* runConversation(
         systemPrompt,
         messages: currentMessages,
         model,
-        tools: TOOL_DEFINITIONS,
+        tools,
         onText: (_text) => {
           // We can't yield from inside a callback, so text is accumulated
           // in the StreamResponse and yielded after
@@ -135,8 +146,12 @@ export async function* runConversation(
       yield { type: 'text', content: response.textContent };
     }
 
-    // If no tool use, we're done
-    if (response.stopReason !== 'tool_use' || response.toolCalls.length === 0) {
+    // If no tool use (or no executor to run tools), we're done
+    if (
+      response.stopReason !== 'tool_use' ||
+      response.toolCalls.length === 0 ||
+      !executeToolFn
+    ) {
       yield {
         type: 'done',
         textContent: fullTextContent,
@@ -227,7 +242,8 @@ export async function* runConversation(
     }));
 
     // Refresh system prompt after mutations so AI sees updated file listing
-    if (roundHadMutation) {
+    // (workspace prompt only — custom prompts have no file listing to refresh)
+    if (roundHadMutation && !options?.systemPrompt) {
       systemPrompt = await buildSystemPrompt(cruxId);
     }
 

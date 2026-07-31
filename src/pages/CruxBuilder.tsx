@@ -8,6 +8,7 @@ import { Modal } from '@/components/ui';
 import SnapshotBanner from '@/components/growth/SnapshotBanner';
 import { cn } from '@/lib/cn';
 import { APP_NAME } from '@/lib/constants';
+import { pathOf, normalizePath } from '@/lib/artifact-path';
 
 export default function CruxBuilder() {
   const { id } = useParams<{ id: string }>();
@@ -37,11 +38,11 @@ export default function CruxBuilder() {
     if (editor.tabs.length > 0) return;
 
     const index = artifacts.find((a) => {
-      const p = (a.meta?.path || a.filename || '').toLowerCase().replace(/^\//, '');
+      const p = normalizePath(pathOf(a)).toLowerCase();
       return p === 'index.html';
     });
     if (index) {
-      const path = (index.meta?.path || index.filename || 'index.html') as string;
+      const path = pathOf(index) || 'index.html';
       openFile(index.id, path);
       // Defer viewMode set so the tab exists first
       requestAnimationFrame(() => {

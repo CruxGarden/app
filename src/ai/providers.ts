@@ -70,6 +70,16 @@ export function getModelInfo(modelId: string): ModelInfo | undefined {
   return undefined;
 }
 
+/** Get short display name for a model ID (e.g. "claude-sonnet-4-20250514" → "Sonnet 4") */
+export function getModelShortName(modelId?: string): string | null {
+  if (!modelId) return null;
+  for (const provider of Object.values(PROVIDERS)) {
+    const model = provider.models.find((m) => m.id === modelId);
+    if (model) return model.name;
+  }
+  return null;
+}
+
 /** Derive provider ID from a model string */
 export function getProviderForModel(model: string): string {
   if (model.startsWith('claude')) return 'anthropic';

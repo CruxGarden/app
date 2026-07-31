@@ -1,3 +1,17 @@
+/**
+ * App-side types for API entities.
+ *
+ * These are DOMAIN types, not pure wire types: entities like Crux and
+ * Artifact extend what the server returns with local-only fields (e.g.
+ * `Artifact.fingerprint` — the Blob Store key; `Crux.meta` strongly typed;
+ * `themeId`) that exist only in the local SQLite store.
+ *
+ * The wire contract itself is generated from the API's OpenAPI document into
+ * ./generated/schema.d.ts (`npm run generate:api`, after `npm run openapi` in
+ * api/). ./contract-check.ts statically asserts the request DTOs below stay
+ * assignable to the generated wire DTOs — contract drift fails `tsc`.
+ */
+
 // ── Auth ───────────────────────────────────────────────
 
 export interface AuthCredentials {

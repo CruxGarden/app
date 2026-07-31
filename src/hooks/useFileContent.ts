@@ -1,53 +1,10 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { Artifact } from '@/api/types';
 import { getServices } from '@/services';
+import { isTextMime } from '@/lib/mime';
 
-const IMAGE_TYPES = new Set([
-  'image/png',
-  'image/jpeg',
-  'image/gif',
-  'image/webp',
-  'image/bmp',
-  'image/x-icon',
-]);
-
-const TEXT_PREFIXES = [
-  'text/',
-  'application/json',
-  'application/javascript',
-  'application/typescript',
-  'application/xml',
-  'image/svg+xml',
-];
-
-const TEXT_EXTENSIONS = new Set([
-  'md', 'mdx', 'txt', 'csv', 'log',
-  'js', 'mjs', 'cjs', 'jsx', 'ts', 'tsx',
-  'json', 'jsonc', 'json5',
-  'html', 'htm', 'xml', 'svg', 'css', 'scss', 'less',
-  'py', 'rb', 'rs', 'go', 'java', 'c', 'cpp', 'h', 'hpp',
-  'sh', 'bash', 'zsh', 'fish',
-  'yaml', 'yml', 'toml', 'ini', 'cfg', 'conf', 'env',
-  'sql', 'graphql', 'gql',
-  'vue', 'svelte', 'astro',
-  'makefile', 'dockerfile',
-]);
-
-function isTextMime(mime: string, filename?: string): boolean {
-  if (TEXT_PREFIXES.some((t) => mime.startsWith(t))) return true;
-  if (filename) {
-    const ext = filename.split('.').pop()?.toLowerCase() || '';
-    if (TEXT_EXTENSIONS.has(ext)) return true;
-    // Files without extensions named like common dotfiles
-    const base = filename.split('/').pop()?.toLowerCase() || '';
-    if (TEXT_EXTENSIONS.has(base)) return true;
-  }
-  return false;
-}
-
-export function isImageMime(mime: string): boolean {
-  return IMAGE_TYPES.has(mime) || mime === 'image/svg+xml';
-}
+// Re-exported for existing importers; the implementation lives in lib/mime.
+export { isImageMime } from '@/lib/mime';
 
 interface UseFileContentResult {
   content: string | null;

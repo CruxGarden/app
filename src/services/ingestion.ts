@@ -4,35 +4,22 @@
  * Receives debounced change batches from the main-process watcher and records
  * external edits in the canonical store: fingerprint the file, skip if the
  * store already has that content (echo), otherwise create/update the artifact
- * row + blob through the artifact service (with write-through suppressed —
- * the content is already on disk).
+ * row + blob through the artifact service with `writeThrough: false` — the
+ * content is already on disk, and background flow never writes disk.
  *
  * Batches process strictly serially; `flushIngestion()` resolves when the
  * queue is empty — auto-snapshot MUST await it before capturing (a snapshot
  * taken mid-ingest would record a half-observed state).
  */
 
-import { Capability, can } from '@/lib/platform';
+import { Capability, can, type ProjectBridge, type ChangeBatch } from '@/lib/platform';
 import { getSqliteClient } from './sqlite/client';
 import { guessMimeType, hashContent } from './sqlite/helpers';
-import { withPathSuppressed } from './project-folder';
 import { getServices } from './index';
 
-interface ChangeBatch {
-  folder: string;
-  folderMissing?: boolean;
-  events: { type: 'write' | 'delete' | 'mkdir' | 'rmdir'; relPath: string }[];
-}
-
-interface ProjectEventsBridge {
-  readFile(folder: string, relPath: string): Promise<Uint8Array>;
-  onChanged(cb: (batch: ChangeBatch) => void): () => void;
-}
-
-function bridge(): ProjectEventsBridge | null {
+function bridge(): ProjectBridge | null {
   if (!can(Capability.ProjectFolder)) return null;
-  return (window as unknown as { electronAPI: { project: ProjectEventsBridge } }).electronAPI
-    .project;
+  return window.electronAPI?.project ?? null;
 }
 
 // ── Folder → crux resolution ────────────────────────────────────────────────
@@ -148,7 +135,7 @@ async function processBatch(batch: ChangeBatch): Promise<void> {
           [cruxId, keepPath],
         );
         if (row) {
-          await withPathSuppressed(cruxId, keepPath, () => artifact.delete(row.id));
+          await artifact.delete(row.id, { writeThrough: false });
           changed = true;
         }
         continue;
@@ -160,7 +147,7 @@ async function processBatch(batch: ChangeBatch): Promise<void> {
           [cruxId, event.relPath],
         );
         if (row) {
-          await withPathSuppressed(cruxId, event.relPath, () => artifact.delete(row.id));
+          await artifact.delete(row.id, { writeThrough: false });
           changed = true;
         }
         continue;
@@ -183,23 +170,25 @@ async function processBatch(batch: ChangeBatch): Promise<void> {
       if (existing?.fingerprint === fingerprint) continue;
 
       const mime = guessMimeType(event.relPath);
-      await withPathSuppressed(cruxId, event.relPath, async () => {
-        if (isProbablyText(bytes, mime)) {
-          await artifact.create({
-            resourceId: cruxId,
-            content: new TextDecoder().decode(bytes),
-            mimeType: mime === 'application/octet-stream' ? 'text/plain' : mime,
-            meta: { path: event.relPath },
-          });
-        } else {
-          await artifact.upload({
-            resourceId: cruxId,
-            blob: new Blob([bytes as BlobPart], { type: mime }),
-            mimeType: mime,
-            meta: { path: event.relPath },
-          });
-        }
-      });
+      // writeThrough: false — the content is already on disk, and writing it
+      // back could clobber an even newer external save (ADR 0001).
+      if (isProbablyText(bytes, mime)) {
+        await artifact.create({
+          resourceId: cruxId,
+          content: new TextDecoder().decode(bytes),
+          mimeType: mime === 'application/octet-stream' ? 'text/plain' : mime,
+          meta: { path: event.relPath },
+          writeThrough: false,
+        });
+      } else {
+        await artifact.upload({
+          resourceId: cruxId,
+          blob: new Blob([bytes as BlobPart], { type: mime }),
+          mimeType: mime,
+          meta: { path: event.relPath },
+          writeThrough: false,
+        });
+      }
       changed = true;
     } catch (err) {
       console.error(`[ingestion] failed to ingest ${event.relPath}:`, err);

@@ -26,10 +26,6 @@ export function siteRouteFor(filePath: string): string {
   return '/' + route.replace(/\/$/, '');
 }
 
-interface ToolchainOutputBridge {
-  onOutput(cb: (data: { folder: string; line: string }) => void): () => void;
-}
-
 /**
  * Dev-server preview for Site Cruxes (ADR 0005): `astro dev` on the crux's
  * own port. Install runs on first use; HMR handles reloads (no version
@@ -51,8 +47,7 @@ export function useSitePreview(cruxId: string, filePath: string, enabled: boolea
   // Surface toolchain output (pnpm install progress) while starting
   useEffect(() => {
     if (!active || base) return;
-    const api = (window as unknown as { electronAPI?: { toolchain?: ToolchainOutputBridge } })
-      .electronAPI?.toolchain;
+    const api = window.electronAPI?.toolchain;
     if (!api?.onOutput) return;
     return api.onOutput(({ line }) => setDetail(line));
   }, [active, base]);

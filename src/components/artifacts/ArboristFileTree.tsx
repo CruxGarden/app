@@ -19,6 +19,7 @@ import type { FileOperation } from '@/stores/uiStore';
 import { getFileIcon, FolderIcon, FolderOpenIcon, ChevronIcon } from './fileIcons';
 import { artifactsToTreeData, type TreeNodeData } from './treeData';
 import InlineRename from '@/components/workspace/InlineRename';
+import { walkEntry } from '@/lib/file-drop';
 
 // ── Types ────────────────────────────────────────────────
 
@@ -218,44 +219,6 @@ function UploadDropOverlay() {
       </div>
     </div>
   );
-}
-
-// ── Folder drop helpers ──────────────────────────────────
-
-async function walkEntry(
-  entry: FileSystemEntry,
-  basePath: string,
-): Promise<UploadFileEntry[]> {
-  if (entry.isFile) {
-    const file = await new Promise<File>((resolve, reject) =>
-      (entry as FileSystemFileEntry).file(resolve, reject),
-    );
-    return [{ file, path: basePath + entry.name }];
-  }
-  const dirReader = (entry as FileSystemDirectoryEntry).createReader();
-  const children = await readAllEntries(dirReader);
-  const results: UploadFileEntry[] = [];
-  for (const child of children) {
-    results.push(...(await walkEntry(child, basePath + entry.name + '/')));
-  }
-  return results;
-}
-
-function readAllEntries(reader: FileSystemDirectoryReader): Promise<FileSystemEntry[]> {
-  return new Promise((resolve, reject) => {
-    const all: FileSystemEntry[] = [];
-    function readBatch() {
-      reader.readEntries((entries) => {
-        if (entries.length === 0) {
-          resolve(all);
-        } else {
-          all.push(...entries);
-          readBatch(); // readEntries may return partial results
-        }
-      }, reject);
-    }
-    readBatch();
-  });
 }
 
 // ── Main component ───────────────────────────────────────

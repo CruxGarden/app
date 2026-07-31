@@ -3,10 +3,7 @@ import type { ToolResultContent } from '@/services/types';
 import type { ToolDefinition } from './adapters/types';
 import { validateToolInput } from './validation';
 import { formatToolError } from './errors';
-
-const IMAGE_MIMES = new Set([
-  'image/png', 'image/jpeg', 'image/jpg', 'image/gif', 'image/webp', 'image/svg+xml',
-]);
+import { guessMimeType, isBinaryMime, isImageMime } from '@/lib/mime';
 
 /**
  * Tool definitions — ported from api/src/ai/ai.tools.ts.
@@ -167,73 +164,6 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
     },
   },
 ];
-
-/** MIME type map — matches api/src/ai/ai.service.ts getMimeType */
-const MIME_MAP: Record<string, string> = {
-  // Text / code
-  ts: 'text/typescript',
-  tsx: 'text/typescript',
-  js: 'application/javascript',
-  jsx: 'application/javascript',
-  mjs: 'application/javascript',
-  json: 'application/json',
-  md: 'text/markdown',
-  css: 'text/css',
-  html: 'text/html',
-  htm: 'text/html',
-  txt: 'text/plain',
-  py: 'text/x-python',
-  rs: 'text/x-rust',
-  go: 'text/x-go',
-  yaml: 'text/yaml',
-  yml: 'text/yaml',
-  toml: 'text/toml',
-  sql: 'text/sql',
-  sh: 'text/x-shellscript',
-  xml: 'text/xml',
-  csv: 'text/csv',
-  // Images
-  svg: 'image/svg+xml',
-  png: 'image/png',
-  jpg: 'image/jpeg',
-  jpeg: 'image/jpeg',
-  gif: 'image/gif',
-  webp: 'image/webp',
-  ico: 'image/x-icon',
-  bmp: 'image/bmp',
-  // Documents
-  pdf: 'application/pdf',
-  // Archives
-  zip: 'application/zip',
-  tar: 'application/x-tar',
-  gz: 'application/gzip',
-  // Audio
-  mp3: 'audio/mpeg',
-  wav: 'audio/wav',
-  ogg: 'audio/ogg',
-  // Video
-  mp4: 'video/mp4',
-  webm: 'video/webm',
-  // Fonts
-  woff: 'font/woff',
-  woff2: 'font/woff2',
-  ttf: 'font/ttf',
-  otf: 'font/otf',
-};
-
-function guessMimeType(path: string): string {
-  const ext = path.split('.').pop()?.toLowerCase() || '';
-  return MIME_MAP[ext] || 'application/octet-stream';
-}
-
-/** Check if a MIME type represents a binary file (matches API's isBinaryMime) */
-function isBinaryMime(mimeType: string): boolean {
-  if (mimeType.startsWith('text/')) return false;
-  if (mimeType === 'application/json') return false;
-  if (mimeType === 'application/javascript') return false;
-  if (mimeType === 'image/svg+xml') return false;
-  return true;
-}
 
 /**
  * Create a tool executor bound to a specific crux.
@@ -548,7 +478,7 @@ async function toolReadFile(
     }
 
     // Images — return as image content block so the AI can see them
-    if (IMAGE_MIMES.has(mime)) {
+    if (isImageMime(mime)) {
       const buffer = await blob.arrayBuffer();
       const bytes = new Uint8Array(buffer);
       let base64 = '';

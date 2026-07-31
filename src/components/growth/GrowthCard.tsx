@@ -4,6 +4,7 @@ import 'react-photo-view/dist/react-photo-view.css';
 import { cn } from '@/lib/cn';
 import type { Dimension, Artifact } from '@/api/types';
 import { getServices } from '@/services';
+import { pathOf, basename } from '@/lib/artifact-path';
 
 interface GrowthCardProps {
   growth: Dimension;
@@ -44,31 +45,31 @@ function detectPreview(artifacts: Artifact[]): PreviewInfo | null {
   if (artifacts.length === 0) return null;
 
   const indexHtml = artifacts.find((a) => {
-    const p = ((a.meta?.path || a.filename || '') as string).toLowerCase();
+    const p = pathOf(a).toLowerCase();
     return p === 'index.html' || p.endsWith('/index.html');
   });
   if (indexHtml) {
-    return { type: 'html', path: (indexHtml.meta?.path || indexHtml.filename) as string, artifactId: indexHtml.id, mimeType: indexHtml.mimeType };
+    return { type: 'html', path: pathOf(indexHtml), artifactId: indexHtml.id, mimeType: indexHtml.mimeType };
   }
 
   const firstImage = artifacts.find((a) => a.mimeType?.startsWith('image/'));
   if (firstImage) {
-    return { type: 'image', path: (firstImage.meta?.path || firstImage.filename) as string, artifactId: firstImage.id, mimeType: firstImage.mimeType };
+    return { type: 'image', path: pathOf(firstImage), artifactId: firstImage.id, mimeType: firstImage.mimeType };
   }
 
   const readme = artifacts.find((a) => {
-    const p = ((a.meta?.path || a.filename || '') as string).toLowerCase();
+    const p = pathOf(a).toLowerCase();
     return p === 'readme.md' || p.endsWith('/readme.md');
   });
   if (readme) {
-    return { type: 'markdown', path: (readme.meta?.path || readme.filename) as string, artifactId: readme.id, mimeType: readme.mimeType };
+    return { type: 'markdown', path: pathOf(readme), artifactId: readme.id, mimeType: readme.mimeType };
   }
 
-  const firstText = artifacts.find((a) => a.encoding === 'utf-8' && !((a.meta?.path || '') as string).endsWith('.keep'));
+  const firstText = artifacts.find((a) => a.encoding === 'utf-8' && !pathOf(a).endsWith('.keep'));
   if (firstText) {
     const mime = firstText.mimeType || '';
     const isCode = mime.includes('javascript') || mime.includes('python') || mime.includes('css') || mime.includes('json') || mime.includes('xml');
-    return { type: isCode ? 'code' : 'text', path: (firstText.meta?.path || firstText.filename) as string, artifactId: firstText.id, mimeType: firstText.mimeType };
+    return { type: isCode ? 'code' : 'text', path: pathOf(firstText), artifactId: firstText.id, mimeType: firstText.mimeType };
   }
 
   return null;
@@ -246,7 +247,7 @@ export default function GrowthCard({ growth, index, isActive, isViewing, onClick
           {!thumbnailUrl && preview && (
             <span className="flex items-center gap-1 text-[10px] text-growth-card-text-muted mt-1">
               <PreviewIcon type={preview.type} />
-              <span className="truncate">{preview.path.split('/').pop()}</span>
+              <span className="truncate">{basename(preview.path)}</span>
             </span>
           )}
 

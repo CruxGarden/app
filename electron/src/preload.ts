@@ -1,11 +1,13 @@
 import { contextBridge, ipcRenderer } from 'electron';
+import type { ElectronBridge, ChangeBatch } from './bridge';
 
 /**
- * Preload script — exposes a type-safe IPC bridge to the renderer.
- * The renderer detects `window.electronAPI` to know it's running in Electron
- * and uses this bridge instead of the WASM/OPFS SQLite worker.
+ * Preload script — exposes the IPC bridge to the renderer.
+ * The contract lives in bridge.ts (shared with the renderer via
+ * app/src/lib/platform.ts); this file implements it. The renderer detects
+ * `window.electronAPI` to know it's running in Electron.
  */
-contextBridge.exposeInMainWorld('electronAPI', {
+const api: ElectronBridge = {
   sqlite: {
     run: (sql: string, params?: unknown[]) =>
       ipcRenderer.invoke('sqlite:run', sql, params),
@@ -58,15 +60,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
       ipcRenderer.invoke('project:list-files', folder) as Promise<string[]>,
     watch: (folder: string) => ipcRenderer.invoke('project:watch', folder) as Promise<void>,
     unwatch: (folder: string) => ipcRenderer.invoke('project:unwatch', folder) as Promise<void>,
-    onChanged: (
-      callback: (batch: {
-        folder: string;
-        folderMissing?: boolean;
-        events: { type: 'write' | 'delete'; relPath: string }[];
-      }) => void,
-    ) => {
+    onChanged: (callback: (batch: ChangeBatch) => void) => {
       const handler = (_event: unknown, batch: unknown) =>
-        callback(batch as Parameters<typeof callback>[0]);
+        callback(batch as ChangeBatch);
       ipcRenderer.on('project:changed', handler);
       return () => ipcRenderer.removeListener('project:changed', handler);
     },
@@ -139,4 +135,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
       return () => ipcRenderer.removeListener('ffmpeg:progress', handler);
     },
   },
-});
+};
+
+contextBridge.exposeInMainWorld('electronAPI', api);

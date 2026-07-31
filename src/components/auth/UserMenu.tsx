@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/stores/authStore';
 import { useUIStore } from '@/stores/uiStore';
@@ -7,6 +7,7 @@ import { useAppStore } from '@/stores/appStore';
 import { useThemeStore } from '@/stores/themeStore';
 import { ThemeMode } from '@/lib/types';
 import { cn } from '@/lib/cn';
+import { useDismiss } from '@/hooks/useDismiss';
 
 function SunIcon() {
   return (
@@ -71,16 +72,8 @@ export default function UserMenu() {
   const menuRef = useRef<HTMLDivElement>(null);
 
   // Close on outside click
-  useEffect(() => {
-    if (!open) return;
-    const handler = (e: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-        setOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
-  }, [open]);
+  const close = useCallback(() => setOpen(false), []);
+  useDismiss(menuRef, close, open);
 
   const initial = author?.username?.charAt(0)?.toUpperCase() ?? '?';
   const avatarUrl = useAvatarUrl(author);

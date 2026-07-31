@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { cn } from '@/lib/cn';
 import { useUIStore } from '@/stores/uiStore';
+import { useDismiss } from '@/hooks/useDismiss';
 
 interface MenuItem {
   label: string;
@@ -40,25 +41,17 @@ export default function ContextMenu({
   const hideContextMenu = useUIStore((s) => s.hideContextMenu);
   const ref = useRef<HTMLDivElement>(null);
 
-  // Close on click outside or Escape
+  // Close on click outside
+  useDismiss(ref, hideContextMenu, contextMenu.visible);
+
+  // Close on Escape
   useEffect(() => {
     if (!contextMenu.visible) return;
-
-    const handleClick = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) {
-        hideContextMenu();
-      }
-    };
     const handleKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') hideContextMenu();
     };
-
-    document.addEventListener('mousedown', handleClick);
     document.addEventListener('keydown', handleKey);
-    return () => {
-      document.removeEventListener('mousedown', handleClick);
-      document.removeEventListener('keydown', handleKey);
-    };
+    return () => document.removeEventListener('keydown', handleKey);
   }, [contextMenu.visible, hideContextMenu]);
 
   if (!contextMenu.visible) return null;

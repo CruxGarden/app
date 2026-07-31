@@ -2,7 +2,6 @@ import type { ICruxService } from './crux.service';
 import type { IArtifactService } from './artifact.service';
 import type { IDimensionService } from './dimension.service';
 import type { IAuthorService } from './author.service';
-import type { IPublishService } from './publish.service';
 import type { IStoreService } from './sqlite/store.service';
 import { getSqliteClient } from './sqlite/client';
 import { initSettings } from './settings';
@@ -13,7 +12,6 @@ export interface Services {
   artifact: IArtifactService;
   dimension: IDimensionService;
   author: IAuthorService;
-  publish: IPublishService;
   store: IStoreService;
 }
 
@@ -53,14 +51,11 @@ async function doInitServices(backend?: Backend): Promise<Services> {
     const { ApiArtifactService } = await import('./api/artifact.service');
     const { ApiDimensionService } = await import('./api/dimension.service');
     const { ApiAuthorService } = await import('./api/author.service');
-    const { ApiPublishService } = await import('./api/publish.service');
-
     services = {
       crux: new ApiCruxService(),
       artifact: new ApiArtifactService(),
       dimension: new ApiDimensionService(),
       author: new ApiAuthorService(),
-      publish: new ApiPublishService(),
       store: storeService,
     };
   } else {
@@ -68,14 +63,11 @@ async function doInitServices(backend?: Backend): Promise<Services> {
     const { SqliteArtifactService } = await import('./sqlite/artifact.service');
     const { SqliteDimensionService } = await import('./sqlite/dimension.service');
     const { SqliteAuthorService } = await import('./sqlite/author.service');
-    const { ApiPublishService } = await import('./api/publish.service');
-
     services = {
       crux: new SqliteCruxService(),
       artifact: new SqliteArtifactService(),
       dimension: new SqliteDimensionService(),
       author: new SqliteAuthorService(),
-      publish: new ApiPublishService(), // always talks to API
       store: storeService,
     };
   }
@@ -142,5 +134,4 @@ export type { ICruxService } from './crux.service';
 export type { IArtifactService } from './artifact.service';
 export type { IDimensionService } from './dimension.service';
 export type { IAuthorService } from './author.service';
-export type { IPublishService } from './publish.service';
 export type { IStoreService } from './sqlite/store.service';

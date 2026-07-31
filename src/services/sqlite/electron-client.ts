@@ -1,39 +1,19 @@
 import type { ISqliteClient } from './client';
+import type { SqliteBridge } from '@/lib/platform';
 
 /**
  * Electron IPC-based SQLite client.
- * Talks to the main process via window.electronAPI.sqlite.
- * Implements ISqliteClient so the rest of the app is backend-agnostic.
+ * Talks to the main process via window.electronAPI.sqlite (contract in
+ * electron/src/bridge.ts). Implements ISqliteClient so the rest of the app
+ * is backend-agnostic.
  */
-
-interface ElectronSqliteAPI {
-  run: (sql: string, params?: unknown[]) => Promise<{ changes: number }>;
-  get: (sql: string, params?: unknown[]) => Promise<unknown>;
-  all: (sql: string, params?: unknown[]) => Promise<unknown[]>;
-  export: () => Promise<ArrayBuffer>;
-  import: (data: ArrayBuffer) => Promise<void>;
-  close: () => Promise<void>;
-  blobWrite: (fingerprint: string, data: Uint8Array) => Promise<void>;
-  blobRead: (fingerprint: string) => Promise<Uint8Array>;
-  blobDelete: (fingerprint: string) => Promise<void>;
-  blobExists: (fingerprint: string) => Promise<boolean>;
-  blobWipeAll: () => Promise<void>;
-}
-
-declare global {
-  interface Window {
-    electronAPI?: {
-      sqlite: ElectronSqliteAPI;
-    };
-  }
-}
 
 export function isElectron(): boolean {
   return typeof window !== 'undefined' && !!window.electronAPI?.sqlite;
 }
 
 export class ElectronSqliteClient implements ISqliteClient {
-  private get api(): ElectronSqliteAPI {
+  private get api(): SqliteBridge {
     if (!window.electronAPI?.sqlite) {
       throw new Error('Electron SQLite API not available');
     }

@@ -3,6 +3,7 @@ import { useAuthStore } from '@/stores/authStore';
 import { useAppStore } from '@/stores/appStore';
 import { useCruxStore } from '@/stores/cruxStore';
 import { cn } from '@/lib/cn';
+import { formatDateTime } from '@/lib/format';
 import { Spinner } from '@/components/ui';
 import { usePaneWidth } from '@/hooks/usePaneWidth';
 import CreateAuthorModal from '@/components/auth/CreateAuthorModal';
@@ -80,17 +81,6 @@ function ExternalLinkIcon() {
     </svg>
   );
 }
-
-function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString(undefined, {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
-}
-
 
 export default function PublishPane() {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
@@ -210,13 +200,13 @@ export default function PublishPane() {
                 <span className="text-[11px] font-mono text-text-muted">v{publishedVersion}</span>
               </div>
               <div className="text-[10px] font-mono text-text-muted">
-                {formatDate(publishedAt)}
+                {formatDateTime(publishedAt)}
               </div>
               {hasUnpublishedChanges && lastEditedAt && new Date(lastEditedAt) > new Date(publishedAt) && (
                 <div className="flex items-center gap-1.5 pt-1.5 border-t border-border">
                   <span className="w-1.5 h-1.5 rounded-full bg-error shrink-0" />
                   <span className="text-[10px] font-mono text-error">
-                    Edited {formatDate(lastEditedAt)}
+                    Edited {formatDateTime(lastEditedAt)}
                   </span>
                 </div>
               )}

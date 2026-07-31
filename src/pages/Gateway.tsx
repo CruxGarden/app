@@ -15,7 +15,7 @@ import { useUIStore } from '@/stores/uiStore';
 import { importGarden } from '@/services/garden-io';
 import * as syncApi from '@/api/sync';
 import { cn } from '@/lib/cn';
-import { isDesktop } from '@/lib/platform';
+import { Capability, can } from '@/lib/platform';
 import { getGardenRoot, chooseGardenRoot, shortenHomePath } from '@/services/desktop';
 
 // ── Types ──────────────────────────────────────────────
@@ -39,7 +39,7 @@ export default function Gateway() {
     <div className="relative min-h-screen flex items-center justify-center p-4">
       {/* Desktop: Gateway renders outside the Shell (no TopBar), so provide a
           drag region or the frameless window can't be moved */}
-      {isDesktop() && (
+      {can(Capability.DesktopChrome) && (
         <div
           className="fixed top-0 left-0 right-0 h-10 z-50"
           style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}
@@ -199,7 +199,7 @@ function SetupStep({ onBack }: { onBack: () => void }) {
   const [openSection, setOpenSection] = useState<SetupSection | null>(SetupSection.Username);
   const [aiEnabled, setAiEnabled] = useState(() => getSetting(SettingsKey.AiEnabled) === 'true');
   const [keysConfigured, setKeysConfigured] = useState(false);
-  const desktop = isDesktop();
+  const desktop = can(Capability.ProjectFolder);
   const [gardenRoot, setGardenRoot] = useState<string | null>(null);
 
   // Desktop: show where Project Folders will live
@@ -405,7 +405,7 @@ function SetupStep({ onBack }: { onBack: () => void }) {
             {aiEnabled && (
               <div className="mt-3">
                 <p className="text-xs text-text-muted mb-3">
-                  {isDesktop()
+                  {can(Capability.SecureSecrets)
                     ? 'Add one or more API keys to build with AI agents. Keys are encrypted in your Mac’s Keychain'
                     : 'Add one or more API keys to build with AI agents. Keys stay in your browser'}
                 </p>

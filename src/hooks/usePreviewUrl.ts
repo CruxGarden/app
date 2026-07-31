@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, useMemo } from 'react';
 import { useCruxStore } from '@/stores/cruxStore';
 import { getServices } from '@/services';
 import { normalizePath } from '@/lib/rewriteUrls';
-import { Capability, can } from '@/lib/platform';
+import { Capability, can, type PreviewBridge } from '@/lib/platform';
 import { folderForCrux } from '@/services/project-folder';
 import {
   cachePreviewFiles,
@@ -14,14 +14,9 @@ import {
   type PreviewFile,
 } from '@/lib/previewCache';
 
-interface PreviewBridge {
-  start(folder: string): Promise<string>;
-  stop(folder: string): Promise<void>;
-}
-
 function previewBridge(): PreviewBridge | null {
   if (!can(Capability.PreviewServer)) return null;
-  return (window as unknown as { electronAPI: { preview: PreviewBridge } }).electronAPI.preview;
+  return window.electronAPI?.preview ?? null;
 }
 
 /**

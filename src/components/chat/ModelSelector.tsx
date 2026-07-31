@@ -1,7 +1,8 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import { PROVIDERS } from '@/ai/providers';
 import { PROVIDER_ICONS } from '@/components/ui/ProviderIcons';
 import { cn } from '@/lib/cn';
+import { useDismiss } from '@/hooks/useDismiss';
 
 interface ModelSelectorProps {
   value: string;
@@ -47,16 +48,8 @@ export default function ModelSelector({ value, onChange, disabled }: ModelSelect
   const [open, setOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    if (!open) return;
-    const handler = (e: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-        setOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
-  }, [open]);
+  const close = useCallback(() => setOpen(false), []);
+  useDismiss(menuRef, close, open);
 
   const groups = getAllModels();
   const label = getModelLabel(value);

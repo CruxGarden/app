@@ -46,8 +46,9 @@ export default function GrowthTimeline({
 
   const setFrequency = (freq: SnapshotFrequency) => {
     if (!crux) return;
-    const meta = { ...crux.meta, settings: { ...crux.meta?.settings, snapshotFrequency: freq } };
-    useCruxStore.setState({ crux: { ...crux, meta } });
+    useCruxStore
+      .getState()
+      .patchCruxMeta({ settings: { ...crux.meta?.settings, snapshotFrequency: freq } });
     saveMeta();
   };
 
