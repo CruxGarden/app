@@ -8,6 +8,7 @@ import { getStoredTokens } from '@/api/client';
 import MarkdownRenderer from '@/components/chat/MarkdownRenderer';
 import { getFileIcon } from '@/components/artifacts/fileIcons';
 import { LoadingPanel } from '@/components/ui';
+import { pathOf, basename, extensionOf } from '@/lib/artifact-path';
 
 // Template for per-crux isolated subdomain: https://{cruxId}.publish.crux.garden
 const PUBLISH_ORIGIN_TEMPLATE = import.meta.env.VITE_PUBLISH_ORIGIN_TEMPLATE || '';
@@ -36,20 +37,18 @@ interface MainFile {
 function resolveMain(artifacts: Artifact[]): MainFile | null {
   if (artifacts.length === 0) return null;
 
-  const byPath = (a: Artifact) => a.meta?.path || a.filename || a.id;
-  const ext = (a: Artifact) => byPath(a).split('.').pop()?.toLowerCase() || '';
+  const ext = (a: Artifact) => extensionOf(pathOf(a));
 
   // 1. index.html at root
   const indexHtml = artifacts.find((a) => {
-    const p = byPath(a).toLowerCase();
+    const p = pathOf(a).toLowerCase();
     return p === 'index.html' || p === '/index.html';
   });
   if (indexHtml) return { artifact: indexHtml, mode: 'html' };
 
   // 2. Any root-level .html
   const rootHtml = artifacts.find((a) => {
-    const p = byPath(a);
-    const parts = p.split('/').filter(Boolean);
+    const parts = pathOf(a).split('/').filter(Boolean);
     return parts.length === 1 && (ext(a) === 'html' || ext(a) === 'htm');
   });
   if (rootHtml) return { artifact: rootHtml, mode: 'html' };
@@ -60,7 +59,7 @@ function resolveMain(artifacts: Artifact[]): MainFile | null {
 
   // 4. README.md at root
   const readme = artifacts.find((a) => {
-    const p = byPath(a).toLowerCase();
+    const p = pathOf(a).toLowerCase();
     return p === 'readme.md' || p === '/readme.md';
   });
   if (readme) return { artifact: readme, mode: 'markdown' };
@@ -182,7 +181,7 @@ function HtmlRenderer({
   if (PUBLISH_ORIGIN_TEMPLATE || PUBLISHED_CONTENT_URL) {
     // If a sub-path is provided (deep link), use it directly — CloudFront Function
     // will rewrite non-file paths to index.html for SPA support
-    const entryPath = subPath || artifact.meta?.path || artifact.filename || 'index.html';
+    const entryPath = subPath || pathOf(artifact) || 'index.html';
     // Per-crux subdomain: https://{cruxId}.publish.crux.garden/{entryPath}
     // Legacy flat URL: https://publish.crux.garden/{cruxId}/{entryPath}
     const src = PUBLISH_ORIGIN_TEMPLATE
@@ -297,7 +296,7 @@ function ImageRenderer({
   downloadBlob: DownloadBlobFn;
 }) {
   const [objectUrl, setObjectUrl] = useState<string | null>(null);
-  const path = artifact.meta?.path || artifact.filename || artifact.id;
+  const path = pathOf(artifact) || artifact.id;
 
   useEffect(() => {
     let url: string | null = null;
@@ -341,8 +340,8 @@ function FileListing({
   downloadBlob: DownloadBlobFn;
 }) {
   const sorted = [...artifacts].sort((a, b) => {
-    const pa = a.meta?.path || a.filename || a.id;
-    const pb = b.meta?.path || b.filename || b.id;
+    const pa = pathOf(a) || a.id;
+    const pb = pathOf(b) || b.id;
     return pa.localeCompare(pb);
   });
 
@@ -362,8 +361,8 @@ function FileListing({
         <h2 className="text-lg font-display font-medium text-text mb-4">Artifacts</h2>
         <div className="space-y-1">
           {sorted.map((a) => {
-            const path = a.meta?.path || a.filename || a.id;
-            const name = path.split('/').pop() || path;
+            const path = pathOf(a) || a.id;
+            const name = basename(path);
             return (
               <button
                 key={a.id}

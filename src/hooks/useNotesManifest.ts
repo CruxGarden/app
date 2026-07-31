@@ -63,11 +63,7 @@ export function useNotesManifest() {
         });
 
         // Merge into store (upload upserts, so merge by ID)
-        useCruxStore.setState((state) => ({
-          artifacts: state.artifacts.some((a) => a.id === newArtifact.id)
-            ? state.artifacts.map((a) => (a.id === newArtifact.id ? newArtifact : a))
-            : [...state.artifacts, newArtifact],
-        }));
+        useCruxStore.getState().upsertArtifact(newArtifact);
       } catch (err) {
         console.error('Failed to update vault manifest:', err);
       } finally {

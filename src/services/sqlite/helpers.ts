@@ -62,55 +62,8 @@ export function generateSlug(title?: string): string {
 
 // ── MIME type detection ──────────────────────────────
 
-const MIME_MAP: Record<string, string> = {
-  '.html': 'text/html',
-  '.astro': 'text/plain',
-  '.htm': 'text/html',
-  '.css': 'text/css',
-  '.js': 'application/javascript',
-  '.mjs': 'application/javascript',
-  '.ts': 'text/typescript',
-  '.tsx': 'text/typescript',
-  '.jsx': 'application/javascript',
-  '.json': 'application/json',
-  '.md': 'text/markdown',
-  '.txt': 'text/plain',
-  '.svg': 'image/svg+xml',
-  '.png': 'image/png',
-  '.jpg': 'image/jpeg',
-  '.jpeg': 'image/jpeg',
-  '.gif': 'image/gif',
-  '.webp': 'image/webp',
-  '.ico': 'image/x-icon',
-  '.pdf': 'application/pdf',
-  '.mp4': 'video/mp4',
-  '.webm': 'video/webm',
-  '.mp3': 'audio/mpeg',
-  '.wav': 'audio/wav',
-  '.woff': 'font/woff',
-  '.woff2': 'font/woff2',
-  '.ttf': 'font/ttf',
-  '.otf': 'font/otf',
-  '.xml': 'application/xml',
-  '.yaml': 'text/yaml',
-  '.yml': 'text/yaml',
-  '.csv': 'text/csv',
-  '.py': 'text/x-python',
-  '.rb': 'text/x-ruby',
-  '.go': 'text/x-go',
-  '.rs': 'text/x-rust',
-  '.java': 'text/x-java',
-  '.c': 'text/x-c',
-  '.cpp': 'text/x-c++',
-  '.h': 'text/x-c',
-  '.sh': 'text/x-sh',
-  '.toml': 'text/x-toml',
-};
-
-export function guessMimeType(path: string): string {
-  const ext = '.' + path.split('.').pop()?.toLowerCase();
-  return MIME_MAP[ext] || 'application/octet-stream';
-}
+// Single MIME table lives in lib/mime; re-exported for existing importers.
+export { guessMimeType } from '@/lib/mime';
 
 // ── Content hashing ──────────────────────────────────
 

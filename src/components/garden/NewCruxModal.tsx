@@ -260,7 +260,7 @@ export default function NewCruxModal({ open, onClose }: NewCruxModalProps) {
 
             // Update store messages so UI reflects the greeting immediately
             if (templateDef.greeting) {
-              useCruxStore.setState({ messages });
+              useCruxStore.getState().setMessages(messages);
             }
           }
         }

@@ -1,4 +1,5 @@
 /* eslint-disable react-refresh/only-export-components */
+import { extensionOf } from '@/lib/artifact-path';
 import audioIcon from 'material-icon-theme/icons/audio.svg?url';
 import cIcon from 'material-icon-theme/icons/c.svg?url';
 import consoleIcon from 'material-icon-theme/icons/console.svg?url';
@@ -104,7 +105,7 @@ export function FolderOpenIcon() {
 }
 
 export function getFileIcon(filename: string): React.ReactNode {
-  const ext = filename.split('.').pop()?.toLowerCase() || '';
+  const ext = extensionOf(filename);
   const src = EXT_ICON_MAP[ext] ?? fileIcon;
   return <MaterialIcon src={src} label={ext} />;
 }

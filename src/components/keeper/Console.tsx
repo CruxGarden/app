@@ -1,8 +1,9 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { cn } from '@/lib/cn';
 import type { ChatMessage } from '@/api/types';
-import { PROVIDERS, getProviderForModel } from '@/ai/providers';
+import { getProviderForModel, getModelShortName } from '@/ai/providers';
 import { getAdapter } from '@/ai/adapters';
+import { runConversation } from '@/ai/engine';
 import type { NormalizedMessage } from '@/services/types';
 import MarkdownRenderer from '@/components/chat/MarkdownRenderer';
 import ModelSelector from '@/components/chat/ModelSelector';
@@ -11,6 +12,7 @@ import { useBlobUrl } from '@/hooks/useBlobUrl';
 import { useAppStore } from '@/stores/appStore';
 import { useThemeStore } from '@/stores/themeStore';
 import { getApiKey } from '@/ai/keys';
+import { formatTime } from '@/lib/format';
 import { getSetting, setSetting, removeSetting } from '@/services/settings';
 import { SettingsKey } from '@/lib/constants';
 import { getPersona, type PersonaSettings } from '@/components/mood/mood-helpers';
@@ -136,7 +138,8 @@ function extractTitle(msgs: { role: string; content: string }[]): string {
   return text.length > 40 ? text.slice(0, 40) + '…' : text;
 }
 
-function formatTime(ts: number): string {
+/** Relative age for conversation list rows ("just now", "5m ago", "Jul 4") */
+function formatRelativeTime(ts: number): string {
   const d = new Date(ts);
   const now = new Date();
   const diff = now.getTime() - ts;
@@ -147,21 +150,6 @@ function formatTime(ts: number): string {
     return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
   }
   return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: '2-digit' });
-}
-
-function formatTimestamp(iso?: string): string {
-  if (!iso) return '';
-  const d = new Date(iso);
-  return d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
-}
-
-function getModelShortName(modelId?: string): string | null {
-  if (!modelId) return null;
-  for (const provider of Object.values(PROVIDERS)) {
-    const model = provider.models.find((m) => m.id === modelId);
-    if (model) return model.name;
-  }
-  return null;
 }
 
 // ── Component ──
@@ -322,20 +310,31 @@ export default function Console() {
       const adapter = await getAdapter(model);
       const normalizedMsgs = toNormalizedMessages(currentMessages);
 
-      const response = await adapter.stream({
+      // Console is a second caller of the Collaboration engine — same loop as
+      // the workspace chat, just with no tools and the Keeper's own prompt.
+      let accumulated = '';
+      for await (const event of runConversation(
+        adapter,
         apiKey,
-        systemPrompt: persona.systemPrompt || KEEPER_SYSTEM_PROMPT,
-        messages: normalizedMsgs,
+        '',
+        normalizedMsgs,
         model,
-        tools: [],
-        onText: (text) => setStreamContent(text),
-        signal: controller.signal,
-      });
+        undefined,
+        controller.signal,
+        { systemPrompt: persona.systemPrompt || KEEPER_SYSTEM_PROMPT, tools: [] },
+      )) {
+        if (event.type === 'text') {
+          accumulated += event.content;
+          setStreamContent(accumulated);
+        } else if (event.type === 'error') {
+          setError(event.message);
+        }
+      }
 
-      if (response.textContent) {
+      if (accumulated) {
         const assistantMsg: ChatMessage = {
           role: 'assistant',
-          content: response.textContent,
+          content: accumulated,
           timestamp: new Date().toISOString(),
           model,
         };
@@ -411,7 +410,7 @@ export default function Console() {
                 >
                   <div className="flex-1 min-w-0">
                     <p className="text-[10px] font-mono truncate">{c.title}</p>
-                    <p className="text-[9px] font-mono text-text-muted/60">{formatTime(c.createdAt)}</p>
+                    <p className="text-[9px] font-mono text-text-muted/60">{formatRelativeTime(c.createdAt)}</p>
                   </div>
                   <button
                     onClick={(e) => { e.stopPropagation(); deleteConversation(c.id); }}
@@ -451,7 +450,7 @@ export default function Console() {
 
                   {/* Metadata footer — timestamp + model */}
                   <div className="mt-1.5 flex items-center gap-2 text-[10px] font-mono text-text-muted/50">
-                    {msg.timestamp && <span>{formatTimestamp(msg.timestamp)}</span>}
+                    {msg.timestamp && <span>{formatTime(msg.timestamp)}</span>}
                     {msg.role === 'assistant' && msg.model && (
                       <span className="text-right flex-1">{getModelShortName(msg.model) || msg.model}</span>
                     )}

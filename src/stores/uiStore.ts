@@ -143,13 +143,6 @@ interface UIState {
   setMoodPanelOpen: (open: boolean) => void;
   toggleMoodPanel: () => void;
 
-  // ── Legacy compatibility ──
-  fileViewerOpen: boolean;
-  timelineOpen: boolean;
-  toggleFileViewer: () => void;
-  toggleTimeline: () => void;
-  setFileViewer: (open: boolean) => void;
-  setTimeline: (open: boolean) => void;
 }
 
 // ── Helpers ─────────────────────────────────────────────
@@ -760,30 +753,4 @@ export const useUIStore = create<UIState>()((set, get) => ({
   toggleConsole: () => set((s) => ({ consoleOpen: !s.consoleOpen })),
   setMoodPanelOpen: (open) => set({ moodPanelOpen: open }),
   toggleMoodPanel: () => set((s) => ({ moodPanelOpen: !s.moodPanelOpen })),
-
-  // ── Legacy compatibility (derived from pane system) ──
-
-  get fileViewerOpen() {
-    const s = get();
-    return s.paneVisibility.artifacts || s.paneVisibility.workshop;
-  },
-  get timelineOpen() {
-    return get().paneVisibility.history;
-  },
-
-  toggleFileViewer: () => {
-    const s = get();
-    if (s.paneVisibility.artifacts) {
-      get().setPaneVisible('artifacts', false);
-      get().setPaneVisible('workshop', false);
-    } else {
-      get().setPaneVisible('artifacts', true);
-    }
-  },
-  toggleTimeline: () => {
-    const s = get();
-    get().setPaneVisible('history', !s.paneVisibility.history);
-  },
-  setFileViewer: (open) => get().setPaneVisible('workshop', open),
-  setTimeline: (open) => get().setPaneVisible('history', open),
 }));

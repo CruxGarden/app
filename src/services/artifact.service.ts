@@ -11,7 +11,8 @@ export interface IArtifactService {
   create(input: CreateArtifactInput): Promise<Artifact>;
   upload(input: UploadArtifactInput): Promise<Artifact>;
   update(id: string, updates: UpdateArtifactInput): Promise<Artifact>;
-  delete(id: string): Promise<void>;
+  /** opts.writeThrough=false records a deletion already made on disk (ingestion). */
+  delete(id: string, opts?: { writeThrough?: boolean }): Promise<void>;
   readContent(id: string): Promise<string>;
   downloadBlob(id: string): Promise<Blob>;
 

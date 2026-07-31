@@ -1,4 +1,5 @@
 import type { Artifact } from '@/api/types';
+import { pathOf } from '@/lib/artifact-path';
 
 export interface TreeNodeData {
   id: string;
@@ -27,7 +28,7 @@ export function artifactsToTreeData(artifacts: Artifact[]): TreeNodeData[] {
   const root: BuildNode = { name: '', path: '', children: new Map() };
 
   for (const a of artifacts) {
-    const filePath = a.meta?.path || a.filename || a.id;
+    const filePath = pathOf(a) || a.id;
     const parts = filePath.split('/').filter(Boolean);
     let current = root;
 

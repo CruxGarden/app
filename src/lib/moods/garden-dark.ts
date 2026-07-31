@@ -18,10 +18,10 @@ export const GARDEN_DARK = {
   // ══════════════════════════════════════════════════════
 
   bg: '#0b0d0c',
-  text: '#e2e4e3',
-  textMuted: '#8b908d',
-  accent: '#7db3a3',
-  border: 'rgba(82, 96, 86, 0.18)',
+  text: '#e8ebe9',
+  textMuted: '#98a49e',
+  accent: '#72c3a8',
+  border: 'rgba(94, 112, 100, 0.28)',
   panel: '#141816',
   surface: '#121513',
   error: '#e63946',

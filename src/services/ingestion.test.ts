@@ -13,11 +13,13 @@ type Batch = {
 function fakeBridge() {
   const files = new Map<string, Uint8Array>();
   let subscriber: ((batch: Batch) => void) | null = null;
+  const writeLog: string[] = [];
   const api = {
     createFolder: async (slug: string) => `/garden/${slug}`,
     ensureFolder: async (folder: string) => folder,
     folderExists: async () => true,
     writeFile: async (folder: string, rel: string, data: Uint8Array) => {
+      writeLog.push(rel);
       files.set(`${folder}::${rel}`, data);
     },
     readFile: async (folder: string, rel: string) => {
@@ -40,6 +42,7 @@ function fakeBridge() {
   return {
     api,
     files,
+    writeLog,
     /** Simulate the OS: put bytes on "disk" WITHOUT the app knowing. */
     externalWrite(folder: string, rel: string, content: string) {
       files.set(`${folder}::${rel}`, new TextEncoder().encode(content));
@@ -205,6 +208,57 @@ describe('Ingestion (external edits → history)', () => {
     expect(await artifactsOf(crux.id)).toHaveLength(1);
 
     bridge.emit({ folder, events: [{ type: 'rmdir', relPath: 'temp' }] });
+    await flushIngestion();
+    expect(await artifactsOf(crux.id)).toHaveLength(0);
+  });
+
+  it('NEVER writes back to disk when recording external edits (ADR 0001: background flow is disk → store only)', async () => {
+    const { crux, folder } = await makeCrux('Site');
+    const { artifact } = getServices();
+    await artifact.create({ resourceId: crux.id, content: 'v1', meta: { path: 'index.html' } });
+    const writesBefore = bridge.writeLog.length;
+
+    bridge.externalWrite(folder, 'index.html', 'v2-from-vscode');
+    bridge.emit({ folder, events: [{ type: 'write', relPath: 'index.html' }] });
+    await flushIngestion();
+
+    // The store learned v2, but ingestion made zero disk writes — a newer
+    // external save can never be clobbered by the recording path.
+    const arts = await artifactsOf(crux.id);
+    expect(await artifact.readContent(arts[0]!.id)).toBe('v2-from-vscode');
+    expect(bridge.writeLog.length).toBe(writesBefore);
+    expect(new TextDecoder().decode(bridge.files.get(`${folder}::index.html`))).toBe('v2-from-vscode');
+  });
+
+  it('recording an external delete does not touch the disk', async () => {
+    const { crux, folder } = await makeCrux('Site');
+    const { artifact } = getServices();
+    await artifact.create({ resourceId: crux.id, content: 'x', meta: { path: 'gone.txt' } });
+
+    // Simulate: user deletes on disk, then (race) re-creates before we process
+    bridge.externalDelete(folder, 'gone.txt');
+    bridge.externalWrite(folder, 'gone.txt', 'recreated');
+    bridge.emit({ folder, events: [{ type: 'delete', relPath: 'gone.txt' }] });
+    await flushIngestion();
+
+    expect(await artifactsOf(crux.id)).toHaveLength(0);
+    // The recreated file survives — delete recording never reached the disk
+    expect(bridge.files.has(`${folder}::gone.txt`)).toBe(true);
+  });
+
+  it('replayed batches are idempotent (delete twice, write twice)', async () => {
+    const { crux, folder } = await makeCrux('Site');
+    bridge.externalWrite(folder, 'a.txt', 'hello');
+    const batch: Batch = { folder, events: [{ type: 'write', relPath: 'a.txt' }] };
+    bridge.emit(batch);
+    bridge.emit(batch);
+    await flushIngestion();
+    expect(await artifactsOf(crux.id)).toHaveLength(1);
+
+    bridge.externalDelete(folder, 'a.txt');
+    const del: Batch = { folder, events: [{ type: 'delete', relPath: 'a.txt' }] };
+    bridge.emit(del);
+    bridge.emit(del);
     await flushIngestion();
     expect(await artifactsOf(crux.id)).toHaveLength(0);
   });

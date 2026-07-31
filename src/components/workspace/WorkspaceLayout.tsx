@@ -19,8 +19,10 @@ const StorePane = lazy(() => import('./StorePane'));
 import ContextMenu from './ContextMenu';
 import MobilePaneSwitcher from './MobilePaneSwitcher';
 import { useCruxStore } from '@/stores/cruxStore';
+import { Capability, can } from '@/lib/platform';
 import { useAppStore } from '@/stores/appStore';
 import { getDownloadUrl } from '@/api/public';
+import { pathOf, basename, isUnder, displayNameOf } from '@/lib/artifact-path';
 import 'react-mosaic-component/react-mosaic-component.css';
 
 // ── Media transcoding constants ──────────────────────────
@@ -224,10 +226,7 @@ export default function WorkspaceLayout() {
       if (id.startsWith('folder:')) {
         const folderPath = id.slice('folder:'.length);
         artifacts
-          .filter((a) => {
-            const p = (a.meta?.path || a.filename || '') as string;
-            return p.startsWith(folderPath + '/') || p === folderPath;
-          })
+          .filter((a) => isUnder(folderPath, pathOf(a)))
           .forEach((a) => artifactIds.add(a.id));
       } else {
         artifactIds.add(id);
@@ -241,12 +240,9 @@ export default function WorkspaceLayout() {
   };
 
   const handleDeleteFolder = async (folderPath: string) => {
-    const children = artifacts.filter((a) => {
-      const p = (a.meta?.path || a.filename || '') as string;
-      return p.startsWith(folderPath + '/') || p === folderPath;
-    });
+    const children = artifacts.filter((a) => isUnder(folderPath, pathOf(a)));
     if (children.length === 0) return;
-    const folderName = folderPath.split('/').pop() || folderPath;
+    const folderName = basename(folderPath);
     if (confirm(`Delete "${folderName}" and ${children.length} file${children.length !== 1 ? 's' : ''}?`)) {
       await deleteArtifacts(children.map((a) => a.id));
     }
@@ -266,39 +262,36 @@ export default function WorkspaceLayout() {
     const artifact = artifacts.find((a) => a.id === id);
     if (!artifact) return false;
     const mime = artifact.mimeType || '';
-    const path = (artifact.meta?.path || artifact.filename || '') as string;
+    const path = pathOf(artifact);
     // Don't offer transcode for files already in streaming/ dir or already streaming-ready
     if (path.startsWith('streaming/')) return false;
     if (STREAMING_READY.has(mime)) return false;
     return STREAMING_MEDIA_TYPES.has(mime);
   }, [artifacts]);
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const ffmpegAvailable = !!(window as any).electronAPI?.ffmpeg;
+  const ffmpegAvailable = can(Capability.Transcode);
 
   const handleTranscode = useCallback(async (id: string) => {
     const artifact = artifacts.find((a) => a.id === id);
     if (!artifact?.fingerprint) return;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const electronAPI = (window as any).electronAPI;
-    if (!electronAPI?.ffmpeg) return;
+    if (!can(Capability.Transcode)) return;
 
     const { getSqliteClient } = await import('@/services/sqlite/client');
     const content = await getSqliteClient().blobRead(artifact.fingerprint);
     if (!content || content.length === 0) return;
 
-    const filePath = (artifact.meta?.path || artifact.filename || 'media') as string;
-    const baseName = filePath.split('/').pop()!.replace(/\.[^.]+$/, '');
+    const inputName = displayNameOf(artifact, 'media');
+    const baseName = inputName.replace(/\.[^.]+$/, '');
     const mime = artifact.mimeType || '';
     const isAudio = mime.startsWith('audio/');
 
     try {
-      const results: Array<{ name: string; data: Uint8Array; mimeType: string }> =
-        await electronAPI.ffmpeg.transcode({
-          inputData: content,
-          inputName: filePath.split('/').pop()!,
-          isAudio,
-        });
+      const { transcode } = await import('@/services/media');
+      const results = await transcode({
+        inputData: content,
+        inputName,
+        isAudio,
+      });
 
       const uploadFile = useCruxStore.getState().uploadFile;
       for (const result of results) {
@@ -315,7 +308,7 @@ export default function WorkspaceLayout() {
   const handleOpen = (id: string) => {
     const artifact = artifacts.find((a) => a.id === id);
     if (!artifact) return;
-    const path = artifact.meta?.path || artifact.filename || artifact.id;
+    const path = pathOf(artifact) || artifact.id;
     openFile(id, path);
     if (!paneVisibility.workshop) setPaneVisible('workshop', true);
   };

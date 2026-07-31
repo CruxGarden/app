@@ -5,6 +5,7 @@ import { useAppStore } from '@/stores/appStore';
 import { exportCrux, importCrux } from '@/services/crux-io';
 import * as syncApi from '@/api/sync';
 import { cn } from '@/lib/cn';
+import { formatBytes, formatDateTime } from '@/lib/format';
 import { Spinner } from '@/components/ui';
 import { usePaneWidth } from '@/hooks/usePaneWidth';
 
@@ -26,20 +27,6 @@ function CloudDownIcon() {
       <path d="m8 17 4 4 4-4" />
     </svg>
   );
-}
-
-function formatSize(bytes: number): string {
-  if (!bytes || bytes <= 0) return '0 B';
-  const k = 1024;
-  const sizes = ['B', 'KB', 'MB'];
-  const i = Math.min(Math.floor(Math.log(bytes) / Math.log(k)), sizes.length - 1);
-  return `${parseFloat((bytes / Math.pow(k, i)).toFixed(1))} ${sizes[i]}`;
-}
-
-function formatDate(iso: string): string {
-  const d = new Date(iso);
-  return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) + ' ' +
-    d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
 }
 
 export default function SyncPane() {
@@ -161,8 +148,8 @@ export default function SyncPane() {
             </div>
             {lastSynced ? (
               <div className="text-[11px] font-mono text-text-muted">
-                <span className="text-text">{formatDate(lastSynced.at)}</span>
-                <span className="ml-2">{formatSize(lastSynced.size)}</span>
+                <span className="text-text">{formatDateTime(lastSynced.at)}</span>
+                <span className="ml-2">{formatBytes(lastSynced.size)}</span>
               </div>
             ) : (
               <div className="text-[11px] font-mono text-text-muted">

@@ -1,6 +1,8 @@
-import { useState, useRef, useEffect, lazy, Suspense } from 'react';
+import { useState, useRef, useCallback, lazy, Suspense } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/cn';
+import { formatDateTime } from '@/lib/format';
+import { useDismiss } from '@/hooks/useDismiss';
 const ExportModal = lazy(() => import('@/components/garden/ExportModal'));
 import type { Crux } from '@/api/types';
 
@@ -32,20 +34,6 @@ function MoreIcon() {
   );
 }
 
-function formatDateTime(dateStr: string): string {
-  const d = new Date(dateStr);
-  const date = d.toLocaleDateString(undefined, {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-  });
-  const time = d.toLocaleTimeString(undefined, {
-    hour: 'numeric',
-    minute: '2-digit',
-  });
-  return `${date}, ${time}`;
-}
-
 export default function CruxCard({ crux, linkTo, onDelete, sortBy = 'created', hideMenu }: CruxCardProps) {
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -54,16 +42,8 @@ export default function CruxCard({ crux, linkTo, onDelete, sortBy = 'created', h
 
   const description = crux.meta?.summary?.purpose || crux.description;
 
-  useEffect(() => {
-    if (!menuOpen) return;
-    const handler = (e: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-        setMenuOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
-  }, [menuOpen]);
+  const closeMenu = useCallback(() => setMenuOpen(false), []);
+  useDismiss(menuRef, closeMenu, menuOpen);
 
   return (
     <div className="relative group last:border-b-0 border-b border-border">

@@ -6,19 +6,11 @@ import { getAdapter } from '@/ai/adapters';
 import { createToolExecutor } from '@/ai/tools';
 import { getApiKey } from '@/ai/keys';
 import { getProviderForModel } from '@/ai/providers';
-import { createSnapshot } from '@/services/growth.service';
+import { SnapshotPolicy, type SnapshotFrequency } from '@/services/growth';
 import type { ChatMessage, ToolCall } from '@/api/types';
 import type { NormalizedMessage } from '@/services/types';
 import { getPersona, getPersonaFingerprint } from '@/components/mood/mood-helpers';
 import { useAppStore } from '@/stores/appStore';
-
-type SnapshotFrequency = 'ai-turn' | '2m' | '5m' | '10m' | 'manual';
-
-const FREQUENCY_DELAYS: Record<string, number> = {
-  '2m': 2 * 60_000,
-  '5m': 5 * 60_000,
-  '10m': 10 * 60_000,
-};
 
 /**
  * Truncate large tool results preserving the beginning and end.
@@ -113,7 +105,22 @@ export function useChat() {
 
   const abortRef = useRef<AbortController | null>(null);
   const refreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const snapshotTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Auto-snapshot policy (Growth module): reads frequency at decision AND
+  // fire time so runtime settings changes are respected.
+  const snapshotPolicyRef = useRef<SnapshotPolicy | null>(null);
+  if (!snapshotPolicyRef.current) {
+    snapshotPolicyRef.current = new SnapshotPolicy(
+      () =>
+        ((useCruxStore.getState().crux?.meta?.settings?.snapshotFrequency as SnapshotFrequency) ||
+          'ai-turn'),
+      () =>
+        useCruxStore
+          .getState()
+          .createSnapshot({ silent: false })
+          .catch((err) => console.warn('Auto-snapshot failed:', err)),
+    );
+  }
 
   const send = useCallback(
     async (content: string) => {
@@ -173,8 +180,9 @@ export function useChat() {
       }
 
       if (metaChanged) {
-        const updatedCrux = { ...useCruxStore.getState().crux!, meta: { ...cruxMeta, personaSnapshots: personaMap, authorSnapshots: authorMap } };
-        useCruxStore.setState({ crux: updatedCrux });
+        useCruxStore
+          .getState()
+          .patchCruxMeta({ personaSnapshots: personaMap, authorSnapshots: authorMap });
       }
 
       // Build normalized message history — only include messages from the current persona.
@@ -303,29 +311,8 @@ export function useChat() {
         tc.name === 'write_file' || tc.name === 'edit_file' || tc.name === 'delete_file' || tc.name === 'generate_image',
       );
       if (hadMutations) {
-        // Read frequency from store (not closure) to respect runtime changes
-        const currentFreq = (useCruxStore.getState().crux?.meta?.settings?.snapshotFrequency as SnapshotFrequency) || 'ai-turn';
-        if (currentFreq === 'ai-turn') {
-          // Snapshot immediately (fire-and-forget)
-          createSnapshot({ silent: false }).catch((err) =>
-            console.warn('Auto-snapshot failed:', err),
-          );
-        } else if (currentFreq !== 'manual') {
-          // Timer-based: reset the timer on each mutation turn
-          if (snapshotTimerRef.current) clearTimeout(snapshotTimerRef.current);
-          const delay = FREQUENCY_DELAYS[currentFreq] ?? 5 * 60_000;
-          snapshotTimerRef.current = setTimeout(() => {
-            snapshotTimerRef.current = null;
-            // Re-check frequency at fire time — user may have changed it
-            const fireFreq = (useCruxStore.getState().crux?.meta?.settings?.snapshotFrequency as SnapshotFrequency) || 'ai-turn';
-            if (fireFreq === 'manual') return;
-            createSnapshot({ silent: false }).catch((err) =>
-              console.warn('Auto-snapshot failed:', err),
-            );
-          }, delay);
-        }
+        snapshotPolicyRef.current?.notifyMutation();
       }
-
     },
     [
       crux,

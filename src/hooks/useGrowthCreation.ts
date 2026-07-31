@@ -1,10 +1,9 @@
 import { useCallback, useRef } from 'react';
 import { useCruxStore } from '@/stores/cruxStore';
-import { createSnapshot } from '@/services/growth.service';
 
 /**
  * Returns a function that manually creates a snapshot of the current workspace.
- * Delegates to the standalone createSnapshot service function.
+ * Delegates to the store's createSnapshot action (Growth module underneath).
  */
 export function useGrowthCreation() {
   const crux = useCruxStore((s) => s.crux);
@@ -15,7 +14,7 @@ export function useGrowthCreation() {
     if (!crux || creatingRef.current) return;
     creatingRef.current = true;
 
-    const { setGrowthCreating } = useCruxStore.getState();
+    const { setGrowthCreating, createSnapshot } = useCruxStore.getState();
     setGrowthCreating(true);
 
     try {

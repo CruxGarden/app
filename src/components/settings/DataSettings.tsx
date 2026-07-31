@@ -3,7 +3,7 @@ import { useAppStore } from '@/stores/appStore';
 import { exportGarden, confirmAndImportGarden, wipeGarden } from '@/services/garden-io';
 import { Panel, Button } from '@/components/ui';
 import { cn } from '@/lib/cn';
-import { isDesktop } from '@/lib/platform';
+import { Capability, can } from '@/lib/platform';
 import { getGardenRoot, chooseGardenRoot, shortenHomePath } from '@/services/desktop';
 
 const WIPE_CONFIRMATION = 'delete me';
@@ -17,7 +17,7 @@ export default function DataSettings() {
   const [status, setStatus] = useState('');
   const [error, setError] = useState('');
   const importRef = useRef<HTMLInputElement>(null);
-  const desktop = isDesktop();
+  const desktop = can(Capability.ProjectFolder);
   const [gardenRoot, setGardenRoot] = useState<string | null>(null);
 
   useEffect(() => {

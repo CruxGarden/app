@@ -360,6 +360,15 @@ export default function MoodEditor() {
     return BgType.Bloom;
   });
   const [bgImagePreview, setBgImagePreview] = useState<string | null>(null);
+  // Object URL created for the preview — revoked when replaced or on unmount
+  const bgObjectUrlRef = useRef<string | null>(null);
+  const releaseBgObjectUrl = () => {
+    const url = bgObjectUrlRef.current;
+    if (!url) return;
+    bgObjectUrlRef.current = null;
+    // Don't revoke a URL the app background is still displaying
+    if (useMoodStore.getState().backgroundUrl !== url) URL.revokeObjectURL(url);
+  };
   // Resolve background image fingerprint to blob URL on mount
   useEffect(() => {
     const fp = getSetting(SettingsKey.BackgroundImage) as string | null;
@@ -367,8 +376,15 @@ export default function MoodEditor() {
     (async () => {
       const { getSqliteClient } = await import('@/services/sqlite/client');
       const data = await getSqliteClient().blobRead(fp);
-      if (data) setBgImagePreview(URL.createObjectURL(new Blob([data as unknown as BlobPart])));
+      if (data) {
+        releaseBgObjectUrl();
+        const url = URL.createObjectURL(new Blob([data as unknown as BlobPart]));
+        bgObjectUrlRef.current = url;
+        setBgImagePreview(url);
+      }
     })();
+    // Revoke the created object URL on unmount
+    return () => releaseBgObjectUrl();
   }, []);
   const [bgGenerating, setBgGenerating] = useState(false);
 
@@ -396,6 +412,7 @@ export default function MoodEditor() {
       const fp = await hashContent(buffer);
       const { getSqliteClient } = await import('@/services/sqlite/client');
       await getSqliteClient().blobWrite(fp, buffer);
+      releaseBgObjectUrl();
       setBgImagePreview(dataUrl);
       setSetting(SettingsKey.BackgroundImage, fp);
       setSetting(SettingsKey.BackgroundType, 'image');
@@ -412,6 +429,7 @@ export default function MoodEditor() {
     setSetting(SettingsKey.BackgroundImage, '');
     handleBgChange(BgType.Bloom);
     useMoodStore.setState({ backgroundUrl: null });
+    releaseBgObjectUrl();
   };
 
   const handleSelect = (preset: MoodPresetDef) => {

@@ -22,16 +22,7 @@ const ChevronIcon = ({ collapsed }: { collapsed: boolean }) => (
   </svg>
 );
 import type { GardenStatus, SyncedCrux } from '@/api/sync';
-
-function formatSize(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-}
-
-function formatDate(iso: string): string {
-  return new Date(iso).toLocaleString();
-}
+import { formatBytes, formatDateTime } from '@/lib/format';
 
 export default function SyncSettings() {
   const { isAuthenticated } = useAuthStore();
@@ -160,7 +151,7 @@ export default function SyncSettings() {
 
       {gardenStatus && (
         <p className="text-xs text-text-muted mb-3">
-          Last pushed: {formatDate(gardenStatus.syncedAt)} ({formatSize(gardenStatus.size)})
+          Last pushed: {formatDateTime(gardenStatus.syncedAt)} ({formatBytes(gardenStatus.size)})
         </p>
       )}
 
@@ -195,7 +186,7 @@ export default function SyncSettings() {
               <div>
                 <span className="text-text font-mono">{c.title}</span>
                 <span className="text-text-muted ml-2">
-                  {formatSize(c.size)} &middot; {formatDate(c.updatedAt)}
+                  {formatBytes(c.size)} &middot; {formatDateTime(c.updatedAt)}
                 </span>
               </div>
               <Button

@@ -10,51 +10,13 @@
  * The folder's absolute path is stamped on the crux as meta.projectFolder.
  */
 
-import { Capability, can } from '@/lib/platform';
+import { Capability, can, type ProjectBridge } from '@/lib/platform';
 import { getSqliteClient } from './sqlite/client';
 import type { Artifact } from '@/api/types';
 
-interface ProjectBridge {
-  createFolder(slug: string): Promise<string>;
-  ensureFolder(folder: string): Promise<string>;
-  folderExists(folder: string): Promise<boolean>;
-  writeFile(folder: string, relPath: string, data: Uint8Array): Promise<void>;
-  readFile(folder: string, relPath: string): Promise<Uint8Array>;
-  deleteFile(folder: string, relPath: string): Promise<void>;
-  renameFile(folder: string, fromRel: string, toRel: string): Promise<void>;
-  reveal(folder: string, relPath?: string): Promise<void>;
-  listFiles(folder: string): Promise<string[]>;
-}
-
 function projectBridge(): ProjectBridge | null {
   if (!can(Capability.ProjectFolder)) return null;
-  return (window as unknown as { electronAPI: { project: ProjectBridge } }).electronAPI.project;
-}
-
-/**
- * Ingestion suppression: when the ingestion service records an EXTERNAL edit
- * through the artifact service, the content is already on disk — write-through
- * would be a pointless echo. Suppression is per (crux, path) so a concurrent
- * app write to a different file is unaffected.
- */
-const suppressedPaths = new Set<string>();
-
-export async function withPathSuppressed<T>(
-  cruxId: string,
-  relPath: string,
-  fn: () => Promise<T>,
-): Promise<T> {
-  const key = `${cruxId}::${relPath}`;
-  suppressedPaths.add(key);
-  try {
-    return await fn();
-  } finally {
-    suppressedPaths.delete(key);
-  }
-}
-
-function isSuppressed(cruxId: string, relPath: string): boolean {
-  return suppressedPaths.has(`${cruxId}::${relPath}`);
+  return window.electronAPI?.project ?? null;
 }
 
 /** The artifact's path inside the Project Folder. */
@@ -110,7 +72,6 @@ export async function writeThroughArtifact(
   content: Uint8Array,
 ): Promise<void> {
   const relPath = artifactRelPath(artifact);
-  if (isSuppressed(cruxId, relPath)) return;
   await withFolder(cruxId, (api, folder) => api.writeFile(folder, relPath, content));
 }
 
@@ -120,7 +81,6 @@ export async function deleteThroughArtifact(
   artifact: Pick<Artifact, 'filename' | 'meta'>,
 ): Promise<void> {
   const relPath = artifactRelPath(artifact);
-  if (isSuppressed(cruxId, relPath)) return;
   await withFolder(cruxId, (api, folder) => api.deleteFile(folder, relPath));
 }
 

@@ -17,7 +17,8 @@
     "format:check": "prettier --check \"src/**/*.{ts,tsx,css}\"",
     "test": "vitest run",
     "test:watch": "vitest",
-    "postinstall": "patch-package"
+    "postinstall": "patch-package",
+    "generate:api": "openapi-typescript ../api/openapi.json -o src/api/generated/schema.d.ts --default-non-nullable false"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.78.0",
@@ -61,6 +62,7 @@
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-react-refresh": "^0.5.2",
     "monaco-editor": "^0.55.1",
+    "openapi-typescript": "^7.13.0",
     "patch-package": "^8.0.1",
     "prettier": "^3.4.2",
     "sql.js": "^1.14.1",

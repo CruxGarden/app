@@ -9,6 +9,7 @@ import type {
 } from '@/api/public';
 import { Button } from '@/components/ui';
 import { cn } from '@/lib/cn';
+import { formatDate } from '@/lib/format';
 import { APP_NAME } from '@/lib/constants';
 
 
@@ -33,14 +34,6 @@ function Avatar({ url, size = 'sm' }: { url: string | null; size?: 'sm' | 'md' }
       {url && <img src={url} alt="" className="w-full h-full object-cover" />}
     </div>
   );
-}
-
-function formatDate(dateStr: string): string {
-  return new Date(dateStr).toLocaleDateString(undefined, {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-  });
 }
 
 /* ── Search icon ─────────────────────────────────────── */

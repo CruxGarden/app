@@ -1,25 +1,9 @@
-/* eslint-disable react-refresh/only-export-components */
 import { useMemo, useState, useRef, useCallback } from 'react';
 import { cn } from '@/lib/cn';
+import { formatDateTime } from '@/lib/format';
 import type { Crux, CruxSummary, CruxKind, CruxVisibility, ChatMessage } from '@/api/types';
 
 // ── Helpers ──────────────────────────────────────────
-
-export function formatSize(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-}
-
-export function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString(undefined, {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
-}
 
 const VISIBILITY_ORDER: CruxVisibility[] = ['public', 'unlisted', 'private'];
 const VISIBILITY_COLORS: Record<CruxVisibility, string> = {
@@ -414,11 +398,11 @@ export default function MetadataContent({
         </FieldRow>
 
         <FieldRow label="Created">
-          <span>{formatDate(crux.created)}</span>
+          <span>{formatDateTime(crux.created)}</span>
         </FieldRow>
 
         <FieldRow label="Updated">
-          <span>{formatDate(crux.updated)}</span>
+          <span>{formatDateTime(crux.updated)}</span>
         </FieldRow>
       </div>
 

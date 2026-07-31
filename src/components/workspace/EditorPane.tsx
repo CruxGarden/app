@@ -5,6 +5,7 @@ import EditorTabBar from './EditorTabBar';
 import EditorToolbar from './EditorToolbar';
 import EditorContent from './EditorContent';
 import BuilderView from './BuilderView';
+import { onCaptureSettled } from '@/lib/thumbnail-capture';
 import { cn } from '@/lib/cn';
 
 /** Auto-recovery boundary for Monaco disposal errors during pane reorder */
@@ -37,17 +38,10 @@ export default function EditorPane() {
   // Listen for capture completion to reset the capturing state
   useEffect(() => {
     if (!isCapturing) return;
-    const previewOrigin = import.meta.env.VITE_PREVIEW_ORIGIN || window.location.origin;
-    function onMessage(e: MessageEvent) {
-      if (e.origin !== previewOrigin) return;
-      if (e.data?.type === 'crux:capture-result' || e.data?.type === 'crux:capture-error') {
-        setIsCapturing(false);
-      }
-    }
-    window.addEventListener('message', onMessage);
+    const unsubscribe = onCaptureSettled(() => setIsCapturing(false));
     const timeout = setTimeout(() => setIsCapturing(false), 10000);
     return () => {
-      window.removeEventListener('message', onMessage);
+      unsubscribe();
       clearTimeout(timeout);
     };
   }, [isCapturing]);

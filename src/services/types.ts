@@ -55,6 +55,13 @@ export interface CreateArtifactInput {
   content: string;
   mimeType?: string;
   meta?: { path?: string; [key: string]: unknown };
+  /**
+   * Desktop write-through to the Project Folder (default true). Ingestion
+   * passes false: it records content that is ALREADY on disk, and writing it
+   * back could clobber a newer external save (ADR 0001 — background flow is
+   * strictly disk → store).
+   */
+  writeThrough?: boolean;
 }
 
 export interface UploadArtifactInput {
@@ -65,6 +72,8 @@ export interface UploadArtifactInput {
   kind?: string;
   type?: string;
   meta?: { path?: string; growthId?: string; [key: string]: unknown };
+  /** See CreateArtifactInput.writeThrough. */
+  writeThrough?: boolean;
 }
 
 export interface UpdateArtifactInput {

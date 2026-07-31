@@ -81,11 +81,13 @@ export class SqliteArtifactService implements IArtifactService {
           await cleanupOrphanedBlob(oldFingerprint);
         }
         // Desktop: keep the Project Folder in sync (ADR 0001 write-through)
-        await writeThroughArtifact(
-          input.resourceId,
-          { filename: filePath.split('/').pop() || 'unnamed', meta: { path: filePath } },
-          contentBytes,
-        );
+        if (input.writeThrough !== false) {
+          await writeThroughArtifact(
+            input.resourceId,
+            { filename: filePath.split('/').pop() || 'unnamed', meta: { path: filePath } },
+            contentBytes,
+          );
+        }
         return this.findById(existing.id as string);
       }
     }
@@ -113,7 +115,9 @@ export class SqliteArtifactService implements IArtifactService {
     };
     const { sql, params } = buildInsert('artifacts', record);
     await db.run(sql, params);
-    await writeThroughArtifact(input.resourceId, record, contentBytes);
+    if (input.writeThrough !== false) {
+      await writeThroughArtifact(input.resourceId, record, contentBytes);
+    }
     return this.findById(record.id);
   }
 
@@ -150,11 +154,13 @@ export class SqliteArtifactService implements IArtifactService {
         if (oldFingerprint && oldFingerprint !== fingerprint) {
           await cleanupOrphanedBlob(oldFingerprint);
         }
-        await writeThroughArtifact(
-          input.resourceId,
-          { filename: filePath.split('/').pop() || 'unnamed', meta: { path: filePath } },
-          contentBytes,
-        );
+        if (input.writeThrough !== false) {
+          await writeThroughArtifact(
+            input.resourceId,
+            { filename: filePath.split('/').pop() || 'unnamed', meta: { path: filePath } },
+            contentBytes,
+          );
+        }
         return this.findById(existing.id as string);
       }
     }
@@ -181,7 +187,7 @@ export class SqliteArtifactService implements IArtifactService {
     const { sql, params } = buildInsert('artifacts', record);
     await db.run(sql, params);
     // Snapshot content ('version' type) never touches the Project Folder
-    if (record.type === 'artifact') {
+    if (record.type === 'artifact' && input.writeThrough !== false) {
       await writeThroughArtifact(input.resourceId, record, contentBytes);
     }
     return this.findById(record.id);
@@ -217,7 +223,7 @@ export class SqliteArtifactService implements IArtifactService {
     return this.findById(id);
   }
 
-  async delete(id: string): Promise<void> {
+  async delete(id: string, opts?: { writeThrough?: boolean }): Promise<void> {
     const db = getSqliteClient();
     const row = await db.get<{
       fingerprint: string | null;
@@ -230,7 +236,7 @@ export class SqliteArtifactService implements IArtifactService {
     if (row?.fingerprint) {
       await cleanupOrphanedBlob(row.fingerprint);
     }
-    if (row && row.type === 'artifact') {
+    if (row && row.type === 'artifact' && opts?.writeThrough !== false) {
       await deleteThroughArtifact(row.resource_id, {
         filename: row.filename,
         meta: { path: row.path || undefined },

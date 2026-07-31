@@ -6,7 +6,34 @@
  * Electron" checks scattered through components. Today one platform implies
  * all desktop capabilities; if a capability ever changes sides (e.g. cloud
  * builds), it flips here and nowhere else.
+ *
+ * The bridge contract itself lives in electron/src/bridge.ts and is shared by
+ * the preload implementation and every renderer consumer via the re-exports
+ * below — there is exactly one declaration of what Desktop Mode provides.
  */
+
+import type { ElectronBridge } from '../../electron/src/bridge';
+
+export type {
+  ElectronBridge,
+  SqliteBridge,
+  DesktopBridge,
+  ProjectBridge,
+  PreviewBridge,
+  ToolchainBridge,
+  DevServerBridge,
+  SecretsBridge,
+  FfmpegBridge,
+  ChangeBatch,
+  WatchEvent,
+  TranscodeOutput,
+} from '../../electron/src/bridge';
+
+declare global {
+  interface Window {
+    electronAPI?: ElectronBridge;
+  }
+}
 
 export enum Capability {
   /** Real Project Folder per crux on the local filesystem (ADR 0001). */
@@ -19,20 +46,15 @@ export enum Capability {
   PreviewServer = 'previewServer',
   /** OS-keychain-backed secret storage (safeStorage). */
   SecureSecrets = 'secureSecrets',
+  /** ffmpeg media transcoding in the main process. */
+  Transcode = 'transcode',
+  /** Frameless-window chrome: drag regions, traffic-light insets. */
+  DesktopChrome = 'desktopChrome',
 }
 
-interface ElectronBridge {
-  sqlite?: unknown;
-  project?: unknown;
-  secrets?: unknown;
-  preview?: unknown;
-  toolchain?: unknown;
-  devserver?: unknown;
-}
-
-function bridge(): ElectronBridge | null {
+function bridge(): Partial<ElectronBridge> | null {
   if (typeof window === 'undefined') return null;
-  return (window as unknown as { electronAPI?: ElectronBridge }).electronAPI ?? null;
+  return window.electronAPI ?? null;
 }
 
 /** Desktop Mode = running inside the Electron shell. */
@@ -54,5 +76,9 @@ export function can(capability: Capability): boolean {
       return !!api.preview;
     case Capability.Build:
       return !!api.toolchain && !!api.devserver;
+    case Capability.Transcode:
+      return !!api.ffmpeg;
+    case Capability.DesktopChrome:
+      return !!api.desktop;
   }
 }

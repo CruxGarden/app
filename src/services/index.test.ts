@@ -22,7 +22,6 @@ describe('Service Factory', () => {
       expect(services.artifact).toBeDefined();
       expect(services.dimension).toBeDefined();
       expect(services.author).toBeDefined();
-      expect(services.publish).toBeDefined();
     });
 
     it('initializes with api backend when specified', async () => {
@@ -32,7 +31,6 @@ describe('Service Factory', () => {
       expect(services.artifact).toBeDefined();
       expect(services.dimension).toBeDefined();
       expect(services.author).toBeDefined();
-      expect(services.publish).toBeDefined();
     });
 
     it('makes services available via getServices()', async () => {
@@ -112,12 +110,12 @@ describe('Service Factory', () => {
       expect(growths).toHaveLength(2);
     });
 
-    it('publish service is always the API implementation', async () => {
+    it('publishing lives in the publish module, not the service locator', async () => {
       const services = await initServices('local');
-      // The publish service should exist even in local mode
-      expect(services.publish).toBeDefined();
-      expect(services.publish.publish).toBeTypeOf('function');
-      expect(services.publish.unpublish).toBeTypeOf('function');
+      expect('publish' in services).toBe(false);
+      const publish = await import('./publish');
+      expect(publish.publishPipeline).toBeTypeOf('function');
+      expect(publish.unpublishPipeline).toBeTypeOf('function');
     });
   });
 });

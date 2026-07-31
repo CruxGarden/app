@@ -1,49 +1,14 @@
 import { useRef, useState, useCallback, useMemo, useEffect } from 'react';
-
-// ── OS drag-and-drop helpers ──────────────────────────────
-
-async function walkEntry(
-  entry: FileSystemEntry,
-  basePath: string,
-): Promise<{ file: File; path: string }[]> {
-  if (entry.isFile) {
-    const file = await new Promise<File>((resolve, reject) =>
-      (entry as FileSystemFileEntry).file(resolve, reject),
-    );
-    return [{ file, path: basePath + entry.name }];
-  }
-  const dirReader = (entry as FileSystemDirectoryEntry).createReader();
-  const children = await readAllEntries(dirReader);
-  const results: { file: File; path: string }[] = [];
-  for (const child of children) {
-    results.push(...(await walkEntry(child, basePath + entry.name + '/')));
-  }
-  return results;
-}
-
-function readAllEntries(reader: FileSystemDirectoryReader): Promise<FileSystemEntry[]> {
-  return new Promise((resolve, reject) => {
-    const all: FileSystemEntry[] = [];
-    function readBatch() {
-      reader.readEntries((entries) => {
-        if (entries.length === 0) {
-          resolve(all);
-        } else {
-          all.push(...entries);
-          readBatch();
-        }
-      }, reject);
-    }
-    readBatch();
-  });
-}
+import { walkEntry } from '@/lib/file-drop';
+import { pathOf, basename, parentPath as parentPathOf } from '@/lib/artifact-path';
 import { useCruxStore } from '@/stores/cruxStore';
 import { useUIStore } from '@/stores/uiStore';
 import ArboristFileTree, {
   type ArboristFileTreeHandle,
   type UploadFileEntry,
 } from '@/components/artifacts/ArboristFileTree';
-import { FieldRow, formatSize, formatDate } from './MetadataContent';
+import { FieldRow } from './MetadataContent';
+import { formatBytes, formatDateTime } from '@/lib/format';
 import { Capability, can } from '@/lib/platform';
 import { revealProjectFolder } from '@/services/project-folder';
 
@@ -174,16 +139,14 @@ export default function ArtifactsPane() {
     if (!tabId) return undefined;
     const artifact = useCruxStore.getState().artifacts.find((a) => a.id === tabId);
     if (!artifact) return undefined;
-    const path = (artifact.meta?.path || artifact.filename || '') as string;
-    const lastSlash = path.lastIndexOf('/');
-    return lastSlash > 0 ? path.slice(0, lastSlash) : undefined;
+    return parentPathOf(pathOf(artifact)) || undefined;
   }, []);
 
   const handleSelect = useCallback(
     (id: string) => {
       const artifact = useCruxStore.getState().artifacts.find((a) => a.id === id);
       if (!artifact) return;
-      const path = artifact.meta?.path || artifact.filename || artifact.id;
+      const path = pathOf(artifact) || artifact.id;
       openFile(id, path);
       if (!useUIStore.getState().paneVisibility.workshop) setPaneVisible('workshop', true);
     },
@@ -229,7 +192,7 @@ export default function ArtifactsPane() {
       const folderPath = parentPath ? `${parentPath}/${name}` : name;
       cancelFileOperation();
       const alreadyExists = useCruxStore.getState().artifacts.some((a) =>
-        (a.meta?.path || a.filename || '').startsWith(folderPath + '/'),
+        pathOf(a).startsWith(folderPath + '/'),
       );
       if (alreadyExists) return;
       await createFile(`${folderPath}/.keep`, '');
@@ -240,27 +203,24 @@ export default function ArtifactsPane() {
   const handleMove = useCallback(
     async (id: string, newParentPath: string | null) => {
       const { artifacts } = useCruxStore.getState();
-      const existingPaths = new Set(artifacts.map((a) => (a.meta?.path || a.filename || '') as string));
+      const existingPaths = new Set(artifacts.map((a) => pathOf(a)));
 
       // If it's a folder (id starts with "folder:"), move all children
       if (id.startsWith('folder:')) {
         const folderPath = id.replace('folder:', '');
-        const children = artifacts.filter((a) => {
-          const p = a.meta?.path || a.filename || '';
-          return p.startsWith(folderPath + '/');
-        });
-        const folderName = folderPath.split('/').pop() || '';
+        const children = artifacts.filter((a) => pathOf(a).startsWith(folderPath + '/'));
+        const folderName = basename(folderPath) || '';
         const destFolderPath = newParentPath ? `${newParentPath}/${folderName}` : folderName;
         const newPaths = children.map((child) => {
-          const oldPath = child.meta?.path || child.filename || '';
+          const oldPath = pathOf(child);
           const relativePath = oldPath.slice(folderPath.length);
           return newParentPath
             ? `${newParentPath}/${folderName}${relativePath}`
             : `${folderName}${relativePath}`;
         });
         const destFolderExists = destFolderPath !== folderPath &&
-          artifacts.some((a) => (a.meta?.path || a.filename || '').startsWith(destFolderPath + '/'));
-        const fileConflicts = newPaths.filter((p) => existingPaths.has(p) && !children.some((c) => (c.meta?.path || c.filename || '') === p));
+          artifacts.some((a) => pathOf(a).startsWith(destFolderPath + '/'));
+        const fileConflicts = newPaths.filter((p) => existingPaths.has(p) && !children.some((c) => pathOf(c) === p));
         if (destFolderExists || fileConflicts.length > 0) {
           const msg = destFolderExists
             ? `A folder named "${folderName}" already exists at the destination. Merge contents?`
@@ -275,8 +235,8 @@ export default function ArtifactsPane() {
       } else {
         const art = artifacts.find((a) => a.id === id);
         if (art) {
-          const oldPath = art.meta?.path || art.filename || '';
-          const filename = oldPath.split('/').pop() || art.filename;
+          const oldPath = pathOf(art);
+          const filename = basename(oldPath) || art.filename;
           const newPath = newParentPath ? `${newParentPath}/${filename}` : filename;
           if (newPath !== oldPath && existingPaths.has(newPath)) {
             if (!confirm(`"${newPath}" already exists. Replace it?`)) return;
@@ -297,12 +257,11 @@ export default function ArtifactsPane() {
         parts[parts.length - 1] = newName;
         const newFolderPath = parts.join('/');
 
-        const children = useCruxStore.getState().artifacts.filter((a) => {
-          const p = a.meta?.path || a.filename || '';
-          return p.startsWith(oldFolderPath + '/');
-        });
+        const children = useCruxStore.getState().artifacts.filter((a) =>
+          pathOf(a).startsWith(oldFolderPath + '/'),
+        );
         for (const child of children) {
-          const oldPath = child.meta?.path || child.filename || '';
+          const oldPath = pathOf(child);
           const newPath = newFolderPath + oldPath.slice(oldFolderPath.length);
           await renameArtifact(child.id, newPath);
         }
@@ -310,7 +269,7 @@ export default function ArtifactsPane() {
         // File rename: swap last path segment
         const artifact = useCruxStore.getState().artifacts.find((a) => a.id === id);
         if (!artifact) return;
-        const oldPath = artifact.meta?.path || artifact.filename || '';
+        const oldPath = pathOf(artifact);
         const pathParts = oldPath.split('/');
         pathParts[pathParts.length - 1] = newName;
         const newPath = pathParts.join('/');
@@ -337,7 +296,7 @@ export default function ArtifactsPane() {
 
   const confirmOverwrite = useCallback((entries: { path: string }[]): boolean => {
     const existingPaths = new Set(
-      useCruxStore.getState().artifacts.map((a) => (a.meta?.path || a.filename || '') as string),
+      useCruxStore.getState().artifacts.map((a) => pathOf(a)),
     );
     const conflicts = entries.filter((e) => existingPaths.has(e.path));
     if (conflicts.length === 0) return true;
@@ -677,7 +636,7 @@ export default function ArtifactsPane() {
             onClick={() => setFileInfoOpen((v) => !v)}
             className="w-full flex items-center justify-between px-3 py-1.5 text-[10px] font-mono uppercase tracking-wider text-text-muted hover:text-text transition-colors cursor-pointer"
           >
-            <span className="truncate">{selectedArtifact.meta?.path || selectedArtifact.filename}</span>
+            <span className="truncate">{pathOf(selectedArtifact)}</span>
             <svg
               width="10"
               height="10"
@@ -695,16 +654,16 @@ export default function ArtifactsPane() {
           {fileInfoOpen && (
             <div className="px-3 pb-2 flex flex-col gap-1.5">
               <FieldRow label="Size">
-                <span>{formatSize(selectedArtifact.size)}</span>
+                <span>{formatBytes(selectedArtifact.size)}</span>
               </FieldRow>
               <FieldRow label="Type">
                 <span>{selectedArtifact.mimeType}</span>
               </FieldRow>
               <FieldRow label="Created">
-                <span>{formatDate(selectedArtifact.created)}</span>
+                <span>{formatDateTime(selectedArtifact.created)}</span>
               </FieldRow>
               <FieldRow label="Updated">
-                <span>{formatDate(selectedArtifact.updated)}</span>
+                <span>{formatDateTime(selectedArtifact.updated)}</span>
               </FieldRow>
             </div>
           )}
