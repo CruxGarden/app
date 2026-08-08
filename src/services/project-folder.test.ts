@@ -150,7 +150,11 @@ describe('Project Folder write-through (ADR 0001)', () => {
   it('projectAllArtifacts rebuilds a deleted folder exactly (restore)', async () => {
     const crux = await cruxService.create({ title: 'Site', type: 'workspace' });
     await artifactService.create({ resourceId: crux.id, content: 'A', meta: { path: 'a.html' } });
-    await artifactService.create({ resourceId: crux.id, content: 'B', meta: { path: 'sub/b.css' } });
+    await artifactService.create({
+      resourceId: crux.id,
+      content: 'B',
+      meta: { path: 'sub/b.css' },
+    });
 
     // Simulate the folder being wiped in Finder, plus a stray file appearing
     bridge.files.clear();

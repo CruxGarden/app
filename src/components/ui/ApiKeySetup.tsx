@@ -17,7 +17,12 @@ interface ApiKeySetupProps {
   autoFocus?: boolean;
 }
 
-export default function ApiKeySetup({ compact, onKeySaved, onKeyChange, autoFocus }: ApiKeySetupProps) {
+export default function ApiKeySetup({
+  compact,
+  onKeySaved,
+  onKeyChange,
+  autoFocus,
+}: ApiKeySetupProps) {
   const providerIds = Object.keys(PROVIDERS);
   const [hints, setHints] = useState<Record<string, string>>({});
   const [inputs, setInputs] = useState<Record<string, string>>({});
@@ -35,8 +40,10 @@ export default function ApiKeySetup({ compact, onKeySaved, onKeyChange, autoFocu
       }
       if (!cancelled) setHints(newHints);
     })();
-    return () => { cancelled = true; };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleSave = async (providerId: string) => {
@@ -117,7 +124,9 @@ export default function ApiKeySetup({ compact, onKeySaved, onKeyChange, autoFocu
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') handleSave(providerId);
                 }}
-                placeholder={hint ? 'Replace key...' : (PROVIDER_PLACEHOLDERS[providerId] || 'Paste API key...')}
+                placeholder={
+                  hint ? 'Replace key...' : PROVIDER_PLACEHOLDERS[providerId] || 'Paste API key...'
+                }
                 className={cn(
                   'flex-1 px-3 py-1.5 text-xs font-mono rounded-[var(--radius-sm)]',
                   'bg-bg border border-border text-text placeholder:text-text-muted/50',

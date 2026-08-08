@@ -1,5 +1,10 @@
 import type { IDimensionService } from '../dimension.service';
-import type { Dimension, DimensionType, CreateDimensionInput, UpdateDimensionInput } from '../types';
+import type {
+  Dimension,
+  DimensionType,
+  CreateDimensionInput,
+  UpdateDimensionInput,
+} from '../types';
 import { NotFoundError } from '../types';
 import { getSqliteClient } from './client';
 import { getLocalIdentity } from './identity';
@@ -16,10 +21,10 @@ export class SqliteDimensionService implements IDimensionService {
     const db = getSqliteClient();
     let rows: Record<string, unknown>[];
     if (type) {
-      rows = await db.all(
-        'SELECT * FROM dimensions WHERE source_id = ? AND type = ?',
-        [sourceId, type],
-      );
+      rows = await db.all('SELECT * FROM dimensions WHERE source_id = ? AND type = ?', [
+        sourceId,
+        type,
+      ]);
     } else {
       rows = await db.all('SELECT * FROM dimensions WHERE source_id = ?', [sourceId]);
     }

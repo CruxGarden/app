@@ -27,7 +27,11 @@ export function fromRow<T>(row: Record<string, unknown>): T {
   for (const [k, v] of Object.entries(row)) {
     const key = toCamel(k);
     if (key === 'meta' && typeof v === 'string') {
-      try { obj[key] = JSON.parse(v || '{}'); } catch { obj[key] = {}; }
+      try {
+        obj[key] = JSON.parse(v || '{}');
+      } catch {
+        obj[key] = {};
+      }
     } else if (key === 'discoverable' || key === 'system') {
       obj[key] = !!v;
     } else {

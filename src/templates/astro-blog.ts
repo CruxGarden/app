@@ -18,8 +18,8 @@ const template: TemplateDefinition = {
   greeting:
     "I've set up a real Astro blog — index page listing your posts, two sample posts in " +
     "src/pages/posts/, and clean typography. The preview runs Astro's dev server with hot " +
-    "reload, and this folder is a genuine Astro project you can also open in any editor. " +
-    "Ask me to write a post, change the design, or restructure anything.",
+    'reload, and this folder is a genuine Astro project you can also open in any editor. ' +
+    'Ask me to write a post, change the design, or restructure anything.',
   // Non-technical-first: chat + workshop only. Artifacts/file tree is one
   // TopBar toggle away for people who want to drop down to the real project.
   layout: LAYOUT_WRITING,
@@ -33,7 +33,12 @@ const template: TemplateDefinition = {
         fields: [
           { key: 'title', label: 'Title', type: 'text', placeholder: 'Post title' },
           { key: 'date', label: 'Date', type: 'text', placeholder: '2026-07-04' },
-          { key: 'description', label: 'Description', type: 'text', placeholder: 'One-line summary shown on the index' },
+          {
+            key: 'description',
+            label: 'Description',
+            type: 'text',
+            placeholder: 'One-line summary shown on the index',
+          },
         ],
         new: {
           pathTemplate: 'src/pages/posts/{slug}.md',
@@ -52,13 +57,22 @@ const template: TemplateDefinition = {
       path: 'src/config.json',
       fields: [
         { key: 'title', label: 'Blog Title', type: 'text', placeholder: 'My Blog' },
-        { key: 'description', label: 'Tagline', type: 'text', placeholder: 'Thoughts, ideas, and stories' },
+        {
+          key: 'description',
+          label: 'Tagline',
+          type: 'text',
+          placeholder: 'Thoughts, ideas, and stories',
+        },
         { key: 'author', label: 'Author', type: 'text', placeholder: 'Your name' },
         { key: 'accent', label: 'Accent Color', type: 'color' },
       ],
     },
     actions: [
-      { label: 'Draft a post with AI', icon: '🪄', do: { type: 'ai', prompt: 'Write a new blog post about ' } },
+      {
+        label: 'Draft a post with AI',
+        icon: '🪄',
+        do: { type: 'ai', prompt: 'Write a new blog post about ' },
+      },
       { label: 'Restyle my blog', icon: '🎨', do: { type: 'ai', prompt: 'Restyle my blog: ' } },
     ],
   },

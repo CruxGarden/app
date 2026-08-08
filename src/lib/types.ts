@@ -13,4 +13,3 @@ export enum ThemeMode {
   Light = 'light',
   Auto = 'auto',
 }
-

@@ -4,6 +4,8 @@ import { useAppStore } from '@/stores/appStore';
 import { useCruxStore } from '@/stores/cruxStore';
 import { cn } from '@/lib/cn';
 import { formatDateTime } from '@/lib/format';
+import { publicCruxUrl } from '@/lib/public-url';
+import { type PublishPhase } from '@/services/publish';
 import { Spinner } from '@/components/ui';
 import { usePaneWidth } from '@/hooks/usePaneWidth';
 import CreateAuthorModal from '@/components/auth/CreateAuthorModal';
@@ -82,6 +84,16 @@ function ExternalLinkIcon() {
   );
 }
 
+/** What the spinner says while a publish runs — a site build is not instant. */
+const PHASE_LABELS: Record<PublishPhase, string> = {
+  sync: 'Syncing...',
+  build: 'Building site...',
+  collect: 'Collecting files...',
+  upload: 'Uploading...',
+  finalize: 'Finishing...',
+  tags: 'Finishing...',
+};
+
 export default function PublishPane() {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const author = useAppStore((s) => s.author);
@@ -95,6 +107,8 @@ export default function PublishPane() {
   const [showConnect, setShowConnect] = useState(false);
   const [publishing, setPublishing] = useState(false);
   const [copied, setCopied] = useState(false);
+  const phase = useCruxStore((s) => s.publishPhase);
+  const failure = useCruxStore((s) => s.publishFailure);
 
   const { ref, isTooNarrow } = usePaneWidth(270);
 
@@ -109,8 +123,7 @@ export default function PublishPane() {
     return latest.updated;
   }, [artifacts]);
 
-  const publicUrl =
-    author && crux ? `${window.location.origin}/${author.username}/${crux.slug}` : null;
+  const publicUrl = author && crux ? publicCruxUrl(author.username, crux.slug) : null;
 
   const doPublish = useCallback(async () => {
     if (!crux) return;
@@ -119,7 +132,7 @@ export default function PublishPane() {
 
     setPublishing(true);
     try {
-      await publishCrux();
+      await publishCrux(); // records its own outcome in the store
     } finally {
       setPublishing(false);
     }
@@ -202,14 +215,16 @@ export default function PublishPane() {
               <div className="text-[10px] font-mono text-text-muted">
                 {formatDateTime(publishedAt)}
               </div>
-              {hasUnpublishedChanges && lastEditedAt && new Date(lastEditedAt) > new Date(publishedAt) && (
-                <div className="flex items-center gap-1.5 pt-1.5 border-t border-border">
-                  <span className="w-1.5 h-1.5 rounded-full bg-error shrink-0" />
-                  <span className="text-[10px] font-mono text-error">
-                    Edited {formatDateTime(lastEditedAt)}
-                  </span>
-                </div>
-              )}
+              {hasUnpublishedChanges &&
+                lastEditedAt &&
+                new Date(lastEditedAt) > new Date(publishedAt) && (
+                  <div className="flex items-center gap-1.5 pt-1.5 border-t border-border">
+                    <span className="w-1.5 h-1.5 rounded-full bg-error shrink-0" />
+                    <span className="text-[10px] font-mono text-error">
+                      Edited {formatDateTime(lastEditedAt)}
+                    </span>
+                  </div>
+                )}
             </div>
           ) : (
             <div className="rounded-[var(--radius-sm)] border border-border/60 border-dashed p-3">
@@ -236,7 +251,9 @@ export default function PublishPane() {
             <div className="flex flex-col">
               <span className="text-xs font-body text-text">Discoverable</span>
               <span className="text-[10px] text-text-muted">
-                {crux.discoverable ? 'Visible in search on crux.garden' : 'Only accessible by direct link'}
+                {crux.discoverable
+                  ? 'Visible in search on crux.garden'
+                  : 'Only accessible by direct link'}
               </span>
             </div>
           </label>
@@ -252,7 +269,7 @@ export default function PublishPane() {
               )}
             >
               <Spinner size={14} />
-              Sharing...
+              {PHASE_LABELS[phase ?? 'sync']}
             </button>
           ) : isPublished && !hasUnpublishedChanges ? (
             <div
@@ -270,7 +287,10 @@ export default function PublishPane() {
               <ConnectAccount
                 compact
                 description="Connect your account to share this crux."
-                onConnected={() => { setShowConnect(false); doPublish(); }}
+                onConnected={() => {
+                  setShowConnect(false);
+                  doPublish();
+                }}
               />
             </div>
           ) : (
@@ -285,6 +305,18 @@ export default function PublishPane() {
               <PublishIcon />
               {isPublished ? 'Update' : 'Share'}
             </button>
+          )}
+
+          {/* Failure — a silent no-op is indistinguishable from success here */}
+          {failure && !publishing && (
+            <div className="rounded-[var(--radius-sm)] border border-error/40 bg-error/5 p-3">
+              <p className="text-xs font-body text-error">{failure.message}</p>
+              {failure.log && (
+                <pre className="mt-2 max-h-40 overflow-auto whitespace-pre-wrap break-words text-[10px] leading-relaxed text-text-muted">
+                  {failure.log.slice(-2000)}
+                </pre>
+              )}
+            </div>
           )}
 
           {/* Public URL */}

@@ -69,6 +69,57 @@ describe('Export / Import', () => {
       expect(content).toBe('<h1>Hello</h1>');
     });
 
+    it('leaves this installation behind — folder path and publish state', async () => {
+      // meta.projectFolder is an absolute path on the exporting machine and
+      // the publish trio describes a deployment the importer does not own.
+      // Carrying either across left imported cruxes pointing at a folder that
+      // does not exist here (silent no-op writes, no preview, no build).
+      const crux = await svc.crux.create({
+        title: 'Portable',
+        type: 'workspace',
+        meta: {
+          projectFolder: '/Users/someone-else/CruxGarden/portable',
+          publishedAt: '2026-07-01T00:00:00.000Z',
+          publishedVersion: 3,
+          publishedFingerprints: { 'index.html': 'fp1' },
+          settings: { model: 'keep-me' },
+        },
+      });
+
+      const result = await exportCrux({ cruxId: crux.id });
+      const zip = await JSZip.loadAsync(await result.blob.arrayBuffer());
+      const cruxJson = JSON.parse(await zip.file('crux.json')!.async('text'));
+      expect(cruxJson.meta.projectFolder).toBeUndefined();
+      expect(cruxJson.meta.publishedAt).toBeUndefined();
+      expect(cruxJson.meta.publishedVersion).toBeUndefined();
+      expect(cruxJson.meta.publishedFingerprints).toBeUndefined();
+      expect(cruxJson.meta.settings).toEqual({ model: 'keep-me' });
+
+      await svc.crux.delete(crux.id);
+      const imported = await importCrux({ data: result.blob });
+      const importedCrux = await svc.crux.findById(imported.cruxId);
+      expect(importedCrux.meta?.projectFolder).toBeUndefined();
+      expect(importedCrux.meta?.publishedAt).toBeUndefined();
+      expect(importedCrux.meta?.settings).toEqual({ model: 'keep-me' });
+    });
+
+    it('drops a stale folder path even when the .crux file predates the fix', async () => {
+      const crux = await svc.crux.create({ title: 'Old Export', type: 'workspace' });
+      const result = await exportCrux({ cruxId: crux.id });
+
+      // Rewrite crux.json the way an older build wrote it.
+      const zip = await JSZip.loadAsync(await result.blob.arrayBuffer());
+      const cruxJson = JSON.parse(await zip.file('crux.json')!.async('text'));
+      cruxJson.meta = { ...cruxJson.meta, projectFolder: '/Volumes/other/Garden/old' };
+      zip.file('crux.json', JSON.stringify(cruxJson));
+      const legacyBlob = await zip.generateAsync({ type: 'blob' });
+
+      await svc.crux.delete(crux.id);
+      const imported = await importCrux({ data: legacyBlob });
+      const importedCrux = await svc.crux.findById(imported.cruxId);
+      expect(importedCrux.meta?.projectFolder).toBeUndefined();
+    });
+
     it('preserves messages through round-trip via version manifests', async () => {
       const crux = await svc.crux.create({ title: 'Chat Test', type: 'workspace' });
       const messages = [
@@ -577,7 +628,10 @@ describe('Export / Import', () => {
       });
 
       // Export with messages so we can verify full restoration
-      const exported = await exportCrux({ cruxId: crux.id, messages: [{ role: 'user', content: 'hello' }] });
+      const exported = await exportCrux({
+        cruxId: crux.id,
+        messages: [{ role: 'user', content: 'hello' }],
+      });
 
       // Spy on cruxService.update to throw ONCE — this is the final meta update step,
       // which runs AFTER the delete + create succeed, triggering the rollback path.
@@ -592,9 +646,9 @@ describe('Export / Import', () => {
       };
 
       try {
-        await expect(
-          importCrux({ data: exported.blob, mode: 'replace' }),
-        ).rejects.toThrow('Simulated update failure');
+        await expect(importCrux({ data: exported.blob, mode: 'replace' })).rejects.toThrow(
+          'Simulated update failure',
+        );
       } finally {
         svc.crux.update = originalUpdate;
       }
@@ -710,7 +764,10 @@ describe('Export / Import', () => {
 
     it('crux.json does not contain messages (they live in version manifests)', async () => {
       const crux = await svc.crux.create({ title: 'No Messages', type: 'workspace' });
-      const result = await exportCrux({ cruxId: crux.id, messages: [{ role: 'user', content: 'test' }] });
+      const result = await exportCrux({
+        cruxId: crux.id,
+        messages: [{ role: 'user', content: 'test' }],
+      });
       const ab = await result.blob.arrayBuffer();
       const zip = await JSZip.loadAsync(ab);
       const cruxJson = JSON.parse(await zip.file('crux.json')!.async('text'));
@@ -741,7 +798,10 @@ describe('Export / Import', () => {
   describe('format efficiency', () => {
     it('snapshot version manifests do not duplicate messages in crux.meta', async () => {
       const crux = await svc.crux.create({ title: 'No Dup', type: 'workspace' });
-      const snapMessages = [{ role: 'user', content: 'hello' }, { role: 'assistant', content: 'hi' }];
+      const snapMessages = [
+        { role: 'user', content: 'hello' },
+        { role: 'assistant', content: 'hi' },
+      ];
 
       const snap = await svc.crux.create({
         slug: 'snapshot-1',
@@ -906,7 +966,10 @@ describe('Export / Import', () => {
       const current = JSON.parse(await zip.file('versions/current.json')!.async('text'));
 
       // Each artifact entry has fingerprint, mimeType, size — no content
-      for (const [_path, info] of Object.entries(current.artifacts) as [string, Record<string, unknown>][]) {
+      for (const [_path, info] of Object.entries(current.artifacts) as [
+        string,
+        Record<string, unknown>,
+      ][]) {
         expect(typeof info.fingerprint).toBe('string');
         expect(info.fingerprint).toMatch(/^[0-9a-f]{64}$/); // SHA-256 hex
         expect(typeof info.mimeType).toBe('string');

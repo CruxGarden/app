@@ -1,4 +1,6 @@
 import { SettingsKey, API_KEY_PREFIX } from '@/lib/constants';
+import { resolveModel } from './providers';
+import { LOCAL_API_KEY } from './local';
 import { getSetting, setSetting, removeSetting } from '@/services/settings';
 import { getSecret, setSecret, deleteSecret } from '@/services/secrets';
 
@@ -8,6 +10,9 @@ import { getSecret, setSecret, deleteSecret } from '@/services/secrets';
  * the old storage location.
  */
 export async function getApiKey(providerId: string): Promise<string | null> {
+  // Local inference authenticates nothing — never blocks on a missing key
+  if (providerId === 'ollama' || providerId === 'lmstudio') return LOCAL_API_KEY;
+
   const key = API_KEY_PREFIX + providerId;
   const value = await getSecret(key);
   if (value) return value;
@@ -21,7 +26,9 @@ export async function getApiKey(providerId: string): Promise<string | null> {
       removeSetting(key);
       return sqliteValue;
     }
-  } catch { /* SQLite not ready — skip migration */ }
+  } catch {
+    /* SQLite not ready — skip migration */
+  }
 
   return null;
 }
@@ -38,11 +45,10 @@ export async function removeApiKey(providerId: string): Promise<void> {
 
 /** Get the default model from settings, or return the fallback */
 export async function getDefaultModel(): Promise<string> {
-  return getSetting(SettingsKey.DefaultModel) || 'claude-sonnet-4-20250514';
+  return resolveModel(getSetting(SettingsKey.DefaultModel));
 }
 
 /** Save the default model to settings */
 export async function setDefaultModel(model: string): Promise<void> {
   setSetting(SettingsKey.DefaultModel, model);
 }
-

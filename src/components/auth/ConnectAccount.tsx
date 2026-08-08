@@ -26,7 +26,13 @@ interface ConnectAccountProps {
  * Reusable email + code connect form.
  * Used in Settings, PublishPane, SyncPane, and anywhere auth is needed inline.
  */
-export default function ConnectAccount({ description, onConnected, onDisconnected, compact, autoFocus }: ConnectAccountProps) {
+export default function ConnectAccount({
+  description,
+  onConnected,
+  onDisconnected,
+  compact,
+  autoFocus,
+}: ConnectAccountProps) {
   const { isAuthenticated, account, connectAccount, disconnectAccount } = useAuthStore();
 
   const [email, setEmail] = useState('');
@@ -102,14 +108,15 @@ export default function ConnectAccount({ description, onConnected, onDisconnecte
 
   return (
     <div className={cn('space-y-3', compact && 'space-y-2')}>
-      {description && (
-        <p className="text-xs text-text-muted">{description}</p>
-      )}
+      {description && <p className="text-xs text-text-muted">{description}</p>}
       <div className="flex items-center gap-2">
         <input
           type="email"
           value={email}
-          onChange={(e) => { setEmail(e.target.value); setError(''); }}
+          onChange={(e) => {
+            setEmail(e.target.value);
+            setError('');
+          }}
           placeholder="email@example.com"
           autoFocus={autoFocus}
           disabled={connecting || codeSent}
@@ -131,7 +138,10 @@ export default function ConnectAccount({ description, onConnected, onDisconnecte
           <input
             type="text"
             value={code}
-            onChange={(e) => { setCode(e.target.value); setError(''); }}
+            onChange={(e) => {
+              setCode(e.target.value);
+              setError('');
+            }}
             placeholder="Enter code"
             autoFocus
             disabled={connecting}
@@ -146,7 +156,10 @@ export default function ConnectAccount({ description, onConnected, onDisconnecte
             {connecting ? <Spinner size={12} /> : 'Connect'}
           </button>
           <button
-            onClick={() => { setCodeSent(false); setCode(''); }}
+            onClick={() => {
+              setCodeSent(false);
+              setCode('');
+            }}
             className="text-xs text-text-muted hover:text-text cursor-pointer"
           >
             Cancel

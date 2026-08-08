@@ -102,10 +102,8 @@ export const useAppStore = create<AppState>((set, get) => ({
       await initServices();
       await get().ensureAuthor();
 
-      // Desktop: start recording external Project Folder edits (ADR 0001)
-      const { initIngestion } = await import('@/services/ingestion');
-      initIngestion();
-
+      // (Ingestion starts inside initServices — it must run on every entry
+      // path, including the Gateway's, which never reaches this store.)
       set({ ready: true });
     }
 
@@ -143,10 +141,20 @@ export const useAppStore = create<AppState>((set, get) => ({
 
     // Revoke old object URL if cached
     const oldUrl = _avatarUrlCache.get(oldFingerprint as string);
-    if (oldUrl) { URL.revokeObjectURL(oldUrl); _avatarUrlCache.delete(oldFingerprint as string); }
+    if (oldUrl) {
+      URL.revokeObjectURL(oldUrl);
+      _avatarUrlCache.delete(oldFingerprint as string);
+    }
 
-    const updated = await (await lazyGetServices()).author.update(author.id, {
-      meta: { ...author.meta, avatarFingerprint: fingerprint, avatarMimeType: file.type, avatarUrl: null },
+    const updated = await (
+      await lazyGetServices()
+    ).author.update(author.id, {
+      meta: {
+        ...author.meta,
+        avatarFingerprint: fingerprint,
+        avatarMimeType: file.type,
+        avatarUrl: null,
+      },
     });
     set({ author: updated });
     if (isAuthenticated) syncAuthorToApi(updated);
@@ -164,7 +172,10 @@ export const useAppStore = create<AppState>((set, get) => ({
       const db = await lazyGetDb();
       db.blobDelete(fingerprint).catch(() => {});
       const oldUrl = _avatarUrlCache.get(fingerprint);
-      if (oldUrl) { URL.revokeObjectURL(oldUrl); _avatarUrlCache.delete(fingerprint); }
+      if (oldUrl) {
+        URL.revokeObjectURL(oldUrl);
+        _avatarUrlCache.delete(fingerprint);
+      }
     }
 
     const meta = { ...author.meta, avatarFingerprint: null, avatarMimeType: null, avatarUrl: null };

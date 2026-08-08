@@ -68,6 +68,12 @@ export interface ProjectBridge {
 export interface PreviewBridge {
   start(folder: string): Promise<string>;
   stop(folder: string): Promise<void>;
+  /**
+   * Screenshot a local preview URL (static server or dev server) via a hidden
+   * window in the main process — desktop's replacement for the injected
+   * postMessage capture web preview uses. Returns JPEG bytes. Loopback only.
+   */
+  capture(url: string): Promise<Uint8Array>;
 }
 
 // ── toolchain (bundled pnpm, ADR 0004) ──────────────────────────────────────
@@ -102,6 +108,21 @@ export interface SecretsBridge {
   delete(key: string): Promise<void>;
 }
 
+// ── localai (Ollama / LM Studio detection, Phase A4) ────────────────────────
+
+export interface LocalAiEndpoint {
+  id: 'ollama' | 'lmstudio';
+  name: string;
+  /** OpenAI-compatible base URL the renderer uses for chat. */
+  baseUrl: string;
+  models: string[];
+}
+
+export interface LocalAiBridge {
+  /** Probe localhost for running local inference servers and their models. */
+  detect(): Promise<LocalAiEndpoint[]>;
+}
+
 // ── ffmpeg (media transcoding) ──────────────────────────────────────────────
 
 export interface TranscodeOutput {
@@ -131,4 +152,5 @@ export interface ElectronBridge {
   devserver: DevServerBridge;
   secrets: SecretsBridge;
   ffmpeg: FfmpegBridge;
+  localai: LocalAiBridge;
 }

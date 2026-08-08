@@ -1,15 +1,14 @@
-import { useCallback, useRef } from 'react';
-import { useCruxStore } from '@/stores/cruxStore';
+import { useCallback, useEffect, useRef } from 'react';
+import { useCruxStore, cancelPendingDeletes } from '@/stores/cruxStore';
 import { getServices } from '@/services';
 import { runConversation } from '@/ai/engine';
-import { getAdapter } from '@/ai/adapters';
-import { createToolExecutor } from '@/ai/tools';
+import { createToolExecutor, didMutate } from '@/ai/tools';
 import { getApiKey } from '@/ai/keys';
-import { getProviderForModel } from '@/ai/providers';
+import { getProviderForModel, resolveModel } from '@/ai/providers';
 import { SnapshotPolicy, type SnapshotFrequency } from '@/services/growth';
 import type { ChatMessage, ToolCall } from '@/api/types';
 import type { NormalizedMessage } from '@/services/types';
-import { getPersona, getPersonaFingerprint } from '@/components/mood/mood-helpers';
+import { getPersona, getPersonaFingerprint } from '@/services/persona';
 import { useAppStore } from '@/stores/appStore';
 
 /**
@@ -62,9 +61,7 @@ function buildNormalizedMessages(allMessages: ChatMessage[]): NormalizedMessage[
         type: 'tool_result' as const,
         tool_use_id: tc.id || `toolu_hist_${i}_${t}`,
         content:
-          tc.name === 'read_file'
-            ? (tc.result || 'Done.')
-            : truncateToolResult(tc.result || 'Done.'),
+          tc.name === 'read_file' ? tc.result || 'Done.' : truncateToolResult(tc.result || 'Done.'),
       }));
 
       // Merge tool results with the NEXT user message to keep roles alternating
@@ -110,23 +107,41 @@ export function useChat() {
   // fire time so runtime settings changes are respected.
   const snapshotPolicyRef = useRef<SnapshotPolicy | null>(null);
   if (!snapshotPolicyRef.current) {
+    const owningCruxId = crux?.id;
     snapshotPolicyRef.current = new SnapshotPolicy(
       () =>
-        ((useCruxStore.getState().crux?.meta?.settings?.snapshotFrequency as SnapshotFrequency) ||
-          'ai-turn'),
-      () =>
+        (useCruxStore.getState().crux?.meta?.settings?.snapshotFrequency as SnapshotFrequency) ||
+        'ai-turn',
+      () => {
+        // A timed policy can fire long after the user moved on — snapshotting
+        // then would capture a different crux entirely.
+        if (useCruxStore.getState().crux?.id !== owningCruxId) return;
         useCruxStore
           .getState()
           .createSnapshot({ silent: false })
-          .catch((err) => console.warn('Auto-snapshot failed:', err)),
+          .catch((err) => console.warn('Auto-snapshot failed:', err));
+      },
     );
   }
+
+  // Tear down anything that outlives the component: a pending snapshot timer,
+  // a debounced artifact refresh, an in-flight turn, and any delete request
+  // still waiting on the user (which would otherwise hang the tool loop).
+  useEffect(() => {
+    return () => {
+      snapshotPolicyRef.current?.dispose();
+      snapshotPolicyRef.current = null;
+      if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current);
+      abortRef.current?.abort();
+      cancelPendingDeletes();
+    };
+  }, []);
 
   const send = useCallback(
     async (content: string) => {
       if (!crux || isStreaming) return;
 
-      const model = crux.meta?.settings?.model || 'claude-sonnet-4-20250514';
+      const model = resolveModel(crux.meta?.settings?.model);
       const providerId = getProviderForModel(model);
       const apiKey = await getApiKey(providerId);
 
@@ -189,9 +204,11 @@ export function useChat() {
       // If any fingerprinted message exists with a different persona, exclude all
       // unfingerpinted (legacy) messages too — they belong to the old persona.
       const allMessages = [...messages, userMsg];
-      const hasOtherPersona = allMessages.some((m) => m.personaFingerprint && m.personaFingerprint !== pf);
-      const personaMessages = allMessages.filter((m) =>
-        m.personaFingerprint === pf || (!m.personaFingerprint && !hasOtherPersona),
+      const hasOtherPersona = allMessages.some(
+        (m) => m.personaFingerprint && m.personaFingerprint !== pf,
+      );
+      const personaMessages = allMessages.filter(
+        (m) => m.personaFingerprint === pf || (!m.personaFingerprint && !hasOtherPersona),
       );
       const normalizedMessages = buildNormalizedMessages(personaMessages);
 
@@ -205,15 +222,15 @@ export function useChat() {
       const toolCalls: ToolCall[] = [];
 
       try {
-        const adapter = await getAdapter(model);
-        const executeToolFn = createToolExecutor(crux.id, async (_path) => {
-          // Auto-approve: the AI is instructed to confirm with the user in chat
-          // before calling delete_file, so the user's reply is the confirmation.
-          return true;
-        }, model);
+        const executeToolFn = createToolExecutor(
+          crux.id,
+          // Honest delete: block the tool until the user answers the ChatPane
+          // confirmation banner; the store performs the deletion on approval.
+          (path, artifactId) => useCruxStore.getState().requestDeleteApproval(artifactId, path),
+          model,
+        );
 
         for await (const event of runConversation(
-          adapter,
           apiKey,
           crux.id,
           normalizedMessages,
@@ -242,12 +259,7 @@ export function useChat() {
               if (tc) tc.result = event.result;
 
               // Refresh artifacts after mutation operations (debounced to coalesce rapid tool calls)
-              if (
-                event.name === 'write_file' ||
-                event.name === 'edit_file' ||
-                event.name === 'delete_file' ||
-                event.name === 'generate_image'
-              ) {
+              if (didMutate(event.name, event.result)) {
                 if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current);
                 refreshTimerRef.current = setTimeout(() => {
                   refreshTimerRef.current = null;
@@ -266,7 +278,9 @@ export function useChat() {
               break;
 
             case 'usage':
-              useCruxStore.getState().addTokenUsage(event.inputTokens, event.outputTokens);
+              useCruxStore
+                .getState()
+                .addTokenUsage(event.inputTokens, event.outputTokens, event.cachedInputTokens);
               break;
 
             case 'info':
@@ -284,6 +298,17 @@ export function useChat() {
         if (e.name !== 'AbortError') {
           fullContent += `\n\n*Error: ${e.message}*`;
         }
+      }
+
+      // The workspace may have moved on while this turn streamed (the user
+      // opened another crux). Persisting now would file this reply — and its
+      // tool records — under the wrong crux, so drop it: the turn's own crux
+      // is no longer loaded, and its history stays as it was on disk.
+      if (useCruxStore.getState().crux?.id !== crux.id) {
+        clearStreamContent();
+        setStreaming(false);
+        abortRef.current = null;
+        return;
       }
 
       // Add assistant message (always, to prevent consecutive user messages)
@@ -306,10 +331,8 @@ export function useChat() {
       // Save messages to crux meta
       await saveMeta();
 
-      // Auto-snapshot trigger — only if this turn had file mutations
-      const hadMutations = toolCalls.some((tc) =>
-        tc.name === 'write_file' || tc.name === 'edit_file' || tc.name === 'delete_file' || tc.name === 'generate_image',
-      );
+      // Auto-snapshot trigger — only if this turn actually changed files
+      const hadMutations = toolCalls.some((tc) => didMutate(tc.name, tc.result ?? ''));
       if (hadMutations) {
         snapshotPolicyRef.current?.notifyMutation();
       }

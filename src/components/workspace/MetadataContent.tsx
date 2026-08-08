@@ -2,6 +2,7 @@ import { useMemo, useState, useRef, useCallback } from 'react';
 import { cn } from '@/lib/cn';
 import { formatDateTime } from '@/lib/format';
 import type { Crux, CruxSummary, CruxKind, CruxVisibility, ChatMessage } from '@/api/types';
+import { getModelShortName } from '@/ai/providers';
 
 // ── Helpers ──────────────────────────────────────────
 
@@ -136,7 +137,9 @@ function EditableField({
 function ReadonlyField({ label, value }: { label: string; value: string }) {
   return (
     <FieldRow label={label}>
-      <span className="whitespace-pre-wrap">{value || <span className="text-text-muted italic">empty</span>}</span>
+      <span className="whitespace-pre-wrap">
+        {value || <span className="text-text-muted italic">empty</span>}
+      </span>
     </FieldRow>
   );
 }
@@ -245,13 +248,7 @@ interface MetadataContentProps {
 }
 
 function formatModel(model: string): string {
-  const map: Record<string, string> = {
-    'claude-sonnet-4-20250514': 'Claude Sonnet 4',
-    'claude-opus-4-20250514': 'Claude Opus 4',
-    'claude-haiku-3-5-20241022': 'Claude Haiku 3.5',
-    'claude-3-5-sonnet-20241022': 'Claude Sonnet 3.5',
-  };
-  return map[model] || model;
+  return getModelShortName(model) || model;
 }
 
 export default function MetadataContent({
@@ -290,20 +287,11 @@ export default function MetadataContent({
     onUpdate({ kind: next ?? null });
   };
 
-
   const Field = readOnly
     ? ({ label, value }: { label: string; value: string; multiline?: boolean }) => (
         <ReadonlyField label={label} value={value} />
       )
-    : ({
-        label,
-        value,
-        multiline,
-      }: {
-        label: string;
-        value: string;
-        multiline?: boolean;
-      }) => (
+    : ({ label, value, multiline }: { label: string; value: string; multiline?: boolean }) => (
         <EditableField
           label={label}
           value={value}
@@ -353,9 +341,7 @@ export default function MetadataContent({
 
         <FieldRow label="Visibility">
           {readOnly ? (
-            <span
-              className="px-2 py-0.5 rounded-full text-[10px] font-mono uppercase inline-block bg-text-muted/15 text-text-muted"
-            >
+            <span className="px-2 py-0.5 rounded-full text-[10px] font-mono uppercase inline-block bg-text-muted/15 text-text-muted">
               {crux.visibility}
             </span>
           ) : (
@@ -432,7 +418,6 @@ export default function MetadataContent({
           </div>
         </>
       )}
-
     </div>
   );
 }

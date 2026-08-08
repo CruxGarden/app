@@ -13,7 +13,12 @@ export function useStoreProxy(cruxId: string | null) {
   useEffect(() => {
     if (!cruxId) return;
 
-    function reply(source: MessageEventSource | null, type: string, id: string, data: Record<string, unknown>) {
+    function reply(
+      source: MessageEventSource | null,
+      type: string,
+      id: string,
+      data: Record<string, unknown>,
+    ) {
       source?.postMessage({ type, id, ...data }, { targetOrigin: PREVIEW_ORIGIN });
     }
 
@@ -28,7 +33,8 @@ export function useStoreProxy(cruxId: string | null) {
 
       switch (type) {
         case 'crux:store:get':
-          store.get(cruxId!, key)
+          store
+            .get(cruxId!, key)
             .then((val) => reply(e.source, 'crux:store:get:res', id, { value: val }))
             .catch(() => reply(e.source, 'crux:store:get:res', id, { value: null }));
           break;
@@ -38,7 +44,8 @@ export function useStoreProxy(cruxId: string | null) {
           break;
 
         case 'crux:store:inc':
-          store.increment(cruxId!, key, by ?? 1)
+          store
+            .increment(cruxId!, key, by ?? 1)
             .then((val) => reply(e.source, 'crux:store:inc:res', id, { value: val }))
             .catch(() => reply(e.source, 'crux:store:inc:res', id, { value: 0 }));
           break;
@@ -48,9 +55,15 @@ export function useStoreProxy(cruxId: string | null) {
           break;
 
         case 'crux:store:list':
-          store.list(cruxId!)
+          store
+            .list(cruxId!)
             .then((entries) => {
-              const keys = entries.map((e) => ({ key: e.key, value: e.value, mode: e.mode, updated: e.updated }));
+              const keys = entries.map((e) => ({
+                key: e.key,
+                value: e.value,
+                mode: e.mode,
+                updated: e.updated,
+              }));
               reply(e.source, 'crux:store:list:res', id, { keys });
             })
             .catch(() => reply(e.source, 'crux:store:list:res', id, { keys: [] }));

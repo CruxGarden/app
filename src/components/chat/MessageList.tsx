@@ -13,7 +13,12 @@ interface MessageListProps {
   truncatedAfter?: number;
 }
 
-export default function MessageList({ messages, streamingContent, isStreaming, truncatedAfter }: MessageListProps) {
+export default function MessageList({
+  messages,
+  streamingContent,
+  isStreaming,
+  truncatedAfter,
+}: MessageListProps) {
   const bottomRef = useRef<HTMLDivElement>(null);
   const hasScrolledRef = useRef(false);
   const author = useAppStore((s) => s.author);

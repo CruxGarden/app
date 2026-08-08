@@ -197,7 +197,7 @@ function HtmlRenderer({
         )}
         <iframe
           src={src}
-          sandbox="allow-scripts allow-same-origin allow-popups allow-modals"
+          sandbox="allow-scripts allow-same-origin allow-popups allow-modals allow-downloads"
           allow="geolocation; camera; microphone; accelerometer; gyroscope; autoplay; fullscreen"
           className={`w-full h-full border-0 transition-opacity duration-150 ${iframeLoaded ? 'opacity-100' : 'opacity-0'}`}
           onLoad={() => setIframeLoaded(true)}
@@ -208,7 +208,16 @@ function HtmlRenderer({
   }
 
   // Fallback: service worker approach (local dev without S3)
-  return <ServiceWorkerHtmlRenderer artifact={artifact} artifacts={artifacts} username={username} slug={slug} cruxId={cruxId} downloadBlob={downloadBlob} />;
+  return (
+    <ServiceWorkerHtmlRenderer
+      artifact={artifact}
+      artifacts={artifacts}
+      username={username}
+      slug={slug}
+      cruxId={cruxId}
+      downloadBlob={downloadBlob}
+    />
+  );
 }
 
 function ServiceWorkerHtmlRenderer({
@@ -239,7 +248,7 @@ function ServiceWorkerHtmlRenderer({
     <iframe
       key={previewUrl}
       src={previewUrl}
-      sandbox="allow-scripts allow-same-origin allow-popups allow-modals"
+      sandbox="allow-scripts allow-same-origin allow-popups allow-modals allow-downloads"
       allow="geolocation; camera; microphone; accelerometer; gyroscope; autoplay; fullscreen"
       className="w-full h-full border-0 bg-contrast"
       title="Published creation"
@@ -392,7 +401,14 @@ function formatSize(bytes?: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-export default function ArtifactRenderer({ artifacts, username, slug, cruxId, subPath, downloadBlob }: ArtifactRendererProps) {
+export default function ArtifactRenderer({
+  artifacts,
+  username,
+  slug,
+  cruxId,
+  subPath,
+  downloadBlob,
+}: ArtifactRendererProps) {
   const main = useMemo(() => resolveMain(artifacts), [artifacts]);
 
   // Default download function uses publicApi
@@ -420,6 +436,8 @@ export default function ArtifactRenderer({ artifacts, username, slug, cruxId, su
     case 'image':
       return <ImageRenderer artifact={main.artifact} downloadBlob={dl} />;
     default:
-      return <FileListing artifacts={artifacts} username={username} slug={slug} downloadBlob={dl} />;
+      return (
+        <FileListing artifacts={artifacts} username={username} slug={slug} downloadBlob={dl} />
+      );
   }
 }

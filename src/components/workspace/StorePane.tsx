@@ -129,8 +129,19 @@ export default function StorePane() {
           >
             + Add key
           </button>
-          <button onClick={loadEntries} className="text-xs text-[var(--text-muted)] hover:text-[var(--text)]" title="Refresh">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <button
+            onClick={loadEntries}
+            className="text-xs text-[var(--text-muted)] hover:text-[var(--text)]"
+            title="Refresh"
+          >
+            <svg
+              width="12"
+              height="12"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+            >
               <polyline points="23 4 23 10 17 10" />
               <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
             </svg>
@@ -147,13 +158,26 @@ export default function StorePane() {
             onChange={(e) => setNewKey(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === 'Enter') handleAdd();
-              if (e.key === 'Escape') { setAdding(false); setNewKey(''); }
+              if (e.key === 'Escape') {
+                setAdding(false);
+                setNewKey('');
+              }
             }}
             placeholder="key name"
             className="flex-1 bg-transparent text-sm font-mono outline-none text-[var(--text)] placeholder:text-[var(--text-muted)]"
           />
-          <button onClick={handleAdd} className="text-xs text-[var(--accent)]">Add</button>
-          <button onClick={() => { setAdding(false); setNewKey(''); }} className="text-xs text-[var(--text-muted)]">Cancel</button>
+          <button onClick={handleAdd} className="text-xs text-[var(--accent)]">
+            Add
+          </button>
+          <button
+            onClick={() => {
+              setAdding(false);
+              setNewKey('');
+            }}
+            className="text-xs text-[var(--text-muted)]"
+          >
+            Cancel
+          </button>
         </div>
       )}
 
@@ -175,7 +199,10 @@ export default function StorePane() {
             </thead>
             <tbody>
               {entries.map((entry) => (
-                <tr key={entry.key} className="border-b border-[var(--border)] hover:bg-[var(--surface)]">
+                <tr
+                  key={entry.key}
+                  className="border-b border-[var(--border)] hover:bg-[var(--surface)]"
+                >
                   <td className="px-3 py-1.5 font-mono text-[var(--accent)]">{entry.key}</td>
                   <td
                     className="px-3 py-1.5 font-mono cursor-pointer max-w-[200px] truncate"
@@ -210,7 +237,11 @@ export default function StorePane() {
                           ? 'bg-amber-900/30 text-amber-400'
                           : 'bg-[var(--surface)] text-[var(--text-muted)]'
                       }`}
-                      title={entry.mode === 'public' ? 'Anyone can read/write' : 'Requires crux.garden account'}
+                      title={
+                        entry.mode === 'public'
+                          ? 'Anyone can read/write'
+                          : 'Requires crux.garden account'
+                      }
                     >
                       {entry.mode}
                     </button>
@@ -221,7 +252,14 @@ export default function StorePane() {
                       className="text-[var(--text-muted)] hover:text-[var(--error)] transition-colors"
                       title="Delete key"
                     >
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <svg
+                        width="12"
+                        height="12"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                      >
                         <line x1="18" y1="6" x2="6" y2="18" />
                         <line x1="6" y1="6" x2="18" y2="18" />
                       </svg>
@@ -236,7 +274,9 @@ export default function StorePane() {
 
       {/* Footer */}
       <div className="flex items-center justify-between px-3 py-1.5 border-t border-[var(--border)] text-[var(--text-muted)] text-xs">
-        <span>{entries.length} key{entries.length !== 1 ? 's' : ''} · {formatBytes(totalSize)}</span>
+        <span>
+          {entries.length} key{entries.length !== 1 ? 's' : ''} · {formatBytes(totalSize)}
+        </span>
         {entries.length > 0 && (
           <button onClick={handleClearAll} className="hover:text-[var(--error)] transition-colors">
             Clear all

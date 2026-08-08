@@ -1,9 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import {
-  buildSystemPromptFromData,
-  estimateTokens,
-  estimateMessageTokens,
-  trimMessagesIfNeeded,
+  buildPromptPartsFromData,
+  buildContextFromData,
+  CONTEXT_BLOCK_OPEN,
 } from './system-prompt';
 import type { Crux, Artifact } from '@/services/types';
 
@@ -44,47 +43,73 @@ function makeArtifact(path: string, overrides: Partial<Artifact> = {}): Artifact
   };
 }
 
-describe('buildSystemPromptFromData', () => {
-  it('includes all required sections', () => {
-    const prompt = buildSystemPromptFromData(makeCrux(), []);
+describe('buildPromptPartsFromData', () => {
+  it('splits stable system from volatile context (A2)', () => {
+    const { system, context } = buildPromptPartsFromData(makeCrux(), [makeArtifact('index.html')]);
 
-    expect(prompt).toContain('## Identity');
-    expect(prompt).toContain('## Capabilities');
-    expect(prompt).toContain('## Process');
-    expect(prompt).toContain('## Rules');
-    expect(prompt).toContain('## Web Applications');
-    expect(prompt).toContain('## Edge Cases');
-    expect(prompt).toContain('## Current Files');
+    // Stable prefix: persona, rules, kind guidance — no per-file state
+    expect(system).toContain('## Identity');
+    expect(system).toContain('## Capabilities');
+    expect(system).toContain('## Process');
+    expect(system).toContain('## Rules');
+    expect(system).toContain('## Edge Cases');
+    expect(system).not.toContain('- index.html');
+
+    // Volatile context: file list, wrapped in the workspace_context block
+    expect(context.startsWith(CONTEXT_BLOCK_OPEN)).toBe(true);
+    expect(context).toContain('</workspace_context>');
+    expect(context).toContain('## Current Files');
+    expect(context).toContain('- index.html');
   });
 
   it('uses default Keeper persona when no custom prompt', () => {
-    const prompt = buildSystemPromptFromData(makeCrux(), []);
-    expect(prompt).toContain('The Keeper');
-    expect(prompt).toContain('Crux Garden');
+    const { system } = buildPromptPartsFromData(makeCrux(), []);
+    expect(system).toContain('The Keeper');
+    expect(system).toContain('Crux Garden');
   });
 
-  it('uses custom system prompt when provided', () => {
+  it('adds a per-crux prompt as Instructions alongside the persona identity', () => {
+    // Since the persona system landed, identity always comes from the Mood
+    // persona; a per-crux systemPrompt is workspace INSTRUCTIONS, not a
+    // replacement personality.
     const crux = makeCrux({
       meta: { settings: { systemPrompt: 'You are a coding assistant.' } },
     });
-    const prompt = buildSystemPromptFromData(crux, []);
-    expect(prompt).toContain('You are a coding assistant.');
-    expect(prompt).not.toContain('The Keeper');
+    const { system } = buildPromptPartsFromData(crux, []);
+    expect(system).toContain('## Instructions');
+    expect(system).toContain('You are a coding assistant.');
+    expect(system).toContain('## Identity'); // persona identity is retained
   });
 
+  it('gives browser-native (esm.sh) guidance for non-site cruxes', () => {
+    const { system } = buildPromptPartsFromData(makeCrux(), [makeArtifact('index.html')]);
+    expect(system).toContain('## Web Applications');
+    expect(system).toContain('esm.sh');
+    expect(system).not.toContain('## Site Crux');
+  });
+
+  it('swaps in Site Crux guidance when the crux has an Astro config', () => {
+    const artifacts = [makeArtifact('astro.config.mjs'), makeArtifact('src/pages/index.astro')];
+    const { system } = buildPromptPartsFromData(makeCrux(), artifacts);
+    expect(system).toContain('## Site Crux');
+    expect(system).toContain('package.json');
+    // The esm.sh import-map pattern is actively wrong for a toolchain project
+    expect(system).not.toContain('## Web Applications');
+    expect(system).not.toContain('<script type="importmap">');
+  });
+});
+
+describe('buildContextFromData', () => {
   it('lists artifact files in Current Files section', () => {
-    const artifacts = [
-      makeArtifact('index.html'),
-      makeArtifact('styles.css'),
-    ];
-    const prompt = buildSystemPromptFromData(makeCrux(), artifacts);
-    expect(prompt).toContain('- index.html');
-    expect(prompt).toContain('- styles.css');
+    const artifacts = [makeArtifact('index.html'), makeArtifact('styles.css')];
+    const context = buildContextFromData(makeCrux(), artifacts);
+    expect(context).toContain('- index.html');
+    expect(context).toContain('- styles.css');
   });
 
   it('shows "No files yet." when no artifacts', () => {
-    const prompt = buildSystemPromptFromData(makeCrux(), []);
-    expect(prompt).toContain('No files yet.');
+    const context = buildContextFromData(makeCrux(), []);
+    expect(context).toContain('No files yet.');
   });
 
   it('excludes version artifacts from file listing', () => {
@@ -92,9 +117,9 @@ describe('buildSystemPromptFromData', () => {
       makeArtifact('index.html'),
       makeArtifact('snapshot.html', { type: 'version' }),
     ];
-    const prompt = buildSystemPromptFromData(makeCrux(), artifacts);
-    expect(prompt).toContain('- index.html');
-    expect(prompt).not.toContain('- snapshot.html');
+    const context = buildContextFromData(makeCrux(), artifacts);
+    expect(context).toContain('- index.html');
+    expect(context).not.toContain('- snapshot.html');
   });
 
   it('includes workspace context when summary exists', () => {
@@ -109,81 +134,62 @@ describe('buildSystemPromptFromData', () => {
         },
       },
     });
-    const prompt = buildSystemPromptFromData(crux, []);
-    expect(prompt).toContain('## Workspace Context');
-    expect(prompt).toContain('Project: Portfolio Site');
-    expect(prompt).toContain('Purpose: Showcase work');
+    const context = buildContextFromData(crux, []);
+    expect(context).toContain('## Workspace Context');
+    expect(context).toContain('Project: Portfolio Site');
+    expect(context).toContain('Purpose: Showcase work');
   });
 
   it('omits workspace context when no summary', () => {
-    const prompt = buildSystemPromptFromData(makeCrux(), []);
-    expect(prompt).not.toContain('## Workspace Context');
-  });
-});
-
-describe('estimateTokens', () => {
-  it('estimates ~3.5 chars per token', () => {
-    expect(estimateTokens('hello world')).toBe(4); // 11 / 3.5 = 3.14, ceil = 4
-    expect(estimateTokens('')).toBe(0);
-    expect(estimateTokens('a'.repeat(100))).toBe(29); // 100 / 3.5 = 28.57, ceil = 29
-  });
-});
-
-describe('estimateMessageTokens', () => {
-  it('estimates tokens for string content', () => {
-    const messages = [
-      { role: 'user', content: 'hello world' },
-      { role: 'assistant', content: 'hi there' },
-    ];
-    const tokens = estimateMessageTokens(messages);
-    expect(tokens).toBeGreaterThan(0);
-    expect(tokens).toBe(estimateTokens('hello world') + estimateTokens('hi there'));
+    const context = buildContextFromData(makeCrux(), []);
+    expect(context).not.toContain('## Workspace Context');
   });
 
-  it('estimates tokens for content block arrays', () => {
-    const messages = [
-      {
-        role: 'assistant',
-        content: [
-          { type: 'text', text: 'Let me help' },
-          { type: 'tool_use', id: 't1', name: 'read_file', input: { path: 'index.html' } },
-        ],
+  it('renders the content model so chat and the Builder agree', () => {
+    const crux = makeCrux({
+      meta: {
+        contentModel: {
+          collections: [
+            {
+              name: 'Posts',
+              singular: 'Post',
+              glob: 'src/pages/posts/*.md',
+              routeBase: '/posts/',
+              fields: [
+                { key: 'title', label: 'Title', type: 'text' },
+                { key: 'date', label: 'Date', type: 'text' },
+              ],
+              new: {
+                pathTemplate: 'src/pages/posts/{slug}.md',
+                frontmatter: {
+                  layout: '../../layouts/PostLayout.astro',
+                  title: '{title}',
+                  date: '{today}',
+                },
+              },
+              sort: { field: 'date', dir: 'desc' },
+            },
+          ],
+          settings: {
+            path: 'src/config.json',
+            fields: [{ key: 'title', label: 'Blog Title', type: 'text' }],
+          },
+        },
       },
-    ];
-    const tokens = estimateMessageTokens(messages);
-    expect(tokens).toBeGreaterThan(0);
-  });
-});
-
-describe('trimMessagesIfNeeded', () => {
-  it('returns messages unchanged when under limit', () => {
-    const messages = [
-      { role: 'user', content: 'short message' },
-      { role: 'assistant', content: 'short reply' },
-    ];
-    const { messages: result, trimmed } = trimMessagesIfNeeded(messages, 100);
-    expect(trimmed).toBe(false);
-    expect(result).toEqual(messages);
+    });
+    const context = buildContextFromData(crux, []);
+    expect(context).toContain('## Content Model');
+    expect(context).toContain('Collection: Posts (singular "Post")');
+    expect(context).toContain('src/pages/posts/*.md');
+    expect(context).toContain('src/pages/posts/{slug}.md');
+    expect(context).toContain('layout: ../../layouts/PostLayout.astro');
+    expect(context).toContain('date: {today}');
+    expect(context).toContain('Settings file: src/config.json');
+    expect(context).toContain('descending order by "date"');
   });
 
-  it('trims oldest messages when over limit', () => {
-    // Create many messages that exceed the limit
-    const messages = Array.from({ length: 100 }, (_, i) => ({
-      role: i % 2 === 0 ? 'user' : 'assistant',
-      content: 'x'.repeat(10000), // ~2500 tokens each
-    }));
-    const { messages: result, trimmed } = trimMessagesIfNeeded(messages, 100_000);
-    expect(trimmed).toBe(true);
-    expect(result.length).toBeLessThan(messages.length);
-    expect(result.length).toBeGreaterThanOrEqual(4); // minKeep default
-  });
-
-  it('preserves at least minKeep messages', () => {
-    const messages = Array.from({ length: 10 }, (_, i) => ({
-      role: i % 2 === 0 ? 'user' : 'assistant',
-      content: 'x'.repeat(100000),
-    }));
-    const { messages: result } = trimMessagesIfNeeded(messages, 140_000);
-    expect(result.length).toBeGreaterThanOrEqual(4);
+  it('omits the content model section when the crux has none', () => {
+    const context = buildContextFromData(makeCrux(), []);
+    expect(context).not.toContain('## Content Model');
   });
 });

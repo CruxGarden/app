@@ -1,7 +1,7 @@
-const { app } = require('electron');
 const { spawn } = require('child_process');
 const fs = require('fs');
 const path = require('path');
+const { pnpmEntry, pnpmEnv } = require('./pnpm');
 
 /**
  * Toolchain (ADR 0004) — bundled pnpm, run with Electron's own Node runtime.
@@ -18,19 +18,6 @@ export interface ToolchainResult {
   log: string;
 }
 
-function pnpmEntry(): string {
-  // Dev: electron/node_modules. Packaged: asar-unpacked (a plain-Node child
-  // process cannot read scripts inside app.asar).
-  const candidates = [
-    path.join(app.getAppPath(), 'node_modules', 'pnpm', 'bin', 'pnpm.cjs'),
-    path.join(process.resourcesPath || '', 'app.asar.unpacked', 'node_modules', 'pnpm', 'bin', 'pnpm.cjs'),
-  ];
-  for (const candidate of candidates) {
-    if (fs.existsSync(candidate)) return candidate;
-  }
-  throw new Error('bundled pnpm not found');
-}
-
 export class Toolchain {
   constructor(
     private resolveKnownFolder: (folder: string) => string,
@@ -44,13 +31,7 @@ export class Toolchain {
       let log = '';
       const proc = spawn(process.execPath, [pnpmEntry(), ...args], {
         cwd,
-        env: {
-          ...process.env,
-          ELECTRON_RUN_AS_NODE: '1',
-          // Non-interactive; no update banners in captured logs
-          CI: '1',
-          PNPM_HOME: path.join(app.getPath('userData'), 'pnpm'),
-        },
+        env: pnpmEnv(),
         stdio: ['ignore', 'pipe', 'pipe'],
       });
 

@@ -227,7 +227,9 @@ describe('Ingestion (external edits → history)', () => {
     const arts = await artifactsOf(crux.id);
     expect(await artifact.readContent(arts[0]!.id)).toBe('v2-from-vscode');
     expect(bridge.writeLog.length).toBe(writesBefore);
-    expect(new TextDecoder().decode(bridge.files.get(`${folder}::index.html`))).toBe('v2-from-vscode');
+    expect(new TextDecoder().decode(bridge.files.get(`${folder}::index.html`))).toBe(
+      'v2-from-vscode',
+    );
   });
 
   it('recording an external delete does not touch the disk', async () => {

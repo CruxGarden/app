@@ -6,15 +6,17 @@ interface LogoProps {
   className?: string;
 }
 
+// One Tailwind step larger than the old sans sizes: Cormorant's x-height is
+// low, so at equal px it reads a size smaller.
 const sizes = {
-  sm: 'text-sm',
-  md: 'text-base',
-  lg: 'text-xl',
+  sm: 'text-base',
+  md: 'text-lg',
+  lg: 'text-2xl',
 };
 
 export default function Logo({ size = 'md', className }: LogoProps) {
   return (
-    <span className={cn('font-display font-medium text-text', sizes[size], className)}>
+    <span className={cn('font-wordmark font-semibold text-text', sizes[size], className)}>
       {APP_NAME}
     </span>
   );

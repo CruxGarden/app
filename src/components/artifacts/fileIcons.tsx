@@ -39,29 +39,48 @@ import zipIcon from 'material-icon-theme/icons/zip.svg?url';
 
 const EXT_ICON_MAP: Record<string, string> = {
   // Web
-  html: htmlIcon, htm: htmlIcon,
+  html: htmlIcon,
+  htm: htmlIcon,
   css: cssIcon,
-  scss: sassIcon, sass: sassIcon,
+  scss: sassIcon,
+  sass: sassIcon,
   less: lessIcon,
   // JS / TS
-  js: javascriptIcon, jsx: javascriptIcon, mjs: javascriptIcon,
+  js: javascriptIcon,
+  jsx: javascriptIcon,
+  mjs: javascriptIcon,
   ts: typescriptIcon,
   tsx: reactTsIcon,
   // Data
-  json: jsonIcon, jsonc: jsonIcon,
-  yaml: yamlIcon, yml: yamlIcon,
+  json: jsonIcon,
+  jsonc: jsonIcon,
+  yaml: yamlIcon,
+  yml: yamlIcon,
   toml: tomlIcon,
   xml: xmlIcon,
   // Docs
-  md: markdownIcon, mdx: markdownIcon,
+  md: markdownIcon,
+  mdx: markdownIcon,
   pdf: pdfIcon,
   // Images
-  png: imageIcon, jpg: imageIcon, jpeg: imageIcon,
-  gif: imageIcon, webp: imageIcon, bmp: imageIcon, ico: imageIcon,
+  png: imageIcon,
+  jpg: imageIcon,
+  jpeg: imageIcon,
+  gif: imageIcon,
+  webp: imageIcon,
+  bmp: imageIcon,
+  ico: imageIcon,
   svg: svgIcon,
   // Media
-  mp4: videoIcon, mov: videoIcon, webm: videoIcon, avi: videoIcon, mkv: videoIcon,
-  mp3: audioIcon, wav: audioIcon, ogg: audioIcon, flac: audioIcon,
+  mp4: videoIcon,
+  mov: videoIcon,
+  webm: videoIcon,
+  avi: videoIcon,
+  mkv: videoIcon,
+  mp3: audioIcon,
+  wav: audioIcon,
+  ogg: audioIcon,
+  flac: audioIcon,
   // Languages
   py: pythonIcon,
   go: goIcon,
@@ -77,11 +96,20 @@ const EXT_ICON_MAP: Record<string, string> = {
   cs: csharpIcon,
   lua: luaIcon,
   // Shell
-  sh: consoleIcon, bash: consoleIcon, zsh: consoleIcon, fish: consoleIcon,
+  sh: consoleIcon,
+  bash: consoleIcon,
+  zsh: consoleIcon,
+  fish: consoleIcon,
   // Data / DB
-  sql: databaseIcon, sqlite: databaseIcon, csv: databaseIcon,
+  sql: databaseIcon,
+  sqlite: databaseIcon,
+  csv: databaseIcon,
   // Archives
-  zip: zipIcon, tar: zipIcon, gz: zipIcon, rar: zipIcon, '7z': zipIcon,
+  zip: zipIcon,
+  tar: zipIcon,
+  gz: zipIcon,
+  rar: zipIcon,
+  '7z': zipIcon,
 };
 
 function MaterialIcon({ src, label }: { src: string; label: string }) {

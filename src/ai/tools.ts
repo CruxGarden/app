@@ -1,14 +1,28 @@
 import { getServices } from '@/services';
 import type { ToolResultContent } from '@/services/types';
-import type { ToolDefinition } from './adapters/types';
 import { validateToolInput } from './validation';
 import { formatToolError } from './errors';
 import { guessMimeType, isBinaryMime, isImageMime } from '@/lib/mime';
+import { checkSiteBuild, SiteBuildError } from '@/services/site';
+import { Capability, can } from '@/lib/platform';
+import { pathOf, type ArtifactPathSource } from '@/lib/artifact-path';
 
 /**
  * Tool definitions — ported from api/src/ai/ai.tools.ts.
  * Same schema, same descriptions. Used by provider adapters.
  */
+/** Tool definition (Anthropic-style JSON schema; converted per-provider by the engine) */
+export interface ToolDefinition {
+  name: string;
+  description: string;
+  input_schema: {
+    type: 'object';
+    properties: Record<string, unknown>;
+    required: string[];
+    additionalProperties?: boolean;
+  };
+}
+
 export const TOOL_DEFINITIONS: ToolDefinition[] = [
   {
     name: 'write_file',
@@ -104,8 +118,8 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
     name: 'delete_file',
     description:
       'Request deletion of a file from the workspace. ' +
-      'IMPORTANT: This sends a confirmation request to the user — the file is NOT deleted immediately. The user must approve the deletion. ' +
-      'Always confirm with the user in your message before calling this tool.',
+      'IMPORTANT: This shows the user a confirmation prompt and WAITS for their decision — the tool result tells you whether they approved (file deleted) or declined (file still exists). ' +
+      'Trust the result: never assume a file is gone unless the result says it was deleted.',
     input_schema: {
       type: 'object',
       properties: {
@@ -137,7 +151,7 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
     description:
       'Generate an image using AI and save it to the workspace as a file. ' +
       'USE WHEN: The user asks you to create, generate, or design an image, icon, illustration, logo, photo, or graphic. ' +
-      'This calls an image generation model (OpenAI) and saves the result as a PNG file in the workspace. ' +
+      'This calls an image generation model and saves the result as a PNG file in the workspace. ' +
       'Provide a detailed, descriptive prompt for best results. The image is saved at the specified path.',
     input_schema: {
       type: 'object',
@@ -163,7 +177,84 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
       additionalProperties: false,
     },
   },
+  {
+    name: 'search_files',
+    description:
+      'Search every text file in the workspace and return matching lines as "path:line: text". ' +
+      'USE WHEN: You need to find where something is defined, used, or mentioned without reading every file — much cheaper than multiple read_file calls. ' +
+      'The query is a plain case-insensitive substring by default; set regex: true for a JavaScript regular expression.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        query: {
+          type: 'string',
+          description:
+            'Text to search for. A literal substring unless regex is true. Example: "PostLayout" or (with regex) "date:\\\\s*2026".',
+        },
+        regex: {
+          type: 'boolean',
+          description:
+            'Treat query as a JavaScript regular expression. Default: false (literal substring).',
+        },
+        case_sensitive: {
+          type: 'boolean',
+          description: 'Match case exactly. Default: false.',
+        },
+      },
+      required: ['query'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'rename_file',
+    description:
+      'Rename or move a file within the workspace. Content and history are preserved. ' +
+      'USE WHEN: The user wants a file renamed or moved to another directory. ' +
+      'DO NOT: recreate a file at a new path with write_file and delete the old one — use this tool instead. ' +
+      'NOTE: References to the old path in other files are NOT updated — check with search_files and fix them with edit_file.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        old_path: {
+          type: 'string',
+          description: 'Current relative path of the file. Example: "posts/draft.md".',
+        },
+        new_path: {
+          type: 'string',
+          description: 'New relative path. Example: "posts/hello-world.md".',
+        },
+      },
+      required: ['old_path', 'new_path'],
+      additionalProperties: false,
+    },
+  },
 ];
+
+/**
+ * Site Crux tools — only offered when the platform can run builds
+ * (desktop, Capability.Build). Kept out of TOOL_DEFINITIONS so web
+ * conversations never see tools that would always fail.
+ */
+export const SITE_TOOL_DEFINITIONS: ToolDefinition[] = [
+  {
+    name: 'check_site',
+    description:
+      "Run the site's production build to verify it compiles (Site Cruxes with a build step). " +
+      'Returns the build log on failure so you can fix the errors, then run it again. Nothing is published — this only verifies. ' +
+      'USE WHEN: After changes that could break the build (config, layouts, frontmatter, dependencies), or when the user reports the preview or publish failing.',
+    input_schema: {
+      type: 'object',
+      properties: {},
+      required: [],
+      additionalProperties: false,
+    },
+  },
+];
+
+/** The tool set to offer a workspace conversation on this platform. */
+export function defaultToolDefinitions(): ToolDefinition[] {
+  return can(Capability.Build) ? [...TOOL_DEFINITIONS, ...SITE_TOOL_DEFINITIONS] : TOOL_DEFINITIONS;
+}
 
 /**
  * Create a tool executor bound to a specific crux.
@@ -179,17 +270,27 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
  * - Read-before-edit/write enforcement
  *
  * @param cruxId - The crux to operate on
- * @param onDeleteRequest - Callback for delete confirmation (yields to UI)
+ * @param onDeleteRequest - Delete-approval callback. Shows the user a
+ *   confirmation and resolves with their decision; when it resolves true the
+ *   APP has already deleted the file (the executor only reports it). Omit for
+ *   headless use — the executor then deletes directly.
  */
 export function createToolExecutor(
   cruxId: string,
-  onDeleteRequest?: (path: string) => Promise<boolean>,
+  onDeleteRequest?: (path: string, artifactId: string) => Promise<boolean>,
   chatModel?: string,
 ) {
   const { artifact: artifactService } = getServices();
   const recentlyReadFiles = new Set<string>();
 
-  return async function executeTool(
+  // The SDK executes a step's tool calls concurrently (Promise.all). Nothing
+  // in here is safe under that: the read-tracking set is shared, and the
+  // service's check-then-insert dedup would interleave into duplicate rows for
+  // two writes to the same path. Serialize — tool calls are IO-bound on one
+  // SQLite connection anyway, so there is no parallelism to lose.
+  let queue: Promise<unknown> = Promise.resolve();
+
+  async function runTool(
     toolName: string,
     input: Record<string, unknown>,
   ): Promise<string | ToolResultContent> {
@@ -199,21 +300,16 @@ export function createToolExecutor(
       return formatToolError(toolName, validation.error!);
     }
 
+    const normPath = normalizeToolPath(input.path as string | undefined);
+
     // Track read_file calls for read-before-edit enforcement
-    if (toolName === 'read_file' && input.path) {
-      const path = input.path as string;
-      recentlyReadFiles.add(path);
-      recentlyReadFiles.add(path.replace(/^\//, ''));
+    if (toolName === 'read_file' && normPath) {
+      recentlyReadFiles.add(normPath);
     }
 
-    // Hard-enforce read-before-edit
-    const normPath = (input.path as string | undefined)?.replace(/^\//, '');
-    const hasBeenRead =
-      input.path &&
-      (recentlyReadFiles.has(input.path as string) ||
-        recentlyReadFiles.has(normPath!));
+    const hasBeenRead = !!normPath && recentlyReadFiles.has(normPath);
 
-    if (toolName === 'edit_file' && input.path && !hasBeenRead) {
+    if (toolName === 'edit_file' && normPath && !hasBeenRead) {
       return formatToolError(
         'edit_file',
         `You must call read_file on "${normPath}" before editing it. Read the file first to get its current contents, then retry.`,
@@ -221,10 +317,9 @@ export function createToolExecutor(
     }
 
     // Hard-enforce read-before-write for existing files
-    if (toolName === 'write_file' && input.path && !hasBeenRead) {
+    if (toolName === 'write_file' && normPath && !hasBeenRead) {
       const artifacts = await artifactService.findByResource('crux', cruxId);
-      const existing = findArtifactByPath(artifacts, input.path as string);
-      if (existing) {
+      if (findArtifactByPath(artifacts, normPath)) {
         return formatToolError(
           'write_file',
           `File "${normPath}" already exists. You must call read_file before overwriting an existing file. Read it first, then use edit_file for targeted changes or write_file for a full rewrite.`,
@@ -246,12 +341,7 @@ export function createToolExecutor(
           result = await toolReadFile(input, cruxId, artifactService);
           break;
         case 'delete_file':
-          result = await toolDeleteFile(
-            input,
-            cruxId,
-            artifactService,
-            onDeleteRequest,
-          );
+          result = await toolDeleteFile(input, cruxId, artifactService, onDeleteRequest);
           break;
         case 'list_files':
           result = await toolListFiles(cruxId, artifactService);
@@ -259,21 +349,79 @@ export function createToolExecutor(
         case 'generate_image':
           result = await toolGenerateImage(input, cruxId, artifactService, chatModel);
           break;
+        case 'search_files':
+          result = await toolSearchFiles(input, cruxId, artifactService);
+          break;
+        case 'rename_file':
+          result = await toolRenameFile(input, cruxId, artifactService);
+          break;
+        case 'check_site':
+          result = await toolCheckSite(cruxId);
+          break;
         default:
           return formatToolError(toolName, `Unknown tool: ${toolName}`);
       }
 
-      // Clear read tracking for mutated files (content changed, stale)
-      if (toolName === 'write_file' || toolName === 'edit_file') {
-        recentlyReadFiles.delete(input.path as string);
-        recentlyReadFiles.delete(normPath!);
+      // A file whose content actually changed is no longer "read" — but a
+      // FAILED edit changed nothing, and its error deliberately embeds the
+      // current contents so the model can retry without re-reading. Clearing
+      // on failure made that retry impossible.
+      if (didMutate(toolName, result)) {
+        if (normPath) recentlyReadFiles.delete(normPath);
+        if (toolName === 'rename_file') {
+          recentlyReadFiles.delete(normalizeToolPath(input.old_path as string)!);
+          recentlyReadFiles.delete(normalizeToolPath(input.new_path as string)!);
+        }
       }
 
       return result;
     } catch (err: unknown) {
       return formatToolError(toolName, err as Error);
     }
+  }
+
+  return function executeTool(
+    toolName: string,
+    input: Record<string, unknown>,
+  ): Promise<string | ToolResultContent> {
+    const run = queue.then(
+      () => runTool(toolName, input),
+      () => runTool(toolName, input),
+    );
+    queue = run.catch(() => {});
+    return run;
   };
+}
+
+/** Canonical relative path for a tool input ('' and undefined → undefined). */
+function normalizeToolPath(path: string | undefined): string | undefined {
+  if (!path) return undefined;
+  return path.replace(/^\//, '') || undefined;
+}
+
+/** Prefix of the delete_file result when the user refused. */
+export const DELETE_DECLINED = 'The user DECLINED';
+
+/**
+ * Did this tool call actually change the workspace?
+ *
+ * The single source of truth for "was this a mutation" — used by the engine
+ * (workspace-context refresh, `hadMutation`) and by the chat hook (artifact
+ * refresh, auto-snapshot). Both previously kept their own tool-name lists,
+ * which drifted: `rename_file` was missing from the hook's copies, so an AI
+ * rename never refreshed the file tree.
+ *
+ * Name alone isn't enough: a blocked edit, a validation error, or a declined
+ * delete are all non-events, and treating them as mutations caused pointless
+ * prompt rebuilds and spurious snapshots.
+ */
+export function didMutate(toolName: string, result: string | ToolResultContent): boolean {
+  if (!MUTATING_TOOLS.includes(toolName)) return false;
+  // Mutating tools always report as plain strings we author ourselves
+  if (typeof result !== 'string') return false;
+  if (result.startsWith('Error')) return false;
+  if (result.startsWith(DELETE_DECLINED)) return false;
+  return true;
 }
 
 // ── Tool implementations ────────────────────────────────────
@@ -370,9 +518,7 @@ async function toolEditFile(
   if (matchCount === 0) {
     // Include a snippet of the actual file so the model can retry without another read_file
     const preview =
-      content.length <= 800
-        ? content
-        : content.slice(0, 400) + '\n…\n' + content.slice(-400);
+      content.length <= 800 ? content : content.slice(0, 400) + '\n…\n' + content.slice(-400);
     return (
       formatToolError('edit_file', `old_string not found in ${path}`) +
       `\n\nCurrent file contents:\n\`\`\`\n${preview}\n\`\`\``
@@ -406,6 +552,16 @@ async function toolEditFile(
     return `Edited file: ${path} (replaced ${matchCount} occurrences)`;
   }
   return `Edited file: ${path}`;
+}
+
+/** Base64-encode bytes in chunks — `String.fromCharCode(...bytes)` blows the stack on large files. */
+function bytesToBase64(bytes: Uint8Array): string {
+  const CHUNK = 0x8000;
+  let binary = '';
+  for (let i = 0; i < bytes.length; i += CHUNK) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + CHUNK));
+  }
+  return btoa(binary);
 }
 
 async function extractPdfText(blob: Blob): Promise<string> {
@@ -480,22 +636,19 @@ async function toolReadFile(
     // Images — return as image content block so the AI can see them
     if (isImageMime(mime)) {
       const buffer = await blob.arrayBuffer();
-      const bytes = new Uint8Array(buffer);
-      let base64 = '';
-      for (let i = 0; i < bytes.length; i++) {
-        base64 += String.fromCharCode(bytes[i]!);
-      }
-      base64 = btoa(base64);
+      const base64 = bytesToBase64(new Uint8Array(buffer));
       return [
         { type: 'text', text: `[Image: ${path} (${mime}, ${buffer.byteLength} bytes)]` },
         { type: 'image', source: { type: 'base64', media_type: mime, data: base64 } },
       ];
     }
 
-    // Other binary files — return base64
+    // Other binary files — return base64 (chunked; spreading the byte array
+    // into fromCharCode overflows the call stack past ~100KB)
     const buffer = await blob.arrayBuffer();
-    const base64 = btoa(String.fromCharCode(...new Uint8Array(buffer)));
-    return `[Binary file: ${path} (${mime}, ${buffer.byteLength} bytes)] base64:${base64}`;
+    return `[Binary file: ${path} (${mime}, ${buffer.byteLength} bytes)] base64:${bytesToBase64(
+      new Uint8Array(buffer),
+    )}`;
   }
 
   // Return full content — no truncation (matches API behavior)
@@ -507,34 +660,143 @@ async function toolDeleteFile(
   input: Record<string, unknown>,
   cruxId: string,
   artifactService: ArtifactService,
-  onDeleteRequest?: (path: string) => Promise<boolean>,
+  onDeleteRequest?: (path: string, artifactId: string) => Promise<boolean>,
 ): Promise<string> {
   const path = input.path as string;
-
-  if (onDeleteRequest) {
-    const confirmed = await onDeleteRequest(path);
-    if (!confirmed) return `Delete cancelled by user: ${path}`;
-  }
 
   const artifacts = await artifactService.findByResource('crux', cruxId);
   const match = findArtifactByPath(artifacts, path);
   if (!match) return formatToolError('delete_file', `File not found: ${path}`);
 
+  // Honest approval: block until the user decides; the app performs the
+  // deletion on approval, so the result always reflects what actually happened.
+  // Report the artifact's real path, which may differ from what was asked for
+  // when the model used a bare filename.
+  const realPath = pathOf(match) || path;
+
+  if (onDeleteRequest) {
+    const approved = await onDeleteRequest(realPath, match.id);
+    if (!approved) {
+      return `${DELETE_DECLINED} the deletion of ${realPath}. The file still exists — do not retry unless asked again.`;
+    }
+    return `Deleted file: ${realPath} (approved by user)`;
+  }
+
   await artifactService.delete(match.id);
-  return `Deleted file: ${path}`;
+  return `Deleted file: ${realPath}`;
 }
 
-async function toolListFiles(
+const MAX_SEARCH_MATCHES = 100;
+
+async function toolSearchFiles(
+  input: Record<string, unknown>,
   cruxId: string,
   artifactService: ArtifactService,
 ): Promise<string> {
+  const query = input.query as string;
+  const useRegex = (input.regex as boolean) ?? false;
+  const caseSensitive = (input.case_sensitive as boolean) ?? false;
+
+  let pattern: RegExp;
+  try {
+    const source = useRegex ? query : query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    pattern = new RegExp(source, caseSensitive ? '' : 'i');
+  } catch (err: unknown) {
+    return formatToolError('search_files', `Invalid regular expression: ${(err as Error).message}`);
+  }
+
+  const artifacts = await artifactService.findByResource('crux', cruxId);
+  const files = artifacts.filter(
+    (a: { type: string; mimeType?: string; encoding?: string }) =>
+      a.type === 'artifact' && a.encoding !== 'binary' && !isBinaryMime(a.mimeType || ''),
+  );
+
+  const matches: string[] = [];
+  let truncated = false;
+  for (const file of files) {
+    const path = file.meta?.path || file.filename;
+    let content: string;
+    try {
+      content = await artifactService.readContent(file.id);
+    } catch {
+      continue; // unreadable file — skip, don't fail the whole search
+    }
+    const lines = content.split('\n');
+    for (let i = 0; i < lines.length; i++) {
+      if (pattern.test(lines[i]!)) {
+        if (matches.length >= MAX_SEARCH_MATCHES) {
+          truncated = true;
+          break;
+        }
+        matches.push(`${path}:${i + 1}: ${lines[i]!.trim().slice(0, 200)}`);
+      }
+    }
+    if (truncated) break;
+  }
+
+  if (matches.length === 0) return `No matches for "${query}" in ${files.length} text file(s).`;
+  return (
+    matches.join('\n') +
+    (truncated ? `\n… stopped at ${MAX_SEARCH_MATCHES} matches — narrow the query.` : '')
+  );
+}
+
+async function toolRenameFile(
+  input: Record<string, unknown>,
+  cruxId: string,
+  artifactService: ArtifactService,
+): Promise<string> {
+  const oldPath = input.old_path as string;
+  const newPath = (input.new_path as string).replace(/^\//, '');
+
+  const artifacts = await artifactService.findByResource('crux', cruxId);
+  const match = findArtifactByPath(artifacts, oldPath);
+  if (!match) return formatToolError('rename_file', `File not found: ${oldPath}`);
+
+  const collision = findArtifactByPath(artifacts, newPath);
+  if (collision && collision.id !== match.id) {
+    return formatToolError(
+      'rename_file',
+      `A file already exists at ${newPath}. Delete or rename it first.`,
+    );
+  }
+
+  // The artifact service owns the rest: meta.path + path column + filename
+  // sync, and the Project Folder rename on desktop.
+  await artifactService.update(match.id, { meta: { path: newPath } });
+  return `Renamed ${oldPath} → ${newPath}. References to the old path in other files are NOT updated automatically.`;
+}
+
+async function toolCheckSite(cruxId: string): Promise<string> {
+  try {
+    const outcome = await checkSiteBuild(cruxId);
+    if (outcome === null) {
+      return formatToolError(
+        'check_site',
+        'Building is not available here — it requires the desktop app with a Project Folder for this crux.',
+      );
+    }
+    if (outcome.ok) return 'Build passed — the site compiles cleanly.';
+    return `Build FAILED. Fix the errors below, then run check_site again to verify:\n\n${tailOf(outcome.log)}`;
+  } catch (err: unknown) {
+    if (err instanceof SiteBuildError) {
+      return `Build FAILED (${err.message}):\n\n${tailOf(err.log)}`;
+    }
+    return formatToolError('check_site', err as Error);
+  }
+}
+
+/** Last portion of a build log — errors are at the end; keep the result cheap. */
+function tailOf(log: string, maxChars = 4000): string {
+  const trimmed = log.trim();
+  return trimmed.length <= maxChars ? trimmed : '…' + trimmed.slice(-maxChars);
+}
+
+async function toolListFiles(cruxId: string, artifactService: ArtifactService): Promise<string> {
   const artifacts = await artifactService.findByResource('crux', cruxId);
   const files = artifacts
     .filter((a: { type: string }) => a.type === 'artifact')
-    .map(
-      (a: { meta?: { path?: string }; filename: string }) =>
-        a.meta?.path || a.filename,
-    );
+    .map((a: { meta?: { path?: string }; filename: string }) => a.meta?.path || a.filename);
   return files.join('\n') || 'No files yet.';
 }
 
@@ -643,7 +905,7 @@ async function generateImageOpenAI(apiKey: string, prompt: string, size: string)
   const client = new OpenAI({ apiKey, dangerouslyAllowBrowser: true });
 
   const response = await client.images.generate({
-    model: 'gpt-image-1',
+    model: 'gpt-image-2',
     prompt,
     n: 1,
     size: size as '1024x1024' | '1536x1024' | '1024x1536',
@@ -663,65 +925,68 @@ async function generateImageGemini(apiKey: string, prompt: string): Promise<Blob
   const { GoogleGenAI } = await import('@google/genai');
   const client = new GoogleGenAI({ apiKey });
 
-  // Try 1: Imagen (requires paid plan)
-  try {
-    const response = await client.models.generateImages({
-      model: 'imagen-4.0-generate-001',
-      prompt,
-      config: { numberOfImages: 1 },
-    });
+  // Nano Banana 2 (gemini flash image). The Imagen endpoints shut down
+  // 2026-08-17 — do not add them back. GA ID first, preview alias as fallback.
+  const IMAGE_MODELS = ['gemini-3.1-flash-image', 'gemini-3.1-flash-image-preview'];
+  const errors: string[] = [];
 
-    const image = response.generatedImages?.[0];
-    if (image?.image?.imageBytes) {
-      const binary = Uint8Array.from(atob(image.image.imageBytes), (c) => c.charCodeAt(0));
-      return new Blob([binary], { type: 'image/png' });
-    }
-  } catch {
-    // Imagen failed (likely paid plan required) — try native Gemini
-  }
+  for (const model of IMAGE_MODELS) {
+    try {
+      const response = await client.models.generateContent({
+        model,
+        contents: [{ role: 'user', parts: [{ text: `Generate an image: ${prompt}` }] }],
+        config: {
+          responseModalities: ['IMAGE', 'TEXT'],
+        },
+      });
 
-  // Try 2: Native Gemini image generation via generateContent with responseModalities
-  const response = await client.models.generateContent({
-    model: 'gemini-2.0-flash',
-    contents: [{ role: 'user', parts: [{ text: `Generate an image: ${prompt}` }] }],
-    config: {
-      responseModalities: ['IMAGE', 'TEXT'],
-    },
-  });
-
-  // Extract inline image from response parts
-  const parts = response.candidates?.[0]?.content?.parts;
-  if (parts) {
-    for (const part of parts) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- SDK inline image type
-      const inlineData = (part as any).inlineData;
-      if (inlineData?.data && inlineData?.mimeType?.startsWith('image/')) {
-        const binary = Uint8Array.from(atob(inlineData.data), (c) => c.charCodeAt(0));
-        return new Blob([binary], { type: inlineData.mimeType });
+      const parts = response.candidates?.[0]?.content?.parts;
+      if (parts) {
+        for (const part of parts) {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any -- SDK inline image type
+          const inlineData = (part as any).inlineData;
+          if (inlineData?.data && inlineData?.mimeType?.startsWith('image/')) {
+            const binary = Uint8Array.from(atob(inlineData.data), (c) => c.charCodeAt(0));
+            return new Blob([binary], { type: inlineData.mimeType });
+          }
+        }
       }
+      errors.push(`${model}: no image data in response`);
+    } catch (err: unknown) {
+      errors.push(`${model}: ${(err as Error).message || String(err)}`);
     }
   }
 
-  throw new Error('No image data returned from Google Gemini (tried Imagen and native generation)');
+  throw new Error(`No image data returned from Google Gemini (${errors.join('; ')})`);
 }
 
 /**
- * Find an artifact by path, matching the API's findAttachmentByPath.
- * Checks meta.path AND filename independently, with normalized path (no leading slash).
+ * Find a workspace artifact by its canonical path. Exact matches only.
+ *
+ * The previous lookup also matched on bare filename (first match wins), which
+ * was wrong in both directions: `delete_file("logo.png")` would delete
+ * `images/logo.png` while the confirmation banner and the result both said
+ * "logo.png", and `write_file("app.js")` was refused as "already exists"
+ * because an unrelated `sub/app.js` shared the name — making the root file
+ * impossible to create. Paths are unambiguous; the model gets real ones from
+ * the workspace context, list_files, and search_files.
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- artifact shape varies by service layer
 function findArtifactByPath(artifacts: any[], path: string): any | null {
   const normalized = path.replace(/^\//, '');
   return (
     artifacts.find(
-      (a: { meta?: { path?: string }; filename?: string }) =>
-        a.meta?.path === path ||
-        a.meta?.path === normalized ||
-        a.filename === path ||
-        a.filename === normalized,
+      (a: ArtifactPathSource & { type?: string }) =>
+        a.type === 'artifact' && pathOf(a) === normalized,
     ) || null
   );
 }
 
-/** Tool names that mutate files (trigger system prompt refresh) */
-export const MUTATING_TOOLS = ['write_file', 'edit_file', 'delete_file', 'generate_image'];
+/** Tool names that mutate files (trigger workspace-context refresh) */
+export const MUTATING_TOOLS = [
+  'write_file',
+  'edit_file',
+  'delete_file',
+  'generate_image',
+  'rename_file',
+];

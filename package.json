@@ -18,12 +18,17 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "postinstall": "patch-package",
-    "generate:api": "openapi-typescript ../api/openapi.json -o src/api/generated/schema.d.ts --default-non-nullable false"
+    "generate:api": "openapi-typescript ../api/openapi.json -o src/api/generated/schema.d.ts --default-non-nullable false",
+    "ai:smoke": "node scripts/ai-smoke.mjs"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.78.0",
+    "@ai-sdk/anthropic": "^4.0.27",
+    "@ai-sdk/google": "^4.0.31",
+    "@ai-sdk/openai": "^4.0.27",
+    "@ai-sdk/openai-compatible": "^3.0.20",
     "@google/genai": "^1.45.0",
     "@monaco-editor/react": "^4.7.0",
+    "ai": "^7.0.47",
     "axios": "^1.7.9",
     "clsx": "^2.1.1",
     "jszip": "^3.10.1",

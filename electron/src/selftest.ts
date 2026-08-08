@@ -94,7 +94,7 @@ export async function runSelfTest(ctx: {
       }
     }
 
-    // 5. Preview server serves the folder
+    // 5. Preview server serves the folder + hidden-window screenshot capture
     if (folder) {
       try {
         const base = await previewServer.start(folder);
@@ -103,12 +103,75 @@ export async function runSelfTest(ctx: {
           `status=${res.status}`);
         const trav = await fetchText(base + '/..%2Fescape');
         check('preview traversal blocked', trav.status !== 200, `status=${trav.status}`);
+
+        // Screenshot the served page via the same code the preview:capture IPC uses
+        try {
+          const { capturePreviewUrl } = require('./capture');
+          const jpeg = await capturePreviewUrl(base + '/');
+          const isJpeg = jpeg.length > 1000 && jpeg[0] === 0xff && jpeg[1] === 0xd8;
+          check('preview screenshot capture', isJpeg, `bytes=${jpeg.length}`);
+
+          // The captured image must actually depict something — a solid frame
+          // (blank page, failed load) still passes a byte-length check.
+          const { nativeImage } = require('electron');
+          const bitmap = nativeImage.createFromBuffer(jpeg).toBitmap();
+          let distinct = false;
+          for (let i = 4; i < bitmap.length; i += 4) {
+            if (bitmap[i] !== bitmap[0] || bitmap[i + 1] !== bitmap[1]) { distinct = true; break; }
+          }
+          check('capture is not a blank frame', distinct);
+
+          let rejected = false;
+          try { await capturePreviewUrl('https://example.com/'); } catch { rejected = true; }
+          check('capture rejects non-local URLs', rejected);
+
+          // Redirect containment: a local URL that 302s off-host must never be
+          // screenshotted (loadURL follows redirects; the input check can't see it).
+          const redirector = http.createServer((_req: any, res: any) => {
+            res.writeHead(302, { Location: 'https://example.com/' });
+            res.end();
+          });
+          await new Promise<void>((r) => redirector.listen(0, '127.0.0.1', () => r()));
+          const rport = redirector.address().port;
+          let contained = false;
+          try {
+            await capturePreviewUrl(`http://127.0.0.1:${rport}/`);
+          } catch {
+            contained = true; // aborted, as it should be
+          }
+          redirector.close();
+          check('capture blocks off-host redirects', contained);
+        } catch (e: any) {
+          check('preview screenshot capture', false, e.message);
+        }
+
         await previewServer.stop(folder);
       } catch (e: any) {
         check('preview serves index.html', false, e.message);
       }
     }
-    // 6. FULL ASTRO ROUND-TRIP (opt-in: CRUX_SELFTEST_ASTRO=1 — needs network,
+    // 6. Filesystem containment guards (the renderer's whole sandbox)
+    try {
+      let blobRejected = false;
+      try {
+        db.blobRead('../../../../etc/passwd');
+      } catch {
+        blobRejected = true;
+      }
+      check('blob path rejects non-fingerprint names', blobRejected);
+
+      let outsideRejected = false;
+      try {
+        projects.writeFile('/tmp', 'crux-selftest-escape.txt', new TextEncoder().encode('x'));
+      } catch {
+        outsideRejected = true;
+      }
+      check('project writes outside the garden root are rejected', outsideRejected);
+    } catch (e: any) {
+      check('filesystem containment guards', false, e.message);
+    }
+
+    // 7. FULL ASTRO ROUND-TRIP (opt-in: CRUX_SELFTEST_ASTRO=1 — needs network,
     //    takes a minute or two). Bundled pnpm install → astro dev → astro build.
     if (process.env.CRUX_SELFTEST_ASTRO && toolchain && devServers && folder) {
       try {

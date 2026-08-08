@@ -136,9 +136,7 @@ const NodeRenderer = memo(function NodeRenderer({
       className={cn(
         'group/node flex items-center gap-1.5 py-0.5 pr-2 text-xs font-mono',
         'cursor-pointer select-none',
-        node.isSelected
-          ? 'bg-accent-muted text-text'
-          : 'text-text/70 hover:text-text hover:bg-accent-muted',
+        node.isSelected ? 'bg-accent-muted text-text' : 'text-text hover:bg-accent-muted',
         node.willReceiveDrop && 'bg-accent/10 ring-1 ring-accent/30',
       )}
       onClick={(e) => {
@@ -165,7 +163,7 @@ const NodeRenderer = memo(function NodeRenderer({
       )}
 
       {/* Icon */}
-      <span className={cn('flex-shrink-0', node.isSelected ? '' : 'opacity-60 group-hover/node:opacity-100')}>
+      <span className="flex-shrink-0">
         {isFolder ? node.isOpen ? <FolderOpenIcon /> : <FolderIcon /> : getFileIcon(data.name)}
       </span>
 
@@ -336,9 +334,7 @@ const ArboristFileTree = forwardRef<ArboristFileTreeHandle, ArboristFileTreeProp
     // Track selection changes for multi-select awareness
     const handleSelect = useCallback(
       (nodes: { data: TreeNodeData }[]) => {
-        const ids = nodes
-          .map((n) => n.data.artifact?.id ?? n.data.id)
-          .filter(Boolean) as string[];
+        const ids = nodes.map((n) => n.data.artifact?.id ?? n.data.id).filter(Boolean) as string[];
         onSelectionChange?.(ids);
       },
       [onSelectionChange],

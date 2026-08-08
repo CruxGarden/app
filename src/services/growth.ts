@@ -20,6 +20,7 @@ export interface GrowthDeps {
   crux: {
     create(input: Record<string, unknown>): Promise<Crux>;
     findById(id: string): Promise<Crux>;
+    update(id: string, input: Record<string, unknown>): Promise<unknown>;
   };
   artifact: {
     computeSnapshotFingerprint(cruxId: string): Promise<string>;
@@ -39,10 +40,12 @@ export async function defaultGrowthDeps(): Promise<GrowthDeps> {
     crux: {
       create: (input) => crux.create(input as unknown as Parameters<typeof crux.create>[0]),
       findById: (id) => crux.findById(id),
+      update: (id, input) => crux.update(id, input as Parameters<typeof crux.update>[1]),
     },
     artifact,
     dimension: {
-      create: (input) => dimension.create(input as unknown as Parameters<typeof dimension.create>[0]),
+      create: (input) =>
+        dimension.create(input as unknown as Parameters<typeof dimension.create>[0]),
       update: (id, input) => dimension.update(id, input as Parameters<typeof dimension.update>[1]),
     },
   };
@@ -172,6 +175,8 @@ export interface CreateSnapshotOptions {
 
 export interface SnapshotResult {
   growth: Dimension;
+  /** The snapshot crux just created — the new tip of the active branch. */
+  snapshotCruxId: string;
   /** New messageSegmentStart for the workspace (== messages.length at capture). */
   newSegmentStart: number;
   /** Inputs for the (optional) AI summary. */
@@ -192,8 +197,6 @@ export async function createSnapshotCore(
   const { crux, messages, messageSegmentStart, growths, growthCount, artifactCount } = state;
   const { label } = options;
 
-  const fingerprint = await deps.artifact.computeSnapshotFingerprint(crux.id);
-
   // Parent: activeBranch if set (after branching), otherwise the latest snapshot
   const activeBranch = crux.meta?.settings?.activeBranch as string | undefined;
   const parentCruxId =
@@ -209,7 +212,6 @@ export async function createSnapshotCore(
     type: 'crux',
     kind: 'snapshot',
     meta: {
-      fingerprint,
       messages: segmentMessages,
       cumulativeMessageCount: messages.length,
       parentCruxId,
@@ -217,6 +219,15 @@ export async function createSnapshotCore(
   });
 
   await deps.artifact.cloneArtifactsToSnapshot(crux.id, snapshotCrux.id);
+
+  // Fingerprint the CLONE, not the live workspace. Computing it before the
+  // clone let an ingestion batch landing in between produce a snapshot whose
+  // recorded fingerprint disagreed with its own artifacts — and the .crux
+  // export derives its manifest fingerprint from this value.
+  const fingerprint = await deps.artifact.computeSnapshotFingerprint(snapshotCrux.id);
+  await deps.crux.update(snapshotCrux.id, {
+    meta: { ...(snapshotCrux.meta as Record<string, unknown>), fingerprint },
+  });
 
   const snapshotArtifacts = await deps.artifact.findByResource('crux', snapshotCrux.id);
   const preview = detectPreviewArtifact(snapshotArtifacts);
@@ -243,7 +254,13 @@ export async function createSnapshotCore(
       ? (growths[growths.length - 1]!.meta?.summary as string | undefined)
       : undefined;
 
-  return { growth, newSegmentStart: messages.length, artifactNames, previousSummary };
+  return {
+    growth,
+    snapshotCruxId: snapshotCrux.id,
+    newSegmentStart: messages.length,
+    artifactNames,
+    previousSummary,
+  };
 }
 
 // ── AI summary ──────────────────────────────────────────────────────────────
@@ -256,7 +273,9 @@ function buildSummaryPrompt(
 ): string {
   const recent = messages.slice(-20);
   const convo = recent
-    .map((m) => `${m.role}: ${typeof m.content === 'string' ? m.content.slice(0, 300) : '[tool use]'}`)
+    .map(
+      (m) => `${m.role}: ${typeof m.content === 'string' ? m.content.slice(0, 300) : '[tool use]'}`,
+    )
     .join('\n');
 
   const artifacts = artifactNames.length > 0 ? `\nArtifacts: ${artifactNames.join(', ')}` : '';
@@ -285,35 +304,21 @@ export async function generateSnapshotSummary(opts: {
   try {
     const { getApiKey } = await import('@/ai/keys');
     const { getProviderForModel } = await import('@/ai/providers');
-    const { getAdapter } = await import('@/ai/adapters');
+    const { languageModelFor } = await import('@/ai/engine');
+    const { generateText } = await import('ai');
 
     const providerId = getProviderForModel(opts.model);
     const apiKey = await getApiKey(providerId);
     if (!apiKey) return;
 
-    const adapter = await getAdapter(opts.model);
-    const response = await adapter.stream({
-      apiKey,
-      systemPrompt:
-        'You are a concise technical summarizer. Respond with only the summary, no preamble.',
-      messages: [
-        {
-          role: 'user',
-          content: [
-            {
-              type: 'text',
-              text: buildSummaryPrompt(opts.messages, opts.artifactNames, opts.previousSummary),
-            },
-          ],
-        },
-      ],
-      model: opts.model,
-      tools: [],
-      onText: () => {},
-      maxTokens: 150,
+    const response = await generateText({
+      model: languageModelFor(opts.model, apiKey),
+      system: 'You are a concise technical summarizer. Respond with only the summary, no preamble.',
+      prompt: buildSummaryPrompt(opts.messages, opts.artifactNames, opts.previousSummary),
+      maxOutputTokens: 150,
     });
 
-    const summary = response.textContent.trim();
+    const summary = response.text.trim();
     if (!summary) return;
 
     await opts.deps.dimension.update(opts.dimensionId, { meta: { summary } });

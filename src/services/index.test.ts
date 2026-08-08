@@ -39,12 +39,14 @@ describe('Service Factory', () => {
       expect(services.crux).toBeDefined();
     });
 
-    it('tracks the active backend', async () => {
+    it('tracks the active backend and initializes exactly once (singleton)', async () => {
       await initServices('local');
       expect(getBackend()).toBe('local');
 
+      // initServices memoizes: a second call with a different backend is a
+      // no-op by design — switching backends requires an app restart.
       await initServices('api');
-      expect(getBackend()).toBe('api');
+      expect(getBackend()).toBe('local');
     });
   });
 

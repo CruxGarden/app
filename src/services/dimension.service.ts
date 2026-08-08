@@ -1,9 +1,4 @@
-import type {
-  Dimension,
-  DimensionType,
-  CreateDimensionInput,
-  UpdateDimensionInput,
-} from './types';
+import type { Dimension, DimensionType, CreateDimensionInput, UpdateDimensionInput } from './types';
 
 export interface IDimensionService {
   findById(id: string): Promise<Dimension>;

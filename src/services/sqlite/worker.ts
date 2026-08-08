@@ -125,7 +125,8 @@ async function init() {
       await vfs.isReady;
       sqlite3.vfs_register(vfs, true);
 
-      const flags = SQLite.SQLITE_OPEN_CREATE | SQLite.SQLITE_OPEN_READWRITE | SQLite.SQLITE_OPEN_URI;
+      const flags =
+        SQLite.SQLITE_OPEN_CREATE | SQLite.SQLITE_OPEN_READWRITE | SQLite.SQLITE_OPEN_URI;
       dbHandle = await sqlite3.open_v2('cruxgarden.db', flags);
 
       await exec('PRAGMA journal_mode=WAL');
@@ -141,7 +142,8 @@ async function init() {
         // Silently fall back — this is expected when another tab holds the OPFS lock
         const vfs = new MemoryAsyncVFS();
         sqlite3.vfs_register(vfs, true);
-        const flags = SQLite.SQLITE_OPEN_CREATE | SQLite.SQLITE_OPEN_READWRITE | SQLite.SQLITE_OPEN_URI;
+        const flags =
+          SQLite.SQLITE_OPEN_CREATE | SQLite.SQLITE_OPEN_READWRITE | SQLite.SQLITE_OPEN_URI;
         dbHandle = await sqlite3.open_v2('cruxgarden.db', flags);
         await exec('PRAGMA journal_mode=WAL');
         await exec(SCHEMA);
@@ -232,8 +234,12 @@ async function migrate(): Promise<void> {
         updated TEXT NOT NULL
       )
     `);
-    await exec(`CREATE UNIQUE INDEX IF NOT EXISTS idx_store_public ON store (crux_id, key) WHERE visitor_id IS NULL`);
-    await exec(`CREATE UNIQUE INDEX IF NOT EXISTS idx_store_protected ON store (crux_id, visitor_id, key) WHERE visitor_id IS NOT NULL`);
+    await exec(
+      `CREATE UNIQUE INDEX IF NOT EXISTS idx_store_public ON store (crux_id, key) WHERE visitor_id IS NULL`,
+    );
+    await exec(
+      `CREATE UNIQUE INDEX IF NOT EXISTS idx_store_protected ON store (crux_id, visitor_id, key) WHERE visitor_id IS NOT NULL`,
+    );
     await exec(`CREATE INDEX IF NOT EXISTS idx_store_crux ON store(crux_id)`);
     await run('UPDATE schema_version SET version = 3');
   }
@@ -294,7 +300,10 @@ async function run(sql: string, params: unknown[] = []): Promise<{ changes: numb
   return { changes: sqlite3.changes(dbHandle) };
 }
 
-async function get(sql: string, params: unknown[] = []): Promise<Record<string, unknown> | undefined> {
+async function get(
+  sql: string,
+  params: unknown[] = [],
+): Promise<Record<string, unknown> | undefined> {
   for await (const stmt of sqlite3.statements(dbHandle, sql)) {
     if (params.length) bindParams(stmt, params);
     if ((await sqlite3.step(stmt)) === SQLite.SQLITE_ROW) {
@@ -435,10 +444,9 @@ async function handleMessage(e: MessageEvent<WorkerRequest>) {
         break;
       case 'export':
         result = await exportDb();
-        (self as unknown as Worker).postMessage(
-          { id: msg.id, result } as WorkerResponse,
-          [result as ArrayBuffer],
-        );
+        (self as unknown as Worker).postMessage({ id: msg.id, result } as WorkerResponse, [
+          result as ArrayBuffer,
+        ]);
         return; // already posted with transfer
       case 'import':
         await importDb(msg.data);
@@ -449,16 +457,18 @@ async function handleMessage(e: MessageEvent<WorkerRequest>) {
         result = undefined;
         break;
       case 'blob-write':
-        await blobWrite(msg.fingerprint, msg.data instanceof Uint8Array ? msg.data : new Uint8Array(msg.data));
+        await blobWrite(
+          msg.fingerprint,
+          msg.data instanceof Uint8Array ? msg.data : new Uint8Array(msg.data),
+        );
         result = undefined;
         break;
       case 'blob-read': {
         const data = await blobRead(msg.fingerprint);
         result = data;
-        (self as unknown as Worker).postMessage(
-          { id: msg.id, result } as WorkerResponse,
-          [data.buffer as ArrayBuffer],
-        );
+        (self as unknown as Worker).postMessage({ id: msg.id, result } as WorkerResponse, [
+          data.buffer as ArrayBuffer,
+        ]);
         return; // already posted with transfer
       }
       case 'blob-delete':

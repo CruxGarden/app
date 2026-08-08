@@ -14,7 +14,14 @@ export interface TemplateFile {
 
 // ── Form schema for data-driven templates ──
 
-export type FormFieldType = 'text' | 'textarea' | 'color' | 'image' | 'number' | 'select' | 'repeater';
+export type FormFieldType =
+  | 'text'
+  | 'textarea'
+  | 'color'
+  | 'image'
+  | 'number'
+  | 'select'
+  | 'repeater';
 
 export interface FormFieldBase {
   key: string;
@@ -184,6 +191,7 @@ export interface TemplateDefinition {
 // dozens/hundreds lives on crux.garden as clonable Template Cruxes, and
 // ecosystem templates arrive via TemplateDefinition.scaffold scripts.
 const loaders: Record<string, () => Promise<{ default: TemplateDefinition }>> = {
+  'astro-homepage': () => import('./astro-homepage'),
   'astro-blog': () => import('./astro-blog'),
 };
 
@@ -192,4 +200,49 @@ export async function loadTemplate(id: string): Promise<TemplateDefinition | nul
   if (!loader) return null;
   const mod = await loader();
   return mod.default;
+}
+
+/**
+ * Merge a template's declarations into a new crux's meta: greeting message,
+ * workspace context appended to the system prompt, and the Builder inputs
+ * (contentModel / formSchema).
+ *
+ * Pure so the stamping rules are testable — this ran behind a
+ * `settings.systemPrompt` guard that new cruxes never satisfy, which silently
+ * disabled every template's Builder view, config form, and AI context.
+ */
+export function applyTemplateMeta(
+  existingMeta: Record<string, unknown> | undefined,
+  def: TemplateDefinition,
+): Record<string, unknown> {
+  const meta: Record<string, unknown> = { ...(existingMeta ?? {}) };
+  const settings: Record<string, unknown> = {
+    ...((meta.settings as Record<string, unknown> | undefined) ?? {}),
+  };
+
+  // The template's greeting replaces the persona greeting for this crux
+  if (def.greeting) {
+    meta.messages = [{ role: 'assistant', content: def.greeting }];
+  }
+
+  // Workspace context is instructions, appended to whatever is already there
+  if (def.context) {
+    const existing = typeof settings.systemPrompt === 'string' ? settings.systemPrompt.trim() : '';
+    settings.systemPrompt = existing
+      ? `${existing}\n\nCONTEXT: ${def.context}`
+      : `CONTEXT: ${def.context}`;
+  }
+  meta.settings = settings;
+
+  // Data-driven templates ship a form schema; content-model templates reuse
+  // the same machinery for their settings file.
+  if (def.schema) meta.formSchema = def.schema;
+  if (def.contentModel) {
+    meta.contentModel = def.contentModel;
+    if (def.contentModel.settings && !def.schema) {
+      meta.formSchema = { fields: def.contentModel.settings.fields };
+    }
+  }
+
+  return meta;
 }

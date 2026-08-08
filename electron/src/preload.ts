@@ -71,6 +71,7 @@ const api: ElectronBridge = {
   preview: {
     start: (folder: string) => ipcRenderer.invoke('preview:start', folder) as Promise<string>,
     stop: (folder: string) => ipcRenderer.invoke('preview:stop', folder) as Promise<void>,
+    capture: (url: string) => ipcRenderer.invoke('preview:capture', url) as Promise<Uint8Array>,
   },
 
   toolchain: {
@@ -123,6 +124,10 @@ const api: ElectronBridge = {
     get: (key: string) => ipcRenderer.invoke('secrets:get', key) as Promise<string | null>,
     set: (key: string, value: string) => ipcRenderer.invoke('secrets:set', key, value) as Promise<void>,
     delete: (key: string) => ipcRenderer.invoke('secrets:delete', key) as Promise<void>,
+  },
+
+  localai: {
+    detect: () => ipcRenderer.invoke('localai:detect'),
   },
 
   ffmpeg: {

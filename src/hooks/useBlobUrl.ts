@@ -4,7 +4,10 @@ import { useState, useEffect } from 'react';
 export function useBlobUrl(fingerprint?: string | null): string | null {
   const [url, setUrl] = useState<string | null>(null);
   useEffect(() => {
-    if (!fingerprint) { setUrl(null); return; }
+    if (!fingerprint) {
+      setUrl(null);
+      return;
+    }
     let revoke = '';
     (async () => {
       const { getSqliteClient } = await import('@/services/sqlite/client');
@@ -16,7 +19,9 @@ export function useBlobUrl(fingerprint?: string | null): string | null {
         setUrl(u);
       }
     })();
-    return () => { if (revoke) URL.revokeObjectURL(revoke); };
+    return () => {
+      if (revoke) URL.revokeObjectURL(revoke);
+    };
   }, [fingerprint]);
   return url;
 }

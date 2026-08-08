@@ -31,11 +31,23 @@ export default function MoodBar() {
           onClick={() => toggleBg('blank')}
           className={cn(
             'p-1.5 rounded-[var(--radius-sm)] transition-colors cursor-pointer',
-            bgType === 'blank' ? 'text-accent bg-accent-muted' : 'text-panel-text-muted hover:text-accent hover:bg-accent-muted',
+            bgType === 'blank'
+              ? 'text-accent bg-accent-muted'
+              : 'text-panel-text-muted hover:text-accent hover:bg-accent-muted',
           )}
         >
           <svg width="18" height="14" viewBox="0 0 20 14" className="shrink-0">
-            <rect x="1" y="1" width="18" height="12" rx="2" fill="none" stroke="currentColor" strokeWidth="0.8" opacity="0.4" />
+            <rect
+              x="1"
+              y="1"
+              width="18"
+              height="12"
+              rx="2"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="0.8"
+              opacity="0.4"
+            />
           </svg>
         </button>
         <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-50 pointer-events-none hidden group-hover/blank:block">
@@ -51,7 +63,9 @@ export default function MoodBar() {
               onClick={() => toggleBg('drift')}
               className={cn(
                 'p-1.5 rounded-[var(--radius-sm)] transition-colors cursor-pointer',
-                bgType === 'drift' ? 'text-accent bg-accent-muted' : 'text-panel-text-muted hover:text-accent hover:bg-accent-muted',
+                bgType === 'drift'
+                  ? 'text-accent bg-accent-muted'
+                  : 'text-panel-text-muted hover:text-accent hover:bg-accent-muted',
               )}
             >
               <svg width="18" height="14" viewBox="0 0 20 14" className="shrink-0">
@@ -75,13 +89,33 @@ export default function MoodBar() {
               onClick={() => toggleBg('flow')}
               className={cn(
                 'p-1.5 rounded-[var(--radius-sm)] transition-colors cursor-pointer',
-                bgType === 'flow' ? 'text-accent bg-accent-muted' : 'text-panel-text-muted hover:text-accent hover:bg-accent-muted',
+                bgType === 'flow'
+                  ? 'text-accent bg-accent-muted'
+                  : 'text-panel-text-muted hover:text-accent hover:bg-accent-muted',
               )}
             >
               <svg width="18" height="14" viewBox="0 0 20 14" className="shrink-0">
-                <path d="M2 8 C5 4, 8 4, 10 7 S15 12, 18 8" stroke="currentColor" strokeWidth="0.8" fill="none" opacity="0.6" />
-                <path d="M1 11 C4 7, 7 6, 10 9 S14 14, 19 10" stroke="currentColor" strokeWidth="0.6" fill="none" opacity="0.35" />
-                <path d="M3 5 C6 2, 9 2, 12 5 S16 9, 19 5" stroke="currentColor" strokeWidth="0.6" fill="none" opacity="0.4" />
+                <path
+                  d="M2 8 C5 4, 8 4, 10 7 S15 12, 18 8"
+                  stroke="currentColor"
+                  strokeWidth="0.8"
+                  fill="none"
+                  opacity="0.6"
+                />
+                <path
+                  d="M1 11 C4 7, 7 6, 10 9 S14 14, 19 10"
+                  stroke="currentColor"
+                  strokeWidth="0.6"
+                  fill="none"
+                  opacity="0.35"
+                />
+                <path
+                  d="M3 5 C6 2, 9 2, 12 5 S16 9, 19 5"
+                  stroke="currentColor"
+                  strokeWidth="0.6"
+                  fill="none"
+                  opacity="0.4"
+                />
               </svg>
             </button>
             <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-50 pointer-events-none hidden group-hover/flow:block">
@@ -97,7 +131,9 @@ export default function MoodBar() {
           onClick={() => toggleBg('bloom')}
           className={cn(
             'p-1.5 rounded-[var(--radius-sm)] transition-colors cursor-pointer',
-            bgType === 'bloom' ? 'text-accent bg-accent-muted' : 'text-panel-text-muted hover:text-accent hover:bg-accent-muted',
+            bgType === 'bloom'
+              ? 'text-accent bg-accent-muted'
+              : 'text-panel-text-muted hover:text-accent hover:bg-accent-muted',
           )}
         >
           <svg width="18" height="14" viewBox="0 0 20 14" className="shrink-0">

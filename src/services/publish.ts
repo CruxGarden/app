@@ -11,7 +11,7 @@
  */
 
 import type { Crux, Artifact } from '@/api/types';
-import { pathOf } from '@/lib/artifact-path';
+import { pathOf, isWorkspaceThumbnail } from '@/lib/artifact-path';
 
 export interface PublishFile {
   blob: Blob;
@@ -25,7 +25,16 @@ export type PublishPhase = 'sync' | 'build' | 'collect' | 'upload' | 'finalize' 
 
 export interface PublishDeps {
   api: {
-    get(cruxId: string): Promise<Crux>;
+    /**
+     * Whether the crux already exists server-side.
+     *
+     * MUST resolve false only for a genuine "not found", and MUST throw on any
+     * other failure (network, 5xx, auth). Publishing takes the create path when
+     * this is false, and the API's create hard-deletes any record with the same
+     * author+slug — so answering false on a transient error destroys the live
+     * published crux.
+     */
+    exists(cruxId: string): Promise<boolean>;
     create(input: Record<string, unknown>): Promise<Crux>;
     update(cruxId: string, input: Record<string, unknown>): Promise<Crux>;
     publish(cruxId: string, files: PublishFile[]): Promise<Crux>;
@@ -42,6 +51,12 @@ export interface PublishDeps {
   };
 }
 
+/** True only for a definitive 404 from the API (axios-shaped error). */
+function isNotFound(err: unknown): boolean {
+  const status = (err as { response?: { status?: number }; status?: number })?.response?.status;
+  return status === 404;
+}
+
 async function defaultDeps(): Promise<PublishDeps> {
   const [{ cruxes }, { getServices }, site] = await Promise.all([
     import('@/api'),
@@ -51,7 +66,15 @@ async function defaultDeps(): Promise<PublishDeps> {
   const { artifact, crux: cruxService } = getServices();
   return {
     api: {
-      get: (id) => cruxes.get(id),
+      exists: async (id) => {
+        try {
+          await cruxes.get(id);
+          return true;
+        } catch (err) {
+          if (isNotFound(err)) return false;
+          throw err; // transient/auth failure — never assume "not published"
+        }
+      },
       create: (input) => cruxes.create(input as unknown as Parameters<typeof cruxes.create>[0]),
       update: (id, input) => cruxes.update(id, input as Parameters<typeof cruxes.update>[1]),
       publish: (id, files) => cruxes.publish(id, files),
@@ -71,11 +94,30 @@ async function defaultDeps(): Promise<PublishDeps> {
 
 // ── Publish-state helpers (fingerprint snapshot & change detection) ─────────
 
+/**
+ * Workspace-internal files that are never published and must not drive
+ * change detection:
+ *
+ * - `preview.jpg` — the crux thumbnail, re-shot on capture/snapshot. Its JPEG
+ *   bytes differ on every capture, so counting it would leave the crux
+ *   permanently "changed" after any preview.
+ * - `.keep` — the app's empty-directory marker.
+ */
+export function isInternalArtifactPath(path: string): boolean {
+  const p = path.toLowerCase();
+  return isWorkspaceThumbnail(p) || p === '.keep' || p.endsWith('/.keep');
+}
+
+/** The artifacts a publish actually ships (working files, minus internals). */
+export function publishableArtifacts(artifacts: Artifact[]): Artifact[] {
+  return artifacts.filter((a) => a.type === 'artifact' && !isInternalArtifactPath(pathOf(a)));
+}
+
 /** Build a fingerprint snapshot from artifacts: { path: fingerprint } */
 export function buildFingerprintMap(artifacts: Artifact[]): Record<string, string> {
   const map: Record<string, string> = {};
-  for (const a of artifacts) {
-    if (a.type !== 'artifact' || !a.fingerprint) continue;
+  for (const a of publishableArtifacts(artifacts)) {
+    if (!a.fingerprint) continue;
     map[pathOf(a)] = a.fingerprint;
   }
   return map;
@@ -96,6 +138,48 @@ export function hasContentChanged(
     if (current[currentKeys[i]!] !== publishedFingerprints[currentKeys[i]!]) return true;
   }
   return false;
+}
+
+// ── Failure reporting ───────────────────────────────────────────────────────
+
+export interface PublishFailure {
+  /** One line the user can act on. */
+  message: string;
+  /** Build output, when the failure came from the site build. */
+  log?: string;
+}
+
+/**
+ * Turn anything the pipeline can throw into something worth showing.
+ *
+ * Both publish entry points used to swallow errors (`catch {}`), so a failed
+ * Astro build — by far the likeliest failure once a crux has a build step —
+ * looked exactly like a publish that did nothing at all.
+ */
+export function describePublishFailure(err: unknown): PublishFailure {
+  // SiteBuildError, matched structurally so this module keeps no dependency on
+  // the desktop-only build path.
+  if (err instanceof Error && err.name === 'SiteBuildError') {
+    const log = (err as Error & { log?: string }).log;
+    return { message: err.message, ...(log ? { log } : {}) };
+  }
+
+  const status = (err as { response?: { status?: number } })?.response?.status;
+  if (status === 401 || status === 403) {
+    return { message: 'Your account connection expired — reconnect and try again.' };
+  }
+  if (status === 413) {
+    return { message: 'This crux is too large to publish.' };
+  }
+  if (status) {
+    const serverMessage = (err as { response?: { data?: { message?: string | string[] } } })
+      ?.response?.data?.message;
+    const detail = Array.isArray(serverMessage) ? serverMessage.join(', ') : serverMessage;
+    return { message: detail || `The server rejected the publish (${status}).` };
+  }
+
+  if (err instanceof Error && err.message) return { message: err.message };
+  return { message: 'Publishing failed.' };
 }
 
 // ── The pipeline ────────────────────────────────────────────────────────────
@@ -125,15 +209,11 @@ export async function publishPipeline(
   const deps = opts?.deps ?? (await defaultDeps());
   const progress = opts?.onProgress ?? (() => {});
 
-  // 1. Upsert crux to API (create if not exists, update if it does)
+  // 1. Upsert crux to API (create if not exists, update if it does).
+  // A transient failure here aborts the publish: `exists` throwing is the
+  // guard that stops us taking the destructive create path (see PublishDeps).
   progress('sync');
-  let cruxExistsOnApi = false;
-  try {
-    await deps.api.get(crux.id);
-    cruxExistsOnApi = true;
-  } catch {
-    // 404 — crux not yet on API
-  }
+  const cruxExistsOnApi = await deps.api.exists(crux.id);
   if (cruxExistsOnApi) {
     await deps.api.update(crux.id, cruxUpsertFields(crux));
   } else {
@@ -151,21 +231,27 @@ export async function publishPipeline(
     filesToPublish = await deps.site.buildForPublish(crux.id);
   } else {
     progress('collect');
-    const workingArtifacts = artifacts.filter((a) => a.type === 'artifact');
     filesToPublish = [];
-    for (const art of workingArtifacts) {
+    // Every publishable artifact must load. Skipping a failed blob would ship
+    // an incomplete site while `publishedFingerprints` recorded it as shipped,
+    // so the missing file would never be retried.
+    for (const art of publishableArtifacts(artifacts)) {
+      let blob: Blob;
       try {
-        const blob = await deps.local.downloadBlob(art.id);
-        filesToPublish.push({
-          blob,
-          path: pathOf(art) || 'file',
-          type: art.type,
-          kind: art.kind || undefined,
-          mimeType: art.mimeType,
-        });
-      } catch {
-        // Skip artifacts that fail to load — publish will use what's available
+        blob = await deps.local.downloadBlob(art.id);
+      } catch (err) {
+        throw new Error(
+          `Could not read "${pathOf(art) || art.id}" from the blob store — nothing was published.`,
+          { cause: err },
+        );
       }
+      filesToPublish.push({
+        blob,
+        path: pathOf(art) || 'file',
+        type: art.type,
+        kind: art.kind || undefined,
+        mimeType: art.mimeType,
+      });
     }
   }
 
@@ -188,7 +274,7 @@ export async function publishPipeline(
   // 5. Sync discoverable state and tags (best-effort — publish itself succeeded)
   progress('tags');
   try {
-    const tags = crux.discoverable ? ((crux.meta?.tags as string[]) || []) : [];
+    const tags = crux.discoverable ? (crux.meta?.tags as string[]) || [] : [];
     await deps.api.syncTags(crux.id, tags);
   } catch {
     // best-effort
@@ -202,10 +288,7 @@ export async function publishPipeline(
  * publish metadata locally (persisted — not just in-memory), returns the
  * updated crux.
  */
-export async function unpublishPipeline(
-  crux: Crux,
-  opts?: { deps?: PublishDeps },
-): Promise<Crux> {
+export async function unpublishPipeline(crux: Crux, opts?: { deps?: PublishDeps }): Promise<Crux> {
   const deps = opts?.deps ?? (await defaultDeps());
 
   await deps.api.unpublish(crux.id);

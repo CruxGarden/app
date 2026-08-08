@@ -5,8 +5,7 @@ import { useCruxStore } from '@/stores/cruxStore';
 import { getServices } from '@/services';
 
 export function useGarden() {
-  const { cruxList, loading, search, sortBy, load, setSearch, setSortBy } =
-    useGardenStore();
+  const { cruxList, loading, search, sortBy, load, setSearch, setSortBy } = useGardenStore();
 
   const createCrux = useCruxStore((s) => s.createCrux);
   const navigate = useNavigate();

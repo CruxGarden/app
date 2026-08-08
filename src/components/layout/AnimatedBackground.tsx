@@ -30,11 +30,9 @@ export default function AnimatedBackground() {
   // Watch for external changes to --background-type (e.g. mood system)
   useEffect(() => {
     const observer = new MutationObserver(() => {
-      const val = (
-        getComputedStyle(document.documentElement)
-          .getPropertyValue(BG_CSS_VAR)
-          .trim() || getSetting(SettingsKey.BackgroundType) || BgType.Bloom
-      ) as BgType;
+      const val = (getComputedStyle(document.documentElement).getPropertyValue(BG_CSS_VAR).trim() ||
+        getSetting(SettingsKey.BackgroundType) ||
+        BgType.Bloom) as BgType;
       setBgType((prev) => (prev !== val ? val : prev));
     });
 
@@ -48,7 +46,13 @@ export default function AnimatedBackground() {
 
   // Image overlays a background image
   if (bgType === BgType.Image && backgroundUrl) {
-    return <div aria-hidden="true" className="fixed inset-0 -z-10 pointer-events-none bg-cover bg-center" style={{ backgroundImage: `url(${backgroundUrl})` }} />;
+    return (
+      <div
+        aria-hidden="true"
+        className="fixed inset-0 -z-10 pointer-events-none bg-cover bg-center"
+        style={{ backgroundImage: `url(${backgroundUrl})` }}
+      />
+    );
   }
 
   // Blank uses the body --bg

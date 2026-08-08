@@ -4,6 +4,7 @@ import { useAppStore } from '@/stores/appStore';
 import { useCruxStore } from '@/stores/cruxStore';
 import { useUIStore } from '@/stores/uiStore';
 import { Button } from '@/components/ui';
+import { publicCruxUrl } from '@/lib/public-url';
 import CreateAuthorModal from '@/components/auth/CreateAuthorModal';
 import PublishModal from './PublishModal';
 
@@ -42,12 +43,15 @@ export default function PublishButton() {
 
     setPublishing(true);
     try {
-      await publishCrux();
-      const url = `${window.location.origin}/${currentAuthor.username}/${crux.slug}`;
-      setPublishedUrl(url);
+      const published = await publishCrux();
+      if (!published) {
+        // The Share pane renders the failure the store recorded — it has the
+        // room for a build log, which is what most failures carry.
+        useUIStore.getState().setPaneVisible('publish', true);
+        return;
+      }
+      setPublishedUrl(publicCruxUrl(currentAuthor.username, crux.slug));
       setShowPublishModal(true);
-    } catch {
-      // TODO: show error toast
     } finally {
       setPublishing(false);
     }

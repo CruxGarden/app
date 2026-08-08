@@ -9,15 +9,24 @@ import { importCrux } from '@/services/crux-io';
 import { useGardenStore } from '@/stores/gardenStore';
 import { Modal, Button } from '@/components/ui';
 import { cn } from '@/lib/cn';
-import { loadTemplate } from '@/templates';
-import type { CruxKind } from '@/api/types';
+import { loadTemplate, applyTemplateMeta } from '@/templates';
+import type { CruxKind, ChatMessage } from '@/api/types';
 import { Capability, can } from '@/lib/platform';
 
 // ── Icons ────────────────────────────────────────────────
 
 function BlogIcon() {
   return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+    <svg
+      width="20"
+      height="20"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
       <path d="M12 20h9" />
       <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
     </svg>
@@ -26,7 +35,16 @@ function BlogIcon() {
 
 function LayoutIcon() {
   return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+    <svg
+      width="20"
+      height="20"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
       <rect x="3" y="3" width="18" height="18" rx="2" />
       <path d="M3 9h18" />
       <path d="M9 21V9" />
@@ -54,14 +72,44 @@ interface Template {
 // Uses inline styles to stay self-contained — no external CSS needed.
 
 const T = {
-  wrap: { width: '100%', height: 52, borderRadius: 4, overflow: 'hidden' as const, position: 'relative' as const, fontSize: 0 },
-  bar: (w: string | number, h = 3, bg = '#555') => ({ width: w, height: h, borderRadius: 1, background: bg }),
-  line: (w: string | number, h = 2, bg = '#444') => ({ width: w, height: h, borderRadius: 1, background: bg }),
-  box: (w: string | number, h: string | number, bg = '#333') => ({ width: w, height: h, borderRadius: 2, background: bg }),
-  flex: (gap = 3, dir: 'row' | 'column' = 'row') => ({ display: 'flex' as const, gap, flexDirection: dir }),
+  wrap: {
+    width: '100%',
+    height: 52,
+    borderRadius: 4,
+    overflow: 'hidden' as const,
+    position: 'relative' as const,
+    fontSize: 0,
+  },
+  bar: (w: string | number, h = 3, bg = '#555') => ({
+    width: w,
+    height: h,
+    borderRadius: 1,
+    background: bg,
+  }),
+  line: (w: string | number, h = 2, bg = '#444') => ({
+    width: w,
+    height: h,
+    borderRadius: 1,
+    background: bg,
+  }),
+  box: (w: string | number, h: string | number, bg = '#333') => ({
+    width: w,
+    height: h,
+    borderRadius: 2,
+    background: bg,
+  }),
+  flex: (gap = 3, dir: 'row' | 'column' = 'row') => ({
+    display: 'flex' as const,
+    gap,
+    flexDirection: dir,
+  }),
   col: (gap = 2) => ({ display: 'flex' as const, flexDirection: 'column' as const, gap }),
   pad: (p = 6) => ({ padding: p }),
-  center: { display: 'flex' as const, alignItems: 'center' as const, justifyContent: 'center' as const },
+  center: {
+    display: 'flex' as const,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+  },
 } as const;
 
 function BlankThumb() {
@@ -70,6 +118,44 @@ function BlankThumb() {
       <div style={{ ...T.col(3), alignItems: 'center' }}>
         <div style={T.bar(16, 16, '#252525')} />
         <div style={T.line(24, 2, '#252525')} />
+      </div>
+    </div>
+  );
+}
+
+function HomeIcon() {
+  return (
+    <svg
+      width="20"
+      height="20"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="m3 10 9-7 9 7v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+      <path d="M9 22V12h6v10" />
+    </svg>
+  );
+}
+
+function HomeThumb() {
+  return (
+    <div style={{ ...T.wrap, background: '#1c1c1c', ...T.pad(6) }}>
+      <div style={T.col(3)}>
+        <div style={T.bar('55%', 5)} />
+        <div style={T.line('45%', 2, '#3a3a3a')} />
+        <div style={{ marginTop: 2, ...T.flex(3) }}>
+          <div style={T.box(14, 5, '#2e4a3c')} />
+          <div style={T.box(14, 5, '#2e4a3c')} />
+          <div style={T.box(14, 5, '#2e4a3c')} />
+        </div>
+        <div style={{ marginTop: 2, ...T.col(2) }}>
+          <div style={T.line('80%')} />
+          <div style={T.line('65%')} />
+        </div>
       </div>
     </div>
   );
@@ -94,8 +180,35 @@ function BlogThumb() {
 }
 
 const TEMPLATES: Template[] = [
-  { id: 'blank', label: 'Blank', description: 'Empty workspace — grow anything from scratch', icon: <LayoutIcon />, thumb: <BlankThumb />, kind: 'webapp', defaultTitle: 'My Crux' },
-  { id: 'astro-blog', label: 'Astro Blog', description: 'A real Astro site — live dev server, markdown posts', icon: <BlogIcon />, thumb: <BlogThumb />, kind: 'webapp', defaultTitle: 'My Blog', desktopOnly: true },
+  {
+    id: 'blank',
+    label: 'Blank',
+    description: 'Empty workspace — grow anything from scratch',
+    icon: <LayoutIcon />,
+    thumb: <BlankThumb />,
+    kind: 'webapp',
+    defaultTitle: 'My Crux',
+  },
+  {
+    id: 'astro-homepage',
+    label: 'Astro Home Page',
+    description: 'Your page on the internet — hero, about, links, and posts',
+    icon: <HomeIcon />,
+    thumb: <HomeThumb />,
+    kind: 'webapp',
+    defaultTitle: 'My Home Page',
+    desktopOnly: true,
+  },
+  {
+    id: 'astro-blog',
+    label: 'Astro Blog',
+    description: 'A real Astro site — live dev server, markdown posts',
+    icon: <BlogIcon />,
+    thumb: <BlogThumb />,
+    kind: 'webapp',
+    defaultTitle: 'My Blog',
+    desktopOnly: true,
+  },
 ];
 // ── Component ────────────────────────────────────────────
 
@@ -110,6 +223,8 @@ export default function NewCruxModal({ open, onClose }: NewCruxModalProps) {
   const refresh = useGardenStore((s) => s.load);
 
   const [title, setTitle] = useState('My Crux');
+  // Until the user types a title, it follows the selected template's default
+  const [titleEdited, setTitleEdited] = useState(false);
   const [selectedTemplate, setSelectedTemplate] = useState<string>('blank');
   const [creating, setCreating] = useState(false);
 
@@ -122,6 +237,7 @@ export default function NewCruxModal({ open, onClose }: NewCruxModalProps) {
 
   const reset = () => {
     setTitle('My Crux');
+    setTitleEdited(false);
     setSelectedTemplate('blank');
     setCreating(false);
   };
@@ -143,14 +259,23 @@ export default function NewCruxModal({ open, onClose }: NewCruxModalProps) {
           if (layout.paneOrder && layout.paneVisibility) {
             setSetting(
               `cruxgarden:layout:${result.cruxId}`,
-              JSON.stringify({ paneOrder: layout.paneOrder, paneVisibility: layout.paneVisibility }),
+              JSON.stringify({
+                paneOrder: layout.paneOrder,
+                paneVisibility: layout.paneVisibility,
+              }),
             );
           }
           if (layout.editorTabs) {
-            setSetting(`cruxgarden:editor-tabs:${result.cruxId}`, JSON.stringify(layout.editorTabs));
+            setSetting(
+              `cruxgarden:editor-tabs:${result.cruxId}`,
+              JSON.stringify(layout.editorTabs),
+            );
           }
           if (layout.folderState) {
-            setSetting(`cruxgarden:folder-state:${result.cruxId}`, JSON.stringify(layout.folderState));
+            setSetting(
+              `cruxgarden:folder-state:${result.cruxId}`,
+              JSON.stringify(layout.folderState),
+            );
           }
         }
 
@@ -161,7 +286,9 @@ export default function NewCruxModal({ open, onClose }: NewCruxModalProps) {
 
         if (result.failedArtifacts.length > 0) {
           console.warn('Some artifacts failed to import:', result.failedArtifacts);
-          alert(`Import completed with ${result.failedArtifacts.length} file${result.failedArtifacts.length > 1 ? 's' : ''} that could not be restored.`);
+          alert(
+            `Import completed with ${result.failedArtifacts.length} file${result.failedArtifacts.length > 1 ? 's' : ''} that could not be restored.`,
+          );
         }
 
         refresh();
@@ -170,7 +297,9 @@ export default function NewCruxModal({ open, onClose }: NewCruxModalProps) {
         navigate(`/c/${result.cruxId}`);
       } catch (err) {
         console.error('Import failed:', err);
-        alert(`Failed to import .crux file: ${err instanceof Error ? err.message : 'Make sure it is a valid export.'}`);
+        alert(
+          `Failed to import .crux file: ${err instanceof Error ? err.message : 'Make sure it is a valid export.'}`,
+        );
       } finally {
         setImporting(false);
         setImportProgress({ done: 0, total: 0 });
@@ -230,38 +359,14 @@ export default function NewCruxModal({ open, onClose }: NewCruxModalProps) {
             }
           }
 
-          // Replace greeting with template-specific intro and append context to system prompt
-          if (crux.meta?.settings?.systemPrompt) {
-            const messages = templateDef.greeting
-              ? [{ role: 'assistant' as const, content: templateDef.greeting }]
-              : crux.meta.messages ?? [];
+          // Stamp the template's greeting, workspace context, and Builder
+          // inputs (contentModel / formSchema) into the crux's meta.
+          const meta = applyTemplateMeta(crux.meta as Record<string, unknown>, templateDef);
+          updates.meta = meta;
 
-            updates.meta = {
-              ...crux.meta,
-              messages,
-              settings: {
-                ...crux.meta.settings,
-                systemPrompt: templateDef.context
-                  ? crux.meta.settings.systemPrompt + '\n\nCONTEXT: ' + templateDef.context
-                  : crux.meta.settings.systemPrompt,
-              },
-              // Store form schema for data-driven templates. Content-model
-              // templates reuse the same machinery for their settings file.
-              ...(templateDef.schema ? { formSchema: templateDef.schema } : {}),
-              ...(templateDef.contentModel
-                ? {
-                    contentModel: templateDef.contentModel,
-                    ...(templateDef.contentModel.settings && !templateDef.schema
-                      ? { formSchema: { fields: templateDef.contentModel.settings.fields } }
-                      : {}),
-                  }
-                : {}),
-            };
-
-            // Update store messages so UI reflects the greeting immediately
-            if (templateDef.greeting) {
-              useCruxStore.getState().setMessages(messages);
-            }
+          // Update store messages so the UI reflects the greeting immediately
+          if (templateDef.greeting) {
+            useCruxStore.getState().setMessages(meta.messages as ChatMessage[]);
           }
         }
 
@@ -273,7 +378,7 @@ export default function NewCruxModal({ open, onClose }: NewCruxModalProps) {
       const visibility: Record<string, boolean> = {};
       for (const pane of DEFAULT_PANE_ORDER) visibility[pane] = false;
 
-      const templateLayout = (!quickStart && template.id !== 'blank') ? templateDef?.layout : null;
+      const templateLayout = !quickStart && template.id !== 'blank' ? templateDef?.layout : null;
 
       if (templateLayout) {
         // Template with a layout preset — use its pane set and mosaic tree
@@ -334,7 +439,10 @@ export default function NewCruxModal({ open, onClose }: NewCruxModalProps) {
           <input
             type="text"
             value={title}
-            onChange={(e) => setTitle(e.target.value)}
+            onChange={(e) => {
+              setTitle(e.target.value);
+              setTitleEdited(true);
+            }}
             onKeyDown={(e) => e.key === 'Enter' && handleCreate()}
             onFocus={(e) => e.target.select()}
             placeholder={template.defaultTitle || 'My Crux'}
@@ -356,7 +464,7 @@ export default function NewCruxModal({ open, onClose }: NewCruxModalProps) {
                   key={t.id}
                   onClick={() => {
                     setSelectedTemplate(t.id);
-                    if (!title.trim() && t.defaultTitle) {
+                    if (!titleEdited && t.defaultTitle) {
                       setTitle(t.defaultTitle);
                     }
                   }}
@@ -365,19 +473,19 @@ export default function NewCruxModal({ open, onClose }: NewCruxModalProps) {
                     'w-full px-3 py-2.5 text-left cursor-pointer',
                     'flex items-center gap-3 border-b border-border last:border-b-0',
                     'disabled:opacity-50 disabled:cursor-not-allowed',
-                    selectedTemplate === t.id
-                      ? 'bg-accent-muted/30'
-                      : 'hover:bg-accent-muted/15',
+                    selectedTemplate === t.id ? 'bg-accent-muted/30' : 'hover:bg-accent-muted/15',
                   )}
                 >
                   <div className="w-10 h-10 shrink-0 rounded-[var(--radius-sm)] overflow-hidden border border-border">
                     {t.thumb}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <span className={cn(
-                      'text-sm font-mono block truncate',
-                      selectedTemplate === t.id ? 'text-accent' : 'text-text',
-                    )}>
+                    <span
+                      className={cn(
+                        'text-sm font-mono block truncate',
+                        selectedTemplate === t.id ? 'text-accent' : 'text-text',
+                      )}
+                    >
                       {t.label}
                     </span>
                     {t.description && (
@@ -408,17 +516,36 @@ export default function NewCruxModal({ open, onClose }: NewCruxModalProps) {
             <div className="flex items-center gap-3">
               <div className="relative w-7 h-7 flex items-center justify-center shrink-0">
                 <svg width="24" height="24" viewBox="0 0 28 28" className="-rotate-90">
-                  <circle cx="14" cy="14" r="12" fill="none" stroke="currentColor" strokeWidth="2" className="text-border" />
                   <circle
-                    cx="14" cy="14" r="12"
-                    fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"
+                    cx="14"
+                    cy="14"
+                    r="12"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    className="text-border"
+                  />
+                  <circle
+                    cx="14"
+                    cy="14"
+                    r="12"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
                     className="text-accent transition-[stroke-dashoffset] duration-300"
                     strokeDasharray={2 * Math.PI * 12}
-                    strokeDashoffset={importProgress.total > 0 ? 2 * Math.PI * 12 * (1 - importProgress.done / importProgress.total) : 2 * Math.PI * 12}
+                    strokeDashoffset={
+                      importProgress.total > 0
+                        ? 2 * Math.PI * 12 * (1 - importProgress.done / importProgress.total)
+                        : 2 * Math.PI * 12
+                    }
                   />
                 </svg>
                 <span className="absolute text-[8px] font-mono text-text-muted">
-                  {importProgress.total > 0 ? Math.round((importProgress.done / importProgress.total) * 100) : 0}
+                  {importProgress.total > 0
+                    ? Math.round((importProgress.done / importProgress.total) * 100)
+                    : 0}
                 </span>
               </div>
               <span className="text-xs font-mono text-text-muted">Importing...</span>
@@ -437,7 +564,6 @@ export default function NewCruxModal({ open, onClose }: NewCruxModalProps) {
           </Button>
         </div>
       </div>
-
     </Modal>
   );
 }

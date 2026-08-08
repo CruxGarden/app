@@ -3,12 +3,28 @@
 @import 'highlight.js/styles/github-dark.min.css';
 
 @keyframes fade-in {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 .animate-fade-in {
   animation: fade-in 0.4s ease-out;
+}
+
+/* Modal scrim — a darkened room, not frosted glass. The vignette keeps the
+   workspace legible at center while the edges fall away; the depth comes from
+   the modal's shadow, not from blurring what's behind it. */
+.modal-scrim {
+  background: radial-gradient(
+    ellipse 120% 90% at center,
+    rgb(0 0 0 / 0.55) 0%,
+    rgb(0 0 0 / 0.82) 100%
+  );
+  animation: fade-in 0.15s ease-out;
 }
 
 /* ── Fonts ─────────────────────────────────────────────── */
@@ -45,12 +61,27 @@
   font-display: swap;
 }
 
+/* Wordmark only — a garden serif, not an app font. Variable file; use it at
+   500-600 and display sizes: its hairline strokes drop out small on dark. */
+@font-face {
+  font-family: 'Cormorant Garamond';
+  src: url('/fonts/CormorantGaramond-Latin.woff2') format('woff2');
+  font-weight: 300 700;
+  font-style: normal;
+  font-display: swap;
+}
+
 /* ── Theme: Custom Properties ──────────────────────────── */
 
 @theme inline {
-  --font-display: 'JetBrains Mono', monospace;
+  /* Titles use the native system stack (plain, per Daniel). Body stays
+     Outfit; code/editor surfaces keep JetBrains Mono via --font-mono.
+     The wordmark gets its own face so the brand can feel like a garden
+     without the UI feeling like a magazine. */
+  --font-display: system-ui, -apple-system, 'Segoe UI', sans-serif;
   --font-body: 'Outfit', sans-serif;
   --font-mono: 'JetBrains Mono', monospace;
+  --font-wordmark: 'Cormorant Garamond', Georgia, serif;
 
   /* ── Legacy (kept until all components migrate) ────── */
   --color-bg: var(--bg);
@@ -344,7 +375,7 @@
   --contrast: #ffffff;
   --overlay: rgba(0, 0, 0, 0.5);
   --preview-bg: rgba(0, 0, 0, 0.2);
-  --brand-ai: #D97757;
+  --brand-ai: #d97757;
   --pane-collaboration: #d47080;
   --pane-artifacts: #d4944c;
   --pane-workshop: #c8a84c;
@@ -456,98 +487,98 @@
   /* Pane header tokens */
   /* Pane button tokens */
   --pane-collaboration-button: #d47080;
-  --pane-collaboration-button-hover: rgba(212, 112, 128, 0.10);
+  --pane-collaboration-button-hover: rgba(212, 112, 128, 0.1);
   --pane-collaboration-button-active: rgba(212, 112, 128, 0.15);
   --pane-collaboration-button-icon: #d47080;
   --pane-collaboration-button-icon-hover: #d47080;
   --pane-collaboration-button-icon-active: #d47080;
   --pane-collaboration-button-border: transparent;
-  --pane-collaboration-button-border-hover: rgba(212, 112, 128, 0.20);
-  --pane-collaboration-button-border-active: rgba(212, 112, 128, 0.30);
+  --pane-collaboration-button-border-hover: rgba(212, 112, 128, 0.2);
+  --pane-collaboration-button-border-active: rgba(212, 112, 128, 0.3);
   --pane-artifacts-button: #d4944c;
   --pane-artifacts-button-active: rgba(212, 148, 76, 0.15);
   --pane-artifacts-button-icon: #d4944c;
   --pane-artifacts-button-icon-active: #d4944c;
-  --pane-artifacts-button-border-active: rgba(212, 148, 76, 0.30);
+  --pane-artifacts-button-border-active: rgba(212, 148, 76, 0.3);
   --pane-workshop-button: #c8a84c;
   --pane-workshop-button-active: rgba(200, 168, 76, 0.15);
   --pane-workshop-button-icon: #c8a84c;
   --pane-workshop-button-icon-active: #c8a84c;
-  --pane-workshop-button-border-active: rgba(200, 168, 76, 0.30);
+  --pane-workshop-button-border-active: rgba(200, 168, 76, 0.3);
   --pane-details-button: #5cb87a;
   --pane-details-button-active: rgba(92, 184, 122, 0.15);
   --pane-details-button-icon: #5cb87a;
   --pane-details-button-icon-active: #5cb87a;
-  --pane-details-button-border-active: rgba(92, 184, 122, 0.30);
+  --pane-details-button-border-active: rgba(92, 184, 122, 0.3);
   --pane-history-button: #4cb8b0;
   --pane-history-button-active: rgba(76, 184, 176, 0.15);
   --pane-history-button-icon: #4cb8b0;
   --pane-history-button-icon-active: #4cb8b0;
-  --pane-history-button-border-active: rgba(76, 184, 176, 0.30);
+  --pane-history-button-border-active: rgba(76, 184, 176, 0.3);
   --pane-export-button: #5b9ed4;
   --pane-export-button-active: rgba(91, 158, 212, 0.15);
   --pane-export-button-icon: #5b9ed4;
   --pane-export-button-icon-active: #5b9ed4;
-  --pane-export-button-border-active: rgba(91, 158, 212, 0.30);
+  --pane-export-button-border-active: rgba(91, 158, 212, 0.3);
   --pane-sync-button: #8c7cc8;
   --pane-sync-button-active: rgba(140, 124, 200, 0.15);
   --pane-sync-button-icon: #8c7cc8;
   --pane-sync-button-icon-active: #8c7cc8;
-  --pane-sync-button-border-active: rgba(140, 124, 200, 0.30);
+  --pane-sync-button-border-active: rgba(140, 124, 200, 0.3);
   --pane-publish-button: #c87ca8;
   --pane-publish-button-active: rgba(200, 124, 168, 0.15);
   --pane-publish-button-icon: #c87ca8;
   --pane-publish-button-icon-active: #c87ca8;
-  --pane-publish-button-border-active: rgba(200, 124, 168, 0.30);
+  --pane-publish-button-border-active: rgba(200, 124, 168, 0.3);
   --pane-store-button: #c0a070;
   --pane-store-button-active: rgba(192, 160, 112, 0.15);
   --pane-store-button-icon: #c0a070;
   --pane-store-button-icon-active: #c0a070;
-  --pane-store-button-border-active: rgba(192, 160, 112, 0.30);
+  --pane-store-button-border-active: rgba(192, 160, 112, 0.3);
 
   /* Pane header tokens */
   --pane-collaboration-header: rgba(212, 112, 128, 0.15);
-  --pane-collaboration-header-border: rgba(212, 112, 128, 0.20);
+  --pane-collaboration-header-border: rgba(212, 112, 128, 0.2);
   --pane-collaboration-header-text: #d47080;
   --pane-collaboration-header-icon: #d47080;
   --pane-collaboration-header-close: #d47080;
   --pane-artifacts-header: rgba(212, 148, 76, 0.15);
-  --pane-artifacts-header-border: rgba(212, 148, 76, 0.20);
+  --pane-artifacts-header-border: rgba(212, 148, 76, 0.2);
   --pane-artifacts-header-text: #d4944c;
   --pane-artifacts-header-icon: #d4944c;
   --pane-artifacts-header-close: #d4944c;
   --pane-workshop-header: rgba(200, 168, 76, 0.15);
-  --pane-workshop-header-border: rgba(200, 168, 76, 0.20);
+  --pane-workshop-header-border: rgba(200, 168, 76, 0.2);
   --pane-workshop-header-text: #c8a84c;
   --pane-workshop-header-icon: #c8a84c;
   --pane-workshop-header-close: #c8a84c;
   --pane-details-header: rgba(92, 184, 122, 0.15);
-  --pane-details-header-border: rgba(92, 184, 122, 0.20);
+  --pane-details-header-border: rgba(92, 184, 122, 0.2);
   --pane-details-header-text: #5cb87a;
   --pane-details-header-icon: #5cb87a;
   --pane-details-header-close: #5cb87a;
   --pane-history-header: rgba(76, 184, 176, 0.15);
-  --pane-history-header-border: rgba(76, 184, 176, 0.20);
+  --pane-history-header-border: rgba(76, 184, 176, 0.2);
   --pane-history-header-text: #4cb8b0;
   --pane-history-header-icon: #4cb8b0;
   --pane-history-header-close: #4cb8b0;
   --pane-export-header: rgba(91, 158, 212, 0.15);
-  --pane-export-header-border: rgba(91, 158, 212, 0.20);
+  --pane-export-header-border: rgba(91, 158, 212, 0.2);
   --pane-export-header-text: #5b9ed4;
   --pane-export-header-icon: #5b9ed4;
   --pane-export-header-close: #5b9ed4;
   --pane-sync-header: rgba(140, 124, 200, 0.15);
-  --pane-sync-header-border: rgba(140, 124, 200, 0.20);
+  --pane-sync-header-border: rgba(140, 124, 200, 0.2);
   --pane-sync-header-text: #8c7cc8;
   --pane-sync-header-icon: #8c7cc8;
   --pane-sync-header-close: #8c7cc8;
   --pane-publish-header: rgba(200, 124, 168, 0.15);
-  --pane-publish-header-border: rgba(200, 124, 168, 0.20);
+  --pane-publish-header-border: rgba(200, 124, 168, 0.2);
   --pane-publish-header-text: #c87ca8;
   --pane-publish-header-icon: #c87ca8;
   --pane-publish-header-close: #c87ca8;
   --pane-store-header: rgba(192, 160, 112, 0.15);
-  --pane-store-header-border: rgba(192, 160, 112, 0.20);
+  --pane-store-header-border: rgba(192, 160, 112, 0.2);
   --pane-store-header-text: #c0a070;
   --pane-store-header-icon: #c0a070;
   --pane-store-header-close: #c0a070;
@@ -820,7 +851,10 @@ html.palette-transition *::after {
   transition: opacity 100ms;
 }
 
-.mosaic.crux-mosaic-theme .mosaic-drop-target .drop-target-container .drop-target.drop-target-hover {
+.mosaic.crux-mosaic-theme
+  .mosaic-drop-target
+  .drop-target-container
+  .drop-target.drop-target-hover {
   opacity: 1;
 }
 

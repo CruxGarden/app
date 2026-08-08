@@ -94,9 +94,7 @@ export function initPreviewReceiver(): void {
 /** Wait for the receiver iframe to be ready. */
 async function waitForReceiver(): Promise<boolean> {
   if (!receiverReady) return false;
-  const timeout = new Promise<'timeout'>((resolve) =>
-    setTimeout(() => resolve('timeout'), 5000),
-  );
+  const timeout = new Promise<'timeout'>((resolve) => setTimeout(() => resolve('timeout'), 5000));
   const result = await Promise.race([receiverReady.then(() => 'ready' as const), timeout]);
   return result === 'ready';
 }

@@ -68,9 +68,19 @@ export default function AvatarUpload({ compact }: AvatarUploadProps) {
     <div className="flex items-center gap-3">
       <div className="relative shrink-0">
         {avatar ? (
-          <img src={avatar} alt="Avatar" className={cn(avatarSize, 'rounded-[var(--radius)] object-cover')} />
+          <img
+            src={avatar}
+            alt="Avatar"
+            className={cn(avatarSize, 'rounded-[var(--radius)] object-cover')}
+          />
         ) : (
-          <div className={cn(avatarSize, 'rounded-[var(--radius)] flex items-center justify-center bg-accent-muted text-accent font-display font-bold', compact ? 'text-sm' : 'text-lg')}>
+          <div
+            className={cn(
+              avatarSize,
+              'rounded-[var(--radius)] flex items-center justify-center bg-accent-muted text-accent font-display font-bold',
+              compact ? 'text-sm' : 'text-lg',
+            )}
+          >
             {initial}
           </div>
         )}
@@ -97,7 +107,13 @@ export default function AvatarUpload({ compact }: AvatarUploadProps) {
             Remove
           </button>
         )}
-        <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
+        <input
+          ref={fileRef}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={handleFileChange}
+        />
       </div>
     </div>
   );

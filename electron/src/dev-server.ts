@@ -1,18 +1,22 @@
-const { app } = require('electron');
 const { spawn } = require('child_process');
-const fs = require('fs');
-const path = require('path');
+const { pnpmEntry, pnpmEnv } = require('./pnpm');
 const http = require('http');
 const net = require('net');
 
 /**
- * Site-crux dev servers (`astro dev` and friends) — one per Project Folder.
+ * Site-crux dev servers — one per Project Folder, on an ephemeral port
+ * (per-crux origin isolation, same as the static preview server).
  *
- * The project's own `dev` script runs via bundled pnpm + Electron-as-Node on
- * an ephemeral port (per-crux origin isolation, same as the static preview
- * server). Readiness is detected by polling the port — robust across tools
- * and log formats. Processes are spawned detached (their own process group)
- * so kill(-pid) takes down any children; everything dies with the app.
+ * Astro-only, deliberately: this runs `pnpm exec astro dev --port …` rather
+ * than the project's own `dev` script, because the port is load-bearing and
+ * `pnpm run dev -- --port` does not reach the tool — pnpm forwards a literal
+ * `--`, Astro ignores the flags, and the server quietly binds its default
+ * port instead, colliding with every other open crux. Supporting a second
+ * framework means teaching this function that framework's port flag.
+ *
+ * Readiness is detected by polling the port — robust across log formats.
+ * Processes are spawned detached (their own process group) so kill(-pid)
+ * takes down any children; everything dies with the app.
  */
 
 export type DevStatus = 'starting' | 'ready' | 'crashed' | 'stopped';
@@ -23,17 +27,6 @@ interface RunningDev {
   url: string;
   status: DevStatus;
   log: string;
-}
-
-function pnpmEntry(): string {
-  const candidates = [
-    path.join(app.getAppPath(), 'node_modules', 'pnpm', 'bin', 'pnpm.cjs'),
-    path.join(process.resourcesPath || '', 'app.asar.unpacked', 'node_modules', 'pnpm', 'bin', 'pnpm.cjs'),
-  ];
-  for (const candidate of candidates) {
-    if (fs.existsSync(candidate)) return candidate;
-  }
-  throw new Error('bundled pnpm not found');
 }
 
 function freePort(): Promise<number> {
@@ -91,7 +84,7 @@ export class DevServerManager {
       [pnpmEntry(), 'exec', 'astro', 'dev', '--port', String(port), '--host', '127.0.0.1'],
       {
         cwd,
-        env: { ...process.env, ELECTRON_RUN_AS_NODE: '1', CI: '1' },
+        env: pnpmEnv(),
         stdio: ['ignore', 'pipe', 'pipe'],
         detached: true, // own process group — kill(-pid) reaps children
       },

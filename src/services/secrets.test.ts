@@ -1,10 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import {
-  getSecret,
-  setSecret,
-  deleteSecret,
-  __resetSecretsBackendForTests,
-} from './secrets';
+import { getSecret, setSecret, deleteSecret, __resetSecretsBackendForTests } from './secrets';
 
 /** In-memory fake of the Electron safeStorage IPC bridge. */
 function fakeElectronSecrets(available = true) {
@@ -21,9 +16,7 @@ function fakeElectronSecrets(available = true) {
 }
 
 function installWindow(secrets: object | undefined) {
-  (globalThis as Record<string, unknown>).window = secrets
-    ? { electronAPI: { secrets } }
-    : {};
+  (globalThis as Record<string, unknown>).window = secrets ? { electronAPI: { secrets } } : {};
 }
 
 describe('secrets service', () => {

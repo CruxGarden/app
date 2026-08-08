@@ -28,13 +28,31 @@ import 'react-mosaic-component/react-mosaic-component.css';
 // ── Media transcoding constants ──────────────────────────
 
 const STREAMING_MEDIA_TYPES = new Set([
-  'video/mp4', 'video/webm', 'video/quicktime', 'video/x-msvideo', 'video/x-matroska',
-  'video/mpeg', 'video/ogg', 'video/3gpp',
-  'audio/mpeg', 'audio/wav', 'audio/ogg', 'audio/flac', 'audio/aac',
-  'audio/x-m4a', 'audio/mp4', 'audio/webm',
+  'video/mp4',
+  'video/webm',
+  'video/quicktime',
+  'video/x-msvideo',
+  'video/x-matroska',
+  'video/mpeg',
+  'video/ogg',
+  'video/3gpp',
+  'audio/mpeg',
+  'audio/wav',
+  'audio/ogg',
+  'audio/flac',
+  'audio/aac',
+  'audio/x-m4a',
+  'audio/mp4',
+  'audio/webm',
 ]);
 
-const STREAMING_READY = new Set(['video/mp4', 'video/webm', 'audio/mp4', 'audio/webm', 'audio/aac']);
+const STREAMING_READY = new Set([
+  'video/mp4',
+  'video/webm',
+  'audio/mp4',
+  'audio/webm',
+  'audio/aac',
+]);
 
 // ── Pane component registry ─────────────────────────────
 
@@ -243,7 +261,11 @@ export default function WorkspaceLayout() {
     const children = artifacts.filter((a) => isUnder(folderPath, pathOf(a)));
     if (children.length === 0) return;
     const folderName = basename(folderPath);
-    if (confirm(`Delete "${folderName}" and ${children.length} file${children.length !== 1 ? 's' : ''}?`)) {
+    if (
+      confirm(
+        `Delete "${folderName}" and ${children.length} file${children.length !== 1 ? 's' : ''}?`,
+      )
+    ) {
       await deleteArtifacts(children.map((a) => a.id));
     }
   };
@@ -257,53 +279,58 @@ export default function WorkspaceLayout() {
     }
   };
 
-
-  const isMediaFile = useCallback((id: string) => {
-    const artifact = artifacts.find((a) => a.id === id);
-    if (!artifact) return false;
-    const mime = artifact.mimeType || '';
-    const path = pathOf(artifact);
-    // Don't offer transcode for files already in streaming/ dir or already streaming-ready
-    if (path.startsWith('streaming/')) return false;
-    if (STREAMING_READY.has(mime)) return false;
-    return STREAMING_MEDIA_TYPES.has(mime);
-  }, [artifacts]);
+  const isMediaFile = useCallback(
+    (id: string) => {
+      const artifact = artifacts.find((a) => a.id === id);
+      if (!artifact) return false;
+      const mime = artifact.mimeType || '';
+      const path = pathOf(artifact);
+      // Don't offer transcode for files already in streaming/ dir or already streaming-ready
+      if (path.startsWith('streaming/')) return false;
+      if (STREAMING_READY.has(mime)) return false;
+      return STREAMING_MEDIA_TYPES.has(mime);
+    },
+    [artifacts],
+  );
 
   const ffmpegAvailable = can(Capability.Transcode);
 
-  const handleTranscode = useCallback(async (id: string) => {
-    const artifact = artifacts.find((a) => a.id === id);
-    if (!artifact?.fingerprint) return;
-    if (!can(Capability.Transcode)) return;
+  const handleTranscode = useCallback(
+    async (id: string) => {
+      const artifact = artifacts.find((a) => a.id === id);
+      if (!artifact?.fingerprint) return;
+      if (!can(Capability.Transcode)) return;
 
-    const { getSqliteClient } = await import('@/services/sqlite/client');
-    const content = await getSqliteClient().blobRead(artifact.fingerprint);
-    if (!content || content.length === 0) return;
+      const { getSqliteClient } = await import('@/services/sqlite/client');
+      const content = await getSqliteClient().blobRead(artifact.fingerprint);
+      if (!content || content.length === 0) return;
 
-    const inputName = displayNameOf(artifact, 'media');
-    const baseName = inputName.replace(/\.[^.]+$/, '');
-    const mime = artifact.mimeType || '';
-    const isAudio = mime.startsWith('audio/');
+      const inputName = displayNameOf(artifact, 'media');
+      const baseName = inputName.replace(/\.[^.]+$/, '');
+      const mime = artifact.mimeType || '';
+      const isAudio = mime.startsWith('audio/');
 
-    try {
-      const { transcode } = await import('@/services/media');
-      const results = await transcode({
-        inputData: content,
-        inputName,
-        isAudio,
-      });
+      try {
+        const { transcode } = await import('@/services/media');
+        const results = await transcode({
+          inputData: content,
+          inputName,
+          isAudio,
+        });
 
-      const uploadFile = useCruxStore.getState().uploadFile;
-      for (const result of results) {
-        const blob = new Blob([new Uint8Array(result.data)], { type: result.mimeType });
-        const file = new File([blob], result.name, { type: result.mimeType });
-        await uploadFile(file, `streaming/${baseName}`);
+        const uploadFile = useCruxStore.getState().uploadFile;
+        for (const result of results) {
+          const blob = new Blob([new Uint8Array(result.data)], { type: result.mimeType });
+          const file = new File([blob], result.name, { type: result.mimeType });
+          await uploadFile(file, `streaming/${baseName}`);
+        }
+      } catch (err) {
+        console.error('Transcode failed:', err);
+        alert('Transcode failed: ' + (err as Error).message);
       }
-    } catch (err) {
-      console.error('Transcode failed:', err);
-      alert('Transcode failed: ' + (err as Error).message);
-    }
-  }, [artifacts]);
+    },
+    [artifacts],
+  );
 
   const handleOpen = (id: string) => {
     const artifact = artifacts.find((a) => a.id === id);
@@ -351,10 +378,11 @@ export default function WorkspaceLayout() {
                 borderStyle: 'solid',
               }}
             >
-              <div className="flex items-center gap-2" style={{ color: `var(${prefix}-header-text)` }}>
-                <span style={{ color: `var(${prefix}-header-icon)` }}>
-                  {PANE_ICONS[paneType]}
-                </span>
+              <div
+                className="flex items-center gap-2"
+                style={{ color: `var(${prefix}-header-text)` }}
+              >
+                <span style={{ color: `var(${prefix}-header-icon)` }}>{PANE_ICONS[paneType]}</span>
                 <span className="text-[11px] font-mono uppercase tracking-wider">
                   {PANE_LABELS[paneType]}
                 </span>

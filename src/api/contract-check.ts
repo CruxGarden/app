@@ -30,6 +30,21 @@ type Wire<K extends keyof components['schemas']> = components['schemas'][K];
 type Extends<A, B> = A extends B ? true : false;
 type Assert<T extends true> = T;
 
+/**
+ * Fields the app sends that the wire type no longer has.
+ *
+ * Assignability alone only catches ADDED or retyped server fields: an app DTO
+ * with extra properties still "extends" a narrower wire type, so a field the
+ * API REMOVED would sail through and fail at runtime as a Postgres
+ * "column does not exist" 500. This makes removals a compile error too.
+ */
+type ExtraKeys<AppDto, WireDto> = Exclude<keyof AppDto, keyof WireDto>;
+// Resolves to `true` when nothing is extra; otherwise to the offending key
+// names, which then fail the `Assert` at the use site and name themselves.
+type NoExtraKeys<AppDto, WireDto> = [ExtraKeys<AppDto, WireDto>] extends [never]
+  ? true
+  : ExtraKeys<AppDto, WireDto>;
+
 // kind: the app's CruxKind includes local-only 'snapshot' (snapshot cruxes
 // never sync to the API); the wire enum is the publishable subset.
 export type _CreateCrux = Assert<
@@ -38,9 +53,15 @@ export type _CreateCrux = Assert<
 export type _UpdateCrux = Assert<
   Extends<Omit<UpdateCruxDto, 'kind'>, Omit<Wire<'UpdateCruxDto'>, 'kind'>>
 >;
+export type _CreateCruxNoStrays = Assert<NoExtraKeys<CreateCruxDto, Wire<'CreateCruxDto'>>>;
+export type _UpdateCruxNoStrays = Assert<NoExtraKeys<UpdateCruxDto, Wire<'UpdateCruxDto'>>>;
 
 export type _CreateAuthor = Assert<Extends<CreateAuthorDto, Wire<'CreateAuthorDto'>>>;
 export type _UpdateAuthor = Assert<Extends<UpdateAuthorDto, Wire<'UpdateAuthorDto'>>>;
+export type _CreateAuthorNoStrays = Assert<NoExtraKeys<CreateAuthorDto, Wire<'CreateAuthorDto'>>>;
+export type _UpdateAuthorNoStrays = Assert<NoExtraKeys<UpdateAuthorDto, Wire<'UpdateAuthorDto'>>>;
 
 export type _CreateDimension = Assert<Extends<CreateDimensionDto, Wire<'CreateDimensionDto'>>>;
-
+export type _CreateDimensionNoStrays = Assert<
+  NoExtraKeys<CreateDimensionDto, Wire<'CreateDimensionDto'>>
+>;

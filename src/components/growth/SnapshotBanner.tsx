@@ -14,7 +14,11 @@ export default function SnapshotBanner() {
   const label = `Viewing snapshot ${viewingSnapshotIndex + 1} of ${total}`;
 
   const handleRevert = async () => {
-    if (confirm('Revert workspace to this snapshot? Your current state will be saved as a snapshot first.')) {
+    if (
+      confirm(
+        'Revert workspace to this snapshot? Your current state will be saved as a snapshot first.',
+      )
+    ) {
       await revertToSnapshot(viewingSnapshotId);
     }
   };
@@ -27,7 +31,17 @@ export default function SnapshotBanner() {
   return (
     <div className="flex items-center justify-between gap-3 px-3 py-1.5 bg-surface border-b border-accent/30">
       <div className="flex items-center gap-2">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-accent shrink-0">
+        <svg
+          width="14"
+          height="14"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          className="text-accent shrink-0"
+        >
           <circle cx="12" cy="12" r="10" />
           <polyline points="12 6 12 12 16 14" />
         </svg>

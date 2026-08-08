@@ -70,4 +70,4 @@ export default memo(function GardenSearch({ value, onChange }: GardenSearchProps
       )}
     </div>
   );
-})
+});

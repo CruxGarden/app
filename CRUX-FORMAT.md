@@ -1,6 +1,12 @@
 # The .crux Export Format
 
-Version 3.1 — Last updated 2026-03-10
+Spec revision 3.1 — Last updated 2026-07-31
+
+> **Note on version numbers:** this document's revision (3.1, see Version
+> history below) counts design iterations of the format. The **wire version**
+> written into `manifest.json` is independent and currently `"1.0"` — the
+> importer accepts any `1.x` and rejects other majors. The examples below use
+> the wire version.
 
 ## Overview
 
@@ -48,7 +54,7 @@ The entry point. Validators should read this first.
 
 ```json
 {
-  "version": "3.1",
+  "version": "1.0",
   "fingerprint": "sha256-hex-string",
   "exportedAt": "2026-03-10T14:30:00.000Z",
   "artifactCount": 12,
@@ -62,7 +68,7 @@ The entry point. Validators should read this first.
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `version` | `string` | Semver-style format version. The importer checks the **major** version only — `"3.0"`, `"3.1"`, `"3.99"` are all accepted by a v3 importer. A major version mismatch (e.g. `"4.0"`) is rejected. |
+| `version` | `string` | Semver-style wire version. The importer checks the **major** version only — `"1.0"`, `"1.2"`, `"1.99"` are all accepted by a v1 importer. A major version mismatch (e.g. `"2.0"`) or a missing version is rejected. |
 | `fingerprint` | `string` | SHA-256 archive-level integrity hash. Computed from the artifact snapshot fingerprint, crux.json content, and dimensions.json content. Detects tampering with any part of the archive. |
 | `exportedAt` | `string` | ISO 8601 timestamp of when the export was created. |
 | `artifactCount` | `number` | Count of unique artifact blobs in the `artifacts/` directory. This is the deduplicated count, not the total number of file references across all versions. |
@@ -71,7 +77,7 @@ The entry point. Validators should read this first.
 
 **Validation rules:**
 - `manifest.json` is **required**. A ZIP without it is rejected.
-- The `version` field is required. The importer splits on `.` and compares the first segment to `"3"`.
+- The `version` field is required. The importer splits on `.` and compares the first segment to `"1"`.
 
 ---
 
@@ -467,7 +473,9 @@ This lets the UI show the user whether the import is newer or older than what th
 | File | Purpose |
 |------|---------|
 | `app/src/services/crux-io.ts` | All export/import logic: `exportCrux()`, `importCrux()`, `peekImport()` |
-| `app/src/services/export-import.test.ts` | 26 integration tests (real SQLite, no mocks) |
+| `app/src/services/export-import.test.ts` | Round-trip integration tests (real SQLite, no mocks) |
+| `app/src/services/crux-format.test.ts` | Format-conformance tests against this spec: blob integrity (filename = SHA-256 of bytes), archive fingerprint formula, manifest counts, version rules, fallbacks, store.json, layout/theme passthrough, DAG history |
+| `app/src/services/sqlite/helpers.test.ts` | Fingerprint primitive (SHA-256 test vectors, input-form equivalence) + row/SQL helpers |
 | `app/src/components/workspace/ExportPane.tsx` | Export UI (button, progress, archive preview) |
 | `app/src/pages/Garden.tsx` | Import UI (file picker, conflict modal, progress) |
 
