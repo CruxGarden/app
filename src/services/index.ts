@@ -35,7 +35,9 @@ export async function getBackendSetting(): Promise<Backend> {
 export function initServices(backend?: Backend): Promise<Services> {
   if (services) return Promise.resolve(services);
   if (initPromise) return initPromise;
-  initPromise = doInitServices(backend).finally(() => { initPromise = null; });
+  initPromise = doInitServices(backend).finally(() => {
+    initPromise = null;
+  });
   return initPromise;
 }
 
@@ -76,6 +78,15 @@ async function doInitServices(backend?: Backend): Promise<Services> {
 
   // Populate settings cache from SQLite + migrate localStorage values
   await initSettings();
+
+  // Desktop (ADR 0001): external Project Folder edits must be recorded
+  // whenever the store is live — ingestion rides the services lifecycle.
+  // This used to live only in appStore.init(), which the Gateway's own entry
+  // path never calls (it calls initServices() directly), so entering through
+  // the front door left the watcher firing at a renderer with no listener
+  // and Finder edits never appeared in the Artifacts pane. No-op on web.
+  const { initIngestion } = await import('./ingestion');
+  initIngestion();
 
   return services;
 }

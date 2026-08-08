@@ -8,7 +8,7 @@ import { useThemeStore } from '@/stores/themeStore';
 import { useUIStore } from '@/stores/uiStore';
 import { useCruxStore } from '@/stores/cruxStore';
 import { useFileContent } from '@/hooks/useFileContent';
-import { getMonacoLanguage, getExtension, isPreviewable } from '@/lib/monacoLanguages';
+import { getMonacoLanguage, getExtension } from '@/lib/monacoLanguages';
 import { pathOf, basename } from '@/lib/artifact-path';
 import { isImageMime, isVideoMime } from '@/lib/mime';
 import { Capability, can } from '@/lib/platform';
@@ -27,6 +27,7 @@ import {
   CAPTURE_SIZE,
 } from '@/lib/thumbnail-capture';
 import { registerCruxGardenThemes } from '@/lib/monacoTheme';
+import { captureLocalPreview } from '@/services/preview-capture';
 import { getServices } from '@/services';
 import MarkdownRenderer from '@/components/chat/MarkdownRenderer';
 import TemplateForm from '@/components/workspace/TemplateForm';
@@ -54,7 +55,13 @@ interface EditorContentProps {
   captureRef?: React.MutableRefObject<(() => void) | null>;
 }
 
-export default function EditorContent({ tab, artifact, cruxId, saveRef, captureRef }: EditorContentProps) {
+export default function EditorContent({
+  tab,
+  artifact,
+  cruxId,
+  saveRef,
+  captureRef,
+}: EditorContentProps) {
   const { content, blobUrl, loading, contentVersion, setContent } = useFileContent(
     cruxId,
     artifact,
@@ -70,6 +77,8 @@ export default function EditorContent({ tab, artifact, cruxId, saveRef, captureR
   const disposedRef = useRef(false);
   const previewIframeRef = useRef<HTMLIFrameElement | null>(null);
   const previewUrlRef = useRef<string | null>(null);
+  // Desktop: local-server URL currently shown in the preview iframe (capture target)
+  const desktopCaptureUrlRef = useRef<string | null>(null);
 
   const path = pathOf(artifact) || artifact.id;
   const ext = getExtension(path);
@@ -185,22 +194,31 @@ export default function EditorContent({ tab, artifact, cruxId, saveRef, captureR
   }, [handleSave, saveRef]);
 
   // Save a JPEG blob as preview.jpg (create or replace)
-  const savePreviewBlob = useCallback((blob: Blob) => {
-    const { artifact: artifactService } = getServices();
-    const artifacts = useCruxStore.getState().artifacts;
-    const existing = artifacts.find((a) => {
-      const p = pathOf(a).toLowerCase();
-      return p === 'preview.jpg';
-    });
-    const uploadOpts = { resourceId: cruxId, blob, mimeType: 'image/jpeg', meta: { path: 'preview.jpg' } };
-    artifactService.upload(uploadOpts)
-      .then((saved) => {
-        const store = useCruxStore.getState();
-        if (existing) store.updateArtifact(existing.id, saved);
-        else store.addArtifact(saved);
-      })
-      .catch((err) => console.error('Thumbnail save failed:', err));
-  }, [cruxId]);
+  const savePreviewBlob = useCallback(
+    (blob: Blob) => {
+      const { artifact: artifactService } = getServices();
+      const artifacts = useCruxStore.getState().artifacts;
+      const existing = artifacts.find((a) => {
+        const p = pathOf(a).toLowerCase();
+        return p === 'preview.jpg';
+      });
+      const uploadOpts = {
+        resourceId: cruxId,
+        blob,
+        mimeType: 'image/jpeg',
+        meta: { path: 'preview.jpg' },
+      };
+      artifactService
+        .upload(uploadOpts)
+        .then((saved) => {
+          const store = useCruxStore.getState();
+          if (existing) store.updateArtifact(existing.id, saved);
+          else store.addArtifact(saved);
+        })
+        .catch((err) => console.error('Thumbnail save failed:', err));
+    },
+    [cruxId],
+  );
 
   // HTML capture — postMessage handshake with the preview iframe
   const handleHtmlCapture = useCallback(() => {
@@ -236,14 +254,34 @@ export default function EditorContent({ tab, artifact, cruxId, saveRef, captureR
       .finally(() => URL.revokeObjectURL(video.src));
   }, [blobUrl, savePreviewBlob]);
 
+  // Desktop capture — hidden main-process window screenshots the local
+  // preview URL (works for Site Cruxes and static preview alike; the web
+  // postMessage path can't reach the un-injected desktop preview, ADR 0003)
+  const handleDesktopCapture = useCallback(() => {
+    const url = desktopCaptureUrlRef.current;
+    if (!url) return;
+    captureLocalPreview(url)
+      .then(savePreviewBlob)
+      .catch((err) => console.error('Capture failed:', err));
+  }, [savePreviewBlob]);
+
   // Unified capture dispatcher — picks strategy based on file type
   const isImage = isImageMime(mime);
   const isVideo = isVideoMime(mime);
   const handleCapture = useCallback(() => {
-    if (isHtmlFile) handleHtmlCapture();
+    if (desktopCaptureUrlRef.current) handleDesktopCapture();
+    else if (isHtmlFile) handleHtmlCapture();
     else if (isImage) handleImageCapture();
     else if (isVideo) handleVideoCapture();
-  }, [isHtmlFile, isImage, isVideo, handleHtmlCapture, handleImageCapture, handleVideoCapture]);
+  }, [
+    isHtmlFile,
+    isImage,
+    isVideo,
+    handleDesktopCapture,
+    handleHtmlCapture,
+    handleImageCapture,
+    handleVideoCapture,
+  ]);
 
   // Expose capture to parent via ref
   useEffect(() => {
@@ -253,27 +291,33 @@ export default function EditorContent({ tab, artifact, cruxId, saveRef, captureR
     };
   }, [handleCapture, captureRef]);
 
-  // Auto-capture: triggered when contentVersion changes (file saved or AI-written)
+  // Auto-capture: re-shoot the thumbnail when the file CHANGES (saved or
+  // AI-written) — never on mere open. `contentVersion` starts at 0 and the
+  // initial load bumps it to 1, so the baseline can only be recorded once the
+  // first load has landed; anchoring on the pre-load value made every open
+  // rewrite preview.jpg (new JPEG bytes → new fingerprint → phantom
+  // "unpublished changes").
   const isPreviewFile = isPreviewJpgPath(path);
   const canAutoCapture = isHtmlFile && !isPreviewFile;
   const autoCaptureTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const initialVersionRef = useRef(contentVersion);
+  const baselineVersionRef = useRef<number | null>(null);
   useEffect(() => {
-    // Skip the initial load — only capture on subsequent version changes
-    if (contentVersion <= initialVersionRef.current) return;
+    if (loading) return;
+    if (baselineVersionRef.current === null) {
+      baselineVersionRef.current = contentVersion; // first loaded version
+      return;
+    }
+    if (contentVersion <= baselineVersionRef.current) return;
     if (!canAutoCapture) return;
 
-    // HTML needs longer delay for iframe to settle; image/video are instant
-    const delay = isHtmlFile ? 3000 : 500;
+    // Give the iframe time to render the new content before shooting
     if (autoCaptureTimerRef.current) clearTimeout(autoCaptureTimerRef.current);
-    autoCaptureTimerRef.current = setTimeout(() => {
-      handleCapture();
-    }, delay);
+    autoCaptureTimerRef.current = setTimeout(() => handleCapture(), 3000);
 
     return () => {
       if (autoCaptureTimerRef.current) clearTimeout(autoCaptureTimerRef.current);
     };
-  }, [contentVersion, canAutoCapture, isHtmlFile, handleCapture]);
+  }, [contentVersion, canAutoCapture, handleCapture, loading]);
 
   // Defer Monaco mount by one frame so any disposed editor's async cleanup
   // (rAF, rIC) completes before the new editor tries to initialise
@@ -369,7 +413,7 @@ export default function EditorContent({ tab, artifact, cruxId, saveRef, captureR
 
   // Site cruxes (Astro): preview = the project's own dev server with HMR.
   // Plain cruxes: static preview (local server on desktop, SW cache on web).
-  const site = useSitePreview(cruxId, path, isPreviewable(path));
+  const site = useSitePreview(cruxId, path);
   const previewUrl = usePreviewUrl(content, cruxId, path, isHtmlFile && !site.isSite);
 
   // When preview URL changes, reload the iframe content.
@@ -384,6 +428,17 @@ export default function EditorContent({ tab, artifact, cruxId, saveRef, captureR
     }
     previewUrlRef.current = previewUrl;
   }, [previewUrl]);
+
+  // Keep the desktop capture target current: whatever local-server URL the
+  // preview iframe is showing (dev server for Site Cruxes, static server for
+  // plain cruxes). Null on web — the postMessage capture handles that path.
+  const currentIframeSrc = mountedIframeSrc({ path, site, previewUrl });
+  useEffect(() => {
+    const isLocalServer =
+      !!currentIframeSrc && /^http:\/\/(127\.0\.0\.1|localhost):/.test(currentIframeSrc);
+    desktopCaptureUrlRef.current =
+      isLocalServer && can(Capability.PreviewServer) ? currentIframeSrc : null;
+  }, [currentIframeSrc]);
 
   // SVG preview URL
   const svgPreviewUrl = useMemo(() => {
@@ -414,7 +469,7 @@ export default function EditorContent({ tab, artifact, cruxId, saveRef, captureR
     desktopServed: can(Capability.PreviewServer),
   });
   // Always-on iframe (mounted off-screen outside preview mode for auto-capture)
-  const iframeSrc = mountedIframeSrc({ path, site, previewUrl });
+  const iframeSrc = currentIframeSrc;
   const iframeVisible = target.kind === 'iframe';
 
   // ── Determine main content ──
@@ -501,7 +556,9 @@ export default function EditorContent({ tab, artifact, cruxId, saveRef, captureR
       // Previewable file with no renderer on this platform
       break;
     case 'image':
-      mainContent = blobUrl ? <ImageViewer blobUrl={blobUrl} path={path} artifact={artifact} /> : null;
+      mainContent = blobUrl ? (
+        <ImageViewer blobUrl={blobUrl} path={path} artifact={artifact} />
+      ) : null;
       break;
     case 'video':
     case 'blob':
@@ -535,7 +592,9 @@ export default function EditorContent({ tab, artifact, cruxId, saveRef, captureR
       {/* Desktop: the preview is a real local URL — show it, copy it, open it */}
       {target.kind === 'iframe' && target.localBase && (
         <div className="shrink-0 flex items-center gap-1.5 px-2 py-1 border-b border-border bg-surface text-[10px] font-mono text-text-muted">
-          <span className="truncate flex-1" title={target.localBase}>{target.localBase}</span>
+          <span className="truncate flex-1" title={target.localBase}>
+            {target.localBase}
+          </span>
           <button
             onClick={() => navigator.clipboard?.writeText(target.localBase!)}
             className="shrink-0 px-1.5 py-0.5 rounded-[var(--radius-sm)] hover:text-text hover:bg-surface-solid transition-colors cursor-pointer"
@@ -545,7 +604,9 @@ export default function EditorContent({ tab, artifact, cruxId, saveRef, captureR
           </button>
           <button
             onClick={() => {
-              import('@/services/desktop').then(({ openExternal }) => openExternal(target.localBase!));
+              import('@/services/desktop').then(({ openExternal }) =>
+                openExternal(target.localBase!),
+              );
             }}
             className="shrink-0 px-1.5 py-0.5 rounded-[var(--radius-sm)] hover:text-text hover:bg-surface-solid transition-colors cursor-pointer"
             title="Open in browser"
@@ -561,10 +622,14 @@ export default function EditorContent({ tab, artifact, cruxId, saveRef, captureR
             <>
               <div className="w-5 h-5 border-2 border-accent border-t-transparent rounded-full animate-spin" />
               <p className="text-xs text-text-muted">
-                {target.phase === 'installing' ? 'Preparing project (first run installs dependencies)…' : 'Starting dev server…'}
+                {target.phase === 'installing'
+                  ? 'Preparing project (first run installs dependencies)…'
+                  : 'Starting dev server…'}
               </p>
               {target.detail && (
-                <p className="text-[10px] font-mono text-text-muted/70 max-w-md truncate">{target.detail}</p>
+                <p className="text-[10px] font-mono text-text-muted/70 max-w-md truncate">
+                  {target.detail}
+                </p>
               )}
             </>
           ) : (
@@ -584,26 +649,28 @@ export default function EditorContent({ tab, artifact, cruxId, saveRef, captureR
           ref={previewIframeRef}
           key="preview"
           src={iframeSrc}
-          sandbox="allow-scripts allow-same-origin allow-popups allow-modals"
+          sandbox="allow-scripts allow-same-origin allow-popups allow-modals allow-downloads"
           allow="geolocation; camera; microphone; accelerometer; gyroscope; autoplay; fullscreen"
           onLoad={(e) => {
             try {
               const doc = e.currentTarget.contentDocument;
               if (!doc) return;
-              const bg = getComputedStyle(doc.documentElement).backgroundColor
-                || getComputedStyle(doc.body).backgroundColor;
+              const bg =
+                getComputedStyle(doc.documentElement).backgroundColor ||
+                getComputedStyle(doc.body).backgroundColor;
               if (bg && bg !== 'rgba(0, 0, 0, 0)' && bg !== 'transparent') {
                 e.currentTarget.style.backgroundColor = bg;
               }
-            } catch { /* cross-origin — ignore */ }
+            } catch {
+              /* cross-origin — ignore */
+            }
           }}
-          style={iframeVisible
-            ? { backgroundColor: '#000' }
-            : { backgroundColor: '#000', width: CAPTURE_SIZE.width, height: CAPTURE_SIZE.height }}
-          className={iframeVisible
-            ? 'flex-1 w-full'
-            : 'fixed -left-[9999px] pointer-events-none'
+          style={
+            iframeVisible
+              ? { backgroundColor: '#000' }
+              : { backgroundColor: '#000', width: CAPTURE_SIZE.width, height: CAPTURE_SIZE.height }
           }
+          className={iframeVisible ? 'flex-1 w-full' : 'fixed -left-[9999px] pointer-events-none'}
           title={path}
         />
       )}
@@ -650,7 +717,6 @@ function ImageViewer({
     </PhotoProvider>
   );
 }
-
 
 function formatSize(bytes?: number): string {
   if (!bytes) return 'unknown size';

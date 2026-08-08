@@ -51,6 +51,62 @@ function getBlobDir(): string {
   return path.join(userDataPath, 'blobs');
 }
 
+/**
+ * Local inference CORS shim (Phase A4): the AI SDK runs in the renderer, whose
+ * origin is crux-app:// (packaged) or the Vite dev server. Ollama / LM Studio
+ * only accept browser requests from localhost origins, so rewrite the Origin
+ * on requests to their ports and stamp permissive CORS on the responses.
+ *
+ * SCOPING IS THE WHOLE SECURITY STORY. webRequest filters match on URL only,
+ * and this session is shared with every iframe in the app — including
+ * `{cruxId}.publish.crux.garden` pages (other people's published cruxes) and
+ * AI-authored preview content. Unscoped, this shim would hand any of them the
+ * user's local model server, and the forged Origin would defeat OLLAMA_ORIGINS,
+ * the one control Ollama ships for exactly this. So: the app's own top-level
+ * document gets the shim; everything else is blocked outright.
+ */
+const LOCAL_AI_URLS = [
+  'http://127.0.0.1:11434/*',
+  'http://localhost:11434/*',
+  'http://127.0.0.1:1234/*',
+  'http://localhost:1234/*',
+];
+
+/** True only for requests issued by the app's own top-level document. */
+function isAppTopFrame(details: any): boolean {
+  if (!mainWindow || mainWindow.isDestroyed()) return false;
+  if (!details.webContents || details.webContents.id !== mainWindow.webContents.id) return false;
+  const frame = details.frame;
+  // No frame info (or a subframe) → not the app document. Iframes never qualify.
+  return !!frame && frame.parent === null;
+}
+
+function setupLocalAiCors(session: any) {
+  session.webRequest.onBeforeSendHeaders({ urls: LOCAL_AI_URLS }, (details: any, callback: any) => {
+    if (!isAppTopFrame(details)) {
+      callback({ cancel: true });
+      return;
+    }
+    details.requestHeaders['Origin'] = 'http://localhost';
+    callback({ requestHeaders: details.requestHeaders });
+  });
+  session.webRequest.onHeadersReceived({ urls: LOCAL_AI_URLS }, (details: any, callback: any) => {
+    if (!isAppTopFrame(details)) {
+      callback({});
+      return;
+    }
+    const headers = details.responseHeaders ?? {};
+    // Replace whatever the server sent — the renderer origin must pass
+    for (const key of Object.keys(headers)) {
+      if (key.toLowerCase().startsWith('access-control-')) delete headers[key];
+    }
+    headers['Access-Control-Allow-Origin'] = ['*'];
+    headers['Access-Control-Allow-Headers'] = ['*'];
+    headers['Access-Control-Allow-Methods'] = ['GET, POST, OPTIONS'];
+    callback({ responseHeaders: headers });
+  });
+}
+
 function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1400,
@@ -65,6 +121,30 @@ function createWindow() {
       contextIsolation: true,
       nodeIntegration: false,
     },
+  });
+
+  setupLocalAiCors(mainWindow.webContents.session);
+
+  // The preload re-runs on every top-level navigation, so navigating this
+  // window anywhere else would hand `electronAPI` — BYOK secrets, raw SQL,
+  // filesystem access, `pnpm dlx` — to that page. Nothing may navigate the
+  // shell: in-app routing is client-side, and real links open in the browser.
+  const isAppUrl = (target: string) => {
+    if (target.startsWith('crux-app://')) return true;
+    const dev = process.env.CRUX_DEV_SERVER;
+    return !!dev && target.startsWith(dev);
+  };
+
+  mainWindow.webContents.on('will-navigate', (event: any, target: string) => {
+    if (!isAppUrl(target)) event.preventDefault();
+  });
+  mainWindow.webContents.on('will-redirect', (event: any, target: string) => {
+    if (!isAppUrl(target)) event.preventDefault();
+  });
+  mainWindow.webContents.setWindowOpenHandler(({ url }: { url: string }) => {
+    // Popups never inherit the app context; http(s) goes to the real browser.
+    if (/^https?:\/\//i.test(url)) shell.openExternal(url);
+    return { action: 'deny' };
   });
 
   // Default: serve the built web app from dist/ (bundled resources when
@@ -153,6 +233,10 @@ function setupIpc() {
   ipcMain.handle('secrets:set', (_e: any, key: string, value: string) => secrets.set(key, value));
   ipcMain.handle('secrets:delete', (_e: any, key: string) => secrets.delete(key));
 
+  // ── Local inference (Ollama / LM Studio, Phase A4) ──────────
+  const { detectLocalAi } = require('./localai');
+  ipcMain.handle('localai:detect', () => detectLocalAi());
+
   // ── Project Folders (ADR 0001) ──────────────────────────────
   const desktopConfig = new DesktopConfig(app.getPath('userData'));
   const projects = new ProjectFolders(desktopConfig);
@@ -184,12 +268,17 @@ function setupIpc() {
   // count whether or not the crux is open in the app.
   try {
     const rows = db.all("SELECT meta FROM cruxes WHERE type = 'workspace'") || [];
+    let watched = 0;
     for (const row of rows) {
       try {
         const meta = JSON.parse(row.meta || '{}');
-        if (typeof meta.projectFolder === 'string') watcher.watch(meta.projectFolder);
+        if (typeof meta.projectFolder === 'string') {
+          watcher.watch(meta.projectFolder);
+          watched++;
+        }
       } catch { /* bad meta row — skip */ }
     }
+    debugLog(`Watcher bootstrap: watching ${watched} project folder(s)`);
   } catch (err: any) {
     debugLog(`Watcher bootstrap failed: ${err?.message}`);
   }
@@ -233,6 +322,11 @@ function setupIpc() {
 
   ipcMain.handle('preview:start', (_e: any, folder: string) => previewServer.start(folder));
   ipcMain.handle('preview:stop', (_e: any, folder: string) => previewServer.stop(folder));
+
+  // Screenshot a local preview URL in a hidden window (snapshot thumbnails —
+  // desktop preview has no injected capture script, ADR 0003).
+  const { capturePreviewUrl } = require('./capture');
+  ipcMain.handle('preview:capture', (_e: any, url: string) => capturePreviewUrl(url));
 
   // Open a local preview URL in the default browser — locked to loopback
   ipcMain.handle('desktop:open-external', (_e: any, url: string) => {
@@ -383,11 +477,26 @@ function getWebAppDir(): string {
 function registerAppProtocol() {
   protocol.handle('crux-app', (request: any) => {
     const url = new URL(request.url);
-    let filePath = path.join(getWebAppDir(), decodeURIComponent(url.pathname));
+    const root = path.resolve(getWebAppDir());
+
+    // Chromium canonicalizes ./.. segments but leaves %2F encoded; decoding
+    // after canonicalization resurrects separators, so an encoded traversal
+    // would escape the web root. Reject those outright, then re-assert
+    // containment on the resolved path — this origin can otherwise read any
+    // file the user can.
+    const rawPath = url.pathname;
+    if (/%2f|%5c/i.test(rawPath)) {
+      return new Response('Forbidden', { status: 403 });
+    }
+
+    let filePath = path.resolve(root, '.' + decodeURIComponent(rawPath));
+    if (filePath !== root && !filePath.startsWith(root + path.sep)) {
+      return new Response('Forbidden', { status: 403 });
+    }
 
     // SPA fallback: if the file doesn't exist, serve index.html
     if (!fs.existsSync(filePath) || fs.statSync(filePath).isDirectory()) {
-      filePath = path.join(getWebAppDir(), 'index.html');
+      filePath = path.join(root, 'index.html');
     }
 
     return net.fetch('file://' + filePath);
@@ -436,17 +545,23 @@ app.whenReady().then(() => {
   });
 });
 
+// On macOS the app stays alive with no windows (dock icon reopens one), so the
+// data layer must survive here — tearing down SQLite/watcher on window close
+// left `activate` reopening a window whose every IPC call threw. Only the
+// per-window servers stop. Full teardown belongs to quit (below), which is
+// also the ONLY path Cmd+Q takes: window-all-closed does not fire then.
 app.on('window-all-closed', () => {
   if (devServers) devServers.stopAll();
   if (previewServer) previewServer.stopAll();
-  if (watcher) watcher.closeAll();
-  if (db) db.close();
   if (process.platform !== 'darwin') {
     app.quit();
   }
 });
 
-// Belt and suspenders: no orphaned dev-server process groups, ever
+// The single teardown path — runs for Cmd+Q, app.quit(), and menu Quit.
 app.on('before-quit', () => {
   if (devServers) devServers.stopAll();
+  if (previewServer) previewServer.stopAll();
+  if (watcher) watcher.closeAll();
+  if (db) db.close();
 });

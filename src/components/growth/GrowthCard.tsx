@@ -49,12 +49,22 @@ function detectPreview(artifacts: Artifact[]): PreviewInfo | null {
     return p === 'index.html' || p.endsWith('/index.html');
   });
   if (indexHtml) {
-    return { type: 'html', path: pathOf(indexHtml), artifactId: indexHtml.id, mimeType: indexHtml.mimeType };
+    return {
+      type: 'html',
+      path: pathOf(indexHtml),
+      artifactId: indexHtml.id,
+      mimeType: indexHtml.mimeType,
+    };
   }
 
   const firstImage = artifacts.find((a) => a.mimeType?.startsWith('image/'));
   if (firstImage) {
-    return { type: 'image', path: pathOf(firstImage), artifactId: firstImage.id, mimeType: firstImage.mimeType };
+    return {
+      type: 'image',
+      path: pathOf(firstImage),
+      artifactId: firstImage.id,
+      mimeType: firstImage.mimeType,
+    };
   }
 
   const readme = artifacts.find((a) => {
@@ -62,14 +72,29 @@ function detectPreview(artifacts: Artifact[]): PreviewInfo | null {
     return p === 'readme.md' || p.endsWith('/readme.md');
   });
   if (readme) {
-    return { type: 'markdown', path: pathOf(readme), artifactId: readme.id, mimeType: readme.mimeType };
+    return {
+      type: 'markdown',
+      path: pathOf(readme),
+      artifactId: readme.id,
+      mimeType: readme.mimeType,
+    };
   }
 
   const firstText = artifacts.find((a) => a.encoding === 'utf-8' && !pathOf(a).endsWith('.keep'));
   if (firstText) {
     const mime = firstText.mimeType || '';
-    const isCode = mime.includes('javascript') || mime.includes('python') || mime.includes('css') || mime.includes('json') || mime.includes('xml');
-    return { type: isCode ? 'code' : 'text', path: pathOf(firstText), artifactId: firstText.id, mimeType: firstText.mimeType };
+    const isCode =
+      mime.includes('javascript') ||
+      mime.includes('python') ||
+      mime.includes('css') ||
+      mime.includes('json') ||
+      mime.includes('xml');
+    return {
+      type: isCode ? 'code' : 'text',
+      path: pathOf(firstText),
+      artifactId: firstText.id,
+      mimeType: firstText.mimeType,
+    };
   }
 
   return null;
@@ -77,17 +102,39 @@ function detectPreview(artifacts: Artifact[]): PreviewInfo | null {
 
 function PreviewIcon({ type }: { type: string }) {
   const props = {
-    width: 12, height: 12, viewBox: '0 0 24 24', fill: 'none',
-    stroke: 'currentColor', strokeWidth: 2, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const,
+    width: 12,
+    height: 12,
+    viewBox: '0 0 24 24',
+    fill: 'none',
+    stroke: 'currentColor',
+    strokeWidth: 2,
+    strokeLinecap: 'round' as const,
+    strokeLinejoin: 'round' as const,
   };
 
   switch (type) {
     case 'html':
-      return <svg {...props}><polyline points="16 18 22 12 16 6" /><polyline points="8 6 2 12 8 18" /></svg>;
+      return (
+        <svg {...props}>
+          <polyline points="16 18 22 12 16 6" />
+          <polyline points="8 6 2 12 8 18" />
+        </svg>
+      );
     case 'image':
-      return <svg {...props}><rect x="3" y="3" width="18" height="18" rx="2" ry="2" /><circle cx="8.5" cy="8.5" r="1.5" /><polyline points="21 15 16 10 5 21" /></svg>;
+      return (
+        <svg {...props}>
+          <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+          <circle cx="8.5" cy="8.5" r="1.5" />
+          <polyline points="21 15 16 10 5 21" />
+        </svg>
+      );
     default:
-      return <svg {...props}><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /></svg>;
+      return (
+        <svg {...props}>
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+          <polyline points="14 2 14 8 20 8" />
+        </svg>
+      );
   }
 }
 
@@ -112,7 +159,9 @@ function usePreview(growth: Dimension): PreviewInfo | null {
       }
     })();
 
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [growth.targetId, stored]);
 
   return stored || discovered;
@@ -149,7 +198,14 @@ function useThumbnail(growth: Dimension): string | null {
   return url;
 }
 
-export default function GrowthCard({ growth, index, isActive, isViewing, onClick, onDetailClick }: GrowthCardProps) {
+export default function GrowthCard({
+  growth,
+  index,
+  isActive,
+  isViewing,
+  onClick,
+  onDetailClick,
+}: GrowthCardProps) {
   const label = (growth.meta?.label as string) || null;
   const summary = (growth.meta?.summary as string) || null;
   const preview = usePreview(growth);
@@ -175,17 +231,25 @@ export default function GrowthCard({ growth, index, isActive, isViewing, onClick
       <div className="flex items-start gap-2.5">
         {/* Timeline dot */}
         <div className="flex flex-col items-center pt-1.5 shrink-0">
-          <div className={cn(
-            'w-2 h-2 rounded-full',
-            isViewing ? 'bg-growth-dot-active ring-2 ring-growth-dot-active/40' : isActive ? 'bg-growth-dot-active' : 'bg-growth-dot',
-          )} />
+          <div
+            className={cn(
+              'w-2 h-2 rounded-full',
+              isViewing
+                ? 'bg-growth-dot-active ring-2 ring-growth-dot-active/40'
+                : isActive
+                  ? 'bg-growth-dot-active'
+                  : 'bg-growth-dot',
+            )}
+          />
         </div>
 
         {/* Content */}
         <div className="flex-1 min-w-0">
           <div className="flex items-baseline justify-between gap-2">
             <div className="flex items-center gap-2">
-              <span className="text-[11px] font-mono text-growth-card-label/70 uppercase">#{index + 1}</span>
+              <span className="text-[11px] font-mono text-growth-card-label/70 uppercase">
+                #{index + 1}
+              </span>
               {artifactCount > 0 && (
                 <span className="text-[10px] text-text-muted">
                   {artifactCount} file{artifactCount !== 1 ? 's' : ''}
@@ -193,13 +257,24 @@ export default function GrowthCard({ growth, index, isActive, isViewing, onClick
               )}
             </div>
             <div className="flex items-center gap-1.5">
-              <span className="text-[10px] text-growth-card-text-muted shrink-0">{formatTime(growth.created)}</span>
+              <span className="text-[10px] text-growth-card-text-muted shrink-0">
+                {formatTime(growth.created)}
+              </span>
               <button
                 onClick={onDetailClick}
                 className="text-growth-card-text-muted hover:text-growth-card-label transition-colors p-0.5 cursor-pointer"
                 title="View details"
               >
-                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <svg
+                  width="10"
+                  height="10"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
                   <circle cx="12" cy="12" r="1" />
                   <circle cx="19" cy="12" r="1" />
                   <circle cx="5" cy="12" r="1" />
@@ -210,13 +285,18 @@ export default function GrowthCard({ growth, index, isActive, isViewing, onClick
 
           {/* Label */}
           {label && (
-            <p className="text-[12px] font-display font-medium text-growth-card-text mt-1">{label}</p>
+            <p className="text-[12px] font-display font-medium text-growth-card-text mt-1">
+              {label}
+            </p>
           )}
 
           {/* Summary — click to expand full text */}
           {summary ? (
             <p
-              onClick={(e) => { e.stopPropagation(); setExpanded(!expanded); }}
+              onClick={(e) => {
+                e.stopPropagation();
+                setExpanded(!expanded);
+              }}
               className={cn(
                 'text-[12px] font-body text-growth-card-text mt-1 leading-relaxed cursor-pointer',
                 !expanded && 'line-clamp-2',
@@ -226,7 +306,9 @@ export default function GrowthCard({ growth, index, isActive, isViewing, onClick
               {summary}
             </p>
           ) : (
-            <p className="text-[11px] font-body text-growth-card-text-muted mt-1 italic">Summarizing...</p>
+            <p className="text-[11px] font-body text-growth-card-text-muted mt-1 italic">
+              Summarizing...
+            </p>
           )}
 
           {/* Thumbnail image — click to view full size */}

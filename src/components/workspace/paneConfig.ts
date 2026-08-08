@@ -1,7 +1,14 @@
 import type { PaneType } from '@/stores/uiStore';
 import {
-  ChatIcon, FolderIcon, CodeIcon, TagIcon, StackIcon,
-  ExportIcon, SyncIcon, ShareIcon, StoreIcon,
+  ChatIcon,
+  FolderIcon,
+  CodeIcon,
+  TagIcon,
+  StackIcon,
+  ExportIcon,
+  SyncIcon,
+  ShareIcon,
+  StoreIcon,
 } from '@/components/ui/icons';
 
 /** CSS variable prefixes for each pane (used for pane-specific theming) */

@@ -52,9 +52,11 @@ export default function ExportModal({ open, onClose, crux }: ExportModalProps) {
         onProgress: setProgress,
       });
       triggerDownload(result.blob, result.filename);
-      setProgress(result.failed.length > 0
-        ? `Done — ${result.failed.length} file${result.failed.length > 1 ? 's' : ''} failed`
-        : '');
+      setProgress(
+        result.failed.length > 0
+          ? `Done — ${result.failed.length} file${result.failed.length > 1 ? 's' : ''} failed`
+          : '',
+      );
     } catch {
       setProgress('Export failed');
     } finally {
@@ -73,9 +75,11 @@ export default function ExportModal({ open, onClose, crux }: ExportModalProps) {
         onProgress: setProgress,
       });
       triggerDownload(result.blob, result.filename);
-      setProgress(result.failed.length > 0
-        ? `Done — ${result.failed.length} file${result.failed.length > 1 ? 's' : ''} failed`
-        : '');
+      setProgress(
+        result.failed.length > 0
+          ? `Done — ${result.failed.length} file${result.failed.length > 1 ? 's' : ''} failed`
+          : '',
+      );
     } catch {
       setProgress('Export failed');
     } finally {
@@ -86,9 +90,10 @@ export default function ExportModal({ open, onClose, crux }: ExportModalProps) {
   const totalSize = artifacts.reduce((sum, a) => sum + (Number(a.size) || 0), 0);
   const busy = exporting !== null;
 
-  const subtitle = !loading && artifacts.length > 0
-    ? `${crux.title || crux.slug} — ${artifacts.length} file${artifacts.length !== 1 ? 's' : ''}, ${formatBytes(totalSize)}`
-    : crux.title || crux.slug;
+  const subtitle =
+    !loading && artifacts.length > 0
+      ? `${crux.title || crux.slug} — ${artifacts.length} file${artifacts.length !== 1 ? 's' : ''}, ${formatBytes(totalSize)}`
+      : crux.title || crux.slug;
 
   return (
     <Modal open={open} onClose={busy ? () => {} : onClose} title="Export" subtitle={subtitle}>
@@ -99,7 +104,12 @@ export default function ExportModal({ open, onClose, crux }: ExportModalProps) {
       ) : (
         <div className="flex flex-col gap-4">
           <div className="flex flex-col gap-1.5">
-            <Button onClick={handleExportCrux} loading={exporting === 'crux'} disabled={busy} fullWidth>
+            <Button
+              onClick={handleExportCrux}
+              loading={exporting === 'crux'}
+              disabled={busy}
+              fullWidth
+            >
               Export Crux
             </Button>
             <p className="text-[10px] text-text-muted text-center">
@@ -109,7 +119,13 @@ export default function ExportModal({ open, onClose, crux }: ExportModalProps) {
 
           {artifacts.length > 0 && (
             <div className="flex flex-col gap-1.5">
-              <Button variant="secondary" onClick={handleExportZip} loading={exporting === 'zip'} disabled={busy} fullWidth>
+              <Button
+                variant="secondary"
+                onClick={handleExportZip}
+                loading={exporting === 'zip'}
+                disabled={busy}
+                fullWidth
+              >
                 Export Artifacts
               </Button>
               <p className="text-[10px] text-text-muted text-center">
@@ -121,10 +137,12 @@ export default function ExportModal({ open, onClose, crux }: ExportModalProps) {
       )}
 
       {progress && (
-        <p className={cn(
-          'text-[11px] font-mono text-center truncate mt-3',
-          progress === 'Export failed' ? 'text-error' : 'text-text-muted',
-        )}>
+        <p
+          className={cn(
+            'text-[11px] font-mono text-center truncate mt-3',
+            progress === 'Export failed' ? 'text-error' : 'text-text-muted',
+          )}
+        >
           {progress}
         </p>
       )}

@@ -163,9 +163,13 @@ export async function publish(
 }
 
 export async function unpublish(cruxId: string): Promise<Crux> {
-  const res = await client.post<Crux>(`/cruxes/${cruxId}/unpublish`, {}, {
-    timeout: 60000,
-  });
+  const res = await client.post<Crux>(
+    `/cruxes/${cruxId}/unpublish`,
+    {},
+    {
+      timeout: 60000,
+    },
+  );
   return res.data;
 }
 

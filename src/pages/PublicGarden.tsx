@@ -9,7 +9,6 @@ import { Button } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import { APP_NAME } from '@/lib/constants';
 
-
 type LoadState = 'loading' | 'ready' | 'not-found' | 'error';
 type SortField = 'created' | 'updated';
 
@@ -122,12 +121,8 @@ export default function PublicGarden() {
         {/* Header + Search panel */}
         <div className="bg-panel border border-border rounded-[var(--radius)] p-4 sm:p-5 mb-6">
           <div className="flex items-center gap-3">
-            <div
-              className="w-12 h-12 rounded-[var(--radius)] overflow-hidden flex items-center justify-center shrink-0 ring-1 ring-text-muted/20 bg-surface"
-            >
-              {avatarUrl && (
-                <img src={avatarUrl} alt="" className="w-full h-full object-cover" />
-              )}
+            <div className="w-12 h-12 rounded-[var(--radius)] overflow-hidden flex items-center justify-center shrink-0 ring-1 ring-text-muted/20 bg-surface">
+              {avatarUrl && <img src={avatarUrl} alt="" className="w-full h-full object-cover" />}
             </div>
             <div className="min-w-0">
               <h1 className="font-display text-lg font-medium text-text truncate">

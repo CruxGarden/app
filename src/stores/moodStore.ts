@@ -47,7 +47,9 @@ interface MoodState {
 /**
  * Load avatar and background blob URLs from a mood's artifacts.
  */
-async function loadMoodArtifacts(moodId: string): Promise<{ avatarUrl: string | null; backgroundUrl: string | null }> {
+async function loadMoodArtifacts(
+  moodId: string,
+): Promise<{ avatarUrl: string | null; backgroundUrl: string | null }> {
   try {
     const { artifact } = getServices();
     const artifacts = await artifact.findByResource('crux', moodId);
@@ -55,13 +57,17 @@ async function loadMoodArtifacts(moodId: string): Promise<{ avatarUrl: string | 
     let avatarUrl: string | null = null;
     let backgroundUrl: string | null = null;
 
-    const avatarArt = artifacts.find((a) => a.meta?.path === 'avatar.png' || a.meta?.path === 'avatar.jpg');
+    const avatarArt = artifacts.find(
+      (a) => a.meta?.path === 'avatar.png' || a.meta?.path === 'avatar.jpg',
+    );
     if (avatarArt) {
       const blob = await artifact.downloadBlob(avatarArt.id);
       avatarUrl = URL.createObjectURL(blob);
     }
 
-    const bgArt = artifacts.find((a) => a.meta?.path === 'background.png' || a.meta?.path === 'background.jpg');
+    const bgArt = artifacts.find(
+      (a) => a.meta?.path === 'background.png' || a.meta?.path === 'background.jpg',
+    );
     if (bgArt) {
       const blob = await artifact.downloadBlob(bgArt.id);
       backgroundUrl = URL.createObjectURL(blob);

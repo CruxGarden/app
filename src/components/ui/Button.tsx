@@ -18,8 +18,7 @@ const variants: Record<Variant, string> = {
     'bg-action-button-hover text-action-button-text-hover hover:brightness-110 active:brightness-95',
   ghost:
     'bg-transparent text-action-button-text hover:bg-action-button-hover hover:text-action-button-text-hover active:brightness-95',
-  danger:
-    'bg-error text-bg hover:brightness-110 active:brightness-95',
+  danger: 'bg-error text-bg hover:brightness-110 active:brightness-95',
 };
 
 const sizes: Record<Size, string> = {

@@ -13,7 +13,11 @@ const isLocalApi = API_URL.includes('localhost') || API_URL.includes('127.0.0.1'
 type LoadState = 'loading' | 'ready' | 'not-found' | 'error';
 
 export default function PublicCrux() {
-  const { username, slug, '*': subPath } = useParams<{ username: string; slug: string; '*': string }>();
+  const {
+    username,
+    slug,
+    '*': subPath,
+  } = useParams<{ username: string; slug: string; '*': string }>();
 
   const [crux, setCrux] = useState<Crux | null>(null);
   const [artifacts, setArtifacts] = useState<Artifact[]>([]);
@@ -22,7 +26,7 @@ export default function PublicCrux() {
 
   // Proxy store postMessages to the API when running locally
   // (browser blocks published iframe from fetching localhost directly)
-  useStoreApiProxy(isLocalApi ? crux?.id ?? null : null);
+  useStoreApiProxy(isLocalApi ? (crux?.id ?? null) : null);
 
   const hasMetadata = !!crux;
 
@@ -43,10 +47,7 @@ export default function PublicCrux() {
 
     let cancelled = false;
     setState('loading');
-    Promise.all([
-      publicApi.getCruxBySlug(username, slug),
-      publicApi.getArtifacts(username, slug),
-    ])
+    Promise.all([publicApi.getCruxBySlug(username, slug), publicApi.getArtifacts(username, slug)])
       .then(([cruxData, artifactsData]) => {
         if (cancelled) return;
         setCrux(cruxData);
@@ -115,7 +116,14 @@ export default function PublicCrux() {
 
       <div className="flex-1 min-h-0 relative z-10 flex">
         <div className={`flex-1 min-w-0 ${metadataOpen ? 'hidden sm:block' : ''}`}>
-          <ArtifactRenderer artifacts={artifacts} username={username || ''} slug={slug || ''} cruxId={crux?.id || ''} subPath={subPath} downloadBlob={downloadBlob} />
+          <ArtifactRenderer
+            artifacts={artifacts}
+            username={username || ''}
+            slug={slug || ''}
+            cruxId={crux?.id || ''}
+            subPath={subPath}
+            downloadBlob={downloadBlob}
+          />
         </div>
 
         {metadataOpen && crux && (

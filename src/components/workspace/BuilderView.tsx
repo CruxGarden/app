@@ -4,6 +4,7 @@ import { useUIStore } from '@/stores/uiStore';
 import { useAppStore } from '@/stores/appStore';
 import { getServices } from '@/services';
 import { cn } from '@/lib/cn';
+import { publicCruxUrl } from '@/lib/public-url';
 import {
   parseFrontmatter,
   serializeFrontmatter,
@@ -11,6 +12,7 @@ import {
   interpolate,
   globToRegex,
 } from '@/lib/frontmatter';
+import { Modal, Input, Button } from '@/components/ui';
 import type { ContentModel, ContentCollection, BuilderAction } from '@/templates';
 import type { Artifact } from '@/api/types';
 
@@ -75,8 +77,7 @@ function BuilderBody({ cruxTitle, model }: { cruxTitle: string; model: ContentMo
   // Live URL mirrors PublishPane's construction (viewer route on crux.garden)
   const author = useAppStore((s) => s.author);
   const isPublished = (crux.meta as Record<string, unknown> | undefined)?.publishedAt != null;
-  const publishedUrl =
-    isPublished && author ? `${window.location.origin}/${author.username}/${crux.slug}` : null;
+  const publishedUrl = isPublished && author ? publicCruxUrl(author.username, crux.slug) : null;
 
   const openSettings = useCallback(() => {
     if (settingsArtifact) {
@@ -131,7 +132,12 @@ function BuilderBody({ cruxTitle, model }: { cruxTitle: string; model: ContentMo
           )}
           <AddImageButton />
           {(model.actions ?? []).map((action, i) => (
-            <CustomAction key={i} action={action} onSettings={openSettings} onPublish={openPublish} />
+            <CustomAction
+              key={i}
+              action={action}
+              onSettings={openSettings}
+              onPublish={openPublish}
+            />
           ))}
         </section>
 
@@ -177,27 +183,75 @@ function ActionButton({
 function NewItemButton({ collection }: { collection: ContentCollection }) {
   const createFile = useCruxStore((s) => s.createFile);
   const openFile = useUIStore((s) => s.openFile);
+  // In-app title dialog — window.prompt() does not exist in Electron, so the
+  // old code threw before a post could ever be created on desktop.
+  const [asking, setAsking] = useState(false);
+  const [title, setTitle] = useState('');
+  const [creating, setCreating] = useState(false);
 
-  const handleNew = useCallback(async () => {
-    const title = window.prompt(`${collection.singular} title`);
-    if (!title?.trim()) return;
+  const handleCreate = useCallback(async () => {
     const trimmed = title.trim();
-    const vars = {
-      slug: slugify(trimmed),
-      title: trimmed,
-      today: new Date().toISOString().slice(0, 10),
-    };
-    const path = interpolate(collection.new.pathTemplate, vars);
-    const frontmatter: Record<string, string> = {};
-    for (const [key, value] of Object.entries(collection.new.frontmatter)) {
-      frontmatter[key] = interpolate(value, vars);
+    if (!trimmed || creating) return;
+    setCreating(true);
+    try {
+      const vars = {
+        slug: slugify(trimmed),
+        title: trimmed,
+        today: new Date().toISOString().slice(0, 10),
+      };
+      const path = interpolate(collection.new.pathTemplate, vars);
+      const frontmatter: Record<string, string> = {};
+      for (const [key, value] of Object.entries(collection.new.frontmatter)) {
+        frontmatter[key] = interpolate(value, vars);
+      }
+      const content = serializeFrontmatter(frontmatter, collection.new.body ?? '\n');
+      const artifact = await createFile(path, content);
+      setAsking(false);
+      setTitle('');
+      openFile(artifact.id, path);
+    } finally {
+      setCreating(false);
     }
-    const content = serializeFrontmatter(frontmatter, collection.new.body ?? '\n');
-    const artifact = await createFile(path, content);
-    openFile(artifact.id, path);
-  }, [collection, createFile, openFile]);
+  }, [collection, createFile, openFile, title, creating]);
 
-  return <ActionButton icon="✏️" label={`New ${collection.singular.toLowerCase()}`} onClick={handleNew} />;
+  return (
+    <>
+      <ActionButton
+        icon="✏️"
+        label={`New ${collection.singular.toLowerCase()}`}
+        onClick={() => setAsking(true)}
+      />
+      <Modal
+        open={asking}
+        onClose={() => setAsking(false)}
+        size="sm"
+        title={`New ${collection.singular.toLowerCase()}`}
+      >
+        <form
+          className="flex flex-col gap-3"
+          onSubmit={(e) => {
+            e.preventDefault();
+            void handleCreate();
+          }}
+        >
+          <Input
+            autoFocus
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder={`${collection.singular} title`}
+          />
+          <div className="flex justify-end gap-2">
+            <Button type="button" variant="ghost" size="sm" onClick={() => setAsking(false)}>
+              Cancel
+            </Button>
+            <Button type="submit" size="sm" disabled={!title.trim()} loading={creating}>
+              Create
+            </Button>
+          </div>
+        </form>
+      </Modal>
+    </>
+  );
 }
 
 function AddImageButton() {
@@ -362,7 +416,9 @@ function CollectionSection({ collection }: { collection: ContentCollection }) {
 const fmCache = new Map<string, Record<string, string>>(); // fingerprint -> data
 
 function useCollectionData(items: CollectionItem[], collection: ContentCollection) {
-  const [parsed, setParsed] = useState<Array<{ item: CollectionItem; data: Record<string, string> }>>([]);
+  const [parsed, setParsed] = useState<
+    Array<{ item: CollectionItem; data: Record<string, string> }>
+  >([]);
 
   useEffect(() => {
     let cancelled = false;

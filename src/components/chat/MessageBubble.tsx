@@ -10,7 +10,9 @@ import { useBlobUrl } from '@/hooks/useBlobUrl';
 /** Resolve persona snapshot from crux meta by fingerprint */
 function usePersonaSnapshot(fingerprint?: string) {
   const meta = useCruxStore((s) => s.crux?.meta) as Record<string, unknown> | undefined;
-  const snapshots = meta?.personaSnapshots as Record<string, { name?: string; thumbnailFingerprint?: string; thumbnailDataUrl?: string }> | undefined;
+  const snapshots = meta?.personaSnapshots as
+    | Record<string, { name?: string; thumbnailFingerprint?: string; thumbnailDataUrl?: string }>
+    | undefined;
   const snapshot = fingerprint ? snapshots?.[fingerprint] : undefined;
   return snapshot && typeof snapshot === 'object' ? snapshot : null;
 }
@@ -20,7 +22,13 @@ function MessageAvatar({ fingerprint }: { fingerprint?: string }) {
   const snapshot = usePersonaSnapshot(fingerprint);
   const blobUrl = useBlobUrl(snapshot?.thumbnailFingerprint);
   if (blobUrl) {
-    return <img src={blobUrl} alt="" className="w-6 h-6 aspect-square shrink-0 object-cover [image-rendering:pixelated] rounded-[var(--radius-sm)] ring-1 ring-border" />;
+    return (
+      <img
+        src={blobUrl}
+        alt=""
+        className="w-6 h-6 aspect-square shrink-0 object-cover [image-rendering:pixelated] rounded-[var(--radius-sm)] ring-1 ring-border"
+      />
+    );
   }
   return <ConsoleAvatar bordered />;
 }
@@ -34,12 +42,22 @@ interface MessageBubbleProps {
 /** Resolve author info from crux.meta.authorSnapshots */
 function useAuthorSnapshot(authorId?: string) {
   const meta = useCruxStore((s) => s.crux?.meta) as Record<string, unknown> | undefined;
-  const snapshots = meta?.authorSnapshots as Record<string, { username?: string; avatarFingerprint?: string }> | undefined;
+  const snapshots = meta?.authorSnapshots as
+    | Record<string, { username?: string; avatarFingerprint?: string }>
+    | undefined;
   const snapshot = authorId ? snapshots?.[authorId] : undefined;
   return snapshot && typeof snapshot === 'object' ? snapshot : null;
 }
 
-function UserAvatar({ message, fallbackUrl, fallbackInitial }: { message: ChatMessage; fallbackUrl?: string | null; fallbackInitial: string }) {
+function UserAvatar({
+  message,
+  fallbackUrl,
+  fallbackInitial,
+}: {
+  message: ChatMessage;
+  fallbackUrl?: string | null;
+  fallbackInitial: string;
+}) {
   const authorSnapshot = useAuthorSnapshot(message.authorId);
   const blobUrl = useBlobUrl(authorSnapshot?.avatarFingerprint);
   const avatarUrl = blobUrl || (!authorSnapshot?.avatarFingerprint ? fallbackUrl : null);
@@ -49,7 +67,8 @@ function UserAvatar({ message, fallbackUrl, fallbackInitial }: { message: ChatMe
     <div
       className={cn(
         'w-6 h-6 shrink-0 rounded-[var(--radius-sm)] overflow-hidden flex items-center justify-center ring-1 ring-border',
-        !avatarUrl && 'bg-chat-user-bubble text-chat-user-bubble-text text-[10px] font-display font-bold',
+        !avatarUrl &&
+          'bg-chat-user-bubble text-chat-user-bubble-text text-[10px] font-display font-bold',
       )}
     >
       {avatarUrl ? <img src={avatarUrl} alt="" className="w-full h-full object-cover" /> : initial}
@@ -59,15 +78,24 @@ function UserAvatar({ message, fallbackUrl, fallbackInitial }: { message: ChatMe
 
 function getToolLabel(tc: ToolCall): string {
   switch (tc.name) {
-    case 'write_file': return `Wrote ${String(tc.input?.path ?? '')}`;
-    case 'edit_file': return `Edited ${String(tc.input?.path ?? '')}`;
-    case 'read_file': return `Read ${String(tc.input?.path ?? '')}`;
-    case 'delete_file': return `Deleted ${String(tc.input?.path ?? '')}`;
-    case 'list_files': return 'Listed files';
-    case 'set_palette': return 'Applied palette';
-    case 'get_palette': return 'Read palette';
-    case 'generate_image': return `Generated ${String(tc.input?.path ?? 'image')}`;
-    default: return tc.name;
+    case 'write_file':
+      return `Wrote ${String(tc.input?.path ?? '')}`;
+    case 'edit_file':
+      return `Edited ${String(tc.input?.path ?? '')}`;
+    case 'read_file':
+      return `Read ${String(tc.input?.path ?? '')}`;
+    case 'delete_file':
+      return `Deleted ${String(tc.input?.path ?? '')}`;
+    case 'list_files':
+      return 'Listed files';
+    case 'set_palette':
+      return 'Applied palette';
+    case 'get_palette':
+      return 'Read palette';
+    case 'generate_image':
+      return `Generated ${String(tc.input?.path ?? 'image')}`;
+    default:
+      return tc.name;
   }
 }
 
@@ -75,7 +103,8 @@ function ToolCallItem({ tc }: { tc: ToolCall }) {
   const [expanded, setExpanded] = useState(false);
   const label = getToolLabel(tc);
   const hasResult = !!tc.result;
-  const isError = tc.result?.includes('ERROR') || tc.result?.includes('Error') || tc.result?.includes('failed');
+  const isError =
+    tc.result?.includes('ERROR') || tc.result?.includes('Error') || tc.result?.includes('failed');
 
   return (
     <div>
@@ -120,8 +149,8 @@ export default function MessageBubble({
 
   const personaSnapshot = usePersonaSnapshot(message.personaFingerprint);
   const authorSnapshot = useAuthorSnapshot(message.authorId);
-  const personaName = !isUser ? (personaSnapshot?.name || 'The Keeper') : null;
-  const authorName = isUser ? (authorSnapshot?.username || null) : null;
+  const personaName = !isUser ? personaSnapshot?.name || 'The Keeper' : null;
+  const authorName = isUser ? authorSnapshot?.username || null : null;
 
   return (
     <div className={cn('flex gap-2 items-end', isUser ? 'justify-end' : 'justify-start')}>
@@ -129,15 +158,13 @@ export default function MessageBubble({
       <div
         className={cn(
           'max-w-[85%] rounded-[var(--radius)] px-3 py-2 text-sm break-words',
-          isUser ? 'bg-chat-user-bubble text-chat-user-bubble-text' : 'bg-chat-ai-bubble text-chat-ai-bubble-text',
+          isUser
+            ? 'bg-chat-user-bubble text-chat-user-bubble-text'
+            : 'bg-chat-ai-bubble text-chat-ai-bubble-text',
         )}
       >
-        {personaName && (
-          <div className="text-[10px] font-mono text-accent mb-1">{personaName}</div>
-        )}
-        {authorName && (
-          <div className="text-[10px] font-mono text-accent mb-1">{authorName}</div>
-        )}
+        {personaName && <div className="text-[10px] font-mono text-accent mb-1">{personaName}</div>}
+        {authorName && <div className="text-[10px] font-mono text-accent mb-1">{authorName}</div>}
         {isUser ? (
           <p className="whitespace-pre-wrap">{message.content}</p>
         ) : (
@@ -159,7 +186,9 @@ export default function MessageBubble({
           </div>
         )}
       </div>
-      {isUser && <UserAvatar message={message} fallbackUrl={avatarUrl} fallbackInitial={userInitial} />}
+      {isUser && (
+        <UserAvatar message={message} fallbackUrl={avatarUrl} fallbackInitial={userInitial} />
+      )}
     </div>
   );
 }

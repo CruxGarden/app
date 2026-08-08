@@ -178,8 +178,7 @@ export function fillRect(
   value: number,
 ) {
   for (let dy = 0; dy < h; dy++)
-    for (let dx = 0; dx < w; dx++)
-      setPixel(buf, size, x + dx, y + dy, value);
+    for (let dx = 0; dx < w; dx++) setPixel(buf, size, x + dx, y + dy, value);
 }
 
 /** Draw a filled circle into a mono buffer */
@@ -193,8 +192,7 @@ export function fillCircle(
 ) {
   for (let y = -r; y <= r; y++)
     for (let x = -r; x <= r; x++)
-      if (x * x + y * y <= r * r)
-        setPixel(buf, size, cx + x, cy + y, value);
+      if (x * x + y * y <= r * r) setPixel(buf, size, cx + x, cy + y, value);
 }
 
 /** Draw a 1px outline circle */
@@ -215,11 +213,25 @@ export function strokeCircle(
 }
 
 /** Draw a horizontal line */
-export function hLine(buf: Uint8Array, size: number, x: number, y: number, len: number, value: number) {
+export function hLine(
+  buf: Uint8Array,
+  size: number,
+  x: number,
+  y: number,
+  len: number,
+  value: number,
+) {
   for (let i = 0; i < len; i++) setPixel(buf, size, x + i, y, value);
 }
 
 /** Draw a vertical line */
-export function vLine(buf: Uint8Array, size: number, x: number, y: number, len: number, value: number) {
+export function vLine(
+  buf: Uint8Array,
+  size: number,
+  x: number,
+  y: number,
+  len: number,
+  value: number,
+) {
   for (let i = 0; i < len; i++) setPixel(buf, size, x, y + i, value);
 }

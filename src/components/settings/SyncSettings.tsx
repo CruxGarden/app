@@ -90,7 +90,9 @@ export default function SyncSettings() {
       const imported = await confirmAndImportGarden({
         data: blob,
         onProgress: setStatus,
-        onPostImport: async () => { await useAppStore.getState().ensureAuthor(); },
+        onPostImport: async () => {
+          await useAppStore.getState().ensureAuthor();
+        },
       });
 
       if (!imported) {
@@ -118,7 +120,12 @@ export default function SyncSettings() {
   };
 
   const handleDeleteGarden = async () => {
-    if (!confirm('Delete your cloud garden backup? This cannot be undone. Your local garden is not affected.')) return;
+    if (
+      !confirm(
+        'Delete your cloud garden backup? This cannot be undone. Your local garden is not affected.',
+      )
+    )
+      return;
     setDeletingGarden(true);
     setError('');
     try {
@@ -145,67 +152,90 @@ export default function SyncSettings() {
       </button>
 
       {!collapsed && (
-      <div className="mt-5">
-      {/* Garden backup */}
-      <h3 className="text-xs font-mono text-text-muted mb-2 uppercase tracking-wider">Garden Backup</h3>
+        <div className="mt-5">
+          {/* Garden backup */}
+          <h3 className="text-xs font-mono text-text-muted mb-2 uppercase tracking-wider">
+            Garden Backup
+          </h3>
 
-      {gardenStatus && (
-        <p className="text-xs text-text-muted mb-3">
-          Last pushed: {formatDateTime(gardenStatus.syncedAt)} ({formatBytes(gardenStatus.size)})
-        </p>
-      )}
+          {gardenStatus && (
+            <p className="text-xs text-text-muted mb-3">
+              Last pushed: {formatDateTime(gardenStatus.syncedAt)} ({formatBytes(gardenStatus.size)}
+              )
+            </p>
+          )}
 
-      <div className="flex items-center gap-2 mb-4">
-        <Button variant="secondary" size="sm" onClick={handlePush} disabled={busy} loading={pushing}>
-          {pushing ? 'Pushing...' : 'Push garden'}
-        </Button>
-        <Button variant="secondary" size="sm" onClick={handlePull} disabled={busy} loading={pulling}>
-          {pulling ? 'Pulling...' : 'Pull garden'}
-        </Button>
-        {gardenStatus && (
-          <Button variant="danger" size="sm" onClick={handleDeleteGarden} disabled={busy} loading={deletingGarden}>
-            {deletingGarden ? 'Deleting...' : 'Delete backup'}
-          </Button>
-        )}
-      </div>
-
-      {/* Synced cruxes */}
-      <div className="border-t border-border my-4" />
-      <h3 className="text-xs font-mono text-text-muted mb-2 uppercase tracking-wider">Synced Cruxes</h3>
-
-      {loading ? (
-        <div className="flex items-center gap-2 text-xs text-text-muted">
-          <Spinner size={12} /> Loading...
-        </div>
-      ) : syncedCruxes.length === 0 ? (
-        <p className="text-xs text-text-muted">No cruxes synced to cloud yet.</p>
-      ) : (
-        <div className="space-y-2">
-          {syncedCruxes.map((c) => (
-            <div key={c.cruxId} className="flex items-center justify-between text-xs">
-              <div>
-                <span className="text-text font-mono">{c.title}</span>
-                <span className="text-text-muted ml-2">
-                  {formatBytes(c.size)} &middot; {formatDateTime(c.updatedAt)}
-                </span>
-              </div>
+          <div className="flex items-center gap-2 mb-4">
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={handlePush}
+              disabled={busy}
+              loading={pushing}
+            >
+              {pushing ? 'Pushing...' : 'Push garden'}
+            </Button>
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={handlePull}
+              disabled={busy}
+              loading={pulling}
+            >
+              {pulling ? 'Pulling...' : 'Pull garden'}
+            </Button>
+            {gardenStatus && (
               <Button
                 variant="danger"
                 size="sm"
-                onClick={() => handleDeleteCrux(c.cruxId)}
-                disabled={deletingId === c.cruxId}
-                loading={deletingId === c.cruxId}
+                onClick={handleDeleteGarden}
+                disabled={busy}
+                loading={deletingGarden}
               >
-                Remove
+                {deletingGarden ? 'Deleting...' : 'Delete backup'}
               </Button>
-            </div>
-          ))}
-        </div>
-      )}
+            )}
+          </div>
 
-      {status && <p className="text-xs font-mono text-text-muted mt-3">{status}</p>}
-      {error && <p className="text-xs font-mono text-error mt-3">{error}</p>}
-      </div>
+          {/* Synced cruxes */}
+          <div className="border-t border-border my-4" />
+          <h3 className="text-xs font-mono text-text-muted mb-2 uppercase tracking-wider">
+            Synced Cruxes
+          </h3>
+
+          {loading ? (
+            <div className="flex items-center gap-2 text-xs text-text-muted">
+              <Spinner size={12} /> Loading...
+            </div>
+          ) : syncedCruxes.length === 0 ? (
+            <p className="text-xs text-text-muted">No cruxes synced to cloud yet.</p>
+          ) : (
+            <div className="space-y-2">
+              {syncedCruxes.map((c) => (
+                <div key={c.cruxId} className="flex items-center justify-between text-xs">
+                  <div>
+                    <span className="text-text font-mono">{c.title}</span>
+                    <span className="text-text-muted ml-2">
+                      {formatBytes(c.size)} &middot; {formatDateTime(c.updatedAt)}
+                    </span>
+                  </div>
+                  <Button
+                    variant="danger"
+                    size="sm"
+                    onClick={() => handleDeleteCrux(c.cruxId)}
+                    disabled={deletingId === c.cruxId}
+                    loading={deletingId === c.cruxId}
+                  >
+                    Remove
+                  </Button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {status && <p className="text-xs font-mono text-text-muted mt-3">{status}</p>}
+          {error && <p className="text-xs font-mono text-error mt-3">{error}</p>}
+        </div>
       )}
     </Panel>
   );

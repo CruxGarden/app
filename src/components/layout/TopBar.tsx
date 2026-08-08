@@ -50,10 +50,13 @@ export default function TopBar() {
         'flex items-center justify-between px-3 border-b border-toolbar-border bg-toolbar',
         desktopChrome ? 'h-12 pl-24' : 'h-12', // left padding for macOS traffic lights
       )}
-      style={desktopChrome ? { WebkitAppRegion: 'drag' } as React.CSSProperties : undefined}
+      style={desktopChrome ? ({ WebkitAppRegion: 'drag' } as React.CSSProperties) : undefined}
     >
       {/* Left: branding + breadcrumb */}
-      <div className="flex items-center gap-1.5 min-w-0" style={desktopChrome ? { WebkitAppRegion: 'no-drag' } as React.CSSProperties : undefined}>
+      <div
+        className="flex items-center gap-1.5 min-w-0"
+        style={desktopChrome ? ({ WebkitAppRegion: 'no-drag' } as React.CSSProperties) : undefined}
+      >
         {username ? (
           <button
             onClick={() => navigate('/home')}
@@ -108,7 +111,10 @@ export default function TopBar() {
       </div>
 
       {/* Right: pane toggles + console + user menu */}
-      <div className="flex items-center gap-1" style={desktopChrome ? { WebkitAppRegion: 'no-drag' } as React.CSSProperties : undefined}>
+      <div
+        className="flex items-center gap-1"
+        style={desktopChrome ? ({ WebkitAppRegion: 'no-drag' } as React.CSSProperties) : undefined}
+      >
         {activeCruxId && (
           <>
             <div className="flex items-center">
@@ -203,7 +209,9 @@ export default function TopBar() {
               <div className="absolute top-full right-0 mt-2 z-50 pointer-events-none hidden group-hover/btn:block">
                 <div className="flex items-center gap-2.5 px-3 py-2 rounded-[var(--radius)] bg-tooltip border border-tooltip-border shadow-lg whitespace-nowrap">
                   <span className="text-xs font-medium text-tooltip-text">Console</span>
-                  <kbd className="text-[11px] font-mono text-tooltip-text px-1.5 py-0.5 rounded-[var(--radius-sm)] bg-bg border border-tooltip-border min-w-[1.5rem] text-center">Esc</kbd>
+                  <kbd className="text-[11px] font-mono text-tooltip-text px-1.5 py-0.5 rounded-[var(--radius-sm)] bg-bg border border-tooltip-border min-w-[1.5rem] text-center">
+                    Esc
+                  </kbd>
                 </div>
               </div>
             </div>

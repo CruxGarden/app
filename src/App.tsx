@@ -9,9 +9,7 @@ const HomeGarden = lazy(() => import('@/pages/HomeGarden'));
 const CruxBuilder = lazy(() => import('@/pages/CruxBuilder'));
 const PublicCrux = lazy(() => import('@/pages/PublicCrux'));
 const PublicGarden = lazy(() => import('@/pages/PublicGarden'));
-const ExplorePage = lazy(() =>
-  import('@/pages/Explore').then((m) => ({ default: m.ExplorePage })),
-);
+const ExplorePage = lazy(() => import('@/pages/Explore').then((m) => ({ default: m.ExplorePage })));
 const NotFound = lazy(() => import('@/pages/NotFound'));
 
 // When running inside a workspace preview iframe, the preview system injects
@@ -20,67 +18,70 @@ const NotFound = lazy(() => import('@/pages/NotFound'));
 // where the basename is "/", so this only matters for preview mode.
 const basename = (window as unknown as { __CRUX_BASENAME__?: string }).__CRUX_BASENAME__ || '/';
 
-const router = createBrowserRouter([
-  // Public
-  { 
-    path: '/', 
-    element: (
-      <ErrorBoundary>
-        <Gateway />
-      </ErrorBoundary>
-    ),
-  },
-  {
-    path: '/explore',
-    element: (
-      <ErrorBoundary>
-        <ExplorePage />
-      </ErrorBoundary>
-    ),
-  },
-  {
-    path: '/:username/:slug/*',
-    element: (
-      <ErrorBoundary>
-        <PublicCrux />
-      </ErrorBoundary>
-    ),
-  },
-  {
-    path: '/:username',
-    element: (
-      <ErrorBoundary>
-        <PublicGarden />
-      </ErrorBoundary>
-    ),
-  },
+const router = createBrowserRouter(
+  [
+    // Public
+    {
+      path: '/',
+      element: (
+        <ErrorBoundary>
+          <Gateway />
+        </ErrorBoundary>
+      ),
+    },
+    {
+      path: '/explore',
+      element: (
+        <ErrorBoundary>
+          <ExplorePage />
+        </ErrorBoundary>
+      ),
+    },
+    {
+      path: '/:username/:slug/*',
+      element: (
+        <ErrorBoundary>
+          <PublicCrux />
+        </ErrorBoundary>
+      ),
+    },
+    {
+      path: '/:username',
+      element: (
+        <ErrorBoundary>
+          <PublicGarden />
+        </ErrorBoundary>
+      ),
+    },
 
-  // App
-  {
-    element: <Shell />,
-    children: [
-      {
-        path: '/home',
-        element: (
-          <ErrorBoundary>
-            <HomeGarden />
-          </ErrorBoundary>
-        ),
-      },
-      {
-        path: '/c/:id',
-        element: (
-          <ErrorBoundary>
-            <CruxBuilder />
-          </ErrorBoundary>
-        ),
-      },
-    ],
-  },
+    // App
+    {
+      element: <Shell />,
+      children: [
+        {
+          path: '/home',
+          element: (
+            <ErrorBoundary>
+              <HomeGarden />
+            </ErrorBoundary>
+          ),
+        },
+        {
+          path: '/c/:id',
+          element: (
+            <ErrorBoundary>
+              <CruxBuilder />
+            </ErrorBoundary>
+          ),
+        },
+      ],
+    },
 
-  // Catch-all
-  { path: '*', element: <NotFound /> },
-], { basename });
+    // Catch-all
+    { path: '*', element: <NotFound /> },
+  ],
+  { basename },
+);
 
 export default function App() {
   return (

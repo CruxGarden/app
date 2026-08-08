@@ -82,9 +82,7 @@ function announceChange(cruxId: string): void {
 /** Notify that a Project Folder disappeared (never cascades to deletion). */
 function announceFolderMissing(folder: string, cruxId: string | null): void {
   console.warn(`[ingestion] Project Folder missing: ${folder} — artifacts preserved`);
-  window.dispatchEvent(
-    new CustomEvent('crux:folder-missing', { detail: { folder, cruxId } }),
-  );
+  window.dispatchEvent(new CustomEvent('crux:folder-missing', { detail: { folder, cruxId } }));
 }
 
 // ── Batch processing ────────────────────────────────────────────────────────

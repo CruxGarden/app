@@ -3,10 +3,7 @@
  * Instead of bare "Error: ..." strings, each error tells the model what to do next.
  * Ported from api/src/ai/ai.errors.ts.
  */
-export function formatToolError(
-  toolName: string,
-  error: Error | string,
-): string {
+export function formatToolError(toolName: string, error: Error | string): string {
   const message = typeof error === 'string' ? error : error.message;
 
   // Pattern-match common failures and provide recovery guidance

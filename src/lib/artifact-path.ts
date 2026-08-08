@@ -44,6 +44,19 @@ export function isUnder(folder: string, path: string): boolean {
   return path === folder || path.startsWith(folder + '/');
 }
 
+/**
+ * The workspace thumbnail: app state that happens to be stored as an artifact.
+ *
+ * It is not one of the user's files — it must not reach the Project Folder,
+ * the published site, or publish change detection (its JPEG bytes differ on
+ * every capture, which would leave the crux permanently "changed").
+ */
+export const WORKSPACE_THUMBNAIL_PATH = 'preview.jpg';
+
+export function isWorkspaceThumbnail(path: string): boolean {
+  return path.toLowerCase() === WORKSPACE_THUMBNAIL_PATH;
+}
+
 /** Strip a single leading slash (tool inputs and legacy paths carry them). */
 export function normalizePath(path: string): string {
   return path.replace(/^\//, '');

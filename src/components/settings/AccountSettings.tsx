@@ -36,7 +36,9 @@ export default function AccountSettings() {
       try {
         const { available } = await authorsApi.checkUsername(name.toLowerCase());
         if (!available) setUsernameError('Username is taken at crux.garden');
-      } catch { /* API unavailable */ }
+      } catch {
+        /* API unavailable */
+      }
     }, 400);
   };
 
@@ -48,7 +50,12 @@ export default function AccountSettings() {
   };
 
   // Cleanup debounce timer
-  useEffect(() => () => { if (debounceRef.current) clearTimeout(debounceRef.current); }, []);
+  useEffect(
+    () => () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    },
+    [],
+  );
 
   const startEditingUsername = () => {
     setUsernameValue(author?.username ?? '');
@@ -125,17 +132,38 @@ export default function AccountSettings() {
                   usernameError ? 'border-error' : 'border-border focus:border-accent',
                 )}
               />
-              <Button variant="secondary" size="sm" onClick={handleSaveUsername} disabled={savingUsername}>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={handleSaveUsername}
+                disabled={savingUsername}
+              >
                 {savingUsername ? '...' : 'Save'}
               </Button>
-              <button onClick={cancelEditingUsername} className="text-xs text-text-muted hover:text-text transition-colors cursor-pointer">
+              <button
+                onClick={cancelEditingUsername}
+                className="text-xs text-text-muted hover:text-text transition-colors cursor-pointer"
+              >
                 Cancel
               </button>
             </div>
           ) : (
-            <button onClick={startEditingUsername} className="text-text hover:text-accent transition-colors cursor-pointer flex items-center gap-1.5">
+            <button
+              onClick={startEditingUsername}
+              className="text-text hover:text-accent transition-colors cursor-pointer flex items-center gap-1.5"
+            >
               {author?.username ?? '\u2014'}
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-text-muted">
+              <svg
+                width="12"
+                height="12"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="text-text-muted"
+              >
                 <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
                 <path d="m15 5 4 4" />
               </svg>

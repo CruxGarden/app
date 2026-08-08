@@ -1,5 +1,10 @@
 import type { IDimensionService } from '../dimension.service';
-import type { Dimension, DimensionType, CreateDimensionInput, UpdateDimensionInput } from '../types';
+import type {
+  Dimension,
+  DimensionType,
+  CreateDimensionInput,
+  UpdateDimensionInput,
+} from '../types';
 import * as cruxes from '@/api/cruxes';
 import * as dimensionsApi from '@/api/dimensions';
 

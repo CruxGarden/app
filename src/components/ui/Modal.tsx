@@ -28,7 +28,16 @@ interface ModalProps {
   flush?: boolean;
 }
 
-export default function Modal({ open, onClose, children, className, size = 'md', title, subtitle, flush }: ModalProps) {
+export default function Modal({
+  open,
+  onClose,
+  children,
+  className,
+  size = 'md',
+  title,
+  subtitle,
+  flush,
+}: ModalProps) {
   useEffect(() => {
     if (!open) return;
     const handler = (e: KeyboardEvent) => {
@@ -42,8 +51,17 @@ export default function Modal({ open, onClose, children, className, size = 'md',
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
-      <div className="absolute inset-0 bg-overlay/80 backdrop-blur-sm" onClick={onClose} />
-      <Panel padding="md" className={cn('relative z-10 flex flex-col', SIZE_CLASSES[size], className)}>
+      <div className="absolute inset-0 modal-scrim" onClick={onClose} />
+      <Panel
+        padding="md"
+        className={cn(
+          'relative z-10 flex flex-col',
+          // Deep soft shadow carries the elevation the blur used to fake
+          'shadow-[0_24px_80px_-16px_rgb(0_0_0/0.65)]',
+          SIZE_CLASSES[size],
+          className,
+        )}
+      >
         {title && (
           <div className="flex items-center justify-between mb-4">
             <div>
@@ -55,14 +73,28 @@ export default function Modal({ open, onClose, children, className, size = 'md',
               className="text-text-muted hover:text-text cursor-pointer"
               aria-label="Close"
             >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
                 <path d="M18 6L6 18" />
                 <path d="M6 6l12 12" />
               </svg>
             </button>
           </div>
         )}
-        <div className={cn('flex-1 min-h-0 flex flex-col overflow-hidden bg-bg/50 rounded-[var(--radius-sm)] border border-border', !flush && 'p-4')}>
+        <div
+          className={cn(
+            'flex-1 min-h-0 flex flex-col overflow-hidden bg-bg/50 rounded-[var(--radius-sm)] border border-border',
+            !flush && 'p-4',
+          )}
+        >
           {children}
         </div>
       </Panel>

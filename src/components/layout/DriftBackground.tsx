@@ -66,7 +66,9 @@ function parseCSSColor(raw: string): [number, number, number] {
     return [parseInt(rgbMatch[1]) / 255, parseInt(rgbMatch[2]) / 255, parseInt(rgbMatch[3]) / 255];
   }
   let hex = raw.replace('#', '');
-  if (hex.length === 3) hex = hex.charAt(0) + hex.charAt(0) + hex.charAt(1) + hex.charAt(1) + hex.charAt(2) + hex.charAt(2);
+  if (hex.length === 3)
+    hex =
+      hex.charAt(0) + hex.charAt(0) + hex.charAt(1) + hex.charAt(1) + hex.charAt(2) + hex.charAt(2);
   if (hex.length < 6) return [0.8, 0.8, 0.8]; // malformed — safe fallback
   const r = parseInt(hex.slice(0, 2), 16) / 255;
   const g = parseInt(hex.slice(2, 4), 16) / 255;
@@ -140,19 +142,25 @@ export default function DriftBackground() {
     };
 
     let colors = readColors();
-    let isLightBg = (colors.bgColor[0] * 0.299 + colors.bgColor[1] * 0.587 + colors.bgColor[2] * 0.114) > 0.5;
+    let isLightBg =
+      colors.bgColor[0] * 0.299 + colors.bgColor[1] * 0.587 + colors.bgColor[2] * 0.114 > 0.5;
 
     const onPaletteChange = () => {
       colors = readColors();
-      isLightBg = (colors.bgColor[0] * 0.299 + colors.bgColor[1] * 0.587 + colors.bgColor[2] * 0.114) > 0.5;
+      isLightBg =
+        colors.bgColor[0] * 0.299 + colors.bgColor[1] * 0.587 + colors.bgColor[2] * 0.114 > 0.5;
     };
     document.addEventListener('palette-change', onPaletteChange);
 
     const themeObserver = new MutationObserver(() => {
       colors = readColors();
-      isLightBg = (colors.bgColor[0] * 0.299 + colors.bgColor[1] * 0.587 + colors.bgColor[2] * 0.114) > 0.5;
+      isLightBg =
+        colors.bgColor[0] * 0.299 + colors.bgColor[1] * 0.587 + colors.bgColor[2] * 0.114 > 0.5;
     });
-    themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+    themeObserver.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['class'],
+    });
 
     // Compile shaders
     const prog = linkProgram(gl, STAR_VS, STAR_FS);

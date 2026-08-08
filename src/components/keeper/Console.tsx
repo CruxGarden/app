@@ -1,8 +1,12 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { cn } from '@/lib/cn';
 import type { ChatMessage } from '@/api/types';
-import { getProviderForModel, getModelShortName } from '@/ai/providers';
-import { getAdapter } from '@/ai/adapters';
+import {
+  getProviderForModel,
+  getModelShortName,
+  resolveModel,
+  DEFAULT_MODEL,
+} from '@/ai/providers';
 import { runConversation } from '@/ai/engine';
 import type { NormalizedMessage } from '@/services/types';
 import MarkdownRenderer from '@/components/chat/MarkdownRenderer';
@@ -24,7 +28,13 @@ function useKeeperAvatar(): string {
   return activeMode === 'light' ? keeperAvatarLight : keeperAvatarDark;
 }
 
-export function ConsoleAvatar({ className = 'w-6 h-6', bordered = false }: { className?: string; bordered?: boolean }) {
+export function ConsoleAvatar({
+  className = 'w-6 h-6',
+  bordered = false,
+}: {
+  className?: string;
+  bordered?: boolean;
+}) {
   const keeperSrc = useKeeperAvatar();
   const activeMode = useThemeStore((s) => s.activeMode);
   const [, forceUpdate] = useState(0);
@@ -34,7 +44,8 @@ export function ConsoleAvatar({ className = 'w-6 h-6', bordered = false }: { cla
     return () => window.removeEventListener('crux:persona-changed', handler);
   }, []);
   const persona = getPersona();
-  const fp = activeMode === 'light' ? persona.thumbnailFingerprintLight : persona.thumbnailFingerprint;
+  const fp =
+    activeMode === 'light' ? persona.thumbnailFingerprintLight : persona.thumbnailFingerprint;
   const blobUrl = useBlobUrl(fp);
   const src = blobUrl || keeperSrc;
   return (
@@ -52,7 +63,7 @@ export function ConsoleAvatar({ className = 'w-6 h-6', bordered = false }: { cla
 }
 
 const MAX_CONVERSATIONS = 20;
-const KEEPER_MODEL = 'claude-sonnet-4-20250514';
+const KEEPER_MODEL = DEFAULT_MODEL;
 
 const KEEPER_SYSTEM_PROMPT =
   'You are The Keeper, an outdated robot model who tends the Crux Garden. ' +
@@ -121,14 +132,18 @@ function loadConversations(): Conversation[] {
         return [migrated];
       }
     }
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
   return [];
 }
 
 function saveConversations(convos: Conversation[]) {
   try {
     setSetting(SettingsKey.KeeperConversations, JSON.stringify(convos.slice(0, MAX_CONVERSATIONS)));
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
 }
 
 function extractTitle(msgs: { role: string; content: string }[]): string {
@@ -176,7 +191,8 @@ export default function Console() {
   const keeperAvatarSrc = useKeeperAvatar();
   const activeMode = useThemeStore((s) => s.activeMode);
   const [persona, setPersona] = useState<PersonaSettings>(() => getPersona());
-  const sidebarThumbFp = activeMode === 'light' ? persona.thumbnailFingerprintLight : persona.thumbnailFingerprint;
+  const sidebarThumbFp =
+    activeMode === 'light' ? persona.thumbnailFingerprintLight : persona.thumbnailFingerprint;
   const sidebarThumbUrl = useBlobUrl(sidebarThumbFp);
 
   // Read persona on mount (Modal only mounts content when open)
@@ -208,26 +224,31 @@ export default function Console() {
     setActiveId(id);
   }, []);
 
-  const deleteConversation = useCallback((id: string) => {
-    setConversations((prev) => {
-      const next = prev.filter((c) => c.id !== id);
-      saveConversations(next);
-      return next;
-    });
-    if (activeId === id) {
-      setActiveId(() => {
-        const remaining = conversations.filter((c) => c.id !== id);
-        return remaining.length > 0 ? remaining[0]!.id : null;
+  const deleteConversation = useCallback(
+    (id: string) => {
+      setConversations((prev) => {
+        const next = prev.filter((c) => c.id !== id);
+        saveConversations(next);
+        return next;
       });
-    }
-  }, [activeId, conversations]);
+      if (activeId === id) {
+        setActiveId(() => {
+          const remaining = conversations.filter((c) => c.id !== id);
+          return remaining.length > 0 ? remaining[0]!.id : null;
+        });
+      }
+    },
+    [activeId, conversations],
+  );
 
   const [input, setInput] = useState('');
   const [streaming, setStreaming] = useState(false);
   const [streamContent, setStreamContent] = useState('');
   const [toolActivity, setToolActivity] = useState('');
   const [error, setError] = useState('');
-  const [model, setModel] = useState(() => getSetting(SettingsKey.KeeperModel) || KEEPER_MODEL);
+  const [model, setModel] = useState(
+    () => resolveModel(getSetting(SettingsKey.KeeperModel)) || KEEPER_MODEL,
+  );
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const abortRef = useRef<AbortController | null>(null);
@@ -286,7 +307,11 @@ export default function Console() {
     setToolActivity('');
     setInput('');
 
-    const userMsg: ChatMessage = { role: 'user', content: trimmed, timestamp: new Date().toISOString() };
+    const userMsg: ChatMessage = {
+      role: 'user',
+      content: trimmed,
+      timestamp: new Date().toISOString(),
+    };
     let currentMessages = [...displayMessages, userMsg];
 
     // Update title from first user message if still default
@@ -296,7 +321,13 @@ export default function Console() {
     setConversations((prev) => {
       const next = prev.map((c) =>
         c.id === targetId
-          ? { ...c, messages: currentMessages, ...(isFirstMessage ? { title: trimmed.length > 40 ? trimmed.slice(0, 40) + '…' : trimmed } : {}) }
+          ? {
+              ...c,
+              messages: currentMessages,
+              ...(isFirstMessage
+                ? { title: trimmed.length > 40 ? trimmed.slice(0, 40) + '…' : trimmed }
+                : {}),
+            }
           : c,
       );
       saveConversations(next);
@@ -307,14 +338,12 @@ export default function Console() {
     abortRef.current = controller;
 
     try {
-      const adapter = await getAdapter(model);
       const normalizedMsgs = toNormalizedMessages(currentMessages);
 
       // Console is a second caller of the Collaboration engine — same loop as
       // the workspace chat, just with no tools and the Keeper's own prompt.
       let accumulated = '';
       for await (const event of runConversation(
-        adapter,
         apiKey,
         '',
         normalizedMsgs,
@@ -344,9 +373,7 @@ export default function Console() {
       // Persist final state
       const tId = targetId;
       setConversations((prev) => {
-        const next = prev.map((c) =>
-          c.id === tId ? { ...c, messages: currentMessages } : c,
-        );
+        const next = prev.map((c) => (c.id === tId ? { ...c, messages: currentMessages } : c));
         saveConversations(next);
         return next;
       });
@@ -369,7 +396,11 @@ export default function Console() {
 
   const changeModel = useCallback((m: string) => {
     setModel(m);
-    try { setSetting(SettingsKey.KeeperModel, m); } catch { /* ignore */ }
+    try {
+      setSetting(SettingsKey.KeeperModel, m);
+    } catch {
+      /* ignore */
+    }
   }, []);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -381,180 +412,197 @@ export default function Console() {
 
   return (
     <div className="flex flex-row h-full">
-        {/* Sidebar — portrait + conversation history */}
-        <div className="hidden sm:flex w-48 shrink-0 flex-col border-r border-border">
-          <div className="aspect-square w-full overflow-hidden rounded-tl-[calc(var(--radius)-1px)]">
-            <img
-              src={sidebarThumbUrl || keeperAvatarSrc}
-              alt="Console"
-              className="w-full h-full object-cover [image-rendering:pixelated]"
-            />
-          </div>
-          {/* Conversation history */}
-          <div className="flex-1 min-h-0 overflow-y-auto border-t border-border">
-            <div className="p-2">
-              <button
-                onClick={startNewConversation}
-                className="w-full px-2 py-1.5 mb-2 text-[10px] font-mono text-accent border border-accent/20 hover:bg-accent/10 rounded-[var(--radius-sm)] cursor-pointer transition-colors"
-              >
-                New Conversation
-              </button>
-              {conversations.map((c) => (
-                <div
-                  key={c.id}
-                  className={cn(
-                    'group flex items-start gap-1 px-2 py-1.5 rounded-[var(--radius-sm)] cursor-pointer transition-colors',
-                    c.id === activeId ? 'bg-accent/10 text-text' : 'text-text-muted hover:bg-accent/10 hover:text-text',
-                  )}
-                  onClick={() => setActiveId(c.id)}
-                >
-                  <div className="flex-1 min-w-0">
-                    <p className="text-[10px] font-mono truncate">{c.title}</p>
-                    <p className="text-[9px] font-mono text-text-muted/60">{formatRelativeTime(c.createdAt)}</p>
-                  </div>
-                  <button
-                    onClick={(e) => { e.stopPropagation(); deleteConversation(c.id); }}
-                    className="opacity-0 group-hover:opacity-60 hover:!opacity-100 text-[10px] text-text-muted hover:text-error shrink-0 cursor-pointer transition-opacity"
-                  >
-                    ×
-                  </button>
-                </div>
-              ))}
-            </div>
-          </div>
+      {/* Sidebar — portrait + conversation history */}
+      <div className="hidden sm:flex w-48 shrink-0 flex-col border-r border-border">
+        <div className="aspect-square w-full overflow-hidden rounded-tl-[calc(var(--radius)-1px)]">
+          <img
+            src={sidebarThumbUrl || keeperAvatarSrc}
+            alt="Console"
+            className="w-full h-full object-cover [image-rendering:pixelated]"
+          />
         </div>
-
-        {/* Chat column */}
-        <div className="flex-1 flex flex-col min-w-0">
-          {/* Messages */}
-          <div className="flex-1 overflow-y-auto p-4 space-y-3 min-h-0">
-            {displayMessages.length === 0 && !streaming && (
-              <p className="text-xs text-text-muted text-center py-4">
-                {persona.greeting || 'The Keeper tends the garden. Ask anything.'}
-              </p>
-            )}
-
-            {displayMessages.map((msg, i) => (
-              <div key={i} className={cn('flex gap-2 items-end', msg.role === 'user' ? 'justify-end' : 'justify-start')}>
-                <div
-                  className={cn(
-                    'max-w-[85%] rounded-[var(--radius)] px-3 py-2 text-sm break-words',
-                    msg.role === 'user' ? 'bg-accent-muted text-text' : 'bg-[color-mix(in_srgb,var(--panel),var(--text)_8%)] text-text',
-                  )}
-                >
-                  {msg.role === 'user' ? (
-                    <p className="whitespace-pre-wrap">{msg.content}</p>
-                  ) : (
-                    <MarkdownRenderer content={msg.content} />
-                  )}
-
-                  {/* Metadata footer — timestamp + model */}
-                  <div className="mt-1.5 flex items-center gap-2 text-[10px] font-mono text-text-muted/50">
-                    {msg.timestamp && <span>{formatTime(msg.timestamp)}</span>}
-                    {msg.role === 'assistant' && msg.model && (
-                      <span className="text-right flex-1">{getModelShortName(msg.model) || msg.model}</span>
-                    )}
-                  </div>
+        {/* Conversation history */}
+        <div className="flex-1 min-h-0 overflow-y-auto border-t border-border">
+          <div className="p-2">
+            <button
+              onClick={startNewConversation}
+              className="w-full px-2 py-1.5 mb-2 text-[10px] font-mono text-accent border border-accent/20 hover:bg-accent/10 rounded-[var(--radius-sm)] cursor-pointer transition-colors"
+            >
+              New Conversation
+            </button>
+            {conversations.map((c) => (
+              <div
+                key={c.id}
+                className={cn(
+                  'group flex items-start gap-1 px-2 py-1.5 rounded-[var(--radius-sm)] cursor-pointer transition-colors',
+                  c.id === activeId
+                    ? 'bg-accent/10 text-text'
+                    : 'text-text-muted hover:bg-accent/10 hover:text-text',
+                )}
+                onClick={() => setActiveId(c.id)}
+              >
+                <div className="flex-1 min-w-0">
+                  <p className="text-[10px] font-mono truncate">{c.title}</p>
+                  <p className="text-[9px] font-mono text-text-muted/60">
+                    {formatRelativeTime(c.createdAt)}
+                  </p>
                 </div>
-                {msg.role === 'user' && <UserAvatar />}
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    deleteConversation(c.id);
+                  }}
+                  className="opacity-0 group-hover:opacity-60 hover:!opacity-100 text-[10px] text-text-muted hover:text-error shrink-0 cursor-pointer transition-opacity"
+                >
+                  ×
+                </button>
               </div>
             ))}
-
-            {/* Streaming text */}
-            {streaming && streamContent && (
-              <div className="flex gap-2 items-end justify-start">
-                <div className="max-w-[85%] rounded-[var(--radius)] px-3 py-2 text-sm bg-[color-mix(in_srgb,var(--panel),var(--text)_8%)] text-text">
-                  <MarkdownRenderer content={streamContent} />
-                  <span className="inline-block w-1.5 h-4 bg-accent/60 animate-pulse ml-0.5 align-text-bottom" />
-                </div>
-              </div>
-            )}
-
-            {/* Tool activity indicator */}
-            {streaming && toolActivity && (
-              <div className="flex gap-2 items-end justify-start">
-                <div className="rounded-[var(--radius)] px-3 py-2 bg-[color-mix(in_srgb,var(--panel),var(--text)_8%)] text-xs text-text-muted italic">
-                  {toolActivity}
-                </div>
-              </div>
-            )}
-
-            {/* Loading dots */}
-            {streaming && !streamContent && !toolActivity && (
-              <div className="flex gap-2 items-end justify-start">
-                <div className="rounded-[var(--radius)] px-3 py-2 bg-[color-mix(in_srgb,var(--panel),var(--text)_8%)]">
-                  <div className="flex gap-1">
-                    <span className="w-1.5 h-1.5 rounded-full bg-text-muted animate-bounce [animation-delay:0ms]" />
-                    <span className="w-1.5 h-1.5 rounded-full bg-text-muted animate-bounce [animation-delay:150ms]" />
-                    <span className="w-1.5 h-1.5 rounded-full bg-text-muted animate-bounce [animation-delay:300ms]" />
-                  </div>
-                </div>
-              </div>
-            )}
-
-            <div ref={bottomRef} />
           </div>
+        </div>
+      </div>
 
-          {/* Error */}
-          {error && (
-            <div className="px-4 py-2 text-xs text-error bg-error-muted border-t border-border">
-              {error}
+      {/* Chat column */}
+      <div className="flex-1 flex flex-col min-w-0">
+        {/* Messages */}
+        <div className="flex-1 overflow-y-auto p-4 space-y-3 min-h-0">
+          {displayMessages.length === 0 && !streaming && (
+            <p className="text-xs text-text-muted text-center py-4">
+              {persona.greeting || 'The Keeper tends the garden. Ask anything.'}
+            </p>
+          )}
+
+          {displayMessages.map((msg, i) => (
+            <div
+              key={i}
+              className={cn(
+                'flex gap-2 items-end',
+                msg.role === 'user' ? 'justify-end' : 'justify-start',
+              )}
+            >
+              <div
+                className={cn(
+                  'max-w-[85%] rounded-[var(--radius)] px-3 py-2 text-sm break-words',
+                  msg.role === 'user'
+                    ? 'bg-accent-muted text-text'
+                    : 'bg-[color-mix(in_srgb,var(--panel),var(--text)_8%)] text-text',
+                )}
+              >
+                {msg.role === 'user' ? (
+                  <p className="whitespace-pre-wrap">{msg.content}</p>
+                ) : (
+                  <MarkdownRenderer content={msg.content} />
+                )}
+
+                {/* Metadata footer — timestamp + model */}
+                <div className="mt-1.5 flex items-center gap-2 text-[10px] font-mono text-text-muted/50">
+                  {msg.timestamp && <span>{formatTime(msg.timestamp)}</span>}
+                  {msg.role === 'assistant' && msg.model && (
+                    <span className="text-right flex-1">
+                      {getModelShortName(msg.model) || msg.model}
+                    </span>
+                  )}
+                </div>
+              </div>
+              {msg.role === 'user' && <UserAvatar />}
+            </div>
+          ))}
+
+          {/* Streaming text */}
+          {streaming && streamContent && (
+            <div className="flex gap-2 items-end justify-start">
+              <div className="max-w-[85%] rounded-[var(--radius)] px-3 py-2 text-sm bg-[color-mix(in_srgb,var(--panel),var(--text)_8%)] text-text">
+                <MarkdownRenderer content={streamContent} />
+                <span className="inline-block w-1.5 h-4 bg-accent/60 animate-pulse ml-0.5 align-text-bottom" />
+              </div>
             </div>
           )}
 
-          {/* Input + Model selector */}
-          <div className="border-t border-border p-3 space-y-3">
-            <ModelSelector value={model} onChange={changeModel} disabled={streaming} />
-            <div>
-              <div className="flex items-end gap-2">
-                <textarea
-                  ref={inputRef}
-                  value={input}
-                  onChange={(e) => setInput(e.target.value)}
-                  onKeyDown={handleKeyDown}
-                  placeholder="Send a message..."
-                  rows={1}
-                  className={cn(
-                    'flex-1 resize-none bg-bg border border-accent/20 rounded-[var(--radius-sm)] px-3 py-2',
-                    'text-sm text-text placeholder:text-text-muted',
-                    'focus:outline-none focus:border-accent',
-                    'font-body leading-relaxed max-h-[100px]',
-                  )}
-                  onInput={(e) => {
-                    const el = e.currentTarget;
-                    el.style.height = 'auto';
-                    el.style.height = Math.min(el.scrollHeight, 100) + 'px';
-                  }}
-                />
-                {streaming ? (
-                  <button
-                    onClick={stop}
-                    className={cn(
-                      'px-3 py-2 rounded-[var(--radius-sm)] text-sm font-body',
-                      'bg-error-muted text-error border border-error/20',
-                      'hover:bg-error/20 transition-colors cursor-pointer',
-                    )}
-                  >
-                    Stop
-                  </button>
-                ) : (
-                  <button
-                    onClick={send}
-                    disabled={!input.trim()}
-                    className={cn(
-                      'px-3 py-2 rounded-[var(--radius-sm)] text-sm font-body',
-                      'bg-accent-muted text-accent border border-accent/20',
-                      'hover:border-accent transition-colors cursor-pointer',
-                      'disabled:opacity-40 disabled:cursor-not-allowed',
-                    )}
-                  >
-                    Send
-                  </button>
-                )}
+          {/* Tool activity indicator */}
+          {streaming && toolActivity && (
+            <div className="flex gap-2 items-end justify-start">
+              <div className="rounded-[var(--radius)] px-3 py-2 bg-[color-mix(in_srgb,var(--panel),var(--text)_8%)] text-xs text-text-muted italic">
+                {toolActivity}
               </div>
+            </div>
+          )}
+
+          {/* Loading dots */}
+          {streaming && !streamContent && !toolActivity && (
+            <div className="flex gap-2 items-end justify-start">
+              <div className="rounded-[var(--radius)] px-3 py-2 bg-[color-mix(in_srgb,var(--panel),var(--text)_8%)]">
+                <div className="flex gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-text-muted animate-bounce [animation-delay:0ms]" />
+                  <span className="w-1.5 h-1.5 rounded-full bg-text-muted animate-bounce [animation-delay:150ms]" />
+                  <span className="w-1.5 h-1.5 rounded-full bg-text-muted animate-bounce [animation-delay:300ms]" />
+                </div>
+              </div>
+            </div>
+          )}
+
+          <div ref={bottomRef} />
+        </div>
+
+        {/* Error */}
+        {error && (
+          <div className="px-4 py-2 text-xs text-error bg-error-muted border-t border-border">
+            {error}
+          </div>
+        )}
+
+        {/* Input + Model selector */}
+        <div className="border-t border-border p-3 space-y-3">
+          <ModelSelector value={model} onChange={changeModel} disabled={streaming} />
+          <div>
+            <div className="flex items-end gap-2">
+              <textarea
+                ref={inputRef}
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={handleKeyDown}
+                placeholder="Send a message..."
+                rows={1}
+                className={cn(
+                  'flex-1 resize-none bg-bg border border-accent/20 rounded-[var(--radius-sm)] px-3 py-2',
+                  'text-sm text-text placeholder:text-text-muted',
+                  'focus:outline-none focus:border-accent',
+                  'font-body leading-relaxed max-h-[100px]',
+                )}
+                onInput={(e) => {
+                  const el = e.currentTarget;
+                  el.style.height = 'auto';
+                  el.style.height = Math.min(el.scrollHeight, 100) + 'px';
+                }}
+              />
+              {streaming ? (
+                <button
+                  onClick={stop}
+                  className={cn(
+                    'px-3 py-2 rounded-[var(--radius-sm)] text-sm font-body',
+                    'bg-error-muted text-error border border-error/20',
+                    'hover:bg-error/20 transition-colors cursor-pointer',
+                  )}
+                >
+                  Stop
+                </button>
+              ) : (
+                <button
+                  onClick={send}
+                  disabled={!input.trim()}
+                  className={cn(
+                    'px-3 py-2 rounded-[var(--radius-sm)] text-sm font-body',
+                    'bg-accent-muted text-accent border border-accent/20',
+                    'hover:border-accent transition-colors cursor-pointer',
+                    'disabled:opacity-40 disabled:cursor-not-allowed',
+                  )}
+                >
+                  Send
+                </button>
+              )}
             </div>
           </div>
         </div>
+      </div>
     </div>
   );
 }

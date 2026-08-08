@@ -4,6 +4,7 @@ import {
   unpublishPipeline,
   buildFingerprintMap,
   hasContentChanged,
+  describePublishFailure,
   type PublishDeps,
   type PublishFile,
   type PublishPhase,
@@ -23,7 +24,11 @@ function makeCrux(overrides: Partial<Crux> = {}): Crux {
   } as Crux;
 }
 
-function makeArtifact(path: string, fingerprint: string, overrides: Partial<Artifact> = {}): Artifact {
+function makeArtifact(
+  path: string,
+  fingerprint: string,
+  overrides: Partial<Artifact> = {},
+): Artifact {
   return {
     id: `art-${path}`,
     type: 'artifact',
@@ -48,9 +53,11 @@ interface FakeState {
 
 function makeDeps(opts: {
   exists?: boolean;
+  existsThrows?: boolean;
   isSite?: boolean;
   apiPublishMeta?: Record<string, unknown>;
   failTags?: boolean;
+  failBlob?: string;
 }): { deps: PublishDeps; state: FakeState } {
   const state: FakeState = {
     apiCruxExists: opts.exists ?? false,
@@ -64,9 +71,9 @@ function makeDeps(opts: {
   };
   const deps: PublishDeps = {
     api: {
-      get: async (id) => {
-        if (!state.apiCruxExists) throw new Error('404');
-        return makeCrux({ id });
+      exists: async () => {
+        if (opts.existsThrows) throw new Error('network down');
+        return state.apiCruxExists;
       },
       create: async (input) => {
         state.created.push(input);
@@ -81,7 +88,11 @@ function makeDeps(opts: {
         return makeCrux({
           id,
           visibility: 'public',
-          meta: { publishedAt: '2026-07-31T00:00:00Z', publishedVersion: 3, ...opts.apiPublishMeta },
+          meta: {
+            publishedAt: '2026-07-31T00:00:00Z',
+            publishedVersion: 3,
+            ...opts.apiPublishMeta,
+          },
         });
       },
       unpublish: async (id) => {
@@ -99,14 +110,25 @@ function makeDeps(opts: {
         state.localMetaWrites.push(meta);
         return {};
       },
-      downloadBlob: async (artifactId) => new Blob([`content-of-${artifactId}`], { type: 'text/html' }),
+      downloadBlob: async (artifactId) => {
+        if (opts.failBlob && artifactId === opts.failBlob) {
+          throw new Error('blob missing from store');
+        }
+        return new Blob([`content-of-${artifactId}`], { type: 'text/html' });
+      },
     },
     site: {
       isSiteCrux: () => opts.isSite ?? false,
       buildForPublish: async () => {
         state.built = true;
         return [
-          { blob: new Blob(['<html>built</html>']), path: 'index.html', type: 'artifact', kind: 'file', mimeType: 'text/html' },
+          {
+            blob: new Blob(['<html>built</html>']),
+            path: 'index.html',
+            type: 'artifact',
+            kind: 'file',
+            mimeType: 'text/html',
+          },
         ];
       },
     },
@@ -128,6 +150,60 @@ describe('publishPipeline', () => {
     await publishPipeline(makeCrux(), [makeArtifact('index.html', 'fp1')], { deps });
     expect(state.updated).toHaveLength(1);
     expect(state.created).toHaveLength(0);
+  });
+
+  it('aborts instead of creating when the existence check fails', async () => {
+    // The API's create hard-deletes any same-slug record, so treating a
+    // transient error as "not published" would destroy the live crux.
+    const { deps, state } = makeDeps({ exists: true, existsThrows: true });
+    await expect(
+      publishPipeline(makeCrux(), [makeArtifact('index.html', 'fp1')], { deps }),
+    ).rejects.toThrow('network down');
+    expect(state.created).toHaveLength(0);
+    expect(state.updated).toHaveLength(0);
+    expect(state.publishedFiles).toBeNull();
+  });
+
+  it('fails the publish when an artifact blob cannot be read', async () => {
+    const artifacts = [makeArtifact('index.html', 'fp1'), makeArtifact('app.js', 'fp2')];
+    const { deps, state } = makeDeps({ exists: true, failBlob: 'art-app.js' });
+    await expect(publishPipeline(makeCrux(), artifacts, { deps })).rejects.toThrow(
+      /nothing was published/,
+    );
+    // Nothing uploaded, and no fingerprints recorded for a site that never shipped
+    expect(state.publishedFiles).toBeNull();
+    expect(state.localMetaWrites).toHaveLength(0);
+  });
+
+  it('never publishes or fingerprints internal files (preview.jpg, .keep)', async () => {
+    const artifacts = [
+      makeArtifact('index.html', 'fp1'),
+      makeArtifact('preview.jpg', 'thumb-v1', { mimeType: 'image/jpeg' }),
+      makeArtifact('assets/.keep', 'keep-fp'),
+    ];
+    const { deps, state } = makeDeps({ exists: true });
+    const updated = await publishPipeline(makeCrux(), artifacts, { deps });
+
+    const paths = state.publishedFiles!.map((f) => f.path);
+    expect(paths).toEqual(['index.html']);
+
+    const fingerprints = (updated.meta as { publishedFingerprints: Record<string, string> })
+      .publishedFingerprints;
+    expect(Object.keys(fingerprints)).toEqual(['index.html']);
+  });
+
+  it('a re-captured thumbnail alone does not count as an unpublished change', async () => {
+    // preview.jpg bytes change on every capture; counting it would leave every
+    // previewed crux permanently "changed".
+    const before = buildFingerprintMap([
+      makeArtifact('index.html', 'fp1'),
+      makeArtifact('preview.jpg', 'thumb-v1', { mimeType: 'image/jpeg' }),
+    ]);
+    const after = [
+      makeArtifact('index.html', 'fp1'),
+      makeArtifact('preview.jpg', 'thumb-v2', { mimeType: 'image/jpeg' }),
+    ];
+    expect(hasContentChanged(after, before)).toBe(false);
   });
 
   it('publishes working artifacts as-is for plain cruxes', async () => {
@@ -180,7 +256,9 @@ describe('publishPipeline', () => {
     expect(s2.syncedTags).toEqual([[]]);
 
     const { deps: d3 } = makeDeps({ exists: true, failTags: true });
-    await expect(publishPipeline(makeCrux({ discoverable: true }), [], { deps: d3 })).resolves.toBeDefined();
+    await expect(
+      publishPipeline(makeCrux({ discoverable: true }), [], { deps: d3 }),
+    ).resolves.toBeDefined();
   });
 
   it('reports phases in order', async () => {
@@ -242,6 +320,44 @@ describe('publish-state helpers', () => {
     expect(hasContentChanged(arts, { 'a.html': 'fp1' })).toBe(false);
     expect(hasContentChanged(arts, { 'a.html': 'OLD' })).toBe(true);
     expect(hasContentChanged(arts, { 'a.html': 'fp1', 'b.css': 'fp2' })).toBe(true);
-    expect(hasContentChanged([...arts, makeArtifact('c.js', 'fp3')], { 'a.html': 'fp1' })).toBe(true);
+    expect(hasContentChanged([...arts, makeArtifact('c.js', 'fp3')], { 'a.html': 'fp1' })).toBe(
+      true,
+    );
+  });
+});
+
+describe('describePublishFailure', () => {
+  it('surfaces a site build failure with its log', () => {
+    const err = Object.assign(new Error('Build failed — nothing was published'), {
+      name: 'SiteBuildError',
+      log: 'src/pages/index.astro:12 Unexpected token',
+    });
+    expect(describePublishFailure(err)).toEqual({
+      message: 'Build failed — nothing was published',
+      log: 'src/pages/index.astro:12 Unexpected token',
+    });
+  });
+
+  it('translates an expired connection into something to do about it', () => {
+    const result = describePublishFailure({ response: { status: 401 } });
+    expect(result.message).toMatch(/reconnect/i);
+    expect(result.log).toBeUndefined();
+  });
+
+  it('repeats what the server said about a rejected payload', () => {
+    // The shape a NestJS ValidationPipe 400 actually arrives in.
+    const result = describePublishFailure({
+      response: { status: 400, data: { message: ['data should not be empty'] } },
+    });
+    expect(result.message).toBe('data should not be empty');
+  });
+
+  it('names the status when the server said nothing useful', () => {
+    expect(describePublishFailure({ response: { status: 502 } }).message).toContain('502');
+  });
+
+  it('falls back to the error message, then to a generic line', () => {
+    expect(describePublishFailure(new Error('offline')).message).toBe('offline');
+    expect(describePublishFailure(undefined).message).toBe('Publishing failed.');
   });
 });

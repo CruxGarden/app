@@ -71,7 +71,7 @@ export default function MessageInput({
       e.preventDefault();
       const next = historyIndexRef.current - 1;
       historyIndexRef.current = next;
-      setValue(next < 0 ? savedInputRef.current : history[next] ?? '');
+      setValue(next < 0 ? savedInputRef.current : (history[next] ?? ''));
     }
   };
 

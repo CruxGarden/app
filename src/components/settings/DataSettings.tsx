@@ -64,7 +64,9 @@ export default function DataSettings() {
       const imported = await confirmAndImportGarden({
         data: file,
         onProgress: setStatus,
-        onPostImport: async () => { await useAppStore.getState().ensureAuthor(); },
+        onPostImport: async () => {
+          await useAppStore.getState().ensureAuthor();
+        },
       });
 
       if (!imported) {
@@ -87,7 +89,9 @@ export default function DataSettings() {
       await wipeGarden(setStatus);
       setWipeConfirm('');
       setStatus('Garden wiped — redirecting...');
-      setTimeout(() => { window.location.href = '/'; }, 600);
+      setTimeout(() => {
+        window.location.href = '/';
+      }, 600);
     } catch (err) {
       console.error('Garden wipe failed:', err);
       setError('Wipe failed');
@@ -131,10 +135,22 @@ export default function DataSettings() {
           </p>
 
           <div className="flex items-center gap-2">
-            <Button variant="secondary" size="sm" onClick={handleExport} disabled={busy} loading={exporting}>
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={handleExport}
+              disabled={busy}
+              loading={exporting}
+            >
               {exporting ? 'Exporting...' : 'Export garden'}
             </Button>
-            <Button variant="secondary" size="sm" onClick={() => importRef.current?.click()} disabled={busy} loading={importing}>
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => importRef.current?.click()}
+              disabled={busy}
+              loading={importing}
+            >
               {importing ? 'Importing...' : 'Import garden'}
             </Button>
             <input
@@ -151,14 +167,19 @@ export default function DataSettings() {
               <hr className="border-border my-6" />
               <h3 className="font-display text-sm font-medium text-text mb-2">Garden location</h3>
               <p className="text-xs text-text-muted mb-3">
-                New cruxes create their project folders here. Existing folders stay where they
-                are and keep working.
+                New cruxes create their project folders here. Existing folders stay where they are
+                and keep working.
               </p>
               <div className="flex items-center gap-2">
                 <code className="flex-1 px-3 py-2 text-xs font-mono rounded-[var(--radius-sm)] bg-surface-solid border border-border text-text truncate">
                   {gardenRoot ? shortenHomePath(gardenRoot) : 'Loading…'}
                 </code>
-                <Button variant="secondary" size="sm" onClick={handleChooseGardenRoot} disabled={busy}>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={handleChooseGardenRoot}
+                  disabled={busy}
+                >
                   Choose…
                 </Button>
               </div>
@@ -169,8 +190,8 @@ export default function DataSettings() {
 
           <h3 className="font-display text-sm font-medium text-error mb-2">Danger zone</h3>
           <p className="text-xs text-text-muted mb-3">
-            Permanently delete all cruxes, files, conversations, and settings.
-            Type <span className="font-mono text-text">"{WIPE_CONFIRMATION}"</span> to confirm.
+            Permanently delete all cruxes, files, conversations, and settings. Type{' '}
+            <span className="font-mono text-text">"{WIPE_CONFIRMATION}"</span> to confirm.
           </p>
 
           <div className="flex items-center gap-2">
@@ -187,7 +208,13 @@ export default function DataSettings() {
                 'disabled:opacity-50',
               )}
             />
-            <Button variant="danger" size="sm" onClick={handleWipe} disabled={busy || wipeConfirm !== WIPE_CONFIRMATION} loading={wiping}>
+            <Button
+              variant="danger"
+              size="sm"
+              onClick={handleWipe}
+              disabled={busy || wipeConfirm !== WIPE_CONFIRMATION}
+              loading={wiping}
+            >
               Wipe garden
             </Button>
           </div>

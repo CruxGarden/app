@@ -1,6 +1,15 @@
 export default function MoodIcon() {
   return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
       <circle cx="13.5" cy="6.5" r="0.5" fill="currentColor" />
       <circle cx="17.5" cy="10.5" r="0.5" fill="currentColor" />
       <circle cx="8.5" cy="7.5" r="0.5" fill="currentColor" />

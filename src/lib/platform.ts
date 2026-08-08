@@ -27,6 +27,8 @@ export type {
   ChangeBatch,
   WatchEvent,
   TranscodeOutput,
+  LocalAiBridge,
+  LocalAiEndpoint,
 } from '../../electron/src/bridge';
 
 declare global {
@@ -50,6 +52,8 @@ export enum Capability {
   Transcode = 'transcode',
   /** Frameless-window chrome: drag regions, traffic-light insets. */
   DesktopChrome = 'desktopChrome',
+  /** Local inference (Ollama / LM Studio) detection + CORS shim. */
+  LocalInference = 'localInference',
 }
 
 function bridge(): Partial<ElectronBridge> | null {
@@ -80,5 +84,7 @@ export function can(capability: Capability): boolean {
       return !!api.ffmpeg;
     case Capability.DesktopChrome:
       return !!api.desktop;
+    case Capability.LocalInference:
+      return !!api.localai;
   }
 }

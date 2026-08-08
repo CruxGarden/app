@@ -16,7 +16,13 @@ export interface StoreEntry {
 
 export interface IStoreService {
   get(cruxId: string, key: string, visitorId?: string | null): Promise<unknown | null>;
-  set(cruxId: string, key: string, value: unknown, mode?: 'public' | 'protected', visitorId?: string | null): Promise<void>;
+  set(
+    cruxId: string,
+    key: string,
+    value: unknown,
+    mode?: 'public' | 'protected',
+    visitorId?: string | null,
+  ): Promise<void>;
   increment(cruxId: string, key: string, by?: number, visitorId?: string | null): Promise<number>;
   delete(cruxId: string, key: string, visitorId?: string | null): Promise<void>;
   list(cruxId: string): Promise<StoreEntry[]>;
@@ -83,10 +89,12 @@ export class SqliteStoreService implements IStoreService {
         [cruxId, key, vid],
       );
       if (existing) {
-        await db.run(
-          'UPDATE store SET value = ?, mode = ?, updated = ? WHERE id = ?',
-          [serialized, mode, now, existing.id],
-        );
+        await db.run('UPDATE store SET value = ?, mode = ?, updated = ? WHERE id = ?', [
+          serialized,
+          mode,
+          now,
+          existing.id,
+        ]);
       } else {
         await db.run(
           'INSERT INTO store (id, crux_id, visitor_id, key, value, mode, created, updated) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
@@ -100,10 +108,12 @@ export class SqliteStoreService implements IStoreService {
         [cruxId, key],
       );
       if (existing) {
-        await db.run(
-          'UPDATE store SET value = ?, mode = ?, updated = ? WHERE id = ?',
-          [serialized, mode, now, existing.id],
-        );
+        await db.run('UPDATE store SET value = ?, mode = ?, updated = ? WHERE id = ?', [
+          serialized,
+          mode,
+          now,
+          existing.id,
+        ]);
       } else {
         await db.run(
           'INSERT INTO store (id, crux_id, visitor_id, key, value, mode, created, updated) VALUES (?, ?, NULL, ?, ?, ?, ?, ?)',
@@ -113,7 +123,12 @@ export class SqliteStoreService implements IStoreService {
     }
   }
 
-  async increment(cruxId: string, key: string, by: number = 1, visitorId?: string | null): Promise<number> {
+  async increment(
+    cruxId: string,
+    key: string,
+    by: number = 1,
+    visitorId?: string | null,
+  ): Promise<number> {
     const current = await this.get(cruxId, key, visitorId);
     const currentNum = typeof current === 'number' ? current : 0;
     const newValue = currentNum + by;
@@ -122,8 +137,15 @@ export class SqliteStoreService implements IStoreService {
     const db = getSqliteClient();
     let mode: 'public' | 'protected' = 'public';
     const existing = visitorId
-      ? await db.get('SELECT mode FROM store WHERE crux_id = ? AND key = ? AND visitor_id = ?', [cruxId, key, visitorId])
-      : await db.get('SELECT mode FROM store WHERE crux_id = ? AND key = ? AND visitor_id IS NULL', [cruxId, key]);
+      ? await db.get('SELECT mode FROM store WHERE crux_id = ? AND key = ? AND visitor_id = ?', [
+          cruxId,
+          key,
+          visitorId,
+        ])
+      : await db.get(
+          'SELECT mode FROM store WHERE crux_id = ? AND key = ? AND visitor_id IS NULL',
+          [cruxId, key],
+        );
     if (existing) mode = existing.mode as 'public' | 'protected';
 
     await this.set(cruxId, key, newValue, mode, visitorId);
@@ -133,24 +155,22 @@ export class SqliteStoreService implements IStoreService {
   async delete(cruxId: string, key: string, visitorId?: string | null): Promise<void> {
     const db = getSqliteClient();
     if (visitorId) {
-      await db.run(
-        'DELETE FROM store WHERE crux_id = ? AND key = ? AND visitor_id = ?',
-        [cruxId, key, visitorId],
-      );
+      await db.run('DELETE FROM store WHERE crux_id = ? AND key = ? AND visitor_id = ?', [
+        cruxId,
+        key,
+        visitorId,
+      ]);
     } else {
-      await db.run(
-        'DELETE FROM store WHERE crux_id = ? AND key = ? AND visitor_id IS NULL',
-        [cruxId, key],
-      );
+      await db.run('DELETE FROM store WHERE crux_id = ? AND key = ? AND visitor_id IS NULL', [
+        cruxId,
+        key,
+      ]);
     }
   }
 
   async list(cruxId: string): Promise<StoreEntry[]> {
     const db = getSqliteClient();
-    const rows = await db.all(
-      'SELECT * FROM store WHERE crux_id = ? ORDER BY key',
-      [cruxId],
-    );
+    const rows = await db.all('SELECT * FROM store WHERE crux_id = ? ORDER BY key', [cruxId]);
     return rows.map(toStoreEntry);
   }
 

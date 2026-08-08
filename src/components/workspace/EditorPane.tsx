@@ -81,16 +81,19 @@ export default function EditorPane() {
             title="Builder"
             className={cn(
               'shrink-0 px-3 text-xs border-b border-r border-border transition-colors cursor-pointer',
-              showBuilder
-                ? 'text-accent bg-surface'
-                : 'text-text-muted hover:text-text',
+              showBuilder ? 'text-accent bg-surface' : 'text-text-muted hover:text-text',
             )}
           >
             ⌂
           </button>
         )}
         <div className="flex-1 min-w-0">
-          <EditorTabBar tabs={tabs} activeId={activeTabId} onSelect={setActiveTab} onClose={closeTab} />
+          <EditorTabBar
+            tabs={tabs}
+            activeId={activeTabId}
+            onSelect={setActiveTab}
+            onClose={closeTab}
+          />
         </div>
       </div>
       {showBuilder && <BuilderView />}

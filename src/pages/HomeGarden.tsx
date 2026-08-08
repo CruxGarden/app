@@ -9,7 +9,6 @@ import NewCruxModal from '@/components/garden/NewCruxModal';
 import { IconButton, Modal, Button } from '@/components/ui';
 import { cn } from '@/lib/cn';
 
-
 function GlobeIcon() {
   return (
     <svg
@@ -51,22 +50,13 @@ function PlusCircleIcon() {
 export default function HomeGarden() {
   const author = useAppStore((s) => s.author);
   const avatarUrl = useAvatarUrl(author);
-  const {
-    cruxList,
-    loading,
-    search,
-    sortBy,
-    setSearch,
-    setSortBy,
-    handleClearSearch,
-    deleteCrux,
-  } = useGarden();
+  const { cruxList, loading, search, sortBy, setSearch, setSortBy, handleClearSearch, deleteCrux } =
+    useGarden();
 
   const [showNewCrux, setShowNewCrux] = useState(false);
 
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const deletingCrux = deletingId ? cruxList.find((c) => c.id === deletingId) : null;
-
 
   const handleConfirmDelete = useCallback(async () => {
     if (!deletingId) return;
@@ -178,15 +168,11 @@ export default function HomeGarden() {
       )}
 
       {/* Delete confirmation modal */}
-      <Modal
-        open={deletingId !== null}
-        onClose={() => setDeletingId(null)}
-        title="Delete Crux"
-      >
+      <Modal open={deletingId !== null} onClose={() => setDeletingId(null)} title="Delete Crux">
         <p className="text-sm text-text-muted mb-4">
           Are you sure you want to delete{' '}
-          <span className="text-text font-medium">{deletingCrux?.title || 'this crux'}</span>?
-          This action cannot be undone
+          <span className="text-text font-medium">{deletingCrux?.title || 'this crux'}</span>? This
+          action cannot be undone
         </p>
         <div className="flex justify-end">
           <Button variant="danger" onClick={handleConfirmDelete}>

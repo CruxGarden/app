@@ -22,9 +22,7 @@ function toHex(value: string): string {
   // Already hex — strip # and take only the first 6 chars (drop alpha if present)
   if (value.startsWith('#')) return value.replace('#', '').slice(0, 6);
   // Parse rgba/rgb — ignore alpha channel
-  const match = value.match(
-    /rgba?\(\s*(\d+),\s*(\d+),\s*(\d+)/,
-  );
+  const match = value.match(/rgba?\(\s*(\d+),\s*(\d+),\s*(\d+)/);
   if (match) {
     const r = parseInt(match[1]!).toString(16).padStart(2, '0');
     const g = parseInt(match[2]!).toString(16).padStart(2, '0');

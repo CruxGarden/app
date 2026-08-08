@@ -73,7 +73,9 @@ function FieldRenderer({
             type={field.type === 'number' ? 'number' : 'text'}
             value={String(value ?? '')}
             placeholder={field.placeholder}
-            onChange={(e) => onChange(field.type === 'number' ? Number(e.target.value) : e.target.value)}
+            onChange={(e) =>
+              onChange(field.type === 'number' ? Number(e.target.value) : e.target.value)
+            }
             className={inputClass}
           />
         </label>
@@ -224,10 +226,7 @@ function RepeaterField({
       </div>
       <div className="space-y-1">
         {value.map((item, i) => (
-          <div
-            key={i}
-            className="border border-border rounded-[var(--radius-sm)] overflow-hidden"
-          >
+          <div key={i} className="border border-border rounded-[var(--radius-sm)] overflow-hidden">
             {/* Collapsible header */}
             <div className="flex items-center gap-1 px-2 py-1.5 bg-surface-solid">
               <button

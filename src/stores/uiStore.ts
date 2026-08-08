@@ -142,7 +142,6 @@ interface UIState {
   // ── Mood Editor ──
   setMoodPanelOpen: (open: boolean) => void;
   toggleMoodPanel: () => void;
-
 }
 
 // ── Helpers ─────────────────────────────────────────────
@@ -198,10 +197,7 @@ function buildMosaicTree(panes: PaneType[]): MosaicNode<PaneType> | null {
 }
 
 /** Add a pane to an existing mosaic tree */
-function addPaneToMosaic(
-  tree: MosaicNode<PaneType> | null,
-  pane: PaneType,
-): MosaicNode<PaneType> {
+function addPaneToMosaic(tree: MosaicNode<PaneType> | null, pane: PaneType): MosaicNode<PaneType> {
   if (tree === null) return pane;
   return {
     direction: 'row',
@@ -368,7 +364,10 @@ function validateLayout(layout: PersistedLayout): ValidatedLayout {
   if (layout.mosaicLayout) {
     // Migrate saved mosaic tree: rename panes, remove unknown ones
     const renamed = renameMosaicPanes(layout.mosaicLayout);
-    mosaicLayout = filterMosaicPanes(renamed, allPanes as Set<string>) as MosaicNode<PaneType> | null;
+    mosaicLayout = filterMosaicPanes(
+      renamed,
+      allPanes as Set<string>,
+    ) as MosaicNode<PaneType> | null;
   }
   if (!mosaicLayout) {
     // Build from visible panes in order
@@ -390,7 +389,11 @@ function loadLayout(key: string): PersistedLayout | null {
 
 function saveLayout(
   key: string,
-  layout: { paneOrder: PaneType[]; paneVisibility: Record<PaneType, boolean>; mosaicLayout?: MosaicNode<PaneType> | null },
+  layout: {
+    paneOrder: PaneType[];
+    paneVisibility: Record<PaneType, boolean>;
+    mosaicLayout?: MosaicNode<PaneType> | null;
+  },
 ) {
   setSetting(key, JSON.stringify(layout));
 }
@@ -402,7 +405,11 @@ function debouncedSaveLayout(getState: () => UIState) {
   _saveTimer = setTimeout(() => {
     _saveTimer = null;
     const s = getState();
-    const layout = { paneOrder: s.paneOrder, paneVisibility: s.paneVisibility, mosaicLayout: s.mosaicLayout };
+    const layout = {
+      paneOrder: s.paneOrder,
+      paneVisibility: s.paneVisibility,
+      mosaicLayout: s.mosaicLayout,
+    };
     saveLayout(s.activeCruxId ? cruxLayoutKey(s.activeCruxId) : GLOBAL_LAYOUT_KEY, layout);
   }, 300);
 }
@@ -545,9 +552,7 @@ export const useUIStore = create<UIState>()((set, get) => ({
       });
     } else {
       const global = loadLayout(GLOBAL_LAYOUT_KEY);
-      const layout = global
-        ? validateLayout(global)
-        : getInitialLayout();
+      const layout = global ? validateLayout(global) : getInitialLayout();
       set({
         activeCruxId: null,
         paneOrder: layout.paneOrder,
@@ -569,9 +574,7 @@ export const useUIStore = create<UIState>()((set, get) => ({
     if (!wasVisible) {
       newMosaic = addPaneToMosaic(prev.mosaicLayout, pane);
     } else {
-      newMosaic = prev.mosaicLayout
-        ? removePaneFromMosaic(prev.mosaicLayout, pane)
-        : null;
+      newMosaic = prev.mosaicLayout ? removePaneFromMosaic(prev.mosaicLayout, pane) : null;
     }
 
     // Derive pane order from the mosaic tree leaves
@@ -579,7 +582,11 @@ export const useUIStore = create<UIState>()((set, get) => ({
 
     set({ paneVisibility: newVisibility, paneOrder: newOrder, mosaicLayout: newMosaic });
     const s = get();
-    const layout = { paneOrder: s.paneOrder, paneVisibility: s.paneVisibility, mosaicLayout: s.mosaicLayout };
+    const layout = {
+      paneOrder: s.paneOrder,
+      paneVisibility: s.paneVisibility,
+      mosaicLayout: s.mosaicLayout,
+    };
     saveLayout(s.activeCruxId ? cruxLayoutKey(s.activeCruxId) : GLOBAL_LAYOUT_KEY, layout);
   },
 
@@ -598,14 +605,22 @@ export const useUIStore = create<UIState>()((set, get) => ({
       paneOrder: newOrder,
     });
     const s = get();
-    const layout = { paneOrder: s.paneOrder, paneVisibility: s.paneVisibility, mosaicLayout: s.mosaicLayout };
+    const layout = {
+      paneOrder: s.paneOrder,
+      paneVisibility: s.paneVisibility,
+      mosaicLayout: s.mosaicLayout,
+    };
     saveLayout(s.activeCruxId ? cruxLayoutKey(s.activeCruxId) : GLOBAL_LAYOUT_KEY, layout);
   },
 
   reorderPanes: (newOrder) => {
     set({ paneOrder: newOrder });
     const s = get();
-    const layout = { paneOrder: s.paneOrder, paneVisibility: s.paneVisibility, mosaicLayout: s.mosaicLayout };
+    const layout = {
+      paneOrder: s.paneOrder,
+      paneVisibility: s.paneVisibility,
+      mosaicLayout: s.mosaicLayout,
+    };
     saveLayout(s.activeCruxId ? cruxLayoutKey(s.activeCruxId) : GLOBAL_LAYOUT_KEY, layout);
   },
 
@@ -615,8 +630,7 @@ export const useUIStore = create<UIState>()((set, get) => ({
     const prevLeaves = getMosaicLeaves(prev.mosaicLayout);
     const newLeaves = getMosaicLeaves(newLayout);
     const leavesChanged =
-      prevLeaves.length !== newLeaves.length ||
-      prevLeaves.some((l, i) => l !== newLeaves[i]);
+      prevLeaves.length !== newLeaves.length || prevLeaves.some((l, i) => l !== newLeaves[i]);
 
     if (leavesChanged) {
       // Leaves changed (pane added/removed) — full sync

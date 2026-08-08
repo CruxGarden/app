@@ -2,8 +2,13 @@ import { useEffect, useRef, useState, useMemo } from 'react';
 import { useCruxStore } from '@/stores/cruxStore';
 import { getServices } from '@/services';
 import { normalizePath } from '@/lib/rewriteUrls';
-import { Capability, can, type PreviewBridge } from '@/lib/platform';
-import { folderForCrux } from '@/services/project-folder';
+import { Capability, can } from '@/lib/platform';
+import { setActivePreview } from '@/lib/preview-registry';
+import {
+  startPreviewServer,
+  stopPreviewServer,
+  previewServerLeases,
+} from '@/services/preview-server';
 import {
   cachePreviewFiles,
   updatePreviewFile,
@@ -13,11 +18,6 @@ import {
   injectPreviewScripts,
   type PreviewFile,
 } from '@/lib/previewCache';
-
-function previewBridge(): PreviewBridge | null {
-  if (!can(Capability.PreviewServer)) return null;
-  return window.electronAPI?.preview ?? null;
-}
 
 /**
  * Desktop preview (ADR 0003): a local static server serves the Project Folder
@@ -42,31 +42,27 @@ function useDesktopPreviewUrl(
     [artifacts],
   );
 
-  // Server lifecycle — one server per open crux, stopped when leaving it
+  // Server lifecycle — one server per crux, shared by every editor tab
+  // (leases; see lib/lease.ts) so tab switches don't restart it.
   useEffect(() => {
-    if (!enabled) return;
-    const bridge = previewBridge();
-    if (!bridge) return;
-
+    if (!enabled || !can(Capability.PreviewServer)) return;
     let cancelled = false;
-    let startedFolder: string | null = null;
 
-    (async () => {
-      const folder = await folderForCrux(cruxId);
-      if (!folder || cancelled) return;
-      try {
-        const serverUrl = await bridge.start(folder);
-        startedFolder = folder;
-        if (!cancelled) setBase(serverUrl);
-      } catch (err) {
-        console.error('[preview] failed to start server:', err);
-      }
-    })();
+    startPreviewServer(cruxId)
+      .then((serverUrl) => {
+        if (cancelled || !serverUrl) return;
+        setBase(serverUrl);
+        setActivePreview(cruxId, `${serverUrl}/`); // front page — snapshot screenshots
+      })
+      .catch((err) => console.error('[preview] failed to start server:', err));
 
     return () => {
       cancelled = true;
       setBase(null);
-      if (startedFolder) bridge.stop(startedFolder).catch(() => {});
+      // Release synchronously, then deregister the capture URL only if no
+      // other tab still holds the server.
+      void stopPreviewServer(cruxId);
+      if (previewServerLeases.count(cruxId) === 0) setActivePreview(cruxId, null);
     };
   }, [cruxId, enabled]);
 
@@ -195,7 +191,7 @@ export function usePreviewUrl(
     return () => {
       cancelled = true;
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cruxId, filePath, webEnabled, artifactKey, swReady]);
 
   // Effect 2: Cache everything (initial) or just update HTML (subsequent changes)
@@ -232,9 +228,12 @@ export function usePreviewUrl(
       // Debounce all URL updates to prevent flash during rapid changes.
       // Full recache (AI wrote a file) gets a short delay; HTML-only edits get longer.
       if (debounceRef.current) clearTimeout(debounceRef.current);
-      debounceRef.current = setTimeout(() => {
-        if (!cancelled) setUrl(newUrl);
-      }, wasFullRecache ? 100 : 300);
+      debounceRef.current = setTimeout(
+        () => {
+          if (!cancelled) setUrl(newUrl);
+        },
+        wasFullRecache ? 100 : 300,
+      );
     })();
 
     return () => {

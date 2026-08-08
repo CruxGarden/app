@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
-import { isSiteCrux, startDevServer, stopDevServer } from '@/services/site';
+import { isSiteCrux, startDevServer, stopDevServer, devServerLeases } from '@/services/site';
 import { Capability, can } from '@/lib/platform';
 import { useCruxStore } from '@/stores/cruxStore';
 import { normalizePath } from '@/lib/rewriteUrls';
+import { setActivePreview } from '@/lib/preview-registry';
 
 export type SitePreviewPhase = 'idle' | 'installing' | 'starting' | 'ready' | 'error';
 
@@ -29,20 +30,23 @@ export function siteRouteFor(filePath: string): string {
 /**
  * Dev-server preview for Site Cruxes (ADR 0005): `astro dev` on the crux's
  * own port. Install runs on first use; HMR handles reloads (no version
- * bumping). The server lives as long as the crux is open.
+ * bumping).
+ *
+ * The server lives as long as the CRUX is open, not as long as a previewable
+ * tab is focused: lifecycle is driven by `isSite` alone, and the service layer
+ * leases the server so multiple editor tabs share one. Opening a CSS or config
+ * file no longer tears `astro dev` down. What the pane actually renders is
+ * decided downstream by `previewFor`.
  */
-export function useSitePreview(cruxId: string, filePath: string, enabled: boolean): SitePreview {
+export function useSitePreview(cruxId: string, filePath: string): SitePreview {
   const artifacts = useCruxStore((s) => s.artifacts);
-  const isSite = useMemo(
-    () => can(Capability.Build) && isSiteCrux(artifacts),
-    [artifacts],
-  );
+  const isSite = useMemo(() => can(Capability.Build) && isSiteCrux(artifacts), [artifacts]);
 
   const [base, setBase] = useState<string | null>(null);
   const [phase, setPhase] = useState<SitePreviewPhase>('idle');
   const [detail, setDetail] = useState('');
 
-  const active = enabled && isSite;
+  const active = isSite;
 
   // Surface toolchain output (pnpm install progress) while starting
   useEffect(() => {
@@ -66,6 +70,7 @@ export function useSitePreview(cruxId: string, filePath: string, enabled: boolea
         setBase(url);
         setPhase('ready');
         setDetail('');
+        setActivePreview(cruxId, `${url}/`); // front page — snapshot screenshots
       })
       .catch((err) => {
         if (cancelled) return;
@@ -77,7 +82,10 @@ export function useSitePreview(cruxId: string, filePath: string, enabled: boolea
       cancelled = true;
       setBase(null);
       setPhase('idle');
+      // Release synchronously, then deregister the capture URL only if no
+      // other tab still holds the server (a tab switch keeps it registered).
       stopDevServer(cruxId).catch(() => {});
+      if (devServerLeases.count(cruxId) === 0) setActivePreview(cruxId, null);
     };
   }, [cruxId, active]);
 

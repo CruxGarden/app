@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { useChat } from '@/hooks/useChat';
+import { resolveModel } from '@/ai/providers';
 import { useCruxStore } from '@/stores/cruxStore';
 import MessageList from './MessageList';
 import MessageInput from './MessageInput';
@@ -8,7 +9,9 @@ import ModelInfoPanel from './ModelInfoPanel';
 
 export default function ChatPanel() {
   const { messages, isStreaming, streamingContent, send, stop } = useChat();
-  const model = useCruxStore((s) => s.crux?.meta?.settings?.model || 'claude-sonnet-4-20250514');
+  const model = useCruxStore((s) =>
+    resolveModel(s.crux?.meta?.settings?.model as string | undefined),
+  );
   const setModel = useCruxStore((s) => s.setModel);
   const isViewingSnapshot = useCruxStore((s) => s.viewingSnapshotId !== null);
   const snapshotMessageCount = useCruxStore((s) => s.snapshotMessageCount);
@@ -21,9 +24,8 @@ export default function ChatPanel() {
     return messages;
   }, [messages, isViewingSnapshot, snapshotMessageCount]);
 
-  const remainingCount = isViewingSnapshot && snapshotMessageCount !== null
-    ? messages.length - snapshotMessageCount
-    : 0;
+  const remainingCount =
+    isViewingSnapshot && snapshotMessageCount !== null ? messages.length - snapshotMessageCount : 0;
 
   // User message history in reverse order (most recent first) for arrow-up recall
   const history = useMemo(

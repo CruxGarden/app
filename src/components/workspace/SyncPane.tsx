@@ -11,7 +11,16 @@ import { usePaneWidth } from '@/hooks/usePaneWidth';
 
 function CloudUpIcon() {
   return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+    <svg
+      width="14"
+      height="14"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
       <path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242" />
       <path d="M12 12v9" />
       <path d="m16 16-4-4-4 4" />
@@ -21,7 +30,16 @@ function CloudUpIcon() {
 
 function CloudDownIcon() {
   return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+    <svg
+      width="14"
+      height="14"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
       <path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242" />
       <path d="M12 12v9" />
       <path d="m8 17 4 4 4-4" />
@@ -33,7 +51,10 @@ export default function SyncPane() {
   const crux = useCruxStore((s) => s.crux);
   const allMessages = useCruxStore((s) => s.messages);
   const messageSegmentStart = useCruxStore((s) => s.messageSegmentStart);
-  const messages = useMemo(() => allMessages.slice(messageSegmentStart), [allMessages, messageSegmentStart]);
+  const messages = useMemo(
+    () => allMessages.slice(messageSegmentStart),
+    [allMessages, messageSegmentStart],
+  );
   const summary = useCruxStore((s) => s.summary);
   const author = useAppStore((s) => s.author);
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
@@ -50,13 +71,20 @@ export default function SyncPane() {
   useEffect(() => {
     if (!crux || !isAuthenticated) return;
     let cancelled = false;
-    syncApi.listSyncedCruxes().then((list) => {
-      if (cancelled) return;
-      const entry = list.find((c) => c.cruxId === crux.id);
-      if (entry) setLastSynced({ at: entry.updatedAt, size: entry.size });
-    }).catch(() => { /* non-critical */ });
-    return () => { cancelled = true; };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    syncApi
+      .listSyncedCruxes()
+      .then((list) => {
+        if (cancelled) return;
+        const entry = list.find((c) => c.cruxId === crux.id);
+        if (entry) setLastSynced({ at: entry.updatedAt, size: entry.size });
+      })
+      .catch(() => {
+        /* non-critical */
+      });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [crux?.id, isAuthenticated]);
 
   const handlePush = useCallback(async () => {
@@ -152,9 +180,7 @@ export default function SyncPane() {
                 <span className="ml-2">{formatBytes(lastSynced.size)}</span>
               </div>
             ) : (
-              <div className="text-[11px] font-mono text-text-muted">
-                Not synced yet
-              </div>
+              <div className="text-[11px] font-mono text-text-muted">Not synced yet</div>
             )}
           </div>
 
@@ -171,9 +197,13 @@ export default function SyncPane() {
             )}
           >
             {pushing ? (
-              <><Spinner size={14} /> Pushing...</>
+              <>
+                <Spinner size={14} /> Pushing...
+              </>
             ) : (
-              <><CloudUpIcon /> Push to cloud</>
+              <>
+                <CloudUpIcon /> Push to cloud
+              </>
             )}
           </button>
 
@@ -190,24 +220,28 @@ export default function SyncPane() {
             )}
           >
             {pulling ? (
-              <><Spinner size={14} /> Pulling...</>
+              <>
+                <Spinner size={14} /> Pulling...
+              </>
             ) : (
-              <><CloudDownIcon /> Pull from cloud</>
+              <>
+                <CloudDownIcon /> Pull from cloud
+              </>
             )}
           </button>
 
           {/* Progress / error */}
           {progress && (
-            <p className={cn(
-              'text-[11px] font-mono text-center truncate',
-              progress.includes('failed') ? 'text-error' : 'text-text-muted',
-            )}>
+            <p
+              className={cn(
+                'text-[11px] font-mono text-center truncate',
+                progress.includes('failed') ? 'text-error' : 'text-text-muted',
+              )}
+            >
               {progress}
             </p>
           )}
-          {error && (
-            <p className="text-[11px] font-mono text-center text-error">{error}</p>
-          )}
+          {error && <p className="text-[11px] font-mono text-center text-error">{error}</p>}
         </div>
       )}
     </div>

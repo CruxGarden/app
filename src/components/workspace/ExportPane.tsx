@@ -49,7 +49,10 @@ export default function ExportPane() {
   const artifacts = useCruxStore((s) => s.artifacts);
   const allMessages = useCruxStore((s) => s.messages);
   const messageSegmentStart = useCruxStore((s) => s.messageSegmentStart);
-  const messages = useMemo(() => allMessages.slice(messageSegmentStart), [allMessages, messageSegmentStart]);
+  const messages = useMemo(
+    () => allMessages.slice(messageSegmentStart),
+    [allMessages, messageSegmentStart],
+  );
   const summary = useCruxStore((s) => s.summary);
   const growthCount = useCruxStore((s) => s.growthCount);
   const author = useAppStore((s) => s.author);
@@ -84,7 +87,9 @@ export default function ExportPane() {
       URL.revokeObjectURL(url);
 
       if (result.failed.length > 0) {
-        setProgress(`Done — ${result.failed.length} file${result.failed.length > 1 ? 's' : ''} failed`);
+        setProgress(
+          `Done — ${result.failed.length} file${result.failed.length > 1 ? 's' : ''} failed`,
+        );
       } else {
         setProgress('');
       }
@@ -119,7 +124,9 @@ export default function ExportPane() {
       URL.revokeObjectURL(url);
 
       if (result.failed.length > 0) {
-        setProgress(`Done — ${result.failed.length} file${result.failed.length > 1 ? 's' : ''} failed`);
+        setProgress(
+          `Done — ${result.failed.length} file${result.failed.length > 1 ? 's' : ''} failed`,
+        );
       } else {
         setProgress('');
       }
@@ -280,10 +287,12 @@ export default function ExportPane() {
 
           {/* Progress */}
           {progress && (
-            <p className={cn(
-              'text-[11px] font-mono text-center truncate',
-              progress === 'Export failed' ? 'text-error' : 'text-text-muted',
-            )}>
+            <p
+              className={cn(
+                'text-[11px] font-mono text-center truncate',
+                progress === 'Export failed' ? 'text-error' : 'text-text-muted',
+              )}
+            >
               {progress}
             </p>
           )}

@@ -66,26 +66,49 @@ describe('path predicates', () => {
 describe('previewFor: form mode', () => {
   it('config.json with a form schema in form mode → form', () => {
     expect(
-      previewFor(input({ path: 'config.json', viewMode: 'form', mimeType: 'application/json', hasFormSchema: true })),
+      previewFor(
+        input({
+          path: 'config.json',
+          viewMode: 'form',
+          mimeType: 'application/json',
+          hasFormSchema: true,
+        }),
+      ),
     ).toEqual({ kind: 'form' });
   });
 
   it('form mode without a schema falls through past source and preview arms', () => {
     // viewMode is neither 'source' nor 'preview', so a text file lands on unavailable
     expect(
-      previewFor(input({ path: 'config.json', viewMode: 'form', mimeType: 'application/json', hasFormSchema: false })),
+      previewFor(
+        input({
+          path: 'config.json',
+          viewMode: 'form',
+          mimeType: 'application/json',
+          hasFormSchema: false,
+        }),
+      ),
     ).toEqual({ kind: 'unavailable' });
   });
 
   it('form mode on a non-config file falls through even with a schema', () => {
     expect(
-      previewFor(input({ path: 'data.json', viewMode: 'form', mimeType: 'application/json', hasFormSchema: true })),
+      previewFor(
+        input({
+          path: 'data.json',
+          viewMode: 'form',
+          mimeType: 'application/json',
+          hasFormSchema: true,
+        }),
+      ),
     ).toEqual({ kind: 'unavailable' });
   });
 
   it('form mode without loaded content falls through', () => {
     expect(
-      previewFor(input({ path: 'config.json', viewMode: 'form', hasFormSchema: true, hasContent: false })),
+      previewFor(
+        input({ path: 'config.json', viewMode: 'form', hasFormSchema: true, hasContent: false }),
+      ),
     ).toEqual({ kind: 'unavailable' });
   });
 });
@@ -93,24 +116,40 @@ describe('previewFor: form mode', () => {
 describe('previewFor: source mode', () => {
   it('any text file in source mode → source', () => {
     expect(previewFor(input({ viewMode: 'source' }))).toEqual({ kind: 'source' });
-    expect(previewFor(input({ path: 'main.ts', viewMode: 'source', mimeType: 'text/typescript' }))).toEqual({ kind: 'source' });
+    expect(
+      previewFor(input({ path: 'main.ts', viewMode: 'source', mimeType: 'text/typescript' })),
+    ).toEqual({ kind: 'source' });
   });
 
   it('source mode wins over html preview machinery', () => {
-    expect(
-      previewFor(input({ viewMode: 'source', previewUrl: WEB_URL })),
-    ).toEqual({ kind: 'source' });
+    expect(previewFor(input({ viewMode: 'source', previewUrl: WEB_URL }))).toEqual({
+      kind: 'source',
+    });
   });
 
   it('source mode in a site crux still shows Monaco', () => {
     expect(
-      previewFor(input({ path: 'src/pages/index.astro', viewMode: 'source', site: site({ isSite: true, url: DEV_URL, phase: 'ready' }) })),
+      previewFor(
+        input({
+          path: 'src/pages/index.astro',
+          viewMode: 'source',
+          site: site({ isSite: true, url: DEV_URL, phase: 'ready' }),
+        }),
+      ),
     ).toEqual({ kind: 'source' });
   });
 
   it('source mode with no text content falls through to binary views', () => {
     expect(
-      previewFor(input({ path: 'photo.png', viewMode: 'source', mimeType: 'image/png', hasContent: false, hasBlob: true })),
+      previewFor(
+        input({
+          path: 'photo.png',
+          viewMode: 'source',
+          mimeType: 'image/png',
+          hasContent: false,
+          hasBlob: true,
+        }),
+      ),
     ).toEqual({ kind: 'image' });
   });
 });
@@ -129,9 +168,9 @@ describe('previewFor: html preview', () => {
   });
 
   it('preview mode with content but a non-previewable extension falls through', () => {
-    expect(
-      previewFor(input({ path: 'main.ts', mimeType: 'text/typescript' })),
-    ).toEqual({ kind: 'unavailable' });
+    expect(previewFor(input({ path: 'main.ts', mimeType: 'text/typescript' }))).toEqual({
+      kind: 'unavailable',
+    });
   });
 
   it('preview mode without loaded content skips the preview arms', () => {
@@ -153,12 +192,20 @@ describe('previewFor: localBase (Copy/Open URL bar)', () => {
   });
 
   it('strips the ?v= cache-busting query from localBase', () => {
-    const target = previewFor(input({ previewUrl: 'http://127.0.0.1:9000/a/b.html?v=17', desktopServed: true }));
+    const target = previewFor(
+      input({ previewUrl: 'http://127.0.0.1:9000/a/b.html?v=17', desktopServed: true }),
+    );
     expect(target).toMatchObject({ localBase: 'http://127.0.0.1:9000/a/b.html' });
   });
 
   it('leaves query-less URLs untouched', () => {
-    const target = previewFor(input({ site: site({ isSite: true, url: DEV_URL, phase: 'ready' }), path: 'src/pages/about.astro', desktopServed: true }));
+    const target = previewFor(
+      input({
+        site: site({ isSite: true, url: DEV_URL, phase: 'ready' }),
+        path: 'src/pages/about.astro',
+        desktopServed: true,
+      }),
+    );
     expect(target).toMatchObject({ kind: 'iframe', url: DEV_URL, localBase: DEV_URL });
   });
 });
@@ -174,72 +221,131 @@ describe('previewFor: site cruxes', () => {
 
   it('site crux wins over the plain html arm (html file inside a site)', () => {
     expect(
-      previewFor(input({ path: 'public/legacy.html', site: readySite, previewUrl: null, desktopServed: true })),
+      previewFor(
+        input({
+          path: 'public/legacy.html',
+          site: readySite,
+          previewUrl: null,
+          desktopServed: true,
+        }),
+      ),
     ).toEqual({ kind: 'iframe', url: DEV_URL, localBase: DEV_URL });
   });
 
   it('site crux in preview mode without a URL → site-status with phase/detail', () => {
     expect(
-      previewFor(input({
-        path: 'src/pages/index.astro',
-        site: site({ isSite: true, phase: 'installing', detail: 'pnpm install…' }),
-      })),
+      previewFor(
+        input({
+          path: 'src/pages/index.astro',
+          site: site({ isSite: true, phase: 'installing', detail: 'pnpm install…' }),
+        }),
+      ),
     ).toEqual({ kind: 'site-status', phase: 'installing', detail: 'pnpm install…' });
   });
 
   it('site crux dev-server failure surfaces the error phase and detail', () => {
     expect(
-      previewFor(input({
-        path: 'src/pages/index.astro',
-        site: site({ isSite: true, phase: 'error', detail: 'EADDRINUSE' }),
-      })),
+      previewFor(
+        input({
+          path: 'src/pages/index.astro',
+          site: site({ isSite: true, phase: 'error', detail: 'EADDRINUSE' }),
+        }),
+      ),
     ).toEqual({ kind: 'site-status', phase: 'error', detail: 'EADDRINUSE' });
   });
 });
 
 describe('previewFor: svg / markdown / empty arms', () => {
   it('svg in preview mode → svg', () => {
-    expect(previewFor(input({ path: 'logo.svg', mimeType: 'image/svg+xml' }))).toEqual({ kind: 'svg' });
+    expect(previewFor(input({ path: 'logo.svg', mimeType: 'image/svg+xml' }))).toEqual({
+      kind: 'svg',
+    });
   });
 
   it('md and mdx in preview mode → markdown', () => {
-    expect(previewFor(input({ path: 'README.md', mimeType: 'text/markdown' }))).toEqual({ kind: 'markdown' });
-    expect(previewFor(input({ path: 'post.mdx', mimeType: 'text/markdown' }))).toEqual({ kind: 'markdown' });
+    expect(previewFor(input({ path: 'README.md', mimeType: 'text/markdown' }))).toEqual({
+      kind: 'markdown',
+    });
+    expect(previewFor(input({ path: 'post.mdx', mimeType: 'text/markdown' }))).toEqual({
+      kind: 'markdown',
+    });
   });
 
   it('previewable extension with no renderer (astro off-desktop) → empty', () => {
-    expect(previewFor(input({ path: 'src/pages/index.astro', mimeType: 'text/plain' }))).toEqual({ kind: 'empty' });
+    expect(previewFor(input({ path: 'src/pages/index.astro', mimeType: 'text/plain' }))).toEqual({
+      kind: 'empty',
+    });
   });
 });
 
 describe('previewFor: binary views', () => {
   it('image blob → image', () => {
     expect(
-      previewFor(input({ path: 'photo.png', viewMode: 'source', mimeType: 'image/png', hasContent: false, hasBlob: true })),
+      previewFor(
+        input({
+          path: 'photo.png',
+          viewMode: 'source',
+          mimeType: 'image/png',
+          hasContent: false,
+          hasBlob: true,
+        }),
+      ),
     ).toEqual({ kind: 'image' });
   });
 
   it('image mime without a blob → unavailable (never a broken viewer)', () => {
     expect(
-      previewFor(input({ path: 'photo.png', viewMode: 'source', mimeType: 'image/png', hasContent: false, hasBlob: false })),
+      previewFor(
+        input({
+          path: 'photo.png',
+          viewMode: 'source',
+          mimeType: 'image/png',
+          hasContent: false,
+          hasBlob: false,
+        }),
+      ),
     ).toEqual({ kind: 'unavailable' });
   });
 
   it('video blob → video', () => {
     expect(
-      previewFor(input({ path: 'clip.mp4', viewMode: 'source', mimeType: 'video/mp4', hasContent: false, hasBlob: true })),
+      previewFor(
+        input({
+          path: 'clip.mp4',
+          viewMode: 'source',
+          mimeType: 'video/mp4',
+          hasContent: false,
+          hasBlob: true,
+        }),
+      ),
     ).toEqual({ kind: 'video' });
   });
 
   it('other binary blob → blob', () => {
     expect(
-      previewFor(input({ path: 'doc.pdf', viewMode: 'source', mimeType: 'application/pdf', hasContent: false, hasBlob: true })),
+      previewFor(
+        input({
+          path: 'doc.pdf',
+          viewMode: 'source',
+          mimeType: 'application/pdf',
+          hasContent: false,
+          hasBlob: true,
+        }),
+      ),
     ).toEqual({ kind: 'blob' });
   });
 
   it('nothing loaded at all → unavailable', () => {
     expect(
-      previewFor(input({ path: 'mystery.bin', viewMode: 'source', mimeType: 'application/octet-stream', hasContent: false, hasBlob: false })),
+      previewFor(
+        input({
+          path: 'mystery.bin',
+          viewMode: 'source',
+          mimeType: 'application/octet-stream',
+          hasContent: false,
+          hasBlob: false,
+        }),
+      ),
     ).toEqual({ kind: 'unavailable' });
   });
 });
@@ -248,7 +354,9 @@ describe('previewFor: binary views', () => {
 
 describe('mountedIframeSrc', () => {
   it('plain html file: mounted whenever the preview URL exists, any view mode', () => {
-    expect(mountedIframeSrc({ path: 'index.html', site: site(), previewUrl: WEB_URL })).toBe(WEB_URL);
+    expect(mountedIframeSrc({ path: 'index.html', site: site(), previewUrl: WEB_URL })).toBe(
+      WEB_URL,
+    );
   });
 
   it('plain html file without a preview URL: not mounted', () => {
@@ -261,13 +369,21 @@ describe('mountedIframeSrc', () => {
 
   it('site crux with a running dev server: mounted with the dev-server URL', () => {
     expect(
-      mountedIframeSrc({ path: 'src/pages/index.astro', site: site({ isSite: true, url: DEV_URL, phase: 'ready' }), previewUrl: null }),
+      mountedIframeSrc({
+        path: 'src/pages/index.astro',
+        site: site({ isSite: true, url: DEV_URL, phase: 'ready' }),
+        previewUrl: null,
+      }),
     ).toBe(DEV_URL);
   });
 
   it('site crux before the dev server is up: not mounted (even for html files)', () => {
     expect(
-      mountedIframeSrc({ path: 'public/legacy.html', site: site({ isSite: true, phase: 'starting' }), previewUrl: WEB_URL }),
+      mountedIframeSrc({
+        path: 'public/legacy.html',
+        site: site({ isSite: true, phase: 'starting' }),
+        previewUrl: WEB_URL,
+      }),
     ).toBeNull();
   });
 });

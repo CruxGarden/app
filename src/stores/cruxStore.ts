@@ -1,11 +1,5 @@
 import { create } from 'zustand';
-import type {
-  Crux,
-  ChatMessage,
-  Artifact,
-  CruxSummary,
-  Dimension,
-} from '@/api/types';
+import type { Crux, ChatMessage, Artifact, CruxSummary, Dimension } from '@/api/types';
 import type { UpdateCruxInput } from '@/services/types';
 import type { Palette } from '@/lib/palette';
 import { getServices } from '@/services';
@@ -21,10 +15,18 @@ import {
   type SnapshotChainNode,
   type CreateSnapshotOptions,
 } from '@/services/growth';
-import { publishPipeline, unpublishPipeline } from '@/services/publish';
+import {
+  publishPipeline,
+  unpublishPipeline,
+  describePublishFailure,
+  type PublishPhase,
+  type PublishFailure,
+} from '@/services/publish';
 import { projectFolderExists, projectAllArtifacts } from '@/services/project-folder';
 import { flushIngestion } from '@/services/ingestion';
-import { getPersona } from '@/components/mood/mood-helpers';
+import { captureWorkspacePreview } from '@/services/preview-capture';
+import { getPersona } from '@/services/persona';
+import { DEFAULT_MODEL, resolveModel } from '@/ai/providers';
 import { useUIStore } from '@/stores/uiStore';
 
 interface CruxState {
@@ -85,15 +87,20 @@ interface CruxState {
   reset: () => void;
 
   // Publish actions
-  publishCrux: () => Promise<void>;
+  /** Publish; resolves true on success, false with `publishFailure` set. */
+  publishCrux: () => Promise<boolean>;
+  /** The step a running publish is on (null when idle). */
+  publishPhase: PublishPhase | null;
+  /** Why the last publish failed (null after a success or a fresh attempt). */
+  publishFailure: PublishFailure | null;
   unpublishCrux: () => Promise<void>;
 
   // Upload progress
   uploadProgress: { total: number; completed: number; currentFile: string } | null;
 
   // Token usage tracking (cumulative for the session)
-  tokenUsage: { inputTokens: number; outputTokens: number };
-  addTokenUsage: (input: number, output: number) => void;
+  tokenUsage: { inputTokens: number; outputTokens: number; cachedInputTokens: number };
+  addTokenUsage: (input: number, output: number, cached?: number) => void;
 
   // File CRUD actions
   createFile: (path: string, content?: string) => Promise<Artifact>;
@@ -120,11 +127,17 @@ interface CruxState {
   // Branching actions
   branchFromSnapshot: (snapshotId: string, label: string) => Promise<void>;
 
-  // Delete confirmation actions
-  addPendingDelete: (artifactId: string, path: string) => void;
+  // Delete confirmation actions — the AI's delete_file tool blocks on
+  // requestDeleteApproval; ChatPane's banner resolves it via confirm/dismiss.
+  requestDeleteApproval: (artifactId: string, path: string) => Promise<boolean>;
   confirmDelete: (artifactId: string) => Promise<void>;
   dismissDelete: (artifactId: string) => void;
 }
+
+// Waiters on in-flight delete approvals (AI tool blocked on the user).
+// Module-level: promises don't belong in serialized store state. Keyed by
+// artifact, a LIST because one artifact can have several waiting tool calls.
+const deleteResolvers = new Map<string, ((approved: boolean) => void)[]>();
 
 export const useCruxStore = create<CruxState>((set, get) => ({
   crux: null,
@@ -147,16 +160,20 @@ export const useCruxStore = create<CruxState>((set, get) => ({
   snapshotMessageCount: null,
   pendingDeletes: [],
   folderMissing: false,
+  publishPhase: null,
+  publishFailure: null,
   uploadProgress: null,
-  tokenUsage: { inputTokens: 0, outputTokens: 0 },
+  tokenUsage: { inputTokens: 0, outputTokens: 0, cachedInputTokens: 0 },
 
-  addTokenUsage: (input: number, output: number) => {
+  addTokenUsage: (input: number, output: number, cached = 0) => {
     set((s) => ({
       tokenUsage: {
         // Input tokens = latest value (represents current conversation size, not cumulative)
         inputTokens: input,
         // Output tokens accumulate across the session
         outputTokens: s.tokenUsage.outputTokens + output,
+        // Cache reads = latest value (how much of the last request was served from cache)
+        cachedInputTokens: cached,
       },
     }));
   },
@@ -214,9 +231,10 @@ export const useCruxStore = create<CruxState>((set, get) => ({
 
       // Active tip: the workspace's activeBranch setting, or the latest snapshot
       const activeBranchTip = (crux.meta?.settings?.activeBranch as string) || null;
-      const tipId = activeBranchTip && snapshotNodes.has(activeBranchTip)
-        ? activeBranchTip
-        : sortedGrowths[sortedGrowths.length - 1]!.targetId;
+      const tipId =
+        activeBranchTip && snapshotNodes.has(activeBranchTip)
+          ? activeBranchTip
+          : sortedGrowths[sortedGrowths.length - 1]!.targetId;
 
       const chain = await walkSnapshotChain(tipId, async (id) => snapshotNodes.get(id) ?? null);
       priorMessages = chain.flatMap((n) => n.messages);
@@ -236,8 +254,12 @@ export const useCruxStore = create<CruxState>((set, get) => ({
       hasUnpublishedChanges: hasChanges,
       // Estimate initial token usage from message history until first real API response
       tokenUsage: {
-        inputTokens: fullMessages.reduce((sum, m) => sum + Math.ceil((m.content?.length || 0) / 3.5) + 4, 0),
+        inputTokens: fullMessages.reduce(
+          (sum, m) => sum + Math.ceil((m.content?.length || 0) / 3.5) + 4,
+          0,
+        ),
         outputTokens: 0,
+        cachedInputTokens: 0,
       },
     });
 
@@ -288,7 +310,7 @@ export const useCruxStore = create<CruxState>((set, get) => ({
         messages: initialMessages,
         summary: null,
         settings: {
-          model: 'claude-sonnet-4-20250514',
+          model: DEFAULT_MODEL,
         },
       },
     });
@@ -407,6 +429,9 @@ export const useCruxStore = create<CruxState>((set, get) => ({
   },
 
   reset: () => {
+    // Answer any AI delete request still waiting on the user — clearing the
+    // banners alone would leave the tool call (and the whole turn) hanging.
+    cancelPendingDeletes();
     set({
       crux: null,
       messages: [],
@@ -431,12 +456,28 @@ export const useCruxStore = create<CruxState>((set, get) => ({
 
   // Publish actions — the pipeline lives in services/publish (deep module);
   // the store only hands in state and stores the result.
+  // Publishing reports its own outcome: both entry points used to `catch {}`,
+  // so a failed site build looked exactly like a publish that did nothing.
+  // The phase and the failure live here so the Share pane can show them
+  // whichever button started the publish.
   publishCrux: async () => {
     const { crux, artifacts, saveMeta } = get();
-    if (!crux) return;
-    await saveMeta();
-    const mergedCrux = await publishPipeline(crux, artifacts || []);
-    set({ crux: mergedCrux, hasUnpublishedChanges: false });
+    if (!crux) return false;
+    set({ publishFailure: null, publishPhase: 'sync' });
+    try {
+      await saveMeta();
+      const mergedCrux = await publishPipeline(crux, artifacts || [], {
+        onProgress: (phase) => set({ publishPhase: phase }),
+      });
+      set({ crux: mergedCrux, hasUnpublishedChanges: false });
+      return true;
+    } catch (err) {
+      console.error('[publish] failed:', err);
+      set({ publishFailure: describePublishFailure(err) });
+      return false;
+    } finally {
+      set({ publishPhase: null });
+    }
   },
 
   unpublishCrux: async () => {
@@ -556,7 +597,9 @@ export const useCruxStore = create<CruxState>((set, get) => ({
     const { crux } = get();
     if (!crux) throw new Error('No active crux');
     const { artifact } = getServices();
-    set({ uploadProgress: { total: files.length, completed: 0, currentFile: files[0]?.path || '' } });
+    set({
+      uploadProgress: { total: files.length, completed: 0, currentFile: files[0]?.path || '' },
+    });
     const newArtifacts: Artifact[] = [];
     for (let i = 0; i < files.length; i++) {
       const { file, path } = files[i]!;
@@ -635,12 +678,29 @@ export const useCruxStore = create<CruxState>((set, get) => ({
     // must never capture a half-observed state. Resolves immediately on web.
     await flushIngestion();
 
-    const { crux, messages, messageSegmentStart, growths, growthCount, artifacts } = get();
+    const { crux, messages, messageSegmentStart, growths, growthCount } = get();
     if (!crux) return;
+
+    // Snapshot-with-screenshot: if a local preview is running (desktop),
+    // screenshot its front page into preview.jpg first so the snapshot clone
+    // carries a fresh thumbnail. Best-effort — never blocks the snapshot.
+    const previewShot = await captureWorkspacePreview(crux.id);
+    if (previewShot) {
+      const existing = get().artifacts.find((a) => a.id === previewShot.id);
+      if (existing) get().updateArtifact(previewShot.id, previewShot);
+      else get().addArtifact(previewShot);
+    }
 
     const deps = await defaultGrowthDeps();
     const result = await createSnapshotCore(
-      { crux, messages, messageSegmentStart, growths, growthCount, artifactCount: artifacts.length },
+      {
+        crux,
+        messages,
+        messageSegmentStart,
+        growths,
+        growthCount,
+        artifactCount: get().artifacts.length,
+      },
       options,
       deps,
     );
@@ -648,14 +708,27 @@ export const useCruxStore = create<CruxState>((set, get) => ({
     get().addGrowth(result.growth);
     // Advance segment start so saveMeta only persists new messages going forward
     set({ messageSegmentStart: get().messages.length });
+
+    // Advance the branch tip. `branchFromSnapshot` sets activeBranch and it was
+    // never moved on, so every later snapshot re-parented onto the branch point
+    // (a star, not a chain) and loadCrux — which walks back from activeBranch —
+    // dropped every post-branch conversation segment on reload.
+    if (get().crux?.meta?.settings?.activeBranch) {
+      get().patchCruxMeta({
+        settings: {
+          ...(get().crux!.meta!.settings as Record<string, unknown>),
+          activeBranch: result.snapshotCruxId,
+        },
+      });
+    }
     await get().saveMeta();
 
-    // Fire-and-forget AI summary
+    // Fire-and-forget AI summary — scoped to the segment this snapshot captured
     if (!options.silent) {
-      const model = crux.meta?.settings?.model || 'claude-sonnet-4-20250514';
+      const model = resolveModel(crux.meta?.settings?.model);
       void generateSnapshotSummary({
         dimensionId: result.growth.id,
-        messages,
+        messages: messages.slice(messageSegmentStart),
         artifactNames: result.artifactNames,
         model,
         previousSummary: result.previousSummary,
@@ -672,7 +745,14 @@ export const useCruxStore = create<CruxState>((set, get) => ({
 
   // Snapshot viewing actions
   viewSnapshot: async (snapshotId: string, index: number) => {
-    const { crux, artifacts, messages, messageSegmentStart, workspaceArtifacts, workspaceMessages } = get();
+    const {
+      crux,
+      artifacts,
+      messages,
+      messageSegmentStart,
+      workspaceArtifacts,
+      workspaceMessages,
+    } = get();
     if (!crux) return;
     const { artifact, crux: cruxService } = getServices();
     const snapshotArtifacts = await artifact.findByResource('crux', snapshotId);
@@ -680,9 +760,10 @@ export const useCruxStore = create<CruxState>((set, get) => ({
     // Load snapshot crux to get its cumulative message count
     const snapshotCrux = await cruxService.findById(snapshotId);
     // Use cumulativeMessageCount (new format) or fall back to messages.length (old format where full conversation was stored)
-    const cumulativeCount = (snapshotCrux.meta?.cumulativeMessageCount as number)
-      ?? (snapshotCrux.meta?.messages as ChatMessage[] | undefined)?.length
-      ?? 0;
+    const cumulativeCount =
+      (snapshotCrux.meta?.cumulativeMessageCount as number) ??
+      (snapshotCrux.meta?.messages as ChatMessage[] | undefined)?.length ??
+      0;
 
     set({
       viewingSnapshotId: snapshotId,
@@ -702,7 +783,9 @@ export const useCruxStore = create<CruxState>((set, get) => ({
       const prev = sourceArtifacts.find((a) => a.id === activeTabId);
       if (prev) {
         const prevPath = (prev.meta?.path || prev.filename || '') as string;
-        const match = snapshotArtifacts.find((a) => (a.meta?.path || a.filename || '') === prevPath);
+        const match = snapshotArtifacts.find(
+          (a) => (a.meta?.path || a.filename || '') === prevPath,
+        );
         if (match) {
           useUIStore.getState().openFile(match.id, prevPath);
         }
@@ -717,7 +800,8 @@ export const useCruxStore = create<CruxState>((set, get) => ({
     const activeTabId = useUIStore.getState().editor.activeTabId;
     const prevPath = activeTabId
       ? ((artifacts.find((a) => a.id === activeTabId)?.meta?.path ||
-          artifacts.find((a) => a.id === activeTabId)?.filename || '') as string)
+          artifacts.find((a) => a.id === activeTabId)?.filename ||
+          '') as string)
       : null;
 
     set({
@@ -844,30 +928,72 @@ export const useCruxStore = create<CruxState>((set, get) => ({
     await saveMeta();
   },
 
-  addPendingDelete: (artifactId: string, path: string) => {
-    set((s) => ({
-      pendingDeletes: [...s.pendingDeletes, { artifactId, path }],
-    }));
+  requestDeleteApproval: (artifactId: string, path: string) => {
+    // A model can emit the same delete twice in one step. Both callers must
+    // settle, so waiters are queued per artifact — overwriting the resolver
+    // orphaned the first promise and hung the whole conversation.
+    const existing = deleteResolvers.get(artifactId);
+    if (existing) {
+      return new Promise<boolean>((resolve) => existing.push(resolve));
+    }
+    return new Promise<boolean>((resolve) => {
+      deleteResolvers.set(artifactId, [resolve]);
+      set((s) => ({
+        pendingDeletes: [...s.pendingDeletes, { artifactId, path }],
+      }));
+    });
   },
 
   confirmDelete: async (artifactId: string) => {
     const { crux } = get();
-    if (!crux) return;
-    const { artifact } = getServices();
-    await artifact.delete(artifactId);
-    const arts = await artifact.findByResource('crux', crux.id);
-    set((s) => ({
-      artifacts: arts,
-      pendingDeletes: s.pendingDeletes.filter((d) => d.artifactId !== artifactId),
-    }));
+    try {
+      if (!crux) return;
+      const { artifact } = getServices();
+      await artifact.delete(artifactId);
+      const arts = await artifact.findByResource('crux', crux.id);
+      set({ artifacts: arts });
+      settleDeleteApproval(artifactId, true);
+    } catch (err) {
+      console.error('Delete failed:', err);
+      settleDeleteApproval(artifactId, false); // never strand the tool call
+    } finally {
+      // Whatever happened, the banner goes away and nobody is left waiting
+      set((s) => ({ pendingDeletes: s.pendingDeletes.filter((d) => d.artifactId !== artifactId) }));
+      settleDeleteApproval(artifactId, false);
+    }
   },
 
   dismissDelete: (artifactId: string) => {
     set((s) => ({
       pendingDeletes: s.pendingDeletes.filter((d) => d.artifactId !== artifactId),
     }));
+    settleDeleteApproval(artifactId, false);
   },
 }));
+
+/**
+ * Resolve every waiter on a pending delete. Safe to call twice — the entry is
+ * removed first, so a later "cleanup" call is a no-op rather than a
+ * contradiction.
+ */
+function settleDeleteApproval(artifactId: string, approved: boolean): void {
+  const waiters = deleteResolvers.get(artifactId);
+  if (!waiters) return;
+  deleteResolvers.delete(artifactId);
+  for (const resolve of waiters) resolve(approved);
+}
+
+/**
+ * Answer "no" to every outstanding delete request. Called when the workspace
+ * is torn down or a turn is aborted: without it the tool call awaits forever,
+ * the SDK step never settles, and the conversation is stuck permanently.
+ */
+export function cancelPendingDeletes(): void {
+  for (const artifactId of [...deleteResolvers.keys()]) {
+    settleDeleteApproval(artifactId, false);
+  }
+  useCruxStore.setState({ pendingDeletes: [] });
+}
 
 // Desktop (ADR 0001): when the ingestion service records external Project
 // Folder edits for the open crux, refresh the artifacts panel in place.

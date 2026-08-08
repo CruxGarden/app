@@ -99,10 +99,7 @@ async function loadImage(source: File | Blob | string): Promise<ImageBitmap> {
 
 // ── Median Cut color quantization ────────────────────────────
 
-function medianCut(
-  pixels: [number, number, number][],
-  maxColors: number,
-): number[][] {
+function medianCut(pixels: [number, number, number][], maxColors: number): number[][] {
   // Deduplicate colors first
   const colorMap = new Map<string, { color: [number, number, number]; count: number }>();
   for (const [r, g, b] of pixels) {
@@ -156,7 +153,10 @@ function medianCut(
 
   // Average each bucket to get the palette color
   return buckets.map((bucket) => {
-    let totalR = 0, totalG = 0, totalB = 0, totalCount = 0;
+    let totalR = 0,
+      totalG = 0,
+      totalB = 0,
+      totalCount = 0;
     for (const entry of bucket) {
       totalR += entry.color[0] * entry.count;
       totalG += entry.color[1] * entry.count;
@@ -173,10 +173,7 @@ function medianCut(
 
 // ── Nearest color matching ───────────────────────────────────
 
-function nearestPaletteIndex(
-  pixel: [number, number, number],
-  palette: number[][],
-): number {
+function nearestPaletteIndex(pixel: [number, number, number], palette: number[][]): number {
   let bestIdx = 0;
   let bestDist = Infinity;
 

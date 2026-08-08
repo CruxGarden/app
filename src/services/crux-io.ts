@@ -3,7 +3,7 @@ import { getServices } from './index';
 import { guessMimeType, hashContent, buildInsert } from './sqlite/helpers';
 import { getSqliteClient } from './sqlite/client';
 import { getLocalIdentity } from './sqlite/identity';
-
+import { projectAllArtifacts } from './project-folder';
 
 // ── Constants ────────────────────────────────────────────
 
@@ -29,7 +29,11 @@ export interface ExportResult {
 
 export interface ArtifactsZipOptions {
   cruxSlug?: string;
-  artifacts: { fingerprint?: string; filename: string; meta?: { path?: string; [key: string]: unknown } }[];
+  artifacts: {
+    fingerprint?: string;
+    filename: string;
+    meta?: { path?: string; [key: string]: unknown };
+  }[];
   onProgress?: (status: string) => void;
 }
 
@@ -60,7 +64,12 @@ export interface ImportResult {
   title: string;
   growthCount: number;
   failedArtifacts: string[];
-  layout?: { paneOrder?: string[]; paneVisibility?: Record<string, boolean>; editorTabs?: unknown; folderState?: unknown };
+  layout?: {
+    paneOrder?: string[];
+    paneVisibility?: Record<string, boolean>;
+    editorTabs?: unknown;
+    folderState?: unknown;
+  };
   theme?: { mode?: string; tint?: string };
 }
 
@@ -92,6 +101,33 @@ interface ExportedDimension {
 
 async function toArrayBuffer(data: Blob | ArrayBuffer): Promise<ArrayBuffer> {
   return data instanceof Blob ? data.arrayBuffer() : data;
+}
+
+/**
+ * Meta keys that describe *this installation's* relationship to a crux, not
+ * the crux itself. They must never travel inside a `.crux` file:
+ *
+ * - `projectFolder` is an absolute path on the exporting machine (ADR 0001).
+ *   Carried across, it leaves the imported crux pointing at a folder that does
+ *   not exist under this Garden Root — so no folder is created, write-through
+ *   silently no-ops, and preview/build fail. It also leaks the exporter's home
+ *   directory to anyone they share the file with.
+ * - The publish trio describes a deployment the importer does not own; an
+ *   imported crux must read as "not published yet" until they publish it.
+ */
+const INSTALLATION_META_KEYS = [
+  'projectFolder',
+  'publishedAt',
+  'publishedVersion',
+  'publishedFingerprints',
+] as const;
+
+function withoutInstallationMeta(
+  meta: Record<string, unknown> | undefined,
+): Record<string, unknown> {
+  const clean = { ...(meta ?? {}) };
+  for (const key of INSTALLATION_META_KEYS) delete clean[key];
+  return clean;
 }
 
 /**
@@ -150,11 +186,16 @@ export async function exportCrux(options: ExportOptions): Promise<ExportResult> 
   const allFingerprints = new Set<string>();
 
   // ── Current version manifest ─────────────────────
-  const currentArtifacts: Record<string, { fingerprint: string; mimeType: string; size: number }> = {};
+  const currentArtifacts: Record<string, { fingerprint: string; mimeType: string; size: number }> =
+    {};
   for (const a of freshArtifacts) {
     const path = (a.meta?.path as string) || a.filename;
     if (a.fingerprint) {
-      currentArtifacts[path] = { fingerprint: a.fingerprint, mimeType: a.mimeType, size: Number(a.size) || 0 };
+      currentArtifacts[path] = {
+        fingerprint: a.fingerprint,
+        mimeType: a.mimeType,
+        size: Number(a.size) || 0,
+      };
       allFingerprints.add(a.fingerprint);
     }
   }
@@ -193,11 +234,18 @@ export async function exportCrux(options: ExportOptions): Promise<ExportResult> 
 
       snapshotIdToIndex.set(growth.targetId, i);
 
-      const versionArtifacts: Record<string, { fingerprint: string; mimeType: string; size: number }> = {};
+      const versionArtifacts: Record<
+        string,
+        { fingerprint: string; mimeType: string; size: number }
+      > = {};
       for (const a of snapshotArtifacts) {
         const path = (a.meta?.path as string) || a.filename;
         if (a.fingerprint) {
-          versionArtifacts[path] = { fingerprint: a.fingerprint, mimeType: a.mimeType, size: Number(a.size) || 0 };
+          versionArtifacts[path] = {
+            fingerprint: a.fingerprint,
+            mimeType: a.mimeType,
+            size: Number(a.size) || 0,
+          };
           allFingerprints.add(a.fingerprint);
         }
       }
@@ -207,7 +255,11 @@ export async function exportCrux(options: ExportOptions): Promise<ExportResult> 
       const parentIndex = parentCruxId ? (snapshotIdToIndex.get(parentCruxId) ?? null) : null;
 
       // Strip fields that have their own top-level manifest keys to avoid duplication
-      const { messages: _msgs, parentCruxId: _pid, ...cleanMeta } = (snapshotCrux.meta ?? {}) as Record<string, unknown>;
+      const {
+        messages: _msgs,
+        parentCruxId: _pid,
+        ...cleanMeta
+      } = (snapshotCrux.meta ?? {}) as Record<string, unknown>;
 
       const manifest: VersionManifest = {
         index: i,
@@ -234,13 +286,18 @@ export async function exportCrux(options: ExportOptions): Promise<ExportResult> 
 
   // ── Write current version manifest (deferred so parentIndex can reference snapshots) ─
   const activeBranch = crux.meta?.settings?.activeBranch as string | undefined;
-  const currentParentIndex = activeBranch
-    ? (snapshotIdToIndex.get(activeBranch) ?? null)
-    : null;
-  zip.file('versions/current.json', JSON.stringify({
-    ...currentManifestBase,
-    parentIndex: currentParentIndex,
-  }, null, 2));
+  const currentParentIndex = activeBranch ? (snapshotIdToIndex.get(activeBranch) ?? null) : null;
+  zip.file(
+    'versions/current.json',
+    JSON.stringify(
+      {
+        ...currentManifestBase,
+        parentIndex: currentParentIndex,
+      },
+      null,
+      2,
+    ),
+  );
 
   // ── dimensions.json ──────────────────────────────
   const exportedDimensions: ExportedDimension[] = [];
@@ -272,7 +329,9 @@ export async function exportCrux(options: ExportOptions): Promise<ExportResult> 
   zip.file('dimensions.json', dimensionsJsonContent);
 
   // ── Collect persona thumbnail fingerprints ─────────
-  const personaSnapshots = crux.meta?.personaSnapshots as Record<string, { thumbnailFingerprint?: string; thumbnailFingerprintLight?: string }> | undefined;
+  const personaSnapshots = crux.meta?.personaSnapshots as
+    | Record<string, { thumbnailFingerprint?: string; thumbnailFingerprintLight?: string }>
+    | undefined;
   if (personaSnapshots) {
     for (const snap of Object.values(personaSnapshots)) {
       if (snap && typeof snap === 'object') {
@@ -283,7 +342,9 @@ export async function exportCrux(options: ExportOptions): Promise<ExportResult> 
   }
 
   // ── Collect author avatar fingerprints from authorSnapshots ─────────
-  const authorSnapshots = crux.meta?.authorSnapshots as Record<string, { avatarFingerprint?: string }> | undefined;
+  const authorSnapshots = crux.meta?.authorSnapshots as
+    | Record<string, { avatarFingerprint?: string }>
+    | undefined;
   if (authorSnapshots) {
     for (const snap of Object.values(authorSnapshots)) {
       if (snap && typeof snap === 'object' && snap.avatarFingerprint) {
@@ -310,21 +371,30 @@ export async function exportCrux(options: ExportOptions): Promise<ExportResult> 
   }
 
   // ── crux.json ────────────────────────────────────
-  const cruxJsonContent = JSON.stringify({
-    id: crux.id,
-    slug: crux.slug,
-    title: crux.title,
-    description: crux.description,
-    type: crux.type,
-    kind: crux.meta?.kind ?? null,
-    status: crux.status,
-    visibility: crux.visibility,
-    authorId: crux.authorId ?? null,
-    homeId: crux.homeId ?? null,
-    meta: { ...(crux.meta ?? {}), summary, growthCount, messages: undefined },
-    created: crux.created,
-    updated: crux.updated,
-  }, null, 2);
+  const cruxJsonContent = JSON.stringify(
+    {
+      id: crux.id,
+      slug: crux.slug,
+      title: crux.title,
+      description: crux.description,
+      type: crux.type,
+      kind: crux.meta?.kind ?? null,
+      status: crux.status,
+      visibility: crux.visibility,
+      authorId: crux.authorId ?? null,
+      homeId: crux.homeId ?? null,
+      meta: {
+        ...withoutInstallationMeta(crux.meta as Record<string, unknown>),
+        summary,
+        growthCount,
+        messages: undefined,
+      },
+      created: crux.created,
+      updated: crux.updated,
+    },
+    null,
+    2,
+  );
   zip.file('crux.json', cruxJsonContent);
 
   // ── store.json ──────────────────────────────────
@@ -332,10 +402,14 @@ export async function exportCrux(options: ExportOptions): Promise<ExportResult> 
     const { store } = getServices();
     const entries = await store.list(cruxId);
     if (entries.length > 0) {
-      zip.file('store.json', JSON.stringify(
-        entries.map((e) => ({ key: e.key, value: e.value, mode: e.mode })),
-        null, 2,
-      ));
+      zip.file(
+        'store.json',
+        JSON.stringify(
+          entries.map((e) => ({ key: e.key, value: e.value, mode: e.mode })),
+          null,
+          2,
+        ),
+      );
     }
   } catch {
     // Store service may not be ready — skip silently
@@ -347,14 +421,21 @@ export async function exportCrux(options: ExportOptions): Promise<ExportResult> 
   );
 
   // ── manifest.json ────────────────────────────────
-  zip.file('manifest.json', JSON.stringify({
-    version: FORMAT_VERSION,
-    fingerprint: archiveFingerprint,
-    exportedAt: new Date().toISOString(),
-    artifactCount: uniqueFingerprints.length,
-    snapshotCount: exportedVersionCount,
-    author,
-  }, null, 2));
+  zip.file(
+    'manifest.json',
+    JSON.stringify(
+      {
+        version: FORMAT_VERSION,
+        fingerprint: archiveFingerprint,
+        exportedAt: new Date().toISOString(),
+        artifactCount: uniqueFingerprints.length,
+        snapshotCount: exportedVersionCount,
+        author,
+      },
+      null,
+      2,
+    ),
+  );
 
   onProgress?.('Compressing...');
   const blob = await zip.generateAsync({ type: 'blob' });
@@ -368,7 +449,9 @@ export async function exportCrux(options: ExportOptions): Promise<ExportResult> 
 
 // ── Artifacts-only ZIP export ────────────────────────────
 
-export async function exportArtifactsZip(options: ArtifactsZipOptions): Promise<ArtifactsZipResult> {
+export async function exportArtifactsZip(
+  options: ArtifactsZipOptions,
+): Promise<ArtifactsZipResult> {
   const { cruxSlug, artifacts, onProgress } = options;
   const db = getSqliteClient();
   const zip = new JSZip();
@@ -454,9 +537,15 @@ export async function importCrux(options: ImportOptions): Promise<ImportResult> 
     .sort((a, b) => a.index - b.index);
 
   const useOriginalIds = mode !== 'clone';
-  const slug = useOriginalIds && cruxData.slug
-    ? cruxData.slug
-    : title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') + '-' + Date.now().toString(36);
+  const slug =
+    useOriginalIds && cruxData.slug
+      ? cruxData.slug
+      : title
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, '-')
+          .replace(/^-|-$/g, '') +
+        '-' +
+        Date.now().toString(36);
 
   // ── Collect unique fingerprints ────────────────────
   const allFingerprints = new Set<string>();
@@ -505,9 +594,12 @@ export async function importCrux(options: ImportOptions): Promise<ImportResult> 
       info: { fingerprint: string; mimeType: string; size: number },
     ): { id: string; sql: string; params: unknown[] } {
       const mime = info.mimeType || guessMimeType(path);
-      const isText = mime.startsWith('text/') || mime === 'application/json'
-        || mime === 'application/javascript' || mime === 'application/xml'
-        || mime === 'image/svg+xml';
+      const isText =
+        mime.startsWith('text/') ||
+        mime === 'application/json' ||
+        mime === 'application/javascript' ||
+        mime === 'application/xml' ||
+        mime === 'image/svg+xml';
       const record = {
         id: crypto.randomUUID(),
         type: 'artifact',
@@ -548,7 +640,13 @@ export async function importCrux(options: ImportOptions): Promise<ImportResult> 
     // ── Create workspace crux ────────────────────────
     // Messages come from the current version manifest, not a flat file
     const workspaceMessages = currentVersion?.messages ?? [];
-    const restoredMeta = { ...(cruxData.meta || {}), messages: workspaceMessages, growthCount: 0 };
+    // Sanitized on the way in as well as on the way out — older .crux files
+    // (and any hand-made one) still carry the exporter's folder path.
+    const restoredMeta = {
+      ...withoutInstallationMeta(cruxData.meta),
+      messages: workspaceMessages,
+      growthCount: 0,
+    };
 
     const newCrux = await cruxService.create({
       id: useOriginalIds ? cruxData.id : undefined,
@@ -588,17 +686,23 @@ export async function importCrux(options: ImportOptions): Promise<ImportResult> 
       const svCrux = sv.crux || ({} as Record<string, unknown>);
       try {
         const snapshotId = useOriginalIds && svCrux.id ? svCrux.id : undefined;
-        const snapshotSlug = useOriginalIds && svCrux.slug
-          ? svCrux.slug
-          : `snapshot-${sv.index + 1}-${Date.now().toString(36)}`;
+        const snapshotSlug =
+          useOriginalIds && svCrux.slug
+            ? svCrux.slug
+            : `snapshot-${sv.index + 1}-${Date.now().toString(36)}`;
 
         // Resolve parentIndex → parentCruxId
-        const parentCruxId = sv.parentIndex !== null && sv.parentIndex !== undefined
-          ? (indexToSnapshotId.get(sv.parentIndex) ?? null)
-          : null;
+        const parentCruxId =
+          sv.parentIndex !== null && sv.parentIndex !== undefined
+            ? (indexToSnapshotId.get(sv.parentIndex) ?? null)
+            : null;
 
         // Strip messages/parentCruxId from stored meta (they come from top-level manifest fields)
-        const { messages: _msgs, parentCruxId: _pid, ...cleanSvMeta } = (svCrux.meta || {}) as Record<string, unknown>;
+        const {
+          messages: _msgs,
+          parentCruxId: _pid,
+          ...cleanSvMeta
+        } = (svCrux.meta || {}) as Record<string, unknown>;
         const snapshotMeta = { ...cleanSvMeta, messages: sv.messages || [], parentCruxId };
 
         const snapshotCrux = await cruxService.create({
@@ -673,12 +777,29 @@ export async function importCrux(options: ImportOptions): Promise<ImportResult> 
     }
 
     // ── Final meta update ────────────────────────────
-    const finalMeta = { ...(cruxData.meta || {}), messages: workspaceMessages, growthCount: restoredGrowthCount };
+    // crux.service.update MERGES meta, so an un-sanitized copy here would put
+    // the exporter's projectFolder back over the one creation just made.
+    const finalMeta: Record<string, unknown> = {
+      ...withoutInstallationMeta(cruxData.meta),
+      messages: workspaceMessages,
+      growthCount: restoredGrowthCount,
+    };
     // When cloning, preserve the original ID so the lineage is traceable
     if (!useOriginalIds && cruxData.id) {
       finalMeta.sourceId = cruxData.id;
     }
     await cruxService.update(newCrux.id, { meta: finalMeta });
+
+    // Desktop (ADR 0001): the artifacts went in through direct SQL, so the
+    // Project Folder created above is still empty. Materialize it — without
+    // this an imported Site Crux has nothing on disk to install or build.
+    // No-op on web; never fatal (the store is the system of record).
+    try {
+      await projectAllArtifacts(newCrux.id);
+    } catch (err) {
+      console.error('[import] projecting artifacts to the Project Folder failed:', err);
+    }
+
     done++;
     onProgress?.(done, total);
 
@@ -693,7 +814,11 @@ export async function importCrux(options: ImportOptions): Promise<ImportResult> 
   } catch (err) {
     // Rollback: delete any cruxes we created
     for (const id of createdCruxIds) {
-      try { await cruxService.delete(id); } catch { /* best-effort */ }
+      try {
+        await cruxService.delete(id);
+      } catch {
+        /* best-effort */
+      }
     }
 
     // Replace mode: restore original from safety backup

@@ -1,8 +1,4 @@
-import type {
-  Author,
-  CreateAuthorInput,
-  UpdateAuthorInput,
-} from './types';
+import type { Author, CreateAuthorInput, UpdateAuthorInput } from './types';
 
 export interface IAuthorService {
   findById(id: string): Promise<Author>;

@@ -1025,9 +1025,18 @@ export type TintName = 'green' | 'yellow' | 'red' | 'blue' | 'purple' | 'gray';
 /** The palette keys that carry the accent tint */
 type TintKeys = Pick<
   Palette,
-  | 'bg' | 'surface' | 'surfaceSolid' | 'panel'
-  | 'accent' | 'accentMuted' | 'border' | 'flowColor'
-  | 'syntaxComment' | 'syntaxString' | 'syntaxType' | 'syntaxFunction'
+  | 'bg'
+  | 'surface'
+  | 'surfaceSolid'
+  | 'panel'
+  | 'accent'
+  | 'accentMuted'
+  | 'border'
+  | 'flowColor'
+  | 'syntaxComment'
+  | 'syntaxString'
+  | 'syntaxType'
+  | 'syntaxFunction'
 >;
 
 interface TintPreset {

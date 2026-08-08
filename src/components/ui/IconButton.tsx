@@ -39,7 +39,11 @@ export default function IconButton({
   const showColor = useCustomColor && (active || hovered);
 
   const colorStyle = showColor
-    ? { color: activeColor, backgroundColor: `color-mix(in srgb, ${activeColor} ${active ? '15%' : '10%'}, transparent)`, ...style }
+    ? {
+        color: activeColor,
+        backgroundColor: `color-mix(in srgb, ${activeColor} ${active ? '15%' : '10%'}, transparent)`,
+        ...style,
+      }
     : style;
 
   return (
@@ -60,7 +64,9 @@ export default function IconButton({
           'transition-colors duration-150 cursor-pointer',
           'disabled:opacity-50 disabled:cursor-not-allowed',
           active && !useCustomColor && 'text-icon-button-icon-hover bg-icon-button-hover',
-          !active && !useCustomColor && 'text-icon-button-icon hover:text-icon-button-icon-hover hover:bg-icon-button-hover',
+          !active &&
+            !useCustomColor &&
+            'text-icon-button-icon hover:text-icon-button-icon-hover hover:bg-icon-button-hover',
           !showColor && useCustomColor && 'text-icon-button-icon',
           sizes[size],
           className,

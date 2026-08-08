@@ -11,7 +11,13 @@ interface GardenGridProps {
   hideMenu?: boolean;
 }
 
-export default memo(function GardenGrid({ cruxes, linkBuilder, onDelete, sortBy, hideMenu }: GardenGridProps) {
+export default memo(function GardenGrid({
+  cruxes,
+  linkBuilder,
+  onDelete,
+  sortBy,
+  hideMenu,
+}: GardenGridProps) {
   return (
     <Panel padding="none">
       <div className="flex flex-col">
@@ -28,4 +34,4 @@ export default memo(function GardenGrid({ cruxes, linkBuilder, onDelete, sortBy,
       </div>
     </Panel>
   );
-})
+});

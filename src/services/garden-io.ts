@@ -7,7 +7,6 @@ import { clearAllSettings } from './settings';
 
 const SUPPORTED_MANIFEST_MAJOR = '1';
 
-
 // ── Types ───────────────────────────────────────────────
 
 export interface GardenExportOptions {
@@ -119,14 +118,21 @@ export async function exportGarden(options: GardenExportOptions = {}): Promise<G
   const fingerprint = await hashContent(new Uint8Array(sqliteData));
 
   // manifest.json
-  zip.file('manifest.json', JSON.stringify({
-    version: '1.0',
-    exportedAt: new Date().toISOString(),
-    fingerprint,
-    cruxCount,
-    artifactCount,
-    author,
-  }, null, 2));
+  zip.file(
+    'manifest.json',
+    JSON.stringify(
+      {
+        version: '1.0',
+        exportedAt: new Date().toISOString(),
+        fingerprint,
+        cruxCount,
+        artifactCount,
+        author,
+      },
+      null,
+      2,
+    ),
+  );
 
   onProgress?.('Compressing...');
   const blob = await zip.generateAsync({ type: 'blob' });
@@ -177,7 +183,9 @@ export async function importGarden(options: GardenImportOptions): Promise<Garden
       onProgress?.('Verifying database integrity...');
       const actualFingerprint = await hashContent(new Uint8Array(sqliteData));
       if (actualFingerprint !== manifest.fingerprint) {
-        throw new Error('Garden file integrity check failed — the database may be corrupted or tampered with.');
+        throw new Error(
+          'Garden file integrity check failed — the database may be corrupted or tampered with.',
+        );
       }
     }
 
@@ -212,7 +220,9 @@ export async function importGarden(options: GardenImportOptions): Promise<Garden
     // Verify expected artifact count matches manifest
     if (typeof manifest.artifactCount === 'number') {
       let actualBlobCount = 0;
-      zip.folder('artifacts')?.forEach((_, entry) => { if (!entry.dir) actualBlobCount++; });
+      zip.folder('artifacts')?.forEach((_, entry) => {
+        if (!entry.dir) actualBlobCount++;
+      });
       if (actualBlobCount !== manifest.artifactCount) {
         throw new Error(
           `Artifact count mismatch: manifest says ${manifest.artifactCount}, but archive contains ${actualBlobCount}. The archive may be incomplete.`,
@@ -221,7 +231,12 @@ export async function importGarden(options: GardenImportOptions): Promise<Garden
     }
   } catch (err) {
     // If JSZip fails to parse, this might be a legacy raw SQLite file
-    if (err instanceof Error && (err.message.includes('not a valid zip') || err.message.includes('Corrupted zip') || err.message.includes('end of central directory'))) {
+    if (
+      err instanceof Error &&
+      (err.message.includes('not a valid zip') ||
+        err.message.includes('Corrupted zip') ||
+        err.message.includes('end of central directory'))
+    ) {
       zip = null;
       sqliteData = raw;
       onProgress?.('Detected legacy format...');
@@ -307,6 +322,20 @@ export async function importGarden(options: GardenImportOptions): Promise<Garden
     throw err;
   }
 
+  // Desktop: the imported cruxes carry the *exporting* machine's absolute
+  // Project Folder paths. Give them folders that exist here (no-op on web).
+  onProgress?.('Setting up project folders...');
+  try {
+    const { rehomeProjectFolders } = await import('./project-folder');
+    const rehomed = await rehomeProjectFolders((done, total) =>
+      onProgress?.(`Setting up project folders (${done}/${total})...`),
+    );
+    if (rehomed > 0) console.info(`[garden] re-homed ${rehomed} project folder(s)`);
+  } catch (err) {
+    // The store is intact either way — folders can be restored per-crux later.
+    console.error('[garden] project folder re-homing failed:', err);
+  }
+
   // Get counts from the imported database
   const cruxCountRow = await db.get<{ count: number }>(
     "SELECT COUNT(*) as count FROM cruxes WHERE type = 'workspace'",
@@ -334,9 +363,7 @@ export interface ConfirmAndImportOptions {
   onPostImport?: () => Promise<void>;
 }
 
-export async function confirmAndImportGarden(
-  options: ConfirmAndImportOptions,
-): Promise<boolean> {
+export async function confirmAndImportGarden(options: ConfirmAndImportOptions): Promise<boolean> {
   const { data, onProgress, onPostImport } = options;
 
   // Offer to export current garden as a backup first
@@ -368,7 +395,9 @@ export async function confirmAndImportGarden(
   await onPostImport?.();
 
   onProgress?.('Redirecting...');
-  setTimeout(() => { window.location.href = '/'; }, 600);
+  setTimeout(() => {
+    window.location.href = '/';
+  }, 600);
 
   return true;
 }

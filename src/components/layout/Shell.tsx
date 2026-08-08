@@ -33,9 +33,7 @@ export default function Shell() {
 
   useEffect(() => {
     applySavedMoodSettings();
-    useUIStore.getState().setAiEnabled(
-      getSetting(SettingsKey.AiEnabled) === 'true'
-    );
+    useUIStore.getState().setAiEnabled(getSetting(SettingsKey.AiEnabled) === 'true');
 
     if (servicesReady) return;
 

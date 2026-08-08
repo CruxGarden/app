@@ -26,15 +26,13 @@ interface PxlData {
   pixels: string;
 }
 
-
 function decodePixelArt(data: PxlData): Uint8Array {
   const { size, palette, pixels } = data;
   // Support both 8-bit (≤255 colors) and 16-bit (>255 colors) palette indices
   const raw = Uint8Array.from(atob(pixels), (c) => c.charCodeAt(0));
   const depth = (data as PxlData & { depth?: number }).depth;
-  const indices = depth === 16
-    ? new Uint16Array(raw.buffer, raw.byteOffset, raw.byteLength / 2)
-    : raw;
+  const indices =
+    depth === 16 ? new Uint16Array(raw.buffer, raw.byteOffset, raw.byteLength / 2) : raw;
   const rgb = new Uint8Array(size * size * 3);
 
   for (let i = 0; i < size * size; i++) {
@@ -61,11 +59,11 @@ export type KeeperVariant = keyof typeof VARIANTS;
 
 // Animation coordinates per variant
 const ANIM_COORDS = {
-  default:   { eyeCx: 64, eyeCy: 48, eyeR: 14, antennaX1: 62, antennaX2: 63, antennaY: 4 },
+  default: { eyeCx: 64, eyeCy: 48, eyeR: 14, antennaX1: 62, antennaX2: 63, antennaY: 4 },
   weathered: { eyeCx: 64, eyeCy: 48, eyeR: 14, antennaX1: 62, antennaX2: 63, antennaY: 4 },
-  light:          { eyeCx: 64, eyeCy: 38, eyeR: 14, antennaX1: 62, antennaX2: 63, antennaY: 4 },
-  eye:            { eyeCx: 24, eyeCy: 24, eyeR: 14, antennaX1: -1, antennaX2: -1, antennaY: -1 },
-  'avatar-dark':  { eyeCx: 64, eyeCy: 48, eyeR: 14, antennaX1: -1, antennaX2: -1, antennaY: -1 },
+  light: { eyeCx: 64, eyeCy: 38, eyeR: 14, antennaX1: 62, antennaX2: 63, antennaY: 4 },
+  eye: { eyeCx: 24, eyeCy: 24, eyeR: 14, antennaX1: -1, antennaX2: -1, antennaY: -1 },
+  'avatar-dark': { eyeCx: 64, eyeCy: 48, eyeR: 14, antennaX1: -1, antennaX2: -1, antennaY: -1 },
   'avatar-light': { eyeCx: 64, eyeCy: 48, eyeR: 14, antennaX1: -1, antennaX2: -1, antennaY: -1 },
 };
 
@@ -113,7 +111,12 @@ export default function PixelAvatar({
             gridLines={gridLines}
           />
         </div>
-        {tinted && <div className="absolute inset-0 opacity-40" style={{ backgroundColor: 'var(--accent)', mixBlendMode: 'color' }} />}
+        {tinted && (
+          <div
+            className="absolute inset-0 opacity-40"
+            style={{ backgroundColor: 'var(--accent)', mixBlendMode: 'color' }}
+          />
+        )}
       </div>
     );
   }
@@ -131,7 +134,12 @@ export default function PixelAvatar({
           variant={variant}
         />
       </div>
-      {tinted && <div className="absolute inset-0 opacity-40" style={{ backgroundColor: 'var(--accent)', mixBlendMode: 'color' }} />}
+      {tinted && (
+        <div
+          className="absolute inset-0 opacity-40"
+          style={{ backgroundColor: 'var(--accent)', mixBlendMode: 'color' }}
+        />
+      )}
     </div>
   );
 }
@@ -145,7 +153,14 @@ interface AnimatedCanvasProps {
   variant: KeeperVariant;
 }
 
-function AnimatedCanvas({ basePixels, size, scale, className, gridLines, variant }: AnimatedCanvasProps) {
+function AnimatedCanvas({
+  basePixels,
+  size,
+  scale,
+  className,
+  gridLines,
+  variant,
+}: AnimatedCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const rafRef = useRef<number>(0);
   const frameRef = useRef(new Uint8Array(size * size * 3));

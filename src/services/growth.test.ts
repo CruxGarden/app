@@ -26,7 +26,11 @@ function mapLookup(nodes: SnapshotChainNode[]) {
 
 describe('walkSnapshotChain', () => {
   it('returns the chain in chronological order (root first)', async () => {
-    const lookup = mapLookup([node('c', 'b', ['3']), node('b', 'a', ['2']), node('a', null, ['1'])]);
+    const lookup = mapLookup([
+      node('c', 'b', ['3']),
+      node('b', 'a', ['2']),
+      node('a', null, ['1']),
+    ]);
     const chain = await walkSnapshotChain('c', lookup);
     expect(chain.map((n) => n.id)).toEqual(['a', 'b', 'c']);
   });
@@ -74,16 +78,26 @@ describe('detectPreviewArtifact', () => {
       detectPreviewArtifact([art('a.txt'), art('p.png', { mimeType: 'image/png' })])!.type,
     ).toBe('image');
     expect(detectPreviewArtifact([art('a.txt'), art('README.md')])!.type).toBe('markdown');
-    expect(detectPreviewArtifact([art('app.js', { mimeType: 'application/javascript' })])!.type).toBe('code');
+    expect(
+      detectPreviewArtifact([art('app.js', { mimeType: 'application/javascript' })])!.type,
+    ).toBe('code');
     expect(detectPreviewArtifact([art('notes.txt')])!.type).toBe('text');
   });
 });
 
 function makeGrowthDeps(snapshotArtifacts: Artifact[]): {
   deps: GrowthDeps;
-  created: { cruxes: Record<string, unknown>[]; dimensions: Record<string, unknown>[] };
+  created: {
+    cruxes: Record<string, unknown>[];
+    dimensions: Record<string, unknown>[];
+    cruxUpdates: { id: string; input: Record<string, unknown> }[];
+  };
 } {
-  const created = { cruxes: [] as Record<string, unknown>[], dimensions: [] as Record<string, unknown>[] };
+  const created = {
+    cruxes: [] as Record<string, unknown>[],
+    dimensions: [] as Record<string, unknown>[],
+    cruxUpdates: [] as { id: string; input: Record<string, unknown> }[],
+  };
   const deps: GrowthDeps = {
     crux: {
       create: async (input) => {
@@ -91,6 +105,10 @@ function makeGrowthDeps(snapshotArtifacts: Artifact[]): {
         return { id: 'snap-crux-1', ...input } as unknown as Crux;
       },
       findById: async (id) => ({ id, meta: {} }) as Crux,
+      update: async (id, input) => {
+        created.cruxUpdates.push({ id, input });
+        return {};
+      },
     },
     artifact: {
       computeSnapshotFingerprint: async () => 'fp-snapshot',
@@ -121,7 +139,9 @@ describe('createSnapshotCore', () => {
 
   it('stores only the current segment plus cumulative count, and parents on the latest snapshot', async () => {
     const { deps, created } = makeGrowthDeps([art('index.html', { mimeType: 'text/html' })]);
-    const growths = [{ id: 'g0', targetId: 'snap-0', meta: { summary: 'earlier work' } } as unknown as Dimension];
+    const growths = [
+      { id: 'g0', targetId: 'snap-0', meta: { summary: 'earlier work' } } as unknown as Dimension,
+    ];
     const result = await createSnapshotCore(baseState({ growths }), {}, deps);
 
     const snapMeta = created.cruxes[0]!.meta as Record<string, unknown>;
@@ -139,7 +159,11 @@ describe('createSnapshotCore', () => {
       art('.keep'),
     ]);
     const state = baseState({
-      crux: { id: 'crux-1', title: 'T', meta: { settings: { activeBranch: 'branch-snap' } } } as unknown as Crux,
+      crux: {
+        id: 'crux-1',
+        title: 'T',
+        meta: { settings: { activeBranch: 'branch-snap' } },
+      } as unknown as Crux,
     });
     const result = await createSnapshotCore(state, { label: 'Milestone' }, deps);
 

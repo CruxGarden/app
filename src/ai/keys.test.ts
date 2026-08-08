@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { getApiKey, setApiKey, removeApiKey, getDefaultModel, setDefaultModel } from './keys';
+import { DEFAULT_MODEL } from './providers';
 
 describe('API Key Management', () => {
   it('returns null when no key is stored', async () => {
@@ -37,14 +38,17 @@ describe('API Key Management', () => {
 });
 
 describe('Default Model', () => {
-  it('returns fallback when no model is stored', async () => {
+  it('returns the app default when no model is stored', async () => {
     const model = await getDefaultModel();
-    expect(model).toBe('claude-sonnet-4-20250514');
+    expect(model).toBe(DEFAULT_MODEL);
   });
 
-  it('stores and retrieves a default model', async () => {
+  it('stores and retrieves a default model (retired IDs upgrade on read)', async () => {
+    await setDefaultModel('gpt-5.6-terra');
+    expect(await getDefaultModel()).toBe('gpt-5.6-terra');
+
+    // A retired ID stored by an older app version resolves to its successor
     await setDefaultModel('gpt-4o');
-    const model = await getDefaultModel();
-    expect(model).toBe('gpt-4o');
+    expect(await getDefaultModel()).toBe('gpt-5.6-terra');
   });
 });

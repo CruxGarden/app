@@ -180,7 +180,9 @@ describe('Garden Export / Import', () => {
       zip.file('garden.sqlite', new Uint8Array(0));
       const ab = await zip.generateAsync({ type: 'arraybuffer' });
 
-      await expect(importGarden({ data: ab })).rejects.toThrow('Unsupported .garden format version');
+      await expect(importGarden({ data: ab })).rejects.toThrow(
+        'Unsupported .garden format version',
+      );
     });
 
     it('rejects ZIP without garden.sqlite', async () => {

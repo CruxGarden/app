@@ -1,8 +1,4 @@
-import type {
-  Crux,
-  CreateCruxInput,
-  UpdateCruxInput,
-} from './types';
+import type { Crux, CreateCruxInput, UpdateCruxInput } from './types';
 
 export interface ICruxService {
   findById(id: string): Promise<Crux>;

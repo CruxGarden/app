@@ -7,9 +7,8 @@ const G3 = 1 / 6;
 
 // Gradient vectors flattened for fast indexed access: GRAD3[gi*3], GRAD3[gi*3+1], GRAD3[gi*3+2]
 const GRAD3 = new Float32Array([
-  1, 1, 0, -1, 1, 0, 1, -1, 0, -1, -1, 0,
-  1, 0, 1, -1, 0, 1, 1, 0, -1, -1, 0, -1,
-  0, 1, 1, 0, -1, 1, 0, 1, -1, 0, -1, -1,
+  1, 1, 0, -1, 1, 0, 1, -1, 0, -1, -1, 0, 1, 0, 1, -1, 0, 1, 1, 0, -1, -1, 0, -1, 0, 1, 1, 0, -1, 1,
+  0, 1, -1, 0, -1, -1,
 ]);
 
 class Noise3D {
@@ -21,7 +20,7 @@ class Noise3D {
     for (let i = 0; i < 256; i++) p[i] = i;
     let s = seed;
     for (let i = 255; i > 0; i--) {
-      s = ((s * 1103515245 + 12345) & 0x7fffffff);
+      s = (s * 1103515245 + 12345) & 0x7fffffff;
       const j = s % (i + 1);
       const tmp = p[i]!;
       p[i] = p[j]!;
@@ -53,13 +52,51 @@ class Noise3D {
     let i2: number, j2: number, k2: number;
 
     if (x0 >= y0) {
-      if (y0 >= z0) { i1 = 1; j1 = 0; k1 = 0; i2 = 1; j2 = 1; k2 = 0; }
-      else if (x0 >= z0) { i1 = 1; j1 = 0; k1 = 0; i2 = 1; j2 = 0; k2 = 1; }
-      else { i1 = 0; j1 = 0; k1 = 1; i2 = 1; j2 = 0; k2 = 1; }
+      if (y0 >= z0) {
+        i1 = 1;
+        j1 = 0;
+        k1 = 0;
+        i2 = 1;
+        j2 = 1;
+        k2 = 0;
+      } else if (x0 >= z0) {
+        i1 = 1;
+        j1 = 0;
+        k1 = 0;
+        i2 = 1;
+        j2 = 0;
+        k2 = 1;
+      } else {
+        i1 = 0;
+        j1 = 0;
+        k1 = 1;
+        i2 = 1;
+        j2 = 0;
+        k2 = 1;
+      }
     } else {
-      if (y0 < z0) { i1 = 0; j1 = 0; k1 = 1; i2 = 0; j2 = 1; k2 = 1; }
-      else if (x0 < z0) { i1 = 0; j1 = 1; k1 = 0; i2 = 0; j2 = 1; k2 = 1; }
-      else { i1 = 0; j1 = 1; k1 = 0; i2 = 1; j2 = 1; k2 = 0; }
+      if (y0 < z0) {
+        i1 = 0;
+        j1 = 0;
+        k1 = 1;
+        i2 = 0;
+        j2 = 1;
+        k2 = 1;
+      } else if (x0 < z0) {
+        i1 = 0;
+        j1 = 1;
+        k1 = 0;
+        i2 = 0;
+        j2 = 1;
+        k2 = 1;
+      } else {
+        i1 = 0;
+        j1 = 1;
+        k1 = 0;
+        i2 = 1;
+        j2 = 1;
+        k2 = 0;
+      }
     }
 
     const x1 = x0 - i1 + G3;
@@ -180,7 +217,9 @@ function parseCSSColor(raw: string): [number, number, number] {
     return [parseInt(rgbMatch[1]) / 255, parseInt(rgbMatch[2]) / 255, parseInt(rgbMatch[3]) / 255];
   }
   let hex = raw.replace('#', '');
-  if (hex.length === 3) hex = hex.charAt(0) + hex.charAt(0) + hex.charAt(1) + hex.charAt(1) + hex.charAt(2) + hex.charAt(2);
+  if (hex.length === 3)
+    hex =
+      hex.charAt(0) + hex.charAt(0) + hex.charAt(1) + hex.charAt(1) + hex.charAt(2) + hex.charAt(2);
   return [
     parseInt(hex.slice(0, 2), 16) / 255,
     parseInt(hex.slice(2, 4), 16) / 255,
@@ -217,7 +256,7 @@ const PARTICLE_COUNT = 4000;
 const NOISE_SCALE = 0.002;
 const TIME_SCALE = 0.075;
 const BASE_SPEED = 0.6;
-const TRAIL_PERSIST = 0.3;  // fraction remaining per second
+const TRAIL_PERSIST = 0.3; // fraction remaining per second
 const POINT_SIZE = 1.5;
 const TWO_PI = Math.PI * 2;
 
@@ -250,20 +289,26 @@ export default function FlowFieldBackground() {
     };
 
     let colors = readColors();
-    let isLightBg = (colors.bgColor[0] * 0.299 + colors.bgColor[1] * 0.587 + colors.bgColor[2] * 0.114) > 0.5;
+    let isLightBg =
+      colors.bgColor[0] * 0.299 + colors.bgColor[1] * 0.587 + colors.bgColor[2] * 0.114 > 0.5;
 
     const onPaletteChange = () => {
       colors = readColors();
-      isLightBg = (colors.bgColor[0] * 0.299 + colors.bgColor[1] * 0.587 + colors.bgColor[2] * 0.114) > 0.5;
+      isLightBg =
+        colors.bgColor[0] * 0.299 + colors.bgColor[1] * 0.587 + colors.bgColor[2] * 0.114 > 0.5;
     };
     document.addEventListener('palette-change', onPaletteChange);
 
     // Re-read colors when theme class changes (light ↔ dark)
     const themeObserver = new MutationObserver(() => {
       colors = readColors();
-      isLightBg = (colors.bgColor[0] * 0.299 + colors.bgColor[1] * 0.587 + colors.bgColor[2] * 0.114) > 0.5;
+      isLightBg =
+        colors.bgColor[0] * 0.299 + colors.bgColor[1] * 0.587 + colors.bgColor[2] * 0.114 > 0.5;
     });
-    themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+    themeObserver.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['class'],
+    });
 
     // Compile shaders
     const particleProg = linkProgram(gl, PARTICLE_VS, PARTICLE_FS);
@@ -348,7 +393,13 @@ export default function FlowFieldBackground() {
       gl.bindBuffer(gl.ARRAY_BUFFER, quadBuf);
       gl.enableVertexAttribArray(f_aPos);
       gl.vertexAttribPointer(f_aPos, 2, gl.FLOAT, false, 0, 0);
-      gl.uniform4f(f_uFadeColor, colors.bgColor[0], colors.bgColor[1], colors.bgColor[2], fadeAlpha);
+      gl.uniform4f(
+        f_uFadeColor,
+        colors.bgColor[0],
+        colors.bgColor[1],
+        colors.bgColor[2],
+        fadeAlpha,
+      );
       gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
 
       // ── Update particles ──

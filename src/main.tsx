@@ -5,6 +5,14 @@ import { useAppStore } from '@/stores/appStore';
 import App from './App';
 import './styles/globals.css';
 
+// Dropping a file or link onto a region with no drop handler makes the browser
+// NAVIGATE the top-level document to it. In the desktop shell that would swap
+// the app out from under the preload bridge, so refuse every unhandled drop —
+// components that accept drops call preventDefault themselves and are
+// unaffected (the listener runs at the document, after they handle it).
+window.addEventListener('dragover', (e) => e.preventDefault());
+window.addEventListener('drop', (e) => e.preventDefault());
+
 function isPublicRoute(): boolean {
   const path = window.location.pathname;
   // Gateway (/) renders immediately — it handles its own init via handleEnter
@@ -12,9 +20,9 @@ function isPublicRoute(): boolean {
   return (
     path.startsWith('/explore') ||
     (!path.startsWith('/home') &&
-     !path.startsWith('/settings') &&
-     !path.startsWith('/c/') &&
-     path.split('/').filter(Boolean).length >= 1)
+      !path.startsWith('/settings') &&
+      !path.startsWith('/c/') &&
+      path.split('/').filter(Boolean).length >= 1)
   );
 }
 
@@ -69,14 +77,20 @@ createRoot(document.getElementById('root')!, {
 // These fire via setTimeout/rAF after the editor is disposed and can't be caught by React.
 function isMonacoDisposalError(e: ErrorEvent | PromiseRejectionEvent): boolean {
   const err = 'reason' in e ? e.reason : e.error;
-  const msg = (err instanceof Error ? err.message : String(err ?? '')) + ('message' in e ? e.message : '');
+  const msg =
+    (err instanceof Error ? err.message : String(err ?? '')) + ('message' in e ? e.message : '');
   const filename = 'filename' in e ? e.filename : '';
   const isMonacoFile = filename?.includes('monaco-editor') || filename?.includes('editor.api');
-  const isMonacoMsg = msg.includes('domNode') || msg.includes('setClassName') || msg.includes('disposed');
+  const isMonacoMsg =
+    msg.includes('domNode') || msg.includes('setClassName') || msg.includes('disposed');
   return isMonacoFile || isMonacoMsg;
 }
-window.addEventListener('error', (e) => { if (isMonacoDisposalError(e)) e.preventDefault(); });
-window.addEventListener('unhandledrejection', (e) => { if (isMonacoDisposalError(e)) e.preventDefault(); });
+window.addEventListener('error', (e) => {
+  if (isMonacoDisposalError(e)) e.preventDefault();
+});
+window.addEventListener('unhandledrejection', (e) => {
+  if (isMonacoDisposalError(e)) e.preventDefault();
+});
 
 // Preview system initialization:
 // - Cross-origin (VITE_PREVIEW_ORIGIN set): load hidden receiver iframe on preview.crux.garden

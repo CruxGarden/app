@@ -1,17 +1,11 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { publicApi, API_BASE_URL } from '@/api';
-import type {
-  ExploreCrux,
-  ExploreAuthor,
-  ExploreTag,
-  ExploreParams,
-} from '@/api/public';
+import type { ExploreCrux, ExploreAuthor, ExploreTag, ExploreParams } from '@/api/public';
 import { Button } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import { formatDate } from '@/lib/format';
 import { APP_NAME } from '@/lib/constants';
-
 
 type ResultType = 'cruxes' | 'authors';
 
@@ -136,17 +130,14 @@ export default function Explore({ onNavigate }: { onNavigate?: () => void }) {
     };
   }, [q, resultType, sort, activeTags, page]);
 
-  const handleSearchChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
-      const value = e.target.value;
-      clearTimeout(debounceRef.current);
-      debounceRef.current = setTimeout(() => {
-        setQ(value);
-        setPage(1);
-      }, 300);
-    },
-    [],
-  );
+  const handleSearchChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      setQ(value);
+      setPage(1);
+    }, 300);
+  }, []);
 
   const handleClear = useCallback(() => {
     if (inputRef.current) inputRef.current.value = '';
@@ -272,19 +263,29 @@ export default function Explore({ onNavigate }: { onNavigate?: () => void }) {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-1 text-xs font-mono">
             <button
-              onClick={() => { setResultType('cruxes'); setPage(1); }}
+              onClick={() => {
+                setResultType('cruxes');
+                setPage(1);
+              }}
               className={cn(
                 'px-3 py-1 rounded-[var(--radius-sm)] cursor-pointer',
-                resultType === 'cruxes' ? 'text-text bg-surface' : 'text-text-muted hover:text-text',
+                resultType === 'cruxes'
+                  ? 'text-text bg-surface'
+                  : 'text-text-muted hover:text-text',
               )}
             >
               Cruxes
             </button>
             <button
-              onClick={() => { setResultType('authors'); setPage(1); }}
+              onClick={() => {
+                setResultType('authors');
+                setPage(1);
+              }}
               className={cn(
                 'px-3 py-1 rounded-[var(--radius-sm)] cursor-pointer',
-                resultType === 'authors' ? 'text-text bg-surface' : 'text-text-muted hover:text-text',
+                resultType === 'authors'
+                  ? 'text-text bg-surface'
+                  : 'text-text-muted hover:text-text',
               )}
             >
               Authors
@@ -294,7 +295,10 @@ export default function Explore({ onNavigate }: { onNavigate?: () => void }) {
           <div className="flex items-center gap-1 text-xs font-mono text-text-muted">
             <span>Sort</span>
             <button
-              onClick={() => { setSort('recent'); setPage(1); }}
+              onClick={() => {
+                setSort('recent');
+                setPage(1);
+              }}
               className={cn(
                 'px-2 py-0.5 rounded-[var(--radius-sm)] cursor-pointer',
                 sort === 'recent' ? 'text-text bg-surface' : 'hover:text-text',
@@ -303,7 +307,10 @@ export default function Explore({ onNavigate }: { onNavigate?: () => void }) {
               Recent
             </button>
             <button
-              onClick={() => { setSort('alpha'); setPage(1); }}
+              onClick={() => {
+                setSort('alpha');
+                setPage(1);
+              }}
               className={cn(
                 'px-2 py-0.5 rounded-[var(--radius-sm)] cursor-pointer',
                 sort === 'alpha' ? 'text-text bg-surface' : 'hover:text-text',
@@ -358,9 +365,7 @@ export default function Explore({ onNavigate }: { onNavigate?: () => void }) {
         <>
           <div className="flex flex-col">
             {resultType === 'cruxes'
-              ? (results as ExploreCrux[]).map((crux) => (
-                  <CruxCard key={crux.id} crux={crux} />
-                ))
+              ? (results as ExploreCrux[]).map((crux) => <CruxCard key={crux.id} crux={crux} />)
               : (results as ExploreAuthor[]).map((author) => (
                   <AuthorCard key={author.id} author={author} />
                 ))}
@@ -400,7 +405,9 @@ export function ExplorePage() {
   // Page title
   useEffect(() => {
     document.title = `Explore - ${APP_NAME}`;
-    return () => { document.title = APP_NAME; };
+    return () => {
+      document.title = APP_NAME;
+    };
   }, []);
 
   // Read initial query from URL for the public route header

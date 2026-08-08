@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, type ReactNode } from 'react';
 import { getModelInfo, PROVIDERS, getProviderForModel } from '@/ai/providers';
-import { TOOL_DEFINITIONS } from '@/ai/tools';
+import { defaultToolDefinitions } from '@/ai/tools';
 import { useCruxStore } from '@/stores/cruxStore';
 import { cn } from '@/lib/cn';
 
@@ -29,8 +29,11 @@ export default function ModelInfoPanel({ model, children }: ModelInfoPanelProps)
   const provider = PROVIDERS[providerId];
 
   const totalTokens = tokenUsage.inputTokens + tokenUsage.outputTokens;
-  const usagePercent = info ? Math.min((tokenUsage.inputTokens / info.contextWindow) * 100, 100) : 0;
-  const barColor = usagePercent > 80 ? 'bg-error' : usagePercent > 50 ? 'bg-amber-400' : 'bg-accent';
+  const usagePercent = info
+    ? Math.min((tokenUsage.inputTokens / info.contextWindow) * 100, 100)
+    : 0;
+  const barColor =
+    usagePercent > 80 ? 'bg-error' : usagePercent > 50 ? 'bg-amber-400' : 'bg-accent';
 
   // Hide progress bar if not enough horizontal space
   useEffect(() => {
@@ -59,10 +62,12 @@ export default function ModelInfoPanel({ model, children }: ModelInfoPanelProps)
                 style={{ width: `${Math.max(usagePercent, 2)}%` }}
               />
             </div>
-            <span className={cn(
-              'text-[10px] whitespace-nowrap',
-              usagePercent > 80 ? 'text-error' : 'text-text-muted',
-            )}>
+            <span
+              className={cn(
+                'text-[10px] whitespace-nowrap',
+                usagePercent > 80 ? 'text-error' : 'text-text-muted',
+              )}
+            >
               {usagePercent.toFixed(0)}%
             </span>
           </div>
@@ -108,8 +113,19 @@ export default function ModelInfoPanel({ model, children }: ModelInfoPanelProps)
               <>
                 <div className="flex justify-between items-center px-3 h-8">
                   <span className="text-text-muted">Session</span>
-                  <span className="text-text">{formatTokens(tokenUsage.inputTokens)} in · {formatTokens(tokenUsage.outputTokens)} out</span>
+                  <span className="text-text">
+                    {formatTokens(tokenUsage.inputTokens)} in ·{' '}
+                    {formatTokens(tokenUsage.outputTokens)} out
+                  </span>
                 </div>
+                {tokenUsage.cachedInputTokens > 0 && (
+                  <div className="flex justify-between items-center px-3 h-8">
+                    <span className="text-text-muted">Cache Reads</span>
+                    <span className="text-text">
+                      {formatTokens(tokenUsage.cachedInputTokens)} tokens
+                    </span>
+                  </div>
+                )}
                 <div className="px-3 py-2 bg-surface/50">
                   <div className="flex justify-between items-center mb-1.5">
                     <span className="text-text-muted">Context Used</span>
@@ -149,12 +165,19 @@ export default function ModelInfoPanel({ model, children }: ModelInfoPanelProps)
 
           {/* Tools grid */}
           <div className="space-y-1.5">
-            <div className="text-text-muted text-[10px] uppercase tracking-wider">Tools ({TOOL_DEFINITIONS.length})</div>
+            <div className="text-text-muted text-[10px] uppercase tracking-wider">
+              Tools ({defaultToolDefinitions().length})
+            </div>
             <div className="grid grid-cols-2 gap-x-4 gap-y-0.5">
-              {TOOL_DEFINITIONS
-                .filter((tool) => tool.name !== 'generate_image' || provider.capabilities.includes('Images'))
+              {defaultToolDefinitions()
+                .filter(
+                  (tool) =>
+                    tool.name !== 'generate_image' || provider.capabilities.includes('Images'),
+                )
                 .map((tool) => (
-                  <span key={tool.name} className="text-text">{tool.name}</span>
+                  <span key={tool.name} className="text-text">
+                    {tool.name}
+                  </span>
                 ))}
             </div>
           </div>

@@ -89,7 +89,16 @@ export default function GrowthTimeline({
                   isCreatingGrowth && 'opacity-50 cursor-wait',
                 )}
               >
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <svg
+                  width="12"
+                  height="12"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
                   <path d="M12 2L2 7l10 5 10-5-10-5z" />
                   <path d="M2 17l10 5 10-5" />
                   <path d="M2 12l10 5 10-5" />
@@ -106,7 +115,10 @@ export default function GrowthTimeline({
                   onChange={(e) => setLabelText(e.target.value)}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter') handleSnapshot();
-                    if (e.key === 'Escape') { setShowLabelInput(false); setLabelText(''); }
+                    if (e.key === 'Escape') {
+                      setShowLabelInput(false);
+                      setLabelText('');
+                    }
                   }}
                   placeholder="Label (optional)"
                   className={cn(
@@ -125,7 +137,10 @@ export default function GrowthTimeline({
                   Save
                 </button>
                 <button
-                  onClick={() => { setShowLabelInput(false); setLabelText(''); }}
+                  onClick={() => {
+                    setShowLabelInput(false);
+                    setLabelText('');
+                  }}
                   className="px-1.5 py-1.5 text-xs text-text-muted hover:text-text transition-colors cursor-pointer"
                 >
                   &times;
@@ -146,7 +161,9 @@ export default function GrowthTimeline({
                   )}
                 >
                   {FREQUENCY_OPTIONS.map((opt) => (
-                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
                   ))}
                 </select>
               </div>
@@ -162,7 +179,16 @@ export default function GrowthTimeline({
                   'bg-accent text-bg border border-accent hover:brightness-110',
                 )}
               >
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <svg
+                  width="12"
+                  height="12"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
                   <path d="M19 12H5" />
                   <path d="M12 19l-7-7 7-7" />
                 </svg>
@@ -207,9 +233,7 @@ export default function GrowthTimeline({
             )}
 
             {growths.length === 0 && !isCreatingGrowth && !summary && (
-              <p className="text-xs text-text-muted text-center py-2">
-                No snapshots yet
-              </p>
+              <p className="text-xs text-text-muted text-center py-2">No snapshots yet</p>
             )}
           </div>
         )}

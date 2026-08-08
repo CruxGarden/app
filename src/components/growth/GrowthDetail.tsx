@@ -61,9 +61,7 @@ export default function GrowthDetail({ growth, index, onClose }: GrowthDetailPro
         <div>
           <span className="text-[11px] font-mono text-accent/70 uppercase">#{index + 1}</span>
           <h3 className="text-sm font-display font-medium text-text mt-0.5">{title}</h3>
-          <span className="text-[10px] text-text-muted">
-            {formatDateTime(growth.created)}
-          </span>
+          <span className="text-[10px] text-text-muted">{formatDateTime(growth.created)}</span>
         </div>
         <button
           onClick={onClose}

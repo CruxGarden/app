@@ -97,6 +97,12 @@ export class SqliteNative {
   // ── Blob storage (filesystem) ──────────────────────────────
 
   private blobPath(fingerprint: string): string {
+    // Blob names are content fingerprints — SHA-256 hex, nothing else. Without
+    // this check the renderer could pass '../…' and turn every blob operation
+    // into arbitrary filesystem read/write/delete.
+    if (!/^[a-f0-9]{64}$/.test(fingerprint)) {
+      throw new Error(`invalid blob fingerprint: ${String(fingerprint).slice(0, 32)}`);
+    }
     return path.join(this.blobDir, fingerprint);
   }
 

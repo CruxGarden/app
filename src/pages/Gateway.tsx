@@ -1,7 +1,13 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Panel, Spinner, Button, IconButton, ApiKeySetup, Toggle } from '@/components/ui';
-import { PlusCircleIcon, CloudIcon, FileUploadIcon, SproutIcon, ArrowLeftIcon } from '@/components/ui/icons';
+import {
+  PlusCircleIcon,
+  CloudIcon,
+  FileUploadIcon,
+  SproutIcon,
+  ArrowLeftIcon,
+} from '@/components/ui/icons';
 import ConnectAccount from '@/components/auth/ConnectAccount';
 import AvatarUpload from '@/components/auth/AvatarUpload';
 import { APP_NAME, SettingsKey } from '@/lib/constants';
@@ -94,7 +100,7 @@ function BannerStep({
 
   return (
     <Panel padding="lg" className="max-w-xs w-full flex flex-col items-center py-10">
-      <h1 className="font-display text-4xl font-medium text-gateway-title">{APP_NAME}</h1>
+      <h1 className="font-wordmark text-5xl font-semibold text-gateway-title">{APP_NAME}</h1>
       <p className="text-gateway-subtitle text-lg mt-1">where ideas grow</p>
 
       <div className="mt-6">
@@ -166,13 +172,9 @@ function OptionCard({
         'cursor-pointer group',
       )}
     >
-      <div className="shrink-0 text-text-muted group-hover:text-accent">
-        {icon}
-      </div>
+      <div className="shrink-0 text-text-muted group-hover:text-accent">{icon}</div>
       <div>
-        <div className="text-sm font-medium text-text group-hover:text-accent">
-          {title}
-        </div>
+        <div className="text-sm font-medium text-text group-hover:text-accent">{title}</div>
         <div className="text-xs text-text-muted mt-0.5">{description}</div>
       </div>
     </button>
@@ -220,7 +222,10 @@ function SetupStep({ onBack }: { onBack: () => void }) {
 
   const checkApiKeys = async () => {
     for (const id of Object.keys(PROVIDERS)) {
-      if (await getApiKey(id)) { setKeysConfigured(true); return; }
+      if (await getApiKey(id)) {
+        setKeysConfigured(true);
+        return;
+      }
     }
     setKeysConfigured(false);
   };
@@ -250,7 +255,9 @@ function SetupStep({ onBack }: { onBack: () => void }) {
           setUsernameError((prev) => prev || (available ? '' : 'Username is taken at crux.garden'));
         }
         if (!available) setUsernameError('Username is taken at crux.garden');
-      } catch { /* API unavailable — skip check */ }
+      } catch {
+        /* API unavailable — skip check */
+      }
     }, 400);
   };
 
@@ -262,12 +269,21 @@ function SetupStep({ onBack }: { onBack: () => void }) {
   };
 
   // Cleanup debounce timer
-  useEffect(() => () => { if (debounceRef.current) clearTimeout(debounceRef.current); }, []);
+  useEffect(
+    () => () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    },
+    [],
+  );
 
   // Validate username against the API when connected (used by handleFinish)
   const validateUsername = async (name: string): Promise<boolean> => {
     const formatError = validateFormat(name);
-    if (formatError) { setUsernameError(formatError); setOpenSection(SetupSection.Username); return false; }
+    if (formatError) {
+      setUsernameError(formatError);
+      setOpenSection(SetupSection.Username);
+      return false;
+    }
     if (!isAuthenticated) return true;
     try {
       const { authors } = await import('@/api');
@@ -277,7 +293,9 @@ function SetupStep({ onBack }: { onBack: () => void }) {
         setOpenSection(SetupSection.Username);
         return false;
       }
-    } catch { /* API unavailable — skip check */ }
+    } catch {
+      /* API unavailable — skip check */
+    }
     return true;
   };
 
@@ -359,14 +377,19 @@ function SetupStep({ onBack }: { onBack: () => void }) {
             {openSection === SetupSection.GardenRoot && (
               <div className="pt-3 pb-4 px-1">
                 <p className="text-xs text-text-muted mb-3">
-                  Every crux you create becomes a real folder here — open them in Finder,
-                  your editor, or any tool. You can move this later in Settings.
+                  Every crux you create becomes a real folder here — open them in Finder, your
+                  editor, or any tool. You can move this later in Settings.
                 </p>
                 <div className="flex items-center gap-2">
                   <code className="flex-1 px-3 py-2 text-xs font-mono rounded-[var(--radius-sm)] bg-surface-solid border border-border text-text truncate">
                     {gardenRoot ? shortenHomePath(gardenRoot) : 'Loading…'}
                   </code>
-                  <Button variant="secondary" size="sm" onClick={handleChooseGardenRoot} disabled={saving}>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={handleChooseGardenRoot}
+                    disabled={saving}
+                  >
                     Choose…
                   </Button>
                 </div>
@@ -455,7 +478,9 @@ function SetupStep({ onBack }: { onBack: () => void }) {
                       setUsernameError('Username is taken at crux.garden');
                       setOpenSection(SetupSection.Username);
                     }
-                  } catch { /* API unavailable */ }
+                  } catch {
+                    /* API unavailable */
+                  }
                 }
               }}
             />
@@ -465,7 +490,13 @@ function SetupStep({ onBack }: { onBack: () => void }) {
 
       {/* Continue */}
       <div className="mt-6">
-        <Button onClick={handleFinish} loading={saving} disabled={!!usernameError} fullWidth size="md">
+        <Button
+          onClick={handleFinish}
+          loading={saving}
+          disabled={!!usernameError}
+          fullWidth
+          size="md"
+        >
           Welcome
         </Button>
       </div>
@@ -502,7 +533,14 @@ function AccordionHeader({
       <span className="text-xs font-mono uppercase tracking-wider">{label}</span>
       <div className="flex items-center gap-2">
         {!open && summary && (
-          <span className={cn('text-[10px] font-mono', required ? 'text-error' : completed ? 'text-accent' : 'text-text-muted')}>{summary}</span>
+          <span
+            className={cn(
+              'text-[10px] font-mono',
+              required ? 'text-error' : completed ? 'text-accent' : 'text-text-muted',
+            )}
+          >
+            {summary}
+          </span>
         )}
         <svg
           width="12"
@@ -543,7 +581,9 @@ function CloudStep({ onBack }: { onBack: () => void }) {
       await useAppStore.getState().ensureAuthor();
 
       setStatus('Redirecting...');
-      setTimeout(() => { window.location.href = '/home'; }, 400);
+      setTimeout(() => {
+        window.location.href = '/home';
+      }, 400);
     } catch (err: unknown) {
       if ((err as { response?: { status?: number } })?.response?.status === 404) {
         setNoCloud(true);
@@ -613,7 +653,9 @@ function ImportStep({ onBack }: { onBack: () => void }) {
       await useAppStore.getState().ensureAuthor();
 
       setStatus('Redirecting...');
-      setTimeout(() => { window.location.href = '/home'; }, 400);
+      setTimeout(() => {
+        window.location.href = '/home';
+      }, 400);
     } catch (err) {
       console.error('Garden import failed:', err);
       setError(err instanceof Error ? err.message : 'Import failed — the file may be corrupted');
@@ -647,10 +689,15 @@ function ImportStep({ onBack }: { onBack: () => void }) {
     <Panel padding="lg" className="w-full animate-in fade-in slide-in-from-bottom-2 duration-300">
       <BackButton onClick={onBack} disabled={importing} />
 
-      <h2 className="font-display text-sm font-medium text-accent mb-4">Restore from .garden file</h2>
+      <h2 className="font-display text-sm font-medium text-accent mb-4">
+        Restore from .garden file
+      </h2>
 
       <div
-        onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+        onDragOver={(e) => {
+          e.preventDefault();
+          setDragOver(true);
+        }}
         onDragLeave={() => setDragOver(false)}
         onDrop={handleDrop}
         className={cn(
@@ -665,11 +712,7 @@ function ImportStep({ onBack }: { onBack: () => void }) {
         <p className="text-sm text-text-muted mb-3">
           Drag & drop a <span className="font-mono text-text">.garden</span> file here
         </p>
-        <Button
-          variant="secondary"
-          onClick={() => fileRef.current?.click()}
-          loading={importing}
-        >
+        <Button variant="secondary" onClick={() => fileRef.current?.click()} loading={importing}>
           {importing ? 'Importing...' : 'Choose file'}
         </Button>
         <input

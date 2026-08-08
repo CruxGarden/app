@@ -12,10 +12,7 @@ export interface DroppedFile {
 }
 
 /** Recursively collect all files under a FileSystemEntry (file or directory). */
-export async function walkEntry(
-  entry: FileSystemEntry,
-  basePath: string,
-): Promise<DroppedFile[]> {
+export async function walkEntry(entry: FileSystemEntry, basePath: string): Promise<DroppedFile[]> {
   if (entry.isFile) {
     const file = await new Promise<File>((resolve, reject) =>
       (entry as FileSystemFileEntry).file(resolve, reject),

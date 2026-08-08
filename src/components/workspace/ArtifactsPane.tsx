@@ -14,7 +14,16 @@ import { revealProjectFolder } from '@/services/project-folder';
 
 function RevealIcon() {
   return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+    <svg
+      width="14"
+      height="14"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
       <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
       <path d="M10 13l2 2 4-4" />
     </svg>
@@ -62,7 +71,16 @@ function FilePlusIcon() {
 
 function CollapseAllIcon() {
   return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+    <svg
+      width="14"
+      height="14"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
       <polyline points="4 14 10 14 10 20" />
       <polyline points="20 10 14 10 14 4" />
       <line x1="14" y1="10" x2="21" y2="3" />
@@ -124,9 +142,8 @@ export default function ArtifactsPane() {
   const [fileInfoOpen, setFileInfoOpen] = useState(false);
   const [isDraggingOverEmpty, setIsDraggingOverEmpty] = useState(false);
 
-  const selectedArtifact = selectedIds.length === 1
-    ? artifacts.find((a) => a.id === selectedIds[0])
-    : null;
+  const selectedArtifact =
+    selectedIds.length === 1 ? artifacts.find((a) => a.id === selectedIds[0]) : null;
 
   // Derive parent folder from tree focus or active tab selection
   const getParentPath = useCallback(() => {
@@ -158,7 +175,10 @@ export default function ArtifactsPane() {
   }, []);
 
   const handleContextMenu = useCallback(
-    (e: React.MouseEvent, info: { id: string | null; path: string; isFolder: boolean; selectedIds?: string[] }) => {
+    (
+      e: React.MouseEvent,
+      info: { id: string | null; path: string; isFolder: boolean; selectedIds?: string[] },
+    ) => {
       e.preventDefault();
       showContextMenu({
         x: e.clientX,
@@ -191,9 +211,9 @@ export default function ArtifactsPane() {
       const parentPath = useUIStore.getState().activeFileOperation?.parentPath;
       const folderPath = parentPath ? `${parentPath}/${name}` : name;
       cancelFileOperation();
-      const alreadyExists = useCruxStore.getState().artifacts.some((a) =>
-        pathOf(a).startsWith(folderPath + '/'),
-      );
+      const alreadyExists = useCruxStore
+        .getState()
+        .artifacts.some((a) => pathOf(a).startsWith(folderPath + '/'));
       if (alreadyExists) return;
       await createFile(`${folderPath}/.keep`, '');
     },
@@ -218,9 +238,12 @@ export default function ArtifactsPane() {
             ? `${newParentPath}/${folderName}${relativePath}`
             : `${folderName}${relativePath}`;
         });
-        const destFolderExists = destFolderPath !== folderPath &&
+        const destFolderExists =
+          destFolderPath !== folderPath &&
           artifacts.some((a) => pathOf(a).startsWith(destFolderPath + '/'));
-        const fileConflicts = newPaths.filter((p) => existingPaths.has(p) && !children.some((c) => pathOf(c) === p));
+        const fileConflicts = newPaths.filter(
+          (p) => existingPaths.has(p) && !children.some((c) => pathOf(c) === p),
+        );
         if (destFolderExists || fileConflicts.length > 0) {
           const msg = destFolderExists
             ? `A folder named "${folderName}" already exists at the destination. Merge contents?`
@@ -257,9 +280,9 @@ export default function ArtifactsPane() {
         parts[parts.length - 1] = newName;
         const newFolderPath = parts.join('/');
 
-        const children = useCruxStore.getState().artifacts.filter((a) =>
-          pathOf(a).startsWith(oldFolderPath + '/'),
-        );
+        const children = useCruxStore
+          .getState()
+          .artifacts.filter((a) => pathOf(a).startsWith(oldFolderPath + '/'));
         for (const child of children) {
           const oldPath = pathOf(child);
           const newPath = newFolderPath + oldPath.slice(oldFolderPath.length);
@@ -281,23 +304,24 @@ export default function ArtifactsPane() {
 
   // Close any newly-created folders after an import (folders not yet in saved state
   // would open by default due to openByDefault=true — we want them collapsed).
-  const closeFoldersFromPaths = useCallback((paths: string[]) => {
-    const current = useUIStore.getState().folderOpenState;
-    const toClose = new Set<string>();
-    for (const path of paths) {
-      const parts = path.split('/');
-      for (let i = 1; i < parts.length; i++) {
-        const folderId = `folder:${parts.slice(0, i).join('/')}`;
-        if (!(folderId in current)) toClose.add(folderId);
+  const closeFoldersFromPaths = useCallback(
+    (paths: string[]) => {
+      const current = useUIStore.getState().folderOpenState;
+      const toClose = new Set<string>();
+      for (const path of paths) {
+        const parts = path.split('/');
+        for (let i = 1; i < parts.length; i++) {
+          const folderId = `folder:${parts.slice(0, i).join('/')}`;
+          if (!(folderId in current)) toClose.add(folderId);
+        }
       }
-    }
-    for (const folderId of toClose) setFolderOpen(folderId, false);
-  }, [setFolderOpen]);
+      for (const folderId of toClose) setFolderOpen(folderId, false);
+    },
+    [setFolderOpen],
+  );
 
   const confirmOverwrite = useCallback((entries: { path: string }[]): boolean => {
-    const existingPaths = new Set(
-      useCruxStore.getState().artifacts.map((a) => pathOf(a)),
-    );
+    const existingPaths = new Set(useCruxStore.getState().artifacts.map((a) => pathOf(a)));
     const conflicts = entries.filter((e) => existingPaths.has(e.path));
     if (conflicts.length === 0) return true;
     const msg =
@@ -331,7 +355,6 @@ export default function ArtifactsPane() {
     [deleteArtifacts],
   );
 
-
   const handleFileInputChange = useCallback(
     async (e: React.ChangeEvent<HTMLInputElement>) => {
       const files = Array.from(e.target.files || []);
@@ -341,7 +364,10 @@ export default function ArtifactsPane() {
         file: f,
         path: parentPath ? `${parentPath}/${f.name}` : f.name,
       }));
-      if (!confirmOverwrite(entries)) { e.target.value = ''; return; }
+      if (!confirmOverwrite(entries)) {
+        e.target.value = '';
+        return;
+      }
       if (entries.length === 1) {
         await uploadFile(entries[0]!.file, parentPath);
       } else {
@@ -362,9 +388,12 @@ export default function ArtifactsPane() {
         file: f,
         path: parentPath
           ? `${parentPath}/${f.webkitRelativePath || f.name}`
-          : (f.webkitRelativePath || f.name),
+          : f.webkitRelativePath || f.name,
       }));
-      if (!confirmOverwrite(entries)) { e.target.value = ''; return; }
+      if (!confirmOverwrite(entries)) {
+        e.target.value = '';
+        return;
+      }
       await uploadFiles(entries);
       closeFoldersFromPaths(entries.map((en) => en.path));
       e.target.value = '';
@@ -515,13 +544,23 @@ export default function ArtifactsPane() {
           <div className="absolute top-full right-0 mt-1 z-50 bg-surface-solid border border-border rounded-[var(--radius-sm)] shadow-lg overflow-hidden">
             <button
               className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-text hover:bg-surface transition-colors whitespace-nowrap cursor-pointer"
-              onClick={() => { setUploadMenuOpen(false); fileInputRef.current?.click(); }}
+              onClick={() => {
+                setUploadMenuOpen(false);
+                fileInputRef.current?.click();
+              }}
             >
               Files…
             </button>
             <button
               className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-text hover:bg-surface transition-colors whitespace-nowrap cursor-pointer"
-              onClick={() => { setUploadMenuOpen(false); const el = folderInputRef.current; if (el) { el.setAttribute('webkitdirectory', ''); el.click(); } }}
+              onClick={() => {
+                setUploadMenuOpen(false);
+                const el = folderInputRef.current;
+                if (el) {
+                  el.setAttribute('webkitdirectory', '');
+                  el.click();
+                }
+              }}
             >
               Folder…
             </button>
@@ -567,8 +606,19 @@ export default function ArtifactsPane() {
         </div>
       )}
 
-      <input ref={fileInputRef} type="file" multiple className="hidden" onChange={handleFileInputChange} />
-      <input ref={folderInputRef} type="file" className="hidden" onChange={handleFolderInputChange} />
+      <input
+        ref={fileInputRef}
+        type="file"
+        multiple
+        className="hidden"
+        onChange={handleFileInputChange}
+      />
+      <input
+        ref={folderInputRef}
+        type="file"
+        className="hidden"
+        onChange={handleFolderInputChange}
+      />
 
       <div
         className="flex-1 overflow-hidden min-h-0 flex flex-col"
@@ -614,7 +664,16 @@ export default function ArtifactsPane() {
             {isDraggingOverEmpty ? (
               <div className="absolute inset-0 z-10 flex items-center justify-center bg-accent/5 border-2 border-dashed border-accent/40 rounded-[var(--radius)] pointer-events-none">
                 <div className="flex flex-col items-center gap-1 text-accent">
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                  <svg
+                    width="24"
+                    height="24"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
                     <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
                     <polyline points="17 8 12 3 7 8" />
                     <line x1="12" y1="3" x2="12" y2="15" />
@@ -623,7 +682,9 @@ export default function ArtifactsPane() {
                 </div>
               </div>
             ) : (
-              <p className="text-xs text-center text-text-muted">Create or import an artifact to get started</p>
+              <p className="text-xs text-center text-text-muted">
+                Create or import an artifact to get started
+              </p>
             )}
           </div>
         )}
@@ -677,7 +738,9 @@ export default function ArtifactsPane() {
             <span className="truncate mr-2">
               {uploadProgress.completed + 1}/{uploadProgress.total}: {uploadProgress.currentFile}
             </span>
-            <span className="shrink-0">{Math.round(((uploadProgress.completed) / uploadProgress.total) * 100)}%</span>
+            <span className="shrink-0">
+              {Math.round((uploadProgress.completed / uploadProgress.total) * 100)}%
+            </span>
           </div>
           <div className="h-0.5 bg-border">
             <div

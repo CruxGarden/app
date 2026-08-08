@@ -15,7 +15,6 @@ import {
   renameThroughArtifact,
 } from '../project-folder';
 
-
 /**
  * If no other artifact row references this fingerprint, delete the OPFS blob.
  * Safe to call even if the blob doesn't exist (blobDelete is a no-op).
@@ -34,10 +33,7 @@ async function cleanupOrphanedBlob(fingerprint: string | null): Promise<void> {
 
 export class SqliteArtifactService implements IArtifactService {
   async findById(id: string): Promise<Artifact> {
-    const row = await getSqliteClient().get(
-      'SELECT * FROM artifacts WHERE id = ?',
-      [id],
-    );
+    const row = await getSqliteClient().get('SELECT * FROM artifacts WHERE id = ?', [id]);
     if (!row) throw new NotFoundError('Artifact not found');
     return toArtifact(row);
   }
@@ -50,6 +46,60 @@ export class SqliteArtifactService implements IArtifactService {
     return rows.map(toArtifact);
   }
 
+  /**
+   * Content-addressed update of an existing artifact at `filePath`, or null if
+   * there is none. Shared by create() (text) and upload() (binary), which had
+   * near-identical copies of this block.
+   */
+  private async dedupUpdate(args: {
+    resourceId: string;
+    filePath: string;
+    fingerprint: string;
+    contentBytes: Uint8Array;
+    encoding: 'utf-8' | 'binary';
+    size: number;
+    mimeType?: string;
+    writeThrough?: boolean;
+    /** upload() writes the blob up front; create() defers it to here. */
+    blobAlreadyWritten: boolean;
+  }): Promise<Artifact | null> {
+    const db = getSqliteClient();
+    const existing = await db.get<Record<string, unknown>>(
+      "SELECT id, fingerprint, mime_type FROM artifacts WHERE resource_id = ? AND path = ? AND type = 'artifact'",
+      [args.resourceId, args.filePath],
+    );
+    if (!existing) return null;
+
+    const oldFingerprint = existing.fingerprint as string | null;
+    if (!args.blobAlreadyWritten) await db.blobWrite(args.fingerprint, args.contentBytes);
+    await db.run(
+      'UPDATE artifacts SET encoding = ?, mime_type = ?, size = ?, fingerprint = ?, updated = ? WHERE id = ?',
+      [
+        args.encoding,
+        args.mimeType || (existing.mime_type as string),
+        args.size,
+        args.fingerprint,
+        new Date().toISOString(),
+        existing.id,
+      ],
+    );
+    if (oldFingerprint && oldFingerprint !== args.fingerprint) {
+      await cleanupOrphanedBlob(oldFingerprint);
+    }
+    // Desktop: keep the Project Folder in sync (ADR 0001 write-through)
+    if (args.writeThrough !== false) {
+      await writeThroughArtifact(
+        args.resourceId,
+        {
+          filename: args.filePath.split('/').pop() || 'unnamed',
+          meta: { path: args.filePath },
+        },
+        args.contentBytes,
+      );
+    }
+    return this.findById(existing.id as string);
+  }
+
   async create(input: CreateArtifactInput): Promise<Artifact> {
     const identity = await getLocalIdentity();
     const filePath = input.meta?.path || '';
@@ -57,39 +107,20 @@ export class SqliteArtifactService implements IArtifactService {
     const contentBytes = new TextEncoder().encode(input.content);
     const fingerprint = await hashContent(contentBytes);
 
-    // Check for existing artifact at same path (dedup — update in place)
+    // Existing artifact at the same path → update in place (dedup)
     if (filePath) {
-      const existing = await db.get<Record<string, unknown>>(
-        "SELECT id, fingerprint, mime_type FROM artifacts WHERE resource_id = ? AND path = ? AND type = 'artifact'",
-        [input.resourceId, filePath],
-      );
-      if (existing) {
-        const oldFingerprint = existing.fingerprint as string | null;
-        await db.blobWrite(fingerprint, contentBytes);
-        await db.run(
-          'UPDATE artifacts SET encoding = ?, mime_type = ?, size = ?, fingerprint = ?, updated = ? WHERE id = ?',
-          [
-            'utf-8',
-            input.mimeType || (existing.mime_type as string),
-            contentBytes.byteLength,
-            fingerprint,
-            new Date().toISOString(),
-            existing.id,
-          ],
-        );
-        if (oldFingerprint && oldFingerprint !== fingerprint) {
-          await cleanupOrphanedBlob(oldFingerprint);
-        }
-        // Desktop: keep the Project Folder in sync (ADR 0001 write-through)
-        if (input.writeThrough !== false) {
-          await writeThroughArtifact(
-            input.resourceId,
-            { filename: filePath.split('/').pop() || 'unnamed', meta: { path: filePath } },
-            contentBytes,
-          );
-        }
-        return this.findById(existing.id as string);
-      }
+      const deduped = await this.dedupUpdate({
+        resourceId: input.resourceId,
+        filePath,
+        fingerprint,
+        contentBytes,
+        encoding: 'utf-8',
+        size: contentBytes.byteLength,
+        mimeType: input.mimeType,
+        writeThrough: input.writeThrough,
+        blobAlreadyWritten: false,
+      });
+      if (deduped) return deduped;
     }
 
     await db.blobWrite(fingerprint, contentBytes);
@@ -134,35 +165,18 @@ export class SqliteArtifactService implements IArtifactService {
 
     // When type is 'version', skip dedup — always create a new record.
     if (input.type !== 'version' && filePath) {
-      const existing = await db.get<Record<string, unknown>>(
-        "SELECT id, fingerprint, mime_type FROM artifacts WHERE resource_id = ? AND path = ? AND type = 'artifact'",
-        [input.resourceId, filePath],
-      );
-      if (existing) {
-        const oldFingerprint = existing.fingerprint as string | null;
-        await db.run(
-          'UPDATE artifacts SET encoding = ?, mime_type = ?, size = ?, fingerprint = ?, updated = ? WHERE id = ?',
-          [
-            'binary',
-            input.mimeType || (existing.mime_type as string),
-            input.blob.size,
-            fingerprint,
-            new Date().toISOString(),
-            existing.id,
-          ],
-        );
-        if (oldFingerprint && oldFingerprint !== fingerprint) {
-          await cleanupOrphanedBlob(oldFingerprint);
-        }
-        if (input.writeThrough !== false) {
-          await writeThroughArtifact(
-            input.resourceId,
-            { filename: filePath.split('/').pop() || 'unnamed', meta: { path: filePath } },
-            contentBytes,
-          );
-        }
-        return this.findById(existing.id as string);
-      }
+      const deduped = await this.dedupUpdate({
+        resourceId: input.resourceId,
+        filePath,
+        fingerprint,
+        contentBytes,
+        encoding: 'binary',
+        size: input.blob.size,
+        mimeType: input.mimeType,
+        writeThrough: input.writeThrough,
+        blobAlreadyWritten: true,
+      });
+      if (deduped) return deduped;
     }
 
     const now = new Date().toISOString();
@@ -207,6 +221,15 @@ export class SqliteArtifactService implements IArtifactService {
     if (existing.type === 'artifact' && newRel && newRel !== oldRel) {
       await renameThroughArtifact(existing.resourceId, oldRel, newRel);
     }
+    // Keep the internal path column in sync with meta.path — dedup lookups,
+    // ingestion queries, and computeSnapshotFingerprint all key on it. A stale
+    // column after a rename would duplicate the artifact on the next write.
+    if (newRel && newRel !== oldRel) {
+      changes.path = newRel;
+      if (updates.filename === undefined) {
+        changes.filename = newRel.split('/').pop() || newRel;
+      }
+    }
 
     const sets = Object.keys(changes)
       .map((k) => {
@@ -215,7 +238,9 @@ export class SqliteArtifactService implements IArtifactService {
       })
       .join(', ');
     const params = Object.values(changes).map((v) =>
-      v !== null && typeof v === 'object' && !(v instanceof Uint8Array) ? JSON.stringify(v) : v ?? null,
+      v !== null && typeof v === 'object' && !(v instanceof Uint8Array)
+        ? JSON.stringify(v)
+        : (v ?? null),
     );
     params.push(id);
 

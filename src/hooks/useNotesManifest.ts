@@ -20,7 +20,7 @@ export function useNotesManifest() {
 
     // Collect .md file paths under notes/, sorted
     const mdFiles = artifacts
-      .map((a) => ((a.meta?.path || a.filename || '') as string))
+      .map((a) => (a.meta?.path || a.filename || '') as string)
       .filter((p) => p.startsWith('notes/') && p.endsWith('.md'))
       .sort();
 

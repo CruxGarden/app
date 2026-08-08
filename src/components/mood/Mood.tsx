@@ -6,44 +6,76 @@ import { useMoodStore } from '@/stores/moodStore';
 import { getSetting, setSetting } from '@/services/settings';
 import { BG_CSS_VAR, SettingsKey } from '@/lib/constants';
 import { BgType, ThemeMode } from '@/lib/types';
-import { getPersona, savePersona, DEFAULT_PERSONA, getResolvedMode, type PersonaSettings } from './mood-helpers';
+import {
+  getPersona,
+  savePersona,
+  DEFAULT_PERSONA,
+  getResolvedMode,
+  type PersonaSettings,
+} from './mood-helpers';
 import { useBlobUrl } from '@/hooks/useBlobUrl';
-
 
 // ── Preset thumbnail ─────────────────────────────────
 
 function PresetThumb({ preset, active }: { preset: MoodPresetDef; active: boolean }) {
-  const p = (key: string) => preset.overrides[key] || (GARDEN_DARK as Record<string, string>)[key] || '#888';
+  const p = (key: string) =>
+    preset.overrides[key] || (GARDEN_DARK as Record<string, string>)[key] || '#888';
 
   return (
-    <div className={cn(
-      'w-full rounded-[6px] p-[2px] transition-all',
-      active ? 'bg-accent' : 'bg-transparent hover:bg-text-muted/30',
-    )}>
+    <div
+      className={cn(
+        'w-full rounded-[6px] p-[2px] transition-all',
+        active ? 'bg-accent' : 'bg-transparent hover:bg-text-muted/30',
+      )}
+    >
       <div className="rounded-[4px] overflow-hidden">
-      <div className="flex flex-col" style={{ backgroundColor: p('bg'), height: 60 }}>
-        {/* Toolbar */}
-        <div className="h-2.5 flex items-center px-1 gap-0.5" style={{ backgroundColor: p('surface'), borderBottom: `1px solid ${p('border')}` }}>
-          <div className="w-1 h-1 rounded-full" style={{ backgroundColor: p('accent') }} />
-          <div className="flex-1" />
-          <div className="flex gap-px">
-            {(['paneCollaboration', 'paneArtifacts', 'paneWorkshop', 'paneDetails'] as const).map((k) => (
-              <div key={k} className="w-1.5 h-1.5 rounded-[1px]" style={{ backgroundColor: p(k) }} />
-            ))}
+        <div className="flex flex-col" style={{ backgroundColor: p('bg'), height: 60 }}>
+          {/* Toolbar */}
+          <div
+            className="h-2.5 flex items-center px-1 gap-0.5"
+            style={{ backgroundColor: p('surface'), borderBottom: `1px solid ${p('border')}` }}
+          >
+            <div className="w-1 h-1 rounded-full" style={{ backgroundColor: p('accent') }} />
+            <div className="flex-1" />
+            <div className="flex gap-px">
+              {(['paneCollaboration', 'paneArtifacts', 'paneWorkshop', 'paneDetails'] as const).map(
+                (k) => (
+                  <div
+                    key={k}
+                    className="w-1.5 h-1.5 rounded-[1px]"
+                    style={{ backgroundColor: p(k) }}
+                  />
+                ),
+              )}
+            </div>
+          </div>
+          {/* Content */}
+          <div className="flex-1 flex p-1 gap-1">
+            <div className="flex-1 flex flex-col justify-end gap-0.5">
+              <div
+                className="self-end w-3/4 h-1.5 rounded-[1px]"
+                style={{ backgroundColor: `color-mix(in srgb, ${p('accent')} 15%, transparent)` }}
+              />
+              <div
+                className="self-start w-2/3 h-1.5 rounded-[1px]"
+                style={{ backgroundColor: p('surface') }}
+              />
+            </div>
+            <div
+              className="w-4"
+              style={{ backgroundColor: p('panel'), borderLeft: `1px solid ${p('border')}` }}
+            >
+              <div
+                className="mt-0.5 mx-0.5 h-1 rounded-[1px]"
+                style={{ backgroundColor: p('accent'), opacity: 0.5 }}
+              />
+              <div
+                className="mt-0.5 mx-0.5 h-1 rounded-[1px]"
+                style={{ backgroundColor: p('surface') }}
+              />
+            </div>
           </div>
         </div>
-        {/* Content */}
-        <div className="flex-1 flex p-1 gap-1">
-          <div className="flex-1 flex flex-col justify-end gap-0.5">
-            <div className="self-end w-3/4 h-1.5 rounded-[1px]" style={{ backgroundColor: `color-mix(in srgb, ${p('accent')} 15%, transparent)` }} />
-            <div className="self-start w-2/3 h-1.5 rounded-[1px]" style={{ backgroundColor: p('surface') }} />
-          </div>
-          <div className="w-4" style={{ backgroundColor: p('panel'), borderLeft: `1px solid ${p('border')}` }}>
-            <div className="mt-0.5 mx-0.5 h-1 rounded-[1px]" style={{ backgroundColor: p('accent'), opacity: 0.5 }} />
-            <div className="mt-0.5 mx-0.5 h-1 rounded-[1px]" style={{ backgroundColor: p('surface') }} />
-          </div>
-        </div>
-      </div>
       </div>
     </div>
   );
@@ -67,46 +99,49 @@ function PersonaTab() {
     savePersona(next);
   };
 
-  const handleThumbnailUpload = (field: 'thumbnailFingerprint' | 'thumbnailFingerprintLight') => async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    if (file.size > 10 * 1024 * 1024) return;
+  const handleThumbnailUpload =
+    (field: 'thumbnailFingerprint' | 'thumbnailFingerprintLight') =>
+    async (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      if (file.size > 10 * 1024 * 1024) return;
 
-    // Resize to 128x128 square
-    const dataUrl = await new Promise<string>((resolve) => {
-      const reader = new FileReader();
-      reader.onload = () => {
-        const img = new Image();
-        img.onload = () => {
-          const canvas = document.createElement('canvas');
-          canvas.width = 128;
-          canvas.height = 128;
-          const ctx = canvas.getContext('2d')!;
-          const size = Math.min(img.width, img.height);
-          const sx = (img.width - size) / 2;
-          const sy = (img.height - size) / 2;
-          ctx.drawImage(img, sx, sy, size, size, 0, 0, 128, 128);
-          resolve(canvas.toDataURL('image/webp', 0.8));
+      // Resize to 128x128 square
+      const dataUrl = await new Promise<string>((resolve) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          const img = new Image();
+          img.onload = () => {
+            const canvas = document.createElement('canvas');
+            canvas.width = 128;
+            canvas.height = 128;
+            const ctx = canvas.getContext('2d')!;
+            const size = Math.min(img.width, img.height);
+            const sx = (img.width - size) / 2;
+            const sy = (img.height - size) / 2;
+            ctx.drawImage(img, sx, sy, size, size, 0, 0, 128, 128);
+            resolve(canvas.toDataURL('image/webp', 0.8));
+          };
+          img.src = reader.result as string;
         };
-        img.src = reader.result as string;
-      };
-      reader.readAsDataURL(file);
-    });
+        reader.readAsDataURL(file);
+      });
 
-    // Write to OPFS blob store
-    const res = await fetch(dataUrl);
-    const buffer = new Uint8Array(await res.arrayBuffer());
-    const { hashContent } = await import('@/services/sqlite/helpers');
-    const fp = await hashContent(buffer);
-    const { getSqliteClient } = await import('@/services/sqlite/client');
-    const db = getSqliteClient();
-    await db.blobWrite(fp, buffer);
+      // Write to OPFS blob store
+      const res = await fetch(dataUrl);
+      const buffer = new Uint8Array(await res.arrayBuffer());
+      const { hashContent } = await import('@/services/sqlite/helpers');
+      const fp = await hashContent(buffer);
+      const { getSqliteClient } = await import('@/services/sqlite/client');
+      const db = getSqliteClient();
+      await db.blobWrite(fp, buffer);
 
-    // Clear legacy data URL field if present
-    const legacyField = field === 'thumbnailFingerprint' ? 'thumbnailDataUrl' : 'thumbnailDataUrlLight';
-    update({ [field]: fp, [legacyField]: null });
-    e.target.value = '';
-  };
+      // Clear legacy data URL field if present
+      const legacyField =
+        field === 'thumbnailFingerprint' ? 'thumbnailDataUrl' : 'thumbnailDataUrlLight';
+      update({ [field]: fp, [legacyField]: null });
+      e.target.value = '';
+    };
 
   const handleReset = () => {
     const fresh = { ...DEFAULT_PERSONA };
@@ -114,7 +149,12 @@ function PersonaTab() {
     savePersona(fresh);
   };
 
-  const isCustomized = persona.name !== DEFAULT_PERSONA.name || persona.greeting !== DEFAULT_PERSONA.greeting || persona.systemPrompt !== DEFAULT_PERSONA.systemPrompt || !!persona.thumbnailFingerprint || !!persona.thumbnailFingerprintLight;
+  const isCustomized =
+    persona.name !== DEFAULT_PERSONA.name ||
+    persona.greeting !== DEFAULT_PERSONA.greeting ||
+    persona.systemPrompt !== DEFAULT_PERSONA.systemPrompt ||
+    !!persona.thumbnailFingerprint ||
+    !!persona.thumbnailFingerprintLight;
 
   const inputClass = cn(
     'w-full bg-bg border border-border rounded-[var(--radius-sm)] px-2.5 py-1.5',
@@ -126,18 +166,29 @@ function PersonaTab() {
     <div className="flex flex-col gap-4 h-full">
       {/* Thumbnails */}
       <div className="shrink-0">
-        <div className="text-[9px] font-mono uppercase tracking-wider text-text-muted mb-2">Avatar</div>
+        <div className="text-[9px] font-mono uppercase tracking-wider text-text-muted mb-2">
+          Avatar
+        </div>
         <div className="flex items-start gap-4">
           <div className="flex flex-col items-center gap-1">
             <button
               onClick={() => fileRef.current?.click()}
               className="w-16 h-16 shrink-0 rounded-[var(--radius)] border border-border overflow-hidden bg-surface hover:border-accent cursor-pointer"
             >
-              <img src={darkThumbUrl || keeperAvatarDark} alt="" className="w-full h-full object-cover [image-rendering:pixelated]" />
+              <img
+                src={darkThumbUrl || keeperAvatarDark}
+                alt=""
+                className="w-full h-full object-cover [image-rendering:pixelated]"
+              />
             </button>
             <span className="text-[9px] font-mono text-text-muted">Dark</span>
             {persona.thumbnailFingerprint && (
-              <button onClick={() => update({ thumbnailFingerprint: null, thumbnailDataUrl: null })} className="text-[9px] text-error hover:text-text cursor-pointer">Remove</button>
+              <button
+                onClick={() => update({ thumbnailFingerprint: null, thumbnailDataUrl: null })}
+                className="text-[9px] text-error hover:text-text cursor-pointer"
+              >
+                Remove
+              </button>
             )}
           </div>
           <div className="flex flex-col items-center gap-1">
@@ -145,21 +196,46 @@ function PersonaTab() {
               onClick={() => fileLightRef.current?.click()}
               className="w-16 h-16 shrink-0 rounded-[var(--radius)] border border-border overflow-hidden bg-surface hover:border-accent cursor-pointer"
             >
-              <img src={lightThumbUrl || keeperAvatarLight} alt="" className="w-full h-full object-cover [image-rendering:pixelated]" />
+              <img
+                src={lightThumbUrl || keeperAvatarLight}
+                alt=""
+                className="w-full h-full object-cover [image-rendering:pixelated]"
+              />
             </button>
             <span className="text-[9px] font-mono text-text-muted">Light</span>
             {persona.thumbnailFingerprintLight && (
-              <button onClick={() => update({ thumbnailFingerprintLight: null, thumbnailDataUrlLight: null })} className="text-[9px] text-error hover:text-text cursor-pointer">Remove</button>
+              <button
+                onClick={() =>
+                  update({ thumbnailFingerprintLight: null, thumbnailDataUrlLight: null })
+                }
+                className="text-[9px] text-error hover:text-text cursor-pointer"
+              >
+                Remove
+              </button>
             )}
           </div>
-          <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleThumbnailUpload('thumbnailFingerprint')} />
-          <input ref={fileLightRef} type="file" accept="image/*" className="hidden" onChange={handleThumbnailUpload('thumbnailFingerprintLight')} />
+          <input
+            ref={fileRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={handleThumbnailUpload('thumbnailFingerprint')}
+          />
+          <input
+            ref={fileLightRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={handleThumbnailUpload('thumbnailFingerprintLight')}
+          />
         </div>
       </div>
 
       {/* Name */}
       <div className="shrink-0">
-        <div className="text-[9px] font-mono uppercase tracking-wider text-text-muted mb-1.5">Name</div>
+        <div className="text-[9px] font-mono uppercase tracking-wider text-text-muted mb-1.5">
+          Name
+        </div>
         <input
           type="text"
           value={persona.name}
@@ -172,7 +248,9 @@ function PersonaTab() {
 
       {/* Greeting */}
       <div className="shrink-0">
-        <div className="text-[9px] font-mono uppercase tracking-wider text-text-muted mb-1.5">Greeting</div>
+        <div className="text-[9px] font-mono uppercase tracking-wider text-text-muted mb-1.5">
+          Greeting
+        </div>
         <input
           type="text"
           value={persona.greeting}
@@ -185,7 +263,9 @@ function PersonaTab() {
 
       {/* System Prompt */}
       <div className="flex-1 min-h-0 flex flex-col">
-        <div className="text-[9px] font-mono uppercase tracking-wider text-text-muted mb-1.5 shrink-0">System Prompt</div>
+        <div className="text-[9px] font-mono uppercase tracking-wider text-text-muted mb-1.5 shrink-0">
+          System Prompt
+        </div>
         <textarea
           value={persona.systemPrompt}
           onChange={(e) => update({ systemPrompt: e.target.value })}
@@ -231,7 +311,12 @@ function BackgroundTabContent({
   const fileRef = useRef<HTMLInputElement>(null);
   const isLight = getResolvedMode() === 'Light';
 
-  const animatedOptions: { value: BgType; label: string; description: string; darkOnly?: boolean }[] = [
+  const animatedOptions: {
+    value: BgType;
+    label: string;
+    description: string;
+    darkOnly?: boolean;
+  }[] = [
     { value: BgType.Bloom, label: 'Bloom', description: 'Animated gradient blobs' },
     { value: BgType.Drift, label: 'Drift', description: 'Floating particles', darkOnly: true },
     { value: BgType.Flow, label: 'Flow', description: 'Organic wave patterns', darkOnly: true },
@@ -241,7 +326,9 @@ function BackgroundTabContent({
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-col gap-1.5">
-        <div className="text-[9px] font-mono uppercase tracking-wider text-text-muted">Animated</div>
+        <div className="text-[9px] font-mono uppercase tracking-wider text-text-muted">
+          Animated
+        </div>
         <div className="grid grid-cols-2 gap-2">
           {animatedOptions.map(({ value, label, description, darkOnly }) => {
             const disabled = darkOnly && isLight;
@@ -346,8 +433,12 @@ type Tab = 'palette' | 'background' | 'persona';
 
 export default function MoodEditor() {
   const [tab, setTab] = useState<Tab>('palette');
-  const [activeDarkId, setActiveDarkId] = useState(() => (getSetting(SettingsKey.MoodPresetDark) as string) || 'obsidian');
-  const [activeLightId, setActiveLightId] = useState(() => (getSetting(SettingsKey.MoodPresetLight) as string) || 'parchment');
+  const [activeDarkId, setActiveDarkId] = useState(
+    () => (getSetting(SettingsKey.MoodPresetDark) as string) || 'obsidian',
+  );
+  const [activeLightId, setActiveLightId] = useState(
+    () => (getSetting(SettingsKey.MoodPresetLight) as string) || 'parchment',
+  );
 
   // Sync preset IDs on mount (component only renders when modal is open)
   useEffect(() => {
@@ -356,7 +447,14 @@ export default function MoodEditor() {
   }, []);
   const [bgType, setBgType] = useState<BgType>(() => {
     const saved = getSetting(SettingsKey.BackgroundType) as string | null;
-    if (saved === 'bloom' || saved === 'blank' || saved === 'drift' || saved === 'flow' || saved === 'image') return saved as BgType;
+    if (
+      saved === 'bloom' ||
+      saved === 'blank' ||
+      saved === 'drift' ||
+      saved === 'flow' ||
+      saved === 'image'
+    )
+      return saved as BgType;
     return BgType.Bloom;
   });
   const [bgImagePreview, setBgImagePreview] = useState<string | null>(null);
@@ -445,7 +543,9 @@ export default function MoodEditor() {
     const currentMode = getResolvedMode();
     if (preset.section !== currentMode) {
       import('@/stores/themeStore').then(({ useThemeStore }) => {
-        useThemeStore.getState().setMode(preset.section === 'Light' ? ThemeMode.Light : ThemeMode.Dark);
+        useThemeStore
+          .getState()
+          .setMode(preset.section === 'Light' ? ThemeMode.Light : ThemeMode.Dark);
       });
     } else {
       applyMoodPalette(preset.overrides);
@@ -456,15 +556,19 @@ export default function MoodEditor() {
     <div className="select-none flex-1 flex flex-col min-h-0">
       {/* Tabs */}
       <div className="flex items-center gap-1 pb-3 mb-3 border-b border-border shrink-0">
-        {([['palette', 'Palette'], ['background', 'Background'], ['persona', 'Persona']] as const).map(([t, label]) => (
+        {(
+          [
+            ['palette', 'Palette'],
+            ['background', 'Background'],
+            ['persona', 'Persona'],
+          ] as const
+        ).map(([t, label]) => (
           <button
             key={t}
             onClick={() => setTab(t)}
             className={cn(
               'px-2.5 py-1 text-xs font-display font-medium rounded-[var(--radius-sm)] cursor-pointer',
-              tab === t
-                ? 'text-text bg-surface'
-                : 'text-text-muted hover:text-text',
+              tab === t ? 'text-text bg-surface' : 'text-text-muted hover:text-text',
             )}
           >
             {label}
@@ -482,7 +586,9 @@ export default function MoodEditor() {
               if (sectionPresets.length === 0) return null;
               return (
                 <div key={section} className={section !== 'Dark' ? 'mt-4' : ''}>
-                  <div className="text-[9px] font-mono uppercase tracking-wider text-text-muted mb-2">{section}</div>
+                  <div className="text-[9px] font-mono uppercase tracking-wider text-text-muted mb-2">
+                    {section}
+                  </div>
                   <div className="grid grid-cols-5 gap-2">
                     {sectionPresets.map((preset) => (
                       <button
@@ -491,10 +597,14 @@ export default function MoodEditor() {
                         className="flex flex-col items-center gap-1.5 cursor-pointer group"
                       >
                         <PresetThumb preset={preset} active={activeForSection === preset.id} />
-                        <span className={cn(
-                          'text-[10px] font-mono transition-colors',
-                          activeForSection === preset.id ? 'text-text' : 'text-text-muted group-hover:text-text',
-                        )}>
+                        <span
+                          className={cn(
+                            'text-[10px] font-mono transition-colors',
+                            activeForSection === preset.id
+                              ? 'text-text'
+                              : 'text-text-muted group-hover:text-text',
+                          )}
+                        >
                           {preset.name}
                         </span>
                       </button>
