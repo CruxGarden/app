@@ -649,7 +649,7 @@ export default function EditorContent({
           ref={previewIframeRef}
           key="preview"
           src={iframeSrc}
-          sandbox="allow-scripts allow-same-origin allow-popups allow-modals allow-downloads"
+          sandbox="allow-scripts allow-same-origin allow-popups allow-modals allow-downloads allow-forms"
           allow="geolocation; camera; microphone; accelerometer; gyroscope; autoplay; fullscreen"
           onLoad={(e) => {
             try {
