@@ -197,7 +197,7 @@ function HtmlRenderer({
         )}
         <iframe
           src={src}
-          sandbox="allow-scripts allow-same-origin allow-popups allow-modals allow-downloads"
+          sandbox="allow-scripts allow-same-origin allow-popups allow-modals allow-downloads allow-forms"
           allow="geolocation; camera; microphone; accelerometer; gyroscope; autoplay; fullscreen"
           className={`w-full h-full border-0 transition-opacity duration-150 ${iframeLoaded ? 'opacity-100' : 'opacity-0'}`}
           onLoad={() => setIframeLoaded(true)}
@@ -248,7 +248,7 @@ function ServiceWorkerHtmlRenderer({
     <iframe
       key={previewUrl}
       src={previewUrl}
-      sandbox="allow-scripts allow-same-origin allow-popups allow-modals allow-downloads"
+      sandbox="allow-scripts allow-same-origin allow-popups allow-modals allow-downloads allow-forms"
       allow="geolocation; camera; microphone; accelerometer; gyroscope; autoplay; fullscreen"
       className="w-full h-full border-0 bg-contrast"
       title="Published creation"
