@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, chromium } from '@playwright/test';
 import { launchApp } from './launch';
 
 /**
@@ -42,6 +42,24 @@ test.describe('acceptance journey (local half)', () => {
       await expect(preview).toBeVisible({ timeout: 4 * 60_000 });
       await expect(preview).toHaveAttribute('src', /\/posts\/hello-from-playwright$/);
       await page.screenshot({ path: 'e2e/.results/journey-2-preview.png' });
+
+      // The dev server is a real local web server — leave the app's chrome and
+      // assert on the site itself: the post renders at its route, with the
+      // frontmatter the Builder wrote.
+      const siteUrl = (await preview.getAttribute('src'))!;
+      const browser = await chromium.launch();
+      try {
+        const site = await browser.newPage({ viewport: { width: 1280, height: 900 } });
+        await site.goto(siteUrl);
+        await expect(site.getByRole('heading', { name: 'Hello from Playwright' })).toBeVisible();
+        await site.screenshot({ path: 'e2e/.results/journey-2b-site-post.png', fullPage: true });
+        // …and the home page lists it
+        await site.goto(new URL('/', siteUrl).toString());
+        await expect(site.getByRole('link', { name: 'Hello from Playwright' })).toBeVisible();
+        await site.screenshot({ path: 'e2e/.results/journey-2c-site-home.png', fullPage: true });
+      } finally {
+        await browser.close();
+      }
 
       // ── Snapshot with a label ─────────────────────────────────────────
       await page.getByRole('button', { name: 'Toggle history' }).click();
