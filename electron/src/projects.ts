@@ -27,7 +27,9 @@ export class DesktopConfig {
   }
 
   private defaults(): DesktopConfigData {
-    const root = path.join(os.homedir(), 'CruxGarden');
+    // CRUX_GARDEN_ROOT: test isolation — UI tests must not create folders in
+    // the developer's real garden.
+    const root = process.env.CRUX_GARDEN_ROOT || path.join(os.homedir(), 'CruxGarden');
     return { gardenRoot: root, knownRoots: [root] };
   }
 

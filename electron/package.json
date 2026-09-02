@@ -13,7 +13,8 @@
     "dist": "npm run build:all && electron-builder",
     "dist:mac": "npm run build:all && electron-builder --mac",
     "dist:win": "npm run build:all && electron-builder --win",
-    "dist:linux": "npm run build:all && electron-builder --linux"
+    "dist:linux": "npm run build:all && electron-builder --linux",
+    "test:e2e": "tsc && playwright test"
   },
   "dependencies": {
     "better-sqlite3": "^12.8.0",
@@ -24,9 +25,11 @@
   },
   "devDependencies": {
     "@electron/rebuild": "^4.0.3",
+    "@playwright/test": "^1.62.1",
     "@types/better-sqlite3": "^7.6.13",
     "electron": "^41.0.2",
     "electron-builder": "^26.8.1",
+    "playwright": "^1.62.1",
     "typescript": "^5.7.0"
   },
   "build": {

@@ -36,8 +36,10 @@ function debugLog(msg: string) {
 }
 debugLog(`Starting Crux Garden. isDev=${isDev}, isPackaged=${app.isPackaged}, ffmpeg=${ffmpegPath}`);
 
-// Set name for menu bar, but lock userData path so it doesn't change with the name
-const userDataPath = app.getPath('userData');
+// Set name for menu bar, but lock userData path so it doesn't change with the name.
+// CRUX_USER_DATA overrides it so automated UI tests (Playwright) run against a
+// throwaway database instead of the developer's real garden.
+const userDataPath = process.env.CRUX_USER_DATA || app.getPath('userData');
 app.setName('Crux Garden');
 app.setPath('userData', userDataPath);
 
