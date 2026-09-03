@@ -31,7 +31,7 @@ test.describe('mood builder', () => {
       await expect(tile).toHaveCSS('margin-left', '4px');
 
       // Mood modal → Open Mood Builder → lands on the Theme tab
-      await page.getByRole('button', { name: 'Mood' }).click();
+      await page.getByRole('button', { name: 'Mood', exact: true }).click();
       await expect(page.getByRole('heading', { name: 'Mood' })).toBeVisible();
       await page.getByRole('button', { name: 'Open Mood Builder' }).click();
       await expect(page.getByRole('heading', { name: 'Mood Builder' })).toBeVisible();

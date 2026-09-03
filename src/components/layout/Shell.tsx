@@ -21,6 +21,7 @@ export default function Shell() {
   const settingsOpen = useUIStore((s) => s.settingsOpen);
   const exploreOpen = useUIStore((s) => s.exploreOpen);
   const moodPanelOpen = useUIStore((s) => s.moodPanelOpen);
+  const dockReserve = useUIStore((s) => s.dockReserve);
 
   useEffect(() => {
     if (servicesReady) return;
@@ -89,7 +90,10 @@ export default function Shell() {
       </div>
 
       {/* Main */}
-      <main className="relative flex-1 min-h-0 overflow-y-auto">
+      <main
+        className="relative flex-1 min-h-0 overflow-y-auto"
+        style={dockReserve ? { paddingBottom: dockReserve } : undefined}
+      >
         {initError ? (
           <div role="alert" className="flex h-full items-center justify-center p-8 text-center">
             <div className="max-w-sm flex flex-col gap-2">

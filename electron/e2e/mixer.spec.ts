@@ -23,7 +23,7 @@ test.describe('resonance mixer', () => {
       await expect.poll(async () => (await state()).playing).toBe(true);
 
       // Dock → Mood Builder lands on Resonance
-      await dock.getByRole('button', { name: 'Open Mood Builder' }).click();
+      await dock.getByRole('button', { name: 'Open the mixer' }).click();
       await expect(page.getByRole('heading', { name: 'Mood Builder' })).toBeVisible();
       await expect(page.getByRole('textbox', { name: 'Mix name' })).toHaveValue(
         'Dusk in the Garden',

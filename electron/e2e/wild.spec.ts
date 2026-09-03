@@ -45,7 +45,7 @@ test.describe('wild theme', () => {
       await expect(page.getByText('too much', { exact: true })).toBeVisible({ timeout: 30_000 });
 
       // Mood modal → Mood Builder → Import the theme
-      await page.getByRole('button', { name: 'Mood' }).click();
+      await page.getByRole('button', { name: 'Mood', exact: true }).click();
       await page.getByRole('button', { name: 'Open Mood Builder' }).click();
       await expect(page.getByRole('heading', { name: 'Mood Builder' })).toBeVisible();
       await page

@@ -29,7 +29,7 @@ test.describe('resonance playlist + cues', () => {
       await expect.poll(async () => (await state()).playing).toBe(true);
 
       // Playlist: first item 0.02 min (~1.2 s), enabled → advances to Still Air
-      await dock.getByRole('button', { name: 'Open Mood Builder' }).click();
+      await dock.getByRole('button', { name: 'Open the mixer' }).click();
       await expect(page.getByRole('heading', { name: 'Mood Builder' })).toBeVisible();
       await page.getByRole('spinbutton', { name: 'Dusk in the Garden minutes' }).fill('0.02');
       await page.getByRole('checkbox', { name: 'Playlist enabled' }).check();

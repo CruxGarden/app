@@ -106,6 +106,9 @@ interface UIState {
   moodPanelOpen: boolean;
   setMoodPanelOpen: (open: boolean) => void;
   toggleMoodPanel: () => void;
+  /** Pixels the Mood Dock reserves at the bottom of <main> so it never covers pane controls. */
+  dockReserve: number;
+  setDockReserve: (px: number) => void;
 
   // ── Layout actions ──
 
@@ -540,6 +543,8 @@ export const useUIStore = create<UIState>()((set, get) => ({
   moodPanelOpen: false,
   setMoodPanelOpen: (open) => set({ moodPanelOpen: open }),
   toggleMoodPanel: () => set((s) => ({ moodPanelOpen: !s.moodPanelOpen })),
+  dockReserve: 0,
+  setDockReserve: (px) => set((s) => (s.dockReserve === px ? s : { dockReserve: px })),
 
   setActiveCrux: (id) => {
     // Flush any pending debounced scroll save
