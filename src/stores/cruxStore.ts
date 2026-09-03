@@ -42,7 +42,6 @@ interface CruxState {
   streamingContent: string;
 
   // Publish state
-  hasUnpublishedChanges: boolean;
   artifactsVersion: number;
 
   // Growth state
@@ -75,6 +74,8 @@ interface CruxState {
   setStreaming: (streaming: boolean) => void;
   appendStreamContent: (content: string) => void;
   clearStreamContent: () => void;
+  /** Re-read the workspace's artifacts from the store (snapshot-view aware). */
+  refreshArtifacts: () => Promise<void>;
   setArtifacts: (artifacts: Artifact[]) => void;
   addArtifact: (artifact: Artifact) => void;
   /** Merge an artifact into state by id (insert or replace). */
@@ -142,6 +143,19 @@ const deleteResolvers = new Map<string, ((approved: boolean) => void)[]>();
 // Monotonic id of the latest loadCrux call — stale loads compare and bail.
 let loadGeneration = 0;
 
+/**
+ * Derived, never stored: a published crux has unpublished changes when the
+ * working files' fingerprints differ from the snapshot taken at publish.
+ * The stored flag this replaces was set `true` by nine mutators — including
+ * the thumbnail capture, whose preview.jpg is excluded from publish by design,
+ * so a screenshot flipped a published crux to "changed".
+ */
+export const selectHasUnpublishedChanges = (s: CruxState): boolean =>
+  hasContentChanged(
+    s.artifacts,
+    s.crux?.meta?.publishedFingerprints as Record<string, string> | undefined,
+  );
+
 export const useCruxStore = create<CruxState>((set, get) => ({
   crux: null,
   messages: [],
@@ -152,7 +166,6 @@ export const useCruxStore = create<CruxState>((set, get) => ({
   streamingContent: '',
   growths: [],
   growthCount: 0,
-  hasUnpublishedChanges: false,
   artifactsVersion: 0,
   isCreatingGrowth: false,
   viewingSnapshotId: null,
@@ -204,11 +217,6 @@ export const useCruxStore = create<CruxState>((set, get) => ({
     // NOTE: crux.meta.settings.palette stores per-crux palette data for future use,
     // but themes are currently global — don't override the user's active theme on load.
 
-    // Compare current artifact fingerprints against the published snapshot
-    const hasChanges = hasContentChanged(
-      artifacts,
-      crux.meta?.publishedFingerprints as Record<string, string> | undefined,
-    );
 
     // Load growth dimensions first so we can reconstruct the full conversation
     const { dimension } = getServices();
@@ -261,7 +269,6 @@ export const useCruxStore = create<CruxState>((set, get) => ({
       summary: crux.meta?.summary || null,
       growthCount: crux.meta?.growthCount || 0,
       growths: sortedGrowths,
-      hasUnpublishedChanges: hasChanges,
       // Estimate initial token usage from message history until first real API response
       tokenUsage: {
         inputTokens: fullMessages.reduce(
@@ -366,16 +373,30 @@ export const useCruxStore = create<CruxState>((set, get) => ({
     set({ streamingContent: '' });
   },
 
+  refreshArtifacts: async () => {
+    const { crux, viewingSnapshotId } = get();
+    if (!crux) return;
+    const { artifact } = getServices();
+    const arts = await artifact.findByResource('crux', crux.id);
+    // Still the same workspace? (a slow refresh must not land on another crux)
+    if (get().crux?.id !== crux.id) return;
+    // While a snapshot is being viewed, `artifacts` shows the SNAPSHOT's files
+    // and the workspace's live list is stashed. A refresh (ingestion, AI tool)
+    // updates the stash, so exiting the snapshot restores current truth rather
+    // than the list from before the change.
+    if (viewingSnapshotId) set({ workspaceArtifacts: arts });
+    else set({ artifacts: arts });
+  },
+
   setArtifacts: (artifacts: Artifact[]) => {
     set((s) => ({
       artifacts,
-      hasUnpublishedChanges: true,
       artifactsVersion: s.artifactsVersion + 1,
     }));
   },
 
   addArtifact: (artifact: Artifact) => {
-    set((state) => ({ artifacts: [...state.artifacts, artifact], hasUnpublishedChanges: true }));
+    set((state) => ({ artifacts: [...state.artifacts, artifact] }));
   },
 
   upsertArtifact: (artifact: Artifact) => {
@@ -391,10 +412,6 @@ export const useCruxStore = create<CruxState>((set, get) => ({
       const newArtifacts = state.artifacts.map((a) => (a.id === id ? { ...a, ...updates } : a));
       return {
         artifacts: newArtifacts,
-        hasUnpublishedChanges: hasContentChanged(
-          newArtifacts,
-          state.crux?.meta?.publishedFingerprints as Record<string, string> | undefined,
-        ),
       };
     });
   },
@@ -429,10 +446,8 @@ export const useCruxStore = create<CruxState>((set, get) => ({
     if (!crux) return;
     const { crux: cruxService } = getServices();
     const updated = await cruxService.update(crux.id, dto);
-    const isPublished = crux.meta?.publishedAt != null;
     set({
       crux: { ...crux, ...updated },
-      ...(isPublished ? { hasUnpublishedChanges: true } : {}),
     });
   },
 
@@ -455,7 +470,6 @@ export const useCruxStore = create<CruxState>((set, get) => ({
       streamingContent: '',
       growths: [],
       growthCount: 0,
-      hasUnpublishedChanges: false,
       isCreatingGrowth: false,
       viewingSnapshotId: null,
       viewingSnapshotIndex: null,
@@ -482,7 +496,7 @@ export const useCruxStore = create<CruxState>((set, get) => ({
       const mergedCrux = await publishPipeline(crux, artifacts || [], {
         onProgress: (phase) => set({ publishPhase: phase }),
       });
-      set({ crux: mergedCrux, hasUnpublishedChanges: false });
+      set({ crux: mergedCrux });
       return true;
     } catch (err) {
       console.error('[publish] failed:', err);
@@ -515,7 +529,7 @@ export const useCruxStore = create<CruxState>((set, get) => ({
       mimeType: mime,
       meta: { path },
     });
-    set((state) => ({ artifacts: [...state.artifacts, newArtifact], hasUnpublishedChanges: true }));
+    set((state) => ({ artifacts: [...state.artifacts, newArtifact] }));
     return newArtifact;
   },
 
@@ -534,7 +548,6 @@ export const useCruxStore = create<CruxState>((set, get) => ({
       artifacts: state.artifacts.some((a) => a.id === newArtifact.id)
         ? state.artifacts.map((a) => (a.id === newArtifact.id ? newArtifact : a))
         : [...state.artifacts, newArtifact],
-      hasUnpublishedChanges: true,
     }));
     return newArtifact;
   },
@@ -558,7 +571,6 @@ export const useCruxStore = create<CruxState>((set, get) => ({
             }
           : a,
       ),
-      hasUnpublishedChanges: true,
     }));
   },
 
@@ -575,7 +587,6 @@ export const useCruxStore = create<CruxState>((set, get) => ({
             }
           : a,
       ),
-      hasUnpublishedChanges: true,
     }));
   },
 
@@ -584,7 +595,6 @@ export const useCruxStore = create<CruxState>((set, get) => ({
     await artifact.delete(id);
     set((state) => ({
       artifacts: state.artifacts.filter((a) => a.id !== id),
-      hasUnpublishedChanges: true,
     }));
     // Also close any editor tab for this file
     useUIStore.getState().closeTab(id);
@@ -597,7 +607,6 @@ export const useCruxStore = create<CruxState>((set, get) => ({
     const idSet = new Set(ids);
     set((state) => ({
       artifacts: state.artifacts.filter((a) => !idSet.has(a.id)),
-      hasUnpublishedChanges: true,
     }));
     // Close editor tabs for all deleted files
     const uiStore = useUIStore.getState();
@@ -636,7 +645,7 @@ export const useCruxStore = create<CruxState>((set, get) => ({
         if (idx >= 0) merged[idx] = a;
         else merged.push(a);
       }
-      return { artifacts: merged, hasUnpublishedChanges: true, uploadProgress: null };
+      return { artifacts: merged, uploadProgress: null };
     });
   },
 
@@ -655,7 +664,6 @@ export const useCruxStore = create<CruxState>((set, get) => ({
     });
     set((state) => ({
       artifacts: state.artifacts.map((a) => (a.id === id ? { ...a, ...updated } : a)),
-      hasUnpublishedChanges: true,
     }));
     return updated;
   },
@@ -1033,9 +1041,7 @@ if (typeof window !== 'undefined') {
     const { crux } = useCruxStore.getState();
     if (!crux || crux.id !== cruxId) return;
     try {
-      const { artifact } = getServices();
-      const arts = await artifact.findByResource('crux', cruxId);
-      useCruxStore.getState().setArtifacts(arts);
+      await useCruxStore.getState().refreshArtifacts();
     } catch {
       /* services not ready — panel refreshes on next load */
     }

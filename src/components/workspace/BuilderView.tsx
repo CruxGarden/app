@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useCruxStore } from '@/stores/cruxStore';
+import { useCruxStore, selectHasUnpublishedChanges } from '@/stores/cruxStore';
 import { useUIStore } from '@/stores/uiStore';
 import { useAppStore } from '@/stores/appStore';
 import { getServices } from '@/services';
@@ -61,7 +61,7 @@ export default function BuilderView() {
 function BuilderBody({ cruxTitle, model }: { cruxTitle: string; model: ContentModel }) {
   const crux = useCruxStore((s) => s.crux)!;
   const artifacts = useCruxStore((s) => s.artifacts);
-  const hasUnpublishedChanges = useCruxStore((s) => s.hasUnpublishedChanges);
+  const hasUnpublishedChanges = useCruxStore(selectHasUnpublishedChanges);
   const openFile = useUIStore((s) => s.openFile);
   const setPaneVisible = useUIStore((s) => s.setPaneVisible);
 

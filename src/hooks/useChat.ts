@@ -1,6 +1,5 @@
 import { useCallback } from 'react';
 import { useCruxStore } from '@/stores/cruxStore';
-import { getServices } from '@/services';
 import { runConversation } from '@/ai/engine';
 import { createToolExecutor, didMutate } from '@/ai/tools';
 import { chatSessionFor } from '@/services/chat-session';
@@ -261,12 +260,10 @@ export function useChat() {
                 if (session.refreshTimer) clearTimeout(session.refreshTimer);
                 session.refreshTimer = setTimeout(() => {
                   session.refreshTimer = null;
-                  const { artifact } = getServices();
-                  const currentCruxId = useCruxStore.getState().crux?.id ?? crux.id;
-                  artifact.findByResource('crux', currentCruxId).then(
-                    (arts) => useCruxStore.getState().setArtifacts(arts),
-                    (err) => console.error('Failed to refresh artifacts:', err),
-                  );
+                  useCruxStore
+                    .getState()
+                    .refreshArtifacts()
+                    .catch((err) => console.error('Failed to refresh artifacts:', err));
                 }, 150);
               }
               break;
