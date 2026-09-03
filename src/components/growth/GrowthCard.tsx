@@ -247,11 +247,14 @@ export default function GrowthCard({
           ? 'border-growth-card-label/60 ring-1 ring-growth-card-label/30'
           : isActive
             ? 'border-growth-card-label/40'
-            : 'border-garden-card-border hover:border-garden-card-border-hover hover:-translate-y-px hover:shadow-lg hover:shadow-black/20',
+            : 'border-garden-card-border shadow-card hover:border-garden-card-border-hover hover:-translate-y-px hover:shadow-card-hover',
       )}
     >
       {/* Screenshot */}
-      <div className="relative aspect-[16/10] w-full bg-garden-card-thumbnail overflow-hidden border-b border-garden-card-border">
+      <div
+        className="relative w-full bg-garden-card-thumbnail overflow-hidden border-b border-garden-card-border"
+        style={{ aspectRatio: 'var(--growth-card-aspect)' }}
+      >
         {thumbnailUrl ? (
           <PhotoProvider>
             <PhotoView src={thumbnailUrl}>

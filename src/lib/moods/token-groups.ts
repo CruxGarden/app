@@ -5,7 +5,7 @@
  */
 import { GARDEN_DARK } from './garden-dark';
 
-export type TokenKind = 'color' | 'length' | 'number' | 'font';
+export type TokenKind = 'color' | 'length' | 'number' | 'font' | 'text';
 
 export interface TokenGroup {
   id: string;
@@ -39,7 +39,59 @@ const LAYOUT_KEYS = new Set([
   'paneHeaderRadius',
   'paneHeaderPadding',
   'workspacePadding',
+  'density',
 ]);
+const TYPE_KEYS = new Set([
+  'fontDisplay',
+  'fontBody',
+  'fontMono',
+  'fontScale',
+  'lineHeightBody',
+  'fontWeightBody',
+  'letterSpacingBody',
+  'letterSpacingDisplay',
+  'letterSpacingMono',
+]);
+const HEADER_KEYS = new Set([
+  'paneHeaderLabelFont',
+  'paneHeaderLabelSize',
+  'paneHeaderLabelWeight',
+  'paneHeaderLabelCase',
+  'paneHeaderLabelTracking',
+  'paneHeaderIconDisplay',
+  'paneHeaderCloseDisplay',
+  'paneHeaderJustify',
+]);
+const ELEVATION_KEYS = new Set([
+  'elevationPanel',
+  'elevationCard',
+  'elevationCardHover',
+  'elevationModal',
+  'scrim',
+  'motionScale',
+]);
+const EDITOR_KEYS = new Set([
+  'editorBackground',
+  'editorFontSize',
+  'editorGutter',
+  'editorCursor',
+  'editorSelection',
+]);
+const IMAGE_BG_KEYS = new Set([
+  'bgImageDim',
+  'bgImageBlur',
+  'bgImageFit',
+  'bgImagePosition',
+  'bgImageScale',
+]);
+const GRID_KEYS = new Set([
+  'gardenCardMinWidth',
+  'gardenCardAspect',
+  'gardenGridGap',
+  'growthCardAspect',
+]);
+/** Free-form CSS keywords (text-transform, iteration count, background-size…) */
+const TEXT_KEYS = /(Case|Display|Justify|Fit|Position|Pulse)$|^(elevation|scrim)/;
 
 const FOUNDATION_KEYS = new Set([
   'bg',
@@ -84,14 +136,38 @@ export const TOKEN_GROUPS: TokenGroup[] = [
   {
     id: 'layout',
     label: 'Shape & layout',
-    hint: 'Corner radii, the gutter between workspace panes, header height.',
+    hint: 'Corner radii, the gutter between workspace panes, header height, and density (multiplies every padding and gap).',
     match: (k) => LAYOUT_KEYS.has(k),
   },
   {
     id: 'typography',
     label: 'Typography',
-    hint: 'Font stacks for display, body and code.',
-    match: starts('font'),
+    hint: 'Font stacks, the type scale (multiplies every size), weight, line height and tracking.',
+    match: (k) => TYPE_KEYS.has(k),
+  },
+  {
+    id: 'header',
+    label: 'Pane headers',
+    hint: 'How every pane title bar is set: label font, size, case, tracking, icon and close visibility, alignment. Per-pane groups override case and alignment.',
+    match: (k) => HEADER_KEYS.has(k),
+  },
+  {
+    id: 'elevation',
+    label: 'Elevation & motion',
+    hint: 'Shadows for panels, cards and modals, the modal scrim, and how fast things move (0 = instant).',
+    match: (k) => ELEVATION_KEYS.has(k),
+  },
+  {
+    id: 'editor',
+    label: 'Editor',
+    hint: 'The code editor: ground, gutter, cursor, selection, font size.',
+    match: (k) => EDITOR_KEYS.has(k),
+  },
+  {
+    id: 'grid',
+    label: 'Home grid',
+    hint: 'Card width, thumbnail shape and gap on the Home Garden; snapshot card shape.',
+    match: (k) => GRID_KEYS.has(k),
   },
   ...PANES.map<TokenGroup>((p) => ({
     id: `pane-${p.id.toLowerCase()}`,
@@ -165,9 +241,9 @@ export const TOKEN_GROUPS: TokenGroup[] = [
   },
   {
     id: 'ambient',
-    label: 'Ambient background',
-    hint: 'Bloom, stars, flow and drift backgrounds.',
-    match: starts('bloom', 'star', 'flow', 'drift', 'previewBg'),
+    label: 'Background',
+    hint: 'Bloom, stars, flow and drift backgrounds; dim, blur, fit and zoom for an image background.',
+    match: (k) => IMAGE_BG_KEYS.has(k) || starts('bloom', 'star', 'flow', 'drift', 'previewBg')(k),
   },
 ];
 
@@ -193,10 +269,21 @@ export function groupTokens(): { group: TokenGroup; keys: string[] }[] {
 }
 
 export function tokenKind(key: string): TokenKind {
+  if (TEXT_KEYS.test(key)) return 'text';
+  if (
+    /^(density|fontScale|motionScale|lineHeightBody|fontWeight|bgImageDim|bgImageScale)/.test(key)
+  )
+    return 'number';
+  if (/Weight$/.test(key)) return 'number';
+  if (/^font(Display|Body|Mono)$|LabelFont$/.test(key)) return 'font';
   if (LAYOUT_KEYS.has(key)) return 'length';
-  if (/(Radius|RadiusSm|Height|Padding|Width|Gap)$/.test(key)) return 'length';
+  if (
+    /(Radius|RadiusSm|Height|Padding|Width|Gap|Size|Blur|Tracking|Spacing)$|^letterSpacing|^gardenGridGap|Aspect$/.test(
+      key,
+    )
+  )
+    return 'length';
   if (/(Opacity|Speed|Density)$/.test(key)) return 'number';
-  if (key.startsWith('font')) return 'font';
   return 'color';
 }
 

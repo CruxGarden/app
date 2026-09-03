@@ -37,9 +37,42 @@ function tokenHex(name: string): string {
   return toHex(cssVar(name));
 }
 
+/** The Mood's editor font size in px (Monaco wants a number). */
+export function readEditorFontSize(): number {
+  if (typeof document === 'undefined') return 13;
+  const raw = getComputedStyle(document.documentElement).getPropertyValue('--editor-font-size');
+  const n = parseFloat(raw);
+  return Number.isFinite(n) && n > 0 ? n : 13;
+}
+
 /** Read a CSS var and return as #hex for Monaco editor colors */
 function colorHex(name: string): string {
   return `#${toHex(cssVar(name))}`;
+}
+
+/** Like colorHex but keeps alpha as #RRGGBBAA (selection, highlights). */
+function colorHexAlpha(name: string): string {
+  const v = cssVar(name);
+  const m =
+    v.match(/rgba?\(\s*(\d+),\s*(\d+),\s*(\d+)(?:,\s*([\d.]+))?/) ??
+    v.match(/rgba?\(\s*(\d+)\s+(\d+)\s+(\d+)(?:\s*\/\s*([\d.%]+))?/);
+  const base = `#${toHex(v)}`;
+  if (!m || m[4] === undefined) return base;
+  const a = m[4].endsWith('%') ? parseFloat(m[4]) / 100 : parseFloat(m[4]);
+  if (!Number.isFinite(a) || a >= 1) return base;
+  return (
+    base +
+    Math.round(a * 255)
+      .toString(16)
+      .padStart(2, '0')
+  );
+}
+
+/** The Mood's code font family as Monaco wants it (a plain string). */
+export function readEditorFontFamily(): string {
+  if (typeof document === 'undefined') return "'JetBrains Mono', monospace";
+  const raw = getComputedStyle(document.documentElement).getPropertyValue('--font-mono').trim();
+  return raw || "'JetBrains Mono', monospace";
 }
 
 /**
@@ -50,6 +83,9 @@ export function registerCruxGardenThemes(monaco: typeof Monaco): void {
   // The editor's own token, so a Mood can give the editor a different ground
   // (Notepad-white on a teal desktop) without repainting the whole app.
   const bg = colorHex('--editor-background');
+  const gutter = colorHex('--editor-gutter');
+  const cursor = colorHex('--editor-cursor');
+  const selection = colorHexAlpha('--editor-selection');
   const text = colorHex('--text');
   const textMuted = colorHex('--text-muted');
   const accent = colorHex('--accent');
@@ -137,9 +173,7 @@ export function registerCruxGardenThemes(monaco: typeof Monaco): void {
       'editor.background': bg,
       'editor.foreground': text,
       'editor.lineHighlightBackground': `${surfaceSolid}12`,
-      'editor.selectionBackground': `${accent}26`,
       'editor.inactiveSelectionBackground': `${accent}12`,
-      'editorCursor.foreground': accent,
       'editorLineNumber.foreground': `${border}80`,
       'editorLineNumber.activeForeground': textMuted,
       'editorIndentGuide.background': `${border}18`,
@@ -153,7 +187,9 @@ export function registerCruxGardenThemes(monaco: typeof Monaco): void {
       'scrollbarSlider.background': `${border}30`,
       'scrollbarSlider.hoverBackground': `${textMuted}50`,
       'scrollbarSlider.activeBackground': `${textMuted}70`,
-      'editorGutter.background': bg,
+      'editorGutter.background': gutter,
+      'editorCursor.foreground': cursor,
+      'editor.selectionBackground': selection,
       'editorOverviewRuler.border': '#00000000',
       'minimap.background': bg,
       'input.background': surfaceSolid,
@@ -173,9 +209,7 @@ export function registerCruxGardenThemes(monaco: typeof Monaco): void {
       'editor.background': bg,
       'editor.foreground': text,
       'editor.lineHighlightBackground': `${surfaceSolid}12`,
-      'editor.selectionBackground': `${accent}26`,
       'editor.inactiveSelectionBackground': `${accent}12`,
-      'editorCursor.foreground': accent,
       'editorLineNumber.foreground': `${border}80`,
       'editorLineNumber.activeForeground': textMuted,
       'editorIndentGuide.background': `${border}18`,
@@ -189,7 +223,9 @@ export function registerCruxGardenThemes(monaco: typeof Monaco): void {
       'scrollbarSlider.background': `${border}30`,
       'scrollbarSlider.hoverBackground': `${textMuted}50`,
       'scrollbarSlider.activeBackground': `${textMuted}70`,
-      'editorGutter.background': bg,
+      'editorGutter.background': gutter,
+      'editorCursor.foreground': cursor,
+      'editor.selectionBackground': selection,
       'editorOverviewRuler.border': '#00000000',
       'minimap.background': bg,
       'input.background': surfaceSolid,

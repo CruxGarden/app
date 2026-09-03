@@ -21,6 +21,10 @@ import {
   type TokenGroup,
 } from '@/lib/moods/token-groups';
 import { Button } from '@/components/ui';
+import { saveUserPreset, toThemeFile, parseThemeFile } from '@/lib/moods/user-presets';
+import { useAppStore } from '@/stores/appStore';
+import { setSetting } from '@/services/settings';
+import { SettingsKey } from '@/lib/constants';
 
 /**
  * The Theme tab of the Mood Builder: every palette token, grouped, editable,
@@ -180,7 +184,7 @@ function TokenRow({
           className={cn(
             'h-7 rounded-[var(--radius-sm)] border border-border bg-surface px-2 text-[11px] font-mono text-text',
             'focus:outline-none focus:border-accent',
-            kind === 'font' ? 'w-56' : 'w-40',
+            kind === 'font' || kind === 'text' ? 'w-56' : 'w-40',
           )}
         />
         <button
@@ -211,6 +215,15 @@ export default function ThemeTokensTab() {
   const [query, setQuery] = useState('');
   const [overrides, setOverrides] = useState<ThemeOverrides>(() => getThemeOverrides(section));
   const [tick, setTick] = useState(0);
+  // Undo / redo over whole override sets (session only)
+  const history = useRef<{ past: ThemeOverrides[]; future: ThemeOverrides[] }>({
+    past: [],
+    future: [],
+  });
+  const [histLen, setHistLen] = useState({ past: 0, future: 0 });
+  const [saving, setSaving] = useState(false);
+  const [presetName, setPresetName] = useState('');
+  const [savedNote, setSavedNote] = useState<string | null>(null);
   const [previewCount, setPreviewCount] = useState(() => Object.keys(getThemePreview()).length);
   useEffect(
     () =>
@@ -228,7 +241,7 @@ export default function ThemeTokensTab() {
     setOverrides(getThemeOverrides(section));
   }, [section, preset?.id]);
 
-  const persist = useCallback(
+  const commit = useCallback(
     (next: ThemeOverrides) => {
       setOverrides(next);
       setThemeOverrides(section, next);
@@ -238,6 +251,74 @@ export default function ThemeTokensTab() {
     },
     [section],
   );
+
+  /** A user edit: remembered for undo. */
+  const persist = useCallback(
+    (next: ThemeOverrides) => {
+      const h = history.current;
+      h.past.push(overrides);
+      if (h.past.length > 100) h.past.shift();
+      h.future = [];
+      setHistLen({ past: h.past.length, future: 0 });
+      commit(next);
+    },
+    [overrides, commit],
+  );
+
+  const undo = useCallback(() => {
+    const h = history.current;
+    const prev = h.past.pop();
+    if (!prev) return;
+    h.future.push(overrides);
+    setHistLen({ past: h.past.length, future: h.future.length });
+    commit(prev);
+  }, [overrides, commit]);
+
+  const redo = useCallback(() => {
+    const h = history.current;
+    const next = h.future.pop();
+    if (!next) return;
+    h.past.push(overrides);
+    setHistLen({ past: h.past.length, future: h.future.length });
+    commit(next);
+  }, [overrides, commit]);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const meta = e.metaKey || e.ctrlKey;
+      if (!meta || e.key.toLowerCase() !== 'z') return;
+      const t = e.target as HTMLElement | null;
+      if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA')) return;
+      e.preventDefault();
+      if (e.shiftKey) redo();
+      else undo();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [undo, redo]);
+
+  /** The complete look: base preset + edits, standalone. */
+  const fullLook = useCallback(
+    (): ThemeOverrides => ({ ...(preset?.overrides ?? {}), ...overrides }),
+    [preset, overrides],
+  );
+
+  const presetKeyFor = (s: MoodSection) =>
+    s === 'Light' ? SettingsKey.MoodPresetLight : SettingsKey.MoodPresetDark;
+
+  const saveAsPreset = () => {
+    const author = useAppStore.getState().author?.username;
+    const saved = saveUserPreset({ name: presetName, section, overrides: fullLook(), author });
+    // It becomes the active preset for this mode; the loose edits are folded in
+    setSetting(presetKeyFor(section), saved.id);
+    commit({});
+    history.current = { past: [], future: [] };
+    setHistLen({ past: 0, future: 0 });
+    setSaving(false);
+    setPresetName('');
+    setSavedNote(`Saved "${saved.name}" — find it in the Mood presets under Yours.`);
+    setTimeout(() => setSavedNote(null), 4000);
+  };
 
   const effective = (key: string): string =>
     overrides[key] ??
@@ -262,34 +343,40 @@ export default function ThemeTokensTab() {
       )
     : current.keys.map((k) => ({ key: k, group: current.group }));
 
+  /** Export the complete look as a shareable .cruxmood.json */
   const exportJson = () => {
-    const blob = new Blob([JSON.stringify({ section, preset: preset?.id, overrides }, null, 2)], {
-      type: 'application/json',
-    });
+    const author = useAppStore.getState().author?.username;
+    const name = preset ? `${preset.name}${total ? ' (edited)' : ''}` : 'Garden Dark';
+    const file = toThemeFile({ name, section, overrides: fullLook(), author });
+    const blob = new Blob([JSON.stringify(file, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `crux-theme-${section.toLowerCase()}.json`;
+    a.download = `${name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}.cruxmood.json`;
     a.click();
     URL.revokeObjectURL(url);
   };
 
+  /** Import: a named theme file becomes a preset under Yours; a bare map becomes edits. */
   const importJson = async (file: File) => {
-    try {
-      const parsed = JSON.parse(await file.text()) as
-        | { overrides?: unknown }
-        | Record<string, unknown>;
-      const raw = (
-        parsed && typeof parsed === 'object' && 'overrides' in parsed ? parsed.overrides : parsed
-      ) as Record<string, unknown>;
-      const next: ThemeOverrides = {};
-      for (const [k, v] of Object.entries(raw ?? {})) {
-        if (k in GARDEN_DARK && typeof v === 'string') next[k] = v;
+    const parsed = parseThemeFile(await file.text());
+    if (!parsed) return;
+    if (parsed.name) {
+      const saved = saveUserPreset({
+        name: parsed.name,
+        section: parsed.section ?? section,
+        overrides: parsed.overrides,
+        author: parsed.author,
+      });
+      if (saved.section === section) {
+        setSetting(presetKeyFor(section), saved.id);
+        commit({});
       }
-      persist(next);
-    } catch {
-      /* not a theme file — leave things as they are */
+      setSavedNote(`Imported "${saved.name}" — find it in the Mood presets under Yours.`);
+      setTimeout(() => setSavedNote(null), 4000);
+      return;
     }
+    persist(parsed.overrides);
   };
 
   return (
@@ -330,6 +417,53 @@ export default function ThemeTokensTab() {
           onChange={(e) => setQuery(e.target.value)}
           className="h-8 w-48 rounded-[var(--radius-sm)] border border-border bg-surface px-2.5 text-xs text-text placeholder:text-text-muted focus:outline-none focus:border-accent"
         />
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={undo}
+          disabled={histLen.past === 0}
+          title="Undo (⌘Z)"
+        >
+          Undo
+        </Button>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={redo}
+          disabled={histLen.future === 0}
+          title="Redo (⇧⌘Z)"
+        >
+          Redo
+        </Button>
+        {saving ? (
+          <form
+            className="flex items-center gap-1.5"
+            onSubmit={(e) => {
+              e.preventDefault();
+              saveAsPreset();
+            }}
+          >
+            <input
+              autoFocus
+              aria-label="Preset name"
+              placeholder="Name this look…"
+              value={presetName}
+              onChange={(e) => setPresetName(e.target.value)}
+              onKeyDown={(e) => e.key === 'Escape' && setSaving(false)}
+              className="h-8 w-40 rounded-[var(--radius-sm)] border border-border bg-surface px-2.5 text-xs text-text placeholder:text-text-muted focus:outline-none focus:border-accent"
+            />
+            <Button size="sm" type="submit">
+              Save
+            </Button>
+            <Button variant="ghost" size="sm" type="button" onClick={() => setSaving(false)}>
+              Cancel
+            </Button>
+          </form>
+        ) : (
+          <Button variant="secondary" size="sm" onClick={() => setSaving(true)}>
+            Save as preset
+          </Button>
+        )}
         <Button variant="ghost" size="sm" onClick={exportJson}>
           Export
         </Button>
@@ -351,6 +485,12 @@ export default function ThemeTokensTab() {
           Reset all
         </Button>
       </div>
+
+      {savedNote && (
+        <p role="status" className="text-[11px] text-accent -mt-1">
+          {savedNote}
+        </p>
+      )}
 
       <div className="flex gap-4 flex-1 min-h-0">
         {/* Groups */}

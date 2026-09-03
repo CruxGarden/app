@@ -47,12 +47,14 @@ export default function AnimatedBackground() {
   // Image overlays a background image
   if (bgType === BgType.Image && backgroundUrl) {
     return (
-      <div
-        aria-hidden="true"
-        data-testid="mood-background-image"
-        className="fixed inset-0 -z-10 pointer-events-none bg-cover bg-center"
-        style={{ backgroundImage: `url(${backgroundUrl})` }}
-      />
+      <div aria-hidden="true" className="fixed inset-0 -z-10 pointer-events-none overflow-hidden">
+        <div
+          data-testid="mood-background-image"
+          className="mood-bg-image absolute inset-0"
+          style={{ backgroundImage: `url(${backgroundUrl})` }}
+        />
+        <div className="mood-bg-dim absolute inset-0" />
+      </div>
     );
   }
 

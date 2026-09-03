@@ -91,7 +91,7 @@ export default function CruxCard({
         'relative group flex flex-col rounded-[var(--radius)] overflow-hidden',
         'bg-garden-card border border-garden-card-border',
         'transition-[border-color,transform,box-shadow] duration-200',
-        'hover:border-garden-card-border-hover hover:bg-garden-card-hover hover:-translate-y-0.5 hover:shadow-lg hover:shadow-black/20',
+        'shadow-card hover:border-garden-card-border-hover hover:bg-garden-card-hover hover:-translate-y-0.5 hover:shadow-card-hover',
         'focus-within:border-garden-card-border-hover',
       )}
     >
@@ -101,7 +101,10 @@ export default function CruxCard({
         aria-label={`Open ${crux.title || crux.slug}`}
       >
         {/* Thumbnail */}
-        <div className="relative aspect-[16/10] w-full bg-garden-card-thumbnail overflow-hidden border-b border-garden-card-border">
+        <div
+          className="relative w-full bg-garden-card-thumbnail overflow-hidden border-b border-garden-card-border"
+          style={{ aspectRatio: 'var(--garden-card-aspect)' }}
+        >
           {imageUrl ? (
             <img
               src={imageUrl}

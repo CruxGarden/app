@@ -19,11 +19,7 @@
    workspace legible at center while the edges fall away; the depth comes from
    the modal's shadow, not from blurring what's behind it. */
 .modal-scrim {
-  background: radial-gradient(
-    ellipse 120% 90% at center,
-    rgb(0 0 0 / 0.55) 0%,
-    rgb(0 0 0 / 0.82) 100%
-  );
+  background: var(--scrim);
   animation: fade-in 0.15s ease-out;
 }
 
@@ -82,6 +78,16 @@
   --font-body: 'Outfit', sans-serif;
   --font-mono: 'JetBrains Mono', monospace;
   --font-wordmark: 'Cormorant Garamond', Georgia, serif;
+
+  /* ── Dimensions driven by Mood tokens ──────────────────
+     Tailwind's spacing unit and default transition follow the Mood, so
+     p-3 / gap-2 / transition-colors everywhere respond to density and motion. */
+  --spacing: calc(0.25rem * var(--density));
+  --default-transition-duration: calc(150ms * var(--motion-scale));
+  --shadow-panel: var(--elevation-panel);
+  --shadow-card: var(--elevation-card);
+  --shadow-card-hover: var(--elevation-card-hover);
+  --shadow-modal: var(--elevation-modal);
 
   /* ── Legacy (kept until all components migrate) ────── */
   --color-bg: var(--bg);
@@ -433,6 +439,41 @@
   --overlay-badge-text: #ffffff;
   --overlay-badge: rgba(0, 0, 0, 0.55);
   --editor-background: var(--bg);
+  --pane-header-label-font: var(--font-mono);
+  --pane-header-label-size: 11px;
+  --pane-header-label-weight: 400;
+  --pane-header-label-case: uppercase;
+  --pane-header-label-tracking: 0.05em;
+  --pane-header-icon-display: inline-flex;
+  --pane-header-close-display: inline-flex;
+  --pane-header-justify: space-between;
+  --font-scale: 1;
+  --density: 1;
+  --line-height-body: 1.5;
+  --font-weight-body: 400;
+  --letter-spacing-body: 0;
+  --letter-spacing-display: 0;
+  --letter-spacing-mono: 0;
+  --elevation-panel: 0 10px 15px -3px rgb(0 0 0 / 0.05), 0 4px 6px -4px rgb(0 0 0 / 0.05);
+  --elevation-card: none;
+  --elevation-card-hover: 0 10px 15px -3px rgb(0 0 0 / 0.2), 0 4px 6px -4px rgb(0 0 0 / 0.2);
+  --elevation-modal: 0 24px 80px -16px rgb(0 0 0 / 0.65);
+  --scrim: radial-gradient(
+    ellipse 120% 90% at center,
+    rgb(0 0 0 / 0.55) 0%,
+    rgb(0 0 0 / 0.82) 100%
+  );
+  --motion-scale: 1;
+  --editor-font-size: 13px;
+  --bg-image-dim: 0;
+  --bg-image-blur: 0px;
+  --bg-image-fit: cover;
+  --bg-image-position: center;
+  --bg-image-scale: 1;
+  --garden-card-min-width: 220px;
+  --garden-card-aspect: 16 / 10;
+  --garden-grid-gap: 1rem;
+  --growth-card-aspect: 16 / 10;
   --syntax-comment: #6a7a6e;
   --syntax-keyword: #7db3a3;
   --syntax-string: #a8d4c4;
@@ -627,12 +668,47 @@ body,
   padding: 0;
 }
 
+html {
+  /* The Mood's type scale: every rem-based size in the app follows */
+  font-size: calc(16px * var(--font-scale));
+}
+
 body {
   font-family: var(--font-body);
+  font-weight: var(--font-weight-body);
+  letter-spacing: var(--letter-spacing-body);
+  line-height: var(--line-height-body);
   background-color: var(--bg);
   color: var(--text);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+/* Display and code faces carry their own tracking */
+.font-display,
+.font-wordmark {
+  letter-spacing: var(--letter-spacing-display);
+}
+.font-mono {
+  letter-spacing: var(--letter-spacing-mono);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --motion-scale: 0;
+  }
+}
+
+/* Image background — fit, position, zoom, blur, and a dimming veil */
+.mood-bg-image {
+  background-size: var(--bg-image-fit);
+  background-position: var(--bg-image-position);
+  background-repeat: no-repeat;
+  filter: blur(var(--bg-image-blur));
+  transform: scale(var(--bg-image-scale));
+}
+.mood-bg-dim {
+  background: rgb(0 0 0 / var(--bg-image-dim));
 }
 
 /* ── Scrollbar ─────────────────────────────────────────── */
@@ -810,7 +886,11 @@ html.palette-transition *::after {
   --heading: var(--pane-collaboration-heading);
   --pane-header-radius: var(--pane-collaboration-header-radius);
   --pane-header-height: var(--pane-collaboration-header-height);
+  --pane-border-width: var(--pane-collaboration-border-width);
+  --pane-header-label-case: var(--pane-collaboration-header-label-case);
+  --pane-header-justify: var(--pane-collaboration-header-justify);
   border-radius: var(--pane-collaboration-radius);
+  animation: pane-pulse 1.4s ease-in-out var(--pane-collaboration-pulse);
 }
 .mosaic.crux-mosaic-theme .mosaic-window.pane-artifacts {
   --panel: var(--pane-artifacts-body);
@@ -827,7 +907,11 @@ html.palette-transition *::after {
   --heading: var(--pane-artifacts-heading);
   --pane-header-radius: var(--pane-artifacts-header-radius);
   --pane-header-height: var(--pane-artifacts-header-height);
+  --pane-border-width: var(--pane-artifacts-border-width);
+  --pane-header-label-case: var(--pane-artifacts-header-label-case);
+  --pane-header-justify: var(--pane-artifacts-header-justify);
   border-radius: var(--pane-artifacts-radius);
+  animation: pane-pulse 1.4s ease-in-out var(--pane-artifacts-pulse);
 }
 .mosaic.crux-mosaic-theme .mosaic-window.pane-workshop {
   --panel: var(--pane-workshop-body);
@@ -844,7 +928,11 @@ html.palette-transition *::after {
   --heading: var(--pane-workshop-heading);
   --pane-header-radius: var(--pane-workshop-header-radius);
   --pane-header-height: var(--pane-workshop-header-height);
+  --pane-border-width: var(--pane-workshop-border-width);
+  --pane-header-label-case: var(--pane-workshop-header-label-case);
+  --pane-header-justify: var(--pane-workshop-header-justify);
   border-radius: var(--pane-workshop-radius);
+  animation: pane-pulse 1.4s ease-in-out var(--pane-workshop-pulse);
 }
 .mosaic.crux-mosaic-theme .mosaic-window.pane-details {
   --panel: var(--pane-details-body);
@@ -861,7 +949,11 @@ html.palette-transition *::after {
   --heading: var(--pane-details-heading);
   --pane-header-radius: var(--pane-details-header-radius);
   --pane-header-height: var(--pane-details-header-height);
+  --pane-border-width: var(--pane-details-border-width);
+  --pane-header-label-case: var(--pane-details-header-label-case);
+  --pane-header-justify: var(--pane-details-header-justify);
   border-radius: var(--pane-details-radius);
+  animation: pane-pulse 1.4s ease-in-out var(--pane-details-pulse);
 }
 .mosaic.crux-mosaic-theme .mosaic-window.pane-history {
   --panel: var(--pane-history-body);
@@ -878,7 +970,11 @@ html.palette-transition *::after {
   --heading: var(--pane-history-heading);
   --pane-header-radius: var(--pane-history-header-radius);
   --pane-header-height: var(--pane-history-header-height);
+  --pane-border-width: var(--pane-history-border-width);
+  --pane-header-label-case: var(--pane-history-header-label-case);
+  --pane-header-justify: var(--pane-history-header-justify);
   border-radius: var(--pane-history-radius);
+  animation: pane-pulse 1.4s ease-in-out var(--pane-history-pulse);
 }
 .mosaic.crux-mosaic-theme .mosaic-window.pane-export {
   --panel: var(--pane-export-body);
@@ -895,7 +991,11 @@ html.palette-transition *::after {
   --heading: var(--pane-export-heading);
   --pane-header-radius: var(--pane-export-header-radius);
   --pane-header-height: var(--pane-export-header-height);
+  --pane-border-width: var(--pane-export-border-width);
+  --pane-header-label-case: var(--pane-export-header-label-case);
+  --pane-header-justify: var(--pane-export-header-justify);
   border-radius: var(--pane-export-radius);
+  animation: pane-pulse 1.4s ease-in-out var(--pane-export-pulse);
 }
 .mosaic.crux-mosaic-theme .mosaic-window.pane-sync {
   --panel: var(--pane-sync-body);
@@ -912,7 +1012,11 @@ html.palette-transition *::after {
   --heading: var(--pane-sync-heading);
   --pane-header-radius: var(--pane-sync-header-radius);
   --pane-header-height: var(--pane-sync-header-height);
+  --pane-border-width: var(--pane-sync-border-width);
+  --pane-header-label-case: var(--pane-sync-header-label-case);
+  --pane-header-justify: var(--pane-sync-header-justify);
   border-radius: var(--pane-sync-radius);
+  animation: pane-pulse 1.4s ease-in-out var(--pane-sync-pulse);
 }
 .mosaic.crux-mosaic-theme .mosaic-window.pane-publish {
   --panel: var(--pane-publish-body);
@@ -929,7 +1033,11 @@ html.palette-transition *::after {
   --heading: var(--pane-publish-heading);
   --pane-header-radius: var(--pane-publish-header-radius);
   --pane-header-height: var(--pane-publish-header-height);
+  --pane-border-width: var(--pane-publish-border-width);
+  --pane-header-label-case: var(--pane-publish-header-label-case);
+  --pane-header-justify: var(--pane-publish-header-justify);
   border-radius: var(--pane-publish-radius);
+  animation: pane-pulse 1.4s ease-in-out var(--pane-publish-pulse);
 }
 .mosaic.crux-mosaic-theme .mosaic-window.pane-store {
   --panel: var(--pane-store-body);
@@ -946,7 +1054,11 @@ html.palette-transition *::after {
   --heading: var(--pane-store-heading);
   --pane-header-radius: var(--pane-store-header-radius);
   --pane-header-height: var(--pane-store-header-height);
+  --pane-border-width: var(--pane-store-border-width);
+  --pane-header-label-case: var(--pane-store-header-label-case);
+  --pane-header-justify: var(--pane-store-header-justify);
   border-radius: var(--pane-store-radius);
+  animation: pane-pulse 1.4s ease-in-out var(--pane-store-pulse);
 }
 
 /* Clip overflow on body (not window) so drop target overlays remain visible */
@@ -972,7 +1084,7 @@ html.palette-transition *::after {
 .mosaic.crux-mosaic-theme .mosaic-window .pane-toolbar {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: var(--pane-header-justify);
   width: 100%;
   height: var(--pane-header-height);
   padding: 0 10px;
@@ -991,6 +1103,33 @@ html.palette-transition *::after {
 }
 .mosaic.crux-mosaic-theme .mosaic-window .mosaic-window-controls {
   display: none;
+}
+
+/* Header anatomy — every part a token */
+.mosaic.crux-mosaic-theme .pane-toolbar-label {
+  font-family: var(--pane-header-label-font);
+  font-size: var(--pane-header-label-size);
+  font-weight: var(--pane-header-label-weight);
+  text-transform: var(--pane-header-label-case);
+  letter-spacing: var(--pane-header-label-tracking);
+}
+.mosaic.crux-mosaic-theme .pane-toolbar-icon {
+  display: var(--pane-header-icon-display);
+}
+.mosaic.crux-mosaic-theme .pane-toolbar-close {
+  display: var(--pane-header-close-display);
+}
+
+/* Frame pulse — a pane's --pane-<name>-pulse token is the iteration count:
+   0 stays still, "infinite" breathes (the AI sets it while it works). */
+@keyframes pane-pulse {
+  0%,
+  100% {
+    filter: brightness(1);
+  }
+  50% {
+    filter: brightness(1.45) saturate(1.2);
+  }
 }
 
 /* Resize handles */
