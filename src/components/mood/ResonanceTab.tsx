@@ -4,6 +4,15 @@ import { Button } from '@/components/ui';
 import { useAudioStore } from '@/stores/audioStore';
 import { useShallow } from 'zustand/react/shallow';
 import {
+  CUE_EVENTS,
+  CUE_KINDS,
+  getCues,
+  saveCues,
+  type CueEvent,
+  type CueKind,
+  type SoundCues,
+} from '@/services/cues';
+import {
   LAYER_LABELS,
   LAYER_TYPES,
   SCALES,
@@ -354,7 +363,19 @@ function LayerStrip({
 }
 
 export default function ResonanceTab() {
-  const { mixes, activeMixId, playing, toggle, selectMix, upsertMix, deleteMix } = useAudioStore(
+  const {
+    mixes,
+    activeMixId,
+    playing,
+    toggle,
+    selectMix,
+    upsertMix,
+    deleteMix,
+    playlist,
+    playlistIndex,
+    setPlaylist,
+    cue,
+  } = useAudioStore(
     useShallow((s) => ({
       mixes: s.mixes,
       activeMixId: s.activeMixId,
@@ -363,8 +384,19 @@ export default function ResonanceTab() {
       selectMix: s.selectMix,
       upsertMix: s.upsertMix,
       deleteMix: s.deleteMix,
+      playlist: s.playlist,
+      playlistIndex: s.playlistIndex,
+      setPlaylist: s.setPlaylist,
+      cue: s.cue,
     })),
   );
+  const [cues, setCues] = useState<SoundCues>(() => getCues());
+  const [addToPlaylist, setAddToPlaylist] = useState('');
+  const updateCue = (ev: CueEvent, kind: CueKind | null) => {
+    const next = { ...cues, [ev]: kind };
+    setCues(next);
+    saveCues(next);
+  };
   const mix = mixes.find((m) => m.id === activeMixId) ?? mixes[0];
   const history = useRef<{ past: Mix[]; future: Mix[] }>({ past: [], future: [] });
   const [hist, setHist] = useState({ past: 0, future: 0 });
@@ -608,6 +640,191 @@ export default function ResonanceTab() {
             />
           ))}
         </div>
+
+        {/* Playlist */}
+        <section className="rounded-[var(--radius-sm)] border border-border bg-surface/50 px-3 py-2.5 flex flex-col gap-2">
+          <div className="flex items-center gap-3">
+            <div className="text-[10px] font-mono uppercase tracking-wider text-caption">
+              Playlist
+            </div>
+            <label className="flex items-center gap-1.5 text-[11px] text-text-muted cursor-pointer">
+              <input
+                type="checkbox"
+                aria-label="Playlist enabled"
+                checked={playlist.enabled}
+                onChange={(e) => setPlaylist({ ...playlist, enabled: e.target.checked })}
+                className="accent-accent"
+              />
+              Play through the list
+            </label>
+            <label className="flex items-center gap-1.5 text-[11px] text-text-muted cursor-pointer">
+              <input
+                type="checkbox"
+                aria-label="Shuffle"
+                checked={playlist.shuffle}
+                onChange={(e) => setPlaylist({ ...playlist, shuffle: e.target.checked })}
+                className="accent-accent"
+              />
+              Shuffle
+            </label>
+          </div>
+          {playlist.items.length === 0 && (
+            <p className="text-[11px] text-text-muted">
+              No items — add mixes below and turn the playlist on.
+            </p>
+          )}
+          {playlist.items.map((it, i) => {
+            const m = mixes.find((x) => x.id === it.mixId);
+            const label = m?.name ?? it.mixId;
+            const current = playlist.enabled && i === playlistIndex;
+            return (
+              <div
+                key={`${it.mixId}-${i}`}
+                className={cn(
+                  'flex items-center gap-2 text-[11px] rounded-[var(--radius-sm)] px-2 py-1',
+                  current ? 'bg-accent-muted text-text' : 'text-text-muted',
+                )}
+              >
+                <span className="w-4 font-mono">{i + 1}</span>
+                <span className="flex-1 truncate text-text">{label}</span>
+                <label className="flex items-center gap-1">
+                  <input
+                    type="number"
+                    aria-label={`${label} minutes`}
+                    min={0.01}
+                    step={1}
+                    value={it.minutes}
+                    onChange={(e) => {
+                      const minutes = Math.max(0.01, parseFloat(e.target.value) || 0.01);
+                      setPlaylist({
+                        ...playlist,
+                        items: playlist.items.map((x, j) => (j === i ? { ...x, minutes } : x)),
+                      });
+                    }}
+                    className="w-16 h-6 rounded-[var(--radius-sm)] border border-border bg-surface px-1.5 text-[11px] text-text"
+                  />
+                  min
+                </label>
+                <label className="flex items-center gap-1">
+                  <input
+                    type="number"
+                    aria-label={`${label} crossfade`}
+                    min={0}
+                    step={1}
+                    value={it.crossfadeSec}
+                    onChange={(e) => {
+                      const crossfadeSec = Math.max(0, parseFloat(e.target.value) || 0);
+                      setPlaylist({
+                        ...playlist,
+                        items: playlist.items.map((x, j) => (j === i ? { ...x, crossfadeSec } : x)),
+                      });
+                    }}
+                    className="w-14 h-6 rounded-[var(--radius-sm)] border border-border bg-surface px-1.5 text-[11px] text-text"
+                  />
+                  s fade
+                </label>
+                <button
+                  type="button"
+                  aria-label={`Move ${label} up`}
+                  disabled={i === 0}
+                  onClick={() => {
+                    const items = [...playlist.items];
+                    [items[i - 1], items[i]] = [items[i]!, items[i - 1]!];
+                    setPlaylist({ ...playlist, items });
+                  }}
+                  className="px-1 text-text-muted hover:text-text disabled:opacity-30 cursor-pointer"
+                >
+                  ↑
+                </button>
+                <button
+                  type="button"
+                  aria-label={`Remove ${label} from playlist`}
+                  onClick={() =>
+                    setPlaylist({ ...playlist, items: playlist.items.filter((_, j) => j !== i) })
+                  }
+                  className="px-1 text-text-muted hover:text-error cursor-pointer"
+                >
+                  ×
+                </button>
+              </div>
+            );
+          })}
+          <div className="flex items-center gap-2">
+            <select
+              aria-label="Add mix to playlist"
+              value={addToPlaylist}
+              onChange={(e) => setAddToPlaylist(e.target.value)}
+              className="h-7 rounded-[var(--radius-sm)] border border-border bg-surface px-2 text-[11px] text-text"
+            >
+              <option value="">Add a mix…</option>
+              {mixes.map((m) => (
+                <option key={m.id} value={m.id}>
+                  {m.name}
+                </option>
+              ))}
+            </select>
+            <Button
+              variant="ghost"
+              size="sm"
+              disabled={!addToPlaylist}
+              onClick={() => {
+                if (!addToPlaylist) return;
+                setPlaylist({
+                  ...playlist,
+                  items: [
+                    ...playlist.items,
+                    { mixId: addToPlaylist, minutes: 15, crossfadeSec: 6 },
+                  ],
+                });
+                setAddToPlaylist('');
+              }}
+            >
+              Add to playlist
+            </Button>
+          </div>
+        </section>
+
+        {/* Sound cues */}
+        <section className="rounded-[var(--radius-sm)] border border-border bg-surface/50 px-3 py-2.5 flex flex-col gap-1.5">
+          <div className="text-[10px] font-mono uppercase tracking-wider text-caption">
+            Sound cues
+          </div>
+          <p className="text-[11px] text-text-muted">
+            Short sounds on app events, ducking the mix while the AI works. Off until you've pressed
+            play once.
+          </p>
+          {CUE_EVENTS.map((ev) => (
+            <div key={ev.id} className="flex items-center gap-2 text-[11px]">
+              <span className="w-32 shrink-0 text-text">{ev.label}</span>
+              <span className="flex-1 text-text-muted truncate">{ev.hint}</span>
+              <select
+                aria-label={`${ev.label} cue`}
+                value={cues[ev.id] ?? ''}
+                onChange={(e) => updateCue(ev.id, (e.target.value || null) as CueKind | null)}
+                className="h-7 rounded-[var(--radius-sm)] border border-border bg-surface px-2 text-[11px] text-text"
+              >
+                <option value="">None</option>
+                {CUE_KINDS.map((k) => (
+                  <option key={k.id} value={k.id}>
+                    {k.label}
+                  </option>
+                ))}
+              </select>
+              <Button
+                variant="ghost"
+                size="sm"
+                disabled={!cues[ev.id]}
+                onClick={() => {
+                  const k = cues[ev.id];
+                  if (k) void cue(k);
+                }}
+                aria-label={`Audition ${ev.label} cue`}
+              >
+                ▶
+              </Button>
+            </div>
+          ))}
+        </section>
       </div>
     </div>
   );

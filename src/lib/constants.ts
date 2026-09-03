@@ -55,6 +55,8 @@ export enum SettingsKey {
   ResonanceOptIn = 'cruxgarden:resonanceOptIn',
   ResonancePlaying = 'cruxgarden:resonancePlaying',
   MoodDockState = 'cruxgarden:moodDockState',
+  ResonancePlaylist = 'cruxgarden:resonancePlaylist',
+  ResonanceCues = 'cruxgarden:resonanceCues',
   Persona = 'cruxgarden:persona',
 
   // AI
