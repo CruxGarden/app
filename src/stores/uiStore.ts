@@ -101,6 +101,9 @@ interface UIState {
   // Explore modal
   exploreOpen: boolean;
   setExploreOpen: (open: boolean) => void;
+  /** Kind filter Explore opens with (e.g. 'mood'); consumed on mount */
+  exploreKind: string | null;
+  openExplore: (kind?: string | null) => void;
 
   // Mood modal (quick presets/background/persona; opens the Mood Builder page)
   moodPanelOpen: boolean;
@@ -509,6 +512,8 @@ export const useUIStore = create<UIState>()((set, get) => ({
   setSettingsOpen: (open) => set({ settingsOpen: open }),
   exploreOpen: false,
   setExploreOpen: (open) => set({ exploreOpen: open }),
+  exploreKind: null,
+  openExplore: (kind = null) => set({ exploreOpen: true, exploreKind: kind }),
 
   // ── Layout actions ──
 

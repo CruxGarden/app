@@ -67,11 +67,17 @@ export async function downloadArtifact(
 
 // ── Explore ───────────────────────────────────────────
 
+export type ExploreSort = 'recent' | 'newest' | 'alpha';
+
 export interface ExploreParams {
   q?: string;
   type?: 'cruxes' | 'authors';
   tag?: string[];
-  sort?: 'recent' | 'alpha';
+  /** Crux kind: webapp, page, document, image, notes, mood */
+  kind?: string;
+  /** Author username */
+  author?: string;
+  sort?: ExploreSort;
   page?: number;
   perPage?: number;
 }
@@ -83,6 +89,7 @@ export interface ExploreCrux {
   description?: string;
   kind?: string;
   meta?: Record<string, unknown>;
+  tags?: string[];
   created: string;
   updated: string;
   author_username: string;
@@ -111,6 +118,8 @@ export async function explore(
   if (params?.q) url.searchParams.set('q', params.q);
   if (params?.type) url.searchParams.set('type', params.type);
   if (params?.sort) url.searchParams.set('sort', params.sort);
+  if (params?.kind) url.searchParams.set('kind', params.kind);
+  if (params?.author) url.searchParams.set('author', params.author);
   if (params?.page) url.searchParams.set('page', String(params.page));
   if (params?.perPage) url.searchParams.set('perPage', String(params.perPage));
   if (params?.tag) {
@@ -127,8 +136,9 @@ export async function explore(
   };
 }
 
-export async function exploreTags(limit?: number): Promise<ExploreTag[]> {
+export async function exploreTags(limit?: number, kind?: string): Promise<ExploreTag[]> {
   const url = new URL(`${base}/explore/tags`);
+  if (kind) url.searchParams.set('kind', kind);
   if (limit) url.searchParams.set('limit', String(limit));
   const res = await fetch(url.toString());
   if (!res.ok) throw new Error(`Tags failed (${res.status})`);
