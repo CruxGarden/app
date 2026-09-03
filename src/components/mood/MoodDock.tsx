@@ -28,7 +28,9 @@ function LevelBars({ level, playing }: { level: number; playing: boolean }) {
         <span
           key={i}
           className="w-[3px] rounded-sm bg-accent transition-[height] duration-100"
-          style={{ height: `${Math.max(2, (playing ? Math.min(1, level * 3) : 0.15) * k * 16)}px` }}
+          style={{
+            height: `${Math.max(2, (playing ? Math.min(1, Math.sqrt(level) * 1.6) : 0.15) * k * 16)}px`,
+          }}
         />
       ))}
     </span>
