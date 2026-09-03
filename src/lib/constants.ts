@@ -47,6 +47,14 @@ export enum SettingsKey {
   MoodThemeLight = 'cruxgarden:moodThemeLight',
   /** Presets the user saved from the Mood Builder (JSON array) */
   MoodUserPresets = 'cruxgarden:moodUserPresets',
+
+  // Resonance Sound Mixer
+  ResonanceMixes = 'cruxgarden:resonanceMixes',
+  ResonanceActiveMix = 'cruxgarden:resonanceActiveMix',
+  ResonanceVolume = 'cruxgarden:resonanceVolume',
+  ResonanceOptIn = 'cruxgarden:resonanceOptIn',
+  ResonancePlaying = 'cruxgarden:resonancePlaying',
+  MoodDockState = 'cruxgarden:moodDockState',
   Persona = 'cruxgarden:persona',
 
   // AI
