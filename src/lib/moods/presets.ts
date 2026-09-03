@@ -44,10 +44,172 @@ const LIGHT_SYNTAX = {
   syntaxAttribute: 'var(--pane-workshop)', // gold pane
 };
 
+// Blade Runner helper: each pane gets a two-tone neon gradient frame, a black
+// header with the neon as text, and a slightly lifted body.
+function neonFrames(panes: Record<string, [string, string]>) {
+  const result: Record<string, string> = {};
+  for (const [key, [neon, deep]] of Object.entries(panes)) {
+    result[`${key}Border`] = `linear-gradient(160deg, ${neon}, ${deep} 60%, ${neon})`;
+    result[`${key}Body`] = '#0a0d1a';
+    result[`${key}Surface`] = '#10142a';
+    result[`${key}Header`] = '#04050d';
+    result[`${key}HeaderBorder`] = 'transparent';
+    result[`${key}HeaderText`] = neon;
+    result[`${key}HeaderIcon`] = neon;
+    result[`${key}HeaderClose`] = deep;
+    result[`${key}Caption`] = neon;
+    result[`${key}Heading`] = '#ffb86b';
+    result[`${key}Accent`] = neon;
+    result[`${key}ButtonActive`] = `color-mix(in srgb, ${neon} 18%, transparent)`;
+    result[`${key}ButtonBorderActive`] = neon;
+  }
+  return result;
+}
+
 export const MOOD_PRESETS: MoodPresetDef[] = [
   // ════════════════════════════════════════════════════
   // DARK — tonal variations on café (warm, readable)
   // ════════════════════════════════════════════════════
+
+  // Blade Runner — rain-black indigo, neon orange and cyan, magenta signage.
+  // Every pane keeps the same wet-asphalt body; its identity is a neon frame.
+  {
+    id: 'blade-runner',
+    name: 'Blade Runner',
+    section: 'Dark',
+    overrides: {
+      bg: '#04050d',
+      panel: '#0a0d1a',
+      surface: '#10142a',
+      surfaceSolid: '#10142a',
+      accent: '#ff6a1a',
+      accentMuted: '#2a1408',
+      border: '#1a2a4a',
+      text: '#e8ecf6',
+      textMuted: '#7d88ad',
+      heading: '#ffb86b',
+      caption: '#16d5e8',
+      highlight: '#16d5e8',
+      error: '#ff3b5c',
+      warning: '#ffb020',
+      success: '#2ee6a6',
+      radius: '0.25rem',
+      radiusSm: '0.125rem',
+      radiusLg: '0.5rem',
+      paneGap: '10px',
+      workspacePadding: '10px',
+      paneBorderWidth: '2px',
+      paneHeaderHeight: '30px',
+      paneHeaderRadius: '0px',
+      fontDisplay: "'JetBrains Mono', monospace",
+      // Top bar: a dark visor with an orange readout
+      toolbar: '#06070f',
+      toolbarText: '#ffb86b',
+      toolbarTextMuted: '#7d88ad',
+      toolbarBorder: '#1a2a4a',
+      toolbarDivider: '#1a2a4a',
+      iconButtonIcon: '#16d5e8',
+      iconButtonIconHover: '#ff6a1a',
+      iconButtonHover: '#10142a',
+      // Chat: the user speaks in orange, the machine in cold cyan-grey
+      chat: '#0a0d1a',
+      chatText: '#e8ecf6',
+      chatTextMuted: '#7d88ad',
+      chatUserBubble: '#2a1408',
+      chatUserBubbleText: '#ffb86b',
+      chatUserBubbleBorder: '#ff6a1a',
+      chatAiBubble: '#10142a',
+      chatAiText: '#d6e4f0',
+      chatAiBubbleBorder: '#1a2a4a',
+      chatInput: '#06070f',
+      chatInputText: '#e8ecf6',
+      chatInputBorder: '#1a2a4a',
+      chatInputBorderFocus: '#16d5e8',
+      chatInputPlaceholder: '#4d5878',
+      chatSendButton: '#ff6a1a',
+      chatSendButtonHover: '#ff8a45',
+      chatSendButtonIcon: '#04050d',
+      // Controls
+      primaryButton: '#ff6a1a',
+      primaryButtonText: '#04050d',
+      primaryButtonBorder: '#ff6a1a',
+      actionButton: '#10142a',
+      actionButtonText: '#16d5e8',
+      actionButtonBorder: '#1a2a4a',
+      badge: '#0e2a30',
+      badgeText: '#16d5e8',
+      badgeBorder: '#16d5e8',
+      // Cards
+      gardenCard: '#0a0d1a',
+      gardenCardHover: '#10142a',
+      gardenCardBorder: '#1a2a4a',
+      gardenCardBorderHover: '#16d5e8',
+      gardenCardTitle: '#ffb86b',
+      gardenCardText: '#a7b1cf',
+      gardenCardMeta: '#5d6890',
+      gardenCardThumbnail: '#04050d',
+      growthCard: '#0a0d1a',
+      growthCardHover: '#10142a',
+      growthCardActive: '#14213d',
+      growthCardText: '#e8ecf6',
+      growthCardTextMuted: '#7d88ad',
+      growthCardLabel: '#16d5e8',
+      growthDot: '#4d5878',
+      growthDotActive: '#ff6a1a',
+      overlayBadge: 'rgba(4, 5, 13, 0.75)',
+      overlayBadgeText: '#16d5e8',
+      // File tree
+      fileTree: '#0a0d1a',
+      fileTreeItemText: '#d6e4f0',
+      fileTreeItemIcon: '#7d88ad',
+      fileTreeItemHover: '#10142a',
+      fileTreeItemSelected: '#14213d',
+      fileTreeItemTextSelected: '#ffb86b',
+      // Code
+      syntaxComment: '#4d5878',
+      syntaxKeyword: '#ff6a1a',
+      syntaxString: '#16d5e8',
+      syntaxNumber: '#ffb020',
+      syntaxType: '#ff2bd6',
+      syntaxFunction: '#ffb86b',
+      syntaxPunctuation: '#7d88ad',
+      syntaxVariable: '#d6e4f0',
+      syntaxTag: '#ff2bd6',
+      syntaxAttribute: '#16d5e8',
+      // Ambient: sodium lamps over wet streets
+      bloomBg1: '#04050d',
+      bloomBg2: '#000000',
+      bloom1: '#ff6a1a',
+      bloom2: '#16d5e8',
+      bloom3: '#ff2bd6',
+      bloom4: '#1a2a4a',
+      bloom5: '#ffb020',
+      bloom6: '#0b3a44',
+      bloomBlur: '80px',
+      bloomOpacity: '0.55',
+      // Pane identities — neon frames on the same wet-asphalt body
+      paneCollaboration: '#ff2bd6',
+      paneArtifacts: '#ffb020',
+      paneWorkshop: '#16d5e8',
+      paneDetails: '#2ee6a6',
+      paneHistory: '#ff6a1a',
+      paneExport: '#8a7cff',
+      paneSync: '#5cc8ff',
+      panePublish: '#ff3b5c',
+      paneStore: '#ffd36b',
+      ...neonFrames({
+        paneCollaboration: ['#ff2bd6', '#7a1a9a'],
+        paneArtifacts: ['#ffb020', '#8a4a00'],
+        paneWorkshop: ['#16d5e8', '#0b3a44'],
+        paneDetails: ['#2ee6a6', '#0b4a3a'],
+        paneHistory: ['#ff6a1a', '#7a2a00'],
+        paneExport: ['#8a7cff', '#2a1a7a'],
+        paneSync: ['#5cc8ff', '#0b2a4a'],
+        panePublish: ['#ff3b5c', '#6a0a1a'],
+        paneStore: ['#ffd36b', '#7a5a00'],
+      }),
+    },
+  },
 
   // Obsidian — soft black, neutral, high readability
   {
