@@ -200,6 +200,8 @@ export const GARDEN_DARK = {
   markdownBlockquoteBg: 'color-mix(in srgb, var(--accent) 5%, transparent)',
   chatAiBubble: 'color-mix(in srgb, var(--surface) 85%, white)',
   codeBlock: 'color-mix(in srgb, var(--bg) 90%, var(--surface))',
+  // Monaco reads this (a plain color — Monaco cannot take color-mix or gradients)
+  editorBackground: 'var(--bg)',
   codeBlockText: 'var(--text)',
   growthCard: 'var(--surface)',
   growthCardHover: 'color-mix(in srgb, var(--surface) 85%, white)',

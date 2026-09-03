@@ -47,7 +47,9 @@ function colorHex(name: string): string {
  * Call this on mount and again whenever the palette changes.
  */
 export function registerCruxGardenThemes(monaco: typeof Monaco): void {
-  const bg = colorHex('--bg');
+  // The editor's own token, so a Mood can give the editor a different ground
+  // (Notepad-white on a teal desktop) without repainting the whole app.
+  const bg = colorHex('--editor-background');
   const text = colorHex('--text');
   const textMuted = colorHex('--text-muted');
   const accent = colorHex('--accent');
