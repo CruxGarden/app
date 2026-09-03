@@ -30,6 +30,9 @@ test.describe('acceptance journey (local half)', () => {
       // Builder is the Workshop's home view for content-model cruxes
       const newPost = page.getByRole('button', { name: /new post/i });
       await expect(newPost).toBeVisible({ timeout: 30_000 });
+      // Regression: the workspace rendered desktop AND mobile layouts (one
+      // CSS-hidden), so every pane — and the Keeper's greeting — was mounted twice.
+      await expect(page.getByText(/set up your home page/)).toHaveCount(1);
       await page.screenshot({ path: 'e2e/.results/journey-1-builder.png' });
 
       // ── New post via the in-app dialog (window.prompt does not exist here) ─

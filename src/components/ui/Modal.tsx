@@ -41,7 +41,12 @@ export default function Modal({
   useEffect(() => {
     if (!open) return;
     const handler = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
+      if (e.key !== 'Escape') return;
+      // This Escape belongs to the modal: don't let global shortcuts (Shell's
+      // Escape → Keeper console) also fire on the same keypress.
+      e.stopPropagation();
+      e.preventDefault();
+      onClose();
     };
     document.addEventListener('keydown', handler);
     return () => document.removeEventListener('keydown', handler);

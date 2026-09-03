@@ -227,6 +227,7 @@ export default function NewCruxModal({ open, onClose }: NewCruxModalProps) {
   const [titleEdited, setTitleEdited] = useState(false);
   const [selectedTemplate, setSelectedTemplate] = useState<string>('blank');
   const [creating, setCreating] = useState(false);
+  const [createError, setCreateError] = useState<string | null>(null);
 
   // Import state
   const importInputRef = useRef<HTMLInputElement>(null);
@@ -319,6 +320,8 @@ export default function NewCruxModal({ open, onClose }: NewCruxModalProps) {
   );
 
   const handleCreate = async (quickStart = false) => {
+    if (creating || importing) return;
+    setCreateError(null);
     setCreating(true);
     try {
       const effectiveTitle = quickStart
@@ -410,7 +413,12 @@ export default function NewCruxModal({ open, onClose }: NewCruxModalProps) {
       reset();
       onClose();
       navigate(`/c/${crux.id}`);
-    } catch {
+    } catch (err) {
+      // A crux row may already exist at this point (see the create → template
+      // → update sequence above); the user must be told rather than left
+      // staring at a spinner that quietly stopped.
+      console.error('[new-crux] creation failed:', err);
+      setCreateError(err instanceof Error ? err.message : 'Could not create the crux.');
       setCreating(false);
     }
   };
@@ -563,6 +571,11 @@ export default function NewCruxModal({ open, onClose }: NewCruxModalProps) {
             Create
           </Button>
         </div>
+        {createError && (
+          <p role="alert" className="mt-2 text-xs text-error">
+            {createError}
+          </p>
+        )}
       </div>
     </Modal>
   );

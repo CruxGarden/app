@@ -49,9 +49,14 @@ export default function Shell() {
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       const meta = e.metaKey || e.ctrlKey;
+      // A modal or an editable control that already handled this key owns it.
+      if (e.defaultPrevented) return;
+      const t = e.target as HTMLElement | null;
+      const editing =
+        !!t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable);
 
-      // Escape → open console (when AI enabled and console not already open)
-      if (e.key === 'Escape' && !consoleOpen && aiEnabled) {
+      // Escape → open console (when AI enabled, console not open, not typing)
+      if (e.key === 'Escape' && !consoleOpen && aiEnabled && !editing) {
         setConsoleOpen(true);
         return;
       }
