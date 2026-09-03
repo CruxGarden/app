@@ -9,9 +9,10 @@ import { join } from 'node:path';
  * must NOT inherit ELECTRON_RUN_AS_NODE from the shell.
  */
 export async function launchApp(
-  opts: { env?: Record<string, string> } = {},
+  opts: { env?: Record<string, string>; dir?: string } = {},
 ): Promise<{ app: ElectronApplication; page: Page; dir: string }> {
-  const dir = mkdtempSync(join(tmpdir(), 'crux-e2e-'));
+  // Pass a previous run's `dir` to relaunch on the same garden (restart tests).
+  const dir = opts.dir ?? mkdtempSync(join(tmpdir(), 'crux-e2e-'));
   const env: Record<string, string> = {};
   for (const [k, v] of Object.entries(process.env)) {
     if (v !== undefined && k !== 'ELECTRON_RUN_AS_NODE') env[k] = v;

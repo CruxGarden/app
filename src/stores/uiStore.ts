@@ -103,7 +103,6 @@ interface UIState {
   setExploreOpen: (open: boolean) => void;
 
   // Mood Editor
-  moodPanelOpen: boolean;
 
   // ── Layout actions ──
 
@@ -148,8 +147,6 @@ interface UIState {
   toggleConsole: () => void;
 
   // ── Mood Editor ──
-  setMoodPanelOpen: (open: boolean) => void;
-  toggleMoodPanel: () => void;
 }
 
 // ── Helpers ─────────────────────────────────────────────
@@ -506,7 +503,6 @@ export const useUIStore = create<UIState>()((set, get) => ({
   setSettingsOpen: (open) => set({ settingsOpen: open }),
   exploreOpen: false,
   setExploreOpen: (open) => set({ exploreOpen: open }),
-  moodPanelOpen: false,
 
   // ── Layout actions ──
 
@@ -801,6 +797,4 @@ export const useUIStore = create<UIState>()((set, get) => ({
 
   setConsoleOpen: (open) => set({ consoleOpen: open }),
   toggleConsole: () => set((s) => ({ consoleOpen: !s.consoleOpen })),
-  setMoodPanelOpen: (open) => set({ moodPanelOpen: open }),
-  toggleMoodPanel: () => set((s) => ({ moodPanelOpen: !s.moodPanelOpen })),
 }));

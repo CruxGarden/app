@@ -42,6 +42,9 @@ export enum SettingsKey {
   MoodPresetDark = 'cruxgarden:moodPresetDark',
   MoodPresetLight = 'cruxgarden:moodPresetLight',
   ActiveMoodId = 'cruxgarden:activeMoodId',
+  /** Custom theme token overrides layered on the active preset, per mode (JSON) */
+  MoodThemeDark = 'cruxgarden:moodThemeDark',
+  MoodThemeLight = 'cruxgarden:moodThemeLight',
   Persona = 'cruxgarden:persona',
 
   // AI
