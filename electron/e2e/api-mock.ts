@@ -32,6 +32,16 @@ export interface MockApi {
     cruxes: Record<string, Record<string, unknown>>;
     /** Files received by POST /cruxes/:id/publish, by crux id */
     published: Record<string, PublishedFile[]>;
+    domains: Array<
+      Record<string, unknown> & {
+        id: string;
+        cruxId: string;
+        hostname: string;
+        status: string;
+        error: string | null;
+        verifies: number;
+      }
+    >;
   };
   /** Every request seen (`METHOD /path -> status`), for debugging. */
   log: string[];
@@ -99,6 +109,7 @@ export async function startMockApi(): Promise<MockApi> {
     crux: null,
     cruxes: {},
     published: {},
+    domains: [],
   };
   const log: string[] = [];
 
@@ -219,6 +230,58 @@ export async function startMockApi(): Promise<MockApi> {
       state.cruxes[state.crux.id as string] = state.crux;
       return send(201, state.crux);
     }
+    // ── usage (ADR 0011): storage from published file sizes; bandwidth is a fixed sample
+    const usageFor = (id: string) => {
+      const files = state.published[id] ?? [];
+      const storageBytes = files.reduce((n, f) => n + (f.bytes?.length ?? 0), 0);
+      const title =
+        (state.cruxes[id]?.title as string | undefined) ??
+        (state.crux?.title as string | undefined);
+      return {
+        cruxId: id,
+        title,
+        storageBytes,
+        files: files.length,
+        bandwidthBytes: storageBytes ? 40960 : 0,
+        requests: storageBytes ? 12 : 0,
+      };
+    };
+    if (path === '/usage/me' && method === 'GET') {
+      const cruxes = Object.keys(state.published).map(usageFor);
+      return send(200, {
+        period: { start: '2026-09-01', end: '2026-10-01' },
+        plan: {
+          id: 'free',
+          name: 'Free',
+          storageBytes: 1073741824,
+          bandwidthBytesPerPeriod: 1073741824,
+        },
+        storageBytes: cruxes.reduce((n, c) => n + c.storageBytes, 0),
+        bandwidthBytes: cruxes.reduce((n, c) => n + c.bandwidthBytes, 0),
+        requests: cruxes.reduce((n, c) => n + c.requests, 0),
+        cruxes,
+        bandwidthAsOf: null,
+      });
+    }
+    // ── custom domains: verify advances one step per call
+    const dm = path.match(/^\/domains\/([^/]+)(\/verify)?$/);
+    if (dm) {
+      const d = state.domains.find((x) => x.id === dm[1]);
+      if (!d) return send(404, { statusCode: 404, message: 'Domain not found' });
+      if (dm[2] && method === 'POST') {
+        d.verifies += 1;
+        if (d.verifies === 1) d.error = 'Waiting for the TXT record';
+        else if (d.verifies === 2) {
+          d.status = 'issuing';
+          d.error = null;
+        } else d.status = 'active';
+        return send(200, d);
+      }
+      if (method === 'DELETE') {
+        state.domains = state.domains.filter((x) => x.id !== d.id);
+        return send(204, null);
+      }
+    }
     const m = path.match(/^\/cruxes\/([^/]+)(\/.*)?$/);
     if (m) {
       const id = m[1]!;
@@ -259,6 +322,38 @@ export async function startMockApi(): Promise<MockApi> {
         state.cruxes[id] = updated;
         if (!state.crux || state.crux.id === id) state.crux = updated;
         return send(200, updated);
+      }
+      if (sub === '/usage' && method === 'GET') return send(200, usageFor(id));
+      if (sub === '/domains' && method === 'GET')
+        return send(
+          200,
+          state.domains.filter((d) => d.cruxId === id),
+        );
+      if (sub === '/domains' && method === 'POST') {
+        const hostname = String(bodyJson().hostname ?? '').toLowerCase();
+        if (!/^[a-z0-9.-]+\.[a-z]{2,}$/.test(hostname))
+          return send(400, { statusCode: 400, message: 'Enter a domain like blog.example.com' });
+        if (state.domains.some((d) => d.hostname === hostname))
+          return send(409, {
+            statusCode: 409,
+            message: 'That domain is already connected to a crux',
+          });
+        const d = {
+          id: `dom-${state.domains.length + 1}`,
+          cruxId: id,
+          hostname,
+          status: 'pending_dns',
+          error: null as string | null,
+          records: [
+            { type: 'CNAME', name: hostname, value: 'publish.crux.garden' },
+            { type: 'TXT', name: `_crux-verify.${hostname}`, value: 'crux-verify=abc123' },
+          ],
+          created: new Date().toISOString(),
+          updated: new Date().toISOString(),
+          verifies: 0,
+        };
+        state.domains.push(d);
+        return send(201, d);
       }
       if (sub === '/tags' && method === 'PUT') return send(200, []);
       if (sub === '/unpublish' && method === 'POST') {
