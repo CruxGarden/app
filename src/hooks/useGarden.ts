@@ -3,9 +3,20 @@ import { useNavigate } from 'react-router-dom';
 import { useGardenStore } from '@/stores/gardenStore';
 import { useCruxStore } from '@/stores/cruxStore';
 import { getServices } from '@/services';
+import { useShallow } from 'zustand/react/shallow';
 
 export function useGarden() {
-  const { cruxList, loading, search, sortBy, load, setSearch, setSortBy } = useGardenStore();
+  const { cruxList, loading, search, sortBy, load, setSearch, setSortBy } = useGardenStore(
+    useShallow((s) => ({
+      cruxList: s.cruxList,
+      loading: s.loading,
+      search: s.search,
+      sortBy: s.sortBy,
+      load: s.load,
+      setSearch: s.setSearch,
+      setSortBy: s.setSortBy,
+    })),
+  );
 
   const createCrux = useCruxStore((s) => s.createCrux);
   const navigate = useNavigate();

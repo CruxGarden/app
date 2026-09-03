@@ -11,10 +11,18 @@ import { ConsoleAvatar } from '@/components/keeper/Console';
 import { SearchIcon, MoodIcon, ChevronRightIcon } from '@/components/ui/icons';
 import { PANE_VAR_PREFIX, PANE_BUTTONS } from '@/components/workspace/paneConfig';
 import { Capability, can } from '@/lib/platform';
+import { useShallow } from 'zustand/react/shallow';
 
 export default function TopBar() {
   const navigate = useNavigate();
-  const { paneOrder, paneVisibility, togglePane, activeCruxId } = useUIStore();
+  const { paneOrder, paneVisibility, togglePane, activeCruxId } = useUIStore(
+    useShallow((s) => ({
+      paneOrder: s.paneOrder,
+      paneVisibility: s.paneVisibility,
+      togglePane: s.togglePane,
+      activeCruxId: s.activeCruxId,
+    })),
+  );
   const cruxTitle = useCruxStore((s) => s.crux?.title);
   const updateCrux = useCruxStore((s) => s.updateCrux);
   const username = useAppStore((s) => s.author?.username);
