@@ -5,8 +5,11 @@ import {
   applyActiveMood,
   activePreset,
   getThemeOverrides,
+  getThemePreview,
+  onThemePreviewChange,
   resolvedSection,
   setThemeOverrides,
+  setThemePreview,
   type MoodSection,
   type ThemeOverrides,
 } from '@/lib/moods/active';
@@ -208,6 +211,15 @@ export default function ThemeTokensTab() {
   const [query, setQuery] = useState('');
   const [overrides, setOverrides] = useState<ThemeOverrides>(() => getThemeOverrides(section));
   const [tick, setTick] = useState(0);
+  const [previewCount, setPreviewCount] = useState(() => Object.keys(getThemePreview()).length);
+  useEffect(
+    () =>
+      onThemePreviewChange(() => {
+        setPreviewCount(Object.keys(getThemePreview()).length);
+        setTick((t) => t + 1);
+      }),
+    [],
+  );
   const resolveColor = useColorResolver();
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -299,6 +311,16 @@ export default function ThemeTokensTab() {
             </>
           )}
         </div>
+        {previewCount > 0 && (
+          <button
+            type="button"
+            onClick={() => setThemePreview(null)}
+            className="inline-flex items-center gap-1.5 h-7 px-2.5 rounded-[var(--radius-sm)] border border-warning-border bg-warning-bg text-warning-text text-[11px] cursor-pointer"
+            title="The AI is previewing tokens on top of your theme"
+          >
+            AI preview: {previewCount} token{previewCount === 1 ? '' : 's'} · clear
+          </button>
+        )}
         <div className="flex-1" />
         <input
           type="search"

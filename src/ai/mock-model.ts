@@ -1,6 +1,10 @@
 import { MockLanguageModelV4, convertArrayToReadableStream } from 'ai/test';
 import type { LanguageModel } from 'ai';
-import type { LanguageModelV4StreamPart, LanguageModelV4Usage, LanguageModelV4Prompt } from '@ai-sdk/provider';
+import type {
+  LanguageModelV4StreamPart,
+  LanguageModelV4Usage,
+  LanguageModelV4Prompt,
+} from '@ai-sdk/provider';
 
 /**
  * The scripted language model the e2e suite talks to (CRUX_AI_MOCK=1).
@@ -10,8 +14,8 @@ import type { LanguageModelV4StreamPart, LanguageModelV4Usage, LanguageModelV4Pr
  * streaming into the UI, auto-snapshot — runs in Playwright without a key.
  *
  * Script: a user message containing "write" makes the model call
- * `write_file` (hello.txt); once it sees the tool result it answers with
- * text. Anything else is echoed. Never used outside the mock flag.
+ * `write_file` (hello.txt); "paint" makes it call `set_theme` (preview);
+ * once it sees a tool result it answers with text. Anything else is echoed. Never used outside the mock flag.
  */
 
 const USAGE: LanguageModelV4Usage = {
@@ -20,7 +24,12 @@ const USAGE: LanguageModelV4Usage = {
 };
 
 function stream(parts: LanguageModelV4StreamPart[]) {
-  return { stream: convertArrayToReadableStream<LanguageModelV4StreamPart>([{ type: 'stream-start', warnings: [] }, ...parts]) };
+  return {
+    stream: convertArrayToReadableStream<LanguageModelV4StreamPart>([
+      { type: 'stream-start', warnings: [] },
+      ...parts,
+    ]),
+  };
 }
 
 function textStream(text: string) {
@@ -57,11 +66,26 @@ export function getMockLanguageModel(): LanguageModel {
       doStream: async ({ prompt }) => {
         const last = prompt[prompt.length - 1];
         if (last?.role === 'tool') {
-          return textStream('Done — I wrote that file for you.');
+          const painted = last.content.some(
+            (c) => c.type === 'tool-result' && c.toolName === 'set_theme',
+          );
+          return textStream(painted ? 'Done — I painted it.' : 'Done — I wrote that file for you.');
         }
         const text = lastUserText(prompt);
         // "slowly": hold the tool call back so a test can act mid-turn
         if (/\bslowly\b/i.test(text)) await new Promise((r) => setTimeout(r, 1500));
+        // "paint": the model signals with the theme (preview layer)
+        if (/\bpaint\b/i.test(text)) {
+          return toolCallStream('set_theme', {
+            tokens: {
+              accent: '#ff2d95',
+              paneCollaborationBody: '#112233',
+              paneCollaborationBorder: 'linear-gradient(135deg, #00f0ff, #7cff00)',
+              paneBorderWidth: '3px',
+            },
+            mode: 'preview',
+          });
+        }
         if (/\bwrite\b/i.test(text)) {
           return toolCallStream('write_file', {
             path: 'hello.txt',

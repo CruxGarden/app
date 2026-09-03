@@ -4,6 +4,7 @@ import type { ContentModel, ContentCollection, FormField } from '@/templates';
 import { getPersona } from '@/services/persona';
 import { isSiteCrux } from '@/services/site';
 import { Capability, can } from '@/lib/platform';
+import { THEME_TOOL_GUIDANCE } from './theme-tools';
 
 /**
  * The workspace prompt, split for caching (AI-COLLABORATION-PLAN Phase A2):
@@ -98,7 +99,9 @@ function buildStablePrompt(crux: Crux, artifacts: Artifact[]): string {
       (can(Capability.Build)
         ? "- **check_site** — Run the site's production build (Site Cruxes) and report errors. Nothing is published; this only verifies.\n\n"
         : '\n') +
+      '- **get_theme** / **set_theme** — Read and change the workspace theme (colors, radii, pane gutters, per-pane surfaces). See Theme below.\n' +
       'IMPORTANT: You CAN generate images. When the user asks for an image, illustration, icon, logo, photo, or artwork, call the generate_image tool. Do NOT say you cannot generate images — you have this capability.\n\n' +
+      THEME_TOOL_GUIDANCE +
       '### Crux Store\n' +
       'Published cruxes have access to a persistent key-value store via `window.crux.store`. This allows stateful apps — counters, guestbooks, leaderboards, user preferences, form submissions.\n' +
       'Available methods:\n' +

@@ -65,12 +65,43 @@ export function setThemeOverrides(section: MoodSection, overrides: ThemeOverride
   setSetting(overridesKey(section), Object.keys(clean).length ? JSON.stringify(clean) : '');
 }
 
-/** Preset + custom overrides, ready for applyMoodPalette. */
-export function composeMoodPalette(section: MoodSection = resolvedSection()): Partial<MoodPalette> {
-  return { ...(activePreset(section)?.overrides ?? {}), ...getThemeOverrides(section) };
+// ── Preview layer ─────────────────────────────────────────────────────────
+// Transient tokens on top of the saved theme — the AI uses this to signal
+// state ("building…", "done") without touching what the user chose. Never
+// persisted; gone on reload.
+let preview: ThemeOverrides = {};
+const previewListeners = new Set<() => void>();
+
+export function getThemePreview(): ThemeOverrides {
+  return { ...preview };
 }
 
-/** Apply the active Mood for a mode to the document. */
+/** Replace (or, with merge, extend) the preview layer and re-apply. */
+export function setThemePreview(
+  tokens: ThemeOverrides | null,
+  opts: { merge?: boolean } = {},
+): void {
+  const next: ThemeOverrides = opts.merge ? { ...preview } : {};
+  for (const [k, v] of Object.entries(tokens ?? {})) {
+    if (k in GARDEN_DARK && typeof v === 'string' && v.trim()) next[k] = v;
+  }
+  preview = next;
+  applyActiveMood();
+  previewListeners.forEach((fn) => fn());
+}
+
+export function onThemePreviewChange(fn: () => void): () => void {
+  previewListeners.add(fn);
+  return () => previewListeners.delete(fn);
+}
+
+/** Preset + saved overrides + preview layer, ready for applyMoodPalette. */
+export function composeMoodPalette(section: MoodSection = resolvedSection()): Partial<MoodPalette> {
+  return { ...(activePreset(section)?.overrides ?? {}), ...getThemeOverrides(section), ...preview };
+}
+
+/** Apply the active Mood for a mode to the document (no-op without a DOM). */
 export function applyActiveMood(section: MoodSection = resolvedSection()): void {
+  if (typeof document === 'undefined') return;
   applyMoodPalette(composeMoodPalette(section));
 }

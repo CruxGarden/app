@@ -22,6 +22,8 @@ export function validateToolInput(
       return validatePathOnly(input);
     case 'list_files':
     case 'check_site':
+    case 'set_theme':
+    case 'get_theme':
       return { valid: true };
     case 'generate_image':
       return validateGenerateImage(input);

@@ -770,11 +770,18 @@ html.palette-transition *::after {
   left: var(--workspace-padding);
 }
 
+/* The pane frame. The border is painted as a background ring (padding = border
+   width, window background = border token) rather than a CSS border, so the
+   border token may be a gradient — `linear-gradient(135deg, #00f0ff, #7cff00)`
+   reads as "this pane is busy". The header and body paint --panel over the
+   ring; their inner corners follow the outer radius minus the ring. */
 .mosaic.crux-mosaic-theme .mosaic-window {
-  border: var(--pane-border-width) solid var(--border);
+  --pane-inner-radius: max(0px, calc(var(--pane-radius) - var(--pane-border-width)));
+  border: none;
+  padding: var(--pane-border-width);
   border-radius: var(--pane-radius);
   box-shadow: none;
-  background: var(--panel);
+  background: var(--border);
   color: var(--text);
 }
 .mosaic.crux-mosaic-theme .mosaic-preview {
@@ -946,12 +953,14 @@ html.palette-transition *::after {
   overflow: hidden;
   contain: layout style;
   background: var(--panel);
+  border-radius: 0 0 var(--pane-inner-radius) var(--pane-inner-radius);
 }
 
 .mosaic.crux-mosaic-theme .mosaic-window .mosaic-window-toolbar {
   height: auto;
   padding: var(--pane-header-padding);
-  background: transparent;
+  background: var(--panel);
+  border-radius: var(--pane-inner-radius) var(--pane-inner-radius) 0 0;
   border-bottom: none;
   box-shadow: none;
   cursor: grab;
