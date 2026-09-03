@@ -33,14 +33,17 @@ import { SettingsKey } from '@/lib/constants';
  */
 
 /** Resolve any CSS color expression (var(), color-mix(), rgba) to #rrggbb. */
-function useColorResolver() {
+function useColorResolver(onReady?: () => void) {
   const probe = useRef<HTMLSpanElement | null>(null);
+  const readyRef = useRef(onReady);
+  readyRef.current = onReady;
   useEffect(() => {
     const el = document.createElement('span');
     el.setAttribute('aria-hidden', 'true');
     el.style.cssText = 'position:fixed;left:-9999px;top:-9999px;width:0;height:0;';
     document.body.appendChild(el);
     probe.current = el;
+    readyRef.current?.();
     return () => {
       el.remove();
       probe.current = null;
@@ -233,7 +236,8 @@ export default function ThemeTokensTab() {
       }),
     [],
   );
-  const resolveColor = useColorResolver();
+  // Swatches resolve through a probe element that exists only after mount — re-render once it does
+  const resolveColor = useColorResolver(() => setTick((t) => t + 1));
   const fileRef = useRef<HTMLInputElement>(null);
 
   // The mode can change under us (a preset from the other section was picked)

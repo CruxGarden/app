@@ -11,7 +11,21 @@ import { cuesPlayedCount } from '@/services/cues';
 
 type EngineModule = typeof import('@/audio/engine');
 let enginePromise: Promise<EngineModule['engine']> | null = null;
+/** Outside a browser (unit tests) the store still works; the engine is a no-op. */
+const NOOP_ENGINE = {
+  onChange: () => () => {},
+  setVolume: () => {},
+  play: async () => {},
+  update: () => {},
+  pause: () => {},
+  duck: () => {},
+  cue: async () => {},
+  suspend: () => {},
+  resume: () => {},
+} as unknown as EngineModule['engine'];
+
 async function getEngine() {
+  if (typeof window === 'undefined' || typeof AudioContext === 'undefined') return NOOP_ENGINE;
   if (!enginePromise) {
     enginePromise = import('@/audio/engine').then((m) => {
       m.engine.onChange((snap) => {

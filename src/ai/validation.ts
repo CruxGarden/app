@@ -25,6 +25,8 @@ export function validateToolInput(
     case 'set_theme':
     case 'get_theme':
     case 'set_background':
+    case 'get_resonance':
+    case 'set_resonance':
       return { valid: true };
     case 'generate_image':
       return validateGenerateImage(input);
