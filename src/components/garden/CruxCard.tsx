@@ -115,13 +115,13 @@ export default function CruxCard({
           {/* Badges */}
           <div className="absolute left-2 bottom-2 flex items-center gap-1.5">
             {isPublished && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-black/55 backdrop-blur-sm px-2 py-0.5 text-[10px] font-mono text-white">
+              <span className="inline-flex items-center gap-1 rounded-full bg-overlay-badge backdrop-blur-sm px-2 py-0.5 text-[10px] font-mono text-overlay-badge-text">
                 <span className="w-1.5 h-1.5 rounded-full bg-accent" />
                 Shared
               </span>
             )}
             {kindLabel && (
-              <span className="rounded-full bg-black/45 backdrop-blur-sm px-2 py-0.5 text-[10px] font-mono text-white/85">
+              <span className="rounded-full bg-overlay-badge backdrop-blur-sm px-2 py-0.5 text-[10px] font-mono text-overlay-badge-text">
                 {kindLabel}
               </span>
             )}
@@ -157,7 +157,7 @@ export default function CruxCard({
             }}
             aria-label="Crux actions"
             className={cn(
-              'p-1.5 rounded-full bg-black/45 backdrop-blur-sm text-white/85 hover:text-white hover:bg-black/65 cursor-pointer transition-opacity',
+              'p-1.5 rounded-full bg-overlay-badge backdrop-blur-sm text-overlay-badge-text hover:brightness-125 cursor-pointer transition-opacity',
               menuOpen
                 ? 'opacity-100'
                 : 'opacity-0 group-hover:opacity-100 focus-visible:opacity-100',

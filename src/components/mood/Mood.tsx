@@ -1,4 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useUIStore } from '@/stores/uiStore';
 import { cn } from '@/lib/cn';
 import { GARDEN_DARK } from '@/lib/moods';
 import { MOOD_PRESETS, type MoodPresetDef } from '@/lib/moods/presets';
@@ -430,7 +432,14 @@ function BackgroundTabContent({
 
 type Tab = 'palette' | 'theme' | 'background' | 'persona';
 
-export default function MoodEditor({ initialTab = 'palette' }: { initialTab?: Tab } = {}) {
+interface MoodEditorProps {
+  initialTab?: Tab;
+  /** The modal: no Theme tab, plus a way into the full Mood Builder page. */
+  compact?: boolean;
+}
+
+export default function MoodEditor({ initialTab = 'palette', compact = false }: MoodEditorProps) {
+  const navigate = useNavigate();
   const [tab, setTab] = useState<Tab>(initialTab);
   const [activeDarkId, setActiveDarkId] = useState(
     () => (getSetting(SettingsKey.MoodPresetDark) as string) || 'obsidian',
@@ -559,18 +568,36 @@ export default function MoodEditor({ initialTab = 'palette' }: { initialTab?: Ta
             ['background', 'Background'],
             ['persona', 'Persona'],
           ] as const
-        ).map(([t, label]) => (
-          <button
-            key={t}
-            onClick={() => setTab(t)}
-            className={cn(
-              'px-2.5 py-1 text-xs font-display font-medium rounded-[var(--radius-sm)] cursor-pointer',
-              tab === t ? 'text-text bg-surface' : 'text-text-muted hover:text-text',
-            )}
-          >
-            {label}
-          </button>
-        ))}
+        )
+          .filter(([t]) => !(compact && t === 'theme'))
+          .map(([t, label]) => (
+            <button
+              key={t}
+              onClick={() => setTab(t)}
+              className={cn(
+                'px-2.5 py-1 text-xs font-display font-medium rounded-[var(--radius-sm)] cursor-pointer',
+                tab === t ? 'text-text bg-surface' : 'text-text-muted hover:text-text',
+              )}
+            >
+              {label}
+            </button>
+          ))}
+        {compact && (
+          <>
+            <div className="flex-1" />
+            <button
+              type="button"
+              onClick={() => {
+                useUIStore.getState().setMoodPanelOpen(false);
+                navigate('/mood?tab=theme');
+              }}
+              className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-body rounded-[var(--radius-sm)] border border-border bg-surface text-text hover:border-accent hover:text-accent transition-colors cursor-pointer"
+            >
+              Open Mood Builder
+              <span aria-hidden>→</span>
+            </button>
+          </>
+        )}
       </div>
 
       {/* Active tab content */}

@@ -312,6 +312,10 @@ export const GARDEN_DARK = {
   driftSpeed: '1',
   driftDensity: '400',
 
+  // ── Overlay badges (labels drawn over thumbnails) ─────
+  overlayBadge: 'rgba(0, 0, 0, 0.55)',
+  overlayBadgeText: '#ffffff',
+
   // ── Toggle ───────────────────────────────────────────
   toggle: 'var(--surface)',
   toggleActive: 'var(--accent)',
@@ -399,6 +403,13 @@ function paneTokens(base: string) {
     [`${base}TextMuted`]: 'var(--text-muted)',
     [`${base}Surface`]: 'var(--surface)',
     [`${base}Accent`]: 'var(--accent)',
+    [`${base}AccentMuted`]: 'var(--accent-muted)',
+    [`${base}SurfaceSolid`]: 'var(--surface-solid)',
+    [`${base}RadiusSm`]: 'var(--radius-sm)',
+    [`${base}Caption`]: 'var(--caption)',
+    [`${base}Heading`]: 'var(--heading)',
+    [`${base}HeaderRadius`]: 'var(--pane-header-radius)',
+    [`${base}HeaderHeight`]: 'var(--pane-header-height)',
   };
 }
 

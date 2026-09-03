@@ -269,11 +269,11 @@ export default function GrowthCard({
         )}
         {/* Badges */}
         <div className="absolute left-2 bottom-2 flex items-center gap-1.5 pointer-events-none">
-          <span className="rounded-full bg-black/55 backdrop-blur-sm px-2 py-0.5 text-[10px] font-mono text-white/90">
+          <span className="rounded-full bg-overlay-badge backdrop-blur-sm px-2 py-0.5 text-[10px] font-mono text-overlay-badge-text">
             #{index + 1}
           </span>
           {isViewing && (
-            <span className="inline-flex items-center gap-1 rounded-full bg-black/55 backdrop-blur-sm px-2 py-0.5 text-[10px] font-mono text-white">
+            <span className="inline-flex items-center gap-1 rounded-full bg-overlay-badge backdrop-blur-sm px-2 py-0.5 text-[10px] font-mono text-overlay-badge-text">
               <span className="w-1.5 h-1.5 rounded-full bg-growth-dot-active" />
               Viewing
             </span>
@@ -284,7 +284,7 @@ export default function GrowthCard({
           aria-label="Snapshot details"
           title="Details"
           className={cn(
-            'absolute top-2 right-2 p-1.5 rounded-full bg-black/45 backdrop-blur-sm text-white/85 hover:text-white hover:bg-black/65 cursor-pointer transition-opacity',
+            'absolute top-2 right-2 p-1.5 rounded-full bg-overlay-badge backdrop-blur-sm text-overlay-badge-text hover:brightness-125 cursor-pointer transition-opacity',
             isActive
               ? 'opacity-100'
               : 'opacity-0 group-hover/card:opacity-100 focus-visible:opacity-100',

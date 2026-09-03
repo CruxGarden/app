@@ -272,6 +272,15 @@
   --color-success-text: var(--success-text);
   --color-success-border: var(--success-border);
 
+  /* ── V3: Overlay badges + toggle (Mood Builder-editable) ── */
+  --color-overlay-badge: var(--overlay-badge);
+  --color-overlay-badge-text: var(--overlay-badge-text);
+  --color-toggle: var(--toggle);
+  --color-toggle-active: var(--toggle-active);
+  --color-toggle-thumb: var(--toggle-thumb);
+  --color-toggle-thumb-active: var(--toggle-thumb-active);
+  --color-toggle-border: var(--toggle-border);
+
   /* ── V3: Garden Card ──────────────────────────────── */
   --color-garden-card: var(--garden-card);
   --color-garden-card-hover: var(--garden-card-hover);
@@ -421,6 +430,8 @@
   --pane-header-radius: var(--radius-sm);
   --pane-header-padding: 6px;
   --workspace-padding: 4px;
+  --overlay-badge-text: #ffffff;
+  --overlay-badge: rgba(0, 0, 0, 0.55);
   --syntax-comment: #6a7a6e;
   --syntax-keyword: #7db3a3;
   --syntax-string: #a8d4c4;
@@ -784,6 +795,13 @@ html.palette-transition *::after {
   --text-muted: var(--pane-collaboration-text-muted);
   --surface: var(--pane-collaboration-surface);
   --accent: var(--pane-collaboration-accent);
+  --accent-muted: var(--pane-collaboration-accent-muted);
+  --surface-solid: var(--pane-collaboration-surface-solid);
+  --radius-sm: var(--pane-collaboration-radius-sm);
+  --caption: var(--pane-collaboration-caption);
+  --heading: var(--pane-collaboration-heading);
+  --pane-header-radius: var(--pane-collaboration-header-radius);
+  --pane-header-height: var(--pane-collaboration-header-height);
   border-radius: var(--pane-collaboration-radius);
 }
 .mosaic.crux-mosaic-theme .mosaic-window.pane-artifacts {
@@ -794,6 +812,13 @@ html.palette-transition *::after {
   --text-muted: var(--pane-artifacts-text-muted);
   --surface: var(--pane-artifacts-surface);
   --accent: var(--pane-artifacts-accent);
+  --accent-muted: var(--pane-artifacts-accent-muted);
+  --surface-solid: var(--pane-artifacts-surface-solid);
+  --radius-sm: var(--pane-artifacts-radius-sm);
+  --caption: var(--pane-artifacts-caption);
+  --heading: var(--pane-artifacts-heading);
+  --pane-header-radius: var(--pane-artifacts-header-radius);
+  --pane-header-height: var(--pane-artifacts-header-height);
   border-radius: var(--pane-artifacts-radius);
 }
 .mosaic.crux-mosaic-theme .mosaic-window.pane-workshop {
@@ -804,6 +829,13 @@ html.palette-transition *::after {
   --text-muted: var(--pane-workshop-text-muted);
   --surface: var(--pane-workshop-surface);
   --accent: var(--pane-workshop-accent);
+  --accent-muted: var(--pane-workshop-accent-muted);
+  --surface-solid: var(--pane-workshop-surface-solid);
+  --radius-sm: var(--pane-workshop-radius-sm);
+  --caption: var(--pane-workshop-caption);
+  --heading: var(--pane-workshop-heading);
+  --pane-header-radius: var(--pane-workshop-header-radius);
+  --pane-header-height: var(--pane-workshop-header-height);
   border-radius: var(--pane-workshop-radius);
 }
 .mosaic.crux-mosaic-theme .mosaic-window.pane-details {
@@ -814,6 +846,13 @@ html.palette-transition *::after {
   --text-muted: var(--pane-details-text-muted);
   --surface: var(--pane-details-surface);
   --accent: var(--pane-details-accent);
+  --accent-muted: var(--pane-details-accent-muted);
+  --surface-solid: var(--pane-details-surface-solid);
+  --radius-sm: var(--pane-details-radius-sm);
+  --caption: var(--pane-details-caption);
+  --heading: var(--pane-details-heading);
+  --pane-header-radius: var(--pane-details-header-radius);
+  --pane-header-height: var(--pane-details-header-height);
   border-radius: var(--pane-details-radius);
 }
 .mosaic.crux-mosaic-theme .mosaic-window.pane-history {
@@ -824,6 +863,13 @@ html.palette-transition *::after {
   --text-muted: var(--pane-history-text-muted);
   --surface: var(--pane-history-surface);
   --accent: var(--pane-history-accent);
+  --accent-muted: var(--pane-history-accent-muted);
+  --surface-solid: var(--pane-history-surface-solid);
+  --radius-sm: var(--pane-history-radius-sm);
+  --caption: var(--pane-history-caption);
+  --heading: var(--pane-history-heading);
+  --pane-header-radius: var(--pane-history-header-radius);
+  --pane-header-height: var(--pane-history-header-height);
   border-radius: var(--pane-history-radius);
 }
 .mosaic.crux-mosaic-theme .mosaic-window.pane-export {
@@ -834,6 +880,13 @@ html.palette-transition *::after {
   --text-muted: var(--pane-export-text-muted);
   --surface: var(--pane-export-surface);
   --accent: var(--pane-export-accent);
+  --accent-muted: var(--pane-export-accent-muted);
+  --surface-solid: var(--pane-export-surface-solid);
+  --radius-sm: var(--pane-export-radius-sm);
+  --caption: var(--pane-export-caption);
+  --heading: var(--pane-export-heading);
+  --pane-header-radius: var(--pane-export-header-radius);
+  --pane-header-height: var(--pane-export-header-height);
   border-radius: var(--pane-export-radius);
 }
 .mosaic.crux-mosaic-theme .mosaic-window.pane-sync {
@@ -844,6 +897,13 @@ html.palette-transition *::after {
   --text-muted: var(--pane-sync-text-muted);
   --surface: var(--pane-sync-surface);
   --accent: var(--pane-sync-accent);
+  --accent-muted: var(--pane-sync-accent-muted);
+  --surface-solid: var(--pane-sync-surface-solid);
+  --radius-sm: var(--pane-sync-radius-sm);
+  --caption: var(--pane-sync-caption);
+  --heading: var(--pane-sync-heading);
+  --pane-header-radius: var(--pane-sync-header-radius);
+  --pane-header-height: var(--pane-sync-header-height);
   border-radius: var(--pane-sync-radius);
 }
 .mosaic.crux-mosaic-theme .mosaic-window.pane-publish {
@@ -854,6 +914,13 @@ html.palette-transition *::after {
   --text-muted: var(--pane-publish-text-muted);
   --surface: var(--pane-publish-surface);
   --accent: var(--pane-publish-accent);
+  --accent-muted: var(--pane-publish-accent-muted);
+  --surface-solid: var(--pane-publish-surface-solid);
+  --radius-sm: var(--pane-publish-radius-sm);
+  --caption: var(--pane-publish-caption);
+  --heading: var(--pane-publish-heading);
+  --pane-header-radius: var(--pane-publish-header-radius);
+  --pane-header-height: var(--pane-publish-header-height);
   border-radius: var(--pane-publish-radius);
 }
 .mosaic.crux-mosaic-theme .mosaic-window.pane-store {
@@ -864,6 +931,13 @@ html.palette-transition *::after {
   --text-muted: var(--pane-store-text-muted);
   --surface: var(--pane-store-surface);
   --accent: var(--pane-store-accent);
+  --accent-muted: var(--pane-store-accent-muted);
+  --surface-solid: var(--pane-store-surface-solid);
+  --radius-sm: var(--pane-store-radius-sm);
+  --caption: var(--pane-store-caption);
+  --heading: var(--pane-store-heading);
+  --pane-header-radius: var(--pane-store-header-radius);
+  --pane-header-height: var(--pane-store-header-height);
   border-radius: var(--pane-store-radius);
 }
 

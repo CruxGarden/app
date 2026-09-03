@@ -83,7 +83,8 @@ export async function startMockApi(): Promise<MockApi> {
       });
     if (path === '/auth/logout') return send(200, {});
     if (path === '/authors/check-username') return send(200, { available: true });
-    if (path.startsWith('/authors/') && method === 'PATCH') return send(200, { ...AUTHOR, ...bodyJson() });
+    if (path.startsWith('/authors/') && method === 'PATCH')
+      return send(200, { ...AUTHOR, ...bodyJson() });
     if (path.startsWith('/authors/') && path.endsWith('/avatar')) return send(200, AUTHOR);
 
     if (path === '/cruxes' && method === 'POST') {

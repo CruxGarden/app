@@ -17,7 +17,10 @@ test.describe('form-mode editor (site settings)', () => {
     const gardenRoot = join(dir, 'garden');
     const configOnDisk = (): string | null => {
       try {
-        return readFileSync(join(gardenRoot, readdirSync(gardenRoot)[0]!, 'src/config.json'), 'utf8');
+        return readFileSync(
+          join(gardenRoot, readdirSync(gardenRoot)[0]!, 'src/config.json'),
+          'utf8',
+        );
       } catch {
         return null;
       }
@@ -58,15 +61,22 @@ test.describe('form-mode editor (site settings)', () => {
       // open the front page via the "Preview" mode to learn its URL.
       let base = siteUrl ? new URL(siteUrl).origin : null;
       if (!base) {
-        await page.getByRole('button', { name: 'Preview' }).click().catch(() => {});
-        const src = await page.locator('iframe[src^="http://127.0.0.1"]').getAttribute('src', { timeout: 4 * 60_000 });
+        await page
+          .getByRole('button', { name: 'Preview' })
+          .click()
+          .catch(() => {});
+        const src = await page
+          .locator('iframe[src^="http://127.0.0.1"]')
+          .getAttribute('src', { timeout: 4 * 60_000 });
         base = new URL(src!).origin;
       }
       const browser = await chromium.launch();
       try {
         const site = await browser.newPage();
         await site.goto(`${base}/`);
-        await expect(site.getByRole('heading', { name: 'Playwright Person', level: 1 })).toBeVisible({ timeout: 30_000 });
+        await expect(
+          site.getByRole('heading', { name: 'Playwright Person', level: 1 }),
+        ).toBeVisible({ timeout: 30_000 });
         await site.screenshot({ path: 'e2e/.results/form-2-live-site.png' });
       } finally {
         await browser.close();

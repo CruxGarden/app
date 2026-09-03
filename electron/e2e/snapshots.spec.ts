@@ -49,7 +49,10 @@ test.describe('snapshots & revert', () => {
       // Snapshot "v1"
       await page.getByRole('button', { name: 'Toggle history' }).click();
       const snapshotWithLabel = async (label: string) => {
-        await page.getByRole('button', { name: /snapshot/i }).first().click();
+        await page
+          .getByRole('button', { name: /snapshot/i })
+          .first()
+          .click();
         const input = page.getByPlaceholder('Label (optional)');
         await input.fill(label);
         await input.press('Enter');
@@ -84,9 +87,13 @@ test.describe('snapshots & revert', () => {
 
       // Leave and come back: the reconstructed conversation/history must be
       // the reverted one, not the pre-revert branch.
-      await page.getByRole('link', { name: /garden|home/i }).first().click().catch(async () => {
-        await page.evaluate(() => window.history.back());
-      });
+      await page
+        .getByRole('link', { name: /garden|home/i })
+        .first()
+        .click()
+        .catch(async () => {
+          await page.evaluate(() => window.history.back());
+        });
       await page.getByText('My Crux', { exact: true }).first().click();
       // Tabs are not restored on reopen — open the file from the tree.
       const tree = page.getByRole('tree');
