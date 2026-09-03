@@ -73,15 +73,31 @@ test.describe('usage + custom domains (mocked API)', () => {
         true,
       );
 
-      // Settings → Usage
+      // Settings → Sync: push the garden (metered by the mock), then Usage shows it
+      api.state.sync.cruxes['11111111-1111-4111-8111-111111111111'] = {
+        bytes: 2048,
+        title: 'Synced Notes',
+        slug: 'synced-notes',
+        updatedAt: new Date().toISOString(),
+      };
       await page.getByRole('button', { name: 'Account menu' }).click();
       await page.getByRole('button', { name: /^Settings/ }).click();
+      await page.getByRole('button', { name: /^Sync/ }).click();
+      await page.getByRole('button', { name: 'Push garden' }).click();
+      await expect(page.getByText(/Last pushed:/)).toBeVisible({ timeout: 30_000 });
+      expect(api.state.sync.garden?.bytes ?? 0).toBeGreaterThan(0);
+
       const settings = page.getByTestId('usage-settings');
       await expect(settings).toBeVisible();
       await expect(settings.getByRole('heading', { name: 'Usage' })).toBeVisible();
       await expect(settings).toContainText('Free plan');
       await expect(settings).toContainText(/1(\.00)? GB/);
       await expect(settings).toContainText('My Crux');
+      const syncUsage = settings.getByTestId('sync-usage');
+      await expect(syncUsage).toContainText('Garden backup');
+      await expect(syncUsage).toContainText(/pushed/);
+      await expect(syncUsage).toContainText('1 · 2.0 KB');
+      await expect(syncUsage).not.toContainText('↑ 0 B');
       await page.screenshot({ path: 'e2e/.results/usage-domains-2-settings.png' });
       await page.keyboard.press('Escape');
 

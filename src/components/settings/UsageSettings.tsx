@@ -5,6 +5,7 @@ import { formatBytes } from '@/lib/format';
 import * as usageApi from '@/api/usage';
 import { useGardenStore } from '@/stores/gardenStore';
 import { Meter } from '@/components/workspace/UsageSection';
+import { onUsageChanged } from '@/lib/usage-events';
 
 /** Account-wide storage and bandwidth for the billing period, against the plan. */
 export default function UsageSettings() {
@@ -16,12 +17,16 @@ export default function UsageSettings() {
   useEffect(() => {
     if (!isAuthenticated) return;
     let cancelled = false;
-    usageApi
-      .me()
-      .then((u) => !cancelled && setUsage(u))
-      .catch(() => !cancelled && setError('Usage is unavailable right now'));
+    const load = () =>
+      usageApi
+        .me()
+        .then((u) => !cancelled && setUsage(u))
+        .catch(() => !cancelled && setError('Usage is unavailable right now'));
+    load();
+    const off = onUsageChanged(load);
     return () => {
       cancelled = true;
+      off();
     };
   }, [isAuthenticated]);
 
@@ -52,9 +57,9 @@ export default function UsageSettings() {
         <div className="flex flex-col gap-4">
           <div className="grid gap-4 sm:grid-cols-2">
             <Meter
-              label="Published storage"
+              label="Storage"
               value={formatBytes(usage.storageBytes)}
-              hint={`of ${formatBytes(usage.plan.storageBytes)} · ${usage.cruxes.filter((c) => c.storageBytes > 0).length} published crux${usage.cruxes.filter((c) => c.storageBytes > 0).length === 1 ? '' : 'es'}`}
+              hint={`of ${formatBytes(usage.plan.storageBytes)} · published ${formatBytes(usage.publish.storageBytes)} · synced ${formatBytes(usage.sync.storageBytes)}`}
               pct={
                 usage.plan.storageBytes
                   ? Math.min(100, (usage.storageBytes / usage.plan.storageBytes) * 100)
@@ -64,7 +69,7 @@ export default function UsageSettings() {
             <Meter
               label="Bandwidth this period"
               value={formatBytes(usage.bandwidthBytes)}
-              hint={`of ${formatBytes(usage.plan.bandwidthBytesPerPeriod)} · ${usage.requests.toLocaleString()} requests${usage.bandwidthAsOf ? ` · counted ${day(usage.bandwidthAsOf)}` : ''}`}
+              hint={`of ${formatBytes(usage.plan.bandwidthBytesPerPeriod)} · visits ${formatBytes(usage.publish.bandwidthBytes)} (${usage.requests.toLocaleString()} requests) · sync ${formatBytes(usage.sync.transferBytes)}${usage.bandwidthAsOf ? ` · counted ${day(usage.bandwidthAsOf)}` : ''}`}
               pct={
                 usage.plan.bandwidthBytesPerPeriod
                   ? Math.min(100, (usage.bandwidthBytes / usage.plan.bandwidthBytesPerPeriod) * 100)
@@ -72,11 +77,34 @@ export default function UsageSettings() {
               }
             />
           </div>
+          <div data-testid="sync-usage" className="flex flex-col gap-1 text-[11px]">
+            <div className="text-caption font-mono uppercase tracking-wider text-[9px]">Sync</div>
+            <div className="flex items-baseline justify-between gap-2">
+              <span className="text-text">Garden backup</span>
+              <span className="font-mono text-text-muted">
+                {usage.sync.gardenBytes > 0
+                  ? `${formatBytes(usage.sync.gardenBytes)} · pushed ${day(usage.sync.gardenSyncedAt ?? '')}`
+                  : 'none'}
+              </span>
+            </div>
+            <div className="flex items-baseline justify-between gap-2">
+              <span className="text-text">Synced cruxes</span>
+              <span className="font-mono text-text-muted">
+                {usage.sync.cruxCount} · {formatBytes(usage.sync.cruxBytes)}
+              </span>
+            </div>
+            <div className="flex items-baseline justify-between gap-2">
+              <span className="text-text">Transfer this period</span>
+              <span className="font-mono text-text-muted">
+                ↑ {formatBytes(usage.sync.uploadBytes)} · ↓ {formatBytes(usage.sync.downloadBytes)}
+              </span>
+            </div>
+          </div>
           {usage.cruxes.length > 0 && (
             <table className="w-full text-[11px]">
               <thead>
                 <tr className="text-left text-caption font-mono uppercase tracking-wider text-[9px]">
-                  <th className="py-1 font-normal">Crux</th>
+                  <th className="py-1 font-normal">Published crux</th>
                   <th className="py-1 font-normal text-right">Storage</th>
                   <th className="py-1 font-normal text-right">Bandwidth</th>
                   <th className="py-1 font-normal text-right">Requests</th>
@@ -101,7 +129,8 @@ export default function UsageSettings() {
             </table>
           )}
           <p className="text-[10px] text-text-muted">
-            Limits are shown, not enforced yet. Plans that raise them are coming.
+            Published sites and sync backups share these limits. Shown, not enforced yet — plans
+            that raise them are coming.
           </p>
         </div>
       )}
