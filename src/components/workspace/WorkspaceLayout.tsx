@@ -88,16 +88,18 @@ const MemoizedPaneContent = memo(function MemoizedPaneContent({
   );
 });
 
+// Title case here; the Mood decides the rendered case (--pane-header-label-case,
+// uppercase by default), so a theme can ask for "Collaboration" or "collaboration".
 const PANE_LABELS: Record<PaneType, string> = {
-  history: 'HISTORY',
-  collaboration: 'COLLABORATION',
-  artifacts: 'ARTIFACTS',
-  workshop: 'WORKSHOP',
-  details: 'METADATA',
-  sync: 'SYNC',
-  publish: 'SHARE',
-  export: 'EXPORT',
-  store: 'STORE',
+  history: 'History',
+  collaboration: 'Collaboration',
+  artifacts: 'Artifacts',
+  workshop: 'Workshop',
+  details: 'Metadata',
+  sync: 'Sync',
+  publish: 'Share',
+  export: 'Export',
+  store: 'Store',
 };
 
 function MobilePane({ pane }: { pane: PaneType }) {
