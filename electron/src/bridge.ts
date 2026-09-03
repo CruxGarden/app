@@ -153,4 +153,6 @@ export interface ElectronBridge {
   secrets: SecretsBridge;
   ffmpeg: FfmpegBridge;
   localai: LocalAiBridge;
+  /** Test-only overrides, read from the environment the shell was launched with. */
+  test: { apiUrl: string | null };
 }

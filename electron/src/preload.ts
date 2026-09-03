@@ -140,6 +140,8 @@ const api: ElectronBridge = {
       return () => ipcRenderer.removeListener('ffmpeg:progress', handler);
     },
   },
+  // CRUX_API_URL lets the e2e suite point the app at a local mock API.
+  test: { apiUrl: process.env.CRUX_API_URL ?? null },
 };
 
 contextBridge.exposeInMainWorld('electronAPI', api);

@@ -8,7 +8,9 @@ import { join } from 'node:path';
  * userData dir (SQLite + blobs + secrets) and a fresh Garden Root. Electron
  * must NOT inherit ELECTRON_RUN_AS_NODE from the shell.
  */
-export async function launchApp(): Promise<{ app: ElectronApplication; page: Page; dir: string }> {
+export async function launchApp(
+  opts: { env?: Record<string, string> } = {},
+): Promise<{ app: ElectronApplication; page: Page; dir: string }> {
   const dir = mkdtempSync(join(tmpdir(), 'crux-e2e-'));
   const env: Record<string, string> = {};
   for (const [k, v] of Object.entries(process.env)) {
@@ -16,6 +18,7 @@ export async function launchApp(): Promise<{ app: ElectronApplication; page: Pag
   }
   env.CRUX_USER_DATA = join(dir, 'userData');
   env.CRUX_GARDEN_ROOT = join(dir, 'garden');
+  Object.assign(env, opts.env);
 
   const app = await electron.launch({ args: ['.'], cwd: join(__dirname, '..'), env });
   const page = await app.firstWindow();

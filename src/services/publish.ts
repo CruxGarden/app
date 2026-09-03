@@ -67,13 +67,19 @@ async function defaultDeps(): Promise<PublishDeps> {
   return {
     api: {
       exists: async (id) => {
+        let found: Crux | undefined;
         try {
-          await cruxes.get(id);
-          return true;
+          found = await cruxes.get(id);
         } catch (err) {
           if (isNotFound(err)) return false;
           throw err; // transient/auth failure — never assume "not published"
         }
+        // axios RESOLVES a response with status 0 (blocked / never answered)
+        // as if it succeeded, with an empty body. That is not "exists".
+        if (!found || found.id !== id) {
+          throw new Error('Could not reach crux.garden to check publish state.');
+        }
+        return true;
       },
       create: (input) => cruxes.create(input as unknown as Parameters<typeof cruxes.create>[0]),
       update: (id, input) => cruxes.update(id, input as Parameters<typeof cruxes.update>[1]),
