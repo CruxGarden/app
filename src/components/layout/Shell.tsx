@@ -10,6 +10,7 @@ const Console = lazy(() => import('@/components/keeper/Console'));
 const Settings = lazy(() => import('@/pages/Settings'));
 const Explore = lazy(() => import('@/pages/Explore'));
 const Mood = lazy(() => import('@/components/mood/Mood'));
+const MoodDock = lazy(() => import('@/components/mood/MoodDock'));
 
 export default function Shell() {
   const [servicesReady, setServicesReady] = useState(useAppStore.getState().ready);
@@ -118,6 +119,13 @@ export default function Shell() {
             <Console />
           </Suspense>
         </Modal>
+      )}
+
+      {/* Mood Dock — the realtime widget for the active Mood (sound, quick access) */}
+      {servicesReady && !initError && (
+        <Suspense fallback={null}>
+          <MoodDock />
+        </Suspense>
       )}
 
       {/* Mood Modal — quick picks; the Mood Builder page has the full editor */}
