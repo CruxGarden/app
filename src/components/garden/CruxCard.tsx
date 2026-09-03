@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/cn';
 import { formatDateTime } from '@/lib/format';
 import { useDismiss } from '@/hooks/useDismiss';
+import { useBlobUrl } from '@/hooks/useBlobUrl';
 const ExportModal = lazy(() => import('@/components/garden/ExportModal'));
 import type { Crux } from '@/api/types';
 
@@ -13,6 +14,10 @@ interface CruxCardProps {
   sortBy?: 'created' | 'updated';
   /** Hide the three-dot action menu (e.g. on public pages) */
   hideMenu?: boolean;
+  /** Blob Store fingerprint of the crux's preview.jpg, when one has been captured. */
+  thumbnailFingerprint?: string;
+  /** Already-resolved image URL (public pages, where there is no Blob Store). */
+  thumbnailUrl?: string;
 }
 
 function MoreIcon() {
@@ -34,61 +39,152 @@ function MoreIcon() {
   );
 }
 
+const KIND_LABELS: Record<string, string> = {
+  webapp: 'Site',
+  page: 'Page',
+  document: 'Document',
+  image: 'Image',
+  notes: 'Notes',
+};
+
+/**
+ * Stand-in for cruxes that have no screenshot yet: the title's initial on a
+ * quiet accent wash. Deterministic per crux so the grid doesn't shimmer.
+ */
+function Placeholder({ crux }: { crux: Crux }) {
+  const label = crux.title || crux.slug || '?';
+  const initial = label.trim().charAt(0).toUpperCase() || '?';
+  // Rotate the wash a little per crux so a wall of placeholders isn't flat.
+  let hash = 0;
+  for (const ch of crux.id) hash = (hash * 31 + ch.charCodeAt(0)) | 0;
+  const angle = 120 + (Math.abs(hash) % 120);
+  return (
+    <div
+      className="absolute inset-0 flex items-center justify-center"
+      style={{
+        background: `linear-gradient(${angle}deg, color-mix(in srgb, var(--accent) 18%, var(--garden-card-thumbnail)) 0%, var(--garden-card-thumbnail) 70%)`,
+      }}
+      aria-hidden
+    >
+      <span className="font-wordmark text-5xl leading-none text-accent/70 select-none">
+        {initial}
+      </span>
+    </div>
+  );
+}
+
 export default function CruxCard({
   crux,
   linkTo,
   onDelete,
   sortBy = 'created',
   hideMenu,
+  thumbnailFingerprint,
+  thumbnailUrl,
 }: CruxCardProps) {
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
+  const blobUrl = useBlobUrl(thumbnailFingerprint, 'image/jpeg');
+  const imageUrl = thumbnailUrl || blobUrl;
+
   const description = crux.meta?.summary?.purpose || crux.description;
+  const isPublished = crux.meta?.publishedAt != null;
+  const kindLabel = crux.kind ? KIND_LABELS[crux.kind] : undefined;
+  const when = sortBy === 'updated' ? crux.updated : crux.created;
 
   const closeMenu = useCallback(() => setMenuOpen(false), []);
   useDismiss(menuRef, closeMenu, menuOpen);
 
   return (
-    <div className="relative group last:border-b-0 border-b border-border">
+    <div
+      className={cn(
+        'relative group flex flex-col rounded-[var(--radius)] overflow-hidden',
+        'bg-garden-card border border-garden-card-border',
+        'transition-[border-color,transform,box-shadow] duration-200',
+        'hover:border-garden-card-border-hover hover:bg-garden-card-hover hover:-translate-y-0.5 hover:shadow-lg hover:shadow-black/20',
+        'focus-within:border-garden-card-border-hover',
+      )}
+    >
       <button
         onClick={() => navigate(linkTo || `/c/${crux.id}`)}
-        className={cn(
-          'w-full pl-4 py-3 text-left hover:bg-accent-muted/30 cursor-pointer group/row flex items-center gap-3',
-          hideMenu ? 'pr-4' : 'pr-10',
-        )}
+        className="flex flex-col text-left cursor-pointer outline-none flex-1"
+        aria-label={`Open ${crux.title || crux.slug}`}
       >
-        <div className="flex-1 min-w-0">
-          <h3 className="font-display text-sm font-medium text-text group-hover/row:text-accent truncate">
+        {/* Thumbnail */}
+        <div className="relative aspect-[16/10] w-full bg-garden-card-thumbnail overflow-hidden border-b border-garden-card-border">
+          {imageUrl ? (
+            <img
+              src={imageUrl}
+              alt=""
+              className="absolute inset-0 w-full h-full object-cover object-top transition-transform duration-300 group-hover:scale-[1.02]"
+              draggable={false}
+            />
+          ) : (
+            <Placeholder crux={crux} />
+          )}
+          {/* Badges */}
+          <div className="absolute left-2 bottom-2 flex items-center gap-1.5">
+            {isPublished && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-black/55 backdrop-blur-sm px-2 py-0.5 text-[10px] font-mono text-white">
+                <span className="w-1.5 h-1.5 rounded-full bg-accent" />
+                Shared
+              </span>
+            )}
+            {kindLabel && (
+              <span className="rounded-full bg-black/45 backdrop-blur-sm px-2 py-0.5 text-[10px] font-mono text-white/85">
+                {kindLabel}
+              </span>
+            )}
+          </div>
+        </div>
+
+        {/* Body */}
+        <div className="flex flex-col gap-1 px-3.5 pt-3 pb-3.5 flex-1 min-w-0">
+          <h3 className="font-display text-sm font-medium text-garden-card-title group-hover:text-accent truncate transition-colors">
             {crux.title || crux.slug}
           </h3>
-          {description && <p className="text-xs text-text-muted truncate">{description}</p>}
-        </div>
-        <div className="text-[10px] text-text-muted font-mono shrink-0">
-          {sortBy === 'updated' ? formatDateTime(crux.updated) : formatDateTime(crux.created)}
+          <p
+            className={cn(
+              'text-xs text-garden-card-text leading-relaxed line-clamp-2 min-h-[2lh]',
+              !description && 'italic opacity-70',
+            )}
+          >
+            {description || 'No description yet'}
+          </p>
+          <div className="mt-auto pt-2 text-[10px] font-mono text-garden-card-meta">
+            {sortBy === 'updated' ? 'Updated' : 'Created'} {formatDateTime(when)}
+          </div>
         </div>
       </button>
 
       {/* Three-dot menu */}
       {!hideMenu && (
-        <div ref={menuRef} className="absolute top-1/2 -translate-y-1/2 right-2 z-10">
+        <div ref={menuRef} className="absolute top-2 right-2 z-10">
           <button
             onClick={(e) => {
               e.stopPropagation();
               setMenuOpen(!menuOpen);
             }}
+            aria-label="Crux actions"
             className={cn(
-              'p-1 rounded text-text-muted hover:text-text hover:bg-surface cursor-pointer',
-              menuOpen ? 'opacity-100' : 'opacity-0 group-hover:opacity-100',
+              'p-1.5 rounded-full bg-black/45 backdrop-blur-sm text-white/85 hover:text-white hover:bg-black/65 cursor-pointer transition-opacity',
+              menuOpen
+                ? 'opacity-100'
+                : 'opacity-0 group-hover:opacity-100 focus-visible:opacity-100',
             )}
           >
             <MoreIcon />
           </button>
           {menuOpen && (
-            <div className="absolute right-0 top-full mt-1 w-32 bg-surface-solid border border-border rounded-[var(--radius-sm)] shadow-xl py-1 z-50">
+            <div
+              role="menu"
+              className="absolute right-0 top-full mt-1 w-32 bg-surface-solid border border-border rounded-[var(--radius-sm)] shadow-xl py-1 z-50"
+            >
               <button
+                role="menuitem"
                 onClick={(e) => {
                   e.stopPropagation();
                   setMenuOpen(false);
@@ -100,6 +196,7 @@ export default function CruxCard({
               </button>
               {onDelete && (
                 <button
+                  role="menuitem"
                   onClick={(e) => {
                     e.stopPropagation();
                     setMenuOpen(false);

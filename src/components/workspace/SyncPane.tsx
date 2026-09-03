@@ -4,10 +4,10 @@ import { useAuthStore } from '@/stores/authStore';
 import { useAppStore } from '@/stores/appStore';
 import { exportCrux, importCrux } from '@/services/crux-io';
 import * as syncApi from '@/api/sync';
-import { cn } from '@/lib/cn';
 import { formatBytes, formatDateTime } from '@/lib/format';
-import { Spinner } from '@/components/ui';
 import { usePaneWidth } from '@/hooks/usePaneWidth';
+import ConnectAccount from '@/components/auth/ConnectAccount';
+import { PaneEmpty, PaneSection, PaneAction, PaneNote, PaneHint } from './pane-ui';
 import { confirmDialog } from '@/stores/dialogStore';
 
 function CloudUpIcon() {
@@ -167,90 +167,66 @@ export default function SyncPane() {
           <p className="text-xs text-text-muted">Enlarge pane to view contents</p>
         </div>
       ) : !isAuthenticated ? (
-        <div className="flex-1 flex items-center justify-center p-4">
-          <p className="text-xs text-text-muted text-center">
-            Connect your account in Settings to enable cloud sync
-          </p>
-        </div>
+        <PaneEmpty
+          icon={<CloudUpIcon />}
+          title="Sync is off"
+          description="Connect your crux.garden account to back this crux up to the cloud and pull it onto other devices."
+        >
+          <div className="rounded-[var(--radius-sm)] border border-border bg-surface/50 p-3 text-left">
+            <ConnectAccount compact description="Connect your account to enable sync." />
+          </div>
+        </PaneEmpty>
       ) : !crux ? (
-        <div className="flex-1 flex items-center justify-center p-4">
-          <p className="text-xs text-text-muted">No crux loaded</p>
-        </div>
+        <PaneEmpty title="No crux loaded" />
       ) : (
         <div className="flex-1 overflow-y-auto min-h-0 p-3 flex flex-col gap-3">
           {/* Status */}
-          <div className="rounded-[var(--radius-sm)] border border-border bg-surface/50 px-3 py-2">
-            <div className="text-[10px] font-mono uppercase tracking-wider text-text-muted mb-1">
-              Cloud status
-            </div>
+          <PaneSection
+            label="Cloud status"
+            aside={lastSynced ? formatBytes(lastSynced.size) : undefined}
+            tone={lastSynced ? 'default' : 'dashed'}
+          >
             {lastSynced ? (
-              <div className="text-[11px] font-mono text-text-muted">
-                <span className="text-text">{formatDateTime(lastSynced.at)}</span>
-                <span className="ml-2">{formatBytes(lastSynced.size)}</span>
+              <div className="flex items-center gap-1.5 text-[11px] font-mono">
+                <span className="w-1.5 h-1.5 rounded-full bg-accent shrink-0" />
+                <span className="text-text">Synced {formatDateTime(lastSynced.at)}</span>
               </div>
             ) : (
-              <div className="text-[11px] font-mono text-text-muted">Not synced yet</div>
+              <p className="text-[11px] text-text-muted">
+                Not synced yet. Push sends this crux and its history to your account.
+              </p>
             )}
+          </PaneSection>
+
+          <div className="flex flex-col gap-1.5">
+            <PaneAction
+              onClick={handlePush}
+              disabled={busy}
+              busy={pushing && 'Pushing...'}
+              icon={<CloudUpIcon />}
+            >
+              Push to cloud
+            </PaneAction>
+            <PaneHint>Upload this crux, its conversation, and its history</PaneHint>
           </div>
 
-          {/* Push */}
-          <button
-            onClick={handlePush}
-            disabled={busy}
-            className={cn(
-              'w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-[var(--radius-sm)]',
-              'text-sm font-medium font-body transition-all',
-              busy
-                ? 'bg-accent-muted text-accent border border-accent/20 cursor-wait'
-                : 'bg-accent-muted text-accent border border-accent/20 hover:border-accent cursor-pointer',
-            )}
-          >
-            {pushing ? (
-              <>
-                <Spinner size={14} /> Pushing...
-              </>
-            ) : (
-              <>
-                <CloudUpIcon /> Push to cloud
-              </>
-            )}
-          </button>
-
-          {/* Pull */}
-          <button
-            onClick={handlePull}
-            disabled={busy}
-            className={cn(
-              'w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-[var(--radius-sm)]',
-              'text-sm font-medium font-body transition-all',
-              busy
-                ? 'bg-surface text-text-muted border border-border cursor-wait'
-                : 'bg-surface text-text border border-border hover:border-accent cursor-pointer',
-            )}
-          >
-            {pulling ? (
-              <>
-                <Spinner size={14} /> Pulling...
-              </>
-            ) : (
-              <>
-                <CloudDownIcon /> Pull from cloud
-              </>
-            )}
-          </button>
-
-          {/* Progress / error */}
-          {progress && (
-            <p
-              className={cn(
-                'text-[11px] font-mono text-center truncate',
-                progress.includes('failed') ? 'text-error' : 'text-text-muted',
-              )}
+          <div className="flex flex-col gap-1.5">
+            <PaneAction
+              tone="secondary"
+              onClick={handlePull}
+              disabled={busy}
+              busy={pulling && 'Pulling...'}
+              icon={<CloudDownIcon />}
             >
-              {progress}
-            </p>
+              Pull from cloud
+            </PaneAction>
+            <PaneHint>Replace the local copy with the cloud version</PaneHint>
+          </div>
+
+          {progress && (
+            <PaneNote tone={progress.includes('failed') ? 'error' : 'muted'}>{progress}</PaneNote>
           )}
-          {error && <p className="text-[11px] font-mono text-center text-error">{error}</p>}
+          {error && <PaneNote tone="error">{error}</PaneNote>}
         </div>
       )}
     </div>

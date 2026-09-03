@@ -376,10 +376,14 @@ export default function NewCruxModal({ open, onClose }: NewCruxModalProps) {
       <div className="flex flex-col h-full gap-5">
         {/* Name */}
         <div className="shrink-0">
-          <label className="block text-xs font-mono text-text-muted uppercase tracking-wider mb-2">
+          <label
+            htmlFor="new-crux-name"
+            className="block text-xs font-mono text-text-muted uppercase tracking-wider mb-2"
+          >
             Name
           </label>
           <input
+            id="new-crux-name"
             type="text"
             value={title}
             onChange={(e) => {
