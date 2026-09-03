@@ -23,6 +23,8 @@ export interface MoodSummary {
   layers: number;
   layerTypes: string[];
   author?: string;
+  /** Published file name of the cover image (e.g. "cover.png"), when the Mood has one */
+  cover?: string;
 }
 
 const SWATCH_KEYS = [
@@ -38,6 +40,13 @@ const SWATCH_KEYS = [
   'paneDetails',
 ];
 
+function coverFileName(pkg: MoodPackage): string | undefined {
+  if (!pkg.cover) return undefined;
+  const asset = pkg.assets?.find((a) => a.fingerprint === pkg.cover);
+  const ext = asset?.type.split('/')[1]?.replace('jpeg', 'jpg').replace('svg+xml', 'svg') || 'png';
+  return `cover.${ext}`;
+}
+
 export function moodSummary(pkg: MoodPackage): MoodSummary {
   const g = GARDEN_DARK as Record<string, string>;
   const swatch: Record<string, string> = {};
@@ -50,6 +59,7 @@ export function moodSummary(pkg: MoodPackage): MoodSummary {
     layers: pkg.resonance.mixes.reduce((n, m) => n + m.layers.length, 0),
     layerTypes,
     author: pkg.author,
+    cover: coverFileName(pkg),
   };
 }
 
@@ -84,9 +94,9 @@ export function moodPreviewHtml(pkg: MoodPackage): string {
   main{width:min(560px,92vw);background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:28px;box-shadow:0 30px 80px rgb(0 0 0/.35)}
   h1{margin:0 0 4px;font-size:28px} .muted{opacity:.7;font-size:13px} .panes{display:flex;gap:4px;margin:14px 0} .panes span{width:28px;height:10px;border-radius:3px;display:block}
   ul{padding-left:18px} a.btn{display:inline-block;margin-top:18px;padding:10px 16px;border-radius:999px;background:var(--accent);color:var(--bg);text-decoration:none;font-weight:600}
-  .how{margin-top:18px;font-size:13px;opacity:.75}
+  .how{margin-top:18px;font-size:13px;opacity:.75} .cover{display:block;width:100%;aspect-ratio:16/10;object-fit:cover;border-radius:10px;margin:0 0 16px;border:1px solid var(--border)}
 </style></head><body><main>
-<h1>${esc(pkg.name)}</h1>
+${s.cover ? `<img class="cover" src="${esc(s.cover)}" alt="">` : ''}<h1>${esc(pkg.name)}</h1>
 <div class="muted">A Crux Garden Mood${pkg.author ? ` by ${esc(pkg.author)}` : ''} · ${esc(s.section)} · ${s.mixes} mix${s.mixes === 1 ? '' : 'es'}, ${s.layers} layer${s.layers === 1 ? '' : 's'}</div>
 <div class="panes">${panes}</div>
 <ul>${mixes || '<li class="muted">No soundscape</li>'}</ul>
@@ -164,6 +174,20 @@ export async function publishMood(pkg: MoodPackage, deps: PublishMoodDeps): Prom
     blob: zip,
     meta: { path: 'mood.cruxmood' },
   });
+  if (pkg.cover && summary.cover) {
+    try {
+      const bytes = await deps.readBlob(pkg.cover);
+      const type = pkg.assets?.find((a) => a.fingerprint === pkg.cover)?.type || 'image/png';
+      await artifactService.upload({
+        resourceId: crux.id,
+        resourceType: 'crux',
+        blob: new Blob([bytes as BlobPart], { type }),
+        meta: { path: summary.cover },
+      });
+    } catch {
+      /* no cover bytes: the card falls back to the swatch */
+    }
+  }
   await artifactService.create({
     resourceId: crux.id,
     content: JSON.stringify({ ...pkg, publishedCruxId: crux.id }, null, 2),
