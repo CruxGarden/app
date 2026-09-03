@@ -8,7 +8,7 @@ import { applyActiveMood } from '@/lib/moods/active';
 import ThemeTokensTab from './ThemeTokensTab';
 import { useMoodStore } from '@/stores/moodStore';
 import { getSetting, setSetting } from '@/services/settings';
-import { BG_CSS_VAR, SettingsKey } from '@/lib/constants';
+import { SettingsKey } from '@/lib/constants';
 import { BgType, ThemeMode } from '@/lib/types';
 import {
   getPersona,
@@ -495,8 +495,7 @@ export default function MoodEditor({ initialTab = 'palette', compact = false }: 
 
   const handleBgChange = (type: BgType) => {
     setBgType(type);
-    setSetting(SettingsKey.BackgroundType, type);
-    document.documentElement.style.setProperty(BG_CSS_VAR, type);
+    void import('@/services/background').then(({ setBackgroundType }) => setBackgroundType(type));
     if (type === 'image' && bgImagePreview) {
       useMoodStore.setState({ backgroundUrl: bgImagePreview });
     }
@@ -505,22 +504,12 @@ export default function MoodEditor({ initialTab = 'palette', compact = false }: 
   const handleBgImageSelect = async (file: File) => {
     setBgGenerating(true);
     try {
-      // Read file as data URL for preview
-      const dataUrl = await new Promise<string>((resolve) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(reader.result as string);
-        reader.readAsDataURL(file);
-      });
-      // Write to OPFS, store fingerprint in settings
-      const { putBlob } = await import('@/services/blobs');
-      const fp = await putBlob(file);
+      const { setBackgroundFromBlob } = await import('@/services/background');
+      const url = await setBackgroundFromBlob(file);
       releaseBgObjectUrl();
-      setBgImagePreview(dataUrl);
-      setSetting(SettingsKey.BackgroundImage, fp);
-      setSetting(SettingsKey.BackgroundType, 'image');
+      bgObjectUrlRef.current = url || null;
+      setBgImagePreview(url || null);
       setBgType(BgType.Image);
-      document.documentElement.style.setProperty(BG_CSS_VAR, 'image');
-      useMoodStore.setState({ backgroundUrl: dataUrl });
     } finally {
       setBgGenerating(false);
     }
@@ -528,9 +517,8 @@ export default function MoodEditor({ initialTab = 'palette', compact = false }: 
 
   const handleBgImageClear = () => {
     setBgImagePreview(null);
-    setSetting(SettingsKey.BackgroundImage, '');
-    handleBgChange(BgType.Bloom);
-    useMoodStore.setState({ backgroundUrl: null });
+    void import('@/services/background').then(({ clearBackgroundImage }) => clearBackgroundImage());
+    setBgType(BgType.Bloom);
     releaseBgObjectUrl();
   };
 

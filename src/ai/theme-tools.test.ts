@@ -8,6 +8,8 @@ import {
   setThemeOverrides,
 } from '@/lib/moods/active';
 import { initServices } from '@/services';
+import { getSetting } from '@/services/settings';
+import { SettingsKey } from '@/lib/constants';
 
 describe('theme tools', () => {
   beforeEach(async () => {
@@ -20,6 +22,7 @@ describe('theme tools', () => {
     const names = defaultToolDefinitions().map((t) => t.name);
     expect(names).toContain('set_theme');
     expect(names).toContain('get_theme');
+    expect(names).toContain('set_background');
     for (const t of THEME_TOOL_DEFINITIONS) expect(t.input_schema.type).toBe('object');
   });
 
@@ -57,6 +60,24 @@ describe('theme tools', () => {
     // '' is not a value, so the key is treated as "named" for removal via reset
     await runThemeTool('set_theme', { mode: 'persist', reset: true });
     expect(getThemeOverrides('Dark')).toEqual({});
+  });
+
+  it('set_background switches built-in backgrounds and explains bad input', async () => {
+    expect(await runThemeTool('set_background', { type: 'drift' })).toBe(
+      'Background set to drift.',
+    );
+    expect(getSetting(SettingsKey.BackgroundType)).toBe('drift');
+    expect(await runThemeTool('set_background', { type: 'lava' })).toMatch(/unknown type/);
+    expect(await runThemeTool('set_background', {})).toMatch(/prompt .* path .* type/);
+    expect(await runThemeTool('set_background', { path: 'x.png' })).toMatch(/needs a workspace/);
+    expect(await runThemeTool('set_background', { path: 'x.png' }, { cruxId: 'nope' })).toMatch(
+      /no file at "x.png"/,
+    );
+    // No image provider key in the test env → a clear, actionable error
+    expect(await runThemeTool('set_background', { prompt: 'rain over neon streets' })).toMatch(
+      /No API key configured/,
+    );
+    await runThemeTool('set_background', { type: 'bloom' });
   });
 
   it('rejects unknown tokens and tells the model where to look', async () => {

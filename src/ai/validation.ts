@@ -24,6 +24,7 @@ export function validateToolInput(
     case 'check_site':
     case 'set_theme':
     case 'get_theme':
+    case 'set_background':
       return { valid: true };
     case 'generate_image':
       return validateGenerateImage(input);

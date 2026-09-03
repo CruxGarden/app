@@ -66,14 +66,23 @@ export function getMockLanguageModel(): LanguageModel {
       doStream: async ({ prompt }) => {
         const last = prompt[prompt.length - 1];
         if (last?.role === 'tool') {
-          const painted = last.content.some(
-            (c) => c.type === 'tool-result' && c.toolName === 'set_theme',
+          const used = (name: string) =>
+            last.content.some((c) => c.type === 'tool-result' && c.toolName === name);
+          return textStream(
+            used('set_theme')
+              ? 'Done — I painted it.'
+              : used('set_background')
+                ? 'Done — new backdrop.'
+                : 'Done — I wrote that file for you.',
           );
-          return textStream(painted ? 'Done — I painted it.' : 'Done — I wrote that file for you.');
         }
         const text = lastUserText(prompt);
         // "slowly": hold the tool call back so a test can act mid-turn
         if (/\bslowly\b/i.test(text)) await new Promise((r) => setTimeout(r, 1500));
+        // "backdrop": the model sets a workspace image as the Mood background
+        if (/\bbackdrop\b/i.test(text)) {
+          return toolCallStream('set_background', { path: 'backdrop.png' });
+        }
         // "paint": the model signals with the theme (preview layer)
         if (/\bpaint\b/i.test(text)) {
           return toolCallStream('set_theme', {
