@@ -95,15 +95,13 @@ export default function SyncSettings() {
         },
       });
 
-      if (!imported) {
-        setStatus('');
-        setPulling(false);
-      }
+      if (!imported) setStatus('');
     } catch (err) {
       console.error('Garden pull failed:', err);
       setError('Pull failed');
       setStatus('');
-      setPulling(false);
+    } finally {
+      setPulling(false); // success path used to leave the button spinning forever
     }
   };
 

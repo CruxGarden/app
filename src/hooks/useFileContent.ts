@@ -36,7 +36,9 @@ export function useFileContent(_cruxId: string, artifact: Artifact): UseFileCont
   const [loading, setLoading] = useState(true);
   const [fetchKey, setFetchKey] = useState(0);
   const [contentVersion, setContentVersion] = useState(0);
-  const ownSaveRef = useRef(false);
+  // A COUNT, not a flag: Form mode can have several saves in flight at once,
+  // and each landing store update must consume exactly one expectation.
+  const ownSavesPendingRef = useRef(0);
   const loadedRef = useRef(false);
 
   const mime = artifact.mimeType || 'text/plain';
@@ -47,17 +49,20 @@ export function useFileContent(_cruxId: string, artifact: Artifact): UseFileCont
   }, []);
 
   const expectOwnSave = useCallback(() => {
-    ownSaveRef.current = true;
+    ownSavesPendingRef.current++;
+    let cancelled = false;
     return () => {
-      ownSaveRef.current = false;
+      if (cancelled) return;
+      cancelled = true;
+      ownSavesPendingRef.current = Math.max(0, ownSavesPendingRef.current - 1);
     };
   }, []);
 
   useEffect(() => {
     // Our own save just landed in the store: the content is already what the
     // editor shows. Consume the flag and leave the editor alone.
-    if (ownSaveRef.current) {
-      ownSaveRef.current = false;
+    if (ownSavesPendingRef.current > 0) {
+      ownSavesPendingRef.current--;
       return;
     }
 

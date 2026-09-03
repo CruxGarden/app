@@ -16,7 +16,7 @@
  * See: PREVIEW-SYSTEM.md and PREVIEW-ORIGIN-PLAN.md for architecture docs.
  */
 
-import { normalizePath } from '@/lib/rewriteUrls';
+import { resolveRelativePath as normalizePath } from '@/lib/artifact-path';
 
 const PREVIEW_PREFIX = '/__preview/';
 const PREVIEW_ORIGIN = import.meta.env.VITE_PREVIEW_ORIGIN || '';

@@ -1,3 +1,4 @@
+import { openGardenPage } from '@/lib/public-url';
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { publicApi, API_BASE_URL } from '@/api';
@@ -164,7 +165,8 @@ export default function Explore({ onNavigate }: { onNavigate?: () => void }) {
   const handleNavigate = useCallback(
     (path: string) => {
       if (onNavigate) {
-        window.open(path, '_blank');
+        void openGardenPage(path);
+        onNavigate(); // close the modal — it was never called before
       } else {
         navigate(path);
       }

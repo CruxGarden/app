@@ -1,3 +1,4 @@
+import { Capability, can } from "@/lib/platform";
 /**
  * Where a published crux lives for other people.
  *
@@ -47,4 +48,19 @@ export function hasRemotePublishOrigin(): boolean {
 export function publishBaseUrlFor(cruxId: string): string {
   if (PUBLISH_ORIGIN_TEMPLATE) return PUBLISH_ORIGIN_TEMPLATE.replace('{cruxId}', cruxId);
   return `${PUBLISHED_CONTENT_URL}/${cruxId}`;
+}
+
+/**
+ * Open a crux.garden page (a public garden, a published crux) for the user.
+ * In the browser that's a new tab; on desktop `window.open` is denied by the
+ * shell (nothing may navigate the app), so it goes to the system browser.
+ */
+export async function openGardenPage(path: string): Promise<void> {
+  const url = path.startsWith('http') ? path : `${gardenOrigin()}${path.startsWith('/') ? '' : '/'}${path}`;
+  if (can(Capability.DesktopChrome)) {
+    const { openExternal } = await import('@/services/desktop');
+    await openExternal(url);
+    return;
+  }
+  window.open(url, '_blank', 'noopener');
 }

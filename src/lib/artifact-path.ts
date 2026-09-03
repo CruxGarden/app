@@ -57,6 +57,20 @@ export function isWorkspaceThumbnail(path: string): boolean {
   return path.toLowerCase() === WORKSPACE_THUMBNAIL_PATH;
 }
 
+/**
+ * Resolve `.` / `..` segments and collapse empty ones: 'a/./b/../c' → 'a/c'.
+ * Clamps at the root — a path can never climb above the crux.
+ */
+export function resolveRelativePath(path: string): string {
+  const resolved: string[] = [];
+  for (const part of path.split('/')) {
+    if (part === '' || part === '.') continue;
+    if (part === '..') resolved.pop();
+    else resolved.push(part);
+  }
+  return resolved.join('/');
+}
+
 /** Strip a single leading slash (tool inputs and legacy paths carry them). */
 export function normalizePath(path: string): string {
   return path.replace(/^\//, '');

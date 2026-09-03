@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { isSiteCrux, startDevServer, stopDevServer, devServerLeases } from '@/services/site';
 import { Capability, can } from '@/lib/platform';
 import { useCruxStore } from '@/stores/cruxStore';
-import { normalizePath } from '@/lib/rewriteUrls';
+import { resolveRelativePath as normalizePath } from '@/lib/artifact-path';
 import { setActivePreview } from '@/lib/preview-registry';
 
 export type SitePreviewPhase = 'idle' | 'installing' | 'starting' | 'ready' | 'error';
