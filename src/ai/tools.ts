@@ -6,6 +6,7 @@ import { guessMimeType, isBinaryMime, isImageMime } from '@/lib/mime';
 import { checkSiteBuild, SiteBuildError } from '@/services/site';
 import { Capability, can } from '@/lib/platform';
 import { pathOf, type ArtifactPathSource } from '@/lib/artifact-path';
+import { THEME_TOOL_DEFINITIONS, runThemeTool } from './theme-tools';
 
 /**
  * Tool definitions — ported from api/src/ai/ai.tools.ts.
@@ -253,7 +254,8 @@ export const SITE_TOOL_DEFINITIONS: ToolDefinition[] = [
 
 /** The tool set to offer a workspace conversation on this platform. */
 export function defaultToolDefinitions(): ToolDefinition[] {
-  return can(Capability.Build) ? [...TOOL_DEFINITIONS, ...SITE_TOOL_DEFINITIONS] : TOOL_DEFINITIONS;
+  const site = can(Capability.Build) ? SITE_TOOL_DEFINITIONS : [];
+  return [...TOOL_DEFINITIONS, ...site, ...THEME_TOOL_DEFINITIONS];
 }
 
 /**
@@ -357,6 +359,10 @@ export function createToolExecutor(
           break;
         case 'check_site':
           result = await toolCheckSite(cruxId);
+          break;
+        case 'set_theme':
+        case 'get_theme':
+          result = await runThemeTool(toolName, input);
           break;
         default:
           return formatToolError(toolName, `Unknown tool: ${toolName}`);

@@ -8,6 +8,11 @@ import {
   DEFAULT_MODEL,
 } from '@/ai/providers';
 import { runConversation } from '@/ai/engine';
+import {
+  THEME_TOOL_DEFINITIONS,
+  THEME_TOOL_GUIDANCE,
+  createThemeToolExecutor,
+} from '@/ai/theme-tools';
 import type { NormalizedMessage } from '@/services/types';
 import MarkdownRenderer from '@/components/chat/MarkdownRenderer';
 import ModelSelector from '@/components/chat/ModelSelector';
@@ -200,9 +205,7 @@ export default function Console() {
     setPersona(getPersona());
   }, []);
   const [conversations, setConversations] = useState<Conversation[]>(() => loadConversations());
-  const [activeId, setActiveId] = useState<string | null>(
-    () => conversations[0]?.id ?? null,
-  );
+  const [activeId, setActiveId] = useState<string | null>(() => conversations[0]?.id ?? null);
   // Persistence used to run INSIDE setState updaters. React may defer or
   // double-invoke those (StrictMode), and if the console unmounted mid-stream
   // the updater never ran at all — the reply was lost while the request kept
@@ -317,7 +320,8 @@ export default function Console() {
     const isFirstMessage = displayMessages.length === 0;
 
     // Immediately persist user message
-    commitConversations((prev) => prev.map((c) =>
+    commitConversations((prev) =>
+      prev.map((c) =>
         c.id === targetId
           ? {
               ...c,
@@ -327,7 +331,8 @@ export default function Console() {
                 : {}),
             }
           : c,
-      ));
+      ),
+    );
 
     const controller = new AbortController();
     abortRef.current = controller;
@@ -336,16 +341,21 @@ export default function Console() {
       const normalizedMsgs = toNormalizedMessages(currentMessages);
 
       // Console is a second caller of the Collaboration engine — same loop as
-      // the workspace chat, just with no tools and the Keeper's own prompt.
+      // the workspace chat, with the Keeper's own prompt and only the theme
+      // tools (the Keeper tends the garden, not a crux's files).
       let accumulated = '';
       for await (const event of runConversation(
         apiKey,
         '',
         normalizedMsgs,
         model,
-        undefined,
+        createThemeToolExecutor(),
         controller.signal,
-        { systemPrompt: persona.systemPrompt || KEEPER_SYSTEM_PROMPT, tools: [] },
+        {
+          systemPrompt:
+            (persona.systemPrompt || KEEPER_SYSTEM_PROMPT) + '\n\n' + THEME_TOOL_GUIDANCE,
+          tools: THEME_TOOL_DEFINITIONS,
+        },
       )) {
         if (event.type === 'text') {
           accumulated += event.content;
@@ -367,7 +377,9 @@ export default function Console() {
 
       // Persist final state
       const tId = targetId;
-      commitConversations((prev) => prev.map((c) => (c.id === tId ? { ...c, messages: currentMessages } : c)));
+      commitConversations((prev) =>
+        prev.map((c) => (c.id === tId ? { ...c, messages: currentMessages } : c)),
+      );
     } catch (err: unknown) {
       const e = err as Error;
       if (e.name !== 'AbortError') {

@@ -81,9 +81,11 @@ test.describe('mood builder', () => {
       await expect(
         page.locator('.mosaic-window.pane-publish').getByText('Nothing to share yet'),
       ).toHaveCSS('color', 'rgb(255, 0, 0)');
-      const workshop = page.locator('.mosaic-window.pane-workshop');
+      const workshop = page.locator('.mosaic-window.pane-workshop .mosaic-window-body').first();
       await expect(workshop).toHaveCSS('background-color', 'rgb(17, 34, 51)');
-      const collaboration = page.locator('.mosaic-window.pane-collaboration');
+      const collaboration = page
+        .locator('.mosaic-window.pane-collaboration .mosaic-window-body')
+        .first();
       await expect(collaboration).not.toHaveCSS('background-color', 'rgb(17, 34, 51)');
       await page.screenshot({ path: 'e2e/.results/mood-2-workspace.png' });
 
