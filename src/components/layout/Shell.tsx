@@ -11,6 +11,7 @@ const Settings = lazy(() => import('@/pages/Settings'));
 const Explore = lazy(() => import('@/pages/Explore'));
 const Mood = lazy(() => import('@/components/mood/Mood'));
 const MoodDock = lazy(() => import('@/components/mood/MoodDock'));
+import MoodTextureLayers from './MoodTextureLayers';
 
 export default function Shell() {
   const [servicesReady, setServicesReady] = useState(useAppStore.getState().ready);
@@ -84,6 +85,7 @@ export default function Shell() {
 
   return (
     <div className="flex flex-col h-screen overflow-hidden">
+      <MoodTextureLayers />
       {/* Top bar */}
       <div className="relative z-20 shrink-0">
         <TopBar />

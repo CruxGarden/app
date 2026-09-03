@@ -138,8 +138,9 @@ function FileParam({
           if (!f) return;
           setBusy(true);
           try {
-            const { putBlob } = await import('@/services/blobs');
-            onPick(await putBlob(f), f.name);
+            const { importAssetFile } = await import('@/lib/moods/assets');
+            const asset = await importAssetFile(f);
+            onPick(asset.fingerprint, asset.name);
           } finally {
             setBusy(false);
           }

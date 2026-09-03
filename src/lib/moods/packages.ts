@@ -26,6 +26,7 @@ import type { PersonaSettings } from '@/services/persona';
 import { getPersona, savePersona } from '@/services/persona';
 import { DEFAULT_CUES, getCues, saveCues, type SoundCues } from '@/services/cues';
 import * as resonance from '@/services/resonance';
+import { getAssets, addAsset, isAssetRef, refFingerprint, type MoodAsset } from './assets';
 
 export interface MoodPackage {
   format: 'crux-mood';
@@ -42,6 +43,8 @@ export interface MoodPackage {
   theme: MoodThemeFile;
   background: { type: BgType; image?: string };
   persona?: PersonaSettings;
+  /** Files the Mood brings along (index; bytes ride in the zip under assets/). */
+  assets?: MoodAsset[];
   resonance: {
     mixes: Mix[];
     playlist: Playlist;
@@ -121,6 +124,11 @@ export function validateMoodPackage(raw: unknown): MoodPackage | null {
     theme: cleanTheme(p.theme, 'Dark'),
     background: { type, image: typeof bg.image === 'string' && bg.image ? bg.image : undefined },
     persona: persona && typeof persona.name === 'string' ? persona : undefined,
+    assets: Array.isArray(p.assets)
+      ? (p.assets as MoodAsset[]).filter(
+          (a) => a && typeof a.fingerprint === 'string' && typeof a.name === 'string',
+        )
+      : undefined,
     resonance: {
       mixes,
       playlist: validatePlaylist(res.playlist, mixIds),
@@ -180,6 +188,7 @@ export function captureCurrentMood(input: {
     overrides: { ...(preset?.overrides ?? {}), ...getThemeOverrides(section) },
   };
   const bgType = (getSetting(SettingsKey.BackgroundType) as BgType | null) ?? BgType.Bloom;
+  const cover = input.cover ?? ((getSetting(SettingsKey.MoodCover) as string | null) || undefined);
   const bgImage = (getSetting(SettingsKey.BackgroundImage) as string | null) || undefined;
   const mixes = resonance.getMixes();
   const name = input.name.trim() || 'My Mood';
@@ -190,10 +199,11 @@ export function captureCurrentMood(input: {
     name,
     author: input.author,
     created: new Date().toISOString(),
-    cover: input.cover,
+    cover,
     theme,
     background: { type: bgType, image: bgType === BgType.Image ? bgImage : undefined },
     persona: getPersona(),
+    assets: getAssets(),
     resonance: {
       mixes,
       playlist: resonance.getPlaylist(mixes.map((m) => m.id)),
@@ -242,6 +252,9 @@ export async function applyMood(pkg: MoodPackage): Promise<void> {
   // Persona
   if (pkg.persona) savePersona(pkg.persona);
 
+  // Assets index (bytes were written on import)
+  for (const a of pkg.assets ?? []) addAsset(a);
+
   // Resonance
   if (pkg.resonance.mixes.length) {
     resonance.saveMixes(pkg.resonance.mixes);
@@ -265,6 +278,8 @@ export async function applyMood(pkg: MoodPackage): Promise<void> {
 export function packageAssets(pkg: MoodPackage): string[] {
   const fps = new Set<string>();
   if (pkg.cover) fps.add(pkg.cover);
+  for (const a of pkg.assets ?? []) fps.add(a.fingerprint);
+  for (const v of Object.values(pkg.theme.overrides)) if (isAssetRef(v)) fps.add(refFingerprint(v));
   if (pkg.background.image) fps.add(pkg.background.image);
   if (pkg.persona?.thumbnailFingerprint) fps.add(pkg.persona.thumbnailFingerprint);
   if (pkg.persona?.thumbnailFingerprintLight) fps.add(pkg.persona.thumbnailFingerprintLight);

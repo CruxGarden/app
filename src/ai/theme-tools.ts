@@ -403,7 +403,7 @@ function effectiveValue(key: string, saved: ThemeOverrides, preview: ThemeOverri
   return preview[key] ?? saved[key] ?? activePreset()?.overrides[key] ?? base[key] ?? '';
 }
 
-function toolGetTheme(input: Record<string, unknown>): string {
+async function toolGetTheme(input: Record<string, unknown>): Promise<string> {
   const section = resolvedSection();
   const preset = activePreset();
   const saved = getThemeOverrides(section);
@@ -414,11 +414,20 @@ function toolGetTheme(input: Record<string, unknown>): string {
     `saved overrides: ${Object.keys(saved).length}\npreview tokens active: ${Object.keys(preview).length}\n`;
 
   const wanted = typeof input.group === 'string' ? input.group.trim() : '';
+  if (wanted === 'assets') {
+    const { getAssets } = await import('@/lib/moods/assets');
+    const list = getAssets();
+    return (
+      `${header}\n## Assets (${list.length})\nUse an asset as a token value with asset:<fingerprint> — textures (workspaceTexture, pane*Texture), font faces (fontFaceDisplay/Body/Mono), or set_background {path}.\n\n` +
+      (list.map((a) => `- ${a.name} (${a.kind}, ${a.type}) → asset:${a.fingerprint}`).join('\n') ||
+        'none — the user adds files in Mood Builder → Assets')
+    );
+  }
   if (!wanted) {
     const list = groups
       .map(({ group, keys }) => `- ${group.id} — ${group.label}: ${keys.join(', ')}`)
       .join('\n');
-    return `${header}\nGroups (call get_theme with a group id for values):\n${list}`;
+    return `${header}\nGroups (call get_theme with a group id for values):\n${list}\n- assets — the user's files (images, audio, fonts) usable as asset:<fingerprint> values`;
   }
   const found = groups.find((g) => g.group.id === wanted);
   if (!found) {

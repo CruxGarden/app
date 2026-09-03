@@ -5,7 +5,7 @@
  */
 import { GARDEN_DARK } from './garden-dark';
 
-export type TokenKind = 'color' | 'length' | 'number' | 'font' | 'text';
+export type TokenKind = 'color' | 'length' | 'number' | 'font' | 'text' | 'asset';
 
 export interface TokenGroup {
   id: string;
@@ -84,6 +84,14 @@ const IMAGE_BG_KEYS = new Set([
   'bgImagePosition',
   'bgImageScale',
 ]);
+const TEXTURE_KEYS = new Set([
+  'workspaceTexture',
+  'workspaceTextureSize',
+  'workspaceTextureBlend',
+  'workspaceTextureOpacity',
+  'grainOpacity',
+]);
+const FONT_ASSET_KEYS = new Set(['fontFaceDisplay', 'fontFaceBody', 'fontFaceMono']);
 const GRID_KEYS = new Set([
   'gardenCardMinWidth',
   'gardenCardAspect',
@@ -140,10 +148,16 @@ export const TOKEN_GROUPS: TokenGroup[] = [
     match: (k) => LAYOUT_KEYS.has(k),
   },
   {
+    id: 'textures',
+    label: 'Textures & grain',
+    hint: 'Images from your assets laid over the workspace (and per pane, in each pane group), plus film grain.',
+    match: (k) => TEXTURE_KEYS.has(k),
+  },
+  {
     id: 'typography',
     label: 'Typography',
     hint: 'Font stacks, the type scale (multiplies every size), weight, line height and tracking.',
-    match: (k) => TYPE_KEYS.has(k),
+    match: (k) => TYPE_KEYS.has(k) || FONT_ASSET_KEYS.has(k),
   },
   {
     id: 'header',
@@ -269,6 +283,9 @@ export function groupTokens(): { group: TokenGroup; keys: string[] }[] {
 }
 
 export function tokenKind(key: string): TokenKind {
+  if (/Texture$/.test(key) || FONT_ASSET_KEYS.has(key)) return 'asset';
+  if (/TextureSize$|TextureBlend$/.test(key)) return 'text';
+  if (/TextureOpacity$|^grainOpacity$/.test(key)) return 'number';
   if (TEXT_KEYS.test(key)) return 'text';
   if (
     /^(density|fontScale|motionScale|lineHeightBody|fontWeight|bgImageDim|bgImageScale)/.test(key)
