@@ -5,8 +5,8 @@ import { Button } from '@/components/ui';
 
 const MoodEditor = lazy(() => import('@/components/mood/Mood'));
 
-type Tab = 'palette' | 'theme' | 'resonance' | 'background' | 'persona';
-const TABS: Tab[] = ['palette', 'theme', 'resonance', 'background', 'persona'];
+type Tab = 'moods' | 'palette' | 'theme' | 'resonance' | 'background' | 'persona';
+const TABS: Tab[] = ['moods', 'palette', 'theme', 'resonance', 'background', 'persona'];
 
 /**
  * The Mood Builder: presets, the full theme token editor, background and
@@ -17,7 +17,7 @@ export default function MoodBuilder() {
   const navigate = useNavigate();
   const [params] = useSearchParams();
   const requested = params.get('tab') as Tab | null;
-  const initialTab = requested && TABS.includes(requested) ? requested : 'palette';
+  const initialTab = requested && TABS.includes(requested) ? requested : 'theme';
 
   useEffect(() => {
     document.title = `Mood Builder — ${APP_NAME}`;

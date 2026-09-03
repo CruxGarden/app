@@ -57,6 +57,8 @@ export enum SettingsKey {
   MoodDockState = 'cruxgarden:moodDockState',
   ResonancePlaylist = 'cruxgarden:resonancePlaylist',
   ResonanceCues = 'cruxgarden:resonanceCues',
+  /** Installed Mood Packages (JSON array, binaries by fingerprint in the Blob Store) */
+  MoodPackages = 'cruxgarden:moodPackages',
   Persona = 'cruxgarden:persona',
 
   // AI

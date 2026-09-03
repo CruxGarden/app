@@ -4,6 +4,7 @@ import { cn } from '@/lib/cn';
 import { useAudioStore } from '@/stores/audioStore';
 import { useUIStore } from '@/stores/uiStore';
 import { getDockState, setDockState } from '@/services/resonance';
+import { getThemePreview, onThemePreviewChange } from '@/lib/moods/active';
 import { useShallow } from 'zustand/react/shallow';
 
 /**
@@ -56,6 +57,11 @@ export default function MoodDock() {
   const mix = mixes.find((m) => m.id === activeMixId);
 
   const [pos, setPos] = useState(() => getDockState() ?? { x: -1, y: -1, collapsed: false });
+  const [aiPreview, setAiPreview] = useState(() => Object.keys(getThemePreview()).length);
+  useEffect(
+    () => onThemePreviewChange(() => setAiPreview(Object.keys(getThemePreview()).length)),
+    [],
+  );
   const dragging = useRef<{ dx: number; dy: number } | null>(null);
   const moved = useRef(false);
 
@@ -170,9 +176,16 @@ export default function MoodDock() {
         onClick={() => useUIStore.getState().toggleMoodPanel()}
         title="Mood"
         aria-label="Open Mood"
-        className="w-8 h-8 rounded-full bg-accent-muted flex items-center justify-center cursor-pointer shrink-0"
+        className="relative w-8 h-8 rounded-full bg-accent-muted flex items-center justify-center cursor-pointer shrink-0"
       >
         <LevelBars level={level} playing={playing} />
+        {aiPreview > 0 && (
+          <span
+            aria-label={`AI is previewing ${aiPreview} theme tokens`}
+            title={`AI preview: ${aiPreview} tokens`}
+            className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-warning border border-surface-solid"
+          />
+        )}
       </button>
 
       <button
