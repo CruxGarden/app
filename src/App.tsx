@@ -7,6 +7,7 @@ const Shell = lazy(() => import('@/components/layout/Shell'));
 const Gateway = lazy(() => import('@/pages/Gateway'));
 const HomeGarden = lazy(() => import('@/pages/HomeGarden'));
 const CruxBuilder = lazy(() => import('@/pages/CruxBuilder'));
+const MoodBuilder = lazy(() => import('@/pages/MoodBuilder'));
 const PublicCrux = lazy(() => import('@/pages/PublicCrux'));
 const PublicGarden = lazy(() => import('@/pages/PublicGarden'));
 const ExplorePage = lazy(() => import('@/pages/Explore').then((m) => ({ default: m.ExplorePage })));
@@ -71,6 +72,14 @@ const router = createBrowserRouter(
           element: (
             <ErrorBoundary>
               <CruxBuilder />
+            </ErrorBoundary>
+          ),
+        },
+        {
+          path: '/mood',
+          element: (
+            <ErrorBoundary>
+              <MoodBuilder />
             </ErrorBoundary>
           ),
         },

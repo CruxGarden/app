@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 import { launchApp } from './launch';
 
 /**
- * Settings & Mood: the modals open from the TopBar / account menu, a palette
+ * Settings & Mood: the Mood Builder page opens from the TopBar, a palette
  * preset switch changes the document theme, a persona rename persists across
  * closing and reopening, and Escape closes ONE layer at a time (Modal owns
  * Escape — it used to also pop the Keeper console).
@@ -17,9 +17,9 @@ test.describe('settings & mood', () => {
       await expect(page.getByRole('button', { name: 'Add Crux' })).toBeVisible();
       const html = page.locator('html');
 
-      // ── Mood → Palette: pick a light preset, theme class follows ─────────
-      await page.getByRole('button', { name: 'Mood' }).click();
-      const mood = page.getByRole('heading', { name: 'Mood' });
+      // ── Mood Builder → Presets: pick a light preset, theme class follows ──
+      await page.getByRole('button', { name: 'Mood Builder' }).click();
+      const mood = page.getByRole('heading', { name: 'Mood Builder' });
       await expect(mood).toBeVisible();
       await page.getByRole('button', { name: 'Ivory' }).click();
       await expect(html).toHaveClass(/\blight\b/);
@@ -27,19 +27,18 @@ test.describe('settings & mood', () => {
       await expect(html).toHaveClass(/\bdark\b/);
       await page.screenshot({ path: 'e2e/.results/settings-1-mood.png' });
 
-      // ── Mood → Persona: rename, close, reopen — the name persisted ───────
+      // ── Persona: rename, leave, come back — the name persisted ───────────
       await page.getByRole('button', { name: 'Persona', exact: true }).click();
       const personaName = page.getByPlaceholder('Persona name');
       await personaName.fill('The Gardener');
       await page.waitForTimeout(400); // persona saves per change
-      await page.keyboard.press('Escape');
+      await page.getByRole('button', { name: 'Done' }).click();
       await expect(mood).toHaveCount(0);
-      // Escape closed the Mood modal only — the Keeper console did NOT open
-      await expect(page.getByText('Console — The Keeper')).toHaveCount(0);
-      await page.getByRole('button', { name: 'Mood' }).click();
+      await expect(page.getByRole('button', { name: 'Add Crux' })).toBeVisible();
+      await page.getByRole('button', { name: 'Mood Builder' }).click();
       await page.getByRole('button', { name: 'Persona', exact: true }).click();
       await expect(page.getByPlaceholder('Persona name')).toHaveValue('The Gardener');
-      await page.keyboard.press('Escape');
+      await page.getByRole('button', { name: 'Done' }).click();
 
       // ── Settings via the account menu ────────────────────────────────────
       await page.getByRole('button', { name: 'Account menu' }).click();
@@ -54,6 +53,8 @@ test.describe('settings & mood', () => {
       await page.screenshot({ path: 'e2e/.results/settings-2-settings.png' });
       await page.keyboard.press('Escape');
       await expect(page.getByRole('heading', { name: 'Settings' })).toHaveCount(0);
+      // Escape closed the Settings modal only — the Keeper console did NOT open
+      await expect(page.getByText('Console — The Keeper')).toHaveCount(0);
 
       // ── Cmd+, toggles Settings ───────────────────────────────────────────
       await page.keyboard.press('Meta+,');

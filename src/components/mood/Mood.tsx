@@ -1,7 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
 import { cn } from '@/lib/cn';
-import { applyMoodPalette, GARDEN_DARK } from '@/lib/moods';
+import { GARDEN_DARK } from '@/lib/moods';
 import { MOOD_PRESETS, type MoodPresetDef } from '@/lib/moods/presets';
+import { applyActiveMood } from '@/lib/moods/active';
+import ThemeTokensTab from './ThemeTokensTab';
 import { useMoodStore } from '@/stores/moodStore';
 import { getSetting, setSetting } from '@/services/settings';
 import { BG_CSS_VAR, SettingsKey } from '@/lib/constants';
@@ -426,10 +428,10 @@ function BackgroundTabContent({
 
 // ── Main Component ───────────────────────────────────
 
-type Tab = 'palette' | 'background' | 'persona';
+type Tab = 'palette' | 'theme' | 'background' | 'persona';
 
-export default function MoodEditor() {
-  const [tab, setTab] = useState<Tab>('palette');
+export default function MoodEditor({ initialTab = 'palette' }: { initialTab?: Tab } = {}) {
+  const [tab, setTab] = useState<Tab>(initialTab);
   const [activeDarkId, setActiveDarkId] = useState(
     () => (getSetting(SettingsKey.MoodPresetDark) as string) || 'obsidian',
   );
@@ -541,7 +543,8 @@ export default function MoodEditor() {
           .setMode(preset.section === 'Light' ? ThemeMode.Light : ThemeMode.Dark);
       });
     } else {
-      applyMoodPalette(preset.overrides);
+      // Preset + the user's custom tokens for this mode
+      applyActiveMood(preset.section);
     }
   };
 
@@ -551,7 +554,8 @@ export default function MoodEditor() {
       <div className="flex items-center gap-1 pb-3 mb-3 border-b border-border shrink-0">
         {(
           [
-            ['palette', 'Palette'],
+            ['palette', 'Presets'],
+            ['theme', 'Theme'],
             ['background', 'Background'],
             ['persona', 'Persona'],
           ] as const
@@ -618,6 +622,7 @@ export default function MoodEditor() {
             bgGenerating={bgGenerating}
           />
         )}
+        {tab === 'theme' && <ThemeTokensTab />}
         {tab === 'persona' && <PersonaTab />}
       </div>
     </div>

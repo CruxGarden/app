@@ -353,6 +353,15 @@ export const GARDEN_DARK = {
   radiusSm: '0.375rem',
   radiusLg: '0.75rem',
 
+  // ── Workspace layout (the mosaic chrome) ─────────────
+  paneGap: '4px',
+  paneRadius: 'var(--radius)',
+  paneBorderWidth: '1px',
+  paneHeaderHeight: '28px',
+  paneHeaderRadius: 'var(--radius-sm)',
+  paneHeaderPadding: '6px',
+  workspacePadding: '4px',
+
   // ── Typography ───────────────────────────────────────
   fontDisplay: "'JetBrains Mono', monospace",
   fontBody: "'Outfit', sans-serif",
@@ -378,6 +387,18 @@ function paneTokens(base: string) {
     [`${base}HeaderIcon`]: varRef,
     [`${base}HeaderClose`]: varRef,
     [`${base}HeaderCloseHover`]: `color-mix(in srgb, ${varRef} 80%, white)`,
+    // Surface: what the pane's body looks like. Each defaults to the shared
+    // token, so a Mood can restyle one pane (the Workshop darker, Share
+    // rounder) without touching the others. WorkspaceLayout's CSS rebinds
+    // the generic tokens (--panel, --border, --radius, --text, --surface,
+    // --accent) to these inside each pane, so pane content needs no changes.
+    [`${base}Body`]: 'var(--panel)',
+    [`${base}Border`]: 'var(--border)',
+    [`${base}Radius`]: 'var(--pane-radius)',
+    [`${base}Text`]: 'var(--text)',
+    [`${base}TextMuted`]: 'var(--text-muted)',
+    [`${base}Surface`]: 'var(--surface)',
+    [`${base}Accent`]: 'var(--accent)',
   };
 }
 
