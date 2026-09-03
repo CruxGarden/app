@@ -90,6 +90,7 @@ test.describe('theme dimensions', () => {
 
       // The preset is in the Mood modal under Yours and is the active one
       await page.getByRole('button', { name: 'Mood', exact: true }).click();
+      await page.getByRole('button', { name: 'Themes', exact: true }).click();
       await expect(page.getByText('Yours', { exact: true })).toBeVisible();
       await expect(page.getByRole('button', { name: 'Big & Loud', exact: true })).toBeVisible();
       await page.screenshot({ path: 'e2e/.results/dimensions-3-yours.png' });

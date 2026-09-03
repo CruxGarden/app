@@ -13,6 +13,7 @@ import {
 import { applyActiveMood } from '@/lib/moods/active';
 import ThemeTokensTab from './ThemeTokensTab';
 import ResonanceTab from './ResonanceTab';
+import MoodBrowser from './MoodBrowser';
 import { useMoodStore } from '@/stores/moodStore';
 import { getSetting, setSetting } from '@/services/settings';
 import { SettingsKey } from '@/lib/constants';
@@ -437,7 +438,7 @@ function BackgroundTabContent({
 
 // ── Main Component ───────────────────────────────────
 
-type Tab = 'palette' | 'theme' | 'resonance' | 'background' | 'persona';
+type Tab = 'moods' | 'palette' | 'theme' | 'resonance' | 'background' | 'persona';
 
 interface MoodEditorProps {
   initialTab?: Tab;
@@ -445,7 +446,7 @@ interface MoodEditorProps {
   compact?: boolean;
 }
 
-export default function MoodEditor({ initialTab = 'palette', compact = false }: MoodEditorProps) {
+export default function MoodEditor({ initialTab = 'moods', compact = false }: MoodEditorProps) {
   const navigate = useNavigate();
   const [tab, setTab] = useState<Tab>(initialTab);
   const [userPresets, setUserPresets] = useState<UserPreset[]>(() => getUserPresets());
@@ -560,14 +561,21 @@ export default function MoodEditor({ initialTab = 'palette', compact = false }: 
       <div className="flex items-center gap-1 pb-3 mb-3 border-b border-border shrink-0">
         {(
           [
-            ['palette', 'Presets'],
-            ['theme', 'Theme'],
+            ['moods', 'Moods'],
+            ['palette', 'Themes'],
+            ['theme', 'Tokens'],
             ['resonance', 'Resonance'],
             ['background', 'Background'],
             ['persona', 'Persona'],
           ] as const
         )
-          .filter(([t]) => !(compact && (t === 'theme' || t === 'resonance')))
+          .filter(
+            ([t]) =>
+              !(
+                compact &&
+                (t === 'theme' || t === 'resonance' || t === 'background' || t === 'persona')
+              ),
+          )
           .map(([t, label]) => (
             <button
               key={t}
@@ -686,6 +694,7 @@ export default function MoodEditor({ initialTab = 'palette', compact = false }: 
             bgGenerating={bgGenerating}
           />
         )}
+        {tab === 'moods' && <MoodBrowser />}
         {tab === 'theme' && <ThemeTokensTab />}
         {tab === 'resonance' && <ResonanceTab />}
         {tab === 'persona' && <PersonaTab />}
