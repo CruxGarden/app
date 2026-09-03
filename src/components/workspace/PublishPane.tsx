@@ -194,6 +194,13 @@ export default function PublishPane() {
     );
   }
 
+  const needsAction = !isPublished || hasUnpublishedChanges;
+  const editedAfterPublish =
+    hasUnpublishedChanges &&
+    lastEditedAt &&
+    publishedAt &&
+    new Date(lastEditedAt) > new Date(publishedAt);
+
   return (
     <div ref={ref} className="flex flex-col h-full">
       {isTooNarrow ? (
@@ -202,26 +209,32 @@ export default function PublishPane() {
         </div>
       ) : (
         <div className="flex-1 overflow-y-auto min-h-0 p-3 flex flex-col gap-3">
-          {/* Status card */}
+          {/* Status */}
           {isPublished && publishedAt ? (
             <PaneSection label="Status" aside={`v${publishedVersion}`}>
               <div className="flex items-center gap-1.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-accent shrink-0" />
-                <span className="text-[11px] font-mono text-accent">Shared</span>
-                <span className="text-[10px] font-mono text-text-muted ml-auto">
-                  {formatDateTime(publishedAt)}
+                <span
+                  className={cn(
+                    'w-1.5 h-1.5 rounded-full shrink-0',
+                    hasUnpublishedChanges ? 'bg-warning' : 'bg-accent',
+                  )}
+                />
+                <span className="text-xs font-body text-text">Shared</span>
+                <span
+                  className={cn(
+                    'ml-auto text-[10px] font-mono',
+                    hasUnpublishedChanges ? 'text-warning-text' : 'text-accent/80',
+                  )}
+                >
+                  {hasUnpublishedChanges ? 'Changes to share' : 'Up to date'}
                 </span>
               </div>
-              {hasUnpublishedChanges &&
-                lastEditedAt &&
-                new Date(lastEditedAt) > new Date(publishedAt) && (
-                  <div className="flex items-center gap-1.5 pt-1.5 border-t border-border">
-                    <span className="w-1.5 h-1.5 rounded-full bg-error shrink-0" />
-                    <span className="text-[10px] font-mono text-error">
-                      Edited {formatDateTime(lastEditedAt)}
-                    </span>
-                  </div>
+              <div className="mt-1.5 flex flex-col gap-0.5 text-[10px] font-mono text-text-muted">
+                <span>Published {formatDateTime(publishedAt)}</span>
+                {editedAfterPublish && lastEditedAt && (
+                  <span className="text-warning-text">Edited {formatDateTime(lastEditedAt)}</span>
                 )}
+              </div>
             </PaneSection>
           ) : (
             <PaneSection label="Status" tone="dashed">
@@ -232,46 +245,9 @@ export default function PublishPane() {
             </PaneSection>
           )}
 
-          {/* Discoverable toggle */}
-          <label className="flex items-center gap-2 cursor-pointer select-none group">
-            <button
-              onClick={() => updateCrux({ discoverable: !crux.discoverable })}
-              className={cn(
-                'relative w-7 h-4 rounded-full transition-colors shrink-0 cursor-pointer',
-                crux.discoverable ? 'bg-accent' : 'bg-border',
-              )}
-            >
-              <span
-                className={cn(
-                  'absolute top-0.5 left-0.5 w-3 h-3 rounded-full bg-white transition-transform',
-                  crux.discoverable && 'translate-x-3',
-                )}
-              />
-            </button>
-            <div className="flex flex-col">
-              <span className="text-xs font-body text-text">Discoverable</span>
-              <span className="text-[10px] text-text-muted">
-                {crux.discoverable
-                  ? 'Visible in search on crux.garden'
-                  : 'Only accessible by direct link'}
-              </span>
-            </div>
-          </label>
-
-          {/* Action button — state-aware, no disabled green */}
+          {/* Action — only when there is something to do; never a disabled green */}
           {publishing ? (
             <PaneAction busy={PHASE_LABELS[phase ?? 'sync']}>Share</PaneAction>
-          ) : isPublished && !hasUnpublishedChanges ? (
-            <div
-              className={cn(
-                'w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-[var(--radius-sm)]',
-                'text-sm font-medium font-body',
-                'border border-accent/25 text-accent/60',
-              )}
-            >
-              <CheckIcon size={14} />
-              Up to date
-            </div>
           ) : showConnect ? (
             <div className="rounded-[var(--radius-sm)] border border-border bg-surface/50 p-3">
               <ConnectAccount
@@ -283,11 +259,11 @@ export default function PublishPane() {
                 }}
               />
             </div>
-          ) : (
+          ) : needsAction ? (
             <PaneAction onClick={handlePublish} icon={<PublishIcon />}>
               {isPublished ? 'Update' : 'Share'}
             </PaneAction>
-          )}
+          ) : null}
 
           {/* Failure — a silent no-op is indistinguishable from success here */}
           {failure && !publishing && (
@@ -303,53 +279,96 @@ export default function PublishPane() {
             </div>
           )}
 
-          {/* Public URL */}
+          {/* Public address */}
           {isPublished && publicUrl && (
-            <div className="flex flex-col gap-1.5">
-              <span className="text-[10px] font-mono uppercase tracking-wider text-text-muted">
-                Public URL
-              </span>
-              <div className="flex items-center gap-1 rounded-[var(--radius-sm)] bg-bg border border-border px-2.5 py-1.5">
-                <span className="text-[11px] font-mono text-accent truncate flex-1">
-                  {publicUrl}
-                </span>
+            <PaneSection label="Public address">
+              <a
+                href={publicUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block text-[11px] font-mono text-accent break-all leading-relaxed hover:underline"
+              >
+                {publicUrl}
+              </a>
+              <div className="flex gap-1.5 mt-2.5">
                 <button
+                  type="button"
                   onClick={handleCopyUrl}
-                  className="shrink-0 p-1 text-text-muted hover:text-text transition-colors cursor-pointer"
-                  title={copied ? 'Copied!' : 'Copy URL'}
+                  className={cn(
+                    'flex-1 inline-flex items-center justify-center gap-1.5 h-7 rounded-[var(--radius-sm)]',
+                    'text-[11px] font-body border border-border bg-surface text-text',
+                    'hover:border-accent hover:text-accent transition-colors cursor-pointer',
+                  )}
                 >
                   {copied ? <CheckIcon /> : <CopyIcon />}
+                  {copied ? 'Copied' : 'Copy link'}
                 </button>
                 <a
                   href={publicUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="shrink-0 p-1 text-text-muted hover:text-text transition-colors"
-                  title="Open in new tab"
+                  className={cn(
+                    'flex-1 inline-flex items-center justify-center gap-1.5 h-7 rounded-[var(--radius-sm)]',
+                    'text-[11px] font-body border border-border bg-surface text-text',
+                    'hover:border-accent hover:text-accent transition-colors',
+                  )}
                 >
                   <ExternalLinkIcon />
+                  Open
                 </a>
               </div>
-            </div>
+            </PaneSection>
           )}
 
-          {/* Spacer pushes unpublish to bottom */}
+          {/* Visibility */}
+          <PaneSection label="Visibility">
+            <label className="flex items-center gap-2.5 cursor-pointer select-none">
+              <button
+                type="button"
+                role="switch"
+                aria-checked={!!crux.discoverable}
+                aria-label="Discoverable"
+                onClick={() => updateCrux({ discoverable: !crux.discoverable })}
+                className={cn(
+                  'relative w-7 h-4 rounded-full transition-colors shrink-0 cursor-pointer',
+                  crux.discoverable ? 'bg-accent' : 'bg-border',
+                )}
+              >
+                <span
+                  className={cn(
+                    'absolute top-0.5 left-0.5 w-3 h-3 rounded-full bg-white transition-transform',
+                    crux.discoverable && 'translate-x-3',
+                  )}
+                />
+              </button>
+              <div className="flex flex-col">
+                <span className="text-xs font-body text-text">Discoverable</span>
+                <span className="text-[10px] text-text-muted">
+                  {crux.discoverable
+                    ? 'Listed in search on crux.garden'
+                    : 'Only people with the link can find it'}
+                </span>
+              </div>
+            </label>
+          </PaneSection>
+
           <div className="flex-1" />
 
-          {/* Unpublish — de-emphasized */}
+          {/* Unshare — deliberately quiet */}
           {isPublished && (
-            <button
-              onClick={handleUnpublish}
-              disabled={publishing}
-              className={cn(
-                'w-full py-1.5 text-center',
-                'text-[11px] font-mono transition-colors cursor-pointer',
-                'text-text-muted/50 hover:text-error',
-                'disabled:cursor-not-allowed',
-              )}
-            >
-              Unshare
-            </button>
+            <div className="border-t border-border/60 pt-2">
+              <button
+                type="button"
+                onClick={handleUnpublish}
+                disabled={publishing}
+                className={cn(
+                  'w-full py-1.5 text-center text-[11px] font-mono transition-colors cursor-pointer',
+                  'text-text-muted/60 hover:text-error disabled:cursor-not-allowed',
+                )}
+              >
+                Unshare — take this crux offline
+              </button>
+            </div>
           )}
         </div>
       )}

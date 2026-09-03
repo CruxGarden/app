@@ -4,6 +4,7 @@ import 'react-photo-view/dist/react-photo-view.css';
 import { cn } from '@/lib/cn';
 import type { Dimension, Artifact } from '@/api/types';
 import { getServices } from '@/services';
+import { useUIStore } from '@/stores/uiStore';
 import { pathOf, basename } from '@/lib/artifact-path';
 
 interface GrowthCardProps {
@@ -198,6 +199,24 @@ function useThumbnail(growth: Dimension): string | null {
   return url;
 }
 
+/** Stand-in for a snapshot without a screenshot: its number on a quiet wash. */
+function Placeholder({ index }: { index: number }) {
+  const angle = 130 + ((index * 37) % 100);
+  return (
+    <div
+      className="absolute inset-0 flex items-center justify-center"
+      style={{
+        background: `linear-gradient(${angle}deg, color-mix(in srgb, var(--growth-card-label) 16%, var(--garden-card-thumbnail)) 0%, var(--garden-card-thumbnail) 75%)`,
+      }}
+      aria-hidden
+    >
+      <span className="font-wordmark text-3xl leading-none text-growth-card-label/60 select-none">
+        {index + 1}
+      </span>
+    </div>
+  );
+}
+
 export default function GrowthCard({
   growth,
   index,
@@ -211,132 +230,137 @@ export default function GrowthCard({
   const preview = usePreview(growth);
   const thumbnailUrl = useThumbnail(growth);
   const artifactCount = (growth.meta?.artifactCount as number) || 0;
+  const aiEnabled = useUIStore((s) => s.aiEnabled);
   const [expanded, setExpanded] = useState(false);
+
+  // "Summarizing…" is only honest while a summary can actually arrive.
+  const summaryPending = !summary && aiEnabled;
 
   return (
     <div
       onClick={onClick}
       role="button"
       tabIndex={0}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onClick();
+        }
+      }}
       className={cn(
-        'w-full text-left rounded-[var(--radius-sm)] px-3 py-2.5 transition-colors duration-150 cursor-pointer',
-        'border',
+        'group/card relative w-full text-left rounded-[var(--radius)] overflow-hidden cursor-pointer',
+        'bg-growth-card border transition-[border-color,transform,box-shadow] duration-200',
         isViewing
-          ? 'bg-growth-card-active border-growth-card-label/50 text-growth-card-text ring-1 ring-growth-card-label/30'
+          ? 'border-growth-card-label/60 ring-1 ring-growth-card-label/30'
           : isActive
-            ? 'bg-growth-card-active border-growth-card-label/30 text-growth-card-text'
-            : 'bg-growth-card border-transparent text-growth-card-text-muted hover:bg-growth-card-hover hover:text-growth-card-text',
+            ? 'border-growth-card-label/40'
+            : 'border-garden-card-border hover:border-garden-card-border-hover hover:-translate-y-px hover:shadow-lg hover:shadow-black/20',
       )}
     >
-      <div className="flex items-start gap-2.5">
-        {/* Timeline dot */}
-        <div className="flex flex-col items-center pt-1.5 shrink-0">
-          <div
-            className={cn(
-              'w-2 h-2 rounded-full',
-              isViewing
-                ? 'bg-growth-dot-active ring-2 ring-growth-dot-active/40'
-                : isActive
-                  ? 'bg-growth-dot-active'
-                  : 'bg-growth-dot',
-            )}
-          />
-        </div>
-
-        {/* Content */}
-        <div className="flex-1 min-w-0">
-          <div className="flex items-baseline justify-between gap-2">
-            <div className="flex items-center gap-2">
-              <span className="text-[11px] font-mono text-growth-card-label/70 uppercase">
-                #{index + 1}
-              </span>
-              {artifactCount > 0 && (
-                <span className="text-[10px] text-text-muted">
-                  {artifactCount} file{artifactCount !== 1 ? 's' : ''}
-                </span>
-              )}
-            </div>
-            <div className="flex items-center gap-1.5">
-              <span className="text-[10px] text-growth-card-text-muted shrink-0">
-                {formatTime(growth.created)}
-              </span>
-              <button
-                onClick={onDetailClick}
-                className="text-growth-card-text-muted hover:text-growth-card-label transition-colors p-0.5 cursor-pointer"
-                title="View details"
-              >
-                <svg
-                  width="10"
-                  height="10"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <circle cx="12" cy="12" r="1" />
-                  <circle cx="19" cy="12" r="1" />
-                  <circle cx="5" cy="12" r="1" />
-                </svg>
-              </button>
-            </div>
-          </div>
-
-          {/* Label */}
-          {label && (
-            <p className="text-[12px] font-display font-medium text-growth-card-text mt-1">
-              {label}
-            </p>
-          )}
-
-          {/* Summary — click to expand full text */}
-          {summary ? (
-            <p
-              onClick={(e) => {
-                e.stopPropagation();
-                setExpanded(!expanded);
-              }}
-              className={cn(
-                'text-[12px] font-body text-growth-card-text mt-1 leading-relaxed cursor-pointer',
-                !expanded && 'line-clamp-2',
-              )}
-              title={expanded ? 'Click to collapse' : 'Click to read full summary'}
-            >
-              {summary}
-            </p>
-          ) : (
-            <p className="text-[11px] font-body text-growth-card-text-muted mt-1 italic">
-              Summarizing...
-            </p>
-          )}
-
-          {/* Thumbnail image — click to view full size */}
-          {thumbnailUrl && (
-            <PhotoProvider>
-              <PhotoView src={thumbnailUrl}>
-                <img
-                  src={thumbnailUrl}
-                  alt="Snapshot thumbnail"
-                  onClick={(e) => e.stopPropagation()}
-                  className="w-full h-auto rounded-[var(--radius-sm)] border border-border/50 mt-1.5 object-cover max-h-24 cursor-zoom-in"
-                />
-              </PhotoView>
-            </PhotoProvider>
-          )}
-
-          {/* Preview file indicator */}
-          {!thumbnailUrl && preview && (
-            <span className="flex items-center gap-1 text-[10px] text-growth-card-text-muted mt-1">
-              <PreviewIcon type={preview.type} />
-              <span className="truncate">{basename(preview.path)}</span>
+      {/* Screenshot */}
+      <div className="relative aspect-[16/10] w-full bg-garden-card-thumbnail overflow-hidden border-b border-garden-card-border">
+        {thumbnailUrl ? (
+          <PhotoProvider>
+            <PhotoView src={thumbnailUrl}>
+              <img
+                src={thumbnailUrl}
+                alt="Snapshot screenshot"
+                onClick={(e) => e.stopPropagation()}
+                className="absolute inset-0 w-full h-full object-cover object-top cursor-zoom-in transition-transform duration-300 group-hover/card:scale-[1.02]"
+                draggable={false}
+              />
+            </PhotoView>
+          </PhotoProvider>
+        ) : (
+          <Placeholder index={index} />
+        )}
+        {/* Badges */}
+        <div className="absolute left-2 bottom-2 flex items-center gap-1.5 pointer-events-none">
+          <span className="rounded-full bg-black/55 backdrop-blur-sm px-2 py-0.5 text-[10px] font-mono text-white/90">
+            #{index + 1}
+          </span>
+          {isViewing && (
+            <span className="inline-flex items-center gap-1 rounded-full bg-black/55 backdrop-blur-sm px-2 py-0.5 text-[10px] font-mono text-white">
+              <span className="w-1.5 h-1.5 rounded-full bg-growth-dot-active" />
+              Viewing
             </span>
           )}
+        </div>
+        <button
+          onClick={onDetailClick}
+          aria-label="Snapshot details"
+          title="Details"
+          className={cn(
+            'absolute top-2 right-2 p-1.5 rounded-full bg-black/45 backdrop-blur-sm text-white/85 hover:text-white hover:bg-black/65 cursor-pointer transition-opacity',
+            isActive
+              ? 'opacity-100'
+              : 'opacity-0 group-hover/card:opacity-100 focus-visible:opacity-100',
+          )}
+        >
+          <svg
+            width="12"
+            height="12"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <circle cx="12" cy="12" r="1" />
+            <circle cx="19" cy="12" r="1" />
+            <circle cx="5" cy="12" r="1" />
+          </svg>
+        </button>
+      </div>
 
-          {isViewing && (
-            <span className="text-[10px] font-mono text-growth-card-label mt-1 block">VIEWING</span>
+      {/* Info panel */}
+      <div className="flex flex-col gap-1 px-3 pt-2.5 pb-3">
+        <div className="flex items-baseline justify-between gap-2">
+          <p className="text-[12px] font-display font-medium text-growth-card-text truncate">
+            {label ?? `Snapshot ${index + 1}`}
+          </p>
+          <span className="text-[10px] font-mono text-growth-card-text-muted shrink-0">
+            {formatTime(growth.created)}
+          </span>
+        </div>
+
+        <div className="flex items-center gap-1.5 text-[10px] font-mono text-growth-card-text-muted min-w-0">
+          {artifactCount > 0 && (
+            <span>
+              {artifactCount} file{artifactCount !== 1 ? 's' : ''}
+            </span>
+          )}
+          {preview && (
+            <>
+              {artifactCount > 0 && <span aria-hidden>·</span>}
+              <span className="inline-flex items-center gap-1 min-w-0">
+                <PreviewIcon type={preview.type} />
+                <span className="truncate">{basename(preview.path)}</span>
+              </span>
+            </>
           )}
         </div>
+
+        {summary ? (
+          <p
+            onClick={(e) => {
+              e.stopPropagation();
+              setExpanded(!expanded);
+            }}
+            className={cn(
+              'text-[12px] font-body text-growth-card-text mt-0.5 leading-relaxed cursor-pointer',
+              !expanded && 'line-clamp-2',
+            )}
+            title={expanded ? 'Click to collapse' : 'Click to read full summary'}
+          >
+            {summary}
+          </p>
+        ) : summaryPending ? (
+          <p className="text-[11px] font-body text-growth-card-text-muted mt-0.5 italic">
+            Summarizing…
+          </p>
+        ) : null}
       </div>
     </div>
   );

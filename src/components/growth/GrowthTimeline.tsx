@@ -6,6 +6,44 @@ import CruxSummary from './CruxSummary';
 import GrowthCard from './GrowthCard';
 import GrowthDetail from './GrowthDetail';
 import { cn } from '@/lib/cn';
+import { PaneAction, PaneEmpty } from '@/components/workspace/pane-ui';
+
+function LayersIcon() {
+  return (
+    <svg
+      width="13"
+      height="13"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M12 2L2 7l10 5 10-5-10-5z" />
+      <path d="M2 17l10 5 10-5" />
+      <path d="M2 12l10 5 10-5" />
+    </svg>
+  );
+}
+
+function BackIcon() {
+  return (
+    <svg
+      width="13"
+      height="13"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M19 12H5" />
+      <path d="M12 19l-7-7 7-7" />
+    </svg>
+  );
+}
 
 type SnapshotFrequency = 'ai-turn' | '2m' | '5m' | '10m' | 'manual';
 const FREQUENCY_OPTIONS: { value: SnapshotFrequency; label: string }[] = [
@@ -76,35 +114,38 @@ export default function GrowthTimeline({
             onClose={() => setDetailIndex(null)}
           />
         ) : (
-          <div className="flex flex-col gap-2 p-2">
-            {/* Snapshot button + label input — hidden while viewing a snapshot */}
+          <div className="flex flex-col gap-3 p-3">
+            {/* Capture controls — hidden while viewing a snapshot */}
             {!isViewingSnapshot && !showLabelInput && (
-              <button
-                onClick={() => setShowLabelInput(true)}
-                disabled={isCreatingGrowth}
-                className={cn(
-                  'w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-[var(--radius-sm)]',
-                  'text-xs font-mono transition-all cursor-pointer',
-                  'bg-surface text-text-muted border border-border hover:border-accent hover:text-accent',
-                  isCreatingGrowth && 'opacity-50 cursor-wait',
-                )}
-              >
-                <svg
-                  width="12"
-                  height="12"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
+              <div className="flex flex-col gap-2">
+                <PaneAction
+                  onClick={() => setShowLabelInput(true)}
+                  disabled={isCreatingGrowth}
+                  busy={isCreatingGrowth && 'Capturing...'}
+                  icon={<LayersIcon />}
                 >
-                  <path d="M12 2L2 7l10 5 10-5-10-5z" />
-                  <path d="M2 17l10 5 10-5" />
-                  <path d="M2 12l10 5 10-5" />
-                </svg>
-                {isCreatingGrowth ? 'Capturing...' : 'Take Snapshot'}
-              </button>
+                  Take snapshot
+                </PaneAction>
+                <label className="flex items-center justify-between gap-2 px-0.5">
+                  <span className="text-[10px] font-mono uppercase tracking-wider text-text-muted">
+                    Auto-snapshot
+                  </span>
+                  <select
+                    value={frequency}
+                    onChange={(e) => setFrequency(e.target.value as SnapshotFrequency)}
+                    className={cn(
+                      'text-[11px] font-body bg-surface text-text border border-border rounded-[var(--radius-sm)]',
+                      'px-2 py-1 outline-none cursor-pointer hover:border-accent focus:border-accent',
+                    )}
+                  >
+                    {FREQUENCY_OPTIONS.map((opt) => (
+                      <option key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
             )}
             {!isViewingSnapshot && showLabelInput && (
               <div className="flex gap-1.5">
@@ -122,7 +163,7 @@ export default function GrowthTimeline({
                   }}
                   placeholder="Label (optional)"
                   className={cn(
-                    'flex-1 px-2 py-1.5 text-xs font-mono rounded-[var(--radius-sm)]',
+                    'flex-1 min-w-0 px-2.5 h-8 text-xs font-body rounded-[var(--radius-sm)]',
                     'bg-surface border border-border text-text placeholder:text-text-muted',
                     'focus:outline-none focus:border-accent',
                   )}
@@ -130,8 +171,8 @@ export default function GrowthTimeline({
                 <button
                   onClick={handleSnapshot}
                   className={cn(
-                    'px-2.5 py-1.5 text-xs font-mono rounded-[var(--radius-sm)]',
-                    'bg-accent text-bg hover:brightness-110 transition-all cursor-pointer',
+                    'px-3 h-8 text-xs font-body font-medium rounded-[var(--radius-sm)]',
+                    'bg-accent-muted text-accent border border-accent/20 hover:border-accent transition-colors cursor-pointer',
                   )}
                 >
                   Save
@@ -141,59 +182,19 @@ export default function GrowthTimeline({
                     setShowLabelInput(false);
                     setLabelText('');
                   }}
-                  className="px-1.5 py-1.5 text-xs text-text-muted hover:text-text transition-colors cursor-pointer"
+                  aria-label="Cancel"
+                  className="px-2 h-8 text-sm text-text-muted hover:text-text transition-colors cursor-pointer"
                 >
                   &times;
                 </button>
               </div>
             )}
 
-            {/* Auto-snapshot frequency selector */}
-            {!isViewingSnapshot && !showLabelInput && (
-              <div className="flex items-center justify-between px-1">
-                <span className="text-[10px] text-text-muted">Auto-snapshot:</span>
-                <select
-                  value={frequency}
-                  onChange={(e) => setFrequency(e.target.value as SnapshotFrequency)}
-                  className={cn(
-                    'text-[10px] font-mono bg-transparent text-text-muted',
-                    'border-none outline-none cursor-pointer',
-                  )}
-                >
-                  {FREQUENCY_OPTIONS.map((opt) => (
-                    <option key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
-
-            {/* Back to current button — shown while viewing a snapshot */}
+            {/* Back to current — shown while viewing a snapshot */}
             {isViewingSnapshot && (
-              <button
-                onClick={onExitSnapshot}
-                className={cn(
-                  'w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-[var(--radius-sm)]',
-                  'text-xs font-mono transition-all cursor-pointer',
-                  'bg-accent text-bg border border-accent hover:brightness-110',
-                )}
-              >
-                <svg
-                  width="12"
-                  height="12"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <path d="M19 12H5" />
-                  <path d="M12 19l-7-7 7-7" />
-                </svg>
-                Back to Current
-              </button>
+              <PaneAction onClick={onExitSnapshot} icon={<BackIcon />}>
+                Back to current
+              </PaneAction>
             )}
 
             {summary && <CruxSummary summary={summary} className="mb-1" />}
@@ -205,35 +206,36 @@ export default function GrowthTimeline({
             )}
 
             {growths.length > 0 && (
-              <div className="flex flex-col">
-                <div className="relative">
-                  <div className="absolute left-[17px] top-0 bottom-0 w-px bg-border" />
-                  <div className="relative flex flex-col gap-0.5">
-                    {/* Reverse chronological — most recent first */}
-                    {[...growths].reverse().map((growth) => {
-                      const originalIndex = growths.indexOf(growth);
-                      return (
-                        <GrowthCard
-                          key={growth.id}
-                          growth={growth}
-                          index={originalIndex}
-                          isActive={detailIndex === originalIndex}
-                          isViewing={viewingSnapshotIndex === originalIndex}
-                          onClick={() => onViewSnapshot(growth.targetId, originalIndex)}
-                          onDetailClick={(e) => {
-                            e.stopPropagation();
-                            setDetailIndex(detailIndex === originalIndex ? null : originalIndex);
-                          }}
-                        />
-                      );
-                    })}
-                  </div>
+              <div className="relative">
+                <div className="relative flex flex-col gap-3">
+                  {/* Reverse chronological — most recent first */}
+                  {[...growths].reverse().map((growth) => {
+                    const originalIndex = growths.indexOf(growth);
+                    return (
+                      <GrowthCard
+                        key={growth.id}
+                        growth={growth}
+                        index={originalIndex}
+                        isActive={detailIndex === originalIndex}
+                        isViewing={viewingSnapshotIndex === originalIndex}
+                        onClick={() => onViewSnapshot(growth.targetId, originalIndex)}
+                        onDetailClick={(e) => {
+                          e.stopPropagation();
+                          setDetailIndex(detailIndex === originalIndex ? null : originalIndex);
+                        }}
+                      />
+                    );
+                  })}
                 </div>
               </div>
             )}
 
             {growths.length === 0 && !isCreatingGrowth && !summary && (
-              <p className="text-xs text-text-muted text-center py-2">No snapshots yet</p>
+              <PaneEmpty
+                title="No snapshots yet"
+                description="Every version is kept. Take one now, or let auto-snapshot capture each AI turn."
+                className="py-6"
+              />
             )}
           </div>
         )}
