@@ -3,6 +3,7 @@ import { StrictMode, useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { useAppStore } from '@/stores/appStore';
 import App from './App';
+import { dismissSplash } from '@/lib/splash';
 import './styles/globals.css';
 
 // Dropping a file or link onto a region with no drop handler makes the browser
@@ -26,12 +27,6 @@ function isPublicRoute(): boolean {
   );
 }
 
-function dismissSplash() {
-  const splash = document.getElementById('splash');
-  if (!splash) return;
-  splash.style.opacity = '0';
-  setTimeout(() => splash.remove(), 300);
-}
 
 function Bootstrap() {
   const init = useAppStore((s) => s.init);

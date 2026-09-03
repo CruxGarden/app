@@ -1,29 +1,19 @@
 import { lazy, Suspense, useEffect, useState } from 'react';
 import { Outlet } from 'react-router-dom';
 import TopBar from './TopBar';
-import { applySavedMoodSettings } from '@/components/mood/mood-helpers';
 import { Modal, DialogHost } from '@/components/ui';
 import { useUIStore } from '@/stores/uiStore';
-import { isServicesReady, initServices } from '@/services';
-import { getSetting } from '@/services/settings';
-import { SettingsKey } from '@/lib/constants';
-import { useMoodStore } from '@/stores/moodStore';
+import { useAppStore } from '@/stores/appStore';
+import { dismissSplash } from '@/lib/splash';
 
 const Console = lazy(() => import('@/components/keeper/Console'));
 const Settings = lazy(() => import('@/pages/Settings'));
 const Explore = lazy(() => import('@/pages/Explore'));
 const Mood = lazy(() => import('@/components/mood/Mood'));
 
-const hideSplashScreen = () => {
-  const splash = document.getElementById('splash');
-  if (splash) {
-    splash.style.opacity = '0';
-    setTimeout(() => splash.remove(), 300);
-  }
-};
-
 export default function Shell() {
-  const [servicesReady, setServicesReady] = useState(isServicesReady());
+  const [servicesReady, setServicesReady] = useState(useAppStore.getState().ready);
+  const [initError, setInitError] = useState<string | null>(null);
   const aiEnabled = useUIStore((s) => s.aiEnabled);
   const consoleOpen = useUIStore((s) => s.consoleOpen);
   const setConsoleOpen = useUIStore((s) => s.setConsoleOpen);
@@ -32,17 +22,21 @@ export default function Shell() {
   const moodPanelOpen = useUIStore((s) => s.moodPanelOpen);
 
   useEffect(() => {
-    applySavedMoodSettings();
-    useUIStore.getState().setAiEnabled(getSetting(SettingsKey.AiEnabled) === 'true');
-
     if (servicesReady) return;
-
-    (async () => {
-      await initServices();
-      useMoodStore.getState().loadMoods();
-      hideSplashScreen();
-      setServicesReady(true);
-    })();
+    useAppStore
+      .getState()
+      .bootstrap()
+      .then(() => {
+        dismissSplash();
+        setServicesReady(true);
+      })
+      .catch((err: unknown) => {
+        // The old fallback had no catch: a failed init left the TopBar over an
+        // empty <main> with no message, forever.
+        console.error('[shell] bootstrap failed:', err);
+        dismissSplash();
+        setInitError(err instanceof Error ? err.message : 'Could not start Crux Garden.');
+      });
   }, [servicesReady]);
 
   // Global keyboard shortcuts
@@ -95,7 +89,16 @@ export default function Shell() {
 
       {/* Main */}
       <main className="relative flex-1 min-h-0 overflow-y-auto">
-        {servicesReady ? <Outlet /> : null}
+        {initError ? (
+          <div role="alert" className="flex h-full items-center justify-center p-8 text-center">
+            <div className="max-w-sm flex flex-col gap-2">
+              <h2 className="font-display text-base text-text">Crux Garden couldn't start</h2>
+              <p className="text-xs text-text-muted">{initError}</p>
+            </div>
+          </div>
+        ) : servicesReady ? (
+          <Outlet />
+        ) : null}
       </main>
 
       {/* App confirm/alert dialogs (replaces window.confirm/alert) */}
