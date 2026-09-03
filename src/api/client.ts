@@ -1,7 +1,12 @@
 import axios, { type InternalAxiosRequestConfig } from 'axios';
 import { SettingsKey } from '@/lib/constants';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+// Desktop e2e tests launch the shell with CRUX_API_URL to substitute a local
+// mock API; everything else uses the build-time value.
+const API_BASE_URL: string =
+  (typeof window !== 'undefined' && window.electronAPI?.test?.apiUrl) ||
+  import.meta.env.VITE_API_URL ||
+  'http://localhost:3000';
 
 const client = axios.create({
   baseURL: API_BASE_URL,

@@ -443,9 +443,15 @@ export default function EditorContent({
   useEffect(() => {
     if (!previewUrl) return;
     const iframe = previewIframeRef.current;
-    if (previewUrlRef.current && iframe?.contentWindow) {
-      // Same base path — service worker cache was updated, just reload
-      iframe.contentWindow.location.reload();
+    if (previewUrlRef.current && iframe) {
+      // Web: same-origin service-worker preview — reload in place. Desktop: the
+      // static server is another origin, so touching contentWindow.location
+      // throws a SecurityError; reassigning src is the cross-origin reload.
+      try {
+        iframe.contentWindow?.location.reload();
+      } catch {
+        iframe.src = previewUrl;
+      }
     }
     previewUrlRef.current = previewUrl;
   }, [previewUrl]);

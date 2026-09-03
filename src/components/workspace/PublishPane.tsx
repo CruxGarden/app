@@ -310,7 +310,9 @@ export default function PublishPane() {
           {/* Failure — a silent no-op is indistinguishable from success here */}
           {failure && !publishing && (
             <div className="rounded-[var(--radius-sm)] border border-error/40 bg-error/5 p-3">
-              <p className="text-xs font-body text-error">{failure.message}</p>
+              <p role="alert" className="text-xs font-body text-error">
+                {failure.message}
+              </p>
               {failure.log && (
                 <pre className="mt-2 max-h-40 overflow-auto whitespace-pre-wrap break-words text-[10px] leading-relaxed text-text-muted">
                   {failure.log.slice(-2000)}
