@@ -23,6 +23,7 @@ import {
 } from '@/services/publish';
 import { projectFolderExists, projectAllArtifacts } from '@/services/project-folder';
 import { flushIngestion } from '@/services/ingestion';
+import { disposeChatSession } from '@/services/chat-session';
 import { captureWorkspacePreview } from '@/services/preview-capture';
 import { getPersona } from '@/services/persona';
 import { DEFAULT_MODEL, resolveModel } from '@/ai/providers';
@@ -437,6 +438,10 @@ export const useCruxStore = create<CruxState>((set, get) => ({
 
   reset: () => {
     loadGeneration++; // any in-flight loadCrux must not resurrect the workspace
+    // The Collaboration session (in-flight turn, snapshot timer) belongs to
+    // the crux being closed, not to whichever pane happened to be mounted.
+    const closing = get().crux?.id;
+    if (closing) disposeChatSession(closing);
     // Answer any AI delete request still waiting on the user — clearing the
     // banners alone would leave the tool call (and the whole turn) hanging.
     cancelPendingDeletes();

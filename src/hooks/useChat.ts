@@ -1,11 +1,12 @@
-import { useCallback, useEffect, useRef } from 'react';
-import { useCruxStore, cancelPendingDeletes } from '@/stores/cruxStore';
+import { useCallback } from 'react';
+import { useCruxStore } from '@/stores/cruxStore';
 import { getServices } from '@/services';
 import { runConversation } from '@/ai/engine';
 import { createToolExecutor, didMutate } from '@/ai/tools';
+import { chatSessionFor } from '@/services/chat-session';
 import { getApiKey } from '@/ai/keys';
 import { getProviderForModel, resolveModel } from '@/ai/providers';
-import { SnapshotPolicy, type SnapshotFrequency } from '@/services/growth';
+import type { SnapshotFrequency } from '@/services/growth';
 import type { ChatMessage, ToolCall } from '@/api/types';
 import type { NormalizedMessage } from '@/services/types';
 import { getPersona, getPersonaFingerprint } from '@/services/persona';
@@ -114,42 +115,23 @@ export function useChat() {
     })),
   );
 
-  const abortRef = useRef<AbortController | null>(null);
-  const refreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  // Auto-snapshot policy (Growth module): reads frequency at decision AND
-  // fire time so runtime settings changes are respected.
-  const snapshotPolicyRef = useRef<SnapshotPolicy | null>(null);
-  if (!snapshotPolicyRef.current) {
-    const owningCruxId = crux?.id;
-    snapshotPolicyRef.current = new SnapshotPolicy(
-      () =>
+  // Turn/policy/refresh state lives in a per-crux session (services/chat-session),
+  // not in this component: hiding the pane must not abort the turn.
+  const sessionFor = (cruxId: string) =>
+    chatSessionFor(cruxId, {
+      frequency: () =>
         (useCruxStore.getState().crux?.meta?.settings?.snapshotFrequency as SnapshotFrequency) ||
         'ai-turn',
-      () => {
+      snapshot: () => {
         // A timed policy can fire long after the user moved on — snapshotting
         // then would capture a different crux entirely.
-        if (useCruxStore.getState().crux?.id !== owningCruxId) return;
+        if (useCruxStore.getState().crux?.id !== cruxId) return;
         useCruxStore
           .getState()
           .createSnapshot({ silent: false })
           .catch((err) => console.warn('Auto-snapshot failed:', err));
       },
-    );
-  }
-
-  // Tear down anything that outlives the component: a pending snapshot timer,
-  // a debounced artifact refresh, an in-flight turn, and any delete request
-  // still waiting on the user (which would otherwise hang the tool loop).
-  useEffect(() => {
-    return () => {
-      snapshotPolicyRef.current?.dispose();
-      snapshotPolicyRef.current = null;
-      if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current);
-      abortRef.current?.abort();
-      cancelPendingDeletes();
-    };
-  }, []);
+    });
 
   const send = useCallback(
     async (content: string) => {
@@ -230,8 +212,9 @@ export function useChat() {
       setStreaming(true);
       clearStreamContent();
 
+      const session = sessionFor(crux.id);
       const controller = new AbortController();
-      abortRef.current = controller;
+      session.turn = controller;
 
       let fullContent = '';
       const toolCalls: ToolCall[] = [];
@@ -275,9 +258,9 @@ export function useChat() {
 
               // Refresh artifacts after mutation operations (debounced to coalesce rapid tool calls)
               if (didMutate(event.name, event.result)) {
-                if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current);
-                refreshTimerRef.current = setTimeout(() => {
-                  refreshTimerRef.current = null;
+                if (session.refreshTimer) clearTimeout(session.refreshTimer);
+                session.refreshTimer = setTimeout(() => {
+                  session.refreshTimer = null;
                   const { artifact } = getServices();
                   const currentCruxId = useCruxStore.getState().crux?.id ?? crux.id;
                   artifact.findByResource('crux', currentCruxId).then(
@@ -322,7 +305,7 @@ export function useChat() {
       if (useCruxStore.getState().crux?.id !== crux.id) {
         clearStreamContent();
         setStreaming(false);
-        abortRef.current = null;
+        session.turn = null;
         return;
       }
 
@@ -341,7 +324,7 @@ export function useChat() {
 
       clearStreamContent();
       setStreaming(false);
-      abortRef.current = null;
+      session.turn = null;
 
       // Save messages to crux meta
       await saveMeta();
@@ -349,7 +332,7 @@ export function useChat() {
       // Auto-snapshot trigger — only if this turn actually changed files
       const hadMutations = toolCalls.some((tc) => didMutate(tc.name, tc.result ?? ''));
       if (hadMutations) {
-        snapshotPolicyRef.current?.notifyMutation();
+        session.policy.notifyMutation();
       }
     },
     [
@@ -365,8 +348,8 @@ export function useChat() {
   );
 
   const stop = useCallback(() => {
-    abortRef.current?.abort();
-  }, []);
+    if (crux) sessionFor(crux.id).turn?.abort();
+  }, [crux]);
 
   return {
     messages,

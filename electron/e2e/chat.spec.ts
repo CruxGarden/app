@@ -53,4 +53,43 @@ test.describe('collaboration (mock AI)', () => {
       await app.close();
     }
   });
+
+  test('hiding the Collaboration pane mid-turn does not abort the turn', async () => {
+    const { app, page, dir } = await launchApp({ env: { CRUX_AI_MOCK: '1' } });
+    const gardenRoot = join(dir, 'garden');
+    const onDisk = (rel: string) => {
+      try {
+        return existsSync(join(gardenRoot, readdirSync(gardenRoot)[0]!, rel));
+      } catch {
+        return false;
+      }
+    };
+    try {
+      await page.getByRole('button', { name: /enter/i }).click();
+      await page.getByText('Plant a new garden').click();
+      await page.getByRole('button', { name: 'Welcome' }).click();
+      await page.getByRole('button', { name: 'Add Crux' }).click();
+      await page.getByRole('button', { name: /^Blank/ }).click();
+      await page.getByRole('button', { name: 'Create', exact: true }).click();
+
+      const input = page.getByPlaceholder('Send a message...');
+      await expect(input).toBeVisible({ timeout: 30_000 });
+      await input.fill('Please write slowly'); // the mock holds its tool call ~1.5s
+      await input.press('Enter');
+
+      // Hide the pane while the model is "thinking" — the turn belonged to the
+      // pane component and used to be aborted right here.
+      await page.getByRole('button', { name: 'Toggle collaboration' }).click();
+      await expect(input).toHaveCount(0);
+
+      await expect.poll(() => onDisk('hello.txt'), { timeout: 30_000 }).toBe(true);
+      await expect(page.getByRole('tree').getByText('hello.txt', { exact: true })).toBeVisible();
+
+      // Bring the pane back: the completed turn is there
+      await page.getByRole('button', { name: 'Toggle collaboration' }).click();
+      await expect(page.getByText('Done — I wrote that file for you.')).toBeVisible({ timeout: 30_000 });
+    } finally {
+      await app.close();
+    }
+  });
 });
