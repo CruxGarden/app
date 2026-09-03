@@ -88,3 +88,8 @@ export function can(capability: Capability): boolean {
       return !!api.localai;
   }
 }
+
+/** e2e only: the shell was launched with CRUX_AI_MOCK=1 — use the scripted model, no key needed. */
+export function isAiMock(): boolean {
+  return !!bridge()?.test?.aiMock;
+}

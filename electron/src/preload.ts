@@ -141,7 +141,8 @@ const api: ElectronBridge = {
     },
   },
   // CRUX_API_URL lets the e2e suite point the app at a local mock API.
-  test: { apiUrl: process.env.CRUX_API_URL ?? null },
+  // CRUX_AI_MOCK=1 swaps the language model for a scripted mock (e2e).
+  test: { apiUrl: process.env.CRUX_API_URL ?? null, aiMock: process.env.CRUX_AI_MOCK === '1' },
 };
 
 contextBridge.exposeInMainWorld('electronAPI', api);

@@ -200,10 +200,21 @@ export default function Console() {
     setPersona(getPersona());
   }, []);
   const [conversations, setConversations] = useState<Conversation[]>(() => loadConversations());
-  const [activeId, setActiveId] = useState<string | null>(() => {
-    const convos = loadConversations();
-    return convos.length > 0 ? convos[0]!.id : null;
-  });
+  const [activeId, setActiveId] = useState<string | null>(
+    () => conversations[0]?.id ?? null,
+  );
+  // Persistence used to run INSIDE setState updaters. React may defer or
+  // double-invoke those (StrictMode), and if the console unmounted mid-stream
+  // the updater never ran at all — the reply was lost while the request kept
+  // streaming. The ref is the source of truth; commit() saves first, then
+  // renders, and works even after unmount.
+  const conversationsRef = useRef(conversations);
+  const commitConversations = useCallback((update: (prev: Conversation[]) => Conversation[]) => {
+    const next = update(conversationsRef.current);
+    conversationsRef.current = next;
+    saveConversations(next);
+    setConversations(next);
+  }, []);
 
   const active = conversations.find((c) => c.id === activeId) ?? null;
   const displayMessages = useMemo(() => active?.messages ?? [], [active?.messages]);
@@ -216,29 +227,18 @@ export default function Console() {
       createdAt: Date.now(),
       messages: [],
     };
-    setConversations((prev) => {
-      const next = [convo, ...prev].slice(0, MAX_CONVERSATIONS);
-      saveConversations(next);
-      return next;
-    });
+    commitConversations((prev) => [convo, ...prev].slice(0, MAX_CONVERSATIONS));
     setActiveId(id);
-  }, []);
+  }, [commitConversations]);
 
   const deleteConversation = useCallback(
     (id: string) => {
-      setConversations((prev) => {
-        const next = prev.filter((c) => c.id !== id);
-        saveConversations(next);
-        return next;
-      });
+      commitConversations((prev) => prev.filter((c) => c.id !== id));
       if (activeId === id) {
-        setActiveId(() => {
-          const remaining = conversations.filter((c) => c.id !== id);
-          return remaining.length > 0 ? remaining[0]!.id : null;
-        });
+        setActiveId(conversationsRef.current[0]?.id ?? null);
       }
     },
-    [activeId, conversations],
+    [activeId, commitConversations],
   );
 
   const [input, setInput] = useState('');
@@ -252,6 +252,9 @@ export default function Console() {
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const abortRef = useRef<AbortController | null>(null);
+  // Closing the console mid-stream stops the request instead of leaving it
+  // streaming into a component that no longer exists.
+  useEffect(() => () => abortRef.current?.abort(), []);
 
   // Auto-focus input on mount
   useEffect(() => {
@@ -292,11 +295,7 @@ export default function Console() {
         createdAt: Date.now(),
         messages: [],
       };
-      setConversations((prev) => {
-        const next = [convo, ...prev].slice(0, MAX_CONVERSATIONS);
-        saveConversations(next);
-        return next;
-      });
+      commitConversations((prev) => [convo, ...prev].slice(0, MAX_CONVERSATIONS));
       setActiveId(id);
       targetId = id;
     }
@@ -318,8 +317,7 @@ export default function Console() {
     const isFirstMessage = displayMessages.length === 0;
 
     // Immediately persist user message
-    setConversations((prev) => {
-      const next = prev.map((c) =>
+    commitConversations((prev) => prev.map((c) =>
         c.id === targetId
           ? {
               ...c,
@@ -329,10 +327,7 @@ export default function Console() {
                 : {}),
             }
           : c,
-      );
-      saveConversations(next);
-      return next;
-    });
+      ));
 
     const controller = new AbortController();
     abortRef.current = controller;
@@ -372,11 +367,7 @@ export default function Console() {
 
       // Persist final state
       const tId = targetId;
-      setConversations((prev) => {
-        const next = prev.map((c) => (c.id === tId ? { ...c, messages: currentMessages } : c));
-        saveConversations(next);
-        return next;
-      });
+      commitConversations((prev) => prev.map((c) => (c.id === tId ? { ...c, messages: currentMessages } : c)));
     } catch (err: unknown) {
       const e = err as Error;
       if (e.name !== 'AbortError') {
@@ -388,7 +379,7 @@ export default function Console() {
       setToolActivity('');
       abortRef.current = null;
     }
-  }, [input, streaming, displayMessages, activeId, model, persona]);
+  }, [input, streaming, displayMessages, activeId, model, persona, commitConversations]);
 
   const stop = useCallback(() => {
     abortRef.current?.abort();
