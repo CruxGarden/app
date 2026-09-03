@@ -12,4 +12,5 @@ export default defineConfig({
   workers: 1, // one Electron instance at a time
   reporter: [['list']],
   outputDir: './e2e/.results',
+  use: { screenshot: 'only-on-failure' },
 });

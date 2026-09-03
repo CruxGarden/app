@@ -1,6 +1,6 @@
 import { useRef, useState, useCallback, useMemo, useEffect } from 'react';
 import { walkEntry } from '@/lib/file-drop';
-import { pathOf, basename, parentPath as parentPathOf } from '@/lib/artifact-path';
+import { isUnder, pathOf, basename, parentPath as parentPathOf } from '@/lib/artifact-path';
 import { useCruxStore } from '@/stores/cruxStore';
 import { useUIStore } from '@/stores/uiStore';
 import ArboristFileTree, {
@@ -281,29 +281,52 @@ export default function ArtifactsPane() {
 
   const handleRename = useCallback(
     async (id: string, newName: string) => {
-      // If it's a folder, batch rename all children
-      if (id.startsWith('folder:')) {
-        const oldFolderPath = id.replace('folder:', '');
+      const artifacts = useCruxStore.getState().artifacts;
+      const existingPaths = new Set(artifacts.map((a) => pathOf(a)));
+
+      if (id.startsWith(FOLDER_ID_PREFIX)) {
+        // Folder: batch-rename every artifact under it
+        const oldFolderPath = id.slice(FOLDER_ID_PREFIX.length);
         const parts = oldFolderPath.split('/');
         parts[parts.length - 1] = newName;
         const newFolderPath = parts.join('/');
+        if (newFolderPath === oldFolderPath) return;
 
-        const children = useCruxStore
-          .getState()
-          .artifacts.filter((a) => pathOf(a).startsWith(oldFolderPath + '/'));
-        for (const child of children) {
-          const oldPath = pathOf(child);
-          const newPath = newFolderPath + oldPath.slice(oldFolderPath.length);
-          await renameArtifact(child.id, newPath);
+        const children = artifacts.filter((a) => isUnder(oldFolderPath, pathOf(a)));
+        const moves = children.map((child) => ({
+          id: child.id,
+          newPath: newFolderPath + pathOf(child).slice(oldFolderPath.length),
+        }));
+        // Renaming onto an existing sibling used to merge into it silently and
+        // overwrite whatever collided. Ask, like folder MOVE already did.
+        const collisions = moves.filter((m) => existingPaths.has(m.newPath));
+        if (collisions.length > 0) {
+          const msg =
+            collisions.length === 1
+              ? `"${collisions[0]!.newPath}" already exists. Replace it?`
+              : `"${newFolderPath}" already exists — ${collisions.length} files would be replaced. Continue?`;
+          if (!(await confirmDialog({ message: msg, confirmLabel: 'Replace', danger: true }))) return;
         }
+        for (const m of moves) await renameArtifact(m.id, m.newPath);
       } else {
-        // File rename: swap last path segment
-        const artifact = useCruxStore.getState().artifacts.find((a) => a.id === id);
+        // File: swap the last path segment
+        const artifact = artifacts.find((a) => a.id === id);
         if (!artifact) return;
         const oldPath = pathOf(artifact);
         const pathParts = oldPath.split('/');
         pathParts[pathParts.length - 1] = newName;
         const newPath = pathParts.join('/');
+        if (newPath === oldPath) return;
+        if (existingPaths.has(newPath)) {
+          if (
+            !(await confirmDialog({
+              message: `"${newPath}" already exists. Replace it?`,
+              confirmLabel: 'Replace',
+              danger: true,
+            }))
+          )
+            return;
+        }
         await renameArtifact(id, newPath);
       }
     },

@@ -88,6 +88,9 @@ export default function UserMenu() {
     <div ref={menuRef} className="relative">
       <button
         onClick={() => setOpen(!open)}
+        aria-label="Account menu"
+        aria-expanded={open}
+        aria-haspopup="menu"
         className={cn(
           'w-6 h-6 rounded-[var(--radius-sm)] flex items-center justify-center overflow-hidden',
           !avatarUrl &&
