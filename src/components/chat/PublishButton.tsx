@@ -7,6 +7,7 @@ import { Button } from '@/components/ui';
 import { publicCruxUrl } from '@/lib/public-url';
 import CreateAuthorModal from '@/components/auth/CreateAuthorModal';
 import PublishModal from './PublishModal';
+import { useShallow } from 'zustand/react/shallow';
 
 function PublishIcon() {
   return (
@@ -28,9 +29,11 @@ function PublishIcon() {
 }
 
 export default function PublishButton() {
-  const { isAuthenticated } = useAuthStore();
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const author = useAppStore((s) => s.author);
-  const { crux, publishCrux } = useCruxStore();
+  const { crux, publishCrux } = useCruxStore(
+    useShallow((s) => ({ crux: s.crux, publishCrux: s.publishCrux })),
+  );
   const [showAuthorModal, setShowAuthorModal] = useState(false);
   const [showPublishModal, setShowPublishModal] = useState(false);
   const [publishedUrl, setPublishedUrl] = useState('');

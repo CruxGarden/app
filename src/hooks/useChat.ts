@@ -10,6 +10,7 @@ import type { ChatMessage, ToolCall } from '@/api/types';
 import type { NormalizedMessage } from '@/services/types';
 import { getPersona, getPersonaFingerprint } from '@/services/persona';
 import { useAppStore } from '@/stores/appStore';
+import { useShallow } from 'zustand/react/shallow';
 
 /**
  * Truncate large tool results preserving the beginning and end.
@@ -98,7 +99,19 @@ export function useChat() {
     appendStreamContent,
     clearStreamContent,
     saveMeta,
-  } = useCruxStore();
+  } = useCruxStore(
+    useShallow((s) => ({
+      crux: s.crux,
+      messages: s.messages,
+      isStreaming: s.isStreaming,
+      streamingContent: s.streamingContent,
+      addMessage: s.addMessage,
+      setStreaming: s.setStreaming,
+      appendStreamContent: s.appendStreamContent,
+      clearStreamContent: s.clearStreamContent,
+      saveMeta: s.saveMeta,
+    })),
+  );
 
   const abortRef = useRef<AbortController | null>(null);
   const refreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);

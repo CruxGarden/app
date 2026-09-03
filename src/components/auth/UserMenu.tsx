@@ -8,6 +8,7 @@ import { useThemeStore } from '@/stores/themeStore';
 import { ThemeMode } from '@/lib/types';
 import { cn } from '@/lib/cn';
 import { useDismiss } from '@/hooks/useDismiss';
+import { useShallow } from 'zustand/react/shallow';
 
 function SunIcon() {
   return (
@@ -65,9 +66,11 @@ function MonitorIcon() {
 
 export default function UserMenu() {
   const navigate = useNavigate();
-  const { logout } = useAuthStore();
+  const logout = useAuthStore((s) => s.logout);
   const author = useAppStore((s) => s.author);
-  const { mode, setMode } = useThemeStore();
+  const { mode, setMode } = useThemeStore(
+    useShallow((s) => ({ mode: s.mode, setMode: s.setMode })),
+  );
   const [open, setOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 

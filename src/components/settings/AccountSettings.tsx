@@ -6,10 +6,15 @@ import { Panel, Button } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import ConnectAccount from '@/components/auth/ConnectAccount';
 import AvatarUpload from '@/components/auth/AvatarUpload';
+import { useShallow } from 'zustand/react/shallow';
 
 export default function AccountSettings() {
-  const { account, isAuthenticated } = useAuthStore();
-  const { author, updateAuthor } = useAppStore();
+  const { account, isAuthenticated } = useAuthStore(
+    useShallow((s) => ({ account: s.account, isAuthenticated: s.isAuthenticated })),
+  );
+  const { author, updateAuthor } = useAppStore(
+    useShallow((s) => ({ author: s.author, updateAuthor: s.updateAuthor })),
+  );
 
   // Username editing
   const [editingUsername, setEditingUsername] = useState(false);

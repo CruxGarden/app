@@ -26,7 +26,7 @@ import { formatBytes, formatDateTime } from '@/lib/format';
 import { confirmDialog } from '@/stores/dialogStore';
 
 export default function SyncSettings() {
-  const { isAuthenticated } = useAuthStore();
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
 
   const [gardenStatus, setGardenStatus] = useState<GardenStatus | null>(null);
   const [syncedCruxes, setSyncedCruxes] = useState<SyncedCrux[]>([]);

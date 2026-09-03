@@ -39,6 +39,7 @@ import type { Artifact } from '@/api/types';
 import type { EditorTab } from '@/stores/uiStore';
 import type { FormSchema } from '@/templates';
 import { LoadingPanel } from '@/components/ui';
+import { useShallow } from 'zustand/react/shallow';
 
 // ── Save handler registry (module-level, accessible from outside) ──
 const editorSaveHandlers = new Map<string, () => Promise<void>>();
@@ -64,9 +65,13 @@ export default function EditorContent({
   saveRef,
   captureRef,
 }: EditorContentProps) {
-  const { content, blobUrl, loading, contentVersion, setContent, expectOwnSave } =
-    useFileContent(cruxId, artifact);
-  const { setTabDirty, setTabScrollTop } = useUIStore();
+  const { content, blobUrl, loading, contentVersion, setContent, expectOwnSave } = useFileContent(
+    cruxId,
+    artifact,
+  );
+  const { setTabDirty, setTabScrollTop } = useUIStore(
+    useShallow((s) => ({ setTabDirty: s.setTabDirty, setTabScrollTop: s.setTabScrollTop })),
+  );
   const activeMode = useThemeStore((s) => s.activeMode);
   const monacoRef = useRef<typeof Monaco | null>(null);
   const editorRef = useRef<Monaco.editor.IStandaloneCodeEditor | null>(null);
@@ -116,7 +121,7 @@ export default function EditorContent({
   );
 
   // Auto-switch config.json to form mode on first open when schema exists
-  const { setTabViewMode } = useUIStore();
+  const setTabViewMode = useUIStore((s) => s.setTabViewMode);
   useEffect(() => {
     if (isConfigJson && formSchema && tab.viewMode === 'source') {
       setTabViewMode(tab.id, 'form');

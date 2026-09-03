@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useAuthStore } from '@/stores/authStore';
 import { Spinner } from '@/components/ui';
 import { cn } from '@/lib/cn';
+import { useShallow } from 'zustand/react/shallow';
 
 const btnClass = cn(
   'px-3 py-1.5 text-xs font-mono rounded-[var(--radius-sm)]',
@@ -33,7 +34,14 @@ export default function ConnectAccount({
   compact,
   autoFocus,
 }: ConnectAccountProps) {
-  const { isAuthenticated, account, connectAccount, disconnectAccount } = useAuthStore();
+  const { isAuthenticated, account, connectAccount, disconnectAccount } = useAuthStore(
+    useShallow((s) => ({
+      isAuthenticated: s.isAuthenticated,
+      account: s.account,
+      connectAccount: s.connectAccount,
+      disconnectAccount: s.disconnectAccount,
+    })),
+  );
 
   const [email, setEmail] = useState('');
   const [code, setCode] = useState('');

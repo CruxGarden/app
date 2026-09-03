@@ -1,5 +1,6 @@
 import { cn } from '@/lib/cn';
 import { useUIStore, PANE_COLORS, type PaneType } from '@/stores/uiStore';
+import { useShallow } from 'zustand/react/shallow';
 
 const PANE_ICONS: Record<PaneType, { label: string; icon: React.ReactNode }> = {
   history: {
@@ -171,7 +172,12 @@ const PANE_ICONS: Record<PaneType, { label: string; icon: React.ReactNode }> = {
 };
 
 export default function MobilePaneSwitcher() {
-  const { mobileActivePane, setMobileActivePane } = useUIStore();
+  const { mobileActivePane, setMobileActivePane } = useUIStore(
+    useShallow((s) => ({
+      mobileActivePane: s.mobileActivePane,
+      setMobileActivePane: s.setMobileActivePane,
+    })),
+  );
 
   return (
     <div className="flex items-center justify-around h-12 border-t border-border bg-surface/30 shrink-0">

@@ -7,6 +7,7 @@ import EditorContent from './EditorContent';
 import BuilderView from './BuilderView';
 import { onCaptureSettled } from '@/lib/thumbnail-capture';
 import { cn } from '@/lib/cn';
+import { useShallow } from 'zustand/react/shallow';
 
 /** Auto-recovery boundary for Monaco disposal errors during pane reorder */
 class EditorErrorBoundary extends Component<{ children: ReactNode }, { retryKey: number }> {
@@ -29,7 +30,14 @@ class EditorErrorBoundary extends Component<{ children: ReactNode }, { retryKey:
 export default function EditorPane() {
   const crux = useCruxStore((s) => s.crux);
   const artifacts = useCruxStore((s) => s.artifacts);
-  const { editor, setActiveTab, closeTab, setTabViewMode } = useUIStore();
+  const { editor, setActiveTab, closeTab, setTabViewMode } = useUIStore(
+    useShallow((s) => ({
+      editor: s.editor,
+      setActiveTab: s.setActiveTab,
+      closeTab: s.closeTab,
+      setTabViewMode: s.setTabViewMode,
+    })),
+  );
   const { tabs, activeTabId } = editor;
   const saveRef = useRef<(() => void) | null>(null);
   const captureRef = useRef<(() => void) | null>(null);
