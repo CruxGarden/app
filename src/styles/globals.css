@@ -474,6 +474,14 @@
   --garden-card-aspect: 16 / 10;
   --garden-grid-gap: 1rem;
   --growth-card-aspect: 16 / 10;
+  --workspace-texture: none;
+  --workspace-texture-size: cover;
+  --workspace-texture-blend: normal;
+  --workspace-texture-opacity: 1;
+  --grain-opacity: 0;
+  --pane-texture: none;
+  --pane-texture-size: auto;
+  --pane-texture-blend: normal;
   --syntax-comment: #6a7a6e;
   --syntax-keyword: #7db3a3;
   --syntax-string: #a8d4c4;
@@ -711,6 +719,21 @@ body {
   background: rgb(0 0 0 / var(--bg-image-dim));
 }
 
+/* Workspace texture and film grain — fixed layers above the background, below content */
+.mood-texture {
+  background-image: var(--workspace-texture);
+  background-size: var(--workspace-texture-size);
+  background-position: center;
+  mix-blend-mode: var(--workspace-texture-blend);
+  opacity: var(--workspace-texture-opacity);
+}
+.mood-grain {
+  opacity: var(--grain-opacity);
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.5 0 0 0 0 0.5 0 0 0 0 0.5 0 0 0 0.6 0'/></filter><rect width='160' height='160' filter='url(%23n)'/></svg>");
+  background-size: 160px 160px;
+  mix-blend-mode: overlay;
+}
+
 /* ── Scrollbar ─────────────────────────────────────────── */
 
 * {
@@ -889,6 +912,9 @@ html.palette-transition *::after {
   --pane-border-width: var(--pane-collaboration-border-width);
   --pane-header-label-case: var(--pane-collaboration-header-label-case);
   --pane-header-justify: var(--pane-collaboration-header-justify);
+  --pane-texture: var(--pane-collaboration-texture);
+  --pane-texture-size: var(--pane-collaboration-texture-size);
+  --pane-texture-blend: var(--pane-collaboration-texture-blend);
   border-radius: var(--pane-collaboration-radius);
   animation: pane-pulse 1.4s ease-in-out var(--pane-collaboration-pulse);
 }
@@ -910,6 +936,9 @@ html.palette-transition *::after {
   --pane-border-width: var(--pane-artifacts-border-width);
   --pane-header-label-case: var(--pane-artifacts-header-label-case);
   --pane-header-justify: var(--pane-artifacts-header-justify);
+  --pane-texture: var(--pane-artifacts-texture);
+  --pane-texture-size: var(--pane-artifacts-texture-size);
+  --pane-texture-blend: var(--pane-artifacts-texture-blend);
   border-radius: var(--pane-artifacts-radius);
   animation: pane-pulse 1.4s ease-in-out var(--pane-artifacts-pulse);
 }
@@ -931,6 +960,9 @@ html.palette-transition *::after {
   --pane-border-width: var(--pane-workshop-border-width);
   --pane-header-label-case: var(--pane-workshop-header-label-case);
   --pane-header-justify: var(--pane-workshop-header-justify);
+  --pane-texture: var(--pane-workshop-texture);
+  --pane-texture-size: var(--pane-workshop-texture-size);
+  --pane-texture-blend: var(--pane-workshop-texture-blend);
   border-radius: var(--pane-workshop-radius);
   animation: pane-pulse 1.4s ease-in-out var(--pane-workshop-pulse);
 }
@@ -952,6 +984,9 @@ html.palette-transition *::after {
   --pane-border-width: var(--pane-details-border-width);
   --pane-header-label-case: var(--pane-details-header-label-case);
   --pane-header-justify: var(--pane-details-header-justify);
+  --pane-texture: var(--pane-details-texture);
+  --pane-texture-size: var(--pane-details-texture-size);
+  --pane-texture-blend: var(--pane-details-texture-blend);
   border-radius: var(--pane-details-radius);
   animation: pane-pulse 1.4s ease-in-out var(--pane-details-pulse);
 }
@@ -973,6 +1008,9 @@ html.palette-transition *::after {
   --pane-border-width: var(--pane-history-border-width);
   --pane-header-label-case: var(--pane-history-header-label-case);
   --pane-header-justify: var(--pane-history-header-justify);
+  --pane-texture: var(--pane-history-texture);
+  --pane-texture-size: var(--pane-history-texture-size);
+  --pane-texture-blend: var(--pane-history-texture-blend);
   border-radius: var(--pane-history-radius);
   animation: pane-pulse 1.4s ease-in-out var(--pane-history-pulse);
 }
@@ -994,6 +1032,9 @@ html.palette-transition *::after {
   --pane-border-width: var(--pane-export-border-width);
   --pane-header-label-case: var(--pane-export-header-label-case);
   --pane-header-justify: var(--pane-export-header-justify);
+  --pane-texture: var(--pane-export-texture);
+  --pane-texture-size: var(--pane-export-texture-size);
+  --pane-texture-blend: var(--pane-export-texture-blend);
   border-radius: var(--pane-export-radius);
   animation: pane-pulse 1.4s ease-in-out var(--pane-export-pulse);
 }
@@ -1015,6 +1056,9 @@ html.palette-transition *::after {
   --pane-border-width: var(--pane-sync-border-width);
   --pane-header-label-case: var(--pane-sync-header-label-case);
   --pane-header-justify: var(--pane-sync-header-justify);
+  --pane-texture: var(--pane-sync-texture);
+  --pane-texture-size: var(--pane-sync-texture-size);
+  --pane-texture-blend: var(--pane-sync-texture-blend);
   border-radius: var(--pane-sync-radius);
   animation: pane-pulse 1.4s ease-in-out var(--pane-sync-pulse);
 }
@@ -1036,6 +1080,9 @@ html.palette-transition *::after {
   --pane-border-width: var(--pane-publish-border-width);
   --pane-header-label-case: var(--pane-publish-header-label-case);
   --pane-header-justify: var(--pane-publish-header-justify);
+  --pane-texture: var(--pane-publish-texture);
+  --pane-texture-size: var(--pane-publish-texture-size);
+  --pane-texture-blend: var(--pane-publish-texture-blend);
   border-radius: var(--pane-publish-radius);
   animation: pane-pulse 1.4s ease-in-out var(--pane-publish-pulse);
 }
@@ -1057,6 +1104,9 @@ html.palette-transition *::after {
   --pane-border-width: var(--pane-store-border-width);
   --pane-header-label-case: var(--pane-store-header-label-case);
   --pane-header-justify: var(--pane-store-header-justify);
+  --pane-texture: var(--pane-store-texture);
+  --pane-texture-size: var(--pane-store-texture-size);
+  --pane-texture-blend: var(--pane-store-texture-blend);
   border-radius: var(--pane-store-radius);
   animation: pane-pulse 1.4s ease-in-out var(--pane-store-pulse);
 }
@@ -1065,7 +1115,11 @@ html.palette-transition *::after {
 .mosaic.crux-mosaic-theme .mosaic-window .mosaic-window-body {
   overflow: hidden;
   contain: layout style;
-  background: var(--panel);
+  /* texture image (asset) blended over the body color */
+  background:
+    var(--pane-texture) center / var(--pane-texture-size) repeat,
+    var(--panel);
+  background-blend-mode: var(--pane-texture-blend), normal;
   border-radius: 0 0 var(--pane-inner-radius) var(--pane-inner-radius);
 }
 

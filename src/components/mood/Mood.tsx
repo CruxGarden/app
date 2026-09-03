@@ -14,6 +14,7 @@ import { applyActiveMood } from '@/lib/moods/active';
 import ThemeTokensTab from './ThemeTokensTab';
 import ResonanceTab from './ResonanceTab';
 import MoodBrowser from './MoodBrowser';
+import AssetsTab from './AssetsTab';
 import { useMoodStore } from '@/stores/moodStore';
 import { getSetting, setSetting } from '@/services/settings';
 import { SettingsKey } from '@/lib/constants';
@@ -438,7 +439,7 @@ function BackgroundTabContent({
 
 // ── Main Component ───────────────────────────────────
 
-type Tab = 'moods' | 'palette' | 'theme' | 'resonance' | 'background' | 'persona';
+type Tab = 'moods' | 'palette' | 'theme' | 'resonance' | 'assets' | 'background' | 'persona';
 
 interface MoodEditorProps {
   initialTab?: Tab;
@@ -565,6 +566,7 @@ export default function MoodEditor({ initialTab = 'moods', compact = false }: Mo
             ['palette', 'Themes'],
             ['theme', 'Tokens'],
             ['resonance', 'Resonance'],
+            ['assets', 'Assets'],
             ['background', 'Background'],
             ['persona', 'Persona'],
           ] as const
@@ -697,6 +699,7 @@ export default function MoodEditor({ initialTab = 'moods', compact = false }: Mo
         {tab === 'moods' && <MoodBrowser />}
         {tab === 'theme' && <ThemeTokensTab />}
         {tab === 'resonance' && <ResonanceTab />}
+        {tab === 'assets' && <AssetsTab />}
         {tab === 'persona' && <PersonaTab />}
       </div>
     </div>

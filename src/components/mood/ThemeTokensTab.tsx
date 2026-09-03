@@ -21,6 +21,7 @@ import {
   type TokenGroup,
 } from '@/lib/moods/token-groups';
 import { Button } from '@/components/ui';
+import { assetRef, getAssets } from '@/lib/moods/assets';
 import { saveUserPreset, toThemeFile, parseThemeFile } from '@/lib/moods/user-presets';
 import { useAppStore } from '@/stores/appStore';
 import { setSetting } from '@/services/settings';
@@ -160,6 +161,29 @@ function TokenRow({
             onChange={(e) => onChange(`${e.target.value}${len.unit}`)}
             className="w-24 accent-accent"
           />
+        )}
+        {kind === 'asset' && (
+          <select
+            aria-label={`${label} asset`}
+            value=""
+            onChange={(e) => {
+              if (e.target.value) onChange(e.target.value);
+              e.target.value = '';
+            }}
+            className="h-7 w-28 rounded-[var(--radius-sm)] border border-border bg-surface px-1.5 text-[11px] text-text"
+          >
+            <option value="">Pick asset…</option>
+            {getAssets()
+              .filter((a) =>
+                tokenKey.startsWith('fontFace') ? a.kind === 'font' : a.kind === 'image',
+              )
+              .map((a) => (
+                <option key={a.fingerprint} value={assetRef(a.fingerprint)}>
+                  {a.name}
+                </option>
+              ))}
+            <option value="none">none</option>
+          </select>
         )}
         {kind === 'number' && (
           <input

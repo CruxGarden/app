@@ -6,6 +6,14 @@
  */
 
 import { GARDEN_DARK, type MoodPalette, type MoodPaletteKey } from './garden-dark';
+import {
+  cssValueFor,
+  isAssetRef,
+  refFingerprint,
+  resolveAssetUrl,
+  registerFontFace,
+  FONT_FACE_FAMILIES,
+} from './assets';
 
 export { GARDEN_DARK, type MoodPalette, type MoodPaletteKey };
 
@@ -79,12 +87,31 @@ export function applyMoodPalette(palette: Partial<MoodPalette>, base: MoodPalett
     palette = { ...palette, accentMuted: mixHex(bg, accent, 15) };
   }
 
+  const unresolved: { cssVar: string; fingerprint: string }[] = [];
   for (const key of Object.keys(base) as MoodPaletteKey[]) {
     const value = palette[key] ?? base[key];
     const cssVar = VAR_MAP[key];
-    if (cssVar && value !== undefined) {
-      el.style.setProperty(cssVar, String(value));
+    if (!cssVar || value === undefined) continue;
+    const raw = String(value);
+    if (key in FONT_FACE_FAMILIES) {
+      // A font asset: register the face; the family name is what font tokens use
+      if (isAssetRef(raw)) void registerFontFace(FONT_FACE_FAMILIES[key]!, refFingerprint(raw));
+      el.style.setProperty(cssVar, isAssetRef(raw) ? `'${FONT_FACE_FAMILIES[key]}'` : 'none');
+      continue;
     }
+    const css = cssValueFor(raw);
+    if (css === null) {
+      // asset not resolved yet: paint nothing, fill in when the URL arrives
+      el.style.setProperty(cssVar, 'none');
+      unresolved.push({ cssVar, fingerprint: refFingerprint(raw) });
+    } else {
+      el.style.setProperty(cssVar, css);
+    }
+  }
+  for (const u of unresolved) {
+    void resolveAssetUrl(u.fingerprint).then((url) => {
+      if (url) el.style.setProperty(u.cssVar, `url("${url}")`);
+    });
   }
   // Notify Monaco and other listeners that the palette changed
   // Delay slightly so var() references resolve before Monaco reads computed styles

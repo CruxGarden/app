@@ -406,6 +406,18 @@ export const GARDEN_DARK = {
   editorCursor: 'var(--accent)',
   editorSelection: 'color-mix(in srgb, var(--accent) 30%, transparent)',
 
+  // ── Textures & grain (images from the Mood's assets: asset:<fingerprint>) ──
+  workspaceTexture: 'none',
+  workspaceTextureSize: 'cover',
+  workspaceTextureBlend: 'normal',
+  workspaceTextureOpacity: '1',
+  grainOpacity: '0',
+
+  // ── Font assets (asset:<fingerprint> of a .woff2/.ttf → families MoodFontDisplay/Body/Mono) ──
+  fontFaceDisplay: 'none',
+  fontFaceBody: 'none',
+  fontFaceMono: 'none',
+
   // ── Image background ─────────────────────────────────
   bgImageDim: '0',
   bgImageBlur: '0px',
@@ -468,6 +480,10 @@ function paneTokens(base: string) {
     [`${base}HeaderJustify`]: 'var(--pane-header-justify)',
     // "0" = still; "infinite" = pulse the frame (the AI uses this to signal work)
     [`${base}Pulse`]: '0',
+    // Texture: an image (asset:<fingerprint>, a url(), or none) laid over the body color
+    [`${base}Texture`]: 'none',
+    [`${base}TextureSize`]: 'auto',
+    [`${base}TextureBlend`]: 'normal',
   };
 }
 

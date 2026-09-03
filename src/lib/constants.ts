@@ -59,6 +59,10 @@ export enum SettingsKey {
   ResonanceCues = 'cruxgarden:resonanceCues',
   /** Installed Mood Packages (JSON array, binaries by fingerprint in the Blob Store) */
   MoodPackages = 'cruxgarden:moodPackages',
+  /** Index of files the user brought into their Mood (bytes in the Blob Store) */
+  MoodAssets = 'cruxgarden:moodAssets',
+  /** Cover image fingerprint for the next saved Mood */
+  MoodCover = 'cruxgarden:moodCover',
   Persona = 'cruxgarden:persona',
 
   // AI
