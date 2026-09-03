@@ -45,7 +45,8 @@ test.describe('background tool (mock AI)', () => {
 
       // The Background tab agrees and can clear it
       await page.getByRole('button', { name: 'Mood', exact: true }).click();
-      await page.getByRole('button', { name: 'Background', exact: true }).click();
+      await page.getByRole('button', { name: 'Open Mood Builder' }).click();
+      await page.getByRole('button', { name: 'Background', exact: true }).first().click();
       await page.screenshot({ path: 'e2e/.results/background-2-mood-tab.png' });
     } finally {
       await app.close();

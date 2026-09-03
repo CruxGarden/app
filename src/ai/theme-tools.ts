@@ -27,7 +27,13 @@ import { groupTokens, tokenKind, tokenLabel } from '@/lib/moods/token-groups';
 import type { ToolDefinition } from './tools';
 import type { ToolResultContent } from '@/services/types';
 
-export const THEME_TOOL_NAMES = ['set_theme', 'get_theme', 'set_background'] as const;
+export const THEME_TOOL_NAMES = [
+  'set_theme',
+  'get_theme',
+  'set_background',
+  'get_resonance',
+  'set_resonance',
+] as const;
 
 export const THEME_TOOL_DEFINITIONS: ToolDefinition[] = [
   {
@@ -122,6 +128,219 @@ const BACKGROUND_TOOL: ToolDefinition = {
   },
 };
 THEME_TOOL_DEFINITIONS.push(BACKGROUND_TOOL);
+
+const RESONANCE_TOOLS: ToolDefinition[] = [
+  {
+    name: 'get_resonance',
+    description:
+      'Read the soundscape (Resonance Sound Mixer): whether sound is on, the active mix, volume, every mix with its layers, the playlist, and the sound cues. ' +
+      'USE WHEN: before set_resonance, or when the user asks what is playing.',
+    input_schema: { type: 'object', properties: {}, required: [], additionalProperties: false },
+  },
+  {
+    name: 'set_resonance',
+    description:
+      "Change the soundscape. Switching mix, volume, ducking and cues are safe signals (they don't rewrite the user's mixes); " +
+      'layer edits change the active mix and are saved, so only do those when asked. ' +
+      'Fields (any subset): mix (id or name to switch to), playing (true/false), volume (0..1), duck (true while you work, false after), ' +
+      'cue (tick|chime|bloom|thud — a one-shot sound), layer {name, gain?, muted?, params?} (edit a layer of the active mix), ' +
+      'addLayer {type, name?, gain?, params?} (types: music, rain, wind, noise, drone, pad, melody, sample), removeLayer (layer name).',
+    input_schema: {
+      type: 'object',
+      properties: {
+        mix: { type: 'string', description: 'Mix id or name to switch to.' },
+        playing: { type: 'boolean' },
+        volume: { type: 'number', description: '0..1' },
+        duck: { type: 'boolean', description: 'Dip the mix while you work; release with false.' },
+        cue: { type: 'string', enum: ['tick', 'chime', 'bloom', 'thud'] },
+        layer: {
+          type: 'object',
+          description: 'Edit a layer of the active mix by name.',
+          properties: {
+            name: { type: 'string' },
+            gain: { type: 'number', description: 'dB, -60..6' },
+            muted: { type: 'boolean' },
+            params: { type: 'object', additionalProperties: true },
+          },
+          required: ['name'],
+        },
+        addLayer: {
+          type: 'object',
+          properties: {
+            type: {
+              type: 'string',
+              enum: ['music', 'rain', 'wind', 'noise', 'drone', 'pad', 'melody', 'sample'],
+            },
+            name: { type: 'string' },
+            gain: { type: 'number' },
+            params: { type: 'object', additionalProperties: true },
+          },
+          required: ['type'],
+        },
+        removeLayer: {
+          type: 'string',
+          description: 'Name of a layer of the active mix to remove.',
+        },
+      },
+      required: [],
+      additionalProperties: false,
+    },
+  },
+];
+THEME_TOOL_DEFINITIONS.push(...RESONANCE_TOOLS);
+
+async function toolGetResonance(): Promise<string> {
+  const { useAudioStore } = await import('@/stores/audioStore');
+  const { getCues } = await import('@/services/cues');
+  const s = useAudioStore.getState();
+  if (!s.mixes.length) s.init();
+  const st = useAudioStore.getState();
+  const active = st.mixes.find((m) => m.id === st.activeMixId);
+  const lines = [
+    `sound: ${st.optIn ? (st.playing ? 'playing' : 'paused') : 'never enabled (the user must press play once)'}`,
+    `volume: ${st.volume.toFixed(2)}`,
+    `active mix: ${active ? `${active.name} (${active.id})` : 'none'}`,
+    '',
+    'mixes:',
+    ...st.mixes.map(
+      (m) =>
+        `- ${m.name} (${m.id}) — ${m.root} ${m.scale}, ${m.tempo} bpm: ${
+          m.layers
+            .map((l) => `${l.name}[${l.type}${l.muted ? ', muted' : ''} ${l.gain}dB]`)
+            .join(', ') || 'no layers'
+        }`,
+    ),
+    '',
+    `playlist: ${st.playlist.enabled ? 'on' : 'off'}${st.playlist.shuffle ? ', shuffle' : ''} — ${
+      st.playlist.items
+        .map(
+          (it) => `${st.mixes.find((m) => m.id === it.mixId)?.name ?? it.mixId} ${it.minutes}min`,
+        )
+        .join(' → ') || 'empty'
+    }`,
+    `cues: ${Object.entries(getCues())
+      .map(([k, v]) => `${k}=${v ?? 'off'}`)
+      .join(', ')}`,
+  ];
+  return lines.join('\n');
+}
+
+async function toolSetResonance(input: Record<string, unknown>): Promise<string> {
+  const { useAudioStore } = await import('@/stores/audioStore');
+  const { createLayer, LAYER_TYPES } = await import('@/audio/schema');
+  const s = useAudioStore.getState();
+  if (!s.mixes.length) s.init();
+  const done: string[] = [];
+  const warn: string[] = [];
+  const st = () => useAudioStore.getState();
+
+  if (typeof input.mix === 'string' && input.mix.trim()) {
+    const q = input.mix.trim().toLowerCase();
+    const m = st().mixes.find((x) => x.id.toLowerCase() === q || x.name.toLowerCase() === q);
+    if (m) {
+      await st().selectMix(m.id);
+      done.push(`switched to "${m.name}"`);
+    } else warn.push(`no mix "${input.mix}" (call get_resonance for names)`);
+  }
+  if (typeof input.volume === 'number') {
+    st().setVolume(input.volume);
+    done.push(`volume ${Math.min(1, Math.max(0, input.volume)).toFixed(2)}`);
+  }
+  if (typeof input.playing === 'boolean') {
+    if (input.playing) {
+      if (!st().optIn)
+        warn.push('sound has never been enabled — the user must press play in the Mood Dock first');
+      else {
+        await st().play();
+        done.push('playing');
+      }
+    } else {
+      st().pause();
+      done.push('paused');
+    }
+  }
+  if (typeof input.duck === 'boolean') {
+    await st().duck(input.duck);
+    done.push(input.duck ? 'ducked' : 'duck released');
+  }
+  if (typeof input.cue === 'string' && ['tick', 'chime', 'bloom', 'thud'].includes(input.cue)) {
+    if (st().optIn) {
+      await st().cue(input.cue as 'tick');
+      done.push(`cue ${input.cue}`);
+    } else warn.push('cue skipped: sound not enabled');
+  }
+
+  const active = () => st().mixes.find((m) => m.id === st().activeMixId);
+  const layerEdit = input.layer as Record<string, unknown> | undefined;
+  if (layerEdit && typeof layerEdit.name === 'string') {
+    const mix = active();
+    const target = mix?.layers.find(
+      (l) => l.name.toLowerCase() === (layerEdit.name as string).toLowerCase(),
+    );
+    if (!mix || !target) warn.push(`no layer "${layerEdit.name}" in the active mix`);
+    else {
+      const next = {
+        ...target,
+        gain:
+          typeof layerEdit.gain === 'number'
+            ? Math.min(6, Math.max(-60, layerEdit.gain))
+            : target.gain,
+        muted: typeof layerEdit.muted === 'boolean' ? layerEdit.muted : target.muted,
+        params: { ...target.params },
+      };
+      for (const [k, v] of Object.entries((layerEdit.params as Record<string, unknown>) ?? {})) {
+        if (
+          k in next.params &&
+          (typeof v === 'number' || typeof v === 'string' || typeof v === 'boolean')
+        )
+          next.params[k] = v;
+      }
+      await st().upsertMix({
+        ...mix,
+        layers: mix.layers.map((l) => (l.id === target.id ? next : l)),
+      });
+      done.push(`edited layer "${target.name}" (saved to "${mix.name}")`);
+    }
+  }
+  const add = input.addLayer as Record<string, unknown> | undefined;
+  if (add && typeof add.type === 'string') {
+    const mix = active();
+    if (!mix) warn.push('no active mix');
+    else if (!(LAYER_TYPES as string[]).includes(add.type))
+      warn.push(`unknown layer type "${add.type}"`);
+    else {
+      const layer = createLayer(add.type as (typeof LAYER_TYPES)[number], {
+        ...(typeof add.name === 'string' ? { name: add.name } : {}),
+        ...(typeof add.gain === 'number' ? { gain: add.gain } : {}),
+        ...(add.params && typeof add.params === 'object'
+          ? { params: add.params as Record<string, number | string | boolean> }
+          : {}),
+      });
+      await st().upsertMix({ ...mix, layers: [...mix.layers, layer] });
+      done.push(`added ${layer.type} layer "${layer.name}" to "${mix.name}" (saved)`);
+    }
+  }
+  if (typeof input.removeLayer === 'string') {
+    const mix = active();
+    const target = mix?.layers.find(
+      (l) => l.name.toLowerCase() === (input.removeLayer as string).toLowerCase(),
+    );
+    if (!mix || !target) warn.push(`no layer "${input.removeLayer}" to remove`);
+    else {
+      await st().upsertMix({ ...mix, layers: mix.layers.filter((l) => l.id !== target.id) });
+      done.push(`removed layer "${target.name}" from "${mix.name}" (saved)`);
+    }
+  }
+
+  if (!done.length && !warn.length)
+    return 'set_resonance: nothing to do — give mix, volume, playing, duck, cue, layer, addLayer or removeLayer.';
+  return [
+    done.length ? `Done: ${done.join('; ')}.` : '',
+    warn.length ? `Note: ${warn.join('; ')}.` : '',
+  ]
+    .filter(Boolean)
+    .join(' ');
+}
 
 export interface ThemeToolContext {
   cruxId?: string;
@@ -279,6 +498,10 @@ export async function runThemeTool(
       return toolSetTheme(input);
     case 'set_background':
       return toolSetBackground(input, ctx);
+    case 'get_resonance':
+      return toolGetResonance();
+    case 'set_resonance':
+      return toolSetResonance(input);
     default:
       return `Unknown theme tool: ${name}`;
   }
@@ -297,4 +520,6 @@ export const THEME_TOOL_GUIDANCE =
   'Pane border and body tokens accept CSS gradients: set e.g. paneWorkshopBorder to "linear-gradient(135deg, #00f0ff, #7cff00)" (with paneBorderWidth "3px") to show that pane is being worked on, or a solid color for a state — green done, red failed — then reset. ' +
   'Use mode "persist" only when the user asks for a lasting change to how the workspace looks. ' +
   'Never persist a change the user did not ask for. ' +
+  'The soundscape is yours to signal with too: get_resonance / set_resonance — switch the mix, set volume, duck while you work (release after), play a cue. ' +
+  "Layer edits rewrite the user's mix and are saved, so only make them when asked. " +
   'set_background changes what sits behind the panes: generate an image from a prompt, use a workspace image, or pick bloom/drift/flow/blank — when the user asks for a backdrop, or when a theme you are building wants one.\n\n';

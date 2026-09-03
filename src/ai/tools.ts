@@ -363,6 +363,8 @@ export function createToolExecutor(
         case 'set_theme':
         case 'get_theme':
         case 'set_background':
+        case 'get_resonance':
+        case 'set_resonance':
           result = await runThemeTool(toolName, input, { cruxId, chatModel });
           break;
         default:

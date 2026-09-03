@@ -73,12 +73,21 @@ export function getMockLanguageModel(): LanguageModel {
               ? 'Done — I painted it.'
               : used('set_background')
                 ? 'Done — new backdrop.'
-                : 'Done — I wrote that file for you.',
+                : used('set_resonance')
+                  ? 'Done — adjusted the room.'
+                  : 'Done — I wrote that file for you.',
           );
         }
         const text = lastUserText(prompt);
         // "slowly": hold the tool call back so a test can act mid-turn
         if (/\bslowly\b/i.test(text)) await new Promise((r) => setTimeout(r, 1500));
+        // "quiet" / "rain": the model steers the soundscape
+        if (/\bquiet\b/i.test(text)) {
+          return toolCallStream('set_resonance', { volume: 0.2, duck: false });
+        }
+        if (/\brain\b/i.test(text)) {
+          return toolCallStream('set_resonance', { mix: 'Night Rain', cue: 'chime' });
+        }
         // "backdrop": the model sets a workspace image as the Mood background
         if (/\bbackdrop\b/i.test(text)) {
           return toolCallStream('set_background', { path: 'backdrop.png' });
