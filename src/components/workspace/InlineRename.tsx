@@ -15,28 +15,30 @@ export default function InlineRename({ initialValue, onCommit, onCancel }: Inlin
     inputRef.current?.select();
   }, []);
 
+  // Enter and blur both finish the edit, and Enter's commit can open a dialog
+  // that steals focus — which fired blur, which committed AGAIN (a second
+  // "already exists?" dialog, or a double rename). Finish exactly once.
+  const doneRef = useRef(false);
+  const finish = () => {
+    if (doneRef.current) return;
+    doneRef.current = true;
+    const trimmed = value.trim();
+    if (trimmed && trimmed !== initialValue) onCommit(trimmed);
+    else onCancel();
+  };
+
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {
       e.preventDefault();
-      const trimmed = value.trim();
-      if (trimmed && trimmed !== initialValue) {
-        onCommit(trimmed);
-      } else {
-        onCancel();
-      }
+      finish();
     } else if (e.key === 'Escape') {
+      if (doneRef.current) return;
+      doneRef.current = true;
       onCancel();
     }
   };
 
-  const handleBlur = () => {
-    const trimmed = value.trim();
-    if (trimmed && trimmed !== initialValue) {
-      onCommit(trimmed);
-    } else {
-      onCancel();
-    }
-  };
+  const handleBlur = () => finish();
 
   return (
     <input

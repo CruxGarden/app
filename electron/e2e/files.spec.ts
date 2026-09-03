@@ -67,6 +67,29 @@ test.describe('files (Artifacts pane + Project Folder)', () => {
       await expect.poll(() => onDisk('docs/.keep')).toBe(true);
       await page.screenshot({ path: 'e2e/.results/files-2-folder.png' });
 
+      // ── Rename onto an existing name asks first; Cancel keeps both ───────
+      await page.getByRole('button', { name: 'New file' }).click();
+      const secondInput = tree.getByRole('textbox');
+      await secondInput.fill('other.md');
+      await secondInput.press('Enter');
+      await expect(tree.getByText('other.md', { exact: true })).toBeVisible();
+      await tree.getByText('other.md', { exact: true }).click({ button: 'right' });
+      await page.getByRole('menuitem', { name: 'Rename' }).click();
+      const conflictInput = tree.getByRole('textbox');
+      await conflictInput.fill('readme.md');
+      await conflictInput.press('Enter');
+      const conflict = page.getByRole('dialog').filter({ hasText: 'already exists' });
+      await expect(conflict).toBeVisible();
+      await conflict.getByRole('button', { name: 'Cancel' }).click();
+      await expect(tree.getByText('other.md', { exact: true })).toBeVisible();
+      await expect(tree.getByText('readme.md', { exact: true })).toBeVisible();
+      await expect.poll(() => onDisk('other.md') && onDisk('readme.md')).toBe(true);
+      // clean up the extra file so the rest of the journey is unchanged
+      await tree.getByText('other.md', { exact: true }).click({ button: 'right' });
+      await page.getByRole('menuitem', { name: 'Delete', exact: true }).click();
+      await page.getByRole('dialog').getByRole('button', { name: 'Delete' }).click();
+      await expect(tree.getByText('other.md', { exact: true })).toHaveCount(0);
+
       // ── Keyboard Delete on the folder → app dialog (not window.confirm) ──
       await tree.getByText('docs', { exact: true }).click();
       await page.keyboard.press('Delete');
