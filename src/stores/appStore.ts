@@ -49,6 +49,11 @@ export async function syncAuthorToApi(author: Author): Promise<void> {
   }
 }
 
+// In-flight dedup for the two boot operations (module-level: promises are
+// not store state).
+let bootstrapPromise: Promise<void> | null = null;
+let ensureAuthorPromise: Promise<Author> | null = null;
+
 interface AppState {
   /** Whether services (SQLite, OPFS, local author) are initialized */
   ready: boolean;
@@ -56,8 +61,15 @@ interface AppState {
   /** The local author profile */
   author: Author | null;
 
-  /** Ensure a local author exists. Creates one if needed, sets it on the store. */
+  /** Ensure a local author exists. Creates one if needed, sets it on the store. Deduped. */
   ensureAuthor: () => Promise<Author>;
+
+  /**
+   * THE boot path: services + everything that must hold once the store is
+   * live (mood settings, AI flag, moods). Idempotent and deduped; every entry
+   * point (Bootstrap, Shell, Gateway) awaits this and nothing else.
+   */
+  bootstrap: () => Promise<void>;
 
   /** Set author directly */
   setAuthor: (author: Author | null) => void;
@@ -86,27 +98,57 @@ export const useAppStore = create<AppState>((set, get) => ({
   setAuthor: (author) => set({ author }),
 
   ensureAuthor: async () => {
-    const { ensureLocalAuthor } = await import('@/services');
-    const author = await ensureLocalAuthor();
-    set({ author });
-    return author;
+    // Deduped: StrictMode's double effect (and any two callers) used to run
+    // this concurrently and create two `wanderer-*` authors on a fresh DB.
+    if (!ensureAuthorPromise) {
+      ensureAuthorPromise = (async () => {
+        const { ensureLocalAuthor } = await import('@/services');
+        const author = await ensureLocalAuthor();
+        set({ author });
+        return author;
+      })().finally(() => {
+        ensureAuthorPromise = null;
+      });
+    }
+    return ensureAuthorPromise;
+  },
+
+  bootstrap: async () => {
+    if (get().ready) return;
+    if (!bootstrapPromise) {
+      bootstrapPromise = (async () => {
+        // Services: SQLite, blob store, settings — and ingestion (desktop).
+        const { initServices } = await import('@/services');
+        await initServices();
+        // Everything that must be true once the store is live, in one place.
+        // These used to be scattered across Shell, Gateway, and init(), each
+        // path forgetting a different one (ingestion was the last casualty).
+        const [{ applySavedMoodSettings }, { getSetting }, { SettingsKey }, { useUIStore }] =
+          await Promise.all([
+            import('@/components/mood/mood-helpers'),
+            import('@/services/settings'),
+            import('@/lib/constants'),
+            import('./uiStore'),
+          ]);
+        applySavedMoodSettings();
+        useUIStore.getState().setAiEnabled(getSetting(SettingsKey.AiEnabled) === 'true');
+        void import('./moodStore').then(({ useMoodStore }) => useMoodStore.getState().loadMoods());
+        set({ ready: true });
+      })().finally(() => {
+        bootstrapPromise = null;
+      });
+    }
+    return bootstrapPromise;
   },
 
   init: async (opts) => {
-    if (get().ready && !opts?.lightweight) return;
-
     if (!opts?.lightweight) {
-      // Initialize SQLite, OPFS, and settings.
-      // initServices() calls initSettings() internally.
-      const { initServices } = await import('@/services');
-      await initServices();
+      // A full entry (/home, /c/…) needs a garden: services AND a local author.
+      // The Gateway calls bootstrap() alone, because creating the author is
+      // the "plant a garden" step it lets the user choose.
+      await get().bootstrap();
       await get().ensureAuthor();
-
-      // (Ingestion starts inside initServices — it must run on every entry
-      // path, including the Gateway's, which never reaches this store.)
-      set({ ready: true });
     }
-
     // Check stored tokens and refresh if needed
     await useAuthStore.getState().checkAuth(opts);
   },

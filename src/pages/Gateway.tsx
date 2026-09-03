@@ -11,7 +11,6 @@ import {
 import ConnectAccount from '@/components/auth/ConnectAccount';
 import AvatarUpload from '@/components/auth/AvatarUpload';
 import { APP_NAME, SettingsKey } from '@/lib/constants';
-import { initServices, isServicesReady } from '@/services';
 import { PROVIDERS } from '@/ai/providers';
 import { getApiKey } from '@/ai/keys';
 import { getSetting, setSetting } from '@/services/settings';
@@ -82,7 +81,7 @@ function BannerStep({
   const onEnter = async () => {
     onSetStep(Step.Checking);
     try {
-      if (!isServicesReady()) await initServices();
+      await useAppStore.getState().bootstrap();
 
       if (getSetting(SettingsKey.LocalAuthorId)) {
         if (!useAppStore.getState().author) {
