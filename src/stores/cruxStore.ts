@@ -511,7 +511,8 @@ export const useCruxStore = create<CruxState>((set, get) => ({
     const { crux } = get();
     if (!crux) return;
     const updated = await unpublishPipeline(crux);
-    set({ crux: updated });
+    // A failure from an earlier publish attempt no longer describes anything.
+    set({ crux: updated, publishFailure: null });
   },
 
   // File CRUD actions

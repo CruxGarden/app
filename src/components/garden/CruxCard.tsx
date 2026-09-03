@@ -47,25 +47,12 @@ const KIND_LABELS: Record<string, string> = {
   notes: 'Notes',
 };
 
-/**
- * Stand-in for cruxes that have no screenshot yet: the title's initial on a
- * quiet accent wash. Deterministic per crux so the grid doesn't shimmer.
- */
+/** Stand-in for cruxes that have no screenshot yet: the title's initial, plain. */
 function Placeholder({ crux }: { crux: Crux }) {
   const label = crux.title || crux.slug || '?';
   const initial = label.trim().charAt(0).toUpperCase() || '?';
-  // Rotate the wash a little per crux so a wall of placeholders isn't flat.
-  let hash = 0;
-  for (const ch of crux.id) hash = (hash * 31 + ch.charCodeAt(0)) | 0;
-  const angle = 120 + (Math.abs(hash) % 120);
   return (
-    <div
-      className="absolute inset-0 flex items-center justify-center"
-      style={{
-        background: `linear-gradient(${angle}deg, color-mix(in srgb, var(--accent) 18%, var(--garden-card-thumbnail)) 0%, var(--garden-card-thumbnail) 70%)`,
-      }}
-      aria-hidden
-    >
+    <div className="absolute inset-0 flex items-center justify-center" aria-hidden>
       <span className="font-wordmark text-5xl leading-none text-accent/70 select-none">
         {initial}
       </span>
