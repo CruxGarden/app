@@ -24,6 +24,7 @@ const ChevronIcon = ({ collapsed }: { collapsed: boolean }) => (
 import type { GardenStatus, SyncedCrux } from '@/api/sync';
 import { formatBytes, formatDateTime } from '@/lib/format';
 import { confirmDialog } from '@/stores/dialogStore';
+import { notifyUsageChanged } from '@/lib/usage-events';
 
 export default function SyncSettings() {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
@@ -71,6 +72,7 @@ export default function SyncSettings() {
       const meta = await syncApi.pushGarden(result.blob);
       setGardenStatus(meta);
       setStatus('Garden pushed successfully');
+      notifyUsageChanged();
     } catch (err) {
       console.error('Garden push failed:', err);
       setError('Push failed');
@@ -97,6 +99,7 @@ export default function SyncSettings() {
       });
 
       if (!imported) setStatus('');
+      notifyUsageChanged();
     } catch (err) {
       console.error('Garden pull failed:', err);
       setError('Pull failed');
@@ -111,6 +114,7 @@ export default function SyncSettings() {
     try {
       await syncApi.deleteSyncedCrux(cruxId);
       setSyncedCruxes((prev) => prev.filter((c) => c.cruxId !== cruxId));
+      notifyUsageChanged();
     } catch {
       setError('Failed to delete synced crux');
     } finally {
@@ -135,6 +139,7 @@ export default function SyncSettings() {
       await syncApi.deleteGarden();
       setGardenStatus(null);
       setStatus('Cloud backup deleted');
+      notifyUsageChanged();
     } catch {
       setError('Failed to delete cloud backup');
     } finally {

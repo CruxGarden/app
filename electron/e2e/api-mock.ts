@@ -32,6 +32,13 @@ export interface MockApi {
     cruxes: Record<string, Record<string, unknown>>;
     /** Files received by POST /cruxes/:id/publish, by crux id */
     published: Record<string, PublishedFile[]>;
+    /** Sync store: garden backup + synced crux archives, and transfer this period */
+    sync: {
+      garden: { bytes: number; syncedAt: string } | null;
+      cruxes: Record<string, { bytes: number; title: string; slug: string; updatedAt: string }>;
+      up: number;
+      down: number;
+    };
     domains: Array<
       Record<string, unknown> & {
         id: string;
@@ -109,6 +116,7 @@ export async function startMockApi(): Promise<MockApi> {
     crux: null,
     cruxes: {},
     published: {},
+    sync: { garden: null, cruxes: {}, up: 0, down: 0 },
     domains: [],
   };
   const log: string[] = [];
@@ -246,9 +254,103 @@ export async function startMockApi(): Promise<MockApi> {
         requests: storageBytes ? 12 : 0,
       };
     };
+    // ── sync: garden backup + crux archives (multipart PUT), metered into usage
+    if (path === '/sync/garden/status' && method === 'GET') {
+      return state.sync.garden
+        ? send(200, { syncedAt: state.sync.garden.syncedAt, size: state.sync.garden.bytes })
+        : send(404, { statusCode: 404, message: 'No garden backup found' });
+    }
+    if (path === '/sync/garden' && method === 'PUT') {
+      const { files } = parseMultipart(rawBuf, req.headers['content-type'] ?? '');
+      const bytes = files[0]?.bytes.length ?? 0;
+      if (!bytes) return send(400, { statusCode: 400, message: 'No file uploaded' });
+      state.sync.garden = { bytes, syncedAt: new Date().toISOString() };
+      state.sync.up += bytes;
+      return send(200, { syncedAt: state.sync.garden.syncedAt, size: bytes });
+    }
+    if (path === '/sync/garden' && method === 'DELETE') {
+      state.sync.garden = null;
+      return send(204, null);
+    }
+    if (path === '/sync/crux' && method === 'GET') {
+      return send(
+        200,
+        Object.entries(state.sync.cruxes).map(([cruxId, c]) => ({
+          cruxId,
+          slug: c.slug,
+          title: c.title,
+          updatedAt: c.updatedAt,
+          size: c.bytes,
+        })),
+      );
+    }
+    const sm = path.match(/^\/sync\/crux\/([^/]+)$/);
+    if (sm) {
+      const id = sm[1]!;
+      if (method === 'PUT') {
+        const { files, fields } = parseMultipart(rawBuf, req.headers['content-type'] ?? '');
+        const bytes = files[0]?.bytes.length ?? 0;
+        if (!bytes) return send(400, { statusCode: 400, message: 'No file uploaded' });
+        const entry = {
+          bytes,
+          title: fields.title || 'Untitled',
+          slug: fields.slug || id,
+          updatedAt: new Date().toISOString(),
+        };
+        state.sync.cruxes[id] = entry;
+        state.sync.up += bytes;
+        return send(200, { cruxId: id, ...entry, size: bytes });
+      }
+      if (method === 'DELETE') {
+        delete state.sync.cruxes[id];
+        return send(204, null);
+      }
+    }
     if (path === '/usage/me' && method === 'GET') {
       const cruxes = Object.keys(state.published).map(usageFor);
+      const syncCruxes = Object.entries(state.sync.cruxes);
+      const gardenBytes = state.sync.garden?.bytes ?? 0;
+      const cruxBytes = syncCruxes.reduce((n, [, c]) => n + c.bytes, 0);
+      const publish = {
+        storageBytes: cruxes.reduce((n, c) => n + c.storageBytes, 0),
+        bandwidthBytes: cruxes.reduce((n, c) => n + c.bandwidthBytes, 0),
+        requests: cruxes.reduce((n, c) => n + c.requests, 0),
+      };
+      const sync = {
+        storageBytes: gardenBytes + cruxBytes,
+        gardenBytes,
+        gardenSyncedAt: state.sync.garden?.syncedAt ?? null,
+        cruxBytes,
+        cruxCount: syncCruxes.length,
+        transferBytes: state.sync.up + state.sync.down,
+        uploadBytes: state.sync.up,
+        downloadBytes: state.sync.down,
+        uploads: state.sync.up ? 1 : 0,
+        downloads: state.sync.down ? 1 : 0,
+        objects: [
+          ...(state.sync.garden
+            ? [
+                {
+                  kind: 'garden',
+                  id: 'garden',
+                  title: 'Garden backup',
+                  bytes: gardenBytes,
+                  updated: state.sync.garden.syncedAt,
+                },
+              ]
+            : []),
+          ...syncCruxes.map(([id, c]) => ({
+            kind: 'crux',
+            id,
+            title: c.title,
+            bytes: c.bytes,
+            updated: c.updatedAt,
+          })),
+        ],
+      };
       return send(200, {
+        publish,
+        sync,
         period: { start: '2026-09-01', end: '2026-10-01' },
         plan: {
           id: 'free',
@@ -256,9 +358,9 @@ export async function startMockApi(): Promise<MockApi> {
           storageBytes: 1073741824,
           bandwidthBytesPerPeriod: 1073741824,
         },
-        storageBytes: cruxes.reduce((n, c) => n + c.storageBytes, 0),
-        bandwidthBytes: cruxes.reduce((n, c) => n + c.bandwidthBytes, 0),
-        requests: cruxes.reduce((n, c) => n + c.requests, 0),
+        storageBytes: publish.storageBytes + sync.storageBytes,
+        bandwidthBytes: publish.bandwidthBytes + sync.transferBytes,
+        requests: publish.requests,
         cruxes,
         bandwidthAsOf: null,
       });
