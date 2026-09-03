@@ -12,6 +12,7 @@ import { cn } from '@/lib/cn';
 import { loadTemplate, applyTemplateMeta } from '@/templates';
 import type { CruxKind, ChatMessage } from '@/api/types';
 import { Capability, can } from '@/lib/platform';
+import { alertDialog } from '@/stores/dialogStore';
 
 // ── Icons ────────────────────────────────────────────────
 
@@ -287,8 +288,9 @@ export default function NewCruxModal({ open, onClose }: NewCruxModalProps) {
 
         if (result.failedArtifacts.length > 0) {
           console.warn('Some artifacts failed to import:', result.failedArtifacts);
-          alert(
+          void alertDialog(
             `Import completed with ${result.failedArtifacts.length} file${result.failedArtifacts.length > 1 ? 's' : ''} that could not be restored.`,
+            'Import finished with warnings',
           );
         }
 
@@ -298,8 +300,9 @@ export default function NewCruxModal({ open, onClose }: NewCruxModalProps) {
         navigate(`/c/${result.cruxId}`);
       } catch (err) {
         console.error('Import failed:', err);
-        alert(
+        void alertDialog(
           `Failed to import .crux file: ${err instanceof Error ? err.message : 'Make sure it is a valid export.'}`,
+          'Import failed',
         );
       } finally {
         setImporting(false);

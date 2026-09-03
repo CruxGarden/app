@@ -23,6 +23,7 @@ const ChevronIcon = ({ collapsed }: { collapsed: boolean }) => (
 );
 import type { GardenStatus, SyncedCrux } from '@/api/sync';
 import { formatBytes, formatDateTime } from '@/lib/format';
+import { confirmDialog } from '@/stores/dialogStore';
 
 export default function SyncSettings() {
   const { isAuthenticated } = useAuthStore();
@@ -119,9 +120,13 @@ export default function SyncSettings() {
 
   const handleDeleteGarden = async () => {
     if (
-      !confirm(
-        'Delete your cloud garden backup? This cannot be undone. Your local garden is not affected.',
-      )
+      !(await confirmDialog({
+        title: 'Delete cloud backup',
+        message:
+          'Delete your cloud garden backup? This cannot be undone. Your local garden is not affected.',
+        confirmLabel: 'Delete backup',
+        danger: true,
+      }))
     )
       return;
     setDeletingGarden(true);

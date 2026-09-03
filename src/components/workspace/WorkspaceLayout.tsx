@@ -25,6 +25,8 @@ import { useAppStore } from '@/stores/appStore';
 import { getDownloadUrl } from '@/api/public';
 import { pathOf, basename, isUnder, displayNameOf } from '@/lib/artifact-path';
 import 'react-mosaic-component/react-mosaic-component.css';
+import { confirmDialog, alertDialog } from '@/stores/dialogStore';
+import { expandTreeSelection } from '@/components/artifacts/treeData';
 
 // ── Media transcoding constants ──────────────────────────
 
@@ -238,29 +240,24 @@ export default function WorkspaceLayout() {
   };
 
   const handleDelete = async (id: string) => {
-    if (confirm('Delete this file?')) {
+    if (await confirmDialog({ message: 'Delete this file?', confirmLabel: 'Delete', danger: true })) {
       await deleteArtifact(id);
     }
   };
 
   const handleDeleteMultiple = async (ids: string[]) => {
-    // ids may contain folder virtual IDs ("folder:path") alongside real artifact UUIDs.
-    // Expand folders to their children before deleting.
-    const artifactIds = new Set<string>();
-    for (const id of ids) {
-      if (id.startsWith('folder:')) {
-        const folderPath = id.slice('folder:'.length);
-        artifacts
-          .filter((a) => isUnder(folderPath, pathOf(a)))
-          .forEach((a) => artifactIds.add(a.id));
-      } else {
-        artifactIds.add(id);
-      }
-    }
-    const count = artifactIds.size;
+    // Selections mix folder virtual ids ("folder:path") with artifact ids.
+    const artifactIds = expandTreeSelection(ids, artifacts);
+    const count = artifactIds.length;
     if (count === 0) return;
-    if (confirm(`Delete ${count} item${count !== 1 ? 's' : ''}?`)) {
-      await deleteArtifacts([...artifactIds]);
+    if (
+      await confirmDialog({
+        message: `Delete ${count} item${count !== 1 ? 's' : ''}?`,
+        confirmLabel: 'Delete',
+        danger: true,
+      })
+    ) {
+      await deleteArtifacts(artifactIds);
     }
   };
 
@@ -269,9 +266,12 @@ export default function WorkspaceLayout() {
     if (children.length === 0) return;
     const folderName = basename(folderPath);
     if (
-      confirm(
-        `Delete "${folderName}" and ${children.length} file${children.length !== 1 ? 's' : ''}?`,
-      )
+      await confirmDialog({
+        title: 'Delete folder',
+        message: `Delete "${folderName}" and ${children.length} file${children.length !== 1 ? 's' : ''}?`,
+        confirmLabel: 'Delete',
+        danger: true,
+      })
     ) {
       await deleteArtifacts(children.map((a) => a.id));
     }
@@ -333,7 +333,7 @@ export default function WorkspaceLayout() {
         }
       } catch (err) {
         console.error('Transcode failed:', err);
-        alert('Transcode failed: ' + (err as Error).message);
+        void alertDialog('Transcode failed: ' + (err as Error).message, 'Transcode failed');
       }
     },
     [artifacts],

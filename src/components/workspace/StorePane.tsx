@@ -3,6 +3,7 @@ import { useCruxStore } from '@/stores/cruxStore';
 import { getServices, isServicesReady } from '@/services';
 import { formatBytes } from '@/lib/format';
 import type { StoreEntry } from '@/services/sqlite/store.service';
+import { confirmDialog } from '@/stores/dialogStore';
 
 type EditingCell = { key: string; field: 'key' | 'value' | 'mode' } | null;
 
@@ -65,7 +66,7 @@ export default function StorePane() {
   const handleDelete = useCallback(
     async (key: string) => {
       if (!crux?.id || !isServicesReady()) return;
-      if (!confirm(`Delete key "${key}"?`)) return;
+      if (!(await confirmDialog({ message: `Delete key "${key}"?`, confirmLabel: 'Delete', danger: true }))) return;
       const { store } = getServices();
       await store.delete(crux.id, key);
       await loadEntries();
@@ -84,7 +85,7 @@ export default function StorePane() {
 
   const handleClearAll = useCallback(async () => {
     if (!crux?.id || !isServicesReady()) return;
-    if (!confirm('Clear all store entries?')) return;
+    if (!(await confirmDialog({ message: 'Clear all store entries?', confirmLabel: 'Clear all', danger: true }))) return;
     const { store } = getServices();
     await store.clear(crux.id);
     await loadEntries();

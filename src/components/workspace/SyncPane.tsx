@@ -8,6 +8,7 @@ import { cn } from '@/lib/cn';
 import { formatBytes, formatDateTime } from '@/lib/format';
 import { Spinner } from '@/components/ui';
 import { usePaneWidth } from '@/hooks/usePaneWidth';
+import { confirmDialog } from '@/stores/dialogStore';
 
 function CloudUpIcon() {
   return (
@@ -120,7 +121,15 @@ export default function SyncPane() {
 
   const handlePull = useCallback(async () => {
     if (!crux) return;
-    if (!confirm('Pull will replace this crux with the cloud version. Continue?')) return;
+    if (
+      !(await confirmDialog({
+        title: 'Pull from cloud',
+        message: 'Pull will replace this crux with the cloud version. Continue?',
+        confirmLabel: 'Pull',
+        danger: true,
+      }))
+    )
+      return;
 
     setPulling(true);
     setError('');
