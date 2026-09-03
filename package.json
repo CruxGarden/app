@@ -19,7 +19,8 @@
     "test:watch": "vitest",
     "postinstall": "patch-package",
     "generate:api": "openapi-typescript ../api/openapi.json -o src/api/generated/schema.d.ts --default-non-nullable false",
-    "ai:smoke": "node scripts/ai-smoke.mjs"
+    "ai:smoke": "node scripts/ai-smoke.mjs",
+    "verify": "tsc -b --noEmit && eslint src --max-warnings=0 && vitest run && vite build"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^4.0.27",
