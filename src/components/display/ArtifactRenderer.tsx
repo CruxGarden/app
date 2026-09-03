@@ -4,16 +4,12 @@ import { publicApi } from '@/api';
 import { usePublicPreviewUrl } from '@/hooks/usePublicPreviewUrl';
 import { useAppStore } from '@/stores/appStore';
 import { useAuthStore } from '@/stores/authStore';
-import { getStoredTokens } from '@/api/client';
 import MarkdownRenderer from '@/components/chat/MarkdownRenderer';
 import { getFileIcon } from '@/components/artifacts/fileIcons';
 import { LoadingPanel } from '@/components/ui';
 import { pathOf, basename, extensionOf } from '@/lib/artifact-path';
+import { publishOriginFor, publishBaseUrlFor, hasRemotePublishOrigin } from '@/lib/public-url';
 
-// Template for per-crux isolated subdomain: https://{cruxId}.publish.crux.garden
-const PUBLISH_ORIGIN_TEMPLATE = import.meta.env.VITE_PUBLISH_ORIGIN_TEMPLATE || '';
-// Legacy flat URL fallback (deprecated): https://publish.crux.garden
-const PUBLISHED_CONTENT_URL = import.meta.env.VITE_PUBLISHED_CONTENT_URL || '';
 
 /** Fetch a blob by artifact ID — defaults to publicApi if not provided */
 type DownloadBlobFn = (artifactId: string) => Promise<Blob>;
@@ -102,15 +98,8 @@ function HtmlRenderer({
   subPath?: string;
   downloadBlob: DownloadBlobFn;
 }) {
-  // Compute the expected iframe origin for postMessage validation.
-  // Per-crux subdomain: https://{cruxId}.publish.crux.garden
-  // Legacy flat URL: https://publish.crux.garden/{cruxId}/
-  // Local dev: same origin
-  const iframeOrigin = PUBLISH_ORIGIN_TEMPLATE
-    ? PUBLISH_ORIGIN_TEMPLATE.replace('{cruxId}', cruxId)
-    : PUBLISHED_CONTENT_URL
-      ? new URL(`${PUBLISHED_CONTENT_URL}/${cruxId}/`).origin
-      : window.location.origin;
+  // The only origin allowed to exchange postMessages with this viewer.
+  const iframeOrigin = publishOriginFor(cruxId);
 
   const [iframeLoaded, setIframeLoaded] = useState(false);
 
@@ -135,16 +124,17 @@ function HtmlRenderer({
   // This guarantees both sides are ready regardless of load order.
   useEffect(() => {
     function buildSession() {
-      const { accessToken } = getStoredTokens();
       const author = useAppStore.getState().author;
       const apiBase = import.meta.env.VITE_API_URL || '';
-      // Use local postMessage proxy when API is on localhost — browsers block
-      // public origins from fetching private/loopback addresses (Private Network Access).
-      const isLocalApi = apiBase.includes('localhost') || apiBase.includes('127.0.0.1');
+      // SECURITY: the published page is someone else's code running on its own
+      // origin. The visitor's crux.garden access token must never cross into
+      // it — a malicious crux could read it from the message and act as the
+      // visitor. Store calls therefore go through the parent-side proxy
+      // (useStoreApiProxy on the public page), which holds the credentials.
       return {
         type: 'crux:session',
-        token: accessToken ?? null,
-        mode: isLocalApi ? 'local' : 'live',
+        token: null,
+        mode: 'local',
         cruxId,
         apiBase,
         visitorId: author?.id ?? null,
@@ -178,15 +168,11 @@ function HtmlRenderer({
     return () => window.removeEventListener('message', handler);
   }, [cruxId, iframeOrigin]);
 
-  if (PUBLISH_ORIGIN_TEMPLATE || PUBLISHED_CONTENT_URL) {
-    // If a sub-path is provided (deep link), use it directly — CloudFront Function
-    // will rewrite non-file paths to index.html for SPA support
+  if (hasRemotePublishOrigin()) {
+    // Deep links pass straight through; the edge router resolves directory
+    // paths to their index.html.
     const entryPath = subPath || pathOf(artifact) || 'index.html';
-    // Per-crux subdomain: https://{cruxId}.publish.crux.garden/{entryPath}
-    // Legacy flat URL: https://publish.crux.garden/{cruxId}/{entryPath}
-    const src = PUBLISH_ORIGIN_TEMPLATE
-      ? `${PUBLISH_ORIGIN_TEMPLATE.replace('{cruxId}', cruxId)}/${entryPath}`
-      : `${PUBLISHED_CONTENT_URL}/${cruxId}/${entryPath}`;
+    const src = `${publishBaseUrlFor(cruxId)}/${entryPath}`;
 
     return (
       <div className="w-full h-full relative">

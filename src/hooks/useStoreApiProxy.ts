@@ -2,15 +2,17 @@ import { useEffect } from 'react';
 import client from '@/api/client';
 
 /**
- * Listens for crux:store:* postMessages from the published iframe
- * and proxies them to the API via HTTP.
+ * Listens for crux:store:* postMessages from the published iframe and
+ * proxies them to the API via HTTP — with the VIEWER's credentials, which
+ * never leave this window (the published page is untrusted third-party code).
  *
- * Used on public crux pages when the API is on localhost (Private Network
- * Access blocks the iframe from calling localhost directly).
+ * Only messages from `allowedOrigin` (the crux's own publish origin) are
+ * honoured, and replies go back to exactly that origin — any other page that
+ * happens to be embedded must not be able to drive the visitor's store calls.
  */
-export function useStoreApiProxy(cruxId: string | null) {
+export function useStoreApiProxy(cruxId: string | null, allowedOrigin: string | null) {
   useEffect(() => {
-    if (!cruxId) return;
+    if (!cruxId || !allowedOrigin) return;
 
     function reply(
       source: MessageEventSource | null,
@@ -18,10 +20,11 @@ export function useStoreApiProxy(cruxId: string | null) {
       id: string,
       data: Record<string, unknown>,
     ) {
-      source?.postMessage({ type, id, ...data }, { targetOrigin: '*' });
+      source?.postMessage({ type, id, ...data }, { targetOrigin: allowedOrigin! });
     }
 
     function handleMessage(e: MessageEvent) {
+      if (e.origin !== allowedOrigin) return;
       if (!e.data?.type?.startsWith('crux:store:')) return;
 
       const { type, id, key, value, by, mode } = e.data;
@@ -65,5 +68,5 @@ export function useStoreApiProxy(cruxId: string | null) {
 
     window.addEventListener('message', handleMessage);
     return () => window.removeEventListener('message', handleMessage);
-  }, [cruxId]);
+  }, [cruxId, allowedOrigin]);
 }

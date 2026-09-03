@@ -24,3 +24,27 @@ export function publicCruxUrl(username: string, slug: string): string {
   const user = username.startsWith('@') ? username.slice(1) : username;
   return `${gardenOrigin()}/${user}/${slug}`;
 }
+
+// Where a crux's PUBLISHED FILES are served from (distinct from its public
+// page on crux.garden). Per-crux subdomain in production; legacy flat prefix;
+// same-origin service-worker preview in local dev.
+const PUBLISH_ORIGIN_TEMPLATE = import.meta.env.VITE_PUBLISH_ORIGIN_TEMPLATE || '';
+const PUBLISHED_CONTENT_URL = import.meta.env.VITE_PUBLISHED_CONTENT_URL || '';
+
+/** The exact origin the published-crux iframe will have — the only origin allowed to talk to us. */
+export function publishOriginFor(cruxId: string): string {
+  if (PUBLISH_ORIGIN_TEMPLATE) return PUBLISH_ORIGIN_TEMPLATE.replace('{cruxId}', cruxId);
+  if (PUBLISHED_CONTENT_URL) return new URL(`${PUBLISHED_CONTENT_URL}/${cruxId}/`).origin;
+  return window.location.origin;
+}
+
+/** True when published files are served from a per-crux or flat remote origin (not the SW fallback). */
+export function hasRemotePublishOrigin(): boolean {
+  return !!(PUBLISH_ORIGIN_TEMPLATE || PUBLISHED_CONTENT_URL);
+}
+
+/** Base URL for a published file path: `${publishBaseUrlFor(id)}/${path}`. */
+export function publishBaseUrlFor(cruxId: string): string {
+  if (PUBLISH_ORIGIN_TEMPLATE) return PUBLISH_ORIGIN_TEMPLATE.replace('{cruxId}', cruxId);
+  return `${PUBLISHED_CONTENT_URL}/${cruxId}`;
+}

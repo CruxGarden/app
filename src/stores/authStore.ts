@@ -150,7 +150,10 @@ export const useAuthStore = create<AuthState>((set) => ({
     const localAuthor = useAppStore.getState().author;
 
     const finalize = async (profile: Profile) => {
-      let author = localAuthor;
+      // Re-read: the profile fetch is slow enough that the Gateway may have
+      // created the local author meanwhile. Writing the value captured before
+      // the await nulled it and left the app anonymous until reload.
+      let author = useAppStore.getState().author ?? localAuthor;
       // Reconcile local author ID with API author if mismatched (skip in lightweight mode)
       if (!opts?.lightweight && author && profile.author && author.id !== profile.author.id) {
         author = await reconcileAuthorId(author.id, profile.author, profile.id);
@@ -160,8 +163,10 @@ export const useAuthStore = create<AuthState>((set) => ({
         isAuthenticated: true,
         isLoading: false,
       });
-      useAppStore.setState({ author });
-      if (author) syncAuthorToApi(author);
+      if (author) {
+        useAppStore.setState({ author });
+        syncAuthorToApi(author);
+      }
     };
 
     try {

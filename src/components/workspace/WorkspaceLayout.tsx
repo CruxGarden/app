@@ -5,6 +5,7 @@ import { MosaicWithoutDragDropContext, MosaicWindow } from 'react-mosaic-compone
 import type { MosaicBranch, MosaicNode } from 'react-mosaic-component';
 import { useUIStore, type PaneType } from '@/stores/uiStore';
 import { useStoreProxy } from '@/hooks/useStoreProxy';
+import { useIsDesktopLayout } from '@/hooks/useMediaQuery';
 import { useNotesManifest } from '@/hooks/useNotesManifest';
 
 const HistoryPane = lazy(() => import('./HistoryPane'));
@@ -96,6 +97,11 @@ const PANE_LABELS: Record<PaneType, string> = {
   export: 'EXPORT',
   store: 'STORE',
 };
+
+function MobilePane({ pane }: { pane: PaneType }) {
+  const PaneComponent = PANE_COMPONENTS[pane];
+  return <PaneComponent />;
+}
 
 // ── Pane icons ───────────────────────────────────────────
 
@@ -195,6 +201,7 @@ export default function WorkspaceLayout() {
   const setPaneVisible = useUIStore((s) => s.setPaneVisible);
   const paneVisibility = useUIStore((s) => s.paneVisibility);
   const mobileActivePane = useUIStore((s) => s.mobileActivePane);
+  const isDesktopLayout = useIsDesktopLayout();
   const openFile = useUIStore((s) => s.openFile);
   const deleteArtifact = useCruxStore((s) => s.deleteArtifact);
   const deleteArtifacts = useCruxStore((s) => s.deleteArtifacts);
@@ -410,33 +417,32 @@ export default function WorkspaceLayout() {
 
   return (
     <DndProvider backend={HTML5Backend}>
-      {/* Desktop layout */}
-      <div className="hidden md:block h-full min-h-0">
-        {mosaicLayout ? (
-          <MosaicWithoutDragDropContext<PaneType>
-            renderTile={renderTile}
-            value={mosaicLayout}
-            onChange={handleChange}
-            resize={{ minimumPaneSizePercentage: 5 }}
-            className="crux-mosaic-theme"
-          />
-        ) : null}
-      </div>
-
-      {/* Mobile layout */}
-      <div className="flex md:hidden flex-col h-full min-h-0">
-        <div className="flex-1 min-h-0 group/pane">
-          {(() => {
-            const PaneComponent = PANE_COMPONENTS[mobileActivePane];
-            return (
-              <Suspense fallback={null}>
-                <PaneComponent />
-              </Suspense>
-            );
-          })()}
+      {/* Exactly one layout is mounted. Rendering both and hiding one with CSS
+          double-mounted every pane: two chat trees (two useChat loops, two
+          auto-snapshot policies), duplicate DOM, and 2× re-renders per
+          streamed token. */}
+      {isDesktopLayout ? (
+        <div className="h-full min-h-0">
+          {mosaicLayout ? (
+            <MosaicWithoutDragDropContext<PaneType>
+              renderTile={renderTile}
+              value={mosaicLayout}
+              onChange={handleChange}
+              resize={{ minimumPaneSizePercentage: 5 }}
+              className="crux-mosaic-theme"
+            />
+          ) : null}
         </div>
-        <MobilePaneSwitcher />
-      </div>
+      ) : (
+        <div className="flex flex-col h-full min-h-0">
+          <div className="flex-1 min-h-0 group/pane">
+            <Suspense fallback={null}>
+              <MobilePane pane={mobileActivePane} />
+            </Suspense>
+          </div>
+          <MobilePaneSwitcher />
+        </div>
+      )}
 
       {/* Context menu overlay */}
       <ContextMenu
