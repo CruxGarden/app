@@ -12,6 +12,7 @@ import { getPersona, getPersonaFingerprint } from '@/services/persona';
 import { useAppStore } from '@/stores/appStore';
 import { useShallow } from 'zustand/react/shallow';
 import { isAiMock } from '@/lib/platform';
+import { playCue, duckAudio } from '@/services/cues';
 
 /**
  * Truncate large tool results preserving the beginning and end.
@@ -210,6 +211,7 @@ export function useChat() {
 
       setStreaming(true);
       clearStreamContent();
+      void duckAudio(true);
 
       const session = sessionFor(crux.id);
       const controller = new AbortController();
@@ -254,6 +256,7 @@ export function useChat() {
               // Update the tool call with result
               const tc = toolCalls.find((t) => t.id === event.id);
               if (tc) tc.result = event.result;
+              void playCue('toolDone');
 
               // Refresh artifacts after mutation operations (debounced to coalesce rapid tool calls)
               if (didMutate(event.name, event.result)) {
@@ -285,6 +288,7 @@ export function useChat() {
 
             case 'error':
               fullContent += `\n\n*Error: ${event.message}*`;
+              void playCue('error');
               break;
           }
         }
@@ -302,6 +306,7 @@ export function useChat() {
       if (useCruxStore.getState().crux?.id !== crux.id) {
         clearStreamContent();
         setStreaming(false);
+        void duckAudio(false);
         session.turn = null;
         return;
       }
@@ -321,6 +326,8 @@ export function useChat() {
 
       clearStreamContent();
       setStreaming(false);
+      void duckAudio(false);
+      if (fullContent || toolCalls.length > 0) void playCue('message');
       session.turn = null;
 
       // Save messages to crux meta

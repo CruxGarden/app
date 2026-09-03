@@ -3,6 +3,7 @@ import { getSetting, setSetting } from './settings';
 import { SettingsKey } from '@/lib/constants';
 import { validateMix, type Mix } from '@/audio/schema';
 import { DEFAULT_MIXES } from '@/audio/default-mixes';
+import { validatePlaylist, type Playlist } from '@/audio/playlist';
 
 export function getMixes(): Mix[] {
   const raw = getSetting(SettingsKey.ResonanceMixes) as string | null;
@@ -68,4 +69,17 @@ export function getDockState(): DockState | null {
 }
 export function setDockState(s: DockState): void {
   setSetting(SettingsKey.MoodDockState, JSON.stringify(s));
+}
+
+export function getPlaylist(knownMixIds: string[]): Playlist {
+  const raw = getSetting(SettingsKey.ResonancePlaylist) as string | null;
+  if (!raw) return validatePlaylist(undefined, knownMixIds);
+  try {
+    return validatePlaylist(JSON.parse(raw), knownMixIds);
+  } catch {
+    return validatePlaylist(undefined, knownMixIds);
+  }
+}
+export function savePlaylist(pl: Playlist): void {
+  setSetting(SettingsKey.ResonancePlaylist, JSON.stringify(pl));
 }

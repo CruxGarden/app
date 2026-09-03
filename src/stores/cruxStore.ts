@@ -28,6 +28,7 @@ import { captureWorkspacePreview } from '@/services/preview-capture';
 import { getPersona } from '@/services/persona';
 import { DEFAULT_MODEL, resolveModel } from '@/ai/providers';
 import { useUIStore } from '@/stores/uiStore';
+import { playCue } from '@/services/cues';
 
 interface CruxState {
   // Active workspace
@@ -216,7 +217,6 @@ export const useCruxStore = create<CruxState>((set, get) => ({
 
     // NOTE: crux.meta.settings.palette stores per-crux palette data for future use,
     // but themes are currently global — don't override the user's active theme on load.
-
 
     // Load growth dimensions first so we can reconstruct the full conversation
     const { dimension } = getServices();
@@ -424,7 +424,6 @@ export const useCruxStore = create<CruxState>((set, get) => ({
     saveMeta();
   },
 
-
   saveMeta: async () => {
     const { crux, messages, messageSegmentStart, summary, growthCount } = get();
     if (!crux) return;
@@ -497,10 +496,12 @@ export const useCruxStore = create<CruxState>((set, get) => ({
         onProgress: (phase) => set({ publishPhase: phase }),
       });
       set({ crux: mergedCrux });
+      void playCue('published');
       return true;
     } catch (err) {
       console.error('[publish] failed:', err);
       set({ publishFailure: describePublishFailure(err) });
+      void playCue('error');
       return false;
     } finally {
       set({ publishPhase: null });
@@ -745,6 +746,7 @@ export const useCruxStore = create<CruxState>((set, get) => ({
       });
     }
     await get().saveMeta();
+    void playCue('snapshot');
 
     // Fire-and-forget AI summary — scoped to the segment this snapshot captured
     if (!options.silent) {
