@@ -1,4 +1,5 @@
-import { useEffect, useCallback, useRef } from 'react';
+import { useEffect, useCallback, useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useParams, useBlocker } from 'react-router-dom';
 import { useCruxStore } from '@/stores/cruxStore';
 import { useUIStore } from '@/stores/uiStore';
@@ -12,16 +13,31 @@ import { pathOf, normalizePath } from '@/lib/artifact-path';
 
 export default function CruxBuilder() {
   const { id } = useParams<{ id: string }>();
-  const { crux, loadCrux, reset, artifacts } = useCruxStore();
-  const { setPaneVisible, setActiveCrux } = useUIStore();
+  // Selectors, not the whole store: this is the page root, and a whole-store
+  // subscription re-rendered it (and WorkspaceLayout) on every streamed token.
+  const crux = useCruxStore((s) => s.crux);
+  const artifacts = useCruxStore((s) => s.artifacts);
+  const loadCrux = useCruxStore((s) => s.loadCrux);
+  const reset = useCruxStore((s) => s.reset);
+  const setPaneVisible = useUIStore((s) => s.setPaneVisible);
+  const setActiveCrux = useUIStore((s) => s.setActiveCrux);
   const hasDirtyTabs = useUIStore((s) => s.editor.tabs.some((t) => t.dirty));
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (id) {
-      loadCrux(id);
-      setActiveCrux(id);
-    }
+    if (!id) return;
+    let cancelled = false;
+    setLoadError(null);
+    // A stale link or deleted crux used to reject unhandled and leave a
+    // permanently blank page; now it renders a way back.
+    loadCrux(id).catch((err: unknown) => {
+      if (cancelled) return;
+      console.error('[crux] load failed:', err);
+      setLoadError(err instanceof Error ? err.message : 'Could not load this crux.');
+    });
+    setActiveCrux(id);
     return () => {
+      cancelled = true;
       reset();
       setActiveCrux(null);
     };
@@ -108,6 +124,22 @@ export default function CruxBuilder() {
     blocker.proceed?.();
   }, [blocker]);
 
+  if (loadError) {
+    return (
+      <div className="flex h-full items-center justify-center p-8">
+        <div role="alert" className="max-w-sm text-center flex flex-col items-center gap-3">
+          <h2 className="font-display text-base text-text">Crux not found</h2>
+          <p className="text-xs text-text-muted">
+            This link points at a crux that isn't in this garden — it may have been deleted, or
+            it lives in another garden.
+          </p>
+          <Link to="/home" className="text-xs text-accent hover:underline">
+            Back to your garden
+          </Link>
+        </div>
+      </div>
+    );
+  }
   if (!crux) return null;
 
   return (

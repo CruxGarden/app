@@ -850,8 +850,12 @@ export const useCruxStore = create<CruxState>((set, get) => ({
     const currentArtifacts = await artifact.findByResource('crux', crux.id);
     await Promise.allSettled(currentArtifacts.map((a) => artifact.delete(a.id)));
 
-    // Clone snapshot artifacts to workspace
+    // Clone snapshot artifacts to workspace. The clone is metadata-only
+    // (rows pointing at fingerprints) while the deletes above wrote through
+    // to disk — so on desktop the Project Folder would be EMPTY after a
+    // revert. Re-project the store onto the folder (no-op on web).
     await artifact.cloneArtifactsToSnapshot(snapshotId, crux.id);
+    await projectAllArtifacts(crux.id);
 
     // Rebuild conversation via the chain walk (Growth module, single impl)
     const priorMessages = await collectChainMessages(
@@ -904,8 +908,12 @@ export const useCruxStore = create<CruxState>((set, get) => ({
     const currentArtifacts = await artifact.findByResource('crux', crux.id);
     await Promise.allSettled(currentArtifacts.map((a) => artifact.delete(a.id)));
 
-    // Clone snapshot artifacts to workspace
+    // Clone snapshot artifacts to workspace. The clone is metadata-only
+    // (rows pointing at fingerprints) while the deletes above wrote through
+    // to disk — so on desktop the Project Folder would be EMPTY after a
+    // revert. Re-project the store onto the folder (no-op on web).
     await artifact.cloneArtifactsToSnapshot(snapshotId, crux.id);
+    await projectAllArtifacts(crux.id);
 
     // Load snapshot messages — these become the conversation base for the branch
     const snapshotCrux = await cruxService.findById(snapshotId);
