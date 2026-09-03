@@ -10,6 +10,8 @@ import { usePaneWidth } from '@/hooks/usePaneWidth';
 import CreateAuthorModal from '@/components/auth/CreateAuthorModal';
 import ConnectAccount from '@/components/auth/ConnectAccount';
 import { PaneEmpty, PaneSection, PaneAction, PaneHint, PaneNote } from './pane-ui';
+import UsageSection from './UsageSection';
+import CustomDomainSection from './CustomDomainSection';
 function PublishIcon() {
   return (
     <svg
@@ -341,6 +343,14 @@ export default function PublishPane() {
                 </a>
               </div>
             </PaneSection>
+          )}
+
+          {/* Usage + custom domain — for a published crux with a connected account */}
+          {isPublished && isAuthenticated && (
+            <>
+              <UsageSection cruxId={crux.id} refreshKey={publishedVersion} />
+              <CustomDomainSection cruxId={crux.id} />
+            </>
           )}
 
           {/* Visibility */}

@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import type { HTMLAttributes, ReactNode } from 'react';
 import { cn } from '@/lib/cn';
 import { Spinner } from '@/components/ui';
 
@@ -41,7 +41,7 @@ export function PaneEmpty({ icon, title, description, children, className }: Pan
   );
 }
 
-interface PaneSectionProps {
+interface PaneSectionProps extends Omit<HTMLAttributes<HTMLElement>, 'children'> {
   label?: ReactNode;
   /** Something to the right of the label (a version, a count). */
   aside?: ReactNode;
@@ -57,9 +57,11 @@ export function PaneSection({
   children,
   className,
   tone = 'default',
+  ...rest
 }: PaneSectionProps) {
   return (
     <section
+      {...rest}
       className={cn(
         'rounded-[var(--radius-sm)] border px-3 py-2.5',
         tone === 'dashed' ? 'border-dashed border-border/70' : 'border-border bg-surface/50',

@@ -1,5 +1,6 @@
 import AccountSettings from '@/components/settings/AccountSettings';
 import SyncSettings from '@/components/settings/SyncSettings';
+import UsageSettings from '@/components/settings/UsageSettings';
 import DataSettings from '@/components/settings/DataSettings';
 import AiSettings from '@/components/settings/AiSettings';
 
@@ -9,6 +10,7 @@ export default function Settings() {
       <AccountSettings />
       <AiSettings />
       <SyncSettings />
+      <UsageSettings />
       <DataSettings />
     </div>
   );
