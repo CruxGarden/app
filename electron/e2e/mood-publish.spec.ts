@@ -49,7 +49,6 @@ test.describe('publish + discover moods (mocked API)', () => {
       await expect(page.getByRole('status')).toContainText('Published "Sea Glass"', {
         timeout: 60_000,
       });
-      await expect(page.getByText(/Published /)).toBeVisible();
       await expect(page.getByRole('button', { name: 'Republish Sea Glass' })).toBeVisible();
 
       // The mock saw a mood crux published with the three files
