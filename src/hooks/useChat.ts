@@ -11,6 +11,7 @@ import type { NormalizedMessage } from '@/services/types';
 import { getPersona, getPersonaFingerprint } from '@/services/persona';
 import { useAppStore } from '@/stores/appStore';
 import { useShallow } from 'zustand/react/shallow';
+import { isAiMock } from '@/lib/platform';
 
 /**
  * Truncate large tool results preserving the beginning and end.
@@ -156,7 +157,8 @@ export function useChat() {
 
       const model = resolveModel(crux.meta?.settings?.model);
       const providerId = getProviderForModel(model);
-      const apiKey = await getApiKey(providerId);
+      // Under the e2e mock model no provider key is needed.
+      const apiKey = (await getApiKey(providerId)) ?? (isAiMock() ? 'mock' : null);
 
       if (!apiKey) {
         addMessage({

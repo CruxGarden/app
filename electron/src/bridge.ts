@@ -154,5 +154,5 @@ export interface ElectronBridge {
   ffmpeg: FfmpegBridge;
   localai: LocalAiBridge;
   /** Test-only overrides, read from the environment the shell was launched with. */
-  test: { apiUrl: string | null };
+  test: { apiUrl: string | null; aiMock: boolean };
 }

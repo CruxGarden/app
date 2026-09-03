@@ -35,6 +35,8 @@ import { defaultToolDefinitions, didMutate, type ToolDefinition } from './tools'
 import { buildPromptParts, buildWorkspaceContext, CONTEXT_BLOCK_OPEN } from './system-prompt';
 import { estimateTokens, fitToContextWindow, evictedTranscript, compactionNote } from './context';
 import { getModelInfo, getProviderForModel, resolveModel } from './providers';
+import { isAiMock } from '@/lib/platform';
+import { getMockLanguageModel } from './mock-model';
 
 /** Events yielded by the conversation engine */
 export type ConversationEvent =
@@ -71,6 +73,8 @@ export interface ConversationOptions {
  * Retired model IDs resolve to their successors.
  */
 export function languageModelFor(model: string, apiKey: string): LanguageModel {
+  // e2e: a scripted model stands in for every provider (see ai/mock-model.ts).
+  if (isAiMock()) return getMockLanguageModel();
   const id = resolveModel(model);
   const provider = getProviderForModel(id);
   // Local inference (Ollama / LM Studio): OpenAI-compatible localhost API,
