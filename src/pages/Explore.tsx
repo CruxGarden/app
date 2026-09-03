@@ -2,13 +2,41 @@ import { openGardenPage } from '@/lib/public-url';
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { publicApi, API_BASE_URL } from '@/api';
-import type { ExploreCrux, ExploreAuthor, ExploreTag, ExploreParams } from '@/api/public';
+import type {
+  ExploreCrux,
+  ExploreAuthor,
+  ExploreTag,
+  ExploreParams,
+  ExploreSort,
+} from '@/api/public';
+import { useAppStore } from '@/stores/appStore';
+import { useUIStore } from '@/stores/uiStore';
+import MoodResultCard from '@/components/explore/MoodResultCard';
+import { publishBaseUrlFor } from '@/lib/public-url';
 import { Button } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import { formatDate } from '@/lib/format';
 import { APP_NAME } from '@/lib/constants';
 
 type ResultType = 'cruxes' | 'authors';
+
+const KINDS: { id: string; label: string }[] = [
+  { id: '', label: 'Everything' },
+  { id: 'webapp', label: 'Sites' },
+  { id: 'page', label: 'Pages' },
+  { id: 'notes', label: 'Notes' },
+  { id: 'document', label: 'Documents' },
+  { id: 'image', label: 'Images' },
+  { id: 'mood', label: 'Moods' },
+];
+const KIND_LABEL: Record<string, string> = {
+  webapp: 'Site',
+  page: 'Page',
+  notes: 'Notes',
+  document: 'Document',
+  image: 'Image',
+  mood: 'Mood',
+};
 
 function resolveAvatarUrl(meta?: Record<string, unknown>): string | null {
   const url = meta?.avatarUrl || meta?.avatar_url;
@@ -76,7 +104,14 @@ export default function Explore({ onNavigate }: { onNavigate?: () => void }) {
 
   const [q, setQ] = useState('');
   const [resultType, setResultType] = useState<ResultType>('cruxes');
-  const [sort, setSort] = useState<'recent' | 'alpha'>('recent');
+  const [sort, setSort] = useState<ExploreSort>('recent');
+  // Inside the app (services ready) results can be installed / opened locally
+  const appReady = useAppStore((s) => s.ready);
+  const [kind, setKind] = useState<string>(() => useUIStore.getState().exploreKind ?? '');
+  useEffect(() => {
+    // one-shot: the opener asked for a kind
+    if (useUIStore.getState().exploreKind) useUIStore.setState({ exploreKind: null });
+  }, []);
   const [activeTags, setActiveTags] = useState<string[]>([]);
   const [page, setPage] = useState(1);
 
@@ -91,10 +126,10 @@ export default function Explore({ onNavigate }: { onNavigate?: () => void }) {
   // Load popular tags once
   useEffect(() => {
     publicApi
-      .exploreTags(50)
+      .exploreTags(50, kind || undefined)
       .then(setTags)
       .catch(() => setTags([]));
-  }, []);
+  }, [kind]);
 
   // Fetch results
   useEffect(() => {
@@ -108,6 +143,7 @@ export default function Explore({ onNavigate }: { onNavigate?: () => void }) {
       perPage: 24,
     };
     if (q) params.q = q;
+    if (kind) params.kind = kind;
     if (activeTags.length > 0) params.tag = activeTags;
 
     publicApi
@@ -129,7 +165,7 @@ export default function Explore({ onNavigate }: { onNavigate?: () => void }) {
     return () => {
       cancelled = true;
     };
-  }, [q, resultType, sort, activeTags, page]);
+  }, [q, resultType, sort, activeTags, kind, page]);
 
   const handleSearchChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
@@ -158,6 +194,7 @@ export default function Explore({ onNavigate }: { onNavigate?: () => void }) {
     setQ('');
     setActiveTags([]);
     setSort('recent');
+    setKind('');
     setPage(1);
   }, []);
 
@@ -174,7 +211,7 @@ export default function Explore({ onNavigate }: { onNavigate?: () => void }) {
     [navigate, onNavigate],
   );
 
-  const hasFilters = q || activeTags.length > 0 || sort !== 'recent';
+  const hasFilters = q || activeTags.length > 0 || sort !== 'recent' || kind !== '';
 
   // Override navigate in card clicks
   const CruxCard = ({ crux }: { crux: ExploreCrux }) => {
@@ -187,11 +224,35 @@ export default function Explore({ onNavigate }: { onNavigate?: () => void }) {
       >
         <Avatar url={avatarUrl} />
         <div className="flex-1 min-w-0">
-          <div className="font-display text-sm font-medium text-text group-hover:text-accent truncate">
-            {crux.title}
+          <div className="flex items-center gap-2 min-w-0">
+            <div className="font-display text-sm font-medium text-text group-hover:text-accent truncate">
+              {crux.title}
+            </div>
+            {crux.kind && KIND_LABEL[crux.kind] && (
+              <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-badge text-badge-text border border-badge-border shrink-0">
+                {KIND_LABEL[crux.kind]}
+              </span>
+            )}
           </div>
           {crux.description && (
             <p className="text-xs text-text-muted truncate">{crux.description}</p>
+          )}
+          {crux.tags && crux.tags.length > 0 && (
+            <div className="flex flex-wrap gap-1 mt-1">
+              {crux.tags.slice(0, 6).map((t) => (
+                <button
+                  key={t}
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    toggleTag(t);
+                  }}
+                  className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-surface text-text-muted hover:text-accent cursor-pointer"
+                >
+                  #{t}
+                </button>
+              ))}
+            </div>
           )}
         </div>
         <div className="flex items-center gap-3 shrink-0">
@@ -247,7 +308,7 @@ export default function Explore({ onNavigate }: { onNavigate?: () => void }) {
             ref={inputRef}
             type="text"
             onChange={handleSearchChange}
-            placeholder="Search cruxes and authors..."
+            placeholder="Search cruxes, moods and authors…"
             className="w-full pl-9 pr-8 py-2 text-sm bg-surface/50 border border-border rounded-[var(--radius-sm)] text-text placeholder:text-text-muted/50 focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent/30 font-body"
             autoFocus
           />
@@ -310,6 +371,18 @@ export default function Explore({ onNavigate }: { onNavigate?: () => void }) {
             </button>
             <button
               onClick={() => {
+                setSort('newest');
+                setPage(1);
+              }}
+              className={cn(
+                'px-2 py-0.5 rounded-[var(--radius-sm)] cursor-pointer',
+                sort === 'newest' ? 'text-text bg-surface' : 'hover:text-text',
+              )}
+            >
+              Newest
+            </button>
+            <button
+              onClick={() => {
                 setSort('alpha');
                 setPage(1);
               }}
@@ -322,6 +395,32 @@ export default function Explore({ onNavigate }: { onNavigate?: () => void }) {
             </button>
           </div>
         </div>
+
+        {/* Kind chips */}
+        {resultType === 'cruxes' && (
+          <div className="flex flex-wrap gap-1.5 mt-3" role="group" aria-label="Kind">
+            {KINDS.map((k) => (
+              <button
+                key={k.id || 'all'}
+                type="button"
+                onClick={() => {
+                  setKind(k.id);
+                  setActiveTags([]);
+                  setPage(1);
+                }}
+                aria-pressed={kind === k.id}
+                className={cn(
+                  'px-2.5 py-1 rounded-full text-[11px] border cursor-pointer transition-colors',
+                  kind === k.id
+                    ? 'bg-accent-muted text-accent border-accent/40'
+                    : 'bg-surface/50 text-text-muted border-border hover:text-text',
+                )}
+              >
+                {k.label}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Tag cloud */}
@@ -365,9 +464,43 @@ export default function Explore({ onNavigate }: { onNavigate?: () => void }) {
         </div>
       ) : (
         <>
+          {resultType === 'cruxes' && kind === 'mood' && (
+            <div className="grid gap-3 grid-cols-[repeat(auto-fill,minmax(220px,1fr))] p-3">
+              {(results as ExploreCrux[]).map((crux) => (
+                <MoodResultCard
+                  key={crux.id}
+                  crux={crux}
+                  canInstall={appReady}
+                  onOpen={() => handleNavigate(`/${crux.author_username}/${crux.slug}`)}
+                  onInstall={async (apply) => {
+                    const [{ installMoodFromPublished }, { applyMood }, { putBlob }] =
+                      await Promise.all([
+                        import('@/lib/moods/publish-mood'),
+                        import('@/lib/moods/packages'),
+                        import('@/services/blobs'),
+                      ]);
+                    const pkg = await installMoodFromPublished(crux, {
+                      publishBaseUrl: publishBaseUrlFor,
+                      fetchBlob: async (url) => {
+                        const r = await fetch(url);
+                        return r.ok ? r.blob() : null;
+                      },
+                      apiArtifacts: publicApi.getArtifacts,
+                      apiDownload: publicApi.downloadArtifact,
+                      putBlob,
+                    });
+                    if (!pkg) throw new Error('No package found');
+                    if (apply) await applyMood(pkg);
+                  }}
+                />
+              ))}
+            </div>
+          )}
           <div className="flex flex-col">
             {resultType === 'cruxes'
-              ? (results as ExploreCrux[]).map((crux) => <CruxCard key={crux.id} crux={crux} />)
+              ? kind === 'mood'
+                ? null
+                : (results as ExploreCrux[]).map((crux) => <CruxCard key={crux.id} crux={crux} />)
               : (results as ExploreAuthor[]).map((author) => (
                   <AuthorCard key={author.id} author={author} />
                 ))}

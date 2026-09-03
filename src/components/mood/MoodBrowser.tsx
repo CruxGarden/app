@@ -15,6 +15,9 @@ import {
   type MoodPackage,
 } from '@/lib/moods/packages';
 import { useBlobUrl } from '@/hooks/useBlobUrl';
+import { useAuthStore } from '@/stores/authStore';
+import { useUIStore } from '@/stores/uiStore';
+import { formatDate } from '@/lib/format';
 
 /**
  * The Mood Browser: your installed Moods — apply, export, delete — plus
@@ -58,6 +61,45 @@ export default function MoodBrowser() {
   const [note, setNote] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+
+  const doPublish = async (pkg: MoodPackage) => {
+    setBusy(pkg.id);
+    try {
+      const [{ publishMood }, { getServices }, { readBlob }, { publishPipeline }] =
+        await Promise.all([
+          import('@/lib/moods/publish-mood'),
+          import('@/services'),
+          import('@/services/blobs'),
+          import('@/services/publish'),
+        ]);
+      const published = await publishMood(pkg, {
+        services: async () => {
+          const svc = getServices();
+          return {
+            crux: {
+              create: (input) => svc.crux.create(input as never),
+              update: (id, updates) => svc.crux.update(id, updates as never),
+              findById: (id) => svc.crux.findById(id),
+            },
+            artifact: {
+              findByResource: (type, id) => svc.artifact.findByResource(type, id),
+              create: (input) => svc.artifact.create(input as never),
+              upload: (input) => svc.artifact.upload(input as never),
+              delete: (id) => svc.artifact.delete(id),
+            },
+          };
+        },
+        readBlob,
+        publish: (crux, artifacts) => publishPipeline(crux, artifacts as never),
+      });
+      say(`Published "${published.name}" — it's on crux.garden and in Explore → Moods.`);
+    } catch (err) {
+      say(err instanceof Error ? `Publish failed: ${err.message}` : 'Publish failed');
+    } finally {
+      setBusy(null);
+    }
+  };
   const say = (t: string) => {
     setNote(t);
     setTimeout(() => setNote(null), 4000);
@@ -173,6 +215,9 @@ export default function MoodBrowser() {
         >
           Import…
         </Button>
+        <Button variant="ghost" size="sm" onClick={() => useUIStore.getState().openExplore('mood')}>
+          Browse shared Moods
+        </Button>
         <input
           ref={fileRef}
           type="file"
@@ -226,6 +271,11 @@ export default function MoodBrowser() {
                       {layers === 1 ? '' : 's'}
                       {pkg.author ? ` · by ${pkg.author}` : ''}
                     </div>
+                    {pkg.publishedAt && (
+                      <div className="text-[10px] font-mono text-accent truncate">
+                        Published {formatDate(pkg.publishedAt)}
+                      </div>
+                    )}
                   </div>
                   <div className="flex items-center gap-1">
                     <Button size="sm" onClick={() => void doApply(pkg)} disabled={busy !== null}>
@@ -239,6 +289,20 @@ export default function MoodBrowser() {
                       aria-label={`Export ${pkg.name}`}
                     >
                       Export
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => void doPublish(pkg)}
+                      disabled={busy !== null || !isAuthenticated}
+                      title={
+                        isAuthenticated
+                          ? 'Publish to crux.garden'
+                          : 'Connect your account (Settings) to publish'
+                      }
+                      aria-label={`${pkg.publishedCruxId ? 'Republish' : 'Publish'} ${pkg.name}`}
+                    >
+                      {pkg.publishedCruxId ? 'Republish' : 'Publish'}
                     </Button>
                     <button
                       type="button"

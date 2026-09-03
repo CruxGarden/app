@@ -36,6 +36,9 @@ export interface MoodPackage {
   created: string;
   /** Blob fingerprint of a cover image */
   cover?: string;
+  /** The crux this Mood was published as (crux.garden), if any */
+  publishedCruxId?: string;
+  publishedAt?: string;
   theme: MoodThemeFile;
   background: { type: BgType; image?: string };
   persona?: PersonaSettings;
@@ -112,6 +115,9 @@ export function validateMoodPackage(raw: unknown): MoodPackage | null {
     author: typeof p.author === 'string' ? p.author : undefined,
     created: typeof p.created === 'string' ? p.created : new Date().toISOString(),
     cover: typeof p.cover === 'string' && p.cover ? p.cover : undefined,
+    publishedCruxId:
+      typeof p.publishedCruxId === 'string' && p.publishedCruxId ? p.publishedCruxId : undefined,
+    publishedAt: typeof p.publishedAt === 'string' && p.publishedAt ? p.publishedAt : undefined,
     theme: cleanTheme(p.theme, 'Dark'),
     background: { type, image: typeof bg.image === 'string' && bg.image ? bg.image : undefined },
     persona: persona && typeof persona.name === 'string' ? persona : undefined,

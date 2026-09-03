@@ -101,7 +101,7 @@ export interface Crux {
   updated: string;
 }
 
-export type CruxKind = 'webapp' | 'page' | 'document' | 'image' | 'snapshot' | 'notes';
+export type CruxKind = 'webapp' | 'page' | 'document' | 'image' | 'snapshot' | 'notes' | 'mood';
 
 export interface CreateCruxDto {
   id?: string;
