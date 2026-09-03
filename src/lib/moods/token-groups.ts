@@ -155,7 +155,7 @@ export const TOKEN_GROUPS: TokenGroup[] = [
     id: 'code',
     label: 'Markdown & code',
     hint: 'Rendered markdown, code blocks and syntax colors.',
-    match: starts('markdown', 'syntax', 'codeBlock', 'codeLine'),
+    match: starts('markdown', 'syntax', 'codeBlock', 'codeLine', 'editor'),
   },
   {
     id: 'status',

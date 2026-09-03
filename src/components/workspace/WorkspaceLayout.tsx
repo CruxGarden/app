@@ -240,7 +240,9 @@ export default function WorkspaceLayout() {
   };
 
   const handleDelete = async (id: string) => {
-    if (await confirmDialog({ message: 'Delete this file?', confirmLabel: 'Delete', danger: true })) {
+    if (
+      await confirmDialog({ message: 'Delete this file?', confirmLabel: 'Delete', danger: true })
+    ) {
       await deleteArtifact(id);
     }
   };
@@ -379,7 +381,8 @@ export default function WorkspaceLayout() {
             <div
               className="pane-toolbar"
               style={{
-                backgroundColor: `var(${prefix}-header)`,
+                // shorthand, so a header token may be a gradient
+                background: `var(${prefix}-header)`,
                 borderColor: `var(${prefix}-header-border)`,
                 borderWidth: 1,
                 borderStyle: 'solid',

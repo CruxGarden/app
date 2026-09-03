@@ -432,6 +432,7 @@
   --workspace-padding: 4px;
   --overlay-badge-text: #ffffff;
   --overlay-badge: rgba(0, 0, 0, 0.55);
+  --editor-background: var(--bg);
   --syntax-comment: #6a7a6e;
   --syntax-keyword: #7db3a3;
   --syntax-string: #a8d4c4;

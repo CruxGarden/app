@@ -66,6 +66,40 @@ function neonFrames(panes: Record<string, [string, string]>) {
   return result;
 }
 
+// Windows 95 helper: every pane is the same grey window — a raised bevel
+// (light top-left, dark bottom-right, done with a hard diagonal gradient on
+// the frame), a navy title bar with white text, and no radius anywhere.
+function win95Panes(keys: string[]) {
+  const result: Record<string, string> = {};
+  for (const key of keys) {
+    result[key] = '#000080';
+    result[`${key}Body`] = '#c0c0c0';
+    result[`${key}Surface`] = '#dfdfdf';
+    result[`${key}SurfaceSolid`] = '#c0c0c0';
+    result[`${key}Border`] = 'linear-gradient(135deg, #ffffff 0 50%, #404040 50%)';
+    result[`${key}Header`] = 'linear-gradient(90deg, #000080, #1084d0)';
+    result[`${key}HeaderBorder`] = 'transparent';
+    result[`${key}HeaderText`] = '#ffffff';
+    result[`${key}HeaderIcon`] = '#ffffff';
+    result[`${key}HeaderClose`] = '#ffffff';
+    result[`${key}HeaderRadius`] = '0px';
+    result[`${key}HeaderHeight`] = '22px';
+    result[`${key}Radius`] = '0px';
+    result[`${key}RadiusSm`] = '0px';
+    result[`${key}Text`] = '#000000';
+    result[`${key}TextMuted`] = '#3a3a3a';
+    result[`${key}Caption`] = '#000080';
+    result[`${key}Heading`] = '#000000';
+    result[`${key}Accent`] = '#000080';
+    result[`${key}AccentMuted`] = '#b8b8d8';
+    result[`${key}Button`] = '#000080';
+    result[`${key}ButtonIcon`] = '#000080';
+    result[`${key}ButtonActive`] = '#ffffff';
+    result[`${key}ButtonBorderActive`] = '#808080';
+  }
+  return result;
+}
+
 export const MOOD_PRESETS: MoodPresetDef[] = [
   // ════════════════════════════════════════════════════
   // DARK — tonal variations on café (warm, readable)
@@ -422,6 +456,149 @@ export const MOOD_PRESETS: MoodPresetDef[] = [
   // ════════════════════════════════════════════════════
   // LIGHT — tonal variations on parchment/ivory (warm, readable)
   // ════════════════════════════════════════════════════
+
+  // Windows 95 — teal desktop, grey windows, navy title bars, bevels, no radius.
+  {
+    id: 'windows-95',
+    name: 'Windows 95',
+    section: 'Light',
+    overrides: {
+      bg: '#008080',
+      panel: '#c0c0c0',
+      surface: '#dfdfdf',
+      surfaceSolid: '#c0c0c0',
+      accent: '#000080',
+      accentMuted: '#b8b8d8',
+      border: '#808080',
+      text: '#000000',
+      textMuted: '#3a3a3a',
+      heading: '#000000',
+      caption: '#000080',
+      title: '#000000',
+      highlight: '#000080',
+      error: '#c00000',
+      warning: '#a06000',
+      success: '#008000',
+      radius: '0px',
+      radiusSm: '0px',
+      radiusLg: '0px',
+      paneGap: '6px',
+      workspacePadding: '6px',
+      paneBorderWidth: '3px',
+      paneHeaderHeight: '22px',
+      paneHeaderRadius: '0px',
+      paneHeaderPadding: '3px',
+      fontDisplay: "Tahoma, 'MS Sans Serif', Verdana, sans-serif",
+      fontBody: "Tahoma, 'MS Sans Serif', Verdana, sans-serif",
+      fontMono: "'Courier New', Courier, monospace",
+      // Taskbar
+      toolbar: '#c0c0c0',
+      toolbarText: '#000000',
+      toolbarTextMuted: '#3a3a3a',
+      toolbarBorder: '#ffffff',
+      toolbarDivider: '#808080',
+      iconButtonIcon: '#000000',
+      iconButtonIconHover: '#000080',
+      iconButtonHover: '#dfdfdf',
+      iconButtonBorder: '#808080',
+      // Chat: a dialog box
+      chat: '#c0c0c0',
+      chatText: '#000000',
+      chatTextMuted: '#3a3a3a',
+      chatBorder: '#808080',
+      chatUserBubble: '#000080',
+      chatUserBubbleText: '#ffffff',
+      chatUserBubbleBorder: '#000080',
+      chatAiBubble: '#ffffff',
+      chatAiText: '#000000',
+      chatAiBubbleBorder: '#808080',
+      chatInput: '#ffffff',
+      chatInputText: '#000000',
+      chatInputBorder: '#808080',
+      chatInputBorderFocus: '#000080',
+      chatInputPlaceholder: '#808080',
+      chatSendButton: '#c0c0c0',
+      chatSendButtonHover: '#dfdfdf',
+      chatSendButtonIcon: '#000000',
+      // Controls
+      primaryButton: '#c0c0c0',
+      primaryButtonText: '#000000',
+      primaryButtonBorder: '#000000',
+      actionButton: '#c0c0c0',
+      actionButtonText: '#000000',
+      actionButtonBorder: '#808080',
+      badge: '#ffffff',
+      badgeText: '#000080',
+      badgeBorder: '#808080',
+      toggle: '#ffffff',
+      toggleActive: '#000080',
+      toggleThumb: '#808080',
+      toggleThumbActive: '#ffffff',
+      toggleBorder: '#808080',
+      // Cards: icons on the desktop
+      gardenCard: '#c0c0c0',
+      gardenCardHover: '#dfdfdf',
+      gardenCardBorder: '#ffffff',
+      gardenCardBorderHover: '#000080',
+      gardenCardTitle: '#000000',
+      gardenCardText: '#202020',
+      gardenCardMeta: '#3a3a3a',
+      gardenCardThumbnail: '#008080',
+      growthCard: '#ffffff',
+      growthCardHover: '#dfdfdf',
+      growthCardActive: '#b8b8d8',
+      growthCardText: '#000000',
+      growthCardTextMuted: '#3a3a3a',
+      growthCardLabel: '#000080',
+      growthDot: '#808080',
+      growthDotActive: '#000080',
+      overlayBadge: '#000080',
+      overlayBadgeText: '#ffffff',
+      // Explorer
+      fileTree: '#ffffff',
+      fileTreeItemText: '#000000',
+      fileTreeItemIcon: '#000000',
+      fileTreeItemHover: '#dfdfdf',
+      fileTreeItemSelected: '#000080',
+      fileTreeItemTextSelected: '#ffffff',
+      // Notepad
+      editorBackground: '#ffffff',
+      codeBlock: '#ffffff',
+      codeBlockText: '#000000',
+      codeBlockBorder: '#808080',
+      syntaxComment: '#008000',
+      syntaxKeyword: '#000080',
+      syntaxString: '#800000',
+      syntaxNumber: '#800080',
+      syntaxType: '#000080',
+      syntaxFunction: '#000000',
+      syntaxPunctuation: '#000000',
+      syntaxVariable: '#000000',
+      syntaxTag: '#800000',
+      syntaxAttribute: '#ff0000',
+      // Desktop: flat teal, no bloom
+      bloomBg1: '#008080',
+      bloomBg2: '#008080',
+      bloom1: '#008080',
+      bloom2: '#008080',
+      bloom3: '#008080',
+      bloom4: '#008080',
+      bloom5: '#008080',
+      bloom6: '#008080',
+      bloomOpacity: '0',
+      ...win95Panes([
+        'paneCollaboration',
+        'paneArtifacts',
+        'paneWorkshop',
+        'paneDetails',
+        'paneHistory',
+        'paneExport',
+        'paneSync',
+        'panePublish',
+        'paneStore',
+      ]),
+    },
+  },
 
   // Ivory — neutral tint on parchment base
   {
