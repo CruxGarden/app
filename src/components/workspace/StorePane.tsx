@@ -4,8 +4,27 @@ import { getServices, isServicesReady } from '@/services';
 import { formatBytes } from '@/lib/format';
 import type { StoreEntry } from '@/services/sqlite/store.service';
 import { confirmDialog } from '@/stores/dialogStore';
+import { PaneEmpty, PaneToolbar } from './pane-ui';
 
 type EditingCell = { key: string; field: 'key' | 'value' | 'mode' } | null;
+
+function KeyIcon() {
+  return (
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <circle cx="7.5" cy="15.5" r="5.5" />
+      <path d="M21 2l-9.6 9.6M15.5 7.5l3 3L22 7l-3-3" />
+    </svg>
+  );
+}
 
 export default function StorePane() {
   const crux = useCruxStore((s) => s.crux);
@@ -66,7 +85,14 @@ export default function StorePane() {
   const handleDelete = useCallback(
     async (key: string) => {
       if (!crux?.id || !isServicesReady()) return;
-      if (!(await confirmDialog({ message: `Delete key "${key}"?`, confirmLabel: 'Delete', danger: true }))) return;
+      if (
+        !(await confirmDialog({
+          message: `Delete key "${key}"?`,
+          confirmLabel: 'Delete',
+          danger: true,
+        }))
+      )
+        return;
       const { store } = getServices();
       await store.delete(crux.id, key);
       await loadEntries();
@@ -85,7 +111,14 @@ export default function StorePane() {
 
   const handleClearAll = useCallback(async () => {
     if (!crux?.id || !isServicesReady()) return;
-    if (!(await confirmDialog({ message: 'Clear all store entries?', confirmLabel: 'Clear all', danger: true }))) return;
+    if (
+      !(await confirmDialog({
+        message: 'Clear all store entries?',
+        confirmLabel: 'Clear all',
+        danger: true,
+      }))
+    )
+      return;
     const { store } = getServices();
     await store.clear(crux.id);
     await loadEntries();
@@ -112,27 +145,29 @@ export default function StorePane() {
 
   if (!crux) {
     return (
-      <div className="flex items-center justify-center h-full text-[var(--text-muted)] text-sm">
-        No crux loaded
+      <div className="flex flex-col h-full">
+        <PaneEmpty title="No crux loaded" />
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col h-full text-[var(--text)] text-sm">
+    <div className="flex flex-col h-full text-text text-sm">
       {/* Header */}
-      <div className="flex items-center justify-between px-3 py-2 border-b border-[var(--border)]">
-        <span className="text-xs font-mono text-[var(--text-muted)] uppercase">Local</span>
+      <PaneToolbar>
+        <span className="text-[10px] font-mono uppercase tracking-wider text-text-muted">
+          Local store
+        </span>
         <div className="flex items-center gap-2">
           <button
             onClick={() => setAdding(true)}
-            className="text-xs px-2 py-0.5 rounded bg-[var(--surface)] hover:bg-[var(--accent-muted)] text-[var(--text)] transition-colors"
+            className="text-xs px-2 py-0.5 rounded-[var(--radius-sm)] border border-border bg-surface hover:border-accent hover:text-accent text-text transition-colors cursor-pointer"
           >
             + Add key
           </button>
           <button
             onClick={loadEntries}
-            className="text-xs text-[var(--text-muted)] hover:text-[var(--text)]"
+            className="text-xs text-text-muted hover:text-text"
             title="Refresh"
           >
             <svg
@@ -148,11 +183,11 @@ export default function StorePane() {
             </svg>
           </button>
         </div>
-      </div>
+      </PaneToolbar>
 
       {/* Add row */}
       {adding && (
-        <div className="flex items-center gap-2 px-3 py-2 border-b border-[var(--border)] bg-[var(--surface)]">
+        <div className="flex items-center gap-2 px-3 py-2 border-b border-border bg-surface">
           <input
             autoFocus
             value={newKey}
@@ -165,9 +200,9 @@ export default function StorePane() {
               }
             }}
             placeholder="key name"
-            className="flex-1 bg-transparent text-sm font-mono outline-none text-[var(--text)] placeholder:text-[var(--text-muted)]"
+            className="flex-1 bg-transparent text-sm font-mono outline-none text-text placeholder:text-text-muted"
           />
-          <button onClick={handleAdd} className="text-xs text-[var(--accent)]">
+          <button onClick={handleAdd} className="text-xs text-accent">
             Add
           </button>
           <button
@@ -175,7 +210,7 @@ export default function StorePane() {
               setAdding(false);
               setNewKey('');
             }}
-            className="text-xs text-[var(--text-muted)]"
+            className="text-xs text-text-muted"
           >
             Cancel
           </button>
@@ -185,13 +220,25 @@ export default function StorePane() {
       {/* Table */}
       <div className="flex-1 overflow-auto">
         {entries.length === 0 ? (
-          <div className="flex items-center justify-center h-full text-[var(--text-muted)] text-xs">
-            No store entries yet
-          </div>
+          <PaneEmpty
+            icon={<KeyIcon />}
+            title="No store entries yet"
+            description="Key-value data your published crux can read and write with the crux.store SDK."
+            className="h-full"
+          >
+            {!adding && (
+              <button
+                onClick={() => setAdding(true)}
+                className="text-xs text-accent hover:text-text transition-colors cursor-pointer"
+              >
+                Add your first key
+              </button>
+            )}
+          </PaneEmpty>
         ) : (
           <table className="w-full text-xs">
             <thead>
-              <tr className="text-left text-[var(--text-muted)] border-b border-[var(--border)]">
+              <tr className="text-left text-text-muted border-b border-border">
                 <th className="px-3 py-1.5 font-mono font-normal">Key</th>
                 <th className="px-3 py-1.5 font-mono font-normal">Value</th>
                 <th className="px-3 py-1.5 font-mono font-normal w-20">Mode</th>
@@ -200,11 +247,8 @@ export default function StorePane() {
             </thead>
             <tbody>
               {entries.map((entry) => (
-                <tr
-                  key={entry.key}
-                  className="border-b border-[var(--border)] hover:bg-[var(--surface)]"
-                >
-                  <td className="px-3 py-1.5 font-mono text-[var(--accent)]">{entry.key}</td>
+                <tr key={entry.key} className="border-b border-border hover:bg-surface">
+                  <td className="px-3 py-1.5 font-mono text-accent">{entry.key}</td>
                   <td
                     className="px-3 py-1.5 font-mono cursor-pointer max-w-[200px] truncate"
                     onClick={() => startEdit(entry.key, 'value')}
@@ -220,10 +264,10 @@ export default function StorePane() {
                           if (e.key === 'Enter') commitEdit();
                           if (e.key === 'Escape') setEditing(null);
                         }}
-                        className="w-full bg-[var(--bg)] text-[var(--text)] px-1 py-0.5 rounded outline-none ring-1 ring-[var(--accent)]"
+                        className="w-full bg-bg text-text px-1 py-0.5 rounded outline-none ring-1 ring-accent"
                       />
                     ) : (
-                      <span className="text-[var(--text)]">
+                      <span className="text-text">
                         {typeof entry.value === 'string'
                           ? entry.value
                           : JSON.stringify(entry.value)}
@@ -235,8 +279,8 @@ export default function StorePane() {
                       onClick={() => handleToggleMode(entry.key)}
                       className={`text-xs px-1.5 py-0.5 rounded font-mono ${
                         entry.mode === 'public'
-                          ? 'bg-amber-900/30 text-amber-400'
-                          : 'bg-[var(--surface)] text-[var(--text-muted)]'
+                          ? 'bg-warning-bg text-warning-text border border-warning-border'
+                          : 'bg-surface text-text-muted'
                       }`}
                       title={
                         entry.mode === 'public'
@@ -250,7 +294,7 @@ export default function StorePane() {
                   <td className="px-3 py-1.5">
                     <button
                       onClick={() => handleDelete(entry.key)}
-                      className="text-[var(--text-muted)] hover:text-[var(--error)] transition-colors"
+                      className="text-text-muted hover:text-error transition-colors"
                       title="Delete key"
                     >
                       <svg
@@ -274,12 +318,12 @@ export default function StorePane() {
       </div>
 
       {/* Footer */}
-      <div className="flex items-center justify-between px-3 py-1.5 border-t border-[var(--border)] text-[var(--text-muted)] text-xs">
+      <div className="flex items-center justify-between px-3 py-1.5 border-t border-border text-text-muted text-xs">
         <span>
           {entries.length} key{entries.length !== 1 ? 's' : ''} · {formatBytes(totalSize)}
         </span>
         {entries.length > 0 && (
-          <button onClick={handleClearAll} className="hover:text-[var(--error)] transition-colors">
+          <button onClick={handleClearAll} className="hover:text-error transition-colors">
             Clear all
           </button>
         )}

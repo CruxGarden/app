@@ -1,6 +1,7 @@
 import { useCruxStore } from '@/stores/cruxStore';
 import { useAppStore } from '@/stores/appStore';
 import MetadataContent from './MetadataContent';
+import { PaneEmpty } from './pane-ui';
 
 export default function MetadataPane() {
   const crux = useCruxStore((s) => s.crux);
@@ -12,9 +13,7 @@ export default function MetadataPane() {
   if (!crux) {
     return (
       <div className="flex flex-col h-full">
-        <div className="text-text-muted p-4">
-          <p className="text-xs text-center">No crux loaded</p>
-        </div>
+        <PaneEmpty title="No crux loaded" />
       </div>
     );
   }

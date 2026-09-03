@@ -2,10 +2,9 @@ import { useState, useCallback, useMemo } from 'react';
 import { useCruxStore } from '@/stores/cruxStore';
 import { useAppStore } from '@/stores/appStore';
 import { exportCrux, exportArtifactsZip } from '@/services/crux-io';
-import { cn } from '@/lib/cn';
 import { formatBytes } from '@/lib/format';
-import { Spinner } from '@/components/ui';
 import { usePaneWidth } from '@/hooks/usePaneWidth';
+import { PaneEmpty, PaneAction, PaneHint, PaneNote } from './pane-ui';
 function ExportIcon() {
   return (
     <svg
@@ -151,13 +150,13 @@ export default function ExportPane() {
           <p className="text-xs text-text-muted">Enlarge pane to view contents</p>
         </div>
       ) : !crux ? (
-        <div className="flex-1 flex items-center justify-center p-4">
-          <p className="text-xs text-text-muted">No crux loaded</p>
-        </div>
+        <PaneEmpty title="No crux loaded" />
       ) : !hasContent ? (
-        <div className="flex-1 flex items-center justify-center p-4">
-          <p className="text-xs text-text-muted">Nothing to export yet</p>
-        </div>
+        <PaneEmpty
+          icon={<ExportIcon />}
+          title="Nothing to export yet"
+          description="Once this crux has files or a conversation, you can download it as an archive."
+        />
       ) : (
         <div className="flex-1 overflow-y-auto min-h-0 p-3 flex flex-col gap-3">
           {/* Archive contents (collapsible) */}
@@ -219,82 +218,34 @@ export default function ExportPane() {
           {/* Export buttons */}
           <div className="flex flex-col gap-3">
             <div className="flex flex-col gap-1.5">
-              {exporting ? (
-                <button
-                  disabled
-                  className={cn(
-                    'w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-[var(--radius-sm)]',
-                    'text-sm font-medium font-body',
-                    'bg-accent-muted text-accent border border-accent/20 cursor-wait',
-                  )}
-                >
-                  <Spinner size={14} />
-                  Exporting...
-                </button>
-              ) : (
-                <button
-                  onClick={handleExport}
-                  className={cn(
-                    'w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-[var(--radius-sm)]',
-                    'text-sm font-medium font-body transition-all cursor-pointer',
-                    'bg-accent-muted text-accent border border-accent/20 hover:border-accent',
-                  )}
-                >
-                  <ExportIcon />
-                  Export Crux
-                </button>
-              )}
-              <p className="text-[10px] text-text-muted text-center">
-                Full archive — artifacts, conversation, and version history
-              </p>
+              <PaneAction
+                onClick={handleExport}
+                busy={exporting && 'Exporting...'}
+                icon={<ExportIcon />}
+              >
+                Export Crux
+              </PaneAction>
+              <PaneHint>Full archive: artifacts, conversation, and version history</PaneHint>
             </div>
 
             {artifacts.length > 0 && (
               <div className="flex flex-col gap-1.5">
-                {exportingZip ? (
-                  <button
-                    disabled
-                    className={cn(
-                      'w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-[var(--radius-sm)]',
-                      'text-sm font-medium font-body',
-                      'bg-surface text-text-muted border border-border cursor-wait',
-                    )}
-                  >
-                    <Spinner size={14} />
-                    Exporting...
-                  </button>
-                ) : (
-                  <button
-                    onClick={handleExportZip}
-                    disabled={exporting}
-                    className={cn(
-                      'w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-[var(--radius-sm)]',
-                      'text-sm font-medium font-body transition-all cursor-pointer',
-                      'bg-surface text-text-muted border border-border hover:border-text-muted hover:text-text',
-                      exporting && 'opacity-50 cursor-not-allowed',
-                    )}
-                  >
-                    <ZipIcon />
-                    Export Artifacts
-                  </button>
-                )}
-                <p className="text-[10px] text-text-muted text-center">
-                  Just the files — ready to unzip and use
-                </p>
+                <PaneAction
+                  tone="secondary"
+                  onClick={handleExportZip}
+                  disabled={exporting}
+                  busy={exportingZip && 'Exporting...'}
+                  icon={<ZipIcon />}
+                >
+                  Export Artifacts
+                </PaneAction>
+                <PaneHint>Just the files, ready to unzip and use</PaneHint>
               </div>
             )}
           </div>
 
-          {/* Progress */}
           {progress && (
-            <p
-              className={cn(
-                'text-[11px] font-mono text-center truncate',
-                progress === 'Export failed' ? 'text-error' : 'text-text-muted',
-              )}
-            >
-              {progress}
-            </p>
+            <PaneNote tone={progress === 'Export failed' ? 'error' : 'muted'}>{progress}</PaneNote>
           )}
         </div>
       )}

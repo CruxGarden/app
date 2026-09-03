@@ -6,10 +6,10 @@ import { cn } from '@/lib/cn';
 import { formatDateTime } from '@/lib/format';
 import { publicCruxUrl } from '@/lib/public-url';
 import { type PublishPhase } from '@/services/publish';
-import { Spinner } from '@/components/ui';
 import { usePaneWidth } from '@/hooks/usePaneWidth';
 import CreateAuthorModal from '@/components/auth/CreateAuthorModal';
 import ConnectAccount from '@/components/auth/ConnectAccount';
+import { PaneEmpty, PaneSection, PaneAction } from './pane-ui';
 function PublishIcon() {
   return (
     <svg
@@ -174,9 +174,7 @@ export default function PublishPane() {
   if (!crux) {
     return (
       <div ref={ref} className="flex flex-col h-full">
-        <div className="flex-1 flex items-center justify-center p-4">
-          <p className="text-xs text-text-muted">No crux loaded</p>
-        </div>
+        <PaneEmpty title="No crux loaded" />
       </div>
     );
   }
@@ -187,9 +185,11 @@ export default function PublishPane() {
   if (artifacts.length === 0 && !isPublished) {
     return (
       <div ref={ref} className="flex flex-col h-full">
-        <div className="flex-1 flex items-center justify-center p-4">
-          <p className="text-xs text-text-muted">Nothing to share yet</p>
-        </div>
+        <PaneEmpty
+          icon={<PublishIcon />}
+          title="Nothing to share yet"
+          description="Add a file or ask the AI to make something. Sharing puts it live on crux.garden."
+        />
       </div>
     );
   }
@@ -204,16 +204,13 @@ export default function PublishPane() {
         <div className="flex-1 overflow-y-auto min-h-0 p-3 flex flex-col gap-3">
           {/* Status card */}
           {isPublished && publishedAt ? (
-            <div className="rounded-[var(--radius-sm)] border border-border bg-surface/50 p-3 flex flex-col gap-2">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-1.5">
-                  <span className="w-1.5 h-1.5 rounded-full bg-accent shrink-0" />
-                  <span className="text-[11px] font-mono text-accent">Shared</span>
-                </div>
-                <span className="text-[11px] font-mono text-text-muted">v{publishedVersion}</span>
-              </div>
-              <div className="text-[10px] font-mono text-text-muted">
-                {formatDateTime(publishedAt)}
+            <PaneSection label="Status" aside={`v${publishedVersion}`}>
+              <div className="flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-accent shrink-0" />
+                <span className="text-[11px] font-mono text-accent">Shared</span>
+                <span className="text-[10px] font-mono text-text-muted ml-auto">
+                  {formatDateTime(publishedAt)}
+                </span>
               </div>
               {hasUnpublishedChanges &&
                 lastEditedAt &&
@@ -225,11 +222,14 @@ export default function PublishPane() {
                     </span>
                   </div>
                 )}
-            </div>
+            </PaneSection>
           ) : (
-            <div className="rounded-[var(--radius-sm)] border border-border/60 border-dashed p-3">
-              <p className="text-[11px] font-mono text-text-muted text-center">Not shared</p>
-            </div>
+            <PaneSection label="Status" tone="dashed">
+              <p className="text-[11px] text-text-muted">
+                Not shared yet. Sharing publishes this crux at its own address, with its
+                conversation open to visitors.
+              </p>
+            </PaneSection>
           )}
 
           {/* Discoverable toggle */}
@@ -260,17 +260,7 @@ export default function PublishPane() {
 
           {/* Action button — state-aware, no disabled green */}
           {publishing ? (
-            <button
-              disabled
-              className={cn(
-                'w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-[var(--radius-sm)]',
-                'text-sm font-medium font-body',
-                'bg-accent-muted text-accent border border-accent/20 cursor-wait',
-              )}
-            >
-              <Spinner size={14} />
-              {PHASE_LABELS[phase ?? 'sync']}
-            </button>
+            <PaneAction busy={PHASE_LABELS[phase ?? 'sync']}>Share</PaneAction>
           ) : isPublished && !hasUnpublishedChanges ? (
             <div
               className={cn(
@@ -294,17 +284,9 @@ export default function PublishPane() {
               />
             </div>
           ) : (
-            <button
-              onClick={handlePublish}
-              className={cn(
-                'w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-[var(--radius-sm)]',
-                'text-sm font-medium font-body transition-all cursor-pointer',
-                'bg-accent-muted text-accent border border-accent/20 hover:border-accent',
-              )}
-            >
-              <PublishIcon />
+            <PaneAction onClick={handlePublish} icon={<PublishIcon />}>
               {isPublished ? 'Update' : 'Share'}
-            </button>
+            </PaneAction>
           )}
 
           {/* Failure — a silent no-op is indistinguishable from success here */}

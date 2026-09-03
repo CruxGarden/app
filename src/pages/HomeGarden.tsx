@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect } from 'react';
 import { useAppStore } from '@/stores/appStore';
 import { useAvatarUrl } from '@/hooks/useAvatarUrl';
 import { useGarden } from '@/hooks/useGarden';
+import { useGardenStore } from '@/stores/gardenStore';
 
 import { APP_NAME } from '@/lib/constants';
 import { GardenGrid, GardenSearch } from '@/components/garden';
@@ -54,6 +55,7 @@ export default function HomeGarden() {
   const { cruxList, loading, search, sortBy, setSearch, setSortBy, handleClearSearch, deleteCrux } =
     useGarden();
 
+  const thumbnails = useGardenStore((s) => s.thumbnails);
   const [showNewCrux, setShowNewCrux] = useState(false);
 
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -164,8 +166,24 @@ export default function HomeGarden() {
             Clear search
           </button>
         </div>
+      ) : cruxList.length === 0 ? (
+        <div className="bg-panel border border-border rounded-[var(--radius)] flex flex-col items-center text-center py-14 px-6">
+          <div className="w-12 h-12 rounded-full bg-accent-muted text-accent flex items-center justify-center mb-4">
+            <PlusCircleIcon />
+          </div>
+          <p className="font-display text-base text-text mb-1">Your garden is empty</p>
+          <p className="text-sm text-text-muted max-w-[34ch] mb-5">
+            Start from a template or a blank page and talk to the AI to grow it.
+          </p>
+          <Button onClick={() => setShowNewCrux(true)}>Plant your first crux</Button>
+        </div>
       ) : (
-        <GardenGrid cruxes={cruxList} onDelete={setDeletingId} sortBy={sortBy} />
+        <GardenGrid
+          cruxes={cruxList}
+          onDelete={setDeletingId}
+          sortBy={sortBy}
+          thumbnails={thumbnails}
+        />
       )}
 
       {/* Delete confirmation modal */}
