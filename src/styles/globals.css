@@ -261,6 +261,7 @@
   /* ── V3: Error/Warning/Success ────────────────────── */
   --color-error-bg: var(--error-bg);
   --color-error-text: var(--error-text);
+  --color-on-error: var(--on-error);
   --color-error-border: var(--error-border);
   --color-warning: var(--warning);
   --color-warning-bg: var(--warning-bg);
@@ -371,6 +372,8 @@
   --accent: #7db3a3;
   --accent-muted: #1a2723;
   --error: #e63946;
+  /* Text on top of --error (danger buttons). Always white: red buttons must read the same in every theme. */
+  --on-error: #ffffff;
   --error-muted: rgba(230, 57, 70, 0.15);
   --contrast: #ffffff;
   --overlay: rgba(0, 0, 0, 0.5);

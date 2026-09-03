@@ -107,7 +107,7 @@ export default function MessageInput({
             onClick={onStop}
             className={cn(
               'px-3 py-2 rounded-[var(--radius-sm)] text-sm font-body',
-              'bg-danger-button text-danger-button-text border border-danger-button-border',
+              'bg-danger-button text-on-error border border-danger-button-border',
               'hover:bg-danger-button-hover transition-colors cursor-pointer',
             )}
           >
