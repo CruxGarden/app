@@ -66,7 +66,7 @@ export const SCALES: Record<string, number[]> = {
 
 /** What each layer type means by "params", with defaults. */
 export const LAYER_DEFAULTS: Record<LayerType, Record<string, number | string | boolean>> = {
-  music: { fingerprint: '', loop: true, rate: 1, fadeIn: 2, fadeOut: 2 },
+  music: { fingerprint: '', fileName: '', loop: true, rate: 1, fadeIn: 2, fadeOut: 2 },
   rain: { intensity: 0.5, brightness: 0.5, drops: 0.4 },
   wind: { strength: 0.5, gust: 0.4, height: 0.5 },
   noise: { color: 'brown', drift: 0.3, cutoff: 0.5 },
@@ -81,7 +81,7 @@ export const LAYER_DEFAULTS: Record<LayerType, Record<string, number | string | 
   },
   pad: { waveform: 'triangle', attack: 3, release: 6, shimmer: 0.3, octave: 3, changeEvery: 8 },
   melody: { instrument: 'sine', density: 0.25, octave: 5, humanize: 0.3, echo: 0.4 },
-  sample: { fingerprint: '', loop: true, rate: 1 },
+  sample: { fingerprint: '', fileName: '', loop: true, rate: 1 },
 };
 
 export const LAYER_LABELS: Record<LayerType, string> = {

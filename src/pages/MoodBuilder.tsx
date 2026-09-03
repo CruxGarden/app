@@ -5,8 +5,8 @@ import { Button } from '@/components/ui';
 
 const MoodEditor = lazy(() => import('@/components/mood/Mood'));
 
-type Tab = 'palette' | 'theme' | 'background' | 'persona';
-const TABS: Tab[] = ['palette', 'theme', 'background', 'persona'];
+type Tab = 'palette' | 'theme' | 'resonance' | 'background' | 'persona';
+const TABS: Tab[] = ['palette', 'theme', 'resonance', 'background', 'persona'];
 
 /**
  * The Mood Builder: presets, the full theme token editor, background and
