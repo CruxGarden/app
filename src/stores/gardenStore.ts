@@ -14,6 +14,8 @@ interface GardenState {
   sortBy: SortField;
 
   load: () => Promise<void>;
+  /** Delete a crux and refresh the list. */
+  deleteCrux: (id: string) => Promise<void>;
   setSearch: (query: string) => void;
   setSortBy: (field: SortField) => void;
   refresh: () => Promise<void>;
@@ -40,6 +42,12 @@ export const useGardenStore = create<GardenState>((set, get) => ({
   loading: true,
   search: '',
   sortBy: 'created',
+
+  deleteCrux: async (id: string) => {
+    const { crux: cruxService } = getServices();
+    await cruxService.delete(id);
+    await get().load();
+  },
 
   load: async () => {
     set({ loading: true });

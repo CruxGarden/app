@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { getSetting, setSetting } from '@/services/settings';
 import { SettingsKey } from '@/lib/constants';
 import type { MosaicNode } from 'react-mosaic-component';
+import type { TemplateLayout } from '@/templates';
 
 // ── Pane Types ──────────────────────────────────────────
 
@@ -105,6 +106,13 @@ interface UIState {
   moodPanelOpen: boolean;
 
   // ── Layout actions ──
+
+  /** Persist a new crux's initial pane layout (template preset or a blank fallback). */
+  seedCruxLayout: (
+    cruxId: string,
+    layout: TemplateLayout | null,
+    fallback: 'ai' | 'manual',
+  ) => void;
   setActiveCrux: (id: string | null) => void;
   togglePane: (pane: PaneType) => void;
   setPaneVisible: (pane: PaneType, visible: boolean) => void;
@@ -502,6 +510,34 @@ export const useUIStore = create<UIState>()((set, get) => ({
 
   // ── Layout actions ──
 
+  seedCruxLayout: (cruxId, layout, fallback) => {
+    const visibility: Record<string, boolean> = {};
+    for (const pane of DEFAULT_PANE_ORDER) visibility[pane] = false;
+    if (layout) {
+      for (const pane of layout.panes) visibility[pane] = true;
+      setSetting(
+        cruxLayoutKey(cruxId),
+        JSON.stringify({
+          paneOrder: DEFAULT_PANE_ORDER,
+          paneVisibility: visibility,
+          mosaicLayout: layout.mosaic,
+        }),
+      );
+      return;
+    }
+    // Blank workspace: chat + details when an AI key exists (the AI builds),
+    // chat + files + workshop when the user will build by hand.
+    visibility.collaboration = true;
+    if (fallback === 'ai') visibility.details = true;
+    else {
+      visibility.artifacts = true;
+      visibility.workshop = true;
+    }
+    setSetting(
+      cruxLayoutKey(cruxId),
+      JSON.stringify({ paneOrder: DEFAULT_PANE_ORDER, paneVisibility: visibility }),
+    );
+  },
   setActiveCrux: (id) => {
     // Flush any pending debounced scroll save
     if (scrollSaveTimer) {

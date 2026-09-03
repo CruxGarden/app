@@ -88,12 +88,9 @@ export async function resolveAvatarUrlAsync(
     if (cached) return cached;
 
     try {
-      const { getSqliteClient } = await import('@/services/sqlite/client');
-      const db = getSqliteClient();
-      const data = await db.blobRead(fingerprint);
+      const { blobObjectUrl } = await import('@/services/blobs');
       const mimeType = (author?.meta?.avatarMimeType as string) || 'image/jpeg';
-      const blob = new Blob([data.buffer as ArrayBuffer], { type: mimeType });
-      const url = URL.createObjectURL(blob);
+      const url = await blobObjectUrl(fingerprint, mimeType);
       _avatarUrlCache.set(fingerprint, url);
       return url;
     } catch {

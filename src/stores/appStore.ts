@@ -14,11 +14,6 @@ async function lazyGetDb() {
   return getSqliteClient();
 }
 
-async function lazyHashContent(content: Uint8Array): Promise<string> {
-  const { hashContent } = await import('@/services/sqlite/helpers');
-  return hashContent(content);
-}
-
 // Re-use the shared avatar URL cache from authStore
 
 /**
@@ -169,11 +164,10 @@ export const useAppStore = create<AppState>((set, get) => ({
     const { isAuthenticated } = useAuthStore.getState();
     if (!author) throw new Error('No author');
 
-    // Write avatar to OPFS blob store (content-addressable)
-    const buffer = new Uint8Array(await file.arrayBuffer());
-    const fingerprint = await lazyHashContent(buffer);
+    // Write avatar to the Blob Store (content-addressed)
+    const { putBlob } = await import('@/services/blobs');
+    const fingerprint = await putBlob(file);
     const db = await lazyGetDb();
-    await db.blobWrite(fingerprint, buffer);
 
     // Delete old blob if fingerprint changed
     const oldFingerprint = author.meta?.avatarFingerprint;

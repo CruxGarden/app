@@ -1,3 +1,4 @@
+import type { CruxKind } from '@/api/types';
 // ── Re-export entity types from API types ────────────
 // The service layer uses the same entity shapes as the API client.
 // No duplication — single source of truth.
@@ -29,7 +30,7 @@ export interface CreateCruxInput {
   description?: string;
   data?: string;
   type?: string;
-  kind?: 'webapp' | 'page' | 'document' | 'image' | 'snapshot';
+  kind?: CruxKind;
   authorId?: string;
   homeId?: string;
   meta?: Record<string, unknown>;
@@ -41,7 +42,7 @@ export interface UpdateCruxInput {
   description?: string;
   data?: string;
   type?: string;
-  kind?: 'webapp' | 'page' | 'document' | 'image' | 'snapshot' | null;
+  kind?: CruxKind | null;
   status?: 'living' | 'frozen';
   visibility?: 'public' | 'private' | 'unlisted';
   discoverable?: boolean;

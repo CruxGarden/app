@@ -308,8 +308,8 @@ export default function WorkspaceLayout() {
       if (!artifact?.fingerprint) return;
       if (!can(Capability.Transcode)) return;
 
-      const { getSqliteClient } = await import('@/services/sqlite/client');
-      const content = await getSqliteClient().blobRead(artifact.fingerprint);
+      const { readBlob } = await import('@/services/blobs');
+      const content = await readBlob(artifact.fingerprint);
       if (!content || content.length === 0) return;
 
       const inputName = displayNameOf(artifact, 'media');
