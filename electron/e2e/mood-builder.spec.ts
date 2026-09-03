@@ -30,15 +30,34 @@ test.describe('mood builder', () => {
       const tile = page.locator('.mosaic-tile').first();
       await expect(tile).toHaveCSS('margin-left', '4px');
 
-      // Mood Builder → Theme → Shape & layout → Pane gap
-      await page.getByRole('button', { name: 'Mood Builder' }).click();
+      // Mood modal → Open Mood Builder → lands on the Theme tab
+      await page.getByRole('button', { name: 'Mood' }).click();
+      await expect(page.getByRole('heading', { name: 'Mood' })).toBeVisible();
+      await page.getByRole('button', { name: 'Open Mood Builder' }).click();
       await expect(page.getByRole('heading', { name: 'Mood Builder' })).toBeVisible();
-      await page.getByRole('button', { name: 'Theme', exact: true }).click();
+      await expect(page.getByRole('heading', { name: 'Mood', exact: true })).toHaveCount(0);
+
+      // Shape & layout: gutters can be zeroed completely
       await page.getByRole('button', { name: 'Shape & layout' }).click();
       const gap = page.getByRole('textbox', { name: 'Pane gap value' });
-      await gap.fill('12px');
+      await gap.fill('0px');
       await gap.press('Enter');
-      await expect.poll(() => cssVar('--pane-gap')).toBe('12px');
+      const pad = page.getByRole('textbox', { name: 'Workspace padding value' });
+      await pad.fill('0px');
+      await pad.press('Enter');
+      await expect.poll(() => cssVar('--pane-gap')).toBe('0px');
+
+      // Each pane has its own radius and label color
+      await page.getByRole('button', { name: 'Collaboration pane' }).click();
+      const radius = page.getByRole('textbox', { name: 'Radius value', exact: true });
+      await radius.fill('0px');
+      await radius.press('Enter');
+      await expect.poll(() => cssVar('--pane-collaboration-radius')).toBe('0px');
+      await page.getByRole('button', { name: 'Share pane' }).click();
+      const heading = page.getByRole('textbox', { name: 'Heading value' });
+      await heading.fill('#ff0000');
+      await heading.press('Enter');
+      await expect.poll(() => cssVar('--pane-publish-heading')).toBe('#ff0000');
 
       // Workshop pane body color, without touching the other panes
       await page.getByRole('button', { name: 'Workshop pane' }).click();
@@ -48,10 +67,20 @@ test.describe('mood builder', () => {
       await expect.poll(() => cssVar('--pane-workshop-body')).toBe('#112233');
       await page.screenshot({ path: 'e2e/.results/mood-1-theme-tab.png' });
 
-      // Back in the workspace: the chrome reflects both edits
+      // Back in the workspace: the chrome reflects every edit
       await page.getByRole('button', { name: 'Done' }).click();
       await expect(page.getByRole('button', { name: 'New file' })).toBeVisible({ timeout: 30_000 });
-      await expect(tile).toHaveCSS('margin-left', '12px');
+      await expect(tile).toHaveCSS('margin-left', '0px');
+      await expect(page.locator('.mosaic-root')).toHaveCSS('left', '0px');
+      await expect(page.locator('.mosaic-window.pane-collaboration')).toHaveCSS(
+        'border-radius',
+        '0px',
+      );
+      await expect(page.locator('.mosaic-window.pane-workshop')).toHaveCSS('border-radius', '8px');
+      await page.getByRole('button', { name: 'Toggle share' }).click();
+      await expect(
+        page.locator('.mosaic-window.pane-publish').getByText('Nothing to share yet'),
+      ).toHaveCSS('color', 'rgb(255, 0, 0)');
       const workshop = page.locator('.mosaic-window.pane-workshop');
       await expect(workshop).toHaveCSS('background-color', 'rgb(17, 34, 51)');
       const collaboration = page.locator('.mosaic-window.pane-collaboration');
@@ -69,7 +98,7 @@ test.describe('mood builder', () => {
         const v = await again.page.evaluate(() =>
           getComputedStyle(document.documentElement).getPropertyValue('--pane-gap').trim(),
         );
-        expect(v).toBe('12px');
+        expect(v).toBe('0px');
       } finally {
         await again.app.close();
       }

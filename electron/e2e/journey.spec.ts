@@ -82,7 +82,10 @@ test.describe('acceptance journey (local half)', () => {
 
       // ── Snapshot with a label ─────────────────────────────────────────
       await page.getByRole('button', { name: 'Toggle history' }).click();
-      await page.getByRole('button', { name: /snapshot/i }).first().click();
+      await page
+        .getByRole('button', { name: /snapshot/i })
+        .first()
+        .click();
       const label = page.getByPlaceholder(/label/i);
       await label.fill('First post');
       await label.press('Enter');

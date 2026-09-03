@@ -8,7 +8,10 @@ import { launchApp } from './launch';
 test.describe('ui survey', () => {
   test.setTimeout(240_000);
 
-  test.skip(!process.env.CRUX_SURVEY, 'opt-in: CRUX_SURVEY=1 npx playwright test e2e/survey.spec.ts');
+  test.skip(
+    !process.env.CRUX_SURVEY,
+    'opt-in: CRUX_SURVEY=1 npx playwright test e2e/survey.spec.ts',
+  );
 
   test('home + panes', async () => {
     const { app, page } = await launchApp();
@@ -53,7 +56,10 @@ test.describe('ui survey', () => {
       await page.keyboard.press('Meta+s');
       await page.waitForTimeout(2500);
       await togglePane(page, /^Toggle history$/i);
-      await page.getByRole('button', { name: /snapshot/i }).first().click();
+      await page
+        .getByRole('button', { name: /snapshot/i })
+        .first()
+        .click();
       const label = page.getByPlaceholder('Label (optional)');
       await label.fill('first light');
       await label.press('Enter');

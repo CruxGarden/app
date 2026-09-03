@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useState } from 'react';
-import { Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { Outlet } from 'react-router-dom';
 import TopBar from './TopBar';
 import { Modal, DialogHost } from '@/components/ui';
 import { useUIStore } from '@/stores/uiStore';
@@ -9,6 +9,7 @@ import { dismissSplash } from '@/lib/splash';
 const Console = lazy(() => import('@/components/keeper/Console'));
 const Settings = lazy(() => import('@/pages/Settings'));
 const Explore = lazy(() => import('@/pages/Explore'));
+const Mood = lazy(() => import('@/components/mood/Mood'));
 
 export default function Shell() {
   const [servicesReady, setServicesReady] = useState(useAppStore.getState().ready);
@@ -18,8 +19,7 @@ export default function Shell() {
   const setConsoleOpen = useUIStore((s) => s.setConsoleOpen);
   const settingsOpen = useUIStore((s) => s.settingsOpen);
   const exploreOpen = useUIStore((s) => s.exploreOpen);
-  const navigate = useNavigate();
-  const { pathname } = useLocation();
+  const moodPanelOpen = useUIStore((s) => s.moodPanelOpen);
 
   useEffect(() => {
     if (servicesReady) return;
@@ -62,11 +62,10 @@ export default function Shell() {
         return;
       }
 
-      // Cmd+M → the Mood Builder (again to leave it)
+      // Cmd+M → toggle the Mood modal
       if (meta && e.key === 'm') {
         e.preventDefault();
-        if (pathname === '/mood') navigate(-1);
-        else navigate('/mood');
+        useUIStore.getState().toggleMoodPanel();
         return;
       }
 
@@ -79,7 +78,7 @@ export default function Shell() {
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [consoleOpen, setConsoleOpen, aiEnabled, navigate, pathname]);
+  }, [consoleOpen, setConsoleOpen, aiEnabled]);
 
   return (
     <div className="flex flex-col h-screen overflow-hidden">
@@ -120,6 +119,18 @@ export default function Shell() {
           </Suspense>
         </Modal>
       )}
+
+      {/* Mood Modal — quick picks; the Mood Builder page has the full editor */}
+      <Modal
+        open={moodPanelOpen}
+        onClose={() => useUIStore.getState().setMoodPanelOpen(false)}
+        size="screen"
+        title="Mood"
+      >
+        <Suspense fallback={null}>
+          <Mood compact />
+        </Suspense>
+      </Modal>
 
       {/* Settings Modal */}
       <Modal

@@ -353,14 +353,14 @@ export default function PublishPane() {
                 aria-label="Discoverable"
                 onClick={() => updateCrux({ discoverable: !crux.discoverable })}
                 className={cn(
-                  'relative w-7 h-4 rounded-full transition-colors shrink-0 cursor-pointer',
-                  crux.discoverable ? 'bg-accent' : 'bg-border',
+                  'relative w-7 h-4 rounded-full transition-colors shrink-0 cursor-pointer border border-toggle-border',
+                  crux.discoverable ? 'bg-toggle-active' : 'bg-toggle',
                 )}
               >
                 <span
                   className={cn(
-                    'absolute top-0.5 left-0.5 w-3 h-3 rounded-full bg-white transition-transform',
-                    crux.discoverable && 'translate-x-3',
+                    'absolute top-0.5 left-0.5 w-3 h-3 rounded-full transition-transform',
+                    crux.discoverable ? 'translate-x-3 bg-toggle-thumb-active' : 'bg-toggle-thumb',
                   )}
                 />
               </button>

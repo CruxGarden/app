@@ -32,7 +32,7 @@ export function PaneEmpty({ icon, title, description, children, className }: Pan
           {icon}
         </div>
       )}
-      <p className="text-sm font-body text-text">{title}</p>
+      <p className="text-sm font-body text-heading">{title}</p>
       {description && (
         <p className="text-xs text-text-muted max-w-[26ch] leading-relaxed">{description}</p>
       )}
@@ -68,7 +68,7 @@ export function PaneSection({
     >
       {(label || aside) && (
         <div className="flex items-center justify-between gap-2 mb-1.5">
-          <span className="text-[10px] font-mono uppercase tracking-wider text-text-muted">
+          <span className="text-[10px] font-mono uppercase tracking-wider text-caption">
             {label}
           </span>
           {aside && <span className="text-[11px] font-mono text-text-muted">{aside}</span>}

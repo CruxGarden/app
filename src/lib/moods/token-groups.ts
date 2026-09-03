@@ -96,7 +96,7 @@ export const TOKEN_GROUPS: TokenGroup[] = [
   ...PANES.map<TokenGroup>((p) => ({
     id: `pane-${p.id.toLowerCase()}`,
     label: `${p.label} pane`,
-    hint: `Header, toggle button and body surface of the ${p.label} pane. Body tokens inherit the shared ones until you set them.`,
+    hint: `Everything about the ${p.label} pane: header, toggle button, body surface, text, labels, radii. Tokens inherit the shared ones until you set them.`,
     strip: `pane${p.id}`,
     match: (k) => k === `pane${p.id}` || k.startsWith(`pane${p.id}`),
   })),
@@ -133,7 +133,7 @@ export const TOKEN_GROUPS: TokenGroup[] = [
     id: 'cards',
     label: 'Cards & lists',
     hint: 'Garden cards, snapshot cards, the file tree.',
-    match: starts('gardenCard', 'growth', 'fileTree'),
+    match: starts('gardenCard', 'growth', 'fileTree', 'overlayBadge'),
   },
   {
     id: 'surfaces',
@@ -194,6 +194,7 @@ export function groupTokens(): { group: TokenGroup; keys: string[] }[] {
 
 export function tokenKind(key: string): TokenKind {
   if (LAYOUT_KEYS.has(key)) return 'length';
+  if (/(Radius|RadiusSm|Height|Padding|Width|Gap)$/.test(key)) return 'length';
   if (/(Opacity|Speed|Density)$/.test(key)) return 'number';
   if (key.startsWith('font')) return 'font';
   return 'color';

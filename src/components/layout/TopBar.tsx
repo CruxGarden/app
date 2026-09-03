@@ -193,10 +193,10 @@ export default function TopBar() {
           <SearchIcon />
         </IconButton>
         <IconButton
-          label="Mood Builder"
+          label="Mood"
           size="sm"
-          onClick={() => navigate('/mood')}
-          tooltip={{ label: 'Mood Builder', shortcut: 'M' }}
+          onClick={() => useUIStore.getState().toggleMoodPanel()}
+          tooltip={{ label: 'Mood', shortcut: 'M' }}
         >
           <MoodIcon />
         </IconButton>

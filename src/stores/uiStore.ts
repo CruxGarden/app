@@ -102,7 +102,10 @@ interface UIState {
   exploreOpen: boolean;
   setExploreOpen: (open: boolean) => void;
 
-  // Mood Editor
+  // Mood modal (quick presets/background/persona; opens the Mood Builder page)
+  moodPanelOpen: boolean;
+  setMoodPanelOpen: (open: boolean) => void;
+  toggleMoodPanel: () => void;
 
   // ── Layout actions ──
 
@@ -534,6 +537,10 @@ export const useUIStore = create<UIState>()((set, get) => ({
       JSON.stringify({ paneOrder: DEFAULT_PANE_ORDER, paneVisibility: visibility }),
     );
   },
+  moodPanelOpen: false,
+  setMoodPanelOpen: (open) => set({ moodPanelOpen: open }),
+  toggleMoodPanel: () => set((s) => ({ moodPanelOpen: !s.moodPanelOpen })),
+
   setActiveCrux: (id) => {
     // Flush any pending debounced scroll save
     if (scrollSaveTimer) {

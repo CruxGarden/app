@@ -36,12 +36,18 @@ test.describe('collaboration (mock AI)', () => {
       await input.press('Enter');
 
       // Tool ran for real: file in the tree and on disk
-      await expect(page.getByRole('tree').getByText('hello.txt', { exact: true })).toBeVisible({ timeout: 30_000 });
+      await expect(page.getByRole('tree').getByText('hello.txt', { exact: true })).toBeVisible({
+        timeout: 30_000,
+      });
       await expect.poll(() => onDisk('hello.txt')).toBe(true);
-      expect(readFileSync(join(gardenRoot, readdirSync(gardenRoot)[0]!, 'hello.txt'), 'utf8')).toBe('Hello from the mock AI.\n');
+      expect(readFileSync(join(gardenRoot, readdirSync(gardenRoot)[0]!, 'hello.txt'), 'utf8')).toBe(
+        'Hello from the mock AI.\n',
+      );
 
       // The reply after the tool result streamed into the conversation
-      await expect(page.getByText('Done — I wrote that file for you.')).toBeVisible({ timeout: 30_000 });
+      await expect(page.getByText('Done — I wrote that file for you.')).toBeVisible({
+        timeout: 30_000,
+      });
       await page.screenshot({ path: 'e2e/.results/chat-1-turn.png' });
 
       // Auto-snapshot (default: every AI turn that mutated files)
@@ -87,7 +93,9 @@ test.describe('collaboration (mock AI)', () => {
 
       // Bring the pane back: the completed turn is there
       await page.getByRole('button', { name: 'Toggle collaboration' }).click();
-      await expect(page.getByText('Done — I wrote that file for you.')).toBeVisible({ timeout: 30_000 });
+      await expect(page.getByText('Done — I wrote that file for you.')).toBeVisible({
+        timeout: 30_000,
+      });
     } finally {
       await app.close();
     }
