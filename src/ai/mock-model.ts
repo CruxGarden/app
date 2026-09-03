@@ -60,6 +60,8 @@ export function getMockLanguageModel(): LanguageModel {
           return textStream('Done — I wrote that file for you.');
         }
         const text = lastUserText(prompt);
+        // "slowly": hold the tool call back so a test can act mid-turn
+        if (/\bslowly\b/i.test(text)) await new Promise((r) => setTimeout(r, 1500));
         if (/\bwrite\b/i.test(text)) {
           return toolCallStream('write_file', {
             path: 'hello.txt',
