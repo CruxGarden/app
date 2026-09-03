@@ -54,16 +54,9 @@ export function applySavedMoodSettings() {
     const savedFingerprint = getSetting(SettingsKey.BackgroundImage) as string | null;
     if (savedFingerprint) {
       // Async resolution — background loads after initial paint
-      import('@/services/sqlite/client')
-        .then(({ getSqliteClient }) => {
-          const db = getSqliteClient();
-          db.blobRead(savedFingerprint).then((data) => {
-            if (data) {
-              const url = URL.createObjectURL(new Blob([data as unknown as BlobPart]));
-              useMoodStore.setState({ backgroundUrl: url });
-            }
-          });
-        })
+      import('@/services/blobs')
+        .then(({ blobObjectUrl }) => blobObjectUrl(savedFingerprint))
+        .then((url) => useMoodStore.setState({ backgroundUrl: url }))
         .catch(() => {});
     }
   }

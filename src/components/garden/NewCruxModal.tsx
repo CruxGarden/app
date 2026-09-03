@@ -1,7 +1,7 @@
 import { useState, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCruxStore } from '@/stores/cruxStore';
-import { DEFAULT_PANE_ORDER } from '@/stores/uiStore';
+import { useUIStore } from '@/stores/uiStore';
 import { setSetting } from '@/services/settings';
 import { SettingsKey } from '@/lib/constants';
 import { getApiKey } from '@/ai/keys';
@@ -9,8 +9,9 @@ import { importCrux } from '@/services/crux-io';
 import { useGardenStore } from '@/stores/gardenStore';
 import { Modal, Button } from '@/components/ui';
 import { cn } from '@/lib/cn';
-import { loadTemplate, applyTemplateMeta } from '@/templates';
-import type { CruxKind, ChatMessage } from '@/api/types';
+import type { TemplateLayout } from '@/templates';
+import { applyTemplateToCrux } from '@/services/crux-create';
+import type { CruxKind } from '@/api/types';
 import { Capability, can } from '@/lib/platform';
 import { alertDialog } from '@/stores/dialogStore';
 
@@ -333,85 +334,16 @@ export default function NewCruxModal({ open, onClose }: NewCruxModalProps) {
 
       const crux = await createCrux(effectiveTitle);
 
-      // Load template files and set kind/context/greeting if not quick-start blank
-      let templateDef: Awaited<ReturnType<typeof loadTemplate>> = null;
+      let layout: TemplateLayout | null = null;
       if (!quickStart && template.id !== 'blank') {
-        const { getServices } = await import('@/services');
-        const services = getServices();
-
-        const updates: Record<string, unknown> = { kind: template.kind };
-
-        // Load template definition and create artifact files
-        templateDef = await loadTemplate(template.id);
-        if (templateDef) {
-          // Create each template file as an artifact
-          for (const file of templateDef.files) {
-            await services.artifact.create({
-              resourceId: crux.id,
-              content: file.content,
-              meta: { path: file.path },
-            });
-          }
-
-          // Script-driven setup (desktop): run the template's scaffold in the
-          // Project Folder — files it writes are ingested from disk by the
-          // watcher automatically. Failure is non-fatal: embedded files stand.
-          if (templateDef.scaffold) {
-            try {
-              const { runScaffold } = await import('@/services/site');
-              await runScaffold(crux.id, templateDef.scaffold.pnpmArgs);
-            } catch (err) {
-              console.error('[template] scaffold failed:', err);
-            }
-          }
-
-          // Stamp the template's greeting, workspace context, and Builder
-          // inputs (contentModel / formSchema) into the crux's meta.
-          const meta = applyTemplateMeta(crux.meta as Record<string, unknown>, templateDef);
-          updates.meta = meta;
-
-          // Update store messages so the UI reflects the greeting immediately
-          if (templateDef.greeting) {
-            useCruxStore.getState().setMessages(meta.messages as ChatMessage[]);
-          }
-        }
-
-        await services.crux.update(crux.id, updates);
+        const applied = await applyTemplateToCrux(crux, template.id, template.kind);
+        layout = applied.layout;
+        // Reflect the template's greeting immediately (loadCrux reads it later too)
+        if (applied.messages) useCruxStore.getState().setMessages(applied.messages);
       }
 
-      // Set initial pane layout based on template preset (or fallback for blank)
       const hasApiKey = !!(await getApiKey('anthropic'));
-      const visibility: Record<string, boolean> = {};
-      for (const pane of DEFAULT_PANE_ORDER) visibility[pane] = false;
-
-      const templateLayout = !quickStart && template.id !== 'blank' ? templateDef?.layout : null;
-
-      if (templateLayout) {
-        // Template with a layout preset — use its pane set and mosaic tree
-        for (const pane of templateLayout.panes) visibility[pane] = true;
-        setSetting(
-          `cruxgarden:layout:${crux.id}`,
-          JSON.stringify({
-            paneOrder: DEFAULT_PANE_ORDER,
-            paneVisibility: visibility,
-            mosaicLayout: templateLayout.mosaic,
-          }),
-        );
-      } else {
-        // Blank workspace fallback
-        if (hasApiKey) {
-          visibility.collaboration = true;
-          visibility.details = true;
-        } else {
-          visibility.collaboration = true;
-          visibility.artifacts = true;
-          visibility.workshop = true;
-        }
-        setSetting(
-          `cruxgarden:layout:${crux.id}`,
-          JSON.stringify({ paneOrder: DEFAULT_PANE_ORDER, paneVisibility: visibility }),
-        );
-      }
+      useUIStore.getState().seedCruxLayout(crux.id, layout, hasApiKey ? 'ai' : 'manual');
 
       reset();
       onClose();

@@ -130,11 +130,8 @@ function PersonaTab() {
       // Write to OPFS blob store
       const res = await fetch(dataUrl);
       const buffer = new Uint8Array(await res.arrayBuffer());
-      const { hashContent } = await import('@/services/sqlite/helpers');
-      const fp = await hashContent(buffer);
-      const { getSqliteClient } = await import('@/services/sqlite/client');
-      const db = getSqliteClient();
-      await db.blobWrite(fp, buffer);
+      const { putBlob } = await import('@/services/blobs');
+      const fp = await putBlob(buffer);
 
       // Clear legacy data URL field if present
       const legacyField =
@@ -472,11 +469,10 @@ export default function MoodEditor() {
     const fp = getSetting(SettingsKey.BackgroundImage) as string | null;
     if (!fp) return;
     (async () => {
-      const { getSqliteClient } = await import('@/services/sqlite/client');
-      const data = await getSqliteClient().blobRead(fp);
-      if (data) {
+      const { blobObjectUrl } = await import('@/services/blobs');
+      const url = await blobObjectUrl(fp).catch(() => null);
+      if (url) {
         releaseBgObjectUrl();
-        const url = URL.createObjectURL(new Blob([data as unknown as BlobPart]));
         bgObjectUrlRef.current = url;
         setBgImagePreview(url);
       }
@@ -505,11 +501,8 @@ export default function MoodEditor() {
         reader.readAsDataURL(file);
       });
       // Write to OPFS, store fingerprint in settings
-      const buffer = new Uint8Array(await file.arrayBuffer());
-      const { hashContent } = await import('@/services/sqlite/helpers');
-      const fp = await hashContent(buffer);
-      const { getSqliteClient } = await import('@/services/sqlite/client');
-      await getSqliteClient().blobWrite(fp, buffer);
+      const { putBlob } = await import('@/services/blobs');
+      const fp = await putBlob(file);
       releaseBgObjectUrl();
       setBgImagePreview(dataUrl);
       setSetting(SettingsKey.BackgroundImage, fp);

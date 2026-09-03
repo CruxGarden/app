@@ -1,27 +1,32 @@
 import { useState, useEffect } from 'react';
+import { blobObjectUrl } from '@/services/blobs';
 
-/** Resolve an OPFS blob fingerprint to an object URL */
-export function useBlobUrl(fingerprint?: string | null): string | null {
+/** Resolve a Blob Store fingerprint to an object URL, revoked on change/unmount. */
+export function useBlobUrl(fingerprint?: string | null, type?: string): string | null {
   const [url, setUrl] = useState<string | null>(null);
   useEffect(() => {
     if (!fingerprint) {
       setUrl(null);
       return;
     }
-    let revoke = '';
-    (async () => {
-      const { getSqliteClient } = await import('@/services/sqlite/client');
-      const db = getSqliteClient();
-      const data = await db.blobRead(fingerprint);
-      if (data) {
-        const u = URL.createObjectURL(new Blob([data as unknown as BlobPart]));
-        revoke = u;
-        setUrl(u);
-      }
-    })();
+    let cancelled = false;
+    let created: string | null = null;
+    blobObjectUrl(fingerprint, type)
+      .then((u) => {
+        // A late resolution for a fingerprint we no longer show would leak the URL
+        if (cancelled) URL.revokeObjectURL(u);
+        else {
+          created = u;
+          setUrl(u);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setUrl(null);
+      });
     return () => {
-      if (revoke) URL.revokeObjectURL(revoke);
+      cancelled = true;
+      if (created) URL.revokeObjectURL(created);
     };
-  }, [fingerprint]);
+  }, [fingerprint, type]);
   return url;
 }

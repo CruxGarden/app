@@ -1,8 +1,7 @@
-import { useEffect, useCallback } from 'react';
+import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useGardenStore } from '@/stores/gardenStore';
 import { useCruxStore } from '@/stores/cruxStore';
-import { getServices } from '@/services';
 import { useShallow } from 'zustand/react/shallow';
 
 export function useGarden() {
@@ -35,14 +34,7 @@ export function useGarden() {
     setSearch('');
   };
 
-  const deleteCrux = useCallback(
-    async (id: string) => {
-      const { crux: cruxService } = getServices();
-      await cruxService.delete(id);
-      load();
-    },
-    [load],
-  );
+  const deleteCrux = useGardenStore((s) => s.deleteCrux);
 
   return {
     cruxList,
