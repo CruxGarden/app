@@ -37,6 +37,22 @@ test.describe('acceptance journey (local half)', () => {
       await page.getByPlaceholder('Post title').fill('Hello from Playwright');
       await page.getByRole('button', { name: 'Create', exact: true }).click();
 
+      // ── Editing + saving must not remount Monaco ─────────────────────────
+      // Regression: every Cmd+S refetched the file and remounted the editor
+      // (flicker, cursor reset, keystrokes typed during the save lost).
+      const monaco = page.locator('.monaco-editor').first();
+      await expect(monaco).toBeVisible({ timeout: 30_000 });
+      await monaco.evaluate((el) => el.setAttribute('data-e2e-instance', 'original'));
+      await monaco.click();
+      await page.keyboard.press('Meta+ArrowDown'); // end of document (mac)
+      await page.keyboard.press('End');
+      await page.keyboard.type(' Typed by Playwright.');
+      await expect(monaco).toContainText('Typed by Playwright.'); // typing landed
+      await page.keyboard.press('Meta+s');
+      await page.waitForTimeout(800); // save round-trip
+      await expect(page.locator('.monaco-editor[data-e2e-instance="original"]')).toBeVisible(); // same instance
+      await expect(monaco).toContainText('Typed by Playwright.'); // text survived the save
+
       // Opening the .md in the editor starts astro dev; first run installs deps.
       const preview = page.locator('iframe[src^="http://127.0.0.1"]');
       await expect(preview).toBeVisible({ timeout: 4 * 60_000 });

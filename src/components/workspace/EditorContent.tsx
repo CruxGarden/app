@@ -28,7 +28,7 @@ import {
 } from '@/lib/thumbnail-capture';
 import { registerCruxGardenThemes } from '@/lib/monacoTheme';
 import { captureLocalPreview } from '@/services/preview-capture';
-import { getServices } from '@/services';
+import { saveWorkspacePreviewJpeg } from '@/services/preview-capture';
 import MarkdownRenderer from '@/components/chat/MarkdownRenderer';
 import TemplateForm from '@/components/workspace/TemplateForm';
 import { usePreviewUrl } from '@/hooks/usePreviewUrl';
@@ -62,10 +62,8 @@ export default function EditorContent({
   saveRef,
   captureRef,
 }: EditorContentProps) {
-  const { content, blobUrl, loading, contentVersion, setContent } = useFileContent(
-    cruxId,
-    artifact,
-  );
+  const { content, blobUrl, loading, contentVersion, setContent, expectOwnSave } =
+    useFileContent(cruxId, artifact);
   const { setTabDirty, setTabScrollTop } = useUIStore();
   const activeMode = useThemeStore((s) => s.activeMode);
   const monacoRef = useRef<typeof Monaco | null>(null);
@@ -150,27 +148,27 @@ export default function EditorContent({
     return () => document.removeEventListener('palette-change', handler);
   }, [themeName]);
 
-  // Save handler — calls API directly (no store dependency, survives reset)
+  // Save handler. The store update flips the artifact's fingerprint, which is
+  // exactly the signal useFileContent uses to detect EXTERNAL edits — so the
+  // hook is told first that the coming change is ours. Otherwise every Cmd+S
+  // refetched and remounted Monaco (flicker, lost cursor, lost keystrokes
+  // typed during the round-trip).
   const handleSave = useCallback(async () => {
     const current = contentRef.current;
     if (current === null || !dirtyRef.current) return;
+    const cancelOwnSave = expectOwnSave();
     try {
-      const blob = new Blob([current], { type: mime });
-      const { artifact: artifactService } = getServices();
-      const updated = await artifactService.upload({
-        resourceId: cruxId,
-        blob,
-        mimeType: mime,
-        meta: { path: pathOf(artifact) || 'file' },
-      });
+      const updated = await useCruxStore.getState().saveArtifactContent(artifact.id, current);
       dirtyRef.current = false;
       setTabDirty(tab.id, false);
-      // Route through the store action — it also recomputes publish state
-      useCruxStore.getState().updateArtifact(updated.id, updated);
+      // Identical content → fingerprint unchanged → the hook's effect never
+      // ran, so the flag must not linger and swallow a real external change.
+      if (!updated || updated.fingerprint === artifact.fingerprint) cancelOwnSave();
     } catch (err: unknown) {
+      cancelOwnSave();
       console.error('Save failed:', err);
     }
-  }, [artifact, mime, tab.id, cruxId, setTabDirty]);
+  }, [artifact.id, artifact.fingerprint, tab.id, setTabDirty, expectOwnSave]);
 
   // Keep save ref stable for Monaco keybinding (avoids stale closure)
   useEffect(() => {
@@ -193,28 +191,12 @@ export default function EditorContent({
     };
   }, [handleSave, saveRef]);
 
-  // Save a JPEG blob as preview.jpg (create or replace)
+  // Save a JPEG as the workspace thumbnail. The service owns the path, the
+  // no-write-through rule (it's app state, not a user file), and the upload.
   const savePreviewBlob = useCallback(
     (blob: Blob) => {
-      const { artifact: artifactService } = getServices();
-      const artifacts = useCruxStore.getState().artifacts;
-      const existing = artifacts.find((a) => {
-        const p = pathOf(a).toLowerCase();
-        return p === 'preview.jpg';
-      });
-      const uploadOpts = {
-        resourceId: cruxId,
-        blob,
-        mimeType: 'image/jpeg',
-        meta: { path: 'preview.jpg' },
-      };
-      artifactService
-        .upload(uploadOpts)
-        .then((saved) => {
-          const store = useCruxStore.getState();
-          if (existing) store.updateArtifact(existing.id, saved);
-          else store.addArtifact(saved);
-        })
+      saveWorkspacePreviewJpeg(cruxId, blob)
+        .then((saved) => useCruxStore.getState().upsertArtifact(saved))
         .catch((err) => console.error('Thumbnail save failed:', err));
     },
     [cruxId],
@@ -397,6 +379,24 @@ export default function EditorContent({
     [themeName, tab.id, tab.scrollTop, setTabScrollTop],
   );
 
+  // External content arrived (first load is handled by defaultValue; later
+  // versions come from ingestion, restore, or another tab). Push it into the
+  // live model, preserving cursor/scroll, instead of remounting the editor.
+  // Local unsaved edits win — an external change never clobbers typing.
+  const appliedVersionRef = useRef(0);
+  useEffect(() => {
+    if (contentVersion === appliedVersionRef.current) return;
+    appliedVersionRef.current = contentVersion;
+    const editor = editorRef.current;
+    const model = editor?.getModel();
+    if (!editor || !model || content === null || dirtyRef.current) return;
+    if (model.getValue() === content) return;
+    const viewState = editor.saveViewState();
+    model.setValue(content);
+    if (viewState) editor.restoreViewState(viewState);
+    contentRef.current = content;
+  }, [contentVersion, content]);
+
   // Handle content changes — update ref + state (state needed for preview modes)
   // Using defaultValue means React re-renders won't cause Monaco to re-apply content
   const handleEditorChange = useCallback(
@@ -494,7 +494,7 @@ export default function EditorContent({
       mainContent = (
         <div className="flex-1 min-h-0">
           <Editor
-            key={contentVersion}
+            key={tab.id}
             height="100%"
             language={language}
             defaultValue={content ?? ''}

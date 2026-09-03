@@ -110,7 +110,8 @@ interface CruxState {
   renameArtifact: (id: string, newPath: string) => Promise<void>;
   deleteArtifact: (id: string) => Promise<void>;
   deleteArtifacts: (ids: string[]) => Promise<void>;
-  saveArtifactContent: (id: string, content: string) => Promise<void>;
+  /** Persist editor content; resolves with the updated artifact (undefined if unknown id). */
+  saveArtifactContent: (id: string, content: string) => Promise<Artifact | undefined>;
 
   // Growth actions
   loadGrowths: () => Promise<void>;
@@ -631,7 +632,7 @@ export const useCruxStore = create<CruxState>((set, get) => ({
     const { artifacts } = get();
     const { artifact } = getServices();
     const art = artifacts.find((a) => a.id === id);
-    if (!art) return;
+    if (!art) return undefined;
     const mime = art.mimeType || 'text/plain';
     const blob = new Blob([content], { type: mime });
     const updated = await artifact.upload({
@@ -644,6 +645,7 @@ export const useCruxStore = create<CruxState>((set, get) => ({
       artifacts: state.artifacts.map((a) => (a.id === id ? { ...a, ...updated } : a)),
       hasUnpublishedChanges: true,
     }));
+    return updated;
   },
 
   // Growth actions
