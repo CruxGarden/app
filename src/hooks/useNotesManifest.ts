@@ -11,11 +11,15 @@ import { useCruxStore } from '@/stores/cruxStore';
 export function useNotesManifest() {
   const crux = useCruxStore((s) => s.crux);
   const artifacts = useCruxStore((s) => s.artifacts);
+  const viewingSnapshot = useCruxStore((s) => s.viewingSnapshotId);
   const prevKeyRef = useRef<string>('');
   const updatingRef = useRef(false);
 
   useEffect(() => {
     if (!crux || crux.kind !== 'notes') return;
+    // While viewing a snapshot, `artifacts` is the SNAPSHOT's list — writing a
+    // manifest derived from it into the live workspace would be wrong.
+    if (viewingSnapshot) return;
     if (updatingRef.current) return;
 
     // Collect .md file paths under notes/, sorted
@@ -72,5 +76,5 @@ export function useNotesManifest() {
     }, 500);
 
     return () => clearTimeout(timer);
-  }, [crux, artifacts]);
+  }, [crux, artifacts, viewingSnapshot]);
 }

@@ -1,7 +1,7 @@
 import { useState, useMemo, useCallback } from 'react';
 import { useAuthStore } from '@/stores/authStore';
 import { useAppStore } from '@/stores/appStore';
-import { useCruxStore } from '@/stores/cruxStore';
+import { useCruxStore, selectHasUnpublishedChanges } from '@/stores/cruxStore';
 import { cn } from '@/lib/cn';
 import { formatDateTime } from '@/lib/format';
 import { publicCruxUrl } from '@/lib/public-url';
@@ -101,7 +101,7 @@ export default function PublishPane() {
   const artifacts = useCruxStore((s) => s.artifacts);
   const publishCrux = useCruxStore((s) => s.publishCrux);
   const unpublishCrux = useCruxStore((s) => s.unpublishCrux);
-  const hasUnpublishedChanges = useCruxStore((s) => s.hasUnpublishedChanges);
+  const hasUnpublishedChanges = useCruxStore(selectHasUnpublishedChanges);
 
   const [showAuthorModal, setShowAuthorModal] = useState(false);
   const [showConnect, setShowConnect] = useState(false);
