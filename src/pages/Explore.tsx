@@ -412,7 +412,7 @@ export default function Explore({ onNavigate }: { onNavigate?: () => void }) {
                 className={cn(
                   'px-2.5 py-1 rounded-full text-[11px] border cursor-pointer transition-colors',
                   kind === k.id
-                    ? 'bg-accent-muted text-accent border-accent/40'
+                    ? 'bg-accent text-bg border-accent font-medium'
                     : 'bg-surface/50 text-text-muted border-border hover:text-text',
                 )}
               >
