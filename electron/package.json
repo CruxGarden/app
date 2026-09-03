@@ -14,7 +14,8 @@
     "dist:mac": "npm run build:all && electron-builder --mac",
     "dist:win": "npm run build:all && electron-builder --win",
     "dist:linux": "npm run build:all && electron-builder --linux",
-    "test:e2e": "tsc && playwright test"
+    "test:e2e": "tsc && playwright test",
+    "verify": "tsc && eslint src --max-warnings=0"
   },
   "dependencies": {
     "better-sqlite3": "^12.8.0",
