@@ -6,6 +6,7 @@ import { useGarden } from '@/hooks/useGarden';
 import { APP_NAME } from '@/lib/constants';
 import { GardenGrid, GardenSearch } from '@/components/garden';
 import NewCruxModal from '@/components/garden/NewCruxModal';
+import { openGardenPage } from '@/lib/public-url';
 import { IconButton, Modal, Button } from '@/components/ui';
 import { cn } from '@/lib/cn';
 
@@ -106,7 +107,7 @@ export default function HomeGarden() {
                     label="Public Garden"
                     size="sm"
                     tooltip={{ label: 'Public Garden' }}
-                    onClick={() => window.open(`/${author.username}`, '_blank')}
+                    onClick={() => void openGardenPage(`/${author.username}`)}
                   >
                     <GlobeIcon />
                   </IconButton>

@@ -1,6 +1,8 @@
 /* eslint-disable react-refresh/only-export-components */
 import { useEffect, useMemo, useRef, useCallback, useState } from 'react';
 import Editor from '@monaco-editor/react';
+
+const FORM_AUTOSAVE_MS = 300;
 import type * as Monaco from 'monaco-editor';
 import { PhotoProvider, PhotoView } from 'react-photo-view';
 import 'react-photo-view/dist/react-photo-view.css';
@@ -77,6 +79,10 @@ export default function EditorContent({
   const previewUrlRef = useRef<string | null>(null);
   // Desktop: local-server URL currently shown in the preview iframe (capture target)
   const desktopCaptureUrlRef = useRef<string | null>(null);
+  const formSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Bumped on each successful save: own saves no longer refetch (so they no
+  // longer move contentVersion), but the thumbnail must still track them.
+  const [savedVersion, setSavedVersion] = useState(0);
 
   const path = pathOf(artifact) || artifact.id;
   const ext = getExtension(path);
@@ -100,8 +106,11 @@ export default function EditorContent({
       dirtyRef.current = true;
       setContent(json);
       setTabDirty(tab.id, true);
-      // Auto-save immediately so preview refreshes
-      saveHandlerRef.current();
+      // Auto-save (debounced) so the preview refreshes. Saving on every
+      // keystroke put N saves in flight against one file; unmount still
+      // flushes anything dirty.
+      if (formSaveTimerRef.current) clearTimeout(formSaveTimerRef.current);
+      formSaveTimerRef.current = setTimeout(() => saveHandlerRef.current(), FORM_AUTOSAVE_MS);
     },
     [tab.id, setContent, setTabDirty],
   );
@@ -116,9 +125,11 @@ export default function EditorContent({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Keep ref in sync when content loads
+  // Keep ref in sync when content loads — but never over unsaved edits. An
+  // external change arriving while dirty must not become what Cmd+S persists
+  // while Monaco still shows the user's text.
   useEffect(() => {
-    contentRef.current = content;
+    if (!dirtyRef.current) contentRef.current = content;
   }, [content]);
 
   // Sync theme changes — rAF ensures the call lands after any in-progress
@@ -159,11 +170,19 @@ export default function EditorContent({
     const cancelOwnSave = expectOwnSave();
     try {
       const updated = await useCruxStore.getState().saveArtifactContent(artifact.id, current);
+      if (!updated) {
+        // Unknown artifact (deleted underneath us?) — nothing was persisted,
+        // so the edits are still unsaved. Say so instead of marking clean.
+        cancelOwnSave();
+        console.error('Save failed: artifact not in workspace', artifact.id);
+        return;
+      }
       dirtyRef.current = false;
       setTabDirty(tab.id, false);
+      setSavedVersion((v) => v + 1);
       // Identical content → fingerprint unchanged → the hook's effect never
-      // ran, so the flag must not linger and swallow a real external change.
-      if (!updated || updated.fingerprint === artifact.fingerprint) cancelOwnSave();
+      // ran, so the expectation must not linger and swallow a real external change.
+      if (updated.fingerprint === artifact.fingerprint) cancelOwnSave();
     } catch (err: unknown) {
       cancelOwnSave();
       console.error('Save failed:', err);
@@ -283,13 +302,14 @@ export default function EditorContent({
   const canAutoCapture = isHtmlFile && !isPreviewFile;
   const autoCaptureTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const baselineVersionRef = useRef<number | null>(null);
+  const changeSignal = contentVersion + savedVersion; // external loads + own saves
   useEffect(() => {
     if (loading) return;
     if (baselineVersionRef.current === null) {
-      baselineVersionRef.current = contentVersion; // first loaded version
+      baselineVersionRef.current = changeSignal; // first loaded version
       return;
     }
-    if (contentVersion <= baselineVersionRef.current) return;
+    if (changeSignal <= baselineVersionRef.current) return;
     if (!canAutoCapture) return;
 
     // Give the iframe time to render the new content before shooting
@@ -299,7 +319,7 @@ export default function EditorContent({
     return () => {
       if (autoCaptureTimerRef.current) clearTimeout(autoCaptureTimerRef.current);
     };
-  }, [contentVersion, canAutoCapture, handleCapture, loading]);
+  }, [changeSignal, canAutoCapture, handleCapture, loading]);
 
   // Defer Monaco mount by one frame so any disposed editor's async cleanup
   // (rAF, rIC) completes before the new editor tries to initialise
@@ -317,6 +337,7 @@ export default function EditorContent({
     disposedRef.current = false;
     return () => {
       disposedRef.current = true;
+      if (formSaveTimerRef.current) clearTimeout(formSaveTimerRef.current);
       if (scrollRafRef.current) {
         cancelAnimationFrame(scrollRafRef.current);
         scrollRafRef.current = null;

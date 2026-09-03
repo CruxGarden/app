@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, useMemo } from 'react';
 import { useCruxStore } from '@/stores/cruxStore';
 import { getServices } from '@/services';
-import { normalizePath } from '@/lib/rewriteUrls';
+import { resolveRelativePath as normalizePath } from '@/lib/artifact-path';
 import { Capability, can } from '@/lib/platform';
 import { setActivePreview } from '@/lib/preview-registry';
 import {

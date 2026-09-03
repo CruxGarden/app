@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { Artifact } from '@/api/types';
 import { publicApi } from '@/api';
 import { usePublicPreviewUrl } from '@/hooks/usePublicPreviewUrl';
@@ -142,6 +142,7 @@ function HtmlRenderer({
       };
     }
 
+    const pendingUnsubs = new Set<() => void>();
     function sendWhenReady(source: Window) {
       // If auth is still initializing (token refresh in progress), wait for it
       const { isLoading } = useAuthStore.getState();
@@ -149,9 +150,11 @@ function HtmlRenderer({
         const unsub = useAuthStore.subscribe((state) => {
           if (!state.isLoading) {
             unsub();
+            pendingUnsubs.delete(unsub);
             source.postMessage(buildSession(), iframeOrigin);
           }
         });
+        pendingUnsubs.add(unsub); // released on unmount — no posting to a dead frame
       } else {
         source.postMessage(buildSession(), iframeOrigin);
       }
@@ -165,7 +168,11 @@ function HtmlRenderer({
     }
 
     window.addEventListener('message', handler);
-    return () => window.removeEventListener('message', handler);
+    return () => {
+      window.removeEventListener('message', handler);
+      for (const unsub of pendingUnsubs) unsub();
+      pendingUnsubs.clear();
+    };
   }, [cruxId, iframeOrigin]);
 
   if (hasRemotePublishOrigin()) {
@@ -266,7 +273,7 @@ function MarkdownRendererView({
     };
   }, [artifact.id, downloadBlob]);
 
-  if (!content) {
+  if (content === null) {
     return (
       <div className="flex items-center justify-center h-full">
         <LoadingPanel />
@@ -291,21 +298,36 @@ function ImageRenderer({
   downloadBlob: DownloadBlobFn;
 }) {
   const [objectUrl, setObjectUrl] = useState<string | null>(null);
+  const [failed, setFailed] = useState(false);
   const path = pathOf(artifact) || artifact.id;
 
   useEffect(() => {
+    let cancelled = false;
     let url: string | null = null;
+    setObjectUrl(null);
+    setFailed(false);
     downloadBlob(artifact.id)
       .then((blob) => {
+        if (cancelled) return; // a late blob for a previous artifact must not leak a URL
         url = URL.createObjectURL(blob);
         setObjectUrl(url);
       })
-      .catch(() => {});
+      .catch(() => {
+        if (!cancelled) setFailed(true);
+      });
     return () => {
+      cancelled = true;
       if (url) URL.revokeObjectURL(url);
     };
   }, [artifact.id, downloadBlob]);
 
+  if (failed) {
+    return (
+      <div className="flex items-center justify-center h-full text-sm text-text-muted">
+        Couldn't load {path}
+      </div>
+    );
+  }
   if (!objectUrl) {
     return (
       <div className="flex items-center justify-center h-full">
@@ -397,8 +419,14 @@ export default function ArtifactRenderer({
 }: ArtifactRendererProps) {
   const main = useMemo(() => resolveMain(artifacts), [artifacts]);
 
-  // Default download function uses publicApi
-  const dl = downloadBlob || ((id: string) => publicApi.downloadArtifact(username, slug, id));
+  // Default download function uses publicApi. Stable identity: it is an effect
+  // dependency downstream, so a fresh closure per render refetched on every
+  // parent re-render.
+  const fallbackDl = useCallback(
+    (id: string) => publicApi.downloadArtifact(username, slug, id),
+    [username, slug],
+  );
+  const dl = downloadBlob ?? fallbackDl;
 
   if (!main) {
     return <FileListing artifacts={artifacts} username={username} slug={slug} downloadBlob={dl} />;

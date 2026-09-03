@@ -1,7 +1,6 @@
 import { create } from 'zustand';
 import type { Crux, ChatMessage, Artifact, CruxSummary, Dimension } from '@/api/types';
 import type { UpdateCruxInput } from '@/services/types';
-import type { Palette } from '@/lib/palette';
 import { getServices } from '@/services';
 import { guessMimeType } from '@/lib/mime';
 import { hasContentChanged } from '@/services/publish';
@@ -81,7 +80,6 @@ interface CruxState {
   upsertArtifact: (artifact: Artifact) => void;
   updateArtifact: (id: string, updates: Partial<Artifact>) => void;
   setModel: (model: string) => void;
-  setPalette: (palette: Partial<Palette>) => void;
   saveMeta: () => Promise<void>;
   updateCrux: (dto: UpdateCruxInput) => Promise<void>;
   reset: () => void;
@@ -408,13 +406,6 @@ export const useCruxStore = create<CruxState>((set, get) => ({
     saveMeta();
   },
 
-  setPalette: (palette: Partial<Palette>) => {
-    const { crux } = get();
-    if (!crux) return;
-    const merged = { ...crux.meta?.settings?.palette, ...palette };
-    const meta = { ...crux.meta, settings: { ...crux.meta?.settings, palette: merged } };
-    set({ crux: { ...crux, meta } });
-  },
 
   saveMeta: async () => {
     const { crux, messages, messageSegmentStart, summary, growthCount } = get();
@@ -975,10 +966,9 @@ export const useCruxStore = create<CruxState>((set, get) => ({
     const { crux } = get();
     try {
       if (!crux) return;
-      const { artifact } = getServices();
-      await artifact.delete(artifactId);
-      const arts = await artifact.findByResource('crux', crux.id);
-      set({ artifacts: arts });
+      // Same path as a user-initiated delete: closes the editor tab, updates
+      // publish state, writes through to the Project Folder.
+      await get().deleteArtifact(artifactId);
       settleDeleteApproval(artifactId, true);
     } catch (err) {
       console.error('Delete failed:', err);

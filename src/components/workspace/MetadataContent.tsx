@@ -251,6 +251,36 @@ function formatModel(model: string): string {
   return getModelShortName(model) || model;
 }
 
+/**
+ * One metadata field. Module-scope on purpose: this used to be defined inside
+ * the render function, giving React a NEW component type every render — every
+ * field remounted whenever the parent re-rendered (per streamed token), which
+ * threw away any edit in progress.
+ */
+function MetaField({
+  label,
+  value,
+  multiline,
+  readOnly,
+  onUpdate,
+}: {
+  label: string;
+  value: string;
+  multiline?: boolean;
+  readOnly?: boolean;
+  onUpdate?: (dto: Record<string, unknown>) => void;
+}) {
+  if (readOnly || !onUpdate) return <ReadonlyField label={label} value={value} />;
+  return (
+    <EditableField
+      label={label}
+      value={value}
+      onSave={(v) => onUpdate({ [label.toLowerCase()]: v })}
+      multiline={multiline}
+    />
+  );
+}
+
 export default function MetadataContent({
   crux,
   summary,
@@ -287,25 +317,13 @@ export default function MetadataContent({
     onUpdate({ kind: next ?? null });
   };
 
-  const Field = readOnly
-    ? ({ label, value }: { label: string; value: string; multiline?: boolean }) => (
-        <ReadonlyField label={label} value={value} />
-      )
-    : ({ label, value, multiline }: { label: string; value: string; multiline?: boolean }) => (
-        <EditableField
-          label={label}
-          value={value}
-          onSave={(v) => onUpdate?.({ [label.toLowerCase()]: v })}
-          multiline={multiline}
-        />
-      );
 
   return (
     <div className="flex-1 overflow-y-auto min-h-0 p-3 flex flex-col gap-3">
       {/* ── Crux Metadata ── */}
       <div className="flex flex-col gap-3">
-        <Field label="Title" value={crux.title ?? ''} />
-        <Field label="Description" value={crux.description ?? ''} multiline />
+        <MetaField readOnly={readOnly} onUpdate={onUpdate} label="Title" value={crux.title ?? ''} />
+        <MetaField readOnly={readOnly} onUpdate={onUpdate} label="Description" value={crux.description ?? ''} multiline />
         <TagInput
           tags={(crux.meta?.tags as string[]) || []}
           onChange={(tags) => onUpdate?.({ meta: { tags } })}
@@ -337,7 +355,7 @@ export default function MetadataContent({
       {/* ── Details ── */}
       <div className="border-t border-border" />
       <div className="flex flex-col gap-3">
-        <Field label="Slug" value={crux.slug} />
+        <MetaField readOnly={readOnly} onUpdate={onUpdate} label="Slug" value={crux.slug} />
 
         <FieldRow label="Visibility">
           {readOnly ? (
