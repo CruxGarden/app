@@ -3,6 +3,7 @@ import { useAppStore } from '@/stores/appStore';
 import { useAvatarUrl } from '@/hooks/useAvatarUrl';
 import { Spinner } from '@/components/ui';
 import { cn } from '@/lib/cn';
+import { alertDialog } from '@/stores/dialogStore';
 
 const btnClass = cn(
   'px-3 py-1.5 text-xs font-mono rounded-[var(--radius-sm)]',
@@ -38,7 +39,7 @@ export default function AvatarUpload({ compact }: AvatarUploadProps) {
     if (!file) return;
     if (fileRef.current) fileRef.current.value = '';
     if (file.size > MAX_AVATAR_SIZE) {
-      alert('Avatar must be under 10MB');
+      void alertDialog('Avatar must be under 10MB.', 'Image too large');
       return;
     }
     setUploading(true);

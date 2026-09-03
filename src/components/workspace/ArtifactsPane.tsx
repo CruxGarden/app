@@ -11,6 +11,8 @@ import { FieldRow } from './MetadataContent';
 import { formatBytes, formatDateTime } from '@/lib/format';
 import { Capability, can } from '@/lib/platform';
 import { revealProjectFolder } from '@/services/project-folder';
+import { confirmDialog } from '@/stores/dialogStore';
+import { expandTreeSelection, FOLDER_ID_PREFIX } from '@/components/artifacts/treeData';
 
 function RevealIcon() {
   return (
@@ -250,7 +252,7 @@ export default function ArtifactsPane() {
             : fileConflicts.length === 1
               ? `"${fileConflicts[0]}" already exists. Replace it?`
               : `${fileConflicts.length} files already exist. Replace them?`;
-          if (!confirm(msg)) return;
+          if (!(await confirmDialog({ message: msg, confirmLabel: 'Replace' }))) return;
         }
         for (let i = 0; i < children.length; i++) {
           await renameArtifact(children[i]!.id, newPaths[i]!);
@@ -262,7 +264,13 @@ export default function ArtifactsPane() {
           const filename = basename(oldPath) || art.filename;
           const newPath = newParentPath ? `${newParentPath}/${filename}` : filename;
           if (newPath !== oldPath && existingPaths.has(newPath)) {
-            if (!confirm(`"${newPath}" already exists. Replace it?`)) return;
+            if (
+              !(await confirmDialog({
+                message: `"${newPath}" already exists. Replace it?`,
+                confirmLabel: 'Replace',
+              }))
+            )
+              return;
           }
         }
         await moveArtifact(id, newParentPath);
@@ -320,7 +328,7 @@ export default function ArtifactsPane() {
     [setFolderOpen],
   );
 
-  const confirmOverwrite = useCallback((entries: { path: string }[]): boolean => {
+  const confirmOverwrite = useCallback(async (entries: { path: string }[]): Promise<boolean> => {
     const existingPaths = new Set(useCruxStore.getState().artifacts.map((a) => pathOf(a)));
     const conflicts = entries.filter((e) => existingPaths.has(e.path));
     if (conflicts.length === 0) return true;
@@ -328,7 +336,7 @@ export default function ArtifactsPane() {
       conflicts.length === 1
         ? `"${conflicts[0]!.path}" already exists. Replace it?`
         : `${conflicts.length} files already exist. Replace them?`;
-    return confirm(msg);
+    return confirmDialog({ message: msg, confirmLabel: 'Replace' });
   }, []);
 
   const handleUploadFiles = useCallback(
@@ -337,7 +345,7 @@ export default function ArtifactsPane() {
         file: f.file,
         path: parentPath ? `${parentPath}/${f.path}` : f.path,
       }));
-      if (!confirmOverwrite(entries)) return;
+      if (!(await confirmOverwrite(entries))) return;
       await uploadFiles(entries);
       closeFoldersFromPaths(entries.map((e) => e.path));
     },
@@ -346,10 +354,20 @@ export default function ArtifactsPane() {
 
   const handleDelete = useCallback(
     async (ids: string[]) => {
-      const count = ids.length;
-      const msg = count === 1 ? 'Delete this file?' : `Delete ${count} items?`;
-      if (confirm(msg)) {
-        await deleteArtifacts(ids);
+      // Keyboard Delete hands us raw tree selection — folders arrive as
+      // "folder:path" ids and used to be silently skipped by deleteArtifacts.
+      const artifactIds = expandTreeSelection(ids, useCruxStore.getState().artifacts);
+      const count = artifactIds.length;
+      if (count === 0) return;
+      const folders = ids.filter((id) => id.startsWith(FOLDER_ID_PREFIX)).length;
+      const msg =
+        folders === 1 && ids.length === 1
+          ? `Delete this folder and its ${count} file${count !== 1 ? 's' : ''}?`
+          : ids.length === 1
+            ? 'Delete this file?'
+            : `Delete ${ids.length} items (${count} file${count !== 1 ? 's' : ''})?`;
+      if (await confirmDialog({ message: msg, confirmLabel: 'Delete', danger: true })) {
+        await deleteArtifacts(artifactIds);
       }
     },
     [deleteArtifacts],
@@ -474,7 +492,7 @@ export default function ArtifactsPane() {
       {hasProjectFolder && cruxId && (
         <>
           <div className="relative group/btn">
-            <button
+            <button aria-label="Reveal in Finder"
               onClick={() => revealProjectFolder(cruxId)}
               className="p-1 opacity-60 hover:opacity-100 transition-opacity cursor-pointer"
             >
@@ -490,7 +508,7 @@ export default function ArtifactsPane() {
         </>
       )}
       <div className="relative group/btn">
-        <button
+        <button aria-label="Collapse folders"
           onClick={() => treeRef.current?.closeAll()}
           className="p-1 opacity-60 hover:opacity-100 transition-opacity cursor-pointer"
         >
@@ -504,7 +522,7 @@ export default function ArtifactsPane() {
       </div>
       <div className="w-px h-3 bg-border mx-0.5" />
       <div className="relative group/btn">
-        <button
+        <button aria-label="New file"
           onClick={() => {
             startFileOperation({ type: 'create-file', parentPath: getParentPath() });
           }}
@@ -519,7 +537,7 @@ export default function ArtifactsPane() {
         </div>
       </div>
       <div className="relative group/btn">
-        <button
+        <button aria-label="New folder"
           onClick={() => {
             startFileOperation({ type: 'create-folder', parentPath: getParentPath() });
           }}
@@ -534,7 +552,7 @@ export default function ArtifactsPane() {
         </div>
       </div>
       <div className="relative" ref={uploadDropdownRef}>
-        <button
+        <button aria-label="Upload"
           onClick={() => setUploadMenuOpen((v) => !v)}
           className="p-1 opacity-60 hover:opacity-100 transition-opacity cursor-pointer"
         >

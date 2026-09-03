@@ -15,6 +15,7 @@ import {
 import { Modal, Input, Button } from '@/components/ui';
 import type { ContentModel, ContentCollection, BuilderAction } from '@/templates';
 import type { Artifact } from '@/api/types';
+import { confirmDialog, alertDialog } from '@/stores/dialogStore';
 
 /**
  * The Builder — the Workshop's home view for content-model cruxes.
@@ -275,9 +276,10 @@ function AddImageButton() {
       } catch {
         /* clipboard unavailable — snippet still valid */
       }
-      window.alert(
+      void alertDialog(
         `Added ${entries.length} image${entries.length > 1 ? 's' : ''}. ` +
           `Markdown snippet copied — paste it into any post.`,
+        'Images added',
       );
       e.target.value = '';
     },
@@ -395,7 +397,13 @@ function CollectionSection({ collection }: { collection: ContentCollection }) {
               </button>
               <button
                 onClick={async () => {
-                  if (window.confirm(`Delete "${data.title || item.path}"? It stays in history.`)) {
+                  if (
+                    await confirmDialog({
+                      message: `Delete "${data.title || item.path}"? It stays in history.`,
+                      confirmLabel: 'Delete',
+                      danger: true,
+                    })
+                  ) {
                     await deleteArtifacts([item.artifact.id]);
                   }
                 }}

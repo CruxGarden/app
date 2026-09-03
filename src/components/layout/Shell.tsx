@@ -2,7 +2,7 @@ import { lazy, Suspense, useEffect, useState } from 'react';
 import { Outlet } from 'react-router-dom';
 import TopBar from './TopBar';
 import { applySavedMoodSettings } from '@/components/mood/mood-helpers';
-import { Modal } from '@/components/ui';
+import { Modal, DialogHost } from '@/components/ui';
 import { useUIStore } from '@/stores/uiStore';
 import { isServicesReady, initServices } from '@/services';
 import { getSetting } from '@/services/settings';
@@ -97,6 +97,9 @@ export default function Shell() {
       <main className="relative flex-1 min-h-0 overflow-y-auto">
         {servicesReady ? <Outlet /> : null}
       </main>
+
+      {/* App confirm/alert dialogs (replaces window.confirm/alert) */}
+      <DialogHost />
 
       {/* Console Modal */}
       {aiEnabled && (

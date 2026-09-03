@@ -8,3 +8,4 @@ export { default as Modal } from './Modal';
 export { default as Toggle } from './Toggle';
 export { default as IconButton } from './IconButton';
 export { default as ErrorBoundary } from './ErrorBoundary';
+export { default as DialogHost } from './DialogHost';

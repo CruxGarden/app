@@ -361,13 +361,21 @@ export interface ConfirmAndImportOptions {
   onProgress?: (status: string) => void;
   /** Called after successful import to reconcile auth state */
   onPostImport?: () => Promise<void>;
+  /** Ask the user a yes/no question. Defaults to the app's dialog; tests inject their own. */
+  confirm?: (message: string) => Promise<boolean>;
+}
+
+async function defaultConfirm(message: string): Promise<boolean> {
+  const { confirmDialog } = await import('@/stores/dialogStore');
+  return confirmDialog({ message, confirmLabel: 'Continue', danger: true });
 }
 
 export async function confirmAndImportGarden(options: ConfirmAndImportOptions): Promise<boolean> {
   const { data, onProgress, onPostImport } = options;
+  const confirm = options.confirm ?? defaultConfirm;
 
   // Offer to export current garden as a backup first
-  const wantBackup = confirm(
+  const wantBackup = await confirm(
     'Importing a garden will replace ALL existing data.\n\nWould you like to export your current garden first as a backup?',
   );
   if (wantBackup) {
@@ -383,13 +391,13 @@ export async function confirmAndImportGarden(options: ConfirmAndImportOptions): 
       URL.revokeObjectURL(url);
     } catch (err) {
       console.error('Backup export failed:', err);
-      const proceed = confirm('Backup export failed. Continue with import anyway?');
+      const proceed = await confirm('Backup export failed. Continue with import anyway?');
       if (!proceed) return false;
     }
   }
 
   // Final confirmation
-  if (!confirm('This will replace your entire garden. Continue?')) return false;
+  if (!(await confirm('This will replace your entire garden. Continue?'))) return false;
 
   await importGarden({ data, onProgress });
   await onPostImport?.();

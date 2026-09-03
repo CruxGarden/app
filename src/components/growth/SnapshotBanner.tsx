@@ -1,5 +1,6 @@
 import { useCruxStore } from '@/stores/cruxStore';
 import { cn } from '@/lib/cn';
+import { confirmDialog } from '@/stores/dialogStore';
 
 export default function SnapshotBanner() {
   const viewingSnapshotId = useCruxStore((s) => s.viewingSnapshotId);
@@ -15,9 +16,12 @@ export default function SnapshotBanner() {
 
   const handleRevert = async () => {
     if (
-      confirm(
-        'Revert workspace to this snapshot? Your current state will be saved as a snapshot first.',
-      )
+      await confirmDialog({
+        title: 'Revert to snapshot',
+        message:
+          'Revert workspace to this snapshot? Your current state will be saved as a snapshot first.',
+        confirmLabel: 'Revert',
+      })
     ) {
       await revertToSnapshot(viewingSnapshotId);
     }
