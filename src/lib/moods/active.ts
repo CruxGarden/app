@@ -5,7 +5,8 @@
  * applyActiveMood() instead of applying presets by hand.
  */
 import { applyMoodPalette, GARDEN_DARK, type MoodPalette } from './index';
-import { MOOD_PRESETS, type MoodPresetDef } from './presets';
+import { type MoodPresetDef } from './presets';
+import { allPresets } from './user-presets';
 import { getSetting, setSetting } from '@/services/settings';
 import { SettingsKey } from '@/lib/constants';
 
@@ -34,7 +35,7 @@ export function activePresetId(section: MoodSection = resolvedSection()): string
 
 /** The preset for a mode; a saved id from the other mode is ignored. */
 export function activePreset(section: MoodSection = resolvedSection()): MoodPresetDef | null {
-  const preset = MOOD_PRESETS.find((p) => p.id === activePresetId(section));
+  const preset = allPresets().find((p) => p.id === activePresetId(section));
   return preset && preset.section === section ? preset : null;
 }
 

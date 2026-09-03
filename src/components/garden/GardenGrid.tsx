@@ -24,7 +24,13 @@ export default memo(function GardenGrid({
   thumbnailUrls,
 }: GardenGridProps) {
   return (
-    <div className="grid gap-4 grid-cols-[repeat(auto-fill,minmax(220px,1fr))]">
+    <div
+      className="grid"
+      style={{
+        gap: 'var(--garden-grid-gap)',
+        gridTemplateColumns: 'repeat(auto-fill, minmax(var(--garden-card-min-width), 1fr))',
+      }}
+    >
       {cruxes.map((crux) => (
         <CruxCard
           key={crux.id}

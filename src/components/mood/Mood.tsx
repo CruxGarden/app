@@ -4,6 +4,12 @@ import { useUIStore } from '@/stores/uiStore';
 import { cn } from '@/lib/cn';
 import { GARDEN_DARK } from '@/lib/moods';
 import { MOOD_PRESETS, type MoodPresetDef } from '@/lib/moods/presets';
+import {
+  getUserPresets,
+  deleteUserPreset,
+  onUserPresetsChange,
+  type UserPreset,
+} from '@/lib/moods/user-presets';
 import { applyActiveMood } from '@/lib/moods/active';
 import ThemeTokensTab from './ThemeTokensTab';
 import { useMoodStore } from '@/stores/moodStore';
@@ -441,6 +447,8 @@ interface MoodEditorProps {
 export default function MoodEditor({ initialTab = 'palette', compact = false }: MoodEditorProps) {
   const navigate = useNavigate();
   const [tab, setTab] = useState<Tab>(initialTab);
+  const [userPresets, setUserPresets] = useState<UserPreset[]>(() => getUserPresets());
+  useEffect(() => onUserPresetsChange(() => setUserPresets(getUserPresets())), []);
   const [activeDarkId, setActiveDarkId] = useState(
     () => (getSetting(SettingsKey.MoodPresetDark) as string) || 'obsidian',
   );
@@ -592,6 +600,45 @@ export default function MoodEditor({ initialTab = 'palette', compact = false }: 
       <div className="flex-1 min-h-0 flex flex-col overflow-y-auto">
         {tab === 'palette' && (
           <div>
+            {userPresets.length > 0 && (
+              <div className="mb-4">
+                <div className="text-[9px] font-mono uppercase tracking-wider text-text-muted mb-2">
+                  Yours
+                </div>
+                <div className="grid grid-cols-5 gap-2">
+                  {userPresets.map((preset) => {
+                    const active =
+                      (preset.section === 'Dark' ? activeDarkId : activeLightId) === preset.id;
+                    return (
+                      <div key={preset.id} className="relative group">
+                        <button
+                          onClick={() => handleSelect(preset)}
+                          className="w-full flex flex-col items-center gap-1.5 cursor-pointer"
+                        >
+                          <PresetThumb preset={preset} active={active} />
+                          <span
+                            className={cn(
+                              'text-[10px] font-mono transition-colors truncate max-w-full',
+                              active ? 'text-text' : 'text-text-muted group-hover:text-text',
+                            )}
+                          >
+                            {preset.name}
+                          </span>
+                        </button>
+                        <button
+                          onClick={() => deleteUserPreset(preset.id)}
+                          aria-label={`Delete preset ${preset.name}`}
+                          title="Delete this preset"
+                          className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-surface-solid border border-border text-text-muted hover:text-error text-xs leading-none opacity-0 group-hover:opacity-100 focus-visible:opacity-100 cursor-pointer"
+                        >
+                          ×
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
             {(['Dark', 'Light'] as const).map((section) => {
               const sectionPresets = MOOD_PRESETS.filter((p) => p.section === section);
               const activeForSection = section === 'Dark' ? activeDarkId : activeLightId;

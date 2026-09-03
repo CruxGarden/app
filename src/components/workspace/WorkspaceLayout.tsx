@@ -392,17 +392,17 @@ export default function WorkspaceLayout() {
                 className="flex items-center gap-2"
                 style={{ color: `var(${prefix}-header-text)` }}
               >
-                <span style={{ color: `var(${prefix}-header-icon)` }}>{PANE_ICONS[paneType]}</span>
-                <span className="text-[11px] font-mono uppercase tracking-wider">
-                  {PANE_LABELS[paneType]}
+                <span className="pane-toolbar-icon" style={{ color: `var(${prefix}-header-icon)` }}>
+                  {PANE_ICONS[paneType]}
                 </span>
+                <span className="pane-toolbar-label">{PANE_LABELS[paneType]}</span>
               </div>
               <button
                 onClick={(e) => {
                   e.stopPropagation();
                   setPaneVisible(paneType, false);
                 }}
-                className="p-1 hover:opacity-80 transition-opacity cursor-pointer"
+                className="pane-toolbar-close p-1 hover:opacity-80 transition-opacity cursor-pointer"
                 style={{ color: `var(${prefix}-header-close)` }}
                 title={`Close ${PANE_LABELS[paneType]}`}
               >

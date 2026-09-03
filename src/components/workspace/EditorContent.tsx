@@ -28,7 +28,11 @@ import {
   previewOrigin,
   CAPTURE_SIZE,
 } from '@/lib/thumbnail-capture';
-import { registerCruxGardenThemes } from '@/lib/monacoTheme';
+import {
+  registerCruxGardenThemes,
+  readEditorFontSize,
+  readEditorFontFamily,
+} from '@/lib/monacoTheme';
 import { captureLocalPreview } from '@/services/preview-capture';
 import { saveWorkspacePreviewJpeg } from '@/services/preview-capture';
 import MarkdownRenderer from '@/components/chat/MarkdownRenderer';
@@ -88,6 +92,9 @@ export default function EditorContent({
   // Bumped on each successful save: own saves no longer refetch (so they no
   // longer move contentVersion), but the thumbnail must still track them.
   const [savedVersion, setSavedVersion] = useState(0);
+  // Editor type follows the Mood (--editor-font-size, --font-mono)
+  const [editorFontSize, setEditorFontSize] = useState(() => readEditorFontSize());
+  const [editorFontFamily, setEditorFontFamily] = useState(() => readEditorFontFamily());
 
   const path = pathOf(artifact) || artifact.id;
   const ext = getExtension(path);
@@ -161,7 +168,15 @@ export default function EditorContent({
       });
     };
     document.addEventListener('palette-change', handler);
-    return () => document.removeEventListener('palette-change', handler);
+    const sizeHandler = () => {
+      setEditorFontSize(readEditorFontSize());
+      setEditorFontFamily(readEditorFontFamily());
+    };
+    document.addEventListener('palette-change', sizeHandler);
+    return () => {
+      document.removeEventListener('palette-change', handler);
+      document.removeEventListener('palette-change', sizeHandler);
+    };
   }, [themeName]);
 
   // Save handler. The store update flips the artifact's fingerprint, which is
@@ -536,8 +551,8 @@ export default function EditorContent({
             onMount={handleEditorMount}
             options={{
               minimap: { enabled: false },
-              fontSize: 13,
-              fontFamily: "'JetBrains Mono', monospace",
+              fontSize: editorFontSize,
+              fontFamily: editorFontFamily,
               lineNumbers: 'on',
               wordWrap: 'on',
               scrollBeyondLastLine: false,

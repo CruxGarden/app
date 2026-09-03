@@ -62,7 +62,7 @@ export default function Modal({
         className={cn(
           'relative z-10 flex flex-col',
           // Deep soft shadow carries the elevation the blur used to fake
-          'shadow-[0_24px_80px_-16px_rgb(0_0_0/0.65)]',
+          'shadow-modal',
           SIZE_CLASSES[size],
           className,
         )}

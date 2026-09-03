@@ -27,7 +27,7 @@ export default function Toggle({ checked, onChange, label, disabled }: TogglePro
       >
         <span
           className={cn(
-            'absolute top-0.5 left-0.5 w-3 h-3 rounded-full bg-white',
+            'absolute top-0.5 left-0.5 w-3 h-3 rounded-full bg-toggle-thumb-active',
             checked && 'translate-x-3',
           )}
         />

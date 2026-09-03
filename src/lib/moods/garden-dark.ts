@@ -367,6 +367,57 @@ export const GARDEN_DARK = {
   paneHeaderRadius: 'var(--radius-sm)',
   paneHeaderPadding: '6px',
   workspacePadding: '4px',
+  // Pane header anatomy
+  paneHeaderLabelFont: 'var(--font-mono)',
+  paneHeaderLabelSize: '11px',
+  paneHeaderLabelWeight: '400',
+  paneHeaderLabelCase: 'uppercase',
+  paneHeaderLabelTracking: '0.05em',
+  paneHeaderIconDisplay: 'inline-flex',
+  paneHeaderCloseDisplay: 'inline-flex',
+  paneHeaderJustify: 'space-between',
+
+  // ── Density & type scale ─────────────────────────────
+  // fontScale multiplies the root font size (every rem-based size follows);
+  // density multiplies Tailwind's spacing unit (every padding/gap follows).
+  fontScale: '1',
+  density: '1',
+  lineHeightBody: '1.5',
+  fontWeightBody: '400',
+  letterSpacingBody: '0',
+  letterSpacingDisplay: '0',
+  letterSpacingMono: '0',
+
+  // ── Elevation ────────────────────────────────────────
+  elevationPanel: '0 10px 15px -3px rgb(0 0 0 / 0.05), 0 4px 6px -4px rgb(0 0 0 / 0.05)',
+  elevationCard: 'none',
+  elevationCardHover: '0 10px 15px -3px rgb(0 0 0 / 0.2), 0 4px 6px -4px rgb(0 0 0 / 0.2)',
+  elevationModal: '0 24px 80px -16px rgb(0 0 0 / 0.65)',
+  scrim:
+    'radial-gradient(ellipse 120% 90% at center, rgb(0 0 0 / 0.55) 0%, rgb(0 0 0 / 0.82) 100%)',
+
+  // ── Motion ───────────────────────────────────────────
+  // Multiplies the default transition duration (0 = instant)
+  motionScale: '1',
+
+  // ── Editor (Monaco) ──────────────────────────────────
+  editorFontSize: '13px',
+  editorGutter: 'var(--editor-background)',
+  editorCursor: 'var(--accent)',
+  editorSelection: 'color-mix(in srgb, var(--accent) 30%, transparent)',
+
+  // ── Image background ─────────────────────────────────
+  bgImageDim: '0',
+  bgImageBlur: '0px',
+  bgImageFit: 'cover',
+  bgImagePosition: 'center',
+  bgImageScale: '1',
+
+  // ── Home grid ────────────────────────────────────────
+  gardenCardMinWidth: '220px',
+  gardenCardAspect: '16 / 10',
+  gardenGridGap: '1rem',
+  growthCardAspect: '16 / 10',
 
   // ── Typography ───────────────────────────────────────
   fontDisplay: "'JetBrains Mono', monospace",
@@ -412,6 +463,11 @@ function paneTokens(base: string) {
     [`${base}Heading`]: 'var(--heading)',
     [`${base}HeaderRadius`]: 'var(--pane-header-radius)',
     [`${base}HeaderHeight`]: 'var(--pane-header-height)',
+    [`${base}BorderWidth`]: 'var(--pane-border-width)',
+    [`${base}HeaderLabelCase`]: 'var(--pane-header-label-case)',
+    [`${base}HeaderJustify`]: 'var(--pane-header-justify)',
+    // "0" = still; "infinite" = pulse the frame (the AI uses this to signal work)
+    [`${base}Pulse`]: '0',
   };
 }
 
