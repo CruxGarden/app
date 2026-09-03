@@ -30,7 +30,7 @@ test.describe('theme dimensions', () => {
       await expect(label).toHaveCSS('text-transform', 'uppercase');
 
       // Mood → Builder → Theme
-      await page.getByRole('button', { name: 'Mood' }).click();
+      await page.getByRole('button', { name: 'Mood', exact: true }).click();
       await page.getByRole('button', { name: 'Open Mood Builder' }).click();
       await expect(page.getByRole('heading', { name: 'Mood Builder' })).toBeVisible();
 
@@ -89,7 +89,7 @@ test.describe('theme dimensions', () => {
       await page.screenshot({ path: 'e2e/.results/dimensions-2-workspace.png' });
 
       // The preset is in the Mood modal under Yours and is the active one
-      await page.getByRole('button', { name: 'Mood' }).click();
+      await page.getByRole('button', { name: 'Mood', exact: true }).click();
       await expect(page.getByText('Yours', { exact: true })).toBeVisible();
       await expect(page.getByRole('button', { name: 'Big & Loud', exact: true })).toBeVisible();
       await page.screenshot({ path: 'e2e/.results/dimensions-3-yours.png' });

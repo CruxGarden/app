@@ -43,7 +43,7 @@ test.describe('theme tools (mock AI)', () => {
       await page.screenshot({ path: 'e2e/.results/theme-tools-1-painted.png' });
 
       // Preview, not a saved theme: the Mood Builder offers to clear it
-      await page.getByRole('button', { name: 'Mood' }).click();
+      await page.getByRole('button', { name: 'Mood', exact: true }).click();
       await page.getByRole('button', { name: 'Open Mood Builder' }).click();
       await expect(page.getByText(/AI preview: 4 tokens/)).toBeVisible();
       await expect(page.getByText(/\b0 custom\b|custom/)).toHaveCount(0);

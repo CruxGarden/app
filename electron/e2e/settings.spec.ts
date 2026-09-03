@@ -18,7 +18,7 @@ test.describe('settings & mood', () => {
       const html = page.locator('html');
 
       // ── Mood → Presets: pick a light preset, theme class follows ─────────
-      await page.getByRole('button', { name: 'Mood' }).click();
+      await page.getByRole('button', { name: 'Mood', exact: true }).click();
       const mood = page.getByRole('heading', { name: 'Mood' });
       await expect(mood).toBeVisible();
       await page.getByRole('button', { name: 'Ivory' }).click();
@@ -36,7 +36,7 @@ test.describe('settings & mood', () => {
       await expect(mood).toHaveCount(0);
       // Escape closed the Mood modal only — the Keeper console did NOT open
       await expect(page.getByText('Console — The Keeper')).toHaveCount(0);
-      await page.getByRole('button', { name: 'Mood' }).click();
+      await page.getByRole('button', { name: 'Mood', exact: true }).click();
       await page.getByRole('button', { name: 'Persona', exact: true }).click();
       await expect(page.getByPlaceholder('Persona name')).toHaveValue('The Gardener');
       await page.keyboard.press('Escape');

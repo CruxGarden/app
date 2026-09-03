@@ -42,7 +42,7 @@ test.describe('preset screenshots', () => {
         timeout: 30_000,
       });
 
-      await page.getByRole('button', { name: 'Mood' }).click();
+      await page.getByRole('button', { name: 'Mood', exact: true }).click();
       await page.getByRole('button', { name, exact: true }).click();
       await page.waitForTimeout(400);
       await shot('1-mood');

@@ -61,6 +61,17 @@ export default function MoodDock() {
 
   useEffect(() => init(), [init]);
 
+  // Sitting along the bottom edge? Reserve that strip so panes are never
+  // covered (the default). Dragged up into the workspace, it overlaps — the
+  // user's call.
+  useEffect(() => {
+    if (pos.x < 0) return;
+    const h = pos.collapsed ? DISC : PILL_H;
+    const nearBottom = pos.y + h >= window.innerHeight - 28;
+    useUIStore.getState().setDockReserve(nearBottom ? h + 24 : 0);
+    return () => useUIStore.getState().setDockReserve(0);
+  }, [pos.x, pos.y, pos.collapsed]);
+
   // First run: bottom-right, expanded
   useEffect(() => {
     if (pos.x >= 0) return;
@@ -210,8 +221,8 @@ export default function MoodDock() {
       <button
         type="button"
         onClick={() => navigate('/mood?tab=resonance')}
-        title="Open Mood Builder"
-        aria-label="Open Mood Builder"
+        title="Mixer"
+        aria-label="Open the mixer"
         className="w-7 h-7 rounded-full text-text-muted hover:text-accent flex items-center justify-center cursor-pointer shrink-0"
       >
         <svg
