@@ -199,17 +199,10 @@ function useThumbnail(growth: Dimension): string | null {
   return url;
 }
 
-/** Stand-in for a snapshot without a screenshot: its number on a quiet wash. */
+/** Stand-in for a snapshot without a screenshot: just its number. */
 function Placeholder({ index }: { index: number }) {
-  const angle = 130 + ((index * 37) % 100);
   return (
-    <div
-      className="absolute inset-0 flex items-center justify-center"
-      style={{
-        background: `linear-gradient(${angle}deg, color-mix(in srgb, var(--growth-card-label) 16%, var(--garden-card-thumbnail)) 0%, var(--garden-card-thumbnail) 75%)`,
-      }}
-      aria-hidden
-    >
+    <div className="absolute inset-0 flex items-center justify-center" aria-hidden>
       <span className="font-wordmark text-3xl leading-none text-growth-card-label/60 select-none">
         {index + 1}
       </span>

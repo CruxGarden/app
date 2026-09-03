@@ -9,7 +9,7 @@ import { type PublishPhase } from '@/services/publish';
 import { usePaneWidth } from '@/hooks/usePaneWidth';
 import CreateAuthorModal from '@/components/auth/CreateAuthorModal';
 import ConnectAccount from '@/components/auth/ConnectAccount';
-import { PaneEmpty, PaneSection, PaneAction } from './pane-ui';
+import { PaneEmpty, PaneSection, PaneAction, PaneHint, PaneNote } from './pane-ui';
 function PublishIcon() {
   return (
     <svg
@@ -80,6 +80,24 @@ function ExternalLinkIcon() {
       <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
       <polyline points="15 3 21 3 21 9" />
       <line x1="10" y1="14" x2="21" y2="3" />
+    </svg>
+  );
+}
+
+function UnshareIcon() {
+  return (
+    <svg
+      width="13"
+      height="13"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M18.36 6.64a9 9 0 1 1-12.73 0" />
+      <line x1="12" y1="2" x2="12" y2="12" />
     </svg>
   );
 }
@@ -155,10 +173,15 @@ export default function PublishPane() {
     doPublish();
   }, [doPublish]);
 
+  const [unshareError, setUnshareError] = useState<string | null>(null);
   const handleUnpublish = useCallback(async () => {
     setPublishing(true);
+    setUnshareError(null);
     try {
       await unpublishCrux();
+    } catch (err) {
+      // A swallowed failure here reads as "the button does nothing".
+      setUnshareError(err instanceof Error ? err.message : 'Unshare failed');
     } finally {
       setPublishing(false);
     }
@@ -354,20 +377,25 @@ export default function PublishPane() {
 
           <div className="flex-1" />
 
-          {/* Unshare — deliberately quiet */}
+          {/* Unshare — clearly a button, but not competing with Share */}
           {isPublished && (
-            <div className="border-t border-border/60 pt-2">
+            <div className="border-t border-border/60 pt-3 flex flex-col gap-1.5">
               <button
                 type="button"
                 onClick={handleUnpublish}
                 disabled={publishing}
                 className={cn(
-                  'w-full py-1.5 text-center text-[11px] font-mono transition-colors cursor-pointer',
-                  'text-text-muted/60 hover:text-error disabled:cursor-not-allowed',
+                  'w-full flex items-center justify-center gap-2 h-8 rounded-[var(--radius-sm)]',
+                  'text-xs font-body border border-border bg-surface text-text-muted',
+                  'hover:border-error hover:text-error transition-colors cursor-pointer',
+                  'disabled:opacity-50 disabled:cursor-not-allowed',
                 )}
               >
-                Unshare — take this crux offline
+                <UnshareIcon />
+                Unshare
               </button>
+              <PaneHint>Takes this crux offline. Your files and history stay here.</PaneHint>
+              {unshareError && <PaneNote tone="error">{unshareError}</PaneNote>}
             </div>
           )}
         </div>

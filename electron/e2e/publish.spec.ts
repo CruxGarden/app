@@ -45,7 +45,9 @@ test.describe('publish (mocked API)', () => {
       await expect(page.getByText('v1', { exact: true })).toBeVisible();
       await expect(page.getByText(/crux\.garden\/tester\//)).toBeVisible();
       expect(api.log.some((l) => l.startsWith('POST /cruxes ->'))).toBe(true);
-      expect(api.log.some((l) => l.startsWith(`POST /cruxes/${api.state.crux!.id as string}/publish`))).toBe(true);
+      expect(
+        api.log.some((l) => l.startsWith(`POST /cruxes/${api.state.crux!.id as string}/publish`)),
+      ).toBe(true);
       await page.screenshot({ path: 'e2e/.results/publish-1-published.png' });
 
       // Edit → unpublished changes → Update (update path)
@@ -72,8 +74,22 @@ test.describe('publish (mocked API)', () => {
       await page.screenshot({ path: 'e2e/.results/publish-2-failure.png' });
       // Still publishable afterwards — the button is back, not stuck
       await expect(page.getByRole('button', { name: 'Update', exact: true })).toBeVisible();
+      // Unshare takes it offline: status flips back and Share is offered again
+      api.state.failPublish = false;
+      await page.getByRole('button', { name: 'Unshare', exact: true }).click();
+      await expect(page.getByText('Not shared yet', { exact: false })).toBeVisible({
+        timeout: 30_000,
+      });
+      await expect(page.getByRole('button', { name: 'Share', exact: true })).toBeVisible();
+      expect(api.log.some((l) => l.includes('/unpublish -> 200'))).toBe(true);
+      // The earlier failure banner must not outlive the publish it described
+      await expect(page.getByRole('alert').filter({ hasText: /Simulated outage/ })).toHaveCount(0);
+      await page.screenshot({ path: 'e2e/.results/publish-3-unshared.png' });
+
       // Only the intentional not-found probe may 404
-      expect(api.log.filter((l) => l.includes('-> 404') && !l.startsWith('GET /cruxes/'))).toEqual([]);
+      expect(api.log.filter((l) => l.includes('-> 404') && !l.startsWith('GET /cruxes/'))).toEqual(
+        [],
+      );
     } finally {
       await app.close();
       await api.close();
