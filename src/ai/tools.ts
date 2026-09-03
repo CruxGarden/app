@@ -362,7 +362,8 @@ export function createToolExecutor(
           break;
         case 'set_theme':
         case 'get_theme':
-          result = await runThemeTool(toolName, input);
+        case 'set_background':
+          result = await runThemeTool(toolName, input, { cruxId, chatModel });
           break;
         default:
           return formatToolError(toolName, `Unknown tool: ${toolName}`);
@@ -819,13 +820,33 @@ async function toolGenerateImage(
   if (!prompt) return formatToolError('generate_image', 'prompt is required');
   if (!path) return formatToolError('generate_image', 'path is required');
 
+  const generated = await generateImageBlob(prompt, size, chatModel);
+  if ('error' in generated) return formatToolError('generate_image', generated.error);
+
+  await artifactService.upload({
+    resourceId: cruxId,
+    resourceType: 'crux',
+    blob: generated.blob,
+    meta: { path },
+  });
+
+  return `Generated and saved image: ${path}`;
+}
+
+/**
+ * Generate an image with whichever configured provider can (the chat's
+ * provider first, then any other with an Images capability). Shared by
+ * generate_image (saves to the workspace) and set_background (the Mood).
+ */
+export async function generateImageBlob(
+  prompt: string,
+  size = '1024x1024',
+  chatModel?: string,
+): Promise<{ blob: Blob; provider: string } | { error: string }> {
   const { getApiKey } = await import('./keys');
   const { getProviderForModel } = await import('./providers');
   const { PROVIDERS } = await import('./providers');
 
-  // Determine which provider to use for image generation:
-  // 1. If the current chat provider supports images, use it
-  // 2. Otherwise fall back to any provider that supports images
   const chatProvider = chatModel ? getProviderForModel(chatModel) : null;
   const chatProviderInfo = chatProvider ? PROVIDERS[chatProvider] : null;
   const chatSupportsImages = chatProviderInfo?.capabilities.includes('Images');
@@ -840,8 +861,6 @@ async function toolGenerateImage(
       imageApiKey = key;
     }
   }
-
-  // Fallback: try any provider that supports images
   if (!imageApiKey) {
     for (const [id, info] of Object.entries(PROVIDERS)) {
       if (info.capabilities.includes('Images')) {
@@ -854,19 +873,16 @@ async function toolGenerateImage(
       }
     }
   }
-
   if (!imageApiKey || !imageProvider) {
-    return formatToolError(
-      'generate_image',
-      'No API key configured for a provider that supports image generation (OpenAI or Google Gemini). Add one in Settings.',
-    );
+    return {
+      error:
+        'No API key configured for a provider that supports image generation (OpenAI or Google Gemini). Add one in Settings.',
+    };
   }
 
-  // Build ordered list of providers to try: current provider first, then fallbacks
   const attempts: { provider: string; apiKey: string }[] = [
     { provider: imageProvider, apiKey: imageApiKey },
   ];
-  // Add other image-capable providers as fallbacks
   for (const [id, info] of Object.entries(PROVIDERS)) {
     if (id !== imageProvider && info.capabilities.includes('Images')) {
       const key = await getApiKey(id);
@@ -875,35 +891,23 @@ async function toolGenerateImage(
   }
 
   const errors: string[] = [];
-
   for (const attempt of attempts) {
     try {
-      let imageBlob: Blob;
-
+      let blob: Blob;
       if (attempt.provider === 'openai') {
-        imageBlob = await generateImageOpenAI(attempt.apiKey, prompt, size);
+        blob = await generateImageOpenAI(attempt.apiKey, prompt, size);
       } else if (attempt.provider === 'google') {
-        imageBlob = await generateImageGemini(attempt.apiKey, prompt);
+        blob = await generateImageGemini(attempt.apiKey, prompt);
       } else {
         continue;
       }
-
-      await artifactService.upload({
-        resourceId: cruxId,
-        resourceType: 'crux',
-        blob: imageBlob,
-        meta: { path },
-      });
-
-      return `Generated and saved image: ${path}`;
+      return { blob, provider: attempt.provider };
     } catch (err: unknown) {
       const msg = (err as Error).message || String(err);
       errors.push(`${attempt.provider}: ${msg}`);
-      // Continue to next provider
     }
   }
-
-  return formatToolError('generate_image', `All image providers failed:\n${errors.join('\n')}`);
+  return { error: `All image providers failed:\n${errors.join('\n')}` };
 }
 
 async function generateImageOpenAI(apiKey: string, prompt: string, size: string): Promise<Blob> {

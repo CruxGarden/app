@@ -100,6 +100,7 @@ function buildStablePrompt(crux: Crux, artifacts: Artifact[]): string {
         ? "- **check_site** — Run the site's production build (Site Cruxes) and report errors. Nothing is published; this only verifies.\n\n"
         : '\n') +
       '- **get_theme** / **set_theme** — Read and change the workspace theme (colors, radii, pane gutters, per-pane surfaces). See Theme below.\n' +
+      '- **set_background** — Set the workspace background: generate an image from a prompt, use a workspace image, or a built-in bloom/drift/flow/blank.\n' +
       'IMPORTANT: You CAN generate images. When the user asks for an image, illustration, icon, logo, photo, or artwork, call the generate_image tool. Do NOT say you cannot generate images — you have this capability.\n\n' +
       THEME_TOOL_GUIDANCE +
       '### Crux Store\n' +

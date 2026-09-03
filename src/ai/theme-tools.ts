@@ -27,7 +27,7 @@ import { groupTokens, tokenKind, tokenLabel } from '@/lib/moods/token-groups';
 import type { ToolDefinition } from './tools';
 import type { ToolResultContent } from '@/services/types';
 
-export const THEME_TOOL_NAMES = ['set_theme', 'get_theme'] as const;
+export const THEME_TOOL_NAMES = ['set_theme', 'get_theme', 'set_background'] as const;
 
 export const THEME_TOOL_DEFINITIONS: ToolDefinition[] = [
   {
@@ -84,6 +84,95 @@ export const THEME_TOOL_DEFINITIONS: ToolDefinition[] = [
     },
   },
 ];
+
+const BACKGROUND_TOOL: ToolDefinition = {
+  name: 'set_background',
+  description:
+    'Set the workspace background (part of the Mood). Three ways: ' +
+    '`prompt` — GENERATE an image with the configured image provider and use it as the background (describe a wide, calm scene; it sits behind every pane); ' +
+    '`path` — use an image file from this workspace; ' +
+    '`type` — switch to a built-in animated background: bloom, drift, flow, or blank. ' +
+    'USE WHEN: the user asks for a backdrop, wallpaper, or a different mood behind the workspace, or when a theme you built calls for one.',
+  input_schema: {
+    type: 'object',
+    properties: {
+      prompt: {
+        type: 'string',
+        description:
+          'Image description to generate (wide, atmospheric; avoid text and busy detail).',
+      },
+      size: {
+        type: 'string',
+        enum: ['1024x1024', '1536x1024', '1024x1536'],
+        description: 'Generated image size. Default 1536x1024 (landscape suits a backdrop).',
+      },
+      path: {
+        type: 'string',
+        description:
+          'Relative path of an existing image in the workspace, e.g. "images/night.jpg".',
+      },
+      type: {
+        type: 'string',
+        enum: ['bloom', 'drift', 'flow', 'blank'],
+        description: 'A built-in background instead of an image.',
+      },
+    },
+    required: [],
+    additionalProperties: false,
+  },
+};
+THEME_TOOL_DEFINITIONS.push(BACKGROUND_TOOL);
+
+export interface ThemeToolContext {
+  cruxId?: string;
+  chatModel?: string;
+}
+
+async function toolSetBackground(
+  input: Record<string, unknown>,
+  ctx: ThemeToolContext,
+): Promise<string> {
+  const { setBackgroundType, setBackgroundFromBlob, setBackgroundImage } =
+    await import('@/services/background');
+  const type = typeof input.type === 'string' ? input.type : '';
+  const prompt = typeof input.prompt === 'string' ? input.prompt.trim() : '';
+  const path = typeof input.path === 'string' ? input.path.replace(/^\//, '').trim() : '';
+
+  if (type) {
+    const { BgType } = await import('@/lib/types');
+    const valid = [BgType.Bloom, BgType.Drift, BgType.Flow, BgType.Blank] as string[];
+    if (!valid.includes(type))
+      return `set_background: unknown type "${type}". Use one of ${valid.join(', ')}.`;
+    await setBackgroundType(type as (typeof BgType)[keyof typeof BgType]);
+    return `Background set to ${type}.`;
+  }
+
+  if (path) {
+    if (!ctx.cruxId)
+      return 'set_background: "path" needs a workspace; use "prompt" or "type" here.';
+    const { getServices } = await import('@/services');
+    const { pathOf } = await import('@/lib/artifact-path');
+    const artifacts = await getServices().artifact.findByResource('crux', ctx.cruxId);
+    const match = artifacts.find((a) => pathOf(a).toLowerCase() === path.toLowerCase());
+    if (!match) return `set_background: no file at "${path}". Call list_files to see what exists.`;
+    if (!match.mimeType?.startsWith('image/'))
+      return `set_background: "${path}" is ${match.mimeType || 'not an image'}; pick an image file.`;
+    if (!match.fingerprint) return `set_background: "${path}" has no stored content yet.`;
+    await setBackgroundImage(match.fingerprint);
+    return `Background set to the workspace image "${path}".`;
+  }
+
+  if (prompt) {
+    const { generateImageBlob } = await import('./tools');
+    const size = typeof input.size === 'string' ? input.size : '1536x1024';
+    const generated = await generateImageBlob(prompt, size, ctx.chatModel);
+    if ('error' in generated) return `set_background: ${generated.error}`;
+    await setBackgroundFromBlob(generated.blob);
+    return `Generated a ${size} background with ${generated.provider} and set it. The user can change or clear it in Mood → Background.`;
+  }
+
+  return 'set_background: give a prompt (generate), a path (workspace image), or a type (bloom/drift/flow/blank).';
+}
 
 export function isThemeTool(name: string): boolean {
   return (THEME_TOOL_NAMES as readonly string[]).includes(name);
@@ -181,20 +270,23 @@ function toolSetTheme(input: Record<string, unknown>): string {
 export async function runThemeTool(
   name: string,
   input: Record<string, unknown>,
+  ctx: ThemeToolContext = {},
 ): Promise<string | ToolResultContent> {
   switch (name) {
     case 'get_theme':
       return toolGetTheme(input);
     case 'set_theme':
       return toolSetTheme(input);
+    case 'set_background':
+      return toolSetBackground(input, ctx);
     default:
       return `Unknown theme tool: ${name}`;
   }
 }
 
 /** Executor for callers with no workspace (the Keeper console). */
-export function createThemeToolExecutor() {
-  return (name: string, input: Record<string, unknown>) => runThemeTool(name, input);
+export function createThemeToolExecutor(ctx: ThemeToolContext = {}) {
+  return (name: string, input: Record<string, unknown>) => runThemeTool(name, input, ctx);
 }
 
 /** Prompt guidance shared by the workspace chat and the Keeper. */
@@ -204,4 +296,5 @@ export const THEME_TOOL_GUIDANCE =
   'Use mode "preview" to indicate what you are doing — tint the pane you are working in, warm the accent while a long step runs — and clear it with reset: true when you finish. ' +
   'Pane border and body tokens accept CSS gradients: set e.g. paneWorkshopBorder to "linear-gradient(135deg, #00f0ff, #7cff00)" (with paneBorderWidth "3px") to show that pane is being worked on, or a solid color for a state — green done, red failed — then reset. ' +
   'Use mode "persist" only when the user asks for a lasting change to how the workspace looks. ' +
-  'Never persist a change the user did not ask for.\n\n';
+  'Never persist a change the user did not ask for. ' +
+  'set_background changes what sits behind the panes: generate an image from a prompt, use a workspace image, or pick bloom/drift/flow/blank — when the user asks for a backdrop, or when a theme you are building wants one.\n\n';

@@ -49,6 +49,7 @@ export default function AnimatedBackground() {
     return (
       <div
         aria-hidden="true"
+        data-testid="mood-background-image"
         className="fixed inset-0 -z-10 pointer-events-none bg-cover bg-center"
         style={{ backgroundImage: `url(${backgroundUrl})` }}
       />
