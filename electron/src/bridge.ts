@@ -33,6 +33,51 @@ export interface DesktopBridge {
   config(): Promise<{ gardenRoot: string }>;
   chooseGardenRoot(): Promise<string | null>;
   openExternal(url: string): Promise<void>;
+  /** Version, platform, where the logs live — for Settings → Desktop and bug reports. */
+  info(): Promise<DesktopInfo>;
+  /** Reveal the local log folder (ADR 0008: logs are local, user-inspectable). */
+  openLogs(): Promise<void>;
+}
+
+export interface DesktopInfo {
+  version: string;
+  electron: string;
+  platform: string;
+  arch: string;
+  packaged: boolean;
+  logsDir: string;
+  userDataDir: string;
+}
+
+// ── updates (ADR 0007: electron-updater → GitHub Releases) ──────────────────
+
+export type UpdateStatus =
+  | 'disabled'
+  | 'idle'
+  | 'checking'
+  | 'available'
+  | 'not-available'
+  | 'downloading'
+  | 'downloaded'
+  | 'error';
+
+export interface UpdateState {
+  status: UpdateStatus;
+  currentVersion: string;
+  availableVersion: string | null;
+  progress: number | null;
+  error: string | null;
+  autoCheck: boolean;
+  lastCheckedAt: string | null;
+}
+
+export interface UpdatesBridge {
+  state(): Promise<UpdateState>;
+  check(): Promise<UpdateState>;
+  download(): Promise<UpdateState>;
+  install(): Promise<void>;
+  setAutoCheck(on: boolean): Promise<UpdateState>;
+  onChange(cb: (state: UpdateState) => void): () => void;
 }
 
 // ── project (Project Folders, ADR 0001) ─────────────────────────────────────
@@ -153,6 +198,7 @@ export interface ElectronBridge {
   secrets: SecretsBridge;
   ffmpeg: FfmpegBridge;
   localai: LocalAiBridge;
+  updates: UpdatesBridge;
   /** Test-only overrides, read from the environment the shell was launched with. */
   test: { apiUrl: string | null; aiMock: boolean };
 }

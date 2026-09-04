@@ -65,7 +65,7 @@ export default function UsageSettings() {
             <Meter
               label="Storage"
               value={formatBytes(usage.storageBytes)}
-              hint={`of ${formatBytes(usage.plan.storageBytes)} · published ${formatBytes(usage.publish.storageBytes)} · synced ${formatBytes(usage.sync.storageBytes)}`}
+              hint={`of ${formatBytes(usage.plan.storageBytes)} · published ${formatBytes(usage.publish.storageBytes)} · synced ${formatBytes(usage.sync.storageBytes)} · store ${formatBytes(usage.store.storageBytes)}`}
               pct={
                 usage.plan.storageBytes
                   ? Math.min(100, (usage.storageBytes / usage.plan.storageBytes) * 100)
@@ -79,6 +79,16 @@ export default function UsageSettings() {
               pct={
                 usage.plan.bandwidthBytesPerPeriod
                   ? Math.min(100, (usage.bandwidthBytes / usage.plan.bandwidthBytesPerPeriod) * 100)
+                  : 0
+              }
+            />
+            <Meter
+              label="Crux Store requests"
+              value={usage.store.requests.toLocaleString()}
+              hint={`of ${usage.plan.storeRequestsPerPeriod.toLocaleString()} this period · ${usage.store.reads.toLocaleString()} reads · ${usage.store.writes.toLocaleString()} writes · ${usage.store.keys.toLocaleString()} keys`}
+              pct={
+                usage.plan.storeRequestsPerPeriod
+                  ? Math.min(100, (usage.store.requests / usage.plan.storeRequestsPerPeriod) * 100)
                   : 0
               }
             />
@@ -113,7 +123,8 @@ export default function UsageSettings() {
                   <th className="py-1 font-normal">Published crux</th>
                   <th className="py-1 font-normal text-right">Storage</th>
                   <th className="py-1 font-normal text-right">Bandwidth</th>
-                  <th className="py-1 font-normal text-right">Requests</th>
+                  <th className="py-1 font-normal text-right">Visits</th>
+                  <th className="py-1 font-normal text-right">Store</th>
                 </tr>
               </thead>
               <tbody>
@@ -128,6 +139,12 @@ export default function UsageSettings() {
                     </td>
                     <td className="py-1.5 text-right font-mono text-text-muted">
                       {c.requests.toLocaleString()}
+                    </td>
+                    <td
+                      className="py-1.5 text-right font-mono text-text-muted"
+                      title={`${formatBytes(c.storeBytes)} in ${c.storeKeys} keys`}
+                    >
+                      {(c.storeReads + c.storeWrites).toLocaleString()} req
                     </td>
                   </tr>
                 ))}

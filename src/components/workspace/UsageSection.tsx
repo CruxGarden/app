@@ -59,6 +59,16 @@ export default function UsageSection({
           hint={`${usage.requests.toLocaleString()} request${usage.requests === 1 ? '' : 's'} · ${bandwidthPct.toFixed(1)}% of ${formatBytes(account.plan.bandwidthBytesPerPeriod)} this period`}
           pct={bandwidthPct}
         />
+        {(usage.storeKeys > 0 || usage.storeReads + usage.storeWrites > 0) && (
+          <div className="flex items-baseline justify-between gap-2 text-[11px]">
+            <span className="text-text">Crux Store</span>
+            <span className="font-mono text-text-muted">
+              {formatBytes(usage.storeBytes)} · {usage.storeKeys} key
+              {usage.storeKeys === 1 ? '' : 's'} ·{' '}
+              {(usage.storeReads + usage.storeWrites).toLocaleString()} requests
+            </span>
+          </div>
+        )}
         {!account.bandwidthAsOf && (
           <p className="text-[10px] text-text-muted">Bandwidth updates as visits are counted.</p>
         )}

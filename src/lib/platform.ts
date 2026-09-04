@@ -29,6 +29,9 @@ export type {
   TranscodeOutput,
   LocalAiBridge,
   LocalAiEndpoint,
+  DesktopInfo,
+  UpdateState,
+  UpdateStatus,
 } from '../../electron/src/bridge';
 
 declare global {
@@ -54,6 +57,8 @@ export enum Capability {
   DesktopChrome = 'desktopChrome',
   /** Local inference (Ollama / LM Studio) detection + CORS shim. */
   LocalInference = 'localInference',
+  /** Self-update via electron-updater → GitHub Releases (ADR 0007). */
+  Updates = 'updates',
 }
 
 function bridge(): Partial<ElectronBridge> | null {
@@ -86,6 +91,8 @@ export function can(capability: Capability): boolean {
       return !!api.desktop;
     case Capability.LocalInference:
       return !!api.localai;
+    case Capability.Updates:
+      return !!api.updates;
   }
 }
 

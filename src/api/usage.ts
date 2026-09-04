@@ -6,6 +6,7 @@ export interface Plan {
   name: string;
   storageBytes: number;
   bandwidthBytesPerPeriod: number;
+  storeRequestsPerPeriod: number;
 }
 export interface CruxUsage {
   cruxId: string;
@@ -13,6 +14,17 @@ export interface CruxUsage {
   storageBytes: number;
   files: number;
   bandwidthBytes: number;
+  requests: number;
+  storeBytes: number;
+  storeKeys: number;
+  storeReads: number;
+  storeWrites: number;
+}
+export interface StoreUsage {
+  storageBytes: number;
+  keys: number;
+  reads: number;
+  writes: number;
   requests: number;
 }
 export interface SyncObjectUsage {
@@ -72,13 +84,14 @@ export interface AccountUsage {
   plan: Plan;
   /** when this period's numbers stop moving (period end + grace) */
   settlement: { finalizesAt: string; isFinal: boolean; graceHours: number };
-  budgets: { storage: BudgetLine; bandwidth: BudgetLine };
+  budgets: { storage: BudgetLine; bandwidth: BudgetLine; storeRequests: BudgetLine };
   reconciliation: ReconciliationView | null;
   /** totals against the plan: publish + sync */
   storageBytes: number;
   bandwidthBytes: number;
   requests: number;
   publish: { storageBytes: number; bandwidthBytes: number; requests: number };
+  store: StoreUsage;
   cruxes: CruxUsage[];
   sync: SyncUsage;
   bandwidthAsOf: string | null;
