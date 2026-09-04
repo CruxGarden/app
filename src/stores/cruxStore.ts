@@ -25,7 +25,7 @@ import { projectFolderExists, projectAllArtifacts } from '@/services/project-fol
 import { flushIngestion } from '@/services/ingestion';
 import { disposeChatSession } from '@/services/chat-session';
 import { captureWorkspacePreview } from '@/services/preview-capture';
-import { getPersona } from '@/services/persona';
+import { getPersona, getPersonaFingerprint } from '@/services/persona';
 import { DEFAULT_MODEL, resolveModel } from '@/ai/providers';
 import { useUIStore } from '@/stores/uiStore';
 import { playCue } from '@/services/cues';
@@ -309,14 +309,28 @@ export const useCruxStore = create<CruxState>((set, get) => ({
       '-' +
       Date.now().toString(36);
 
+    // The greeting is spoken by the current persona: stamp it and record the
+    // persona snapshot so the bubble is labelled correctly (and stays so if
+    // the Mood changes later).
     const persona = getPersona();
-
+    const pf = getPersonaFingerprint(persona);
     const greeting: ChatMessage = {
       role: 'assistant',
       content: persona.greeting || 'What would you like to create today?',
+      timestamp: new Date().toISOString(),
+      personaFingerprint: pf,
     };
 
     const initialMessages = [greeting];
+    const personaSnapshots = {
+      [pf]: {
+        name: persona.name,
+        greeting: persona.greeting,
+        systemPrompt: persona.systemPrompt,
+        thumbnailFingerprint: persona.thumbnailFingerprint || null,
+        thumbnailFingerprintLight: persona.thumbnailFingerprintLight || null,
+      },
+    };
 
     const crux = await cruxService.create({
       slug,
@@ -325,6 +339,7 @@ export const useCruxStore = create<CruxState>((set, get) => ({
       data: '',
       meta: {
         messages: initialMessages,
+        personaSnapshots,
         summary: null,
         settings: {
           model: DEFAULT_MODEL,

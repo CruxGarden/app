@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { cn } from '@/lib/cn';
 import { Button } from '@/components/ui';
 import { useAppStore } from '@/stores/appStore';
+import { BUNDLED_MOODS } from '@/lib/moods/bundled-moods';
 import { GARDEN_DARK } from '@/lib/moods';
 import {
   applyMood,
@@ -237,6 +238,55 @@ export default function MoodBrowser() {
           {note}
         </p>
       )}
+
+      <section className="flex flex-col gap-2" data-testid="bundled-moods">
+        <div className="flex items-baseline justify-between">
+          <h3 className="text-xxs font-mono uppercase tracking-wider text-caption">Built in</h3>
+          <span className="text-2xs text-text-muted">
+            Eight rooms — look, sound and voice change together. Apply one, then make it yours.
+          </span>
+        </div>
+        <div className="grid gap-3 grid-cols-[repeat(auto-fill,minmax(180px,1fr))]">
+          {BUNDLED_MOODS.map((pkg) => (
+            <div
+              key={pkg.id}
+              className={cn(
+                'group rounded-[var(--radius)] border border-border bg-panel overflow-hidden flex flex-col',
+                busy === pkg.id && 'opacity-70',
+              )}
+              data-testid={`bundled-${pkg.id}`}
+            >
+              <div className="aspect-[16/10] w-full overflow-hidden border-b border-border">
+                <Swatch pkg={pkg} />
+              </div>
+              <div className="p-2.5 flex flex-col gap-1.5">
+                <div className="min-w-0">
+                  <div className="text-sm font-display text-heading truncate">{pkg.name}</div>
+                  <div className="text-2xs font-mono text-text-muted truncate">
+                    {pkg.theme.section} · {pkg.resonance.mixes.map((m) => m.name).join(' · ')}
+                    {pkg.persona ? ` · ${pkg.persona.name}` : ''}
+                  </div>
+                </div>
+                <div className="flex items-center gap-1">
+                  <Button size="sm" onClick={() => void doApply(pkg)} disabled={busy !== null}>
+                    Apply
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => void doExport(pkg)}
+                    disabled={busy !== null}
+                    aria-label={`Export ${pkg.name}`}
+                  >
+                    Export
+                  </Button>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+        <h3 className="text-xxs font-mono uppercase tracking-wider text-caption mt-3">Yours</h3>
+      </section>
 
       {moods.length === 0 ? (
         <div className="rounded-[var(--radius)] border border-dashed border-border/70 p-8 text-center">
