@@ -55,6 +55,172 @@ interface Spec {
 
 const SPECS: Spec[] = [
   {
+    id: 'rainy-day-cafe',
+    name: 'Rainy Day Café',
+    presetId: 'rainy-day-cafe',
+    background: { type: BgType.Drift },
+    mixes: [
+      mix({
+        id: 'rdc-window-seat',
+        name: 'Window Seat',
+        root: 'Eb',
+        scale: 'major',
+        tempo: 58,
+        seed: 412,
+        layers: [
+          layer('rain', 'rdc-rain', -16, { intensity: 0.55, brightness: 0.3, drops: 0.45 }),
+          layer(
+            'keys',
+            'rdc-piano',
+            -20,
+            {
+              instrument: 'piano',
+              progression: 'wistful',
+              voicing: 'seventh',
+              rhythm: 'whole',
+              octave: 4,
+              humanize: 0.7,
+              wobble: 0,
+              tone: 0.45,
+            },
+            [{ type: 'reverb', enabled: true, params: { decay: 5, wet: 0.35 } }],
+          ),
+          layer('noise', 'rdc-murmur', -34, { color: 'brown', cutoff: 0.2, drift: 0.3 }),
+          layer('vinyl', 'rdc-dust', -30, { crackle: 0.2, dust: 0.35, hum: 0.05 }),
+        ],
+        master: { reverbDecay: 4, reverbWet: 0.22, volume: 0 },
+      }),
+    ],
+    cues: { message: null, toolDone: null, snapshot: null, published: 'chime', error: 'thud' },
+    volume: 0.5,
+    persona: {
+      name: 'Marguerite',
+      greeting: 'Take your time. The rain isn’t going anywhere, and neither am I.',
+      systemPrompt:
+        'You are Marguerite, a quiet, attentive collaborator — the friend across the table on a rainy afternoon. Soft-spoken, unhurried, precise when it matters. You leave room for silence and never rush the person.',
+    },
+  },
+  {
+    id: 'spring-morning',
+    name: 'Spring Morning',
+    presetId: 'spring-morning',
+    background: { type: BgType.Bloom },
+    mixes: [
+      mix({
+        id: 'spring-first-light',
+        name: 'First Light',
+        root: 'A',
+        scale: 'lydian',
+        tempo: 66,
+        seed: 321,
+        layers: [
+          layer('melody', 'spring-birds', -24, {
+            instrument: 'sine',
+            octave: 6,
+            density: 0.14,
+            humanize: 0.8,
+            echo: 0.3,
+          }),
+          layer(
+            'keys',
+            'spring-bells',
+            -26,
+            {
+              instrument: 'bells',
+              progression: 'static',
+              voicing: 'triad',
+              rhythm: 'arp',
+              octave: 5,
+              humanize: 0.6,
+              wobble: 0,
+              tone: 0.8,
+            },
+            [{ type: 'reverb', enabled: true, params: { decay: 6, wet: 0.4 } }],
+          ),
+          layer('pad', 'spring-pad', -26, {
+            waveform: 'sine',
+            octave: 4,
+            attack: 7,
+            release: 12,
+            shimmer: 0.2,
+            changeEvery: 16,
+          }),
+          layer('wind', 'spring-breeze', -32, { strength: 0.2, gust: 0.2, height: 0.7 }),
+        ],
+        master: { reverbDecay: 5, reverbWet: 0.3, volume: 0 },
+      }),
+    ],
+    cues: { message: null, toolDone: null, snapshot: 'bloom', published: 'bloom', error: 'thud' },
+    volume: 0.45,
+    persona: {
+      name: 'Wren',
+      greeting: 'Morning. Something small to start with?',
+      systemPrompt:
+        'You are Wren, a light, delicate collaborator. Brief and gentle; you prefer the smallest change that works and you notice details. No hype, no heaviness.',
+    },
+  },
+  {
+    id: 'snowed-in',
+    name: 'Snowed In',
+    presetId: 'snowed-in',
+    background: { type: BgType.Drift },
+    mixes: [
+      mix({
+        id: 'snow-hush',
+        name: 'Hush',
+        root: 'F',
+        scale: 'major',
+        tempo: 46,
+        seed: 1212,
+        layers: [
+          layer('noise', 'snow-air', -26, { color: 'pink', cutoff: 0.18, drift: 0.2 }, [
+            { type: 'filter', enabled: true, params: { kind: 'lowpass', frequency: 900, q: 0.5 } },
+          ]),
+          layer(
+            'pad',
+            'snow-pad',
+            -22,
+            {
+              waveform: 'triangle',
+              octave: 3,
+              attack: 8,
+              release: 14,
+              shimmer: 0.25,
+              changeEvery: 16,
+            },
+            [
+              {
+                type: 'filter',
+                enabled: true,
+                params: { kind: 'lowpass', frequency: 1800, q: 0.4 },
+              },
+            ],
+          ),
+          layer('keys', 'snow-keys', -26, {
+            instrument: 'rhodes',
+            progression: 'gospel',
+            voicing: 'seventh',
+            rhythm: 'whole',
+            octave: 4,
+            humanize: 0.7,
+            wobble: 0.1,
+            tone: 0.3,
+          }),
+          layer('wind', 'snow-wind', -34, { strength: 0.25, gust: 0.15, height: 0.4 }),
+        ],
+        master: { reverbDecay: 8, reverbWet: 0.35, volume: 0 },
+      }),
+    ],
+    cues: { message: null, toolDone: null, snapshot: null, published: 'chime', error: 'thud' },
+    volume: 0.45,
+    persona: {
+      name: 'Ilse',
+      greeting: 'Nowhere to be today. What shall we make of it?',
+      systemPrompt:
+        'You are Ilse, a calm, cosy collaborator for a snowed-in day. Warm, plain-spoken, patient. You keep things tidy and simple and enjoy slow, careful work.',
+    },
+  },
+  {
     id: 'blade-runner-rain',
     name: 'Blade Runner Rain',
     presetId: 'blade-runner',
