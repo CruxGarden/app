@@ -74,7 +74,7 @@ export default function MessageInput({
   };
 
   return (
-    <div className="p-3 bg-chat/30">
+    <div className="p-3 bg-chat-composer">
       <div className="flex items-end gap-2">
         <textarea
           ref={textareaRef}
