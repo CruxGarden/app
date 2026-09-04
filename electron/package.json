@@ -1,7 +1,7 @@
 {
   "name": "crux-garden-desktop",
-  "version": "3.0.0",
-  "description": "Crux Garden Desktop — Electron wrapper with native SQLite",
+  "version": "1.0.0",
+  "description": "Crux Garden \u2014 a local-first creative workspace: talk to an AI, make something, publish it.",
   "main": "dist/main.js",
   "scripts": {
     "build": "tsc",
@@ -11,15 +11,18 @@
     "build:all": "npm run build:web && npm run build",
     "pack": "npm run build:all && electron-builder --dir",
     "dist": "npm run build:all && electron-builder",
-    "dist:mac": "npm run build:all && electron-builder --mac",
+    "dist:mac": "npm run build:all && electron-builder --mac dmg zip",
     "dist:win": "npm run build:all && electron-builder --win",
     "dist:linux": "npm run build:all && electron-builder --linux",
     "test:e2e": "tsc && playwright test",
-    "verify": "tsc && eslint src --max-warnings=0"
+    "verify": "tsc && eslint src --max-warnings=0",
+    "dist:mac:unsigned": "npm run build:all && CSC_IDENTITY_AUTO_DISCOVERY=false electron-builder --mac dmg zip --publish never",
+    "test:packaged": "CRUX_PACKAGED=1 playwright test e2e/packaged.spec.ts"
   },
   "dependencies": {
     "better-sqlite3": "^12.8.0",
     "chokidar": "^4.0.3",
+    "electron-updater": "^6.8.9",
     "ffmpeg-static": "^5.3.0",
     "ignore": "^7.0.5",
     "pnpm": "^10.34.4"
@@ -63,11 +66,30 @@
       "category": "public.app-category.productivity",
       "icon": "build/icon.icns",
       "target": [
-        "dmg",
-        "zip"
+        {
+          "target": "dmg",
+          "arch": [
+            "arm64",
+            "x64"
+          ]
+        },
+        {
+          "target": "zip",
+          "arch": [
+            "arm64",
+            "x64"
+          ]
+        }
       ],
       "hardenedRuntime": true,
-      "gatekeeperAssess": false
+      "gatekeeperAssess": false,
+      "entitlements": "build/entitlements.mac.plist",
+      "entitlementsInherit": "build/entitlements.mac.inherit.plist",
+      "notarize": true,
+      "darkModeSupport": true,
+      "extendInfo": {
+        "NSMicrophoneUsageDescription": "Crux Garden does not record audio; this text is required by macOS for apps that use the audio stack."
+      }
     },
     "win": {
       "icon": "build/icon.ico",
@@ -77,6 +99,28 @@
       "icon": "build/icon.png",
       "target": "AppImage",
       "category": "Utility"
+    },
+    "publish": {
+      "provider": "github",
+      "owner": "CruxGarden",
+      "repo": "app",
+      "releaseType": "draft"
+    },
+    "artifactName": "${productName}-${version}-${arch}.${ext}",
+    "dmg": {
+      "sign": false,
+      "contents": [
+        {
+          "x": 130,
+          "y": 220
+        },
+        {
+          "x": 410,
+          "y": 220,
+          "type": "link",
+          "path": "/Applications"
+        }
+      ]
     }
   }
 }

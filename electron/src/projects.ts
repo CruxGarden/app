@@ -16,6 +16,8 @@ interface DesktopConfigData {
   gardenRoot: string;
   /** Every root ever used — folders under a previous root stay operable. */
   knownRoots: string[];
+  /** Check GitHub Releases for updates on launch (ADR 0008: visible, disableable). */
+  autoUpdate: boolean;
 }
 
 export class DesktopConfig {
@@ -30,7 +32,7 @@ export class DesktopConfig {
     // CRUX_GARDEN_ROOT: test isolation — UI tests must not create folders in
     // the developer's real garden.
     const root = process.env.CRUX_GARDEN_ROOT || path.join(os.homedir(), 'CruxGarden');
-    return { gardenRoot: root, knownRoots: [root] };
+    return { gardenRoot: root, knownRoots: [root], autoUpdate: true };
   }
 
   load(): DesktopConfigData {
@@ -43,6 +45,7 @@ export class DesktopConfig {
         knownRoots: Array.isArray(raw.knownRoots) && raw.knownRoots.length
           ? raw.knownRoots
           : defaults.knownRoots,
+        autoUpdate: raw.autoUpdate !== false,
       };
     } catch {
       this.data = this.defaults();
@@ -63,6 +66,16 @@ export class DesktopConfig {
 
   get knownRoots(): string[] {
     return this.load().knownRoots;
+  }
+
+  get autoUpdate(): boolean {
+    return this.load().autoUpdate;
+  }
+
+  setAutoUpdate(on: boolean): void {
+    const data = this.load();
+    data.autoUpdate = on;
+    fs.writeFileSync(this.filePath, JSON.stringify(data, null, 2));
   }
 }
 

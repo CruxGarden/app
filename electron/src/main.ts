@@ -9,6 +9,8 @@ const { ProjectWatcher } = require('./watcher');
 const { PreviewServer } = require('./preview-server');
 const { Toolchain } = require('./toolchain');
 const { DevServerManager } = require('./dev-server');
+const { AppLog } = require('./log');
+const { Updater } = require('./updater');
 
 // ffmpeg-static provides a bundled ffmpeg binary
 let ffmpegPath: string;
@@ -28,20 +30,27 @@ const selfTestHooks: { secrets?: any; projects?: any; toolchain?: any } = {};
 
 const isDev = !app.isPackaged;
 
-// Debug log to file — use a fixed path since app.getPath may not be ready
-const logFile = path.join(require('os').homedir(), 'crux-garden-debug.log');
-function debugLog(msg: string) {
-  const line = `[${new Date().toISOString()}] ${msg}\n`;
-  try { fs.appendFileSync(logFile, line); } catch {}
-}
-debugLog(`Starting Crux Garden. isDev=${isDev}, isPackaged=${app.isPackaged}, ffmpeg=${ffmpegPath}`);
-
-// Set name for menu bar, but lock userData path so it doesn't change with the name.
-// CRUX_USER_DATA overrides it so automated UI tests (Playwright) run against a
-// throwaway database instead of the developer's real garden.
+// Identity. Packaged builds are "Crux Garden" (Info.plist), so userData is
+// ~/Library/Application Support/Crux Garden — where users' gardens live from the
+// first release on. Dev keeps Electron's default (the package name) so a dev
+// database never collides with the installed app's. The name is set before any
+// getPath() call so both paths are stable. CRUX_USER_DATA overrides it so
+// automated UI tests (Playwright) run against a throwaway database.
+if (app.isPackaged) app.setName('Crux Garden');
 const userDataPath = process.env.CRUX_USER_DATA || app.getPath('userData');
 app.setName('Crux Garden');
 app.setPath('userData', userDataPath);
+// Logs live beside userData when isolated (tests), else in the OS logs folder
+// (macOS: ~/Library/Logs/Crux Garden). Always on, never sent (ADR 0008).
+const logsDir = process.env.CRUX_USER_DATA
+  ? path.join(userDataPath, 'logs')
+  : app.getPath('logs');
+const appLog = new AppLog(logsDir);
+appLog.attach(process, app);
+function debugLog(msg: string) {
+  appLog.info(msg);
+}
+debugLog(`Starting Crux Garden ${app.getVersion()}. isDev=${isDev}, isPackaged=${app.isPackaged}, ffmpeg=${ffmpegPath}`);
 
 function getDbPath(): string {
   const userDataPath = app.getPath('userData');
@@ -334,6 +343,36 @@ function setupIpc() {
   ipcMain.handle('desktop:open-external', (_e: any, url: string) => {
     if (/^http:\/\/127\.0\.0\.1:\d+(\/|$)/.test(url)) shell.openExternal(url);
   });
+
+  ipcMain.handle('desktop:info', () => ({
+    version: app.getVersion(),
+    electron: process.versions.electron,
+    platform: process.platform,
+    arch: process.arch,
+    packaged: app.isPackaged,
+    logsDir,
+    userDataDir: app.getPath('userData'),
+  }));
+  ipcMain.handle('desktop:open-logs', () => {
+    shell.openPath(logsDir);
+  });
+
+  // ── Updates (ADR 0007): GitHub Releases via electron-updater ─────
+  const updater = new Updater({
+    app,
+    autoCheck: () => desktopConfig.autoUpdate,
+    setAutoCheck: (on: boolean) => desktopConfig.setAutoUpdate(on),
+    log: appLog,
+    onChange: (state: any) => {
+      for (const w of BrowserWindow.getAllWindows()) w.webContents.send('updates:changed', state);
+    },
+  });
+  ipcMain.handle('updates:state', () => updater.getState());
+  ipcMain.handle('updates:check', () => updater.check());
+  ipcMain.handle('updates:download', () => updater.download());
+  ipcMain.handle('updates:install', () => updater.install());
+  ipcMain.handle('updates:set-auto', (_e: any, on: boolean) => updater.setAutoCheck(!!on));
+  if (!process.env.CRUX_USER_DATA) updater.scheduleLaunchCheck();
 
   // ── Toolchain + site dev servers (ADR 0004/0005) ────────────
   const toolchain = new Toolchain(

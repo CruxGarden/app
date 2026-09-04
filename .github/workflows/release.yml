@@ -1,0 +1,71 @@
+# Desktop release (ADR 0007): tag `v*` → build, sign, notarize, publish a draft
+# GitHub Release with the DMG + zip + latest-mac.yml electron-updater reads.
+# Signing/notarization run only when the secrets exist, so the same workflow
+# produces unsigned artifacts on a fork or before the Apple side is set up.
+# `workflow_dispatch` builds unsigned and uploads artifacts without publishing.
+name: Release (desktop)
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  mac:
+    name: macOS ${{ matrix.arch }}
+    runs-on: macos-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [arm64, x64]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            electron/package-lock.json
+      - run: npm ci
+      - run: npm ci
+        working-directory: electron
+      - name: Build web app + main process
+        run: npm run build:all
+        working-directory: electron
+      - name: Package
+        working-directory: electron
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Apple Developer ID certificate (.p12, base64) + password — absent → unsigned build
+          CSC_LINK: ${{ secrets.MAC_CERT_P12 }}
+          CSC_KEY_PASSWORD: ${{ secrets.MAC_CERT_PASSWORD }}
+          CSC_IDENTITY_AUTO_DISCOVERY: ${{ secrets.MAC_CERT_P12 != '' }}
+          # Notarization (electron-builder `notarize: true`) — absent → skipped
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          PUBLISH=never
+          if [[ "${GITHUB_REF}" == refs/tags/v* ]]; then PUBLISH=always; fi
+          npx electron-builder --mac dmg zip --${{ matrix.arch }} --publish "$PUBLISH"
+      - name: Smoke-test the packaged app
+        if: matrix.arch == 'arm64'
+        working-directory: electron
+        env:
+          CRUX_PACKAGED: '1'
+        run: |
+          npx playwright install chromium
+          npx playwright test e2e/packaged.spec.ts
+      - uses: actions/upload-artifact@v4
+        with:
+          name: crux-garden-mac-${{ matrix.arch }}
+          path: |
+            electron/release/*.dmg
+            electron/release/*.zip
+            electron/release/*.yml
+            electron/e2e/.results/packaged-gateway.png
+          if-no-files-found: error

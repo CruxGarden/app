@@ -252,6 +252,10 @@ export async function startMockApi(): Promise<MockApi> {
         files: files.length,
         bandwidthBytes: storageBytes ? 40960 : 0,
         requests: storageBytes ? 12 : 0,
+        storeBytes: storageBytes ? 512 : 0,
+        storeKeys: storageBytes ? 2 : 0,
+        storeReads: storageBytes ? 30 : 0,
+        storeWrites: storageBytes ? 4 : 0,
       };
     };
     // ── sync: garden backup + crux archives (multipart PUT), metered into usage
@@ -376,13 +380,26 @@ export async function startMockApi(): Promise<MockApi> {
         over: used > limit,
         overSoft: used > limit * 1.1,
       });
+      const store = {
+        storageBytes: cruxes.reduce((n, c) => n + c.storeBytes, 0),
+        keys: cruxes.reduce((n, c) => n + c.storeKeys, 0),
+        reads: cruxes.reduce((n, c) => n + c.storeReads, 0),
+        writes: cruxes.reduce((n, c) => n + c.storeWrites, 0),
+        requests: 0,
+      };
+      store.requests = store.reads + store.writes;
       return send(200, {
         publish,
+        store,
         sync,
         settlement: { finalizesAt: '2026-10-03T00:00:00.000Z', isFinal: false, graceHours: 48 },
         budgets: {
-          storage: budget(1073741824, publish.storageBytes + sync.storageBytes),
+          storage: budget(
+            1073741824,
+            publish.storageBytes + sync.storageBytes + store.storageBytes,
+          ),
           bandwidth: budget(1073741824, publish.bandwidthBytes + sync.transferBytes),
+          storeRequests: budget(100000, store.requests),
         },
         reconciliation: {
           day: '2026-09-02',
@@ -398,8 +415,9 @@ export async function startMockApi(): Promise<MockApi> {
           name: 'Free',
           storageBytes: 1073741824,
           bandwidthBytesPerPeriod: 1073741824,
+          storeRequestsPerPeriod: 100000,
         },
-        storageBytes: publish.storageBytes + sync.storageBytes,
+        storageBytes: publish.storageBytes + sync.storageBytes + store.storageBytes,
         bandwidthBytes: publish.bandwidthBytes + sync.transferBytes,
         requests: publish.requests,
         cruxes,

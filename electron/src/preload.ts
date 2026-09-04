@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer } from 'electron';
-import type { ElectronBridge, ChangeBatch } from './bridge';
+import type { ElectronBridge, ChangeBatch, DesktopInfo, UpdateState } from './bridge';
 
 /**
  * Preload script — exposes the IPC bridge to the renderer.
@@ -37,6 +37,22 @@ const api: ElectronBridge = {
       ipcRenderer.invoke('desktop:choose-garden-root') as Promise<string | null>,
     openExternal: (url: string) =>
       ipcRenderer.invoke('desktop:open-external', url) as Promise<void>,
+    info: () => ipcRenderer.invoke('desktop:info') as Promise<DesktopInfo>,
+    openLogs: () => ipcRenderer.invoke('desktop:open-logs') as Promise<void>,
+  },
+
+  updates: {
+    state: () => ipcRenderer.invoke('updates:state') as Promise<UpdateState>,
+    check: () => ipcRenderer.invoke('updates:check') as Promise<UpdateState>,
+    download: () => ipcRenderer.invoke('updates:download') as Promise<UpdateState>,
+    install: () => ipcRenderer.invoke('updates:install') as Promise<void>,
+    setAutoCheck: (on: boolean) =>
+      ipcRenderer.invoke('updates:set-auto', on) as Promise<UpdateState>,
+    onChange: (cb: (state: UpdateState) => void) => {
+      const handler = (_e: unknown, state: UpdateState) => cb(state);
+      ipcRenderer.on('updates:changed', handler);
+      return () => ipcRenderer.removeListener('updates:changed', handler);
+    },
   },
 
   project: {
