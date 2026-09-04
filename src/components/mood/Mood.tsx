@@ -27,6 +27,7 @@ import {
   type PersonaSettings,
 } from './mood-helpers';
 import { useBlobUrl } from '@/hooks/useBlobUrl';
+import { Button } from '@/components/ui';
 
 // ── Preset thumbnail ─────────────────────────────────
 
@@ -169,7 +170,7 @@ function PersonaTab() {
   const inputClass = cn(
     'w-full bg-bg border border-border rounded-[var(--radius-sm)] px-2.5 py-1.5',
     'text-xs text-text placeholder:text-text-muted/50',
-    'focus:outline-none focus:border-accent font-mono',
+    'focus:outline-none focus:border-input-border-active font-mono',
   );
 
   return (
@@ -309,16 +310,22 @@ function BackgroundTabContent({
   bgImagePreview,
   onBgImageSelect,
   onBgImageClear,
+  onBgGenerate,
   bgGenerating,
+  bgError,
 }: {
   bgType: BgType;
   onChangeBgType: (t: BgType) => void;
   bgImagePreview: string | null;
   onBgImageSelect: (file: File) => void;
   onBgImageClear: () => void;
+  /** Make a backdrop from a description (the same path the agent's set_background uses). */
+  onBgGenerate: (prompt: string) => void;
   bgGenerating: boolean;
+  bgError: string | null;
 }) {
   const fileRef = useRef<HTMLInputElement>(null);
+  const [bgPrompt, setBgPrompt] = useState('');
   const isLight = getResolvedMode() === 'Light';
 
   const animatedOptions: {
@@ -393,6 +400,39 @@ function BackgroundTabContent({
           }}
         />
 
+        <form
+          className="flex flex-col gap-1.5 mt-2"
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (bgPrompt.trim() && !bgGenerating) onBgGenerate(bgPrompt.trim());
+          }}
+        >
+          <label className="text-[10px] font-mono uppercase tracking-wider text-caption">
+            Describe a backdrop
+          </label>
+          <div className="flex gap-2">
+            <input
+              value={bgPrompt}
+              onChange={(e) => setBgPrompt(e.target.value)}
+              placeholder="fog over a pine forest at dawn, soft, muted"
+              aria-label="Backdrop description"
+              className="flex-1 h-8 rounded-input border border-input-border bg-input px-2.5 text-xs text-input-text placeholder:text-placeholder focus:outline-none focus:border-input-border-active focus:ring-1 focus:ring-input-outline"
+            />
+            <Button
+              type="submit"
+              size="sm"
+              variant="secondary"
+              disabled={!bgPrompt.trim() || bgGenerating}
+              loading={bgGenerating}
+            >
+              Generate
+            </Button>
+          </div>
+          <p className="text-[10px] text-text-muted">
+            Uses your image-capable model key (same as the agent). Or pick an image file below.
+          </p>
+          {bgError && <p className="text-[10px] text-error">{bgError}</p>}
+        </form>
         {bgType === 'image' && bgImagePreview && (
           <div className="flex flex-col gap-2 mt-1 p-3 bg-bg border border-border/50 rounded-[var(--radius-sm)]">
             <div className="relative w-full h-28 rounded-[var(--radius-sm)] overflow-hidden">
@@ -503,6 +543,27 @@ export default function MoodEditor({ initialTab = 'moods', compact = false }: Mo
     return () => releaseBgObjectUrl();
   }, []);
   const [bgGenerating, setBgGenerating] = useState(false);
+  const [bgError, setBgError] = useState<string | null>(null);
+  const handleBgGenerate = async (prompt: string) => {
+    setBgGenerating(true);
+    setBgError(null);
+    try {
+      const { generateImageBlob } = await import('@/ai/tools');
+      const result = await generateImageBlob(prompt, '1536x1024');
+      if ('error' in result) {
+        setBgError(result.error);
+        return;
+      }
+      const { setBackgroundFromBlob, setBackgroundType } = await import('@/services/background');
+      await setBackgroundType(BgType.Image);
+      await setBackgroundFromBlob(result.blob);
+      setBgType(BgType.Image);
+    } catch (err) {
+      setBgError((err as Error).message || 'Could not generate a backdrop');
+    } finally {
+      setBgGenerating(false);
+    }
+  };
 
   const handleBgChange = (type: BgType) => {
     setBgType(type);
@@ -694,6 +755,8 @@ export default function MoodEditor({ initialTab = 'moods', compact = false }: Mo
             onBgImageSelect={handleBgImageSelect}
             onBgImageClear={handleBgImageClear}
             bgGenerating={bgGenerating}
+            bgError={bgError}
+            onBgGenerate={(p) => void handleBgGenerate(p)}
           />
         )}
         {tab === 'moods' && <MoodBrowser />}
