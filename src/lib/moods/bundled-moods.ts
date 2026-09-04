@@ -739,6 +739,140 @@ const SPECS: Spec[] = [
         'You are Andie, an upbeat, funny, big-hearted 1980s collaborator. Enthusiastic without being saccharine, quick with a compliment, allergic to boring. You still do careful work.',
     },
   },
+  {
+    id: 'plain-form',
+    name: 'Plain Form',
+    presetId: 'plain-form',
+    background: { type: BgType.Blank },
+    mixes: [
+      mix({
+        id: 'pf-reading-room',
+        name: 'Reading Room',
+        root: 'C',
+        scale: 'major',
+        tempo: 60,
+        seed: 2004,
+        layers: [
+          layer('noise', 'pf-air', -32, { color: 'brown', cutoff: 0.12, drift: 0.05 }, [
+            { type: 'filter', enabled: true, params: { kind: 'lowpass', frequency: 400, q: 0.5 } },
+          ]),
+        ],
+        master: { reverbDecay: 0.5, reverbWet: 0, volume: 0 },
+      }),
+    ],
+    cues: { message: null, toolDone: null, snapshot: null, published: 'tick', error: 'thud' },
+    volume: 0.3,
+    persona: {
+      name: 'The Clerk',
+      greeting: 'Good day. Please state what you require.',
+      systemPrompt:
+        'You are The Clerk: precise, brief and formal. You answer in complete sentences, never use exclamation marks, and when you have done something you confirm exactly what was done. No small talk, no metaphors, no emoji.',
+    },
+  },
+  {
+    id: 'catppuccin-mocha',
+    name: 'Catppuccin Mocha',
+    presetId: 'catppuccin-mocha',
+    background: { type: BgType.Bloom },
+    mixes: [
+      mix({
+        id: 'ctp-late-night-terminal',
+        name: 'Late Night Terminal',
+        root: 'Ab',
+        scale: 'major',
+        tempo: 64,
+        seed: 1122,
+        layers: [
+          layer(
+            'keys',
+            'ctp-keys',
+            -16,
+            {
+              instrument: 'rhodes',
+              progression: 'lofi',
+              voicing: 'seventh',
+              rhythm: 'half',
+              octave: 4,
+              humanize: 0.5,
+              wobble: 0.3,
+              tone: 0.4,
+            },
+            [
+              { type: 'tape', enabled: true, params: { wobble: 0.3, warmth: 0.6 } },
+              {
+                type: 'filter',
+                enabled: true,
+                params: { kind: 'lowpass', frequency: 2400, q: 0.5 },
+              },
+            ],
+          ),
+          layer(
+            'pad',
+            'ctp-pad',
+            -24,
+            {
+              waveform: 'triangle',
+              octave: 3,
+              attack: 5,
+              release: 9,
+              shimmer: 0.3,
+              changeEvery: 8,
+            },
+            [
+              {
+                type: 'filter',
+                enabled: true,
+                params: { kind: 'lowpass', frequency: 1600, q: 0.4 },
+              },
+            ],
+          ),
+          layer('bass', 'ctp-bass', -20, {
+            pattern: 'root',
+            progression: 'lofi',
+            octave: 2,
+            tone: 0.3,
+            glide: 0.2,
+          }),
+          layer('vinyl', 'ctp-vinyl', -26, { crackle: 0.35, dust: 0.3, hum: 0.08 }),
+        ],
+        master: { reverbDecay: 3, reverbWet: 0.22, volume: 0 },
+      }),
+      mix({
+        id: 'ctp-idle-cursor',
+        name: 'Idle Cursor',
+        root: 'Ab',
+        scale: 'lydian',
+        tempo: 48,
+        seed: 3344,
+        layers: [
+          layer('drone', 'ctp-drone', -22, {
+            waveform: 'fatsine',
+            chord: 'root5',
+            octave: 2,
+            cutoff: 0.25,
+            movement: 0.3,
+          }),
+          layer('melody', 'ctp-blink', -28, {
+            instrument: 'sine',
+            octave: 5,
+            density: 0.1,
+            humanize: 0.6,
+            echo: 0.5,
+          }),
+          layer('noise', 'ctp-fan', -36, { color: 'pink', cutoff: 0.15, drift: 0.2 }),
+        ],
+        master: { reverbDecay: 6, reverbWet: 0.3, volume: 0 },
+      }),
+    ],
+    cues: { message: null, toolDone: 'tick', snapshot: null, published: 'chime', error: 'thud' },
+    volume: 0.5,
+    persona: {
+      name: 'Mocha',
+      greeting: 'Hey. Kettle’s on, terminal’s open. What are we building tonight?',
+      systemPrompt:
+        'You are Mocha, a warm, cosy, slightly playful collaborator who is comfortable with developers. Friendly and relaxed, fluent in code and tooling, quick to show a snippet rather than describe one. Pastel humour, never snark.',
+    },
+  },
 ];
 
 function build(spec: Spec): MoodPackage {
