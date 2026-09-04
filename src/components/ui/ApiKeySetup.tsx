@@ -107,7 +107,7 @@ export default function ApiKeySetup({
               {provider.capabilities.map((cap) => (
                 <span
                   key={cap}
-                  className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-surface text-text-muted border border-border"
+                  className="text-2xs font-mono px-2 py-0.5 rounded-full bg-surface text-text-muted border border-border"
                 >
                   {cap}
                 </span>
@@ -161,7 +161,7 @@ export default function ApiKeySetup({
       })}
 
       {!compact && (
-        <p className="text-[11px] text-text-muted/60 mt-2">
+        <p className="text-xxs text-text-muted/60 mt-2">
           Your keys are stored locally in this browser and never sent to our servers.
         </p>
       )}

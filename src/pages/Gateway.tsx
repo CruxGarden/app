@@ -534,7 +534,7 @@ function AccordionHeader({
         {!open && summary && (
           <span
             className={cn(
-              'text-[10px] font-mono',
+              'text-2xs font-mono',
               required ? 'text-error' : completed ? 'text-accent' : 'text-text-muted',
             )}
           >

@@ -68,7 +68,7 @@ function UserAvatar({
       className={cn(
         'w-6 h-6 shrink-0 rounded-[var(--radius-sm)] overflow-hidden flex items-center justify-center ring-1 ring-border',
         !avatarUrl &&
-          'bg-chat-user-bubble text-chat-user-bubble-text text-[10px] font-display font-bold',
+          'bg-chat-user-bubble text-chat-user-bubble-text text-2xs font-display font-bold',
       )}
     >
       {avatarUrl ? <img src={avatarUrl} alt="" className="w-full h-full object-cover" /> : initial}
@@ -132,7 +132,7 @@ function ToolCallItem({ tc }: { tc: ToolCall }) {
         <span className="truncate">{label}</span>
       </button>
       {expanded && tc.result && (
-        <pre className="mt-1 mx-1 px-2 py-1.5 text-[10px] font-mono leading-relaxed bg-code-block rounded border border-code-block-border text-chat-text-muted overflow-x-auto max-h-48 overflow-y-auto whitespace-pre-wrap break-words">
+        <pre className="mt-1 mx-1 px-2 py-1.5 text-2xs font-mono leading-relaxed bg-code-block rounded border border-code-block-border text-chat-text-muted overflow-x-auto max-h-48 overflow-y-auto whitespace-pre-wrap break-words">
           {tc.result}
         </pre>
       )}
@@ -163,8 +163,8 @@ export default function MessageBubble({
             : 'bg-chat-ai-bubble text-chat-ai-bubble-text border-chat-ai-bubble-border',
         )}
       >
-        {personaName && <div className="text-[10px] font-mono text-accent mb-1">{personaName}</div>}
-        {authorName && <div className="text-[10px] font-mono text-accent mb-1">{authorName}</div>}
+        {personaName && <div className="text-2xs font-mono text-accent mb-1">{personaName}</div>}
+        {authorName && <div className="text-2xs font-mono text-accent mb-1">{authorName}</div>}
         {isUser ? (
           <p className="whitespace-pre-wrap">{message.content}</p>
         ) : (
@@ -181,7 +181,7 @@ export default function MessageBubble({
 
         {/* Model badge for assistant messages */}
         {!isUser && message.model && (
-          <div className="mt-1.5 text-[10px] font-mono text-chat-text-muted/50 text-right">
+          <div className="mt-1.5 text-2xs font-mono text-chat-text-muted/50 text-right">
             {getModelShortName(message.model) || message.model}
           </div>
         )}

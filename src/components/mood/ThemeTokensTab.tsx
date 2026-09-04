@@ -125,7 +125,7 @@ function TokenRow({
           {overridden && <span className="w-1.5 h-1.5 rounded-full bg-accent shrink-0" />}
           <span className="text-xs font-body text-text truncate">{label}</span>
         </div>
-        <div className="text-[10px] font-mono text-text-muted truncate">
+        <div className="text-2xs font-mono text-text-muted truncate">
           {cssVar}
           {!overridden && isDerived(value) && <span className="ml-1.5 opacity-70">inherits</span>}
         </div>
@@ -170,7 +170,7 @@ function TokenRow({
               if (e.target.value) onChange(e.target.value);
               e.target.value = '';
             }}
-            className="h-7 w-28 rounded-[var(--radius-sm)] border border-border bg-surface px-1.5 text-[11px] text-text"
+            className="h-7 w-28 rounded-[var(--radius-sm)] border border-border bg-surface px-1.5 text-xxs text-text"
           >
             <option value="">Pick asset…</option>
             {getAssets()
@@ -209,7 +209,7 @@ function TokenRow({
           }}
           spellCheck={false}
           className={cn(
-            'h-7 rounded-[var(--radius-sm)] border border-border bg-surface px-2 text-[11px] font-mono text-text',
+            'h-7 rounded-[var(--radius-sm)] border border-border bg-surface px-2 text-xxs font-mono text-text',
             'focus:outline-none focus:border-input-border-active',
             kind === 'font' || kind === 'text' ? 'w-56' : 'w-40',
           )}
@@ -430,8 +430,8 @@ export default function ThemeTokensTab() {
           <button
             type="button"
             onClick={() => setThemePreview(null)}
-            className="inline-flex items-center gap-1.5 h-7 px-2.5 rounded-[var(--radius-sm)] border border-warning-border bg-warning-bg text-warning-text text-[11px] cursor-pointer"
-            title="The AI is previewing tokens on top of your theme"
+            className="inline-flex items-center gap-1.5 h-7 px-2.5 rounded-[var(--radius-sm)] border border-warning-border bg-warning-bg text-warning-text text-xxs cursor-pointer"
+            title="A conversation is previewing tokens on top of your theme"
           >
             AI preview: {previewCount} token{previewCount === 1 ? '' : 's'} · clear
           </button>
@@ -515,7 +515,7 @@ export default function ThemeTokensTab() {
       </div>
 
       {savedNote && (
-        <p role="status" className="text-[11px] text-accent -mt-1">
+        <p role="status" className="text-xxs text-accent -mt-1">
           {savedNote}
         </p>
       )}
@@ -545,7 +545,7 @@ export default function ThemeTokensTab() {
                 )}
               >
                 <span className="truncate">{group.label}</span>
-                {n > 0 && <span className="text-[10px] font-mono text-accent shrink-0">{n}</span>}
+                {n > 0 && <span className="text-2xs font-mono text-accent shrink-0">{n}</span>}
               </button>
             );
           })}
@@ -553,7 +553,7 @@ export default function ThemeTokensTab() {
 
         {/* Tokens */}
         <div className="flex-1 min-w-0 overflow-y-auto">
-          {!q && <p className="text-[11px] text-text-muted px-3 pb-2">{current.group.hint}</p>}
+          {!q && <p className="text-xxs text-text-muted px-3 pb-2">{current.group.hint}</p>}
           <div className="flex flex-col gap-0.5">
             {visible.map(({ key, group }) => (
               <TokenRow

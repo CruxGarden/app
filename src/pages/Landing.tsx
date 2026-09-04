@@ -59,7 +59,7 @@ function SiteHeader() {
       <Link to="/" className="font-wordmark text-lg text-text hover:text-accent">
         {APP_NAME}
       </Link>
-      <nav className="flex items-center gap-4 text-[11px] font-mono text-text-muted">
+      <nav className="flex items-center gap-4 text-xxs font-mono text-text-muted">
         <MoodBar />
         <Link to="/explore" className="hover:text-text">
           Explore
@@ -116,7 +116,7 @@ function Hero() {
             >
               Download for Mac ({download.arch === 'arm64' ? 'Apple silicon' : 'Intel'})
             </a>
-            <div className="text-[11px] font-mono text-text-muted">
+            <div className="text-xxs font-mono text-text-muted">
               v{download.version}
               {download.size ? ` · ${formatBytes(download.size)}` : ''}
               {other && (
@@ -142,7 +142,7 @@ function Hero() {
             >
               {download === undefined ? 'Download for Mac' : 'Releases on GitHub'}
             </a>
-            <div className="text-[11px] font-mono text-text-muted">
+            <div className="text-xxs font-mono text-text-muted">
               macOS 13 or later · free · MIT licensed
             </div>
           </>
@@ -244,9 +244,7 @@ function ExploreSection() {
                 {c.description && (
                   <div className="text-xs text-text-muted line-clamp-2 mt-1">{c.description}</div>
                 )}
-                <div className="mt-2 text-[10px] font-mono text-text-muted">
-                  @{c.author_username}
-                </div>
+                <div className="mt-2 text-2xs font-mono text-text-muted">@{c.author_username}</div>
               </div>
             </Link>
           ))}
@@ -302,7 +300,7 @@ function MoodSection() {
       </p>
       <div className="grid gap-4 md:grid-cols-2">
         <div className="bg-panel border border-border rounded-[var(--radius)] p-4">
-          <div className="text-[10px] font-mono uppercase tracking-wider text-text-muted mb-3">
+          <div className="text-2xs font-mono uppercase tracking-wider text-text-muted mb-3">
             Theme
           </div>
           <div className="grid grid-cols-4 sm:grid-cols-6 gap-2" role="listbox" aria-label="Themes">
@@ -326,12 +324,12 @@ function MoodSection() {
               </button>
             ))}
           </div>
-          <div className="mt-2 text-[11px] font-mono text-text-muted">
+          <div className="mt-2 text-xxs font-mono text-text-muted">
             {presets.find((p) => p.id === active)?.name ?? active}
           </div>
         </div>
         <div className="bg-panel border border-border rounded-[var(--radius)] p-4">
-          <div className="text-[10px] font-mono uppercase tracking-wider text-text-muted mb-3">
+          <div className="text-2xs font-mono uppercase tracking-wider text-text-muted mb-3">
             Sound
           </div>
           <ul className="flex flex-col gap-1">
@@ -349,7 +347,7 @@ function MoodSection() {
                   aria-pressed={m.id === activeMixId && playing}
                 >
                   <span className="truncate">{m.name}</span>
-                  <span className="text-[10px] font-mono">
+                  <span className="text-2xs font-mono">
                     {m.id === activeMixId && playing
                       ? 'playing'
                       : m.id === activeMixId
@@ -360,7 +358,7 @@ function MoodSection() {
               </li>
             ))}
           </ul>
-          <div className="mt-2 text-[11px] text-text-muted">
+          <div className="mt-2 text-xxs text-text-muted">
             Generated live in your browser — nothing streams. The player sits in the top bar and
             follows you around the site.
           </div>
@@ -391,7 +389,7 @@ function HowItWorks() {
       <div className="grid gap-3 md:grid-cols-3">
         {steps.map((s, i) => (
           <div key={s.title} className="bg-panel border border-border rounded-[var(--radius)] p-4">
-            <div className="text-[10px] font-mono text-text-muted">0{i + 1}</div>
+            <div className="text-2xs font-mono text-text-muted">0{i + 1}</div>
             <div className="font-display text-lg text-text mt-1">{s.title}</div>
             <p className="text-sm text-text-muted mt-1">{s.body}</p>
           </div>
@@ -441,7 +439,7 @@ function Trust() {
 
 function SiteFooter() {
   return (
-    <footer className="relative z-10 border-t border-border py-6 px-4 sm:px-6 text-[11px] font-mono text-text-muted">
+    <footer className="relative z-10 border-t border-border py-6 px-4 sm:px-6 text-xxs font-mono text-text-muted">
       <div className="max-w-5xl mx-auto flex flex-wrap items-center justify-between gap-3">
         <span>© {new Date().getFullYear()} Crux Garden · MIT</span>
         <span className="flex items-center gap-4">

@@ -127,7 +127,7 @@ export default function PlanSettings() {
       <div className="flex items-baseline justify-between gap-3 mb-3">
         <h2 className="font-display text-base font-medium text-heading">Plan</h2>
         {me && (
-          <span className="text-[11px] font-mono text-text-muted" data-testid="plan-status">
+          <span className="text-xxs font-mono text-text-muted" data-testid="plan-status">
             {me.plan.name}
             {me.status === 'trialing' && me.trialEndsAt
               ? ` · trial ends ${day(me.trialEndsAt)}`
@@ -156,7 +156,7 @@ export default function PlanSettings() {
 
       {catalog && me && (
         <>
-          <div className="flex items-center justify-end gap-1 text-[11px] font-mono text-text-muted mb-2">
+          <div className="flex items-center justify-end gap-1 text-xxs font-mono text-text-muted mb-2">
             {(['month', 'year'] as const).map((iv) => (
               <button
                 key={iv}
@@ -194,15 +194,15 @@ export default function PlanSettings() {
                         : 'Free'}
                     </div>
                   </div>
-                  {plan.blurb && <p className="text-[11px] text-text-muted">{plan.blurb}</p>}
-                  <ul className="text-[11px] text-text-muted mt-1">
+                  {plan.blurb && <p className="text-xxs text-text-muted">{plan.blurb}</p>}
+                  <ul className="text-xxs text-text-muted mt-1">
                     <li>{formatBytes(plan.storageBytes)} storage</li>
                     <li>{formatBytes(plan.bandwidthBytesPerPeriod)} bandwidth / month</li>
                     <li>{plan.storeRequestsPerPeriod.toLocaleString()} store requests / month</li>
                   </ul>
                   <div className="mt-auto pt-2">
                     {current ? (
-                      <span className="text-[11px] font-mono text-accent">Current plan</span>
+                      <span className="text-xxs font-mono text-accent">Current plan</span>
                     ) : paid && (!me.canManage || me.plan.id === 'free') ? (
                       <Button
                         size="sm"
@@ -216,9 +216,9 @@ export default function PlanSettings() {
                           : `Choose ${plan.name}`}
                       </Button>
                     ) : paid ? (
-                      <span className="text-[11px] text-text-muted">Switch in Manage billing</span>
+                      <span className="text-xxs text-text-muted">Switch in Manage billing</span>
                     ) : (
-                      <span className="text-[11px] text-text-muted">Cancel in Manage billing</span>
+                      <span className="text-xxs text-text-muted">Cancel in Manage billing</span>
                     )}
                   </div>
                 </div>
@@ -226,7 +226,7 @@ export default function PlanSettings() {
             })}
           </div>
           <div className="flex flex-wrap items-center justify-between gap-2 mt-3">
-            <p className="text-[10px] text-text-muted">
+            <p className="text-2xs text-text-muted">
               Checkout is Stripe's — Apple Pay, Google Pay and Link work, and no card details ever
               reach Crux Garden.{catalog.trialDays > 0 ? ' Trials need no card.' : ''}
             </p>

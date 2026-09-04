@@ -80,7 +80,7 @@ export default function IconButton({
           <div className="flex items-center gap-2.5 px-3 py-2 rounded-tooltip bg-tooltip border border-tooltip-border shadow-tooltip whitespace-nowrap">
             <span className="text-xs font-medium text-tooltip-text">{tooltip.label}</span>
             {tooltip.shortcut && (
-              <kbd className="text-[11px] font-mono text-tooltip-text px-1.5 py-0.5 rounded-[var(--radius-sm)] bg-bg border border-tooltip-border min-w-[1.5rem] text-center">
+              <kbd className="text-xxs font-mono text-tooltip-text px-1.5 py-0.5 rounded-[var(--radius-sm)] bg-bg border border-tooltip-border min-w-[1.5rem] text-center">
                 {modKey}
                 {tooltip.shortcut}
               </kbd>

@@ -105,7 +105,7 @@ function FieldRenderer({
             className="w-8 h-8 rounded border border-border cursor-pointer bg-transparent"
           />
           <span className={labelClass}>{field.label}</span>
-          <span className="text-[10px] font-mono text-text-muted">{String(value ?? '')}</span>
+          <span className="text-2xs font-mono text-text-muted">{String(value ?? '')}</span>
         </label>
       );
 
@@ -219,7 +219,7 @@ function RepeaterField({
         <span className={labelClass}>{field.label}</span>
         <button
           onClick={addItem}
-          className="text-[10px] font-mono text-accent hover:text-accent/80 transition-colors cursor-pointer"
+          className="text-2xs font-mono text-accent hover:text-accent/80 transition-colors cursor-pointer"
         >
           + Add
         </button>
@@ -231,7 +231,7 @@ function RepeaterField({
             <div className="flex items-center gap-1 px-2 py-1.5 bg-surface-solid">
               <button
                 onClick={() => setCollapsed((prev) => ({ ...prev, [i]: !prev[i] }))}
-                className="text-text-muted hover:text-text text-[10px] w-4 cursor-pointer"
+                className="text-text-muted hover:text-text text-2xs w-4 cursor-pointer"
               >
                 {collapsed[i] ? '\u25B6' : '\u25BC'}
               </button>
@@ -242,20 +242,20 @@ function RepeaterField({
                 <button
                   onClick={() => moveItem(i, -1)}
                   disabled={i === 0}
-                  className="text-[10px] text-text-muted hover:text-text disabled:opacity-30 px-1 cursor-pointer"
+                  className="text-2xs text-text-muted hover:text-text disabled:opacity-30 px-1 cursor-pointer"
                 >
                   &uarr;
                 </button>
                 <button
                   onClick={() => moveItem(i, 1)}
                   disabled={i === value.length - 1}
-                  className="text-[10px] text-text-muted hover:text-text disabled:opacity-30 px-1 cursor-pointer"
+                  className="text-2xs text-text-muted hover:text-text disabled:opacity-30 px-1 cursor-pointer"
                 >
                   &darr;
                 </button>
                 <button
                   onClick={() => removeItem(i)}
-                  className="text-[10px] text-error/70 hover:text-error px-1 cursor-pointer"
+                  className="text-2xs text-error/70 hover:text-error px-1 cursor-pointer"
                 >
                   &times;
                 </button>

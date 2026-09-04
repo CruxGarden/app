@@ -97,7 +97,7 @@ export default function MoodBar({ className }: { className?: string }) {
         <LevelBars level={level} playing={playing} />
         {aiPreview > 0 && (
           <span
-            aria-label={`AI is previewing ${aiPreview} theme tokens`}
+            aria-label={`Theme preview: ${aiPreview} tokens`}
             title={`Theme preview: ${aiPreview} tokens`}
             className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-warning border border-mood-bar"
           />
@@ -111,7 +111,7 @@ export default function MoodBar({ className }: { className?: string }) {
           title="Next mix"
           className="min-w-0 max-w-[9rem] text-left cursor-pointer px-1 hover:text-mood-bar-accent"
         >
-          <span className="block text-[11px] font-body truncate leading-tight">
+          <span className="block text-xxs font-body truncate leading-tight">
             {mix?.name ?? 'No mix'}
           </span>
         </button>

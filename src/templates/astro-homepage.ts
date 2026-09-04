@@ -74,16 +74,6 @@ const template: TemplateDefinition = {
       ],
     },
     actions: [
-      {
-        label: 'Write a post',
-        icon: '🪄',
-        do: { type: 'ai', prompt: 'Write a new post about ' },
-      },
-      {
-        label: 'Restyle my page',
-        icon: '🎨',
-        do: { type: 'ai', prompt: 'Restyle my home page: ' },
-      },
       { label: 'Edit my links', icon: '🔗', do: { type: 'open-file', path: 'src/links.json' } },
     ],
   },

@@ -118,13 +118,13 @@ export default function CruxCard({
           {/* Badges */}
           <div className="absolute left-2 bottom-2 flex items-center gap-1.5">
             {isPublished && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-overlay-badge backdrop-blur-sm px-2 py-0.5 text-[10px] font-mono text-overlay-badge-text">
+              <span className="inline-flex items-center gap-1 rounded-full bg-overlay-badge backdrop-blur-sm px-2 py-0.5 text-2xs font-mono text-overlay-badge-text">
                 <span className="w-1.5 h-1.5 rounded-full bg-accent" />
                 Shared
               </span>
             )}
             {kindLabel && (
-              <span className="rounded-full bg-overlay-badge backdrop-blur-sm px-2 py-0.5 text-[10px] font-mono text-overlay-badge-text">
+              <span className="rounded-full bg-overlay-badge backdrop-blur-sm px-2 py-0.5 text-2xs font-mono text-overlay-badge-text">
                 {kindLabel}
               </span>
             )}
@@ -144,7 +144,7 @@ export default function CruxCard({
           >
             {description || 'No description yet'}
           </p>
-          <div className="mt-auto pt-2 text-[10px] font-mono text-garden-card-meta">
+          <div className="mt-auto pt-2 text-2xs font-mono text-garden-card-meta">
             {sortBy === 'updated' ? 'Updated' : 'Created'} {formatDateTime(when)}
           </div>
         </div>

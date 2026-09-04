@@ -742,7 +742,7 @@ export default function ArtifactsPane() {
         <div className="shrink-0 border-t border-border">
           <button
             onClick={() => setFileInfoOpen((v) => !v)}
-            className="w-full flex items-center justify-between px-3 py-1.5 text-[10px] font-mono uppercase tracking-wider text-text-muted hover:text-text transition-colors cursor-pointer"
+            className="w-full flex items-center justify-between px-3 py-1.5 text-2xs font-mono uppercase tracking-wider text-text-muted hover:text-text transition-colors cursor-pointer"
           >
             <span className="truncate">{pathOf(selectedArtifact)}</span>
             <svg
@@ -781,7 +781,7 @@ export default function ArtifactsPane() {
       {/* Footer: upload progress or stats */}
       {uploadProgress ? (
         <div className="shrink-0 border-t border-border">
-          <div className="px-3 py-1.5 text-[10px] font-mono text-accent flex justify-between">
+          <div className="px-3 py-1.5 text-2xs font-mono text-accent flex justify-between">
             <span className="truncate mr-2">
               {uploadProgress.completed + 1}/{uploadProgress.total}: {uploadProgress.currentFile}
             </span>
@@ -797,7 +797,7 @@ export default function ArtifactsPane() {
           </div>
         </div>
       ) : artifacts.length > 0 ? (
-        <div className="shrink-0 px-3 py-1.5 border-t border-border text-[10px] font-mono text-text-muted flex justify-between">
+        <div className="shrink-0 px-3 py-1.5 border-t border-border text-2xs font-mono text-text-muted flex justify-between">
           <span>
             {artifacts.length} artifact{artifacts.length !== 1 ? 's' : ''}
           </span>

@@ -54,7 +54,7 @@ function ParamControl({
   if (meta.kind === 'range') {
     const v = typeof value === 'number' ? value : meta.min;
     return (
-      <label className="flex items-center gap-2 text-[11px]">
+      <label className="flex items-center gap-2 text-xxs">
         <span className="w-24 shrink-0 text-text-muted truncate">{meta.label}</span>
         <input
           type="range"
@@ -75,13 +75,13 @@ function ParamControl({
   }
   if (meta.kind === 'select') {
     return (
-      <label className="flex items-center gap-2 text-[11px]">
+      <label className="flex items-center gap-2 text-xxs">
         <span className="w-24 shrink-0 text-text-muted truncate">{meta.label}</span>
         <select
           aria-label={id}
           value={String(value ?? meta.options[0]!.value)}
           onChange={(e) => onChange(e.target.value)}
-          className="flex-1 h-7 rounded-[var(--radius-sm)] border border-border bg-surface px-2 text-[11px] text-text"
+          className="flex-1 h-7 rounded-[var(--radius-sm)] border border-border bg-surface px-2 text-xxs text-text"
         >
           {meta.options.map((o) => (
             <option key={o.value} value={o.value}>
@@ -94,7 +94,7 @@ function ParamControl({
   }
   if (meta.kind === 'toggle') {
     return (
-      <label className="flex items-center gap-2 text-[11px] cursor-pointer">
+      <label className="flex items-center gap-2 text-xxs cursor-pointer">
         <span className="w-24 shrink-0 text-text-muted truncate">{meta.label}</span>
         <input
           type="checkbox"
@@ -120,7 +120,7 @@ function FileParam({
   const [busy, setBusy] = useState(false);
   const name = String(layer.params.fileName || '');
   return (
-    <div className="flex items-center gap-2 text-[11px]">
+    <div className="flex items-center gap-2 text-xxs">
       <span className="w-24 shrink-0 text-text-muted">Audio file</span>
       <span className="flex-1 truncate font-mono text-text">{name || 'none'}</span>
       <Button variant="ghost" size="sm" onClick={() => ref.current?.click()} disabled={busy}>
@@ -175,7 +175,7 @@ function EffectRack({ layer, onChange }: { layer: Layer; onChange: (effects: Eff
                 }
                 className="accent-accent"
               />
-              <span className="text-[11px] font-body text-text">{meta.label}</span>
+              <span className="text-xxs font-body text-text">{meta.label}</span>
               <button
                 type="button"
                 onClick={() => onChange(layer.effects.filter((_, j) => j !== i))}
@@ -208,7 +208,7 @@ function EffectRack({ layer, onChange }: { layer: Layer; onChange: (effects: Eff
           aria-label={`Add effect to ${layer.name}`}
           value={adding}
           onChange={(e) => setAdding(e.target.value as EffectType | '')}
-          className="h-7 rounded-[var(--radius-sm)] border border-border bg-surface px-2 text-[11px] text-text"
+          className="h-7 rounded-[var(--radius-sm)] border border-border bg-surface px-2 text-xxs text-text"
         >
           <option value="">Add effect…</option>
           {(Object.keys(EFFECT_META) as EffectType[]).map((t) => (
@@ -257,7 +257,7 @@ function LayerStrip({
       data-testid={`layer-${layer.id}`}
     >
       <div className="flex items-center gap-2 px-2.5 py-2">
-        <span className="text-[9px] font-mono uppercase tracking-wider px-1.5 py-0.5 rounded bg-accent-muted text-accent shrink-0">
+        <span className="text-3xs font-mono uppercase tracking-wider px-1.5 py-0.5 rounded bg-accent-muted text-accent shrink-0">
           {LAYER_LABELS[layer.type]}
         </span>
         <input
@@ -266,7 +266,7 @@ function LayerStrip({
           onChange={(e) => onChange({ ...layer, name: e.target.value })}
           className="w-32 bg-transparent text-xs text-text font-body outline-none border-b border-transparent focus:border-input-border-active"
         />
-        <label className="flex items-center gap-1.5 flex-1 min-w-[140px] text-[10px] text-text-muted">
+        <label className="flex items-center gap-1.5 flex-1 min-w-[140px] text-2xs text-text-muted">
           <span>Gain</span>
           <input
             type="range"
@@ -280,7 +280,7 @@ function LayerStrip({
           />
           <span className="w-10 text-right font-mono">{layer.gain} dB</span>
         </label>
-        <label className="flex items-center gap-1.5 w-28 text-[10px] text-text-muted">
+        <label className="flex items-center gap-1.5 w-28 text-2xs text-text-muted">
           <span>Pan</span>
           <input
             type="range"
@@ -299,7 +299,7 @@ function LayerStrip({
           aria-label={`Mute ${layer.name}`}
           onClick={() => onChange({ ...layer, muted: !layer.muted })}
           className={cn(
-            'h-6 px-2 rounded-[var(--radius-sm)] text-[10px] font-mono border cursor-pointer',
+            'h-6 px-2 rounded-[var(--radius-sm)] text-2xs font-mono border cursor-pointer',
             layer.muted
               ? 'bg-warning-bg text-warning-text border-warning-border'
               : 'border-border text-text-muted hover:text-text',
@@ -312,7 +312,7 @@ function LayerStrip({
           onClick={() => setOpen((o) => !o)}
           aria-expanded={open}
           aria-label={`${layer.name} settings`}
-          className="h-6 px-2 rounded-[var(--radius-sm)] text-[10px] border border-border text-text-muted hover:text-text cursor-pointer"
+          className="h-6 px-2 rounded-[var(--radius-sm)] text-2xs border border-border text-text-muted hover:text-text cursor-pointer"
         >
           {open ? 'Hide' : 'Edit'}
         </button>
@@ -328,7 +328,7 @@ function LayerStrip({
       {open && (
         <div className="px-2.5 pb-3 grid gap-3 md:grid-cols-2">
           <div className="flex flex-col gap-1.5">
-            <div className="text-[10px] font-mono uppercase tracking-wider text-caption">
+            <div className="text-2xs font-mono uppercase tracking-wider text-caption">
               Parameters
             </div>
             {Object.entries(meta).map(([k, pm]) =>
@@ -352,9 +352,7 @@ function LayerStrip({
             )}
           </div>
           <div className="flex flex-col gap-1.5">
-            <div className="text-[10px] font-mono uppercase tracking-wider text-caption">
-              Effects
-            </div>
+            <div className="text-2xs font-mono uppercase tracking-wider text-caption">Effects</div>
             <EffectRack layer={layer} onChange={(effects) => onChange({ ...layer, effects })} />
           </div>
         </div>
@@ -443,9 +441,7 @@ export default function ResonanceTab() {
     <div className="flex gap-4 h-full min-h-0">
       {/* Mixes */}
       <aside className="w-52 shrink-0 flex flex-col gap-2 min-h-0">
-        <div className="text-[10px] font-mono uppercase tracking-wider text-caption px-1">
-          Mixes
-        </div>
+        <div className="text-2xs font-mono uppercase tracking-wider text-caption px-1">Mixes</div>
         <div className="flex-1 overflow-y-auto flex flex-col gap-0.5">
           {mixes.map((m) => (
             <button
@@ -461,7 +457,7 @@ export default function ResonanceTab() {
               )}
             >
               <div className="truncate">{m.name}</div>
-              <div className="text-[10px] font-mono text-text-muted">
+              <div className="text-2xs font-mono text-text-muted">
                 {m.layers.length} layer{m.layers.length === 1 ? '' : 's'}
                 {m.id === activeMixId && playing ? ' · playing' : ''}
               </div>
@@ -538,13 +534,13 @@ export default function ResonanceTab() {
             onChange={(e) => commit({ ...mix, name: e.target.value })}
             className="h-9 flex-1 min-w-[160px] rounded-[var(--radius-sm)] border border-border bg-surface px-3 text-sm text-text font-display outline-none focus:border-input-border-active"
           />
-          <label className="flex items-center gap-1.5 text-[11px] text-text-muted">
+          <label className="flex items-center gap-1.5 text-xxs text-text-muted">
             Key
             <select
               aria-label="Root note"
               value={mix.root}
               onChange={(e) => commit({ ...mix, root: e.target.value })}
-              className="h-8 rounded-[var(--radius-sm)] border border-border bg-surface px-2 text-[11px] text-text"
+              className="h-8 rounded-[var(--radius-sm)] border border-border bg-surface px-2 text-xxs text-text"
             >
               {ROOTS.map((r) => (
                 <option key={r}>{r}</option>
@@ -554,7 +550,7 @@ export default function ResonanceTab() {
               aria-label="Scale"
               value={mix.scale}
               onChange={(e) => commit({ ...mix, scale: e.target.value })}
-              className="h-8 rounded-[var(--radius-sm)] border border-border bg-surface px-2 text-[11px] text-text"
+              className="h-8 rounded-[var(--radius-sm)] border border-border bg-surface px-2 text-xxs text-text"
             >
               {scaleOptions.map((sc) => (
                 <option key={sc} value={sc}>
@@ -563,7 +559,7 @@ export default function ResonanceTab() {
               ))}
             </select>
           </label>
-          <label className="flex items-center gap-1.5 text-[11px] text-text-muted">
+          <label className="flex items-center gap-1.5 text-xxs text-text-muted">
             Tempo
             <input
               type="range"
@@ -613,16 +609,14 @@ export default function ResonanceTab() {
         {/* Layers */}
         <div className="flex flex-col gap-2">
           <div className="flex items-center justify-between">
-            <div className="text-[10px] font-mono uppercase tracking-wider text-caption">
-              Layers
-            </div>
+            <div className="text-2xs font-mono uppercase tracking-wider text-caption">Layers</div>
             <div className="flex flex-wrap gap-1">
               {LAYER_TYPES.map((t) => (
                 <button
                   key={t}
                   type="button"
                   onClick={() => addLayer(t)}
-                  className="h-6 px-2 rounded-[var(--radius-sm)] border border-border bg-surface text-[10px] text-text-muted hover:text-accent hover:border-accent cursor-pointer"
+                  className="h-6 px-2 rounded-[var(--radius-sm)] border border-border bg-surface text-2xs text-text-muted hover:text-accent hover:border-accent cursor-pointer"
                 >
                   + {LAYER_LABELS[t]}
                 </button>
@@ -645,10 +639,8 @@ export default function ResonanceTab() {
         {/* Playlist */}
         <section className="rounded-[var(--radius-sm)] border border-border bg-surface/50 px-3 py-2.5 flex flex-col gap-2">
           <div className="flex items-center gap-3">
-            <div className="text-[10px] font-mono uppercase tracking-wider text-caption">
-              Playlist
-            </div>
-            <label className="flex items-center gap-1.5 text-[11px] text-text-muted cursor-pointer">
+            <div className="text-2xs font-mono uppercase tracking-wider text-caption">Playlist</div>
+            <label className="flex items-center gap-1.5 text-xxs text-text-muted cursor-pointer">
               <input
                 type="checkbox"
                 aria-label="Playlist enabled"
@@ -658,7 +650,7 @@ export default function ResonanceTab() {
               />
               Play through the list
             </label>
-            <label className="flex items-center gap-1.5 text-[11px] text-text-muted cursor-pointer">
+            <label className="flex items-center gap-1.5 text-xxs text-text-muted cursor-pointer">
               <input
                 type="checkbox"
                 aria-label="Shuffle"
@@ -670,7 +662,7 @@ export default function ResonanceTab() {
             </label>
           </div>
           {playlist.items.length === 0 && (
-            <p className="text-[11px] text-text-muted">
+            <p className="text-xxs text-text-muted">
               No items — add mixes below and turn the playlist on.
             </p>
           )}
@@ -682,7 +674,7 @@ export default function ResonanceTab() {
               <div
                 key={`${it.mixId}-${i}`}
                 className={cn(
-                  'flex items-center gap-2 text-[11px] rounded-[var(--radius-sm)] px-2 py-1',
+                  'flex items-center gap-2 text-xxs rounded-[var(--radius-sm)] px-2 py-1',
                   current ? 'bg-accent-muted text-text' : 'text-text-muted',
                 )}
               >
@@ -702,7 +694,7 @@ export default function ResonanceTab() {
                         items: playlist.items.map((x, j) => (j === i ? { ...x, minutes } : x)),
                       });
                     }}
-                    className="w-16 h-6 rounded-[var(--radius-sm)] border border-border bg-surface px-1.5 text-[11px] text-text"
+                    className="w-16 h-6 rounded-[var(--radius-sm)] border border-border bg-surface px-1.5 text-xxs text-text"
                   />
                   min
                 </label>
@@ -720,7 +712,7 @@ export default function ResonanceTab() {
                         items: playlist.items.map((x, j) => (j === i ? { ...x, crossfadeSec } : x)),
                       });
                     }}
-                    className="w-14 h-6 rounded-[var(--radius-sm)] border border-border bg-surface px-1.5 text-[11px] text-text"
+                    className="w-14 h-6 rounded-[var(--radius-sm)] border border-border bg-surface px-1.5 text-xxs text-text"
                   />
                   s fade
                 </label>
@@ -755,7 +747,7 @@ export default function ResonanceTab() {
               aria-label="Add mix to playlist"
               value={addToPlaylist}
               onChange={(e) => setAddToPlaylist(e.target.value)}
-              className="h-7 rounded-[var(--radius-sm)] border border-border bg-surface px-2 text-[11px] text-text"
+              className="h-7 rounded-[var(--radius-sm)] border border-border bg-surface px-2 text-xxs text-text"
             >
               <option value="">Add a mix…</option>
               {mixes.map((m) => (
@@ -787,22 +779,20 @@ export default function ResonanceTab() {
 
         {/* Sound cues */}
         <section className="rounded-[var(--radius-sm)] border border-border bg-surface/50 px-3 py-2.5 flex flex-col gap-1.5">
-          <div className="text-[10px] font-mono uppercase tracking-wider text-caption">
-            Sound cues
-          </div>
-          <p className="text-[11px] text-text-muted">
+          <div className="text-2xs font-mono uppercase tracking-wider text-caption">Sound cues</div>
+          <p className="text-xxs text-text-muted">
             Short sounds on app events, ducking the mix while the AI works. Off until you've pressed
             play once.
           </p>
           {CUE_EVENTS.map((ev) => (
-            <div key={ev.id} className="flex items-center gap-2 text-[11px]">
+            <div key={ev.id} className="flex items-center gap-2 text-xxs">
               <span className="w-32 shrink-0 text-text">{ev.label}</span>
               <span className="flex-1 text-text-muted truncate">{ev.hint}</span>
               <select
                 aria-label={`${ev.label} cue`}
                 value={cues[ev.id] ?? ''}
                 onChange={(e) => updateCue(ev.id, (e.target.value || null) as CueKind | null)}
-                className="h-7 rounded-[var(--radius-sm)] border border-border bg-surface px-2 text-[11px] text-text"
+                className="h-7 rounded-[var(--radius-sm)] border border-border bg-surface px-2 text-xxs text-text"
               >
                 <option value="">None</option>
                 {CUE_KINDS.map((k) => (

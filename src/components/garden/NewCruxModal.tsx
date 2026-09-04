@@ -507,7 +507,7 @@ export default function NewCruxModal({ open, onClose }: NewCruxModalProps) {
                       {t.label}
                     </span>
                     {t.description && (
-                      <span className="text-[11px] text-text-muted block truncate">
+                      <span className="text-xxs text-text-muted block truncate">
                         {t.description}
                       </span>
                     )}
@@ -517,7 +517,7 @@ export default function NewCruxModal({ open, onClose }: NewCruxModalProps) {
             </div>
           </div>
           {template.id !== 'blank' && (
-            <p className="text-[11px] text-text-muted mt-1.5 shrink-0">{template.description}</p>
+            <p className="text-xxs text-text-muted mt-1.5 shrink-0">{template.description}</p>
           )}
         </div>
 

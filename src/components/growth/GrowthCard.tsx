@@ -272,11 +272,11 @@ export default function GrowthCard({
         )}
         {/* Badges */}
         <div className="absolute left-2 bottom-2 flex items-center gap-1.5 pointer-events-none">
-          <span className="rounded-full bg-overlay-badge backdrop-blur-sm px-2 py-0.5 text-[10px] font-mono text-overlay-badge-text">
+          <span className="rounded-full bg-overlay-badge backdrop-blur-sm px-2 py-0.5 text-2xs font-mono text-overlay-badge-text">
             #{index + 1}
           </span>
           {isViewing && (
-            <span className="inline-flex items-center gap-1 rounded-full bg-overlay-badge backdrop-blur-sm px-2 py-0.5 text-[10px] font-mono text-overlay-badge-text">
+            <span className="inline-flex items-center gap-1 rounded-full bg-overlay-badge backdrop-blur-sm px-2 py-0.5 text-2xs font-mono text-overlay-badge-text">
               <span className="w-1.5 h-1.5 rounded-full bg-growth-dot-active" />
               Viewing
             </span>
@@ -313,15 +313,15 @@ export default function GrowthCard({
       {/* Info panel */}
       <div className="flex flex-col gap-1 px-3 pt-2.5 pb-3">
         <div className="flex items-baseline justify-between gap-2">
-          <p className="text-[12px] font-display font-medium text-growth-card-text truncate">
+          <p className="text-xs font-display font-medium text-growth-card-text truncate">
             {label ?? `Snapshot ${index + 1}`}
           </p>
-          <span className="text-[10px] font-mono text-growth-card-text-muted shrink-0">
+          <span className="text-2xs font-mono text-growth-card-text-muted shrink-0">
             {formatTime(growth.created)}
           </span>
         </div>
 
-        <div className="flex items-center gap-1.5 text-[10px] font-mono text-growth-card-text-muted min-w-0">
+        <div className="flex items-center gap-1.5 text-2xs font-mono text-growth-card-text-muted min-w-0">
           {artifactCount > 0 && (
             <span>
               {artifactCount} file{artifactCount !== 1 ? 's' : ''}
@@ -345,7 +345,7 @@ export default function GrowthCard({
               setExpanded(!expanded);
             }}
             className={cn(
-              'text-[12px] font-body text-growth-card-text mt-0.5 leading-relaxed cursor-pointer',
+              'text-xs font-body text-growth-card-text mt-0.5 leading-relaxed cursor-pointer',
               !expanded && 'line-clamp-2',
             )}
             title={expanded ? 'Click to collapse' : 'Click to read full summary'}
@@ -353,7 +353,7 @@ export default function GrowthCard({
             {summary}
           </p>
         ) : summaryPending ? (
-          <p className="text-[11px] font-body text-growth-card-text-muted mt-0.5 italic">
+          <p className="text-xxs font-body text-growth-card-text-muted mt-0.5 italic">
             Summarizing…
           </p>
         ) : null}

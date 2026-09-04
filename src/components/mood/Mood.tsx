@@ -177,7 +177,7 @@ function PersonaTab() {
     <div className="flex flex-col gap-4 h-full">
       {/* Thumbnails */}
       <div className="shrink-0">
-        <div className="text-[9px] font-mono uppercase tracking-wider text-text-muted mb-2">
+        <div className="text-3xs font-mono uppercase tracking-wider text-text-muted mb-2">
           Avatar
         </div>
         <div className="flex items-start gap-4">
@@ -192,11 +192,11 @@ function PersonaTab() {
                 className="w-full h-full object-cover [image-rendering:pixelated]"
               />
             </button>
-            <span className="text-[9px] font-mono text-text-muted">Dark</span>
+            <span className="text-3xs font-mono text-text-muted">Dark</span>
             {persona.thumbnailFingerprint && (
               <button
                 onClick={() => update({ thumbnailFingerprint: null, thumbnailDataUrl: null })}
-                className="text-[9px] text-error hover:text-text cursor-pointer"
+                className="text-3xs text-error hover:text-text cursor-pointer"
               >
                 Remove
               </button>
@@ -213,13 +213,13 @@ function PersonaTab() {
                 className="w-full h-full object-cover [image-rendering:pixelated]"
               />
             </button>
-            <span className="text-[9px] font-mono text-text-muted">Light</span>
+            <span className="text-3xs font-mono text-text-muted">Light</span>
             {persona.thumbnailFingerprintLight && (
               <button
                 onClick={() =>
                   update({ thumbnailFingerprintLight: null, thumbnailDataUrlLight: null })
                 }
-                className="text-[9px] text-error hover:text-text cursor-pointer"
+                className="text-3xs text-error hover:text-text cursor-pointer"
               >
                 Remove
               </button>
@@ -244,7 +244,7 @@ function PersonaTab() {
 
       {/* Name */}
       <div className="shrink-0">
-        <div className="text-[9px] font-mono uppercase tracking-wider text-text-muted mb-1.5">
+        <div className="text-3xs font-mono uppercase tracking-wider text-text-muted mb-1.5">
           Name
         </div>
         <input
@@ -259,7 +259,7 @@ function PersonaTab() {
 
       {/* Greeting */}
       <div className="shrink-0">
-        <div className="text-[9px] font-mono uppercase tracking-wider text-text-muted mb-1.5">
+        <div className="text-3xs font-mono uppercase tracking-wider text-text-muted mb-1.5">
           Greeting
         </div>
         <input
@@ -274,7 +274,7 @@ function PersonaTab() {
 
       {/* System Prompt */}
       <div className="flex-1 min-h-0 flex flex-col">
-        <div className="text-[9px] font-mono uppercase tracking-wider text-text-muted mb-1.5 shrink-0">
+        <div className="text-3xs font-mono uppercase tracking-wider text-text-muted mb-1.5 shrink-0">
           System Prompt
         </div>
         <textarea
@@ -285,13 +285,13 @@ function PersonaTab() {
           maxLength={4000}
         />
         <div className="flex items-center justify-between mt-1 shrink-0">
-          <p className="text-[9px] text-text-muted/50">
+          <p className="text-3xs text-text-muted/50">
             {persona.systemPrompt ? `${persona.systemPrompt.length}/4000` : ''}
           </p>
           {isCustomized && (
             <button
               onClick={handleReset}
-              className="text-[10px] font-mono text-text-muted hover:text-error cursor-pointer"
+              className="text-2xs font-mono text-text-muted hover:text-error cursor-pointer"
             >
               Revert to Default
             </button>
@@ -343,9 +343,7 @@ function BackgroundTabContent({
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-col gap-1.5">
-        <div className="text-[9px] font-mono uppercase tracking-wider text-text-muted">
-          Animated
-        </div>
+        <div className="text-3xs font-mono uppercase tracking-wider text-text-muted">Animated</div>
         <div className="grid grid-cols-2 gap-2">
           {animatedOptions.map(({ value, label, description, darkOnly }) => {
             const disabled = darkOnly && isLight;
@@ -364,7 +362,7 @@ function BackgroundTabContent({
                 )}
               >
                 <span className="text-xs font-mono font-medium">{label}</span>
-                <span className="text-[10px] opacity-60">{description}</span>
+                <span className="text-2xs opacity-60">{description}</span>
               </button>
             );
           })}
@@ -372,7 +370,7 @@ function BackgroundTabContent({
       </div>
 
       <div className="flex flex-col gap-1.5">
-        <div className="text-[9px] font-mono uppercase tracking-wider text-text-muted">Image</div>
+        <div className="text-3xs font-mono uppercase tracking-wider text-text-muted">Image</div>
         <button
           onClick={() => {
             onChangeBgType(BgType.Image);
@@ -386,7 +384,7 @@ function BackgroundTabContent({
           )}
         >
           <span className="text-xs font-mono font-medium">Image</span>
-          <span className="text-[10px] opacity-60">Upload a background image</span>
+          <span className="text-2xs opacity-60">Upload a background image</span>
         </button>
         <input
           ref={fileRef}
@@ -407,7 +405,7 @@ function BackgroundTabContent({
             if (bgPrompt.trim() && !bgGenerating) onBgGenerate(bgPrompt.trim());
           }}
         >
-          <label className="text-[10px] font-mono uppercase tracking-wider text-caption">
+          <label className="text-2xs font-mono uppercase tracking-wider text-caption">
             Describe a backdrop
           </label>
           <div className="flex gap-2">
@@ -428,10 +426,10 @@ function BackgroundTabContent({
               Generate
             </Button>
           </div>
-          <p className="text-[10px] text-text-muted">
+          <p className="text-2xs text-text-muted">
             Uses your image-capable model key (same as the agent). Or pick an image file below.
           </p>
-          {bgError && <p className="text-[10px] text-error">{bgError}</p>}
+          {bgError && <p className="text-2xs text-error">{bgError}</p>}
         </form>
         {bgType === 'image' && bgImagePreview && (
           <div className="flex flex-col gap-2 mt-1 p-3 bg-bg border border-border/50 rounded-[var(--radius-sm)]">
@@ -450,13 +448,13 @@ function BackgroundTabContent({
             <div className="flex items-center gap-3">
               <button
                 onClick={() => fileRef.current?.click()}
-                className="text-[10px] text-accent hover:text-accent/80 transition-colors cursor-pointer"
+                className="text-2xs text-accent hover:text-accent/80 transition-colors cursor-pointer"
               >
                 Change image
               </button>
               <button
                 onClick={onBgImageClear}
-                className="text-[10px] text-error hover:text-error/80 transition-colors cursor-pointer"
+                className="text-2xs text-error hover:text-error/80 transition-colors cursor-pointer"
               >
                 Remove
               </button>
@@ -675,7 +673,7 @@ export default function MoodEditor({ initialTab = 'moods', compact = false }: Mo
           <div>
             {userPresets.length > 0 && (
               <div className="mb-4">
-                <div className="text-[9px] font-mono uppercase tracking-wider text-text-muted mb-2">
+                <div className="text-3xs font-mono uppercase tracking-wider text-text-muted mb-2">
                   Yours
                 </div>
                 <div className="grid grid-cols-5 gap-2">
@@ -691,7 +689,7 @@ export default function MoodEditor({ initialTab = 'moods', compact = false }: Mo
                           <PresetThumb preset={preset} active={active} />
                           <span
                             className={cn(
-                              'text-[10px] font-mono transition-colors truncate max-w-full',
+                              'text-2xs font-mono transition-colors truncate max-w-full',
                               active ? 'text-text' : 'text-text-muted group-hover:text-text',
                             )}
                           >
@@ -718,7 +716,7 @@ export default function MoodEditor({ initialTab = 'moods', compact = false }: Mo
               if (sectionPresets.length === 0) return null;
               return (
                 <div key={section} className={section !== 'Dark' ? 'mt-4' : ''}>
-                  <div className="text-[9px] font-mono uppercase tracking-wider text-text-muted mb-2">
+                  <div className="text-3xs font-mono uppercase tracking-wider text-text-muted mb-2">
                     {section}
                   </div>
                   <div className="grid grid-cols-5 gap-2">
@@ -731,7 +729,7 @@ export default function MoodEditor({ initialTab = 'moods', compact = false }: Mo
                         <PresetThumb preset={preset} active={activeForSection === preset.id} />
                         <span
                           className={cn(
-                            'text-[10px] font-mono transition-colors',
+                            'text-2xs font-mono transition-colors',
                             activeForSection === preset.id
                               ? 'text-text'
                               : 'text-text-muted group-hover:text-text',

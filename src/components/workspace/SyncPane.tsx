@@ -187,12 +187,12 @@ export default function SyncPane() {
             tone={lastSynced ? 'default' : 'dashed'}
           >
             {lastSynced ? (
-              <div className="flex items-center gap-1.5 text-[11px] font-mono">
+              <div className="flex items-center gap-1.5 text-xxs font-mono">
                 <span className="w-1.5 h-1.5 rounded-full bg-accent shrink-0" />
                 <span className="text-text">Synced {formatDateTime(lastSynced.at)}</span>
               </div>
             ) : (
-              <p className="text-[11px] text-text-muted">
+              <p className="text-xxs text-text-muted">
                 Not synced yet. Push sends this crux and its history to your account.
               </p>
             )}

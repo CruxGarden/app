@@ -89,7 +89,7 @@ export default function MoodResultCard({
           <div className="font-display text-sm text-heading truncate">
             {crux.title || crux.slug}
           </div>
-          <div className="text-[10px] font-mono text-text-muted truncate">
+          <div className="text-2xs font-mono text-text-muted truncate">
             Mood · {s?.section ?? '—'} · {s?.mixes ?? 0} mix{s?.mixes === 1 ? '' : 'es'} ·{' '}
             {s?.layers ?? 0} layer
             {s?.layers === 1 ? '' : 's'} · by {crux.author_username}
@@ -100,7 +100,7 @@ export default function MoodResultCard({
             {s.layerTypes.map((t) => (
               <span
                 key={t}
-                className="text-[9px] font-mono px-1.5 py-0.5 rounded-chip bg-badge text-badge-text border border-badge-border"
+                className="text-3xs font-mono px-1.5 py-0.5 rounded-chip bg-badge text-badge-text border border-badge-border"
               >
                 {t}
               </span>
@@ -122,10 +122,7 @@ export default function MoodResultCard({
             </Button>
             {done && (
               <span
-                className={cn(
-                  'text-[11px] ml-auto',
-                  done === 'Failed' ? 'text-error' : 'text-accent',
-                )}
+                className={cn('text-xxs ml-auto', done === 'Failed' ? 'text-error' : 'text-accent')}
               >
                 {done}
               </span>

@@ -301,7 +301,7 @@ export default function Explore({
               {crux.title}
             </div>
             {crux.kind && KIND_LABEL[crux.kind] && (
-              <span className="text-[9px] font-mono px-1.5 py-0.5 rounded-chip bg-badge text-badge-text border border-badge-border shrink-0">
+              <span className="text-3xs font-mono px-1.5 py-0.5 rounded-chip bg-badge text-badge-text border border-badge-border shrink-0">
                 {KIND_LABEL[crux.kind]}
               </span>
             )}
@@ -319,7 +319,7 @@ export default function Explore({
                     e.stopPropagation();
                     toggleTag(t);
                   }}
-                  className="text-[9px] font-mono px-1.5 py-0.5 rounded-chip bg-surface text-text-muted hover:text-accent cursor-pointer"
+                  className="text-3xs font-mono px-1.5 py-0.5 rounded-chip bg-surface text-text-muted hover:text-accent cursor-pointer"
                 >
                   #{t}
                 </button>
@@ -335,11 +335,11 @@ export default function Explore({
               e.stopPropagation();
               filterByAuthor(crux.author_username);
             }}
-            className="text-[10px] font-mono text-text-muted hover:text-accent cursor-pointer"
+            className="text-2xs font-mono text-text-muted hover:text-accent cursor-pointer"
           >
             @{crux.author_username}
           </button>
-          <span className="text-[10px] font-mono text-text-muted">{formatDate(crux.created)}</span>
+          <span className="text-2xs font-mono text-text-muted">{formatDate(crux.created)}</span>
         </div>
       </div>
     );
@@ -359,7 +359,7 @@ export default function Explore({
           </div>
           <div className="text-xs font-mono text-text-muted truncate">@{author.username}</div>
         </div>
-        <div className="text-[10px] text-text-muted font-mono shrink-0">
+        <div className="text-2xs text-text-muted font-mono shrink-0">
           Joined {formatDate(author.created)}
         </div>
       </button>
@@ -430,7 +430,7 @@ export default function Explore({
                   setAuthor('');
                   setPage(1);
                 }}
-                className="px-2 py-0.5 rounded-chip text-[11px] font-mono bg-accent text-bg cursor-pointer"
+                className="px-2 py-0.5 rounded-chip text-xxs font-mono bg-accent text-bg cursor-pointer"
                 aria-label={`Remove author filter ${author}`}
               >
                 @{author} ×
@@ -441,7 +441,7 @@ export default function Explore({
                 key={t}
                 type="button"
                 onClick={() => toggleTag(t)}
-                className="px-2 py-0.5 rounded-chip text-[11px] font-mono bg-accent text-bg cursor-pointer"
+                className="px-2 py-0.5 rounded-chip text-xxs font-mono bg-accent text-bg cursor-pointer"
                 aria-label={`Remove tag filter ${t}`}
               >
                 #{t} ×
@@ -552,7 +552,7 @@ export default function Explore({
                 }}
                 aria-pressed={kind === k.id}
                 className={cn(
-                  'px-2.5 py-1 rounded-chip text-[11px] border cursor-pointer transition-colors',
+                  'px-2.5 py-1 rounded-chip text-xxs border cursor-pointer transition-colors',
                   kind === k.id
                     ? 'bg-accent text-bg border-accent font-medium'
                     : 'bg-surface/50 text-text-muted border-border hover:text-text',
@@ -716,7 +716,7 @@ export function ExplorePage() {
   return (
     <div className="flex flex-col min-h-screen">
       <header className="relative z-20 flex items-center h-8 px-3 border-b border-border bg-surface-solid shrink-0">
-        <div className="flex items-center gap-1.5 text-[10px] font-mono">
+        <div className="flex items-center gap-1.5 text-2xs font-mono">
           <a href="/" className="shrink-0 text-text-muted hover:underline">
             {APP_NAME}
           </a>

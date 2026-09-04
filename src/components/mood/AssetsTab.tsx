@@ -47,7 +47,7 @@ function Thumb({ asset }: { asset: MoodAsset }) {
     return <img src={url} alt="" className="w-full h-full object-cover" draggable={false} />;
   }
   return (
-    <div className="w-full h-full flex items-center justify-center text-[10px] font-mono uppercase text-text-muted bg-surface">
+    <div className="w-full h-full flex items-center justify-center text-2xs font-mono uppercase text-text-muted bg-surface">
       {asset.kind}
     </div>
   );
@@ -141,7 +141,7 @@ export default function AssetsTab() {
       </div>
 
       {note && (
-        <p role="status" className="text-[11px] text-accent">
+        <p role="status" className="text-xxs text-accent">
           {note}
         </p>
       )}
@@ -162,7 +162,7 @@ export default function AssetsTab() {
                   <div className="text-xs font-body text-text truncate" title={a.name}>
                     {a.name}
                   </div>
-                  <div className="text-[10px] font-mono text-text-muted truncate">
+                  <div className="text-2xs font-mono text-text-muted truncate">
                     {a.kind} · {formatBytes(a.size)} ·{' '}
                     <span title={a.fingerprint}>{assetRef(a.fingerprint.slice(0, 8))}…</span>
                   </div>
@@ -192,7 +192,7 @@ export default function AssetsTab() {
                           onChange={(e) =>
                             setPaneFor({ ...paneFor, [a.fingerprint]: e.target.value })
                           }
-                          className="h-7 rounded-[var(--radius-sm)] border border-border bg-surface px-1.5 text-[11px] text-text"
+                          className="h-7 rounded-[var(--radius-sm)] border border-border bg-surface px-1.5 text-xxs text-text"
                         >
                           {PANES.map(([label, key]) => (
                             <option key={key} value={key}>
@@ -271,7 +271,7 @@ export default function AssetsTab() {
                   <button
                     type="button"
                     onClick={() => navigator.clipboard.writeText(assetRef(a.fingerprint))}
-                    className="h-8 px-2 text-[10px] font-mono text-text-muted hover:text-text cursor-pointer"
+                    className="h-8 px-2 text-2xs font-mono text-text-muted hover:text-text cursor-pointer"
                     title="Copy the token value (use it in any texture/font-face token)"
                   >
                     copy asset:…

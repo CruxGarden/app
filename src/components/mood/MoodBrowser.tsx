@@ -233,7 +233,7 @@ export default function MoodBrowser() {
       </div>
 
       {note && (
-        <p role="status" className="text-[11px] text-accent">
+        <p role="status" className="text-xxs text-accent">
           {note}
         </p>
       )}
@@ -265,14 +265,14 @@ export default function MoodBrowser() {
                 <div className="p-2.5 flex flex-col gap-1.5">
                   <div className="min-w-0">
                     <div className="text-sm font-display text-heading truncate">{pkg.name}</div>
-                    <div className="text-[10px] font-mono text-text-muted truncate">
+                    <div className="text-2xs font-mono text-text-muted truncate">
                       {pkg.theme.section} · {pkg.resonance.mixes.length} mix
                       {pkg.resonance.mixes.length === 1 ? '' : 'es'} · {layers} layer
                       {layers === 1 ? '' : 's'}
                       {pkg.author ? ` · by ${pkg.author}` : ''}
                     </div>
                     {pkg.publishedAt && (
-                      <div className="text-[10px] font-mono text-accent truncate">
+                      <div className="text-2xs font-mono text-accent truncate">
                         Published {formatDate(pkg.publishedAt)}
                       </div>
                     )}

@@ -76,19 +76,7 @@ const template: TemplateDefinition = {
         { key: 'accent', label: 'Accent Color', type: 'color' },
       ],
     },
-    actions: [
-      { label: 'Add media', icon: '🎬', do: { type: 'add-media', collection: 'Media' } },
-      {
-        label: 'Write a description',
-        icon: '🪄',
-        do: { type: 'ai', prompt: 'Write a description for my latest item: ' },
-      },
-      {
-        label: 'Restyle my page',
-        icon: '🎨',
-        do: { type: 'ai', prompt: 'Restyle my media page: ' },
-      },
-    ],
+    actions: [{ label: 'Add media', icon: '🎬', do: { type: 'add-media', collection: 'Media' } }],
   },
   files: [
     {

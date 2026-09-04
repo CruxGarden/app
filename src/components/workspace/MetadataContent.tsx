@@ -26,9 +26,7 @@ const KIND_LABELS: Record<string, string> = {
 export function FieldRow({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="flex flex-col gap-0.5">
-      <span className="text-[10px] font-mono uppercase tracking-wider text-text-muted">
-        {label}
-      </span>
+      <span className="text-2xs font-mono uppercase tracking-wider text-text-muted">{label}</span>
       <div className="text-xs font-mono text-text">{children}</div>
     </div>
   );
@@ -200,7 +198,7 @@ function TagInput({
           <span
             key={tag}
             className={cn(
-              'inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-mono',
+              'inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-2xs font-mono',
               'bg-accent/15 text-accent',
             )}
           >
@@ -364,14 +362,14 @@ export default function MetadataContent({
 
         <FieldRow label="Visibility">
           {readOnly ? (
-            <span className="px-2 py-0.5 rounded-full text-[10px] font-mono uppercase inline-block bg-badge text-badge-text border border-badge-border">
+            <span className="px-2 py-0.5 rounded-full text-2xs font-mono uppercase inline-block bg-badge text-badge-text border border-badge-border">
               {crux.visibility}
             </span>
           ) : (
             <button
               onClick={cycleVisibility}
               className={cn(
-                'px-2 py-0.5 rounded-full text-[10px] font-mono uppercase cursor-pointer transition-colors',
+                'px-2 py-0.5 rounded-full text-2xs font-mono uppercase cursor-pointer transition-colors',
                 VISIBILITY_COLORS[crux.visibility],
               )}
               title="Click to change"
@@ -382,21 +380,21 @@ export default function MetadataContent({
         </FieldRow>
 
         <FieldRow label="Type">
-          <span className="px-2 py-0.5 rounded-full text-[10px] font-mono uppercase inline-block bg-badge text-badge-text border border-badge-border">
+          <span className="px-2 py-0.5 rounded-full text-2xs font-mono uppercase inline-block bg-badge text-badge-text border border-badge-border">
             {crux.type || 'text'}
           </span>
         </FieldRow>
 
         <FieldRow label="Kind">
           {readOnly ? (
-            <span className="px-2 py-0.5 rounded-full text-[10px] font-mono uppercase inline-block bg-badge text-badge-text border border-badge-border">
+            <span className="px-2 py-0.5 rounded-full text-2xs font-mono uppercase inline-block bg-badge text-badge-text border border-badge-border">
               {crux.kind ? KIND_LABELS[crux.kind] || crux.kind : 'auto'}
             </span>
           ) : (
             <button
               onClick={cycleKind}
               className={cn(
-                'px-2 py-0.5 rounded-full text-[10px] font-mono uppercase cursor-pointer transition-colors',
+                'px-2 py-0.5 rounded-full text-2xs font-mono uppercase cursor-pointer transition-colors',
                 crux.kind
                   ? 'bg-accent/20 text-accent'
                   : 'bg-badge text-badge-text border border-badge-border',
@@ -422,7 +420,7 @@ export default function MetadataContent({
         <>
           <div className="border-t border-border" />
           <div className="flex flex-col gap-2">
-            <span className="text-[10px] font-mono uppercase tracking-wider text-text-muted">
+            <span className="text-2xs font-mono uppercase tracking-wider text-text-muted">
               AI Summary
             </span>
             {summary.purpose && (

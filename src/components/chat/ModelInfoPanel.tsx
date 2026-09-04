@@ -64,7 +64,7 @@ export default function ModelInfoPanel({ model, children }: ModelInfoPanelProps)
             </div>
             <span
               className={cn(
-                'text-[10px] whitespace-nowrap',
+                'text-2xs whitespace-nowrap',
                 usagePercent > 80 ? 'text-error' : 'text-text-muted',
               )}
             >
@@ -75,7 +75,7 @@ export default function ModelInfoPanel({ model, children }: ModelInfoPanelProps)
 
         <button
           onClick={() => setExpanded(!expanded)}
-          className="flex items-center gap-1 text-text-muted/60 hover:text-text transition-colors cursor-pointer text-[11px] whitespace-nowrap"
+          className="flex items-center gap-1 text-text-muted/60 hover:text-text transition-colors cursor-pointer text-xxs whitespace-nowrap"
         >
           <svg
             width="6"
@@ -139,7 +139,7 @@ export default function ModelInfoPanel({ model, children }: ModelInfoPanelProps)
                       style={{ width: `${Math.max(usagePercent, 1)}%` }}
                     />
                   </div>
-                  <div className="flex justify-between mt-1 text-[10px] text-text-muted/60">
+                  <div className="flex justify-between mt-1 text-2xs text-text-muted/60">
                     <span>0</span>
                     <span>{formatTokens(info.contextWindow)}</span>
                   </div>
@@ -150,13 +150,10 @@ export default function ModelInfoPanel({ model, children }: ModelInfoPanelProps)
 
           {/* Capabilities */}
           <div className="space-y-1.5">
-            <div className="text-text-muted text-[10px] uppercase tracking-wider">Capabilities</div>
+            <div className="text-text-muted text-2xs uppercase tracking-wider">Capabilities</div>
             <div className="flex gap-1.5 flex-wrap">
               {provider.capabilities.map((cap) => (
-                <span
-                  key={cap}
-                  className="px-2 py-0.5 bg-accent-muted rounded text-text text-[11px]"
-                >
+                <span key={cap} className="px-2 py-0.5 bg-accent-muted rounded text-text text-xxs">
                   {cap}
                 </span>
               ))}
@@ -165,7 +162,7 @@ export default function ModelInfoPanel({ model, children }: ModelInfoPanelProps)
 
           {/* Tools grid */}
           <div className="space-y-1.5">
-            <div className="text-text-muted text-[10px] uppercase tracking-wider">
+            <div className="text-text-muted text-2xs uppercase tracking-wider">
               Tools ({defaultToolDefinitions().length})
             </div>
             <div className="grid grid-cols-2 gap-x-4 gap-y-0.5">
@@ -188,7 +185,7 @@ export default function ModelInfoPanel({ model, children }: ModelInfoPanelProps)
               href={provider.keyUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-accent hover:underline text-[11px]"
+              className="text-accent hover:underline text-xxs"
             >
               Manage API key →
             </a>

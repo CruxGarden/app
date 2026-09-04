@@ -67,14 +67,6 @@ const template: TemplateDefinition = {
         { key: 'accent', label: 'Accent Color', type: 'color' },
       ],
     },
-    actions: [
-      {
-        label: 'Draft a post',
-        icon: '🪄',
-        do: { type: 'ai', prompt: 'Write a new blog post about ' },
-      },
-      { label: 'Restyle my blog', icon: '🎨', do: { type: 'ai', prompt: 'Restyle my blog: ' } },
-    ],
   },
   files: [
     {

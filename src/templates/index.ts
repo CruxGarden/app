@@ -151,7 +151,6 @@ export interface BuilderAction {
     | { type: 'new-item'; collection: string }
     | { type: 'edit-settings' }
     | { type: 'open-file'; path: string }
-    | { type: 'ai'; prompt: string }
     | { type: 'add-image' }
     /** Upload audio/video into public/media/ (transcoding when needed) and write an item in `collection` */
     | { type: 'add-media'; collection: string }

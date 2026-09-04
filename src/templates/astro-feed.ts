@@ -65,15 +65,7 @@ const template: TemplateDefinition = {
         { key: 'accent', label: 'Accent Color', type: 'color' },
       ],
     },
-    actions: [
-      { label: 'Add photos', icon: '📷', do: { type: 'add-photos', collection: 'Posts' } },
-      {
-        label: 'Write a caption',
-        icon: '🪄',
-        do: { type: 'ai', prompt: 'Write a caption for my latest post: ' },
-      },
-      { label: 'Restyle my feed', icon: '🎨', do: { type: 'ai', prompt: 'Restyle my feed: ' } },
-    ],
+    actions: [{ label: 'Add photos', icon: '📷', do: { type: 'add-photos', collection: 'Posts' } }],
   },
   files: [
     {
