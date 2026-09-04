@@ -33,6 +33,7 @@ export interface MockApi {
     /** Files received by POST /cruxes/:id/publish, by crux id */
     published: Record<string, PublishedFile[]>;
     /** Sync store: garden backup + synced crux archives, and transfer this period */
+    billing: { planId: string; status: string; customer: boolean; checkouts: number };
     sync: {
       garden: { bytes: number; syncedAt: string } | null;
       cruxes: Record<string, { bytes: number; title: string; slug: string; updatedAt: string }>;
@@ -116,6 +117,7 @@ export async function startMockApi(): Promise<MockApi> {
     crux: null,
     cruxes: {},
     published: {},
+    billing: { planId: 'free', status: 'none', customer: false, checkouts: 0 },
     sync: { garden: null, cruxes: {}, up: 0, down: 0 },
     domains: [],
   };
@@ -274,6 +276,81 @@ export async function startMockApi(): Promise<MockApi> {
         storeWrites: storageBytes ? 4 : 0,
       };
     };
+    // ── billing (ADR 0012): mock provider — checkout "pays" instantly
+    const PLAN_LIMITS: Record<string, [number, number, number]> = {
+      free: [1073741824, 1073741824, 100000],
+      grower: [10737418240, 26843545600, 1000000],
+      gardener: [53687091200, 268435456000, 10000000],
+    };
+    const planOf = (id: string) => ({
+      id,
+      name: id[0]!.toUpperCase() + id.slice(1),
+      blurb: id === 'free' ? 'Publish a site, back up your garden.' : 'More room.',
+      storageBytes: PLAN_LIMITS[id]![0],
+      bandwidthBytesPerPeriod: PLAN_LIMITS[id]![1],
+      storeRequestsPerPeriod: PLAN_LIMITS[id]![2],
+    });
+    const billingMe = () => ({
+      plan: planOf(state.billing.planId),
+      status: state.billing.status,
+      interval: state.billing.planId === 'free' ? null : 'month',
+      renewsAt: state.billing.planId === 'free' ? null : '2026-10-03T00:00:00.000Z',
+      cancelAtPeriodEnd: false,
+      trialEndsAt: null,
+      canManage: state.billing.customer,
+      provider: 'mock',
+    });
+    if (path === '/billing/plans' && method === 'GET') {
+      return send(200, {
+        provider: 'mock',
+        instant: true,
+        trialDays: 0,
+        plans: ['free', 'grower', 'gardener'].map((id) => ({
+          plan: planOf(id),
+          prices:
+            id === 'free'
+              ? []
+              : [
+                  {
+                    interval: 'month',
+                    priceId: `price_${id}_m`,
+                    amount: id === 'grower' ? 500 : 1500,
+                    currency: 'usd',
+                  },
+                  {
+                    interval: 'year',
+                    priceId: `price_${id}_y`,
+                    amount: id === 'grower' ? 5000 : 15000,
+                    currency: 'usd',
+                  },
+                ],
+        })),
+      });
+    }
+    if (path === '/billing/me' && method === 'GET') return send(200, billingMe());
+    if (path === '/billing/sync' && method === 'POST') return send(200, billingMe());
+    if (path === '/billing/checkout' && method === 'POST') {
+      const { planId } = bodyJson() as { planId?: string };
+      if (!planId || !PLAN_LIMITS[planId] || planId === 'free')
+        return send(400, { statusCode: 400, message: 'That plan is not available' });
+      if (state.billing.planId !== 'free')
+        return send(400, {
+          statusCode: 400,
+          message: 'You already have a plan — use “Manage billing” to change it',
+        });
+      state.billing = {
+        planId,
+        status: 'active',
+        customer: true,
+        checkouts: state.billing.checkouts + 1,
+      };
+      return send(200, { url: 'https://crux.garden/billing/success?session_id=cs_mock' });
+    }
+    if (path === '/billing/portal' && method === 'POST') {
+      if (!state.billing.customer)
+        return send(400, { statusCode: 400, message: 'No billing account yet' });
+      return send(200, { url: 'https://billing.mock/portal' });
+    }
     // ── sync: garden backup + crux archives (multipart PUT), metered into usage
     if (path === '/sync/garden/status' && method === 'GET') {
       return state.sync.garden
@@ -426,13 +503,7 @@ export async function startMockApi(): Promise<MockApi> {
           checkedAt: '2026-09-03T00:15:00.000Z',
         },
         period: { start: '2026-09-01', end: '2026-10-01' },
-        plan: {
-          id: 'free',
-          name: 'Free',
-          storageBytes: 1073741824,
-          bandwidthBytesPerPeriod: 1073741824,
-          storeRequestsPerPeriod: 100000,
-        },
+        plan: planOf(state.billing.planId),
         storageBytes: publish.storageBytes + sync.storageBytes + store.storageBytes,
         bandwidthBytes: publish.bandwidthBytes + sync.transferBytes,
         requests: publish.requests,

@@ -31,6 +31,17 @@ export async function openExternal(url: string): Promise<void> {
   await desktopBridge()?.openExternal(url);
 }
 
+/** Open an https URL in the system browser (desktop) or a new tab (web). */
+export async function openWeb(url: string): Promise<void> {
+  if (!/^https:\/\//i.test(url) && !/^https?:\/\/(localhost|127\.0\.0\.1)/i.test(url)) return;
+  const api = desktopBridge();
+  if (api?.openWeb) {
+    await api.openWeb(url);
+    return;
+  }
+  window.open(url, '_blank', 'noopener');
+}
+
 /** Render a path under the home directory as "~/…" for display (macOS, Linux, Windows). */
 export function shortenHomePath(p: string): string {
   const mac = p.match(/^\/Users\/[^/]+(\/.*)?$/);

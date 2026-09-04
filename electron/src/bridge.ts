@@ -33,6 +33,8 @@ export interface DesktopBridge {
   config(): Promise<{ gardenRoot: string }>;
   chooseGardenRoot(): Promise<string | null>;
   openExternal(url: string): Promise<void>;
+  /** Open an https URL in the system browser (checkout, billing portal, docs). */
+  openWeb(url: string): Promise<void>;
   /** Version, platform, where the logs live — for Settings → Desktop and bug reports. */
   info(): Promise<DesktopInfo>;
   /** Reveal the local log folder (ADR 0008: logs are local, user-inspectable). */
