@@ -26,6 +26,18 @@ test.describe('bundled mood screenshots', () => {
 
   test('one shot per Mood', async () => {
     const { app, page } = await launchApp();
+    const cssVar = (name: string) =>
+      page.evaluate(
+        (n) => getComputedStyle(document.documentElement).getPropertyValue(n).trim(),
+        name,
+      );
+    const mixName = () =>
+      page.evaluate(
+        () =>
+          (
+            window as unknown as { __cruxAudio: { state: () => { mixName: string | null } } }
+          ).__cruxAudio.state().mixName,
+      );
     try {
       await page.getByRole('button', { name: /enter/i }).click();
       await page.getByText('Plant a new garden').click();
@@ -45,12 +57,17 @@ test.describe('bundled mood screenshots', () => {
         .catch(() => {});
 
       for (const id of IDS) {
+        const before = { accent: await cssVar('--accent'), mix: await mixName() };
         await page.getByRole('button', { name: 'Mood', exact: true }).click();
         const built = page.getByTestId('bundled-moods');
         await built.getByTestId(`bundled-${id}`).getByRole('button', { name: 'Apply' }).click();
-        await page.waitForTimeout(400);
+        // Applied: the palette and the soundscape both moved off the previous Mood's
+        await expect.poll(() => cssVar('--accent')).not.toBe(before.accent);
+        await expect.poll(mixName).not.toBe(before.mix);
         await page.keyboard.press('Escape');
-        await page.waitForTimeout(1200); // background + transitions settle
+        await expect(page.getByTestId('bundled-moods')).toHaveCount(0);
+        // The palette transition is 400ms (globals.css); let it finish before the shot
+        await page.waitForTimeout(500);
         await page.screenshot({ path: `e2e/.results/mood-${id}.png` });
       }
     } finally {

@@ -104,7 +104,29 @@ function Hero() {
         key. Publishing is the only part that touches our servers.
       </p>
       <div className="mt-8 flex flex-col items-center gap-2">
-        {download ? (
+        {download && !download.detected && other ? (
+          // We could not tell Apple silicon from Intel (Safari hides the GPU): offer both.
+          <>
+            <div className="flex flex-wrap justify-center gap-2">
+              {download.all.map((a) => (
+                <a
+                  key={a.arch}
+                  href={a.url}
+                  className="inline-flex items-center gap-2 px-6 py-3 rounded-[var(--radius)] bg-accent text-bg font-display font-medium text-base hover:opacity-90"
+                  data-testid={a.arch === download.arch ? 'download-button' : undefined}
+                >
+                  Download for Mac ({a.arch === 'arm64' ? 'Apple silicon' : 'Intel'})
+                </a>
+              ))}
+            </div>
+            <div className="text-xxs font-mono text-text-muted">
+              v{download.version} · Apple menu → About This Mac shows which chip you have ·{' '}
+              <a href={RELEASES_URL} className="hover:text-text underline">
+                all releases
+              </a>
+            </div>
+          </>
+        ) : download ? (
           <>
             <a
               href={download.url}
@@ -285,15 +307,14 @@ function MoodSection() {
         A Mood is a whole room: the look, the sound, and the voice you work with. Try one on this
         page — the same eleven ship in the app, and people publish their own.
       </p>
-      <div className="grid gap-3 grid-cols-2 sm:grid-cols-4" role="listbox" aria-label="Moods">
+      <div className="grid gap-3 grid-cols-2 sm:grid-cols-4" role="group" aria-label="Moods">
         {BUNDLED_MOODS.map((pkg) => {
           const o = pkg.theme.overrides;
           return (
             <button
               key={pkg.id}
               type="button"
-              role="option"
-              aria-selected={active === pkg.id}
+              aria-pressed={active === pkg.id}
               onClick={() => void wear(pkg.id)}
               disabled={!!busy}
               className={cn(

@@ -70,7 +70,7 @@
 /* ── Theme: Custom Properties ──────────────────────────── */
 
 @theme inline {
-  /* Titles use the native system stack (plain, per Daniel). Body stays
+  /* Titles use the native system stack (deliberately plain). Body stays
      Outfit; code/editor surfaces keep JetBrains Mono via --font-mono.
      The wordmark gets its own face so the brand can feel like a garden
      without the UI feeling like a magazine. */
@@ -109,71 +109,46 @@
   --color-error: var(--error);
   --color-error-muted: var(--error-muted);
   --color-contrast: var(--contrast);
-  --color-overlay: var(--overlay);
   --color-preview-bg: var(--preview-bg);
   --color-brand-ai: var(--brand-ai);
 
   /* ── V3: Global ───────────────────────────────────── */
-  --color-highlight: var(--highlight);
 
   /* ── V3: Typography ───────────────────────────────── */
-  --color-title: var(--title);
   --color-heading: var(--heading);
-  --color-paragraph: var(--paragraph);
   --color-caption: var(--caption);
-  --color-link: var(--link);
-  --color-link-hover: var(--link-hover);
-  --color-link-visited: var(--link-visited);
-  --color-link-active: var(--link-active);
 
   /* ── V3: Panel ────────────────────────────────────── */
-  --color-panel-hover: var(--panel-hover);
   --color-panel-border: var(--panel-border);
-  --color-panel-border-hover: var(--panel-border-hover);
   --color-panel-text: var(--panel-text);
-  --color-panel-text-muted: var(--panel-text-muted);
 
   /* ── V3: Surface ──────────────────────────────────── */
   --color-surface-hover: var(--surface-hover);
   --color-surface-border: var(--surface-border);
-  --color-surface-border-hover: var(--surface-border-hover);
-  --color-surface-text: var(--surface-text);
   --color-surface-text-muted: var(--surface-text-muted);
 
   /* ── V3: Overlay ──────────────────────────────────── */
-  --color-overlay-panel: var(--overlay-panel);
-  --color-overlay-border: var(--overlay-border);
-  --color-overlay-text: var(--overlay-text);
 
   /* ── V3: Input ────────────────────────────────────── */
   --color-input: var(--input);
-  --color-input-hover: var(--input-hover);
   --color-input-text: var(--input-text);
   --color-placeholder: var(--placeholder);
   --color-input-outline: var(--input-outline);
   --color-input-border: var(--input-border);
   --color-input-border-active: var(--input-border-active);
-  --color-input-border-hover: var(--input-border-hover);
 
   /* ── V3: ActionButton ─────────────────────────────── */
   --color-action-button: var(--action-button);
   --color-action-button-hover: var(--action-button-hover);
   --color-action-button-text: var(--action-button-text);
   --color-action-button-text-hover: var(--action-button-text-hover);
-  --color-action-button-icon: var(--action-button-icon);
-  --color-action-button-icon-hover: var(--action-button-icon-hover);
   --color-action-button-border: var(--action-button-border);
   --color-action-button-border-hover: var(--action-button-border-hover);
 
   /* ── V3: IconButton ───────────────────────────────── */
-  --color-icon-button: var(--icon-button);
   --color-icon-button-hover: var(--icon-button-hover);
-  --color-icon-button-text: var(--icon-button-text);
-  --color-icon-button-text-hover: var(--icon-button-text-hover);
   --color-icon-button-icon: var(--icon-button-icon);
   --color-icon-button-icon-hover: var(--icon-button-icon-hover);
-  --color-icon-button-border: var(--icon-button-border);
-  --color-icon-button-border-hover: var(--icon-button-border-hover);
 
   /* ── V3: PrimaryButton ────────────────────────────── */
   --color-primary-button: var(--primary-button);
@@ -192,9 +167,7 @@
   --color-profile-button: var(--profile-button);
   --color-profile-button-hover: var(--profile-button-hover);
   --color-profile-button-icon: var(--profile-button-icon);
-  --color-profile-button-icon-hover: var(--profile-button-icon-hover);
   --color-profile-button-border: var(--profile-button-border);
-  --color-profile-button-border-hover: var(--profile-button-border-hover);
 
   /* ── V3: Toolbar ──────────────────────────────────── */
   --color-focus-ring: var(--focus-ring);
@@ -206,24 +179,8 @@
   --color-button-disabled-text: var(--button-disabled-text);
   --color-dropdown: var(--dropdown);
   --color-dropdown-border: var(--dropdown-border);
-  --color-dropdown-item: var(--dropdown-item);
-  --color-dropdown-item-hover: var(--dropdown-item-hover);
-  --color-dropdown-item-active: var(--dropdown-item-active);
-  --color-dropdown-item-text: var(--dropdown-item-text);
-  --color-dropdown-item-text-hover: var(--dropdown-item-text-hover);
-  --color-dropdown-item-icon: var(--dropdown-item-icon);
-  --color-dropdown-divider: var(--dropdown-divider);
-  --color-model-selector: var(--model-selector);
   --color-model-selector-border: var(--model-selector-border);
-  --color-model-selector-text: var(--model-selector-text);
-  --color-model-selector-icon: var(--model-selector-icon);
-  --color-model-selector-icon-hover: var(--model-selector-icon-hover);
   --color-model-selector-dropdown: var(--model-selector-dropdown);
-  --color-model-selector-item: var(--model-selector-item);
-  --color-model-selector-item-hover: var(--model-selector-item-hover);
-  --color-model-selector-item-active: var(--model-selector-item-active);
-  --color-model-selector-item-text: var(--model-selector-item-text);
-  --color-file-tree-border: var(--file-tree-border);
   --color-file-tree-drop-target: var(--file-tree-drop-target);
   --color-file-tree-drop-target-border: var(--file-tree-drop-target-border);
   --color-markdown-text: var(--markdown-text);
@@ -235,28 +192,17 @@
   --color-markdown-table-header-bg: var(--markdown-table-header-bg);
   --color-markdown-blockquote-border: var(--markdown-blockquote-border);
   --color-markdown-blockquote-bg: var(--markdown-blockquote-bg);
-  --color-avatar: var(--avatar);
-  --color-avatar-border: var(--avatar-border);
-  --color-avatar-text: var(--avatar-text);
-  --color-avatar-placeholder: var(--avatar-placeholder);
   --color-snapshot-banner: var(--snapshot-banner);
   --color-snapshot-banner-border: var(--snapshot-banner-border);
   --color-snapshot-banner-text: var(--snapshot-banner-text);
   --color-snapshot-banner-button: var(--snapshot-banner-button);
   --color-snapshot-banner-button-hover: var(--snapshot-banner-button-hover);
-  --color-command-palette-item-shortcut: var(--command-palette-item-shortcut);
-  --color-growth-timeline-border: var(--growth-timeline-border);
-  --color-growth-card-border: var(--growth-card-border);
-  --color-warning-muted: var(--warning-muted);
-  --color-success-muted: var(--success-muted);
   --radius-button: var(--button-radius);
   --radius-input: var(--input-radius);
   --radius-card: var(--card-radius);
   --radius-chip: var(--chip-radius);
-  --radius-modal: var(--modal-radius);
   --radius-tooltip: var(--tooltip-radius);
   --radius-dropdown: var(--dropdown-radius);
-  --radius-avatar: var(--avatar-radius);
   --radius-bubble: var(--bubble-radius);
   --radius-meter: var(--meter-radius);
   --shadow-dropdown: var(--elevation-dropdown);
@@ -277,9 +223,6 @@
   --color-toolbar-divider: var(--toolbar-divider);
 
   /* ── V3: Chat ─────────────────────────────────────── */
-  --color-chat: var(--chat);
-  --color-chat-border: var(--chat-border);
-  --color-chat-text: var(--chat-text);
   --color-chat-text-muted: var(--chat-text-muted);
   --color-chat-user-bubble: var(--chat-user-bubble);
   --color-chat-user-bubble-text: var(--chat-user-bubble-text);
@@ -300,7 +243,6 @@
   --color-code-block: var(--code-block);
   --color-code-block-border: var(--code-block-border);
   --color-code-block-text: var(--code-block-text);
-  --color-code-line-highlight: var(--code-line-highlight);
   --color-syntax-comment: var(--syntax-comment);
   --color-syntax-keyword: var(--syntax-keyword);
   --color-syntax-string: var(--syntax-string);
@@ -308,17 +250,11 @@
   --color-syntax-type: var(--syntax-type);
   --color-syntax-function: var(--syntax-function);
   --color-syntax-punctuation: var(--syntax-punctuation);
-  --color-syntax-variable: var(--syntax-variable);
-  --color-syntax-tag: var(--syntax-tag);
-  --color-syntax-attribute: var(--syntax-attribute);
 
   /* ── V3: Tooltip ──────────────────────────────────── */
   --color-tooltip: var(--tooltip);
-  --color-tooltip-hover: var(--tooltip-hover);
   --color-tooltip-text: var(--tooltip-text);
-  --color-tooltip-text-hover: var(--tooltip-text-hover);
   --color-tooltip-border: var(--tooltip-border);
-  --color-tooltip-border-hover: var(--tooltip-border-hover);
 
   /* ── V3: Badge ────────────────────────────────────── */
   --color-badge: var(--badge);
@@ -335,28 +271,16 @@
   --color-selection-text: var(--selection-text);
 
   /* ── V3: Drag ─────────────────────────────────────── */
-  --color-drag-handle: var(--drag-handle);
-  --color-drag-handle-active: var(--drag-handle-active);
-  --color-drag-target: var(--drag-target);
-  --color-drag-target-border: var(--drag-target-border);
 
   /* ── V3: Spinner ──────────────────────────────────── */
-  --color-spinner: var(--spinner);
-  --color-spinner-track: var(--spinner-track);
 
   /* ── V3: Error/Warning/Success ────────────────────── */
-  --color-error-bg: var(--error-bg);
-  --color-error-text: var(--error-text);
   --color-on-error: var(--on-error);
-  --color-error-border: var(--error-border);
   --color-warning: var(--warning);
   --color-warning-bg: var(--warning-bg);
   --color-warning-text: var(--warning-text);
   --color-warning-border: var(--warning-border);
   --color-success: var(--success);
-  --color-success-bg: var(--success-bg);
-  --color-success-text: var(--success-text);
-  --color-success-border: var(--success-border);
 
   /* ── V3: Overlay badges + toggle (Mood Builder-editable) ── */
   --color-overlay-badge: var(--overlay-badge);
@@ -378,8 +302,6 @@
   --color-garden-card-thumbnail: var(--garden-card-thumbnail);
 
   /* ── V3: Gateway ──────────────────────────────────── */
-  --color-gateway-panel: var(--gateway-panel);
-  --color-gateway-panel-border: var(--gateway-panel-border);
   --color-gateway-title: var(--gateway-title);
   --color-gateway-subtitle: var(--gateway-subtitle);
   --color-gateway-button: var(--gateway-button);
@@ -421,9 +343,6 @@
   --color-public-top-bar-link-hover: var(--public-top-bar-link-hover);
 
   /* ── V3: Overlay ──────────────────────────────────── */
-  --color-overlay-panel: var(--overlay-panel);
-  --color-overlay-border: var(--overlay-border);
-  --color-overlay-text: var(--overlay-text);
 
   /* ── V3: Profile Button ───────────────────────────── */
   --color-profile-button: var(--profile-button);
@@ -432,24 +351,17 @@
   --color-profile-button-border: var(--profile-button-border);
 
   /* ── V3: File Tree ────────────────────────────────── */
-  --color-file-tree: var(--file-tree);
   --color-file-tree-item: var(--file-tree-item);
   --color-file-tree-item-hover: var(--file-tree-item-hover);
   --color-file-tree-item-selected: var(--file-tree-item-selected);
   --color-file-tree-item-text: var(--file-tree-item-text);
   --color-file-tree-item-text-selected: var(--file-tree-item-text-selected);
-  --color-file-tree-item-icon: var(--file-tree-item-icon);
 
   /* ── V3: Growth Timeline ──────────────────────────── */
-  --color-growth-timeline: var(--growth-timeline);
   --color-growth-card: var(--growth-card);
-  --color-growth-card-hover: var(--growth-card-hover);
-  --color-growth-card-active: var(--growth-card-active);
   --color-growth-card-text: var(--growth-card-text);
   --color-growth-card-text-muted: var(--growth-card-text-muted);
   --color-growth-card-label: var(--growth-card-label);
-  --color-growth-line: var(--growth-line);
-  --color-growth-dot: var(--growth-dot);
   --color-growth-dot-active: var(--growth-dot-active);
 }
 
@@ -468,9 +380,9 @@
   --accent-muted: #1a2723;
   --error: #e63946;
   /* Text on top of --error (danger buttons). Always white: red buttons must read the same in every theme. */
+  --on-error: #ffffff;
   --error-muted: rgba(230, 57, 70, 0.15);
   --contrast: #ffffff;
-  --overlay: rgba(0, 0, 0, 0.5);
   --preview-bg: rgba(0, 0, 0, 0.2);
   --brand-ai: #d97757;
   --pane-collaboration: #d47080;
@@ -578,8 +490,6 @@
   --garden-card-text: #8b908d;
   --garden-card-meta: #6a6e6b;
   --garden-card-thumbnail: #0b0d0c;
-  --gateway-panel: #131514;
-  --gateway-panel-border: rgba(82, 96, 86, 0.18);
   --gateway-title: #e2e4e3;
   --gateway-subtitle: #8b908d;
   --gateway-button: #7db3a3;
@@ -611,78 +521,58 @@
   --public-top-bar-text-muted: #8b908d;
   --public-top-bar-link: #8b908d;
   --public-top-bar-link-hover: #e2e4e3;
-  --overlay-panel: #141816;
-  --overlay-border: rgba(82, 96, 86, 0.18);
-  --overlay-text: #e2e4e3;
   --profile-button: transparent;
   --profile-button-hover: #1a2723;
   --profile-button-icon: #8b908d;
   --profile-button-border: rgba(82, 96, 86, 0.18);
-  --file-tree: #141816;
   --file-tree-item: transparent;
   --file-tree-item-hover: #181b19;
   --file-tree-item-selected: #1a2723;
   --file-tree-item-text: #e2e4e3;
   --file-tree-item-text-selected: #7db3a3;
-  --file-tree-item-icon: #8b908d;
-  --growth-timeline: #141816;
   --growth-card: #121513;
-  --growth-card-hover: #181b19;
-  --growth-card-active: #1a2723;
   --growth-card-text: #e2e4e3;
   --growth-card-text-muted: #8b908d;
   --growth-card-label: #7db3a3;
-  --growth-line: rgba(82, 96, 86, 0.18);
-  --growth-dot: #8b908d;
   --growth-dot-active: #7db3a3;
 
   /* Pane header tokens */
   /* Pane button tokens */
-  --pane-collaboration-button: #d47080;
   --pane-collaboration-button-hover: rgba(212, 112, 128, 0.1);
   --pane-collaboration-button-active: rgba(212, 112, 128, 0.15);
   --pane-collaboration-button-icon: #d47080;
   --pane-collaboration-button-icon-hover: #d47080;
   --pane-collaboration-button-icon-active: #d47080;
-  --pane-collaboration-button-border: transparent;
   --pane-collaboration-button-border-hover: rgba(212, 112, 128, 0.2);
   --pane-collaboration-button-border-active: rgba(212, 112, 128, 0.3);
-  --pane-artifacts-button: #d4944c;
   --pane-artifacts-button-active: rgba(212, 148, 76, 0.15);
   --pane-artifacts-button-icon: #d4944c;
   --pane-artifacts-button-icon-active: #d4944c;
   --pane-artifacts-button-border-active: rgba(212, 148, 76, 0.3);
-  --pane-workshop-button: #c8a84c;
   --pane-workshop-button-active: rgba(200, 168, 76, 0.15);
   --pane-workshop-button-icon: #c8a84c;
   --pane-workshop-button-icon-active: #c8a84c;
   --pane-workshop-button-border-active: rgba(200, 168, 76, 0.3);
-  --pane-details-button: #5cb87a;
   --pane-details-button-active: rgba(92, 184, 122, 0.15);
   --pane-details-button-icon: #5cb87a;
   --pane-details-button-icon-active: #5cb87a;
   --pane-details-button-border-active: rgba(92, 184, 122, 0.3);
-  --pane-history-button: #4cb8b0;
   --pane-history-button-active: rgba(76, 184, 176, 0.15);
   --pane-history-button-icon: #4cb8b0;
   --pane-history-button-icon-active: #4cb8b0;
   --pane-history-button-border-active: rgba(76, 184, 176, 0.3);
-  --pane-export-button: #5b9ed4;
   --pane-export-button-active: rgba(91, 158, 212, 0.15);
   --pane-export-button-icon: #5b9ed4;
   --pane-export-button-icon-active: #5b9ed4;
   --pane-export-button-border-active: rgba(91, 158, 212, 0.3);
-  --pane-sync-button: #8c7cc8;
   --pane-sync-button-active: rgba(140, 124, 200, 0.15);
   --pane-sync-button-icon: #8c7cc8;
   --pane-sync-button-icon-active: #8c7cc8;
   --pane-sync-button-border-active: rgba(140, 124, 200, 0.3);
-  --pane-publish-button: #c87ca8;
   --pane-publish-button-active: rgba(200, 124, 168, 0.15);
   --pane-publish-button-icon: #c87ca8;
   --pane-publish-button-icon-active: #c87ca8;
   --pane-publish-button-border-active: rgba(200, 124, 168, 0.3);
-  --pane-store-button: #c0a070;
   --pane-store-button-active: rgba(192, 160, 112, 0.15);
   --pane-store-button-icon: #c0a070;
   --pane-store-button-icon-active: #c0a070;
@@ -847,17 +737,24 @@ body {
   border-color: var(--pt-hover-border) !important;
 }
 
-:focus-visible {
-  outline: var(--focus-ring-width) solid var(--focus-ring);
-  outline-offset: var(--focus-ring-offset);
-}
+/* Base-layer defaults: Tailwind utilities live in @layer utilities, which beats
+   @layer base, so a component can opt out (`outline-none` on an input that
+   draws its own focus ring; `disabled:opacity-100` on <Button>, which recolours
+   through the button-disabled tokens instead of dimming). Unlayered, these
+   rules would override every such utility. */
+@layer base {
+  :focus-visible {
+    outline: var(--focus-ring-width) solid var(--focus-ring);
+    outline-offset: var(--focus-ring-offset);
+  }
 
-button:disabled,
-input:disabled,
-select:disabled,
-textarea:disabled,
-[aria-disabled='true'] {
-  opacity: var(--disabled-opacity);
+  button:disabled,
+  input:disabled,
+  select:disabled,
+  textarea:disabled,
+  [aria-disabled='true'] {
+    opacity: var(--disabled-opacity);
+  }
 }
 
 .hover-bright:hover {
@@ -865,6 +762,9 @@ textarea:disabled,
 }
 .active-dim:active {
   filter: brightness(var(--active-brightness));
+}
+.hover-lift {
+  transition: transform var(--default-transition-duration, 150ms);
 }
 .hover-lift:hover {
   transform: translateY(calc(-1 * var(--card-hover-lift)));
@@ -996,13 +896,18 @@ html.palette-transition *::after {
   color: var(--text);
 }
 .mosaic.crux-mosaic-theme .mosaic-preview {
-  /* react-mosaic's drag preview sits behind the body; with a translucent pane body its
-     title text leaked through. It only needs to exist during a drag. */
-  visibility: hidden;
+  /* react-mosaic hands this node to react-dnd as the drag image (setDragImage),
+     so it must stay rendered — `visibility: hidden` blanks the ghost. It sits
+     behind the pane body, and with a translucent body its title leaked through,
+     so park it outside the window (the window clips overflow) on an opaque
+     surface: nothing bleeds, and the ghost still paints. */
+  transform: translateX(-200%);
+  pointer-events: none;
   border: none;
   border-radius: var(--pane-radius);
   box-shadow: none;
-  background: var(--panel);
+  background: var(--surface-solid);
+  color: var(--text);
 }
 
 /* Per-pane surfaces: inside a pane, the generic tokens resolve to that pane's
@@ -1271,9 +1176,6 @@ html.palette-transition *::after {
 }
 .mosaic.crux-mosaic-theme .mosaic-window:hover .pane-toolbar {
   filter: brightness(var(--pane-header-hover-brightness));
-}
-.light .mosaic.crux-mosaic-theme .mosaic-window:hover .pane-toolbar {
-  filter: brightness(0.95);
 }
 .mosaic.crux-mosaic-theme .mosaic-window .mosaic-window-title {
   display: none;

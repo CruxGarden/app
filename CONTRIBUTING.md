@@ -7,8 +7,10 @@ Thanks for helping. This repo is the desktop app (Electron) and the web app it w
 - Be kind; see `CODE_OF_CONDUCT.md`.
 - Security issues go to keeper@crux.garden, not to a public issue (`SECURITY.md`).
 - Vocabulary matters: use the glossary terms (Crux, Artifact, Collaboration, Growth, Mood, Project
-  Folder, Publish, Plan). Architecture decisions live in `docs/adr/` of the docs repo — propose a
-  new ADR rather than silently reversing one.
+  Folder, Publish, Plan). The glossary (`CONTEXT.md`) and the Architecture Decision Records
+  (`docs/adr/0001-…` onwards) live one directory above this repo in the Crux Garden workspace
+  checkout, not in this repository and not (yet) at a public URL — ask if you need a copy. Propose
+  a new ADR rather than silently reversing one.
 
 ## Setup
 
@@ -33,7 +35,9 @@ Tests run isolated from your real garden (throwaway userData + garden root). A m
 ## Pull requests
 
 - Branch from `main`; one coherent change per PR; include tests for behaviour you add.
-- Prettier runs on save/commit; ESLint is `--max-warnings=0`.
+- Format with Prettier before you push: `npm run format` (CI checks `npm run format:check`). There
+  is no commit hook in this repo; the Claude Code hook that formats agents' edits does not apply to
+  you. ESLint runs with `--max-warnings=0`.
 - Say what you verified. If a step was skipped, say that.
 
 ## What the app sends over the network (trust statement)

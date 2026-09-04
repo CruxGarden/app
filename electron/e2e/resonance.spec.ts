@@ -12,12 +12,12 @@ type AudioState = {
 };
 
 /**
- * Resonance Sound Mixer, Phase 1: the Mood Dock plays the Default Mood's
+ * Resonance Sound Mixer, Phase 1: the Mood Bar plays the Default Mood's
  * soundscape for real (Tone.js in the renderer), volume and mix switching
  * work, opt-in + "was playing" survive a restart. Asserted through the audio
  * store's read model, not by listening.
  */
-test.describe('resonance (Mood Dock)', () => {
+test.describe('resonance (Mood Bar)', () => {
   test.setTimeout(150_000);
 
   test('play, volume, next mix, collapse, persist across restart', async () => {
@@ -31,7 +31,7 @@ test.describe('resonance (Mood Dock)', () => {
       await page.getByText('Plant a new garden').click();
       await page.getByRole('button', { name: 'Welcome' }).click();
 
-      const dock = page.getByRole('region', { name: 'Mood Dock' });
+      const dock = page.getByRole('region', { name: 'Mood Bar' });
       await expect(dock).toBeVisible({ timeout: 30_000 });
       expect((await state()).playing).toBe(false);
       expect((await state()).optIn).toBe(false);
@@ -58,9 +58,9 @@ test.describe('resonance (Mood Dock)', () => {
       await page.screenshot({ path: 'e2e/.results/resonance-1-dock.png' });
 
       // Collapse to the disc and back
-      await dock.getByRole('button', { name: 'Collapse Mood Dock' }).click();
-      await expect(dock.getByRole('button', { name: 'Expand Mood Dock' })).toBeVisible();
-      await dock.getByRole('button', { name: 'Expand Mood Dock' }).click();
+      await dock.getByRole('button', { name: 'Collapse Mood Bar' }).click();
+      await expect(dock.getByRole('button', { name: 'Expand Mood Bar' })).toBeVisible();
+      await dock.getByRole('button', { name: 'Expand Mood Bar' }).click();
       await expect(dock.getByRole('button', { name: 'Pause soundscape' })).toBeVisible();
 
       // Restart: opt-in remembered, still on Night Rain at 0.3, resumes playing
@@ -68,7 +68,7 @@ test.describe('resonance (Mood Dock)', () => {
       const again = await launchApp({ dir });
       try {
         await again.page.getByRole('button', { name: /enter/i }).click();
-        await expect(again.page.getByRole('region', { name: 'Mood Dock' })).toBeVisible({
+        await expect(again.page.getByRole('region', { name: 'Mood Bar' })).toBeVisible({
           timeout: 30_000,
         });
         await expect

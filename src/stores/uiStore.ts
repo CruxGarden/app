@@ -109,7 +109,7 @@ interface UIState {
   moodPanelOpen: boolean;
   setMoodPanelOpen: (open: boolean) => void;
   toggleMoodPanel: () => void;
-  /** Pixels the Mood Dock reserves at the bottom of <main> so it never covers pane controls. */
+  /** Pixels the Mood Bar reserves at the bottom of <main> so it never covers pane controls. */
   dockReserve: number;
   setDockReserve: (px: number) => void;
 

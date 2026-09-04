@@ -90,7 +90,8 @@ export const PARAM_META: Record<LayerType, Record<string, ParamMeta>> = {
       ],
     },
     density: pct('Density'),
-    swing: pct('Swing'),
+    /** 0.5 is straight; a hit cannot be scheduled before its own slot, so there is no "early" swing */
+    swing: { kind: 'range', label: 'Swing', min: 0.5, max: 1, step: 0.01 },
     hats: pct('Hats'),
     tone: pct('Tone'),
     humanize: pct('Humanize'),

@@ -171,7 +171,7 @@ const RESONANCE_TOOLS: ToolDefinition[] = [
       'updateMix {name?, root?, scale?, tempo?, master?} and layer / addLayer / removeLayer edit the ACTIVE mix and are saved — only when the user asks for that. ' +
       'Musical layers follow the mix key (root + scale) and tempo; keys and bass share a chord progression. ' +
       'LAYER TYPES and params — ' +
-      'beat {pattern: lofi|boombap|half|four|brush, density 0..1, swing 0..1 (0.5 straight), hats 0..1, tone 0..1, humanize 0..1}; ' +
+      'beat {pattern: lofi|boombap|half|four|brush, density 0..1, swing 0.5..1 (0.5 straight, 0.6 lazy), hats 0..1, tone 0..1, humanize 0..1}; ' +
       'keys {instrument: rhodes|piano|organ|bells|guitar, progression: lofi(ii-V-I)|pop(I-vi-IV-V)|axis(I-V-vi-IV)|minor(i-VII-VI-VII)|gospel|jazz|wistful|static, voicing: triad|seventh, rhythm: whole|half|stabs|arp, octave 2..5, humanize, wobble, tone}; ' +
       'bass {pattern: root|pulse|walk, progression (match keys), octave 1..3, tone, glide}; ' +
       'vinyl {crackle, dust, hum}; ' +
@@ -179,7 +179,7 @@ const RESONANCE_TOOLS: ToolDefinition[] = [
       'melody {instrument: sine|triangle|sawtooth|square, octave 3..7, density, humanize, echo}; rain {intensity, brightness, drops}; wind {strength, gust, height}; noise {color: white|pink|brown, cutoff, drift}; ' +
       'music/sample {fingerprint (a workspace audio file), loop, rate}. ' +
       'EFFECTS per layer: filter {kind: lowpass|highpass|bandpass, frequency Hz, q}, delay {time s, feedback, wet}, reverb {decay s, wet}, chorus {rate, depth, wet}, tremolo {rate, depth}, tape {wobble, warmth} (lofi warmth), bitcrusher {bits 2..12, wet}, compressor {threshold dB, ratio}. ' +
-      'Gains are dB (-60..6; beds around -20, leads around -12). master {reverbDecay s, reverbWet 0..1, volume dB}. ' +
+      'Gains are dB (-60..6; beds around -20, leads around -12). master {reverbDecay s, reverbWet 0..1, volume dB}. Out-of-range values are clamped. A mix holds at most 12 layers, a layer at most 4 effects. ' +
       'RECIPES — lofi study: tempo 70-80, major or dorian, keys rhodes/seventh/half + tape, beat lofi swing 0.6 + bitcrusher 8 bits, bass root, vinyl, faint rain, master reverb short. ' +
       'rainy jazz bar: tempo 60, minor, keys piano/jazz/stabs, bass walk, beat brush low, rain, reverb long. ' +
       'deep focus: no beat; drone + pad (changeEvery 12) + brown noise + slow melody sparse. ' +
@@ -357,8 +357,18 @@ async function toolGetResonance(): Promise<string> {
 
 async function toolSetResonance(input: Record<string, unknown>): Promise<string> {
   const { useAudioStore } = await import('@/stores/audioStore');
-  const { createLayer, LAYER_TYPES, validateMix, createMix, EFFECT_TYPES } =
-    await import('@/audio/schema');
+  const {
+    createLayer,
+    LAYER_TYPES,
+    validateMix,
+    createMix,
+    EFFECT_TYPES,
+    isValidRoot,
+    isValidScale,
+    MAX_LAYERS,
+    MAX_EFFECTS_PER_LAYER,
+    MAX_NAME_LENGTH,
+  } = await import('@/audio/schema');
   const { EFFECT_DEFAULTS } = await import('@/audio/params-meta');
   const s = useAudioStore.getState();
   if (!s.mixes.length) s.init();
@@ -381,7 +391,7 @@ async function toolSetResonance(input: Record<string, unknown>): Promise<string>
   if (typeof input.playing === 'boolean') {
     if (input.playing) {
       if (!st().optIn)
-        warn.push('sound has never been enabled — the user must press play in the Mood Dock first');
+        warn.push('sound has never been enabled — the user must press play in the Mood Bar first');
       else {
         await st().play();
         done.push('playing');
@@ -404,51 +414,80 @@ async function toolSetResonance(input: Record<string, unknown>): Promise<string>
 
   const active = () => st().mixes.find((m) => m.id === st().activeMixId);
 
-  const normEffects = (raw: unknown) =>
-    Array.isArray(raw)
-      ? raw
-          .filter(
-            (e) =>
-              e &&
-              typeof e === 'object' &&
-              (EFFECT_TYPES as string[]).includes(String((e as { type?: unknown }).type)),
-          )
-          .map((e) => {
-            const ef = e as { type: string; params?: Record<string, unknown>; enabled?: boolean };
-            return {
-              type: ef.type as (typeof EFFECT_TYPES)[number],
-              enabled: ef.enabled !== false,
-              params: {
-                ...EFFECT_DEFAULTS[ef.type as (typeof EFFECT_TYPES)[number]],
-                ...(ef.params ?? {}),
-              } as Record<string, number | string>,
-            };
-          })
-      : undefined;
+  const isPlainObject = (v: unknown): v is Record<string, unknown> =>
+    !!v && typeof v === 'object' && !Array.isArray(v);
+  /** Names are capped; the model is told when it happens. */
+  const clipName = (v: unknown, what: string): string | undefined => {
+    if (typeof v !== 'string') return undefined;
+    if (v.length <= MAX_NAME_LENGTH) return v;
+    warn.push(`${what} name shortened to ${MAX_NAME_LENGTH} characters`);
+    return v.slice(0, MAX_NAME_LENGTH);
+  };
+  /** Layer params only when they are an object (arrays / scalars are ignored). */
+  const layerParams = (v: unknown) =>
+    isPlainObject(v) ? { params: v as Record<string, number | string | boolean> } : {};
+  /** Layer (root, scale) validity — validateMix would silently substitute defaults. */
+  const checkKey = (o: Record<string, unknown>, what: string) => {
+    const out: { root?: string; scale?: string } = {};
+    if (o.root !== undefined) {
+      if (isValidRoot(o.root)) out.root = o.root;
+      else warn.push(`${what}: unknown root "${String(o.root)}" — use C, C#/Db, D … B`);
+    }
+    if (o.scale !== undefined) {
+      if (isValidScale(o.scale)) out.scale = o.scale;
+      else
+        warn.push(
+          `${what}: unknown scale "${String(o.scale)}" — use major, minor, dorian, lydian, pentatonic or minorPentatonic`,
+        );
+    }
+    return out;
+  };
+
+  const normEffects = (raw: unknown, what: string) => {
+    if (!Array.isArray(raw)) return undefined;
+    const valid = raw.filter(
+      (e) => isPlainObject(e) && (EFFECT_TYPES as string[]).includes(String(e.type)),
+    ) as Record<string, unknown>[];
+    if (valid.length > MAX_EFFECTS_PER_LAYER)
+      warn.push(`${what}: only the first ${MAX_EFFECTS_PER_LAYER} effects were kept`);
+    return valid.slice(0, MAX_EFFECTS_PER_LAYER).map((ef) => {
+      const type = ef.type as (typeof EFFECT_TYPES)[number];
+      return {
+        type,
+        enabled: ef.enabled !== false,
+        params: {
+          ...EFFECT_DEFAULTS[type],
+          ...(isPlainObject(ef.params) ? ef.params : {}),
+        } as Record<string, number | string>,
+      };
+    });
+  };
 
   const create = input.createMix as Record<string, unknown> | undefined;
   if (create && typeof create.name === 'string' && Array.isArray(create.layers)) {
-    const layers = (create.layers as Record<string, unknown>[])
-      .filter((l) => l && (LAYER_TYPES as string[]).includes(String(l.type)))
-      .map((l) =>
-        createLayer(l.type as (typeof LAYER_TYPES)[number], {
-          ...(typeof l.name === 'string' ? { name: l.name } : {}),
-          ...(typeof l.gain === 'number' ? { gain: l.gain } : {}),
-          ...(typeof l.pan === 'number' ? { pan: l.pan } : {}),
-          ...(l.params && typeof l.params === 'object'
-            ? { params: l.params as Record<string, number | string | boolean> }
-            : {}),
-          ...(normEffects(l.effects) ? { effects: normEffects(l.effects) } : {}),
-        }),
-      );
+    const wanted = (create.layers as unknown[]).filter(
+      (l) => isPlainObject(l) && (LAYER_TYPES as string[]).includes(String(l.type)),
+    ) as Record<string, unknown>[];
+    if (wanted.length > MAX_LAYERS)
+      warn.push(`createMix: a mix holds at most ${MAX_LAYERS} layers; the rest were dropped`);
+    const layers = wanted.slice(0, MAX_LAYERS).map((l) => {
+      const effects = normEffects(l.effects, `layer "${String(l.name ?? l.type)}"`);
+      const layerName = clipName(l.name, 'layer');
+      return createLayer(l.type as (typeof LAYER_TYPES)[number], {
+        ...(layerName !== undefined ? { name: layerName } : {}),
+        ...(typeof l.gain === 'number' ? { gain: l.gain } : {}),
+        ...(typeof l.pan === 'number' ? { pan: l.pan } : {}),
+        ...layerParams(l.params),
+        ...(effects ? { effects } : {}),
+      });
+    });
     const draft = createMix({
-      name: create.name,
-      ...(typeof create.root === 'string' ? { root: create.root } : {}),
-      ...(typeof create.scale === 'string' ? { scale: create.scale } : {}),
+      name: clipName(create.name, 'mix') ?? 'New mix',
+      ...checkKey(create, 'createMix'),
       ...(typeof create.tempo === 'number' ? { tempo: create.tempo } : {}),
       layers,
     });
-    if (create.master && typeof create.master === 'object')
+    if (isPlainObject(create.master))
       draft.master = { ...draft.master, ...(create.master as Record<string, number>) };
     const mix = validateMix(draft);
     if (!mix || !mix.layers.length) warn.push('createMix: no valid layers');
@@ -463,7 +502,7 @@ async function toolSetResonance(input: Record<string, unknown>): Promise<string>
           await st().play();
           done.push('playing');
         } else
-          warn.push('not started: the user must press play in the Mood Dock once to enable sound');
+          warn.push('not started: the user must press play in the Mood Bar once to enable sound');
       }
     }
   }
@@ -473,13 +512,16 @@ async function toolSetResonance(input: Record<string, unknown>): Promise<string>
     const mix = active();
     if (!mix) warn.push('updateMix: no active mix');
     else {
+      const updName = clipName(upd.name, 'mix');
       const next = validateMix({
         ...mix,
-        ...(typeof upd.name === 'string' ? { name: upd.name } : {}),
-        ...(typeof upd.root === 'string' ? { root: upd.root } : {}),
-        ...(typeof upd.scale === 'string' ? { scale: upd.scale } : {}),
+        ...(updName !== undefined ? { name: updName } : {}),
+        ...checkKey(upd, 'updateMix'),
         ...(typeof upd.tempo === 'number' ? { tempo: upd.tempo } : {}),
-        master: { ...mix.master, ...((upd.master as Record<string, number>) ?? {}) },
+        master: {
+          ...mix.master,
+          ...(isPlainObject(upd.master) ? (upd.master as Record<string, number>) : {}),
+        },
       });
       if (next) {
         await st().upsertMix(next);
@@ -506,19 +548,22 @@ async function toolSetResonance(input: Record<string, unknown>): Promise<string>
         pan:
           typeof layerEdit.pan === 'number' ? Math.min(1, Math.max(-1, layerEdit.pan)) : target.pan,
         params: { ...target.params },
-        effects: normEffects(layerEdit.effects) ?? target.effects,
+        effects: normEffects(layerEdit.effects, `layer "${target.name}"`) ?? target.effects,
       };
-      for (const [k, v] of Object.entries((layerEdit.params as Record<string, unknown>) ?? {})) {
+      for (const [k, v] of Object.entries(
+        isPlainObject(layerEdit.params) ? layerEdit.params : {},
+      )) {
         if (
           k in next.params &&
           (typeof v === 'number' || typeof v === 'string' || typeof v === 'boolean')
         )
           next.params[k] = v;
       }
-      await st().upsertMix({
+      const saved = validateMix({
         ...mix,
         layers: mix.layers.map((l) => (l.id === target.id ? next : l)),
       });
+      if (saved) await st().upsertMix(saved);
       done.push(`edited layer "${target.name}" (saved to "${mix.name}")`);
     }
   }
@@ -528,17 +573,20 @@ async function toolSetResonance(input: Record<string, unknown>): Promise<string>
     if (!mix) warn.push('no active mix');
     else if (!(LAYER_TYPES as string[]).includes(add.type))
       warn.push(`unknown layer type "${add.type}"`);
+    else if (mix.layers.length >= MAX_LAYERS)
+      warn.push(`addLayer: "${mix.name}" already has ${MAX_LAYERS} layers (the maximum)`);
     else {
+      const effects = normEffects(add.effects, `layer "${String(add.name ?? add.type)}"`);
+      const addName = clipName(add.name, 'layer');
       const layer = createLayer(add.type as (typeof LAYER_TYPES)[number], {
-        ...(typeof add.name === 'string' ? { name: add.name } : {}),
+        ...(addName !== undefined ? { name: addName } : {}),
         ...(typeof add.gain === 'number' ? { gain: add.gain } : {}),
         ...(typeof add.pan === 'number' ? { pan: add.pan } : {}),
-        ...(add.params && typeof add.params === 'object'
-          ? { params: add.params as Record<string, number | string | boolean> }
-          : {}),
-        ...(normEffects(add.effects) ? { effects: normEffects(add.effects) } : {}),
+        ...layerParams(add.params),
+        ...(effects ? { effects } : {}),
       });
-      await st().upsertMix({ ...mix, layers: [...mix.layers, layer] });
+      const saved = validateMix({ ...mix, layers: [...mix.layers, layer] });
+      if (saved) await st().upsertMix(saved);
       done.push(`added ${layer.type} layer "${layer.name}" to "${mix.name}" (saved)`);
     }
   }
@@ -722,19 +770,25 @@ export async function runThemeTool(
   input: Record<string, unknown>,
   ctx: ThemeToolContext = {},
 ): Promise<string | ToolResultContent> {
-  switch (name) {
-    case 'get_theme':
-      return toolGetTheme(input);
-    case 'set_theme':
-      return toolSetTheme(input);
-    case 'set_background':
-      return toolSetBackground(input, ctx);
-    case 'get_resonance':
-      return toolGetResonance();
-    case 'set_resonance':
-      return toolSetResonance(input);
-    default:
-      return `Unknown theme tool: ${name}`;
+  try {
+    switch (name) {
+      case 'get_theme':
+        return await toolGetTheme(input);
+      case 'set_theme':
+        return toolSetTheme(input);
+      case 'set_background':
+        return await toolSetBackground(input, ctx);
+      case 'get_resonance':
+        return await toolGetResonance();
+      case 'set_resonance':
+        return await toolSetResonance(input);
+      default:
+        return `Unknown theme tool: ${name}`;
+    }
+  } catch (err) {
+    // A tool must report, never throw into the model loop (an engine error is not a chat error).
+    console.warn(`[theme-tools] ${name} failed`, err);
+    return `${name}: failed — ${err instanceof Error ? err.message : String(err)}`;
   }
 }
 
@@ -747,7 +801,7 @@ export function createThemeToolExecutor(ctx: ThemeToolContext = {}) {
 export const THEME_TOOL_GUIDANCE =
   '### Theme\n' +
   'You can restyle every part of the workspace with set_theme (get_theme lists the 25 token groups and every token name; get_theme {group} shows current values). ' +
-  'Beyond colors there are tokens for shape and state: per-component radii (buttonRadius, inputRadius, cardRadius, chipRadius, modalRadius, tooltipRadius, dropdownRadius, avatarRadius, bubbleRadius, meterRadius, paneRadius, paneHeaderRadius), ' +
+  'Beyond colors there are tokens for shape and state: per-component radii (buttonRadius, inputRadius, cardRadius, chipRadius, tooltipRadius, dropdownRadius, bubbleRadius, meterRadius, paneRadius, paneHeaderRadius), ' +
   'shadows (elevationPanel/Card/CardHover/Modal/Dropdown/Tooltip, moodBarShadow), focus (focusRing, focusRingWidth, focusRingOffset), hover/active/disabled (hoverBrightness, activeBrightness, disabledOpacity, paneHeaderHoverBrightness, cardHoverLift, every *Hover / *Active token), ' +
   'sizes (toolbarHeight, paneHeaderHeight, paneGap, density, fontScale, fileTreeRowHeight, toggleWidth/Height, scrollbarWidth, meterHeight), textures and fonts (asset: tokens). ' +
   'Every visible element — buttons, inputs, toggles, chips, tooltips, dropdowns, cards, chat bubbles, markdown, code, file tree, top bar, mood bar, scrollbars, selection, each pane — has its own family; when the user describes a look, change the specific families rather than only foundation colors. ' +

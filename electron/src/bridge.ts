@@ -63,12 +63,17 @@ export type UpdateStatus =
   | 'downloaded'
   | 'error';
 
+/** Which user-facing step failed — Settings → Desktop words each differently. */
+export type UpdateAction = 'check' | 'download' | 'install';
+
 export interface UpdateState {
   status: UpdateStatus;
   currentVersion: string;
   availableVersion: string | null;
   progress: number | null;
   error: string | null;
+  /** Set together with `status: 'error'`; null otherwise. */
+  failedAction: UpdateAction | null;
   autoCheck: boolean;
   lastCheckedAt: string | null;
 }

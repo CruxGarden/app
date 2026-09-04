@@ -9,6 +9,7 @@ import type {
   ExploreParams,
   ExploreSort,
 } from '@/api/public';
+import { parseExploreParams } from './explore-params';
 import { useAppStore } from '@/stores/appStore';
 import { useUIStore } from '@/stores/uiStore';
 import MoodResultCard from '@/components/explore/MoodResultCard';
@@ -687,17 +688,25 @@ export function ExplorePage() {
     };
   }, []);
 
-  // Filters live in the URL so every search is a link (the website embeds this page)
+  // Filters live in the URL so every search is a link (the website embeds this
+  // page). Values are validated here — anything can arrive in a query string.
   const [params, setParams] = useSearchParams();
-  const initial: Partial<ExploreState> = {
-    q: params.get('q') ?? '',
-    type: params.get('type') === 'authors' ? 'authors' : 'cruxes',
-    sort: (params.get('sort') as ExploreSort | null) ?? undefined,
-    kind: params.get('kind') ?? '',
-    tags: params.getAll('tag'),
-    author: params.get('author') ?? '',
-    page: Number(params.get('page') || 1) || 1,
-  };
+  const paramsKey = params.toString();
+  const initial: Partial<ExploreState> = parseExploreParams(params);
+
+  // Explore owns its filter state after mount and mirrors it out to the URL.
+  // When the URL changes for another reason — a link into this page while it
+  // is already mounted, back/forward — remount Explore so it picks the new
+  // filters up. Changes we wrote ourselves are recognised and leave it alone.
+  const lastWritten = useRef<string | null>(null);
+  const [epoch, setEpoch] = useState(0);
+  useEffect(() => {
+    if (lastWritten.current !== null && lastWritten.current !== paramsKey) {
+      setEpoch((e) => e + 1);
+    }
+    lastWritten.current = paramsKey;
+  }, [paramsKey]);
+
   const onStateChange = useCallback(
     (s: ExploreState) => {
       const next = new URLSearchParams();
@@ -708,9 +717,13 @@ export function ExplorePage() {
       for (const t of s.tags) next.append('tag', t);
       if (s.author) next.set('author', s.author);
       if (s.page > 1) next.set('page', String(s.page));
-      if (next.toString() !== params.toString()) setParams(next, { replace: true });
+      const nextKey = next.toString();
+      if (nextKey !== paramsKey) {
+        lastWritten.current = nextKey;
+        setParams(next, { replace: true });
+      }
     },
-    [params, setParams],
+    [paramsKey, setParams],
   );
 
   return (
@@ -726,7 +739,7 @@ export function ExplorePage() {
       </header>
 
       <div className="relative z-10 flex-1 overflow-y-auto p-4 sm:p-6 max-w-5xl mx-auto w-full">
-        <Explore initial={initial} onStateChange={onStateChange} />
+        <Explore key={epoch} initial={initial} onStateChange={onStateChange} />
       </div>
     </div>
   );

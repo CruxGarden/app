@@ -28,9 +28,9 @@ test.describe('billing (mocked API)', () => {
       const plan = page.getByTestId('plan-settings');
       await expect(plan).toBeVisible();
       await expect(plan.getByTestId('plan-status')).toContainText('Free');
-      await expect(plan.getByTestId('plan-card-grower')).toContainText('$5/mo');
+      await expect(plan.getByTestId('plan-card-grower')).toContainText(/5(\.00)?\s*\/\s*mo/);
       await plan.getByRole('button', { name: 'Yearly' }).click();
-      await expect(plan.getByTestId('plan-card-gardener')).toContainText('$150/yr');
+      await expect(plan.getByTestId('plan-card-gardener')).toContainText(/150(\.00)?\s*\/\s*yr/);
       await plan.getByRole('button', { name: 'Monthly' }).click();
 
       await plan

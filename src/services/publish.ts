@@ -273,9 +273,14 @@ export async function publishPipeline(
 
   // 2b. The cover: ship the workspace thumbnail as _crux/cover.jpg so Explore
   // and public pages can show it. Best-effort — a missing or unreadable
-  // preview never blocks a publish.
+  // preview never blocks a publish. A file the user (or the site build) put at
+  // that path wins; we never overwrite their bytes with ours.
   const thumb = artifacts.find((a) => a.type === 'artifact' && isWorkspaceThumbnail(pathOf(a)));
-  if (thumb) {
+  const coverTaken = filesToPublish.some((f) => f.path === PUBLIC_COVER_PATH);
+  if (thumb && coverTaken) {
+    console.warn(`[publish] ${PUBLIC_COVER_PATH} exists in the crux — not shipping the thumbnail`);
+  }
+  if (thumb && !coverTaken) {
     try {
       const blob = await deps.local.downloadBlob(thumb.id);
       if (blob.size > 0)

@@ -53,7 +53,7 @@ export async function applyTemplateToCrux(
   const meta = applyTemplateMeta(crux.meta as Record<string, unknown>, def);
   // Template greetings are spoken by the current persona too
   if (def.greeting) {
-    const { getPersona, getPersonaFingerprint } = await import('./persona');
+    const { getPersona, getPersonaFingerprint, personaSnapshotOf } = await import('./persona');
     const persona = getPersona();
     const pf = getPersonaFingerprint(persona);
     const msgs = (meta.messages as ChatMessage[] | undefined) ?? [];
@@ -64,13 +64,7 @@ export async function applyTemplateToCrux(
     );
     meta.personaSnapshots = {
       ...((meta.personaSnapshots as Record<string, unknown>) ?? {}),
-      [pf]: {
-        name: persona.name,
-        greeting: persona.greeting,
-        systemPrompt: persona.systemPrompt,
-        thumbnailFingerprint: persona.thumbnailFingerprint || null,
-        thumbnailFingerprintLight: persona.thumbnailFingerprintLight || null,
-      },
+      [pf]: personaSnapshotOf(persona),
     };
   }
   const updated = await services.crux.update(crux.id, { kind, meta });

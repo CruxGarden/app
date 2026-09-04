@@ -112,7 +112,7 @@ export default function MessageInput({
               'px-3 py-2 rounded-[var(--radius-sm)] text-sm font-body',
               'bg-chat-send-button text-chat-send-button-icon border border-chat-send-button/20',
               'hover:bg-chat-send-button-hover transition-colors cursor-pointer',
-              'disabled:opacity-40 disabled:cursor-not-allowed',
+              'disabled:cursor-not-allowed',
             )}
           >
             Send

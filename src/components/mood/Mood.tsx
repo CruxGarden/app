@@ -429,7 +429,11 @@ function BackgroundTabContent({
           <p className="text-2xs text-text-muted">
             Uses your image-capable model key (same as the agent). Or pick an image file below.
           </p>
-          {bgError && <p className="text-2xs text-error">{bgError}</p>}
+          {bgError && (
+            <p role="alert" data-testid="bg-error" className="text-2xs text-error">
+              {bgError}
+            </p>
+          )}
         </form>
         {bgType === 'image' && bgImagePreview && (
           <div className="flex flex-col gap-2 mt-1 p-3 bg-bg border border-border/50 rounded-[var(--radius-sm)]">

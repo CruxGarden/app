@@ -3,9 +3,11 @@ const path = require('path');
 
 /**
  * Local logs, always on (ADR 0008): one file per app under the OS logs
- * directory (macOS: ~/Library/Logs/Crux Garden/main.log), rotated at 5 MB,
- * three generations kept. Nothing is sent anywhere. Users attach this file to
- * a GitHub issue; Settings → Desktop opens the folder.
+ * directory for installed builds (macOS: ~/Library/Logs/Crux Garden/main.log;
+ * dev and tests write under their own userData/logs), rotated at 5 MB. The
+ * live file plus `keep` rotated generations are retained (main.log, .1, .2, .3
+ * with the default keep = 3). Nothing is sent anywhere. Users attach this file
+ * to a GitHub issue; Settings → Desktop opens the folder.
  */
 export class AppLog {
   private readonly file: string;
@@ -23,7 +25,7 @@ export class AppLog {
   write(level: 'info' | 'warn' | 'error', msg: string): void {
     const line = `[${new Date().toISOString()}] ${level.toUpperCase()} ${msg}\n`;
     try {
-      this.rotateIfNeeded(line.length);
+      this.rotateIfNeeded(Buffer.byteLength(line));
       fs.appendFileSync(this.file, line);
     } catch {}
   }
@@ -37,10 +39,16 @@ export class AppLog {
     this.write('error', msg);
   }
 
-  /** Capture what would otherwise vanish: main-process throws, renderer/child crashes. */
+  /**
+   * Capture what would otherwise vanish: main-process throws, renderer/child
+   * crashes. `uncaughtExceptionMonitor` only observes — it does not install an
+   * 'uncaughtException' handler, so Electron's default behaviour (the error
+   * dialog, and not continuing as if nothing happened) is left intact. We log
+   * first because the monitor runs before the default handler.
+   */
   attach(proc: NodeJS.Process, app: any): void {
-    proc.on('uncaughtException', (err: Error) =>
-      this.error(`uncaughtException: ${err?.stack || err}`),
+    proc.on('uncaughtExceptionMonitor', (err: Error, origin: string) =>
+      this.error(`${origin}: ${err?.stack || err}`),
     );
     proc.on('unhandledRejection', (reason: unknown) =>
       this.error(`unhandledRejection: ${(reason as Error)?.stack || String(reason)}`),
@@ -49,10 +57,13 @@ export class AppLog {
       this.error(`renderer gone: ${details?.reason} exit=${details?.exitCode}`),
     );
     app.on('child-process-gone', (_e: unknown, details: any) =>
-      this.error(`child process gone: ${details?.type} ${details?.reason} exit=${details?.exitCode}`),
+      this.error(
+        `child process gone: ${details?.type} ${details?.reason} exit=${details?.exitCode}`,
+      ),
     );
   }
 
+  /** `incoming` is the byte length of the line about to be appended. */
   private rotateIfNeeded(incoming: number): void {
     let size: number;
     try {
@@ -61,6 +72,7 @@ export class AppLog {
       return;
     }
     if (size + incoming < this.maxBytes) return;
+    // main.log.{keep-1} → .{keep}, …, main.log.1 → .2, then main.log → .1
     for (let i = this.keep - 1; i >= 1; i--) {
       const from = `${this.file}.${i}`;
       const to = `${this.file}.${i + 1}`;

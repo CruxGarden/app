@@ -86,3 +86,31 @@ export function walkAt(o: Omit<ChordOpts, 'voicing'>, step: number): string {
   const deg = prog[((o.bar % prog.length) + prog.length) % prog.length]! + step;
   return noteName(noteIndex(o.root), o.octave, degreeSemitone(scale, deg));
 }
+
+/** Where a scheduled time falls on the bar grid (4/4, sixteenth resolution). */
+export interface GridPosition {
+  /** 0-based bar index since the transport started */
+  bar: number;
+  /** 0..3 */
+  beat: number;
+  /** 0..15 */
+  step: number;
+}
+
+/**
+ * Bar / beat / sixteenth for a transport tick count. Snaps to the nearest
+ * sixteenth first so bar, beat and step always agree (a tick a hair before a
+ * bar line is that bar, not the last step of the previous one). Every
+ * musical layer derives its position from the *scheduled* time this way, so
+ * they all see the same "one" — reading the transport's live position inside
+ * a lookahead callback does not.
+ */
+export function gridAt(ticks: number, ppq: number): GridPosition {
+  if (!(ppq > 0) || !Number.isFinite(ticks)) return { bar: 0, beat: 0, step: 0 };
+  const sixteenths = Math.max(0, Math.round(ticks / (ppq / 4)));
+  return {
+    bar: Math.floor(sixteenths / 16),
+    beat: Math.floor(sixteenths / 4) % 4,
+    step: sixteenths % 16,
+  };
+}

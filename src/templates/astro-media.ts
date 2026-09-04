@@ -127,9 +127,10 @@ dist/
 `,
     },
     {
+      // Keeps the folder visible in the Artifacts tree; Astro copies public/
+      // verbatim, so this ships as /media/.gitkeep — hence empty.
       path: 'public/media/.gitkeep',
-      content: `Media files (M4A audio, MP4 video) live here. "Add media" in the Builder puts them here for you.
-`,
+      content: '',
     },
     {
       path: 'src/styles/global.css',

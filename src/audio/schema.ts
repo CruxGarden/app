@@ -4,8 +4,12 @@
  * A Mix is JSON: layers through effects into a master bus. Everything the
  * engine can do is a parameter here, so the Mixer UI, the AI's set_resonance,
  * and a .cruxmood package all speak the same shape. Hand-validated (no schema
- * library): unknown fields are dropped, missing ones take defaults.
+ * library): unknown fields are dropped, missing ones take defaults, and every
+ * parameter the Mixer knows (params-meta.ts) is clamped to its range — Tone.js
+ * Params throw RangeError on out-of-range values, so nothing unclamped may
+ * reach the engine or be persisted.
  */
+import { EFFECT_META, PARAM_META, ROOTS, type ParamMeta } from './params-meta';
 
 export type LayerType =
   | 'music'
@@ -147,6 +151,20 @@ export const LAYER_LABELS: Record<LayerType, string> = {
   vinyl: 'Vinyl',
 };
 
+/** Flat spellings harmony.ts normalises to the sharp names in ROOTS. */
+const FLAT_ROOTS = ['Db', 'Eb', 'Gb', 'Ab', 'Bb'];
+export function isValidRoot(v: unknown): v is string {
+  return typeof v === 'string' && (ROOTS.includes(v) || FLAT_ROOTS.includes(v));
+}
+export function isValidScale(v: unknown): v is string {
+  return typeof v === 'string' && Object.prototype.hasOwnProperty.call(SCALES, v);
+}
+
+/** Hard limits on document size — the tools warn, the validator trims silently. */
+export const MAX_LAYERS = 12;
+export const MAX_EFFECTS_PER_LAYER = 4;
+export const MAX_NAME_LENGTH = 80;
+
 let counter = 0;
 export function newId(prefix: string): string {
   counter += 1;
@@ -185,15 +203,53 @@ export function createMix(over: Partial<Mix> = {}): Mix {
 const num = (v: unknown, d: number, lo = -Infinity, hi = Infinity) =>
   typeof v === 'number' && Number.isFinite(v) ? Math.min(hi, Math.max(lo, v)) : d;
 const str = (v: unknown, d: string) => (typeof v === 'string' && v ? v : d);
+const name = (v: unknown, d: string) => str(v, d).slice(0, MAX_NAME_LENGTH);
+
+/**
+ * One parameter against its meta: ranges clamp, selects must name an option,
+ * toggles must be booleans, files must be strings. Returns undefined when the
+ * value is unusable (the caller keeps its default) — never a value Tone would
+ * reject.
+ */
+function coerceParam(
+  meta: ParamMeta | undefined,
+  v: unknown,
+): number | string | boolean | undefined {
+  if (!meta) {
+    // Not something the Mixer renders (e.g. drone.voices, music.fileName): type-check only.
+    return typeof v === 'number' && Number.isFinite(v)
+      ? v
+      : typeof v === 'string' || typeof v === 'boolean'
+        ? v
+        : undefined;
+  }
+  switch (meta.kind) {
+    case 'range':
+      return typeof v === 'number' && Number.isFinite(v)
+        ? Math.min(meta.max, Math.max(meta.min, v))
+        : undefined;
+    case 'select':
+      return typeof v === 'string' && meta.options.some((o) => o.value === v) ? v : undefined;
+    case 'toggle':
+      return typeof v === 'boolean' ? v : undefined;
+    case 'file':
+      return typeof v === 'string' ? v : undefined;
+  }
+}
 
 function validateEffect(raw: unknown): Effect | null {
   if (!raw || typeof raw !== 'object') return null;
   const e = raw as Record<string, unknown>;
   const type = e.type;
   if (!EFFECT_TYPES.includes(type as EffectType)) return null;
+  const meta = EFFECT_META[type as EffectType].params;
   const params: Record<string, number | string> = {};
-  for (const [k, v] of Object.entries((e.params as Record<string, unknown>) ?? {})) {
-    if (typeof v === 'number' || typeof v === 'string') params[k] = v;
+  const rawParams = e.params;
+  if (rawParams && typeof rawParams === 'object' && !Array.isArray(rawParams)) {
+    for (const [k, v] of Object.entries(rawParams as Record<string, unknown>)) {
+      const c = coerceParam(meta[k], v);
+      if (typeof c === 'number' || typeof c === 'string') params[k] = c;
+    }
   }
   return { type: type as EffectType, enabled: e.enabled !== false, params };
 }
@@ -203,22 +259,26 @@ function validateLayer(raw: unknown): Layer | null {
   const l = raw as Record<string, unknown>;
   if (!LAYER_TYPES.includes(l.type as LayerType)) return null;
   const type = l.type as LayerType;
+  const meta = PARAM_META[type];
   const params: Record<string, number | string | boolean> = { ...LAYER_DEFAULTS[type] };
-  for (const [k, v] of Object.entries((l.params as Record<string, unknown>) ?? {})) {
-    if (k in params && (typeof v === 'number' || typeof v === 'string' || typeof v === 'boolean')) {
-      params[k] = v;
+  const rawParams = l.params;
+  if (rawParams && typeof rawParams === 'object' && !Array.isArray(rawParams)) {
+    for (const [k, v] of Object.entries(rawParams as Record<string, unknown>)) {
+      if (!(k in params)) continue;
+      const c = coerceParam(meta[k], v);
+      if (c !== undefined) params[k] = c;
     }
   }
   return {
     id: str(l.id, newId(type)),
     type,
-    name: str(l.name, LAYER_LABELS[type]),
+    name: name(l.name, LAYER_LABELS[type]),
     gain: num(l.gain, -12, -60, 6),
     pan: num(l.pan, 0, -1, 1),
     muted: l.muted === true,
     params,
     effects: Array.isArray(l.effects)
-      ? (l.effects.map(validateEffect).filter(Boolean) as Effect[])
+      ? (l.effects.map(validateEffect).filter(Boolean) as Effect[]).slice(0, MAX_EFFECTS_PER_LAYER)
       : [],
   };
 }
@@ -228,13 +288,13 @@ export function validateMix(raw: unknown): Mix | null {
   if (!raw || typeof raw !== 'object') return null;
   const m = raw as Record<string, unknown>;
   if (!Array.isArray(m.layers)) return null;
-  const layers = m.layers.map(validateLayer).filter(Boolean) as Layer[];
+  const layers = (m.layers.map(validateLayer).filter(Boolean) as Layer[]).slice(0, MAX_LAYERS);
   const master = (m.master as Record<string, unknown>) ?? {};
   return {
     id: str(m.id, newId('mix')),
-    name: str(m.name, 'Untitled mix'),
-    root: str(m.root, 'D'),
-    scale: str(m.scale, 'pentatonic') in SCALES ? (m.scale as string) : 'pentatonic',
+    name: name(m.name, 'Untitled mix'),
+    root: isValidRoot(m.root) ? m.root : 'D',
+    scale: isValidScale(m.scale) ? m.scale : 'pentatonic',
     tempo: num(m.tempo, 60, 20, 200),
     seed: num(m.seed, 1),
     layers,

@@ -31,15 +31,38 @@ export async function openExternal(url: string): Promise<void> {
   await desktopBridge()?.openExternal(url);
 }
 
-/** Open an https URL in the system browser (desktop) or a new tab (web). */
-export async function openWeb(url: string): Promise<void> {
-  if (!/^https:\/\//i.test(url) && !/^https?:\/\/(localhost|127\.0\.0\.1)/i.test(url)) return;
+/** What `openWeb` will hand to a browser: https anywhere, or http on loopback (local API in dev). */
+export function isOpenableWebUrl(url: string): boolean {
+  return (
+    /^https:\/\/\S+$/i.test(url) || /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?(\/|$)/i.test(url)
+  );
+}
+
+/**
+ * Open a web URL in the system browser (desktop) or a new tab (web).
+ *
+ * Resolves `true` when a browser was asked to open it, `false` when it wasn't
+ * — a refused URL, a popup blocker, or the desktop shell declining (its IPC
+ * handler is https-only, so loopback http never opens there). Callers show
+ * the "couldn't open your browser" state on `false`; nothing here throws.
+ */
+export async function openWeb(url: string): Promise<boolean> {
+  if (!isOpenableWebUrl(url)) return false;
   const api = desktopBridge();
   if (api?.openWeb) {
-    await api.openWeb(url);
-    return;
+    // The main process only opens https; mirror that so the caller learns
+    // about it instead of the click silently doing nothing.
+    if (!/^https:\/\//i.test(url)) return false;
+    try {
+      // The bridge resolves void today; a future contract may report a result.
+      const result: unknown = await api.openWeb(url);
+      return result === undefined ? true : Boolean(result);
+    } catch {
+      return false;
+    }
   }
-  window.open(url, '_blank', 'noopener');
+  if (typeof window === 'undefined') return false;
+  return window.open(url, '_blank', 'noopener') !== null;
 }
 
 /** Render a path under the home directory as "~/…" for display (macOS, Linux, Windows). */

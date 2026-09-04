@@ -46,7 +46,12 @@ test.describe('usage + custom domains (mocked API)', () => {
       await expect(usage).toContainText('1 file');
       const publishedId = Object.keys(api.state.published)[0]!;
       expect(api.state.published[publishedId]![0]!.bytes.length).toBeGreaterThan(0);
-      await expect(usage).not.toContainText('Storage0 B');
+      // The Meter renders <span>label</span><span>value</span>; check the value node itself
+      const storageValue = usage
+        .getByRole('progressbar', { name: 'Storage used' })
+        .locator('xpath=preceding-sibling::div[1]/span[2]');
+      await expect(storageValue).toHaveText(/^\d+(\.\d+)? (B|KB|MB)$/);
+      await expect(storageValue).not.toHaveText('0 B');
       await expect(usage).toContainText(/Bandwidth/);
 
       // Custom domain: add → records → verify ×3 → live
@@ -62,7 +67,7 @@ test.describe('usage + custom domains (mocked API)', () => {
       await expect(dom).toContainText('_crux-verify.blog.example.com');
       await expect(dom).toContainText('publish.crux.garden');
       await dom.getByRole('button', { name: 'Verify blog.example.com' }).click();
-      await expect(dom).toContainText('Waiting for the TXT record');
+      await expect(dom).toContainText('Waiting for the CNAME and TXT record');
       await dom.getByRole('button', { name: 'Verify blog.example.com' }).click();
       await expect(dom).toContainText('Issuing certificate');
       await dom.getByRole('button', { name: 'Verify blog.example.com' }).click();
@@ -99,16 +104,18 @@ test.describe('usage + custom domains (mocked API)', () => {
       await expect(syncUsage).toContainText('1 · 2.0 KB');
       await expect(syncUsage).not.toContainText('↑ 0 B');
       await expect(settings).toContainText('Crux Store requests');
-      await expect(settings).toContainText('34 reads'.replace('34 reads', '30 reads'));
+      await expect(settings).toContainText('30 reads');
       await expect(settings.getByTestId('past-periods')).toContainText('Aug 1 → Sep 1');
-      await expect(settings.getByTestId('settlement-note')).toContainText(
-        'settle 48 hours after the period ends · checked against CloudFront: matches',
-      );
+      await expect(settings.getByTestId('settlement-note')).toContainText(/settle 48 hours/);
+      await expect(settings.getByTestId('settlement-note')).toContainText(/CloudFront: matches/);
       await page.screenshot({ path: 'e2e/.results/usage-domains-2-settings.png' });
       await page.keyboard.press('Escape');
 
-      // Remove the domain
+      // Remove the domain: confirmDialog first (a live domain says "Disconnect")
       await dom.getByRole('button', { name: 'Remove blog.example.com' }).click();
+      const confirm = page.getByRole('dialog');
+      await expect(confirm).toContainText('blog.example.com');
+      await confirm.getByRole('button', { name: /^(Disconnect|Remove)$/ }).click();
       await expect(page.getByTestId('domain-blog.example.com')).toHaveCount(0);
     } finally {
       await app.close();

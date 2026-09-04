@@ -151,3 +151,47 @@ describe('shipped template definitions', () => {
     }
   });
 });
+
+describe('content model consistency', () => {
+  // `layout` is Astro plumbing the recipe writes but nobody edits — every other
+  // recipe key must be a declared field, or the item form would hide it.
+  const STRUCTURAL_KEYS = new Set(['layout']);
+
+  it.each(TEMPLATE_IDS)('%s: recipe frontmatter keys are declared fields', async (id) => {
+    const def = (await loadTemplate(id))!;
+    for (const collection of def.contentModel?.collections ?? []) {
+      const fieldKeys = collection.fields.map((f) => f.key);
+      for (const key of Object.keys(collection.new.frontmatter)) {
+        if (STRUCTURAL_KEYS.has(key)) continue;
+        expect(fieldKeys, `${id}/${collection.name}: recipe key "${key}" is not a field`).toContain(
+          key,
+        );
+      }
+    }
+  });
+
+  it.each(TEMPLATE_IDS)('%s: builder actions point at existing collections', async (id) => {
+    const def = (await loadTemplate(id))!;
+    const names = (def.contentModel?.collections ?? []).map((c) => c.name);
+    for (const action of def.contentModel?.actions ?? []) {
+      if ('collection' in action.do) {
+        expect(names, `${id}: action "${action.label}" targets an unknown collection`).toContain(
+          action.do.collection,
+        );
+      }
+      if (action.do.type === 'open-file') {
+        const path = action.do.path;
+        expect(
+          def.files.some((f) => f.path === path),
+          `${id}: action "${action.label}" opens a file the template does not ship (${path})`,
+        ).toBe(true);
+      }
+    }
+  });
+
+  it('astro-media ships an empty folder marker, not prose, for public/media', async () => {
+    const def = (await loadTemplate('astro-media'))!;
+    const keep = def.files.find((f) => f.path === 'public/media/.gitkeep');
+    expect(keep?.content).toBe('');
+  });
+});

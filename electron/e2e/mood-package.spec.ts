@@ -25,7 +25,7 @@ test.describe('mood packages', () => {
       await page.getByRole('button', { name: /enter/i }).click();
       await page.getByText('Plant a new garden').click();
       await page.getByRole('button', { name: 'Welcome' }).click();
-      await expect(page.getByRole('region', { name: 'Mood Dock' })).toBeVisible({
+      await expect(page.getByRole('region', { name: 'Mood Bar' })).toBeVisible({
         timeout: 30_000,
       });
 

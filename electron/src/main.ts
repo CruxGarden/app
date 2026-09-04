@@ -38,13 +38,12 @@ const isDev = !app.isPackaged;
 // automated UI tests (Playwright) run against a throwaway database.
 if (app.isPackaged) app.setName('Crux Garden');
 const userDataPath = process.env.CRUX_USER_DATA || app.getPath('userData');
-app.setName('Crux Garden');
 app.setPath('userData', userDataPath);
-// Logs live beside userData when isolated (tests), else in the OS logs folder
-// (macOS: ~/Library/Logs/Crux Garden). Always on, never sent (ADR 0008).
-const logsDir = process.env.CRUX_USER_DATA
-  ? path.join(userDataPath, 'logs')
-  : app.getPath('logs');
+// Logs: installed builds write to the OS logs folder (macOS: ~/Library/Logs/Crux
+// Garden). Dev and isolated test runs write beside their own userData so they
+// never share a main.log with the installed app. Always on, never sent (ADR 0008).
+const logsDir =
+  isDev || process.env.CRUX_USER_DATA ? path.join(userDataPath, 'logs') : app.getPath('logs');
 const appLog = new AppLog(logsDir);
 appLog.attach(process, app);
 function debugLog(msg: string) {
@@ -349,6 +348,9 @@ function setupIpc() {
     if (/^https:\/\/[^\s]+$/i.test(url)) shell.openExternal(url);
   });
 
+  // logsDir / userDataDir are shown in Settings → Desktop so a user can find and
+  // attach their own logs. They are local filesystem paths that reveal the account
+  // name: they must never be put into any telemetry or crash-report payload (ADR 0008).
   ipcMain.handle('desktop:info', () => ({
     version: app.getVersion(),
     electron: process.versions.electron,

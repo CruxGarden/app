@@ -246,6 +246,29 @@ describe('publishPipeline', () => {
     });
   });
 
+  it('leaves a user file at _crux/cover.jpg alone instead of shipping the thumbnail', async () => {
+    const { deps, state } = makeDeps({});
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    try {
+      await publishPipeline(
+        makeCrux(),
+        [
+          makeArtifact('index.html', 'fp-index'),
+          makeArtifact('_crux/cover.jpg', 'fp-user-cover', { mimeType: 'image/jpeg' }),
+          makeArtifact('preview.jpg', 'fp-thumb', { mimeType: 'image/jpeg' }),
+        ],
+        { deps },
+      );
+      expect(warn).toHaveBeenCalledTimes(1);
+    } finally {
+      warn.mockRestore();
+    }
+    const covers = state.publishedFiles!.filter((f) => f.path === '_crux/cover.jpg');
+    expect(covers).toHaveLength(1);
+    // the user's bytes, not the thumbnail's
+    expect(await covers[0]!.blob.text()).toBe('content-of-art-_crux/cover.jpg');
+  });
+
   it('syncs tags when discoverable, clears them when not, and survives tag failure', async () => {
     const { deps: d1, state: s1 } = makeDeps({ exists: true });
     await publishPipeline(

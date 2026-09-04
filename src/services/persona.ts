@@ -78,3 +78,27 @@ export function getPersonaFingerprint(persona?: PersonaSettings): string {
   }
   return hash.toString(36);
 }
+
+/**
+ * What a crux records about the persona that spoke in it, keyed by
+ * `getPersonaFingerprint()` in `crux.meta.personaSnapshots`. Identity fields
+ * plus thumbnail fingerprints — never data URLs (binary lives in the Blob Store).
+ */
+export interface PersonaSnapshot {
+  name: string;
+  greeting: string;
+  systemPrompt: string;
+  thumbnailFingerprint: string | null;
+  thumbnailFingerprintLight: string | null;
+}
+
+/** The snapshot to store for a persona — one shape for every writer. */
+export function personaSnapshotOf(persona: PersonaSettings): PersonaSnapshot {
+  return {
+    name: persona.name,
+    greeting: persona.greeting,
+    systemPrompt: persona.systemPrompt,
+    thumbnailFingerprint: persona.thumbnailFingerprint || null,
+    thumbnailFingerprintLight: persona.thumbnailFingerprintLight || null,
+  };
+}

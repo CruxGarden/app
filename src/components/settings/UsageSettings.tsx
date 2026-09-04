@@ -5,6 +5,7 @@ import { formatBytes } from '@/lib/format';
 import * as usageApi from '@/api/usage';
 import { useGardenStore } from '@/stores/gardenStore';
 import { Meter } from '@/components/workspace/UsageSection';
+import { periodDay as day } from '@/lib/period-day';
 import { onUsageChanged } from '@/lib/usage-events';
 
 /** Account-wide storage and bandwidth for the billing period, against the plan. */
@@ -40,13 +41,6 @@ export default function UsageSettings() {
 
   const title = (c: usageApi.CruxUsage) =>
     c.title || cruxes.find((x) => x.id === c.cruxId)?.title || c.cruxId.slice(0, 8);
-  // Period bounds are UTC dates; format them as such so the 1st doesn't show as the 31st
-  const day = (iso: string) =>
-    new Date(`${iso.slice(0, 10)}T00:00:00Z`).toLocaleDateString(undefined, {
-      timeZone: 'UTC',
-      month: 'short',
-      day: 'numeric',
-    });
 
   return (
     <Panel data-testid="usage-settings">
@@ -99,7 +93,7 @@ export default function UsageSettings() {
               <span className="text-text">Garden backup</span>
               <span className="font-mono text-text-muted">
                 {usage.sync.gardenBytes > 0
-                  ? `${formatBytes(usage.sync.gardenBytes)} · pushed ${day(usage.sync.gardenSyncedAt ?? '')}`
+                  ? `${formatBytes(usage.sync.gardenBytes)} · pushed ${day(usage.sync.gardenSyncedAt)}`
                   : 'none'}
               </span>
             </div>

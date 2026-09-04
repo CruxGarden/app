@@ -611,7 +611,7 @@ export default function Console() {
                       'px-3 py-2 rounded-[var(--radius-sm)] text-sm font-body',
                       'bg-accent-muted text-accent border border-accent/20',
                       'hover:border-accent transition-colors cursor-pointer',
-                      'disabled:opacity-40 disabled:cursor-not-allowed',
+                      'disabled:cursor-not-allowed',
                     )}
                   >
                     Send

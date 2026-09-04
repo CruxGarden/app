@@ -22,7 +22,13 @@ class MixRuntime {
   readonly input = new Tone.Gain(0);
   private layers = new Map<string, LiveLayer>();
   constructor(public mix: Mix) {
-    for (const l of mix.layers) this.addLayer(l);
+    try {
+      for (const l of mix.layers) this.addLayer(l);
+    } catch (err) {
+      // A layer that cannot be built must not leak the ones already wired.
+      this.dispose();
+      throw err;
+    }
   }
 
   private wire(live: LiveLayer) {
