@@ -344,6 +344,11 @@ function setupIpc() {
     if (/^http:\/\/127\.0\.0\.1:\d+(\/|$)/.test(url)) shell.openExternal(url);
   });
 
+  // https only — never file:, never the app's own scheme
+  ipcMain.handle('desktop:open-web', (_e: any, url: string) => {
+    if (/^https:\/\/[^\s]+$/i.test(url)) shell.openExternal(url);
+  });
+
   ipcMain.handle('desktop:info', () => ({
     version: app.getVersion(),
     electron: process.versions.electron,

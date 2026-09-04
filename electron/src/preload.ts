@@ -9,12 +9,9 @@ import type { ElectronBridge, ChangeBatch, DesktopInfo, UpdateState } from './br
  */
 const api: ElectronBridge = {
   sqlite: {
-    run: (sql: string, params?: unknown[]) =>
-      ipcRenderer.invoke('sqlite:run', sql, params),
-    get: (sql: string, params?: unknown[]) =>
-      ipcRenderer.invoke('sqlite:get', sql, params),
-    all: (sql: string, params?: unknown[]) =>
-      ipcRenderer.invoke('sqlite:all', sql, params),
+    run: (sql: string, params?: unknown[]) => ipcRenderer.invoke('sqlite:run', sql, params),
+    get: (sql: string, params?: unknown[]) => ipcRenderer.invoke('sqlite:get', sql, params),
+    all: (sql: string, params?: unknown[]) => ipcRenderer.invoke('sqlite:all', sql, params),
     export: () => ipcRenderer.invoke('sqlite:export'),
     import: (data: ArrayBuffer) => ipcRenderer.invoke('sqlite:import', data),
     close: () => ipcRenderer.invoke('sqlite:close'),
@@ -22,12 +19,9 @@ const api: ElectronBridge = {
     // Blob storage
     blobWrite: (fingerprint: string, data: Uint8Array) =>
       ipcRenderer.invoke('sqlite:blob-write', fingerprint, data),
-    blobRead: (fingerprint: string) =>
-      ipcRenderer.invoke('sqlite:blob-read', fingerprint),
-    blobDelete: (fingerprint: string) =>
-      ipcRenderer.invoke('sqlite:blob-delete', fingerprint),
-    blobExists: (fingerprint: string) =>
-      ipcRenderer.invoke('sqlite:blob-exists', fingerprint),
+    blobRead: (fingerprint: string) => ipcRenderer.invoke('sqlite:blob-read', fingerprint),
+    blobDelete: (fingerprint: string) => ipcRenderer.invoke('sqlite:blob-delete', fingerprint),
+    blobExists: (fingerprint: string) => ipcRenderer.invoke('sqlite:blob-exists', fingerprint),
     blobWipeAll: () => ipcRenderer.invoke('sqlite:blob-wipe-all'),
   },
 
@@ -37,6 +31,7 @@ const api: ElectronBridge = {
       ipcRenderer.invoke('desktop:choose-garden-root') as Promise<string | null>,
     openExternal: (url: string) =>
       ipcRenderer.invoke('desktop:open-external', url) as Promise<void>,
+    openWeb: (url: string) => ipcRenderer.invoke('desktop:open-web', url) as Promise<void>,
     info: () => ipcRenderer.invoke('desktop:info') as Promise<DesktopInfo>,
     openLogs: () => ipcRenderer.invoke('desktop:open-logs') as Promise<void>,
   },
@@ -77,8 +72,7 @@ const api: ElectronBridge = {
     watch: (folder: string) => ipcRenderer.invoke('project:watch', folder) as Promise<void>,
     unwatch: (folder: string) => ipcRenderer.invoke('project:unwatch', folder) as Promise<void>,
     onChanged: (callback: (batch: ChangeBatch) => void) => {
-      const handler = (_event: unknown, batch: unknown) =>
-        callback(batch as ChangeBatch);
+      const handler = (_event: unknown, batch: unknown) => callback(batch as ChangeBatch);
       ipcRenderer.on('project:changed', handler);
       return () => ipcRenderer.removeListener('project:changed', handler);
     },
@@ -138,7 +132,8 @@ const api: ElectronBridge = {
   secrets: {
     available: () => ipcRenderer.invoke('secrets:available') as Promise<boolean>,
     get: (key: string) => ipcRenderer.invoke('secrets:get', key) as Promise<string | null>,
-    set: (key: string, value: string) => ipcRenderer.invoke('secrets:set', key, value) as Promise<void>,
+    set: (key: string, value: string) =>
+      ipcRenderer.invoke('secrets:set', key, value) as Promise<void>,
     delete: (key: string) => ipcRenderer.invoke('secrets:delete', key) as Promise<void>,
   },
 
@@ -149,7 +144,9 @@ const api: ElectronBridge = {
   ffmpeg: {
     available: () => ipcRenderer.invoke('ffmpeg:available') as Promise<boolean>,
     transcode: (opts: { inputData: Uint8Array; inputName: string; isAudio: boolean }) =>
-      ipcRenderer.invoke('ffmpeg:transcode', opts) as Promise<Array<{ name: string; data: Uint8Array; mimeType: string }>>,
+      ipcRenderer.invoke('ffmpeg:transcode', opts) as Promise<
+        Array<{ name: string; data: Uint8Array; mimeType: string }>
+      >,
     onProgress: (callback: (progress: number) => void) => {
       const handler = (_event: unknown, progress: number) => callback(progress);
       ipcRenderer.on('ffmpeg:progress', handler);

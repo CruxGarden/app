@@ -177,6 +177,15 @@ export function describePublishFailure(err: unknown): PublishFailure {
   if (status === 413) {
     return { message: 'This crux is too large to publish.' };
   }
+  if (status === 402) {
+    const serverMessage = (err as { response?: { data?: { message?: string } } })?.response?.data
+      ?.message;
+    return {
+      message:
+        (typeof serverMessage === 'string' && serverMessage) ||
+        'This publish is over your plan’s storage. Free up space or upgrade in Settings → Plan.',
+    };
+  }
   if (status) {
     const serverMessage = (err as { response?: { data?: { message?: string | string[] } } })
       ?.response?.data?.message;

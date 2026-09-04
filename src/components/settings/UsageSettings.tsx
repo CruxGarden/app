@@ -181,6 +181,12 @@ export default function UsageSettings() {
               </tbody>
             </table>
           )}
+          {(usage.budgets.storage.overSoft || usage.budgets.bandwidth.overSoft) && (
+            <p className="text-xs text-warning" data-testid="over-soft">
+              You're past the soft limit on your {usage.plan.name} plan. Nothing is cut off; new
+              publishes stop at twice the plan. A bigger plan is one click up in Plan.
+            </p>
+          )}
           <p className="text-[10px] text-text-muted" data-testid="settlement-note">
             Published sites and sync backups share these limits. Visit counts settle{' '}
             {usage.settlement.graceHours} hours after the period ends
