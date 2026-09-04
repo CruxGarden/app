@@ -98,6 +98,10 @@ test.describe('usage + custom domains (mocked API)', () => {
       await expect(syncUsage).toContainText(/pushed/);
       await expect(syncUsage).toContainText('1 · 2.0 KB');
       await expect(syncUsage).not.toContainText('↑ 0 B');
+      await expect(settings.getByTestId('past-periods')).toContainText('Aug 1 → Sep 1');
+      await expect(settings.getByTestId('settlement-note')).toContainText(
+        'settle 48 hours after the period ends · checked against CloudFront: matches',
+      );
       await page.screenshot({ path: 'e2e/.results/usage-domains-2-settings.png' });
       await page.keyboard.press('Escape');
 

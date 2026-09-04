@@ -12,16 +12,22 @@ export default function UsageSettings() {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const cruxes = useGardenStore((s) => s.allCruxes);
   const [usage, setUsage] = useState<usageApi.AccountUsage | null>(null);
+  const [past, setPast] = useState<usageApi.PeriodView[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!isAuthenticated) return;
     let cancelled = false;
-    const load = () =>
+    const load = () => {
       usageApi
         .me()
         .then((u) => !cancelled && setUsage(u))
         .catch(() => !cancelled && setError('Usage is unavailable right now'));
+      usageApi
+        .periods()
+        .then((p) => !cancelled && setPast(p))
+        .catch(() => {});
+    };
     load();
     const off = onUsageChanged(load);
     return () => {
@@ -128,9 +134,47 @@ export default function UsageSettings() {
               </tbody>
             </table>
           )}
-          <p className="text-[10px] text-text-muted">
-            Published sites and sync backups share these limits. Shown, not enforced yet — plans
-            that raise them are coming.
+          {past.length > 0 && (
+            <table className="w-full text-[11px]" data-testid="past-periods">
+              <thead>
+                <tr className="text-left text-caption font-mono uppercase tracking-wider text-[9px]">
+                  <th className="py-1 font-normal">Past period</th>
+                  <th className="py-1 font-normal text-right">Storage</th>
+                  <th className="py-1 font-normal text-right">Bandwidth</th>
+                  <th className="py-1 font-normal text-right">Plan</th>
+                </tr>
+              </thead>
+              <tbody>
+                {past.map((p) => (
+                  <tr key={p.period.start} className="border-t border-border/60">
+                    <td className="py-1.5 text-text">
+                      {day(p.period.start)} → {day(p.period.end)}
+                    </td>
+                    <td className="py-1.5 text-right font-mono text-text-muted">
+                      {formatBytes(p.storageBytes)}
+                      {p.overStorage && <span className="text-warning"> over</span>}
+                    </td>
+                    <td className="py-1.5 text-right font-mono text-text-muted">
+                      {formatBytes(p.bandwidthBytes)}
+                      {p.overBandwidth && <span className="text-warning"> over</span>}
+                    </td>
+                    <td className="py-1.5 text-right font-mono text-text-muted">{p.planId}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+          <p className="text-[10px] text-text-muted" data-testid="settlement-note">
+            Published sites and sync backups share these limits. Visit counts settle{' '}
+            {usage.settlement.graceHours} hours after the period ends
+            {usage.reconciliation
+              ? usage.reconciliation.status === 'ok'
+                ? ' · checked against CloudFront: matches'
+                : usage.reconciliation.status === 'gap'
+                  ? ' · checked against CloudFront: some visits not yet counted'
+                  : ''
+              : ''}
+            . Shown, not enforced yet — plans that raise them are coming.
           </p>
         </div>
       )}
