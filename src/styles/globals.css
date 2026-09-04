@@ -220,6 +220,7 @@
   --color-toolbar-border: var(--toolbar-border);
   --color-toolbar-text: var(--toolbar-text);
   --color-toolbar-text-muted: var(--toolbar-text-muted);
+  --color-toolbar-link: var(--toolbar-link);
   --color-toolbar-divider: var(--toolbar-divider);
 
   /* ── V3: Chat ─────────────────────────────────────── */

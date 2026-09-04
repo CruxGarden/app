@@ -18,6 +18,8 @@ const IDS = [
   'sunday-paper',
   'deep-sea',
   'pretty-in-pink',
+  'plain-form',
+  'catppuccin-mocha',
 ];
 
 test.describe('bundled mood screenshots', () => {

@@ -305,7 +305,7 @@ function MoodSection() {
       <h2 className="font-display text-2xl text-text mb-1">Set the mood</h2>
       <p className="text-sm text-text-muted mb-4">
         A Mood is a whole room: the look, the sound, and the voice you work with. Try one on this
-        page — the same eleven ship in the app, and people publish their own.
+        page — the same thirteen ship in the app, and people publish their own.
       </p>
       <div className="grid gap-3 grid-cols-2 sm:grid-cols-4" role="group" aria-label="Moods">
         {BUNDLED_MOODS.map((pkg) => {

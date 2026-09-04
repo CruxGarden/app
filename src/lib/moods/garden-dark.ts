@@ -224,6 +224,8 @@ export const GARDEN_DARK = {
   moodBarRadius: '9999px',
   moodBarShadow: 'none',
   toolbar: 'var(--panel)',
+  // the username link in the top bar (accent by default; a Mood with an accent-coloured toolbar recolours it)
+  toolbarLink: 'var(--accent)',
   publicTopBar: 'var(--panel)',
   profileButton: 'transparent',
   actionButton: 'transparent',

@@ -72,7 +72,7 @@ export default function TopBar() {
         {username ? (
           <button
             onClick={() => navigate('/home')}
-            className="shrink-0 text-xs font-medium font-display text-accent cursor-pointer whitespace-nowrap hover:underline"
+            className="shrink-0 text-xs font-medium font-display text-toolbar-link cursor-pointer whitespace-nowrap hover:underline"
           >
             {username}
           </button>
