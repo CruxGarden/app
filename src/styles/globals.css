@@ -261,6 +261,7 @@
   --radius-meter: var(--meter-radius);
   --shadow-dropdown: var(--elevation-dropdown);
   --shadow-tooltip: var(--elevation-tooltip);
+  --color-chat-composer: var(--chat-composer);
   --color-mood-bar: var(--mood-bar);
   --color-mood-bar-border: var(--mood-bar-border);
   --color-mood-bar-text: var(--mood-bar-text);
@@ -995,6 +996,9 @@ html.palette-transition *::after {
   color: var(--text);
 }
 .mosaic.crux-mosaic-theme .mosaic-preview {
+  /* react-mosaic's drag preview sits behind the body; with a translucent pane body its
+     title text leaked through. It only needs to exist during a drag. */
+  visibility: hidden;
   border: none;
   border-radius: var(--pane-radius);
   box-shadow: none;

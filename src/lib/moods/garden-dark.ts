@@ -183,6 +183,8 @@ export const GARDEN_DARK = {
 
   // ── From bg ──────────────────────────────────────────
   chat: 'var(--bg)',
+  /** the composer strip under the messages — transparent so the pane body shows */
+  chatComposer: 'transparent',
   gardenCardThumbnail: 'var(--bg)',
   contrast: '#ffffff',
   previewBg: 'color-mix(in srgb, var(--bg) 80%, transparent)',
