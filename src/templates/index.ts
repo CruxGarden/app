@@ -155,6 +155,8 @@ export interface BuilderAction {
     | { type: 'add-image' }
     /** Upload audio/video into public/media/ (transcoding when needed) and write an item in `collection` */
     | { type: 'add-media'; collection: string }
+    /** Upload images into public/images/ and write one item per image in `collection` (its `image` field) */
+    | { type: 'add-photos'; collection: string }
     | { type: 'publish' };
 }
 

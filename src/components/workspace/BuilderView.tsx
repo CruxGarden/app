@@ -135,6 +135,16 @@ function BuilderBody({ cruxTitle, model }: { cruxTitle: string; model: ContentMo
           )}
           <AddImageButton />
           {(model.actions ?? [])
+            .filter((a) => a.do.type === 'add-photos')
+            .map((a) => {
+              const target = model.collections.find(
+                (c) => c.name === (a.do as { collection: string }).collection,
+              );
+              return target ? (
+                <AddPhotosButton key={a.label} collection={target} label={a.label} icon={a.icon} />
+              ) : null;
+            })}
+          {(model.actions ?? [])
             .filter((a) => a.do.type === 'add-media')
             .map((a) => {
               const target = model.collections.find(
@@ -316,6 +326,87 @@ function AddImageButton() {
 }
 
 /**
+ * Add photos: upload images into public/images/ and write one post per image
+ * (the collection's `image` field), so a feed fills from a file picker.
+ */
+function AddPhotosButton({
+  collection,
+  label,
+  icon,
+}: {
+  collection: ContentCollection;
+  label: string;
+  icon?: string;
+}) {
+  const uploadFile = useCruxStore((s) => s.uploadFile);
+  const createFile = useCruxStore((s) => s.createFile);
+  const openFile = useUIStore((s) => s.openFile);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [status, setStatus] = useState<string | null>(null);
+
+  const handleFiles = useCallback(
+    async (e: React.ChangeEvent<HTMLInputElement>) => {
+      const files = Array.from(e.target.files || []).filter((f) => f.type.startsWith('image/'));
+      e.target.value = '';
+      if (!files.length) return;
+      let last: { artifact: Artifact; path: string } | null = null;
+      try {
+        for (const [i, file] of files.entries()) {
+          setStatus(`Adding ${file.name} (${i + 1}/${files.length})…`);
+          const publicName = mediaFileName(file.name);
+          await uploadFile(file, 'public/images');
+          const title = file.name.replace(/\.[^.]+$/, '').replace(/[-_]+/g, ' ');
+          const vars = {
+            slug: slugify(title),
+            title,
+            today: new Date().toISOString().slice(0, 10),
+          };
+          const frontmatter: Record<string, string> = {};
+          for (const [key, value] of Object.entries(collection.new.frontmatter))
+            frontmatter[key] = interpolate(value, vars);
+          frontmatter.image = `/images/${publicName}`;
+          const path = interpolate(collection.new.pathTemplate, vars);
+          const artifact = await createFile(
+            path,
+            serializeFrontmatter(frontmatter, collection.new.body ?? '\n'),
+          );
+          last = { artifact, path };
+        }
+        if (last) openFile(last.artifact.id, last.path);
+        void alertDialog(
+          `Added ${files.length} ${collection.singular.toLowerCase()}${files.length === 1 ? '' : 's'} — one per photo. Add captions in each, or ask for them.`,
+          'Photos added',
+        );
+      } catch (err) {
+        void alertDialog('Adding photos failed: ' + (err as Error).message, 'Add photos');
+      } finally {
+        setStatus(null);
+      }
+    },
+    [collection, uploadFile, createFile, openFile],
+  );
+
+  return (
+    <>
+      <ActionButton
+        icon={icon ?? '📷'}
+        label={status ?? label}
+        onClick={() => !status && inputRef.current?.click()}
+      />
+      <input
+        ref={inputRef}
+        type="file"
+        accept="image/*"
+        multiple
+        className="hidden"
+        onChange={handleFiles}
+        data-testid="add-photos-input"
+      />
+    </>
+  );
+}
+
+/**
  * Add media: upload audio/video into public/media/, transcoding through ffmpeg
  * when the browser couldn't play the original (desktop only — on web the file
  * is uploaded as-is), then write one item per file into the collection so it
@@ -451,7 +542,7 @@ function CustomAction({
         openFileByPath(action.do.path);
         break;
       default:
-        break; // new-item / add-image / add-media render as derived buttons already
+        break; // new-item / add-image / add-media / add-photos render as derived buttons already
     }
   }, [action, onSettings, onPublish, openFileByPath]);
 

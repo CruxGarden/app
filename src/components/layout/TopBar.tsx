@@ -7,6 +7,7 @@ import IconButton from '@/components/ui/IconButton';
 import UserMenu from '@/components/auth/UserMenu';
 import { APP_NAME } from '@/lib/constants';
 import { cn } from '@/lib/cn';
+import MoodBar from '@/components/mood/MoodBar';
 import { ConsoleAvatar } from '@/components/keeper/Console';
 import { SearchIcon, MoodIcon, ChevronRightIcon } from '@/components/ui/icons';
 import { PANE_VAR_PREFIX, PANE_BUTTONS } from '@/components/workspace/paneConfig';
@@ -184,6 +185,8 @@ export default function TopBar() {
             <div className="w-px h-5 bg-toolbar-divider mx-1" />
           </>
         )}
+        <MoodBar className="mr-1" />
+        <div className="w-px h-5 bg-toolbar-divider mx-1" />
         <IconButton
           label="Explore"
           size="sm"

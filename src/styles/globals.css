@@ -190,6 +190,78 @@
   --color-profile-button-border-hover: var(--profile-button-border-hover);
 
   /* ── V3: Toolbar ──────────────────────────────────── */
+  --color-focus-ring: var(--focus-ring);
+  --color-meter-track: var(--meter-track);
+  --color-meter-fill: var(--meter-fill);
+  --color-meter-warn: var(--meter-warn);
+  --color-meter-danger: var(--meter-danger);
+  --color-button-disabled: var(--button-disabled);
+  --color-button-disabled-text: var(--button-disabled-text);
+  --color-dropdown: var(--dropdown);
+  --color-dropdown-border: var(--dropdown-border);
+  --color-dropdown-item: var(--dropdown-item);
+  --color-dropdown-item-hover: var(--dropdown-item-hover);
+  --color-dropdown-item-active: var(--dropdown-item-active);
+  --color-dropdown-item-text: var(--dropdown-item-text);
+  --color-dropdown-item-text-hover: var(--dropdown-item-text-hover);
+  --color-dropdown-item-icon: var(--dropdown-item-icon);
+  --color-dropdown-divider: var(--dropdown-divider);
+  --color-model-selector: var(--model-selector);
+  --color-model-selector-border: var(--model-selector-border);
+  --color-model-selector-text: var(--model-selector-text);
+  --color-model-selector-icon: var(--model-selector-icon);
+  --color-model-selector-icon-hover: var(--model-selector-icon-hover);
+  --color-model-selector-dropdown: var(--model-selector-dropdown);
+  --color-model-selector-item: var(--model-selector-item);
+  --color-model-selector-item-hover: var(--model-selector-item-hover);
+  --color-model-selector-item-active: var(--model-selector-item-active);
+  --color-model-selector-item-text: var(--model-selector-item-text);
+  --color-file-tree-border: var(--file-tree-border);
+  --color-file-tree-drop-target: var(--file-tree-drop-target);
+  --color-file-tree-drop-target-border: var(--file-tree-drop-target-border);
+  --color-markdown-text: var(--markdown-text);
+  --color-markdown-heading: var(--markdown-heading);
+  --color-markdown-link: var(--markdown-link);
+  --color-markdown-link-hover: var(--markdown-link-hover);
+  --color-markdown-hr: var(--markdown-hr);
+  --color-markdown-table-border: var(--markdown-table-border);
+  --color-markdown-table-header-bg: var(--markdown-table-header-bg);
+  --color-markdown-blockquote-border: var(--markdown-blockquote-border);
+  --color-markdown-blockquote-bg: var(--markdown-blockquote-bg);
+  --color-avatar: var(--avatar);
+  --color-avatar-border: var(--avatar-border);
+  --color-avatar-text: var(--avatar-text);
+  --color-avatar-placeholder: var(--avatar-placeholder);
+  --color-snapshot-banner: var(--snapshot-banner);
+  --color-snapshot-banner-border: var(--snapshot-banner-border);
+  --color-snapshot-banner-text: var(--snapshot-banner-text);
+  --color-snapshot-banner-button: var(--snapshot-banner-button);
+  --color-snapshot-banner-button-hover: var(--snapshot-banner-button-hover);
+  --color-command-palette-item-shortcut: var(--command-palette-item-shortcut);
+  --color-growth-timeline-border: var(--growth-timeline-border);
+  --color-growth-card-border: var(--growth-card-border);
+  --color-warning-muted: var(--warning-muted);
+  --color-success-muted: var(--success-muted);
+  --radius-button: var(--button-radius);
+  --radius-input: var(--input-radius);
+  --radius-card: var(--card-radius);
+  --radius-chip: var(--chip-radius);
+  --radius-modal: var(--modal-radius);
+  --radius-tooltip: var(--tooltip-radius);
+  --radius-dropdown: var(--dropdown-radius);
+  --radius-avatar: var(--avatar-radius);
+  --radius-bubble: var(--bubble-radius);
+  --radius-meter: var(--meter-radius);
+  --shadow-dropdown: var(--elevation-dropdown);
+  --shadow-tooltip: var(--elevation-tooltip);
+  --color-mood-bar: var(--mood-bar);
+  --color-mood-bar-border: var(--mood-bar-border);
+  --color-mood-bar-text: var(--mood-bar-text);
+  --color-mood-bar-text-muted: var(--mood-bar-text-muted);
+  --color-mood-bar-accent: var(--mood-bar-accent);
+  --color-mood-bar-accent-text: var(--mood-bar-accent-text);
+  --color-mood-bar-hover: var(--mood-bar-hover);
+  --shadow-mood-bar: var(--mood-bar-shadow);
   --color-toolbar: var(--toolbar);
   --color-toolbar-border: var(--toolbar-border);
   --color-toolbar-text: var(--toolbar-text);
@@ -388,7 +460,6 @@
   --accent-muted: #1a2723;
   --error: #e63946;
   /* Text on top of --error (danger buttons). Always white: red buttons must read the same in every theme. */
-  --on-error: #ffffff;
   --error-muted: rgba(230, 57, 70, 0.15);
   --contrast: #ffffff;
   --overlay: rgba(0, 0, 0, 0.5);
@@ -738,25 +809,50 @@ body {
 
 * {
   scrollbar-width: thin;
-  scrollbar-color: var(--border) transparent;
+  scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
 }
 
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: var(--scrollbar-width);
+  height: var(--scrollbar-width);
 }
 
 ::-webkit-scrollbar-track {
-  background: transparent;
+  background: var(--scrollbar-track);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--border);
-  border-radius: 3px;
+  background: var(--scrollbar-thumb);
+  border-radius: calc(var(--scrollbar-width) / 2);
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--text-muted);
+  background: var(--scrollbar-thumb-hover);
+}
+
+/* ── Interaction states (Mood tokens) ─────────────────── */
+
+:focus-visible {
+  outline: var(--focus-ring-width) solid var(--focus-ring);
+  outline-offset: var(--focus-ring-offset);
+}
+
+button:disabled,
+input:disabled,
+select:disabled,
+textarea:disabled,
+[aria-disabled='true'] {
+  opacity: var(--disabled-opacity);
+}
+
+.hover-bright:hover {
+  filter: brightness(var(--hover-brightness));
+}
+.active-dim:active {
+  filter: brightness(var(--active-brightness));
+}
+.hover-lift:hover {
+  transform: translateY(calc(-1 * var(--card-hover-lift)));
 }
 
 /* ── Palette Transition ────────────────────────────────── */
@@ -777,8 +873,8 @@ html.palette-transition *::after {
 /* ── Selection ─────────────────────────────────────────── */
 
 ::selection {
-  background: var(--accent-muted);
-  color: var(--accent);
+  background: var(--selection-bg);
+  color: var(--selection-text);
 }
 
 /* ── highlight.js palette overrides ───────────────────── */
@@ -1147,7 +1243,7 @@ html.palette-transition *::after {
   transition: filter 150ms;
 }
 .mosaic.crux-mosaic-theme .mosaic-window:hover .pane-toolbar {
-  filter: brightness(1.15);
+  filter: brightness(var(--pane-header-hover-brightness));
 }
 .light .mosaic.crux-mosaic-theme .mosaic-window:hover .pane-toolbar {
   filter: brightness(0.95);

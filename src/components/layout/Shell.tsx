@@ -10,7 +10,6 @@ const Console = lazy(() => import('@/components/keeper/Console'));
 const Settings = lazy(() => import('@/pages/Settings'));
 const Explore = lazy(() => import('@/pages/Explore'));
 const Mood = lazy(() => import('@/components/mood/Mood'));
-const MoodDock = lazy(() => import('@/components/mood/MoodDock'));
 import MoodTextureLayers from './MoodTextureLayers';
 
 export default function Shell() {
@@ -22,7 +21,6 @@ export default function Shell() {
   const settingsOpen = useUIStore((s) => s.settingsOpen);
   const exploreOpen = useUIStore((s) => s.exploreOpen);
   const moodPanelOpen = useUIStore((s) => s.moodPanelOpen);
-  const dockReserve = useUIStore((s) => s.dockReserve);
 
   useEffect(() => {
     if (servicesReady) return;
@@ -92,10 +90,7 @@ export default function Shell() {
       </div>
 
       {/* Main */}
-      <main
-        className="relative flex-1 min-h-0 overflow-y-auto"
-        style={dockReserve ? { paddingBottom: dockReserve } : undefined}
-      >
+      <main className="relative flex-1 min-h-0 overflow-y-auto">
         {initError ? (
           <div role="alert" className="flex h-full items-center justify-center p-8 text-center">
             <div className="max-w-sm flex flex-col gap-2">
@@ -125,13 +120,6 @@ export default function Shell() {
             <Console />
           </Suspense>
         </Modal>
-      )}
-
-      {/* Mood Dock — the realtime widget for the active Mood (sound, quick access) */}
-      {servicesReady && !initError && (
-        <Suspense fallback={null}>
-          <MoodDock />
-        </Suspense>
       )}
 
       {/* Mood Modal — quick picks; the Mood Builder page has the full editor */}
