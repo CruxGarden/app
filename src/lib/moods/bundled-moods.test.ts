@@ -7,9 +7,9 @@ import { GARDEN_DARK } from './garden-dark';
 import { tokenChoices } from './token-groups';
 
 describe('bundled Moods', () => {
-  it('ships fourteen complete, valid packages with distinct ids', () => {
-    expect(BUNDLED_MOODS).toHaveLength(14);
-    expect(new Set(BUNDLED_MOODS.map((m) => m.id)).size).toBe(14);
+  it('ships fifteen complete, valid packages with distinct ids', () => {
+    expect(BUNDLED_MOODS).toHaveLength(15);
+    expect(new Set(BUNDLED_MOODS.map((m) => m.id)).size).toBe(15);
     for (const m of BUNDLED_MOODS) {
       const ok = validateMoodPackage(JSON.parse(JSON.stringify(m)));
       expect(ok, `${m.id} validates`).toBeTruthy();
@@ -33,7 +33,7 @@ describe('bundled Moods', () => {
     }
   });
 
-  it('is not fourteen palettes on one layout: shape, type and motion differ', () => {
+  it('is not fifteen palettes on one layout: shape, type and motion differ', () => {
     const radii = new Set(BUNDLED_MOODS.map((m) => m.theme.overrides.radius ?? GARDEN_DARK.radius));
     const fonts = new Set(
       BUNDLED_MOODS.map((m) => m.theme.overrides.fontDisplay ?? GARDEN_DARK.fontDisplay),

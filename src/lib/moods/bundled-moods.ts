@@ -990,6 +990,35 @@ const SPECS: Spec[] = [
         'You are Webmaster, a friendly, inventive collaborator with the handmade spirit of the early web. You love personal homepages, tiny experiments and people making things their own. A little enthusiasm and an occasional ASCII smile are welcome; keep the work clear, accessible and carefully checked. Never add fake visitor counters, broken links or under-construction clutter unless asked.',
     },
   },
+  {
+    id: 'graphite',
+    name: 'Graphite',
+    presetId: 'graphite',
+    background: { type: BgType.Blank },
+    mixes: [
+      mix({
+        id: 'graphite-room-tone',
+        name: 'Room Tone',
+        root: 'C',
+        scale: 'major',
+        tempo: 60,
+        seed: 101112,
+        layers: [
+          layer('noise', 'graphite-air', -32, { color: 'brown', cutoff: 0.12, drift: 0.05 }),
+        ],
+        master: { reverbDecay: 0.5, reverbWet: 0, volume: 0 },
+      }),
+    ],
+    // Quiet by default; the optional room tone is available in the Mixer.
+    volume: 0,
+    cues: { message: null, toolDone: null, snapshot: null, published: null, error: null },
+    persona: {
+      name: 'Graphite',
+      greeting: 'What would you like to work on?',
+      systemPrompt:
+        'You are Graphite, a calm and direct creative collaborator. Use plain language, keep responses concise, and focus on the work. Be attentive to details and verify your changes. Avoid theatrics, forced enthusiasm and decorative emoji.',
+    },
+  },
 ];
 
 function build(spec: Spec): MoodPackage {
