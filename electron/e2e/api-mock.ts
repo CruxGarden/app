@@ -306,6 +306,27 @@ export async function startMockApi(): Promise<MockApi> {
         return send(204, null);
       }
     }
+    if (path === '/usage/periods' && method === 'GET') {
+      return send(200, [
+        {
+          period: { start: '2026-08-01', end: '2026-09-01' },
+          planId: 'free',
+          storageBytes: 12345,
+          publishStorageBytes: 12345,
+          syncStorageBytes: 0,
+          bandwidthBytes: 2048,
+          publishBandwidthBytes: 2048,
+          syncTransferBytes: 0,
+          requests: 3,
+          storageLimit: 1073741824,
+          bandwidthLimit: 1073741824,
+          overStorage: false,
+          overBandwidth: false,
+          reconciliationStatus: 'ok',
+          finalizedAt: '2026-09-03T00:00:00.000Z',
+        },
+      ]);
+    }
     if (path === '/usage/me' && method === 'GET') {
       const cruxes = Object.keys(state.published).map(usageFor);
       const syncCruxes = Object.entries(state.sync.cruxes);
@@ -348,9 +369,29 @@ export async function startMockApi(): Promise<MockApi> {
           })),
         ],
       };
+      const budget = (limit: number, used: number) => ({
+        limit,
+        used,
+        softLimit: Math.round(limit * 1.1),
+        over: used > limit,
+        overSoft: used > limit * 1.1,
+      });
       return send(200, {
         publish,
         sync,
+        settlement: { finalizesAt: '2026-10-03T00:00:00.000Z', isFinal: false, graceHours: 48 },
+        budgets: {
+          storage: budget(1073741824, publish.storageBytes + sync.storageBytes),
+          bandwidth: budget(1073741824, publish.bandwidthBytes + sync.transferBytes),
+        },
+        reconciliation: {
+          day: '2026-09-02',
+          status: 'ok',
+          meteredBytes: 40960,
+          edgeBytes: 40960,
+          gapPct: 0,
+          checkedAt: '2026-09-03T00:15:00.000Z',
+        },
         period: { start: '2026-09-01', end: '2026-10-01' },
         plan: {
           id: 'free',
