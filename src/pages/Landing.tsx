@@ -6,12 +6,9 @@ import { Button } from '@/components/ui';
 import MoodBar from '@/components/mood/MoodBar';
 import { useAudioStore } from '@/stores/audioStore';
 import { useShallow } from 'zustand/react/shallow';
-import { MOOD_PRESETS } from '@/lib/moods/presets';
-import { activePresetId, applyActiveMood } from '@/lib/moods/active';
-import { getResolvedMode } from '@/components/mood/mood-helpers';
-import { setSetting } from '@/services/settings';
-import { SettingsKey, APP_NAME } from '@/lib/constants';
-import { ThemeMode } from '@/lib/types';
+import { BUNDLED_MOODS } from '@/lib/moods/bundled-moods';
+import { applyMood } from '@/lib/moods/packages';
+import { APP_NAME } from '@/lib/constants';
 import {
   GITHUB_APP_URL,
   GITHUB_ORG_URL,
@@ -255,114 +252,84 @@ function ExploreSection() {
 }
 
 function MoodSection() {
-  const section = getResolvedMode();
-  const [active, setActive] = useState(() => activePresetId(section));
-  const presets = MOOD_PRESETS.filter((p) => p.section === section).slice(0, 12);
-  const { mixes, activeMixId, playing, toggle, selectMix, init } = useAudioStore(
+  const [active, setActive] = useState<string | null>(null);
+  const [busy, setBusy] = useState<string | null>(null);
+  const { mixes, activeMixId, playing, toggle, init } = useAudioStore(
     useShallow((s) => ({
       mixes: s.mixes,
       activeMixId: s.activeMixId,
       playing: s.playing,
       toggle: s.toggle,
-      selectMix: s.selectMix,
       init: s.init,
     })),
   );
   useEffect(() => init(), [init]);
+  const mix = mixes.find((m) => m.id === activeMixId);
 
-  const choose = (id: string) => {
-    setSetting(section === 'Light' ? SettingsKey.MoodPresetLight : SettingsKey.MoodPresetDark, id);
-    applyActiveMood(section);
-    setActive(id);
-  };
-  const flipMode = () => {
-    import('@/stores/themeStore').then(({ useThemeStore }) => {
-      useThemeStore.getState().setMode(section === 'Light' ? ThemeMode.Dark : ThemeMode.Light);
-      setActive(activePresetId(section === 'Light' ? 'Dark' : 'Light'));
-    });
+  const wear = async (id: string) => {
+    const pkg = BUNDLED_MOODS.find((m) => m.id === id);
+    if (!pkg || busy) return;
+    setBusy(id);
+    try {
+      await applyMood(pkg);
+      setActive(id);
+    } finally {
+      setBusy(null);
+    }
   };
 
   return (
     <section id="mood" className="py-10 border-t border-border">
-      <div className="flex items-baseline justify-between gap-3 mb-1">
-        <h2 className="font-display text-2xl text-text">Set the mood</h2>
+      <h2 className="font-display text-2xl text-text mb-1">Set the mood</h2>
+      <p className="text-sm text-text-muted mb-4">
+        A Mood is a whole room: the look, the sound, and the voice you work with. Try one on this
+        page — the same eight ship in the app, and people publish their own.
+      </p>
+      <div className="grid gap-3 grid-cols-2 sm:grid-cols-4" role="listbox" aria-label="Moods">
+        {BUNDLED_MOODS.map((pkg) => {
+          const o = pkg.theme.overrides;
+          return (
+            <button
+              key={pkg.id}
+              type="button"
+              role="option"
+              aria-selected={active === pkg.id}
+              onClick={() => void wear(pkg.id)}
+              disabled={!!busy}
+              className={cn(
+                'text-left rounded-card border overflow-hidden cursor-pointer hover-lift',
+                active === pkg.id ? 'border-accent ring-2 ring-accent/40' : 'border-border',
+              )}
+              style={{ background: o.panel ?? o.bg, color: o.text }}
+            >
+              <div
+                className="h-16"
+                style={{
+                  background: `linear-gradient(135deg, ${o.bg} 0%, ${o.surface ?? o.bg} 60%, ${o.accent} 100%)`,
+                }}
+              />
+              <div className="p-2.5">
+                <div className="text-sm font-display" style={{ color: o.heading ?? o.text }}>
+                  {pkg.name}
+                </div>
+                <div className="text-2xs font-mono mt-0.5" style={{ color: o.textMuted ?? o.text }}>
+                  {pkg.resonance.mixes[0]?.name}
+                  {pkg.persona ? ` · ${pkg.persona.name}` : ''}
+                </div>
+              </div>
+            </button>
+          );
+        })}
+      </div>
+      <div className="mt-4 flex items-center gap-3 text-xs text-text-muted">
         <button
           type="button"
-          onClick={flipMode}
-          className="text-xs font-mono text-text-muted hover:text-text cursor-pointer"
+          onClick={() => void toggle()}
+          className="px-3 py-1.5 rounded-button bg-accent text-bg font-medium cursor-pointer hover-bright"
         >
-          Switch to {section === 'Light' ? 'dark' : 'light'}
+          {playing ? 'Pause' : 'Play'} {mix ? `“${mix.name}”` : 'the soundscape'}
         </button>
-      </div>
-      <p className="text-sm text-text-muted mb-4">
-        A Mood is a look and a soundscape. Try one on this page — the same Moods ship in the app,
-        and people publish their own.
-      </p>
-      <div className="grid gap-4 md:grid-cols-2">
-        <div className="bg-panel border border-border rounded-[var(--radius)] p-4">
-          <div className="text-2xs font-mono uppercase tracking-wider text-text-muted mb-3">
-            Theme
-          </div>
-          <div className="grid grid-cols-4 sm:grid-cols-6 gap-2" role="listbox" aria-label="Themes">
-            {presets.map((p) => (
-              <button
-                key={p.id}
-                type="button"
-                role="option"
-                aria-selected={active === p.id}
-                onClick={() => choose(p.id)}
-                title={p.name}
-                className={cn(
-                  'aspect-square rounded-[var(--radius-sm)] border overflow-hidden cursor-pointer',
-                  active === p.id ? 'border-accent ring-2 ring-accent/40' : 'border-border',
-                )}
-                style={{
-                  background: `linear-gradient(135deg, ${p.overrides.bg ?? 'var(--bg)'} 50%, ${p.overrides.accent ?? 'var(--accent)'} 50%)`,
-                }}
-              >
-                <span className="sr-only">{p.name}</span>
-              </button>
-            ))}
-          </div>
-          <div className="mt-2 text-xxs font-mono text-text-muted">
-            {presets.find((p) => p.id === active)?.name ?? active}
-          </div>
-        </div>
-        <div className="bg-panel border border-border rounded-[var(--radius)] p-4">
-          <div className="text-2xs font-mono uppercase tracking-wider text-text-muted mb-3">
-            Sound
-          </div>
-          <ul className="flex flex-col gap-1">
-            {mixes.slice(0, 6).map((m) => (
-              <li key={m.id}>
-                <button
-                  type="button"
-                  onClick={() => (m.id === activeMixId ? void toggle() : void selectMix(m.id))}
-                  className={cn(
-                    'w-full flex items-center justify-between px-3 py-2 rounded-[var(--radius-sm)] text-sm cursor-pointer',
-                    m.id === activeMixId
-                      ? 'bg-surface text-text'
-                      : 'text-text-muted hover:text-text',
-                  )}
-                  aria-pressed={m.id === activeMixId && playing}
-                >
-                  <span className="truncate">{m.name}</span>
-                  <span className="text-2xs font-mono">
-                    {m.id === activeMixId && playing
-                      ? 'playing'
-                      : m.id === activeMixId
-                        ? 'paused'
-                        : ''}
-                  </span>
-                </button>
-              </li>
-            ))}
-          </ul>
-          <div className="mt-2 text-xxs text-text-muted">
-            Generated live in your browser — nothing streams. The player sits in the top bar and
-            follows you around the site.
-          </div>
-        </div>
+        <span>Generated live in your browser — nothing streams. The player is in the top bar.</span>
       </div>
     </section>
   );

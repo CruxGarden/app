@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { cn } from '@/lib/cn';
+import { getPersona } from '@/services/persona';
 import type { ChatMessage, ToolCall } from '@/api/types';
 import { getModelShortName } from '@/ai/providers';
 import MarkdownRenderer from './MarkdownRenderer';
@@ -149,7 +150,7 @@ export default function MessageBubble({
 
   const personaSnapshot = usePersonaSnapshot(message.personaFingerprint);
   const authorSnapshot = useAuthorSnapshot(message.authorId);
-  const personaName = !isUser ? personaSnapshot?.name || 'The Keeper' : null;
+  const personaName = !isUser ? personaSnapshot?.name || getPersona().name : null;
   const authorName = isUser ? authorSnapshot?.username || null : null;
 
   return (

@@ -67,6 +67,7 @@ export const GARDEN_DARK = {
   spinner: 'var(--accent)',
   spinnerTrack: 'var(--border)',
   flowColor: 'var(--accent)',
+  flowBg: 'var(--bg)',
   iconButtonIconHover: 'var(--accent)',
   iconButtonHover: 'var(--accent-muted)',
   actionButtonHover: 'var(--accent-muted)',

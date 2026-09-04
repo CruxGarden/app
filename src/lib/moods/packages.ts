@@ -255,9 +255,15 @@ export async function applyMood(pkg: MoodPackage): Promise<void> {
   // Assets index (bytes were written on import)
   for (const a of pkg.assets ?? []) addAsset(a);
 
-  // Resonance
+  // Resonance — the package's mixes join the user's (same id replaces), then
+  // its active mix, playlist, cues and volume take over.
   if (pkg.resonance.mixes.length) {
-    resonance.saveMixes(pkg.resonance.mixes);
+    const incoming = new Set(pkg.resonance.mixes.map((m) => m.id));
+    const merged = [
+      ...resonance.getMixes().filter((m) => !incoming.has(m.id)),
+      ...pkg.resonance.mixes,
+    ];
+    resonance.saveMixes(merged);
     resonance.setActiveMixId(pkg.resonance.activeMixId);
     resonance.savePlaylist(pkg.resonance.playlist);
     resonance.setVolume(pkg.resonance.volume);
@@ -265,7 +271,7 @@ export async function applyMood(pkg: MoodPackage): Promise<void> {
     const { useAudioStore } = await import('@/stores/audioStore');
     const s = useAudioStore.getState();
     useAudioStore.setState({
-      mixes: pkg.resonance.mixes,
+      mixes: merged,
       playlist: pkg.resonance.playlist,
       volume: pkg.resonance.volume,
     });
