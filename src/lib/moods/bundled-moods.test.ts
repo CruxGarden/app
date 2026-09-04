@@ -5,9 +5,9 @@ import { validateMix, LAYER_TYPES } from '@/audio/schema';
 import { GARDEN_DARK } from './garden-dark';
 
 describe('bundled Moods', () => {
-  it('ships eight complete, valid packages with distinct ids', () => {
-    expect(BUNDLED_MOODS).toHaveLength(8);
-    expect(new Set(BUNDLED_MOODS.map((m) => m.id)).size).toBe(8);
+  it('ships eleven complete, valid packages with distinct ids', () => {
+    expect(BUNDLED_MOODS).toHaveLength(11);
+    expect(new Set(BUNDLED_MOODS.map((m) => m.id)).size).toBe(11);
     for (const m of BUNDLED_MOODS) {
       const ok = validateMoodPackage(JSON.parse(JSON.stringify(m)));
       expect(ok, `${m.id} validates`).toBeTruthy();

@@ -243,7 +243,7 @@ export default function MoodBrowser() {
         <div className="flex items-baseline justify-between">
           <h3 className="text-xxs font-mono uppercase tracking-wider text-caption">Built in</h3>
           <span className="text-2xs text-text-muted">
-            Eight rooms — look, sound and voice change together. Apply one, then make it yours.
+            Eleven rooms — look, sound and voice change together. Apply one, then make it yours.
           </span>
         </div>
         <div className="grid gap-3 grid-cols-[repeat(auto-fill,minmax(180px,1fr))]">
