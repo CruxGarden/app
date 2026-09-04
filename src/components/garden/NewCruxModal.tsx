@@ -181,6 +181,47 @@ function BlogThumb() {
   );
 }
 
+function FeedThumb() {
+  return (
+    <div style={{ ...T.wrap, background: '#161616', ...T.pad(6) }}>
+      <div style={{ ...T.flex(4), alignItems: 'center', marginBottom: 4 }}>
+        <div style={{ ...T.box(9, 9, '#d96c3f'), borderRadius: 5 }} />
+        <div style={T.col(2)}>
+          <div style={T.bar('22px', 2)} />
+          <div style={T.line('14px', 2, '#3a3a3a')} />
+        </div>
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 2 }}>
+        {['#3b2a24', '#1f3a2a', '#2a2f3b', '#3b3324', '#2b2b2b', '#24333b'].map((c, i) => (
+          <div key={i} style={{ ...T.box('100%', 9, c) }} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function MediaThumb() {
+  return (
+    <div style={{ ...T.wrap, background: '#0c0d10', ...T.pad(6) }}>
+      <div style={T.col(3)}>
+        <div style={T.bar('40%', 3)} />
+        <div style={{ ...T.flex(4), alignItems: 'center' }}>
+          <div style={T.box(10, 10, '#1d2027')} />
+          <div style={{ ...T.col(2), flex: 1 }}>
+            <div style={T.line('60%')} />
+            <div style={{ ...T.bar('100%', 3, '#22252c'), position: 'relative' }}>
+              <div
+                style={{ ...T.bar('45%', 3, '#5b8def'), position: 'absolute', left: 0, top: 0 }}
+              />
+            </div>
+          </div>
+        </div>
+        <div style={{ ...T.box('100%', 14, '#000'), border: '1px solid #22252c' }} />
+      </div>
+    </div>
+  );
+}
+
 const TEMPLATES: Template[] = [
   {
     id: 'blank',
@@ -209,6 +250,26 @@ const TEMPLATES: Template[] = [
     thumb: <BlogThumb />,
     kind: 'webapp',
     defaultTitle: 'My Blog',
+    desktopOnly: true,
+  },
+  {
+    id: 'astro-feed',
+    label: 'Astro Feed',
+    description: 'A photo feed — profile, square grid, a page per picture',
+    icon: <LayoutIcon />,
+    thumb: <FeedThumb />,
+    kind: 'webapp',
+    defaultTitle: 'My Feed',
+    desktopOnly: true,
+  },
+  {
+    id: 'astro-media',
+    label: 'Astro Media',
+    description: 'Share music and video — players, pages, ffmpeg conversion on import',
+    icon: <LayoutIcon />,
+    thumb: <MediaThumb />,
+    kind: 'webapp',
+    defaultTitle: 'My Media',
     desktopOnly: true,
   },
 ];

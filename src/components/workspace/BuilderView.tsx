@@ -16,6 +16,8 @@ import { Modal, Input, Button } from '@/components/ui';
 import type { ContentModel, ContentCollection, BuilderAction } from '@/templates';
 import type { Artifact } from '@/api/types';
 import { confirmDialog, alertDialog } from '@/stores/dialogStore';
+import { Capability, can } from '@/lib/platform';
+import { mediaKindFor, isStreamingReady, mediaFileName } from '@/lib/media-kind';
 
 /**
  * The Builder — the Workshop's home view for content-model cruxes.
@@ -132,14 +134,26 @@ function BuilderBody({ cruxTitle, model }: { cruxTitle: string; model: ContentMo
             <ActionButton icon="⚙️" label="Site settings" onClick={openSettings} />
           )}
           <AddImageButton />
-          {(model.actions ?? []).map((action, i) => (
-            <CustomAction
-              key={i}
-              action={action}
-              onSettings={openSettings}
-              onPublish={openPublish}
-            />
-          ))}
+          {(model.actions ?? [])
+            .filter((a) => a.do.type === 'add-media')
+            .map((a) => {
+              const target = model.collections.find(
+                (c) => c.name === (a.do as { collection: string }).collection,
+              );
+              return target ? (
+                <AddMediaButton key={a.label} collection={target} label={a.label} icon={a.icon} />
+              ) : null;
+            })}
+          {(model.actions ?? [])
+            .filter((a) => a.do.type !== 'add-media')
+            .map((action, i) => (
+              <CustomAction
+                key={i}
+                action={action}
+                onSettings={openSettings}
+                onPublish={openPublish}
+              />
+            ))}
         </section>
 
         {/* ── Collections ── */}
@@ -301,6 +315,117 @@ function AddImageButton() {
   );
 }
 
+/**
+ * Add media: upload audio/video into public/media/, transcoding through ffmpeg
+ * when the browser couldn't play the original (desktop only — on web the file
+ * is uploaded as-is), then write one item per file into the collection so it
+ * shows up with a player immediately.
+ */
+function AddMediaButton({
+  collection,
+  label,
+  icon,
+}: {
+  collection: ContentCollection;
+  label: string;
+  icon?: string;
+}) {
+  const uploadFile = useCruxStore((s) => s.uploadFile);
+  const createFile = useCruxStore((s) => s.createFile);
+  const openFile = useUIStore((s) => s.openFile);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [status, setStatus] = useState<string | null>(null);
+
+  const handleFiles = useCallback(
+    async (e: React.ChangeEvent<HTMLInputElement>) => {
+      const files = Array.from(e.target.files || []);
+      e.target.value = '';
+      if (!files.length) return;
+      const canTranscode = can(Capability.Transcode);
+      let lastArtifact: Artifact | null = null;
+      let lastPath = '';
+      let converted = 0;
+      try {
+        for (const [i, file] of files.entries()) {
+          const kind = mediaKindFor(file.type, file.name);
+          if (!kind) continue;
+          let publicName = mediaFileName(file.name);
+          let toUpload: File = file;
+          if (canTranscode && !isStreamingReady(file.type, file.name)) {
+            setStatus(`Converting ${file.name} (${i + 1}/${files.length})…`);
+            const { transcode } = await import('@/services/media');
+            const outputs = await transcode(
+              {
+                inputData: new Uint8Array(await file.arrayBuffer()),
+                inputName: file.name,
+                isAudio: kind === 'audio',
+              },
+              (p) => setStatus(`Converting ${file.name} — ${Math.round(p)}%`),
+            );
+            const out = outputs[0];
+            if (out) {
+              publicName = mediaFileName(out.name);
+              toUpload = new File([new Uint8Array(out.data)], publicName, { type: out.mimeType });
+              converted += 1;
+            }
+          }
+          setStatus(`Adding ${publicName}…`);
+          await uploadFile(toUpload, 'public/media');
+          const title = file.name.replace(/\.[^.]+$/, '').replace(/[-_]+/g, ' ');
+          const vars = {
+            slug: slugify(title),
+            title,
+            today: new Date().toISOString().slice(0, 10),
+          };
+          const frontmatter: Record<string, string> = {};
+          for (const [key, value] of Object.entries(collection.new.frontmatter))
+            frontmatter[key] = interpolate(value, vars);
+          frontmatter.kind = kind;
+          frontmatter.media = `/media/${publicName}`;
+          lastPath = interpolate(collection.new.pathTemplate, vars);
+          lastArtifact = await createFile(
+            lastPath,
+            serializeFrontmatter(frontmatter, collection.new.body ?? '\n'),
+          );
+        }
+        if (lastArtifact) openFile(lastArtifact.id, lastPath);
+        const skipped = files.filter((f) => !mediaKindFor(f.type, f.name)).length;
+        void alertDialog(
+          `Added ${files.length - skipped} item${files.length - skipped === 1 ? '' : 's'}` +
+            (converted ? ` (${converted} converted for the web)` : '') +
+            (skipped ? `; skipped ${skipped} non-media file${skipped === 1 ? '' : 's'}` : '') +
+            '.',
+          'Media added',
+        );
+      } catch (err) {
+        void alertDialog('Adding media failed: ' + (err as Error).message, 'Add media');
+      } finally {
+        setStatus(null);
+      }
+    },
+    [collection, uploadFile, createFile, openFile],
+  );
+
+  return (
+    <>
+      <ActionButton
+        icon={icon ?? '🎬'}
+        label={status ?? label}
+        onClick={() => !status && inputRef.current?.click()}
+      />
+      <input
+        ref={inputRef}
+        type="file"
+        accept="audio/*,video/*,.mov,.mkv,.flac,.wav,.m4a,.mp3,.mp4,.webm"
+        multiple
+        className="hidden"
+        onChange={handleFiles}
+        data-testid="add-media-input"
+      />
+    </>
+  );
+}
+
 function CustomAction({
   action,
   onSettings,
@@ -326,7 +451,7 @@ function CustomAction({
         openFileByPath(action.do.path);
         break;
       default:
-        break; // new-item / add-image render as derived buttons already
+        break; // new-item / add-image / add-media render as derived buttons already
     }
   }, [action, onSettings, onPublish, openFileByPath]);
 

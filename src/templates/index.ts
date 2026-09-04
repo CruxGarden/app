@@ -153,6 +153,8 @@ export interface BuilderAction {
     | { type: 'open-file'; path: string }
     | { type: 'ai'; prompt: string }
     | { type: 'add-image' }
+    /** Upload audio/video into public/media/ (transcoding when needed) and write an item in `collection` */
+    | { type: 'add-media'; collection: string }
     | { type: 'publish' };
 }
 
@@ -193,6 +195,8 @@ export interface TemplateDefinition {
 const loaders: Record<string, () => Promise<{ default: TemplateDefinition }>> = {
   'astro-homepage': () => import('./astro-homepage'),
   'astro-blog': () => import('./astro-blog'),
+  'astro-feed': () => import('./astro-feed'),
+  'astro-media': () => import('./astro-media'),
 };
 
 export async function loadTemplate(id: string): Promise<TemplateDefinition | null> {
