@@ -47,11 +47,11 @@ test.describe('acceptance journey (local half)', () => {
       await expect(monaco).toBeVisible({ timeout: 30_000 });
       await monaco.evaluate((el) => el.setAttribute('data-e2e-instance', 'original'));
       await monaco.click();
-      await page.keyboard.press('Meta+ArrowDown'); // end of document (mac)
+      await page.keyboard.press('ControlOrMeta+ArrowDown'); // end of document (mac)
       await page.keyboard.press('End');
       await page.keyboard.type(' Typed by Playwright.');
       await expect(monaco).toContainText('Typed by Playwright.'); // typing landed
-      await page.keyboard.press('Meta+s');
+      await page.keyboard.press('ControlOrMeta+s');
       await page.waitForTimeout(800); // save round-trip
       await expect(page.locator('.monaco-editor[data-e2e-instance="original"]')).toBeVisible(); // same instance
       await expect(monaco).toContainText('Typed by Playwright.'); // text survived the save

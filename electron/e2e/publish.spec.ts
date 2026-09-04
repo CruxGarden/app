@@ -30,7 +30,7 @@ test.describe('publish (mocked API)', () => {
       await expect(monaco).toBeVisible({ timeout: 30_000 });
       await monaco.click();
       await page.keyboard.type('<h1>Hello</h1>');
-      await page.keyboard.press('Meta+s');
+      await page.keyboard.press('ControlOrMeta+s');
 
       // Share pane → Share → not connected → inline connect form
       await page.getByRole('button', { name: 'Toggle share' }).click();
@@ -52,9 +52,9 @@ test.describe('publish (mocked API)', () => {
 
       // Edit → unpublished changes → Update (update path)
       await monaco.click();
-      await page.keyboard.press('Meta+ArrowDown');
+      await page.keyboard.press('ControlOrMeta+ArrowDown');
       await page.keyboard.type('<p>More</p>');
-      await page.keyboard.press('Meta+s');
+      await page.keyboard.press('ControlOrMeta+s');
       const update = page.getByRole('button', { name: 'Update', exact: true });
       await expect(update).toBeVisible();
       await update.click();
@@ -65,9 +65,9 @@ test.describe('publish (mocked API)', () => {
       // A failing publish must say why (used to be catch {} → nothing happened)
       api.state.failPublish = true;
       await monaco.click();
-      await page.keyboard.press('Meta+ArrowDown');
+      await page.keyboard.press('ControlOrMeta+ArrowDown');
       await page.keyboard.type('<p>Again</p>');
-      await page.keyboard.press('Meta+s');
+      await page.keyboard.press('ControlOrMeta+s');
       await page.getByRole('button', { name: 'Update', exact: true }).click();
       const failure = page.getByRole('alert').filter({ hasText: /Simulated outage/ });
       await expect(failure).toHaveCount(1);

@@ -31,10 +31,15 @@ export async function openExternal(url: string): Promise<void> {
   await desktopBridge()?.openExternal(url);
 }
 
-/** Render "/Users/name/…" as "~/…" for display. */
+/** Render a path under the home directory as "~/…" for display (macOS, Linux, Windows). */
 export function shortenHomePath(p: string): string {
-  const match = p.match(/^\/Users\/[^/]+(\/.*)?$/);
-  return match ? `~${match[1] || ''}` : p;
+  const mac = p.match(/^\/Users\/[^/]+(\/.*)?$/);
+  if (mac) return `~${mac[1] || ''}`;
+  const linux = p.match(/^\/home\/[^/]+(\/.*)?$/);
+  if (linux) return `~${linux[1] || ''}`;
+  const win = p.match(/^[A-Za-z]:\\Users\\[^\\]+(\\.*)?$/);
+  if (win) return `~${(win[1] || '').replace(/\\/g, '/')}`;
+  return p;
 }
 
 /** Version, platform, log location — null on web. */
