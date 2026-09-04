@@ -67,7 +67,7 @@ export async function downloadArtifact(
 
 // ── Explore ───────────────────────────────────────────
 
-export type ExploreSort = 'recent' | 'newest' | 'alpha';
+export type ExploreSort = 'relevant' | 'recent' | 'newest' | 'alpha';
 
 export interface ExploreParams {
   q?: string;

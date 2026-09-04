@@ -1,6 +1,6 @@
 import { openGardenPage } from '@/lib/public-url';
 import { useEffect, useState, useCallback, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { publicApi, API_BASE_URL } from '@/api';
 import type {
   ExploreCrux,
@@ -99,21 +99,50 @@ function ClearIcon() {
 
 /* ── Explore (reusable in page and modal) ─────────────── */
 
-export default function Explore({ onNavigate }: { onNavigate?: () => void }) {
+/** The filter state Explore exposes — the public page mirrors it into the URL. */
+export interface ExploreState {
+  q: string;
+  type: ResultType;
+  sort: ExploreSort;
+  kind: string;
+  tags: string[];
+  author: string;
+  page: number;
+}
+
+export default function Explore({
+  onNavigate,
+  initial,
+  onStateChange,
+}: {
+  onNavigate?: () => void;
+  initial?: Partial<ExploreState>;
+  onStateChange?: (state: ExploreState) => void;
+}) {
   const navigate = useNavigate();
 
-  const [q, setQ] = useState('');
-  const [resultType, setResultType] = useState<ResultType>('cruxes');
-  const [sort, setSort] = useState<ExploreSort>('recent');
+  const [q, setQ] = useState(initial?.q ?? '');
+  const [resultType, setResultType] = useState<ResultType>(initial?.type ?? 'cruxes');
+  const [sort, setSort] = useState<ExploreSort>(
+    initial?.sort ?? (initial?.q ? 'relevant' : 'recent'),
+  );
+  const [author, setAuthor] = useState(initial?.author ?? '');
   // Inside the app (services ready) results can be installed / opened locally
   const appReady = useAppStore((s) => s.ready);
-  const [kind, setKind] = useState<string>(() => useUIStore.getState().exploreKind ?? '');
+  const [kind, setKind] = useState<string>(
+    () => initial?.kind ?? useUIStore.getState().exploreKind ?? '',
+  );
   useEffect(() => {
     // one-shot: the opener asked for a kind
     if (useUIStore.getState().exploreKind) useUIStore.setState({ exploreKind: null });
   }, []);
-  const [activeTags, setActiveTags] = useState<string[]>([]);
-  const [page, setPage] = useState(1);
+  const [activeTags, setActiveTags] = useState<string[]>(initial?.tags ?? []);
+  const [page, setPage] = useState(initial?.page ?? 1);
+
+  // Mirror state outward (the public page writes it to the URL so searches are links)
+  useEffect(() => {
+    onStateChange?.({ q, type: resultType, sort, kind, tags: activeTags, author, page });
+  }, [q, resultType, sort, kind, activeTags, author, page, onStateChange]);
 
   const [results, setResults] = useState<(ExploreCrux | ExploreAuthor)[]>([]);
   const [totalPages, setTotalPages] = useState(1);
@@ -144,6 +173,7 @@ export default function Explore({ onNavigate }: { onNavigate?: () => void }) {
     };
     if (q) params.q = q;
     if (kind) params.kind = kind;
+    if (author) params.author = author;
     if (activeTags.length > 0) params.tag = activeTags;
 
     publicApi
@@ -165,13 +195,17 @@ export default function Explore({ onNavigate }: { onNavigate?: () => void }) {
     return () => {
       cancelled = true;
     };
-  }, [q, resultType, sort, activeTags, kind, page]);
+  }, [q, resultType, sort, activeTags, kind, author, page]);
 
   const handleSearchChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => {
       setQ(value);
+      // a fresh term ranks by relevance; clearing it falls back to recency
+      setSort((prev) =>
+        value ? (prev === 'recent' ? 'relevant' : prev) : prev === 'relevant' ? 'recent' : prev,
+      );
       setPage(1);
     }, 300);
   }, []);
@@ -179,6 +213,13 @@ export default function Explore({ onNavigate }: { onNavigate?: () => void }) {
   const handleClear = useCallback(() => {
     if (inputRef.current) inputRef.current.value = '';
     setQ('');
+    setSort((prev) => (prev === 'relevant' ? 'recent' : prev));
+    setPage(1);
+  }, []);
+
+  const filterByAuthor = useCallback((username: string) => {
+    setAuthor(username);
+    setResultType('cruxes');
     setPage(1);
   }, []);
 
@@ -193,6 +234,7 @@ export default function Explore({ onNavigate }: { onNavigate?: () => void }) {
     if (inputRef.current) inputRef.current.value = '';
     setQ('');
     setActiveTags([]);
+    setAuthor('');
     setSort('recent');
     setKind('');
     setPage(1);
@@ -211,15 +253,28 @@ export default function Explore({ onNavigate }: { onNavigate?: () => void }) {
     [navigate, onNavigate],
   );
 
-  const hasFilters = q || activeTags.length > 0 || sort !== 'recent' || kind !== '';
+  const hasFilters =
+    q ||
+    activeTags.length > 0 ||
+    author ||
+    (sort !== 'recent' && sort !== 'relevant') ||
+    kind !== '';
 
   // Override navigate in card clicks
   const CruxCard = ({ crux }: { crux: ExploreCrux }) => {
     const href = `/${crux.author_username}/${crux.slug}`;
     const avatarUrl = resolveAvatarUrl(crux.author_meta);
+    // A div, not a <button>: the tag and author chips inside are real buttons,
+    // and a button inside a button is invalid HTML with unreliable click routing.
     return (
-      <button
+      <div
+        role="link"
+        tabIndex={0}
+        aria-label={crux.title || crux.slug}
         onClick={() => handleNavigate(href)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') handleNavigate(href);
+        }}
         className="w-full px-4 py-3 text-left hover:bg-accent-muted/30 cursor-pointer group flex items-center gap-3 border-b border-border last:border-b-0"
       >
         <Avatar url={avatarUrl} />
@@ -256,10 +311,20 @@ export default function Explore({ onNavigate }: { onNavigate?: () => void }) {
           )}
         </div>
         <div className="flex items-center gap-3 shrink-0">
-          <span className="text-[10px] font-mono text-text-muted">{crux.author_username}</span>
+          <button
+            type="button"
+            aria-label={`Only cruxes by ${crux.author_username}`}
+            onClick={(e) => {
+              e.stopPropagation();
+              filterByAuthor(crux.author_username);
+            }}
+            className="text-[10px] font-mono text-text-muted hover:text-accent cursor-pointer"
+          >
+            @{crux.author_username}
+          </button>
           <span className="text-[10px] font-mono text-text-muted">{formatDate(crux.created)}</span>
         </div>
-      </button>
+      </div>
     );
   };
 
@@ -307,8 +372,9 @@ export default function Explore({ onNavigate }: { onNavigate?: () => void }) {
           <input
             ref={inputRef}
             type="text"
+            defaultValue={initial?.q ?? ''}
             onChange={handleSearchChange}
-            placeholder="Search cruxes, moods and authors…"
+            placeholder="Search cruxes, moods and authors… (@name, #tag)"
             className="w-full pl-9 pr-8 py-2 text-sm bg-surface/50 border border-border rounded-[var(--radius-sm)] text-text placeholder:text-text-muted/50 focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent/30 font-body"
             autoFocus
           />
@@ -321,6 +387,36 @@ export default function Explore({ onNavigate }: { onNavigate?: () => void }) {
             </button>
           )}
         </div>
+
+        {/* Active filters */}
+        {(author || activeTags.length > 0) && (
+          <div className="flex flex-wrap items-center gap-1.5 mb-3" data-testid="active-filters">
+            {author && (
+              <button
+                type="button"
+                onClick={() => {
+                  setAuthor('');
+                  setPage(1);
+                }}
+                className="px-2 py-0.5 rounded-full text-[11px] font-mono bg-accent text-bg cursor-pointer"
+                aria-label={`Remove author filter ${author}`}
+              >
+                @{author} ×
+              </button>
+            )}
+            {activeTags.map((t) => (
+              <button
+                key={t}
+                type="button"
+                onClick={() => toggleTag(t)}
+                className="px-2 py-0.5 rounded-full text-[11px] font-mono bg-accent text-bg cursor-pointer"
+                aria-label={`Remove tag filter ${t}`}
+              >
+                #{t} ×
+              </button>
+            ))}
+          </div>
+        )}
 
         {/* Type toggle + sort */}
         <div className="flex items-center justify-between">
@@ -357,6 +453,20 @@ export default function Explore({ onNavigate }: { onNavigate?: () => void }) {
 
           <div className="flex items-center gap-1 text-xs font-mono text-text-muted">
             <span>Sort</span>
+            {q && (
+              <button
+                onClick={() => {
+                  setSort('relevant');
+                  setPage(1);
+                }}
+                className={cn(
+                  'px-2 py-0.5 rounded-[var(--radius-sm)] cursor-pointer',
+                  sort === 'relevant' ? 'text-text bg-surface' : 'hover:text-text',
+                )}
+              >
+                Best match
+              </button>
+            )}
             <button
               onClick={() => {
                 setSort('recent');
@@ -545,7 +655,32 @@ export function ExplorePage() {
     };
   }, []);
 
-  // Read initial query from URL for the public route header
+  // Filters live in the URL so every search is a link (the website embeds this page)
+  const [params, setParams] = useSearchParams();
+  const initial: Partial<ExploreState> = {
+    q: params.get('q') ?? '',
+    type: params.get('type') === 'authors' ? 'authors' : 'cruxes',
+    sort: (params.get('sort') as ExploreSort | null) ?? undefined,
+    kind: params.get('kind') ?? '',
+    tags: params.getAll('tag'),
+    author: params.get('author') ?? '',
+    page: Number(params.get('page') || 1) || 1,
+  };
+  const onStateChange = useCallback(
+    (s: ExploreState) => {
+      const next = new URLSearchParams();
+      if (s.q) next.set('q', s.q);
+      if (s.type !== 'cruxes') next.set('type', s.type);
+      if (s.sort !== (s.q ? 'relevant' : 'recent')) next.set('sort', s.sort);
+      if (s.kind) next.set('kind', s.kind);
+      for (const t of s.tags) next.append('tag', t);
+      if (s.author) next.set('author', s.author);
+      if (s.page > 1) next.set('page', String(s.page));
+      if (next.toString() !== params.toString()) setParams(next, { replace: true });
+    },
+    [params, setParams],
+  );
+
   return (
     <div className="flex flex-col min-h-screen">
       <header className="relative z-20 flex items-center h-8 px-3 border-b border-border bg-surface-solid shrink-0">
@@ -559,7 +694,7 @@ export function ExplorePage() {
       </header>
 
       <div className="relative z-10 flex-1 overflow-y-auto p-4 sm:p-6 max-w-5xl mx-auto w-full">
-        <Explore />
+        <Explore initial={initial} onStateChange={onStateChange} />
       </div>
     </div>
   );
