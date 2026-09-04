@@ -233,6 +233,16 @@ const TEMPLATES: Template[] = [
     defaultTitle: 'My Crux',
   },
   {
+    id: 'astro-empty',
+    label: 'Empty (Astro)',
+    description: 'A real Astro project with one page — bring your own plan',
+    icon: <LayoutIcon />,
+    thumb: <BlankThumb />,
+    kind: 'webapp',
+    defaultTitle: 'My Site',
+    desktopOnly: true,
+  },
+  {
     id: 'astro-homepage',
     label: 'Astro Home Page',
     description: 'Your page on the internet — hero, about, links, and posts',

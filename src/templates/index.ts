@@ -197,6 +197,7 @@ const loaders: Record<string, () => Promise<{ default: TemplateDefinition }>> = 
   'astro-blog': () => import('./astro-blog'),
   'astro-feed': () => import('./astro-feed'),
   'astro-media': () => import('./astro-media'),
+  'astro-empty': () => import('./astro-empty'),
 };
 
 export async function loadTemplate(id: string): Promise<TemplateDefinition | null> {
