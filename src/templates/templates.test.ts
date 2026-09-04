@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { applyTemplateMeta, loadTemplate, type TemplateDefinition } from './index';
 
-const TEMPLATE_IDS = ['astro-homepage', 'astro-blog'] as const;
+const TEMPLATE_IDS = ['astro-homepage', 'astro-blog', 'astro-feed', 'astro-media'] as const;
 
 describe('applyTemplateMeta', () => {
   const def: TemplateDefinition = {
