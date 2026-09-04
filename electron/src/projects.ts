@@ -2,6 +2,12 @@ const { shell } = require('electron');
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
+const {
+  isInside,
+  resolveInsideOrThrow,
+  sanitizeFolderName: sanitizeName,
+  toPosixRel,
+} = require('./paths');
 
 /**
  * Project Folders (ADR 0001) — main-process side.
@@ -42,9 +48,10 @@ export class DesktopConfig {
       const defaults = this.defaults();
       this.data = {
         gardenRoot: raw.gardenRoot || defaults.gardenRoot,
-        knownRoots: Array.isArray(raw.knownRoots) && raw.knownRoots.length
-          ? raw.knownRoots
-          : defaults.knownRoots,
+        knownRoots:
+          Array.isArray(raw.knownRoots) && raw.knownRoots.length
+            ? raw.knownRoots
+            : defaults.knownRoots,
         autoUpdate: raw.autoUpdate !== false,
       };
     } catch {
@@ -79,10 +86,9 @@ export class DesktopConfig {
   }
 }
 
-/** Filesystem names a slug may not produce. */
+/** Filesystem names a slug may not produce (see paths.ts — Windows-aware). */
 function sanitizeFolderName(slug: string): string {
-  const cleaned = slug.replace(/[^a-zA-Z0-9._-]/g, '-').replace(/^\.+/, '').slice(0, 100);
-  return cleaned || 'crux';
+  return sanitizeName(slug);
 }
 
 export class ProjectFolders {
@@ -96,11 +102,7 @@ export class ProjectFolders {
 
   /** True when `candidate` is inside (or is) a directory we manage. */
   private isUnderKnownRoot(candidate: string): boolean {
-    const resolved = path.resolve(candidate);
-    return this.config.knownRoots.some((root: string) => {
-      const r = path.resolve(root);
-      return resolved === r || resolved.startsWith(r + path.sep);
-    });
+    return this.config.knownRoots.some((root: string) => isInside(root, candidate));
   }
 
   private assertKnownFolder(folder: string): string {
@@ -114,11 +116,7 @@ export class ProjectFolders {
   /** Resolve a relative path inside a project folder; reject traversal. */
   private resolveInside(folder: string, relPath: string): string {
     const base = this.assertKnownFolder(folder);
-    const target = path.resolve(base, relPath);
-    if (target !== base && !target.startsWith(base + path.sep)) {
-      throw new Error(`Path escapes the project folder: ${relPath}`);
-    }
-    return target;
+    return resolveInsideOrThrow(base, relPath);
   }
 
   /** Create a Project Folder for a slug; `-2`, `-3`… on collision. */
@@ -189,9 +187,7 @@ export class ProjectFolders {
   }
 
   reveal(folder: string, relPath?: string): void {
-    const target = relPath
-      ? this.resolveInside(folder, relPath)
-      : this.assertKnownFolder(folder);
+    const target = relPath ? this.resolveInside(folder, relPath) : this.assertKnownFolder(folder);
     shell.showItemInFolder(target);
   }
 
@@ -211,13 +207,15 @@ export class ProjectFolders {
     const ig = createIgnore().add(DEFAULT_IGNORES);
     try {
       ig.add(fs.readFileSync(path.join(base, '.cruxignore'), 'utf8'));
-    } catch { /* no .cruxignore */ }
+    } catch {
+      /* no .cruxignore */
+    }
 
     const out: string[] = [];
     const walk = (dir: string) => {
       for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
         const abs = path.join(dir, entry.name);
-        const rel = path.relative(base, abs).split(path.sep).join('/');
+        const rel = toPosixRel(base, abs);
         if (ig.ignores(entry.isDirectory() ? rel + '/' : rel)) continue;
         if (entry.isDirectory()) walk(abs);
         else if (entry.isFile()) out.push(rel);

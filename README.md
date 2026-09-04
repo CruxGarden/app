@@ -1,40 +1,48 @@
-// CloudFront Function: SPA Rewrite for Published Cruxes
-//
-// Attach to the "Viewer Request" event on the CloudFront distribution
-// serving the published content bucket (crux-garden-published).
-//
-// S3 paths follow: /{authorId}/{slug}/{filepath}
-//
-// If a request doesn't have a file extension and has at least two path
-// segments (authorId + slug), rewrite it to index.html within that
-// crux's prefix. This allows React Router (BrowserRouter) and other
-// SPA frameworks to handle client-side routing.
+# Crux Garden
 
-function handler(event) {
-  var request = event.request;
-  var uri = request.uri;
+**Talk to an AI. Make something. Publish it at your own address.** Every version is kept, and
+visitors can open "How was this made?" to read the conversation.
 
-  // Split into segments, filtering out empty strings from leading/trailing slashes
-  var parts = uri.split('/').filter(function (p) { return p.length > 0; });
+Crux Garden is a local-first creative workspace for the Mac (Windows and Linux builds are in
+progress). Your work lives in ordinary folders on your disk; the AI runs on your own key or a
+local model; publishing is the only part that touches our servers.
 
-  // Need at least authorId and slug
-  if (parts.length < 2) {
-    return request;
-  }
+- Website and downloads: https://crux.garden
+- Explore what people made: https://crux.garden/explore
+- This repo: the desktop app (`electron/`) and the web app it wraps (`src/`)
 
-  // If the last segment has a file extension, it's a real file — pass through
-  var lastSegment = parts[parts.length - 1];
-  if (lastSegment.indexOf('.') > -1) {
-    return request;
-  }
+## Run it from source
 
-  // Rewrite to index.html within the crux's prefix
-  var authorId = parts[0];
-  var slug = parts[1];
-  request.uri = '/' + authorId + '/' + slug + '/index.html';
+```bash
+nvm use                                   # Node 22
+npm install && npm run dev                # web app on http://localhost:8080
+cd electron && npm install && npm run dev # desktop shell against the dev server
+```
 
-  return request;
-}
+Build a DMG without a certificate: `cd electron && npm run dist:mac:unsigned`.
 
+## Verify
 
-crux-garden-publish-url-rewrite
+```bash
+npm run verify                # typecheck + lint + unit tests + build
+cd electron && npm run verify && npm run build:all && npm run test:e2e   # Playwright against the real app
+```
+
+## What the app sends over the network
+
+- **AI requests** go straight from your machine to the provider you chose, with your key — or to a
+  local model, sending nothing.
+- **Publishing and sync** send only what you ask to publish or back up, to crux.garden.
+- **Update checks** ask GitHub Releases for the latest version. You can turn them off in Settings →
+  Desktop.
+- **Nothing else.** No analytics. No crash reporting unless you opt in. Logs stay on your disk
+  (`~/Library/Logs/Crux Garden`).
+
+## Contributing
+
+See `CONTRIBUTING.md`. Security reports: keeper@crux.garden (`SECURITY.md`).
+
+## License
+
+MIT — see `LICENSE`. Bundled Astro templates are original; adapted open-source themes carry their
+own attribution inside the template.

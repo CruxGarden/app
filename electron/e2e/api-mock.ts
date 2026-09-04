@@ -35,7 +35,7 @@ export interface MockApi {
     /** Sync store: garden backup + synced crux archives, and transfer this period */
     billing: { planId: string; status: string; customer: boolean; checkouts: number };
     sync: {
-      garden: { bytes: number; syncedAt: string } | null;
+      garden: { bytes: number; syncedAt: string; data?: Buffer } | null;
       cruxes: Record<string, { bytes: number; title: string; slug: string; updatedAt: string }>;
       up: number;
       down: number;
@@ -361,9 +361,15 @@ export async function startMockApi(): Promise<MockApi> {
       const { files } = parseMultipart(rawBuf, req.headers['content-type'] ?? '');
       const bytes = files[0]?.bytes.length ?? 0;
       if (!bytes) return send(400, { statusCode: 400, message: 'No file uploaded' });
-      state.sync.garden = { bytes, syncedAt: new Date().toISOString() };
+      state.sync.garden = { bytes, syncedAt: new Date().toISOString(), data: files[0]!.bytes };
       state.sync.up += bytes;
       return send(200, { syncedAt: state.sync.garden.syncedAt, size: bytes });
+    }
+    if (path === '/sync/garden' && method === 'GET') {
+      if (!state.sync.garden?.data)
+        return send(404, { statusCode: 404, message: 'No garden backup found' });
+      state.sync.down += state.sync.garden.bytes;
+      return sendRaw(200, 'application/zip', state.sync.garden.data);
     }
     if (path === '/sync/garden' && method === 'DELETE') {
       state.sync.garden = null;

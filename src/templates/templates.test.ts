@@ -74,6 +74,23 @@ describe('applyTemplateMeta', () => {
   });
 });
 
+describe('toolchain-only templates', () => {
+  it('astro-empty ships the Astro toolchain files and no content model', async () => {
+    const def = (await loadTemplate('astro-empty'))!;
+    const paths = def.files.map((f) => f.path);
+    expect(paths).toEqual(
+      expect.arrayContaining([
+        'package.json',
+        'astro.config.mjs',
+        '.cruxignore',
+        'src/pages/index.astro',
+      ]),
+    );
+    expect(def.contentModel).toBeUndefined();
+    expect(def.greeting).toMatch(/empty Astro project/i);
+  });
+});
+
 describe('shipped template definitions', () => {
   it.each(TEMPLATE_IDS)('%s: settings form fields exist in its config file', async (id) => {
     const def = (await loadTemplate(id))!;
