@@ -6,6 +6,14 @@
 import * as Tone from 'tone';
 import { SCALES, type Layer, type Mix } from './schema';
 import { makeRng } from './rng';
+import { chordAt, bassAt, walkAt } from './harmony';
+
+/** Current bar index on the transport (musical layers agree on the chord this way). */
+function currentBar(): number {
+  const pos = String(Tone.getTransport().position);
+  const bar = parseInt(pos.split(':')[0] ?? '0', 10);
+  return Number.isFinite(bar) ? bar : 0;
+}
 
 export interface LayerRuntime {
   output: Tone.ToneAudioNode;
@@ -362,6 +370,385 @@ function player(layer: Layer): LayerRuntime {
   };
 }
 
+// ── Beat ──────────────────────────────────────────────────────────────────
+// 16-step patterns: k = kick, s = snare, h = hat, H = open hat, '.' = rest
+const BEAT_PATTERNS: Record<string, { kick: string; snare: string; hat: string }> = {
+  lofi: { kick: 'k.........k.....', snare: '....s.......s...', hat: 'h.h.h.h.h.h.h.H.' },
+  boombap: { kick: 'k......k..k.....', snare: '....s.......s...', hat: '..h...h...h...h.' },
+  half: { kick: 'k.......k.......', snare: '............s...', hat: '....h.......h...' },
+  four: { kick: 'k...k...k...k...', snare: '....s.......s...', hat: '..h...h...h...h.' },
+  brush: { kick: '................', snare: '....s.......s...', hat: 'hhhhhhhhhhhhhhhh' },
+};
+
+function beat(layer: Layer, mix: Mix): LayerRuntime {
+  const out = new Tone.Gain(1);
+  const tone = new Tone.Filter({ type: 'lowpass', frequency: 4000, Q: 0.4 });
+  const kick = new Tone.MembraneSynth({
+    pitchDecay: 0.06,
+    octaves: 6,
+    envelope: { attack: 0.001, decay: 0.35, sustain: 0, release: 0.4 },
+    volume: -4,
+  });
+  const snare = new Tone.NoiseSynth({
+    noise: { type: 'pink' },
+    envelope: { attack: 0.001, decay: 0.16, sustain: 0, release: 0.08 },
+    volume: -10,
+  });
+  const snareBody = new Tone.Filter({ type: 'bandpass', frequency: 1800, Q: 0.8 });
+  const hat = new Tone.NoiseSynth({
+    noise: { type: 'white' },
+    envelope: { attack: 0.001, decay: 0.05, sustain: 0, release: 0.03 },
+    volume: -18,
+  });
+  const hatFilter = new Tone.Filter({ type: 'highpass', frequency: 7000 });
+  kick.connect(tone);
+  snare.chain(snareBody, tone);
+  hat.chain(hatFilter, tone);
+  tone.connect(out);
+  const rng = makeRng(mix.seed + 21);
+  let cfg = {
+    pattern: s(layer.params.pattern, 'lofi'),
+    density: n(layer.params.density, 0.7),
+    swing: n(layer.params.swing, 0.55),
+    hats: n(layer.params.hats, 0.6),
+    humanize: n(layer.params.humanize, 0.4),
+  };
+  let step = 0;
+  const seq = new Tone.Loop((time) => {
+    const p = BEAT_PATTERNS[cfg.pattern] ?? BEAT_PATTERNS.lofi!;
+    const i = step % 16;
+    step += 1;
+    // swing: push the off-16ths late
+    const sixteenth = Tone.Time('16n').toSeconds();
+    const late = i % 2 === 1 ? (cfg.swing - 0.5) * sixteenth * 0.9 : 0;
+    const jitter = (rng() - 0.5) * 0.02 * cfg.humanize;
+    const t = time + Math.max(0, late + jitter);
+    const vel = (base: number) =>
+      Math.min(1, Math.max(0.2, base * (1 - (rng() - 0.5) * 0.4 * cfg.humanize)));
+    if (p.kick[i] === 'k' && (i === 0 || rng() < cfg.density + 0.2))
+      kick.triggerAttackRelease('C1', '8n', t, vel(0.9));
+    if (p.snare[i] === 's' && rng() < cfg.density + 0.25)
+      snare.triggerAttackRelease('8n', t, vel(0.8));
+    const h = p.hat[i];
+    if ((h === 'h' || h === 'H') && rng() < cfg.hats) {
+      hat.envelope.decay = h === 'H' ? 0.18 : 0.05;
+      hat.triggerAttackRelease('16n', t, vel(h === 'H' ? 0.6 : 0.45));
+    }
+  }, '16n');
+  const apply = (l: Layer) => {
+    cfg = {
+      pattern: s(l.params.pattern, 'lofi'),
+      density: n(l.params.density, 0.7),
+      swing: n(l.params.swing, 0.55),
+      hats: n(l.params.hats, 0.6),
+      humanize: n(l.params.humanize, 0.4),
+    };
+    tone.frequency.rampTo(lerp(900, 9000, n(l.params.tone, 0.5)), 0.3);
+  };
+  apply(layer);
+  return {
+    output: out,
+    start: () => {
+      step = 0;
+      seq.start(0);
+    },
+    stop: () => seq.stop(),
+    update: apply,
+    dispose: () =>
+      [seq, kick, snare, snareBody, hat, hatFilter, tone, out].forEach((x) => x.dispose()),
+  };
+}
+
+// ── Keys ──────────────────────────────────────────────────────────────────
+function keysSynth(instrument: string): Tone.PolySynth {
+  switch (instrument) {
+    case 'piano':
+      return new Tone.PolySynth(Tone.Synth, {
+        oscillator: { type: 'triangle' } as never,
+        envelope: { attack: 0.005, decay: 1.2, sustain: 0.15, release: 1.8 },
+        volume: -8,
+      });
+    case 'organ':
+      return new Tone.PolySynth(Tone.Synth, {
+        oscillator: { type: 'fatsine', count: 3, spread: 8 } as never,
+        envelope: { attack: 0.05, decay: 0.2, sustain: 0.9, release: 0.4 },
+        volume: -12,
+      });
+    case 'bells':
+      return new Tone.PolySynth(Tone.FMSynth, {
+        harmonicity: 3.01,
+        modulationIndex: 14,
+        envelope: { attack: 0.005, decay: 2.5, sustain: 0, release: 3 },
+        modulationEnvelope: { attack: 0.005, decay: 0.8, sustain: 0, release: 1 },
+        volume: -14,
+      } as never);
+    case 'guitar':
+      return new Tone.PolySynth(Tone.AMSynth, {
+        harmonicity: 2,
+        envelope: { attack: 0.01, decay: 1.4, sustain: 0.05, release: 1.2 },
+        volume: -10,
+      } as never);
+    default: // rhodes
+      return new Tone.PolySynth(Tone.FMSynth, {
+        harmonicity: 1,
+        modulationIndex: 1.6,
+        oscillator: { type: 'sine' } as never,
+        envelope: { attack: 0.01, decay: 1.6, sustain: 0.25, release: 2.2 },
+        modulation: { type: 'square' } as never,
+        modulationEnvelope: { attack: 0.02, decay: 0.6, sustain: 0.1, release: 1 },
+        volume: -10,
+      } as never);
+  }
+}
+
+function keys(layer: Layer, mix: Mix): LayerRuntime {
+  const out = new Tone.Gain(1);
+  const tone = new Tone.Filter({ type: 'lowpass', frequency: 3000, Q: 0.6 });
+  const wobble = new Tone.Vibrato({ frequency: 0.7, depth: 0.05 });
+  let synth = keysSynth(s(layer.params.instrument, 'rhodes'));
+  synth.chain(wobble, tone, out);
+  const rng = makeRng(mix.seed + 33);
+  let instrument = s(layer.params.instrument, 'rhodes');
+  let cfg = {
+    progression: s(layer.params.progression, 'lofi'),
+    voicing: s(layer.params.voicing, 'seventh') as 'triad' | 'seventh',
+    rhythm: s(layer.params.rhythm, 'half'),
+    octave: Math.round(n(layer.params.octave, 4)),
+    humanize: n(layer.params.humanize, 0.4),
+  };
+  let currentMix = mix;
+  const chordNow = () =>
+    chordAt({
+      root: currentMix.root,
+      scale: currentMix.scale,
+      progression: cfg.progression,
+      bar: currentBar(),
+      octave: cfg.octave,
+      voicing: cfg.voicing,
+    });
+  const strum = (notes: string[], dur: string, time: number, vel = 0.7) => {
+    notes.forEach((note, i) => {
+      const spread = i * 0.012 * (0.5 + cfg.humanize);
+      const jitter = (rng() - 0.5) * 0.03 * cfg.humanize;
+      synth.triggerAttackRelease(
+        note,
+        dur,
+        time + spread + Math.max(0, jitter),
+        vel * (1 - rng() * 0.2 * cfg.humanize),
+      );
+    });
+  };
+  let beatIdx = 0;
+  const loop = new Tone.Loop((time) => {
+    const b = beatIdx % 4;
+    beatIdx += 1;
+    const chord = chordNow();
+    switch (cfg.rhythm) {
+      case 'whole':
+        if (b === 0) strum(chord, '1m', time, 0.65);
+        break;
+      case 'stabs':
+        if (b === 1 || b === 3 || (b === 2 && rng() < 0.3))
+          strum(chord, '8n', time + Tone.Time('8n').toSeconds() * (rng() < 0.5 ? 1 : 0), 0.6);
+        break;
+      case 'arp': {
+        const note = chord[(beatIdx * 2) % chord.length]!;
+        synth.triggerAttackRelease(note, '8n', time, 0.55);
+        const note2 = chord[(beatIdx * 2 + 1) % chord.length]!;
+        synth.triggerAttackRelease(note2, '8n', time + Tone.Time('8n').toSeconds(), 0.5);
+        break;
+      }
+      default: // half
+        if (b === 0 || b === 2) strum(chord, '2n', time, b === 0 ? 0.7 : 0.55);
+    }
+  }, '4n');
+  const apply = (l: Layer, m: Mix) => {
+    currentMix = m;
+    cfg = {
+      progression: s(l.params.progression, 'lofi'),
+      voicing: s(l.params.voicing, 'seventh') as 'triad' | 'seventh',
+      rhythm: s(l.params.rhythm, 'half'),
+      octave: Math.round(n(l.params.octave, 4)),
+      humanize: n(l.params.humanize, 0.4),
+    };
+    wobble.depth.rampTo(n(l.params.wobble, 0.3) * 0.15, 0.3);
+    tone.frequency.rampTo(lerp(600, 9000, n(l.params.tone, 0.55)), 0.3);
+    const inst = s(l.params.instrument, 'rhodes');
+    if (inst !== instrument) {
+      instrument = inst;
+      synth.releaseAll();
+      synth.disconnect();
+      synth.dispose();
+      synth = keysSynth(inst);
+      synth.connect(wobble);
+    }
+  };
+  apply(layer, mix);
+  return {
+    output: out,
+    start: () => {
+      beatIdx = 0;
+      loop.start(0);
+    },
+    stop: () => {
+      loop.stop();
+      synth.releaseAll();
+    },
+    update: apply,
+    dispose: () => [loop, synth, wobble, tone, out].forEach((x) => x.dispose()),
+  };
+}
+
+// ── Bass ──────────────────────────────────────────────────────────────────
+function bass(layer: Layer, mix: Mix): LayerRuntime {
+  const out = new Tone.Gain(1);
+  const synth = new Tone.MonoSynth({
+    oscillator: { type: 'triangle' } as never,
+    filter: { type: 'lowpass', Q: 1, rolloff: -24 } as never,
+    envelope: { attack: 0.01, decay: 0.4, sustain: 0.6, release: 0.6 },
+    filterEnvelope: {
+      attack: 0.01,
+      decay: 0.3,
+      sustain: 0.3,
+      release: 0.5,
+      baseFrequency: 120,
+      octaves: 2.2,
+    },
+    portamento: n(layer.params.glide, 0.2) * 0.15,
+    volume: -6,
+  });
+  synth.connect(out);
+  const rng = makeRng(mix.seed + 45);
+  let currentMix = mix;
+  let cfg = {
+    pattern: s(layer.params.pattern, 'root'),
+    progression: s(layer.params.progression, 'lofi'),
+    octave: Math.round(n(layer.params.octave, 2)),
+  };
+  let beatIdx = 0;
+  const loop = new Tone.Loop((time) => {
+    const b = beatIdx % 4;
+    beatIdx += 1;
+    const o = {
+      root: currentMix.root,
+      scale: currentMix.scale,
+      progression: cfg.progression,
+      bar: currentBar(),
+      octave: cfg.octave,
+    };
+    switch (cfg.pattern) {
+      case 'pulse':
+        synth.triggerAttackRelease(bassAt(o), '8n', time, b === 0 ? 0.9 : 0.6);
+        if (rng() < 0.5)
+          synth.triggerAttackRelease(bassAt(o), '16n', time + Tone.Time('8n').toSeconds(), 0.45);
+        break;
+      case 'walk': {
+        const steps = [0, 2, 4, rng() < 0.5 ? 5 : 6];
+        synth.triggerAttackRelease(walkAt(o, steps[b]!), '4n', time, b === 0 ? 0.85 : 0.6);
+        break;
+      }
+      default: // root: on the one, sometimes a pickup on the four
+        if (b === 0) synth.triggerAttackRelease(bassAt(o), '2n', time, 0.85);
+        else if (b === 3 && rng() < 0.4)
+          synth.triggerAttackRelease(walkAt(o, 4), '8n', time + Tone.Time('8n').toSeconds(), 0.5);
+    }
+  }, '4n');
+  const apply = (l: Layer, m: Mix) => {
+    currentMix = m;
+    cfg = {
+      pattern: s(l.params.pattern, 'root'),
+      progression: s(l.params.progression, 'lofi'),
+      octave: Math.round(n(l.params.octave, 2)),
+    };
+    synth.portamento = n(l.params.glide, 0.2) * 0.15;
+    synth.filter.frequency.rampTo(lerp(120, 1400, n(l.params.tone, 0.4)), 0.3);
+  };
+  apply(layer, mix);
+  return {
+    output: out,
+    start: () => {
+      beatIdx = 0;
+      loop.start(0);
+    },
+    stop: () => {
+      loop.stop();
+      synth.triggerRelease();
+    },
+    update: apply,
+    dispose: () => [loop, synth, out].forEach((x) => x.dispose()),
+  };
+}
+
+// ── Vinyl ─────────────────────────────────────────────────────────────────
+function vinyl(layer: Layer): LayerRuntime {
+  const out = new Tone.Gain(1);
+  // dust: quiet pink bed with a slow wow
+  const dust = new Tone.Noise('pink');
+  const dustFilter = new Tone.Filter({ type: 'bandpass', frequency: 3000, Q: 0.5 });
+  const dustGain = new Tone.Gain(0.15);
+  const wow = new Tone.LFO({ frequency: 0.55, min: 0.08, max: 0.2 }).start();
+  dust.chain(dustFilter, dustGain, out);
+  wow.connect(dustGain.gain);
+  // crackle: random pops
+  const pop = new Tone.Noise('white');
+  const popFilter = new Tone.Filter({ type: 'highpass', frequency: 2500 });
+  const popEnv = new Tone.AmplitudeEnvelope({
+    attack: 0.001,
+    decay: 0.012,
+    sustain: 0,
+    release: 0.01,
+  });
+  const popGain = new Tone.Gain(0.5);
+  pop.chain(popFilter, popEnv, popGain, out);
+  // hum: mains
+  const hum = new Tone.Oscillator({ frequency: 60, type: 'sine', volume: -40 });
+  const humGain = new Tone.Gain(0.3);
+  hum.chain(humGain, out);
+  let chance = 0.35;
+  const loop = new Tone.Loop((time) => {
+    if (Math.random() < chance) popEnv.triggerAttackRelease(0.008, time + Math.random() * 0.05);
+  }, '16n');
+  const apply = (l: Layer) => {
+    const crackle = n(l.params.crackle, 0.5);
+    chance = crackle * 0.7;
+    popGain.gain.rampTo(lerp(0.1, 0.8, crackle), 0.3);
+    dustGain.gain.rampTo(lerp(0, 0.35, n(l.params.dust, 0.4)), 0.3);
+    humGain.gain.rampTo(n(l.params.hum, 0.15), 0.3);
+  };
+  apply(layer);
+  return {
+    output: out,
+    start: () => {
+      dust.start();
+      pop.start();
+      hum.start();
+      loop.start(0);
+    },
+    stop: () => {
+      dust.stop();
+      pop.stop();
+      hum.stop();
+      loop.stop();
+    },
+    update: apply,
+    dispose: () =>
+      [
+        loop,
+        wow,
+        dust,
+        dustFilter,
+        dustGain,
+        pop,
+        popFilter,
+        popEnv,
+        popGain,
+        hum,
+        humGain,
+        out,
+      ].forEach((x) => x.dispose()),
+  };
+}
+
 export function buildLayer(layer: Layer, mix: Mix): LayerRuntime {
   switch (layer.type) {
     case 'rain':
@@ -379,5 +766,13 @@ export function buildLayer(layer: Layer, mix: Mix): LayerRuntime {
     case 'music':
     case 'sample':
       return player(layer);
+    case 'beat':
+      return beat(layer, mix);
+    case 'keys':
+      return keys(layer, mix);
+    case 'bass':
+      return bass(layer, mix);
+    case 'vinyl':
+      return vinyl(layer);
   }
 }

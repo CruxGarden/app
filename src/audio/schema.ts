@@ -7,14 +7,34 @@
  * library): unknown fields are dropped, missing ones take defaults.
  */
 
-export type LayerType = 'music' | 'rain' | 'wind' | 'noise' | 'drone' | 'pad' | 'melody' | 'sample';
+export type LayerType =
+  | 'music'
+  | 'rain'
+  | 'wind'
+  | 'noise'
+  | 'drone'
+  | 'pad'
+  | 'melody'
+  | 'sample'
+  | 'beat'
+  | 'keys'
+  | 'bass'
+  | 'vinyl';
 
-export type EffectType = 'filter' | 'delay' | 'reverb' | 'chorus' | 'tremolo';
+export type EffectType =
+  | 'filter'
+  | 'delay'
+  | 'reverb'
+  | 'chorus'
+  | 'tremolo'
+  | 'tape'
+  | 'bitcrusher'
+  | 'compressor';
 
 export interface Effect {
   type: EffectType;
   enabled: boolean;
-  /** Effect-specific: filter {frequency, q, kind}, delay {time, feedback, wet}, reverb {decay, wet}, chorus {rate, depth, wet}, tremolo {rate, depth} */
+  /** Effect-specific: filter {frequency, q, kind}, delay {time, feedback, wet}, reverb {decay, wet}, chorus {rate, depth, wet}, tremolo {rate, depth}, tape {wobble, warmth}, bitcrusher {bits, wet}, compressor {threshold, ratio} */
   params: Record<string, number | string>;
 }
 
@@ -54,6 +74,21 @@ export const LAYER_TYPES: LayerType[] = [
   'pad',
   'melody',
   'sample',
+  'beat',
+  'keys',
+  'bass',
+  'vinyl',
+];
+
+export const EFFECT_TYPES: EffectType[] = [
+  'filter',
+  'delay',
+  'reverb',
+  'chorus',
+  'tremolo',
+  'tape',
+  'bitcrusher',
+  'compressor',
 ];
 export const SCALES: Record<string, number[]> = {
   major: [0, 2, 4, 5, 7, 9, 11],
@@ -82,6 +117,19 @@ export const LAYER_DEFAULTS: Record<LayerType, Record<string, number | string | 
   pad: { waveform: 'triangle', attack: 3, release: 6, shimmer: 0.3, octave: 3, changeEvery: 8 },
   melody: { instrument: 'sine', density: 0.25, octave: 5, humanize: 0.3, echo: 0.4 },
   sample: { fingerprint: '', fileName: '', loop: true, rate: 1 },
+  beat: { pattern: 'lofi', density: 0.7, swing: 0.55, tone: 0.5, hats: 0.6, humanize: 0.4 },
+  keys: {
+    instrument: 'rhodes',
+    progression: 'lofi',
+    voicing: 'seventh',
+    rhythm: 'half',
+    octave: 4,
+    humanize: 0.4,
+    wobble: 0.3,
+    tone: 0.55,
+  },
+  bass: { pattern: 'root', progression: 'lofi', octave: 2, tone: 0.4, glide: 0.2 },
+  vinyl: { crackle: 0.5, dust: 0.4, hum: 0.15 },
 };
 
 export const LAYER_LABELS: Record<LayerType, string> = {
@@ -93,6 +141,10 @@ export const LAYER_LABELS: Record<LayerType, string> = {
   pad: 'Pad',
   melody: 'Melody',
   sample: 'Sample',
+  beat: 'Beat',
+  keys: 'Keys',
+  bass: 'Bass',
+  vinyl: 'Vinyl',
 };
 
 let counter = 0;
@@ -138,7 +190,7 @@ function validateEffect(raw: unknown): Effect | null {
   if (!raw || typeof raw !== 'object') return null;
   const e = raw as Record<string, unknown>;
   const type = e.type;
-  if (!['filter', 'delay', 'reverb', 'chorus', 'tremolo'].includes(type as string)) return null;
+  if (!EFFECT_TYPES.includes(type as EffectType)) return null;
   const params: Record<string, number | string> = {};
   for (const [k, v] of Object.entries((e.params as Record<string, unknown>) ?? {})) {
     if (typeof v === 'number' || typeof v === 'string') params[k] = v;

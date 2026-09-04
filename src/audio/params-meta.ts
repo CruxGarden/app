@@ -77,6 +77,102 @@ export const PARAM_META: Record<LayerType, Record<string, ParamMeta>> = {
     loop: { kind: 'toggle', label: 'Loop' },
     rate: { kind: 'range', label: 'Speed', min: 0.25, max: 2, step: 0.01, unit: '×' },
   },
+  beat: {
+    pattern: {
+      kind: 'select',
+      label: 'Pattern',
+      options: [
+        { value: 'lofi', label: 'Lofi (laid back)' },
+        { value: 'boombap', label: 'Boom bap' },
+        { value: 'half', label: 'Half-time' },
+        { value: 'four', label: 'Four on the floor' },
+        { value: 'brush', label: 'Brushes' },
+      ],
+    },
+    density: pct('Density'),
+    swing: pct('Swing'),
+    hats: pct('Hats'),
+    tone: pct('Tone'),
+    humanize: pct('Humanize'),
+  },
+  keys: {
+    instrument: {
+      kind: 'select',
+      label: 'Instrument',
+      options: [
+        { value: 'rhodes', label: 'Rhodes' },
+        { value: 'piano', label: 'Piano' },
+        { value: 'organ', label: 'Organ' },
+        { value: 'bells', label: 'Bells' },
+        { value: 'guitar', label: 'Guitar' },
+      ],
+    },
+    progression: {
+      kind: 'select',
+      label: 'Progression',
+      options: [
+        { value: 'lofi', label: 'ii – V – I' },
+        { value: 'pop', label: 'I – vi – IV – V' },
+        { value: 'axis', label: 'I – V – vi – IV' },
+        { value: 'minor', label: 'i – VII – VI – VII' },
+        { value: 'gospel', label: 'I – IV – V – I' },
+        { value: 'jazz', label: 'ii – V – I – vi' },
+        { value: 'wistful', label: 'I – iii – IV – vi' },
+        { value: 'static', label: 'One chord' },
+      ],
+    },
+    voicing: {
+      kind: 'select',
+      label: 'Voicing',
+      options: [
+        { value: 'triad', label: 'Triads' },
+        { value: 'seventh', label: 'Sevenths' },
+      ],
+    },
+    rhythm: {
+      kind: 'select',
+      label: 'Rhythm',
+      options: [
+        { value: 'whole', label: 'Whole notes' },
+        { value: 'half', label: 'Half notes' },
+        { value: 'stabs', label: 'Stabs' },
+        { value: 'arp', label: 'Arpeggio' },
+      ],
+    },
+    octave: { kind: 'range', label: 'Octave', min: 2, max: 5, step: 1 },
+    humanize: pct('Humanize'),
+    wobble: pct('Wobble'),
+    tone: pct('Tone'),
+  },
+  bass: {
+    pattern: {
+      kind: 'select',
+      label: 'Pattern',
+      options: [
+        { value: 'root', label: 'Root notes' },
+        { value: 'pulse', label: 'Pulse' },
+        { value: 'walk', label: 'Walking' },
+      ],
+    },
+    progression: {
+      kind: 'select',
+      label: 'Progression',
+      options: [
+        { value: 'lofi', label: 'ii – V – I' },
+        { value: 'pop', label: 'I – vi – IV – V' },
+        { value: 'axis', label: 'I – V – vi – IV' },
+        { value: 'minor', label: 'i – VII – VI – VII' },
+        { value: 'gospel', label: 'I – IV – V – I' },
+        { value: 'jazz', label: 'ii – V – I – vi' },
+        { value: 'wistful', label: 'I – iii – IV – vi' },
+        { value: 'static', label: 'One chord' },
+      ],
+    },
+    octave: { kind: 'range', label: 'Octave', min: 1, max: 3, step: 1 },
+    tone: pct('Tone'),
+    glide: pct('Glide'),
+  },
+  vinyl: { crackle: pct('Crackle'), dust: pct('Dust'), hum: pct('Hum') },
 };
 
 export const EFFECT_META: Record<EffectType, { label: string; params: Record<string, ParamMeta> }> =
@@ -134,6 +230,24 @@ export const EFFECT_META: Record<EffectType, { label: string; params: Record<str
         depth: pct('Depth'),
       },
     },
+    tape: {
+      label: 'Tape',
+      params: { wobble: pct('Wobble'), warmth: pct('Warmth') },
+    },
+    bitcrusher: {
+      label: 'Bitcrusher',
+      params: {
+        bits: { kind: 'range', label: 'Bits', min: 2, max: 12, step: 1 },
+        wet: pct('Mix'),
+      },
+    },
+    compressor: {
+      label: 'Compressor',
+      params: {
+        threshold: { kind: 'range', label: 'Threshold', min: -60, max: 0, step: 1, unit: ' dB' },
+        ratio: { kind: 'range', label: 'Ratio', min: 1, max: 20, step: 0.5, unit: ':1' },
+      },
+    },
   };
 
 export const EFFECT_DEFAULTS: Record<EffectType, Record<string, number | string>> = {
@@ -142,6 +256,9 @@ export const EFFECT_DEFAULTS: Record<EffectType, Record<string, number | string>
   reverb: { decay: 3, wet: 0.3 },
   chorus: { rate: 0.6, depth: 0.5, wet: 0.4 },
   tremolo: { rate: 2, depth: 0.5 },
+  tape: { wobble: 0.3, warmth: 0.4 },
+  bitcrusher: { bits: 8, wet: 0.3 },
+  compressor: { threshold: -18, ratio: 3 },
 };
 
 export const ROOTS = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];

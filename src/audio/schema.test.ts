@@ -1,5 +1,13 @@
 import { describe, it, expect } from 'vitest';
-import { createLayer, createMix, validateMix, LAYER_TYPES } from './schema';
+import { EFFECT_DEFAULTS } from './params-meta';
+import {
+  createLayer,
+  createMix,
+  validateMix,
+  LAYER_TYPES,
+  EFFECT_TYPES,
+  LAYER_DEFAULTS,
+} from './schema';
 import { DEFAULT_MIXES } from './default-mixes';
 
 describe('Mix schema', () => {
@@ -46,5 +54,37 @@ describe('Mix schema', () => {
     expect(back?.scale).toBe('pentatonic');
     expect(validateMix(null)).toBeNull();
     expect(validateMix({ name: 'no layers' })).toBeNull();
+  });
+
+  it('every effect type validates with its defaults and unknown effects are dropped', () => {
+    const layer = createLayer('keys', {
+      effects: EFFECT_TYPES.map((t) => ({
+        type: t,
+        enabled: true,
+        params: { ...EFFECT_DEFAULTS[t] },
+      })),
+    });
+    const mix = validateMix(createMix({ layers: [layer] }))!;
+    expect(mix.layers[0]!.effects.map((e) => e.type)).toEqual(EFFECT_TYPES);
+    const bad = validateMix(
+      createMix({
+        layers: [
+          createLayer('beat', {
+            effects: [{ type: 'flanger' as never, enabled: true, params: {} }],
+          }),
+        ],
+      }),
+    )!;
+    expect(bad.layers[0]!.effects).toEqual([]);
+    // the new instrument layers carry their musical params
+    expect(LAYER_DEFAULTS.keys.progression).toBe('lofi');
+    expect(LAYER_DEFAULTS.beat.pattern).toBe('lofi');
+    expect(DEFAULT_MIXES.find((m) => m.id === 'lofi-study')?.layers.map((l) => l.type)).toEqual([
+      'keys',
+      'beat',
+      'bass',
+      'vinyl',
+      'rain',
+    ]);
   });
 });
