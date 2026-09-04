@@ -8,6 +8,7 @@ const Shell = lazy(() => import('@/components/layout/Shell'));
 const Gateway = lazy(() => import('@/pages/Gateway'));
 const Landing = lazy(() => import('@/pages/Landing'));
 const BillingReturn = lazy(() => import('@/pages/BillingReturn'));
+const Plans = lazy(() => import('@/pages/Plans'));
 const HomeGarden = lazy(() => import('@/pages/HomeGarden'));
 const CruxBuilder = lazy(() => import('@/pages/CruxBuilder'));
 const MoodBuilder = lazy(() => import('@/pages/MoodBuilder'));
@@ -32,6 +33,14 @@ const router = createBrowserRouter(
     {
       path: '/',
       element: <ErrorBoundary>{publicSite ? <Landing /> : <Gateway />}</ErrorBoundary>,
+    },
+    {
+      path: '/plans',
+      element: (
+        <ErrorBoundary>
+          <Plans />
+        </ErrorBoundary>
+      ),
     },
     {
       path: '/billing/:outcome',
