@@ -66,6 +66,7 @@ const template: TemplateDefinition = {
       ],
     },
     actions: [
+      { label: 'Add photos', icon: '📷', do: { type: 'add-photos', collection: 'Posts' } },
       {
         label: 'Write a caption',
         icon: '🪄',

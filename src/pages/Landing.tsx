@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { publicApi } from '@/api';
 import type { ExploreCrux, ExploreTag } from '@/api/public';
 import { Button } from '@/components/ui';
-import MoodDock from '@/components/mood/MoodDock';
+import MoodBar from '@/components/mood/MoodBar';
 import { useAudioStore } from '@/stores/audioStore';
 import { useShallow } from 'zustand/react/shallow';
 import { MOOD_PRESETS } from '@/lib/moods/presets';
@@ -48,7 +48,6 @@ export default function Landing() {
         <Trust />
       </main>
       <SiteFooter />
-      <MoodDock />
     </div>
   );
 }
@@ -60,6 +59,7 @@ function SiteHeader() {
         {APP_NAME}
       </Link>
       <nav className="flex items-center gap-4 text-[11px] font-mono text-text-muted">
+        <MoodBar />
         <Link to="/explore" className="hover:text-text">
           Explore
         </Link>
@@ -349,8 +349,8 @@ function MoodSection() {
             ))}
           </ul>
           <div className="mt-2 text-[11px] text-text-muted">
-            Generated live in your browser — nothing streams. The player follows you around the
-            site.
+            Generated live in your browser — nothing streams. The player sits in the top bar and
+            follows you around the site.
           </div>
         </div>
       </div>

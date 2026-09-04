@@ -48,6 +48,27 @@ test.describe('starter cruxes', () => {
       });
       await expect(page.getByRole('button', { name: 'Add images' })).toBeVisible();
       await expect(page.getByText(/set up your feed/)).toHaveCount(1);
+      // Add photos → one post per image, pointing at public/images
+      const png = Buffer.from(
+        'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==',
+        'base64',
+      );
+      await page
+        .getByTestId('add-photos-input')
+        .first()
+        .setInputFiles([
+          { name: 'Harbor Sunset.png', mimeType: 'image/png', buffer: png },
+          { name: 'wet-leaves.png', mimeType: 'image/png', buffer: png },
+        ]);
+      const photosDialog = page.getByRole('alertdialog');
+      await expect(photosDialog).toContainText('Added 2 posts', { timeout: 30_000 });
+      await photosDialog
+        .getByRole('button', { name: /ok|close/i })
+        .first()
+        .click();
+      const feedEditor = page.locator('.monaco-editor').first();
+      await expect(feedEditor).toBeVisible({ timeout: 30_000 });
+      await expect(feedEditor).toContainText('image: /images/wet-leaves.png');
       await page.screenshot({ path: 'e2e/.results/starters-1-feed-builder.png' });
 
       // ── Media ──

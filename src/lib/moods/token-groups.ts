@@ -32,6 +32,24 @@ const LAYOUT_KEYS = new Set([
   'radius',
   'radiusSm',
   'radiusLg',
+  'buttonRadius',
+  'inputRadius',
+  'cardRadius',
+  'chipRadius',
+  'modalRadius',
+  'tooltipRadius',
+  'dropdownRadius',
+  'avatarRadius',
+  'bubbleRadius',
+  'meterRadius',
+  'meterHeight',
+  'toolbarHeight',
+  'fileTreeRowHeight',
+  'fileTreeIndent',
+  'toggleWidth',
+  'toggleHeight',
+  'scrollbarWidth',
+  'cardHoverLift',
   'paneGap',
   'paneRadius',
   'paneBorderWidth',
@@ -53,6 +71,7 @@ const TYPE_KEYS = new Set([
   'letterSpacingMono',
 ]);
 const HEADER_KEYS = new Set([
+  'paneHeaderHoverBrightness',
   'paneHeaderLabelFont',
   'paneHeaderLabelSize',
   'paneHeaderLabelWeight',
@@ -67,8 +86,14 @@ const ELEVATION_KEYS = new Set([
   'elevationCard',
   'elevationCardHover',
   'elevationModal',
+  'elevationDropdown',
+  'elevationTooltip',
   'scrim',
+  'glassBlur',
   'motionScale',
+  'hoverBrightness',
+  'activeBrightness',
+  'disabledOpacity',
 ]);
 const EDITOR_KEYS = new Set([
   'editorBackground',
@@ -213,6 +238,11 @@ export const TOKEN_GROUPS: TokenGroup[] = [
       'tooltip',
       'avatar',
       'spinner',
+      'moodBar',
+      'focusRing',
+      'button',
+      'meter',
+      'onError',
       'selection',
       'scrollbar',
       'drag',
@@ -287,6 +317,8 @@ export function tokenKind(key: string): TokenKind {
   if (/TextureSize$|TextureBlend$/.test(key)) return 'text';
   if (/TextureOpacity$|^grainOpacity$/.test(key)) return 'number';
   if (TEXT_KEYS.test(key)) return 'text';
+  if (/Shadow$|^elevation/.test(key)) return 'text';
+  if (/Brightness$|^disabledOpacity$/.test(key)) return 'number';
   if (
     /^(density|fontScale|motionScale|lineHeightBody|fontWeight|bgImageDim|bgImageScale)/.test(key)
   )

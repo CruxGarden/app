@@ -1,0 +1,182 @@
+import { useCallback, useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { cn } from '@/lib/cn';
+import { useAudioStore } from '@/stores/audioStore';
+import { useUIStore } from '@/stores/uiStore';
+import { getDockState, setDockState } from '@/services/resonance';
+import { getThemePreview, onThemePreviewChange } from '@/lib/moods/active';
+import { useShallow } from 'zustand/react/shallow';
+
+/**
+ * The Mood Dock, now a control in the top bar: the active soundscape's
+ * transport and volume, what's playing, a way into the Mood modal and the
+ * Mixer. Collapsed it is one small button with live level bars; expanded it
+ * shows the mix name, play/pause, volume and the mixer. The collapsed state
+ * persists. Every part is a Mood token (moodBar*), so a theme can restyle it.
+ */
+
+function LevelBars({ level, playing }: { level: number; playing: boolean }) {
+  const bars = [0.35, 0.7, 1, 0.55];
+  return (
+    <span className="flex items-end gap-[2px] h-3.5 w-3.5" aria-hidden>
+      {bars.map((k, i) => (
+        <span
+          key={i}
+          className="w-[2.5px] rounded-sm bg-mood-bar-accent transition-[height] duration-100"
+          style={{
+            height: `${Math.max(2, (playing ? Math.min(1, Math.sqrt(level) * 1.6) : 0.15) * k * 14)}px`,
+          }}
+        />
+      ))}
+    </span>
+  );
+}
+
+export default function MoodBar({ className }: { className?: string }) {
+  const navigate = useNavigate();
+  const { mixes, activeMixId, playing, volume, level, init, toggle, next, setVolume } =
+    useAudioStore(
+      useShallow((s) => ({
+        mixes: s.mixes,
+        activeMixId: s.activeMixId,
+        playing: s.playing,
+        volume: s.volume,
+        level: s.level,
+        init: s.init,
+        toggle: s.toggle,
+        next: s.next,
+        setVolume: s.setVolume,
+      })),
+    );
+  const mix = mixes.find((m) => m.id === activeMixId);
+  const [collapsed, setCollapsed] = useState(() => getDockState()?.collapsed ?? false);
+  const [aiPreview, setAiPreview] = useState(() => Object.keys(getThemePreview()).length);
+  useEffect(
+    () => onThemePreviewChange(() => setAiPreview(Object.keys(getThemePreview()).length)),
+    [],
+  );
+  useEffect(() => init(), [init]);
+
+  const setCollapsedPersist = useCallback((c: boolean) => {
+    setCollapsed(c);
+    const prev = getDockState() ?? { x: -1, y: -1, collapsed: c };
+    setDockState({ ...prev, collapsed: c });
+  }, []);
+
+  const PlayIcon = playing ? (
+    <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+      <rect x="6" y="4" width="4" height="16" />
+      <rect x="14" y="4" width="4" height="16" />
+    </svg>
+  ) : (
+    <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+      <path d="M6 4l14 8-14 8z" />
+    </svg>
+  );
+
+  return (
+    <div
+      role="region"
+      aria-label="Mood Dock"
+      className={cn(
+        'flex items-center gap-1 h-7 pl-1 pr-1 select-none',
+        'bg-mood-bar border border-mood-bar-border text-mood-bar-text rounded-[var(--mood-bar-radius)] shadow-mood-bar',
+        className,
+      )}
+    >
+      {/* Level button: expand when collapsed, open Mood when expanded */}
+      <button
+        type="button"
+        onClick={() =>
+          collapsed ? setCollapsedPersist(false) : useUIStore.getState().toggleMoodPanel()
+        }
+        title={collapsed ? (mix ? `${mix.name}${playing ? ' — playing' : ''}` : 'Mood') : 'Mood'}
+        aria-label={collapsed ? 'Expand Mood Dock' : 'Open Mood'}
+        className="relative w-5 h-5 rounded-[var(--mood-bar-radius)] flex items-center justify-center cursor-pointer shrink-0 hover:bg-mood-bar-hover"
+      >
+        <LevelBars level={level} playing={playing} />
+        {aiPreview > 0 && (
+          <span
+            aria-label={`AI is previewing ${aiPreview} theme tokens`}
+            title={`Theme preview: ${aiPreview} tokens`}
+            className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-warning border border-mood-bar"
+          />
+        )}
+      </button>
+
+      {!collapsed && (
+        <button
+          type="button"
+          onClick={() => void next()}
+          title="Next mix"
+          className="min-w-0 max-w-[9rem] text-left cursor-pointer px-1 hover:text-mood-bar-accent"
+        >
+          <span className="block text-[11px] font-body truncate leading-tight">
+            {mix?.name ?? 'No mix'}
+          </span>
+        </button>
+      )}
+
+      <button
+        type="button"
+        onClick={() => void toggle()}
+        aria-label={playing ? 'Pause soundscape' : 'Play soundscape'}
+        className="w-5 h-5 rounded-[var(--mood-bar-radius)] bg-mood-bar-accent text-mood-bar-accent-text flex items-center justify-center cursor-pointer shrink-0 hover:brightness-110"
+      >
+        {PlayIcon}
+      </button>
+
+      {!collapsed && (
+        <>
+          <input
+            type="range"
+            aria-label="Soundscape volume"
+            min={0}
+            max={1}
+            step={0.01}
+            value={volume}
+            onChange={(e) => setVolume(parseFloat(e.target.value))}
+            className="w-14 accent-mood-bar-accent cursor-pointer"
+          />
+          <button
+            type="button"
+            onClick={() => navigate('/mood?tab=resonance')}
+            title="Mixer"
+            aria-label="Open the mixer"
+            className="w-5 h-5 rounded-[var(--mood-bar-radius)] text-mood-bar-text-muted hover:text-mood-bar-accent flex items-center justify-center cursor-pointer shrink-0"
+          >
+            <svg
+              width="12"
+              height="12"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              aria-hidden
+            >
+              <line x1="4" y1="21" x2="4" y2="14" />
+              <line x1="4" y1="10" x2="4" y2="3" />
+              <line x1="12" y1="21" x2="12" y2="12" />
+              <line x1="12" y1="8" x2="12" y2="3" />
+              <line x1="20" y1="21" x2="20" y2="16" />
+              <line x1="20" y1="12" x2="20" y2="3" />
+              <line x1="1" y1="14" x2="7" y2="14" />
+              <line x1="9" y1="8" x2="15" y2="8" />
+              <line x1="17" y1="16" x2="23" y2="16" />
+            </svg>
+          </button>
+          <button
+            type="button"
+            onClick={() => setCollapsedPersist(true)}
+            aria-label="Collapse Mood Dock"
+            title="Collapse"
+            className="w-4 h-5 text-mood-bar-text-muted hover:text-mood-bar-text flex items-center justify-center cursor-pointer shrink-0 text-xs"
+          >
+            ‹
+          </button>
+        </>
+      )}
+    </div>
+  );
+}
