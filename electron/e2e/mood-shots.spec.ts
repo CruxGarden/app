@@ -21,6 +21,7 @@ const IDS = [
   'plain-form',
   'catppuccin-mocha',
   'geocities',
+  'graphite',
 ];
 
 test.describe('bundled mood screenshots', () => {
@@ -69,6 +70,11 @@ test.describe('bundled mood screenshots', () => {
         await expect.poll(mixName).not.toBe(before.mix);
         await page.keyboard.press('Escape');
         await expect(page.getByTestId('bundled-moods')).toHaveCount(0);
+        if (id === 'graphite') {
+          await page.getByRole('button', { name: 'Toggle metadata' }).click();
+          await page.getByRole('button', { name: 'Toggle artifacts' }).click();
+          await expect(page.locator('.pane-artifacts').getByRole('tree')).toBeVisible();
+        }
         await page.mouse.move(0, 0);
         // The palette transition is 400ms (globals.css); let it finish before the shot
         await page.waitForTimeout(500);

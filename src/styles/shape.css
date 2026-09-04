@@ -60,6 +60,19 @@
   border: 1px solid var(--pane-header-border-color);
 }
 
+/* ── Concave corners keep their frame ──
+   The frame is a ring: the window paints the border colour, the header and body
+   paint --panel on top, inset by the frame width, with a corner radius reduced
+   by that width so the ring is even. That subtraction is right for convex
+   corners (round, bevel) and wrong for concave ones: a notch or scoop cut of
+   radius r on the outside needs a cut of r + w on the inside, or the ring has
+   nothing to paint in the corner and the frame stops short on every side. */
+@container style(--pane-corner-shape: notch) or style(--pane-corner-shape: scoop) {
+  .mosaic.crux-mosaic-theme .mosaic-tile .mosaic-window {
+    --pane-inner-radius: calc(var(--pane-radius) + var(--pane-frame-width));
+  }
+}
+
 /* ── paneBorderStyle: anything but solid is a real border on the window ── */
 @container not style(--pane-border-style: solid) {
   .mosaic.crux-mosaic-theme .mosaic-tile .mosaic-window {
