@@ -75,7 +75,7 @@ const template: TemplateDefinition = {
     },
     actions: [
       {
-        label: 'Write a post with AI',
+        label: 'Write a post',
         icon: '🪄',
         do: { type: 'ai', prompt: 'Write a new post about ' },
       },

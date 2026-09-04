@@ -67,7 +67,7 @@ const template: TemplateDefinition = {
     },
     actions: [
       {
-        label: 'Caption with AI',
+        label: 'Write a caption',
         icon: '🪄',
         do: { type: 'ai', prompt: 'Write a caption for my latest post: ' },
       },

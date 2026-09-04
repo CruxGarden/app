@@ -100,4 +100,58 @@ export const DEFAULT_MIXES: Mix[] = [
     ],
     master: { reverbDecay: 1, reverbWet: 0, volume: 0 },
   }),
+  createMix({
+    id: 'lofi-study',
+    name: 'Lofi Study',
+    root: 'F',
+    scale: 'major',
+    tempo: 72,
+    seed: 19,
+    layers: [
+      createLayer('keys', {
+        id: 'lofi-keys',
+        gain: -14,
+        params: {
+          instrument: 'rhodes',
+          progression: 'lofi',
+          voicing: 'seventh',
+          rhythm: 'half',
+          octave: 4,
+          humanize: 0.5,
+          wobble: 0.35,
+          tone: 0.5,
+        },
+        effects: [{ type: 'tape', enabled: true, params: { wobble: 0.35, warmth: 0.5 } }],
+      }),
+      createLayer('beat', {
+        id: 'lofi-beat',
+        gain: -16,
+        params: {
+          pattern: 'lofi',
+          density: 0.7,
+          swing: 0.6,
+          tone: 0.45,
+          hats: 0.55,
+          humanize: 0.5,
+        },
+        effects: [{ type: 'bitcrusher', enabled: true, params: { bits: 8, wet: 0.25 } }],
+      }),
+      createLayer('bass', {
+        id: 'lofi-bass',
+        gain: -16,
+        params: { pattern: 'root', progression: 'lofi', octave: 2, tone: 0.35, glide: 0.25 },
+      }),
+      createLayer('vinyl', {
+        id: 'lofi-vinyl',
+        gain: -22,
+        params: { crackle: 0.5, dust: 0.4, hum: 0.1 },
+      }),
+      createLayer('rain', {
+        id: 'lofi-rain',
+        gain: -30,
+        params: { intensity: 0.25, brightness: 0.3, drops: 0.2 },
+      }),
+    ],
+    master: { reverbDecay: 2.5, reverbWet: 0.18, volume: 0 },
+  }),
 ];

@@ -34,7 +34,7 @@ describe('resonance tools', () => {
     const out = (await runThemeTool('get_resonance', {})) as string;
     expect(out).toMatch(/never enabled/);
     expect(out).toMatch(/Dusk in the Garden \(dusk-in-the-garden\)/);
-    expect(out).toMatch(/Rain\[rain -20dB\]/);
+    expect(out).toMatch(/Rain\[rain -20dB/);
     expect(out).toMatch(/cues: .*toolDone=tick/);
   });
 

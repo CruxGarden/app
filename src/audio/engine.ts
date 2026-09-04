@@ -26,14 +26,13 @@ class MixRuntime {
   }
 
   private wire(live: LiveLayer) {
-    const chain: Tone.ToneAudioNode[] = [
-      ...live.effects.map((e) => e.node),
-      live.panner,
-      live.gain,
-      this.input,
-    ];
     live.runtime.output.disconnect();
-    live.runtime.output.chain(...chain);
+    let prev: Tone.ToneAudioNode = live.runtime.output;
+    for (const e of live.effects) {
+      prev.connect(e.input);
+      prev = e.output;
+    }
+    prev.chain(live.panner, live.gain, this.input);
   }
 
   private addLayer(def: Layer) {

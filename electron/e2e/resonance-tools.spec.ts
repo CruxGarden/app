@@ -1,7 +1,14 @@
 import { test, expect } from '@playwright/test';
 import { launchApp } from './launch';
 
-type AudioState = { playing: boolean; mixName: string | null; volume: number; cuesPlayed: number };
+type AudioState = {
+  playing: boolean;
+  mixName: string | null;
+  volume: number;
+  cuesPlayed: number;
+  layerTypes: string[];
+  mixCount: number;
+};
 
 /** Phase 5: the AI steers the soundscape — volume and mix switch from scripted turns. */
 test.describe('resonance tools (mock AI)', () => {
@@ -38,7 +45,17 @@ test.describe('resonance tools (mock AI)', () => {
       await input.press('Enter');
       await expect(page.getByText('Done — adjusted the room.')).toHaveCount(2, { timeout: 30_000 });
       await expect.poll(async () => (await state()).mixName).toBe('Night Rain');
-      await expect(dock.getByText('Night Rain')).toBeVisible();
+
+      // "lofi": the model composes a brand-new mix (keys + beat + bass + vinyl) and switches to it
+      const before = (await state()).mixCount;
+      await input.fill('give me some lofi study beats');
+      await input.press('Enter');
+      await expect(page.getByText('Done — adjusted the room.')).toHaveCount(3, { timeout: 30_000 });
+      await expect.poll(async () => (await state()).mixName).toBe('Lofi Study Beats');
+      expect((await state()).layerTypes).toEqual(['keys', 'beat', 'bass', 'vinyl']);
+      expect((await state()).mixCount).toBe(before + 1);
+      await expect.poll(async () => (await state()).playing).toBe(true);
+      await expect(dock.getByText('Lofi Study Beats')).toBeVisible();
       await page.screenshot({ path: 'e2e/.results/resonance-tools-1.png' });
     } finally {
       await app.close();

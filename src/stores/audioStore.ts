@@ -225,6 +225,8 @@ if (typeof window !== 'undefined') {
         activeMixId: s.activeMixId,
         mixName: s.mixes.find((m) => m.id === s.activeMixId)?.name ?? null,
         layerCount: s.mixes.find((m) => m.id === s.activeMixId)?.layers.length ?? 0,
+        layerTypes: s.mixes.find((m) => m.id === s.activeMixId)?.layers.map((l) => l.type) ?? [],
+        mixCount: s.mixes.length,
         volume: s.volume,
         contextState: s.contextState,
         optIn: s.optIn,

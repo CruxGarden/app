@@ -79,7 +79,7 @@ const template: TemplateDefinition = {
     actions: [
       { label: 'Add media', icon: '🎬', do: { type: 'add-media', collection: 'Media' } },
       {
-        label: 'Describe with AI',
+        label: 'Write a description',
         icon: '🪄',
         do: { type: 'ai', prompt: 'Write a description for my latest item: ' },
       },

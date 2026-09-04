@@ -129,6 +129,31 @@ const BACKGROUND_TOOL: ToolDefinition = {
 };
 THEME_TOOL_DEFINITIONS.push(BACKGROUND_TOOL);
 
+const LAYER_TYPE_NAMES = [
+  'music',
+  'rain',
+  'wind',
+  'noise',
+  'drone',
+  'pad',
+  'melody',
+  'sample',
+  'beat',
+  'keys',
+  'bass',
+  'vinyl',
+];
+const EFFECT_TYPE_NAMES = [
+  'filter',
+  'delay',
+  'reverb',
+  'chorus',
+  'tremolo',
+  'tape',
+  'bitcrusher',
+  'compressor',
+];
+
 const RESONANCE_TOOLS: ToolDefinition[] = [
   {
     name: 'get_resonance',
@@ -140,11 +165,25 @@ const RESONANCE_TOOLS: ToolDefinition[] = [
   {
     name: 'set_resonance',
     description:
-      "Change the soundscape. Switching mix, volume, ducking and cues are safe signals (they don't rewrite the user's mixes); " +
-      'layer edits change the active mix and are saved, so only do those when asked. ' +
-      'Fields (any subset): mix (id or name to switch to), playing (true/false), volume (0..1), duck (true while you work, false after), ' +
-      'cue (tick|chime|bloom|thud — a one-shot sound), layer {name, gain?, muted?, params?} (edit a layer of the active mix), ' +
-      'addLayer {type, name?, gain?, params?} (types: music, rain, wind, noise, drone, pad, melody, sample), removeLayer (layer name).',
+      "Change or compose the soundscape. Safe signals (never rewrite the user's mixes): mix (switch by id/name), playing, volume (0..1), duck, cue. " +
+      'Composing: createMix {name, root?, scale?, tempo?, master?, layers:[{type, name?, gain?, pan?, params?, effects?}], play?} builds a NEW mix, saves it and switches to it — ' +
+      'this is how you answer "make me lofi study beats" or "something like a rainy jazz bar": a new mix, not edits to an existing one. ' +
+      'updateMix {name?, root?, scale?, tempo?, master?} and layer / addLayer / removeLayer edit the ACTIVE mix and are saved — only when the user asks for that. ' +
+      'Musical layers follow the mix key (root + scale) and tempo; keys and bass share a chord progression. ' +
+      'LAYER TYPES and params — ' +
+      'beat {pattern: lofi|boombap|half|four|brush, density 0..1, swing 0..1 (0.5 straight), hats 0..1, tone 0..1, humanize 0..1}; ' +
+      'keys {instrument: rhodes|piano|organ|bells|guitar, progression: lofi(ii-V-I)|pop(I-vi-IV-V)|axis(I-V-vi-IV)|minor(i-VII-VI-VII)|gospel|jazz|wistful|static, voicing: triad|seventh, rhythm: whole|half|stabs|arp, octave 2..5, humanize, wobble, tone}; ' +
+      'bass {pattern: root|pulse|walk, progression (match keys), octave 1..3, tone, glide}; ' +
+      'vinyl {crackle, dust, hum}; ' +
+      'pad {waveform, octave 2..5, attack s, release s, shimmer, changeEvery bars}; drone {waveform, chord: root|root5|root5oct|minor7, octave 0..4, cutoff, movement}; ' +
+      'melody {instrument: sine|triangle|sawtooth|square, octave 3..7, density, humanize, echo}; rain {intensity, brightness, drops}; wind {strength, gust, height}; noise {color: white|pink|brown, cutoff, drift}; ' +
+      'music/sample {fingerprint (a workspace audio file), loop, rate}. ' +
+      'EFFECTS per layer: filter {kind: lowpass|highpass|bandpass, frequency Hz, q}, delay {time s, feedback, wet}, reverb {decay s, wet}, chorus {rate, depth, wet}, tremolo {rate, depth}, tape {wobble, warmth} (lofi warmth), bitcrusher {bits 2..12, wet}, compressor {threshold dB, ratio}. ' +
+      'Gains are dB (-60..6; beds around -20, leads around -12). master {reverbDecay s, reverbWet 0..1, volume dB}. ' +
+      'RECIPES — lofi study: tempo 70-80, major or dorian, keys rhodes/seventh/half + tape, beat lofi swing 0.6 + bitcrusher 8 bits, bass root, vinyl, faint rain, master reverb short. ' +
+      'rainy jazz bar: tempo 60, minor, keys piano/jazz/stabs, bass walk, beat brush low, rain, reverb long. ' +
+      'deep focus: no beat; drone + pad (changeEvery 12) + brown noise + slow melody sparse. ' +
+      'space ambient: drone fatsawtooth octave 1 + pad lydian + wind height high + long reverb.',
     input_schema: {
       type: 'object',
       properties: {
@@ -153,27 +192,111 @@ const RESONANCE_TOOLS: ToolDefinition[] = [
         volume: { type: 'number', description: '0..1' },
         duck: { type: 'boolean', description: 'Dip the mix while you work; release with false.' },
         cue: { type: 'string', enum: ['tick', 'chime', 'bloom', 'thud'] },
+        createMix: {
+          type: 'object',
+          description: 'Compose a new mix (saved, then made active).',
+          properties: {
+            name: { type: 'string' },
+            root: { type: 'string', description: 'C, C#, D, Eb, E, F, F#, G, Ab, A, Bb, B' },
+            scale: {
+              type: 'string',
+              enum: ['major', 'minor', 'dorian', 'lydian', 'pentatonic', 'minorPentatonic'],
+            },
+            tempo: { type: 'number', description: 'BPM 20..200' },
+            master: {
+              type: 'object',
+              properties: {
+                reverbDecay: { type: 'number' },
+                reverbWet: { type: 'number' },
+                volume: { type: 'number' },
+              },
+            },
+            layers: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  type: { type: 'string', enum: LAYER_TYPE_NAMES },
+                  name: { type: 'string' },
+                  gain: { type: 'number' },
+                  pan: { type: 'number' },
+                  params: { type: 'object', additionalProperties: true },
+                  effects: {
+                    type: 'array',
+                    items: {
+                      type: 'object',
+                      properties: {
+                        type: { type: 'string', enum: EFFECT_TYPE_NAMES },
+                        params: { type: 'object', additionalProperties: true },
+                      },
+                      required: ['type'],
+                    },
+                  },
+                },
+                required: ['type'],
+              },
+            },
+            play: {
+              type: 'boolean',
+              description: 'Start playing (only works once the user has enabled sound).',
+            },
+          },
+          required: ['name', 'layers'],
+        },
+        updateMix: {
+          type: 'object',
+          description: "Change the active mix's key, tempo, name or master bus (saved).",
+          properties: {
+            name: { type: 'string' },
+            root: { type: 'string' },
+            scale: { type: 'string' },
+            tempo: { type: 'number' },
+            master: { type: 'object', additionalProperties: true },
+          },
+        },
         layer: {
           type: 'object',
           description: 'Edit a layer of the active mix by name.',
           properties: {
             name: { type: 'string' },
             gain: { type: 'number', description: 'dB, -60..6' },
+            pan: { type: 'number' },
             muted: { type: 'boolean' },
             params: { type: 'object', additionalProperties: true },
+            effects: {
+              type: 'array',
+              description: "Replaces the layer's effects.",
+              items: {
+                type: 'object',
+                properties: {
+                  type: { type: 'string', enum: EFFECT_TYPE_NAMES },
+                  params: { type: 'object', additionalProperties: true },
+                },
+                required: ['type'],
+              },
+            },
           },
           required: ['name'],
         },
         addLayer: {
           type: 'object',
           properties: {
-            type: {
-              type: 'string',
-              enum: ['music', 'rain', 'wind', 'noise', 'drone', 'pad', 'melody', 'sample'],
-            },
+            type: { type: 'string', enum: LAYER_TYPE_NAMES },
             name: { type: 'string' },
             gain: { type: 'number' },
+            pan: { type: 'number' },
             params: { type: 'object', additionalProperties: true },
+            effects: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  type: { type: 'string', enum: EFFECT_TYPE_NAMES },
+                  params: { type: 'object', additionalProperties: true },
+                },
+                required: ['type'],
+              },
+            },
           },
           required: ['type'],
         },
@@ -206,7 +329,14 @@ async function toolGetResonance(): Promise<string> {
       (m) =>
         `- ${m.name} (${m.id}) — ${m.root} ${m.scale}, ${m.tempo} bpm: ${
           m.layers
-            .map((l) => `${l.name}[${l.type}${l.muted ? ', muted' : ''} ${l.gain}dB]`)
+            .map(
+              (l) =>
+                `${l.name}[${l.type}${l.muted ? ', muted' : ''} ${l.gain}dB${
+                  m.id === st.activeMixId
+                    ? ` ${JSON.stringify(l.params)}${l.effects.length ? ' fx:' + l.effects.map((e) => e.type).join('+') : ''}`
+                    : ''
+                }]`,
+            )
             .join(', ') || 'no layers'
         }`,
     ),
@@ -227,7 +357,9 @@ async function toolGetResonance(): Promise<string> {
 
 async function toolSetResonance(input: Record<string, unknown>): Promise<string> {
   const { useAudioStore } = await import('@/stores/audioStore');
-  const { createLayer, LAYER_TYPES } = await import('@/audio/schema');
+  const { createLayer, LAYER_TYPES, validateMix, createMix, EFFECT_TYPES } =
+    await import('@/audio/schema');
+  const { EFFECT_DEFAULTS } = await import('@/audio/params-meta');
   const s = useAudioStore.getState();
   if (!s.mixes.length) s.init();
   const done: string[] = [];
@@ -271,6 +403,91 @@ async function toolSetResonance(input: Record<string, unknown>): Promise<string>
   }
 
   const active = () => st().mixes.find((m) => m.id === st().activeMixId);
+
+  const normEffects = (raw: unknown) =>
+    Array.isArray(raw)
+      ? raw
+          .filter(
+            (e) =>
+              e &&
+              typeof e === 'object' &&
+              (EFFECT_TYPES as string[]).includes(String((e as { type?: unknown }).type)),
+          )
+          .map((e) => {
+            const ef = e as { type: string; params?: Record<string, unknown>; enabled?: boolean };
+            return {
+              type: ef.type as (typeof EFFECT_TYPES)[number],
+              enabled: ef.enabled !== false,
+              params: {
+                ...EFFECT_DEFAULTS[ef.type as (typeof EFFECT_TYPES)[number]],
+                ...(ef.params ?? {}),
+              } as Record<string, number | string>,
+            };
+          })
+      : undefined;
+
+  const create = input.createMix as Record<string, unknown> | undefined;
+  if (create && typeof create.name === 'string' && Array.isArray(create.layers)) {
+    const layers = (create.layers as Record<string, unknown>[])
+      .filter((l) => l && (LAYER_TYPES as string[]).includes(String(l.type)))
+      .map((l) =>
+        createLayer(l.type as (typeof LAYER_TYPES)[number], {
+          ...(typeof l.name === 'string' ? { name: l.name } : {}),
+          ...(typeof l.gain === 'number' ? { gain: l.gain } : {}),
+          ...(typeof l.pan === 'number' ? { pan: l.pan } : {}),
+          ...(l.params && typeof l.params === 'object'
+            ? { params: l.params as Record<string, number | string | boolean> }
+            : {}),
+          ...(normEffects(l.effects) ? { effects: normEffects(l.effects) } : {}),
+        }),
+      );
+    const draft = createMix({
+      name: create.name,
+      ...(typeof create.root === 'string' ? { root: create.root } : {}),
+      ...(typeof create.scale === 'string' ? { scale: create.scale } : {}),
+      ...(typeof create.tempo === 'number' ? { tempo: create.tempo } : {}),
+      layers,
+    });
+    if (create.master && typeof create.master === 'object')
+      draft.master = { ...draft.master, ...(create.master as Record<string, number>) };
+    const mix = validateMix(draft);
+    if (!mix || !mix.layers.length) warn.push('createMix: no valid layers');
+    else {
+      await st().upsertMix(mix);
+      await st().selectMix(mix.id);
+      done.push(
+        `composed "${mix.name}" (${mix.root} ${mix.scale}, ${mix.tempo} bpm; ${mix.layers.map((l) => l.type).join(', ')}) and made it active`,
+      );
+      if (create.play === true) {
+        if (st().optIn) {
+          await st().play();
+          done.push('playing');
+        } else
+          warn.push('not started: the user must press play in the Mood Dock once to enable sound');
+      }
+    }
+  }
+
+  const upd = input.updateMix as Record<string, unknown> | undefined;
+  if (upd && typeof upd === 'object') {
+    const mix = active();
+    if (!mix) warn.push('updateMix: no active mix');
+    else {
+      const next = validateMix({
+        ...mix,
+        ...(typeof upd.name === 'string' ? { name: upd.name } : {}),
+        ...(typeof upd.root === 'string' ? { root: upd.root } : {}),
+        ...(typeof upd.scale === 'string' ? { scale: upd.scale } : {}),
+        ...(typeof upd.tempo === 'number' ? { tempo: upd.tempo } : {}),
+        master: { ...mix.master, ...((upd.master as Record<string, number>) ?? {}) },
+      });
+      if (next) {
+        await st().upsertMix(next);
+        done.push(`updated "${next.name}" (${next.root} ${next.scale}, ${next.tempo} bpm; saved)`);
+      }
+    }
+  }
+
   const layerEdit = input.layer as Record<string, unknown> | undefined;
   if (layerEdit && typeof layerEdit.name === 'string') {
     const mix = active();
@@ -286,7 +503,10 @@ async function toolSetResonance(input: Record<string, unknown>): Promise<string>
             ? Math.min(6, Math.max(-60, layerEdit.gain))
             : target.gain,
         muted: typeof layerEdit.muted === 'boolean' ? layerEdit.muted : target.muted,
+        pan:
+          typeof layerEdit.pan === 'number' ? Math.min(1, Math.max(-1, layerEdit.pan)) : target.pan,
         params: { ...target.params },
+        effects: normEffects(layerEdit.effects) ?? target.effects,
       };
       for (const [k, v] of Object.entries((layerEdit.params as Record<string, unknown>) ?? {})) {
         if (
@@ -312,9 +532,11 @@ async function toolSetResonance(input: Record<string, unknown>): Promise<string>
       const layer = createLayer(add.type as (typeof LAYER_TYPES)[number], {
         ...(typeof add.name === 'string' ? { name: add.name } : {}),
         ...(typeof add.gain === 'number' ? { gain: add.gain } : {}),
+        ...(typeof add.pan === 'number' ? { pan: add.pan } : {}),
         ...(add.params && typeof add.params === 'object'
           ? { params: add.params as Record<string, number | string | boolean> }
           : {}),
+        ...(normEffects(add.effects) ? { effects: normEffects(add.effects) } : {}),
       });
       await st().upsertMix({ ...mix, layers: [...mix.layers, layer] });
       done.push(`added ${layer.type} layer "${layer.name}" to "${mix.name}" (saved)`);
@@ -333,7 +555,7 @@ async function toolSetResonance(input: Record<string, unknown>): Promise<string>
   }
 
   if (!done.length && !warn.length)
-    return 'set_resonance: nothing to do — give mix, volume, playing, duck, cue, layer, addLayer or removeLayer.';
+    return 'set_resonance: nothing to do — give mix, volume, playing, duck, cue, createMix, updateMix, layer, addLayer or removeLayer.';
   return [
     done.length ? `Done: ${done.join('; ')}.` : '',
     warn.length ? `Note: ${warn.join('; ')}.` : '',
@@ -529,6 +751,7 @@ export const THEME_TOOL_GUIDANCE =
   'Pane border and body tokens accept CSS gradients: set e.g. paneWorkshopBorder to "linear-gradient(135deg, #00f0ff, #7cff00)" (with paneBorderWidth "3px") to show that pane is being worked on, or a solid color for a state — green done, red failed — then reset. ' +
   'Use mode "persist" only when the user asks for a lasting change to how the workspace looks. ' +
   'Never persist a change the user did not ask for. ' +
-  'The soundscape is yours to signal with too: get_resonance / set_resonance — switch the mix, set volume, duck while you work (release after), play a cue. ' +
-  "Layer edits rewrite the user's mix and are saved, so only make them when asked. " +
+  'The soundscape is yours too: get_resonance / set_resonance — switch the mix, set volume, duck while you work (release after), play a cue. ' +
+  'When the user asks for music or a soundscape ("lofi study beats", "something like a rainy jazz bar", "deep focus"), COMPOSE it: set_resonance createMix with keys/bass/beat/vinyl or drone/pad/melody/rain layers in a fitting key and tempo (the tool description carries the layer catalog and recipes), then offer to tweak. ' +
+  "Edits to an existing mix (layer, updateMix) rewrite the user's mix and are saved, so only make them when asked. " +
   'set_background changes what sits behind the panes: generate an image from a prompt, use a workspace image, or pick bloom/drift/flow/blank — when the user asks for a backdrop, or when a theme you are building wants one.\n\n';
