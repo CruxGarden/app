@@ -12,6 +12,7 @@
 
 import type { Crux, Artifact } from '@/api/types';
 import { pathOf, isWorkspaceThumbnail } from '@/lib/artifact-path';
+import { PUBLIC_COVER_PATH } from '@/lib/public-cover';
 
 export interface PublishFile {
   blob: Blob;
@@ -267,6 +268,25 @@ export async function publishPipeline(
         kind: art.kind || undefined,
         mimeType: art.mimeType,
       });
+    }
+  }
+
+  // 2b. The cover: ship the workspace thumbnail as _crux/cover.jpg so Explore
+  // and public pages can show it. Best-effort — a missing or unreadable
+  // preview never blocks a publish.
+  const thumb = artifacts.find((a) => a.type === 'artifact' && isWorkspaceThumbnail(pathOf(a)));
+  if (thumb) {
+    try {
+      const blob = await deps.local.downloadBlob(thumb.id);
+      if (blob.size > 0)
+        filesToPublish.push({
+          blob,
+          path: PUBLIC_COVER_PATH,
+          type: 'artifact',
+          mimeType: thumb.mimeType || 'image/jpeg',
+        });
+    } catch {
+      /* no cover this time */
     }
   }
 

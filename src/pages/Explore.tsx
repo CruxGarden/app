@@ -16,6 +16,7 @@ import { publishBaseUrlFor } from '@/lib/public-url';
 import { Button } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import { formatDate } from '@/lib/format';
+import { publicCoverUrl } from '@/lib/public-cover';
 import { APP_NAME } from '@/lib/constants';
 
 type ResultType = 'cruxes' | 'authors';
@@ -56,6 +57,21 @@ function Avatar({ url, size = 'sm' }: { url: string | null; size?: 'sm' | 'md' }
     >
       {url && <img src={url} alt="" className="w-full h-full object-cover" />}
     </div>
+  );
+}
+
+/** The published site's cover (shipped as _crux/cover.jpg); hidden when the publish predates covers. */
+function CoverThumb({ cruxId }: { cruxId: string }) {
+  const [failed, setFailed] = useState(false);
+  if (failed) return null;
+  return (
+    <img
+      src={publicCoverUrl(cruxId)}
+      alt=""
+      loading="lazy"
+      onError={() => setFailed(true)}
+      className="w-16 h-10 rounded-card object-cover shrink-0 bg-garden-card-thumbnail border border-garden-card-border"
+    />
   );
 }
 
@@ -277,6 +293,7 @@ export default function Explore({
         }}
         className="w-full px-4 py-3 text-left hover:bg-accent-muted/30 cursor-pointer group flex items-center gap-3 border-b border-border last:border-b-0"
       >
+        <CoverThumb cruxId={crux.id} />
         <Avatar url={avatarUrl} />
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 min-w-0">

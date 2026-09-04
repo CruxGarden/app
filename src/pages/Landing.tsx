@@ -22,6 +22,7 @@ import {
 } from '@/lib/site';
 import { cn } from '@/lib/cn';
 import { formatBytes } from '@/lib/format';
+import { publicCoverUrl } from '@/lib/public-cover';
 
 /**
  * crux.garden — the public website. Same app, VITE_PUBLIC_SITE=1: the pitch, the
@@ -229,13 +230,24 @@ function ExploreSection() {
             <Link
               key={c.id}
               to={`/${c.author_username}/${c.slug}`}
-              className="block bg-panel border border-border rounded-[var(--radius)] p-3 hover:border-accent"
+              className="block bg-panel border border-border rounded-card overflow-hidden hover:border-accent hover-lift"
             >
-              <div className="font-display text-sm text-text truncate">{c.title || c.slug}</div>
-              {c.description && (
-                <div className="text-xs text-text-muted line-clamp-2 mt-1">{c.description}</div>
-              )}
-              <div className="mt-2 text-[10px] font-mono text-text-muted">@{c.author_username}</div>
+              <img
+                src={publicCoverUrl(c.id)}
+                alt=""
+                loading="lazy"
+                onError={(e) => ((e.currentTarget as HTMLImageElement).style.display = 'none')}
+                className="w-full aspect-[16/10] object-cover bg-garden-card-thumbnail"
+              />
+              <div className="p-3">
+                <div className="font-display text-sm text-text truncate">{c.title || c.slug}</div>
+                {c.description && (
+                  <div className="text-xs text-text-muted line-clamp-2 mt-1">{c.description}</div>
+                )}
+                <div className="mt-2 text-[10px] font-mono text-text-muted">
+                  @{c.author_username}
+                </div>
+              </div>
             </Link>
           ))}
         </div>

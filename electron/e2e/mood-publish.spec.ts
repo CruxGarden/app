@@ -54,7 +54,10 @@ test.describe('publish + discover moods (mocked API)', () => {
       // The mock saw a mood crux published with the three files
       const moodCrux = Object.values(api.state.cruxes).find((c) => c.kind === 'mood');
       expect(moodCrux?.title).toBe('Sea Glass');
-      const paths = (api.state.published[moodCrux!.id as string] ?? []).map((f) => f.path).sort();
+      const paths = (api.state.published[moodCrux!.id as string] ?? [])
+        .map((f) => f.path)
+        .filter((p) => !p.startsWith('_crux/')) // the cover ships alongside
+        .sort();
       expect(paths).toEqual(['index.html', 'mood.cruxmood', 'mood.json']);
       expect((moodCrux!.meta as Record<string, unknown>).mood).toMatchObject({ section: 'Dark' });
 

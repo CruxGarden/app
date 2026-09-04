@@ -175,7 +175,7 @@ describe('publishPipeline', () => {
     expect(state.localMetaWrites).toHaveLength(0);
   });
 
-  it('never publishes or fingerprints internal files (preview.jpg, .keep)', async () => {
+  it('ships the thumbnail only as _crux/cover.jpg; internal files never publish or fingerprint', async () => {
     const artifacts = [
       makeArtifact('index.html', 'fp1'),
       makeArtifact('preview.jpg', 'thumb-v1', { mimeType: 'image/jpeg' }),
@@ -185,8 +185,12 @@ describe('publishPipeline', () => {
     const updated = await publishPipeline(makeCrux(), artifacts, { deps });
 
     const paths = state.publishedFiles!.map((f) => f.path);
-    expect(paths).toEqual(['index.html']);
+    expect(paths).toEqual(['index.html', '_crux/cover.jpg']);
+    expect(state.publishedFiles!.find((f) => f.path === '_crux/cover.jpg')?.mimeType).toBe(
+      'image/jpeg',
+    );
 
+    // the cover is derived, never part of change detection
     const fingerprints = (updated.meta as { publishedFingerprints: Record<string, string> })
       .publishedFingerprints;
     expect(Object.keys(fingerprints)).toEqual(['index.html']);
