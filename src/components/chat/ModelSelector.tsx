@@ -88,7 +88,7 @@ export default function ModelSelector({ value, onChange, disabled }: ModelSelect
         className={cn(
           'flex items-center gap-1.5 px-2 py-0.5 text-[11px] font-mono rounded transition-colors cursor-pointer',
           'bg-accent-muted text-accent',
-          'disabled:cursor-not-allowed disabled:opacity-50',
+          'disabled:cursor-not-allowed',
         )}
       >
         {SelectedIcon && <SelectedIcon size={12} />}
@@ -108,7 +108,7 @@ export default function ModelSelector({ value, onChange, disabled }: ModelSelect
       </button>
 
       {open && (
-        <div className="absolute left-0 bottom-full mb-1 z-50 min-w-48 max-h-[60vh] overflow-y-auto bg-surface-solid border border-border rounded-[var(--radius-sm)] shadow-xl py-1">
+        <div className="absolute left-0 bottom-full mb-1 z-50 min-w-48 max-h-[60vh] overflow-y-auto bg-model-selector-dropdown border border-model-selector-border rounded-dropdown shadow-dropdown py-1">
           {groups.map((group) => (
             <div key={group.providerId}>
               {(() => {

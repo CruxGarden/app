@@ -992,6 +992,7 @@ html.palette-transition *::after {
    The pane-* tokens are computed on :root, so this is not a cycle. */
 .mosaic.crux-mosaic-theme .mosaic-window.pane-collaboration {
   --panel: var(--pane-collaboration-body);
+  --pane-header-close-hover: var(--pane-collaboration-header-close-hover);
   --border: var(--pane-collaboration-border);
   --radius: var(--pane-collaboration-radius);
   --text: var(--pane-collaboration-text);
@@ -1016,6 +1017,7 @@ html.palette-transition *::after {
 }
 .mosaic.crux-mosaic-theme .mosaic-window.pane-artifacts {
   --panel: var(--pane-artifacts-body);
+  --pane-header-close-hover: var(--pane-artifacts-header-close-hover);
   --border: var(--pane-artifacts-border);
   --radius: var(--pane-artifacts-radius);
   --text: var(--pane-artifacts-text);
@@ -1040,6 +1042,7 @@ html.palette-transition *::after {
 }
 .mosaic.crux-mosaic-theme .mosaic-window.pane-workshop {
   --panel: var(--pane-workshop-body);
+  --pane-header-close-hover: var(--pane-workshop-header-close-hover);
   --border: var(--pane-workshop-border);
   --radius: var(--pane-workshop-radius);
   --text: var(--pane-workshop-text);
@@ -1064,6 +1067,7 @@ html.palette-transition *::after {
 }
 .mosaic.crux-mosaic-theme .mosaic-window.pane-details {
   --panel: var(--pane-details-body);
+  --pane-header-close-hover: var(--pane-details-header-close-hover);
   --border: var(--pane-details-border);
   --radius: var(--pane-details-radius);
   --text: var(--pane-details-text);
@@ -1088,6 +1092,7 @@ html.palette-transition *::after {
 }
 .mosaic.crux-mosaic-theme .mosaic-window.pane-history {
   --panel: var(--pane-history-body);
+  --pane-header-close-hover: var(--pane-history-header-close-hover);
   --border: var(--pane-history-border);
   --radius: var(--pane-history-radius);
   --text: var(--pane-history-text);
@@ -1112,6 +1117,7 @@ html.palette-transition *::after {
 }
 .mosaic.crux-mosaic-theme .mosaic-window.pane-export {
   --panel: var(--pane-export-body);
+  --pane-header-close-hover: var(--pane-export-header-close-hover);
   --border: var(--pane-export-border);
   --radius: var(--pane-export-radius);
   --text: var(--pane-export-text);
@@ -1136,6 +1142,7 @@ html.palette-transition *::after {
 }
 .mosaic.crux-mosaic-theme .mosaic-window.pane-sync {
   --panel: var(--pane-sync-body);
+  --pane-header-close-hover: var(--pane-sync-header-close-hover);
   --border: var(--pane-sync-border);
   --radius: var(--pane-sync-radius);
   --text: var(--pane-sync-text);
@@ -1160,6 +1167,7 @@ html.palette-transition *::after {
 }
 .mosaic.crux-mosaic-theme .mosaic-window.pane-publish {
   --panel: var(--pane-publish-body);
+  --pane-header-close-hover: var(--pane-publish-header-close-hover);
   --border: var(--pane-publish-border);
   --radius: var(--pane-publish-radius);
   --text: var(--pane-publish-text);
@@ -1184,6 +1192,7 @@ html.palette-transition *::after {
 }
 .mosaic.crux-mosaic-theme .mosaic-window.pane-store {
   --panel: var(--pane-store-body);
+  --pane-header-close-hover: var(--pane-store-header-close-hover);
   --border: var(--pane-store-border);
   --radius: var(--pane-store-radius);
   --text: var(--pane-store-text);
@@ -1268,6 +1277,9 @@ html.palette-transition *::after {
 }
 .mosaic.crux-mosaic-theme .pane-toolbar-close {
   display: var(--pane-header-close-display);
+}
+.mosaic.crux-mosaic-theme .pane-toolbar-close:hover {
+  color: var(--pane-header-close-hover);
 }
 
 /* Frame pulse — a pane's --pane-<name>-pulse token is the iteration count:

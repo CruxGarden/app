@@ -95,7 +95,8 @@ export function Meter({
         <span className="font-mono text-text">{value}</span>
       </div>
       <div
-        className="h-1.5 rounded-full bg-surface overflow-hidden"
+        className="rounded-meter bg-meter-track overflow-hidden"
+        style={{ height: 'var(--meter-height)' }}
         role="progressbar"
         aria-label={`${label} used`}
         aria-valuenow={Math.round(pct)}
@@ -104,8 +105,8 @@ export function Meter({
       >
         <div
           className={cn(
-            'h-full rounded-full transition-[width]',
-            pct >= 90 ? 'bg-error' : pct >= 70 ? 'bg-warning' : 'bg-accent',
+            'h-full rounded-meter transition-[width]',
+            pct >= 90 ? 'bg-meter-danger' : pct >= 70 ? 'bg-meter-warn' : 'bg-meter-fill',
           )}
           style={{ width: `${pct}%` }}
         />

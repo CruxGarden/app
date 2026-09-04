@@ -438,8 +438,8 @@ export default function NewCruxModal({ open, onClose }: NewCruxModalProps) {
   const inputClass = cn(
     'w-full px-3 py-2 text-sm font-mono rounded-[var(--radius-sm)]',
     'bg-surface-solid border border-border text-text placeholder:text-text-muted/50',
-    'focus:outline-none focus:border-accent transition-colors',
-    'disabled:opacity-50',
+    'focus:outline-none focus:border-input-border-active transition-colors',
+    '',
   );
 
   return (
@@ -490,7 +490,7 @@ export default function NewCruxModal({ open, onClose }: NewCruxModalProps) {
                   className={cn(
                     'w-full px-3 py-2.5 text-left cursor-pointer',
                     'flex items-center gap-3 border-b border-border last:border-b-0',
-                    'disabled:opacity-50 disabled:cursor-not-allowed',
+                    'disabled:cursor-not-allowed',
                     selectedTemplate === t.id ? 'bg-accent-muted/30' : 'hover:bg-accent-muted/15',
                   )}
                 >

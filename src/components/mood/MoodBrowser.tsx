@@ -193,7 +193,7 @@ export default function MoodBrowser() {
               value={name}
               onChange={(e) => setName(e.target.value)}
               onKeyDown={(e) => e.key === 'Escape' && setSaving(false)}
-              className="h-8 w-44 rounded-[var(--radius-sm)] border border-border bg-surface px-2.5 text-xs text-text placeholder:text-text-muted focus:outline-none focus:border-accent"
+              className="h-8 w-44 rounded-[var(--radius-sm)] border border-border bg-surface px-2.5 text-xs text-text placeholder:text-text-muted focus:outline-none focus:border-input-border-active"
             />
             <Button size="sm" type="submit">
               Save

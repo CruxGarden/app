@@ -13,12 +13,14 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 const variants: Record<Variant, string> = {
-  primary: 'bg-primary-button text-primary-button-text hover:brightness-110 active:brightness-95',
+  primary:
+    'bg-primary-button text-primary-button-text border border-primary-button-border hover:bg-primary-button-hover hover:border-primary-button-border-hover active-dim',
   secondary:
-    'bg-action-button-hover text-action-button-text-hover hover:brightness-110 active:brightness-95',
+    'bg-action-button text-action-button-text border border-action-button-border hover:bg-action-button-hover hover:text-action-button-text-hover hover:border-action-button-border-hover active-dim',
   ghost:
-    'bg-transparent text-action-button-text hover:bg-action-button-hover hover:text-action-button-text-hover active:brightness-95',
-  danger: 'bg-error text-on-error hover:brightness-110 active:brightness-95',
+    'bg-transparent text-action-button-text border border-transparent hover:bg-action-button-hover hover:text-action-button-text-hover active-dim',
+  danger:
+    'bg-danger-button text-danger-button-text border border-danger-button-border hover:bg-danger-button-hover active-dim',
 };
 
 const sizes: Record<Size, string> = {
@@ -41,9 +43,9 @@ export default function Button({
     <button
       disabled={disabled || loading}
       className={cn(
-        'inline-flex items-center justify-center font-medium rounded-[var(--radius-sm)]',
+        'inline-flex items-center justify-center font-medium rounded-button',
         'cursor-pointer',
-        'disabled:bg-border disabled:text-text-muted disabled:border-transparent disabled:cursor-not-allowed',
+        'disabled:bg-button-disabled disabled:text-button-disabled-text disabled:border-transparent disabled:cursor-not-allowed',
         'font-body',
         variants[variant],
         sizes[size],

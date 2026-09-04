@@ -25,7 +25,11 @@ export function chatSessionFor(
 ): ChatSession {
   let s = sessions.get(cruxId);
   if (!s) {
-    s = { turn: null, policy: new SnapshotPolicy(deps.frequency, deps.snapshot), refreshTimer: null };
+    s = {
+      turn: null,
+      policy: new SnapshotPolicy(deps.frequency, deps.snapshot),
+      refreshTimer: null,
+    };
     sessions.set(cruxId, s);
   }
   return s;

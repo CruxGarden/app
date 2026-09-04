@@ -108,7 +108,7 @@ function BannerStep({
           size="lg"
           onClick={onEnter}
           disabled={checking}
-          className="!w-14 !h-14 bg-panel !text-accent hover:bg-accent/20 hover:!text-accent"
+          className="!w-14 !h-14 bg-gateway-button !text-accent hover:bg-gateway-button-hover hover:!text-accent"
         >
           {checking ? <Spinner size={20} /> : <PlusCircleIcon size={40} />}
         </IconButton>
@@ -354,7 +354,7 @@ function SetupStep({ onBack }: { onBack: () => void }) {
               className={cn(
                 'w-full px-3 py-2 text-sm font-mono rounded-[var(--radius-sm)]',
                 'bg-surface-solid border text-text placeholder:text-text-muted',
-                'focus:outline-none focus:border-accent disabled:opacity-50',
+                'focus:outline-none focus:border-input-border-active',
                 usernameError ? 'border-error' : 'border-border',
               )}
               autoFocus
@@ -738,7 +738,7 @@ function BackButton({ onClick, disabled }: { onClick: () => void; disabled?: boo
       disabled={disabled}
       className={cn(
         'flex items-center gap-1 text-xs text-text-muted hover:text-text mb-4 cursor-pointer',
-        'disabled:opacity-50 disabled:cursor-not-allowed',
+        'disabled:cursor-not-allowed',
       )}
     >
       <ArrowLeftIcon />

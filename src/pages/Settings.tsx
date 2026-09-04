@@ -8,7 +8,19 @@ import AiSettings from '@/components/settings/AiSettings';
 
 export default function Settings() {
   return (
-    <div className="overflow-y-auto flex-1 flex flex-col gap-4">
+    <div
+      className="overflow-y-auto flex-1 flex flex-col gap-4"
+      style={
+        {
+          // Settings surfaces read their own token family (settings*)
+          '--panel': 'var(--settings-panel)',
+          '--panel-border': 'var(--settings-panel-border)',
+          '--caption': 'var(--settings-label)',
+          '--heading': 'var(--settings-value)',
+          '--border': 'var(--settings-divider)',
+        } as React.CSSProperties
+      }
+    >
       <AccountSettings />
       <AiSettings />
       <SyncSettings />

@@ -1,4 +1,4 @@
-import { Capability, can } from "@/lib/platform";
+import { Capability, can } from '@/lib/platform';
 /**
  * Where a published crux lives for other people.
  *
@@ -56,7 +56,9 @@ export function publishBaseUrlFor(cruxId: string): string {
  * shell (nothing may navigate the app), so it goes to the system browser.
  */
 export async function openGardenPage(path: string): Promise<void> {
-  const url = path.startsWith('http') ? path : `${gardenOrigin()}${path.startsWith('/') ? '' : '/'}${path}`;
+  const url = path.startsWith('http')
+    ? path
+    : `${gardenOrigin()}${path.startsWith('/') ? '' : '/'}${path}`;
   if (can(Capability.DesktopChrome)) {
     const { openExternal } = await import('@/services/desktop');
     await openExternal(url);

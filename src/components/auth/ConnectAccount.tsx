@@ -7,7 +7,7 @@ import { useShallow } from 'zustand/react/shallow';
 const btnClass = cn(
   'px-3 py-1.5 text-xs font-mono rounded-[var(--radius-sm)]',
   'bg-surface border border-border text-text hover:bg-accent-muted cursor-pointer',
-  'disabled:opacity-50 disabled:cursor-not-allowed',
+  'disabled:cursor-not-allowed',
 );
 
 interface ConnectAccountProps {
@@ -105,7 +105,7 @@ export default function ConnectAccount({
           className={cn(
             'px-3 py-1.5 text-xs font-mono rounded-[var(--radius-sm)]',
             'text-error hover:bg-error-muted cursor-pointer',
-            'disabled:opacity-50 disabled:cursor-not-allowed',
+            'disabled:cursor-not-allowed',
           )}
         >
           {connecting ? 'Disconnecting...' : 'Disconnect'}
@@ -131,8 +131,8 @@ export default function ConnectAccount({
           className={cn(
             'flex-1 px-3 py-1.5 text-xs font-mono rounded-[var(--radius-sm)]',
             'bg-surface border border-border text-text placeholder:text-text-muted',
-            'focus:outline-none focus:border-accent',
-            'disabled:opacity-50',
+            'focus:outline-none focus:border-input-border-active',
+            '',
           )}
         />
         {!codeSent && (
@@ -156,8 +156,8 @@ export default function ConnectAccount({
             className={cn(
               'flex-1 px-3 py-1.5 text-xs font-mono rounded-[var(--radius-sm)]',
               'bg-surface border border-border text-text placeholder:text-text-muted',
-              'focus:outline-none focus:border-accent',
-              'disabled:opacity-50',
+              'focus:outline-none focus:border-input-border-active',
+              '',
             )}
           />
           <button onClick={handleConnect} disabled={connecting || !code} className={btnClass}>

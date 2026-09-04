@@ -285,5 +285,5 @@ const labelClass = 'block text-xs font-mono text-text-muted mb-1';
 const inputClass = cn(
   'w-full px-2 py-1.5 text-sm font-mono rounded-[var(--radius-sm)]',
   'bg-surface-solid border border-border text-text placeholder:text-text-muted/50',
-  'focus:outline-none focus:border-accent transition-colors',
+  'focus:outline-none focus:border-input-border-active transition-colors',
 );

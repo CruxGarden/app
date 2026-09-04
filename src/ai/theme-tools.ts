@@ -746,7 +746,11 @@ export function createThemeToolExecutor(ctx: ThemeToolContext = {}) {
 /** Prompt guidance shared by the workspace chat and the Keeper. */
 export const THEME_TOOL_GUIDANCE =
   '### Theme\n' +
-  'You can restyle the workspace with set_theme (get_theme lists token names and groups). ' +
+  'You can restyle every part of the workspace with set_theme (get_theme lists the 25 token groups and every token name; get_theme {group} shows current values). ' +
+  'Beyond colors there are tokens for shape and state: per-component radii (buttonRadius, inputRadius, cardRadius, chipRadius, modalRadius, tooltipRadius, dropdownRadius, avatarRadius, bubbleRadius, meterRadius, paneRadius, paneHeaderRadius), ' +
+  'shadows (elevationPanel/Card/CardHover/Modal/Dropdown/Tooltip, moodBarShadow), focus (focusRing, focusRingWidth, focusRingOffset), hover/active/disabled (hoverBrightness, activeBrightness, disabledOpacity, paneHeaderHoverBrightness, cardHoverLift, every *Hover / *Active token), ' +
+  'sizes (toolbarHeight, paneHeaderHeight, paneGap, density, fontScale, fileTreeRowHeight, toggleWidth/Height, scrollbarWidth, meterHeight), textures and fonts (asset: tokens). ' +
+  'Every visible element — buttons, inputs, toggles, chips, tooltips, dropdowns, cards, chat bubbles, markdown, code, file tree, top bar, mood bar, scrollbars, selection, each pane — has its own family; when the user describes a look, change the specific families rather than only foundation colors. ' +
   'Use mode "preview" to indicate what you are doing — tint the pane you are working in, warm the accent while a long step runs — and clear it with reset: true when you finish. ' +
   'Pane border and body tokens accept CSS gradients: set e.g. paneWorkshopBorder to "linear-gradient(135deg, #00f0ff, #7cff00)" (with paneBorderWidth "3px") to show that pane is being worked on, or a solid color for a state — green done, red failed — then reset. ' +
   'Use mode "persist" only when the user asks for a lasting change to how the workspace looks. ' +

@@ -317,13 +317,18 @@ export default function MetadataContent({
     onUpdate({ kind: next ?? null });
   };
 
-
   return (
     <div className="flex-1 overflow-y-auto min-h-0 p-3 flex flex-col gap-3">
       {/* ── Crux Metadata ── */}
       <div className="flex flex-col gap-3">
         <MetaField readOnly={readOnly} onUpdate={onUpdate} label="Title" value={crux.title ?? ''} />
-        <MetaField readOnly={readOnly} onUpdate={onUpdate} label="Description" value={crux.description ?? ''} multiline />
+        <MetaField
+          readOnly={readOnly}
+          onUpdate={onUpdate}
+          label="Description"
+          value={crux.description ?? ''}
+          multiline
+        />
         <TagInput
           tags={(crux.meta?.tags as string[]) || []}
           onChange={(tags) => onUpdate?.({ meta: { tags } })}
@@ -359,7 +364,7 @@ export default function MetadataContent({
 
         <FieldRow label="Visibility">
           {readOnly ? (
-            <span className="px-2 py-0.5 rounded-full text-[10px] font-mono uppercase inline-block bg-text-muted/15 text-text-muted">
+            <span className="px-2 py-0.5 rounded-full text-[10px] font-mono uppercase inline-block bg-badge text-badge-text border border-badge-border">
               {crux.visibility}
             </span>
           ) : (
@@ -377,14 +382,14 @@ export default function MetadataContent({
         </FieldRow>
 
         <FieldRow label="Type">
-          <span className="px-2 py-0.5 rounded-full text-[10px] font-mono uppercase inline-block bg-text-muted/15 text-text-muted">
+          <span className="px-2 py-0.5 rounded-full text-[10px] font-mono uppercase inline-block bg-badge text-badge-text border border-badge-border">
             {crux.type || 'text'}
           </span>
         </FieldRow>
 
         <FieldRow label="Kind">
           {readOnly ? (
-            <span className="px-2 py-0.5 rounded-full text-[10px] font-mono uppercase inline-block bg-text-muted/15 text-text-muted">
+            <span className="px-2 py-0.5 rounded-full text-[10px] font-mono uppercase inline-block bg-badge text-badge-text border border-badge-border">
               {crux.kind ? KIND_LABELS[crux.kind] || crux.kind : 'auto'}
             </span>
           ) : (
@@ -392,7 +397,9 @@ export default function MetadataContent({
               onClick={cycleKind}
               className={cn(
                 'px-2 py-0.5 rounded-full text-[10px] font-mono uppercase cursor-pointer transition-colors',
-                crux.kind ? 'bg-accent/20 text-accent' : 'bg-text-muted/15 text-text-muted',
+                crux.kind
+                  ? 'bg-accent/20 text-accent'
+                  : 'bg-badge text-badge-text border border-badge-border',
               )}
               title="Click to change"
             >

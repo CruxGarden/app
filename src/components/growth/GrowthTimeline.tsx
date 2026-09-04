@@ -135,7 +135,7 @@ export default function GrowthTimeline({
                     onChange={(e) => setFrequency(e.target.value as SnapshotFrequency)}
                     className={cn(
                       'text-[11px] font-body bg-surface text-text border border-border rounded-[var(--radius-sm)]',
-                      'px-2 py-1 outline-none cursor-pointer hover:border-accent focus:border-accent',
+                      'px-2 py-1 outline-none cursor-pointer hover:border-accent focus:border-input-border-active',
                     )}
                   >
                     {FREQUENCY_OPTIONS.map((opt) => (
@@ -165,7 +165,7 @@ export default function GrowthTimeline({
                   className={cn(
                     'flex-1 min-w-0 px-2.5 h-8 text-xs font-body rounded-[var(--radius-sm)]',
                     'bg-surface border border-border text-text placeholder:text-text-muted',
-                    'focus:outline-none focus:border-accent',
+                    'focus:outline-none focus:border-input-border-active',
                   )}
                 />
                 <button

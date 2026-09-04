@@ -177,7 +177,7 @@ export default function CustomDomainSection({ cruxId }: { cruxId: string }) {
                 onClick={() => void remove(d.id)}
                 disabled={busy !== null}
                 aria-label={`Remove ${d.hostname}`}
-                className="ml-auto text-[11px] text-text-muted hover:text-error cursor-pointer disabled:opacity-50"
+                className="ml-auto text-[11px] text-text-muted hover:text-error cursor-pointer"
               >
                 Remove
               </button>
@@ -200,7 +200,7 @@ export default function CustomDomainSection({ cruxId }: { cruxId: string }) {
               value={hostname}
               onChange={(e) => setHostname(e.target.value)}
               onKeyDown={(e) => e.key === 'Escape' && setAdding(false)}
-              className="h-8 rounded-[var(--radius-sm)] border border-border bg-surface px-2.5 text-xs font-mono text-text placeholder:text-text-muted focus:outline-none focus:border-accent"
+              className="h-8 rounded-[var(--radius-sm)] border border-border bg-surface px-2.5 text-xs font-mono text-text placeholder:text-text-muted focus:outline-none focus:border-input-border-active"
             />
             {error && (
               <PaneNote tone="error" className="text-left">
