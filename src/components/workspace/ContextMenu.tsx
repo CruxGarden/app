@@ -161,7 +161,7 @@ export default function ContextMenu({
     <div
       ref={ref}
       role="menu"
-      className="fixed z-50 min-w-[140px] bg-surface-solid border border-border rounded-[var(--radius-sm)] shadow-lg py-1 overflow-hidden"
+      className="fixed z-50 min-w-[140px] bg-dropdown border border-dropdown-border rounded-dropdown shadow-dropdown py-1 overflow-hidden"
       style={{ left: x, top: y }}
     >
       {items.map((item) => (

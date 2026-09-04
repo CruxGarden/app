@@ -21,15 +21,23 @@ export default function Toggle({ checked, onChange, label, disabled }: TogglePro
         disabled={disabled}
         onClick={() => onChange(!checked)}
         className={cn(
-          'relative w-7 h-4 rounded-full shrink-0 cursor-pointer',
-          checked ? 'bg-accent' : 'bg-border',
+          'relative rounded-full shrink-0 cursor-pointer border border-toggle-border transition-colors',
+          checked ? 'bg-toggle-active' : 'bg-toggle',
         )}
+        style={{ width: 'var(--toggle-width)', height: 'var(--toggle-height)' }}
       >
         <span
           className={cn(
-            'absolute top-0.5 left-0.5 w-3 h-3 rounded-full bg-toggle-thumb-active',
-            checked && 'translate-x-3',
+            'absolute top-[2px] left-[2px] rounded-full transition-transform',
+            checked ? 'bg-toggle-thumb-active' : 'bg-toggle-thumb',
           )}
+          style={{
+            width: 'calc(var(--toggle-height) - 4px)',
+            height: 'calc(var(--toggle-height) - 4px)',
+            transform: checked
+              ? 'translateX(calc(var(--toggle-width) - var(--toggle-height)))'
+              : undefined,
+          }}
         />
       </button>
       {label && <span className="text-xs text-text-muted">{label}</span>}

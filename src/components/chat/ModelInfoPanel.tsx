@@ -33,7 +33,7 @@ export default function ModelInfoPanel({ model, children }: ModelInfoPanelProps)
     ? Math.min((tokenUsage.inputTokens / info.contextWindow) * 100, 100)
     : 0;
   const barColor =
-    usagePercent > 80 ? 'bg-error' : usagePercent > 50 ? 'bg-amber-400' : 'bg-accent';
+    usagePercent > 80 ? 'bg-meter-danger' : usagePercent > 50 ? 'bg-meter-warn' : 'bg-meter-fill';
 
   // Hide progress bar if not enough horizontal space
   useEffect(() => {

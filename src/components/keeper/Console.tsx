@@ -414,194 +414,210 @@ export default function Console() {
   };
 
   return (
-    <div className="flex flex-row h-full">
-      {/* Sidebar — portrait + conversation history */}
-      <div className="hidden sm:flex w-48 shrink-0 flex-col border-r border-border">
-        <div className="aspect-square w-full overflow-hidden rounded-tl-[calc(var(--radius)-1px)]">
-          <img
-            src={sidebarThumbUrl || keeperAvatarSrc}
-            alt="Console"
-            className="w-full h-full object-cover [image-rendering:pixelated]"
-          />
-        </div>
-        {/* Conversation history */}
-        <div className="flex-1 min-h-0 overflow-y-auto border-t border-border">
-          <div className="p-2">
-            <button
-              onClick={startNewConversation}
-              className="w-full px-2 py-1.5 mb-2 text-[10px] font-mono text-accent border border-accent/20 hover:bg-accent/10 rounded-[var(--radius-sm)] cursor-pointer transition-colors"
-            >
-              New Conversation
-            </button>
-            {conversations.map((c) => (
-              <div
-                key={c.id}
-                className={cn(
-                  'group flex items-start gap-1 px-2 py-1.5 rounded-[var(--radius-sm)] cursor-pointer transition-colors',
-                  c.id === activeId
-                    ? 'bg-accent/10 text-text'
-                    : 'text-text-muted hover:bg-accent/10 hover:text-text',
-                )}
-                onClick={() => setActiveId(c.id)}
+    <div
+      style={
+        {
+          // The Keeper's console reads its own token family (console*)
+          '--panel': 'var(--console)',
+          '--panel-border': 'var(--console-border)',
+          '--surface': 'var(--console-sidebar)',
+          '--surface-border': 'var(--console-sidebar-border)',
+          '--input': 'var(--console-input)',
+          '--input-border': 'var(--console-input-border)',
+          '--text': 'var(--console-text)',
+          '--text-muted': 'var(--console-text-muted)',
+        } as React.CSSProperties
+      }
+    >
+      <div className="flex flex-row h-full">
+        {/* Sidebar — portrait + conversation history */}
+        <div className="hidden sm:flex w-48 shrink-0 flex-col border-r border-border">
+          <div className="aspect-square w-full overflow-hidden rounded-tl-[calc(var(--radius)-1px)]">
+            <img
+              src={sidebarThumbUrl || keeperAvatarSrc}
+              alt="Console"
+              className="w-full h-full object-cover [image-rendering:pixelated]"
+            />
+          </div>
+          {/* Conversation history */}
+          <div className="flex-1 min-h-0 overflow-y-auto border-t border-border">
+            <div className="p-2">
+              <button
+                onClick={startNewConversation}
+                className="w-full px-2 py-1.5 mb-2 text-[10px] font-mono text-accent border border-accent/20 hover:bg-accent/10 rounded-[var(--radius-sm)] cursor-pointer transition-colors"
               >
-                <div className="flex-1 min-w-0">
-                  <p className="text-[10px] font-mono truncate">{c.title}</p>
-                  <p className="text-[9px] font-mono text-text-muted/60">
-                    {formatRelativeTime(c.createdAt)}
-                  </p>
-                </div>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    deleteConversation(c.id);
-                  }}
-                  className="opacity-0 group-hover:opacity-60 hover:!opacity-100 text-[10px] text-text-muted hover:text-error shrink-0 cursor-pointer transition-opacity"
+                New Conversation
+              </button>
+              {conversations.map((c) => (
+                <div
+                  key={c.id}
+                  className={cn(
+                    'group flex items-start gap-1 px-2 py-1.5 rounded-[var(--radius-sm)] cursor-pointer transition-colors',
+                    c.id === activeId
+                      ? 'bg-accent/10 text-text'
+                      : 'text-text-muted hover:bg-accent/10 hover:text-text',
+                  )}
+                  onClick={() => setActiveId(c.id)}
                 >
-                  ×
-                </button>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[10px] font-mono truncate">{c.title}</p>
+                    <p className="text-[9px] font-mono text-text-muted/60">
+                      {formatRelativeTime(c.createdAt)}
+                    </p>
+                  </div>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      deleteConversation(c.id);
+                    }}
+                    className="opacity-0 group-hover:opacity-60 hover:!opacity-100 text-[10px] text-text-muted hover:text-error shrink-0 cursor-pointer transition-opacity"
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Chat column */}
+        <div className="flex-1 flex flex-col min-w-0">
+          {/* Messages */}
+          <div className="flex-1 overflow-y-auto p-4 space-y-3 min-h-0">
+            {displayMessages.length === 0 && !streaming && (
+              <p className="text-xs text-text-muted text-center py-4">
+                {persona.greeting || 'The Keeper tends the garden. Ask anything.'}
+              </p>
+            )}
+
+            {displayMessages.map((msg, i) => (
+              <div
+                key={i}
+                className={cn(
+                  'flex gap-2 items-end',
+                  msg.role === 'user' ? 'justify-end' : 'justify-start',
+                )}
+              >
+                <div
+                  className={cn(
+                    'max-w-[85%] rounded-[var(--radius)] px-3 py-2 text-sm break-words',
+                    msg.role === 'user'
+                      ? 'bg-accent-muted text-text'
+                      : 'bg-[color-mix(in_srgb,var(--panel),var(--text)_8%)] text-text',
+                  )}
+                >
+                  {msg.role === 'user' ? (
+                    <p className="whitespace-pre-wrap">{msg.content}</p>
+                  ) : (
+                    <MarkdownRenderer content={msg.content} />
+                  )}
+
+                  {/* Metadata footer — timestamp + model */}
+                  <div className="mt-1.5 flex items-center gap-2 text-[10px] font-mono text-text-muted/50">
+                    {msg.timestamp && <span>{formatTime(msg.timestamp)}</span>}
+                    {msg.role === 'assistant' && msg.model && (
+                      <span className="text-right flex-1">
+                        {getModelShortName(msg.model) || msg.model}
+                      </span>
+                    )}
+                  </div>
+                </div>
+                {msg.role === 'user' && <UserAvatar />}
               </div>
             ))}
-          </div>
-        </div>
-      </div>
 
-      {/* Chat column */}
-      <div className="flex-1 flex flex-col min-w-0">
-        {/* Messages */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-3 min-h-0">
-          {displayMessages.length === 0 && !streaming && (
-            <p className="text-xs text-text-muted text-center py-4">
-              {persona.greeting || 'The Keeper tends the garden. Ask anything.'}
-            </p>
+            {/* Streaming text */}
+            {streaming && streamContent && (
+              <div className="flex gap-2 items-end justify-start">
+                <div className="max-w-[85%] rounded-[var(--radius)] px-3 py-2 text-sm bg-[color-mix(in_srgb,var(--panel),var(--text)_8%)] text-text">
+                  <MarkdownRenderer content={streamContent} />
+                  <span className="inline-block w-1.5 h-4 bg-accent/60 animate-pulse ml-0.5 align-text-bottom" />
+                </div>
+              </div>
+            )}
+
+            {/* Tool activity indicator */}
+            {streaming && toolActivity && (
+              <div className="flex gap-2 items-end justify-start">
+                <div className="rounded-[var(--radius)] px-3 py-2 bg-[color-mix(in_srgb,var(--panel),var(--text)_8%)] text-xs text-text-muted italic">
+                  {toolActivity}
+                </div>
+              </div>
+            )}
+
+            {/* Loading dots */}
+            {streaming && !streamContent && !toolActivity && (
+              <div className="flex gap-2 items-end justify-start">
+                <div className="rounded-[var(--radius)] px-3 py-2 bg-[color-mix(in_srgb,var(--panel),var(--text)_8%)]">
+                  <div className="flex gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-text-muted animate-bounce [animation-delay:0ms]" />
+                    <span className="w-1.5 h-1.5 rounded-full bg-text-muted animate-bounce [animation-delay:150ms]" />
+                    <span className="w-1.5 h-1.5 rounded-full bg-text-muted animate-bounce [animation-delay:300ms]" />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div ref={bottomRef} />
+          </div>
+
+          {/* Error */}
+          {error && (
+            <div className="px-4 py-2 text-xs text-error bg-error-muted border-t border-border">
+              {error}
+            </div>
           )}
 
-          {displayMessages.map((msg, i) => (
-            <div
-              key={i}
-              className={cn(
-                'flex gap-2 items-end',
-                msg.role === 'user' ? 'justify-end' : 'justify-start',
-              )}
-            >
-              <div
-                className={cn(
-                  'max-w-[85%] rounded-[var(--radius)] px-3 py-2 text-sm break-words',
-                  msg.role === 'user'
-                    ? 'bg-accent-muted text-text'
-                    : 'bg-[color-mix(in_srgb,var(--panel),var(--text)_8%)] text-text',
-                )}
-              >
-                {msg.role === 'user' ? (
-                  <p className="whitespace-pre-wrap">{msg.content}</p>
+          {/* Input + Model selector */}
+          <div className="border-t border-border p-3 space-y-3">
+            <ModelSelector value={model} onChange={changeModel} disabled={streaming} />
+            <div>
+              <div className="flex items-end gap-2">
+                <textarea
+                  ref={inputRef}
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  placeholder="Send a message..."
+                  rows={1}
+                  className={cn(
+                    'flex-1 resize-none bg-bg border border-accent/20 rounded-[var(--radius-sm)] px-3 py-2',
+                    'text-sm text-text placeholder:text-text-muted',
+                    'focus:outline-none focus:border-input-border-active',
+                    'font-body leading-relaxed max-h-[100px]',
+                  )}
+                  onInput={(e) => {
+                    const el = e.currentTarget;
+                    el.style.height = 'auto';
+                    el.style.height = Math.min(el.scrollHeight, 100) + 'px';
+                  }}
+                />
+                {streaming ? (
+                  <button
+                    onClick={stop}
+                    className={cn(
+                      'px-3 py-2 rounded-[var(--radius-sm)] text-sm font-body',
+                      'bg-error-muted text-error border border-error/20',
+                      'hover:bg-error/20 transition-colors cursor-pointer',
+                    )}
+                  >
+                    Stop
+                  </button>
                 ) : (
-                  <MarkdownRenderer content={msg.content} />
+                  <button
+                    onClick={send}
+                    disabled={!input.trim()}
+                    className={cn(
+                      'px-3 py-2 rounded-[var(--radius-sm)] text-sm font-body',
+                      'bg-accent-muted text-accent border border-accent/20',
+                      'hover:border-accent transition-colors cursor-pointer',
+                      'disabled:opacity-40 disabled:cursor-not-allowed',
+                    )}
+                  >
+                    Send
+                  </button>
                 )}
-
-                {/* Metadata footer — timestamp + model */}
-                <div className="mt-1.5 flex items-center gap-2 text-[10px] font-mono text-text-muted/50">
-                  {msg.timestamp && <span>{formatTime(msg.timestamp)}</span>}
-                  {msg.role === 'assistant' && msg.model && (
-                    <span className="text-right flex-1">
-                      {getModelShortName(msg.model) || msg.model}
-                    </span>
-                  )}
-                </div>
               </div>
-              {msg.role === 'user' && <UserAvatar />}
-            </div>
-          ))}
-
-          {/* Streaming text */}
-          {streaming && streamContent && (
-            <div className="flex gap-2 items-end justify-start">
-              <div className="max-w-[85%] rounded-[var(--radius)] px-3 py-2 text-sm bg-[color-mix(in_srgb,var(--panel),var(--text)_8%)] text-text">
-                <MarkdownRenderer content={streamContent} />
-                <span className="inline-block w-1.5 h-4 bg-accent/60 animate-pulse ml-0.5 align-text-bottom" />
-              </div>
-            </div>
-          )}
-
-          {/* Tool activity indicator */}
-          {streaming && toolActivity && (
-            <div className="flex gap-2 items-end justify-start">
-              <div className="rounded-[var(--radius)] px-3 py-2 bg-[color-mix(in_srgb,var(--panel),var(--text)_8%)] text-xs text-text-muted italic">
-                {toolActivity}
-              </div>
-            </div>
-          )}
-
-          {/* Loading dots */}
-          {streaming && !streamContent && !toolActivity && (
-            <div className="flex gap-2 items-end justify-start">
-              <div className="rounded-[var(--radius)] px-3 py-2 bg-[color-mix(in_srgb,var(--panel),var(--text)_8%)]">
-                <div className="flex gap-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-text-muted animate-bounce [animation-delay:0ms]" />
-                  <span className="w-1.5 h-1.5 rounded-full bg-text-muted animate-bounce [animation-delay:150ms]" />
-                  <span className="w-1.5 h-1.5 rounded-full bg-text-muted animate-bounce [animation-delay:300ms]" />
-                </div>
-              </div>
-            </div>
-          )}
-
-          <div ref={bottomRef} />
-        </div>
-
-        {/* Error */}
-        {error && (
-          <div className="px-4 py-2 text-xs text-error bg-error-muted border-t border-border">
-            {error}
-          </div>
-        )}
-
-        {/* Input + Model selector */}
-        <div className="border-t border-border p-3 space-y-3">
-          <ModelSelector value={model} onChange={changeModel} disabled={streaming} />
-          <div>
-            <div className="flex items-end gap-2">
-              <textarea
-                ref={inputRef}
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyDown={handleKeyDown}
-                placeholder="Send a message..."
-                rows={1}
-                className={cn(
-                  'flex-1 resize-none bg-bg border border-accent/20 rounded-[var(--radius-sm)] px-3 py-2',
-                  'text-sm text-text placeholder:text-text-muted',
-                  'focus:outline-none focus:border-accent',
-                  'font-body leading-relaxed max-h-[100px]',
-                )}
-                onInput={(e) => {
-                  const el = e.currentTarget;
-                  el.style.height = 'auto';
-                  el.style.height = Math.min(el.scrollHeight, 100) + 'px';
-                }}
-              />
-              {streaming ? (
-                <button
-                  onClick={stop}
-                  className={cn(
-                    'px-3 py-2 rounded-[var(--radius-sm)] text-sm font-body',
-                    'bg-error-muted text-error border border-error/20',
-                    'hover:bg-error/20 transition-colors cursor-pointer',
-                  )}
-                >
-                  Stop
-                </button>
-              ) : (
-                <button
-                  onClick={send}
-                  disabled={!input.trim()}
-                  className={cn(
-                    'px-3 py-2 rounded-[var(--radius-sm)] text-sm font-body',
-                    'bg-accent-muted text-accent border border-accent/20',
-                    'hover:border-accent transition-colors cursor-pointer',
-                    'disabled:opacity-40 disabled:cursor-not-allowed',
-                  )}
-                >
-                  Send
-                </button>
-              )}
             </div>
           </div>
         </div>

@@ -363,15 +363,23 @@ export default function PublishPane() {
                 aria-label="Discoverable"
                 onClick={() => updateCrux({ discoverable: !crux.discoverable })}
                 className={cn(
-                  'relative w-7 h-4 rounded-full transition-colors shrink-0 cursor-pointer border border-toggle-border',
+                  'relative rounded-full transition-colors shrink-0 cursor-pointer border border-toggle-border',
                   crux.discoverable ? 'bg-toggle-active' : 'bg-toggle',
                 )}
+                style={{ width: 'var(--toggle-width)', height: 'var(--toggle-height)' }}
               >
                 <span
                   className={cn(
-                    'absolute top-0.5 left-0.5 w-3 h-3 rounded-full transition-transform',
-                    crux.discoverable ? 'translate-x-3 bg-toggle-thumb-active' : 'bg-toggle-thumb',
+                    'absolute top-[2px] left-[2px] rounded-full transition-transform',
+                    crux.discoverable ? 'bg-toggle-thumb-active' : 'bg-toggle-thumb',
                   )}
+                  style={{
+                    width: 'calc(var(--toggle-height) - 4px)',
+                    height: 'calc(var(--toggle-height) - 4px)',
+                    transform: crux.discoverable
+                      ? 'translateX(calc(var(--toggle-width) - var(--toggle-height)))'
+                      : undefined,
+                  }}
                 />
               </button>
               <div className="flex flex-col">
@@ -398,7 +406,7 @@ export default function PublishPane() {
                   'w-full flex items-center justify-center gap-2 h-8 rounded-[var(--radius-sm)]',
                   'text-xs font-body border border-border bg-surface text-text-muted',
                   'hover:border-error hover:text-error transition-colors cursor-pointer',
-                  'disabled:opacity-50 disabled:cursor-not-allowed',
+                  'disabled:cursor-not-allowed',
                 )}
               >
                 <UnshareIcon />

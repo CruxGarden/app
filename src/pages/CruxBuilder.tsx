@@ -130,8 +130,8 @@ export default function CruxBuilder() {
         <div role="alert" className="max-w-sm text-center flex flex-col items-center gap-3">
           <h2 className="font-display text-base text-text">Crux not found</h2>
           <p className="text-xs text-text-muted">
-            This link points at a crux that isn't in this garden — it may have been deleted, or
-            it lives in another garden.
+            This link points at a crux that isn't in this garden — it may have been deleted, or it
+            lives in another garden.
           </p>
           <Link to="/home" className="text-xs text-accent hover:underline">
             Back to your garden

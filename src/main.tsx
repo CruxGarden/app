@@ -27,7 +27,6 @@ function isPublicRoute(): boolean {
   );
 }
 
-
 function Bootstrap() {
   const init = useAppStore((s) => s.init);
   const publicRoute = isPublicRoute();

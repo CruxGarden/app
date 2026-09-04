@@ -130,7 +130,7 @@ export default function ApiKeySetup({
                 className={cn(
                   'flex-1 px-3 py-1.5 text-xs font-mono rounded-[var(--radius-sm)]',
                   'bg-bg border border-border text-text placeholder:text-text-muted/50',
-                  'outline-none focus:border-accent ',
+                  'outline-none focus:border-input-border-active ',
                 )}
               />
               <button
@@ -139,7 +139,7 @@ export default function ApiKeySetup({
                 className={cn(
                   'px-3 py-1.5 text-xs font-mono rounded-[var(--radius-sm)]',
                   'bg-surface border border-border text-text hover:bg-accent-muted  cursor-pointer',
-                  'disabled:opacity-50 disabled:cursor-not-allowed',
+                  'disabled:cursor-not-allowed',
                 )}
               >
                 Save

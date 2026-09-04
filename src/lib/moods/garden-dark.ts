@@ -242,7 +242,7 @@ export const GARDEN_DARK = {
   inputRadius: 'var(--radius-sm)',
   cardRadius: 'var(--radius)',
   chipRadius: '9999px',
-  modalRadius: 'var(--radius)',
+  modalRadius: 'var(--radius-lg)',
   tooltipRadius: 'var(--radius)',
   dropdownRadius: 'var(--radius-sm)',
   avatarRadius: 'var(--radius-sm)',

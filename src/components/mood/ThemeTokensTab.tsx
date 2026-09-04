@@ -210,7 +210,7 @@ function TokenRow({
           spellCheck={false}
           className={cn(
             'h-7 rounded-[var(--radius-sm)] border border-border bg-surface px-2 text-[11px] font-mono text-text',
-            'focus:outline-none focus:border-accent',
+            'focus:outline-none focus:border-input-border-active',
             kind === 'font' || kind === 'text' ? 'w-56' : 'w-40',
           )}
         />
@@ -443,7 +443,7 @@ export default function ThemeTokensTab() {
           aria-label="Find a token"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          className="h-8 w-48 rounded-[var(--radius-sm)] border border-border bg-surface px-2.5 text-xs text-text placeholder:text-text-muted focus:outline-none focus:border-accent"
+          className="h-8 w-48 rounded-[var(--radius-sm)] border border-border bg-surface px-2.5 text-xs text-text placeholder:text-text-muted focus:outline-none focus:border-input-border-active"
         />
         <Button
           variant="ghost"
@@ -478,7 +478,7 @@ export default function ThemeTokensTab() {
               value={presetName}
               onChange={(e) => setPresetName(e.target.value)}
               onKeyDown={(e) => e.key === 'Escape' && setSaving(false)}
-              className="h-8 w-40 rounded-[var(--radius-sm)] border border-border bg-surface px-2.5 text-xs text-text placeholder:text-text-muted focus:outline-none focus:border-accent"
+              className="h-8 w-40 rounded-[var(--radius-sm)] border border-border bg-surface px-2.5 text-xs text-text placeholder:text-text-muted focus:outline-none focus:border-input-border-active"
             />
             <Button size="sm" type="submit">
               Save

@@ -284,7 +284,7 @@ export default function Explore({
               {crux.title}
             </div>
             {crux.kind && KIND_LABEL[crux.kind] && (
-              <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-badge text-badge-text border border-badge-border shrink-0">
+              <span className="text-[9px] font-mono px-1.5 py-0.5 rounded-chip bg-badge text-badge-text border border-badge-border shrink-0">
                 {KIND_LABEL[crux.kind]}
               </span>
             )}
@@ -302,7 +302,7 @@ export default function Explore({
                     e.stopPropagation();
                     toggleTag(t);
                   }}
-                  className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-surface text-text-muted hover:text-accent cursor-pointer"
+                  className="text-[9px] font-mono px-1.5 py-0.5 rounded-chip bg-surface text-text-muted hover:text-accent cursor-pointer"
                 >
                   #{t}
                 </button>
@@ -350,7 +350,22 @@ export default function Explore({
   };
 
   return (
-    <div className="overflow-y-auto flex-1">
+    <div
+      className="overflow-y-auto flex-1"
+      style={
+        {
+          // Explore is the command palette surface (commandPalette* tokens)
+          '--panel': 'var(--command-palette)',
+          '--panel-border': 'var(--command-palette-border)',
+          '--surface': 'var(--command-palette-item)',
+          '--accent-muted': 'var(--command-palette-item-hover)',
+          '--input': 'var(--command-palette-input)',
+          '--input-text': 'var(--command-palette-input-text)',
+          '--text': 'var(--command-palette-item-text)',
+          '--text-muted': 'var(--command-palette-item-icon)',
+        } as React.CSSProperties
+      }
+    >
       {/* Search + filters */}
       <div className="bg-panel border border-border rounded-[var(--radius)] p-4 sm:p-5 mb-6">
         <div className="flex items-center justify-between mb-4">
@@ -375,7 +390,7 @@ export default function Explore({
             defaultValue={initial?.q ?? ''}
             onChange={handleSearchChange}
             placeholder="Search cruxes, moods and authors… (@name, #tag)"
-            className="w-full pl-9 pr-8 py-2 text-sm bg-surface/50 border border-border rounded-[var(--radius-sm)] text-text placeholder:text-text-muted/50 focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent/30 font-body"
+            className="w-full pl-9 pr-8 py-2 text-sm bg-surface/50 border border-border rounded-[var(--radius-sm)] text-text placeholder:text-text-muted/50 focus:outline-none focus:border-input-border-active focus:ring-1 focus:ring-input-outline font-body"
             autoFocus
           />
           {q && (
@@ -398,7 +413,7 @@ export default function Explore({
                   setAuthor('');
                   setPage(1);
                 }}
-                className="px-2 py-0.5 rounded-full text-[11px] font-mono bg-accent text-bg cursor-pointer"
+                className="px-2 py-0.5 rounded-chip text-[11px] font-mono bg-accent text-bg cursor-pointer"
                 aria-label={`Remove author filter ${author}`}
               >
                 @{author} ×
@@ -409,7 +424,7 @@ export default function Explore({
                 key={t}
                 type="button"
                 onClick={() => toggleTag(t)}
-                className="px-2 py-0.5 rounded-full text-[11px] font-mono bg-accent text-bg cursor-pointer"
+                className="px-2 py-0.5 rounded-chip text-[11px] font-mono bg-accent text-bg cursor-pointer"
                 aria-label={`Remove tag filter ${t}`}
               >
                 #{t} ×
@@ -520,7 +535,7 @@ export default function Explore({
                 }}
                 aria-pressed={kind === k.id}
                 className={cn(
-                  'px-2.5 py-1 rounded-full text-[11px] border cursor-pointer transition-colors',
+                  'px-2.5 py-1 rounded-chip text-[11px] border cursor-pointer transition-colors',
                   kind === k.id
                     ? 'bg-accent text-bg border-accent font-medium'
                     : 'bg-surface/50 text-text-muted border-border hover:text-text',
@@ -542,7 +557,7 @@ export default function Explore({
                 key={tag.label}
                 onClick={() => toggleTag(tag.label)}
                 className={cn(
-                  'px-2.5 py-1 text-xs font-mono rounded-[var(--radius-sm)] cursor-pointer border',
+                  'px-2.5 py-1 text-xs font-mono rounded-chip cursor-pointer border',
                   activeTags.includes(tag.label)
                     ? 'bg-accent text-bg border-accent'
                     : 'bg-surface/50 text-text-muted border-border hover:text-text hover:border-text-muted',

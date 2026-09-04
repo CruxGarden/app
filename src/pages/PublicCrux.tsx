@@ -8,7 +8,6 @@ import { useStoreApiProxy } from '@/hooks/useStoreApiProxy';
 import { publishOriginFor } from '@/lib/public-url';
 import MetadataContent from '@/components/workspace/MetadataContent';
 
-
 type LoadState = 'loading' | 'ready' | 'not-found' | 'error';
 
 export default function PublicCrux() {

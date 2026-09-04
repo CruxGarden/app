@@ -110,7 +110,7 @@ export default function UserMenu() {
 
       {open ? (
         <div className="absolute right-0 top-full w-48 pt-2 z-50">
-          <div className="bg-overlay-panel border border-overlay-border rounded-[var(--radius)] shadow-xl py-1">
+          <div className="bg-dropdown border border-dropdown-border rounded-dropdown shadow-dropdown py-1">
             {author ? (
               <button
                 onClick={() => {

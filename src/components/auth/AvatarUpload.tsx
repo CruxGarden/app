@@ -8,7 +8,7 @@ import { alertDialog } from '@/stores/dialogStore';
 const btnClass = cn(
   'px-3 py-1.5 text-xs font-mono rounded-[var(--radius-sm)]',
   'bg-surface border border-border text-text hover:bg-accent-muted cursor-pointer',
-  'disabled:opacity-50 disabled:cursor-not-allowed',
+  'disabled:cursor-not-allowed',
 );
 
 interface AvatarUploadProps {
@@ -102,7 +102,7 @@ export default function AvatarUpload({ compact }: AvatarUploadProps) {
             className={cn(
               'px-3 py-1.5 text-xs font-mono rounded-[var(--radius-sm)]',
               'text-error hover:bg-error-muted cursor-pointer',
-              'disabled:opacity-50 disabled:cursor-not-allowed',
+              'disabled:cursor-not-allowed',
             )}
           >
             Remove

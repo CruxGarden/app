@@ -91,7 +91,7 @@ export default function CruxCard({
         'relative group flex flex-col rounded-[var(--radius)] overflow-hidden',
         'bg-garden-card border border-garden-card-border',
         'transition-[border-color,transform,box-shadow] duration-200',
-        'shadow-card hover:border-garden-card-border-hover hover:bg-garden-card-hover hover:-translate-y-0.5 hover:shadow-card-hover',
+        'shadow-card hover:border-garden-card-border-hover hover:bg-garden-card-hover hover-lift hover:shadow-card-hover',
         'focus-within:border-garden-card-border-hover',
       )}
     >
@@ -171,7 +171,7 @@ export default function CruxCard({
           {menuOpen && (
             <div
               role="menu"
-              className="absolute right-0 top-full mt-1 w-32 bg-surface-solid border border-border rounded-[var(--radius-sm)] shadow-xl py-1 z-50"
+              className="absolute right-0 top-full mt-1 w-32 bg-dropdown border border-dropdown-border rounded-dropdown shadow-dropdown py-1 z-50"
             >
               <button
                 role="menuitem"

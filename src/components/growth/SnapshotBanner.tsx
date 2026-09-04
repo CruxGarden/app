@@ -33,7 +33,7 @@ export default function SnapshotBanner() {
   );
 
   return (
-    <div className="flex items-center justify-between gap-3 px-3 py-1.5 bg-surface border-b border-accent/30">
+    <div className="flex items-center justify-between gap-3 px-3 py-1.5 bg-snapshot-banner text-snapshot-banner-text border-b border-snapshot-banner-border">
       <div className="flex items-center gap-2">
         <svg
           width="14"
@@ -59,8 +59,8 @@ export default function SnapshotBanner() {
         <button
           onClick={exitSnapshotView}
           className={cn(
-            'px-2 py-0.5 text-[11px] font-mono rounded-[var(--radius-sm)]',
-            'bg-accent text-bg hover:brightness-110 transition-all cursor-pointer',
+            'px-2 py-0.5 text-[11px] font-mono rounded-button',
+            'bg-snapshot-banner-button text-bg hover:bg-snapshot-banner-button-hover transition-all cursor-pointer',
           )}
         >
           Back

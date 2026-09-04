@@ -201,7 +201,7 @@ function ExploreSection() {
           onChange={(e) => setQ(e.target.value)}
           placeholder="Search sites, zines, moods, authors… (@name, #tag)"
           aria-label="Search published cruxes"
-          className="w-full px-4 py-3 text-sm bg-panel border border-border rounded-[var(--radius)] text-text placeholder:text-text-muted/60 focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent/30 font-body"
+          className="w-full px-4 py-3 text-sm bg-panel border border-border rounded-[var(--radius)] text-text placeholder:text-text-muted/60 focus:outline-none focus:border-input-border-active focus:ring-1 focus:ring-input-outline font-body"
         />
         <button
           type="submit"
@@ -216,7 +216,7 @@ function ExploreSection() {
             <Link
               key={t.label}
               to={`/explore?tag=${encodeURIComponent(t.label)}`}
-              className="px-2.5 py-1 text-xs font-mono rounded-[var(--radius-sm)] bg-panel border border-border text-text-muted hover:text-text hover:border-text-muted"
+              className="px-2.5 py-1 text-xs font-mono rounded-chip bg-panel border border-border text-text-muted hover:text-text hover:border-text-muted"
             >
               #{t.label} <span className="opacity-50">{t.count}</span>
             </Link>

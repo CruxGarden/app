@@ -10,7 +10,6 @@ import { LoadingPanel } from '@/components/ui';
 import { pathOf, basename, extensionOf } from '@/lib/artifact-path';
 import { publishOriginFor, publishBaseUrlFor, hasRemotePublishOrigin } from '@/lib/public-url';
 
-
 /** Fetch a blob by artifact ID — defaults to publicApi if not provided */
 type DownloadBlobFn = (artifactId: string) => Promise<Blob>;
 

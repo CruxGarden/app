@@ -134,7 +134,7 @@ export default function AccountSettings() {
                 className={cn(
                   'px-2 py-0.5 text-sm font-mono rounded-[var(--radius-sm)]',
                   'bg-surface border text-text outline-none transition-colors',
-                  usernameError ? 'border-error' : 'border-border focus:border-accent',
+                  usernameError ? 'border-error' : 'border-border focus:border-input-border-active',
                 )}
               />
               <Button

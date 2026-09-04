@@ -100,7 +100,7 @@ export default function MoodResultCard({
             {s.layerTypes.map((t) => (
               <span
                 key={t}
-                className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-badge text-badge-text border border-badge-border"
+                className="text-[9px] font-mono px-1.5 py-0.5 rounded-chip bg-badge text-badge-text border border-badge-border"
               >
                 {t}
               </span>

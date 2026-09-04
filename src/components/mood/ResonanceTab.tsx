@@ -264,7 +264,7 @@ function LayerStrip({
           aria-label={`${layer.name} name`}
           value={layer.name}
           onChange={(e) => onChange({ ...layer, name: e.target.value })}
-          className="w-32 bg-transparent text-xs text-text font-body outline-none border-b border-transparent focus:border-accent"
+          className="w-32 bg-transparent text-xs text-text font-body outline-none border-b border-transparent focus:border-input-border-active"
         />
         <label className="flex items-center gap-1.5 flex-1 min-w-[140px] text-[10px] text-text-muted">
           <span>Gain</span>
@@ -519,7 +519,7 @@ export default function ResonanceTab() {
             type="button"
             onClick={() => void toggle()}
             aria-label={playing ? 'Pause mix' : 'Play mix'}
-            className="w-9 h-9 rounded-full bg-accent text-bg flex items-center justify-center cursor-pointer hover:brightness-110 shrink-0"
+            className="w-9 h-9 rounded-full bg-accent text-bg flex items-center justify-center cursor-pointer hover-bright shrink-0"
           >
             {playing ? (
               <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
@@ -536,7 +536,7 @@ export default function ResonanceTab() {
             aria-label="Mix name"
             value={mix.name}
             onChange={(e) => commit({ ...mix, name: e.target.value })}
-            className="h-9 flex-1 min-w-[160px] rounded-[var(--radius-sm)] border border-border bg-surface px-3 text-sm text-text font-display outline-none focus:border-accent"
+            className="h-9 flex-1 min-w-[160px] rounded-[var(--radius-sm)] border border-border bg-surface px-3 text-sm text-text font-display outline-none focus:border-input-border-active"
           />
           <label className="flex items-center gap-1.5 text-[11px] text-text-muted">
             Key

@@ -305,7 +305,8 @@ export default function ArtifactsPane() {
             collisions.length === 1
               ? `"${collisions[0]!.newPath}" already exists. Replace it?`
               : `"${newFolderPath}" already exists — ${collisions.length} files would be replaced. Continue?`;
-          if (!(await confirmDialog({ message: msg, confirmLabel: 'Replace', danger: true }))) return;
+          if (!(await confirmDialog({ message: msg, confirmLabel: 'Replace', danger: true })))
+            return;
         }
         for (const m of moves) await renameArtifact(m.id, m.newPath);
       } else {
@@ -515,14 +516,15 @@ export default function ArtifactsPane() {
       {hasProjectFolder && cruxId && (
         <>
           <div className="relative group/btn">
-            <button aria-label="Reveal in Finder"
+            <button
+              aria-label="Reveal in Finder"
               onClick={() => revealProjectFolder(cruxId)}
               className="p-1 opacity-60 hover:opacity-100 transition-opacity cursor-pointer"
             >
               <RevealIcon />
             </button>
             <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 z-50 pointer-events-none hidden group-hover/btn:block">
-              <div className="px-2.5 py-1.5 rounded-[var(--radius)] bg-surface-solid border border-border shadow-lg whitespace-nowrap">
+              <div className="px-2.5 py-1.5 rounded-tooltip bg-tooltip text-tooltip-text border border-tooltip-border shadow-tooltip whitespace-nowrap">
                 <span className="text-xs font-medium text-text">Reveal in Finder</span>
               </div>
             </div>
@@ -531,21 +533,23 @@ export default function ArtifactsPane() {
         </>
       )}
       <div className="relative group/btn">
-        <button aria-label="Collapse folders"
+        <button
+          aria-label="Collapse folders"
           onClick={() => treeRef.current?.closeAll()}
           className="p-1 opacity-60 hover:opacity-100 transition-opacity cursor-pointer"
         >
           <CollapseAllIcon />
         </button>
         <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 z-50 pointer-events-none hidden group-hover/btn:block">
-          <div className="px-2.5 py-1.5 rounded-[var(--radius)] bg-surface-solid border border-border shadow-lg whitespace-nowrap">
+          <div className="px-2.5 py-1.5 rounded-tooltip bg-tooltip text-tooltip-text border border-tooltip-border shadow-tooltip whitespace-nowrap">
             <span className="text-xs font-medium text-text">Collapse folders</span>
           </div>
         </div>
       </div>
       <div className="w-px h-3 bg-border mx-0.5" />
       <div className="relative group/btn">
-        <button aria-label="New file"
+        <button
+          aria-label="New file"
           onClick={() => {
             startFileOperation({ type: 'create-file', parentPath: getParentPath() });
           }}
@@ -554,13 +558,14 @@ export default function ArtifactsPane() {
           <FilePlusIcon />
         </button>
         <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 z-50 pointer-events-none hidden group-hover/btn:block">
-          <div className="px-2.5 py-1.5 rounded-[var(--radius)] bg-surface-solid border border-border shadow-lg whitespace-nowrap">
+          <div className="px-2.5 py-1.5 rounded-tooltip bg-tooltip text-tooltip-text border border-tooltip-border shadow-tooltip whitespace-nowrap">
             <span className="text-xs font-medium text-text">New file</span>
           </div>
         </div>
       </div>
       <div className="relative group/btn">
-        <button aria-label="New folder"
+        <button
+          aria-label="New folder"
           onClick={() => {
             startFileOperation({ type: 'create-folder', parentPath: getParentPath() });
           }}
@@ -569,20 +574,21 @@ export default function ArtifactsPane() {
           <FolderPlusIcon />
         </button>
         <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 z-50 pointer-events-none hidden group-hover/btn:block">
-          <div className="px-2.5 py-1.5 rounded-[var(--radius)] bg-surface-solid border border-border shadow-lg whitespace-nowrap">
+          <div className="px-2.5 py-1.5 rounded-tooltip bg-tooltip text-tooltip-text border border-tooltip-border shadow-tooltip whitespace-nowrap">
             <span className="text-xs font-medium text-text">New folder</span>
           </div>
         </div>
       </div>
       <div className="relative" ref={uploadDropdownRef}>
-        <button aria-label="Upload"
+        <button
+          aria-label="Upload"
           onClick={() => setUploadMenuOpen((v) => !v)}
           className="p-1 opacity-60 hover:opacity-100 transition-opacity cursor-pointer"
         >
           <UploadIcon />
         </button>
         {uploadMenuOpen && (
-          <div className="absolute top-full right-0 mt-1 z-50 bg-surface-solid border border-border rounded-[var(--radius-sm)] shadow-lg overflow-hidden">
+          <div className="absolute top-full right-0 mt-1 z-50 bg-dropdown border border-dropdown-border rounded-dropdown shadow-dropdown overflow-hidden">
             <button
               className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-text hover:bg-surface transition-colors whitespace-nowrap cursor-pointer"
               onClick={() => {

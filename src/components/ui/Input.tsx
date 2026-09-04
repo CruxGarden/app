@@ -17,7 +17,7 @@ const Input = forwardRef<HTMLInputElement, InputProps>(({ error, className, ...p
           'transition-colors duration-150',
           'focus:border-input-border-active focus:ring-1 focus:ring-input-outline',
           error ? 'border-error' : 'border-input-border',
-          'disabled:opacity-50 disabled:cursor-not-allowed',
+          'disabled:cursor-not-allowed',
           className,
         )}
         {...props}

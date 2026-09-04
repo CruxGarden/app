@@ -92,7 +92,10 @@ export const FOLDER_ID_PREFIX = 'folder:';
  * the artifact ids it denotes (folders expand to every artifact under them).
  * The one place this rule lives; both delete paths use it.
  */
-export function expandTreeSelection(ids: readonly string[], artifacts: readonly Artifact[]): string[] {
+export function expandTreeSelection(
+  ids: readonly string[],
+  artifacts: readonly Artifact[],
+): string[] {
   const out = new Set<string>();
   for (const id of ids) {
     if (id.startsWith(FOLDER_ID_PREFIX)) {

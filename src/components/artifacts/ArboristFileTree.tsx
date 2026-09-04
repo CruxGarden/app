@@ -136,8 +136,10 @@ const NodeRenderer = memo(function NodeRenderer({
       className={cn(
         'group/node flex items-center gap-1.5 py-0.5 pr-2 text-xs font-mono',
         'cursor-pointer select-none',
-        node.isSelected ? 'bg-accent-muted text-text' : 'text-text hover:bg-accent-muted',
-        node.willReceiveDrop && 'bg-accent/10 ring-1 ring-accent/30',
+        node.isSelected
+          ? 'bg-file-tree-item-selected text-file-tree-item-text-selected'
+          : 'bg-file-tree-item text-file-tree-item-text hover:bg-file-tree-item-hover',
+        node.willReceiveDrop && 'bg-file-tree-drop-target ring-1 ring-file-tree-drop-target-border',
       )}
       onClick={(e) => {
         // Only toggle folder open/close on plain click — not when modifier
@@ -195,9 +197,20 @@ const NodeRenderer = memo(function NodeRenderer({
 
 // ── Upload icon ──────────────────────────────────────────
 
+/** Row height and indent come from Mood tokens (--file-tree-row-height / --file-tree-indent). */
+function readTreeGeometry(): { rowHeight: number; indent: number } {
+  if (typeof document === 'undefined') return { rowHeight: 26, indent: 20 };
+  const cs = getComputedStyle(document.documentElement);
+  const px = (name: string, d: number) => {
+    const v = parseFloat(cs.getPropertyValue(name));
+    return Number.isFinite(v) && v > 0 ? v : d;
+  };
+  return { rowHeight: px('--file-tree-row-height', 26), indent: px('--file-tree-indent', 20) };
+}
+
 function UploadDropOverlay() {
   return (
-    <div className="absolute inset-0 z-10 flex items-center justify-center bg-accent/5 border-2 border-dashed border-accent/40 rounded-[var(--radius)] pointer-events-none">
+    <div className="absolute inset-0 z-10 flex items-center justify-center bg-file-tree-drop-target border-2 border-dashed border-file-tree-drop-target-border rounded-[var(--radius)] pointer-events-none">
       <div className="flex flex-col items-center gap-1 text-accent">
         <svg
           width="24"
@@ -246,6 +259,7 @@ const ArboristFileTree = forwardRef<ArboristFileTreeHandle, ArboristFileTreeProp
     const containerRef = useRef<HTMLDivElement>(null);
     const dndManager = useDragDropManager();
     const [dndRoot, setDndRoot] = useState<HTMLDivElement | null>(null);
+    const treeGeometry = readTreeGeometry();
     const [containerHeight, setContainerHeight] = useState(400);
     const [isDraggingFiles, setIsDraggingFiles] = useState(false);
 
@@ -593,8 +607,8 @@ const ArboristFileTree = forwardRef<ArboristFileTreeHandle, ArboristFileTreeProp
                     data={treeDataWithCreate}
                     width="100%"
                     height={containerHeight}
-                    indent={20}
-                    rowHeight={26}
+                    indent={treeGeometry.indent}
+                    rowHeight={treeGeometry.rowHeight}
                     openByDefault={false}
                     initialOpenState={initialOpenState}
                     selection={selectedId ?? undefined}

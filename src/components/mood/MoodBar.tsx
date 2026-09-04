@@ -121,7 +121,7 @@ export default function MoodBar({ className }: { className?: string }) {
         type="button"
         onClick={() => void toggle()}
         aria-label={playing ? 'Pause soundscape' : 'Play soundscape'}
-        className="w-5 h-5 rounded-[var(--mood-bar-radius)] bg-mood-bar-accent text-mood-bar-accent-text flex items-center justify-center cursor-pointer shrink-0 hover:brightness-110"
+        className="w-5 h-5 rounded-[var(--mood-bar-radius)] bg-mood-bar-accent text-mood-bar-accent-text flex items-center justify-center cursor-pointer shrink-0 hover-bright"
       >
         {PlayIcon}
       </button>

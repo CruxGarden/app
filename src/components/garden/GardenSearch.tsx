@@ -58,7 +58,7 @@ export default memo(function GardenSearch({ value, onChange }: GardenSearchProps
         defaultValue={value}
         onChange={handleChange}
         placeholder="Search cruxes..."
-        className="w-full px-3 pr-8 py-2 text-sm bg-surface/50 border border-border rounded-[var(--radius-sm)] text-text placeholder:text-text-muted/50 focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent/30 transition-colors font-body"
+        className="w-full px-3 pr-8 py-2 text-sm bg-surface/50 border border-border rounded-[var(--radius-sm)] text-text placeholder:text-text-muted/50 focus:outline-none focus:border-input-border-active focus:ring-1 focus:ring-input-outline transition-colors font-body"
       />
       {hasText && (
         <button
