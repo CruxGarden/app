@@ -23,7 +23,7 @@ import {
   applyActiveMood,
   type ThemeOverrides,
 } from '@/lib/moods/active';
-import { groupTokens, tokenKind, tokenLabel } from '@/lib/moods/token-groups';
+import { groupTokens, tokenKind, tokenLabel, tokenChoices } from '@/lib/moods/token-groups';
 import type { ToolDefinition } from './tools';
 import type { ToolResultContent } from '@/services/types';
 
@@ -706,7 +706,9 @@ async function toolGetTheme(input: Record<string, unknown>): Promise<string> {
   const rows = found.keys
     .map((k) => {
       const flag = k in preview ? ' [preview]' : k in saved ? ' [saved]' : '';
-      return `${k} (${tokenKind(k)}, ${tokenLabel(k, found.group)}): ${effectiveValue(k, saved, preview)}${flag}`;
+      const choices = tokenChoices(k);
+      const kind = choices ? `one of ${choices.join('|')}` : tokenKind(k);
+      return `${k} (${kind}, ${tokenLabel(k, found.group)}): ${effectiveValue(k, saved, preview)}${flag}`;
     })
     .join('\n');
   return `${header}\n## ${found.group.label}\n${found.group.hint}\n\n${rows}`;
@@ -721,12 +723,23 @@ function toolSetTheme(input: Record<string, unknown>): string {
 
   const tokens: ThemeOverrides = {};
   const unknown: string[] = [];
+  const invalid: string[] = [];
   for (const [k, v] of Object.entries(raw)) {
     if (!(k in GARDEN_DARK)) unknown.push(k);
-    else if (typeof v === 'string' && v.trim()) tokens[k] = v.trim();
+    else if (typeof v === 'string' && v.trim()) {
+      const choices = tokenChoices(k);
+      if (choices && !choices.includes(v.trim()))
+        invalid.push(`${k} must be one of ${choices.join('|')} (got "${v.trim()}")`);
+      else tokens[k] = v.trim();
+    }
   }
-  if (unknown.length && Object.keys(tokens).length === 0 && !reset) {
-    return `set_theme: unknown token(s): ${unknown.join(', ')}. Call get_theme to list valid names.`;
+  if ((unknown.length || invalid.length) && Object.keys(tokens).length === 0 && !reset) {
+    return `set_theme: ${[
+      unknown.length ? `unknown token(s): ${unknown.join(', ')}` : '',
+      ...invalid,
+    ]
+      .filter(Boolean)
+      .join('; ')}. Call get_theme to list valid names and options.`;
   }
 
   const section = resolvedSection();
@@ -761,7 +774,11 @@ function toolSetTheme(input: Record<string, unknown>): string {
       summary = `Saved ${Object.keys(tokens).length} token${Object.keys(tokens).length === 1 ? '' : 's'} to the ${section} theme (visible in the Mood Builder).`;
     }
   }
-  return unknown.length ? `${summary}\nIgnored unknown token(s): ${unknown.join(', ')}.` : summary;
+  const notes = [
+    unknown.length ? `Ignored unknown token(s): ${unknown.join(', ')}.` : '',
+    invalid.length ? `Ignored: ${invalid.join('; ')}.` : '',
+  ].filter(Boolean);
+  return notes.length ? `${summary}\n${notes.join('\n')}` : summary;
 }
 
 /** Execute a theme tool. Safe without a DOM (state updates, no paint). */

@@ -17,6 +17,7 @@ import {
   groupTokens,
   isDerived,
   tokenKind,
+  tokenChoices,
   tokenLabel,
   type TokenGroup,
 } from '@/lib/moods/token-groups';
@@ -185,6 +186,20 @@ function TokenRow({
             <option value="none">none</option>
           </select>
         )}
+        {kind === 'choice' && (
+          <select
+            aria-label={`${label} option`}
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+            className="h-7 w-40 rounded-[var(--radius-sm)] border border-border bg-surface px-1.5 text-xxs text-text"
+          >
+            {(tokenChoices(tokenKey) ?? []).map((c) => (
+              <option key={c} value={c}>
+                {c}
+              </option>
+            ))}
+          </select>
+        )}
         {kind === 'number' && (
           <input
             type="range"
@@ -200,6 +215,7 @@ function TokenRow({
         <input
           type="text"
           aria-label={`${label} value`}
+          hidden={kind === 'choice'}
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
           onBlur={commit}
