@@ -4,7 +4,7 @@ import { launchApp } from './launch';
 type AudioState = { mixName: string | null; mixCount: number };
 
 /**
- * The thirteen built-in Moods apply as whole rooms: theme tokens, background,
+ * The fourteen built-in Moods apply as whole rooms: theme tokens, background,
  * soundscape and persona change together, and the user's own mixes survive.
  */
 test.describe('bundled moods', () => {
@@ -31,7 +31,7 @@ test.describe('bundled moods', () => {
       await page.getByRole('button', { name: 'Mood', exact: true }).click();
       const built = page.getByTestId('bundled-moods');
       await expect(built).toBeVisible();
-      await expect(built.locator('[data-testid^="bundled-"]')).toHaveCount(13);
+      await expect(built.locator('[data-testid^="bundled-"]')).toHaveCount(14);
 
       await built.getByTestId('bundled-windows-95').getByRole('button', { name: 'Apply' }).click();
       await expect.poll(() => cssVar('--radius')).toBe('0px');

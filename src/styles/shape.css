@@ -120,6 +120,7 @@
     z-index: -1;
     background: var(--pane-header-bg);
     border-radius: inherit;
+    corner-shape: inherit;
   }
   .mosaic.crux-mosaic-theme .mosaic-tile .mosaic-window .mosaic-window-body {
     border: var(--pane-frame-width) var(--pane-border-style) var(--border);
@@ -179,6 +180,7 @@
     z-index: -1;
     background: var(--pane-header-bg);
     border-radius: inherit;
+    corner-shape: inherit;
   }
   .mosaic.crux-mosaic-theme .mosaic-tile .mosaic-window .mosaic-window-body {
     padding: 0 var(--pane-frame-width) var(--pane-frame-width);
@@ -299,7 +301,7 @@
   }
 }
 
-/* ── cardBorderStyle + corners: `.shape-card` on garden, explore and Mood cards ── */
+/* ── cardBorderStyle + corners: `.shape-card` on garden and Mood cards ── */
 .shape-card {
   border-style: var(--card-border-style);
   corner-shape: var(--pane-corner-shape);

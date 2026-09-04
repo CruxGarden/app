@@ -67,8 +67,8 @@ function neonFrames(panes: Record<string, [string, string]>) {
 }
 
 // Windows 95 helper: every pane is the same grey window — a raised bevel
-// (light top-left, dark bottom-right, done with a hard diagonal gradient on
-// the frame), a navy title bar with white text, and no radius anywhere.
+// (light top-left, dark bottom-right, drawn by paneBorderStyle: outset),
+// a navy title bar with white text, and no radius anywhere.
 function win95Panes(keys: string[]) {
   const result: Record<string, string> = {};
   for (const key of keys) {
@@ -76,7 +76,7 @@ function win95Panes(keys: string[]) {
     result[`${key}Body`] = '#c0c0c0';
     result[`${key}Surface`] = '#dfdfdf';
     result[`${key}SurfaceSolid`] = '#c0c0c0';
-    result[`${key}Border`] = 'linear-gradient(135deg, #ffffff 0 50%, #404040 50%)';
+    result[`${key}Border`] = '#c0c0c0';
     result[`${key}Header`] = 'linear-gradient(90deg, #000080, #1084d0)';
     result[`${key}HeaderBorder`] = 'transparent';
     result[`${key}HeaderText`] = '#ffffff';
@@ -351,6 +351,13 @@ export const MOOD_PRESETS: MoodPresetDef[] = [
       driftBg: '#1f2226',
       driftSpeed: '0.25',
       driftDensity: '90',
+      // Silhouette (ADR 0014): shared by the preset and its Bundled Mood.
+      paneHeaderShape: 'underline',
+      paneCornerShape: 'round',
+      controlCornerShape: 'round',
+      paneBorderStyle: 'solid',
+      dividerStyle: 'hairline',
+      cardBorderStyle: 'solid',
     },
   },
   // ── Spring Morning — near-white, faint green and blossom, thin type, lots of air ──
@@ -489,6 +496,13 @@ export const MOOD_PRESETS: MoodPresetDef[] = [
       motionPress: 'none',
       motionAttention: 'pulse',
       motionAmbient: 'float',
+      // Silhouette (ADR 0014): shared by the preset and its Bundled Mood.
+      paneHeaderShape: 'none',
+      paneCornerShape: 'round',
+      controlCornerShape: 'round',
+      paneBorderStyle: 'solid',
+      dividerStyle: 'none',
+      cardBorderStyle: 'none',
     },
   },
   // ── Snowed In — white-blue hush, soft greys, everything a little muffled ──
@@ -601,6 +615,13 @@ export const MOOD_PRESETS: MoodPresetDef[] = [
       driftBg: '#eef1f5',
       driftSpeed: '0.2',
       driftDensity: '220',
+      // Silhouette (ADR 0014): shared by the preset and its Bundled Mood.
+      paneHeaderShape: 'none',
+      paneCornerShape: 'round',
+      controlCornerShape: 'round',
+      paneBorderStyle: 'none',
+      dividerStyle: 'none',
+      cardBorderStyle: 'none',
     },
   },
   // ── Lofi Café — warm cream, big soft radii, paper grain, chunky friendly type ──
@@ -739,6 +760,13 @@ export const MOOD_PRESETS: MoodPresetDef[] = [
       motionAttention: 'pulse',
       motionAmbient: 'float',
       reactAccentAudio: '0.5',
+      // Silhouette (ADR 0014): shared by the preset and its Bundled Mood.
+      paneHeaderShape: 'label',
+      paneCornerShape: 'round',
+      controlCornerShape: 'round',
+      paneBorderStyle: 'solid',
+      dividerStyle: 'ornament',
+      cardBorderStyle: 'none',
     },
   },
   // ── Solarpunk Garden — deep greens, gold, leaf textures, generous rounded glass ──
@@ -853,6 +881,13 @@ export const MOOD_PRESETS: MoodPresetDef[] = [
       bloom6: '#0f2117',
       bloomOpacity: '0.8',
       bloomSpeed: '0.5',
+      // Silhouette (ADR 0014): shared by the preset and its Bundled Mood.
+      paneHeaderShape: 'label',
+      paneCornerShape: 'bevel',
+      controlCornerShape: 'bevel',
+      paneBorderStyle: 'solid',
+      dividerStyle: 'ornament',
+      cardBorderStyle: 'solid',
     },
   },
   // ── Sunday Paper — off-white pages, hairline rules, serif display, no radii, wide gutters ──
@@ -989,6 +1024,13 @@ export const MOOD_PRESETS: MoodPresetDef[] = [
       motionPress: 'none',
       motionAttention: 'none',
       motionAmbient: 'none',
+      // Silhouette (ADR 0014): shared by the preset and its Bundled Mood.
+      paneHeaderShape: 'underline',
+      paneCornerShape: 'square',
+      controlCornerShape: 'square',
+      paneBorderStyle: 'double',
+      dividerStyle: 'double',
+      cardBorderStyle: 'double',
     },
   },
   // ════════════════════════════════════════════════════
@@ -1139,6 +1181,14 @@ export const MOOD_PRESETS: MoodPresetDef[] = [
       motionAmbient: 'none',
       reactAccentAudio: '0.8',
       reactBackgroundTyping: '0.5',
+      // Silhouette (ADR 0014): shared by the preset and its Bundled Mood.
+      paneHeaderShape: 'bar',
+      paneCornerShape: 'notch',
+      controlCornerShape: 'bevel',
+      paneBorderStyle: 'solid',
+      dividerStyle: 'dashed',
+      cardBorderStyle: 'solid',
+      paneRadius: '12px',
     },
   },
 
@@ -1282,6 +1332,13 @@ export const MOOD_PRESETS: MoodPresetDef[] = [
       motionPress: 'none',
       motionAttention: 'blink',
       motionAmbient: 'none',
+      // Silhouette (ADR 0014): shared by the preset and its Bundled Mood.
+      paneHeaderShape: 'tab',
+      paneCornerShape: 'square',
+      controlCornerShape: 'square',
+      paneBorderStyle: 'solid',
+      dividerStyle: 'dashed',
+      cardBorderStyle: 'dashed',
     },
   },
 
@@ -1600,6 +1657,13 @@ export const MOOD_PRESETS: MoodPresetDef[] = [
       motionAttention: 'pulse',
       motionAmbient: 'breathe',
       reactAccentAudio: '0.6',
+      // Silhouette (ADR 0014): shared by the preset and its Bundled Mood.
+      paneHeaderShape: 'bar',
+      paneCornerShape: 'round',
+      controlCornerShape: 'round',
+      paneBorderStyle: 'solid',
+      dividerStyle: 'hairline',
+      cardBorderStyle: 'solid',
     },
   },
 
@@ -2851,6 +2915,13 @@ export const MOOD_PRESETS: MoodPresetDef[] = [
         radius: '14px',
         headerRadius: '10px',
       }),
+      // Silhouette (ADR 0014): shared by the preset and its Bundled Mood.
+      paneHeaderShape: 'label',
+      paneCornerShape: 'scoop',
+      controlCornerShape: 'round',
+      paneBorderStyle: 'solid',
+      dividerStyle: 'ornament',
+      cardBorderStyle: 'dashed',
     },
   },
 
@@ -3002,6 +3073,13 @@ export const MOOD_PRESETS: MoodPresetDef[] = [
       motionPress: 'sink',
       motionAttention: 'blink',
       motionAmbient: 'none',
+      // Silhouette (ADR 0014): shared by the preset and its Bundled Mood.
+      paneHeaderShape: 'bar',
+      paneCornerShape: 'square',
+      controlCornerShape: 'square',
+      paneBorderStyle: 'outset',
+      dividerStyle: 'etched',
+      cardBorderStyle: 'solid',
     },
   },
 
@@ -3466,6 +3544,13 @@ export const MOOD_PRESETS: MoodPresetDef[] = [
       motionPress: 'none',
       motionAttention: 'none',
       motionAmbient: 'none',
+      // Silhouette (ADR 0014): shared by the preset and its Bundled Mood.
+      paneHeaderShape: 'bar',
+      paneCornerShape: 'square',
+      controlCornerShape: 'square',
+      paneBorderStyle: 'solid',
+      dividerStyle: 'hairline',
+      cardBorderStyle: 'solid',
     },
   },
 
@@ -3673,6 +3758,13 @@ export const MOOD_PRESETS: MoodPresetDef[] = [
       motionPress: 'scale',
       motionAttention: 'pulse',
       motionAmbient: 'none',
+      // Silhouette (ADR 0014): shared by the preset and its Bundled Mood.
+      paneHeaderShape: 'tab',
+      paneCornerShape: 'round',
+      controlCornerShape: 'round',
+      paneBorderStyle: 'solid',
+      dividerStyle: 'hairline',
+      cardBorderStyle: 'solid',
     },
   },
 ];

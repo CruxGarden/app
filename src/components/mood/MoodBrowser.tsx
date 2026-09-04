@@ -243,7 +243,8 @@ export default function MoodBrowser() {
         <div className="flex items-baseline justify-between">
           <h3 className="text-xxs font-mono uppercase tracking-wider text-caption">Built in</h3>
           <span className="text-2xs text-text-muted">
-            Eleven rooms — look, sound and voice change together. Apply one, then make it yours.
+            {BUNDLED_MOODS.length} rooms — look, sound and voice change together. Apply one, then
+            make it yours.
           </span>
         </div>
         <div className="grid gap-3 grid-cols-[repeat(auto-fill,minmax(180px,1fr))]">
@@ -251,7 +252,7 @@ export default function MoodBrowser() {
             <div
               key={pkg.id}
               className={cn(
-                'group rounded-[var(--radius)] border border-border bg-panel overflow-hidden flex flex-col',
+                'group shape-card rounded-[var(--radius)] border border-border bg-panel overflow-hidden flex flex-col',
                 busy === pkg.id && 'opacity-70',
               )}
               data-testid={`bundled-${pkg.id}`}
@@ -304,7 +305,7 @@ export default function MoodBrowser() {
               <div
                 key={pkg.id}
                 className={cn(
-                  'group rounded-[var(--radius)] border border-border bg-panel overflow-hidden flex flex-col',
+                  'group shape-card rounded-[var(--radius)] border border-border bg-panel overflow-hidden flex flex-col',
                   busy === pkg.id && 'opacity-70',
                 )}
                 data-testid={`mood-${pkg.id}`}

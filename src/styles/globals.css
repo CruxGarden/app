@@ -681,7 +681,8 @@ body {
 
 @media (prefers-reduced-motion: reduce) {
   :root {
-    --motion-scale: 0;
+    /* Mood tokens are inline on html; the system preference must win. */
+    --motion-scale: 0 !important;
   }
 }
 

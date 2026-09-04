@@ -70,7 +70,7 @@ export default function CruxCard({
   return (
     <div
       className={cn(
-        'relative group flex flex-col rounded-[var(--radius)] overflow-hidden motion-enter-card',
+        'relative group shape-card flex flex-col rounded-[var(--radius)] overflow-hidden motion-enter-card',
         'bg-garden-card border border-garden-card-border',
         'transition-[border-color,transform,box-shadow] duration-200',
         'shadow-card hover:border-garden-card-border-hover hover:bg-garden-card-hover hover-lift hover:shadow-card-hover',

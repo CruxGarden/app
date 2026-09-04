@@ -20,6 +20,7 @@ const IDS = [
   'pretty-in-pink',
   'plain-form',
   'catppuccin-mocha',
+  'geocities',
 ];
 
 test.describe('bundled mood screenshots', () => {
@@ -68,6 +69,7 @@ test.describe('bundled mood screenshots', () => {
         await expect.poll(mixName).not.toBe(before.mix);
         await page.keyboard.press('Escape');
         await expect(page.getByTestId('bundled-moods')).toHaveCount(0);
+        await page.mouse.move(0, 0);
         // The palette transition is 400ms (globals.css); let it finish before the shot
         await page.waitForTimeout(500);
         await page.screenshot({ path: `e2e/.results/mood-${id}.png` });

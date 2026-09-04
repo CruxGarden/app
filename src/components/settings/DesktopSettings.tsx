@@ -135,7 +135,7 @@ export default function DesktopSettings() {
           or click Restart to update.
         </p>
 
-        <div className="border-t border-border my-1" />
+        <div className="divider my-1" />
 
         <div className="flex items-center justify-between gap-3">
           <div>
