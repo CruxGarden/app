@@ -126,7 +126,7 @@ export async function startMockApi(): Promise<MockApi> {
     const parsedUrl = new URL(req.url ?? '/', 'http://x');
     const path = parsedUrl.pathname;
     const send = (status: number, body: unknown) => {
-      log.push(`${method} ${path} -> ${status}`);
+      log.push(`${method} ${path}${parsedUrl.search} -> ${status}`);
       res.writeHead(status, {
         'Content-Type': 'application/json',
         'Access-Control-Allow-Origin': '*',
@@ -136,7 +136,7 @@ export async function startMockApi(): Promise<MockApi> {
       res.end(body === null ? '' : JSON.stringify(body));
     };
     const sendRaw = (status: number, mime: string, bytes: Buffer) => {
-      log.push(`${method} ${path} -> ${status}`);
+      log.push(`${method} ${path}${parsedUrl.search} -> ${status}`);
       res.writeHead(status, {
         'Content-Type': mime,
         'Content-Length': bytes.length,
@@ -166,10 +166,26 @@ export async function startMockApi(): Promise<MockApi> {
     if (path === '/explore/tags') return send(200, { data: [] });
     if (path === '/explore' && method === 'GET') {
       const kind = parsedUrl.searchParams.get('kind');
-      const q = parsedUrl.searchParams.get('q')?.toLowerCase();
+      let q = parsedUrl.searchParams.get('q')?.toLowerCase() ?? '';
+      let author = parsedUrl.searchParams.get('author')?.toLowerCase() ?? '';
+      const tags = parsedUrl.searchParams.getAll('tag').map((t) => t.toLowerCase());
+      if (q.startsWith('@')) {
+        author = q.slice(1);
+        q = '';
+      } else if (q.startsWith('#')) {
+        tags.push(q.slice(1));
+        q = '';
+      }
       const items = Object.values(state.cruxes)
         .filter((c) => c.visibility === 'public' && c.discoverable !== false)
         .filter((c) => !kind || c.kind === kind)
+        .filter((c) => !author || AUTHOR.username.toLowerCase().startsWith(author))
+        .filter((c) => {
+          const mine = (
+            ((c.meta as Record<string, unknown> | undefined)?.tags as string[] | undefined) ?? []
+          ).map((t) => t.toLowerCase());
+          return tags.every((t) => mine.includes(t));
+        })
         .filter(
           (c) =>
             !q ||
