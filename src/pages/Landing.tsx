@@ -66,6 +66,9 @@ function SiteHeader() {
         <a href="#mood" className="hover:text-text">
           Mood
         </a>
+        <Link to="/plans" className="hover:text-text">
+          Plans
+        </Link>
         <a href="#download" className="hover:text-text">
           Download
         </a>
@@ -143,6 +146,14 @@ function Hero() {
             </div>
           </>
         )}
+        <p className="mt-4 text-xs text-text-muted max-w-md">
+          Free includes the whole app, the AI on your own key, 1 GB published and backed up, and a
+          custom domain.{' '}
+          <Link to="/plans" className="text-accent hover:underline">
+            More room when you need it
+          </Link>
+          .
+        </p>
       </div>
     </section>
   );
