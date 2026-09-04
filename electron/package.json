@@ -13,11 +13,12 @@
     "dist": "npm run build:all && electron-builder",
     "dist:mac": "npm run build:all && electron-builder --mac dmg zip",
     "dist:win": "npm run build:all && electron-builder --win",
-    "dist:linux": "npm run build:all && electron-builder --linux",
+    "dist:linux": "npm run build:all && electron-builder --linux --publish never",
     "test:e2e": "tsc && playwright test",
     "verify": "tsc && eslint src --max-warnings=0",
     "dist:mac:unsigned": "npm run build:all && CSC_IDENTITY_AUTO_DISCOVERY=false electron-builder --mac dmg zip --publish never",
-    "test:packaged": "CRUX_PACKAGED=1 playwright test e2e/packaged.spec.ts"
+    "test:packaged": "CRUX_PACKAGED=1 playwright test e2e/packaged.spec.ts",
+    "dist:win:unsigned": "npm run build:all && electron-builder --win --publish never"
   },
   "dependencies": {
     "better-sqlite3": "^12.8.0",
@@ -93,12 +94,36 @@
     },
     "win": {
       "icon": "build/icon.ico",
-      "target": "nsis"
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "artifactName": "${productName}-${version}-win-${arch}.${ext}"
     },
     "linux": {
       "icon": "build/icon.png",
-      "target": "AppImage",
-      "category": "Utility"
+      "category": "Utility",
+      "target": [
+        {
+          "target": "AppImage",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "deb",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "artifactName": "${productName}-${version}-linux-${arch}.${ext}",
+      "maintainer": "keeper@crux.garden",
+      "synopsis": "Talk to an AI, make something, publish it."
     },
     "publish": {
       "provider": "github",
@@ -121,6 +146,12 @@
           "path": "/Applications"
         }
       ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "deleteAppDataOnUninstall": false
     }
   }
 }

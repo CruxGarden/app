@@ -43,7 +43,7 @@ test.describe('snapshots & revert', () => {
       await expect(monaco).toBeVisible({ timeout: 30_000 });
       await monaco.click();
       await page.keyboard.type('version one');
-      await page.keyboard.press('Meta+s');
+      await page.keyboard.press('ControlOrMeta+s');
       await expect.poll(fileOnDisk).toBe('version one');
 
       // Snapshot "v1"
@@ -62,10 +62,10 @@ test.describe('snapshots & revert', () => {
 
       // Edit + save + snapshot "v2"
       await monaco.click();
-      await page.keyboard.press('Meta+ArrowDown');
+      await page.keyboard.press('ControlOrMeta+ArrowDown');
       await page.keyboard.press('End');
       await page.keyboard.type(' and version two');
-      await page.keyboard.press('Meta+s');
+      await page.keyboard.press('ControlOrMeta+s');
       await expect.poll(fileOnDisk).toBe('version one and version two');
       await snapshotWithLabel('v2');
       await page.screenshot({ path: 'e2e/.results/snapshots-1-two-versions.png' });

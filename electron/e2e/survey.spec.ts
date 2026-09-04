@@ -53,7 +53,7 @@ test.describe('ui survey', () => {
       await page.keyboard.type(
         '<body style="margin:0;font-family:sans-serif;background:#0f1412;color:#dfe6e2"><main style="padding:48px"><h1 style="font-size:40px">Hello, garden</h1><p>A small page grown in Crux Garden.</p></main></body>',
       );
-      await page.keyboard.press('Meta+s');
+      await page.keyboard.press('ControlOrMeta+s');
       await page.waitForTimeout(2500);
       await togglePane(page, /^Toggle history$/i);
       await page

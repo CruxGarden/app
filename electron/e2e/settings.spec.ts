@@ -65,9 +65,9 @@ test.describe('settings & mood', () => {
       await expect(page.getByText('Console — The Keeper')).toHaveCount(0);
 
       // ── Cmd+, toggles Settings ───────────────────────────────────────────
-      await page.keyboard.press('Meta+,');
+      await page.keyboard.press('ControlOrMeta+,');
       await expect(page.getByRole('heading', { name: 'Settings' })).toBeVisible();
-      await page.keyboard.press('Meta+,');
+      await page.keyboard.press('ControlOrMeta+,');
       await expect(page.getByRole('heading', { name: 'Settings' })).toHaveCount(0);
     } finally {
       await app.close();

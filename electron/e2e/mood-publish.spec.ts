@@ -30,7 +30,7 @@ test.describe('publish + discover moods (mocked API)', () => {
       await expect(monaco).toBeVisible({ timeout: 30_000 });
       await monaco.click();
       await page.keyboard.type('<h1>Hi</h1>');
-      await page.keyboard.press('Meta+s');
+      await page.keyboard.press('ControlOrMeta+s');
       await page.getByRole('button', { name: 'Toggle share' }).click();
       await page.getByRole('button', { name: 'Share', exact: true }).click();
       await page.getByPlaceholder('email@example.com').fill('tester@example.com');

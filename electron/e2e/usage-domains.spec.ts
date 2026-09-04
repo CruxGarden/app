@@ -28,7 +28,7 @@ test.describe('usage + custom domains (mocked API)', () => {
       await expect(monaco).toBeVisible({ timeout: 30_000 });
       await monaco.click();
       await page.keyboard.type('<h1>Hello domain</h1>');
-      await page.keyboard.press('Meta+s');
+      await page.keyboard.press('ControlOrMeta+s');
 
       // Connect + publish through the Share pane
       await page.getByRole('button', { name: 'Toggle share' }).click();

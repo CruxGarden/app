@@ -1,8 +1,9 @@
-# Desktop release (ADR 0007): tag `v*` → build, sign, notarize, publish a draft
-# GitHub Release with the DMG + zip + latest-mac.yml electron-updater reads.
-# Signing/notarization run only when the secrets exist, so the same workflow
-# produces unsigned artifacts on a fork or before the Apple side is set up.
-# `workflow_dispatch` builds unsigned and uploads artifacts without publishing.
+# Desktop release (ADR 0007, amended 2026-09-03 for Windows + Linux): tag `v*`
+# → build every platform, sign/notarize where secrets exist, publish one draft
+# GitHub Release with the installers and the latest*.yml files electron-updater
+# reads. macOS is the tested platform (packaged smoke test); Windows and Linux
+# are build-only until their e2e runs are green. `workflow_dispatch` builds
+# unsigned and uploads artifacts without publishing.
 name: Release (desktop)
 
 on:
@@ -68,4 +69,77 @@ jobs:
             electron/release/*.zip
             electron/release/*.yml
             electron/e2e/.results/packaged-gateway.png
+          if-no-files-found: error
+
+  linux:
+    name: Linux x64 (AppImage + deb)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            electron/package-lock.json
+      - run: npm ci
+      - run: npm ci
+        working-directory: electron
+      - run: npm run build:all
+        working-directory: electron
+      - name: Package
+        working-directory: electron
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          PUBLISH=never
+          if [[ "${GITHUB_REF}" == refs/tags/v* ]]; then PUBLISH=always; fi
+          npx electron-builder --linux --x64 --publish "$PUBLISH"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: crux-garden-linux-x64
+          path: |
+            electron/release/*.AppImage
+            electron/release/*.deb
+            electron/release/*.yml
+          if-no-files-found: error
+
+  windows:
+    name: Windows x64 (NSIS)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            electron/package-lock.json
+      - run: npm ci
+      - run: npm ci
+        working-directory: electron
+      - run: npm run build:all
+        working-directory: electron
+      - name: Package
+        working-directory: electron
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Windows code signing (optional): a .pfx as base64 + password. Absent → unsigned
+          # (SmartScreen warns until reputation builds). SignPath / Azure Trusted Signing
+          # can replace this step later without touching the rest of the workflow.
+          CSC_LINK: ${{ secrets.WIN_CERT_PFX }}
+          CSC_KEY_PASSWORD: ${{ secrets.WIN_CERT_PASSWORD }}
+        run: |
+          PUBLISH=never
+          if [[ "${GITHUB_REF}" == refs/tags/v* ]]; then PUBLISH=always; fi
+          npx electron-builder --win --x64 --publish "$PUBLISH"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: crux-garden-win-x64
+          path: |
+            electron/release/*.exe
+            electron/release/*.yml
           if-no-files-found: error

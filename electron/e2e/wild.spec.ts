@@ -32,7 +32,7 @@ test.describe('wild theme', () => {
       await page.keyboard.type(
         '<body style="margin:0;background:#ff2d95;color:#000;font-family:sans-serif"><main style="padding:48px"><h1 style="font-size:64px">LOUD</h1><p>A page with no indoor voice.</p></main></body>',
       );
-      await page.keyboard.press('Meta+s');
+      await page.keyboard.press('ControlOrMeta+s');
       await page.waitForTimeout(2000);
       await page.getByRole('button', { name: 'Toggle history' }).click();
       await page

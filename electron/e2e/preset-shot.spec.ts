@@ -28,7 +28,7 @@ test.describe('preset screenshots', () => {
       await page.keyboard.type(
         '<body style="margin:0;background:#04050d;color:#ff6a1a;font-family:monospace"><main style="padding:48px"><h1 style="font-size:56px;letter-spacing:.2em">TYRELL</h1><p style="color:#16d5e8">More human than human.</p></main></body>',
       );
-      await page.keyboard.press('Meta+s');
+      await page.keyboard.press('ControlOrMeta+s');
       await page.waitForTimeout(2000);
       await page.getByRole('button', { name: 'Toggle history' }).click();
       await page
