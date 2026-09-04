@@ -22,14 +22,14 @@ function DeleteConfirmations() {
           <div className="flex items-center gap-1.5 shrink-0">
             <button
               onClick={() => dismissDelete(d.artifactId)}
-              className="px-2 py-0.5 text-[11px] font-mono text-text-muted hover:text-text transition-colors cursor-pointer"
+              className="px-2 py-0.5 text-xxs font-mono text-text-muted hover:text-text transition-colors cursor-pointer"
             >
               Keep
             </button>
             <button
               onClick={() => confirmDelete(d.artifactId)}
               className={cn(
-                'px-2 py-0.5 text-[11px] font-mono rounded-[var(--radius-sm)]',
+                'px-2 py-0.5 text-xxs font-mono rounded-[var(--radius-sm)]',
                 'bg-error text-on-error hover-bright transition-all cursor-pointer',
               )}
             >

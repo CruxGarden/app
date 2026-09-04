@@ -27,7 +27,7 @@ function CopyValue({ value }: { value: string }) {
         setTimeout(() => setCopied(false), 1500);
       }}
       title="Copy"
-      className="text-left font-mono text-[11px] text-accent hover:underline break-all cursor-pointer"
+      className="text-left font-mono text-xxs text-accent hover:underline break-all cursor-pointer"
     >
       {value}
       {copied && <span className="ml-1 text-text-muted">copied</span>}
@@ -123,19 +123,17 @@ export default function CustomDomainSection({ cruxId }: { cruxId: string }) {
                 )}
               />
               <span className="text-xs font-mono text-text truncate flex-1">{d.hostname}</span>
-              <span className="text-[10px] font-mono text-text-muted">
-                {STATUS_LABEL[d.status]}
-              </span>
+              <span className="text-2xs font-mono text-text-muted">{STATUS_LABEL[d.status]}</span>
             </div>
             {d.status !== 'active' && (
               <div className="flex flex-col gap-1.5">
-                <p className="text-[10px] text-text-muted">
+                <p className="text-2xs text-text-muted">
                   Create these two records at your DNS provider, then verify:
                 </p>
                 {d.records.map((r) => (
                   <div
                     key={r.type}
-                    className="grid grid-cols-[3.2rem_1fr] gap-x-2 gap-y-0.5 text-[10px]"
+                    className="grid grid-cols-[3.2rem_1fr] gap-x-2 gap-y-0.5 text-2xs"
                   >
                     <span className="font-mono text-caption">{r.type}</span>
                     <CopyValue value={r.name} />
@@ -155,7 +153,7 @@ export default function CustomDomainSection({ cruxId }: { cruxId: string }) {
                 href={`https://${d.hostname}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-[11px] font-mono text-accent hover:underline break-all"
+                className="text-xxs font-mono text-accent hover:underline break-all"
               >
                 https://{d.hostname}
               </a>
@@ -177,7 +175,7 @@ export default function CustomDomainSection({ cruxId }: { cruxId: string }) {
                 onClick={() => void remove(d.id)}
                 disabled={busy !== null}
                 aria-label={`Remove ${d.hostname}`}
-                className="ml-auto text-[11px] text-text-muted hover:text-error cursor-pointer"
+                className="ml-auto text-xxs text-text-muted hover:text-error cursor-pointer"
               >
                 Remove
               </button>

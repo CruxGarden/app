@@ -155,7 +155,7 @@ export default function StorePane() {
     <div className="flex flex-col h-full text-text text-sm">
       {/* Header */}
       <PaneToolbar>
-        <span className="text-[10px] font-mono uppercase tracking-wider text-text-muted">
+        <span className="text-2xs font-mono uppercase tracking-wider text-text-muted">
           Local store
         </span>
         <div className="flex items-center gap-2">

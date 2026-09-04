@@ -60,7 +60,7 @@ export default function UsageSection({
           pct={bandwidthPct}
         />
         {(usage.storeKeys > 0 || usage.storeReads + usage.storeWrites > 0) && (
-          <div className="flex items-baseline justify-between gap-2 text-[11px]">
+          <div className="flex items-baseline justify-between gap-2 text-xxs">
             <span className="text-text">Crux Store</span>
             <span className="font-mono text-text-muted">
               {formatBytes(usage.storeBytes)} · {usage.storeKeys} key
@@ -70,7 +70,7 @@ export default function UsageSection({
           </div>
         )}
         {!account.bandwidthAsOf && (
-          <p className="text-[10px] text-text-muted">Bandwidth updates as visits are counted.</p>
+          <p className="text-2xs text-text-muted">Bandwidth updates as visits are counted.</p>
         )}
       </div>
     </PaneSection>
@@ -90,7 +90,7 @@ export function Meter({
 }) {
   return (
     <div className="flex flex-col gap-1">
-      <div className="flex items-baseline justify-between gap-2 text-[11px]">
+      <div className="flex items-baseline justify-between gap-2 text-xxs">
         <span className="text-text">{label}</span>
         <span className="font-mono text-text">{value}</span>
       </div>
@@ -111,7 +111,7 @@ export function Meter({
           style={{ width: `${pct}%` }}
         />
       </div>
-      <div className="text-[10px] text-text-muted">{hint}</div>
+      <div className="text-2xs text-text-muted">{hint}</div>
     </div>
   );
 }

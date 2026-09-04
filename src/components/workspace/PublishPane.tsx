@@ -247,14 +247,14 @@ export default function PublishPane() {
                 <span className="text-xs font-body text-text">Shared</span>
                 <span
                   className={cn(
-                    'ml-auto text-[10px] font-mono',
+                    'ml-auto text-2xs font-mono',
                     hasUnpublishedChanges ? 'text-warning-text' : 'text-accent/80',
                   )}
                 >
                   {hasUnpublishedChanges ? 'Changes to share' : 'Up to date'}
                 </span>
               </div>
-              <div className="mt-1.5 flex flex-col gap-0.5 text-[10px] font-mono text-text-muted">
+              <div className="mt-1.5 flex flex-col gap-0.5 text-2xs font-mono text-text-muted">
                 <span>Published {formatDateTime(publishedAt)}</span>
                 {editedAfterPublish && lastEditedAt && (
                   <span className="text-warning-text">Edited {formatDateTime(lastEditedAt)}</span>
@@ -263,7 +263,7 @@ export default function PublishPane() {
             </PaneSection>
           ) : (
             <PaneSection label="Status" tone="dashed">
-              <p className="text-[11px] text-text-muted">
+              <p className="text-xxs text-text-muted">
                 Not shared yet. Sharing publishes this crux at its own address, with its
                 conversation open to visitors.
               </p>
@@ -297,7 +297,7 @@ export default function PublishPane() {
                 {failure.message}
               </p>
               {failure.log && (
-                <pre className="mt-2 max-h-40 overflow-auto whitespace-pre-wrap break-words text-[10px] leading-relaxed text-text-muted">
+                <pre className="mt-2 max-h-40 overflow-auto whitespace-pre-wrap break-words text-2xs leading-relaxed text-text-muted">
                   {failure.log.slice(-2000)}
                 </pre>
               )}
@@ -311,7 +311,7 @@ export default function PublishPane() {
                 href={publicUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="block text-[11px] font-mono text-accent break-all leading-relaxed hover:underline"
+                className="block text-xxs font-mono text-accent break-all leading-relaxed hover:underline"
               >
                 {publicUrl}
               </a>
@@ -321,7 +321,7 @@ export default function PublishPane() {
                   onClick={handleCopyUrl}
                   className={cn(
                     'flex-1 inline-flex items-center justify-center gap-1.5 h-7 rounded-[var(--radius-sm)]',
-                    'text-[11px] font-body border border-border bg-surface text-text',
+                    'text-xxs font-body border border-border bg-surface text-text',
                     'hover:border-accent hover:text-accent transition-colors cursor-pointer',
                   )}
                 >
@@ -334,7 +334,7 @@ export default function PublishPane() {
                   rel="noopener noreferrer"
                   className={cn(
                     'flex-1 inline-flex items-center justify-center gap-1.5 h-7 rounded-[var(--radius-sm)]',
-                    'text-[11px] font-body border border-border bg-surface text-text',
+                    'text-xxs font-body border border-border bg-surface text-text',
                     'hover:border-accent hover:text-accent transition-colors',
                   )}
                 >
@@ -384,7 +384,7 @@ export default function PublishPane() {
               </button>
               <div className="flex flex-col">
                 <span className="text-xs font-body text-text">Discoverable</span>
-                <span className="text-[10px] text-text-muted">
+                <span className="text-2xs text-text-muted">
                   {crux.discoverable
                     ? 'Listed in search on crux.garden'
                     : 'Only people with the link can find it'}

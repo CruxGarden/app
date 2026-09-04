@@ -127,14 +127,14 @@ export default function GrowthTimeline({
                   Take snapshot
                 </PaneAction>
                 <label className="flex items-center justify-between gap-2 px-0.5">
-                  <span className="text-[10px] font-mono uppercase tracking-wider text-text-muted">
+                  <span className="text-2xs font-mono uppercase tracking-wider text-text-muted">
                     Auto-snapshot
                   </span>
                   <select
                     value={frequency}
                     onChange={(e) => setFrequency(e.target.value as SnapshotFrequency)}
                     className={cn(
-                      'text-[11px] font-body bg-surface text-text border border-border rounded-[var(--radius-sm)]',
+                      'text-xxs font-body bg-surface text-text border border-border rounded-[var(--radius-sm)]',
                       'px-2 py-1 outline-none cursor-pointer hover:border-accent focus:border-input-border-active',
                     )}
                   >

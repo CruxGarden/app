@@ -162,7 +162,7 @@ export default function ExportPane() {
           {/* Archive contents (collapsible) */}
           <details className="rounded-[var(--radius-sm)] border border-border bg-surface/50 group">
             <summary className="px-3 py-2 flex items-center justify-between cursor-pointer select-none list-none [&::-webkit-details-marker]:hidden">
-              <span className="text-[10px] font-mono uppercase tracking-wider text-text-muted">
+              <span className="text-2xs font-mono uppercase tracking-wider text-text-muted">
                 Archive contents
               </span>
               <svg
@@ -179,7 +179,7 @@ export default function ExportPane() {
                 <polyline points="6 9 12 15 18 9" />
               </svg>
             </summary>
-            <div className="px-3 pb-3 text-[11px] font-mono text-text-muted space-y-0.5">
+            <div className="px-3 pb-3 text-xxs font-mono text-text-muted space-y-0.5">
               <div className="text-text">manifest.json</div>
               <div className="text-text">crux.json</div>
               <div className="flex justify-between">

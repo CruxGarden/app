@@ -53,7 +53,7 @@ export default function UsageSettings() {
       <div className="flex items-baseline justify-between gap-3 mb-3">
         <h2 className="font-display text-base font-medium text-heading">Usage</h2>
         {usage && (
-          <span className="text-[11px] font-mono text-text-muted">
+          <span className="text-xxs font-mono text-text-muted">
             {day(usage.period.start)} → {day(usage.period.end)} · {usage.plan.name} plan
           </span>
         )}
@@ -93,8 +93,8 @@ export default function UsageSettings() {
               }
             />
           </div>
-          <div data-testid="sync-usage" className="flex flex-col gap-1 text-[11px]">
-            <div className="text-caption font-mono uppercase tracking-wider text-[9px]">Sync</div>
+          <div data-testid="sync-usage" className="flex flex-col gap-1 text-xxs">
+            <div className="text-caption font-mono uppercase tracking-wider text-3xs">Sync</div>
             <div className="flex items-baseline justify-between gap-2">
               <span className="text-text">Garden backup</span>
               <span className="font-mono text-text-muted">
@@ -117,9 +117,9 @@ export default function UsageSettings() {
             </div>
           </div>
           {usage.cruxes.length > 0 && (
-            <table className="w-full text-[11px]">
+            <table className="w-full text-xxs">
               <thead>
-                <tr className="text-left text-caption font-mono uppercase tracking-wider text-[9px]">
+                <tr className="text-left text-caption font-mono uppercase tracking-wider text-3xs">
                   <th className="py-1 font-normal">Published crux</th>
                   <th className="py-1 font-normal text-right">Storage</th>
                   <th className="py-1 font-normal text-right">Bandwidth</th>
@@ -152,9 +152,9 @@ export default function UsageSettings() {
             </table>
           )}
           {past.length > 0 && (
-            <table className="w-full text-[11px]" data-testid="past-periods">
+            <table className="w-full text-xxs" data-testid="past-periods">
               <thead>
-                <tr className="text-left text-caption font-mono uppercase tracking-wider text-[9px]">
+                <tr className="text-left text-caption font-mono uppercase tracking-wider text-3xs">
                   <th className="py-1 font-normal">Past period</th>
                   <th className="py-1 font-normal text-right">Storage</th>
                   <th className="py-1 font-normal text-right">Bandwidth</th>
@@ -187,7 +187,7 @@ export default function UsageSettings() {
               publishes stop at twice the plan. A bigger plan is one click up in Plan.
             </p>
           )}
-          <p className="text-[10px] text-text-muted" data-testid="settlement-note">
+          <p className="text-2xs text-text-muted" data-testid="settlement-note">
             Published sites and sync backups share these limits. Visit counts settle{' '}
             {usage.settlement.graceHours} hours after the period ends
             {usage.reconciliation

@@ -143,11 +143,17 @@ export default function TopBar() {
                       size="sm"
                       onClick={() => togglePane(paneType)}
                       active
-                      style={{
-                        color: `var(${prefix}-button-icon-active)`,
-                        backgroundColor: `var(${prefix}-button-active)`,
-                        borderColor: `var(${prefix}-button-border-active)`,
-                      }}
+                      className="pane-toggle"
+                      style={
+                        {
+                          color: `var(${prefix}-button-icon-active)`,
+                          backgroundColor: `var(${prefix}-button-active)`,
+                          borderColor: `var(${prefix}-button-border-active)`,
+                          '--pt-hover': `var(${prefix}-button-hover)`,
+                          '--pt-hover-icon': `var(${prefix}-button-icon-hover)`,
+                          '--pt-hover-border': `var(${prefix}-button-border-hover)`,
+                        } as React.CSSProperties
+                      }
                       tooltip={{ label: config.label }}
                     >
                       <Icon />
@@ -175,7 +181,15 @@ export default function TopBar() {
                         size="sm"
                         onClick={() => togglePane(paneType)}
                         active={false}
-                        style={{ color: `var(${prefix}-button-icon)` }}
+                        className="pane-toggle"
+                        style={
+                          {
+                            color: `var(${prefix}-button-icon)`,
+                            '--pt-hover': `var(${prefix}-button-hover)`,
+                            '--pt-hover-icon': `var(${prefix}-button-icon-hover)`,
+                            '--pt-hover-border': `var(${prefix}-button-border-hover)`,
+                          } as React.CSSProperties
+                        }
                         tooltip={{ label: config.label }}
                       >
                         <Icon />
@@ -223,7 +237,7 @@ export default function TopBar() {
               <div className="absolute top-full right-0 mt-2 z-50 pointer-events-none hidden group-hover/btn:block">
                 <div className="flex items-center gap-2.5 px-3 py-2 rounded-tooltip bg-tooltip border border-tooltip-border shadow-tooltip whitespace-nowrap">
                   <span className="text-xs font-medium text-tooltip-text">Console</span>
-                  <kbd className="text-[11px] font-mono text-tooltip-text px-1.5 py-0.5 rounded-[var(--radius-sm)] bg-bg border border-tooltip-border min-w-[1.5rem] text-center">
+                  <kbd className="text-xxs font-mono text-tooltip-text px-1.5 py-0.5 rounded-[var(--radius-sm)] bg-bg border border-tooltip-border min-w-[1.5rem] text-center">
                     Esc
                   </kbd>
                 </div>

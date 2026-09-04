@@ -60,7 +60,7 @@ export default function DesktopSettings() {
       <div className="flex items-baseline justify-between gap-3 mb-3">
         <h2 className="font-display text-sm font-medium text-accent">Desktop</h2>
         {info && (
-          <span className="text-[11px] font-mono text-text-muted">
+          <span className="text-xxs font-mono text-text-muted">
             v{info.version} · {info.platform}-{info.arch}
             {info.packaged ? '' : ' · dev'}
           </span>
@@ -114,7 +114,7 @@ export default function DesktopSettings() {
           disabled={!state || state.status === 'disabled'}
           onChange={(on) => run(() => updates.setAutoCheck(on))}
         />
-        <p className="text-[10px] text-text-muted">
+        <p className="text-2xs text-text-muted">
           The update check is the only routine network call this app makes on its own. Nothing
           downloads without your click.
         </p>
@@ -127,7 +127,7 @@ export default function DesktopSettings() {
             <div className="text-text-muted font-mono">
               {info ? shortenHomePath(info.logsDir) : ''}
             </div>
-            <div className="text-[10px] text-text-muted">
+            <div className="text-2xs text-text-muted">
               Written locally, never sent. Attach main.log to a GitHub issue when something breaks.
             </div>
           </div>

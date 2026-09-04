@@ -9,7 +9,7 @@ interface CruxSummaryProps {
 function SummaryField({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex gap-2">
-      <span className="text-accent font-mono text-[11px] uppercase tracking-wider shrink-0 w-16 pt-0.5">
+      <span className="text-accent font-mono text-xxs uppercase tracking-wider shrink-0 w-16 pt-0.5">
         {label}
       </span>
       <span className="text-text-muted text-sm leading-relaxed">{value}</span>

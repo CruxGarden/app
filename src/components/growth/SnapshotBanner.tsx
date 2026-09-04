@@ -28,7 +28,7 @@ export default function SnapshotBanner() {
   };
 
   const btnClass = cn(
-    'px-2 py-0.5 text-[11px] font-mono rounded-[var(--radius-sm)]',
+    'px-2 py-0.5 text-xxs font-mono rounded-[var(--radius-sm)]',
     'text-text-muted hover:text-text border border-border hover:border-accent/50 transition-colors cursor-pointer',
   );
 
@@ -50,7 +50,7 @@ export default function SnapshotBanner() {
           <polyline points="12 6 12 12 16 14" />
         </svg>
         <span className="text-xs font-mono text-accent">{label}</span>
-        <span className="text-[10px] text-text-muted">read-only</span>
+        <span className="text-2xs text-text-muted">read-only</span>
       </div>
       <div className="flex items-center gap-1.5">
         <button onClick={handleRevert} className={btnClass}>
@@ -59,7 +59,7 @@ export default function SnapshotBanner() {
         <button
           onClick={exitSnapshotView}
           className={cn(
-            'px-2 py-0.5 text-[11px] font-mono rounded-button',
+            'px-2 py-0.5 text-xxs font-mono rounded-button',
             'bg-snapshot-banner-button text-bg hover:bg-snapshot-banner-button-hover transition-all cursor-pointer',
           )}
         >

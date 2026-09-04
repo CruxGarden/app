@@ -196,7 +196,7 @@ export default function MobilePaneSwitcher() {
             )}
           >
             {icon}
-            <span className="text-[9px] font-mono">{label}</span>
+            <span className="text-3xs font-mono">{label}</span>
           </button>
         );
       })}

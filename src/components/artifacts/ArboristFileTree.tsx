@@ -182,7 +182,7 @@ const NodeRenderer = memo(function NodeRenderer({
           {fileSize && (
             <span
               className={cn(
-                'ml-auto shrink-0 text-[10px] text-text-muted/50 transition-opacity',
+                'ml-auto shrink-0 text-2xs text-text-muted/50 transition-opacity',
                 node.isSelected ? 'opacity-100' : 'opacity-0 group-hover/node:opacity-100',
               )}
             >

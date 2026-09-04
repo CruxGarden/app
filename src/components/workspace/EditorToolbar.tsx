@@ -67,7 +67,7 @@ export default function EditorToolbar({
         {tab.dirty && onSave && (
           <button
             onClick={onSave}
-            className="px-2 py-0.5 text-[10px] font-mono rounded-[var(--radius-sm)] bg-accent-muted text-accent border border-accent/20 hover:border-accent transition-colors cursor-pointer"
+            className="px-2 py-0.5 text-2xs font-mono rounded-[var(--radius-sm)] bg-accent-muted text-accent border border-accent/20 hover:border-accent transition-colors cursor-pointer"
           >
             Save
           </button>
@@ -115,7 +115,7 @@ function ModeButton({
     <button
       onClick={onClick}
       className={cn(
-        'px-2 py-0.5 text-[10px] font-mono rounded-[var(--radius-sm)] transition-colors cursor-pointer',
+        'px-2 py-0.5 text-2xs font-mono rounded-[var(--radius-sm)] transition-colors cursor-pointer',
         active ? 'bg-accent-muted text-accent' : 'text-text-muted hover:text-text',
       )}
     >

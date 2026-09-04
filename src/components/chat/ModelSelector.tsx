@@ -86,7 +86,7 @@ export default function ModelSelector({ value, onChange, disabled }: ModelSelect
         onClick={() => !disabled && setOpen(!open)}
         disabled={disabled}
         className={cn(
-          'flex items-center gap-1.5 px-2 py-0.5 text-[11px] font-mono rounded transition-colors cursor-pointer',
+          'flex items-center gap-1.5 px-2 py-0.5 text-xxs font-mono rounded transition-colors cursor-pointer',
           'bg-accent-muted text-accent',
           'disabled:cursor-not-allowed',
         )}
@@ -114,7 +114,7 @@ export default function ModelSelector({ value, onChange, disabled }: ModelSelect
               {(() => {
                 const Icon = PROVIDER_ICONS[group.providerId];
                 return (
-                  <div className="px-3 py-1 text-[10px] font-mono text-text-muted uppercase tracking-wider flex items-center gap-1.5">
+                  <div className="px-3 py-1 text-2xs font-mono text-text-muted uppercase tracking-wider flex items-center gap-1.5">
                     {Icon && <Icon size={10} />}
                     {group.provider}
                   </div>
@@ -143,7 +143,7 @@ export default function ModelSelector({ value, onChange, disabled }: ModelSelect
           {/* Local inference (desktop, running servers only) */}
           {localEndpoints.map((endpoint) => (
             <div key={endpoint.id}>
-              <div className="px-3 py-1 text-[10px] font-mono text-text-muted uppercase tracking-wider">
+              <div className="px-3 py-1 text-2xs font-mono text-text-muted uppercase tracking-wider">
                 {endpoint.name} · local
               </div>
               {sortLocalModels(endpoint.models).map((name) => {
@@ -164,7 +164,7 @@ export default function ModelSelector({ value, onChange, disabled }: ModelSelect
                   >
                     {name}
                     {isToolCapableLocalModel(name) && (
-                      <span className="ml-1.5 text-[10px] text-accent/70">· tools</span>
+                      <span className="ml-1.5 text-2xs text-accent/70">· tools</span>
                     )}
                   </button>
                 );

@@ -70,10 +70,8 @@ export function PaneSection({
     >
       {(label || aside) && (
         <div className="flex items-center justify-between gap-2 mb-1.5">
-          <span className="text-[10px] font-mono uppercase tracking-wider text-caption">
-            {label}
-          </span>
-          {aside && <span className="text-[11px] font-mono text-text-muted">{aside}</span>}
+          <span className="text-2xs font-mono uppercase tracking-wider text-caption">{label}</span>
+          {aside && <span className="text-xxs font-mono text-text-muted">{aside}</span>}
         </div>
       )}
       {children}
@@ -142,7 +140,7 @@ export function PaneAction({
 /** One-line helper text under an action. */
 export function PaneHint({ children, className }: { children: ReactNode; className?: string }) {
   return (
-    <p className={cn('text-[10px] text-text-muted text-center leading-relaxed', className)}>
+    <p className={cn('text-2xs text-text-muted text-center leading-relaxed', className)}>
       {children}
     </p>
   );
@@ -161,7 +159,7 @@ export function PaneNote({
   return (
     <p
       className={cn(
-        'text-[11px] font-mono text-center truncate',
+        'text-xxs font-mono text-center truncate',
         tone === 'error' ? 'text-error' : 'text-text-muted',
         className,
       )}

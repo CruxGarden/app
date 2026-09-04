@@ -638,7 +638,7 @@ export default function EditorContent({
       {mainContent}
       {/* Desktop: the preview is a real local URL — show it, copy it, open it */}
       {target.kind === 'iframe' && target.localBase && (
-        <div className="shrink-0 flex items-center gap-1.5 px-2 py-1 border-b border-border bg-surface text-[10px] font-mono text-text-muted">
+        <div className="shrink-0 flex items-center gap-1.5 px-2 py-1 border-b border-border bg-surface text-2xs font-mono text-text-muted">
           <span className="truncate flex-1" title={target.localBase}>
             {target.localBase}
           </span>
@@ -674,7 +674,7 @@ export default function EditorContent({
                   : 'Starting dev server…'}
               </p>
               {target.detail && (
-                <p className="text-[10px] font-mono text-text-muted/70 max-w-md truncate">
+                <p className="text-2xs font-mono text-text-muted/70 max-w-md truncate">
                   {target.detail}
                 </p>
               )}
@@ -682,7 +682,7 @@ export default function EditorContent({
           ) : (
             <>
               <p className="text-xs text-error">Dev server failed to start</p>
-              <pre className="text-[10px] font-mono text-text-muted max-w-md max-h-40 overflow-auto whitespace-pre-wrap text-left">
+              <pre className="text-2xs font-mono text-text-muted max-w-md max-h-40 overflow-auto whitespace-pre-wrap text-left">
                 {target.detail}
               </pre>
             </>
@@ -755,7 +755,7 @@ function ImageViewer({
             onLoad={handleLoad}
           />
         </PhotoView>
-        <div className="flex items-center gap-3 text-[10px] font-mono text-text-muted">
+        <div className="flex items-center gap-3 text-2xs font-mono text-text-muted">
           <span>{filename}</span>
           {dimensions && <span>{dimensions}</span>}
           <span>{formatSize(artifact.size)}</span>

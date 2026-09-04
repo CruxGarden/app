@@ -29,7 +29,7 @@ export default function Plans() {
   return (
     <div className="flex flex-col min-h-screen">
       <header className="relative z-20 flex items-center h-8 px-3 border-b border-border bg-surface-solid shrink-0">
-        <div className="flex items-center gap-1.5 text-[10px] font-mono">
+        <div className="flex items-center gap-1.5 text-2xs font-mono">
           <Link to="/" className="shrink-0 text-text-muted hover:underline">
             {APP_NAME}
           </Link>
@@ -51,7 +51,7 @@ export default function Plans() {
 
         {catalog && (
           <>
-            <div className="flex items-center justify-end gap-1 text-[11px] font-mono text-text-muted mt-8 mb-2">
+            <div className="flex items-center justify-end gap-1 text-xxs font-mono text-text-muted mt-8 mb-2">
               {(['month', 'year'] as const).map((iv) => (
                 <button
                   key={iv}

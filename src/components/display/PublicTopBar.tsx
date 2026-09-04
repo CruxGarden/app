@@ -17,7 +17,7 @@ export default function PublicTopBar({
 }: PublicTopBarProps) {
   return (
     <header className="relative z-20 flex items-center justify-between h-8 px-3 border-b border-public-top-bar-border bg-public-top-bar shrink-0">
-      <div className="flex items-center gap-1.5 min-w-0 text-[10px] font-mono">
+      <div className="flex items-center gap-1.5 min-w-0 text-2xs font-mono">
         <a
           href="https://crux.garden"
           className="shrink-0 text-public-top-bar-link hover:text-public-top-bar-link-hover hover:underline"

@@ -21,7 +21,7 @@ function SnapshotField({
     <div className="flex flex-col gap-0.5">
       <span
         className={cn(
-          'font-mono text-[10px] uppercase tracking-wider',
+          'font-mono text-2xs uppercase tracking-wider',
           accent ? 'text-accent' : 'text-text-muted',
         )}
       >
@@ -59,9 +59,9 @@ export default function GrowthDetail({ growth, index, onClose }: GrowthDetailPro
       {/* Header */}
       <div className="flex items-start justify-between">
         <div>
-          <span className="text-[11px] font-mono text-accent/70 uppercase">#{index + 1}</span>
+          <span className="text-xxs font-mono text-accent/70 uppercase">#{index + 1}</span>
           <h3 className="text-sm font-display font-medium text-text mt-0.5">{title}</h3>
-          <span className="text-[10px] text-text-muted">{formatDateTime(growth.created)}</span>
+          <span className="text-2xs text-text-muted">{formatDateTime(growth.created)}</span>
         </div>
         <button
           onClick={onClose}

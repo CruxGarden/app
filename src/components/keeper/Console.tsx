@@ -186,7 +186,7 @@ function UserAvatar() {
       {avatarUrl ? (
         <img src={avatarUrl} alt="" className="w-full h-full object-cover" />
       ) : (
-        <span className="text-[10px] font-display font-bold text-accent">{initial}</span>
+        <span className="text-2xs font-display font-bold text-accent">{initial}</span>
       )}
     </div>
   );
@@ -444,7 +444,7 @@ export default function Console() {
             <div className="p-2">
               <button
                 onClick={startNewConversation}
-                className="w-full px-2 py-1.5 mb-2 text-[10px] font-mono text-accent border border-accent/20 hover:bg-accent/10 rounded-[var(--radius-sm)] cursor-pointer transition-colors"
+                className="w-full px-2 py-1.5 mb-2 text-2xs font-mono text-accent border border-accent/20 hover:bg-accent/10 rounded-[var(--radius-sm)] cursor-pointer transition-colors"
               >
                 New Conversation
               </button>
@@ -460,8 +460,8 @@ export default function Console() {
                   onClick={() => setActiveId(c.id)}
                 >
                   <div className="flex-1 min-w-0">
-                    <p className="text-[10px] font-mono truncate">{c.title}</p>
-                    <p className="text-[9px] font-mono text-text-muted/60">
+                    <p className="text-2xs font-mono truncate">{c.title}</p>
+                    <p className="text-3xs font-mono text-text-muted/60">
                       {formatRelativeTime(c.createdAt)}
                     </p>
                   </div>
@@ -470,7 +470,7 @@ export default function Console() {
                       e.stopPropagation();
                       deleteConversation(c.id);
                     }}
-                    className="opacity-0 group-hover:opacity-60 hover:!opacity-100 text-[10px] text-text-muted hover:text-error shrink-0 cursor-pointer transition-opacity"
+                    className="opacity-0 group-hover:opacity-60 hover:!opacity-100 text-2xs text-text-muted hover:text-error shrink-0 cursor-pointer transition-opacity"
                   >
                     ×
                   </button>
@@ -513,7 +513,7 @@ export default function Console() {
                   )}
 
                   {/* Metadata footer — timestamp + model */}
-                  <div className="mt-1.5 flex items-center gap-2 text-[10px] font-mono text-text-muted/50">
+                  <div className="mt-1.5 flex items-center gap-2 text-2xs font-mono text-text-muted/50">
                     {msg.timestamp && <span>{formatTime(msg.timestamp)}</span>}
                     {msg.role === 'assistant' && msg.model && (
                       <span className="text-right flex-1">

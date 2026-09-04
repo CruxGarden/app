@@ -48,11 +48,6 @@ function useCollectionItems(collection: ContentCollection): CollectionItem[] {
   }, [artifacts, collection.glob]);
 }
 
-/** Prefill the chat input and focus it (MessageInput listens). */
-function promptAI(prompt: string) {
-  window.dispatchEvent(new CustomEvent('crux:ai-prompt', { detail: { prompt } }));
-}
-
 export default function BuilderView() {
   const crux = useCruxStore((s) => s.crux);
   const contentModel = (crux?.meta as { contentModel?: ContentModel } | undefined)?.contentModel;
@@ -171,7 +166,7 @@ function BuilderBody({ cruxTitle, model }: { cruxTitle: string; model: ContentMo
           <CollectionSection key={collection.name} collection={collection} />
         ))}
 
-        <p className="text-[10px] text-text-muted/60 text-center">
+        <p className="text-2xs text-text-muted/60 text-center">
           This is a real Astro project — open the Artifacts panel to work with the files directly.
         </p>
       </div>
@@ -529,9 +524,6 @@ function CustomAction({
   const openFileByPath = useOpenFileByPath();
   const handle = useCallback(() => {
     switch (action.do.type) {
-      case 'ai':
-        promptAI(action.do.prompt);
-        break;
       case 'edit-settings':
         onSettings();
         break;
@@ -602,12 +594,12 @@ function CollectionSection({ collection }: { collection: ContentCollection }) {
                     {data.title || item.path.split('/').pop()}
                   </span>
                   {data.draft === 'true' && (
-                    <span className="shrink-0 px-1.5 py-0.5 text-[10px] rounded bg-border text-text-muted">
+                    <span className="shrink-0 px-1.5 py-0.5 text-2xs rounded bg-border text-text-muted">
                       draft
                     </span>
                   )}
                 </span>
-                <span className="block text-[11px] text-text-muted truncate mt-0.5">
+                <span className="block text-xxs text-text-muted truncate mt-0.5">
                   {[data.date, data.description].filter(Boolean).join(' — ')}
                 </span>
               </button>

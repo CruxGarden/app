@@ -129,7 +129,7 @@ export default function PublicCrux() {
         {metadataOpen && crux && (
           <div className="w-full sm:w-[300px] sm:max-w-[40%] shrink-0 border-l border-border bg-bg overflow-hidden flex flex-col">
             <div className="flex items-center px-3 h-8 border-b border-border shrink-0">
-              <span className="text-[10px] font-mono uppercase tracking-wider text-text-muted">
+              <span className="text-2xs font-mono uppercase tracking-wider text-text-muted">
                 Metadata
               </span>
             </div>

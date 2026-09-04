@@ -97,7 +97,7 @@ export default function UserMenu() {
         className={cn(
           'w-6 h-6 rounded-[var(--radius-sm)] flex items-center justify-center overflow-hidden',
           !avatarUrl &&
-            'bg-profile-button text-profile-button-icon text-[10px] font-display font-bold',
+            'bg-profile-button text-profile-button-icon text-2xs font-display font-bold',
           'ring-1 ring-profile-button-border hover:ring-profile-button-hover transition-shadow cursor-pointer',
         )}
       >
@@ -133,7 +133,7 @@ export default function UserMenu() {
             >
               <span className="flex items-center justify-between w-full">
                 Settings
-                <kbd className="text-[11px] font-mono text-text-muted ml-4">⌘,</kbd>
+                <kbd className="text-xxs font-mono text-text-muted ml-4">⌘,</kbd>
               </span>
             </button>
 

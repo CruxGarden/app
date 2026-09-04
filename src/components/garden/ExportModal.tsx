@@ -112,7 +112,7 @@ export default function ExportModal({ open, onClose, crux }: ExportModalProps) {
             >
               Export Crux
             </Button>
-            <p className="text-[10px] text-text-muted text-center">
+            <p className="text-2xs text-text-muted text-center">
               Full archive — artifacts, collaboration, and snapshot history
             </p>
           </div>
@@ -128,7 +128,7 @@ export default function ExportModal({ open, onClose, crux }: ExportModalProps) {
               >
                 Export Artifacts
               </Button>
-              <p className="text-[10px] text-text-muted text-center">
+              <p className="text-2xs text-text-muted text-center">
                 Just the files — ready to unzip and use
               </p>
             </div>
@@ -139,7 +139,7 @@ export default function ExportModal({ open, onClose, crux }: ExportModalProps) {
       {progress && (
         <p
           className={cn(
-            'text-[11px] font-mono text-center truncate mt-3',
+            'text-xxs font-mono text-center truncate mt-3',
             progress === 'Export failed' ? 'text-error' : 'text-text-muted',
           )}
         >
