@@ -25,7 +25,7 @@ import { projectFolderExists, projectAllArtifacts } from '@/services/project-fol
 import { flushIngestion } from '@/services/ingestion';
 import { disposeChatSession } from '@/services/chat-session';
 import { captureWorkspacePreview } from '@/services/preview-capture';
-import { getPersona, getPersonaFingerprint } from '@/services/persona';
+import { getPersona, getPersonaFingerprint, personaSnapshotOf } from '@/services/persona';
 import { DEFAULT_MODEL, resolveModel } from '@/ai/providers';
 import { useUIStore } from '@/stores/uiStore';
 import { playCue } from '@/services/cues';
@@ -322,15 +322,7 @@ export const useCruxStore = create<CruxState>((set, get) => ({
     };
 
     const initialMessages = [greeting];
-    const personaSnapshots = {
-      [pf]: {
-        name: persona.name,
-        greeting: persona.greeting,
-        systemPrompt: persona.systemPrompt,
-        thumbnailFingerprint: persona.thumbnailFingerprint || null,
-        thumbnailFingerprintLight: persona.thumbnailFingerprintLight || null,
-      },
-    };
+    const personaSnapshots = { [pf]: personaSnapshotOf(persona) };
 
     const crux = await cruxService.create({
       slug,

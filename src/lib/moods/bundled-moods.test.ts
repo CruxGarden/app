@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { BUNDLED_MOODS, bundledMood } from './bundled-moods';
+import { DEFAULT_MIXES } from '@/audio/default-mixes';
 import { validateMoodPackage } from './packages';
 import { validateMix, LAYER_TYPES } from '@/audio/schema';
 import { GARDEN_DARK } from './garden-dark';
@@ -31,7 +32,7 @@ describe('bundled Moods', () => {
     }
   });
 
-  it('is not eight palettes on one layout: shape, type and motion differ', () => {
+  it('is not eleven palettes on one layout: shape, type and motion differ', () => {
     const radii = new Set(BUNDLED_MOODS.map((m) => m.theme.overrides.radius ?? GARDEN_DARK.radius));
     const fonts = new Set(
       BUNDLED_MOODS.map((m) => m.theme.overrides.fontDisplay ?? GARDEN_DARK.fontDisplay),
@@ -49,5 +50,10 @@ describe('bundled Moods', () => {
     expect(motion.size).toBeGreaterThanOrEqual(3);
     expect(backgrounds.size).toBeGreaterThanOrEqual(3);
     expect(bundledMood('windows-95')?.theme.overrides.motionScale).toBe('0');
+  });
+
+  it('ships mixes already inside every parameter range (validateMix is the identity)', () => {
+    const all = [...BUNDLED_MOODS.flatMap((m) => m.resonance.mixes), ...DEFAULT_MIXES];
+    for (const mix of all) expect(validateMix(mix), mix.id).toEqual(mix);
   });
 });

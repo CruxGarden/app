@@ -45,7 +45,9 @@ export default function Button({
       className={cn(
         'inline-flex items-center justify-center font-medium rounded-button',
         'cursor-pointer',
-        'disabled:bg-button-disabled disabled:text-button-disabled-text disabled:border-transparent disabled:cursor-not-allowed',
+        // Recolours through the button-disabled tokens; opts out of the global
+        // `button:disabled { opacity }` dim so the two do not stack.
+        'disabled:bg-button-disabled disabled:text-button-disabled-text disabled:border-transparent disabled:opacity-100 disabled:cursor-not-allowed',
         'font-body',
         variants[variant],
         sizes[size],

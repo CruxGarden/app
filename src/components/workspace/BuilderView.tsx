@@ -17,7 +17,40 @@ import type { ContentModel, ContentCollection, BuilderAction } from '@/templates
 import type { Artifact } from '@/api/types';
 import { confirmDialog, alertDialog } from '@/stores/dialogStore';
 import { Capability, can } from '@/lib/platform';
-import { mediaKindFor, isStreamingReady, mediaFileName } from '@/lib/media-kind';
+import { mediaKindFor, isStreamingReady } from '@/lib/media-kind';
+import { formatBytes } from '@/lib/format';
+import {
+  MAX_TRANSCODE_BYTES,
+  describeBatch,
+  titleFromFileName,
+  uniqueFileName,
+  uniqueItemPath,
+} from './builder-files';
+
+/** Action types the Builder renders from dedicated components, not CustomAction. */
+const DERIVED_ACTIONS = new Set<BuilderAction['do']['type']>([
+  'new-item',
+  'add-image',
+  'add-media',
+  'add-photos',
+]);
+
+/** Paths of every artifact in the crux (meta.path, falling back to filename). */
+function artifactPaths(): Set<string> {
+  return new Set(
+    useCruxStore
+      .getState()
+      .artifacts.map((a) => (a.meta?.path as string | undefined) || a.filename || ''),
+  );
+}
+
+/** Filenames already present under `folder` (e.g. 'public/images'). */
+function namesInFolder(paths: Set<string>, folder: string): Set<string> {
+  const prefix = folder + '/';
+  const names = new Set<string>();
+  for (const p of paths) if (p.startsWith(prefix)) names.add(p.slice(prefix.length));
+  return names;
+}
 
 /**
  * The Builder — the Workshop's home view for content-model cruxes.
@@ -150,7 +183,7 @@ function BuilderBody({ cruxTitle, model }: { cruxTitle: string; model: ContentMo
               ) : null;
             })}
           {(model.actions ?? [])
-            .filter((a) => a.do.type !== 'add-media')
+            .filter((a) => !DERIVED_ACTIONS.has(a.do.type))
             .map((action, i) => (
               <CustomAction
                 key={i}
@@ -344,36 +377,52 @@ function AddPhotosButton({
       const files = Array.from(e.target.files || []).filter((f) => f.type.startsWith('image/'));
       e.target.value = '';
       if (!files.length) return;
+      // Names taken before this batch, plus what the batch itself adds — so
+      // two "IMG_0001.jpg" never share one artifact path or one image URL.
+      const takenPaths = artifactPaths();
+      const takenNames = namesInFolder(takenPaths, 'public/images');
       let last: { artifact: Artifact; path: string } | null = null;
+      const failed: string[] = [];
+      let added = 0;
       try {
         for (const [i, file] of files.entries()) {
           setStatus(`Adding ${file.name} (${i + 1}/${files.length})…`);
-          const publicName = mediaFileName(file.name);
-          await uploadFile(file, 'public/images');
-          const title = file.name.replace(/\.[^.]+$/, '').replace(/[-_]+/g, ' ');
-          const vars = {
-            slug: slugify(title),
-            title,
-            today: new Date().toISOString().slice(0, 10),
-          };
-          const frontmatter: Record<string, string> = {};
-          for (const [key, value] of Object.entries(collection.new.frontmatter))
-            frontmatter[key] = interpolate(value, vars);
-          frontmatter.image = `/images/${publicName}`;
-          const path = interpolate(collection.new.pathTemplate, vars);
-          const artifact = await createFile(
-            path,
-            serializeFrontmatter(frontmatter, collection.new.body ?? '\n'),
-          );
-          last = { artifact, path };
+          try {
+            // Upload under the sanitised name — the frontmatter points at it,
+            // and a raw name with spaces or parentheses would 404 once published.
+            const publicName = uniqueFileName(file.name, takenNames);
+            takenNames.add(publicName);
+            const upload = new File([file], publicName, { type: file.type });
+            const uploaded = await uploadFile(upload, 'public/images');
+            const uploadedPath = (uploaded.meta?.path as string | undefined) || '';
+            takenPaths.add(uploadedPath);
+            const imageUrl = uploadedPath.startsWith('public/')
+              ? uploadedPath.slice('public'.length)
+              : `/images/${publicName}`;
+
+            const title = titleFromFileName(file.name);
+            const { path, vars } = uniqueItemPath(collection.new.pathTemplate, title, takenPaths);
+            const frontmatter: Record<string, string> = {};
+            for (const [key, value] of Object.entries(collection.new.frontmatter))
+              frontmatter[key] = interpolate(value, vars);
+            frontmatter.image = imageUrl;
+            const artifact = await createFile(
+              path,
+              serializeFrontmatter(frontmatter, collection.new.body ?? '\n'),
+            );
+            takenPaths.add(path);
+            last = { artifact, path };
+            added += 1;
+          } catch (err) {
+            failed.push(`${file.name}: ${(err as Error).message || 'unknown error'}`);
+          }
         }
         if (last) openFile(last.artifact.id, last.path);
         void alertDialog(
-          `Added ${files.length} ${collection.singular.toLowerCase()}${files.length === 1 ? '' : 's'} — one per photo. Add captions in each, or ask for them.`,
-          'Photos added',
+          describeBatch({ added, singular: collection.singular.toLowerCase(), failed }) +
+            (added ? ' One per photo — add captions in each, or ask for them.' : ''),
+          failed.length && !added ? 'Add photos' : 'Photos added',
         );
-      } catch (err) {
-        void alertDialog('Adding photos failed: ' + (err as Error).message, 'Add photos');
       } finally {
         setStatus(null);
       }
@@ -428,63 +477,88 @@ function AddMediaButton({
       e.target.value = '';
       if (!files.length) return;
       const canTranscode = can(Capability.Transcode);
-      let lastArtifact: Artifact | null = null;
-      let lastPath = '';
+      const takenPaths = artifactPaths();
+      const takenNames = namesInFolder(takenPaths, 'public/media');
+      let last: { artifact: Artifact; path: string } | null = null;
       let converted = 0;
+      let skipped = 0;
+      let added = 0;
+      const failed: string[] = [];
       try {
         for (const [i, file] of files.entries()) {
           const kind = mediaKindFor(file.type, file.name);
-          if (!kind) continue;
-          let publicName = mediaFileName(file.name);
-          let toUpload: File = file;
-          if (canTranscode && !isStreamingReady(file.type, file.name)) {
-            setStatus(`Converting ${file.name} (${i + 1}/${files.length})…`);
-            const { transcode } = await import('@/services/media');
-            const outputs = await transcode(
-              {
-                inputData: new Uint8Array(await file.arrayBuffer()),
-                inputName: file.name,
-                isAudio: kind === 'audio',
-              },
-              (p) => setStatus(`Converting ${file.name} — ${Math.round(p)}%`),
-            );
-            const out = outputs[0];
-            if (out) {
-              publicName = mediaFileName(out.name);
-              toUpload = new File([new Uint8Array(out.data)], publicName, { type: out.mimeType });
+          if (!kind) {
+            skipped += 1;
+            continue;
+          }
+          try {
+            let publicName = file.name;
+            let toUpload: File = file;
+            let mimeType = file.type;
+            if (canTranscode && !isStreamingReady(file.type, file.name)) {
+              // The transcode path reads the whole file into memory and sends
+              // it over IPC in one message — refuse anything past the cap.
+              if (file.size > MAX_TRANSCODE_BYTES) {
+                throw new Error(
+                  `too large to convert (${formatBytes(file.size)}; the limit is ${formatBytes(MAX_TRANSCODE_BYTES)}). Convert it to MP4 or M4A first.`,
+                );
+              }
+              setStatus(`Converting ${file.name} (${i + 1}/${files.length})…`);
+              const { transcode } = await import('@/services/media');
+              const outputs = await transcode(
+                {
+                  inputData: new Uint8Array(await file.arrayBuffer()),
+                  inputName: file.name,
+                  isAudio: kind === 'audio',
+                },
+                (p) => setStatus(`Converting ${file.name} — ${Math.round(p)}%`),
+              );
+              const out = outputs[0];
+              // No output is a failure, not a reason to ship the unplayable original.
+              if (!out || !out.data || out.data.byteLength === 0) {
+                throw new Error('conversion produced no output');
+              }
+              publicName = out.name;
+              mimeType = out.mimeType;
+              toUpload = new File([new Uint8Array(out.data)], publicName, { type: mimeType });
               converted += 1;
             }
+            publicName = uniqueFileName(publicName, takenNames);
+            takenNames.add(publicName);
+            if (toUpload.name !== publicName) {
+              toUpload = new File([toUpload], publicName, { type: mimeType });
+            }
+            setStatus(`Adding ${publicName}…`);
+            const uploaded = await uploadFile(toUpload, 'public/media');
+            const uploadedPath = (uploaded.meta?.path as string | undefined) || '';
+            takenPaths.add(uploadedPath);
+            const mediaUrl = uploadedPath.startsWith('public/')
+              ? uploadedPath.slice('public'.length)
+              : `/media/${publicName}`;
+
+            const title = titleFromFileName(file.name);
+            const { path, vars } = uniqueItemPath(collection.new.pathTemplate, title, takenPaths);
+            const frontmatter: Record<string, string> = {};
+            for (const [key, value] of Object.entries(collection.new.frontmatter))
+              frontmatter[key] = interpolate(value, vars);
+            frontmatter.kind = kind;
+            frontmatter.media = mediaUrl;
+            const artifact = await createFile(
+              path,
+              serializeFrontmatter(frontmatter, collection.new.body ?? '\n'),
+            );
+            takenPaths.add(path);
+            last = { artifact, path };
+            added += 1;
+          } catch (err) {
+            failed.push(`${file.name}: ${(err as Error).message || 'unknown error'}`);
           }
-          setStatus(`Adding ${publicName}…`);
-          await uploadFile(toUpload, 'public/media');
-          const title = file.name.replace(/\.[^.]+$/, '').replace(/[-_]+/g, ' ');
-          const vars = {
-            slug: slugify(title),
-            title,
-            today: new Date().toISOString().slice(0, 10),
-          };
-          const frontmatter: Record<string, string> = {};
-          for (const [key, value] of Object.entries(collection.new.frontmatter))
-            frontmatter[key] = interpolate(value, vars);
-          frontmatter.kind = kind;
-          frontmatter.media = `/media/${publicName}`;
-          lastPath = interpolate(collection.new.pathTemplate, vars);
-          lastArtifact = await createFile(
-            lastPath,
-            serializeFrontmatter(frontmatter, collection.new.body ?? '\n'),
-          );
         }
-        if (lastArtifact) openFile(lastArtifact.id, lastPath);
-        const skipped = files.filter((f) => !mediaKindFor(f.type, f.name)).length;
+        if (last) openFile(last.artifact.id, last.path);
         void alertDialog(
-          `Added ${files.length - skipped} item${files.length - skipped === 1 ? '' : 's'}` +
-            (converted ? ` (${converted} converted for the web)` : '') +
-            (skipped ? `; skipped ${skipped} non-media file${skipped === 1 ? '' : 's'}` : '') +
-            '.',
-          'Media added',
+          describeBatch({ added, singular: 'item', converted, skipped, failed }),
+          failed.length && !added ? 'Add media' : 'Media added',
         );
-      } catch (err) {
-        void alertDialog('Adding media failed: ' + (err as Error).message, 'Add media');
       } finally {
         setStatus(null);
       }

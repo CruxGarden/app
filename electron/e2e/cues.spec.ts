@@ -23,7 +23,7 @@ test.describe('resonance playlist + cues', () => {
       await page.getByRole('button', { name: /enter/i }).click();
       await page.getByText('Plant a new garden').click();
       await page.getByRole('button', { name: 'Welcome' }).click();
-      const dock = page.getByRole('region', { name: 'Mood Dock' });
+      const dock = page.getByRole('region', { name: 'Mood Bar' });
       await expect(dock).toBeVisible({ timeout: 30_000 });
       await dock.getByRole('button', { name: 'Play soundscape' }).click();
       await expect.poll(async () => (await state()).playing).toBe(true);

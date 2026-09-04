@@ -72,18 +72,19 @@ test.describe('starter cruxes', () => {
       await page.screenshot({ path: 'e2e/.results/starters-1-feed-builder.png' });
 
       // ── Media ──
-      await page
-        .getByRole('button', { name: 'Home', exact: true })
-        .click()
-        .catch(() => {});
-      await page.goto(page.url().replace(/\/c\/.*$/, '/home')).catch(() => {});
+      // The breadcrumb's first button is the garden name → /home (there is no button named "Home")
+      await page.getByRole('banner').getByRole('button').first().click();
+      await expect(page.getByText('Home Garden', { exact: true })).toBeVisible({ timeout: 15_000 });
+      await expect(page.getByRole('button', { name: 'Add Crux' })).toBeVisible();
       await page.getByRole('button', { name: 'Add Crux' }).click();
       await page.getByRole('button', { name: /Astro Media/ }).click();
       await page.getByRole('button', { name: 'Create', exact: true }).click();
-      // The workspace mounts the Builder once per layout; take the first match.
-      const addMedia = page.getByRole('button', { name: 'Add media' }).first();
+      // WorkspaceLayout mounts exactly one layout (mosaic or mobile), so the Builder is in the
+      // DOM once; anchor the names because the starter's sample item ("Your first track goes
+      // here… Add media") also contains the words.
+      const addMedia = page.getByRole('button', { name: /^(\S+ )?Add media$/ });
       await expect(addMedia).toBeVisible({ timeout: 30_000 });
-      await expect(page.getByRole('button', { name: /new item/i }).first()).toBeVisible();
+      await expect(page.getByRole('button', { name: /^(\S+ )?New item$/i })).toBeVisible();
 
       // A WAV goes through ffmpeg (bundled ffmpeg-static) and lands as M4A
       await page.getByTestId('add-media-input').first().setInputFiles({

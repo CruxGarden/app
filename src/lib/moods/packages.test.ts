@@ -8,7 +8,12 @@ import {
   getInstalledMoods,
   deleteMood,
   packageAssets,
+  personaForApply,
+  applyMood,
 } from './packages';
+import { bundledMood } from './bundled-moods';
+import { getPersona, savePersona } from '@/services/persona';
+import { useAudioStore } from '@/stores/audioStore';
 import { initServices } from '@/services';
 import { setSetting } from '@/services/settings';
 import { SettingsKey } from '@/lib/constants';
@@ -74,5 +79,75 @@ describe('Mood Packages', () => {
     });
     const back2 = await importMoodPackage(await noAudio.arrayBuffer(), async () => 'x');
     expect(back2?.name).toBe('With Music');
+  });
+
+  it('applying a Mood keeps the user avatars unless the package brings its own', () => {
+    const mine = {
+      name: 'Me',
+      greeting: 'hi',
+      systemPrompt: 'be me',
+      thumbnailFingerprint: 'dark-fp',
+      thumbnailFingerprintLight: 'light-fp',
+    };
+    // bundled shape: voice only
+    const voice = personaForApply(mine, { name: 'Barista', greeting: 'hey', systemPrompt: 'warm' });
+    expect(voice).toEqual({ ...mine, name: 'Barista', greeting: 'hey', systemPrompt: 'warm' });
+    // explicit nulls (a captured persona with no avatar) do not wipe the user's
+    expect(
+      personaForApply(mine, {
+        name: 'X',
+        greeting: '',
+        systemPrompt: '',
+        thumbnailFingerprint: null,
+      }).thumbnailFingerprint,
+    ).toBe('dark-fp');
+    // a package with its own avatars replaces them
+    expect(
+      personaForApply(mine, {
+        name: 'X',
+        greeting: '',
+        systemPrompt: '',
+        thumbnailFingerprint: 'pkg',
+      }),
+    ).toMatchObject({ thumbnailFingerprint: 'pkg', thumbnailFingerprintLight: 'light-fp' });
+  });
+
+  it('applyMood saves copies of the bundled mixes, not the package objects', async () => {
+    // savePersona and the theme store touch window; the node env has none
+    const g = globalThis as { window?: unknown };
+    const hadWindow = 'window' in g;
+    g.window = {
+      dispatchEvent: () => true,
+      matchMedia: () => ({ matches: false, addEventListener: () => {} }),
+    };
+    try {
+      savePersona({
+        name: 'Me',
+        greeting: 'hi',
+        systemPrompt: 'be me',
+        thumbnailFingerprint: 'dark-fp',
+        thumbnailFingerprintLight: 'light-fp',
+      });
+      const pkg = bundledMood('rainy-day-cafe')!;
+      await applyMood(pkg);
+      const persona = getPersona();
+      expect(persona.name).toBe(pkg.persona!.name);
+      expect(persona.thumbnailFingerprint).toBe('dark-fp');
+      expect(persona.thumbnailFingerprintLight).toBe('light-fp');
+
+      const stored = useAudioStore
+        .getState()
+        .mixes.find((m) => m.id === pkg.resonance.activeMixId)!;
+      const inPackage = pkg.resonance.mixes.find((m) => m.id === pkg.resonance.activeMixId)!;
+      expect(stored).toEqual(inPackage);
+      expect(stored).not.toBe(inPackage);
+      expect(stored.layers[0]).not.toBe(inPackage.layers[0]);
+      // mutating what the store holds cannot reach the bundled package
+      stored.layers[0]!.params.intensity = 0;
+      expect(inPackage.layers[0]!.params.intensity).not.toBe(0);
+    } finally {
+      if (hadWindow) delete g.window;
+      else delete g.window;
+    }
   });
 });

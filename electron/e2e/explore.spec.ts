@@ -45,7 +45,7 @@ test.describe('explore (mocked API)', () => {
       await expect(page.getByText('Sunny Recipes')).toBeVisible();
 
       // Search narrows and shows Best match
-      const box = page.getByPlaceholder(/Search cruxes/).last();
+      const box = page.getByPlaceholder(/moods and authors/);
       await box.fill('rainy');
       await expect(page.getByText('Sunny Recipes')).toHaveCount(0);
       await expect(page.getByRole('button', { name: 'Best match' })).toBeVisible();

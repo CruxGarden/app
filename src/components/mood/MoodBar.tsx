@@ -5,14 +5,19 @@ import { useAudioStore } from '@/stores/audioStore';
 import { useUIStore } from '@/stores/uiStore';
 import { getDockState, setDockState } from '@/services/resonance';
 import { getThemePreview, onThemePreviewChange } from '@/lib/moods/active';
+import { isPublicSite } from '@/lib/site';
 import { useShallow } from 'zustand/react/shallow';
 
 /**
- * The Mood Dock, now a control in the top bar: the active soundscape's
+ * The Mood Bar, now a control in the top bar: the active soundscape's
  * transport and volume, what's playing, a way into the Mood modal and the
  * Mixer. Collapsed it is one small button with live level bars; expanded it
  * shows the mix name, play/pause, volume and the mixer. The collapsed state
  * persists. Every part is a Mood token (moodBar*), so a theme can restyle it.
+ *
+ * On the public website (crux.garden) there is no Mood modal and no /mood
+ * route: the level button scrolls to the landing page's Moods section and the
+ * Mixer button is not shown.
  */
 
 function LevelBars({ level, playing }: { level: number; playing: boolean }) {
@@ -34,6 +39,7 @@ function LevelBars({ level, playing }: { level: number; playing: boolean }) {
 
 export default function MoodBar({ className }: { className?: string }) {
   const navigate = useNavigate();
+  const publicSite = isPublicSite();
   const { mixes, activeMixId, playing, volume, level, init, toggle, next, setVolume } =
     useAudioStore(
       useShallow((s) => ({
@@ -57,6 +63,14 @@ export default function MoodBar({ className }: { className?: string }) {
   );
   useEffect(() => init(), [init]);
 
+  const openMood = useCallback(() => {
+    if (publicSite) {
+      document.getElementById('mood')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      return;
+    }
+    useUIStore.getState().toggleMoodPanel();
+  }, [publicSite]);
+
   const setCollapsedPersist = useCallback((c: boolean) => {
     setCollapsed(c);
     const prev = getDockState() ?? { x: -1, y: -1, collapsed: c };
@@ -77,7 +91,7 @@ export default function MoodBar({ className }: { className?: string }) {
   return (
     <div
       role="region"
-      aria-label="Mood Dock"
+      aria-label="Mood Bar"
       className={cn(
         'flex items-center gap-1 h-7 pl-1 pr-1 select-none',
         'bg-mood-bar border border-mood-bar-border text-mood-bar-text rounded-[var(--mood-bar-radius)] shadow-mood-bar',
@@ -87,11 +101,9 @@ export default function MoodBar({ className }: { className?: string }) {
       {/* Level button: expand when collapsed, open Mood when expanded */}
       <button
         type="button"
-        onClick={() =>
-          collapsed ? setCollapsedPersist(false) : useUIStore.getState().toggleMoodPanel()
-        }
+        onClick={() => (collapsed ? setCollapsedPersist(false) : openMood())}
         title={collapsed ? (mix ? `${mix.name}${playing ? ' — playing' : ''}` : 'Mood') : 'Mood'}
-        aria-label={collapsed ? 'Expand Mood Dock' : 'Open Mood'}
+        aria-label={collapsed ? 'Expand Mood Bar' : publicSite ? 'Go to Moods' : 'Open Mood'}
         className="relative w-5 h-5 rounded-[var(--mood-bar-radius)] flex items-center justify-center cursor-pointer shrink-0 hover:bg-mood-bar-hover"
       >
         <LevelBars level={level} playing={playing} />
@@ -138,38 +150,40 @@ export default function MoodBar({ className }: { className?: string }) {
             onChange={(e) => setVolume(parseFloat(e.target.value))}
             className="w-14 accent-mood-bar-accent cursor-pointer"
           />
-          <button
-            type="button"
-            onClick={() => navigate('/mood?tab=resonance')}
-            title="Mixer"
-            aria-label="Open the mixer"
-            className="w-5 h-5 rounded-[var(--mood-bar-radius)] text-mood-bar-text-muted hover:text-mood-bar-accent flex items-center justify-center cursor-pointer shrink-0"
-          >
-            <svg
-              width="12"
-              height="12"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              aria-hidden
+          {!publicSite && (
+            <button
+              type="button"
+              onClick={() => navigate('/mood?tab=resonance')}
+              title="Mixer"
+              aria-label="Open the mixer"
+              className="w-5 h-5 rounded-[var(--mood-bar-radius)] text-mood-bar-text-muted hover:text-mood-bar-accent flex items-center justify-center cursor-pointer shrink-0"
             >
-              <line x1="4" y1="21" x2="4" y2="14" />
-              <line x1="4" y1="10" x2="4" y2="3" />
-              <line x1="12" y1="21" x2="12" y2="12" />
-              <line x1="12" y1="8" x2="12" y2="3" />
-              <line x1="20" y1="21" x2="20" y2="16" />
-              <line x1="20" y1="12" x2="20" y2="3" />
-              <line x1="1" y1="14" x2="7" y2="14" />
-              <line x1="9" y1="8" x2="15" y2="8" />
-              <line x1="17" y1="16" x2="23" y2="16" />
-            </svg>
-          </button>
+              <svg
+                width="12"
+                height="12"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                aria-hidden
+              >
+                <line x1="4" y1="21" x2="4" y2="14" />
+                <line x1="4" y1="10" x2="4" y2="3" />
+                <line x1="12" y1="21" x2="12" y2="12" />
+                <line x1="12" y1="8" x2="12" y2="3" />
+                <line x1="20" y1="21" x2="20" y2="16" />
+                <line x1="20" y1="12" x2="20" y2="3" />
+                <line x1="1" y1="14" x2="7" y2="14" />
+                <line x1="9" y1="8" x2="15" y2="8" />
+                <line x1="17" y1="16" x2="23" y2="16" />
+              </svg>
+            </button>
+          )}
           <button
             type="button"
             onClick={() => setCollapsedPersist(true)}
-            aria-label="Collapse Mood Dock"
+            aria-label="Collapse Mood Bar"
             title="Collapse"
             className="w-4 h-5 text-mood-bar-text-muted hover:text-mood-bar-text flex items-center justify-center cursor-pointer shrink-0 text-xs"
           >

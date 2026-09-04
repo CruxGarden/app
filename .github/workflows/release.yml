@@ -4,6 +4,16 @@
 # reads. macOS is the tested platform (packaged smoke test); Windows and Linux
 # are build-only until their e2e runs are green. `workflow_dispatch` builds
 # unsigned and uploads artifacts without publishing.
+#
+# Shape, and why:
+# - `prepare` runs once: it refuses a tag that does not match electron/package.json
+#   (electron-builder names the release from the package version, not the tag, so
+#   a mismatch would silently create a second draft) and creates the draft release
+#   up front, so the three platform jobs attach to it instead of racing to create it.
+# - macOS is ONE job building `--arm64 --x64` together: electron-builder writes a
+#   single latest-mac.yml listing both architectures. Two jobs would each upload
+#   their own latest-mac.yml and the second would overwrite the first, leaving the
+#   updater blind to one architecture.
 name: Release (desktop)
 
 on:
@@ -15,13 +25,53 @@ permissions:
   contents: write
 
 jobs:
+  prepare:
+    name: Check version, create draft
+    runs-on: ubuntu-latest
+    outputs:
+      publish: ${{ steps.mode.outputs.publish }}
+      version: ${{ steps.mode.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+      - name: Decide publish mode
+        id: mode
+        run: |
+          VERSION=$(node -p "require('./electron/package.json').version")
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          if [[ "$GITHUB_REF_TYPE" == tag && "$GITHUB_REF_NAME" == v* ]]; then
+            echo "publish=always" >> "$GITHUB_OUTPUT"
+          else
+            echo "publish=never" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Tag must match electron/package.json version
+        if: steps.mode.outputs.publish == 'always'
+        run: |
+          EXPECTED="v${{ steps.mode.outputs.version }}"
+          if [[ "$GITHUB_REF_NAME" != "$EXPECTED" ]]; then
+            echo "::error::Tag $GITHUB_REF_NAME does not match electron/package.json version ($EXPECTED)." \
+                 "Bump the version (npm version in electron/) and re-tag."
+            exit 1
+          fi
+      - name: Create the draft release once
+        if: steps.mode.outputs.publish == 'always'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # electron-builder reuses an existing draft whose tag_name matches the version tag.
+          if gh release view "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "Release $GITHUB_REF_NAME already exists; attaching to it."
+          else
+            gh release create "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --draft --verify-tag \
+              --title "${{ steps.mode.outputs.version }}" --notes ""
+          fi
+
   mac:
-    name: macOS ${{ matrix.arch }}
+    name: macOS arm64 + x64
+    needs: prepare
     runs-on: macos-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        arch: [arm64, x64]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -37,7 +87,7 @@ jobs:
       - name: Build web app + main process
         run: npm run build:all
         working-directory: electron
-      - name: Package
+      - name: Package (both architectures → one latest-mac.yml)
         working-directory: electron
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -49,12 +99,8 @@ jobs:
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-        run: |
-          PUBLISH=never
-          if [[ "${GITHUB_REF}" == refs/tags/v* ]]; then PUBLISH=always; fi
-          npx electron-builder --mac dmg zip --${{ matrix.arch }} --publish "$PUBLISH"
-      - name: Smoke-test the packaged app
-        if: matrix.arch == 'arm64'
+        run: npx electron-builder --mac dmg zip --arm64 --x64 --publish "${{ needs.prepare.outputs.publish }}"
+      - name: Smoke-test the packaged app (runner's native arch)
         working-directory: electron
         env:
           CRUX_PACKAGED: '1'
@@ -63,7 +109,7 @@ jobs:
           npx playwright test e2e/packaged.spec.ts
       - uses: actions/upload-artifact@v4
         with:
-          name: crux-garden-mac-${{ matrix.arch }}
+          name: crux-garden-mac
           path: |
             electron/release/*.dmg
             electron/release/*.zip
@@ -73,6 +119,7 @@ jobs:
 
   linux:
     name: Linux x64 (AppImage + deb)
+    needs: prepare
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -92,10 +139,7 @@ jobs:
         working-directory: electron
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          PUBLISH=never
-          if [[ "${GITHUB_REF}" == refs/tags/v* ]]; then PUBLISH=always; fi
-          npx electron-builder --linux --x64 --publish "$PUBLISH"
+        run: npx electron-builder --linux --x64 --publish "${{ needs.prepare.outputs.publish }}"
       - uses: actions/upload-artifact@v4
         with:
           name: crux-garden-linux-x64
@@ -107,6 +151,7 @@ jobs:
 
   windows:
     name: Windows x64 (NSIS)
+    needs: prepare
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
@@ -132,10 +177,7 @@ jobs:
           # can replace this step later without touching the rest of the workflow.
           CSC_LINK: ${{ secrets.WIN_CERT_PFX }}
           CSC_KEY_PASSWORD: ${{ secrets.WIN_CERT_PASSWORD }}
-        run: |
-          PUBLISH=never
-          if [[ "${GITHUB_REF}" == refs/tags/v* ]]; then PUBLISH=always; fi
-          npx electron-builder --win --x64 --publish "$PUBLISH"
+        run: npx electron-builder --win --x64 --publish "${{ needs.prepare.outputs.publish }}"
       - uses: actions/upload-artifact@v4
         with:
           name: crux-garden-win-x64

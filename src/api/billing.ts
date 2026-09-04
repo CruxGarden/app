@@ -56,9 +56,38 @@ export async function sync(): Promise<BillingMe> {
   return data;
 }
 
+/**
+ * Hosts a checkout/portal URL from the API may point at before we hand it to
+ * the system browser: Stripe's hosted pages, our own return pages, and the
+ * mock provider's stand-ins (nursery + desktop e2e). Anything else is refused —
+ * the URL comes from a server response, not from the user.
+ */
+const BILLING_HOSTS = new Set([
+  'checkout.stripe.com',
+  'billing.stripe.com',
+  'crux.garden',
+  'www.crux.garden',
+  'billing.mock',
+]);
+
+export function isBillingUrl(url: string): boolean {
+  let parsed: URL;
+  try {
+    parsed = new URL(url);
+  } catch {
+    return false;
+  }
+  const host = parsed.hostname.toLowerCase();
+  if (parsed.protocol === 'https:') return BILLING_HOSTS.has(host);
+  // Local API in development (mock provider) returns http:// on loopback
+  if (parsed.protocol === 'http:') return host === 'localhost' || host === '127.0.0.1';
+  return false;
+}
+
+/** Prices are USD cents; format in en-US so tests and users see the same string. */
 export function formatPrice(amount: number, currency: string): string {
   try {
-    return new Intl.NumberFormat(undefined, {
+    return new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency: currency.toUpperCase(),
       minimumFractionDigits: amount % 100 === 0 ? 0 : 2,

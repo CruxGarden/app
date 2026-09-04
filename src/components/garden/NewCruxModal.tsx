@@ -439,7 +439,6 @@ export default function NewCruxModal({ open, onClose }: NewCruxModalProps) {
     'w-full px-3 py-2 text-sm font-mono rounded-[var(--radius-sm)]',
     'bg-surface-solid border border-border text-text placeholder:text-text-muted/50',
     'focus:outline-none focus:border-input-border-active transition-colors',
-    '',
   );
 
   return (

@@ -191,12 +191,14 @@ export const useAudioStore = create<AudioState>((set, get) => ({
   },
 
   upsertMix: async (mix) => {
+    // The engine is the last line of defence: a Mix it refuses must not be
+    // persisted, or the next launch would rebuild the same broken graph.
+    if (get().activeMixId === mix.id) (await getEngine()).update(mix);
     const mixes = get().mixes.some((m) => m.id === mix.id)
       ? get().mixes.map((m) => (m.id === mix.id ? mix : m))
       : [...get().mixes, mix];
     persist.saveMixes(mixes);
     set({ mixes });
-    if (get().activeMixId === mix.id) (await getEngine()).update(mix);
   },
 
   deleteMix: (id) => {

@@ -2,12 +2,13 @@ import { useCallback, useEffect, useState } from 'react';
 import { cn } from '@/lib/cn';
 import { Button } from '@/components/ui';
 import * as domainsApi from '@/api/domains';
+import { confirmDialog } from '@/stores/dialogStore';
 import { PaneSection, PaneHint, PaneNote } from './pane-ui';
 
 /**
  * Connect your own domain to a published crux: enter it, create the two DNS
  * records we show, press Verify. The API takes it from pending_dns through
- * issuing (certificate) to active; we re-check while it's issuing.
+ * issuing (certificate) to active; we re-read the list while it's issuing.
  */
 const STATUS_LABEL: Record<domainsApi.DomainStatus, string> = {
   pending_dns: 'Waiting for DNS',
@@ -15,6 +16,12 @@ const STATUS_LABEL: Record<domainsApi.DomainStatus, string> = {
   active: 'Live',
   failed: 'Failed',
 };
+
+function apiMessage(err: unknown, fallback: string): string {
+  const msg = (err as { response?: { data?: { message?: string | string[] } } })?.response?.data
+    ?.message;
+  return Array.isArray(msg) ? msg.join(', ') : msg || fallback;
+}
 
 function CopyValue({ value }: { value: string }) {
   const [copied, setCopied] = useState(false);
@@ -41,6 +48,8 @@ export default function CustomDomainSection({ cruxId }: { cruxId: string }) {
   const [hostname, setHostname] = useState('');
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // Per-domain failure from Verify/Remove, shown on that card
+  const [rowError, setRowError] = useState<{ id: string; message: string } | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -51,21 +60,15 @@ export default function CustomDomainSection({ cruxId }: { cruxId: string }) {
   }, [cruxId]);
   useEffect(() => void load(), [load]);
 
-  // While a certificate is issuing, re-check every 20s
+  // While a certificate is issuing, re-read every 20s. This is a GET — the
+  // server advances the certificate on its own; `verify` is the user's button
+  // and kicks off DNS/ACM work each time, so it is not what a timer calls.
+  const anyIssuing = domains.some((d) => d.status === 'issuing');
   useEffect(() => {
-    const issuing = domains.filter((d) => d.status === 'issuing');
-    if (!issuing.length) return;
-    const t = setInterval(() => {
-      issuing.forEach(
-        (d) =>
-          void domainsApi
-            .verify(d.id)
-            .then((v) => setDomains((ds) => ds.map((x) => (x.id === v.id ? v : x))))
-            .catch(() => {}),
-      );
-    }, 20_000);
+    if (!anyIssuing) return;
+    const t = setInterval(() => void load(), 20_000);
     return () => clearInterval(t);
-  }, [domains]);
+  }, [anyIssuing, load]);
 
   const add = async () => {
     setBusy('add');
@@ -76,27 +79,40 @@ export default function CustomDomainSection({ cruxId }: { cruxId: string }) {
       setHostname('');
       setAdding(false);
     } catch (err) {
-      const msg = (err as { response?: { data?: { message?: string | string[] } } }).response?.data
-        ?.message;
-      setError(Array.isArray(msg) ? msg.join(', ') : msg || 'Could not add that domain');
+      setError(apiMessage(err, 'Could not add that domain'));
     } finally {
       setBusy(null);
     }
   };
   const verify = async (id: string) => {
     setBusy(id);
+    setRowError(null);
     try {
       const v = await domainsApi.verify(id);
       setDomains((ds) => ds.map((x) => (x.id === id ? v : x)));
+    } catch (err) {
+      setRowError({ id, message: apiMessage(err, 'Could not check that domain right now') });
     } finally {
       setBusy(null);
     }
   };
-  const remove = async (id: string) => {
-    setBusy(id);
+  const remove = async (d: domainsApi.CustomDomain) => {
+    const ok = await confirmDialog({
+      message:
+        d.status === 'active'
+          ? `Disconnect ${d.hostname}? Visitors there will stop seeing this crux until you connect it again.`
+          : `Remove ${d.hostname}? You can connect it again later.`,
+      confirmLabel: d.status === 'active' ? 'Disconnect' : 'Remove',
+      danger: true,
+    });
+    if (!ok) return;
+    setBusy(d.id);
+    setRowError(null);
     try {
-      await domainsApi.remove(id);
-      setDomains((ds) => ds.filter((x) => x.id !== id));
+      await domainsApi.remove(d.id);
+      setDomains((ds) => ds.filter((x) => x.id !== d.id));
+    } catch (err) {
+      setRowError({ id: d.id, message: apiMessage(err, 'Could not remove that domain') });
     } finally {
       setBusy(null);
     }
@@ -132,7 +148,7 @@ export default function CustomDomainSection({ cruxId }: { cruxId: string }) {
                 </p>
                 {d.records.map((r) => (
                   <div
-                    key={r.type}
+                    key={`${r.type}:${r.name}`}
                     className="grid grid-cols-[3.2rem_1fr] gap-x-2 gap-y-0.5 text-2xs"
                   >
                     <span className="font-mono text-caption">{r.type}</span>
@@ -158,6 +174,11 @@ export default function CustomDomainSection({ cruxId }: { cruxId: string }) {
                 https://{d.hostname}
               </a>
             )}
+            {rowError?.id === d.id && (
+              <PaneNote tone="error" className="text-left">
+                {rowError.message}
+              </PaneNote>
+            )}
             <div className="flex items-center gap-1.5">
               {d.status !== 'active' && (
                 <Button
@@ -172,7 +193,7 @@ export default function CustomDomainSection({ cruxId }: { cruxId: string }) {
               )}
               <button
                 type="button"
-                onClick={() => void remove(d.id)}
+                onClick={() => void remove(d)}
                 disabled={busy !== null}
                 aria-label={`Remove ${d.hostname}`}
                 className="ml-auto text-xxs text-text-muted hover:text-error cursor-pointer"

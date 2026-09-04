@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { cn } from '@/lib/cn';
 import { formatBytes } from '@/lib/format';
 import * as usageApi from '@/api/usage';
+import { periodDay } from '@/lib/period-day';
 import { PaneSection } from './pane-ui';
 
 /** Storage and bandwidth for one published crux, this billing period. */
@@ -43,7 +44,7 @@ export default function UsageSection({
   return (
     <PaneSection
       label="Usage"
-      aside={`${account.period.start} → ${account.period.end}`}
+      aside={`${periodDay(account.period.start)} → ${periodDay(account.period.end)}`}
       data-testid="crux-usage"
     >
       <div className="flex flex-col gap-2">

@@ -4,7 +4,7 @@ import { launchApp } from './launch';
 type AudioState = { mixName: string | null; mixCount: number };
 
 /**
- * The eight built-in Moods apply as whole rooms: theme tokens, background,
+ * The eleven built-in Moods apply as whole rooms: theme tokens, background,
  * soundscape and persona change together, and the user's own mixes survive.
  */
 test.describe('bundled moods', () => {
@@ -23,7 +23,7 @@ test.describe('bundled moods', () => {
       await page.getByRole('button', { name: /enter/i }).click();
       await page.getByText('Plant a new garden').click();
       await page.getByRole('button', { name: 'Welcome' }).click();
-      await expect(page.getByRole('region', { name: 'Mood Dock' })).toBeVisible({
+      await expect(page.getByRole('region', { name: 'Mood Bar' })).toBeVisible({
         timeout: 30_000,
       });
       const before = (await audio()).mixCount;

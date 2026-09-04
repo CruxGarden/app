@@ -330,9 +330,15 @@ export async function startMockApi(): Promise<MockApi> {
     if (path === '/billing/me' && method === 'GET') return send(200, billingMe());
     if (path === '/billing/sync' && method === 'POST') return send(200, billingMe());
     if (path === '/billing/checkout' && method === 'POST') {
-      const { planId } = bodyJson() as { planId?: string };
+      const { planId, interval } = bodyJson() as { planId?: string; interval?: string };
+      // CheckoutDto: planId ∈ paid plans, interval ∈ month|year (class-validator 400s otherwise)
       if (!planId || !PLAN_LIMITS[planId] || planId === 'free')
         return send(400, { statusCode: 400, message: 'That plan is not available' });
+      if (interval !== 'month' && interval !== 'year')
+        return send(400, {
+          statusCode: 400,
+          message: ['interval must be one of the following values: month, year'],
+        });
       if (state.billing.planId !== 'free')
         return send(400, {
           statusCode: 400,
@@ -390,6 +396,9 @@ export async function startMockApi(): Promise<MockApi> {
     const sm = path.match(/^\/sync\/crux\/([^/]+)$/);
     if (sm) {
       const id = sm[1]!;
+      // The controller's ParseUUIDPipe rejects anything that is not a UUID
+      if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id))
+        return send(400, { statusCode: 400, message: 'Validation failed (uuid is expected)' });
       if (method === 'PUT') {
         const { files, fields } = parseMultipart(rawBuf, req.headers['content-type'] ?? '');
         const bytes = files[0]?.bytes.length ?? 0;
@@ -402,7 +411,14 @@ export async function startMockApi(): Promise<MockApi> {
         };
         state.sync.cruxes[id] = entry;
         state.sync.up += bytes;
-        return send(200, { cruxId: id, ...entry, size: bytes });
+        // SyncService.pushCrux → { cruxId, slug, title, updatedAt, size } (no `bytes`)
+        return send(200, {
+          cruxId: id,
+          slug: entry.slug,
+          title: entry.title,
+          updatedAt: entry.updatedAt,
+          size: bytes,
+        });
       }
       if (method === 'DELETE') {
         delete state.sync.cruxes[id];
@@ -517,19 +533,28 @@ export async function startMockApi(): Promise<MockApi> {
         bandwidthAsOf: null,
       });
     }
-    // ── custom domains: verify advances one step per call
+    // ── custom domains: verify advances one step per call. The response is the
+    // API's CustomDomainView; `verifies` is the mock's own counter and is stripped.
+    const domainView = (d: (typeof state.domains)[number]) => {
+      const { verifies: _verifies, ...view } = d;
+      return view;
+    };
     const dm = path.match(/^\/domains\/([^/]+)(\/verify)?$/);
     if (dm) {
       const d = state.domains.find((x) => x.id === dm[1]);
       if (!d) return send(404, { statusCode: 404, message: 'Domain not found' });
       if (dm[2] && method === 'POST') {
         d.verifies += 1;
-        if (d.verifies === 1) d.error = 'Waiting for the TXT record';
-        else if (d.verifies === 2) {
+        if (d.verifies === 1) {
+          // DomainsService.verify: `Waiting for the ${missing.join(' and ')} record`
+          // — on a fresh domain neither the CNAME nor the TXT resolves yet.
+          const missing = ['CNAME', 'TXT'].join(' and ');
+          d.error = `Waiting for the ${missing} record`;
+        } else if (d.verifies === 2) {
           d.status = 'issuing';
           d.error = null;
         } else d.status = 'active';
-        return send(200, d);
+        return send(200, domainView(d));
       }
       if (method === 'DELETE') {
         state.domains = state.domains.filter((x) => x.id !== d.id);
@@ -579,10 +604,7 @@ export async function startMockApi(): Promise<MockApi> {
       }
       if (sub === '/usage' && method === 'GET') return send(200, usageFor(id));
       if (sub === '/domains' && method === 'GET')
-        return send(
-          200,
-          state.domains.filter((d) => d.cruxId === id),
-        );
+        return send(200, state.domains.filter((d) => d.cruxId === id).map(domainView));
       if (sub === '/domains' && method === 'POST') {
         const hostname = String(bodyJson().hostname ?? '').toLowerCase();
         if (!/^[a-z0-9.-]+\.[a-z]{2,}$/.test(hostname))
@@ -607,7 +629,7 @@ export async function startMockApi(): Promise<MockApi> {
           verifies: 0,
         };
         state.domains.push(d);
-        return send(201, d);
+        return send(201, domainView(d));
       }
       if (sub === '/tags' && method === 'PUT') return send(200, []);
       if (sub === '/unpublish' && method === 'POST') {

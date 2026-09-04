@@ -2,16 +2,21 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-  <!-- Hardened runtime, not sandboxed (ADR 0007): the app spawns pnpm/astro and writes ~/CruxGarden. -->
+  <!-- Hardened runtime, NOT App Sandbox (ADR 0007): the app spawns pnpm/astro and writes
+       ~/CruxGarden directly, so the sandbox-only keys (network.server, files.user-selected,
+       network.client) do not apply and are omitted — an unsandboxed process already has them.
+
+       Only what Electron itself needs:
+       - allow-jit + allow-unsigned-executable-memory: V8 generates and executes machine code.
+
+       Deliberately absent:
+       - disable-library-validation: every dylib/.node we dlopen (better_sqlite3.node, Electron
+         frameworks) is inside the bundle and signed with the app identity by electron-builder.
+         pnpm, astro and ffmpeg are separate child processes via execFile, not loaded libraries,
+         so library validation never sees them.
+       - allow-dyld-environment-variables: nothing sets DYLD_* for the main process; leaving it
+         on would let anything in the environment inject code into a signed app. -->
   <key>com.apple.security.cs.allow-jit</key><true/>
   <key>com.apple.security.cs.allow-unsigned-executable-memory</key><true/>
-  <!-- Native modules (better-sqlite3) and the bundled ffmpeg are signed with our identity but
-       Electron loads them via dlopen; library validation would refuse mismatched team IDs from
-       toolchains the user installs. -->
-  <key>com.apple.security.cs.disable-library-validation</key><true/>
-  <key>com.apple.security.cs.allow-dyld-environment-variables</key><true/>
-  <key>com.apple.security.network.client</key><true/>
-  <key>com.apple.security.network.server</key><true/>
-  <key>com.apple.security.files.user-selected.read-write</key><true/>
 </dict>
 </plist>

@@ -743,7 +743,9 @@ const SPECS: Spec[] = [
 
 function build(spec: Spec): MoodPackage {
   const p = preset(spec.presetId);
-  const active = spec.mixes[0]!;
+  // Own copies: the store and settings must never hold references into SPECS.
+  const mixes = structuredClone(spec.mixes);
+  const active = mixes[0]!;
   return {
     format: 'crux-mood',
     version: 1,
@@ -768,11 +770,11 @@ function build(spec: Spec): MoodPackage {
     },
     assets: [],
     resonance: {
-      mixes: spec.mixes,
+      mixes,
       playlist: {
-        enabled: spec.mixes.length > 1,
+        enabled: mixes.length > 1,
         shuffle: false,
-        items: spec.mixes.map((m) => ({ mixId: m.id, minutes: 25, crossfadeSec: 8 })),
+        items: mixes.map((m) => ({ mixId: m.id, minutes: 25, crossfadeSec: 8 })),
       },
       cues: { ...DEFAULT_CUES, ...(spec.cues ?? {}) },
       activeMixId: active.id,

@@ -9,6 +9,7 @@ import { type PublishPhase } from '@/services/publish';
 import { usePaneWidth } from '@/hooks/usePaneWidth';
 import CreateAuthorModal from '@/components/auth/CreateAuthorModal';
 import ConnectAccount from '@/components/auth/ConnectAccount';
+import { Toggle } from '@/components/ui';
 import { PaneEmpty, PaneSection, PaneAction, PaneHint, PaneNote } from './pane-ui';
 import UsageSection from './UsageSection';
 import CustomDomainSection from './CustomDomainSection';
@@ -355,42 +356,18 @@ export default function PublishPane() {
 
           {/* Visibility */}
           <PaneSection label="Visibility">
-            <label className="flex items-center gap-2.5 cursor-pointer select-none">
-              <button
-                type="button"
-                role="switch"
-                aria-checked={!!crux.discoverable}
-                aria-label="Discoverable"
-                onClick={() => updateCrux({ discoverable: !crux.discoverable })}
-                className={cn(
-                  'relative rounded-full transition-colors shrink-0 cursor-pointer border border-toggle-border',
-                  crux.discoverable ? 'bg-toggle-active' : 'bg-toggle',
-                )}
-                style={{ width: 'var(--toggle-width)', height: 'var(--toggle-height)' }}
-              >
-                <span
-                  className={cn(
-                    'absolute top-[2px] left-[2px] rounded-full transition-transform',
-                    crux.discoverable ? 'bg-toggle-thumb-active' : 'bg-toggle-thumb',
-                  )}
-                  style={{
-                    width: 'calc(var(--toggle-height) - 4px)',
-                    height: 'calc(var(--toggle-height) - 4px)',
-                    transform: crux.discoverable
-                      ? 'translateX(calc(var(--toggle-width) - var(--toggle-height)))'
-                      : undefined,
-                  }}
-                />
-              </button>
-              <div className="flex flex-col">
-                <span className="text-xs font-body text-text">Discoverable</span>
-                <span className="text-2xs text-text-muted">
-                  {crux.discoverable
-                    ? 'Listed in search on crux.garden'
-                    : 'Only people with the link can find it'}
-                </span>
-              </div>
-            </label>
+            <div className="flex flex-col gap-0.5">
+              <Toggle
+                checked={!!crux.discoverable}
+                onChange={(on) => updateCrux({ discoverable: on })}
+                label="Discoverable"
+              />
+              <span className="text-2xs text-text-muted">
+                {crux.discoverable
+                  ? 'Listed in search on crux.garden'
+                  : 'Only people with the link can find it'}
+              </span>
+            </div>
           </PaneSection>
 
           <div className="flex-1" />

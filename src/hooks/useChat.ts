@@ -8,7 +8,7 @@ import { getProviderForModel, resolveModel } from '@/ai/providers';
 import type { SnapshotFrequency } from '@/services/growth';
 import type { ChatMessage, ToolCall } from '@/api/types';
 import type { NormalizedMessage } from '@/services/types';
-import { getPersona, getPersonaFingerprint } from '@/services/persona';
+import { getPersona, getPersonaFingerprint, personaSnapshotOf } from '@/services/persona';
 import { useAppStore } from '@/stores/appStore';
 import { useShallow } from 'zustand/react/shallow';
 import { isAiMock } from '@/lib/platform';
@@ -171,13 +171,7 @@ export function useChat() {
       // Persona snapshot (keyed by persona fingerprint)
       const personaMap = { ...((cruxMeta?.personaSnapshots as Record<string, unknown>) || {}) };
       if (!personaMap[pf]) {
-        personaMap[pf] = {
-          name: persona.name,
-          greeting: persona.greeting,
-          systemPrompt: persona.systemPrompt,
-          thumbnailFingerprint: persona.thumbnailFingerprint || null,
-          thumbnailFingerprintLight: persona.thumbnailFingerprintLight || null,
-        };
+        personaMap[pf] = personaSnapshotOf(persona);
         metaChanged = true;
       }
 

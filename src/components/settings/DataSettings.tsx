@@ -205,7 +205,6 @@ export default function DataSettings() {
                 'px-3 py-1.5 text-xs font-mono rounded-[var(--radius-sm)] w-32',
                 'bg-surface border border-border text-text placeholder:text-text-muted',
                 'focus:outline-none focus:border-error',
-                '',
               )}
             />
             <Button

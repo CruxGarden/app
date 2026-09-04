@@ -172,7 +172,7 @@ export default function ContextMenu({
           disabled={item.disabled}
           className={cn(
             'w-full text-left px-3 py-1.5 text-xs font-mono transition-colors cursor-pointer',
-            'disabled:opacity-40 disabled:cursor-not-allowed',
+            'disabled:cursor-not-allowed',
             item.destructive
               ? 'text-error hover:bg-error-muted'
               : 'text-text hover:bg-accent-muted/20',

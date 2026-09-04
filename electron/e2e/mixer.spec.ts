@@ -17,7 +17,7 @@ test.describe('resonance mixer', () => {
       await page.getByRole('button', { name: /enter/i }).click();
       await page.getByText('Plant a new garden').click();
       await page.getByRole('button', { name: 'Welcome' }).click();
-      const dock = page.getByRole('region', { name: 'Mood Dock' });
+      const dock = page.getByRole('region', { name: 'Mood Bar' });
       await expect(dock).toBeVisible({ timeout: 30_000 });
       await dock.getByRole('button', { name: 'Play soundscape' }).click();
       await expect.poll(async () => (await state()).playing).toBe(true);
@@ -63,7 +63,7 @@ test.describe('resonance mixer', () => {
       const again = await launchApp({ dir });
       try {
         await again.page.getByRole('button', { name: /enter/i }).click();
-        await expect(again.page.getByRole('region', { name: 'Mood Dock' })).toBeVisible({
+        await expect(again.page.getByRole('region', { name: 'Mood Bar' })).toBeVisible({
           timeout: 30_000,
         });
         await expect

@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react';
 import { Panel, Button, Toggle } from '@/components/ui';
 import { Capability, can } from '@/lib/platform';
 import type { DesktopInfo, UpdateState } from '@/lib/platform';
-import { getDesktopInfo, openLogs, updates, shortenHomePath } from '@/services/desktop';
+import { getDesktopInfo, openLogs, openWeb, updates, shortenHomePath } from '@/services/desktop';
+import { RELEASES_URL } from '@/lib/site';
 
 /**
  * Settings → Desktop: what build this is, updates (visible and disableable,
@@ -50,8 +51,17 @@ export default function DesktopSettings() {
         return `Downloading… ${state.progress ?? 0}%`;
       case 'downloaded':
         return `Version ${state.availableVersion} is ready to install.`;
-      case 'error':
-        return `Update check failed: ${state.error ?? 'unknown error'}`;
+      case 'error': {
+        const why = state.error ?? 'unknown error';
+        switch (state.failedAction) {
+          case 'download':
+            return `Couldn't download version ${state.availableVersion ?? ''}: ${why}`;
+          case 'install':
+            return `Couldn't install the update: ${why}`;
+          default:
+            return `Update check failed: ${why}`;
+        }
+      }
     }
   })();
 
@@ -96,6 +106,11 @@ export default function DesktopSettings() {
                 Restart to update
               </Button>
             )}
+            {state?.status === 'error' && state.failedAction === 'download' && (
+              <Button size="sm" variant="secondary" onClick={() => void openWeb(RELEASES_URL)}>
+                Get it from GitHub
+              </Button>
+            )}
             {state && !['downloading', 'downloaded', 'disabled'].includes(state.status) && (
               <Button
                 size="sm"
@@ -116,7 +131,8 @@ export default function DesktopSettings() {
         />
         <p className="text-2xs text-text-muted">
           The update check is the only routine network call this app makes on its own. Nothing
-          downloads without your click.
+          downloads without your click; once downloaded, the update installs when you quit the app
+          or click Restart to update.
         </p>
 
         <div className="border-t border-border my-1" />

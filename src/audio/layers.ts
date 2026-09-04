@@ -6,13 +6,18 @@
 import * as Tone from 'tone';
 import { SCALES, type Layer, type Mix } from './schema';
 import { makeRng } from './rng';
-import { chordAt, bassAt, walkAt } from './harmony';
+import { chordAt, bassAt, walkAt, gridAt, type GridPosition } from './harmony';
 
-/** Current bar index on the transport (musical layers agree on the chord this way). */
-function currentBar(): number {
-  const pos = String(Tone.getTransport().position);
-  const bar = parseInt(pos.split(':')[0] ?? '0', 10);
-  return Number.isFinite(bar) ? bar : 0;
+/**
+ * Bar / beat / step for the time a Loop callback was *scheduled* for. Loop
+ * callbacks fire ~100 ms ahead of `time`, so Transport.position (now) would
+ * read the previous beat near every boundary; private counters reset in
+ * start() drift from the tick grid Loop.start(0) aligns to. Every musical
+ * layer uses this, so they agree on the one and on the chord.
+ */
+function grid(time: number): GridPosition {
+  const T = Tone.getTransport();
+  return gridAt(T.getTicksAtTime(time), T.PPQ);
 }
 
 export interface LayerRuntime {
@@ -26,6 +31,8 @@ export interface LayerRuntime {
 const n = (v: unknown, d: number) => (typeof v === 'number' && Number.isFinite(v) ? v : d);
 const s = (v: unknown, d: string) => (typeof v === 'string' && v ? v : d);
 const lerp = (a: number, b: number, t: number) => a + (b - a) * Math.min(1, Math.max(0, t));
+/** Octave kept where note names stay inside MIDI (C0..C8) — above that an oscillator frequency throws. */
+const oct = (v: unknown, d: number) => Math.min(8, Math.max(0, Math.round(n(v, d))));
 
 function scaleNotes(mix: Mix, octave: number, count = 8): string[] {
   const steps = SCALES[mix.scale] ?? SCALES.pentatonic!;
@@ -176,7 +183,7 @@ function drone(layer: Layer, mix: Mix): LayerRuntime {
   move.connect(filter.frequency);
   let notes: string[] = [];
   const chordFor = (l: Layer, m: Mix) => {
-    const octave = Math.round(n(l.params.octave, 2));
+    const octave = oct(l.params.octave, 2);
     const root = Tone.Frequency(`${m.root}${octave}`);
     const chord = s(l.params.chord, 'root5');
     const iv =
@@ -232,12 +239,11 @@ function pad(layer: Layer, mix: Mix): LayerRuntime {
   const rng = makeRng(mix.seed + 7);
   let cfg = {
     every: n(layer.params.changeEvery, 8),
-    octave: Math.round(n(layer.params.octave, 3)),
+    octave: oct(layer.params.octave, 3),
   };
-  let bar = 0;
   const loop = new Tone.Loop((time) => {
-    bar += 1;
-    if (bar % Math.max(1, Math.round(cfg.every)) !== 1 && cfg.every > 1) return;
+    const { bar } = grid(time);
+    if (bar % Math.max(1, Math.round(cfg.every)) !== 0) return;
     const notes = scaleNotes(mix, cfg.octave, 9);
     const degrees = [0, 3, 4, 5]; // I IV V vi in scale index terms
     const d = degrees[Math.floor(rng() * degrees.length)]!;
@@ -245,7 +251,7 @@ function pad(layer: Layer, mix: Mix): LayerRuntime {
     synth.triggerAttackRelease(chord, `${Math.max(1, cfg.every - 1)}n`.replace('n', 'm'), time);
   }, '1m');
   const apply = (l: Layer) => {
-    cfg = { every: n(l.params.changeEvery, 8), octave: Math.round(n(l.params.octave, 3)) };
+    cfg = { every: n(l.params.changeEvery, 8), octave: oct(l.params.octave, 3) };
     synth.set({
       envelope: { attack: n(l.params.attack, 3), release: n(l.params.release, 6) } as never,
       oscillator: { type: s(l.params.waveform, 'triangle') as never } as never,
@@ -255,10 +261,7 @@ function pad(layer: Layer, mix: Mix): LayerRuntime {
   apply(layer);
   return {
     output: out,
-    start: () => {
-      bar = 0;
-      loop.start(0);
-    },
+    start: () => loop.start(0),
     stop: () => {
       loop.stop();
       synth.releaseAll();
@@ -281,7 +284,7 @@ function melody(layer: Layer, mix: Mix): LayerRuntime {
   const rng = makeRng(mix.seed);
   let cfg = {
     density: n(layer.params.density, 0.25),
-    octave: Math.round(n(layer.params.octave, 5)),
+    octave: oct(layer.params.octave, 5),
     humanize: n(layer.params.humanize, 0.3),
   };
   let last = 0;
@@ -297,7 +300,7 @@ function melody(layer: Layer, mix: Mix): LayerRuntime {
   const apply = (l: Layer) => {
     cfg = {
       density: n(l.params.density, 0.25),
-      octave: Math.round(n(l.params.octave, 5)),
+      octave: oct(l.params.octave, 5),
       humanize: n(l.params.humanize, 0.3),
     };
     echo.wet.rampTo(n(l.params.echo, 0.4), 0.5);
@@ -413,14 +416,13 @@ function beat(layer: Layer, mix: Mix): LayerRuntime {
     hats: n(layer.params.hats, 0.6),
     humanize: n(layer.params.humanize, 0.4),
   };
-  let step = 0;
   const seq = new Tone.Loop((time) => {
     const p = BEAT_PATTERNS[cfg.pattern] ?? BEAT_PATTERNS.lofi!;
-    const i = step % 16;
-    step += 1;
-    // swing: push the off-16ths late
+    const i = grid(time).step;
+    // swing: push the off-16ths late. 0.5 is straight; the meta floor is 0.5
+    // because a hit cannot be scheduled before its own slot.
     const sixteenth = Tone.Time('16n').toSeconds();
-    const late = i % 2 === 1 ? (cfg.swing - 0.5) * sixteenth * 0.9 : 0;
+    const late = i % 2 === 1 ? Math.max(0, cfg.swing - 0.5) * sixteenth * 0.9 : 0;
     const jitter = (rng() - 0.5) * 0.02 * cfg.humanize;
     const t = time + Math.max(0, late + jitter);
     const vel = (base: number) =>
@@ -448,10 +450,7 @@ function beat(layer: Layer, mix: Mix): LayerRuntime {
   apply(layer);
   return {
     output: out,
-    start: () => {
-      step = 0;
-      seq.start(0);
-    },
+    start: () => seq.start(0),
     stop: () => seq.stop(),
     update: apply,
     dispose: () =>
@@ -513,16 +512,16 @@ function keys(layer: Layer, mix: Mix): LayerRuntime {
     progression: s(layer.params.progression, 'lofi'),
     voicing: s(layer.params.voicing, 'seventh') as 'triad' | 'seventh',
     rhythm: s(layer.params.rhythm, 'half'),
-    octave: Math.round(n(layer.params.octave, 4)),
+    octave: oct(layer.params.octave, 4),
     humanize: n(layer.params.humanize, 0.4),
   };
   let currentMix = mix;
-  const chordNow = () =>
+  const chordFor = (bar: number) =>
     chordAt({
       root: currentMix.root,
       scale: currentMix.scale,
       progression: cfg.progression,
-      bar: currentBar(),
+      bar,
       octave: cfg.octave,
       voicing: cfg.voicing,
     });
@@ -538,11 +537,10 @@ function keys(layer: Layer, mix: Mix): LayerRuntime {
       );
     });
   };
-  let beatIdx = 0;
   const loop = new Tone.Loop((time) => {
-    const b = beatIdx % 4;
-    beatIdx += 1;
-    const chord = chordNow();
+    const { bar, beat: b } = grid(time);
+    const beatIdx = bar * 4 + b;
+    const chord = chordFor(bar);
     switch (cfg.rhythm) {
       case 'whole':
         if (b === 0) strum(chord, '1m', time, 0.65);
@@ -568,7 +566,7 @@ function keys(layer: Layer, mix: Mix): LayerRuntime {
       progression: s(l.params.progression, 'lofi'),
       voicing: s(l.params.voicing, 'seventh') as 'triad' | 'seventh',
       rhythm: s(l.params.rhythm, 'half'),
-      octave: Math.round(n(l.params.octave, 4)),
+      octave: oct(l.params.octave, 4),
       humanize: n(l.params.humanize, 0.4),
     };
     wobble.depth.rampTo(n(l.params.wobble, 0.3) * 0.15, 0.3);
@@ -586,10 +584,7 @@ function keys(layer: Layer, mix: Mix): LayerRuntime {
   apply(layer, mix);
   return {
     output: out,
-    start: () => {
-      beatIdx = 0;
-      loop.start(0);
-    },
+    start: () => loop.start(0),
     stop: () => {
       loop.stop();
       synth.releaseAll();
@@ -623,17 +618,15 @@ function bass(layer: Layer, mix: Mix): LayerRuntime {
   let cfg = {
     pattern: s(layer.params.pattern, 'root'),
     progression: s(layer.params.progression, 'lofi'),
-    octave: Math.round(n(layer.params.octave, 2)),
+    octave: oct(layer.params.octave, 2),
   };
-  let beatIdx = 0;
   const loop = new Tone.Loop((time) => {
-    const b = beatIdx % 4;
-    beatIdx += 1;
+    const { bar, beat: b } = grid(time);
     const o = {
       root: currentMix.root,
       scale: currentMix.scale,
       progression: cfg.progression,
-      bar: currentBar(),
+      bar,
       octave: cfg.octave,
     };
     switch (cfg.pattern) {
@@ -658,7 +651,7 @@ function bass(layer: Layer, mix: Mix): LayerRuntime {
     cfg = {
       pattern: s(l.params.pattern, 'root'),
       progression: s(l.params.progression, 'lofi'),
-      octave: Math.round(n(l.params.octave, 2)),
+      octave: oct(l.params.octave, 2),
     };
     synth.portamento = n(l.params.glide, 0.2) * 0.15;
     synth.filter.frequency.rampTo(lerp(120, 1400, n(l.params.tone, 0.4)), 0.3);
@@ -666,10 +659,7 @@ function bass(layer: Layer, mix: Mix): LayerRuntime {
   apply(layer, mix);
   return {
     output: out,
-    start: () => {
-      beatIdx = 0;
-      loop.start(0);
-    },
+    start: () => loop.start(0),
     stop: () => {
       loop.stop();
       synth.triggerRelease();
@@ -680,8 +670,9 @@ function bass(layer: Layer, mix: Mix): LayerRuntime {
 }
 
 // ── Vinyl ─────────────────────────────────────────────────────────────────
-function vinyl(layer: Layer): LayerRuntime {
+function vinyl(layer: Layer, mix: Mix): LayerRuntime {
   const out = new Tone.Gain(1);
+  const rng = makeRng(mix.seed + 57);
   // dust: quiet pink bed with a slow wow
   const dust = new Tone.Noise('pink');
   const dustFilter = new Tone.Filter({ type: 'bandpass', frequency: 3000, Q: 0.5 });
@@ -706,7 +697,7 @@ function vinyl(layer: Layer): LayerRuntime {
   hum.chain(humGain, out);
   let chance = 0.35;
   const loop = new Tone.Loop((time) => {
-    if (Math.random() < chance) popEnv.triggerAttackRelease(0.008, time + Math.random() * 0.05);
+    if (rng() < chance) popEnv.triggerAttackRelease(0.008, time + rng() * 0.05);
   }, '16n');
   const apply = (l: Layer) => {
     const crackle = n(l.params.crackle, 0.5);
@@ -773,6 +764,6 @@ export function buildLayer(layer: Layer, mix: Mix): LayerRuntime {
     case 'bass':
       return bass(layer, mix);
     case 'vinyl':
-      return vinyl(layer);
+      return vinyl(layer, mix);
   }
 }

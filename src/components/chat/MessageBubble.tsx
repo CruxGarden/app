@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { cn } from '@/lib/cn';
 import { getPersona } from '@/services/persona';
 import type { ChatMessage, ToolCall } from '@/api/types';
@@ -16,6 +16,32 @@ function usePersonaSnapshot(fingerprint?: string) {
     | undefined;
   const snapshot = fingerprint ? snapshots?.[fingerprint] : undefined;
   return snapshot && typeof snapshot === 'object' ? snapshot : null;
+}
+
+/**
+ * The current persona's name — read once, refreshed on 'crux:persona-changed'.
+ * `getPersona()` parses JSON from the settings cache; calling it in every
+ * assistant bubble's render was a JSON.parse per message per keystroke.
+ */
+let personaNameCache: string | null = null;
+function currentPersonaName(): string {
+  if (personaNameCache === null) personaNameCache = getPersona().name;
+  return personaNameCache;
+}
+if (typeof window !== 'undefined') {
+  window.addEventListener('crux:persona-changed', () => {
+    personaNameCache = null;
+  });
+}
+
+function usePersonaName(): string {
+  const [name, setName] = useState(currentPersonaName);
+  useEffect(() => {
+    const refresh = () => setName(currentPersonaName());
+    window.addEventListener('crux:persona-changed', refresh);
+    return () => window.removeEventListener('crux:persona-changed', refresh);
+  }, []);
+  return name;
 }
 
 /** Look up the persona avatar for a message — resolves OPFS blob by fingerprint */
@@ -150,7 +176,8 @@ export default function MessageBubble({
 
   const personaSnapshot = usePersonaSnapshot(message.personaFingerprint);
   const authorSnapshot = useAuthorSnapshot(message.authorId);
-  const personaName = !isUser ? personaSnapshot?.name || getPersona().name : null;
+  const currentName = usePersonaName();
+  const personaName = !isUser ? personaSnapshot?.name || currentName : null;
   const authorName = isUser ? authorSnapshot?.username || null : null;
 
   return (

@@ -214,6 +214,28 @@ export function captureCurrentMood(input: {
   };
 }
 
+/**
+ * The persona to save when a package is applied: the package's voice over the
+ * user's record, keeping the user's avatars unless the package brings its own.
+ * Bundled Moods carry only name/greeting/systemPrompt — a whole-record save
+ * used to wipe thumbnailFingerprint / thumbnailFingerprintLight.
+ */
+export function personaForApply(
+  current: PersonaSettings,
+  incoming: Partial<PersonaSettings>,
+): PersonaSettings {
+  const next: Partial<PersonaSettings> = { ...incoming };
+  for (const k of [
+    'thumbnailFingerprint',
+    'thumbnailFingerprintLight',
+    'thumbnailDataUrl',
+    'thumbnailDataUrlLight',
+  ] as const) {
+    if (!next[k]) delete next[k];
+  }
+  return { ...current, ...next };
+}
+
 /** Wear a package: theme (as a user preset), background, persona, resonance. */
 export async function applyMood(pkg: MoodPackage): Promise<void> {
   // Theme → a user preset with the package's id, made active for its mode
@@ -249,20 +271,20 @@ export async function applyMood(pkg: MoodPackage): Promise<void> {
     );
   }
 
-  // Persona
-  if (pkg.persona) savePersona(pkg.persona);
+  // Persona — voice from the package, avatars kept unless the package brings its own
+  if (pkg.persona) savePersona(personaForApply(getPersona(), pkg.persona));
 
   // Assets index (bytes were written on import)
   for (const a of pkg.assets ?? []) addAsset(a);
 
   // Resonance — the package's mixes join the user's (same id replaces), then
   // its active mix, playlist, cues and volume take over.
-  if (pkg.resonance.mixes.length) {
-    const incoming = new Set(pkg.resonance.mixes.map((m) => m.id));
-    const merged = [
-      ...resonance.getMixes().filter((m) => !incoming.has(m.id)),
-      ...pkg.resonance.mixes,
-    ];
+  // Mixes go through validateMix so the store and settings hold clamped copies,
+  // never references into the package (bundled packages are module singletons).
+  const pkgMixes = pkg.resonance.mixes.map(validateMix).filter(Boolean) as Mix[];
+  if (pkgMixes.length) {
+    const incoming = new Set(pkgMixes.map((m) => m.id));
+    const merged = [...resonance.getMixes().filter((m) => !incoming.has(m.id)), ...pkgMixes];
     resonance.saveMixes(merged);
     resonance.setActiveMixId(pkg.resonance.activeMixId);
     resonance.savePlaylist(pkg.resonance.playlist);

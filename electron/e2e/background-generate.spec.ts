@@ -24,8 +24,12 @@ test.describe('background: describe a backdrop (UI)', () => {
       await box.fill('fog over a pine forest at dawn');
       await expect(generate).toBeEnabled();
       await generate.click();
-      // No provider key in the test garden → a readable error, not a spinner forever
-      await expect(page.getByText(/key|provider|image/i).first()).toBeVisible({ timeout: 20_000 });
+      // No provider key in the test garden → the error line names the missing key
+      // (the always-visible hint under the box also mentions keys, so target the error itself)
+      await expect(page.getByTestId('bg-error')).toHaveText(
+        /No API key configured for a provider that supports image generation/,
+        { timeout: 20_000 },
+      );
       await expect(generate).toBeEnabled({ timeout: 20_000 });
     } finally {
       await app.close();
