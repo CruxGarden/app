@@ -84,10 +84,11 @@ test.describe('starter cruxes', () => {
       await expect(monaco).toBeVisible({ timeout: 30_000 });
       await expect(monaco).toContainText('media: /media/Garden-Loop.m4a');
       await expect(monaco).toContainText('kind: audio');
-      // …and the converted file is in the project
-      await expect(page.getByRole('tree').getByText('Garden-Loop.m4a')).toBeVisible({
-        timeout: 15_000,
-      });
+      // …and the converted file is in the project (expand public/ → media/)
+      const tree = page.getByRole('tree');
+      await tree.getByText('public', { exact: true }).click();
+      await tree.getByText('media', { exact: true }).click();
+      await expect(tree.getByText('Garden-Loop.m4a')).toBeVisible({ timeout: 15_000 });
       await page.screenshot({ path: 'e2e/.results/starters-2-media-item.png' });
     } finally {
       await app.close();
