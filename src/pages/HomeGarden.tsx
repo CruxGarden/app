@@ -10,44 +10,7 @@ import NewCruxModal from '@/components/garden/NewCruxModal';
 import { openGardenPage } from '@/lib/public-url';
 import { IconButton, Modal, Button } from '@/components/ui';
 import { cn } from '@/lib/cn';
-
-function GlobeIcon() {
-  return (
-    <svg
-      width="16"
-      height="16"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.5"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <circle cx="12" cy="12" r="10" />
-      <line x1="2" y1="12" x2="22" y2="12" />
-      <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
-    </svg>
-  );
-}
-
-function PlusCircleIcon() {
-  return (
-    <svg
-      width="20"
-      height="20"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.5"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <circle cx="12" cy="12" r="10" />
-      <line x1="12" y1="8" x2="12" y2="16" />
-      <line x1="8" y1="12" x2="16" y2="12" />
-    </svg>
-  );
-}
+import { GlobeIcon, PlusCircleIcon } from '@/components/ui/icons';
 
 export default function HomeGarden() {
   const author = useAppStore((s) => s.author);
@@ -124,7 +87,7 @@ export default function HomeGarden() {
             onClick={() => setShowNewCrux(true)}
             className="bg-panel text-text-muted hover:bg-accent/20 hover:text-accent"
           >
-            <PlusCircleIcon />
+            <PlusCircleIcon size={20} />
           </IconButton>
         </div>
         <div className="flex items-center gap-3 mt-6">
@@ -169,7 +132,7 @@ export default function HomeGarden() {
       ) : cruxList.length === 0 ? (
         <div className="bg-panel border border-border rounded-[var(--radius)] flex flex-col items-center text-center py-14 px-6">
           <div className="w-12 h-12 rounded-full bg-accent-muted text-accent flex items-center justify-center mb-4">
-            <PlusCircleIcon />
+            <PlusCircleIcon size={20} />
           </div>
           <p className="font-display text-base text-text mb-1">Your garden is empty</p>
           <p className="text-sm text-text-muted max-w-[34ch] mb-5">

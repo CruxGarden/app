@@ -61,9 +61,9 @@ export default function MessageList({
       {isStreaming && streamingContent && (
         <div className="flex gap-2 items-end justify-start">
           <ConsoleAvatar />
-          <div className="max-w-[85%] rounded-[var(--radius)] px-3 py-2 text-sm bg-[color-mix(in_srgb,var(--panel),var(--text)_8%)] text-text">
+          <div className="max-w-[85%] rounded-[var(--radius)] px-3 py-2 text-sm bg-[color-mix(in_srgb,var(--panel),var(--text)_8%)] text-text motion-enter-bubble">
             <MarkdownRenderer content={streamingContent} />
-            <span className="inline-block w-1.5 h-4 bg-accent/60 animate-pulse ml-0.5 align-text-bottom" />
+            <span className="inline-block w-1.5 h-4 bg-accent/60 motion-attention ml-0.5 align-text-bottom" />
           </div>
         </div>
       )}
@@ -71,11 +71,11 @@ export default function MessageList({
       {isStreaming && !streamingContent && (
         <div className="flex gap-2 items-end justify-start">
           <ConsoleAvatar />
-          <div className="rounded-[var(--radius)] px-3 py-2 bg-[color-mix(in_srgb,var(--panel),var(--text)_8%)]">
+          <div className="rounded-[var(--radius)] px-3 py-2 bg-[color-mix(in_srgb,var(--panel),var(--text)_8%)] motion-enter-bubble">
             <div className="flex gap-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-text-muted animate-bounce [animation-delay:0ms]" />
-              <span className="w-1.5 h-1.5 rounded-full bg-text-muted animate-bounce [animation-delay:150ms]" />
-              <span className="w-1.5 h-1.5 rounded-full bg-text-muted animate-bounce [animation-delay:300ms]" />
+              <span className="w-1.5 h-1.5 rounded-full bg-text-muted motion-attention [animation-delay:0ms]" />
+              <span className="w-1.5 h-1.5 rounded-full bg-text-muted motion-attention [animation-delay:150ms]" />
+              <span className="w-1.5 h-1.5 rounded-full bg-text-muted motion-attention [animation-delay:300ms]" />
             </div>
           </div>
         </div>

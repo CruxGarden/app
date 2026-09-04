@@ -185,7 +185,7 @@ export default function MessageBubble({
       {!isUser && <MessageAvatar fingerprint={message.personaFingerprint} />}
       <div
         className={cn(
-          'max-w-[85%] rounded-bubble px-3 py-2 text-sm break-words border',
+          'max-w-[85%] rounded-bubble px-3 py-2 text-sm break-words border motion-enter-bubble',
           isUser
             ? 'bg-chat-user-bubble text-chat-user-bubble-text border-chat-user-bubble-border'
             : 'bg-chat-ai-bubble text-chat-ai-bubble-text border-chat-ai-bubble-border',

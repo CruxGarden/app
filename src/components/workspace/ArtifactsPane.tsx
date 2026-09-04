@@ -791,7 +791,7 @@ export default function ArtifactsPane() {
           </div>
           <div className="h-0.5 bg-border">
             <div
-              className="h-full bg-accent transition-all duration-200"
+              className="h-full bg-accent transition-[width]"
               style={{ width: `${(uploadProgress.completed / uploadProgress.total) * 100}%` }}
             />
           </div>

@@ -331,6 +331,13 @@ export const GARDEN_DARK = {
   radius: '0.5rem',
   radiusSm: '0.375rem',
   radiusLg: '0.75rem',
+  // ── shape (shape.css) — silhouette choices; defaults reproduce today's look ──
+  paneBorderStyle: 'solid',
+  paneCornerShape: 'round',
+  controlCornerShape: 'round',
+  paneHeaderShape: 'bar',
+  dividerStyle: 'hairline',
+  cardBorderStyle: 'solid',
 
   // ── Workspace layout (the mosaic chrome) ─────────────
   paneGap: '4px',
@@ -372,6 +379,40 @@ export const GARDEN_DARK = {
   // ── Motion ───────────────────────────────────────────
   // Multiplies the default transition duration (0 = instant)
   motionScale: '1',
+
+  // ── icons ── which glyph set the icon module draws (line | filled | pixel; TOKEN_CHOICES)
+  iconSet: 'line',
+  // ── motion ── (ADR 0014; styles/motion.css) how things move, per role
+  motionEaseStandard: 'cubic-bezier(0.2, 0, 0, 1)',
+  motionEaseEnter: 'cubic-bezier(0.16, 1, 0.3, 1)',
+  motionEaseExit: 'cubic-bezier(0.4, 0, 1, 1)',
+  motionEaseSpring: 'cubic-bezier(0.34, 1.56, 0.64, 1)',
+  // every duration is multiplied by motionScale; fast also times transition-colors
+  motionDurationFast: '150ms',
+  motionDurationBase: '250ms',
+  motionDurationSlow: '400ms',
+  // choice tokens (TOKEN_CHOICES in token-groups.ts): how each role appears…
+  motionEnterPane: 'none',
+  motionEnterDialog: 'fade',
+  motionEnterDropdown: 'fade',
+  motionEnterBubble: 'none',
+  motionEnterCard: 'none',
+  motionEnterToast: 'slide-down',
+  // …leaves…
+  motionExitDialog: 'fade',
+  motionExitDropdown: 'none',
+  motionExitToast: 'fade',
+  // …and responds: press = a control under the pointer, attention = working
+  // indicators, ambient = idle life on a surface
+  motionPress: 'none',
+  motionAttention: 'pulse',
+  motionAmbient: 'none',
+
+  // ── Reactions (ADR 0014; lib/moods/signals.ts) ────────
+  // 0..1: how far a live signal may move the interface. 0 = does not react.
+  reactAccentAudio: '0',
+  reactBackgroundTyping: '0',
+  reactPaneAgent: '0',
 
   // ── Editor (Monaco) ──────────────────────────────────
   editorFontSize: '13px',

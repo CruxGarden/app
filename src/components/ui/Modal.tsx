@@ -1,6 +1,7 @@
 import { type ReactNode, useEffect } from 'react';
 import { cn } from '@/lib/cn';
 import Panel from './Panel';
+import { useMotionExit } from '@/hooks/useMotionExit';
 
 type ModalSize = 'sm' | 'md' | 'lg' | 'xl' | 'screen' | 'full';
 
@@ -52,15 +53,19 @@ export default function Modal({
     return () => document.removeEventListener('keydown', handler);
   }, [open, onClose]);
 
-  if (!open) return null;
+  // The Mood's dialog motion: enters on mount, plays the exit before unmount
+  const motion = useMotionExit(open, 'dialog');
+  if (!motion.mounted) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div className="absolute inset-0 modal-scrim" onClick={onClose} />
       <Panel
+        ref={motion.ref}
         padding="md"
         className={cn(
           'relative z-10 flex flex-col',
+          motion.className,
           // Deep soft shadow carries the elevation the blur used to fake
           'shadow-modal',
           SIZE_CLASSES[size],

@@ -1,7 +1,8 @@
 import { useEffect, useRef } from 'react';
-import { cn } from '@/lib/cn';
 import { useUIStore } from '@/stores/uiStore';
 import { useDismiss } from '@/hooks/useDismiss';
+import { useMotionExit } from '@/hooks/useMotionExit';
+import { cn } from '@/lib/cn';
 
 interface MenuItem {
   label: string;
@@ -40,6 +41,7 @@ export default function ContextMenu({
   const contextMenu = useUIStore((s) => s.contextMenu);
   const hideContextMenu = useUIStore((s) => s.hideContextMenu);
   const ref = useRef<HTMLDivElement>(null);
+  const motion = useMotionExit(contextMenu.visible, 'dropdown');
 
   // Close on click outside
   useDismiss(ref, hideContextMenu, contextMenu.visible);
@@ -54,7 +56,7 @@ export default function ContextMenu({
     return () => document.removeEventListener('keydown', handleKey);
   }, [contextMenu.visible, hideContextMenu]);
 
-  if (!contextMenu.visible) return null;
+  if (!motion.mounted) return null;
 
   const { x, y, targetId, targetPath, isFolder, selectedIds } = contextMenu;
   const isMultiSelect = selectedIds.length > 1;
@@ -159,9 +161,15 @@ export default function ContextMenu({
 
   return (
     <div
-      ref={ref}
+      ref={(el) => {
+        ref.current = el;
+        motion.ref.current = el;
+      }}
       role="menu"
-      className="fixed z-50 min-w-[140px] bg-dropdown border border-dropdown-border rounded-dropdown shadow-dropdown py-1 overflow-hidden"
+      className={cn(
+        'fixed z-50 min-w-[140px] bg-dropdown border border-dropdown-border rounded-dropdown shadow-dropdown py-1 overflow-hidden',
+        motion.className,
+      )}
       style={{ left: x, top: y }}
     >
       {items.map((item) => (

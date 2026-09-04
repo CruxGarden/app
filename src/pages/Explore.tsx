@@ -1,4 +1,5 @@
 import { openGardenPage } from '@/lib/public-url';
+import { SearchIcon, CloseIcon } from '@/components/ui/icons';
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { publicApi, API_BASE_URL } from '@/api';
@@ -73,44 +74,6 @@ function CoverThumb({ cruxId }: { cruxId: string }) {
       onError={() => setFailed(true)}
       className="w-16 h-10 rounded-card object-cover shrink-0 bg-garden-card-thumbnail border border-garden-card-border"
     />
-  );
-}
-
-/* ── Search icon ─────────────────────────────────────── */
-
-function SearchIcon() {
-  return (
-    <svg
-      width="14"
-      height="14"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <circle cx="11" cy="11" r="8" />
-      <path d="m21 21-4.3-4.3" />
-    </svg>
-  );
-}
-
-function ClearIcon() {
-  return (
-    <svg
-      width="12"
-      height="12"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M18 6L6 18" />
-      <path d="M6 6l12 12" />
-    </svg>
   );
 }
 
@@ -292,7 +255,7 @@ export default function Explore({
         onKeyDown={(e) => {
           if (e.key === 'Enter') handleNavigate(href);
         }}
-        className="w-full px-4 py-3 text-left hover:bg-accent-muted/30 cursor-pointer group flex items-center gap-3 border-b border-border last:border-b-0"
+        className="w-full px-4 py-3 text-left hover:bg-accent-muted/30 cursor-pointer group flex items-center gap-3 border-b border-border last:border-b-0 motion-enter-card"
       >
         <CoverThumb cruxId={crux.id} />
         <Avatar url={avatarUrl} />
@@ -351,7 +314,7 @@ export default function Explore({
     return (
       <button
         onClick={() => handleNavigate(`/${author.username}`)}
-        className="w-full px-4 py-3 text-left hover:bg-accent-muted/30 cursor-pointer group flex items-center gap-3 border-b border-border last:border-b-0"
+        className="w-full px-4 py-3 text-left hover:bg-accent-muted/30 cursor-pointer group flex items-center gap-3 border-b border-border last:border-b-0 motion-enter-card"
       >
         <Avatar url={avatarUrl} size="md" />
         <div className="flex-1 min-w-0">
@@ -400,7 +363,7 @@ export default function Explore({
         {/* Search input */}
         <div className="relative mb-4">
           <div className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted">
-            <SearchIcon />
+            <SearchIcon size={14} />
           </div>
           <input
             ref={inputRef}
@@ -416,7 +379,7 @@ export default function Explore({
               onClick={handleClear}
               className="absolute right-2.5 top-1/2 -translate-y-1/2 text-text-muted hover:text-text cursor-pointer"
             >
-              <ClearIcon />
+              <CloseIcon size={12} />
             </button>
           )}
         </div>

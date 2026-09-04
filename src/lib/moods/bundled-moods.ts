@@ -387,7 +387,8 @@ const SPECS: Spec[] = [
     name: 'Windows 95',
     presetId: 'windows-95',
     extra: {
-      motionScale: '0',
+      // ── motion ── instant through zero durations in the preset (not motionScale 0), so the blink still has a cadence
+      motionScale: '1',
       cardHoverLift: '0px',
       hoverBrightness: '1',
       activeBrightness: '1',
@@ -478,7 +479,8 @@ const SPECS: Spec[] = [
     name: 'Terminal',
     presetId: 'terminal',
     extra: {
-      motionScale: '0',
+      // ── motion ── instant through zero durations in the preset; the blink keeps its cadence
+      motionScale: '1',
       cardHoverLift: '0px',
       focusRingWidth: '2px',
       fontScale: '1.08',

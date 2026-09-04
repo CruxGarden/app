@@ -149,7 +149,7 @@ export function ChevronIcon({ open }: { open: boolean }) {
       strokeWidth={2}
       strokeLinecap="round"
       strokeLinejoin="round"
-      className={`transition-transform duration-150 ${open ? 'rotate-90' : ''}`}
+      className={`transition-transform ${open ? 'rotate-90' : ''}`}
     >
       <polyline points="9 18 15 12 9 6" />
     </svg>

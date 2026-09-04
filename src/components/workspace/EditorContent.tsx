@@ -617,7 +617,7 @@ export default function EditorContent({
           <a
             href={blobUrl}
             download={basename(path) || 'file'}
-            className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-[var(--radius-sm)] bg-accent-muted text-accent border border-accent/20 hover:border-accent transition-all"
+            className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-[var(--radius-sm)] bg-accent-muted text-accent border border-accent/20 hover:border-accent transition-colors motion-press"
           >
             Download
           </a>

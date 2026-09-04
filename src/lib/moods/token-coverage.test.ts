@@ -145,6 +145,8 @@ describe('token coverage', () => {
     }
     const v = `--${kebab(k)}`;
     if (corpus.includes(`var(${v})`)) return true;
+    // A choice token read by a style query — `@container style(--motion-press: sink)` (motion.css)
+    if (corpus.includes(`style(${v}:`)) return true;
     if (tokenValues.includes(`var(${v})`)) return true;
     if (tsCorpus.includes(`'${v}'`) || tsCorpus.includes(`"${v}"`) || tsCorpus.includes(`\`${v}\``))
       return true;

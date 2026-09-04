@@ -6,6 +6,7 @@ import { useDismiss } from '@/hooks/useDismiss';
 import { useBlobUrl } from '@/hooks/useBlobUrl';
 const ExportModal = lazy(() => import('@/components/garden/ExportModal'));
 import type { Crux } from '@/api/types';
+import { MoreVerticalIcon } from '@/components/ui/icons';
 
 interface CruxCardProps {
   crux: Crux;
@@ -18,25 +19,6 @@ interface CruxCardProps {
   thumbnailFingerprint?: string;
   /** Already-resolved image URL (public pages, where there is no Blob Store). */
   thumbnailUrl?: string;
-}
-
-function MoreIcon() {
-  return (
-    <svg
-      width="14"
-      height="14"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <circle cx="12" cy="5" r="1" />
-      <circle cx="12" cy="12" r="1" />
-      <circle cx="12" cy="19" r="1" />
-    </svg>
-  );
 }
 
 const KIND_LABELS: Record<string, string> = {
@@ -88,7 +70,7 @@ export default function CruxCard({
   return (
     <div
       className={cn(
-        'relative group flex flex-col rounded-[var(--radius)] overflow-hidden',
+        'relative group flex flex-col rounded-[var(--radius)] overflow-hidden motion-enter-card',
         'bg-garden-card border border-garden-card-border',
         'transition-[border-color,transform,box-shadow] duration-200',
         'shadow-card hover:border-garden-card-border-hover hover:bg-garden-card-hover hover-lift hover:shadow-card-hover',
@@ -166,7 +148,7 @@ export default function CruxCard({
                 : 'opacity-0 group-hover:opacity-100 focus-visible:opacity-100',
             )}
           >
-            <MoreIcon />
+            <MoreVerticalIcon size={14} />
           </button>
           {menuOpen && (
             <div

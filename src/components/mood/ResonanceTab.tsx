@@ -1,4 +1,5 @@
 import { useCallback, useMemo, useRef, useState } from 'react';
+import { PauseIcon, PlayIcon } from '@/components/ui/icons';
 import { cn } from '@/lib/cn';
 import { Button } from '@/components/ui';
 import { useAudioStore } from '@/stores/audioStore';
@@ -517,16 +518,7 @@ export default function ResonanceTab() {
             aria-label={playing ? 'Pause mix' : 'Play mix'}
             className="w-9 h-9 rounded-full bg-accent text-bg flex items-center justify-center cursor-pointer hover-bright shrink-0"
           >
-            {playing ? (
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
-                <rect x="6" y="4" width="4" height="16" />
-                <rect x="14" y="4" width="4" height="16" />
-              </svg>
-            ) : (
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
-                <path d="M6 4l14 8-14 8z" />
-              </svg>
-            )}
+            {playing ? <PauseIcon size={12} /> : <PlayIcon size={12} />}
           </button>
           <input
             aria-label="Mix name"

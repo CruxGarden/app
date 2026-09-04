@@ -1,4 +1,4 @@
-import { lazy, memo, Suspense, useCallback } from 'react';
+import { lazy, memo, Suspense, useCallback, type CSSProperties } from 'react';
 import { DndProvider } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
 import { MosaicWithoutDragDropContext, MosaicWindow } from 'react-mosaic-component';
@@ -19,6 +19,18 @@ const ExportPane = lazy(() => import('./ExportPane'));
 const StorePane = lazy(() => import('./StorePane'));
 import ContextMenu from './ContextMenu';
 import MobilePaneSwitcher from './MobilePaneSwitcher';
+import {
+  ActivityIcon,
+  ChatIcon,
+  CloseIcon,
+  CodeIcon,
+  ExportIcon,
+  FolderIcon,
+  RefreshIcon,
+  RepeatIcon,
+  StoreIcon,
+  TagIcon,
+} from '@/components/ui/icons';
 import { useCruxStore } from '@/stores/cruxStore';
 import { Capability, can } from '@/lib/platform';
 import { useAppStore } from '@/stores/appStore';
@@ -109,93 +121,18 @@ function MobilePane({ pane }: { pane: PaneType }) {
 
 // ── Pane icons ───────────────────────────────────────────
 
-const iconProps = {
-  width: 14,
-  height: 14,
-  viewBox: '0 0 24 24',
-  fill: 'none',
-  stroke: 'currentColor',
-  strokeWidth: 2,
-  strokeLinecap: 'round' as const,
-  strokeLinejoin: 'round' as const,
-};
-
+// Header glyphs come from the icon module so the Mood's iconSet (line | filled | pixel) applies.
 const PANE_ICONS: Record<PaneType, React.ReactNode> = {
-  history: (
-    <svg {...iconProps}>
-      <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
-    </svg>
-  ),
-  collaboration: (
-    <svg {...iconProps}>
-      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-    </svg>
-  ),
-  artifacts: (
-    <svg {...iconProps}>
-      <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
-    </svg>
-  ),
-  workshop: (
-    <svg {...iconProps}>
-      <polyline points="16 18 22 12 16 6" />
-      <polyline points="8 6 2 12 8 18" />
-    </svg>
-  ),
-  details: (
-    <svg {...iconProps}>
-      <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z" />
-      <line x1="7" y1="7" x2="7.01" y2="7" />
-    </svg>
-  ),
-  sync: (
-    <svg {...iconProps}>
-      <polyline points="23 4 23 10 17 10" />
-      <polyline points="1 20 1 14 7 14" />
-      <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
-    </svg>
-  ),
-  publish: (
-    <svg {...iconProps}>
-      <polyline points="17 1 21 5 17 9" />
-      <path d="M3 11V9a4 4 0 0 1 4-4h14" />
-      <polyline points="7 23 3 19 7 15" />
-      <path d="M21 13v2a4 4 0 0 1-4 4H3" />
-    </svg>
-  ),
-  export: (
-    <svg {...iconProps}>
-      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-      <polyline points="7 10 12 15 17 10" />
-      <line x1="12" y1="15" x2="12" y2="3" />
-    </svg>
-  ),
-  store: (
-    <svg {...iconProps}>
-      <ellipse cx="12" cy="5" rx="9" ry="3" />
-      <path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3" />
-      <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5" />
-    </svg>
-  ),
+  history: <ActivityIcon size={14} strokeWidth={2} />,
+  collaboration: <ChatIcon size={14} strokeWidth={2} />,
+  artifacts: <FolderIcon size={14} strokeWidth={2} />,
+  workshop: <CodeIcon size={14} strokeWidth={2} />,
+  details: <TagIcon size={14} strokeWidth={2} />,
+  sync: <RefreshIcon size={14} strokeWidth={2} />,
+  publish: <RepeatIcon size={14} strokeWidth={2} />,
+  export: <ExportIcon size={14} strokeWidth={2} />,
+  store: <StoreIcon size={14} strokeWidth={2} />,
 };
-
-function CloseIcon() {
-  return (
-    <svg
-      width="12"
-      height="12"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <line x1="18" y1="6" x2="6" y2="18" />
-      <line x1="6" y1="6" x2="18" y2="18" />
-    </svg>
-  );
-}
 
 // ── Main layout ─────────────────────────────────────────
 
@@ -378,17 +315,18 @@ export default function WorkspaceLayout() {
         <MosaicWindow<PaneType>
           path={path}
           title={PANE_LABELS[paneType]}
-          className={`pane-${paneType}`}
+          className={`pane-${paneType} motion-enter-pane`}
           renderToolbar={() => (
             <div
               className="pane-toolbar"
-              style={{
-                // shorthand, so a header token may be a gradient
-                background: `var(${prefix}-header)`,
-                borderColor: `var(${prefix}-header-border)`,
-                borderWidth: 1,
-                borderStyle: 'solid',
-              }}
+              style={
+                {
+                  // Painted by shape.css (so paneHeaderShape can restyle the
+                  // header); passed as properties so a header token may be a gradient.
+                  '--pane-header-bg': `var(${prefix}-header)`,
+                  '--pane-header-border-color': `var(${prefix}-header-border)`,
+                } as CSSProperties
+              }
             >
               <div
                 className="flex items-center gap-2"
@@ -408,7 +346,7 @@ export default function WorkspaceLayout() {
                 style={{ color: `var(${prefix}-header-close)` }}
                 title={`Close ${PANE_LABELS[paneType]}`}
               >
-                <CloseIcon />
+                <CloseIcon size={12} />
               </button>
             </div>
           )}

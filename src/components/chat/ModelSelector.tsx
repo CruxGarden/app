@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
+import { ChevronDownIcon } from '@/components/ui/icons';
 import { PROVIDERS } from '@/ai/providers';
 import {
   detectLocalEndpoints,
@@ -12,6 +13,7 @@ import type { LocalAiEndpoint } from '@/lib/platform';
 import { PROVIDER_ICONS } from '@/components/ui/ProviderIcons';
 import { cn } from '@/lib/cn';
 import { useDismiss } from '@/hooks/useDismiss';
+import { useMotionExit } from '@/hooks/useMotionExit';
 
 interface ModelSelectorProps {
   value: string;
@@ -79,6 +81,7 @@ export default function ModelSelector({ value, onChange, disabled }: ModelSelect
   const provider = getProviderLabel(value);
   const providerId = getProviderId(value);
   const SelectedIcon = PROVIDER_ICONS[providerId];
+  const motion = useMotionExit(open, 'dropdown');
 
   return (
     <div ref={menuRef} className="relative">
@@ -94,21 +97,21 @@ export default function ModelSelector({ value, onChange, disabled }: ModelSelect
         {SelectedIcon && <SelectedIcon size={12} />}
         <span className="text-text-muted">{provider}</span>
         <span>{label}</span>
-        <svg
-          width="8"
-          height="8"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2.5"
+        <ChevronDownIcon
+          size={8}
+          strokeWidth={2.5}
           className={cn('transition-transform', open && 'rotate-180')}
-        >
-          <path d="m6 9 6 6 6-6" />
-        </svg>
+        />
       </button>
 
-      {open && (
-        <div className="absolute left-0 bottom-full mb-1 z-50 min-w-48 max-h-[60vh] overflow-y-auto bg-model-selector-dropdown border border-model-selector-border rounded-dropdown shadow-dropdown py-1">
+      {motion.mounted && (
+        <div
+          ref={motion.ref}
+          className={cn(
+            'absolute left-0 bottom-full mb-1 z-50 min-w-48 max-h-[60vh] overflow-y-auto bg-model-selector-dropdown border border-model-selector-border rounded-dropdown shadow-dropdown py-1',
+            motion.className,
+          )}
+        >
           {groups.map((group) => (
             <div key={group.providerId}>
               {(() => {

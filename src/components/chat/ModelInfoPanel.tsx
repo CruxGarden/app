@@ -58,7 +58,7 @@ export default function ModelInfoPanel({ model, children }: ModelInfoPanelProps)
           <div className="flex items-center gap-1.5 flex-1 min-w-0">
             <div className="flex-1 h-1.5 bg-border/30 rounded-full overflow-hidden min-w-8">
               <div
-                className={cn('h-full rounded-full transition-all', barColor)}
+                className={cn('h-full rounded-full transition-[width]', barColor)}
                 style={{ width: `${Math.max(usagePercent, 2)}%` }}
               />
             </div>
@@ -135,7 +135,7 @@ export default function ModelInfoPanel({ model, children }: ModelInfoPanelProps)
                   </div>
                   <div className="h-2 bg-border/30 rounded-full overflow-hidden">
                     <div
-                      className={cn('h-full rounded-full transition-all', barColor)}
+                      className={cn('h-full rounded-full transition-[width]', barColor)}
                       style={{ width: `${Math.max(usagePercent, 1)}%` }}
                     />
                   </div>

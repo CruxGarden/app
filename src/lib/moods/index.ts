@@ -14,6 +14,8 @@ import {
   registerFontFace,
   FONT_FACE_FAMILIES,
 } from './assets';
+// ── icons ──
+import { applyIconSet } from './icon-set';
 
 export { GARDEN_DARK, type MoodPalette, type MoodPaletteKey };
 
@@ -113,6 +115,9 @@ export function applyMoodPalette(palette: Partial<MoodPalette>, base: MoodPalett
       if (url) el.style.setProperty(u.cssVar, `url("${url}")`);
     });
   }
+  // ── icons ── a choice token CSS cannot act on: mirror it onto <html data-icon-set>
+  // and tell mounted icons (components/ui/icons) to redraw for the set.
+  applyIconSet(el.style.getPropertyValue('--icon-set').trim());
   // Notify Monaco and other listeners that the palette changed
   // Delay slightly so var() references resolve before Monaco reads computed styles
   requestAnimationFrame(() => {

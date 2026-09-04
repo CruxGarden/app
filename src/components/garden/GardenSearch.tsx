@@ -1,26 +1,9 @@
 import { useRef, useEffect, useState, memo } from 'react';
+import { CloseIcon } from '@/components/ui/icons';
 
 interface GardenSearchProps {
   value: string;
   onChange: (query: string) => void;
-}
-
-function ClearIcon() {
-  return (
-    <svg
-      width="12"
-      height="12"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M18 6L6 18" />
-      <path d="M6 6l12 12" />
-    </svg>
-  );
 }
 
 export default memo(function GardenSearch({ value, onChange }: GardenSearchProps) {
@@ -65,7 +48,7 @@ export default memo(function GardenSearch({ value, onChange }: GardenSearchProps
           onClick={handleClear}
           className="absolute right-2.5 top-1/2 -translate-y-1/2 text-text-muted hover:text-text transition-colors cursor-pointer"
         >
-          <ClearIcon />
+          <CloseIcon size={12} />
         </button>
       )}
     </div>

@@ -1,0 +1,575 @@
+/* ── Motion — how things move is a Theme Token (ADR 0014) ──────────────────
+   Components never pick an animation. They carry ONE role class:
+
+     .motion-enter-pane | -dialog | -dropdown | -bubble | -card | -toast
+     .motion-exit-dialog | -dropdown | -toast       (added by lib/motion.ts runExit)
+     .motion-press   .motion-attention   .motion-ambient
+
+   and the Mood decides what that role does through choice tokens
+   (motionEnterDialog: none|fade|slide-up|slide-down|scale|pop|drift, …).
+
+   How a choice becomes keyframes, in CSS only: the tokens land as custom
+   properties on <html> (applyMoodPalette), every element is a style-query
+   container for the properties it inherits, so each role class asks its
+   parent which choice is set —
+
+     @container style(--motion-enter-dialog: scale) {
+       .motion-enter-dialog { animation-name: motion-in-scale; }
+     }
+
+   — and `none` simply matches no block, leaving animation-name: none. No JS
+   maps choices to classes; changing a token in the Builder or through
+   set_theme re-selects the keyframes live. Timing comes from the easing
+   tokens (motionEase*) and the duration tokens (motionDuration*), and every
+   duration is multiplied by --motion-scale, so motionScale 0 and
+   prefers-reduced-motion still stop everything.
+
+   Exits: the element must stay mounted while it plays; useMotionExit /
+   runExit (lib/motion.ts, hooks/useMotionExit.ts) swap the enter class for
+   the exit class and resolve on animationend (immediately when the choice is
+   none or the duration is 0).
+
+   Reactive signals (lib/moods/signals.ts) write --signal-audio, --signal-typing
+   and --signal-agent (0..1) on <html>; the react* binding tokens scale how far
+   they reach — see the last section. Generated blocks: scratchpad gen-motion.mjs. */
+
+/* ── Signals default to silence; derived durations ── */
+:root {
+  --signal-audio: 0;
+  --signal-typing: 0;
+  --signal-agent: 0;
+  --motion-ms-fast: calc(var(--motion-duration-fast) * var(--motion-scale));
+  --motion-ms-base: calc(var(--motion-duration-base) * var(--motion-scale));
+  --motion-ms-slow: calc(var(--motion-duration-slow) * var(--motion-scale));
+}
+
+/* ── Keyframes: enters ── */
+@keyframes motion-in-fade {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes motion-in-slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+}
+@keyframes motion-in-slide-down {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+}
+@keyframes motion-in-scale {
+  from {
+    opacity: 0;
+    transform: scale(0.94);
+  }
+}
+@keyframes motion-in-pop {
+  0% {
+    opacity: 0;
+    transform: scale(0.85);
+  }
+  70% {
+    opacity: 1;
+    transform: scale(1.03);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+@keyframes motion-in-drift {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.985);
+    filter: blur(3px);
+  }
+  to {
+    filter: blur(0);
+  }
+}
+
+/* ── Keyframes: exits (the final frame holds until unmount) ── */
+@keyframes motion-out-fade {
+  to {
+    opacity: 0;
+  }
+}
+@keyframes motion-out-scale {
+  to {
+    opacity: 0;
+    transform: scale(0.94);
+  }
+}
+@keyframes motion-out-slide-down {
+  to {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+}
+
+/* ── Keyframes: attention (loops while the element is on screen) ── */
+@keyframes motion-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+@keyframes motion-blink {
+  0%,
+  49% {
+    opacity: 1;
+  }
+  50%,
+  100% {
+    opacity: 0;
+  }
+}
+@keyframes motion-wiggle {
+  0%,
+  100% {
+    transform: rotate(0);
+  }
+  25% {
+    transform: rotate(-8deg) translateX(-1px);
+  }
+  75% {
+    transform: rotate(8deg) translateX(1px);
+  }
+}
+@keyframes motion-glow {
+  0%,
+  100% {
+    filter: brightness(1) drop-shadow(0 0 0 transparent);
+  }
+  50% {
+    filter: brightness(1.6) drop-shadow(0 0 6px currentColor);
+  }
+}
+
+/* ── Keyframes: ambient (slow, for idle surfaces) ── */
+@keyframes motion-breathe {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.03);
+    opacity: 0.85;
+  }
+}
+@keyframes motion-ambient-drift {
+  0%,
+  100% {
+    transform: translate(0, 0);
+  }
+  33% {
+    transform: translate(2px, -3px);
+  }
+  66% {
+    transform: translate(-2px, 2px);
+  }
+}
+@keyframes motion-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-4px);
+  }
+}
+
+/* Role classes live in the components layer so a Tailwind utility on the same
+   element (animate-spin, transition-colors) still wins if one is ever needed. */
+@layer components {
+  /* ── Enter roles ── */
+  .motion-enter-pane,
+  .motion-enter-dialog,
+  .motion-enter-dropdown,
+  .motion-enter-bubble,
+  .motion-enter-card,
+  .motion-enter-toast {
+    animation-name: none;
+    animation-duration: var(--motion-ms-base);
+    animation-timing-function: var(--motion-ease-enter);
+    /* backwards, not both: once in, the element holds no transform (a held
+       transform would re-anchor fixed children such as context menus) */
+    animation-fill-mode: backwards;
+  }
+  .motion-enter-pane {
+    animation-duration: var(--motion-ms-slow);
+  }
+  .motion-enter-dropdown,
+  .motion-enter-toast {
+    animation-duration: var(--motion-ms-fast);
+  }
+
+  /* ── Exit roles ── */
+  .motion-exit-dialog,
+  .motion-exit-dropdown,
+  .motion-exit-toast {
+    animation-name: none;
+    animation-duration: var(--motion-ms-fast);
+    animation-timing-function: var(--motion-ease-exit);
+    animation-fill-mode: forwards;
+    pointer-events: none;
+  }
+
+  /* ── Press: how a control answers a click ── */
+  .motion-press {
+    transition-property: transform;
+    transition-duration: var(--motion-ms-fast);
+    transition-timing-function: var(--motion-ease-standard);
+  }
+  @container style(--motion-press: scale) {
+    .motion-press:active:not(:disabled) {
+      transform: scale(0.95);
+    }
+  }
+  @container style(--motion-press: sink) {
+    .motion-press:active:not(:disabled) {
+      transform: translateY(1px);
+    }
+  }
+
+  /* ── Attention: working / streaming / recording indicators ── */
+  .motion-attention {
+    animation-name: none;
+    animation-duration: calc(var(--motion-ms-slow) * 3);
+    animation-timing-function: var(--motion-ease-standard);
+    animation-iteration-count: infinite;
+  }
+
+  /* ── Ambient: idle life on a surface ── */
+  .motion-ambient {
+    animation-name: none;
+    animation-duration: calc(var(--motion-ms-slow) * 12);
+    animation-timing-function: ease-in-out;
+    animation-iteration-count: infinite;
+  }
+
+  /* ── Choice → keyframes: enters ── */
+  @container style(--motion-enter-pane: fade) {
+    .motion-enter-pane {
+      animation-name: motion-in-fade;
+    }
+  }
+  @container style(--motion-enter-pane: slide-up) {
+    .motion-enter-pane {
+      animation-name: motion-in-slide-up;
+    }
+  }
+  @container style(--motion-enter-pane: slide-down) {
+    .motion-enter-pane {
+      animation-name: motion-in-slide-down;
+    }
+  }
+  @container style(--motion-enter-pane: scale) {
+    .motion-enter-pane {
+      animation-name: motion-in-scale;
+    }
+  }
+  @container style(--motion-enter-pane: pop) {
+    .motion-enter-pane {
+      animation-name: motion-in-pop;
+    }
+  }
+  @container style(--motion-enter-pane: drift) {
+    .motion-enter-pane {
+      animation-name: motion-in-drift;
+    }
+  }
+  @container style(--motion-enter-dialog: fade) {
+    .motion-enter-dialog {
+      animation-name: motion-in-fade;
+    }
+  }
+  @container style(--motion-enter-dialog: slide-up) {
+    .motion-enter-dialog {
+      animation-name: motion-in-slide-up;
+    }
+  }
+  @container style(--motion-enter-dialog: slide-down) {
+    .motion-enter-dialog {
+      animation-name: motion-in-slide-down;
+    }
+  }
+  @container style(--motion-enter-dialog: scale) {
+    .motion-enter-dialog {
+      animation-name: motion-in-scale;
+    }
+  }
+  @container style(--motion-enter-dialog: pop) {
+    .motion-enter-dialog {
+      animation-name: motion-in-pop;
+    }
+  }
+  @container style(--motion-enter-dialog: drift) {
+    .motion-enter-dialog {
+      animation-name: motion-in-drift;
+    }
+  }
+  @container style(--motion-enter-dropdown: fade) {
+    .motion-enter-dropdown {
+      animation-name: motion-in-fade;
+    }
+  }
+  @container style(--motion-enter-dropdown: slide-up) {
+    .motion-enter-dropdown {
+      animation-name: motion-in-slide-up;
+    }
+  }
+  @container style(--motion-enter-dropdown: slide-down) {
+    .motion-enter-dropdown {
+      animation-name: motion-in-slide-down;
+    }
+  }
+  @container style(--motion-enter-dropdown: scale) {
+    .motion-enter-dropdown {
+      animation-name: motion-in-scale;
+    }
+  }
+  @container style(--motion-enter-dropdown: pop) {
+    .motion-enter-dropdown {
+      animation-name: motion-in-pop;
+    }
+  }
+  @container style(--motion-enter-dropdown: drift) {
+    .motion-enter-dropdown {
+      animation-name: motion-in-drift;
+    }
+  }
+  @container style(--motion-enter-bubble: fade) {
+    .motion-enter-bubble {
+      animation-name: motion-in-fade;
+    }
+  }
+  @container style(--motion-enter-bubble: slide-up) {
+    .motion-enter-bubble {
+      animation-name: motion-in-slide-up;
+    }
+  }
+  @container style(--motion-enter-bubble: slide-down) {
+    .motion-enter-bubble {
+      animation-name: motion-in-slide-down;
+    }
+  }
+  @container style(--motion-enter-bubble: scale) {
+    .motion-enter-bubble {
+      animation-name: motion-in-scale;
+    }
+  }
+  @container style(--motion-enter-bubble: pop) {
+    .motion-enter-bubble {
+      animation-name: motion-in-pop;
+    }
+  }
+  @container style(--motion-enter-bubble: drift) {
+    .motion-enter-bubble {
+      animation-name: motion-in-drift;
+    }
+  }
+  @container style(--motion-enter-card: fade) {
+    .motion-enter-card {
+      animation-name: motion-in-fade;
+    }
+  }
+  @container style(--motion-enter-card: slide-up) {
+    .motion-enter-card {
+      animation-name: motion-in-slide-up;
+    }
+  }
+  @container style(--motion-enter-card: slide-down) {
+    .motion-enter-card {
+      animation-name: motion-in-slide-down;
+    }
+  }
+  @container style(--motion-enter-card: scale) {
+    .motion-enter-card {
+      animation-name: motion-in-scale;
+    }
+  }
+  @container style(--motion-enter-card: pop) {
+    .motion-enter-card {
+      animation-name: motion-in-pop;
+    }
+  }
+  @container style(--motion-enter-card: drift) {
+    .motion-enter-card {
+      animation-name: motion-in-drift;
+    }
+  }
+  @container style(--motion-enter-toast: fade) {
+    .motion-enter-toast {
+      animation-name: motion-in-fade;
+    }
+  }
+  @container style(--motion-enter-toast: slide-up) {
+    .motion-enter-toast {
+      animation-name: motion-in-slide-up;
+    }
+  }
+  @container style(--motion-enter-toast: slide-down) {
+    .motion-enter-toast {
+      animation-name: motion-in-slide-down;
+    }
+  }
+  @container style(--motion-enter-toast: scale) {
+    .motion-enter-toast {
+      animation-name: motion-in-scale;
+    }
+  }
+  @container style(--motion-enter-toast: pop) {
+    .motion-enter-toast {
+      animation-name: motion-in-pop;
+    }
+  }
+  @container style(--motion-enter-toast: drift) {
+    .motion-enter-toast {
+      animation-name: motion-in-drift;
+    }
+  }
+
+  /* ── Choice → keyframes: exits ── */
+  @container style(--motion-exit-dialog: fade) {
+    .motion-exit-dialog {
+      animation-name: motion-out-fade;
+    }
+  }
+  @container style(--motion-exit-dialog: scale) {
+    .motion-exit-dialog {
+      animation-name: motion-out-scale;
+    }
+  }
+  @container style(--motion-exit-dialog: slide-down) {
+    .motion-exit-dialog {
+      animation-name: motion-out-slide-down;
+    }
+  }
+  @container style(--motion-exit-dropdown: fade) {
+    .motion-exit-dropdown {
+      animation-name: motion-out-fade;
+    }
+  }
+  @container style(--motion-exit-dropdown: scale) {
+    .motion-exit-dropdown {
+      animation-name: motion-out-scale;
+    }
+  }
+  @container style(--motion-exit-dropdown: slide-down) {
+    .motion-exit-dropdown {
+      animation-name: motion-out-slide-down;
+    }
+  }
+  @container style(--motion-exit-toast: fade) {
+    .motion-exit-toast {
+      animation-name: motion-out-fade;
+    }
+  }
+  @container style(--motion-exit-toast: scale) {
+    .motion-exit-toast {
+      animation-name: motion-out-scale;
+    }
+  }
+  @container style(--motion-exit-toast: slide-down) {
+    .motion-exit-toast {
+      animation-name: motion-out-slide-down;
+    }
+  }
+
+  /* ── Choice → keyframes: attention ── */
+  @container style(--motion-attention: pulse) {
+    .motion-attention {
+      animation-name: motion-pulse;
+    }
+  }
+  @container style(--motion-attention: blink) {
+    .motion-attention {
+      animation-name: motion-blink;
+      animation-timing-function: steps(1, end);
+      animation-duration: var(--motion-ms-slow);
+    }
+  }
+  @container style(--motion-attention: wiggle) {
+    .motion-attention {
+      animation-name: motion-wiggle;
+      animation-duration: var(--motion-ms-slow);
+    }
+  }
+  @container style(--motion-attention: glow) {
+    .motion-attention {
+      animation-name: motion-glow;
+    }
+  }
+
+  /* ── Choice → keyframes: ambient ── */
+  @container style(--motion-ambient: breathe) {
+    .motion-ambient {
+      animation-name: motion-breathe;
+    }
+  }
+  @container style(--motion-ambient: drift) {
+    .motion-ambient {
+      animation-name: motion-ambient-drift;
+    }
+  }
+  @container style(--motion-ambient: float) {
+    .motion-ambient {
+      animation-name: motion-float;
+    }
+  }
+
+  /* ── Spring: a Mood that sets motionEaseSpring lets pops and scales overshoot ── */
+  @container style(--motion-enter-dialog: pop) {
+    .motion-enter-dialog {
+      animation-timing-function: var(--motion-ease-spring);
+    }
+  }
+  @container style(--motion-enter-card: pop) {
+    .motion-enter-card {
+      animation-timing-function: var(--motion-ease-spring);
+    }
+  }
+  @container style(--motion-enter-dropdown: pop) {
+    .motion-enter-dropdown {
+      animation-timing-function: var(--motion-ease-spring);
+    }
+  }
+  @container style(--motion-enter-bubble: pop) {
+    .motion-enter-bubble {
+      animation-timing-function: var(--motion-ease-spring);
+    }
+  }
+
+  /* ── Reactions: signals × bindings ──────────────────────────────────────
+     --signal-audio   Resonance level        × reactAccentAudio      → accent glow
+     --signal-typing  decays after keystrokes × reactBackgroundTyping → bloom intensity (bloom.css)
+     --signal-agent   collaborator turn       × reactPaneAgent       → Collaboration pane glow
+     Bindings default to 0, so a Mood that says nothing does not react. */
+  .react-accent {
+    box-shadow: 0 0 calc(16px * var(--signal-audio) * var(--react-accent-audio))
+      color-mix(in srgb, var(--accent) 65%, transparent);
+  }
+  .react-accent-bars {
+    filter: brightness(calc(1 + 0.6 * var(--signal-audio) * var(--react-accent-audio)));
+  }
+}
+
+/* Outside the layer: must beat globals.css's `.mosaic-window { box-shadow: none }`. */
+.mosaic.crux-mosaic-theme .mosaic-window.pane-collaboration {
+  box-shadow: 0 0 calc(28px * var(--signal-agent) * var(--react-pane-agent))
+    color-mix(in srgb, var(--pane-collaboration) 55%, transparent);
+}
+
+/* The modal scrim (globals.css) fades on the fast duration; div. outranks the plain class there. */
+div.modal-scrim {
+  animation-duration: var(--motion-ms-fast);
+  animation-timing-function: var(--motion-ease-enter);
+}

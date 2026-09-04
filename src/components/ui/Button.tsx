@@ -14,7 +14,7 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 
 const variants: Record<Variant, string> = {
   primary:
-    'bg-primary-button text-primary-button-text border border-primary-button-border hover:bg-primary-button-hover hover:border-primary-button-border-hover active-dim',
+    'bg-primary-button text-primary-button-text border border-primary-button-border hover:bg-primary-button-hover hover:border-primary-button-border-hover active-dim react-accent',
   secondary:
     'bg-action-button text-action-button-text border border-action-button-border hover:bg-action-button-hover hover:text-action-button-text-hover hover:border-action-button-border-hover active-dim',
   ghost:
@@ -44,7 +44,7 @@ export default function Button({
       disabled={disabled || loading}
       className={cn(
         'inline-flex items-center justify-center font-medium rounded-button',
-        'cursor-pointer',
+        'cursor-pointer motion-press',
         // Recolours through the button-disabled tokens; opts out of the global
         // `button:disabled { opacity }` dim so the two do not stack.
         'disabled:bg-button-disabled disabled:text-button-disabled-text disabled:border-transparent disabled:opacity-100 disabled:cursor-not-allowed',

@@ -7,6 +7,7 @@ import { getDockState, setDockState } from '@/services/resonance';
 import { getThemePreview, onThemePreviewChange } from '@/lib/moods/active';
 import { isPublicSite } from '@/lib/site';
 import { useShallow } from 'zustand/react/shallow';
+import { PauseIcon, PlayIcon as PlayIconGlyph, SlidersIcon } from '@/components/ui/icons';
 
 /**
  * The Mood Bar, now a control in the top bar: the active soundscape's
@@ -23,11 +24,14 @@ import { useShallow } from 'zustand/react/shallow';
 function LevelBars({ level, playing }: { level: number; playing: boolean }) {
   const bars = [0.35, 0.7, 1, 0.55];
   return (
-    <span className="flex items-end gap-[2px] h-3.5 w-3.5" aria-hidden>
+    <span
+      className="flex items-end gap-[2px] h-3.5 w-3.5 motion-ambient react-accent-bars"
+      aria-hidden
+    >
       {bars.map((k, i) => (
         <span
           key={i}
-          className="w-[2.5px] rounded-sm bg-mood-bar-accent transition-[height] duration-100"
+          className="w-[2.5px] rounded-sm bg-mood-bar-accent transition-[height] [transition-duration:var(--motion-ms-fast)]"
           style={{
             height: `${Math.max(2, (playing ? Math.min(1, Math.sqrt(level) * 1.6) : 0.15) * k * 14)}px`,
           }}
@@ -77,16 +81,7 @@ export default function MoodBar({ className }: { className?: string }) {
     setDockState({ ...prev, collapsed: c });
   }, []);
 
-  const PlayIcon = playing ? (
-    <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
-      <rect x="6" y="4" width="4" height="16" />
-      <rect x="14" y="4" width="4" height="16" />
-    </svg>
-  ) : (
-    <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
-      <path d="M6 4l14 8-14 8z" />
-    </svg>
-  );
+  const PlayIcon = playing ? <PauseIcon size={11} /> : <PlayIconGlyph size={11} />;
 
   return (
     <div
@@ -133,7 +128,7 @@ export default function MoodBar({ className }: { className?: string }) {
         type="button"
         onClick={() => void toggle()}
         aria-label={playing ? 'Pause soundscape' : 'Play soundscape'}
-        className="w-5 h-5 rounded-[var(--mood-bar-radius)] bg-mood-bar-accent text-mood-bar-accent-text flex items-center justify-center cursor-pointer shrink-0 hover-bright"
+        className="w-5 h-5 rounded-[var(--mood-bar-radius)] bg-mood-bar-accent text-mood-bar-accent-text flex items-center justify-center cursor-pointer shrink-0 hover-bright motion-press react-accent"
       >
         {PlayIcon}
       </button>
@@ -158,26 +153,7 @@ export default function MoodBar({ className }: { className?: string }) {
               aria-label="Open the mixer"
               className="w-5 h-5 rounded-[var(--mood-bar-radius)] text-mood-bar-text-muted hover:text-mood-bar-accent flex items-center justify-center cursor-pointer shrink-0"
             >
-              <svg
-                width="12"
-                height="12"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                aria-hidden
-              >
-                <line x1="4" y1="21" x2="4" y2="14" />
-                <line x1="4" y1="10" x2="4" y2="3" />
-                <line x1="12" y1="21" x2="12" y2="12" />
-                <line x1="12" y1="8" x2="12" y2="3" />
-                <line x1="20" y1="21" x2="20" y2="16" />
-                <line x1="20" y1="12" x2="20" y2="3" />
-                <line x1="1" y1="14" x2="7" y2="14" />
-                <line x1="9" y1="8" x2="15" y2="8" />
-                <line x1="17" y1="16" x2="23" y2="16" />
-              </svg>
+              <SlidersIcon size={12} />
             </button>
           )}
           <button

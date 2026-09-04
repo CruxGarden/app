@@ -61,7 +61,7 @@ export default function IconButton({
         }}
         className={cn(
           'inline-flex items-center justify-center rounded-[var(--radius-sm)]',
-          'transition-colors duration-150 cursor-pointer',
+          'transition-colors cursor-pointer motion-press',
           'disabled:cursor-not-allowed',
           active && !useCustomColor && 'text-icon-button-icon-hover bg-icon-button-hover',
           !active &&

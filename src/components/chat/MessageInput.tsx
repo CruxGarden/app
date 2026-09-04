@@ -111,7 +111,7 @@ export default function MessageInput({
             className={cn(
               'px-3 py-2 rounded-[var(--radius-sm)] text-sm font-body',
               'bg-chat-send-button text-chat-send-button-icon border border-chat-send-button/20',
-              'hover:bg-chat-send-button-hover transition-colors cursor-pointer',
+              'hover:bg-chat-send-button-hover transition-colors cursor-pointer motion-press react-accent',
               'disabled:cursor-not-allowed',
             )}
           >
