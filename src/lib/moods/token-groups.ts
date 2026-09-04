@@ -5,7 +5,23 @@
  */
 import { GARDEN_DARK } from './garden-dark';
 
-export type TokenKind = 'color' | 'length' | 'number' | 'font' | 'text' | 'asset';
+export type TokenKind = 'color' | 'length' | 'number' | 'font' | 'text' | 'asset' | 'choice';
+
+/**
+ * Tokens whose value is one of a fixed set of names (a border style, an enter
+ * animation, an icon set). The Mood Builder renders a select; set_theme refuses
+ * anything else. Register a token here when you add one — keep the sections.
+ */
+export const TOKEN_CHOICES: Record<string, readonly string[]> = {
+  // ── motion (motion.css) ──
+  // ── shape (shape.css) ──
+  // ── icons (ui/icons) ──
+};
+
+/** The allowed values for a choice token, or null when the token is free-form. */
+export function tokenChoices(key: string): readonly string[] | null {
+  return TOKEN_CHOICES[key] ?? null;
+}
 
 export interface TokenGroup {
   id: string;
@@ -299,6 +315,7 @@ export function groupTokens(): { group: TokenGroup; keys: string[] }[] {
 }
 
 export function tokenKind(key: string): TokenKind {
+  if (key in TOKEN_CHOICES) return 'choice';
   if (/Texture$/.test(key) || FONT_ASSET_KEYS.has(key)) return 'asset';
   if (/TextureSize$|TextureBlend$/.test(key)) return 'text';
   if (/TextureOpacity$|^grainOpacity$/.test(key)) return 'number';
