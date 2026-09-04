@@ -43,7 +43,7 @@ export default function EditorToolbar({
             className={cn(
               'p-1 rounded-[var(--radius-sm)] transition-colors cursor-pointer',
               isCapturing
-                ? 'text-accent animate-pulse'
+                ? 'text-accent motion-attention'
                 : 'text-text-muted hover:text-accent hover:bg-accent-muted',
             )}
           >

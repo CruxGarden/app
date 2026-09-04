@@ -4,6 +4,8 @@
  * Pure data + string functions — no DOM, no React.
  */
 import { GARDEN_DARK } from './garden-dark';
+// ── icons ──
+import { ICON_SETS } from './icon-set';
 
 export type TokenKind = 'color' | 'length' | 'number' | 'font' | 'text' | 'asset' | 'choice';
 
@@ -12,10 +14,33 @@ export type TokenKind = 'color' | 'length' | 'number' | 'font' | 'text' | 'asset
  * animation, an icon set). The Mood Builder renders a select; set_theme refuses
  * anything else. Register a token here when you add one — keep the sections.
  */
+// ── motion ──
+const MOTION_ENTER = ['none', 'fade', 'slide-up', 'slide-down', 'scale', 'pop', 'drift'] as const;
+const MOTION_EXIT = ['none', 'fade', 'scale', 'slide-down'] as const;
+
 export const TOKEN_CHOICES: Record<string, readonly string[]> = {
   // ── motion (motion.css) ──
+  motionEnterPane: MOTION_ENTER,
+  motionEnterDialog: MOTION_ENTER,
+  motionEnterDropdown: MOTION_ENTER,
+  motionEnterBubble: MOTION_ENTER,
+  motionEnterCard: MOTION_ENTER,
+  motionEnterToast: MOTION_ENTER,
+  motionExitDialog: MOTION_EXIT,
+  motionExitDropdown: MOTION_EXIT,
+  motionExitToast: MOTION_EXIT,
+  motionPress: ['none', 'scale', 'sink'],
+  motionAttention: ['none', 'pulse', 'blink', 'wiggle', 'glow'],
+  motionAmbient: ['none', 'breathe', 'drift', 'float'],
   // ── shape (shape.css) ──
+  paneBorderStyle: ['solid', 'double', 'dashed', 'dotted', 'inset', 'outset', 'none'],
+  paneCornerShape: ['round', 'bevel', 'scoop', 'notch', 'square'],
+  controlCornerShape: ['round', 'bevel', 'scoop', 'notch', 'square'],
+  paneHeaderShape: ['bar', 'tab', 'label', 'underline', 'none'],
+  dividerStyle: ['hairline', 'double', 'dotted', 'dashed', 'etched', 'ornament', 'none'],
+  cardBorderStyle: ['solid', 'double', 'dashed', 'none'],
   // ── icons (ui/icons) ──
+  iconSet: ICON_SETS,
 };
 
 /** The allowed values for a choice token, or null when the token is free-form. */
@@ -178,6 +203,21 @@ export const TOKEN_GROUPS: TokenGroup[] = [
     hint: 'Corner radii, the gutter between workspace panes, header height, and density (multiplies every padding and gap).',
     match: (k) => LAYOUT_KEYS.has(k),
   },
+  // ── shape ── (ADR 0014) the silhouette choices, right after the radii they size
+  {
+    id: 'shape',
+    label: 'Shape',
+    hint: 'Silhouette: how pane borders are drawn, the curve of pane and control corners, the pane header shape, section dividers and card borders.',
+    match: (k) =>
+      [
+        'paneBorderStyle',
+        'paneCornerShape',
+        'controlCornerShape',
+        'paneHeaderShape',
+        'dividerStyle',
+        'cardBorderStyle',
+      ].includes(k),
+  },
   {
     id: 'textures',
     label: 'Textures & grain',
@@ -201,6 +241,13 @@ export const TOKEN_GROUPS: TokenGroup[] = [
     label: 'Elevation & motion',
     hint: 'Shadows for panels, cards and modals, the modal scrim, and how fast things move (0 = instant).',
     match: (k) => ELEVATION_KEYS.has(k),
+  },
+  // ── icons ──
+  {
+    id: 'icons',
+    label: 'Icons',
+    hint: 'Which glyph set the interface draws: line (thin strokes), filled (solid silhouettes) or pixel (16-pixel grid, drawn crisp). One choice, every icon follows.',
+    match: (k) => k === 'iconSet',
   },
   {
     id: 'editor',
@@ -291,6 +338,19 @@ export const TOKEN_GROUPS: TokenGroup[] = [
     hint: 'Bloom, stars, flow and drift backgrounds; dim, blur, fit and zoom for an image background.',
     match: (k) => IMAGE_BG_KEYS.has(k) || starts('bloom', 'star', 'flow', 'drift', 'previewBg')(k),
   },
+  // ── motion ──
+  {
+    id: 'motion',
+    label: 'Motion',
+    hint: 'How things move: easing curves, three durations (all multiplied by motion scale, under Elevation & motion), and for each role — panes, dialogs, dropdowns, chat bubbles, cards, toasts — how it appears and leaves; how controls answer a press, how working indicators draw attention, and whether idle surfaces breathe.',
+    match: (k) => k.startsWith('motion') && k !== 'motionScale',
+  },
+  {
+    id: 'reactions',
+    label: 'Reactions',
+    hint: 'How much the interface reacts to what is happening, 0 (not at all) to 1: the accent glows with the soundscape level, the background lifts while you type, the Collaboration pane glows while a collaborator turn runs.',
+    match: (k) => k.startsWith('react'),
+  },
 ];
 
 const OTHER: TokenGroup = {
@@ -316,6 +376,10 @@ export function groupTokens(): { group: TokenGroup; keys: string[] }[] {
 
 export function tokenKind(key: string): TokenKind {
   if (key in TOKEN_CHOICES) return 'choice';
+  // ── motion ── easings are curves (text), durations are <time> lengths, bindings 0..1 numbers
+  if (/^motionEase/.test(key)) return 'text';
+  if (/^motionDuration/.test(key)) return 'length';
+  if (/^react/.test(key)) return 'number';
   if (/Texture$/.test(key) || FONT_ASSET_KEYS.has(key)) return 'asset';
   if (/TextureSize$|TextureBlend$/.test(key)) return 'text';
   if (/TextureOpacity$|^grainOpacity$/.test(key)) return 'number';

@@ -13,97 +13,7 @@ import { Toggle } from '@/components/ui';
 import { PaneEmpty, PaneSection, PaneAction, PaneHint, PaneNote } from './pane-ui';
 import UsageSection from './UsageSection';
 import CustomDomainSection from './CustomDomainSection';
-function PublishIcon() {
-  return (
-    <svg
-      width="14"
-      height="14"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.5"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <circle cx="18" cy="5" r="3" />
-      <circle cx="6" cy="5" r="3" />
-      <circle cx="12" cy="19" r="3" />
-      <path d="M8.59 7.41L12 16M15.41 7.41L12 16" />
-    </svg>
-  );
-}
-
-function CopyIcon() {
-  return (
-    <svg
-      width="12"
-      height="12"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
-      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
-    </svg>
-  );
-}
-
-function CheckIcon({ size = 12 }: { size?: number }) {
-  return (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <polyline points="20 6 9 17 4 12" />
-    </svg>
-  );
-}
-
-function ExternalLinkIcon() {
-  return (
-    <svg
-      width="12"
-      height="12"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
-      <polyline points="15 3 21 3 21 9" />
-      <line x1="10" y1="14" x2="21" y2="3" />
-    </svg>
-  );
-}
-
-function UnshareIcon() {
-  return (
-    <svg
-      width="13"
-      height="13"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M18.36 6.64a9 9 0 1 1-12.73 0" />
-      <line x1="12" y1="2" x2="12" y2="12" />
-    </svg>
-  );
-}
+import { CheckIcon, CopyIcon, ExternalLinkIcon, PowerIcon, ShareIcon } from '@/components/ui/icons';
 
 /** What the spinner says while a publish runs — a site build is not instant. */
 const PHASE_LABELS: Record<PublishPhase, string> = {
@@ -212,7 +122,7 @@ export default function PublishPane() {
     return (
       <div ref={ref} className="flex flex-col h-full">
         <PaneEmpty
-          icon={<PublishIcon />}
+          icon={<ShareIcon size={14} />}
           title="Nothing to share yet"
           description="Add a file or ask the AI to make something. Sharing puts it live on crux.garden."
         />
@@ -286,7 +196,7 @@ export default function PublishPane() {
               />
             </div>
           ) : needsAction ? (
-            <PaneAction onClick={handlePublish} icon={<PublishIcon />}>
+            <PaneAction onClick={handlePublish} icon={<ShareIcon size={14} />}>
               {isPublished ? 'Update' : 'Share'}
             </PaneAction>
           ) : null}
@@ -326,7 +236,7 @@ export default function PublishPane() {
                     'hover:border-accent hover:text-accent transition-colors cursor-pointer',
                   )}
                 >
-                  {copied ? <CheckIcon /> : <CopyIcon />}
+                  {copied ? <CheckIcon /> : <CopyIcon size={12} />}
                   {copied ? 'Copied' : 'Copy link'}
                 </button>
                 <a
@@ -386,7 +296,7 @@ export default function PublishPane() {
                   'disabled:cursor-not-allowed',
                 )}
               >
-                <UnshareIcon />
+                <PowerIcon size={13} />
                 Unshare
               </button>
               <PaneHint>Takes this crux offline. Your files and history stay here.</PaneHint>

@@ -38,7 +38,7 @@ function PresetThumb({ preset, active }: { preset: MoodPresetDef; active: boolea
   return (
     <div
       className={cn(
-        'w-full rounded-[6px] p-[2px] transition-all',
+        'w-full rounded-[6px] p-[2px] transition-colors',
         active ? 'bg-accent' : 'bg-transparent hover:bg-text-muted/30',
       )}
     >

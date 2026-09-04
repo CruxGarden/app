@@ -1,5 +1,7 @@
 @import 'tailwindcss';
 @import './bloom.css';
+@import './motion.css';
+@import './shape.css';
 @import 'highlight.js/styles/github-dark.min.css';
 
 @keyframes fade-in {
@@ -83,7 +85,7 @@
      Tailwind's spacing unit and default transition follow the Mood, so
      p-3 / gap-2 / transition-colors everywhere respond to density and motion. */
   --spacing: calc(0.25rem * var(--density));
-  --default-transition-duration: calc(150ms * var(--motion-scale));
+  --default-transition-duration: calc(var(--motion-duration-fast, 150ms) * var(--motion-scale));
   /* Small type as rem so fontScale (html font-size) reaches it; 9/10/11px at 16px root */
   --text-3xs: 0.5625rem;
   --text-3xs--line-height: 1.3;
@@ -95,6 +97,12 @@
   --shadow-card: var(--elevation-card);
   --shadow-card-hover: var(--elevation-card-hover);
   --shadow-modal: var(--elevation-modal);
+  /* ── motion ── easing tokens as utilities (ease-motion-standard …); durations
+     are used through the role classes in motion.css and --motion-ms-* */
+  --ease-motion-standard: var(--motion-ease-standard);
+  --ease-motion-enter: var(--motion-ease-enter);
+  --ease-motion-exit: var(--motion-ease-exit);
+  --ease-motion-spring: var(--motion-ease-spring);
 
   /* ── Legacy (kept until all components migrate) ────── */
   --color-bg: var(--bg);

@@ -30,7 +30,7 @@ function DeleteConfirmations() {
               onClick={() => confirmDelete(d.artifactId)}
               className={cn(
                 'px-2 py-0.5 text-xxs font-mono rounded-[var(--radius-sm)]',
-                'bg-error text-on-error hover-bright transition-all cursor-pointer',
+                'bg-error text-on-error hover-bright transition-colors motion-press cursor-pointer',
               )}
             >
               Delete

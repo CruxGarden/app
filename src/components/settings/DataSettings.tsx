@@ -119,7 +119,7 @@ export default function DataSettings() {
           strokeLinecap="round"
           strokeLinejoin="round"
           className={cn(
-            'text-text-muted transition-transform duration-150',
+            'text-text-muted transition-transform',
             collapsed ? '-rotate-90' : 'rotate-0',
           )}
         >

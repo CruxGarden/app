@@ -1,7 +1,8 @@
-import { type HTMLAttributes } from 'react';
+import { type ComponentProps } from 'react';
 import { cn } from '@/lib/cn';
 
-interface PanelProps extends HTMLAttributes<HTMLDivElement> {
+/** `ref` is an ordinary prop (React 19) so a Modal can hand the panel to useMotionExit. */
+interface PanelProps extends ComponentProps<'div'> {
   padding?: 'sm' | 'md' | 'lg' | 'none';
 }
 

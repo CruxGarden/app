@@ -1,0 +1,352 @@
+/* ── Shape — a pane's silhouette is a Theme Token (ADR 0014) ────────────────
+   Six choice tokens (TOKEN_CHOICES in lib/moods/token-groups.ts) decide how
+   the chrome is drawn; components only carry a role (`.divider`, `.shape-card`,
+   or simply being a pane / a control):
+
+     paneBorderStyle    solid | double | dashed | dotted | inset | outset | none
+     paneCornerShape    round | bevel | scoop | notch | square      (panes, cards)
+     controlCornerShape round | bevel | scoop | notch | square      (buttons, inputs…)
+     paneHeaderShape    bar | tab | label | underline | none
+     dividerStyle       hairline | double | dotted | dashed | etched | ornament | none
+     cardBorderStyle    solid | double | dashed | none
+
+   Corners use CSS `corner-shape` (Chromium 139+, so the desktop app always
+   has it); the radius stays the size, the token picks the curve. `square` is
+   a real corner-shape value; browsers without corner-shape fall back to a
+   zero radius (last section).
+
+   The pane frame. globals.css paints the frame as a *ring* — padding equal to
+   the border width with the border token as the window background — so a
+   Mood or the persona can make a border a gradient ("this pane is busy").
+   That ring can only ever be solid, so every other paneBorderStyle switches
+   the frame to a real CSS border (a gradient token then degrades to
+   currentColor). The header shapes `tab` and `label` move the frame off the
+   window onto the header and the body; `label` keeps the ring (gradients
+   survive), `tab` uses real borders.
+
+   How a choice reaches a rule, in CSS only: the tokens land on <html> as
+   custom properties (applyMoodPalette), every element is a style-query
+   container for the properties it inherits, so each rule asks its parent —
+   `@container style(--pane-header-shape: tab) { … }`. Rules here need one
+   more class than the ones in globals.css to win at equal cascade position. */
+
+/* ── Defaults: today's look ── */
+:root {
+  --pane-border-style: solid;
+  --pane-corner-shape: round;
+  --control-corner-shape: round;
+  --pane-header-shape: bar;
+  --divider-style: hairline;
+  --card-border-style: solid;
+}
+
+/* ── Panes: corners, header paint, frame variables ── */
+.mosaic.crux-mosaic-theme .mosaic-tile .mosaic-window {
+  /* the frame's width (double needs at least 3px to show two lines) */
+  --pane-frame-width: var(--pane-border-width);
+  /* how far the ring insets the header/body (0 once the frame is a real border) */
+  --pane-ring: var(--pane-border-width);
+  corner-shape: var(--pane-corner-shape);
+}
+.mosaic.crux-mosaic-theme .mosaic-tile .mosaic-window .mosaic-window-toolbar,
+.mosaic.crux-mosaic-theme .mosaic-tile .mosaic-window .mosaic-window-body,
+.mosaic.crux-mosaic-theme .mosaic-tile .mosaic-window .mosaic-window-toolbar > .pane-toolbar {
+  corner-shape: var(--pane-corner-shape);
+}
+/* WorkspaceLayout hands the pane's header tokens over as two properties so
+   the shapes below can repaint the header. */
+.mosaic.crux-mosaic-theme .mosaic-tile .mosaic-window .mosaic-window-toolbar > .pane-toolbar {
+  background: var(--pane-header-bg);
+  border: 1px solid var(--pane-header-border-color);
+}
+
+/* ── paneBorderStyle: anything but solid is a real border on the window ── */
+@container not style(--pane-border-style: solid) {
+  .mosaic.crux-mosaic-theme .mosaic-tile .mosaic-window {
+    --pane-ring: 0px;
+    --pane-inner-radius: max(0px, calc(var(--pane-radius) - var(--pane-frame-width)));
+    padding: 0;
+    background: var(--panel);
+    border: var(--pane-frame-width) var(--pane-border-style) var(--border);
+  }
+}
+@container style(--pane-border-style: double) {
+  .mosaic.crux-mosaic-theme .mosaic-tile .mosaic-window {
+    --pane-frame-width: max(3px, var(--pane-border-width));
+  }
+}
+
+/* ── paneHeaderShape: tab — the header hangs off the top-left; the frame
+      wraps the body and comes up under it ── */
+@container style(--pane-header-shape: tab) {
+  .mosaic.crux-mosaic-theme .mosaic-tile .mosaic-window {
+    --pane-ring: 0px;
+    padding: 0;
+    background: transparent;
+    border: none;
+  }
+  .mosaic.crux-mosaic-theme .mosaic-tile .mosaic-window .mosaic-window-toolbar {
+    height: auto;
+    padding: 0;
+    background: transparent;
+    border-radius: 0;
+    align-items: flex-end;
+    overflow: visible;
+  }
+  .mosaic.crux-mosaic-theme .mosaic-tile .mosaic-window .mosaic-window-toolbar > .pane-toolbar {
+    position: relative;
+    z-index: 5;
+    isolation: isolate;
+    width: auto;
+    max-width: calc(100% - var(--pane-radius));
+    gap: 1.25rem;
+    height: calc(var(--pane-header-height) + var(--pane-frame-width));
+    margin-bottom: calc(-1 * var(--pane-frame-width));
+    padding: 0 12px var(--pane-frame-width);
+    border-radius: var(--pane-header-radius) var(--pane-header-radius) 0 0;
+    border: var(--pane-frame-width) var(--pane-border-style) var(--border);
+    border-bottom: 0;
+    /* opaque under the tint, so the body's top edge does not show through the tab */
+    background: var(--panel);
+  }
+  .mosaic.crux-mosaic-theme
+    .mosaic-tile
+    .mosaic-window
+    .mosaic-window-toolbar
+    > .pane-toolbar::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background: var(--pane-header-bg);
+    border-radius: inherit;
+  }
+  .mosaic.crux-mosaic-theme .mosaic-tile .mosaic-window .mosaic-window-body {
+    border: var(--pane-frame-width) var(--pane-border-style) var(--border);
+    border-radius: 0 var(--pane-radius) var(--pane-radius) var(--pane-radius);
+  }
+}
+
+/* ── paneHeaderShape: label — a small title floats over the top edge, like a
+      fieldset legend. The frame is split: the toolbar strip carries the top
+      and the body the rest; both keep the ring for solid frames. ── */
+@container style(--pane-header-shape: label) {
+  .mosaic.crux-mosaic-theme .mosaic-tile .mosaic-window {
+    --pane-ring: 0px;
+    padding: calc(var(--pane-header-height) / 2) 0 0;
+    background: transparent;
+    border: none;
+  }
+  .mosaic.crux-mosaic-theme .mosaic-tile .mosaic-window .mosaic-window-toolbar {
+    position: relative;
+    overflow: visible;
+    height: calc(var(--pane-header-height) / 2);
+    padding: var(--pane-frame-width) var(--pane-frame-width) 0;
+    background: var(--border);
+    border: 0;
+    border-radius: var(--pane-radius) var(--pane-radius) 0 0;
+  }
+  .mosaic.crux-mosaic-theme .mosaic-tile .mosaic-window .mosaic-window-toolbar::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    background: var(--panel);
+    border-radius: var(--pane-inner-radius) var(--pane-inner-radius) 0 0;
+  }
+  .mosaic.crux-mosaic-theme .mosaic-tile .mosaic-window .mosaic-window-toolbar > .pane-toolbar {
+    position: absolute;
+    z-index: 1;
+    isolation: isolate;
+    left: 12px;
+    top: calc(-1 * (var(--pane-header-height) + var(--pane-frame-width)) / 2);
+    width: auto;
+    max-width: calc(100% - 24px);
+    gap: 1rem;
+    height: var(--pane-header-height);
+    padding: 0 10px;
+    border-radius: var(--pane-header-radius);
+    background: var(--panel);
+  }
+  .mosaic.crux-mosaic-theme
+    .mosaic-tile
+    .mosaic-window
+    .mosaic-window-toolbar
+    > .pane-toolbar::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background: var(--pane-header-bg);
+    border-radius: inherit;
+  }
+  .mosaic.crux-mosaic-theme .mosaic-tile .mosaic-window .mosaic-window-body {
+    padding: 0 var(--pane-frame-width) var(--pane-frame-width);
+    background: var(--border);
+    border-radius: 0 0 var(--pane-radius) var(--pane-radius);
+  }
+  .mosaic.crux-mosaic-theme .mosaic-tile .mosaic-window .mosaic-window-body::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background:
+      var(--pane-texture) center / var(--pane-texture-size) repeat,
+      var(--panel);
+    background-blend-mode: var(--pane-texture-blend), normal;
+    border-radius: 0 0 var(--pane-inner-radius) var(--pane-inner-radius);
+  }
+  /* a non-solid frame is a real border on the same two elements */
+  @container not style(--pane-border-style: solid) {
+    .mosaic.crux-mosaic-theme .mosaic-tile .mosaic-window .mosaic-window-toolbar {
+      padding: 0;
+      background: var(--panel);
+      border: var(--pane-frame-width) var(--pane-border-style) var(--border);
+      border-bottom: 0;
+    }
+    .mosaic.crux-mosaic-theme .mosaic-tile .mosaic-window .mosaic-window-body {
+      padding: 0;
+      background: var(--panel);
+      border: var(--pane-frame-width) var(--pane-border-style) var(--border);
+      border-top: 0;
+    }
+  }
+}
+
+/* ── paneHeaderShape: underline — the title over a rule, no fill ── */
+@container style(--pane-header-shape: underline) {
+  .mosaic.crux-mosaic-theme .mosaic-tile .mosaic-window .mosaic-window-toolbar > .pane-toolbar {
+    background: transparent;
+    border: 0;
+    border-bottom: var(--pane-frame-width) var(--pane-border-style) var(--border);
+    border-radius: 0;
+  }
+}
+
+/* ── paneHeaderShape: none — no header until the pane is hovered ── */
+@container style(--pane-header-shape: none) {
+  .mosaic.crux-mosaic-theme .mosaic-tile .mosaic-window .mosaic-window-toolbar {
+    position: absolute;
+    top: var(--pane-ring);
+    left: var(--pane-ring);
+    right: var(--pane-ring);
+    z-index: 6;
+    background: transparent;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity calc(150ms * var(--motion-scale));
+  }
+  .mosaic.crux-mosaic-theme .mosaic-tile .mosaic-window:hover .mosaic-window-toolbar,
+  .mosaic.crux-mosaic-theme .mosaic-tile .mosaic-window .mosaic-window-toolbar:focus-within {
+    opacity: 1;
+    pointer-events: auto;
+  }
+  .mosaic.crux-mosaic-theme .mosaic-tile .mosaic-window .mosaic-window-body {
+    border-radius: var(--pane-inner-radius);
+  }
+}
+
+/* ── dividerStyle: `.divider` is a rule between sections (a <div> or <hr>);
+      --divider-color lets a caller keep its own colour token ── */
+.divider {
+  border: 0;
+  border-top: 1px solid var(--divider-color, var(--border));
+  height: 0;
+}
+@container style(--divider-style: double) {
+  .divider {
+    border-top: 3px double var(--divider-color, var(--border));
+  }
+}
+@container style(--divider-style: dotted) {
+  .divider {
+    border-top-style: dotted;
+  }
+}
+@container style(--divider-style: dashed) {
+  .divider {
+    border-top-style: dashed;
+  }
+}
+@container style(--divider-style: etched) {
+  .divider {
+    border-top: 2px groove var(--divider-color, var(--border));
+  }
+}
+@container style(--divider-style: ornament) {
+  .divider {
+    border: 0;
+    height: auto;
+    line-height: 1;
+    text-align: center;
+    background:
+      linear-gradient(var(--divider-color, var(--border)), var(--divider-color, var(--border))) left
+        center / calc(50% - 1.25em) 1px no-repeat,
+      linear-gradient(var(--divider-color, var(--border)), var(--divider-color, var(--border)))
+        right center / calc(50% - 1.25em) 1px no-repeat;
+  }
+  .divider::before {
+    content: '\2726';
+    display: block;
+    font-size: 0.75em;
+    line-height: 1;
+    color: var(--text-muted);
+  }
+}
+@container style(--divider-style: none) {
+  .divider {
+    border-top-color: transparent;
+  }
+}
+
+/* ── cardBorderStyle + corners: `.shape-card` on garden, explore and Mood cards ── */
+.shape-card {
+  border-style: var(--card-border-style);
+  corner-shape: var(--pane-corner-shape);
+}
+@container style(--card-border-style: double) {
+  .shape-card {
+    border-width: 3px;
+  }
+}
+
+/* ── controlCornerShape: every control, plus the small surfaces that hang off them ── */
+button,
+input,
+select,
+textarea,
+.shape-control,
+.rounded-dropdown,
+.rounded-tooltip {
+  corner-shape: var(--control-corner-shape);
+}
+.rounded-bubble,
+.rounded-card {
+  corner-shape: var(--pane-corner-shape);
+}
+
+/* ── square without corner-shape support (Web Mode in older browsers): radius 0 ── */
+@supports not (corner-shape: bevel) {
+  @container style(--pane-corner-shape: square) {
+    .mosaic.crux-mosaic-theme .mosaic-tile .mosaic-window,
+    .mosaic.crux-mosaic-theme .mosaic-tile .mosaic-window .mosaic-window-toolbar,
+    .mosaic.crux-mosaic-theme .mosaic-tile .mosaic-window .mosaic-window-body,
+    .mosaic.crux-mosaic-theme .mosaic-tile .mosaic-window .mosaic-window-toolbar > .pane-toolbar,
+    .shape-card,
+    .rounded-bubble,
+    .rounded-card {
+      border-radius: 0 !important;
+    }
+  }
+  @container style(--control-corner-shape: square) {
+    button,
+    input,
+    select,
+    textarea,
+    .shape-control,
+    .rounded-dropdown,
+    .rounded-tooltip {
+      border-radius: 0 !important;
+    }
+  }
+}

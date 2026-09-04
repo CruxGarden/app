@@ -5,6 +5,7 @@ import { Modal, DialogHost } from '@/components/ui';
 import { useUIStore } from '@/stores/uiStore';
 import { useAppStore } from '@/stores/appStore';
 import { dismissSplash } from '@/lib/splash';
+import { startSignals } from '@/lib/moods/signals';
 
 const Console = lazy(() => import('@/components/keeper/Console'));
 const Settings = lazy(() => import('@/pages/Settings'));
@@ -21,6 +22,9 @@ export default function Shell() {
   const settingsOpen = useUIStore((s) => s.settingsOpen);
   const exploreOpen = useUIStore((s) => s.exploreOpen);
   const moodPanelOpen = useUIStore((s) => s.moodPanelOpen);
+
+  // Reactive theme signals (--signal-audio/typing/agent) live for the app's lifetime
+  useEffect(() => startSignals(), []);
 
   useEffect(() => {
     if (servicesReady) return;

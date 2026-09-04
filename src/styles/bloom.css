@@ -80,7 +80,10 @@
   height: 100%;
   top: calc(50% - 100% / 2);
   left: calc(50% - 100% / 2);
-  opacity: var(--bloom-opacity, 1);
+  /* ── motion ── reactive: typing (--signal-typing, lib/moods/signals.ts) lifts
+     the bloom by up to reactBackgroundTyping; 0 (the default) leaves it still */
+  --bloom-react: calc(1 + var(--signal-typing, 0) * var(--react-background-typing));
+  opacity: calc(var(--bloom-opacity, 1) * var(--bloom-react));
 }
 
 /* ── Blob 1 — vertical movement ────────────────────────── */
@@ -131,7 +134,7 @@
     no-repeat;
   transform-origin: calc(50% - 200px);
   animation: moveHorizontal calc(300s / var(--bloom-speed, 1)) ease infinite;
-  opacity: calc(var(--bloom-opacity, 1) * 0.7);
+  opacity: calc(var(--bloom-opacity, 1) * 0.7 * var(--bloom-react));
 }
 
 /* ── Blob 5 — large circle ─────────────────────────────── */

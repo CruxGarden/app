@@ -68,7 +68,7 @@ function useColorResolver(onReady?: () => void) {
 }
 
 function parseLength(v: string): { n: number; unit: string } | null {
-  const m = v.trim().match(/^(-?\d*\.?\d+)(px|rem|em|%)$/);
+  const m = v.trim().match(/^(-?\d*\.?\d+)(px|rem|em|%|ms|s)$/);
   return m ? { n: parseFloat(m[1]!), unit: m[2]! } : null;
 }
 
@@ -156,8 +156,8 @@ function TokenRow({
             type="range"
             aria-label={`${label} slider`}
             min={0}
-            max={len.unit === 'px' ? 64 : 3}
-            step={len.unit === 'px' ? 1 : 0.05}
+            max={len.unit === 'px' ? 64 : len.unit === 'ms' ? 1000 : 3}
+            step={len.unit === 'px' ? 1 : len.unit === 'ms' ? 10 : 0.05}
             value={len.n}
             onChange={(e) => onChange(`${e.target.value}${len.unit}`)}
             className="w-24 accent-accent"
@@ -205,8 +205,8 @@ function TokenRow({
             type="range"
             aria-label={`${label} slider`}
             min={0}
-            max={/Density$/.test(tokenKey) ? 1000 : 2}
-            step={/Density$/.test(tokenKey) ? 10 : 0.05}
+            max={/Density$/.test(tokenKey) ? 1000 : /^react/.test(tokenKey) ? 1 : 2}
+            step={/Density$/.test(tokenKey) ? 10 : /^react/.test(tokenKey) ? 0.05 : 0.05}
             value={Number(value) || 0}
             onChange={(e) => onChange(e.target.value)}
             className="w-24 accent-accent"

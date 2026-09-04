@@ -121,7 +121,7 @@ function BannerStep({
 
 function ChooseStep({ onChoice }: { onChoice: (s: Step) => void }) {
   return (
-    <Panel padding="lg" className="w-full animate-in fade-in slide-in-from-bottom-2 duration-300">
+    <Panel padding="lg" className="w-full motion-enter-dialog">
       <p className="text-sm text-text-muted text-center mb-6">
         Welcome. How would you like to get started?
       </p>
@@ -323,7 +323,7 @@ function SetupStep({ onBack }: { onBack: () => void }) {
   };
 
   return (
-    <Panel padding="lg" className="w-full animate-in fade-in slide-in-from-bottom-2 duration-300">
+    <Panel padding="lg" className="w-full motion-enter-dialog">
       <BackButton onClick={onBack} disabled={saving} />
 
       <h2 className="font-display text-sm font-medium text-accent mb-1">Set up your garden</h2>
@@ -596,7 +596,7 @@ function CloudStep({ onBack }: { onBack: () => void }) {
   };
 
   return (
-    <Panel padding="lg" className="w-full animate-in fade-in slide-in-from-bottom-2 duration-300">
+    <Panel padding="lg" className="w-full motion-enter-dialog">
       <BackButton onClick={onBack} disabled={pulling} />
 
       <h2 className="font-display text-sm font-medium text-accent mb-4">Log in to your account</h2>
@@ -685,7 +685,7 @@ function ImportStep({ onBack }: { onBack: () => void }) {
   }, []);
 
   return (
-    <Panel padding="lg" className="w-full animate-in fade-in slide-in-from-bottom-2 duration-300">
+    <Panel padding="lg" className="w-full motion-enter-dialog">
       <BackButton onClick={onBack} disabled={importing} />
 
       <h2 className="font-display text-sm font-medium text-accent mb-4">

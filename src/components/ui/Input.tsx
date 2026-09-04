@@ -14,7 +14,7 @@ const Input = forwardRef<HTMLInputElement, InputProps>(({ error, className, ...p
           'h-10 w-full rounded-[var(--radius-sm)] px-3 text-sm font-body',
           'bg-input text-input-text placeholder:text-placeholder',
           'border outline-none',
-          'transition-colors duration-150',
+          'transition-colors',
           'focus:border-input-border-active focus:ring-1 focus:ring-input-outline',
           error ? 'border-error' : 'border-input-border',
           'disabled:cursor-not-allowed',

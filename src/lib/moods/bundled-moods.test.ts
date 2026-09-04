@@ -4,6 +4,7 @@ import { DEFAULT_MIXES } from '@/audio/default-mixes';
 import { validateMoodPackage } from './packages';
 import { validateMix, LAYER_TYPES } from '@/audio/schema';
 import { GARDEN_DARK } from './garden-dark';
+import { tokenChoices } from './token-groups';
 
 describe('bundled Moods', () => {
   it('ships thirteen complete, valid packages with distinct ids', () => {
@@ -49,7 +50,39 @@ describe('bundled Moods', () => {
     expect(gaps.size).toBeGreaterThanOrEqual(4);
     expect(motion.size).toBeGreaterThanOrEqual(3);
     expect(backgrounds.size).toBeGreaterThanOrEqual(3);
-    expect(bundledMood('windows-95')?.theme.overrides.motionScale).toBe('0');
+    // Windows 95 snaps: transitions and enters take no time, only the blink keeps a cadence
+    expect(bundledMood('windows-95')?.theme.overrides.motionDurationFast).toBe('0ms');
+    // ── motion ── (ADR 0014) how things appear and idle differs too
+    const enters = new Set(
+      BUNDLED_MOODS.map(
+        (m) => m.theme.overrides.motionEnterDialog ?? GARDEN_DARK.motionEnterDialog,
+      ),
+    );
+    const ambients = new Set(
+      BUNDLED_MOODS.map((m) => m.theme.overrides.motionAmbient ?? GARDEN_DARK.motionAmbient),
+    );
+    expect(enters.size).toBeGreaterThanOrEqual(4);
+    expect(ambients.size).toBeGreaterThanOrEqual(3);
+    expect(bundledMood('sunday-paper')?.theme.overrides.motionEnterDialog).toBe('none');
+    // ── shape ── (ADR 0014) the tokens exist and every Mood resolves to a legal
+    // option. Per-Mood silhouettes (Windows 95 outset, Sunday Paper double, tab
+    // and underline headers) are the unfinished half of the shape pass; when it
+    // lands, assert spread here the way motion and icons do above.
+    for (const m of BUNDLED_MOODS) {
+      for (const key of ['paneHeaderShape', 'paneCornerShape', 'paneBorderStyle'] as const) {
+        const value = m.theme.overrides[key] ?? GARDEN_DARK[key];
+        expect(tokenChoices(key), `${key} is a choice token`).toBeTruthy();
+        expect(tokenChoices(key), `${m.id} ${key}=${value}`).toContain(value);
+      }
+    }
+    // ── icons ── (ADR 0014) the glyph set is part of the room: at least two sets in use
+    const icons = new Set(
+      BUNDLED_MOODS.map((m) => m.theme.overrides.iconSet ?? GARDEN_DARK.iconSet),
+    );
+    expect(icons.size).toBeGreaterThanOrEqual(2);
+    expect(bundledMood('windows-95')?.theme.overrides.iconSet).toBe('pixel');
+    expect(bundledMood('pretty-in-pink')?.theme.overrides.iconSet).toBe('filled');
+    expect(bundledMood('deep-sea')?.theme.overrides.motionAmbient).toBe('breathe');
   });
 
   it('ships mixes already inside every parameter range (validateMix is the identity)', () => {

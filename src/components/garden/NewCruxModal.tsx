@@ -14,45 +14,7 @@ import { applyTemplateToCrux } from '@/services/crux-create';
 import type { CruxKind } from '@/api/types';
 import { Capability, can } from '@/lib/platform';
 import { alertDialog } from '@/stores/dialogStore';
-
-// ── Icons ────────────────────────────────────────────────
-
-function BlogIcon() {
-  return (
-    <svg
-      width="20"
-      height="20"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.5"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M12 20h9" />
-      <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
-    </svg>
-  );
-}
-
-function LayoutIcon() {
-  return (
-    <svg
-      width="20"
-      height="20"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.5"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <rect x="3" y="3" width="18" height="18" rx="2" />
-      <path d="M3 9h18" />
-      <path d="M9 21V9" />
-    </svg>
-  );
-}
+import { HomeIcon, LayoutIcon, PencilIcon } from '@/components/ui/icons';
 
 // ── Templates ────────────────────────────────────────────
 
@@ -122,24 +84,6 @@ function BlankThumb() {
         <div style={T.line(24, 2, '#252525')} />
       </div>
     </div>
-  );
-}
-
-function HomeIcon() {
-  return (
-    <svg
-      width="20"
-      height="20"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.5"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="m3 10 9-7 9 7v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
-      <path d="M9 22V12h6v10" />
-    </svg>
   );
 }
 
@@ -256,7 +200,7 @@ const TEMPLATES: Template[] = [
     id: 'astro-blog',
     label: 'Astro Blog',
     description: 'A real Astro site — live dev server, markdown posts',
-    icon: <BlogIcon />,
+    icon: <PencilIcon />,
     thumb: <BlogThumb />,
     kind: 'webapp',
     defaultTitle: 'My Blog',
@@ -550,7 +494,7 @@ export default function NewCruxModal({ open, onClose }: NewCruxModalProps) {
                     stroke="currentColor"
                     strokeWidth="2"
                     strokeLinecap="round"
-                    className="text-accent transition-[stroke-dashoffset] duration-300"
+                    className="text-accent transition-[stroke-dashoffset] [transition-duration:var(--motion-ms-slow)]"
                     strokeDasharray={2 * Math.PI * 12}
                     strokeDashoffset={
                       importProgress.total > 0

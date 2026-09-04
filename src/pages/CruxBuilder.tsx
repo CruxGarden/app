@@ -173,7 +173,7 @@ export default function CruxBuilder() {
             }}
             className={cn(
               'px-3 py-1.5 text-xs font-mono rounded-[var(--radius-sm)]',
-              'bg-accent-muted text-accent border border-accent/20 hover:border-accent transition-all cursor-pointer',
+              'bg-accent-muted text-accent border border-accent/20 hover:border-accent transition-colors motion-press cursor-pointer',
             )}
           >
             Save & leave
