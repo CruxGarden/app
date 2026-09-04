@@ -7,9 +7,9 @@ import { GARDEN_DARK } from './garden-dark';
 import { tokenChoices } from './token-groups';
 
 describe('bundled Moods', () => {
-  it('ships thirteen complete, valid packages with distinct ids', () => {
-    expect(BUNDLED_MOODS).toHaveLength(13);
-    expect(new Set(BUNDLED_MOODS.map((m) => m.id)).size).toBe(13);
+  it('ships fourteen complete, valid packages with distinct ids', () => {
+    expect(BUNDLED_MOODS).toHaveLength(14);
+    expect(new Set(BUNDLED_MOODS.map((m) => m.id)).size).toBe(14);
     for (const m of BUNDLED_MOODS) {
       const ok = validateMoodPackage(JSON.parse(JSON.stringify(m)));
       expect(ok, `${m.id} validates`).toBeTruthy();
@@ -33,7 +33,7 @@ describe('bundled Moods', () => {
     }
   });
 
-  it('is not thirteen palettes on one layout: shape, type and motion differ', () => {
+  it('is not fourteen palettes on one layout: shape, type and motion differ', () => {
     const radii = new Set(BUNDLED_MOODS.map((m) => m.theme.overrides.radius ?? GARDEN_DARK.radius));
     const fonts = new Set(
       BUNDLED_MOODS.map((m) => m.theme.overrides.fontDisplay ?? GARDEN_DARK.fontDisplay),
@@ -64,16 +64,18 @@ describe('bundled Moods', () => {
     expect(enters.size).toBeGreaterThanOrEqual(4);
     expect(ambients.size).toBeGreaterThanOrEqual(3);
     expect(bundledMood('sunday-paper')?.theme.overrides.motionEnterDialog).toBe('none');
-    // ── shape ── (ADR 0014) the tokens exist and every Mood resolves to a legal
-    // option. Per-Mood silhouettes (Windows 95 outset, Sunday Paper double, tab
-    // and underline headers) are the unfinished half of the shape pass; when it
-    // lands, assert spread here the way motion and icons do above.
-    for (const m of BUNDLED_MOODS) {
-      for (const key of ['paneHeaderShape', 'paneCornerShape', 'paneBorderStyle'] as const) {
-        const value = m.theme.overrides[key] ?? GARDEN_DARK[key];
-        expect(tokenChoices(key), `${key} is a choice token`).toBeTruthy();
-        expect(tokenChoices(key), `${m.id} ${key}=${value}`).toContain(value);
-      }
+    // Shape has to change the silhouette, not merely resolve to legal defaults.
+    for (const [key, minimum] of [
+      ['paneHeaderShape', 5],
+      ['paneCornerShape', 5],
+      ['controlCornerShape', 3],
+      ['paneBorderStyle', 4],
+      ['dividerStyle', 5],
+      ['cardBorderStyle', 4],
+    ] as const) {
+      const values = BUNDLED_MOODS.map((m) => m.theme.overrides[key] ?? GARDEN_DARK[key]);
+      expect(new Set(values).size, `${key} spread`).toBeGreaterThanOrEqual(minimum);
+      for (const value of values) expect(tokenChoices(key), key).toContain(value);
     }
     // ── icons ── (ADR 0014) the glyph set is part of the room: at least two sets in use
     const icons = new Set(

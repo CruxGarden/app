@@ -164,7 +164,7 @@ export default function DataSettings() {
 
           {desktop && (
             <>
-              <hr className="border-border my-6" />
+              <hr className="divider my-6" />
               <h3 className="font-display text-sm font-medium text-text mb-2">Garden location</h3>
               <p className="text-xs text-text-muted mb-3">
                 New cruxes create their project folders here. Existing folders stay where they are
@@ -186,7 +186,7 @@ export default function DataSettings() {
             </>
           )}
 
-          <hr className="border-border my-6" />
+          <hr className="divider my-6" />
 
           <h3 className="font-display text-sm font-medium text-error mb-2">Danger zone</h3>
           <p className="text-xs text-text-muted mb-3">

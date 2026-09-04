@@ -337,7 +337,7 @@ export default function MetadataContent({
       {/* ── Contributors ── */}
       {(authorName || collaborators.length > 0) && (
         <>
-          <div className="border-t border-border" />
+          <div className="divider" />
           <div className="flex flex-col gap-2">
             {authorName && (
               <FieldRow label="Author">
@@ -356,7 +356,7 @@ export default function MetadataContent({
       )}
 
       {/* ── Details ── */}
-      <div className="border-t border-border" />
+      <div className="divider" />
       <div className="flex flex-col gap-3">
         <MetaField readOnly={readOnly} onUpdate={onUpdate} label="Slug" value={crux.slug} />
 
@@ -418,7 +418,7 @@ export default function MetadataContent({
       {/* ── AI Summary ── */}
       {summary && (
         <>
-          <div className="border-t border-border" />
+          <div className="divider" />
           <div className="flex flex-col gap-2">
             <span className="text-2xs font-mono uppercase tracking-wider text-text-muted">
               AI Summary

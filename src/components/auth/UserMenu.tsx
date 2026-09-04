@@ -84,7 +84,7 @@ export default function UserMenu() {
               </span>
             </button>
 
-            <div className="border-t border-border my-1" />
+            <div className="divider my-1" />
 
             <button
               onClick={() => setMode(ThemeMode.Light)}
@@ -117,7 +117,7 @@ export default function UserMenu() {
               System
             </button>
 
-            <div className="border-t border-border my-1" />
+            <div className="divider my-1" />
 
             <button
               onClick={handleLogout}

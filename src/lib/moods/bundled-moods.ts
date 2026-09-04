@@ -5,7 +5,7 @@
  * and Publish work exactly as for a Mood someone made; they carry no binary
  * assets (textures and backgrounds are CSS; sound is synthesized).
  *
- * The point is range: not eight palettes on one layout, but eight different
+ * The point is range: distinct
  * rooms — shapes, type, density, motion and sound all move together.
  */
 import { MOOD_PRESETS } from './presets';
@@ -873,6 +873,121 @@ const SPECS: Spec[] = [
       greeting: 'Hey. Kettle’s on, terminal’s open. What are we building tonight?',
       systemPrompt:
         'You are Mocha, a warm, cosy, slightly playful collaborator who is comfortable with developers. Friendly and relaxed, fluent in code and tooling, quick to show a snippet rather than describe one. Pastel humour, never snark.',
+    },
+  },
+  {
+    id: 'geocities',
+    name: 'GeoCities',
+    presetId: 'homepage-97',
+    extra: {
+      // A handmade homepage: tiled stars outside, readable paper inside.
+      bg: '#000033',
+      toolbarLink: '#00ffff',
+      moodBarRadius: '0px',
+      accent: '#0000cc',
+      workspaceTexture:
+        'radial-gradient(circle at 12px 12px, #ffffcc 0 1px, transparent 1.5px), radial-gradient(circle at 47px 37px, #00ffff 0 1px, transparent 1.5px), radial-gradient(circle at 29px 61px, #ff99ff 0 1px, transparent 1.5px)',
+      workspaceTextureSize: '72px 72px',
+      workspaceTextureBlend: 'normal',
+      workspaceTextureOpacity: '1',
+      grainOpacity: '0',
+      paneHeaderShape: 'bar',
+      paneCornerShape: 'square',
+      controlCornerShape: 'square',
+      paneBorderStyle: 'outset',
+      dividerStyle: 'etched',
+      cardBorderStyle: 'double',
+      paneCollaborationBorder: '#c0c0c0',
+      paneArtifactsBorder: '#c0c0c0',
+      paneWorkshopBorder: '#c0c0c0',
+      paneDetailsBorder: '#c0c0c0',
+      paneHistoryBorder: '#c0c0c0',
+      paneExportBorder: '#c0c0c0',
+      paneSyncBorder: '#c0c0c0',
+      panePublishBorder: '#c0c0c0',
+      paneStoreBorder: '#c0c0c0',
+      chatComposer: '#ffffff',
+      iconSet: 'pixel',
+      motionScale: '1',
+      motionDurationFast: '80ms',
+      motionDurationBase: '180ms',
+      motionDurationSlow: '900ms',
+      motionEaseStandard: 'linear',
+      motionEnterPane: 'none',
+      motionEnterDialog: 'pop',
+      motionEnterDropdown: 'none',
+      motionEnterBubble: 'slide-up',
+      motionEnterCard: 'pop',
+      motionEnterToast: 'slide-down',
+      motionExitDialog: 'none',
+      motionExitDropdown: 'none',
+      motionExitToast: 'none',
+      motionPress: 'sink',
+      motionAttention: 'blink',
+      motionAmbient: 'none',
+    },
+    background: { type: BgType.Blank },
+    mixes: [
+      mix({
+        id: 'geo-webring',
+        name: 'Webring Radio',
+        root: 'C',
+        scale: 'major',
+        tempo: 108,
+        seed: 1997,
+        layers: [
+          layer('keys', 'geo-midi', -22, {
+            instrument: 'bells',
+            progression: 'pop',
+            voicing: 'triad',
+            rhythm: 'arp',
+            octave: 5,
+            humanize: 0,
+            wobble: 0,
+            tone: 0.65,
+          }),
+          layer('keys', 'geo-organ', -26, {
+            instrument: 'organ',
+            progression: 'pop',
+            voicing: 'triad',
+            rhythm: 'whole',
+            octave: 3,
+            humanize: 0,
+            wobble: 0,
+            tone: 0.4,
+          }),
+          layer('bass', 'geo-bass', -22, {
+            pattern: 'pulse',
+            progression: 'pop',
+            octave: 2,
+            tone: 0.5,
+            glide: 0,
+          }),
+          layer('beat', 'geo-drum-machine', -25, {
+            pattern: 'four',
+            density: 0.55,
+            swing: 0.5,
+            hats: 0.3,
+            tone: 0.5,
+            humanize: 0,
+          }),
+        ],
+        master: { reverbDecay: 1.2, reverbWet: 0.12, volume: 0 },
+      }),
+    ],
+    cues: {
+      message: 'chime',
+      toolDone: 'tick',
+      snapshot: 'chime',
+      published: 'bloom',
+      error: 'thud',
+    },
+    volume: 0.45,
+    persona: {
+      name: 'Webmaster',
+      greeting: 'Welcome to my little corner of the web! What are we putting online today?',
+      systemPrompt:
+        'You are Webmaster, a friendly, inventive collaborator with the handmade spirit of the early web. You love personal homepages, tiny experiments and people making things their own. A little enthusiasm and an occasional ASCII smile are welcome; keep the work clear, accessible and carefully checked. Never add fake visitor counters, broken links or under-construction clutter unless asked.',
     },
   },
 ];
