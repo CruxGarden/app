@@ -62,15 +62,23 @@ const local = sh('git', ['rev-parse', 'HEAD']);
 const remote = sh('git', ['rev-parse', 'origin/main']);
 if (local !== remote) fail('main is not level with origin/main — pull or push first');
 if (sh('git', ['tag', '--list', tag])) fail(`tag ${tag} already exists`);
-if (next === current) fail(`electron/package.json is already ${current}`);
+// The version may already be right (the very first release, or a bump that
+// landed in its own commit): then there is nothing to change, only to tag.
+const bump = next !== current;
 
-console.log(`Release ${current} → ${next} (${tag})${dryRun ? '  [dry run]' : ''}`);
+console.log(
+  bump
+    ? `Release ${current} → ${next} (${tag})${dryRun ? '  [dry run]' : ''}`
+    : `Release ${next} (${tag}) — version already set, tagging HEAD${dryRun ? '  [dry run]' : ''}`,
+);
 
 // ── Bump, commit, tag, push ────────────────────────────────────────────────
-// npm version writes package.json and package-lock.json together.
-run('npm', ['version', next, '--no-git-tag-version'], { cwd: electronDir });
-run('git', ['add', 'electron/package.json', 'electron/package-lock.json']);
-run('git', ['commit', '-m', `Release ${tag}`]);
+if (bump) {
+  // npm version writes package.json and package-lock.json together.
+  run('npm', ['version', next, '--no-git-tag-version'], { cwd: electronDir });
+  run('git', ['add', 'electron/package.json', 'electron/package-lock.json']);
+  run('git', ['commit', '-m', `Release ${tag}`]);
+}
 run('git', ['tag', '-a', tag, '-m', `Crux Garden ${next}`]);
 run('git', ['push', 'origin', 'main', tag]);
 
