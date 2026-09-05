@@ -79,7 +79,7 @@ describe('transcriptOf', () => {
       shelf: 'history',
       question: 'Who am I?',
       entry: { name: 'Émile Zola', kind: 'person', era: '1840–1902' },
-      score: 8,
+      score: 81, // 40 accuracy (two misses) + 41 speed (54.5 s of 300 used)
       outcome: 'won',
       questions: 2,
       durationSeconds: 55,

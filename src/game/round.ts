@@ -295,9 +295,41 @@ export function isOver(state: RoundState): boolean {
   return state.status !== 'open';
 }
 
-/** Score: the points left on a win, 0 otherwise. Silence where other products put praise. */
+/** A win is worth up to this. Half for guessing well, half for guessing soon. */
+export const MAX_SCORE = 100;
+
+export interface ScoreBreakdown {
+  /** Points kept × 5: every wrong guess costs five of fifty. */
+  accuracy: number;
+  /** The clock unspent, fifty for an instant answer, zero at the buzzer. */
+  speed: number;
+  total: number;
+}
+
+/**
+ * Two ways to win. Accuracy is the points left (ten minus wrong guesses)
+ * scaled to fifty; speed is the share of the five minutes still on the clock,
+ * also out of fifty. A cautious player asks everything and guesses once —
+ * fifty for accuracy, little for speed. A bold one guesses early and often —
+ * speed intact, accuracy bleeding five a miss. Either road can reach the top;
+ * neither reaches it alone. A round that is not won scores nothing.
+ */
+export function scoreBreakdown(state: RoundState): ScoreBreakdown {
+  if (state.status !== 'won') return { accuracy: 0, speed: 0, total: 0 };
+  const half = MAX_SCORE / 2;
+  const accuracy = Math.round((half * state.points) / state.config.points);
+  const speed = Math.round((half * remainingMs(state)) / state.budgetMs);
+  return { accuracy, speed, total: accuracy + speed };
+}
+
+/** Score out of MAX_SCORE on a win, 0 otherwise. Silence where other products put praise. */
 export function scoreOf(state: RoundState): number {
-  return state.status === 'won' ? state.points : 0;
+  return scoreBreakdown(state).total;
+}
+
+/** The speed half as it stands right now — what the player is spending by taking their time. */
+export function speedBonusNow(state: RoundState): number {
+  return Math.round(((MAX_SCORE / 2) * remainingMs(state)) / state.budgetMs);
 }
 
 /** The answered exchanges so far — what every model call is given as context. */

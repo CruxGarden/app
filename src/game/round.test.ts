@@ -15,6 +15,8 @@ import {
   receiveVerdict,
   remainingMs,
   scoreOf,
+  scoreBreakdown,
+  speedBonusNow,
   startRound,
   tick,
   withdrawAsk,
@@ -127,10 +129,11 @@ describe('guesses', () => {
     });
   });
 
-  it('the right guess costs nothing: a first-try hit is a clean 10', () => {
+  it('the right guess costs nothing: a first-try hit on the first second is a clean 100', () => {
     const s = receiveVerdict(guess(open(), 'Cleopatra'), right);
     expect(s.status).toBe('won');
-    expect(scoreOf(s)).toBe(10);
+    expect(scoreOf(s)).toBe(100);
+    expect(scoreBreakdown(s)).toEqual({ accuracy: 50, speed: 50, total: 100 });
     expect(isOver(s)).toBe(true);
     expect(s.endedAtMs).toBe(0);
   });
@@ -140,8 +143,27 @@ describe('guesses', () => {
     s = receiveVerdict(guess(s, 'a'), wrong);
     s = receiveVerdict(guess(s, 'b'), wrong);
     s = receiveVerdict(guess(s, 'Cleopatra'), right);
-    expect(scoreOf(s)).toBe(8);
+    expect(scoreOf(s)).toBe(90);
+    expect(scoreBreakdown(s)).toEqual({ accuracy: 40, speed: 50, total: 90 });
     expect(missesOf(s)).toEqual(['a', 'b']);
+  });
+
+  it('two roads to a score: time spent costs speed, misses cost accuracy, and they trade', () => {
+    // Cautious: every second used, one clean guess — all accuracy, no speed
+    let slow = tick(open(), 299_000);
+    slow = receiveVerdict(guess(slow, 'Cleopatra'), right);
+    expect(scoreBreakdown(slow)).toEqual({ accuracy: 50, speed: 0, total: 50 });
+    // Bold: guessed at once, four misses on the way — all speed, accuracy bled
+    let bold = open();
+    for (const g of ['a', 'b', 'c', 'd']) bold = receiveVerdict(guess(bold, g), wrong);
+    bold = receiveVerdict(guess(bold, 'Cleopatra'), right);
+    expect(scoreBreakdown(bold)).toEqual({ accuracy: 30, speed: 50, total: 80 });
+    // Middle: half the clock, one miss
+    let mid = tick(open(), 150_000);
+    mid = receiveVerdict(guess(mid, 'a'), wrong);
+    mid = receiveVerdict(guess(mid, 'Cleopatra'), right);
+    expect(scoreBreakdown(mid)).toEqual({ accuracy: 45, speed: 25, total: 70 });
+    expect(speedBonusNow(tick(open(), 60_000))).toBe(40);
   });
 
   it('points floor at 0, and reaching 0 ends the round as lost with score 0', () => {
