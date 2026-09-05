@@ -140,6 +140,37 @@ describe('RoundSession', () => {
     expect(session.get().state.questionsLeft).toBe(9);
   });
 
+  it('a refused key is flagged, not retried: the surface goes back to the Connect step', async () => {
+    const refusing = new MockLanguageModelV4({
+      doGenerate: async () => {
+        throw Object.assign(new Error('invalid x-api-key'), { statusCode: 401 });
+      },
+    });
+    const { session } = harness(refusing);
+    expect(session.get().refused).toBe(false);
+    session.start();
+    await until(() => !session.get().state.composing);
+    expect(session.get().refused).toBe(true);
+    expect(session.get().error).toBe('invalid x-api-key.');
+    // Nothing was charged: the round never really began
+    expect(session.get().state.openingLine).toBe('');
+    expect(session.get().state.elapsedMs).toBe(0);
+    expect(session.get().state.points).toBe(10);
+  });
+
+  it('a provider that is merely down is a failed move, never a refusal', async () => {
+    const down = new MockLanguageModelV4({
+      doGenerate: async () => {
+        throw Object.assign(new Error('overloaded'), { statusCode: 529 });
+      },
+    });
+    const { session } = harness(down);
+    session.start();
+    await until(() => !session.get().state.composing);
+    expect(session.get().error).toBe('overloaded.');
+    expect(session.get().refused).toBe(false);
+  });
+
   it('dispose stops the clock and drops late results', async () => {
     const { session, advance, clockStopped } = harness();
     session.start();

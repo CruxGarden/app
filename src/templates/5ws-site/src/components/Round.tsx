@@ -9,8 +9,10 @@
  * the end, the reveal is the reward — no confetti.
  *
  * The round runs here, in the visitor's browser, with the AI they connected
- * (first play: "Connect your AI"); the hidden figure lives in client state
- * for the round and goes into every model call as fixed context (ADR 0016).
+ * (first play: "Connect your AI" — one field, one button; the provider is
+ * read off the key and the opening line is the validation); the hidden
+ * figure lives in client state for the round and goes into every model call
+ * as fixed context (ADR 0016).
  * Mobile-first: one column, the voice on top, the question/guess bar at the
  * bottom. The same component is the desktop layout with more room.
  */
@@ -23,11 +25,13 @@ import type { Reveal } from '../game/hidden';
 import { RoundSession } from '../lib/session';
 import {
   PROVIDERS,
+  UNKNOWN_KEY_MESSAGE,
+  detectProvider,
   injectedModel,
   modelFor,
   providerInfo,
+  refusedMessage,
   temperatureFor,
-  validateConfig,
 } from '../lib/model';
 import {
   clearAuth,
@@ -42,18 +46,22 @@ import {
   utcDay,
   type KeyValueStorage,
   type ModelConfig,
-  type ProviderId,
   type StoredAuth,
 } from '../lib/local-state';
 import {
-  board as fetchBoard,
   clockOf,
   login,
+  markPlayed,
   postScore,
+  profile,
+  rankOf,
+  readBoard,
+  readPlayed,
   requestCode,
   siteConfig,
   type Leaderboard,
 } from '../lib/leaderboard';
+import { storeFor } from '../lib/store';
 import { formatClock, isWebUrl, searchUrlFor } from '../lib/format';
 
 export interface RoundProps {
@@ -73,10 +81,55 @@ export default function Round({ shelf: shelfJson, base = '/' }: RoundProps) {
     }
   }, [shelfJson]);
   const [config, setConfig] = useState<ModelConfig | null>(() => loadModelConfig(storage));
+  // What the Connect step shows when a round hands the visitor back to it: the
+  // sentence, and the key that was refused so it can be fixed rather than retyped.
   const [connectProblem, setConnectProblem] = useState<string | null>(null);
+  const [refusedKey, setRefusedKey] = useState('');
   const [roundNo, setRoundNo] = useState(1);
   const [lastEntryId, setLastEntryId] = useState<string | null>(null);
   const injected = injectedModel() !== null;
+
+  const connect = useCallback(
+    (key: string) => {
+      const provider = detectProvider(key);
+      if (!provider) {
+        setConnectProblem(UNKNOWN_KEY_MESSAGE);
+        return;
+      }
+      const next: ModelConfig = { provider, apiKey: key.trim() };
+      try {
+        modelFor(next); // throws with a sentence when it cannot be built
+      } catch (err) {
+        setConnectProblem((err as Error).message);
+        return;
+      }
+      saveModelConfig(storage, next);
+      setConfig(next);
+      setConnectProblem(null);
+      setRefusedKey('');
+    },
+    [storage],
+  );
+  // "Change": forget the key and go back to the step, clean.
+  const disconnect = useCallback(() => {
+    clearModelConfig(storage);
+    setConfig(null);
+    setConnectProblem(null);
+    setRefusedKey('');
+  }, [storage]);
+  // The round could not use the connection (the provider refused the key, or
+  // the model could not be built): back to the step, with the key still there.
+  const onModelProblem = useCallback(
+    (problem: string, key: string) => {
+      setConnectProblem(problem);
+      setRefusedKey(key);
+      if (!injected) {
+        clearModelConfig(storage);
+        setConfig(null);
+      }
+    },
+    [injected, storage],
+  );
 
   if (!parsed.shelf) {
     return (
@@ -86,28 +139,13 @@ export default function Round({ shelf: shelfJson, base = '/' }: RoundProps) {
     );
   }
 
-  const connect = (next: ModelConfig) => {
-    try {
-      modelFor(next); // throws with a sentence when it cannot be built
-      saveModelConfig(storage, next);
-      setConfig(next);
-      setConnectProblem(null);
-    } catch (err) {
-      setConnectProblem((err as Error).message);
-    }
-  };
-  const disconnect = () => {
-    clearModelConfig(storage);
-    setConfig(null);
-  };
-
   if (!injected && !config) {
     return (
       <ConnectAi
         shelf={parsed.shelf}
         problem={connectProblem}
+        initialKey={refusedKey}
         onConnect={connect}
-        onCancel={null}
       />
     );
   }
@@ -125,37 +163,38 @@ export default function Round({ shelf: shelfJson, base = '/' }: RoundProps) {
         setRoundNo((n) => n + 1);
       }}
       onDisconnect={injected ? null : disconnect}
-      onModelProblem={(problem) => {
-        setConnectProblem(problem);
-        if (!injected) disconnect();
-      }}
+      onModelProblem={onModelProblem}
     />
   );
 }
 
 // ── Connect your AI ─────────────────────────────────────────────────────────
 
+/**
+ * The one unavoidable bit of setup for a stranger, so: one field, one button.
+ * The provider is read off the key's prefix; Enter or Connect stores it and
+ * the round starts at once — the opening line is the validation. A key from
+ * nowhere we know gets one line and a button that stays put.
+ */
 function ConnectAi({
   shelf,
   problem,
+  initialKey,
   onConnect,
-  onCancel,
 }: {
   shelf: Shelf;
+  /** What the last round said about the connection ("That key was refused by …"). */
   problem: string | null;
-  onConnect: (config: ModelConfig) => void;
-  onCancel: (() => void) | null;
+  /** The refused key, pre-filled so it can be fixed rather than retyped. */
+  initialKey: string;
+  onConnect: (key: string) => void;
 }) {
-  const [provider, setProvider] = useState<ProviderId>('anthropic');
-  const [apiKey, setApiKey] = useState('');
-  const [model, setModel] = useState('');
-  const info = providerInfo(provider);
-  const draft: ModelConfig = {
-    provider,
-    apiKey: apiKey.trim() || undefined,
-    model: model.trim() || undefined,
-  };
-  const invalid = validateConfig(draft);
+  const [key, setKey] = useState(initialKey);
+  const trimmed = key.trim();
+  const provider = detectProvider(trimmed);
+  const unknown = trimmed.length > 0 && provider === null;
+  // The round's sentence stands until the key is touched
+  const showProblem = problem !== null && !unknown && key === initialKey;
   return (
     <div className="round-app connect" data-layout="narrow">
       <h1 className="question voice">{shelf.question}</h1>
@@ -163,65 +202,59 @@ function ConnectAi({
         className="connect-form"
         onSubmit={(e) => {
           e.preventDefault();
-          if (!invalid) onConnect(draft);
+          if (provider) onConnect(trimmed);
         }}
       >
         <h2>Connect your AI</h2>
-        <p className="how">
-          The round runs here in your browser with your own key. It goes to{' '}
-          {info?.label ?? 'the provider'} and nowhere else; this page never sees it again once it is
-          stored here.
+        <p className="get-key">
+          <span>Get a key:</span>
+          {PROVIDERS.map((p) => (
+            <a key={p.id} href={p.keysUrl} target="_blank" rel="noopener noreferrer">
+              {p.free ? `${p.label} — free` : p.label}
+            </a>
+          ))}
         </p>
-        <label className="field">
-          <span>Provider</span>
-          <select value={provider} onChange={(e) => setProvider(e.target.value as ProviderId)}>
-            {PROVIDERS.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.label}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="field">
-          <span>Key</span>
+        <div className="row">
           <input
             type="password"
+            aria-label="Key"
+            placeholder="Paste your key"
             autoComplete="off"
             spellCheck={false}
-            placeholder={info?.keyHint ?? ''}
-            value={apiKey}
-            onChange={(e) => setApiKey(e.target.value)}
+            autoFocus
+            enterKeyHint="go"
+            value={key}
+            onChange={(e) => setKey(e.target.value)}
           />
-        </label>
-        <label className="field">
-          <span>Model</span>
-          <input
-            type="text"
-            placeholder={info?.defaultModel ?? ''}
-            value={model}
-            onChange={(e) => setModel(e.target.value)}
-          />
-        </label>
-        {problem && <p className="note error">{problem}</p>}
-        <div className="actions">
-          <button type="submit" className="primary" disabled={!!invalid}>
-            Play
+          <button type="submit" className="primary" disabled={!provider}>
+            Connect
           </button>
-          {onCancel && (
-            <button type="button" onClick={onCancel}>
-              Back
-            </button>
-          )}
         </div>
-        {info && (
-          <p className="note">
-            <a href={info.keysUrl} target="_blank" rel="noopener noreferrer">
-              Get a {info.label} key
-            </a>
+        {unknown && (
+          <p className="note error" role="status">
+            {UNKNOWN_KEY_MESSAGE}
           </p>
         )}
+        {showProblem && (
+          <p className="note error" role="alert">
+            {problem}
+          </p>
+        )}
+        <p className="note">Your key stays in this browser and is sent only to that provider.</p>
       </form>
     </div>
+  );
+}
+
+/** Which AI the round is talking through, and the way to change it. Quiet. */
+function Connected({ config, onChange }: { config: ModelConfig; onChange: () => void }) {
+  return (
+    <p className="round-foot">
+      {providerInfo(config.provider)?.label ?? 'Connected'} ·{' '}
+      <button type="button" className="link" onClick={onChange}>
+        Change
+      </button>
+    </p>
   );
 }
 
@@ -235,7 +268,8 @@ interface PlayProps {
   avoidEntryId: string | null;
   onPlayAgain: (lastEntryId: string) => void;
   onDisconnect: (() => void) | null;
-  onModelProblem: (problem: string) => void;
+  /** The connection cannot be used: a sentence, and the key it concerned. */
+  onModelProblem: (problem: string, key: string) => void;
 }
 
 function Play({
@@ -250,12 +284,36 @@ function Play({
 }: PlayProps) {
   // The first round of a UTC day on this shelf is the daily — the same figure
   // for everyone (seeded by the day) and the one that counts for the board.
-  const daily = useMemo(() => dailyAvailable(storage, shelf.id), [storage, shelf.id]);
+  // This browser remembers having played it; signed in, the visitor's own
+  // `played:<day>` record in the crux's store remembers it across browsers,
+  // so that is asked first (null until it answers; a store that cannot
+  // answer leaves the browser's word standing).
+  const store = useMemo(() => storeFor(loadAuth(storage)?.accessToken ?? null), [storage]);
+  const [daily, setDaily] = useState<boolean | null>(() => {
+    const here = dailyAvailable(storage, shelf.id);
+    return here && store && loadAuth(storage) ? null : here;
+  });
+  useEffect(() => {
+    if (daily !== null || !store) return;
+    let cancelled = false;
+    readPlayed(store, utcDay()).then((played) => {
+      if (!cancelled) setDaily(played === null);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [daily, store]);
   const entry = useMemo(
-    () => (daily ? pickEntry(shelf, utcDay()) : pickPractice(shelf, avoidEntryId)),
+    () =>
+      daily === null
+        ? null
+        : daily
+          ? pickEntry(shelf, utcDay())
+          : pickPractice(shelf, avoidEntryId),
     [daily, shelf, avoidEntryId],
   );
   const [session, sessionProblem] = useMemo(() => {
+    if (!entry) return [null, null] as const;
     try {
       return [
         new RoundSession({
@@ -278,10 +336,25 @@ function Play({
   }, [session]);
 
   useEffect(() => {
-    if (sessionProblem) onModelProblem(sessionProblem);
-  }, [sessionProblem, onModelProblem]);
+    if (sessionProblem) onModelProblem(sessionProblem, config.apiKey ?? '');
+  }, [sessionProblem, onModelProblem, config.apiKey]);
 
-  if (!session) return null;
+  // The provider refused the key: back to the step, key in hand.
+  const onRefused = useCallback(
+    () => onModelProblem(refusedMessage(config.provider), config.apiKey ?? ''),
+    [onModelProblem, config.provider, config.apiKey],
+  );
+
+  if (daily === null) {
+    return (
+      <div className="round-app" data-layout="narrow">
+        <p className="voice">
+          <Composing />
+        </p>
+      </div>
+    );
+  }
+  if (!session || !entry) return null;
   return (
     <LiveRound
       session={session}
@@ -290,8 +363,10 @@ function Play({
       daily={daily}
       storage={storage}
       base={base}
+      config={config}
       onPlayAgain={() => onPlayAgain(entry.id)}
       onDisconnect={onDisconnect}
+      onRefused={onRefused}
     />
   );
 }
@@ -313,8 +388,10 @@ function LiveRound({
   daily,
   storage,
   base,
+  config,
   onPlayAgain,
   onDisconnect,
+  onRefused,
 }: {
   session: RoundSession;
   shelf: Shelf;
@@ -322,8 +399,10 @@ function LiveRound({
   daily: boolean;
   storage: KeyValueStorage;
   base: string;
+  config: ModelConfig;
   onPlayAgain: () => void;
   onDisconnect: (() => void) | null;
+  onRefused: () => void;
 }) {
   const snap = useSyncExternalStore(
     (fn) => session.subscribe(fn),
@@ -348,6 +427,11 @@ function LiveRound({
   useEffect(() => {
     if (over && daily) markDailyPlayed(storage, shelf.id);
   }, [over, daily, storage, shelf.id]);
+
+  // A refused key ends the attempt before it began: back to the Connect step.
+  useEffect(() => {
+    if (snap.refused) onRefused();
+  }, [snap.refused, onRefused]);
 
   const submitQuestion = (e: React.FormEvent) => {
     e.preventDefault();
@@ -397,9 +481,8 @@ function LiveRound({
       </header>
 
       <section className="round-voice" aria-live="polite">
-                <p className="voice opening">
-          {state.openingLine ||
-            (state.awaiting === 'opening' ? <Composing /> : <em>…</em>)}
+        <p className="voice opening">
+          {state.openingLine || (state.awaiting === 'opening' ? <Composing /> : <em>…</em>)}
         </p>
         {state.turns.map((t, i) => (
           <div className="turn" key={i}>
@@ -504,16 +587,11 @@ function LiveRound({
               )}
             </div>
           </div>
+          {onDisconnect && <Connected config={config} onChange={onDisconnect} />}
         </footer>
       )}
 
-      {over && onDisconnect && (
-        <p className="round-foot">
-          <button type="button" className="link" onClick={onDisconnect}>
-            Connect a different AI
-          </button>
-        </p>
-      )}
+      {over && onDisconnect && <Connected config={config} onChange={onDisconnect} />}
     </div>
   );
 }
@@ -739,7 +817,7 @@ function RevealView({
             {state.turns.length === 1 ? 'question' : 'questions'}
           </p>
 
-          <Board daily={daily} state={state} storage={storage} />
+          <Board daily={daily} state={state} storage={storage} shelf={shelf} entry={entry} />
 
           <div className="after">
             <button type="button" className="primary" onClick={onPlayAgain}>
@@ -784,70 +862,88 @@ type BoardStatus =
   | { kind: 'practice' }
   | { kind: 'unpublished' }
   | { kind: 'loading' }
-  | { kind: 'signed-out'; board: Leaderboard | null }
-  | { kind: 'posted'; board: Leaderboard }
+  | { kind: 'signed-out'; board: Leaderboard }
+  /** Posted (or found already posted from another browser: `counted` false); `rank` of this name. */
+  | { kind: 'posted'; board: Leaderboard; counted: boolean; rank: number | null }
   | { kind: 'error'; message: string };
 
+/**
+ * The board lives in the crux's own store (`../lib/leaderboard`): the day's
+ * `leaderboard:` key is readable by anyone and written only with a sign-in,
+ * under the page's convention of one entry per username. So the page asks
+ * for the sign-in before it posts — the page's rule; the store only asks for
+ * the token. Signed out, the board still shows; the post waits for the code
+ * from the email.
+ */
 function Board({
   daily,
   state,
   storage,
+  shelf,
+  entry,
 }: {
   daily: boolean;
   state: RoundState;
   storage: KeyValueStorage;
+  shelf: Shelf;
+  entry: ShelfEntry;
 }) {
   const site = useMemo(() => siteConfig(), []);
   const [auth, setAuth] = useState<StoredAuth | null>(() => loadAuth(storage));
+  const store = useMemo(() => storeFor(auth?.accessToken ?? null), [auth]);
   const [status, setStatus] = useState<BoardStatus>(() =>
-    !daily ? { kind: 'practice' } : !site.cruxId ? { kind: 'unpublished' } : { kind: 'loading' },
+    !daily ? { kind: 'practice' } : !store ? { kind: 'unpublished' } : { kind: 'loading' },
   );
+  const day = useMemo(() => utcDay(), []);
   const score = scoreOf(state);
   const seconds = durationSeconds(state);
   const postedRef = useRef(false);
 
   const post = useCallback(
     async (a: StoredAuth) => {
-      if (postedRef.current) return;
+      if (!store || postedRef.current) return;
       postedRef.current = true;
       setStatus({ kind: 'loading' });
       try {
-        const board = await postScore(site, a.accessToken, { score, seconds });
-        if (board) setStatus({ kind: 'posted', board });
-        else setStatus({ kind: 'unpublished' });
+        // One counted round a day: the visitor's own `played:` record (private
+        // to them) says whether another browser already posted today's.
+        const already = await readPlayed(store, day);
+        let board: Leaderboard;
+        if (already) {
+          board = await readBoard(store, day);
+        } else {
+          board = await postScore(store, day, a.name, { score, seconds });
+          await markPlayed(store, day, { entry: entry.id, shelf: shelf.id, score, seconds });
+        }
+        setStatus({ kind: 'posted', board, counted: !already, rank: rankOf(board, a.name) });
       } catch (err) {
         postedRef.current = false;
-        const status = (err as { status?: number }).status;
-        if (status === 401) {
+        if ((err as { status?: number }).status === 401) {
           clearAuth(storage);
           setAuth(null);
-          setStatus({ kind: 'signed-out', board: null });
+          setStatus({ kind: 'signed-out', board: await readBoard(store, day) });
         } else {
           setStatus({ kind: 'error', message: (err as Error).message });
         }
       }
     },
-    [site, score, seconds, storage],
+    [store, day, score, seconds, storage, entry.id, shelf.id],
   );
 
   useEffect(() => {
-    if (!daily || !site.cruxId) return;
+    if (!daily || !store) return;
     if (auth) {
       void post(auth);
       return;
     }
     let cancelled = false;
-    fetchBoard(site)
-      .then((board) => {
-        if (!cancelled) setStatus({ kind: 'signed-out', board });
-      })
-      .catch(() => {
-        if (!cancelled) setStatus({ kind: 'signed-out', board: null });
-      });
+    void readBoard(store, day).then((board) => {
+      if (!cancelled) setStatus({ kind: 'signed-out', board });
+    });
     return () => {
       cancelled = true;
     };
-  }, [daily, site, auth, post]);
+  }, [daily, store, day, auth, post]);
 
   const onSignedIn = (a: StoredAuth) => {
     saveAuth(storage, a);
@@ -877,14 +973,14 @@ function Board({
         </p>
       )}
       {status.kind === 'error' && <p className="note error">{status.message}</p>}
-      {status.kind === 'posted' && status.board.you && (
+      {status.kind === 'posted' && status.rank !== null && (
         <p className="you" data-testid="your-rank">
-          {status.board.you.counted
-            ? `You are #${status.board.you.rank} today.`
-            : `Today’s board already has your first round — #${status.board.you.rank}.`}
+          {status.counted
+            ? `You are #${status.rank} today.`
+            : `Today’s board already has your first round — #${status.rank}.`}
         </p>
       )}
-      {(status.kind === 'posted' || status.kind === 'signed-out') && status.board && (
+      {(status.kind === 'posted' || status.kind === 'signed-out') && (
         <BoardTable board={status.board} />
       )}
       {status.kind === 'signed-out' && <SignIn site={site} onSignedIn={onSignedIn} />}
@@ -951,7 +1047,8 @@ function SignIn({
     setProblem(null);
     try {
       const tokens = await login(site, email.trim(), code.trim());
-      onSignedIn({ ...tokens, email: email.trim() });
+      const { username } = await profile(site, tokens.accessToken); // the name on the board
+      onSignedIn({ ...tokens, email: email.trim(), name: username });
     } catch (err) {
       setProblem((err as Error).message);
     } finally {
@@ -1015,4 +1112,3 @@ function useLayout(ref: React.RefObject<HTMLElement | null>): 'narrow' | 'wide' 
   }, [ref]);
   return layout;
 }
-

@@ -48,7 +48,10 @@ export function useStoreApiProxy(cruxId: string | null, allowedOrigin: string | 
 
         case 'crux:store:inc':
           client
-            .post(`/store/${cruxId}/${encodeURIComponent(key)}/inc`, { by: by ?? 1 })
+            .post(`/store/${cruxId}/${encodeURIComponent(key)}/inc`, {
+              by: by ?? 1,
+              ...(mode ? { mode } : {}),
+            })
             .then((r) => reply(e.source, 'crux:store:inc:res', id, { value: r.data?.value }))
             .catch(() => reply(e.source, 'crux:store:inc:res', id, { value: 0 }));
           break;

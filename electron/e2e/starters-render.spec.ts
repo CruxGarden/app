@@ -1,6 +1,11 @@
 import { test, expect, chromium, type Page } from '@playwright/test';
 import { launchApp } from './launch';
-import { fiveWsScript, fiveWsLineFor, FIVE_WS_OPENING, FIVE_WS_WHY_MISS } from '../../src/ai/mock-model';
+import {
+  fiveWsScript,
+  fiveWsLineFor,
+  FIVE_WS_OPENING,
+  FIVE_WS_WHY_MISS,
+} from '../../src/ai/mock-model';
 import { parseShelf, pickEntry } from '../../src/game/shelf';
 import { matchesName } from '../../src/game/hidden';
 import historyShelf from '../../src/templates/shelves/history.json';
@@ -14,11 +19,13 @@ import historyShelf from '../../src/templates/shelves/history.json';
  * with the visitor's AI. Here a scripted model rides in on
  * `window.__fiveWsModel` (the island prefers it, so there is no key step) and
  * answers through the app's own mock script; the crux.garden API is routed to
- * an in-test stand-in for the board and the email-code sign-in.
+ * an in-test stand-in for the Crux Store (the board and the played record are
+ * keys in the crux's own store) and the email-code sign-in.
  */
 
 const API = 'https://api.e2e.invalid';
-const utcDay = (daysAgo = 0) => new Date(Date.now() - daysAgo * 86_400_000).toISOString().slice(0, 10);
+const utcDay = (daysAgo = 0) =>
+  new Date(Date.now() - daysAgo * 86_400_000).toISOString().slice(0, 10);
 
 /** The scripted model in the page: the app's mock script runs in Node, the page calls it. */
 async function withScriptedModel(p: Page) {
@@ -59,14 +66,26 @@ async function withScriptedModel(p: Page) {
   });
 }
 
-/** The API as the play page sees it: sign-in, and a board that records one daily score. */
+/** An entry on a day's board, as the page keeps it under the `leaderboard:<day>` key. */
+type Entry = { name: string; score: number; seconds: number; at: string };
+
+/**
+ * The API as the play page sees it: the email-code sign-in (and the profile
+ * that names the account), and the crux's Crux Store — `leaderboard:<day>`
+ * (mode `common`: the crux's one value, read by anyone, written with the
+ * visitor's token; the page keeps one entry per username) and `played:<day>`
+ * (mode `protected`: the visitor's own). Astro dev has no publish injection, so
+ * the page is told its crux id and API origin the way the injection would.
+ */
 async function withPlayApi(p: Page) {
-  const posted: Array<{ score: number; seconds: number }> = [];
+  const writes: Array<{ key: string; mode: string; value: unknown; bearer: string | null }> = [];
   const today = utcDay();
-  const others = [
+  const others: Entry[] = [
     { name: 'ada', score: 10, seconds: 74, at: `${today}T08:00:00.000Z` },
     { name: 'grace', score: 8, seconds: 121, at: `${today}T08:10:00.000Z` },
   ];
+  const common: Record<string, unknown> = { [`leaderboard:${today}`]: { entries: others } };
+  const mine: Record<string, unknown> = {}; // the tester's protected keys
   await p.addInitScript(
     (cfg) => {
       (window as unknown as { crux: unknown }).crux = { publish: cfg };
@@ -79,31 +98,51 @@ async function withPlayApi(p: Page) {
     const cors = {
       'access-control-allow-origin': '*',
       'access-control-allow-headers': '*',
-      'access-control-allow-methods': 'GET,POST,OPTIONS',
+      'access-control-allow-methods': 'GET,POST,PUT,OPTIONS',
     };
     const json = (status: number, body: unknown) =>
-      route.fulfill({ status, contentType: 'application/json', headers: cors, body: JSON.stringify(body) });
+      route.fulfill({
+        status,
+        contentType: 'application/json',
+        headers: cors,
+        body: JSON.stringify(body),
+      });
     if (req.method() === 'OPTIONS') return route.fulfill({ status: 204, headers: cors });
+    const bearer = /^Bearer (.+)$/.exec(req.headers()['authorization'] ?? '')?.[1] ?? null;
     if (url.pathname === '/auth/code') return json(200, { message: 'sent' });
     if (url.pathname === '/auth/login')
       return json(200, { accessToken: 'test-access', refreshToken: 'test-refresh' });
-    const m = /^\/cruxes\/([^/]+)\/leaderboard\/([^/?]+)$/.exec(url.pathname);
-    if (m && m[1] === 'crux-e2e') {
-      if (req.method() === 'POST') {
-        if (!/^Bearer /.test(req.headers()['authorization'] ?? ''))
-          return json(401, { statusCode: 401, message: 'Unauthorized' });
-        const body = req.postDataJSON() as { score: number; seconds: number };
-        posted.push(body);
-        const mine = { name: 'tester', score: body.score, seconds: body.seconds, at: new Date().toISOString() };
-        const entries = [...others, mine].sort((a, b) => b.score - a.score || a.seconds - b.seconds);
-        const rank = entries.indexOf(mine) + 1;
-        return json(201, { day: today, entries, you: { rank, score: body.score, seconds: body.seconds, counted: posted.length === 1 } });
-      }
-      return json(200, { day: today, entries: others, you: null });
+    if (url.pathname === '/auth/profile') {
+      if (!bearer) return json(401, { statusCode: 401, message: 'Unauthorized' });
+      return json(200, {
+        id: 'acct-1',
+        email: 'tester@example.com',
+        author: { id: 'author-1', username: 'tester' },
+      });
     }
-    return json(404, { statusCode: 404, message: `e2e: unhandled ${req.method()} ${url.pathname}` });
+    const m = /^\/store\/([^/]+)\/([^/]+)$/.exec(url.pathname);
+    if (m && m[1] === 'crux-e2e') {
+      const key = decodeURIComponent(m[2]!);
+      if (req.method() === 'PUT') {
+        const body = req.postDataJSON() as { value: unknown; mode?: string };
+        const mode = body.mode ?? 'protected';
+        if (mode !== 'public' && !bearer)
+          return json(401, { statusCode: 401, message: 'Protected keys require authentication' });
+        writes.push({ key, mode, value: body.value, bearer });
+        if (mode === 'protected') mine[key] = body.value;
+        else common[key] = body.value;
+        return json(200, { value: body.value });
+      }
+      if (key in common) return json(200, { value: common[key] });
+      // protected: the visitor's own, or nothing
+      return json(200, { value: bearer ? (mine[key] ?? null) : null });
+    }
+    return json(404, {
+      statusCode: 404,
+      message: `e2e: unhandled ${req.method()} ${url.pathname}`,
+    });
   });
-  return { posted };
+  return { writes };
 }
 
 test.describe('starter templates render through astro dev', () => {
@@ -187,13 +226,13 @@ test.describe('starter templates render through astro dev', () => {
       const scrollWidth = (p: import('@playwright/test').Page) =>
         p.evaluate(() => document.documentElement.scrollWidth);
 
-      // The leaderboard is read from the API (entries are written server-side, one per
-      // account per day). A published page gets its crux id + API origin from the publish
-      // injection (window.crux.publish); astro dev has no injection, so stand both in.
-      const API = 'https://api.e2e.invalid';
+      // The board is a key in the crux's own store — `leaderboard:<day>`, mode
+      // `common` — read by anyone. A published page gets its crux id + API origin
+      // from the publish injection (window.crux.publish); astro dev has no
+      // injection, so stand both in and answer the store reads.
       const today = new Date().toISOString().slice(0, 10);
       const yesterday = new Date(Date.now() - 86_400_000).toISOString().slice(0, 10);
-      const boards: Record<string, unknown[]> = {
+      const boards: Record<string, Entry[]> = {
         [today]: [
           { name: 'ada', score: 10, seconds: 74, at: `${today}T08:00:00.000Z` },
           { name: 'grace', score: 9, seconds: 121, at: `${today}T08:10:00.000Z` },
@@ -201,6 +240,7 @@ test.describe('starter templates render through astro dev', () => {
         ],
         [yesterday]: [{ name: 'emmy', score: 7, seconds: 200, at: `${yesterday}T09:00:00.000Z` }],
       };
+      const storeReads: string[] = [];
       const withBoard = async (p: import('@playwright/test').Page) => {
         await p.addInitScript(
           (cfg) => {
@@ -209,14 +249,17 @@ test.describe('starter templates render through astro dev', () => {
           { cruxId: 'crux-e2e', apiBase: API },
         );
         await p.route(`${API}/**`, (route) => {
-          const m = /\/cruxes\/([^/]+)\/leaderboard\/([^/?]+)/.exec(route.request().url());
-          const day = m?.[2] === 'today' ? today : m?.[2];
-          const entries = (day && boards[day]) || [];
+          const url = new URL(route.request().url());
+          const m = /^\/store\/([^/]+)\/([^/]+)$/.exec(url.pathname);
+          const key = m ? decodeURIComponent(m[2]!) : '';
+          storeReads.push(`${route.request().method()} ${key}`);
+          const day = key.startsWith('leaderboard:') ? key.slice('leaderboard:'.length) : null;
+          const entries = (day && boards[day]) || null;
           void route.fulfill({
-            status: m && m[1] === 'crux-e2e' ? 200 : 404,
+            status: m && m[1] === 'crux-e2e' && route.request().method() === 'GET' ? 200 : 404,
             contentType: 'application/json',
             headers: { 'access-control-allow-origin': '*' },
-            body: JSON.stringify({ day, entries }),
+            body: JSON.stringify({ value: entries ? { entries } : null }),
           });
         });
       };
@@ -227,11 +270,17 @@ test.describe('starter templates render through astro dev', () => {
       await phone.goto(origin);
       await expect(phone.locator('h1.question')).toHaveText('Who am I?');
       expect(await scrollWidth(phone)).toBeLessThanOrEqual(390);
-      await phone.screenshot({ path: 'e2e/.results/starters-render-5-5ws-phone.png', fullPage: true });
+      await phone.screenshot({
+        path: 'e2e/.results/starters-render-5-5ws-phone.png',
+        fullPage: true,
+      });
       await phone.locator('ul.round-list a').first().click();
       await expect(phone.locator('.transcript h3', { hasText: 'This was' })).toBeVisible();
       expect(await scrollWidth(phone)).toBeLessThanOrEqual(390);
-      await phone.screenshot({ path: 'e2e/.results/starters-render-6-5ws-phone-round.png', fullPage: true });
+      await phone.screenshot({
+        path: 'e2e/.results/starters-render-6-5ws-phone-round.png',
+        fullPage: true,
+      });
       await phone.close();
 
       const site = await browser.newPage({ viewport: { width: 1200, height: 900 } });
@@ -244,19 +293,31 @@ test.describe('starter templates render through astro dev', () => {
       const board = site.locator('#today');
       await expect(board).toBeVisible();
       await expect(board.locator('tbody tr')).toHaveCount(3);
-      await expect(board.locator('tbody tr').first().locator('td')).toHaveText(['1', 'ada', '10', '1:14']);
+      await expect(board.locator('tbody tr').first().locator('td')).toHaveText([
+        '1',
+        'ada',
+        '10',
+        '1:14',
+      ]);
       await board.getByRole('link', { name: 'Yesterday' }).click();
       await expect(board.locator('h2')).toHaveText('Yesterday');
       await expect(board.locator('tbody tr')).toHaveCount(1);
       await board.getByRole('link', { name: 'Today' }).click();
       await expect(board.locator('tbody tr')).toHaveCount(3);
+      // The shelf page only reads, and reads exactly the two days it shows
+      expect(new Set(storeReads)).toEqual(
+        new Set([`GET leaderboard:${today}`, `GET leaderboard:${yesterday}`]),
+      );
       await expect(site).toHaveTitle('5Ws — Ten Questions. Five minutes. Good luck.');
       await expect(site.locator('h1.question')).toHaveText('Who am I?');
       const entries = site.locator('ol.entries li');
       expect(await entries.count()).toBeGreaterThanOrEqual(40);
       await expect(entries.filter({ hasText: 'Hypatia' })).toContainText('person');
       await expect(site.locator('ul.round-list li')).toHaveCount(1);
-      await site.screenshot({ path: 'e2e/.results/starters-render-3-5ws-shelf.png', fullPage: true });
+      await site.screenshot({
+        path: 'e2e/.results/starters-render-3-5ws-shelf.png',
+        fullPage: true,
+      });
 
       // The sample round: questions in sans, the voice and the reveal in serif
       await site.locator('ul.round-list a').first().click();
@@ -276,7 +337,10 @@ test.describe('starter templates render through astro dev', () => {
       expect(await you.evaluate(family)).not.toMatch(/Georgia/);
       await expect(site.locator('.adjacent a', { hasText: 'The shelf' })).toBeVisible();
       expect(await scrollWidth(site)).toBeLessThanOrEqual(1200);
-      await site.screenshot({ path: 'e2e/.results/starters-render-4-5ws-round.png', fullPage: true });
+      await site.screenshot({
+        path: 'e2e/.results/starters-render-4-5ws-round.png',
+        fullPage: true,
+      });
       await site.close();
 
       // ── /play: the round itself, in the browser ──
@@ -285,9 +349,11 @@ test.describe('starter templates render through astro dev', () => {
       const wrong = ['Cleopatra', 'Napoleon', 'Socrates'].find((n) => !matchesName(daily, n))!;
       const play = await browser.newPage({ viewport: { width: 1200, height: 900 } });
       await play.context().grantPermissions(['clipboard-read', 'clipboard-write']);
-      await play.context().route('https://duckduckgo.com/**', (route) =>
-        route.fulfill({ contentType: 'text/html', body: '<title>search stand-in</title>' }),
-      );
+      await play
+        .context()
+        .route('https://duckduckgo.com/**', (route) =>
+          route.fulfill({ contentType: 'text/html', body: '<title>search stand-in</title>' }),
+        );
       await withScriptedModel(play);
       const api = await withPlayApi(play);
       await play.goto(origin + 'play/');
@@ -337,12 +403,17 @@ test.describe('starter templates render through astro dev', () => {
       expect(popup.url()).toBe('https://duckduckgo.com/?q=Hypatia%20of%20Alexandria');
       await popup.close();
       await expect(clock).toHaveAttribute('data-composing', 'false');
-      await play.getByLabel('Page to keep').fill('https://en.wikipedia.org/wiki/Hypatia', { timeout: 15_000 });
+      await play
+        .getByLabel('Page to keep')
+        .fill('https://en.wikipedia.org/wiki/Hypatia', { timeout: 15_000 });
       await play.getByLabel('Title (optional)').fill('Hypatia — Wikipedia', { timeout: 15_000 });
       await play.getByRole('button', { name: 'Keep this page' }).click({ timeout: 15_000 });
       await expect(play.getByTestId('kept-pages')).toContainText('Hypatia — Wikipedia');
       await play.getByRole('button', { name: 'Done searching' }).click({ timeout: 15_000 });
-      await play.screenshot({ path: 'e2e/.results/starters-render-7-5ws-play.png', fullPage: true });
+      await play.screenshot({
+        path: 'e2e/.results/starters-render-7-5ws-play.png',
+        fullPage: true,
+      });
 
       // The right guess ends it; the reveal names the misses
       await play.getByLabel('Your guess').fill(daily.name, { timeout: 15_000 });
@@ -355,17 +426,45 @@ test.describe('starter templates render through astro dev', () => {
       await expect(misses).toContainText(FIVE_WS_WHY_MISS);
       await expect(play.getByRole('button', { name: 'Give up' })).toHaveCount(0); // nothing else on screen
 
-      // Today's board: sign in with an email code, and the daily score is posted
+      // Today's board: sign in with an email code, and the page adds the daily score under
+      // the account's username to the day's `leaderboard:` key (mode common, with the
+      // token); `played:` (protected) records the counted round. Nothing was written before.
       await expect(play.getByText('Sign in with your email to join today’s board.')).toBeVisible();
-      await expect(play.locator('.board-table tbody tr')).toHaveCount(2); // public board first
+      await expect(play.locator('.board-table tbody tr')).toHaveCount(2); // the board, read signed out
+      expect(api.writes).toEqual([]);
       await play.getByLabel('Email').fill('tester@example.com', { timeout: 15_000 });
       await play.getByRole('button', { name: 'Send code' }).click({ timeout: 15_000 });
       await play.getByLabel('Code').fill('123456', { timeout: 15_000 });
       await play.getByRole('button', { name: 'Sign in' }).click({ timeout: 15_000 });
-      await expect(play.getByTestId('your-rank')).toHaveText('You are #2 today.', { timeout: 15_000 });
+      await expect(play.getByTestId('your-rank')).toHaveText('You are #2 today.', {
+        timeout: 15_000,
+      });
       await expect(play.locator('.board-table tbody tr')).toHaveCount(3);
-      expect(api.posted).toEqual([{ score: 9, seconds: expect.any(Number) }]);
-      expect(api.posted[0]!.seconds).toBeLessThan(120);
+      await expect(play.locator('.board-table tbody tr').nth(1).locator('td')).toHaveText([
+        '2',
+        'tester',
+        '9',
+        /^\d:\d\d$/,
+      ]);
+      expect(api.writes.map((w) => [w.key, w.mode, w.bearer])).toEqual([
+        [`leaderboard:${utcDay()}`, 'common', 'test-access'],
+        [`played:${utcDay()}`, 'protected', 'test-access'],
+      ]);
+      const posted = (api.writes[0]!.value as { entries: Entry[] }).entries;
+      expect(posted.map((e) => e.name)).toEqual(['ada', 'tester', 'grace']); // one entry per name, sorted
+      expect(posted[1]).toEqual({
+        name: 'tester',
+        score: 9,
+        seconds: expect.any(Number),
+        at: expect.any(String),
+      });
+      expect(posted[1]!.seconds).toBeLessThan(120);
+      expect(api.writes[1]!.value).toEqual({
+        entry: daily.id,
+        shelf: shelf.id,
+        score: 9,
+        seconds: expect.any(Number),
+      });
 
       // Copy transcript puts the markdown page on the clipboard
       await play.getByRole('button', { name: 'Copy transcript' }).click({ timeout: 15_000 });
@@ -376,7 +475,10 @@ test.describe('starter templates render through astro dev', () => {
       expect(md).toContain('**You:** ' + q);
       expect(md).toContain('## Reveal');
       expect(md).toContain('https://en.wikipedia.org/wiki/Hypatia');
-      await play.screenshot({ path: 'e2e/.results/starters-render-8-5ws-reveal.png', fullPage: true });
+      await play.screenshot({
+        path: 'e2e/.results/starters-render-8-5ws-reveal.png',
+        fullPage: true,
+      });
 
       // Play again: a new round opens, someone talking, ten points
       await play.getByRole('button', { name: 'Play again' }).click({ timeout: 15_000 });
@@ -403,6 +505,178 @@ test.describe('starter templates render through astro dev', () => {
       expect(voiceBox.y + voiceBox.height).toBeLessThanOrEqual(bar.y);
       await phonePlay.screenshot({ path: 'e2e/.results/starters-render-9-5ws-play-phone.png' });
       await phonePlay.close();
+
+      // ── Connect your AI: the step itself, with no scripted model on the page ──
+      // One field, one button; the provider read off the key; Enter starts the
+      // round, whose opening call is the validation. No real provider call can be
+      // made here, so the providers are stood in: Anthropic refuses with 401 and
+      // Google with its 400 "API key not valid" — both must bring the step back
+      // with the key still in the field.
+      await test.step('Connect your AI: one field, one button; a refused key comes back', async () => {
+        const UNKNOWN = 'That doesn’t look like a key from Anthropic, OpenAI or Google.';
+        const seen: Array<{ host: string; key: string }> = [];
+        const withRefusingProviders = async (p: Page) => {
+          const cors = {
+            'access-control-allow-origin': '*',
+            'access-control-allow-headers': '*',
+            'access-control-allow-methods': 'GET,POST,OPTIONS',
+          };
+          await p.route('https://api.anthropic.com/**', async (route) => {
+            const req = route.request();
+            if (req.method() === 'OPTIONS') return route.fulfill({ status: 204, headers: cors });
+            seen.push({ host: 'anthropic', key: req.headers()['x-api-key'] ?? '' });
+            await new Promise((r) => setTimeout(r, 2000)); // long enough to see the round open
+            try {
+              await route.fulfill({
+                status: 401,
+                contentType: 'application/json',
+                headers: cors,
+                body: JSON.stringify({
+                  type: 'error',
+                  error: { type: 'authentication_error', message: 'invalid x-api-key' },
+                }),
+              });
+            } catch {
+              /* the round was torn down (Change) and aborted the call */
+            }
+          });
+          await p.route('https://generativelanguage.googleapis.com/**', (route) => {
+            const req = route.request();
+            if (req.method() === 'OPTIONS') return route.fulfill({ status: 204, headers: cors });
+            seen.push({ host: 'google', key: req.headers()['x-goog-api-key'] ?? '' });
+            return route.fulfill({
+              status: 400,
+              contentType: 'application/json',
+              headers: cors,
+              body: JSON.stringify({
+                error: {
+                  code: 400,
+                  message: 'API key not valid. Please pass a valid API key.',
+                  status: 'INVALID_ARGUMENT',
+                },
+              }),
+            });
+          });
+        };
+        const stored = (p: Page) =>
+          p.evaluate(() => JSON.parse(localStorage.getItem('5ws:model') ?? 'null'));
+
+        const connect = await browser.newPage({ viewport: { width: 1200, height: 900 } });
+        await withRefusingProviders(connect);
+        await connect.goto(origin + 'play/');
+
+        // The step: the shelf's question in serif, one heading, one field, one button, no dropdown
+        await expect(connect.getByRole('heading', { name: 'Connect your AI' })).toBeVisible({
+          timeout: 60_000,
+        });
+        await expect(connect.locator('.connect-form select')).toHaveCount(0);
+        await expect(connect.locator('.connect-form input')).toHaveCount(1);
+        await expect(connect.locator('.connect-form button')).toHaveCount(1);
+        const field = connect.getByLabel('Key');
+        const button = connect.getByRole('button', { name: 'Connect', exact: true });
+        await expect(button).toBeDisabled();
+        expect(await connect.locator('.connect-form h2').evaluate(family)).toMatch(/system-ui/);
+        // "Get a key" links above the field: Google first and marked free, all in a new tab
+        const links = connect.locator('.connect-form .get-key a');
+        await expect(links).toHaveText(['Google — free', 'OpenAI', 'Anthropic']);
+        expect(
+          await links.evaluateAll((as) => as.map((a) => (a as HTMLAnchorElement).href)),
+        ).toEqual([
+          'https://aistudio.google.com/apikey',
+          'https://platform.openai.com/api-keys',
+          'https://console.anthropic.com/settings/keys',
+        ]);
+        for (const a of await links.all()) await expect(a).toHaveAttribute('target', '_blank');
+        const linksBox = (await connect.locator('.connect-form .get-key').boundingBox())!;
+        const fieldBox = (await field.boundingBox())!;
+        expect(linksBox.y + linksBox.height).toBeLessThanOrEqual(fieldBox.y);
+        await expect(
+          connect.getByText('Your key stays in this browser and is sent only to that provider.'),
+        ).toBeVisible();
+        await connect.screenshot({ path: 'e2e/.results/5ws-connect-1200.png', fullPage: true });
+
+        // A key from nowhere we know: one line, and the button stays put
+        await field.fill('hunter2');
+        await expect(connect.getByText(UNKNOWN)).toBeVisible();
+        await expect(button).toBeDisabled();
+        await field.press('Enter');
+        await expect(connect.getByRole('heading', { name: 'Connect your AI' })).toBeVisible();
+        expect(await stored(connect)).toBeNull();
+
+        // Paste-and-go: an Anthropic-shaped key, Enter — the round opens at once
+        await field.fill('sk-ant-e2e-not-a-real-key');
+        await expect(connect.getByText(UNKNOWN)).toHaveCount(0);
+        await expect(button).toBeEnabled();
+        await field.press('Enter');
+        await expect(connect.getByTestId('points')).toHaveText('10 points', { timeout: 15_000 });
+        await expect(connect.locator('.round-voice .composing')).toBeVisible();
+        expect(await stored(connect)).toEqual({
+          provider: 'anthropic',
+          apiKey: 'sk-ant-e2e-not-a-real-key',
+        });
+        // Which AI, and "Change", sit quietly in the bar — a link, not a boxed button
+        const foot = connect.locator('.round-bar .round-foot');
+        await expect(foot).toHaveText('Anthropic · Change');
+        const change = foot.getByRole('button', { name: 'Change' });
+        expect(await change.evaluate((el) => getComputedStyle(el).borderStyle)).toBe('none');
+        expect(await change.evaluate((el) => getComputedStyle(el).textDecorationLine)).toBe(
+          'underline',
+        );
+        await connect.screenshot({
+          path: 'e2e/.results/5ws-connect-1200-change.png',
+          fullPage: true,
+        });
+        // Change forgets the key and comes back to the step, clean
+        await change.click();
+        await expect(connect.getByRole('heading', { name: 'Connect your AI' })).toBeVisible();
+        await expect(field).toHaveValue('');
+        expect(await stored(connect)).toBeNull();
+
+        // Again, and let the opening call be the validation: the provider refuses, the step comes back
+        await field.fill('sk-ant-e2e-not-a-real-key');
+        await field.press('Enter');
+        await expect(connect.getByTestId('points')).toHaveText('10 points', { timeout: 15_000 });
+        await expect(connect.getByText('That key was refused by Anthropic.')).toBeVisible({
+          timeout: 15_000,
+        });
+        await expect(field).toHaveValue('sk-ant-e2e-not-a-real-key');
+        expect(seen).toEqual([
+          { host: 'anthropic', key: 'sk-ant-e2e-not-a-real-key' },
+          { host: 'anthropic', key: 'sk-ant-e2e-not-a-real-key' },
+        ]);
+        expect(await stored(connect)).toBeNull();
+        await connect.screenshot({
+          path: 'e2e/.results/5ws-connect-1200-refused.png',
+          fullPage: true,
+        });
+
+        // Editing the key clears the sentence; a Google-shaped key goes to Google via Connect
+        await field.fill('AIzaE2E-not-a-real-key');
+        await expect(connect.getByText('That key was refused by Anthropic.')).toHaveCount(0);
+        await button.click();
+        await expect(connect.getByText('That key was refused by Google.')).toBeVisible({
+          timeout: 15_000,
+        });
+        expect(seen[2]).toEqual({ host: 'google', key: 'AIzaE2E-not-a-real-key' });
+        await connect.close();
+
+        // A phone: the links wrap, the field and button stack, nothing scrolls sideways
+        const phoneConnect = await browser.newPage({ viewport: { width: 390, height: 844 } });
+        await withRefusingProviders(phoneConnect);
+        await phoneConnect.goto(origin + 'play/');
+        await expect(phoneConnect.getByRole('heading', { name: 'Connect your AI' })).toBeVisible({
+          timeout: 60_000,
+        });
+        expect(await scrollWidth(phoneConnect)).toBeLessThanOrEqual(390);
+        const pf = (await phoneConnect.getByLabel('Key').boundingBox())!;
+        const pb = (await phoneConnect
+          .getByRole('button', { name: 'Connect', exact: true })
+          .boundingBox())!;
+        expect(pb.y).toBeGreaterThanOrEqual(pf.y + pf.height); // stacked, not side by side
+        expect(Math.round(pb.width)).toBe(Math.round(pf.width)); // the button is the field's width
+        await phoneConnect.screenshot({ path: 'e2e/.results/5ws-connect-390.png', fullPage: true });
+        await phoneConnect.close();
+      });
     } finally {
       await browser.close();
       await app.close();

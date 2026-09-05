@@ -8,8 +8,9 @@
  * sequences them: the voice is already composing when the session opens,
  * the clock is advanced by wall-clock deltas the reducer ignores while
  * composing (latency is never charged), a model failure hands the question
- * or guess back uncharged with a sentence and a way to retry, and any end
- * state runs the reveal — which never blocks (the engine falls back to the
+ * or guess back uncharged with a sentence and a way to retry (a refused key
+ * is flagged instead — the opening call is how a pasted key gets validated),
+ * and any end state runs the reveal — which never blocks (the engine falls back to the
  * shelf's own facts).
  */
 
@@ -42,6 +43,7 @@ import {
   type Reveal,
   type Voice,
 } from '../game/hidden';
+import { isAuthError } from './model';
 
 export type SessionPhase = 'playing' | 'revealing' | 'done';
 
@@ -58,6 +60,12 @@ export interface SessionSnapshot {
   error: string | null;
   /** What to re-issue when the visitor asks to try again. */
   retry: Retry | null;
+  /**
+   * The provider refused the key (401/403, or Google's 400 "API key not
+   * valid"). Terminal for this connection: the surface goes back to the
+   * Connect step rather than offering a retry that cannot succeed.
+   */
+  refused: boolean;
 }
 
 export interface SessionOptions {
@@ -110,6 +118,7 @@ export class RoundSession {
       reveal: null,
       error: null,
       retry: null,
+      refused: false,
     };
   }
 
@@ -241,7 +250,12 @@ export class RoundSession {
       this.set({ state: apply(result) });
     } catch (err) {
       if (this.disposed || this.abort.signal.aborted) return;
-      this.set({ state: withdraw(), error: messageOf(err), retry });
+      this.set({
+        state: withdraw(),
+        error: messageOf(err),
+        retry,
+        ...(isAuthError(err) ? { refused: true } : {}),
+      });
     }
     this.finishIfOver();
   }

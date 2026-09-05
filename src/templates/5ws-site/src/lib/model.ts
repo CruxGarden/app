@@ -15,40 +15,81 @@ import { createOpenAI } from '@ai-sdk/openai';
 import { createGoogleGenerativeAI } from '@ai-sdk/google';
 import type { ModelConfig, ProviderId } from './local-state';
 
+export type ConnectableProvider = Exclude<ProviderId, 'crux'>;
+
 export interface ProviderInfo {
-  id: Exclude<ProviderId, 'crux'>;
+  id: ConnectableProvider;
   label: string;
   defaultModel: string;
   /** Where a visitor gets a key. */
   keysUrl: string;
-  /** What a key from this provider looks like, for the placeholder. */
-  keyHint: string;
+  /** The provider hands out keys with a free tier — said next to its link. */
+  free?: boolean;
 }
 
-/** The providers a visitor can connect, in the order the form shows them. */
+/**
+ * The providers a visitor can connect, in the order the "Get a key" links
+ * show them: the free one first.
+ */
 export const PROVIDERS: readonly ProviderInfo[] = [
   {
-    id: 'anthropic',
-    label: 'Anthropic',
-    defaultModel: 'claude-sonnet-5',
-    keysUrl: 'https://console.anthropic.com/settings/keys',
-    keyHint: 'sk-ant-…',
+    id: 'google',
+    label: 'Google',
+    defaultModel: 'gemini-3.6-flash',
+    keysUrl: 'https://aistudio.google.com/apikey',
+    free: true,
   },
   {
     id: 'openai',
     label: 'OpenAI',
     defaultModel: 'gpt-5.6-sol',
     keysUrl: 'https://platform.openai.com/api-keys',
-    keyHint: 'sk-…',
   },
   {
-    id: 'google',
-    label: 'Google',
-    defaultModel: 'gemini-3.6-flash',
-    keysUrl: 'https://aistudio.google.com/apikey',
-    keyHint: 'AIza…',
+    id: 'anthropic',
+    label: 'Anthropic',
+    defaultModel: 'claude-sonnet-5',
+    keysUrl: 'https://console.anthropic.com/settings/keys',
   },
 ];
+
+/**
+ * Which provider issued a key, read off its prefix — so the Connect step is
+ * one field and no dropdown. `sk-ant-` is Anthropic, `AIza` is Google, and
+ * any other `sk-` is OpenAI. Null when the key is from none of them.
+ */
+export function detectProvider(key: string): ConnectableProvider | null {
+  const k = key.trim();
+  if (k.startsWith('sk-ant-')) return 'anthropic';
+  if (k.startsWith('AIza')) return 'google';
+  if (k.startsWith('sk-')) return 'openai';
+  return null;
+}
+
+/** The one line the Connect step says about a key it cannot place. */
+export const UNKNOWN_KEY_MESSAGE = 'That doesn’t look like a key from Anthropic, OpenAI or Google.';
+
+/** The line the Connect step says when the provider turned the key down. */
+export function refusedMessage(provider: ProviderId): string {
+  return `That key was refused by ${providerInfo(provider)?.label ?? 'the provider'}.`;
+}
+
+/**
+ * Did a model call fail because the provider would not accept the key? The
+ * AI SDK's `APICallError` carries the HTTP status: 401 and 403 are refusals
+ * everywhere; Google answers a bad key with 400 and "API key not valid", so
+ * a 400 that talks about the key counts too. Anything else (rate limits, a
+ * down provider, a bad model id) is a failed move, not a bad key.
+ */
+export function isAuthError(err: unknown): boolean {
+  if (!err || typeof err !== 'object') return false;
+  const e = err as { statusCode?: unknown; message?: unknown; responseBody?: unknown };
+  const status = typeof e.statusCode === 'number' ? e.statusCode : null;
+  if (status === 401 || status === 403) return true;
+  if (status !== 400) return false;
+  const text = [e.message, e.responseBody].filter((v) => typeof v === 'string').join('\n');
+  return /api[ _-]?key/i.test(text);
+}
 
 export function providerInfo(id: ProviderId): ProviderInfo | null {
   return PROVIDERS.find((p) => p.id === id) ?? null;

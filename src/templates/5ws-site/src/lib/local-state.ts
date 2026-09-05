@@ -36,11 +36,12 @@ export interface ModelConfig {
   model?: string;
 }
 
-/** Sign-in tokens from the API's email-code flow. */
+/** Sign-in tokens from the API's email-code flow, and the account's username — the name on the board. */
 export interface StoredAuth {
   accessToken: string;
   refreshToken: string;
   email: string;
+  name: string;
 }
 
 const memory = new Map<string, string>();
@@ -103,10 +104,13 @@ export function loadAuth(storage: KeyValueStorage): StoredAuth | null {
     if (!raw) return null;
     const v = JSON.parse(raw) as Partial<StoredAuth>;
     if (typeof v.accessToken !== 'string' || !v.accessToken) return null;
+    // No name, no board: a sign-in from before names were kept starts over
+    if (typeof v.name !== 'string' || !v.name.trim()) return null;
     return {
       accessToken: v.accessToken,
       refreshToken: typeof v.refreshToken === 'string' ? v.refreshToken : '',
       email: typeof v.email === 'string' ? v.email : '',
+      name: v.name.trim(),
     };
   } catch {
     return null;

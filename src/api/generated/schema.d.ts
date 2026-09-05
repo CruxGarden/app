@@ -1226,9 +1226,21 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * Read a store key
+         * @description Public and common keys need no token and return the shared value. Protected keys return the caller’s own slot (token needed; otherwise `{ value: null }`). A key has one mode, fixed by its first write. `public` — open: anyone reads and writes one shared value. `protected` — authenticated, per user: signed-in account required; one private slot per account. `common` — authenticated, shared: one value per key belonging to the crux; signed-in account required to write, increment or delete; anyone reads.
+         */
         get: operations["StoreController_get"];
+        /**
+         * Write a store key
+         * @description Public keys need no token. Protected keys need a token and write the caller’s own slot. Common keys need a token and write the one shared value. A key has one mode, fixed by its first write. `public` — open: anyone reads and writes one shared value. `protected` — authenticated, per user: signed-in account required; one private slot per account. `common` — authenticated, shared: one value per key belonging to the crux; signed-in account required to write, increment or delete; anyone reads.
+         */
         put: operations["StoreController_set"];
         post?: never;
+        /**
+         * Delete a store key or the caller’s slot
+         * @description The crux author deletes the whole key (every slot). Anyone else deletes the shared value of a public key, the shared value of a common key (token required), or their own slot on a protected key (token required).
+         */
         delete: operations["StoreController_deleteEntry"];
         options?: never;
         head?: never;
@@ -1244,6 +1256,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Atomically increment a store key
+         * @description Public and common keys increment the shared value (common needs a token). Protected keys increment the caller’s own slot. A missing value is created at `by`. A key that does not exist is created in `mode`, else protected when signed in and public otherwise.
+         */
         post: operations["StoreController_increment"];
         delete?: never;
         options?: never;
@@ -1258,28 +1274,15 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * List every store row of a crux (author only)
+         * @description Every row, all slots included. Modes: public, protected, common.
+         */
         get: operations["StoreController_list"];
         put?: never;
         post?: never;
+        /** Clear every store key of a crux (author only) */
         delete: operations["StoreController_clearAll"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/cruxes/{cruxId}/leaderboard/{day}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** A shelf's board for a day ('today' or YYYY-MM-DD) */
-        get: operations["LeaderboardController_board"];
-        put?: never;
-        /** Record the caller's first round of the day */
-        post: operations["LeaderboardController_post"];
-        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -1865,11 +1868,11 @@ export interface components {
             /** @description The value to store (any JSON-serializable type) */
             value: Record<string, never>;
             /**
-             * @description Access mode for this key
+             * @description Access mode for this key. Fixed by the first write; a later write with a different mode is refused (409). `public`: anyone reads and writes one shared value. `protected`: needs a signed-in account; one private slot per account. `common`: one shared value that needs a signed-in account to write, increment or delete, and that anyone can read.
              * @default protected
              * @enum {string}
              */
-            mode?: "public" | "protected";
+            mode?: "public" | "protected" | "common";
         };
         IncrementStoreEntryDto: {
             /**
@@ -1877,12 +1880,11 @@ export interface components {
              * @default 1
              */
             by?: number;
-        };
-        PostScoreDto: {
-            /** @description Points left at the end of the round */
-            score: number;
-            /** @description Round duration in seconds */
-            seconds: number;
+            /**
+             * @description Mode for a key this increment creates. Ignored when the key exists unless it disagrees with the key’s mode (409). Defaults to `protected` when signed in, `public` otherwise.
+             * @enum {string}
+             */
+            mode?: "public" | "protected" | "common";
         };
     };
     responses: never;
@@ -5630,14 +5632,32 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The published crux whose store this is */
                 cruxId: string;
+                /** @description Store key */
                 key: string;
             };
             cookie?: never;
         };
         requestBody?: never;
         responses: {
+            /** @description `{ value, mode, updatedAt }`, or `{ value: null }` when unset or not readable by the caller. */
             200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        value: unknown;
+                        /** @enum {string} */
+                        mode?: "public" | "protected" | "common";
+                        /** Format: date-time */
+                        updatedAt?: string;
+                    };
+                };
+            };
+            /** @description Crux not found */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -5650,7 +5670,9 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The published crux whose store this is */
                 cruxId: string;
+                /** @description Store key */
                 key: string;
             };
             cookie?: never;
@@ -5661,7 +5683,33 @@ export interface operations {
             };
         };
         responses: {
+            /** @description The stored value */
             200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        value?: unknown;
+                    };
+                };
+            };
+            /** @description Protected or common key written without a token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Crux not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The key already has a different mode */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -5674,14 +5722,31 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The published crux whose store this is */
                 cruxId: string;
+                /** @description Store key */
                 key: string;
             };
             cookie?: never;
         };
         requestBody?: never;
         responses: {
+            /** @description Deleted */
             204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Protected or common key deleted without a token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Crux not found */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -5694,7 +5759,9 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The published crux whose store this is */
                 cruxId: string;
+                /** @description Store key */
                 key: string;
             };
             cookie?: never;
@@ -5705,7 +5772,33 @@ export interface operations {
             };
         };
         responses: {
+            /** @description The new value */
             201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        value?: number;
+                    };
+                };
+            };
+            /** @description Protected or common key incremented without a token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Crux not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The key already has a different mode */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -5718,13 +5811,36 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The published crux whose store this is */
                 cruxId: string;
             };
             cookie?: never;
         };
         requestBody?: never;
         responses: {
+            /** @description Store rows */
             200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Token required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not the crux author */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Crux not found */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -5737,57 +5853,36 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The published crux whose store this is */
                 cruxId: string;
             };
             cookie?: never;
         };
         requestBody?: never;
         responses: {
+            /** @description Cleared */
             204: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content?: never;
             };
-        };
-    };
-    LeaderboardController_board: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                cruxId: string;
-                day: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
+            /** @description Token required */
+            401: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content?: never;
             };
-        };
-    };
-    LeaderboardController_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                cruxId: string;
-                day: string;
+            /** @description Not the crux author */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["PostScoreDto"];
-            };
-        };
-        responses: {
-            201: {
+            /** @description Crux not found */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };

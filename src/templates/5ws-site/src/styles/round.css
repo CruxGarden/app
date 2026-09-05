@@ -169,7 +169,6 @@ button.link {
 }
 .round-bar input,
 .connect-form input,
-.connect-form select,
 .sign-in input,
 .search-panel input {
   flex: 1 1 auto;
@@ -185,7 +184,6 @@ button.link {
 }
 .round-bar input:focus,
 .connect-form input:focus,
-.connect-form select:focus,
 .sign-in input:focus,
 .search-panel input:focus {
   outline: 2px solid var(--accent);
@@ -404,7 +402,7 @@ button.primary,
   gap: 0.5rem;
 }
 
-/* ── Connect your AI ── */
+/* ── Connect your AI: one field, one button ── */
 .connect .question {
   font-size: clamp(2rem, 1.4rem + 3vw, 2.8rem);
   font-weight: 400;
@@ -418,26 +416,59 @@ button.primary,
   max-width: 30rem;
 }
 .connect-form h2 {
+  /* Plain words, as written — not the site's small-caps section heading */
   margin: 0;
+  font-family: var(--sans);
+  font-size: 1.1rem;
+  font-weight: 600;
+  letter-spacing: normal;
+  text-transform: none;
+  color: var(--text);
 }
-.connect-form .field {
+.connect-form .get-key {
   display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0 1rem;
+  margin: 0;
   font-size: 0.85rem;
   color: var(--muted);
 }
-.connect-form .actions {
+.connect-form .get-key a {
+  min-height: var(--tap);
+  display: inline-flex;
+  align-items: center;
+}
+.connect-form .row {
   display: flex;
   gap: 0.5rem;
-  margin-top: 0.5rem;
+}
+.connect-form .note {
+  margin: 0;
+}
+@media (max-width: 480px) {
+  .connect-form .row {
+    flex-direction: column;
+  }
 }
 
+/* Which AI is connected, and the way to change it — quiet, in the interface */
 .round-foot {
-  margin: 0.5rem 0 1rem;
-  font-size: 0.8rem;
+  margin: 0;
+  font-size: 0.75rem;
   color: var(--muted);
 }
-.round-foot .link {
+/* Inside the bar every button is boxed; this one stays a link */
+.round-foot button.link {
+  min-height: 0;
+  padding: 0;
+  font-size: inherit;
   color: var(--muted);
+  background: none;
+  border: 0;
+  text-decoration: underline;
+}
+.reveal + .round-foot,
+.round-voice + .round-foot {
+  margin: 0.5rem 0 1rem;
 }
