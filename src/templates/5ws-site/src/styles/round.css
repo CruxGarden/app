@@ -1,0 +1,443 @@
+/* The Round (/play). Mobile-first: one column, the voice on top, the
+   question/guess bar pinned to the bottom. Serif for anything with a voice
+   (.voice), sans for the interface. Almost no motion: the only thing that
+   moves is whoever is speaking (the composing dots) and, once, the name. */
+
+.round-app {
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
+  max-width: var(--measure);
+  margin: 0 auto;
+  padding: 0 var(--gutter);
+  font-family: var(--sans);
+}
+.round-app .voice {
+  font-family: var(--serif);
+}
+
+/* ── Top: shelf link, points, clock, questions ── */
+.round-top {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 1rem;
+  padding: 0.75rem 0 0.5rem;
+  background: var(--bg);
+  border-bottom: 1px solid var(--rule);
+  font-size: 0.85rem;
+}
+.round-top .shelf-link {
+  color: var(--muted);
+  white-space: nowrap;
+  min-height: var(--tap);
+  display: inline-flex;
+  align-items: center;
+}
+.status {
+  display: flex;
+  gap: 1rem;
+  align-items: baseline;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.status .points b {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--text);
+}
+.status .clock {
+  font-size: 1.1rem;
+  color: var(--text);
+  letter-spacing: 0.02em;
+}
+.status .clock.paused {
+  color: var(--muted);
+}
+.status .qleft {
+  font-size: 0.8rem;
+}
+
+/* ── The voice column ── */
+.round-voice {
+  flex: 1 1 auto;
+  padding: 1.5rem 0 1rem;
+  font-size: clamp(1.05rem, 1rem + 0.3vw, 1.15rem);
+  line-height: 1.7;
+}
+.round-voice p {
+  margin: 0 0 1.25rem;
+}
+.round-voice .opening {
+  font-size: 1.15em;
+}
+.round-voice .you {
+  font-size: 0.9rem;
+  color: var(--muted);
+  margin: 1.75rem 0 0.5rem;
+}
+.round-voice .you strong {
+  font-weight: 600;
+  color: var(--text);
+}
+.guess-line {
+  font-size: 0.9rem;
+  color: var(--muted);
+  margin: 0.5rem 0 1.25rem;
+}
+.guess-line .label {
+  color: var(--text);
+  font-weight: 600;
+}
+.guess-line.wrong .cost {
+  color: var(--muted);
+  margin-left: 0.35rem;
+}
+.guess-line.right .label {
+  color: var(--accent);
+}
+
+/* Whoever is speaking is the one thing that moves */
+.composing {
+  display: inline-flex;
+  gap: 0.15em;
+  color: var(--muted);
+}
+.composing span {
+  animation: compose 1.6s ease-in-out infinite;
+}
+.composing span:nth-child(2) {
+  animation-delay: 0.25s;
+}
+.composing span:nth-child(3) {
+  animation-delay: 0.5s;
+}
+@keyframes compose {
+  0%,
+  100% {
+    opacity: 0.25;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .composing span {
+    animation: none;
+    opacity: 0.7;
+  }
+}
+
+.note {
+  font-size: 0.85rem;
+  color: var(--muted);
+  margin: 0 0 0.75rem;
+}
+.note.error {
+  color: #8a3b2e;
+}
+button.link {
+  background: none;
+  border: 0;
+  padding: 0;
+  color: var(--accent);
+  font: inherit;
+  cursor: pointer;
+  text-decoration: underline;
+  min-height: var(--tap);
+}
+
+/* ── Bottom bar: ask, guess, search, give up ── */
+.round-bar {
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+  background: var(--bg);
+  border-top: 1px solid var(--rule);
+  padding: 0.6rem 0 max(0.6rem, env(safe-area-inset-bottom));
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.round-bar form {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+.round-bar input,
+.connect-form input,
+.connect-form select,
+.sign-in input,
+.search-panel input {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: var(--tap);
+  padding: 0 0.75rem;
+  font: inherit;
+  font-size: 1rem;
+  color: var(--text);
+  background: #fff;
+  border: 1px solid var(--rule);
+  border-radius: 6px;
+}
+.round-bar input:focus,
+.connect-form input:focus,
+.connect-form select:focus,
+.sign-in input:focus,
+.search-panel input:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+  border-color: var(--accent);
+}
+.round-bar button,
+.connect-form button,
+.sign-in button,
+.search-panel button,
+.after button {
+  min-height: var(--tap);
+  padding: 0 0.9rem;
+  font: inherit;
+  font-size: 0.9rem;
+  color: var(--text);
+  background: #fff;
+  border: 1px solid var(--rule);
+  border-radius: 6px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.round-bar button:disabled,
+.connect-form button:disabled,
+.sign-in button:disabled,
+.search-panel button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+.round-bar button.quiet,
+.search-panel button.quiet {
+  color: var(--muted);
+  border-color: transparent;
+}
+.round-bar button.active {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+button.primary,
+.after button.primary {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+
+/* Guesses cost; questions don't — the guess field wears a different border */
+.round-bar .guess input {
+  border-color: var(--accent);
+  border-style: dashed;
+}
+.round-bar .guess .cost {
+  font-size: 0.75rem;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.round-bar .moves {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.round-bar .side {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: space-between;
+}
+@media (min-width: 40rem) {
+  .round-bar .moves {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .round-bar .guess {
+    flex: 1 1 auto;
+  }
+}
+
+/* ── Search: a new tab; the clock keeps running ── */
+.search-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.5rem 0 0.75rem;
+  border-bottom: 1px solid var(--rule);
+  max-height: 55dvh;
+  overflow-y: auto;
+}
+.search-panel .keep {
+  flex-wrap: wrap;
+}
+.search-panel .keep input[type='url'] {
+  flex-basis: 100%;
+}
+.search-panel .kept {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  font-size: 0.85rem;
+}
+.search-panel .kept li {
+  padding: 0.25rem 0;
+}
+.search-panel .close {
+  align-self: flex-start;
+}
+
+/* ── The reveal ── */
+.reveal {
+  margin-top: 2rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--rule);
+}
+.reveal .outcome {
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+.reveal .who {
+  font-size: clamp(1.5rem, 1.2rem + 1.5vw, 2rem);
+  font-weight: 400;
+  margin: 0 0 1rem;
+  animation: reveal 900ms ease-out both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .reveal .who {
+    animation: none;
+  }
+}
+.reveal h4,
+.board h4 {
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin: 2rem 0 0.75rem;
+}
+.reveal .misses ul {
+  padding-left: 1.1rem;
+  margin: 0 0 1.25rem;
+}
+.reveal .misses li {
+  margin-bottom: 0.6rem;
+}
+.reveal .misses .guess-name {
+  font-weight: 600;
+}
+.reveal .parting {
+  font-style: italic;
+  color: var(--muted);
+}
+.reveal .score {
+  font-size: 0.9rem;
+  color: var(--muted);
+  margin: 1.5rem 0 0.5rem;
+  font-variant-numeric: tabular-nums;
+}
+.reveal .after {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 1.5rem 0 1rem;
+}
+.reveal .markdown {
+  width: 100%;
+  font:
+    0.8rem/1.4 ui-monospace,
+    SFMono-Regular,
+    Menlo,
+    monospace;
+  color: var(--text);
+  background: #fff;
+  border: 1px solid var(--rule);
+  border-radius: 6px;
+  padding: 0.75rem;
+  margin: 0 0 1rem;
+  resize: vertical;
+}
+
+/* ── Today's board ── */
+.board .you {
+  font-size: 0.95rem;
+  margin: 0 0 0.75rem;
+}
+.board-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+  margin: 0 0 1rem;
+}
+.board-table th,
+.board-table td {
+  text-align: left;
+  padding: 0.45rem 0.25rem;
+  border-bottom: 1px solid var(--rule);
+}
+.board-table th {
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.board-table td:first-child,
+.board-table th:first-child {
+  width: 2rem;
+  color: var(--muted);
+}
+.board-table td:nth-child(3),
+.board-table td:nth-child(4),
+.board-table th:nth-child(3),
+.board-table th:nth-child(4) {
+  text-align: right;
+  white-space: nowrap;
+}
+.sign-in .row {
+  display: flex;
+  gap: 0.5rem;
+}
+
+/* ── Connect your AI ── */
+.connect .question {
+  font-size: clamp(2rem, 1.4rem + 3vw, 2.8rem);
+  font-weight: 400;
+  line-height: 1.1;
+  margin: 2.5rem 0 1.5rem;
+}
+.connect-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  max-width: 30rem;
+}
+.connect-form h2 {
+  margin: 0;
+}
+.connect-form .field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+.connect-form .actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.round-foot {
+  margin: 0.5rem 0 1rem;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+.round-foot .link {
+  color: var(--muted);
+}

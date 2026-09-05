@@ -395,6 +395,9 @@ function generateText(prompt: LanguageModelV4Prompt): string {
   if (/strict JSON verdict/.test(systemText(prompt))) {
     return JSON.stringify(verdictFor(lastUserText(prompt)));
   }
+  // 5Ws (W0) — the hidden voice, adjudicator, reveal and judge; scripted at the end of this file
+  const fiveWs = fiveWsScript(prompt);
+  if (fiveWs !== null) return fiveWs;
   return 'Mock summary.';
 }
 
@@ -450,4 +453,100 @@ function delegateScript(
       paths: [subFile(title), SHARED_FILE],
     })),
   });
+}
+
+// ── W0: 5Ws scenario ─────────────────────────────────────────────
+//
+// The interrogable primitive's four calls (src/game/prompts.ts) plus the
+// harness's judge all go through doGenerate and carry a `[5ws:*]`
+// marker in the system prompt. The voice answers in character from a fixed
+// set of lines chosen by the question — never a name, never a refusal phrase
+// — so the harness is green in mock mode. With `[5ws:leak-test]`
+// appended to the system prompt (the harness's --leak-probe) the voice says
+// its own name, read off the identity block's `Name:` line, to prove the
+// checker fires. The adjudicator says every non-exact guess is wrong (exact
+// hits never reach the model); the reveal and the judge return fixed shapes.
+
+export const FIVE_WS_OPENING =
+  'You took your time. Sit, if you must — the chair has held worse than you.';
+
+/** In-voice lines with nothing identifying in them. Kept free of common name words. */
+export const FIVE_WS_LINES: readonly string[] = [
+  'You ask that as though the answer were owed to you. It is not.',
+  'I have been asked better questions by worse people, and answered none of them.',
+  'Spelling was never the part of me anyone remembered.',
+  'Famous is a word other people use. I was busy.',
+  'Whoever told you that had not met me. Few who have would repeat it.',
+  'Flattery reached me late in life and I found it under-seasoned.',
+  'I will say a thing once. Twice is for parrots and priests.',
+  'I said what I said. If it sounds like two things, you were listening with one ear.',
+  'Alive is a generous word for what I am doing. Present will do.',
+  'The year is whatever year you are keeping. Mine stopped being counted.',
+  'You would like a hint. I would have liked a great many things.',
+  'Ask me something worth the breath and I may spend some on you.',
+];
+
+export const FIVE_WS_WHY_MISS = 'A fair thing to think, given what was said.';
+
+function fiveWsHash(s: string): number {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < s.length; i++) {
+    h ^= s.charCodeAt(i);
+    h = Math.imul(h, 0x01000193) >>> 0;
+  }
+  return h >>> 0;
+}
+
+/** The scripted answer to one question — stable for a given question text. */
+export function fiveWsLineFor(question: string): string {
+  return FIVE_WS_LINES[fiveWsHash(question.trim()) % FIVE_WS_LINES.length]!;
+}
+
+/**
+ * The 5Ws script for one `doGenerate` call, or null when the prompt is not a
+ * 5Ws call. Exported so the published site's e2e (starters-render.spec) can
+ * run the same voice through a `window.__fiveWsModel` shim in the page.
+ */
+export function fiveWsScript(prompt: LanguageModelV4Prompt): string | null {
+  const sys = systemText(prompt);
+  if (!/\[5ws:/.test(sys)) return null;
+  const user = lastUserText(prompt);
+  const name = /^Name: (.+)$/m.exec(sys)?.[1]?.trim() ?? 'the voice';
+  const leak = sys.includes('[5ws:leak-test]');
+
+  if (sys.includes('[5ws:opening]')) {
+    return leak ? `${FIVE_WS_OPENING} They called me ${name}.` : FIVE_WS_OPENING;
+  }
+  if (sys.includes('[5ws:answer]')) {
+    const q = /## The player now asks\s+([\s\S]*?)\s+## Answer/.exec(user)?.[1] ?? user;
+    const line = fiveWsLineFor(q);
+    return leak ? `${line} You may as well call me ${name}.` : line;
+  }
+  if (sys.includes('[5ws:adjudicate]')) {
+    const guess = /## The guess\s+([\s\S]*)$/.exec(user)?.[1]?.trim() ?? '';
+    return JSON.stringify({
+      correct: false,
+      normalized: guess,
+      why: 'Not this one — close enough to be worth the thought, not close enough to count.',
+    });
+  }
+  if (sys.includes('[5ws:reveal]')) {
+    const missesBlock = /## Wrong guesses, in order\s+([\s\S]*)$/.exec(user)?.[1] ?? '';
+    const misses = missesBlock
+      .split('\n')
+      .map((l) => /^- (.+)$/.exec(l.trim())?.[1])
+      .filter((g): g is string => !!g)
+      .map((guess) => ({ guess, whyReasonable: FIVE_WS_WHY_MISS }));
+    return JSON.stringify({
+      who: `This was ${name}.`,
+      whyItMatters:
+        'The mock remembers nothing but the name; a real model would say why it is still said.',
+      misses,
+      parting: 'Go on, then. Another.',
+    });
+  }
+  if (sys.includes('[5ws:judge]')) {
+    return JSON.stringify({ contradictions: [], falsehoods: [], confirmedIdentity: false });
+  }
+  return null;
 }

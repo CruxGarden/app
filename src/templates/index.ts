@@ -12,6 +12,17 @@ export interface TemplateFile {
   content: string;
 }
 
+/**
+ * The product name of the interrogable-crux game (ADR 0016, WHO-AM-I-PLAN.md).
+ * One constant: the template's label, default title and greeting read it; the
+ * published site never does — each Shelf carries its own `question`.
+ */
+export const FIVE_WS_NAME = '5Ws';
+export const FIVE_WS_TEMPLATE_ID = '5ws';
+/** The picker blurb; with the name it is the site's default <title>. The headings are always the Shelf's own question. */
+export const FIVE_WS_TAGLINE = 'Ten Questions. Five minutes. Good luck.';
+export const FIVE_WS_SITE_TITLE = `${FIVE_WS_NAME} — ${FIVE_WS_TAGLINE}`;
+
 // ── Form schema for data-driven templates ──
 
 export type FormFieldType =
@@ -156,6 +167,10 @@ export interface BuilderAction {
     | { type: 'add-media'; collection: string }
     /** Upload images into public/images/ and write one item per image in `collection` (its `image` field) */
     | { type: 'add-photos'; collection: string }
+    /** Append an entry to the Shelf at `path` through a form (ADR 0016) */
+    | { type: 'add-shelf-entry'; path: string }
+    /** Start a Round on this Interrogable Crux — opens the site's /play page in the preview (ADR 0016) */
+    | { type: 'open-round' }
     | { type: 'publish' };
 }
 
@@ -193,6 +208,13 @@ export interface TemplateDefinition {
   scaffold?: { pnpmArgs: string[] };
   /** What the user makes here — drives the Builder (Workshop home view) */
   contentModel?: ContentModel;
+  /**
+   * Extra crux meta stamped at creation (shallow-merged over the existing
+   * meta, before the keys above). 5Ws uses it for `meta.game` —
+   * `{ shelfPath }` — whose presence is what marks the crux interrogable to
+   * the Builder (ADR 0016).
+   */
+  meta?: Record<string, unknown>;
 }
 
 // Lazy-load template files to keep the modal bundle small
@@ -206,6 +228,7 @@ const loaders: Record<string, () => Promise<{ default: TemplateDefinition }>> = 
   'astro-feed': () => import('./astro-feed'),
   'astro-media': () => import('./astro-media'),
   'astro-empty': () => import('./astro-empty'),
+  [FIVE_WS_TEMPLATE_ID]: () => import('./5ws'),
 };
 
 export async function loadTemplate(id: string): Promise<TemplateDefinition | null> {
@@ -229,7 +252,7 @@ export function applyTemplateMeta(
   def: TemplateDefinition,
   templateId?: string,
 ): Record<string, unknown> {
-  const meta: Record<string, unknown> = { ...(existingMeta ?? {}) };
+  const meta: Record<string, unknown> = { ...(existingMeta ?? {}), ...(def.meta ?? {}) };
   // Which template this crux grew from — AGENTS.md and (per ADR 0006) lineage read it
   if (templateId) meta.template = templateId;
   // The template's skill rides with the crux (export, clone, Template Cruxes)

@@ -21,7 +21,16 @@ import { initServices } from '@/services';
 import { clearMemory } from '@/services/memory';
 import type { Crux, Artifact } from '@/services/types';
 
-const REQUIRED = ['blog', 'feed', 'media', 'homepage', 'astro-basics', 'mood-design', 'resonance'];
+const REQUIRED = [
+  'blog',
+  'feed',
+  'media',
+  'homepage',
+  'astro-basics',
+  'mood-design',
+  'resonance',
+  '5ws',
+];
 
 function makeCrux(meta: Record<string, unknown> = {}): Crux {
   return {

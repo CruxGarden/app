@@ -1267,6 +1267,24 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/cruxes/{cruxId}/leaderboard/{day}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** A shelf's board for a day ('today' or YYYY-MM-DD) */
+        get: operations["LeaderboardController_board"];
+        put?: never;
+        /** Record the caller's first round of the day */
+        post: operations["LeaderboardController_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1859,6 +1877,12 @@ export interface components {
              * @default 1
              */
             by?: number;
+        };
+        PostScoreDto: {
+            /** @description Points left at the end of the round */
+            score: number;
+            /** @description Round duration in seconds */
+            seconds: number;
         };
     };
     responses: never;
@@ -5720,6 +5744,50 @@ export interface operations {
         requestBody?: never;
         responses: {
             204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    LeaderboardController_board: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                cruxId: string;
+                day: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    LeaderboardController_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                cruxId: string;
+                day: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PostScoreDto"];
+            };
+        };
+        responses: {
+            201: {
                 headers: {
                     [name: string]: unknown;
                 };

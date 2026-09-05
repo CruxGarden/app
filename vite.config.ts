@@ -29,5 +29,9 @@ export default defineConfig({
     environment: 'node',
     setupFiles: ['./src/test/setup.ts'],
     include: ['src/**/*.test.ts'],
+    // Stylesheets are normally blanked in tests; the 5Ws template imports its
+    // play-page stylesheet with `?raw` to write it into the crux, so that one
+    // must come through as text.
+    css: { include: [/5ws-site\/src\/styles\//] },
   },
 });

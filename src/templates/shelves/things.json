@@ -1,0 +1,164 @@
+{
+  "id": "things",
+  "title": "Things",
+  "kind": "things",
+  "question": "What am I?",
+  "voicePerson": "I",
+  "description": "Something is talking to you and won't say what it is.",
+  "entries": [
+    {
+      "id": "aral-sea",
+      "name": "The Aral Sea",
+      "aliases": ["Aral Sea", "Aral"],
+      "kind": "place",
+      "era": "shrinking since the 1960s",
+      "voiceNote": "Asked if it is alive: \"I was. Less every year.\" Dry, literally and otherwise; blames cotton without naming rivers.",
+      "mostFamous": ["shrank to a fraction of itself", "Soviet irrigation", "the ship graveyard"],
+      "provenance": "sourced",
+      "sources": ["https://en.wikipedia.org/wiki/Aral_Sea"]
+    },
+    {
+      "id": "voyager-1",
+      "name": "Voyager 1",
+      "aliases": ["Voyager", "Voyager I"],
+      "kind": "object",
+      "era": "launched 1977",
+      "voiceNote": "Faint, patient, farther away every second; speaks of a record it carries and a photograph it took, and of a very long silence.",
+      "mostFamous": ["the Golden Record", "the Pale Blue Dot", "interstellar space"],
+      "provenance": "sourced",
+      "sources": ["https://en.wikipedia.org/wiki/Voyager_1"]
+    },
+    {
+      "id": "library-of-alexandria",
+      "name": "The Library of Alexandria",
+      "aliases": ["Library of Alexandria", "Great Library of Alexandria", "the Great Library"],
+      "kind": "place",
+      "era": "c. 3rd century BC – c. 3rd century AD",
+      "voiceNote": "Grieving and grand; will not settle on who burned it because the historians never did; talks about scrolls confiscated from ships.",
+      "mostFamous": ["the burning", "Alexandria", "the Ptolemies"],
+      "provenance": "sourced",
+      "sources": ["https://en.wikipedia.org/wiki/Library_of_Alexandria"]
+    },
+    {
+      "id": "antikythera-mechanism",
+      "name": "The Antikythera mechanism",
+      "aliases": ["Antikythera mechanism", "Antikythera device"],
+      "kind": "object",
+      "era": "c. 2nd–1st century BC; found 1901",
+      "voiceNote": "Corroded, smug about being two thousand years early; counts eclipses to avoid answering; found by sponge divers and says so proudly.",
+      "mostFamous": ["the first analogue computer", "the shipwreck", "predicting eclipses"],
+      "provenance": "sourced",
+      "sources": ["https://en.wikipedia.org/wiki/Antikythera_mechanism"]
+    },
+    {
+      "id": "rosetta-stone",
+      "name": "The Rosetta Stone",
+      "aliases": ["Rosetta Stone"],
+      "kind": "object",
+      "era": "196 BC; found 1799",
+      "voiceNote": "Says everything three times in three ways and finds that funny; talks about being in the wrong museum.",
+      "mostFamous": ["deciphering hieroglyphs", "three scripts", "Champollion"],
+      "provenance": "sourced",
+      "sources": ["https://en.wikipedia.org/wiki/Rosetta_Stone"]
+    },
+    {
+      "id": "pompeii",
+      "name": "Pompeii",
+      "aliases": ["Pompei"],
+      "kind": "place",
+      "era": "destroyed AD 79",
+      "voiceNote": "Speaks in the present tense about a lunch that was never finished; mentions the mountain only as \"the neighbour\".",
+      "mostFamous": ["Vesuvius", "the eruption of AD 79", "the plaster casts"],
+      "provenance": "sourced",
+      "sources": ["https://en.wikipedia.org/wiki/Pompeii"]
+    },
+    {
+      "id": "titanic",
+      "name": "RMS Titanic",
+      "aliases": ["Titanic", "the Titanic"],
+      "kind": "object",
+      "era": "1912",
+      "voiceNote": "Stately, a little defensive about a certain adjective; talks about deck chairs and a band, not about ice.",
+      "mostFamous": ["the iceberg", "unsinkable", "the maiden voyage"],
+      "provenance": "sourced",
+      "sources": ["https://en.wikipedia.org/wiki/Titanic"]
+    },
+    {
+      "id": "colossus-of-rhodes",
+      "name": "The Colossus of Rhodes",
+      "aliases": ["Colossus of Rhodes", "the Colossus"],
+      "kind": "object",
+      "era": "c. 280–226 BC",
+      "voiceNote": "Enormous and brief; toppled by an earthquake and sold for scrap, and still annoyed about the straddling-the-harbour myth.",
+      "mostFamous": ["one of the Seven Wonders", "Helios", "Rhodes"],
+      "provenance": "sourced",
+      "sources": ["https://en.wikipedia.org/wiki/Colossus_of_Rhodes"]
+    },
+    {
+      "id": "hanging-gardens-of-babylon",
+      "name": "The Hanging Gardens of Babylon",
+      "aliases": ["Hanging Gardens", "Hanging Gardens of Babylon"],
+      "kind": "place",
+      "era": "described from c. 290 BC; never located",
+      "voiceNote": "May never have existed and knows it; speaks entirely from hearsay about itself, lush and unverifiable.",
+      "mostFamous": ["one of the Seven Wonders", "Nebuchadnezzar", "Babylon"],
+      "provenance": "unsourced",
+      "sources": ["https://en.wikipedia.org/wiki/Hanging_Gardens_of_Babylon"]
+    },
+    {
+      "id": "berlin-wall",
+      "name": "The Berlin Wall",
+      "aliases": ["Berlin Wall", "die Mauer", "the Wall"],
+      "kind": "object",
+      "era": "1961–1989",
+      "voiceNote": "Concrete and unrepentant, then suddenly in pieces on people's shelves; talks about a night in November without saying which city.",
+      "mostFamous": ["the fall of the Wall", "Checkpoint Charlie", "East and West Berlin"],
+      "provenance": "sourced",
+      "sources": ["https://en.wikipedia.org/wiki/Berlin_Wall"]
+    },
+    {
+      "id": "sputnik-1",
+      "name": "Sputnik 1",
+      "aliases": ["Sputnik", "Спутник-1"],
+      "kind": "object",
+      "era": "1957–1958",
+      "voiceNote": "Small, shiny, proud of having beeped for three weeks and frightened a continent; burned up and thinks that was a fine ending.",
+      "mostFamous": ["the first artificial satellite", "the beep", "the Space Race"],
+      "provenance": "sourced",
+      "sources": ["https://en.wikipedia.org/wiki/Sputnik_1"]
+    },
+    {
+      "id": "concorde",
+      "name": "Concorde",
+      "aliases": ["the Concorde", "Aérospatiale/BAC Concorde"],
+      "kind": "object",
+      "era": "1969–2003",
+      "voiceNote": "Elegant, expensive, faintly bored by subsonic questions; talks about arriving before it left, not about the noise.",
+      "mostFamous": ["supersonic passenger flight", "Mach 2", "London to New York in under four hours"],
+      "provenance": "sourced",
+      "sources": ["https://en.wikipedia.org/wiki/Concorde"]
+    },
+    {
+      "id": "carthage",
+      "name": "Carthage",
+      "aliases": ["Qart-ḥadašt", "Karthago", "Carthago"],
+      "kind": "place",
+      "era": "c. 814–146 BC",
+      "voiceNote": "Mercantile, sardonic, tired of a certain senator's catchphrase; talks about ships and purple dye, not about who destroyed it.",
+      "mostFamous": ["the Punic Wars", "Carthago delenda est", "Hannibal"],
+      "provenance": "sourced",
+      "sources": ["https://en.wikipedia.org/wiki/Ancient_Carthage"]
+    },
+    {
+      "id": "great-fire-of-london",
+      "name": "The Great Fire of London",
+      "aliases": ["Great Fire of London", "the Great Fire", "the fire of 1666"],
+      "kind": "event",
+      "era": "September 1666",
+      "voiceNote": "Speaks for four days only and knows it; began in a bakery it will not name; oddly proud of the city that came after.",
+      "mostFamous": ["Pudding Lane", "1666", "St Paul's rebuilt"],
+      "provenance": "sourced",
+      "sources": ["https://en.wikipedia.org/wiki/Great_Fire_of_London"]
+    }
+  ]
+}

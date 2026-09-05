@@ -312,6 +312,10 @@ function describeAction(a: BuilderAction): string {
       return `${a.label} — uploads audio/video into public/media/ (transcoding when needed) and writes an item in "${a.do.collection}".`;
     case 'add-photos':
       return `${a.label} — uploads images into public/images/ and writes one item per image in "${a.do.collection}" (its image field).`;
+    case 'add-shelf-entry':
+      return `${a.label} — appends an entry (name, aliases, kind, era, voice note, provenance, sources) to the Shelf at ${a.do.path}.`;
+    case 'open-round':
+      return `${a.label} — starts a Round against the Shelf (the Round pane; the hidden figure is never in this conversation).`;
     case 'publish':
       return `${a.label} — publishes the crux.`;
   }
