@@ -64,6 +64,8 @@ export enum SettingsKey {
   /** Cover image fingerprint for the next saved Mood */
   MoodCover = 'cruxgarden:moodCover',
   Persona = 'cruxgarden:persona',
+  /** Garden Memory (ADR 0013): one editable memory.md per garden, read into every conversation */
+  GardenMemory = 'cruxgarden:memory',
 
   // AI
   AiEnabled = 'cruxgarden:aiEnabled',

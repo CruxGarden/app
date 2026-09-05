@@ -676,3 +676,55 @@ describe('growth tools', () => {
     expect(didMutate('snapshot', b)).toBe(false);
   });
 });
+
+describe('remember and load_skill (B6)', () => {
+  beforeEach(async () => {
+    await initServices('local');
+    const { clearMemory } = await import('@/services/memory');
+    await clearMemory();
+  });
+
+  it('are offered to every workspace conversation', () => {
+    const names = defaultToolDefinitions().map((t) => t.name);
+    expect(names).toContain('remember');
+    expect(names).toContain('load_skill');
+    // Neither changes the workspace — no context rebuild, no auto-snapshot
+    expect(MUTATING_TOOLS).not.toContain('remember');
+    expect(MUTATING_TOOLS).not.toContain('load_skill');
+    expect(didMutate('remember', 'Remembered (Preferences): x')).toBe(false);
+  });
+
+  it('remember validates section and note before touching memory', async () => {
+    const { getServices } = await import('@/services');
+    const { getMemory, isMemoryEmpty } = await import('@/services/memory');
+    const created = await getServices().crux.create({ title: 'Mem' });
+    const exec = createToolExecutor(created.id);
+
+    expect(await exec('remember', { section: 'Habits', note: 'x' })).toMatch(
+      /Error.*section must be one of "Preferences", "Voice", "Decisions", "Notes"/,
+    );
+    expect(await exec('remember', { section: 'Notes', note: '   ' })).toMatch(
+      /Error.*note is required/,
+    );
+    expect(await exec('remember', { section: 'Notes', note: 'a\nb' })).toMatch(
+      /Error.*single line/,
+    );
+    expect(await exec('remember', { section: 'Notes', note: 'x'.repeat(301) })).toMatch(
+      /Error.*at most 300/,
+    );
+    expect(isMemoryEmpty(getMemory())).toBe(true);
+
+    const ok = await exec('remember', { section: 'Preferences', note: 'prefers British spelling' });
+    expect(ok).toBe('Remembered (Preferences): prefers British spelling');
+    expect(getMemory()).toContain('## Preferences\n- prefers British spelling');
+  });
+
+  it('load_skill returns the skill text and refuses unknown names', async () => {
+    const { getServices } = await import('@/services');
+    const { getSkill } = await import('./skills');
+    const created = await getServices().crux.create({ title: 'Skill' });
+    const exec = createToolExecutor(created.id);
+    expect(await exec('load_skill', { name: 'mood-design' })).toBe(getSkill('mood-design')!.text);
+    expect(await exec('load_skill', { name: 'cooking' })).toMatch(/Error.*Unknown skill "cooking"/);
+  });
+});

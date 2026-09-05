@@ -1,4 +1,4 @@
-import type { ChatMessage, ToolCall, TurnJobSummary } from '@/api/types';
+import type { ChatMessage, ToolCall, TurnCheckSummary, TurnJobSummary } from '@/api/types';
 import type { ConversationEvent } from '@/ai/engine';
 import { didMutate } from '@/ai/tools';
 
@@ -23,6 +23,8 @@ export type TurnJobStatus =
   | 'planning'
   | 'running'
   | 'paused'
+  /** Verify before done (B4): build, screenshot, and inspect the result. */
+  | 'checking'
   | 'done'
   | 'failed'
   | 'interrupted';
@@ -44,6 +46,36 @@ export interface TurnPlan {
 
 export type TurnStopReason = 'stopped' | 'steered' | 'closed';
 
+export type TurnCheckStatus = 'checking' | 'passed' | 'problems';
+
+/** One screenshot the check took, and whether the verdict on it was ok. */
+export interface CheckShot {
+  fingerprint: string;
+  ok: boolean;
+}
+
+/**
+ * Verify before done (AI-COLLABORATION-V3 B4). A check runs on a "done" claim
+ * (or when the person presses "Check it"): build for Site Cruxes, screenshot
+ * the preview, one bounded inspection turn. A failing first check reopens the
+ * job for ONE fix turn and re-checks once; the second verdict is final.
+ */
+export interface TurnCheck {
+  status: TurnCheckStatus;
+  /** 1 for the first check, 2 for the re-check after the fix turn. Never more. */
+  attempt: number;
+  /** What the check found (empty when it passed). Readable in the card and transcript. */
+  problems: string[];
+  /** Screenshots in order — the failed "before" shot first, the final shot last. */
+  shots: CheckShot[];
+  /** Growth snapshot the latest verdict was recorded on. */
+  snapshotId?: string;
+  /** Why the inspection was partial (no vision, no preview, verdict unreadable). */
+  note?: string;
+  /** Who asked: the model's completion claim, or the person ("Check it"). */
+  requestedBy: 'claim' | 'person';
+}
+
 export interface TurnJob {
   id: string;
   cruxId: string;
@@ -60,6 +92,8 @@ export interface TurnJob {
   snapshotIds: string[];
   /** Short preview of the message that started the job — display only. */
   prompt: string;
+  /** Verify-before-done state, once a check started on this job (B4). */
+  check?: TurnCheck;
 }
 
 export type { TurnJobSummary };
@@ -102,7 +136,22 @@ export function promptPreview(content: string): string {
 
 export function isJobActive(job: TurnJob | null | undefined): boolean {
   return (
-    !!job && (job.status === 'planning' || job.status === 'running' || job.status === 'queued')
+    !!job &&
+    (job.status === 'planning' ||
+      job.status === 'running' ||
+      job.status === 'queued' ||
+      job.status === 'checking')
+  );
+}
+
+/** The fix turn after a failed first check is running (or about to). */
+export function isFixingAfterCheck(job: TurnJob | null | undefined): boolean {
+  return (
+    !!job &&
+    !!job.check &&
+    job.check.status === 'problems' &&
+    job.check.attempt === 1 &&
+    (job.status === 'running' || job.status === 'planning')
   );
 }
 
@@ -129,12 +178,37 @@ export function stepLabel(job: TurnJob, stepIndex: number): string {
 export function summarizeJob(job: TurnJob): TurnJobSummary {
   const status: TurnJobSummary['status'] =
     job.status === 'failed' ? 'failed' : job.status === 'interrupted' ? 'interrupted' : 'done';
+  const check = summarizeCheck(job.check);
   return {
     status,
     steps: job.plan.steps.length,
     completedSteps: job.plan.steps.filter((s) => s.status === 'done').length,
     snapshots: job.snapshotIds.length,
+    ...(check ? { check } : {}),
   };
+}
+
+/** The transcript's view of a finished check; null while it runs or never ran. */
+export function summarizeCheck(check: TurnCheck | undefined): TurnCheckSummary | null {
+  if (!check || check.status === 'checking') return null;
+  const last = check.shots.at(-1);
+  return {
+    status: check.status,
+    problems: check.problems,
+    ...(last ? { thumbnailFingerprint: last.fingerprint } : {}),
+  };
+}
+
+/** The one-line label for a check outcome — the only words the UI uses for it. */
+export function describeCheck(status: TurnCheckStatus): string {
+  switch (status) {
+    case 'checking':
+      return 'Checking…';
+    case 'passed':
+      return 'Checked ✓';
+    case 'problems':
+      return 'Check found problems';
+  }
 }
 
 /** The transcript line under a finished job's reply: "Ran 3 steps · 2 snapshots". */
@@ -157,6 +231,142 @@ export function reconcilePersistedJob(job: TurnJob | null | undefined): TurnJob 
     stopReason: 'closed',
     error: 'The app closed while this was running.',
   });
+}
+
+// ── Verify before done (B4) ─────────────────────────────────────────────────
+
+/**
+ * The completion-claim heuristic, deliberately simple: a turn reads as "done"
+ * when the model emitted a plan (it set out to finish something) OR its final
+ * text contains one of these words. False positives cost one check; false
+ * negatives are covered by the "Check it" button.
+ */
+export const COMPLETION_CLAIM = /\b(done|finished|complete|completed|ready|should (?:now )?work|that's it|all set)\b/i;
+
+export function looksLikeCompletionClaim(text: string): boolean {
+  return COMPLETION_CLAIM.test(text);
+}
+
+/**
+ * Should the automatic check run after this job? All of: the setting is on,
+ * the crux is visual (Site Crux or index.html), the turn changed files, the
+ * job finished on its own, no check ran yet, and it reads as a completion.
+ */
+export function shouldAutoCheck(args: {
+  job: TurnJob;
+  content: string;
+  mutated: boolean;
+  visual: boolean;
+  enabled: boolean;
+}): boolean {
+  const { job, content, mutated, visual, enabled } = args;
+  if (!enabled || !visual || !mutated) return false;
+  if (job.status !== 'done' || job.check) return false;
+  return job.plan.explicit || looksLikeCompletionClaim(content);
+}
+
+/** A job with only a check to run — the person pressed "Check it". */
+export function newCheckJob(cruxId: string, now = new Date()): TurnJob {
+  const job = newTurnJob(cruxId, 'Check it', now);
+  return beginCheck(job, 'person');
+}
+
+/** Move the job into its check (first or second attempt). */
+export function beginCheck(job: TurnJob, requestedBy: TurnCheck['requestedBy']): TurnJob {
+  const prev = job.check;
+  return {
+    ...job,
+    status: 'checking',
+    check: {
+      status: 'checking',
+      attempt: (prev?.attempt ?? 0) + 1,
+      problems: [],
+      shots: prev?.shots ?? [],
+      requestedBy: prev?.requestedBy ?? requestedBy,
+      ...(prev?.snapshotId ? { snapshotId: prev.snapshotId } : {}),
+    },
+  };
+}
+
+export interface CheckVerdictRecord {
+  ok: boolean;
+  problems: string[];
+  /** Fingerprint of the screenshot this verdict was made on, if one was taken. */
+  shotFingerprint?: string;
+  note?: string;
+}
+
+/** Record a verdict on the job's check. The job is `done` afterwards (the loop is over). */
+export function finishCheck(job: TurnJob, verdict: CheckVerdictRecord): TurnJob {
+  const check = job.check ?? {
+    status: 'checking',
+    attempt: 1,
+    problems: [],
+    shots: [],
+    requestedBy: 'claim' as const,
+  };
+  const shots = verdict.shotFingerprint
+    ? [...check.shots, { fingerprint: verdict.shotFingerprint, ok: verdict.ok }]
+    : check.shots;
+  const finished = finishJob(job, 'done');
+  return {
+    ...finished,
+    check: {
+      ...check,
+      status: verdict.ok ? 'passed' : 'problems',
+      problems: verdict.problems,
+      shots,
+      ...(verdict.note ? { note: verdict.note } : {}),
+    },
+  };
+}
+
+/**
+ * Reopen a job whose first check found problems for ONE fix turn: same job id
+ * and snapshots, a fresh implicit step named for the fix. The check keeps its
+ * problems so the card can say what is being fixed.
+ */
+export function continueJobForFix(job: TurnJob, problems: string[]): TurnJob {
+  const title = `Fix: ${promptPreview(problems.join('; '))}`;
+  const { endedAt: _endedAt, stopReason: _stopReason, error: _error, ...rest } = job;
+  return {
+    ...rest,
+    status: 'running',
+    plan: { steps: [{ title, status: 'running' }], explicit: false },
+    currentStep: 0,
+    check: {
+      ...(job.check ?? { attempt: 1, shots: [], requestedBy: 'claim' as const }),
+      status: 'problems',
+      problems,
+    },
+  };
+}
+
+/** Attach the verdict to the Growth snapshot it was recorded on. */
+export function withCheckSnapshot(job: TurnJob, snapshotId: string): TurnJob {
+  if (!job.check) return job;
+  return { ...job, check: { ...job.check, snapshotId } };
+}
+
+/** The Growth dimension meta entry a verified snapshot carries. */
+export interface SnapshotVerification {
+  status: 'passed' | 'problems';
+  problems: string[];
+  attempt: number;
+  requestedBy: TurnCheck['requestedBy'];
+  checkedAt: string;
+}
+
+export function verificationOf(job: TurnJob, now = new Date()): SnapshotVerification | null {
+  const c = job.check;
+  if (!c || c.status === 'checking') return null;
+  return {
+    status: c.status,
+    problems: c.problems,
+    attempt: c.attempt,
+    requestedBy: c.requestedBy,
+    checkedAt: now.toISOString(),
+  };
 }
 
 // ── The loop ────────────────────────────────────────────────────────────────

@@ -20,6 +20,7 @@ import type { ContentModel, ContentCollection, FormField, BuilderAction } from '
 import type { PersonaSettings } from './persona';
 import { isSiteCrux } from './site';
 import { Capability, can } from '@/lib/platform';
+import { skillsForCrux, type Skill } from '@/ai/skills';
 
 export const AGENTS_MD_PATH = 'AGENTS.md';
 export const CLAUDE_MD_PATH = 'CLAUDE.md';
@@ -72,7 +73,7 @@ export function renderAgentsMdSections(input: AgentsMdInput): AgentsMdSections {
   const canBuild = input.canBuild ?? false;
 
   return {
-    about: renderAbout(input.crux, site, templateId),
+    about: renderAbout(input.crux, site, templateId, skillsForCrux(input.crux, input.artifacts)),
     contentModel: contentModel ? renderContentModel(contentModel) : null,
     conventions: renderConventions(site, contentModel),
     preview: renderPreview(site, canBuild),
@@ -90,6 +91,7 @@ function renderAbout(
   crux: Pick<Crux, 'title' | 'kind'>,
   site: boolean,
   templateId: string | null,
+  skills: Skill[],
 ): string {
   const lines = ['## About this crux'];
   lines.push(`- Title: ${crux.title || 'Untitled'}`);
@@ -97,6 +99,11 @@ function renderAbout(
     `- Kind: ${site ? 'Site Crux (a real toolchain project with a build step)' : describeKind(crux.kind)}`,
   );
   if (templateId) lines.push(`- Template: ${templateDisplayName(templateId)} (\`${templateId}\`)`);
+  // The know-how for this kind of crux is a skill (B6) — the same text the
+  // built-in collaborator loads; an external agent asks for it by name.
+  for (const s of skills) {
+    lines.push(`- Skill: \`${s.name}\` — ${s.summary} Load it with \`load_skill("${s.name}")\`.`);
+  }
   lines.push(
     '',
     'This folder is a Crux — a creative project in Crux Garden: a conversation with an AI plus the files it produces, with every version kept as Growth history. ' +

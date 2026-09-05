@@ -9,15 +9,7 @@ import { LAYOUT_WRITING } from './index';
  * and ships dist/.
  */
 const template: TemplateDefinition = {
-  context:
-    'This is a real Astro project (a Site Crux) — a personal home page. Source lives in src/: ' +
-    'the front page is src/pages/index.astro (hero, about, links, recent posts), posts are ' +
-    'markdown files with title/date/description frontmatter in src/pages/posts/ (they appear ' +
-    'on the front page automatically and live at /posts/<slug>). Site identity (name, tagline, ' +
-    'about text, accent color, links) lives in src/config.json — the user edits it as a form, ' +
-    'so keep its JSON shape intact. Layouts are in src/layouts, styles in src/styles/global.css. ' +
-    'The preview is a live astro dev server with hot reload. node_modules and dist are managed ' +
-    'by the app — never create or edit files there.',
+  skill: 'homepage',
   greeting:
     "I've set up your home page — a hero with your name and tagline, an about section, a links " +
     'row, and a posts section that fills in as you write. Everything is a real Astro project: ' +

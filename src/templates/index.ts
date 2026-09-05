@@ -169,7 +169,14 @@ export interface ContentModel {
 
 export interface TemplateDefinition {
   files: TemplateFile[];
-  context: string;
+  /**
+   * Skill (B6, ADR 0013) loaded automatically into every conversation in a
+   * crux made from this template — the template's know-how, kept out of the
+   * cached system prompt. Stamped on the crux as `meta.skills`.
+   */
+  skill?: string;
+  /** Legacy: prose appended to the crux instructions at creation. Built-ins use `skill` instead. */
+  context?: string;
   /** AI greeting message introducing the template and what's been set up */
   greeting: string;
   /** Optional form schema — when present, the workshop shows an editable form for config.json */
@@ -225,6 +232,8 @@ export function applyTemplateMeta(
   const meta: Record<string, unknown> = { ...(existingMeta ?? {}) };
   // Which template this crux grew from — AGENTS.md and (per ADR 0006) lineage read it
   if (templateId) meta.template = templateId;
+  // The template's skill rides with the crux (export, clone, Template Cruxes)
+  if (def.skill) meta.skills = [def.skill];
   const settings: Record<string, unknown> = {
     ...((meta.settings as Record<string, unknown> | undefined) ?? {}),
   };

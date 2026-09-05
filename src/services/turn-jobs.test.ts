@@ -9,6 +9,17 @@ import {
   describeJobSummary,
   summarizeJob,
   stepLabel,
+  looksLikeCompletionClaim,
+  shouldAutoCheck,
+  beginCheck,
+  finishCheck,
+  continueJobForFix,
+  newCheckJob,
+  isJobActive,
+  isFixingAfterCheck,
+  describeCheck,
+  verificationOf,
+  finishJob,
   type TurnJob,
 } from './turn-jobs';
 
@@ -251,5 +262,109 @@ describe('reconcilePersistedJob', () => {
     const job = { ...newTurnJob('c', 'x'), status: 'done' as const };
     expect(reconcilePersistedJob(job)).toBe(job);
     expect(reconcilePersistedJob(null)).toBeNull();
+  });
+});
+
+// ── Verify before done (B4) ─────────────────────────────────────────────────
+
+describe('completion-claim heuristic', () => {
+  it('matches the documented words and nothing else', () => {
+    for (const t of [
+      'Done — the landing page is ready.',
+      'All finished.',
+      'The build is complete',
+      'This should now work in the preview.',
+      'That should work.',
+      "That's it!",
+    ]) {
+      expect(looksLikeCompletionClaim(t), t).toBe(true);
+    }
+    for (const t of ['Which colour do you prefer?', 'I read the file.', 'Here is the outline:']) {
+      expect(looksLikeCompletionClaim(t), t).toBe(false);
+    }
+  });
+
+  it('shouldAutoCheck needs: enabled, visual, mutated, done, unchecked, and a plan or a claim', () => {
+    const done = finishJob(newTurnJob('c', 'Make a page'), 'done');
+    const base = { job: done, content: 'Done.', mutated: true, visual: true, enabled: true };
+    expect(shouldAutoCheck(base)).toBe(true);
+    expect(shouldAutoCheck({ ...base, enabled: false })).toBe(false);
+    expect(shouldAutoCheck({ ...base, visual: false })).toBe(false);
+    expect(shouldAutoCheck({ ...base, mutated: false })).toBe(false);
+    expect(shouldAutoCheck({ ...base, content: 'Here is a thought.' })).toBe(false);
+    // A plan is a claim of intent to finish — no words needed
+    const planned = { ...done, plan: { ...done.plan, explicit: true } };
+    expect(shouldAutoCheck({ ...base, job: planned, content: 'Here is a thought.' })).toBe(true);
+    // Never twice, never on a stopped job
+    expect(shouldAutoCheck({ ...base, job: beginCheck(done, 'claim') })).toBe(false);
+    expect(shouldAutoCheck({ ...base, job: finishJob(done, 'interrupted') })).toBe(false);
+  });
+});
+
+describe('check state', () => {
+  it('beginCheck → checking (active), finishCheck → done with the verdict and shot', () => {
+    const job = finishJob(newTurnJob('c', 'Make a page'), 'done');
+    const checking = beginCheck(job, 'claim');
+    expect(checking.status).toBe('checking');
+    expect(isJobActive(checking)).toBe(true);
+    expect(checking.check).toMatchObject({ status: 'checking', attempt: 1, requestedBy: 'claim' });
+    expect(describeCheck(checking.check!.status)).toBe('Checking…');
+
+    const passed = finishCheck(checking, { ok: true, problems: [], shotFingerprint: 'f1' });
+    expect(passed.status).toBe('done');
+    expect(passed.check).toMatchObject({ status: 'passed', problems: [], attempt: 1 });
+    expect(passed.check!.shots).toEqual([{ fingerprint: 'f1', ok: true }]);
+    expect(summarizeJob(passed).check).toEqual({
+      status: 'passed',
+      problems: [],
+      thumbnailFingerprint: 'f1',
+    });
+    expect(describeCheck('passed')).toBe('Checked ✓');
+    expect(verificationOf(passed)).toMatchObject({
+      status: 'passed',
+      attempt: 1,
+      requestedBy: 'claim',
+    });
+  });
+
+  it('problems → one fix turn on the same job, then the re-check is attempt 2 and final', () => {
+    const job = finishJob(newTurnJob('c', 'Make a page'), 'done');
+    const first = finishCheck(beginCheck(job, 'claim'), {
+      ok: false,
+      problems: ['Heading missing'],
+      shotFingerprint: 'before',
+    });
+    expect(first.check!.status).toBe('problems');
+    expect(describeCheck('problems')).toBe('Check found problems');
+
+    const fixing = continueJobForFix(first, ['Heading missing']);
+    expect(fixing.id).toBe(job.id);
+    expect(fixing.status).toBe('running');
+    expect(fixing.endedAt).toBeUndefined();
+    expect(fixing.plan.explicit).toBe(false);
+    expect(fixing.plan.steps[0]!.title).toBe('Fix: Heading missing');
+    expect(isFixingAfterCheck(fixing)).toBe(true);
+    expect(isFixingAfterCheck(first)).toBe(false);
+
+    const again = beginCheck(finishJob(fixing, 'done'), 'claim');
+    expect(again.check!.attempt).toBe(2);
+    expect(again.check!.shots).toEqual([{ fingerprint: 'before', ok: false }]);
+    const final = finishCheck(again, { ok: true, problems: [], shotFingerprint: 'after' });
+    expect(final.check!.shots.map((s) => s.fingerprint)).toEqual(['before', 'after']);
+    expect(summarizeJob(final).check!.thumbnailFingerprint).toBe('after');
+  });
+
+  it('a manual check is a checking job the person asked for; a relaunch reports it interrupted', () => {
+    const job = newCheckJob('c');
+    expect(job.status).toBe('checking');
+    expect(job.check).toMatchObject({ attempt: 1, requestedBy: 'person' });
+    expect(job.prompt).toBe('Check it');
+    expect(reconcilePersistedJob(job)!.status).toBe('interrupted');
+  });
+
+  it('a job without a check has no check summary and no verification', () => {
+    const job = finishJob(newTurnJob('c', 'x'), 'done');
+    expect(summarizeJob(job).check).toBeUndefined();
+    expect(verificationOf(job)).toBeNull();
   });
 });

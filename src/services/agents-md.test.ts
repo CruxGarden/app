@@ -85,8 +85,12 @@ describe('renderAgentsMd', () => {
     expect(md).toContain('## Voice');
     expect(md).toContain('**The Keeper**');
     expect(md).toContain(DEFAULT_PERSONA.systemPrompt.slice(0, 40));
-    expect(md).toContain('## Instructions for this crux');
-    expect(md).toContain('CONTEXT: This is a real Astro project');
+    // Template know-how is a skill (B6), not prose baked into the instructions
+    expect(md).not.toContain('## Instructions for this crux');
+    expect(md).not.toContain('CONTEXT: This is a real Astro project');
+    expect(md).toContain('- Skill: `blog` — ');
+    expect(md).toContain('load_skill("blog")');
+    expect(md).toContain('- Skill: `astro-basics` — ');
   });
 
   it('omits the content model and instructions when the crux has none, and describes plain cruxes', () => {

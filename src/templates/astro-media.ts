@@ -9,16 +9,7 @@ import { LAYOUT_VISUAL } from './index';
  * couldn't play the original (MOV, WAV, FLAC…), and writes the item.
  */
 const template: TemplateDefinition = {
-  context:
-    'This is a real Astro project (a Site Crux) — a page for sharing music and video. Source ' +
-    'lives in src/: the list is src/pages/index.astro, each item is a markdown file in ' +
-    'src/pages/m/ with frontmatter title/date/kind/media/cover/description — kind is "audio" or ' +
-    '"video", media is a path under public/ (e.g. /media/song.m4a), cover an optional image ' +
-    'under public/images/. Items live at /m/<slug>. Site identity (name, tagline, accent) is ' +
-    'src/config.json — the user edits it as a form, keep its JSON shape. Browsers play MP4 ' +
-    '(H.264/AAC) and M4A reliably; the app transcodes other formats into public/media/ when ' +
-    'the user adds them with the Builder. node_modules and dist are managed by the app — ' +
-    'never create or edit files there.',
+  skill: 'media',
   greeting:
     "I've set up your media page — a list with players for every track and video, and a page " +
     'for each. Use “Add media” to bring in audio or video files; anything the browser cannot ' +

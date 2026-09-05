@@ -7,7 +7,44 @@ import MarkdownRenderer from './MarkdownRenderer';
 import { ConsoleAvatar } from '@/components/keeper/Console';
 import { useCruxStore } from '@/stores/cruxStore';
 import { useBlobUrl } from '@/hooks/useBlobUrl';
-import { describeJobSummary } from '@/services/turn-jobs';
+import { describeCheck, describeJobSummary } from '@/services/turn-jobs';
+import type { TurnCheckSummary } from '@/api/types';
+
+/** Verify-before-done record under a reply: "Checked ✓" (or the problems) and the screenshot. */
+function CheckLine({ check }: { check: TurnCheckSummary }) {
+  const url = useBlobUrl(check.thumbnailFingerprint, 'image/jpeg');
+  const ok = check.status === 'passed';
+  return (
+    <div className="mt-1.5 space-y-1" data-testid="check-record" data-status={check.status}>
+      <div
+        className={cn('text-2xs font-mono', ok ? 'text-accent' : 'text-error/90')}
+        data-testid="check-result"
+      >
+        {describeCheck(check.status)}
+      </div>
+      {!ok && check.problems.length > 0 && (
+        <ul className="text-2xs text-chat-text-muted/80 space-y-0.5">
+          {check.problems.map((p, i) => (
+            <li key={i} className="whitespace-pre-wrap break-words">
+              {p}
+            </li>
+          ))}
+        </ul>
+      )}
+      {url && (
+        <img
+          src={url}
+          alt={ok ? 'Checked screenshot' : 'Screenshot with problems'}
+          data-testid="check-thumb"
+          className={cn(
+            'h-16 w-auto rounded-[var(--radius-sm)] border object-cover object-top',
+            ok ? 'border-accent/40' : 'border-error/40',
+          )}
+        />
+      )}
+    </div>
+  );
+}
 
 /** Resolve persona snapshot from crux meta by fingerprint */
 function usePersonaSnapshot(fingerprint?: string) {
@@ -122,6 +159,28 @@ function getToolLabel(tc: ToolCall): string {
       return 'Read palette';
     case 'generate_image':
       return `Generated ${String(tc.input?.path ?? 'image')}`;
+    case 'rename_file':
+      return `Renamed ${String(tc.input?.old_path ?? '')} → ${String(tc.input?.new_path ?? '')}`;
+    case 'search_files':
+      return `Searched for ${String(tc.input?.query ?? '')}`;
+    case 'check_site':
+      return 'Checked the build';
+    case 'snapshot':
+      return tc.input?.label ? `Snapshot "${String(tc.input.label)}"` : 'Took a snapshot';
+    case 'list_snapshots':
+      return 'Listed snapshots';
+    case 'restore':
+      return `Restored snapshot ${String(tc.input?.snapshotId ?? '')}`;
+    case 'branch':
+      return tc.input?.label
+        ? `Branched "${String(tc.input.label)}"`
+        : `Branched from ${String(tc.input?.snapshotId ?? '')}`;
+    case 'diff':
+      return 'Compared snapshots';
+    case 'remember':
+      return `Remembered ${String(tc.input?.section ?? 'a note')}`;
+    case 'load_skill':
+      return `Loaded skill ${String(tc.input?.name ?? '')}`;
     default:
       return tc.name;
   }
@@ -185,10 +244,15 @@ export default function MessageBubble({
       ? message.agent
       : personaSnapshot?.name || currentName
     : null;
-  const authorName = isUser ? authorSnapshot?.username || null : null;
+  // The check's findings sit on the person's side but are the app's words (B4).
+  const fromCheck = isUser && message.origin === 'check';
+  const authorName = fromCheck ? 'Check' : isUser ? authorSnapshot?.username || null : null;
 
   return (
-    <div className={cn('flex gap-2 items-end', isUser ? 'justify-end' : 'justify-start')}>
+    <div
+      className={cn('flex gap-2 items-end', isUser ? 'justify-end' : 'justify-start')}
+      {...(fromCheck ? { 'data-testid': 'check-message' } : {})}
+    >
       {!isUser && <MessageAvatar fingerprint={message.personaFingerprint} />}
       <div
         className={cn(
@@ -224,6 +288,7 @@ export default function MessageBubble({
             {describeJobSummary(message.job)}
           </div>
         )}
+        {!isUser && message.job?.check && <CheckLine check={message.job.check} />}
 
         {/* Model badge for assistant messages */}
         {!isUser && message.model && (

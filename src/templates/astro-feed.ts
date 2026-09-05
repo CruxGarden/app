@@ -9,15 +9,7 @@ import { LAYOUT_VISUAL } from './index';
  * or the New post button makes the post.
  */
 const template: TemplateDefinition = {
-  context:
-    'This is a real Astro project (a Site Crux) — a photo feed. Source lives in src/: the grid is ' +
-    'src/pages/index.astro, each post is a markdown file in src/pages/p/ with frontmatter ' +
-    'title/date/image/caption (image is a path under public/, e.g. /images/sunset.jpg) and lives ' +
-    'at /p/<slug>. Profile identity (name, handle, bio, avatar, accent) is src/config.json — the ' +
-    'user edits it as a form, keep its JSON shape. Images go in public/images/. Layouts are in ' +
-    'src/layouts, styles in src/styles/global.css. The preview is a live astro dev server. ' +
-    'node_modules and dist are managed by the app — never create or edit files there. To add a ' +
-    'post: put the image in public/images/ and create src/pages/p/<slug>.md pointing at it.',
+  skill: 'feed',
   greeting:
     "I've set up your feed — a profile header, a square grid, and a page for every post. Add " +
     'images with the button, then make a post for each (or ask me to). Change your name, ' +

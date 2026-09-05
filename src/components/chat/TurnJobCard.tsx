@@ -2,8 +2,15 @@ import { useEffect, useState } from 'react';
 import { cn } from '@/lib/cn';
 import { useCruxStore } from '@/stores/cruxStore';
 import { confirmDialog } from '@/stores/dialogStore';
-import { isJobActive, type PlanStep, type TurnJob } from '@/services/turn-jobs';
-import { dismissJob, removeQueued, runNextQueued, stopTurn } from '@/services/turns';
+import { useBlobUrl } from '@/hooks/useBlobUrl';
+import {
+  describeCheck,
+  isFixingAfterCheck,
+  isJobActive,
+  type PlanStep,
+  type TurnJob,
+} from '@/services/turn-jobs';
+import { checkNow, dismissJob, removeQueued, runNextQueued, stopTurn } from '@/services/turns';
 
 /** Short turns look as they always did: the card only appears past this. */
 const REVEAL_AFTER_MS = 3000;
@@ -59,7 +66,10 @@ function StepMark({ status }: { status: PlanStep['status'] }) {
 }
 
 function headline(job: TurnJob): string {
+  if (isFixingAfterCheck(job)) return 'Check found problems · fixing';
   switch (job.status) {
+    case 'checking':
+      return describeCheck('checking');
     case 'planning':
       return 'Working on…';
     case 'running':
@@ -73,8 +83,28 @@ function headline(job: TurnJob): string {
     case 'failed':
       return 'Failed';
     default:
-      return 'Finished';
+      return job.check && job.check.status !== 'checking'
+        ? describeCheck(job.check.status)
+        : 'Finished';
   }
+}
+
+/** The screenshot a check took, from the Blob Store. */
+function CheckShot({ fingerprint, ok }: { fingerprint: string; ok: boolean }) {
+  const url = useBlobUrl(fingerprint, 'image/jpeg');
+  if (!url) return null;
+  return (
+    <img
+      src={url}
+      alt={ok ? 'Checked screenshot' : 'Screenshot with problems'}
+      data-testid="check-shot"
+      data-ok={ok ? 'true' : 'false'}
+      className={cn(
+        'h-14 w-auto rounded-[var(--radius-sm)] border object-cover object-top',
+        ok ? 'border-accent/40' : 'border-error/40',
+      )}
+    />
+  );
 }
 
 /**
@@ -93,14 +123,20 @@ export default function TurnJobCard() {
   const active = isJobActive(job);
   const hasQueue = queue.length > 0;
 
-  // Reveal: a plan, a stop/failure, a queue, or a turn that has run a while.
+  // Reveal: a plan, a stop/failure, a queue, a check, or a turn that has run a
+  // while. A passed automatic check folds away (the reply carries "Checked ✓");
+  // a check the person asked for, or one that found problems, stays until dismissed.
+  const checkKeepsCard =
+    !!job?.check && (job.check.status !== 'passed' || job.check.requestedBy === 'person');
   const reveal =
     !!job &&
-    job.status !== 'done' &&
-    (job.plan.explicit ||
-      job.status === 'interrupted' ||
-      job.status === 'failed' ||
-      elapsed >= REVEAL_AFTER_MS);
+    ((job.status !== 'done' &&
+      (job.plan.explicit ||
+        job.status === 'interrupted' ||
+        job.status === 'failed' ||
+        job.status === 'checking' ||
+        elapsed >= REVEAL_AFTER_MS)) ||
+      checkKeepsCard);
   if (!reveal && !hasQueue) return null;
 
   const lastSnapshotId = job && job.snapshotIds.length > 0 ? job.snapshotIds.at(-1)! : null;
@@ -141,6 +177,7 @@ export default function TurnJobCard() {
     <div
       data-testid="turn-job"
       data-status={job?.status ?? 'idle'}
+      data-check={job?.check?.status ?? 'none'}
       className="mx-3 mb-2 rounded-[var(--radius)] border border-border bg-chat-ai-bubble text-chat-ai-bubble-text text-xs motion-enter-toast"
     >
       {job && reveal && (
@@ -190,6 +227,30 @@ export default function TurnJobCard() {
             <div className="text-2xs text-error/80 break-words">{job.error}</div>
           )}
 
+          {job.check && job.check.problems.length > 0 && (
+            <ul className="space-y-0.5 text-2xs text-error/90" data-testid="check-problems">
+              {job.check.problems.map((p, i) => (
+                <li key={i} className="whitespace-pre-wrap break-words">
+                  {p}
+                </li>
+              ))}
+            </ul>
+          )}
+          {job.check && job.check.shots.length > 0 && (
+            <div className="flex items-center gap-1.5">
+              {job.check.shots.map((shot, i) => (
+                <CheckShot
+                  key={`${shot.fingerprint}-${i}`}
+                  fingerprint={shot.fingerprint}
+                  ok={shot.ok}
+                />
+              ))}
+            </div>
+          )}
+          {job.check?.note && job.status !== 'checking' && (
+            <div className="text-2xs text-text-muted/80">{job.check.note}</div>
+          )}
+
           <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
             {active ? (
               <button
@@ -208,6 +269,11 @@ export default function TurnJobCard() {
                     title={lastSnapshotLabel ?? undefined}
                   >
                     Restore last snapshot
+                  </button>
+                )}
+                {job.check && (
+                  <button onClick={() => void checkNow()} className={btn}>
+                    Check it
                   </button>
                 )}
                 <button onClick={() => void dismissJob()} className={btn}>
