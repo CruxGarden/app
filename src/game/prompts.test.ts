@@ -3,6 +3,7 @@ import { MockLanguageModelV4 } from 'ai/test';
 import type { LanguageModel } from 'ai';
 import {
   adjudicate,
+  WRONG_GUESS_FALLBACK,
   answer,
   answerRaw,
   buildAdjudicatePrompt,
@@ -204,6 +205,54 @@ describe('callers', () => {
       why: 'Different novelist.',
     });
     expect(calls()).toBe(1);
+  });
+
+  it('adjudicate: a wrong verdict that gives the answer away is sealed before the player sees it', async () => {
+    // The real leak, 2026-09-05: "Not Winfield Scott. The ground truth is Sequoyah…"
+    const sequoyah: HiddenState = {
+      entryId: 'sequoyah',
+      name: 'Sequoyah',
+      aliases: ['George Gist', 'George Guess'],
+      kind: 'person',
+      era: 'c. 1770–1843',
+      voiceNote: 'patient',
+      provenance: 'sourced',
+      mostFamous: ['the Cherokee syllabary'],
+      question: 'Who am I?',
+    };
+    const leaky = scripted([
+      '{"correct": false, "normalized": "Winfield Scott", "why": "Not Winfield Scott. The ground truth is Sequoyah, creator of the Cherokee syllabary who died in 1843 in Mexico."}',
+    ]);
+    await expect(adjudicate(ctxOf(leaky.model), sequoyah, 'Winfield Scott', [])).resolves.toEqual({
+      correct: false,
+      normalized: 'Winfield Scott',
+      why: WRONG_GUESS_FALLBACK,
+    });
+    // A most-famous work alone is a leak too
+    const work = scripted([
+      '{"correct": false, "normalized": "Winfield Scott", "why": "Not him — think of the Cherokee syllabary."}',
+    ]);
+    await expect(
+      adjudicate(ctxOf(work.model), sequoyah, 'Winfield Scott', []),
+    ).resolves.toMatchObject({ why: WRONG_GUESS_FALLBACK });
+    // A contradiction — wrong, yet "normalized" to the answer — never surfaces the name
+    const contradictory = scripted([
+      '{"correct": false, "normalized": "Sequoyah", "why": "That is a general, not who you want."}',
+    ]);
+    await expect(
+      adjudicate(ctxOf(contradictory.model), sequoyah, 'Winfield Scott', []),
+    ).resolves.toEqual({
+      correct: false,
+      normalized: 'Winfield Scott',
+      why: 'That is a general, not who you want.',
+    });
+    // A clean wrong verdict passes through untouched
+    const clean = scripted([
+      '{"correct": false, "normalized": "Winfield Scott", "why": "Not Winfield Scott; he commanded armies."}',
+    ]);
+    await expect(
+      adjudicate(ctxOf(clean.model), sequoyah, 'Winfield Scott', []),
+    ).resolves.toMatchObject({ why: 'Not Winfield Scott; he commanded armies.' });
   });
 
   it('adjudicate throws when no verdict can be read, so the guess can be handed back', async () => {

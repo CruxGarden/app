@@ -26,7 +26,7 @@ import {
   type RevealMiss,
   type Voice,
 } from './hidden';
-import { findNameLeaks, redactNames } from './leaks';
+import { findLeaks, findNameLeaks, redactNames } from './leaks';
 
 /** What every call needs: the model, and optionally a way to stop. */
 export interface CallContext {
@@ -223,7 +223,7 @@ export function buildAdjudicatePrompt(
       '- Reject a different person, thing, place or event that shares a surname, first name, title or number; reject a category ("a Roman emperor", "a space probe"); reject the name of a work, invention or battle in place of the thing itself; reject a guess that merely describes it.',
       '- When the transcript makes an ambiguous guess unambiguous (the player has clearly been talking about this one), accept it.',
       '- `normalized` is the canonical name of whatever the guess names — the ground truth name when correct, the other thing when wrong, the guess itself when it names nothing real.',
-      '- `why` is one sentence the player will read at the reveal.',
+      '- `why` is one sentence the player reads IMMEDIATELY, mid-round, next to their guess. When the guess is wrong it may only speak about the guess (who or what that is, and that it is not this one). It must never name, describe, date, locate or hint at the ground truth — not its name, its work, its era, its place, its category. "Not Winfield Scott; he was a general." is right. "Not Winfield Scott. The answer is Sequoyah, creator of the Cherokee syllabary." ends the game and is forbidden.',
       'Answer with JSON only: {"correct": boolean, "normalized": string, "why": string}.',
     ].join('\n'),
     prompt: [
@@ -439,7 +439,29 @@ export async function adjudicate(
   // Belt and braces: a verdict that says "correct" for something that is
   // plainly a different name is the model's call; one that says "wrong" for
   // the exact name cannot happen (handled above).
-  return verdict;
+  return verdict.correct ? verdict : sealWrongVerdict(hidden, g, verdict);
+}
+
+/** What a wrong guess is told when the model's own line cannot be shown. */
+export const WRONG_GUESS_FALLBACK = 'Not this one.';
+
+/**
+ * A wrong verdict is shown mid-round, so nothing in it may give the answer
+ * away. The model is told so; this is the guard for when it does it anyway
+ * (one did: "Not Winfield Scott. The ground truth is Sequoyah…"). Any
+ * forbidden term — name, alias, name part, most-famous work — in `why`
+ * replaces the whole line; a `normalized` that is the hidden name on a wrong
+ * verdict is a contradiction and becomes the guess itself.
+ */
+export function sealWrongVerdict(
+  hidden: HiddenState,
+  guess: string,
+  verdict: Adjudication,
+): Adjudication {
+  const why = findLeaks(hidden, [verdict.why]).length ? WRONG_GUESS_FALLBACK : verdict.why;
+  const normalized =
+    !verdict.normalized || matchesName(hidden, verdict.normalized) ? guess : verdict.normalized;
+  return { correct: false, normalized, why };
 }
 
 /**
