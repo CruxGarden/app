@@ -22,8 +22,12 @@ const IDS = [
   'catppuccin-mocha',
   'geocities',
   'graphite',
+  // Gray sits before Soft Serve: Gray and Black share one orange, and the
+  // apply check below wants the accent to move between consecutive Moods
+  'soft-serve-gray',
   'soft-serve',
   'soft-serve-night',
+  'soft-serve-black',
 ];
 
 test.describe('bundled mood screenshots', () => {

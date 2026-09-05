@@ -7,9 +7,9 @@ import { GARDEN_DARK } from './garden-dark';
 import { tokenChoices } from './token-groups';
 
 describe('bundled Moods', () => {
-  it('ships seventeen complete, valid packages with distinct ids', () => {
-    expect(BUNDLED_MOODS).toHaveLength(17);
-    expect(new Set(BUNDLED_MOODS.map((m) => m.id)).size).toBe(17);
+  it('ships nineteen complete, valid packages with distinct ids', () => {
+    expect(BUNDLED_MOODS).toHaveLength(19);
+    expect(new Set(BUNDLED_MOODS.map((m) => m.id)).size).toBe(19);
     for (const m of BUNDLED_MOODS) {
       const ok = validateMoodPackage(JSON.parse(JSON.stringify(m)));
       expect(ok, `${m.id} validates`).toBeTruthy();
@@ -33,7 +33,7 @@ describe('bundled Moods', () => {
     }
   });
 
-  it('is not seventeen palettes on one layout: shape, type and motion differ', () => {
+  it('is not nineteen palettes on one layout: shape, type and motion differ', () => {
     const radii = new Set(BUNDLED_MOODS.map((m) => m.theme.overrides.radius ?? GARDEN_DARK.radius));
     const fonts = new Set(
       BUNDLED_MOODS.map((m) => m.theme.overrides.fontDisplay ?? GARDEN_DARK.fontDisplay),
@@ -101,7 +101,28 @@ describe('bundled Moods', () => {
     expect(night.paneHeaderLabelWeight).toBe(soft.paneHeaderLabelWeight);
     expect(night.motionEnterBubble).toBe(soft.motionEnterBubble);
     expect(bundledMood('soft-serve-night')!.theme.section).toBe('Dark');
-    expect(BUNDLED_MOODS.at(-1)?.id).toBe('soft-serve-night');
+    // Gray and Black: the same silhouette and tighter gutters, the orange only a highlight —
+    // pane identities are neutral except where the conversation happens and where it goes live
+    const gray = bundledMood('soft-serve-gray')!.theme.overrides;
+    const black = bundledMood('soft-serve-black')!.theme.overrides;
+    for (const o of [gray, black]) {
+      expect(o.paneBorderStyle).toBe('none');
+      expect(o.paneHeaderShape).toBe('underline');
+      expect(o.cardRadius).toBe(soft.cardRadius);
+      expect(o.paneGap).toBe('10px');
+      expect(o.workspacePadding).toBe('10px');
+      expect(o.accent).toBe('#F26B3A');
+      expect(o.paneCollaboration).toBe(o.accent);
+      expect(o.panePublish).toBe(o.accent);
+      expect(o.paneWorkshop).not.toBe(o.accent);
+      expect(o.paneArtifacts).not.toBe(o.accent);
+    }
+    expect(soft.paneGap).toBe('10px');
+    expect(night.workspacePadding).toBe('10px');
+    expect(bundledMood('soft-serve-gray')!.theme.section).toBe('Light');
+    expect(bundledMood('soft-serve-black')!.theme.section).toBe('Dark');
+    expect(BUNDLED_MOODS.at(-2)?.id).toBe('soft-serve-gray');
+    expect(BUNDLED_MOODS.at(-1)?.id).toBe('soft-serve-black');
   });
 
   it('ships mixes already inside every parameter range (validateMix is the identity)', () => {
