@@ -266,12 +266,24 @@ describe('5ws (ADR 0016)', () => {
         expect(page.content, page.path).toContain('<h1 class="question">{question}</h1>');
       }
     }
-    // Serif for the voice, sans for the interface
+    // One machine: a monospace face for everything (the spec's serif/sans rule set aside on
+    // purpose, and the stylesheet says so), the voice in phosphor, amber by default and green
+    // as the other, keyed on data-phosphor; the one keyframe is the cursor's blink
     const css = def.files.find((f) => f.path === 'src/styles/global.css')!.content;
-    expect(css).toMatch(/--serif:[^;]*serif;/);
-    expect(css).toMatch(/--sans:[^;]*sans-serif;/);
+    expect(css).toMatch(/--mono:[^;]*monospace;/);
+    expect(css).not.toMatch(/--serif:|--sans:/);
+    expect(css).toMatch(/serif/i); // the comment that says why
+    expect(css).toContain('--voice: #e0a83a');
+    expect(css).toContain("[data-phosphor='green']");
     expect(css).toContain('.transcript h3');
-    expect((css.match(/@keyframes/g) ?? []).length).toBeLessThanOrEqual(1);
+    expect(css.match(/@keyframes/g)).toEqual(['@keyframes']);
+    expect(css).toContain('prefers-reduced-motion');
+    expect(base.content).toContain('data-phosphor="amber"');
+    expect(base.content).toContain("localStorage.getItem('5ws:phosphor')");
+    // /play passes the game's name (from the tagline) for the boot line and the share block
+    const play = def.files.find((f) => f.path === 'src/pages/play.astro')!.content;
+    expect(play).toContain("tagline.split(' — ')[0]");
+    expect(play).toContain('name={name}');
   });
 
   it('declares the Rounds collection, the Shelf as settings, and the two Builder actions', async () => {

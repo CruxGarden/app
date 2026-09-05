@@ -20,6 +20,12 @@ import siteLocalState from './5ws-site/src/lib/local-state.ts?raw';
 import siteLeaderboard from './5ws-site/src/lib/leaderboard.ts?raw';
 import siteStore from './5ws-site/src/lib/store.ts?raw';
 import siteFormat from './5ws-site/src/lib/format.ts?raw';
+import siteTyping from './5ws-site/src/lib/typing.ts?raw';
+import siteDecrypt from './5ws-site/src/lib/decrypt.ts?raw';
+import siteShare from './5ws-site/src/lib/share.ts?raw';
+import siteCountdown from './5ws-site/src/lib/countdown.ts?raw';
+import sitePhosphor from './5ws-site/src/lib/phosphor.ts?raw';
+import siteSound from './5ws-site/src/lib/sound.ts?raw';
 import siteRoundCss from './5ws-site/src/styles/round.css?raw';
 
 /**
@@ -31,8 +37,11 @@ import siteRoundCss from './5ws-site/src/styles/round.css?raw';
  * `rounds/*.md` are finished rounds: the conversation is the artifact. The
  * pages show the shelf and the transcripts and hand off to the app to play.
  *
- * Serif for anything with a voice, sans for the interface, one fade at most.
- * `meta.game.shelfPath` marks the crux interrogable to the Builder.
+ * The whole site reads as one machine — a calm terminal: one monospace face,
+ * the voice in phosphor, the interface in grey a step smaller (global.css says
+ * why the spec's serif/sans rule was set aside). The voice types on /play; the
+ * one keyframe is the cursor's blink. `meta.game.shelfPath` marks the crux
+ * interrogable to the Builder.
  *
  * `/play` is the game itself: a React island that runs the round in the
  * visitor's browser with the AI they connect ("Connect your AI" — provider +
@@ -72,6 +81,12 @@ export const SITE_FILES: readonly { path: string; content: string }[] = [
   { path: 'src/lib/leaderboard.ts', content: siteLeaderboard },
   { path: 'src/lib/store.ts', content: siteStore },
   { path: 'src/lib/format.ts', content: siteFormat },
+  { path: 'src/lib/typing.ts', content: siteTyping },
+  { path: 'src/lib/decrypt.ts', content: siteDecrypt },
+  { path: 'src/lib/share.ts', content: siteShare },
+  { path: 'src/lib/countdown.ts', content: siteCountdown },
+  { path: 'src/lib/phosphor.ts', content: sitePhosphor },
+  { path: 'src/lib/sound.ts', content: siteSound },
   { path: 'src/styles/round.css', content: siteRoundCss },
 ];
 
@@ -228,8 +243,8 @@ dist/
     {
       path: 'public/favicon.svg',
       content: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
-  <circle cx="16" cy="16" r="13" fill="none" stroke="#5a4632" stroke-width="2"/>
-  <path d="M16 6v10l6 4" fill="none" stroke="#5a4632" stroke-width="2" stroke-linecap="round"/>
+  <rect width="32" height="32" rx="4" fill="#0f0f0e"/>
+  <rect x="9" y="8" width="10" height="16" fill="#e0a83a"/>
 </svg>
 `,
     },
@@ -285,101 +300,193 @@ export function slugOf(path: string): string {
     },
     {
       path: 'src/styles/global.css',
-      content: `/* Serif for anything with a voice; sans for the interface. Almost no motion.
-   Mobile-first: one column, a reading measure, tap targets you can hit with a thumb. */
+      content: `/* The whole site is one machine: a calm terminal program — a modern TUI, not
+   an arcade cabinet. One monospace face for everything; the voice in phosphor
+   at full brightness, the interface in a cool grey one size step down.
+
+   This sets aside the spec's "serif for anything with a voice, sans for the
+   interface" on purpose: a terminal has one face, so voice and interface are
+   told apart by brightness and colour instead. Amber by default, green as the
+   other phosphor (data-phosphor on <html>, remembered in this browser — the
+   head applies it before first paint). Almost no motion: the one keyframe is
+   the block cursor's blink, and nothing blinks under reduced motion. Faint
+   scanlines on desktop only, felt more than seen. No glow beyond a 1px hint
+   on the voice; no frame, no vignette, no flicker.
+
+   Contrast (WCAG AA, against the ground): interface grey ≈ 8:1, dim grey ≈ 5.4:1,
+   amber ≈ 8.9:1, green ≈ 10:1. Mobile-first: one column, a reading measure,
+   tap targets you can hit with a thumb. */
 :root {
-  --bg: #f7f4ee;
-  --text: #1f1d1a;
-  --muted: #7a746b;
-  --rule: #e3ded4;
-  --accent: #5a4632;
-  --serif: 'Iowan Old Style', 'Palatino Linotype', Palatino, Georgia, 'Times New Roman', serif;
-  --sans: system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif;
-  --measure: 66ch; /* the voice reads at a book's width on desktop, full width on a phone */
+  --bg: #0f0f0e;
+  --voice: #e0a83a;
+  --voice-dim: #9a7a36;
+  --bright: #d4d7dc;
+  --text: #a4aab3;
+  --muted: #828a96;
+  --rule: #26272a;
+  --rule-strong: #3a3c40;
+  --field: #161615;
+  --error: #d98a7a;
+  --glow: 0 0 1px color-mix(in srgb, var(--voice) 50%, transparent);
+  --mono: 'IBM Plex Mono', 'JetBrains Mono', 'SF Mono', Menlo, Consolas, 'Liberation Mono',
+    ui-monospace, monospace;
+  --ui: 0.85rem; /* the interface: one step down from the voice */
+  --voice-size: 1rem;
+  --measure: 72ch;
   --gutter: clamp(1rem, 4vw, 2rem);
   --tap: 2.75rem;
 }
+:root[data-phosphor='green'] {
+  --bg: #0c100d;
+  --voice: #5fd77a;
+  --voice-dim: #3f8a52;
+  --rule: #222925;
+  --rule-strong: #33403a;
+  --field: #121815;
+}
 
 * { box-sizing: border-box; }
-html { font-size: clamp(1rem, 0.95rem + 0.25vw, 1.125rem); -webkit-text-size-adjust: 100%; }
+html { font-size: clamp(1rem, 0.95rem + 0.25vw, 1.0625rem); -webkit-text-size-adjust: 100%; }
 
 body {
   margin: 0;
   background: var(--bg);
   color: var(--text);
-  font-family: var(--sans);
+  font-family: var(--mono);
+  font-size: var(--ui);
   line-height: 1.6;
   overflow-wrap: anywhere;
+}
+/* Scanlines: ≤ 0.03, desktop only — on a phone they muddy small text */
+@media (min-width: 40rem) {
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: 99;
+    pointer-events: none;
+    background: repeating-linear-gradient(
+      to bottom,
+      rgba(255, 255, 255, 0.028) 0,
+      rgba(255, 255, 255, 0.028) 1px,
+      transparent 1px,
+      transparent 3px
+    );
+  }
+}
+
+/* The one thing that moves */
+@keyframes blink {
+  0%, 49% { opacity: 1; }
+  50%, 100% { opacity: 0; }
+}
+.cursor {
+  color: var(--voice);
+  animation: blink 1s steps(1, end) infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .cursor { animation: none; }
 }
 
 main {
   max-width: var(--measure);
   margin: 0 auto;
-  padding: 2rem var(--gutter) 5rem;
+  padding: 1.5rem var(--gutter) 5rem;
 }
-@media (min-width: 40rem) { main { padding-top: 3.5rem; padding-bottom: 7rem; } }
+@media (min-width: 40rem) { main { padding-top: 2.5rem; padding-bottom: 7rem; } }
 
-a { color: var(--accent); text-decoration: none; }
-a:hover { text-decoration: underline; }
+a { color: var(--text); text-decoration: underline; text-decoration-color: var(--rule-strong); }
+a:hover { color: var(--bright); text-decoration-color: currentColor; }
 
-/* ── Interface (sans) ── */
+/* ── Interface ── */
 .masthead {
   max-width: var(--measure);
   margin: 0 auto;
-  padding: 0.5rem var(--gutter) 0;
+  padding: 0.35rem var(--gutter) 0;
   display: flex;
   flex-wrap: wrap;
   justify-content: space-between;
   align-items: center;
   gap: 0 1rem;
-  font-size: 0.85rem;
   color: var(--muted);
+  border-bottom: 1px solid var(--rule);
 }
-.masthead a { color: var(--muted); display: inline-flex; align-items: center; min-height: var(--tap); }
-.masthead nav { display: flex; gap: 1.25rem; }
+.masthead a { color: var(--text); display: inline-flex; align-items: center; min-height: var(--tap); text-decoration: none; }
+.masthead a:hover { text-decoration: underline; }
+.masthead nav { display: flex; align-items: center; gap: 1.25rem; }
+.masthead nav a { color: var(--muted); }
+button.toggle {
+  min-height: var(--tap);
+  padding: 0 0.5rem;
+  font: inherit;
+  font-size: 0.7rem;
+  color: var(--muted);
+  background: none;
+  border: 0;
+  cursor: pointer;
+  white-space: nowrap;
+}
+button.toggle::before { content: '['; color: var(--rule-strong); }
+button.toggle::after { content: ']'; color: var(--rule-strong); }
+button.toggle:hover { color: var(--text); }
 
+/* Section headings as ruled lines: ── the shelf ──────── */
 h2 {
-  font-family: var(--sans);
+  display: flex;
+  align-items: center;
+  gap: 0.75ch;
   font-size: 0.75rem;
-  font-weight: 600;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  font-weight: 400;
+  letter-spacing: 0.04em;
+  text-transform: lowercase;
   color: var(--muted);
-  margin: 3rem 0 1rem;
+  margin: 2.5rem 0 1rem;
 }
-h2 .count { font-weight: 400; margin-left: 0.5rem; }
+h2::before { content: '──'; color: var(--rule-strong); }
+h2::after { content: ''; flex: 1; border-top: 1px solid var(--rule); }
+h2 .count { color: var(--muted); }
+h2 .count::before { content: '('; }
+h2 .count::after { content: ')'; }
 
-.lede { font-size: 1.05rem; margin: 0 0 0.5rem; }
-.how, .note, .facts, .crumb, .tag, .adjacent, .site-foot { font-size: 0.85rem; color: var(--muted); }
+.lede { color: var(--bright); margin: 0 0 0.5rem; }
+.how, .note, .facts, .crumb, .tag, .adjacent, .site-foot { color: var(--muted); }
 .how { margin: 0; }
 .how a, .crumb a, .play a { display: inline-block; padding: 0.35rem 0; }
 .note { margin: -0.5rem 0 1.25rem; }
 
-.play { padding-top: 1rem; }
+.play { padding-top: 0.5rem; }
 .play p { margin: 0; }
-.play .play-link { display: inline-block; min-height: var(--tap); line-height: var(--tap); font-size: 1.05rem; }
-.play .url { display: block; margin-top: 0.35rem; font-size: 0.8rem; color: var(--muted); }
+.play .play-link { display: inline-block; min-height: var(--tap); line-height: var(--tap); color: var(--bright); }
+.play .play-link::before { content: '> '; color: var(--voice); }
+.play .url { display: block; margin-top: 0.35rem; font-size: 0.75rem; color: var(--muted); }
 /* /play: the island is the page */
 body.bare main { max-width: none; padding: 0; }
 
+/* The shelf as a directory listing: name, dotted leader, kind and era */
 ol.entries { list-style: none; padding: 0; margin: 0; }
 ol.entries li {
   display: flex;
-  flex-wrap: wrap;
-  justify-content: space-between;
   align-items: baseline;
-  gap: 0 1rem;
+  gap: 1ch;
   min-height: var(--tap);
-  padding: 0.5rem 0;
-  border-bottom: 1px solid var(--rule);
-  font-size: 0.95rem;
+  padding: 0.35rem 0;
   break-inside: avoid;
 }
-ol.entries .name { font-family: var(--serif); }
-ol.entries .meta { color: var(--muted); font-size: 0.75rem; }
+/* Names wrap at words, never inside one; the leader takes what is left */
+ol.entries .name { order: 1; flex: 0 1 auto; min-width: 0; overflow-wrap: normal; color: var(--text); }
+ol.entries li::before {
+  content: '';
+  order: 2;
+  flex: 1 1 2ch;
+  min-width: 2ch;
+  border-bottom: 1px dotted var(--rule-strong);
+  transform: translateY(-0.35em);
+}
+ol.entries .meta { order: 3; flex: 0 0 auto; color: var(--muted); font-size: 0.75rem; white-space: nowrap; }
+/* One column, like a directory listing: at the reading measure every name, its leader and
+   its era fit on a single line */
 @media (min-width: 40rem) {
-  ol.entries { columns: 2; column-gap: 2.5rem; }
-  ol.entries li { font-size: 0.9rem; min-height: 0; padding: 0.45rem 0; }
+  ol.entries li { min-height: 0; padding: 0.3rem 0; }
 }
 
 ul.round-list { list-style: none; padding: 0; margin: 0; }
@@ -387,76 +494,77 @@ ul.round-list li {
   display: flex;
   flex-direction: column;
   gap: 0.15rem;
-  padding: 0.75rem 0;
+  padding: 0.6rem 0;
   border-bottom: 1px solid var(--rule);
-  font-size: 0.95rem;
 }
 ul.round-list li > a, ul.round-list li > span:first-child { display: inline-block; min-height: 1.75rem; }
 @media (min-width: 40rem) {
-  ul.round-list li { flex-direction: row; justify-content: space-between; gap: 1rem; font-size: 0.9rem; }
+  ul.round-list li { flex-direction: row; justify-content: space-between; gap: 1rem; }
 }
 .tag {
   display: inline-block;
   padding: 0 0.4rem;
-  border: 1px solid var(--rule);
-  border-radius: 3px;
+  border: 1px solid var(--rule-strong);
+  border-radius: 2px;
   font-size: 0.7rem;
   margin-left: 0.5rem;
   vertical-align: middle;
 }
 
-table.board { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
-table.board th, table.board td { text-align: left; padding: 0.5rem 0.25rem; border-bottom: 1px solid var(--rule); }
-table.board th { font-size: 0.7rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
-table.board td:first-child, table.board th:first-child { width: 2rem; color: var(--muted); }
+/* The board: a plain aligned table */
+table.board { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+table.board th, table.board td { text-align: left; padding: 0.4rem 0.5ch; border-bottom: 1px solid var(--rule); }
+table.board th { font-size: 0.7rem; font-weight: 400; letter-spacing: 0.04em; text-transform: lowercase; color: var(--muted); }
+table.board td:first-child, table.board th:first-child { width: 3ch; color: var(--muted); }
 table.board td:nth-child(3), table.board td:nth-child(4), table.board th:nth-child(3), table.board th:nth-child(4) { text-align: right; white-space: nowrap; }
 #board-switch a { display: inline-block; min-height: var(--tap); line-height: var(--tap); }
 
-/* ── Voice (serif) ── */
-h1.question, .voice, .round-head h1, .transcript p, .transcript li, .transcript h3 {
-  font-family: var(--serif);
+/* ── Voice: the bright thing on the screen ── */
+h1.question, .voice, .transcript p, .transcript li, .transcript h3 {
+  color: var(--voice);
+  text-shadow: var(--glow);
+  font-size: var(--voice-size);
 }
 h1.question {
-  font-size: clamp(2rem, 1.4rem + 3vw, 2.8rem);
+  font-size: clamp(1.5rem, 1.2rem + 1.5vw, 2rem);
   font-weight: 400;
-  line-height: 1.1;
-  margin: 0 0 1.25rem;
-  letter-spacing: -0.01em;
+  line-height: 1.2;
+  margin: 0 0 1rem;
 }
-.round-head h1 { font-size: clamp(1.5rem, 1.2rem + 1.5vw, 1.9rem); font-weight: 400; margin: 0.25rem 0 0.5rem; }
+h1.question::before { content: '▮ '; color: var(--voice-dim); }
+/* The round's title is interface, not voice */
+.round-head h1 { font-size: 1.15rem; font-weight: 600; color: var(--bright); margin: 0.25rem 0 0.5rem; }
 .round-head .crumb { margin: 0; }
 .round-head .facts { margin: 0 0 2rem; }
 
-.transcript { font-size: clamp(1.05rem, 1rem + 0.3vw, 1.15rem); line-height: 1.7; }
-.transcript p { margin: 0 0 1.4rem; }
-.transcript p em:only-child { color: var(--muted); }
+.transcript { line-height: 1.7; }
+.transcript p { margin: 0 0 1.3rem; }
+.transcript p em:only-child { color: var(--voice-dim); }
 /* The player's lines are interface, not voice */
 .transcript p:has(> strong:first-child) {
-  font-family: var(--sans);
-  font-size: 0.9rem;
   color: var(--muted);
-  margin: 2rem 0 0.75rem;
+  text-shadow: none;
+  font-size: var(--ui);
+  margin: 1.75rem 0 0.75rem;
 }
+.transcript p:has(> strong:first-child)::before { content: '> '; color: var(--rule-strong); }
 .transcript p:has(> strong:first-child) strong { font-weight: 600; color: var(--text); }
-/* "Guesses" and "Reveal" are section labels: interface, sans */
-.transcript h2 { margin: 3.5rem 0 1.5rem; padding-top: 2rem; border-top: 1px solid var(--rule); }
+/* "Guesses" and "Reveal" are section labels: interface */
+.transcript h2 { margin: 3rem 0 1.5rem; }
 /* "This was", "Why they matter", "The misses", "Parting": the voice's own headings */
-.transcript h3 { font-size: clamp(1.35rem, 1.2rem + 0.8vw, 1.6rem); font-weight: 400; margin: 2.5rem 0 0.75rem; }
-.transcript h3 + p { font-size: 1.15em; }
-/* The reveal: the one thing that moves is the name */
-.transcript h3:first-of-type + p { animation: reveal 900ms ease-out both; }
-.transcript ul { padding-left: 1.25rem; }
-.transcript li { margin-bottom: 0.75rem; }
-@keyframes reveal { from { opacity: 0; } to { opacity: 1; } }
-@media (prefers-reduced-motion: reduce) { .transcript h3:first-of-type + p { animation: none; } }
+.transcript h3 { font-size: calc(var(--voice-size) * 1.15); font-weight: 400; margin: 2rem 0 0.75rem; color: var(--voice-dim); text-shadow: none; }
+.transcript h3 + p { font-size: calc(var(--voice-size) * 1.1); }
+.transcript ul { list-style: none; padding: 0; }
+.transcript li { margin-bottom: 0.75rem; padding-left: 2ch; text-indent: -2ch; }
+.transcript li::before { content: '· '; color: var(--muted); }
+.transcript li strong { color: var(--text); text-shadow: none; }
 
-.adjacent { margin-top: 3.5rem; padding-top: 1.5rem; border-top: 1px solid var(--rule); }
+.adjacent { margin-top: 3rem; padding-top: 1.25rem; border-top: 1px solid var(--rule); }
 .adjacent h3 {
-  font-family: var(--sans);
   font-size: 0.75rem;
-  font-weight: 600;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  font-weight: 400;
+  letter-spacing: 0.04em;
+  text-transform: lowercase;
   color: var(--muted);
   margin: 1.5rem 0 0.5rem;
 }
@@ -465,11 +573,11 @@ h1.question {
 .adjacent p a { display: inline-block; min-height: var(--tap); line-height: var(--tap); }
 
 .about h2 { margin-top: 2.5rem; }
-.about p, .about li { font-size: 0.95rem; }
+.about p, .about li { color: var(--text); }
 .about li { margin-bottom: 0.5rem; }
-.about .voice { font-size: 1.1rem; }
+.about strong { color: var(--bright); }
 
-.site-foot { max-width: var(--measure); margin: 0 auto; padding: 0 var(--gutter) 3rem; }
+.site-foot { max-width: var(--measure); margin: 0 auto; padding: 0 var(--gutter) 3rem; font-size: 0.75rem; }
 `,
     },
     {
@@ -485,13 +593,21 @@ const base = import.meta.env.BASE_URL;
 ---
 
 <!doctype html>
-<html lang="en">
+<html lang="en" data-phosphor="amber">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="dark" />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <title>{title}</title>
     {description && <meta name="description" content={description} />}
+    <!-- The remembered phosphor, before first paint (see src/lib/phosphor.ts) -->
+    <script is:inline>
+      try {
+        if (localStorage.getItem('5ws:phosphor') === 'green')
+          document.documentElement.setAttribute('data-phosphor', 'green');
+      } catch (e) {}
+    </script>
   </head>
   <body class={bare ? 'bare' : ''}>
     {!bare && (
@@ -501,6 +617,7 @@ const base = import.meta.env.BASE_URL;
           <a href={base}>Shelf</a>
           <a href={base + 'play/'}>Play</a>
           <a href={base + 'about/'}>About</a>
+          <button type="button" class="toggle" id="phosphor-toggle" title="Switch phosphor">amber</button>
         </nav>
       </header>
     )}
@@ -510,6 +627,27 @@ const base = import.meta.env.BASE_URL;
     {!bare && <footer class="site-foot">A Shelf and its Rounds. Press Play.</footer>}
   </body>
 </html>
+
+<script>
+  // The phosphor toggle: amber ⇄ green, remembered in this browser
+  import { applyPhosphor, currentPhosphor, otherPhosphor, savePhosphor } from '../lib/phosphor';
+  const root = document.documentElement;
+  const button = document.getElementById('phosphor-toggle');
+  if (button) {
+    const show = () => {
+      const p = currentPhosphor(root);
+      button.textContent = p;
+      button.setAttribute('aria-label', 'Phosphor ' + p + ' — switch to ' + otherPhosphor(p));
+    };
+    show();
+    button.addEventListener('click', () => {
+      const next = otherPhosphor(currentPhosphor(root));
+      applyPhosphor(root, next);
+      savePhosphor(localStorage, next);
+      show();
+    });
+  }
+</script>
 `,
     },
     {
@@ -822,12 +960,15 @@ import Round from '../components/Round';
 import '../styles/round.css';
 
 // The game. Nothing else on screen: the layout is bare, the island is the page.
+// The game's name (the tagline's first word) heads the boot line and the share block.
 const base = import.meta.env.BASE_URL;
 const question = questionFor(shelf);
+const tagline = ${JSON.stringify(FIVE_WS_SITE_TITLE)};
+const name = tagline.split(' — ')[0];
 ---
 
 <Base title={question} bare>
-  <Round client:only="react" shelf={shelf} base={base} />
+  <Round client:only="react" shelf={shelf} base={base} name={name} />
 </Base>
 `,
     },

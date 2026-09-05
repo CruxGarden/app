@@ -1,7 +1,10 @@
-/* The Round (/play). Mobile-first: one column, the voice on top, the
-   question/guess bar pinned to the bottom. Serif for anything with a voice
-   (.voice), sans for the interface. Almost no motion: the only thing that
-   moves is whoever is speaking (the composing dots) and, once, the name. */
+/* The Round (/play). A calm terminal program: one monospace face, the voice in
+   phosphor at full brightness, the interface in a cool grey one step smaller.
+   The palette, face and cursor come from global.css (which says why the spec's
+   serif/sans rule was set aside — a terminal has one face). Almost no motion:
+   the block cursor blinks while the voice composes or types, the clock's colon
+   blinks while the clock runs, and nothing else moves. Mobile-first: one
+   column, the voice on top, the question/guess bar pinned to the bottom. */
 
 .round-app {
   display: flex;
@@ -10,83 +13,149 @@
   max-width: var(--measure);
   margin: 0 auto;
   padding: 0 var(--gutter);
-  font-family: var(--sans);
-}
-.round-app .voice {
-  font-family: var(--serif);
+  font-size: var(--ui);
 }
 
-/* ── Top: shelf link, points, clock, questions ── */
+/* Boot: a dark screen, one cursor, then the banner types — everything else is
+   already laid out underneath so nothing jumps when the screen comes up. */
+.round-app.booting .round-top,
+.round-app.booting .round-voice > :not(.banner),
+.round-app.booting .round-bar,
+.round-app.booting .round-foot {
+  visibility: hidden;
+}
+
+/* ── Top: shelf, toggles | readouts ── */
 .round-top {
   position: sticky;
   top: 0;
   z-index: 2;
   display: flex;
   justify-content: space-between;
-  align-items: baseline;
+  align-items: center;
   gap: 1rem;
-  padding: 0.75rem 0 0.5rem;
+  min-height: 2.75rem;
+  padding: 0.35rem 0;
   background: var(--bg);
   border-bottom: 1px solid var(--rule);
-  font-size: 0.85rem;
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+.round-top .left {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  min-width: 0;
 }
 .round-top .shelf-link {
-  color: var(--muted);
+  color: var(--text);
   white-space: nowrap;
   min-height: var(--tap);
   display: inline-flex;
   align-items: center;
+  text-decoration: none;
 }
+.round-top .shelf-link:hover {
+  text-decoration: underline;
+}
+.corner {
+  display: flex;
+  gap: 0.25rem;
+}
+/* On a phone the header is the shelf and the readouts; the toggles sit in the bar's foot
+   while the round is open and at the foot of the reveal after. (The island is capped at
+   the reading measure, so this keys on the viewport, not the component's width.) */
+.bar-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+.bar-foot button.toggle {
+  background: none;
+  border: 0;
+  padding: 0 0.5rem;
+}
+@media (max-width: 39.99rem) {
+  .round-top .corner {
+    display: none;
+  }
+}
+@media (min-width: 40rem) {
+  .bar-foot .corner {
+    display: none;
+  }
+  .bar-foot:not(:has(.round-foot)) {
+    display: none;
+  }
+}
+
+/* The readouts: fixed-width digits, nothing shifts as they change */
 .status {
   display: flex;
   gap: 1rem;
   align-items: baseline;
-  color: var(--muted);
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
-.status .points b {
-  font-size: 1.25rem;
-  font-weight: 600;
-  color: var(--text);
-}
-.status .clock {
-  font-size: 1.1rem;
+.readout {
   color: var(--text);
   letter-spacing: 0.02em;
 }
-.status .clock.paused {
+.readout.qleft {
   color: var(--muted);
 }
-.status .qleft {
-  font-size: 0.8rem;
+.readout.clock .colon {
+  animation: blink 1s steps(1, end) infinite;
+}
+/* Holding: composing, typing, over — the colon stands still */
+.readout.clock.hold .colon {
+  animation: none;
+}
+.readout.clock.hold {
+  color: var(--muted);
+}
+@media (prefers-reduced-motion: reduce) {
+  .readout.clock .colon {
+    animation: none;
+  }
 }
 
 /* ── The voice column ── */
 .round-voice {
   flex: 1 1 auto;
-  padding: 1.5rem 0 1rem;
-  font-size: clamp(1.05rem, 1rem + 0.3vw, 1.15rem);
-  line-height: 1.7;
+  padding: 1rem 0 1rem;
+  line-height: 1.65;
+}
+.round-voice .banner {
+  margin: 0 0 1.25rem;
+  color: var(--muted);
+  font-size: var(--ui);
 }
 .round-voice p {
-  margin: 0 0 1.25rem;
+  margin: 0 0 1.1rem;
+}
+.round-voice .voice {
+  font-size: var(--voice-size);
 }
 .round-voice .opening {
-  font-size: 1.15em;
+  font-size: calc(var(--voice-size) * 1.05);
 }
 .round-voice .you {
-  font-size: 0.9rem;
   color: var(--muted);
-  margin: 1.75rem 0 0.5rem;
+  margin: 1.5rem 0 0.5rem;
 }
 .round-voice .you strong {
   font-weight: 600;
   color: var(--text);
 }
+.round-voice .turn .you::before {
+  content: '> ';
+  color: var(--rule-strong);
+}
 .guess-line {
-  font-size: 0.9rem;
   color: var(--muted);
-  margin: 0.5rem 0 1.25rem;
+  margin: 0.5rem 0 1.1rem;
 }
 .guess-line .label {
   color: var(--text);
@@ -97,53 +166,21 @@
   margin-left: 0.35rem;
 }
 .guess-line.right .label {
-  color: var(--accent);
-}
-
-/* Whoever is speaking is the one thing that moves */
-.composing {
-  display: inline-flex;
-  gap: 0.15em;
-  color: var(--muted);
-}
-.composing span {
-  animation: compose 1.6s ease-in-out infinite;
-}
-.composing span:nth-child(2) {
-  animation-delay: 0.25s;
-}
-.composing span:nth-child(3) {
-  animation-delay: 0.5s;
-}
-@keyframes compose {
-  0%,
-  100% {
-    opacity: 0.25;
-  }
-  50% {
-    opacity: 1;
-  }
-}
-@media (prefers-reduced-motion: reduce) {
-  .composing span {
-    animation: none;
-    opacity: 0.7;
-  }
+  color: var(--voice);
 }
 
 .note {
-  font-size: 0.85rem;
   color: var(--muted);
   margin: 0 0 0.75rem;
 }
 .note.error {
-  color: #8a3b2e;
+  color: var(--error);
 }
 button.link {
   background: none;
   border: 0;
   padding: 0;
-  color: var(--accent);
+  color: var(--text);
   font: inherit;
   cursor: pointer;
   text-decoration: underline;
@@ -176,19 +213,26 @@ button.link {
   min-height: var(--tap);
   padding: 0 0.75rem;
   font: inherit;
-  font-size: 1rem;
-  color: var(--text);
-  background: #fff;
-  border: 1px solid var(--rule);
-  border-radius: 6px;
+  font-size: var(--ui);
+  color: var(--bright);
+  background: var(--field);
+  border: 1px solid var(--rule-strong);
+  border-radius: 2px;
+  caret-color: var(--voice);
+}
+.round-bar input::placeholder,
+.connect-form input::placeholder,
+.sign-in input::placeholder,
+.search-panel input::placeholder {
+  color: var(--muted);
 }
 .round-bar input:focus,
 .connect-form input:focus,
 .sign-in input:focus,
 .search-panel input:focus {
-  outline: 2px solid var(--accent);
-  outline-offset: 1px;
-  border-color: var(--accent);
+  outline: 1px solid var(--voice);
+  outline-offset: 0;
+  border-color: var(--voice);
 }
 .round-bar button,
 .connect-form button,
@@ -198,44 +242,61 @@ button.link {
   min-height: var(--tap);
   padding: 0 0.9rem;
   font: inherit;
-  font-size: 0.9rem;
+  font-size: var(--ui);
   color: var(--text);
-  background: #fff;
-  border: 1px solid var(--rule);
-  border-radius: 6px;
+  background: var(--field);
+  border: 1px solid var(--rule-strong);
+  border-radius: 2px;
   cursor: pointer;
   white-space: nowrap;
+}
+.round-bar button:hover:not(:disabled),
+.connect-form button:hover:not(:disabled),
+.sign-in button:hover:not(:disabled),
+.search-panel button:hover:not(:disabled),
+.after button:hover:not(:disabled) {
+  color: var(--bright);
+  border-color: var(--muted);
 }
 .round-bar button:disabled,
 .connect-form button:disabled,
 .sign-in button:disabled,
 .search-panel button:disabled {
-  opacity: 0.45;
+  opacity: 0.4;
   cursor: default;
 }
 .round-bar button.quiet,
-.search-panel button.quiet {
+.search-panel button.quiet,
+.after button.quiet {
   color: var(--muted);
+  background: none;
   border-color: transparent;
 }
 .round-bar button.active {
-  border-color: var(--accent);
-  color: var(--accent);
+  border-color: var(--voice);
+  color: var(--voice);
 }
 button.primary,
 .after button.primary {
-  background: var(--accent);
-  color: #fff;
-  border-color: var(--accent);
+  background: var(--voice);
+  color: var(--bg);
+  border-color: var(--voice);
+  font-weight: 600;
+}
+button.primary:hover:not(:disabled),
+.after button.primary:hover:not(:disabled) {
+  color: var(--bg);
+  border-color: var(--voice);
+  filter: brightness(1.08);
 }
 
 /* Guesses cost; questions don't — the guess field wears a different border */
 .round-bar .guess input {
-  border-color: var(--accent);
+  border-color: var(--voice-dim);
   border-style: dashed;
 }
 .round-bar .guess .cost {
-  font-size: 0.75rem;
+  font-size: 0.7rem;
   color: var(--muted);
   white-space: nowrap;
 }
@@ -254,6 +315,7 @@ button.primary,
     flex-direction: row;
     align-items: center;
     justify-content: space-between;
+    gap: 1.25rem;
   }
   .round-bar .guess {
     flex: 1 1 auto;
@@ -280,10 +342,13 @@ button.primary,
   list-style: none;
   margin: 0;
   padding: 0;
-  font-size: 0.85rem;
 }
 .search-panel .kept li {
   padding: 0.25rem 0;
+}
+.search-panel .kept li::before {
+  content: '· ';
+  color: var(--muted);
 }
 .search-panel .close {
   align-self: flex-start;
@@ -291,71 +356,111 @@ button.primary,
 
 /* ── The reveal ── */
 .reveal {
-  margin-top: 2rem;
-  padding-top: 1.5rem;
+  margin-top: 1.75rem;
+  padding-top: 1.25rem;
   border-top: 1px solid var(--rule);
 }
 .reveal .outcome {
-  font-size: 0.85rem;
   color: var(--muted);
 }
 .reveal .who {
-  font-size: clamp(1.5rem, 1.2rem + 1.5vw, 2rem);
+  font-size: calc(var(--voice-size) * 1.25);
   font-weight: 400;
   margin: 0 0 1rem;
-  animation: reveal 900ms ease-out both;
+  line-height: 1.4;
 }
-@media (prefers-reduced-motion: reduce) {
-  .reveal .who {
-    animation: none;
-  }
+/* The blocks resolve to letters; same colour before and after — the resolve is the reward */
+.reveal .who .secret {
+  letter-spacing: 0.02em;
 }
 .reveal h4,
 .board h4 {
+  display: flex;
+  align-items: center;
+  gap: 0.75ch;
   font-size: 0.75rem;
-  font-weight: 600;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  font-weight: 400;
+  letter-spacing: 0.04em;
+  text-transform: lowercase;
   color: var(--muted);
-  margin: 2rem 0 0.75rem;
+  margin: 1.75rem 0 0.75rem;
+}
+.reveal h4::before,
+.board h4::before {
+  content: '──';
+  color: var(--rule-strong);
+}
+.reveal h4::after,
+.board h4::after {
+  content: '';
+  flex: 1;
+  border-top: 1px solid var(--rule);
 }
 .reveal .misses ul {
-  padding-left: 1.1rem;
+  list-style: none;
+  padding: 0;
   margin: 0 0 1.25rem;
 }
 .reveal .misses li {
   margin-bottom: 0.6rem;
+  padding-left: 2ch;
+  text-indent: -2ch;
+}
+.reveal .misses li::before {
+  content: '✗ ';
+  color: var(--muted);
 }
 .reveal .misses .guess-name {
   font-weight: 600;
+  color: var(--text);
 }
 .reveal .parting {
-  font-style: italic;
-  color: var(--muted);
-}
-.reveal .score {
-  font-size: 0.9rem;
-  color: var(--muted);
-  margin: 1.5rem 0 0.5rem;
-  font-variant-numeric: tabular-nums;
+  color: var(--voice-dim);
 }
 .reveal .after {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   gap: 0.5rem;
-  margin: 1.5rem 0 1rem;
+  margin: 1rem 0 1rem;
+}
+.reveal .after .hint {
+  font: inherit;
+  font-size: 0.7rem;
+  color: var(--muted);
+  padding: 0 0.4rem;
+  border: 1px solid var(--rule);
+  border-radius: 2px;
+}
+.reveal .after-voice {
+  margin-top: 1.5rem;
+}
+/* The share block: the only trophy, in a dashed box, no spoiler in it */
+.reveal .share {
+  display: inline-block;
+  margin: 0;
+  padding: 0.75rem 1rem;
+  font: inherit;
+  line-height: 1.6;
+  color: var(--text);
+  border: 1px dashed var(--rule-strong);
+  border-radius: 2px;
+  white-space: pre;
+  overflow-x: auto;
+  max-width: 100%;
+}
+.reveal .next {
+  margin: 0 0 1rem;
 }
 .reveal .markdown {
   width: 100%;
-  font:
-    0.8rem/1.4 ui-monospace,
-    SFMono-Regular,
-    Menlo,
-    monospace;
+  font: inherit;
+  font-size: 0.75rem;
+  line-height: 1.45;
   color: var(--text);
-  background: #fff;
-  border: 1px solid var(--rule);
-  border-radius: 6px;
+  background: var(--field);
+  border: 1px solid var(--rule-strong);
+  border-radius: 2px;
   padding: 0.75rem;
   margin: 0 0 1rem;
   resize: vertical;
@@ -363,31 +468,31 @@ button.primary,
 
 /* ── Today's board ── */
 .board .you {
-  font-size: 0.95rem;
+  color: var(--text);
   margin: 0 0 0.75rem;
 }
 .board-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 0.9rem;
   margin: 0 0 1rem;
+  font-variant-numeric: tabular-nums;
 }
 .board-table th,
 .board-table td {
   text-align: left;
-  padding: 0.45rem 0.25rem;
+  padding: 0.35rem 0.5ch;
   border-bottom: 1px solid var(--rule);
 }
 .board-table th {
   font-size: 0.7rem;
-  font-weight: 600;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+  font-weight: 400;
+  letter-spacing: 0.04em;
+  text-transform: lowercase;
   color: var(--muted);
 }
 .board-table td:first-child,
 .board-table th:first-child {
-  width: 2rem;
+  width: 3ch;
   color: var(--muted);
 }
 .board-table td:nth-child(3),
@@ -404,26 +509,27 @@ button.primary,
 
 /* ── Connect your AI: one field, one button ── */
 .connect .question {
-  font-size: clamp(2rem, 1.4rem + 3vw, 2.8rem);
-  font-weight: 400;
-  line-height: 1.1;
   margin: 2.5rem 0 1.5rem;
 }
 .connect-form {
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
-  max-width: 30rem;
+  max-width: 32rem;
 }
 .connect-form h2 {
-  /* Plain words, as written — not the site's small-caps section heading */
+  /* Plain words, as written — not the site's ruled section heading */
+  display: block;
   margin: 0;
-  font-family: var(--sans);
-  font-size: 1.1rem;
+  font-size: var(--ui);
   font-weight: 600;
   letter-spacing: normal;
   text-transform: none;
-  color: var(--text);
+  color: var(--bright);
+}
+.connect-form h2::before,
+.connect-form h2::after {
+  content: none;
 }
 .connect-form .get-key {
   display: flex;
@@ -431,13 +537,13 @@ button.primary,
   align-items: center;
   gap: 0 1rem;
   margin: 0;
-  font-size: 0.85rem;
   color: var(--muted);
 }
 .connect-form .get-key a {
   min-height: var(--tap);
   display: inline-flex;
   align-items: center;
+  color: var(--text);
 }
 .connect-form .row {
   display: flex;
@@ -455,7 +561,7 @@ button.primary,
 /* Which AI is connected, and the way to change it — quiet, in the interface */
 .round-foot {
   margin: 0;
-  font-size: 0.75rem;
+  font-size: 0.7rem;
   color: var(--muted);
 }
 /* Inside the bar every button is boxed; this one stays a link */

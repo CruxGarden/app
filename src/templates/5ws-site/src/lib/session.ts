@@ -99,6 +99,7 @@ export class RoundSession {
   private clock: unknown = null;
   private lastTickAt = 0;
   private disposed = false;
+  private held = false;
 
   constructor(opts: SessionOptions) {
     this.now = opts.now ?? (() => Date.now());
@@ -199,6 +200,20 @@ export class RoundSession {
     this.set({ state: keepPage(this.snap.state, page) });
   }
 
+  /**
+   * Hold the clock while the surface is still saying a line the model has
+   * already finished (the voice types; the player cannot read faster than it
+   * shows). The reducer pauses for composing; this is the same courtesy for
+   * the client's own pacing. Wall time under a hold is never charged.
+   */
+  hold(on: boolean): void {
+    this.held = on;
+  }
+
+  get isHeld(): boolean {
+    return this.held;
+  }
+
   giveUp(): void {
     const next = giveUp(this.snap.state);
     if (next === this.snap.state) return;
@@ -226,6 +241,7 @@ export class RoundSession {
     const t = this.now();
     const delta = t - this.lastTickAt;
     this.lastTickAt = t;
+    if (this.held) return;
     const next = tick(this.snap.state, delta); // ignored while composing or once over
     if (next !== this.snap.state) {
       this.set({ state: next });
