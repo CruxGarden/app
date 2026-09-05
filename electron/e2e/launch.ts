@@ -27,7 +27,23 @@ export async function launchApp(
   const args = ['.'];
   if (process.platform === 'linux' && process.env.CI) args.push('--no-sandbox');
   const app = await electron.launch({ args, cwd: join(__dirname, '..'), env });
-  const page = await app.firstWindow();
+  // Keep what the main process prints: when no window ever appears, this is
+  // the only evidence of why (a native module built for the wrong ABI, a
+  // missing shared library, a thrown error before createWindow).
+  let output = '';
+  const keep = (chunk: Buffer) => {
+    output = (output + chunk.toString()).slice(-4000);
+  };
+  app.process().stdout?.on('data', keep);
+  app.process().stderr?.on('data', keep);
+  let page: Page;
+  try {
+    page = await app.firstWindow();
+  } catch (err) {
+    throw new Error(
+      `${(err as Error).message}\n--- electron output ---\n${output || '(nothing printed)'}`,
+    );
+  }
   await page.waitForLoadState('domcontentloaded');
   return { app, page, dir };
 }
