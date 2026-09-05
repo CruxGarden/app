@@ -295,7 +295,15 @@ describe('5ws (ADR 0016)', () => {
     const pkg = JSON.parse(def.files.find((f) => f.path === 'package.json')!.content) as {
       dependencies: Record<string, string>;
     };
-    for (const dep of ['@astrojs/react', 'react', 'react-dom', 'ai', '@ai-sdk/anthropic', '@ai-sdk/openai', '@ai-sdk/google']) {
+    for (const dep of [
+      '@astrojs/react',
+      'react',
+      'react-dom',
+      'ai',
+      '@ai-sdk/anthropic',
+      '@ai-sdk/openai',
+      '@ai-sdk/google',
+    ]) {
       expect(pkg.dependencies[dep], dep).toBeTruthy();
     }
     expect(def.files.find((f) => f.path === 'astro.config.mjs')!.content).toContain('react()');
@@ -317,15 +325,26 @@ describe('5ws (ADR 0016)', () => {
     );
   });
 
-  it('the index reads the daily leaderboard from the API and never writes it', async () => {
+  it('the index reads the daily board from the crux’s own store and never writes it', async () => {
     const def = (await loadTemplate(FIVE_WS_TEMPLATE_ID))!;
     const index = def.files.find((f) => f.path === 'src/pages/index.astro')!.content;
     expect(index).toContain('id="today"');
-    expect(index).toContain("/leaderboard/' + day");
-    expect(index).toContain('window.crux.publish');
+    expect(index).toContain("import { storeFor } from '../lib/store'");
+    expect(index).toContain('readBoard(store, utcDayAgo(0))');
+    expect(index).toContain('readBoard(store, utcDayAgo(1))');
     expect(index).toContain('No one has played');
-    expect(index).not.toContain('crux.store');
-    expect(index).not.toMatch(/method:\s*['"]POST/);
+    expect(index).not.toMatch(/\.set\(/);
+    expect(index).not.toMatch(/fetch\(/);
+    expect(index).not.toContain('/leaderboard/'); // the removed API endpoint
+    // The board and the played record are store keys; the page carries the store client
+    const paths = def.files.map((f) => f.path);
+    expect(paths).toContain('src/lib/store.ts');
+    const lb = def.files.find((f) => f.path === 'src/lib/leaderboard.ts')!.content;
+    expect(lb).toContain('`leaderboard:${day}`');
+    expect(lb).toContain('`played:${day}`');
+    expect(lb).toContain("'common'");
+    expect(lb).toContain("'protected'");
+    expect(lb).not.toContain('/leaderboard/');
   });
 });
 

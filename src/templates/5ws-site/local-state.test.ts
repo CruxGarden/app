@@ -57,8 +57,20 @@ describe('sign-in tokens', () => {
   it('round-trips and clears', () => {
     const s = memoryStorage();
     expect(loadAuth(s)).toBeNull();
-    saveAuth(s, { accessToken: 'a', refreshToken: 'r', email: 'x@y.z' });
-    expect(loadAuth(s)).toEqual({ accessToken: 'a', refreshToken: 'r', email: 'x@y.z' });
+    saveAuth(s, { accessToken: 'a', refreshToken: 'r', email: 'x@y.z', name: 'ada' });
+    expect(loadAuth(s)).toEqual({
+      accessToken: 'a',
+      refreshToken: 'r',
+      email: 'x@y.z',
+      name: 'ada',
+    });
+    // A sign-in without the account's name (from before names were kept) does not count
+    s.setItem(
+      STORAGE_KEYS.auth,
+      JSON.stringify({ accessToken: 'a', refreshToken: 'r', email: 'x@y.z' }),
+    );
+    expect(loadAuth(s)).toBeNull();
+    saveAuth(s, { accessToken: 'a', refreshToken: 'r', email: 'x@y.z', name: 'ada' });
     s.setItem(STORAGE_KEYS.auth, JSON.stringify({ refreshToken: 'r' }));
     expect(loadAuth(s)).toBeNull();
     clearAuth(s);

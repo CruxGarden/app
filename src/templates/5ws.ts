@@ -18,6 +18,7 @@ import siteSession from './5ws-site/src/lib/session.ts?raw';
 import siteModel from './5ws-site/src/lib/model.ts?raw';
 import siteLocalState from './5ws-site/src/lib/local-state.ts?raw';
 import siteLeaderboard from './5ws-site/src/lib/leaderboard.ts?raw';
+import siteStore from './5ws-site/src/lib/store.ts?raw';
 import siteFormat from './5ws-site/src/lib/format.ts?raw';
 import siteRoundCss from './5ws-site/src/styles/round.css?raw';
 
@@ -37,7 +38,11 @@ import siteRoundCss from './5ws-site/src/styles/round.css?raw';
  * visitor's browser with the AI they connect ("Connect your AI" — provider +
  * key, kept in this browser, sent only to that provider). The engine is the
  * app's `src/game/` copied in verbatim; the daily figure is seeded by the UTC
- * day; a signed-in visitor's daily score goes to the crux's board.
+ * day; a signed-in visitor's daily score goes to the crux's board — a key in
+ * the crux's own Crux Store (`leaderboard:<day>`, mode `common`: the crux's one
+ * value, readable by all, written with a sign-in; one entry per username by
+ * the page's convention), with `played:<day>` (protected) marking the day's
+ * counted round. No other backend; a fork carries its own board.
  */
 
 export const SHELF_PATH = 'shelf.json';
@@ -65,6 +70,7 @@ export const SITE_FILES: readonly { path: string; content: string }[] = [
   { path: 'src/lib/model.ts', content: siteModel },
   { path: 'src/lib/local-state.ts', content: siteLocalState },
   { path: 'src/lib/leaderboard.ts', content: siteLeaderboard },
+  { path: 'src/lib/store.ts', content: siteStore },
   { path: 'src/lib/format.ts', content: siteFormat },
   { path: 'src/styles/round.css', content: siteRoundCss },
 ];
@@ -602,17 +608,14 @@ const day = (d: unknown) => String(d ?? '').slice(0, 10);
 
 <script>
   // ── Today's board ──
-  // Entries are written server-side by the app (an account with a valid email
-  // per entry); this page only reads. The published page learns its crux id
-  // and API origin from the publish injection (window.crux.publish); a page
-  // served any other way falls back to its {cruxId}.publish.* hostname.
-  type Entry = { name: string; score: number; seconds: number; at: string };
-  type Board = { day: string; entries: Entry[] };
-  const cfg = (window as { crux?: { publish?: { cruxId?: string; apiBase?: string } } }).crux
-    ?.publish;
-  const fromHost = /^([^.]+)\\.publish\\./.exec(location.hostname)?.[1];
-  const cruxId = cfg?.cruxId ?? fromHost;
-  const apiBase = (cfg?.apiBase ?? 'https://api.crux.garden').replace(/\\/$/, '');
+  // The day's board is a key in this crux's own store ('leaderboard:<day>',
+  // mode 'common': the crux's one value, readable by all, written with a sign-in).
+  // The play page writes it; this page only reads, whichever way the store is
+  // reachable — the API when published, the host frame in the preview.
+  import { storeFor } from '../lib/store';
+  import { clockOf, readBoard, utcDayAgo, type Leaderboard } from '../lib/leaderboard';
+
+  const store = storeFor(null);
   const section = document.getElementById('today');
   const title = document.getElementById('board-title');
   const empty = document.getElementById('board-empty');
@@ -620,32 +623,16 @@ const day = (d: unknown) => String(d ?? '').slice(0, 10);
   const switcher = document.getElementById('board-switch');
   const link = document.getElementById('board-link');
 
-  const utcDay = (daysAgo: number) =>
-    new Date(Date.now() - daysAgo * 86_400_000).toISOString().slice(0, 10);
-  const clock = (seconds: number) => {
-    const s = Math.max(0, Math.round(Number(seconds) || 0));
-    return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0');
-  };
-  async function fetchBoard(day: string): Promise<Board | null> {
-    try {
-      const r = await fetch(apiBase + '/cruxes/' + encodeURIComponent(cruxId!) + '/leaderboard/' + day);
-      if (!r.ok) return null;
-      const data = (await r.json()) as Board;
-      return Array.isArray(data?.entries) ? data : null;
-    } catch {
-      return null;
-    }
-  }
-  function render(board: Board | null, label: string) {
+  function render(board: Leaderboard, label: string) {
     if (!table || !empty || !title) return;
-    const rows = (board?.entries ?? []).slice(0, 20);
+    const rows = board.entries.slice(0, 20);
     title.textContent = label;
     empty.textContent = 'No one has played ' + label.toLowerCase() + '.';
     const tbody = table.tBodies[0]!;
     tbody.replaceChildren(
       ...rows.map((e, i) => {
         const tr = document.createElement('tr');
-        for (const text of [String(i + 1), String(e.name ?? ''), String(e.score ?? ''), clock(e.seconds)]) {
+        for (const text of [String(i + 1), e.name, String(e.score), clockOf(e.seconds)]) {
           const td = document.createElement('td');
           td.textContent = text;
           tr.appendChild(td);
@@ -656,12 +643,15 @@ const day = (d: unknown) => String(d ?? '').slice(0, 10);
     table.hidden = rows.length === 0;
     empty.hidden = rows.length > 0;
   }
-  if (section && cruxId) {
+  if (section && store) {
     (async () => {
-      const [today, yesterday] = await Promise.all([fetchBoard(utcDay(0)), fetchBoard(utcDay(1))]);
+      const [today, yesterday] = await Promise.all([
+        readBoard(store, utcDayAgo(0)),
+        readBoard(store, utcDayAgo(1)),
+      ]);
       render(today, 'Today');
       section.hidden = false;
-      if (switcher && link && yesterday && yesterday.entries.length > 0) {
+      if (switcher && link && yesterday.entries.length > 0) {
         switcher.hidden = false;
         let showing: 'today' | 'yesterday' = 'today';
         link.addEventListener('click', (ev) => {
