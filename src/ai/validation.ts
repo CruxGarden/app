@@ -1,3 +1,6 @@
+import { hasSkill, skillNames } from './skills';
+import { MEMORY_NOTE_MAX, MEMORY_SECTIONS, normalizeSection } from '@/services/memory';
+
 export interface ValidationResult {
   valid: boolean;
   error?: string;
@@ -44,6 +47,10 @@ export function validateToolInput(
       return validateBranch(input);
     case 'diff':
       return validateDiff(input);
+    case 'remember':
+      return validateRemember(input);
+    case 'load_skill':
+      return validateLoadSkill(input);
     default:
       return { valid: false, error: `Unknown tool: ${toolName}` };
   }
@@ -256,4 +263,41 @@ function validateDiff(input: Record<string, unknown>): ValidationResult {
   const from = validateSnapshotRef(input, 'from', true);
   if (!from.valid) return from;
   return validateSnapshotRef(input, 'to', false);
+}
+
+// ── Garden Memory and skills (B6) ───────────────────────────────────────────
+
+function validateRemember(input: Record<string, unknown>): ValidationResult {
+  if (typeof input.section !== 'string' || !normalizeSection(input.section)) {
+    return {
+      valid: false,
+      error: `section must be one of ${MEMORY_SECTIONS.map((s) => `"${s}"`).join(', ')}.`,
+    };
+  }
+  if (typeof input.note !== 'string' || input.note.trim() === '') {
+    return { valid: false, error: 'note is required and must be a non-empty string.' };
+  }
+  if (input.note.trim().length > MEMORY_NOTE_MAX) {
+    return {
+      valid: false,
+      error: `note must be at most ${MEMORY_NOTE_MAX} characters — one line, not a paragraph.`,
+    };
+  }
+  if (/\r|\n/.test(input.note.trim())) {
+    return { valid: false, error: 'note must be a single line. Call remember once per line.' };
+  }
+  return { valid: true };
+}
+
+function validateLoadSkill(input: Record<string, unknown>): ValidationResult {
+  if (typeof input.name !== 'string' || input.name.trim() === '') {
+    return { valid: false, error: 'name is required and must be a string.' };
+  }
+  if (!hasSkill(input.name)) {
+    return {
+      valid: false,
+      error: `Unknown skill "${input.name}". Available: ${skillNames().join(', ')}.`,
+    };
+  }
+  return { valid: true };
 }

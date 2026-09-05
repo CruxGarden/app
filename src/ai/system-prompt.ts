@@ -3,9 +3,11 @@ import type { Crux, Artifact } from '@/services/types';
 import { getPersona } from '@/services/persona';
 import { isSiteCrux } from '@/services/site';
 import { Capability, can } from '@/lib/platform';
-import { THEME_TOOL_GUIDANCE } from './theme-tools';
 import { renderWorkspaceGuide, syncAgentsMd } from '@/services/agents-md';
 import { PLAN_PROMPT_LINE } from '@/services/turn-jobs';
+import { VERIFY_PROMPT_LINE } from '@/services/verify';
+import { renderMemoryForPrompt, syncMemoryFromDisk } from '@/services/memory';
+import { renderSkillsIndex, renderLoadedSkills, skillsForCrux } from './skills';
 
 // The content-model renderer lives with the AGENTS.md renderer (one source for
 // both readers); re-exported so existing callers keep their import path.
@@ -14,14 +16,19 @@ export { renderContentModel } from '@/services/agents-md';
 /**
  * The workspace prompt, split for caching (AI-COLLABORATION-PLAN Phase A2):
  *
- * - `system` is the STABLE prefix — persona, behavior, rules, crux-kind
- *   guidance. It changes only when the user edits settings, so providers can
- *   cache it across rounds (Anthropic `cache_control` is applied in the
- *   engine).
+ * - `system` is the STABLE prefix — persona, behavior, rules, garden memory,
+ *   the skills index, crux-kind essentials. It changes only when the user
+ *   edits settings (or something is remembered), so providers can cache it
+ *   across rounds (Anthropic `cache_control` is applied in the engine).
  * - `context` is the VOLATILE workspace state — file list, summary, content
- *   model. It changes on every file mutation, so it lives in the first user
- *   block instead of the system prompt, where refreshing it doesn't bust the
- *   cached prefix.
+ *   model, the skills this crux loads automatically. It changes on every file
+ *   mutation, so it lives in the first user block instead of the system
+ *   prompt, where refreshing it doesn't bust the cached prefix.
+ *
+ * Know-how that only some conversations need (Astro details, template
+ * specifics, composing a Mood, the soundscape, the Crux Store) lives in
+ * skills (`./skills`, B6) — loaded on demand through `load_skill`, or
+ * automatically for the crux's template — instead of in this prefix.
  */
 export interface PromptParts {
   system: string;
@@ -49,6 +56,9 @@ export async function buildPromptParts(cruxId: string): Promise<PromptParts> {
   // block below — bring it up to date (persona or instructions may have
   // changed since it was written). Fingerprint compare; no write when equal.
   await syncAgentsMd(crux, artifacts);
+  // Garden Memory: adopt an outside edit of <Garden Root>/memory.md (desktop)
+  // before it is read into the prefix. One file read; no-op on web.
+  await syncMemoryFromDisk();
   return buildPromptPartsFromData(crux, artifacts);
 }
 
@@ -93,6 +103,11 @@ function buildStablePrompt(crux: Crux, artifacts: Artifact[]): string {
     sections.push('## Instructions\n' + customPrompt);
   }
 
+  // ── Garden Memory (B6) ────────────────────────────────
+  // About the gardener, distinct from the persona above. Rarely changes, so it
+  // belongs in the cached prefix; capped and truncated by whole lines.
+  sections.push(renderMemoryForPrompt());
+
   // ── Capabilities ──────────────────────────────────────
   sections.push(
     '## Capabilities\n' +
@@ -106,41 +121,33 @@ function buildStablePrompt(crux: Crux, artifacts: Artifact[]): string {
       '- **list_files** — List all workspace files. The current list is in the <workspace_context> block at the start of the conversation; call this only if files may have changed.\n' +
       '- **generate_image** — Generate an image using AI and save it as a workspace file. Provide a detailed prompt, a file path (e.g. "images/hero.png"), and an optional size (1024x1024, 1024x1536, or 1536x1024).\n' +
       (can(Capability.Build)
-        ? "- **check_site** — Run the site's production build (Site Cruxes) and report errors. Nothing is published; this only verifies.\n\n"
-        : '\n') +
-      '- **get_theme** / **set_theme** — Read and change the workspace theme (colors, radii, pane gutters, per-pane surfaces). See Theme below.\n' +
-      '- **set_background** — Set the workspace background: generate an image from a prompt, use a workspace image, or a built-in bloom/drift/flow/blank.\n' +
-      '- **get_resonance** / **set_resonance** — Read, steer and COMPOSE the soundscape: switch mix, volume, duck, cues; createMix to compose new music (keys, bass, beat, vinyl, pads, drones, rain…) when the user asks for a sound or a vibe.\n' +
+        ? "- **check_site** — Run the site's production build (Site Cruxes) and report errors. Nothing is published; this only verifies.\n"
+        : '') +
+      '- **get_theme** / **set_theme** / **set_background** — Read and change the workspace look (theme tokens, backdrop). Load the mood-design skill before restyling.\n' +
+      '- **get_resonance** / **set_resonance** — Read, steer and compose the soundscape. Load the resonance skill before composing.\n' +
       '- **snapshot** / **list_snapshots** / **restore** / **branch** / **diff** — Growth, the version history, as tools. See Growth below.\n' +
+      '- **remember** — Save one line to Garden Memory when the person asks you to remember something or states a durable preference (see above).\n' +
+      '- **load_skill** — Load the know-how for one kind of work (see Skills below).\n' +
       'IMPORTANT: You CAN generate images. When the user asks for an image, illustration, icon, logo, photo, or artwork, call the generate_image tool. Do NOT say you cannot generate images — you have this capability.\n\n' +
-      THEME_TOOL_GUIDANCE +
-      GROWTH_TOOL_GUIDANCE +
-      '### Crux Store\n' +
-      'Published cruxes have access to a persistent key-value store via `window.crux.store`. This allows stateful apps — counters, guestbooks, leaderboards, user preferences, form submissions.\n' +
-      'Available methods:\n' +
-      '- `await crux.store.get(key)` — Read a value (returns null if not found)\n' +
-      '- `await crux.store.set(key, value)` — Write a JSON-serializable value\n' +
-      '- `await crux.store.increment(key, by?)` — Atomic increment (default +1, race-safe)\n' +
-      '- `await crux.store.delete(key)` — Delete a key\n' +
-      '- `await crux.store.list()` — List all keys (author only)\n\n' +
-      'Keys have two modes:\n' +
-      '- **public** — anyone can read/write, no account needed (counters, guestbooks, votes)\n' +
-      '- **protected** — requires a crux.garden account, scoped per visitor (preferences, saves)\n\n' +
-      'The mode is set by the author in the Store pane, not in code. Default is `protected`.\n' +
-      'For unauthenticated visitors, protected `get` returns null and protected `set` is a no-op. Always provide fallback defaults:\n' +
-      '```js\nconst prefs = await crux.store.get("prefs") ?? DEFAULT_PREFS\n```\n' +
-      'The store works in both preview (local SQLite) and published (API) mode — no code changes needed.\n' +
-      'Use `increment` instead of `get` + `set` for counters to avoid race conditions.',
+      '### Theme and soundscape\n' +
+      'Use set_theme mode "preview" to signal what you are doing (tint the pane you work in, warm the accent during a long step) and clear it with reset: true when done; mode "persist" only when the person asks for a lasting change. Never persist a change they did not ask for. ' +
+      "Edits to the person's existing mixes are saved, so only make them when asked; a request for music or a vibe means composing a new mix.\n\n" +
+      GROWTH_TOOL_GUIDANCE.trimEnd(),
   );
+
+  // ── Skills index (B6) ─────────────────────────────────
+  sections.push(renderSkillsIndex());
 
   // ── Process ───────────────────────────────────────────
   sections.push(
     '## Process\n' +
       'When the user asks you to create or modify something, follow this order:\n' +
-      '1. Review the <workspace_context> block at the start of the conversation — it lists the current files (and the content model, when this crux has one).\n' +
+      '1. Review the <workspace_context> block at the start of the conversation — it lists the current files (and the content model and skills, when this crux has them).\n' +
       '2. Read any existing files relevant to the request using read_file.\n' +
       '3. Briefly explain what you plan to do. ' +
       PLAN_PROMPT_LINE +
+      ' ' +
+      VERIFY_PROMPT_LINE +
       '\n' +
       '4. Execute using tool calls (write_file, edit_file, etc.).\n' +
       '5. Summarize what changed.',
@@ -169,7 +176,8 @@ function buildStablePrompt(crux: Crux, artifacts: Artifact[]): string {
   );
 
   // ── Crux-kind guidance ────────────────────────────────
-  // A Site Crux (real toolchain, ADR 0005) gets build-step guidance; anything
+  // A Site Crux (real toolchain, ADR 0005) gets the build-step essentials —
+  // the long form is the astro-basics skill in the context block; anything
   // else gets the browser-native (no build step) guidance. The esm.sh pattern
   // is actively wrong for Site Cruxes — never show both.
   sections.push(isSiteCrux(artifacts) ? siteCruxGuidance() : WEB_APP_GUIDANCE);
@@ -213,19 +221,16 @@ const WEB_APP_GUIDANCE =
   '- Structure multi-file projects with clear directories: components/, lib/, assets/\n' +
   '- Every .js file must use ES module syntax (import/export), loaded via <script type="module" src="./app.js">\n' +
   '- If creating a Vite project, always set `base: "./"` in vite.config.ts — published and previewed sites are served from a subdirectory, not the domain root.\n' +
-  '- If using React Router, read `window.__CRUX_BASENAME__` for the basename: `createBrowserRouter([...], { basename: window.__CRUX_BASENAME__ || "/" })`';
+  '- If using React Router, read `window.__CRUX_BASENAME__` for the basename: `createBrowserRouter([...], { basename: window.__CRUX_BASENAME__ || "/" })`\n' +
+  '- For stateful published apps (counters, guestbooks, saves) load the crux-store skill.';
 
-/** Guidance for Site Cruxes (ADR 0005) — a real toolchain project with a build step. */
+/** Essentials for Site Cruxes (ADR 0005); the astro-basics skill in the context block has the rest. */
 function siteCruxGuidance(): string {
   return (
     '## Site Crux (build-step project)\n' +
-    'This crux is a real toolchain project — an Astro project with a build step (a Site Crux). It is NOT a browser-only static site:\n' +
-    '- Source lives in src/: pages in src/pages (file-based routing — index.astro is /, posts/*.md become /posts/*), layouts in src/layouts, styles in src/styles. Static assets (favicon, images) go in public/.\n' +
-    '- Write real .astro, .md, .ts, and framework files as the project calls for — the toolchain compiles them. Do NOT use esm.sh import maps, CDN script tags for npm packages, or React.createElement workarounds here; those are for cruxes without a build step.\n' +
-    '- Add dependencies to package.json — the app runs pnpm install automatically. NEVER create or edit node_modules/, dist/, or .astro/; they are build machinery managed by the app.\n' +
-    '- Markdown content needs correct frontmatter. If the workspace context includes a Content Model, follow its collections and new-item recipes exactly — the Builder UI and your files must agree.\n' +
-    '- Astro basics: component script goes between --- fences at the top of .astro files; markdown frontmatter references its layout by relative path (e.g. layout: ../../layouts/PostLayout.astro); use import.meta.glob for content listings.\n' +
-    "- The preview is the project's own dev server with hot reload. Publish runs the production build and ships dist/ — a broken build blocks publishing, so keep the project building; prefer small, verifiable changes." +
+    'This crux is a real toolchain project — an Astro project with a build step (a Site Crux), NOT a browser-only static site. The astro-basics skill is loaded in your workspace context; follow it.\n' +
+    '- Write real .astro, .md and .ts files under src/; add dependencies to package.json (the app installs them). Do NOT use esm.sh import maps or CDN workarounds here. Never create or edit node_modules/, dist/ or .astro/.\n' +
+    '- A broken build blocks publishing — keep the project building; prefer small, verifiable changes.' +
     (can(Capability.Build)
       ? '\n- After changes that could break the build (config, layouts, frontmatter, dependencies), run check_site and fix any errors it reports before telling the user you are done.'
       : '')
@@ -234,7 +239,7 @@ function siteCruxGuidance(): string {
 
 // ── Volatile context block ────────────────────────────────────────────────
 
-/** Pure function for the volatile context block — file list, summary, content model. */
+/** Pure function for the volatile context block — file list, summary, content model, loaded skills. */
 export function buildContextFromData(crux: Crux, artifacts: Artifact[]): string {
   const meta = crux.meta as Record<string, unknown> | undefined;
   const sections: string[] = [];
@@ -268,6 +273,12 @@ export function buildContextFromData(crux: Crux, artifacts: Artifact[]): string 
         canBuild: can(Capability.Build),
       }),
   );
+
+  // ── Skills this crux loads automatically (B6) ─────────
+  // The template's skill (a Blog crux never has to ask) and astro-basics for
+  // any Site Crux. Everything else arrives through load_skill.
+  const loaded = renderLoadedSkills(skillsForCrux(crux, artifacts));
+  if (loaded) sections.push(loaded);
 
   return [
     CONTEXT_BLOCK_OPEN,

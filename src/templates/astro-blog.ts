@@ -8,13 +8,7 @@ import { LAYOUT_WRITING } from './index';
  * editor and `pnpm dev` works in a terminal.
  */
 const template: TemplateDefinition = {
-  context:
-    'This is a real Astro project (a Site Crux). Source lives in src/: pages in src/pages ' +
-    '(Astro routing — index.astro is /, posts/*.md become /posts/*), layouts in src/layouts. ' +
-    'Posts are markdown files with title/date/description frontmatter in src/pages/posts/. ' +
-    'The preview is a live astro dev server with hot reload. node_modules and dist are ' +
-    'managed by the app — never create or edit files there. To add a post, create a new ' +
-    '.md file in src/pages/posts/ with frontmatter. Styling lives in src/styles/global.css.',
+  skill: 'blog',
   greeting:
     "I've set up a real Astro blog — index page listing your posts, two sample posts in " +
     "src/pages/posts/, and clean typography. The preview runs Astro's dev server with hot " +

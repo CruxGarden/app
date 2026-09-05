@@ -7,12 +7,7 @@ import { LAYOUT_BALANCED } from './index';
  * what they want to build and just need the toolchain wired up.
  */
 const template: TemplateDefinition = {
-  context:
-    'This is a real, nearly empty Astro project (a Site Crux). src/pages/index.astro is the only ' +
-    'page; add pages under src/pages (Astro routing), components under src/components, styles in ' +
-    'src/styles/global.css. The preview is a live astro dev server with hot reload; node_modules ' +
-    'and dist are managed by the app — never create or edit files there. Build whatever the user ' +
-    'asks for; there is no content model here, so create files directly.',
+  skill: 'astro-basics',
   greeting:
     "An empty Astro project, wired up and running — one page, nothing else. Tell me what we're " +
     'building and I will lay out the pages.',

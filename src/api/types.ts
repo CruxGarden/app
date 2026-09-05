@@ -166,6 +166,12 @@ export interface ChatMessage {
   job?: TurnJobSummary;
   /** External agent (MCP client name) whose tool calls this message records — ADR 0013 */
   agent?: string;
+  /**
+   * The app wrote this message on the person's side of the transcript — the
+   * check's findings handed back to the model (B4). Shown as "Check", never
+   * as the person.
+   */
+  origin?: 'check';
 }
 
 /** Compact record of a finished Background Turn — the transcript's "Ran 3 steps · 2 snapshots". */
@@ -174,6 +180,16 @@ export interface TurnJobSummary {
   steps: number;
   completedSteps: number;
   snapshots: number;
+  /** Verify-before-done outcome (B4), once a check ran on this turn. */
+  check?: TurnCheckSummary;
+}
+
+/** What the transcript keeps of a check: the verdict and the screenshot it took. */
+export interface TurnCheckSummary {
+  status: 'passed' | 'problems';
+  problems: string[];
+  /** Blob Store fingerprint of the final screenshot. */
+  thumbnailFingerprint?: string;
 }
 
 export interface ToolCall {
@@ -194,6 +210,8 @@ export interface CruxMeta {
     activeBranch?: string;
     /** Agent Host switched on for this crux (MCP server per crux, ADR 0013). Off by default. */
     agentHost?: boolean;
+    /** Check automatically after a turn that claims to be done (B4). On unless false. */
+    verifyOnDone?: boolean;
   };
   growthCount?: number;
   snapshot?: GrowthSnapshot;

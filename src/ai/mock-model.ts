@@ -16,6 +16,10 @@ import type {
  * Script: a user message containing "write" makes the model call
  * `write_file` (hello.txt); "paint" makes it call `set_theme` (preview);
  * once it sees a tool result it answers with text. Anything else is echoed. Never used outside the mock flag.
+ *
+ * `doGenerate` (non-streaming calls) answers the verify-before-done
+ * inspection (B4) with a scripted verdict — see `verdictFor` at the end of
+ * this file — and any other generateText call with a short fixed text.
  */
 
 const USAGE: LanguageModelV4Usage = {
@@ -63,13 +67,25 @@ let instance: MockLanguageModelV4 | null = null;
 export function getMockLanguageModel(): LanguageModel {
   if (!instance) {
     instance = new MockLanguageModelV4({
+      doGenerate: async ({ prompt }) => ({
+        content: [{ type: 'text', text: generateText(prompt) }],
+        finishReason: { unified: 'stop', raw: undefined },
+        usage: USAGE,
+        warnings: [],
+      }),
       doStream: async ({ prompt, abortSignal }) => {
+        // B4 verify scenario ("landing page" / "Check found:") — scripted at the end of this file
+        const verify = verifyScript(prompt);
+        if (verify) return verify;
         // B0 growth scenario ("rewind") — scripted at the end of this file
         const growth = growthScript(prompt);
         if (growth) return growth;
         // B3 Background Turn scenario ("three steps") — scripted at the end of this file
         const plan = planScript(prompt, abortSignal);
         if (plan) return plan;
+        // B6 Garden Memory scenario ("remember") — scripted at the end of this file
+        const memory = memoryScript(prompt);
+        if (memory) return memory;
         const last = prompt[prompt.length - 1];
         if (last?.role === 'tool') {
           const used = (name: string) =>
@@ -258,4 +274,123 @@ function planScript(
     );
     return stream(parts);
   })();
+}
+
+// ── B6: Garden Memory scenario + prompt capture ─────────────────────────────
+//
+// "remember": the model saves one line to Garden Memory through the visible
+// `remember` tool — remember(Preferences, "prefers British spelling") → text.
+// The e2e suite reads what the model was sent through `window.__cruxAiMock`:
+// every system prompt this mock has received, in order, so a test can assert
+// that a NEW crux's first turn carries the remembered line.
+
+export const REMEMBER_NOTE = 'prefers British spelling';
+
+function memoryScript(prompt: LanguageModelV4Prompt): ReturnType<typeof stream> | null {
+  if (!/\bremember\b/i.test(lastUserText(prompt))) return null;
+  const last = prompt[prompt.length - 1];
+  if (last?.role === 'tool') return textStream('Noted — I will keep that in mind.');
+  return toolCallStream('remember', { section: 'Preferences', note: REMEMBER_NOTE });
+}
+
+/** Every system prompt the mock has been sent so far (e2e hook). */
+export function mockSystemPrompts(): string[] {
+  const out: string[] = [];
+  for (const call of instance?.doStreamCalls ?? []) {
+    for (const m of call.prompt) {
+      if (m.role === 'system') out.push(String(m.content));
+    }
+  }
+  return out;
+}
+
+if (typeof window !== 'undefined') {
+  (window as unknown as { __cruxAiMock?: unknown }).__cruxAiMock = {
+    systemPrompts: mockSystemPrompts,
+  };
+}
+
+// ── B4: Verify before done scenario ─────────────────────────────────────────
+//
+// "landing page": the model writes index.html WITHOUT the heading and claims
+// "Done — the landing page is ready." The app's check screenshots the preview
+// and asks this same model (doGenerate) for a verdict; the verdict says the
+// heading is missing → the app hands back "Check found: Heading missing" → the
+// model reads the file, rewrites it with an <h1>, and replies "Fixed — added the
+// heading." The re-check then passes. Both verdicts are decided from the
+// inspection text itself (which reply it quotes), not from call counting, so
+// a later manual "Check it" on the fixed page passes too.
+
+export const LANDING_PATH = 'index.html';
+export const LANDING_MISSING = 'Heading missing';
+export const LANDING_DONE_REPLY = 'Done — the landing page is ready.';
+export const LANDING_FIXED_REPLY = 'Fixed — added the heading.';
+
+const LANDING_BROKEN = [
+  '<!doctype html>',
+  '<html lang="en">',
+  '<head><meta charset="utf-8"><title>Landing</title></head>',
+  '<body style="font-family: sans-serif; padding: 2rem">',
+  '<p>Welcome to the garden.</p>',
+  '</body>',
+  '</html>',
+  '',
+].join('\n');
+
+const LANDING_FIXED = LANDING_BROKEN.replace(
+  '<p>Welcome to the garden.</p>',
+  '<h1>Welcome</h1>\n<p>Welcome to the garden.</p>',
+);
+
+/** Tool results after the most recent user message — this turn's rounds so far. */
+function toolResultsThisTurn(prompt: LanguageModelV4Prompt): string[] {
+  const names: string[] = [];
+  for (let i = prompt.length - 1; i >= 0; i--) {
+    const m = prompt[i]!;
+    if (m.role === 'user') break;
+    if (m.role === 'tool') {
+      for (const c of m.content) if (c.type === 'tool-result') names.unshift(c.toolName);
+    }
+  }
+  return names;
+}
+
+function verifyScript(prompt: LanguageModelV4Prompt): ReturnType<typeof stream> | null {
+  const text = lastUserText(prompt);
+  const rounds = toolResultsThisTurn(prompt);
+  if (/^Check found:/m.test(text)) {
+    if (rounds.length === 0) return toolCallStream('read_file', { path: LANDING_PATH });
+    if (rounds.length === 1) {
+      return toolCallStream('write_file', { path: LANDING_PATH, content: LANDING_FIXED });
+    }
+    return textStream(LANDING_FIXED_REPLY);
+  }
+  if (/\blanding page\b/i.test(text)) {
+    if (rounds.length === 0) {
+      return toolCallStream('write_file', { path: LANDING_PATH, content: LANDING_BROKEN });
+    }
+    return textStream(LANDING_DONE_REPLY);
+  }
+  return null;
+}
+
+function systemText(prompt: LanguageModelV4Prompt): string {
+  return prompt
+    .filter((m) => m.role === 'system')
+    .map((m) => (m as { content: string }).content)
+    .join('\n');
+}
+
+/** The scripted inspection verdict: the heading is missing until the fix reply is quoted. */
+export function verdictFor(inspectionText: string): { ok: boolean; problems: string[] } {
+  return inspectionText.includes(LANDING_FIXED_REPLY)
+    ? { ok: true, problems: [] }
+    : { ok: false, problems: [LANDING_MISSING] };
+}
+
+function generateText(prompt: LanguageModelV4Prompt): string {
+  if (/strict JSON verdict/.test(systemText(prompt))) {
+    return JSON.stringify(verdictFor(lastUserText(prompt)));
+  }
+  return 'Mock summary.';
 }

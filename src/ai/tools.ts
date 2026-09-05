@@ -13,6 +13,8 @@ import {
   isGrowthTool,
   runGrowthTool,
 } from './growth-tools';
+import { MEMORY_TOOL_DEFINITIONS, runMemoryTool } from '@/services/memory';
+import { SKILL_TOOL_DEFINITIONS, runSkillTool } from './skills';
 
 /**
  * Tool definitions — ported from api/src/ai/ai.tools.ts.
@@ -261,7 +263,14 @@ export const SITE_TOOL_DEFINITIONS: ToolDefinition[] = [
 /** The tool set to offer a workspace conversation on this platform. */
 export function defaultToolDefinitions(): ToolDefinition[] {
   const site = can(Capability.Build) ? SITE_TOOL_DEFINITIONS : [];
-  return [...TOOL_DEFINITIONS, ...site, ...GROWTH_TOOL_DEFINITIONS, ...THEME_TOOL_DEFINITIONS];
+  return [
+    ...TOOL_DEFINITIONS,
+    ...site,
+    ...GROWTH_TOOL_DEFINITIONS,
+    ...THEME_TOOL_DEFINITIONS,
+    ...MEMORY_TOOL_DEFINITIONS,
+    ...SKILL_TOOL_DEFINITIONS,
+  ];
 }
 
 /** Options for a tool executor beyond the crux it is bound to. */
@@ -394,6 +403,14 @@ export function createToolExecutor(
         case 'get_resonance':
         case 'set_resonance':
           result = await runThemeTool(toolName, input, { cruxId, chatModel });
+          break;
+        case 'remember':
+          // Garden Memory (B6): the one write path besides the person's own
+          // edits; the result is the line they see in the transcript.
+          result = await runMemoryTool(input);
+          break;
+        case 'load_skill':
+          result = runSkillTool(input);
           break;
         default:
           return formatToolError(toolName, `Unknown tool: ${toolName}`);

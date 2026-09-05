@@ -233,3 +233,41 @@ describe('AGENTS.md as the single source (B1)', () => {
     expect(system).toMatch(/call restore with that snapshot id/);
   });
 });
+
+describe('garden memory and skills in the prompt (B6)', () => {
+  it('carries the memory section in the stable prefix, after the persona and before the tools', async () => {
+    const { clearMemory, setMemory } = await import('@/services/memory');
+    const { initServices } = await import('@/services');
+    await initServices();
+    await setMemory('## Preferences\n- prefers British spelling\n');
+    try {
+      const { system, context } = buildPromptPartsFromData(makeCrux(), []);
+      expect(system).toContain('## What you know about this gardener');
+      expect(system).toContain('- prefers British spelling');
+      expect(context).not.toContain('prefers British spelling');
+      expect(system.indexOf('## Identity')).toBeLessThan(
+        system.indexOf('## What you know about this gardener'),
+      );
+      expect(system.indexOf('## What you know about this gardener')).toBeLessThan(
+        system.indexOf('## Capabilities'),
+      );
+      // Persona voice and gardener memory stay distinct sections
+      expect(system).toContain('your own voice comes from Identity');
+    } finally {
+      await clearMemory();
+    }
+  });
+
+  it('lists remember and load_skill among the capabilities and carries the skills index', () => {
+    const { system } = buildPromptPartsFromData(makeCrux(), []);
+    expect(system).toContain('**remember**');
+    expect(system).toContain('**load_skill**');
+    expect(system).toContain('## Skills');
+    expect(system).toContain('**resonance** — ');
+    // Long guidance moved to skills; the short rules stayed
+    expect(system).toContain('### Theme and soundscape');
+    expect(system).toContain('Never persist a change they did not ask for');
+    expect(system).not.toContain('### Crux Store');
+    expect(system).not.toContain('25 token groups');
+  });
+});

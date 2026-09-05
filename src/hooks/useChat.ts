@@ -1,7 +1,7 @@
 import { useCallback } from 'react';
 import { useCruxStore } from '@/stores/cruxStore';
 import { useShallow } from 'zustand/react/shallow';
-import { submitTurn, stopTurn, steerTurn } from '@/services/turns';
+import { submitTurn, stopTurn, steerTurn, checkNow } from '@/services/turns';
 import { isJobActive } from '@/services/turn-jobs';
 
 /**
@@ -44,6 +44,12 @@ export function useChat() {
     if (crux) stopTurn('stopped');
   }, [crux]);
 
+  // "Check it" (B4): build, screenshot and inspect the current state on demand.
+  const check = useCallback(() => {
+    if (!crux) return;
+    void checkNow().catch((err) => console.error('Check failed to start:', err));
+  }, [crux]);
+
   return {
     messages,
     isStreaming,
@@ -54,5 +60,6 @@ export function useChat() {
     send,
     steer,
     stop,
+    check,
   };
 }

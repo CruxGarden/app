@@ -223,6 +223,8 @@ export default function GrowthCard({
   const preview = usePreview(growth);
   const thumbnailUrl = useThumbnail(growth);
   const artifactCount = (growth.meta?.artifactCount as number) || 0;
+  // Verify-before-done (B4): the check recorded on this snapshot, if one ran.
+  const verification = growth.meta?.verification as { status?: string } | undefined;
   const aiEnabled = useUIStore((s) => s.aiEnabled);
   const [expanded, setExpanded] = useState(false);
 
@@ -279,6 +281,24 @@ export default function GrowthCard({
             <span className="inline-flex items-center gap-1 rounded-full bg-overlay-badge backdrop-blur-sm px-2 py-0.5 text-2xs font-mono text-overlay-badge-text">
               <span className="w-1.5 h-1.5 rounded-full bg-growth-dot-active" />
               Viewing
+            </span>
+          )}
+          {verification?.status === 'passed' && (
+            <span
+              className="rounded-full bg-overlay-badge backdrop-blur-sm px-2 py-0.5 text-2xs font-mono text-overlay-badge-text"
+              data-testid="growth-checked"
+              data-status="passed"
+            >
+              Checked ✓
+            </span>
+          )}
+          {verification?.status === 'problems' && (
+            <span
+              className="rounded-full bg-overlay-badge backdrop-blur-sm px-2 py-0.5 text-2xs font-mono text-overlay-badge-text"
+              data-testid="growth-checked"
+              data-status="problems"
+            >
+              Check found problems
             </span>
           )}
         </div>
