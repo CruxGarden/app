@@ -25,4 +25,4 @@ An Interrogable Crux (ADR 0016) built as an Astro Site Crux. The template is the
 
 **Transcripts** are the record of play. Edit `rounds/*.md` only for typos; never rewrite what the voice said or change a score.
 
-**Styling**: serif for anything with a voice, sans for the interface; one fade on the reveal at most. `node_modules/`, `dist/` and `.astro/` are the app's — never create or edit files there.
+**Styling**: the site wears the Soft Serve look — a blush page (navy in dark), white borderless cards with 24px corners, heavy titles, hairline dividers, a coral accent, one rounded sans stack (`src/styles/global.css` holds the tokens; light and dark are keyed on `data-theme`). The voice is the biggest, boldest text; the interface is smaller and grey. Almost no motion: the typing, the cursor, one fade at most. `node_modules/`, `dist/` and `.astro/` are the app's — never create or edit files there.

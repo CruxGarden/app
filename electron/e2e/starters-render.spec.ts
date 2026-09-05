@@ -24,12 +24,24 @@ import historyShelf from '../../src/templates/shelves/history.json';
  */
 
 const API = 'https://api.e2e.invalid';
-/** The phosphor palette (global.css): the voice is the bright thing; the interface is cool grey. */
-const AMBER = 'rgb(224, 168, 58)';
-const GREEN = 'rgb(95, 215, 122)';
-const UI_GREY = 'rgb(164, 170, 179)';
-const DIM_GREY = 'rgb(130, 138, 150)';
-const MONO = /Mono|Menlo|Consolas|monospace/i;
+/** Soft Serve (global.css): a blush page, white cards, the voice bold in the text colour, the interface grey. */
+const LIGHT = {
+  ground: 'rgb(253, 238, 234)',
+  card: 'rgb(255, 255, 255)',
+  text: 'rgb(28, 28, 28)',
+  muted: 'rgb(122, 111, 107)',
+};
+/** Dark: deep navy with the same coral. */
+const DARK = {
+  ground: 'rgb(15, 26, 46)',
+  card: 'rgb(23, 36, 64)',
+  text: 'rgb(243, 241, 236)',
+};
+/** One rounded sans stack; Outfit only if the visitor has it (no webfont download). */
+const SANS = /Outfit|SF Pro Rounded|ui-rounded|system-ui|sans-serif/i;
+const CARD_GUTTER = 12; // cards edge-to-edge on a phone, 12px either side
+const theme = (p: Page) => p.evaluate(() => localStorage.getItem('5ws:theme'));
+const bg = (el: Element) => getComputedStyle(el).backgroundColor;
 const utcDay = (daysAgo = 0) =>
   new Date(Date.now() - daysAgo * 86_400_000).toISOString().slice(0, 10);
 
@@ -215,7 +227,7 @@ test.describe('starter templates render through astro dev', () => {
     }
   });
 
-  test('5Ws shelf lists its entries; the sample round reveals in phosphor', async () => {
+  test('5Ws shelf lists its entries; the sample round reveals in Soft Serve', async () => {
     const { app, page } = await launchApp();
     const browser = await chromium.launch();
     try {
@@ -281,6 +293,13 @@ test.describe('starter templates render through astro dev', () => {
       await phone.goto(origin);
       await expect(phone.locator('h1.question')).toHaveText('Who am I?');
       expect(await scrollWidth(phone)).toBeLessThanOrEqual(390);
+      // Cards edge-to-edge with 12px gutters; every entry row is a thumb-sized target
+      const hero = (await phone.locator('.card.hero').boundingBox())!;
+      expect(Math.round(hero.x)).toBe(CARD_GUTTER);
+      expect(Math.round(hero.width)).toBe(390 - 2 * CARD_GUTTER);
+      expect(
+        (await phone.locator('ol.entries li').first().boundingBox())!.height,
+      ).toBeGreaterThanOrEqual(44);
       await phone.screenshot({
         path: 'e2e/.results/starters-render-5-5ws-phone.png',
         fullPage: true,
@@ -330,7 +349,8 @@ test.describe('starter templates render through astro dev', () => {
         fullPage: true,
       });
 
-      // The sample round: one monospace face; the voice in amber, the player's lines in grey
+      // The sample round: a white card on the blush page; the voice bold in the text colour,
+      // the player's lines smaller and grey — one sans stack, no monospace anywhere
       await site.locator('ul.round-list a').first().click();
       await expect(site.locator('.round-head h1')).toContainText('Round 1');
       const you = site.locator('.transcript p', { hasText: 'Are you a man or a woman?' });
@@ -340,24 +360,68 @@ test.describe('starter templates render through astro dev', () => {
       await expect(reveal.locator('xpath=following-sibling::p[1]')).toContainText('Hypatia');
       const family = (el: Element) => getComputedStyle(el).fontFamily;
       const color = (el: Element) => getComputedStyle(el).color;
-      expect(await reveal.evaluate(family)).toMatch(MONO);
+      const weight = (el: Element) => getComputedStyle(el).fontWeight;
+      expect(await reveal.evaluate(family)).toMatch(SANS);
+      expect(await reveal.evaluate(family)).not.toMatch(/mono/i);
+      expect(await reveal.evaluate(weight)).toBe('800');
       // The voice: the first paragraph that is not a "You:" line
       const voice = site.locator('.transcript p:not(:has(> strong:first-child))').first();
       await expect(voice).toContainText('harder city');
-      expect(await voice.evaluate(family)).toMatch(MONO);
-      expect(await voice.evaluate(color)).toBe(AMBER);
-      expect(await you.evaluate(family)).toMatch(MONO);
-      expect(await you.evaluate(color)).toBe(DIM_GREY);
-      await expect(site.locator('html')).toHaveAttribute('data-phosphor', 'amber');
+      expect(await voice.evaluate(family)).toMatch(SANS);
+      expect(await voice.evaluate(color)).toBe(LIGHT.text);
+      expect(await voice.evaluate(weight)).toBe('600');
+      expect(await you.evaluate(family)).toMatch(SANS);
+      expect(await you.evaluate(color)).toBe(LIGHT.muted);
+      expect(await you.evaluate(weight)).toBe('400');
+      expect(
+        await voice.evaluate((el) => parseFloat(getComputedStyle(el).fontSize)),
+      ).toBeGreaterThan(await you.evaluate((el) => parseFloat(getComputedStyle(el).fontSize)));
+      // Light by default (this browser's system is light); nothing picked yet
+      await expect(site.locator('html')).toHaveAttribute('data-theme', 'light');
+      await expect(site.locator('html')).toHaveAttribute('data-theme-choice', 'system');
+      expect(await theme(site)).toBeNull();
       expect(await site.evaluate(() => getComputedStyle(document.body).backgroundColor)).toBe(
-        'rgb(15, 15, 14)',
+        LIGHT.ground,
       );
+      const roundCard = site.locator('article.round.card');
+      expect(await roundCard.evaluate(bg)).toBe(LIGHT.card);
+      expect(await roundCard.evaluate((el) => getComputedStyle(el).borderStyle)).toBe('none');
+      expect(await roundCard.evaluate((el) => getComputedStyle(el).borderRadius)).toBe('24px');
       await expect(site.locator('.adjacent a', { hasText: 'The shelf' })).toBeVisible();
       expect(await scrollWidth(site)).toBeLessThanOrEqual(1200);
       await site.screenshot({
         path: 'e2e/.results/starters-render-4-5ws-round.png',
         fullPage: true,
       });
+
+      // The toggle in the masthead: system → light → dark, remembered; the head applies it
+      // before first paint on the next page
+      const siteToggle = site.locator('#theme-toggle');
+      await expect(siteToggle).toHaveAccessibleName(/^Theme: System/);
+      await siteToggle.click();
+      await expect(siteToggle).toHaveAccessibleName(/^Theme: Light/);
+      await expect(site.locator('html')).toHaveAttribute('data-theme', 'light');
+      expect(await theme(site)).toBe('light');
+      await siteToggle.click();
+      await expect(siteToggle).toHaveAccessibleName(/^Theme: Dark/);
+      await expect(site.locator('html')).toHaveAttribute('data-theme', 'dark');
+      expect(await theme(site)).toBe('dark');
+      expect(await site.evaluate(() => getComputedStyle(document.body).backgroundColor)).toBe(
+        DARK.ground,
+      );
+      expect(await roundCard.evaluate(bg)).toBe(DARK.card);
+      expect(await voice.evaluate(color)).toBe(DARK.text);
+      await site.reload();
+      await expect(site.locator('html')).toHaveAttribute('data-theme', 'dark');
+      await expect(site.locator('html')).toHaveAttribute('data-theme-choice', 'dark');
+      await site.screenshot({
+        path: 'e2e/.results/5ws-soft-transcript-dark-1200.png',
+        fullPage: true,
+      });
+      await site.locator('#theme-toggle').click();
+      await expect(site.locator('html')).toHaveAttribute('data-theme-choice', 'system');
+      await expect(site.locator('html')).toHaveAttribute('data-theme', 'light');
+      expect(await theme(site)).toBe('system');
       await site.close();
 
       // ── /play: the round itself, in the browser ──
@@ -380,28 +444,54 @@ test.describe('starter templates render through astro dev', () => {
       await expect(app).toHaveClass(/booting/, { timeout: 60_000 });
       await expect(app.locator('.banner .cursor')).toBeVisible();
       await expect(app).toHaveAttribute('data-boot', 'title'); // after the dark 900 ms
-      await play.screenshot({ path: 'e2e/.results/5ws-crt-boot-1200.png' });
+      // …in coral, on a white card on the blush page
+      expect(await play.locator('.round-card .banner').evaluate(color)).toBe('rgb(255, 74, 46)');
+      expect(await play.locator('.round-card').evaluate(bg)).toBe(LIGHT.card);
+      expect(await play.evaluate(() => getComputedStyle(document.body).backgroundColor)).toBe(
+        LIGHT.ground,
+      );
+      await play.screenshot({ path: 'e2e/.results/5ws-soft-boot-light-1200.png' });
       await expect(app).not.toHaveClass(/booting/, { timeout: 15_000 });
-      await expect(play.locator('.round-voice .banner')).toHaveText('5Ws · Who am I?');
+      await expect(play.locator('.round-card .banner')).toHaveText('5Ws · Who am I?');
+      await expect(play.locator('.round-card .banner')).toHaveCSS('color', LIGHT.text); // settled
 
-      // Someone is already talking — the voice types, in amber, and the cursor goes when it is done;
-      // the interface is the same face in grey
+      // Someone is already talking — the voice types, bold, and the cursor goes when it is done;
+      // the interface is the same face, smaller and grey; the readouts are soft pills
       const opening = play.locator('.round-voice .voice.opening');
       await expect(opening).toHaveText(FIVE_WS_OPENING, { timeout: 60_000 });
       await expect(opening.locator('.cursor')).toHaveCount(0);
-      expect(await opening.evaluate(family)).toMatch(MONO);
-      expect(await opening.evaluate(color)).toBe(AMBER);
-      expect(await play.locator('.status').evaluate(family)).toMatch(MONO);
-      expect(await play.getByTestId('points').evaluate(color)).toBe(UI_GREY);
+      expect(await opening.evaluate(family)).toMatch(SANS);
+      expect(await opening.evaluate(color)).toBe(LIGHT.text);
+      expect(await opening.evaluate(weight)).toBe('600');
+      expect(await play.locator('.status').evaluate(family)).toMatch(SANS);
+      expect(await play.getByTestId('points').evaluate(color)).toBe(LIGHT.text);
+      expect(await play.getByTestId('points').evaluate(bg)).toBe(LIGHT.ground);
+      expect(
+        await play.getByTestId('points').evaluate((el) => getComputedStyle(el).borderRadius),
+      ).toBe('9999px');
       await expect(play.getByTestId('points')).toHaveText('PTS 10');
       await expect(play.getByTestId('questions-left')).toHaveText('Q 10');
-      await expect(play.getByTestId('clock')).toHaveText(/^\d\d:\d\d$/);
+      await expect(play.getByTestId('clock')).toHaveText(/^\d:\d\d$/);
       await expect(play.getByTestId('clock')).toHaveAttribute('data-composing', 'false');
       await expect(play.getByTestId('clock')).toHaveAttribute('data-held', 'false');
       await expect(play.getByText('Connect your AI')).toHaveCount(0); // the scripted model needs no key
-      // Sound is off by default; the phosphor toggle is there
-      await expect(play.getByRole('button', { name: 'sound off' })).toBeVisible();
-      await expect(play.getByRole('button', { name: /^Phosphor amber/ })).toBeVisible();
+      // Sound is off by default; the theme toggle is in the same corner, on system
+      await expect(play.getByRole('button', { name: 'Sound off' })).toBeVisible();
+      await expect(play.getByRole('button', { name: /^Theme: System/ })).toBeVisible();
+      // Ask is the coral pill; Guess is coral text; Search and Give up are grey text; no borders
+      const ask = play.getByRole('button', { name: 'Ask', exact: true });
+      expect(await ask.evaluate(bg)).toBe('rgb(255, 74, 46)');
+      expect(await ask.evaluate((el) => getComputedStyle(el).borderRadius)).toBe('9999px');
+      expect(await play.getByRole('button', { name: 'Guess', exact: true }).evaluate(color)).toBe(
+        'rgb(255, 74, 46)',
+      );
+      expect(await play.getByRole('button', { name: 'Search', exact: true }).evaluate(color)).toBe(
+        LIGHT.muted,
+      );
+      for (const el of await play.locator('.round-bar input, .round-bar button').all()) {
+        expect(await el.evaluate((e) => getComputedStyle(e).borderStyle)).toBe('none');
+      }
+      expect(await play.getByLabel('Ask a question').evaluate(bg)).toBe(LIGHT.ground);
 
       // A question is free; the clock stands still while the voice composes
       const clock = play.getByTestId('clock');
@@ -416,16 +506,22 @@ test.describe('starter templates render through astro dev', () => {
       await expect(clock).toHaveAttribute('data-held', 'false');
       const after = Number(await clock.getAttribute('data-elapsed'));
       expect(after - before).toBeLessThan(900); // 1.5 s of composing and ~2 s of typing were not charged
-      await expect(play.getByTestId('questions-left')).toHaveText('Q 09');
+      await expect(play.getByTestId('questions-left')).toHaveText('Q 9');
       await expect(play.getByTestId('points')).toHaveText('PTS 10');
 
-      // A wrong guess costs a point, with the verdict's reason, quietly
+      // A wrong guess costs a point, with the verdict's reason, quietly — the points pill goes
+      // coral for one beat and comes back
       await play.getByLabel('Your guess').fill(wrong, { timeout: 15_000 });
       await play.getByRole('button', { name: 'Guess', exact: true }).click({ timeout: 15_000 });
+      await expect(play.getByTestId('points')).toHaveAttribute('data-drop', 'true', {
+        timeout: 15_000,
+      });
       const miss = play.getByTestId('wrong-guess');
       await expect(miss).toContainText(`Not ${wrong}.`, { timeout: 15_000 });
       await expect(miss).toContainText('Not this one');
-      await expect(play.getByTestId('points')).toHaveText('PTS 09');
+      await expect(play.getByTestId('points')).toHaveText('PTS 9');
+      await expect(play.getByTestId('points')).toHaveAttribute('data-drop', 'false');
+      expect(await play.getByTestId('points').evaluate(bg)).toBe(LIGHT.ground);
 
       // Search opens a new tab; the clock keeps running; a page can be kept
       await play.getByRole('button', { name: 'Search', exact: true }).click({ timeout: 15_000 });
@@ -446,16 +542,23 @@ test.describe('starter templates render through astro dev', () => {
       await play.getByRole('button', { name: 'Keep this page' }).click({ timeout: 15_000 });
       await expect(play.getByTestId('kept-pages')).toContainText('Hypatia — Wikipedia');
       await play.getByRole('button', { name: 'Done searching' }).click({ timeout: 15_000 });
-      await play.screenshot({ path: 'e2e/.results/5ws-crt-round-1200.png' });
+      await play.screenshot({ path: 'e2e/.results/5ws-soft-round-light-1200.png' });
 
-      // The right guess ends it; the name decrypts from blocks to letters; the reveal names the misses
+      // The right guess ends it; the name decrypts from blocks to letters in coral and the
+      // heading settles to the text colour; the reveal is its own card and names the misses
       await play.getByLabel('Your guess').fill(daily.name, { timeout: 15_000 });
       await play.getByRole('button', { name: 'Guess', exact: true }).click({ timeout: 15_000 });
       const who = play.locator('.reveal .who');
       await expect(who).toHaveText(`This was ${daily.name}.`, { timeout: 30_000 });
       await expect(who.locator('.secret')).toHaveAttribute('data-resolved', 'true');
-      expect(await who.evaluate(family)).toMatch(MONO);
-      expect(await who.evaluate(color)).toBe(AMBER);
+      expect(await who.evaluate(family)).toMatch(SANS);
+      expect(await who.evaluate(weight)).toBe('800');
+      await expect(who).toHaveCSS('color', LIGHT.text);
+      expect(await play.locator('.reveal').evaluate(bg)).toBe(LIGHT.card);
+      await expect(play.locator('.round-card .reveal')).toHaveCount(0); // its own card, stacked under
+      const roundBox = (await play.locator('.round-card').boundingBox())!;
+      const revealBox = (await play.locator('.reveal').boundingBox())!;
+      expect(revealBox.y).toBeGreaterThanOrEqual(roundBox.y + roundBox.height);
       const misses = play.getByTestId('misses');
       await expect(misses).toContainText(wrong);
       await expect(misses).toContainText(FIVE_WS_WHY_MISS);
@@ -516,9 +619,18 @@ test.describe('starter templates render through astro dev', () => {
         seconds: expect.any(Number),
       });
 
+      // The share block: the one dashed box, coral
+      expect(await share.evaluate((el) => getComputedStyle(el).borderStyle)).toBe('dashed');
+      expect(await share.evaluate((el) => getComputedStyle(el).borderColor)).toBe(
+        'rgb(255, 74, 46)',
+      );
+
       // Copy result puts the share block on the clipboard — the same lines, no name
       await play.evaluate(() => window.scrollTo(0, 0));
-      await play.screenshot({ path: 'e2e/.results/5ws-crt-reveal-1200.png', fullPage: true });
+      await play.screenshot({
+        path: 'e2e/.results/5ws-soft-reveal-light-1200.png',
+        fullPage: true,
+      });
       await play.getByRole('button', { name: 'Copy result' }).click({ timeout: 15_000 });
       await expect(play.getByRole('button', { name: 'Copied' })).toBeVisible();
       const result = await play.evaluate(() => navigator.clipboard.readText());
@@ -527,18 +639,43 @@ test.describe('starter templates render through astro dev', () => {
       expect(result).toContain('✗ ✓');
       await expect(play.getByRole('button', { name: 'Copy result' })).toBeVisible(); // the label comes back
 
-      // The other phosphor: one toggle, the attribute changes, the voice goes green, it is remembered
-      await play.getByRole('button', { name: /^Phosphor amber/ }).click();
-      await expect(play.locator('html')).toHaveAttribute('data-phosphor', 'green');
-      expect(await who.evaluate(color)).toBe(GREEN);
-      expect(await play.evaluate(() => localStorage.getItem('5ws:phosphor'))).toBe('green');
-      await expect(play.getByRole('button', { name: /^Phosphor green/ })).toBeVisible();
-      await play.screenshot({ path: 'e2e/.results/5ws-crt-reveal-green-1200.png' });
-      await play.getByRole('button', { name: /^Phosphor green/ }).click();
-      await expect(play.locator('html')).toHaveAttribute('data-phosphor', 'amber');
+      // The theme toggle: system → light → dark → system; each step remembered; the cards go navy
+      await play.getByRole('button', { name: /^Theme: System/ }).click();
+      await expect(play.getByRole('button', { name: /^Theme: Light/ })).toBeVisible();
+      await expect(play.locator('html')).toHaveAttribute('data-theme', 'light');
+      await expect(play.locator('html')).toHaveAttribute('data-theme-choice', 'light');
+      expect(await theme(play)).toBe('light');
+      await play.getByRole('button', { name: /^Theme: Light/ }).click();
+      await expect(play.getByRole('button', { name: /^Theme: Dark/ })).toBeVisible();
+      await expect(play.locator('html')).toHaveAttribute('data-theme', 'dark');
+      expect(await theme(play)).toBe('dark');
+      expect(await play.evaluate(() => getComputedStyle(document.body).backgroundColor)).toBe(
+        DARK.ground,
+      );
+      expect(await play.locator('.round-card').evaluate(bg)).toBe(DARK.card);
+      expect(await play.locator('.reveal').evaluate(bg)).toBe(DARK.card);
+      await expect(who).toHaveCSS('color', DARK.text);
+      await play.screenshot({ path: 'e2e/.results/5ws-soft-reveal-dark-1200.png', fullPage: true });
+      // …and it is remembered: another page in this browser opens dark before first paint
+      // (a fresh context carrying this browser's storage — the play page owns its own)
+      const twinContext = await browser.newContext({
+        storageState: await play.context().storageState(),
+      });
+      const twin = await twinContext.newPage();
+      await twin.goto(origin);
+      await expect(twin.locator('html')).toHaveAttribute('data-theme', 'dark');
+      await expect(twin.locator('html')).toHaveAttribute('data-theme-choice', 'dark');
+      expect(await twin.evaluate(() => getComputedStyle(document.body).backgroundColor)).toBe(
+        DARK.ground,
+      );
+      await twinContext.close();
+      await play.getByRole('button', { name: /^Theme: Dark/ }).click();
+      await expect(play.getByRole('button', { name: /^Theme: System/ })).toBeVisible();
+      await expect(play.locator('html')).toHaveAttribute('data-theme', 'light');
+      expect(await theme(play)).toBe('system');
       // …and the round it was toggled in is still this one: the reveal stands, nothing restarted
       await expect(who).toHaveText(`This was ${daily.name}.`);
-      await expect(play.getByTestId('points')).toHaveText('PTS 09');
+      await expect(play.getByTestId('points')).toHaveText('PTS 9');
 
       // Copy transcript (the quieter button) puts the markdown page on the clipboard
       await play.getByRole('button', { name: 'Copy transcript' }).click({ timeout: 15_000 });
@@ -583,6 +720,10 @@ test.describe('starter templates render through astro dev', () => {
       await expect(still.locator('.round-app')).toHaveAttribute('data-motion', 'reduced');
       await expect(still.locator('.round-app')).toHaveAttribute('data-boot', 'done');
       await expect(still.locator('.round-app')).not.toHaveClass(/booting/);
+      // …and the card does not fade in
+      expect(
+        await still.locator('.round-card').evaluate((el) => getComputedStyle(el).animationName),
+      ).toBe('none');
       await still.close();
 
       // A phone: one column, the voice on top, the bar pinned to the bottom
@@ -592,7 +733,7 @@ test.describe('starter templates render through astro dev', () => {
       await phonePlay.goto(origin + 'play/');
       await expect(phonePlay.locator('.round-app')).toHaveClass(/booting/, { timeout: 60_000 });
       await expect(phonePlay.locator('.round-app')).toHaveAttribute('data-boot', 'title');
-      await phonePlay.screenshot({ path: 'e2e/.results/5ws-crt-boot-390.png' });
+      await phonePlay.screenshot({ path: 'e2e/.results/5ws-soft-boot-light-390.png' });
       await expect(phonePlay.locator('.round-voice .voice.opening')).toHaveText(FIVE_WS_OPENING, {
         timeout: 60_000,
       });
@@ -602,13 +743,42 @@ test.describe('starter templates render through astro dev', () => {
       const voiceBox = (await phonePlay.locator('.round-voice .voice.opening').boundingBox())!;
       expect(Math.round(bar.y + bar.height)).toBeGreaterThanOrEqual(842);
       expect(voiceBox.y + voiceBox.height).toBeLessThanOrEqual(bar.y);
-      // Tap targets: every control in the bar and the top is at least 44px tall
-      for (const b of await phonePlay.locator('.round-bar button, .round-bar input').all()) {
+      // The card is edge-to-edge with 12px gutters; the bar is a blurred sheet across the width
+      const phoneCard = (await phonePlay.locator('.round-card').boundingBox())!;
+      expect(Math.round(phoneCard.x)).toBe(CARD_GUTTER);
+      expect(Math.round(phoneCard.width)).toBe(390 - 2 * CARD_GUTTER);
+      expect(Math.round(bar.x)).toBe(0);
+      expect(Math.round(bar.width)).toBe(390);
+      expect(
+        await phonePlay
+          .locator('.round-bar')
+          .evaluate(
+            (el) =>
+              getComputedStyle(el).backdropFilter || getComputedStyle(el).webkitBackdropFilter,
+          ),
+      ).toMatch(/blur/);
+      // Tap targets: every control in the bar and the corner is at least 44px tall
+      for (const b of await phonePlay
+        .locator('.round-bar button, .round-bar input, .round-top .corner button')
+        .all()) {
         expect((await b.boundingBox())!.height).toBeGreaterThanOrEqual(44);
       }
-      await expect(phonePlay.locator('.round-top .corner')).toBeHidden();
-      await expect(phonePlay.getByRole('button', { name: 'sound off' })).toBeVisible();
-      await phonePlay.screenshot({ path: 'e2e/.results/5ws-crt-round-390.png' });
+      // The corner — sound pill and theme toggle — sits top right on the phone too
+      await expect(phonePlay.locator('.round-top .corner')).toBeVisible();
+      await expect(phonePlay.getByRole('button', { name: 'Sound off' })).toBeVisible();
+      const phoneToggle = phonePlay.getByRole('button', { name: /^Theme: System/ });
+      const toggleBox = (await phoneToggle.boundingBox())!;
+      expect(toggleBox.x + toggleBox.width).toBeGreaterThan(390 - 2 * CARD_GUTTER);
+      await phonePlay.screenshot({ path: 'e2e/.results/5ws-soft-round-light-390.png' });
+      // Dark on the phone: two presses (system → light → dark), the card goes navy
+      await phoneToggle.click();
+      await phonePlay.getByRole('button', { name: /^Theme: Light/ }).click();
+      await expect(phonePlay.locator('html')).toHaveAttribute('data-theme', 'dark');
+      expect(await phonePlay.locator('.round-card').evaluate(bg)).toBe(DARK.card);
+      expect(await phonePlay.evaluate(() => getComputedStyle(document.body).backgroundColor)).toBe(
+        DARK.ground,
+      );
+      await phonePlay.screenshot({ path: 'e2e/.results/5ws-soft-round-dark-390.png' });
       // A first-try win on the phone: the reveal, then the share block, one column
       await phonePlay.getByLabel('Your guess').fill(daily.name, { timeout: 15_000 });
       await phonePlay
@@ -621,7 +791,19 @@ test.describe('starter templates render through astro dev', () => {
       await expect(phonePlay.getByTestId('share')).toContainText('10/10 in');
       expect(await scrollWidth(phonePlay)).toBeLessThanOrEqual(390);
       await phonePlay.evaluate(() => window.scrollTo(0, 0));
-      await phonePlay.screenshot({ path: 'e2e/.results/5ws-crt-reveal-390.png', fullPage: true });
+      await phonePlay.screenshot({
+        path: 'e2e/.results/5ws-soft-reveal-dark-390.png',
+        fullPage: true,
+      });
+      // …and back to system (light): the reveal stands
+      await phonePlay.getByRole('button', { name: /^Theme: Dark/ }).click();
+      await expect(phonePlay.locator('html')).toHaveAttribute('data-theme', 'light');
+      expect(await phonePlay.locator('.reveal').evaluate(bg)).toBe(LIGHT.card);
+      await expect(phonePlay.locator('.reveal .who')).toHaveText(`This was ${daily.name}.`);
+      await phonePlay.screenshot({
+        path: 'e2e/.results/5ws-soft-reveal-light-390.png',
+        fullPage: true,
+      });
       await phonePlay.close();
 
       // ── Connect your AI: the step itself, with no scripted model on the page ──
@@ -683,7 +865,8 @@ test.describe('starter templates render through astro dev', () => {
         await withRefusingProviders(connect);
         await connect.goto(origin + 'play/');
 
-        // The step: the shelf's question in phosphor, one heading, one field, one button, no dropdown
+        // The step: the shelf's question heavy on a white card, one heading, one field, one
+        // button, no dropdown
         await expect(connect.getByRole('heading', { name: 'Connect your AI' })).toBeVisible({
           timeout: 60_000,
         });
@@ -693,8 +876,14 @@ test.describe('starter templates render through astro dev', () => {
         const field = connect.getByLabel('Key');
         const button = connect.getByRole('button', { name: 'Connect', exact: true });
         await expect(button).toBeDisabled();
-        expect(await connect.locator('.connect-form h2').evaluate(family)).toMatch(MONO);
-        expect(await connect.locator('.connect .question').evaluate(color)).toBe(AMBER);
+        expect(await connect.locator('.connect-form h2').evaluate(family)).toMatch(SANS);
+        expect(await connect.locator('.connect .question').evaluate(color)).toBe(LIGHT.text);
+        expect(await connect.locator('.connect .question').evaluate(weight)).toBe('800');
+        const connectCard = connect.locator('.connect-card');
+        await expect(connectCard).toHaveCSS('opacity', '1'); // the 200ms fade has finished
+        expect(await connectCard.evaluate(bg)).toBe(LIGHT.card);
+        expect(await field.evaluate(bg)).toBe(LIGHT.ground);
+        expect(await field.evaluate((el) => getComputedStyle(el).borderStyle)).toBe('none');
         // "Get a key" links above the field: Google first and marked free, all in a new tab
         const links = connect.locator('.connect-form .get-key a');
         await expect(links).toHaveText(['Google — free', 'OpenAI', 'Anthropic']);
@@ -786,6 +975,7 @@ test.describe('starter templates render through astro dev', () => {
         await expect(phoneConnect.getByRole('heading', { name: 'Connect your AI' })).toBeVisible({
           timeout: 60_000,
         });
+        await expect(phoneConnect.locator('.connect-card')).toHaveCSS('opacity', '1');
         expect(await scrollWidth(phoneConnect)).toBeLessThanOrEqual(390);
         const pf = (await phoneConnect.getByLabel('Key').boundingBox())!;
         const pb = (await phoneConnect

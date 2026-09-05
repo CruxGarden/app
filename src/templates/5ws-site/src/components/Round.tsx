@@ -1,19 +1,23 @@
 /**
  * The Round — the play surface of 5Ws, an Astro island (`/play`).
  *
- * Someone is already talking when it opens. The screen is a calm terminal:
- * one monospace face, a dark ground, the voice in phosphor and the interface
- * in a cool grey one step smaller (`round.css` says why the spec's serif/sans
- * rule was set aside). The voice *types* — character by character, a breath
- * after punctuation, a block cursor at the end — and nothing else moves while
- * it does; Space or a tap skips to the end. Points and the clock are readouts
- * (`PTS 08`, `04:37`) whose colon blinks only while the clock runs; the clock
- * holds while the voice types, as it pauses while the model composes. A Guess
- * field kept apart from the question because guesses cost and questions
- * don't; Search opens a tab and the clock keeps running; Give up is a shrug.
- * At the end the name decrypts from blocks, the sections type in one after
- * another, and a share block with no spoiler in it is the only trophy. No
- * confetti, no streaks; a dim line says when the next figure comes.
+ * Someone is already talking when it opens. The screen is Soft Serve: a blush
+ * page (deep navy in dark), one white card with round corners and no border,
+ * the voice as the biggest, boldest text in it, the interface smaller and grey
+ * (`global.css` says why the spec's serif/sans rule was set aside). The voice
+ * *types* — character by character, a breath after punctuation, a coral bar
+ * cursor at the end — and nothing else moves while it does; Space or a tap
+ * skips to the end. Points, questions left and the clock are a row of soft
+ * pills in the card head (`PTS 8 · Q 9 · 4:37`); the points pill goes coral
+ * for one beat when a point goes; the clock holds while the voice types, as
+ * it pauses while the model composes. A Guess field kept apart from the
+ * question because guesses cost and questions don't (a wrong guess nudges it,
+ * 2px — the one flourish); Search opens a tab and the clock keeps running;
+ * Give up is a shrug. At the end the name decrypts from blocks in coral and
+ * settles, the sections type in one after another, and a share block with no
+ * spoiler in it is the only trophy. No confetti, no streaks; a dim line says
+ * when the next figure comes. Light or dark follows the system unless the
+ * toggle in the corner says otherwise.
  *
  * The round runs here, in the visitor's browser, with the AI they connected
  * (first play: "Connect your AI" — one field, one button; the provider is
@@ -79,21 +83,26 @@ import {
   type Leaderboard,
 } from '../lib/leaderboard';
 import { storeFor } from '../lib/store';
-import { clockParts, isWebUrl, pad2, searchUrlFor } from '../lib/format';
+import { formatClock, isWebUrl, searchUrlFor } from '../lib/format';
 import { typeOut, typingUnits } from '../lib/typing';
 import { decryptSchedule, letterCount, maskName, splitWho } from '../lib/decrypt';
 import { shareResult } from '../lib/share';
 import { formatCountdown, msUntilUtcMidnight } from '../lib/countdown';
 import {
-  applyPhosphor,
-  currentPhosphor,
-  loadPhosphor,
+  DARK_QUERY,
+  applyTheme,
+  currentThemeChoice,
   loadSound,
-  otherPhosphor,
-  savePhosphor,
+  loadTheme,
+  nextTheme,
+  resolveTheme,
   saveSound,
-  type Phosphor,
-} from '../lib/phosphor';
+  saveTheme,
+  systemPrefersDark,
+  themeToggleLabel,
+  type ResolvedTheme,
+  type ThemeChoice,
+} from '../lib/theme';
 import { createSound, type Sound } from '../lib/sound';
 
 export interface RoundProps {
@@ -105,10 +114,14 @@ export interface RoundProps {
   name?: string;
 }
 
-/** The screen's two settings, remembered in this browser: phosphor and sound. */
+/** The screen's two settings, remembered in this browser: the theme and sound. */
 interface Prefs {
-  phosphor: Phosphor;
-  setPhosphor: (p: Phosphor) => void;
+  /** What was picked: system (the default), light or dark. */
+  theme: ThemeChoice;
+  /** What is showing. */
+  resolved: ResolvedTheme;
+  /** One press: system → light → dark → system. */
+  cycleTheme: () => void;
   soundOn: boolean;
   setSoundOn: (on: boolean) => void;
   /** The engine while sound is on; null when off. */
@@ -134,7 +147,7 @@ export default function Round({ shelf: shelfJson, base = '/', name }: RoundProps
   const injected = injectedModel() !== null;
   const prefs = usePrefs(storage);
   // The session below is memoised on this; a fresh fallback object on every render
-  // (toggling the phosphor re-renders the root) would start a new round mid-round.
+  // (toggling the theme re-renders the root) would start a new round mid-round.
   const effectiveConfig = useMemo<ModelConfig>(() => config ?? { provider: 'anthropic' }, [config]);
 
   const connect = useCallback(
@@ -220,24 +233,34 @@ export default function Round({ shelf: shelfJson, base = '/', name }: RoundProps
   );
 }
 
-// ── Screen settings: phosphor, sound ────────────────────────────────────────
+// ── Screen settings: theme, sound ───────────────────────────────────────────
 
 function usePrefs(storage: KeyValueStorage): Prefs {
-  const [phosphor, setPhosphorState] = useState<Phosphor>(() =>
+  // The head script applied the remembered choice before first paint; start from what it set.
+  const [theme, setThemeState] = useState<ThemeChoice>(() =>
     typeof document !== 'undefined'
-      ? currentPhosphor(document.documentElement)
-      : loadPhosphor(storage),
+      ? currentThemeChoice(document.documentElement)
+      : loadTheme(storage),
   );
+  const [systemDark, setSystemDark] = useState(() => systemPrefersDark());
   useEffect(() => {
-    if (typeof document !== 'undefined') applyPhosphor(document.documentElement, phosphor);
-  }, [phosphor]);
-  const setPhosphor = useCallback(
-    (p: Phosphor) => {
-      savePhosphor(storage, p);
-      setPhosphorState(p);
-    },
-    [storage],
-  );
+    if (typeof matchMedia !== 'function') return;
+    const mq = matchMedia(DARK_QUERY);
+    const onChange = () => setSystemDark(mq.matches);
+    mq.addEventListener('change', onChange);
+    return () => mq.removeEventListener('change', onChange);
+  }, []);
+  useEffect(() => {
+    if (typeof document !== 'undefined') applyTheme(document.documentElement, theme, systemDark);
+  }, [theme, systemDark]);
+  const cycleTheme = useCallback(() => {
+    setThemeState((t) => {
+      const next = nextTheme(t);
+      saveTheme(storage, next);
+      return next;
+    });
+  }, [storage]);
+  const resolved = resolveTheme(theme, systemDark);
   const [soundOn, setSoundOnState] = useState(() => loadSound(storage));
   const [engine, setEngine] = useState<Sound | null>(null);
   // Built after the toggle's click, so the browser lets it play
@@ -252,35 +275,75 @@ function usePrefs(storage: KeyValueStorage): Prefs {
     [storage],
   );
   return useMemo(
-    () => ({ phosphor, setPhosphor, soundOn, setSoundOn, sound: soundOn ? engine : null }),
-    [phosphor, setPhosphor, soundOn, setSoundOn, engine],
+    () => ({ theme, resolved, cycleTheme, soundOn, setSoundOn, sound: soundOn ? engine : null }),
+    [theme, resolved, cycleTheme, soundOn, setSoundOn, engine],
   );
 }
 
-/** The two toggles, in the corner: which phosphor, and whether the keys click. */
+/** The corner, top right: a small pill for sound, and the sun/moon that cycles the theme. */
 function Corner({ prefs }: { prefs: Prefs }) {
-  const other = otherPhosphor(prefs.phosphor);
+  const label = themeToggleLabel(prefs.theme);
   return (
     <div className="corner">
       <button
         type="button"
-        className="toggle"
-        aria-label={`Phosphor ${prefs.phosphor} — switch to ${other}`}
-        title={`Switch to ${other}`}
-        onClick={() => prefs.setPhosphor(other)}
-      >
-        {prefs.phosphor}
-      </button>
-      <button
-        type="button"
-        className="toggle"
+        className="pill"
         aria-pressed={prefs.soundOn}
         onClick={() => prefs.setSoundOn(!prefs.soundOn)}
       >
-        sound {prefs.soundOn ? 'on' : 'off'}
+        Sound {prefs.soundOn ? 'on' : 'off'}
+      </button>
+      <button
+        type="button"
+        className="theme-toggle"
+        aria-label={label}
+        title={label}
+        data-theme-choice={prefs.theme}
+        onClick={prefs.cycleTheme}
+      >
+        {prefs.resolved === 'dark' ? <MoonGlyph /> : <SunGlyph />}
       </button>
     </div>
   );
+}
+
+/* The same two glyphs as Base.astro's toggle (inline, so no request). */
+function SunGlyph() {
+  return (
+    <svg
+      className="sun"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      aria-hidden="true"
+    >
+      <circle cx="12" cy="12" r="4" />
+      <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41" />
+    </svg>
+  );
+}
+function MoonGlyph() {
+  return (
+    <svg className="moon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+      <path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z" />
+    </svg>
+  );
+}
+
+/** True for `ms` after `value` changes (never on mount): the points pill's beat, the guess field's nudge. */
+function usePulse(value: number, ms: number): boolean {
+  const [on, setOn] = useState(false);
+  const prev = useRef(value);
+  useEffect(() => {
+    if (value === prev.current) return;
+    prev.current = value;
+    setOn(true);
+    const h = setTimeout(() => setOn(false), ms);
+    return () => clearTimeout(h);
+  }, [value, ms]);
+  return on;
 }
 
 /** `prefers-reduced-motion`: text appears at once, nothing blinks. */
@@ -335,51 +398,53 @@ function ConnectAi({
         <span className="shelf-link">{shelf.title}</span>
         <Corner prefs={prefs} />
       </header>
-      <h1 className="question voice">{shelf.question}</h1>
-      <form
-        className="connect-form"
-        onSubmit={(e) => {
-          e.preventDefault();
-          if (provider) onConnect(trimmed);
-        }}
-      >
-        <h2>Connect your AI</h2>
-        <p className="get-key">
-          <span>Get a key:</span>
-          {PROVIDERS.map((p) => (
-            <a key={p.id} href={p.keysUrl} target="_blank" rel="noopener noreferrer">
-              {p.free ? `${p.label} — free` : p.label}
-            </a>
-          ))}
-        </p>
-        <div className="row">
-          <input
-            type="password"
-            aria-label="Key"
-            placeholder="Paste your key"
-            autoComplete="off"
-            spellCheck={false}
-            autoFocus
-            enterKeyHint="go"
-            value={key}
-            onChange={(e) => setKey(e.target.value)}
-          />
-          <button type="submit" className="primary" disabled={!provider}>
-            Connect
-          </button>
-        </div>
-        {unknown && (
-          <p className="note error" role="status">
-            {UNKNOWN_KEY_MESSAGE}
+      <section className="card connect-card">
+        <h1 className="question">{shelf.question}</h1>
+        <form
+          className="connect-form"
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (provider) onConnect(trimmed);
+          }}
+        >
+          <h2>Connect your AI</h2>
+          <p className="get-key">
+            <span>Get a key:</span>
+            {PROVIDERS.map((p) => (
+              <a key={p.id} href={p.keysUrl} target="_blank" rel="noopener noreferrer">
+                {p.free ? `${p.label} — free` : p.label}
+              </a>
+            ))}
           </p>
-        )}
-        {showProblem && (
-          <p className="note error" role="alert">
-            {problem}
-          </p>
-        )}
-        <p className="note">Your key stays in this browser and is sent only to that provider.</p>
-      </form>
+          <div className="row">
+            <input
+              type="password"
+              aria-label="Key"
+              placeholder="Paste your key"
+              autoComplete="off"
+              spellCheck={false}
+              autoFocus
+              enterKeyHint="go"
+              value={key}
+              onChange={(e) => setKey(e.target.value)}
+            />
+            <button type="submit" className="button primary" disabled={!provider}>
+              Connect
+            </button>
+          </div>
+          {unknown && (
+            <p className="note error" role="status">
+              {UNKNOWN_KEY_MESSAGE}
+            </p>
+          )}
+          {showProblem && (
+            <p className="note error" role="alert">
+              {problem}
+            </p>
+          )}
+          <p className="note">Your key stays in this browser and is sent only to that provider.</p>
+        </form>
+      </section>
     </div>
   );
 }
@@ -715,10 +780,16 @@ function LiveRound({
     setGuessText('');
   };
 
-  const { mm, ss } = clockParts(remainingMs(state));
   const running = !over && !state.composing && !typing;
   const canAsk = !over && !state.composing && state.questionsLeft > 0;
   const banner = `${name} · ${shelf.question}`;
+  // A point gone: the pill goes coral for a beat. A wrong guess: the guess field nudges, once.
+  const pointsBeat = usePulse(state.points, 700);
+  const wrongCount = state.guesses.filter((g) => g.correct === false).length;
+  const nudge = usePulse(wrongCount, 160);
+  // The banner typed in coral; once the boot is done it settles to the text colour over a beat
+  // (only then — a theme switch must not animate it).
+  const bannerSettling = usePulse(boot === 'done' ? 1 : 0, 700);
 
   return (
     <TypingContext.Provider value={control}>
@@ -733,101 +804,109 @@ function LiveRound({
         onClick={boot !== 'done' ? onVoiceClick : undefined}
       >
         <header className="round-top">
-          <div className="left">
-            <a className="shelf-link" href={base}>
-              {shelf.title}
-            </a>
-            <Corner prefs={prefs} />
-          </div>
-          <div className="status" aria-live="off">
-            <span className="readout points" data-testid="points" title="Points">
-              PTS {pad2(state.points)}
-            </span>
-            <span className="readout qleft" data-testid="questions-left" title="Questions left">
-              Q {pad2(state.questionsLeft)}
-            </span>
-            <span
-              className={`readout clock${running ? ' running' : ' hold'}`}
-              data-testid="clock"
-              data-elapsed={state.elapsedMs}
-              data-composing={state.composing ? 'true' : 'false'}
-              data-held={typing ? 'true' : 'false'}
-              title="Time left"
-            >
-              {mm}
-              <span className="colon">:</span>
-              {ss}
-            </span>
-          </div>
+          <a className="shelf-link" href={base}>
+            {shelf.title}
+          </a>
+          <Corner prefs={prefs} />
         </header>
 
-        <section className="round-voice" aria-live="polite" onClick={onVoiceClick}>
-          <p className="banner">
-            {boot === 'dark' ? (
-              <Cursor />
-            ) : boot === 'title' ? (
-              <TypedText
-                text={banner}
-                charsPerSecond={BOOT_BANNER_CPS}
-                onDone={() => setBoot('done')}
-              />
-            ) : (
-              banner
-            )}
-          </p>
-          <p className="voice opening">
-            {state.openingLine === null ? (
-              state.awaiting === 'opening' ? (
-                <Composing />
+        <section className="card round-card">
+          <header className="card-head" onClick={onVoiceClick}>
+            <p className="banner" data-settling={bannerSettling ? 'true' : 'false'}>
+              {boot === 'dark' ? (
+                <Cursor />
+              ) : boot === 'title' ? (
+                <TypedText
+                  text={banner}
+                  charsPerSecond={BOOT_BANNER_CPS}
+                  onDone={() => setBoot('done')}
+                />
               ) : (
-                <em>…</em>
-              )
-            ) : state.openingLine === '' ? (
-              <em>…</em>
-            ) : (
-              <TypedText text={state.openingLine} active={boot === 'done'} />
-            )}
-          </p>
-          {state.turns.map((t, i) => (
-            <div className="turn" key={i}>
-              <p className="you">
-                <strong>You:</strong> {t.question}
-              </p>
-              <p className="voice">
-                {t.answer === null ? <Composing /> : <TypedText text={t.answer} />}
-              </p>
-            </div>
-          ))}
-          {state.guesses.map((g, i) => (
-            <GuessLine key={i} guess={g} />
-          ))}
-          {snap.error && (
-            <p className="note error" role="alert">
-              {snap.error}{' '}
-              {snap.retry && (
-                <button type="button" className="link" onClick={() => session.retry()}>
-                  Try again
-                </button>
+                banner
               )}
             </p>
-          )}
-          {over && (
-            <RevealView
-              state={state}
-              reveal={snap.reveal}
-              revealing={snap.phase !== 'done'}
-              daily={daily}
-              storage={storage}
-              base={base}
-              name={name}
-              shelf={shelf}
-              entry={entry}
-              onPlayAgain={onPlayAgain}
-              onVoiceDone={() => setRevealDone(true)}
-            />
-          )}
-          <div ref={voiceEndRef} />
+            <div className="status" aria-live="off">
+              <span
+                className="readout points"
+                data-testid="points"
+                data-drop={pointsBeat ? 'true' : 'false'}
+                title="Points"
+              >
+                PTS {state.points}
+              </span>
+              <span className="readout qleft" data-testid="questions-left" title="Questions left">
+                Q {state.questionsLeft}
+              </span>
+              <span
+                className={`readout clock${running ? ' running' : ' hold'}`}
+                data-testid="clock"
+                data-elapsed={state.elapsedMs}
+                data-composing={state.composing ? 'true' : 'false'}
+                data-held={typing ? 'true' : 'false'}
+                title="Time left"
+              >
+                {formatClock(remainingMs(state))}
+              </span>
+            </div>
+          </header>
+
+          <section className="round-voice" aria-live="polite" onClick={onVoiceClick}>
+            <p className="voice opening">
+              {state.openingLine === null ? (
+                state.awaiting === 'opening' ? (
+                  <Composing />
+                ) : (
+                  <em>…</em>
+                )
+              ) : state.openingLine === '' ? (
+                <em>…</em>
+              ) : (
+                <TypedText text={state.openingLine} active={boot === 'done'} />
+              )}
+            </p>
+            {state.turns.map((t, i) => (
+              <div className="turn" key={i}>
+                <p className="you">
+                  <strong>You:</strong> {t.question}
+                </p>
+                <p className="voice">
+                  {t.answer === null ? <Composing /> : <TypedText text={t.answer} />}
+                </p>
+              </div>
+            ))}
+            {state.guesses.map((g, i) => (
+              <GuessLine key={i} guess={g} />
+            ))}
+            {snap.error && (
+              <p className="note error" role="alert">
+                {snap.error}{' '}
+                {snap.retry && (
+                  <button type="button" className="link" onClick={() => session.retry()}>
+                    Try again
+                  </button>
+                )}
+              </p>
+            )}
+          </section>
         </section>
+
+        {/* The reveal: its own card, stacked under the round's */}
+        {over && (
+          <RevealView
+            state={state}
+            reveal={snap.reveal}
+            revealing={snap.phase !== 'done'}
+            daily={daily}
+            storage={storage}
+            base={base}
+            name={name}
+            shelf={shelf}
+            entry={entry}
+            onPlayAgain={onPlayAgain}
+            onVoiceDone={() => setRevealDone(true)}
+          />
+        )}
+        <div ref={voiceEndRef} />
 
         {!over && (
           <footer className="round-bar">
@@ -851,7 +930,11 @@ function LiveRound({
                 autoComplete="off"
                 enterKeyHint="send"
               />
-              <button type="submit" disabled={!canAsk || !question.trim()}>
+              <button
+                type="submit"
+                className="button primary"
+                disabled={!canAsk || !question.trim()}
+              >
                 Ask
               </button>
             </form>
@@ -866,8 +949,13 @@ function LiveRound({
                   disabled={state.composing}
                   autoComplete="off"
                   enterKeyHint="go"
+                  data-nudge={nudge ? 'true' : 'false'}
                 />
-                <button type="submit" disabled={state.composing || !guessText.trim()}>
+                <button
+                  type="submit"
+                  className="button accent"
+                  disabled={state.composing || !guessText.trim()}
+                >
                   Guess
                 </button>
                 <span className="cost">−1 if wrong</span>
@@ -875,7 +963,8 @@ function LiveRound({
               <div className="side">
                 <button
                   type="button"
-                  className={state.browserOpen ? 'active' : ''}
+                  className={state.browserOpen ? 'button' : 'button quiet'}
+                  aria-pressed={state.browserOpen}
                   onClick={() =>
                     state.browserOpen ? session.closeBrowser() : session.openBrowser()
                   }
@@ -885,7 +974,7 @@ function LiveRound({
                 {confirmGiveUp ? (
                   <button
                     type="button"
-                    className="quiet"
+                    className="button quiet"
                     onClick={() => session.giveUp()}
                     onBlur={() => setConfirmGiveUp(false)}
                     autoFocus
@@ -893,23 +982,27 @@ function LiveRound({
                     Give up — sure?
                   </button>
                 ) : (
-                  <button type="button" className="quiet" onClick={() => setConfirmGiveUp(true)}>
+                  <button
+                    type="button"
+                    className="button quiet"
+                    onClick={() => setConfirmGiveUp(true)}
+                  >
                     Give up
                   </button>
                 )}
               </div>
             </div>
-            <div className="bar-foot">
-              <Corner prefs={prefs} />
-              {onDisconnect && <Connected config={config} onChange={onDisconnect} />}
-            </div>
+            {onDisconnect && (
+              <div className="bar-foot">
+                <Connected config={config} onChange={onDisconnect} />
+              </div>
+            )}
           </footer>
         )}
 
-        {over && (
+        {over && onDisconnect && (
           <div className="bar-foot">
-            <Corner prefs={prefs} />
-            {onDisconnect && <Connected config={config} onChange={onDisconnect} />}
+            <Connected config={config} onChange={onDisconnect} />
           </div>
         )}
       </div>
@@ -917,22 +1010,14 @@ function LiveRound({
   );
 }
 
-/** The block cursor — the one thing that blinks. */
+/** The cursor — a coral rounded bar, the one thing that blinks (drawn by the stylesheet). */
 function Cursor() {
-  return (
-    <span className="cursor" aria-hidden="true">
-      ▮
-    </span>
-  );
+  return <span className="cursor" aria-hidden="true" />;
 }
 
 /** Whoever is speaking is composing: the cursor, waiting. */
 function Composing() {
-  return (
-    <span className="composing cursor" aria-label="composing">
-      ▮
-    </span>
-  );
+  return <span className="composing cursor" role="img" aria-label="composing" />;
 }
 
 /**
@@ -1081,7 +1166,7 @@ function SearchPanel({
           autoFocus
           autoComplete="off"
         />
-        <button type="submit" disabled={!q.trim()}>
+        <button type="submit" className="button" disabled={!q.trim()}>
           Search the web
         </button>
       </form>
@@ -1104,11 +1189,11 @@ function SearchPanel({
           autoComplete="off"
         />
         {canPaste && (
-          <button type="button" className="quiet" onClick={paste}>
+          <button type="button" className="button quiet" onClick={paste}>
             Paste
           </button>
         )}
-        <button type="submit" disabled={!isWebUrl(url)}>
+        <button type="submit" className="button" disabled={!isWebUrl(url)}>
           Keep this page
         </button>
       </form>
@@ -1179,6 +1264,8 @@ function RevealView({
   }, [reveal]);
   const [stage, setStage] = useState(0);
   const advance = useCallback(() => setStage((s) => s + 1), []);
+  // The name resolved (stage 1): the heading settles from coral to the text colour over a beat
+  const whoSettling = usePulse(stage > 0 ? 1 : 0, 700);
   const voiceDone = reveal !== null && stage >= pieces.length;
   const voiceDoneRef = useRef(onVoiceDone);
   voiceDoneRef.current = onVoiceDone;
@@ -1199,7 +1286,11 @@ function RevealView({
   const who = reveal?.who || `This was ${entry.name}.`;
 
   return (
-    <section className="reveal" data-testid="reveal" data-voice-done={voiceDone ? 'true' : 'false'}>
+    <section
+      className="reveal card"
+      data-testid="reveal"
+      data-voice-done={voiceDone ? 'true' : 'false'}
+    >
       {outcome && <p className="outcome">{outcome}</p>}
       {revealing || !reveal ? (
         <p className="voice">
@@ -1207,7 +1298,7 @@ function RevealView({
         </p>
       ) : (
         <>
-          <h3 className="voice who">
+          <h3 className="voice who" data-settling={whoSettling ? 'true' : 'false'}>
             <DecryptWho who={who} name={entry.name} won={state.status === 'won'} onDone={advance} />
           </h3>
           {pieces.map((p, i) => {
@@ -1390,10 +1481,10 @@ function After({
         {share}
       </pre>
       <div className="after">
-        <button type="button" className="primary" onClick={() => void copy('result')}>
+        <button type="button" className="button primary" onClick={() => void copy('result')}>
           {copied === 'result' ? 'Copied' : 'Copy result'}
         </button>
-        <button type="button" className="quiet" onClick={() => void copy('transcript')}>
+        <button type="button" className="button quiet" onClick={() => void copy('transcript')}>
           {copied === 'transcript' ? 'Copied' : 'Copy transcript'}
         </button>
       </div>
@@ -1402,7 +1493,7 @@ function After({
       <Board daily={daily} state={state} storage={storage} shelf={shelf} entry={entry} />
 
       <div className="after">
-        <button type="button" onClick={onPlayAgain}>
+        <button type="button" className="button" onClick={onPlayAgain}>
           Play again
         </button>
         <kbd className="hint">Enter</kbd>
@@ -1659,7 +1750,7 @@ function SignIn({
             required
             autoComplete="email"
           />
-          <button type="submit" disabled={busy || !email.trim()}>
+          <button type="submit" className="button primary" disabled={busy || !email.trim()}>
             Send code
           </button>
         </div>
@@ -1675,7 +1766,7 @@ function SignIn({
             required
             autoComplete="one-time-code"
           />
-          <button type="submit" disabled={busy || !code.trim()}>
+          <button type="submit" className="button primary" disabled={busy || !code.trim()}>
             Sign in
           </button>
         </div>

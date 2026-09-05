@@ -266,20 +266,75 @@ describe('5ws (ADR 0016)', () => {
         expect(page.content, page.path).toContain('<h1 class="question">{question}</h1>');
       }
     }
-    // One machine: a monospace face for everything (the spec's serif/sans rule set aside on
-    // purpose, and the stylesheet says so), the voice in phosphor, amber by default and green
-    // as the other, keyed on data-phosphor; the one keyframe is the cursor's blink
+    // Soft Serve: one heavy geometric stack for everything (Outfit only if the visitor has it —
+    // no webfont download, and the stylesheet says so; the spec's serif/sans rule set aside on
+    // purpose, and the stylesheet says why), the Mood's exact light tokens, a navy dark, keyed on
+    // data-theme; the one keyframe in global.css is the cursor's blink, nothing monospace
     const css = def.files.find((f) => f.path === 'src/styles/global.css')!.content;
-    expect(css).toMatch(/--mono:[^;]*monospace;/);
-    expect(css).not.toMatch(/--serif:|--sans:/);
-    expect(css).toMatch(/serif/i); // the comment that says why
-    expect(css).toContain('--voice: #e0a83a');
-    expect(css).toContain("[data-phosphor='green']");
+    expect(css).toMatch(/--sans: 'Outfit', 'SF Pro Rounded', ui-rounded, system-ui, sans-serif;/);
+    expect(css).not.toMatch(/--mono:|--serif:|monospace/);
+    expect(css).toMatch(/serif for anything with a\s+voice/); // the comment that says why
+    expect(css).toMatch(/no webfont download/);
+    for (const token of [
+      '--ground: #FDEEEA',
+      '--card: #FFFFFF',
+      '--text: #1C1C1C',
+      '--muted: #7A6F6B',
+      '--hairline: #EFE6E3',
+      '--accent: #FF4A2E',
+      '--accent-hover: #E63D24',
+      '--highlight: #F5B400',
+      '--info: #7B86F6',
+      '--success: #2E9E5B',
+      '--shadow: 0 8px 32px rgba(60, 30, 20, 0.06)',
+      '--ring: rgb(255 74 46 / 0.35)',
+      '--radius-card: 24px',
+    ]) {
+      expect(css, token).toContain(token);
+    }
+    const dark = css.slice(css.indexOf(":root[data-theme='dark']"));
+    for (const token of [
+      'color-scheme: dark',
+      '--ground: #0F1A2E',
+      '--card: #172440',
+      '--field: #1D2C4D',
+      '--text: #F3F1EC',
+      '--muted: #9AA4B8',
+      '--hairline: #22314F',
+      '--accent: #FF5A3F',
+      '--accent-hover: #FF7A63',
+      '--highlight: #FFC233',
+      '--info: #8FA0FF',
+      '--success: #3FBF75',
+      '--shadow: 0 8px 32px rgba(0, 0, 0, 0.4)',
+    ]) {
+      expect(dark, token).toContain(token);
+    }
+    expect(css).not.toMatch(/data-phosphor|scanline|repeating-linear-gradient|linear-gradient/);
     expect(css).toContain('.transcript h3');
     expect(css.match(/@keyframes/g)).toEqual(['@keyframes']);
     expect(css).toContain('prefers-reduced-motion');
-    expect(base.content).toContain('data-phosphor="amber"');
-    expect(base.content).toContain("localStorage.getItem('5ws:phosphor')");
+    // The round's own sheet adds exactly the nudge and the fade, nothing else moves
+    const round = def.files.find((f) => f.path === 'src/styles/round.css')!.content;
+    expect(round.match(/@keyframes \w+/g)).toEqual(['@keyframes fade', '@keyframes nudge']);
+    expect(round).toContain('animation: fade 200ms');
+    expect(round).toContain('animation: nudge 120ms');
+    expect(round).toContain('translateX(-2px)');
+    expect(round).toContain('border: 2px dashed var(--accent)'); // the share block, the one box
+    // The theme: system by default, light or dark by choice, remembered under 5ws:theme and
+    // applied before first paint by the head; color-scheme follows
+    expect(base.content).toContain(
+      '<html lang="en" data-theme="light" data-theme-choice="system">',
+    );
+    expect(base.content).toContain('<meta name="color-scheme" content="light dark" />');
+    expect(base.content).toContain("localStorage.getItem('5ws:theme')");
+    expect(base.content).toContain("matchMedia('(prefers-color-scheme: dark)')");
+    expect(base.content).toContain('id="theme-toggle"');
+    expect(base.content).toContain('class="sun"');
+    expect(base.content).toContain('class="moon"');
+    expect(base.content).not.toContain('phosphor');
+    expect(def.files.map((f) => f.path)).toContain('src/lib/theme.ts');
+    expect(def.files.map((f) => f.path)).not.toContain('src/lib/phosphor.ts');
     // /play passes the game's name (from the tagline) for the boot line and the share block
     const play = def.files.find((f) => f.path === 'src/pages/play.astro')!.content;
     expect(play).toContain("tagline.split(' — ')[0]");
