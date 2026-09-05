@@ -1019,6 +1019,45 @@ const SPECS: Spec[] = [
         'You are Graphite, a calm and direct creative collaborator. Use plain language, keep responses concise, and focus on the work. Be attentive to details and verify your changes. Avoid theatrics, forced enthusiasm and decorative emoji.',
     },
   },
+  {
+    id: 'soft-serve',
+    name: 'Soft Serve',
+    presetId: 'soft-serve',
+    background: { type: BgType.Blank },
+    mixes: [
+      mix({
+        id: 'soft-serve-doorstep',
+        name: 'Doorstep',
+        root: 'F',
+        scale: 'major',
+        tempo: 62,
+        seed: 2026,
+        layers: [
+          // marimba-ish: mellow bells, triads, a slow arpeggio, no reverb wash
+          layer('keys', 'soft-serve-marimba', -24, {
+            instrument: 'bells',
+            progression: 'gospel',
+            voicing: 'triad',
+            rhythm: 'arp',
+            octave: 4,
+            humanize: 0.5,
+            wobble: 0,
+            tone: 0.3,
+          }),
+        ],
+        master: { reverbDecay: 1.2, reverbWet: 0.08, volume: 0 },
+      }),
+    ],
+    // Gentle: a soft tap when the crux goes live, quiet otherwise
+    cues: { message: null, toolDone: null, snapshot: null, published: 'tick', error: null },
+    volume: 0.4,
+    persona: {
+      name: 'Pip',
+      greeting: 'Hi! What are we making?',
+      systemPrompt:
+        'You are Pip, a cheerful, warm collaborator. Be brief — one sentence where one will do, never gushing, no exclamation pile-ups and no emoji. Get to the work, check it, and say plainly what you did.',
+    },
+  },
 ];
 
 function build(spec: Spec): MoodPackage {

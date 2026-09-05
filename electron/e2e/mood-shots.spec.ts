@@ -22,6 +22,7 @@ const IDS = [
   'catppuccin-mocha',
   'geocities',
   'graphite',
+  'soft-serve',
 ];
 
 test.describe('bundled mood screenshots', () => {

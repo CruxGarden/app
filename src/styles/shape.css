@@ -237,6 +237,13 @@
     border-radius: 0;
   }
 }
+/* A frameless pane (paneBorderStyle: none) still gets its rule: a hairline in
+   the pane's border colour — the underline is a divider, not part of the frame. */
+@container style(--pane-header-shape: underline) and style(--pane-border-style: none) {
+  .mosaic.crux-mosaic-theme .mosaic-tile .mosaic-window .mosaic-window-toolbar > .pane-toolbar {
+    border-bottom: 1px solid var(--border);
+  }
+}
 
 /* ── paneHeaderShape: none — no header until the pane is hovered ── */
 @container style(--pane-header-shape: none) {

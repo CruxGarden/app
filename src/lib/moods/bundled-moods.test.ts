@@ -7,9 +7,9 @@ import { GARDEN_DARK } from './garden-dark';
 import { tokenChoices } from './token-groups';
 
 describe('bundled Moods', () => {
-  it('ships fifteen complete, valid packages with distinct ids', () => {
-    expect(BUNDLED_MOODS).toHaveLength(15);
-    expect(new Set(BUNDLED_MOODS.map((m) => m.id)).size).toBe(15);
+  it('ships sixteen complete, valid packages with distinct ids', () => {
+    expect(BUNDLED_MOODS).toHaveLength(16);
+    expect(new Set(BUNDLED_MOODS.map((m) => m.id)).size).toBe(16);
     for (const m of BUNDLED_MOODS) {
       const ok = validateMoodPackage(JSON.parse(JSON.stringify(m)));
       expect(ok, `${m.id} validates`).toBeTruthy();
@@ -33,7 +33,7 @@ describe('bundled Moods', () => {
     }
   });
 
-  it('is not fifteen palettes on one layout: shape, type and motion differ', () => {
+  it('is not sixteen palettes on one layout: shape, type and motion differ', () => {
     const radii = new Set(BUNDLED_MOODS.map((m) => m.theme.overrides.radius ?? GARDEN_DARK.radius));
     const fonts = new Set(
       BUNDLED_MOODS.map((m) => m.theme.overrides.fontDisplay ?? GARDEN_DARK.fontDisplay),
@@ -85,6 +85,13 @@ describe('bundled Moods', () => {
     expect(bundledMood('windows-95')?.theme.overrides.iconSet).toBe('pixel');
     expect(bundledMood('pretty-in-pink')?.theme.overrides.iconSet).toBe('filled');
     expect(bundledMood('deep-sea')?.theme.overrides.motionAmbient).toBe('breathe');
+    // Soft Serve is the frameless one: no pane border, cards unbordered, the title over a hairline
+    const soft = bundledMood('soft-serve')!.theme.overrides;
+    expect(soft.paneBorderStyle).toBe('none');
+    expect(soft.paneBorderWidth).toBe('0px');
+    expect(soft.cardBorderStyle).toBe('none');
+    expect(soft.paneHeaderShape).toBe('underline');
+    expect(BUNDLED_MOODS.at(-1)?.id).toBe('soft-serve');
   });
 
   it('ships mixes already inside every parameter range (validateMix is the identity)', () => {

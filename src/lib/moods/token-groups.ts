@@ -105,6 +105,7 @@ const TYPE_KEYS = new Set([
   'fontScale',
   'lineHeightBody',
   'fontWeightBody',
+  'fontWeightDisplay',
   'letterSpacingBody',
   'letterSpacingDisplay',
   'letterSpacingMono',
