@@ -3,7 +3,7 @@ name: CI
 on:
   pull_request:
   push:
-    branches: [main, v1-launch]
+    branches: [main]
   workflow_dispatch:
 
 concurrency:
@@ -34,6 +34,8 @@ jobs:
     name: e2e (real desktop app, macOS)
     runs-on: macos-latest
     needs: verify
+    # macOS minutes bill at 10x: only on main and manual runs, not on every PR push
+    if: github.event_name != 'pull_request'
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
