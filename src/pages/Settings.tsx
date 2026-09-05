@@ -5,6 +5,7 @@ import PlanSettings from '@/components/settings/PlanSettings';
 import DataSettings from '@/components/settings/DataSettings';
 import DesktopSettings from '@/components/settings/DesktopSettings';
 import AiSettings from '@/components/settings/AiSettings';
+import AgentsSettings from '@/components/settings/AgentsSettings';
 
 export default function Settings() {
   return (
@@ -23,6 +24,7 @@ export default function Settings() {
     >
       <AccountSettings />
       <AiSettings />
+      <AgentsSettings />
       <SyncSettings />
       <PlanSettings />
       <UsageSettings />

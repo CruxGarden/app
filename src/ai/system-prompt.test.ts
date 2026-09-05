@@ -193,3 +193,43 @@ describe('buildContextFromData', () => {
     expect(context).not.toContain('## Content Model');
   });
 });
+
+describe('AGENTS.md as the single source (B1)', () => {
+  it('the context block embeds the same workspace guide the Project Folder file carries', async () => {
+    const { renderWorkspaceGuide, renderAgentsMd } = await import('@/services/agents-md');
+    const { applyTemplateMeta, loadTemplate } = await import('@/templates');
+    const { getPersona } = await import('@/services/persona');
+    const def = (await loadTemplate('astro-blog'))!;
+    const crux = makeCrux({ meta: applyTemplateMeta({}, def, 'astro-blog') });
+    const artifacts = def.files.map((f) => makeArtifact(f.path));
+
+    const context = buildContextFromData(crux, artifacts);
+    const guide = renderWorkspaceGuide({ crux, artifacts, persona: getPersona(), canBuild: false });
+    expect(context).toContain('# Workspace guide (AGENTS.md)');
+    expect(context).toContain(guide);
+    // …and the file is that guide plus voice and instructions
+    const file = renderAgentsMd({ crux, artifacts, persona: getPersona(), canBuild: false });
+    expect(file).toContain(guide);
+    // Content model still reaches the model (now via the guide), once
+    expect(context.match(/## Content Model/g)).toHaveLength(1);
+    expect(context).toContain('Template: Astro Blog');
+  });
+
+  it('voice and instructions live in the stable prefix, not the volatile block', () => {
+    const crux = makeCrux({ meta: { settings: { systemPrompt: 'Prefer short posts.' } } });
+    const { system, context } = buildPromptPartsFromData(crux, []);
+    expect(system).toContain('Prefer short posts.');
+    expect(context).not.toContain('Prefer short posts.');
+    expect(context).not.toContain('## Voice');
+  });
+
+  it('describes the Growth tools and when to use them (B0)', () => {
+    const { system } = buildPromptPartsFromData(makeCrux(), []);
+    expect(system).toContain('### Growth (version history)');
+    expect(system).toContain(
+      '**snapshot** / **list_snapshots** / **restore** / **branch** / **diff**',
+    );
+    expect(system).toMatch(/Before a risky or multi-file change, call snapshot/);
+    expect(system).toMatch(/call restore with that snapshot id/);
+  });
+});

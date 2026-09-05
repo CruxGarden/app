@@ -4,6 +4,27 @@ import { SettingsKey } from '@/lib/constants';
 import type { MosaicNode } from 'react-mosaic-component';
 import type { TemplateLayout } from '@/templates';
 
+// ── Agent approvals (ADR 0013) ──────────────────────────
+
+export interface AgentApproval {
+  id: string;
+  /** MCP client name — who is asking */
+  agent: string;
+  action: 'publish' | 'unpublish';
+  cruxId: string;
+}
+
+const agentApprovalResolvers = new Map<string, (approved: boolean) => void>();
+
+/** Answer "no" to every outstanding agent approval (workspace torn down). */
+export function cancelPendingAgentApprovals(): void {
+  for (const [id, resolve] of [...agentApprovalResolvers]) {
+    agentApprovalResolvers.delete(id);
+    resolve(false);
+  }
+  useUIStore.setState({ pendingAgentApprovals: [] });
+}
+
 // ── Pane Types ──────────────────────────────────────────
 
 export type PaneType =
@@ -97,6 +118,14 @@ interface UIState {
   // Settings modal
   settingsOpen: boolean;
   setSettingsOpen: (open: boolean) => void;
+
+  // Agent approvals (ADR 0013): an external agent asked for something that
+  // needs a human yes — publish/unpublish. The tool call awaits the answer;
+  // ChatPane renders the banner. Same contract as delete approvals: every
+  // waiter must settle or the agent's call hangs forever.
+  pendingAgentApprovals: AgentApproval[];
+  requestAgentApproval: (req: Omit<AgentApproval, 'id'>) => Promise<boolean>;
+  resolveAgentApproval: (id: string, approved: boolean) => void;
 
   // Explore modal
   exploreOpen: boolean;
@@ -510,6 +539,20 @@ export const useUIStore = create<UIState>()((set, get) => ({
   consoleOpen: false,
   settingsOpen: false,
   setSettingsOpen: (open) => set({ settingsOpen: open }),
+  pendingAgentApprovals: [],
+  requestAgentApproval: (req) =>
+    new Promise<boolean>((resolve) => {
+      const id = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+      agentApprovalResolvers.set(id, resolve);
+      set((s) => ({ pendingAgentApprovals: [...s.pendingAgentApprovals, { ...req, id }] }));
+    }),
+  resolveAgentApproval: (id, approved) => {
+    set((s) => ({ pendingAgentApprovals: s.pendingAgentApprovals.filter((a) => a.id !== id) }));
+    const resolve = agentApprovalResolvers.get(id);
+    if (!resolve) return;
+    agentApprovalResolvers.delete(id);
+    resolve(approved);
+  },
   exploreOpen: false,
   setExploreOpen: (open) => set({ exploreOpen: open }),
   exploreKind: null,

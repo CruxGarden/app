@@ -1,10 +1,15 @@
 import { getServices } from '@/services';
 import type { Crux, Artifact } from '@/services/types';
-import type { ContentModel, ContentCollection, FormField } from '@/templates';
 import { getPersona } from '@/services/persona';
 import { isSiteCrux } from '@/services/site';
 import { Capability, can } from '@/lib/platform';
 import { THEME_TOOL_GUIDANCE } from './theme-tools';
+import { renderWorkspaceGuide, syncAgentsMd } from '@/services/agents-md';
+import { PLAN_PROMPT_LINE } from '@/services/turn-jobs';
+
+// The content-model renderer lives with the AGENTS.md renderer (one source for
+// both readers); re-exported so existing callers keep their import path.
+export { renderContentModel } from '@/services/agents-md';
 
 /**
  * The workspace prompt, split for caching (AI-COLLABORATION-PLAN Phase A2):
@@ -40,6 +45,10 @@ export async function buildPromptParts(cruxId: string): Promise<PromptParts> {
   const { crux: cruxService, artifact: artifactService } = getServices();
   const crux = await cruxService.findById(cruxId);
   const artifacts = await artifactService.findByResource('crux', cruxId);
+  // The Project Folder's AGENTS.md renders from the same data as the context
+  // block below — bring it up to date (persona or instructions may have
+  // changed since it was written). Fingerprint compare; no write when equal.
+  await syncAgentsMd(crux, artifacts);
   return buildPromptPartsFromData(crux, artifacts);
 }
 
@@ -102,8 +111,10 @@ function buildStablePrompt(crux: Crux, artifacts: Artifact[]): string {
       '- **get_theme** / **set_theme** — Read and change the workspace theme (colors, radii, pane gutters, per-pane surfaces). See Theme below.\n' +
       '- **set_background** — Set the workspace background: generate an image from a prompt, use a workspace image, or a built-in bloom/drift/flow/blank.\n' +
       '- **get_resonance** / **set_resonance** — Read, steer and COMPOSE the soundscape: switch mix, volume, duck, cues; createMix to compose new music (keys, bass, beat, vinyl, pads, drones, rain…) when the user asks for a sound or a vibe.\n' +
+      '- **snapshot** / **list_snapshots** / **restore** / **branch** / **diff** — Growth, the version history, as tools. See Growth below.\n' +
       'IMPORTANT: You CAN generate images. When the user asks for an image, illustration, icon, logo, photo, or artwork, call the generate_image tool. Do NOT say you cannot generate images — you have this capability.\n\n' +
       THEME_TOOL_GUIDANCE +
+      GROWTH_TOOL_GUIDANCE +
       '### Crux Store\n' +
       'Published cruxes have access to a persistent key-value store via `window.crux.store`. This allows stateful apps — counters, guestbooks, leaderboards, user preferences, form submissions.\n' +
       'Available methods:\n' +
@@ -128,7 +139,9 @@ function buildStablePrompt(crux: Crux, artifacts: Artifact[]): string {
       'When the user asks you to create or modify something, follow this order:\n' +
       '1. Review the <workspace_context> block at the start of the conversation — it lists the current files (and the content model, when this crux has one).\n' +
       '2. Read any existing files relevant to the request using read_file.\n' +
-      '3. Briefly explain what you plan to do.\n' +
+      '3. Briefly explain what you plan to do. ' +
+      PLAN_PROMPT_LINE +
+      '\n' +
       '4. Execute using tool calls (write_file, edit_file, etc.).\n' +
       '5. Summarize what changed.',
   );
@@ -174,6 +187,16 @@ function buildStablePrompt(crux: Crux, artifacts: Artifact[]): string {
 
   return sections.join('\n\n');
 }
+
+/** How and when to use the Growth tools (B0). */
+const GROWTH_TOOL_GUIDANCE =
+  '### Growth (version history)\n' +
+  'Every snapshot holds every file plus the conversation so far; the person sees them in the Growth timeline with your label and that you took them.\n' +
+  '- Before a risky or multi-file change, call snapshot with a short label — a checkpoint you can come back to.\n' +
+  '- If a check fails after your change (check_site errors, a broken preview) and going back beats fixing forward, call restore with that snapshot id. A safety snapshot of the current state is taken first, so nothing is lost.\n' +
+  '- After finishing a coherent piece of work, snapshot again. The app also snapshots automatically after a turn that changed files, and skips its own when yours already captured the same files.\n' +
+  '- Use diff to see what a restore would change, branch when the user wants to try another direction from an earlier version, list_snapshots for ids.\n' +
+  '- Snapshots refer to files and the conversation, never to the theme or the soundscape.\n\n';
 
 /** Guidance for browser-native cruxes (no build step) — served as-is by the preview. */
 const WEB_APP_GUIDANCE =
@@ -231,11 +254,20 @@ export function buildContextFromData(crux: Crux, artifacts: Artifact[]): string 
   // ── Current Files ─────────────────────────────────────
   sections.push('## Current Files\n' + buildFileList(artifacts));
 
-  // ── Content Model (drives the Builder UI) ─────────────
-  const contentModel = meta?.contentModel as ContentModel | undefined;
-  if (contentModel) {
-    sections.push(renderContentModel(contentModel));
-  }
+  // ── Workspace guide ───────────────────────────────────
+  // The same sections the Project Folder's AGENTS.md carries (about, content
+  // model + Builder actions, conventions, preview, hands-off, Growth), from
+  // the one renderer — an external agent and the built-in collaborator read
+  // identical guidance. Voice and Instructions are in the stable prefix.
+  sections.push(
+    '# Workspace guide (AGENTS.md)\n' +
+      renderWorkspaceGuide({
+        crux,
+        artifacts,
+        persona: getPersona(),
+        canBuild: can(Capability.Build),
+      }),
+  );
 
   return [
     CONTEXT_BLOCK_OPEN,
@@ -258,64 +290,6 @@ function buildFileList(artifacts: Artifact[]): string {
       return `- ${path}${size}`;
     })
     .join('\n');
-}
-
-/**
- * Render the crux's content model (crux.meta.contentModel — the declaration
- * the Builder UI is generated from) so chat-created content matches what the
- * Builder produces: same paths, same frontmatter, same settings shape.
- */
-function renderContentModel(model: ContentModel): string {
-  const lines: string[] = [
-    '## Content Model',
-    'This crux has a Builder UI generated from the content model below. When creating or editing content, follow it exactly so your files and the Builder agree.',
-  ];
-
-  for (const collection of model.collections ?? []) {
-    lines.push('', ...renderCollection(collection));
-  }
-
-  if (model.settings) {
-    lines.push(
-      '',
-      `### Settings file: ${model.settings.path}`,
-      `Fields: ${fieldSummary(model.settings.fields)}`,
-      'The user edits this file as a form — keep it valid JSON with exactly these keys.',
-    );
-  }
-
-  return lines.join('\n');
-}
-
-function renderCollection(collection: ContentCollection): string[] {
-  const lines: string[] = [
-    `### Collection: ${collection.name} (singular "${collection.singular}")`,
-    `- Files: ${collection.glob}${collection.routeBase ? ` — served at ${collection.routeBase}` : ''}`,
-    `- Frontmatter fields: ${fieldSummary(collection.fields)}`,
-  ];
-
-  if (collection.new) {
-    lines.push(
-      `- New ${collection.singular} recipe — create ${collection.new.pathTemplate} ` +
-        "(placeholders: {slug} = kebab-case of the title, {title} = the title, {today} = today's date as YYYY-MM-DD) " +
-        'with this frontmatter:',
-      '```yaml',
-      ...Object.entries(collection.new.frontmatter).map(([key, value]) => `${key}: ${value}`),
-      '```',
-    );
-  }
-
-  if (collection.sort) {
-    lines.push(
-      `- Listed in ${collection.sort.dir === 'desc' ? 'descending' : 'ascending'} order by "${collection.sort.field}".`,
-    );
-  }
-
-  return lines;
-}
-
-function fieldSummary(fields: FormField[]): string {
-  return fields.map((f) => `${f.key} ("${f.label}")`).join(', ');
 }
 
 // Token estimation and context fitting live in ./context (Phase A5).

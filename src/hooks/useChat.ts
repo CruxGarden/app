@@ -1,359 +1,58 @@
 import { useCallback } from 'react';
 import { useCruxStore } from '@/stores/cruxStore';
-import { runConversation } from '@/ai/engine';
-import { createToolExecutor, didMutate } from '@/ai/tools';
-import { chatSessionFor } from '@/services/chat-session';
-import { getApiKey } from '@/ai/keys';
-import { getProviderForModel, resolveModel } from '@/ai/providers';
-import type { SnapshotFrequency } from '@/services/growth';
-import type { ChatMessage, ToolCall } from '@/api/types';
-import type { NormalizedMessage } from '@/services/types';
-import { getPersona, getPersonaFingerprint, personaSnapshotOf } from '@/services/persona';
-import { useAppStore } from '@/stores/appStore';
 import { useShallow } from 'zustand/react/shallow';
-import { isAiMock } from '@/lib/platform';
-import { playCue, duckAudio } from '@/services/cues';
+import { submitTurn, stopTurn, steerTurn } from '@/services/turns';
+import { isJobActive } from '@/services/turn-jobs';
 
 /**
- * Truncate large tool results preserving the beginning and end.
- * Better than a flat cut — the model can see the start of the file
- * and the end, with a note about what was omitted.
+ * The Collaboration pane's view of the current crux's turns.
+ *
+ * A turn is a Background Turn job (services/turns, B3): the engine loop runs
+ * in the service, tracked by the store, so this hook only reads state and
+ * forwards intent. Sending while a job runs QUEUES the message; `steer` stops
+ * the job and sends the message at once.
  */
-function truncateToolResult(raw: string, maxLength = 1500): string {
-  if (raw.length <= maxLength) return raw;
-  const headSize = Math.floor(maxLength * 0.6);
-  const tailSize = Math.floor(maxLength * 0.3);
-  const head = raw.slice(0, headSize);
-  const tail = raw.slice(-tailSize);
-  const omitted = raw.length - headSize - tailSize;
-  return `${head}\n\n…(${omitted} characters omitted — use read_file to see full contents)…\n\n${tail}`;
-}
-
-/**
- * Build normalized messages with proper tool_use / tool_result blocks.
- * Converts ChatMessage[] (with toolCalls array) to NormalizedMessage[]
- * (with content block arrays) for the conversation engine.
- */
-function buildNormalizedMessages(allMessages: ChatMessage[]): NormalizedMessage[] {
-  const result: NormalizedMessage[] = [];
-
-  for (let i = 0; i < allMessages.length; i++) {
-    const m = allMessages[i]!;
-
-    if (m.role === 'assistant' && m.toolCalls?.length) {
-      // Assistant message with tool calls → content block array
-      const blocks: NormalizedMessage['content'] = [];
-      if (m.content?.trim()) {
-        blocks.push({ type: 'text', text: m.content });
-      }
-      for (let t = 0; t < m.toolCalls.length; t++) {
-        const tc = m.toolCalls[t]!;
-        blocks.push({
-          type: 'tool_use',
-          id: tc.id || `toolu_hist_${i}_${t}`,
-          name: tc.name,
-          input: tc.input || {},
-        });
-      }
-      result.push({ role: 'assistant', content: blocks });
-
-      // Build tool_result blocks
-      // Never truncate read_file results — the AI needs exact file content
-      // to construct accurate old_string matches for edit_file.
-      const toolResults = m.toolCalls.map((tc, t) => ({
-        type: 'tool_result' as const,
-        tool_use_id: tc.id || `toolu_hist_${i}_${t}`,
-        content:
-          tc.name === 'read_file' ? tc.result || 'Done.' : truncateToolResult(tc.result || 'Done.'),
-      }));
-
-      // Merge tool results with the NEXT user message to keep roles alternating
-      const next = allMessages[i + 1];
-      if (next?.role === 'user') {
-        const merged: NormalizedMessage['content'] = [...toolResults];
-        if (next.content?.trim()) {
-          merged.push({ type: 'text', text: next.content });
-        }
-        result.push({ role: 'user', content: merged });
-        i++; // skip the next message, we merged it
-      } else {
-        result.push({ role: 'user', content: toolResults });
-      }
-    } else if (m.role === 'user') {
-      result.push({ role: 'user', content: m.content || '...' });
-    } else {
-      // Plain assistant text
-      result.push({ role: 'assistant', content: m.content || '...' });
-    }
-  }
-
-  return result;
-}
-
 export function useChat() {
-  const {
-    crux,
-    messages,
-    isStreaming,
-    streamingContent,
-    addMessage,
-    setStreaming,
-    appendStreamContent,
-    clearStreamContent,
-    saveMeta,
-  } = useCruxStore(
+  const { crux, messages, isStreaming, streamingContent, turnJob, turnQueue } = useCruxStore(
     useShallow((s) => ({
       crux: s.crux,
       messages: s.messages,
       isStreaming: s.isStreaming,
       streamingContent: s.streamingContent,
-      addMessage: s.addMessage,
-      setStreaming: s.setStreaming,
-      appendStreamContent: s.appendStreamContent,
-      clearStreamContent: s.clearStreamContent,
-      saveMeta: s.saveMeta,
+      turnJob: s.turnJob,
+      turnQueue: s.turnQueue,
     })),
   );
 
-  // Turn/policy/refresh state lives in a per-crux session (services/chat-session),
-  // not in this component: hiding the pane must not abort the turn.
-  const sessionFor = (cruxId: string) =>
-    chatSessionFor(cruxId, {
-      frequency: () =>
-        (useCruxStore.getState().crux?.meta?.settings?.snapshotFrequency as SnapshotFrequency) ||
-        'ai-turn',
-      snapshot: () => {
-        // A timed policy can fire long after the user moved on — snapshotting
-        // then would capture a different crux entirely.
-        if (useCruxStore.getState().crux?.id !== cruxId) return;
-        useCruxStore
-          .getState()
-          .createSnapshot({ silent: false })
-          .catch((err) => console.warn('Auto-snapshot failed:', err));
-      },
-    });
-
   const send = useCallback(
-    async (content: string) => {
-      if (!crux || isStreaming) return;
-
-      const model = resolveModel(crux.meta?.settings?.model);
-      const providerId = getProviderForModel(model);
-      // Under the e2e mock model no provider key is needed.
-      const apiKey = (await getApiKey(providerId)) ?? (isAiMock() ? 'mock' : null);
-
-      if (!apiKey) {
-        addMessage({
-          role: 'assistant',
-          content: `No API key configured for ${providerId}. Add one in Settings to start chatting.`,
-        });
-        return;
-      }
-
-      // Add user message stamped with current persona + author ID
-      const persona = getPersona();
-      const pf = getPersonaFingerprint(persona);
-      const author = useAppStore.getState().author;
-      const userMsg: ChatMessage = {
-        role: 'user',
-        content,
-        timestamp: new Date().toISOString(),
-        personaFingerprint: pf,
-        authorId: author?.id,
-      };
-      addMessage(userMsg);
-
-      // Register persona + author snapshots in crux meta (keyed, stored once).
-      // Thumbnails/avatars go to OPFS blobs — only fingerprint references in metadata.
-      const cruxMeta = useCruxStore.getState().crux?.meta as Record<string, unknown> | undefined;
-      let metaChanged = false;
-
-      // Persona snapshot (keyed by persona fingerprint)
-      const personaMap = { ...((cruxMeta?.personaSnapshots as Record<string, unknown>) || {}) };
-      if (!personaMap[pf]) {
-        personaMap[pf] = personaSnapshotOf(persona);
-        metaChanged = true;
-      }
-
-      // Author snapshot (keyed by author UUID)
-      const authorMap = { ...((cruxMeta?.authorSnapshots as Record<string, unknown>) || {}) };
-      if (author?.id && !authorMap[author.id]) {
-        authorMap[author.id] = {
-          username: author.username,
-          avatarFingerprint: author.meta?.avatarFingerprint || null,
-        };
-        metaChanged = true;
-      }
-
-      if (metaChanged) {
-        useCruxStore
-          .getState()
-          .patchCruxMeta({ personaSnapshots: personaMap, authorSnapshots: authorMap });
-      }
-
-      // Build normalized message history — only include messages from the current persona.
-      // If any fingerprinted message exists with a different persona, exclude all
-      // unfingerpinted (legacy) messages too — they belong to the old persona.
-      const allMessages = [...messages, userMsg];
-      const hasOtherPersona = allMessages.some(
-        (m) => m.personaFingerprint && m.personaFingerprint !== pf,
-      );
-      const personaMessages = allMessages.filter(
-        (m) => m.personaFingerprint === pf || (!m.personaFingerprint && !hasOtherPersona),
-      );
-      const normalizedMessages = buildNormalizedMessages(personaMessages);
-
-      setStreaming(true);
-      clearStreamContent();
-      void duckAudio(true);
-
-      const session = sessionFor(crux.id);
-      const controller = new AbortController();
-      session.turn = controller;
-
-      let fullContent = '';
-      const toolCalls: ToolCall[] = [];
-
-      try {
-        const executeToolFn = createToolExecutor(
-          crux.id,
-          // Honest delete: block the tool until the user answers the ChatPane
-          // confirmation banner; the store performs the deletion on approval.
-          (path, artifactId) => useCruxStore.getState().requestDeleteApproval(artifactId, path),
-          model,
-        );
-
-        for await (const event of runConversation(
-          apiKey,
-          crux.id,
-          normalizedMessages,
-          model,
-          executeToolFn,
-          controller.signal,
-        )) {
-          switch (event.type) {
-            case 'text':
-              fullContent += event.content;
-              appendStreamContent(event.content);
-              break;
-
-            case 'tool_start':
-              toolCalls.push({
-                name: event.name,
-                id: event.id,
-                input: event.input,
-                result: undefined,
-              });
-              break;
-
-            case 'tool_result': {
-              // Update the tool call with result
-              const tc = toolCalls.find((t) => t.id === event.id);
-              if (tc) tc.result = event.result;
-              void playCue('toolDone');
-
-              // Refresh artifacts after mutation operations (debounced to coalesce rapid tool calls)
-              if (didMutate(event.name, event.result)) {
-                if (session.refreshTimer) clearTimeout(session.refreshTimer);
-                session.refreshTimer = setTimeout(() => {
-                  session.refreshTimer = null;
-                  useCruxStore
-                    .getState()
-                    .refreshArtifacts()
-                    .catch((err) => console.error('Failed to refresh artifacts:', err));
-                }, 150);
-              }
-              break;
-            }
-
-            case 'done':
-              break;
-
-            case 'usage':
-              useCruxStore
-                .getState()
-                .addTokenUsage(event.inputTokens, event.outputTokens, event.cachedInputTokens);
-              break;
-
-            case 'info':
-              // Informational messages (e.g., context trimming) — show inline
-              fullContent += `\n\n*${event.message}*`;
-              break;
-
-            case 'error':
-              fullContent += `\n\n*Error: ${event.message}*`;
-              void playCue('error');
-              break;
-          }
-        }
-      } catch (err: unknown) {
-        const e = err as Error;
-        if (e.name !== 'AbortError') {
-          fullContent += `\n\n*Error: ${e.message}*`;
-        }
-      }
-
-      // The workspace may have moved on while this turn streamed (the user
-      // opened another crux). Persisting now would file this reply — and its
-      // tool records — under the wrong crux, so drop it: the turn's own crux
-      // is no longer loaded, and its history stays as it was on disk.
-      if (useCruxStore.getState().crux?.id !== crux.id) {
-        clearStreamContent();
-        setStreaming(false);
-        void duckAudio(false);
-        session.turn = null;
-        return;
-      }
-
-      // Add assistant message (always, to prevent consecutive user messages)
-      if (fullContent || toolCalls.length > 0) {
-        const assistantMsg: ChatMessage = {
-          role: 'assistant',
-          content: fullContent,
-          model,
-          timestamp: new Date().toISOString(),
-          toolCalls: toolCalls.length > 0 ? toolCalls : undefined,
-          personaFingerprint: pf,
-        };
-        addMessage(assistantMsg);
-      }
-
-      clearStreamContent();
-      setStreaming(false);
-      void duckAudio(false);
-      if (fullContent || toolCalls.length > 0) void playCue('message');
-      session.turn = null;
-
-      // Save messages to crux meta
-      await saveMeta();
-
-      // Auto-snapshot trigger — only if this turn actually changed files
-      const hadMutations = toolCalls.some((tc) => didMutate(tc.name, tc.result ?? ''));
-      if (hadMutations) {
-        session.policy.notifyMutation();
-      }
+    (content: string) => {
+      if (!crux) return;
+      void submitTurn(content).catch((err) => console.error('Turn failed to start:', err));
     },
-    [
-      crux,
-      messages,
-      isStreaming,
-      addMessage,
-      setStreaming,
-      appendStreamContent,
-      clearStreamContent,
-      saveMeta,
-    ],
+    [crux],
+  );
+
+  const steer = useCallback(
+    (content: string) => {
+      if (!crux) return;
+      void steerTurn(content).catch((err) => console.error('Steer failed:', err));
+    },
+    [crux],
   );
 
   const stop = useCallback(() => {
-    if (crux) sessionFor(crux.id).turn?.abort();
+    if (crux) stopTurn('stopped');
   }, [crux]);
 
   return {
     messages,
     isStreaming,
     streamingContent,
+    job: turnJob,
+    isJobRunning: isJobActive(turnJob),
+    queue: turnQueue,
     send,
+    steer,
     stop,
   };
 }

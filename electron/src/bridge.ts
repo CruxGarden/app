@@ -193,6 +193,65 @@ export interface FfmpegBridge {
   onProgress(callback: (progress: number) => void): () => void;
 }
 
+// ── agent host (MCP server per crux, ADR 0013) ──────────────────────────────
+
+/** A running per-crux MCP server, as Settings → Agents shows it. */
+export interface AgentHostServer {
+  cruxId: string;
+  slug: string;
+  name: string;
+  folder: string;
+  /** Streamable HTTP endpoint on 127.0.0.1. */
+  url: string;
+  /** Bearer token — also written to `<folder>/.crux/mcp.json` (mode 600). */
+  token: string;
+  configPath: string;
+  /** For clients that prefer stdio: a thin proxy to the HTTP endpoint. */
+  stdioCommand: string;
+  /** Names of the MCP clients currently connected. */
+  clients: string[];
+}
+
+/** Anthropic-style tool definition as the renderer's `ai/tools.ts` declares it. */
+export interface AgentToolDefinition {
+  name: string;
+  description: string;
+  input_schema: Record<string, unknown>;
+}
+
+/** Main → renderer: run this on behalf of an external agent. */
+export type AgentHostRequest =
+  | { id: string; kind: 'tools/list'; cruxId: string; agent: string }
+  | {
+      id: string;
+      kind: 'tools/call';
+      cruxId: string;
+      agent: string;
+      name: string;
+      input: Record<string, unknown>;
+    }
+  | { id: string; kind: 'resources/read'; cruxId: string; agent: string; uri: string };
+
+/** Renderer → main: the answer to one request. */
+export interface AgentHostResponse {
+  id: string;
+  result?: unknown;
+  error?: string;
+}
+
+export interface AgentHostBridge {
+  list(): Promise<AgentHostServer[]>;
+  /** Start (or restart) the crux's server with a fresh token. */
+  enable(cruxId: string): Promise<AgentHostServer>;
+  disable(cruxId: string): Promise<void>;
+  /** Same as enable: a new token, the config file rewritten. */
+  regenerate(cruxId: string): Promise<AgentHostServer>;
+  onChanged(cb: (servers: AgentHostServer[]) => void): () => void;
+  /** Forwarded MCP requests arrive here; answer each with `respond`. */
+  onRequest(cb: (request: AgentHostRequest) => void): () => void;
+  respond(response: AgentHostResponse): void;
+}
+
 // ── the whole bridge ────────────────────────────────────────────────────────
 
 export interface ElectronBridge {
@@ -206,6 +265,7 @@ export interface ElectronBridge {
   ffmpeg: FfmpegBridge;
   localai: LocalAiBridge;
   updates: UpdatesBridge;
+  agentHost: AgentHostBridge;
   /** Test-only overrides, read from the environment the shell was launched with. */
   test: { apiUrl: string | null; aiMock: boolean };
 }

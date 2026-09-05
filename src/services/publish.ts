@@ -13,6 +13,7 @@
 import type { Crux, Artifact } from '@/api/types';
 import { pathOf, isWorkspaceThumbnail } from '@/lib/artifact-path';
 import { PUBLIC_COVER_PATH } from '@/lib/public-cover';
+import { isGeneratedGuidePath } from './agents-md';
 
 export interface PublishFile {
   blob: Blob;
@@ -109,10 +110,14 @@ async function defaultDeps(): Promise<PublishDeps> {
  *   bytes differ on every capture, so counting it would leave the crux
  *   permanently "changed" after any preview.
  * - `.keep` — the app's empty-directory marker.
+ * - `AGENTS.md` / `CLAUDE.md` — the generated agent guide (B1): documentation
+ *   for whoever works in the folder, not part of the site.
  */
 export function isInternalArtifactPath(path: string): boolean {
   const p = path.toLowerCase();
-  return isWorkspaceThumbnail(p) || p === '.keep' || p.endsWith('/.keep');
+  return (
+    isWorkspaceThumbnail(p) || p === '.keep' || p.endsWith('/.keep') || isGeneratedGuidePath(path)
+  );
 }
 
 /** The artifacts a publish actually ships (working files, minus internals). */

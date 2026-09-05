@@ -220,8 +220,11 @@ export async function loadTemplate(id: string): Promise<TemplateDefinition | nul
 export function applyTemplateMeta(
   existingMeta: Record<string, unknown> | undefined,
   def: TemplateDefinition,
+  templateId?: string,
 ): Record<string, unknown> {
   const meta: Record<string, unknown> = { ...(existingMeta ?? {}) };
+  // Which template this crux grew from — AGENTS.md and (per ADR 0006) lineage read it
+  if (templateId) meta.template = templateId;
   const settings: Record<string, unknown> = {
     ...((meta.settings as Record<string, unknown> | undefined) ?? {}),
   };

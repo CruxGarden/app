@@ -34,6 +34,16 @@ export function validateToolInput(
       return validateSearchFiles(input);
     case 'rename_file':
       return validateRenameFile(input);
+    case 'snapshot':
+      return validateOptionalLabel(input);
+    case 'list_snapshots':
+      return validateListSnapshots(input);
+    case 'restore':
+      return validateSnapshotRef(input, 'snapshotId', true);
+    case 'branch':
+      return validateBranch(input);
+    case 'diff':
+      return validateDiff(input);
     default:
       return { valid: false, error: `Unknown tool: ${toolName}` };
   }
@@ -181,4 +191,69 @@ function validatePath(path: string): ValidationResult | null {
     };
   }
   return null;
+}
+
+// ── Growth tools ────────────────────────────────────────────────────────────
+
+const MAX_LABEL_LENGTH = 120;
+
+function validateOptionalLabel(input: Record<string, unknown>): ValidationResult {
+  if (input.label === undefined || input.label === null) return { valid: true };
+  if (typeof input.label !== 'string') {
+    return { valid: false, error: 'label must be a string.' };
+  }
+  if (input.label.length > MAX_LABEL_LENGTH) {
+    return { valid: false, error: `label must be at most ${MAX_LABEL_LENGTH} characters.` };
+  }
+  return { valid: true };
+}
+
+function validateListSnapshots(input: Record<string, unknown>): ValidationResult {
+  if (input.limit === undefined) return { valid: true };
+  if (typeof input.limit !== 'number' || !Number.isInteger(input.limit) || input.limit < 1) {
+    return { valid: false, error: 'limit must be a positive integer.' };
+  }
+  return { valid: true };
+}
+
+/** A snapshot reference: id, "#N", or "latest" — resolution happens in the tool. */
+function validateSnapshotRef(
+  input: Record<string, unknown>,
+  key: string,
+  required: boolean,
+): ValidationResult {
+  const value = input[key];
+  if (value === undefined || value === null) {
+    return required
+      ? {
+          valid: false,
+          error: `${key} is required — a snapshot id from list_snapshots, "#N", or "latest".`,
+        }
+      : { valid: true };
+  }
+  if (typeof value !== 'string' || value.trim() === '') {
+    return {
+      valid: false,
+      error: `${key} must be a non-empty string (a snapshot id, "#N", or "latest").`,
+    };
+  }
+  return { valid: true };
+}
+
+function validateBranch(input: Record<string, unknown>): ValidationResult {
+  const ref = validateSnapshotRef(input, 'snapshotId', true);
+  if (!ref.valid) return ref;
+  if (typeof input.label !== 'string' || input.label.trim() === '') {
+    return { valid: false, error: 'label is required and must be a non-empty string.' };
+  }
+  if (input.label.length > MAX_LABEL_LENGTH) {
+    return { valid: false, error: `label must be at most ${MAX_LABEL_LENGTH} characters.` };
+  }
+  return { valid: true };
+}
+
+function validateDiff(input: Record<string, unknown>): ValidationResult {
+  const from = validateSnapshotRef(input, 'from', true);
+  if (!from.valid) return from;
+  return validateSnapshotRef(input, 'to', false);
 }

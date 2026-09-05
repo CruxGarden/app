@@ -7,6 +7,7 @@ import MarkdownRenderer from './MarkdownRenderer';
 import { ConsoleAvatar } from '@/components/keeper/Console';
 import { useCruxStore } from '@/stores/cruxStore';
 import { useBlobUrl } from '@/hooks/useBlobUrl';
+import { describeJobSummary } from '@/services/turn-jobs';
 
 /** Resolve persona snapshot from crux meta by fingerprint */
 function usePersonaSnapshot(fingerprint?: string) {
@@ -177,7 +178,13 @@ export default function MessageBubble({
   const personaSnapshot = usePersonaSnapshot(message.personaFingerprint);
   const authorSnapshot = useAuthorSnapshot(message.authorId);
   const currentName = usePersonaName();
-  const personaName = !isUser ? personaSnapshot?.name || currentName : null;
+  // An external agent's tool records (ADR 0013) are attributed to that agent,
+  // not to the persona.
+  const personaName = !isUser
+    ? message.agent
+      ? message.agent
+      : personaSnapshot?.name || currentName
+    : null;
   const authorName = isUser ? authorSnapshot?.username || null : null;
 
   return (
@@ -204,6 +211,17 @@ export default function MessageBubble({
             {message.toolCalls.map((tc, i) => (
               <ToolCallItem key={tc.id || i} tc={tc} />
             ))}
+          </div>
+        )}
+
+        {/* Background Turn record: "Ran 3 steps · 2 snapshots" (planned turns only —
+            a one-step reply reads exactly as it always did) */}
+        {!isUser && message.job && (message.job.steps > 1 || message.job.status !== 'done') && (
+          <div
+            className="mt-1.5 text-2xs font-mono text-chat-text-muted/70"
+            data-testid="turn-summary"
+          >
+            {describeJobSummary(message.job)}
           </div>
         )}
 

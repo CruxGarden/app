@@ -28,6 +28,7 @@ export const DEFAULT_IGNORES = [
   'dist/',
   '.astro/',
   '.git/',
+  '.crux/', // app-internal per-folder state (MCP token, ADR 0013) — never ingested or published
   '.DS_Store',
   'Thumbs.db',
   '*.swp',

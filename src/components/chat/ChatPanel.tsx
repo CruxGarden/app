@@ -6,9 +6,10 @@ import MessageList from './MessageList';
 import MessageInput from './MessageInput';
 import ModelSelector from './ModelSelector';
 import ModelInfoPanel from './ModelInfoPanel';
+import TurnJobCard from './TurnJobCard';
 
 export default function ChatPanel() {
-  const { messages, isStreaming, streamingContent, send, stop } = useChat();
+  const { messages, isStreaming, streamingContent, isJobRunning, send, steer, stop } = useChat();
   const model = useCruxStore((s) =>
     resolveModel(s.crux?.meta?.settings?.model as string | undefined),
   );
@@ -58,7 +59,14 @@ export default function ChatPanel() {
               <ModelSelector value={model} onChange={setModel} disabled={isStreaming} />
             </ModelInfoPanel>
           </div>
-          <MessageInput onSend={send} onStop={stop} isStreaming={isStreaming} history={history} />
+          <TurnJobCard />
+          <MessageInput
+            onSend={send}
+            onSteer={steer}
+            onStop={stop}
+            isStreaming={isStreaming || isJobRunning}
+            history={history}
+          />
         </div>
       )}
     </div>

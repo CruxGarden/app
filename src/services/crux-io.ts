@@ -4,6 +4,7 @@ import { guessMimeType, hashContent, buildInsert } from './sqlite/helpers';
 import { getSqliteClient } from './sqlite/client';
 import { getLocalIdentity } from './sqlite/identity';
 import { projectAllArtifacts } from './project-folder';
+import { syncAgentsMd } from './agents-md';
 
 // ── Constants ────────────────────────────────────────────
 
@@ -788,7 +789,7 @@ export async function importCrux(options: ImportOptions): Promise<ImportResult> 
     if (!useOriginalIds && cruxData.id) {
       finalMeta.sourceId = cruxData.id;
     }
-    await cruxService.update(newCrux.id, { meta: finalMeta });
+    const finalCrux = await cruxService.update(newCrux.id, { meta: finalMeta });
 
     // Desktop (ADR 0001): the artifacts went in through direct SQL, so the
     // Project Folder created above is still empty. Materialize it — without
@@ -799,6 +800,8 @@ export async function importCrux(options: ImportOptions): Promise<ImportResult> 
     } catch (err) {
       console.error('[import] projecting artifacts to the Project Folder failed:', err);
     }
+    // The folder's agent guide (B1) reflects THIS installation's persona
+    await syncAgentsMd(finalCrux, null);
 
     done++;
     onProgress?.(done, total);

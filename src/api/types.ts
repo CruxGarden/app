@@ -162,6 +162,18 @@ export interface ChatMessage {
   personaFingerprint?: string;
   /** Author UUID for user messages — resolved via crux.meta.authorSnapshots */
   authorId?: string;
+  /** The Background Turn that produced this reply, once it finished (B3). */
+  job?: TurnJobSummary;
+  /** External agent (MCP client name) whose tool calls this message records — ADR 0013 */
+  agent?: string;
+}
+
+/** Compact record of a finished Background Turn — the transcript's "Ran 3 steps · 2 snapshots". */
+export interface TurnJobSummary {
+  status: 'done' | 'failed' | 'interrupted';
+  steps: number;
+  completedSteps: number;
+  snapshots: number;
 }
 
 export interface ToolCall {
@@ -180,6 +192,8 @@ export interface CruxMeta {
     palette?: Record<string, string>;
     snapshotFrequency?: string;
     activeBranch?: string;
+    /** Agent Host switched on for this crux (MCP server per crux, ADR 0013). Off by default. */
+    agentHost?: boolean;
   };
   growthCount?: number;
   snapshot?: GrowthSnapshot;

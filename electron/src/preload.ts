@@ -1,5 +1,13 @@
 import { contextBridge, ipcRenderer } from 'electron';
-import type { ElectronBridge, ChangeBatch, DesktopInfo, UpdateState } from './bridge';
+import type {
+  ElectronBridge,
+  ChangeBatch,
+  DesktopInfo,
+  UpdateState,
+  AgentHostServer,
+  AgentHostRequest,
+  AgentHostResponse,
+} from './bridge';
 
 /**
  * Preload script — exposes the IPC bridge to the renderer.
@@ -152,6 +160,26 @@ const api: ElectronBridge = {
       ipcRenderer.on('ffmpeg:progress', handler);
       return () => ipcRenderer.removeListener('ffmpeg:progress', handler);
     },
+  },
+  // Agent Host (ADR 0013): per-crux MCP servers in main; tool calls run here.
+  agentHost: {
+    list: () => ipcRenderer.invoke('agent-host:list') as Promise<AgentHostServer[]>,
+    enable: (cruxId: string) =>
+      ipcRenderer.invoke('agent-host:enable', cruxId) as Promise<AgentHostServer>,
+    disable: (cruxId: string) => ipcRenderer.invoke('agent-host:disable', cruxId) as Promise<void>,
+    regenerate: (cruxId: string) =>
+      ipcRenderer.invoke('agent-host:regenerate', cruxId) as Promise<AgentHostServer>,
+    onChanged: (cb: (servers: AgentHostServer[]) => void) => {
+      const handler = (_e: unknown, servers: unknown) => cb(servers as AgentHostServer[]);
+      ipcRenderer.on('agent-host:changed', handler);
+      return () => ipcRenderer.removeListener('agent-host:changed', handler);
+    },
+    onRequest: (cb: (request: AgentHostRequest) => void) => {
+      const handler = (_e: unknown, request: unknown) => cb(request as AgentHostRequest);
+      ipcRenderer.on('agent-host:request', handler);
+      return () => ipcRenderer.removeListener('agent-host:request', handler);
+    },
+    respond: (response: AgentHostResponse) => ipcRenderer.send('agent-host:response', response),
   },
   // CRUX_API_URL lets the e2e suite point the app at a local mock API.
   // CRUX_AI_MOCK=1 swaps the language model for a scripted mock (e2e).

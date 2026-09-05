@@ -11,6 +11,7 @@ const { Toolchain } = require('./toolchain');
 const { DevServerManager } = require('./dev-server');
 const { AppLog } = require('./log');
 const { Updater } = require('./updater');
+const { AgentHost } = require('./mcp-server');
 
 // ffmpeg-static provides a bundled ffmpeg binary
 let ffmpegPath: string;
@@ -25,6 +26,7 @@ let db: any = null;
 let watcher: any = null;
 let previewServer: any = null;
 let devServers: any = null;
+let agentHost: any = null;
 // References for the CRUX_SELFTEST integration test (see selftest.ts)
 const selfTestHooks: { secrets?: any; projects?: any; toolchain?: any } = {};
 
@@ -381,6 +383,59 @@ function setupIpc() {
   ipcMain.handle('updates:set-auto', (_e: any, on: boolean) => updater.setAutoCheck(!!on));
   if (!process.env.CRUX_USER_DATA) updater.scheduleLaunchCheck();
 
+  // ── Agent Host (ADR 0013): one MCP server per switched-on crux ──────
+  // Servers live here; every tool call is forwarded to the renderer, which
+  // runs the same executor the built-in collaborator uses.
+  const lookupCrux = (cruxId: string) => {
+    const row = db.get('SELECT slug, title, meta FROM cruxes WHERE id = ?', [cruxId]);
+    if (!row) return null;
+    try {
+      const meta = JSON.parse(row.meta || '{}');
+      if (typeof meta.projectFolder !== 'string') return null;
+      return { slug: row.slug, title: row.title || '', folder: meta.projectFolder };
+    } catch {
+      return null;
+    }
+  };
+  agentHost = new AgentHost({
+    lookupCrux,
+    resolveKnownFolder: (folder: string) => projects.resolveKnownFolder(folder),
+    sendToRenderer: (request: unknown) => {
+      if (!mainWindow || mainWindow.isDestroyed()) return false;
+      mainWindow.webContents.send('agent-host:request', request);
+      return true;
+    },
+    onChanged: (servers: unknown) => {
+      for (const w of BrowserWindow.getAllWindows()) w.webContents.send('agent-host:changed', servers);
+    },
+    // Packaged: dist/ sits inside app.asar; the launcher is unpacked so plain
+    // `node` can run it (asarUnpack in package.json).
+    stdioScript: path.join(__dirname, 'mcp-stdio.js').replace('app.asar' + path.sep, 'app.asar.unpacked' + path.sep),
+    version: app.getVersion(),
+    log: debugLog,
+  });
+  ipcMain.handle('agent-host:list', () => agentHost.list());
+  ipcMain.handle('agent-host:enable', (_e: any, cruxId: string) => agentHost.enable(cruxId));
+  ipcMain.handle('agent-host:disable', (_e: any, cruxId: string) => agentHost.disable(cruxId));
+  ipcMain.handle('agent-host:regenerate', (_e: any, cruxId: string) => agentHost.enable(cruxId));
+  ipcMain.on('agent-host:response', (_e: any, response: unknown) => agentHost.handleResponse(response));
+
+  // Cruxes switched on in an earlier run come back with their token intact,
+  // so a client configured last week still connects.
+  try {
+    const rows = db.all("SELECT id, meta FROM cruxes WHERE type = 'workspace'") || [];
+    for (const row of rows) {
+      try {
+        const meta = JSON.parse(row.meta || '{}');
+        if (meta?.settings?.agentHost === true && typeof meta.projectFolder === 'string') {
+          agentHost.resume(row.id).catch((err: any) => debugLog(`Agent host resume failed for ${row.id}: ${err?.message}`));
+        }
+      } catch { /* bad meta row — skip */ }
+    }
+  } catch (err: any) {
+    debugLog(`Agent host bootstrap failed: ${err?.message}`);
+  }
+
   // ── Toolchain + site dev servers (ADR 0004/0005) ────────────
   const toolchain = new Toolchain(
     (folder: string) => projects.resolveKnownFolder(folder),
@@ -608,6 +663,7 @@ app.on('window-all-closed', () => {
 
 // The single teardown path — runs for Cmd+Q, app.quit(), and menu Quit.
 app.on('before-quit', () => {
+  if (agentHost) agentHost.stopAll();
   if (devServers) devServers.stopAll();
   if (previewServer) previewServer.stopAll();
   if (watcher) watcher.closeAll();

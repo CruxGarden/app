@@ -48,6 +48,12 @@ export type ConversationEvent =
       input: Record<string, unknown>;
     }
   | { type: 'tool_result'; name: string; id: string; result: string }
+  /**
+   * One model round finished (its text streamed, its tool calls executed and
+   * their results returned). The step boundary a Background Turn snapshots
+   * on — `index` counts rounds from 0 within this conversation call.
+   */
+  | { type: 'step_end'; index: number }
   | { type: 'done'; textContent: string; hadMutation: boolean }
   | { type: 'error'; message: string }
   | { type: 'info'; message: string }
@@ -311,6 +317,7 @@ export async function* runConversation(
   ];
 
   let finishReason: string | undefined;
+  let stepIndex = 0;
   try {
     const result = streamText({
       model: options?.languageModel ?? languageModelFor(model, apiKey),
@@ -390,6 +397,7 @@ export async function* runConversation(
               cachedInputTokens: part.usage.inputTokenDetails?.cacheReadTokens ?? 0,
             };
           }
+          yield { type: 'step_end', index: stepIndex++ };
           break;
 
         case 'finish':

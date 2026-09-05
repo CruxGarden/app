@@ -32,6 +32,11 @@ export type {
   DesktopInfo,
   UpdateState,
   UpdateStatus,
+  AgentHostBridge,
+  AgentHostServer,
+  AgentHostRequest,
+  AgentHostResponse,
+  AgentToolDefinition,
 } from '../../electron/src/bridge';
 
 declare global {
@@ -59,6 +64,8 @@ export enum Capability {
   LocalInference = 'localInference',
   /** Self-update via electron-updater → GitHub Releases (ADR 0007). */
   Updates = 'updates',
+  /** Hosts an MCP server per crux for external agents (ADR 0013). Desktop Mode only. */
+  AgentHost = 'agentHost',
 }
 
 function bridge(): Partial<ElectronBridge> | null {
@@ -93,6 +100,8 @@ export function can(capability: Capability): boolean {
       return !!api.localai;
     case Capability.Updates:
       return !!api.updates;
+    case Capability.AgentHost:
+      return !!api.agentHost;
   }
 }
 
