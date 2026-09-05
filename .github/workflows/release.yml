@@ -89,19 +89,22 @@ jobs:
         working-directory: electron
       - name: Signing and notarization env (only the secrets that are set)
         # An empty CSC_LINK is not "no certificate" to electron-builder — it is a path, and
-        # the build dies with "not a file". Export each variable only when its secret exists.
+        # the build dies with "not a file". Decide here; the import step below runs only
+        # when a certificate exists. electron-builder's own temporary keychain broke on the
+        # macOS 26 runner image (set-key-partition-list: "passphrase you entered is not
+        # correct"), so the certificate is imported by Apple's action instead and
+        # electron-builder discovers the identity from that keychain.
         env:
           MAC_CERT_P12: ${{ secrets.MAC_CERT_P12 }}
-          MAC_CERT_PASSWORD: ${{ secrets.MAC_CERT_PASSWORD }}
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         run: |
           if [[ -n "$MAC_CERT_P12" ]]; then
-            echo "CSC_LINK=$MAC_CERT_P12" >> "$GITHUB_ENV"
-            echo "CSC_KEY_PASSWORD=$MAC_CERT_PASSWORD" >> "$GITHUB_ENV"
+            echo "MAC_SIGN=1" >> "$GITHUB_ENV"
             echo "Developer ID certificate present: signing"
           else
+            echo "MAC_SIGN=0" >> "$GITHUB_ENV"
             echo "CSC_IDENTITY_AUTO_DISCOVERY=false" >> "$GITHUB_ENV"
             echo "No certificate secret: unsigned build"
           fi
@@ -113,6 +116,20 @@ jobs:
           else
             echo "No notarization credentials: skipping notarization"
           fi
+      - name: Import the Developer ID certificate into a build keychain
+        if: env.MAC_SIGN == '1'
+        uses: apple-actions/import-codesign-certs@v3
+        with:
+          p12-file-base64: ${{ secrets.MAC_CERT_P12 }}
+          p12-password: ${{ secrets.MAC_CERT_PASSWORD }}
+          keychain: crux-signing
+          keychain-password: ${{ github.run_id }}-${{ github.run_attempt }}
+      - name: Point electron-builder at that keychain
+        if: env.MAC_SIGN == '1'
+        run: |
+          KC=$(ls "$HOME"/Library/Keychains/crux-signing.keychain* | head -1)
+          echo "CSC_KEYCHAIN=$KC" >> "$GITHUB_ENV"
+          security find-identity -v -p codesigning "$KC"
       - name: Package (both architectures → one latest-mac.yml)
         working-directory: electron
         env:
