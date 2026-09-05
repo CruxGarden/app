@@ -56,6 +56,8 @@ function probe(url: string): Promise<boolean> {
 
 export class DevServerManager {
   private running = new Map<string, RunningDev>();
+  /** Output of the last process per folder that exited without becoming ready. */
+  private lastOutput = new Map<string, string>();
 
   constructor(
     private resolveKnownFolder: (folder: string) => string,
@@ -101,12 +103,14 @@ export class DevServerManager {
     proc.stdout.on('data', capture);
     proc.stderr.on('data', capture);
 
-    proc.on('close', () => {
+    proc.on('close', (code: number | null) => {
       const current = this.running.get(cwd);
       if (current === dev) {
         dev.status = dev.status === 'stopped' ? 'stopped' : 'crashed';
         if (dev.status === 'crashed') this.onStatus?.(cwd, 'crashed', null);
         this.running.delete(cwd);
+        // Keep what the process said so the failure can be explained after the fact.
+        this.lastOutput.set(cwd, `exit ${code ?? 'signal'}\n${dev.log}`);
       }
     });
 
@@ -117,7 +121,10 @@ export class DevServerManager {
     const started = Date.now();
     for (;;) {
       const dev = this.running.get(cwd);
-      if (!dev) throw new Error('dev server exited before becoming ready');
+      if (!dev) {
+        const said = (this.lastOutput.get(cwd) ?? '').slice(-2000);
+        throw new Error(`dev server exited before becoming ready\n${said}`);
+      }
       if (dev.status === 'ready') return dev.url;
       if (await probe(dev.url + '/')) {
         dev.status = 'ready';
@@ -126,14 +133,17 @@ export class DevServerManager {
       }
       if (Date.now() - started > timeoutMs) {
         await this.stop(cwd);
-        throw new Error(`dev server did not become ready in ${timeoutMs / 1000}s\n${dev.log.slice(-2000)}`);
+        throw new Error(
+          `dev server did not become ready in ${timeoutMs / 1000}s\n${dev.log.slice(-2000)}`,
+        );
       }
       await new Promise((r) => setTimeout(r, 400));
     }
   }
 
   lastLog(folder: string): string {
-    return this.running.get(this.resolveKnownFolder(folder))?.log ?? '';
+    const cwd = this.resolveKnownFolder(folder);
+    return this.running.get(cwd)?.log ?? this.lastOutput.get(cwd) ?? '';
   }
 
   async stop(folder: string): Promise<void> {
@@ -146,7 +156,11 @@ export class DevServerManager {
     try {
       process.kill(-dev.proc.pid, 'SIGTERM'); // whole process group
     } catch {
-      try { dev.proc.kill('SIGKILL'); } catch { /* already gone */ }
+      try {
+        dev.proc.kill('SIGKILL');
+      } catch {
+        /* already gone */
+      }
     }
   }
 
