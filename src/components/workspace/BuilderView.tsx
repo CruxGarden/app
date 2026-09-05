@@ -30,6 +30,8 @@ import {
   type CaptionItem,
 } from './builder-files';
 import { canCollaborate, runParallelJob } from '@/services/turns';
+import { parseShelf, type Shelf, type ShelfEntry } from '@/game/shelf';
+import { HIDDEN_KINDS, type HiddenKind } from '@/game/hidden';
 
 /** Action types the Builder renders from dedicated components, not CustomAction. */
 const DERIVED_ACTIONS = new Set<BuilderAction['do']['type']>([
@@ -37,6 +39,7 @@ const DERIVED_ACTIONS = new Set<BuilderAction['do']['type']>([
   'add-image',
   'add-media',
   'add-photos',
+  'add-shelf-entry',
 ]);
 
 /** Paths of every artifact in the crux (meta.path, falling back to filename). */
@@ -121,6 +124,8 @@ function BuilderBody({ cruxTitle, model }: { cruxTitle: string; model: ContentMo
   }, [settingsArtifact, openFile, model.settings]);
 
   const openPublish = useCallback(() => setPaneVisible('publish', true), [setPaneVisible]);
+  // `meta.game.shelfPath` is what marks a crux interrogable (ADR 0016)
+  const shelfPath = shelfPathOf(crux.meta as Record<string, unknown> | undefined);
 
   return (
     <div className="flex-1 overflow-y-auto min-h-0">
@@ -187,6 +192,16 @@ function BuilderBody({ cruxTitle, model }: { cruxTitle: string; model: ContentMo
               ) : null;
             })}
           {(model.actions ?? [])
+            .filter((a) => a.do.type === 'add-shelf-entry')
+            .map((a) => (
+              <AddToShelfButton
+                key={a.label}
+                path={(a.do as { path: string }).path}
+                label={a.label}
+                icon={a.icon}
+              />
+            ))}
+          {(model.actions ?? [])
             .filter((a) => !DERIVED_ACTIONS.has(a.do.type))
             .map((action, i) => (
               <CustomAction
@@ -197,6 +212,9 @@ function BuilderBody({ cruxTitle, model }: { cruxTitle: string; model: ContentMo
               />
             ))}
         </section>
+
+        {/* ── The Shelf (Interrogable Crux, ADR 0016) ── */}
+        {shelfPath && <ShelfSection path={shelfPath} />}
 
         {/* ── Collections ── */}
         {model.collections.map((collection) => (
@@ -614,6 +632,7 @@ function CustomAction({
   onPublish: () => void;
 }) {
   const openFileByPath = useOpenFileByPath();
+  const openRound = useOpenRound();
   const handle = useCallback(() => {
     switch (action.do.type) {
       case 'edit-settings':
@@ -625,12 +644,40 @@ function CustomAction({
       case 'open-file':
         openFileByPath(action.do.path);
         break;
+      case 'open-round':
+        openRound();
+        break;
       default:
-        break; // new-item / add-image / add-media / add-photos render as derived buttons already
+        break; // new-item / add-image / add-media / add-photos / add-shelf-entry render as derived buttons already
     }
-  }, [action, onSettings, onPublish, openFileByPath]);
+  }, [action, onSettings, onPublish, openFileByPath, openRound]);
 
   return <ActionButton icon={action.icon} label={action.label} onClick={handle} />;
+}
+
+/**
+ * Start a round (5Ws, ADR 0016): the game is the site's own /play page — a
+ * React island that runs the round in the browser with the AI the player
+ * connects — so playing from the app means opening that page in the preview.
+ * Opening the source file makes the Workshop's astro dev preview show its route.
+ */
+const PLAY_PAGE_PATH = 'src/pages/play.astro';
+
+function useOpenRound() {
+  const openFileByPath = useOpenFileByPath();
+  return useCallback(() => {
+    const has = useCruxStore
+      .getState()
+      .artifacts.some((a) => ((a.meta?.path as string | undefined) || a.filename) === PLAY_PAGE_PATH);
+    if (!has) {
+      void alertDialog(
+        `This crux has no ${PLAY_PAGE_PATH}. The game page ships with the 5Ws template; add one to play here.`,
+        'Start a round',
+      );
+      return;
+    }
+    openFileByPath(PLAY_PAGE_PATH);
+  }, [openFileByPath]);
 }
 
 function useOpenFileByPath() {
@@ -763,4 +810,236 @@ function useCollectionData(items: CollectionItem[], collection: ContentCollectio
   }, [items, collection.sort]);
 
   return parsed;
+}
+
+// ── The Shelf (ADR 0016) ─────────────────────────────────────────────────────
+
+function shelfPathOf(meta: Record<string, unknown> | undefined): string | null {
+  const game = meta?.game;
+  if (!game || typeof game !== 'object') return null;
+  const path = (game as { shelfPath?: unknown }).shelfPath;
+  return typeof path === 'string' && path ? path : null;
+}
+
+function useShelfArtifact(path: string): Artifact | null {
+  const artifacts = useCruxStore((s) => s.artifacts);
+  return useMemo(
+    () =>
+      artifacts.find((a) => ((a.meta?.path as string | undefined) || a.filename) === path) ?? null,
+    [artifacts, path],
+  );
+}
+
+/** The parsed Shelf at `path`, re-read whenever the file's fingerprint changes. */
+function useShelf(path: string): { shelf: Shelf | null; error: string | null; artifact: Artifact | null } {
+  const artifact = useShelfArtifact(path);
+  const fingerprint = artifact?.fingerprint ?? artifact?.id ?? null;
+  const [state, setState] = useState<{ shelf: Shelf | null; error: string | null }>({
+    shelf: null,
+    error: null,
+  });
+  useEffect(() => {
+    let cancelled = false;
+    if (!artifact) {
+      setState({ shelf: null, error: null });
+      return;
+    }
+    (async () => {
+      try {
+        const content = await getServices().artifact.readContent(artifact.id);
+        const shelf = parseShelf(content);
+        if (!cancelled) setState({ shelf, error: null });
+      } catch (err) {
+        if (!cancelled) setState({ shelf: null, error: (err as Error).message });
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [artifact?.id, fingerprint]);
+  return { ...state, artifact };
+}
+
+function ShelfSection({ path }: { path: string }) {
+  const { shelf, error, artifact } = useShelf(path);
+  const openFile = useUIStore((s) => s.openFile);
+  return (
+    <section data-testid="shelf-section">
+      <h2 className="text-xs font-mono uppercase tracking-wider text-text-muted mb-1">
+        Shelf{shelf ? ` · ${shelf.entries.length}` : ''}
+      </h2>
+      {shelf && (
+        <p className="text-xs text-text-muted mb-3">
+          <span className="text-text">{shelf.title}</span> — {shelf.question}
+          {shelf.description ? ` · ${shelf.description}` : ''}
+        </p>
+      )}
+      {!artifact ? (
+        <p className="text-xs text-text-muted">No shelf at {path} yet.</p>
+      ) : error ? (
+        <p className="text-xs text-error">
+          {path} does not parse: {error}
+        </p>
+      ) : shelf ? (
+        <ul className="grid grid-cols-1 sm:grid-cols-2 gap-x-6">
+          {shelf.entries.map((e) => (
+            <li
+              key={e.id}
+              className="flex items-baseline justify-between gap-3 py-1.5 border-b border-border/60 text-sm"
+              data-testid="shelf-entry"
+            >
+              <span className="text-text truncate">{e.name}</span>
+              <span className="shrink-0 text-xxs text-text-muted">
+                {e.kind}
+                {e.era ? ` · ${e.era}` : ''}
+                {e.provenance === 'unsourced' ? ' · unsourced' : ''}
+              </span>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+      {artifact && (
+        <button
+          onClick={() => openFile(artifact.id, path)}
+          className="mt-3 text-xxs text-text-muted hover:text-accent cursor-pointer"
+        >
+          Edit {path} directly
+        </button>
+      )}
+    </section>
+  );
+}
+
+const fieldClass =
+  'w-full px-3 py-2 text-sm rounded-[var(--radius-sm)] bg-surface border border-border text-text focus:outline-none focus:border-accent';
+
+const EMPTY_ENTRY = {
+  name: '',
+  aliases: '',
+  kind: 'person' as HiddenKind,
+  era: '',
+  voiceNote: '',
+  provenance: 'sourced' as ShelfEntry['provenance'],
+  sources: '',
+};
+
+/** "Add to shelf": a form that appends one entry to the Shelf file — the same shape the skill describes. */
+function AddToShelfButton({ path, label, icon }: { path: string; label: string; icon?: string }) {
+  const { shelf, artifact } = useShelf(path);
+  const saveArtifactContent = useCruxStore((s) => s.saveArtifactContent);
+  const [open, setOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [form, setForm] = useState(EMPTY_ENTRY);
+  const set = (key: keyof typeof EMPTY_ENTRY) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) =>
+    setForm((f) => ({ ...f, [key]: e.target.value }));
+
+  const splitList = (raw: string, sep: RegExp) =>
+    raw
+      .split(sep)
+      .map((s) => s.trim())
+      .filter(Boolean);
+
+  const handleAdd = useCallback(async () => {
+    if (!artifact || !shelf || saving) return;
+    const name = form.name.trim();
+    if (!name) return;
+    const sources = splitList(form.sources, /\r?\n|,\s+/);
+    if (form.provenance === 'sourced' && sources.length === 0) {
+      await alertDialog('A sourced entry needs at least one source URL — or mark it unsourced.');
+      return;
+    }
+    const id = slugify(name);
+    if (shelf.entries.some((e) => e.id === id)) {
+      await alertDialog(`"${name}" is already on the shelf.`);
+      return;
+    }
+    const entry: ShelfEntry = {
+      id,
+      name,
+      aliases: splitList(form.aliases, /,|\r?\n/),
+      kind: form.kind,
+      ...(form.era.trim() ? { era: form.era.trim() } : {}),
+      ...(form.voiceNote.trim() ? { voiceNote: form.voiceNote.trim() } : {}),
+      provenance: form.provenance,
+      ...(sources.length ? { sources } : {}),
+    };
+    setSaving(true);
+    try {
+      // Re-read at save time so a concurrent edit is not clobbered
+      const current = parseShelf(await getServices().artifact.readContent(artifact.id));
+      const next = { ...current, entries: [...current.entries, entry] };
+      await saveArtifactContent(artifact.id, JSON.stringify(next, null, 2) + '\n');
+      setOpen(false);
+      setForm(EMPTY_ENTRY);
+    } catch (err) {
+      await alertDialog(`Could not add to the shelf: ${(err as Error).message}`);
+    } finally {
+      setSaving(false);
+    }
+  }, [artifact, shelf, saving, form, saveArtifactContent]);
+
+  if (!artifact) return null;
+  return (
+    <>
+      <ActionButton icon={icon ?? '📚'} label={label} onClick={() => setOpen(true)} />
+      <Modal open={open} onClose={() => setOpen(false)} size="sm" title={label}>
+        <form
+          className="flex flex-col gap-3"
+          onSubmit={(e) => {
+            e.preventDefault();
+            void handleAdd();
+          }}
+        >
+          <Input autoFocus value={form.name} onChange={set('name')} placeholder="Name" />
+          <Input
+            value={form.aliases}
+            onChange={set('aliases')}
+            placeholder="Aliases, comma-separated (variants, spellings, titles)"
+          />
+          <div className="flex gap-2">
+            <select value={form.kind} onChange={set('kind')} className={fieldClass} aria-label="Kind">
+              {HIDDEN_KINDS.map((k) => (
+                <option key={k} value={k}>
+                  {k}
+                </option>
+              ))}
+            </select>
+            <Input value={form.era} onChange={set('era')} placeholder="Era — c. 355–415" />
+          </div>
+          <textarea
+            value={form.voiceNote}
+            onChange={set('voiceNote')}
+            placeholder="Voice note — one line: temperament, and how they deflect"
+            rows={2}
+            className={fieldClass}
+          />
+          <select
+            value={form.provenance}
+            onChange={set('provenance')}
+            className={fieldClass}
+            aria-label="Provenance"
+          >
+            <option value="sourced">sourced — facts can be checked against the pages below</option>
+            <option value="unsourced">unsourced — spoken from what is commonly told</option>
+          </select>
+          <textarea
+            value={form.sources}
+            onChange={set('sources')}
+            placeholder="Sources — one URL per line"
+            rows={2}
+            className={fieldClass}
+          />
+          <div className="flex justify-end gap-2">
+            <Button type="button" variant="ghost" size="sm" onClick={() => setOpen(false)}>
+              Cancel
+            </Button>
+            <Button type="submit" size="sm" disabled={!form.name.trim()} loading={saving}>
+              Add
+            </Button>
+          </div>
+        </form>
+      </Modal>
+    </>
+  );
 }

@@ -12,6 +12,8 @@
  * assignable to the generated wire DTOs — contract drift fails `tsc`.
  */
 
+import type { DisclosureRule, HiddenState, Reveal, Voice } from '@/game/hidden';
+
 // ── Auth ───────────────────────────────────────────────
 
 export interface AuthCredentials {
@@ -218,6 +220,20 @@ export interface CruxMeta {
   tags?: string[];
   artifactRefs?: string[];
   parentCruxId?: string;
+  /**
+   * Interrogable Crux (ADR 0016): the secret this crux holds back. Only the
+   * round engine's calls (`src/game/prompts.ts`) ever carry it — the ordinary
+   * collaboration prompt must never render it.
+   */
+  hidden?: HiddenState;
+  /** How the hidden thing speaks. */
+  voice?: Voice;
+  /** What the hidden voice may never say outright. */
+  disclosure?: DisclosureRule;
+  /** What to say when the round ends (the last reveal, for the crux's own record). */
+  reveal?: Reveal;
+  /** 5Ws configuration: where the Shelf lives in the Project Folder, and when it was last played. */
+  game?: { shelfPath: string; lastRoundAt?: string };
   [key: string]: unknown;
 }
 

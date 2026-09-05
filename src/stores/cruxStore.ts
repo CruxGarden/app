@@ -743,10 +743,12 @@ export const useCruxStore = create<CruxState>((set, get) => ({
     const art = artifacts.find((a) => a.id === id);
     if (!art) return undefined;
     const mime = art.mimeType || 'text/plain';
-    const blob = new Blob([content], { type: mime });
-    const updated = await artifact.upload({
+    // Text goes through `create` (dedups on the path, keeps `encoding: 'utf-8'`).
+    // This used to `upload()` a Blob, which flips the row to `encoding: 'binary'`
+    // — after which `readContent` refused the file the editor had just saved.
+    const updated = await artifact.create({
       resourceId: art.resourceId,
-      blob,
+      content,
       mimeType: mime,
       meta: { path: art.meta?.path },
     });

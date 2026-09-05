@@ -9,7 +9,7 @@ import { importCrux } from '@/services/crux-io';
 import { useGardenStore } from '@/stores/gardenStore';
 import { Modal, Button } from '@/components/ui';
 import { cn } from '@/lib/cn';
-import type { TemplateLayout } from '@/templates';
+import { FIVE_WS_NAME, FIVE_WS_TEMPLATE_ID, FIVE_WS_TAGLINE, type TemplateLayout } from '@/templates';
 import { applyTemplateToCrux } from '@/services/crux-create';
 import type { CruxKind } from '@/api/types';
 import { Capability, can } from '@/lib/platform';
@@ -166,6 +166,31 @@ function MediaThumb() {
   );
 }
 
+function FiveWsThumb() {
+  return (
+    <div style={{ ...T.wrap, background: '#171512', ...T.pad(6) }}>
+      <div style={T.col(3)}>
+        <div style={T.bar('55%', 5, '#c9bda6')} />
+        <div style={{ height: 2 }} />
+        <div style={{ ...T.flex(6) }}>
+          <div style={T.col(2)}>
+            <div style={T.line('100%', 2, '#6b6255')} />
+            <div style={T.line('100%', 2, '#6b6255')} />
+            <div style={T.line('100%', 2, '#6b6255')} />
+            <div style={T.line('100%', 2, '#6b6255')} />
+          </div>
+          <div style={T.col(2)}>
+            <div style={T.line('100%', 2, '#6b6255')} />
+            <div style={T.line('100%', 2, '#6b6255')} />
+            <div style={T.line('100%', 2, '#6b6255')} />
+            <div style={T.line('100%', 2, '#6b6255')} />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 const TEMPLATES: Template[] = [
   {
     id: 'blank',
@@ -224,6 +249,16 @@ const TEMPLATES: Template[] = [
     thumb: <MediaThumb />,
     kind: 'webapp',
     defaultTitle: 'My Media',
+    desktopOnly: true,
+  },
+  {
+    id: FIVE_WS_TEMPLATE_ID,
+    label: FIVE_WS_NAME,
+    description: FIVE_WS_TAGLINE,
+    icon: <LayoutIcon />,
+    thumb: <FiveWsThumb />,
+    kind: 'webapp',
+    defaultTitle: FIVE_WS_NAME,
     desktopOnly: true,
   },
 ];

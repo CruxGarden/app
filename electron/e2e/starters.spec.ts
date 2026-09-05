@@ -4,7 +4,9 @@ import { launchApp } from './launch';
 /**
  * Starter cruxes: the Feed and Media templates create, the Builder shows their
  * actions, and "Add media" runs a real ffmpeg transcode (WAV → M4A) and writes
- * an item pointing at the converted file. Does not wait for astro dev.
+ * an item pointing at the converted file. The 5Ws template creates with its
+ * Shelf visible in the Builder and "Add to shelf" appends to shelf.json.
+ * Does not wait for astro dev.
  */
 
 /** A 0.2 s silent 8 kHz mono 16-bit WAV — small, valid, and not streaming-ready. */
@@ -112,6 +114,66 @@ test.describe('starter cruxes', () => {
       await tree.getByText('media', { exact: true }).click();
       await expect(tree.getByText('Garden-Loop.m4a')).toBeVisible({ timeout: 15_000 });
       await page.screenshot({ path: 'e2e/.results/starters-2-media-item.png' });
+    } finally {
+      await app.close();
+    }
+  });
+
+  test('5Ws template → Builder shows the Shelf; Add to shelf appends; the files exist', async () => {
+    const { app, page } = await launchApp();
+    try {
+      await page.getByRole('button', { name: /enter/i }).click();
+      await page.getByText('Plant a new garden').click();
+      await page.getByRole('button', { name: 'Welcome' }).click();
+
+      await page.getByRole('button', { name: 'Add Crux' }).click();
+      await page.getByRole('button', { name: /^5Ws/ }).click();
+      await page.getByRole('button', { name: 'Create', exact: true }).click();
+
+      // The Builder: the two game actions, the Rounds collection, and the Shelf itself
+      await expect(page.getByRole('button', { name: /Add to shelf$/ })).toBeVisible({
+        timeout: 30_000,
+      });
+      await expect(page.getByRole('button', { name: /Start a round$/ })).toBeVisible();
+      await expect(page.getByRole('button', { name: /^(\S+ )?New round$/i })).toBeVisible();
+      const shelf = page.getByTestId('shelf-section');
+      await expect(shelf).toContainText('History — Who am I?');
+      await expect(shelf).toContainText('Hypatia');
+      await expect(shelf).toContainText('Emmy Noether');
+      const before = await shelf.getByTestId('shelf-entry').count();
+      expect(before).toBeGreaterThanOrEqual(40);
+      // The sample round is listed under Rounds
+      await expect(page.getByText('Round 1', { exact: true })).toBeVisible();
+      await page.screenshot({ path: 'e2e/.results/starters-3-5ws-builder.png' });
+
+      // Add to shelf: the form appends an entry to shelf.json and the list re-reads it
+      await page.getByRole('button', { name: /Add to shelf$/ }).click();
+      await page.getByPlaceholder('Name', { exact: true }).fill('Ibn Khaldun');
+      await page.getByPlaceholder(/Aliases/).fill('Ibn Khaldūn, Abd al-Rahman ibn Khaldun');
+      await page.getByPlaceholder(/Era/).fill('1332–1406');
+      await page
+        .getByPlaceholder(/Voice note/)
+        .fill('Dry historian of how dynasties rot; deflects into the cycle of civilisations.');
+      await page.getByPlaceholder(/Sources/).fill('https://en.wikipedia.org/wiki/Ibn_Khaldun');
+      await page.getByRole('button', { name: 'Add', exact: true }).click();
+      await expect(shelf).toContainText('Ibn Khaldun', { timeout: 15_000 });
+      await expect(shelf.getByTestId('shelf-entry')).toHaveCount(before + 1);
+
+      // Start a round: the game is the site's own /play page — the Builder opens its
+      // source so the Workshop preview shows the round (the island needs the visitor's AI).
+      await page.getByRole('button', { name: /Start a round$/ }).click();
+      const playEditor = page.locator('.monaco-editor').first();
+      await expect(playEditor).toBeVisible({ timeout: 30_000 });
+      await expect(playEditor).toContainText('client:only="react"');
+      await page.screenshot({ path: 'e2e/.results/starters-4-5ws-play-source.png' });
+
+      // The files are real: shelf.json at the root, the sample round under rounds/
+      const tree = page.getByRole('tree');
+      await expect(tree.getByText('shelf.json', { exact: true })).toBeVisible();
+      // Two folders are named rounds now that src/pages/ is expanded (play.astro sits there): the root one is first
+      await tree.getByText('rounds', { exact: true }).first().click();
+      await expect(tree.getByText('2026-09-05-1.md')).toBeVisible({ timeout: 15_000 });
+      await page.screenshot({ path: 'e2e/.results/starters-4-5ws-shelf-added.png' });
     } finally {
       await app.close();
     }
