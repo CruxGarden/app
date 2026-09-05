@@ -48,6 +48,7 @@
   "build": {
     "appId": "garden.crux.app",
     "productName": "Crux Garden",
+    "afterSign": "build/ad-hoc-sign.js",
     "directories": {
       "output": "release"
     },
