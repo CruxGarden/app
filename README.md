@@ -35,6 +35,10 @@ cd electron && npm run verify && npm run build:all && npm run test:e2e   # Playw
 - **Publishing and sync** send only what you ask to publish or back up, to crux.garden.
 - **Update checks** ask GitHub Releases for the latest version. You can turn them off in Settings →
   Desktop.
+- **Agents you connect** (Settings → Agents) talk to a per-crux MCP server on `127.0.0.1` only, off
+  by default. The token lives in the crux's `.crux/mcp.json`, never leaves your machine, and is never
+  published or versioned. A connected agent sees that one crux — not your keys or your account — and
+  everything it does is recorded in the Collaboration under its name.
 - **Nothing else.** No analytics. No crash reporting unless you opt in. Logs stay on your disk
   (`~/Library/Logs/Crux Garden`).
 

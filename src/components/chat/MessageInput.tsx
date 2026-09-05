@@ -2,8 +2,12 @@ import { useState, useRef, useCallback } from 'react';
 import { cn } from '@/lib/cn';
 
 interface MessageInputProps {
+  /** Send — or, while a Background Turn runs, queue behind it. */
   onSend: (content: string) => void;
   onStop?: () => void;
+  /** Stop the running turn and send this message at once. */
+  onSteer?: (content: string) => void;
+  /** A turn is in flight: the composer stays live, Enter queues, Steer redirects. */
   isStreaming: boolean;
   disabled?: boolean;
   history?: string[];
@@ -12,6 +16,7 @@ interface MessageInputProps {
 export default function MessageInput({
   onSend,
   onStop,
+  onSteer,
   isStreaming,
   disabled,
   history = [],
@@ -23,25 +28,33 @@ export default function MessageInput({
 
   // Builder actions can hand the user to the AI mid-sentence
 
-  const handleSubmit = useCallback(() => {
-    const trimmed = value.trim();
-    if (!trimmed || disabled) return;
-
-    onSend(trimmed);
+  const clear = useCallback(() => {
     setValue('');
     historyIndexRef.current = -1;
     savedInputRef.current = '';
-
     // Reset textarea height
     if (textareaRef.current) {
       textareaRef.current.style.height = 'auto';
     }
-  }, [value, disabled, onSend]);
+  }, []);
+
+  const handleSubmit = useCallback(() => {
+    const trimmed = value.trim();
+    if (!trimmed || disabled) return;
+    onSend(trimmed);
+    clear();
+  }, [value, disabled, onSend, clear]);
+
+  const handleSteer = useCallback(() => {
+    const trimmed = value.trim();
+    if (!trimmed || disabled || !onSteer) return;
+    onSteer(trimmed);
+    clear();
+  }, [value, disabled, onSteer, clear]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      if (isStreaming) return;
       handleSubmit();
     }
 
@@ -94,16 +107,44 @@ export default function MessageInput({
           )}
         />
         {isStreaming ? (
-          <button
-            onClick={onStop}
-            className={cn(
-              'px-3 py-2 rounded-[var(--radius-sm)] text-sm font-body',
-              'bg-danger-button text-on-error border border-danger-button-border',
-              'hover:bg-danger-button-hover transition-colors cursor-pointer',
+          <>
+            {value.trim() && onSteer && (
+              <button
+                onClick={handleSteer}
+                title="Stop the current turn and send this now"
+                className={cn(
+                  'px-3 py-2 rounded-[var(--radius-sm)] text-sm font-body',
+                  'bg-action-button text-action-button-text border border-action-button-border',
+                  'hover:bg-action-button-hover transition-colors cursor-pointer',
+                )}
+              >
+                Steer
+              </button>
             )}
-          >
-            Stop
-          </button>
+            {value.trim() && (
+              <button
+                onClick={handleSubmit}
+                title="Send after the current turn finishes"
+                className={cn(
+                  'px-3 py-2 rounded-[var(--radius-sm)] text-sm font-body',
+                  'bg-chat-send-button text-chat-send-button-icon border border-chat-send-button/20',
+                  'hover:bg-chat-send-button-hover transition-colors cursor-pointer motion-press react-accent',
+                )}
+              >
+                Queue
+              </button>
+            )}
+            <button
+              onClick={onStop}
+              className={cn(
+                'px-3 py-2 rounded-[var(--radius-sm)] text-sm font-body',
+                'bg-danger-button text-on-error border border-danger-button-border',
+                'hover:bg-danger-button-hover transition-colors cursor-pointer',
+              )}
+            >
+              Stop
+            </button>
+          </>
         ) : (
           <button
             onClick={handleSubmit}
@@ -120,7 +161,9 @@ export default function MessageInput({
         )}
       </div>
       <p className="text-xxs text-chat-text-muted mt-1.5 px-1">
-        Enter to send · Shift+Enter for new line · ↑ for history
+        {isStreaming
+          ? 'Enter to queue after this turn · Steer stops it and sends now'
+          : 'Enter to send · Shift+Enter for new line · ↑ for history'}
       </p>
     </div>
   );

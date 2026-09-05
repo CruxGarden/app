@@ -1,6 +1,7 @@
 import type { Crux, CruxKind, ChatMessage } from '@/api/types';
 import { getServices } from './index';
 import { loadTemplate, applyTemplateMeta, type TemplateLayout } from '@/templates';
+import { syncAgentsMd } from './agents-md';
 
 /**
  * "New crux from a template" as one operation — file creation, the desktop
@@ -28,6 +29,7 @@ export async function applyTemplateToCrux(
   const services = getServices();
   if (!def) {
     const updated = await services.crux.update(crux.id, { kind });
+    await syncAgentsMd(updated, null);
     return { crux: updated, messages: null, layout: null };
   }
 
@@ -50,7 +52,7 @@ export async function applyTemplateToCrux(
     }
   }
 
-  const meta = applyTemplateMeta(crux.meta as Record<string, unknown>, def);
+  const meta = applyTemplateMeta(crux.meta as Record<string, unknown>, def, templateId);
   // Template greetings are spoken by the current persona too
   if (def.greeting) {
     const { getPersona, getPersonaFingerprint, personaSnapshotOf } = await import('./persona');
@@ -68,6 +70,8 @@ export async function applyTemplateToCrux(
     };
   }
   const updated = await services.crux.update(crux.id, { kind, meta });
+  // The folder's guide for any agent (B1) — rendered from the meta just stamped
+  await syncAgentsMd(updated, null);
   return {
     crux: updated,
     messages: def.greeting ? (meta.messages as ChatMessage[]) : null,

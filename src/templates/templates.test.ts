@@ -195,3 +195,11 @@ describe('content model consistency', () => {
     expect(keep?.content).toBe('');
   });
 });
+
+describe('applyTemplateMeta template lineage', () => {
+  it('stamps meta.template with the template id when given', async () => {
+    const def = (await loadTemplate('astro-blog'))!;
+    expect(applyTemplateMeta({}, def, 'astro-blog').template).toBe('astro-blog');
+    expect(applyTemplateMeta({}, def).template).toBeUndefined();
+  });
+});

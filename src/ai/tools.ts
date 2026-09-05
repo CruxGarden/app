@@ -7,6 +7,12 @@ import { checkSiteBuild, SiteBuildError } from '@/services/site';
 import { Capability, can } from '@/lib/platform';
 import { pathOf, type ArtifactPathSource } from '@/lib/artifact-path';
 import { THEME_TOOL_DEFINITIONS, runThemeTool } from './theme-tools';
+import {
+  GROWTH_TOOL_DEFINITIONS,
+  MUTATING_GROWTH_TOOLS,
+  isGrowthTool,
+  runGrowthTool,
+} from './growth-tools';
 
 /**
  * Tool definitions — ported from api/src/ai/ai.tools.ts.
@@ -255,7 +261,17 @@ export const SITE_TOOL_DEFINITIONS: ToolDefinition[] = [
 /** The tool set to offer a workspace conversation on this platform. */
 export function defaultToolDefinitions(): ToolDefinition[] {
   const site = can(Capability.Build) ? SITE_TOOL_DEFINITIONS : [];
-  return [...TOOL_DEFINITIONS, ...site, ...THEME_TOOL_DEFINITIONS];
+  return [...TOOL_DEFINITIONS, ...site, ...GROWTH_TOOL_DEFINITIONS, ...THEME_TOOL_DEFINITIONS];
+}
+
+/** Options for a tool executor beyond the crux it is bound to. */
+export interface ToolExecutorOptions {
+  /**
+   * Who the tools act for — recorded on every snapshot they take (ADR 0013).
+   * 'collaborator' (default) is the built-in AI; the MCP server passes
+   * 'agent:<client name>'.
+   */
+  requestedBy?: string;
 }
 
 /**
@@ -276,14 +292,19 @@ export function defaultToolDefinitions(): ToolDefinition[] {
  *   confirmation and resolves with their decision; when it resolves true the
  *   APP has already deleted the file (the executor only reports it). Omit for
  *   headless use — the executor then deletes directly.
+ * @param chatModel - The conversation's model (image generation picks a
+ *   provider from it).
+ * @param options - Attribution and other per-caller settings.
  */
 export function createToolExecutor(
   cruxId: string,
   onDeleteRequest?: (path: string, artifactId: string) => Promise<boolean>,
   chatModel?: string,
+  options: ToolExecutorOptions = {},
 ) {
   const { artifact: artifactService } = getServices();
   const recentlyReadFiles = new Set<string>();
+  const requestedBy = options.requestedBy || 'collaborator';
 
   // The SDK executes a step's tool calls concurrently (Promise.all). Nothing
   // in here is safe under that: the read-tracking set is shared, and the
@@ -360,6 +381,13 @@ export function createToolExecutor(
         case 'check_site':
           result = await toolCheckSite(cruxId);
           break;
+        case 'snapshot':
+        case 'list_snapshots':
+        case 'restore':
+        case 'branch':
+        case 'diff':
+          result = await runGrowthTool(toolName, input, { cruxId, requestedBy });
+          break;
         case 'set_theme':
         case 'get_theme':
         case 'set_background':
@@ -381,6 +409,8 @@ export function createToolExecutor(
           recentlyReadFiles.delete(normalizeToolPath(input.old_path as string)!);
           recentlyReadFiles.delete(normalizeToolPath(input.new_path as string)!);
         }
+        // A restore/branch replaced every file: nothing read before it is current
+        if (isGrowthTool(toolName)) recentlyReadFiles.clear();
       }
 
       return result;
@@ -1001,4 +1031,5 @@ export const MUTATING_TOOLS = [
   'delete_file',
   'generate_image',
   'rename_file',
+  ...MUTATING_GROWTH_TOOLS,
 ];

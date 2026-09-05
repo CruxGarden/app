@@ -9,6 +9,7 @@ import {
   MUTATING_TOOLS,
 } from './tools';
 import { initServices } from '@/services';
+import { GROWTH_TOOL_DEFINITIONS } from './growth-tools';
 
 describe('TOOL_DEFINITIONS', () => {
   it('defines 8 universal tools', () => {
@@ -38,6 +39,22 @@ describe('TOOL_DEFINITIONS', () => {
     expect(defaultToolDefinitions().map((t) => t.name)).not.toContain('check_site');
   });
 
+  it('offers the Growth tools on every platform (B0)', () => {
+    const names = defaultToolDefinitions().map((t) => t.name);
+    for (const name of GROWTH_TOOL_DEFINITIONS.map((t) => t.name)) expect(names).toContain(name);
+    expect(GROWTH_TOOL_DEFINITIONS.map((t) => t.name)).toEqual([
+      'snapshot',
+      'list_snapshots',
+      'restore',
+      'branch',
+      'diff',
+    ]);
+    for (const tool of GROWTH_TOOL_DEFINITIONS) {
+      expect(tool.input_schema.type).toBe('object');
+      expect(tool.description.length).toBeGreaterThan(10);
+    }
+  });
+
   it('each tool has valid input_schema', () => {
     for (const tool of [...TOOL_DEFINITIONS, ...SITE_TOOL_DEFINITIONS]) {
       expect(tool.input_schema.type).toBe('object');
@@ -55,6 +72,9 @@ describe('MUTATING_TOOLS', () => {
       'delete_file',
       'generate_image',
       'rename_file',
+      // Growth tools that replace files (B0); snapshot/list/diff do not mutate
+      'restore',
+      'branch',
     ]);
   });
 });
@@ -469,5 +489,190 @@ describe('createToolExecutor', () => {
       const matches = artifacts.filter((a) => (a.meta?.path || a.filename) === 'race.txt');
       expect(matches).toHaveLength(1);
     });
+  });
+});
+
+/**
+ * Growth tools (B0) through the executor, against the real local services —
+ * the headless host path (no workspace store registered), which is what an
+ * external agent gets when the crux is not open in the app.
+ */
+describe('growth tools', () => {
+  let execute: ReturnType<typeof createToolExecutor>;
+  let cruxId: string;
+
+  beforeEach(async () => {
+    await initServices('local');
+    const services = (await import('@/services')).getServices();
+    const crux = await services.crux.create({
+      title: 'Growth',
+      type: 'workspace',
+      meta: { messages: [{ role: 'user', content: 'hi' }], settings: { model: 'm' } },
+    });
+    cruxId = crux.id;
+    execute = createToolExecutor(cruxId);
+    await execute('write_file', { path: 'index.html', content: '<h1>v1</h1>' });
+  });
+
+  it('snapshot records a labelled snapshot attributed to the collaborator and returns its id', async () => {
+    const result = (await execute('snapshot', { label: 'First' })) as string;
+    expect(result).toMatch(/^Snapshot #1 recorded\./);
+    const id = /id: (\S+)/.exec(result)![1]!;
+
+    const { getServices } = await import('@/services');
+    const { dimension, crux } = getServices();
+    const growths = await dimension.findBySourceAndType(cruxId, 'growth');
+    expect(growths).toHaveLength(1);
+    expect(growths[0]!.targetId).toBe(id);
+    expect(growths[0]!.meta?.label).toBe('First');
+    expect(growths[0]!.meta?.requestedBy).toBe('collaborator');
+    // The captured segment is now history: the workspace segment starts fresh
+    const updated = await crux.findById(cruxId);
+    expect(updated.meta?.messages).toEqual([]);
+    expect(updated.meta?.growthCount).toBe(1);
+    const snap = await crux.findById(id);
+    expect((snap.meta?.messages as unknown[]).length).toBe(1);
+  });
+
+  it('stamps agent attribution when the executor is created for an agent', async () => {
+    const agentExecute = createToolExecutor(cruxId, undefined, undefined, {
+      requestedBy: 'agent:claude-code',
+    });
+    await agentExecute('snapshot', {});
+    const { getServices } = await import('@/services');
+    const growths = await getServices().dimension.findBySourceAndType(cruxId, 'growth');
+    expect(growths[0]!.meta?.requestedBy).toBe('agent:claude-code');
+  });
+
+  it('list_snapshots lists id, position, label and parent; respects limit', async () => {
+    expect(await execute('list_snapshots', {})).toMatch(/No snapshots yet/);
+    await execute('snapshot', { label: 'one' });
+    await execute('read_file', { path: 'index.html' });
+    await execute('write_file', { path: 'index.html', content: '<h1>v2</h1>' });
+    const second = (await execute('snapshot', { label: 'two' })) as string;
+    const secondId = /id: (\S+)/.exec(second)![1]!;
+
+    const all = (await execute('list_snapshots', {})) as string;
+    const lines = all.split('\n');
+    expect(lines).toHaveLength(2);
+    expect(lines[0]).toMatch(/^#1 \S+ "one" — .* — parent none — by collaborator$/);
+    expect(lines[1]).toMatch(
+      new RegExp(`^#2 ${secondId} "two" — .* — parent \\S+ — by collaborator$`),
+    );
+    // #2 chains from #1
+    const firstId = lines[0]!.split(' ')[1]!;
+    expect(lines[1]).toContain(`parent ${firstId}`);
+
+    const limited = (await execute('list_snapshots', { limit: 1 })) as string;
+    expect(limited.split('\n')).toHaveLength(1);
+    expect(limited).toContain('"two"');
+  });
+
+  it('restore takes a safety snapshot, puts the files back, and reports the change', async () => {
+    const snap = (await execute('snapshot', { label: 'good' })) as string;
+    const goodId = /id: (\S+)/.exec(snap)![1]!;
+    await execute('read_file', { path: 'index.html' });
+    await execute('write_file', { path: 'index.html', content: '<h1>BROKEN</h1>' });
+    await execute('write_file', { path: 'extra.css', content: 'body{}' });
+
+    const result = (await execute('restore', { snapshotId: goodId })) as string;
+    expect(result).toMatch(/^Restored the workspace to snapshot #1 "good"/);
+    expect(result).toContain('Safety snapshot #2 "Before revert"');
+    expect(result).toContain('1 removed, 1 modified');
+    expect(result).toContain('extra.css');
+    expect(didMutate('restore', result)).toBe(true);
+
+    expect(await execute('read_file', { path: 'index.html' })).toBe('<h1>v1</h1>');
+    expect(await execute('read_file', { path: 'extra.css' })).toContain('File not found');
+
+    // The restored snapshot is the tip: next snapshot chains from it
+    const { getServices } = await import('@/services');
+    const crux = await getServices().crux.findById(cruxId);
+    expect(crux.meta?.settings?.activeBranch).toBe(goodId);
+    const list = (await execute('list_snapshots', {})) as string;
+    expect(list.split('\n')).toHaveLength(2);
+  });
+
+  it('restore accepts "#N" and "latest" references', async () => {
+    await execute('snapshot', { label: 'a' });
+    await execute('read_file', { path: 'index.html' });
+    await execute('write_file', { path: 'index.html', content: '<h1>v2</h1>' });
+    const result = (await execute('restore', { snapshotId: '#1' })) as string;
+    expect(result).toMatch(/^Restored the workspace to snapshot #1 "a"/);
+    expect(await execute('read_file', { path: 'index.html' })).toBe('<h1>v1</h1>');
+    // "latest" is now the safety snapshot (v2) — restoring it brings v2 back
+    const again = (await execute('restore', { snapshotId: 'latest' })) as string;
+    expect(again).toContain('"Before revert"');
+    expect(await execute('read_file', { path: 'index.html' })).toBe('<h1>v2</h1>');
+  });
+
+  it('refuses an unknown snapshot id without touching anything', async () => {
+    await execute('snapshot', { label: 'a' });
+    const result = (await execute('restore', { snapshotId: 'not-a-snapshot' })) as string;
+    expect(result).toMatch(/^Error/);
+    expect(result).toContain('Unknown snapshot "not-a-snapshot"');
+    expect(result).toContain('list_snapshots');
+    expect(didMutate('restore', result)).toBe(false);
+    const list = (await execute('list_snapshots', {})) as string;
+    expect(list.split('\n')).toHaveLength(1); // no safety snapshot was taken
+    expect(await execute('read_file', { path: 'index.html' })).toBe('<h1>v1</h1>');
+  });
+
+  it('validates inputs before running', async () => {
+    expect(await execute('restore', {})).toContain('snapshotId is required');
+    expect(await execute('branch', { snapshotId: '#1' })).toContain('label is required');
+    expect(await execute('diff', {})).toContain('from is required');
+    expect(await execute('list_snapshots', { limit: 0 })).toContain('positive integer');
+    expect(await execute('snapshot', { label: 'x'.repeat(200) })).toContain('at most 120');
+  });
+
+  it('branch restores the files, marks the branch point active, and seeds the conversation', async () => {
+    const snap = (await execute('snapshot', { label: 'base' })) as string;
+    const baseId = /id: (\S+)/.exec(snap)![1]!;
+    await execute('read_file', { path: 'index.html' });
+    await execute('write_file', { path: 'index.html', content: '<h1>v2</h1>' });
+
+    const result = (await execute('branch', { snapshotId: baseId, label: 'Try dark' })) as string;
+    expect(result).toMatch(/^Branched as "Try dark" from snapshot #1 "base"/);
+    expect(result).toContain('Safety snapshot #2 "Before branch"');
+    expect(didMutate('branch', result)).toBe(true);
+    expect(await execute('read_file', { path: 'index.html' })).toBe('<h1>v1</h1>');
+
+    const { getServices } = await import('@/services');
+    const crux = await getServices().crux.findById(cruxId);
+    expect(crux.meta?.settings?.activeBranch).toBe(baseId);
+    const msgs = crux.meta?.messages as { content: string }[];
+    expect(msgs).toHaveLength(1);
+    expect(msgs[0]!.content).toContain('Branching from snapshot "Try dark"');
+
+    // A snapshot taken now chains from the branch point and moves the tip
+    const next = (await execute('snapshot', { label: 'on branch' })) as string;
+    const nextId = /id: (\S+)/.exec(next)![1]!;
+    expect(next).toContain(`parent: ${baseId}`);
+    const after = await getServices().crux.findById(cruxId);
+    expect(after.meta?.settings?.activeBranch).toBe(nextId);
+  });
+
+  it('diff reports added/removed/modified by fingerprint, against a snapshot or the working files', async () => {
+    const a = (await execute('snapshot', { label: 'a' })) as string;
+    const aId = /id: (\S+)/.exec(a)![1]!;
+    await execute('read_file', { path: 'index.html' });
+    await execute('write_file', { path: 'index.html', content: '<h1>v2!!</h1>' });
+    await execute('write_file', { path: 'new.txt', content: 'n' });
+
+    const working = (await execute('diff', { from: aId })) as string;
+    expect(working).toContain('to the current working files');
+    expect(working).toMatch(/Added \(1\):\n {2}new.txt \(1 bytes\)/);
+    expect(working).toMatch(/Modified \(1\):\n {2}index.html \(11 → 13 bytes\)/);
+    expect(working).not.toContain('Removed');
+
+    const b = (await execute('snapshot', { label: 'b' })) as string;
+    const bId = /id: (\S+)/.exec(b)![1]!;
+    const between = (await execute('diff', { from: aId, to: bId })) as string;
+    expect(between).toContain('new.txt');
+    expect(await execute('diff', { from: bId })).toMatch(/^No file differences/);
+    expect(await execute('diff', { from: 'nope' })).toContain('Unknown snapshot "nope"');
+    expect(didMutate('diff', between)).toBe(false);
+    expect(didMutate('snapshot', b)).toBe(false);
   });
 });

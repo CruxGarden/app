@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { useAuthStore, _avatarUrlCache } from './authStore';
 import * as authorsApi from '@/api/authors';
 import type { Author } from '@/api/types';
+import { Capability, can } from '@/lib/platform';
 
 // Lazy import to avoid pulling SQLite worker into public pages
 async function lazyGetServices() {
@@ -127,6 +128,12 @@ export const useAppStore = create<AppState>((set, get) => ({
           ]);
         applySavedMoodSettings();
         useUIStore.getState().setAiEnabled(getSetting(SettingsKey.AiEnabled) === 'true');
+        // Desktop Mode: answer the per-crux MCP servers' forwarded tool calls (ADR 0013).
+        if (can(Capability.AgentHost)) {
+          void import('@/services/agent-host').then(({ startAgentHostListener }) =>
+            startAgentHostListener(),
+          );
+        }
         void import('./moodStore').then(({ useMoodStore }) => useMoodStore.getState().loadMoods());
         set({ ready: true });
       })().finally(() => {

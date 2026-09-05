@@ -11,6 +11,10 @@ import {
   createSnapshotCore,
   defaultGrowthDeps,
   generateSnapshotSummary,
+  registerGrowthHost,
+  workspaceGrowthHost,
+  workspaceUnchangedSinceTip,
+  GROWTH_CHANGED_EVENT,
   type SnapshotChainNode,
   type CreateSnapshotOptions,
 } from '@/services/growth';
@@ -24,6 +28,7 @@ import {
 import { projectFolderExists, projectAllArtifacts } from '@/services/project-folder';
 import { flushIngestion } from '@/services/ingestion';
 import { disposeChatSession } from '@/services/chat-session';
+import { reconcilePersistedJob, type TurnJob } from '@/services/turn-jobs';
 import { captureWorkspacePreview } from '@/services/preview-capture';
 import { getPersona, getPersonaFingerprint, personaSnapshotOf } from '@/services/persona';
 import { DEFAULT_MODEL, resolveModel } from '@/ai/providers';
@@ -41,6 +46,11 @@ interface CruxState {
   // Streaming state
   isStreaming: boolean;
   streamingContent: string;
+
+  // Background Turn (B3): the latest job for this crux and messages queued behind it.
+  // Mirrored into crux.meta.turnJob / turnQueue by persistTurnState.
+  turnJob: TurnJob | null;
+  turnQueue: string[];
 
   // Publish state
   artifactsVersion: number;
@@ -73,6 +83,10 @@ interface CruxState {
   /** Shallow-merge a patch into crux.meta in memory (persist with saveMeta). */
   patchCruxMeta: (patch: Record<string, unknown>) => void;
   setStreaming: (streaming: boolean) => void;
+  setTurnJob: (job: TurnJob | null) => void;
+  setTurnQueue: (queue: string[]) => void;
+  /** Write turnJob + turnQueue into crux.meta and save — a relaunch reports the job, not loses it. */
+  persistTurnState: () => Promise<void>;
   appendStreamContent: (content: string) => void;
   clearStreamContent: () => void;
   /** Re-read the workspace's artifacts from the store (snapshot-view aware). */
@@ -119,7 +133,13 @@ interface CruxState {
   addGrowth: (growth: Dimension) => void;
   setSummary: (summary: CruxSummary) => void;
   setGrowthCreating: (creating: boolean) => void;
-  createSnapshot: (options?: CreateSnapshotOptions) => Promise<void>;
+  /**
+   * `ifChanged`: skip when the workspace already matches the branch tip — the
+   * dedupe for automatic snapshots (end-of-turn, per-step) so a model-taken
+   * snapshot is never followed by an identical one. Manual snapshots and the
+   * safety snapshots the Revert/Branch dialogs promise always land.
+   */
+  createSnapshot: (options?: CreateSnapshotOptions & { ifChanged?: boolean }) => Promise<void>;
 
   // Snapshot viewing actions
   viewSnapshot: (snapshotId: string, index: number) => Promise<void>;
@@ -140,6 +160,10 @@ interface CruxState {
 // Module-level: promises don't belong in serialized store state. Keyed by
 // artifact, a LIST because one artifact can have several waiting tool calls.
 const deleteResolvers = new Map<string, ((approved: boolean) => void)[]>();
+
+// The open workspace's GrowthHost registration (growth tools mutate the live
+// store, not persisted copies); replaced on load, dropped on reset.
+let unregisterGrowthHost: (() => void) | null = null;
 
 // Monotonic id of the latest loadCrux call — stale loads compare and bail.
 let loadGeneration = 0;
@@ -165,6 +189,8 @@ export const useCruxStore = create<CruxState>((set, get) => ({
   summary: null,
   isStreaming: false,
   streamingContent: '',
+  turnJob: null,
+  turnQueue: [],
   growths: [],
   growthCount: 0,
   artifactsVersion: 0,
@@ -260,9 +286,24 @@ export const useCruxStore = create<CruxState>((set, get) => ({
     const fullMessages = priorMessages.concat(workspaceMessages);
     const segmentStart = priorMessages.length;
 
+    // A Background Turn persisted as still running can only mean the app
+    // closed under it: report it as interrupted (with its last snapshot),
+    // and write that back so the next load agrees.
+    const persistedJob = (crux.meta?.turnJob as TurnJob | undefined) ?? null;
+    const turnJob = reconcilePersistedJob(persistedJob);
+    if (turnJob !== persistedJob) {
+      crux.meta = { ...crux.meta, turnJob };
+      await cruxService.update(id, { meta: crux.meta });
+    }
+    const turnQueue = Array.isArray(crux.meta?.turnQueue)
+      ? (crux.meta.turnQueue as unknown[]).filter((q): q is string => typeof q === 'string')
+      : [];
+
     if (!stillCurrent()) return;
     set({
       crux,
+      turnJob,
+      turnQueue,
       messages: fullMessages,
       messageSegmentStart: segmentStart,
       artifacts,
@@ -279,6 +320,25 @@ export const useCruxStore = create<CruxState>((set, get) => ({
         cachedInputTokens: 0,
       },
     });
+
+    // Growth tools (snapshot/restore/branch — B0) act on the live workspace
+    // while this crux is open: the store's own actions, the store's own
+    // safety snapshots.
+    unregisterGrowthHost?.();
+    unregisterGrowthHost = registerGrowthHost(
+      id,
+      workspaceGrowthHost(
+        {
+          cruxId: id,
+          getCrux: () => get().crux,
+          getGrowths: () => get().growths,
+          createSnapshot: (options) => get().createSnapshot(options),
+          revertToSnapshot: (snapshotId) => get().revertToSnapshot(snapshotId),
+          branchFromSnapshot: (snapshotId, label) => get().branchFromSnapshot(snapshotId, label),
+        },
+        { crux: cruxService, artifact },
+      ),
+    );
 
     // Desktop: the folder may have been deleted while the app was closed —
     // the watcher can't see that, so check on open (never cascades; the user
@@ -368,6 +428,21 @@ export const useCruxStore = create<CruxState>((set, get) => ({
 
   setStreaming: (streaming: boolean) => {
     set({ isStreaming: streaming });
+  },
+
+  setTurnJob: (job: TurnJob | null) => {
+    set({ turnJob: job });
+  },
+
+  setTurnQueue: (queue: string[]) => {
+    set({ turnQueue: queue });
+  },
+
+  persistTurnState: async () => {
+    const { crux, turnJob, turnQueue } = get();
+    if (!crux) return;
+    get().patchCruxMeta({ turnJob, turnQueue });
+    await get().saveMeta();
   },
 
   appendStreamContent: (content: string) => {
@@ -463,6 +538,8 @@ export const useCruxStore = create<CruxState>((set, get) => ({
     // the crux being closed, not to whichever pane happened to be mounted.
     const closing = get().crux?.id;
     if (closing) disposeChatSession(closing);
+    unregisterGrowthHost?.();
+    unregisterGrowthHost = null;
     // Answer any AI delete request still waiting on the user — clearing the
     // banners alone would leave the tool call (and the whole turn) hanging.
     cancelPendingDeletes();
@@ -474,6 +551,8 @@ export const useCruxStore = create<CruxState>((set, get) => ({
       summary: null,
       isStreaming: false,
       streamingContent: '',
+      turnJob: null,
+      turnQueue: [],
       growths: [],
       growthCount: 0,
       isCreatingGrowth: false,
@@ -712,6 +791,9 @@ export const useCruxStore = create<CruxState>((set, get) => ({
     const { crux, messages, messageSegmentStart, growths, growthCount } = get();
     if (!crux) return;
 
+    const deps = await defaultGrowthDeps();
+    if (options.ifChanged && (await workspaceUnchangedSinceTip(crux, growths, deps))) return;
+
     // Snapshot-with-screenshot: if a local preview is running (desktop),
     // screenshot its front page into preview.jpg first so the snapshot clone
     // carries a fresh thumbnail. Best-effort — never blocks the snapshot.
@@ -722,7 +804,6 @@ export const useCruxStore = create<CruxState>((set, get) => ({
       else get().addArtifact(previewShot);
     }
 
-    const deps = await defaultGrowthDeps();
     const result = await createSnapshotCore(
       {
         crux,
@@ -1064,5 +1145,16 @@ if (typeof window !== 'undefined') {
     if (crux && crux.id === cruxId) {
       useCruxStore.setState({ folderMissing: true });
     }
+  });
+}
+
+// A growth change announced from outside the store's own actions (a headless
+// host, another writer) — refresh the live timeline for the open crux.
+if (typeof window !== 'undefined') {
+  window.addEventListener(GROWTH_CHANGED_EVENT, (e: Event) => {
+    const cruxId = (e as CustomEvent<{ cruxId?: string }>).detail?.cruxId;
+    const s = useCruxStore.getState();
+    if (!s.crux || (cruxId && cruxId !== s.crux.id)) return;
+    s.loadGrowths().catch((err) => console.warn('Growth reload failed:', err));
   });
 }
