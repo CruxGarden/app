@@ -26,15 +26,78 @@ export interface ReleaseAsset {
   size?: number;
 }
 
+export type Platform = 'mac' | 'windows' | 'linux' | 'unknown';
+export type DownloadKind = 'dmg' | 'exe' | 'AppImage' | 'deb';
+
+/** One installer in a release, classified from its file name. */
+export interface DownloadOption {
+  platform: Exclude<Platform, 'unknown'>;
+  kind: DownloadKind;
+  /** Mac builds carry the chip; Windows and Linux ship x64 only. */
+  arch: MacArch;
+  url: string;
+  size: number | null;
+  /** Short label for a link: "Apple silicon", "Intel", "Windows", "Linux AppImage", "Debian / Ubuntu .deb" */
+  label: string;
+}
+
 export interface LatestDownload {
   version: string;
+  /** The primary button. */
   url: string;
+  platform: Exclude<Platform, 'unknown'>;
+  kind: DownloadKind;
   arch: MacArch;
   size: number | null;
-  /** False when `arch` is only a default (detection was inconclusive) — show every Mac build. */
+  /** False when the primary is only a default (no platform or chip detected) — show every build. */
   detected: boolean;
   /** all macOS DMGs in the release, for the "other Mac" link */
   all: { arch: MacArch; url: string }[];
+  /** Every installer in the release, for the "other platforms" links. */
+  options: DownloadOption[];
+}
+
+/**
+ * Which desktop OS the visitor is on, from the UA string alone — that much it
+ * does say. Phones and tablets are 'unknown' on purpose: there is nothing to
+ * install there, so the page offers every build instead of guessing.
+ */
+export function detectPlatform(
+  nav: { userAgent?: string } | undefined = globalThis.navigator as
+    | { userAgent?: string }
+    | undefined,
+): Platform {
+  const ua = nav?.userAgent ?? '';
+  if (/iPhone|iPad|iPod|Android|Mobile/i.test(ua)) return 'unknown';
+  if (/Windows NT/i.test(ua)) return 'windows';
+  if (/Macintosh|Mac OS X/i.test(ua)) return 'mac';
+  if (/Linux|X11|CrOS/i.test(ua)) return 'linux';
+  return 'unknown';
+}
+
+/** Classify a release asset by name; null for updater manifests, zips, blockmaps and the like. */
+export function classifyAsset(a: ReleaseAsset): DownloadOption | null {
+  const base = { url: a.browser_download_url, size: a.size ?? null };
+  if (/\.dmg$/i.test(a.name)) {
+    const arch: MacArch = /x64|intel/i.test(a.name) ? 'x64' : 'arm64';
+    return {
+      ...base,
+      platform: 'mac',
+      kind: 'dmg',
+      arch,
+      label: arch === 'arm64' ? 'Apple silicon' : 'Intel',
+    };
+  }
+  if (/\.exe$/i.test(a.name)) {
+    return { ...base, platform: 'windows', kind: 'exe', arch: 'x64', label: 'Windows' };
+  }
+  if (/\.AppImage$/i.test(a.name)) {
+    return { ...base, platform: 'linux', kind: 'AppImage', arch: 'x64', label: 'Linux AppImage' };
+  }
+  if (/\.deb$/i.test(a.name)) {
+    return { ...base, platform: 'linux', kind: 'deb', arch: 'x64', label: 'Debian / Ubuntu .deb' };
+  }
+  return null;
 }
 
 /** Map a Client Hints `architecture` value ("arm" / "x86") to a Mac arch. */
@@ -104,42 +167,61 @@ export async function detectMacArch(
   return archFromRenderer(readRenderer());
 }
 
-/** Pick the DMG for an arch from a GitHub release's assets (pure, testable). */
+/**
+ * Pick the primary installer for a visitor from a GitHub release's assets
+ * (pure, testable). Mac visitors get the DMG for their chip; Windows the
+ * installer; Linux the AppImage (the .deb stays one click away). When the
+ * platform is unknown, or the release has nothing for it, the primary is the
+ * Apple silicon DMG with `detected: false`, and the page shows every build.
+ */
 export function pickDownload(
   tagName: string,
   assets: ReleaseAsset[],
   arch: DetectedArch,
+  platform: Platform = 'mac',
 ): LatestDownload | null {
-  const dmgs = assets.filter((a) => /\.dmg$/i.test(a.name));
-  const all = dmgs
-    .map((a) => ({
-      arch: (/x64|intel/i.test(a.name) ? 'x64' : 'arm64') as MacArch,
-      url: a.browser_download_url,
-      size: a.size ?? null,
-    }))
-    .sort((a, b) => a.arch.localeCompare(b.arch));
-  if (all.length === 0) return null;
-  const matched = arch === 'unknown' ? undefined : all.find((a) => a.arch === arch);
-  const chosen = matched ?? all.find((a) => a.arch === 'arm64') ?? all[0]!;
+  const options = assets
+    .map(classifyAsset)
+    .filter((o): o is DownloadOption => o !== null)
+    .sort((a, b) => a.platform.localeCompare(b.platform) || a.arch.localeCompare(b.arch));
+  const macs = options.filter((o) => o.platform === 'mac');
+  const all = macs.map(({ arch: a, url }) => ({ arch: a, url }));
+  if (options.length === 0) return null;
+
+  let chosen: DownloadOption | undefined;
+  if (platform === 'mac' && arch !== 'unknown') chosen = macs.find((o) => o.arch === arch);
+  else if (platform === 'windows') chosen = options.find((o) => o.platform === 'windows');
+  else if (platform === 'linux')
+    chosen =
+      options.find((o) => o.kind === 'AppImage') ?? options.find((o) => o.platform === 'linux');
+  const detected = chosen !== undefined;
+  chosen ??= macs.find((o) => o.arch === 'arm64') ?? options[0]!;
   return {
     version: tagName.replace(/^v/, ''),
     url: chosen.url,
+    platform: chosen.platform,
+    kind: chosen.kind,
     arch: chosen.arch,
     size: chosen.size,
-    detected: matched !== undefined,
-    all: all.map(({ arch: a, url }) => ({ arch: a, url })),
+    detected,
+    all,
+    options,
   };
 }
 
 /** Latest desktop release from GitHub, or null when offline / no release yet. */
-export async function fetchLatestDownload(arch?: DetectedArch): Promise<LatestDownload | null> {
+export async function fetchLatestDownload(
+  arch?: DetectedArch,
+  platform: Platform = detectPlatform(),
+): Promise<LatestDownload | null> {
   try {
     const res = await fetch(LATEST_RELEASE_API, {
       headers: { Accept: 'application/vnd.github+json' },
     });
     if (!res.ok) return null;
     const body = (await res.json()) as { tag_name?: string; assets?: ReleaseAsset[] };
-    return pickDownload(body.tag_name ?? '', body.assets ?? [], arch ?? (await detectMacArch()));
+    const macArch = arch ?? (platform === 'mac' ? await detectMacArch() : 'unknown');
+    return pickDownload(body.tag_name ?? '', body.assets ?? [], macArch, platform);
   } catch {
     return null;
   }
