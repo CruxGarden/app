@@ -13,6 +13,7 @@
     "desktop:dev": "./scripts/desktop.sh --dev",
     "desktop:rebuild": "./scripts/desktop.sh --rebuild",
     "desktop:selftest": "./scripts/desktop.sh --selftest",
+    "release": "node scripts/release.mjs",
     "lint": "eslint .",
     "format": "prettier --write \"src/**/*.{ts,tsx,css}\"",
     "format:check": "prettier --check \"src/**/*.{ts,tsx,css}\"",

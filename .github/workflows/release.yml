@@ -55,6 +55,31 @@ jobs:
                  "Bump the version (npm version in electron/) and re-tag."
             exit 1
           fi
+      - name: Wait for CI on this commit to be green
+        if: steps.mode.outputs.publish == 'always'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # A tag can be pushed the moment its commit lands, before CI has run on it.
+          # Wait for the CI workflow on this exact commit; refuse to release on red.
+          for i in $(seq 1 60); do
+            runs=$(gh run list --repo "$GITHUB_REPOSITORY" --workflow CI --commit "$GITHUB_SHA" \
+                     --json status,conclusion,url --limit 10)
+            if echo "$runs" | jq -e 'map(select(.conclusion == "success")) | length > 0' >/dev/null; then
+              echo "CI is green on $GITHUB_SHA"; exit 0
+            fi
+            if echo "$runs" | jq -e 'map(select(.status == "completed" and .conclusion != "success" and .conclusion != "cancelled")) | length > 0' >/dev/null; then
+              echo "::error::CI failed on $GITHUB_SHA — fix main, then re-tag."
+              echo "$runs" | jq -r '.[] | "\(.status) \(.conclusion // "-") \(.url)"'
+              exit 1
+            fi
+            if [[ "$runs" == "[]" && $i -gt 6 ]]; then
+              echo "::error::No CI run found for $GITHUB_SHA after 3 minutes. Tag a commit on main that CI has seen."
+              exit 1
+            fi
+            echo "CI not finished yet (attempt $i/60), waiting 30s…"; sleep 30
+          done
+          echo "::error::CI did not finish within 30 minutes."; exit 1
       - name: Create the draft release once
         if: steps.mode.outputs.publish == 'always'
         env:
