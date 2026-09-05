@@ -3,6 +3,11 @@
   "version": "1.0.0",
   "description": "Crux Garden — a local-first creative workspace: talk to an AI, make something, publish it.",
   "license": "MIT",
+  "author": {
+    "name": "Crux Garden",
+    "email": "keeper@crux.garden"
+  },
+  "homepage": "https://crux.garden",
   "main": "dist/main.js",
   "scripts": {
     "build": "tsc",
