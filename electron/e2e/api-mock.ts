@@ -280,7 +280,6 @@ export async function startMockApi(): Promise<MockApi> {
     const PLAN_LIMITS: Record<string, [number, number, number]> = {
       free: [1073741824, 1073741824, 100000],
       grower: [10737418240, 26843545600, 1000000],
-      gardener: [53687091200, 268435456000, 10000000],
     };
     const planOf = (id: string) => ({
       id,
@@ -305,7 +304,7 @@ export async function startMockApi(): Promise<MockApi> {
         provider: 'mock',
         instant: true,
         trialDays: 0,
-        plans: ['free', 'grower', 'gardener'].map((id) => ({
+        plans: ['free', 'grower'].map((id) => ({
           plan: planOf(id),
           prices:
             id === 'free'
@@ -314,13 +313,13 @@ export async function startMockApi(): Promise<MockApi> {
                   {
                     interval: 'month',
                     priceId: `price_${id}_m`,
-                    amount: id === 'grower' ? 500 : 1500,
+                    amount: 500,
                     currency: 'usd',
                   },
                   {
                     interval: 'year',
                     priceId: `price_${id}_y`,
-                    amount: id === 'grower' ? 5000 : 15000,
+                    amount: 5000,
                     currency: 'usd',
                   },
                 ],

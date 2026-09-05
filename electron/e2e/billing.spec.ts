@@ -30,7 +30,7 @@ test.describe('billing (mocked API)', () => {
       await expect(plan.getByTestId('plan-status')).toContainText('Free');
       await expect(plan.getByTestId('plan-card-grower')).toContainText(/5(\.00)?\s*\/\s*mo/);
       await plan.getByRole('button', { name: 'Yearly' }).click();
-      await expect(plan.getByTestId('plan-card-gardener')).toContainText(/150(\.00)?\s*\/\s*yr/);
+      await expect(plan.getByTestId('plan-card-grower')).toContainText(/50(\.00)?\s*\/\s*yr/);
       await plan.getByRole('button', { name: 'Monthly' }).click();
 
       await plan
@@ -40,9 +40,6 @@ test.describe('billing (mocked API)', () => {
       await expect(plan.getByTestId('plan-status')).toContainText('Grower', { timeout: 15_000 });
       await expect(plan.getByTestId('plan-status')).toContainText('renews');
       await expect(plan.getByTestId('plan-card-grower')).toContainText('Current plan');
-      await expect(plan.getByTestId('plan-card-gardener')).toContainText(
-        'Switch in Manage billing',
-      );
       await expect(plan.getByRole('button', { name: 'Manage billing' })).toBeVisible();
       expect(api.state.billing.checkouts).toBe(1);
 
