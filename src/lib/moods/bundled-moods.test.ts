@@ -7,9 +7,9 @@ import { GARDEN_DARK } from './garden-dark';
 import { tokenChoices } from './token-groups';
 
 describe('bundled Moods', () => {
-  it('ships sixteen complete, valid packages with distinct ids', () => {
-    expect(BUNDLED_MOODS).toHaveLength(16);
-    expect(new Set(BUNDLED_MOODS.map((m) => m.id)).size).toBe(16);
+  it('ships seventeen complete, valid packages with distinct ids', () => {
+    expect(BUNDLED_MOODS).toHaveLength(17);
+    expect(new Set(BUNDLED_MOODS.map((m) => m.id)).size).toBe(17);
     for (const m of BUNDLED_MOODS) {
       const ok = validateMoodPackage(JSON.parse(JSON.stringify(m)));
       expect(ok, `${m.id} validates`).toBeTruthy();
@@ -33,7 +33,7 @@ describe('bundled Moods', () => {
     }
   });
 
-  it('is not sixteen palettes on one layout: shape, type and motion differ', () => {
+  it('is not seventeen palettes on one layout: shape, type and motion differ', () => {
     const radii = new Set(BUNDLED_MOODS.map((m) => m.theme.overrides.radius ?? GARDEN_DARK.radius));
     const fonts = new Set(
       BUNDLED_MOODS.map((m) => m.theme.overrides.fontDisplay ?? GARDEN_DARK.fontDisplay),
@@ -91,7 +91,17 @@ describe('bundled Moods', () => {
     expect(soft.paneBorderWidth).toBe('0px');
     expect(soft.cardBorderStyle).toBe('none');
     expect(soft.paneHeaderShape).toBe('underline');
-    expect(BUNDLED_MOODS.at(-1)?.id).toBe('soft-serve');
+    // Soft Serve Night is the same silhouette after dark: navy ground, cream titles, coral kept
+    const night = bundledMood('soft-serve-night')!.theme.overrides;
+    expect(night.paneBorderStyle).toBe('none');
+    expect(night.paneBorderWidth).toBe('0px');
+    expect(night.cardBorderStyle).toBe('none');
+    expect(night.paneHeaderShape).toBe('underline');
+    expect(night.cardRadius).toBe(soft.cardRadius);
+    expect(night.paneHeaderLabelWeight).toBe(soft.paneHeaderLabelWeight);
+    expect(night.motionEnterBubble).toBe(soft.motionEnterBubble);
+    expect(bundledMood('soft-serve-night')!.theme.section).toBe('Dark');
+    expect(BUNDLED_MOODS.at(-1)?.id).toBe('soft-serve-night');
   });
 
   it('ships mixes already inside every parameter range (validateMix is the identity)', () => {
