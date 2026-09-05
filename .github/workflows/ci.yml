@@ -24,7 +24,7 @@ jobs:
             package-lock.json
             electron/package-lock.json
       - run: npm ci
-      - run: npm run verify           # tsc + eslint + vitest + vite build — the same gate the agent runs
+      - run: npm run verify # tsc + eslint + vitest + vite build — the same gate the agent runs
       - run: npm ci
         working-directory: electron
       - run: npm run verify
@@ -82,6 +82,8 @@ jobs:
         working-directory: electron
       - run: npx playwright install --with-deps chromium
         working-directory: electron
+      # Ubuntu 24.04 AppArmor blocks Electron's user-namespace sandbox; allow it for this run
+      - run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0 || true
       - run: xvfb-run -a npx playwright test e2e/smoke.spec.ts e2e/files.spec.ts e2e/settings.spec.ts e2e/paths.unit.spec.ts e2e/updater.unit.spec.ts
         working-directory: electron
       - uses: actions/upload-artifact@v4

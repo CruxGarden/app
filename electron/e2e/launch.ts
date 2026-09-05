@@ -21,7 +21,12 @@ export async function launchApp(
   env.CRUX_GARDEN_ROOT = join(dir, 'garden');
   Object.assign(env, opts.env);
 
-  const app = await electron.launch({ args: ['.'], cwd: join(__dirname, '..'), env });
+  // Ubuntu runners (24.04+) restrict unprivileged user namespaces, so Chromium's
+  // sandbox cannot start and firstWindow() times out. CI on Linux runs unsandboxed;
+  // the sandbox is exercised by the macOS gate and by every developer run.
+  const args = ['.'];
+  if (process.platform === 'linux' && process.env.CI) args.push('--no-sandbox');
+  const app = await electron.launch({ args, cwd: join(__dirname, '..'), env });
   const page = await app.firstWindow();
   await page.waitForLoadState('domcontentloaded');
   return { app, page, dir };
