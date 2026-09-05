@@ -1,10 +1,13 @@
-/* The Round (/play). A calm terminal program: one monospace face, the voice in
-   phosphor at full brightness, the interface in a cool grey one step smaller.
-   The palette, face and cursor come from global.css (which says why the spec's
-   serif/sans rule was set aside — a terminal has one face). Almost no motion:
-   the block cursor blinks while the voice composes or types, the clock's colon
-   blinks while the clock runs, and nothing else moves. Mobile-first: one
-   column, the voice on top, the question/guess bar pinned to the bottom. */
+/* The Round (/play), in Soft Serve: the blush page, one white card with 24px
+   corners and no border, the voice as the biggest boldest text in it, the
+   interface smaller and grey, readouts as a row of soft pills in the card
+   head, hairlines between the turns. Palette, type, pills, buttons and the
+   cursor come from global.css (which says why the spec's serif/sans rule was
+   set aside). Motion, all of it: the typing, the cursor's blink, a 2px nudge
+   on the guess field when a guess is wrong, and one 200ms fade when a card
+   appears — nothing under reduced motion. Mobile-first: one column, cards
+   edge-to-edge with 12px gutters, the ask/guess bar pinned to the bottom on a
+   blurred card-coloured sheet. */
 
 .round-app {
   display: flex;
@@ -16,188 +19,245 @@
   font-size: var(--ui);
 }
 
-/* Boot: a dark screen, one cursor, then the banner types — everything else is
-   already laid out underneath so nothing jumps when the screen comes up. */
+/* The one fade: a card appearing */
+@keyframes fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+.round-card,
+.reveal,
+.connect-card {
+  animation: fade 200ms ease-out;
+}
+/* The one flourish: a wrong guess nudges the guess field, 2px, 120ms */
+@keyframes nudge {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  33% {
+    transform: translateX(-2px);
+  }
+  66% {
+    transform: translateX(2px);
+  }
+}
+.round-bar .guess input[data-nudge='true'] {
+  animation: nudge 120ms ease-in-out;
+}
+@media (prefers-reduced-motion: reduce) {
+  .round-card,
+  .reveal,
+  .connect-card,
+  .round-bar .guess input[data-nudge='true'] {
+    animation: none;
+  }
+}
+
+/* Boot: the card with one cursor, then the banner types in coral — everything
+   else is already laid out underneath so nothing jumps when the screen comes up. */
 .round-app.booting .round-top,
-.round-app.booting .round-voice > :not(.banner),
+.round-app.booting .card-head > :not(.banner),
+.round-app.booting .round-voice,
 .round-app.booting .round-bar,
-.round-app.booting .round-foot {
+.round-app.booting .bar-foot {
   visibility: hidden;
 }
 
-/* ── Top: shelf, toggles | readouts ── */
+/* ── Top: the shelf | the corner (sound pill, theme toggle) ── */
 .round-top {
-  position: sticky;
-  top: 0;
-  z-index: 2;
   display: flex;
   justify-content: space-between;
   align-items: center;
   gap: 1rem;
-  min-height: 2.75rem;
-  padding: 0.35rem 0;
-  background: var(--bg);
-  border-bottom: 1px solid var(--rule);
-  font-size: 0.75rem;
+  min-height: var(--tap);
+  padding: 0.75rem 0 0.5rem;
   color: var(--muted);
 }
-.round-top .left {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  min-width: 0;
-}
 .round-top .shelf-link {
-  color: var(--text);
-  white-space: nowrap;
-  min-height: var(--tap);
   display: inline-flex;
   align-items: center;
+  min-height: var(--tap);
+  min-width: 0;
+  color: var(--text);
+  font-weight: 800;
+  letter-spacing: -0.02em;
   text-decoration: none;
+  white-space: nowrap;
 }
 .round-top .shelf-link:hover {
-  text-decoration: underline;
+  color: var(--accent);
 }
-.corner {
-  display: flex;
-  gap: 0.25rem;
-}
-/* On a phone the header is the shelf and the readouts; the toggles sit in the bar's foot
-   while the round is open and at the foot of the reveal after. (The island is capped at
-   the reading measure, so this keys on the viewport, not the component's width.) */
+/* Which AI is connected, and the way to change it — quiet, under the bar or the reveal */
 .bar-foot {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-end;
   gap: 1rem;
+  padding: 0.25rem 0 0.5rem;
 }
-.bar-foot button.toggle {
-  background: none;
-  border: 0;
-  padding: 0 0.5rem;
+.bar-foot:empty {
+  display: none;
 }
-@media (max-width: 39.99rem) {
-  .round-top .corner {
-    display: none;
-  }
+.round-foot {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--muted);
 }
-@media (min-width: 40rem) {
-  .bar-foot .corner {
-    display: none;
-  }
-  .bar-foot:not(:has(.round-foot)) {
-    display: none;
-  }
+.round-foot button.link {
+  min-height: 0;
+  font-size: inherit;
+  font-weight: 600;
+  color: var(--muted);
 }
 
-/* The readouts: fixed-width digits, nothing shifts as they change */
+/* ── The card: content-height, like the reference; the bar takes what is left ── */
+.round-card {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 12px;
+}
+.round-card .card-head {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem 1rem;
+}
+/* The banner: the game and the question, heavy. It types in coral and settles to the text colour. */
+.card-head .banner {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+  color: var(--text);
+}
+.round-app[data-boot='dark'] .banner,
+.round-app[data-boot='title'] .banner {
+  color: var(--accent);
+}
+/* The settle — coral to the text colour — is a transition only for the beat after it happens,
+   so a theme switch changes colours at once */
+.card-head .banner[data-settling='true'],
+.reveal h3.who[data-settling='true'] {
+  transition: color 600ms ease-out;
+}
+
+/* The readouts: soft pills, fixed-width digits so nothing shifts as they change */
 .status {
   display: flex;
-  gap: 1rem;
-  align-items: baseline;
+  align-items: center;
+  gap: 0.4rem;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
 .readout {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2rem;
+  padding: 0 0.75rem;
+  border-radius: var(--pill);
+  background: var(--field);
   color: var(--text);
-  letter-spacing: 0.02em;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
 }
 .readout.qleft {
   color: var(--muted);
 }
-.readout.clock .colon {
-  animation: blink 1s steps(1, end) infinite;
+/* A point gone: the pill goes coral for one beat */
+.readout.points[data-drop='true'] {
+  background: var(--accent);
+  color: var(--on-accent);
 }
-/* Holding: composing, typing, over — the colon stands still */
-.readout.clock.hold .colon {
-  animation: none;
-}
+/* Holding: composing, typing, over — the clock dims */
 .readout.clock.hold {
   color: var(--muted);
-}
-@media (prefers-reduced-motion: reduce) {
-  .readout.clock .colon {
-    animation: none;
-  }
 }
 
 /* ── The voice column ── */
 .round-voice {
   flex: 1 1 auto;
-  padding: 1rem 0 1rem;
-  line-height: 1.65;
-}
-.round-voice .banner {
-  margin: 0 0 1.25rem;
-  color: var(--muted);
-  font-size: var(--ui);
+  padding: 0.25rem 0 0.5rem;
 }
 .round-voice p {
-  margin: 0 0 1.1rem;
+  margin: 0 0 1rem;
 }
 .round-voice .voice {
   font-size: var(--voice-size);
+  font-weight: 600;
+  line-height: 1.3;
+  letter-spacing: -0.01em;
 }
 .round-voice .opening {
-  font-size: calc(var(--voice-size) * 1.05);
+  margin-bottom: 1.25rem;
+}
+/* A hairline between the turns; the player's line is interface */
+.round-voice .turn {
+  padding-top: 1rem;
+  border-top: 1px solid var(--hairline);
 }
 .round-voice .you {
+  margin: 0 0 0.5rem;
   color: var(--muted);
-  margin: 1.5rem 0 0.5rem;
+  font-size: var(--ui);
 }
 .round-voice .you strong {
-  font-weight: 600;
-  color: var(--text);
-}
-.round-voice .turn .you::before {
-  content: '> ';
-  color: var(--rule-strong);
+  font-weight: 700;
 }
 .guess-line {
+  margin: 0 0 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--hairline);
   color: var(--muted);
-  margin: 0.5rem 0 1.1rem;
 }
 .guess-line .label {
   color: var(--text);
-  font-weight: 600;
+  font-weight: 700;
 }
 .guess-line.wrong .cost {
-  color: var(--muted);
-  margin-left: 0.35rem;
+  display: inline-block;
+  margin-left: 0.5rem;
+  padding: 0 0.5rem;
+  border-radius: var(--pill);
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: 0.75rem;
+  font-weight: 700;
 }
 .guess-line.right .label {
-  color: var(--voice);
+  color: var(--success);
 }
-
-.note {
-  color: var(--muted);
+.round-voice .note {
   margin: 0 0 0.75rem;
 }
-.note.error {
-  color: var(--error);
-}
-button.link {
-  background: none;
-  border: 0;
-  padding: 0;
-  color: var(--text);
-  font: inherit;
-  cursor: pointer;
-  text-decoration: underline;
-  min-height: var(--tap);
-}
 
-/* ── Bottom bar: ask, guess, search, give up ── */
+/* ── Bottom bar: ask, guess, search, give up — a blurred sheet pinned to the bottom ── */
 .round-bar {
   position: sticky;
   bottom: 0;
   z-index: 2;
-  background: var(--bg);
-  border-top: 1px solid var(--rule);
-  padding: 0.6rem 0 max(0.6rem, env(safe-area-inset-bottom));
+  margin: 0 calc(-1 * var(--gutter));
+  padding: 0.75rem var(--gutter) max(0.75rem, env(safe-area-inset-bottom));
+  border-radius: var(--radius-card) var(--radius-card) 0 0;
+  background: color-mix(in srgb, var(--card) 86%, transparent);
+  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(16px);
+  box-shadow: 0 -8px 32px rgba(60, 30, 20, 0.06);
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
+  margin-top: auto; /* pinned to the bottom of the screen, whatever the card's height */
+}
+:root[data-theme='dark'] .round-bar {
+  box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.4);
 }
 .round-bar form {
   display: flex;
@@ -207,18 +267,19 @@ button.link {
 .round-bar input,
 .connect-form input,
 .sign-in input,
-.search-panel input {
+.search-panel input,
+.reveal .markdown {
   flex: 1 1 auto;
   min-width: 0;
   min-height: var(--tap);
-  padding: 0 0.75rem;
+  padding: 0 1rem;
+  border: 0;
+  border-radius: var(--radius);
+  background: var(--field);
+  color: var(--text);
   font: inherit;
   font-size: var(--ui);
-  color: var(--bright);
-  background: var(--field);
-  border: 1px solid var(--rule-strong);
-  border-radius: 2px;
-  caret-color: var(--voice);
+  caret-color: var(--accent);
 }
 .round-bar input::placeholder,
 .connect-form input::placeholder,
@@ -226,88 +287,30 @@ button.link {
 .search-panel input::placeholder {
   color: var(--muted);
 }
-.round-bar input:focus,
-.connect-form input:focus,
-.sign-in input:focus,
-.search-panel input:focus {
-  outline: 1px solid var(--voice);
+.round-bar input:focus-visible,
+.connect-form input:focus-visible,
+.sign-in input:focus-visible,
+.search-panel input:focus-visible,
+.reveal .markdown:focus-visible {
+  outline: 3px solid var(--ring);
   outline-offset: 0;
-  border-color: var(--voice);
 }
-.round-bar button,
-.connect-form button,
-.sign-in button,
-.search-panel button,
-.after button {
-  min-height: var(--tap);
-  padding: 0 0.9rem;
-  font: inherit;
-  font-size: var(--ui);
-  color: var(--text);
-  background: var(--field);
-  border: 1px solid var(--rule-strong);
-  border-radius: 2px;
-  cursor: pointer;
-  white-space: nowrap;
-}
-.round-bar button:hover:not(:disabled),
-.connect-form button:hover:not(:disabled),
-.sign-in button:hover:not(:disabled),
-.search-panel button:hover:not(:disabled),
-.after button:hover:not(:disabled) {
-  color: var(--bright);
-  border-color: var(--muted);
-}
-.round-bar button:disabled,
-.connect-form button:disabled,
-.sign-in button:disabled,
-.search-panel button:disabled {
-  opacity: 0.4;
-  cursor: default;
-}
-.round-bar button.quiet,
-.search-panel button.quiet,
-.after button.quiet {
-  color: var(--muted);
-  background: none;
-  border-color: transparent;
-}
-.round-bar button.active {
-  border-color: var(--voice);
-  color: var(--voice);
-}
-button.primary,
-.after button.primary {
-  background: var(--voice);
-  color: var(--bg);
-  border-color: var(--voice);
-  font-weight: 600;
-}
-button.primary:hover:not(:disabled),
-.after button.primary:hover:not(:disabled) {
-  color: var(--bg);
-  border-color: var(--voice);
-  filter: brightness(1.08);
-}
-
-/* Guesses cost; questions don't — the guess field wears a different border */
-.round-bar .guess input {
-  border-color: var(--voice-dim);
-  border-style: dashed;
+.round-bar input:disabled {
+  opacity: 0.6;
 }
 .round-bar .guess .cost {
-  font-size: 0.7rem;
+  font-size: 0.75rem;
   color: var(--muted);
   white-space: nowrap;
 }
 .round-bar .moves {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 0.25rem;
 }
 .round-bar .side {
   display: flex;
-  gap: 0.5rem;
+  gap: 0.25rem;
   justify-content: space-between;
 }
 @media (min-width: 40rem) {
@@ -315,7 +318,7 @@ button.primary:hover:not(:disabled),
     flex-direction: row;
     align-items: center;
     justify-content: space-between;
-    gap: 1.25rem;
+    gap: 1rem;
   }
   .round-bar .guess {
     flex: 1 1 auto;
@@ -327,10 +330,13 @@ button.primary:hover:not(:disabled),
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
-  padding: 0.5rem 0 0.75rem;
-  border-bottom: 1px solid var(--rule);
+  padding: 0.25rem 0 0.75rem;
+  border-bottom: 1px solid var(--hairline);
   max-height: 55dvh;
   overflow-y: auto;
+}
+.search-panel .note {
+  margin: 0;
 }
 .search-panel .keep {
   flex-wrap: wrap;
@@ -344,156 +350,163 @@ button.primary:hover:not(:disabled),
   padding: 0;
 }
 .search-panel .kept li {
-  padding: 0.25rem 0;
+  padding: 0.5rem 0;
+  border-top: 1px solid var(--hairline);
 }
-.search-panel .kept li::before {
-  content: '· ';
-  color: var(--muted);
+.search-panel .kept a {
+  font-weight: 600;
 }
 .search-panel .close {
   align-self: flex-start;
 }
 
-/* ── The reveal ── */
+/* ── The reveal: its own card ── */
 .reveal {
-  margin-top: 1.75rem;
-  padding-top: 1.25rem;
-  border-top: 1px solid var(--rule);
+  margin-bottom: 12px;
 }
 .reveal .outcome {
+  margin: 0 0 0.5rem;
   color: var(--muted);
+  font-weight: 600;
 }
-.reveal .who {
-  font-size: calc(var(--voice-size) * 1.25);
-  font-weight: 400;
+/* "This was …": resolves in coral, then settles to the text colour */
+.reveal h3.who {
   margin: 0 0 1rem;
-  line-height: 1.4;
+  font-size: calc(var(--voice-size) * 1.2);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+  color: var(--text);
 }
-/* The blocks resolve to letters; same colour before and after — the resolve is the reward */
-.reveal .who .secret {
-  letter-spacing: 0.02em;
+.reveal h3.who:has(.secret[data-resolved='false']) {
+  color: var(--accent);
+}
+.reveal h3.who .secret {
+  letter-spacing: 0.01em;
+}
+.reveal .voice {
+  font-size: var(--voice-size);
+  font-weight: 600;
+  line-height: 1.3;
+  letter-spacing: -0.01em;
 }
 .reveal h4,
 .board h4 {
-  display: flex;
-  align-items: center;
-  gap: 0.75ch;
-  font-size: 0.75rem;
-  font-weight: 400;
-  letter-spacing: 0.04em;
-  text-transform: lowercase;
+  margin: 1.5rem 0 0.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--hairline);
   color: var(--muted);
-  margin: 1.75rem 0 0.75rem;
-}
-.reveal h4::before,
-.board h4::before {
-  content: '──';
-  color: var(--rule-strong);
-}
-.reveal h4::after,
-.board h4::after {
-  content: '';
-  flex: 1;
-  border-top: 1px solid var(--rule);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
 }
 .reveal .misses ul {
   list-style: none;
+  margin: 0 0 1rem;
   padding: 0;
-  margin: 0 0 1.25rem;
 }
 .reveal .misses li {
-  margin-bottom: 0.6rem;
-  padding-left: 2ch;
-  text-indent: -2ch;
+  padding: 0.6rem 0;
+  border-top: 1px solid var(--hairline);
+  font-size: 1.05rem;
+  line-height: 1.45;
 }
-.reveal .misses li::before {
-  content: '✗ ';
-  color: var(--muted);
+.reveal .misses li:first-child {
+  border-top: 0;
+  padding-top: 0;
 }
 .reveal .misses .guess-name {
-  font-weight: 600;
-  color: var(--text);
+  font-weight: 800;
+}
+.reveal .misses .why {
+  font-weight: 500;
 }
 .reveal .parting {
-  color: var(--voice-dim);
+  color: var(--muted);
 }
 .reveal .after {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 0.5rem;
-  margin: 1rem 0 1rem;
+  margin: 1rem 0;
 }
 .reveal .after .hint {
-  font: inherit;
-  font-size: 0.7rem;
+  padding: 0.15rem 0.5rem;
+  border-radius: 6px;
+  background: var(--field);
   color: var(--muted);
-  padding: 0 0.4rem;
-  border: 1px solid var(--rule);
-  border-radius: 2px;
+  font: inherit;
+  font-size: 0.75rem;
+  font-weight: 600;
 }
 .reveal .after-voice {
   margin-top: 1.5rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--hairline);
 }
-/* The share block: the only trophy, in a dashed box, no spoiler in it */
+/* The share block: the only trophy — a dashed coral box, no spoiler in it */
 .reveal .share {
   display: inline-block;
+  max-width: 100%;
   margin: 0;
-  padding: 0.75rem 1rem;
-  font: inherit;
-  line-height: 1.6;
+  padding: 0.85rem 1.1rem;
+  border: 2px dashed var(--accent);
+  border-radius: var(--radius);
   color: var(--text);
-  border: 1px dashed var(--rule-strong);
-  border-radius: 2px;
+  font: inherit;
+  font-weight: 600;
+  line-height: 1.6;
   white-space: pre;
   overflow-x: auto;
-  max-width: 100%;
 }
 .reveal .next {
   margin: 0 0 1rem;
 }
 .reveal .markdown {
   width: 100%;
-  font: inherit;
-  font-size: 0.75rem;
-  line-height: 1.45;
-  color: var(--text);
-  background: var(--field);
-  border: 1px solid var(--rule-strong);
-  border-radius: 2px;
-  padding: 0.75rem;
   margin: 0 0 1rem;
+  padding: 0.75rem 1rem;
+  font-size: 0.8125rem;
+  line-height: 1.45;
   resize: vertical;
 }
 
 /* ── Today's board ── */
 .board .you {
-  color: var(--text);
   margin: 0 0 0.75rem;
+  font-weight: 600;
 }
 .board-table {
   width: 100%;
-  border-collapse: collapse;
   margin: 0 0 1rem;
+  border-collapse: collapse;
   font-variant-numeric: tabular-nums;
 }
 .board-table th,
 .board-table td {
+  padding: 0.5rem 0.25rem;
+  border-bottom: 1px solid var(--hairline);
   text-align: left;
-  padding: 0.35rem 0.5ch;
-  border-bottom: 1px solid var(--rule);
+}
+.board-table tr:last-child td {
+  border-bottom: 0;
 }
 .board-table th {
-  font-size: 0.7rem;
-  font-weight: 400;
-  letter-spacing: 0.04em;
-  text-transform: lowercase;
   color: var(--muted);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
 }
 .board-table td:first-child,
 .board-table th:first-child {
-  width: 3ch;
+  width: 2.5rem;
   color: var(--muted);
+}
+.board-table td:nth-child(2) {
+  font-weight: 600;
 }
 .board-table td:nth-child(3),
 .board-table td:nth-child(4),
@@ -506,44 +519,47 @@ button.primary:hover:not(:disabled),
   display: flex;
   gap: 0.5rem;
 }
+.sign-in .note {
+  margin: 0 0 0.75rem;
+}
 
-/* ── Connect your AI: one field, one button ── */
+/* ── Connect your AI: one field, one button, in a card ── */
 .connect .question {
-  margin: 2.5rem 0 1.5rem;
+  margin: 0 0 1rem;
+}
+.connect-card {
+  margin-top: 0.25rem;
 }
 .connect-form {
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
-  max-width: 32rem;
 }
 .connect-form h2 {
-  /* Plain words, as written — not the site's ruled section heading */
-  display: block;
   margin: 0;
-  font-size: var(--ui);
-  font-weight: 600;
-  letter-spacing: normal;
-  text-transform: none;
-  color: var(--bright);
-}
-.connect-form h2::before,
-.connect-form h2::after {
-  content: none;
+  font-size: 1.15rem;
 }
 .connect-form .get-key {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 0 1rem;
+  gap: 0.5rem;
   margin: 0;
   color: var(--muted);
 }
 .connect-form .get-key a {
-  min-height: var(--tap);
   display: inline-flex;
   align-items: center;
+  min-height: var(--tap);
+  padding: 0 0.9rem;
+  border-radius: var(--pill);
+  background: var(--field);
   color: var(--text);
+  font-weight: 600;
+  text-decoration: none;
+}
+.connect-form .get-key a:hover {
+  color: var(--accent);
 }
 .connect-form .row {
   display: flex;
@@ -556,25 +572,4 @@ button.primary:hover:not(:disabled),
   .connect-form .row {
     flex-direction: column;
   }
-}
-
-/* Which AI is connected, and the way to change it — quiet, in the interface */
-.round-foot {
-  margin: 0;
-  font-size: 0.7rem;
-  color: var(--muted);
-}
-/* Inside the bar every button is boxed; this one stays a link */
-.round-foot button.link {
-  min-height: 0;
-  padding: 0;
-  font-size: inherit;
-  color: var(--muted);
-  background: none;
-  border: 0;
-  text-decoration: underline;
-}
-.reveal + .round-foot,
-.round-voice + .round-foot {
-  margin: 0.5rem 0 1rem;
 }
