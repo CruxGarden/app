@@ -30,6 +30,7 @@
 
 import { utcDay } from './local-state';
 import type { KeyStore } from './store';
+import { MAX_SCORE } from '../game/round';
 
 export interface LeaderboardEntry {
   name: string;
@@ -267,7 +268,7 @@ export function clockOf(seconds: number): string {
 
 /** A score as the board will take it: 0–10 points, 0–330 seconds, whole numbers. */
 export function clampScore(score: Score): Score {
-  return { score: clampInt(score.score, 0, 10), seconds: clampInt(score.seconds, 0, 330) };
+  return { score: clampInt(score.score, 0, MAX_SCORE), seconds: clampInt(score.seconds, 0, 330) };
 }
 
 function clampInt(n: number, lo: number, hi: number): number {

@@ -181,6 +181,14 @@
 .readout.clock.hold {
   color: var(--muted);
 }
+/* The speed half of the score, draining with the clock */
+.readout.speed {
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+}
+.readout.speed.hold {
+  color: var(--muted);
+}
 
 /* ── The voice column ── */
 .round-voice {
@@ -368,6 +376,21 @@
   margin: 0 0 0.5rem;
   color: var(--muted);
   font-weight: 600;
+}
+/* The score and its two halves, under the outcome */
+.reveal .scoreline {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 1rem;
+  align-items: baseline;
+  margin: 0 0 0.75rem;
+  color: var(--muted);
+  font-size: 0.875rem;
+}
+.reveal .scoreline strong {
+  color: var(--text);
+  font-size: 1.25rem;
+  font-weight: 800;
 }
 /* "This was …": resolves in coral, then settles to the text colour */
 .reveal h3.who {

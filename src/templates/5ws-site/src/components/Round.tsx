@@ -40,7 +40,16 @@ import {
   useSyncExternalStore,
 } from 'react';
 import { hiddenFromEntry, parseShelf, pickEntry, type Shelf, type ShelfEntry } from '../game/shelf';
-import { durationSeconds, remainingMs, scoreOf, type Guess, type RoundState } from '../game/round';
+import {
+  MAX_SCORE,
+  durationSeconds,
+  remainingMs,
+  scoreBreakdown,
+  scoreOf,
+  speedBonusNow,
+  type Guess,
+  type RoundState,
+} from '../game/round';
 import { renderTranscriptMarkdown, transcriptOf } from '../game/transcript';
 import type { Reveal } from '../game/hidden';
 import { RoundSession } from '../lib/session';
@@ -847,6 +856,13 @@ function LiveRound({
               >
                 {formatClock(remainingMs(state))}
               </span>
+              <span
+                className={`readout speed${running ? ' running' : ' hold'}`}
+                data-testid="speed-bonus"
+                title="Speed bonus: fifty on the first second, zero at the buzzer. The other fifty is accuracy — five per wrong guess."
+              >
+                +{speedBonusNow(state)}
+              </span>
             </div>
           </header>
 
@@ -1292,6 +1308,7 @@ function RevealView({
       data-voice-done={voiceDone ? 'true' : 'false'}
     >
       {outcome && <p className="outcome">{outcome}</p>}
+      {state.status === 'won' && <ScoreLine state={state} />}
       {revealing || !reveal ? (
         <p className="voice">
           <Composing />
@@ -1456,7 +1473,7 @@ function After({
         day: daily ? state.startedAt.slice(0, 10) : null,
         status: state.status === 'open' ? 'gaveUp' : state.status,
         score: scoreOf(state),
-        total: state.config.points,
+        total: MAX_SCORE,
         seconds: durationSeconds(state),
         guesses: state.guesses,
         url: `${typeof location !== 'undefined' ? location.origin : ''}${base}play/`,
@@ -1665,6 +1682,26 @@ function Board({
       )}
       {status.kind === 'signed-out' && <SignIn site={site} onSignedIn={onSignedIn} />}
     </section>
+  );
+}
+
+/** The two halves of the score, so the next round has a strategy: fewer misses, or fewer seconds. */
+function ScoreLine({ state }: { state: RoundState }) {
+  const { accuracy, speed, total } = scoreBreakdown(state);
+  const misses = state.guesses.filter((g) => g.correct === false).length;
+  return (
+    <p className="scoreline" data-testid="score-line">
+      <strong>
+        {total}/{MAX_SCORE}
+      </strong>
+      <span className="part">
+        {accuracy} accuracy ·{' '}
+        {misses === 0 ? 'no misses' : `${misses} miss${misses === 1 ? '' : 'es'}`}
+      </span>
+      <span className="part">
+        {speed} speed · {durationSeconds(state)}s
+      </span>
+    </p>
   );
 }
 
