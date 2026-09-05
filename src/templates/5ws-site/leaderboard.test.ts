@@ -56,7 +56,7 @@ const entry = (name: string, score: number, seconds: number, at: string): Leader
 const ADA = entry('ada', 10, 74, `${DAY}T08:00:00.000Z`);
 const GRACE = entry('grace', 8, 121, `${DAY}T08:10:00.000Z`);
 
-describe('the board, as one common value the page maintains', () => {
+describe('the board, as one public value the page maintains', () => {
   it('normalizes what the store holds: sorted by score, then seconds, then post time; capped', () => {
     const board = normalizeBoard(
       {
@@ -124,14 +124,14 @@ describe('the board, as one common value the page maintains', () => {
     expect((await readBoard(store, DAY)).entries).toEqual([ADA]);
   });
 
-  it('postScore: read, add this name, sort, cap, write the day back as a common key, clamped', async () => {
+  it('postScore: read, add this name, sort, cap, write the day back as a public key, clamped', async () => {
     const { store, writes } = memoryStore({ [boardKey(DAY)]: { entries: [ADA, GRACE] } });
     const board = await postScore(store, DAY, 'tester', { score: 9.4, seconds: 80.6 });
     expect(board.entries.map((e) => e.name)).toEqual(['ada', 'tester', 'grace']);
     expect(rankOf(board, 'tester')).toBe(2);
     expect(writes).toHaveLength(1);
     expect(writes[0]!.key).toBe('leaderboard:2026-09-05');
-    expect(writes[0]!.mode).toBe('common');
+    expect(writes[0]!.mode).toBe('public');
     const written = writes[0]!.value as { entries: LeaderboardEntry[] };
     expect(written.entries.map((e) => e.name)).toEqual(['ada', 'tester', 'grace']);
     expect(written.entries[1]).toEqual({

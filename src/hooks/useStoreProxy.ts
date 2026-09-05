@@ -18,7 +18,7 @@ export function isPreviewOrigin(origin: string): boolean {
   return can(Capability.PreviewServer) && /^http:\/\/(127\.0\.0\.1|localhost)(:\d+)?$/.test(origin);
 }
 
-/** The preview's one visitor: the author — protected keys get a slot, common keys a writer. */
+/** The preview's one visitor: the author — always signed in, so every write has a writer. */
 function localVisitorId(): string | null {
   return useAppStore.getState().author?.id ?? null;
 }

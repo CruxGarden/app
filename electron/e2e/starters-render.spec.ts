@@ -72,9 +72,10 @@ type Entry = { name: string; score: number; seconds: number; at: string };
 /**
  * The API as the play page sees it: the email-code sign-in (and the profile
  * that names the account), and the crux's Crux Store — `leaderboard:<day>`
- * (mode `common`: the crux's one value, read by anyone, written with the
- * visitor's token; the page keeps one entry per username) and `played:<day>`
- * (mode `protected`: the visitor's own). Astro dev has no publish injection, so
+ * (mode `public`: the crux's one value, read by anyone, written with the
+ * visitor's token like every store write; the page keeps one entry per
+ * username) and `played:<day>` (mode `protected`: the visitor's own). Astro
+ * dev has no publish injection, so
  * the page is told its crux id and API origin the way the injection would.
  */
 async function withPlayApi(p: Page) {
@@ -84,7 +85,7 @@ async function withPlayApi(p: Page) {
     { name: 'ada', score: 10, seconds: 74, at: `${today}T08:00:00.000Z` },
     { name: 'grace', score: 8, seconds: 121, at: `${today}T08:10:00.000Z` },
   ];
-  const common: Record<string, unknown> = { [`leaderboard:${today}`]: { entries: others } };
+  const shared: Record<string, unknown> = { [`leaderboard:${today}`]: { entries: others } };
   const mine: Record<string, unknown> = {}; // the tester's protected keys
   await p.addInitScript(
     (cfg) => {
@@ -126,14 +127,18 @@ async function withPlayApi(p: Page) {
       if (req.method() === 'PUT') {
         const body = req.postDataJSON() as { value: unknown; mode?: string };
         const mode = body.mode ?? 'protected';
-        if (mode !== 'public' && !bearer)
-          return json(401, { statusCode: 401, message: 'Protected keys require authentication' });
+        // Every write needs an account, whatever the mode.
+        if (!bearer)
+          return json(401, {
+            statusCode: 401,
+            message: 'Writing to the store requires a signed-in account',
+          });
         writes.push({ key, mode, value: body.value, bearer });
         if (mode === 'protected') mine[key] = body.value;
-        else common[key] = body.value;
+        else shared[key] = body.value;
         return json(200, { value: body.value });
       }
-      if (key in common) return json(200, { value: common[key] });
+      if (key in shared) return json(200, { value: shared[key] });
       // protected: the visitor's own, or nothing
       return json(200, { value: bearer ? (mine[key] ?? null) : null });
     }
@@ -227,7 +232,7 @@ test.describe('starter templates render through astro dev', () => {
         p.evaluate(() => document.documentElement.scrollWidth);
 
       // The board is a key in the crux's own store — `leaderboard:<day>`, mode
-      // `common` — read by anyone. A published page gets its crux id + API origin
+      // `public` — read by anyone. A published page gets its crux id + API origin
       // from the publish injection (window.crux.publish); astro dev has no
       // injection, so stand both in and answer the store reads.
       const today = new Date().toISOString().slice(0, 10);
@@ -427,7 +432,7 @@ test.describe('starter templates render through astro dev', () => {
       await expect(play.getByRole('button', { name: 'Give up' })).toHaveCount(0); // nothing else on screen
 
       // Today's board: sign in with an email code, and the page adds the daily score under
-      // the account's username to the day's `leaderboard:` key (mode common, with the
+      // the account's username to the day's `leaderboard:` key (mode public, with the
       // token); `played:` (protected) records the counted round. Nothing was written before.
       await expect(play.getByText('Sign in with your email to join today’s board.')).toBeVisible();
       await expect(play.locator('.board-table tbody tr')).toHaveCount(2); // the board, read signed out
@@ -447,7 +452,7 @@ test.describe('starter templates render through astro dev', () => {
         /^\d:\d\d$/,
       ]);
       expect(api.writes.map((w) => [w.key, w.mode, w.bearer])).toEqual([
-        [`leaderboard:${utcDay()}`, 'common', 'test-access'],
+        [`leaderboard:${utcDay()}`, 'public', 'test-access'],
         [`played:${utcDay()}`, 'protected', 'test-access'],
       ]);
       const posted = (api.writes[0]!.value as { entries: Entry[] }).entries;

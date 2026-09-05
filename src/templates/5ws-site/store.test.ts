@@ -50,7 +50,7 @@ describe('storeFor: which way in', () => {
     expect(store.via).toBe('api');
 
     expect(await store.get('leaderboard:2026-09-05')).toEqual({ entries: [] });
-    await store.set('leaderboard:2026-09-05', { entries: [{ name: 'ada' }] }, 'common');
+    await store.set('leaderboard:2026-09-05', { entries: [{ name: 'ada' }] }, 'public');
 
     const calls = fetchFn.mock.calls as unknown as Array<[string, RequestInit]>;
     const getCall = calls[0]!;
@@ -61,7 +61,7 @@ describe('storeFor: which way in', () => {
     expect(putCall[1].method).toBe('PUT');
     expect(JSON.parse(String(putCall[1].body))).toEqual({
       value: { entries: [{ name: 'ada' }] },
-      mode: 'common',
+      mode: 'public',
     });
     expect((putCall[1].headers as Record<string, string>).Authorization).toBe('Bearer tok');
     expect((putCall[1].headers as Record<string, string>)['Content-Type']).toBe('application/json');

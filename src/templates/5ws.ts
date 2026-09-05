@@ -39,7 +39,7 @@ import siteRoundCss from './5ws-site/src/styles/round.css?raw';
  * key, kept in this browser, sent only to that provider). The engine is the
  * app's `src/game/` copied in verbatim; the daily figure is seeded by the UTC
  * day; a signed-in visitor's daily score goes to the crux's board — a key in
- * the crux's own Crux Store (`leaderboard:<day>`, mode `common`: the crux's one
+ * the crux's own Crux Store (`leaderboard:<day>`, mode `public`: the crux's one
  * value, readable by all, written with a sign-in; one entry per username by
  * the page's convention), with `played:<day>` (protected) marking the day's
  * counted round. No other backend; a fork carries its own board.
@@ -609,7 +609,7 @@ const day = (d: unknown) => String(d ?? '').slice(0, 10);
 <script>
   // ── Today's board ──
   // The day's board is a key in this crux's own store ('leaderboard:<day>',
-  // mode 'common': the crux's one value, readable by all, written with a sign-in).
+  // mode 'public': the crux's one value, readable by all, written with a sign-in).
   // The play page writes it; this page only reads, whichever way the store is
   // reachable — the API when published, the host frame in the preview.
   import { storeFor } from '../lib/store';

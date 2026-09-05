@@ -342,8 +342,9 @@ describe('5ws (ADR 0016)', () => {
     const lb = def.files.find((f) => f.path === 'src/lib/leaderboard.ts')!.content;
     expect(lb).toContain('`leaderboard:${day}`');
     expect(lb).toContain('`played:${day}`');
-    expect(lb).toContain("'common'");
+    expect(lb).toContain("'public'");
     expect(lb).toContain("'protected'");
+    expect(lb).not.toContain("'common'"); // the retired third bucket
     expect(lb).not.toContain('/leaderboard/');
   });
 });

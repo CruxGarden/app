@@ -75,9 +75,8 @@ export default function StorePane() {
       const { store } = getServices();
       const entry = entries.find((e) => e.key === key);
       if (!entry) return;
-      // The three buckets, in a cycle: open → per-user → common (see CONTEXT.md)
-      const newMode =
-        entry.mode === 'public' ? 'protected' : entry.mode === 'protected' ? 'common' : 'public';
+      // The two buckets: open ↔ per-user (see CONTEXT.md, "Crux Store modes")
+      const newMode = entry.mode === 'public' ? 'protected' : 'public';
       await store.set(crux.id, key, entry.value, newMode);
       await loadEntries();
     },
@@ -286,10 +285,8 @@ export default function StorePane() {
                       }`}
                       title={
                         entry.mode === 'public'
-                          ? 'Open: anyone can read and write'
-                          : entry.mode === 'common'
-                            ? 'Protected common: anyone reads, a connected account writes'
-                            : 'Protected user: per account, private'
+                          ? 'Open: anyone reads, a connected account writes'
+                          : 'Protected user: per account, private'
                       }
                     >
                       {entry.mode}
