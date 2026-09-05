@@ -1689,7 +1689,7 @@ export interface components {
              * @description A paid plan id
              * @enum {string}
              */
-            planId: "grower";
+            planId: "gardener";
             /** @enum {string} */
             interval: "month" | "year";
         };

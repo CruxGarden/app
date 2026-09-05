@@ -279,7 +279,7 @@ export async function startMockApi(): Promise<MockApi> {
     // ── billing (ADR 0012): mock provider — checkout "pays" instantly
     const PLAN_LIMITS: Record<string, [number, number, number]> = {
       free: [1073741824, 1073741824, 100000],
-      grower: [10737418240, 26843545600, 1000000],
+      gardener: [10737418240, 26843545600, 1000000],
     };
     const planOf = (id: string) => ({
       id,
@@ -304,7 +304,7 @@ export async function startMockApi(): Promise<MockApi> {
         provider: 'mock',
         instant: true,
         trialDays: 0,
-        plans: ['free', 'grower'].map((id) => ({
+        plans: ['free', 'gardener'].map((id) => ({
           plan: planOf(id),
           prices:
             id === 'free'
