@@ -24,6 +24,8 @@ import type {
   UpdateAuthorDto,
   CreateDimensionDto,
 } from './types';
+import type { CheckoutBody } from './billing';
+import type { AddDomainBody } from './domains';
 
 type Wire<K extends keyof components['schemas']> = components['schemas'][K];
 
@@ -55,6 +57,12 @@ export type _UpdateCrux = Assert<
 >;
 export type _CreateCruxNoStrays = Assert<NoExtraKeys<CreateCruxDto, Wire<'CreateCruxDto'>>>;
 export type _UpdateCruxNoStrays = Assert<NoExtraKeys<UpdateCruxDto, Wire<'UpdateCruxDto'>>>;
+
+// Billing and custom domains (ADR 0011/0012): the app builds these bodies by hand.
+export type _Checkout = Assert<Extends<CheckoutBody, Wire<'CheckoutDto'>>>;
+export type _CheckoutNoStrays = Assert<NoExtraKeys<CheckoutBody, Wire<'CheckoutDto'>>>;
+export type _AddDomain = Assert<Extends<AddDomainBody, Wire<'AddDomainDto'>>>;
+export type _AddDomainNoStrays = Assert<NoExtraKeys<AddDomainBody, Wire<'AddDomainDto'>>>;
 
 export type _CreateAuthor = Assert<Extends<CreateAuthorDto, Wire<'CreateAuthorDto'>>>;
 export type _UpdateAuthor = Assert<Extends<UpdateAuthorDto, Wire<'UpdateAuthorDto'>>>;

@@ -23,8 +23,13 @@ export async function list(cruxId: string): Promise<CustomDomain[]> {
   return data;
 }
 
+/** Body of POST /cruxes/:id/domains — asserted against the API contract in contract-check.ts. */
+export interface AddDomainBody {
+  hostname: string;
+}
 export async function add(cruxId: string, hostname: string): Promise<CustomDomain> {
-  const { data } = await client.post<CustomDomain>(`/cruxes/${cruxId}/domains`, { hostname });
+  const body: AddDomainBody = { hostname };
+  const { data } = await client.post<CustomDomain>(`/cruxes/${cruxId}/domains`, body);
   return data;
 }
 
