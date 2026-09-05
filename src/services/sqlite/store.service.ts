@@ -5,13 +5,19 @@ import { fromRow } from './helpers';
 
 /**
  * Key modes, chosen by the writer (the SDK's `set(key, value, { mode })`):
- * - `public` — one row per key, anyone reads and writes;
- * - `protected` — one row per (key, visitor), private to that visitor;
- * - `common` — one row per key belonging to the crux, read by anyone, written
- *   only by a signed-in visitor (here: the local user).
+ * - `public` — one row per key belonging to the crux, read by anyone;
+ * - `protected` — one row per (key, visitor), private to that visitor.
+ * Every write on the published store needs a signed-in account; in the
+ * preview the local user is always signed in, so this store does not ask.
  * Mirrors the API's Crux Store so the preview behaves like the published page.
  */
-export type StoreMode = 'public' | 'protected' | 'common';
+export type StoreMode = 'public' | 'protected';
+
+/** `common` (the 2026-09-05 third bucket) is `public` now; anything unknown is the default, `protected`. */
+export function normalizeStoreMode(mode: string | undefined | null): StoreMode {
+  if (mode === 'public' || mode === 'common') return 'public';
+  return 'protected';
+}
 
 export interface StoreEntry {
   id: string;
@@ -52,6 +58,7 @@ function parseValue(raw: string): unknown {
 function toStoreEntry(row: Record<string, unknown>): StoreEntry {
   const entry = fromRow<StoreEntry>(row);
   entry.value = typeof entry.value === 'string' ? parseValue(entry.value) : entry.value;
+  entry.mode = normalizeStoreMode(entry.mode as string);
   return entry;
 }
 
@@ -70,7 +77,7 @@ export class SqliteStoreService implements IStoreService {
       if (row) return parseValue(row.value as string);
     }
 
-    // Fall back to the crux's one row (visitor_id IS NULL): public or common
+    // Fall back to the crux's one row (visitor_id IS NULL): public
     const row = await db.get(
       'SELECT value FROM store WHERE crux_id = ? AND key = ? AND visitor_id IS NULL',
       [cruxId, key],
@@ -85,14 +92,12 @@ export class SqliteStoreService implements IStoreService {
     mode: StoreMode = 'protected',
     visitorId?: string | null,
   ): Promise<void> {
-    if (mode === 'common' && !visitorId) {
-      throw new Error('A common key is written by a signed-in visitor: who is writing?');
-    }
+    mode = normalizeStoreMode(mode);
     const db = getSqliteClient();
     const now = new Date().toISOString();
     const serialized = JSON.stringify(value);
 
-    // Public and common keys are the crux's one row (visitor_id NULL); protected is per visitor
+    // Public keys are the crux's one row (visitor_id NULL); protected is per visitor
     const vid = mode === 'protected' ? (visitorId ?? null) : null;
 
     if (vid) {
@@ -159,7 +164,7 @@ export class SqliteStoreService implements IStoreService {
           'SELECT mode FROM store WHERE crux_id = ? AND key = ? AND visitor_id IS NULL',
           [cruxId, key],
         );
-    if (existing) mode = existing.mode as StoreMode;
+    if (existing) mode = normalizeStoreMode(existing.mode as string);
 
     await this.set(cruxId, key, newValue, mode, visitorId);
     return newValue;

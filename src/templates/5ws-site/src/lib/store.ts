@@ -1,12 +1,12 @@
 /**
  * The crux's own key-value store, as this page reaches it.
  *
- * A published crux carries a Crux Store (`window.crux.store`): keys in three
- * modes — `public` (anyone reads and writes), `protected` (one slot per
- * signed-in visitor, private to them), `common` (one value per key belonging
- * to the crux, readable by anyone, written only with a visitor's sign-in). The
- * board and the "played today" record live there, so a fork of this site
- * carries its own board and Crux Garden runs no other backend for it.
+ * A published crux carries a Crux Store (`window.crux.store`): keys in two
+ * modes — `public` (one value per key belonging to the crux, readable by
+ * anyone) and `protected` (one slot per signed-in visitor, private to them).
+ * Every write needs the visitor's sign-in, whatever the mode. The board and
+ * the "played today" record live there, so a fork of this site carries its
+ * own board and Crux Garden runs no other backend for it.
  *
  * Three ways in, tried in this order:
  *
@@ -26,7 +26,7 @@
  * Plain `fetch`, no dependency — this file is written into the published site.
  */
 
-export type StoreMode = 'public' | 'protected' | 'common';
+export type StoreMode = 'public' | 'protected';
 
 export interface KeyStore {
   /** Which way in — for messages and tests, never for logic. */

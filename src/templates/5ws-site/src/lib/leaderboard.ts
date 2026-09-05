@@ -7,11 +7,12 @@
  * Both records live in the crux's own Crux Store (`./store`) — no other
  * backend; a fork of this site carries its own board:
  *
- *   leaderboard:<YYYY-MM-DD>   common     { entries: [{ name, score, seconds, at }] }
+ *   leaderboard:<YYYY-MM-DD>   public     { entries: [{ name, score, seconds, at }] }
  *   played:<YYYY-MM-DD>        protected  { entry, shelf, score, seconds }
  *
- * `common` means the day's board is one value belonging to the crux: anyone
- * reads it, and writing needs a visitor's sign-in. The page maintains it —
+ * `public` means the day's board is one value belonging to the crux: anyone
+ * reads it, and writing — like every store write — needs a visitor's sign-in.
+ * The page maintains it —
  * read, replace-or-add the visitor's entry, sort, cap, write back — under a
  * convention the store does not enforce: **one entry per name, the name being
  * the signed-in account's username, posted only by that account.** A
@@ -82,7 +83,7 @@ export async function readBoard(store: KeyStore, day: string): Promise<Leaderboa
 /**
  * Post a daily score under `name` — the signed-in account's username; the
  * caller has made sure of the sign-in. Read, replace-or-add this name's entry,
- * sort, cap, write back (`common`: the write needs the token in the store).
+ * sort, cap, write back (the write needs the token in the store).
  *
  * The page showed the board at the reveal, then the visitor signed in; this
  * reads it again, immediately before the write, so posts that landed in
@@ -100,7 +101,7 @@ export async function postScore(
 ): Promise<Leaderboard> {
   const entry: LeaderboardEntry = { name, ...clampScore(score), at: new Date().toISOString() };
   const board = withEntry(await readBoard(store, day), entry);
-  await store.set(boardKey(day), { entries: board.entries }, 'common');
+  await store.set(boardKey(day), { entries: board.entries }, 'public');
   return board;
 }
 

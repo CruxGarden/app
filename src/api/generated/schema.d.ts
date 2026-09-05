@@ -1228,18 +1228,18 @@ export interface paths {
         };
         /**
          * Read a store key
-         * @description Public and common keys need no token and return the shared value. Protected keys return the caller’s own slot (token needed; otherwise `{ value: null }`). A key has one mode, fixed by its first write. `public` — open: anyone reads and writes one shared value. `protected` — authenticated, per user: signed-in account required; one private slot per account. `common` — authenticated, shared: one value per key belonging to the crux; signed-in account required to write, increment or delete; anyone reads.
+         * @description Public keys need no token and return the shared value. Protected keys return the caller’s own slot (token needed; otherwise `{ value: null }`). A key has one mode, fixed by its first write. Every write (set, increment, delete) needs a signed-in account. `public` — open: one shared value belonging to the crux that anyone reads. `protected` — per user: one private slot per account, read and written only by its owner.
          */
         get: operations["StoreController_get"];
         /**
          * Write a store key
-         * @description Public keys need no token. Protected keys need a token and write the caller’s own slot. Common keys need a token and write the one shared value. A key has one mode, fixed by its first write. `public` — open: anyone reads and writes one shared value. `protected` — authenticated, per user: signed-in account required; one private slot per account. `common` — authenticated, shared: one value per key belonging to the crux; signed-in account required to write, increment or delete; anyone reads.
+         * @description Token required. Public keys write the one shared value; protected keys write the caller’s own slot. A key has one mode, fixed by its first write. Every write (set, increment, delete) needs a signed-in account. `public` — open: one shared value belonging to the crux that anyone reads. `protected` — per user: one private slot per account, read and written only by its owner.
          */
         put: operations["StoreController_set"];
         post?: never;
         /**
          * Delete a store key or the caller’s slot
-         * @description The crux author deletes the whole key (every slot). Anyone else deletes the shared value of a public key, the shared value of a common key (token required), or their own slot on a protected key (token required).
+         * @description Token required. The crux author deletes the whole key (every slot). Anyone else deletes the shared value of a public key or their own slot on a protected key.
          */
         delete: operations["StoreController_deleteEntry"];
         options?: never;
@@ -1258,7 +1258,7 @@ export interface paths {
         put?: never;
         /**
          * Atomically increment a store key
-         * @description Public and common keys increment the shared value (common needs a token). Protected keys increment the caller’s own slot. A missing value is created at `by`. A key that does not exist is created in `mode`, else protected when signed in and public otherwise.
+         * @description Token required. Public keys increment the shared value; protected keys increment the caller’s own slot. A missing value is created at `by`. A key that does not exist is created in `mode`, else protected.
          */
         post: operations["StoreController_increment"];
         delete?: never;
@@ -1276,7 +1276,7 @@ export interface paths {
         };
         /**
          * List every store row of a crux (author only)
-         * @description Every row, all slots included. Modes: public, protected, common.
+         * @description Every row, all slots included. Modes: public, protected.
          */
         get: operations["StoreController_list"];
         put?: never;
@@ -1868,11 +1868,11 @@ export interface components {
             /** @description The value to store (any JSON-serializable type) */
             value: Record<string, never>;
             /**
-             * @description Access mode for this key. Fixed by the first write; a later write with a different mode is refused (409). `public`: anyone reads and writes one shared value. `protected`: needs a signed-in account; one private slot per account. `common`: one shared value that needs a signed-in account to write, increment or delete, and that anyone can read.
+             * @description Access mode for this key. Fixed by the first write; a later write with a different mode is refused (409). Every write needs a signed-in account. `public`: one shared value that anyone reads. `protected`: one private slot per account, read only by its owner.
              * @default protected
              * @enum {string}
              */
-            mode?: "public" | "protected" | "common";
+            mode?: "public" | "protected";
         };
         IncrementStoreEntryDto: {
             /**
@@ -1881,10 +1881,10 @@ export interface components {
              */
             by?: number;
             /**
-             * @description Mode for a key this increment creates. Ignored when the key exists unless it disagrees with the key’s mode (409). Defaults to `protected` when signed in, `public` otherwise.
+             * @description Mode for a key this increment creates. Ignored when the key exists unless it disagrees with the key’s mode (409). Defaults to `protected`.
              * @enum {string}
              */
-            mode?: "public" | "protected" | "common";
+            mode?: "public" | "protected";
         };
     };
     responses: never;
@@ -5650,7 +5650,7 @@ export interface operations {
                     "application/json": {
                         value: unknown;
                         /** @enum {string} */
-                        mode?: "public" | "protected" | "common";
+                        mode?: "public" | "protected";
                         /** Format: date-time */
                         updatedAt?: string;
                     };
@@ -5694,7 +5694,7 @@ export interface operations {
                     };
                 };
             };
-            /** @description Protected or common key written without a token */
+            /** @description Written without a token */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -5710,6 +5710,13 @@ export interface operations {
             };
             /** @description The key already has a different mode */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description This account wrote more than STORE_WRITES_PER_MINUTE_PER_ACCOUNT (default 60) times in the last minute */
+            429: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -5738,7 +5745,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Protected or common key deleted without a token */
+            /** @description Deleted without a token */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -5747,6 +5754,13 @@ export interface operations {
             };
             /** @description Crux not found */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description This account wrote more than STORE_WRITES_PER_MINUTE_PER_ACCOUNT (default 60) times in the last minute */
+            429: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -5783,7 +5797,7 @@ export interface operations {
                     };
                 };
             };
-            /** @description Protected or common key incremented without a token */
+            /** @description Incremented without a token */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -5799,6 +5813,13 @@ export interface operations {
             };
             /** @description The key already has a different mode */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description This account wrote more than STORE_WRITES_PER_MINUTE_PER_ACCOUNT (default 60) times in the last minute */
+            429: {
                 headers: {
                     [name: string]: unknown;
                 };
