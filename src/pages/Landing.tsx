@@ -16,6 +16,7 @@ import {
   CONTACT_EMAIL,
   fetchLatestDownload,
   type LatestDownload,
+  type DownloadOption,
 } from '@/lib/site';
 import { cn } from '@/lib/cn';
 import { formatBytes } from '@/lib/format';
@@ -87,8 +88,6 @@ function Hero() {
       cancelled = true;
     };
   }, []);
-  const other = download?.all.find((a) => a.arch !== download.arch);
-
   return (
     <section id="download" className="pt-16 pb-12 sm:pt-24 sm:pb-16 text-center">
       <h1 className="font-wordmark text-6xl sm:text-7xl font-semibold text-gateway-title leading-none">
@@ -104,68 +103,7 @@ function Hero() {
         key. Publishing is the only part that touches our servers.
       </p>
       <div className="mt-8 flex flex-col items-center gap-2">
-        {download && !download.detected && other ? (
-          // We could not tell Apple silicon from Intel (Safari hides the GPU): offer both.
-          <>
-            <div className="flex flex-wrap justify-center gap-2">
-              {download.all.map((a) => (
-                <a
-                  key={a.arch}
-                  href={a.url}
-                  className="inline-flex items-center gap-2 px-6 py-3 rounded-[var(--radius)] bg-accent text-bg font-display font-medium text-base hover:opacity-90"
-                  data-testid={a.arch === download.arch ? 'download-button' : undefined}
-                >
-                  Download for Mac ({a.arch === 'arm64' ? 'Apple silicon' : 'Intel'})
-                </a>
-              ))}
-            </div>
-            <div className="text-xxs font-mono text-text-muted">
-              v{download.version} · Apple menu → About This Mac shows which chip you have ·{' '}
-              <a href={RELEASES_URL} className="hover:text-text underline">
-                all releases
-              </a>
-            </div>
-          </>
-        ) : download ? (
-          <>
-            <a
-              href={download.url}
-              className="inline-flex items-center gap-2 px-6 py-3 rounded-[var(--radius)] bg-accent text-bg font-display font-medium text-base hover:opacity-90"
-              data-testid="download-button"
-            >
-              Download for Mac ({download.arch === 'arm64' ? 'Apple silicon' : 'Intel'})
-            </a>
-            <div className="text-xxs font-mono text-text-muted">
-              v{download.version}
-              {download.size ? ` · ${formatBytes(download.size)}` : ''}
-              {other && (
-                <>
-                  {' · '}
-                  <a href={other.url} className="hover:text-text underline">
-                    {other.arch === 'arm64' ? 'Apple silicon' : 'Intel'} build
-                  </a>
-                </>
-              )}
-              {' · '}
-              <a href={RELEASES_URL} className="hover:text-text underline">
-                all releases
-              </a>
-            </div>
-          </>
-        ) : (
-          <>
-            <a
-              href={RELEASES_URL}
-              className="inline-flex items-center gap-2 px-6 py-3 rounded-[var(--radius)] bg-accent text-bg font-display font-medium text-base hover:opacity-90"
-              data-testid="download-button"
-            >
-              {download === undefined ? 'Download for Mac' : 'Releases on GitHub'}
-            </a>
-            <div className="text-xxs font-mono text-text-muted">
-              macOS 13 or later · free · MIT licensed
-            </div>
-          </>
-        )}
+        <DownloadButtons download={download} />
         <p className="mt-4 text-xs text-text-muted max-w-md">
           Free includes the whole app, the AI on your own key, 1 GB published and backed up, and a
           custom domain.{' '}
@@ -176,6 +114,94 @@ function Hero() {
         </p>
       </div>
     </section>
+  );
+}
+
+const BUTTON =
+  'inline-flex items-center gap-2 px-6 py-3 rounded-[var(--radius)] bg-accent text-bg font-display font-medium text-base hover:opacity-90';
+
+function buttonLabel(o: Pick<DownloadOption, 'platform' | 'kind' | 'arch'>): string {
+  if (o.platform === 'mac')
+    return `Download for Mac (${o.arch === 'arm64' ? 'Apple silicon' : 'Intel'})`;
+  if (o.platform === 'linux') return `Download for Linux (${o.kind})`;
+  return 'Download for Windows';
+}
+
+/**
+ * The download call to action. The visitor's OS picks the primary button:
+ * Mac (per chip), Windows, or Linux (AppImage, .deb one click away). When the
+ * OS or chip cannot be told — phones, Safari's hidden GPU — every build is
+ * offered. Before the release exists the button goes to the releases page.
+ */
+function DownloadButtons({ download }: { download: LatestDownload | null | undefined }) {
+  if (!download) {
+    return (
+      <>
+        <a href={RELEASES_URL} className={BUTTON} data-testid="download-button">
+          {download === undefined ? 'Download' : 'Releases on GitHub'}
+        </a>
+        <div className="text-xxs font-mono text-text-muted">
+          macOS 13+, Windows 10+, Linux x64 · free · MIT licensed
+        </div>
+      </>
+    );
+  }
+  const others = download.options.filter((o) => o.url !== download.url);
+  const otherLine = (
+    <>
+      {others.map((o) => (
+        <span key={o.url}>
+          {' · '}
+          <a href={o.url} className="hover:text-text underline">
+            {o.platform === 'mac' ? `Mac (${o.label})` : o.label}
+          </a>
+        </span>
+      ))}
+      {' · '}
+      <a href={RELEASES_URL} className="hover:text-text underline">
+        all releases
+      </a>
+    </>
+  );
+
+  if (!download.detected) {
+    // Nothing reliable about this visitor: one button per build, no favourite.
+    return (
+      <>
+        <div className="flex flex-wrap justify-center gap-2">
+          {download.options.map((o) => (
+            <a
+              key={o.url}
+              href={o.url}
+              className={BUTTON}
+              data-testid={o.url === download.url ? 'download-button' : undefined}
+            >
+              {buttonLabel(o)}
+            </a>
+          ))}
+        </div>
+        <div className="text-xxs font-mono text-text-muted">
+          v{download.version} · on a Mac, Apple menu → About This Mac shows which chip you have ·{' '}
+          <a href={RELEASES_URL} className="hover:text-text underline">
+            all releases
+          </a>
+        </div>
+      </>
+    );
+  }
+
+  return (
+    <>
+      <a href={download.url} className={BUTTON} data-testid="download-button">
+        {buttonLabel(download)}
+      </a>
+      <div className="text-xxs font-mono text-text-muted">
+        v{download.version}
+        {download.size ? ` · ${formatBytes(download.size)}` : ''}
+        {download.platform === 'linux' && download.kind === 'AppImage' ? ' · needs libfuse2' : ''}
+        {otherLine}
+      </div>
+    </>
   );
 }
 
