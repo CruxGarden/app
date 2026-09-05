@@ -24,6 +24,12 @@ import historyShelf from '../../src/templates/shelves/history.json';
  */
 
 const API = 'https://api.e2e.invalid';
+/** The phosphor palette (global.css): the voice is the bright thing; the interface is cool grey. */
+const AMBER = 'rgb(224, 168, 58)';
+const GREEN = 'rgb(95, 215, 122)';
+const UI_GREY = 'rgb(164, 170, 179)';
+const DIM_GREY = 'rgb(130, 138, 150)';
+const MONO = /Mono|Menlo|Consolas|monospace/i;
 const utcDay = (daysAgo = 0) =>
   new Date(Date.now() - daysAgo * 86_400_000).toISOString().slice(0, 10);
 
@@ -209,7 +215,7 @@ test.describe('starter templates render through astro dev', () => {
     }
   });
 
-  test('5Ws shelf lists its entries; the sample round reveals in serif', async () => {
+  test('5Ws shelf lists its entries; the sample round reveals in phosphor', async () => {
     const { app, page } = await launchApp();
     const browser = await chromium.launch();
     try {
@@ -324,7 +330,7 @@ test.describe('starter templates render through astro dev', () => {
         fullPage: true,
       });
 
-      // The sample round: questions in sans, the voice and the reveal in serif
+      // The sample round: one monospace face; the voice in amber, the player's lines in grey
       await site.locator('ul.round-list a').first().click();
       await expect(site.locator('.round-head h1')).toContainText('Round 1');
       const you = site.locator('.transcript p', { hasText: 'Are you a man or a woman?' });
@@ -333,13 +339,19 @@ test.describe('starter templates render through astro dev', () => {
       await expect(reveal).toBeVisible();
       await expect(reveal.locator('xpath=following-sibling::p[1]')).toContainText('Hypatia');
       const family = (el: Element) => getComputedStyle(el).fontFamily;
-      expect(await reveal.evaluate(family)).toMatch(/Georgia|Palatino|Iowan/);
+      const color = (el: Element) => getComputedStyle(el).color;
+      expect(await reveal.evaluate(family)).toMatch(MONO);
       // The voice: the first paragraph that is not a "You:" line
       const voice = site.locator('.transcript p:not(:has(> strong:first-child))').first();
       await expect(voice).toContainText('harder city');
-      expect(await voice.evaluate(family)).toMatch(/Georgia|Palatino|Iowan/);
-      expect(await you.evaluate(family)).toMatch(/system-ui/);
-      expect(await you.evaluate(family)).not.toMatch(/Georgia/);
+      expect(await voice.evaluate(family)).toMatch(MONO);
+      expect(await voice.evaluate(color)).toBe(AMBER);
+      expect(await you.evaluate(family)).toMatch(MONO);
+      expect(await you.evaluate(color)).toBe(DIM_GREY);
+      await expect(site.locator('html')).toHaveAttribute('data-phosphor', 'amber');
+      expect(await site.evaluate(() => getComputedStyle(document.body).backgroundColor)).toBe(
+        'rgb(15, 15, 14)',
+      );
       await expect(site.locator('.adjacent a', { hasText: 'The shelf' })).toBeVisible();
       expect(await scrollWidth(site)).toBeLessThanOrEqual(1200);
       await site.screenshot({
@@ -363,15 +375,33 @@ test.describe('starter templates render through astro dev', () => {
       const api = await withPlayApi(play);
       await play.goto(origin + 'play/');
 
-      // Someone is already talking — in serif; the interface is sans
+      // Boot: a dark screen with one cursor, then the banner types in
+      const app = play.locator('.round-app');
+      await expect(app).toHaveClass(/booting/, { timeout: 60_000 });
+      await expect(app.locator('.banner .cursor')).toBeVisible();
+      await expect(app).toHaveAttribute('data-boot', 'title'); // after the dark 900 ms
+      await play.screenshot({ path: 'e2e/.results/5ws-crt-boot-1200.png' });
+      await expect(app).not.toHaveClass(/booting/, { timeout: 15_000 });
+      await expect(play.locator('.round-voice .banner')).toHaveText('5Ws · Who am I?');
+
+      // Someone is already talking — the voice types, in amber, and the cursor goes when it is done;
+      // the interface is the same face in grey
       const opening = play.locator('.round-voice .voice.opening');
       await expect(opening).toHaveText(FIVE_WS_OPENING, { timeout: 60_000 });
-      expect(await opening.evaluate(family)).toMatch(/Georgia|Palatino|Iowan/);
-      expect(await play.locator('.status').evaluate(family)).toMatch(/system-ui/);
-      await expect(play.getByTestId('points')).toHaveText('10 points');
-      await expect(play.getByTestId('questions-left')).toHaveText('10 questions');
+      await expect(opening.locator('.cursor')).toHaveCount(0);
+      expect(await opening.evaluate(family)).toMatch(MONO);
+      expect(await opening.evaluate(color)).toBe(AMBER);
+      expect(await play.locator('.status').evaluate(family)).toMatch(MONO);
+      expect(await play.getByTestId('points').evaluate(color)).toBe(UI_GREY);
+      await expect(play.getByTestId('points')).toHaveText('PTS 10');
+      await expect(play.getByTestId('questions-left')).toHaveText('Q 10');
+      await expect(play.getByTestId('clock')).toHaveText(/^\d\d:\d\d$/);
       await expect(play.getByTestId('clock')).toHaveAttribute('data-composing', 'false');
+      await expect(play.getByTestId('clock')).toHaveAttribute('data-held', 'false');
       await expect(play.getByText('Connect your AI')).toHaveCount(0); // the scripted model needs no key
+      // Sound is off by default; the phosphor toggle is there
+      await expect(play.getByRole('button', { name: 'sound off' })).toBeVisible();
+      await expect(play.getByRole('button', { name: /^Phosphor amber/ })).toBeVisible();
 
       // A question is free; the clock stands still while the voice composes
       const clock = play.getByTestId('clock');
@@ -383,10 +413,11 @@ test.describe('starter templates render through astro dev', () => {
       await expect(play.locator('.turn .voice').first()).toHaveText(fiveWsLineFor(q), {
         timeout: 15_000,
       });
+      await expect(clock).toHaveAttribute('data-held', 'false');
       const after = Number(await clock.getAttribute('data-elapsed'));
-      expect(after - before).toBeLessThan(900); // 1.5 s of composing was not charged
-      await expect(play.getByTestId('questions-left')).toHaveText('9 questions');
-      await expect(play.getByTestId('points')).toHaveText('10 points');
+      expect(after - before).toBeLessThan(900); // 1.5 s of composing and ~2 s of typing were not charged
+      await expect(play.getByTestId('questions-left')).toHaveText('Q 09');
+      await expect(play.getByTestId('points')).toHaveText('PTS 10');
 
       // A wrong guess costs a point, with the verdict's reason, quietly
       await play.getByLabel('Your guess').fill(wrong, { timeout: 15_000 });
@@ -394,7 +425,7 @@ test.describe('starter templates render through astro dev', () => {
       const miss = play.getByTestId('wrong-guess');
       await expect(miss).toContainText(`Not ${wrong}.`, { timeout: 15_000 });
       await expect(miss).toContainText('Not this one');
-      await expect(play.getByTestId('points')).toHaveText('9 points');
+      await expect(play.getByTestId('points')).toHaveText('PTS 09');
 
       // Search opens a new tab; the clock keeps running; a page can be kept
       await play.getByRole('button', { name: 'Search', exact: true }).click({ timeout: 15_000 });
@@ -415,21 +446,35 @@ test.describe('starter templates render through astro dev', () => {
       await play.getByRole('button', { name: 'Keep this page' }).click({ timeout: 15_000 });
       await expect(play.getByTestId('kept-pages')).toContainText('Hypatia — Wikipedia');
       await play.getByRole('button', { name: 'Done searching' }).click({ timeout: 15_000 });
-      await play.screenshot({
-        path: 'e2e/.results/starters-render-7-5ws-play.png',
-        fullPage: true,
-      });
+      await play.screenshot({ path: 'e2e/.results/5ws-crt-round-1200.png' });
 
-      // The right guess ends it; the reveal names the misses
+      // The right guess ends it; the name decrypts from blocks to letters; the reveal names the misses
       await play.getByLabel('Your guess').fill(daily.name, { timeout: 15_000 });
       await play.getByRole('button', { name: 'Guess', exact: true }).click({ timeout: 15_000 });
       const who = play.locator('.reveal .who');
       await expect(who).toHaveText(`This was ${daily.name}.`, { timeout: 30_000 });
-      expect(await who.evaluate(family)).toMatch(/Georgia|Palatino|Iowan/);
+      await expect(who.locator('.secret')).toHaveAttribute('data-resolved', 'true');
+      expect(await who.evaluate(family)).toMatch(MONO);
+      expect(await who.evaluate(color)).toBe(AMBER);
       const misses = play.getByTestId('misses');
       await expect(misses).toContainText(wrong);
       await expect(misses).toContainText(FIVE_WS_WHY_MISS);
       await expect(play.getByRole('button', { name: 'Give up' })).toHaveCount(0); // nothing else on screen
+      // The interface comes back once the voice is done: the share block, with no name in it
+      const share = play.getByTestId('share');
+      await expect(share).toBeVisible({ timeout: 15_000 });
+      const shown = (await share.textContent())!;
+      expect(shown.split('\n')).toEqual([
+        `5Ws · Who am I? · ${utcDay()}`,
+        expect.stringMatching(/^9\/10 in \d:\d\d {3}✗ ✓$/),
+        `${origin}play/`,
+      ]);
+      expect(shown).not.toContain(daily.name);
+      // The daily round says when the next figure comes; nothing about streaks
+      await expect(play.getByTestId('next-figure')).toHaveText(
+        /^Next figure in (\d+h \d\dm|\d+m|<1m|now)$/,
+      );
+      await expect(play.getByText(/streak/i)).toHaveCount(0);
 
       // Today's board: sign in with an email code, and the page adds the daily score under
       // the account's username to the day's `leaderboard:` key (mode public, with the
@@ -471,7 +516,31 @@ test.describe('starter templates render through astro dev', () => {
         seconds: expect.any(Number),
       });
 
-      // Copy transcript puts the markdown page on the clipboard
+      // Copy result puts the share block on the clipboard — the same lines, no name
+      await play.evaluate(() => window.scrollTo(0, 0));
+      await play.screenshot({ path: 'e2e/.results/5ws-crt-reveal-1200.png', fullPage: true });
+      await play.getByRole('button', { name: 'Copy result' }).click({ timeout: 15_000 });
+      await expect(play.getByRole('button', { name: 'Copied' })).toBeVisible();
+      const result = await play.evaluate(() => navigator.clipboard.readText());
+      expect(result).toBe(shown);
+      expect(result).not.toContain(daily.name);
+      expect(result).toContain('✗ ✓');
+      await expect(play.getByRole('button', { name: 'Copy result' })).toBeVisible(); // the label comes back
+
+      // The other phosphor: one toggle, the attribute changes, the voice goes green, it is remembered
+      await play.getByRole('button', { name: /^Phosphor amber/ }).click();
+      await expect(play.locator('html')).toHaveAttribute('data-phosphor', 'green');
+      expect(await who.evaluate(color)).toBe(GREEN);
+      expect(await play.evaluate(() => localStorage.getItem('5ws:phosphor'))).toBe('green');
+      await expect(play.getByRole('button', { name: /^Phosphor green/ })).toBeVisible();
+      await play.screenshot({ path: 'e2e/.results/5ws-crt-reveal-green-1200.png' });
+      await play.getByRole('button', { name: /^Phosphor green/ }).click();
+      await expect(play.locator('html')).toHaveAttribute('data-phosphor', 'amber');
+      // …and the round it was toggled in is still this one: the reveal stands, nothing restarted
+      await expect(who).toHaveText(`This was ${daily.name}.`);
+      await expect(play.getByTestId('points')).toHaveText('PTS 09');
+
+      // Copy transcript (the quieter button) puts the markdown page on the clipboard
       await play.getByRole('button', { name: 'Copy transcript' }).click({ timeout: 15_000 });
       await expect(play.getByRole('button', { name: 'Copied' })).toBeVisible();
       const md = await play.evaluate(() => navigator.clipboard.readText());
@@ -480,25 +549,50 @@ test.describe('starter templates render through astro dev', () => {
       expect(md).toContain('**You:** ' + q);
       expect(md).toContain('## Reveal');
       expect(md).toContain('https://en.wikipedia.org/wiki/Hypatia');
-      await play.screenshot({
-        path: 'e2e/.results/starters-render-8-5ws-reveal.png',
-        fullPage: true,
-      });
 
-      // Play again: a new round opens, someone talking, ten points
+      // Play again: a new round opens without the boot, someone talking, ten points
       await play.getByRole('button', { name: 'Play again' }).click({ timeout: 15_000 });
+      await expect(play.locator('.round-app')).not.toHaveClass(/booting/);
       await expect(play.locator('.round-voice .voice.opening')).toHaveText(FIVE_WS_OPENING, {
         timeout: 30_000,
       });
-      await expect(play.getByTestId('points')).toHaveText('10 points');
-      await expect(play.getByTestId('questions-left')).toHaveText('10 questions');
+      await expect(play.locator('.round-app')).toHaveAttribute('data-boot', 'done');
+      await expect(play.getByTestId('points')).toHaveText('PTS 10');
+      await expect(play.getByTestId('questions-left')).toHaveText('Q 10');
       await play.close();
+
+      // Reduced motion: no boot, the text is there at once, nothing blinks
+      const still = await browser.newPage({
+        viewport: { width: 1200, height: 900 },
+        reducedMotion: 'reduce',
+      });
+      await withScriptedModel(still);
+      await withPlayApi(still);
+      await still.goto(origin + 'play/');
+      const firstSeen = await still.waitForFunction(
+        () => {
+          const el = document.querySelector('.round-voice .voice.opening');
+          if (!el || el.querySelector('.cursor')) return null; // still composing
+          const t = el.textContent?.trim() ?? '';
+          return t.length > 0 ? t : null;
+        },
+        null,
+        { timeout: 60_000 },
+      );
+      expect(await firstSeen.jsonValue()).toBe(FIVE_WS_OPENING); // whole, on its first paint
+      await expect(still.locator('.round-app')).toHaveAttribute('data-motion', 'reduced');
+      await expect(still.locator('.round-app')).toHaveAttribute('data-boot', 'done');
+      await expect(still.locator('.round-app')).not.toHaveClass(/booting/);
+      await still.close();
 
       // A phone: one column, the voice on top, the bar pinned to the bottom
       const phonePlay = await browser.newPage({ viewport: { width: 390, height: 844 } });
       await withScriptedModel(phonePlay);
       await withPlayApi(phonePlay);
       await phonePlay.goto(origin + 'play/');
+      await expect(phonePlay.locator('.round-app')).toHaveClass(/booting/, { timeout: 60_000 });
+      await expect(phonePlay.locator('.round-app')).toHaveAttribute('data-boot', 'title');
+      await phonePlay.screenshot({ path: 'e2e/.results/5ws-crt-boot-390.png' });
       await expect(phonePlay.locator('.round-voice .voice.opening')).toHaveText(FIVE_WS_OPENING, {
         timeout: 60_000,
       });
@@ -508,7 +602,26 @@ test.describe('starter templates render through astro dev', () => {
       const voiceBox = (await phonePlay.locator('.round-voice .voice.opening').boundingBox())!;
       expect(Math.round(bar.y + bar.height)).toBeGreaterThanOrEqual(842);
       expect(voiceBox.y + voiceBox.height).toBeLessThanOrEqual(bar.y);
-      await phonePlay.screenshot({ path: 'e2e/.results/starters-render-9-5ws-play-phone.png' });
+      // Tap targets: every control in the bar and the top is at least 44px tall
+      for (const b of await phonePlay.locator('.round-bar button, .round-bar input').all()) {
+        expect((await b.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+      }
+      await expect(phonePlay.locator('.round-top .corner')).toBeHidden();
+      await expect(phonePlay.getByRole('button', { name: 'sound off' })).toBeVisible();
+      await phonePlay.screenshot({ path: 'e2e/.results/5ws-crt-round-390.png' });
+      // A first-try win on the phone: the reveal, then the share block, one column
+      await phonePlay.getByLabel('Your guess').fill(daily.name, { timeout: 15_000 });
+      await phonePlay
+        .getByRole('button', { name: 'Guess', exact: true })
+        .click({ timeout: 15_000 });
+      await expect(phonePlay.locator('.reveal .who')).toHaveText(`This was ${daily.name}.`, {
+        timeout: 30_000,
+      });
+      await expect(phonePlay.getByTestId('share')).toBeVisible({ timeout: 15_000 });
+      await expect(phonePlay.getByTestId('share')).toContainText('10/10 in');
+      expect(await scrollWidth(phonePlay)).toBeLessThanOrEqual(390);
+      await phonePlay.evaluate(() => window.scrollTo(0, 0));
+      await phonePlay.screenshot({ path: 'e2e/.results/5ws-crt-reveal-390.png', fullPage: true });
       await phonePlay.close();
 
       // ── Connect your AI: the step itself, with no scripted model on the page ──
@@ -570,7 +683,7 @@ test.describe('starter templates render through astro dev', () => {
         await withRefusingProviders(connect);
         await connect.goto(origin + 'play/');
 
-        // The step: the shelf's question in serif, one heading, one field, one button, no dropdown
+        // The step: the shelf's question in phosphor, one heading, one field, one button, no dropdown
         await expect(connect.getByRole('heading', { name: 'Connect your AI' })).toBeVisible({
           timeout: 60_000,
         });
@@ -580,7 +693,8 @@ test.describe('starter templates render through astro dev', () => {
         const field = connect.getByLabel('Key');
         const button = connect.getByRole('button', { name: 'Connect', exact: true });
         await expect(button).toBeDisabled();
-        expect(await connect.locator('.connect-form h2').evaluate(family)).toMatch(/system-ui/);
+        expect(await connect.locator('.connect-form h2').evaluate(family)).toMatch(MONO);
+        expect(await connect.locator('.connect .question').evaluate(color)).toBe(AMBER);
         // "Get a key" links above the field: Google first and marked free, all in a new tab
         const links = connect.locator('.connect-form .get-key a');
         await expect(links).toHaveText(['Google — free', 'OpenAI', 'Anthropic']);
@@ -613,7 +727,7 @@ test.describe('starter templates render through astro dev', () => {
         await expect(connect.getByText(UNKNOWN)).toHaveCount(0);
         await expect(button).toBeEnabled();
         await field.press('Enter');
-        await expect(connect.getByTestId('points')).toHaveText('10 points', { timeout: 15_000 });
+        await expect(connect.getByTestId('points')).toHaveText('PTS 10', { timeout: 15_000 });
         await expect(connect.locator('.round-voice .composing')).toBeVisible();
         expect(await stored(connect)).toEqual({
           provider: 'anthropic',
@@ -640,7 +754,7 @@ test.describe('starter templates render through astro dev', () => {
         // Again, and let the opening call be the validation: the provider refuses, the step comes back
         await field.fill('sk-ant-e2e-not-a-real-key');
         await field.press('Enter');
-        await expect(connect.getByTestId('points')).toHaveText('10 points', { timeout: 15_000 });
+        await expect(connect.getByTestId('points')).toHaveText('PTS 10', { timeout: 15_000 });
         await expect(connect.getByText('That key was refused by Anthropic.')).toBeVisible({
           timeout: 15_000,
         });
