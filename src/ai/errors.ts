@@ -38,6 +38,9 @@ export function formatToolError(toolName: string, error: Error | string): string
       () => message, // validation errors already have guidance
     ],
     [/must not contain/i, () => message],
+    // Scope refusals (B5) already say what the worker may change
+    [/outside this task's scope/i, () => message],
+    [/not available here/i, () => message],
   ];
 
   for (const [pattern, formatter] of patterns) {

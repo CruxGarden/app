@@ -5,6 +5,8 @@ import {
   titleFromFileName,
   describeBatch,
   MAX_TRANSCODE_BYTES,
+  CAPTION_OFFER_MIN,
+  captionTasksFor,
 } from './builder-files';
 
 describe('uniqueFileName', () => {
@@ -76,5 +78,34 @@ describe('describeBatch', () => {
   });
   it('exposes the transcode cap', () => {
     expect(MAX_TRANSCODE_BYTES).toBe(524288000);
+  });
+});
+
+describe('captionTasksFor (B5)', () => {
+  const items = (n: number) =>
+    Array.from({ length: n }, (_, i) => ({
+      path: `src/pages/photos/p${i + 1}.md`,
+      imagePath: `public/images/p${i + 1}.jpg`,
+    }));
+
+  it('batches photos into tasks of ten with disjoint scopes', () => {
+    const tasks = captionTasksFor(items(23));
+    expect(tasks.map((t) => t.title)).toEqual(['Captions 1–8', 'Captions 9–16', 'Captions 17–23']);
+    const all = tasks.flatMap((t) => t.scope.paths!);
+    expect(all).toHaveLength(23);
+    expect(new Set(all).size).toBe(23);
+    expect(tasks[0]!.instructions).toContain('- src/pages/photos/p1.md — image: public/images/p1.jpg');
+    expect(tasks[0]!.instructions).toContain('read_file on the image');
+    expect(tasks[0]!.instructions).toContain('Keep the frontmatter exactly as it is');
+    expect(tasks[2]!.scope.paths).toEqual(items(23).slice(16).map((i) => i.path));
+  });
+
+  it('never exceeds the task maximum — batches grow instead', () => {
+    const tasks = captionTasksFor(items(100));
+    expect(tasks).toHaveLength(6);
+    expect(tasks.flatMap((t) => t.scope.paths!)).toHaveLength(100);
+    expect(captionTasksFor(items(3))).toHaveLength(1);
+    expect(captionTasksFor([])).toEqual([]);
+    expect(CAPTION_OFFER_MIN).toBe(8);
   });
 });

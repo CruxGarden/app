@@ -20,8 +20,11 @@ import {
   describeCheck,
   verificationOf,
   finishJob,
+  withLiveParallelState,
+  hasPendingMerge,
   type TurnJob,
 } from './turn-jobs';
+import type { SubagentRun } from './subagents';
 
 const PLAN = '```plan\n1. Lay the foundation\n2. Raise the walls\n3) Put on the roof\n```\n';
 
@@ -366,5 +369,62 @@ describe('check state', () => {
     const job = finishJob(newTurnJob('c', 'x'), 'done');
     expect(summarizeJob(job).check).toBeUndefined();
     expect(verificationOf(job)).toBeNull();
+  });
+});
+
+describe('parallel work on the job (B5)', () => {
+  const worker = (title: string, status: SubagentRun['status']): SubagentRun => ({
+    title,
+    status,
+    scope: { paths: [`${title}.md`] },
+    steps: 1,
+    files: [],
+  });
+
+  it('a relaunch marks running and waiting workers interrupted along with the job', () => {
+    const job: TurnJob = {
+      ...newTurnJob('c', 'fan out'),
+      status: 'running',
+      subagents: [worker('a', 'done'), worker('b', 'running'), worker('c', 'pending')],
+    };
+    const fixed = reconcilePersistedJob(job)!;
+    expect(fixed.status).toBe('interrupted');
+    expect(fixed.subagents!.map((s) => s.status)).toEqual(['done', 'interrupted', 'interrupted']);
+    expect(fixed.subagents![1]!.endedAt).toBeTruthy();
+    // A finished job with settled workers is returned as is
+    const settled = finishJob({ ...job, subagents: [worker('a', 'done')] }, 'done');
+    expect(reconcilePersistedJob(settled)).toBe(settled);
+  });
+
+  it('a publish from the turn loop keeps the live subagent and merge state', () => {
+    const base = newTurnJob('c', 'fan out');
+    const live: TurnJob = {
+      ...base,
+      subagents: [worker('a', 'running')],
+      merge: { baseId: 'b', status: 'pending', applied: [], conflicts: [] },
+    };
+    const fromLoop: TurnJob = { ...base, status: 'running' };
+    const merged = withLiveParallelState(fromLoop, live);
+    expect(merged.status).toBe('running');
+    expect(merged.subagents).toBe(live.subagents);
+    expect(merged.merge).toBe(live.merge);
+    // A different job's live state never leaks in
+    expect(withLiveParallelState(fromLoop, { ...live, id: 'other' })).toBe(fromLoop);
+    expect(withLiveParallelState(fromLoop, null)).toBe(fromLoop);
+  });
+
+  it('hasPendingMerge is true only while conflicts await a decision', () => {
+    const job = newTurnJob('c', 'x');
+    expect(hasPendingMerge(job)).toBe(false);
+    const conflict = { path: 'n.md', options: [{ branch: 0, kind: 'added' as const }] };
+    expect(
+      hasPendingMerge({ ...job, merge: { baseId: 'b', status: 'pending', applied: [], conflicts: [conflict] } }),
+    ).toBe(true);
+    expect(
+      hasPendingMerge({ ...job, merge: { baseId: 'b', status: 'merged', applied: [], conflicts: [conflict] } }),
+    ).toBe(false);
+    expect(
+      hasPendingMerge({ ...job, merge: { baseId: 'b', status: 'pending', applied: [], conflicts: [] } }),
+    ).toBe(false);
   });
 });

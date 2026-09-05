@@ -128,6 +128,7 @@ function buildStablePrompt(crux: Crux, artifacts: Artifact[]): string {
       '- **snapshot** / **list_snapshots** / **restore** / **branch** / **diff** — Growth, the version history, as tools. See Growth below.\n' +
       '- **remember** — Save one line to Garden Memory when the person asks you to remember something or states a durable preference (see above).\n' +
       '- **load_skill** — Load the know-how for one kind of work (see Skills below).\n' +
+      '- **delegate** — Parallel workers for wide, independent work; load the parallel-work skill first.\n' +
       'IMPORTANT: You CAN generate images. When the user asks for an image, illustration, icon, logo, photo, or artwork, call the generate_image tool. Do NOT say you cannot generate images — you have this capability.\n\n' +
       '### Theme and soundscape\n' +
       'Use set_theme mode "preview" to signal what you are doing (tint the pane you work in, warm the accent during a long step) and clear it with reset: true when done; mode "persist" only when the person asks for a lasting change. Never persist a change they did not ask for. ' +

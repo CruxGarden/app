@@ -15,6 +15,12 @@ import {
 } from './growth-tools';
 import { MEMORY_TOOL_DEFINITIONS, runMemoryTool } from '@/services/memory';
 import { SKILL_TOOL_DEFINITIONS, runSkillTool } from './skills';
+import {
+  DELEGATE_TOOL_DEFINITION,
+  validateDelegateInput,
+  type DelegateTaskInput,
+} from './delegate-tool';
+import { scopeViolation, type WriteScope } from '@/lib/write-scope';
 
 /**
  * Tool definitions — ported from api/src/ai/ai.tools.ts.
@@ -270,7 +276,30 @@ export function defaultToolDefinitions(): ToolDefinition[] {
     ...THEME_TOOL_DEFINITIONS,
     ...MEMORY_TOOL_DEFINITIONS,
     ...SKILL_TOOL_DEFINITIONS,
+    DELEGATE_TOOL_DEFINITION,
   ];
+}
+
+/**
+ * The tool set a Subagent gets (B5): files and search, scoped by the executor,
+ * plus load_skill. No delete or rename (a branch adds and edits; removals are
+ * for the main line, where the person approves them), no Growth (the branch
+ * IS its history), no theme or soundscape (the Mood is not the task), and no
+ * delegate (no fan-out from a fan-out).
+ */
+export const SUBAGENT_TOOL_NAMES = [
+  'write_file',
+  'edit_file',
+  'read_file',
+  'list_files',
+  'search_files',
+  'generate_image',
+  'load_skill',
+] as const;
+
+export function subagentToolDefinitions(): ToolDefinition[] {
+  const names = new Set<string>(SUBAGENT_TOOL_NAMES);
+  return [...TOOL_DEFINITIONS, ...SKILL_TOOL_DEFINITIONS].filter((t) => names.has(t.name));
 }
 
 /** Options for a tool executor beyond the crux it is bound to. */
@@ -278,10 +307,26 @@ export interface ToolExecutorOptions {
   /**
    * Who the tools act for — recorded on every snapshot they take (ADR 0013).
    * 'collaborator' (default) is the built-in AI; the MCP server passes
-   * 'agent:<client name>'.
+   * 'agent:<client name>'; a Subagent runner passes 'subagent:<title>'.
    */
   requestedBy?: string;
+  /**
+   * Write scope (B5): write_file / edit_file / delete_file / rename_file /
+   * generate_image refuse paths outside it with a clear tool error. Read
+   * tools are never scoped. Absent = unrestricted (the main line).
+   */
+  scope?: WriteScope;
+  /**
+   * Runs the `delegate` tool — fanning tasks out to Subagents and returning
+   * the merge summary. Only the app's Collaboration wires this; without it
+   * the tool reports that it is unavailable here.
+   */
+  delegate?: (tasks: DelegateTaskInput[]) => Promise<string>;
 }
+
+/** The delegate tool's answer when no runner is wired (headless, MCP, tests). */
+export const DELEGATE_UNAVAILABLE =
+  'delegate is not available here — parallel workers run only from the Collaboration pane in the app.';
 
 /**
  * Create a tool executor bound to a specific crux.
@@ -331,6 +376,10 @@ export function createToolExecutor(
     if (!validation.valid) {
       return formatToolError(toolName, validation.error!);
     }
+
+    // Scope (B5): a worker may read anything, but only change what it was given.
+    const outside = scopeViolation(toolName, input, options.scope);
+    if (outside) return formatToolError(toolName, outside);
 
     const normPath = normalizeToolPath(input.path as string | undefined);
 
@@ -412,6 +461,17 @@ export function createToolExecutor(
         case 'load_skill':
           result = runSkillTool(input);
           break;
+        case 'delegate': {
+          // Fan out to Subagents (B5). Validation already ran; the runner is
+          // the app's, so the result is the merge summary the person also sees.
+          if (!options.delegate) return formatToolError('delegate', DELEGATE_UNAVAILABLE);
+          const parsed = validateDelegateInput(input);
+          if (!parsed.valid) return formatToolError('delegate', parsed.error);
+          result = await options.delegate(parsed.tasks);
+          // Merged files landed on the main line: nothing read before is current.
+          recentlyReadFiles.clear();
+          break;
+        }
         default:
           return formatToolError(toolName, `Unknown tool: ${toolName}`);
       }
@@ -1049,4 +1109,6 @@ export const MUTATING_TOOLS = [
   'generate_image',
   'rename_file',
   ...MUTATING_GROWTH_TOOLS,
+  // Subagents (B5): the merge applies their files to the main line
+  'delegate',
 ];

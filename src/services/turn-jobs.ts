@@ -1,6 +1,7 @@
 import type { ChatMessage, ToolCall, TurnCheckSummary, TurnJobSummary } from '@/api/types';
 import type { ConversationEvent } from '@/ai/engine';
 import { didMutate } from '@/ai/tools';
+import { isSubagentActive, type MergeState, type SubagentRun } from './subagents';
 
 /**
  * Background Turns (AI-COLLABORATION-V3 B3, ADR 0013).
@@ -94,6 +95,10 @@ export interface TurnJob {
   prompt: string;
   /** Verify-before-done state, once a check started on this job (B4). */
   check?: TurnCheck;
+  /** Workers this job fanned out to (B5), in task order — persisted with the job. */
+  subagents?: SubagentRun[];
+  /** The merge of those workers' branches, once they all ended. */
+  merge?: MergeState;
 }
 
 export type { TurnJobSummary };
@@ -226,11 +231,44 @@ export function describeJobSummary(s: TurnJobSummary): string {
  */
 export function reconcilePersistedJob(job: TurnJob | null | undefined): TurnJob | null {
   if (!job) return null;
-  if (!isJobActive(job) && job.status !== 'paused') return job;
-  return finishJob(job, 'interrupted', {
+  const settled = withInterruptedSubagents(job);
+  if (!isJobActive(job) && job.status !== 'paused') return settled;
+  return finishJob(settled, 'interrupted', {
     stopReason: 'closed',
     error: 'The app closed while this was running.',
   });
+}
+
+/** Workers persisted as still running can only have been cut off with the app. */
+export function withInterruptedSubagents(job: TurnJob): TurnJob {
+  if (!job.subagents?.some(isSubagentActive)) return job;
+  const endedAt = new Date().toISOString();
+  return {
+    ...job,
+    subagents: job.subagents.map((s) =>
+      isSubagentActive(s) ? { ...s, status: 'interrupted', endedAt } : s,
+    ),
+  };
+}
+
+/**
+ * The turn loop publishes whole job objects from its own copy, while the
+ * delegate runner updates `subagents` / `merge` on the live job underneath
+ * it. Whoever publishes carries the live parallel state forward so neither
+ * writer erases the other's.
+ */
+export function withLiveParallelState(job: TurnJob, live: TurnJob | null): TurnJob {
+  if (!live || live.id !== job.id) return job;
+  return {
+    ...job,
+    ...(live.subagents ? { subagents: live.subagents } : {}),
+    ...(live.merge ? { merge: live.merge } : {}),
+  };
+}
+
+/** Workers ended with files the person still has to decide on. */
+export function hasPendingMerge(job: TurnJob | null | undefined): boolean {
+  return !!job?.merge && job.merge.status === 'pending' && job.merge.conflicts.length > 0;
 }
 
 // ── Verify before done (B4) ─────────────────────────────────────────────────
@@ -241,7 +279,8 @@ export function reconcilePersistedJob(job: TurnJob | null | undefined): TurnJob 
  * text contains one of these words. False positives cost one check; false
  * negatives are covered by the "Check it" button.
  */
-export const COMPLETION_CLAIM = /\b(done|finished|complete|completed|ready|should (?:now )?work|that's it|all set)\b/i;
+export const COMPLETION_CLAIM =
+  /\b(done|finished|complete|completed|ready|should (?:now )?work|that's it|all set)\b/i;
 
 export function looksLikeCompletionClaim(text: string): boolean {
   return COMPLETION_CLAIM.test(text);

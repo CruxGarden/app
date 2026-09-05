@@ -81,7 +81,12 @@ const HOST_TOOL_NAMES = new Set(HOST_TOOL_DEFINITIONS.map((t) => t.name));
 
 /** Everything an external agent can call: the collaborator's tools (files, search, check_site, Growth, theme, resonance) plus the product actions. */
 export function agentToolDefinitions(): ToolDefinition[] {
-  return [...defaultToolDefinitions(), ...HOST_TOOL_DEFINITIONS];
+  // An external agent brings its own subagents; ours run only from the
+  // Collaboration pane (B5), so `delegate` is not offered over MCP.
+  return [
+    ...defaultToolDefinitions().filter((t) => t.name !== 'delegate'),
+    ...HOST_TOOL_DEFINITIONS,
+  ];
 }
 
 /** `requestedBy` stamp for Growth and the transcript's `model` badge. */

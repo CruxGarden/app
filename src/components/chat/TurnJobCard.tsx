@@ -5,28 +5,44 @@ import { confirmDialog } from '@/stores/dialogStore';
 import { useBlobUrl } from '@/hooks/useBlobUrl';
 import {
   describeCheck,
+  hasPendingMerge,
   isFixingAfterCheck,
   isJobActive,
   type PlanStep,
   type TurnJob,
 } from '@/services/turn-jobs';
 import { checkNow, dismissJob, removeQueued, runNextQueued, stopTurn } from '@/services/turns';
+import { chooseConflict, mergeNow } from '@/services/delegate';
+import {
+  conflictsDecided,
+  isSubagentActive,
+  type MergeState,
+  type SubagentRun,
+} from '@/services/subagents';
 
 /** Short turns look as they always did: the card only appears past this. */
 const REVEAL_AFTER_MS = 3000;
 
-function useElapsed(job: TurnJob | null): number {
+/** A one-second clock that only ticks while something is running. */
+function useNow(active: boolean, key: string | undefined): number {
   const [now, setNow] = useState(() => Date.now());
-  const active = isJobActive(job);
   useEffect(() => {
     if (!active) return;
     setNow(Date.now());
     const t = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(t);
-  }, [active, job?.id]);
-  if (!job) return 0;
-  const end = active ? now : job.endedAt ? Date.parse(job.endedAt) : now;
-  return Math.max(0, end - Date.parse(job.startedAt));
+  }, [active, key]);
+  return now;
+}
+
+function elapsedOf(
+  startedAt: string | undefined,
+  endedAt: string | undefined,
+  now: number,
+): number {
+  if (!startedAt) return 0;
+  const end = endedAt ? Date.parse(endedAt) : now;
+  return Math.max(0, end - Date.parse(startedAt));
 }
 
 function formatElapsed(ms: number): string {
@@ -67,6 +83,10 @@ function StepMark({ status }: { status: PlanStep['status'] }) {
 
 function headline(job: TurnJob): string {
   if (isFixingAfterCheck(job)) return 'Check found problems · fixing';
+  // Parallel work (B5): the workers' state leads while they run, and a merge
+  // waiting on the person leads once the job is over.
+  if (job.subagents?.some(isSubagentActive)) return 'Working in parallel';
+  if (hasPendingMerge(job) && !isJobActive(job)) return 'Needs a decision';
   switch (job.status) {
     case 'checking':
       return describeCheck('checking');
@@ -85,8 +105,177 @@ function headline(job: TurnJob): string {
     default:
       return job.check && job.check.status !== 'checking'
         ? describeCheck(job.check.status)
-        : 'Finished';
+        : job.merge?.status === 'merged'
+          ? 'Merged'
+          : 'Finished';
   }
+}
+
+function subagentStatusWord(status: SubagentRun['status']): string {
+  switch (status) {
+    case 'pending':
+      return 'waiting';
+    case 'running':
+      return 'working';
+    case 'done':
+      return 'done';
+    case 'failed':
+      return 'failed';
+    case 'interrupted':
+      return 'stopped';
+  }
+}
+
+function subagentMark(status: SubagentRun['status']): PlanStep['status'] {
+  switch (status) {
+    case 'done':
+      return 'done';
+    case 'running':
+      return 'running';
+    case 'failed':
+    case 'interrupted':
+      return 'interrupted';
+    default:
+      return 'pending';
+  }
+}
+
+/** The workers under the current step: title, status, files, elapsed. */
+function SubagentRows({ runs, now }: { runs: SubagentRun[]; now: number }) {
+  return (
+    <ul className="space-y-0.5 pl-1" aria-label="Workers" data-testid="subagents">
+      {runs.map((run, i) => (
+        <li
+          key={`${run.title}-${i}`}
+          data-testid="subagent"
+          data-status={run.status}
+          className={cn(
+            'flex items-center gap-1.5',
+            run.status === 'pending' && 'text-text-muted/70',
+            run.status === 'failed' && 'text-error/90',
+          )}
+          title={run.error ?? run.reply ?? undefined}
+        >
+          <StepMark status={subagentMark(run.status)} />
+          <span className="truncate flex-1">{run.title}</span>
+          <span className="shrink-0 font-mono text-2xs text-text-muted">
+            {subagentStatusWord(run.status)} · {run.files.length} file
+            {run.files.length === 1 ? '' : 's'} ·{' '}
+            {formatElapsed(elapsedOf(run.startedAt, run.endedAt, now))}
+          </span>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+/** What merged, what needs a decision, and the Merge button. */
+function MergePanel({
+  merge,
+  runs,
+  busy,
+}: {
+  merge: MergeState;
+  runs: SubagentRun[];
+  busy: boolean;
+}) {
+  const [merging, setMerging] = useState(false);
+  const titleOf = (branch: number) => runs[branch]?.title ?? `Worker ${branch + 1}`;
+  const decided = conflictsDecided(merge.conflicts);
+  const pending = merge.status === 'pending';
+  const selectCls = cn(
+    'text-xxs font-mono rounded-[var(--radius-sm)] border border-border bg-transparent px-1 py-0.5',
+    'text-text hover:border-accent/50 cursor-pointer',
+  );
+
+  return (
+    <div className="space-y-1" data-testid="merge" data-status={merge.status}>
+      <div className="font-mono text-2xs text-accent">
+        {pending ? 'Needs a decision' : 'Merged'}
+        {merge.applied.length > 0 && (
+          <span className="text-text-muted">
+            {' '}
+            · {merge.applied.length} file{merge.applied.length === 1 ? '' : 's'}
+            {pending ? ' merged so far' : ''}
+          </span>
+        )}
+      </div>
+      {merge.applied.length > 0 && (
+        <div className="text-2xs text-text-muted break-words" data-testid="merge-applied">
+          {merge.applied.map((a) => a.path).join(', ')}
+        </div>
+      )}
+      {merge.conflicts.length > 0 && (
+        <ul className="space-y-0.5" aria-label="Files changed by more than one worker">
+          {merge.conflicts.map((c) => (
+            <li
+              key={c.path}
+              data-testid="merge-conflict"
+              data-path={c.path}
+              className="flex items-center gap-2"
+            >
+              <span className="font-mono truncate flex-1" title={c.path}>
+                {c.path}
+              </span>
+              {pending ? (
+                <select
+                  aria-label={`Version of ${c.path}`}
+                  className={selectCls}
+                  value={c.choice === undefined ? '' : String(c.choice)}
+                  disabled={busy || merging}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    if (v === '') return;
+                    void chooseConflict(c.path, v === 'keep' ? 'keep' : Number(v));
+                  }}
+                >
+                  <option value="" disabled>
+                    Choose…
+                  </option>
+                  {c.options.map((o) => (
+                    <option key={o.branch} value={String(o.branch)}>
+                      {titleOf(o.branch)}
+                      {o.kind === 'removed' ? ' (removes it)' : ''}
+                    </option>
+                  ))}
+                  <option value="keep">Leave as is</option>
+                </select>
+              ) : (
+                <span className="shrink-0 font-mono text-2xs text-text-muted">
+                  {c.choice === 'keep' || c.choice === undefined
+                    ? 'left as is'
+                    : `from ${titleOf(c.choice)}`}
+                </span>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+      {pending && (
+        <div className="pt-0.5">
+          <button
+            onClick={async () => {
+              setMerging(true);
+              try {
+                await mergeNow();
+              } finally {
+                setMerging(false);
+              }
+            }}
+            disabled={!decided || busy || merging}
+            className={cn(
+              'px-2 py-0.5 text-xxs font-mono rounded-[var(--radius-sm)] border transition-colors cursor-pointer',
+              'text-accent border-accent/40 hover:border-accent',
+              'disabled:opacity-50 disabled:cursor-not-allowed',
+            )}
+            title={decided ? undefined : 'Choose a version for every file first'}
+          >
+            {merging ? 'Merging…' : 'Merge'}
+          </button>
+        </div>
+      )}
+    </div>
+  );
 }
 
 /** The screenshot a check took, from the Blob Store. */
@@ -117,17 +306,21 @@ export default function TurnJobCard() {
   const queue = useCruxStore((s) => s.turnQueue);
   const growths = useCruxStore((s) => s.growths);
   const revertToSnapshot = useCruxStore((s) => s.revertToSnapshot);
-  const elapsed = useElapsed(job);
+  const active = isJobActive(job);
+  const workersActive = !!job?.subagents?.some(isSubagentActive);
+  const now = useNow(active || workersActive, job?.id);
+  const elapsed = job ? elapsedOf(job.startedAt, active ? undefined : job.endedAt, now) : 0;
   const [restoring, setRestoring] = useState(false);
 
-  const active = isJobActive(job);
   const hasQueue = queue.length > 0;
 
-  // Reveal: a plan, a stop/failure, a queue, a check, or a turn that has run a
-  // while. A passed automatic check folds away (the reply carries "Checked ✓");
-  // a check the person asked for, or one that found problems, stays until dismissed.
+  // Reveal: a plan, a stop/failure, a queue, a check, parallel work, or a turn
+  // that has run a while. A passed automatic check folds away (the reply
+  // carries "Checked ✓"); a check the person asked for, one that found
+  // problems, or a fan-out (its rows and merge) stays until dismissed.
   const checkKeepsCard =
     !!job?.check && (job.check.status !== 'passed' || job.check.requestedBy === 'person');
+  const parallelKeepsCard = (job?.subagents?.length ?? 0) > 0;
   const reveal =
     !!job &&
     ((job.status !== 'done' &&
@@ -136,7 +329,8 @@ export default function TurnJobCard() {
         job.status === 'failed' ||
         job.status === 'checking' ||
         elapsed >= REVEAL_AFTER_MS)) ||
-      checkKeepsCard);
+      checkKeepsCard ||
+      parallelKeepsCard);
   if (!reveal && !hasQueue) return null;
 
   const lastSnapshotId = job && job.snapshotIds.length > 0 ? job.snapshotIds.at(-1)! : null;
@@ -221,6 +415,13 @@ export default function TurnJobCard() {
                 </li>
               ))}
             </ol>
+          )}
+
+          {job.subagents && job.subagents.length > 0 && (
+            <SubagentRows runs={job.subagents} now={now} />
+          )}
+          {job.merge && job.subagents && (
+            <MergePanel merge={job.merge} runs={job.subagents} busy={active} />
           )}
 
           {job.error && job.stopReason !== 'closed' && (

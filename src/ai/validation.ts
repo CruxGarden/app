@@ -1,5 +1,6 @@
 import { hasSkill, skillNames } from './skills';
 import { MEMORY_NOTE_MAX, MEMORY_SECTIONS, normalizeSection } from '@/services/memory';
+import { validateDelegateInput } from './delegate-tool';
 
 export interface ValidationResult {
   valid: boolean;
@@ -51,6 +52,10 @@ export function validateToolInput(
       return validateRemember(input);
     case 'load_skill':
       return validateLoadSkill(input);
+    case 'delegate': {
+      const parsed = validateDelegateInput(input);
+      return parsed.valid ? { valid: true } : { valid: false, error: parsed.error };
+    }
     default:
       return { valid: false, error: `Unknown tool: ${toolName}` };
   }

@@ -74,6 +74,9 @@ export function getMockLanguageModel(): LanguageModel {
         warnings: [],
       }),
       doStream: async ({ prompt, abortSignal }) => {
+        // B5 subagents scenario ("in parallel" / "[Subagent]") — scripted at the end of this file
+        const parallel = delegateScript(prompt, abortSignal);
+        if (parallel) return parallel;
         // B4 verify scenario ("landing page" / "Check found:") — scripted at the end of this file
         const verify = verifyScript(prompt);
         if (verify) return verify;
@@ -393,4 +396,58 @@ function generateText(prompt: LanguageModelV4Prompt): string {
     return JSON.stringify(verdictFor(lastUserText(prompt)));
   }
   return 'Mock summary.';
+}
+
+// ── B5: Subagents scenario ──────────────────────────────────────────────────
+//
+// "in parallel": the model calls `delegate` with three tasks (Alpha, Beta,
+// Gamma). Each worker — a separate conversation this same mock answers,
+// recognised by the "[Subagent] <title>" brief — writes its own file
+// (alpha.md …) and then the SHARED notes.md, so the merge has two clean files
+// per worker and one conflict for the person to decide. "slowly" in the ask
+// makes every worker think ~4s before its first write, so a test can Stop
+// mid-run. After the delegate result the model closes with text.
+
+export const SUB_TITLES = ['Alpha', 'Beta', 'Gamma'];
+export const subFile = (title: string) => `${title.toLowerCase()}.md`;
+export const SHARED_FILE = 'notes.md';
+export const subNotes = (title: string) => `notes from ${title}\n`;
+const SUB_THINK_MS = 4000;
+
+function delegateScript(
+  prompt: LanguageModelV4Prompt,
+  abortSignal?: AbortSignal,
+): Promise<ReturnType<typeof stream>> | ReturnType<typeof stream> | null {
+  const text = lastUserText(prompt);
+  const brief = /^\[Subagent\] (\w+)/m.exec(text);
+  if (brief) {
+    const title = brief[1]!;
+    const rounds = toolResultsThisTurn(prompt);
+    return (async () => {
+      if (rounds.length === 0) {
+        if (/\bslowly\b/i.test(text)) await think(SUB_THINK_MS, abortSignal);
+        return toolCallStream('write_file', {
+          path: subFile(title),
+          content: `${title} was here.\n`,
+        });
+      }
+      if (rounds.length === 1) {
+        return toolCallStream('write_file', { path: SHARED_FILE, content: subNotes(title) });
+      }
+      return textStream(`Wrote ${subFile(title)} and ${SHARED_FILE}.`);
+    })();
+  }
+  if (!/\bin parallel\b/i.test(text)) return null;
+  const last = prompt[prompt.length - 1];
+  if (last?.role === 'tool') return textStream('Done — merged the parallel work.');
+  const slowly = /\bslowly\b/i.test(text);
+  return toolCallStream('delegate', {
+    tasks: SUB_TITLES.map((title) => ({
+      title,
+      instructions:
+        `Write ${subFile(title)} with a line of your own, then add your notes to ${SHARED_FILE}.` +
+        (slowly ? ' Take it slowly.' : ''),
+      paths: [subFile(title), SHARED_FILE],
+    })),
+  });
 }

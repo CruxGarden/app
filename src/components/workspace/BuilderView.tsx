@@ -20,12 +20,16 @@ import { Capability, can } from '@/lib/platform';
 import { mediaKindFor, isStreamingReady } from '@/lib/media-kind';
 import { formatBytes } from '@/lib/format';
 import {
+  CAPTION_OFFER_MIN,
   MAX_TRANSCODE_BYTES,
+  captionTasksFor,
   describeBatch,
   titleFromFileName,
   uniqueFileName,
   uniqueItemPath,
+  type CaptionItem,
 } from './builder-files';
+import { canCollaborate, runParallelJob } from '@/services/turns';
 
 /** Action types the Builder renders from dedicated components, not CustomAction. */
 const DERIVED_ACTIONS = new Set<BuilderAction['do']['type']>([
@@ -383,6 +387,7 @@ function AddPhotosButton({
       const takenNames = namesInFolder(takenPaths, 'public/images');
       let last: { artifact: Artifact; path: string } | null = null;
       const failed: string[] = [];
+      const captionItems: CaptionItem[] = [];
       let added = 0;
       try {
         for (const [i, file] of files.entries()) {
@@ -411,6 +416,7 @@ function AddPhotosButton({
               serializeFrontmatter(frontmatter, collection.new.body ?? '\n'),
             );
             takenPaths.add(path);
+            captionItems.push({ path, imagePath: uploadedPath });
             last = { artifact, path };
             added += 1;
           } catch (err) {
@@ -418,11 +424,23 @@ function AddPhotosButton({
           }
         }
         if (last) openFile(last.artifact.id, last.path);
-        void alertDialog(
-          describeBatch({ added, singular: collection.singular.toLowerCase(), failed }) +
-            (added ? ' One per photo — add captions in each, or ask for them.' : ''),
-          failed.length && !added ? 'Add photos' : 'Photos added',
-        );
+        const summary = describeBatch({ added, singular: collection.singular.toLowerCase(), failed });
+        // A big batch is wide, independent work: offer to caption it with
+        // parallel workers (B5) — only when a model can actually run.
+        if (added >= CAPTION_OFFER_MIN && (await canCollaborate())) {
+          const write = await confirmDialog({
+            title: 'Photos added',
+            message: `${summary} Write a caption for each one now? Workers look at the photos in parallel, each on its own Growth branch, and the captions merge into the posts.`,
+            confirmLabel: 'Write captions',
+            cancelLabel: 'Not now',
+          });
+          if (write) void runParallelJob(`Write captions for ${added} photos`, captionTasksFor(captionItems));
+        } else {
+          void alertDialog(
+            summary + (added ? ' One per photo — add captions in each, or ask for them.' : ''),
+            failed.length && !added ? 'Add photos' : 'Photos added',
+          );
+        }
       } finally {
         setStatus(null);
       }

@@ -26,9 +26,12 @@ import {
   stampJob,
   verificationOf,
   withCheckSnapshot,
+  withLiveParallelState,
   type TurnJob,
   type TurnStopReason,
 } from './turn-jobs';
+import { delegateTasks } from './delegate';
+import type { SubagentTask } from './subagents';
 import {
   checkFoundMessage,
   defaultCheckDeps,
@@ -61,6 +64,16 @@ import {
 
 /** Per-crux in-flight run, so steer can wait for the previous job to settle. */
 const activeRuns = new Map<string, Promise<void>>();
+
+/**
+ * Publish a job to the store. The turn loop hands over whole objects from its
+ * own copy while the Subagent runner (B5) updates `subagents` / `merge` on the
+ * live job — so the live parallel state rides along on every publish.
+ */
+function publishJob(job: TurnJob): void {
+  const s = useCruxStore.getState();
+  s.setTurnJob(withLiveParallelState(job, s.turnJob));
+}
 /** Set before abort so the finaliser knows whether Stop or Steer ended the job. */
 const stopReasons = new Map<string, TurnStopReason>();
 
@@ -211,6 +224,13 @@ export async function dismissJob(): Promise<void> {
   await s.persistTurnState();
 }
 
+/** Can a turn run for the open crux — a model with a key (or the e2e mock)? */
+export async function canCollaborate(): Promise<boolean> {
+  const crux = useCruxStore.getState().crux;
+  if (!crux) return false;
+  return (await resolveModelAndKey(crux)).apiKey !== null;
+}
+
 /** Resolve the model + key for this crux; null key means no provider is configured. */
 async function resolveModelAndKey(
   crux: NonNullable<ReturnType<typeof useCruxStore.getState>['crux']>,
@@ -309,7 +329,7 @@ async function launch(args: {
   const normalizedMessages = normalizedHistory(pf);
 
   // The job: tracked by the store, persisted so a relaunch reports it.
-  useCruxStore.getState().setTurnJob(job);
+  publishJob(job);
   useCruxStore.getState().setStreaming(true);
   useCruxStore.getState().clearStreamContent();
   void duckAudio(true);
@@ -348,6 +368,19 @@ async function runJob(args: {
     // confirmation banner; the store performs the deletion on approval.
     (path, artifactId) => useCruxStore.getState().requestDeleteApproval(artifactId, path),
     model,
+    {
+      // Subagents (B5): the model fans out from inside this job; Stop on the
+      // job aborts every worker through the same signal.
+      delegate: (tasks) =>
+        delegateTasks(tasks, {
+          cruxId,
+          model,
+          apiKey,
+          signal: controller.signal,
+          jobId: args.job.id,
+          requestedBy: 'collaborator',
+        }),
+    },
   );
   // Stop means stop: a provider stream that arrives after the abort must not
   // change files behind the person's back.
@@ -372,7 +405,7 @@ async function runJob(args: {
       runConversation(apiKey, cruxId, normalizedMessages, model, executeToolFn, controller.signal),
     update: async (job) => {
       if (!stillHere()) return;
-      useCruxStore.getState().setTurnJob(job);
+      publishJob(job);
       await useCruxStore.getState().persistTurnState();
     },
     onText: (delta) => {
@@ -599,7 +632,7 @@ async function runCheckCycle(args: {
   session.turn = controller;
   stopReasons.delete(cruxId);
 
-  useCruxStore.getState().setTurnJob(job);
+  publishJob(job);
   await useCruxStore.getState().persistTurnState();
 
   const live = useCruxStore.getState();
@@ -631,7 +664,7 @@ async function runCheckCycle(args: {
     job = finishJob(job, aborted ? 'interrupted' : 'failed', {
       ...(aborted ? { stopReason } : { error: (err as Error)?.message ?? String(err) }),
     });
-    useCruxStore.getState().setTurnJob(job);
+    publishJob(job);
     await useCruxStore.getState().persistTurnState();
     return;
   }
@@ -654,7 +687,7 @@ async function runCheckCycle(args: {
     restampLastReply(job);
     job = await recordVerification(job, args.uncapturedMutation);
     if (!stillHere()) return;
-    useCruxStore.getState().setTurnJob(job);
+    publishJob(job);
     await useCruxStore.getState().persistTurnState();
     void playCue(outcome.ok ? 'message' : 'error');
     await runQueuedAfter(job);
@@ -701,6 +734,68 @@ export async function checkNow(): Promise<void> {
     reply: '',
     uncapturedMutation: false,
   });
+  activeRuns.set(cruxId, run);
+  try {
+    await run;
+  } finally {
+    if (activeRuns.get(cruxId) === run) activeRuns.delete(cruxId);
+  }
+}
+
+// ── Parallel work started by a person (B5) ──────────────────────────────────
+
+/**
+ * The Builder's batch actions fan out without a model turn: a job of its own
+ * runs the workers, merges, and finishes. Stop on the card aborts it like any
+ * turn; the composer queues behind it.
+ */
+export async function runParallelJob(prompt: string, tasks: SubagentTask[]): Promise<void> {
+  const s = useCruxStore.getState();
+  const crux = s.crux;
+  if (!crux || tasks.length === 0 || isJobActive(s.turnJob) || activeRuns.has(crux.id)) return;
+  const cruxId = crux.id;
+  const { model, providerId, apiKey } = await resolveModelAndKey(crux);
+  if (!apiKey) {
+    s.addMessage({
+      role: 'assistant',
+      content: `No API key configured for ${providerId}. Add one in Settings to run this.`,
+    });
+    return;
+  }
+  const job: TurnJob = { ...newTurnJob(cruxId, prompt), status: 'running' };
+  publishJob(job);
+  await useCruxStore.getState().persistTurnState();
+
+  const session = sessionFor(cruxId);
+  const controller = new AbortController();
+  session.turn = controller;
+  stopReasons.delete(cruxId);
+
+  const run = (async () => {
+    try {
+      await delegateTasks(tasks, {
+        cruxId,
+        model,
+        apiKey,
+        signal: controller.signal,
+        jobId: job.id,
+        requestedBy: 'person',
+      });
+    } finally {
+      session.turn = null;
+      const live = useCruxStore.getState();
+      if (live.crux?.id === cruxId && live.turnJob?.id === job.id) {
+        const stopReason = stopReasons.get(cruxId) ?? null;
+        publishJob(
+          finishJob(live.turnJob, controller.signal.aborted ? 'interrupted' : 'done', {
+            stopReason: stopReason ?? undefined,
+          }),
+        );
+        await live.persistTurnState();
+      }
+      stopReasons.delete(cruxId);
+    }
+  })();
   activeRuns.set(cruxId, run);
   try {
     await run;

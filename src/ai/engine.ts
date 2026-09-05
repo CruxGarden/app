@@ -72,6 +72,13 @@ export interface ConversationOptions {
    * The seam the eval harness injects mock models through (A6).
    */
   languageModel?: LanguageModel;
+  /**
+   * With a custom `systemPrompt`, supply the volatile <workspace_context>
+   * block yourself — called once up front and again after every file
+   * mutation, exactly like the workspace prompt's own refresh. A Subagent
+   * (B5) uses this to see its branch's files under the main crux's guidance.
+   */
+  contextBlock?: () => Promise<string>;
 }
 
 /**
@@ -247,8 +254,15 @@ export async function* runConversation(
   // providers can cache it; the file list and content model ride in a
   // <workspace_context> user block that refreshes without busting the cache.
   const { system: systemPrompt, context: workspaceContext } = options?.systemPrompt
-    ? { system: options.systemPrompt, context: '' }
+    ? {
+        system: options.systemPrompt,
+        context: options.contextBlock ? await options.contextBlock() : '',
+      }
     : await buildPromptParts(cruxId);
+  // How to rebuild the context block after a mutation (null: nothing to refresh)
+  const refreshContext: (() => Promise<string>) | null = options?.systemPrompt
+    ? (options.contextBlock ?? null)
+    : () => buildWorkspaceContext(cruxId);
   let currentMessages = [...messages];
   let fullTextContent = '';
   let hadMutation = false;
@@ -335,12 +349,12 @@ export async function* runConversation(
       // the updated file listing — the stable system prompt is untouched, so
       // the provider cache survives (workspace prompts only; custom prompts
       // have no context block to refresh).
-      prepareStep: options?.systemPrompt
+      prepareStep: !refreshContext
         ? undefined
         : async ({ messages: stepMessages }) => {
             if (!mutatedSinceStep) return {};
             mutatedSinceStep = false;
-            const fresh = await buildWorkspaceContext(cruxId);
+            const fresh = await refreshContext();
             return {
               messages: stepMessages.map((m) =>
                 m.role === 'user' &&
