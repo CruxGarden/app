@@ -40,11 +40,22 @@ export async function me(): Promise<BillingMe> {
   const { data } = await client.get<BillingMe>('/billing/me');
   return data;
 }
+/** The plans that can be bought; mirrors the API's enum (contract-check.ts keeps them equal). */
+export type PaidPlanId = 'grower' | 'gardener';
+const PAID_PLAN_IDS: readonly PaidPlanId[] = ['grower', 'gardener'];
+/** Body of POST /billing/checkout — asserted against the API contract in contract-check.ts. */
+export interface CheckoutBody {
+  planId: PaidPlanId;
+  interval: BillingInterval;
+}
 export async function checkout(
   planId: string,
   interval: BillingInterval,
 ): Promise<{ url: string }> {
-  const { data } = await client.post<{ url: string }>('/billing/checkout', { planId, interval });
+  if (!(PAID_PLAN_IDS as readonly string[]).includes(planId))
+    throw new Error(`"${planId}" is not a plan you can buy`);
+  const body: CheckoutBody = { planId: planId as PaidPlanId, interval };
+  const { data } = await client.post<{ url: string }>('/billing/checkout', body);
   return data;
 }
 export async function portal(): Promise<{ url: string }> {

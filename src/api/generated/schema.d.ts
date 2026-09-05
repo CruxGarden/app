@@ -4,5129 +4,5727 @@
  */
 
 export interface paths {
-  '/': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Health check
+         * @description Returns the health status of the API and its dependencies (database, Redis). Status will be "healthy" if all services are up, "degraded" if some services are down, or "unhealthy" if critical services are down.
+         */
+        get: operations["AppController_health"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    /**
-     * Health check
-     * @description Returns the health status of the API and its dependencies (database, Redis). Status will be "healthy" if all services are up, "degraded" if some services are down, or "unhealthy" if critical services are down.
-     */
-    get: operations['AppController_health'];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/auth/code': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/auth/code": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Request authentication code
+         * @description Sends an authentication code to the provided email address.
+         */
+        post: operations["AuthController_code"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get?: never;
-    put?: never;
-    /**
-     * Request authentication code
-     * @description Sends an authentication code to the provided email address.
-     */
-    post: operations['AuthController_code'];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/auth/login': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/auth/login": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Login with email and code
+         * @description Authenticates a user using email and authentication code. Creates account and author if first time login.
+         */
+        post: operations["AuthController_login"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get?: never;
-    put?: never;
-    /**
-     * Login with email and code
-     * @description Authenticates a user using email and authentication code. Creates account and author if first time login.
-     */
-    post: operations['AuthController_login'];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/auth/token': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/auth/token": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Refresh access token
+         * @description Gets a new access token using a refresh token.
+         */
+        post: operations["AuthController_token"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get?: never;
-    put?: never;
-    /**
-     * Refresh access token
-     * @description Gets a new access token using a refresh token.
-     */
-    post: operations['AuthController_token'];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/auth/profile': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/auth/profile": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get user profile
+         * @description Retrieves the authenticated user's account profile.
+         */
+        get: operations["AuthController_profile"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    /**
-     * Get user profile
-     * @description Retrieves the authenticated user's account profile.
-     */
-    get: operations['AuthController_profile'];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/auth/logout': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/auth/logout": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Logout user
+         * @description Logs out the authenticated user and invalidates their grant tokens.
+         */
+        delete: operations["AuthController_logout"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get?: never;
-    put?: never;
-    post?: never;
-    /**
-     * Logout user
-     * @description Logs out the authenticated user and invalidates their grant tokens.
-     */
-    delete: operations['AuthController_logout'];
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/account/check-email': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/account/check-email": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Check email availability
+         * @description Checks if an email address is available for use. Returns true if available or if it belongs to the current user.
+         */
+        get: operations["AccountController_checkEmail"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    /**
-     * Check email availability
-     * @description Checks if an email address is available for use. Returns true if available or if it belongs to the current user.
-     */
-    get: operations['AccountController_checkEmail'];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/account': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/account": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get account
+         * @description Retrieves the authenticated user's account.
+         */
+        get: operations["AccountController_get"];
+        put?: never;
+        post?: never;
+        /**
+         * Delete account
+         * @description Permanently deletes the authenticated user's account. Requires confirmation.
+         */
+        delete: operations["AccountController_delete"];
+        options?: never;
+        head?: never;
+        /**
+         * Update account (partial)
+         * @description Partially updates the authenticated user's account information. Only provided fields will be updated.
+         */
+        patch: operations["AccountController_update"];
+        trace?: never;
     };
-    /**
-     * Get account
-     * @description Retrieves the authenticated user's account.
-     */
-    get: operations['AccountController_get'];
-    put?: never;
-    post?: never;
-    /**
-     * Delete account
-     * @description Permanently deletes the authenticated user's account. Requires confirmation.
-     */
-    delete: operations['AccountController_delete'];
-    options?: never;
-    head?: never;
-    /**
-     * Update account (partial)
-     * @description Partially updates the authenticated user's account information. Only provided fields will be updated.
-     */
-    patch: operations['AccountController_update'];
-    trace?: never;
-  };
-  '/authors/check-username': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/authors/check-username": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Check username availability
+         * @description Checks if a username is available for use. Returns true if available or if it belongs to the current user.
+         */
+        get: operations["AuthorController_checkUsername"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    /**
-     * Check username availability
-     * @description Checks if a username is available for use. Returns true if available or if it belongs to the current user.
-     */
-    get: operations['AuthorController_checkUsername'];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/authors': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/authors": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get all authors
+         * @description Retrieves a paginated list of all authors.
+         */
+        get: operations["AuthorController_getAll"];
+        put?: never;
+        /**
+         * Create a new author
+         * @description Creates a new author profile. Requires authentication.
+         */
+        post: operations["AuthorController_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    /**
-     * Get all authors
-     * @description Retrieves a paginated list of all authors.
-     */
-    get: operations['AuthorController_getAll'];
-    put?: never;
-    /**
-     * Create a new author
-     * @description Creates a new author profile. Requires authentication.
-     */
-    post: operations['AuthorController_create'];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/authors/{identifier}': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/authors/{identifier}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get an author by ID or username
+         * @description Retrieves a specific author by their UUID or username. Prefix identifier with @ to search by username (e.g., @johndoe), otherwise looks up by UUID.
+         */
+        get: operations["AuthorController_getByIdentifier"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    /**
-     * Get an author by ID or username
-     * @description Retrieves a specific author by their UUID or username. Prefix identifier with @ to search by username (e.g., @johndoe), otherwise looks up by UUID.
-     */
-    get: operations['AuthorController_getByIdentifier'];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/authors/{id}': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/authors/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Delete an author
+         * @description Deletes an existing author profile. Requires authentication and ownership.
+         */
+        delete: operations["AuthorController_delete"];
+        options?: never;
+        head?: never;
+        /**
+         * Update an author
+         * @description Updates an existing author profile. Requires authentication and ownership.
+         */
+        patch: operations["AuthorController_update"];
+        trace?: never;
     };
-    get?: never;
-    put?: never;
-    post?: never;
-    /**
-     * Delete an author
-     * @description Deletes an existing author profile. Requires authentication and ownership.
-     */
-    delete: operations['AuthorController_delete'];
-    options?: never;
-    head?: never;
-    /**
-     * Update an author
-     * @description Updates an existing author profile. Requires authentication and ownership.
-     */
-    patch: operations['AuthorController_update'];
-    trace?: never;
-  };
-  '/authors/{id}/avatar': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/authors/{id}/avatar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["AuthorController_uploadAvatar"];
+        delete: operations["AuthorController_removeAvatar"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get?: never;
-    put?: never;
-    post: operations['AuthorController_uploadAvatar'];
-    delete: operations['AuthorController_removeAvatar'];
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/authors/{identifier}/avatar': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/authors/{identifier}/avatar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["AuthorController_getAvatar"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get: operations['AuthorController_getAvatar'];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/authors/{identifier}/cruxes': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/authors/{identifier}/cruxes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["AuthorController_getPublicCruxes"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get: operations['AuthorController_getPublicCruxes'];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/authors/{identifier}/cruxes/{slug}': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/authors/{identifier}/cruxes/{slug}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["AuthorController_getCruxBySlug"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get: operations['AuthorController_getCruxBySlug'];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/authors/{identifier}/graph': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/authors/{identifier}/graph": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["AuthorController_getGraph"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get: operations['AuthorController_getGraph'];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/authors/{identifier}/cruxes/{slug}/artifacts': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/authors/{identifier}/cruxes/{slug}/artifacts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["AuthorController_getPublicArtifacts"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get: operations['AuthorController_getPublicArtifacts'];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/authors/{identifier}/cruxes/{slug}/artifacts/{artifactId}/download': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/authors/{identifier}/cruxes/{slug}/artifacts/{artifactId}/download": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["AuthorController_downloadPublicArtifact"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get: operations['AuthorController_downloadPublicArtifact'];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/cruxes': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/cruxes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get all cruxes
+         * @description Retrieves a paginated list of all cruxes with their authors.
+         */
+        get: operations["CruxController_findAll"];
+        put?: never;
+        /**
+         * Create a new crux
+         * @description Creates a new crux with the provided data. Requires authentication.
+         */
+        post: operations["CruxController_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    /**
-     * Get all cruxes
-     * @description Retrieves a paginated list of all cruxes with their authors.
-     */
-    get: operations['CruxController_findAll'];
-    put?: never;
-    /**
-     * Create a new crux
-     * @description Creates a new crux with the provided data. Requires authentication.
-     */
-    post: operations['CruxController_create'];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/cruxes/{identifier}': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/cruxes/{identifier}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get a crux by identifier
+         * @description Retrieves a specific crux by its UUID or slug.
+         */
+        get: operations["CruxController_getByIdentifier"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    /**
-     * Get a crux by identifier
-     * @description Retrieves a specific crux by its UUID or slug.
-     */
-    get: operations['CruxController_getByIdentifier'];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/cruxes/{id}': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/cruxes/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Delete a crux
+         * @description Deletes an existing crux. Requires authentication and ownership.
+         */
+        delete: operations["CruxController_delete"];
+        options?: never;
+        head?: never;
+        /**
+         * Update a crux
+         * @description Updates an existing crux with the provided data. Requires authentication and ownership.
+         */
+        patch: operations["CruxController_update"];
+        trace?: never;
     };
-    get?: never;
-    put?: never;
-    post?: never;
-    /**
-     * Delete a crux
-     * @description Deletes an existing crux. Requires authentication and ownership.
-     */
-    delete: operations['CruxController_delete'];
-    options?: never;
-    head?: never;
-    /**
-     * Update a crux
-     * @description Updates an existing crux with the provided data. Requires authentication and ownership.
-     */
-    patch: operations['CruxController_update'];
-    trace?: never;
-  };
-  '/cruxes/{id}/dimensions': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/cruxes/{id}/dimensions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get dimensions for a crux
+         * @description Retrieves all dimensional relationships where this crux is the source. Dimensions can be filtered by type and optionally include embedded source/target crux data.
+         */
+        get: operations["CruxController_getDimensions"];
+        put?: never;
+        /**
+         * Create a new dimension from this crux
+         * @description Creates a new dimensional relationship from this crux to another crux.
+         */
+        post: operations["CruxController_createDimension"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    /**
-     * Get dimensions for a crux
-     * @description Retrieves all dimensional relationships where this crux is the source. Dimensions can be filtered by type and optionally include embedded source/target crux data.
-     */
-    get: operations['CruxController_getDimensions'];
-    put?: never;
-    /**
-     * Create a new dimension from this crux
-     * @description Creates a new dimensional relationship from this crux to another crux.
-     */
-    post: operations['CruxController_createDimension'];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/cruxes/{id}/tags': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/cruxes/{id}/tags": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get all tags for a crux
+         * @description Retrieves all tags associated with a specific crux.
+         */
+        get: operations["CruxController_getTags"];
+        /**
+         * Sync tags for a crux
+         * @description Replaces all tags for a crux with the provided list. Tags must be in kebab-case format.
+         */
+        put: operations["CruxController_syncTags"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    /**
-     * Get all tags for a crux
-     * @description Retrieves all tags associated with a specific crux.
-     */
-    get: operations['CruxController_getTags'];
-    /**
-     * Sync tags for a crux
-     * @description Replaces all tags for a crux with the provided list. Tags must be in kebab-case format.
-     */
-    put: operations['CruxController_syncTags'];
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/cruxes/{id}/artifacts': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/cruxes/{id}/artifacts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get all artifacts for a crux
+         * @description Retrieves all file artifacts associated with a specific crux.
+         */
+        get: operations["CruxController_getArtifacts"];
+        put?: never;
+        /**
+         * Upload a file artifact to a crux
+         * @description Uploads a file and creates an artifact record for a crux. Max file size: 50MB. Requires authentication and crux ownership.
+         */
+        post: operations["CruxController_createArtifact"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    /**
-     * Get all artifacts for a crux
-     * @description Retrieves all file artifacts associated with a specific crux.
-     */
-    get: operations['CruxController_getArtifacts'];
-    put?: never;
-    /**
-     * Upload a file artifact to a crux
-     * @description Uploads a file and creates an artifact record for a crux. Max file size: 50MB. Requires authentication and crux ownership.
-     */
-    post: operations['CruxController_createArtifact'];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/cruxes/{id}/artifacts/{artifactId}/download': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/cruxes/{id}/artifacts/{artifactId}/download": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Download an artifact file
+         * @description Downloads the file for a specific artifact. Returns the file with appropriate Content-Type and Content-Disposition headers. Cached for 1 year.
+         */
+        get: operations["CruxController_downloadArtifact"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    /**
-     * Download an artifact file
-     * @description Downloads the file for a specific artifact. Returns the file with appropriate Content-Type and Content-Disposition headers. Cached for 1 year.
-     */
-    get: operations['CruxController_downloadArtifact'];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/cruxes/{id}/publish': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/cruxes/{id}/publish": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["CruxController_publish"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get?: never;
-    put?: never;
-    post: operations['CruxController_publish'];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/cruxes/{id}/unpublish': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/cruxes/{id}/unpublish": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["CruxController_unpublish"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get?: never;
-    put?: never;
-    post: operations['CruxController_unpublish'];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/artifacts/{id}': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/artifacts/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Update an artifact
+         * @description Updates an existing artifact. Optionally upload a new file to replace the existing one. Max file size: 50MB. Requires authentication and ownership.
+         */
+        put: operations["ArtifactController_update"];
+        post?: never;
+        /**
+         * Delete an artifact
+         * @description Deletes an existing artifact. Requires authentication and ownership.
+         */
+        delete: operations["ArtifactController_delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get?: never;
-    /**
-     * Update an artifact
-     * @description Updates an existing artifact. Optionally upload a new file to replace the existing one. Max file size: 50MB. Requires authentication and ownership.
-     */
-    put: operations['ArtifactController_update'];
-    post?: never;
-    /**
-     * Delete an artifact
-     * @description Deletes an existing artifact. Requires authentication and ownership.
-     */
-    delete: operations['ArtifactController_delete'];
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/homes': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/homes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get all homes
+         * @description Retrieves a paginated list of all homes.
+         */
+        get: operations["HomeController_getAll"];
+        put?: never;
+        /**
+         * Create a new home
+         * @description Creates a new home with the provided data. Requires admin authentication.
+         */
+        post: operations["HomeController_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    /**
-     * Get all homes
-     * @description Retrieves a paginated list of all homes.
-     */
-    get: operations['HomeController_getAll'];
-    put?: never;
-    /**
-     * Create a new home
-     * @description Creates a new home with the provided data. Requires admin authentication.
-     */
-    post: operations['HomeController_create'];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/homes/{id}': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/homes/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get a home by ID
+         * @description Retrieves a specific home by its UUID.
+         */
+        get: operations["HomeController_getById"];
+        put?: never;
+        post?: never;
+        /**
+         * Delete a home
+         * @description Deletes an existing home. Requires admin authentication.
+         */
+        delete: operations["HomeController_delete"];
+        options?: never;
+        head?: never;
+        /**
+         * Update a home
+         * @description Updates an existing home with the provided data. Requires admin authentication.
+         */
+        patch: operations["HomeController_update"];
+        trace?: never;
     };
-    /**
-     * Get a home by ID
-     * @description Retrieves a specific home by its UUID.
-     */
-    get: operations['HomeController_getById'];
-    put?: never;
-    post?: never;
-    /**
-     * Delete a home
-     * @description Deletes an existing home. Requires admin authentication.
-     */
-    delete: operations['HomeController_delete'];
-    options?: never;
-    head?: never;
-    /**
-     * Update a home
-     * @description Updates an existing home with the provided data. Requires admin authentication.
-     */
-    patch: operations['HomeController_update'];
-    trace?: never;
-  };
-  '/tags': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/tags": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List all tags
+         * @description Retrieves all tags with optional filtering by resource type, search term, and sorting. Results are paginated - use Link and Pagination response headers for navigation.
+         */
+        get: operations["TagController_findAll"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    /**
-     * List all tags
-     * @description Retrieves all tags with optional filtering by resource type, search term, and sorting. Results are paginated - use Link and Pagination response headers for navigation.
-     */
-    get: operations['TagController_findAll'];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/tags/{id}': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/tags/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get a tag by ID
+         * @description Retrieves a single tag by its UUID.
+         */
+        get: operations["TagController_getById"];
+        put?: never;
+        post?: never;
+        /**
+         * Delete a tag
+         * @description Soft deletes an existing tag by its ID. This is an admin-only operation and affects ALL resources using this tag. The tag is marked as deleted but not permanently removed from the database.
+         */
+        delete: operations["TagController_delete"];
+        options?: never;
+        head?: never;
+        /**
+         * Update a tag
+         * @description Updates the label of an existing tag by its ID. This is an admin-only operation and affects ALL resources using this tag.
+         */
+        patch: operations["TagController_update"];
+        trace?: never;
     };
-    /**
-     * Get a tag by ID
-     * @description Retrieves a single tag by its UUID.
-     */
-    get: operations['TagController_getById'];
-    put?: never;
-    post?: never;
-    /**
-     * Delete a tag
-     * @description Soft deletes an existing tag by its ID. This is an admin-only operation and affects ALL resources using this tag. The tag is marked as deleted but not permanently removed from the database.
-     */
-    delete: operations['TagController_delete'];
-    options?: never;
-    head?: never;
-    /**
-     * Update a tag
-     * @description Updates the label of an existing tag by its ID. This is an admin-only operation and affects ALL resources using this tag.
-     */
-    patch: operations['TagController_update'];
-    trace?: never;
-  };
-  '/dimensions/{id}': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/dimensions/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get a dimension by ID
+         * @description Retrieves a single dimension by its UUID.
+         */
+        get: operations["DimensionController_getById"];
+        put?: never;
+        post?: never;
+        /**
+         * Delete a dimension
+         * @description Soft deletes a dimensional relationship.
+         */
+        delete: operations["DimensionController_delete"];
+        options?: never;
+        head?: never;
+        /**
+         * Update a dimension
+         * @description Updates an existing dimensional relationship.
+         */
+        patch: operations["DimensionController_update"];
+        trace?: never;
     };
-    /**
-     * Get a dimension by ID
-     * @description Retrieves a single dimension by its UUID.
-     */
-    get: operations['DimensionController_getById'];
-    put?: never;
-    post?: never;
-    /**
-     * Delete a dimension
-     * @description Soft deletes a dimensional relationship.
-     */
-    delete: operations['DimensionController_delete'];
-    options?: never;
-    head?: never;
-    /**
-     * Update a dimension
-     * @description Updates an existing dimensional relationship.
-     */
-    patch: operations['DimensionController_update'];
-    trace?: never;
-  };
-  '/paths': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/usage/me": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Storage and bandwidth for the current billing period, with plan limits */
+        get: operations["UsageController_me"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    /**
-     * Get all paths
-     * @description Retrieves a paginated list of all paths with their metadata.
-     */
-    get: operations['PathController_findAll'];
-    put?: never;
-    /**
-     * Create a new path
-     * @description Creates a new path with the provided data. Requires authentication.
-     */
-    post: operations['PathController_create'];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/paths/{identifier}': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/cruxes/{id}/usage": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Storage and bandwidth for one crux this billing period */
+        get: operations["UsageController_crux"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    /**
-     * Get a path by identifier
-     * @description Retrieves a specific path by its UUID or slug.
-     */
-    get: operations['PathController_getByIdentifier'];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/paths/{id}': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/usage/ingest/run": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Admin: ingest new CloudFront logs now */
+        post: operations["UsageController_ingest"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get?: never;
-    put?: never;
-    post?: never;
-    /**
-     * Delete a path
-     * @description Deletes an existing path. Requires authentication and ownership.
-     */
-    delete: operations['PathController_delete'];
-    options?: never;
-    head?: never;
-    /**
-     * Update a path
-     * @description Updates an existing path with the provided data. Requires authentication and ownership.
-     */
-    patch: operations['PathController_update'];
-    trace?: never;
-  };
-  '/paths/{id}/markers': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/usage/periods": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Finalized billing periods for the current account (newest first) */
+        get: operations["UsageController_periods"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    /**
-     * Get all markers for a path
-     * @description Retrieves all markers (crux references) for a specific path in order.
-     */
-    get: operations['PathController_getMarkers'];
-    /**
-     * Sync markers for a path
-     * @description Replaces all markers for a path with the provided list. Each marker references a crux by ID.
-     */
-    put: operations['PathController_syncMarkers'];
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/paths/{id}/tags': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/usage/reconcile": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Admin: daily bandwidth reconciliation against CloudFront */
+        get: operations["UsageController_reconciliation"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    /**
-     * Get all tags for a path
-     * @description Retrieves all tags associated with a specific path.
-     */
-    get: operations['PathController_getTags'];
-    /**
-     * Sync tags for a path
-     * @description Replaces all tags for a path with the provided list. Tags must be in kebab-case format.
-     */
-    put: operations['PathController_syncTags'];
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/ai/chat': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/usage/reconcile/run": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Admin: reconcile the last days now */
+        post: operations["UsageController_reconcile"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get?: never;
-    put?: never;
-    post: operations['AiController_chat'];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/sync/garden': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/usage/periods/close": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Admin: finalize the previous billing period if grace has passed */
+        post: operations["UsageController_closePeriods"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get: operations['SyncController_pullGarden'];
-    put: operations['SyncController_pushGarden'];
-    post?: never;
-    delete: operations['SyncController_deleteGarden'];
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/sync/garden/status': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/billing/plans": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Plans and prices (public) */
+        get: operations["BillingController_plans"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get: operations['SyncController_getGardenStatus'];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/sync/crux/{cruxId}': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/billing/me": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** This account’s plan and subscription state */
+        get: operations["BillingController_me"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get: operations['SyncController_pullCrux'];
-    put: operations['SyncController_pushCrux'];
-    post?: never;
-    delete: operations['SyncController_deleteCrux'];
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/sync/crux': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/billing/checkout": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Start a hosted checkout; returns the URL to open */
+        post: operations["BillingController_checkout"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get: operations['SyncController_listCruxes'];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/explore': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/billing/portal": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Customer portal URL (change plan, payment method, cancel) */
+        post: operations["BillingController_portal"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    /** Search discoverable cruxes or authors */
-    get: operations['ExploreController_explore'];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/explore/tags': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/billing/sync": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Re-pull the subscription from the provider (after checkout) */
+        post: operations["BillingController_sync"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    /** Popular tags across discoverable cruxes */
-    get: operations['ExploreController_tags'];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/store/{cruxId}/{key}': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/billing/subscriptions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Admin: all subscriptions */
+        get: operations["BillingController_all"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get: operations['StoreController_get'];
-    put: operations['StoreController_set'];
-    post?: never;
-    delete: operations['StoreController_deleteEntry'];
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/store/{cruxId}/{key}/inc': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/cruxes/{id}/domains": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Custom domains connected to a crux */
+        get: operations["DomainsController_list"];
+        put?: never;
+        /** Connect a custom domain; returns the DNS records to create */
+        post: operations["DomainsController_add"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get?: never;
-    put?: never;
-    post: operations['StoreController_increment'];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/store/{cruxId}': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/domains/{id}/verify": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Check DNS and advance the domain (pending_dns → issuing → active) */
+        post: operations["DomainsController_verify"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get: operations['StoreController_list'];
-    put?: never;
-    post?: never;
-    delete: operations['StoreController_clearAll'];
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
+    "/domains/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Disconnect a custom domain */
+        delete: operations["DomainsController_remove"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/paths": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get all paths
+         * @description Retrieves a paginated list of all paths with their metadata.
+         */
+        get: operations["PathController_findAll"];
+        put?: never;
+        /**
+         * Create a new path
+         * @description Creates a new path with the provided data. Requires authentication.
+         */
+        post: operations["PathController_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/paths/{identifier}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get a path by identifier
+         * @description Retrieves a specific path by its UUID or slug.
+         */
+        get: operations["PathController_getByIdentifier"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/paths/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Delete a path
+         * @description Deletes an existing path. Requires authentication and ownership.
+         */
+        delete: operations["PathController_delete"];
+        options?: never;
+        head?: never;
+        /**
+         * Update a path
+         * @description Updates an existing path with the provided data. Requires authentication and ownership.
+         */
+        patch: operations["PathController_update"];
+        trace?: never;
+    };
+    "/paths/{id}/markers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get all markers for a path
+         * @description Retrieves all markers (crux references) for a specific path in order.
+         */
+        get: operations["PathController_getMarkers"];
+        /**
+         * Sync markers for a path
+         * @description Replaces all markers for a path with the provided list. Each marker references a crux by ID.
+         */
+        put: operations["PathController_syncMarkers"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/paths/{id}/tags": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get all tags for a path
+         * @description Retrieves all tags associated with a specific path.
+         */
+        get: operations["PathController_getTags"];
+        /**
+         * Sync tags for a path
+         * @description Replaces all tags for a path with the provided list. Tags must be in kebab-case format.
+         */
+        put: operations["PathController_syncTags"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ai/chat": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["AiController_chat"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/sync/garden": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["SyncController_pullGarden"];
+        put: operations["SyncController_pushGarden"];
+        post?: never;
+        delete: operations["SyncController_deleteGarden"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/sync/garden/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["SyncController_getGardenStatus"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/sync/crux/{cruxId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["SyncController_pullCrux"];
+        put: operations["SyncController_pushCrux"];
+        post?: never;
+        delete: operations["SyncController_deleteCrux"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/sync/crux": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["SyncController_listCruxes"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/explore": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Search discoverable cruxes or authors */
+        get: operations["ExploreController_explore"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/explore/tags": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Popular tags across discoverable cruxes */
+        get: operations["ExploreController_tags"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/store/{cruxId}/{key}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["StoreController_get"];
+        put: operations["StoreController_set"];
+        post?: never;
+        delete: operations["StoreController_deleteEntry"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/store/{cruxId}/{key}/inc": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["StoreController_increment"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/store/{cruxId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["StoreController_list"];
+        put?: never;
+        post?: never;
+        delete: operations["StoreController_clearAll"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
-  schemas: {
-    AuthCodeDto: {
-      /**
-       * Format: email
-       * @description Email address to send authentication code to
-       * @example user@example.com
-       */
-      email: string;
-    };
-    AuthLoginDto: {
-      /**
-       * Format: email
-       * @description Email address of the user
-       * @example user@example.com
-       */
-      email: string;
-      /**
-       * @description Authentication code received via email
-       * @example 123456
-       */
-      code: string;
-    };
-    AuthTokenDto: {
-      /**
-       * @description Refresh token for obtaining new access tokens
-       * @example eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
-       */
-      refreshToken: string;
-    };
-    UpdateAccountDto: Record<string, never>;
-    DeleteAccountDto: Record<string, never>;
-    CreateAuthorDto: {
-      /**
-       * Format: uuid
-       * @description Unique identifier for the author
-       * @example 550e8400-e29b-41d4-a716-446655440000
-       */
-      id?: string;
-      /**
-       * @description Username for the author (alphanumeric, hyphens, underscores only)
-       * @example johndoe
-       */
-      username: string;
-      /**
-       * @description Display name for the author
-       * @example John Doe
-       */
-      displayName: string;
-      /**
-       * @description Bio or description of the author
-       * @example Software developer and writer
-       */
-      bio?: string;
-      /**
-       * Format: uuid
-       * @description Root Crux ID for the author
-       * @example 550e8400-e29b-41d4-a716-446655440000
-       */
-      rootId?: string;
-      /**
-       * @description Home ID (set internally from primary home)
-       * @example 550e8400-e29b-41d4-a716-446655440000
-       */
-      homeId?: string;
-    };
-    UpdateAuthorDto: {
-      /**
-       * @description Username for the author (alphanumeric, hyphens, underscores only)
-       * @example johndoe
-       */
-      username?: string;
-      /**
-       * @description Display name for the author
-       * @example John Doe
-       */
-      displayName?: string;
-      /**
-       * @description Email address of the author
-       * @example john@example.com
-       */
-      email?: string;
-      /**
-       * @description Bio or description of the author
-       * @example Software developer and writer
-       */
-      bio?: string;
-      /**
-       * Format: uuid
-       * @description Root Crux ID for the author
-       * @example 550e8400-e29b-41d4-a716-446655440000
-       */
-      rootId?: string;
-      /**
-       * @description Website URL of the author
-       * @example https://johndoe.com
-       */
-      website?: string;
-      /**
-       * @description Avatar URL for the author
-       * @example https://example.com/avatar.jpg
-       */
-      avatarUrl?: string;
-      /** @description Metadata JSON object */
-      meta?: Record<string, never>;
-    };
-    CreateCruxDto: {
-      /**
-       * @description Unique slug identifier for the crux
-       * @example my-awesome-crux
-       */
-      slug: string;
-      /**
-       * @description Optional title for the crux
-       * @example My Awesome Crux
-       */
-      title?: string;
-      /**
-       * @description Optional description for the crux
-       * @example My Awesome Crux Description
-       */
-      description?: string;
-      /**
-       * @description Main content/data of the crux
-       * @example This is the content of my crux
-       */
-      data: string;
-      /**
-       * @description Type of crux content
-       * @default text
-       * @example text
-       */
-      type?: string;
-      /**
-       * @description Kind of crux (subcategory)
-       * @example webapp
-       * @enum {string}
-       */
-      kind?: 'webapp' | 'page' | 'document' | 'image' | 'notes';
-      /**
-       * @description Status of the crux
-       * @default living
-       * @example living
-       * @enum {string}
-       */
-      status?: 'living' | 'frozen';
-      /**
-       * @description Visibility setting for the crux
-       * @default unlisted
-       * @example unlisted
-       * @enum {string}
-       */
-      visibility?: 'public' | 'private' | 'unlisted';
-      /**
-       * @description Whether this crux is discoverable in search
-       * @default false
-       * @example false
-       */
-      discoverable?: boolean;
-      /**
-       * @description Array of tag names to associate with the crux
-       * @example [
-       *       "technology",
-       *       "programming"
-       *     ]
-       */
-      tags?: string[];
-      /**
-       * @description Optional metadata object for the crux
-       * @example {
-       *       "key": "value",
-       *       "custom": "data"
-       *     }
-       */
-      meta?: {
-        [key: string]: unknown;
-      };
-      /**
-       * Format: uuid
-       * @description Unique identifier for the crux (auto-generated)
-       * @example 550e8400-e29b-41d4-a716-446655440000
-       */
-      id?: string;
-      /**
-       * Format: uuid
-       * @description Author ID (set internally from account)
-       * @example 550e8400-e29b-41d4-a716-446655440000
-       */
-      authorId?: string;
-      /**
-       * Format: uuid
-       * @description Home ID (set internally from author)
-       * @example 550e8400-e29b-41d4-a716-446655440000
-       */
-      homeId?: string;
-    };
-    UpdateCruxDto: {
-      /**
-       * @description Updated slug (URL-safe identifier)
-       * @example my-updated-slug
-       */
-      slug?: string;
-      /**
-       * @description Updated title for the crux
-       * @example My Updated Crux Title
-       */
-      title?: string;
-      /**
-       * @description Updated description for the crux
-       * @example My Updated Crux Description
-       */
-      description?: string;
-      /**
-       * @description Updated content/data of the crux
-       * @example This is the updated content of my crux
-       */
-      data?: string;
-      /**
-       * @description Updated type of crux content
-       * @example text
-       */
-      type?: string;
-      /**
-       * @description Updated kind of crux (subcategory). Set to null to clear.
-       * @example webapp
-       * @enum {string|null}
-       */
-      kind?: 'webapp' | 'page' | 'document' | 'image' | 'notes' | null;
-      /**
-       * @description Updated status of the crux
-       * @example frozen
-       * @enum {string}
-       */
-      status?: 'living' | 'frozen';
-      /**
-       * @description Updated visibility setting for the crux
-       * @example public
-       * @enum {string}
-       */
-      visibility?: 'public' | 'private' | 'unlisted';
-      /**
-       * @description Whether this crux is discoverable in search
-       * @example false
-       */
-      discoverable?: boolean;
-      /**
-       * @description Updated array of tag names to associate with the crux
-       * @example [
-       *       "updated-tag",
-       *       "new-category"
-       *     ]
-       */
-      tags?: string[];
-      /**
-       * @description Updated metadata object for the crux
-       * @example {
-       *       "key": "updated-value",
-       *       "custom": "updated-data"
-       *     }
-       */
-      meta?: {
-        [key: string]: unknown;
-      };
-    };
-    CreateDimensionDto: {
-      /**
-       * Format: uuid
-       * @description Unique identifier for the dimension (auto-generated)
-       * @example 550e8400-e29b-41d4-a716-446655440000
-       */
-      id?: string;
-      /**
-       * @description Target crux ID to create dimensional relationship with
-       * @example crux_123
-       */
-      targetId: string;
-      /**
-       * @description Type of dimensional relationship
-       * @example gate
-       * @enum {string}
-       */
-      type: 'gate' | 'garden' | 'growth' | 'graft';
-      /**
-       * @description Weight of the relationship (integer)
-       * @example 1
-       */
-      weight?: number;
-      /**
-       * @description Optional note for the dimension
-       * @example This is a note about the dimension
-       */
-      note?: string;
-      /**
-       * Format: uuid
-       * @description Source crux ID (set internally from crux endpoint)
-       * @example 550e8400-e29b-41d4-a716-446655440000
-       */
-      sourceId?: string;
-      /**
-       * Format: uuid
-       * @description Author ID (set internally from account)
-       * @example 550e8400-e29b-41d4-a716-446655440000
-       */
-      authorId?: string;
-      /**
-       * Format: uuid
-       * @description Home ID (set internally from primary home)
-       * @example 550e8400-e29b-41d4-a716-446655440000
-       */
-      homeId?: string;
-    };
-    CreateHomeDto: {
-      /**
-       * Format: uuid
-       * @description Unique identifier for the home
-       * @example 550e8400-e29b-41d4-a716-446655440000
-       */
-      id?: string;
-      /**
-       * @description Name of the home
-       * @example My Garden
-       */
-      name: string;
-      /**
-       * @description Optional description of the home
-       * @example A personal knowledge garden for collecting ideas
-       */
-      description?: string;
-      /**
-       * @description Whether this is the primary home
-       * @default false
-       * @example true
-       */
-      primary?: boolean;
-      /**
-       * @description Type of the home
-       * @example personal
-       */
-      type: string;
-      /**
-       * @description Kind of the home
-       * @example garden
-       */
-      kind: string;
-      /**
-       * @description Optional metadata for the home
-       * @example {
-       *       "color": "blue",
-       *       "icon": "tree"
-       *     }
-       */
-      meta?: Record<string, never>;
-    };
-    UpdateHomeDto: {
-      /**
-       * Format: uuid
-       * @description Unique identifier for the home
-       * @example 550e8400-e29b-41d4-a716-446655440000
-       */
-      id?: string;
-      /**
-       * @description Name of the home
-       * @example Updated Garden Name
-       */
-      name?: string;
-      /**
-       * @description Optional description of the home
-       * @example An updated description
-       */
-      description?: string;
-      /**
-       * @description Whether this is the primary home
-       * @default false
-       * @example true
-       */
-      primary?: boolean;
-      /**
-       * @description Type of the home
-       * @example personal
-       */
-      type?: string;
-      /**
-       * @description Kind of the home
-       * @example garden
-       */
-      kind?: string;
-      /**
-       * @description Optional metadata for the home
-       * @example {
-       *       "color": "green",
-       *       "icon": "flower"
-       *     }
-       */
-      meta?: Record<string, never>;
-    };
-    UpdateTagDto: Record<string, never>;
-    UpdateDimensionDto: {
-      /**
-       * @description Type of dimensional relationship
-       * @example gate
-       * @enum {string}
-       */
-      type?: 'gate' | 'garden' | 'growth' | 'graft';
-      /**
-       * @description Weight of the relationship (integer)
-       * @example 1
-       */
-      weight?: number;
-      /**
-       * @description Optional note for the dimension
-       * @example This is a note about the dimension
-       */
-      note?: string;
-    };
-    CreatePathDto: {
-      /**
-       * @description Unique slug identifier for the path
-       * @example my-awesome-path
-       */
-      slug: string;
-      /**
-       * @description Optional title for the path
-       * @example My Awesome Path
-       */
-      title?: string;
-      /**
-       * @description Optional description for the path
-       * @example This is a description of my path
-       */
-      description?: string;
-      /**
-       * @description Type of the path
-       * @default living
-       * @example living
-       * @enum {string}
-       */
-      type?: 'living' | 'frozen';
-      /**
-       * @description Visibility setting for the path
-       * @default unlisted
-       * @example unlisted
-       * @enum {string}
-       */
-      visibility?: 'public' | 'private' | 'unlisted';
-      /**
-       * @description Kind of path (guide or wander)
-       * @example wander
-       * @enum {string}
-       */
-      kind: 'guide' | 'wander';
-      /**
-       * @description Entry marker ID for the path
-       * @example 550e8400-e29b-41d4-a716-446655440000
-       */
-      entry: string;
-      /**
-       * Format: uuid
-       * @description Unique identifier for the path (auto-generated)
-       * @example 550e8400-e29b-41d4-a716-446655440000
-       */
-      id?: string;
-      /**
-       * Format: uuid
-       * @description Author ID (set internally from account)
-       * @example 550e8400-e29b-41d4-a716-446655440000
-       */
-      authorId?: string;
-      /**
-       * Format: uuid
-       * @description Home ID (set internally from primary home)
-       * @example 550e8400-e29b-41d4-a716-446655440000
-       */
-      homeId?: string;
-      /**
-       * Format: uuid
-       * @description Account ID (set internally from auth)
-       * @example 550e8400-e29b-41d4-a716-446655440000
-       */
-      accountId?: string;
-    };
-    UpdatePathDto: {
-      /**
-       * @description Updated title for the path
-       * @example My Updated Path Title
-       */
-      title?: string;
-      /**
-       * @description Updated description for the path
-       * @example Updated description for my path
-       */
-      description?: string;
-      /**
-       * @description Updated type of the path
-       * @example frozen
-       * @enum {string}
-       */
-      type?: 'living' | 'frozen';
-      /**
-       * @description Updated visibility setting for the path
-       * @example public
-       * @enum {string}
-       */
-      visibility?: 'public' | 'private' | 'unlisted';
-      /**
-       * @description Updated kind of path (guide or wander)
-       * @example guide
-       * @enum {string}
-       */
-      kind?: 'guide' | 'wander';
-      /**
-       * @description Updated entry marker ID for the path
-       * @example 550e8400-e29b-41d4-a716-446655440001
-       */
-      entry?: string;
-    };
-    MarkerInput: {
-      /**
-       * @description Crux ID for the marker
-       * @example 550e8400-e29b-41d4-a716-446655440000
-       */
-      cruxId: string;
-      /**
-       * @description Order/position of the marker in the path
-       * @example 0
-       */
-      order: number;
-      /**
-       * @description Optional note for the marker
-       * @example This is an important marker
-       */
-      note?: string;
-    };
-    SyncMarkersDto: {
-      /**
-       * @description Array of markers to sync for the path
-       * @example [
-       *       {
-       *         "cruxId": "550e8400-e29b-41d4-a716-446655440000",
-       *         "order": 0,
-       *         "note": "First marker"
-       *       },
-       *       {
-       *         "cruxId": "660e8400-e29b-41d4-a716-446655440000",
-       *         "order": 1
-       *       }
-       *     ]
-       */
-      markers: components['schemas']['MarkerInput'][];
-    };
-    ChatDto: {
-      /** @description Crux workspace ID */
-      cruxId: string;
-      /** @description Conversation messages (content may be string or content blocks) */
-      messages: string[];
-      /**
-       * @description Model to use
-       * @default claude-sonnet-4-20250514
-       */
-      model?: string;
-    };
-    SetStoreEntryDto: {
-      /** @description The value to store (any JSON-serializable type) */
-      value: Record<string, never>;
-      /**
-       * @description Access mode for this key
-       * @default protected
-       * @enum {string}
-       */
-      mode?: 'public' | 'protected';
-    };
-    IncrementStoreEntryDto: {
-      /**
-       * @description Amount to increment by (default: 1)
-       * @default 1
-       */
-      by?: number;
-    };
-  };
-  responses: never;
-  parameters: never;
-  requestBodies: never;
-  headers: never;
-  pathItems: never;
-}
-export type $defs = Record<string, never>;
-export interface operations {
-  AppController_health: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Health status retrieved successfully. Always returns 200 OK even if services are down - check the status field for actual health. */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': {
-            /**
-             * @description Overall health: "healthy" = all up, "degraded" = some down, "unhealthy" = critical services down
-             * @example healthy
-             * @enum {string}
-             */
-            status: 'healthy' | 'degraded' | 'unhealthy';
-            /**
-             * @description API version
-             * @example 0.0.1
-             */
-            version: string;
-            /**
-             * Format: date-time
-             * @description ISO 8601 timestamp when the health check was performed
-             * @example 2025-10-06T12:00:00.000Z
-             */
-            timestamp: string;
-            services: {
-              database: {
-                /**
-                 * @description Database connectivity status
-                 * @example up
-                 * @enum {string}
-                 */
-                status: 'up' | 'down';
-                /**
-                 * @description Database response time in milliseconds
-                 * @example 5
-                 */
-                responseTime?: number;
-                /**
-                 * @description Error message when status is "down"
-                 * @example Connection timeout
-                 */
-                error?: string;
-              };
-              redis: {
-                /**
-                 * @description Redis connectivity status
-                 * @example up
-                 * @enum {string}
-                 */
-                status: 'up' | 'down';
-                /**
-                 * @description Redis response time in milliseconds
-                 * @example 2
-                 */
-                responseTime?: number;
-                /**
-                 * @description Error message when status is "down"
-                 * @example Connection refused
-                 */
-                error?: string;
-              };
-            };
-          };
-        };
-      };
-    };
-  };
-  AuthController_code: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        'application/json': components['schemas']['AuthCodeDto'];
-      };
-    };
-    responses: {
-      /** @description Authentication code sent successfully */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': {
-            /** @example Auth Code emailed to user@example.com */
-            message?: string;
-          };
-        };
-      };
-      /** @description Invalid email format */
-      400: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-    };
-  };
-  AuthController_login: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        'application/json': components['schemas']['AuthLoginDto'];
-      };
-    };
-    responses: {
-      /** @description Login successful */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': {
-            /**
-             * @description JWT access token valid for 1 hour
-             * @example eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
-             */
-            accessToken?: string;
-            /**
-             * @description Refresh token valid for 14 days
-             * @example gHtdgqnJiEaBcDef
-             */
-            refreshToken?: string;
-            /**
-             * @description Access token expiration time in seconds
-             * @example 3600
-             */
-            expiresIn?: number;
-          };
-        };
-      };
-      /** @description Invalid request format */
-      400: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description Invalid email or authentication code */
-      401: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-    };
-  };
-  AuthController_token: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        'application/json': components['schemas']['AuthTokenDto'];
-      };
-    };
-    responses: {
-      /** @description Token refreshed successfully */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': {
-            /**
-             * @description New JWT access token valid for 1 hour
-             * @example eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
-             */
-            accessToken?: string;
-            /**
-             * @description New refresh token valid for 14 days
-             * @example gHtdgqnJiEaBcDef
-             */
-            refreshToken?: string;
-            /**
-             * @description Access token expiration time in seconds
-             * @example 3600
-             */
-            expiresIn?: number;
-          };
-        };
-      };
-      /** @description Invalid request format */
-      400: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description Invalid or expired refresh token */
-      401: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-    };
-  };
-  AuthController_profile: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description User profile retrieved successfully */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': {
-            /**
-             * Format: uuid
-             * @example 550e8400-e29b-41d4-a716-446655440000
-             */
-            id?: string;
+    schemas: {
+        AuthCodeDto: {
             /**
              * Format: email
+             * @description Email address to send authentication code to
              * @example user@example.com
              */
+            email: string;
+        };
+        AuthLoginDto: {
+            /**
+             * Format: email
+             * @description Email address of the user
+             * @example user@example.com
+             */
+            email: string;
+            /**
+             * @description Authentication code received via email
+             * @example 123456
+             */
+            code: string;
+        };
+        AuthTokenDto: {
+            /**
+             * @description Refresh token for obtaining new access tokens
+             * @example eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+             */
+            refreshToken: string;
+        };
+        UpdateAccountDto: Record<string, never>;
+        DeleteAccountDto: Record<string, never>;
+        CreateAuthorDto: {
+            /**
+             * Format: uuid
+             * @description Unique identifier for the author
+             * @example 550e8400-e29b-41d4-a716-446655440000
+             */
+            id?: string;
+            /**
+             * @description Username for the author (alphanumeric, hyphens, underscores only)
+             * @example johndoe
+             */
+            username: string;
+            /**
+             * @description Display name for the author
+             * @example John Doe
+             */
+            displayName: string;
+            /**
+             * @description Bio or description of the author
+             * @example Software developer and writer
+             */
+            bio?: string;
+            /**
+             * Format: uuid
+             * @description Root Crux ID for the author
+             * @example 550e8400-e29b-41d4-a716-446655440000
+             */
+            rootId?: string;
+            /**
+             * @description Home ID (set internally from primary home)
+             * @example 550e8400-e29b-41d4-a716-446655440000
+             */
+            homeId?: string;
+        };
+        UpdateAuthorDto: {
+            /**
+             * @description Username for the author (alphanumeric, hyphens, underscores only)
+             * @example johndoe
+             */
+            username?: string;
+            /**
+             * @description Display name for the author
+             * @example John Doe
+             */
+            displayName?: string;
+            /**
+             * @description Email address of the author
+             * @example john@example.com
+             */
             email?: string;
             /**
-             * @example author
+             * @description Bio or description of the author
+             * @example Software developer and writer
+             */
+            bio?: string;
+            /**
+             * Format: uuid
+             * @description Root Crux ID for the author
+             * @example 550e8400-e29b-41d4-a716-446655440000
+             */
+            rootId?: string;
+            /**
+             * @description Website URL of the author
+             * @example https://johndoe.com
+             */
+            website?: string;
+            /**
+             * @description Avatar URL for the author
+             * @example https://example.com/avatar.jpg
+             */
+            avatarUrl?: string;
+            /** @description Metadata JSON object */
+            meta?: Record<string, never>;
+        };
+        CreateCruxDto: {
+            /**
+             * @description Unique slug identifier for the crux
+             * @example my-awesome-crux
+             */
+            slug: string;
+            /**
+             * @description Optional title for the crux
+             * @example My Awesome Crux
+             */
+            title?: string;
+            /**
+             * @description Optional description for the crux
+             * @example My Awesome Crux Description
+             */
+            description?: string;
+            /**
+             * @description Main content/data of the crux. Empty for workspace cruxes, whose content lives in artifacts.
+             * @default
+             * @example This is the content of my crux
+             */
+            data?: string;
+            /**
+             * @description Type of crux content
+             * @default text
+             * @example text
+             */
+            type?: string;
+            /**
+             * @description Kind of crux (subcategory)
+             * @example webapp
              * @enum {string}
              */
-            role?: 'admin' | 'author' | 'keeper';
+            kind?: "webapp" | "page" | "document" | "image" | "notes" | "mood";
             /**
-             * Format: date-time
-             * @example 2024-01-01T00:00:00.000Z
+             * @description Status of the crux
+             * @default living
+             * @example living
+             * @enum {string}
              */
-            created?: string;
+            status?: "living" | "frozen";
             /**
-             * Format: date-time
-             * @example 2024-01-01T00:00:00.000Z
+             * @description Visibility setting for the crux
+             * @default unlisted
+             * @example unlisted
+             * @enum {string}
              */
-            updated?: string;
-          };
-        };
-      };
-      /** @description Authentication required */
-      401: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description User profile not found */
-      404: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-    };
-  };
-  AuthController_logout: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Logout successful - no content returned */
-      204: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description Authentication required */
-      401: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-    };
-  };
-  AccountController_checkEmail: {
-    parameters: {
-      query: {
-        /** @description Email address to check */
-        email: string;
-      };
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Email availability status */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': {
-            /** @example true */
-            available?: boolean;
-          };
-        };
-      };
-      /** @description Invalid email format */
-      400: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description Authentication required */
-      401: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-    };
-  };
-  AccountController_get: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Account retrieved successfully */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': {
-            /** Format: uuid */
-            id?: string;
-            /** @example user@example.com */
-            email?: string;
-            /** @enum {string} */
-            role?: 'admin' | 'author' | 'keeper';
+            visibility?: "public" | "private" | "unlisted";
+            /**
+             * @description Whether this crux is discoverable in search
+             * @default false
+             * @example false
+             */
+            discoverable?: boolean;
+            /**
+             * @description Array of tag names to associate with the crux
+             * @example [
+             *       "technology",
+             *       "programming"
+             *     ]
+             */
+            tags?: string[];
+            /**
+             * @description Optional metadata object for the crux
+             * @example {
+             *       "key": "value",
+             *       "custom": "data"
+             *     }
+             */
+            meta?: {
+                [key: string]: unknown;
+            };
             /**
              * Format: uuid
-             * @example 550e8400-e29b-41d4-a716-446655440001
+             * @description Unique identifier for the crux (auto-generated)
+             * @example 550e8400-e29b-41d4-a716-446655440000
              */
-            homeId?: string;
-            /** Format: date-time */
-            created?: string;
-            /** Format: date-time */
-            updated?: string;
-          };
-        };
-      };
-      /** @description Authentication required */
-      401: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description Account not found */
-      404: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-    };
-  };
-  AccountController_delete: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        'application/json': components['schemas']['DeleteAccountDto'];
-      };
-    };
-    responses: {
-      /** @description Account deleted successfully */
-      204: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description Confirmation text does not match */
-      400: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description Authentication required */
-      401: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description Cannot delete another user's account */
-      403: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description Account not found */
-      404: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-    };
-  };
-  AccountController_update: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        'application/json': components['schemas']['UpdateAccountDto'];
-      };
-    };
-    responses: {
-      /** @description Account updated successfully */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': {
-            /** Format: uuid */
             id?: string;
-            /** @example user@example.com */
-            email?: string;
-            /** @enum {string} */
-            role?: 'admin' | 'author' | 'keeper';
             /**
              * Format: uuid
-             * @example 550e8400-e29b-41d4-a716-446655440001
-             */
-            homeId?: string;
-            /** Format: date-time */
-            created?: string;
-            /** Format: date-time */
-            updated?: string;
-          };
-        };
-      };
-      /** @description Invalid input data */
-      400: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description Authentication required */
-      401: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description Cannot update another user's account */
-      403: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description Account not found */
-      404: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description Email already exists */
-      409: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-    };
-  };
-  AuthorController_checkUsername: {
-    parameters: {
-      query: {
-        /** @description Username to check */
-        username: string;
-      };
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Username availability status */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': {
-            /** @example true */
-            available?: boolean;
-          };
-        };
-      };
-      /** @description Authentication required */
-      401: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-    };
-  };
-  AuthorController_getAll: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description List of authors retrieved successfully */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': {
-            /** @example author_123 */
-            id?: string;
-            /** @example johndoe */
-            username?: string;
-            /** @example John Doe */
-            display_name?: string;
-            /** @example john@example.com */
-            email?: string;
-            /** @example Software developer and writer */
-            bio?: string;
-            /** @example https://johndoe.com */
-            website?: string;
-            /** @example https://example.com/avatar.jpg */
-            avatar_url?: string;
-            /** Format: date-time */
-            created?: string;
-            /** Format: date-time */
-            updated?: string;
-          }[];
-        };
-      };
-    };
-  };
-  AuthorController_create: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        'application/json': components['schemas']['CreateAuthorDto'];
-      };
-    };
-    responses: {
-      /** @description The author has been successfully created. */
-      201: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': {
-            /** @example author_123 */
-            id?: string;
-            /** @example johndoe */
-            username?: string;
-            /** @example John Doe */
-            display_name?: string;
-            /** @example john@example.com */
-            email?: string;
-            /** @example Software developer and writer */
-            bio?: string;
-            /** @example https://johndoe.com */
-            website?: string;
-            /** @example https://example.com/avatar.jpg */
-            avatar_url?: string;
-            /** Format: date-time */
-            created?: string;
-            /** Format: date-time */
-            updated?: string;
-          };
-        };
-      };
-      /** @description Authentication required */
-      401: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description Insufficient permissions */
-      403: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-    };
-  };
-  AuthorController_getByIdentifier: {
-    parameters: {
-      query?: {
-        /** @description Embed related resources. Use "home" to include the home crux. */
-        embed?: 'home';
-      };
-      header?: never;
-      path: {
-        /** @description Author UUID (e.g., "550e8400-e29b-41d4-a716-446655440000") or @username (e.g., "@johndoe") */
-        identifier: string;
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description The author data */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json':
-            | {
-                /** @example author_123 */
-                id?: string;
-                /** @example johndoe */
-                username?: string;
-                /** @example John Doe */
-                displayName?: string;
-                /** @example Software developer and writer */
-                bio?: string;
-                /**
-                 * Format: uuid
-                 * @example 550e8400-e29b-41d4-a716-446655440000
-                 */
-                accountId?: string;
-                /**
-                 * Format: uuid
-                 * @example 550e8400-e29b-41d4-a716-446655440001
-                 */
-                homeId?: string;
-                /** @example individual */
-                type?: string;
-                /** @example writer */
-                kind?: string;
-                /** @example {} */
-                meta?: Record<string, never>;
-                /** Format: date-time */
-                created?: string;
-                /** Format: date-time */
-                updated?: string;
-              }
-            | {
-                /** @example author_123 */
-                id?: string;
-                /** @example johndoe */
-                username?: string;
-                /** @example John Doe */
-                displayName?: string;
-                /** @example Software developer and writer */
-                bio?: string;
-                /** @example account_456 */
-                accountId?: string;
-                /** @example individual */
-                type?: string;
-                /** @example writer */
-                kind?: string;
-                /** @example {} */
-                meta?: Record<string, never>;
-                home?: {
-                  /** @example crux_789 */
-                  id?: string;
-                  /** @example My Home Crux */
-                  title?: string;
-                };
-                /** Format: date-time */
-                created?: string;
-                /** Format: date-time */
-                updated?: string;
-              };
-        };
-      };
-      /** @description Author not found */
-      404: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-    };
-  };
-  AuthorController_delete: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        /** @description The UUID of the author to delete */
-        id: string;
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description The author has been successfully deleted. */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': {
-            /** @example Author deleted successfully */
-            message?: string;
-          };
-        };
-      };
-      /** @description Authentication required */
-      401: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description Insufficient permissions */
-      403: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description Author not found */
-      404: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-    };
-  };
-  AuthorController_update: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        /** @description The UUID of the author to update */
-        id: string;
-      };
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        'application/json': components['schemas']['UpdateAuthorDto'];
-      };
-    };
-    responses: {
-      /** @description The author has been successfully updated. */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': {
-            /** @example author_123 */
-            id?: string;
-            /** @example johndoe */
-            username?: string;
-            /** @example John Updated */
-            display_name?: string;
-            /** @example john.updated@example.com */
-            email?: string;
-            /** @example Updated bio information */
-            bio?: string;
-            /** @example https://johnupdated.com */
-            website?: string;
-            /** @example https://example.com/new-avatar.jpg */
-            avatar_url?: string;
-            /** Format: date-time */
-            created?: string;
-            /** Format: date-time */
-            updated?: string;
-          };
-        };
-      };
-      /** @description Authentication required */
-      401: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description Insufficient permissions */
-      403: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description Author not found */
-      404: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-    };
-  };
-  AuthorController_uploadAvatar: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        id: string;
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      201: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-    };
-  };
-  AuthorController_removeAvatar: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        id: string;
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-    };
-  };
-  AuthorController_getAvatar: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        identifier: string;
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-    };
-  };
-  AuthorController_getPublicCruxes: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        identifier: string;
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-    };
-  };
-  AuthorController_getCruxBySlug: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        identifier: string;
-        slug: string;
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-    };
-  };
-  AuthorController_getGraph: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        identifier: string;
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-    };
-  };
-  AuthorController_getPublicArtifacts: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        identifier: string;
-        slug: string;
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-    };
-  };
-  AuthorController_downloadPublicArtifact: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        identifier: string;
-        slug: string;
-        artifactId: string;
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-    };
-  };
-  CruxController_findAll: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description List of cruxes retrieved successfully */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': {
-            /** @example crux_123 */
-            id?: string;
-            /** @example my-awesome-crux */
-            slug?: string;
-            /** @example My Awesome Crux */
-            title?: string;
-            /** @example A brief description of this crux */
-            description?: string;
-            /** @example This is the content of my crux */
-            data?: string;
-            /** @example text */
-            type?: string;
-            /** @example note */
-            kind?: string;
-            /** @example living */
-            status?: string;
-            /** @example public */
-            visibility?: string;
-            /**
-             * Format: uuid
+             * @description Author ID (set internally from account)
              * @example 550e8400-e29b-41d4-a716-446655440000
              */
             authorId?: string;
             /**
              * Format: uuid
-             * @example 550e8400-e29b-41d4-a716-446655440001
-             */
-            homeId?: string;
-            /** @example {} */
-            meta?: Record<string, never>;
-            /** @example johndoe */
-            author_username?: string;
-            /** @example John Doe */
-            author_display_name?: string;
-            /** Format: date-time */
-            created?: string;
-            /** Format: date-time */
-            updated?: string;
-          }[];
-        };
-      };
-    };
-  };
-  CruxController_create: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        'application/json': components['schemas']['CreateCruxDto'];
-      };
-    };
-    responses: {
-      /** @description The crux has been successfully created. */
-      201: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': {
-            /** @example crux_123 */
-            id?: string;
-            /** @example my-awesome-crux */
-            slug?: string;
-            /** @example My Awesome Crux */
-            title?: string;
-            /** @example A brief description of this crux */
-            description?: string;
-            /** @example This is the content of my crux */
-            data?: string;
-            /** @example text */
-            type?: string;
-            /** @example note */
-            kind?: string;
-            /** @example living */
-            status?: string;
-            /** @example unlisted */
-            visibility?: string;
-            /**
-             * Format: uuid
+             * @description Home ID (set internally from author)
              * @example 550e8400-e29b-41d4-a716-446655440000
              */
-            authorId?: string;
-            /**
-             * Format: uuid
-             * @example 550e8400-e29b-41d4-a716-446655440001
-             */
             homeId?: string;
-            /** @example {} */
-            meta?: Record<string, never>;
-            /** Format: date-time */
-            createdAt?: string;
-            /** Format: date-time */
-            updatedAt?: string;
-          };
         };
-      };
-      /** @description Authentication required */
-      401: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description Insufficient permissions */
-      403: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-    };
-  };
-  CruxController_getByIdentifier: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        /** @description The UUID or slug of the crux */
-        identifier: string;
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description The crux data */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': {
-            /** @example crux_123 */
-            id?: string;
-            /** @example my-awesome-crux */
+        UpdateCruxDto: {
+            /**
+             * @description Updated slug (URL-safe identifier)
+             * @example my-updated-slug
+             */
             slug?: string;
-            /** @example My Awesome Crux */
+            /**
+             * @description Updated title for the crux
+             * @example My Updated Crux Title
+             */
             title?: string;
-            /** @example A brief description of this crux */
+            /**
+             * @description Updated description for the crux
+             * @example My Updated Crux Description
+             */
             description?: string;
-            /** @example This is the content of my crux */
+            /**
+             * @description Updated content/data of the crux
+             * @example This is the updated content of my crux
+             */
             data?: string;
-            /** @example text */
+            /**
+             * @description Updated type of crux content
+             * @example text
+             */
             type?: string;
-            /** @example note */
-            kind?: string;
-            /** @example living */
-            status?: string;
-            /** @example unlisted */
-            visibility?: string;
+            /**
+             * @description Updated kind of crux (subcategory). Set to null to clear.
+             * @example webapp
+             * @enum {string|null}
+             */
+            kind?: "webapp" | "page" | "document" | "image" | "notes" | "mood" | null;
+            /**
+             * @description Updated status of the crux
+             * @example frozen
+             * @enum {string}
+             */
+            status?: "living" | "frozen";
+            /**
+             * @description Updated visibility setting for the crux
+             * @example public
+             * @enum {string}
+             */
+            visibility?: "public" | "private" | "unlisted";
+            /**
+             * @description Whether this crux is discoverable in search
+             * @example false
+             */
+            discoverable?: boolean;
+            /**
+             * @description Updated array of tag names to associate with the crux
+             * @example [
+             *       "updated-tag",
+             *       "new-category"
+             *     ]
+             */
+            tags?: string[];
+            /**
+             * @description Updated metadata object for the crux
+             * @example {
+             *       "key": "updated-value",
+             *       "custom": "updated-data"
+             *     }
+             */
+            meta?: {
+                [key: string]: unknown;
+            };
+        };
+        CreateDimensionDto: {
             /**
              * Format: uuid
+             * @description Unique identifier for the dimension (auto-generated)
              * @example 550e8400-e29b-41d4-a716-446655440000
              */
-            authorId?: string;
-            /**
-             * Format: uuid
-             * @example 550e8400-e29b-41d4-a716-446655440001
-             */
-            homeId?: string;
-            /** @example {} */
-            meta?: Record<string, never>;
-            /** Format: date-time */
-            createdAt?: string;
-            /** Format: date-time */
-            updatedAt?: string;
-          };
-        };
-      };
-      /** @description Crux not found */
-      404: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-    };
-  };
-  CruxController_delete: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        /** @description The UUID of the crux to delete */
-        id: string;
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description The crux has been successfully deleted. */
-      204: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description Authentication required */
-      401: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description Insufficient permissions */
-      403: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description Crux not found */
-      404: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-    };
-  };
-  CruxController_update: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        /** @description The UUID of the crux to update */
-        id: string;
-      };
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        'application/json': components['schemas']['UpdateCruxDto'];
-      };
-    };
-    responses: {
-      /** @description The crux has been successfully updated. */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': {
-            /** @example crux_123 */
-            id?: string;
-            /** @example my-awesome-crux */
-            slug?: string;
-            /** @example My Updated Crux */
-            title?: string;
-            /** @example Updated description */
-            description?: string;
-            /** @example This is the updated content */
-            data?: string;
-            /** @example text */
-            type?: string;
-            /** @example note */
-            kind?: string;
-            /** @example living */
-            status?: string;
-            /** @example public */
-            visibility?: string;
-            /**
-             * Format: uuid
-             * @example 550e8400-e29b-41d4-a716-446655440000
-             */
-            authorId?: string;
-            /**
-             * Format: uuid
-             * @example 550e8400-e29b-41d4-a716-446655440001
-             */
-            homeId?: string;
-            /** @example {} */
-            meta?: Record<string, never>;
-            /** Format: date-time */
-            createdAt?: string;
-            /** Format: date-time */
-            updatedAt?: string;
-          };
-        };
-      };
-      /** @description Authentication required */
-      401: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description Insufficient permissions */
-      403: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description Crux not found */
-      404: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-    };
-  };
-  CruxController_getDimensions: {
-    parameters: {
-      query?: {
-        /** @description Filter dimensions by type. Gates are origins/sources, Gardens are creations/consequences, Growth is evolution over time, Grafts are lateral connections. */
-        type?: 'gate' | 'garden' | 'growth' | 'graft';
-        /** @description Control which related crux data to embed in the response. Can be a single value or comma-separated list (order-agnostic, case-insensitive). Default: "target" */
-        embed?: string;
-      };
-      header?: never;
-      path: {
-        /** @description The UUID of the source crux */
-        id: string;
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Dimensions retrieved successfully */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': {
-            /** Format: uuid */
             id?: string;
             /**
-             * Format: uuid
-             * @description Always present - ID of the source crux
+             * @description Target crux ID to create dimensional relationship with
+             * @example crux_123
              */
-            sourceId?: string;
+            targetId: string;
             /**
-             * Format: uuid
-             * @description Always present - ID of the target crux
-             */
-            targetId?: string;
-            /**
+             * @description Type of dimensional relationship
              * @example gate
              * @enum {string}
              */
-            type?: 'gate' | 'garden' | 'growth' | 'graft';
-            /** @example inspiration */
-            kind?: string;
-            /** @example 1 */
+            type: "gate" | "garden" | "growth" | "graft";
+            /**
+             * @description Weight of the relationship (integer)
+             * @example 1
+             */
             weight?: number;
-            /** @example This inspired that idea */
+            /**
+             * @description Optional note for the dimension
+             * @example This is a note about the dimension
+             */
             note?: string;
-            /** Format: date-time */
-            created?: string;
-            /** Format: date-time */
-            updated?: string;
-            /** @description Embedded source crux data (only present if embed includes "source") */
-            source?: {
-              /** Format: uuid */
-              id?: string;
-              /** @example my-source-crux */
-              slug?: string;
-              /** @example Source Crux Title */
-              title?: string;
-              /** @example Source crux content... */
-              data?: string;
-            };
-            /** @description Embedded target crux data (present by default, excluded if embed=none or embed=source) */
-            target?: {
-              /** Format: uuid */
-              id?: string;
-              /** @example my-target-crux */
-              slug?: string;
-              /** @example Target Crux Title */
-              title?: string;
-              /** @example Target crux content... */
-              data?: string;
-            };
-          }[];
-        };
-      };
-      /** @description Crux not found */
-      404: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-    };
-  };
-  CruxController_createDimension: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        /** @description The UUID of the source crux */
-        id: string;
-      };
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        'application/json': components['schemas']['CreateDimensionDto'];
-      };
-    };
-    responses: {
-      /** @description Dimension created successfully */
-      201: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': {
-            /** @example dim_123 */
-            id?: string;
-            /** @example crux_123 */
-            sourceId?: string;
-            /** @example crux_456 */
-            targetId?: string;
-            /** @example gate */
-            type?: string;
-            /** @example 1 */
-            weight?: number;
-            /** @example Connection note */
-            note?: string;
-          };
-        };
-      };
-      /** @description Invalid dimension type or target IDs */
-      400: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description Authentication required */
-      401: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description Crux not found */
-      404: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-    };
-  };
-  CruxController_getTags: {
-    parameters: {
-      query: {
-        filter: string;
-      };
-      header?: never;
-      path: {
-        /** @description The UUID of the crux */
-        id: string;
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Tags retrieved successfully */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': {
-            /** Format: uuid */
-            id?: string;
-            /** @example web-development */
-            label?: string;
-            /** Format: date-time */
-            created?: string;
-            /** Format: date-time */
-            updated?: string;
-          }[];
-        };
-      };
-      /** @description Authentication required */
-      401: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description Crux not found */
-      404: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-    };
-  };
-  CruxController_syncTags: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        /** @description The UUID of the crux */
-        id: string;
-      };
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        'application/json': {
-          /**
-           * @example [
-           *       "web-development",
-           *       "javascript",
-           *       "tutorial"
-           *     ]
-           */
-          labels?: string[];
-        };
-      };
-    };
-    responses: {
-      /** @description Tags synced successfully */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': {
-            /** Format: uuid */
-            id?: string;
-            /** @example web-development */
-            label?: string;
-            /** @example crux */
-            resourceType?: string;
-            /** Format: uuid */
-            resourceId?: string;
-            /** Format: uuid */
-            authorId?: string;
-            /** Format: uuid */
-            homeId?: string;
-            /** Format: date-time */
-            created?: string;
-            /** Format: date-time */
-            updated?: string;
-          }[];
-        };
-      };
-      /** @description Invalid tag label format (must be kebab-case) */
-      400: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description Authentication required */
-      401: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description No permission to manage tags for this crux */
-      403: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description Crux not found */
-      404: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-    };
-  };
-  CruxController_getArtifacts: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        /** @description The UUID of the crux */
-        id: string;
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Artifacts retrieved successfully */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': {
-            /** Format: uuid */
-            id?: string;
-            /** @example image */
-            type?: string;
-            /** @example photo */
-            kind?: string;
-            /** @example screenshot.png */
-            filename?: string;
-            /** @example image/png */
-            mimeType?: string;
-            /** @example 1024000 */
-            size?: number;
-            /** Format: date-time */
-            created?: string;
-            /** Format: date-time */
-            updated?: string;
-          }[];
-        };
-      };
-      /** @description Authentication required */
-      401: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description Crux not found */
-      404: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-    };
-  };
-  CruxController_createArtifact: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        /** @description The UUID of the crux */
-        id: string;
-      };
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        'multipart/form-data': {
-          /**
-           * Format: binary
-           * @description The file to upload (max 50MB)
-           */
-          file: string;
-          /**
-           * @description Type of artifact
-           * @example image
-           */
-          type: string;
-          /**
-           * @description Kind of artifact
-           * @example photo
-           */
-          kind: string;
-          /**
-           * @description Optional metadata as JSON string
-           * @example {"width": 1920, "height": 1080}
-           */
-          meta?: string;
-        };
-      };
-    };
-    responses: {
-      /** @description Artifact uploaded successfully */
-      201: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': {
-            /** Format: uuid */
-            id?: string;
-            /** @example image */
-            type?: string;
-            /** @example photo */
-            kind?: string;
-            /** @example screenshot.png */
-            filename?: string;
-            /** @example image/png */
-            mimeType?: string;
-            /** @example 1024000 */
-            size?: number;
-            /** Format: date-time */
-            created?: string;
-            /** Format: date-time */
-            updated?: string;
-          };
-        };
-      };
-      /** @description Invalid file, exceeds size limit, or missing required fields */
-      400: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description Authentication required */
-      401: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description No permission to manage this crux */
-      403: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description Crux not found */
-      404: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-    };
-  };
-  CruxController_downloadArtifact: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        /** @description The UUID of the crux */
-        id: string;
-        /** @description The UUID of the artifact */
-        artifactId: string;
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Artifact file downloaded successfully */
-      200: {
-        headers: {
-          /** @description MIME type of the file */
-          'Content-Type'?: string;
-          /** @description Artifact filename */
-          'Content-Disposition'?: string;
-          /** @description Cache control header */
-          'Cache-Control'?: string;
-          [name: string]: unknown;
-        };
-        content: {
-          'application/octet-stream': string;
-        };
-      };
-      /** @description Crux or artifact not found, or artifact does not belong to this crux */
-      404: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-    };
-  };
-  CruxController_publish: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        id: string;
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-    };
-  };
-  CruxController_unpublish: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        id: string;
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-    };
-  };
-  ArtifactController_update: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        /** @description The UUID of the artifact to update */
-        id: string;
-      };
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        'multipart/form-data': {
-          /**
-           * Format: binary
-           * @description Optional: New file to replace existing (max 50MB)
-           */
-          file?: string;
-          /**
-           * @description Type of artifact
-           * @example image
-           */
-          type?: string;
-          /**
-           * @description Kind of artifact
-           * @example photo
-           */
-          kind?: string;
-          /**
-           * @description Optional metadata as JSON string
-           * @example {"width": 1920, "height": 1080}
-           */
-          meta?: string;
-        };
-      };
-    };
-    responses: {
-      /** @description The artifact has been successfully updated. */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': {
-            /** Format: uuid */
-            id?: string;
-            /** @example image */
-            type?: string;
-            /** @example photo */
-            kind?: string;
-            /** @example screenshot.png */
-            filename?: string;
-            /** @example image/png */
-            mimeType?: string;
-            /** @example 1024000 */
-            size?: number;
-            /** Format: date-time */
-            created?: string;
-            /** Format: date-time */
-            updated?: string;
-          };
-        };
-      };
-      /** @description Invalid input data or file exceeds size limit */
-      400: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description Authentication required */
-      401: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description Insufficient permissions */
-      403: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description Artifact not found */
-      404: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-    };
-  };
-  ArtifactController_delete: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        /** @description The UUID of the artifact to delete */
-        id: string;
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description The artifact has been successfully deleted. */
-      204: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description Authentication required */
-      401: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description Insufficient permissions */
-      403: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description Artifact not found */
-      404: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-    };
-  };
-  HomeController_getAll: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description List of homes retrieved successfully */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': {
-            /** Format: uuid */
-            id?: string;
-            /** @example My Garden */
-            name?: string;
-            description?: string;
-            /** @example true */
-            primary?: boolean;
-            /** @example personal */
-            type?: string;
-            /** @example garden */
-            kind?: string;
-            meta?: Record<string, never>;
-            /** Format: date-time */
-            created?: string;
-            /** Format: date-time */
-            updated?: string;
-          }[];
-        };
-      };
-      /** @description Authentication required */
-      401: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-    };
-  };
-  HomeController_create: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        'application/json': components['schemas']['CreateHomeDto'];
-      };
-    };
-    responses: {
-      /** @description The home has been successfully created. */
-      201: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': {
             /**
              * Format: uuid
+             * @description Source crux ID (set internally from crux endpoint)
+             * @example 550e8400-e29b-41d4-a716-446655440000
+             */
+            sourceId?: string;
+            /**
+             * Format: uuid
+             * @description Author ID (set internally from account)
+             * @example 550e8400-e29b-41d4-a716-446655440000
+             */
+            authorId?: string;
+            /**
+             * Format: uuid
+             * @description Home ID (set internally from primary home)
+             * @example 550e8400-e29b-41d4-a716-446655440000
+             */
+            homeId?: string;
+        };
+        CreateHomeDto: {
+            /**
+             * Format: uuid
+             * @description Unique identifier for the home
              * @example 550e8400-e29b-41d4-a716-446655440000
              */
             id?: string;
-            /** @example My Garden */
-            name?: string;
-            /** @example A personal knowledge garden */
-            description?: string;
-            /** @example true */
-            primary?: boolean;
-            /** @example personal */
-            type?: string;
-            /** @example garden */
-            kind?: string;
             /**
+             * @description Name of the home
+             * @example My Garden
+             */
+            name: string;
+            /**
+             * @description Optional description of the home
+             * @example A personal knowledge garden for collecting ideas
+             */
+            description?: string;
+            /**
+             * @description Whether this is the primary home
+             * @default false
+             * @example true
+             */
+            primary?: boolean;
+            /**
+             * @description Type of the home
+             * @example personal
+             */
+            type: string;
+            /**
+             * @description Kind of the home
+             * @example garden
+             */
+            kind: string;
+            /**
+             * @description Optional metadata for the home
              * @example {
              *       "color": "blue",
              *       "icon": "tree"
              *     }
              */
             meta?: Record<string, never>;
-            /** Format: date-time */
-            created?: string;
-            /** Format: date-time */
-            updated?: string;
-          };
         };
-      };
-      /** @description Invalid input data */
-      400: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description Authentication required */
-      401: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description Admin access required */
-      403: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-    };
-  };
-  HomeController_getById: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        /** @description The UUID of the home */
-        id: string;
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description The home data */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': {
-            /** Format: uuid */
-            id?: string;
-            /** @example My Garden */
-            name?: string;
-            description?: string;
-            /** @example true */
-            primary?: boolean;
-            /** @example personal */
-            type?: string;
-            /** @example garden */
-            kind?: string;
-            meta?: Record<string, never>;
-            /** Format: date-time */
-            created?: string;
-            /** Format: date-time */
-            updated?: string;
-          };
-        };
-      };
-      /** @description Authentication required */
-      401: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description Home not found */
-      404: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-    };
-  };
-  HomeController_delete: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        /** @description The UUID of the home to delete */
-        id: string;
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description The home has been successfully deleted. */
-      204: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description Authentication required */
-      401: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description Admin access required */
-      403: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description Home not found */
-      404: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-    };
-  };
-  HomeController_update: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        /** @description The UUID of the home to update */
-        id: string;
-      };
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        'application/json': components['schemas']['UpdateHomeDto'];
-      };
-    };
-    responses: {
-      /** @description The home has been successfully updated. */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': {
-            /** Format: uuid */
-            id?: string;
-            /** @example Updated Garden Name */
-            name?: string;
-            description?: string;
-            /** @example true */
-            primary?: boolean;
-            /** @example personal */
-            type?: string;
-            /** @example garden */
-            kind?: string;
-            meta?: Record<string, never>;
-            /** Format: date-time */
-            created?: string;
-            /** Format: date-time */
-            updated?: string;
-          };
-        };
-      };
-      /** @description Invalid input data */
-      400: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description Authentication required */
-      401: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description Admin access required */
-      403: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description Home not found */
-      404: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-    };
-  };
-  TagController_findAll: {
-    parameters: {
-      query?: {
-        /** @description Filter tags by resource type (crux, path, or theme) */
-        resourceType?: 'crux' | 'path' | 'theme';
-        /** @description Search term to filter tags by label (case-insensitive partial match) */
-        search?: string;
-        /** @description Sort order: "alpha" for alphabetical, "count" for most used (default: count) */
-        sort?: 'alpha' | 'count';
-        /** @description Filter by exact label match (case-sensitive) */
-        label?: string;
-        /** @description Page number for pagination (default: 1) */
-        page?: unknown;
-        /** @description Number of results per page (default: 25) */
-        perPage?: unknown;
-      };
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Tags retrieved successfully. Check Link header for pagination links and Pagination header for metadata. */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': {
-            /** @example tag_123 */
+        UpdateHomeDto: {
+            /**
+             * Format: uuid
+             * @description Unique identifier for the home
+             * @example 550e8400-e29b-41d4-a716-446655440000
+             */
             id?: string;
             /**
-             * @example crux
+             * @description Name of the home
+             * @example Updated Garden Name
+             */
+            name?: string;
+            /**
+             * @description Optional description of the home
+             * @example An updated description
+             */
+            description?: string;
+            /**
+             * @description Whether this is the primary home
+             * @default false
+             * @example true
+             */
+            primary?: boolean;
+            /**
+             * @description Type of the home
+             * @example personal
+             */
+            type?: string;
+            /**
+             * @description Kind of the home
+             * @example garden
+             */
+            kind?: string;
+            /**
+             * @description Optional metadata for the home
+             * @example {
+             *       "color": "green",
+             *       "icon": "flower"
+             *     }
+             */
+            meta?: Record<string, never>;
+        };
+        UpdateTagDto: Record<string, never>;
+        UpdateDimensionDto: {
+            /**
+             * @description Type of dimensional relationship
+             * @example gate
              * @enum {string}
              */
-            resourceType?: 'crux' | 'path' | 'theme';
-            /** @example crux_456 */
-            resourceId?: string;
-            /** @example frontend-development */
-            label?: string;
+            type?: "gate" | "garden" | "growth" | "graft";
             /**
-             * Format: uuid
-             * @example 550e8400-e29b-41d4-a716-446655440000
+             * @description Weight of the relationship (integer)
+             * @example 1
              */
-            authorId?: string;
+            weight?: number;
             /**
-             * Format: uuid
-             * @example 550e8400-e29b-41d4-a716-446655440001
+             * @description Optional note for the dimension
+             * @example This is a note about the dimension
              */
-            homeId?: string;
-            /** Format: date-time */
-            created?: string;
-            /** Format: date-time */
-            updated?: string;
-          }[];
+            note?: string;
         };
-      };
-      /** @description Authentication required */
-      401: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-    };
-  };
-  TagController_getById: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        /** @description The UUID of the tag */
-        id: string;
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Tag retrieved successfully. */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': {
-            /** @example tag_123 */
-            id?: string;
-            /** @example crux */
-            resourceType?: string;
-            /** @example crux_456 */
-            resourceId?: string;
-            /** @example frontend-development */
-            label?: string;
-            /** @example author_789 */
-            authorId?: string;
-            /** Format: date-time */
-            created?: string;
-            /** Format: date-time */
-            updated?: string;
-          };
-        };
-      };
-      /** @description Authentication required */
-      401: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description Tag not found */
-      404: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-    };
-  };
-  TagController_delete: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        /** @description The UUID of the tag to delete */
-        id: string;
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Tag successfully deleted (soft delete). No content returned. */
-      204: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description Authentication required */
-      401: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description Admin permissions required */
-      403: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description Tag not found */
-      404: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-    };
-  };
-  TagController_update: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        /** @description The UUID of the tag to update */
-        id: string;
-      };
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        'application/json': components['schemas']['UpdateTagDto'];
-      };
-    };
-    responses: {
-      /** @description Tag updated successfully. */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': {
-            /** @example tag_123 */
-            id?: string;
+        CheckoutDto: {
             /**
-             * @example crux
+             * @description A paid plan id
              * @enum {string}
              */
-            resourceType?: 'crux' | 'path' | 'theme';
-            /** @example crux_456 */
-            resourceId?: string;
+            planId: "grower" | "gardener";
+            /** @enum {string} */
+            interval: "month" | "year";
+        };
+        AddDomainDto: {
+            /** @description A subdomain you control, e.g. blog.example.com (apex domains are not supported yet) */
+            hostname: string;
+        };
+        CreatePathDto: {
             /**
-             * @description Updated label (lowercase kebab-case)
-             * @example frontend-development
+             * @description Unique slug identifier for the path
+             * @example my-awesome-path
              */
-            label?: string;
-            /** @example author_789 */
-            authorId?: string;
-            /** Format: date-time */
-            created?: string;
-            /** Format: date-time */
-            updated?: string;
-          };
-        };
-      };
-      /** @description Invalid tag label format (must be lowercase kebab-case: a-z, 0-9, hyphens only) */
-      400: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description Authentication required */
-      401: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description Admin permissions required */
-      403: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description Tag not found */
-      404: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-    };
-  };
-  DimensionController_getById: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        /** @description The UUID of the dimension */
-        id: string;
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Dimension retrieved successfully. */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': {
-            /** @example dim_123 */
-            id?: string;
-            /** @example crux_123 */
-            sourceId?: string;
-            /** @example crux_456 */
-            targetId?: string;
-            /** @example gate */
-            type?: string;
-            /** @example reference */
-            kind?: string;
-            /** @example 1 */
-            weight?: number;
-            /** @example Prerequisite concept */
-            note?: string;
+            slug: string;
+            /**
+             * @description Optional title for the path
+             * @example My Awesome Path
+             */
+            title?: string;
+            /**
+             * @description Optional description for the path
+             * @example This is a description of my path
+             */
+            description?: string;
+            /**
+             * @description Type of the path
+             * @default living
+             * @example living
+             * @enum {string}
+             */
+            type?: "living" | "frozen";
+            /**
+             * @description Visibility setting for the path
+             * @default unlisted
+             * @example unlisted
+             * @enum {string}
+             */
+            visibility?: "public" | "private" | "unlisted";
+            /**
+             * @description Kind of path (guide or wander)
+             * @example wander
+             * @enum {string}
+             */
+            kind: "guide" | "wander";
+            /**
+             * @description Entry marker ID for the path
+             * @example 550e8400-e29b-41d4-a716-446655440000
+             */
+            entry: string;
             /**
              * Format: uuid
+             * @description Unique identifier for the path (auto-generated)
+             * @example 550e8400-e29b-41d4-a716-446655440000
+             */
+            id?: string;
+            /**
+             * Format: uuid
+             * @description Author ID (set internally from account)
              * @example 550e8400-e29b-41d4-a716-446655440000
              */
             authorId?: string;
             /**
              * Format: uuid
-             * @example 550e8400-e29b-41d4-a716-446655440001
-             */
-            homeId?: string;
-            /** @example {} */
-            meta?: Record<string, never>;
-            /** Format: date-time */
-            created?: string;
-            /** Format: date-time */
-            updated?: string;
-          };
-        };
-      };
-      /** @description Authentication required */
-      401: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description Dimension not found */
-      404: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-    };
-  };
-  DimensionController_delete: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        /** @description The UUID of the dimension to delete */
-        id: string;
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Dimension deleted successfully */
-      204: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description Authentication required */
-      401: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description Insufficient permissions */
-      403: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description Dimension not found */
-      404: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-    };
-  };
-  DimensionController_update: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        /** @description The UUID of the dimension to update */
-        id: string;
-      };
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        'application/json': components['schemas']['UpdateDimensionDto'];
-      };
-    };
-    responses: {
-      /** @description Dimension updated successfully */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': {
-            /** @example dim_123 */
-            id?: string;
-            /** @example crux_123 */
-            sourceId?: string;
-            /** @example crux_456 */
-            targetId?: string;
-            /** @example gate */
-            type?: string;
-            /** @example reference */
-            kind?: string;
-            /** @example 2 */
-            weight?: number;
-            /** @example Updated note */
-            note?: string;
-            /**
-             * Format: uuid
+             * @description Home ID (set internally from primary home)
              * @example 550e8400-e29b-41d4-a716-446655440000
              */
-            authorId?: string;
+            homeId?: string;
             /**
              * Format: uuid
+             * @description Account ID (set internally from auth)
+             * @example 550e8400-e29b-41d4-a716-446655440000
+             */
+            accountId?: string;
+        };
+        UpdatePathDto: {
+            /**
+             * @description Updated title for the path
+             * @example My Updated Path Title
+             */
+            title?: string;
+            /**
+             * @description Updated description for the path
+             * @example Updated description for my path
+             */
+            description?: string;
+            /**
+             * @description Updated type of the path
+             * @example frozen
+             * @enum {string}
+             */
+            type?: "living" | "frozen";
+            /**
+             * @description Updated visibility setting for the path
+             * @example public
+             * @enum {string}
+             */
+            visibility?: "public" | "private" | "unlisted";
+            /**
+             * @description Updated kind of path (guide or wander)
+             * @example guide
+             * @enum {string}
+             */
+            kind?: "guide" | "wander";
+            /**
+             * @description Updated entry marker ID for the path
              * @example 550e8400-e29b-41d4-a716-446655440001
              */
-            homeId?: string;
-            /** @example {} */
-            meta?: Record<string, never>;
-          };
-        };
-      };
-      /** @description Authentication required */
-      401: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description Insufficient permissions */
-      403: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description Dimension not found */
-      404: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-    };
-  };
-  PathController_findAll: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description List of paths retrieved successfully */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': {
-            /** Format: uuid */
-            id?: string;
-            /** @example my-awesome-path */
-            slug?: string;
-            /** @example My Awesome Path */
-            title?: string;
-            /** @example A journey through code */
-            description?: string;
-            /** @example living */
-            type?: string;
-            /** @example public */
-            visibility?: string;
-            /** @example guide */
-            kind?: string;
-            /** Format: uuid */
             entry?: string;
-            /** Format: uuid */
-            authorId?: string;
-            /** Format: uuid */
-            homeId?: string;
-            /** @example {} */
-            meta?: Record<string, never>;
-            /** Format: date-time */
-            created?: string;
-            /** Format: date-time */
-            updated?: string;
-          }[];
         };
-      };
-    };
-  };
-  PathController_create: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        'application/json': components['schemas']['CreatePathDto'];
-      };
-    };
-    responses: {
-      /** @description The path has been successfully created. */
-      201: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': {
-            /** Format: uuid */
-            id?: string;
-            /** @example my-awesome-path */
-            slug?: string;
-            /** @example My Awesome Path */
-            title?: string;
-            /** @example A journey through code */
-            description?: string;
-            /** @example living */
-            type?: string;
-            /** @example unlisted */
-            visibility?: string;
-            /** @example guide */
-            kind?: string;
-            /** Format: uuid */
-            entry?: string;
-            /** Format: uuid */
-            authorId?: string;
-            /** Format: uuid */
-            homeId?: string;
-            /** Format: date-time */
-            created?: string;
-            /** Format: date-time */
-            updated?: string;
-          };
-        };
-      };
-      /** @description Authentication required */
-      401: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description Insufficient permissions */
-      403: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-    };
-  };
-  PathController_getByIdentifier: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        /** @description The UUID or slug of the path */
-        identifier: string;
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description The path data */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': {
-            /** Format: uuid */
-            id?: string;
-            /** @example my-awesome-path */
-            slug?: string;
-            /** @example My Awesome Path */
-            title?: string;
-            /** @example A journey through code */
-            description?: string;
-            /** @example living */
-            type?: string;
-            /** @example public */
-            visibility?: string;
-            /** @example guide */
-            kind?: string;
-            /** Format: uuid */
-            entry?: string;
-            /** Format: uuid */
-            authorId?: string;
-            /** Format: uuid */
-            homeId?: string;
-            /** Format: date-time */
-            created?: string;
-            /** Format: date-time */
-            updated?: string;
-          };
-        };
-      };
-      /** @description Path not found */
-      404: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-    };
-  };
-  PathController_delete: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        /** @description The UUID of the path to delete */
-        id: string;
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description The path has been successfully deleted. */
-      204: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description Authentication required */
-      401: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description Insufficient permissions */
-      403: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description Path not found */
-      404: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-    };
-  };
-  PathController_update: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        /** @description The UUID of the path to update */
-        id: string;
-      };
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        'application/json': components['schemas']['UpdatePathDto'];
-      };
-    };
-    responses: {
-      /** @description The path has been successfully updated. */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': {
-            /** Format: uuid */
-            id?: string;
-            /** @example my-updated-path */
-            slug?: string;
-            /** @example My Updated Path */
-            title?: string;
-            /** @example Updated description */
-            description?: string;
-            /** @example frozen */
-            type?: string;
-            /** @example public */
-            visibility?: string;
-            /** @example wander */
-            kind?: string;
-            /** Format: uuid */
-            entry?: string;
-            /** Format: uuid */
-            authorId?: string;
-            /** Format: uuid */
-            homeId?: string;
-            /** Format: date-time */
-            created?: string;
-            /** Format: date-time */
-            updated?: string;
-          };
-        };
-      };
-      /** @description Authentication required */
-      401: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description Insufficient permissions */
-      403: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description Path not found */
-      404: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-    };
-  };
-  PathController_getMarkers: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        /** @description The UUID of the path */
-        id: string;
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Markers retrieved successfully */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': {
-            /** Format: uuid */
-            id?: string;
-            /** Format: uuid */
-            pathId?: string;
-            /** Format: uuid */
-            cruxId?: string;
-            /** @example 0 */
-            order?: number;
-            /** @example Start here */
+        MarkerInput: {
+            /**
+             * @description Crux ID for the marker
+             * @example 550e8400-e29b-41d4-a716-446655440000
+             */
+            cruxId: string;
+            /**
+             * @description Order/position of the marker in the path
+             * @example 0
+             */
+            order: number;
+            /**
+             * @description Optional note for the marker
+             * @example This is an important marker
+             */
             note?: string;
-            /** Format: uuid */
-            authorId?: string;
-            /** Format: uuid */
-            homeId?: string;
-            /** Format: date-time */
-            created?: string;
-            /** Format: date-time */
-            updated?: string;
-          }[];
         };
-      };
-      /** @description Path not found */
-      404: {
-        headers: {
-          [name: string]: unknown;
+        SyncMarkersDto: {
+            /**
+             * @description Array of markers to sync for the path
+             * @example [
+             *       {
+             *         "cruxId": "550e8400-e29b-41d4-a716-446655440000",
+             *         "order": 0,
+             *         "note": "First marker"
+             *       },
+             *       {
+             *         "cruxId": "660e8400-e29b-41d4-a716-446655440000",
+             *         "order": 1
+             *       }
+             *     ]
+             */
+            markers: components["schemas"]["MarkerInput"][];
         };
-        content?: never;
-      };
-    };
-  };
-  PathController_syncMarkers: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        /** @description The UUID of the path */
-        id: string;
-      };
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        'application/json': components['schemas']['SyncMarkersDto'];
-      };
-    };
-    responses: {
-      /** @description Markers synced successfully */
-      200: {
-        headers: {
-          [name: string]: unknown;
+        ChatDto: {
+            /** @description Crux workspace ID */
+            cruxId: string;
+            /** @description Conversation messages (content may be string or content blocks) */
+            messages: string[];
+            /**
+             * @description Model to use
+             * @default claude-sonnet-4-20250514
+             */
+            model?: string;
         };
-        content: {
-          'application/json': {
-            /** Format: uuid */
-            id?: string;
-            /** Format: uuid */
-            pathId?: string;
-            /** Format: uuid */
-            cruxId?: string;
-            /** @example 0 */
-            order?: number;
-            /** @example Start here */
-            note?: string;
-            /** Format: uuid */
-            authorId?: string;
-            /** Format: uuid */
-            homeId?: string;
-            /** Format: date-time */
-            created?: string;
-            /** Format: date-time */
-            updated?: string;
-          }[];
+        SetStoreEntryDto: {
+            /** @description The value to store (any JSON-serializable type) */
+            value: Record<string, never>;
+            /**
+             * @description Access mode for this key
+             * @default protected
+             * @enum {string}
+             */
+            mode?: "public" | "protected";
         };
-      };
-      /** @description Invalid marker data */
-      400: {
-        headers: {
-          [name: string]: unknown;
+        IncrementStoreEntryDto: {
+            /**
+             * @description Amount to increment by (default: 1)
+             * @default 1
+             */
+            by?: number;
         };
-        content?: never;
-      };
-      /** @description Authentication required */
-      401: {
-        headers: {
-          [name: string]: unknown;
+    };
+    responses: never;
+    parameters: never;
+    requestBodies: never;
+    headers: never;
+    pathItems: never;
+}
+export type $defs = Record<string, never>;
+export interface operations {
+    AppController_health: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
         };
-        content?: never;
-      };
-      /** @description No permission to manage markers for this path */
-      403: {
-        headers: {
-          [name: string]: unknown;
+        requestBody?: never;
+        responses: {
+            /** @description Health status retrieved successfully. Always returns 200 OK even if services are down - check the status field for actual health. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * @description Overall health: "healthy" = all up, "degraded" = some down, "unhealthy" = critical services down
+                         * @example healthy
+                         * @enum {string}
+                         */
+                        status: "healthy" | "degraded" | "unhealthy";
+                        /**
+                         * @description API version
+                         * @example 0.0.1
+                         */
+                        version: string;
+                        /**
+                         * Format: date-time
+                         * @description ISO 8601 timestamp when the health check was performed
+                         * @example 2025-10-06T12:00:00.000Z
+                         */
+                        timestamp: string;
+                        services: {
+                            database: {
+                                /**
+                                 * @description Database connectivity status
+                                 * @example up
+                                 * @enum {string}
+                                 */
+                                status: "up" | "down";
+                                /**
+                                 * @description Database response time in milliseconds
+                                 * @example 5
+                                 */
+                                responseTime?: number;
+                                /**
+                                 * @description Error message when status is "down"
+                                 * @example Connection timeout
+                                 */
+                                error?: string;
+                            };
+                            redis: {
+                                /**
+                                 * @description Redis connectivity status
+                                 * @example up
+                                 * @enum {string}
+                                 */
+                                status: "up" | "down";
+                                /**
+                                 * @description Redis response time in milliseconds
+                                 * @example 2
+                                 */
+                                responseTime?: number;
+                                /**
+                                 * @description Error message when status is "down"
+                                 * @example Connection refused
+                                 */
+                                error?: string;
+                            };
+                        };
+                    };
+                };
+            };
         };
-        content?: never;
-      };
-      /** @description Path or referenced crux not found */
-      404: {
-        headers: {
-          [name: string]: unknown;
+    };
+    AuthController_code: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
         };
-        content?: never;
-      };
-    };
-  };
-  PathController_getTags: {
-    parameters: {
-      query: {
-        filter: string;
-      };
-      header?: never;
-      path: {
-        /** @description The UUID of the path */
-        id: string;
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Tags retrieved successfully */
-      200: {
-        headers: {
-          [name: string]: unknown;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AuthCodeDto"];
+            };
         };
-        content: {
-          'application/json': {
-            /** Format: uuid */
-            id?: string;
-            /** @example tutorial */
-            label?: string;
-            /** @example path */
-            resourceType?: string;
-            /** Format: uuid */
-            resourceId?: string;
-            /** Format: uuid */
-            authorId?: string;
-            /** Format: uuid */
-            homeId?: string;
-            /** Format: date-time */
-            created?: string;
-            /** Format: date-time */
-            updated?: string;
-          }[];
+        responses: {
+            /** @description Authentication code sent successfully */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @example Auth Code emailed to user@example.com */
+                        message?: string;
+                    };
+                };
+            };
+            /** @description Invalid email format */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
         };
-      };
-      /** @description Authentication required */
-      401: {
-        headers: {
-          [name: string]: unknown;
+    };
+    AuthController_login: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
         };
-        content?: never;
-      };
-      /** @description Path not found */
-      404: {
-        headers: {
-          [name: string]: unknown;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AuthLoginDto"];
+            };
         };
-        content?: never;
-      };
-    };
-  };
-  PathController_syncTags: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        /** @description The UUID of the path */
-        id: string;
-      };
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        'application/json': {
-          /**
-           * @example [
-           *       "tutorial",
-           *       "learning-path",
-           *       "beginner"
-           *     ]
-           */
-          labels?: string[];
+        responses: {
+            /** @description Login successful */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * @description JWT access token valid for 1 hour
+                         * @example eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+                         */
+                        accessToken?: string;
+                        /**
+                         * @description Refresh token valid for 14 days
+                         * @example gHtdgqnJiEaBcDef
+                         */
+                        refreshToken?: string;
+                        /**
+                         * @description Access token expiration time in seconds
+                         * @example 3600
+                         */
+                        expiresIn?: number;
+                    };
+                };
+            };
+            /** @description Invalid request format */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Invalid email or authentication code */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
         };
-      };
     };
-    responses: {
-      /** @description Tags synced successfully */
-      200: {
-        headers: {
-          [name: string]: unknown;
+    AuthController_token: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
         };
-        content: {
-          'application/json': {
-            /** Format: uuid */
-            id?: string;
-            /** @example tutorial */
-            label?: string;
-            /** @example path */
-            resourceType?: string;
-            /** Format: uuid */
-            resourceId?: string;
-            /** Format: uuid */
-            authorId?: string;
-            /** Format: uuid */
-            homeId?: string;
-            /** Format: date-time */
-            created?: string;
-            /** Format: date-time */
-            updated?: string;
-          }[];
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AuthTokenDto"];
+            };
         };
-      };
-      /** @description Invalid tag label format (must be kebab-case) */
-      400: {
-        headers: {
-          [name: string]: unknown;
+        responses: {
+            /** @description Token refreshed successfully */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * @description New JWT access token valid for 1 hour
+                         * @example eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+                         */
+                        accessToken?: string;
+                        /**
+                         * @description New refresh token valid for 14 days
+                         * @example gHtdgqnJiEaBcDef
+                         */
+                        refreshToken?: string;
+                        /**
+                         * @description Access token expiration time in seconds
+                         * @example 3600
+                         */
+                        expiresIn?: number;
+                    };
+                };
+            };
+            /** @description Invalid request format */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Invalid or expired refresh token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
         };
-        content?: never;
-      };
-      /** @description Authentication required */
-      401: {
-        headers: {
-          [name: string]: unknown;
+    };
+    AuthController_profile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
         };
-        content?: never;
-      };
-      /** @description No permission to manage tags for this path */
-      403: {
-        headers: {
-          [name: string]: unknown;
+        requestBody?: never;
+        responses: {
+            /** @description User profile retrieved successfully */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Format: uuid
+                         * @example 550e8400-e29b-41d4-a716-446655440000
+                         */
+                        id?: string;
+                        /**
+                         * Format: email
+                         * @example user@example.com
+                         */
+                        email?: string;
+                        /**
+                         * @example author
+                         * @enum {string}
+                         */
+                        role?: "admin" | "author" | "keeper";
+                        /**
+                         * Format: date-time
+                         * @example 2024-01-01T00:00:00.000Z
+                         */
+                        created?: string;
+                        /**
+                         * Format: date-time
+                         * @example 2024-01-01T00:00:00.000Z
+                         */
+                        updated?: string;
+                    };
+                };
+            };
+            /** @description Authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description User profile not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
         };
-        content?: never;
-      };
-      /** @description Path not found */
-      404: {
-        headers: {
-          [name: string]: unknown;
+    };
+    AuthController_logout: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
         };
-        content?: never;
-      };
-    };
-  };
-  AiController_chat: {
-    parameters: {
-      query?: never;
-      header: {
-        'x-anthropic-key': string;
-      };
-      path?: never;
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        'application/json': components['schemas']['ChatDto'];
-      };
-    };
-    responses: {
-      201: {
-        headers: {
-          [name: string]: unknown;
+        requestBody?: never;
+        responses: {
+            /** @description Logout successful - no content returned */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
         };
-        content?: never;
-      };
     };
-  };
-  SyncController_pullGarden: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown;
+    AccountController_checkEmail: {
+        parameters: {
+            query: {
+                /** @description Email address to check */
+                email: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
         };
-        content?: never;
-      };
-    };
-  };
-  SyncController_pushGarden: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown;
+        requestBody?: never;
+        responses: {
+            /** @description Email availability status */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @example true */
+                        available?: boolean;
+                    };
+                };
+            };
+            /** @description Invalid email format */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
         };
-        content?: never;
-      };
     };
-  };
-  SyncController_deleteGarden: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      204: {
-        headers: {
-          [name: string]: unknown;
+    AccountController_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
         };
-        content?: never;
-      };
-    };
-  };
-  SyncController_getGardenStatus: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown;
+        requestBody?: never;
+        responses: {
+            /** @description Account retrieved successfully */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** Format: uuid */
+                        id?: string;
+                        /** @example user@example.com */
+                        email?: string;
+                        /** @enum {string} */
+                        role?: "admin" | "author" | "keeper";
+                        /**
+                         * Format: uuid
+                         * @example 550e8400-e29b-41d4-a716-446655440001
+                         */
+                        homeId?: string;
+                        /** Format: date-time */
+                        created?: string;
+                        /** Format: date-time */
+                        updated?: string;
+                    };
+                };
+            };
+            /** @description Authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Account not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
         };
-        content?: never;
-      };
     };
-  };
-  SyncController_pullCrux: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        cruxId: string;
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown;
+    AccountController_delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
         };
-        content?: never;
-      };
-    };
-  };
-  SyncController_pushCrux: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        cruxId: string;
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DeleteAccountDto"];
+            };
         };
-        content?: never;
-      };
-    };
-  };
-  SyncController_deleteCrux: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        cruxId: string;
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      204: {
-        headers: {
-          [name: string]: unknown;
+        responses: {
+            /** @description Account deleted successfully */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Confirmation text does not match */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Cannot delete another user's account */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Account not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
         };
-        content?: never;
-      };
     };
-  };
-  SyncController_listCruxes: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown;
+    AccountController_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
         };
-        content?: never;
-      };
-    };
-  };
-  ExploreController_explore: {
-    parameters: {
-      query?: {
-        /** @description Search term */
-        q?: string;
-        /** @description Result type */
-        type?: 'cruxes' | 'authors';
-        /** @description Sort order */
-        sort?: 'recent' | 'alpha';
-        perPage?: number;
-        page?: number;
-        /** @description Filter by tag (exact, multiple = AND) */
-        tag?: unknown[];
-      };
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateAccountDto"];
+            };
         };
-        content?: never;
-      };
-    };
-  };
-  ExploreController_tags: {
-    parameters: {
-      query?: {
-        /** @description Max tags (default 50) */
-        limit?: number;
-      };
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown;
+        responses: {
+            /** @description Account updated successfully */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** Format: uuid */
+                        id?: string;
+                        /** @example user@example.com */
+                        email?: string;
+                        /** @enum {string} */
+                        role?: "admin" | "author" | "keeper";
+                        /**
+                         * Format: uuid
+                         * @example 550e8400-e29b-41d4-a716-446655440001
+                         */
+                        homeId?: string;
+                        /** Format: date-time */
+                        created?: string;
+                        /** Format: date-time */
+                        updated?: string;
+                    };
+                };
+            };
+            /** @description Invalid input data */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Cannot update another user's account */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Account not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Email already exists */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
         };
-        content?: never;
-      };
     };
-  };
-  StoreController_get: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        cruxId: string;
-        key: string;
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown;
+    AuthorController_checkUsername: {
+        parameters: {
+            query: {
+                /** @description Username to check */
+                username: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
         };
-        content?: never;
-      };
-    };
-  };
-  StoreController_set: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        cruxId: string;
-        key: string;
-      };
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        'application/json': components['schemas']['SetStoreEntryDto'];
-      };
-    };
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown;
+        requestBody?: never;
+        responses: {
+            /** @description Username availability status */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @example true */
+                        available?: boolean;
+                    };
+                };
+            };
+            /** @description Authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
         };
-        content?: never;
-      };
     };
-  };
-  StoreController_deleteEntry: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        cruxId: string;
-        key: string;
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      204: {
-        headers: {
-          [name: string]: unknown;
+    AuthorController_getAll: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
         };
-        content?: never;
-      };
-    };
-  };
-  StoreController_increment: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        cruxId: string;
-        key: string;
-      };
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        'application/json': components['schemas']['IncrementStoreEntryDto'];
-      };
-    };
-    responses: {
-      201: {
-        headers: {
-          [name: string]: unknown;
+        requestBody?: never;
+        responses: {
+            /** @description List of authors retrieved successfully */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @example author_123 */
+                        id?: string;
+                        /** @example johndoe */
+                        username?: string;
+                        /** @example John Doe */
+                        display_name?: string;
+                        /** @example john@example.com */
+                        email?: string;
+                        /** @example Software developer and writer */
+                        bio?: string;
+                        /** @example https://johndoe.com */
+                        website?: string;
+                        /** @example https://example.com/avatar.jpg */
+                        avatar_url?: string;
+                        /** Format: date-time */
+                        created?: string;
+                        /** Format: date-time */
+                        updated?: string;
+                    }[];
+                };
+            };
         };
-        content?: never;
-      };
     };
-  };
-  StoreController_list: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        cruxId: string;
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown;
+    AuthorController_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
         };
-        content?: never;
-      };
-    };
-  };
-  StoreController_clearAll: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        cruxId: string;
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      204: {
-        headers: {
-          [name: string]: unknown;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateAuthorDto"];
+            };
         };
-        content?: never;
-      };
+        responses: {
+            /** @description The author has been successfully created. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @example author_123 */
+                        id?: string;
+                        /** @example johndoe */
+                        username?: string;
+                        /** @example John Doe */
+                        display_name?: string;
+                        /** @example john@example.com */
+                        email?: string;
+                        /** @example Software developer and writer */
+                        bio?: string;
+                        /** @example https://johndoe.com */
+                        website?: string;
+                        /** @example https://example.com/avatar.jpg */
+                        avatar_url?: string;
+                        /** Format: date-time */
+                        created?: string;
+                        /** Format: date-time */
+                        updated?: string;
+                    };
+                };
+            };
+            /** @description Authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Insufficient permissions */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
     };
-  };
+    AuthorController_getByIdentifier: {
+        parameters: {
+            query?: {
+                /** @description Embed related resources. Use "home" to include the home crux. */
+                embed?: "home";
+            };
+            header?: never;
+            path: {
+                /** @description Author UUID (e.g., "550e8400-e29b-41d4-a716-446655440000") or @username (e.g., "@johndoe") */
+                identifier: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The author data */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @example author_123 */
+                        id?: string;
+                        /** @example johndoe */
+                        username?: string;
+                        /** @example John Doe */
+                        displayName?: string;
+                        /** @example Software developer and writer */
+                        bio?: string;
+                        /**
+                         * Format: uuid
+                         * @example 550e8400-e29b-41d4-a716-446655440000
+                         */
+                        accountId?: string;
+                        /**
+                         * Format: uuid
+                         * @example 550e8400-e29b-41d4-a716-446655440001
+                         */
+                        homeId?: string;
+                        /** @example individual */
+                        type?: string;
+                        /** @example writer */
+                        kind?: string;
+                        /** @example {} */
+                        meta?: Record<string, never>;
+                        /** Format: date-time */
+                        created?: string;
+                        /** Format: date-time */
+                        updated?: string;
+                    } | {
+                        /** @example author_123 */
+                        id?: string;
+                        /** @example johndoe */
+                        username?: string;
+                        /** @example John Doe */
+                        displayName?: string;
+                        /** @example Software developer and writer */
+                        bio?: string;
+                        /** @example account_456 */
+                        accountId?: string;
+                        /** @example individual */
+                        type?: string;
+                        /** @example writer */
+                        kind?: string;
+                        /** @example {} */
+                        meta?: Record<string, never>;
+                        home?: {
+                            /** @example crux_789 */
+                            id?: string;
+                            /** @example My Home Crux */
+                            title?: string;
+                        };
+                        /** Format: date-time */
+                        created?: string;
+                        /** Format: date-time */
+                        updated?: string;
+                    };
+                };
+            };
+            /** @description Author not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AuthorController_delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The UUID of the author to delete */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The author has been successfully deleted. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @example Author deleted successfully */
+                        message?: string;
+                    };
+                };
+            };
+            /** @description Authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Insufficient permissions */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Author not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AuthorController_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The UUID of the author to update */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateAuthorDto"];
+            };
+        };
+        responses: {
+            /** @description The author has been successfully updated. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @example author_123 */
+                        id?: string;
+                        /** @example johndoe */
+                        username?: string;
+                        /** @example John Updated */
+                        display_name?: string;
+                        /** @example john.updated@example.com */
+                        email?: string;
+                        /** @example Updated bio information */
+                        bio?: string;
+                        /** @example https://johnupdated.com */
+                        website?: string;
+                        /** @example https://example.com/new-avatar.jpg */
+                        avatar_url?: string;
+                        /** Format: date-time */
+                        created?: string;
+                        /** Format: date-time */
+                        updated?: string;
+                    };
+                };
+            };
+            /** @description Authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Insufficient permissions */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Author not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AuthorController_uploadAvatar: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AuthorController_removeAvatar: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AuthorController_getAvatar: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                identifier: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AuthorController_getPublicCruxes: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                identifier: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AuthorController_getCruxBySlug: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                identifier: string;
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AuthorController_getGraph: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                identifier: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AuthorController_getPublicArtifacts: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                identifier: string;
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AuthorController_downloadPublicArtifact: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                identifier: string;
+                slug: string;
+                artifactId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    CruxController_findAll: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description List of cruxes retrieved successfully */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @example crux_123 */
+                        id?: string;
+                        /** @example my-awesome-crux */
+                        slug?: string;
+                        /** @example My Awesome Crux */
+                        title?: string;
+                        /** @example A brief description of this crux */
+                        description?: string;
+                        /** @example This is the content of my crux */
+                        data?: string;
+                        /** @example text */
+                        type?: string;
+                        /** @example note */
+                        kind?: string;
+                        /** @example living */
+                        status?: string;
+                        /** @example public */
+                        visibility?: string;
+                        /**
+                         * Format: uuid
+                         * @example 550e8400-e29b-41d4-a716-446655440000
+                         */
+                        authorId?: string;
+                        /**
+                         * Format: uuid
+                         * @example 550e8400-e29b-41d4-a716-446655440001
+                         */
+                        homeId?: string;
+                        /** @example {} */
+                        meta?: Record<string, never>;
+                        /** @example johndoe */
+                        author_username?: string;
+                        /** @example John Doe */
+                        author_display_name?: string;
+                        /** Format: date-time */
+                        created?: string;
+                        /** Format: date-time */
+                        updated?: string;
+                    }[];
+                };
+            };
+        };
+    };
+    CruxController_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateCruxDto"];
+            };
+        };
+        responses: {
+            /** @description The crux has been successfully created. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @example crux_123 */
+                        id?: string;
+                        /** @example my-awesome-crux */
+                        slug?: string;
+                        /** @example My Awesome Crux */
+                        title?: string;
+                        /** @example A brief description of this crux */
+                        description?: string;
+                        /** @example This is the content of my crux */
+                        data?: string;
+                        /** @example text */
+                        type?: string;
+                        /** @example note */
+                        kind?: string;
+                        /** @example living */
+                        status?: string;
+                        /** @example unlisted */
+                        visibility?: string;
+                        /**
+                         * Format: uuid
+                         * @example 550e8400-e29b-41d4-a716-446655440000
+                         */
+                        authorId?: string;
+                        /**
+                         * Format: uuid
+                         * @example 550e8400-e29b-41d4-a716-446655440001
+                         */
+                        homeId?: string;
+                        /** @example {} */
+                        meta?: Record<string, never>;
+                        /** Format: date-time */
+                        createdAt?: string;
+                        /** Format: date-time */
+                        updatedAt?: string;
+                    };
+                };
+            };
+            /** @description Authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Insufficient permissions */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    CruxController_getByIdentifier: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The UUID or slug of the crux */
+                identifier: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The crux data */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @example crux_123 */
+                        id?: string;
+                        /** @example my-awesome-crux */
+                        slug?: string;
+                        /** @example My Awesome Crux */
+                        title?: string;
+                        /** @example A brief description of this crux */
+                        description?: string;
+                        /** @example This is the content of my crux */
+                        data?: string;
+                        /** @example text */
+                        type?: string;
+                        /** @example note */
+                        kind?: string;
+                        /** @example living */
+                        status?: string;
+                        /** @example unlisted */
+                        visibility?: string;
+                        /**
+                         * Format: uuid
+                         * @example 550e8400-e29b-41d4-a716-446655440000
+                         */
+                        authorId?: string;
+                        /**
+                         * Format: uuid
+                         * @example 550e8400-e29b-41d4-a716-446655440001
+                         */
+                        homeId?: string;
+                        /** @example {} */
+                        meta?: Record<string, never>;
+                        /** Format: date-time */
+                        createdAt?: string;
+                        /** Format: date-time */
+                        updatedAt?: string;
+                    };
+                };
+            };
+            /** @description Crux not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    CruxController_delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The UUID of the crux to delete */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The crux has been successfully deleted. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Insufficient permissions */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Crux not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    CruxController_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The UUID of the crux to update */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateCruxDto"];
+            };
+        };
+        responses: {
+            /** @description The crux has been successfully updated. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @example crux_123 */
+                        id?: string;
+                        /** @example my-awesome-crux */
+                        slug?: string;
+                        /** @example My Updated Crux */
+                        title?: string;
+                        /** @example Updated description */
+                        description?: string;
+                        /** @example This is the updated content */
+                        data?: string;
+                        /** @example text */
+                        type?: string;
+                        /** @example note */
+                        kind?: string;
+                        /** @example living */
+                        status?: string;
+                        /** @example public */
+                        visibility?: string;
+                        /**
+                         * Format: uuid
+                         * @example 550e8400-e29b-41d4-a716-446655440000
+                         */
+                        authorId?: string;
+                        /**
+                         * Format: uuid
+                         * @example 550e8400-e29b-41d4-a716-446655440001
+                         */
+                        homeId?: string;
+                        /** @example {} */
+                        meta?: Record<string, never>;
+                        /** Format: date-time */
+                        createdAt?: string;
+                        /** Format: date-time */
+                        updatedAt?: string;
+                    };
+                };
+            };
+            /** @description Authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Insufficient permissions */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Crux not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    CruxController_getDimensions: {
+        parameters: {
+            query?: {
+                /** @description Filter dimensions by type. Gates are origins/sources, Gardens are creations/consequences, Growth is evolution over time, Grafts are lateral connections. */
+                type?: "gate" | "garden" | "growth" | "graft";
+                /** @description Control which related crux data to embed in the response. Can be a single value or comma-separated list (order-agnostic, case-insensitive). Default: "target" */
+                embed?: string;
+            };
+            header?: never;
+            path: {
+                /** @description The UUID of the source crux */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Dimensions retrieved successfully */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** Format: uuid */
+                        id?: string;
+                        /**
+                         * Format: uuid
+                         * @description Always present - ID of the source crux
+                         */
+                        sourceId?: string;
+                        /**
+                         * Format: uuid
+                         * @description Always present - ID of the target crux
+                         */
+                        targetId?: string;
+                        /**
+                         * @example gate
+                         * @enum {string}
+                         */
+                        type?: "gate" | "garden" | "growth" | "graft";
+                        /** @example inspiration */
+                        kind?: string;
+                        /** @example 1 */
+                        weight?: number;
+                        /** @example This inspired that idea */
+                        note?: string;
+                        /** Format: date-time */
+                        created?: string;
+                        /** Format: date-time */
+                        updated?: string;
+                        /** @description Embedded source crux data (only present if embed includes "source") */
+                        source?: {
+                            /** Format: uuid */
+                            id?: string;
+                            /** @example my-source-crux */
+                            slug?: string;
+                            /** @example Source Crux Title */
+                            title?: string;
+                            /** @example Source crux content... */
+                            data?: string;
+                        };
+                        /** @description Embedded target crux data (present by default, excluded if embed=none or embed=source) */
+                        target?: {
+                            /** Format: uuid */
+                            id?: string;
+                            /** @example my-target-crux */
+                            slug?: string;
+                            /** @example Target Crux Title */
+                            title?: string;
+                            /** @example Target crux content... */
+                            data?: string;
+                        };
+                    }[];
+                };
+            };
+            /** @description Crux not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    CruxController_createDimension: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The UUID of the source crux */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateDimensionDto"];
+            };
+        };
+        responses: {
+            /** @description Dimension created successfully */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @example dim_123 */
+                        id?: string;
+                        /** @example crux_123 */
+                        sourceId?: string;
+                        /** @example crux_456 */
+                        targetId?: string;
+                        /** @example gate */
+                        type?: string;
+                        /** @example 1 */
+                        weight?: number;
+                        /** @example Connection note */
+                        note?: string;
+                    };
+                };
+            };
+            /** @description Invalid dimension type or target IDs */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Crux not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    CruxController_getTags: {
+        parameters: {
+            query: {
+                filter: string;
+            };
+            header?: never;
+            path: {
+                /** @description The UUID of the crux */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Tags retrieved successfully */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** Format: uuid */
+                        id?: string;
+                        /** @example web-development */
+                        label?: string;
+                        /** Format: date-time */
+                        created?: string;
+                        /** Format: date-time */
+                        updated?: string;
+                    }[];
+                };
+            };
+            /** @description Authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Crux not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    CruxController_syncTags: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The UUID of the crux */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /**
+                     * @example [
+                     *       "web-development",
+                     *       "javascript",
+                     *       "tutorial"
+                     *     ]
+                     */
+                    labels?: string[];
+                };
+            };
+        };
+        responses: {
+            /** @description Tags synced successfully */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** Format: uuid */
+                        id?: string;
+                        /** @example web-development */
+                        label?: string;
+                        /** @example crux */
+                        resourceType?: string;
+                        /** Format: uuid */
+                        resourceId?: string;
+                        /** Format: uuid */
+                        authorId?: string;
+                        /** Format: uuid */
+                        homeId?: string;
+                        /** Format: date-time */
+                        created?: string;
+                        /** Format: date-time */
+                        updated?: string;
+                    }[];
+                };
+            };
+            /** @description Invalid tag label format (must be kebab-case) */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No permission to manage tags for this crux */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Crux not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    CruxController_getArtifacts: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The UUID of the crux */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Artifacts retrieved successfully */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** Format: uuid */
+                        id?: string;
+                        /** @example image */
+                        type?: string;
+                        /** @example photo */
+                        kind?: string;
+                        /** @example screenshot.png */
+                        filename?: string;
+                        /** @example image/png */
+                        mimeType?: string;
+                        /** @example 1024000 */
+                        size?: number;
+                        /** Format: date-time */
+                        created?: string;
+                        /** Format: date-time */
+                        updated?: string;
+                    }[];
+                };
+            };
+            /** @description Authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Crux not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    CruxController_createArtifact: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The UUID of the crux */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": {
+                    /**
+                     * Format: binary
+                     * @description The file to upload (max 50MB)
+                     */
+                    file: string;
+                    /**
+                     * @description Type of artifact
+                     * @example image
+                     */
+                    type: string;
+                    /**
+                     * @description Kind of artifact
+                     * @example photo
+                     */
+                    kind: string;
+                    /**
+                     * @description Optional metadata as JSON string
+                     * @example {"width": 1920, "height": 1080}
+                     */
+                    meta?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Artifact uploaded successfully */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** Format: uuid */
+                        id?: string;
+                        /** @example image */
+                        type?: string;
+                        /** @example photo */
+                        kind?: string;
+                        /** @example screenshot.png */
+                        filename?: string;
+                        /** @example image/png */
+                        mimeType?: string;
+                        /** @example 1024000 */
+                        size?: number;
+                        /** Format: date-time */
+                        created?: string;
+                        /** Format: date-time */
+                        updated?: string;
+                    };
+                };
+            };
+            /** @description Invalid file, exceeds size limit, or missing required fields */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No permission to manage this crux */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Crux not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    CruxController_downloadArtifact: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The UUID of the crux */
+                id: string;
+                /** @description The UUID of the artifact */
+                artifactId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Artifact file downloaded successfully */
+            200: {
+                headers: {
+                    /** @description MIME type of the file */
+                    "Content-Type"?: string;
+                    /** @description Artifact filename */
+                    "Content-Disposition"?: string;
+                    /** @description Cache control header */
+                    "Cache-Control"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/octet-stream": string;
+                };
+            };
+            /** @description Crux or artifact not found, or artifact does not belong to this crux */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    CruxController_publish: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    CruxController_unpublish: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ArtifactController_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The UUID of the artifact to update */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": {
+                    /**
+                     * Format: binary
+                     * @description Optional: New file to replace existing (max 50MB)
+                     */
+                    file?: string;
+                    /**
+                     * @description Type of artifact
+                     * @example image
+                     */
+                    type?: string;
+                    /**
+                     * @description Kind of artifact
+                     * @example photo
+                     */
+                    kind?: string;
+                    /**
+                     * @description Optional metadata as JSON string
+                     * @example {"width": 1920, "height": 1080}
+                     */
+                    meta?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description The artifact has been successfully updated. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** Format: uuid */
+                        id?: string;
+                        /** @example image */
+                        type?: string;
+                        /** @example photo */
+                        kind?: string;
+                        /** @example screenshot.png */
+                        filename?: string;
+                        /** @example image/png */
+                        mimeType?: string;
+                        /** @example 1024000 */
+                        size?: number;
+                        /** Format: date-time */
+                        created?: string;
+                        /** Format: date-time */
+                        updated?: string;
+                    };
+                };
+            };
+            /** @description Invalid input data or file exceeds size limit */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Insufficient permissions */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Artifact not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ArtifactController_delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The UUID of the artifact to delete */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The artifact has been successfully deleted. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Insufficient permissions */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Artifact not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    HomeController_getAll: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description List of homes retrieved successfully */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** Format: uuid */
+                        id?: string;
+                        /** @example My Garden */
+                        name?: string;
+                        description?: string;
+                        /** @example true */
+                        primary?: boolean;
+                        /** @example personal */
+                        type?: string;
+                        /** @example garden */
+                        kind?: string;
+                        meta?: Record<string, never>;
+                        /** Format: date-time */
+                        created?: string;
+                        /** Format: date-time */
+                        updated?: string;
+                    }[];
+                };
+            };
+            /** @description Authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    HomeController_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateHomeDto"];
+            };
+        };
+        responses: {
+            /** @description The home has been successfully created. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Format: uuid
+                         * @example 550e8400-e29b-41d4-a716-446655440000
+                         */
+                        id?: string;
+                        /** @example My Garden */
+                        name?: string;
+                        /** @example A personal knowledge garden */
+                        description?: string;
+                        /** @example true */
+                        primary?: boolean;
+                        /** @example personal */
+                        type?: string;
+                        /** @example garden */
+                        kind?: string;
+                        /**
+                         * @example {
+                         *       "color": "blue",
+                         *       "icon": "tree"
+                         *     }
+                         */
+                        meta?: Record<string, never>;
+                        /** Format: date-time */
+                        created?: string;
+                        /** Format: date-time */
+                        updated?: string;
+                    };
+                };
+            };
+            /** @description Invalid input data */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Admin access required */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    HomeController_getById: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The UUID of the home */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The home data */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** Format: uuid */
+                        id?: string;
+                        /** @example My Garden */
+                        name?: string;
+                        description?: string;
+                        /** @example true */
+                        primary?: boolean;
+                        /** @example personal */
+                        type?: string;
+                        /** @example garden */
+                        kind?: string;
+                        meta?: Record<string, never>;
+                        /** Format: date-time */
+                        created?: string;
+                        /** Format: date-time */
+                        updated?: string;
+                    };
+                };
+            };
+            /** @description Authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Home not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    HomeController_delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The UUID of the home to delete */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The home has been successfully deleted. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Admin access required */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Home not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    HomeController_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The UUID of the home to update */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateHomeDto"];
+            };
+        };
+        responses: {
+            /** @description The home has been successfully updated. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** Format: uuid */
+                        id?: string;
+                        /** @example Updated Garden Name */
+                        name?: string;
+                        description?: string;
+                        /** @example true */
+                        primary?: boolean;
+                        /** @example personal */
+                        type?: string;
+                        /** @example garden */
+                        kind?: string;
+                        meta?: Record<string, never>;
+                        /** Format: date-time */
+                        created?: string;
+                        /** Format: date-time */
+                        updated?: string;
+                    };
+                };
+            };
+            /** @description Invalid input data */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Admin access required */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Home not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    TagController_findAll: {
+        parameters: {
+            query?: {
+                /** @description Filter tags by resource type (crux, path, or theme) */
+                resourceType?: "crux" | "path" | "theme";
+                /** @description Search term to filter tags by label (case-insensitive partial match) */
+                search?: string;
+                /** @description Sort order: "alpha" for alphabetical, "count" for most used (default: count) */
+                sort?: "alpha" | "count";
+                /** @description Filter by exact label match (case-sensitive) */
+                label?: string;
+                /** @description Page number for pagination (default: 1) */
+                page?: unknown;
+                /** @description Number of results per page (default: 25) */
+                perPage?: unknown;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Tags retrieved successfully. Check Link header for pagination links and Pagination header for metadata. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @example tag_123 */
+                        id?: string;
+                        /**
+                         * @example crux
+                         * @enum {string}
+                         */
+                        resourceType?: "crux" | "path" | "theme";
+                        /** @example crux_456 */
+                        resourceId?: string;
+                        /** @example frontend-development */
+                        label?: string;
+                        /**
+                         * Format: uuid
+                         * @example 550e8400-e29b-41d4-a716-446655440000
+                         */
+                        authorId?: string;
+                        /**
+                         * Format: uuid
+                         * @example 550e8400-e29b-41d4-a716-446655440001
+                         */
+                        homeId?: string;
+                        /** Format: date-time */
+                        created?: string;
+                        /** Format: date-time */
+                        updated?: string;
+                    }[];
+                };
+            };
+            /** @description Authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    TagController_getById: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The UUID of the tag */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Tag retrieved successfully. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @example tag_123 */
+                        id?: string;
+                        /** @example crux */
+                        resourceType?: string;
+                        /** @example crux_456 */
+                        resourceId?: string;
+                        /** @example frontend-development */
+                        label?: string;
+                        /** @example author_789 */
+                        authorId?: string;
+                        /** Format: date-time */
+                        created?: string;
+                        /** Format: date-time */
+                        updated?: string;
+                    };
+                };
+            };
+            /** @description Authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Tag not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    TagController_delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The UUID of the tag to delete */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Tag successfully deleted (soft delete). No content returned. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Admin permissions required */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Tag not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    TagController_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The UUID of the tag to update */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateTagDto"];
+            };
+        };
+        responses: {
+            /** @description Tag updated successfully. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @example tag_123 */
+                        id?: string;
+                        /**
+                         * @example crux
+                         * @enum {string}
+                         */
+                        resourceType?: "crux" | "path" | "theme";
+                        /** @example crux_456 */
+                        resourceId?: string;
+                        /**
+                         * @description Updated label (lowercase kebab-case)
+                         * @example frontend-development
+                         */
+                        label?: string;
+                        /** @example author_789 */
+                        authorId?: string;
+                        /** Format: date-time */
+                        created?: string;
+                        /** Format: date-time */
+                        updated?: string;
+                    };
+                };
+            };
+            /** @description Invalid tag label format (must be lowercase kebab-case: a-z, 0-9, hyphens only) */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Admin permissions required */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Tag not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    DimensionController_getById: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The UUID of the dimension */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Dimension retrieved successfully. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @example dim_123 */
+                        id?: string;
+                        /** @example crux_123 */
+                        sourceId?: string;
+                        /** @example crux_456 */
+                        targetId?: string;
+                        /** @example gate */
+                        type?: string;
+                        /** @example reference */
+                        kind?: string;
+                        /** @example 1 */
+                        weight?: number;
+                        /** @example Prerequisite concept */
+                        note?: string;
+                        /**
+                         * Format: uuid
+                         * @example 550e8400-e29b-41d4-a716-446655440000
+                         */
+                        authorId?: string;
+                        /**
+                         * Format: uuid
+                         * @example 550e8400-e29b-41d4-a716-446655440001
+                         */
+                        homeId?: string;
+                        /** @example {} */
+                        meta?: Record<string, never>;
+                        /** Format: date-time */
+                        created?: string;
+                        /** Format: date-time */
+                        updated?: string;
+                    };
+                };
+            };
+            /** @description Authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Dimension not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    DimensionController_delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The UUID of the dimension to delete */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Dimension deleted successfully */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Insufficient permissions */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Dimension not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    DimensionController_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The UUID of the dimension to update */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateDimensionDto"];
+            };
+        };
+        responses: {
+            /** @description Dimension updated successfully */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @example dim_123 */
+                        id?: string;
+                        /** @example crux_123 */
+                        sourceId?: string;
+                        /** @example crux_456 */
+                        targetId?: string;
+                        /** @example gate */
+                        type?: string;
+                        /** @example reference */
+                        kind?: string;
+                        /** @example 2 */
+                        weight?: number;
+                        /** @example Updated note */
+                        note?: string;
+                        /**
+                         * Format: uuid
+                         * @example 550e8400-e29b-41d4-a716-446655440000
+                         */
+                        authorId?: string;
+                        /**
+                         * Format: uuid
+                         * @example 550e8400-e29b-41d4-a716-446655440001
+                         */
+                        homeId?: string;
+                        /** @example {} */
+                        meta?: Record<string, never>;
+                    };
+                };
+            };
+            /** @description Authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Insufficient permissions */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Dimension not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    UsageController_me: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    UsageController_crux: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    UsageController_ingest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    UsageController_periods: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    UsageController_reconciliation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    UsageController_reconcile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    UsageController_closePeriods: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    BillingController_plans: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    BillingController_me: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    BillingController_checkout: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CheckoutDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    BillingController_portal: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    BillingController_sync: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    BillingController_all: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    DomainsController_list: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    DomainsController_add: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AddDomainDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    DomainsController_verify: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    DomainsController_remove: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PathController_findAll: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description List of paths retrieved successfully */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** Format: uuid */
+                        id?: string;
+                        /** @example my-awesome-path */
+                        slug?: string;
+                        /** @example My Awesome Path */
+                        title?: string;
+                        /** @example A journey through code */
+                        description?: string;
+                        /** @example living */
+                        type?: string;
+                        /** @example public */
+                        visibility?: string;
+                        /** @example guide */
+                        kind?: string;
+                        /** Format: uuid */
+                        entry?: string;
+                        /** Format: uuid */
+                        authorId?: string;
+                        /** Format: uuid */
+                        homeId?: string;
+                        /** @example {} */
+                        meta?: Record<string, never>;
+                        /** Format: date-time */
+                        created?: string;
+                        /** Format: date-time */
+                        updated?: string;
+                    }[];
+                };
+            };
+        };
+    };
+    PathController_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreatePathDto"];
+            };
+        };
+        responses: {
+            /** @description The path has been successfully created. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** Format: uuid */
+                        id?: string;
+                        /** @example my-awesome-path */
+                        slug?: string;
+                        /** @example My Awesome Path */
+                        title?: string;
+                        /** @example A journey through code */
+                        description?: string;
+                        /** @example living */
+                        type?: string;
+                        /** @example unlisted */
+                        visibility?: string;
+                        /** @example guide */
+                        kind?: string;
+                        /** Format: uuid */
+                        entry?: string;
+                        /** Format: uuid */
+                        authorId?: string;
+                        /** Format: uuid */
+                        homeId?: string;
+                        /** Format: date-time */
+                        created?: string;
+                        /** Format: date-time */
+                        updated?: string;
+                    };
+                };
+            };
+            /** @description Authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Insufficient permissions */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PathController_getByIdentifier: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The UUID or slug of the path */
+                identifier: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The path data */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** Format: uuid */
+                        id?: string;
+                        /** @example my-awesome-path */
+                        slug?: string;
+                        /** @example My Awesome Path */
+                        title?: string;
+                        /** @example A journey through code */
+                        description?: string;
+                        /** @example living */
+                        type?: string;
+                        /** @example public */
+                        visibility?: string;
+                        /** @example guide */
+                        kind?: string;
+                        /** Format: uuid */
+                        entry?: string;
+                        /** Format: uuid */
+                        authorId?: string;
+                        /** Format: uuid */
+                        homeId?: string;
+                        /** Format: date-time */
+                        created?: string;
+                        /** Format: date-time */
+                        updated?: string;
+                    };
+                };
+            };
+            /** @description Path not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PathController_delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The UUID of the path to delete */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The path has been successfully deleted. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Insufficient permissions */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Path not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PathController_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The UUID of the path to update */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdatePathDto"];
+            };
+        };
+        responses: {
+            /** @description The path has been successfully updated. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** Format: uuid */
+                        id?: string;
+                        /** @example my-updated-path */
+                        slug?: string;
+                        /** @example My Updated Path */
+                        title?: string;
+                        /** @example Updated description */
+                        description?: string;
+                        /** @example frozen */
+                        type?: string;
+                        /** @example public */
+                        visibility?: string;
+                        /** @example wander */
+                        kind?: string;
+                        /** Format: uuid */
+                        entry?: string;
+                        /** Format: uuid */
+                        authorId?: string;
+                        /** Format: uuid */
+                        homeId?: string;
+                        /** Format: date-time */
+                        created?: string;
+                        /** Format: date-time */
+                        updated?: string;
+                    };
+                };
+            };
+            /** @description Authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Insufficient permissions */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Path not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PathController_getMarkers: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The UUID of the path */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Markers retrieved successfully */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** Format: uuid */
+                        id?: string;
+                        /** Format: uuid */
+                        pathId?: string;
+                        /** Format: uuid */
+                        cruxId?: string;
+                        /** @example 0 */
+                        order?: number;
+                        /** @example Start here */
+                        note?: string;
+                        /** Format: uuid */
+                        authorId?: string;
+                        /** Format: uuid */
+                        homeId?: string;
+                        /** Format: date-time */
+                        created?: string;
+                        /** Format: date-time */
+                        updated?: string;
+                    }[];
+                };
+            };
+            /** @description Path not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PathController_syncMarkers: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The UUID of the path */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SyncMarkersDto"];
+            };
+        };
+        responses: {
+            /** @description Markers synced successfully */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** Format: uuid */
+                        id?: string;
+                        /** Format: uuid */
+                        pathId?: string;
+                        /** Format: uuid */
+                        cruxId?: string;
+                        /** @example 0 */
+                        order?: number;
+                        /** @example Start here */
+                        note?: string;
+                        /** Format: uuid */
+                        authorId?: string;
+                        /** Format: uuid */
+                        homeId?: string;
+                        /** Format: date-time */
+                        created?: string;
+                        /** Format: date-time */
+                        updated?: string;
+                    }[];
+                };
+            };
+            /** @description Invalid marker data */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No permission to manage markers for this path */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Path or referenced crux not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PathController_getTags: {
+        parameters: {
+            query: {
+                filter: string;
+            };
+            header?: never;
+            path: {
+                /** @description The UUID of the path */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Tags retrieved successfully */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** Format: uuid */
+                        id?: string;
+                        /** @example tutorial */
+                        label?: string;
+                        /** @example path */
+                        resourceType?: string;
+                        /** Format: uuid */
+                        resourceId?: string;
+                        /** Format: uuid */
+                        authorId?: string;
+                        /** Format: uuid */
+                        homeId?: string;
+                        /** Format: date-time */
+                        created?: string;
+                        /** Format: date-time */
+                        updated?: string;
+                    }[];
+                };
+            };
+            /** @description Authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Path not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PathController_syncTags: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The UUID of the path */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /**
+                     * @example [
+                     *       "tutorial",
+                     *       "learning-path",
+                     *       "beginner"
+                     *     ]
+                     */
+                    labels?: string[];
+                };
+            };
+        };
+        responses: {
+            /** @description Tags synced successfully */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** Format: uuid */
+                        id?: string;
+                        /** @example tutorial */
+                        label?: string;
+                        /** @example path */
+                        resourceType?: string;
+                        /** Format: uuid */
+                        resourceId?: string;
+                        /** Format: uuid */
+                        authorId?: string;
+                        /** Format: uuid */
+                        homeId?: string;
+                        /** Format: date-time */
+                        created?: string;
+                        /** Format: date-time */
+                        updated?: string;
+                    }[];
+                };
+            };
+            /** @description Invalid tag label format (must be kebab-case) */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No permission to manage tags for this path */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Path not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AiController_chat: {
+        parameters: {
+            query?: never;
+            header: {
+                "x-anthropic-key": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ChatDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    SyncController_pullGarden: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    SyncController_pushGarden: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    SyncController_deleteGarden: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    SyncController_getGardenStatus: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    SyncController_pullCrux: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                cruxId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    SyncController_pushCrux: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                cruxId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    SyncController_deleteCrux: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                cruxId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    SyncController_listCruxes: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ExploreController_explore: {
+        parameters: {
+            query?: {
+                /** @description Search term */
+                q?: string;
+                /** @description Result type */
+                type?: "cruxes" | "authors";
+                /** @description Sort order (relevant = best match, default when q is given; recent = last updated; newest = first published) */
+                sort?: "relevant" | "recent" | "newest" | "alpha";
+                /** @description Crux kind: webapp, page, document, image, notes, mood */
+                kind?: string;
+                /** @description Author username (exact). Typing "@dan" into q searches usernames by prefix instead. */
+                author?: string;
+                perPage?: number;
+                page?: number;
+                /** @description Filter by tag (exact, multiple = AND) */
+                tag?: unknown[];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ExploreController_tags: {
+        parameters: {
+            query?: {
+                /** @description Max tags (default 50) */
+                limit?: number;
+                /** @description Only tags on cruxes of this kind */
+                kind?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    StoreController_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                cruxId: string;
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    StoreController_set: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                cruxId: string;
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SetStoreEntryDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    StoreController_deleteEntry: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                cruxId: string;
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    StoreController_increment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                cruxId: string;
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["IncrementStoreEntryDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    StoreController_list: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                cruxId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    StoreController_clearAll: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                cruxId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
 }
