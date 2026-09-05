@@ -7,6 +7,8 @@ import {
   didMutate,
   DELETE_DECLINED,
   MUTATING_TOOLS,
+  DELEGATE_UNAVAILABLE,
+  subagentToolDefinitions,
 } from './tools';
 import { initServices } from '@/services';
 import { GROWTH_TOOL_DEFINITIONS } from './growth-tools';
@@ -75,7 +77,114 @@ describe('MUTATING_TOOLS', () => {
       // Growth tools that replace files (B0); snapshot/list/diff do not mutate
       'restore',
       'branch',
+      // Subagents (B5): the merge lands files on the main line
+      'delegate',
     ]);
+  });
+});
+
+describe('write scope (B5)', () => {
+  const cruxId = 'test-crux';
+
+  beforeEach(async () => {
+    await initServices('local');
+    const services = (await import('@/services')).getServices();
+    await services.crux.create({ title: 'Test' });
+  });
+
+  it('refuses writes outside a path list with a clear error, and allows inside', async () => {
+    const execute = createToolExecutor(cruxId, undefined, undefined, {
+      scope: { paths: ['alpha.md', 'notes.md'] },
+    });
+    expect(await execute('write_file', { path: 'alpha.md', content: 'a' })).toBe(
+      'Created file: alpha.md',
+    );
+    expect(await execute('write_file', { path: 'notes.md', content: 'n' })).toBe(
+      'Created file: notes.md',
+    );
+    const refused = (await execute('write_file', { path: 'beta.md', content: 'b' })) as string;
+    expect(refused).toMatch(/^Error: Path "beta.md" is outside this task's scope/);
+    expect(refused).toContain('the files alpha.md, notes.md');
+    // Nothing was written
+    expect(await execute('list_files', {})).not.toContain('beta.md');
+  });
+
+  it('scopes edit, delete, rename and generate_image too — reads stay open', async () => {
+    const setup = createToolExecutor(cruxId);
+    await setup('write_file', { path: 'index.html', content: '<h1>Hi</h1>' });
+    await setup('write_file', { path: 'posts/a.md', content: 'a' });
+
+    const execute = createToolExecutor(cruxId, undefined, undefined, {
+      scope: { folder: 'posts' },
+    });
+    expect(await execute('read_file', { path: 'index.html' })).toBe('<h1>Hi</h1>');
+    expect(
+      await execute('edit_file', { path: 'index.html', old_string: 'Hi', new_string: 'Yo' }),
+    ).toMatch(/outside this task's scope/);
+    expect(await execute('delete_file', { path: 'index.html' })).toMatch(
+      /outside this task's scope/,
+    );
+    expect(await execute('rename_file', { old_path: 'posts/a.md', new_path: 'a.md' })).toMatch(
+      /"a.md" is outside/,
+    );
+    expect(await execute('generate_image', { prompt: 'x', path: 'hero.png' })).toMatch(
+      /outside this task's scope/,
+    );
+    // Inside the folder everything works as usual (read-before-edit still enforced)
+    await execute('read_file', { path: 'posts/a.md' });
+    expect(
+      await execute('edit_file', { path: 'posts/a.md', old_string: 'a', new_string: 'b' }),
+    ).toBe('Edited file: posts/a.md');
+    expect(await execute('write_file', { path: 'posts/deep/new.md', content: 'n' })).toBe(
+      'Created file: posts/deep/new.md',
+    );
+    expect(
+      await execute('rename_file', { old_path: 'posts/a.md', new_path: 'posts/b.md' }),
+    ).toMatch(/^Renamed/);
+    expect(await execute('read_file', { path: 'index.html' })).toBe('<h1>Hi</h1>');
+  });
+
+  it('a path that climbs out of the folder is refused before anything runs', async () => {
+    const execute = createToolExecutor(cruxId, undefined, undefined, { scope: { folder: 'posts' } });
+    // Input validation refuses traversal first; either way nothing is written
+    expect(await execute('write_file', { path: 'posts/../index.html', content: 'x' })).toMatch(
+      /^Error/,
+    );
+    expect(await execute('list_files', {})).toBe('No files yet.');
+  });
+
+  it('delegate is offered to the workspace but refused without a runner, and validated first', async () => {
+    expect(defaultToolDefinitions().map((t) => t.name)).toContain('delegate');
+    expect(subagentToolDefinitions().map((t) => t.name)).toEqual([
+      'write_file',
+      'edit_file',
+      'read_file',
+      'list_files',
+      'generate_image',
+      'search_files',
+      'load_skill',
+    ]);
+    const headless = createToolExecutor(cruxId);
+    expect(
+      await headless('delegate', { tasks: [{ title: 'A', instructions: 'x', paths: ['a.md'] }] }),
+    ).toBe(`Error: ${DELEGATE_UNAVAILABLE}`);
+    expect(await headless('delegate', { tasks: [] })).toMatch(
+      /^Error in delegate: tasks must be a non-empty array/,
+    );
+
+    const tasksSeen: unknown[] = [];
+    const wired = createToolExecutor(cruxId, undefined, undefined, {
+      delegate: async (tasks) => {
+        tasksSeen.push(tasks);
+        return 'merged';
+      },
+    });
+    expect(
+      await wired('delegate', { tasks: [{ title: 'A', instructions: 'x', paths: ['/a.md'] }] }),
+    ).toBe('merged');
+    expect(tasksSeen).toEqual([[{ title: 'A', instructions: 'x', scope: { paths: ['a.md'] } }]]);
+    expect(didMutate('delegate', 'merged')).toBe(true);
+    expect(didMutate('delegate', `Error: ${DELEGATE_UNAVAILABLE}`)).toBe(false);
   });
 });
 

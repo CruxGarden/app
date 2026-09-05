@@ -6,6 +6,8 @@
 
 import { mediaFileName } from '@/lib/media-kind';
 import { slugify, interpolate } from '@/lib/frontmatter';
+import { MAX_DELEGATE_TASKS } from '@/ai/delegate-tool';
+import type { SubagentTask } from '@/services/subagents';
 
 /**
  * Transcoding reads the whole file into memory and ships it across IPC as one
@@ -98,4 +100,45 @@ export function describeBatch(opts: {
     text += `\n\nCouldn't add ${opts.failed.length} file${opts.failed.length === 1 ? '' : 's'}:\n${opts.failed.join('\n')}`;
   }
   return text;
+}
+
+// ── Captions in parallel (B5) ─────────────────────────────────────────────
+
+/** Offer "Write captions" after a photo batch at least this large. */
+export const CAPTION_OFFER_MIN = 8;
+/** Photos per worker before the batch count grows. */
+const CAPTIONS_PER_TASK = 10;
+
+export interface CaptionItem {
+  /** The collection item written for the photo. */
+  path: string;
+  /** The uploaded image's workspace path (what read_file takes). */
+  imagePath: string;
+}
+
+/**
+ * One Subagent task per batch of photos: look at each image, write a
+ * one-sentence caption into its post's body. Scope = the posts in the batch,
+ * so no two workers ever touch the same file. At most MAX_DELEGATE_TASKS
+ * tasks; batches grow past ten when there are more photos than that allows.
+ */
+export function captionTasksFor(items: CaptionItem[], noun = 'photo'): SubagentTask[] {
+  if (items.length === 0) return [];
+  const count = Math.min(MAX_DELEGATE_TASKS, Math.max(1, Math.ceil(items.length / CAPTIONS_PER_TASK)));
+  const size = Math.ceil(items.length / count);
+  const tasks: SubagentTask[] = [];
+  for (let start = 0; start < items.length; start += size) {
+    const batch = items.slice(start, start + size);
+    const end = start + batch.length;
+    tasks.push({
+      title: `Captions ${start + 1}–${end}`,
+      instructions: [
+        `Write a caption for each ${noun} below. For each one: call read_file on the image to look at it, call read_file on the post, then use edit_file to replace the post's empty body with one plain sentence describing the ${noun} — specific, no hashtags, no quotes, no title. Keep the frontmatter exactly as it is; only the body changes. If a post already has a body, leave it alone.`,
+        '',
+        ...batch.map((it) => `- ${it.path} — image: ${it.imagePath}`),
+      ].join('\n'),
+      scope: { paths: batch.map((it) => it.path) },
+    });
+  }
+  return tasks;
 }
