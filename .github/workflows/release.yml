@@ -87,18 +87,36 @@ jobs:
       - name: Build web app + main process
         run: npm run build:all
         working-directory: electron
+      - name: Signing and notarization env (only the secrets that are set)
+        # An empty CSC_LINK is not "no certificate" to electron-builder — it is a path, and
+        # the build dies with "not a file". Export each variable only when its secret exists.
+        env:
+          MAC_CERT_P12: ${{ secrets.MAC_CERT_P12 }}
+          MAC_CERT_PASSWORD: ${{ secrets.MAC_CERT_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          if [[ -n "$MAC_CERT_P12" ]]; then
+            echo "CSC_LINK=$MAC_CERT_P12" >> "$GITHUB_ENV"
+            echo "CSC_KEY_PASSWORD=$MAC_CERT_PASSWORD" >> "$GITHUB_ENV"
+            echo "Developer ID certificate present: signing"
+          else
+            echo "CSC_IDENTITY_AUTO_DISCOVERY=false" >> "$GITHUB_ENV"
+            echo "No certificate secret: unsigned build"
+          fi
+          if [[ -n "$APPLE_ID" && -n "$APPLE_APP_SPECIFIC_PASSWORD" && -n "$APPLE_TEAM_ID" ]]; then
+            echo "APPLE_ID=$APPLE_ID" >> "$GITHUB_ENV"
+            echo "APPLE_APP_SPECIFIC_PASSWORD=$APPLE_APP_SPECIFIC_PASSWORD" >> "$GITHUB_ENV"
+            echo "APPLE_TEAM_ID=$APPLE_TEAM_ID" >> "$GITHUB_ENV"
+            echo "Notarization credentials present"
+          else
+            echo "No notarization credentials: skipping notarization"
+          fi
       - name: Package (both architectures → one latest-mac.yml)
         working-directory: electron
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # Apple Developer ID certificate (.p12, base64) + password — absent → unsigned build
-          CSC_LINK: ${{ secrets.MAC_CERT_P12 }}
-          CSC_KEY_PASSWORD: ${{ secrets.MAC_CERT_PASSWORD }}
-          CSC_IDENTITY_AUTO_DISCOVERY: ${{ secrets.MAC_CERT_P12 != '' }}
-          # Notarization (electron-builder `notarize: true`) — absent → skipped
-          APPLE_ID: ${{ secrets.APPLE_ID }}
-          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
-          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         run: npx electron-builder --mac dmg zip --arm64 --x64 --publish "${{ needs.prepare.outputs.publish }}"
       - name: Smoke-test the packaged app (runner's native arch)
         working-directory: electron
@@ -167,16 +185,28 @@ jobs:
         working-directory: electron
       - run: npm run build:all
         working-directory: electron
+      - name: Signing env (only when a certificate is configured)
+        # Windows code signing (optional): a .pfx as base64 + password. Absent → unsigned
+        # (SmartScreen warns until reputation builds). SignPath / Azure Trusted Signing
+        # can replace this step later without touching the rest of the workflow.
+        # An empty CSC_LINK is read as a path and fails the build, so export only when set.
+        shell: bash
+        env:
+          WIN_CERT_PFX: ${{ secrets.WIN_CERT_PFX }}
+          WIN_CERT_PASSWORD: ${{ secrets.WIN_CERT_PASSWORD }}
+        run: |
+          if [[ -n "$WIN_CERT_PFX" ]]; then
+            echo "CSC_LINK=$WIN_CERT_PFX" >> "$GITHUB_ENV"
+            echo "CSC_KEY_PASSWORD=$WIN_CERT_PASSWORD" >> "$GITHUB_ENV"
+            echo "Windows certificate present: signing"
+          else
+            echo "No Windows certificate secret: unsigned build"
+          fi
       - name: Package
         working-directory: electron
         shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # Windows code signing (optional): a .pfx as base64 + password. Absent → unsigned
-          # (SmartScreen warns until reputation builds). SignPath / Azure Trusted Signing
-          # can replace this step later without touching the rest of the workflow.
-          CSC_LINK: ${{ secrets.WIN_CERT_PFX }}
-          CSC_KEY_PASSWORD: ${{ secrets.WIN_CERT_PASSWORD }}
         run: npx electron-builder --win --x64 --publish "${{ needs.prepare.outputs.publish }}"
       - uses: actions/upload-artifact@v4
         with:
