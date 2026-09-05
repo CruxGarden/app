@@ -451,6 +451,7 @@
   --density: 1;
   --line-height-body: 1.5;
   --font-weight-body: 400;
+  --font-weight-display: var(--font-weight-body);
   --letter-spacing-body: 0;
   --letter-spacing-display: 0;
   --letter-spacing-mono: 0;
@@ -674,6 +675,13 @@ body {
 .font-display,
 .font-wordmark {
   letter-spacing: var(--letter-spacing-display);
+}
+/* …and the display face its own weight, in the base layer so a component's
+   font-medium / font-bold utility still wins (today's look is unchanged). */
+@layer base {
+  .font-display {
+    font-weight: var(--font-weight-display);
+  }
 }
 .font-mono {
   letter-spacing: var(--letter-spacing-mono);

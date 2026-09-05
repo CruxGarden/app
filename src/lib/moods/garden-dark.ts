@@ -364,6 +364,8 @@ export const GARDEN_DARK = {
   density: '1',
   lineHeightBody: '1.5',
   fontWeightBody: '400',
+  // display text (.font-display) without its own weight utility; defaults to the body weight
+  fontWeightDisplay: 'var(--font-weight-body)',
   letterSpacingBody: '0',
   letterSpacingDisplay: '0',
   letterSpacingMono: '0',
