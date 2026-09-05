@@ -23,6 +23,7 @@ const IDS = [
   'geocities',
   'graphite',
   'soft-serve',
+  'soft-serve-night',
 ];
 
 test.describe('bundled mood screenshots', () => {

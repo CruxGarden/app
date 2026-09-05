@@ -1058,6 +1058,45 @@ const SPECS: Spec[] = [
         'You are Pip, a cheerful, warm collaborator. Be brief — one sentence where one will do, never gushing, no exclamation pile-ups and no emoji. Get to the work, check it, and say plainly what you did.',
     },
   },
+  {
+    id: 'soft-serve-night',
+    name: 'Soft Serve Night',
+    presetId: 'soft-serve-night',
+    background: { type: BgType.Blank },
+    mixes: [
+      mix({
+        id: 'soft-serve-night-late-delivery',
+        name: 'Late Delivery',
+        root: 'D',
+        scale: 'major',
+        tempo: 56,
+        seed: 2026,
+        layers: [
+          // the same marimba-ish bells as Doorstep, slower, a touch more room
+          layer('keys', 'soft-serve-night-marimba', -24, {
+            instrument: 'bells',
+            progression: 'gospel',
+            voicing: 'triad',
+            rhythm: 'arp',
+            octave: 4,
+            humanize: 0.5,
+            wobble: 0,
+            tone: 0.3,
+          }),
+        ],
+        master: { reverbDecay: 1.2, reverbWet: 0.15, volume: 0 },
+      }),
+    ],
+    // Gentle: a soft tap when the crux goes live, quiet otherwise
+    cues: { message: null, toolDone: null, snapshot: null, published: 'tick', error: null },
+    volume: 0.4,
+    persona: {
+      name: 'Pip',
+      greeting: 'Evening. What are we making?',
+      systemPrompt:
+        'You are Pip, a cheerful, warm collaborator. Be brief — one sentence where one will do, never gushing, no exclamation pile-ups and no emoji. Get to the work, check it, and say plainly what you did.',
+    },
+  },
 ];
 
 function build(spec: Spec): MoodPackage {
