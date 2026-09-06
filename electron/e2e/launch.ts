@@ -1,5 +1,5 @@
 import { _electron as electron, type ElectronApplication, type Page } from '@playwright/test';
-import { mkdtempSync } from 'node:fs';
+import { mkdtempSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -40,8 +40,16 @@ export async function launchApp(
   try {
     page = await app.firstWindow();
   } catch (err) {
+    // The app writes its own boot log beside the isolated userData (AppLog);
+    // an uncaught error before the window exists lands there, not on stderr.
+    let appLog = '(no main.log written)';
+    try {
+      appLog = readFileSync(join(env.CRUX_USER_DATA, 'logs', 'main.log'), 'utf8').slice(-4000);
+    } catch {
+      /* the app never got as far as opening its log */
+    }
     throw new Error(
-      `${(err as Error).message}\n--- electron output ---\n${output || '(nothing printed)'}`,
+      `${(err as Error).message}\n--- electron stdout/stderr ---\n${output || '(nothing printed)'}\n--- main.log ---\n${appLog}`,
     );
   }
   await page.waitForLoadState('domcontentloaded');
