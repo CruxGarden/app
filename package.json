@@ -12,6 +12,7 @@
     "desktop": "./scripts/desktop.sh",
     "desktop:dev": "./scripts/desktop.sh --dev",
     "desktop:rebuild": "./scripts/desktop.sh --rebuild",
+    "desktop:live": "./scripts/desktop.sh --live",
     "desktop:selftest": "./scripts/desktop.sh --selftest",
     "release": "node scripts/release.mjs",
     "lint": "eslint .",

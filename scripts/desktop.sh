@@ -8,6 +8,7 @@
 #   ./scripts/desktop.sh              # build if needed, launch the app
 #   ./scripts/desktop.sh --rebuild    # force a fresh web build first
 #   ./scripts/desktop.sh --dev       # HMR mode: launch against the Vite dev server
+#   ./scripts/desktop.sh --live       # against the PRODUCTION API (api.crux.garden) — publish for real
 #   ./scripts/desktop.sh --selftest   # run the in-app integration self-test (8 checks)
 #   ./scripts/desktop.sh --logs       # tail the desktop debug log
 #
@@ -40,15 +41,34 @@ echo "· node $(node --version)"
 # ── Args ─────────────────────────────────────────────────────────────────────
 MODE="app"
 REBUILD=0
+LIVE=0
 for arg in "$@"; do
   case "$arg" in
     --rebuild)  REBUILD=1 ;;
     --dev)      MODE="dev" ;;
+    --live)     LIVE=1 ;;
     --selftest) MODE="selftest" ;;
     --logs)     exec tail -f "$DEBUG_LOG" ;;
     *) echo "unknown flag: $arg" >&2; exit 1 ;;
   esac
 done
+
+# ── API target ───────────────────────────────────────────────────────────────
+# VITE_* values are baked into the web bundle at build time. --live points the
+# build at production; otherwise .env (or the shell) decides. The bundle
+# remembers which target it was built for, so switching targets rebuilds
+# instead of quietly reusing the other one's bundle.
+if [ "$LIVE" = 1 ]; then
+  export VITE_API_URL="https://api.crux.garden"
+  export VITE_PUBLISH_ORIGIN_TEMPLATE="https://{cruxId}.publish.crux.garden"
+  echo "· LIVE: building against ${VITE_API_URL} — publishes go to production; sign in with your real account"
+fi
+TARGET="${VITE_API_URL:-env-file}"
+TARGET_MARK="$APP_DIR/dist/.api-target"
+if [ -f "$TARGET_MARK" ] && [ "$(cat "$TARGET_MARK")" != "$TARGET" ]; then
+  echo "· web bundle was built for $(cat "$TARGET_MARK"); rebuilding for ${TARGET}"
+  REBUILD=1
+fi
 
 # ── Dependencies (first run) ─────────────────────────────────────────────────
 [ -d "$APP_DIR/node_modules" ]      || (cd "$APP_DIR" && npm install)
@@ -59,6 +79,7 @@ if [ "$MODE" != "dev" ]; then
   if [ "$REBUILD" = 1 ] || [ ! -f "$APP_DIR/dist/index.html" ]; then
     echo "· building web bundle (vite)…"
     (cd "$APP_DIR" && npx tsc -b && npx vite build)
+    printf '%s' "$TARGET" >"$TARGET_MARK"
   else
     echo "· web bundle present (use --rebuild to refresh)"
   fi
