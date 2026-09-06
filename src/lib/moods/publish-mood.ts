@@ -226,16 +226,22 @@ export async function installMoodFromPublished(
     putBlob: (bytes: Uint8Array) => Promise<string>;
   },
 ): Promise<MoodPackage | null> {
-  let blob = await deps
+  // The published copy is the fast path, but whatever answers there is not
+  // necessarily the package: without a publish origin configured the URL is
+  // relative and the app's own shell answers with index.html; a CDN answers a
+  // missing file with an HTML page. Anything that does not parse as a package
+  // falls through to the API, which serves the artifact itself.
+  const published = await deps
     .fetchBlob(`${deps.publishBaseUrl(crux.id)}/mood.cruxmood`)
     .catch(() => null);
-  if (!blob) {
+  let pkg = published ? await importMoodPackage(published, deps.putBlob).catch(() => null) : null;
+  if (!pkg) {
     const arts = await deps.apiArtifacts(crux.author_username, crux.slug);
     const art = arts.find((a) => (a.meta?.path || a.filename) === 'mood.cruxmood');
     if (!art) return null;
-    blob = await deps.apiDownload(crux.author_username, crux.slug, art.id);
+    const blob = await deps.apiDownload(crux.author_username, crux.slug, art.id);
+    pkg = await importMoodPackage(blob, deps.putBlob);
   }
-  const pkg = await importMoodPackage(blob, deps.putBlob);
   if (!pkg) return null;
   const installed: MoodPackage = { ...pkg, publishedCruxId: pkg.publishedCruxId ?? crux.id };
   installMood(installed);

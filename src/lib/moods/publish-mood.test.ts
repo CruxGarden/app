@@ -148,5 +148,24 @@ describe('publishing a Mood', () => {
     );
     expect(viaApi?.publishedCruxId).toBe('c10');
     expect(getInstalledMoods()).toHaveLength(1); // same package id → replaced, not duplicated
+    // the published URL answered with something that is not a package (an HTML
+    // page, the app shell's index.html) → the API copy is used instead
+    const notAZip = new Blob(['<!doctype html><title>Crux Garden</title>'], { type: 'text/html' });
+    let apiAsked = 0;
+    const viaApiAfterJunk = await installMoodFromPublished(
+      { id: 'c11', slug: 'remote3', author_username: 'ann' },
+      {
+        publishBaseUrl: () => '/c11',
+        fetchBlob: async () => notAZip,
+        apiArtifacts: async () => {
+          apiAsked += 1;
+          return [{ id: 'art1', meta: { path: 'mood.cruxmood' } }];
+        },
+        apiDownload: async () => zip,
+        putBlob,
+      },
+    );
+    expect(apiAsked).toBe(1);
+    expect(viaApiAfterJunk?.publishedCruxId).toBe('c11');
   });
 });

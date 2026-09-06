@@ -1,4 +1,4 @@
-import { openGardenPage } from '@/lib/public-url';
+import { openGardenPage, publishBaseUrlFor, hasRemotePublishOrigin } from '@/lib/public-url';
 import { SearchIcon, CloseIcon } from '@/components/ui/icons';
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
@@ -14,7 +14,6 @@ import { parseExploreParams } from './explore-params';
 import { useAppStore } from '@/stores/appStore';
 import { useUIStore } from '@/stores/uiStore';
 import MoodResultCard from '@/components/explore/MoodResultCard';
-import { publishBaseUrlFor } from '@/lib/public-url';
 import { Button } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import { formatDate } from '@/lib/format';
@@ -588,8 +587,13 @@ export default function Explore({
                     const pkg = await installMoodFromPublished(crux, {
                       publishBaseUrl: publishBaseUrlFor,
                       fetchBlob: async (url) => {
+                        // No publish origin configured (dev, tests): the URL would be
+                        // relative to the app shell, which answers everything with index.html.
+                        if (!hasRemotePublishOrigin()) return null;
                         const r = await fetch(url);
-                        return r.ok ? r.blob() : null;
+                        if (!r.ok) return null;
+                        const type = r.headers.get('content-type') || '';
+                        return type.startsWith('text/html') ? null : r.blob();
                       },
                       apiArtifacts: publicApi.getArtifacts,
                       apiDownload: publicApi.downloadArtifact,
