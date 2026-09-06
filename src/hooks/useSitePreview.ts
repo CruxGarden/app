@@ -1,5 +1,11 @@
-import { useEffect, useMemo, useState } from 'react';
-import { isSiteCrux, startDevServer, stopDevServer, devServerLeases } from '@/services/site';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  isSiteCrux,
+  startDevServer,
+  stopDevServer,
+  restartDevServer,
+  devServerLeases,
+} from '@/services/site';
 import { Capability, can } from '@/lib/platform';
 import { useCruxStore } from '@/stores/cruxStore';
 import { resolveRelativePath as normalizePath } from '@/lib/artifact-path';
@@ -15,6 +21,19 @@ export interface SitePreview {
   phase: SitePreviewPhase;
   /** Latest toolchain/dev-server output line, or the error message. */
   detail: string;
+  /** Port the dev server is listening on (null until ready). */
+  port: number | null;
+  /** The port the crux asks for (settings.previewPort), if any. */
+  preferredPort: number | null;
+  /** Stop and start the dev server again; with a port, remember it for this crux first. */
+  restart: (port?: number | null) => Promise<void>;
+}
+
+/** Port of a http://127.0.0.1:NNNN base URL, or null. */
+export function portOf(base: string | null): number | null {
+  if (!base) return null;
+  const m = /:(\d+)\/?$/.exec(base);
+  return m ? Number(m[1]) : null;
 }
 
 /** Map a source file to its dev-server route (Astro pages convention). */
@@ -40,6 +59,12 @@ export function siteRouteFor(filePath: string): string {
  */
 export function useSitePreview(cruxId: string, filePath: string): SitePreview {
   const artifacts = useCruxStore((s) => s.artifacts);
+  const preferredPort = useCruxStore((s) => s.crux?.meta?.settings?.previewPort ?? null);
+  // The start effect reads the preference through a ref on purpose: changing
+  // the port must not tear the server down and up by itself — restart() does
+  // that deliberately, once, when the user asks.
+  const preferredRef = useRef(preferredPort);
+  preferredRef.current = preferredPort;
   const isSite = useMemo(() => can(Capability.Build) && isSiteCrux(artifacts), [artifacts]);
 
   const [base, setBase] = useState<string | null>(null);
@@ -64,7 +89,8 @@ export function useSitePreview(cruxId: string, filePath: string): SitePreview {
     setPhase('installing');
     setDetail('Preparing project…');
 
-    startDevServer(cruxId)
+    const wanted = preferredRef.current;
+    startDevServer(cruxId, wanted ? { port: wanted } : {})
       .then((url) => {
         if (cancelled || !url) return;
         setBase(url);
@@ -89,6 +115,37 @@ export function useSitePreview(cruxId: string, filePath: string): SitePreview {
     };
   }, [cruxId, active]);
 
+  const restart = useCallback(
+    async (port?: number | null) => {
+      if (port !== undefined) {
+        // Remember the choice on the crux (null clears it), then restart on it.
+        const { crux, updateCrux } = useCruxStore.getState();
+        if (crux) {
+          const settings = { ...(crux.meta?.settings ?? {}) };
+          if (port) settings.previewPort = port;
+          else delete settings.previewPort;
+          await updateCrux({ meta: { ...(crux.meta ?? {}), settings } });
+        }
+      }
+      setPhase('starting');
+      setDetail('Restarting dev server…');
+      setBase(null);
+      try {
+        const wanted = port === undefined ? preferredPort : port;
+        const url = await restartDevServer(cruxId, wanted ? { port: wanted } : {});
+        if (!url) return;
+        setBase(url);
+        setPhase('ready');
+        setDetail('');
+        setActivePreview(cruxId, `${url}/`);
+      } catch (err) {
+        setPhase('error');
+        setDetail((err as Error)?.message || 'Dev server failed to restart');
+      }
+    },
+    [cruxId, preferredPort],
+  );
+
   const url = base && phase === 'ready' ? `${base}${siteRouteFor(filePath)}` : null;
-  return { isSite, url, phase, detail };
+  return { isSite, url, phase, detail, port: portOf(base), preferredPort, restart };
 }

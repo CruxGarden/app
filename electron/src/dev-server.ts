@@ -40,6 +40,42 @@ function freePort(): Promise<number> {
   });
 }
 
+/** True when nothing on 127.0.0.1 holds `port` right now. */
+function portFree(port: number): Promise<boolean> {
+  return new Promise((resolve) => {
+    const server = net.createServer();
+    server.once('error', () => resolve(false));
+    server.listen(port, '127.0.0.1', () => server.close(() => resolve(true)));
+  });
+}
+
+/** What a caller may ask of start(): a port they would like, a patience limit. */
+export interface DevStartOptions {
+  /** Preferred port (1024–65535). Taken when free; otherwise an ephemeral one, and `portFallback` says so. */
+  port?: number;
+  timeoutMs?: number;
+}
+
+/**
+ * Pick the port a dev server should listen on: the preferred one when it is
+ * legal and free, else an ephemeral one. Pure given the two probes, so the
+ * rule is testable without sockets.
+ */
+export async function pickPort(
+  preferred: number | undefined,
+  isFree: (port: number) => Promise<boolean> = portFree,
+  ephemeral: () => Promise<number> = freePort,
+): Promise<{ port: number; fallback: boolean }> {
+  const legal =
+    typeof preferred === 'number' &&
+    Number.isInteger(preferred) &&
+    preferred >= 1024 &&
+    preferred <= 65535;
+  if (legal && (await isFree(preferred as number)))
+    return { port: preferred as number, fallback: false };
+  return { port: await ephemeral(), fallback: legal };
+}
+
 function probe(url: string): Promise<boolean> {
   return new Promise((resolve) => {
     const req = http.get(url, { timeout: 1000 }, (res: any) => {
@@ -70,7 +106,9 @@ export class DevServerManager {
   }
 
   /** Start (or reuse) the project's dev server. Resolves when it answers HTTP. */
-  async start(folder: string, timeoutMs = 120_000): Promise<string> {
+  async start(folder: string, opts: DevStartOptions | number = {}): Promise<string> {
+    const options: DevStartOptions = typeof opts === 'number' ? { timeoutMs: opts } : opts;
+    const timeoutMs = options.timeoutMs ?? 120_000;
     const cwd = this.resolveKnownFolder(folder);
     const existing = this.running.get(cwd);
     if (existing && (existing.status === 'ready' || existing.status === 'starting')) {
@@ -78,7 +116,8 @@ export class DevServerManager {
       return this.waitReady(cwd, timeoutMs);
     }
 
-    const port = await freePort();
+    const { port, fallback } = await pickPort(options.port);
+    if (fallback) this.lastOutput.set(cwd, `port ${options.port} is in use; using ${port}`);
     const url = `http://127.0.0.1:${port}`;
 
     const proc = spawn(
@@ -162,6 +201,25 @@ export class DevServerManager {
         /* already gone */
       }
     }
+  }
+
+  /**
+   * Stop and start again — the user's "Restart" (a wedged HMR, a changed
+   * config, a new preferred port). Waits for the old process group to exit so
+   * the port it held is free for the new one.
+   */
+  async restart(folder: string, opts: DevStartOptions = {}): Promise<string> {
+    const cwd = this.resolveKnownFolder(folder);
+    const old = this.running.get(cwd);
+    if (old) {
+      const gone = new Promise<void>((resolve) => {
+        old.proc.once('close', () => resolve());
+        setTimeout(resolve, 3000); // never wait on a zombie
+      });
+      await this.stop(folder);
+      await gone;
+    }
+    return this.start(folder, opts);
   }
 
   async stopAll(): Promise<void> {

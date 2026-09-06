@@ -39,6 +39,7 @@ import MarkdownRenderer from '@/components/chat/MarkdownRenderer';
 import TemplateForm from '@/components/workspace/TemplateForm';
 import { usePreviewUrl } from '@/hooks/usePreviewUrl';
 import { useSitePreview } from '@/hooks/useSitePreview';
+import SitePreviewControls from './SitePreviewControls';
 import type { Artifact } from '@/api/types';
 import type { EditorTab } from '@/stores/uiStore';
 import type { FormSchema } from '@/templates';
@@ -639,6 +640,24 @@ export default function EditorContent({
       {/* Desktop: the preview is a real local URL — show it, copy it, open it */}
       {target.kind === 'iframe' && target.localBase && (
         <div className="shrink-0 flex items-center gap-1.5 px-2 py-1 border-b border-border bg-surface text-2xs font-mono text-text-muted">
+          {site.isSite && (
+            <SitePreviewControls
+              site={site}
+              onRefresh={() => {
+                const iframe = previewIframeRef.current;
+                if (!iframe) return;
+                try {
+                  iframe.contentWindow?.location.reload();
+                } catch {
+                  const src = iframe.src;
+                  iframe.src = 'about:blank';
+                  requestAnimationFrame(() => {
+                    iframe.src = src;
+                  });
+                }
+              }}
+            />
+          )}
           <span className="truncate flex-1" title={target.localBase}>
             {target.localBase}
           </span>

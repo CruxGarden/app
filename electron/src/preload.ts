@@ -119,7 +119,10 @@ const api: ElectronBridge = {
   },
 
   devserver: {
-    start: (folder: string) => ipcRenderer.invoke('devserver:start', folder) as Promise<string>,
+    start: (folder: string, opts?: { port?: number }) =>
+      ipcRenderer.invoke('devserver:start', folder, opts) as Promise<string>,
+    restart: (folder: string, opts?: { port?: number }) =>
+      ipcRenderer.invoke('devserver:restart', folder, opts) as Promise<string>,
     stop: (folder: string) => ipcRenderer.invoke('devserver:stop', folder) as Promise<void>,
     status: (folder: string) =>
       ipcRenderer.invoke('devserver:status', folder) as Promise<{
