@@ -48,10 +48,21 @@ const logsDir =
   isDev || process.env.CRUX_USER_DATA ? path.join(userDataPath, 'logs') : app.getPath('logs');
 const appLog = new AppLog(logsDir);
 appLog.attach(process, app);
+// Isolated runs (Playwright, CI) have nobody to dismiss Electron's error dialog:
+// an uncaught error before the window exists would sit there until the test
+// times out with nothing on stderr. Say it and exit instead.
+if (process.env.CRUX_USER_DATA) {
+  process.on('uncaughtException', (err: Error) => {
+    console.error(`[main] uncaught: ${err?.stack || String(err)}`);
+    app.exit(1);
+  });
+}
 function debugLog(msg: string) {
   appLog.info(msg);
 }
-debugLog(`Starting Crux Garden ${app.getVersion()}. isDev=${isDev}, isPackaged=${app.isPackaged}, ffmpeg=${ffmpegPath}`);
+debugLog(
+  `Starting Crux Garden ${app.getVersion()}. isDev=${isDev}, isPackaged=${app.isPackaged}, ffmpeg=${ffmpegPath}`,
+);
 
 function getDbPath(): string {
   const userDataPath = app.getPath('userData');
@@ -125,7 +136,11 @@ function createWindow() {
     height: 900,
     minWidth: 800,
     minHeight: 600,
-    icon: path.join(__dirname, '../build/icon' + (process.platform === 'win32' ? '.ico' : process.platform === 'darwin' ? '.icns' : '.png')),
+    icon: path.join(
+      __dirname,
+      '../build/icon' +
+        (process.platform === 'win32' ? '.ico' : process.platform === 'darwin' ? '.icns' : '.png'),
+    ),
     titleBarStyle: 'hiddenInset',
     trafficLightPosition: { x: 12, y: 12 },
     webPreferences: {
@@ -168,7 +183,9 @@ function createWindow() {
   } else {
     const indexPath = path.join(getWebAppDir(), 'index.html');
     if (!fs.existsSync(indexPath)) {
-      debugLog(`No built web app at ${indexPath} — run "npm run build:web" (or set CRUX_DEV_SERVER)`);
+      debugLog(
+        `No built web app at ${indexPath} — run "npm run build:web" (or set CRUX_DEV_SERVER)`,
+      );
     }
     mainWindow.loadURL('crux-app:///index.html');
   }
@@ -288,7 +305,9 @@ function setupIpc() {
           watcher.watch(meta.projectFolder);
           watched++;
         }
-      } catch { /* bad meta row — skip */ }
+      } catch {
+        /* bad meta row — skip */
+      }
     }
     debugLog(`Watcher bootstrap: watching ${watched} project folder(s)`);
   } catch (err: any) {
@@ -306,28 +325,36 @@ function setupIpc() {
     return resolved;
   });
   ipcMain.handle('project:folder-exists', (_e: any, folder: string) =>
-    projects.folderExists(folder));
-  ipcMain.handle('project:write-file', (_e: any, folder: string, relPath: string, data: Uint8Array) => {
-    watcher.markSelfWrite(folder, relPath);
-    return projects.writeFile(folder, relPath, data);
-  });
+    projects.folderExists(folder),
+  );
+  ipcMain.handle(
+    'project:write-file',
+    (_e: any, folder: string, relPath: string, data: Uint8Array) => {
+      watcher.markSelfWrite(folder, relPath);
+      return projects.writeFile(folder, relPath, data);
+    },
+  );
   ipcMain.handle('project:read-file', (_e: any, folder: string, relPath: string) =>
-    projects.readFile(folder, relPath));
+    projects.readFile(folder, relPath),
+  );
   ipcMain.handle('project:delete-file', (_e: any, folder: string, relPath: string) => {
     watcher.markSelfWrite(folder, relPath);
     return projects.deleteFile(folder, relPath);
   });
-  ipcMain.handle('project:rename-file', (_e: any, folder: string, fromRel: string, toRel: string) => {
-    watcher.markSelfWrite(folder, fromRel);
-    watcher.markSelfWrite(folder, toRel);
-    return projects.renameFile(folder, fromRel, toRel);
-  });
+  ipcMain.handle(
+    'project:rename-file',
+    (_e: any, folder: string, fromRel: string, toRel: string) => {
+      watcher.markSelfWrite(folder, fromRel);
+      watcher.markSelfWrite(folder, toRel);
+      return projects.renameFile(folder, fromRel, toRel);
+    },
+  );
   ipcMain.handle('project:reveal', (_e: any, folder: string, relPath?: string) =>
-    projects.reveal(folder, relPath));
+    projects.reveal(folder, relPath),
+  );
   ipcMain.handle('project:watch', (_e: any, folder: string) => watcher.watch(folder));
   ipcMain.handle('project:unwatch', (_e: any, folder: string) => watcher.unwatch(folder));
-  ipcMain.handle('project:list-files', (_e: any, folder: string) =>
-    projects.listFiles(folder));
+  ipcMain.handle('project:list-files', (_e: any, folder: string) => projects.listFiles(folder));
 
   // ── Preview server (ADR 0003) ───────────────────────────────
   previewServer = new PreviewServer((folder: string) => projects.resolveKnownFolder(folder));
@@ -406,11 +433,14 @@ function setupIpc() {
       return true;
     },
     onChanged: (servers: unknown) => {
-      for (const w of BrowserWindow.getAllWindows()) w.webContents.send('agent-host:changed', servers);
+      for (const w of BrowserWindow.getAllWindows())
+        w.webContents.send('agent-host:changed', servers);
     },
     // Packaged: dist/ sits inside app.asar; the launcher is unpacked so plain
     // `node` can run it (asarUnpack in package.json).
-    stdioScript: path.join(__dirname, 'mcp-stdio.js').replace('app.asar' + path.sep, 'app.asar.unpacked' + path.sep),
+    stdioScript: path
+      .join(__dirname, 'mcp-stdio.js')
+      .replace('app.asar' + path.sep, 'app.asar.unpacked' + path.sep),
     version: app.getVersion(),
     log: debugLog,
   });
@@ -418,7 +448,9 @@ function setupIpc() {
   ipcMain.handle('agent-host:enable', (_e: any, cruxId: string) => agentHost.enable(cruxId));
   ipcMain.handle('agent-host:disable', (_e: any, cruxId: string) => agentHost.disable(cruxId));
   ipcMain.handle('agent-host:regenerate', (_e: any, cruxId: string) => agentHost.enable(cruxId));
-  ipcMain.on('agent-host:response', (_e: any, response: unknown) => agentHost.handleResponse(response));
+  ipcMain.on('agent-host:response', (_e: any, response: unknown) =>
+    agentHost.handleResponse(response),
+  );
 
   // Cruxes switched on in an earlier run come back with their token intact,
   // so a client configured last week still connects.
@@ -428,9 +460,15 @@ function setupIpc() {
       try {
         const meta = JSON.parse(row.meta || '{}');
         if (meta?.settings?.agentHost === true && typeof meta.projectFolder === 'string') {
-          agentHost.resume(row.id).catch((err: any) => debugLog(`Agent host resume failed for ${row.id}: ${err?.message}`));
+          agentHost
+            .resume(row.id)
+            .catch((err: any) =>
+              debugLog(`Agent host resume failed for ${row.id}: ${err?.message}`),
+            );
         }
-      } catch { /* bad meta row — skip */ }
+      } catch {
+        /* bad meta row — skip */
+      }
     }
   } catch (err: any) {
     debugLog(`Agent host bootstrap failed: ${err?.message}`);
@@ -452,13 +490,13 @@ function setupIpc() {
   );
 
   ipcMain.handle('toolchain:is-installed', (_e: any, folder: string) =>
-    toolchain.isInstalled(folder));
+    toolchain.isInstalled(folder),
+  );
   ipcMain.handle('toolchain:has-package-json', (_e: any, folder: string) =>
-    toolchain.hasPackageJson(folder));
-  ipcMain.handle('toolchain:install', (_e: any, folder: string) =>
-    toolchain.install(folder));
-  ipcMain.handle('toolchain:build', (_e: any, folder: string) =>
-    toolchain.build(folder));
+    toolchain.hasPackageJson(folder),
+  );
+  ipcMain.handle('toolchain:install', (_e: any, folder: string) => toolchain.install(folder));
+  ipcMain.handle('toolchain:build', (_e: any, folder: string) => toolchain.build(folder));
   ipcMain.handle('toolchain:scaffold', (_e: any, folder: string, args: string[]) => {
     // Template scaffolds only — no arbitrary pnpm surface from the renderer
     if (!Array.isArray(args) || !['dlx', 'create'].includes(args[0])) {
@@ -466,75 +504,92 @@ function setupIpc() {
     }
     return toolchain.run(folder, args);
   });
-  ipcMain.handle('devserver:start', (_e: any, folder: string) =>
-    devServers.start(folder));
-  ipcMain.handle('devserver:stop', (_e: any, folder: string) =>
-    devServers.stop(folder));
-  ipcMain.handle('devserver:status', (_e: any, folder: string) =>
-    devServers.status(folder));
-  ipcMain.handle('devserver:log', (_e: any, folder: string) =>
-    devServers.lastLog(folder));
+  ipcMain.handle('devserver:start', (_e: any, folder: string) => devServers.start(folder));
+  ipcMain.handle('devserver:stop', (_e: any, folder: string) => devServers.stop(folder));
+  ipcMain.handle('devserver:status', (_e: any, folder: string) => devServers.status(folder));
+  ipcMain.handle('devserver:log', (_e: any, folder: string) => devServers.lastLog(folder));
 
   // ── FFmpeg transcode handler ──────────────────────────────
   ipcMain.handle('ffmpeg:available', () => {
     return !!(ffmpegPath && fs.existsSync(ffmpegPath));
   });
 
-  ipcMain.handle('ffmpeg:transcode', async (_e: any, opts: {
-    inputData: Uint8Array;
-    inputName: string;
-    isAudio: boolean;
-  }) => {
-    if (!ffmpegPath || !fs.existsSync(ffmpegPath)) {
-      throw new Error('FFmpeg not available');
-    }
-
-    const tmpDir = path.join(app.getPath('temp'), 'crux-transcode-' + Date.now());
-    fs.mkdirSync(tmpDir, { recursive: true });
-
-    const inputExt = path.extname(opts.inputName) || (opts.isAudio ? '.wav' : '.mp4');
-    const inputFile = path.join(tmpDir, 'input' + inputExt);
-    fs.writeFileSync(inputFile, Buffer.from(opts.inputData));
-
-    const results: Array<{ name: string; data: Uint8Array; mimeType: string }> = [];
-
-    try {
-      if (opts.isAudio) {
-        // Audio: transcode to AAC M4A
-        const outputFile = path.join(tmpDir, 'output.m4a');
-        await runFfmpeg([
-          '-i', inputFile,
-          '-c:a', 'aac', '-b:a', '192k',
-          '-y', outputFile,
-        ], _e.sender);
-        results.push({
-          name: path.basename(opts.inputName, inputExt) + '.m4a',
-          data: new Uint8Array(fs.readFileSync(outputFile)),
-          mimeType: 'audio/mp4',
-        });
-      } else {
-        // Video: transcode to H.264 MP4 with faststart
-        const outputFile = path.join(tmpDir, 'output.mp4');
-        await runFfmpeg([
-          '-i', inputFile,
-          '-c:v', 'libx264', '-preset', 'fast', '-crf', '28',
-          '-c:a', 'aac', '-b:a', '128k',
-          '-movflags', '+faststart',
-          '-y', outputFile,
-        ], _e.sender);
-        results.push({
-          name: path.basename(opts.inputName, inputExt) + '.mp4',
-          data: new Uint8Array(fs.readFileSync(outputFile)),
-          mimeType: 'video/mp4',
-        });
+  ipcMain.handle(
+    'ffmpeg:transcode',
+    async (
+      _e: any,
+      opts: {
+        inputData: Uint8Array;
+        inputName: string;
+        isAudio: boolean;
+      },
+    ) => {
+      if (!ffmpegPath || !fs.existsSync(ffmpegPath)) {
+        throw new Error('FFmpeg not available');
       }
-    } finally {
-      // Clean up temp files
-      try { fs.rmSync(tmpDir, { recursive: true, force: true }); } catch {}
-    }
 
-    return results;
-  });
+      const tmpDir = path.join(app.getPath('temp'), 'crux-transcode-' + Date.now());
+      fs.mkdirSync(tmpDir, { recursive: true });
+
+      const inputExt = path.extname(opts.inputName) || (opts.isAudio ? '.wav' : '.mp4');
+      const inputFile = path.join(tmpDir, 'input' + inputExt);
+      fs.writeFileSync(inputFile, Buffer.from(opts.inputData));
+
+      const results: Array<{ name: string; data: Uint8Array; mimeType: string }> = [];
+
+      try {
+        if (opts.isAudio) {
+          // Audio: transcode to AAC M4A
+          const outputFile = path.join(tmpDir, 'output.m4a');
+          await runFfmpeg(
+            ['-i', inputFile, '-c:a', 'aac', '-b:a', '192k', '-y', outputFile],
+            _e.sender,
+          );
+          results.push({
+            name: path.basename(opts.inputName, inputExt) + '.m4a',
+            data: new Uint8Array(fs.readFileSync(outputFile)),
+            mimeType: 'audio/mp4',
+          });
+        } else {
+          // Video: transcode to H.264 MP4 with faststart
+          const outputFile = path.join(tmpDir, 'output.mp4');
+          await runFfmpeg(
+            [
+              '-i',
+              inputFile,
+              '-c:v',
+              'libx264',
+              '-preset',
+              'fast',
+              '-crf',
+              '28',
+              '-c:a',
+              'aac',
+              '-b:a',
+              '128k',
+              '-movflags',
+              '+faststart',
+              '-y',
+              outputFile,
+            ],
+            _e.sender,
+          );
+          results.push({
+            name: path.basename(opts.inputName, inputExt) + '.mp4',
+            data: new Uint8Array(fs.readFileSync(outputFile)),
+            mimeType: 'video/mp4',
+          });
+        }
+      } finally {
+        // Clean up temp files
+        try {
+          fs.rmSync(tmpDir, { recursive: true, force: true });
+        } catch {}
+      }
+
+      return results;
+    },
+  );
 }
 
 function runFfmpeg(args: string[], sender: any): Promise<void> {
@@ -549,12 +604,14 @@ function runFfmpeg(args: string[], sender: any): Promise<void> {
       // Parse duration from FFmpeg output
       const durMatch = stderr.match(/Duration:\s+(\d+):(\d+):(\d+\.\d+)/);
       if (durMatch && !duration) {
-        duration = parseInt(durMatch[1]!) * 3600 + parseInt(durMatch[2]!) * 60 + parseFloat(durMatch[3]!);
+        duration =
+          parseInt(durMatch[1]!) * 3600 + parseInt(durMatch[2]!) * 60 + parseFloat(durMatch[3]!);
       }
       // Parse progress
       const timeMatch = chunk.toString().match(/time=(\d+):(\d+):(\d+\.\d+)/);
       if (timeMatch && duration > 0) {
-        const current = parseInt(timeMatch[1]!) * 3600 + parseInt(timeMatch[2]!) * 60 + parseFloat(timeMatch[3]!);
+        const current =
+          parseInt(timeMatch[1]!) * 3600 + parseInt(timeMatch[2]!) * 60 + parseFloat(timeMatch[3]!);
         const progress = Math.min(current / duration, 1);
         sender.send('ffmpeg:progress', progress);
       }
@@ -607,15 +664,17 @@ function registerAppProtocol() {
 }
 
 // Register crux-app:// as a privileged scheme (must be before app.whenReady)
-protocol.registerSchemesAsPrivileged([{
-  scheme: 'crux-app',
-  privileges: {
-    standard: true,
-    secure: true,
-    supportFetchAPI: true,
-    corsEnabled: true,
+protocol.registerSchemesAsPrivileged([
+  {
+    scheme: 'crux-app',
+    privileges: {
+      standard: true,
+      secure: true,
+      supportFetchAPI: true,
+      corsEnabled: true,
+    },
   },
-}]);
+]);
 
 // ── App lifecycle ────────────────────────────────────────────
 
