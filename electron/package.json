@@ -11,6 +11,7 @@
   "main": "dist/main.js",
   "scripts": {
     "build": "tsc",
+    "postinstall": "electron-builder install-app-deps",
     "start": "tsc && electron .",
     "dev": "tsc && CRUX_DEV_SERVER=http://localhost:8080 electron .",
     "build:web": "cd .. && tsc -b && npx vite build",

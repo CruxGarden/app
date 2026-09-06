@@ -52,10 +52,13 @@ appLog.attach(process, app);
 // an uncaught error before the window exists would sit there until the test
 // times out with nothing on stderr. Say it and exit instead.
 if (process.env.CRUX_USER_DATA) {
-  process.on('uncaughtException', (err: Error) => {
-    console.error(`[main] uncaught: ${err?.stack || String(err)}`);
+  const fatal = (kind: string) => (err: unknown) => {
+    console.error(`[main] ${kind}: ${(err as Error)?.stack || String(err)}`);
     app.exit(1);
-  });
+  };
+  process.on('uncaughtException', fatal('uncaught'));
+  // A native module built for the wrong ABI surfaces here (dynamic import).
+  process.on('unhandledRejection', fatal('unhandled rejection'));
 }
 function debugLog(msg: string) {
   appLog.info(msg);
