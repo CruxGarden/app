@@ -507,7 +507,12 @@ function setupIpc() {
     }
     return toolchain.run(folder, args);
   });
-  ipcMain.handle('devserver:start', (_e: any, folder: string) => devServers.start(folder));
+  ipcMain.handle('devserver:start', (_e: any, folder: string, opts?: { port?: number }) =>
+    devServers.start(folder, opts ?? {}),
+  );
+  ipcMain.handle('devserver:restart', (_e: any, folder: string, opts?: { port?: number }) =>
+    devServers.restart(folder, opts ?? {}),
+  );
   ipcMain.handle('devserver:stop', (_e: any, folder: string) => devServers.stop(folder));
   ipcMain.handle('devserver:status', (_e: any, folder: string) => devServers.status(folder));
   ipcMain.handle('devserver:log', (_e: any, folder: string) => devServers.lastLog(folder));

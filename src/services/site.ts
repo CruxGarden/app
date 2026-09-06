@@ -110,7 +110,10 @@ export const devServerLeases = createLeasePool({
  * Start (or reuse) the site's dev server and take a lease on it.
  * Resolves with its URL when ready. Pair every call with `stopDevServer`.
  */
-export async function startDevServer(cruxId: string): Promise<string | null> {
+export async function startDevServer(
+  cruxId: string,
+  opts: { port?: number } = {},
+): Promise<string | null> {
   const ctx = await siteContext(cruxId);
   if (!ctx) return null;
   const { api, folder } = ctx;
@@ -118,11 +121,25 @@ export async function startDevServer(cruxId: string): Promise<string | null> {
   devServerLeases.acquire(cruxId);
   try {
     await ensureInstalled(cruxId);
-    return await api.devserver.start(folder);
+    return await api.devserver.start(folder, opts);
   } catch (err) {
     devServerLeases.release(cruxId);
     throw err;
   }
+}
+
+/**
+ * Stop the site's dev server and start it again — leases untouched, so the
+ * tabs holding it keep holding it. `port` asks for a specific port; the
+ * server falls back to an ephemeral one when it is taken.
+ */
+export async function restartDevServer(
+  cruxId: string,
+  opts: { port?: number } = {},
+): Promise<string | null> {
+  const ctx = await siteContext(cruxId);
+  if (!ctx) return null;
+  return ctx.api.devserver.restart(ctx.folder, opts);
 }
 
 /** Release a lease. The server stops once no leases remain (after a grace period). */

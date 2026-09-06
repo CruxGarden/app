@@ -214,6 +214,8 @@ export interface CruxMeta {
     agentHost?: boolean;
     /** Check automatically after a turn that claims to be done (B4). On unless false. */
     verifyOnDone?: boolean;
+    /** Port the site's dev server should try first (1024–65535); ephemeral when unset or taken. */
+    previewPort?: number;
   };
   growthCount?: number;
   snapshot?: GrowthSnapshot;

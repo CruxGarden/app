@@ -142,7 +142,10 @@ export interface ToolchainBridge {
 // ── devserver (astro dev per Site Crux, ADR 0005) ───────────────────────────
 
 export interface DevServerBridge {
-  start(folder: string): Promise<string>;
+  /** Start (or reuse) the dev server; `port` is a preference, honoured when free. */
+  start(folder: string, opts?: { port?: number }): Promise<string>;
+  /** Stop and start again, optionally on a new preferred port. */
+  restart(folder: string, opts?: { port?: number }): Promise<string>;
   stop(folder: string): Promise<void>;
   status(folder: string): Promise<{ status: string; url: string | null }>;
   log(folder: string): Promise<string>;
