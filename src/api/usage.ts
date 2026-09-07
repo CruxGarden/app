@@ -7,6 +7,8 @@ export interface Plan {
   storageBytes: number;
   bandwidthBytesPerPeriod: number;
   storeRequestsPerPeriod: number;
+  /** Custom domains an account may have connected at once. */
+  customDomains: number;
 }
 export interface CruxUsage {
   cruxId: string;
