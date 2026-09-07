@@ -6,8 +6,10 @@ import { Button } from '@/components/ui';
 import MoodBar from '@/components/mood/MoodBar';
 import { useAudioStore } from '@/stores/audioStore';
 import { useShallow } from 'zustand/react/shallow';
-import { BUNDLED_MOODS } from '@/lib/moods/bundled-moods';
+import { BUNDLED_MOODS, bundledMood } from '@/lib/moods/bundled-moods';
 import { applyMood } from '@/lib/moods/packages';
+import { getSetting, setSetting } from '@/services/settings';
+import { SettingsKey } from '@/lib/constants';
 import { APP_NAME } from '@/lib/constants';
 import {
   GITHUB_APP_URL,
@@ -299,8 +301,14 @@ function ExploreSection() {
   );
 }
 
+/** The Mood the site wears: what the visitor last chose here, else the Default Mood. */
+function publicMoodId(): string {
+  const saved = getSetting(SettingsKey.PublicMoodId);
+  return saved && bundledMood(saved) ? saved : 'the-keeper';
+}
+
 function MoodSection() {
-  const [active, setActive] = useState<string | null>(null);
+  const [active, setActive] = useState<string | null>(() => publicMoodId());
   const [busy, setBusy] = useState<string | null>(null);
   const { track, playing, toggle, init } = useAudioStore(
     useShallow((s) => ({
@@ -311,6 +319,12 @@ function MoodSection() {
     })),
   );
   useEffect(() => init(), [init]);
+  // The site wears a Mood like the app does — The Keeper by default, or the one
+  // the visitor picked last time (a bundled Mood's files play from their URLs here).
+  useEffect(() => {
+    const pkg = bundledMood(publicMoodId());
+    if (pkg) void applyMood(pkg).catch(() => {});
+  }, []);
 
   const wear = async (id: string) => {
     const pkg = BUNDLED_MOODS.find((m) => m.id === id);
@@ -318,6 +332,7 @@ function MoodSection() {
     setBusy(id);
     try {
       await applyMood(pkg);
+      setSetting(SettingsKey.PublicMoodId, id);
       setActive(id);
     } finally {
       setBusy(null);
