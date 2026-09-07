@@ -1295,3 +1295,43 @@ html.palette-transition *::after {
   background: transparent;
   box-shadow: none;
 }
+
+/* ── Gateway stage: the banner and player rise out of the image and sink away when the room is left alone ── */
+@keyframes gateway-rise {
+  from {
+    opacity: 0;
+    transform: translateY(22px) scale(0.985);
+    filter: blur(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    filter: blur(0);
+  }
+}
+.gateway-stage > * {
+  opacity: 0;
+  transition:
+    opacity 2200ms ease-in-out,
+    transform 2200ms ease-in-out,
+    filter 2200ms ease-in-out;
+}
+.gateway-stage[data-visible='false'] > * {
+  transform: translateY(8px);
+  filter: blur(4px);
+}
+.gateway-stage[data-visible='true'] > * {
+  animation: gateway-rise 1100ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  opacity: 1;
+}
+.gateway-stage[data-visible='true'] > *:nth-child(2) {
+  animation-delay: 220ms;
+}
+@media (prefers-reduced-motion: reduce) {
+  .gateway-stage > * {
+    transition-duration: 400ms;
+  }
+  .gateway-stage[data-visible='true'] > * {
+    animation: none;
+  }
+}

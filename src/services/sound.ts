@@ -32,11 +32,18 @@ export function validateTrack(raw: unknown): SoundTrack | null {
   };
 }
 
+/** Names given before a rename shipped; a garden that ingested the old one shows the new. */
+export const RENAMED_TRACKS: Record<string, string> = {
+  'Echoes Beyond the Signal': 'Echoes From Beyond',
+};
+
 export function getTrack(): SoundTrack | null {
   const raw = getSetting(SettingsKey.SoundTrack) as string | null;
   if (!raw) return null;
   try {
-    return validateTrack(JSON.parse(raw));
+    const t = validateTrack(JSON.parse(raw));
+    if (t && RENAMED_TRACKS[t.name]) t.name = RENAMED_TRACKS[t.name]!;
+    return t;
   } catch {
     return null;
   }
