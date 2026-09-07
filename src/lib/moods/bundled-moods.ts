@@ -17,7 +17,7 @@ import type { PersonaSettings } from '@/services/persona';
 import { DEFAULT_PERSONA } from '@/services/persona';
 import keeperVista from '@/assets/moods/keeper/vista.jpg?url';
 import keeperAvatar from '@/assets/moods/keeper/keeper-avatar.png?url';
-import keeperTrack from '@/assets/moods/keeper/echoes-beyond-the-signal.opus?url';
+import keeperTrack from '@/assets/moods/keeper/echoes-from-beyond.opus?url';
 
 const CREATED = '2026-09-04T00:00:00.000Z';
 
@@ -43,7 +43,7 @@ interface Spec {
 /**
  * The Keeper — the Default Mood. The garden at dusk (Crux Garden's own vista),
  * the Moss theme, the Keeper's voice and face, and one looping track,
- * "Echoes Beyond the Signal". Ships as files; apply ingests them.
+ * "Echoes From Beyond". Ships as files; apply ingests them.
  */
 const THE_KEEPER: Spec = {
   id: 'the-keeper',
@@ -64,7 +64,7 @@ const THE_KEEPER: Spec = {
   bundled: {
     background: keeperVista,
     avatar: keeperAvatar,
-    track: { url: keeperTrack, name: 'Echoes Beyond the Signal', type: 'audio/ogg' },
+    track: { url: keeperTrack, name: 'Echoes From Beyond', type: 'audio/ogg' },
   },
 };
 
