@@ -1,10 +1,11 @@
 import { useState, useMemo, useCallback } from 'react';
+import { Capability, can } from '@/lib/platform';
 import { useAuthStore } from '@/stores/authStore';
 import { useAppStore } from '@/stores/appStore';
 import { useCruxStore, selectHasUnpublishedChanges } from '@/stores/cruxStore';
 import { cn } from '@/lib/cn';
 import { formatDateTime } from '@/lib/format';
-import { publicCruxUrl } from '@/lib/public-url';
+import { publicCruxUrl, openGardenPage } from '@/lib/public-url';
 import { type PublishPhase } from '@/services/publish';
 import { usePaneWidth } from '@/hooks/usePaneWidth';
 import CreateAuthorModal from '@/components/auth/CreateAuthorModal';
@@ -222,6 +223,14 @@ export default function PublishPane() {
                 href={publicUrl}
                 target="_blank"
                 rel="noopener noreferrer"
+                onClick={(e) => {
+                  // Desktop: the shell denies new windows — hand the URL to the system
+                  // browser ourselves instead of trusting the popup path.
+                  if (can(Capability.DesktopChrome)) {
+                    e.preventDefault();
+                    void openGardenPage(publicUrl);
+                  }
+                }}
                 className="block text-xxs font-mono text-accent break-all leading-relaxed hover:underline"
               >
                 {publicUrl}
@@ -243,6 +252,14 @@ export default function PublishPane() {
                   href={publicUrl}
                   target="_blank"
                   rel="noopener noreferrer"
+                  onClick={(e) => {
+                    // Desktop: the shell denies new windows — hand the URL to the system
+                    // browser ourselves instead of trusting the popup path.
+                    if (can(Capability.DesktopChrome)) {
+                      e.preventDefault();
+                      void openGardenPage(publicUrl);
+                    }
+                  }}
                   className={cn(
                     'flex-1 inline-flex items-center justify-center gap-1.5 h-7 rounded-[var(--radius-sm)]',
                     'text-xxs font-body border border-border bg-surface text-text',
