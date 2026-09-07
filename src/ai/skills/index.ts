@@ -109,7 +109,7 @@ export function skillsForCrux(crux: Pick<Crux, 'meta'>, artifacts: ArtifactPathS
 export function renderSkillsIndex(): string {
   return [
     '## Skills',
-    'Know-how lives in skills, not here. Before that kind of work, call load_skill(name) unless it is already in this conversation (this crux\'s are in <workspace_context>).',
+    "Know-how lives in skills, not here. Before that kind of work, call load_skill(name) unless it is already in this conversation (this crux's are in <workspace_context>).",
     ...Object.values(SKILLS).map((s) => `- **${s.name}** — ${s.summary}`),
   ].join('\n');
 }

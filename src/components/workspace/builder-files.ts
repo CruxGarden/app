@@ -124,7 +124,10 @@ export interface CaptionItem {
  */
 export function captionTasksFor(items: CaptionItem[], noun = 'photo'): SubagentTask[] {
   if (items.length === 0) return [];
-  const count = Math.min(MAX_DELEGATE_TASKS, Math.max(1, Math.ceil(items.length / CAPTIONS_PER_TASK)));
+  const count = Math.min(
+    MAX_DELEGATE_TASKS,
+    Math.max(1, Math.ceil(items.length / CAPTIONS_PER_TASK)),
+  );
   const size = Math.ceil(items.length / count);
   const tasks: SubagentTask[] = [];
   for (let start = 0; start < items.length; start += size) {

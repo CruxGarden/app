@@ -23,13 +23,14 @@ test.describe('mood assets', () => {
       await page.getByRole('button', { name: 'Welcome' }).click();
       await page.getByRole('button', { name: 'Mood', exact: true }).click();
       await page.getByRole('button', { name: 'Open Mood Builder' }).click();
-      await page.getByRole('button', { name: 'Assets', exact: true }).click();
+      // Files live at the foot of the Theme section, under the tokens
+      await page.getByRole('button', { name: 'Theme', exact: true }).click();
 
       await page
         .locator('input[type="file"][aria-label="Add asset files"]')
         .setInputFiles(join(__dirname, 'fixtures', 'backdrop.png'));
       await expect(page.getByRole('status')).toContainText('Added 1 file');
-      const card = page.locator('[data-testid^="asset-"]').first();
+      const card = page.locator('[data-testid^="asset-"]').filter({ hasText: 'backdrop.png' });
       await expect(card).toContainText('backdrop.png');
 
       // Workspace texture → the token resolves to a blob URL and the layer paints it
@@ -46,7 +47,6 @@ test.describe('mood assets', () => {
         .toMatch(/^url\("blob:/);
 
       // Grain is a token
-      await page.getByRole('button', { name: 'Tokens', exact: true }).click();
       await page.getByRole('button', { name: 'Textures & grain' }).click();
       const grain = page.getByRole('textbox', { name: 'Grain opacity value' });
       await grain.fill('0.4');
@@ -57,7 +57,6 @@ test.describe('mood assets', () => {
       await page.screenshot({ path: 'e2e/.results/assets-1-tokens.png' });
 
       // Cover → the saved Mood shows the image
-      await page.getByRole('button', { name: 'Assets', exact: true }).click();
       await card.getByRole('button', { name: 'Cover', exact: true }).click();
       await page.getByRole('button', { name: 'Moods', exact: true }).click();
       await page.getByRole('button', { name: 'Save current as Mood' }).click();

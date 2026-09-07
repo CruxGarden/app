@@ -5,8 +5,10 @@ import { Button } from '@/components/ui';
 
 const MoodEditor = lazy(() => import('@/components/mood/Mood'));
 
-type Tab = 'moods' | 'palette' | 'theme' | 'resonance' | 'assets' | 'background' | 'persona';
-const TABS: Tab[] = ['moods', 'palette', 'theme', 'resonance', 'assets', 'background', 'persona'];
+type Tab = 'moods' | 'theme' | 'background' | 'sound' | 'persona';
+const TABS: Tab[] = ['moods', 'theme', 'background', 'sound', 'persona'];
+/** Old links (?tab=palette, resonance, assets) land on the section that absorbed them. */
+const LEGACY: Record<string, Tab> = { palette: 'theme', resonance: 'sound', assets: 'theme' };
 
 /**
  * The Mood Builder: presets, the full theme token editor, background and
@@ -16,7 +18,8 @@ const TABS: Tab[] = ['moods', 'palette', 'theme', 'resonance', 'assets', 'backgr
 export default function MoodBuilder() {
   const navigate = useNavigate();
   const [params] = useSearchParams();
-  const requested = params.get('tab') as Tab | null;
+  const raw = params.get('tab');
+  const requested = (raw && LEGACY[raw]) || (raw as Tab | null);
   const initialTab = requested && TABS.includes(requested) ? requested : 'theme';
 
   useEffect(() => {

@@ -315,6 +315,17 @@ function SetupStep({ onBack }: { onBack: () => void }) {
         await useAppStore.getState().updateAuthor({ username: trimmed });
       }
 
+      // A new garden wears the Default Mood — The Keeper: the vista, Moss, the
+      // Keeper's face and track. Restored gardens bring their own and skip this.
+      try {
+        const { bundledMood } = await import('@/lib/moods/bundled-moods');
+        const { applyMood } = await import('@/lib/moods/packages');
+        const keeper = bundledMood('the-keeper');
+        if (keeper) await applyMood(keeper);
+      } catch {
+        /* the garden still opens; the Mood can be applied from the Mood modal */
+      }
+
       navigate('/home', { replace: true });
     } catch {
       setUsernameError('Something went wrong');

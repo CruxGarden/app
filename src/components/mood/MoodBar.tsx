@@ -3,22 +3,23 @@ import { useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/cn';
 import { useAudioStore } from '@/stores/audioStore';
 import { useUIStore } from '@/stores/uiStore';
-import { getDockState, setDockState } from '@/services/resonance';
+import { getDockState, setDockState } from '@/services/sound';
 import { getThemePreview, onThemePreviewChange } from '@/lib/moods/active';
 import { isPublicSite } from '@/lib/site';
 import { useShallow } from 'zustand/react/shallow';
 import { PauseIcon, PlayIcon as PlayIconGlyph, SlidersIcon } from '@/components/ui/icons';
 
 /**
- * The Mood Bar, now a control in the top bar: the active soundscape's
- * transport and volume, what's playing, a way into the Mood modal and the
- * Mixer. Collapsed it is one small button with live level bars; expanded it
- * shows the mix name, play/pause, volume and the mixer. The collapsed state
- * persists. Every part is a Mood token (moodBar*), so a theme can restyle it.
+ * The Mood Bar, a control in the top bar: the Mood's track — play/pause,
+ * volume, what's playing — and a way into the Mood modal and the Sound
+ * section. Collapsed it is one small button with live level bars; expanded it
+ * shows the track name, play/pause, volume and the sound settings. The
+ * collapsed state persists. Every part is a Mood token (moodBar*), so a theme
+ * can restyle it.
  *
  * On the public website (crux.garden) there is no Mood modal and no /mood
  * route: the level button scrolls to the landing page's Moods section and the
- * Mixer button is not shown.
+ * settings button is not shown.
  */
 
 function LevelBars({ level, playing }: { level: number; playing: boolean }) {
@@ -44,21 +45,19 @@ function LevelBars({ level, playing }: { level: number; playing: boolean }) {
 export default function MoodBar({ className }: { className?: string }) {
   const navigate = useNavigate();
   const publicSite = isPublicSite();
-  const { mixes, activeMixId, playing, volume, level, init, toggle, next, setVolume } =
-    useAudioStore(
-      useShallow((s) => ({
-        mixes: s.mixes,
-        activeMixId: s.activeMixId,
-        playing: s.playing,
-        volume: s.volume,
-        level: s.level,
-        init: s.init,
-        toggle: s.toggle,
-        next: s.next,
-        setVolume: s.setVolume,
-      })),
-    );
-  const mix = mixes.find((m) => m.id === activeMixId);
+  const { track, enabled, playing, volume, level, init, toggle, setVolume } = useAudioStore(
+    useShallow((s) => ({
+      track: s.track,
+      enabled: s.enabled,
+      playing: s.playing,
+      volume: s.volume,
+      level: s.level,
+      init: s.init,
+      toggle: s.toggle,
+      setVolume: s.setVolume,
+    })),
+  );
+  const canPlay = !!track && enabled;
   const [collapsed, setCollapsed] = useState(() => getDockState()?.collapsed ?? false);
   const [aiPreview, setAiPreview] = useState(() => Object.keys(getThemePreview()).length);
   useEffect(
@@ -97,7 +96,9 @@ export default function MoodBar({ className }: { className?: string }) {
       <button
         type="button"
         onClick={() => (collapsed ? setCollapsedPersist(false) : openMood())}
-        title={collapsed ? (mix ? `${mix.name}${playing ? ' — playing' : ''}` : 'Mood') : 'Mood'}
+        title={
+          collapsed ? (track ? `${track.name}${playing ? ' — playing' : ''}` : 'Mood') : 'Mood'
+        }
         aria-label={collapsed ? 'Expand Mood Bar' : publicSite ? 'Go to Moods' : 'Open Mood'}
         className="relative w-5 h-5 rounded-[var(--mood-bar-radius)] flex items-center justify-center cursor-pointer shrink-0 hover:bg-mood-bar-hover"
       >
@@ -112,23 +113,22 @@ export default function MoodBar({ className }: { className?: string }) {
       </button>
 
       {!collapsed && (
-        <button
-          type="button"
-          onClick={() => void next()}
-          title="Next mix"
-          className="min-w-0 max-w-[9rem] text-left cursor-pointer px-1 hover:text-mood-bar-accent"
+        <span
+          className="min-w-0 max-w-[9rem] text-left px-1 block text-xxs font-body truncate leading-tight"
+          title={track ? track.name : 'This Mood has no track'}
+          data-testid="mood-bar-track"
         >
-          <span className="block text-xxs font-body truncate leading-tight">
-            {mix?.name ?? 'No mix'}
-          </span>
-        </button>
+          {track ? track.name : enabled ? 'No track' : 'Sound off'}
+        </span>
       )}
 
       <button
         type="button"
         onClick={() => void toggle()}
+        disabled={!canPlay}
         aria-label={playing ? 'Pause soundscape' : 'Play soundscape'}
-        className="w-5 h-5 rounded-[var(--mood-bar-radius)] bg-mood-bar-accent text-mood-bar-accent-text flex items-center justify-center cursor-pointer shrink-0 hover-bright motion-press react-accent"
+        title={!track ? 'This Mood has no track — add one under Mood → Sound' : undefined}
+        className="w-5 h-5 rounded-[var(--mood-bar-radius)] bg-mood-bar-accent text-mood-bar-accent-text flex items-center justify-center cursor-pointer shrink-0 hover-bright motion-press react-accent disabled:opacity-40 disabled:cursor-default"
       >
         {PlayIcon}
       </button>
@@ -148,9 +148,9 @@ export default function MoodBar({ className }: { className?: string }) {
           {!publicSite && (
             <button
               type="button"
-              onClick={() => navigate('/mood?tab=resonance')}
-              title="Mixer"
-              aria-label="Open the mixer"
+              onClick={() => navigate('/mood?tab=sound')}
+              title="Sound"
+              aria-label="Open sound settings"
               className="w-5 h-5 rounded-[var(--mood-bar-radius)] text-mood-bar-text-muted hover:text-mood-bar-accent flex items-center justify-center cursor-pointer shrink-0"
             >
               <SlidersIcon size={12} />

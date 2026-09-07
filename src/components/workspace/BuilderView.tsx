@@ -442,7 +442,11 @@ function AddPhotosButton({
           }
         }
         if (last) openFile(last.artifact.id, last.path);
-        const summary = describeBatch({ added, singular: collection.singular.toLowerCase(), failed });
+        const summary = describeBatch({
+          added,
+          singular: collection.singular.toLowerCase(),
+          failed,
+        });
         // A big batch is wide, independent work: offer to caption it with
         // parallel workers (B5) — only when a model can actually run.
         if (added >= CAPTION_OFFER_MIN && (await canCollaborate())) {
@@ -452,7 +456,11 @@ function AddPhotosButton({
             confirmLabel: 'Write captions',
             cancelLabel: 'Not now',
           });
-          if (write) void runParallelJob(`Write captions for ${added} photos`, captionTasksFor(captionItems));
+          if (write)
+            void runParallelJob(
+              `Write captions for ${added} photos`,
+              captionTasksFor(captionItems),
+            );
         } else {
           void alertDialog(
             summary + (added ? ' One per photo — add captions in each, or ask for them.' : ''),
@@ -668,7 +676,9 @@ function useOpenRound() {
   return useCallback(() => {
     const has = useCruxStore
       .getState()
-      .artifacts.some((a) => ((a.meta?.path as string | undefined) || a.filename) === PLAY_PAGE_PATH);
+      .artifacts.some(
+        (a) => ((a.meta?.path as string | undefined) || a.filename) === PLAY_PAGE_PATH,
+      );
     if (!has) {
       void alertDialog(
         `This crux has no ${PLAY_PAGE_PATH}. The game page ships with the 5Ws template; add one to play here.`,
@@ -831,7 +841,11 @@ function useShelfArtifact(path: string): Artifact | null {
 }
 
 /** The parsed Shelf at `path`, re-read whenever the file's fingerprint changes. */
-function useShelf(path: string): { shelf: Shelf | null; error: string | null; artifact: Artifact | null } {
+function useShelf(path: string): {
+  shelf: Shelf | null;
+  error: string | null;
+  artifact: Artifact | null;
+} {
   const artifact = useShelfArtifact(path);
   const fingerprint = artifact?.fingerprint ?? artifact?.id ?? null;
   const [state, setState] = useState<{ shelf: Shelf | null; error: string | null }>({
@@ -931,8 +945,10 @@ function AddToShelfButton({ path, label, icon }: { path: string; label: string; 
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState(EMPTY_ENTRY);
-  const set = (key: keyof typeof EMPTY_ENTRY) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) =>
-    setForm((f) => ({ ...f, [key]: e.target.value }));
+  const set =
+    (key: keyof typeof EMPTY_ENTRY) =>
+    (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) =>
+      setForm((f) => ({ ...f, [key]: e.target.value }));
 
   const splitList = (raw: string, sep: RegExp) =>
     raw
@@ -998,7 +1014,12 @@ function AddToShelfButton({ path, label, icon }: { path: string; label: string; 
             placeholder="Aliases, comma-separated (variants, spellings, titles)"
           />
           <div className="flex gap-2">
-            <select value={form.kind} onChange={set('kind')} className={fieldClass} aria-label="Kind">
+            <select
+              value={form.kind}
+              onChange={set('kind')}
+              className={fieldClass}
+              aria-label="Kind"
+            >
               {HIDDEN_KINDS.map((k) => (
                 <option key={k} value={k}>
                   {k}

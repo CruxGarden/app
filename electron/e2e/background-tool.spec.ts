@@ -27,7 +27,11 @@ test.describe('background tool (mock AI)', () => {
       await expect(page.getByRole('tree').getByText('backdrop.png', { exact: true })).toBeVisible({
         timeout: 30_000,
       });
-      await expect(page.getByTestId('mood-background-image')).toHaveCount(0);
+      // A new garden already wears The Keeper's vista; the tool must replace it
+      const bgBefore = await page
+        .getByTestId('mood-background-image')
+        .evaluate((el) => getComputedStyle(el).backgroundImage);
+      expect(bgBefore).toMatch(/blob:/);
 
       const input = page.getByPlaceholder('Send a message...');
       await input.fill('give me a new backdrop');
@@ -37,6 +41,9 @@ test.describe('background tool (mock AI)', () => {
       const bg = page.getByTestId('mood-background-image');
       await expect(bg).toBeVisible();
       await expect(bg).toHaveCSS('background-image', /url\("blob:/);
+      await expect
+        .poll(() => bg.evaluate((el) => getComputedStyle(el).backgroundImage))
+        .not.toBe(bgBefore);
       const type = await page.evaluate(() =>
         getComputedStyle(document.documentElement).getPropertyValue('--background-type').trim(),
       );

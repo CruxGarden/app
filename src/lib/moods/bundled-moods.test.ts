@@ -1,27 +1,44 @@
 import { describe, it, expect } from 'vitest';
 import { BUNDLED_MOODS, bundledMood } from './bundled-moods';
-import { DEFAULT_MIXES } from '@/audio/default-mixes';
 import { validateMoodPackage } from './packages';
-import { validateMix, LAYER_TYPES } from '@/audio/schema';
 import { GARDEN_DARK } from './garden-dark';
+import { DEFAULT_PERSONA } from '@/services/persona';
 import { tokenChoices } from './token-groups';
 
 describe('bundled Moods', () => {
-  it('ships nineteen complete, valid packages with distinct ids', () => {
-    expect(BUNDLED_MOODS).toHaveLength(19);
-    expect(new Set(BUNDLED_MOODS.map((m) => m.id)).size).toBe(19);
+  it('ships twenty complete, valid packages with distinct ids', () => {
+    expect(BUNDLED_MOODS).toHaveLength(20);
+    expect(new Set(BUNDLED_MOODS.map((m) => m.id)).size).toBe(20);
     for (const m of BUNDLED_MOODS) {
       const ok = validateMoodPackage(JSON.parse(JSON.stringify(m)));
       expect(ok, `${m.id} validates`).toBeTruthy();
-      expect(ok!.resonance.mixes.length, `${m.id} has sound`).toBeGreaterThan(0);
-      expect(ok!.resonance.mixes.map((x) => x.id)).toContain(ok!.resonance.activeMixId);
+      expect(ok!.sound.volume).toBeGreaterThanOrEqual(0);
+      expect(ok!.sound.volume).toBeLessThanOrEqual(1);
+      expect(ok!.sound.enabled).toBe(true);
       expect(m.persona?.name, `${m.id} has a voice`).toBeTruthy();
-      for (const mix of m.resonance.mixes) {
-        const v = validateMix(mix)!;
-        expect(v.layers.length, `${mix.id} layers`).toBeGreaterThan(0);
-        for (const l of v.layers) expect(LAYER_TYPES).toContain(l.type);
-      }
     }
+  });
+
+  it('The Keeper is the Default Mood: first, Moss, the vista, the Keeper voice and face, one track', () => {
+    const k = BUNDLED_MOODS[0]!;
+    expect(k.id).toBe('the-keeper');
+    expect(k.theme.section).toBe('Dark');
+    expect(k.theme.overrides.accent).toBe('#88bc88'); // Moss
+    expect(k.background.type).toBe('image');
+    expect(k.persona).toMatchObject({
+      name: DEFAULT_PERSONA.name,
+      systemPrompt: DEFAULT_PERSONA.systemPrompt,
+    });
+    // the files ship inside the app; the package carries them as URLs until apply
+    expect(k.bundled?.background).toMatch(/vista/);
+    expect(k.bundled?.avatar).toMatch(/keeper-avatar/);
+    expect(k.bundled?.track).toMatchObject({ name: 'Echoes Beyond the Signal', type: 'audio/ogg' });
+    expect(k.sound.track).toBeNull();
+    // and validation (the shape a saved/imported package takes) keeps the sound block
+    const ok = validateMoodPackage(JSON.parse(JSON.stringify(k)))!;
+    expect(ok.sound).toEqual(k.sound);
+    // no other bundled Mood ships files
+    expect(BUNDLED_MOODS.filter((m) => m.bundled)).toHaveLength(1);
   });
 
   it('covers both modes and only uses real theme tokens', () => {
@@ -33,7 +50,7 @@ describe('bundled Moods', () => {
     }
   });
 
-  it('is not nineteen palettes on one layout: shape, type and motion differ', () => {
+  it('is not twenty palettes on one layout: shape, type and motion differ', () => {
     const radii = new Set(BUNDLED_MOODS.map((m) => m.theme.overrides.radius ?? GARDEN_DARK.radius));
     const fonts = new Set(
       BUNDLED_MOODS.map((m) => m.theme.overrides.fontDisplay ?? GARDEN_DARK.fontDisplay),
@@ -123,10 +140,5 @@ describe('bundled Moods', () => {
     expect(bundledMood('soft-serve-black')!.theme.section).toBe('Dark');
     expect(BUNDLED_MOODS.at(-2)?.id).toBe('soft-serve-gray');
     expect(BUNDLED_MOODS.at(-1)?.id).toBe('soft-serve-black');
-  });
-
-  it('ships mixes already inside every parameter range (validateMix is the identity)', () => {
-    const all = [...BUNDLED_MOODS.flatMap((m) => m.resonance.mixes), ...DEFAULT_MIXES];
-    for (const mix of all) expect(validateMix(mix), mix.id).toEqual(mix);
   });
 });

@@ -90,23 +90,11 @@ export default function MoodResultCard({
             {crux.title || crux.slug}
           </div>
           <div className="text-2xs font-mono text-text-muted truncate">
-            Mood · {s?.section ?? '—'} · {s?.mixes ?? 0} mix{s?.mixes === 1 ? '' : 'es'} ·{' '}
-            {s?.layers ?? 0} layer
-            {s?.layers === 1 ? '' : 's'} · by {crux.author_username}
+            Mood · {s?.section ?? '—'} · {s?.track ? `plays “${s.track}”` : 'quiet'} · by{' '}
+            {crux.author_username}
           </div>
         </div>
-        {s?.layerTypes?.length ? (
-          <div className="flex flex-wrap gap-1">
-            {s.layerTypes.map((t) => (
-              <span
-                key={t}
-                className="text-3xs font-mono px-1.5 py-0.5 rounded-chip bg-badge text-badge-text border border-badge-border"
-              >
-                {t}
-              </span>
-            ))}
-          </div>
-        ) : null}
+
         {canInstall && (
           <div className="flex items-center gap-1.5 pt-1">
             <Button size="sm" onClick={() => void run(true)} disabled={busy !== null}>

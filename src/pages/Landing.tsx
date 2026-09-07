@@ -302,17 +302,15 @@ function ExploreSection() {
 function MoodSection() {
   const [active, setActive] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
-  const { mixes, activeMixId, playing, toggle, init } = useAudioStore(
+  const { track, playing, toggle, init } = useAudioStore(
     useShallow((s) => ({
-      mixes: s.mixes,
-      activeMixId: s.activeMixId,
+      track: s.track,
       playing: s.playing,
       toggle: s.toggle,
       init: s.init,
     })),
   );
   useEffect(() => init(), [init]);
-  const mix = mixes.find((m) => m.id === activeMixId);
 
   const wear = async (id: string) => {
     const pkg = BUNDLED_MOODS.find((m) => m.id === id);
@@ -331,7 +329,7 @@ function MoodSection() {
       <h2 className="font-display text-2xl text-text mb-1">Set the mood</h2>
       <p className="text-sm text-text-muted mb-4">
         A Mood is a whole room: the look, the sound, and the voice you work with. Try one on this
-        page — the same nineteen ship in the app, and people publish their own.
+        page — the same twenty ship in the app, and people publish their own.
       </p>
       <div className="grid gap-3 grid-cols-2 sm:grid-cols-4" role="group" aria-label="Moods">
         {BUNDLED_MOODS.map((pkg) => {
@@ -360,7 +358,7 @@ function MoodSection() {
                   {pkg.name}
                 </div>
                 <div className="text-2xs font-mono mt-0.5" style={{ color: o.textMuted ?? o.text }}>
-                  {pkg.resonance.mixes[0]?.name}
+                  {pkg.bundled?.track?.name ?? pkg.sound.track?.name ?? 'quiet'}
                   {pkg.persona ? ` · ${pkg.persona.name}` : ''}
                 </div>
               </div>
@@ -372,11 +370,16 @@ function MoodSection() {
         <button
           type="button"
           onClick={() => void toggle()}
-          className="px-3 py-1.5 rounded-button bg-accent text-bg font-medium cursor-pointer hover-bright"
+          disabled={!track}
+          className="px-3 py-1.5 rounded-button bg-accent text-bg font-medium cursor-pointer hover-bright disabled:opacity-50 disabled:cursor-default"
         >
-          {playing ? 'Pause' : 'Play'} {mix ? `“${mix.name}”` : 'the soundscape'}
+          {playing ? 'Pause' : 'Play'} {track ? `“${track.name}”` : 'the track'}
         </button>
-        <span>Generated live in your browser — nothing streams. The player is in the top bar.</span>
+        <span>
+          {track
+            ? 'A Mood plays one looping track. The player is in the top bar.'
+            : 'This Mood is quiet. Wear The Keeper to hear the garden.'}
+        </span>
       </div>
     </section>
   );

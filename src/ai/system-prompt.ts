@@ -26,7 +26,7 @@ export { renderContentModel } from '@/services/agents-md';
  *   prompt, where refreshing it doesn't bust the cached prefix.
  *
  * Know-how that only some conversations need (Astro details, template
- * specifics, composing a Mood, the soundscape, the Crux Store) lives in
+ * specifics, composing a Mood, the Crux Store) lives in
  * skills (`./skills`, B6) — loaded on demand through `load_skill`, or
  * automatically for the crux's template — instead of in this prefix.
  */
@@ -124,13 +124,12 @@ function buildStablePrompt(crux: Crux, artifacts: Artifact[]): string {
         ? "- **check_site** — Run the site's production build (Site Cruxes) and report errors. Nothing is published; this only verifies.\n"
         : '') +
       '- **get_theme** / **set_theme** / **set_background** — Read and change the workspace look (theme tokens, backdrop). Load the mood-design skill before restyling.\n' +
-      '- **get_resonance** / **set_resonance** — Read, steer and compose the soundscape. Load the resonance skill before composing.\n' +
       '- **snapshot** / **list_snapshots** / **restore** / **branch** / **diff** — Growth, the version history, as tools. See Growth below.\n' +
       '- **remember** — Save one line to Garden Memory when the person asks you to remember something or states a durable preference (see above).\n' +
       '- **load_skill** — Load the know-how for one kind of work (see Skills below).\n' +
       '- **delegate** — Parallel workers for wide, independent work; load the parallel-work skill first.\n' +
       'IMPORTANT: You CAN generate images. When the user asks for an image, illustration, icon, logo, photo, or artwork, call the generate_image tool. Do NOT say you cannot generate images — you have this capability.\n\n' +
-      '### Theme and soundscape\n' +
+      '### Theme\n' +
       'Use set_theme mode "preview" to signal what you are doing (tint the pane you work in, warm the accent during a long step) and clear it with reset: true when done; mode "persist" only when the person asks for a lasting change. Never persist a change they did not ask for. ' +
       "Edits to the person's existing mixes are saved, so only make them when asked; a request for music or a vibe means composing a new mix.\n\n" +
       GROWTH_TOOL_GUIDANCE.trimEnd(),
@@ -205,7 +204,7 @@ const GROWTH_TOOL_GUIDANCE =
   '- If a check fails after your change (check_site errors, a broken preview) and going back beats fixing forward, call restore with that snapshot id. A safety snapshot of the current state is taken first, so nothing is lost.\n' +
   '- After finishing a coherent piece of work, snapshot again. The app also snapshots automatically after a turn that changed files, and skips its own when yours already captured the same files.\n' +
   '- Use diff to see what a restore would change, branch when the user wants to try another direction from an earlier version, list_snapshots for ids.\n' +
-  '- Snapshots refer to files and the conversation, never to the theme or the soundscape.\n\n';
+  '- Snapshots refer to files and the conversation, never to the theme or the sound.\n\n';
 
 /** Guidance for browser-native cruxes (no build step) — served as-is by the preview. */
 const WEB_APP_GUIDANCE =

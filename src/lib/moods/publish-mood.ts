@@ -19,9 +19,8 @@ import type { Crux } from '@/api/types';
 export interface MoodSummary {
   section: 'Dark' | 'Light';
   swatch: Record<string, string>;
-  mixes: number;
-  layers: number;
-  layerTypes: string[];
+  /** The Mood's track name, when it has one */
+  track?: string;
   author?: string;
   /** Published file name of the cover image (e.g. "cover.png"), when the Mood has one */
   cover?: string;
@@ -51,13 +50,10 @@ export function moodSummary(pkg: MoodPackage): MoodSummary {
   const g = GARDEN_DARK as Record<string, string>;
   const swatch: Record<string, string> = {};
   for (const k of SWATCH_KEYS) swatch[k] = pkg.theme.overrides[k] || g[k] || '#888888';
-  const layerTypes = [...new Set(pkg.resonance.mixes.flatMap((m) => m.layers.map((l) => l.type)))];
   return {
     section: pkg.theme.section,
     swatch,
-    mixes: pkg.resonance.mixes.length,
-    layers: pkg.resonance.mixes.reduce((n, m) => n + m.layers.length, 0),
-    layerTypes,
+    track: pkg.sound.track?.name ?? pkg.bundled?.track?.name,
     author: pkg.author,
     cover: coverFileName(pkg),
   };
@@ -77,14 +73,6 @@ export function moodPreviewHtml(pkg: MoodPackage): string {
   const panes = ['paneCollaboration', 'paneArtifacts', 'paneWorkshop', 'paneDetails']
     .map((k) => `<span style="background:${esc(sw[k]!)}"></span>`)
     .join('');
-  const mixes = pkg.resonance.mixes
-    .map(
-      (m) =>
-        `<li><strong>${esc(m.name)}</strong> <span class="muted">${esc(m.root)} ${esc(m.scale)} · ${m.tempo} bpm · ${m.layers
-          .map((l) => esc(l.name))
-          .join(', ')}</span></li>`,
-    )
-    .join('');
   return `<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>${esc(pkg.name)} — a Crux Garden Mood</title>
@@ -97,9 +85,8 @@ export function moodPreviewHtml(pkg: MoodPackage): string {
   .how{margin-top:18px;font-size:13px;opacity:.75} .cover{display:block;width:100%;aspect-ratio:16/10;object-fit:cover;border-radius:10px;margin:0 0 16px;border:1px solid var(--border)}
 </style></head><body><main>
 ${s.cover ? `<img class="cover" src="${esc(s.cover)}" alt="">` : ''}<h1>${esc(pkg.name)}</h1>
-<div class="muted">A Crux Garden Mood${pkg.author ? ` by ${esc(pkg.author)}` : ''} · ${esc(s.section)} · ${s.mixes} mix${s.mixes === 1 ? '' : 'es'}, ${s.layers} layer${s.layers === 1 ? '' : 's'}</div>
+<div class="muted">A Crux Garden Mood${pkg.author ? ` by ${esc(pkg.author)}` : ''} · ${esc(s.section)}${s.track ? ` · plays “${esc(s.track)}”` : ' · quiet'}</div>
 <div class="panes">${panes}</div>
-<ul>${mixes || '<li class="muted">No soundscape</li>'}</ul>
 <a class="btn" href="mood.cruxmood" download>Download mood.cruxmood</a>
 <p class="how">In Crux Garden, open Explore → Moods and press Install, or import the file from the Mood modal.</p>
 </main></body></html>`;
@@ -136,7 +123,9 @@ export async function publishMood(pkg: MoodPackage, deps: PublishMoodDeps): Prom
   const summary = moodSummary(pkg);
   const meta = {
     mood: summary,
-    tags: [...new Set(['mood', summary.section.toLowerCase(), ...summary.layerTypes])],
+    tags: [
+      ...new Set(['mood', summary.section.toLowerCase(), ...(summary.track ? ['music'] : [])]),
+    ],
   };
 
   let crux: Crux | null = null;
@@ -146,7 +135,7 @@ export async function publishMood(pkg: MoodPackage, deps: PublishMoodDeps): Prom
   if (crux) {
     crux = await cruxService.update(crux.id, {
       title: pkg.name,
-      description: `A Crux Garden Mood: ${summary.section}, ${summary.mixes} mixes.`,
+      description: `A Crux Garden Mood: ${summary.section}${summary.track ? `, plays “${summary.track}”` : ''}.`,
       kind: 'mood',
       discoverable: true,
       meta: { ...(crux.meta as Record<string, unknown>), ...meta },
@@ -154,7 +143,7 @@ export async function publishMood(pkg: MoodPackage, deps: PublishMoodDeps): Prom
   } else {
     crux = await cruxService.create({
       title: pkg.name,
-      description: `A Crux Garden Mood: ${summary.section}, ${summary.mixes} mixes.`,
+      description: `A Crux Garden Mood: ${summary.section}${summary.track ? `, plays “${summary.track}”` : ''}.`,
       kind: 'mood',
       meta,
     });

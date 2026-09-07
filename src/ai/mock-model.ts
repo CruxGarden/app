@@ -98,48 +98,12 @@ export function getMockLanguageModel(): LanguageModel {
               ? 'Done — I painted it.'
               : used('set_background')
                 ? 'Done — new backdrop.'
-                : used('set_resonance')
-                  ? 'Done — adjusted the room.'
-                  : 'Done — I wrote that file for you.',
+                : 'Done — I wrote that file for you.',
           );
         }
         const text = lastUserText(prompt);
         // "slowly": hold the tool call back so a test can act mid-turn
         if (/\bslowly\b/i.test(text)) await new Promise((r) => setTimeout(r, 1500));
-        // "quiet" / "rain": the model steers the soundscape
-        if (/\bquiet\b/i.test(text)) {
-          return toolCallStream('set_resonance', { volume: 0.2, duck: false });
-        }
-        if (/\blofi\b/i.test(text)) {
-          return toolCallStream('set_resonance', {
-            createMix: {
-              name: 'Lofi Study Beats',
-              root: 'F',
-              scale: 'major',
-              tempo: 74,
-              layers: [
-                {
-                  type: 'keys',
-                  gain: -14,
-                  params: { instrument: 'rhodes', progression: 'lofi', rhythm: 'half' },
-                  effects: [{ type: 'tape', params: { wobble: 0.4 } }],
-                },
-                {
-                  type: 'beat',
-                  gain: -16,
-                  params: { pattern: 'lofi', swing: 0.6 },
-                  effects: [{ type: 'bitcrusher', params: { bits: 8 } }],
-                },
-                { type: 'bass', gain: -16, params: { pattern: 'root', progression: 'lofi' } },
-                { type: 'vinyl', gain: -22 },
-              ],
-              master: { reverbDecay: 2.5, reverbWet: 0.2 },
-            },
-          });
-        }
-        if (/\brain\b/i.test(text)) {
-          return toolCallStream('set_resonance', { mix: 'Night Rain', cue: 'chime' });
-        }
         // "backdrop": the model sets a workspace image as the Mood background
         if (/\bbackdrop\b/i.test(text)) {
           return toolCallStream('set_background', { path: 'backdrop.png' });

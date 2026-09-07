@@ -19,18 +19,16 @@ import ModelSelector from '@/components/chat/ModelSelector';
 import { useAvatarUrl } from '@/hooks/useAvatarUrl';
 import { useBlobUrl } from '@/hooks/useBlobUrl';
 import { useAppStore } from '@/stores/appStore';
-import { useThemeStore } from '@/stores/themeStore';
 import { getApiKey } from '@/ai/keys';
 import { formatTime } from '@/lib/format';
 import { getSetting, setSetting, removeSetting } from '@/services/settings';
 import { SettingsKey } from '@/lib/constants';
 import { getPersona, type PersonaSettings } from '@/components/mood/mood-helpers';
-import keeperAvatarDark from '@/images/keeper-avatar-pixel-dark.jpg';
-import keeperAvatarLight from '@/images/keeper-avatar-pixel-light.jpg';
+import PersonaAvatar, { DEFAULT_PERSONA_AVATAR } from '@/components/persona/PersonaAvatar';
 
+/** The face when the persona has none of its own: the bundled Keeper. */
 function useKeeperAvatar(): string {
-  const activeMode = useThemeStore((s) => s.activeMode);
-  return activeMode === 'light' ? keeperAvatarLight : keeperAvatarDark;
+  return DEFAULT_PERSONA_AVATAR;
 }
 
 export function ConsoleAvatar({
@@ -41,7 +39,6 @@ export function ConsoleAvatar({
   bordered?: boolean;
 }) {
   const keeperSrc = useKeeperAvatar();
-  const activeMode = useThemeStore((s) => s.activeMode);
   const [, forceUpdate] = useState(0);
   useEffect(() => {
     const handler = () => forceUpdate((n) => n + 1);
@@ -49,20 +46,15 @@ export function ConsoleAvatar({
     return () => window.removeEventListener('crux:persona-changed', handler);
   }, []);
   const persona = getPersona();
-  const fp =
-    activeMode === 'light' ? persona.thumbnailFingerprintLight : persona.thumbnailFingerprint;
+  // One avatar; a light-mode copy from before 2026-09-07 still shows if that is all there is
+  const fp = persona.thumbnailFingerprint || persona.thumbnailFingerprintLight;
   const blobUrl = useBlobUrl(fp);
-  const src = blobUrl || keeperSrc;
   return (
-    <img
-      src={src}
+    <PersonaAvatar
+      src={blobUrl || keeperSrc}
       alt="Console"
-      className={cn(
-        className,
-        'aspect-square shrink-0 object-cover',
-        '[image-rendering:pixelated]',
-        bordered ? 'rounded-[var(--radius-sm)] ring-1 ring-border' : '',
-      )}
+      className={className}
+      bordered={bordered}
     />
   );
 }
@@ -194,10 +186,8 @@ function UserAvatar() {
 
 export default function Console() {
   const keeperAvatarSrc = useKeeperAvatar();
-  const activeMode = useThemeStore((s) => s.activeMode);
   const [persona, setPersona] = useState<PersonaSettings>(() => getPersona());
-  const sidebarThumbFp =
-    activeMode === 'light' ? persona.thumbnailFingerprintLight : persona.thumbnailFingerprint;
+  const sidebarThumbFp = persona.thumbnailFingerprint || persona.thumbnailFingerprintLight;
   const sidebarThumbUrl = useBlobUrl(sidebarThumbFp);
 
   // Read persona on mount (Modal only mounts content when open)
@@ -433,10 +423,10 @@ export default function Console() {
         {/* Sidebar — portrait + conversation history */}
         <div className="hidden sm:flex w-48 shrink-0 flex-col border-r border-border">
           <div className="aspect-square w-full overflow-hidden rounded-tl-[calc(var(--radius)-1px)]">
-            <img
+            <PersonaAvatar
               src={sidebarThumbUrl || keeperAvatarSrc}
               alt="Console"
-              className="w-full h-full object-cover [image-rendering:pixelated]"
+              className="w-full h-full rounded-none"
             />
           </div>
           {/* Conversation history */}

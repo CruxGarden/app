@@ -21,16 +21,7 @@ import { initServices } from '@/services';
 import { clearMemory } from '@/services/memory';
 import type { Crux, Artifact } from '@/services/types';
 
-const REQUIRED = [
-  'blog',
-  'feed',
-  'media',
-  'homepage',
-  'astro-basics',
-  'mood-design',
-  'resonance',
-  '5ws',
-];
+const REQUIRED = ['blog', 'feed', 'media', 'homepage', 'astro-basics', 'mood-design', '5ws'];
 
 function makeCrux(meta: Record<string, unknown> = {}): Crux {
   return {
@@ -160,7 +151,7 @@ describe('skills registry (B6)', () => {
   describe('load_skill tool', () => {
     it('is defined and returns the skill text', () => {
       expect(SKILL_TOOL_DEFINITIONS.map((t) => t.name)).toEqual(['load_skill']);
-      expect(runSkillTool({ name: 'resonance' })).toBe(getSkill('resonance')!.text);
+      expect(runSkillTool({ name: 'mood-design' })).toBe(getSkill('mood-design')!.text);
       expect(runSkillTool({ name: 'nope' })).toMatch(/^Error: Unknown skill "nope"/);
     });
 

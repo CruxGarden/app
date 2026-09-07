@@ -263,9 +263,9 @@ describe('garden memory and skills in the prompt (B6)', () => {
     expect(system).toContain('**remember**');
     expect(system).toContain('**load_skill**');
     expect(system).toContain('## Skills');
-    expect(system).toContain('**resonance** — ');
+    expect(system).toContain('**mood-design** — ');
     // Long guidance moved to skills; the short rules stayed
-    expect(system).toContain('### Theme and soundscape');
+    expect(system).toContain('### Theme');
     expect(system).toContain('Never persist a change they did not ask for');
     expect(system).not.toContain('### Crux Store');
     expect(system).not.toContain('25 token groups');
