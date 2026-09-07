@@ -25,6 +25,8 @@ const SYNC_KEYS: Set<string> = new Set([
   SettingsKey.BackgroundBlockSize,
   SettingsKey.MoodPresetDark,
   SettingsKey.MoodPresetLight,
+  // The public website has no SQLite: the Mood it wears lives here
+  SettingsKey.PublicMoodId,
 ]);
 
 // ── Public API ──────────────────────────────────────────────────────────────
