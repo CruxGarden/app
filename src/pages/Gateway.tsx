@@ -99,12 +99,67 @@ async function startGatewaySound(pkg: MoodPackage | undefined): Promise<void> {
   }
 }
 
+/** How long the Gateway stays just the room before the banner shows on its own. */
+const REVEAL_AFTER_MS = 7_000;
+/** Still for this long on the banner step and the banner sinks away again. */
+const IDLE_AFTER_MS = 10_000;
+
 export default function Gateway() {
   const navigate = useNavigate();
   const [step, setStep] = useState<Step>(Step.Banner);
   useEffect(() => {
     void wearGatewayMood().catch(() => {});
   }, []);
+
+  // Arrival: the music starts and the background fades in; the banner and the
+  // player wait until the person stirs — mouse, click, key — or half a minute
+  // — or seven seconds pass — then rise out of the image (a fade with a lift
+  // and a clearing blur). On the banner step they sink away again after ten
+  // seconds without movement, to let the room be looked at; any stir brings
+  // them back (Daniel, 2026-09-07). A curtain in the page colour lifts first.
+  const [curtain, setCurtain] = useState<'down' | 'lifting' | 'gone'>('down');
+  const [visible, setVisible] = useState(false);
+  const visibleRef = useRef(false);
+  visibleRef.current = visible;
+  const idle = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // A click while the stage is hidden only brings it back — it must never press
+  // an invisible button (the pointer move that precedes a real click reveals first).
+  const guardHiddenClick = (e: React.MouseEvent) => {
+    if (visibleRef.current) return;
+    e.preventDefault();
+    e.stopPropagation();
+  };
+  useEffect(() => {
+    const lift = requestAnimationFrame(() => setCurtain('lifting'));
+    const gone = setTimeout(() => setCurtain('gone'), 1700);
+    return () => {
+      cancelAnimationFrame(lift);
+      clearTimeout(gone);
+    };
+  }, []);
+  useEffect(() => {
+    const armIdle = () => {
+      if (idle.current) clearTimeout(idle.current);
+      // Only the banner step rests; a person mid-setup keeps their form
+      if (step !== Step.Banner) return;
+      idle.current = setTimeout(() => setVisible(false), IDLE_AFTER_MS);
+    };
+    const stir = () => {
+      setVisible(true);
+      armIdle();
+    };
+    const first = setTimeout(stir, REVEAL_AFTER_MS);
+    window.addEventListener('pointermove', stir);
+    window.addEventListener('pointerdown', stir);
+    window.addEventListener('keydown', stir);
+    return () => {
+      clearTimeout(first);
+      if (idle.current) clearTimeout(idle.current);
+      window.removeEventListener('pointermove', stir);
+      window.removeEventListener('pointerdown', stir);
+      window.removeEventListener('keydown', stir);
+    };
+  }, [step]);
 
   return (
     <div className="relative min-h-screen flex items-center justify-center p-4">
@@ -116,26 +171,43 @@ export default function Gateway() {
           style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}
         />
       )}
-      {/* The Mood's player — the room is set before you enter. Both it and the
-          banner can be dragged anywhere; the place is remembered. */}
-      <Draggable id="player" label="Player" className="fixed top-2 right-3 z-50">
-        <MoodBar gateway />
-      </Draggable>
-      <Draggable id="banner" label="Banner" className="w-full max-w-md">
-        <div className="w-full flex flex-col items-center gap-6">
-          {(step === Step.Banner || step === Step.Checking) && (
-            <BannerStep
-              checking={step === Step.Checking}
-              onSetStep={setStep}
-              onNavigateHome={() => navigate('/home', { replace: true })}
-            />
+      {curtain !== 'gone' && (
+        <div
+          aria-hidden
+          data-testid="gateway-curtain"
+          className={cn(
+            'fixed inset-0 z-30 bg-bg pointer-events-none transition-opacity duration-[1500ms] ease-out',
+            curtain === 'lifting' ? 'opacity-0' : 'opacity-100',
           )}
-          {step === Step.Choose && <ChooseStep onChoice={setStep} />}
-          {step === Step.Setup && <SetupStep onBack={() => setStep(Step.Choose)} />}
-          {step === Step.Cloud && <CloudStep onBack={() => setStep(Step.Choose)} />}
-          {step === Step.Import && <ImportStep onBack={() => setStep(Step.Choose)} />}
-        </div>
-      </Draggable>
+        />
+      )}
+      {/* The banner with the Mood's player directly below it, centred. Both can be
+          dragged anywhere; the place is remembered. Hidden until the person stirs. */}
+      <div
+        data-testid="gateway-stage"
+        data-visible={visible ? 'true' : 'false'}
+        onClickCapture={guardHiddenClick}
+        className="gateway-stage w-full max-w-md flex flex-col items-center gap-4"
+      >
+        <Draggable id="banner" label="Banner" className="w-full">
+          <div className="w-full flex flex-col items-center gap-6">
+            {(step === Step.Banner || step === Step.Checking) && (
+              <BannerStep
+                checking={step === Step.Checking}
+                onSetStep={setStep}
+                onNavigateHome={() => navigate('/home', { replace: true })}
+              />
+            )}
+            {step === Step.Choose && <ChooseStep onChoice={setStep} />}
+            {step === Step.Setup && <SetupStep onBack={() => setStep(Step.Choose)} />}
+            {step === Step.Cloud && <CloudStep onBack={() => setStep(Step.Choose)} />}
+            {step === Step.Import && <ImportStep onBack={() => setStep(Step.Choose)} />}
+          </div>
+        </Draggable>
+        <Draggable id="player" label="Player" handle>
+          <MoodBar gateway />
+        </Draggable>
+      </div>
     </div>
   );
 }

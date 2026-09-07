@@ -33,6 +33,7 @@ export default function Draggable({
   className,
   children,
   label,
+  handle = false,
 }: {
   /** Key in the saved layout */
   id: string;
@@ -40,6 +41,8 @@ export default function Draggable({
   className?: string;
   children: ReactNode;
   label: string;
+  /** Show a grip to drag by (for a piece that is all controls, like the player) */
+  handle?: boolean;
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const [pos, setPos] = useState<{ cx: number; cy: number } | null>(() => readLayout()[id] ?? null);
@@ -121,6 +124,7 @@ export default function Draggable({
       className={cn(
         'touch-none select-none',
         dragging ? 'cursor-grabbing' : 'cursor-grab',
+        handle && 'flex items-center gap-1',
         pos ? 'fixed z-40' : className,
       )}
       style={
@@ -130,12 +134,25 @@ export default function Draggable({
                 left: `${pos.cx * 100}%`,
                 top: `${pos.cy * 100}%`,
                 transform: 'translate(-50%, -50%)',
+                // a placed piece keeps its own transform: the stage's rise animation
+                // would override it (animations beat inline styles)
+                animation: 'none',
               }
             : {}),
           WebkitAppRegion: 'no-drag',
         } as React.CSSProperties
       }
     >
+      {handle && (
+        <span
+          aria-hidden
+          data-testid={`gateway-${id}-grip`}
+          className="text-text-muted/70 text-xs leading-none px-0.5"
+          title="Drag to move"
+        >
+          ⋮⋮
+        </span>
+      )}
       {children}
     </div>
   );

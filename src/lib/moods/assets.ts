@@ -6,6 +6,7 @@
  */
 import { getSetting, setSetting } from '@/services/settings';
 import { SettingsKey } from '@/lib/constants';
+import { RENAMED_TRACKS } from '@/services/sound';
 
 export type AssetKind = 'image' | 'audio' | 'font' | 'other';
 
@@ -48,11 +49,10 @@ export function getAssets(): MoodAsset[] {
   if (!raw) return [];
   try {
     const parsed = JSON.parse(raw) as unknown;
-    return Array.isArray(parsed)
-      ? (parsed as MoodAsset[]).filter(
-          (a) => a && typeof a.fingerprint === 'string' && typeof a.name === 'string',
-        )
-      : [];
+    if (!Array.isArray(parsed)) return [];
+    return (parsed as MoodAsset[])
+      .filter((a) => a && typeof a.fingerprint === 'string' && typeof a.name === 'string')
+      .map((a) => (RENAMED_TRACKS[a.name] ? { ...a, name: RENAMED_TRACKS[a.name]! } : a));
   } catch {
     return [];
   }
