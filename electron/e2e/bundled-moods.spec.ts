@@ -10,7 +10,7 @@ type AudioState = { trackName: string | null; enabled: boolean };
  */
 test.describe('bundled moods', () => {
   test('apply Windows 95 then Blade Runner Rain: shape, sound and voice follow', async () => {
-    const { app, page } = await launchApp();
+    const { app, page, dir } = await launchApp();
     const cssVar = (name: string) =>
       page.evaluate(
         (n) => getComputedStyle(document.documentElement).getPropertyValue(n).trim(),
@@ -21,6 +21,9 @@ test.describe('bundled moods', () => {
         (window as unknown as { __cruxAudio: { state: () => AudioState } }).__cruxAudio.state(),
       );
     try {
+      // The Gateway itself wears The Keeper on a first run: vista and Moss before Enter
+      await expect(page.getByTestId('mood-background-image')).toBeVisible({ timeout: 30_000 });
+      await expect.poll(() => cssVar('--accent')).toBe('#88bc88');
       await page.getByRole('button', { name: /enter/i }).click();
       await page.getByText('Plant a new garden').click();
       await page.getByRole('button', { name: 'Welcome' }).click();
@@ -77,6 +80,22 @@ test.describe('bundled moods', () => {
       await expect(page.getByTestId('persona-avatar').first()).toBeVisible();
     } finally {
       await app.close();
+    }
+
+    // Relaunch on the same garden: the Gateway wears the worn Mood before Enter
+    const again = await launchApp({ dir });
+    try {
+      const cssVar2 = (name: string) =>
+        again.page.evaluate(
+          (n) => getComputedStyle(document.documentElement).getPropertyValue(n).trim(),
+          name,
+        );
+      await expect.poll(() => cssVar2('--accent'), { timeout: 30_000 }).toBe('#88bc88');
+      await expect(again.page.getByTestId('mood-background-image')).toBeVisible({
+        timeout: 30_000,
+      });
+    } finally {
+      await again.app.close();
     }
   });
 });

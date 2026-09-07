@@ -1,4 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
+import { applyMood } from '@/lib/moods/packages';
+import { BgType } from '@/lib/types';
 import { useNavigate } from 'react-router-dom';
 import { Panel, Spinner, Button, IconButton, ApiKeySetup, Toggle } from '@/components/ui';
 import {
@@ -36,9 +38,36 @@ enum Step {
 
 // ── Main Component ─────────────────────────────────────
 
+/**
+ * The Gateway wears a Mood too. First run: The Keeper's look (theme and the
+ * vista from its shipped URL — no garden yet, so no sound and nothing to
+ * ingest). Returning: the theme is already painted from the synced settings;
+ * a bundled Mood's background image is shown from its URL until the garden's
+ * own copy resolves after Enter.
+ */
+async function wearGatewayMood(): Promise<void> {
+  const { bundledMood } = await import('@/lib/moods/bundled-moods');
+  const worn = getSetting(SettingsKey.WornMoodId);
+  const fresh = !worn && !getSetting(SettingsKey.MoodPresetDark);
+  if (fresh) {
+    const keeper = bundledMood('the-keeper');
+    if (keeper) await applyMood(keeper, { sound: false });
+    return;
+  }
+  const pkg = worn ? bundledMood(worn) : undefined;
+  if (pkg?.bundled?.background && getSetting(SettingsKey.BackgroundType) === BgType.Image) {
+    const { useMoodStore } = await import('@/stores/moodStore');
+    if (!useMoodStore.getState().backgroundUrl)
+      useMoodStore.setState({ backgroundUrl: pkg.bundled.background });
+  }
+}
+
 export default function Gateway() {
   const navigate = useNavigate();
   const [step, setStep] = useState<Step>(Step.Banner);
+  useEffect(() => {
+    void wearGatewayMood().catch(() => {});
+  }, []);
 
   return (
     <div className="relative min-h-screen flex items-center justify-center p-4">
@@ -319,7 +348,6 @@ function SetupStep({ onBack }: { onBack: () => void }) {
       // Keeper's face and track. Restored gardens bring their own and skip this.
       try {
         const { bundledMood } = await import('@/lib/moods/bundled-moods');
-        const { applyMood } = await import('@/lib/moods/packages');
         const keeper = bundledMood('the-keeper');
         if (keeper) await applyMood(keeper);
       } catch {

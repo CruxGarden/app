@@ -25,6 +25,13 @@ const SYNC_KEYS: Set<string> = new Set([
   SettingsKey.BackgroundBlockSize,
   SettingsKey.MoodPresetDark,
   SettingsKey.MoodPresetLight,
+  // The whole look, so the Gateway paints the worn Mood before services init:
+  // the user presets (a bundled Mood's theme is one), the token overrides,
+  // and which Mood Package is worn
+  SettingsKey.MoodUserPresets,
+  SettingsKey.MoodThemeDark,
+  SettingsKey.MoodThemeLight,
+  SettingsKey.WornMoodId,
   // The public website has no SQLite: the Mood it wears lives here
   SettingsKey.PublicMoodId,
 ]);

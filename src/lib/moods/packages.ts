@@ -239,8 +239,12 @@ export function personaForApply(
   return { ...current, ...next };
 }
 
-/** Wear a package: theme (as a user preset), background, persona, sound. */
-export async function applyMood(pkg: MoodPackage): Promise<void> {
+/**
+ * Wear a package: theme (as a user preset), background, persona, sound.
+ * `sound: false` leaves the sound settings alone — the Gateway wears a Mood's
+ * look before a garden exists and must not seed sound into it.
+ */
+export async function applyMood(pkg: MoodPackage, opts: { sound?: boolean } = {}): Promise<void> {
   // Theme → a user preset with the package's id, made active for its mode
   const preset = saveUserPreset({
     id: `user-${pkg.id}`,
@@ -292,6 +296,9 @@ export async function applyMood(pkg: MoodPackage): Promise<void> {
 
   // Assets index (bytes were written on import)
   for (const a of pkg.assets ?? []) addAsset(a);
+
+  setSetting(SettingsKey.WornMoodId, pkg.id);
+  if (opts.sound === false) return;
 
   // Sound — the package's track, volume, on/off and cues take over.
   const track = shipped.track ?? pkg.sound.track;
