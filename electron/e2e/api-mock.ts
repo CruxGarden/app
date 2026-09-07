@@ -285,9 +285,9 @@ export async function startMockApi(): Promise<MockApi> {
       };
     };
     // ── billing (ADR 0012): mock provider — checkout "pays" instantly
-    const PLAN_LIMITS: Record<string, [number, number, number]> = {
-      free: [1073741824, 1073741824, 100000],
-      gardener: [10737418240, 26843545600, 1000000],
+    const PLAN_LIMITS: Record<string, [number, number, number, number]> = {
+      free: [1073741824, 1073741824, 100000, 1],
+      gardener: [10737418240, 26843545600, 1000000, 10],
     };
     const planOf = (id: string) => ({
       id,
@@ -296,6 +296,7 @@ export async function startMockApi(): Promise<MockApi> {
       storageBytes: PLAN_LIMITS[id]![0],
       bandwidthBytesPerPeriod: PLAN_LIMITS[id]![1],
       storeRequestsPerPeriod: PLAN_LIMITS[id]![2],
+      customDomains: PLAN_LIMITS[id]![3],
     });
     const billingMe = () => ({
       plan: planOf(state.billing.planId),

@@ -91,7 +91,11 @@ export default function Plans() {
                       <li>
                         {plan.storeRequestsPerPeriod.toLocaleString()} Crux Store requests a month
                       </li>
-                      <li>Custom domains included</li>
+                      <li>
+                        {plan.customDomains === 1
+                          ? '1 custom domain'
+                          : `${plan.customDomains} custom domains`}
+                      </li>
                     </ul>
                   </div>
                 );
