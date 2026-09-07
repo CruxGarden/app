@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import type { Dimension, CruxSummary as CruxSummaryType } from '@/api/types';
 import { LoadingPanel } from '@/components/ui';
 import { useCruxStore } from '@/stores/cruxStore';
+import { confirmDialog, alertDialog } from '@/stores/dialogStore';
 import CruxSummary from './CruxSummary';
 import GrowthCard from './GrowthCard';
 import GrowthDetail from './GrowthDetail';
@@ -97,6 +98,32 @@ export default function GrowthTimeline({
     if (showLabelInput) labelInputRef.current?.focus();
   }, [showLabelInput]);
 
+  const [removing, setRemoving] = useState(false);
+  const handleRemoveLatest = async () => {
+    const tip = growths[growths.length - 1];
+    if (!tip) return;
+    const name =
+      (tip.meta?.label as string | undefined) || tip.target?.title || `Snapshot ${growths.length}`;
+    const ok = await confirmDialog({
+      title: 'Remove last snapshot',
+      message: `Remove "${name}" from history? Your files stay exactly as they are; only this checkpoint goes.`,
+      confirmLabel: 'Remove',
+    });
+    if (!ok) return;
+    setRemoving(true);
+    try {
+      await useCruxStore.getState().removeLatestSnapshot();
+      setDetailIndex(null);
+    } catch (err) {
+      await alertDialog(
+        (err as Error)?.message || 'Could not remove the snapshot',
+        'Remove last snapshot',
+      );
+    } finally {
+      setRemoving(false);
+    }
+  };
+
   const handleSnapshot = () => {
     const label = labelText.trim() || undefined;
     setShowLabelInput(false);
@@ -146,6 +173,18 @@ export default function GrowthTimeline({
                   </select>
                 </label>
               </div>
+            )}
+            {/* Walk history back one step: the tip goes, files stay */}
+            {!isViewingSnapshot && !showLabelInput && growths.length > 0 && (
+              <button
+                onClick={handleRemoveLatest}
+                disabled={isCreatingGrowth || removing}
+                className="self-start px-0.5 text-2xs font-mono text-text-muted hover:text-error transition-colors cursor-pointer disabled:opacity-50"
+                title="Remove the most recent snapshot. Your files stay as they are."
+                data-testid="growth-remove-latest"
+              >
+                {removing ? 'Removing…' : 'Remove last snapshot'}
+              </button>
             )}
             {!isViewingSnapshot && showLabelInput && (
               <div className="flex gap-1.5">

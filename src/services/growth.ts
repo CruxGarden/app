@@ -22,11 +22,15 @@ export interface GrowthDeps {
     create(input: Record<string, unknown>): Promise<Crux>;
     findById(id: string): Promise<Crux>;
     update(id: string, input: Record<string, unknown>): Promise<unknown>;
+    /** Hard-delete a snapshot crux with its artifact rows and growth dimension. */
+    delete(id: string): Promise<void>;
   };
   artifact: {
     computeSnapshotFingerprint(cruxId: string): Promise<string>;
     cloneArtifactsToSnapshot(fromId: string, toId: string): Promise<unknown>;
     findByResource(type: string, id: string): Promise<Artifact[]>;
+    /** Delete one artifact row; `writeThrough: false` keeps the disk untouched and frees an orphaned blob. */
+    delete(id: string, opts?: { writeThrough?: boolean }): Promise<void>;
   };
   dimension: {
     create(input: Record<string, unknown>): Promise<Dimension>;
@@ -42,6 +46,7 @@ export async function defaultGrowthDeps(): Promise<GrowthDeps> {
       create: (input) => crux.create(input as unknown as Parameters<typeof crux.create>[0]),
       findById: (id) => crux.findById(id),
       update: (id, input) => crux.update(id, input as Parameters<typeof crux.update>[1]),
+      delete: (id) => crux.delete(id),
     },
     artifact,
     dimension: {
@@ -302,6 +307,66 @@ function buildSummaryPrompt(
   return `Summarize what was accomplished in this conversation segment in 1-2 short sentences. Focus on what changed, not what already existed. Be specific about the nature of the change (e.g. "changed X to Y", "added Z", "restyled the header").${artifacts}${previousContext}\n\nConversation:\n${convo}`;
 }
 
+export interface RemoveSnapshotResult {
+  /** The growth dimension and snapshot crux that were removed. */
+  growthId: string;
+  snapshotCruxId: string;
+  /** The snapshot's own segment of the conversation — it returns to the workspace segment. */
+  restoredMessages: ChatMessage[];
+  /** What `settings.activeBranch` should become: undefined = leave alone, null = clear. */
+  activeBranch: string | null | undefined;
+}
+
+/**
+ * Remove the most recent snapshot — the tip of history. Repeating it walks
+ * history back one checkpoint at a time; the working files are never touched,
+ * and the removed snapshot's conversation segment rejoins the workspace
+ * segment so the transcript stays whole. Only a snapshot nothing else
+ * descends from may go: a tip that a later snapshot or branch parents on is
+ * refused. Blobs only that snapshot referenced are freed with its artifacts.
+ */
+export async function removeLatestSnapshotCore(
+  state: Pick<SnapshotWorkspaceState, 'crux' | 'growths'>,
+  deps: GrowthDeps,
+): Promise<RemoveSnapshotResult | null> {
+  const sorted = [...state.growths].sort((a, b) => (a.weight ?? 0) - (b.weight ?? 0));
+  const tip = sorted[sorted.length - 1];
+  if (!tip) return null;
+
+  // Nothing may descend from the tip: read every snapshot's parent link.
+  const parents = await Promise.all(
+    sorted.slice(0, -1).map(async (g) => {
+      try {
+        const c = await deps.crux.findById(g.targetId);
+        return (c.meta?.parentCruxId as string | undefined) ?? null;
+      } catch {
+        return null;
+      }
+    }),
+  );
+  if (parents.includes(tip.targetId)) {
+    throw new Error('This snapshot has a branch growing from it; remove that branch first.');
+  }
+
+  const snapshot = await deps.crux.findById(tip.targetId);
+  const restoredMessages = (snapshot.meta?.messages as ChatMessage[] | undefined) ?? [];
+  const parentCruxId = (snapshot.meta?.parentCruxId as string | undefined) ?? null;
+
+  // Artifact rows first, quietly (they mirror no folder), so blobs that only
+  // this snapshot held are freed; then the crux, which takes its dimension.
+  const artifacts = await deps.artifact.findByResource('crux', tip.targetId);
+  for (const a of artifacts) await deps.artifact.delete(a.id, { writeThrough: false });
+  await deps.crux.delete(tip.targetId);
+
+  const activeBranch = state.crux.meta?.settings?.activeBranch as string | undefined;
+  return {
+    growthId: tip.id,
+    snapshotCruxId: tip.targetId,
+    restoredMessages,
+    activeBranch: activeBranch === tip.targetId ? parentCruxId : undefined,
+  };
+}
+
 /**
  * Fire-and-forget AI summary for a snapshot. On success the summary is
  * persisted to the dimension and reported through `onApplied` — the caller
@@ -409,9 +474,6 @@ export interface GrowthHostDeps extends GrowthDeps {
   dimension: GrowthDeps['dimension'] & {
     findBySourceAndType(sourceId: string, type: string): Promise<Dimension[]>;
   };
-  artifact: GrowthDeps['artifact'] & {
-    delete(id: string): Promise<void>;
-  };
   /** Store → disk projection after a restore (no-op on web). */
   projectAll(cruxId: string): Promise<unknown>;
   /** Wait for in-flight external edits before capturing (no-op on web). */
@@ -437,7 +499,7 @@ export async function defaultGrowthHostDeps(): Promise<GrowthHostDeps> {
       computeSnapshotFingerprint: (id) => artifact.computeSnapshotFingerprint(id),
       cloneArtifactsToSnapshot: (from, to) => artifact.cloneArtifactsToSnapshot(from, to),
       findByResource: (type, id) => artifact.findByResource(type, id),
-      delete: (id) => artifact.delete(id),
+      delete: (id, opts) => artifact.delete(id, opts),
     },
     projectAll: projectAllArtifacts,
     flush: flushIngestion,
