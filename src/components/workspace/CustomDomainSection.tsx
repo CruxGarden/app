@@ -144,14 +144,14 @@ export default function CustomDomainSection({ cruxId }: { cruxId: string }) {
             {d.status !== 'active' && (
               <div className="flex flex-col gap-1.5">
                 <p className="text-2xs text-text-muted">
-                  Create these two records at your DNS provider, then verify:
+                  Create these records at your DNS provider, then verify:
                 </p>
-                {d.records.some((r) => r.type === 'ALIAS') && (
+                {d.records.some((r) => r.type === 'A' || r.type === 'ALIAS') && (
                   <p className="text-2xs text-text-muted">
-                    A bare domain cannot carry a CNAME, so the first record is an ALIAS (some
-                    providers call it ANAME or CNAME flattening — Route 53, Cloudflare, Namecheap,
-                    Porkbun and DNSimple have it). If yours does not, connect{' '}
-                    <span className="font-mono">www.{d.hostname}</span> instead.
+                    Your site will answer at <span className="font-mono">www.{d.hostname}</span>;{' '}
+                    <span className="font-mono">{d.hostname}</span> redirects there.
+                    {d.records.some((r) => r.type === 'ALIAS') &&
+                      ' ALIAS is also called ANAME or CNAME flattening (Route 53, Cloudflare, Namecheap, Porkbun, DNSimple have it).'}
                   </p>
                 )}
                 {d.records.map((r) => (

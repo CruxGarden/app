@@ -3,7 +3,7 @@ import client from './client';
 /** Mirrors the API's DomainsModule (ADR 0011). */
 export type DomainStatus = 'pending_dns' | 'issuing' | 'active' | 'failed';
 export interface DnsRecord {
-  type: 'CNAME' | 'ALIAS' | 'TXT';
+  type: 'A' | 'AAAA' | 'CNAME' | 'ALIAS' | 'TXT';
   name: string;
   value: string;
 }
