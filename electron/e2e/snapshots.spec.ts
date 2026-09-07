@@ -70,6 +70,18 @@ test.describe('snapshots & revert', () => {
       await snapshotWithLabel('v2');
       await page.screenshot({ path: 'e2e/.results/snapshots-1-two-versions.png' });
 
+      // Remove the last snapshot: v2 leaves history, v1 stays, the file is untouched
+      await page.getByTestId('growth-remove-latest').click();
+      const removeDialog = page.getByRole('dialog');
+      await expect(removeDialog).toContainText(/Remove "v2"/);
+      await removeDialog.getByRole('button', { name: 'Remove' }).click();
+      await expect(page.getByText('v2', { exact: true })).toHaveCount(0);
+      await expect(page.getByText('v1', { exact: true })).toBeVisible();
+      await expect.poll(fileOnDisk).toBe('version one and version two');
+      await expect(monaco).toContainText('version two');
+      // …and take it again so the rest of the journey has its v2
+      await snapshotWithLabel('v2');
+
       // View v1 → banner → Revert → app confirm dialog
       await page.getByRole('button').filter({ hasText: 'v1' }).first().click();
       await expect(page.getByRole('button', { name: 'Revert' })).toBeVisible();

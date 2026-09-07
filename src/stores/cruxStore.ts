@@ -9,6 +9,7 @@ import {
   collectChainMessages,
   chainLookupFromService,
   createSnapshotCore,
+  removeLatestSnapshotCore,
   defaultGrowthDeps,
   generateSnapshotSummary,
   registerGrowthHost,
@@ -140,6 +141,8 @@ interface CruxState {
    * safety snapshots the Revert/Branch dialogs promise always land.
    */
   createSnapshot: (options?: CreateSnapshotOptions & { ifChanged?: boolean }) => Promise<void>;
+  /** Remove the most recent snapshot (history walks back one; files untouched). */
+  removeLatestSnapshot: () => Promise<void>;
 
   // Snapshot viewing actions
   viewSnapshot: (snapshotId: string, index: number) => Promise<void>;
@@ -785,6 +788,35 @@ export const useCruxStore = create<CruxState>((set, get) => ({
 
   // The snapshot lifecycle lives in services/growth (deep module); this action
   // gathers workspace state, runs the core, and applies the result.
+  removeLatestSnapshot: async () => {
+    const { crux, growths, viewingSnapshotId } = get();
+    if (!crux || growths.length === 0) return;
+    const tip = [...growths].sort((a, b) => (a.weight ?? 0) - (b.weight ?? 0)).at(-1)!;
+    // Looking at the snapshot being removed: leave it first, then remove.
+    if (viewingSnapshotId === tip.targetId) await get().exitSnapshotView();
+
+    const deps = await defaultGrowthDeps();
+    const result = await removeLatestSnapshotCore(
+      { crux: get().crux!, growths: get().growths },
+      deps,
+    );
+    if (!result) return;
+
+    set((state) => ({
+      growths: state.growths.filter((g) => g.id !== result.growthId),
+      growthCount: Math.max(0, state.growthCount - 1),
+      // The removed segment is back in the workspace segment
+      messageSegmentStart: Math.max(0, state.messageSegmentStart - result.restoredMessages.length),
+    }));
+    if (result.activeBranch !== undefined) {
+      const settings = { ...(get().crux?.meta?.settings ?? {}) } as Record<string, unknown>;
+      if (result.activeBranch) settings.activeBranch = result.activeBranch;
+      else delete settings.activeBranch;
+      get().patchCruxMeta({ settings });
+    }
+    await get().saveMeta();
+  },
+
   createSnapshot: async (options = {}) => {
     // Desktop (ADR 0001): external edits may still be mid-ingest — a snapshot
     // must never capture a half-observed state. Resolves immediately on web.

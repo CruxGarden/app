@@ -4,6 +4,7 @@ import {
   collectChainMessages,
   detectPreviewArtifact,
   createSnapshotCore,
+  removeLatestSnapshotCore,
   createSnapshotIfChanged,
   workspaceUnchangedSinceTip,
   resolveSnapshotRef,
@@ -106,18 +107,25 @@ describe('detectPreviewArtifact', () => {
   });
 });
 
-function makeGrowthDeps(snapshotArtifacts: Artifact[]): {
+function makeGrowthDeps(
+  snapshotArtifacts: Artifact[],
+  snapshots: Record<string, Record<string, unknown>> = {},
+): {
   deps: GrowthDeps;
   created: {
     cruxes: Record<string, unknown>[];
     dimensions: Record<string, unknown>[];
     cruxUpdates: { id: string; input: Record<string, unknown> }[];
+    deletedCruxes: string[];
+    deletedArtifacts: { id: string; writeThrough: boolean | undefined }[];
   };
 } {
   const created = {
     cruxes: [] as Record<string, unknown>[],
     dimensions: [] as Record<string, unknown>[],
     cruxUpdates: [] as { id: string; input: Record<string, unknown> }[],
+    deletedCruxes: [] as string[],
+    deletedArtifacts: [] as { id: string; writeThrough: boolean | undefined }[],
   };
   const deps: GrowthDeps = {
     crux: {
@@ -125,16 +133,22 @@ function makeGrowthDeps(snapshotArtifacts: Artifact[]): {
         created.cruxes.push(input);
         return { id: 'snap-crux-1', ...input } as unknown as Crux;
       },
-      findById: async (id) => ({ id, meta: {} }) as Crux,
+      findById: async (id) => ({ id, meta: snapshots[id] ?? {} }) as Crux,
       update: async (id, input) => {
         created.cruxUpdates.push({ id, input });
         return {};
+      },
+      delete: async (id) => {
+        created.deletedCruxes.push(id);
       },
     },
     artifact: {
       computeSnapshotFingerprint: async () => 'fp-snapshot',
       cloneArtifactsToSnapshot: async () => {},
       findByResource: async () => snapshotArtifacts,
+      delete: async (id, opts) => {
+        created.deletedArtifacts.push({ id, writeThrough: opts?.writeThrough });
+      },
     },
     dimension: {
       create: async (input) => {
@@ -194,6 +208,74 @@ describe('createSnapshotCore', () => {
     expect((dimMeta.preview as { type: string }).type).toBe('html');
     expect(dimMeta.thumbnailId).toBe('art-preview.jpg');
     expect(result.artifactNames).toEqual(['index.html', 'preview.jpg']); // .keep excluded
+  });
+});
+
+describe('removeLatestSnapshotCore', () => {
+  const g = (id: string, targetId: string, weight: number) =>
+    ({ id, targetId, weight, meta: {} }) as unknown as Dimension;
+  const crux = (settings: Record<string, unknown> = {}) =>
+    ({ id: 'crux-1', title: 'T', meta: { settings } }) as unknown as Crux;
+
+  it('removes the tip, frees its artifacts quietly, and hands its messages back', async () => {
+    const { deps, created } = makeGrowthDeps([art('index.html'), art('preview.jpg')], {
+      'snap-1': { parentCruxId: null },
+      'snap-2': { parentCruxId: 'snap-1', messages: [{ role: 'user', content: 'later' }] },
+    });
+    const result = await removeLatestSnapshotCore(
+      { crux: crux(), growths: [g('g2', 'snap-2', 2), g('g1', 'snap-1', 1)] },
+      deps,
+    );
+    expect(result).toMatchObject({
+      growthId: 'g2',
+      snapshotCruxId: 'snap-2',
+      activeBranch: undefined,
+    });
+    expect(result!.restoredMessages.map((m) => m.content)).toEqual(['later']);
+    expect(created.deletedArtifacts.every((d) => d.writeThrough === false)).toBe(true);
+    expect(created.deletedArtifacts).toHaveLength(2);
+    expect(created.deletedCruxes).toEqual(['snap-2']);
+  });
+
+  it('moves the active branch back to the parent when the tip was the branch head', async () => {
+    const { deps } = makeGrowthDeps([], {
+      'snap-1': { parentCruxId: null },
+      'snap-2': { parentCruxId: 'snap-1' },
+    });
+    const moved = await removeLatestSnapshotCore(
+      {
+        crux: crux({ activeBranch: 'snap-2' }),
+        growths: [g('g1', 'snap-1', 1), g('g2', 'snap-2', 2)],
+      },
+      deps,
+    );
+    expect(moved!.activeBranch).toBe('snap-1');
+    // a root tip clears the setting
+    const cleared = await removeLatestSnapshotCore(
+      { crux: crux({ activeBranch: 'snap-1' }), growths: [g('g1', 'snap-1', 1)] },
+      deps,
+    );
+    expect(cleared!.activeBranch).toBeNull();
+  });
+
+  it('refuses a tip that another snapshot descends from, and does nothing with no history', async () => {
+    const { deps, created } = makeGrowthDeps([], {
+      'snap-1': { parentCruxId: null },
+      'snap-2': { parentCruxId: 'snap-1' },
+      'branch-a': { parentCruxId: 'snap-2' }, // a branch grew from the tip, then was listed later
+    });
+    // snap-2 is the highest weight but branch-a (lower weight? no — any) parents on it
+    await expect(
+      removeLatestSnapshotCore(
+        {
+          crux: crux(),
+          growths: [g('g1', 'snap-1', 1), g('gb', 'branch-a', 2), g('g2', 'snap-2', 3)],
+        },
+        deps,
+      ),
+    ).rejects.toThrow(/branch growing from it/);
+    expect(created.deletedCruxes).toEqual([]);
+    expect(await removeLatestSnapshotCore({ crux: crux(), growths: [] }, deps)).toBeNull();
   });
 });
 
