@@ -60,8 +60,11 @@ export async function openGardenPage(path: string): Promise<void> {
     ? path
     : `${gardenOrigin()}${path.startsWith('/') ? '' : '/'}${path}`;
   if (can(Capability.DesktopChrome)) {
-    const { openExternal } = await import('@/services/desktop');
-    await openExternal(url);
+    // openWeb, not openExternal: the shell's open-external IPC is locked to
+    // loopback preview URLs and silently drops an https one — which is why the
+    // Public Garden button used to do nothing.
+    const { openWeb } = await import('@/services/desktop');
+    await openWeb(url);
     return;
   }
   window.open(url, '_blank', 'noopener');
