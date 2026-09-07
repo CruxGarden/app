@@ -145,7 +145,9 @@ describe('write scope (B5)', () => {
   });
 
   it('a path that climbs out of the folder is refused before anything runs', async () => {
-    const execute = createToolExecutor(cruxId, undefined, undefined, { scope: { folder: 'posts' } });
+    const execute = createToolExecutor(cruxId, undefined, undefined, {
+      scope: { folder: 'posts' },
+    });
     // Input validation refuses traversal first; either way nothing is written
     expect(await execute('write_file', { path: 'posts/../index.html', content: 'x' })).toMatch(
       /^Error/,

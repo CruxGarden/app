@@ -50,6 +50,7 @@ export async function launchApp(
     }
     throw new Error(
       `${(err as Error).message}\n--- electron stdout/stderr ---\n${output || '(nothing printed)'}\n--- main.log ---\n${appLog}`,
+      { cause: err },
     );
   }
   await page.waitForLoadState('domcontentloaded');

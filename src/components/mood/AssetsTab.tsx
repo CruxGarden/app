@@ -20,7 +20,6 @@ import {
   setThemeOverrides,
 } from '@/lib/moods/active';
 import { useAudioStore } from '@/stores/audioStore';
-import { createLayer } from '@/audio/schema';
 
 /**
  * The Assets tab: files you bring into your Mood — images for backgrounds,
@@ -90,19 +89,11 @@ export default function AssetsTab() {
     await setBackgroundImage(a.fingerprint);
     say(`"${a.name}" is the background.`);
   };
-  const addMusicLayer = async (a: MoodAsset, type: 'music' | 'sample') => {
-    const s = useAudioStore.getState();
-    if (!s.mixes.length) s.init();
-    const st = useAudioStore.getState();
-    const mix = st.mixes.find((m) => m.id === st.activeMixId);
-    if (!mix) return;
-    const layer = createLayer(type, {
-      name: a.name.replace(/\.[^.]+$/, ''),
-      gain: -10,
-      params: { fingerprint: a.fingerprint, fileName: a.name },
-    });
-    await st.upsertMix({ ...mix, layers: [...mix.layers, layer] });
-    say(`Added "${layer.name}" as a ${type} layer to "${mix.name}".`);
+  const makeTrack = async (a: MoodAsset) => {
+    await useAudioStore
+      .getState()
+      .setTrack({ fingerprint: a.fingerprint, name: a.name.replace(/\.[^.]+$/, ''), type: a.type });
+    say(`"${a.name}" is the Mood's track.`);
   };
 
   return (
@@ -120,8 +111,8 @@ export default function AssetsTab() {
       >
         <p className="text-sm text-heading">Bring your own files</p>
         <p className="text-xs text-text-muted mt-1 mb-3">
-          Images for backgrounds, textures and covers · audio for music and sample layers · fonts
-          (.woff2, .ttf) for the type. They live in your garden and travel inside the Mood Package.
+          Images for backgrounds, textures and covers · audio for the Mood's track · fonts (.woff2,
+          .ttf) for the type. They live in your garden and travel inside the Mood Package.
         </p>
         <Button size="sm" onClick={() => fileRef.current?.click()} disabled={busy}>
           {busy ? 'Adding…' : 'Add files'}
@@ -225,22 +216,9 @@ export default function AssetsTab() {
                     </>
                   )}
                   {a.kind === 'audio' && (
-                    <>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => void addMusicLayer(a, 'music')}
-                      >
-                        Music layer
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => void addMusicLayer(a, 'sample')}
-                      >
-                        Sample layer
-                      </Button>
-                    </>
+                    <Button variant="ghost" size="sm" onClick={() => void makeTrack(a)}>
+                      Use as track
+                    </Button>
                   )}
                   {a.kind === 'font' &&
                     (

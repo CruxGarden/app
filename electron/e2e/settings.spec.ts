@@ -21,7 +21,7 @@ test.describe('settings & mood', () => {
       await page.getByRole('button', { name: 'Mood', exact: true }).click();
       const mood = page.getByRole('heading', { name: 'Mood' });
       await expect(mood).toBeVisible();
-      await page.getByRole('button', { name: 'Themes', exact: true }).click();
+      await page.getByRole('button', { name: 'Theme', exact: true }).click();
       await page.getByRole('button', { name: 'Ivory' }).click();
       await expect(html).toHaveClass(/\blight\b/);
       await page.getByRole('button', { name: 'Obsidian' }).click();

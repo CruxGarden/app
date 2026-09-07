@@ -1,220 +1,168 @@
 /**
- * Resonance state the UI reads: what's playing, the mixes, volume, level.
- * The engine (Tone.js) is loaded lazily on first play so it never lands in
- * the boot bundle. Persists what the user chose.
+ * Sound state the UI reads: the Mood's track, whether it plays, volume, level.
+ * The player (an <audio> element through WebAudio) is loaded lazily on first
+ * play so it never lands in the boot bundle. Persists what the user chose.
  */
 import { create } from 'zustand';
-import type { Mix } from '@/audio/schema';
-import * as persist from '@/services/resonance';
-import { nextPlaylistIndex, type Playlist } from '@/audio/playlist';
-import { cuesPlayedCount } from '@/services/cues';
+import * as persist from '@/services/sound';
+import type { SoundTrack } from '@/services/sound';
+import { cuesPlayedCount, type CueKind } from '@/services/cues';
 
-type EngineModule = typeof import('@/audio/engine');
-let enginePromise: Promise<EngineModule['engine']> | null = null;
-/** Outside a browser (unit tests) the store still works; the engine is a no-op. */
-const NOOP_ENGINE = {
+type PlayerModule = typeof import('@/audio/track');
+let playerPromise: Promise<PlayerModule['trackPlayer']> | null = null;
+/** Outside a browser (unit tests) the store still works; the player is a no-op. */
+const NOOP_PLAYER = {
   onChange: () => () => {},
-  setVolume: () => {},
+  load: async () => {},
   play: async () => {},
-  update: () => {},
   pause: () => {},
+  setVolume: () => {},
   duck: () => {},
-  cue: async () => {},
-  suspend: () => {},
-  resume: () => {},
-} as unknown as EngineModule['engine'];
+  context: () => null,
+  playing: false,
+} as unknown as PlayerModule['trackPlayer'];
 
-async function getEngine() {
-  if (typeof window === 'undefined' || typeof AudioContext === 'undefined') return NOOP_ENGINE;
-  if (!enginePromise) {
-    enginePromise = import('@/audio/engine').then((m) => {
-      m.engine.onChange((snap) => {
+async function getPlayer() {
+  if (typeof window === 'undefined' || typeof Audio === 'undefined') return NOOP_PLAYER;
+  if (!playerPromise) {
+    playerPromise = import('@/audio/track').then((m) => {
+      m.trackPlayer.onChange((snap) => {
         useAudioStore.setState({
           level: snap.level,
           contextState: snap.contextState,
           ducked: snap.ducked,
         });
       });
-      return m.engine;
+      return m.trackPlayer;
     });
   }
-  return enginePromise;
+  return playerPromise;
+}
+
+/** Where the bytes are: a Blob Store object URL, or the shipped file's URL. */
+async function resolveTrackUrl(track: SoundTrack | null): Promise<string | null> {
+  if (!track) return null;
+  if (
+    track.fingerprint &&
+    typeof URL !== 'undefined' &&
+    typeof URL.createObjectURL === 'function'
+  ) {
+    try {
+      const { blobObjectUrl } = await import('@/services/blobs');
+      return await blobObjectUrl(track.fingerprint, track.type);
+    } catch {
+      /* fall through to the url, if any */
+    }
+  }
+  return track.url ?? null;
 }
 
 export interface AudioState {
-  mixes: Mix[];
-  activeMixId: string;
+  /** The Mood's track; null when the Mood has no sound */
+  track: SoundTrack | null;
+  /** Sound switched on for this Mood */
+  enabled: boolean;
   playing: boolean;
   /** 0..1 */
   volume: number;
+  /** 0..1 level for the bars */
   level: number;
   contextState: 'suspended' | 'running' | 'closed' | 'none';
   ducked: boolean;
+  /** the user pressed play once — sound may resume on launch, cues may sound */
   optIn: boolean;
-  playlist: Playlist;
-  /** Index into playlist.items of what is playing (-1 when the playlist is off). */
-  playlistIndex: number;
-  setPlaylist: (pl: Playlist) => void;
-  /** Load persisted state; called once from the Dock. */
+
   init: () => void;
   play: () => Promise<void>;
   pause: () => void;
   toggle: () => Promise<void>;
-  next: () => Promise<void>;
-  selectMix: (id: string, crossfadeSec?: number) => Promise<void>;
   setVolume: (v: number) => void;
-  /** Replace or add a Mix (edits from the Mixer / the AI). */
-  upsertMix: (mix: Mix) => Promise<void>;
-  deleteMix: (id: string) => void;
+  setEnabled: (on: boolean) => void;
+  /** Change the track (null removes it); keeps playing when it was. */
+  setTrack: (track: SoundTrack | null) => Promise<void>;
   duck: (on: boolean) => Promise<void>;
-  cue: (kind: 'chime' | 'tick' | 'bloom' | 'thud') => Promise<void>;
+  cue: (kind: CueKind) => Promise<void>;
 }
 
 let initialised = false;
-let advanceTimer: ReturnType<typeof setTimeout> | null = null;
-
-/** (Re)arm the playlist timer for the current item; clears it when not applicable. */
-function schedule(get: () => AudioState, set: (p: Partial<AudioState>) => void) {
-  if (advanceTimer) clearTimeout(advanceTimer);
-  advanceTimer = null;
-  const { playing, playlist, playlistIndex, activeMixId } = get();
-  if (!playing || !playlist.enabled || playlist.items.length === 0) return;
-  let idx = playlistIndex;
-  if (idx < 0 || playlist.items[idx]?.mixId !== activeMixId) {
-    idx = playlist.items.findIndex((it) => it.mixId === activeMixId);
-    if (idx < 0) {
-      // Not on the playlist: jump onto it
-      set({ playlistIndex: 0 });
-      void get().selectMix(playlist.items[0]!.mixId, playlist.items[0]!.crossfadeSec);
-      return;
-    }
-    set({ playlistIndex: idx });
-  }
-  const item = playlist.items[idx]!;
-  advanceTimer = setTimeout(() => void get().next(), Math.max(1000, item.minutes * 60_000));
-}
 
 export const useAudioStore = create<AudioState>((set, get) => ({
-  mixes: [],
-  activeMixId: '',
+  track: null,
+  enabled: true,
   playing: false,
   volume: 0.7,
   level: 0,
   contextState: 'none',
   ducked: false,
   optIn: false,
-  playlist: { enabled: false, shuffle: false, items: [] },
-  playlistIndex: -1,
-
-  setPlaylist: (pl) => {
-    persist.savePlaylist(pl);
-    set({ playlist: pl });
-    schedule(get, set);
-  },
 
   init: () => {
     if (initialised) return;
     initialised = true;
-    const mixes = persist.getMixes();
-    const saved = persist.getActiveMixId();
-    const activeMixId = mixes.some((m) => m.id === saved) ? saved : mixes[0]!.id;
     set({
-      mixes,
-      activeMixId,
+      track: persist.getTrack(),
+      enabled: persist.getEnabled(),
       volume: persist.getVolume(),
       optIn: persist.getOptIn(),
-      playlist: persist.getPlaylist(mixes.map((m) => m.id)),
     });
     // Sound resumes on launch only if the user opted in and left it playing.
     if (persist.getOptIn() && persist.getWasPlaying()) void get().play();
-    if (typeof document !== 'undefined') {
-      document.addEventListener('visibilitychange', () => {
-        void getEngine().then((e) => (document.hidden ? e.suspend() : e.resume()));
-      });
-    }
   },
 
   play: async () => {
-    const { mixes, activeMixId, volume } = get();
-    const mix = mixes.find((m) => m.id === activeMixId) ?? mixes[0];
-    if (!mix) return;
-    const e = await getEngine();
-    e.setVolume(volume);
-    await e.play(mix);
+    const { track, volume, enabled } = get();
+    if (!track || !enabled) return;
+    const url = await resolveTrackUrl(track);
+    if (!url) return;
+    const p = await getPlayer();
+    p.setVolume(volume);
+    await p.load(url);
+    await p.play();
     persist.setOptIn(true);
     persist.setWasPlaying(true);
     set({ playing: true, optIn: true });
-    schedule(get, set);
   },
 
   pause: () => {
-    void getEngine().then((e) => e.pause());
+    void getPlayer().then((p) => p.pause());
     persist.setWasPlaying(false);
     set({ playing: false });
-    schedule(get, set);
   },
 
   toggle: async () => (get().playing ? get().pause() : get().play()),
-
-  next: async () => {
-    const { mixes, activeMixId, playlist, playlistIndex } = get();
-    if (playlist.enabled && playlist.items.length) {
-      const idx = nextPlaylistIndex(playlist, playlistIndex);
-      const item = playlist.items[idx];
-      if (item) {
-        set({ playlistIndex: idx });
-        await get().selectMix(item.mixId, playlist.items[idx]?.crossfadeSec);
-        return;
-      }
-    }
-    const i = mixes.findIndex((m) => m.id === activeMixId);
-    const nextMix = mixes[(i + 1) % mixes.length];
-    if (nextMix) await get().selectMix(nextMix.id);
-  },
-
-  selectMix: async (id, crossfadeSec) => {
-    const mix = get().mixes.find((m) => m.id === id);
-    if (!mix) return;
-    persist.setActiveMixId(id);
-    // Keep the playlist cursor honest when the user picks a mix by hand
-    const idx = get().playlist.items.findIndex((it) => it.mixId === id);
-    set({ activeMixId: id, playlistIndex: idx });
-    if (get().playing) await (await getEngine()).play(mix, crossfadeSec);
-    schedule(get, set);
-  },
 
   setVolume: (v) => {
     const vol = Math.min(1, Math.max(0, v));
     persist.setVolume(vol);
     set({ volume: vol });
-    void getEngine().then((e) => e.setVolume(vol));
+    void getPlayer().then((p) => p.setVolume(vol));
   },
 
-  upsertMix: async (mix) => {
-    // The engine is the last line of defence: a Mix it refuses must not be
-    // persisted, or the next launch would rebuild the same broken graph.
-    if (get().activeMixId === mix.id) (await getEngine()).update(mix);
-    const mixes = get().mixes.some((m) => m.id === mix.id)
-      ? get().mixes.map((m) => (m.id === mix.id ? mix : m))
-      : [...get().mixes, mix];
-    persist.saveMixes(mixes);
-    set({ mixes });
+  setEnabled: (on) => {
+    persist.setEnabled(on);
+    set({ enabled: on });
+    if (!on && get().playing) get().pause();
   },
 
-  deleteMix: (id) => {
-    const mixes = get().mixes.filter((m) => m.id !== id);
-    if (mixes.length === 0) return;
-    persist.saveMixes(mixes);
-    set({ mixes });
-    const pl = get().playlist;
-    if (pl.items.some((it) => it.mixId === id)) {
-      get().setPlaylist({ ...pl, items: pl.items.filter((it) => it.mixId !== id) });
+  setTrack: async (track) => {
+    persist.setTrack(track);
+    set({ track });
+    if (!track) {
+      if (get().playing) get().pause();
+      return;
     }
-    if (get().activeMixId === id) void get().selectMix(mixes[0]!.id);
+    if (get().playing) {
+      const url = await resolveTrackUrl(track);
+      if (url) await (await getPlayer()).load(url);
+    }
   },
 
-  duck: async (on) => (await getEngine()).duck(on),
-  cue: async (kind) => (await getEngine()).cue(kind),
+  duck: async (on) => (await getPlayer()).duck(on),
+  cue: async (kind) => {
+    const { playCueSound } = await import('@/audio/cues');
+    const p = await getPlayer();
+    await playCueSound(kind, p.context());
+  },
 }));
 
 // Test/diagnostic hook: read-only view of the audio state.
@@ -224,18 +172,13 @@ if (typeof window !== 'undefined') {
       const s = useAudioStore.getState();
       return {
         playing: s.playing,
-        activeMixId: s.activeMixId,
-        mixName: s.mixes.find((m) => m.id === s.activeMixId)?.name ?? null,
-        layerCount: s.mixes.find((m) => m.id === s.activeMixId)?.layers.length ?? 0,
-        layerTypes: s.mixes.find((m) => m.id === s.activeMixId)?.layers.map((l) => l.type) ?? [],
-        mixCount: s.mixes.length,
+        trackName: s.track?.name ?? null,
+        enabled: s.enabled,
         volume: s.volume,
         contextState: s.contextState,
         optIn: s.optIn,
         ducked: s.ducked,
         level: s.level,
-        playlistIndex: s.playlistIndex,
-        playlistEnabled: s.playlist.enabled,
         cuesPlayed: cuesPlayedCount(),
       };
     },

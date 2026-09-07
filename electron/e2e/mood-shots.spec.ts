@@ -41,13 +41,6 @@ test.describe('bundled mood screenshots', () => {
         (n) => getComputedStyle(document.documentElement).getPropertyValue(n).trim(),
         name,
       );
-    const mixName = () =>
-      page.evaluate(
-        () =>
-          (
-            window as unknown as { __cruxAudio: { state: () => { mixName: string | null } } }
-          ).__cruxAudio.state().mixName,
-      );
     try {
       await page.getByRole('button', { name: /enter/i }).click();
       await page.getByText('Plant a new garden').click();
@@ -67,13 +60,12 @@ test.describe('bundled mood screenshots', () => {
         .catch(() => {});
 
       for (const id of IDS) {
-        const before = { accent: await cssVar('--accent'), mix: await mixName() };
+        const before = { accent: await cssVar('--accent') };
         await page.getByRole('button', { name: 'Mood', exact: true }).click();
         const built = page.getByTestId('bundled-moods');
         await built.getByTestId(`bundled-${id}`).getByRole('button', { name: 'Apply' }).click();
-        // Applied: the palette and the soundscape both moved off the previous Mood's
+        // Applied: the palette moved off the previous Mood's
         await expect.poll(() => cssVar('--accent')).not.toBe(before.accent);
-        await expect.poll(mixName).not.toBe(before.mix);
         await page.keyboard.press('Escape');
         await expect(page.getByTestId('bundled-moods')).toHaveCount(0);
         if (id === 'graphite') {

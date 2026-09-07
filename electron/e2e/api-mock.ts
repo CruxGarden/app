@@ -189,7 +189,7 @@ export async function startMockApi(): Promise<MockApi> {
       const items = Object.values(state.cruxes)
         .filter((c) => c.visibility === 'public' && c.discoverable !== false)
         .filter((c) => !kind || c.kind === kind)
-        .filter((c) => !author || AUTHOR.username.toLowerCase().startsWith(author))
+        .filter(() => !author || AUTHOR.username.toLowerCase().startsWith(author))
         .filter((c) => {
           const mine = (
             ((c.meta as Record<string, unknown> | undefined)?.tags as string[] | undefined) ?? []

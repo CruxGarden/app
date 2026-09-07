@@ -12,6 +12,7 @@ import {
   setThemePreview,
   type MoodSection,
   type ThemeOverrides,
+  onThemeOverridesChange,
 } from '@/lib/moods/active';
 import {
   groupTokens,
@@ -280,10 +281,18 @@ export default function ThemeTokensTab() {
   const resolveColor = useColorResolver(() => setTick((t) => t + 1));
   const fileRef = useRef<HTMLInputElement>(null);
 
-  // The mode can change under us (a preset from the other section was picked)
+  // The mode can change under us (a preset from the other section was picked),
+  // and other editors write overrides too (a file card sets a texture token).
   useEffect(() => {
     setOverrides(getThemeOverrides(section));
   }, [section, preset?.id]);
+  useEffect(
+    () =>
+      onThemeOverridesChange((s) => {
+        if (s === section) setOverrides(getThemeOverrides(section));
+      }),
+    [section],
+  );
 
   const commit = useCallback(
     (next: ThemeOverrides) => {

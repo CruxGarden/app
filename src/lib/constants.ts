@@ -48,14 +48,15 @@ export enum SettingsKey {
   /** Presets the user saved from the Mood Builder (JSON array) */
   MoodUserPresets = 'cruxgarden:moodUserPresets',
 
-  // Resonance Sound Mixer
-  ResonanceMixes = 'cruxgarden:resonanceMixes',
-  ResonanceActiveMix = 'cruxgarden:resonanceActiveMix',
+  // Sound — the Mood's track (see audio/track.ts)
+  /** The track the Mood plays (JSON: fingerprint or url, name, type) */
+  SoundTrack = 'cruxgarden:soundTrack',
+  /** Sound switched on for this Mood ('' = off) */
+  SoundEnabled = 'cruxgarden:soundEnabled',
   ResonanceVolume = 'cruxgarden:resonanceVolume',
   ResonanceOptIn = 'cruxgarden:resonanceOptIn',
   ResonancePlaying = 'cruxgarden:resonancePlaying',
   MoodDockState = 'cruxgarden:moodDockState',
-  ResonancePlaylist = 'cruxgarden:resonancePlaylist',
   ResonanceCues = 'cruxgarden:resonanceCues',
   /** Installed Mood Packages (JSON array, binaries by fingerprint in the Blob Store) */
   MoodPackages = 'cruxgarden:moodPackages',

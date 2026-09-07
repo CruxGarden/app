@@ -119,7 +119,7 @@ test('Spring Morning gives the body the header space and reveals controls on hov
   }
 });
 
-test('GeoCities applies its stars, bevels, pixel icons and MIDI-style Mix; reduced motion stops the pop', async () => {
+test('GeoCities applies its stars, bevels and pixel icons; reduced motion stops the pop', async () => {
   const { app, page } = await launchApp();
   try {
     await openWorkspace(page);
@@ -133,7 +133,8 @@ test('GeoCities applies its stars, bevels, pixel icons and MIDI-style Mix; reduc
       'background-size',
       '72px 72px, 72px 72px, 72px 72px',
     );
-    await expect(page.getByRole('region', { name: 'Mood Bar' })).toContainText('Webring Radio');
+    // GeoCities is quiet (no track of its own yet): the bar says so, sound stays on
+    await expect(page.getByRole('region', { name: 'Mood Bar' })).toContainText('No track');
     await page.mouse.move(0, 0);
     await page.screenshot({ path: test.info().outputPath('geocities-workspace.png') });
 

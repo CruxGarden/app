@@ -94,10 +94,16 @@ describe('captionTasksFor (B5)', () => {
     const all = tasks.flatMap((t) => t.scope.paths!);
     expect(all).toHaveLength(23);
     expect(new Set(all).size).toBe(23);
-    expect(tasks[0]!.instructions).toContain('- src/pages/photos/p1.md — image: public/images/p1.jpg');
+    expect(tasks[0]!.instructions).toContain(
+      '- src/pages/photos/p1.md — image: public/images/p1.jpg',
+    );
     expect(tasks[0]!.instructions).toContain('read_file on the image');
     expect(tasks[0]!.instructions).toContain('Keep the frontmatter exactly as it is');
-    expect(tasks[2]!.scope.paths).toEqual(items(23).slice(16).map((i) => i.path));
+    expect(tasks[2]!.scope.paths).toEqual(
+      items(23)
+        .slice(16)
+        .map((i) => i.path),
+    );
   });
 
   it('never exceeds the task maximum — batches grow instead', () => {

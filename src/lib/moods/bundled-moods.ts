@@ -1,19 +1,23 @@
 /**
- * Bundled Moods — complete looks-and-sounds that ship with the app: a theme
- * preset (plus a few extra tokens), a background, a composed soundscape,
- * cues and a persona voice. They are ordinary Mood Packages, so Apply, Export
- * and Publish work exactly as for a Mood someone made; they carry no binary
- * assets (textures and backgrounds are CSS; sound is synthesized).
+ * Bundled Moods — complete looks that ship with the app: a theme preset (plus
+ * a few extra tokens), a background, a persona voice, cues, and — where a
+ * Mood has one — a track. They are ordinary Mood Packages, so Apply, Export
+ * and Publish work exactly as for a Mood someone made. Most carry no binary
+ * assets (textures and backgrounds are CSS); The Keeper ships its own
+ * background, avatar and track as files inside the app (`bundled`).
  *
- * The point is range: distinct
- * rooms — shapes, type, density, motion and sound all move together.
+ * The point is range: distinct rooms — shapes, type, density, motion and
+ * voice all move together.
  */
 import { MOOD_PRESETS } from './presets';
 import type { MoodPackage } from './packages';
-import { createLayer, createMix, type Mix, type Layer, type LayerType } from '@/audio/schema';
 import { BgType } from '@/lib/types';
 import { DEFAULT_CUES, type SoundCues } from '@/services/cues';
 import type { PersonaSettings } from '@/services/persona';
+import { DEFAULT_PERSONA } from '@/services/persona';
+import keeperVista from '@/assets/moods/keeper/vista.jpg?url';
+import keeperAvatar from '@/assets/moods/keeper/keeper-avatar.png?url';
+import keeperTrack from '@/assets/moods/keeper/echoes-beyond-the-signal.opus?url';
 
 const CREATED = '2026-09-04T00:00:00.000Z';
 
@@ -23,74 +27,54 @@ function preset(id: string) {
   return p;
 }
 
-type L = Partial<Layer> & { type: LayerType };
-function layer(
-  type: LayerType,
-  id: string,
-  gain: number,
-  params: Record<string, number | string | boolean> = {},
-  effects: Layer['effects'] = [],
-): L {
-  return { type, id, gain, params, effects };
-}
-function mix(over: Omit<Partial<Mix>, 'layers'> & { id: string; name: string; layers: L[] }): Mix {
-  const { layers, ...rest } = over;
-  return createMix({
-    ...rest,
-    layers: layers.map((l) => createLayer(l.type, l)),
-  });
-}
-
 interface Spec {
   id: string;
   name: string;
   presetId: string;
   extra?: Record<string, string>;
   background: { type: BgType };
-  mixes: Mix[];
   cues?: Partial<SoundCues>;
   volume?: number;
   persona: Pick<PersonaSettings, 'name' | 'greeting' | 'systemPrompt'>;
+  /** Files shipped inside the app — see MoodPackage.bundled */
+  bundled?: MoodPackage['bundled'];
 }
 
+/**
+ * The Keeper — the Default Mood. The garden at dusk (Crux Garden's own vista),
+ * the Moss theme, the Keeper's voice and face, and one looping track,
+ * "Echoes Beyond the Signal". Ships as files; apply ingests them.
+ */
+const THE_KEEPER: Spec = {
+  id: 'the-keeper',
+  name: 'The Keeper',
+  presetId: 'moss',
+  extra: {
+    // the vista carries the room: no bloom, a soft dim so panels stay legible
+    bgImageDim: '0.35',
+    bgImageBlur: '0px',
+  },
+  background: { type: BgType.Image },
+  volume: 0.5,
+  persona: {
+    name: DEFAULT_PERSONA.name,
+    greeting: DEFAULT_PERSONA.greeting,
+    systemPrompt: DEFAULT_PERSONA.systemPrompt,
+  },
+  bundled: {
+    background: keeperVista,
+    avatar: keeperAvatar,
+    track: { url: keeperTrack, name: 'Echoes Beyond the Signal', type: 'audio/ogg' },
+  },
+};
+
 const SPECS: Spec[] = [
+  THE_KEEPER,
   {
     id: 'rainy-day-cafe',
     name: 'Rainy Day Café',
     presetId: 'rainy-day-cafe',
     background: { type: BgType.Drift },
-    mixes: [
-      mix({
-        id: 'rdc-window-seat',
-        name: 'Window Seat',
-        root: 'Eb',
-        scale: 'major',
-        tempo: 58,
-        seed: 412,
-        layers: [
-          layer('rain', 'rdc-rain', -16, { intensity: 0.55, brightness: 0.3, drops: 0.45 }),
-          layer(
-            'keys',
-            'rdc-piano',
-            -20,
-            {
-              instrument: 'piano',
-              progression: 'wistful',
-              voicing: 'seventh',
-              rhythm: 'whole',
-              octave: 4,
-              humanize: 0.7,
-              wobble: 0,
-              tone: 0.45,
-            },
-            [{ type: 'reverb', enabled: true, params: { decay: 5, wet: 0.35 } }],
-          ),
-          layer('noise', 'rdc-murmur', -34, { color: 'brown', cutoff: 0.2, drift: 0.3 }),
-          layer('vinyl', 'rdc-dust', -30, { crackle: 0.2, dust: 0.35, hum: 0.05 }),
-        ],
-        master: { reverbDecay: 4, reverbWet: 0.22, volume: 0 },
-      }),
-    ],
     cues: { message: null, toolDone: null, snapshot: null, published: 'chime', error: 'thud' },
     volume: 0.5,
     persona: {
@@ -105,51 +89,6 @@ const SPECS: Spec[] = [
     name: 'Spring Morning',
     presetId: 'spring-morning',
     background: { type: BgType.Bloom },
-    mixes: [
-      mix({
-        id: 'spring-first-light',
-        name: 'First Light',
-        root: 'A',
-        scale: 'lydian',
-        tempo: 66,
-        seed: 321,
-        layers: [
-          layer('melody', 'spring-birds', -24, {
-            instrument: 'sine',
-            octave: 6,
-            density: 0.14,
-            humanize: 0.8,
-            echo: 0.3,
-          }),
-          layer(
-            'keys',
-            'spring-bells',
-            -26,
-            {
-              instrument: 'bells',
-              progression: 'static',
-              voicing: 'triad',
-              rhythm: 'arp',
-              octave: 5,
-              humanize: 0.6,
-              wobble: 0,
-              tone: 0.8,
-            },
-            [{ type: 'reverb', enabled: true, params: { decay: 6, wet: 0.4 } }],
-          ),
-          layer('pad', 'spring-pad', -26, {
-            waveform: 'sine',
-            octave: 4,
-            attack: 7,
-            release: 12,
-            shimmer: 0.2,
-            changeEvery: 16,
-          }),
-          layer('wind', 'spring-breeze', -32, { strength: 0.2, gust: 0.2, height: 0.7 }),
-        ],
-        master: { reverbDecay: 5, reverbWet: 0.3, volume: 0 },
-      }),
-    ],
     cues: { message: null, toolDone: null, snapshot: 'bloom', published: 'bloom', error: 'thud' },
     volume: 0.45,
     persona: {
@@ -164,53 +103,6 @@ const SPECS: Spec[] = [
     name: 'Snowed In',
     presetId: 'snowed-in',
     background: { type: BgType.Drift },
-    mixes: [
-      mix({
-        id: 'snow-hush',
-        name: 'Hush',
-        root: 'F',
-        scale: 'major',
-        tempo: 46,
-        seed: 1212,
-        layers: [
-          layer('noise', 'snow-air', -26, { color: 'pink', cutoff: 0.18, drift: 0.2 }, [
-            { type: 'filter', enabled: true, params: { kind: 'lowpass', frequency: 900, q: 0.5 } },
-          ]),
-          layer(
-            'pad',
-            'snow-pad',
-            -22,
-            {
-              waveform: 'triangle',
-              octave: 3,
-              attack: 8,
-              release: 14,
-              shimmer: 0.25,
-              changeEvery: 16,
-            },
-            [
-              {
-                type: 'filter',
-                enabled: true,
-                params: { kind: 'lowpass', frequency: 1800, q: 0.4 },
-              },
-            ],
-          ),
-          layer('keys', 'snow-keys', -26, {
-            instrument: 'rhodes',
-            progression: 'gospel',
-            voicing: 'seventh',
-            rhythm: 'whole',
-            octave: 4,
-            humanize: 0.7,
-            wobble: 0.1,
-            tone: 0.3,
-          }),
-          layer('wind', 'snow-wind', -34, { strength: 0.25, gust: 0.15, height: 0.4 }),
-        ],
-        master: { reverbDecay: 8, reverbWet: 0.35, volume: 0 },
-      }),
-    ],
     cues: { message: null, toolDone: null, snapshot: null, published: 'chime', error: 'thud' },
     volume: 0.45,
     persona: {
@@ -241,35 +133,6 @@ const SPECS: Spec[] = [
       moodBarRadius: '2px',
     },
     background: { type: BgType.Flow },
-    mixes: [
-      mix({
-        id: 'br-neon-rain',
-        name: 'Neon Rain',
-        root: 'D',
-        scale: 'minor',
-        tempo: 56,
-        seed: 2019,
-        layers: [
-          layer('rain', 'br-rain', -14, { intensity: 0.75, brightness: 0.35, drops: 0.7 }),
-          layer(
-            'drone',
-            'br-drone',
-            -16,
-            { waveform: 'fatsawtooth', chord: 'minor7', octave: 1, cutoff: 0.3, movement: 0.5 },
-            [{ type: 'chorus', enabled: true, params: { rate: 0.2, depth: 0.6, wet: 0.4 } }],
-          ),
-          layer(
-            'melody',
-            'br-lead',
-            -20,
-            { instrument: 'sine', octave: 5, density: 0.12, humanize: 0.5, echo: 0.7 },
-            [{ type: 'delay', enabled: true, params: { time: 0.75, feedback: 0.5, wet: 0.5 } }],
-          ),
-          layer('vinyl', 'br-hum', -30, { crackle: 0.15, dust: 0.3, hum: 0.35 }),
-        ],
-        master: { reverbDecay: 9, reverbWet: 0.4, volume: 0 },
-      }),
-    ],
     cues: { toolDone: 'tick', published: 'bloom', error: 'thud', message: null, snapshot: null },
     volume: 0.6,
     persona: {
@@ -285,94 +148,6 @@ const SPECS: Spec[] = [
     name: 'Lofi Study Café',
     presetId: 'lofi-cafe',
     background: { type: BgType.Bloom },
-    mixes: [
-      mix({
-        id: 'lofi-cafe-mix',
-        name: 'Study Beats',
-        root: 'F',
-        scale: 'major',
-        tempo: 74,
-        seed: 7,
-        layers: [
-          layer(
-            'keys',
-            'lc-keys',
-            -14,
-            {
-              instrument: 'rhodes',
-              progression: 'lofi',
-              voicing: 'seventh',
-              rhythm: 'half',
-              octave: 4,
-              humanize: 0.5,
-              wobble: 0.35,
-              tone: 0.5,
-            },
-            [{ type: 'tape', enabled: true, params: { wobble: 0.35, warmth: 0.5 } }],
-          ),
-          layer(
-            'beat',
-            'lc-beat',
-            -16,
-            { pattern: 'lofi', density: 0.7, swing: 0.6, tone: 0.45, hats: 0.55, humanize: 0.5 },
-            [{ type: 'bitcrusher', enabled: true, params: { bits: 8, wet: 0.25 } }],
-          ),
-          layer('bass', 'lc-bass', -16, {
-            pattern: 'root',
-            progression: 'lofi',
-            octave: 2,
-            tone: 0.35,
-            glide: 0.25,
-          }),
-          layer('vinyl', 'lc-vinyl', -22, { crackle: 0.5, dust: 0.4, hum: 0.1 }),
-          layer('rain', 'lc-rain', -30, { intensity: 0.25, brightness: 0.3, drops: 0.2 }),
-        ],
-        master: { reverbDecay: 2.5, reverbWet: 0.18, volume: 0 },
-      }),
-      mix({
-        id: 'lofi-cafe-late',
-        name: 'Late Shift',
-        root: 'Bb',
-        scale: 'dorian',
-        tempo: 68,
-        seed: 11,
-        layers: [
-          layer(
-            'keys',
-            'll-keys',
-            -15,
-            {
-              instrument: 'guitar',
-              progression: 'jazz',
-              voicing: 'seventh',
-              rhythm: 'stabs',
-              octave: 4,
-              humanize: 0.6,
-              wobble: 0.2,
-              tone: 0.45,
-            },
-            [{ type: 'tape', enabled: true, params: { wobble: 0.25, warmth: 0.6 } }],
-          ),
-          layer('beat', 'll-beat', -18, {
-            pattern: 'half',
-            density: 0.6,
-            swing: 0.62,
-            tone: 0.4,
-            hats: 0.4,
-            humanize: 0.6,
-          }),
-          layer('bass', 'll-bass', -17, {
-            pattern: 'walk',
-            progression: 'jazz',
-            octave: 2,
-            tone: 0.4,
-            glide: 0.35,
-          }),
-          layer('vinyl', 'll-vinyl', -24, { crackle: 0.6, dust: 0.5, hum: 0.05 }),
-        ],
-        master: { reverbDecay: 3, reverbWet: 0.22, volume: 0 },
-      }),
-    ],
     cues: { toolDone: null, published: 'chime', snapshot: null, error: 'thud', message: null },
     volume: 0.55,
     persona: {
@@ -400,21 +175,6 @@ const SPECS: Spec[] = [
       moodBarShadow: 'inset 1px 1px 0 #ffffff, inset -1px -1px 0 #808080',
     },
     background: { type: BgType.Blank },
-    mixes: [
-      mix({
-        id: 'w95-silence',
-        name: 'Office Hum',
-        root: 'C',
-        scale: 'major',
-        tempo: 90,
-        seed: 95,
-        layers: [
-          layer('noise', 'w95-fan', -34, { color: 'brown', cutoff: 0.25, drift: 0.1 }),
-          layer('vinyl', 'w95-hum', -40, { crackle: 0, dust: 0, hum: 0.5 }),
-        ],
-        master: { reverbDecay: 0.5, reverbWet: 0, volume: 0 },
-      }),
-    ],
     cues: {
       message: 'tick',
       toolDone: 'tick',
@@ -435,36 +195,6 @@ const SPECS: Spec[] = [
     name: 'Solarpunk Garden',
     presetId: 'solarpunk-garden',
     background: { type: BgType.Bloom },
-    mixes: [
-      mix({
-        id: 'sp-canopy',
-        name: 'Canopy',
-        root: 'G',
-        scale: 'lydian',
-        tempo: 50,
-        seed: 33,
-        layers: [
-          layer('wind', 'sp-wind', -20, { strength: 0.45, gust: 0.35, height: 0.85 }),
-          layer('pad', 'sp-pad', -18, {
-            waveform: 'fattriangle',
-            octave: 3,
-            attack: 6,
-            release: 10,
-            shimmer: 0.5,
-            changeEvery: 12,
-          }),
-          layer('melody', 'sp-melody', -22, {
-            instrument: 'triangle',
-            octave: 5,
-            density: 0.2,
-            humanize: 0.5,
-            echo: 0.5,
-          }),
-          layer('rain', 'sp-leaves', -34, { intensity: 0.15, brightness: 0.7, drops: 0.5 }),
-        ],
-        master: { reverbDecay: 7, reverbWet: 0.35, volume: 0 },
-      }),
-    ],
     cues: { toolDone: null, snapshot: 'bloom', published: 'bloom', error: 'thud', message: null },
     volume: 0.6,
     persona: {
@@ -487,65 +217,6 @@ const SPECS: Spec[] = [
       grainOpacity: '0.06',
     },
     background: { type: BgType.Blank },
-    mixes: [
-      mix({
-        id: 'term-brown',
-        name: 'Brown Noise',
-        root: 'A',
-        scale: 'minorPentatonic',
-        tempo: 60,
-        seed: 1,
-        layers: [layer('noise', 'term-noise', -18, { color: 'brown', cutoff: 0.35, drift: 0.2 })],
-        master: { reverbDecay: 0.5, reverbWet: 0, volume: 0 },
-      }),
-      mix({
-        id: 'term-boombap',
-        name: 'Code Bap',
-        root: 'A',
-        scale: 'minor',
-        tempo: 88,
-        seed: 88,
-        layers: [
-          layer(
-            'beat',
-            'tb-beat',
-            -14,
-            { pattern: 'boombap', density: 0.8, swing: 0.56, tone: 0.55, hats: 0.6, humanize: 0.3 },
-            [{ type: 'compressor', enabled: true, params: { threshold: -14, ratio: 4 } }],
-          ),
-          layer('bass', 'tb-bass', -14, {
-            pattern: 'pulse',
-            progression: 'minor',
-            octave: 2,
-            tone: 0.45,
-            glide: 0.1,
-          }),
-          layer(
-            'keys',
-            'tb-keys',
-            -20,
-            {
-              instrument: 'organ',
-              progression: 'minor',
-              voicing: 'triad',
-              rhythm: 'stabs',
-              octave: 4,
-              humanize: 0.3,
-              wobble: 0,
-              tone: 0.5,
-            },
-            [
-              {
-                type: 'filter',
-                enabled: true,
-                params: { kind: 'lowpass', frequency: 2400, q: 0.8 },
-              },
-            ],
-          ),
-        ],
-        master: { reverbDecay: 1.2, reverbWet: 0.1, volume: 0 },
-      }),
-    ],
     cues: { message: null, toolDone: 'tick', snapshot: null, published: 'chime', error: 'thud' },
     volume: 0.5,
     persona: {
@@ -560,44 +231,6 @@ const SPECS: Spec[] = [
     name: 'Sunday Paper',
     presetId: 'sunday-paper',
     background: { type: BgType.Blank },
-    mixes: [
-      mix({
-        id: 'sp-morning-edition',
-        name: 'Morning Edition',
-        root: 'C',
-        scale: 'major',
-        tempo: 62,
-        seed: 1901,
-        layers: [
-          layer('keys', 'me-piano', -14, {
-            instrument: 'piano',
-            progression: 'pop',
-            voicing: 'triad',
-            rhythm: 'whole',
-            octave: 4,
-            humanize: 0.5,
-            wobble: 0,
-            tone: 0.7,
-          }),
-          layer('beat', 'me-brush', -26, {
-            pattern: 'brush',
-            density: 0.5,
-            swing: 0.5,
-            tone: 0.5,
-            hats: 0.5,
-            humanize: 0.6,
-          }),
-          layer('bass', 'me-bass', -20, {
-            pattern: 'root',
-            progression: 'pop',
-            octave: 2,
-            tone: 0.3,
-            glide: 0.2,
-          }),
-        ],
-        master: { reverbDecay: 8, reverbWet: 0.42, volume: 0 },
-      }),
-    ],
     cues: { message: null, toolDone: null, snapshot: null, published: 'chime', error: 'thud' },
     volume: 0.5,
     persona: {
@@ -623,36 +256,6 @@ const SPECS: Spec[] = [
       glassBlur: '20px',
     },
     background: { type: BgType.Drift },
-    mixes: [
-      mix({
-        id: 'ds-abyss',
-        name: 'Abyss',
-        root: 'E',
-        scale: 'lydian',
-        tempo: 40,
-        seed: 2000,
-        layers: [
-          layer('drone', 'ds-drone', -14, {
-            waveform: 'fatsine',
-            chord: 'root5oct',
-            octave: 1,
-            cutoff: 0.2,
-            movement: 0.35,
-          }),
-          layer('pad', 'ds-pad', -20, {
-            waveform: 'sine',
-            octave: 3,
-            attack: 8,
-            release: 14,
-            shimmer: 0.3,
-            changeEvery: 16,
-          }),
-          layer('wind', 'ds-current', -24, { strength: 0.35, gust: 0.25, height: 0.9 }),
-          layer('noise', 'ds-pressure', -30, { color: 'brown', cutoff: 0.15, drift: 0.4 }),
-        ],
-        master: { reverbDecay: 14, reverbWet: 0.5, volume: 0 },
-      }),
-    ],
     cues: { message: null, toolDone: null, snapshot: 'bloom', published: 'bloom', error: 'thud' },
     volume: 0.55,
     persona: {
@@ -674,58 +277,6 @@ const SPECS: Spec[] = [
       bloomSpeed: '0.8',
     },
     background: { type: BgType.Bloom },
-    mixes: [
-      mix({
-        id: 'pip-prom',
-        name: 'Prom Night',
-        root: 'E',
-        scale: 'major',
-        tempo: 96,
-        seed: 1986,
-        layers: [
-          layer(
-            'keys',
-            'pip-bells',
-            -16,
-            {
-              instrument: 'bells',
-              progression: 'axis',
-              voicing: 'triad',
-              rhythm: 'arp',
-              octave: 5,
-              humanize: 0.2,
-              wobble: 0.1,
-              tone: 0.7,
-            },
-            [{ type: 'chorus', enabled: true, params: { rate: 0.8, depth: 0.6, wet: 0.5 } }],
-          ),
-          layer('beat', 'pip-beat', -16, {
-            pattern: 'half',
-            density: 0.75,
-            swing: 0.5,
-            tone: 0.7,
-            hats: 0.7,
-            humanize: 0.2,
-          }),
-          layer('bass', 'pip-bass', -15, {
-            pattern: 'pulse',
-            progression: 'axis',
-            octave: 2,
-            tone: 0.55,
-            glide: 0.05,
-          }),
-          layer('pad', 'pip-pad', -20, {
-            waveform: 'fatsawtooth',
-            octave: 3,
-            attack: 1.5,
-            release: 4,
-            shimmer: 0.6,
-            changeEvery: 4,
-          }),
-        ],
-        master: { reverbDecay: 3.5, reverbWet: 0.3, volume: 0 },
-      }),
-    ],
     cues: {
       message: 'chime',
       toolDone: 'tick',
@@ -746,22 +297,6 @@ const SPECS: Spec[] = [
     name: 'Plain Form',
     presetId: 'plain-form',
     background: { type: BgType.Blank },
-    mixes: [
-      mix({
-        id: 'pf-reading-room',
-        name: 'Reading Room',
-        root: 'C',
-        scale: 'major',
-        tempo: 60,
-        seed: 2004,
-        layers: [
-          layer('noise', 'pf-air', -32, { color: 'brown', cutoff: 0.12, drift: 0.05 }, [
-            { type: 'filter', enabled: true, params: { kind: 'lowpass', frequency: 400, q: 0.5 } },
-          ]),
-        ],
-        master: { reverbDecay: 0.5, reverbWet: 0, volume: 0 },
-      }),
-    ],
     cues: { message: null, toolDone: null, snapshot: null, published: 'tick', error: 'thud' },
     volume: 0.3,
     persona: {
@@ -776,96 +311,6 @@ const SPECS: Spec[] = [
     name: 'Catppuccin Mocha',
     presetId: 'catppuccin-mocha',
     background: { type: BgType.Bloom },
-    mixes: [
-      mix({
-        id: 'ctp-late-night-terminal',
-        name: 'Late Night Terminal',
-        root: 'Ab',
-        scale: 'major',
-        tempo: 64,
-        seed: 1122,
-        layers: [
-          layer(
-            'keys',
-            'ctp-keys',
-            -16,
-            {
-              instrument: 'rhodes',
-              progression: 'lofi',
-              voicing: 'seventh',
-              rhythm: 'half',
-              octave: 4,
-              humanize: 0.5,
-              wobble: 0.3,
-              tone: 0.4,
-            },
-            [
-              { type: 'tape', enabled: true, params: { wobble: 0.3, warmth: 0.6 } },
-              {
-                type: 'filter',
-                enabled: true,
-                params: { kind: 'lowpass', frequency: 2400, q: 0.5 },
-              },
-            ],
-          ),
-          layer(
-            'pad',
-            'ctp-pad',
-            -24,
-            {
-              waveform: 'triangle',
-              octave: 3,
-              attack: 5,
-              release: 9,
-              shimmer: 0.3,
-              changeEvery: 8,
-            },
-            [
-              {
-                type: 'filter',
-                enabled: true,
-                params: { kind: 'lowpass', frequency: 1600, q: 0.4 },
-              },
-            ],
-          ),
-          layer('bass', 'ctp-bass', -20, {
-            pattern: 'root',
-            progression: 'lofi',
-            octave: 2,
-            tone: 0.3,
-            glide: 0.2,
-          }),
-          layer('vinyl', 'ctp-vinyl', -26, { crackle: 0.35, dust: 0.3, hum: 0.08 }),
-        ],
-        master: { reverbDecay: 3, reverbWet: 0.22, volume: 0 },
-      }),
-      mix({
-        id: 'ctp-idle-cursor',
-        name: 'Idle Cursor',
-        root: 'Ab',
-        scale: 'lydian',
-        tempo: 48,
-        seed: 3344,
-        layers: [
-          layer('drone', 'ctp-drone', -22, {
-            waveform: 'fatsine',
-            chord: 'root5',
-            octave: 2,
-            cutoff: 0.25,
-            movement: 0.3,
-          }),
-          layer('melody', 'ctp-blink', -28, {
-            instrument: 'sine',
-            octave: 5,
-            density: 0.1,
-            humanize: 0.6,
-            echo: 0.5,
-          }),
-          layer('noise', 'ctp-fan', -36, { color: 'pink', cutoff: 0.15, drift: 0.2 }),
-        ],
-        master: { reverbDecay: 6, reverbWet: 0.3, volume: 0 },
-      }),
-    ],
     cues: { message: null, toolDone: 'tick', snapshot: null, published: 'chime', error: 'thud' },
     volume: 0.5,
     persona: {
@@ -927,54 +372,6 @@ const SPECS: Spec[] = [
       motionAmbient: 'none',
     },
     background: { type: BgType.Blank },
-    mixes: [
-      mix({
-        id: 'geo-webring',
-        name: 'Webring Radio',
-        root: 'C',
-        scale: 'major',
-        tempo: 108,
-        seed: 1997,
-        layers: [
-          layer('keys', 'geo-midi', -22, {
-            instrument: 'bells',
-            progression: 'pop',
-            voicing: 'triad',
-            rhythm: 'arp',
-            octave: 5,
-            humanize: 0,
-            wobble: 0,
-            tone: 0.65,
-          }),
-          layer('keys', 'geo-organ', -26, {
-            instrument: 'organ',
-            progression: 'pop',
-            voicing: 'triad',
-            rhythm: 'whole',
-            octave: 3,
-            humanize: 0,
-            wobble: 0,
-            tone: 0.4,
-          }),
-          layer('bass', 'geo-bass', -22, {
-            pattern: 'pulse',
-            progression: 'pop',
-            octave: 2,
-            tone: 0.5,
-            glide: 0,
-          }),
-          layer('beat', 'geo-drum-machine', -25, {
-            pattern: 'four',
-            density: 0.55,
-            swing: 0.5,
-            hats: 0.3,
-            tone: 0.5,
-            humanize: 0,
-          }),
-        ],
-        master: { reverbDecay: 1.2, reverbWet: 0.12, volume: 0 },
-      }),
-    ],
     cues: {
       message: 'chime',
       toolDone: 'tick',
@@ -995,20 +392,6 @@ const SPECS: Spec[] = [
     name: 'Graphite',
     presetId: 'graphite',
     background: { type: BgType.Blank },
-    mixes: [
-      mix({
-        id: 'graphite-room-tone',
-        name: 'Room Tone',
-        root: 'C',
-        scale: 'major',
-        tempo: 60,
-        seed: 101112,
-        layers: [
-          layer('noise', 'graphite-air', -32, { color: 'brown', cutoff: 0.12, drift: 0.05 }),
-        ],
-        master: { reverbDecay: 0.5, reverbWet: 0, volume: 0 },
-      }),
-    ],
     // Quiet by default; the optional room tone is available in the Mixer.
     volume: 0,
     cues: { message: null, toolDone: null, snapshot: null, published: null, error: null },
@@ -1024,30 +407,6 @@ const SPECS: Spec[] = [
     name: 'Soft Serve',
     presetId: 'soft-serve',
     background: { type: BgType.Blank },
-    mixes: [
-      mix({
-        id: 'soft-serve-doorstep',
-        name: 'Doorstep',
-        root: 'F',
-        scale: 'major',
-        tempo: 62,
-        seed: 2026,
-        layers: [
-          // marimba-ish: mellow bells, triads, a slow arpeggio, no reverb wash
-          layer('keys', 'soft-serve-marimba', -24, {
-            instrument: 'bells',
-            progression: 'gospel',
-            voicing: 'triad',
-            rhythm: 'arp',
-            octave: 4,
-            humanize: 0.5,
-            wobble: 0,
-            tone: 0.3,
-          }),
-        ],
-        master: { reverbDecay: 1.2, reverbWet: 0.08, volume: 0 },
-      }),
-    ],
     // Gentle: a soft tap when the crux goes live, quiet otherwise
     cues: { message: null, toolDone: null, snapshot: null, published: 'tick', error: null },
     volume: 0.4,
@@ -1063,30 +422,6 @@ const SPECS: Spec[] = [
     name: 'Soft Serve Night',
     presetId: 'soft-serve-night',
     background: { type: BgType.Blank },
-    mixes: [
-      mix({
-        id: 'soft-serve-night-late-delivery',
-        name: 'Late Delivery',
-        root: 'D',
-        scale: 'major',
-        tempo: 56,
-        seed: 2026,
-        layers: [
-          // the same marimba-ish bells as Doorstep, slower, a touch more room
-          layer('keys', 'soft-serve-night-marimba', -24, {
-            instrument: 'bells',
-            progression: 'gospel',
-            voicing: 'triad',
-            rhythm: 'arp',
-            octave: 4,
-            humanize: 0.5,
-            wobble: 0,
-            tone: 0.3,
-          }),
-        ],
-        master: { reverbDecay: 1.2, reverbWet: 0.15, volume: 0 },
-      }),
-    ],
     // Gentle: a soft tap when the crux goes live, quiet otherwise
     cues: { message: null, toolDone: null, snapshot: null, published: 'tick', error: null },
     volume: 0.4,
@@ -1102,30 +437,6 @@ const SPECS: Spec[] = [
     name: 'Soft Serve Gray',
     presetId: 'soft-serve-gray',
     background: { type: BgType.Blank },
-    mixes: [
-      mix({
-        id: 'soft-serve-gray-counter-service',
-        name: 'Counter Service',
-        root: 'G',
-        scale: 'major',
-        tempo: 60,
-        seed: 2026,
-        layers: [
-          // Doorstep's marimba-ish bells, a step up and a touch slower
-          layer('keys', 'soft-serve-gray-marimba', -24, {
-            instrument: 'bells',
-            progression: 'gospel',
-            voicing: 'triad',
-            rhythm: 'arp',
-            octave: 4,
-            humanize: 0.5,
-            wobble: 0,
-            tone: 0.3,
-          }),
-        ],
-        master: { reverbDecay: 1.2, reverbWet: 0.08, volume: 0 },
-      }),
-    ],
     // Gentle: a soft tap when the crux goes live, quiet otherwise
     cues: { message: null, toolDone: null, snapshot: null, published: 'tick', error: null },
     volume: 0.4,
@@ -1141,30 +452,6 @@ const SPECS: Spec[] = [
     name: 'Soft Serve Black',
     presetId: 'soft-serve-black',
     background: { type: BgType.Blank },
-    mixes: [
-      mix({
-        id: 'soft-serve-black-closing-time',
-        name: 'Closing Time',
-        root: 'A',
-        scale: 'major',
-        tempo: 54,
-        seed: 2026,
-        layers: [
-          // Late Delivery's bells, slower still, the same touch of room
-          layer('keys', 'soft-serve-black-marimba', -24, {
-            instrument: 'bells',
-            progression: 'gospel',
-            voicing: 'triad',
-            rhythm: 'arp',
-            octave: 4,
-            humanize: 0.5,
-            wobble: 0,
-            tone: 0.3,
-          }),
-        ],
-        master: { reverbDecay: 1.2, reverbWet: 0.15, volume: 0 },
-      }),
-    ],
     // Gentle: a soft tap when the crux goes live, quiet otherwise
     cues: { message: null, toolDone: null, snapshot: null, published: 'tick', error: null },
     volume: 0.4,
@@ -1179,9 +466,6 @@ const SPECS: Spec[] = [
 
 function build(spec: Spec): MoodPackage {
   const p = preset(spec.presetId);
-  // Own copies: the store and settings must never hold references into SPECS.
-  const mixes = structuredClone(spec.mixes);
-  const active = mixes[0]!;
   return {
     format: 'crux-mood',
     version: 1,
@@ -1205,17 +489,15 @@ function build(spec: Spec): MoodPackage {
       systemPrompt: spec.persona.systemPrompt,
     },
     assets: [],
-    resonance: {
-      mixes,
-      playlist: {
-        enabled: mixes.length > 1,
-        shuffle: false,
-        items: mixes.map((m) => ({ mixId: m.id, minutes: 25, crossfadeSec: 8 })),
-      },
-      cues: { ...DEFAULT_CUES, ...(spec.cues ?? {}) },
-      activeMixId: active.id,
+    sound: {
+      // A bundled track is a URL until apply ingests it; the package itself
+      // carries it under `bundled` so export never embeds an app-internal path.
+      track: null,
       volume: spec.volume ?? 0.6,
+      enabled: true,
+      cues: { ...DEFAULT_CUES, ...(spec.cues ?? {}) },
     },
+    ...(spec.bundled ? { bundled: spec.bundled } : {}),
   };
 }
 

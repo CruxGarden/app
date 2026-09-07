@@ -1,7 +1,7 @@
 /**
  * Mood Packages — the installable, shareable bundle: theme + background +
- * persona + resonance + meta. Stored in settings (JSON) with every binary
- * (cover, background image, audio files, persona avatars) in the Blob Store
+ * sound + persona + meta. Stored in settings (JSON) with every binary
+ * (cover, background image, the track, persona avatars) in the Blob Store
  * by fingerprint; exported as a `.cruxmood` zip that carries those assets.
  */
 import JSZip from 'jszip';
@@ -19,14 +19,12 @@ import {
 import { getSetting, setSetting } from '@/services/settings';
 import { SettingsKey } from '@/lib/constants';
 import { BgType } from '@/lib/types';
-import type { Mix } from '@/audio/schema';
-import { validateMix } from '@/audio/schema';
-import { validatePlaylist, type Playlist } from '@/audio/playlist';
 import type { PersonaSettings } from '@/services/persona';
 import { getPersona, savePersona } from '@/services/persona';
 import { DEFAULT_CUES, getCues, saveCues, type SoundCues } from '@/services/cues';
-import * as resonance from '@/services/resonance';
-import { getAssets, addAsset, isAssetRef, refFingerprint, type MoodAsset } from './assets';
+import * as sound from '@/services/sound';
+import { validateTrack, type SoundTrack } from '@/services/sound';
+import { getAssets, addAsset, isAssetRef, refFingerprint, kindOf, type MoodAsset } from './assets';
 
 export interface MoodPackage {
   format: 'crux-mood';
@@ -45,13 +43,26 @@ export interface MoodPackage {
   persona?: PersonaSettings;
   /** Files the Mood brings along (index; bytes ride in the zip under assets/). */
   assets?: MoodAsset[];
-  resonance: {
-    mixes: Mix[];
-    playlist: Playlist;
-    cues: SoundCues;
-    activeMixId: string;
-    volume: number;
+  /** The Mood's sound: one looping track, its volume, on/off, and the cues. */
+  sound: MoodSound;
+  /**
+   * Files a bundled Mood ships inside the app (URLs). On apply they are
+   * ingested into the Blob Store where there is one, so what the user then
+   * saves or exports carries fingerprints like any other Mood. Never set on
+   * a captured or imported package.
+   */
+  bundled?: {
+    background?: string;
+    avatar?: string;
+    track?: { url: string; name: string; type: string };
   };
+}
+
+export interface MoodSound {
+  track: SoundTrack | null;
+  volume: number;
+  enabled: boolean;
+  cues: SoundCues;
 }
 
 const listeners = new Set<() => void>();
@@ -97,14 +108,12 @@ export function validateMoodPackage(raw: unknown): MoodPackage | null {
   const type = (Object.values(BgType) as string[]).includes(bg.type as string)
     ? (bg.type as BgType)
     : BgType.Bloom;
-  const res = (p.resonance ?? {}) as Record<string, unknown>;
-  const mixes = Array.isArray(res.mixes)
-    ? (res.mixes.map(validateMix).filter(Boolean) as Mix[])
-    : [];
-  const mixIds = mixes.map((m) => m.id);
+  // `sound` is the shape since 2026-09-07; packages saved before carried a
+  // `resonance` block (synthesized mixes) — its volume and cues still apply.
+  const snd = (p.sound ?? p.resonance ?? {}) as Record<string, unknown>;
   const cues = { ...DEFAULT_CUES };
   for (const k of Object.keys(cues) as (keyof SoundCues)[]) {
-    const v = (res.cues as Record<string, unknown> | undefined)?.[k];
+    const v = (snd.cues as Record<string, unknown> | undefined)?.[k];
     if (v === null) cues[k] = null;
     else if (v === 'tick' || v === 'chime' || v === 'bloom' || v === 'thud') cues[k] = v;
   }
@@ -129,15 +138,11 @@ export function validateMoodPackage(raw: unknown): MoodPackage | null {
           (a) => a && typeof a.fingerprint === 'string' && typeof a.name === 'string',
         )
       : undefined,
-    resonance: {
-      mixes,
-      playlist: validatePlaylist(res.playlist, mixIds),
+    sound: {
+      track: validateTrack(snd.track),
+      volume: typeof snd.volume === 'number' ? Math.min(1, Math.max(0, snd.volume)) : 0.7,
+      enabled: snd.enabled !== false,
       cues,
-      activeMixId:
-        typeof res.activeMixId === 'string' && mixIds.includes(res.activeMixId)
-          ? res.activeMixId
-          : (mixIds[0] ?? ''),
-      volume: typeof res.volume === 'number' ? Math.min(1, Math.max(0, res.volume)) : 0.7,
     },
   };
 }
@@ -190,7 +195,6 @@ export function captureCurrentMood(input: {
   const bgType = (getSetting(SettingsKey.BackgroundType) as BgType | null) ?? BgType.Bloom;
   const cover = input.cover ?? ((getSetting(SettingsKey.MoodCover) as string | null) || undefined);
   const bgImage = (getSetting(SettingsKey.BackgroundImage) as string | null) || undefined;
-  const mixes = resonance.getMixes();
   const name = input.name.trim() || 'My Mood';
   return {
     format: 'crux-mood',
@@ -204,12 +208,11 @@ export function captureCurrentMood(input: {
     background: { type: bgType, image: bgType === BgType.Image ? bgImage : undefined },
     persona: getPersona(),
     assets: getAssets(),
-    resonance: {
-      mixes,
-      playlist: resonance.getPlaylist(mixes.map((m) => m.id)),
+    sound: {
+      track: sound.getTrack(),
+      volume: sound.getVolume(),
+      enabled: sound.getEnabled(),
       cues: getCues(),
-      activeMixId: resonance.getActiveMixId(),
-      volume: resonance.getVolume(),
     },
   };
 }
@@ -236,7 +239,7 @@ export function personaForApply(
   return { ...current, ...next };
 }
 
-/** Wear a package: theme (as a user preset), background, persona, resonance. */
+/** Wear a package: theme (as a user preset), background, persona, sound. */
 export async function applyMood(pkg: MoodPackage): Promise<void> {
   // Theme → a user preset with the package's id, made active for its mode
   const preset = saveUserPreset({
@@ -261,9 +264,15 @@ export async function applyMood(pkg: MoodPackage): Promise<void> {
     applyActiveMood(pkg.theme.section);
   }
 
+  // A bundled Mood's files: into the Blob Store where there is one (the app),
+  // straight from their URLs where there is not (the public website).
+  const shipped = await ingestBundled(pkg);
+
   // Background
   const bg = await import('@/services/background');
-  if (pkg.background.type === BgType.Image && pkg.background.image) {
+  if (shipped.background) {
+    await bg.setBackgroundImage(shipped.background.fingerprint ?? '', shipped.background.url);
+  } else if (pkg.background.type === BgType.Image && pkg.background.image) {
     await bg.setBackgroundImage(pkg.background.image);
   } else {
     await bg.setBackgroundType(
@@ -272,34 +281,82 @@ export async function applyMood(pkg: MoodPackage): Promise<void> {
   }
 
   // Persona — voice from the package, avatars kept unless the package brings its own
-  if (pkg.persona) savePersona(personaForApply(getPersona(), pkg.persona));
+  if (pkg.persona) {
+    const incoming: Partial<PersonaSettings> = { ...pkg.persona };
+    if (shipped.avatar) {
+      incoming.thumbnailFingerprint = shipped.avatar;
+      incoming.thumbnailFingerprintLight = shipped.avatar;
+    }
+    savePersona(personaForApply(getPersona(), incoming));
+  }
 
   // Assets index (bytes were written on import)
   for (const a of pkg.assets ?? []) addAsset(a);
 
-  // Resonance — the package's mixes join the user's (same id replaces), then
-  // its active mix, playlist, cues and volume take over.
-  // Mixes go through validateMix so the store and settings hold clamped copies,
-  // never references into the package (bundled packages are module singletons).
-  const pkgMixes = pkg.resonance.mixes.map(validateMix).filter(Boolean) as Mix[];
-  if (pkgMixes.length) {
-    const incoming = new Set(pkgMixes.map((m) => m.id));
-    const merged = [...resonance.getMixes().filter((m) => !incoming.has(m.id)), ...pkgMixes];
-    resonance.saveMixes(merged);
-    resonance.setActiveMixId(pkg.resonance.activeMixId);
-    resonance.savePlaylist(pkg.resonance.playlist);
-    resonance.setVolume(pkg.resonance.volume);
-    saveCues(pkg.resonance.cues);
-    const { useAudioStore } = await import('@/stores/audioStore');
-    const s = useAudioStore.getState();
-    useAudioStore.setState({
-      mixes: merged,
-      playlist: pkg.resonance.playlist,
-      volume: pkg.resonance.volume,
-    });
-    await s.selectMix(pkg.resonance.activeMixId);
-    s.setVolume(pkg.resonance.volume);
+  // Sound — the package's track, volume, on/off and cues take over.
+  const track = shipped.track ?? pkg.sound.track;
+  sound.setTrack(track);
+  sound.setVolume(pkg.sound.volume);
+  sound.setEnabled(pkg.sound.enabled);
+  saveCues(pkg.sound.cues);
+  const { useAudioStore } = await import('@/stores/audioStore');
+  const s = useAudioStore.getState();
+  s.init();
+  useAudioStore.setState({ volume: pkg.sound.volume, enabled: pkg.sound.enabled });
+  s.setVolume(pkg.sound.volume);
+  await s.setTrack(track);
+}
+
+interface Shipped {
+  background?: { fingerprint?: string; url?: string };
+  avatar?: string;
+  track?: SoundTrack;
+}
+
+/** Fetch a shipped file into the Blob Store; null where that is not possible. */
+async function ingestUrl(url: string): Promise<{ fingerprint: string; blob: Blob } | null> {
+  try {
+    const res = await fetch(url);
+    if (!res.ok) return null;
+    const blob = await res.blob();
+    const { putBlob } = await import('@/services/blobs');
+    const fingerprint = await putBlob(blob);
+    return { fingerprint, blob };
+  } catch {
+    return null;
   }
+}
+
+async function ingestBundled(pkg: MoodPackage): Promise<Shipped> {
+  const b = pkg.bundled;
+  if (!b) return {};
+  const { isPublicSite } = await import('@/lib/site');
+  const out: Shipped = {};
+  if (isPublicSite()) {
+    // No garden here: play and show the files from where they are served.
+    if (b.background) out.background = { url: b.background };
+    if (b.track) out.track = { url: b.track.url, name: b.track.name, type: b.track.type };
+    return out;
+  }
+  if (b.background) {
+    const got = await ingestUrl(b.background);
+    out.background = got ? { fingerprint: got.fingerprint } : { url: b.background };
+  }
+  if (b.avatar) out.avatar = (await ingestUrl(b.avatar))?.fingerprint;
+  if (b.track) {
+    const got = await ingestUrl(b.track.url);
+    if (got) {
+      addAsset({
+        fingerprint: got.fingerprint,
+        name: b.track.name,
+        type: b.track.type,
+        size: got.blob.size,
+        kind: kindOf(b.track.type, b.track.name),
+      });
+      out.track = { fingerprint: got.fingerprint, name: b.track.name, type: b.track.type };
+    } else out.track = { url: b.track.url, name: b.track.name, type: b.track.type };
+  }
+  return out;
 }
 
 /** Every Blob Store fingerprint a package references. */
@@ -311,11 +368,7 @@ export function packageAssets(pkg: MoodPackage): string[] {
   if (pkg.background.image) fps.add(pkg.background.image);
   if (pkg.persona?.thumbnailFingerprint) fps.add(pkg.persona.thumbnailFingerprint);
   if (pkg.persona?.thumbnailFingerprintLight) fps.add(pkg.persona.thumbnailFingerprintLight);
-  for (const m of pkg.resonance.mixes)
-    for (const l of m.layers) {
-      const fp = l.params.fingerprint;
-      if (typeof fp === 'string' && fp) fps.add(fp);
-    }
+  if (pkg.sound.track?.fingerprint) fps.add(pkg.sound.track.fingerprint);
   return [...fps];
 }
 
@@ -326,13 +379,12 @@ export async function exportMoodPackage(
   opts: { includeAudio?: boolean } = {},
 ): Promise<Blob> {
   const zip = new JSZip();
-  zip.file('package.json', JSON.stringify(pkg, null, 2));
+  const portable: Partial<MoodPackage> = { ...pkg };
+  delete portable.bundled;
+  zip.file('package.json', JSON.stringify(portable, null, 2));
   const audioFps = new Set<string>();
-  for (const m of pkg.resonance.mixes)
-    for (const l of m.layers) {
-      const fp = l.params.fingerprint;
-      if (typeof fp === 'string' && fp) audioFps.add(fp);
-    }
+  if (pkg.sound.track?.fingerprint) audioFps.add(pkg.sound.track.fingerprint);
+  for (const a of pkg.assets ?? []) if (a.kind === 'audio') audioFps.add(a.fingerprint);
   for (const fp of packageAssets(pkg)) {
     if (opts.includeAudio === false && audioFps.has(fp)) continue;
     try {

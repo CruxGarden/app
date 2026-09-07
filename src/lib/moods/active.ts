@@ -64,6 +64,15 @@ export function setThemeOverrides(section: MoodSection, overrides: ThemeOverride
     if (k in GARDEN_DARK && typeof v === 'string' && v.trim()) clean[k] = v;
   }
   setSetting(overridesKey(section), Object.keys(clean).length ? JSON.stringify(clean) : '');
+  overridesListeners.forEach((fn) => fn(section));
+}
+
+// Several editors show the same overrides at once (the tokens editor and the
+// files list share the Theme section): each hears the others' writes.
+const overridesListeners = new Set<(section: MoodSection) => void>();
+export function onThemeOverridesChange(fn: (section: MoodSection) => void): () => void {
+  overridesListeners.add(fn);
+  return () => overridesListeners.delete(fn);
 }
 
 // ── Preview layer ─────────────────────────────────────────────────────────

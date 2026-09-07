@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { launchApp } from './launch';
 
-type AudioState = { mixName: string | null };
+type AudioState = { volume: number; trackName: string | null };
 
 /**
  * Phase 4: save what you're wearing as a Mood, change everything, apply the
@@ -29,18 +29,18 @@ test.describe('mood packages', () => {
         timeout: 30_000,
       });
 
-      // Shape a look: pane gap 0 + Night Rain as the mix
+      // Shape a look: pane gap 0 + a quieter track
       await page.getByRole('button', { name: 'Mood', exact: true }).click();
       await page.getByRole('button', { name: 'Open Mood Builder' }).click();
-      await page.getByRole('button', { name: 'Tokens', exact: true }).click();
+      await page.getByRole('button', { name: 'Theme', exact: true }).click();
       await page.getByRole('button', { name: 'Shape & layout' }).click();
       const gap = page.getByRole('textbox', { name: 'Pane gap value' });
       await gap.fill('0px');
       await gap.press('Enter');
       await expect.poll(() => cssVar('--pane-gap')).toBe('0px');
-      await page.getByRole('button', { name: 'Resonance', exact: true }).click();
-      await page.getByRole('button', { name: /^Night Rain/ }).click();
-      await expect.poll(async () => (await audio()).mixName).toBe('Night Rain');
+      await page.getByRole('button', { name: 'Sound', exact: true }).click();
+      await page.getByRole('slider', { name: 'Track volume' }).fill('0.25');
+      await expect.poll(async () => (await audio()).volume).toBe(0.25);
 
       // Save it as a Mood
       await page.getByRole('button', { name: 'Moods', exact: true }).click();
@@ -51,15 +51,14 @@ test.describe('mood packages', () => {
       await expect(page.getByTestId('mood-mood-night-shift')).toBeVisible();
       await page.screenshot({ path: 'e2e/.results/mood-package-1-browser.png' });
 
-      // Change everything: preset Ember (gap back to default via preset), mix Still Air
-      await page.getByRole('button', { name: 'Themes', exact: true }).click();
+      // Change everything: preset Ember (gap back to default via preset), volume up
+      await page.getByRole('button', { name: 'Theme', exact: true }).click();
       await page.getByRole('button', { name: 'Ember' }).click();
-      await page.getByRole('button', { name: 'Tokens', exact: true }).click();
       await page.getByRole('button', { name: 'Reset all' }).click();
       await expect.poll(() => cssVar('--pane-gap')).toBe('4px');
-      await page.getByRole('button', { name: 'Resonance', exact: true }).click();
-      await page.getByRole('button', { name: /^Still Air/ }).click();
-      await expect.poll(async () => (await audio()).mixName).toBe('Still Air');
+      await page.getByRole('button', { name: 'Sound', exact: true }).click();
+      await page.getByRole('slider', { name: 'Track volume' }).fill('0.9');
+      await expect.poll(async () => (await audio()).volume).toBe(0.9);
 
       // Apply the saved Mood: both come back
       await page.getByRole('button', { name: 'Moods', exact: true }).click();
@@ -69,10 +68,11 @@ test.describe('mood packages', () => {
         .click();
       await expect(page.getByRole('status')).toContainText('Now wearing "Night Shift"');
       await expect.poll(() => cssVar('--pane-gap')).toBe('0px');
-      await expect.poll(async () => (await audio()).mixName).toBe('Night Rain');
+      await expect.poll(async () => (await audio()).volume).toBe(0.25);
+      expect((await audio()).trackName).toBe('Echoes Beyond the Signal'); // the Keeper's track rode along
 
       // The theme became a preset under Yours as well
-      await page.getByRole('button', { name: 'Themes', exact: true }).click();
+      await page.getByRole('button', { name: 'Theme', exact: true }).click();
       await expect(page.getByRole('button', { name: 'Night Shift', exact: true })).toBeVisible();
 
       // Delete the Mood

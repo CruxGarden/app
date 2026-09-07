@@ -7,6 +7,7 @@ import MarkdownRenderer from './MarkdownRenderer';
 import { ConsoleAvatar } from '@/components/keeper/Console';
 import { useCruxStore } from '@/stores/cruxStore';
 import { useBlobUrl } from '@/hooks/useBlobUrl';
+import PersonaAvatar from '@/components/persona/PersonaAvatar';
 import { describeCheck, describeJobSummary } from '@/services/turn-jobs';
 import type { TurnCheckSummary } from '@/api/types';
 
@@ -86,15 +87,7 @@ function usePersonaName(): string {
 function MessageAvatar({ fingerprint }: { fingerprint?: string }) {
   const snapshot = usePersonaSnapshot(fingerprint);
   const blobUrl = useBlobUrl(snapshot?.thumbnailFingerprint);
-  if (blobUrl) {
-    return (
-      <img
-        src={blobUrl}
-        alt=""
-        className="w-6 h-6 aspect-square shrink-0 object-cover [image-rendering:pixelated] rounded-[var(--radius-sm)] ring-1 ring-border"
-      />
-    );
-  }
+  if (blobUrl) return <PersonaAvatar src={blobUrl} bordered />;
   return <ConsoleAvatar bordered />;
 }
 

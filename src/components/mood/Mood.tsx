@@ -12,7 +12,8 @@ import {
 } from '@/lib/moods/user-presets';
 import { applyActiveMood } from '@/lib/moods/active';
 import ThemeTokensTab from './ThemeTokensTab';
-import ResonanceTab from './ResonanceTab';
+import SoundTab from './SoundTab';
+import PersonaAvatar from '@/components/persona/PersonaAvatar';
 import MoodBrowser from './MoodBrowser';
 import AssetsTab from './AssetsTab';
 import { useMoodStore } from '@/stores/moodStore';
@@ -97,15 +98,10 @@ function PresetThumb({ preset, active }: { preset: MoodPresetDef; active: boolea
 
 // ── Persona Tab ──────────────────────────────────────
 
-import keeperAvatarDark from '@/images/keeper-avatar-pixel-dark.jpg';
-import keeperAvatarLight from '@/images/keeper-avatar-pixel-light.jpg';
-
 function PersonaTab() {
   const [persona, setPersona] = useState<PersonaSettings>(() => getPersona());
   const fileRef = useRef<HTMLInputElement>(null);
-  const fileLightRef = useRef<HTMLInputElement>(null);
   const darkThumbUrl = useBlobUrl(persona.thumbnailFingerprint);
-  const lightThumbUrl = useBlobUrl(persona.thumbnailFingerprintLight);
 
   const update = (patch: Partial<PersonaSettings>) => {
     const next = { ...persona, ...patch };
@@ -113,9 +109,10 @@ function PersonaTab() {
     savePersona(next);
   };
 
+  // One avatar for the persona, whatever the mode: it sits on a theme gradient
+  // (PersonaAvatar), so it never needs a dark and a light copy.
   const handleThumbnailUpload =
-    (field: 'thumbnailFingerprint' | 'thumbnailFingerprintLight') =>
-    async (e: React.ChangeEvent<HTMLInputElement>) => {
+    (field: 'thumbnailFingerprint') => async (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0];
       if (!file) return;
       if (file.size > 10 * 1024 * 1024) return;
@@ -147,10 +144,13 @@ function PersonaTab() {
       const { putBlob } = await import('@/services/blobs');
       const fp = await putBlob(buffer);
 
-      // Clear legacy data URL field if present
-      const legacyField =
-        field === 'thumbnailFingerprint' ? 'thumbnailDataUrl' : 'thumbnailDataUrlLight';
-      update({ [field]: fp, [legacyField]: null });
+      // One avatar: the light-mode copy is retired along with the legacy data URLs
+      update({
+        [field]: fp,
+        thumbnailDataUrl: null,
+        thumbnailFingerprintLight: null,
+        thumbnailDataUrlLight: null,
+      });
       e.target.value = '';
     };
 
@@ -164,8 +164,7 @@ function PersonaTab() {
     persona.name !== DEFAULT_PERSONA.name ||
     persona.greeting !== DEFAULT_PERSONA.greeting ||
     persona.systemPrompt !== DEFAULT_PERSONA.systemPrompt ||
-    !!persona.thumbnailFingerprint ||
-    !!persona.thumbnailFingerprintLight;
+    !!persona.thumbnailFingerprint;
 
   const inputClass = cn(
     'w-full bg-bg border border-border rounded-[var(--radius-sm)] px-2.5 py-1.5',
@@ -185,39 +184,19 @@ function PersonaTab() {
             <button
               onClick={() => fileRef.current?.click()}
               className="w-16 h-16 shrink-0 rounded-[var(--radius)] border border-border overflow-hidden bg-surface hover:border-accent cursor-pointer"
+              aria-label="Choose an avatar"
             >
-              <img
-                src={darkThumbUrl || keeperAvatarDark}
-                alt=""
-                className="w-full h-full object-cover [image-rendering:pixelated]"
-              />
+              <PersonaAvatar src={darkThumbUrl} className="w-full h-full rounded-none" />
             </button>
-            <span className="text-3xs font-mono text-text-muted">Dark</span>
             {persona.thumbnailFingerprint && (
               <button
-                onClick={() => update({ thumbnailFingerprint: null, thumbnailDataUrl: null })}
-                className="text-3xs text-error hover:text-text cursor-pointer"
-              >
-                Remove
-              </button>
-            )}
-          </div>
-          <div className="flex flex-col items-center gap-1">
-            <button
-              onClick={() => fileLightRef.current?.click()}
-              className="w-16 h-16 shrink-0 rounded-[var(--radius)] border border-border overflow-hidden bg-surface hover:border-accent cursor-pointer"
-            >
-              <img
-                src={lightThumbUrl || keeperAvatarLight}
-                alt=""
-                className="w-full h-full object-cover [image-rendering:pixelated]"
-              />
-            </button>
-            <span className="text-3xs font-mono text-text-muted">Light</span>
-            {persona.thumbnailFingerprintLight && (
-              <button
                 onClick={() =>
-                  update({ thumbnailFingerprintLight: null, thumbnailDataUrlLight: null })
+                  update({
+                    thumbnailFingerprint: null,
+                    thumbnailDataUrl: null,
+                    thumbnailFingerprintLight: null,
+                    thumbnailDataUrlLight: null,
+                  })
                 }
                 className="text-3xs text-error hover:text-text cursor-pointer"
               >
@@ -231,13 +210,6 @@ function PersonaTab() {
             accept="image/*"
             className="hidden"
             onChange={handleThumbnailUpload('thumbnailFingerprint')}
-          />
-          <input
-            ref={fileLightRef}
-            type="file"
-            accept="image/*"
-            className="hidden"
-            onChange={handleThumbnailUpload('thumbnailFingerprintLight')}
           />
         </div>
       </div>
@@ -481,11 +453,18 @@ function BackgroundTabContent({
 
 // ── Main Component ───────────────────────────────────
 
-type Tab = 'moods' | 'palette' | 'theme' | 'resonance' | 'assets' | 'background' | 'persona';
+/**
+ * A Mood is four things — Theme, Background, Sound, Persona — plus the
+ * library of Moods to wear. Each tab edits the ACTIVE Mood live; "Save current
+ * as Mood" under Moods captures it. The modal shows the same five tabs so a
+ * quick tweak is always one keystroke away; the Mood Builder page is the same
+ * editor with room to breathe.
+ */
+type Tab = 'moods' | 'theme' | 'background' | 'sound' | 'persona';
 
 interface MoodEditorProps {
   initialTab?: Tab;
-  /** The modal: no Theme tab, plus a way into the full Mood Builder page. */
+  /** The modal: the same sections, plus a way into the full Mood Builder page. */
   compact?: boolean;
 }
 
@@ -626,33 +605,23 @@ export default function MoodEditor({ initialTab = 'moods', compact = false }: Mo
         {(
           [
             ['moods', 'Moods'],
-            ['palette', 'Themes'],
-            ['theme', 'Tokens'],
-            ['resonance', 'Resonance'],
-            ['assets', 'Assets'],
+            ['theme', 'Theme'],
             ['background', 'Background'],
+            ['sound', 'Sound'],
             ['persona', 'Persona'],
           ] as const
-        )
-          .filter(
-            ([t]) =>
-              !(
-                compact &&
-                (t === 'theme' || t === 'resonance' || t === 'background' || t === 'persona')
-              ),
-          )
-          .map(([t, label]) => (
-            <button
-              key={t}
-              onClick={() => setTab(t)}
-              className={cn(
-                'px-2.5 py-1 text-xs font-display font-medium rounded-[var(--radius-sm)] cursor-pointer',
-                tab === t ? 'text-text bg-surface' : 'text-text-muted hover:text-text',
-              )}
-            >
-              {label}
-            </button>
-          ))}
+        ).map(([t, label]) => (
+          <button
+            key={t}
+            onClick={() => setTab(t)}
+            className={cn(
+              'px-2.5 py-1 text-xs font-display font-medium rounded-[var(--radius-sm)] cursor-pointer',
+              tab === t ? 'text-text bg-surface' : 'text-text-muted hover:text-text',
+            )}
+          >
+            {label}
+          </button>
+        ))}
         {compact && (
           <>
             <div className="flex-1" />
@@ -673,8 +642,8 @@ export default function MoodEditor({ initialTab = 'moods', compact = false }: Mo
 
       {/* Active tab content */}
       <div className="flex-1 min-h-0 flex flex-col overflow-y-auto">
-        {tab === 'palette' && (
-          <div>
+        {tab === 'theme' && (
+          <div className="flex flex-col gap-6">
             {userPresets.length > 0 && (
               <div className="mb-4">
                 <div className="text-3xs font-mono uppercase tracking-wider text-text-muted mb-2">
@@ -747,6 +716,26 @@ export default function MoodEditor({ initialTab = 'moods', compact = false }: Mo
                 </div>
               );
             })}
+            {compact ? (
+              <p className="text-xxs text-text-muted">
+                Every token — colours, type, shape, motion — is in the Mood Builder.
+              </p>
+            ) : (
+              <>
+                <div>
+                  <div className="text-3xs font-mono uppercase tracking-wider text-text-muted mb-2">
+                    Tokens
+                  </div>
+                  <ThemeTokensTab />
+                </div>
+                <div>
+                  <div className="text-3xs font-mono uppercase tracking-wider text-text-muted mb-2">
+                    Files
+                  </div>
+                  <AssetsTab />
+                </div>
+              </>
+            )}
           </div>
         )}
         {tab === 'background' && (
@@ -762,9 +751,7 @@ export default function MoodEditor({ initialTab = 'moods', compact = false }: Mo
           />
         )}
         {tab === 'moods' && <MoodBrowser />}
-        {tab === 'theme' && <ThemeTokensTab />}
-        {tab === 'resonance' && <ResonanceTab />}
-        {tab === 'assets' && <AssetsTab />}
+        {tab === 'sound' && <SoundTab />}
         {tab === 'persona' && <PersonaTab />}
       </div>
     </div>

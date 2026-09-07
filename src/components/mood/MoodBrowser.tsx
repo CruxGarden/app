@@ -264,7 +264,8 @@ export default function MoodBrowser() {
                 <div className="min-w-0">
                   <div className="text-sm font-display text-heading truncate">{pkg.name}</div>
                   <div className="text-2xs font-mono text-text-muted truncate">
-                    {pkg.theme.section} · {pkg.resonance.mixes.map((m) => m.name).join(' · ')}
+                    {pkg.theme.section} ·{' '}
+                    {pkg.bundled?.track?.name ?? pkg.sound.track?.name ?? 'no sound'}
                     {pkg.persona ? ` · ${pkg.persona.name}` : ''}
                   </div>
                 </div>
@@ -300,7 +301,6 @@ export default function MoodBrowser() {
       ) : (
         <div className="grid gap-3 grid-cols-[repeat(auto-fill,minmax(180px,1fr))]">
           {moods.map((pkg) => {
-            const layers = pkg.resonance.mixes.reduce((n, m) => n + m.layers.length, 0);
             return (
               <div
                 key={pkg.id}
@@ -317,9 +317,7 @@ export default function MoodBrowser() {
                   <div className="min-w-0">
                     <div className="text-sm font-display text-heading truncate">{pkg.name}</div>
                     <div className="text-2xs font-mono text-text-muted truncate">
-                      {pkg.theme.section} · {pkg.resonance.mixes.length} mix
-                      {pkg.resonance.mixes.length === 1 ? '' : 'es'} · {layers} layer
-                      {layers === 1 ? '' : 's'}
+                      {pkg.theme.section} · {pkg.sound.track?.name ?? 'no sound'}
                       {pkg.author ? ` · by ${pkg.author}` : ''}
                     </div>
                     {pkg.publishedAt && (

@@ -418,13 +418,22 @@ describe('parallel work on the job (B5)', () => {
     expect(hasPendingMerge(job)).toBe(false);
     const conflict = { path: 'n.md', options: [{ branch: 0, kind: 'added' as const }] };
     expect(
-      hasPendingMerge({ ...job, merge: { baseId: 'b', status: 'pending', applied: [], conflicts: [conflict] } }),
+      hasPendingMerge({
+        ...job,
+        merge: { baseId: 'b', status: 'pending', applied: [], conflicts: [conflict] },
+      }),
     ).toBe(true);
     expect(
-      hasPendingMerge({ ...job, merge: { baseId: 'b', status: 'merged', applied: [], conflicts: [conflict] } }),
+      hasPendingMerge({
+        ...job,
+        merge: { baseId: 'b', status: 'merged', applied: [], conflicts: [conflict] },
+      }),
     ).toBe(false);
     expect(
-      hasPendingMerge({ ...job, merge: { baseId: 'b', status: 'pending', applied: [], conflicts: [] } }),
+      hasPendingMerge({
+        ...job,
+        merge: { baseId: 'b', status: 'pending', applied: [], conflicts: [] },
+      }),
     ).toBe(false);
   });
 });
