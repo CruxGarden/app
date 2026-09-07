@@ -1,5 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
-import { applyMood } from '@/lib/moods/packages';
+import { applyMood, type MoodPackage } from '@/lib/moods/packages';
+import MoodBar from '@/components/mood/MoodBar';
 import { BgType } from '@/lib/types';
 import { useNavigate } from 'react-router-dom';
 import { Panel, Spinner, Button, IconButton, ApiKeySetup, Toggle } from '@/components/ui';
@@ -49,16 +50,51 @@ async function wearGatewayMood(): Promise<void> {
   const { bundledMood } = await import('@/lib/moods/bundled-moods');
   const worn = getSetting(SettingsKey.WornMoodId);
   const fresh = !worn && !getSetting(SettingsKey.MoodPresetDark);
+  const keeper = bundledMood('the-keeper');
   if (fresh) {
-    const keeper = bundledMood('the-keeper');
     if (keeper) await applyMood(keeper, { sound: false });
-    return;
+  } else {
+    const pkg = worn ? bundledMood(worn) : undefined;
+    if (pkg?.bundled?.background && getSetting(SettingsKey.BackgroundType) === BgType.Image) {
+      const { useMoodStore } = await import('@/stores/moodStore');
+      if (!useMoodStore.getState().backgroundUrl)
+        useMoodStore.setState({ backgroundUrl: pkg.bundled.background });
+    }
   }
-  const pkg = worn ? bundledMood(worn) : undefined;
-  if (pkg?.bundled?.background && getSetting(SettingsKey.BackgroundType) === BgType.Image) {
-    const { useMoodStore } = await import('@/stores/moodStore');
-    if (!useMoodStore.getState().backgroundUrl)
-      useMoodStore.setState({ backgroundUrl: pkg.bundled.background });
+  await startGatewaySound(fresh ? keeper : worn ? bundledMood(worn) : undefined);
+}
+
+/**
+ * Set the mood: the Mood's track plays on the Gateway (Daniel, 2026-09-07 —
+ * "the idea is we're setting the mood"). Before a garden exists the Blob Store
+ * cannot answer, so a bundled Mood's track plays from its shipped URL; nothing
+ * is persisted beyond what the player itself remembers (opt-in, playing). A
+ * person who paused the sound last time is left in peace.
+ */
+async function startGatewaySound(pkg: MoodPackage | undefined): Promise<void> {
+  const { useAudioStore } = await import('@/stores/audioStore');
+  const sound = await import('@/services/sound');
+  useAudioStore.getState().init();
+  const st = useAudioStore.getState();
+  const shipped = pkg?.bundled?.track;
+  if (shipped) {
+    const track = st.track
+      ? { ...st.track, url: st.track.url ?? shipped.url }
+      : { url: shipped.url, name: shipped.name, type: shipped.type };
+    useAudioStore.setState({
+      track,
+      ...(st.track ? {} : { volume: pkg!.sound.volume, enabled: pkg!.sound.enabled }),
+    });
+  }
+  const paused = sound.getOptIn() && !sound.getWasPlaying();
+  if (!paused && useAudioStore.getState().enabled) {
+    await useAudioStore
+      .getState()
+      .play()
+      .catch((err: unknown) => {
+        // A browser that wants a gesture first: the bar's play button is right there
+        console.warn('Gateway sound did not start:', err);
+      });
   }
 }
 
@@ -79,6 +115,17 @@ export default function Gateway() {
           style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}
         />
       )}
+      {/* The Mood's player — the room is set before you enter */}
+      <div
+        className="fixed top-2 right-3 z-50"
+        style={
+          can(Capability.DesktopChrome)
+            ? ({ WebkitAppRegion: 'no-drag' } as React.CSSProperties)
+            : undefined
+        }
+      >
+        <MoodBar gateway />
+      </div>
       <div className="w-full max-w-md flex flex-col items-center gap-6">
         {(step === Step.Banner || step === Step.Checking) && (
           <BannerStep

@@ -1,4 +1,5 @@
-const { app, BrowserWindow, ipcMain, protocol, net, dialog, shell } = require('electron');
+const { app, BrowserWindow, ipcMain, protocol, dialog, shell } = require('electron');
+const { Readable } = require('node:stream');
 const path = require('path');
 const fs = require('fs');
 const { execFile } = require('child_process');
@@ -667,8 +668,77 @@ function registerAppProtocol() {
       filePath = path.join(root, 'index.html');
     }
 
-    return net.fetch('file://' + filePath);
+    // Serve from disk ourselves rather than net.fetch('file://…'): media
+    // elements ask with a Range header (a Mood's track loops from here), which
+    // the file: scheme does not honour, and the content type must be right.
+    const size = fs.statSync(filePath).size;
+    const type = contentTypeFor(filePath);
+    const range = request.headers.get('range');
+    const m = range ? /^bytes=(\d*)-(\d*)$/.exec(range) : null;
+    if (m && (m[1] || m[2])) {
+      const start = m[1] ? Number(m[1]) : Math.max(0, size - Number(m[2]));
+      const end = m[1] && m[2] ? Math.min(Number(m[2]), size - 1) : size - 1;
+      if (start >= size || start > end) {
+        return new Response(null, {
+          status: 416,
+          headers: { 'Content-Range': `bytes */${size}` },
+        });
+      }
+      const stream = fs.createReadStream(filePath, { start, end });
+      return new Response(Readable.toWeb(stream) as any, {
+        status: 206,
+        headers: {
+          'Content-Type': type,
+          'Content-Length': String(end - start + 1),
+          'Content-Range': `bytes ${start}-${end}/${size}`,
+          'Accept-Ranges': 'bytes',
+        },
+      });
+    }
+    return new Response(Readable.toWeb(fs.createReadStream(filePath)) as any, {
+      status: 200,
+      headers: {
+        'Content-Type': type,
+        'Content-Length': String(size),
+        'Accept-Ranges': 'bytes',
+      },
+    });
   });
+}
+
+const CONTENT_TYPES: Record<string, string> = {
+  '.html': 'text/html; charset=utf-8',
+  '.js': 'text/javascript; charset=utf-8',
+  '.mjs': 'text/javascript; charset=utf-8',
+  '.css': 'text/css; charset=utf-8',
+  '.json': 'application/json; charset=utf-8',
+  '.map': 'application/json; charset=utf-8',
+  '.wasm': 'application/wasm',
+  '.svg': 'image/svg+xml',
+  '.png': 'image/png',
+  '.jpg': 'image/jpeg',
+  '.jpeg': 'image/jpeg',
+  '.gif': 'image/gif',
+  '.webp': 'image/webp',
+  '.ico': 'image/x-icon',
+  '.woff': 'font/woff',
+  '.woff2': 'font/woff2',
+  '.ttf': 'font/ttf',
+  '.otf': 'font/otf',
+  '.opus': 'audio/ogg',
+  '.ogg': 'audio/ogg',
+  '.mp3': 'audio/mpeg',
+  '.m4a': 'audio/mp4',
+  '.aac': 'audio/aac',
+  '.wav': 'audio/wav',
+  '.flac': 'audio/flac',
+  '.mp4': 'video/mp4',
+  '.webm': 'video/webm',
+  '.txt': 'text/plain; charset=utf-8',
+  '.md': 'text/markdown; charset=utf-8',
+};
+function contentTypeFor(filePath: string): string {
+  return CONTENT_TYPES[path.extname(filePath).toLowerCase()] ?? 'application/octet-stream';
 }
 
 // Register crux-app:// as a privileged scheme (must be before app.whenReady)

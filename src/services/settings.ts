@@ -32,6 +32,12 @@ const SYNC_KEYS: Set<string> = new Set([
   SettingsKey.MoodThemeDark,
   SettingsKey.MoodThemeLight,
   SettingsKey.WornMoodId,
+  // …and its sound, so the Gateway can play the worn Mood's track before Enter
+  SettingsKey.SoundTrack,
+  SettingsKey.SoundEnabled,
+  SettingsKey.ResonanceVolume,
+  SettingsKey.ResonanceOptIn,
+  SettingsKey.ResonancePlaying,
   // The public website has no SQLite: the Mood it wears lives here
   SettingsKey.PublicMoodId,
 ]);

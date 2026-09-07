@@ -46,7 +46,8 @@ export class TrackPlayer {
     const el = new Audio();
     el.loop = true;
     el.preload = 'auto';
-    el.crossOrigin = 'anonymous';
+    // Same-origin sources only (blob: and the app's own files): no crossOrigin,
+    // which would turn a plain file request into a CORS one the app scheme rejects.
     this.el = el;
     try {
       const ctx = new AudioContext();
