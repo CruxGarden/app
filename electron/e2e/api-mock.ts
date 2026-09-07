@@ -279,13 +279,6 @@ export async function startMockApi(): Promise<MockApi> {
         bandwidthBytes: storageBytes ? 40960 : 0,
         requests: storageBytes ? 12 : 0,
         visitors: storageBytes ? 9 : 0,
-        players: storageBytes ? 2 : 0,
-        daily: storageBytes
-          ? [
-              { day: '2026-09-05', visitors: 3, players: 1, requests: 4 },
-              { day: '2026-09-06', visitors: 6, players: 1, requests: 8 },
-            ]
-          : [],
         storeBytes: storageBytes ? 512 : 0,
         storeKeys: storageBytes ? 2 : 0,
         storeReads: storageBytes ? 30 : 0,
@@ -472,7 +465,6 @@ export async function startMockApi(): Promise<MockApi> {
         bandwidthBytes: cruxes.reduce((n, c) => n + c.bandwidthBytes, 0),
         requests: cruxes.reduce((n, c) => n + c.requests, 0),
         visitors: cruxes.reduce((n, c) => n + c.visitors, 0),
-        players: cruxes.reduce((n, c) => n + c.players, 0),
       };
       const sync = {
         storageBytes: gardenBytes + cruxBytes,

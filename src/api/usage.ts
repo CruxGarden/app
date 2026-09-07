@@ -10,13 +10,6 @@ export interface Plan {
   /** Custom domains an account may have connected at once. */
   customDomains: number;
 }
-/** One day of audience for a crux (days with nothing are omitted). */
-export interface DailyAudience {
-  day: string; // YYYY-MM-DD (UTC)
-  visitors: number;
-  players: number;
-  requests: number;
-}
 export interface CruxUsage {
   cruxId: string;
   title?: string;
@@ -24,10 +17,8 @@ export interface CruxUsage {
   files: number;
   bandwidthBytes: number;
   requests: number;
-  /** people this period: distinct visitors summed per day; signed-in visitors who wrote to the store */
+  /** people, all time: every visitor the crux ever had, counted once per day each */
   visitors: number;
-  players: number;
-  daily: DailyAudience[];
   storeBytes: number;
   storeKeys: number;
   storeReads: number;
@@ -108,7 +99,6 @@ export interface AccountUsage {
     bandwidthBytes: number;
     requests: number;
     visitors: number;
-    players: number;
   };
   store: StoreUsage;
   cruxes: CruxUsage[];
