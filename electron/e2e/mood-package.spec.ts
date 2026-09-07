@@ -69,7 +69,7 @@ test.describe('mood packages', () => {
       await expect(page.getByRole('status')).toContainText('Now wearing "Night Shift"');
       await expect.poll(() => cssVar('--pane-gap')).toBe('0px');
       await expect.poll(async () => (await audio()).volume).toBe(0.25);
-      expect((await audio()).trackName).toBe('Echoes Beyond the Signal'); // the Keeper's track rode along
+      expect((await audio()).trackName).toBe('Echoes From Beyond'); // the Keeper's track rode along
 
       // The theme became a preset under Yours as well
       await page.getByRole('button', { name: 'Theme', exact: true }).click();

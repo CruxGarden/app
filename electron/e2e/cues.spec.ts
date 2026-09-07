@@ -27,7 +27,7 @@ test.describe('sound: track + cues', () => {
       // A fresh garden wears The Keeper: its track is already the Mood's
       await expect
         .poll(async () => (await state()).trackName, { timeout: 30_000 })
-        .toBe('Echoes Beyond the Signal');
+        .toBe('Echoes From Beyond');
       // It started on the Gateway (the room is set before you enter) and kept going
       await expect.poll(async () => (await state()).playing, { timeout: 15_000 }).toBe(true);
       await page.screenshot({ path: 'e2e/.results/cues-1-playing.png' });

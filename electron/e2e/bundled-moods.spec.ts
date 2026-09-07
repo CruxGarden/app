@@ -26,8 +26,8 @@ test.describe('bundled moods', () => {
       await expect.poll(() => cssVar('--accent')).toBe('#88bc88');
       // …and the Mood's track is already playing from the bar
       const bar = page.getByRole('region', { name: 'Mood Bar' });
-      await expect(bar).toContainText('Echoes Beyond the Signal');
-      await expect.poll(async () => (await audio()).trackName).toBe('Echoes Beyond the Signal');
+      await expect(bar).toContainText('Echoes From Beyond');
+      await expect.poll(async () => (await audio()).trackName).toBe('Echoes From Beyond');
       await expect.poll(async () => (await audio()).playing, { timeout: 15_000 }).toBe(true);
       await page.getByRole('button', { name: /enter/i }).click();
       await page.getByText('Plant a new garden').click();
@@ -39,7 +39,7 @@ test.describe('bundled moods', () => {
       await expect.poll(() => cssVar('--accent'), { timeout: 30_000 }).toBe('#88bc88');
       await expect.poll(() => cssVar('--background-type')).toBe('image');
       await expect(page.getByTestId('mood-background-image')).toBeVisible();
-      await expect.poll(async () => (await audio()).trackName).toBe('Echoes Beyond the Signal');
+      await expect.poll(async () => (await audio()).trackName).toBe('Echoes From Beyond');
 
       await page.getByRole('button', { name: 'Mood', exact: true }).click();
       const built = page.getByTestId('bundled-moods');
@@ -71,7 +71,7 @@ test.describe('bundled moods', () => {
       // Back to The Keeper from the browser: the track and the vista return
       await page.getByRole('button', { name: 'Mood', exact: true }).click();
       await built.getByTestId('bundled-the-keeper').getByRole('button', { name: 'Apply' }).click();
-      await expect.poll(async () => (await audio()).trackName).toBe('Echoes Beyond the Signal');
+      await expect.poll(async () => (await audio()).trackName).toBe('Echoes From Beyond');
       await expect.poll(() => cssVar('--background-type')).toBe('image');
       await page.keyboard.press('Escape');
       // A new crux greets with the Keeper's voice; its face sits on a theme gradient

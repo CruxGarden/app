@@ -32,7 +32,7 @@ describe('bundled Moods', () => {
     // the files ship inside the app; the package carries them as URLs until apply
     expect(k.bundled?.background).toMatch(/vista/);
     expect(k.bundled?.avatar).toMatch(/keeper-avatar/);
-    expect(k.bundled?.track).toMatchObject({ name: 'Echoes Beyond the Signal', type: 'audio/ogg' });
+    expect(k.bundled?.track).toMatchObject({ name: 'Echoes From Beyond', type: 'audio/ogg' });
     expect(k.sound.track).toBeNull();
     // and validation (the shape a saved/imported package takes) keeps the sound block
     const ok = validateMoodPackage(JSON.parse(JSON.stringify(k)))!;
