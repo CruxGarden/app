@@ -1,6 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { applyMood, type MoodPackage } from '@/lib/moods/packages';
 import MoodBar from '@/components/mood/MoodBar';
+import Draggable from '@/components/gateway/Draggable';
 import { BgType } from '@/lib/types';
 import { useNavigate } from 'react-router-dom';
 import { Panel, Spinner, Button, IconButton, ApiKeySetup, Toggle } from '@/components/ui';
@@ -115,30 +116,26 @@ export default function Gateway() {
           style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}
         />
       )}
-      {/* The Mood's player — the room is set before you enter */}
-      <div
-        className="fixed top-2 right-3 z-50"
-        style={
-          can(Capability.DesktopChrome)
-            ? ({ WebkitAppRegion: 'no-drag' } as React.CSSProperties)
-            : undefined
-        }
-      >
+      {/* The Mood's player — the room is set before you enter. Both it and the
+          banner can be dragged anywhere; the place is remembered. */}
+      <Draggable id="player" label="Player" className="fixed top-2 right-3 z-50">
         <MoodBar gateway />
-      </div>
-      <div className="w-full max-w-md flex flex-col items-center gap-6">
-        {(step === Step.Banner || step === Step.Checking) && (
-          <BannerStep
-            checking={step === Step.Checking}
-            onSetStep={setStep}
-            onNavigateHome={() => navigate('/home', { replace: true })}
-          />
-        )}
-        {step === Step.Choose && <ChooseStep onChoice={setStep} />}
-        {step === Step.Setup && <SetupStep onBack={() => setStep(Step.Choose)} />}
-        {step === Step.Cloud && <CloudStep onBack={() => setStep(Step.Choose)} />}
-        {step === Step.Import && <ImportStep onBack={() => setStep(Step.Choose)} />}
-      </div>
+      </Draggable>
+      <Draggable id="banner" label="Banner" className="w-full max-w-md">
+        <div className="w-full flex flex-col items-center gap-6">
+          {(step === Step.Banner || step === Step.Checking) && (
+            <BannerStep
+              checking={step === Step.Checking}
+              onSetStep={setStep}
+              onNavigateHome={() => navigate('/home', { replace: true })}
+            />
+          )}
+          {step === Step.Choose && <ChooseStep onChoice={setStep} />}
+          {step === Step.Setup && <SetupStep onBack={() => setStep(Step.Choose)} />}
+          {step === Step.Cloud && <CloudStep onBack={() => setStep(Step.Choose)} />}
+          {step === Step.Import && <ImportStep onBack={() => setStep(Step.Choose)} />}
+        </div>
+      </Draggable>
     </div>
   );
 }
