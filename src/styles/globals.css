@@ -315,6 +315,7 @@
   --color-gateway-subtitle: var(--gateway-subtitle);
   --color-gateway-button: var(--gateway-button);
   --color-gateway-button-hover: var(--gateway-button-hover);
+  --color-gateway-button-text: var(--gateway-button-text);
 
   /* ── V3: Settings ─────────────────────────────────── */
   --color-settings-panel: var(--settings-panel);
@@ -504,6 +505,7 @@
   --gateway-subtitle: #8b908d;
   --gateway-button: #7db3a3;
   --gateway-button-hover: #6da393;
+  --gateway-button-text: var(--bg);
   --settings-panel: #141816;
   --settings-panel-border: rgba(82, 96, 86, 0.18);
   --settings-label: #7db3a3;

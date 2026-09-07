@@ -108,7 +108,7 @@ function BannerStep({
           size="lg"
           onClick={onEnter}
           disabled={checking}
-          className="!w-14 !h-14 bg-gateway-button !text-accent hover:bg-gateway-button-hover hover:!text-accent"
+          className="!w-14 !h-14 bg-gateway-button !text-gateway-button-text hover:bg-gateway-button-hover hover:!text-gateway-button-text"
         >
           {checking ? <Spinner size={20} /> : <PlusCircleIcon size={40} />}
         </IconButton>

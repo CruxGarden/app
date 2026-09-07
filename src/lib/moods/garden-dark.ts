@@ -58,6 +58,9 @@ export const GARDEN_DARK = {
   settingsLabel: 'var(--accent)',
   gatewayButton: 'var(--accent)',
   gatewayButtonHover: 'color-mix(in srgb, var(--accent) 85%, black)',
+  // The glyph on the Enter button: accent-on-accent is invisible, so it
+  // takes the page background, like text on every other accent button.
+  gatewayButtonText: 'var(--bg)',
   flowColor: 'var(--accent)',
   flowBg: 'var(--bg)',
   iconButtonIconHover: 'var(--accent)',
