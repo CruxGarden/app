@@ -4,6 +4,9 @@ import { getServices, isServicesReady } from '@/services';
 import { formatBytes } from '@/lib/format';
 import type { StoreEntry } from '@/services/sqlite/store.service';
 import { confirmDialog } from '@/stores/dialogStore';
+import { useAuthStore } from '@/stores/authStore';
+import * as liveStore from '@/api/store';
+import { cn } from '@/lib/cn';
 import { PaneEmpty, PaneToolbar } from './pane-ui';
 
 type EditingCell = { key: string; field: 'key' | 'value' | 'mode' } | null;
@@ -28,6 +31,18 @@ function KeyIcon() {
 
 export default function StorePane() {
   const crux = useCruxStore((s) => s.crux);
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const isPublished = !!crux?.meta?.publishedAt;
+  /**
+   * Two stores, one pane. Local: what the workspace preview writes (SQLite,
+   * editable). Live: what visitors of the PUBLISHED crux wrote, read from the
+   * API — a data explorer for the site that is actually out there.
+   */
+  const [source, setSource] = useState<'local' | 'live'>('local');
+  const canLive = isAuthenticated && isPublished;
+  const live = source === 'live' && canLive;
+  const [liveEntries, setLiveEntries] = useState<liveStore.LiveStoreEntry[]>([]);
+  const [liveError, setLiveError] = useState<string | null>(null);
   const [entries, setEntries] = useState<StoreEntry[]>([]);
   const [editing, setEditing] = useState<EditingCell>(null);
   const [editValue, setEditValue] = useState('');
@@ -41,16 +56,62 @@ export default function StorePane() {
     setEntries(all);
   }, [crux?.id]);
 
+  const loadLive = useCallback(async () => {
+    if (!crux?.id || !live) return;
+    try {
+      setLiveEntries(await liveStore.listLive(crux.id));
+      setLiveError(null);
+    } catch (err) {
+      setLiveError((err as Error)?.message || 'Could not read the live store');
+    }
+  }, [crux?.id, live]);
+
   useEffect(() => {
     loadEntries();
   }, [loadEntries]);
+  useEffect(() => {
+    loadLive();
+  }, [loadLive]);
 
-  // Refresh when store changes (from preview iframe writes)
+  // Refresh when store changes (from preview iframe writes; live: visitors)
   useEffect(() => {
     if (!crux?.id) return;
-    const interval = setInterval(loadEntries, 2000);
+    const interval = setInterval(live ? loadLive : loadEntries, live ? 5000 : 2000);
     return () => clearInterval(interval);
-  }, [crux?.id, loadEntries]);
+  }, [crux?.id, live, loadEntries, loadLive]);
+
+  const handleDeleteLive = useCallback(
+    async (key: string) => {
+      if (!crux?.id) return;
+      if (
+        !(await confirmDialog({
+          message: `Delete "${key}" from the live store? Every visitor's value for it goes too.`,
+          confirmLabel: 'Delete',
+          danger: true,
+        }))
+      )
+        return;
+      await liveStore.deleteLive(crux.id, key);
+      await loadLive();
+    },
+    [crux?.id, loadLive],
+  );
+
+  const handleClearLive = useCallback(async () => {
+    if (!crux?.id) return;
+    if (
+      !(await confirmDialog({
+        title: 'Clear the live store',
+        message:
+          "Delete everything visitors have written to the published crux? For 5Ws that is the leaderboard and everyone's daily records.",
+        confirmLabel: 'Clear live store',
+        danger: true,
+      }))
+    )
+      return;
+    await liveStore.clearLive(crux.id);
+    await loadLive();
+  }, [crux?.id, loadLive]);
 
   const handleSetValue = useCallback(
     async (key: string, value: string) => {
@@ -156,18 +217,57 @@ export default function StorePane() {
     <div className="flex flex-col h-full text-text text-sm">
       {/* Header */}
       <PaneToolbar>
-        <span className="text-2xs font-mono uppercase tracking-wider text-text-muted">
-          Local store
-        </span>
+        <div
+          className="flex items-center gap-0.5 text-2xs font-mono uppercase tracking-wider"
+          role="tablist"
+          aria-label="Store source"
+        >
+          {(['local', 'live'] as const).map((src) => (
+            <button
+              key={src}
+              role="tab"
+              aria-selected={source === src}
+              disabled={src === 'live' && !canLive}
+              onClick={() => setSource(src)}
+              className={cn(
+                'px-1.5 py-0.5 rounded-[var(--radius-sm)] transition-colors cursor-pointer disabled:cursor-default disabled:opacity-40',
+                source === src ? 'text-text bg-surface-solid' : 'text-text-muted hover:text-text',
+              )}
+              title={
+                src === 'local'
+                  ? 'What the workspace preview writes (this machine)'
+                  : canLive
+                    ? 'What visitors of the published crux wrote'
+                    : isPublished
+                      ? 'Connect your account to read the live store'
+                      : 'Publish the crux to have a live store'
+              }
+              data-testid={`store-source-${src}`}
+            >
+              {src === 'local' ? 'Local' : 'Live'}
+            </button>
+          ))}
+        </div>
         <div className="flex items-center gap-2">
+          {!live && (
+            <button
+              onClick={() => setAdding(true)}
+              className="text-xs px-2 py-0.5 rounded-[var(--radius-sm)] border border-border bg-surface hover:border-accent hover:text-accent text-text transition-colors cursor-pointer"
+            >
+              + Add key
+            </button>
+          )}
+          {live && liveEntries.length > 0 && (
+            <button
+              onClick={handleClearLive}
+              className="text-xs text-text-muted hover:text-error transition-colors"
+              title="Delete everything visitors wrote"
+            >
+              Clear
+            </button>
+          )}
           <button
-            onClick={() => setAdding(true)}
-            className="text-xs px-2 py-0.5 rounded-[var(--radius-sm)] border border-border bg-surface hover:border-accent hover:text-accent text-text transition-colors cursor-pointer"
-          >
-            + Add key
-          </button>
-          <button
-            onClick={loadEntries}
+            onClick={live ? loadLive : loadEntries}
             className="text-xs text-text-muted hover:text-text"
             title="Refresh"
           >
@@ -187,7 +287,7 @@ export default function StorePane() {
       </PaneToolbar>
 
       {/* Add row */}
-      {adding && (
+      {adding && !live && (
         <div className="flex items-center gap-2 px-3 py-2 border-b border-border bg-surface">
           <input
             autoFocus
@@ -218,112 +318,209 @@ export default function StorePane() {
         </div>
       )}
 
-      {/* Table */}
-      <div className="flex-1 overflow-auto">
-        {entries.length === 0 ? (
-          <PaneEmpty
-            icon={<KeyIcon />}
-            title="No store entries yet"
-            description="Key-value data your published crux can read and write with the crux.store SDK."
-            className="h-full"
-          >
-            {!adding && (
-              <button
-                onClick={() => setAdding(true)}
-                className="text-xs text-accent hover:text-text transition-colors cursor-pointer"
-              >
-                Add your first key
-              </button>
-            )}
-          </PaneEmpty>
-        ) : (
-          <table className="w-full text-xs">
-            <thead>
-              <tr className="text-left text-text-muted border-b border-border">
-                <th className="px-3 py-1.5 font-mono font-normal">Key</th>
-                <th className="px-3 py-1.5 font-mono font-normal">Value</th>
-                <th className="px-3 py-1.5 font-mono font-normal w-20">Mode</th>
-                <th className="px-3 py-1.5 w-8"></th>
-              </tr>
-            </thead>
-            <tbody>
-              {entries.map((entry) => (
-                <tr key={entry.key} className="border-b border-border hover:bg-surface">
-                  <td className="px-3 py-1.5 font-mono text-accent">{entry.key}</td>
-                  <td
-                    className="px-3 py-1.5 font-mono cursor-pointer max-w-[200px] truncate"
-                    onClick={() => startEdit(entry.key, 'value')}
-                    title="Click to edit"
-                  >
-                    {editing?.key === entry.key && editing.field === 'value' ? (
-                      <input
-                        autoFocus
-                        value={editValue}
-                        onChange={(e) => setEditValue(e.target.value)}
-                        onBlur={commitEdit}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') commitEdit();
-                          if (e.key === 'Escape') setEditing(null);
-                        }}
-                        className="w-full bg-bg text-text px-1 py-0.5 rounded outline-none ring-1 ring-accent"
-                      />
-                    ) : (
-                      <span className="text-text">
-                        {typeof entry.value === 'string'
-                          ? entry.value
-                          : JSON.stringify(entry.value)}
-                      </span>
-                    )}
-                  </td>
-                  <td className="px-3 py-1.5">
-                    <button
-                      onClick={() => handleToggleMode(entry.key)}
-                      className={`text-xs px-1.5 py-0.5 rounded font-mono ${
-                        entry.mode === 'public'
-                          ? 'bg-warning-bg text-warning-text border border-warning-border'
-                          : 'bg-surface text-text-muted'
-                      }`}
-                      title={
-                        entry.mode === 'public'
-                          ? 'Open: anyone reads, a connected account writes'
-                          : 'Protected user: per account, private'
-                      }
-                    >
-                      {entry.mode}
-                    </button>
-                  </td>
-                  <td className="px-3 py-1.5">
-                    <button
-                      onClick={() => handleDelete(entry.key)}
-                      className="text-text-muted hover:text-error transition-colors"
-                      title="Delete key"
-                    >
-                      <svg
-                        width="12"
-                        height="12"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                      >
-                        <line x1="18" y1="6" x2="6" y2="18" />
-                        <line x1="6" y1="6" x2="18" y2="18" />
-                      </svg>
-                    </button>
-                  </td>
+      {/* Live table — read-only values; delete only */}
+      {live && (
+        <div className="flex-1 overflow-auto" data-testid="store-live">
+          {liveError ? (
+            <PaneEmpty
+              title="Could not read the live store"
+              description={liveError}
+              className="h-full"
+            />
+          ) : liveEntries.length === 0 ? (
+            <PaneEmpty
+              icon={<KeyIcon />}
+              title="Nothing written yet"
+              description="Keys appear here as visitors of the published crux write them."
+              className="h-full"
+            />
+          ) : (
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="text-left text-text-muted border-b border-border">
+                  <th className="px-3 py-1.5 font-mono font-normal">Key</th>
+                  <th className="px-3 py-1.5 font-mono font-normal">Value</th>
+                  <th className="px-3 py-1.5 font-mono font-normal w-20">Mode</th>
+                  <th className="px-3 py-1.5 font-mono font-normal w-28">Updated</th>
+                  <th className="px-3 py-1.5 w-8"></th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </div>
+              </thead>
+              <tbody>
+                {liveEntries.map((entry) => {
+                  const text =
+                    typeof entry.value === 'string' ? entry.value : JSON.stringify(entry.value);
+                  return (
+                    <tr
+                      key={`${entry.key}:${entry.visitorId ?? ''}`}
+                      className="border-b border-border hover:bg-surface"
+                    >
+                      <td className="px-3 py-1.5 font-mono text-accent">
+                        {entry.key}
+                        {entry.visitorId && (
+                          <span
+                            className="ml-1.5 text-text-muted"
+                            title={`Visitor ${entry.visitorId}`}
+                          >
+                            · {entry.visitorId.slice(0, 8)}
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-3 py-1.5 font-mono max-w-[240px] truncate" title={text}>
+                        <span className="text-text">{text}</span>
+                      </td>
+                      <td className="px-3 py-1.5">
+                        <span
+                          className={`text-xs px-1.5 py-0.5 rounded font-mono ${
+                            entry.mode === 'public'
+                              ? 'bg-warning-bg text-warning-text border border-warning-border'
+                              : 'bg-surface text-text-muted'
+                          }`}
+                        >
+                          {entry.mode}
+                        </span>
+                      </td>
+                      <td className="px-3 py-1.5 font-mono text-text-muted whitespace-nowrap">
+                        {new Date(entry.updatedAt).toLocaleString(undefined, {
+                          month: 'short',
+                          day: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        })}
+                      </td>
+                      <td className="px-3 py-1.5">
+                        <button
+                          onClick={() => handleDeleteLive(entry.key)}
+                          className="text-text-muted hover:text-error transition-colors"
+                          title="Delete this key from the live store"
+                        >
+                          ×
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          )}
+        </div>
+      )}
+
+      {/* Table */}
+      {!live && (
+        <div className="flex-1 overflow-auto">
+          {entries.length === 0 ? (
+            <PaneEmpty
+              icon={<KeyIcon />}
+              title="No store entries yet"
+              description="Key-value data your published crux can read and write with the crux.store SDK."
+              className="h-full"
+            >
+              {!adding && (
+                <button
+                  onClick={() => setAdding(true)}
+                  className="text-xs text-accent hover:text-text transition-colors cursor-pointer"
+                >
+                  Add your first key
+                </button>
+              )}
+            </PaneEmpty>
+          ) : (
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="text-left text-text-muted border-b border-border">
+                  <th className="px-3 py-1.5 font-mono font-normal">Key</th>
+                  <th className="px-3 py-1.5 font-mono font-normal">Value</th>
+                  <th className="px-3 py-1.5 font-mono font-normal w-20">Mode</th>
+                  <th className="px-3 py-1.5 w-8"></th>
+                </tr>
+              </thead>
+              <tbody>
+                {entries.map((entry) => (
+                  <tr key={entry.key} className="border-b border-border hover:bg-surface">
+                    <td className="px-3 py-1.5 font-mono text-accent">{entry.key}</td>
+                    <td
+                      className="px-3 py-1.5 font-mono cursor-pointer max-w-[200px] truncate"
+                      onClick={() => startEdit(entry.key, 'value')}
+                      title="Click to edit"
+                    >
+                      {editing?.key === entry.key && editing.field === 'value' ? (
+                        <input
+                          autoFocus
+                          value={editValue}
+                          onChange={(e) => setEditValue(e.target.value)}
+                          onBlur={commitEdit}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') commitEdit();
+                            if (e.key === 'Escape') setEditing(null);
+                          }}
+                          className="w-full bg-bg text-text px-1 py-0.5 rounded outline-none ring-1 ring-accent"
+                        />
+                      ) : (
+                        <span className="text-text">
+                          {typeof entry.value === 'string'
+                            ? entry.value
+                            : JSON.stringify(entry.value)}
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-3 py-1.5">
+                      <button
+                        onClick={() => handleToggleMode(entry.key)}
+                        className={`text-xs px-1.5 py-0.5 rounded font-mono ${
+                          entry.mode === 'public'
+                            ? 'bg-warning-bg text-warning-text border border-warning-border'
+                            : 'bg-surface text-text-muted'
+                        }`}
+                        title={
+                          entry.mode === 'public'
+                            ? 'Open: anyone reads, a connected account writes'
+                            : 'Protected user: per account, private'
+                        }
+                      >
+                        {entry.mode}
+                      </button>
+                    </td>
+                    <td className="px-3 py-1.5">
+                      <button
+                        onClick={() => handleDelete(entry.key)}
+                        className="text-text-muted hover:text-error transition-colors"
+                        title="Delete key"
+                      >
+                        <svg
+                          width="12"
+                          height="12"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                        >
+                          <line x1="18" y1="6" x2="6" y2="18" />
+                          <line x1="6" y1="6" x2="18" y2="18" />
+                        </svg>
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      )}
 
       {/* Footer */}
       <div className="flex items-center justify-between px-3 py-1.5 border-t border-border text-text-muted text-xs">
-        <span>
-          {entries.length} key{entries.length !== 1 ? 's' : ''} · {formatBytes(totalSize)}
-        </span>
-        {entries.length > 0 && (
+        {live ? (
+          <span>
+            {liveEntries.length} row{liveEntries.length !== 1 ? 's' : ''} ·{' '}
+            {new Set(liveEntries.map((e) => e.key)).size} key
+            {new Set(liveEntries.map((e) => e.key)).size !== 1 ? 's' : ''} · live
+          </span>
+        ) : (
+          <span>
+            {entries.length} key{entries.length !== 1 ? 's' : ''} · {formatBytes(totalSize)}
+          </span>
+        )}
+        {!live && entries.length > 0 && (
           <button onClick={handleClearAll} className="hover:text-error transition-colors">
             Clear all
           </button>

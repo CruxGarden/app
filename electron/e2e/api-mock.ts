@@ -50,6 +50,14 @@ export interface MockApi {
         verifies: number;
       }
     >;
+    /** Author-side Crux Store rows (what visitors wrote); seeded on first read. */
+    store?: Array<{
+      key: string;
+      value: unknown;
+      mode: 'public' | 'protected';
+      visitorId: string | null;
+      updatedAt: string;
+    }>;
   };
   /** Every request seen (`METHOD /path -> status`), for debugging. */
   log: string[];
@@ -538,6 +546,37 @@ export async function startMockApi(): Promise<MockApi> {
       const { verifies: _verifies, ...view } = d;
       return view;
     };
+    // Crux Store, author side: GET /store/:cruxId lists what visitors wrote;
+    // DELETE /store/:cruxId/:key and DELETE /store/:cruxId clear it.
+    const storeMatch = path.match(/^\/store\/([^/]+)(?:\/([^/]+))?$/);
+    if (storeMatch) {
+      state.store ??= [
+        {
+          key: 'leaderboard:2026-09-06',
+          value: { entries: [{ name: 'tester', score: 87, seconds: 61 }] },
+          mode: 'public',
+          visitorId: null,
+          updatedAt: new Date().toISOString(),
+        },
+        {
+          key: 'played:2026-09-06',
+          value: { score: 87 },
+          mode: 'protected',
+          visitorId: 'visitor-a1b2c3d4',
+          updatedAt: new Date().toISOString(),
+        },
+      ];
+      if (method === 'GET' && !storeMatch[2]) return send(200, state.store);
+      if (method === 'DELETE' && storeMatch[2]) {
+        const key = decodeURIComponent(storeMatch[2]);
+        state.store = state.store.filter((e) => e.key !== key);
+        return send(204, null);
+      }
+      if (method === 'DELETE') {
+        state.store = [];
+        return send(204, null);
+      }
+    }
     const dm = path.match(/^\/domains\/([^/]+)(\/verify)?$/);
     if (dm) {
       const d = state.domains.find((x) => x.id === dm[1]);

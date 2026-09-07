@@ -50,6 +50,20 @@ test.describe('publish (mocked API)', () => {
       ).toBe(true);
       await page.screenshot({ path: 'e2e/.results/publish-1-published.png' });
 
+      // Store pane → Live: the published crux's store, as visitors left it
+      await page.getByRole('button', { name: 'Toggle store' }).click();
+      await page.getByTestId('store-source-live').click();
+      const liveStore = page.getByTestId('store-live');
+      await expect(liveStore).toContainText('leaderboard:2026-09-06');
+      await expect(liveStore).toContainText('played:2026-09-06');
+      await expect(liveStore).toContainText('visitor-'); // a per-visitor row shows who
+      await liveStore.getByTitle('Delete this key from the live store').first().click();
+      await page.getByRole('dialog').getByRole('button', { name: 'Delete' }).click();
+      await expect(liveStore).not.toContainText('leaderboard:2026-09-06');
+      expect(api.log.some((l) => l.startsWith('DELETE /store/'))).toBe(true);
+      await page.getByTestId('store-source-local').click();
+      await page.getByRole('button', { name: 'Toggle store' }).click();
+
       // Edit → unpublished changes → Update (update path)
       await monaco.click();
       await page.keyboard.press('ControlOrMeta+ArrowDown');
