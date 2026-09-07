@@ -54,6 +54,8 @@ test.describe('publish (mocked API)', () => {
       await page.getByRole('button', { name: 'Toggle store' }).click();
       await page.getByTestId('store-source-live').click();
       const liveStore = page.getByTestId('store-live');
+      await expect(page.getByTestId('store-export')).toBeEnabled();
+      await expect(page.getByTestId('store-import')).toBeVisible();
       await expect(liveStore).toContainText('leaderboard:2026-09-06');
       await expect(liveStore).toContainText('played:2026-09-06');
       await expect(liveStore).toContainText('visitor-'); // a per-visitor row shows who
@@ -91,6 +93,10 @@ test.describe('publish (mocked API)', () => {
       // Unshare takes it offline: status flips back and Share is offered again
       api.state.failPublish = false;
       await page.getByRole('button', { name: 'Unshare', exact: true }).click();
+      // It says what goes with it — the live store's rows — before it goes
+      const unshare = page.getByRole('dialog');
+      await expect(unshare).toContainText('Crux Store');
+      await unshare.getByRole('button', { name: 'Unshare' }).click();
       await expect(page.getByText('Not shared yet', { exact: false })).toBeVisible({
         timeout: 30_000,
       });

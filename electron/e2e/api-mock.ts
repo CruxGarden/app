@@ -278,6 +278,14 @@ export async function startMockApi(): Promise<MockApi> {
         files: files.length,
         bandwidthBytes: storageBytes ? 40960 : 0,
         requests: storageBytes ? 12 : 0,
+        visitors: storageBytes ? 9 : 0,
+        players: storageBytes ? 2 : 0,
+        daily: storageBytes
+          ? [
+              { day: '2026-09-05', visitors: 3, players: 1, requests: 4 },
+              { day: '2026-09-06', visitors: 6, players: 1, requests: 8 },
+            ]
+          : [],
         storeBytes: storageBytes ? 512 : 0,
         storeKeys: storageBytes ? 2 : 0,
         storeReads: storageBytes ? 30 : 0,
@@ -463,6 +471,8 @@ export async function startMockApi(): Promise<MockApi> {
         storageBytes: cruxes.reduce((n, c) => n + c.storageBytes, 0),
         bandwidthBytes: cruxes.reduce((n, c) => n + c.bandwidthBytes, 0),
         requests: cruxes.reduce((n, c) => n + c.requests, 0),
+        visitors: cruxes.reduce((n, c) => n + c.visitors, 0),
+        players: cruxes.reduce((n, c) => n + c.players, 0),
       };
       const sync = {
         storageBytes: gardenBytes + cruxBytes,
@@ -550,7 +560,8 @@ export async function startMockApi(): Promise<MockApi> {
     // Crux Store, author side: GET /store/:cruxId lists what visitors wrote;
     // DELETE /store/:cruxId/:key and DELETE /store/:cruxId clear it.
     const storeMatch = path.match(/^\/store\/([^/]+)(?:\/([^/]+))?$/);
-    if (storeMatch) {
+    const storeIo = path.match(/^\/store\/([^/]+)\/-\/(export|import)$/);
+    if (storeMatch || storeIo) {
       state.store ??= [
         {
           key: 'leaderboard:2026-09-06',
@@ -567,9 +578,48 @@ export async function startMockApi(): Promise<MockApi> {
           updatedAt: new Date().toISOString(),
         },
       ];
-      if (method === 'GET' && !storeMatch[2]) return send(200, state.store);
-      if (method === 'DELETE' && storeMatch[2]) {
-        const key = decodeURIComponent(storeMatch[2]);
+      if (storeIo?.[2] === 'export' && method === 'GET') {
+        const doc = {
+          format: 'crux-store',
+          version: 1,
+          cruxId: storeIo[1],
+          exportedAt: new Date().toISOString(),
+          public: {} as Record<string, unknown>,
+          protected: {} as Record<string, Record<string, unknown>>,
+        };
+        for (const e of state.store) {
+          if (e.visitorId) (doc.protected[e.visitorId] ??= {})[e.key] = e.value;
+          else doc.public[e.key] = e.value;
+        }
+        return send(200, doc);
+      }
+      if (storeIo?.[2] === 'import' && method === 'POST') {
+        const doc = body as {
+          public?: Record<string, unknown>;
+          protected?: Record<string, Record<string, unknown>>;
+        };
+        if (parsedUrl.searchParams.get('mode') === 'replace') state.store = [];
+        let imported = 0;
+        const put = (key: string, value: unknown, visitorId: string | null) => {
+          state.store = state.store!.filter((e) => !(e.key === key && e.visitorId === visitorId));
+          state.store.push({
+            key,
+            value,
+            mode: visitorId ? 'protected' : 'public',
+            visitorId,
+            updatedAt: new Date().toISOString(),
+          });
+          imported += 1;
+        };
+        for (const [k, v] of Object.entries(doc.public ?? {})) put(k, v, null);
+        for (const [vid, vals] of Object.entries(doc.protected ?? {}))
+          for (const [k, v] of Object.entries(vals)) put(k, v, vid);
+        return send(200, { imported, skipped: 0 });
+      }
+      if (storeIo) return send(404, { message: 'Not found' });
+      if (method === 'GET' && !storeMatch![2]) return send(200, state.store);
+      if (method === 'DELETE' && storeMatch![2]) {
+        const key = decodeURIComponent(storeMatch![2]);
         state.store = state.store.filter((e) => e.key !== key);
         return send(204, null);
       }

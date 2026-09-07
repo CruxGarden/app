@@ -1,9 +1,15 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useCruxStore } from '@/stores/cruxStore';
 import { getServices, isServicesReady } from '@/services';
 import { formatBytes } from '@/lib/format';
 import type { StoreEntry } from '@/services/sqlite/store.service';
-import { confirmDialog } from '@/stores/dialogStore';
+import { alertDialog, confirmDialog } from '@/stores/dialogStore';
+import {
+  parseStoreExport,
+  storeExportEntries,
+  storeExportFilename,
+  toStoreExport,
+} from '@/lib/store-export';
 import { useAuthStore } from '@/stores/authStore';
 import * as liveStore from '@/api/store';
 import { cn } from '@/lib/cn';
@@ -112,6 +118,77 @@ export default function StorePane() {
     await liveStore.clearLive(crux.id);
     await loadLive();
   }, [crux?.id, loadLive]);
+
+  // ── Export / import: one JSON document, the same for local and live ──
+  const fileInput = useRef<HTMLInputElement>(null);
+  const handleExport = useCallback(async () => {
+    if (!crux?.id) return;
+    try {
+      const doc = live
+        ? await liveStore.exportLive(crux.id)
+        : toStoreExport(
+            crux.id,
+            entries.map((e) => ({ key: e.key, value: e.value, visitorId: e.visitorId })),
+          );
+      const blob = new Blob([JSON.stringify(doc, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = storeExportFilename(crux.title, live);
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch (err) {
+      await alertDialog((err as Error)?.message || 'Export failed', 'Could not export the store');
+    }
+  }, [crux?.id, crux?.title, live, entries]);
+
+  const handleImportFile = useCallback(
+    async (file: File) => {
+      if (!crux?.id) return;
+      try {
+        const doc = parseStoreExport(JSON.parse(await file.text()));
+        const rows = storeExportEntries(doc);
+        const existing = live ? liveEntries.length : entries.length;
+        let replace = false;
+        if (existing > 0) {
+          replace = !(await confirmDialog({
+            title: `Import into the ${live ? 'live' : 'local'} store`,
+            message: `${rows.length} value${rows.length === 1 ? '' : 's'} from ${file.name}. Merge them over the ${existing} row${existing === 1 ? '' : 's'} already here? Cancel to replace everything instead.`,
+            confirmLabel: 'Merge',
+          }));
+          if (
+            replace &&
+            !(await confirmDialog({
+              title: 'Replace the store',
+              message: `Delete the ${existing} row${existing === 1 ? '' : 's'} here and load ${file.name} in their place?`,
+              confirmLabel: 'Replace',
+              danger: true,
+            }))
+          )
+            return;
+        }
+        if (live) {
+          const r = await liveStore.importLive(crux.id, doc, replace ? 'replace' : 'merge');
+          await loadLive();
+          if (r.skipped)
+            await alertDialog(
+              `${r.imported} imported. ${r.skipped} per-visitor value${r.skipped === 1 ? '' : 's'} skipped: their visitors have no account here.`,
+              'Imported with skips',
+            );
+        } else {
+          if (!isServicesReady()) return;
+          const { store } = getServices();
+          if (replace) await store.clear(crux.id);
+          for (const row of rows)
+            await store.set(crux.id, row.key, row.value, row.mode, row.visitorId);
+          await loadEntries();
+        }
+      } catch (err) {
+        await alertDialog((err as Error)?.message || 'Import failed', 'Could not import');
+      }
+    },
+    [crux?.id, live, liveEntries.length, entries.length, loadLive, loadEntries],
+  );
 
   const handleSetValue = useCallback(
     async (key: string, value: string) => {
@@ -266,6 +343,38 @@ export default function StorePane() {
               Clear
             </button>
           )}
+          <button
+            onClick={handleExport}
+            disabled={live ? liveEntries.length === 0 : entries.length === 0}
+            className="text-xs text-text-muted hover:text-text transition-colors disabled:opacity-40 disabled:cursor-default"
+            title={
+              live
+                ? 'Save everything visitors wrote as a JSON file'
+                : 'Save the local store as a JSON file'
+            }
+            data-testid="store-export"
+          >
+            Export
+          </button>
+          <button
+            onClick={() => fileInput.current?.click()}
+            className="text-xs text-text-muted hover:text-text transition-colors"
+            title="Load a Crux Store export (JSON) into this store"
+            data-testid="store-import"
+          >
+            Import
+          </button>
+          <input
+            ref={fileInput}
+            type="file"
+            accept="application/json,.json"
+            hidden
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              e.target.value = '';
+              if (f) void handleImportFile(f);
+            }}
+          />
           <button
             onClick={live ? loadLive : loadEntries}
             className="text-xs text-text-muted hover:text-text"

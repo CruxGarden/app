@@ -13,6 +13,9 @@ import ConnectAccount from '@/components/auth/ConnectAccount';
 import { Toggle } from '@/components/ui';
 import { PaneEmpty, PaneSection, PaneAction, PaneHint, PaneNote } from './pane-ui';
 import UsageSection from './UsageSection';
+import { confirmDialog } from '@/stores/dialogStore';
+import * as domainsApi from '@/api/domains';
+import * as liveStore from '@/api/store';
 import CustomDomainSection from './CustomDomainSection';
 import { CheckIcon, CopyIcon, ExternalLinkIcon, PowerIcon, ShareIcon } from '@/components/ui/icons';
 
@@ -89,6 +92,32 @@ export default function PublishPane() {
 
   const [unshareError, setUnshareError] = useState<string | null>(null);
   const handleUnpublish = useCallback(async () => {
+    // Say what goes with it before it goes: custom domains stop serving and the
+    // live Crux Store is deleted. Both are looked up now so the message is exact.
+    const [domains, rows] = await Promise.all([
+      crux?.id ? domainsApi.list(crux.id).catch(() => []) : [],
+      crux?.id ? liveStore.listLive(crux.id).catch(() => []) : [],
+    ]);
+    const parts = ['Takes the site offline. Your files and history stay here.'];
+    if (domains.length)
+      parts.push(
+        `${domains.map((d) => d.hostname).join(', ')} will stop serving; reconnect later and the same records verify.`,
+      );
+    if (rows.length) {
+      const keys = new Set(rows.map((r) => r.key)).size;
+      parts.push(
+        `Everything visitors wrote to the Crux Store is deleted — ${keys} key${keys === 1 ? '' : 's'}, ${rows.length} row${rows.length === 1 ? '' : 's'}. Export it from the Store pane first if you want to keep it.`,
+      );
+    }
+    if (
+      !(await confirmDialog({
+        title: 'Unshare this crux',
+        message: parts.join(' '),
+        confirmLabel: 'Unshare',
+        danger: true,
+      }))
+    )
+      return;
     setPublishing(true);
     setUnshareError(null);
     try {
@@ -99,7 +128,7 @@ export default function PublishPane() {
     } finally {
       setPublishing(false);
     }
-  }, [unpublishCrux]);
+  }, [unpublishCrux, crux?.id]);
 
   const handleCopyUrl = useCallback(() => {
     if (!publicUrl) return;
