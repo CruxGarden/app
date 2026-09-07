@@ -42,7 +42,14 @@ function LevelBars({ level, playing }: { level: number; playing: boolean }) {
   );
 }
 
-export default function MoodBar({ className }: { className?: string }) {
+export default function MoodBar({
+  className,
+  gateway = false,
+}: {
+  className?: string;
+  /** On the Gateway: no garden yet, so no Mood modal and no sound settings — just the player. */
+  gateway?: boolean;
+}) {
   const navigate = useNavigate();
   const publicSite = isPublicSite();
   const { track, enabled, playing, volume, level, init, toggle, setVolume } = useAudioStore(
@@ -67,12 +74,13 @@ export default function MoodBar({ className }: { className?: string }) {
   useEffect(() => init(), [init]);
 
   const openMood = useCallback(() => {
+    if (gateway) return;
     if (publicSite) {
       document.getElementById('mood')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
       return;
     }
     useUIStore.getState().toggleMoodPanel();
-  }, [publicSite]);
+  }, [publicSite, gateway]);
 
   const setCollapsedPersist = useCallback((c: boolean) => {
     setCollapsed(c);
@@ -145,7 +153,7 @@ export default function MoodBar({ className }: { className?: string }) {
             onChange={(e) => setVolume(parseFloat(e.target.value))}
             className="w-14 accent-mood-bar-accent cursor-pointer"
           />
-          {!publicSite && (
+          {!publicSite && !gateway && (
             <button
               type="button"
               onClick={() => navigate('/mood?tab=sound')}

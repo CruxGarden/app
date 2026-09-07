@@ -28,8 +28,8 @@ test.describe('sound: track + cues', () => {
       await expect
         .poll(async () => (await state()).trackName, { timeout: 30_000 })
         .toBe('Echoes Beyond the Signal');
-      await dock.getByRole('button', { name: 'Play soundscape' }).click();
-      await expect.poll(async () => (await state()).playing).toBe(true);
+      // It started on the Gateway (the room is set before you enter) and kept going
+      await expect.poll(async () => (await state()).playing, { timeout: 15_000 }).toBe(true);
       await page.screenshot({ path: 'e2e/.results/cues-1-playing.png' });
 
       // A turn with a tool call → toolDone cue, ducked during, released after

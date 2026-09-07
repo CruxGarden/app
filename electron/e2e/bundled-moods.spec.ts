@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { launchApp } from './launch';
 
-type AudioState = { trackName: string | null; enabled: boolean };
+type AudioState = { trackName: string | null; enabled: boolean; playing: boolean };
 
 /**
  * The twenty built-in Moods apply as whole rooms: theme tokens, background,
@@ -24,6 +24,11 @@ test.describe('bundled moods', () => {
       // The Gateway itself wears The Keeper on a first run: vista and Moss before Enter
       await expect(page.getByTestId('mood-background-image')).toBeVisible({ timeout: 30_000 });
       await expect.poll(() => cssVar('--accent')).toBe('#88bc88');
+      // …and the Mood's track is already playing from the bar
+      const bar = page.getByRole('region', { name: 'Mood Bar' });
+      await expect(bar).toContainText('Echoes Beyond the Signal');
+      await expect.poll(async () => (await audio()).trackName).toBe('Echoes Beyond the Signal');
+      await expect.poll(async () => (await audio()).playing, { timeout: 15_000 }).toBe(true);
       await page.getByRole('button', { name: /enter/i }).click();
       await page.getByText('Plant a new garden').click();
       await page.getByRole('button', { name: 'Welcome' }).click();
