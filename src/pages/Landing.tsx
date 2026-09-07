@@ -105,8 +105,8 @@ function Hero() {
       <div className="mt-8 flex flex-col items-center gap-2">
         <DownloadButtons download={download} />
         <p className="mt-4 text-xs text-text-muted max-w-md">
-          Free includes the whole app, the AI on your own key, 1 GB published and backed up, and a
-          custom domain.{' '}
+          Free includes the whole app, the AI on your own key, and 1 GB published and backed up.
+          Gardener adds room to grow and your own domain.{' '}
           <Link to="/plans" className="text-accent hover:underline">
             More room when you need it
           </Link>
@@ -394,7 +394,7 @@ function HowItWorks() {
     },
     {
       title: 'Publish',
-      body: 'One click puts it live at your own address, with a custom domain if you like. Visitors can open “How was this made?” and read the conversation.',
+      body: 'One click puts it live at its own address — or at your own domain with Gardener. Visitors can open “How was this made?” and read the conversation.',
     },
   ];
   return (

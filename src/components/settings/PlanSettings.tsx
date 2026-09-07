@@ -245,11 +245,9 @@ export default function PlanSettings() {
                     <li>{formatBytes(plan.storageBytes)} storage</li>
                     <li>{formatBytes(plan.bandwidthBytesPerPeriod)} bandwidth / month</li>
                     <li>{plan.storeRequestsPerPeriod.toLocaleString()} store requests / month</li>
-                    <li>
-                      {plan.customDomains === 1
-                        ? '1 custom domain'
-                        : `${plan.customDomains} custom domains`}
-                    </li>
+                    {plan.customDomains > 0 && (
+                      <li>Your own domains — up to {plan.customDomains}</li>
+                    )}
                   </ul>
                   <div className="mt-auto pt-2">
                     {current ? (
