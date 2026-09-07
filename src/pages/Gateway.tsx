@@ -187,7 +187,7 @@ export default function Gateway() {
         data-testid="gateway-stage"
         data-visible={visible ? 'true' : 'false'}
         onClickCapture={guardHiddenClick}
-        className="gateway-stage w-full max-w-md flex flex-col items-center gap-4"
+        className="gateway-stage w-full max-w-md flex flex-col items-center gap-10"
       >
         <Draggable id="banner" label="Banner" className="w-full">
           <div className="w-full flex flex-col items-center gap-6">
