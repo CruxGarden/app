@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { cn } from '@/lib/cn';
 import { Button } from '@/components/ui';
 import * as domainsApi from '@/api/domains';
+import * as usageApi from '@/api/usage';
 import { confirmDialog } from '@/stores/dialogStore';
 import { PaneSection, PaneHint, PaneNote } from './pane-ui';
 
@@ -50,12 +51,20 @@ export default function CustomDomainSection({ cruxId }: { cruxId: string }) {
   const [error, setError] = useState<string | null>(null);
   // Per-domain failure from Verify/Remove, shown on that card
   const [rowError, setRowError] = useState<{ id: string; message: string } | null>(null);
+  // How many domains the account's plan allows; null until known. Zero means
+  // the feature is Gardener's and the section says so instead of a form.
+  const [allowance, setAllowance] = useState<number | null>(null);
 
   const load = useCallback(async () => {
     try {
       setDomains(await domainsApi.list(cruxId));
     } catch {
       /* the section simply stays empty */
+    }
+    try {
+      setAllowance((await usageApi.me()).plan.customDomains);
+    } catch {
+      /* unknown allowance: the form stays, the server still decides */
     }
   }, [cruxId]);
   useEffect(() => void load(), [load]);
@@ -243,12 +252,19 @@ export default function CustomDomainSection({ cruxId }: { cruxId: string }) {
               </Button>
             </div>
           </form>
+        ) : allowance === 0 && domains.length === 0 ? (
+          <div data-testid="domains-gardener">
+            <PaneHint>
+              Your own address for this crux comes with Gardener — two DNS records and a click,
+              certificate included. Upgrade in Settings → Plan.
+            </PaneHint>
+          </div>
         ) : (
           <div className="flex flex-col gap-1">
             <Button size="sm" variant="secondary" onClick={() => setAdding(true)}>
               {domains.length ? 'Connect another domain' : 'Connect a domain'}
             </Button>
-            <PaneHint>Your own address for this crux, on us. Two DNS records and a click.</PaneHint>
+            <PaneHint>Your own address for this crux. Two DNS records and a click.</PaneHint>
           </div>
         )}
       </div>

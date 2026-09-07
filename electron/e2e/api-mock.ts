@@ -287,7 +287,7 @@ export async function startMockApi(): Promise<MockApi> {
     };
     // ── billing (ADR 0012): mock provider — checkout "pays" instantly
     const PLAN_LIMITS: Record<string, [number, number, number, number]> = {
-      free: [1073741824, 1073741824, 100000, 1],
+      free: [1073741824, 1073741824, 100000, 0],
       gardener: [10737418240, 26843545600, 1000000, 10],
     };
     const planOf = (id: string) => ({
@@ -694,6 +694,19 @@ export async function startMockApi(): Promise<MockApi> {
           return send(409, {
             statusCode: 409,
             message: 'That domain is already connected to a crux',
+          });
+        // Plan limit, as the API enforces it: Free has none — a Gardener feature
+        const allowance = planOf(state.billing.planId).customDomains;
+        if (state.domains.length >= allowance)
+          return send(402, {
+            statusCode: 402,
+            message:
+              allowance === 0
+                ? 'Custom domains come with Gardener. Upgrade in Settings → Plan to put this crux at your own address.'
+                : `The plan includes ${allowance} custom domains and you have ${state.domains.length} connected.`,
+            kind: 'domains',
+            limit: allowance,
+            used: state.domains.length,
           });
         const d = {
           id: `dom-${state.domains.length + 1}`,

@@ -42,9 +42,9 @@ export default function Plans() {
         <h1 className="font-display text-3xl text-text">Plans</h1>
         <p className="text-sm text-text-muted mt-2 max-w-2xl">
           Everything creative in Crux Garden is free: the app, the AI (on your own key), Moods,
-          versions, custom domains. Plans only buy more room for what you publish and back up.
-          Nothing is ever cut off for going over; new publishes pause at twice a plan, and you hear
-          from us long before that.
+          versions, publishing. Gardener buys room for what you publish and back up, and your own
+          domain. Nothing is ever cut off for going over; new publishes pause at twice a plan, and
+          you hear from us long before that.
         </p>
 
         {error && <p className="text-sm text-text-muted mt-8">Plans are unavailable right now.</p>}
@@ -91,11 +91,11 @@ export default function Plans() {
                       <li>
                         {plan.storeRequestsPerPeriod.toLocaleString()} Crux Store requests a month
                       </li>
-                      <li>
-                        {plan.customDomains === 1
-                          ? '1 custom domain'
-                          : `${plan.customDomains} custom domains`}
-                      </li>
+                      {plan.customDomains > 0 && (
+                        <li>
+                          Your own domains — up to {plan.customDomains}, certificates included
+                        </li>
+                      )}
                     </ul>
                   </div>
                 );

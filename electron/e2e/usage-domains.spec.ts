@@ -54,8 +54,16 @@ test.describe('usage + custom domains (mocked API)', () => {
       await expect(storageValue).not.toHaveText('0 B');
       await expect(usage).toContainText(/Bandwidth/);
 
-      // Custom domain: add → records → verify ×3 → live
+      // Custom domains are Gardener's: on Free the section says so, no form
       const domains = page.getByTestId('custom-domains');
+      await expect(domains.getByTestId('domains-gardener')).toContainText('Gardener');
+      await expect(domains.getByRole('button', { name: 'Connect a domain' })).toHaveCount(0);
+      // Upgrade (the mock account's plan) and reopen the pane: the form is back
+      api.state.billing.planId = 'gardener';
+      await page.getByRole('button', { name: 'Toggle share' }).click();
+      await page.getByRole('button', { name: 'Toggle share' }).click();
+      await expect(page.getByTestId('crux-usage')).toBeVisible({ timeout: 30_000 });
+      // Custom domain: add → records → verify ×3 → live
       await domains.getByRole('button', { name: 'Connect a domain' }).click();
       await domains.getByRole('textbox', { name: 'Domain name' }).fill('not a domain');
       await domains.getByRole('button', { name: 'Connect', exact: true }).click();
@@ -95,8 +103,8 @@ test.describe('usage + custom domains (mocked API)', () => {
       const settings = page.getByTestId('usage-settings');
       await expect(settings).toBeVisible();
       await expect(settings.getByRole('heading', { name: 'Usage' })).toBeVisible();
-      await expect(settings).toContainText('Free plan');
-      await expect(settings).toContainText(/1(\.00)? GB/);
+      await expect(settings).toContainText('Gardener plan');
+      await expect(settings).toContainText(/10(\.00)? GB/);
       await expect(settings).toContainText('My Crux');
       const syncUsage = settings.getByTestId('sync-usage');
       await expect(syncUsage).toContainText('Garden backup');
