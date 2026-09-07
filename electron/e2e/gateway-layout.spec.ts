@@ -13,7 +13,7 @@ test.describe('gateway layout', () => {
       await expect(stage).toHaveAttribute('data-visible', 'false');
       await page.mouse.move(40, 40);
       await expect(stage).toHaveAttribute('data-visible', 'true');
-      await page.waitForTimeout(1300); // the rise finishes before we measure
+      await page.waitForTimeout(800); // the rise finishes before we measure
       // the player sits directly under the banner, both centred
       const b0 = (await box('gateway-banner'))!;
       const p0 = (await box('gateway-player'))!;
