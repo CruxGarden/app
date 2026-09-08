@@ -100,13 +100,13 @@ async function startGatewaySound(pkg: MoodPackage | undefined): Promise<void> {
 }
 
 /** The one rhythm (Daniel, 2026-09-07): background in over a second; the
- * title five seconds after launch, in over two seconds (the entrance); on
- * screen for seven and a half, out over two — and any stir brings it straight
+ * title five seconds after launch, in over 1.2 s with a quick start (the
+ * entrance); on screen for fifteen, out over two — and any stir brings it straight
  * back, no animation. */
 const CURTAIN_MS = 1_000;
 const REVEAL_AFTER_MS = 5_000;
-const ENTRANCE_MS = 2_000;
-const IDLE_AFTER_MS = 7_500;
+const ENTRANCE_MS = 1_200;
+const IDLE_AFTER_MS = 15_000;
 
 export default function Gateway() {
   const navigate = useNavigate();
