@@ -503,8 +503,8 @@
   --garden-card-thumbnail: #0b0d0c;
   --gateway-title: #e2e4e3;
   --gateway-subtitle: #8b908d;
-  --gateway-button: color-mix(in srgb, var(--accent) 16%, var(--surface));
-  --gateway-button-hover: color-mix(in srgb, var(--accent) 28%, var(--surface));
+  --gateway-button: transparent;
+  --gateway-button-hover: color-mix(in srgb, var(--accent) 18%, var(--surface));
   --gateway-button-text: var(--accent);
   --settings-panel: #141816;
   --settings-panel-border: rgba(82, 96, 86, 0.18);
