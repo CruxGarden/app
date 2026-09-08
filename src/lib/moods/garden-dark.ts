@@ -56,10 +56,10 @@ export const GARDEN_DARK = {
   growthCardLabel: 'var(--accent)',
   growthDotActive: 'var(--accent)',
   settingsLabel: 'var(--accent)',
-  // The Enter button: a quiet square tinted with the accent, the glyph in the
-  // accent itself (Daniel's reference, 2026-09-07) — not a solid accent block.
-  gatewayButton: 'color-mix(in srgb, var(--accent) 16%, var(--surface))',
-  gatewayButtonHover: 'color-mix(in srgb, var(--accent) 28%, var(--surface))',
+  // The Enter button: just the glyph in the accent; the quiet accent-tinted
+  // square appears on hover (Daniel, 2026-09-07).
+  gatewayButton: 'transparent',
+  gatewayButtonHover: 'color-mix(in srgb, var(--accent) 18%, var(--surface))',
   gatewayButtonText: 'var(--accent)',
   flowColor: 'var(--accent)',
   flowBg: 'var(--bg)',
