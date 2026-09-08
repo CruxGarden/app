@@ -99,11 +99,11 @@ async function startGatewaySound(pkg: MoodPackage | undefined): Promise<void> {
   }
 }
 
-/** The one rhythm (Daniel, 2026-09-07): background in over a second, then the
- * title in over a second, on screen for fifteen, out over a second — and any
- * stir brings it back the same way. */
+/** The one rhythm (Daniel, 2026-09-07): background in over a second, the
+ * title three seconds after launch in half a second, on screen for fifteen,
+ * out over a second — and any stir brings it back the same way. */
 const CURTAIN_MS = 1_000;
-const REVEAL_AFTER_MS = 1_000;
+const REVEAL_AFTER_MS = 3_000;
 const IDLE_AFTER_MS = 15_000;
 
 export default function Gateway() {
