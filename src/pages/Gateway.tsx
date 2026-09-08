@@ -100,11 +100,11 @@ async function startGatewaySound(pkg: MoodPackage | undefined): Promise<void> {
 }
 
 /** The one rhythm (Daniel, 2026-09-07): background in over a second; the
- * title five seconds after launch, in over 1.2 s with a quick start (the
+ * title as soon as the curtain is up, in over 1.2 s with a quick start (the
  * entrance); on screen for fifteen, out over two — and any stir brings it straight
  * back, no animation. */
 const CURTAIN_MS = 1_000;
-const REVEAL_AFTER_MS = 5_000;
+const REVEAL_AFTER_MS = CURTAIN_MS;
 const ENTRANCE_MS = 1_200;
 const IDLE_AFTER_MS = 15_000;
 
