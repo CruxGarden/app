@@ -7,7 +7,8 @@
  * it — and it records when, so the Share pane can say "backup is 3 snapshots
  * behind" without asking the API.
  */
-import { useCruxStore } from '@/stores/cruxStore';
+import type { StoreApi } from 'zustand';
+import type { CruxState } from '@/stores/cruxStore';
 import { useAppStore } from '@/stores/appStore';
 import { exportCrux } from '@/services/crux-io';
 import * as syncApi from '@/api/sync';
@@ -34,11 +35,16 @@ export function snapshotsBehind(crux: Crux | null | undefined, growthCount: numb
 }
 
 /**
- * Export the open crux and push it. Resolves with the record it saved. Throws
- * on failure (callers decide whether that blocks what they were doing).
+ * Export a workspace's crux and push it. Resolves with the record it saved.
+ * Throws on failure (callers decide whether that blocks what they were doing).
+ * Takes the workspace's data store (ADR 0018: services never guess the active
+ * one) and writes the record back through it.
  */
-export async function backupCurrentCrux(onProgress?: (msg: string) => void): Promise<BackupRecord> {
-  const s = useCruxStore.getState();
+export async function backupCrux(
+  data: StoreApi<CruxState>,
+  onProgress?: (msg: string) => void,
+): Promise<BackupRecord> {
+  const s = data.getState();
   const crux = s.crux;
   if (!crux) throw new Error('No crux is open');
   const author = useAppStore.getState().author;
@@ -58,10 +64,10 @@ export async function backupCurrentCrux(onProgress?: (msg: string) => void): Pro
   });
   const record: BackupRecord = {
     at: entry.updatedAt,
-    growthCount: useCruxStore.getState().growthCount,
+    growthCount: data.getState().growthCount,
     size: entry.size,
   };
-  await useCruxStore.getState().updateCrux({ meta: { backup: record } });
+  await data.getState().updateCrux({ meta: { backup: record } });
   onProgress?.('Backed up');
   return record;
 }

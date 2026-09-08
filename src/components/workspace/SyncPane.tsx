@@ -1,8 +1,8 @@
 import { useState, useCallback, useEffect } from 'react';
-import { useCruxStore } from '@/stores/cruxStore';
+import { useCruxStore, useCruxStoreApi } from '@/stores/cruxStore';
 import { useAuthStore } from '@/stores/authStore';
 import { importCrux } from '@/services/crux-io';
-import { backupCurrentCrux } from '@/services/backup';
+import { backupCrux } from '@/services/backup';
 import * as syncApi from '@/api/sync';
 import { formatBytes, formatDateTime } from '@/lib/format';
 import { usePaneWidth } from '@/hooks/usePaneWidth';
@@ -50,6 +50,7 @@ function CloudDownIcon() {
 
 export default function SyncPane() {
   const crux = useCruxStore((s) => s.crux);
+  const store = useCruxStoreApi();
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
 
   const [pushing, setPushing] = useState(false);
@@ -85,7 +86,7 @@ export default function SyncPane() {
     setPushing(true);
     setError('');
     try {
-      const record = await backupCurrentCrux(setProgress);
+      const record = await backupCrux(store, setProgress);
       setLastSynced({ at: record.at, size: record.size });
       setProgress('Pushed successfully');
     } catch (err) {
@@ -95,7 +96,7 @@ export default function SyncPane() {
     } finally {
       setPushing(false);
     }
-  }, [crux]);
+  }, [crux, store]);
 
   const handlePull = useCallback(async () => {
     if (!crux) return;
