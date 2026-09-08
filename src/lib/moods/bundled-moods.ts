@@ -130,6 +130,7 @@ const SPECS: Spec[] = [
       moodBarBorder: '#16d5e8',
       moodBarAccent: '#ff6a1a',
       moodBarAccentText: '#04050d',
+      moodBarButton: 'var(--mood-bar-accent)',
       moodBarRadius: '2px',
     },
     background: { type: BgType.Flow },

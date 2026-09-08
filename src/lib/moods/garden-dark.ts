@@ -217,12 +217,16 @@ export const GARDEN_DARK = {
   toggleHeight: '16px',
   scrollbarWidth: '6px',
   // Mood bar (the soundscape control in the top bar)
+  // In the background by default (Daniel, 2026-09-07): solid surface, muted
+  // text, the bars and slider in the muted text colour; the play button is a
+  // quiet accent-tinted square with the glyph in the accent. No translucency.
   moodBar: 'var(--surface)',
   moodBarBorder: 'var(--border)',
-  moodBarText: 'var(--text)',
+  moodBarText: 'var(--text-muted)',
   moodBarTextMuted: 'var(--text-muted)',
-  moodBarAccent: 'var(--accent)',
-  moodBarAccentText: 'var(--bg)',
+  moodBarAccent: 'var(--text-muted)',
+  moodBarButton: 'color-mix(in srgb, var(--accent) 16%, var(--surface))',
+  moodBarAccentText: 'var(--accent)', // the glyph on the play button
   moodBarHover: 'var(--accent-muted)',
   moodBarRadius: '9999px',
   moodBarShadow: 'none',
