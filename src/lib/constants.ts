@@ -60,6 +60,8 @@ export enum SettingsKey {
   ResonanceCues = 'cruxgarden:resonanceCues',
   /** Installed Mood Packages (JSON array, binaries by fingerprint in the Blob Store) */
   MoodPackages = 'cruxgarden:moodPackages',
+  /** Back a crux up to crux.garden whenever it is shared ('true'); set from the share-time prompt */
+  BackupOnShare = 'cruxgarden:backupOnShare',
   /** The Mood Package last applied in the app (bundled or installed id); the Gateway wears it before services init */
   WornMoodId = 'cruxgarden:wornMoodId',
   /** The bundled Mood the public website wears (localStorage; The Keeper until the visitor picks another) */

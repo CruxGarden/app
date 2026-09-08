@@ -13,7 +13,10 @@ import ConnectAccount from '@/components/auth/ConnectAccount';
 import { Toggle } from '@/components/ui';
 import { PaneEmpty, PaneSection, PaneAction, PaneHint, PaneNote } from './pane-ui';
 import UsageSection from './UsageSection';
-import { confirmDialog } from '@/stores/dialogStore';
+import { confirmDialog, choiceDialog } from '@/stores/dialogStore';
+import { backupCurrentCrux, backupOf, snapshotsBehind } from '@/services/backup';
+import { getSetting, setSetting } from '@/services/settings';
+import { SettingsKey } from '@/lib/constants';
 import * as domainsApi from '@/api/domains';
 import * as liveStore from '@/api/store';
 import CustomDomainSection from './CustomDomainSection';
@@ -60,18 +63,64 @@ export default function PublishPane() {
 
   const publicUrl = author && crux ? publicCruxUrl(author.username, crux.slug) : null;
 
+  // Backups (RESILIENCE-PLAN §2b): a published site is not a backup. A crux
+  // that has never been backed up asks before it is shared; "Always back up
+  // when I share" turns the question into a habit. Returns false to stop.
+  const growthCount = useCruxStore((s) => s.growthCount);
+  const [backingUp, setBackingUp] = useState(false);
+  const [backupError, setBackupError] = useState<string | null>(null);
+  const runBackup = useCallback(async (): Promise<boolean> => {
+    setBackingUp(true);
+    setBackupError(null);
+    try {
+      await backupCurrentCrux();
+      return true;
+    } catch (err) {
+      setBackupError(
+        `Backup failed — ${err instanceof Error ? err.message : 'could not reach crux.garden'}. Nothing was shared.`,
+      );
+      return false;
+    } finally {
+      setBackingUp(false);
+    }
+  }, []);
+  const ensureBackupBeforeShare = useCallback(async (): Promise<boolean> => {
+    const current = useCruxStore.getState().crux;
+    if (!current) return false;
+    const always = getSetting(SettingsKey.BackupOnShare) === 'true';
+    const record = backupOf(current);
+    const behind = snapshotsBehind(current, useCruxStore.getState().growthCount) ?? Infinity;
+    if (always) return behind === 0 ? true : runBackup();
+    if (record) return true; // backed up before; the pane shows how far behind
+    const r = await choiceDialog({
+      title: 'No backup on crux.garden',
+      message:
+        'A published site is not a backup — it holds what visitors see, not this crux’s sources and history. If this machine is lost, they go with it. Back this crux up first?',
+      choices: [
+        { id: 'skip', label: 'Share without a backup', variant: 'ghost' },
+        { id: 'backup', label: 'Back up and share' },
+      ],
+      checkbox: { label: 'Always back up when I share' },
+    });
+    if (r.choice === null) return false;
+    if (r.checked) setSetting(SettingsKey.BackupOnShare, 'true');
+    if (r.choice === 'skip') return true;
+    return runBackup();
+  }, [runBackup]);
+
   const doPublish = useCallback(async () => {
     if (!crux) return;
     const currentAuthor = useAppStore.getState().author;
     if (!currentAuthor) return;
 
+    if (!(await ensureBackupBeforeShare())) return;
     setPublishing(true);
     try {
       await publishCrux(); // records its own outcome in the store
     } finally {
       setPublishing(false);
     }
-  }, [crux, publishCrux]);
+  }, [crux, publishCrux, ensureBackupBeforeShare]);
 
   const handlePublish = useCallback(() => {
     if (!isAuthenticated) {
@@ -212,7 +261,9 @@ export default function PublishPane() {
           )}
 
           {/* Action — only when there is something to do; never a disabled green */}
-          {publishing ? (
+          {backingUp ? (
+            <PaneAction busy="Backing up...">Share</PaneAction>
+          ) : publishing ? (
             <PaneAction busy={PHASE_LABELS[phase ?? 'sync']}>Share</PaneAction>
           ) : showConnect ? (
             <div className="rounded-[var(--radius-sm)] border border-border bg-surface/50 p-3">
@@ -232,6 +283,46 @@ export default function PublishPane() {
           ) : null}
 
           {/* Failure — a silent no-op is indistinguishable from success here */}
+          {backupError && <PaneNote tone="error">{backupError}</PaneNote>}
+          {/* Backup standing (RESILIENCE-PLAN §2b): a published site is not a backup */}
+          {isPublished &&
+            !backingUp &&
+            (() => {
+              const record = backupOf(crux);
+              const behind = snapshotsBehind(crux, growthCount);
+              if (!record)
+                return (
+                  <div data-testid="backup-standing">
+                    <PaneNote tone="muted">
+                      No backup on crux.garden ·{' '}
+                      <button
+                        type="button"
+                        onClick={() => void runBackup()}
+                        className="text-accent hover:underline cursor-pointer"
+                      >
+                        Back up now
+                      </button>
+                    </PaneNote>
+                  </div>
+                );
+              if (behind && behind > 0)
+                return (
+                  <div data-testid="backup-standing">
+                    <PaneNote tone="muted">
+                      Backup is {behind} snapshot{behind === 1 ? '' : 's'} behind ·{' '}
+                      <button
+                        type="button"
+                        onClick={() => void runBackup()}
+                        className="text-accent hover:underline cursor-pointer"
+                      >
+                        Back up now
+                      </button>
+                    </PaneNote>
+                  </div>
+                );
+              return null;
+            })()}
+
           {failure && !publishing && (
             <div className="rounded-[var(--radius-sm)] border border-error/40 bg-error/5 p-3">
               <p role="alert" className="text-xs font-body text-error">

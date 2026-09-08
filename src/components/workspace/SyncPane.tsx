@@ -1,8 +1,8 @@
-import { useState, useCallback, useEffect, useMemo } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useCruxStore } from '@/stores/cruxStore';
 import { useAuthStore } from '@/stores/authStore';
-import { useAppStore } from '@/stores/appStore';
-import { exportCrux, importCrux } from '@/services/crux-io';
+import { importCrux } from '@/services/crux-io';
+import { backupCurrentCrux } from '@/services/backup';
 import * as syncApi from '@/api/sync';
 import { formatBytes, formatDateTime } from '@/lib/format';
 import { usePaneWidth } from '@/hooks/usePaneWidth';
@@ -50,14 +50,6 @@ function CloudDownIcon() {
 
 export default function SyncPane() {
   const crux = useCruxStore((s) => s.crux);
-  const allMessages = useCruxStore((s) => s.messages);
-  const messageSegmentStart = useCruxStore((s) => s.messageSegmentStart);
-  const messages = useMemo(
-    () => allMessages.slice(messageSegmentStart),
-    [allMessages, messageSegmentStart],
-  );
-  const summary = useCruxStore((s) => s.summary);
-  const author = useAppStore((s) => s.author);
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
 
   const [pushing, setPushing] = useState(false);
@@ -92,23 +84,9 @@ export default function SyncPane() {
     if (!crux) return;
     setPushing(true);
     setError('');
-    setProgress('Exporting crux...');
     try {
-      const result = await exportCrux({
-        cruxId: crux.id,
-        messages,
-        summary,
-        author: author ? { username: author.username, displayName: author.displayName } : null,
-        onProgress: setProgress,
-      });
-
-      setProgress('Uploading to cloud...');
-      const entry = await syncApi.pushCrux(crux.id, result.blob, {
-        slug: crux.slug || crux.id,
-        title: crux.title || 'Untitled',
-      });
-
-      setLastSynced({ at: entry.updatedAt, size: entry.size });
+      const record = await backupCurrentCrux(setProgress);
+      setLastSynced({ at: record.at, size: record.size });
       setProgress('Pushed successfully');
     } catch (err) {
       console.error('Crux push failed:', err);
@@ -117,7 +95,7 @@ export default function SyncPane() {
     } finally {
       setPushing(false);
     }
-  }, [crux, messages, summary, author]);
+  }, [crux]);
 
   const handlePull = useCallback(async () => {
     if (!crux) return;
