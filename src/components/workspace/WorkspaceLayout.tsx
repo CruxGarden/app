@@ -3,6 +3,9 @@ import { DndProvider } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
 import { MosaicWithoutDragDropContext, MosaicWindow } from 'react-mosaic-component';
 import type { MosaicBranch, MosaicNode } from 'react-mosaic-component';
+import { PaneEmpty } from './pane-ui';
+import { usePaneWidth } from '@/hooks/usePaneWidth';
+import { Spinner } from '@/components/ui';
 import { useUIStore, type PaneType } from '@/stores/uiStore';
 import { useStoreProxy } from '@/hooks/useStoreProxy';
 import { useIsDesktopLayout } from '@/hooks/useMediaQuery';
@@ -85,6 +88,23 @@ const PANE_COMPONENTS: Record<PaneType, React.ComponentType> = {
 
 // Memoized pane content — prevents React from re-diffing heavy subtrees
 // (Monaco, chat, file tree) when only mosaic split percentages change
+/**
+ * The least width each pane makes sense in. Below it the pane says so instead
+ * of squeezing its controls (the Share pane set the pattern); each has its own
+ * number — a file tree lives in less than a conversation does.
+ */
+const PANE_MIN_WIDTH: Record<PaneType, number> = {
+  collaboration: 260,
+  artifacts: 160,
+  workshop: 280,
+  details: 220,
+  history: 200,
+  export: 200,
+  sync: 200,
+  publish: 270,
+  store: 280,
+};
+
 const MemoizedPaneContent = memo(function MemoizedPaneContent({
   paneType,
 }: {
@@ -99,6 +119,36 @@ const MemoizedPaneContent = memo(function MemoizedPaneContent({
     </div>
   );
 });
+
+/**
+ * What sits inside a tile: the pane, once the crux has loaded and the tile is
+ * wide enough — otherwise a word about why not. Empty frames with nothing in
+ * them read as broken (Daniel, 2026-09-07: a slow first open after a restart).
+ */
+function PaneBody({ paneType }: { paneType: PaneType }) {
+  const loaded = useCruxStore((s) => !!s.crux);
+  const { ref, isTooNarrow } = usePaneWidth(PANE_MIN_WIDTH[paneType]);
+  return (
+    <div ref={ref} className="h-full min-h-0 flex flex-col" data-testid={`pane-body-${paneType}`}>
+      {!loaded ? (
+        <PaneEmpty
+          icon={<Spinner size={16} />}
+          title="Opening…"
+          description={`${PANE_LABELS[paneType]} appears as soon as the crux has loaded.`}
+          className="h-full"
+        />
+      ) : isTooNarrow ? (
+        <PaneEmpty
+          title="Widen the pane"
+          description={`${PANE_LABELS[paneType]} needs at least ${PANE_MIN_WIDTH[paneType]}px to show its contents.`}
+          className="h-full"
+        />
+      ) : (
+        <MemoizedPaneContent paneType={paneType} />
+      )}
+    </div>
+  );
+}
 
 // Title case here; the Mood decides the rendered case (--pane-header-label-case,
 // uppercase by default), so a theme can ask for "Collaboration" or "collaboration".
@@ -351,7 +401,7 @@ export default function WorkspaceLayout() {
             </div>
           )}
         >
-          <MemoizedPaneContent paneType={paneType} />
+          <PaneBody paneType={paneType} />
         </MosaicWindow>
       );
     },
