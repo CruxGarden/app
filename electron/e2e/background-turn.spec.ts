@@ -170,7 +170,10 @@ test.describe('background turns (mock AI)', () => {
     const { page } = again;
     try {
       await page.getByRole('button', { name: /enter/i }).click();
-      await page.getByText('My Crux', { exact: true }).first().click();
+      // The last workspace now opens when entering the garden.
+      await expect(page.getByRole('button', { name: 'Switch Crux workspace' })).toContainText(
+        'My Crux',
+      );
 
       const card = page.getByTestId('turn-job');
       await expect(card).toBeVisible({ timeout: 30_000 });

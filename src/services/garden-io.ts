@@ -40,6 +40,7 @@ async function toArrayBuffer(data: Blob | ArrayBuffer): Promise<ArrayBuffer> {
 const ALL_TABLES = ['cruxes', 'artifacts', 'dimensions', 'authors', 'settings'];
 
 export async function wipeGarden(onProgress?: (status: string) => void): Promise<void> {
+  await (await import('@/stores/workspaceRegistry')).prepareGardenReplacement();
   const db = getSqliteClient();
 
   onProgress?.('Deleting all data...');
@@ -280,6 +281,7 @@ export async function importGarden(options: GardenImportOptions): Promise<Garden
   // ── Destructive import ────────────────────────────────
   try {
     onProgress?.('Importing database...');
+    await (await import('@/stores/workspaceRegistry')).prepareGardenReplacement();
     await db.import(sqliteData);
 
     // Wipe existing blobs so orphaned files from the old garden don't linger

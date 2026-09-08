@@ -14,6 +14,16 @@ import { SettingsKey, isSecretSettingKey } from '@/lib/constants';
 
 const cache = new Map<string, string>();
 let ready = false;
+let writes: Promise<void> = Promise.resolve();
+let writeFailure: unknown;
+export async function flushSettings(): Promise<void> {
+  await writes;
+  if (writeFailure) {
+    const error = writeFailure;
+    writeFailure = undefined;
+    throw error;
+  }
+}
 
 // Keys that must be readable synchronously before services init (written to
 // localStorage as a cache so the first paint uses the right theme/background).
@@ -75,9 +85,14 @@ export function setSetting(key: string, value: string): void {
   // Async persist to SQLite (fire-and-forget)
   if (ready) {
     const db = getSqliteClient();
-    db.run('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)', [key, value]).catch(
-      () => {},
-    );
+    writes = writes
+      .then(() =>
+        db.run('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)', [key, value]),
+      )
+      .then(() => {})
+      .catch((error) => {
+        writeFailure = error;
+      });
   }
 }
 

@@ -1,6 +1,6 @@
 import { ChatPanel } from '@/components/chat';
 import { useCruxStore } from '@/stores/cruxStore';
-import { useUIStore } from '@/stores/uiStore';
+import { useWorkspaceUIStore as useUIStore } from '@/stores/uiStore';
 import { cn } from '@/lib/cn';
 
 function DeleteConfirmations() {

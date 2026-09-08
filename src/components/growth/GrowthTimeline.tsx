@@ -1,3 +1,4 @@
+import { useCruxStoreApi } from '@/stores/cruxStore';
 import { useState, useRef, useEffect } from 'react';
 import type { Dimension, CruxSummary as CruxSummaryType } from '@/api/types';
 import { LoadingPanel } from '@/components/ui';
@@ -74,6 +75,7 @@ export default function GrowthTimeline({
   onViewSnapshot,
   onExitSnapshot,
 }: GrowthTimelineProps) {
+  const cruxStore = useCruxStoreApi();
   const [detailIndex, setDetailIndex] = useState<number | null>(null);
   const [showLabelInput, setShowLabelInput] = useState(false);
   const [labelText, setLabelText] = useState('');
@@ -85,7 +87,7 @@ export default function GrowthTimeline({
 
   const setFrequency = (freq: SnapshotFrequency) => {
     if (!crux) return;
-    useCruxStore
+    cruxStore
       .getState()
       .patchCruxMeta({ settings: { ...crux.meta?.settings, snapshotFrequency: freq } });
     saveMeta();
@@ -112,7 +114,7 @@ export default function GrowthTimeline({
     if (!ok) return;
     setRemoving(true);
     try {
-      await useCruxStore.getState().removeLatestSnapshot();
+      await cruxStore.getState().removeLatestSnapshot();
       setDetailIndex(null);
     } catch (err) {
       await alertDialog(

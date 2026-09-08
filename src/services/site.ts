@@ -1,3 +1,4 @@
+import { retainPreview, trackPreviewStart } from './preview-owners';
 /**
  * Site cruxes (ADR 0005) — renderer side.
  *
@@ -110,7 +111,7 @@ export const devServerLeases = createLeasePool({
  * Start (or reuse) the site's dev server and take a lease on it.
  * Resolves with its URL when ready. Pair every call with `stopDevServer`.
  */
-export async function startDevServer(
+async function startDevServerOwned(
   cruxId: string,
   opts: { port?: number } = {},
 ): Promise<string | null> {
@@ -121,7 +122,14 @@ export async function startDevServer(
   devServerLeases.acquire(cruxId);
   try {
     await ensureInstalled(cruxId);
-    return await api.devserver.start(folder, opts);
+    const url = await api.devserver.start(folder, opts);
+    retainPreview(
+      cruxId,
+      'dev',
+      () => devServerLeases.acquire(cruxId),
+      () => devServerLeases.close(cruxId),
+    );
+    return url;
   } catch (err) {
     devServerLeases.release(cruxId);
     throw err;
@@ -133,7 +141,7 @@ export async function startDevServer(
  * tabs holding it keep holding it. `port` asks for a specific port; the
  * server falls back to an ephemeral one when it is taken.
  */
-export async function restartDevServer(
+async function restartDevServerOwned(
   cruxId: string,
   opts: { port?: number } = {},
 ): Promise<string | null> {
@@ -212,4 +220,16 @@ export async function buildForPublish(
     });
   }
   return files;
+}
+
+export function startDevServer(
+  ...args: Parameters<typeof startDevServerOwned>
+): ReturnType<typeof startDevServerOwned> {
+  return trackPreviewStart(args[0], startDevServerOwned(...args));
+}
+
+export function restartDevServer(
+  ...args: Parameters<typeof restartDevServerOwned>
+): ReturnType<typeof restartDevServerOwned> {
+  return trackPreviewStart(args[0], restartDevServerOwned(...args));
 }

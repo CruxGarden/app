@@ -84,11 +84,39 @@ jobs:
         working-directory: electron
       # Ubuntu 24.04 AppArmor blocks Electron's user-namespace sandbox; allow it for this run
       - run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0 || true
-      - run: xvfb-run -a npx playwright test e2e/smoke.spec.ts e2e/files.spec.ts e2e/settings.spec.ts e2e/paths.unit.spec.ts e2e/updater.unit.spec.ts
+      - run: xvfb-run -a npx playwright test e2e/smoke.spec.ts e2e/files.spec.ts e2e/settings.spec.ts e2e/paths.unit.spec.ts e2e/updater.unit.spec.ts e2e/multi-crux.spec.ts e2e/multi-crux-keyboard.spec.ts e2e/multi-crux-lifecycle.spec.ts e2e/multi-crux-turns.spec.ts e2e/preview-ports.unit.spec.ts
         working-directory: electron
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: e2e-results-linux
+          path: electron/e2e/.results
+          if-no-files-found: ignore
+
+  workspace-pr:
+    name: multi-Crux workspaces (macOS PR gate)
+    if: github.event_name == 'pull_request'
+    runs-on: macos-latest
+    needs: verify
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            electron/package-lock.json
+      - run: npm ci
+      - run: npm ci
+        working-directory: electron
+      - run: npm run build:all
+        working-directory: electron
+      - run: npx playwright test e2e/multi-crux.spec.ts e2e/multi-crux-keyboard.spec.ts e2e/multi-crux-lifecycle.spec.ts e2e/multi-crux-turns.spec.ts e2e/multi-crux-preview.spec.ts e2e/preview-ports.unit.spec.ts
+        working-directory: electron
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: workspace-pr-results
           path: electron/e2e/.results
           if-no-files-found: ignore

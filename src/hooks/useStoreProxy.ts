@@ -1,3 +1,5 @@
+import { useCruxStoreApi } from '@/stores/cruxStore';
+import { trackWorkspacePromise } from '@/stores/workspaceSelection';
 import { useEffect } from 'react';
 import { getServices, isServicesReady } from '@/services';
 import { Capability, can } from '@/lib/platform';
@@ -30,6 +32,7 @@ function localVisitorId(): string | null {
  * Must be mounted in the workspace where cruxId is available.
  */
 export function useStoreProxy(cruxId: string | null) {
+  const workspace = useCruxStoreApi();
   useEffect(() => {
     if (!cruxId) return;
 
@@ -45,11 +48,16 @@ export function useStoreProxy(cruxId: string | null) {
 
     function handleMessage(e: MessageEvent) {
       // Only accept messages from the preview iframe
-      if (!isPreviewOrigin(e.origin)) return;
+      if (workspace.getState().closing || !isPreviewOrigin(e.origin)) return;
+      const frame = [...document.querySelectorAll<HTMLIFrameElement>('iframe[data-crux-id]')].find(
+        (f) => f.contentWindow === e.source && f.dataset.cruxId === cruxId,
+      );
+      if (!frame || new URL(frame.src, location.href).origin !== e.origin) return;
       if (!e.data?.type?.startsWith('crux:store:')) return;
       if (!isServicesReady()) return;
 
       const { store } = getServices();
+      const track = <T>(p: Promise<T>) => trackWorkspacePromise(workspace, p);
       const { type, id, key, value, by } = e.data;
       const mode = (e.data.mode || 'protected') as StoreMode;
       const visitorId = localVisitorId();
@@ -58,30 +66,27 @@ export function useStoreProxy(cruxId: string | null) {
 
       switch (type) {
         case 'crux:store:get':
-          store
-            .get(cruxId!, key, visitorId)
+          track(store.get(cruxId!, key, visitorId))
             .then((val) => answer('crux:store:get:res', { value: val }))
             .catch(() => answer('crux:store:get:res', { value: null }));
           break;
 
         case 'crux:store:set':
-          store.set(cruxId!, key, value, mode, visitorId).catch(() => {});
+          track(store.set(cruxId!, key, value, mode, visitorId)).catch(() => {});
           break;
 
         case 'crux:store:inc':
-          store
-            .increment(cruxId!, key, by ?? 1)
+          track(store.increment(cruxId!, key, by ?? 1))
             .then((val) => answer('crux:store:inc:res', { value: val }))
             .catch(() => answer('crux:store:inc:res', { value: 0 }));
           break;
 
         case 'crux:store:del':
-          store.delete(cruxId!, key).catch(() => {});
+          track(store.delete(cruxId!, key)).catch(() => {});
           break;
 
         case 'crux:store:list':
-          store
-            .list(cruxId!)
+          track(store.list(cruxId!))
             .then((entries) => {
               const keys = entries.map((e) => ({
                 key: e.key,
@@ -98,5 +103,5 @@ export function useStoreProxy(cruxId: string | null) {
 
     window.addEventListener('message', handleMessage);
     return () => window.removeEventListener('message', handleMessage);
-  }, [cruxId]);
+  }, [cruxId, workspace]);
 }

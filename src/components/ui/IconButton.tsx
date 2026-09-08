@@ -50,6 +50,7 @@ export default function IconButton({
     <div className="relative group/btn">
       <button
         aria-label={label}
+        aria-pressed={active}
         style={colorStyle}
         onMouseEnter={(e) => {
           setHovered(true);

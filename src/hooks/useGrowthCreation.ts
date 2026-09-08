@@ -1,3 +1,4 @@
+import { useCruxStoreApi } from '@/stores/cruxStore';
 import { useCallback, useRef } from 'react';
 import { useCruxStore } from '@/stores/cruxStore';
 
@@ -6,6 +7,7 @@ import { useCruxStore } from '@/stores/cruxStore';
  * Delegates to the store's createSnapshot action (Growth module underneath).
  */
 export function useGrowthCreation() {
+  const cruxStore = useCruxStoreApi();
   const crux = useCruxStore((s) => s.crux);
   const isCreatingGrowth = useCruxStore((s) => s.isCreatingGrowth);
   const creatingRef = useRef(false);
@@ -15,7 +17,7 @@ export function useGrowthCreation() {
       if (!crux || creatingRef.current) return;
       creatingRef.current = true;
 
-      const { setGrowthCreating, createSnapshot } = useCruxStore.getState();
+      const { setGrowthCreating, createSnapshot } = cruxStore.getState();
       setGrowthCreating(true);
 
       try {
@@ -27,7 +29,7 @@ export function useGrowthCreation() {
         creatingRef.current = false;
       }
     },
-    [crux],
+    [crux, cruxStore],
   );
 
   return { createSnapshot: doCreateSnapshot, isCreatingGrowth };

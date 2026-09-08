@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useCruxStore } from '@/stores/cruxStore';
+import { createCruxStore } from '@/stores/cruxStore';
 import { useUIStore } from '@/stores/uiStore';
 import { setSetting } from '@/services/settings';
 import { SettingsKey } from '@/lib/constants';
@@ -275,8 +275,9 @@ interface NewCruxModalProps {
 }
 
 export default function NewCruxModal({ open, onClose }: NewCruxModalProps) {
+  const [cruxStore] = useState(() => createCruxStore());
   const navigate = useNavigate();
-  const createCrux = useCruxStore((s) => s.createCrux);
+  const createCrux = cruxStore.getState().createCrux;
   const refresh = useGardenStore((s) => s.load);
 
   const [title, setTitle] = useState('My Crux');
@@ -394,7 +395,7 @@ export default function NewCruxModal({ open, onClose }: NewCruxModalProps) {
         const applied = await applyTemplateToCrux(crux, template.id, template.kind);
         layout = applied.layout;
         // Reflect the template's greeting immediately (loadCrux reads it later too)
-        if (applied.messages) useCruxStore.getState().setMessages(applied.messages);
+        if (applied.messages) cruxStore.getState().setMessages(applied.messages);
       }
 
       const hasApiKey = !!(await getApiKey('anthropic'));

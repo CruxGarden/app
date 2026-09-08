@@ -94,9 +94,11 @@ test.describe('mood builder', () => {
       const again = await launchApp({ dir });
       try {
         await again.page.getByRole('button', { name: /enter/i }).click();
-        await expect(again.page.getByRole('button', { name: 'Add Crux' })).toBeVisible({
-          timeout: 30_000,
-        });
+        await expect(again.page.getByRole('button', { name: 'Switch Crux workspace' })).toBeVisible(
+          {
+            timeout: 30_000,
+          },
+        );
         const v = await again.page.evaluate(() =>
           getComputedStyle(document.documentElement).getPropertyValue('--pane-gap').trim(),
         );

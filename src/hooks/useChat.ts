@@ -1,7 +1,7 @@
 import { useCallback } from 'react';
 import { useCruxStore } from '@/stores/cruxStore';
 import { useShallow } from 'zustand/react/shallow';
-import { submitTurn, stopTurn, steerTurn, checkNow } from '@/services/turns';
+import { useTurns } from '@/services/turns';
 import { isJobActive } from '@/services/turn-jobs';
 
 /**
@@ -13,6 +13,7 @@ import { isJobActive } from '@/services/turn-jobs';
  * the job and sends the message at once.
  */
 export function useChat() {
+  const { submitTurn, stopTurn, steerTurn, checkNow } = useTurns();
   const { crux, messages, isStreaming, streamingContent, turnJob, turnQueue } = useCruxStore(
     useShallow((s) => ({
       crux: s.crux,
@@ -29,7 +30,7 @@ export function useChat() {
       if (!crux) return;
       void submitTurn(content).catch((err) => console.error('Turn failed to start:', err));
     },
-    [crux],
+    [crux, submitTurn],
   );
 
   const steer = useCallback(
@@ -37,18 +38,18 @@ export function useChat() {
       if (!crux) return;
       void steerTurn(content).catch((err) => console.error('Steer failed:', err));
     },
-    [crux],
+    [crux, steerTurn],
   );
 
   const stop = useCallback(() => {
     if (crux) stopTurn('stopped');
-  }, [crux]);
+  }, [crux, stopTurn]);
 
   // "Check it" (B4): build, screenshot and inspect the current state on demand.
   const check = useCallback(() => {
     if (!crux) return;
     void checkNow().catch((err) => console.error('Check failed to start:', err));
-  }, [crux]);
+  }, [checkNow, crux]);
 
   return {
     messages,

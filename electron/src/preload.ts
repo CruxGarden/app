@@ -34,6 +34,22 @@ const api: ElectronBridge = {
   },
 
   desktop: {
+    onWorkspaceCommand: (callback) => {
+      const handler = (_event: unknown, command: import('./bridge').WorkspaceCommand) =>
+        callback(command);
+      ipcRenderer.on('workspace:command', handler);
+      return () => ipcRenderer.removeListener('workspace:command', handler);
+    },
+    onCloseRequest: (callback) => {
+      const handler = () => callback();
+      ipcRenderer.on('workspace:close-request', handler);
+      ipcRenderer.send('workspace:close-guard', true);
+      return () => {
+        ipcRenderer.removeListener('workspace:close-request', handler);
+        ipcRenderer.send('workspace:close-guard', false);
+      };
+    },
+    completeClose: (approved) => ipcRenderer.send('workspace:close-response', approved),
     config: () => ipcRenderer.invoke('desktop:config') as Promise<{ gardenRoot: string }>,
     chooseGardenRoot: () =>
       ipcRenderer.invoke('desktop:choose-garden-root') as Promise<string | null>,
