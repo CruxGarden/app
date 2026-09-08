@@ -137,9 +137,6 @@ export default function Draggable({
                 left: `${pos.cx * 100}%`,
                 top: `${pos.cy * 100}%`,
                 transform: 'translate(-50%, -50%)',
-                // a placed piece keeps its own transform (the stage fades it by
-                // opacity and blur only, see .gateway-stage in globals.css)
-                transition: 'opacity 900ms ease-in-out, filter 900ms ease-in-out',
               }
             : riseDelayMs
               ? { transitionDelay: `${riseDelayMs}ms` }
