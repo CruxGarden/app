@@ -259,7 +259,7 @@ function BannerStep({
   };
 
   return (
-    <Panel padding="lg" className="max-w-xs w-full flex flex-col items-center py-10">
+    <Panel padding="lg" className="w-fit flex flex-col items-center px-8 py-6">
       <h1 className="font-wordmark text-5xl font-semibold text-gateway-title">{APP_NAME}</h1>
       <p className="text-gateway-subtitle text-lg mt-1">where ideas grow</p>
 
