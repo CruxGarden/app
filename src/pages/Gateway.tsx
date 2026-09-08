@@ -100,7 +100,7 @@ async function startGatewaySound(pkg: MoodPackage | undefined): Promise<void> {
 }
 
 /** How long the Gateway stays just the room before the banner shows on its own. */
-const REVEAL_AFTER_MS = 7_000;
+const REVEAL_AFTER_MS = 10_000;
 /** Still for this long on the banner step and the banner sinks away again. */
 const IDLE_AFTER_MS = 10_000;
 
@@ -113,7 +113,7 @@ export default function Gateway() {
 
   // Arrival: the music starts and the background fades in; the banner and the
   // player wait until the person stirs — mouse, click, key — or half a minute
-  // — or seven seconds pass — then rise out of the image (a fade with a lift
+  // — or ten seconds pass — then rise out of the image (a fade with a lift
   // and a clearing blur). On the banner step they sink away again after ten
   // seconds without movement, to let the room be looked at; any stir brings
   // them back (Daniel, 2026-09-07). A curtain in the page colour lifts first.
@@ -187,7 +187,7 @@ export default function Gateway() {
         data-testid="gateway-stage"
         data-visible={visible ? 'true' : 'false'}
         onClickCapture={guardHiddenClick}
-        className="gateway-stage w-full max-w-md flex flex-col items-center gap-10"
+        className="gateway-stage relative w-full max-w-md flex flex-col items-center"
       >
         <Draggable id="banner" label="Banner" className="w-full">
           <div className="w-full flex flex-col items-center gap-6">
@@ -204,9 +204,12 @@ export default function Gateway() {
             {step === Step.Import && <ImportStep onBack={() => setStep(Step.Choose)} />}
           </div>
         </Draggable>
-        <Draggable id="player" label="Player" handle>
-          <MoodBar gateway />
-        </Draggable>
+        {/* The banner keeps the exact centre of the window; the player hangs below it */}
+        <div className="absolute inset-x-0 top-full mt-10 flex justify-center">
+          <Draggable id="player" label="Player" handle riseDelayMs={55}>
+            <MoodBar gateway />
+          </Draggable>
+        </div>
       </div>
     </div>
   );

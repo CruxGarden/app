@@ -34,6 +34,7 @@ export default function Draggable({
   children,
   label,
   handle = false,
+  riseDelayMs = 0,
 }: {
   /** Key in the saved layout */
   id: string;
@@ -43,6 +44,8 @@ export default function Draggable({
   label: string;
   /** Show a grip to drag by (for a piece that is all controls, like the player) */
   handle?: boolean;
+  /** Rise a beat after the others (ms) */
+  riseDelayMs?: number;
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const [pos, setPos] = useState<{ cx: number; cy: number } | null>(() => readLayout()[id] ?? null);
@@ -122,7 +125,7 @@ export default function Draggable({
       onDoubleClick={reset}
       title="Drag to move · double-click to put back"
       className={cn(
-        'touch-none select-none',
+        'gateway-piece touch-none select-none',
         dragging ? 'cursor-grabbing' : 'cursor-grab',
         handle && 'flex items-center gap-1',
         pos ? 'fixed z-40' : className,
@@ -138,9 +141,11 @@ export default function Draggable({
                 // would override it (animations beat inline styles)
                 animation: 'none',
               }
-            : {}),
+            : riseDelayMs
+              ? { animationDelay: `${riseDelayMs}ms` }
+              : {}),
           WebkitAppRegion: 'no-drag',
-        } as React.CSSProperties
+        } as unknown as React.CSSProperties
       }
     >
       {handle && (
