@@ -14,7 +14,7 @@
  * from the app root; the pure parts (decay, smoothing, clamping) are tested.
  */
 import { useAudioStore } from '@/stores/audioStore';
-import { useCruxStore } from '@/stores/cruxStore';
+import { useWorkspaceRegistry } from '@/stores/workspaceRegistry';
 
 export const TYPING_DECAY_MS = 1500;
 /** Per-frame approach rate toward a target (1 = jump, 0 = never) at 60fps. */
@@ -155,14 +155,17 @@ export function startSignals(): () => void {
     state.setAudio(s.level, s.playing);
     wake();
   });
-  const unCrux = useCruxStore.subscribe((s, prev) => {
-    if (s.isStreaming === prev.isStreaming) return;
-    state.setAgent(s.isStreaming);
+  const updateAgent = () => {
+    state.setAgent(
+      useWorkspaceRegistry
+        .getState()
+        .entries.some((e) => e.status === 'Working' || e.status === 'Checking'),
+    );
     wake();
-  });
+  };
+  const unCrux = useWorkspaceRegistry.subscribe(updateAgent);
   state.setAudio(useAudioStore.getState().level, useAudioStore.getState().playing);
-  state.setAgent(useCruxStore.getState().isStreaming);
-  wake();
+  updateAgent();
 
   stop = () => {
     document.removeEventListener('keydown', onKey, true);

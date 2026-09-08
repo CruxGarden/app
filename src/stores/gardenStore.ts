@@ -1,3 +1,4 @@
+import { useWorkspaceRegistry } from './workspaceRegistry';
 import { create } from 'zustand';
 import type { Crux } from '@/api/types';
 import { getServices } from '@/services';
@@ -71,6 +72,8 @@ export const useGardenStore = create<GardenState>((set, get) => ({
   sortBy: 'created',
 
   deleteCrux: async (id: string) => {
+    if (useWorkspaceRegistry.getState().entries.some((entry) => entry.id === id))
+      throw new Error('Close this Crux workspace before deleting it.');
     const { crux: cruxService } = getServices();
     await cruxService.delete(id);
     await get().load();

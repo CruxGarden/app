@@ -1,4 +1,6 @@
-import { create } from 'zustand';
+import { create, useStore } from 'zustand';
+import { useContext } from 'react';
+import { WorkspaceContext, workspaceSelection } from './workspaceSelection';
 import { getSetting, setSetting } from '@/services/settings';
 import { SettingsKey } from '@/lib/constants';
 import type { MosaicNode } from 'react-mosaic-component';
@@ -12,17 +14,6 @@ export interface AgentApproval {
   agent: string;
   action: 'publish' | 'unpublish';
   cruxId: string;
-}
-
-const agentApprovalResolvers = new Map<string, (approved: boolean) => void>();
-
-/** Answer "no" to every outstanding agent approval (workspace torn down). */
-export function cancelPendingAgentApprovals(): void {
-  for (const [id, resolve] of [...agentApprovalResolvers]) {
-    agentApprovalResolvers.delete(id);
-    resolve(false);
-  }
-  useUIStore.setState({ pendingAgentApprovals: [] });
 }
 
 // ── Pane Types ──────────────────────────────────────────
@@ -86,7 +77,13 @@ export interface ContextMenuState {
 
 // ── Full UI State ───────────────────────────────────────
 
-interface UIState {
+export interface UIState {
+  composerDraft: string;
+  composerHistoryIndex: number;
+  composerHistoryDraft: string;
+  setComposerDraft: (value: string) => void;
+  cancelApprovals: () => void;
+  dispose: () => void;
   // Pane system
   paneOrder: PaneType[];
   paneVisibility: Record<PaneType, boolean>;
@@ -441,420 +438,467 @@ function saveLayout(
   setSetting(key, JSON.stringify(layout));
 }
 
-/** Debounced layout persistence — avoids writes on every resize frame */
-let _saveTimer: ReturnType<typeof setTimeout> | null = null;
-function debouncedSaveLayout(getState: () => UIState) {
-  if (_saveTimer) clearTimeout(_saveTimer);
-  _saveTimer = setTimeout(() => {
-    _saveTimer = null;
-    const s = getState();
-    const layout = {
-      paneOrder: s.paneOrder,
-      paneVisibility: s.paneVisibility,
-      mosaicLayout: s.mosaicLayout,
-    };
-    saveLayout(s.activeCruxId ? cruxLayoutKey(s.activeCruxId) : GLOBAL_LAYOUT_KEY, layout);
-  }, 300);
-}
-
-/** Load global layout, migrating from old Zustand persist key if needed */
-function getInitialLayout(): ValidatedLayout {
-  const global = loadLayout(GLOBAL_LAYOUT_KEY);
-  if (global) return validateLayout(global);
-
-  // Migrate from old persist key (cruxgarden:ui)
-  try {
-    const old = getSetting(SettingsKey.LegacyUi);
-    if (old) {
-      const parsed = JSON.parse(old);
-      if (parsed.state?.paneOrder) {
-        const migrated = validateLayout({
-          paneOrder: parsed.state.paneOrder,
-          paneVisibility: parsed.state.paneVisibility,
-        });
-        saveLayout(GLOBAL_LAYOUT_KEY, migrated);
-        return migrated;
-      }
-    }
-  } catch {
-    /* ignore */
+export function createUIStore(cruxId?: string) {
+  const agentApprovalResolvers = new Map<string, (approved: boolean) => void>();
+  /** Debounced layout persistence — avoids writes on every resize frame */
+  let _saveTimer: ReturnType<typeof setTimeout> | null = null;
+  function debouncedSaveLayout(getState: () => UIState) {
+    if (_saveTimer) clearTimeout(_saveTimer);
+    _saveTimer = setTimeout(() => {
+      _saveTimer = null;
+      const s = getState();
+      const layout = {
+        paneOrder: s.paneOrder,
+        paneVisibility: s.paneVisibility,
+        mosaicLayout: s.mosaicLayout,
+      };
+      saveLayout(s.activeCruxId ? cruxLayoutKey(s.activeCruxId) : GLOBAL_LAYOUT_KEY, layout);
+    }, 300);
   }
 
-  const visiblePanes = DEFAULT_PANE_ORDER.filter((p) => DEFAULT_VISIBILITY[p]);
-  return {
-    paneOrder: [...DEFAULT_PANE_ORDER],
-    paneVisibility: { ...DEFAULT_VISIBILITY },
-    mosaicLayout: buildMosaicTree(visiblePanes),
-  };
-}
+  /** Load global layout, migrating from old Zustand persist key if needed */
+  function getInitialLayout(): ValidatedLayout {
+    const global = loadLayout(GLOBAL_LAYOUT_KEY);
+    if (global) return validateLayout(global);
 
-/** Resolve layout for a crux: crux-specific → global → defaults */
-function resolveLayout(cruxId: string): ValidatedLayout {
-  const cruxLayout = loadLayout(cruxLayoutKey(cruxId));
-  if (cruxLayout) return validateLayout(cruxLayout);
+    // Migrate from old persist key (cruxgarden:ui)
+    try {
+      const old = getSetting(SettingsKey.LegacyUi);
+      if (old) {
+        const parsed = JSON.parse(old);
+        if (parsed.state?.paneOrder) {
+          const migrated = validateLayout({
+            paneOrder: parsed.state.paneOrder,
+            paneVisibility: parsed.state.paneVisibility,
+          });
+          saveLayout(GLOBAL_LAYOUT_KEY, migrated);
+          return migrated;
+        }
+      }
+    } catch {
+      /* ignore */
+    }
 
-  const globalLayout = loadLayout(GLOBAL_LAYOUT_KEY);
-  if (globalLayout) return validateLayout(globalLayout);
+    const visiblePanes = DEFAULT_PANE_ORDER.filter((p) => DEFAULT_VISIBILITY[p]);
+    return {
+      paneOrder: [...DEFAULT_PANE_ORDER],
+      paneVisibility: { ...DEFAULT_VISIBILITY },
+      mosaicLayout: buildMosaicTree(visiblePanes),
+    };
+  }
 
-  const visiblePanes = DEFAULT_PANE_ORDER.filter((p) => DEFAULT_VISIBILITY[p]);
-  return {
-    paneOrder: [...DEFAULT_PANE_ORDER],
-    paneVisibility: { ...DEFAULT_VISIBILITY },
-    mosaicLayout: buildMosaicTree(visiblePanes),
-  };
-}
+  /** Resolve layout for a crux: crux-specific → global → defaults */
+  function resolveLayout(cruxId: string): ValidatedLayout {
+    const cruxLayout = loadLayout(cruxLayoutKey(cruxId));
+    if (cruxLayout) return validateLayout(cruxLayout);
 
-/** Debounced save for scroll position updates (avoid thrashing localStorage) */
-let scrollSaveTimer: ReturnType<typeof setTimeout> | null = null;
-function debouncedSaveEditorTabs(cruxId: string, editor: EditorPaneState) {
-  if (scrollSaveTimer) clearTimeout(scrollSaveTimer);
-  scrollSaveTimer = setTimeout(() => {
-    saveEditorTabs(cruxId, editor);
-  }, 500);
-}
+    const globalLayout = loadLayout(GLOBAL_LAYOUT_KEY);
+    if (globalLayout) return validateLayout(globalLayout);
 
-const initialLayout = getInitialLayout();
+    const visiblePanes = DEFAULT_PANE_ORDER.filter((p) => DEFAULT_VISIBILITY[p]);
+    return {
+      paneOrder: [...DEFAULT_PANE_ORDER],
+      paneVisibility: { ...DEFAULT_VISIBILITY },
+      mosaicLayout: buildMosaicTree(visiblePanes),
+    };
+  }
 
-// ── Store ───────────────────────────────────────────────
+  /** Debounced save for scroll position updates (avoid thrashing localStorage) */
+  let scrollSaveTimer: ReturnType<typeof setTimeout> | null = null;
+  function debouncedSaveEditorTabs(cruxId: string, editor: EditorPaneState) {
+    if (scrollSaveTimer) clearTimeout(scrollSaveTimer);
+    scrollSaveTimer = setTimeout(() => {
+      saveEditorTabs(cruxId, editor);
+    }, 500);
+  }
 
-export const useUIStore = create<UIState>()((set, get) => ({
-  // ── Initial state ──
-  paneOrder: initialLayout.paneOrder,
-  paneVisibility: initialLayout.paneVisibility,
-  mosaicLayout: initialLayout.mosaicLayout,
-  activeCruxId: null,
+  const initialLayout = getInitialLayout();
 
-  editor: {
-    tabs: [],
-    activeTabId: null,
-    diffTargetId: null,
-  },
+  // ── Store ───────────────────────────────────────────────
 
-  activeFileOperation: null,
-  folderOpenState: {},
-  contextMenu: { ...DEFAULT_CONTEXT_MENU },
-  mobileActivePane: 'collaboration' as PaneType,
-  aiEnabled: false,
-  setAiEnabled: (enabled) => set({ aiEnabled: enabled }),
-  consoleOpen: false,
-  settingsOpen: false,
-  setSettingsOpen: (open) => set({ settingsOpen: open }),
-  pendingAgentApprovals: [],
-  requestAgentApproval: (req) =>
-    new Promise<boolean>((resolve) => {
-      const id = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
-      agentApprovalResolvers.set(id, resolve);
-      set((s) => ({ pendingAgentApprovals: [...s.pendingAgentApprovals, { ...req, id }] }));
-    }),
-  resolveAgentApproval: (id, approved) => {
-    set((s) => ({ pendingAgentApprovals: s.pendingAgentApprovals.filter((a) => a.id !== id) }));
-    const resolve = agentApprovalResolvers.get(id);
-    if (!resolve) return;
-    agentApprovalResolvers.delete(id);
-    resolve(approved);
-  },
-  exploreOpen: false,
-  setExploreOpen: (open) => set({ exploreOpen: open }),
-  exploreKind: null,
-  openExplore: (kind = null) => set({ exploreOpen: true, exploreKind: kind }),
+  const store = create<UIState>()((set, get) => ({
+    composerHistoryIndex: -1,
+    composerHistoryDraft: '',
+    composerDraft: cruxId ? (getSetting(`cruxgarden:composer:${cruxId}`) ?? '') : '',
+    setComposerDraft: (composerDraft) => {
+      set({ composerDraft });
+      if (cruxId) setSetting(`cruxgarden:composer:${cruxId}`, composerDraft);
+    },
+    cancelApprovals: () => {
+      for (const resolve of agentApprovalResolvers.values()) resolve(false);
+      agentApprovalResolvers.clear();
+      set({ pendingAgentApprovals: [] });
+    },
+    dispose: () => {
+      get().cancelApprovals();
+      if (_saveTimer) {
+        clearTimeout(_saveTimer);
+        const s = get();
+        saveLayout(s.activeCruxId ? cruxLayoutKey(s.activeCruxId) : GLOBAL_LAYOUT_KEY, {
+          paneOrder: s.paneOrder,
+          paneVisibility: s.paneVisibility,
+          mosaicLayout: s.mosaicLayout,
+        });
+      }
+      if (scrollSaveTimer) clearTimeout(scrollSaveTimer);
+      const s = get();
+      if (s.activeCruxId) saveEditorTabs(s.activeCruxId, s.editor);
+    },
+    // ── Initial state ──
+    paneOrder: initialLayout.paneOrder,
+    paneVisibility: initialLayout.paneVisibility,
+    mosaicLayout: initialLayout.mosaicLayout,
+    activeCruxId: null,
 
-  // ── Layout actions ──
+    editor: {
+      tabs: [],
+      activeTabId: null,
+      diffTargetId: null,
+    },
 
-  seedCruxLayout: (cruxId, layout, fallback) => {
-    const visibility: Record<string, boolean> = {};
-    for (const pane of DEFAULT_PANE_ORDER) visibility[pane] = false;
-    if (layout) {
-      for (const pane of layout.panes) visibility[pane] = true;
+    activeFileOperation: null,
+    folderOpenState: {},
+    contextMenu: { ...DEFAULT_CONTEXT_MENU },
+    mobileActivePane: 'collaboration' as PaneType,
+    aiEnabled: false,
+    setAiEnabled: (enabled) => set({ aiEnabled: enabled }),
+    consoleOpen: false,
+    settingsOpen: false,
+    setSettingsOpen: (open) => set({ settingsOpen: open }),
+    pendingAgentApprovals: [],
+    requestAgentApproval: (req) =>
+      new Promise<boolean>((resolve) => {
+        const id = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+        agentApprovalResolvers.set(id, resolve);
+        set((s) => ({ pendingAgentApprovals: [...s.pendingAgentApprovals, { ...req, id }] }));
+      }),
+    resolveAgentApproval: (id, approved) => {
+      set((s) => ({ pendingAgentApprovals: s.pendingAgentApprovals.filter((a) => a.id !== id) }));
+      const resolve = agentApprovalResolvers.get(id);
+      if (!resolve) return;
+      agentApprovalResolvers.delete(id);
+      resolve(approved);
+    },
+    exploreOpen: false,
+    setExploreOpen: (open) => set({ exploreOpen: open }),
+    exploreKind: null,
+    openExplore: (kind = null) => set({ exploreOpen: true, exploreKind: kind }),
+
+    // ── Layout actions ──
+
+    seedCruxLayout: (cruxId, layout, fallback) => {
+      const visibility: Record<string, boolean> = {};
+      for (const pane of DEFAULT_PANE_ORDER) visibility[pane] = false;
+      if (layout) {
+        for (const pane of layout.panes) visibility[pane] = true;
+        setSetting(
+          cruxLayoutKey(cruxId),
+          JSON.stringify({
+            paneOrder: DEFAULT_PANE_ORDER,
+            paneVisibility: visibility,
+            mosaicLayout: layout.mosaic,
+          }),
+        );
+        return;
+      }
+      // Blank workspace: chat + details when an AI key exists (the AI builds),
+      // chat + files + workshop when the user will build by hand.
+      visibility.collaboration = true;
+      if (fallback === 'ai') visibility.details = true;
+      else {
+        visibility.artifacts = true;
+        visibility.workshop = true;
+      }
       setSetting(
         cruxLayoutKey(cruxId),
-        JSON.stringify({
-          paneOrder: DEFAULT_PANE_ORDER,
-          paneVisibility: visibility,
-          mosaicLayout: layout.mosaic,
-        }),
+        JSON.stringify({ paneOrder: DEFAULT_PANE_ORDER, paneVisibility: visibility }),
       );
-      return;
-    }
-    // Blank workspace: chat + details when an AI key exists (the AI builds),
-    // chat + files + workshop when the user will build by hand.
-    visibility.collaboration = true;
-    if (fallback === 'ai') visibility.details = true;
-    else {
-      visibility.artifacts = true;
-      visibility.workshop = true;
-    }
-    setSetting(
-      cruxLayoutKey(cruxId),
-      JSON.stringify({ paneOrder: DEFAULT_PANE_ORDER, paneVisibility: visibility }),
-    );
-  },
-  moodPanelOpen: false,
-  setMoodPanelOpen: (open) => set({ moodPanelOpen: open }),
-  toggleMoodPanel: () => set((s) => ({ moodPanelOpen: !s.moodPanelOpen })),
-  dockReserve: 0,
-  setDockReserve: (px) => set((s) => (s.dockReserve === px ? s : { dockReserve: px })),
+    },
+    moodPanelOpen: false,
+    setMoodPanelOpen: (open) => set({ moodPanelOpen: open }),
+    toggleMoodPanel: () => set((s) => ({ moodPanelOpen: !s.moodPanelOpen })),
+    dockReserve: 0,
+    setDockReserve: (px) => set((s) => (s.dockReserve === px ? s : { dockReserve: px })),
 
-  setActiveCrux: (id) => {
-    // Flush any pending debounced scroll save
-    if (scrollSaveTimer) {
-      clearTimeout(scrollSaveTimer);
-      scrollSaveTimer = null;
-    }
-    // Save current state before switching
-    const prev = get();
-    if (prev.activeCruxId) {
-      if (prev.editor.tabs.length > 0) {
-        saveEditorTabs(prev.activeCruxId, prev.editor);
+    setActiveCrux: (id) => {
+      // Flush any pending debounced scroll save
+      if (scrollSaveTimer) {
+        clearTimeout(scrollSaveTimer);
+        scrollSaveTimer = null;
       }
-      if (Object.keys(prev.folderOpenState).length > 0) {
-        saveFolderState(prev.activeCruxId, prev.folderOpenState);
+      // Save current state before switching
+      const prev = get();
+      if (prev.activeCruxId) {
+        if (prev.editor.tabs.length > 0) {
+          saveEditorTabs(prev.activeCruxId, prev.editor);
+        }
+        if (Object.keys(prev.folderOpenState).length > 0) {
+          saveFolderState(prev.activeCruxId, prev.folderOpenState);
+        }
       }
-    }
 
-    if (id) {
-      const layout = resolveLayout(id);
-      // Restore editor tabs for this crux
-      const saved = loadEditorTabs(id);
-      const restoredTabs: EditorTab[] = saved
-        ? saved.tabs.map((t) => ({
-            id: t.id,
-            path: t.path,
-            name: nameFromPath(t.path),
-            dirty: false,
-            viewMode: t.viewMode ?? 'source',
-            scrollTop: t.scrollTop ?? 0,
-          }))
-        : [];
-      const restoredActiveId = saved?.activeTabId ?? null;
+      if (id) {
+        const layout = resolveLayout(id);
+        // Restore editor tabs for this crux
+        const saved = loadEditorTabs(id);
+        const restoredTabs: EditorTab[] = saved
+          ? saved.tabs.map((t) => ({
+              id: t.id,
+              path: t.path,
+              name: nameFromPath(t.path),
+              dirty: false,
+              viewMode: t.viewMode ?? 'source',
+              scrollTop: t.scrollTop ?? 0,
+            }))
+          : [];
+        const restoredActiveId = saved?.activeTabId ?? null;
 
-      // Restore folder open/close state
-      const savedFolders = loadFolderState(id);
+        // Restore folder open/close state
+        const savedFolders = loadFolderState(id);
 
-      set({
-        activeCruxId: id,
-        paneOrder: layout.paneOrder,
-        paneVisibility: layout.paneVisibility,
-        mosaicLayout: layout.mosaicLayout,
-        editor: {
-          tabs: restoredTabs,
-          activeTabId: restoredActiveId,
-          diffTargetId: null,
-        },
-        folderOpenState: savedFolders ?? {},
-      });
-    } else {
-      const global = loadLayout(GLOBAL_LAYOUT_KEY);
-      const layout = global ? validateLayout(global) : getInitialLayout();
-      set({
-        activeCruxId: null,
-        paneOrder: layout.paneOrder,
-        paneVisibility: layout.paneVisibility,
-        mosaicLayout: layout.mosaicLayout,
-        editor: { tabs: [], activeTabId: null, diffTargetId: null },
-        folderOpenState: {},
-      });
-    }
-  },
-
-  togglePane: (pane) => {
-    const prev = get();
-    const wasVisible = prev.paneVisibility[pane];
-    const newVisibility = { ...prev.paneVisibility, [pane]: !wasVisible };
-
-    // Update mosaic tree: add or remove the pane
-    let newMosaic: MosaicNode<PaneType> | null;
-    if (!wasVisible) {
-      newMosaic = addPaneToMosaic(prev.mosaicLayout, pane);
-    } else {
-      newMosaic = prev.mosaicLayout ? removePaneFromMosaic(prev.mosaicLayout, pane) : null;
-    }
-
-    // Derive pane order from the mosaic tree leaves
-    const newOrder = newMosaic ? getMosaicLeaves(newMosaic) : prev.paneOrder;
-
-    set({ paneVisibility: newVisibility, paneOrder: newOrder, mosaicLayout: newMosaic });
-    const s = get();
-    const layout = {
-      paneOrder: s.paneOrder,
-      paneVisibility: s.paneVisibility,
-      mosaicLayout: s.mosaicLayout,
-    };
-    saveLayout(s.activeCruxId ? cruxLayoutKey(s.activeCruxId) : GLOBAL_LAYOUT_KEY, layout);
-  },
-
-  setPaneVisible: (pane, visible) => {
-    const prev = get();
-    let newMosaic = prev.mosaicLayout;
-    if (visible && !prev.paneVisibility[pane]) {
-      newMosaic = addPaneToMosaic(newMosaic, pane);
-    } else if (!visible && prev.paneVisibility[pane]) {
-      newMosaic = newMosaic ? removePaneFromMosaic(newMosaic, pane) : null;
-    }
-    const newOrder = newMosaic ? getMosaicLeaves(newMosaic) : prev.paneOrder;
-    set({
-      paneVisibility: { ...prev.paneVisibility, [pane]: visible },
-      mosaicLayout: newMosaic,
-      paneOrder: newOrder,
-    });
-    const s = get();
-    const layout = {
-      paneOrder: s.paneOrder,
-      paneVisibility: s.paneVisibility,
-      mosaicLayout: s.mosaicLayout,
-    };
-    saveLayout(s.activeCruxId ? cruxLayoutKey(s.activeCruxId) : GLOBAL_LAYOUT_KEY, layout);
-  },
-
-  reorderPanes: (newOrder) => {
-    set({ paneOrder: newOrder });
-    const s = get();
-    const layout = {
-      paneOrder: s.paneOrder,
-      paneVisibility: s.paneVisibility,
-      mosaicLayout: s.mosaicLayout,
-    };
-    saveLayout(s.activeCruxId ? cruxLayoutKey(s.activeCruxId) : GLOBAL_LAYOUT_KEY, layout);
-  },
-
-  setMosaicLayout: (newLayout) => {
-    const prev = get();
-    // Fast path: if leaves haven't changed (resize only), just update the tree
-    const prevLeaves = getMosaicLeaves(prev.mosaicLayout);
-    const newLeaves = getMosaicLeaves(newLayout);
-    const leavesChanged =
-      prevLeaves.length !== newLeaves.length || prevLeaves.some((l, i) => l !== newLeaves[i]);
-
-    if (leavesChanged) {
-      // Leaves changed (pane added/removed) — full sync
-      const newVisibility = { ...prev.paneVisibility };
-      const leafSet = new Set(newLeaves);
-      for (const pane of DEFAULT_PANE_ORDER) {
-        newVisibility[pane] = leafSet.has(pane);
+        set({
+          activeCruxId: id,
+          paneOrder: layout.paneOrder,
+          paneVisibility: layout.paneVisibility,
+          mosaicLayout: layout.mosaicLayout,
+          editor: {
+            tabs: restoredTabs,
+            activeTabId: restoredActiveId,
+            diffTargetId: null,
+          },
+          folderOpenState: savedFolders ?? {},
+        });
+      } else {
+        const global = loadLayout(GLOBAL_LAYOUT_KEY);
+        const layout = global ? validateLayout(global) : getInitialLayout();
+        set({
+          activeCruxId: null,
+          paneOrder: layout.paneOrder,
+          paneVisibility: layout.paneVisibility,
+          mosaicLayout: layout.mosaicLayout,
+          editor: { tabs: [], activeTabId: null, diffTargetId: null },
+          folderOpenState: {},
+        });
       }
-      set({ mosaicLayout: newLayout, paneVisibility: newVisibility, paneOrder: newLeaves });
-    } else {
-      // Resize only — just update the tree, skip visibility/order
-      set({ mosaicLayout: newLayout });
-    }
+    },
 
-    // Debounce persistence to avoid writes on every resize frame
-    debouncedSaveLayout(get);
-  },
+    togglePane: (pane) => {
+      const prev = get();
+      const wasVisible = prev.paneVisibility[pane];
+      const newVisibility = { ...prev.paneVisibility, [pane]: !wasVisible };
 
-  // ── Editor tab actions ──
-
-  openFile: (id, path) => {
-    set((s) => {
-      const existing = s.editor.tabs.find((t) => t.id === id);
-      if (existing) {
-        return { editor: { ...s.editor, activeTabId: id } };
+      // Update mosaic tree: add or remove the pane
+      let newMosaic: MosaicNode<PaneType> | null;
+      if (!wasVisible) {
+        newMosaic = addPaneToMosaic(prev.mosaicLayout, pane);
+      } else {
+        newMosaic = prev.mosaicLayout ? removePaneFromMosaic(prev.mosaicLayout, pane) : null;
       }
-      const tab: EditorTab = {
-        id,
-        path,
-        name: nameFromPath(path),
-        dirty: false,
-        viewMode: 'source',
-        scrollTop: 0,
+
+      // Derive pane order from the mosaic tree leaves
+      const newOrder = newMosaic ? getMosaicLeaves(newMosaic) : prev.paneOrder;
+
+      set({ paneVisibility: newVisibility, paneOrder: newOrder, mosaicLayout: newMosaic });
+      const s = get();
+      const layout = {
+        paneOrder: s.paneOrder,
+        paneVisibility: s.paneVisibility,
+        mosaicLayout: s.mosaicLayout,
       };
-      return {
+      saveLayout(s.activeCruxId ? cruxLayoutKey(s.activeCruxId) : GLOBAL_LAYOUT_KEY, layout);
+    },
+
+    setPaneVisible: (pane, visible) => {
+      const prev = get();
+      let newMosaic = prev.mosaicLayout;
+      if (visible && !prev.paneVisibility[pane]) {
+        newMosaic = addPaneToMosaic(newMosaic, pane);
+      } else if (!visible && prev.paneVisibility[pane]) {
+        newMosaic = newMosaic ? removePaneFromMosaic(newMosaic, pane) : null;
+      }
+      const newOrder = newMosaic ? getMosaicLeaves(newMosaic) : prev.paneOrder;
+      set({
+        paneVisibility: { ...prev.paneVisibility, [pane]: visible },
+        mosaicLayout: newMosaic,
+        paneOrder: newOrder,
+      });
+      const s = get();
+      const layout = {
+        paneOrder: s.paneOrder,
+        paneVisibility: s.paneVisibility,
+        mosaicLayout: s.mosaicLayout,
+      };
+      saveLayout(s.activeCruxId ? cruxLayoutKey(s.activeCruxId) : GLOBAL_LAYOUT_KEY, layout);
+    },
+
+    reorderPanes: (newOrder) => {
+      set({ paneOrder: newOrder });
+      const s = get();
+      const layout = {
+        paneOrder: s.paneOrder,
+        paneVisibility: s.paneVisibility,
+        mosaicLayout: s.mosaicLayout,
+      };
+      saveLayout(s.activeCruxId ? cruxLayoutKey(s.activeCruxId) : GLOBAL_LAYOUT_KEY, layout);
+    },
+
+    setMosaicLayout: (newLayout) => {
+      const prev = get();
+      // Fast path: if leaves haven't changed (resize only), just update the tree
+      const prevLeaves = getMosaicLeaves(prev.mosaicLayout);
+      const newLeaves = getMosaicLeaves(newLayout);
+      const leavesChanged =
+        prevLeaves.length !== newLeaves.length || prevLeaves.some((l, i) => l !== newLeaves[i]);
+
+      if (leavesChanged) {
+        // Leaves changed (pane added/removed) — full sync
+        const newVisibility = { ...prev.paneVisibility };
+        const leafSet = new Set(newLeaves);
+        for (const pane of DEFAULT_PANE_ORDER) {
+          newVisibility[pane] = leafSet.has(pane);
+        }
+        set({ mosaicLayout: newLayout, paneVisibility: newVisibility, paneOrder: newLeaves });
+      } else {
+        // Resize only — just update the tree, skip visibility/order
+        set({ mosaicLayout: newLayout });
+      }
+
+      // Debounce persistence to avoid writes on every resize frame
+      debouncedSaveLayout(get);
+    },
+
+    // ── Editor tab actions ──
+
+    openFile: (id, path) => {
+      set((s) => {
+        const existing = s.editor.tabs.find((t) => t.id === id);
+        if (existing) {
+          return { editor: { ...s.editor, activeTabId: id } };
+        }
+        const tab: EditorTab = {
+          id,
+          path,
+          name: nameFromPath(path),
+          dirty: false,
+          viewMode: 'source',
+          scrollTop: 0,
+        };
+        return {
+          editor: {
+            ...s.editor,
+            tabs: [...s.editor.tabs, tab],
+            activeTabId: id,
+          },
+        };
+      });
+      const s = get();
+      if (s.activeCruxId) saveEditorTabs(s.activeCruxId, s.editor);
+    },
+
+    closeTab: (id) => {
+      set((s) => {
+        const tabs = s.editor.tabs.filter((t) => t.id !== id);
+        let activeTabId = s.editor.activeTabId;
+        if (activeTabId === id) {
+          const closedIndex = s.editor.tabs.findIndex((t) => t.id === id);
+          activeTabId = tabs[Math.min(closedIndex, tabs.length - 1)]?.id ?? null;
+        }
+        return { editor: { ...s.editor, tabs, activeTabId } };
+      });
+      const s = get();
+      if (s.activeCruxId) saveEditorTabs(s.activeCruxId, s.editor);
+    },
+
+    setActiveTab: (id) => {
+      set((s) => ({ editor: { ...s.editor, activeTabId: id } }));
+      const s = get();
+      if (s.activeCruxId) saveEditorTabs(s.activeCruxId, s.editor);
+    },
+
+    setTabDirty: (id, dirty) =>
+      set((s) => ({
         editor: {
           ...s.editor,
-          tabs: [...s.editor.tabs, tab],
-          activeTabId: id,
+          tabs: s.editor.tabs.map((t) => (t.id === id ? { ...t, dirty } : t)),
         },
-      };
-    });
-    const s = get();
-    if (s.activeCruxId) saveEditorTabs(s.activeCruxId, s.editor);
-  },
+      })),
 
-  closeTab: (id) => {
-    set((s) => {
-      const tabs = s.editor.tabs.filter((t) => t.id !== id);
-      let activeTabId = s.editor.activeTabId;
-      if (activeTabId === id) {
-        const closedIndex = s.editor.tabs.findIndex((t) => t.id === id);
-        activeTabId = tabs[Math.min(closedIndex, tabs.length - 1)]?.id ?? null;
-      }
-      return { editor: { ...s.editor, tabs, activeTabId } };
-    });
-    const s = get();
-    if (s.activeCruxId) saveEditorTabs(s.activeCruxId, s.editor);
-  },
+    setTabViewMode: (id, mode) => {
+      set((s) => ({
+        editor: {
+          ...s.editor,
+          tabs: s.editor.tabs.map((t) => (t.id === id ? { ...t, viewMode: mode } : t)),
+        },
+      }));
+      const s = get();
+      if (s.activeCruxId) saveEditorTabs(s.activeCruxId, s.editor);
+    },
 
-  setActiveTab: (id) => {
-    set((s) => ({ editor: { ...s.editor, activeTabId: id } }));
-    const s = get();
-    if (s.activeCruxId) saveEditorTabs(s.activeCruxId, s.editor);
-  },
+    setTabScrollTop: (id, scrollTop) => {
+      set((s) => ({
+        editor: {
+          ...s.editor,
+          tabs: s.editor.tabs.map((t) => (t.id === id ? { ...t, scrollTop } : t)),
+        },
+      }));
+      const s = get();
+      if (s.activeCruxId) debouncedSaveEditorTabs(s.activeCruxId, s.editor);
+    },
 
-  setTabDirty: (id, dirty) =>
-    set((s) => ({
-      editor: {
-        ...s.editor,
-        tabs: s.editor.tabs.map((t) => (t.id === id ? { ...t, dirty } : t)),
-      },
-    })),
+    setDiffTarget: (id) => set((s) => ({ editor: { ...s.editor, diffTargetId: id } })),
 
-  setTabViewMode: (id, mode) => {
-    set((s) => ({
-      editor: {
-        ...s.editor,
-        tabs: s.editor.tabs.map((t) => (t.id === id ? { ...t, viewMode: mode } : t)),
-      },
-    }));
-    const s = get();
-    if (s.activeCruxId) saveEditorTabs(s.activeCruxId, s.editor);
-  },
+    closeAllTabs: () => {
+      set((s) => ({
+        editor: { ...s.editor, tabs: [], activeTabId: null, diffTargetId: null },
+      }));
+      const s = get();
+      if (s.activeCruxId) saveEditorTabs(s.activeCruxId, s.editor);
+    },
 
-  setTabScrollTop: (id, scrollTop) => {
-    set((s) => ({
-      editor: {
-        ...s.editor,
-        tabs: s.editor.tabs.map((t) => (t.id === id ? { ...t, scrollTop } : t)),
-      },
-    }));
-    const s = get();
-    if (s.activeCruxId) debouncedSaveEditorTabs(s.activeCruxId, s.editor);
-  },
+    // ── Folder state ──
 
-  setDiffTarget: (id) => set((s) => ({ editor: { ...s.editor, diffTargetId: id } })),
+    setFolderOpen: (folderId, isOpen) => {
+      set((s) => ({
+        folderOpenState: { ...s.folderOpenState, [folderId]: isOpen },
+      }));
+      const s = get();
+      if (s.activeCruxId) saveFolderState(s.activeCruxId, s.folderOpenState);
+    },
 
-  closeAllTabs: () => {
-    set((s) => ({
-      editor: { ...s.editor, tabs: [], activeTabId: null, diffTargetId: null },
-    }));
-    const s = get();
-    if (s.activeCruxId) saveEditorTabs(s.activeCruxId, s.editor);
-  },
+    // ── File operations ──
 
-  // ── Folder state ──
+    startFileOperation: (op) => set({ activeFileOperation: op }),
+    cancelFileOperation: () => set({ activeFileOperation: null }),
 
-  setFolderOpen: (folderId, isOpen) => {
-    set((s) => ({
-      folderOpenState: { ...s.folderOpenState, [folderId]: isOpen },
-    }));
-    const s = get();
-    if (s.activeCruxId) saveFolderState(s.activeCruxId, s.folderOpenState);
-  },
+    // ── Context menu ──
 
-  // ── File operations ──
+    showContextMenu: (state) => set({ contextMenu: { ...state, visible: true } }),
+    hideContextMenu: () => set({ contextMenu: { ...DEFAULT_CONTEXT_MENU } }),
 
-  startFileOperation: (op) => set({ activeFileOperation: op }),
-  cancelFileOperation: () => set({ activeFileOperation: null }),
+    // ── Mobile ──
 
-  // ── Context menu ──
+    setMobileActivePane: (pane) => set({ mobileActivePane: pane }),
 
-  showContextMenu: (state) => set({ contextMenu: { ...state, visible: true } }),
-  hideContextMenu: () => set({ contextMenu: { ...DEFAULT_CONTEXT_MENU } }),
+    // ── Keeper Console ──
 
-  // ── Mobile ──
+    setConsoleOpen: (open) => set({ consoleOpen: open }),
+    toggleConsole: () => set((s) => ({ consoleOpen: !s.consoleOpen })),
+  }));
 
-  setMobileActivePane: (pane) => set({ mobileActivePane: pane }),
+  if (cruxId) store.getState().setActiveCrux(cruxId);
+  return store;
+}
 
-  // ── Keeper Console ──
-
-  setConsoleOpen: (open) => set({ consoleOpen: open }),
-  toggleConsole: () => set((s) => ({ consoleOpen: !s.consoleOpen })),
-}));
+/** Garden-wide controls. Workspace panes use their own UI store. */
+export const useUIStore = createUIStore();
+export function useWorkspaceUIStoreApi() {
+  const context = useContext(WorkspaceContext);
+  const selected = useStore(workspaceSelection, (s) => s.active);
+  return (context ?? selected)?.ui ?? useUIStore;
+}
+export function useWorkspaceUIStore<T>(selector: (state: UIState) => T): T {
+  return useStore(useWorkspaceUIStoreApi(), selector);
+}
+export function cancelPendingAgentApprovals(): void {
+  useUIStore.getState().cancelApprovals();
+}

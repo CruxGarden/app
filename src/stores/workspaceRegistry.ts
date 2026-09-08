@@ -1,0 +1,322 @@
+import { maintainNotesManifest } from '@/services/notes-manifest';
+import { registerPreviewOwner } from '@/services/preview-owners';
+import { setActivePreview } from '@/lib/preview-registry';
+import { create } from 'zustand';
+import { createCruxStore, type CruxState } from './cruxStore';
+import { createUIStore } from './uiStore';
+import {
+  workspaceSelection,
+  workspaceOperations,
+  type WorkspaceStores,
+} from './workspaceSelection';
+import { getSetting, setSetting, flushSettings } from '@/services/settings';
+import { getServices } from '@/services';
+import { turnsFor } from '@/services/turns';
+import { documentsFor } from '@/services/workspace-documents';
+import { flushIngestion } from '@/services/ingestion';
+import { GROWTH_CHANGED_EVENT } from '@/services/growth';
+import { disposeChatSession } from '@/services/chat-session';
+
+export interface Workspace extends WorkspaceStores {
+  id: string;
+  phase: 'loading' | 'ready' | 'error' | 'closing';
+  error: string | null;
+  seenTurnId: string | null;
+  loaded: Promise<void>;
+  operations: Set<Promise<unknown>>;
+  cleanup: Set<() => void | Promise<void>>;
+}
+export interface WorkspaceSummary {
+  id: string;
+  title: string;
+  status: string;
+  dirty: boolean;
+}
+const sessions = new Map<string, Workspace>();
+const KEY = 'cruxgarden:open-workspaces:v1';
+export const useWorkspaceRegistry = create<{
+  entries: WorkspaceSummary[];
+  mru: string[];
+  activeId: string | null;
+  restored: boolean;
+}>(() => ({ entries: [], mru: [], activeId: null, restored: false }));
+function persist() {
+  const s = useWorkspaceRegistry.getState();
+  setSetting(
+    KEY,
+    JSON.stringify({
+      version: 1,
+      openCruxIds: s.entries.map((e) => e.id),
+      lastActiveCruxId: s.mru[0] ?? null,
+    }),
+  );
+}
+export function parseOpenWorkspaces(raw: string | null): { ids: string[]; active: string | null } {
+  try {
+    const value = JSON.parse(raw ?? 'null');
+    if (value?.version !== 1 || !Array.isArray(value.openCruxIds)) return { ids: [], active: null };
+    const ids = [
+      ...new Set<string>(
+        value.openCruxIds.filter(
+          (id: unknown): id is string => typeof id === 'string' && id.length > 0,
+        ),
+      ),
+    ];
+    return { ids, active: ids.includes(value.lastActiveCruxId) ? value.lastActiveCruxId : null };
+  } catch {
+    return { ids: [], active: null };
+  }
+}
+function statusOf(s: CruxState, w: Workspace): string {
+  if (w.phase !== 'ready')
+    return w.phase === 'error' ? 'Failed to open' : w.phase === 'closing' ? 'Closing' : 'Loading';
+  if (s.pendingDeletes.length || w.ui.getState().pendingAgentApprovals.length)
+    return 'Needs approval';
+  if (s.turnJob?.merge?.status === 'pending') return 'Needs merge';
+  if (s.publishPhase) return 'Publishing';
+  if (s.turnJob?.status === 'checking') return 'Checking';
+  if (s.isStreaming || ['planning', 'running'].includes(s.turnJob?.status ?? '')) return 'Working';
+  if (s.turnJob?.status === 'failed') return 'Failed';
+  if (s.turnJob?.status === 'done') {
+    if (useWorkspaceRegistry.getState().activeId === w.id) w.seenTurnId = s.turnJob.id;
+    if (w.seenTurnId !== s.turnJob.id) return 'Done';
+  }
+  return 'Editing';
+}
+function summarize(w: Workspace) {
+  const s = w.data.getState();
+  const next = {
+    id: w.id,
+    title: s.crux?.title || 'Untitled',
+    status: `${statusOf(s, w)}${s.turnQueue.length ? ` · ${s.turnQueue.length} queued` : ''}`,
+    dirty: w.ui.getState().editor.tabs.some((t) => t.dirty),
+  };
+  const prev = useWorkspaceRegistry.getState().entries.find((e) => e.id === w.id);
+  if (
+    prev &&
+    Object.keys(next).every((k) => prev[k as keyof typeof prev] === next[k as keyof typeof next])
+  )
+    return;
+  useWorkspaceRegistry.setState((r) => ({
+    entries: r.entries.some((e) => e.id === w.id)
+      ? r.entries.map((e) => (e.id === w.id ? next : e))
+      : [...r.entries, next],
+  }));
+}
+export function getWorkspace(id: string): Workspace | undefined {
+  return sessions.get(id);
+}
+export function allWorkspaces(): Workspace[] {
+  return [...sessions.values()];
+}
+export async function openWorkspace(id: string): Promise<Workspace> {
+  let w = sessions.get(id);
+  if (w) {
+    if (w.phase === 'closing') throw new Error('This workspace is closing.');
+    await w.loaded;
+    return w;
+  }
+  const ui = createUIStore(id);
+  const data = createCruxStore(ui);
+  w = {
+    id,
+    data,
+    ui,
+    phase: 'loading',
+    error: null,
+    seenTurnId: null,
+    loaded: Promise.resolve(),
+    operations: new Set(),
+    cleanup: new Set(),
+  };
+  const owned = w;
+  workspaceOperations.set(data, owned.operations);
+  sessions.set(id, owned);
+  owned.cleanup.add(registerPreviewOwner(id));
+  owned.cleanup.add(() => setActivePreview(id, null));
+  // Track every asynchronous store operation, including work begun from a pane
+  // that will unmount. Closing drains these before disposing the session.
+  const patch: Partial<CruxState> = {};
+  for (const [key, action] of Object.entries(data.getState())) {
+    if (typeof action !== 'function' || ['drain', 'reset', 'cancelPendingDeletes'].includes(key))
+      continue;
+    (patch as Record<string, unknown>)[key] = (...args: unknown[]) => {
+      const result = (action as (...a: unknown[]) => unknown)(...args);
+      if (result instanceof Promise) {
+        owned.operations.add(result);
+        void result.finally(() => owned.operations.delete(result)).catch(() => {});
+      }
+      return result;
+    };
+  }
+  data.setState(patch);
+  owned.cleanup.add(data.subscribe(() => summarize(owned)));
+  owned.cleanup.add(ui.subscribe(() => summarize(owned)));
+  summarize(owned);
+  persist();
+  owned.loaded = data
+    .getState()
+    .loadCrux(id)
+    .then(() => {
+      if (data.getState().crux?.kind === 'snapshot')
+        throw new Error('A Growth snapshot is not an editable workspace.');
+      owned.phase = 'ready';
+      owned.cleanup.add(
+        maintainNotesManifest(data, (operation) => {
+          owned.operations.add(operation);
+          void operation.finally(() => owned.operations.delete(operation)).catch(() => {});
+        }),
+      );
+      summarize(owned);
+    })
+    .catch((error: unknown) => {
+      owned.phase = 'error';
+      owned.error = (error as Error).message;
+      summarize(owned);
+      throw error;
+    });
+  await owned.loaded;
+  return owned;
+}
+let activation = 0;
+export async function activateWorkspace(id: string): Promise<Workspace | null> {
+  const ticket = ++activation;
+  const w = await openWorkspace(id);
+  if (ticket !== activation) return null;
+  workspaceSelection.setState({ active: w });
+  useWorkspaceRegistry.setState((s) => ({
+    activeId: id,
+    mru: [id, ...s.mru.filter((x) => x !== id)],
+  }));
+  summarize(w);
+  persist();
+  return w;
+}
+export function leaveWorkspaceView() {
+  activation++;
+  workspaceSelection.setState({ active: null });
+  useWorkspaceRegistry.setState({ activeId: null });
+}
+export async function closeWorkspace(
+  id: string,
+  options: { stop?: boolean; documents?: 'save' | 'discard' } = {},
+): Promise<void> {
+  const w = sessions.get(id);
+  if (!w) {
+    useWorkspaceRegistry.setState((r) => ({
+      entries: r.entries.filter((e) => e.id !== id),
+      mru: r.mru.filter((x) => x !== id),
+    }));
+    persist();
+    await flushSettings();
+    return;
+  }
+  if (w.phase === 'closing') throw new Error('This workspace is already closing.');
+  const s = w.data.getState();
+  const busy =
+    s.isStreaming ||
+    ['running', 'planning', 'checking'].includes(s.turnJob?.status ?? '') ||
+    s.pendingDeletes.length ||
+    w.ui.getState().pendingAgentApprovals.length;
+  if (s.publishPhase || s.uploadProgress)
+    throw new Error('Wait for publishing or uploads to finish before closing this workspace.');
+  if (busy && !options.stop) throw new Error('Stop the work before closing this workspace.');
+  const docs = documentsFor(w.data, w.ui);
+  if (docs.hasDirty() && !options.documents)
+    throw new Error('Save or discard unsaved edits before closing.');
+  w.phase = 'closing';
+  w.data.setState({ closing: true });
+  summarize(w);
+  try {
+    w.ui.getState().cancelApprovals();
+    w.data.getState().cancelPendingDeletes();
+    turnsFor(w.data).stopTurn('closed');
+    await w.loaded.catch(() => {});
+    await turnsFor(w.data).drain();
+    disposeChatSession(id);
+    while (w.operations.size) await Promise.all([...w.operations]);
+    if (options.documents === 'save') await docs.saveAll();
+    await docs.drain();
+    await flushIngestion();
+    await w.data.getState().drain();
+    await w.data.getState().saveMeta();
+    await flushSettings();
+    disposeChatSession(id);
+    for (const fn of w.cleanup) await fn();
+    w.ui.getState().dispose();
+    w.data.getState().reset();
+    docs.dispose();
+    sessions.delete(id);
+    if (useWorkspaceRegistry.getState().activeId === id) leaveWorkspaceView();
+    useWorkspaceRegistry.setState((r) => ({
+      entries: r.entries.filter((e) => e.id !== id),
+      mru: r.mru.filter((x) => x !== id),
+    }));
+    persist();
+    await flushSettings();
+  } catch (error) {
+    if (sessions.get(id) !== w) throw error;
+    w.phase = 'ready';
+    w.data.setState({ closing: false });
+    summarize(w);
+    throw error;
+  }
+}
+export async function restoreWorkspaceList(): Promise<string | null> {
+  if (useWorkspaceRegistry.getState().restored) return null;
+  const saved = parseOpenWorkspaces(getSetting(KEY));
+  const cruxes = await getServices().crux.listAll();
+  const valid = new Map(cruxes.filter((c) => c.kind !== 'snapshot').map((c) => [c.id, c]));
+  const ids = saved.ids.filter((id) => valid.has(id));
+  useWorkspaceRegistry.setState({
+    restored: true,
+    entries: ids.map((id) => ({
+      id,
+      title: valid.get(id)!.title || 'Untitled',
+      status: 'Not loaded',
+      dirty: false,
+    })),
+    mru:
+      saved.active && ids.includes(saved.active)
+        ? [saved.active, ...ids.filter((id) => id !== saved.active)]
+        : ids,
+  });
+  return saved.active && ids.includes(saved.active) ? saved.active : null;
+}
+if (typeof window !== 'undefined') {
+  window.addEventListener('crux:external-change', (e) => {
+    const w = sessions.get((e as CustomEvent<{ cruxId: string }>).detail.cruxId);
+    void w?.data.getState().refreshArtifacts().catch(console.error);
+  });
+  window.addEventListener('crux:folder-missing', (e) => {
+    sessions
+      .get((e as CustomEvent<{ cruxId: string }>).detail.cruxId)
+      ?.data.setState({ folderMissing: true });
+  });
+  window.addEventListener(GROWTH_CHANGED_EVENT, (e) => {
+    const id = (e as CustomEvent<{ cruxId?: string }>).detail?.cruxId;
+    for (const w of sessions.values())
+      if (!id || id === w.id) void w.data.getState().loadGrowths().catch(console.error);
+  });
+}
+
+/** Orderly application exit preserves membership but never resumes provider calls. */
+export async function shutdownWorkspaces(documents: 'save' | 'discard'): Promise<void> {
+  const state = useWorkspaceRegistry.getState();
+  const saved = {
+    version: 1,
+    openCruxIds: state.entries.map((e) => e.id),
+    lastActiveCruxId: state.mru[0] ?? null,
+  };
+  for (const w of allWorkspaces()) await closeWorkspace(w.id, { stop: true, documents });
+  setSetting(KEY, JSON.stringify(saved));
+  await flushSettings();
+}
+/** Garden replacement must never inherit callbacks or open sessions from the old database. */
+export async function prepareGardenReplacement(): Promise<void> {
+  if (allWorkspaces().length)
+    throw new Error('Close all open Crux workspaces before replacing this garden.');
+  leaveWorkspaceView();
+  useWorkspaceRegistry.setState({ entries: [], mru: [], activeId: null, restored: false });
+  await flushSettings();
+}

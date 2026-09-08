@@ -1,3 +1,5 @@
+import type { StoreApi } from 'zustand';
+import type { CruxState } from '@/stores/cruxStore';
 import { generateText, jsonSchema, Output, type LanguageModel } from 'ai';
 import { isSiteCrux } from '@/services/site';
 import { pathOf, type ArtifactPathSource } from '@/lib/artifact-path';
@@ -359,20 +361,20 @@ function withBudget<T>(p: Promise<T>, ms: number, signal?: AbortSignal): Promise
  * `preview.jpg` — exactly what snapshot thumbnails are.
  */
 export async function defaultCheckDeps(args: {
+  workspace: StoreApi<CruxState>;
   model: string;
   apiKey: string | null;
 }): Promise<CheckDeps> {
-  const [{ checkSiteBuild, startDevServer, stopDevServer }, preview, capture, registry, store] =
+  const [{ checkSiteBuild, startDevServer, stopDevServer }, preview, capture, registry] =
     await Promise.all([
       import('@/services/site'),
       import('@/services/preview-server'),
       import('@/services/preview-capture'),
       import('@/lib/preview-registry'),
-      import('@/stores/cruxStore'),
     ]);
 
   const screenshot: CheckDeps['screenshot'] = async (cruxId) => {
-    const s = store.useCruxStore.getState();
+    const s = args.workspace.getState();
     const site = isSiteCrux(s.artifacts);
     let url = registry.activePreviewUrl(cruxId);
     let started = false;
@@ -387,7 +389,7 @@ export async function defaultCheckDeps(args: {
       const bytes = new Uint8Array(await blob.arrayBuffer());
       const saved = await capture.saveWorkspacePreviewJpeg(cruxId, blob);
       // Mirror what createSnapshot does so the Artifacts list sees the new preview.jpg.
-      const live = store.useCruxStore.getState();
+      const live = args.workspace.getState();
       if (live.crux?.id === cruxId) {
         if (live.artifacts.some((a) => a.id === saved.id)) live.updateArtifact(saved.id, saved);
         else live.addArtifact(saved);

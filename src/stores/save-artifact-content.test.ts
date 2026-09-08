@@ -6,7 +6,8 @@
  * content as string".
  */
 import { describe, it, expect, beforeEach } from 'vitest';
-import { useCruxStore } from './cruxStore';
+import { createCruxStore } from './cruxStore';
+const useCruxStore = createCruxStore();
 import { initServices, getServices } from '@/services';
 
 describe('saveArtifactContent', () => {

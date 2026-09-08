@@ -39,8 +39,7 @@ import { isInternalArtifactPath } from '@/services/publish';
 import type { ToolResultContent } from '@/services/types';
 import { useAppStore } from '@/stores/appStore';
 import { useAuthStore } from '@/stores/authStore';
-import { useCruxStore } from '@/stores/cruxStore';
-import { cancelPendingAgentApprovals, useUIStore } from '@/stores/uiStore';
+import { getWorkspace, type Workspace } from '@/stores/workspaceRegistry';
 
 // ── Tool surface ─────────────────────────────────────────────────────────────
 
@@ -143,8 +142,8 @@ function hostBridge() {
  * saveMeta.
  */
 async function persistAgentHostFlag(cruxId: string, on: boolean): Promise<void> {
-  const store = useCruxStore.getState();
-  if (store.crux?.id === cruxId) {
+  const store = getWorkspace(cruxId)?.data.getState();
+  if (store?.crux?.id === cruxId) {
     store.patchCruxMeta({ settings: { ...store.crux.meta?.settings, agentHost: on } });
     await store.saveMeta();
     return;
@@ -206,12 +205,6 @@ interface McpResourceResult {
 let stopListener: (() => void) | null = null;
 // One executor per (crux, agent): read-before-write tracking is per agent
 // session, like it is per conversation for the built-in collaborator.
-const executors = new Map<string, ReturnType<typeof createToolExecutor>>();
-
-/**
- * Start answering forwarded MCP requests. Called once from the app bootstrap
- * in Desktop Mode; idempotent. Returns a stop function.
- */
 export function startAgentHostListener(): () => void {
   if (stopListener) return stopListener;
   const api = hostBridge();
@@ -223,17 +216,8 @@ export function startAgentHostListener(): () => void {
       (err: unknown) => api.respond({ id: request.id, error: errorMessage(err) }),
     );
   });
-  // Switching cruxes tears down the workspace the pending approvals belonged to.
-  const offStore = useCruxStore.subscribe((s, prev) => {
-    if (s.crux?.id !== prev.crux?.id) {
-      cancelPendingAgentApprovals();
-      executors.clear();
-    }
-  });
-
   stopListener = () => {
     offRequest();
-    offStore();
     stopListener = null;
   };
   return stopListener;
@@ -243,8 +227,17 @@ async function handleRequest(request: AgentHostRequest): Promise<unknown> {
   switch (request.kind) {
     case 'tools/list':
       return agentToolDefinitions();
-    case 'tools/call':
-      return callTool(request);
+    case 'tools/call': {
+      const w = getWorkspace(request.cruxId);
+      if (!w || w.phase !== 'ready') return toMcpResult(notOpenMessage());
+      const operation = hostFor(w).callTool(request);
+      w.operations.add(operation);
+      try {
+        return await operation;
+      } finally {
+        w.operations.delete(operation);
+      }
+    }
     case 'resources/read':
       return readResource(request);
   }
@@ -257,169 +250,189 @@ function notOpenMessage(): string {
   );
 }
 
-async function callTool(
-  request: Extract<AgentHostRequest, { kind: 'tools/call' }>,
-): Promise<McpToolResult> {
-  const { crux } = useCruxStore.getState();
-  if (!crux || crux.id !== request.cruxId) return toMcpResult(notOpenMessage());
-
-  const result = HOST_TOOL_NAMES.has(request.name)
-    ? await runHostTool(request)
-    : await executorFor(request.cruxId, request.agent)(request.name, request.input);
-
-  // The workspace may have changed while a blocked call (delete approval,
-  // publish approval) waited. Never record under the wrong crux.
-  if (useCruxStore.getState().crux?.id !== request.cruxId) return toMcpResult(result);
-
-  await recordToolCall(request, result);
-
-  if (didMutate(request.name, result)) {
-    await useCruxStore
-      .getState()
-      .refreshArtifacts()
-      .catch((err) => console.error('[agent-host] artifact refresh failed:', err));
-    noteMutation(request.cruxId);
+const hosts = new WeakMap<Workspace, ReturnType<typeof createWorkspaceHost>>();
+function hostFor(w: Workspace) {
+  let host = hosts.get(w);
+  if (!host) {
+    host = createWorkspaceHost(w);
+    hosts.set(w, host);
   }
-  return toMcpResult(result);
+  return host;
 }
+function createWorkspaceHost(w: Workspace) {
+  const useCruxStore = w.data;
+  const executors = new Map<string, ReturnType<typeof createToolExecutor>>();
+  w.cleanup.add(() => {
+    for (const timer of mutationTimers.values()) clearTimeout(timer);
+    mutationTimers.clear();
+    executors.clear();
+  });
+  async function callTool(
+    request: Extract<AgentHostRequest, { kind: 'tools/call' }>,
+  ): Promise<McpToolResult> {
+    const { crux } = useCruxStore.getState();
+    if (!crux || crux.id !== request.cruxId) return toMcpResult(notOpenMessage());
 
-/**
- * An external agent has no turn boundary — a coding agent makes twenty edits
- * in a row. Treat a quiet spell after the last mutation as the end of its
- * "turn" and hand ONE notification to the same auto-snapshot policy the
- * built-in collaborator uses, instead of a snapshot per write.
- */
-const AGENT_TURN_QUIET_MS = 4000;
-const mutationTimers = new Map<string, ReturnType<typeof setTimeout>>();
+    const result = HOST_TOOL_NAMES.has(request.name)
+      ? await runHostTool(request)
+      : await executorFor(request.cruxId, request.agent)(request.name, request.input);
 
-function noteMutation(cruxId: string): void {
-  const existing = mutationTimers.get(cruxId);
-  if (existing) clearTimeout(existing);
-  mutationTimers.set(
-    cruxId,
-    setTimeout(() => {
-      mutationTimers.delete(cruxId);
-      if (useCruxStore.getState().crux?.id !== cruxId) return;
-      sessionFor(cruxId).policy.notifyMutation();
-    }, AGENT_TURN_QUIET_MS),
-  );
-}
+    // The workspace may have changed while a blocked call (delete approval,
+    // publish approval) waited. Never record under the wrong crux.
+    if (useCruxStore.getState().crux?.id !== request.cruxId) return toMcpResult(result);
 
-function executorFor(cruxId: string, agent: string) {
-  const key = `${cruxId}::${agent}`;
-  let exec = executors.get(key);
-  if (!exec) {
-    const model = resolveModel(useCruxStore.getState().crux?.meta?.settings?.model);
-    exec = createToolExecutor(
-      cruxId,
-      // The same banner the built-in collaborator's deletes wait on: the
-      // person approves in the app, never in the agent's terminal.
-      (path, artifactId) => useCruxStore.getState().requestDeleteApproval(artifactId, path),
-      model,
-      { requestedBy: agentActor(agent) },
-    );
-    executors.set(key, exec);
-  }
-  return exec;
-}
+    await recordToolCall(request, result);
 
-/** The same per-crux session the chat hook uses — so the auto-snapshot policy is shared. */
-function sessionFor(cruxId: string) {
-  return chatSessionFor(cruxId, {
-    frequency: () =>
-      (useCruxStore.getState().crux?.meta?.settings?.snapshotFrequency as SnapshotFrequency) ||
-      'ai-turn',
-    snapshot: () => {
-      if (useCruxStore.getState().crux?.id !== cruxId) return;
-      useCruxStore
+    if (didMutate(request.name, result)) {
+      await useCruxStore
         .getState()
-        .createSnapshot({ silent: false })
-        .catch((err) => console.warn('Auto-snapshot failed:', err));
-    },
-  });
-}
-
-/** Record the call in the Collaboration as a tool message from the agent. */
-async function recordToolCall(
-  request: Extract<AgentHostRequest, { kind: 'tools/call' }>,
-  result: string | ToolResultContent,
-): Promise<void> {
-  const toolCall: ToolCall = {
-    id: `agent_${request.id}`,
-    name: request.name,
-    input: request.input,
-    result: resultText(result),
-  };
-  const message: ChatMessage = {
-    role: 'assistant',
-    content: '',
-    // Stamped with the persona so the built-in collaborator sees what the
-    // external agent did in its own context, and with the agent for the UI.
-    model: agentActor(request.agent),
-    agent: request.agent,
-    timestamp: new Date().toISOString(),
-    toolCalls: [toolCall],
-    personaFingerprint: getPersonaFingerprint(getPersona()),
-  };
-  const store = useCruxStore.getState();
-  store.addMessage(message);
-  await store.saveMeta();
-}
-
-// ── Host tools ───────────────────────────────────────────────────────────────
-
-async function runHostTool(
-  request: Extract<AgentHostRequest, { kind: 'tools/call' }>,
-): Promise<string> {
-  switch (request.name) {
-    case 'publish':
-      return publishFor(request, 'publish');
-    case 'unpublish':
-      return publishFor(request, 'unpublish');
-    case 'get_usage':
-      return getUsage(request.cruxId);
-    default:
-      return `Error: Unknown tool: ${request.name}`;
+        .refreshArtifacts()
+        .catch((err) => console.error('[agent-host] artifact refresh failed:', err));
+      noteMutation(request.cruxId);
+    }
+    return toMcpResult(result);
   }
-}
 
-async function publishFor(
-  request: Extract<AgentHostRequest, { kind: 'tools/call' }>,
-  action: 'publish' | 'unpublish',
-): Promise<string> {
-  if (!useAuthStore.getState().isAuthenticated) {
-    return 'Error: No crux.garden account is connected. The person can connect one in Crux Garden → Settings → Account.';
-  }
-  const approved = await useUIStore.getState().requestAgentApproval({
-    agent: request.agent,
-    action,
-    cruxId: request.cruxId,
-  });
-  if (!approved) {
-    return `The user DECLINED the ${action} request. Do not retry unless they ask for it.`;
-  }
-  const store = useCruxStore.getState();
-  if (store.crux?.id !== request.cruxId) return notOpenMessage();
+  /**
+   * An external agent has no turn boundary — a coding agent makes twenty edits
+   * in a row. Treat a quiet spell after the last mutation as the end of its
+   * "turn" and hand ONE notification to the same auto-snapshot policy the
+   * built-in collaborator uses, instead of a snapshot per write.
+   */
+  const AGENT_TURN_QUIET_MS = 4000;
+  const mutationTimers = new Map<string, ReturnType<typeof setTimeout>>();
 
-  if (action === 'unpublish') {
-    try {
-      await store.unpublishCrux();
-      return 'Unpublished. The crux is no longer live on crux.garden.';
-    } catch (err) {
-      return `Error: unpublish failed — ${errorMessage(err)}`;
+  function noteMutation(cruxId: string): void {
+    const existing = mutationTimers.get(cruxId);
+    if (existing) clearTimeout(existing);
+    mutationTimers.set(
+      cruxId,
+      setTimeout(() => {
+        mutationTimers.delete(cruxId);
+        if (useCruxStore.getState().crux?.id !== cruxId) return;
+        sessionFor(cruxId).policy.notifyMutation();
+      }, AGENT_TURN_QUIET_MS),
+    );
+  }
+
+  function executorFor(cruxId: string, agent: string) {
+    const key = `${cruxId}::${agent}`;
+    let exec = executors.get(key);
+    if (!exec) {
+      const model = resolveModel(useCruxStore.getState().crux?.meta?.settings?.model);
+      exec = createToolExecutor(
+        cruxId,
+        // The same banner the built-in collaborator's deletes wait on: the
+        // person approves in the app, never in the agent's terminal.
+        (path, artifactId) => useCruxStore.getState().requestDeleteApproval(artifactId, path),
+        model,
+        { requestedBy: agentActor(agent) },
+      );
+      executors.set(key, exec);
+    }
+    return exec;
+  }
+
+  /** The same per-crux session the chat hook uses — so the auto-snapshot policy is shared. */
+  function sessionFor(cruxId: string) {
+    return chatSessionFor(cruxId, {
+      frequency: () =>
+        (useCruxStore.getState().crux?.meta?.settings?.snapshotFrequency as SnapshotFrequency) ||
+        'ai-turn',
+      snapshot: () => {
+        if (useCruxStore.getState().crux?.id !== cruxId) return;
+        useCruxStore
+          .getState()
+          .createSnapshot({ silent: false })
+          .catch((err) => console.warn('Auto-snapshot failed:', err));
+      },
+    });
+  }
+
+  /** Record the call in the Collaboration as a tool message from the agent. */
+  async function recordToolCall(
+    request: Extract<AgentHostRequest, { kind: 'tools/call' }>,
+    result: string | ToolResultContent,
+  ): Promise<void> {
+    const toolCall: ToolCall = {
+      id: `agent_${request.id}`,
+      name: request.name,
+      input: request.input,
+      result: resultText(result),
+    };
+    const message: ChatMessage = {
+      role: 'assistant',
+      content: '',
+      // Stamped with the persona so the built-in collaborator sees what the
+      // external agent did in its own context, and with the agent for the UI.
+      model: agentActor(request.agent),
+      agent: request.agent,
+      timestamp: new Date().toISOString(),
+      toolCalls: [toolCall],
+      personaFingerprint: getPersonaFingerprint(getPersona()),
+    };
+    const store = useCruxStore.getState();
+    store.addMessage(message);
+    await store.saveMeta();
+  }
+
+  // ── Host tools ───────────────────────────────────────────────────────────────
+
+  async function runHostTool(
+    request: Extract<AgentHostRequest, { kind: 'tools/call' }>,
+  ): Promise<string> {
+    switch (request.name) {
+      case 'publish':
+        return publishFor(request, 'publish');
+      case 'unpublish':
+        return publishFor(request, 'unpublish');
+      case 'get_usage':
+        return getUsage(request.cruxId);
+      default:
+        return `Error: Unknown tool: ${request.name}`;
     }
   }
 
-  const ok = await store.publishCrux();
-  if (!ok) {
-    const failure = useCruxStore.getState().publishFailure;
-    const log = failure?.log ? `\n\nBuild output:\n${failure.log}` : '';
-    return `Error: publish failed — ${failure?.message ?? 'unknown error'}${log}`;
+  async function publishFor(
+    request: Extract<AgentHostRequest, { kind: 'tools/call' }>,
+    action: 'publish' | 'unpublish',
+  ): Promise<string> {
+    if (!useAuthStore.getState().isAuthenticated) {
+      return 'Error: No crux.garden account is connected. The person can connect one in Crux Garden → Settings → Account.';
+    }
+    const approved = await w.ui.getState().requestAgentApproval({
+      agent: request.agent,
+      action,
+      cruxId: request.cruxId,
+    });
+    if (!approved) {
+      return `The user DECLINED the ${action} request. Do not retry unless they ask for it.`;
+    }
+    const store = useCruxStore.getState();
+    if (store.crux?.id !== request.cruxId) return notOpenMessage();
+
+    if (action === 'unpublish') {
+      try {
+        await store.unpublishCrux();
+        return 'Unpublished. The crux is no longer live on crux.garden.';
+      } catch (err) {
+        return `Error: unpublish failed — ${errorMessage(err)}`;
+      }
+    }
+
+    const ok = await store.publishCrux();
+    if (!ok) {
+      const failure = useCruxStore.getState().publishFailure;
+      const log = failure?.log ? `\n\nBuild output:\n${failure.log}` : '';
+      return `Error: publish failed — ${failure?.message ?? 'unknown error'}${log}`;
+    }
+    const author = useAppStore.getState().author;
+    const slug = useCruxStore.getState().crux?.slug ?? store.crux.slug;
+    const url = author ? publicCruxUrl(author.username, slug) : null;
+    return url ? `Published. Live at ${url}` : 'Published.';
   }
-  const author = useAppStore.getState().author;
-  const slug = useCruxStore.getState().crux?.slug ?? store.crux.slug;
-  const url = author ? publicCruxUrl(author.username, slug) : null;
-  return url ? `Published. Live at ${url}` : 'Published.';
+
+  return { callTool };
 }
 
 async function getUsage(cruxId: string): Promise<string> {
@@ -468,6 +481,7 @@ async function readResource(
       return json({ cruxId, snapshots: timeline });
     }
     case 'crux://preview': {
+      if (getWorkspace(cruxId)?.phase !== 'ready') throw new Error(notOpenMessage());
       const folder = await folderForCrux(cruxId);
       const dev = folder ? await window.electronAPI?.devserver.status(folder) : null;
       if (dev?.url) return json({ url: dev.url, kind: 'dev-server', status: dev.status });

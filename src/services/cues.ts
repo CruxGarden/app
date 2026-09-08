@@ -71,11 +71,12 @@ export async function playCue(event: CueEvent): Promise<void> {
 }
 
 /** Dip the soundscape while the AI works; release afterwards. */
+let duckOwners = 0;
 export async function duckAudio(on: boolean): Promise<void> {
   if (typeof window === 'undefined') return;
+  duckOwners = Math.max(0, duckOwners + (on ? 1 : -1));
   const { useAudioStore } = await import('@/stores/audioStore');
   const s = useAudioStore.getState();
-  if (!s.playing && !on) return;
   if (!s.optIn) return;
-  await s.duck(on);
+  await s.duck(duckOwners > 0);
 }

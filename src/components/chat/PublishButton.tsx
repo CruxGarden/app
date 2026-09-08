@@ -1,8 +1,8 @@
+import { useWorkspaceUIStoreApi } from '@/stores/uiStore';
 import { useState, useCallback } from 'react';
 import { useAuthStore } from '@/stores/authStore';
 import { useAppStore } from '@/stores/appStore';
 import { useCruxStore } from '@/stores/cruxStore';
-import { useUIStore } from '@/stores/uiStore';
 import { Button } from '@/components/ui';
 import { publicCruxUrl } from '@/lib/public-url';
 import CreateAuthorModal from '@/components/auth/CreateAuthorModal';
@@ -11,6 +11,7 @@ import { useShallow } from 'zustand/react/shallow';
 import { UploadIcon } from '@/components/ui/icons';
 
 export default function PublishButton() {
+  const uiStore = useWorkspaceUIStoreApi();
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const author = useAppStore((s) => s.author);
   const { crux, publishCrux } = useCruxStore(
@@ -32,7 +33,7 @@ export default function PublishButton() {
       if (!published) {
         // The Share pane renders the failure the store recorded — it has the
         // room for a build log, which is what most failures carry.
-        useUIStore.getState().setPaneVisible('publish', true);
+        uiStore.getState().setPaneVisible('publish', true);
         return;
       }
       setPublishedUrl(publicCruxUrl(currentAuthor.username, crux.slug));
@@ -40,12 +41,12 @@ export default function PublishButton() {
     } finally {
       setPublishing(false);
     }
-  }, [crux, publishCrux]);
+  }, [crux, publishCrux, uiStore]);
 
   const handleClick = useCallback(() => {
     // Not connected — open the Share pane which has the inline connect form
     if (!isAuthenticated) {
-      useUIStore.getState().setPaneVisible('publish', true);
+      uiStore.getState().setPaneVisible('publish', true);
       return;
     }
 
@@ -57,7 +58,7 @@ export default function PublishButton() {
 
     // Publish
     doPublish();
-  }, [isAuthenticated, author, doPublish]);
+  }, [isAuthenticated, author, doPublish, uiStore]);
 
   const handleAuthorCreated = useCallback(() => {
     setShowAuthorModal(false);

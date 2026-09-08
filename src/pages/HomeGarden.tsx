@@ -22,12 +22,17 @@ export default function HomeGarden() {
   const [showNewCrux, setShowNewCrux] = useState(false);
 
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [deleteError, setDeleteError] = useState('');
   const deletingCrux = deletingId ? cruxList.find((c) => c.id === deletingId) : null;
 
   const handleConfirmDelete = useCallback(async () => {
     if (!deletingId) return;
-    await deleteCrux(deletingId);
-    setDeletingId(null);
+    try {
+      await deleteCrux(deletingId);
+      setDeletingId(null);
+    } catch (error) {
+      setDeleteError((error as Error).message);
+    }
   }, [deletingId, deleteCrux]);
 
   // Page title
@@ -143,7 +148,10 @@ export default function HomeGarden() {
       ) : (
         <GardenGrid
           cruxes={cruxList}
-          onDelete={setDeletingId}
+          onDelete={(id) => {
+            setDeleteError('');
+            setDeletingId(id);
+          }}
           sortBy={sortBy}
           thumbnails={thumbnails}
         />
@@ -156,6 +164,11 @@ export default function HomeGarden() {
           <span className="text-text font-medium">{deletingCrux?.title || 'this crux'}</span>? This
           action cannot be undone
         </p>
+        {deleteError && (
+          <p role="alert" className="text-sm text-error mb-3">
+            {deleteError}
+          </p>
+        )}
         <div className="flex justify-end">
           <Button variant="danger" onClick={handleConfirmDelete}>
             Delete

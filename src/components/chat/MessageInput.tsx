@@ -1,4 +1,5 @@
-import { useState, useRef, useCallback } from 'react';
+import { useWorkspaceUIStore, useWorkspaceUIStoreApi } from '@/stores/uiStore';
+import { useRef, useCallback, useEffect } from 'react';
 import { cn } from '@/lib/cn';
 
 interface MessageInputProps {
@@ -21,10 +22,21 @@ export default function MessageInput({
   disabled,
   history = [],
 }: MessageInputProps) {
-  const [value, setValue] = useState('');
+  const ui = useWorkspaceUIStoreApi();
+  const value = useWorkspaceUIStore((s) => s.composerDraft);
+  const setValue = useWorkspaceUIStore((s) => s.setComposerDraft);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const historyIndexRef = useRef(-1);
-  const savedInputRef = useRef('');
+  const historyIndexRef = useRef(ui.getState().composerHistoryIndex);
+  const savedInputRef = useRef(ui.getState().composerHistoryDraft);
+  useEffect(
+    () => () => {
+      ui.setState({
+        composerHistoryIndex: historyIndexRef.current,
+        composerHistoryDraft: savedInputRef.current,
+      });
+    },
+    [ui],
+  );
 
   // Builder actions can hand the user to the AI mid-sentence
 
@@ -36,7 +48,7 @@ export default function MessageInput({
     if (textareaRef.current) {
       textareaRef.current.style.height = 'auto';
     }
-  }, []);
+  }, [setValue]);
 
   const handleSubmit = useCallback(() => {
     const trimmed = value.trim();

@@ -74,6 +74,18 @@ export function getMockLanguageModel(): LanguageModel {
         warnings: [],
       }),
       doStream: async ({ prompt, abortSignal }) => {
+        const workspace = /\[workspace:(\w+)(:delete)?\]/.exec(lastUserText(prompt));
+        if (workspace) {
+          if (prompt.at(-1)?.role === 'tool')
+            return textStream(`Completed workspace ${workspace[1]}.`);
+          await think(12000, abortSignal);
+          return workspace[2]
+            ? toolCallStream('delete_file', { path: 'shared.txt' })
+            : toolCallStream('write_file', {
+                path: 'shared.txt',
+                content: `Owned by ${workspace[1]}\n`,
+              });
+        }
         // B5 subagents scenario ("in parallel" / "[Subagent]") — scripted at the end of this file
         const parallel = delegateScript(prompt, abortSignal);
         if (parallel) return parallel;

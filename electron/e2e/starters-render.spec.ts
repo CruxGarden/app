@@ -100,8 +100,8 @@ async function withPlayApi(p: Page) {
   const writes: Array<{ key: string; mode: string; value: unknown; bearer: string | null }> = [];
   const today = utcDay();
   const others: Entry[] = [
-    { name: 'ada', score: 10, seconds: 74, at: `${today}T08:00:00.000Z` },
-    { name: 'grace', score: 8, seconds: 121, at: `${today}T08:10:00.000Z` },
+    { name: 'ada', score: 100, seconds: 74, at: `${today}T08:00:00.000Z` },
+    { name: 'grace', score: 80, seconds: 121, at: `${today}T08:10:00.000Z` },
   ];
   const shared: Record<string, unknown> = { [`leaderboard:${today}`]: { entries: others } };
   const mine: Record<string, unknown> = {}; // the tester's protected keys
@@ -203,7 +203,8 @@ test.describe('starter templates render through astro dev', () => {
       await site.close();
 
       // ── Media ──
-      await page.goto(page.url().replace(/\/c\/.*$/, '/home'));
+      // Navigate within the app so Feed remains open while Media starts.
+      await page.getByRole('banner').getByRole('button').first().click();
       await page.getByRole('button', { name: 'Add Crux' }).click();
       await page.getByRole('button', { name: /Astro Media/ }).click();
       await page.getByRole('button', { name: 'Create', exact: true }).click();
@@ -257,11 +258,11 @@ test.describe('starter templates render through astro dev', () => {
       const yesterday = new Date(Date.now() - 86_400_000).toISOString().slice(0, 10);
       const boards: Record<string, Entry[]> = {
         [today]: [
-          { name: 'ada', score: 10, seconds: 74, at: `${today}T08:00:00.000Z` },
-          { name: 'grace', score: 9, seconds: 121, at: `${today}T08:10:00.000Z` },
-          { name: 'hedy', score: 9, seconds: 140, at: `${today}T08:20:00.000Z` },
+          { name: 'ada', score: 100, seconds: 74, at: `${today}T08:00:00.000Z` },
+          { name: 'grace', score: 90, seconds: 121, at: `${today}T08:10:00.000Z` },
+          { name: 'hedy', score: 90, seconds: 140, at: `${today}T08:20:00.000Z` },
         ],
-        [yesterday]: [{ name: 'emmy', score: 7, seconds: 200, at: `${yesterday}T09:00:00.000Z` }],
+        [yesterday]: [{ name: 'emmy', score: 70, seconds: 200, at: `${yesterday}T09:00:00.000Z` }],
       };
       const storeReads: string[] = [];
       const withBoard = async (p: import('@playwright/test').Page) => {
@@ -326,7 +327,7 @@ test.describe('starter templates render through astro dev', () => {
       await expect(board.locator('tbody tr').first().locator('td')).toHaveText([
         '1',
         'ada',
-        '10',
+        '100',
         '1:14',
       ]);
       await board.getByRole('link', { name: 'Yesterday' }).click();
@@ -567,9 +568,14 @@ test.describe('starter templates render through astro dev', () => {
       const share = play.getByTestId('share');
       await expect(share).toBeVisible({ timeout: 15_000 });
       const shown = (await share.textContent())!;
+      // Scores are now out of 100 (accuracy + speed), not the ten guess points.
+      // Round unit tests verify the formula; this flow checks score propagation.
+      const score = Number(/^(\d+)\/100/m.exec(shown)?.[1]);
+      expect(score).toBeGreaterThan(80);
+      expect(score).toBeLessThanOrEqual(95); // one wrong guess costs five accuracy points
       expect(shown.split('\n')).toEqual([
         `5Ws · Who am I? · ${utcDay()}`,
-        expect.stringMatching(/^9\/10 in \d:\d\d {3}✗ ✓$/),
+        expect.stringMatching(/^\d+\/100 in \d:\d\d {3}✗ ✓$/),
         `${origin}play/`,
       ]);
       expect(shown).not.toContain(daily.name);
@@ -596,7 +602,7 @@ test.describe('starter templates render through astro dev', () => {
       await expect(play.locator('.board-table tbody tr').nth(1).locator('td')).toHaveText([
         '2',
         'tester',
-        '9',
+        String(score),
         /^\d:\d\d$/,
       ]);
       expect(api.writes.map((w) => [w.key, w.mode, w.bearer])).toEqual([
@@ -607,7 +613,7 @@ test.describe('starter templates render through astro dev', () => {
       expect(posted.map((e) => e.name)).toEqual(['ada', 'tester', 'grace']); // one entry per name, sorted
       expect(posted[1]).toEqual({
         name: 'tester',
-        score: 9,
+        score,
         seconds: expect.any(Number),
         at: expect.any(String),
       });
@@ -615,7 +621,7 @@ test.describe('starter templates render through astro dev', () => {
       expect(api.writes[1]!.value).toEqual({
         entry: daily.id,
         shelf: shelf.id,
-        score: 9,
+        score,
         seconds: expect.any(Number),
       });
 
@@ -788,7 +794,7 @@ test.describe('starter templates render through astro dev', () => {
         timeout: 30_000,
       });
       await expect(phonePlay.getByTestId('share')).toBeVisible({ timeout: 15_000 });
-      await expect(phonePlay.getByTestId('share')).toContainText('10/10 in');
+      await expect(phonePlay.getByTestId('share')).toContainText(/(?:[89]\d|100)\/100 in/);
       expect(await scrollWidth(phonePlay)).toBeLessThanOrEqual(390);
       await phonePlay.evaluate(() => window.scrollTo(0, 0));
       await phonePlay.screenshot({

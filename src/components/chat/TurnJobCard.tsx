@@ -11,8 +11,8 @@ import {
   type PlanStep,
   type TurnJob,
 } from '@/services/turn-jobs';
-import { checkNow, dismissJob, removeQueued, runNextQueued, stopTurn } from '@/services/turns';
-import { chooseConflict, mergeNow } from '@/services/delegate';
+import { useTurns } from '@/services/turns';
+import { useDelegate } from '@/services/delegate';
 import {
   conflictsDecided,
   isSubagentActive,
@@ -179,6 +179,7 @@ function MergePanel({
   runs: SubagentRun[];
   busy: boolean;
 }) {
+  const { chooseConflict, mergeNow } = useDelegate();
   const [merging, setMerging] = useState(false);
   const titleOf = (branch: number) => runs[branch]?.title ?? `Worker ${branch + 1}`;
   const decided = conflictsDecided(merge.conflicts);
@@ -302,6 +303,7 @@ function CheckShot({ fingerprint, ok }: { fingerprint: string; ok: boolean }) {
  * the last snapshot. Everything the job can do, a person can do here.
  */
 export default function TurnJobCard() {
+  const { checkNow, dismissJob, removeQueued, runNextQueued, stopTurn } = useTurns();
   const job = useCruxStore((s) => s.turnJob);
   const queue = useCruxStore((s) => s.turnQueue);
   const growths = useCruxStore((s) => s.growths);
