@@ -217,15 +217,13 @@ export const GARDEN_DARK = {
   toggleHeight: '16px',
   scrollbarWidth: '6px',
   // Mood bar (the soundscape control in the top bar)
-  // Quiet by default — the bar is there, in the background (Daniel, 2026-09-07):
-  // a translucent surface, muted text, the accent softened towards the text.
-  moodBar: 'color-mix(in srgb, var(--surface) 72%, transparent)',
-  moodBarBorder: 'color-mix(in srgb, var(--border) 60%, transparent)',
-  moodBarText: 'var(--text-muted)',
-  moodBarTextMuted: 'color-mix(in srgb, var(--text-muted) 70%, transparent)',
-  moodBarAccent: 'color-mix(in srgb, var(--accent) 55%, var(--text-muted))',
+  moodBar: 'var(--surface)',
+  moodBarBorder: 'var(--border)',
+  moodBarText: 'var(--text)',
+  moodBarTextMuted: 'var(--text-muted)',
+  moodBarAccent: 'var(--accent)',
   moodBarAccentText: 'var(--bg)',
-  moodBarHover: 'color-mix(in srgb, var(--accent) 12%, transparent)',
+  moodBarHover: 'var(--accent-muted)',
   moodBarRadius: '9999px',
   moodBarShadow: 'none',
   toolbar: 'var(--panel)',
