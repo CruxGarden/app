@@ -1296,21 +1296,21 @@ html.palette-transition *::after {
   box-shadow: none;
 }
 
-/* ── Gateway stage: the banner and player fade in over 1 s and out over 2.1 s, a small lift with it ── */
+/* ── Gateway stage: the banner and player fade in over 0.5 s and out over 1 s, a small lift with it ── */
 .gateway-stage .gateway-piece {
   opacity: 0;
   transform: translateY(10px);
   filter: blur(3px);
   transition:
-    opacity 2100ms ease-in-out,
-    transform 2100ms ease-in-out,
-    filter 2100ms ease-in-out;
+    opacity 1000ms ease-in-out,
+    transform 1000ms ease-in-out,
+    filter 1000ms ease-in-out;
 }
 .gateway-stage[data-visible='true'] .gateway-piece {
   opacity: 1;
   transform: translateY(0);
   filter: blur(0);
-  transition-duration: 1000ms;
+  transition-duration: 500ms;
 }
 /* a dragged piece is positioned by its own transform: fade it by opacity and blur only */
 .gateway-stage .gateway-piece[data-placed] {
