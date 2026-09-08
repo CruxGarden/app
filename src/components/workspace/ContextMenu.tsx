@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { useUIStore } from '@/stores/uiStore';
+import { useWorkspaceUIStore as useUIStore } from '@/stores/uiStore';
 import { useDismiss } from '@/hooks/useDismiss';
 import { useMotionExit } from '@/hooks/useMotionExit';
 import { cn } from '@/lib/cn';

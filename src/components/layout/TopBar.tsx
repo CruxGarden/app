@@ -1,7 +1,6 @@
-import { useState, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useUIStore, DEFAULT_PANE_ORDER } from '@/stores/uiStore';
-import { useCruxStore } from '@/stores/cruxStore';
+import { useUIStore, useWorkspaceUIStore, DEFAULT_PANE_ORDER } from '@/stores/uiStore';
+import WorkspaceSwitcher from './WorkspaceSwitcher';
 import { useAppStore } from '@/stores/appStore';
 import IconButton from '@/components/ui/IconButton';
 import UserMenu from '@/components/auth/UserMenu';
@@ -16,7 +15,7 @@ import { useShallow } from 'zustand/react/shallow';
 
 export default function TopBar() {
   const navigate = useNavigate();
-  const { paneOrder, paneVisibility, togglePane, activeCruxId } = useUIStore(
+  const { paneOrder, paneVisibility, togglePane, activeCruxId } = useWorkspaceUIStore(
     useShallow((s) => ({
       paneOrder: s.paneOrder,
       paneVisibility: s.paneVisibility,
@@ -24,32 +23,12 @@ export default function TopBar() {
       activeCruxId: s.activeCruxId,
     })),
   );
-  const cruxTitle = useCruxStore((s) => s.crux?.title);
-  const updateCrux = useCruxStore((s) => s.updateCrux);
   const username = useAppStore((s) => s.author?.username);
   const aiEnabled = useUIStore((s) => s.aiEnabled);
-
-  const [editingTitle, setEditingTitle] = useState(false);
-  const [titleDraft, setTitleDraft] = useState('');
-  const titleInputRef = useRef<HTMLInputElement>(null);
 
   // Split panes into enabled (in paneOrder) and disabled (in default order)
   const enabledPanes = paneOrder.filter((p) => paneVisibility[p]);
   const disabledPanes = DEFAULT_PANE_ORDER.filter((p) => !paneVisibility[p]);
-
-  const startEditTitle = useCallback(() => {
-    setTitleDraft(cruxTitle || '');
-    setEditingTitle(true);
-    setTimeout(() => titleInputRef.current?.select(), 0);
-  }, [cruxTitle]);
-
-  const commitTitle = useCallback(() => {
-    setEditingTitle(false);
-    const trimmed = titleDraft.trim();
-    if (trimmed && trimmed !== cruxTitle) {
-      updateCrux({ title: trimmed });
-    }
-  }, [titleDraft, cruxTitle, updateCrux]);
 
   const desktopChrome = can(Capability.DesktopChrome);
 
@@ -84,42 +63,10 @@ export default function TopBar() {
             {APP_NAME}
           </button>
         )}
-        {activeCruxId ? (
-          <>
-            <span className="text-toolbar-text-muted shrink-0">
-              <ChevronRightIcon />
-            </span>
-            {editingTitle ? (
-              <input
-                ref={titleInputRef}
-                value={titleDraft}
-                onChange={(e) => setTitleDraft(e.target.value)}
-                onBlur={commitTitle}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    e.preventDefault();
-                    commitTitle();
-                  }
-                  if (e.key === 'Escape') {
-                    setEditingTitle(false);
-                  }
-                }}
-                className="text-xs font-medium font-display text-toolbar-text bg-transparent border-b border-input-border-active outline-none w-32"
-              />
-            ) : (
-              <span
-                onDoubleClick={(e) => {
-                  e.preventDefault();
-                  startEditTitle();
-                }}
-                className="text-xs font-medium font-display text-toolbar-text-muted cursor-default whitespace-nowrap"
-                title="Double-click to rename"
-              >
-                {cruxTitle || 'Untitled'}
-              </span>
-            )}
-          </>
-        ) : null}
+        <span className="text-toolbar-text-muted shrink-0">
+          <ChevronRightIcon />
+        </span>
+        <WorkspaceSwitcher />
       </div>
 
       {/* Right: pane toggles + console + user menu */}

@@ -24,7 +24,10 @@ test.describe('sync: new-device restore (mocked API)', () => {
       await page.getByRole('button', { name: /^Blank/ }).click();
       await page.getByPlaceholder('My Crux').fill('Carried Over');
       await page.getByRole('button', { name: 'Create', exact: true }).click();
-      await expect(page.getByText('Carried Over').first()).toBeVisible({ timeout: 30_000 });
+      await expect(page.getByRole('button', { name: 'Switch Crux workspace' })).toContainText(
+        'Carried Over',
+        { timeout: 30_000 },
+      );
 
       await page.getByRole('button', { name: 'Account menu' }).click();
       await page.getByRole('button', { name: /^Settings/ }).click();
@@ -52,12 +55,14 @@ test.describe('sync: new-device restore (mocked API)', () => {
       await page.getByPlaceholder('Enter code').fill('123456');
       await page.getByRole('button', { name: 'Connect', exact: true }).click();
       await page.getByRole('button', { name: 'Restore garden' }).click({ timeout: 30_000 });
-      // Redirects to Home with the garden restored
-      await expect(page.getByText('Carried Over').first()).toBeVisible({ timeout: 90_000 });
+      // The restored garden includes its remembered open workspace.
+      await expect(page.getByRole('button', { name: 'Switch Crux workspace' })).toContainText(
+        'Carried Over',
+        { timeout: 90_000 },
+      );
       expect(api.state.sync.down).toBeGreaterThan(0);
       await page.screenshot({ path: 'e2e/.results/new-device-1-restored.png' });
-      // The restored crux opens as a workspace
-      await page.getByText('Carried Over').first().click();
+      // The restored Crux is already open through lazy workspace restoration.
       await expect(page.locator('.mosaic-window').first()).toBeVisible({ timeout: 30_000 });
     } finally {
       await b.app.close();

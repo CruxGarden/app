@@ -1,5 +1,5 @@
 import { cn } from '@/lib/cn';
-import { useUIStore, PANE_COLORS, type PaneType } from '@/stores/uiStore';
+import { useWorkspaceUIStore as useUIStore, PANE_COLORS, type PaneType } from '@/stores/uiStore';
 import { useShallow } from 'zustand/react/shallow';
 import {
   ChatIcon,

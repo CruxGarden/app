@@ -1,3 +1,5 @@
+import { folderForCrux } from '@/services/project-folder';
+import { useCruxStoreApi } from '@/stores/cruxStore';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   isSiteCrux,
@@ -58,6 +60,7 @@ export function siteRouteFor(filePath: string): string {
  * decided downstream by `previewFor`.
  */
 export function useSitePreview(cruxId: string, filePath: string): SitePreview {
+  const cruxStore = useCruxStoreApi();
   const artifacts = useCruxStore((s) => s.artifacts);
   const preferredPort = useCruxStore((s) => s.crux?.meta?.settings?.previewPort ?? null);
   // The start effect reads the preference through a ref on purpose: changing
@@ -78,8 +81,34 @@ export function useSitePreview(cruxId: string, filePath: string): SitePreview {
     if (!active || base) return;
     const api = window.electronAPI?.toolchain;
     if (!api?.onOutput) return;
-    return api.onOutput(({ line }) => setDetail(line));
-  }, [active, base]);
+    let folder: string | null = null;
+    void folderForCrux(cruxId).then((value) => {
+      folder = value;
+    });
+    return api.onOutput((event) => {
+      if (event.folder === folder) setDetail(event.line);
+    });
+  }, [active, base, cruxId]);
+
+  useEffect(() => {
+    if (!active) return;
+    let folder: string | null = null;
+    void folderForCrux(cruxId).then((value) => {
+      folder = value;
+    });
+    return window.electronAPI?.devserver.onStatus((event) => {
+      if (event.folder !== folder) return;
+      if (event.status === 'ready' && event.url) {
+        setBase(event.url);
+        setPhase('ready');
+        setDetail('');
+      } else if (event.status === 'crashed') {
+        setBase(null);
+        setPhase('error');
+        setDetail('The preview server stopped. Restart it to continue.');
+      }
+    });
+  }, [active, cruxId]);
 
   // Dev-server lifecycle — per open crux
   useEffect(() => {
@@ -119,12 +148,12 @@ export function useSitePreview(cruxId: string, filePath: string): SitePreview {
     async (port?: number | null) => {
       if (port !== undefined) {
         // Remember the choice on the crux (null clears it), then restart on it.
-        const { crux, updateCrux } = useCruxStore.getState();
+        const { crux, updateCrux } = cruxStore.getState();
         if (crux) {
           const settings = { ...(crux.meta?.settings ?? {}) };
           if (port) settings.previewPort = port;
           else delete settings.previewPort;
-          await updateCrux({ meta: { ...(crux.meta ?? {}), settings } });
+          await updateCrux({ meta: { settings } });
         }
       }
       setPhase('starting');
@@ -143,7 +172,7 @@ export function useSitePreview(cruxId: string, filePath: string): SitePreview {
         setDetail((err as Error)?.message || 'Dev server failed to restart');
       }
     },
-    [cruxId, preferredPort],
+    [cruxId, cruxStore, preferredPort],
   );
 
   const url = base && phase === 'ready' ? `${base}${siteRouteFor(filePath)}` : null;

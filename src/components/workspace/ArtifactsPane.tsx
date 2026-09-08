@@ -1,8 +1,10 @@
+import { useWorkspaceUIStoreApi } from '@/stores/uiStore';
+import { useCruxStoreApi } from '@/stores/cruxStore';
 import { useRef, useState, useCallback, useMemo, useEffect } from 'react';
 import { walkEntry } from '@/lib/file-drop';
 import { isUnder, pathOf, basename, parentPath as parentPathOf } from '@/lib/artifact-path';
 import { useCruxStore } from '@/stores/cruxStore';
-import { useUIStore } from '@/stores/uiStore';
+import { useWorkspaceUIStore as useUIStore } from '@/stores/uiStore';
 import ArboristFileTree, {
   type ArboristFileTreeHandle,
   type UploadFileEntry,
@@ -111,6 +113,8 @@ function UploadIcon() {
 }
 
 export default function ArtifactsPane() {
+  const cruxStore = useCruxStoreApi();
+  const uiStore = useWorkspaceUIStoreApi();
   const artifacts = useCruxStore((s) => s.artifacts);
   const cruxId = useCruxStore((s) => s.crux?.id);
   const folderMissing = useCruxStore((s) => s.folderMissing);
@@ -154,22 +158,22 @@ export default function ArtifactsPane() {
     if (treeFocused) return treeFocused;
 
     // Fall back to the selected file's parent folder
-    const tabId = useUIStore.getState().editor.activeTabId;
+    const tabId = uiStore.getState().editor.activeTabId;
     if (!tabId) return undefined;
-    const artifact = useCruxStore.getState().artifacts.find((a) => a.id === tabId);
+    const artifact = cruxStore.getState().artifacts.find((a) => a.id === tabId);
     if (!artifact) return undefined;
     return parentPathOf(pathOf(artifact)) || undefined;
-  }, []);
+  }, [cruxStore, uiStore]);
 
   const handleSelect = useCallback(
     (id: string) => {
-      const artifact = useCruxStore.getState().artifacts.find((a) => a.id === id);
+      const artifact = cruxStore.getState().artifacts.find((a) => a.id === id);
       if (!artifact) return;
       const path = pathOf(artifact) || artifact.id;
       openFile(id, path);
-      if (!useUIStore.getState().paneVisibility.workshop) setPaneVisible('workshop', true);
+      if (!uiStore.getState().paneVisibility.workshop) setPaneVisible('workshop', true);
     },
-    [openFile, setPaneVisible],
+    [cruxStore, openFile, setPaneVisible, uiStore],
   );
 
   const handleSelectionChange = useCallback((ids: string[]) => {
@@ -198,33 +202,33 @@ export default function ArtifactsPane() {
 
   const handleCreateFile = useCallback(
     async (name: string) => {
-      const parentPath = useUIStore.getState().activeFileOperation?.parentPath;
+      const parentPath = uiStore.getState().activeFileOperation?.parentPath;
       const fullPath = parentPath ? `${parentPath}/${name}` : name;
       cancelFileOperation();
       const newFile = await createFile(fullPath);
       openFile(newFile.id, fullPath);
-      if (!useUIStore.getState().paneVisibility.workshop) setPaneVisible('workshop', true);
+      if (!uiStore.getState().paneVisibility.workshop) setPaneVisible('workshop', true);
     },
-    [createFile, cancelFileOperation, openFile, setPaneVisible],
+    [uiStore, cancelFileOperation, createFile, openFile, setPaneVisible],
   );
 
   const handleCreateFolder = useCallback(
     async (name: string) => {
-      const parentPath = useUIStore.getState().activeFileOperation?.parentPath;
+      const parentPath = uiStore.getState().activeFileOperation?.parentPath;
       const folderPath = parentPath ? `${parentPath}/${name}` : name;
       cancelFileOperation();
-      const alreadyExists = useCruxStore
+      const alreadyExists = cruxStore
         .getState()
         .artifacts.some((a) => pathOf(a).startsWith(folderPath + '/'));
       if (alreadyExists) return;
       await createFile(`${folderPath}/.keep`, '');
     },
-    [createFile, cancelFileOperation],
+    [uiStore, cancelFileOperation, cruxStore, createFile],
   );
 
   const handleMove = useCallback(
     async (id: string, newParentPath: string | null) => {
-      const { artifacts } = useCruxStore.getState();
+      const { artifacts } = cruxStore.getState();
       const existingPaths = new Set(artifacts.map((a) => pathOf(a)));
 
       // If it's a folder (id starts with "folder:"), move all children
@@ -276,12 +280,12 @@ export default function ArtifactsPane() {
         await moveArtifact(id, newParentPath);
       }
     },
-    [moveArtifact, renameArtifact],
+    [cruxStore, moveArtifact, renameArtifact],
   );
 
   const handleRename = useCallback(
     async (id: string, newName: string) => {
-      const artifacts = useCruxStore.getState().artifacts;
+      const artifacts = cruxStore.getState().artifacts;
       const existingPaths = new Set(artifacts.map((a) => pathOf(a)));
 
       if (id.startsWith(FOLDER_ID_PREFIX)) {
@@ -331,14 +335,14 @@ export default function ArtifactsPane() {
         await renameArtifact(id, newPath);
       }
     },
-    [renameArtifact],
+    [cruxStore, renameArtifact],
   );
 
   // Close any newly-created folders after an import (folders not yet in saved state
   // would open by default due to openByDefault=true — we want them collapsed).
   const closeFoldersFromPaths = useCallback(
     (paths: string[]) => {
-      const current = useUIStore.getState().folderOpenState;
+      const current = uiStore.getState().folderOpenState;
       const toClose = new Set<string>();
       for (const path of paths) {
         const parts = path.split('/');
@@ -349,19 +353,22 @@ export default function ArtifactsPane() {
       }
       for (const folderId of toClose) setFolderOpen(folderId, false);
     },
-    [setFolderOpen],
+    [setFolderOpen, uiStore],
   );
 
-  const confirmOverwrite = useCallback(async (entries: { path: string }[]): Promise<boolean> => {
-    const existingPaths = new Set(useCruxStore.getState().artifacts.map((a) => pathOf(a)));
-    const conflicts = entries.filter((e) => existingPaths.has(e.path));
-    if (conflicts.length === 0) return true;
-    const msg =
-      conflicts.length === 1
-        ? `"${conflicts[0]!.path}" already exists. Replace it?`
-        : `${conflicts.length} files already exist. Replace them?`;
-    return confirmDialog({ message: msg, confirmLabel: 'Replace' });
-  }, []);
+  const confirmOverwrite = useCallback(
+    async (entries: { path: string }[]): Promise<boolean> => {
+      const existingPaths = new Set(cruxStore.getState().artifacts.map((a) => pathOf(a)));
+      const conflicts = entries.filter((e) => existingPaths.has(e.path));
+      if (conflicts.length === 0) return true;
+      const msg =
+        conflicts.length === 1
+          ? `"${conflicts[0]!.path}" already exists. Replace it?`
+          : `${conflicts.length} files already exist. Replace them?`;
+      return confirmDialog({ message: msg, confirmLabel: 'Replace' });
+    },
+    [cruxStore],
+  );
 
   const handleUploadFiles = useCallback(
     async (files: UploadFileEntry[], parentPath: string | null) => {
@@ -380,7 +387,7 @@ export default function ArtifactsPane() {
     async (ids: string[]) => {
       // Keyboard Delete hands us raw tree selection — folders arrive as
       // "folder:path" ids and used to be silently skipped by deleteArtifacts.
-      const artifactIds = expandTreeSelection(ids, useCruxStore.getState().artifacts);
+      const artifactIds = expandTreeSelection(ids, cruxStore.getState().artifacts);
       const count = artifactIds.length;
       if (count === 0) return;
       const folders = ids.filter((id) => id.startsWith(FOLDER_ID_PREFIX)).length;
@@ -394,7 +401,7 @@ export default function ArtifactsPane() {
         await deleteArtifacts(artifactIds);
       }
     },
-    [deleteArtifacts],
+    [cruxStore, deleteArtifacts],
   );
 
   const handleFileInputChange = useCallback(

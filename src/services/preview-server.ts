@@ -1,3 +1,4 @@
+import { retainPreview, trackPreviewStart } from './preview-owners';
 /**
  * The static preview server per crux (ADR 0003) — renderer side.
  *
@@ -31,7 +32,7 @@ export const previewServerLeases = createLeasePool({
  * Start (or reuse) the crux's static preview server and take a lease.
  * Returns its base URL, or null when unavailable (web, or no Project Folder).
  */
-export async function startPreviewServer(cruxId: string): Promise<string | null> {
+async function startPreviewServerOwned(cruxId: string): Promise<string | null> {
   const bridge = previewBridge();
   if (!bridge) return null;
   const folder = await folderForCrux(cruxId);
@@ -39,7 +40,14 @@ export async function startPreviewServer(cruxId: string): Promise<string | null>
 
   previewServerLeases.acquire(cruxId);
   try {
-    return await bridge.start(folder);
+    const url = await bridge.start(folder);
+    retainPreview(
+      cruxId,
+      'static',
+      () => previewServerLeases.acquire(cruxId),
+      () => previewServerLeases.close(cruxId),
+    );
+    return url;
   } catch (err) {
     previewServerLeases.release(cruxId);
     throw err;
@@ -49,4 +57,10 @@ export async function startPreviewServer(cruxId: string): Promise<string | null>
 /** Release a lease. The server stops once no leases remain. */
 export async function stopPreviewServer(cruxId: string): Promise<void> {
   previewServerLeases.release(cruxId);
+}
+
+export function startPreviewServer(
+  ...args: Parameters<typeof startPreviewServerOwned>
+): ReturnType<typeof startPreviewServerOwned> {
+  return trackPreviewStart(args[0], startPreviewServerOwned(...args));
 }

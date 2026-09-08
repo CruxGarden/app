@@ -91,3 +91,30 @@ describe('createLeasePool', () => {
     });
   });
 });
+
+it('explicit owner close waits for shutdown and ignores late widget releases', async () => {
+  let done!: () => void;
+  const stopped = vi.fn(
+    () =>
+      new Promise<void>((resolve) => {
+        done = resolve;
+      }),
+  );
+  const pool = createLeasePool({ graceMs: 100, stop: stopped });
+  pool.acquire('a');
+  pool.acquire('a');
+  let closed = false;
+  const closing = pool.close('a').then(() => {
+    closed = true;
+  });
+  await Promise.resolve();
+  expect(closed).toBe(false);
+  pool.release('a');
+  done();
+  await closing;
+  expect(stopped).toHaveBeenCalledTimes(1);
+  expect(pool.count('a')).toBe(0);
+  pool.acquire('a');
+  expect(pool.count('a')).toBe(1);
+  pool.reset();
+});

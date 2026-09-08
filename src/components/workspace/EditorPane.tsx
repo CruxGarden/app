@@ -1,5 +1,5 @@
 import { useRef, useState, useEffect, Component, type ReactNode } from 'react';
-import { useUIStore } from '@/stores/uiStore';
+import { useWorkspaceUIStore as useUIStore } from '@/stores/uiStore';
 import { useCruxStore } from '@/stores/cruxStore';
 import EditorTabBar from './EditorTabBar';
 import EditorToolbar from './EditorToolbar';
