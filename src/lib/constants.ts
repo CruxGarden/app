@@ -60,8 +60,6 @@ export enum SettingsKey {
   ResonanceCues = 'cruxgarden:resonanceCues',
   /** Installed Mood Packages (JSON array, binaries by fingerprint in the Blob Store) */
   MoodPackages = 'cruxgarden:moodPackages',
-  /** Where the Gateway's banner and player were dragged (JSON, fractions of the window) */
-  GatewayLayout = 'cruxgarden:gatewayLayout',
   /** The Mood Package last applied in the app (bundled or installed id); the Gateway wears it before services init */
   WornMoodId = 'cruxgarden:wornMoodId',
   /** The bundled Mood the public website wears (localStorage; The Keeper until the visitor picks another) */

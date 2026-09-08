@@ -1,9 +1,9 @@
 import { test, expect } from '@playwright/test';
 import { launchApp } from './launch';
 
-/** The Gateway's banner and player go where you drag them, and stay there. */
+/** The Gateway's banner and player go where you drag them — for the session; a relaunch starts in place. */
 test.describe('gateway layout', () => {
-  test('drag the banner and the player; the place survives a relaunch; double-click resets', async () => {
+  test('drag the banner and the player; double-click resets; a relaunch starts in place', async () => {
     const { app, page, dir } = await launchApp();
     const box = (id: string) => page.getByTestId(id).boundingBox();
     try {
@@ -44,6 +44,12 @@ test.describe('gateway layout', () => {
 
       // the button still works after a drag
       await expect(page.getByRole('button', { name: 'Enter' })).toBeEnabled();
+      // double-click puts the banner back
+      const placedBanner = page.getByTestId('gateway-banner');
+      await expect(placedBanner).toHaveAttribute('data-placed', 'true');
+      const pb = (await placedBanner.boundingBox())!;
+      await page.mouse.dblclick(pb.x + pb.width / 2, pb.y + 12);
+      await expect(placedBanner).not.toHaveAttribute('data-placed', 'true');
     } finally {
       await app.close();
     }
@@ -53,11 +59,15 @@ test.describe('gateway layout', () => {
       await expect(again.page.getByRole('button', { name: 'Enter' })).toBeVisible({
         timeout: 30_000,
       });
-      const banner = again.page.getByTestId('gateway-banner');
-      await expect(banner).toHaveAttribute('data-placed', 'true');
-      const b = (await banner.boundingBox())!;
-      await again.page.mouse.dblclick(b.x + b.width / 2, b.y + 12);
-      await expect(banner).not.toHaveAttribute('data-placed', 'true');
+      // nothing was remembered: both pieces are back in the flow
+      await expect(again.page.getByTestId('gateway-banner')).not.toHaveAttribute(
+        'data-placed',
+        'true',
+      );
+      await expect(again.page.getByTestId('gateway-player')).not.toHaveAttribute(
+        'data-placed',
+        'true',
+      );
     } finally {
       await again.app.close();
     }

@@ -32,7 +32,6 @@ const SYNC_KEYS: Set<string> = new Set([
   SettingsKey.MoodThemeDark,
   SettingsKey.MoodThemeLight,
   SettingsKey.WornMoodId,
-  SettingsKey.GatewayLayout,
   // …and its sound, so the Gateway can play the worn Mood's track before Enter
   SettingsKey.SoundTrack,
   SettingsKey.SoundEnabled,

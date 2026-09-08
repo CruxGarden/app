@@ -1,15 +1,12 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { cn } from '@/lib/cn';
-import { getSetting, setSetting } from '@/services/settings';
-import { SettingsKey } from '@/lib/constants';
 
 /**
  * Drag a Gateway component anywhere on the screen (Daniel, 2026-09-07: "why
  * don't you let me drag the player and banner components anywhere I want").
- * The position is kept as the centre point in fractions of the window, so it
- * lands in the same place at any window size, and it persists (a sync setting,
- * readable before services init). Double-click puts it back where it started.
- * Buttons, sliders and inputs inside still work: a press on one never drags.
+ * Just for fun: nothing is remembered — the next launch starts in place.
+ * Double-click puts a piece back where it started. Buttons, sliders and
+ * inputs inside still work: a press on one never drags.
  */
 /**
  * A free piece keeps its centre in fractions of the window; an anchored piece
@@ -17,21 +14,7 @@ import { SettingsKey } from '@/lib/constants';
  * anchor's centre, so the distance between them is the same on every screen.
  */
 type Pos = { cx: number; cy: number } | { dx: number; dy: number };
-type Layout = Record<string, Pos>;
 const MOVED_EVENT = 'crux:gateway-piece-moved';
-
-function readLayout(): Layout {
-  try {
-    const raw = getSetting(SettingsKey.GatewayLayout);
-    const parsed = raw ? (JSON.parse(raw) as unknown) : null;
-    return parsed && typeof parsed === 'object' ? (parsed as Layout) : {};
-  } catch {
-    return {};
-  }
-}
-function writeLayout(layout: Layout) {
-  setSetting(SettingsKey.GatewayLayout, Object.keys(layout).length ? JSON.stringify(layout) : '');
-}
 
 const INTERACTIVE = 'button, a, input, select, textarea, [role="slider"], [role="switch"]';
 
@@ -44,7 +27,7 @@ export default function Draggable({
   riseDelayMs = 0,
   anchorId,
 }: {
-  /** Key in the saved layout */
+  /** Names the piece (test id, anchor target) */
   id: string;
   /** Where it sits until dragged (positioning classes) */
   className?: string;
@@ -59,13 +42,8 @@ export default function Draggable({
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const anchored = !!anchorId;
-  const [pos, setPos] = useState<Pos | null>(() => {
-    const saved = readLayout()[id];
-    if (!saved) return null;
-    // a position saved in the other mode (free vs anchored) is discarded
-    return anchored === 'dx' in saved ? saved : null;
-  });
-  const drag = useRef<{ dx: number; dy: number; moved: boolean } | null>(null);
+  const [pos, setPos] = useState<Pos | null>(null);
+  const drag = useRef<{ dx: number; dy: number } | null>(null);
   const [dragging, setDragging] = useState(false);
   const [, setTick] = useState(0);
 
@@ -118,7 +96,6 @@ export default function Draggable({
     drag.current = {
       dx: r.left + r.width / 2 - e.clientX,
       dy: r.top + r.height / 2 - e.clientY,
-      moved: false,
     };
     el.setPointerCapture(e.pointerId);
     setDragging(true);
@@ -127,26 +104,16 @@ export default function Draggable({
   const onPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
     const d = drag.current;
     if (!d) return;
-    d.moved = true;
     setPos(fromPx(e.clientX + d.dx, e.clientY + d.dy));
   };
   const onPointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
-    const d = drag.current;
     drag.current = null;
     setDragging(false);
     if (ref.current?.hasPointerCapture(e.pointerId)) ref.current.releasePointerCapture(e.pointerId);
-    if (!d?.moved) return;
-    setPos((p) => {
-      if (p) writeLayout({ ...readLayout(), [id]: p });
-      return p;
-    });
   };
   const reset = (e: React.MouseEvent<HTMLDivElement>) => {
     if ((e.target as HTMLElement).closest(INTERACTIVE)) return;
     setPos(null);
-    const layout = readLayout();
-    delete layout[id];
-    writeLayout(layout);
   };
 
   // Tell anchored pieces after the DOM has the new position (an effect runs
