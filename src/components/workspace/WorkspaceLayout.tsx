@@ -140,7 +140,7 @@ function PaneBody({ paneType }: { paneType: PaneType }) {
       ) : isTooNarrow ? (
         <PaneEmpty
           title="Widen the pane"
-          description={`${PANE_LABELS[paneType]} needs at least ${PANE_MIN_WIDTH[paneType]}px to show its contents.`}
+          description={`${PANE_LABELS[paneType]} needs a little more room to show its contents.`}
           className="h-full"
         />
       ) : (
