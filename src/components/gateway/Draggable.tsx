@@ -44,7 +44,7 @@ export default function Draggable({
   label: string;
   /** Show a grip to drag by (for a piece that is all controls, like the player) */
   handle?: boolean;
-  /** Rise a beat after the others (ms) */
+  /** Fade in a beat after the others (ms) */
   riseDelayMs?: number;
 }) {
   const ref = useRef<HTMLDivElement>(null);
@@ -137,12 +137,12 @@ export default function Draggable({
                 left: `${pos.cx * 100}%`,
                 top: `${pos.cy * 100}%`,
                 transform: 'translate(-50%, -50%)',
-                // a placed piece keeps its own transform: the stage's rise animation
-                // would override it (animations beat inline styles)
-                animation: 'none',
+                // a placed piece keeps its own transform (the stage fades it by
+                // opacity and blur only, see .gateway-stage in globals.css)
+                transition: 'opacity 900ms ease-in-out, filter 900ms ease-in-out',
               }
             : riseDelayMs
-              ? { animationDelay: `${riseDelayMs}ms` }
+              ? { transitionDelay: `${riseDelayMs}ms` }
               : {}),
           WebkitAppRegion: 'no-drag',
         } as unknown as React.CSSProperties

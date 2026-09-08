@@ -99,10 +99,12 @@ async function startGatewaySound(pkg: MoodPackage | undefined): Promise<void> {
   }
 }
 
-/** How long the Gateway stays just the room before the banner shows on its own. */
-const REVEAL_AFTER_MS = 10_000;
-/** Still for this long on the banner step and the banner sinks away again. */
-const IDLE_AFTER_MS = 10_000;
+/** The one rhythm (Daniel, 2026-09-07): background in over a second, then the
+ * title in over a second, on screen for fifteen, out over a second — and any
+ * stir brings it back the same way. */
+const CURTAIN_MS = 1_000;
+const REVEAL_AFTER_MS = 1_000;
+const IDLE_AFTER_MS = 15_000;
 
 export default function Gateway() {
   const navigate = useNavigate();
@@ -131,7 +133,7 @@ export default function Gateway() {
   };
   useEffect(() => {
     const lift = requestAnimationFrame(() => setCurtain('lifting'));
-    const gone = setTimeout(() => setCurtain('gone'), 1700);
+    const gone = setTimeout(() => setCurtain('gone'), CURTAIN_MS + 200);
     return () => {
       cancelAnimationFrame(lift);
       clearTimeout(gone);
@@ -176,7 +178,7 @@ export default function Gateway() {
           aria-hidden
           data-testid="gateway-curtain"
           className={cn(
-            'fixed inset-0 z-30 bg-bg pointer-events-none transition-opacity duration-[1500ms] ease-out',
+            'fixed inset-0 z-30 bg-bg pointer-events-none transition-opacity duration-[1000ms] ease-out',
             curtain === 'lifting' ? 'opacity-0' : 'opacity-100',
           )}
         />
