@@ -100,8 +100,8 @@ async function startGatewaySound(pkg: MoodPackage | undefined): Promise<void> {
 }
 
 /** The one rhythm (Daniel, 2026-09-07): background in over a second, the
- * title three seconds after launch in half a second, on screen for fifteen,
- * out over a second — and any stir brings it back the same way. */
+ * title three seconds after launch in a second, on screen for fifteen,
+ * out over two seconds — and any stir brings it back the same way. */
 const CURTAIN_MS = 1_000;
 const REVEAL_AFTER_MS = 3_000;
 const IDLE_AFTER_MS = 15_000;
@@ -207,7 +207,7 @@ export default function Gateway() {
           </div>
         </Draggable>
         {/* The banner keeps the exact centre of the window; the player hangs below it */}
-        <div className="absolute inset-x-0 top-full mt-10 flex justify-center">
+        <div className="absolute inset-x-0 top-full mt-5 flex justify-center">
           <Draggable id="player" label="Player" handle riseDelayMs={55} anchorId="banner">
             <MoodBar gateway />
           </Draggable>
