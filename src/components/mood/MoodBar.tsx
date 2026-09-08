@@ -151,7 +151,7 @@ export default function MoodBar({
         disabled={!canPlay}
         aria-label={playing ? 'Pause soundscape' : 'Play soundscape'}
         title={!track ? 'This Mood has no track — add one under Mood → Sound' : undefined}
-        className="w-5 h-5 rounded-[var(--mood-bar-radius)] bg-mood-bar-accent text-mood-bar-accent-text flex items-center justify-center cursor-pointer shrink-0 hover-bright motion-press react-accent disabled:opacity-40 disabled:cursor-default"
+        className="w-5 h-5 rounded-[var(--mood-bar-radius)] bg-mood-bar-button text-mood-bar-accent-text flex items-center justify-center cursor-pointer shrink-0 hover-bright motion-press react-accent disabled:opacity-40 disabled:cursor-default"
       >
         {PlayIcon}
       </button>

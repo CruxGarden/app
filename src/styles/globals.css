@@ -222,6 +222,7 @@
   --color-mood-bar-text-muted: var(--mood-bar-text-muted);
   --color-mood-bar-accent: var(--mood-bar-accent);
   --color-mood-bar-accent-text: var(--mood-bar-accent-text);
+  --color-mood-bar-button: var(--mood-bar-button);
   --color-mood-bar-hover: var(--mood-bar-hover);
   --shadow-mood-bar: var(--mood-bar-shadow);
   --color-toolbar: var(--toolbar);
