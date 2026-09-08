@@ -99,12 +99,14 @@ async function startGatewaySound(pkg: MoodPackage | undefined): Promise<void> {
   }
 }
 
-/** The one rhythm (Daniel, 2026-09-07): background in over a second, the
- * title three seconds after launch in a second, on screen for fifteen,
- * out over two seconds — and any stir brings it back the same way. */
+/** The one rhythm (Daniel, 2026-09-07): background in over a second; the
+ * title five seconds after launch, in over two seconds (the entrance); on
+ * screen for seven and a half, out over two — and any stir brings it straight
+ * back, no animation. */
 const CURTAIN_MS = 1_000;
-const REVEAL_AFTER_MS = 3_000;
-const IDLE_AFTER_MS = 15_000;
+const REVEAL_AFTER_MS = 5_000;
+const ENTRANCE_MS = 2_000;
+const IDLE_AFTER_MS = 7_500;
 
 export default function Gateway() {
   const navigate = useNavigate();
@@ -123,6 +125,14 @@ export default function Gateway() {
   const [visible, setVisible] = useState(false);
   const visibleRef = useRef(false);
   visibleRef.current = visible;
+  // The first appearance is the entrance (slow); once it has played, the stage
+  // comes back instantly whenever the person stirs.
+  const [entrance, setEntrance] = useState(true);
+  useEffect(() => {
+    if (!visible || !entrance) return;
+    const t = setTimeout(() => setEntrance(false), ENTRANCE_MS + 100);
+    return () => clearTimeout(t);
+  }, [visible, entrance]);
   const idle = useRef<ReturnType<typeof setTimeout> | null>(null);
   // A click while the stage is hidden only brings it back — it must never press
   // an invisible button (the pointer move that precedes a real click reveals first).
@@ -188,6 +198,7 @@ export default function Gateway() {
       <div
         data-testid="gateway-stage"
         data-visible={visible ? 'true' : 'false'}
+        data-entrance={entrance ? 'true' : undefined}
         onClickCapture={guardHiddenClick}
         className="gateway-stage relative w-full max-w-md flex flex-col items-center"
       >
