@@ -34,6 +34,13 @@ test.describe('gateway layout', () => {
       const after = (await box('gateway-banner'))!;
       expect(Math.round(after.x - before.x)).toBeLessThan(-100); // clamped at the window edge in a small test window
       expect(Math.round(after.y - before.y)).toBeGreaterThan(90);
+      // the player is anchored to the banner: its centre moved by the same amount as the banner's
+      // (a placed banner is no longer full-width, so compare centres, not left edges)
+      const cx = (b: { x: number; width: number }) => b.x + b.width / 2;
+      const cy = (b: { y: number; height: number }) => b.y + b.height / 2;
+      const barFollowed = (await box('gateway-player'))!;
+      expect(Math.round(cx(barFollowed) - cx(barAfter))).toBe(Math.round(cx(after) - cx(before)));
+      expect(Math.round(cy(barFollowed) - cy(barAfter))).toBe(Math.round(cy(after) - cy(before)));
 
       // the button still works after a drag
       await expect(page.getByRole('button', { name: 'Enter' })).toBeEnabled();

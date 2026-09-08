@@ -11,7 +11,14 @@ import { SettingsKey } from '@/lib/constants';
  * readable before services init). Double-click puts it back where it started.
  * Buttons, sliders and inputs inside still work: a press on one never drags.
  */
-type Layout = Record<string, { cx: number; cy: number }>;
+/**
+ * A free piece keeps its centre in fractions of the window; an anchored piece
+ * (the player, to the banner) keeps its centre as a pixel offset from the
+ * anchor's centre, so the distance between them is the same on every screen.
+ */
+type Pos = { cx: number; cy: number } | { dx: number; dy: number };
+type Layout = Record<string, Pos>;
+const MOVED_EVENT = 'crux:gateway-piece-moved';
 
 function readLayout(): Layout {
   try {
@@ -35,6 +42,7 @@ export default function Draggable({
   label,
   handle = false,
   riseDelayMs = 0,
+  anchorId,
 }: {
   /** Key in the saved layout */
   id: string;
@@ -46,22 +54,59 @@ export default function Draggable({
   handle?: boolean;
   /** Fade in a beat after the others (ms) */
   riseDelayMs?: number;
+  /** Keep the position relative to this piece (its `id`) rather than the window */
+  anchorId?: string;
 }) {
   const ref = useRef<HTMLDivElement>(null);
-  const [pos, setPos] = useState<{ cx: number; cy: number } | null>(() => readLayout()[id] ?? null);
+  const anchored = !!anchorId;
+  const [pos, setPos] = useState<Pos | null>(() => {
+    const saved = readLayout()[id];
+    if (!saved) return null;
+    // a position saved in the other mode (free vs anchored) is discarded
+    return anchored === 'dx' in saved ? saved : null;
+  });
   const drag = useRef<{ dx: number; dy: number; moved: boolean } | null>(null);
   const [dragging, setDragging] = useState(false);
+  const [, setTick] = useState(0);
 
-  const clamp = useCallback((cx: number, cy: number) => {
-    const el = ref.current;
-    const w = el?.offsetWidth ?? 0;
-    const h = el?.offsetHeight ?? 0;
-    const W = window.innerWidth;
-    const H = window.innerHeight;
-    const x = Math.min(W - w / 2 - 4, Math.max(w / 2 + 4, cx * W));
-    const y = Math.min(H - h / 2 - 4, Math.max(h / 2 + 4, cy * H));
-    return { cx: x / W, cy: y / H };
-  }, []);
+  const anchorCenter = useCallback(() => {
+    const el = anchorId
+      ? document.querySelector<HTMLElement>(`[data-testid="gateway-${anchorId}"]`)
+      : null;
+    if (!el) return { x: window.innerWidth / 2, y: window.innerHeight / 2 };
+    const r = el.getBoundingClientRect();
+    return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+  }, [anchorId]);
+
+  /** Centre point in px from a saved position. */
+  const toPx = useCallback(
+    (p: Pos) => {
+      if ('dx' in p) {
+        const a = anchorCenter();
+        return { x: a.x + p.dx, y: a.y + p.dy };
+      }
+      return { x: p.cx * window.innerWidth, y: p.cy * window.innerHeight };
+    },
+    [anchorCenter],
+  );
+  /** Saved position from a centre point in px, kept on screen. */
+  const fromPx = useCallback(
+    (x: number, y: number): Pos => {
+      const el = ref.current;
+      const w = el?.offsetWidth ?? 0;
+      const h = el?.offsetHeight ?? 0;
+      const W = window.innerWidth;
+      const H = window.innerHeight;
+      const cx = Math.min(W - w / 2 - 4, Math.max(w / 2 + 4, x));
+      const cy = Math.min(H - h / 2 - 4, Math.max(h / 2 + 4, y));
+      if (anchored) {
+        const a = anchorCenter();
+        return { dx: cx - a.x, dy: cy - a.y };
+      }
+      return { cx: cx / W, cy: cy / H };
+    },
+    [anchored, anchorCenter],
+  );
 
   const onPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
     if (e.button !== 0) return;
@@ -83,7 +128,7 @@ export default function Draggable({
     const d = drag.current;
     if (!d) return;
     d.moved = true;
-    setPos(clamp((e.clientX + d.dx) / window.innerWidth, (e.clientY + d.dy) / window.innerHeight));
+    setPos(fromPx(e.clientX + d.dx, e.clientY + d.dy));
   };
   const onPointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
     const d = drag.current;
@@ -104,12 +149,33 @@ export default function Draggable({
     writeLayout(layout);
   };
 
-  // Keep it on screen when the window shrinks
+  // Tell anchored pieces after the DOM has the new position (an effect runs
+  // after commit; a dispatch inside the handler would be read a frame early)
   useEffect(() => {
-    const onResize = () => setPos((p) => (p ? clamp(p.cx, p.cy) : p));
+    window.dispatchEvent(new Event(MOVED_EVENT));
+  }, [pos]);
+
+  // Follow the window (and, anchored, the anchor) when either moves
+  useEffect(() => {
+    const follow = () => setTick((t) => t + 1);
+    const onResize = () => {
+      setPos((p) =>
+        p && !('dx' in p) ? fromPx(p.cx * window.innerWidth, p.cy * window.innerHeight) : p,
+      );
+      follow();
+    };
     window.addEventListener('resize', onResize);
-    return () => window.removeEventListener('resize', onResize);
-  }, [clamp]);
+    window.addEventListener(MOVED_EVENT, follow);
+    // the anchor exists only after the first paint
+    const first = requestAnimationFrame(follow);
+    return () => {
+      window.removeEventListener('resize', onResize);
+      window.removeEventListener(MOVED_EVENT, follow);
+      cancelAnimationFrame(first);
+    };
+  }, [fromPx]);
+
+  const placed = pos && typeof window !== 'undefined' ? toPx(pos) : null;
 
   return (
     <div
@@ -132,10 +198,10 @@ export default function Draggable({
       )}
       style={
         {
-          ...(pos
+          ...(placed
             ? {
-                left: `${pos.cx * 100}%`,
-                top: `${pos.cy * 100}%`,
+                left: `${placed.x}px`,
+                top: `${placed.y}px`,
                 transform: 'translate(-50%, -50%)',
               }
             : riseDelayMs
