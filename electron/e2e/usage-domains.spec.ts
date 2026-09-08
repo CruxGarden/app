@@ -37,6 +37,13 @@ test.describe('usage + custom domains (mocked API)', () => {
       await page.getByRole('button', { name: 'Send Code' }).click();
       await page.getByPlaceholder('Enter code').fill('123456');
       await page.getByRole('button', { name: 'Connect', exact: true }).click();
+      // first share: the backup question (RESILIENCE-PLAN §2b); tick "always" so it never asks again
+      const backupAsk = page
+        .getByRole('dialog')
+        .filter({ hasText: 'A published site is not a backup' });
+      await expect(backupAsk).toBeVisible({ timeout: 30_000 });
+      await backupAsk.getByRole('checkbox').check();
+      await backupAsk.getByRole('button', { name: 'Share without a backup' }).click();
       await expect(page.getByText('Up to date')).toBeVisible({ timeout: 30_000 });
 
       // Usage for this crux

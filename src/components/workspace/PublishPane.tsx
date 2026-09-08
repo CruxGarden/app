@@ -2,7 +2,7 @@ import { useState, useMemo, useCallback } from 'react';
 import { Capability, can } from '@/lib/platform';
 import { useAuthStore } from '@/stores/authStore';
 import { useAppStore } from '@/stores/appStore';
-import { useCruxStore, selectHasUnpublishedChanges } from '@/stores/cruxStore';
+import { useCruxStore, useCruxStoreApi, selectHasUnpublishedChanges } from '@/stores/cruxStore';
 import { cn } from '@/lib/cn';
 import { formatDateTime } from '@/lib/format';
 import { publicCruxUrl, openGardenPage } from '@/lib/public-url';
@@ -14,7 +14,7 @@ import { Toggle } from '@/components/ui';
 import { PaneEmpty, PaneSection, PaneAction, PaneHint, PaneNote } from './pane-ui';
 import UsageSection from './UsageSection';
 import { confirmDialog, choiceDialog } from '@/stores/dialogStore';
-import { backupCurrentCrux, backupOf, snapshotsBehind } from '@/services/backup';
+import { backupCrux, backupOf, snapshotsBehind } from '@/services/backup';
 import { getSetting, setSetting } from '@/services/settings';
 import { SettingsKey } from '@/lib/constants';
 import * as domainsApi from '@/api/domains';
@@ -67,13 +67,14 @@ export default function PublishPane() {
   // that has never been backed up asks before it is shared; "Always back up
   // when I share" turns the question into a habit. Returns false to stop.
   const growthCount = useCruxStore((s) => s.growthCount);
+  const store = useCruxStoreApi();
   const [backingUp, setBackingUp] = useState(false);
   const [backupError, setBackupError] = useState<string | null>(null);
   const runBackup = useCallback(async (): Promise<boolean> => {
     setBackingUp(true);
     setBackupError(null);
     try {
-      await backupCurrentCrux();
+      await backupCrux(store);
       return true;
     } catch (err) {
       setBackupError(
@@ -83,13 +84,13 @@ export default function PublishPane() {
     } finally {
       setBackingUp(false);
     }
-  }, []);
+  }, [store]);
   const ensureBackupBeforeShare = useCallback(async (): Promise<boolean> => {
-    const current = useCruxStore.getState().crux;
+    const current = store.getState().crux;
     if (!current) return false;
     const always = getSetting(SettingsKey.BackupOnShare) === 'true';
     const record = backupOf(current);
-    const behind = snapshotsBehind(current, useCruxStore.getState().growthCount) ?? Infinity;
+    const behind = snapshotsBehind(current, store.getState().growthCount) ?? Infinity;
     if (always) return behind === 0 ? true : runBackup();
     if (record) return true; // backed up before; the pane shows how far behind
     const r = await choiceDialog({
@@ -106,7 +107,7 @@ export default function PublishPane() {
     if (r.checked) setSetting(SettingsKey.BackupOnShare, 'true');
     if (r.choice === 'skip') return true;
     return runBackup();
-  }, [runBackup]);
+  }, [runBackup, store]);
 
   const doPublish = useCallback(async () => {
     if (!crux) return;
