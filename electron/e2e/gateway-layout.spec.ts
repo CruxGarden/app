@@ -11,7 +11,7 @@ test.describe('gateway layout', () => {
       // Arrival: background first, then the title fades in on its own
       const stage = page.getByTestId('gateway-stage');
       await expect(stage).toHaveAttribute('data-visible', 'true', { timeout: 5_000 });
-      await page.waitForTimeout(1500); // the entrance finishes before we measure
+      await page.waitForTimeout(1900); // the entrance finishes before we measure
       // the player sits directly under the banner, both centred
       const b0 = (await box('gateway-banner'))!;
       const p0 = (await box('gateway-player'))!;

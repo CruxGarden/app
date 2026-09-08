@@ -23,18 +23,33 @@ import { PauseIcon, PlayIcon as PlayIconGlyph, SlidersIcon } from '@/components/
  */
 
 function LevelBars({ level, playing }: { level: number; playing: boolean }) {
-  const bars = [0.35, 0.7, 1, 0.55];
+  // Four bars that sway, subtly, while the track plays. The analyser's level sets how
+  // tall they reach (a quiet passage, lower bars); when the analyser has
+  // nothing to say — some sources give it silence — they still move, so the
+  // bar always shows that sound is on.
+  const bars = [
+    { k: 0.35, ms: 1900, delay: 0 },
+    { k: 0.7, ms: 2300, delay: 300 },
+    { k: 1, ms: 1700, delay: 150 },
+    { k: 0.55, ms: 2600, delay: 500 },
+  ];
+  const reach = playing ? 0.55 + Math.min(1, Math.sqrt(level) * 1.6) * 0.45 : 0.15;
   return (
     <span
       className="flex items-end gap-[2px] h-3.5 w-3.5 motion-ambient react-accent-bars"
       aria-hidden
     >
-      {bars.map((k, i) => (
+      {bars.map((b, i) => (
         <span
           key={i}
-          className="w-[2.5px] rounded-sm bg-mood-bar-accent transition-[height] [transition-duration:var(--motion-ms-fast)]"
+          className={cn(
+            'w-[2.5px] rounded-sm bg-mood-bar-accent origin-bottom transition-[height] [transition-duration:var(--motion-ms-fast)]',
+            playing && 'mood-bar-dance',
+          )}
           style={{
-            height: `${Math.max(2, (playing ? Math.min(1, Math.sqrt(level) * 1.6) : 0.15) * k * 14)}px`,
+            height: `${Math.max(2, reach * b.k * 14)}px`,
+            animationDuration: `${b.ms}ms`,
+            animationDelay: `${b.delay}ms`,
           }}
         />
       ))}
