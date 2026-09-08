@@ -1296,20 +1296,25 @@ html.palette-transition *::after {
   box-shadow: none;
 }
 
-/* ── Gateway stage: the banner and player fade in and out at one pace (900 ms), a small lift with it ── */
+/* ── Gateway stage: the banner and player fade in over 1.4 s and out over 2.1 s, a small lift with it ── */
 .gateway-stage .gateway-piece {
   opacity: 0;
   transform: translateY(10px);
   filter: blur(3px);
   transition:
-    opacity 900ms ease-in-out,
-    transform 900ms ease-in-out,
-    filter 900ms ease-in-out;
+    opacity 2100ms ease-in-out,
+    transform 2100ms ease-in-out,
+    filter 2100ms ease-in-out;
 }
 .gateway-stage[data-visible='true'] .gateway-piece {
   opacity: 1;
   transform: translateY(0);
   filter: blur(0);
+  transition-duration: 1400ms;
+}
+/* a dragged piece is positioned by its own transform: fade it by opacity and blur only */
+.gateway-stage .gateway-piece[data-placed] {
+  transition-property: opacity, filter;
 }
 @media (prefers-reduced-motion: reduce) {
   .gateway-stage .gateway-piece {
