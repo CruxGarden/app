@@ -1,3 +1,4 @@
+import { claimPreviewPort, releasePreviewPort } from './preview-ports';
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
@@ -12,18 +13,36 @@ const path = require('path');
  */
 
 const MIME_MAP: Record<string, string> = {
-  '.html': 'text/html', '.htm': 'text/html', '.css': 'text/css',
-  '.js': 'application/javascript', '.mjs': 'application/javascript',
-  '.json': 'application/json', '.md': 'text/markdown', '.txt': 'text/plain',
-  '.svg': 'image/svg+xml', '.xml': 'application/xml',
-  '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg',
-  '.gif': 'image/gif', '.webp': 'image/webp', '.ico': 'image/x-icon',
-  '.bmp': 'image/bmp', '.avif': 'image/avif',
+  '.html': 'text/html',
+  '.htm': 'text/html',
+  '.css': 'text/css',
+  '.js': 'application/javascript',
+  '.mjs': 'application/javascript',
+  '.json': 'application/json',
+  '.md': 'text/markdown',
+  '.txt': 'text/plain',
+  '.svg': 'image/svg+xml',
+  '.xml': 'application/xml',
+  '.png': 'image/png',
+  '.jpg': 'image/jpeg',
+  '.jpeg': 'image/jpeg',
+  '.gif': 'image/gif',
+  '.webp': 'image/webp',
+  '.ico': 'image/x-icon',
+  '.bmp': 'image/bmp',
+  '.avif': 'image/avif',
   '.pdf': 'application/pdf',
-  '.mp3': 'audio/mpeg', '.wav': 'audio/wav', '.ogg': 'audio/ogg',
-  '.m4a': 'audio/mp4', '.mp4': 'video/mp4', '.webm': 'video/webm',
-  '.woff': 'font/woff', '.woff2': 'font/woff2', '.ttf': 'font/ttf',
-  '.otf': 'font/otf', '.wasm': 'application/wasm',
+  '.mp3': 'audio/mpeg',
+  '.wav': 'audio/wav',
+  '.ogg': 'audio/ogg',
+  '.m4a': 'audio/mp4',
+  '.mp4': 'video/mp4',
+  '.webm': 'video/webm',
+  '.woff': 'font/woff',
+  '.woff2': 'font/woff2',
+  '.ttf': 'font/ttf',
+  '.otf': 'font/otf',
+  '.wasm': 'application/wasm',
 };
 
 function mimeFor(filePath: string): string {
@@ -33,32 +52,63 @@ function mimeFor(filePath: string): string {
 interface RunningServer {
   server: any;
   url: string;
+  port: number;
+  owner: object;
 }
 
 export class PreviewServer {
+  private stopping = new Map<string, Promise<void>>();
+  private starting = new Map<string, Promise<string>>();
   private running = new Map<string, RunningServer>(); // resolved folder -> server
 
   constructor(private resolveKnownFolder: (folder: string) => string) {}
 
   /** Start (or reuse) a static server for a Project Folder. Returns its URL. */
-  async start(folder: string): Promise<string> {
+  start(folder: string): Promise<string> {
+    const base = this.resolveKnownFolder(folder);
+    const existing = this.starting.get(base);
+    if (existing) return existing;
+    const previousStop = this.stopping.get(base);
+    const start = Promise.resolve().then(async () => {
+      await previousStop;
+      return this.startOwned(base);
+    });
+    this.starting.set(base, start);
+    void start
+      .finally(() => {
+        if (this.starting.get(base) === start) this.starting.delete(base);
+      })
+      .catch(() => {});
+    return start;
+  }
+  private async startOwned(folder: string): Promise<string> {
     const base = this.resolveKnownFolder(folder);
     const existing = this.running.get(base);
     if (existing) return existing.url;
 
+    const owner = {};
     const server = http.createServer((req: any, res: any) => {
       this.handle(base, req, res);
     });
 
-    const url: string = await new Promise((resolve, reject) => {
-      server.once('error', reject);
-      server.listen(0, '127.0.0.1', () => {
-        const { port } = server.address();
-        resolve(`http://127.0.0.1:${port}`);
+    let port = 0;
+    for (let attempt = 0; attempt < 5; attempt++) {
+      await new Promise<void>((resolve, reject) => {
+        server.once('error', reject);
+        server.listen(0, '127.0.0.1', () => {
+          server.removeListener('error', reject);
+          resolve();
+        });
       });
-    });
+      port = server.address().port;
+      if (claimPreviewPort(port, owner)) break;
+      await new Promise<void>((resolve) => server.close(() => resolve()));
+      port = 0;
+    }
+    if (!port) throw new Error('Could not allocate a distinct static preview port. Try again.');
+    const url = `http://127.0.0.1:${port}`;
 
-    this.running.set(base, { server, url });
+    this.running.set(base, { server, url, port: Number(new URL(url).port), owner });
     return url;
   }
 
@@ -98,19 +148,36 @@ export class PreviewServer {
     }
   }
 
-  async stop(folder: string): Promise<void> {
+  stop(folder: string): Promise<void> {
     const base = this.resolveKnownFolder(folder);
+    const existing = this.stopping.get(base);
+    if (existing) return existing;
+    const pendingStart = this.starting.get(base);
+    const stop = Promise.resolve().then(async () => {
+      await pendingStart?.catch(() => {});
+      await this.stopOwned(base);
+    });
+    this.stopping.set(base, stop);
+    void stop
+      .finally(() => {
+        if (this.stopping.get(base) === stop) this.stopping.delete(base);
+      })
+      .catch(() => {});
+    return stop;
+  }
+  private async stopOwned(base: string): Promise<void> {
     const running = this.running.get(base);
     if (!running) return;
-    this.running.delete(base);
     await new Promise<void>((resolve) => running.server.close(() => resolve()));
+    releasePreviewPort(running.port, running.owner);
+    if (this.running.get(base) === running) this.running.delete(base);
   }
 
   async stopAll(): Promise<void> {
-    const all = [...this.running.values()];
-    this.running.clear();
     await Promise.all(
-      all.map((r) => new Promise<void>((resolve) => r.server.close(() => resolve()))),
+      [...new Set([...this.running.keys(), ...this.starting.keys()])].map((folder) =>
+        this.stop(folder),
+      ),
     );
   }
 }

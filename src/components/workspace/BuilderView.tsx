@@ -1,6 +1,7 @@
+import { useCruxStoreApi } from '@/stores/cruxStore';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useCruxStore, selectHasUnpublishedChanges } from '@/stores/cruxStore';
-import { useUIStore } from '@/stores/uiStore';
+import { useWorkspaceUIStore as useUIStore } from '@/stores/uiStore';
 import { useAppStore } from '@/stores/appStore';
 import { getServices } from '@/services';
 import { cn } from '@/lib/cn';
@@ -29,7 +30,7 @@ import {
   uniqueItemPath,
   type CaptionItem,
 } from './builder-files';
-import { canCollaborate, runParallelJob } from '@/services/turns';
+import { useTurns } from '@/services/turns';
 import { parseShelf, type Shelf, type ShelfEntry } from '@/game/shelf';
 import { HIDDEN_KINDS, type HiddenKind } from '@/game/hidden';
 
@@ -43,7 +44,7 @@ const DERIVED_ACTIONS = new Set<BuilderAction['do']['type']>([
 ]);
 
 /** Paths of every artifact in the crux (meta.path, falling back to filename). */
-function artifactPaths(): Set<string> {
+function artifactPaths(useCruxStore: ReturnType<typeof useCruxStoreApi>): Set<string> {
   return new Set(
     useCruxStore
       .getState()
@@ -388,6 +389,8 @@ function AddPhotosButton({
   label: string;
   icon?: string;
 }) {
+  const cruxStore = useCruxStoreApi();
+  const { canCollaborate, runParallelJob } = useTurns();
   const uploadFile = useCruxStore((s) => s.uploadFile);
   const createFile = useCruxStore((s) => s.createFile);
   const openFile = useUIStore((s) => s.openFile);
@@ -401,7 +404,7 @@ function AddPhotosButton({
       if (!files.length) return;
       // Names taken before this batch, plus what the batch itself adds — so
       // two "IMG_0001.jpg" never share one artifact path or one image URL.
-      const takenPaths = artifactPaths();
+      const takenPaths = artifactPaths(cruxStore);
       const takenNames = namesInFolder(takenPaths, 'public/images');
       let last: { artifact: Artifact; path: string } | null = null;
       const failed: string[] = [];
@@ -471,7 +474,18 @@ function AddPhotosButton({
         setStatus(null);
       }
     },
-    [collection, uploadFile, createFile, openFile],
+    [
+      cruxStore,
+      openFile,
+      collection.singular,
+      collection.new.pathTemplate,
+      collection.new.body,
+      collection.new.frontmatter,
+      canCollaborate,
+      uploadFile,
+      createFile,
+      runParallelJob,
+    ],
   );
 
   return (
@@ -509,6 +523,7 @@ function AddMediaButton({
   label: string;
   icon?: string;
 }) {
+  const cruxStore = useCruxStoreApi();
   const uploadFile = useCruxStore((s) => s.uploadFile);
   const createFile = useCruxStore((s) => s.createFile);
   const openFile = useUIStore((s) => s.openFile);
@@ -521,7 +536,7 @@ function AddMediaButton({
       e.target.value = '';
       if (!files.length) return;
       const canTranscode = can(Capability.Transcode);
-      const takenPaths = artifactPaths();
+      const takenPaths = artifactPaths(cruxStore);
       const takenNames = namesInFolder(takenPaths, 'public/media');
       let last: { artifact: Artifact; path: string } | null = null;
       let converted = 0;
@@ -607,7 +622,15 @@ function AddMediaButton({
         setStatus(null);
       }
     },
-    [collection, uploadFile, createFile, openFile],
+    [
+      cruxStore,
+      openFile,
+      uploadFile,
+      collection.new.pathTemplate,
+      collection.new.body,
+      collection.new.frontmatter,
+      createFile,
+    ],
   );
 
   return (
@@ -672,9 +695,10 @@ function CustomAction({
 const PLAY_PAGE_PATH = 'src/pages/play.astro';
 
 function useOpenRound() {
+  const cruxStore = useCruxStoreApi();
   const openFileByPath = useOpenFileByPath();
   return useCallback(() => {
-    const has = useCruxStore
+    const has = cruxStore
       .getState()
       .artifacts.some(
         (a) => ((a.meta?.path as string | undefined) || a.filename) === PLAY_PAGE_PATH,
@@ -687,19 +711,20 @@ function useOpenRound() {
       return;
     }
     openFileByPath(PLAY_PAGE_PATH);
-  }, [openFileByPath]);
+  }, [cruxStore, openFileByPath]);
 }
 
 function useOpenFileByPath() {
+  const cruxStore = useCruxStoreApi();
   const openFile = useUIStore((s) => s.openFile);
   return useCallback(
     (path: string) => {
-      const artifact = useCruxStore
+      const artifact = cruxStore
         .getState()
         .artifacts.find((a) => ((a.meta?.path as string | undefined) || a.filename) === path);
       if (artifact) openFile(artifact.id, path);
     },
-    [openFile],
+    [cruxStore, openFile],
   );
 }
 

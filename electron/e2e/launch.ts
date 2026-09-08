@@ -53,6 +53,21 @@ export async function launchApp(
       { cause: err },
     );
   }
+  // Test teardown is intentionally noninteractive. Lifecycle tests exercise
+  // the real close request explicitly; ordinary finally blocks must still
+  // stop Electron and its managed servers after a failed assertion.
+  const close = app.close.bind(app);
+  app.close = async () => {
+    await app
+      .evaluate(({ ipcMain, BrowserWindow }) => {
+        const window = BrowserWindow.getAllWindows().find((w) =>
+          w.webContents.getURL().startsWith('crux-app://'),
+        );
+        if (window) ipcMain.emit('workspace:close-guard', { sender: window.webContents }, false);
+      })
+      .catch(() => {});
+    await close();
+  };
   await page.waitForLoadState('domcontentloaded');
   return { app, page, dir };
 }

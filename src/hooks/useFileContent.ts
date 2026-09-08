@@ -1,3 +1,7 @@
+import { useStore } from 'zustand';
+import { useCruxStoreApi } from '@/stores/cruxStore';
+import { useWorkspaceUIStoreApi } from '@/stores/uiStore';
+import { documentsFor } from '@/services/workspace-documents';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Artifact } from '@/api/types';
 import { getServices } from '@/services';
@@ -31,15 +35,23 @@ interface UseFileContentResult {
 }
 
 export function useFileContent(_cruxId: string, artifact: Artifact): UseFileContentResult {
-  const [content, setContent] = useState<string | null>(null);
+  const data = useCruxStoreApi();
+  const ui = useWorkspaceUIStoreApi();
+  const documents = documentsFor(data, ui);
+  const doc = documents.get(artifact.id);
+  const content = useStore(doc, (s) => s.content);
+  const setContent = useCallback(
+    (value: string) => documents.edit(artifact.id, value),
+    [documents, artifact.id],
+  );
   const [blobUrl, setBlobUrl] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(content === null);
   const [fetchKey, setFetchKey] = useState(0);
   const [contentVersion, setContentVersion] = useState(0);
   // A COUNT, not a flag: Form mode can have several saves in flight at once,
   // and each landing store update must consume exactly one expectation.
   const ownSavesPendingRef = useRef(0);
-  const loadedRef = useRef(false);
+  const loadedRef = useRef(content !== null);
 
   const mime = artifact.mimeType || 'text/plain';
   const filename = (artifact.meta?.path as string) || artifact.filename || '';
@@ -77,7 +89,7 @@ export function useFileContent(_cruxId: string, artifact: Artifact): UseFileCont
         if (isTextMime(mime, filename)) {
           blob.text().then((text) => {
             if (cancelled) return;
-            setContent(text);
+            documents.hydrate(artifact, text);
             setContentVersion((v) => v + 1);
             loadedRef.current = true;
             setLoading(false);
@@ -92,7 +104,7 @@ export function useFileContent(_cruxId: string, artifact: Artifact): UseFileCont
       .catch((err) => {
         if (cancelled) return;
         console.error('Failed to load file:', artifact.id, err);
-        setContent('// Error loading file');
+        doc.setState({ error: 'Could not load this Artifact.' });
         setLoading(false);
       });
 
@@ -101,7 +113,7 @@ export function useFileContent(_cruxId: string, artifact: Artifact): UseFileCont
     };
     // Content identity is the fingerprint, not the row timestamp: metadata
     // edits (rename, move) must not re-download the file.
-  }, [artifact.id, artifact.fingerprint, mime, filename, fetchKey]);
+  }, [artifact.id, artifact.fingerprint, mime, filename, fetchKey, artifact, documents, doc]);
 
   // Clean up blob URLs
   useEffect(() => {

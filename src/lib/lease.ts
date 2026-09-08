@@ -17,6 +17,8 @@ export interface LeasePool {
   release(key: string): number;
   /** Leases currently held for a key. */
   count(key: string): number;
+  /** Explicit owner close: cancel grace timers and await resource shutdown. */
+  close(key: string): Promise<void>;
   /** Cancel timers and forget all leases (tests, teardown). */
   reset(): void;
 }
@@ -30,6 +32,7 @@ export function createLeasePool(options: {
   onStopError?: (key: string, err: unknown) => void;
 }): LeasePool {
   const counts = new Map<string, number>();
+  const closed = new Set<string>();
   const timers = new Map<string, ReturnType<typeof setTimeout>>();
 
   function cancelPendingStop(key: string): void {
@@ -42,11 +45,20 @@ export function createLeasePool(options: {
 
   return {
     acquire(key) {
+      closed.delete(key);
       cancelPendingStop(key);
       counts.set(key, (counts.get(key) ?? 0) + 1);
     },
 
+    async close(key) {
+      closed.add(key);
+      cancelPendingStop(key);
+      counts.delete(key);
+      await options.stop(key);
+    },
+
     release(key) {
+      if (closed.has(key)) return 0;
       const remaining = Math.max(0, (counts.get(key) ?? 0) - 1);
       if (remaining === 0) counts.delete(key);
       else counts.set(key, remaining);
@@ -77,6 +89,7 @@ export function createLeasePool(options: {
       for (const timer of timers.values()) clearTimeout(timer);
       timers.clear();
       counts.clear();
+      closed.clear();
     },
   };
 }

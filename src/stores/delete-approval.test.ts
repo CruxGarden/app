@@ -7,7 +7,9 @@
  * turn — permanently unfinished.
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { useCruxStore, cancelPendingDeletes } from './cruxStore';
+import { createCruxStore } from './cruxStore';
+const useCruxStore = createCruxStore();
+const cancelPendingDeletes = () => useCruxStore.getState().cancelPendingDeletes();
 import { initServices, getServices } from '@/services';
 
 async function seedCrux() {

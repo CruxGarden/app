@@ -1,5 +1,7 @@
-import { lazy, Suspense, useEffect, useState } from 'react';
-import { Outlet } from 'react-router-dom';
+import WorkspaceLifecycle from './WorkspaceLifecycle';
+import { restoreWorkspaceList } from '@/stores/workspaceRegistry';
+import { lazy, Suspense, useEffect, useRef, useState } from 'react';
+import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import TopBar from './TopBar';
 import { Modal, DialogHost } from '@/components/ui';
 import { useUIStore } from '@/stores/uiStore';
@@ -14,6 +16,10 @@ const Mood = lazy(() => import('@/components/mood/Mood'));
 import MoodTextureLayers from './MoodTextureLayers';
 
 export default function Shell() {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const currentPath = useRef(location.pathname);
+  currentPath.current = location.pathname;
   const [servicesReady, setServicesReady] = useState(useAppStore.getState().ready);
   const [initError, setInitError] = useState<string | null>(null);
   const aiEnabled = useUIStore((s) => s.aiEnabled);
@@ -22,6 +28,17 @@ export default function Shell() {
   const settingsOpen = useUIStore((s) => s.settingsOpen);
   const exploreOpen = useUIStore((s) => s.exploreOpen);
   const moodPanelOpen = useUIStore((s) => s.moodPanelOpen);
+
+  useEffect(() => {
+    if (!servicesReady) return;
+    const path = currentPath.current;
+    void restoreWorkspaceList()
+      .then((id) => {
+        if (id && path === '/home' && currentPath.current === path)
+          navigate(`/c/${id}`, { replace: true });
+      })
+      .catch(console.error);
+  }, [servicesReady, navigate]);
 
   // Reactive theme signals (--signal-audio/typing/agent) live for the app's lifetime
   useEffect(() => startSignals(), []);
@@ -87,6 +104,7 @@ export default function Shell() {
 
   return (
     <div className="flex flex-col h-screen overflow-hidden">
+      <WorkspaceLifecycle />
       <MoodTextureLayers />
       {/* Top bar */}
       <div className="relative z-20 shrink-0">

@@ -1,3 +1,5 @@
+import { useWorkspaceUIStoreApi } from '@/stores/uiStore';
+import { useCruxStoreApi } from '@/stores/cruxStore';
 import { lazy, memo, Suspense, useCallback, type CSSProperties } from 'react';
 import { DndProvider } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
@@ -6,10 +8,9 @@ import type { MosaicBranch, MosaicNode } from 'react-mosaic-component';
 import { PaneEmpty } from './pane-ui';
 import { usePaneWidth } from '@/hooks/usePaneWidth';
 import { Spinner } from '@/components/ui';
-import { useUIStore, type PaneType } from '@/stores/uiStore';
+import { useWorkspaceUIStore as useUIStore, type PaneType } from '@/stores/uiStore';
 import { useStoreProxy } from '@/hooks/useStoreProxy';
 import { useIsDesktopLayout } from '@/hooks/useMediaQuery';
-import { useNotesManifest } from '@/hooks/useNotesManifest';
 
 const HistoryPane = lazy(() => import('./HistoryPane'));
 const ChatPane = lazy(() => import('./ChatPane'));
@@ -187,6 +188,8 @@ const PANE_ICONS: Record<PaneType, React.ReactNode> = {
 // ── Main layout ─────────────────────────────────────────
 
 export default function WorkspaceLayout() {
+  const cruxStore = useCruxStoreApi();
+  const uiStore = useWorkspaceUIStoreApi();
   const mosaicLayout = useUIStore((s) => s.mosaicLayout);
   const setMosaicLayout = useUIStore((s) => s.setMosaicLayout);
   const setPaneVisible = useUIStore((s) => s.setPaneVisible);
@@ -203,26 +206,23 @@ export default function WorkspaceLayout() {
   // Proxy crux:store:* postMessages from preview iframe to local SQLite
   useStoreProxy(crux?.id ?? null);
 
-  // Auto-generate manifest.json for notes-type cruxes
-  useNotesManifest();
-
   // Context menu handlers
   const handleNewFile = (parentPath: string) => {
-    useUIStore.getState().startFileOperation({
+    uiStore.getState().startFileOperation({
       type: 'create-file',
       parentPath,
     });
   };
 
   const handleNewFolder = (parentPath: string) => {
-    useUIStore.getState().startFileOperation({
+    uiStore.getState().startFileOperation({
       type: 'create-folder',
       parentPath,
     });
   };
 
   const handleRename = (_id: string, path: string) => {
-    useUIStore.getState().startFileOperation({
+    uiStore.getState().startFileOperation({
       type: 'rename',
       targetPath: path,
     });
@@ -316,7 +316,7 @@ export default function WorkspaceLayout() {
           isAudio,
         });
 
-        const uploadFile = useCruxStore.getState().uploadFile;
+        const uploadFile = cruxStore.getState().uploadFile;
         for (const result of results) {
           const blob = new Blob([new Uint8Array(result.data)], { type: result.mimeType });
           const file = new File([blob], result.name, { type: result.mimeType });
@@ -327,7 +327,7 @@ export default function WorkspaceLayout() {
         void alertDialog('Transcode failed: ' + (err as Error).message, 'Transcode failed');
       }
     },
-    [artifacts],
+    [artifacts, cruxStore],
   );
 
   const handleOpen = (id: string) => {

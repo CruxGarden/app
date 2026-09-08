@@ -1,4 +1,7 @@
-/* eslint-disable react-refresh/only-export-components */
+import { useWorkspaceUIStoreApi } from '@/stores/uiStore';
+import { documentsFor } from '@/services/workspace-documents';
+import { useStore } from 'zustand';
+import { useCruxStoreApi } from '@/stores/cruxStore';
 import { useEffect, useMemo, useRef, useCallback, useState } from 'react';
 import Editor from '@monaco-editor/react';
 
@@ -7,7 +10,7 @@ import type * as Monaco from 'monaco-editor';
 import { PhotoProvider, PhotoView } from 'react-photo-view';
 import 'react-photo-view/dist/react-photo-view.css';
 import { useThemeStore } from '@/stores/themeStore';
-import { useUIStore } from '@/stores/uiStore';
+import { useWorkspaceUIStore as useUIStore } from '@/stores/uiStore';
 import { useCruxStore } from '@/stores/cruxStore';
 import { useFileContent } from '@/hooks/useFileContent';
 import { getMonacoLanguage, getExtension } from '@/lib/monacoLanguages';
@@ -46,15 +49,6 @@ import type { FormSchema } from '@/templates';
 import { LoadingPanel } from '@/components/ui';
 import { useShallow } from 'zustand/react/shallow';
 
-// ── Save handler registry (module-level, accessible from outside) ──
-const editorSaveHandlers = new Map<string, () => Promise<void>>();
-
-/** Save all dirty editors. Awaitable — resolves when all saves complete. */
-export async function saveAllDirtyEditors(): Promise<void> {
-  const promises = Array.from(editorSaveHandlers.values()).map((fn) => fn());
-  await Promise.all(promises);
-}
-
 interface EditorContentProps {
   tab: EditorTab;
   artifact: Artifact;
@@ -70,6 +64,12 @@ export default function EditorContent({
   saveRef,
   captureRef,
 }: EditorContentProps) {
+  const cruxStore = useCruxStoreApi();
+  const uiStore = useWorkspaceUIStoreApi();
+  const documents = documentsFor(cruxStore, uiStore);
+  const documentSession = documents.get(artifact.id);
+  const documentError = useStore(documentSession, (s) => s.error);
+  const documentConflict = useStore(documentSession, (s) => s.conflict);
   const { content, blobUrl, loading, contentVersion, setContent, expectOwnSave } = useFileContent(
     cruxId,
     artifact,
@@ -80,8 +80,8 @@ export default function EditorContent({
   const activeMode = useThemeStore((s) => s.activeMode);
   const monacoRef = useRef<typeof Monaco | null>(null);
   const editorRef = useRef<Monaco.editor.IStandaloneCodeEditor | null>(null);
-  const contentRef = useRef<string | null>(null);
-  const dirtyRef = useRef(false);
+  const contentRef = useRef<string | null>(documentSession.getState().content);
+  const dirtyRef = useRef(documents.dirty(artifact.id));
   const saveHandlerRef = useRef<() => void>(() => {});
   const scrollRafRef = useRef<number | null>(null);
   const disposedRef = useRef(false);
@@ -190,38 +190,20 @@ export default function EditorContent({
     if (current === null || !dirtyRef.current) return;
     const cancelOwnSave = expectOwnSave();
     try {
-      const updated = await useCruxStore.getState().saveArtifactContent(artifact.id, current);
-      if (!updated) {
-        // Unknown artifact (deleted underneath us?) — nothing was persisted,
-        // so the edits are still unsaved. Say so instead of marking clean.
-        cancelOwnSave();
-        console.error('Save failed: artifact not in workspace', artifact.id);
-        return;
-      }
-      dirtyRef.current = false;
-      setTabDirty(tab.id, false);
+      await documents.save(artifact.id);
+      dirtyRef.current = documents.dirty(artifact.id);
       setSavedVersion((v) => v + 1);
-      // Identical content → fingerprint unchanged → the hook's effect never
-      // ran, so the expectation must not linger and swallow a real external change.
-      if (updated.fingerprint === artifact.fingerprint) cancelOwnSave();
+      cancelOwnSave();
     } catch (err: unknown) {
       cancelOwnSave();
       console.error('Save failed:', err);
     }
-  }, [artifact.id, artifact.fingerprint, tab.id, setTabDirty, expectOwnSave]);
+  }, [expectOwnSave, documents, artifact.id]);
 
   // Keep save ref stable for Monaco keybinding (avoids stale closure)
   useEffect(() => {
     saveHandlerRef.current = handleSave;
   }, [handleSave]);
-
-  // Register save handler in module-level map (for saveAllDirtyEditors)
-  useEffect(() => {
-    editorSaveHandlers.set(tab.id, handleSave);
-    return () => {
-      editorSaveHandlers.delete(tab.id);
-    };
-  }, [tab.id, handleSave]);
 
   // Expose save to parent via ref
   useEffect(() => {
@@ -235,11 +217,12 @@ export default function EditorContent({
   // no-write-through rule (it's app state, not a user file), and the upload.
   const savePreviewBlob = useCallback(
     (blob: Blob) => {
+      if (cruxStore.getState().closing || cruxStore.getState().crux?.id !== cruxId) return;
       saveWorkspacePreviewJpeg(cruxId, blob)
-        .then((saved) => useCruxStore.getState().upsertArtifact(saved))
+        .then((saved) => cruxStore.getState().upsertArtifact(saved))
         .catch((err) => console.error('Thumbnail save failed:', err));
     },
-    [cruxId],
+    [cruxId, cruxStore],
   );
 
   // HTML capture — postMessage handshake with the preview iframe
@@ -353,7 +336,7 @@ export default function EditorContent({
     };
   }, []);
 
-  // Cleanup: auto-save dirty content, cancel pending scroll rAF, mark disposed
+  // Keep the document/model; dispose only the visible editor widget.
   useEffect(() => {
     disposedRef.current = false;
     return () => {
@@ -363,12 +346,15 @@ export default function EditorContent({
         cancelAnimationFrame(scrollRafRef.current);
         scrollRafRef.current = null;
       }
-      // Auto-save dirty content on unmount (fire-and-forget)
-      if (dirtyRef.current) {
-        saveHandlerRef.current();
-      }
+      const editor = editorRef.current;
+      if (editor)
+        documentSession.setState({
+          view: editor.saveViewState(),
+          model: editor.getModel(),
+          focus: null,
+        });
     };
-  }, []);
+  }, [documentSession]);
 
   // Global Cmd+S
   useEffect(() => {
@@ -389,6 +375,13 @@ export default function EditorContent({
 
       monacoRef.current = monaco;
       editorRef.current = editor;
+      documentSession.setState({ model: editor.getModel(), focus: () => editor.focus() });
+      editor.onDidChangeCursorSelection(() =>
+        documentSession.setState({ view: editor.saveViewState() }),
+      );
+      editor.onDidBlurEditorWidget(() =>
+        documentSession.setState({ view: editor.saveViewState() }),
+      );
 
       registerCruxGardenThemes(monaco);
       // Defer setTheme by one frame — it broadcasts to all instances and can
@@ -397,8 +390,10 @@ export default function EditorContent({
         if (!disposedRef.current) monaco.editor.setTheme(themeName);
       });
 
+      const savedView = documentSession.getState().view;
+      if (savedView) editor.restoreViewState(savedView);
       // Restore scroll position
-      if (tab.scrollTop > 0) {
+      if (!savedView && tab.scrollTop > 0) {
         editor.setScrollTop(tab.scrollTop);
       }
 
@@ -418,7 +413,7 @@ export default function EditorContent({
         saveHandlerRef.current();
       });
     },
-    [themeName, tab.id, tab.scrollTop, setTabScrollTop],
+    [documentSession, tab.scrollTop, tab.id, themeName, setTabScrollTop],
   );
 
   // External content arrived (first load is handled by defaultValue; later
@@ -543,6 +538,8 @@ export default function EditorContent({
         <div className="flex-1 min-h-0">
           <Editor
             key={tab.id}
+            path={`crux://${cruxId}/${artifact.id}`}
+            keepCurrentModel
             height="100%"
             language={language}
             defaultValue={content ?? ''}
@@ -636,6 +633,19 @@ export default function EditorContent({
 
   return (
     <>
+      {(documentError || documentConflict) && (
+        <div role="alert" className="p-2 text-xs text-error">
+          {documentError || 'This Artifact changed externally. Your unsaved edits are retained.'}
+          {documentConflict && (
+            <button
+              className="ml-2 underline"
+              onClick={() => void documents.save(artifact.id, true).catch(() => {})}
+            >
+              Overwrite with my edits
+            </button>
+          )}
+        </div>
+      )}
       {mainContent}
       {/* Desktop: the preview is a real local URL — show it, copy it, open it */}
       {target.kind === 'iframe' && target.localBase && (
@@ -712,6 +722,7 @@ export default function EditorContent({
       {/* Always-on preview iframe for HTML files — visible in preview mode, off-screen otherwise for auto-capture */}
       {iframeSrc && (
         <iframe
+          data-crux-id={cruxId}
           ref={previewIframeRef}
           key="preview"
           src={iframeSrc}

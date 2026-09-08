@@ -5,7 +5,7 @@ import { useCruxStore } from '@/stores/cruxStore';
 import { cn } from '@/lib/cn';
 import { Capability, can } from '@/lib/platform';
 import { isVisualCrux } from '@/services/verify';
-import { setVerifyOnDone } from '@/services/turns';
+import { useTurns } from '@/services/turns';
 import MessageList from './MessageList';
 import MessageInput from './MessageInput';
 import ModelSelector from './ModelSelector';
@@ -18,6 +18,7 @@ import TurnJobCard from './TurnJobCard';
  * where a check can happen — a visual crux on a platform that can screenshot.
  */
 function CheckControls({ busy }: { busy: boolean }) {
+  const { setVerifyOnDone } = useTurns();
   const visual = useCruxStore((s) => isVisualCrux(s.artifacts));
   const auto = useCruxStore((s) => s.crux?.meta?.settings?.verifyOnDone !== false);
   const { check } = useChat();

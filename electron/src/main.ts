@@ -23,6 +23,29 @@ try {
 }
 
 let mainWindow: any = null;
+let workspaceCloseGuard = false;
+let workspaceClosePending = false;
+let workspaceMayClose = false;
+function requestWorkspaceClose(event: any): boolean {
+  if (!workspaceCloseGuard || workspaceMayClose || !mainWindow) return false;
+  event.preventDefault();
+  if (!workspaceClosePending) {
+    workspaceClosePending = true;
+    mainWindow.webContents.send('workspace:close-request');
+  }
+  return true;
+}
+ipcMain.on('workspace:close-guard', (event: any, enabled: boolean) => {
+  if (event.sender === mainWindow?.webContents) workspaceCloseGuard = enabled;
+});
+ipcMain.on('workspace:close-response', (event: any, approved: boolean) => {
+  if (event.sender !== mainWindow?.webContents || !workspaceClosePending) return;
+  workspaceClosePending = false;
+  if (approved) {
+    workspaceMayClose = true;
+    app.quit();
+  }
+});
 let db: any = null;
 let watcher: any = null;
 let previewServer: any = null;
@@ -155,6 +178,41 @@ function createWindow() {
   });
 
   setupLocalAiCors(mainWindow.webContents.session);
+  let cyclingWorkspaces = false;
+  mainWindow.webContents.on('before-input-event', (event: any, input: any) => {
+    if (input.isComposing || input.modifiers?.includes('altgr')) return;
+    const down = input.type === 'keyDown';
+    const search =
+      down && (input.control || input.meta) && input.alt && input.key?.toLowerCase() === 'k';
+    const cycle = down && input.control && input.key === 'Tab';
+    const commit = input.type === 'keyUp' && input.key === 'Control' && cyclingWorkspaces;
+    const cancel = down && input.key === 'Escape' && cyclingWorkspaces;
+    if (!search && !cycle && !commit && !cancel) return;
+    event.preventDefault();
+    // A cross-origin frame can retain the native keyboard target after DOM focus changes.
+    if (search || cycle) mainWindow.webContents.focus();
+    if (cycle) cyclingWorkspaces = true;
+    if (commit || cancel) cyclingWorkspaces = false;
+    mainWindow.webContents.send(
+      'workspace:command',
+      search
+        ? 'search'
+        : cycle
+          ? input.shift
+            ? 'previous'
+            : 'next'
+          : commit
+            ? 'commit'
+            : 'cancel',
+    );
+  });
+  mainWindow.on('blur', () => {
+    if (cyclingWorkspaces) {
+      cyclingWorkspaces = false;
+      mainWindow?.webContents.send('workspace:command', 'cancel');
+    }
+  });
+  mainWindow.on('close', (event: any) => requestWorkspaceClose(event));
 
   // The preload re-runs on every top-level navigation, so navigating this
   // window anywhere else would hand `electronAPI` — BYOK secrets, raw SQL,
@@ -798,11 +856,24 @@ app.on('window-all-closed', () => {
   }
 });
 
-// The single teardown path — runs for Cmd+Q, app.quit(), and menu Quit.
-app.on('before-quit', () => {
-  if (agentHost) agentHost.stopAll();
-  if (devServers) devServers.stopAll();
-  if (previewServer) previewServer.stopAll();
-  if (watcher) watcher.closeAll();
-  if (db) db.close();
+// Await owned processes and the watcher before closing SQLite and quitting.
+let teardown: Promise<void> | null = null;
+let teardownDone = false;
+app.on('before-quit', (event: any) => {
+  if (requestWorkspaceClose(event)) return;
+  if (teardownDone) return;
+  event.preventDefault();
+  if (teardown) return;
+  teardown = (async () => {
+    await agentHost?.stopAll();
+    await devServers?.stopAll();
+    await previewServer?.stopAll();
+    await watcher?.closeAll();
+    db?.close();
+    teardownDone = true;
+    app.quit();
+  })().catch((error: unknown) => {
+    teardown = null;
+    debugLog(`Could not finish shutdown: ${String(error)}`);
+  });
 });

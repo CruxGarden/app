@@ -29,7 +29,11 @@ export interface SqliteBridge {
 
 // ── desktop ─────────────────────────────────────────────────────────────────
 
+export type WorkspaceCommand = 'search' | 'next' | 'previous' | 'commit' | 'cancel';
 export interface DesktopBridge {
+  onWorkspaceCommand?(callback: (command: WorkspaceCommand) => void): () => void;
+  onCloseRequest?(callback: () => void): () => void;
+  completeClose?(approved: boolean): void;
   config(): Promise<{ gardenRoot: string }>;
   chooseGardenRoot(): Promise<string | null>;
   openExternal(url: string): Promise<void>;
