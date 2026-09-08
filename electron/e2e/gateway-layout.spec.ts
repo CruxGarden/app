@@ -8,9 +8,9 @@ test.describe('gateway layout', () => {
     const box = (id: string) => page.getByTestId(id).boundingBox();
     try {
       await expect(page.getByRole('button', { name: 'Enter' })).toBeVisible({ timeout: 30_000 });
-      // Arrival: background first, then the title fades in on its own after five seconds
+      // Arrival: background first, then the title fades in on its own
       const stage = page.getByTestId('gateway-stage');
-      await expect(stage).toHaveAttribute('data-visible', 'true', { timeout: 10_000 });
+      await expect(stage).toHaveAttribute('data-visible', 'true', { timeout: 5_000 });
       await page.waitForTimeout(1500); // the entrance finishes before we measure
       // the player sits directly under the banner, both centred
       const b0 = (await box('gateway-banner'))!;
