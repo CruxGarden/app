@@ -1297,7 +1297,7 @@ html.palette-transition *::after {
   box-shadow: none;
 }
 
-/* ── Gateway stage: the entrance fades in over 1.6 s (quick start, soft landing); every fade out takes 2 s; after the entrance, a stir brings it back at once ── */
+/* ── Gateway stage: the entrance fades in over 2 s (quick start, soft landing); every fade out takes 2 s; after the entrance, a stir brings it back at once ── */
 .gateway-stage .gateway-piece {
   opacity: 0;
   transform: translateY(10px);
@@ -1314,7 +1314,7 @@ html.palette-transition *::after {
   transition-duration: 0ms;
 }
 .gateway-stage[data-visible='true'][data-entrance] .gateway-piece {
-  transition-duration: 1600ms;
+  transition-duration: 2000ms;
   transition-timing-function: cubic-bezier(0.16, 0.84, 0.3, 1);
 }
 /* a dragged piece is positioned by its own transform: fade it by opacity and blur only */
