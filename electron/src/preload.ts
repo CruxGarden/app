@@ -202,7 +202,14 @@ const api: ElectronBridge = {
   },
   // CRUX_API_URL lets the e2e suite point the app at a local mock API.
   // CRUX_AI_MOCK=1 swaps the language model for a scripted mock (e2e).
-  test: { apiUrl: process.env.CRUX_API_URL ?? null, aiMock: process.env.CRUX_AI_MOCK === '1' },
+  // CRUX_AUTOBACKUP_QUIET_MS shortens automatic backup's quiet window (e2e).
+  test: {
+    apiUrl: process.env.CRUX_API_URL ?? null,
+    aiMock: process.env.CRUX_AI_MOCK === '1',
+    autoBackupQuietMs: process.env.CRUX_AUTOBACKUP_QUIET_MS
+      ? Number(process.env.CRUX_AUTOBACKUP_QUIET_MS) || null
+      : null,
+  },
 };
 
 contextBridge.exposeInMainWorld('electronAPI', api);

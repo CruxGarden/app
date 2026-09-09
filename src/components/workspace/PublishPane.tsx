@@ -92,7 +92,9 @@ export default function PublishPane() {
   const askAboutBackup = useCallback(async (): Promise<'skip' | 'backup' | null> => {
     const current = store.getState().crux;
     if (!current) return null;
-    const always = getSetting(SettingsKey.BackupOnShare) === 'true';
+    const always =
+      getSetting(SettingsKey.BackupOnShare) === 'true' ||
+      getSetting(SettingsKey.AutoBackup) === 'true';
     if (always) return 'backup';
     if (backupOf(current)) return 'skip'; // backed up before; the pane shows how far behind
     const r = await choiceDialog({

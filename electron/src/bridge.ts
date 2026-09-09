@@ -274,5 +274,5 @@ export interface ElectronBridge {
   updates: UpdatesBridge;
   agentHost: AgentHostBridge;
   /** Test-only overrides, read from the environment the shell was launched with. */
-  test: { apiUrl: string | null; aiMock: boolean };
+  test: { apiUrl: string | null; aiMock: boolean; autoBackupQuietMs: number | null };
 }

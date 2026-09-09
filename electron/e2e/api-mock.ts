@@ -32,6 +32,8 @@ export interface MockApi {
     cruxes: Record<string, Record<string, unknown>>;
     /** Files received by POST /cruxes/:id/publish, by crux id */
     published: Record<string, PublishedFile[]>;
+    /** Answer every sync push with 402 (over the plan's storage) */
+    syncOverLimit?: boolean;
     /** Sync store: garden backup + synced crux archives, and transfer this period */
     billing: { planId: string; status: string; customer: boolean; checkouts: number };
     sync: {
@@ -415,6 +417,12 @@ export async function startMockApi(): Promise<MockApi> {
       if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id))
         return send(400, { statusCode: 400, message: 'Validation failed (uuid is expected)' });
       if (method === 'PUT') {
+        if (state.syncOverLimit)
+          return send(402, {
+            statusCode: 402,
+            message: 'Your plan’s storage is full — free up space or upgrade in Settings → Plan.',
+            kind: 'storage',
+          });
         const { files, fields } = parseMultipart(rawBuf, req.headers['content-type'] ?? '');
         const bytes = files[0]?.bytes.length ?? 0;
         if (!bytes) return send(400, { statusCode: 400, message: 'No file uploaded' });

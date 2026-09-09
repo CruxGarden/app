@@ -3,6 +3,7 @@ import { useCruxStore, useCruxStoreApi } from '@/stores/cruxStore';
 import { useAuthStore } from '@/stores/authStore';
 import { importCrux } from '@/services/crux-io';
 import { backupCrux } from '@/services/backup';
+import { isAutoBackupOn, autoBackupPause, AUTO_BACKUP_CHANGED } from '@/services/auto-backup';
 import * as syncApi from '@/api/sync';
 import { formatBytes, formatDateTime } from '@/lib/format';
 import { usePaneWidth } from '@/hooks/usePaneWidth';
@@ -48,6 +49,14 @@ function CloudDownIcon() {
   );
 }
 
+function autoBackupLine(): { text: string; tone: 'muted' | 'error' } | null {
+  if (!isAutoBackupOn()) return null;
+  const pause = autoBackupPause();
+  return pause
+    ? { text: `Automatic backup paused — ${pause}`, tone: 'error' }
+    : { text: 'Automatic backup is on', tone: 'muted' };
+}
+
 export default function SyncPane() {
   const crux = useCruxStore((s) => s.crux);
   const store = useCruxStoreApi();
@@ -58,6 +67,12 @@ export default function SyncPane() {
   const [progress, setProgress] = useState('');
   const [error, setError] = useState('');
   const [lastSynced, setLastSynced] = useState<{ at: string; size: number } | null>(null);
+  const [autoNote, setAutoNote] = useState(() => autoBackupLine());
+  useEffect(() => {
+    const sync = () => setAutoNote(autoBackupLine());
+    window.addEventListener(AUTO_BACKUP_CHANGED, sync);
+    return () => window.removeEventListener(AUTO_BACKUP_CHANGED, sync);
+  }, []);
 
   const { ref, isTooNarrow } = usePaneWidth(200);
 
@@ -174,6 +189,13 @@ export default function SyncPane() {
               <p className="text-xxs text-text-muted">
                 Not synced yet. Push sends this crux and its history to your account.
               </p>
+            )}
+            {autoNote && (
+              <div data-testid="sync-auto-note" className="mt-1.5">
+                <PaneNote tone={autoNote.tone} className="text-left">
+                  {autoNote.text}
+                </PaneNote>
+              </div>
             )}
           </PaneSection>
 
