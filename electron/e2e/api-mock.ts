@@ -127,7 +127,7 @@ function parseMultipart(
   return out;
 }
 
-export async function startMockApi(): Promise<MockApi> {
+export async function startMockApi(opts: { port?: number } = {}): Promise<MockApi> {
   const state: MockApi['state'] = {
     failPublish: false,
     publishedVersion: 0,
@@ -151,6 +151,7 @@ export async function startMockApi(): Promise<MockApi> {
         'Access-Control-Allow-Origin': '*',
         'Access-Control-Allow-Methods': 'GET,POST,PUT,PATCH,DELETE,OPTIONS',
         'Access-Control-Allow-Headers': '*',
+        'Access-Control-Expose-Headers': 'Pagination',
       });
       res.end(body === null ? '' : JSON.stringify(body));
     };
@@ -216,6 +217,22 @@ export async function startMockApi(): Promise<MockApi> {
       res.setHeader('Pagination', JSON.stringify({ currentPage: 1, lastPage: 1 }));
       return send(200, items);
     }
+    // ── Public author routes: the author, their published cruxes (the public site) ──
+    const pubAuthor = path.match(/^\/authors\/([^/]+)(\/cruxes)?$/);
+    if (pubAuthor && method === 'GET' && !path.startsWith('/authors/check-username')) {
+      if (pubAuthor[1] !== AUTHOR.username)
+        return send(404, { statusCode: 404, message: 'Author not found' });
+      if (!pubAuthor[2]) return send(200, AUTHOR);
+      const list = Object.values(state.cruxes).filter(
+        (c) => (c.meta as Record<string, unknown> | undefined)?.publishedAt,
+      );
+      res.setHeader(
+        'Pagination',
+        JSON.stringify({ currentPage: 1, lastPage: 1, total: list.length }),
+      );
+      return send(200, list);
+    }
+
     // ── Public author routes: crux by slug, its artifacts, downloads ──
     const pub = path.match(
       /^\/authors\/([^/]+)\/cruxes\/([^/]+)(\/artifacts(?:\/([^/]+)\/download)?)?$/,
@@ -778,7 +795,7 @@ export async function startMockApi(): Promise<MockApi> {
     return send(404, { statusCode: 404, message: `mock: unhandled ${method} ${path}` });
   });
 
-  await new Promise<void>((r) => server.listen(0, '127.0.0.1', r));
+  await new Promise<void>((r) => server.listen(opts.port ?? 0, '127.0.0.1', r));
   const { port } = server.address() as AddressInfo;
   return {
     url: `http://127.0.0.1:${port}`,
