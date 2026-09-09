@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import { Capability, can } from '@/lib/platform';
 import { useAuthStore } from '@/stores/authStore';
 import { useAppStore } from '@/stores/appStore';
@@ -18,6 +18,7 @@ import { backupCrux, backupOf, snapshotsBehind } from '@/services/backup';
 import { getSetting, setSetting } from '@/services/settings';
 import { SettingsKey } from '@/lib/constants';
 import * as domainsApi from '@/api/domains';
+import * as cruxesApi from '@/api/cruxes';
 import * as liveStore from '@/api/store';
 import CustomDomainSection from './CustomDomainSection';
 import { CheckIcon, CopyIcon, ExternalLinkIcon, PowerIcon, ShareIcon } from '@/components/ui/icons';
@@ -62,6 +63,37 @@ export default function PublishPane() {
   }, [artifacts]);
 
   const publicUrl = author && crux ? publicCruxUrl(author.username, crux.slug) : null;
+
+  // Drift (RESILIENCE-PLAN §3, scenarios 4 and 5): local meta says "published",
+  // but the account may say otherwise — unpublished elsewhere, or published
+  // again from another machine. Ask once per open; the pane says what it found.
+  type Remote = { state: 'gone' } | { state: 'ahead'; version: number } | { state: 'same' };
+  const [remote, setRemote] = useState<Remote | null>(null);
+  useEffect(() => {
+    setRemote(null);
+    if (!crux?.id || !isPublished || !isAuthenticated) return;
+    let cancelled = false;
+    const localVersion = Number(crux.meta?.publishedVersion ?? 0);
+    cruxesApi
+      .get(crux.id)
+      .then((r) => {
+        if (cancelled) return;
+        const v = Number(r.meta?.publishedVersion ?? 0);
+        if (!r.meta?.publishedAt) setRemote({ state: 'gone' });
+        else if (v > localVersion) setRemote({ state: 'ahead', version: v });
+        else setRemote({ state: 'same' });
+      })
+      .catch((err: unknown) => {
+        if (cancelled) return;
+        const status = (err as { response?: { status?: number } })?.response?.status;
+        if (status === 404) setRemote({ state: 'gone' });
+        // any other failure: say nothing rather than something wrong
+      });
+    return () => {
+      cancelled = true;
+    };
+    // publishedVersion changes after a publish here; re-check then
+  }, [crux?.id, crux?.meta?.publishedVersion, isPublished, isAuthenticated]);
 
   // Backups (RESILIENCE-PLAN §2b): a published site is not a backup. A crux
   // that has never been backed up asks before it is shared; "Always back up
@@ -221,7 +253,7 @@ export default function PublishPane() {
     );
   }
 
-  const needsAction = !isPublished || hasUnpublishedChanges;
+  const needsAction = !isPublished || hasUnpublishedChanges || remote?.state === 'gone';
   const editedAfterPublish =
     hasUnpublishedChanges &&
     lastEditedAt &&
@@ -262,6 +294,22 @@ export default function PublishPane() {
                   <span className="text-warning-text">Edited {formatDateTime(lastEditedAt)}</span>
                 )}
               </div>
+              {remote?.state === 'gone' && (
+                <div className="mt-2" data-testid="publish-drift">
+                  <PaneNote tone="error" className="text-left whitespace-normal">
+                    No longer published — it was taken offline from elsewhere. Share again to put it
+                    back.
+                  </PaneNote>
+                </div>
+              )}
+              {remote?.state === 'ahead' && (
+                <div className="mt-2" data-testid="publish-drift">
+                  <PaneNote tone="muted" className="text-left whitespace-normal">
+                    Published elsewhere as v{remote.version}; this machine has v{publishedVersion}.
+                    Sharing from here replaces it.
+                  </PaneNote>
+                </div>
+              )}
             </PaneSection>
           ) : (
             <PaneSection label="Status" tone="dashed">
@@ -290,7 +338,7 @@ export default function PublishPane() {
             </div>
           ) : needsAction ? (
             <PaneAction onClick={handlePublish} icon={<ShareIcon size={14} />}>
-              {isPublished ? 'Update' : 'Share'}
+              {remote?.state === 'gone' ? 'Share again' : isPublished ? 'Update' : 'Share'}
             </PaneAction>
           ) : null}
 

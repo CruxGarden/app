@@ -2,7 +2,7 @@ import { useState, useCallback, useEffect } from 'react';
 import { useCruxStore, useCruxStoreApi } from '@/stores/cruxStore';
 import { useAuthStore } from '@/stores/authStore';
 import { importCrux } from '@/services/crux-io';
-import { backupCrux } from '@/services/backup';
+import { backupCrux, backupOf } from '@/services/backup';
 import { isAutoBackupOn, autoBackupPause, AUTO_BACKUP_CHANGED } from '@/services/auto-backup';
 import * as syncApi from '@/api/sync';
 import { formatBytes, formatDateTime } from '@/lib/format';
@@ -190,6 +190,22 @@ export default function SyncPane() {
                 Not synced yet. Push sends this crux and its history to your account.
               </p>
             )}
+            {lastSynced &&
+              (() => {
+                // Scenario 5: the cloud copy is newer than anything this machine pushed
+                const local = backupOf(crux);
+                const remoteAt = new Date(lastSynced.at).getTime();
+                const localAt = local ? new Date(local.at).getTime() : 0;
+                return remoteAt - localAt > 5_000 ? (
+                  <div data-testid="sync-drift" className="mt-1.5">
+                    <PaneNote tone="muted" className="text-left whitespace-normal">
+                      {local
+                        ? 'The cloud copy is newer than this machine’s last push — pushed from another machine. Pull to get it, or Push to replace it.'
+                        : 'This crux has a cloud copy this machine never pushed — from another machine, or before the app kept track. Pull to get it, or Push to replace it.'}
+                    </PaneNote>
+                  </div>
+                ) : null;
+              })()}
             {autoNote && (
               <div data-testid="sync-auto-note" className="mt-1.5">
                 <PaneNote tone={autoNote.tone} className="text-left">
