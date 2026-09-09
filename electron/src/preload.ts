@@ -7,6 +7,10 @@ import type {
   AgentHostServer,
   AgentHostRequest,
   AgentHostResponse,
+  AgentStatus,
+  AgentStartOptions,
+  AgentPermissionRequest,
+  AgentEvent,
 } from './bridge';
 
 /**
@@ -200,12 +204,34 @@ const api: ElectronBridge = {
     },
     respond: (response: AgentHostResponse) => ipcRenderer.send('agent-host:response', response),
   },
+  agent: {
+    status: (force?: boolean) =>
+      ipcRenderer.invoke('agent:status', !!force) as Promise<AgentStatus>,
+    start: (opts: AgentStartOptions) => ipcRenderer.invoke('agent:start', opts) as Promise<void>,
+    interrupt: (runId: string) => ipcRenderer.invoke('agent:interrupt', runId) as Promise<void>,
+    answer: (requestId: string, allow: boolean) =>
+      ipcRenderer.send('agent:answer', { requestId, allow }),
+    onEvent: (cb: (runId: string, event: AgentEvent) => void) => {
+      const handler = (_e: unknown, payload: unknown) => {
+        const p = payload as { runId: string; event: AgentEvent };
+        cb(p.runId, p.event);
+      };
+      ipcRenderer.on('agent:event', handler);
+      return () => ipcRenderer.removeListener('agent:event', handler);
+    },
+    onPermission: (cb: (request: AgentPermissionRequest) => void) => {
+      const handler = (_e: unknown, request: unknown) => cb(request as AgentPermissionRequest);
+      ipcRenderer.on('agent:permission', handler);
+      return () => ipcRenderer.removeListener('agent:permission', handler);
+    },
+  },
   // CRUX_API_URL lets the e2e suite point the app at a local mock API.
   // CRUX_AI_MOCK=1 swaps the language model for a scripted mock (e2e).
   // CRUX_AUTOBACKUP_QUIET_MS shortens automatic backup's quiet window (e2e).
   test: {
     apiUrl: process.env.CRUX_API_URL ?? null,
     aiMock: process.env.CRUX_AI_MOCK === '1',
+    agentMock: process.env.CRUX_AGENT_MOCK === '1',
     autoBackupQuietMs: process.env.CRUX_AUTOBACKUP_QUIET_MS
       ? Number(process.env.CRUX_AUTOBACKUP_QUIET_MS) || null
       : null,

@@ -13,6 +13,7 @@ const { DevServerManager } = require('./dev-server');
 const { AppLog } = require('./log');
 const { Updater } = require('./updater');
 const { AgentHost } = require('./mcp-server');
+const { AgentProvider } = require('./agent-provider');
 
 // ffmpeg-static provides a bundled ffmpeg binary
 let ffmpegPath: string;
@@ -51,6 +52,7 @@ let watcher: any = null;
 let previewServer: any = null;
 let devServers: any = null;
 let agentHost: any = null;
+let agentProvider: any = null;
 // References for the CRUX_SELFTEST integration test (see selftest.ts)
 const selfTestHooks: { secrets?: any; projects?: any; toolchain?: any } = {};
 
@@ -514,6 +516,32 @@ function setupIpc() {
     agentHost.handleResponse(response),
   );
 
+  // Agent Provider (ADR 0019): Claude Code driven by the SDK, in this process.
+  agentProvider = new AgentProvider({
+    sendEvent: (runId: string, event: unknown) => {
+      for (const w of BrowserWindow.getAllWindows())
+        if (!w.isDestroyed()) w.webContents.send('agent:event', { runId, event });
+    },
+    sendPermission: (request: unknown) => {
+      if (!mainWindow || mainWindow.isDestroyed()) return false;
+      mainWindow.webContents.send('agent:permission', request);
+      return true;
+    },
+    log: debugLog,
+    version: app.getVersion(),
+    mock: process.env.CRUX_AGENT_MOCK === '1',
+  });
+  ipcMain.handle('agent:status', (_e: any, force: boolean) => agentProvider.status(force));
+  ipcMain.handle('agent:start', (_e: any, opts: any) => {
+    // The folder must be one of ours: the SDK gets the resolved path, nothing else.
+    const cwd = projects.resolveKnownFolder(opts?.cwd);
+    return agentProvider.start({ ...opts, cwd });
+  });
+  ipcMain.handle('agent:interrupt', (_e: any, runId: string) => agentProvider.interrupt(runId));
+  ipcMain.on('agent:answer', (_e: any, a: { requestId: string; allow: boolean }) =>
+    agentProvider.answer(a.requestId, !!a.allow),
+  );
+
   // Cruxes switched on in an earlier run come back with their token intact,
   // so a client configured last week still connects.
   try {
@@ -866,6 +894,7 @@ app.on('before-quit', (event: any) => {
   if (teardown) return;
   teardown = (async () => {
     await agentHost?.stopAll();
+    await agentProvider?.stopAll();
     await devServers?.stopAll();
     await previewServer?.stopAll();
     await watcher?.closeAll();

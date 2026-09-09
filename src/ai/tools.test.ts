@@ -69,6 +69,12 @@ describe('TOOL_DEFINITIONS', () => {
 describe('MUTATING_TOOLS', () => {
   it('lists every tool that changes workspace files', () => {
     expect(MUTATING_TOOLS).toEqual([
+      // Claude Code's own tools (Agent Provider, ADR 0019)
+      'Write',
+      'Edit',
+      'MultiEdit',
+      'NotebookEdit',
+      'Bash',
       'write_file',
       'edit_file',
       'delete_file',

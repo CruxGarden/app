@@ -1101,6 +1101,12 @@ function findArtifactByPath(artifacts: any[], path: string): any | null {
 
 /** Tool names that mutate files (trigger workspace-context refresh) */
 export const MUTATING_TOOLS = [
+  // Claude Code's own tools (Agent Provider, ADR 0019)
+  'Write',
+  'Edit',
+  'MultiEdit',
+  'NotebookEdit',
+  'Bash',
   'write_file',
   'edit_file',
   'delete_file',

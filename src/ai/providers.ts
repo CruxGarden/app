@@ -28,6 +28,17 @@ export interface ProviderInfo {
 /** The app-wide default chat model (used when a crux has no model setting). */
 export const DEFAULT_MODEL = 'claude-sonnet-5';
 
+/**
+ * The Agent Provider (ADR 0019): Claude Code itself, run by the app in the
+ * Project Folder on the person's own Claude Code login. One "model" id; the
+ * real model is whatever their Claude Code is set to.
+ */
+export const CLAUDE_CODE_PROVIDER = 'claude-code';
+export const CLAUDE_CODE_MODEL = 'claude-code';
+export function isAgentModel(model: string | undefined | null): boolean {
+  return model === CLAUDE_CODE_MODEL;
+}
+
 export const PROVIDERS: Record<string, ProviderInfo> = {
   anthropic: {
     id: 'anthropic',
@@ -46,6 +57,16 @@ export const PROVIDERS: Record<string, ProviderInfo> = {
     ],
     capabilities: ['Chat', 'Files'],
     keyUrl: 'https://console.anthropic.com/settings/keys',
+  },
+  [CLAUDE_CODE_PROVIDER]: {
+    id: CLAUDE_CODE_PROVIDER,
+    name: 'Claude Code',
+    defaultModel: CLAUDE_CODE_MODEL,
+    models: [
+      { id: CLAUDE_CODE_MODEL, name: 'Claude Code', contextWindow: 200000, maxOutput: 32000 },
+    ],
+    capabilities: ['Chat', 'Files'],
+    keyUrl: 'https://claude.com/product/claude-code',
   },
   openai: {
     id: 'openai',
@@ -162,6 +183,7 @@ export function getModelShortName(modelId?: string): string | null {
 
 /** Derive provider ID from a model string */
 export function getProviderForModel(model: string): string {
+  if (isAgentModel(model)) return CLAUDE_CODE_PROVIDER;
   const local = localProviderOf(model);
   if (local) return local;
   if (model.startsWith('claude')) return 'anthropic';

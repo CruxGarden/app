@@ -10,10 +10,14 @@ import type { TemplateLayout } from '@/templates';
 
 export interface AgentApproval {
   id: string;
-  /** MCP client name — who is asking */
+  /** Who is asking — an MCP client name, or "Claude Code" for the Agent Provider */
   agent: string;
-  action: 'publish' | 'unpublish';
+  /** `tool`: the Agent Provider wants to run a tool the SDK will not auto-allow (ADR 0019) */
+  action: 'publish' | 'unpublish' | 'tool';
   cruxId: string;
+  /** For `tool`: the tool's name and a one-line summary (the command, the url…) */
+  tool?: string;
+  detail?: string;
 }
 
 // ── Pane Types ──────────────────────────────────────────

@@ -62,8 +62,17 @@ function AgentApprovals() {
           role="alert"
           className="flex items-center justify-between gap-2 px-3 py-2 rounded-[var(--radius-sm)] bg-accent-muted border border-accent/30"
         >
-          <span className="text-xs font-mono text-text truncate">
-            <strong>{a.agent}</strong> wants to {a.action} this crux.
+          <span className="text-xs font-mono text-text truncate" title={a.detail}>
+            {a.action === 'tool' ? (
+              <>
+                <strong>{a.agent}</strong> wants to run <strong>{a.tool}</strong>
+                {a.detail ? <span className="text-text-muted">: {a.detail}</span> : null}
+              </>
+            ) : (
+              <>
+                <strong>{a.agent}</strong> wants to {a.action} this crux.
+              </>
+            )}
           </span>
           <div className="flex items-center gap-1.5 shrink-0">
             <button
@@ -79,7 +88,11 @@ function AgentApprovals() {
                 'bg-primary-button text-primary-button-text border border-primary-button-border hover:bg-primary-button-hover transition-colors motion-press cursor-pointer',
               )}
             >
-              {a.action === 'publish' ? 'Publish' : 'Unpublish'}
+              {a.action === 'publish'
+                ? 'Publish'
+                : a.action === 'unpublish'
+                  ? 'Unpublish'
+                  : 'Allow'}
             </button>
           </div>
         </div>

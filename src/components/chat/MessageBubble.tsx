@@ -134,6 +134,14 @@ function UserAvatar({
   );
 }
 
+/** The last two path segments — Claude Code's tools speak in absolute paths. */
+function shortPath(v: unknown): string {
+  const parts = String(v ?? '')
+    .split('/')
+    .filter(Boolean);
+  return parts.slice(-2).join('/');
+}
+
 function getToolLabel(tc: ToolCall): string {
   switch (tc.name) {
     case 'write_file':
@@ -174,8 +182,32 @@ function getToolLabel(tc: ToolCall): string {
       return `Remembered ${String(tc.input?.section ?? 'a note')}`;
     case 'load_skill':
       return `Loaded skill ${String(tc.input?.name ?? '')}`;
+    // Claude Code's own tools (Agent Provider, ADR 0019)
+    case 'Read':
+      return `Read ${shortPath(tc.input?.file_path)}`;
+    case 'Write':
+      return `Wrote ${shortPath(tc.input?.file_path)}`;
+    case 'Edit':
+    case 'MultiEdit':
+      return `Edited ${shortPath(tc.input?.file_path)}`;
+    case 'NotebookEdit':
+      return `Edited ${shortPath(tc.input?.notebook_path)}`;
+    case 'Bash':
+      return `Ran ${String(tc.input?.command ?? '').slice(0, 80)}`;
+    case 'Glob':
+      return `Found files ${String(tc.input?.pattern ?? '')}`;
+    case 'Grep':
+      return `Searched for ${String(tc.input?.pattern ?? '')}`;
+    case 'WebFetch':
+      return `Fetched ${String(tc.input?.url ?? '')}`;
+    case 'WebSearch':
+      return `Searched the web for ${String(tc.input?.query ?? '')}`;
+    case 'Task':
+      return `Delegated: ${String(tc.input?.description ?? '')}`;
+    case 'TodoWrite':
+      return 'Updated the plan';
     default:
-      return tc.name;
+      return tc.name.startsWith('mcp__') ? tc.name.split('__').slice(-1)[0]! : tc.name;
   }
 }
 

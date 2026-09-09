@@ -133,6 +133,10 @@ export const useAppStore = create<AppState>((set, get) => ({
           void import('@/services/agent-host').then(({ startAgentHostListener }) =>
             startAgentHostListener(),
           );
+          // …and the Agent Provider's permission questions (ADR 0019).
+          void import('@/services/agent-provider').then(({ startAgentPermissionListener }) =>
+            startAgentPermissionListener(),
+          );
         }
         void import('./moodStore').then(({ useMoodStore }) => useMoodStore.getState().loadMoods());
         // Automatic backup (RESILIENCE-PLAN §2a): quiet cruxes and the garden once a day

@@ -1,6 +1,8 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { ChevronDownIcon } from '@/components/ui/icons';
-import { PROVIDERS } from '@/ai/providers';
+import { PROVIDERS, CLAUDE_CODE_PROVIDER } from '@/ai/providers';
+import { agentStatus } from '@/services/agent-provider';
+import type { AgentStatus } from '../../../electron/src/bridge';
 import {
   detectLocalEndpoints,
   isLocalModel,
@@ -65,6 +67,7 @@ function getProviderLabel(modelId: string): string {
 export default function ModelSelector({ value, onChange, disabled }: ModelSelectorProps) {
   const [open, setOpen] = useState(false);
   const [localEndpoints, setLocalEndpoints] = useState<LocalAiEndpoint[]>([]);
+  const [agent, setAgent] = useState<AgentStatus | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
 
   const close = useCallback(() => setOpen(false), []);
@@ -73,10 +76,15 @@ export default function ModelSelector({ value, onChange, disabled }: ModelSelect
   // Re-probe local servers each time the menu opens (fast when none run),
   // so the list tracks the user starting/stopping Ollama or LM Studio.
   useEffect(() => {
-    if (open) detectLocalEndpoints(true).then(setLocalEndpoints);
+    if (open) {
+      detectLocalEndpoints(true).then(setLocalEndpoints);
+      // Claude Code (ADR 0019) is offered only where a binary exists — desktop, installed.
+      void agentStatus().then(setAgent);
+    }
   }, [open]);
 
-  const groups = getAllModels();
+  const groups = getAllModels().filter((g) => g.providerId !== CLAUDE_CODE_PROVIDER);
+  const agentGroup = getAllModels().find((g) => g.providerId === CLAUDE_CODE_PROVIDER);
   const label = getModelLabel(value);
   const provider = getProviderLabel(value);
   const providerId = getProviderId(value);
@@ -142,6 +150,45 @@ export default function ModelSelector({ value, onChange, disabled }: ModelSelect
               ))}
             </div>
           ))}
+
+          {/* Claude Code — the person's own agent, run in the Project Folder (ADR 0019) */}
+          {agentGroup && agent && (
+            <div data-testid="model-group-claude-code">
+              <div className="px-3 py-1 text-2xs font-mono text-text-muted uppercase tracking-wider flex items-center gap-1.5">
+                {(() => {
+                  const Icon = PROVIDER_ICONS[CLAUDE_CODE_PROVIDER];
+                  return Icon ? <Icon size={10} /> : null;
+                })()}
+                Your agent
+              </div>
+              {agentGroup.models.map((model) => (
+                <button
+                  key={model.id}
+                  disabled={!agent.installed}
+                  title={
+                    agent.installed ? (agent.version ?? undefined) : (agent.reason ?? undefined)
+                  }
+                  onClick={() => {
+                    onChange(model.id);
+                    setOpen(false);
+                  }}
+                  className={cn(
+                    'w-full px-3 py-1.5 text-left text-xs font-mono transition-colors',
+                    !agent.installed
+                      ? 'text-text-muted/60 cursor-not-allowed'
+                      : model.id === value
+                        ? 'text-accent bg-accent-muted cursor-pointer'
+                        : 'text-text hover:bg-accent-muted cursor-pointer',
+                  )}
+                >
+                  {model.name}
+                  {!agent.installed && (
+                    <span className="ml-1.5 text-2xs text-text-muted/70">· not installed</span>
+                  )}
+                </button>
+              ))}
+            </div>
+          )}
 
           {/* Local inference (desktop, running servers only) */}
           {localEndpoints.map((endpoint) => (
