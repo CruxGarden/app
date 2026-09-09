@@ -179,6 +179,24 @@ export const selectHasUnpublishedChanges = (s: CruxState): boolean =>
     s.crux?.meta?.publishedFingerprints as Record<string, string> | undefined,
   );
 
+/**
+ * After the workspace's artifacts were replaced (revert, branch), every open
+ * editor tab points at an id that no longer exists. Re-point each by path to
+ * the new artifact; a path that vanished loses its tab.
+ */
+function rebindEditorTabs(ui: StoreApi<UIState>, artifacts: Artifact[]): void {
+  const editor = ui.getState().editor;
+  const byPath = new Map(artifacts.map((a) => [(a.meta?.path || a.filename || '') as string, a]));
+  const active = editor.tabs.find((t) => t.id === editor.activeTabId);
+  for (const tab of editor.tabs) {
+    const match = byPath.get(tab.path);
+    if (match) ui.getState().openFile(match.id, tab.path);
+    else ui.getState().closeTab(tab.id);
+  }
+  const activeMatch = active ? byPath.get(active.path) : undefined;
+  if (activeMatch) ui.getState().setActiveTab(activeMatch.id);
+}
+
 export function createCruxStore(ui: StoreApi<UIState> = useUIStore) {
   // Waiters on in-flight delete approvals (AI tool blocked on the user).
   // Module-level: promises don't belong in serialized store state. Keyed by
@@ -1032,6 +1050,7 @@ export function createCruxStore(ui: StoreApi<UIState> = useUIStore) {
         workspaceSegmentStart: null,
         snapshotMessageCount: null,
       });
+      rebindEditorTabs(ui, workspaceArtifacts ?? []);
 
       // Re-select the same file (by path) in workspace artifacts
       if (prevPath && workspaceArtifacts) {
@@ -1087,6 +1106,7 @@ export function createCruxStore(ui: StoreApi<UIState> = useUIStore) {
         messages: priorMessages,
         messageSegmentStart: priorMessages.length,
       });
+      rebindEditorTabs(ui, newWorkspaceArtifacts);
 
       // The reverted-to snapshot is now the tip: the next snapshot must chain
       // from it, and a reload must walk back from it. Without this the next
@@ -1158,6 +1178,7 @@ export function createCruxStore(ui: StoreApi<UIState> = useUIStore) {
         messageSegmentStart: snapshotMessages.length,
         crux: { ...crux, meta },
       });
+      rebindEditorTabs(ui, newWorkspaceArtifacts);
 
       // Persist
       const { saveMeta } = get();

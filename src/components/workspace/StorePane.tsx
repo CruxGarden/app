@@ -5,6 +5,7 @@ import { formatBytes } from '@/lib/format';
 import type { StoreEntry } from '@/services/sqlite/store.service';
 import { alertDialog, confirmDialog } from '@/stores/dialogStore';
 import {
+  LOCAL_VISITOR,
   parseStoreExport,
   storeExportEntries,
   storeExportFilename,
@@ -128,7 +129,12 @@ export default function StorePane() {
         ? await liveStore.exportLive(crux.id)
         : toStoreExport(
             crux.id,
-            entries.map((e) => ({ key: e.key, value: e.value, visitorId: e.visitorId })),
+            entries.map((e) => ({
+              key: e.key,
+              value: e.value,
+              visitorId: e.visitorId,
+              mode: e.mode === 'protected' ? 'protected' : 'public',
+            })),
           );
       const blob = new Blob([JSON.stringify(doc, null, 2)], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
@@ -180,7 +186,13 @@ export default function StorePane() {
           const { store } = getServices();
           if (replace) await store.clear(crux.id);
           for (const row of rows)
-            await store.set(crux.id, row.key, row.value, row.mode, row.visitorId);
+            await store.set(
+              crux.id,
+              row.key,
+              row.value,
+              row.mode,
+              row.visitorId === LOCAL_VISITOR ? null : row.visitorId,
+            );
           await loadEntries();
         }
       } catch (err) {
@@ -201,7 +213,8 @@ export default function StorePane() {
       } catch {
         parsed = value;
       }
-      await store.set(crux.id, key, parsed, entry?.mode ?? 'protected');
+      // the row's own visitor slot, or a second row appears beside it
+      await store.set(crux.id, key, parsed, entry?.mode ?? 'protected', entry?.visitorId ?? null);
       await loadEntries();
     },
     [crux?.id, entries, loadEntries],
@@ -215,7 +228,7 @@ export default function StorePane() {
       if (!entry) return;
       // The two buckets: open ↔ per-user (see CONTEXT.md, "Crux Store modes")
       const newMode = entry.mode === 'public' ? 'protected' : 'public';
-      await store.set(crux.id, key, entry.value, newMode);
+      await store.set(crux.id, key, entry.value, newMode, entry.visitorId ?? null);
       await loadEntries();
     },
     [crux?.id, entries, loadEntries],

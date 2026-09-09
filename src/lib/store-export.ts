@@ -23,7 +23,12 @@ export interface StoreRowLike {
   key: string;
   value: unknown;
   visitorId: string | null;
+  /** A protected row with no visitor (the workspace's own slot) keeps its mode under `protected.local`. */
+  mode?: 'public' | 'protected';
 }
+
+/** The visitor id that stands for "this workspace, no account" in a document. */
+export const LOCAL_VISITOR = 'local';
 
 export interface StoreImportEntry {
   key: string;
@@ -43,6 +48,7 @@ export function toStoreExport(cruxId: string, rows: StoreRowLike[], now = new Da
   };
   for (const r of rows) {
     if (r.visitorId) (out.protected[r.visitorId] ??= {})[r.key] = r.value;
+    else if (r.mode === 'protected') (out.protected[LOCAL_VISITOR] ??= {})[r.key] = r.value;
     else out.public[r.key] = r.value;
   }
   return out;

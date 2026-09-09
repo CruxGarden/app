@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { cn } from '@/lib/cn';
 import { getApiKey, setApiKey, removeApiKey } from '@/ai/keys';
+import { isLocalModel } from '@/ai/local';
 import { PROVIDERS } from '@/ai/providers';
 import { PROVIDER_ICONS } from './ProviderIcons';
 
@@ -33,6 +34,7 @@ export default function ApiKeySetup({
     (async () => {
       const newHints: Record<string, string> = {};
       for (const id of providerIds) {
+        if (isLocalModel(PROVIDERS[id]!.defaultModel)) continue; // local inference: no key
         const key = await getApiKey(id);
         if (key) {
           newHints[id] = `${key.slice(0, 7)}...${key.slice(-4)}`;
@@ -74,6 +76,8 @@ export default function ApiKeySetup({
         const Icon = PROVIDER_ICONS[providerId];
         const hint = hints[providerId];
         const input = inputs[providerId] || '';
+        // Ollama / LM Studio run on this machine: nothing to paste, nothing to remove
+        const local = isLocalModel(provider.defaultModel);
 
         return (
           <div
@@ -92,7 +96,11 @@ export default function ApiKeySetup({
                 >
                   {provider.name}
                 </a>
-                {hint ? (
+                {local ? (
+                  <span className="text-xs font-mono text-text-muted/70">
+                    No key needed — runs on this machine
+                  </span>
+                ) : hint ? (
                   <span className="text-xs font-mono px-1.5 py-0.5 rounded-[var(--radius-sm)] text-accent bg-accent-muted">
                     {hint}
                   </span>
@@ -115,47 +123,51 @@ export default function ApiKeySetup({
             </div>
 
             {/* Key input */}
-            <div className="flex items-center gap-2">
-              <input
-                type="password"
-                value={input}
-                autoFocus={autoFocus && idx === 0}
-                onChange={(e) => setInputs((v) => ({ ...v, [providerId]: e.target.value }))}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') handleSave(providerId);
-                }}
-                placeholder={
-                  hint ? 'Replace key...' : PROVIDER_PLACEHOLDERS[providerId] || 'Paste API key...'
-                }
-                className={cn(
-                  'flex-1 px-3 py-1.5 text-xs font-mono rounded-[var(--radius-sm)]',
-                  'bg-bg border border-border text-text placeholder:text-text-muted/50',
-                  'outline-none focus:border-input-border-active ',
-                )}
-              />
-              <button
-                onClick={() => handleSave(providerId)}
-                disabled={!input.trim()}
-                className={cn(
-                  'px-3 py-1.5 text-xs font-mono rounded-[var(--radius-sm)]',
-                  'bg-surface border border-border text-text hover:bg-accent-muted  cursor-pointer',
-                  'disabled:cursor-not-allowed',
-                )}
-              >
-                Save
-              </button>
-              {hint && (
+            {!local && (
+              <div className="flex items-center gap-2">
+                <input
+                  type="password"
+                  value={input}
+                  autoFocus={autoFocus && idx === 0}
+                  onChange={(e) => setInputs((v) => ({ ...v, [providerId]: e.target.value }))}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') handleSave(providerId);
+                  }}
+                  placeholder={
+                    hint
+                      ? 'Replace key...'
+                      : PROVIDER_PLACEHOLDERS[providerId] || 'Paste API key...'
+                  }
+                  className={cn(
+                    'flex-1 px-3 py-1.5 text-xs font-mono rounded-[var(--radius-sm)]',
+                    'bg-bg border border-border text-text placeholder:text-text-muted/50',
+                    'outline-none focus:border-input-border-active ',
+                  )}
+                />
                 <button
-                  onClick={() => handleRemove(providerId)}
+                  onClick={() => handleSave(providerId)}
+                  disabled={!input.trim()}
                   className={cn(
                     'px-3 py-1.5 text-xs font-mono rounded-[var(--radius-sm)]',
-                    'text-error hover:bg-error-muted  cursor-pointer',
+                    'bg-surface border border-border text-text hover:bg-accent-muted  cursor-pointer',
+                    'disabled:cursor-not-allowed',
                   )}
                 >
-                  Remove
+                  Save
                 </button>
-              )}
-            </div>
+                {hint && (
+                  <button
+                    onClick={() => handleRemove(providerId)}
+                    className={cn(
+                      'px-3 py-1.5 text-xs font-mono rounded-[var(--radius-sm)]',
+                      'text-error hover:bg-error-muted  cursor-pointer',
+                    )}
+                  >
+                    Remove
+                  </button>
+                )}
+              </div>
+            )}
           </div>
         );
       })}
