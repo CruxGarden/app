@@ -2,7 +2,10 @@ import { useState, useEffect } from 'react';
 import { cn } from '@/lib/cn';
 import { getApiKey, setApiKey, removeApiKey } from '@/ai/keys';
 import { isLocalModel } from '@/ai/local';
-import { PROVIDERS } from '@/ai/providers';
+import { PROVIDERS, CLAUDE_CODE_PROVIDER } from '@/ai/providers';
+import { agentStatus } from '@/services/agent-provider';
+import { Capability, can } from '@/lib/platform';
+import type { AgentStatus } from '../../../electron/src/bridge';
 import { PROVIDER_ICONS } from './ProviderIcons';
 
 const PROVIDER_PLACEHOLDERS: Record<string, string> = {
@@ -24,7 +27,14 @@ export default function ApiKeySetup({
   onKeyChange,
   autoFocus,
 }: ApiKeySetupProps) {
-  const providerIds = Object.keys(PROVIDERS);
+  // Claude Code (ADR 0019) is a provider without a key; desktop only.
+  const providerIds = Object.keys(PROVIDERS).filter(
+    (id) => id !== CLAUDE_CODE_PROVIDER || can(Capability.AgentHost),
+  );
+  const [agent, setAgent] = useState<AgentStatus | null>(null);
+  useEffect(() => {
+    if (can(Capability.AgentHost)) void agentStatus().then(setAgent);
+  }, []);
   const [hints, setHints] = useState<Record<string, string>>({});
   const [inputs, setInputs] = useState<Record<string, string>>({});
 
@@ -34,7 +44,7 @@ export default function ApiKeySetup({
     (async () => {
       const newHints: Record<string, string> = {};
       for (const id of providerIds) {
-        if (isLocalModel(PROVIDERS[id]!.defaultModel)) continue; // local inference: no key
+        if (isLocalModel(PROVIDERS[id]!.defaultModel) || id === CLAUDE_CODE_PROVIDER) continue; // no key
         const key = await getApiKey(id);
         if (key) {
           newHints[id] = `${key.slice(0, 7)}...${key.slice(-4)}`;
@@ -96,7 +106,18 @@ export default function ApiKeySetup({
                 >
                   {provider.name}
                 </a>
-                {local ? (
+                {providerId === CLAUDE_CODE_PROVIDER ? (
+                  <span
+                    className="text-xs font-mono text-text-muted/70"
+                    data-testid="claude-code-status"
+                  >
+                    {agent === null
+                      ? 'Looking for Claude Code…'
+                      : agent.installed
+                        ? `Installed${agent.version ? ` · ${agent.version}` : ''} — uses your Claude Code login, no key here`
+                        : 'Not installed — install Claude Code, sign in once from a terminal, then restart'}
+                  </span>
+                ) : local ? (
                   <span className="text-xs font-mono text-text-muted/70">
                     No key needed — runs on this machine
                   </span>
@@ -123,7 +144,7 @@ export default function ApiKeySetup({
             </div>
 
             {/* Key input */}
-            {!local && (
+            {!local && providerId !== CLAUDE_CODE_PROVIDER && (
               <div className="flex items-center gap-2">
                 <input
                   type="password"

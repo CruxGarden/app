@@ -214,6 +214,8 @@ export interface CruxMeta {
     activeBranch?: string;
     /** Agent Host switched on for this crux (MCP server per crux, ADR 0013). Off by default. */
     agentHost?: boolean;
+    /** The Claude Code session this crux's Agent Provider turns resume (ADR 0019). */
+    agentSessionId?: string;
     /** Check automatically after a turn that claims to be done (B4). On unless false. */
     verifyOnDone?: boolean;
     /** Port the site's dev server should try first (1024–65535); ephemeral when unset or taken. */

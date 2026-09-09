@@ -259,6 +259,58 @@ export interface AgentHostBridge {
   respond(response: AgentHostResponse): void;
 }
 
+// ── agent provider (Claude Code as a Collaboration provider, ADR 0019) ─────────
+
+export interface AgentStatus {
+  installed: boolean;
+  path: string | null;
+  version: string | null;
+  reason: string | null;
+}
+
+export interface AgentStartOptions {
+  runId: string;
+  cruxId: string;
+  cwd: string;
+  prompt: string;
+  sessionId?: string | null;
+  appendSystemPrompt?: string;
+}
+
+/** Main → renderer: the agent wants to use a tool the SDK will not auto-allow. */
+export interface AgentPermissionRequest {
+  requestId: string;
+  runId: string;
+  cruxId: string;
+  toolName: string;
+  input: Record<string, unknown>;
+  /** One line: the command, the url, the path. */
+  summary: string;
+}
+
+/** The engine's ConversationEvent shape plus `session` and `result` (see agent-events.ts). */
+export type AgentEvent =
+  | { type: 'text'; content: string }
+  | { type: 'tool_start'; name: string; id: string; input: Record<string, unknown> }
+  | { type: 'tool_result'; name: string; id: string; result: string }
+  | { type: 'step_end'; index: number }
+  | { type: 'usage'; inputTokens: number; outputTokens: number; cachedInputTokens: number }
+  | { type: 'info'; message: string }
+  | { type: 'error'; message: string }
+  | { type: 'done'; textContent: string; hadMutation: boolean }
+  | { type: 'session'; sessionId: string; model: string; version: string }
+  | { type: 'result'; costUsd: number; durationMs: number; numTurns: number; isError: boolean };
+
+export interface AgentProviderBridge {
+  status(force?: boolean): Promise<AgentStatus>;
+  /** Resolves when the turn's stream has ended; events arrive through onEvent meanwhile. */
+  start(opts: AgentStartOptions): Promise<void>;
+  interrupt(runId: string): Promise<void>;
+  answer(requestId: string, allow: boolean): void;
+  onEvent(cb: (runId: string, event: AgentEvent) => void): () => void;
+  onPermission(cb: (request: AgentPermissionRequest) => void): () => void;
+}
+
 // ── the whole bridge ────────────────────────────────────────────────────────
 
 export interface ElectronBridge {
@@ -273,6 +325,13 @@ export interface ElectronBridge {
   localai: LocalAiBridge;
   updates: UpdatesBridge;
   agentHost: AgentHostBridge;
+  agent: AgentProviderBridge;
   /** Test-only overrides, read from the environment the shell was launched with. */
-  test: { apiUrl: string | null; aiMock: boolean; autoBackupQuietMs: number | null };
+  test: {
+    apiUrl: string | null;
+    aiMock: boolean;
+    /** CRUX_AGENT_MOCK=1 — the Agent Provider runs a scripted Claude Code. */
+    agentMock: boolean;
+    autoBackupQuietMs: number | null;
+  };
 }
