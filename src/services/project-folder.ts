@@ -132,7 +132,7 @@ export async function rehomeProjectFolders(
 
   const db = getSqliteClient();
   const rows = await db.all<{ id: string; slug: string | null; meta: string | null }>(
-    "SELECT id, slug, meta FROM cruxes WHERE type = 'workspace'",
+    "SELECT id, slug, meta FROM cruxes WHERE type = 'workspace' AND deleted IS NULL",
   );
 
   const { getServices } = await import('./index');

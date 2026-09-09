@@ -14,6 +14,7 @@ CREATE TABLE IF NOT EXISTS cruxes (
   meta TEXT DEFAULT '{}',
   remote_id TEXT,
   synced_at TEXT,
+  deleted TEXT,
   created TEXT NOT NULL,
   updated TEXT NOT NULL
 );

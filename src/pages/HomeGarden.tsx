@@ -8,6 +8,8 @@ import { APP_NAME } from '@/lib/constants';
 import { GardenGrid, GardenSearch } from '@/components/garden';
 import NewCruxModal from '@/components/garden/NewCruxModal';
 import RecoverSection from '@/components/garden/RecoverSection';
+import TrashSection from '@/components/garden/TrashSection';
+import { TRASH_RETENTION_DAYS } from '@/stores/gardenStore';
 import { openGardenPage } from '@/lib/public-url';
 import { IconButton, Modal, Button } from '@/components/ui';
 import { cn } from '@/lib/cn';
@@ -169,12 +171,16 @@ export default function HomeGarden() {
         />
       )}
 
+      {/* The Trash: deleted cruxes wait here, restorable, until purged */}
+      <TrashSection />
+
       {/* Delete confirmation modal */}
       <Modal open={deletingId !== null} onClose={() => setDeletingId(null)} title="Delete Crux">
         <p className="text-sm text-text-muted mb-4">
           Are you sure you want to delete{' '}
-          <span className="text-text font-medium">{deletingCrux?.title || 'this crux'}</span>? This
-          action cannot be undone
+          <span className="text-text font-medium">{deletingCrux?.title || 'this crux'}</span>? It
+          moves to Recently deleted, where you can restore it for {TRASH_RETENTION_DAYS} days. Its
+          files stay in its Project Folder on disk.
         </p>
         {deletingPublished && (
           <label className="flex items-start gap-2 text-xs text-text-muted mb-4 cursor-pointer select-none">

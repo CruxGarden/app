@@ -7,11 +7,17 @@ import { WORKSPACE_THUMBNAIL_PATH } from '@/lib/artifact-path';
 
 export type SortField = 'created' | 'updated';
 
+/** How long a deleted crux waits in the Trash before it is purged for good. */
+export const TRASH_RETENTION_DAYS = 30;
+const TRASH_RETENTION_MS = TRASH_RETENTION_DAYS * 24 * 60 * 60 * 1000;
+
 interface GardenState {
   /** Raw list (unfiltered, unsorted) */
   allCruxes: Crux[];
   /** Filtered + sorted for display */
   cruxList: Crux[];
+  /** Cruxes in the Trash — hidden from the grid, restorable until purged. */
+  trashed: Crux[];
   /** cruxId → fingerprint of its captured preview.jpg (only cruxes that have one). */
   thumbnails: Record<string, string>;
   loading: boolean;
@@ -19,8 +25,12 @@ interface GardenState {
   sortBy: SortField;
 
   load: () => Promise<void>;
-  /** Delete a crux and refresh the list. */
+  /** Move a crux to the Trash and refresh the lists. */
   deleteCrux: (id: string) => Promise<void>;
+  /** Bring a trashed crux back to the garden. */
+  restoreCrux: (id: string) => Promise<void>;
+  /** Delete a trashed crux for good — rows gone, the Project Folder left where it is. */
+  destroyCrux: (id: string) => Promise<void>;
   setSearch: (query: string) => void;
   setSortBy: (field: SortField) => void;
   refresh: () => Promise<void>;
@@ -66,6 +76,7 @@ async function loadThumbnails(): Promise<Record<string, string>> {
 export const useGardenStore = create<GardenState>((set, get) => ({
   allCruxes: [],
   cruxList: [],
+  trashed: [],
   thumbnails: {},
   loading: true,
   search: '',
@@ -75,7 +86,17 @@ export const useGardenStore = create<GardenState>((set, get) => ({
     if (useWorkspaceRegistry.getState().entries.some((entry) => entry.id === id))
       throw new Error('Close this Crux workspace before deleting it.');
     const { crux: cruxService } = getServices();
-    await cruxService.delete(id);
+    await cruxService.trash(id);
+    await get().load();
+  },
+
+  restoreCrux: async (id: string) => {
+    await getServices().crux.restore(id);
+    await get().load();
+  },
+
+  destroyCrux: async (id: string) => {
+    await getServices().crux.delete(id);
     await get().load();
   },
 
@@ -84,8 +105,15 @@ export const useGardenStore = create<GardenState>((set, get) => ({
     try {
       const { search, sortBy } = get();
       const { crux: cruxService } = getServices();
-      const [data, thumbnails] = await Promise.all([cruxService.listAll(), loadThumbnails()]);
-      set({ allCruxes: data, cruxList: filterAndSort(data, search, sortBy), thumbnails });
+      await cruxService.purgeTrash(TRASH_RETENTION_MS).catch((err) => {
+        console.warn('[gardenStore] trash purge skipped:', err);
+      });
+      const [data, trashed, thumbnails] = await Promise.all([
+        cruxService.listAll(),
+        cruxService.listTrashed(),
+        loadThumbnails(),
+      ]);
+      set({ allCruxes: data, cruxList: filterAndSort(data, search, sortBy), trashed, thumbnails });
     } catch (err) {
       console.error('[gardenStore] Failed to load cruxes:', err);
     } finally {

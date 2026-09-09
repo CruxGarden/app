@@ -82,4 +82,21 @@ export class ApiCruxService implements ICruxService {
 
     return all;
   }
+
+  // The Trash is a local-garden notion; the API has no equivalent.
+  async trash(cruxId: string): Promise<void> {
+    await this.delete(cruxId);
+  }
+
+  async restore(_cruxId: string): Promise<void> {
+    throw new Error('Trash is not available for the remote garden');
+  }
+
+  async listTrashed(): Promise<Crux[]> {
+    return [];
+  }
+
+  async purgeTrash(_olderThanMs: number): Promise<number> {
+    return 0;
+  }
 }

@@ -44,6 +44,18 @@ export class SqliteNative {
 
     // Run schema
     this.db.exec(loadSchema());
+    this.ensureColumns();
+  }
+
+  /**
+   * Columns added after a table was first created. `CREATE TABLE IF NOT EXISTS`
+   * leaves an existing table alone, so each addition is checked here, once, on
+   * open — the desktop counterpart of the worker's schema_version migrations.
+   */
+  private ensureColumns(): void {
+    const cols = this.db.pragma("table_info('cruxes')") as { name: string }[];
+    if (!cols.some((c) => c.name === 'deleted'))
+      this.db.exec('ALTER TABLE cruxes ADD COLUMN deleted TEXT');
   }
 
   /** Sanitize params for better-sqlite3 which only accepts number, string, bigint, Buffer, null */
@@ -79,7 +91,10 @@ export class SqliteNative {
 
   export(): ArrayBuffer {
     const buffer = this.db.serialize();
-    return buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength) as ArrayBuffer;
+    return buffer.buffer.slice(
+      buffer.byteOffset,
+      buffer.byteOffset + buffer.byteLength,
+    ) as ArrayBuffer;
   }
 
   import(data: ArrayBuffer): void {
@@ -88,6 +103,7 @@ export class SqliteNative {
     fs.writeFileSync(dbPath, Buffer.from(data));
     this.db = new Database(dbPath);
     this.db.pragma('journal_mode = WAL');
+    this.ensureColumns();
   }
 
   close(): void {
