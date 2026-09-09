@@ -411,7 +411,7 @@ export default function PublishPane() {
                     void openGardenPage(publicUrl);
                   }
                 }}
-                className="block text-xxs font-mono text-accent break-all leading-relaxed hover:underline"
+                className="block text-xxs font-mono text-accent truncate leading-relaxed hover:underline"
               >
                 {publicUrl}
               </a>

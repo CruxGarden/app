@@ -254,7 +254,7 @@ export default function CustomDomainSection({ cruxId }: { cruxId: string }) {
           </form>
         ) : allowance === 0 && domains.length === 0 ? (
           <div data-testid="domains-gardener">
-            <PaneHint>
+            <PaneHint align="left">
               Your own address for this crux comes with Gardener — two DNS records and a click,
               certificate included. Upgrade in Settings → Plan.
             </PaneHint>

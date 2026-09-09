@@ -106,30 +106,30 @@ export default function HomeGarden() {
             <PlusCircleIcon size={20} />
           </IconButton>
         </div>
-        <div className="flex items-center gap-3 mt-6">
+        <div className="flex items-center gap-3 mt-4">
           <div className="flex-1">
             <GardenSearch value={search} onChange={setSearch} />
           </div>
-          <div className="flex items-center gap-1 text-xs font-mono text-text-muted shrink-0">
-            <span>Sort by</span>
-            <button
-              onClick={() => setSortBy('created')}
-              className={cn(
-                'px-2 py-0.5 rounded-[var(--radius-sm)] transition-colors cursor-pointer',
-                sortBy === 'created' ? 'text-text bg-surface' : 'hover:text-text',
-              )}
-            >
-              Created
-            </button>
-            <button
-              onClick={() => setSortBy('updated')}
-              className={cn(
-                'px-2 py-0.5 rounded-[var(--radius-sm)] transition-colors cursor-pointer',
-                sortBy === 'updated' ? 'text-text bg-surface' : 'hover:text-text',
-              )}
-            >
-              Updated
-            </button>
+          {/* Sort: a segmented control, one piece with the search field */}
+          <div
+            aria-label="Sort by"
+            className="flex items-center h-9 p-0.5 rounded-[var(--radius-sm)] bg-surface border border-border shrink-0"
+          >
+            {(['created', 'updated'] as const).map((field) => (
+              <button
+                key={field}
+                aria-pressed={sortBy === field}
+                onClick={() => setSortBy(field)}
+                className={cn(
+                  'h-full px-3 text-xs font-medium rounded-[calc(var(--radius-sm)-2px)] transition-colors cursor-pointer',
+                  sortBy === field
+                    ? 'bg-panel text-text shadow-card'
+                    : 'text-text-muted hover:text-text',
+                )}
+              >
+                {field === 'created' ? 'Created' : 'Updated'}
+              </button>
+            ))}
           </div>
         </div>
       </div>
