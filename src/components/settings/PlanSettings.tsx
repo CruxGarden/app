@@ -275,7 +275,7 @@ export default function PlanSettings() {
             })}
           </div>
           <div className="flex flex-wrap items-center justify-between gap-2 mt-3">
-            <p className="text-2xs text-text-muted">
+            <p className="text-xxs text-text-muted">
               Checkout is Stripe's — Apple Pay, Google Pay and Link work, and no card details ever
               reach Crux Garden.{catalog.trialDays > 0 ? ' Trials need no card.' : ''}
             </p>

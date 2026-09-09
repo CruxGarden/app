@@ -1,6 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import { cn } from '@/lib/cn';
 import { Button } from '@/components/ui';
+import { ExportIcon, ShareIcon, CloseIcon } from '@/components/ui/icons';
+import { getSetting } from '@/services/settings';
+import { SettingsKey } from '@/lib/constants';
 import { useAppStore } from '@/stores/appStore';
 import { BUNDLED_MOODS } from '@/lib/moods/bundled-moods';
 import { GARDEN_DARK } from '@/lib/moods';
@@ -49,6 +52,131 @@ function Swatch({ pkg }: { pkg: MoodPackage }) {
       <div className="flex-1 flex gap-1 p-1.5">
         <div className="flex-1 rounded-[2px]" style={{ background: c('panel') }} />
         <div className="w-1/3 rounded-[2px]" style={{ background: c('panel') }} />
+      </div>
+    </div>
+  );
+}
+
+/**
+ * One Mood as a card. The picture is the action: click it to wear the Mood
+ * (a "Wear" pill appears on hover; the worn one says so). Secondary actions —
+ * export, publish, delete — sit as small icon buttons in the footer and only
+ * come forward on hover, so the grid reads as rooms, not as rows of buttons.
+ */
+function MoodCard({
+  pkg,
+  worn,
+  busy,
+  onApply,
+  onExport,
+  onPublish,
+  onDelete,
+  canPublish,
+  testId,
+}: {
+  pkg: MoodPackage;
+  worn: boolean;
+  busy: boolean;
+  onApply: () => void;
+  onExport: () => void;
+  onPublish?: () => void;
+  onDelete?: () => void;
+  canPublish?: boolean;
+  testId: string;
+}) {
+  const meta = [
+    pkg.theme.section,
+    pkg.bundled?.track?.name ?? pkg.sound.track?.name ?? 'no sound',
+    pkg.persona ? pkg.persona.name : pkg.author ? `by ${pkg.author}` : null,
+  ]
+    .filter(Boolean)
+    .join(' · ');
+  const iconBtn =
+    'w-7 h-7 inline-flex items-center justify-center rounded-[var(--radius-sm)] text-text-muted hover:text-text hover:bg-surface transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed';
+  return (
+    <div
+      className={cn(
+        'group shape-card rounded-[var(--radius)] border bg-panel overflow-hidden flex flex-col transition-colors',
+        worn ? 'border-accent/60' : 'border-border hover:border-accent/40',
+        busy && 'opacity-70',
+      )}
+      data-testid={testId}
+    >
+      <button
+        type="button"
+        onClick={onApply}
+        disabled={busy}
+        aria-label={`Apply ${pkg.name}`}
+        aria-pressed={worn}
+        className="relative block aspect-[16/10] w-full overflow-hidden border-b border-border cursor-pointer disabled:cursor-wait text-left"
+      >
+        <div className="w-full h-full transition-transform duration-300 group-hover:scale-[1.03]">
+          <Swatch pkg={pkg} />
+        </div>
+        {worn ? (
+          <span className="absolute left-2 top-2 inline-flex items-center gap-1 rounded-full bg-overlay-badge backdrop-blur-sm px-2 py-0.5 text-2xs font-mono text-overlay-badge-text">
+            <span className="w-1.5 h-1.5 rounded-full bg-accent" />
+            Wearing
+          </span>
+        ) : (
+          <span className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity bg-black/25">
+            <span className="rounded-full bg-primary-button text-primary-button-text px-3 py-1 text-xs font-medium shadow-card">
+              Wear this Mood
+            </span>
+          </span>
+        )}
+      </button>
+      <div className="px-2.5 py-2 flex items-center gap-2">
+        <div className="min-w-0 flex-1">
+          <div className="text-sm font-display text-heading truncate">{pkg.name}</div>
+          <div className="text-2xs font-mono text-text-muted truncate">{meta}</div>
+          {pkg.publishedAt && (
+            <div className="text-2xs font-mono text-accent truncate">
+              Published {formatDate(pkg.publishedAt)}
+            </div>
+          )}
+        </div>
+        <div className="flex items-center shrink-0 opacity-60 group-hover:opacity-100 transition-opacity">
+          <button
+            type="button"
+            onClick={onExport}
+            disabled={busy}
+            aria-label={`Export ${pkg.name}`}
+            title="Export as .cruxmood"
+            className={iconBtn}
+          >
+            <ExportIcon size={13} />
+          </button>
+          {onPublish && (
+            <button
+              type="button"
+              onClick={onPublish}
+              disabled={busy || !canPublish}
+              title={
+                canPublish
+                  ? pkg.publishedCruxId
+                    ? 'Republish to crux.garden'
+                    : 'Publish to crux.garden'
+                  : 'Connect your account (Settings) to publish'
+              }
+              aria-label={`${pkg.publishedCruxId ? 'Republish' : 'Publish'} ${pkg.name}`}
+              className={iconBtn}
+            >
+              <ShareIcon size={13} />
+            </button>
+          )}
+          {onDelete && (
+            <button
+              type="button"
+              onClick={onDelete}
+              aria-label={`Delete Mood ${pkg.name}`}
+              title="Delete"
+              className={cn(iconBtn, 'hover:text-error')}
+            >
+              <CloseIcon size={13} />
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -114,10 +242,12 @@ export default function MoodBrowser() {
     say(`Saved "${pkg.name}" — theme, background, persona and soundscape.`);
   };
 
+  const [wornId, setWornId] = useState<string | null>(() => getSetting(SettingsKey.WornMoodId));
   const doApply = async (pkg: MoodPackage) => {
     setBusy(pkg.id);
     try {
       await applyMood(pkg);
+      setWornId(pkg.id);
       say(`Now wearing "${pkg.name}".`);
     } finally {
       setBusy(null);
@@ -243,48 +373,21 @@ export default function MoodBrowser() {
         <div className="flex items-baseline justify-between">
           <h3 className="text-xxs font-mono uppercase tracking-wider text-caption">Built in</h3>
           <span className="text-2xs text-text-muted">
-            {BUNDLED_MOODS.length} rooms — look, sound and voice change together. Apply one, then
-            make it yours.
+            {BUNDLED_MOODS.length} rooms — look, sound and voice change together. Click one to wear
+            it.
           </span>
         </div>
         <div className="grid gap-3 grid-cols-[repeat(auto-fill,minmax(180px,1fr))]">
           {BUNDLED_MOODS.map((pkg) => (
-            <div
+            <MoodCard
               key={pkg.id}
-              className={cn(
-                'group shape-card rounded-[var(--radius)] border border-border bg-panel overflow-hidden flex flex-col',
-                busy === pkg.id && 'opacity-70',
-              )}
-              data-testid={`bundled-${pkg.id}`}
-            >
-              <div className="aspect-[16/10] w-full overflow-hidden border-b border-border">
-                <Swatch pkg={pkg} />
-              </div>
-              <div className="p-2.5 flex flex-col gap-1.5">
-                <div className="min-w-0">
-                  <div className="text-sm font-display text-heading truncate">{pkg.name}</div>
-                  <div className="text-2xs font-mono text-text-muted truncate">
-                    {pkg.theme.section} ·{' '}
-                    {pkg.bundled?.track?.name ?? pkg.sound.track?.name ?? 'no sound'}
-                    {pkg.persona ? ` · ${pkg.persona.name}` : ''}
-                  </div>
-                </div>
-                <div className="flex items-center gap-1">
-                  <Button size="sm" onClick={() => void doApply(pkg)} disabled={busy !== null}>
-                    Apply
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => void doExport(pkg)}
-                    disabled={busy !== null}
-                    aria-label={`Export ${pkg.name}`}
-                  >
-                    Export
-                  </Button>
-                </div>
-              </div>
-            </div>
+              pkg={pkg}
+              worn={wornId === pkg.id}
+              busy={busy === pkg.id}
+              onApply={() => void doApply(pkg)}
+              onExport={() => void doExport(pkg)}
+              testId={`bundled-${pkg.id}`}
+            />
           ))}
         </div>
         <h3 className="text-xxs font-mono uppercase tracking-wider text-caption mt-3">Yours</h3>
@@ -300,73 +403,20 @@ export default function MoodBrowser() {
         </div>
       ) : (
         <div className="grid gap-3 grid-cols-[repeat(auto-fill,minmax(180px,1fr))]">
-          {moods.map((pkg) => {
-            return (
-              <div
-                key={pkg.id}
-                className={cn(
-                  'group shape-card rounded-[var(--radius)] border border-border bg-panel overflow-hidden flex flex-col',
-                  busy === pkg.id && 'opacity-70',
-                )}
-                data-testid={`mood-${pkg.id}`}
-              >
-                <div className="aspect-[16/10] w-full overflow-hidden border-b border-border">
-                  <Swatch pkg={pkg} />
-                </div>
-                <div className="p-2.5 flex flex-col gap-1.5">
-                  <div className="min-w-0">
-                    <div className="text-sm font-display text-heading truncate">{pkg.name}</div>
-                    <div className="text-2xs font-mono text-text-muted truncate">
-                      {pkg.theme.section} · {pkg.sound.track?.name ?? 'no sound'}
-                      {pkg.author ? ` · by ${pkg.author}` : ''}
-                    </div>
-                    {pkg.publishedAt && (
-                      <div className="text-2xs font-mono text-accent truncate">
-                        Published {formatDate(pkg.publishedAt)}
-                      </div>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <Button size="sm" onClick={() => void doApply(pkg)} disabled={busy !== null}>
-                      Apply
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => void doExport(pkg)}
-                      disabled={busy !== null}
-                      aria-label={`Export ${pkg.name}`}
-                    >
-                      Export
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => void doPublish(pkg)}
-                      disabled={busy !== null || !isAuthenticated}
-                      title={
-                        isAuthenticated
-                          ? 'Publish to crux.garden'
-                          : 'Connect your account (Settings) to publish'
-                      }
-                      aria-label={`${pkg.publishedCruxId ? 'Republish' : 'Publish'} ${pkg.name}`}
-                    >
-                      {pkg.publishedCruxId ? 'Republish' : 'Publish'}
-                    </Button>
-                    <button
-                      type="button"
-                      onClick={() => deleteMood(pkg.id)}
-                      aria-label={`Delete Mood ${pkg.name}`}
-                      title="Delete"
-                      className="ml-auto text-text-muted hover:text-error text-sm px-1 cursor-pointer"
-                    >
-                      ×
-                    </button>
-                  </div>
-                </div>
-              </div>
-            );
-          })}
+          {moods.map((pkg) => (
+            <MoodCard
+              key={pkg.id}
+              pkg={pkg}
+              worn={wornId === pkg.id}
+              busy={busy === pkg.id}
+              onApply={() => void doApply(pkg)}
+              onExport={() => void doExport(pkg)}
+              onPublish={() => void doPublish(pkg)}
+              canPublish={isAuthenticated}
+              onDelete={() => deleteMood(pkg.id)}
+              testId={`mood-${pkg.id}`}
+            />
+          ))}
         </div>
       )}
     </div>

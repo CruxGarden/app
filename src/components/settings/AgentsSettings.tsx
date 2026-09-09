@@ -73,7 +73,7 @@ export default function AgentsSettings() {
 
         {/* ADR 0008-style plain statement: what an outside agent can do and see */}
         <div
-          className="rounded-[var(--radius-sm)] border border-border bg-surface px-3 py-2 text-2xs text-text-muted leading-relaxed"
+          className="rounded-[var(--radius-sm)] border border-border bg-surface px-3 py-2 text-xxs text-text-muted leading-relaxed"
           data-testid="agents-trust"
         >
           <strong className="text-text">What a connected agent can do and see.</strong> It can read,
@@ -232,7 +232,7 @@ function ConnectPanel({
       >
         {snippets[tab]}
       </pre>
-      <p className="text-2xs text-text-muted">{hints[tab]}</p>
+      <p className="text-xxs text-text-muted">{hints[tab]}</p>
 
       <div className="divider my-1" />
 
@@ -251,7 +251,7 @@ function ConnectPanel({
       </div>
 
       <div className="flex items-center justify-between gap-3 pt-1">
-        <span className="text-2xs text-text-muted">
+        <span className="text-xxs text-text-muted">
           A new token disconnects every client until they use the new one.
         </span>
         <Button size="sm" variant="secondary" disabled={busy} onClick={onRegenerate}>

@@ -126,7 +126,7 @@ export default function CruxCard({
           >
             {description || 'No description yet'}
           </p>
-          <div className="mt-auto pt-2 text-2xs font-mono text-garden-card-meta">
+          <div className="mt-auto pt-2 text-xxs font-mono text-garden-card-meta">
             {sortBy === 'updated' ? 'Updated' : 'Created'} {formatDateTime(when)}
           </div>
         </div>

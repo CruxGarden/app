@@ -107,8 +107,8 @@ export function PaneAction({
       onClick={onClick}
       disabled={disabled || isBusy}
       className={cn(
-        'w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-[var(--radius-sm)]',
-        'text-sm font-medium font-body transition-all',
+        'w-full flex items-center justify-center gap-1.5 px-3 h-8 rounded-[var(--radius-sm)]',
+        'text-xs font-medium font-body transition-all whitespace-nowrap',
         tone === 'primary'
           ? 'bg-accent-muted text-accent border border-accent/20'
           : 'bg-surface text-text border border-border',
@@ -137,10 +137,24 @@ export function PaneAction({
   );
 }
 
-/** One-line helper text under an action. */
-export function PaneHint({ children, className }: { children: ReactNode; className?: string }) {
+/** Helper text under an action or inside a section. */
+export function PaneHint({
+  children,
+  className,
+  align = 'center',
+}: {
+  children: ReactNode;
+  className?: string;
+  align?: 'center' | 'left';
+}) {
   return (
-    <p className={cn('text-2xs text-text-muted text-center leading-relaxed', className)}>
+    <p
+      className={cn(
+        'text-xxs text-text-muted leading-relaxed',
+        align === 'center' ? 'text-center' : 'text-left',
+        className,
+      )}
+    >
       {children}
     </p>
   );
