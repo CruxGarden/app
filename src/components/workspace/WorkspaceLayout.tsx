@@ -41,8 +41,9 @@ import { useAppStore } from '@/stores/appStore';
 import { getDownloadUrl } from '@/api/public';
 import { pathOf, basename, isUnder, displayNameOf } from '@/lib/artifact-path';
 import 'react-mosaic-component/react-mosaic-component.css';
-import { confirmDialog, alertDialog } from '@/stores/dialogStore';
+import { alertDialog } from '@/stores/dialogStore';
 import { expandTreeSelection } from '@/components/artifacts/treeData';
+import { confirmAndDeleteArtifacts } from '@/components/artifacts/safeDelete';
 
 // ── Media transcoding constants ──────────────────────────
 
@@ -197,8 +198,6 @@ export default function WorkspaceLayout() {
   const mobileActivePane = useUIStore((s) => s.mobileActivePane);
   const isDesktopLayout = useIsDesktopLayout();
   const openFile = useUIStore((s) => s.openFile);
-  const deleteArtifact = useCruxStore((s) => s.deleteArtifact);
-  const deleteArtifacts = useCruxStore((s) => s.deleteArtifacts);
   const artifacts = useCruxStore((s) => s.artifacts);
   const crux = useCruxStore((s) => s.crux);
   const author = useAppStore((s) => s.author);
@@ -229,11 +228,7 @@ export default function WorkspaceLayout() {
   };
 
   const handleDelete = async (id: string) => {
-    if (
-      await confirmDialog({ message: 'Delete this file?', confirmLabel: 'Delete', danger: true })
-    ) {
-      await deleteArtifact(id);
-    }
+    await confirmAndDeleteArtifacts(cruxStore, [id], 'Delete this file?');
   };
 
   const handleDeleteMultiple = async (ids: string[]) => {
@@ -241,31 +236,23 @@ export default function WorkspaceLayout() {
     const artifactIds = expandTreeSelection(ids, artifacts);
     const count = artifactIds.length;
     if (count === 0) return;
-    if (
-      await confirmDialog({
-        message: `Delete ${count} item${count !== 1 ? 's' : ''}?`,
-        confirmLabel: 'Delete',
-        danger: true,
-      })
-    ) {
-      await deleteArtifacts(artifactIds);
-    }
+    await confirmAndDeleteArtifacts(
+      cruxStore,
+      artifactIds,
+      `Delete ${count} item${count !== 1 ? 's' : ''}?`,
+    );
   };
 
   const handleDeleteFolder = async (folderPath: string) => {
     const children = artifacts.filter((a) => isUnder(folderPath, pathOf(a)));
     if (children.length === 0) return;
     const folderName = basename(folderPath);
-    if (
-      await confirmDialog({
-        title: 'Delete folder',
-        message: `Delete "${folderName}" and ${children.length} file${children.length !== 1 ? 's' : ''}?`,
-        confirmLabel: 'Delete',
-        danger: true,
-      })
-    ) {
-      await deleteArtifacts(children.map((a) => a.id));
-    }
+    await confirmAndDeleteArtifacts(
+      cruxStore,
+      children.map((a) => a.id),
+      `Delete "${folderName}" and ${children.length} file${children.length !== 1 ? 's' : ''}?`,
+      'Delete folder',
+    );
   };
 
   const handleCopyUrl = (id: string) => {

@@ -223,7 +223,8 @@ test.describe('metadata and store panes', () => {
 
       await store.getByRole('button', { name: 'Clear all' }).click();
       await expect(page.getByText('Clear all store entries?')).toBeVisible();
-      await page.getByRole('dialog').getByRole('button', { name: 'Clear all' }).click();
+      // the export above is our copy — clear without another
+      await page.getByRole('dialog').getByRole('button', { name: 'Clear without a copy' }).click();
       await expect(store.getByText('No store entries yet')).toBeVisible();
       await expect(store).toContainText('0 keys');
 

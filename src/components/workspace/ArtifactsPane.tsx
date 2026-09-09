@@ -14,6 +14,7 @@ import { formatBytes, formatDateTime } from '@/lib/format';
 import { Capability, can } from '@/lib/platform';
 import { revealProjectFolder } from '@/services/project-folder';
 import { confirmDialog } from '@/stores/dialogStore';
+import { confirmAndDeleteArtifacts } from '@/components/artifacts/safeDelete';
 import { expandTreeSelection, FOLDER_ID_PREFIX } from '@/components/artifacts/treeData';
 
 function RevealIcon() {
@@ -126,7 +127,6 @@ export default function ArtifactsPane() {
   const uploadProgress = useCruxStore((s) => s.uploadProgress);
   const moveArtifact = useCruxStore((s) => s.moveArtifact);
   const renameArtifact = useCruxStore((s) => s.renameArtifact);
-  const deleteArtifacts = useCruxStore((s) => s.deleteArtifacts);
   const isViewingSnapshot = useCruxStore((s) => s.viewingSnapshotId !== null);
   const openFile = useUIStore((s) => s.openFile);
   const setPaneVisible = useUIStore((s) => s.setPaneVisible);
@@ -397,11 +397,9 @@ export default function ArtifactsPane() {
           : ids.length === 1
             ? 'Delete this file?'
             : `Delete ${ids.length} items (${count} file${count !== 1 ? 's' : ''})?`;
-      if (await confirmDialog({ message: msg, confirmLabel: 'Delete', danger: true })) {
-        await deleteArtifacts(artifactIds);
-      }
+      await confirmAndDeleteArtifacts(cruxStore, artifactIds, msg);
     },
-    [cruxStore, deleteArtifacts],
+    [cruxStore],
   );
 
   const handleFileInputChange = useCallback(
