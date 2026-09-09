@@ -5,7 +5,7 @@ import { cn } from '@/lib/cn';
 import { useShallow } from 'zustand/react/shallow';
 
 const btnClass = cn(
-  'px-3 py-1.5 text-xs font-mono rounded-[var(--radius-sm)]',
+  'px-3 py-1.5 text-xs font-body rounded-[var(--radius-sm)]',
   'bg-surface border border-border text-text hover:bg-accent-muted cursor-pointer',
   'disabled:cursor-not-allowed',
 );
@@ -106,7 +106,7 @@ export default function ConnectAccount({
           onClick={handleDisconnect}
           disabled={connecting}
           className={cn(
-            'px-3 py-1.5 text-xs font-mono rounded-[var(--radius-sm)]',
+            'px-3 py-1.5 text-xs font-body rounded-[var(--radius-sm)]',
             'text-error hover:bg-error-muted cursor-pointer',
             'disabled:cursor-not-allowed',
           )}
@@ -132,7 +132,7 @@ export default function ConnectAccount({
           autoFocus={autoFocus}
           disabled={connecting || codeSent}
           className={cn(
-            'flex-1 px-3 py-1.5 text-xs font-mono rounded-[var(--radius-sm)]',
+            'flex-1 px-3 py-1.5 text-xs font-body rounded-[var(--radius-sm)]',
             'bg-surface border border-border text-text placeholder:text-text-muted',
             'focus:outline-none focus:border-input-border-active',
             '',
@@ -157,7 +157,7 @@ export default function ConnectAccount({
             autoFocus
             disabled={connecting}
             className={cn(
-              'flex-1 px-3 py-1.5 text-xs font-mono rounded-[var(--radius-sm)]',
+              'flex-1 px-3 py-1.5 text-xs font-body rounded-[var(--radius-sm)]',
               'bg-surface border border-border text-text placeholder:text-text-muted',
               'focus:outline-none focus:border-input-border-active',
               '',

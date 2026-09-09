@@ -40,7 +40,7 @@ export default function Toggle({ checked, onChange, label, disabled }: TogglePro
           }}
         />
       </button>
-      {label && <span className="text-xs text-text-muted">{label}</span>}
+      {label && <span className="text-xs text-text-muted whitespace-nowrap">{label}</span>}
     </label>
   );
 }
