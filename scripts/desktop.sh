@@ -76,7 +76,13 @@ fi
 
 # ── Web bundle (skipped in --dev; Vite serves it live) ───────────────────────
 if [ "$MODE" != "dev" ]; then
-  if [ "$REBUILD" = 1 ] || [ ! -f "$APP_DIR/dist/index.html" ]; then
+  # Stale check: any source newer than the bundle means it no longer shows the code.
+  STALE=""
+  if [ -f "$APP_DIR/dist/index.html" ]; then
+    STALE="$(find "$APP_DIR/src" "$APP_DIR/index.html" "$APP_DIR/package.json" -newer "$APP_DIR/dist/index.html" -print -quit 2>/dev/null)"
+  fi
+  if [ "$REBUILD" = 1 ] || [ ! -f "$APP_DIR/dist/index.html" ] || [ -n "$STALE" ]; then
+    [ -n "$STALE" ] && echo "· web bundle is older than ${STALE#$APP_DIR/}; rebuilding"
     echo "· building web bundle (vite)…"
     (cd "$APP_DIR" && npx tsc -b && npx vite build)
     printf '%s' "$TARGET" >"$TARGET_MARK"
