@@ -3,7 +3,7 @@ import { useCruxStore } from '@/stores/cruxStore';
 import { getServices, isServicesReady } from '@/services';
 import { formatBytes } from '@/lib/format';
 import type { StoreEntry } from '@/services/sqlite/store.service';
-import { alertDialog, confirmDialog } from '@/stores/dialogStore';
+import { alertDialog, choiceDialog, confirmDialog } from '@/stores/dialogStore';
 import {
   LOCAL_VISITOR,
   parseStoreExport,
@@ -104,26 +104,10 @@ export default function StorePane() {
     [crux?.id, loadLive],
   );
 
-  const handleClearLive = useCallback(async () => {
-    if (!crux?.id) return;
-    if (
-      !(await confirmDialog({
-        title: 'Clear the live store',
-        message:
-          "Delete everything visitors have written to the published crux? For 5Ws that is the leaderboard and everyone's daily records.",
-        confirmLabel: 'Clear live store',
-        danger: true,
-      }))
-    )
-      return;
-    await liveStore.clearLive(crux.id);
-    await loadLive();
-  }, [crux?.id, loadLive]);
-
   // ── Export / import: one JSON document, the same for local and live ──
   const fileInput = useRef<HTMLInputElement>(null);
   const handleExport = useCallback(async () => {
-    if (!crux?.id) return;
+    if (!crux?.id) return false;
     try {
       const doc = live
         ? await liveStore.exportLive(crux.id)
@@ -143,10 +127,43 @@ export default function StorePane() {
       a.download = storeExportFilename(crux.title, live);
       a.click();
       setTimeout(() => URL.revokeObjectURL(url), 1000);
+      return true;
     } catch (err) {
       await alertDialog((err as Error)?.message || 'Export failed', 'Could not export the store');
+      return false;
     }
   }, [crux?.id, crux?.title, live, entries]);
+
+  /** Clear confirmation with an "export a copy first" way out. True = go ahead. */
+  const confirmClear = useCallback(
+    async (title: string, message: string): Promise<boolean> => {
+      const { choice } = await choiceDialog({
+        title,
+        message: `${message} An export is the only way back.`,
+        choices: [
+          { id: 'clear', label: 'Clear without a copy', variant: 'danger' },
+          { id: 'export', label: 'Export a copy, then clear', variant: 'primary' },
+        ],
+      });
+      if (!choice) return false;
+      if (choice === 'export') return handleExport();
+      return true;
+    },
+    [handleExport],
+  );
+
+  const handleClearLive = useCallback(async () => {
+    if (!crux?.id) return;
+    if (
+      !(await confirmClear(
+        'Clear the live store',
+        "Delete everything visitors have written to the published crux? For 5Ws that is the leaderboard and everyone's daily records.",
+      ))
+    )
+      return;
+    await liveStore.clearLive(crux.id);
+    await loadLive();
+  }, [crux?.id, loadLive, confirmClear]);
 
   const handleImportFile = useCallback(
     async (file: File) => {
@@ -263,18 +280,11 @@ export default function StorePane() {
 
   const handleClearAll = useCallback(async () => {
     if (!crux?.id || !isServicesReady()) return;
-    if (
-      !(await confirmDialog({
-        message: 'Clear all store entries?',
-        confirmLabel: 'Clear all',
-        danger: true,
-      }))
-    )
-      return;
+    if (!(await confirmClear('Clear the store', 'Clear all store entries?'))) return;
     const { store } = getServices();
     await store.clear(crux.id);
     await loadEntries();
-  }, [crux?.id, loadEntries]);
+  }, [crux?.id, loadEntries, confirmClear]);
 
   const startEdit = (key: string, field: 'value') => {
     const entry = entries.find((e) => e.key === key);

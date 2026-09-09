@@ -2,11 +2,16 @@ import { useState, useRef, useCallback, useEffect } from 'react';
 import { useAppStore } from '@/stores/appStore';
 import { exportGarden, confirmAndImportGarden, wipeGarden } from '@/services/garden-io';
 import { Panel, Button } from '@/components/ui';
+import { choiceDialog } from '@/stores/dialogStore';
 import { cn } from '@/lib/cn';
 import { Capability, can } from '@/lib/platform';
 import { getGardenRoot, chooseGardenRoot, shortenHomePath } from '@/services/desktop';
 
 const WIPE_CONFIRMATION = 'delete me';
+/** An export this recent counts as "you have a copy" — the wipe skips the offer. */
+const RECENT_EXPORT_MS = 10 * 60 * 1000;
+/** When the garden was last exported in this session — survives Settings closing and reopening. */
+let lastGardenExportAt = 0;
 
 export default function DataSettings() {
   const [collapsed, setCollapsed] = useState(true);
@@ -45,9 +50,12 @@ export default function DataSettings() {
       URL.revokeObjectURL(url);
 
       setStatus('Export complete');
+      lastGardenExportAt = Date.now();
+      return true;
     } catch (err) {
       console.error('Garden export failed:', err);
       setError('Export failed');
+      return false;
       setStatus('');
     } finally {
       setExporting(false);
@@ -83,6 +91,21 @@ export default function DataSettings() {
   }, []);
 
   const handleWipe = useCallback(async () => {
+    // Guardrail: a wipe with no copy anywhere is the one thing nobody can undo.
+    // Unless a .garden export just happened, offer to make one on the way out.
+    if (Date.now() - lastGardenExportAt > RECENT_EXPORT_MS) {
+      const { choice } = await choiceDialog({
+        title: 'Wipe the garden',
+        message:
+          'Every crux, file, conversation and setting on this machine goes. A .garden file is the only way back — unless this garden is backed up at crux.garden.',
+        choices: [
+          { id: 'wipe', label: 'Wipe without a copy', variant: 'danger' },
+          { id: 'export', label: 'Export, then wipe', variant: 'primary' },
+        ],
+      });
+      if (!choice) return;
+      if (choice === 'export' && !(await handleExport())) return;
+    }
     setWiping(true);
     setError('');
     try {
@@ -104,7 +127,7 @@ export default function DataSettings() {
     } finally {
       setWiping(false);
     }
-  }, []);
+  }, [handleExport]);
 
   const busy = exporting || importing || wiping;
 

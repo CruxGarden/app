@@ -35,6 +35,12 @@ interface ModalProps {
   flush?: boolean;
 }
 
+/**
+ * Open modals, bottom to top. Only the topmost answers Escape — a confirm over
+ * Settings must not take Settings down with it.
+ */
+const openModals: symbol[] = [];
+
 export default function Modal({
   open,
   onClose,
@@ -48,16 +54,24 @@ export default function Modal({
 }: ModalProps) {
   useEffect(() => {
     if (!open) return;
+    const token = Symbol('modal');
+    openModals.push(token);
     const handler = (e: KeyboardEvent) => {
       if (e.key !== 'Escape') return;
+      if (openModals[openModals.length - 1] !== token) return;
       // This Escape belongs to the modal: don't let global shortcuts (Shell's
-      // Escape → Keeper console) also fire on the same keypress.
+      // Escape → Keeper console) or a modal underneath also fire on the same keypress.
       e.stopPropagation();
       e.preventDefault();
       onClose();
     };
-    document.addEventListener('keydown', handler);
-    return () => document.removeEventListener('keydown', handler);
+    // Capture phase on window: first to see the key, ahead of every other handler.
+    window.addEventListener('keydown', handler, true);
+    return () => {
+      window.removeEventListener('keydown', handler, true);
+      const i = openModals.indexOf(token);
+      if (i >= 0) openModals.splice(i, 1);
+    };
   }, [open, onClose]);
 
   // The Mood's dialog motion: enters on mount, plays the exit before unmount
