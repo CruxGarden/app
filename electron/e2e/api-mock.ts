@@ -36,7 +36,10 @@ export interface MockApi {
     billing: { planId: string; status: string; customer: boolean; checkouts: number };
     sync: {
       garden: { bytes: number; syncedAt: string; data?: Buffer } | null;
-      cruxes: Record<string, { bytes: number; title: string; slug: string; updatedAt: string }>;
+      cruxes: Record<
+        string,
+        { bytes: number; title: string; slug: string; updatedAt: string; data?: Buffer }
+      >;
       up: number;
       down: number;
     };
@@ -251,6 +254,9 @@ export async function startMockApi(): Promise<MockApi> {
       return send(200, { ...AUTHOR, ...bodyJson() });
     if (path.startsWith('/authors/') && path.endsWith('/avatar')) return send(200, AUTHOR);
 
+    // The account's cruxes (what publish upserted) — the Recover section reads this
+    if (path === '/cruxes' && method === 'GET') return send(200, Object.values(state.cruxes));
+
     if (path === '/cruxes' && method === 'POST') {
       const body = bodyJson();
       state.crux = {
@@ -417,6 +423,7 @@ export async function startMockApi(): Promise<MockApi> {
           title: fields.title || 'Untitled',
           slug: fields.slug || id,
           updatedAt: new Date().toISOString(),
+          data: files[0]!.bytes,
         };
         state.sync.cruxes[id] = entry;
         state.sync.up += bytes;
@@ -428,6 +435,12 @@ export async function startMockApi(): Promise<MockApi> {
           updatedAt: entry.updatedAt,
           size: bytes,
         });
+      }
+      if (method === 'GET') {
+        const entry = state.sync.cruxes[id];
+        if (!entry?.data) return send(404, { statusCode: 404, message: 'No synced crux' });
+        state.sync.down += entry.bytes;
+        return sendRaw(200, 'application/zip', entry.data);
       }
       if (method === 'DELETE') {
         delete state.sync.cruxes[id];

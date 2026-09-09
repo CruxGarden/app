@@ -7,10 +7,13 @@ import { useGardenStore } from '@/stores/gardenStore';
 import { APP_NAME } from '@/lib/constants';
 import { GardenGrid, GardenSearch } from '@/components/garden';
 import NewCruxModal from '@/components/garden/NewCruxModal';
+import RecoverSection from '@/components/garden/RecoverSection';
 import { openGardenPage } from '@/lib/public-url';
 import { IconButton, Modal, Button } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import { GlobeIcon, PlusCircleIcon } from '@/components/ui/icons';
+import { useAuthStore } from '@/stores/authStore';
+import * as cruxesApi from '@/api/cruxes';
 
 export default function HomeGarden() {
   const author = useAppStore((s) => s.author);
@@ -24,16 +27,22 @@ export default function HomeGarden() {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState('');
   const deletingCrux = deletingId ? cruxList.find((c) => c.id === deletingId) : null;
+  // A published crux deleted here would keep serving with nothing left to manage it
+  // (RESILIENCE-PLAN §3 scenario 3): offer to take it offline in the same breath.
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const deletingPublished = !!deletingCrux?.meta?.publishedAt && isAuthenticated;
+  const [alsoUnshare, setAlsoUnshare] = useState(true);
 
   const handleConfirmDelete = useCallback(async () => {
     if (!deletingId) return;
     try {
+      if (deletingPublished && alsoUnshare) await cruxesApi.unpublish(deletingId);
       await deleteCrux(deletingId);
       setDeletingId(null);
     } catch (error) {
       setDeleteError((error as Error).message);
     }
-  }, [deletingId, deleteCrux]);
+  }, [deletingId, deleteCrux, deletingPublished, alsoUnshare]);
 
   // Page title
   useEffect(() => {
@@ -123,6 +132,9 @@ export default function HomeGarden() {
         </div>
       </div>
 
+      {/* Cruxes the account has and this machine does not (RESILIENCE-PLAN §2c) */}
+      <RecoverSection />
+
       {/* Content */}
       {cruxList.length === 0 && search.length > 0 ? (
         <div className="bg-panel border border-border rounded-[var(--radius)] flex flex-col items-center py-10">
@@ -164,6 +176,20 @@ export default function HomeGarden() {
           <span className="text-text font-medium">{deletingCrux?.title || 'this crux'}</span>? This
           action cannot be undone
         </p>
+        {deletingPublished && (
+          <label className="flex items-start gap-2 text-xs text-text-muted mb-4 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={alsoUnshare}
+              onChange={(e) => setAlsoUnshare(e.target.checked)}
+              className="accent-accent mt-0.5"
+            />
+            <span>
+              Also take it offline. Untick to keep the published site up — it will then be listed
+              under “In your account, not on this machine”, where you can recover or unshare it.
+            </span>
+          </label>
+        )}
         {deleteError && (
           <p role="alert" className="text-sm text-error mb-3">
             {deleteError}

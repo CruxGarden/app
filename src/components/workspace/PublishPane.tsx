@@ -78,50 +78,59 @@ export default function PublishPane() {
       return true;
     } catch (err) {
       setBackupError(
-        `Backup failed — ${err instanceof Error ? err.message : 'could not reach crux.garden'}. Nothing was shared.`,
+        `Backup failed — ${err instanceof Error ? err.message : 'could not reach crux.garden'}. The share went through; try Back up now.`,
       );
       return false;
     } finally {
       setBackingUp(false);
     }
   }, [store]);
-  const ensureBackupBeforeShare = useCallback(async (): Promise<boolean> => {
+  /**
+   * What the share asks about backups: 'skip' (share only), 'backup' (share,
+   * then back up so the archive carries the publish facts), or null (stop).
+   */
+  const askAboutBackup = useCallback(async (): Promise<'skip' | 'backup' | null> => {
     const current = store.getState().crux;
-    if (!current) return false;
+    if (!current) return null;
     const always = getSetting(SettingsKey.BackupOnShare) === 'true';
-    const record = backupOf(current);
-    const behind = snapshotsBehind(current, store.getState().growthCount) ?? Infinity;
-    if (always) return behind === 0 ? true : runBackup();
-    if (record) return true; // backed up before; the pane shows how far behind
+    if (always) return 'backup';
+    if (backupOf(current)) return 'skip'; // backed up before; the pane shows how far behind
     const r = await choiceDialog({
       title: 'No backup on crux.garden',
       message:
-        'A published site is not a backup — it holds what visitors see, not this crux’s sources and history. If this machine is lost, they go with it. Back this crux up first?',
+        'A published site is not a backup — it holds what visitors see, not this crux’s sources and history. If this machine is lost, they go with it. Back this crux up as well?',
       choices: [
         { id: 'skip', label: 'Share without a backup', variant: 'ghost' },
         { id: 'backup', label: 'Back up and share' },
       ],
       checkbox: { label: 'Always back up when I share' },
     });
-    if (r.choice === null) return false;
+    if (r.choice === null) return null;
     if (r.checked) setSetting(SettingsKey.BackupOnShare, 'true');
-    if (r.choice === 'skip') return true;
-    return runBackup();
-  }, [runBackup, store]);
+    return r.choice === 'backup' ? 'backup' : 'skip';
+  }, [store]);
 
   const doPublish = useCallback(async () => {
     if (!crux) return;
     const currentAuthor = useAppStore.getState().author;
     if (!currentAuthor) return;
 
-    if (!(await ensureBackupBeforeShare())) return;
+    const backup = await askAboutBackup();
+    if (backup === null) return;
     setPublishing(true);
+    let ok: boolean;
     try {
-      await publishCrux(); // records its own outcome in the store
+      ok = await publishCrux(); // records its own outcome in the store
     } finally {
       setPublishing(false);
     }
-  }, [crux, publishCrux, ensureBackupBeforeShare]);
+    // After the publish, so the archive carries publishedAt and the fingerprints;
+    // and only when the share itself worked.
+    if (ok && backup === 'backup') {
+      const behind = snapshotsBehind(store.getState().crux, store.getState().growthCount);
+      if (behind !== 0 || !backupOf(store.getState().crux)) await runBackup();
+    }
+  }, [crux, publishCrux, askAboutBackup, runBackup, store]);
 
   const handlePublish = useCallback(() => {
     if (!isAuthenticated) {
