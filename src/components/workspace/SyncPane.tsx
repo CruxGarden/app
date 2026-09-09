@@ -3,9 +3,11 @@ import { useCruxStore, useCruxStoreApi } from '@/stores/cruxStore';
 import { useAuthStore } from '@/stores/authStore';
 import { importCrux } from '@/services/crux-io';
 import { backupCrux, backupOf } from '@/services/backup';
+import { cruxesChangedSince } from '@/services/drift';
 import { isAutoBackupOn, autoBackupPause, AUTO_BACKUP_CHANGED } from '@/services/auto-backup';
 import * as syncApi from '@/api/sync';
 import { formatBytes, formatDateTime } from '@/lib/format';
+import * as usageApi from '@/api/usage';
 import { usePaneWidth } from '@/hooks/usePaneWidth';
 import ConnectAccount from '@/components/auth/ConnectAccount';
 import { PaneEmpty, PaneSection, PaneAction, PaneNote, PaneHint } from './pane-ui';
@@ -68,6 +70,19 @@ export default function SyncPane() {
   const [error, setError] = useState('');
   const [lastSynced, setLastSynced] = useState<{ at: string; size: number } | null>(null);
   const [autoNote, setAutoNote] = useState(() => autoBackupLine());
+  // Scenario 8: say where the plan stands before a push fails on it
+  const [budget, setBudget] = useState<usageApi.BudgetLine | null>(null);
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    let cancelled = false;
+    usageApi
+      .me()
+      .then((u) => !cancelled && setBudget(u.budgets.storage))
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [isAuthenticated, lastSynced]);
   useEffect(() => {
     const sync = () => setAutoNote(autoBackupLine());
     window.addEventListener(AUTO_BACKUP_CHANGED, sync);
@@ -113,18 +128,29 @@ export default function SyncPane() {
     }
   }, [crux, store]);
 
+  const growthCount = useCruxStore((s) => s.growthCount);
   const handlePull = useCallback(async () => {
     if (!crux) return;
+    // Scenario 6: never quietly overwrite work done here since the last push
+    const local = backupOf(crux);
+    const behind = local ? Math.max(0, growthCount - local.growthCount) : null;
+    const editedSince = local
+      ? (await cruxesChangedSince([crux], local.at, 1_000)).length > 0
+      : true;
+    const changedHere = local === null || (behind ?? 0) > 0 || editedSince;
     if (
       !(await confirmDialog({
         title: 'Pull from cloud',
-        message: 'Pull will replace this crux with the cloud version. Continue?',
-        confirmLabel: 'Pull',
+        message: changedHere
+          ? local
+            ? `This crux changed here after its last push${behind ? ` — ${behind} snapshot${behind === 1 ? '' : 's'}` : ''}. Pull replaces those changes with the cloud copy. Push first if you want to keep them.`
+            : 'This machine never pushed this crux, so the cloud copy is not its backup. Pull replaces everything here with it.'
+          : 'Pull will replace this crux with the cloud version. Continue?',
+        confirmLabel: changedHere ? 'Pull anyway' : 'Pull',
         danger: true,
       }))
     )
       return;
-
     setPulling(true);
     setError('');
     setProgress('Downloading from cloud...');
@@ -150,7 +176,7 @@ export default function SyncPane() {
       setProgress('');
       setPulling(false);
     }
-  }, [crux]);
+  }, [crux, growthCount]);
 
   const busy = pushing || pulling;
 
@@ -206,6 +232,18 @@ export default function SyncPane() {
                   </div>
                 ) : null;
               })()}
+            {budget && budget.limit > 0 && budget.used / budget.limit >= 0.8 && (
+              <div data-testid="sync-budget" className="mt-1.5">
+                <PaneNote
+                  tone={budget.over ? 'error' : 'muted'}
+                  className="text-left whitespace-normal"
+                >
+                  {budget.over
+                    ? `Storage is over your plan (${formatBytes(budget.used)} of ${formatBytes(budget.limit)}) — pushes are refused above twice the limit. Free up space or upgrade in Settings → Plan.`
+                    : `Storage is at ${Math.round((budget.used / budget.limit) * 100)}% of your plan.`}
+                </PaneNote>
+              </div>
+            )}
             {autoNote && (
               <div data-testid="sync-auto-note" className="mt-1.5">
                 <PaneNote tone={autoNote.tone} className="text-left">

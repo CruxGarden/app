@@ -50,6 +50,12 @@ test.describe('links out of the app', () => {
       await page.getByRole('button', { name: 'Send Code' }).click();
       await page.getByPlaceholder('Enter code').fill('123456');
       await page.getByRole('button', { name: 'Connect', exact: true }).click();
+      // the first share asks about a backup (RESILIENCE-PLAN §2b); not what this spec is about
+      const backupAsk = page
+        .getByRole('dialog')
+        .filter({ hasText: 'A published site is not a backup' });
+      await expect(backupAsk).toBeVisible({ timeout: 30_000 });
+      await backupAsk.getByRole('button', { name: 'Share without a backup' }).click();
       await expect(page.getByText('Up to date')).toBeVisible({ timeout: 30_000 });
 
       // Share pane → Open

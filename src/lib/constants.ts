@@ -62,6 +62,8 @@ export enum SettingsKey {
   MoodPackages = 'cruxgarden:moodPackages',
   /** Back a crux up to crux.garden whenever it is shared ('true'); set from the share-time prompt */
   BackupOnShare = 'cruxgarden:backupOnShare',
+  /** The crux.garden account id this garden was last connected to (kept across log-outs) */
+  ConnectedAccountId = 'cruxgarden:connectedAccountId',
   /** Automatic backup: quiet cruxes and the garden once a day ('true') */
   AutoBackup = 'cruxgarden:autoBackup',
   /** Why automatic backups are paused (a plan limit), or '' */
