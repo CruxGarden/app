@@ -3,7 +3,14 @@ import { useAuthStore } from '@/stores/authStore';
 import { useAppStore } from '@/stores/appStore';
 import * as syncApi from '@/api/sync';
 import { exportGarden, confirmAndImportGarden } from '@/services/garden-io';
-import { Panel, Spinner, Button } from '@/components/ui';
+import { Panel, Spinner, Button, Toggle } from '@/components/ui';
+import {
+  isAutoBackupOn,
+  setAutoBackup,
+  autoBackupPause,
+  lastGardenBackupAt,
+  AUTO_BACKUP_CHANGED,
+} from '@/services/auto-backup';
 import { cn } from '@/lib/cn';
 
 const ChevronIcon = ({ collapsed }: { collapsed: boolean }) => (
@@ -30,6 +37,19 @@ export default function SyncSettings() {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
 
   const [gardenStatus, setGardenStatus] = useState<GardenStatus | null>(null);
+  // Automatic backup (RESILIENCE-PLAN §2a): the setting, and what it last did
+  const [auto, setAuto] = useState(() => isAutoBackupOn());
+  const [autoPause, setAutoPause] = useState<string | null>(() => autoBackupPause());
+  const [autoLast, setAutoLast] = useState<string | null>(() => lastGardenBackupAt());
+  useEffect(() => {
+    const sync = () => {
+      setAuto(isAutoBackupOn());
+      setAutoPause(autoBackupPause());
+      setAutoLast(lastGardenBackupAt());
+    };
+    window.addEventListener(AUTO_BACKUP_CHANGED, sync);
+    return () => window.removeEventListener(AUTO_BACKUP_CHANGED, sync);
+  }, []);
   const [syncedCruxes, setSyncedCruxes] = useState<SyncedCrux[]>([]);
   const [collapsed, setCollapsed] = useState(true);
   const [loading, setLoading] = useState(true);
@@ -161,6 +181,40 @@ export default function SyncSettings() {
 
       {!collapsed && (
         <div className="mt-5">
+          {/* Automatic backup */}
+          <div
+            className="flex items-start justify-between gap-4 mb-4 pb-4 border-b border-border"
+            data-testid="auto-backup"
+          >
+            <div className="min-w-0">
+              <p className="text-sm text-text">Back up my garden to crux.garden automatically</p>
+              <p className="text-xs text-text-muted mt-0.5">
+                A crux is backed up ten minutes after it goes quiet, the whole garden once a day,
+                and every crux you share. A published site is not a backup — this is.
+              </p>
+              {auto && autoPause && (
+                <p
+                  role="alert"
+                  className="text-xs text-error mt-1.5"
+                  data-testid="auto-backup-paused"
+                >
+                  Paused — {autoPause} Switch it off and on to try again.
+                </p>
+              )}
+              {auto && !autoPause && (
+                <p
+                  className="text-xs text-text-muted mt-1.5 font-mono"
+                  data-testid="auto-backup-status"
+                >
+                  {autoLast
+                    ? `Garden backed up ${formatDateTime(autoLast)}`
+                    : 'On — the first garden backup runs shortly'}
+                </p>
+              )}
+            </div>
+            <Toggle checked={auto} onChange={(on) => setAutoBackup(on)} label="Automatic backup" />
+          </div>
+
           {/* Garden backup */}
           <h3 className="text-xs font-mono text-text-muted mb-2 uppercase tracking-wider">
             Garden Backup

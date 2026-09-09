@@ -109,3 +109,9 @@ export function can(capability: Capability): boolean {
 export function isAiMock(): boolean {
   return !!bridge()?.test?.aiMock;
 }
+
+/** e2e only: CRUX_AUTOBACKUP_QUIET_MS shortens automatic backup's quiet window. */
+export function autoBackupQuietMsKnob(): number | null {
+  const v = bridge()?.test?.autoBackupQuietMs;
+  return typeof v === 'number' && v > 0 ? v : null;
+}

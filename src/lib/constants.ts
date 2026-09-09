@@ -62,6 +62,12 @@ export enum SettingsKey {
   MoodPackages = 'cruxgarden:moodPackages',
   /** Back a crux up to crux.garden whenever it is shared ('true'); set from the share-time prompt */
   BackupOnShare = 'cruxgarden:backupOnShare',
+  /** Automatic backup: quiet cruxes and the garden once a day ('true') */
+  AutoBackup = 'cruxgarden:autoBackup',
+  /** Why automatic backups are paused (a plan limit), or '' */
+  AutoBackupPaused = 'cruxgarden:autoBackupPaused',
+  /** ISO time of the last automatic garden backup */
+  LastGardenBackupAt = 'cruxgarden:lastGardenBackupAt',
   /** The Mood Package last applied in the app (bundled or installed id); the Gateway wears it before services init */
   WornMoodId = 'cruxgarden:wornMoodId',
   /** The bundled Mood the public website wears (localStorage; The Keeper until the visitor picks another) */
