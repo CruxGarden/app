@@ -40,7 +40,8 @@ test.describe('publish (mocked API)', () => {
       await page.getByPlaceholder('Enter code').fill('123456');
       await page.getByRole('button', { name: 'Connect', exact: true }).click();
       // A published site is not a backup: the first share asks, and "Back up and
-      // share" pushes the crux archive before publishing (RESILIENCE-PLAN §2b)
+      // share" publishes, then pushes the crux archive — which then carries the
+      // publish facts (RESILIENCE-PLAN §2b)
       const backupAsk = page
         .getByRole('dialog')
         .filter({ hasText: 'A published site is not a backup' });
@@ -49,10 +50,12 @@ test.describe('publish (mocked API)', () => {
 
       // Connecting continues straight into the publish (create path)
       await expect(page.getByText('Up to date')).toBeVisible({ timeout: 30_000 });
+      await expect
+        .poll(() => api.log.findIndex((l) => l.startsWith('PUT /sync/crux/')), { timeout: 30_000 })
+        .toBeGreaterThan(-1);
       const pushAt = api.log.findIndex((l) => l.startsWith('PUT /sync/crux/'));
       const publishAt = api.log.findIndex((l) => l.includes('/publish -> 200'));
-      expect(pushAt).toBeGreaterThan(-1);
-      expect(publishAt).toBeGreaterThan(pushAt);
+      expect(pushAt).toBeGreaterThan(publishAt);
       // backed up at the shared snapshot: the pane has nothing to say about the backup
       await expect(page.getByTestId('backup-standing')).toHaveCount(0);
       await expect(page.getByText('v1', { exact: true })).toBeVisible();
