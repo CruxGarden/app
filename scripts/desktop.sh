@@ -71,8 +71,11 @@ if [ -f "$TARGET_MARK" ] && [ "$(cat "$TARGET_MARK")" != "$TARGET" ]; then
 fi
 
 # ── Dependencies (first run) ─────────────────────────────────────────────────
-[ -d "$APP_DIR/node_modules" ]      || (cd "$APP_DIR" && npm install)
-[ -d "$ELECTRON_DIR/node_modules" ] || (cd "$ELECTRON_DIR" && npm install)
+# Install when node_modules is missing OR the lockfile moved past it (a pull
+# that added a dependency used to fail at launch with "Cannot find package").
+needs_install() { [ ! -d "$1/node_modules" ] || [ "$1/package-lock.json" -nt "$1/node_modules/.package-lock.json" ]; }
+needs_install "$APP_DIR"      && (cd "$APP_DIR" && echo "· npm install (app)" && npm install)
+needs_install "$ELECTRON_DIR" && (cd "$ELECTRON_DIR" && echo "· npm install (electron)" && npm install)
 
 # ── Web bundle (skipped in --dev; Vite serves it live) ───────────────────────
 if [ "$MODE" != "dev" ]; then
