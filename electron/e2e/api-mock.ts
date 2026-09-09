@@ -773,10 +773,19 @@ export async function startMockApi(opts: { port?: number } = {}): Promise<MockAp
           hostname,
           status: 'pending_dns',
           error: null as string | null,
-          records: [
-            { type: 'CNAME', name: hostname, value: 'publish.crux.garden' },
-            { type: 'TXT', name: `_crux-verify.${hostname}`, value: 'crux-verify=abc123' },
-          ],
+          // A bare domain cannot carry a CNAME: like the API, point the apex at the gate
+          // with ALIAS, put the site on www, and prove ownership with the TXT.
+          records:
+            hostname.split('.').length === 2
+              ? [
+                  { type: 'ALIAS', name: hostname, value: 'gate.crux.garden' },
+                  { type: 'CNAME', name: `www.${hostname}`, value: 'gate.crux.garden' },
+                  { type: 'TXT', name: `_crux-verify.${hostname}`, value: 'crux-verify=abc123' },
+                ]
+              : [
+                  { type: 'CNAME', name: hostname, value: 'publish.crux.garden' },
+                  { type: 'TXT', name: `_crux-verify.${hostname}`, value: 'crux-verify=abc123' },
+                ],
           created: new Date().toISOString(),
           updated: new Date().toISOString(),
           verifies: 0,

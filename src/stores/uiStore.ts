@@ -775,6 +775,18 @@ export function createUIStore(cruxId?: string) {
         if (existing) {
           return { editor: { ...s.editor, activeTabId: id } };
         }
+        // Same path, new artifact id (a snapshot viewed, a revert, a branch):
+        // the tab is the same tab — re-point it rather than opening a twin.
+        const samePath = s.editor.tabs.find((t) => t.path === path);
+        if (samePath) {
+          return {
+            editor: {
+              ...s.editor,
+              tabs: s.editor.tabs.map((t) => (t === samePath ? { ...t, id, dirty: false } : t)),
+              activeTabId: id,
+            },
+          };
+        }
         const tab: EditorTab = {
           id,
           path,

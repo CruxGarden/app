@@ -413,7 +413,7 @@ export default function ArtifactsPane() {
         file: f,
         path: parentPath ? `${parentPath}/${f.name}` : f.name,
       }));
-      if (!confirmOverwrite(entries)) {
+      if (!(await confirmOverwrite(entries))) {
         e.target.value = '';
         return;
       }
@@ -439,7 +439,7 @@ export default function ArtifactsPane() {
           ? `${parentPath}/${f.webkitRelativePath || f.name}`
           : f.webkitRelativePath || f.name,
       }));
-      if (!confirmOverwrite(entries)) {
+      if (!(await confirmOverwrite(entries))) {
         e.target.value = '';
         return;
       }
@@ -500,7 +500,7 @@ export default function ArtifactsPane() {
           fileEntries.push(...(await walkEntry(entry, '')));
         }
         if (fileEntries.length > 0) {
-          if (!confirmOverwrite(fileEntries)) return;
+          if (!(await confirmOverwrite(fileEntries))) return;
           await uploadFiles(fileEntries);
           closeFoldersFromPaths(fileEntries.map((e) => e.path));
           return;
@@ -510,7 +510,7 @@ export default function ArtifactsPane() {
       const files = Array.from(e.dataTransfer.files);
       if (files.length > 0) {
         const fileEntries = files.map((f) => ({ file: f, path: f.name }));
-        if (!confirmOverwrite(fileEntries)) return;
+        if (!(await confirmOverwrite(fileEntries))) return;
         await uploadFiles(fileEntries);
         closeFoldersFromPaths(fileEntries.map((e) => e.path));
       }

@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useCruxStore } from '@/stores/cruxStore';
 import { cn } from '@/lib/cn';
 import { confirmDialog } from '@/stores/dialogStore';
@@ -8,6 +9,11 @@ export default function SnapshotBanner() {
   const growths = useCruxStore((s) => s.growths);
   const exitSnapshotView = useCruxStore((s) => s.exitSnapshotView);
   const revertToSnapshot = useCruxStore((s) => s.revertToSnapshot);
+  const branchFromSnapshot = useCruxStore((s) => s.branchFromSnapshot);
+  // Branch: the same action the collaborator's `branch` tool has — every AI
+  // control has a UI control. A label, then the workspace continues from here.
+  const [branching, setBranching] = useState(false);
+  const [branchLabel, setBranchLabel] = useState('');
 
   if (viewingSnapshotId === null || viewingSnapshotIndex === null) return null;
 
@@ -25,6 +31,13 @@ export default function SnapshotBanner() {
     ) {
       await revertToSnapshot(viewingSnapshotId);
     }
+  };
+
+  const handleBranch = async () => {
+    const label = branchLabel.trim() || `Branch from snapshot ${viewingSnapshotIndex + 1}`;
+    setBranching(false);
+    setBranchLabel('');
+    await branchFromSnapshot(viewingSnapshotId, label);
   };
 
   const btnClass = cn(
@@ -53,6 +66,36 @@ export default function SnapshotBanner() {
         <span className="text-2xs text-text-muted">read-only</span>
       </div>
       <div className="flex items-center gap-1.5">
+        {branching ? (
+          <>
+            <input
+              autoFocus
+              aria-label="Branch label"
+              value={branchLabel}
+              onChange={(e) => setBranchLabel(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') void handleBranch();
+                if (e.key === 'Escape') {
+                  setBranching(false);
+                  setBranchLabel('');
+                }
+              }}
+              placeholder="Branch label (optional)"
+              className="h-6 w-44 px-2 text-xxs font-body rounded-[var(--radius-sm)] bg-surface border border-border text-text placeholder:text-text-muted focus:outline-none focus:border-input-border-active"
+            />
+            <button onClick={() => void handleBranch()} className={btnClass}>
+              Create branch
+            </button>
+          </>
+        ) : (
+          <button
+            onClick={() => setBranching(true)}
+            className={btnClass}
+            title="Continue from this snapshot on a new line of history"
+          >
+            Branch
+          </button>
+        )}
         <button onClick={handleRevert} className={btnClass}>
           Revert
         </button>

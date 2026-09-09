@@ -1,3 +1,4 @@
+import { isAiMock } from '@/lib/platform';
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { cn } from '@/lib/cn';
 import type { ChatMessage } from '@/api/types';
@@ -272,7 +273,8 @@ export default function Console() {
     if (!trimmed || streaming) return;
 
     const providerId = getProviderForModel(model);
-    const apiKey = await getApiKey(providerId);
+    // Under the e2e mock model no provider key is needed (as in services/turns.ts)
+    const apiKey = (await getApiKey(providerId)) ?? (isAiMock() ? 'mock' : null);
     if (!apiKey) {
       setError(`No API key for ${providerId}. Add one in Settings to chat with The Keeper.`);
       return;
