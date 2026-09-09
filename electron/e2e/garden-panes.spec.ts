@@ -132,6 +132,7 @@ test.describe('home garden, crux picker, panes, console', () => {
       await expect(page.getByRole('button', { name: 'Open Gamma Moss' })).toHaveCount(0, {
         timeout: 15_000,
       });
+      await expect(page.getByTestId('trash-section')).toContainText('Gamma Moss'); // in the Trash, not gone
       await expect(cards(page)).toHaveCount(2);
     } finally {
       await app.close();

@@ -61,6 +61,20 @@ test.describe('recover (mocked API)', () => {
       await expect(page.getByRole('heading', { name: 'Delete Crux' })).toBeVisible();
       await page.getByRole('checkbox', { name: /Also take it offline/ }).uncheck(); // keep the site
       await page.getByRole('button', { name: 'Delete', exact: true }).click();
+      // It lands in the Trash first — still on this machine, so not recoverable yet
+      const trashRow = page
+        .getByTestId('trash-section')
+        .locator('li')
+        .filter({ hasText: 'My Crux' });
+      await expect(trashRow).toBeVisible({ timeout: 15_000 });
+      await expect(trashRow).toContainText('still published');
+      await expect(page.getByTestId('recover-section')).toHaveCount(0);
+      await trashRow.getByRole('button', { name: 'Delete forever' }).click();
+      await page
+        .getByRole('dialog')
+        .filter({ hasText: 'for good' })
+        .getByRole('button', { name: 'Delete forever' })
+        .click();
       await expect(page.getByTestId('recover-section')).toBeVisible({ timeout: 30_000 });
       expect(api.state.published[cruxId]).toBeTruthy(); // still published
       const row = page.getByTestId('recover-section').locator('li').first();

@@ -23,6 +23,7 @@ export default function RecoverSection() {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const author = useAppStore((s) => s.author);
   const allCruxes = useGardenStore((s) => s.allCruxes);
+  const trashed = useGardenStore((s) => s.trashed);
   const refresh = useGardenStore((s) => s.refresh);
   const [rows, setRows] = useState<CloudOnlyCrux[] | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
@@ -35,11 +36,11 @@ export default function RecoverSection() {
       return;
     }
     try {
-      setRows(await listCloudOnlyCruxes(new Set(allCruxes.map((c) => c.id))));
+      setRows(await listCloudOnlyCruxes(new Set([...allCruxes, ...trashed].map((c) => c.id))));
     } catch {
       setRows(null); // the account could not be read; the section simply stays away
     }
-  }, [isAuthenticated, allCruxes]);
+  }, [isAuthenticated, allCruxes, trashed]);
   useEffect(() => {
     void load();
   }, [load]);

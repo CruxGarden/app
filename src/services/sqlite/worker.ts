@@ -243,6 +243,17 @@ async function migrate(): Promise<void> {
     await exec(`CREATE INDEX IF NOT EXISTS idx_store_crux ON store(crux_id)`);
     await run('UPDATE schema_version SET version = 3');
   }
+
+  // v3 → v4: cruxes.deleted — the Trash. Deleting a crux stamps this column;
+  // the row and its files stay until the user empties it or 30 days pass.
+  const v4Row = await get('SELECT version FROM schema_version');
+  const v4Version = v4Row ? (v4Row.version as number) : 0;
+  if (v4Version < 4) {
+    const cols = await all("PRAGMA table_info('cruxes')");
+    if (!cols.some((c) => c.name === 'deleted'))
+      await exec('ALTER TABLE cruxes ADD COLUMN deleted TEXT');
+    await run('UPDATE schema_version SET version = 4');
+  }
 }
 
 // ── SQL execution helpers ──────────────────────────────

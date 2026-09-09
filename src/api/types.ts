@@ -101,6 +101,8 @@ export interface Crux {
   meta?: CruxMeta;
   created: string;
   updated: string;
+  /** Set while the crux sits in the Trash (local gardens only). */
+  deleted?: string | null;
 }
 
 export type CruxKind = 'webapp' | 'page' | 'document' | 'image' | 'snapshot' | 'notes' | 'mood';
