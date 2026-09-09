@@ -27,7 +27,7 @@ export default function DialogHost() {
   if (req.kind === 'choice') {
     const choices = req.choices ?? [];
     return (
-      <Modal open onClose={cancel} size="sm" title={req.title ?? 'Which way?'}>
+      <Modal open onClose={cancel} size="sm" layer="top" title={req.title ?? 'Which way?'}>
         <div role="dialog" className="flex flex-col gap-4">
           <p className="text-sm text-text whitespace-pre-line">{req.message}</p>
           {req.checkbox && (
@@ -64,6 +64,7 @@ export default function DialogHost() {
       open
       onClose={cancel}
       size="sm"
+      layer="top"
       title={req.title ?? (req.kind === 'alert' ? 'Notice' : 'Are you sure?')}
     >
       <div role={req.kind === 'alert' ? 'alertdialog' : 'dialog'} className="flex flex-col gap-4">

@@ -76,8 +76,11 @@ export default function ConnectAccount({
       setCode('');
       setCodeSent(false);
       onConnected?.();
-    } catch {
-      setError('Invalid code or connection failed');
+    } catch (err) {
+      // A deliberate refusal (a different account than this garden's) says why;
+      // anything else is the code or the connection.
+      const msg = err instanceof Error ? err.message : '';
+      setError(msg.startsWith('Not connected') ? msg : 'Invalid code or connection failed');
     } finally {
       setConnecting(false);
     }

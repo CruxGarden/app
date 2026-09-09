@@ -25,6 +25,12 @@ interface ModalProps {
   title?: string;
   /** Subtitle displayed below the title */
   subtitle?: string;
+  /**
+   * Stacking layer. App-level confirm/alert/choice dialogs (DialogHost) use
+   * 'top' so they sit above whatever modal asked the question — Settings,
+   * a pull, a delete — and stay clickable.
+   */
+  layer?: 'base' | 'top';
   /** Remove inner content padding (e.g. for edge-to-edge layouts) */
   flush?: boolean;
 }
@@ -37,6 +43,7 @@ export default function Modal({
   size = 'md',
   title,
   subtitle,
+  layer = 'base',
   flush,
 }: ModalProps) {
   useEffect(() => {
@@ -60,7 +67,10 @@ export default function Modal({
   return (
     <div
       data-modal-open={open || undefined}
-      className="fixed inset-0 z-50 flex items-center justify-center"
+      className={cn(
+        'fixed inset-0 flex items-center justify-center',
+        layer === 'top' ? 'z-[70]' : 'z-50',
+      )}
     >
       <div className="absolute inset-0 modal-scrim" onClick={onClose} />
       <Panel

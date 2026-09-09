@@ -196,7 +196,48 @@ export const useAuthStore = create<AuthState>((set) => ({
 
     // Reconcile local author ID with API author
     let author: Author | null = profile.author ?? null;
-    const localAuthor = useAppStore.getState().author;
+    // After a log-out the in-memory author is null, but the garden still has
+    // its author row (and the account it was connected to): read it back, or
+    // a second account would take the garden over without a word.
+    let localAuthor = useAppStore.getState().author;
+    if (!localAuthor) {
+      try {
+        const { getSetting } = await import('@/services/settings');
+        const { SettingsKey } = await import('@/lib/constants');
+        const id = getSetting(SettingsKey.LocalAuthorId);
+        if (id) localAuthor = await (await import('@/services')).getServices().author.findById(id);
+      } catch {
+        /* no local author yet */
+      }
+    }
+
+    // RESILIENCE-PLAN §3 scenario 7: this garden was connected to another
+    // account before (remembered in settings across log-outs; the author row
+    // carries it too). Publishing under a different account is not something
+    // to slide into: ask.
+    const { getSetting, setSetting } = await import('@/services/settings');
+    const { SettingsKey: Keys } = await import('@/lib/constants');
+    const previousAccount =
+      getSetting(Keys.ConnectedAccountId) ||
+      (localAuthor?.accountId && !localAuthor.accountId.startsWith('local-')
+        ? localAuthor.accountId
+        : null);
+    if (previousAccount && previousAccount !== profile.id) {
+      const { choiceDialog } = await import('./dialogStore');
+      const r = await choiceDialog({
+        title: 'A different account',
+        message: `This garden was connected to another crux.garden account${localAuthor ? ` as ${localAuthor.username}` : ''}. You signed in as ${profile.email}. Switch the garden to this account? Its cruxes will publish under it from now on, and the other account keeps whatever it already has.`,
+        choices: [
+          { id: 'stay', label: 'Stay disconnected', variant: 'ghost' },
+          { id: 'switch', label: 'Switch this garden' },
+        ],
+      });
+      if (r.choice !== 'switch') {
+        clearTokens();
+        set({ account: null, isAuthenticated: false });
+        throw new Error('Not connected — this garden belongs to a different account.');
+      }
+    }
 
     if (profile.author && localAuthor) {
       if (localAuthor.id !== profile.author.id) {
@@ -220,6 +261,7 @@ export const useAuthStore = create<AuthState>((set) => ({
       }
     }
 
+    setSetting(Keys.ConnectedAccountId, profile.id);
     set({
       account: profile,
       isAuthenticated: true,

@@ -34,6 +34,10 @@ export interface MockApi {
     published: Record<string, PublishedFile[]>;
     /** Answer every sync push with 402 (over the plan's storage) */
     syncOverLimit?: boolean;
+    /** Extra bytes counted against the storage budget (usage/me) */
+    storageUsedBytes?: number;
+    /** The email of the last login; other@example.com is a second account */
+    loginEmail?: string;
     /** Sync store: garden backup + synced crux archives, and transfer this period */
     billing: { planId: string; status: string; customer: boolean; checkouts: number };
     sync: {
@@ -238,18 +242,32 @@ export async function startMockApi(): Promise<MockApi> {
     }
 
     if (path === '/auth/code' && method === 'POST') return send(200, { message: 'sent' });
-    if (path === '/auth/login' && method === 'POST')
+    if (path === '/auth/login' && method === 'POST') {
+      state.loginEmail = String(bodyJson().email ?? 'tester@example.com');
       return send(200, { accessToken: 'test-access', refreshToken: 'test-refresh' });
-    if (path === '/auth/profile' && method === 'GET')
+    }
+    if (path === '/auth/profile' && method === 'GET') {
+      // other@example.com is a second account with its own author (two-machines.spec)
+      const other = state.loginEmail === 'other@example.com';
+      const author = other
+        ? {
+            ...AUTHOR,
+            id: 'author-api-2',
+            username: 'other',
+            displayName: 'Other',
+            accountId: 'acct-2',
+          }
+        : AUTHOR;
       return send(200, {
-        id: 'acct-1',
-        email: 'tester@example.com',
+        id: other ? 'acct-2' : 'acct-1',
+        email: state.loginEmail ?? 'tester@example.com',
         role: 'author',
         homeId: 'home-1',
         created: AUTHOR.created,
         updated: AUTHOR.updated,
-        author: AUTHOR,
+        author,
       });
+    }
     if (path === '/auth/logout') return send(200, {});
     if (path === '/authors/check-username') return send(200, { available: true });
     if (path.startsWith('/authors/') && method === 'PATCH')
@@ -542,7 +560,10 @@ export async function startMockApi(): Promise<MockApi> {
         budgets: {
           storage: budget(
             1073741824,
-            publish.storageBytes + sync.storageBytes + store.storageBytes,
+            publish.storageBytes +
+              sync.storageBytes +
+              store.storageBytes +
+              (state.storageUsedBytes ?? 0),
           ),
           bandwidth: budget(1073741824, publish.bandwidthBytes + sync.transferBytes),
           storeRequests: budget(100000, store.requests),

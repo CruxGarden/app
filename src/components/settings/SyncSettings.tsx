@@ -32,11 +32,15 @@ import type { GardenStatus, SyncedCrux } from '@/api/sync';
 import { formatBytes, formatDateTime } from '@/lib/format';
 import { confirmDialog } from '@/stores/dialogStore';
 import { notifyUsageChanged } from '@/lib/usage-events';
+import { useGardenStore } from '@/stores/gardenStore';
+import { cruxesChangedSince } from '@/services/drift';
+import * as usageApi from '@/api/usage';
 
 export default function SyncSettings() {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
 
   const [gardenStatus, setGardenStatus] = useState<GardenStatus | null>(null);
+  const [budget, setBudget] = useState<usageApi.BudgetLine | null>(null);
   // Automatic backup (RESILIENCE-PLAN §2a): the setting, and what it last did
   const [auto, setAuto] = useState(() => isAutoBackupOn());
   const [autoPause, setAutoPause] = useState<string | null>(() => autoBackupPause());
@@ -79,6 +83,17 @@ export default function SyncSettings() {
   useEffect(() => {
     if (isAuthenticated) refresh();
   }, [isAuthenticated, refresh]);
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    let cancelled = false;
+    usageApi
+      .me()
+      .then((u) => !cancelled && setBudget(u.budgets.storage))
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [isAuthenticated, gardenStatus]);
 
   if (!isAuthenticated) return null;
 
@@ -103,6 +118,30 @@ export default function SyncSettings() {
   };
 
   const handlePull = async () => {
+    // Scenario 6: cruxes changed here after the cloud copy was made would be
+    // overwritten by a whole-garden pull. Name them; make it a choice.
+    if (gardenStatus) {
+      const changed = await cruxesChangedSince(
+        useGardenStore.getState().allCruxes,
+        gardenStatus.syncedAt,
+      );
+      if (changed.length) {
+        const names = changed
+          .slice(0, 5)
+          .map((c) => c.title || c.slug)
+          .join(', ');
+        const more = changed.length > 5 ? ` and ${changed.length - 5} more` : '';
+        if (
+          !(await confirmDialog({
+            title: 'Newer work on this machine',
+            message: `${changed.length} crux${changed.length === 1 ? '' : 'es'} changed here after the cloud backup was made: ${names}${more}. Pulling the garden replaces them with the older copies. Push the garden first if you want to keep them.`,
+            confirmLabel: 'Pull anyway',
+            danger: true,
+          }))
+        )
+          return;
+      }
+    }
     setPulling(true);
     setError('');
     setStatus('Downloading from cloud...');
@@ -224,6 +263,17 @@ export default function SyncSettings() {
             <p className="text-xs text-text-muted mb-3">
               Last pushed: {formatDateTime(gardenStatus.syncedAt)} ({formatBytes(gardenStatus.size)}
               )
+            </p>
+          )}
+          {budget && budget.limit > 0 && budget.used / budget.limit >= 0.8 && (
+            <p
+              role={budget.over ? 'alert' : undefined}
+              className={cn('text-xs mb-3', budget.over ? 'text-error' : 'text-text-muted')}
+              data-testid="settings-sync-budget"
+            >
+              {budget.over
+                ? `Storage is over your plan (${formatBytes(budget.used)} of ${formatBytes(budget.limit)}) — pushes are refused above twice the limit.`
+                : `Storage is at ${Math.round((budget.used / budget.limit) * 100)}% of your plan — a push may soon be refused.`}
             </p>
           )}
 
