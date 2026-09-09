@@ -94,7 +94,12 @@ export default function DataSettings() {
       }, 600);
     } catch (err) {
       console.error('Garden wipe failed:', err);
-      setError('Wipe failed');
+      // ADR 0018: open workspaces must be closed first — say so, not just "failed"
+      setError(
+        err instanceof Error && /open Crux workspaces/.test(err.message)
+          ? err.message
+          : 'Wipe failed',
+      );
       setStatus('');
     } finally {
       setWiping(false);
