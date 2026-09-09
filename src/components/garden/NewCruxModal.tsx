@@ -421,7 +421,7 @@ export default function NewCruxModal({ open, onClose }: NewCruxModalProps) {
   };
 
   const inputClass = cn(
-    'w-full px-3 py-2 text-sm font-mono rounded-[var(--radius-sm)]',
+    'w-full px-3 h-9 text-sm font-body rounded-[var(--radius-sm)]',
     'bg-surface-solid border border-border text-text placeholder:text-text-muted/50',
     'focus:outline-none focus:border-input-border-active transition-colors',
   );
@@ -484,14 +484,14 @@ export default function NewCruxModal({ open, onClose }: NewCruxModalProps) {
                   <div className="flex-1 min-w-0">
                     <span
                       className={cn(
-                        'text-sm font-mono block truncate',
+                        'text-sm font-body font-medium block truncate',
                         selectedTemplate === t.id ? 'text-accent' : 'text-text',
                       )}
                     >
                       {t.label}
                     </span>
                     {t.description && (
-                      <span className="text-xxs text-text-muted block truncate">
+                      <span className="text-xs text-text-muted block truncate">
                         {t.description}
                       </span>
                     )}

@@ -86,13 +86,24 @@
      p-3 / gap-2 / transition-colors everywhere respond to density and motion. */
   --spacing: calc(0.25rem * var(--density));
   --default-transition-duration: calc(var(--motion-duration-fast, 150ms) * var(--motion-scale));
-  /* Small type as rem so fontScale (html font-size) reaches it; 9/10/11px at 16px root */
-  --text-3xs: 0.5625rem;
+  /* The UI type scale (rem, so the Mood's fontScale reaches it). At a 16px root:
+       3xs/2xs 10 · xxs 11 · xs 12 · sm 13 · base 15 · lg 17
+     Nothing in the chrome sits under 10px; 13px is the working size for
+     body copy, buttons and inputs — compact without being cramped. */
+  --text-3xs: 0.625rem;
   --text-3xs--line-height: 1.3;
   --text-2xs: 0.625rem;
   --text-2xs--line-height: 1.3;
   --text-xxs: 0.6875rem;
-  --text-xxs--line-height: 1.35;
+  --text-xxs--line-height: 1.4;
+  --text-xs: 0.75rem;
+  --text-xs--line-height: 1.45;
+  --text-sm: 0.8125rem;
+  --text-sm--line-height: 1.5;
+  --text-base: 0.9375rem;
+  --text-base--line-height: 1.5;
+  --text-lg: 1.0625rem;
+  --text-lg--line-height: 1.4;
   --shadow-panel: var(--elevation-panel);
   --shadow-card: var(--elevation-card);
   --shadow-card-hover: var(--elevation-card-hover);

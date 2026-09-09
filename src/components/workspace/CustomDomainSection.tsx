@@ -152,11 +152,11 @@ export default function CustomDomainSection({ cruxId }: { cruxId: string }) {
             </div>
             {d.status !== 'active' && (
               <div className="flex flex-col gap-1.5">
-                <p className="text-2xs text-text-muted">
+                <p className="text-xxs text-text-muted">
                   Create these records at your DNS provider, then verify:
                 </p>
                 {d.records.some((r) => r.type === 'A' || r.type === 'ALIAS') && (
-                  <p className="text-2xs text-text-muted">
+                  <p className="text-xxs text-text-muted">
                     Your site will answer at <span className="font-mono">www.{d.hostname}</span>;{' '}
                     <span className="font-mono">{d.hostname}</span> redirects there.
                     {d.records.some((r) => r.type === 'ALIAS') &&
@@ -166,7 +166,7 @@ export default function CustomDomainSection({ cruxId }: { cruxId: string }) {
                 {d.records.map((r) => (
                   <div
                     key={`${r.type}:${r.name}`}
-                    className="grid grid-cols-[3.2rem_1fr] gap-x-2 gap-y-0.5 text-2xs"
+                    className="grid grid-cols-[3.2rem_1fr] gap-x-2 gap-y-0.5 text-xxs"
                   >
                     <span className="font-mono text-caption">{r.type}</span>
                     <CopyValue value={r.name} />
@@ -254,7 +254,7 @@ export default function CustomDomainSection({ cruxId }: { cruxId: string }) {
           </form>
         ) : allowance === 0 && domains.length === 0 ? (
           <div data-testid="domains-gardener">
-            <PaneHint>
+            <PaneHint align="left">
               Your own address for this crux comes with Gardener — two DNS records and a click,
               certificate included. Upgrade in Settings → Plan.
             </PaneHint>

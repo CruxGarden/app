@@ -146,25 +146,29 @@ export default function GrowthTimeline({
           <div className="flex flex-col gap-3 p-3">
             {/* Capture controls — hidden while viewing a snapshot */}
             {!isViewingSnapshot && !showLabelInput && (
-              <div className="flex flex-col gap-2">
+              <div className="flex items-center gap-1.5">
                 <PaneAction
                   onClick={() => setShowLabelInput(true)}
                   disabled={isCreatingGrowth}
                   busy={isCreatingGrowth && 'Capturing...'}
                   icon={<LayersIcon />}
+                  className="flex-1"
                 >
                   Take snapshot
                 </PaneAction>
-                <label className="flex items-center justify-between gap-2 px-0.5">
+                <label
+                  className="flex items-center gap-1.5 shrink-0"
+                  title="Auto-snapshot: when a version is captured without asking"
+                >
                   <span className="text-2xs font-mono uppercase tracking-wider text-text-muted">
-                    Auto-snapshot
+                    Auto
                   </span>
                   <select
                     value={frequency}
                     onChange={(e) => setFrequency(e.target.value as SnapshotFrequency)}
                     className={cn(
-                      'text-xxs font-body bg-surface text-text border border-border rounded-[var(--radius-sm)]',
-                      'px-2 py-1 outline-none cursor-pointer hover:border-accent focus:border-input-border-active',
+                      'h-8 text-xs font-body bg-surface text-text border border-border rounded-[var(--radius-sm)]',
+                      'px-2 outline-none cursor-pointer hover:border-accent focus:border-input-border-active',
                     )}
                   >
                     {FREQUENCY_OPTIONS.map((opt) => (

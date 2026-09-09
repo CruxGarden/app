@@ -72,7 +72,7 @@ export default function UsageSection({
           </div>
         )}
         {!account.bandwidthAsOf && (
-          <p className="text-2xs text-text-muted">Bandwidth updates as visits are counted.</p>
+          <p className="text-xxs text-text-muted">Bandwidth updates as visits are counted.</p>
         )}
       </div>
     </PaneSection>
@@ -131,7 +131,7 @@ export function Meter({
           style={{ width: `${pct}%` }}
         />
       </div>
-      <div className="text-2xs text-text-muted">{hint}</div>
+      <div className="text-xxs text-text-muted">{hint}</div>
     </div>
   );
 }

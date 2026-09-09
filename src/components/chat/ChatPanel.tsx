@@ -101,12 +101,14 @@ export default function ChatPanel() {
         </div>
       ) : (
         <div className="border-t border-border">
-          <div className="px-3 pt-2.5 pb-1">
-            <ModelInfoPanel model={model}>
-              <ModelSelector value={model} onChange={setModel} disabled={isStreaming} />
-            </ModelInfoPanel>
-          </div>
-          <div className="px-3 pb-1.5 flex justify-end empty:hidden">
+          {/* One control row: model + usage on the left, the check controls on the right;
+              wraps onto two lines when the pane is narrow. */}
+          <div className="px-3 pt-2 pb-1 flex items-center gap-x-3 gap-y-1.5 flex-wrap">
+            <div className="flex-1 min-w-[200px]">
+              <ModelInfoPanel model={model}>
+                <ModelSelector value={model} onChange={setModel} disabled={isStreaming} />
+              </ModelInfoPanel>
+            </div>
             <CheckControls busy={isStreaming || isJobRunning} />
           </div>
           <TurnJobCard />

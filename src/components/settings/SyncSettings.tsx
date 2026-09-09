@@ -255,7 +255,7 @@ export default function SyncSettings() {
           </div>
 
           {/* Garden backup */}
-          <h3 className="text-xs font-mono text-text-muted mb-2 uppercase tracking-wider">
+          <h3 className="text-2xs font-mono text-caption mb-2 uppercase tracking-wider">
             Garden Backup
           </h3>
 
@@ -311,7 +311,7 @@ export default function SyncSettings() {
 
           {/* Synced cruxes */}
           <div className="border-t border-border my-4" />
-          <h3 className="text-xs font-mono text-text-muted mb-2 uppercase tracking-wider">
+          <h3 className="text-2xs font-mono text-caption mb-2 uppercase tracking-wider">
             Synced Cruxes
           </h3>
 
@@ -326,7 +326,7 @@ export default function SyncSettings() {
               {syncedCruxes.map((c) => (
                 <div key={c.cruxId} className="flex items-center justify-between text-xs">
                   <div>
-                    <span className="text-text font-mono">{c.title}</span>
+                    <span className="text-text font-medium">{c.title}</span>
                     <span className="text-text-muted ml-2">
                       {formatBytes(c.size)} &middot; {formatDateTime(c.updatedAt)}
                     </span>

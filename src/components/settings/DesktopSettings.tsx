@@ -129,7 +129,7 @@ export default function DesktopSettings() {
           disabled={!state || state.status === 'disabled'}
           onChange={(on) => run(() => updates.setAutoCheck(on))}
         />
-        <p className="text-2xs text-text-muted">
+        <p className="text-xxs text-text-muted">
           The update check is the only routine network call this app makes on its own. Nothing
           downloads without your click; once downloaded, the update installs when you quit the app
           or click Restart to update.
@@ -143,7 +143,7 @@ export default function DesktopSettings() {
             <div className="text-text-muted font-mono">
               {info ? shortenHomePath(info.logsDir) : ''}
             </div>
-            <div className="text-2xs text-text-muted">
+            <div className="text-xxs text-text-muted">
               Written locally, never sent. Attach main.log to a GitHub issue when something breaks.
             </div>
           </div>

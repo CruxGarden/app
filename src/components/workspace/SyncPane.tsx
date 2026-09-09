@@ -253,30 +253,31 @@ export default function SyncPane() {
             )}
           </PaneSection>
 
-          <div className="flex flex-col gap-1.5">
-            <PaneAction
-              onClick={handlePush}
-              disabled={busy}
-              busy={pushing && 'Pushing...'}
-              icon={<CloudUpIcon />}
-            >
-              Push to cloud
-            </PaneAction>
-            <PaneHint>Upload this crux, its conversation, and its history</PaneHint>
-          </div>
-
-          <div className="flex flex-col gap-1.5">
-            <PaneAction
-              tone="secondary"
-              onClick={handlePull}
-              disabled={busy}
-              busy={pulling && 'Pulling...'}
-              icon={<CloudDownIcon />}
-            >
-              Pull from cloud
-            </PaneAction>
-            <PaneHint>Replace the local copy with the cloud version</PaneHint>
-          </div>
+          <PaneSection label="Backup">
+            <div className="flex flex-wrap gap-1.5 [&>*]:flex-1 [&>*]:min-w-[132px]">
+              <PaneAction
+                onClick={handlePush}
+                disabled={busy}
+                busy={pushing && 'Pushing...'}
+                icon={<CloudUpIcon />}
+              >
+                Push to cloud
+              </PaneAction>
+              <PaneAction
+                tone="secondary"
+                onClick={handlePull}
+                disabled={busy}
+                busy={pulling && 'Pulling...'}
+                icon={<CloudDownIcon />}
+              >
+                Pull from cloud
+              </PaneAction>
+            </div>
+            <PaneHint align="left" className="mt-2">
+              Push sends this crux, its conversation and its history to your account. Pull replaces
+              the local copy with the cloud version.
+            </PaneHint>
+          </PaneSection>
 
           {progress && (
             <PaneNote tone={progress.includes('failed') ? 'error' : 'muted'}>{progress}</PaneNote>

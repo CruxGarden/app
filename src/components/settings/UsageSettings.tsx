@@ -88,7 +88,7 @@ export default function UsageSettings() {
             />
           </div>
           <div data-testid="sync-usage" className="flex flex-col gap-1 text-xxs">
-            <div className="text-caption font-mono uppercase tracking-wider text-3xs">Sync</div>
+            <div className="text-caption font-mono uppercase tracking-wider text-2xs">Sync</div>
             <div className="flex items-baseline justify-between gap-2">
               <span className="text-text">Garden backup</span>
               <span className="font-mono text-text-muted">
@@ -113,7 +113,7 @@ export default function UsageSettings() {
           {usage.cruxes.length > 0 && (
             <table className="w-full text-xxs">
               <thead>
-                <tr className="text-left text-caption font-mono uppercase tracking-wider text-3xs">
+                <tr className="text-left text-caption font-mono uppercase tracking-wider text-2xs">
                   <th className="py-1 font-normal">Published crux</th>
                   <th className="py-1 font-normal text-right">Storage</th>
                   <th className="py-1 font-normal text-right">Bandwidth</th>
@@ -148,7 +148,7 @@ export default function UsageSettings() {
           {past.length > 0 && (
             <table className="w-full text-xxs" data-testid="past-periods">
               <thead>
-                <tr className="text-left text-caption font-mono uppercase tracking-wider text-3xs">
+                <tr className="text-left text-caption font-mono uppercase tracking-wider text-2xs">
                   <th className="py-1 font-normal">Past period</th>
                   <th className="py-1 font-normal text-right">Storage</th>
                   <th className="py-1 font-normal text-right">Bandwidth</th>
@@ -181,7 +181,7 @@ export default function UsageSettings() {
               publishes stop at twice the plan. A bigger plan is one click up in Plan.
             </p>
           )}
-          <p className="text-2xs text-text-muted" data-testid="settlement-note">
+          <p className="text-xxs text-text-muted" data-testid="settlement-note">
             Published sites and sync backups share these limits. Visit counts settle{' '}
             {usage.settlement.graceHours} hours after the period ends
             {usage.reconciliation

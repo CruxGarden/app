@@ -14,7 +14,8 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 
 const variants: Record<Variant, string> = {
   primary:
-    'bg-primary-button text-primary-button-text border border-primary-button-border hover:bg-primary-button-hover hover:border-primary-button-border-hover active-dim react-accent',
+    // A soft top light and a hairline shadow give the fill some body in every Mood
+    'bg-primary-button text-primary-button-text border border-primary-button-border hover:bg-primary-button-hover hover:border-primary-button-border-hover active-dim react-accent bg-gradient-to-b from-white/10 to-transparent shadow-[0_1px_1px_rgb(0_0_0/0.18)]',
   secondary:
     'bg-action-button text-action-button-text border border-action-button-border hover:bg-action-button-hover hover:text-action-button-text-hover hover:border-action-button-border-hover active-dim',
   ghost:
