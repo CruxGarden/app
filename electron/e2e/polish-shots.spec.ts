@@ -36,6 +36,7 @@ test.describe('polish tour', () => {
       await page.setViewportSize({ width: 1440, height: 900 });
       // Gateway: wait for the banner to be in place
       await expect(page.getByRole('button', { name: /enter/i })).toBeVisible({ timeout: 30_000 });
+      await page.waitForTimeout(3500); // curtain + entrance
       await shot(page, '01-gateway');
       await enterGarden(page);
       await shot(page, '02-home-empty');

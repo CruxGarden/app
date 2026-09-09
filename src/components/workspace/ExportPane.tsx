@@ -193,7 +193,7 @@ export default function ExportPane() {
           </PaneSection>
 
           <div className="flex flex-col gap-1.5">
-            <div className="flex gap-1.5">
+            <div className="flex flex-wrap gap-1.5 [&>*]:flex-1 [&>*]:min-w-[132px]">
               <PaneAction
                 onClick={handleExport}
                 busy={exporting && 'Exporting...'}

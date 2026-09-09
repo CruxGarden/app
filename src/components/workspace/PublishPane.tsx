@@ -389,7 +389,7 @@ export default function PublishPane() {
                 {failure.message}
               </p>
               {failure.log && (
-                <pre className="mt-2 max-h-40 overflow-auto whitespace-pre-wrap break-words text-2xs leading-relaxed text-text-muted">
+                <pre className="mt-2 max-h-40 overflow-auto whitespace-pre-wrap break-words text-xxs leading-relaxed text-text-muted">
                   {failure.log.slice(-2000)}
                 </pre>
               )}
@@ -469,7 +469,7 @@ export default function PublishPane() {
                 onChange={(on) => updateCrux({ discoverable: on })}
                 label="Discoverable"
               />
-              <span className="text-2xs text-text-muted">
+              <span className="text-xxs text-text-muted">
                 {crux.discoverable
                   ? 'Listed in search on crux.garden'
                   : 'Only people with the link can find it'}
