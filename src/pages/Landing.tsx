@@ -3,7 +3,8 @@ import { Link, useNavigate } from 'react-router-dom';
 import { publicApi } from '@/api';
 import type { ExploreCrux, ExploreTag } from '@/api/public';
 import { Button } from '@/components/ui';
-import MoodBar from '@/components/mood/MoodBar';
+import GardenIntro from '@/components/landing/GardenIntro';
+import '@/components/landing/garden-home.css';
 import { useAudioStore } from '@/stores/audioStore';
 import { useShallow } from 'zustand/react/shallow';
 import { BUNDLED_MOODS, bundledMood } from '@/lib/moods/bundled-moods';
@@ -31,22 +32,24 @@ import { publicCoverUrl } from '@/lib/public-cover';
  */
 export default function Landing() {
   useEffect(() => {
-    document.title = `${APP_NAME} — talk to an AI, make something, publish it`;
+    document.title = `${APP_NAME} — You can grow anything`;
     return () => {
       document.title = APP_NAME;
     };
   }, []);
 
   return (
-    <div className="relative min-h-screen flex flex-col">
+    <div className="grow-home">
       <SiteHeader />
-      {/* A quiet sheet over the animated background so type stays legible on any Mood */}
-      <main className="relative z-10 flex-1 w-full max-w-5xl mx-auto px-4 sm:px-6 pb-24 mt-6 rounded-[var(--radius)] bg-bg/70 backdrop-blur-md border border-border/60">
-        <Hero />
-        <ExploreSection />
-        <MoodSection />
-        <HowItWorks />
-        <Trust />
+      <main>
+        <GardenIntro initialMood={publicMoodId()} />
+        <div className="grow-details">
+          <ExploreSection />
+          <HowItWorks />
+          <MoodSection />
+          <Hero />
+          <Trust />
+        </div>
       </main>
       <SiteFooter />
     </div>
@@ -55,26 +58,21 @@ export default function Landing() {
 
 function SiteHeader() {
   return (
-    <header className="relative z-20 flex items-center justify-between h-10 px-4 sm:px-6 border-b border-border bg-surface-solid/80 backdrop-blur-[var(--glass-blur)]">
-      <Link to="/" className="font-wordmark text-lg text-text hover:text-accent">
+    <header className="grow-header">
+      <Link to="/" className="grow-wordmark">
         {APP_NAME}
+        <span aria-hidden="true">✳</span>
       </Link>
-      <nav className="flex items-center gap-4 text-xxs font-mono text-text-muted">
-        <MoodBar />
-        <Link to="/explore" className="hover:text-text">
-          Explore
-        </Link>
-        <a href="#mood" className="hover:text-text">
-          Mood
+      <nav aria-label="Main navigation">
+        <Link to="/explore">Explore</Link>
+        <a href="#mood" className="grow-desktop-link">
+          Moods
         </a>
-        <Link to="/plans" className="hover:text-text">
+        <Link to="/plans" className="grow-desktop-link">
           Plans
         </Link>
-        <a href="#download" className="hover:text-text">
-          Download
-        </a>
-        <a href={GITHUB_ORG_URL} target="_blank" rel="noreferrer" className="hover:text-text">
-          GitHub
+        <a href="#download" className="grow-header-download">
+          Get Crux Garden ↗
         </a>
       </nav>
     </header>
@@ -91,18 +89,12 @@ function Hero() {
     };
   }, []);
   return (
-    <section id="download" className="pt-16 pb-12 sm:pt-24 sm:pb-16 text-center">
-      <h1 className="font-wordmark text-6xl sm:text-7xl font-semibold text-gateway-title leading-none">
-        {APP_NAME}
-      </h1>
-      <p className="text-gateway-subtitle text-xl mt-2">where ideas grow</p>
-      <p className="mt-6 text-base sm:text-lg text-text max-w-2xl mx-auto">
-        Talk to an AI. Make something — a site, a zine, a photo feed, a soundscape. Publish it at
-        your own address. Every version is kept, and visitors can see how it was made.
-      </p>
-      <p className="mt-2 text-sm text-text-muted max-w-2xl mx-auto">
-        Local-first and open source. Your work lives in folders on your Mac; the AI runs on your own
-        key. Publishing is the only part that touches our servers.
+    <section id="download" className="grow-download">
+      <p className="grow-eyebrow">A LITTLE ROOM FOR YOUR NEXT BIG IDEA</p>
+      <h2>What will you grow?</h2>
+      <p className="mt-5 text-sm text-text-muted max-w-xl mx-auto">
+        Crux Garden is a creative workspace for your computer. Build with an AI collaborator, keep
+        your work and its history, and publish when you’re ready.
       </p>
       <div className="mt-8 flex flex-col items-center gap-2">
         <DownloadButtons download={download} />
@@ -310,6 +302,7 @@ function publicMoodId(): string {
 function MoodSection() {
   const [active, setActive] = useState<string | null>(() => publicMoodId());
   const [busy, setBusy] = useState<string | null>(null);
+  const [showAll, setShowAll] = useState(false);
   const { track, playing, toggle, init } = useAudioStore(
     useShallow((s) => ({
       track: s.track,
@@ -319,6 +312,11 @@ function MoodSection() {
     })),
   );
   useEffect(() => init(), [init]);
+  useEffect(() => {
+    const changed = (event: Event) => setActive((event as CustomEvent<string>).detail);
+    window.addEventListener('public-mood-changed', changed);
+    return () => window.removeEventListener('public-mood-changed', changed);
+  }, []);
   // The site wears a Mood like the app does — The Keeper by default, or the one
   // the visitor picked last time (a bundled Mood's files play from their URLs here).
   useEffect(() => {
@@ -334,6 +332,7 @@ function MoodSection() {
       await applyMood(pkg);
       setSetting(SettingsKey.PublicMoodId, id);
       setActive(id);
+      window.dispatchEvent(new CustomEvent('public-mood-changed', { detail: id }));
     } finally {
       setBusy(null);
     }
@@ -347,7 +346,7 @@ function MoodSection() {
         page — these Moods also ship in the app, and people publish their own.
       </p>
       <div className="grid gap-3 grid-cols-2 sm:grid-cols-4" role="group" aria-label="Moods">
-        {BUNDLED_MOODS.map((pkg) => {
+        {(showAll ? BUNDLED_MOODS : BUNDLED_MOODS.slice(0, 8)).map((pkg) => {
           const o = pkg.theme.overrides;
           return (
             <button
@@ -381,6 +380,14 @@ function MoodSection() {
           );
         })}
       </div>
+      <button
+        type="button"
+        className="mt-4 text-xs text-text-muted underline cursor-pointer"
+        aria-expanded={showAll}
+        onClick={() => setShowAll(!showAll)}
+      >
+        {showAll ? 'Show fewer Moods' : `See all ${BUNDLED_MOODS.length} Moods`}
+      </button>
       <div className="mt-4 flex items-center gap-3 text-xs text-text-muted">
         <button
           type="button"
@@ -392,7 +399,7 @@ function MoodSection() {
         </button>
         <span>
           {track
-            ? 'A Mood plays one looping track. The player is in the top bar.'
+            ? 'A Mood can bring its own soundtrack. Play it when you’re ready.'
             : 'This Mood is quiet. Wear The Keeper to hear the garden.'}
         </span>
       </div>
@@ -404,11 +411,11 @@ function HowItWorks() {
   const steps = [
     {
       title: 'Create',
-      body: 'Start from a template — a blog, a feed, a media page — and talk to the AI. Every crux is a real folder; open it in any editor.',
+      body: 'Start with an idea and an AI collaborator. Your Crux holds the conversation and what you make together, in a Project Folder you control.',
     },
     {
-      title: 'Version',
-      body: 'Growth keeps a snapshot after every AI turn. Branch, label, restore. Nothing is lost.',
+      title: 'Grow',
+      body: 'Try different directions in independent Tasks. Review and merge what works; Growth preserves your snapshots, branches and the story of how you got here.',
     },
     {
       title: 'Publish',
@@ -437,8 +444,8 @@ function Trust() {
       <h2 className="font-display text-2xl text-text mb-3">What the app sends</h2>
       <ul className="text-sm text-text-muted flex flex-col gap-1.5 max-w-2xl">
         <li>
-          <span className="text-text">AI requests</span> go straight from your Mac to the provider
-          you chose, with your own key. Or run a local model and send nothing.
+          <span className="text-text">AI requests</span> go straight from your computer to the
+          provider you chose, with your own key. Or run a local model and send nothing.
         </li>
         <li>
           <span className="text-text">Publishing and sync</span> send only what you ask to publish

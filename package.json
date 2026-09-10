@@ -57,6 +57,7 @@
     "rehype-highlight": "^7.0.2",
     "remark-gfm": "^4.0.1",
     "tailwind-merge": "^2.6.0",
+    "three": "^0.186.0",
     "wa-sqlite": "^1.0.0",
     "zustand": "^5.0.3"
   },
@@ -70,6 +71,7 @@
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
     "@types/sql.js": "^1.4.9",
+    "@types/three": "^0.185.4",
     "@vitejs/plugin-react": "^4.3.4",
     "eslint": "^10.0.3",
     "eslint-plugin-react-hooks": "^7.0.1",

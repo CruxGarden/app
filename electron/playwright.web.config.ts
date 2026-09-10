@@ -21,7 +21,7 @@ export default defineConfig({
   },
   webServer: {
     command:
-      'VITE_PUBLIC_SITE=1 VITE_API_URL=http://127.0.0.1:8124 npx vite --port 8123 --strictPort',
+      'VITE_PUBLIC_SITE=1 VITE_API_URL=http://127.0.0.1:8124 VITE_PREVIEW_ORIGIN= VITE_PUBLISH_ORIGIN_TEMPLATE= VITE_PUBLISHED_CONTENT_URL= npx vite --port 8123 --strictPort',
     cwd: '..',
     url: 'http://localhost:8123',
     reuseExistingServer: false,

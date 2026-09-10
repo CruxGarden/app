@@ -1,4 +1,4 @@
-import { lazy, Suspense } from 'react';
+import { lazy, Suspense, useSyncExternalStore } from 'react';
 import { createBrowserRouter, RouterProvider, Navigate } from 'react-router-dom';
 import { isPublicSite } from '@/lib/site';
 import ErrorBoundary from '@/components/ui/ErrorBoundary';
@@ -129,10 +129,14 @@ const router = createBrowserRouter(
   { basename },
 );
 
+const subscribeRoute = (changed: () => void) => router.subscribe(changed);
+const onPublicHomepage = () => publicSite && router.state.location.pathname === '/';
+
 export default function App() {
+  const homepage = useSyncExternalStore(subscribeRoute, onPublicHomepage);
   return (
     <ErrorBoundary>
-      <AnimatedBackground />
+      {!homepage && <AnimatedBackground />}
       <Suspense fallback={null}>
         <RouterProvider router={router} />
       </Suspense>

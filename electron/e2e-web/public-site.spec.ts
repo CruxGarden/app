@@ -49,7 +49,9 @@ test.describe('public site', () => {
     page,
   }) => {
     await page.goto('/');
-    await expect(page.getByRole('heading', { name: 'Crux Garden', level: 1 })).toBeVisible();
+    await expect(
+      page.getByRole('heading', { name: 'You can grow anything.', level: 1 }),
+    ).toBeVisible();
     await expect(page.getByTestId('download-button')).toBeVisible();
     // wearing a Mood changes the accent and survives a reload
     const accent = () =>
@@ -57,6 +59,7 @@ test.describe('public site', () => {
         getComputedStyle(document.documentElement).getPropertyValue('--accent').trim(),
       );
     const before = await accent();
+    await page.getByRole('button', { name: /See all .* Moods/ }).click();
     await page
       .getByRole('group', { name: 'Moods' })
       .getByRole('button')
@@ -68,6 +71,82 @@ test.describe('public site', () => {
     await expect.poll(accent).toBe(worn);
     // the recent cruxes strip shows the seeded crux and links to its page
     await expect(page.getByText('Garden Notes').first()).toBeVisible();
+  });
+
+  test('the homepage garden rotates, changes worlds, and leads to creations', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 1000 });
+    await page.goto('/');
+    const canvas = page.getByTestId('garden-canvas');
+    await expect(canvas).toBeVisible();
+    await expect(
+      page.getByRole('heading', { name: 'You can grow anything.', level: 1 }),
+    ).toBeVisible();
+    await page.screenshot({ path: '/private/tmp/crux-homepage-keeper.png', fullPage: true });
+    await page.screenshot({ path: '/private/tmp/crux-homepage-hero.png' });
+    const before = await canvas.screenshot();
+    const box = (await canvas.boundingBox())!;
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(box.x + box.width / 2 + 110, box.y + box.height / 2, { steps: 12 });
+    await page.mouse.up();
+    expect((await canvas.screenshot()).equals(before)).toBe(false);
+    await page.getByRole('button', { name: 'Reset garden view' }).click();
+    const worlds = page.getByRole('group', { name: 'Visit a garden world' });
+    await worlds.getByRole('button', { name: 'Ancient Egypt', exact: true }).click();
+    await expect(page.locator('.garden-landscape')).toHaveAttribute('data-world', 'ancient-egypt');
+    await expect(page.getByText('Landscape study · an idea for a future Mood.')).toBeVisible();
+    await page.screenshot({ path: '/private/tmp/crux-homepage-egypt.png', fullPage: true });
+    await worlds.getByRole('button', { name: 'GLUMLOT', exact: true }).click();
+    await expect(page.locator('.garden-landscape')).toHaveAttribute('data-world', 'glumlot');
+    await page.screenshot({ path: '/private/tmp/crux-homepage-glumlot.png', fullPage: true });
+    await page.reload();
+    await expect(page.locator('.garden-landscape')).toHaveAttribute('data-world', 'glumlot');
+    await page
+      .getByRole('group', { name: 'Places in the garden' })
+      .getByRole('button', { name: /The arcade/ })
+      .click();
+    await expect(page.getByRole('heading', { name: 'A game to get lost in.' })).toBeVisible();
+    await page.getByRole('link', { name: 'Explore games' }).click();
+    await expect(page).toHaveURL(/\/explore\?q=game$/);
+  });
+
+  test('the homepage works on a phone and with reduced motion', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await page.goto('/');
+    await expect(page.getByTestId('garden-canvas')).toBeVisible();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
+      true,
+    );
+    await page.screenshot({ path: '/private/tmp/crux-homepage-mobile.png', fullPage: true });
+    await page.screenshot({ path: '/private/tmp/crux-homepage-mobile-hero.png' });
+    await page.getByRole('link', { name: 'Start growing' }).click();
+    await expect(page.getByRole('heading', { name: 'What will you grow?' })).toBeInViewport();
+    await expect(page.getByTestId('download-button')).toBeVisible();
+  });
+
+  test('without WebGL the headline, world choices, and creation links remain usable', async ({
+    page,
+  }) => {
+    await page.addInitScript(() => {
+      const original = HTMLCanvasElement.prototype.getContext;
+      HTMLCanvasElement.prototype.getContext = function (type: string, ...args: unknown[]) {
+        if (type.includes('webgl')) return null;
+        return original.apply(this, [type, ...args] as Parameters<typeof original>);
+      } as typeof original;
+    });
+    await page.goto('/');
+    await expect(page.getByText('A world of possibilities.', { exact: true })).toBeVisible();
+    const button = page
+      .getByRole('group', { name: 'Places in the garden' })
+      .getByRole('button', { name: /The workshop/ });
+    await button.focus();
+    await page.keyboard.press('Enter');
+    await expect(page.getByRole('heading', { name: 'That useful little thing.' })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Explore tools' })).toHaveAttribute(
+      'href',
+      '/explore?q=tool',
+    );
   });
 
   test('Plans: Free has no domain line, Gardener does; billing return pages read right', async ({
