@@ -373,6 +373,10 @@ function setupIpc() {
         /* bad meta row — skip */
       }
     }
+    for (const copy of db.all("SELECT project_folder FROM working_copies WHERE phase = 'ready'") ||
+      []) {
+      if (copy.project_folder) watcher.watch(copy.project_folder);
+    }
     debugLog(`Watcher bootstrap: watching ${watched} project folder(s)`);
   } catch (err: any) {
     debugLog(`Watcher bootstrap failed: ${err?.message}`);
@@ -419,6 +423,10 @@ function setupIpc() {
   ipcMain.handle('project:watch', (_e: any, folder: string) => watcher.watch(folder));
   ipcMain.handle('project:unwatch', (_e: any, folder: string) => watcher.unwatch(folder));
   ipcMain.handle('project:list-files', (_e: any, folder: string) => projects.listFiles(folder));
+  ipcMain.handle('project:capture', (_e: any, folder: string) => projects.capture(folder));
+  ipcMain.handle('project:set-mode', (_e: any, folder: string, relPath: string, mode: number) =>
+    projects.setMode(folder, relPath, mode),
+  );
 
   // ── Preview server (ADR 0003) ───────────────────────────────
   previewServer = new PreviewServer((folder: string) => projects.resolveKnownFolder(folder));
@@ -478,8 +486,18 @@ function setupIpc() {
   // Servers live here; every tool call is forwarded to the renderer, which
   // runs the same executor the built-in collaborator uses.
   const lookupCrux = (cruxId: string) => {
-    const row = db.get('SELECT slug, title, meta FROM cruxes WHERE id = ?', [cruxId]);
-    if (!row) return null;
+    const row = db.get('SELECT slug, title, meta FROM cruxes WHERE id = ? AND deleted IS NULL', [
+      cruxId,
+    ]);
+    if (!row) {
+      const copy = db.get(
+        "SELECT w.project_folder, w.title FROM working_copies w JOIN cruxes c ON c.id = w.crux_id WHERE w.id = ? AND w.phase = 'ready' AND w.role = 'task' AND c.deleted IS NULL",
+        [cruxId],
+      );
+      return copy?.project_folder
+        ? { slug: `task-${cruxId}`, title: copy.title, folder: copy.project_folder }
+        : null;
+    }
     try {
       const meta = JSON.parse(row.meta || '{}');
       if (typeof meta.projectFolder !== 'string') return null;
@@ -535,6 +553,13 @@ function setupIpc() {
   ipcMain.handle('agent:start', (_e: any, opts: any) => {
     // The folder must be one of ours: the SDK gets the resolved path, nothing else.
     const cwd = projects.resolveKnownFolder(opts?.cwd);
+    const owner = lookupCrux(opts?.cruxId);
+    if (!owner || projects.resolveKnownFolder(owner.folder) !== cwd)
+      throw new Error('The agent directory does not match its open Working Copy.');
+    if (
+      db.get("SELECT id FROM task_merges WHERE crux_id = ? AND phase = 'applying'", [opts.cruxId])
+    )
+      throw new Error('Recover the pending merge before starting an agent in Main.');
     return agentProvider.start({ ...opts, cwd });
   });
   ipcMain.handle('agent:interrupt', (_e: any, runId: string) => agentProvider.interrupt(runId));

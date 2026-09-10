@@ -1,3 +1,7 @@
+import { createTaskSlots } from './task-slots';
+import { getSetting } from './settings';
+import { copyIdentity } from './working-copies';
+import { assertCopyWritable } from './working-copies';
 import { trackWorkspaceOperation } from '@/stores/workspaceSelection';
 import { useCruxStoreApi, type CruxState } from '@/stores/cruxStore';
 import type { StoreApi } from 'zustand';
@@ -133,6 +137,11 @@ export function buildNormalizedMessages(allMessages: ChatMessage[]): NormalizedM
   return result;
 }
 
+const taskSlots = createTaskSlots(() =>
+  Math.max(1, Math.min(4, Number(getSetting('cruxgarden:parallel-task-limit')) || 2)),
+);
+
+const taskSlotHolders = new Set<string>();
 const controllers = new WeakMap<StoreApi<CruxState>, ReturnType<typeof createTurns>>();
 export function turnsFor(store: StoreApi<CruxState>) {
   let turns = controllers.get(store);
@@ -282,6 +291,7 @@ function createTurns(useCruxStore: StoreApi<CruxState>) {
     const crux = store.crux;
     if (!crux || store.closing) return;
     const cruxId = crux.id;
+    await assertCopyWritable(cruxId);
 
     const { model, providerId, apiKey, reason } = await resolveModelAndKey(crux);
     if (useCruxStore.getState().closing) return;
@@ -381,7 +391,35 @@ function createTurns(useCruxStore: StoreApi<CruxState>) {
 
     if (useCruxStore.getState().closing) controller.abort();
 
-    const run = runJob({ cruxId, job, apiKey, model, normalizedMessages, pf, controller });
+    const run = (async () => {
+      const owner = copyIdentity(useCruxStore.getState().crux)?.cruxId ?? cruxId;
+      if (taskSlots.busy(owner))
+        useCruxStore.getState().appendStreamContent('Waiting for another task to finish…');
+      let release: (() => void) | undefined;
+      try {
+        if (!taskSlotHolders.has(cruxId)) {
+          release = await taskSlots.acquire(owner, controller.signal);
+          taskSlotHolders.add(cruxId);
+        }
+        useCruxStore.getState().clearStreamContent();
+        if (controller.signal.aborted) throw new Error('Stopped before starting the task.');
+        await runJob({ cruxId, job, apiKey, model, normalizedMessages, pf, controller });
+      } catch (error) {
+        if (!controller.signal.aborted) throw error;
+        useCruxStore.getState().setStreaming(false);
+        useCruxStore.getState().clearStreamContent();
+        session.turn = null;
+        publishJob(
+          finishJob(job, 'interrupted', { stopReason: stopReasons.get(cruxId) ?? 'stopped' }),
+        );
+        stopReasons.delete(cruxId);
+        await useCruxStore.getState().persistTurnState();
+        void duckAudio(false);
+      } finally {
+        if (release) taskSlotHolders.delete(cruxId);
+        release?.();
+      }
+    })();
     activeRuns.set(cruxId, run);
     try {
       await run;

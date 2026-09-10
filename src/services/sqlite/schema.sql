@@ -1,3 +1,29 @@
+CREATE TABLE IF NOT EXISTS working_copies (
+  id TEXT PRIMARY KEY,
+  crux_id TEXT NOT NULL,
+  task_id TEXT NOT NULL UNIQUE,
+  title TEXT NOT NULL,
+  base_snapshot_id TEXT NOT NULL,
+  role TEXT NOT NULL DEFAULT 'task',
+  phase TEXT NOT NULL DEFAULT 'preparing',
+  meta TEXT NOT NULL DEFAULT '{}',
+  project_folder TEXT,
+  revision INTEGER NOT NULL DEFAULT 0,
+  created TEXT NOT NULL,
+  updated TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_working_copies_crux ON working_copies(crux_id);
+CREATE TABLE IF NOT EXISTS task_merges (
+  id TEXT PRIMARY KEY,
+  crux_id TEXT NOT NULL,
+  copy_id TEXT NOT NULL,
+  candidate_id TEXT NOT NULL,
+  phase TEXT NOT NULL,
+  data TEXT NOT NULL,
+  created TEXT NOT NULL
+);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_task_merge_applying ON task_merges(crux_id) WHERE phase = 'applying';
+
 CREATE TABLE IF NOT EXISTS cruxes (
   id TEXT PRIMARY KEY,
   slug TEXT UNIQUE,

@@ -1,3 +1,5 @@
+import { exportTaskCrux, importTaskCrux, portableMeta } from './task-archive';
+import { assertMainWorkspace, listWorkingCopies } from './working-copies';
 import JSZip from 'jszip';
 import { getServices } from './index';
 import { guessMimeType, hashContent, buildInsert } from './sqlite/helpers';
@@ -126,7 +128,7 @@ const INSTALLATION_META_KEYS = [
 function withoutInstallationMeta(
   meta: Record<string, unknown> | undefined,
 ): Record<string, unknown> {
-  const clean = { ...(meta ?? {}) };
+  const clean = portableMeta(meta);
   for (const key of INSTALLATION_META_KEYS) delete clean[key];
   return clean;
 }
@@ -167,6 +169,8 @@ export async function peekImport(data: Blob | ArrayBuffer): Promise<{
 // ── Export ───────────────────────────────────────────────
 
 export async function exportCrux(options: ExportOptions): Promise<ExportResult> {
+  await assertMainWorkspace(options.cruxId);
+  if ((await listWorkingCopies(options.cruxId)).length) return exportTaskCrux(options);
   const { cruxId, messages, summary = null, author = null, onProgress } = options;
   const { crux: cruxService, artifact, dimension } = getServices();
   const db = getSqliteClient();
@@ -499,6 +503,7 @@ export async function importCrux(options: ImportOptions): Promise<ImportResult> 
 
   const manifest = JSON.parse(await manifestFile.async('text'));
   const majorVersion = String(manifest.version ?? '').split('.')[0];
+  if (majorVersion === '2') return importTaskCrux(zip, options);
   if (majorVersion !== SUPPORTED_MANIFEST_MAJOR) {
     throw new Error(
       `Unsupported .crux format version "${manifest.version}". This app supports v${SUPPORTED_MANIFEST_MAJOR}.x.`,

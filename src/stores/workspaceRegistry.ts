@@ -1,3 +1,4 @@
+import { findWorkingCopy } from '@/services/working-copies';
 import { maintainNotesManifest } from '@/services/notes-manifest';
 import { registerPreviewOwner } from '@/services/preview-owners';
 import { setActivePreview } from '@/lib/preview-registry';
@@ -19,6 +20,9 @@ import { disposeChatSession } from '@/services/chat-session';
 
 export interface Workspace extends WorkspaceStores {
   id: string;
+  /** id is the content owner (Main or a Working Copy); cruxId is product identity. */
+  cruxId: string;
+  lifetimeId: string;
   phase: 'loading' | 'ready' | 'error' | 'closing';
   error: string | null;
   seenTurnId: string | null;
@@ -120,6 +124,8 @@ export async function openWorkspace(id: string): Promise<Workspace> {
   const data = createCruxStore(ui);
   w = {
     id,
+    cruxId: id,
+    lifetimeId: crypto.randomUUID(),
     data,
     ui,
     phase: 'loading',
@@ -158,6 +164,8 @@ export async function openWorkspace(id: string): Promise<Workspace> {
     .getState()
     .loadCrux(id)
     .then(() => {
+      const copy = data.getState().crux?.meta?.workingCopy as { cruxId?: string } | undefined;
+      owned.cruxId = copy?.cruxId ?? id;
       if (data.getState().crux?.kind === 'snapshot')
         throw new Error('A Growth snapshot is not an editable workspace.');
       owned.phase = 'ready';
@@ -267,6 +275,12 @@ export async function restoreWorkspaceList(): Promise<string | null> {
   const saved = parseOpenWorkspaces(getSetting(KEY));
   const cruxes = await getServices().crux.listAll();
   const valid = new Map(cruxes.filter((c) => c.kind !== 'snapshot').map((c) => [c.id, c]));
+  for (const id of saved.ids) {
+    if (valid.has(id)) continue;
+    const copy = await findWorkingCopy(id);
+    if (copy?.role === 'task' && valid.has(copy.cruxId))
+      valid.set(id, await getServices().crux.findById(id));
+  }
   const ids = saved.ids.filter((id) => valid.has(id));
   useWorkspaceRegistry.setState({
     restored: true,
@@ -319,4 +333,22 @@ export async function prepareGardenReplacement(): Promise<void> {
   leaveWorkspaceView();
   useWorkspaceRegistry.setState({ entries: [], mru: [], activeId: null, restored: false });
   await flushSettings();
+}
+
+/** Close a Crux as a group, preserving each copy's independent state and directories. */
+export async function closeCruxWorkspaces(
+  cruxId: string,
+  documents: 'save' | 'discard',
+): Promise<void> {
+  const ids: string[] = [];
+  for (const entry of useWorkspaceRegistry.getState().entries) {
+    if (entry.id === cruxId || (await findWorkingCopy(entry.id))?.cruxId === cruxId)
+      ids.push(entry.id);
+  }
+  for (const id of ids) {
+    const s = getWorkspace(id)?.data.getState();
+    if (s?.closing || s?.publishPhase || s?.uploadProgress)
+      throw new Error('Wait for this Crux’s task operations to finish before closing.');
+  }
+  for (const id of ids) await closeWorkspace(id, { stop: true, documents });
 }

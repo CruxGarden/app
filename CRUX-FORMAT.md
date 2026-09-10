@@ -1,18 +1,45 @@
 # The .crux Export Format
 
-Spec revision 3.1 — Last updated 2026-07-31
+Spec revision 3.2 — Last updated 2026-09-09
 
 > **Note on version numbers:** this document's revision (3.1, see Version
 > history below) counts design iterations of the format. The **wire version**
-> written into `manifest.json` is independent and currently `"1.0"` — the
-> importer accepts any `1.x` and rejects other majors. The examples below use
-> the wire version.
+> written into `manifest.json` is independent: `"1.0"` for a Crux without tasks,
+> `"2.0"` when private task history must travel too. The importer accepts 1.x and 2.x;
+> unknown or missing majors are rejected. The detailed examples below describe v1.
 
 ## Overview
 
 A `.crux` file is a ZIP archive (standard deflate compression) that contains a complete, portable snapshot of a Crux Garden workspace. It captures everything needed to fully reconstruct a crux on any device: the workspace metadata, the conversation history segmented by version, the dimension graph with metadata, every file artifact, and the complete version history with all prior snapshots.
 
 The file extension is `.crux`, but it is a standard ZIP file and can be opened with any ZIP tool.
+
+## V2: a Crux with parallel tasks
+
+V2 uses `manifest.json`, `crux.json` (identity for conflict detection), `tasks.json` and
+`artifacts/<fingerprint>`. It does not use the v1 `versions/` index encoding. The exact UTF-8
+`tasks.json` text is SHA-256 fingerprinted in the manifest; every required Artifact blob is
+also checked against its filename before any metadata is imported. Missing blobs or ancestors
+abort import instead of producing a partial backup.
+
+`tasks.json` contains `cruxId` and arrays named `cruxes`, `copies`, `artifacts`, `dimensions`,
+and `store`. Record fields use SQLite snake_case; `cruxes` and `copies` metadata is JSON,
+not a machine folder binding. Crux records include Main plus Main/task Growth snapshots;
+copies include unfinished, archived and merged tasks. Dimensions retain content-owner IDs.
+Merge metadata preserves `sourceHead`, `targetHead`, `baseId`, `copyId`, `taskId` and merge ID.
+The local Store remains separate for each content owner and is not merged into Main.
+
+Machine paths, running turn state, MCP enablement and Claude Code resume IDs are removed.
+Import reconstructs fresh folders and agent guidance. Clone remaps all record IDs, task IDs,
+Growth parents, branch tips, merge references and thumbnail references. Restoring an absent
+Crux preserves its IDs; restoring/replacing an existing Crux is refused with a clone option.
+Review-only candidates and their runtime journals are not portable task history; an applying
+merge must be recovered before export. Review directories remain on the originating machine.
+
+Unmerged task conversations are private and present in backup, not in published Main. This
+format is a complete private archive, not the public conversation projection. V1-only readers
+reject its major version rather than silently dropping tasks. Garden backups containing
+Working Copies likewise declare major 2 and include the `working_copies` and `task_merges` tables.
 
 ## Why it exists
 
@@ -66,16 +93,17 @@ The entry point. Validators should read this first.
 }
 ```
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `version` | `string` | Semver-style wire version. The importer checks the **major** version only — `"1.0"`, `"1.2"`, `"1.99"` are all accepted by a v1 importer. A major version mismatch (e.g. `"2.0"`) or a missing version is rejected. |
-| `fingerprint` | `string` | SHA-256 archive-level integrity hash. Computed from the artifact snapshot fingerprint, crux.json content, and dimensions.json content. Detects tampering with any part of the archive. |
-| `exportedAt` | `string` | ISO 8601 timestamp of when the export was created. |
-| `artifactCount` | `number` | Count of unique artifact blobs in the `artifacts/` directory. This is the deduplicated count, not the total number of file references across all versions. |
-| `snapshotCount` | `number` | Count of snapshots that were **successfully** exported. May be less than the number of growth dimensions if some snapshots failed to export. |
-| `author` | `object \| null` | The author who exported the file. Contains `username` and `displayName`. Null if exported without being logged in. |
+| Field           | Type             | Description                                                                                                                                                                                                         |
+| --------------- | ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `version`       | `string`         | Semver-style wire version. The importer checks the **major** version only — `"1.0"`, `"1.2"`, `"1.99"` are all accepted by a v1 importer. A major version mismatch (e.g. `"2.0"`) or a missing version is rejected. |
+| `fingerprint`   | `string`         | SHA-256 archive-level integrity hash. Computed from the artifact snapshot fingerprint, crux.json content, and dimensions.json content. Detects tampering with any part of the archive.                              |
+| `exportedAt`    | `string`         | ISO 8601 timestamp of when the export was created.                                                                                                                                                                  |
+| `artifactCount` | `number`         | Count of unique artifact blobs in the `artifacts/` directory. This is the deduplicated count, not the total number of file references across all versions.                                                          |
+| `snapshotCount` | `number`         | Count of snapshots that were **successfully** exported. May be less than the number of growth dimensions if some snapshots failed to export.                                                                        |
+| `author`        | `object \| null` | The author who exported the file. Contains `username` and `displayName`. Null if exported without being logged in.                                                                                                  |
 
 **Validation rules:**
+
 - `manifest.json` is **required**. A ZIP without it is rejected.
 - The `version` field is required. The importer splits on `.` and compares the first segment to `"1"`.
 
@@ -100,37 +128,38 @@ The workspace's identity — who it is, not what it contains.
   "meta": {
     "summary": { "title": "...", "description": "..." },
     "growthCount": 3,
-    "settings": { "palette": { "..." : "..." } }
+    "settings": { "palette": { "...": "..." } }
   },
   "created": "2026-03-01T10:00:00.000Z",
   "updated": "2026-03-10T14:30:00.000Z"
 }
 ```
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `id` | `string` | UUID v4. Used to detect conflicts on import (does this crux already exist locally?). In `restore` and `replace` modes, the imported crux reuses this ID. In `clone` mode, a new ID is generated. |
-| `slug` | `string` | URL-safe identifier for published URLs (`crux.garden/@user/slug`). Preserved in restore/replace, regenerated in clone. |
-| `title` | `string` | Human-readable workspace name. |
-| `description` | `string` | Optional description. |
-| `type` | `string` | Always `"workspace"` for the main crux. Snapshots have type `"crux"`. |
-| `kind` | `string \| null` | Controls publish behavior: `"webapp"`, `"page"`, `"document"`, `"image"`, `"notes"`, or `null` (auto-detect from files). Snapshots use `"snapshot"`. |
-| `status` | `string` | Lifecycle status. Typically `"living"`. |
-| `visibility` | `string` | `"private"` or `"public"`. |
-| `authorId` | `string \| null` | UUID of the author who owns this crux. |
-| `homeId` | `string \| null` | UUID of the home (workspace container) this crux belongs to. |
-| `meta` | `object` | Extensible metadata bag. Contains `summary`, `growthCount`, and app-specific settings. Does **not** contain `messages` — those live in version manifests. |
-| `created` | `string` | ISO 8601 creation timestamp. |
-| `updated` | `string` | ISO 8601 last-modified timestamp. |
+| Field         | Type             | Description                                                                                                                                                                                      |
+| ------------- | ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `id`          | `string`         | UUID v4. Used to detect conflicts on import (does this crux already exist locally?). In `restore` and `replace` modes, the imported crux reuses this ID. In `clone` mode, a new ID is generated. |
+| `slug`        | `string`         | URL-safe identifier for published URLs (`crux.garden/@user/slug`). Preserved in restore/replace, regenerated in clone.                                                                           |
+| `title`       | `string`         | Human-readable workspace name.                                                                                                                                                                   |
+| `description` | `string`         | Optional description.                                                                                                                                                                            |
+| `type`        | `string`         | Always `"workspace"` for the main crux. Snapshots have type `"crux"`.                                                                                                                            |
+| `kind`        | `string \| null` | Controls publish behavior: `"webapp"`, `"page"`, `"document"`, `"image"`, `"notes"`, or `null` (auto-detect from files). Snapshots use `"snapshot"`.                                             |
+| `status`      | `string`         | Lifecycle status. Typically `"living"`.                                                                                                                                                          |
+| `visibility`  | `string`         | `"private"` or `"public"`.                                                                                                                                                                       |
+| `authorId`    | `string \| null` | UUID of the author who owns this crux.                                                                                                                                                           |
+| `homeId`      | `string \| null` | UUID of the home (workspace container) this crux belongs to.                                                                                                                                     |
+| `meta`        | `object`         | Extensible metadata bag. Contains `summary`, `growthCount`, and app-specific settings. Does **not** contain `messages` — those live in version manifests.                                        |
+| `created`     | `string`         | ISO 8601 creation timestamp.                                                                                                                                                                     |
+| `updated`     | `string`         | ISO 8601 last-modified timestamp.                                                                                                                                                                |
 
 **Optional UI fields** (stored in crux.json if present, passed through on import):
 
-| Field | Type | Description |
-|-------|------|-------------|
+| Field    | Type     | Description                                                                                                                                                          |
+| -------- | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `layout` | `object` | Workspace layout state: `paneOrder`, `paneVisibility`, `editorTabs`, `folderState`. The importer returns these so the UI can restore them to local settings storage. |
-| `theme` | `object` | User's theme preferences: `mode` (light/dark) and `tint` (accent color). |
+| `theme`  | `object` | User's theme preferences: `mode` (light/dark) and `tint` (accent color).                                                                                             |
 
 **Validation rules:**
+
 - `crux.json` is **required**. A ZIP without it is rejected.
 - If `title` is missing or empty, the importer defaults to `"Imported Crux"`.
 
@@ -170,21 +199,21 @@ The dimension graph — relationships between the workspace and its snapshots, w
 
 Each entry represents a dimension (relationship) between two version manifests:
 
-| Field | Type | Description |
-| ----- | ---- | ----------- |
-| `sourceIndex` | `"current" \| number` | Index of the source version manifest. Currently always `"current"` (the workspace). |
-| `targetIndex` | `number` | Index of the target version manifest (maps to `versions/{N}.json`). |
-| `type` | `string` | Dimension type: `"growth"`, `"garden"`, `"graft"`. Currently only `"growth"` is used. |
-| `weight` | `number` | Ordering weight (1-indexed). Determines timeline order. |
-| `meta` | `object` | Dimension metadata — varies by type. |
+| Field         | Type                  | Description                                                                           |
+| ------------- | --------------------- | ------------------------------------------------------------------------------------- |
+| `sourceIndex` | `"current" \| number` | Index of the source version manifest. Currently always `"current"` (the workspace).   |
+| `targetIndex` | `number`              | Index of the target version manifest (maps to `versions/{N}.json`).                   |
+| `type`        | `string`              | Dimension type: `"growth"`, `"garden"`, `"graft"`. Currently only `"growth"` is used. |
+| `weight`      | `number`              | Ordering weight (1-indexed). Determines timeline order.                               |
+| `meta`        | `object`              | Dimension metadata — varies by type.                                                  |
 
 **Growth dimension meta fields:**
 
-| Field | Type | Description |
-| ----- | ---- | ----------- |
-| `summary` | `string` | AI-generated snapshot summary (what changed since the previous snapshot). |
-| `artifactCount` | `number` | Number of files at this point in time. |
-| `preview` | `object` | Primary artifact preview info: `{ type, path, mimeType }`. |
+| Field           | Type     | Description                                                                                                                                 |
+| --------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| `summary`       | `string` | AI-generated snapshot summary (what changed since the previous snapshot).                                                                   |
+| `artifactCount` | `number` | Number of files at this point in time.                                                                                                      |
+| `preview`       | `object` | Primary artifact preview info: `{ type, path, mimeType }`.                                                                                  |
 | `thumbnailPath` | `string` | Path to the thumbnail artifact within this snapshot (e.g. `"preview.jpg"`). The importer resolves this to an attachment ID after uploading. |
 
 **Why index-based, not UUID-based:** In clone mode, all UUIDs are regenerated. Indices are stable within the archive and map directly to version manifest filenames.
@@ -214,12 +243,12 @@ Per-crux key-value store entries. Optional — only present if the crux has stor
 ]
 ```
 
-| Field | Type | Description |
-| ----- | ---- | ----------- |
-| `key` | `string` | The store key name. |
-| `value` | `any` | JSON-serializable value (string, number, boolean, object, array). |
-| `mode` | `string` | `"public"` (one shared value) or `"protected"` (per-visitor). |
-| `updated` | `string` | ISO 8601 timestamp of last modification. |
+| Field     | Type     | Description                                                       |
+| --------- | -------- | ----------------------------------------------------------------- |
+| `key`     | `string` | The store key name.                                               |
+| `value`   | `any`    | JSON-serializable value (string, number, boolean, object, array). |
+| `mode`    | `string` | `"public"` (one shared value) or `"protected"` (per-visitor).     |
+| `updated` | `string` | ISO 8601 timestamp of last modification.                          |
 
 On import, store entries are inserted into the local SQLite `store` table. The `crux_id` is set to the imported crux's ID.
 
@@ -299,14 +328,14 @@ Snapshot versions. Same structure as `current.json`, but with a numeric `index`,
 
 **Version manifest fields:**
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `index` | `"current" \| number` | `"current"` for the live workspace, `0`-indexed integers for snapshots. |
-| `crux` | `object` | Minimal crux identity: `id`, `slug`, `title`, `kind`, `meta`. |
-| `crux.meta.fingerprint` | `string` | SHA-256 of this version's artifact state. |
-| `artifacts` | `object` | Map of `path → { fingerprint, mimeType, size }`. The path is the file's virtual path in the workspace (e.g. `"src/index.html"`). The fingerprint points to a blob in the `artifacts/` directory. |
-| `messages` | `array` | The conversation messages that belong to this version segment. Each snapshot stores only its own messages — the full conversation is reconstructed by walking the snapshot chain and concatenating segments. |
-| `parentIndex` | `number \| null` | Index of the parent snapshot in the version history. `null` for the first snapshot. Enables branching — when the history is a DAG rather than a linear chain. |
+| Field                   | Type                  | Description                                                                                                                                                                                                  |
+| ----------------------- | --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `index`                 | `"current" \| number` | `"current"` for the live workspace, `0`-indexed integers for snapshots.                                                                                                                                      |
+| `crux`                  | `object`              | Minimal crux identity: `id`, `slug`, `title`, `kind`, `meta`.                                                                                                                                                |
+| `crux.meta.fingerprint` | `string`              | SHA-256 of this version's artifact state.                                                                                                                                                                    |
+| `artifacts`             | `object`              | Map of `path → { fingerprint, mimeType, size }`. The path is the file's virtual path in the workspace (e.g. `"src/index.html"`). The fingerprint points to a blob in the `artifacts/` directory.             |
+| `messages`              | `array`               | The conversation messages that belong to this version segment. Each snapshot stores only its own messages — the full conversation is reconstructed by walking the snapshot chain and concatenating segments. |
+| `parentIndex`           | `number \| null`      | Index of the parent snapshot in the version history. `null` for the first snapshot. Enables branching — when the history is a DAG rather than a linear chain.                                                |
 
 **Key insight: message segmentation.** Each version manifest stores only the messages from its own conversation segment. The full conversation is reconstructed by walking the growth chain (snapshot 0 → snapshot 1 → ... → current) and concatenating all segments. This mirrors the local storage model where each snapshot crux stores its own `meta.messages`.
 
@@ -405,6 +434,7 @@ When importing a `.crux` file, the app first calls `peekImport()` to check if a 
 14. **Return result** — Crux ID, title, growth count, list of any failed artifacts, and optional layout/theme data.
 
 **On failure at any step after 10:**
+
 - All cruxes created during the import are deleted (cascade deletes their artifacts and dimensions)
 - In replace mode, the original crux is restored from the safety backup
 - The original error is re-thrown to the caller
@@ -420,6 +450,7 @@ Export files are named:
 ```
 
 Examples:
+
 - `my-cool-project-202603101430.crux`
 - `landing-page-202603010900.crux`
 
@@ -451,41 +482,41 @@ This lets the UI show the user whether the import is newer or older than what th
 
 ## Error handling summary
 
-| Scenario | Behavior |
-|----------|----------|
-| Missing `manifest.json` | Import rejected with error |
-| Unsupported format version | Import rejected with error |
-| Missing `crux.json` | Import rejected with error |
-| Missing `dimensions.json` | Bare dimensions created from sequential ordering |
-| Missing `versions/` directory | No snapshots restored |
-| Individual artifact blob fails to read/write | Skipped, added to `failedArtifacts` list |
-| Individual snapshot fails to export | Skipped, added to `failed` list, `snapshotCount` reflects actual |
-| Individual snapshot fails to import | Skipped, `growthCount` reflects actual |
-| Workspace create fails | Rollback (delete any created cruxes), restore backup if replace mode |
-| Final meta update fails | Rollback + restore backup |
-| Backup export fails (replace mode) | Import proceeds without safety net |
-| Backup restore fails (during rollback) | Error logged, original error still thrown |
+| Scenario                                     | Behavior                                                             |
+| -------------------------------------------- | -------------------------------------------------------------------- |
+| Missing `manifest.json`                      | Import rejected with error                                           |
+| Unsupported format version                   | Import rejected with error                                           |
+| Missing `crux.json`                          | Import rejected with error                                           |
+| Missing `dimensions.json`                    | Bare dimensions created from sequential ordering                     |
+| Missing `versions/` directory                | No snapshots restored                                                |
+| Individual artifact blob fails to read/write | Skipped, added to `failedArtifacts` list                             |
+| Individual snapshot fails to export          | Skipped, added to `failed` list, `snapshotCount` reflects actual     |
+| Individual snapshot fails to import          | Skipped, `growthCount` reflects actual                               |
+| Workspace create fails                       | Rollback (delete any created cruxes), restore backup if replace mode |
+| Final meta update fails                      | Rollback + restore backup                                            |
+| Backup export fails (replace mode)           | Import proceeds without safety net                                   |
+| Backup restore fails (during rollback)       | Error logged, original error still thrown                            |
 
 ---
 
 ## Implementation reference
 
-| File | Purpose |
-|------|---------|
-| `app/src/services/crux-io.ts` | All export/import logic: `exportCrux()`, `importCrux()`, `peekImport()` |
-| `app/src/services/export-import.test.ts` | Round-trip integration tests (real SQLite, no mocks) |
-| `app/src/services/crux-format.test.ts` | Format-conformance tests against this spec: blob integrity (filename = SHA-256 of bytes), archive fingerprint formula, manifest counts, version rules, fallbacks, store.json, layout/theme passthrough, DAG history |
-| `app/src/services/sqlite/helpers.test.ts` | Fingerprint primitive (SHA-256 test vectors, input-form equivalence) + row/SQL helpers |
-| `app/src/components/workspace/ExportPane.tsx` | Export UI (button, progress, archive preview) |
-| `app/src/pages/Garden.tsx` | Import UI (file picker, conflict modal, progress) |
+| File                                          | Purpose                                                                                                                                                                                                             |
+| --------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `app/src/services/crux-io.ts`                 | All export/import logic: `exportCrux()`, `importCrux()`, `peekImport()`                                                                                                                                             |
+| `app/src/services/export-import.test.ts`      | Round-trip integration tests (real SQLite, no mocks)                                                                                                                                                                |
+| `app/src/services/crux-format.test.ts`        | Format-conformance tests against this spec: blob integrity (filename = SHA-256 of bytes), archive fingerprint formula, manifest counts, version rules, fallbacks, store.json, layout/theme passthrough, DAG history |
+| `app/src/services/sqlite/helpers.test.ts`     | Fingerprint primitive (SHA-256 test vectors, input-form equivalence) + row/SQL helpers                                                                                                                              |
+| `app/src/components/workspace/ExportPane.tsx` | Export UI (button, progress, archive preview)                                                                                                                                                                       |
+| `app/src/pages/Garden.tsx`                    | Import UI (file picker, conflict modal, progress)                                                                                                                                                                   |
 
 ---
 
 ## Version history
 
-| Version | Changes |
-|---------|---------|
-| 3.1 | Message segmentation (per-version `messages` + `parentIndex`), `dimensions.json` with full metadata (summary, preview, thumbnailPath), OPFS blob storage (all content out of SQLite), archive fingerprint covers dimensions |
-| 3.0 | Content-addressable artifacts, version manifests, manifest.json validation, rollback with safety backup, `kind` preservation, archive-level integrity fingerprint, `snapshotCount` |
-| 2.0 | ZIP-based format with inline artifacts (no deduplication) |
-| 1.x | Legacy format (backward-compatible import only) |
+| Version | Changes                                                                                                                                                                                                                     |
+| ------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 3.1     | Message segmentation (per-version `messages` + `parentIndex`), `dimensions.json` with full metadata (summary, preview, thumbnailPath), OPFS blob storage (all content out of SQLite), archive fingerprint covers dimensions |
+| 3.0     | Content-addressable artifacts, version manifests, manifest.json validation, rollback with safety backup, `kind` preservation, archive-level integrity fingerprint, `snapshotCount`                                          |
+| 2.0     | ZIP-based format with inline artifacts (no deduplication)                                                                                                                                                                   |
+| 1.x     | Legacy format (backward-compatible import only)                                                                                                                                                                             |

@@ -1,4 +1,5 @@
 import { useWorkspaceUIStoreApi } from '@/stores/uiStore';
+import { copyIdentity } from '@/services/working-copies';
 import { useCruxStoreApi } from '@/stores/cruxStore';
 import { lazy, memo, Suspense, useCallback, type CSSProperties } from 'react';
 import { DndProvider } from 'react-dnd';
@@ -129,10 +130,16 @@ const MemoizedPaneContent = memo(function MemoizedPaneContent({
  */
 function PaneBody({ paneType }: { paneType: PaneType }) {
   const loaded = useCruxStore((s) => !!s.crux);
+  const copy = useCruxStore((s) => copyIdentity(s.crux));
   const { ref, isTooNarrow } = usePaneWidth(PANE_MIN_WIDTH[paneType]);
   return (
     <div ref={ref} className="h-full min-h-0 flex flex-col" data-testid={`pane-body-${paneType}`}>
-      {!loaded ? (
+      {copy && ['publish', 'sync', 'details', 'export'].includes(paneType) ? (
+        <PaneEmpty
+          title="Available in Main"
+          description="Open Main to manage the Crux’s details, publishing and complete backup."
+        />
+      ) : !loaded ? (
         <PaneEmpty
           icon={<Spinner size={16} />}
           title="Opening…"

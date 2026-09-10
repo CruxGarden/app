@@ -89,10 +89,12 @@ export async function walkSnapshotChain(
 /** Chain-node lookup over the crux service (deleted snapshots end the walk). */
 export function chainLookupFromService(deps: {
   findById(id: string): Promise<Crux>;
+  contentOwnerId?: string;
 }): (id: string) => Promise<SnapshotChainNode | null> {
   return async (id) => {
     try {
       const snapshot = await deps.findById(id);
+      if (deps.contentOwnerId && snapshot.meta?.contentOwnerId !== deps.contentOwnerId) return null;
       return {
         id,
         messages: (snapshot.meta?.messages as ChatMessage[]) || [],
@@ -182,6 +184,9 @@ export interface SnapshotWorkspaceState {
 }
 
 export interface CreateSnapshotOptions {
+  merge?: Record<string, unknown>;
+  /** Internal task coordinator owns the write barrier. */
+  taskOperation?: boolean;
   label?: string;
   silent?: boolean; // skip AI summary generation
   /**
@@ -231,9 +236,13 @@ export async function createSnapshotCore(
     type: 'crux',
     kind: 'snapshot',
     meta: {
+      ...(options.merge ? { merge: options.merge } : {}),
       messages: segmentMessages,
       cumulativeMessageCount: messages.length,
       parentCruxId,
+      ...(crux.meta?.workingCopy
+        ? { workingCopy: crux.meta.workingCopy, contentOwnerId: crux.id }
+        : {}),
     },
   });
 

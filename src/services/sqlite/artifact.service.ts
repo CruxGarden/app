@@ -1,3 +1,4 @@
+import { assertCopyWritable, isTaskHistoryReference } from '../working-copies';
 import type { IArtifactService } from '../artifact.service';
 import type {
   Artifact,
@@ -72,6 +73,17 @@ export class SqliteArtifactService implements IArtifactService {
 
     const oldFingerprint = existing.fingerprint as string | null;
     if (!args.blobAlreadyWritten) await db.blobWrite(args.fingerprint, args.contentBytes);
+    // Desktop: keep the Project Folder in sync (ADR 0001 write-through)
+    if (args.writeThrough !== false) {
+      await writeThroughArtifact(
+        args.resourceId,
+        {
+          filename: args.filePath.split('/').pop() || 'unnamed',
+          meta: { path: args.filePath },
+        },
+        args.contentBytes,
+      );
+    }
     await db.run(
       'UPDATE artifacts SET encoding = ?, mime_type = ?, size = ?, fingerprint = ?, updated = ? WHERE id = ?',
       [
@@ -86,21 +98,11 @@ export class SqliteArtifactService implements IArtifactService {
     if (oldFingerprint && oldFingerprint !== args.fingerprint) {
       await cleanupOrphanedBlob(oldFingerprint);
     }
-    // Desktop: keep the Project Folder in sync (ADR 0001 write-through)
-    if (args.writeThrough !== false) {
-      await writeThroughArtifact(
-        args.resourceId,
-        {
-          filename: args.filePath.split('/').pop() || 'unnamed',
-          meta: { path: args.filePath },
-        },
-        args.contentBytes,
-      );
-    }
     return this.findById(existing.id as string);
   }
 
   async create(input: CreateArtifactInput): Promise<Artifact> {
+    if (input.writeThrough !== false) await assertCopyWritable(input.resourceId);
     const identity = await getLocalIdentity();
     const filePath = input.meta?.path || '';
     const db = getSqliteClient();
@@ -145,14 +147,15 @@ export class SqliteArtifactService implements IArtifactService {
       updated: now,
     };
     const { sql, params } = buildInsert('artifacts', record);
-    await db.run(sql, params);
     if (input.writeThrough !== false) {
       await writeThroughArtifact(input.resourceId, record, contentBytes);
     }
+    await db.run(sql, params);
     return this.findById(record.id);
   }
 
   async upload(input: UploadArtifactInput): Promise<Artifact> {
+    if (input.writeThrough !== false) await assertCopyWritable(input.resourceId);
     const identity = await getLocalIdentity();
     const filePath = input.meta?.path || '';
     const db = getSqliteClient();
@@ -199,16 +202,17 @@ export class SqliteArtifactService implements IArtifactService {
       updated: now,
     };
     const { sql, params } = buildInsert('artifacts', record);
-    await db.run(sql, params);
     // Snapshot content ('version' type) never touches the Project Folder
     if (record.type === 'artifact' && input.writeThrough !== false) {
       await writeThroughArtifact(input.resourceId, record, contentBytes);
     }
+    await db.run(sql, params);
     return this.findById(record.id);
   }
 
   async update(id: string, updates: UpdateArtifactInput): Promise<Artifact> {
     const existing = await this.findById(id);
+    await assertCopyWritable(existing.resourceId);
     const changes: Record<string, unknown> = { updated: new Date().toISOString() };
     if (updates.meta) changes.meta = { ...existing.meta, ...updates.meta };
     if (updates.mimeType !== undefined) changes.mimeType = updates.mimeType;
@@ -257,16 +261,17 @@ export class SqliteArtifactService implements IArtifactService {
       path: string | null;
       filename: string;
     }>('SELECT fingerprint, type, resource_id, path, filename FROM artifacts WHERE id = ?', [id]);
-    await db.run('DELETE FROM artifacts WHERE id = ?', [id]);
-    if (row?.fingerprint) {
-      await cleanupOrphanedBlob(row.fingerprint);
-    }
+    if (row && (await isTaskHistoryReference(row.resource_id)))
+      throw new Error('This snapshot is used by a task or merge.');
     if (row && row.type === 'artifact' && opts?.writeThrough !== false) {
+      await assertCopyWritable(row.resource_id);
       await deleteThroughArtifact(row.resource_id, {
         filename: row.filename,
         meta: { path: row.path || undefined },
       });
     }
+    await db.run('DELETE FROM artifacts WHERE id = ?', [id]);
+    if (row?.fingerprint) await cleanupOrphanedBlob(row.fingerprint);
   }
 
   async readContent(id: string): Promise<string> {

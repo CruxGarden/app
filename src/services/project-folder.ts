@@ -14,6 +14,7 @@ import { Capability, can, type ProjectBridge } from '@/lib/platform';
 import { getSqliteClient } from './sqlite/client';
 import { isWorkspaceThumbnail } from '@/lib/artifact-path';
 import type { Artifact } from '@/api/types';
+import { findWorkingCopy } from './working-copies';
 
 function projectBridge(): ProjectBridge | null {
   if (!can(Capability.ProjectFolder)) return null;
@@ -36,6 +37,8 @@ export async function createProjectFolder(slug: string): Promise<string | null> 
 export async function folderForCrux(cruxId: string): Promise<string | null> {
   const api = projectBridge();
   if (!api) return null;
+  const copy = await findWorkingCopy(cruxId);
+  if (copy) return copy.projectFolder;
   const db = getSqliteClient();
   const row = await db.get<{ meta: string | null }>('SELECT meta FROM cruxes WHERE id = ?', [
     cruxId,
@@ -61,8 +64,9 @@ async function withFolder(
     await api.ensureFolder(folder);
     await op(api, folder);
   } catch (err) {
-    // Write-through must never take down the canonical write path
-    console.error('[project-folder] write-through failed:', err);
+    throw new Error(`Could not update the Project Folder: ${(err as Error).message}`, {
+      cause: err,
+    });
   }
 }
 
@@ -162,6 +166,16 @@ export async function rehomeProjectFolders(
       console.error(`[project-folder] re-homing ${row.id} failed:`, err);
     }
   }
+  const copies = await db.all<{ id: string; project_folder: string | null }>(
+    'SELECT id, project_folder FROM working_copies',
+  );
+  for (const copy of copies) {
+    if (copy.project_folder && (await api.folderExists(copy.project_folder))) continue;
+    const folder = await api.createFolder(`task-${copy.id}`);
+    await db.run('UPDATE working_copies SET project_folder = ? WHERE id = ?', [folder, copy.id]);
+    await projectAllArtifacts(copy.id);
+    rehomed++;
+  }
   onProgress?.(rows.length, rows.length);
   return rehomed;
 }
@@ -180,8 +194,13 @@ export async function projectAllArtifacts(cruxId: string): Promise<string | null
 
   await api.ensureFolder(folder);
   const db = getSqliteClient();
-  const rows = await db.all<{ path: string | null; filename: string; fingerprint: string | null }>(
-    "SELECT path, filename, fingerprint FROM artifacts WHERE resource_id = ? AND type = 'artifact'",
+  const rows = await db.all<{
+    path: string | null;
+    filename: string;
+    fingerprint: string | null;
+    meta: string;
+  }>(
+    "SELECT path, filename, fingerprint, meta FROM artifacts WHERE resource_id = ? AND type = 'artifact'",
     [cruxId],
   );
 
@@ -193,6 +212,8 @@ export async function projectAllArtifacts(cruxId: string): Promise<string | null
     wanted.add(relPath);
     const bytes = await db.blobRead(row.fingerprint);
     await api.writeFile(folder, relPath, bytes);
+    const mode = JSON.parse(row.meta || '{}').mode;
+    if (typeof mode === 'number') await api.setMode?.(folder, relPath, mode);
   }
 
   // Remove non-ignored files the store doesn't know — this is an explicit

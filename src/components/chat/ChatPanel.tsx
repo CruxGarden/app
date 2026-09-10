@@ -1,3 +1,4 @@
+import { copyIdentity } from '@/services/working-copies';
 import { useMemo } from 'react';
 import { useChat } from '@/hooks/useChat';
 import { resolveModel } from '@/ai/providers';
@@ -62,6 +63,9 @@ export default function ChatPanel() {
   );
   const setModel = useCruxStore((s) => s.setModel);
   const isViewingSnapshot = useCruxStore((s) => s.viewingSnapshotId !== null);
+  const copy = useCruxStore((s) => copyIdentity(s.crux));
+  const locked = useCruxStore((s) => s.closing);
+  const readOnlyTask = !!copy && copy.phase !== 'ready';
   const snapshotMessageCount = useCruxStore((s) => s.snapshotMessageCount);
 
   // When viewing a snapshot, truncate messages to what existed at that point
@@ -93,10 +97,14 @@ export default function ChatPanel() {
         isStreaming={isViewingSnapshot ? false : isStreaming}
         truncatedAfter={remainingCount > 0 ? remainingCount : undefined}
       />
-      {isViewingSnapshot ? (
+      {isViewingSnapshot || readOnlyTask || locked ? (
         <div className="border-t border-border px-3 py-3">
           <div className="text-xs font-mono text-text-muted text-center">
-            Chat is read-only while viewing a snapshot
+            {readOnlyTask
+              ? 'This task’s Collaboration is preserved. Reopen an archived task or start a new task to continue.'
+              : locked
+                ? 'A task operation is in progress.'
+                : 'Chat is read-only while viewing a snapshot'}
           </div>
         </div>
       ) : (

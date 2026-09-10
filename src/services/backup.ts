@@ -1,3 +1,4 @@
+import { copyIdentity } from './working-copies';
 /**
  * Backups — a crux's archive (files, history, conversation) pushed to the
  * account's sync storage. A published site is not a backup (RESILIENCE-PLAN
@@ -47,6 +48,11 @@ export async function backupCrux(
   const s = data.getState();
   const crux = s.crux;
   if (!crux) throw new Error('No crux is open');
+  const copy = copyIdentity(crux);
+  if (copy) {
+    const { openWorkspace } = await import('@/stores/workspaceRegistry');
+    return backupCrux((await openWorkspace(copy.cruxId)).data, onProgress);
+  }
   const author = useAppStore.getState().author;
   const messages = s.messages.slice(s.messageSegmentStart);
   onProgress?.('Exporting crux...');

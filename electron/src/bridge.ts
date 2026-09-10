@@ -105,6 +105,9 @@ export interface ChangeBatch {
 }
 
 export interface ProjectBridge {
+  /** Stable capture of eligible Artifacts for task creation/review. Rejects symlinks. */
+  capture?(folder: string): Promise<{ path: string; data: Uint8Array; mode: number }[]>;
+  setMode?(folder: string, relPath: string, mode: number): Promise<void>;
   createFolder(slug: string): Promise<string>;
   ensureFolder(folder: string): Promise<string>;
   folderExists(folder: string): Promise<boolean>;

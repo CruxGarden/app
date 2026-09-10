@@ -35,6 +35,7 @@ export const DEFAULT_IGNORES = [
   '*.swx',
   '.#*',
   '*~',
+  '*.crux-write-*',
 ];
 
 export interface WatchEvent {
