@@ -9,16 +9,23 @@ style.textContent =
   '#steps{display:grid;gap:14px;margin:30px 0}.track{display:grid;grid-template-columns:100px repeat(16,minmax(24px,1fr));gap:6px}.step{padding:0;height:55px;border-radius:5px}.step:nth-child(4n+2){border-left:3px solid #acc4d5}.step[aria-pressed=true]{background:#dba773;color:#21170c;border-color:#e6bb8f}.pad{text-transform:capitalize}#meter{width:100px}.track .active{outline:2px solid white}@media(max-width:800px){#steps{overflow:auto}.track{min-width:800px}}';
 document.head.append(style);
 let session, context, sampler, sequencer, analyser, animation;
+let initialization;
+let playbackRequest = 0;
+let audioRequested = false;
 function stop() {
+  playbackRequest++;
+  audioRequested = false;
   sequencer?.stop();
   sampler?.stop();
   if (context?.state === 'running') void context.suspend();
   $('#playing').textContent = 'Silent';
   cancelAnimationFrame(animation);
   $('#meter').value = 0;
+  $('#meter').dataset.peak = '0';
 }
-async function ready() {
-  if (!context) {
+async function ready(request) {
+  if (request !== playbackRequest) return false;
+  initialization ??= (async () => {
     context = new AudioContext();
     await context.suspend();
     analyser = context.createAnalyser();
@@ -33,12 +40,21 @@ async function ready() {
       ),
       destination: analyser,
     });
-  }
-  await sampler.ready;
+    await sampler.ready;
+  })();
+  await initialization;
+  if (request !== playbackRequest) return false;
   sampler.output.volume = session.doc.volume;
   await context.resume();
+  if (request !== playbackRequest) {
+    // Stop may arrive while resume is pending. Do not suspend a newer Play.
+    if (!audioRequested) await context.suspend();
+    return false;
+  }
+  return true;
 }
 function meter() {
+  cancelAnimationFrame(animation);
   if (context?.state !== 'running') return;
   const samples = new Float32Array(analyser.fftSize);
   analyser.getFloatTimeDomainData(samples);
@@ -64,7 +80,9 @@ try {
         trigger.setAttribute('aria-label', `Play ${pad}`);
         trigger.onclick = async () => {
           try {
-            await ready();
+            const request = playbackRequest;
+            audioRequested = true;
+            if (!(await ready(request))) return;
             sampler.start({ note: pad, velocity: 100 });
             $('#playing').textContent = 'Sample';
             meter();
@@ -98,8 +116,11 @@ try {
 $('#play').onclick = async () => {
   try {
     stop();
+    const request = playbackRequest;
+    audioRequested = true;
+    $('#playing').textContent = 'Loading samples…';
     await session.save();
-    await ready();
+    if (!(await ready(request))) return;
     const doc = session.doc;
     sequencer = Sequencer(context, { bpm: doc.bpm, loop: true, loopEnd: '2:1' });
     sequencer.addTrack(
