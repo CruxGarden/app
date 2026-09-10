@@ -19,6 +19,7 @@ import eightBitGarden from '@/assets/moods/8-bit/garden.png?url';
 import glitchcoreGarden from '@/assets/moods/glitchcore/garden.png?url';
 import fantasyGarden from '@/assets/moods/80s-fantasy/garden.png?url';
 import glumlotChamber from '@/assets/moods/glumlot/chamber.png?url';
+import silentHillGarden from '@/assets/moods/silent-hill/garden.png?url';
 import keeperVista from '@/assets/moods/keeper/vista.jpg?url';
 import keeperAvatar from '@/assets/moods/keeper/keeper-avatar.png?url';
 import keeperTrack from '@/assets/moods/keeper/echoes-from-beyond.opus?url';
@@ -74,6 +75,22 @@ const THE_KEEPER: Spec = {
 
 const SPECS: Spec[] = [
   THE_KEEPER,
+  {
+    id: 'silent-hill',
+    name: 'Silent Hill',
+    presetId: 'silent-hill',
+    extra: { bgImageDim: '0', bgImageBlur: '0px' },
+    background: { type: BgType.Image },
+    bundled: { background: silentHillGarden },
+    cues: { message: null, toolDone: null, snapshot: 'tick', published: 'tick', error: null },
+    volume: 0.25,
+    persona: {
+      name: 'Morrow',
+      greeting: 'The fog can wait. What would you like to work on?',
+      systemPrompt:
+        'You are Morrow, a patient, observant creative collaborator with a quiet, reflective voice. Notice small details, help the person find a clear next step, and verify your work. Your atmosphere is melancholy but your help is grounded and kind. Keep explanations and code straightforward. Never manufacture threats, jump scares, cryptic warnings or fake system failures, and never turn the conversation into unwanted horror roleplay.',
+    },
+  },
   {
     id: 'glumlot',
     name: 'GLUMLOT',

@@ -6,9 +6,9 @@ import { DEFAULT_PERSONA } from '@/services/persona';
 import { tokenChoices } from './token-groups';
 
 describe('bundled Moods', () => {
-  it('ships twenty-four complete, valid packages with distinct ids', () => {
-    expect(BUNDLED_MOODS).toHaveLength(24);
-    expect(new Set(BUNDLED_MOODS.map((m) => m.id)).size).toBe(24);
+  it('ships twenty-five complete, valid packages with distinct ids', () => {
+    expect(BUNDLED_MOODS).toHaveLength(25);
+    expect(new Set(BUNDLED_MOODS.map((m) => m.id)).size).toBe(25);
     for (const m of BUNDLED_MOODS) {
       const ok = validateMoodPackage(JSON.parse(JSON.stringify(m)));
       expect(ok, `${m.id} validates`).toBeTruthy();
@@ -38,8 +38,8 @@ describe('bundled Moods', () => {
     // and validation (the shape a saved/imported package takes) keeps the sound block
     const ok = validateMoodPackage(JSON.parse(JSON.stringify(k)))!;
     expect(ok.sound).toEqual(k.sound);
-    // Five Moods ship backgrounds; only The Keeper brings a track.
-    expect(BUNDLED_MOODS.filter((m) => m.bundled)).toHaveLength(5);
+    // Six Moods ship backgrounds; only The Keeper brings a track.
+    expect(BUNDLED_MOODS.filter((m) => m.bundled)).toHaveLength(6);
     expect(BUNDLED_MOODS.filter((m) => m.bundled?.track)).toHaveLength(1);
   });
 
