@@ -1,0 +1,13 @@
+{
+  "name": "crux-tool-sampler",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "smplr": "1.0.0",
+    "playcanvas": "2.22.1",
+    "tabulator-tables": "6.5.2"
+  },
+  "devDependencies": {
+    "esbuild": "0.25.12"
+  }
+}
