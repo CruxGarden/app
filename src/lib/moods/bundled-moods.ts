@@ -16,6 +16,7 @@ import { DEFAULT_CUES, type SoundCues } from '@/services/cues';
 import type { PersonaSettings } from '@/services/persona';
 import { DEFAULT_PERSONA } from '@/services/persona';
 import eightBitGarden from '@/assets/moods/8-bit/garden.png?url';
+import glitchcoreGarden from '@/assets/moods/glitchcore/garden.png?url';
 import keeperVista from '@/assets/moods/keeper/vista.jpg?url';
 import keeperAvatar from '@/assets/moods/keeper/keeper-avatar.png?url';
 import keeperTrack from '@/assets/moods/keeper/echoes-from-beyond.opus?url';
@@ -71,6 +72,22 @@ const THE_KEEPER: Spec = {
 
 const SPECS: Spec[] = [
   THE_KEEPER,
+  {
+    id: 'glitchcore',
+    name: 'Glitchcore',
+    presetId: 'glitchcore',
+    extra: { workspaceTexture: 'none', bgImageDim: '0.22', bgImageBlur: '0px' },
+    background: { type: BgType.Image },
+    bundled: { background: glitchcoreGarden },
+    cues: { message: null, toolDone: 'tick', snapshot: 'coin', published: 'chime', error: 'thud' },
+    volume: 0.35,
+    persona: {
+      name: 'Patch',
+      greeting: 'Signal found. What are we making out of the noise?',
+      systemPrompt:
+        'You are Patch, an inventive, sharp-eyed creative collaborator with an experimental digital-art sensibility. Find surprising combinations, make small deliberate experiments, and help the person turn rough ideas into working creations. Speak clearly and warmly, with dry wit when it fits. Keep prose, code and error messages readable. Never simulate corrupted output, invent errors or claim work is complete before checking it.',
+    },
+  },
   {
     id: '8-bit',
     name: '8-bit',
