@@ -15,6 +15,8 @@ import {
 import { tendingPath, validateTendingTarget, stopTendingTarget } from '@/services/tending-actions';
 import { confirmDialog } from '@/stores/dialogStore';
 import { Button } from '@/components/ui';
+import { can, Capability } from '@/lib/platform';
+import { useGardenStore } from '@/stores/gardenStore';
 
 function elapsed(since: string, now: number): string {
   const seconds = Math.max(0, Math.floor((now - Date.parse(since)) / 1000));
@@ -34,6 +36,8 @@ export default function Tending() {
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState('current');
   const [error, setError] = useState('');
+  const [creatingDemo, setCreatingDemo] = useState(false);
+  const [demoProgress, setDemoProgress] = useState('');
   const [now, setNow] = useState(Date.now);
   useEffect(() => {
     heading.current?.focus();
@@ -78,6 +82,25 @@ export default function Tending() {
       setError((e as Error).message);
     }
   }
+  async function createDemo() {
+    setCreatingDemo(true);
+    setError('');
+    try {
+      const { createTendingDemo } = await import('@/demos/glasshouse/create');
+      await createTendingDemo(setDemoProgress);
+      setQuery('Glasshouse');
+      setFilter('current');
+    } catch (e) {
+      setError((e as Error).message);
+      setDemoProgress('');
+    } finally {
+      try {
+        await useGardenStore.getState().refresh();
+      } finally {
+        setCreatingDemo(false);
+      }
+    }
+  }
   return (
     <div className="max-w-5xl mx-auto p-4 sm:p-6 space-y-4">
       <div className="flex items-start justify-between gap-3">
@@ -94,6 +117,22 @@ export default function Tending() {
           Home Garden
         </Link>
       </div>
+      {can(Capability.ProjectFolder) && (
+        <div className="flex flex-wrap items-center gap-3 text-sm">
+          <Button
+            variant="secondary"
+            size="sm"
+            disabled={creatingDemo}
+            onClick={() => void createDemo()}
+          >
+            {creatingDemo ? 'Creating demo…' : 'Create demo Crux'}
+          </Button>
+          <p className="text-text-muted" role="status">
+            {demoProgress ||
+              'Try Glasshouse: a scripted plant shop with Tasks to review and merge. No API key needed.'}
+          </p>
+        </div>
+      )}
       <div className="grid grid-cols-3 gap-3" aria-label="Garden activity">
         {[
           ['Needs tending', count],
