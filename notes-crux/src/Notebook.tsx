@@ -25,7 +25,6 @@ export default function Notebook() {
   const [query, setQuery] = useState('');
   const [newPath, setNewPath] = useState('');
   const [publication, setPublication] = useState<Publication>({ title: 'My notebook', pages: [] });
-  const publicationRevision = useRef<string | null>(null);
   const active = useRef({ path: '', fingerprint: '', saved: '', draft: '', header: '' });
   const editor = useRef<EditorPersistenceHandle | null>(null);
   const pending = useRef<PendingEditorChange | null>(null);
@@ -140,7 +139,6 @@ export default function Notebook() {
       const config = await request<Document>('read', { path: 'publish.json' });
       if (!live) return;
       setPublication(JSON.parse(config.content));
-      publicationRevision.current = config.fingerprint;
       const first =
         files.find((f) => f.path === 'Welcome.md') ?? files.find((f) => /\.md$/i.test(f.path));
       if (first) await open(first.path);
@@ -232,21 +230,28 @@ export default function Notebook() {
   async function selectPublic(checked: boolean) {
     setBusy(true);
     const previous = publication;
-    const next = {
-      ...publication,
+    setPublication({
+      ...previous,
       pages: checked
-        ? [...new Set([...publication.pages, path])]
-        : publication.pages.filter((p) => p !== path),
-    };
-    setPublication(next);
+        ? [...new Set([...previous.pages, path])]
+        : previous.pages.filter((p) => p !== path),
+    });
     try {
       await flush();
-      const saved = await request<{ fingerprint: string }>('write', {
+      // Settings and external editors may have changed the publication file since opening.
+      const current = await request<Document>('read', { path: 'publish.json' });
+      const config = JSON.parse(current.content) as Publication;
+      const next = {
+        ...config,
+        pages: checked
+          ? [...new Set([...config.pages, path])]
+          : config.pages.filter((p) => p !== path),
+      };
+      await request('write', {
         path: 'publish.json',
         content: JSON.stringify(next, null, 2),
-        expected: publicationRevision.current,
+        expected: current.fingerprint,
       });
-      publicationRevision.current = saved.fingerprint;
       setPublication(next);
     } catch (err) {
       setPublication(previous);

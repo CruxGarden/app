@@ -72,3 +72,18 @@ test('imported Tigrana images resolve while metadata and unselected content stay
   write('Imported/Vault/Folder/Note.md', '![Escape](../../../../outside.png)');
   assert.throws(() => readEdition(folder));
 });
+test('layout defaults to the existing reader and invalid choices stop the build', (t) => {
+  const { folder, write } = fixture(t);
+  assert.equal(readEdition(folder).layout, 'single-page');
+  for (const layout of ['single-page', 'separate-pages']) {
+    write('publish.json', JSON.stringify({ title: 'Notebook', pages: ['Public.md'], layout }));
+    const edition = readEdition(folder);
+    assert.equal(edition.layout, layout);
+    assert.ok(!JSON.stringify(edition).includes('SECRET'));
+  }
+  write(
+    'publish.json',
+    JSON.stringify({ title: 'Notebook', pages: ['Public.md'], layout: 'unknown' }),
+  );
+  assert.throws(() => readEdition(folder), /layout/);
+});
