@@ -1,0 +1,209 @@
+{
+  "backend": "sql.js in-memory SQLite + Map Blob Store (not native desktop I/O)",
+  "count": 50000,
+  "snapshots": 3,
+  "fileBytes": 1024,
+  "phases": [
+    {
+      "name": "create-artifacts",
+      "status": "passed",
+      "durationMs": 249493,
+      "memoryBefore": {
+        "rss": 873398272,
+        "heapTotal": 179109888,
+        "heapUsed": 138282848,
+        "external": 88670331,
+        "arrayBuffers": 99677813
+      },
+      "memoryAfter": {
+        "rss": 629358592,
+        "heapTotal": 65519616,
+        "heapUsed": 35450904,
+        "external": 116770898,
+        "arrayBuffers": 92344166
+      }
+    },
+    {
+      "name": "load-file-list",
+      "status": "passed",
+      "durationMs": 293,
+      "memoryBefore": {
+        "rss": 629358592,
+        "heapTotal": 65519616,
+        "heapUsed": 35466928,
+        "external": 116771342,
+        "arrayBuffers": 92344166
+      },
+      "memoryAfter": {
+        "rss": 630472704,
+        "heapTotal": 157597696,
+        "heapUsed": 126040976,
+        "external": 116048114,
+        "arrayBuffers": 91621638
+      }
+    },
+    {
+      "name": "build-folder-tree",
+      "status": "passed",
+      "durationMs": 55,
+      "memoryBefore": {
+        "rss": 630472704,
+        "heapTotal": 157597696,
+        "heapUsed": 126081024,
+        "external": 116048554,
+        "arrayBuffers": 91621638
+      },
+      "memoryAfter": {
+        "rss": 630472704,
+        "heapTotal": 180666368,
+        "heapUsed": 150834216,
+        "external": 116048114,
+        "arrayBuffers": 91621638
+      }
+    },
+    {
+      "name": "snapshot-file-records-0",
+      "status": "passed",
+      "durationMs": 2445,
+      "memoryBefore": {
+        "rss": 1298071552,
+        "heapTotal": 319504384,
+        "heapUsed": 194171824,
+        "external": 344244507,
+        "arrayBuffers": 382202991
+      },
+      "memoryAfter": {
+        "rss": 1334984704,
+        "heapTotal": 220397568,
+        "heapUsed": 164127528,
+        "external": 191599919,
+        "arrayBuffers": 239795100
+      }
+    },
+    {
+      "name": "edit-one-percent-1",
+      "status": "passed",
+      "durationMs": 75,
+      "memoryBefore": {
+        "rss": 1337622528,
+        "heapTotal": 278953984,
+        "heapUsed": 253575000,
+        "external": 157545327,
+        "arrayBuffers": 205740508
+      },
+      "memoryAfter": {
+        "rss": 1337245696,
+        "heapTotal": 281952256,
+        "heapUsed": 244473520,
+        "external": 159772311,
+        "arrayBuffers": 207966020
+      }
+    },
+    {
+      "name": "snapshot-file-records-1",
+      "status": "passed",
+      "durationMs": 2345,
+      "memoryBefore": {
+        "rss": 1337245696,
+        "heapTotal": 281952256,
+        "heapUsed": 244524392,
+        "external": 159843476,
+        "arrayBuffers": 208036736
+      },
+      "memoryAfter": {
+        "rss": 1681473536,
+        "heapTotal": 311541760,
+        "heapUsed": 252601672,
+        "external": 216224932,
+        "arrayBuffers": 264420113
+      }
+    },
+    {
+      "name": "edit-one-percent-2",
+      "status": "passed",
+      "durationMs": 77,
+      "memoryBefore": {
+        "rss": 1684881408,
+        "heapTotal": 372604928,
+        "heapUsed": 339775352,
+        "external": 192765540,
+        "arrayBuffers": 240960721
+      },
+      "memoryAfter": {
+        "rss": 1684520960,
+        "heapTotal": 375603200,
+        "heapUsed": 333190296,
+        "external": 193734968,
+        "arrayBuffers": 241929797
+      }
+    },
+    {
+      "name": "snapshot-file-records-2",
+      "status": "passed",
+      "durationMs": 2437,
+      "memoryBefore": {
+        "rss": 1684520960,
+        "heapTotal": 375603200,
+        "heapUsed": 333240384,
+        "external": 193806133,
+        "arrayBuffers": 242000513
+      },
+      "memoryAfter": {
+        "rss": 2116157440,
+        "heapTotal": 341573632,
+        "heapUsed": 264362128,
+        "external": 267534457,
+        "arrayBuffers": 315729638
+      }
+    },
+    {
+      "name": "export-crux",
+      "status": "passed",
+      "durationMs": 4536,
+      "memoryBefore": {
+        "rss": 2273067008,
+        "heapTotal": 478134272,
+        "heapUsed": 440826496,
+        "external": 395394949,
+        "arrayBuffers": 443590130
+      },
+      "memoryAfter": {
+        "rss": 2880847872,
+        "heapTotal": 827949056,
+        "heapUsed": 668335688,
+        "external": 471062866,
+        "arrayBuffers": 623789317
+      }
+    },
+    {
+      "name": "fresh-store-import",
+      "status": "passed",
+      "durationMs": 12796,
+      "memoryBefore": {
+        "rss": 2891415552,
+        "heapTotal": 531709952,
+        "heapUsed": 432836080,
+        "external": 557171320,
+        "arrayBuffers": 709897771
+      },
+      "memoryAfter": {
+        "rss": 3397976064,
+        "heapTotal": 448774144,
+        "heapUsed": 383560344,
+        "external": 373896103,
+        "arrayBuffers": 526622554
+      }
+    }
+  ],
+  "startedAt": "2026-09-10T15:39:09.503Z",
+  "node": "v22.19.0",
+  "platform": "darwin",
+  "architecture": "arm64",
+  "cpu": "Apple M3 Pro",
+  "hostMemoryBytes": 38654705664,
+  "sqliteBytesBeforeExport": 152698880,
+  "fileReferences": 200000,
+  "archiveBytes": 104531238,
+  "uniqueBlobs": 51000,
+  "status": "passed"
+}

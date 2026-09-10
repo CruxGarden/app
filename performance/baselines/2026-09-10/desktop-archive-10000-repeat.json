@@ -1,0 +1,34 @@
+{
+  "count": 10000,
+  "seedMode": "archive",
+  "fileBytes": 1024,
+  "snapshots": 3,
+  "phaseTimeoutMs": 180000,
+  "changedFiles": 100,
+  "platform": "darwin",
+  "architecture": "arm64",
+  "cpu": "Apple M3 Pro",
+  "hostMemoryBytes": 38654705664,
+  "node": "v24.14.0",
+  "phases": [
+    {
+      "name": "initial-archive-import",
+      "status": "passed",
+      "durationMs": 16740,
+      "sampledElectronWorkingSetBytes": 1240530944,
+      "memorySamples": 18
+    },
+    {
+      "name": "expand-folders-and-open-note",
+      "status": "failed",
+      "error": "TimeoutError: locator.click: Timeout 60000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByRole('tree').getByText('notes', { exact: true })\u001b[22m\n",
+      "durationMs": 60003,
+      "sampledElectronWorkingSetBytes": 1377812480,
+      "memorySamples": 61
+    }
+  ],
+  "rendererErrors": ["Failed to load resource: the server responded with a status of 404 ()"],
+  "startedAt": "2026-09-10T15:54:23.873Z",
+  "error": "TimeoutError: locator.click: Timeout 60000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByRole('tree').getByText('notes', { exact: true })\u001b[22m\n",
+  "status": "failed"
+}

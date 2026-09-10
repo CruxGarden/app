@@ -1,0 +1,94 @@
+{
+  "count": 1000,
+  "seedMode": "archive",
+  "fileBytes": 1024,
+  "snapshots": 3,
+  "phaseTimeoutMs": 180000,
+  "changedFiles": 10,
+  "platform": "darwin",
+  "architecture": "arm64",
+  "cpu": "Apple M3 Pro",
+  "hostMemoryBytes": 38654705664,
+  "node": "v24.14.0",
+  "phases": [
+    {
+      "name": "initial-archive-import",
+      "status": "passed",
+      "durationMs": 1939,
+      "sampledElectronWorkingSetBytes": 937754624,
+      "memorySamples": 3
+    },
+    {
+      "name": "expand-folders-and-open-note",
+      "status": "passed",
+      "durationMs": 1259,
+      "sampledElectronWorkingSetBytes": 1056522240,
+      "memorySamples": 3
+    },
+    {
+      "name": "snapshot-0",
+      "status": "passed",
+      "durationMs": 389,
+      "sampledElectronWorkingSetBytes": 1114996736,
+      "memorySamples": 2
+    },
+    {
+      "name": "edit-and-ingest-1",
+      "status": "passed",
+      "durationMs": 1018,
+      "sampledElectronWorkingSetBytes": 1172815872,
+      "memorySamples": 3
+    },
+    {
+      "name": "snapshot-1",
+      "status": "passed",
+      "durationMs": 395,
+      "sampledElectronWorkingSetBytes": 1176862720,
+      "memorySamples": 2
+    },
+    {
+      "name": "edit-and-ingest-2",
+      "status": "passed",
+      "durationMs": 1013,
+      "sampledElectronWorkingSetBytes": 1185038336,
+      "memorySamples": 3
+    },
+    {
+      "name": "snapshot-2",
+      "status": "passed",
+      "durationMs": 918,
+      "sampledElectronWorkingSetBytes": 1249558528,
+      "memorySamples": 2
+    },
+    {
+      "name": "export-crux",
+      "status": "passed",
+      "durationMs": 1371,
+      "sampledElectronWorkingSetBytes": 1265582080,
+      "memorySamples": 3
+    },
+    {
+      "name": "fresh-garden-import",
+      "status": "passed",
+      "durationMs": 2472,
+      "sampledElectronWorkingSetBytes": 957333504,
+      "memorySamples": 4
+    }
+  ],
+  "startedAt": "2026-09-10T15:47:58.760Z",
+  "renderedTreeRows": 31,
+  "archiveBytes": 2100883,
+  "archiveManifest": {
+    "version": "1.0",
+    "fingerprint": "f51c1cc251285ca976586035c4f973a7645b6f48413f2a6c615cd764ca2473ca",
+    "exportedAt": "2026-09-10T15:48:09.824Z",
+    "artifactCount": 1022,
+    "snapshotCount": 3,
+    "author": {
+      "username": "wanderer-6f6ea9d6",
+      "displayName": "Wanderer"
+    }
+  },
+  "uniqueNoteBlobs": 1020,
+  "status": "passed"
+}

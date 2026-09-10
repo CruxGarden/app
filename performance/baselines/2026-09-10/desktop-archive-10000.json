@@ -1,0 +1,33 @@
+{
+  "count": 10000,
+  "seedMode": "archive",
+  "fileBytes": 1024,
+  "snapshots": 3,
+  "phaseTimeoutMs": 180000,
+  "changedFiles": 100,
+  "platform": "darwin",
+  "architecture": "arm64",
+  "cpu": "Apple M3 Pro",
+  "hostMemoryBytes": 38654705664,
+  "node": "v24.14.0",
+  "phases": [
+    {
+      "name": "initial-archive-import",
+      "status": "passed",
+      "durationMs": 17169,
+      "sampledElectronWorkingSetBytes": 1273069568,
+      "memorySamples": 19
+    },
+    {
+      "name": "expand-folders-and-open-note",
+      "status": "failed",
+      "error": "TimeoutError: locator.click: Timeout 60000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByRole('tree').getByText('notes', { exact: true })\u001b[22m\n",
+      "durationMs": 60003,
+      "sampledElectronWorkingSetBytes": 1427046400,
+      "memorySamples": 61
+    }
+  ],
+  "startedAt": "2026-09-10T15:48:17.647Z",
+  "error": "TimeoutError: locator.click: Timeout 60000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByRole('tree').getByText('notes', { exact: true })\u001b[22m\n",
+  "status": "failed"
+}

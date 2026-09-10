@@ -1,0 +1,16 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "paths": {
+      "@/*": ["./src/*"],
+      "electron": ["./electron/node_modules/electron"]
+    }
+  },
+  "include": [
+    "performance",
+    "electron/performance",
+    "vitest.performance.config.ts",
+    "electron/playwright.performance.config.ts",
+    "vite-env.d.ts"
+  ]
+}
