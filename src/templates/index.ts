@@ -230,6 +230,14 @@ const loaders: Record<string, () => Promise<{ default: TemplateDefinition }>> = 
   moqira: () => import('./moqira'),
   onebigsky: () => import('./onebigsky'),
   'cardinal-drone': () => import('./cardinal-drone'),
+  'tool-openmosh': () =>
+    import('./tool-sampler').then((m) => ({ default: m.samplerTemplate('openmosh') })),
+  'tool-tables': () =>
+    import('./tool-sampler').then((m) => ({ default: m.samplerTemplate('tables') })),
+  'tool-smplr': () =>
+    import('./tool-sampler').then((m) => ({ default: m.samplerTemplate('smplr') })),
+  'tool-playcanvas': () =>
+    import('./tool-sampler').then((m) => ({ default: m.samplerTemplate('playcanvas') })),
   'astro-homepage': () => import('./astro-homepage'),
   'astro-blog': () => import('./astro-blog'),
   'astro-feed': () => import('./astro-feed'),

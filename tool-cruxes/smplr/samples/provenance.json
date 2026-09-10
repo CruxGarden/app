@@ -1,0 +1,26 @@
+{
+  "repository": "https://github.com/sgossner/VCSL",
+  "revision": "c1ea7bcc3c7309650ab0da9d15c9cd1fbc4a4c7e",
+  "samples": {
+    "kick": {
+      "path": "Membranophones/Struck Membranophones/Bass Drum 3 - Legacy/bdrum_muted_pp_rr2.wav",
+      "bytes": 165958,
+      "sha256": "c77c4fc2d465b1784e020c4a4af2f140d7da7143cc61da3881959850b5877c71"
+    },
+    "snare": {
+      "path": "Membranophones/Struck Membranophones/Legacy Snares/OldSnare/snare_f1.wav",
+      "bytes": 58134,
+      "sha256": "c332f9548c64202a6740d6ee327b17f87e1fd13fee034a9ad58fc8b4c07a80f2"
+    },
+    "hat": {
+      "path": "Idiophones/Struck Idiophones/Hi-Hat Cymbal/HiHat_HitC_v2_rr1_Mid.wav",
+      "bytes": 247272,
+      "sha256": "e1fb54c9a030800038abcebbed1c056fb74bdeec627315f3cd5fd893c6e6b031"
+    },
+    "clap": {
+      "path": "Idiophones/Struck Idiophones/Claps/SoloClap_vl2.wav",
+      "bytes": 95536,
+      "sha256": "f8afd95a16e8846f1c0c831c15482af65765107cab267fa262a218a10b0297db"
+    }
+  }
+}

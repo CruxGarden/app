@@ -6,7 +6,7 @@ import { openWorkspace } from '@/stores/workspaceRegistry';
 import { documentsFor } from '@/services/workspace-documents';
 import { createTask } from '@/services/tasks';
 import { copyIdentity } from '@/services/working-copies';
-import { isEmbeddedApp, isCardinal, embeddedContentRoot } from '@/services/embedded-app';
+import { isEmbeddedApp, isLocalCreationTool, embeddedContentRoot } from '@/services/embedded-app';
 import { workshopEntry } from '@/lib/workshop-entry';
 import { pathOf } from '@/lib/artifact-path';
 import { can, Capability } from '@/lib/platform';
@@ -88,7 +88,7 @@ export default function EmbeddedAppActions() {
         )}
       {!identity && (
         <>
-          {!isCardinal(crux) && (
+          {!isLocalCreationTool(crux) && (
             <button className={button} onClick={() => showPane('publish')}>
               Share selected content
             </button>

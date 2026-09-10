@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback, useEffect } from 'react';
-import { isEmbeddedApp, isCardinal } from '@/services/embedded-app';
+import { isEmbeddedApp, isLocalCreationTool } from '@/services/embedded-app';
 import { Capability, can } from '@/lib/platform';
 import { useAuthStore } from '@/stores/authStore';
 import { useAppStore } from '@/stores/appStore';
@@ -239,12 +239,12 @@ export default function PublishPane() {
     );
   }
 
-  if (isCardinal(crux))
+  if (isLocalCreationTool(crux))
     return (
       <div ref={ref} className="flex flex-col h-full">
         <PaneEmpty
-          title="A local instrument"
-          description="Play and save this instrument in Garden. Website sharing isn't available for this Crux yet."
+          title="A local creation tool"
+          description="Use and save this tool in Garden. Website sharing isn't available for this Crux yet."
         />
       </div>
     );

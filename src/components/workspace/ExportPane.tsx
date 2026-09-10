@@ -1,5 +1,5 @@
 import { useState, useCallback, useMemo } from 'react';
-import { isEmbeddedApp, isCardinal } from '@/services/embedded-app';
+import { isEmbeddedApp, isCardinal, samplerType } from '@/services/embedded-app';
 import { useCruxStore } from '@/stores/cruxStore';
 import { useAppStore } from '@/stores/appStore';
 import { exportCrux, exportArtifactsZip } from '@/services/crux-io';
@@ -162,7 +162,9 @@ export default function ExportPane() {
         <div className="flex-1 overflow-y-auto min-h-0 p-3 flex flex-col gap-3">
           {isEmbeddedApp(crux) && (
             <PaneNote tone="muted" className="text-left whitespace-normal">
-              {isCardinal(crux) ? (
+              {samplerType(crux) ? (
+                'Complete editable project: includes the app, all project data and media, private Collaboration, Tasks and Growth. Anyone with this archive can open them.'
+              ) : isCardinal(crux) ? (
                 'Complete instrument: includes its app, patch, presets, private Collaboration, Tasks and Growth. Anyone with this file can open them. Retain the included licenses and source information.'
               ) : (
                 <>

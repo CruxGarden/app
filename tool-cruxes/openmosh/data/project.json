@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "type": "openmosh",
+  "title": "Signal garden",
+  "source": null,
+  "time": 0,
+  "effects": [
+    {
+      "kind": "pixelate",
+      "values": {
+        "size": 8
+      }
+    }
+  ]
+}

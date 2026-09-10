@@ -1,0 +1,14 @@
+{
+  "repository": "https://github.com/zivavu/OpenMosh",
+  "revision": "f49c27bb6bd475efe6db0c1596d6d65362e4ee90",
+  "file": "src/lib/gl/effect-shaders.ts",
+  "effects": [
+    "pixelate",
+    "posterize",
+    "scanlines",
+    "kaleido",
+    "mirror",
+    "data-bend"
+  ],
+  "note": "Selected original GLSL fragments; no upstream UI, BPM, media exporter, fonts or other shaders are included."
+}

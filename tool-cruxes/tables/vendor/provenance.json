@@ -1,0 +1,13 @@
+{
+  "package": "tabulator-tables",
+  "version": "6.5.2",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/tabulator-tables/tabulator.git"
+  },
+  "bytes": 449073,
+  "sha256": "23a5fe922fd8e3fd9d6e89aaeb93a0ed8ccd83ea2495e191639e3e80d84d0234",
+  "build": "esbuild 0.25.12, bundle ESM, minify, legalComments eof",
+  "entry": "export { TabulatorFull as Tabulator } from \"tabulator-tables\";"
+}
