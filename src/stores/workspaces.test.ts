@@ -463,3 +463,43 @@ it.each([false, true])(
     expect(wa.data.getState().messageSegmentStart).toBe(2);
   },
 );
+
+it('keeps advanced tabs intact across Clean view and remembers the view independently per workspace', async () => {
+  const { a, b } = await pair();
+  const w = await openWorkspace(a.id);
+  w.ui.getState().openFile('example', 'index.html');
+  w.ui.getState().setTabDirty('example', true);
+  const editor = w.ui.getState().editor;
+  w.ui.getState().setWorkshopView('clean');
+  expect(w.ui.getState().editor).toBe(editor);
+  expect(w.ui.getState().editor.tabs[0]?.dirty).toBe(true);
+  const other = await openWorkspace(b.id);
+  other.ui.getState().setWorkshopView('advanced');
+  expect(w.ui.getState().workshopView).toBe('clean');
+  const restored = createUIStore(a.id);
+  restored.getState().setActiveCrux(a.id);
+  expect(restored.getState().workshopView).toBe('clean');
+  restored.getState().openFile('example', 'index.html');
+  expect(restored.getState().workshopView).toBe('advanced');
+  restored.getState().dispose();
+});
+
+it('uses the checkpoint entry choice while preserving Clean view through history tab rebinding', async () => {
+  const { wa, fa } = await pair();
+  wa.ui.getState().openFile(fa.id, 'same.txt');
+  await wa.data.getState().updateCrux({ meta: { settings: { entryFile: 'original.html' } } });
+  await wa.data.getState().createSnapshot({ silent: true });
+  const snapshot = wa.data.getState().growths[0]!;
+  await wa.data.getState().updateCrux({ meta: { settings: { entryFile: 'new.html' } } });
+  wa.ui.getState().setWorkshopView('clean');
+  await wa.data.getState().viewSnapshot(snapshot.targetId, 0);
+  expect(wa.data.getState().snapshotEntryFile).toBe('original.html');
+  expect(wa.ui.getState().workshopView).toBe('clean');
+  await wa.data.getState().exitSnapshotView();
+  expect(wa.data.getState().crux?.meta?.settings?.entryFile).toBe('new.html');
+  expect(wa.data.getState().snapshotEntryFile).toBeNull();
+  expect(wa.ui.getState().workshopView).toBe('clean');
+  await wa.data.getState().revertToSnapshot(snapshot.targetId);
+  expect(wa.data.getState().crux?.meta?.settings?.entryFile).toBe('original.html');
+  expect(wa.ui.getState().workshopView).toBe('clean');
+});

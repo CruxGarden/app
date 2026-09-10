@@ -4,7 +4,6 @@ import { WorkspaceContext, workspaceSelection } from './workspaceSelection';
 import { getSetting, setSetting } from '@/services/settings';
 import { SettingsKey } from '@/lib/constants';
 import type { MosaicNode } from 'react-mosaic-component';
-import type { TemplateLayout } from '@/templates';
 
 // ── Agent approvals (ADR 0013) ──────────────────────────
 
@@ -97,6 +96,8 @@ export interface UIState {
 
   // Editor
   editor: EditorPaneState;
+  workshopView: 'clean' | 'advanced';
+  setWorkshopView: (view: 'clean' | 'advanced') => void;
 
   // File operations
   activeFileOperation: FileOperation | null;
@@ -146,12 +147,8 @@ export interface UIState {
 
   // ── Layout actions ──
 
-  /** Persist a new crux's initial pane layout (template preset or a blank fallback). */
-  seedCruxLayout: (
-    cruxId: string,
-    layout: TemplateLayout | null,
-    fallback: 'ai' | 'manual',
-  ) => void;
+  /** Start a new Crux with Collaboration beside its clean preview. */
+  seedCruxLayout: (cruxId: string) => void;
   setActiveCrux: (id: string | null) => void;
   togglePane: (pane: PaneType) => void;
   setPaneVisible: (pane: PaneType, visible: boolean) => void;
@@ -159,7 +156,7 @@ export interface UIState {
   setMosaicLayout: (layout: MosaicNode<PaneType> | null) => void;
 
   // ── Editor tab actions ──
-  openFile: (id: string, path: string) => void;
+  openFile: (id: string, path: string, options?: { preserveWorkshopView?: boolean }) => void;
   closeTab: (id: string) => void;
   setActiveTab: (id: string | null) => void;
   setTabDirty: (id: string, dirty: boolean) => void;
@@ -555,6 +552,12 @@ export function createUIStore(cruxId?: string) {
     mosaicLayout: initialLayout.mosaicLayout,
     activeCruxId: null,
 
+    workshopView: 'clean',
+    setWorkshopView: (workshopView) => {
+      set({ workshopView });
+      const id = get().activeCruxId;
+      if (id) setSetting(`cruxgarden:workshop-view:${id}`, workshopView);
+    },
     editor: {
       tabs: [],
       activeTabId: null,
@@ -596,29 +599,13 @@ export function createUIStore(cruxId?: string) {
 
     // ── Layout actions ──
 
-    seedCruxLayout: (cruxId, layout, fallback) => {
+    seedCruxLayout: (cruxId) => {
       const visibility: Record<string, boolean> = {};
       for (const pane of DEFAULT_PANE_ORDER) visibility[pane] = false;
-      if (layout) {
-        for (const pane of layout.panes) visibility[pane] = true;
-        setSetting(
-          cruxLayoutKey(cruxId),
-          JSON.stringify({
-            paneOrder: DEFAULT_PANE_ORDER,
-            paneVisibility: visibility,
-            mosaicLayout: layout.mosaic,
-          }),
-        );
-        return;
-      }
-      // Blank workspace: chat + details when an AI key exists (the AI builds),
-      // chat + files + workshop when the user will build by hand.
+      // Creation starts with a conversation and the result beside it. Template
+      // Builder actions remain available in Advanced; no provider-specific guess.
       visibility.collaboration = true;
-      if (fallback === 'ai') visibility.details = true;
-      else {
-        visibility.artifacts = true;
-        visibility.workshop = true;
-      }
+      visibility.workshop = true;
       setSetting(
         cruxLayoutKey(cruxId),
         JSON.stringify({ paneOrder: DEFAULT_PANE_ORDER, paneVisibility: visibility }),
@@ -668,6 +655,8 @@ export function createUIStore(cruxId?: string) {
 
         set({
           activeCruxId: id,
+          workshopView:
+            getSetting(`cruxgarden:workshop-view:${id}`) === 'advanced' ? 'advanced' : 'clean',
           paneOrder: layout.paneOrder,
           paneVisibility: layout.paneVisibility,
           mosaicLayout: layout.mosaicLayout,
@@ -779,7 +768,8 @@ export function createUIStore(cruxId?: string) {
 
     // ── Editor tab actions ──
 
-    openFile: (id, path) => {
+    openFile: (id, path, options) => {
+      if (!options?.preserveWorkshopView) get().setWorkshopView('advanced');
       set((s) => {
         const existing = s.editor.tabs.find((t) => t.id === id);
         if (existing) {

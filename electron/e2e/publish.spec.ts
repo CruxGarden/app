@@ -20,6 +20,7 @@ test.describe('publish (mocked API)', () => {
       await page.getByRole('button', { name: 'Add Crux' }).click();
       await page.getByRole('button', { name: /^Blank/ }).click();
       await page.getByRole('button', { name: 'Create', exact: true }).click();
+      await page.getByRole('button', { name: 'Add files', exact: true }).click();
 
       // Something to publish
       await page.getByRole('button', { name: 'New file' }).click({ timeout: 30_000 });

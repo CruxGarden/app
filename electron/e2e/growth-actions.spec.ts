@@ -58,6 +58,7 @@ test.describe('growth actions (History pane)', () => {
       await page.getByRole('button', { name: 'Add Crux' }).click();
       await page.getByRole('button', { name: /^Blank/ }).click();
       await page.getByRole('button', { name: 'Create', exact: true }).click();
+      await page.getByRole('button', { name: 'Add files', exact: true }).click();
 
       // ── a file with content, saved ──
       await page.getByRole('button', { name: 'New file' }).click({ timeout: 30_000 });

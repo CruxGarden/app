@@ -9,6 +9,7 @@ test('type audit', async () => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await enterGarden(page);
     await createCrux(page, 'Audit');
+    await page.getByRole('button', { name: 'Add files', exact: true }).click();
     await page.getByRole('button', { name: 'New file' }).click({ timeout: 30_000 });
     const nameInput = page.getByRole('tree').getByRole('textbox');
     await nameInput.fill('index.html');
@@ -27,23 +28,43 @@ test('type audit', async () => {
             .trim();
           if (!text) continue;
           const cs = getComputedStyle(el);
-          const fam = cs.fontFamily.includes('Mono') ? 'mono' : cs.fontFamily.includes('Outfit') ? 'outfit' : cs.fontFamily.includes('Cormorant') ? 'serif' : 'sys';
+          const fam = cs.fontFamily.includes('Mono')
+            ? 'mono'
+            : cs.fontFamily.includes('Outfit')
+              ? 'outfit'
+              : cs.fontFamily.includes('Cormorant')
+                ? 'serif'
+                : 'sys';
           const key = `${cs.fontSize} ${fam} ${cs.fontWeight}`;
           const e = out.get(key) ?? { n: 0, ex: [] };
           e.n++;
-          if (e.ex.length < 4) e.ex.push(text.slice(0, 28) + ' <' + el.tagName.toLowerCase() + '.' + (el.className?.toString().split(' ').slice(0, 3).join('.') || '') + '>');
+          if (e.ex.length < 4)
+            e.ex.push(
+              text.slice(0, 28) +
+                ' <' +
+                el.tagName.toLowerCase() +
+                '.' +
+                (el.className?.toString().split(' ').slice(0, 3).join('.') || '') +
+                '>',
+            );
           out.set(key, e);
         }
         return Array.from(out.entries()).sort((a, b) => parseFloat(a[0]) - parseFloat(b[0]));
       });
       console.log(`\n=== ${label} ===`);
-      for (const [k, v] of rows) console.log(`${k.padEnd(22)} ×${String(v.n).padStart(3)}  ${v.ex.join(' | ')}`);
+      for (const [k, v] of rows)
+        console.log(`${k.padEnd(22)} ×${String(v.n).padStart(3)}  ${v.ex.join(' | ')}`);
     };
     await audit('builder');
-    const cc = await page.getByTestId('check-controls').getByRole('button').first().evaluate((el) => {
-      const cs = getComputedStyle(el);
-      return { size: cs.fontSize, fam: cs.fontFamily, cls: el.className, pad: cs.padding };
-    }).catch(() => null);
+    const cc = await page
+      .getByTestId('check-controls')
+      .getByRole('button')
+      .first()
+      .evaluate((el) => {
+        const cs = getComputedStyle(el);
+        return { size: cs.fontSize, fam: cs.fontFamily, cls: el.className, pad: cs.padding };
+      })
+      .catch(() => null);
     console.log('check-controls:', JSON.stringify(cc));
     await page.keyboard.press('ControlOrMeta+,');
     await page.getByRole('heading', { name: 'Settings' }).waitFor();

@@ -33,7 +33,7 @@ export async function storedCrux(page: Page, id: string) {
 export async function addArtifact(page: Page, path: string) {
   const newFile = page.getByRole('button', { name: 'New file', exact: true });
   const toggle = page.getByRole('button', { name: 'Toggle artifacts' });
-  if ((await toggle.getAttribute('aria-pressed')) === 'false') await toggle.click();
+  if (!(await page.getByTestId('pane-body-artifacts').isVisible())) await toggle.click();
   await newFile.click();
   const input = page.getByRole('tree').getByRole('textbox');
   await input.fill(path);

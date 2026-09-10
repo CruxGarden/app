@@ -184,6 +184,7 @@ test.describe('starter templates render through astro dev', () => {
       await page.getByRole('button', { name: 'Add Crux' }).click();
       await page.getByRole('button', { name: /Astro Feed/ }).click();
       await page.getByRole('button', { name: 'Create', exact: true }).click();
+      await page.getByRole('button', { name: 'Edit content', exact: true }).click();
       await expect(page.getByRole('button', { name: /new post/i }).first()).toBeVisible({
         timeout: 30_000,
       });
@@ -208,6 +209,7 @@ test.describe('starter templates render through astro dev', () => {
       await page.getByRole('button', { name: 'Add Crux' }).click();
       await page.getByRole('button', { name: /Astro Media/ }).click();
       await page.getByRole('button', { name: 'Create', exact: true }).click();
+      await page.getByRole('button', { name: 'Edit content', exact: true }).click();
       await expect(page.getByRole('button', { name: 'Add media' }).first()).toBeVisible({
         timeout: 30_000,
       });

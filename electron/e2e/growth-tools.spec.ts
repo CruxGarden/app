@@ -123,6 +123,7 @@ test.describe('AGENTS.md per Project Folder', () => {
       await page.getByRole('button', { name: 'Add Crux' }).click();
       await page.getByRole('button', { name: /Astro Blog/ }).click();
       await page.getByRole('button', { name: 'Create', exact: true }).click();
+      await page.getByRole('button', { name: 'Edit content', exact: true }).click();
       await expect(page.getByRole('button', { name: /new post/i }).first()).toBeVisible({
         timeout: 30_000,
       });

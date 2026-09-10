@@ -374,3 +374,23 @@ describe('parallel tasks', () => {
     expect(await read(a.id)).toBe('Resumed');
   });
 });
+
+it('inherits the entry file into a Task and carries it through a portable archive', async () => {
+  const { main } = await fixture();
+  const w = await openWorkspace(main.id);
+  await w.data.getState().updateCrux({ meta: { settings: { entryFile: 'index.html' } } });
+  const task = await createTask(main.id, 'Entry choice');
+  expect((await getServices().crux.findById(task.id)).meta?.settings?.entryFile).toBe('index.html');
+  const archive = await exportCrux({ cruxId: main.id });
+  const restored = await importCrux({ data: archive.blob, mode: 'clone' });
+  expect((await getServices().crux.findById(restored.cruxId)).meta?.settings?.entryFile).toBe(
+    'index.html',
+  );
+  const { listWorkingCopies } = await import('./working-copies');
+  const copied = (await listWorkingCopies(restored.cruxId)).find(
+    (copy) => copy.title === 'Entry choice',
+  )!;
+  expect((await getServices().crux.findById(copied.id)).meta?.settings?.entryFile).toBe(
+    'index.html',
+  );
+});

@@ -40,7 +40,11 @@ export default function MessageList({
     <div className="flex-1 overflow-y-auto p-4 space-y-3">
       {messages.length === 0 && !isStreaming && (
         <div className="text-text-muted">
-          <p className="text-xs text-center">Start a conversation to begin collaborating</p>
+          <p className="text-sm font-medium">What would you like to make?</p>
+          <p className="text-xs mt-2">
+            Describe the result you have in mind and who it is for. Choose a collaborator below,
+            then send your idea. Your creation will appear in the Workshop as it takes shape.
+          </p>
         </div>
       )}
 

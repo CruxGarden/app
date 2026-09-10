@@ -222,6 +222,8 @@ export interface CruxMeta {
     verifyOnDone?: boolean;
     /** Port the site's dev server should try first (1024–65535); ephemeral when unset or taken. */
     previewPort?: number;
+    /** Relative Artifact path shown by default in the Workshop. Null means automatic. */
+    entryFile?: string | null;
   };
   growthCount?: number;
   snapshot?: GrowthSnapshot;

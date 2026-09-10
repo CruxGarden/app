@@ -29,6 +29,7 @@ test.describe('ui survey', () => {
         await t.fill(title);
       }
       await page.getByRole('button', { name: 'Create', exact: true }).click();
+      await page.getByRole('button', { name: 'Add files', exact: true }).click();
       await page.getByRole('button', { name: 'New file' }).click({ timeout: 30_000 });
     };
     const togglePane = async (p: Page, name: RegExp) => {

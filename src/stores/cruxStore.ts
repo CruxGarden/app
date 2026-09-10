@@ -78,6 +78,7 @@ export interface CruxState {
   workspaceMessages: ChatMessage[] | null; // stashed while viewing snapshot
   workspaceSegmentStart: number | null; // stashed while viewing snapshot
   snapshotMessageCount: number | null; // how many messages to show for this snapshot
+  snapshotEntryFile: string | null;
 
   // Pending file deletions (awaiting user confirmation)
   pendingDeletes: { id: string; requestedAt: string; artifactId: string; path: string }[];
@@ -193,7 +194,7 @@ function rebindEditorTabs(ui: StoreApi<UIState>, artifacts: Artifact[]): void {
   const active = editor.tabs.find((t) => t.id === editor.activeTabId);
   for (const tab of editor.tabs) {
     const match = byPath.get(tab.path);
-    if (match) ui.getState().openFile(match.id, tab.path);
+    if (match) ui.getState().openFile(match.id, tab.path, { preserveWorkshopView: true });
     else ui.getState().closeTab(tab.id);
   }
   const activeMatch = active ? byPath.get(active.path) : undefined;
@@ -245,6 +246,7 @@ export function createCruxStore(ui: StoreApi<UIState> = useUIStore) {
     workspaceMessages: null,
     workspaceSegmentStart: null,
     snapshotMessageCount: null,
+    snapshotEntryFile: null,
     pendingDeletes: [],
     folderMissing: false,
     publishPhase: null,
@@ -632,6 +634,7 @@ export function createCruxStore(ui: StoreApi<UIState> = useUIStore) {
         workspaceMessages: null,
         workspaceSegmentStart: null,
         snapshotMessageCount: null,
+        snapshotEntryFile: null,
         pendingDeletes: [],
       });
     },
@@ -1012,6 +1015,7 @@ export function createCruxStore(ui: StoreApi<UIState> = useUIStore) {
         viewingSnapshotIndex: index,
         artifacts: snapshotArtifacts,
         snapshotMessageCount: cumulativeCount,
+        snapshotEntryFile: snapshotCrux.meta?.settings?.entryFile ?? null,
         // Stash workspace state only if not already viewing a snapshot
         workspaceArtifacts: get().workspaceArtifacts ?? get().artifacts,
         workspaceMessages: workspaceMessages ?? messages,
@@ -1029,7 +1033,7 @@ export function createCruxStore(ui: StoreApi<UIState> = useUIStore) {
             (a) => (a.meta?.path || a.filename || '') === prevPath,
           );
           if (match) {
-            ui.getState().openFile(match.id, prevPath);
+            ui.getState().openFile(match.id, prevPath, { preserveWorkshopView: true });
           }
         }
       }
@@ -1057,6 +1061,7 @@ export function createCruxStore(ui: StoreApi<UIState> = useUIStore) {
         workspaceMessages: null,
         workspaceSegmentStart: null,
         snapshotMessageCount: null,
+        snapshotEntryFile: null,
       });
       rebindEditorTabs(ui, workspaceArtifacts ?? []);
 
@@ -1066,7 +1071,7 @@ export function createCruxStore(ui: StoreApi<UIState> = useUIStore) {
           (a) => (a.meta?.path || a.filename || '') === prevPath,
         );
         if (match) {
-          ui.getState().openFile(match.id, prevPath);
+          ui.getState().openFile(match.id, prevPath, { preserveWorkshopView: true });
         }
       }
     },
@@ -1077,6 +1082,7 @@ export function createCruxStore(ui: StoreApi<UIState> = useUIStore) {
       if (!crux) return;
       const { artifact, crux: cruxService } = getServices();
 
+      const restoredSnapshot = await cruxService.findById(snapshotId);
       // Auto-snapshot current state as a safety net before reverting
       try {
         await get().createSnapshot({ label: 'Before revert', silent: true });
@@ -1115,6 +1121,7 @@ export function createCruxStore(ui: StoreApi<UIState> = useUIStore) {
         workspaceMessages: null,
         workspaceSegmentStart: null,
         snapshotMessageCount: null,
+        snapshotEntryFile: null,
         messages: priorMessages,
         messageSegmentStart: priorMessages.length,
       });
@@ -1126,7 +1133,11 @@ export function createCruxStore(ui: StoreApi<UIState> = useUIStore) {
       // reconstructed the pre-revert conversation. (branchFromSnapshot already
       // did this; revert is the same operation without a label.)
       get().patchCruxMeta({
-        settings: { ...(get().crux?.meta?.settings ?? {}), activeBranch: snapshotId },
+        settings: {
+          ...(get().crux?.meta?.settings ?? {}),
+          activeBranch: snapshotId,
+          entryFile: restoredSnapshot.meta?.settings?.entryFile ?? null,
+        },
       });
 
       // Persist the reverted state — workspace now has empty segment going forward
@@ -1177,7 +1188,11 @@ export function createCruxStore(ui: StoreApi<UIState> = useUIStore) {
       const meta = {
         ...crux.meta,
         messages: [],
-        settings: { ...crux.meta?.settings, activeBranch: snapshotId },
+        settings: {
+          ...crux.meta?.settings,
+          activeBranch: snapshotId,
+          entryFile: snapshotCrux.meta?.settings?.entryFile ?? null,
+        },
       };
 
       // Inject a system message to orient the AI about the branch
@@ -1195,6 +1210,7 @@ export function createCruxStore(ui: StoreApi<UIState> = useUIStore) {
         workspaceMessages: null,
         workspaceSegmentStart: null,
         snapshotMessageCount: null,
+        snapshotEntryFile: null,
         messages: [...snapshotMessages, branchMessage],
         messageSegmentStart: snapshotMessages.length,
         crux: { ...crux, meta },

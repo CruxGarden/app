@@ -1,10 +1,9 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import TendingDestination from '@/components/workspace/TendingDestination';
 import TaskBar from '@/components/workspace/TaskBar';
 import { findWorkingCopy } from '@/services/working-copies';
 import { useCruxStore } from '@/stores/cruxStore';
-import { useWorkspaceUIStoreApi } from '@/stores/uiStore';
 import {
   activateWorkspace,
   closeWorkspace,
@@ -15,7 +14,6 @@ import { WorkspaceContext } from '@/stores/workspaceSelection';
 import { WorkspaceLayout } from '@/components/workspace';
 import SnapshotBanner from '@/components/growth/SnapshotBanner';
 import { APP_NAME } from '@/lib/constants';
-import { pathOf, normalizePath } from '@/lib/artifact-path';
 
 export default function CruxBuilder() {
   const { id: cruxId } = useParams<{ id: string }>();
@@ -83,31 +81,6 @@ export default function CruxBuilder() {
 }
 function Builder() {
   const crux = useCruxStore((s) => s.crux);
-  const artifacts = useCruxStore((s) => s.artifacts);
-  const ui = useWorkspaceUIStoreApi();
-  const previous = useRef<number | null>(null);
-  useEffect(() => {
-    if (!crux) return;
-    const state = ui.getState();
-    if (previous.current === null && !state.editor.tabs.length) {
-      const index = artifacts.find((a) => normalizePath(pathOf(a)).toLowerCase() === 'index.html');
-      if (index) {
-        state.openFile(index.id, pathOf(index));
-        state.setTabViewMode(index.id, 'preview');
-        state.setPaneVisible('workshop', true);
-      }
-    }
-    if (
-      previous.current === 0 &&
-      artifacts.length > 0 &&
-      !state.paneVisibility.artifacts &&
-      !state.paneVisibility.workshop
-    ) {
-      state.setPaneVisible('artifacts', true);
-      state.setPaneVisible('workshop', true);
-    }
-    previous.current = artifacts.length;
-  }, [crux, artifacts, ui]);
   useEffect(() => {
     document.title = crux?.title || APP_NAME;
     return () => {

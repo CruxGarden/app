@@ -56,6 +56,7 @@ interface EditorContentProps {
   cruxId: string;
   saveRef?: React.MutableRefObject<(() => void) | null>;
   captureRef?: React.MutableRefObject<(() => void) | null>;
+  clean?: boolean;
 }
 
 export default function EditorContent({
@@ -64,6 +65,7 @@ export default function EditorContent({
   cruxId,
   saveRef,
   captureRef,
+  clean = false,
 }: EditorContentProps) {
   const readOnlyTask = useCruxStore((s) => {
     const copy = copyIdentity(s.crux);
@@ -91,7 +93,6 @@ export default function EditorContent({
   const scrollRafRef = useRef<number | null>(null);
   const disposedRef = useRef(false);
   const previewIframeRef = useRef<HTMLIFrameElement | null>(null);
-  const previewUrlRef = useRef<string | null>(null);
   // Desktop: local-server URL currently shown in the preview iframe (capture target)
   const desktopCaptureUrlRef = useRef<string | null>(null);
   const formSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -458,24 +459,8 @@ export default function EditorContent({
   const site = useSitePreview(cruxId, path);
   const previewUrl = usePreviewUrl(content, cruxId, path, isHtmlFile && !site.isSite);
 
-  // When preview URL changes, reload the iframe content.
-  // For the initial load, src handles it. For subsequent updates,
-  // the service worker cache is already updated — just reload in place.
-  useEffect(() => {
-    if (!previewUrl) return;
-    const iframe = previewIframeRef.current;
-    if (previewUrlRef.current && iframe) {
-      // Web: same-origin service-worker preview — reload in place. Desktop: the
-      // static server is another origin, so touching contentWindow.location
-      // throws a SecurityError; reassigning src is the cross-origin reload.
-      try {
-        iframe.contentWindow?.location.reload();
-      } catch {
-        iframe.src = previewUrl;
-      }
-    }
-    previewUrlRef.current = previewUrl;
-  }, [previewUrl]);
+  // The iframe's src already navigates when the versioned preview URL changes.
+  // A second imperative reload can reset page state just after the first load.
 
   // Keep the desktop capture target current: whatever local-server URL the
   // preview iframe is showing (dev server for Site Cruxes, static server for
@@ -656,7 +641,7 @@ export default function EditorContent({
       {/* Desktop: the preview is a real local URL — show it, copy it, open it */}
       {target.kind === 'iframe' && target.localBase && (
         <div className="shrink-0 flex items-center gap-1.5 px-2 py-1 border-b border-border bg-surface text-2xs font-mono text-text-muted">
-          {site.isSite && (
+          {site.isSite && !clean && (
             <SitePreviewControls
               site={site}
               onRefresh={() => {
@@ -674,8 +659,33 @@ export default function EditorContent({
               }}
             />
           )}
+          {(clean || !site.isSite) && (
+            <button
+              className="shrink-0 px-1.5 py-0.5 hover:text-text cursor-pointer"
+              title="Return to the entry page"
+              onClick={() => {
+                const iframe = previewIframeRef.current;
+                if (iframe && iframeSrc) iframe.src = iframeSrc;
+              }}
+            >
+              Home
+            </button>
+          )}
+          {(clean || !site.isSite) && (
+            <button
+              data-testid="preview-refresh"
+              className="shrink-0 px-1.5 py-0.5 hover:text-text cursor-pointer"
+              title="Reload the preview"
+              onClick={() => {
+                const iframe = previewIframeRef.current;
+                if (iframe) iframe.setAttribute('src', iframe.src);
+              }}
+            >
+              Refresh
+            </button>
+          )}
           <span className="truncate flex-1" title={target.localBase}>
-            {target.localBase}
+            {clean ? path : target.localBase}
           </span>
           <button
             onClick={() => navigator.clipboard?.writeText(target.localBase!)}
@@ -716,7 +726,13 @@ export default function EditorContent({
             </>
           ) : (
             <>
-              <p className="text-xs text-error">Dev server failed to start</p>
+              <p className="text-xs text-error">Preview could not start</p>
+              <button
+                className="text-xs underline cursor-pointer"
+                onClick={() => void site.restart()}
+              >
+                Retry preview
+              </button>
               <pre className="text-2xs font-mono text-text-muted max-w-md max-h-40 overflow-auto whitespace-pre-wrap text-left">
                 {target.detail}
               </pre>
@@ -754,7 +770,7 @@ export default function EditorContent({
               : { backgroundColor: '#000', width: CAPTURE_SIZE.width, height: CAPTURE_SIZE.height }
           }
           className={iframeVisible ? 'flex-1 w-full' : 'fixed -left-[9999px] pointer-events-none'}
-          title={path}
+          title={clean ? `Crux preview: ${path}` : path}
         />
       )}
     </>
