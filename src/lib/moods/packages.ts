@@ -115,7 +115,8 @@ export function validateMoodPackage(raw: unknown): MoodPackage | null {
   for (const k of Object.keys(cues) as (keyof SoundCues)[]) {
     const v = (snd.cues as Record<string, unknown> | undefined)?.[k];
     if (v === null) cues[k] = null;
-    else if (v === 'tick' || v === 'chime' || v === 'bloom' || v === 'thud') cues[k] = v;
+    else if (v === 'tick' || v === 'chime' || v === 'bloom' || v === 'thud' || v === 'coin')
+      cues[k] = v;
   }
   const persona =
     p.persona && typeof p.persona === 'object' ? (p.persona as PersonaSettings) : undefined;
@@ -386,16 +387,36 @@ export async function exportMoodPackage(
   opts: { includeAudio?: boolean } = {},
 ): Promise<Blob> {
   const zip = new JSZip();
-  const portable: Partial<MoodPackage> = { ...pkg };
+  const portable: MoodPackage = structuredClone(pkg);
+  // Export from Built in must carry shipped files even before the Mood is worn.
+  // Ingest without applying: exporting must not change the person's current room.
+  const shippedBytes = new Map<string, Uint8Array>();
+  const includeShipped = async (url: string) => {
+    const got = await ingestUrl(url);
+    if (!got) throw new Error('Could not read a bundled Mood file. Please try exporting again.');
+    shippedBytes.set(got.fingerprint, new Uint8Array(await got.blob.arrayBuffer()));
+    return got.fingerprint;
+  };
+  if (pkg.bundled?.background)
+    portable.background.image = await includeShipped(pkg.bundled.background);
+  if (pkg.bundled?.avatar && portable.persona) {
+    const fp = await includeShipped(pkg.bundled.avatar);
+    portable.persona.thumbnailFingerprint = fp;
+    portable.persona.thumbnailFingerprintLight = fp;
+  }
+  if (pkg.bundled?.track && opts.includeAudio !== false) {
+    const { url, name, type } = pkg.bundled.track;
+    portable.sound.track = { fingerprint: await includeShipped(url), name, type };
+  }
   delete portable.bundled;
   zip.file('package.json', JSON.stringify(portable, null, 2));
   const audioFps = new Set<string>();
-  if (pkg.sound.track?.fingerprint) audioFps.add(pkg.sound.track.fingerprint);
-  for (const a of pkg.assets ?? []) if (a.kind === 'audio') audioFps.add(a.fingerprint);
-  for (const fp of packageAssets(pkg)) {
+  if (portable.sound.track?.fingerprint) audioFps.add(portable.sound.track.fingerprint);
+  for (const a of portable.assets ?? []) if (a.kind === 'audio') audioFps.add(a.fingerprint);
+  for (const fp of packageAssets(portable)) {
     if (opts.includeAudio === false && audioFps.has(fp)) continue;
     try {
-      const bytes = await readBlob(fp);
+      const bytes = shippedBytes.get(fp) ?? (await readBlob(fp));
       if (bytes?.length) zip.file(`assets/${fp}`, bytes, { binary: true });
     } catch {
       /* missing asset: the package still describes the look */

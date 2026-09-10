@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import {
   captureCurrentMood,
   validateMoodPackage,
@@ -76,6 +76,33 @@ describe('Mood Packages', () => {
     });
     const back2 = await importMoodPackage(await noAudio.arrayBuffer(), async () => 'x');
     expect(back2?.name).toBe('With Music');
+  });
+
+  it('exports a bundled background before apply and retains its cues without changing the worn Mood', async () => {
+    const pkg = bundledMood('8-bit')!;
+    const before = captureCurrentMood({ name: 'Before' });
+    const original = structuredClone(pkg);
+    const bytes = new Uint8Array([137, 80, 78, 71, 1, 2, 3]);
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(bytes)));
+    try {
+      const zip = await exportMoodPackage(pkg, async () => {
+        throw new Error('not stored');
+      });
+      const written: Uint8Array[] = [];
+      const back = await importMoodPackage(await zip.arrayBuffer(), async (data) => {
+        written.push(data);
+        return 'stored';
+      });
+      expect(written).toEqual([bytes]);
+      expect(back?.background.image).toMatch(/^[a-f0-9]{64}$/);
+      expect(back?.sound.cues.snapshot).toBe('coin');
+      expect(back?.bundled).toBeUndefined();
+      expect(pkg).toEqual(original);
+      expect(captureCurrentMood({ name: 'Before' }).theme).toEqual(before.theme);
+      expect(getPersona()).toEqual(before.persona);
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 
   it('applying a Mood keeps the user avatars unless the package brings its own', () => {

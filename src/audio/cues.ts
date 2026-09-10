@@ -45,7 +45,10 @@ export async function playCueSound(kind: CueKind, ctx?: AudioContext | null): Pr
   if (c.state === 'suspended') await c.resume().catch(() => {});
   const now = c.currentTime;
   const peak = 0.18;
-  if (kind === 'chime') {
+  if (kind === 'coin') {
+    blip(c, NOTES.E5!, now, 0.04, 'square', peak * 0.35, 0.025);
+    blip(c, NOTES.B5!, now + 0.075, 0.06, 'square', peak * 0.35, 0.06);
+  } else if (kind === 'chime') {
     blip(c, NOTES.E5!, now, 0.1, 'triangle', peak, 0.35);
     blip(c, NOTES.B5!, now + 0.12, 0.2, 'triangle', peak, 0.4);
   } else if (kind === 'tick') {

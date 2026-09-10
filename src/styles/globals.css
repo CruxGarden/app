@@ -27,6 +27,15 @@
 
 /* ── Fonts ─────────────────────────────────────────────── */
 
+/* Press Start 2P by CodeMan38, SIL OFL 1.1; license ships in /fonts. */
+@font-face {
+  font-family: 'Press Start 2P';
+  src: url('/fonts/PressStart2P-Regular.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
 @font-face {
   font-family: 'JetBrains Mono';
   src: url('/fonts/JetBrainsMono-Regular.woff2') format('woff2');

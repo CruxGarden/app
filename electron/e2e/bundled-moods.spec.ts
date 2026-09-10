@@ -1,14 +1,59 @@
 import { test, expect } from '@playwright/test';
 import { launchApp } from './launch';
+import { enterGarden, createCrux } from './multi-crux-helpers';
 
 type AudioState = { trackName: string | null; enabled: boolean; playing: boolean };
 
 /**
- * The twenty built-in Moods apply as whole rooms: theme tokens, background,
+ * The built-in Moods apply as whole rooms: theme tokens, background,
  * sound and persona change together. The Keeper — the Default Mood — brings
  * its own background image and track.
  */
 test.describe('bundled moods', () => {
+  test('8-bit applies its pixel font, garden image and Bit persona and survives restart', async () => {
+    const { app, page, dir } = await launchApp();
+    try {
+      await enterGarden(page);
+      await page.getByRole('button', { name: 'Mood', exact: true }).click();
+      await page.getByTestId('bundled-8-bit').getByRole('button', { name: 'Apply' }).click();
+      await expect
+        .poll(() =>
+          page.evaluate(() =>
+            getComputedStyle(document.documentElement).getPropertyValue('--accent').trim(),
+          ),
+        )
+        .toBe('#86efac');
+      await expect(page.getByTestId('mood-background-image')).toBeVisible();
+      await page.keyboard.press('Escape');
+      await createCrux(page, 'A little pixel garden');
+      await expect(page.getByText('Ready, player one. What shall we make?')).toBeVisible();
+      expect(
+        await page.evaluate(async () => {
+          await document.fonts.load('8px "Press Start 2P"');
+          return document.fonts.check('8px "Press Start 2P"');
+        }),
+      ).toBe(true);
+      await page.mouse.move(0, 0);
+      await page.screenshot({ path: '/private/tmp/crux-8-bit-workspace.png' });
+    } finally {
+      await app.close();
+    }
+    const again = await launchApp({ dir });
+    try {
+      await expect
+        .poll(() =>
+          again.page.evaluate(() =>
+            getComputedStyle(document.documentElement).getPropertyValue('--icon-set').trim(),
+          ),
+        )
+        .toBe('pixel');
+      await expect(again.page.getByTestId('mood-background-image')).toBeVisible();
+      await again.page.screenshot({ path: '/private/tmp/crux-8-bit-gateway.png' });
+    } finally {
+      await again.app.close();
+    }
+  });
+
   test('apply Windows 95 then Blade Runner Rain: shape, sound and voice follow', async () => {
     const { app, page, dir } = await launchApp();
     const cssVar = (name: string) =>
@@ -44,7 +89,7 @@ test.describe('bundled moods', () => {
       await page.getByRole('button', { name: 'Mood', exact: true }).click();
       const built = page.getByTestId('bundled-moods');
       await expect(built).toBeVisible();
-      await expect(built.locator('[data-testid^="bundled-"]')).toHaveCount(20);
+      await expect(built.locator('[data-testid^="bundled-"]')).toHaveCount(21);
 
       await built.getByTestId('bundled-windows-95').getByRole('button', { name: 'Apply' }).click();
       await expect.poll(() => cssVar('--radius')).toBe('0px');

@@ -7,7 +7,7 @@ import { getSetting, setSetting } from './settings';
 import { SettingsKey } from '@/lib/constants';
 
 export type CueEvent = 'message' | 'toolDone' | 'snapshot' | 'published' | 'error';
-export type CueKind = 'chime' | 'tick' | 'bloom' | 'thud';
+export type CueKind = 'chime' | 'tick' | 'bloom' | 'thud' | 'coin';
 export type SoundCues = Record<CueEvent, CueKind | null>;
 
 export const CUE_EVENTS: { id: CueEvent; label: string; hint: string }[] = [
@@ -18,6 +18,7 @@ export const CUE_EVENTS: { id: CueEvent; label: string; hint: string }[] = [
   { id: 'error', label: 'Something failed', hint: 'a publish or tool error' },
 ];
 export const CUE_KINDS: { id: CueKind; label: string }[] = [
+  { id: 'coin', label: '8-bit coin' },
   { id: 'tick', label: 'Tick' },
   { id: 'chime', label: 'Chime' },
   { id: 'bloom', label: 'Bloom' },

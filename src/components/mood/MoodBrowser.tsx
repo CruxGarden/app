@@ -265,6 +265,8 @@ export default function MoodBrowser() {
       a.download = `${pkg.name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}.cruxmood`;
       a.click();
       URL.revokeObjectURL(url);
+    } catch (error) {
+      say(error instanceof Error ? error.message : 'Could not export this Mood.');
     } finally {
       setBusy(null);
     }
