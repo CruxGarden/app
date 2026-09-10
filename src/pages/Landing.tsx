@@ -4,12 +4,13 @@ import { publicApi } from '@/api';
 import type { ExploreCrux, ExploreTag } from '@/api/public';
 import { Button } from '@/components/ui';
 import GardenIntro from '@/components/landing/GardenIntro';
+import { initialHomepageWorld } from '@/components/landing/worlds';
 import '@/components/landing/garden-home.css';
 import { useAudioStore } from '@/stores/audioStore';
 import { useShallow } from 'zustand/react/shallow';
 import { BUNDLED_MOODS, bundledMood } from '@/lib/moods/bundled-moods';
 import { applyMood } from '@/lib/moods/packages';
-import { getSetting, setSetting } from '@/services/settings';
+import { setSetting } from '@/services/settings';
 import { SettingsKey } from '@/lib/constants';
 import { APP_NAME } from '@/lib/constants';
 import {
@@ -31,6 +32,8 @@ import { publicCoverUrl } from '@/lib/public-cover';
  * statement (ADR 0008). Everything here works without an account.
  */
 export default function Landing() {
+  const [initialWorld] = useState(initialHomepageWorld);
+  const initialMood = bundledMood(initialWorld) ? initialWorld : 'the-keeper';
   useEffect(() => {
     document.title = `${APP_NAME} — You can grow anything`;
     return () => {
@@ -42,11 +45,11 @@ export default function Landing() {
     <div className="grow-home">
       <SiteHeader />
       <main>
-        <GardenIntro initialMood={publicMoodId()} />
+        <GardenIntro initialMood={initialWorld} />
         <div className="grow-details">
           <ExploreSection />
           <HowItWorks />
-          <MoodSection />
+          <MoodSection initialMood={initialMood} />
           <Hero />
           <Trust />
         </div>
@@ -293,14 +296,8 @@ function ExploreSection() {
   );
 }
 
-/** The Mood the site wears: what the visitor last chose here, else the Default Mood. */
-function publicMoodId(): string {
-  const saved = getSetting(SettingsKey.PublicMoodId);
-  return saved && bundledMood(saved) ? saved : 'the-keeper';
-}
-
-function MoodSection() {
-  const [active, setActive] = useState<string | null>(() => publicMoodId());
+function MoodSection({ initialMood }: { initialMood: string }) {
+  const [active, setActive] = useState<string | null>(initialMood);
   const [busy, setBusy] = useState<string | null>(null);
   const [showAll, setShowAll] = useState(false);
   const { track, playing, toggle, init } = useAudioStore(
@@ -317,12 +314,11 @@ function MoodSection() {
     window.addEventListener('public-mood-changed', changed);
     return () => window.removeEventListener('public-mood-changed', changed);
   }, []);
-  // The site wears a Mood like the app does — The Keeper by default, or the one
-  // the visitor picked last time (a bundled Mood's files play from their URLs here).
+  // Match the random opening world; landscape studies use The Keeper's Mood.
   useEffect(() => {
-    const pkg = bundledMood(publicMoodId());
+    const pkg = bundledMood(initialMood);
     if (pkg) void applyMood(pkg).catch(() => {});
-  }, []);
+  }, [initialMood]);
 
   const wear = async (id: string) => {
     const pkg = BUNDLED_MOODS.find((m) => m.id === id);
