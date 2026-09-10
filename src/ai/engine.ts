@@ -248,7 +248,7 @@ export async function* runConversation(
   signal?: AbortSignal,
   options?: ConversationOptions,
 ): AsyncGenerator<ConversationEvent> {
-  const toolDefs = options?.tools ?? defaultToolDefinitions();
+  const toolDefs = options?.tools ?? defaultToolDefinitions(cruxId);
   // Stable prefix vs volatile workspace context (A2): the system prompt holds
   // only what survives across rounds (persona, rules, kind guidance) so
   // providers can cache it; the file list and content model ride in a

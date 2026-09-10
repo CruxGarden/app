@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback, useEffect } from 'react';
-import { isEmbeddedApp } from '@/services/embedded-app';
+import { isEmbeddedApp, isCardinal } from '@/services/embedded-app';
 import { Capability, can } from '@/lib/platform';
 import { useAuthStore } from '@/stores/authStore';
 import { useAppStore } from '@/stores/appStore';
@@ -238,6 +238,16 @@ export default function PublishPane() {
       </div>
     );
   }
+
+  if (isCardinal(crux))
+    return (
+      <div ref={ref} className="flex flex-col h-full">
+        <PaneEmpty
+          title="A local instrument"
+          description="Play and save this instrument in Garden. Website sharing isn't available for this Crux yet."
+        />
+      </div>
+    );
 
   const publishedVersion = crux.meta?.publishedVersion as number | undefined;
   const publishedAt = crux.meta?.publishedAt as string | undefined;

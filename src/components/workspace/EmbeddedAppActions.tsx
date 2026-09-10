@@ -6,7 +6,7 @@ import { openWorkspace } from '@/stores/workspaceRegistry';
 import { documentsFor } from '@/services/workspace-documents';
 import { createTask } from '@/services/tasks';
 import { copyIdentity } from '@/services/working-copies';
-import { isEmbeddedApp } from '@/services/embedded-app';
+import { isEmbeddedApp, isCardinal, embeddedContentRoot } from '@/services/embedded-app';
 import { workshopEntry } from '@/lib/workshop-entry';
 import { pathOf } from '@/lib/artifact-path';
 import { can, Capability } from '@/lib/platform';
@@ -39,7 +39,7 @@ export default function EmbeddedAppActions() {
         : await createTask(
             crux!.id,
             'Customize app',
-            `Customize this app: ${prompt.trim() || 'Help me improve the app.'}\nKeep existing content in ${crux!.kind === 'notes' ? 'notebook/' : 'mockups/'} intact unless I explicitly request content changes. Review changes before merging into Main.`,
+            `Customize this app: ${prompt.trim() || 'Help me improve the app.'}\nKeep existing content in ${embeddedContentRoot(crux)} intact unless I explicitly request content changes. Review changes before merging into Main.`,
           );
       const workspace = await openWorkspace(task.id);
       const state = workspace.data.getState();
@@ -68,7 +68,7 @@ export default function EmbeddedAppActions() {
     <>
       <button
         className={button}
-        title="Ask the agent to help with your notes or designs"
+        title="Ask the agent to help with this app or its content"
         onClick={() => {
           ui.getState().setPaneVisible('collaboration', true);
           ui.getState().setMobileActivePane('collaboration');
@@ -88,9 +88,11 @@ export default function EmbeddedAppActions() {
         )}
       {!identity && (
         <>
-          <button className={button} onClick={() => showPane('publish')}>
-            Share selected content
-          </button>
+          {!isCardinal(crux) && (
+            <button className={button} onClick={() => showPane('publish')}>
+              Share selected content
+            </button>
+          )}
           <button className={button} onClick={() => showPane('export')}>
             Export complete Crux
           </button>

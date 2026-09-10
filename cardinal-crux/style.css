@@ -1,0 +1,248 @@
+:root {
+  color-scheme: dark;
+  font-family: system-ui, sans-serif;
+  color: #f2e8d7;
+  background: #101b24;
+}
+* {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+}
+main {
+  max-width: 1000px;
+  margin: auto;
+  padding: clamp(20px, 4vw, 56px);
+}
+.eyebrow {
+  color: #a8cfc9;
+  font-size: 10px;
+  letter-spacing: 0.22em;
+}
+h1 {
+  font-family: Georgia, serif;
+  font-weight: 400;
+  font-size: clamp(38px, 6vw, 68px);
+  margin: 14px 0 6px;
+}
+header p {
+  color: #a6b8bd;
+  font-size: 14px;
+  margin-bottom: 28px;
+}
+.instrument {
+  border: 1px solid #42515b;
+  border-radius: 18px;
+  background: #182832;
+  overflow: hidden;
+}
+.horizon {
+  position: relative;
+  height: 150px;
+  overflow: hidden;
+  background: linear-gradient(#19333e, #477578 70%, #d7a86f);
+}
+.sun {
+  position: absolute;
+  width: 70px;
+  height: 70px;
+  background: #f3d8a5;
+  border-radius: 50%;
+  left: calc(50% - 35px);
+  top: 38px;
+  box-shadow: 0 0 65px #f3d8a545;
+}
+.horizon i {
+  position: absolute;
+  bottom: -65px;
+  left: -15%;
+  width: 130%;
+  height: 110px;
+  border-radius: 50%;
+  background: #284b52;
+  transform: rotate(-4deg);
+}
+.horizon i:nth-of-type(2) {
+  bottom: -80px;
+  background: #1e3942;
+  transform: rotate(5deg);
+}
+.horizon i:nth-of-type(3) {
+  bottom: -95px;
+  background: #182832;
+  transform: rotate(-2deg);
+}
+.transport {
+  display: flex;
+  gap: 18px;
+  align-items: center;
+  padding: 24px 28px 8px;
+}
+button,
+input,
+select {
+  font: inherit;
+  border: 1px solid #53656b;
+  border-radius: 7px;
+  padding: 10px 14px;
+  color: inherit;
+  background: #213640;
+}
+button {
+  cursor: pointer;
+}
+button:hover {
+  border-color: #a8cfc9;
+}
+button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+#play {
+  min-width: 150px;
+  background: #edc58c;
+  color: #152630;
+  border: 0;
+  font-weight: 650;
+}
+#playing {
+  font-size: 12px;
+  color: #a8cfc9;
+}
+fieldset {
+  border: 0;
+  padding: 20px 28px 30px;
+  margin: 0;
+}
+legend {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+#sliders {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 26px 30px;
+}
+label {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  font-size: 12px;
+}
+label .value {
+  font-variant-numeric: tabular-nums;
+  color: #a8cfc9;
+}
+input[type='range'] {
+  width: 100%;
+  padding: 0;
+  accent-color: #edc58c;
+}
+label small {
+  color: #95adb4;
+  font-size: 11px;
+}
+.presets {
+  display: flex;
+  gap: 16px;
+  align-items: end;
+  margin: 25px 0;
+  flex-wrap: wrap;
+}
+.presets label {
+  flex: 1;
+  min-width: 160px;
+}
+.presets button {
+  height: 42px;
+}
+footer {
+  font-size: 11px;
+  color: #a6b8bd;
+  line-height: 1.6;
+}
+footer button {
+  font-size: 11px;
+  margin: 0 0 8px 10px;
+  padding: 6px 10px;
+}
+#error {
+  color: #ffd2b9;
+}
+.hint {
+  color: #91aaa9;
+}
+code {
+  color: #cdd9d3;
+}
+button:focus-visible,
+input:focus-visible,
+select:focus-visible {
+  outline: 2px solid #edc58c;
+  outline-offset: 4px;
+}
+@media (max-width: 560px) {
+  #sliders {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .horizon {
+    height: 110px;
+  }
+  main {
+    padding: 20px;
+  }
+  .transport,
+  fieldset {
+    padding-left: 18px;
+    padding-right: 18px;
+  }
+}
+#canvas_wrapper {
+  position: fixed;
+  inset: 0;
+  visibility: hidden;
+  transform-origin: 0 0;
+  transform: scale(calc(1 / var(--device-pixel-ratio, 1)));
+  width: 100vw;
+  height: 100vh;
+}
+#canvas {
+  padding: 0;
+  margin: 0;
+}
+body[data-view='rack'] #canvas_wrapper {
+  visibility: visible;
+}
+body[data-view='rack'] main {
+  display: none;
+}
+#back {
+  position: fixed;
+  bottom: 18px;
+  right: 18px;
+  z-index: 5;
+  background: #d8b477;
+  color: #1b252d;
+  box-shadow: 0 4px 16px #0008;
+}
+#rack {
+  float: right;
+}
+a {
+  color: inherit;
+}
+label small {
+  display: block;
+  opacity: 0.7;
+  min-height: 1.2em;
+}
+#error {
+  color: #ffc2b5;
+}
+main {
+  position: relative;
+}

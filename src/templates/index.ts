@@ -10,6 +10,9 @@
 export interface TemplateFile {
   path: string;
   content: string;
+  /** Binary bundled assets, decoded into Blob Store bytes during creation. */
+  encoding?: 'base64' | 'asset-url';
+  mimeType?: string;
 }
 
 /**
@@ -225,6 +228,8 @@ export interface TemplateDefinition {
 const loaders: Record<string, () => Promise<{ default: TemplateDefinition }>> = {
   notes: () => import('./notes'),
   moqira: () => import('./moqira'),
+  onebigsky: () => import('./onebigsky'),
+  'cardinal-drone': () => import('./cardinal-drone'),
   'astro-homepage': () => import('./astro-homepage'),
   'astro-blog': () => import('./astro-blog'),
   'astro-feed': () => import('./astro-feed'),

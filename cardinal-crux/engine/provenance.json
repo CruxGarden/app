@@ -1,0 +1,19 @@
+{
+  "cardinalCommit": "0a530b73273afc914ec71a78e9165cd28c53b599",
+  "emscripten": "3.1.27",
+  "emsdkCommit": "5eb0bde7585670252e8ba05e9d361627bffd08b5",
+  "runtime": {
+    "CardinalMini.wasm": {
+      "bytes": 7641950,
+      "sha256": "24024a060b054a27eb99d9c5d0a0f6fd541449feefb6af3626a5004b00c4c629"
+    },
+    "CardinalMini.js": {
+      "bytes": 3975820,
+      "sha256": "b45e86d80ec125f4fe61e0f2674eba9432e40a41cb94f7b3acc859af3d3318a9"
+    },
+    "CardinalMini.data": {
+      "bytes": 4614917,
+      "sha256": "653352fa25ab6d0c2ea31c12fd356fdf04e5c73d920e07991f1e7ebdb5fe6e63"
+    }
+  }
+}

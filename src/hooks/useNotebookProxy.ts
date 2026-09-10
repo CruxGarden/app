@@ -1,4 +1,6 @@
-import { isEmbeddedApp, isMoqira } from '@/services/embedded-app';
+import { isEmbeddedApp } from '@/services/embedded-app';
+import { registerAppTools } from '@/services/embedded-app-tool-registry';
+import { embeddedAppToolAdapter } from '@/services/embedded-app-tool-adapters';
 import { useBlocker } from 'react-router-dom';
 import {
   registerNotebookEditor,
@@ -22,11 +24,61 @@ export function useNotebookProxy(cruxId: string | null) {
   }, [blocker, cruxId]);
   useEffect(() => {
     if (!cruxId || !isEmbeddedApp(workspace.getState().crux)) return;
-    const protocol = isMoqira(workspace.getState().crux) ? 'crux:app' : 'crux:notebook';
+    const protocol = workspace.getState().crux?.kind === 'notes' ? 'crux:notebook' : 'crux:app';
     const execute = notebookSession(workspace);
     let dirty = false;
     let peer: { source: MessageEventSource; origin: string } | null = null;
     const flushes = new Map<string, { resolve(): void; reject(error: Error): void }>();
+    const commands = new Map<
+      string,
+      { resolve(result: unknown): void; reject(error: Error): void }
+    >();
+    const toolAdapter = embeddedAppToolAdapter(workspace.getState().crux);
+    const unregisterAppTools = toolAdapter
+      ? registerAppTools(cruxId, {
+          tools: toolAdapter.tools,
+          execute: async (name, input) => {
+            const command = toolAdapter.prepare(name, input);
+            const state = workspace.getState();
+            if (
+              state.crux?.id !== cruxId ||
+              state.viewingSnapshotId ||
+              !peer ||
+              ![...document.querySelectorAll<HTMLIFrameElement>('iframe[data-crux-id]')].some(
+                (frame) => frame.dataset.cruxId === cruxId && frame.contentWindow === peer!.source,
+              )
+            )
+              return Promise.reject(
+                new Error('Open the current app in Workshop before using its tools.'),
+              );
+            return new Promise((resolve, reject) => {
+              const id = crypto.randomUUID();
+              const timer = setTimeout(() => {
+                commands.delete(id);
+                reject(
+                  new Error(
+                    'App command was not confirmed. Inspect the app before retrying; a draft may remain.',
+                  ),
+                );
+              }, 60000);
+              commands.set(id, {
+                resolve: (result) => {
+                  clearTimeout(timer);
+                  resolve(result);
+                },
+                reject: (error) => {
+                  clearTimeout(timer);
+                  reject(error);
+                },
+              });
+              peer!.source.postMessage(
+                { type: 'crux:app:command', id, command },
+                { targetOrigin: peer!.origin },
+              );
+            });
+          },
+        })
+      : () => {};
     const unregister = registerNotebookEditor(cruxId, {
       dirty: () => dirty,
       flush: () => {
@@ -77,6 +129,13 @@ export function useNotebookProxy(cruxId: string | null) {
       if (!frame || new URL(frame.src, location.href).origin !== event.origin) return;
       peer = { source: event.source!, origin: event.origin };
       if (!isEmbeddedApp(workspace.getState().crux)) return;
+      if (event.data.op === 'tool-result') {
+        const command = commands.get(event.data.commandId);
+        commands.delete(event.data.commandId);
+        if (event.data.error) command?.reject(new Error(event.data.error));
+        else command?.resolve(event.data.result);
+        return;
+      }
       if (event.data.op === 'dirty') {
         dirty = event.data.dirty === true;
         workspace.setState({});
@@ -102,9 +161,14 @@ export function useNotebookProxy(cruxId: string | null) {
     window.addEventListener('message', receive);
     return () => {
       unregister();
+      unregisterAppTools();
       window.removeEventListener('message', receive);
       for (const pending of flushes.values())
         pending.reject(new Error('App editor closed before saving.'));
+      for (const pending of commands.values())
+        pending.reject(
+          new Error('App closed before the command was confirmed. Inspect before retrying.'),
+        );
     };
   }, [cruxId, workspace]);
 }

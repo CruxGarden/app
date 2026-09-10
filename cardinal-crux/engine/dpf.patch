@@ -1,0 +1,13 @@
+diff --git a/distrho/src/jackbridge/WebBridge.hpp b/distrho/src/jackbridge/WebBridge.hpp
+index be96483..2009146 100644
+--- a/distrho/src/jackbridge/WebBridge.hpp
++++ b/distrho/src/jackbridge/WebBridge.hpp
+@@ -170,7 +170,7 @@ struct WebBridge : NativeBridge {
+             // resume/start playback on first click
+             document.addEventListener('click', function(e) {
+                 var WAB = Module['WebAudioBridge'];
+-                if (WAB.audioContext.state === 'suspended')
++                if (!Module['gardenOwnsPlayback'] && WAB.audioContext.state === 'suspended')
+                     WAB.audioContext.resume();
+             });
+         }, DISTRHO_PLUGIN_NUM_INPUTS, DISTRHO_PLUGIN_NUM_INPUTS_2, DISTRHO_PLUGIN_NUM_OUTPUTS_2, bufferSize, audioBufferStorage, WebAudioCallback, this);

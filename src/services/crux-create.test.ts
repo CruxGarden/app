@@ -34,4 +34,23 @@ describe('applyTemplateToCrux', () => {
     expect(result.crux.kind).toBe('page');
     expect(result.messages).toBeNull();
   });
+
+  it('creates the offline game with real font bytes and no build requirement', async () => {
+    const { crux: cruxService, artifact } = getServices();
+    const crux = await cruxService.create({ title: 'One Big Sky', type: 'workspace' });
+    const result = await applyTemplateToCrux(crux, 'onebigsky', 'webapp');
+    const files = await artifact.findByResource('crux', crux.id);
+    const paths = files.map((file) => file.meta?.path);
+    expect(paths).toEqual(expect.arrayContaining(['index.html', 'game.js', 'ui/input.js', 'assets/fonts/OFL.txt']));
+    expect(paths).not.toContain('package.json');
+    expect(paths).not.toContain('server.cjs');
+    expect(result.crux.meta?.settings).toMatchObject({ entryFile: 'index.html' });
+    for (const name of ['Silkscreen-Regular', 'Silkscreen-Bold']) {
+      const file = files.find((file) => file.meta?.path === `assets/fonts/${name}.ttf`)!;
+      const bytes = new Uint8Array(await (await artifact.downloadBlob(file.id)).arrayBuffer());
+      const { readFileSync } = await import('node:fs');
+      const original = readFileSync(new URL(`../../onebigsky-crux/assets/fonts/${name}.ttf`, import.meta.url));
+      expect(bytes).toEqual(new Uint8Array(original));
+    }
+  });
 });

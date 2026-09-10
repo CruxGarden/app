@@ -24,6 +24,7 @@ import siberianCity from '@/assets/moods/siberian-blizzard/city.png?url';
 import keeperVista from '@/assets/moods/keeper/vista.jpg?url';
 import keeperAvatar from '@/assets/moods/keeper/keeper-avatar.png?url';
 import keeperTrack from '@/assets/moods/keeper/echoes-from-beyond.opus?url';
+import oneBigSky from '@/assets/moods/one-big-sky/sky.png?url';
 
 const CREATED = '2026-09-04T00:00:00.000Z';
 
@@ -76,6 +77,22 @@ const THE_KEEPER: Spec = {
 
 const SPECS: Spec[] = [
   THE_KEEPER,
+  {
+    id: 'one-big-sky',
+    name: 'One Big Sky',
+    presetId: 'one-big-sky',
+    extra: { bgImageDim: '0.08', bgImageBlur: '0px' },
+    background: { type: BgType.Image },
+    bundled: { background: oneBigSky },
+    cues: { message: null, toolDone: null, snapshot: 'coin', published: 'chime', error: 'thud' },
+    volume: 0.2,
+    persona: {
+      name: 'Skye',
+      greeting: 'There’s room up here for another idea. What shall we make?',
+      systemPrompt:
+        'You are Skye, a friendly, inventive creative collaborator with the lightness of an afternoon arcade adventure. Help the person turn ideas into playable experiments, explain decisions plainly, and verify what you build. Be practical and concise. Preserve their work and creative intent. Game references are welcome in moderation; never invent scores, progress or completed work.',
+    },
+  },
   {
     id: 'siberian-blizzard',
     name: 'Siberian Blizzard',

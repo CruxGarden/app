@@ -34,6 +34,25 @@ export async function applyTemplateToCrux(
   }
 
   for (const file of def.files) {
+    if (file.encoding === 'asset-url') {
+      const response = await fetch(file.content);
+      if (!response.ok) throw new Error(`Could not load bundled asset ${file.path}.`);
+      await services.artifact.upload({
+        resourceId: crux.id,
+        blob: await response.blob(),
+        meta: { path: file.path },
+      });
+      continue;
+    }
+    if (file.encoding === 'base64') {
+      const bytes = Uint8Array.from(atob(file.content), (char) => char.charCodeAt(0));
+      await services.artifact.upload({
+        resourceId: crux.id,
+        blob: new Blob([bytes], { type: file.mimeType ?? 'application/octet-stream' }),
+        meta: { path: file.path },
+      });
+      continue;
+    }
     await services.artifact.create({
       resourceId: crux.id,
       content: file.content,

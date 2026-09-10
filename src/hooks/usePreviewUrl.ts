@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, useMemo } from 'react';
 import { useCruxStore } from '@/stores/cruxStore';
+import { appPreviewKey } from '@/services/app-changes';
 import { getServices } from '@/services';
 import { resolveRelativePath as normalizePath } from '@/lib/artifact-path';
 import { Capability, can } from '@/lib/platform';
@@ -32,15 +33,13 @@ function useDesktopPreviewUrl(
   enabled: boolean,
 ): string | null {
   const artifacts = useCruxStore((s) => s.artifacts);
+  const crux = useCruxStore((s) => s.crux);
   const [base, setBase] = useState<string | null>(null);
   const [url, setUrl] = useState<string | null>(null);
   const versionRef = useRef(0);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const artifactKey = useMemo(
-    () => artifacts.map((a) => `${a.id}:${a.fingerprint || a.updated}`).join(','),
-    [artifacts],
-  );
+  const artifactKey = useMemo(() => appPreviewKey(crux, artifacts), [crux, artifacts]);
 
   // Server lifecycle — one server per crux, shared by every editor tab
   // (leases; see lib/lease.ts) so tab switches don't restart it.

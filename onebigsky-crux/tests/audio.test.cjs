@@ -1,0 +1,247 @@
+const { test } = require("node:test");
+const assert = require("node:assert/strict");
+const ArcadeAudio = require("../audio.js");
+function fixture(initial = "running") {
+  const nodes = [];
+  const param = () => ({
+    value: 0,
+    values: [],
+    ramps: [],
+    setValueAtTime(v, t) {
+      this.value = v;
+      this.values.push([v, t]);
+    },
+    linearRampToValueAtTime(value, time) {
+      this.ramps.push({ value, time });
+    },
+    exponentialRampToValueAtTime() {},
+  });
+  const node = (kind) => {
+    const n = {
+      kind,
+      gain: param(),
+      frequency: param(),
+      connect() {},
+      disconnect() {
+        this.disconnected = true;
+      },
+      start(t) {
+        this.started = t;
+      },
+      stop(t) {
+        this.stopped = t;
+      },
+    };
+    nodes.push(n);
+    return n;
+  };
+  class Context {
+    constructor() {
+      this.currentTime = 10;
+      this.sampleRate = 44100;
+      this.state = initial;
+      this.destination = {};
+    }
+    createGain() {
+      return node("gain");
+    }
+    createOscillator() {
+      return node("tone");
+    }
+    createBufferSource() {
+      return node("noise");
+    }
+    createBiquadFilter() {
+      return node("filter");
+    }
+    createBuffer(ch, length) {
+      return { getChannelData: () => new Float32Array(length) };
+    }
+    resume() {
+      this.state = "running";
+      return Promise.resolve();
+    }
+  }
+  const audio = new ArcadeAudio(Context);
+  return { audio, nodes };
+}
+test("sound defaults on but creates audio only after user activation", () => {
+  const { audio } = fixture("suspended");
+  assert.equal(audio.enabled, true);
+  assert.equal(audio.context, null);
+  audio.unlock();
+  assert.equal(audio.context.state, "running");
+  assert.equal(audio.blocked, false);
+});
+test("flap, step and death schedule distinct bounded arcade sounds", () => {
+  const { audio, nodes } = fixture();
+  audio.unlock();
+  audio.play("flap");
+  assert.equal(nodes.filter((n) => n.kind === "tone").length, 1);
+  assert.equal(nodes.filter((n) => n.kind === "noise").length, 1);
+  audio.context.currentTime += 1;
+  audio.play("step", 0);
+  audio.context.currentTime += 1;
+  audio.play("step", 1);
+  const steps = nodes.filter((n) => n.kind === "tone").slice(1);
+  assert.notEqual(
+    steps[0].frequency.values[0][0],
+    steps[1].frequency.values[0][0],
+  );
+  audio.play("death");
+  assert.equal(nodes.filter((n) => n.kind === "noise").length, 2);
+  assert.equal(nodes.filter((n) => n.kind === "tone").length, 6);
+  for (const n of nodes.filter(
+    (n) => n.kind === "tone" || n.kind === "noise",
+  )) {
+    assert.ok(n.stopped > n.started && n.stopped - n.started < 0.5);
+    n.onended();
+    assert.equal(n.disconnected, true);
+  }
+});
+test("mute silences existing voices and suppresses new effects until enabled", () => {
+  const { audio, nodes } = fixture();
+  audio.unlock();
+  audio.play("death");
+  audio.toggle();
+  assert.equal(audio.master.gain.value, 0);
+  const count = nodes.length;
+  audio.play("flap");
+  audio.tone(300, 0.1);
+  assert.equal(nodes.length, count);
+  audio.toggle();
+  assert.equal(audio.master.gain.value, 0.55);
+  audio.play("flap");
+  assert.ok(nodes.length > count);
+});
+test("simultaneous footsteps are limited without suppressing death effects", () => {
+  const { audio, nodes } = fixture();
+  audio.unlock();
+  audio.play("step");
+  audio.play("step");
+  assert.equal(nodes.filter((n) => n.kind === "tone").length, 1);
+  audio.play("death");
+  audio.play("death");
+  assert.equal(nodes.filter((n) => n.kind === "noise").length, 2);
+});
+test("blocked or unavailable browser audio is recoverable without crashing", () => {
+  const { audio } = fixture("suspended");
+  audio.unlock();
+  audio.context.state = "suspended";
+  audio.toggle();
+  assert.equal(audio.enabled, true);
+  assert.equal(audio.blocked, false);
+  const unavailable = new ArcadeAudio(undefined);
+  unavailable.unlock();
+  assert.equal(unavailable.enabled, false);
+  unavailable.play("death");
+});
+
+test("respawn plays a rising chime with a short shimmer and obeys mute", () => {
+  const { audio, nodes } = fixture();
+  audio.unlock();
+  audio.play("spawn");
+  const notes = nodes.filter((n) => n.kind === "tone");
+  assert.equal(notes.length, 5);
+  for (let i = 1; i < notes.length; i++) {
+    assert.ok(
+      notes[i].frequency.values[0][0] > notes[i - 1].frequency.values[0][0],
+    );
+    assert.ok(notes[i].started > notes[i - 1].started);
+  }
+  assert.ok(Math.max(...notes.map((n) => n.stopped)) - notes[0].started < 0.65);
+  audio.toggle();
+  const count = nodes.length;
+  audio.play("spawn");
+  assert.equal(nodes.length, count);
+});
+
+test("all four birds have distinct quieter flap voices even when flapping together", () => {
+  const { audio, nodes } = fixture();
+  audio.unlock();
+  for (let character = 0; character < 4; character++)
+    audio.play("flap", character);
+  const tones = nodes.filter((n) => n.kind === "tone");
+  const filters = nodes.filter((n) => n.kind === "filter");
+  assert.equal(tones.length, 4);
+  assert.equal(
+    new Set(tones.map((n) => Math.round(n.frequency.values[0][0] / 10))).size,
+    4,
+  );
+  assert.equal(new Set(filters.map((n) => n.frequency.value)).size, 4);
+  assert.equal(new Set(tones.map((n) => n.type)).size, 2);
+  for (const tone of tones)
+    assert.ok(
+      tone.stopped - tone.started >= 0.1 && tone.stopped - tone.started < 0.18,
+    );
+  audio.play("flap", 0);
+  assert.equal(nodes.filter((n) => n.kind === "tone").length, 4);
+  audio.context.currentTime += 0.1;
+  audio.play("flap", 0);
+  assert.equal(nodes.filter((n) => n.kind === "tone").length, 5);
+});
+
+test("every flap fades in gently and fades fully to silence", () => {
+  for (let character = 0; character < 4; character++) {
+    const { audio, nodes } = fixture();
+    audio.unlock();
+    audio.play("flap", character);
+    const gains = nodes.filter((n) => n.kind === "gain").slice(1);
+    assert.equal(gains.length, 2);
+    for (const gain of gains) {
+      assert.equal(gain.gain.values[0][0], 0);
+      assert.ok(gain.gain.ramps[0].time - audio.context.currentTime >= 0.024);
+      assert.equal(gain.gain.ramps.at(-1).value, 0);
+    }
+    const tone = nodes.find((n) => n.kind === "tone");
+    assert.notEqual(tone.type, "square");
+    assert.equal(
+      tone.frequency.values.length,
+      1,
+      "no abrupt pitch steps during flaps",
+    );
+  }
+});
+
+test("zombie splats have a short layered sound, throttle simultaneous pops, and obey mute", () => {
+  const { audio, nodes } = fixture();
+  audio.unlock();
+  audio.play("zombie-pop", 1);
+  assert.equal(nodes.filter((n) => n.kind === "tone").length, 2);
+  assert.equal(nodes.filter((n) => n.kind === "noise").length, 1);
+  const count = nodes.length;
+  audio.play("zombie-pop", 2);
+  assert.equal(nodes.length, count);
+  audio.context.currentTime += 0.1;
+  audio.toggle();
+  audio.play("zombie-pop");
+  assert.equal(nodes.length, count);
+});
+
+test("new mounts have distinct flap sounds that obey mute", () => {
+  const pitches = [];
+  for (const character of [4, 5, 6, 7]) {
+    const { audio, nodes } = fixture();
+    audio.unlock();
+    audio.play("flap", character);
+    const tone = nodes.find((n) => n.kind === "tone");
+    assert.ok(tone);
+    pitches.push(tone.frequency.values[0][0]);
+    audio.toggle();
+    const count = nodes.length;
+    audio.play("flap", character);
+    assert.equal(nodes.length, count);
+  }
+  assert.equal(new Set(pitches.map((p) => Math.round(p / 20))).size, 4);
+});
+
+test("water splash combines noise and a short tone and respects mute", () => {
+  const { audio, nodes } = fixture();
+  audio.unlock();
+  audio.play("splash");
+  assert.ok(nodes.some((n) => n.kind === "tone"));
+  const count = nodes.length;
+  audio.toggle();
+  audio.play("splash");
+  assert.equal(nodes.length, count);
+});
