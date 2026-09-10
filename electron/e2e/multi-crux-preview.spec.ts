@@ -9,7 +9,12 @@ async function showHtml(page: Page, id: string, name: string) {
   const meta = await storedCrux(page, id);
   writeFileSync(
     join(meta.projectFolder, 'index.html'),
-    `<h1>${name}</h1><input aria-label="Preview input"><script>document.body.dataset.before = localStorage.getItem('owner') || ''; localStorage.setItem('owner', '${name}')</script>`,
+    `<h1>${name}</h1><input aria-label="Preview input"><script>
+      const previous = localStorage.getItem('owner');
+      if (previous && previous !== '${name}') localStorage.setItem('foreign-owner', previous);
+      localStorage.setItem('owner', '${name}');
+      document.body.dataset.foreignOwner = localStorage.getItem('foreign-owner') || '';
+    </script>`,
   );
   const tree = page.getByRole('tree');
   const toggle = page.getByRole('button', { name: 'Toggle artifacts' });
@@ -72,8 +77,10 @@ test('static previews retain distinct ports and storage; shortcuts work from a p
     expect(await previewStore(page)).toBe('Beta');
     await page.locator('#unregistered-preview').evaluate((frame) => frame.remove());
     expect(new URL(a).origin).not.toBe(new URL(b).origin);
+    // Clean/Advanced can reload a preview. Remember any foreign owner across reloads,
+    // while allowing the same Crux to see its own previously saved browser state.
     await expect(page.frameLocator('iframe[data-crux-id]').locator('body')).toHaveAttribute(
-      'data-before',
+      'data-foreign-owner',
       '',
     );
     expect(await (await fetch(a)).text()).toContain('<h1>Alpha</h1>');
@@ -102,6 +109,10 @@ test('static previews retain distinct ports and storage; shortcuts work from a p
       'Alpha',
     );
     expect(await previewStore(page)).toBe('Alpha');
+    await expect(page.frameLocator('iframe[data-crux-id]').locator('body')).toHaveAttribute(
+      'data-foreign-owner',
+      '',
+    );
     expect(new URL((await page.locator('iframe[data-crux-id]').getAttribute('src'))!).origin).toBe(
       new URL(a).origin,
     );
