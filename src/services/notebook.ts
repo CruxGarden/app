@@ -4,6 +4,9 @@ import {
   isEmbeddedApp,
   isMoqira,
   isCardinal,
+  samplerType,
+  samplerPath,
+  validateSamplerFile,
   embeddedContentRoot,
   cardinalPath,
   validateCardinalFile,
@@ -52,6 +55,7 @@ export function notebookSession(workspace: StoreApi<CruxState>) {
       const files = await artifact.findByResource('crux', owner);
       const moqira = isMoqira(state.crux);
       const cardinal = isCardinal(state.crux);
+      const sampler = samplerType(state.crux);
       const root = embeddedContentRoot(state.crux);
       const op = request.op;
       if (op === 'list') {
@@ -62,11 +66,13 @@ export function notebookSession(workspace: StoreApi<CruxState>) {
             fingerprint: f.fingerprint,
           }));
       }
-      const path = cardinal
-        ? cardinalPath(request.path)
-        : moqira
-          ? moqiraPath(request.path)
-          : notebookPath(request.path);
+      const path = sampler
+        ? samplerPath(sampler, request.path)
+        : cardinal
+          ? cardinalPath(request.path)
+          : moqira
+            ? moqiraPath(request.path)
+            : notebookPath(request.path);
       let existing = files.find((f) => pathOf(f) === path);
       if (op === 'read') {
         // Watcher batches are debounced. Reconcile this file before opening it,
@@ -119,6 +125,7 @@ export function notebookSession(workspace: StoreApi<CruxState>) {
         throw new Error(
           'This file changed elsewhere. Your draft is still here; reload before replacing it.',
         );
+      let writtenFingerprint: string | null = null;
       if (op === 'delete') {
         if (!existing || !/\.md$/i.test(path))
           throw new Error('Only an existing note can be deleted.');
@@ -138,6 +145,18 @@ export function notebookSession(workspace: StoreApi<CruxState>) {
           );
           if (!match) throw new Error('Choose a PNG, JPEG, GIF or WebP image.');
           const bytes = Uint8Array.from(atob(match[2]!), (c) => c.charCodeAt(0));
+          writtenFingerprint = await hashContent(bytes);
+          if (sampler) {
+            const digest = writtenFingerprint;
+            if (
+              bytes.length > 4_000_000 ||
+              path !==
+                `data/assets/${digest}.${{ 'image/png': 'png', 'image/jpeg': 'jpg', 'image/webp': 'webp', 'image/gif': 'gif' }[match[1]!]}`
+            )
+              throw new Error(
+                'Imported images must keep their original bytes and content fingerprint.',
+              );
+          }
           await artifact.upload({
             resourceId: owner,
             blob: new Blob([bytes], { type: match[1] }),
@@ -146,6 +165,7 @@ export function notebookSession(workspace: StoreApi<CruxState>) {
         } else {
           if (moqira) validateMoqiraFile(path, request.content);
           if (cardinal) validateCardinalFile(request.content);
+          if (sampler) validateSamplerFile(sampler, request.content);
           if (path === 'notebook/publish.json') {
             const config = JSON.parse(request.content);
             if (
@@ -160,23 +180,27 @@ export function notebookSession(workspace: StoreApi<CruxState>) {
             )
               throw new Error('Choose a title and a list of Markdown pages to publish.');
           }
+          writtenFingerprint = await hashContent(request.content);
           await artifact.create({ resourceId: owner, content: request.content, meta: { path } });
         }
       }
       await workspace.getState().refreshArtifacts();
       await workspace.getState().createSnapshot({
-        label: cardinal
-          ? 'Instrument saved'
-          : moqira
-            ? 'Wireframes saved'
-            : op === 'delete'
-              ? 'Deleted a note'
-              : 'Notebook saved',
+        label: sampler
+          ? 'Project saved'
+          : cardinal
+            ? 'Instrument saved'
+            : moqira
+              ? 'Wireframes saved'
+              : op === 'delete'
+                ? 'Deleted a note'
+                : 'Notebook saved',
         ifChanged: true,
         silent: true,
       });
-      const saved = (await artifact.findByResource('crux', owner)).find((f) => pathOf(f) === path);
-      return { fingerprint: saved?.fingerprint ?? null };
+      // A watcher can ingest another writer during refresh/snapshot. Acknowledge
+      // our bytes, never that newer version: the next save must detect its conflict.
+      return { fingerprint: writtenFingerprint };
     });
     tail = operation.catch(() => {});
     return operation;

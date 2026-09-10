@@ -1,3 +1,4 @@
+import { TYPES, validateProject } from '../../tool-cruxes/shared/model.js';
 import { validateDocument } from '../../cardinal-crux/model.js';
 
 /** Built-in apps with editable data owned by the Crux. */
@@ -7,7 +8,13 @@ export function isCardinal(crux: { meta?: Record<string, unknown> } | null | und
 export function embeddedContentRoot(
   crux: { kind?: string; meta?: Record<string, unknown> } | null | undefined,
 ) {
-  return isCardinal(crux) ? 'music/' : isMoqira(crux) ? 'mockups/' : 'notebook/';
+  return samplerType(crux)
+    ? 'data/'
+    : isCardinal(crux)
+      ? 'music/'
+      : isMoqira(crux)
+        ? 'mockups/'
+        : 'notebook/';
 }
 export function cardinalPath(value: unknown): string {
   if (value !== 'instrument.json')
@@ -24,7 +31,7 @@ export function isMoqira(crux: { meta?: Record<string, unknown> } | null | undef
 export function isEmbeddedApp(
   crux: { kind?: string; meta?: Record<string, unknown> } | null | undefined,
 ) {
-  return crux?.kind === 'notes' || isMoqira(crux) || isCardinal(crux);
+  return crux?.kind === 'notes' || isMoqira(crux) || isCardinal(crux) || !!samplerType(crux);
 }
 export function moqiraPath(value: unknown): string {
   if (value !== 'project.json' && value !== 'publish.json')
@@ -58,4 +65,31 @@ export function validateMoqiraFile(path: string, content: string) {
   ) {
     throw new Error('Choose a valid Moqira project (schema version 1).');
   }
+}
+
+/** Trusted local sampler apps use a small JSON document and immutable raster assets. */
+export function samplerType(
+  crux: { meta?: Record<string, unknown> } | null | undefined,
+): string | null {
+  const template = crux?.meta?.template;
+  if (typeof template !== 'string' || !template.startsWith('tool-')) return null;
+  const type = template.slice(5);
+  return TYPES.includes(type) ? type : null;
+}
+export function isLocalCreationTool(crux: { meta?: Record<string, unknown> } | null | undefined) {
+  return isCardinal(crux) || !!samplerType(crux);
+}
+export function samplerPath(type: string, value: unknown): string {
+  if (value === 'project.json') return 'data/project.json';
+  if (
+    type === 'openmosh' &&
+    typeof value === 'string' &&
+    /^assets\/[a-f0-9]{64}\.(png|jpg|webp|gif)$/.test(value)
+  )
+    return 'data/' + value;
+  throw new Error('This app can access only its project document and imported images.');
+}
+export function validateSamplerFile(type: string, content: string) {
+  if (content.length > 2_000_000) throw new Error('The project is too large.');
+  validateProject(JSON.parse(content), type);
 }

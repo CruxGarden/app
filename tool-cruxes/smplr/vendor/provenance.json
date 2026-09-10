@@ -1,0 +1,13 @@
+{
+  "package": "smplr",
+  "version": "1.0.0",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/danigb/smplr.git"
+  },
+  "bytes": 63807,
+  "sha256": "c0a00c88d7daffbe479738ad853ed11cb9bd838789f201aa2761c37e09739e28",
+  "build": "esbuild 0.25.12, bundle ESM, minify, legalComments eof",
+  "entry": "export { Sampler, Sequencer } from \"smplr\";"
+}

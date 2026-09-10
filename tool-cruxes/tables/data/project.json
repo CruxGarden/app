@@ -1,0 +1,43 @@
+{
+  "schemaVersion": 1,
+  "type": "tables",
+  "title": "Launch board",
+  "columns": [
+    {
+      "key": "task",
+      "title": "Task",
+      "type": "text"
+    },
+    {
+      "key": "owner",
+      "title": "Owner",
+      "type": "text"
+    },
+    {
+      "key": "status",
+      "title": "Status",
+      "type": "text"
+    },
+    {
+      "key": "hours",
+      "title": "Hours",
+      "type": "number"
+    }
+  ],
+  "rows": [
+    {
+      "id": "task-1",
+      "task": "Design the launch page",
+      "owner": "Alex",
+      "status": "In progress",
+      "hours": 6
+    },
+    {
+      "id": "task-2",
+      "task": "Gather customer feedback",
+      "owner": "Sam",
+      "status": "Planned",
+      "hours": 3
+    }
+  ]
+}

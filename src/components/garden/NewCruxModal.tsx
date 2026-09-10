@@ -222,6 +222,46 @@ const TEMPLATES: Template[] = [
     desktopOnly: true,
   },
   {
+    id: 'tool-openmosh',
+    label: 'OpenMosh effects',
+    description: 'Creative · layer image effects and export a PNG',
+    defaultTitle: 'Signal garden',
+    icon: <LayoutIcon />,
+    thumb: <BlankThumb />,
+    kind: 'webapp',
+    desktopOnly: true,
+  },
+  {
+    id: 'tool-tables',
+    label: 'Tables',
+    description: 'Business & productivity · projects, contacts and inventory',
+    defaultTitle: 'Launch board',
+    icon: <LayoutIcon />,
+    thumb: <BlankThumb />,
+    kind: 'webapp',
+    desktopOnly: true,
+  },
+  {
+    id: 'tool-smplr',
+    label: 'Sample sequencer',
+    description: 'Creative · sample pads and a saved sixteen-step rhythm',
+    defaultTitle: 'Pocket rhythm',
+    icon: <LayoutIcon />,
+    thumb: <BlankThumb />,
+    kind: 'webapp',
+    desktopOnly: true,
+  },
+  {
+    id: 'tool-playcanvas',
+    label: '3D Workshop',
+    description: 'Creative · build an interactive scene with PlayCanvas',
+    defaultTitle: 'Little world',
+    icon: <LayoutIcon />,
+    thumb: <BlankThumb />,
+    kind: 'webapp',
+    desktopOnly: true,
+  },
+  {
     id: 'cardinal-drone',
     label: 'Cardinal Drone',
     description: 'Play a prepared modular instrument, shape its sound, or open the rack',
@@ -443,7 +483,9 @@ export default function NewCruxModal({ open, onClose }: NewCruxModalProps) {
           crux.id,
           !quickStart && template.id === 'notes'
             ? 27
-            : !quickStart && ['moqira', 'onebigsky', 'cardinal-drone'].includes(template.id)
+            : !quickStart &&
+                (['moqira', 'onebigsky', 'cardinal-drone'].includes(template.id) ||
+                  template.id.startsWith('tool-'))
               ? 22
               : undefined,
         );

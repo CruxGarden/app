@@ -9,5 +9,10 @@
   },
   "devDependencies": {
     "esbuild": "0.25.12"
+  },
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "test": "node --test tests/*.test.js",
+    "check": "node --check shared/session.js && node --check shared/model.js && node --check openmosh/app.js && node --check tables/app.js && node --check smplr/app.js && node --check playcanvas/app.js"
   }
 }

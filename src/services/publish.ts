@@ -1,4 +1,4 @@
-import { isEmbeddedApp, isMoqira, isCardinal } from './embedded-app';
+import { isEmbeddedApp, isMoqira, isLocalCreationTool } from './embedded-app';
 import { portableMeta } from './task-archive';
 import { assertCopyWritable } from './working-copies';
 /**
@@ -236,8 +236,8 @@ export async function publishPipeline(
     messages?: ChatMessage[];
   },
 ): Promise<Crux> {
-  if (isCardinal(crux))
-    throw new Error('Website sharing is not available for this local instrument yet.');
+  if (isLocalCreationTool(crux))
+    throw new Error('Website sharing is not available for this local creation tool yet.');
   if (crux.type === 'working-copy' || crux.meta?.workingCopy)
     throw new Error('Publish from Main after merging this task.');
   if (!opts?.deps) await assertCopyWritable(crux.id);

@@ -60,7 +60,7 @@ it('preserves a Cardinal instrument in Growth and archives, protects ownership a
     (a) => a.meta?.path === 'music/instrument.json',
   )!;
   expect(await services.artifact.readContent(file.id)).toBe(content);
-  await expect(publishPipeline(crux, artifacts)).rejects.toThrow('local instrument');
+  await expect(publishPipeline(crux, artifacts)).rejects.toThrow('local creation tool');
   store.setState({ viewingSnapshotId: 'past' });
   await expect(
     call({ op: 'write', path: 'instrument.json', content, expected: result.fingerprint }),

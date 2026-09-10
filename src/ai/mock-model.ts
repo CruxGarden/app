@@ -74,6 +74,40 @@ export function getMockLanguageModel(): LanguageModel {
         warnings: [],
       }),
       doStream: async ({ prompt, abortSignal }) => {
+        const sampler = /\[sampler:(openmosh|tables|smplr|playcanvas)\]/.exec(lastUserText(prompt));
+        if (sampler) {
+          const type = sampler[1]!;
+          const scripts: Record<
+            string,
+            { inspect: string; mutate: string; input: Record<string, unknown> }
+          > = {
+            openmosh: {
+              inspect: 'inspect_effects',
+              mutate: 'set_effects',
+              input: { effects: [{ kind: 'posterize', values: { levels: 4 } }] },
+            },
+            tables: {
+              inspect: 'inspect_table',
+              mutate: 'upsert_table_rows',
+              input: { rows: [{ id: 'task-1', hours: 9, status: 'Ready' }] },
+            },
+            smplr: { inspect: 'inspect_pattern', mutate: 'set_pattern', input: { bpm: 128 } },
+            playcanvas: {
+              inspect: 'inspect_scene',
+              mutate: 'upsert_scene_objects',
+              input: { objects: [{ id: 'center', color: '#ff6600', name: 'Agent sun' }] },
+            },
+          };
+          const script = scripts[type]!;
+          const rounds = toolResultsThisTurn(prompt);
+          if (!rounds.length) return toolCallStream(script.inspect, {});
+          if (rounds.length === 1) return toolCallStream(script.mutate, script.input);
+          if (rounds.length === 2) return toolCallStream(script.inspect, {});
+          const failure = toolResultText(prompt, script.mutate);
+          return textStream(
+            failure?.startsWith('Error') ? failure : `Saved ${type} project with app tools.`,
+          );
+        }
         const instrument = /\[instrument:(controls|preset)\]/.exec(lastUserText(prompt));
         if (instrument) {
           const rounds = toolResultsThisTurn(prompt);

@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>PlayCanvas · Little world</title>
+    <link rel="stylesheet" href="shared/style.css" />
+  </head>
+  <body>
+    <header>
+      <div>
+        <div class="eyebrow">PlayCanvas · Little world</div>
+        <input id="title" aria-label="Project title" maxlength="120" />
+      </div>
+      <div class="actions">
+        <span id="save-state" role="status">Opening project…</span
+        ><button id="save">Save now</button><button id="reload">Reload saved project</button>
+      </div>
+    </header>
+    <div id="error" role="alert" hidden></div>
+    <main id="app"></main>
+    <footer>
+      Use the app, ask an agent, or customize its source in a Task. Your editable project saves with
+      Growth.
+    </footer>
+    <script type="module" src="app.js"></script>
+  </body>
+</html>

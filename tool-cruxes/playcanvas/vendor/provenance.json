@@ -1,0 +1,13 @@
+{
+  "package": "playcanvas",
+  "version": "2.22.1",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/playcanvas/engine.git"
+  },
+  "bytes": 2463543,
+  "sha256": "83db450d09b0e3afb55517e56ee7d51d92c5fc571c917961ec363c08027ed6b1",
+  "build": "Upstream build/playcanvas.min.mjs, copied unchanged",
+  "entry": "export * from \"playcanvas\";"
+}
