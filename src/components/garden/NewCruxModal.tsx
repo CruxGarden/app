@@ -212,6 +212,16 @@ const TEMPLATES: Template[] = [
     desktopOnly: true,
   },
   {
+    id: 'moqira',
+    label: 'Mockups',
+    description: 'Design wireframes with Moqira, then share an interactive public edition',
+    icon: <LayoutIcon />,
+    thumb: <BlankThumb />,
+    kind: 'webapp',
+    defaultTitle: 'My Mockups',
+    desktopOnly: true,
+  },
+  {
     id: 'astro-empty',
     label: 'Empty (Astro)',
     description: 'A real Astro project with one page — bring your own plan',
@@ -409,7 +419,14 @@ export default function NewCruxModal({ open, onClose }: NewCruxModalProps) {
 
       useUIStore
         .getState()
-        .seedCruxLayout(crux.id, !quickStart && template.id === 'notes' ? 27 : undefined);
+        .seedCruxLayout(
+          crux.id,
+          !quickStart && template.id === 'notes'
+            ? 27
+            : !quickStart && template.id === 'moqira'
+              ? 22
+              : undefined,
+        );
       if (idea.trim()) setSetting(`cruxgarden:composer:${crux.id}`, idea.trim());
 
       reset();

@@ -1,0 +1,8 @@
+---
+import App from '../App';
+import { readEdition } from '../../scripts/edition.mjs';
+const edition = import.meta.env.PROD ? readEdition(process.cwd()) : undefined;
+---
+<!doctype html><html lang="en"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width"/><title>{edition?.name ?? 'Moqira'}</title></head><body>
+{edition ? <App publicProject={edition} client:only="react" /> : <App client:only="react" />}
+</body></html>

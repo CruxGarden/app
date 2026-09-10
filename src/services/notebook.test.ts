@@ -67,7 +67,7 @@ describe('notebook Artifact bridge', () => {
   it('blocks history, closed workspaces and non-notebook Cruxes', async () => {
     const { call, store } = await fixture();
     store.setState({ viewingSnapshotId: 'old' });
-    await expect(call({ op: 'list' })).rejects.toThrow('current notebook');
+    await expect(call({ op: 'list' })).rejects.toThrow('current app');
     store.setState({ viewingSnapshotId: null, closing: true });
     await expect(call({ op: 'list' })).rejects.toThrow('no longer open');
     store.setState({ closing: false, crux: { ...store.getState().crux!, kind: 'webapp' } });

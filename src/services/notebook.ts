@@ -1,3 +1,4 @@
+import { isEmbeddedApp, isMoqira, moqiraPath, validateMoqiraFile } from './embedded-app';
 import type { StoreApi } from 'zustand';
 import type { CruxState } from '@/stores/cruxStore';
 import { getServices } from '@/services';
@@ -48,23 +49,25 @@ export function notebookSession(workspace: StoreApi<CruxState>) {
   return (request: Record<string, unknown>) => {
     const operation = tail.then(async () => {
       const state = workspace.getState();
-      if (!owner || state.crux?.id !== owner || state.crux.kind !== 'notes' || state.closing)
-        throw new Error('This notebook is no longer open.');
+      if (!owner || state.crux?.id !== owner || !isEmbeddedApp(state.crux) || state.closing)
+        throw new Error('This app is no longer open.');
       // A Site preview can still point at Main when browsing Growth. Never expose a writable bridge there.
-      if (state.viewingSnapshotId) throw new Error('Return to the current notebook to edit.');
+      if (state.viewingSnapshotId) throw new Error('Return to the current app to edit.');
       await flushIngestion();
       const { artifact } = getServices();
       const files = await artifact.findByResource('crux', owner);
+      const moqira = isMoqira(state.crux);
+      const root = moqira ? 'mockups/' : NOTEBOOK_ROOT;
       const op = request.op;
       if (op === 'list') {
         return files
-          .filter((f) => pathOf(f).startsWith(NOTEBOOK_ROOT))
+          .filter((f) => pathOf(f).startsWith(root))
           .map((f) => ({
-            path: pathOf(f).slice(NOTEBOOK_ROOT.length),
+            path: pathOf(f).slice(root.length),
             fingerprint: f.fingerprint,
           }));
       }
-      const path = notebookPath(request.path);
+      const path = moqira ? moqiraPath(request.path) : notebookPath(request.path);
       let existing = files.find((f) => pathOf(f) === path);
       if (op === 'read') {
         // Watcher batches are debounced. Reconcile this file before opening it,
@@ -142,6 +145,7 @@ export function notebookSession(workspace: StoreApi<CruxState>) {
             meta: { path },
           });
         } else {
+          if (moqira) validateMoqiraFile(path, request.content);
           if (path === 'notebook/publish.json') {
             const config = JSON.parse(request.content);
             if (
@@ -159,7 +163,7 @@ export function notebookSession(workspace: StoreApi<CruxState>) {
       }
       await workspace.getState().refreshArtifacts();
       await workspace.getState().createSnapshot({
-        label: op === 'delete' ? 'Deleted a note' : 'Notebook saved',
+        label: moqira ? 'Wireframes saved' : op === 'delete' ? 'Deleted a note' : 'Notebook saved',
         ifChanged: true,
         silent: true,
       });

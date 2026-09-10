@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "name": "My Mockups",
+  "activeWireframeId": "welcome",
+  "appearance": {
+    "colorScheme": "light",
+    "accentColor": "#2563eb",
+    "appFontFamily": "Inter, system-ui, sans-serif",
+    "appFontSize": 14,
+    "accentTitlebar": false
+  },
+  "wireframes": [
+    {
+      "id": "welcome",
+      "name": "Wireframe 1",
+      "background": "white",
+      "showGrid": true,
+      "nodes": []
+    }
+  ]
+}

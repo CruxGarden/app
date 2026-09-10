@@ -224,6 +224,7 @@ export interface TemplateDefinition {
 // ecosystem templates arrive via TemplateDefinition.scaffold scripts.
 const loaders: Record<string, () => Promise<{ default: TemplateDefinition }>> = {
   notes: () => import('./notes'),
+  moqira: () => import('./moqira'),
   'astro-homepage': () => import('./astro-homepage'),
   'astro-blog': () => import('./astro-blog'),
   'astro-feed': () => import('./astro-feed'),
