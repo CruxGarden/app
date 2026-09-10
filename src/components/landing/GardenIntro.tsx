@@ -46,21 +46,27 @@ export default function GardenIntro({ initialMood }: { initialMood: string }) {
     <section
       className="grow-intro"
       aria-labelledby="grow-title"
-      style={{ '--world-sky': world.sky, '--world-accent': world.accent } as CSSProperties}
+      style={
+        {
+          '--world-sky': world.sky,
+          '--world-accent': world.accent,
+          '--world-orbit': world.roof,
+        } as CSSProperties
+      }
     >
       <div className="grow-hero-copy">
-        <p className="grow-eyebrow">A CREATIVE WORKSPACE. A WORLD OF POSSIBILITIES.</p>
+        <p className="grow-eyebrow">LET YOUR IDEAS GET OUT OF HAND.</p>
         <h1 id="grow-title">
-          You can grow
-          <br />
-          <em>anything.</em>
+          <span>You can</span> <span>grow</span>{' '}
+          <em>
+            anything<span className="grow-period">.</span>
+          </em>
         </h1>
         <p className="grow-description">
-          A game. A world. A useful little tool.
+          Weird games. New worlds. Your next big thing.
           <br />
-          An idea you can’t quite explain yet.
+          Make it with AI. Make it yours.
         </p>
-        <p className="grow-invitation">Start with a conversation. See what grows.</p>
         <div className="grow-actions">
           <a className="grow-primary" href="#download">
             Start growing <span aria-hidden="true">↗</span>
@@ -69,12 +75,11 @@ export default function GardenIntro({ initialMood }: { initialMood: string }) {
             Look around <span aria-hidden="true">↓</span>
           </a>
         </div>
-        <p className="grow-small">Build with AI. Keep your history. Share what you make.</p>
       </div>
       <div className={`grow-world ${world.night ? 'grow-world-night' : ''}`}>
         <div className="grow-world-caption">
           <span className="grow-world-dot" />
-          <span>A LITTLE WORLD OF POSSIBILITIES</span>
+          <span>UNREASONABLE POSSIBILITIES</span>
           <span className="grow-world-number">
             {String(GARDEN_WORLDS.indexOf(world) + 1).padStart(2, '0')} / 08
           </span>
@@ -89,7 +94,7 @@ export default function GardenIntro({ initialMood }: { initialMood: string }) {
           <Suspense
             fallback={
               <div className="garden-loading" role="status">
-                Growing a little world…
+                Opening a world…
               </div>
             }
           >
@@ -103,7 +108,7 @@ export default function GardenIntro({ initialMood }: { initialMood: string }) {
       </div>
       <div className="grow-world-picker">
         <div>
-          <p className="grow-eyebrow">WHAT DOES YOUR GARDEN FEEL LIKE?</p>
+          <p className="grow-eyebrow">SAME GARDEN. DIFFERENT UNIVERSE.</p>
           <p className="grow-world-line" aria-live="polite">
             {world.line}
           </p>
@@ -126,7 +131,7 @@ export default function GardenIntro({ initialMood }: { initialMood: string }) {
       </div>
       <div className="grow-places" id="places">
         <div className="grow-place-picker">
-          <p className="grow-eyebrow">THERE’S SOMETHING GROWING HERE</p>
+          <p className="grow-eyebrow">PICK A PORTAL</p>
           <div role="group" aria-label="Places in the garden">
             {GARDEN_PLACES.map((p, i) => (
               <button key={p.id} aria-pressed={p.id === placeId} onClick={() => setPlaceId(p.id)}>
