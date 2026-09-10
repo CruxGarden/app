@@ -162,3 +162,24 @@ export const GARDEN_PLACES = [
   },
 ] as const;
 export type GardenPlaceId = (typeof GARDEN_PLACES)[number]['id'];
+
+// One draw per document load, including React StrictMode and route remounts.
+// Remember only the last draw in this tab so refreshes do not immediately repeat.
+let initialWorldId: string | undefined;
+export function initialHomepageWorld(): string {
+  if (initialWorldId) return initialWorldId;
+  let previous: string | null = null;
+  try {
+    previous = sessionStorage.getItem('cruxgarden:homepage-world');
+  } catch {
+    // Random selection still works when browser storage is unavailable.
+  }
+  const choices = GARDEN_WORLDS.filter((world) => world.id !== previous);
+  initialWorldId = choices[Math.floor(Math.random() * choices.length)]!.id;
+  try {
+    sessionStorage.setItem('cruxgarden:homepage-world', initialWorldId);
+  } catch {
+    // Persistence is optional; it only prevents immediate repeats.
+  }
+  return initialWorldId;
+}

@@ -45,7 +45,7 @@ test.afterAll(async () => {
 });
 
 test.describe('public site', () => {
-  test('Landing: wordmark, download, Moods that stick, Explore shows what people made', async ({
+  test('Landing: wordmark, download, Mood selection, Explore shows what people made', async ({
     page,
   }) => {
     await page.goto('/');
@@ -53,7 +53,7 @@ test.describe('public site', () => {
       page.getByRole('heading', { name: 'You can grow anything.', level: 1 }),
     ).toBeVisible();
     await expect(page.getByTestId('download-button')).toBeVisible();
-    // wearing a Mood changes the accent and survives a reload
+    // Wearing a Mood changes the accent for the current visit.
     const accent = () =>
       page.evaluate(() =>
         getComputedStyle(document.documentElement).getPropertyValue('--accent').trim(),
@@ -66,9 +66,6 @@ test.describe('public site', () => {
       .filter({ hasText: 'Terminal' })
       .click();
     await expect.poll(accent).not.toBe(before);
-    const worn = await accent();
-    await page.reload();
-    await expect.poll(accent).toBe(worn);
     // the recent cruxes strip shows the seeded crux and links to its page
     await expect(page.getByText('Garden Notes').first()).toBeVisible();
   });
@@ -81,6 +78,11 @@ test.describe('public site', () => {
     await expect(
       page.getByRole('heading', { name: 'You can grow anything.', level: 1 }),
     ).toBeVisible();
+    await page
+      .getByRole('group', { name: 'Visit a garden world' })
+      .getByRole('button', { name: 'The Keeper', exact: true })
+      .click();
+    await expect(page.locator('.garden-landscape')).toHaveAttribute('data-world', 'the-keeper');
     await page.screenshot({ path: '/private/tmp/crux-homepage-keeper.png', fullPage: true });
     await page.screenshot({ path: '/private/tmp/crux-homepage-hero.png' });
     const before = await canvas.screenshot();
@@ -99,8 +101,6 @@ test.describe('public site', () => {
     await worlds.getByRole('button', { name: 'GLUMLOT', exact: true }).click();
     await expect(page.locator('.garden-landscape')).toHaveAttribute('data-world', 'glumlot');
     await page.screenshot({ path: '/private/tmp/crux-homepage-glumlot.png', fullPage: true });
-    await page.reload();
-    await expect(page.locator('.garden-landscape')).toHaveAttribute('data-world', 'glumlot');
     await page
       .getByRole('group', { name: 'Places in the garden' })
       .getByRole('button', { name: /The arcade/ })
@@ -108,6 +108,34 @@ test.describe('public site', () => {
     await expect(page.getByRole('heading', { name: 'A game to get lost in.' })).toBeVisible();
     await page.getByRole('link', { name: 'Explore games' }).click();
     await expect(page).toHaveURL(/\/explore\?q=game$/);
+  });
+
+  test('a refresh draws a new world and applies its corresponding Mood', async ({ page }) => {
+    await page.goto('/');
+    const landscape = page.locator('.garden-landscape');
+    await expect(landscape).toBeVisible();
+    const first = await landscape.getAttribute('data-world');
+    const worlds = page.getByRole('group', { name: 'Visit a garden world' });
+    const firstName = await worlds.locator('[aria-pressed="true"]').innerText();
+    await page.reload();
+    await expect(landscape).toBeVisible();
+    await expect(landscape).not.toHaveAttribute('data-world', first!);
+    await expect(worlds.locator('[aria-pressed="true"]')).not.toHaveText(firstName);
+    const selected = await landscape.getAttribute('data-world');
+    const name = await worlds.locator('[aria-pressed="true"]').innerText();
+    const moodName = ['ancient-egypt', 'paper-theatre'].includes(selected!) ? 'The Keeper' : name;
+    const moods = page.getByRole('group', { name: 'Moods' });
+    await expect(moods.getByRole('button').filter({ hasText: moodName })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+    // Returning through client-side navigation does not count as a page refresh.
+    await page
+      .getByRole('navigation', { name: 'Main navigation' })
+      .getByRole('link', { name: 'Explore', exact: true })
+      .click();
+    await page.goBack();
+    await expect(landscape).toHaveAttribute('data-world', selected!);
   });
 
   test('the homepage works on a phone and with reduced motion', async ({ page }) => {
