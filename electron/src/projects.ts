@@ -150,20 +150,31 @@ export class ProjectFolders {
 
   writeFile(folder: string, relPath: string, data: Uint8Array): void {
     const target = this.resolveInside(folder, relPath);
+    this.assertNoSymlinks(folder, relPath);
     fs.mkdirSync(path.dirname(target), { recursive: true });
-    fs.writeFileSync(target, Buffer.from(data));
+    const temporary = `${target}.crux-write-${require('crypto').randomUUID()}`;
+    try {
+      const mode = fs.existsSync(target) ? fs.statSync(target).mode & 0o777 : 0o644;
+      fs.writeFileSync(temporary, Buffer.from(data), { mode });
+      fs.renameSync(temporary, target);
+    } finally {
+      if (fs.existsSync(temporary)) fs.unlinkSync(temporary);
+    }
   }
 
   readFile(folder: string, relPath: string): Uint8Array {
+    this.assertNoSymlinks(folder, relPath);
     return new Uint8Array(fs.readFileSync(this.resolveInside(folder, relPath)));
   }
 
   deleteFile(folder: string, relPath: string): void {
+    this.assertNoSymlinks(folder, relPath);
     const target = this.resolveInside(folder, relPath);
     try {
       fs.unlinkSync(target);
-    } catch {
-      return; // already gone
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT') return;
+      throw error;
     }
     // Prune now-empty parent directories up to the project folder
     const base = this.assertKnownFolder(folder);
@@ -180,6 +191,8 @@ export class ProjectFolders {
   }
 
   renameFile(folder: string, fromRel: string, toRel: string): void {
+    this.assertNoSymlinks(folder, fromRel);
+    this.assertNoSymlinks(folder, toRel);
     const from = this.resolveInside(folder, fromRel);
     const to = this.resolveInside(folder, toRel);
     fs.mkdirSync(path.dirname(to), { recursive: true });
@@ -194,6 +207,80 @@ export class ProjectFolders {
   /** Validate a folder for serving/listing. Returns the resolved path. */
   resolveKnownFolder(folder: string): string {
     return this.assertKnownFolder(folder);
+  }
+
+  private assertNoSymlinks(folder: string, relPath: string): void {
+    let current = this.assertKnownFolder(folder);
+    if (fs.lstatSync(current).isSymbolicLink())
+      throw new Error('A task cannot use a symlinked Project Folder.');
+    for (const part of relPath.split('/')) {
+      current = path.join(current, part);
+      if (fs.existsSync(current) && fs.lstatSync(current).isSymbolicLink())
+        throw new Error(`A task cannot capture or replace a symlink: ${relPath}`);
+    }
+  }
+
+  setMode(folder: string, relPath: string, mode: number): void {
+    this.assertNoSymlinks(folder, relPath);
+    fs.chmodSync(this.resolveInside(folder, relPath), mode & 0o777);
+  }
+
+  capture(folder: string): { path: string; data: Uint8Array; mode: number }[] {
+    const base = this.assertKnownFolder(folder);
+    this.assertNoSymlinks(base, '');
+    const createIgnore = require('ignore');
+    const { DEFAULT_IGNORES } = require('./watcher');
+    const ig = createIgnore()
+      .add(DEFAULT_IGNORES)
+      .add([
+        '.env',
+        '.env.*',
+        '*.pem',
+        '*.key',
+        '.claude/',
+        '.codex/',
+        '.cursor/',
+        '*.crux-write-*',
+      ]);
+    const ignorePath = path.join(base, '.cruxignore');
+    if (fs.existsSync(ignorePath)) {
+      this.assertNoSymlinks(base, '.cruxignore');
+      ig.add(fs.readFileSync(ignorePath, 'utf8'));
+    }
+    const scan = (): { rel: string; signature: string; mode: number }[] => {
+      const result: { rel: string; signature: string; mode: number }[] = [];
+      const walk = (dir: string) => {
+        for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+          const abs = path.join(dir, entry.name);
+          const rel = toPosixRel(base, abs);
+          if (ig.ignores(rel) || ig.ignores(rel + '/')) continue;
+          if (entry.isSymbolicLink())
+            throw new Error(`Task capture does not support symlinks: ${rel}`);
+          if (entry.isDirectory()) walk(abs);
+          else if (entry.isFile()) {
+            const stat = fs.statSync(abs);
+            result.push({
+              rel,
+              mode: stat.mode & 0o777,
+              signature: `${stat.ino}:${stat.size}:${stat.mtimeMs}:${stat.ctimeMs}`,
+            });
+          } else throw new Error(`Task capture does not support this file type: ${rel}`);
+        }
+      };
+      walk(base);
+      return result.sort((a, b) => a.rel.localeCompare(b.rel));
+    };
+    const before = scan();
+    const files = before.map((f) => ({
+      path: f.rel,
+      mode: f.mode,
+      data: this.readFile(base, f.rel),
+    }));
+    if (JSON.stringify(before) !== JSON.stringify(scan()))
+      throw new Error(
+        'The Project Folder changed during capture. Pause external writers and try again.',
+      );
+    return files;
   }
 
   /**

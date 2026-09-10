@@ -170,7 +170,13 @@ export async function startAutoBackup(): Promise<AutoBackupScheduler> {
       if (!w) return; // closed since; the daily garden backup has it
       const { backupOf, snapshotsBehind } = await import('@/services/backup');
       const st = w.data.getState();
-      if (backupOf(st.crux) && snapshotsBehind(st.crux, st.growthCount) === 0) return;
+      const { listWorkingCopies } = await import('./working-copies');
+      if (
+        !(await listWorkingCopies(w.cruxId)).length &&
+        backupOf(st.crux) &&
+        snapshotsBehind(st.crux, st.growthCount) === 0
+      )
+        return;
       await backupCrux(w.data);
       window.dispatchEvent(new Event(AUTO_BACKUP_CHANGED));
     },

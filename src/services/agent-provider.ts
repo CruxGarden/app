@@ -48,6 +48,7 @@ export const AGENT_NAME = 'Claude Code';
  * preload side and was collected mid-turn; a module-level handler is not.
  */
 const runHandlers = new Map<string, (event: AgentEvent) => void>();
+const runOwners = new Map<string, { id: string; lifetimeId: string }>();
 let eventListener: (() => void) | null = null;
 function ensureEventListener(): void {
   const a = api();
@@ -61,8 +62,16 @@ export function startAgentPermissionListener(): () => void {
   const a = api();
   if (!a || permissionListener) return permissionListener ?? (() => {});
   permissionListener = a.onPermission((request: AgentPermissionRequest) => {
-    const ui = getWorkspace(request.cruxId)?.ui;
-    if (!ui) {
+    const workspace = getWorkspace(request.cruxId);
+    const ui = workspace?.ui;
+    const owner = runOwners.get(request.runId);
+    if (
+      !ui ||
+      !owner ||
+      owner.id !== request.cruxId ||
+      owner.lifetimeId !== workspace?.lifetimeId ||
+      !runHandlers.has(request.runId)
+    ) {
       a.answer(request.requestId, false);
       return;
     }
@@ -75,7 +84,14 @@ export function startAgentPermissionListener(): () => void {
         detail: request.summary,
         cruxId: request.cruxId,
       })
-      .then((ok) => a.answer(request.requestId, ok));
+      .then((ok) =>
+        a.answer(
+          request.requestId,
+          ok &&
+            runOwners.get(request.runId) === owner &&
+            getWorkspace(request.cruxId)?.lifetimeId === owner.lifetimeId,
+        ),
+      );
   });
   return () => {
     permissionListener?.();
@@ -116,7 +132,12 @@ export async function* runAgentTurn(opts: AgentTurnOptions): AsyncGenerator<Conv
     queue.push(event);
     wake?.();
   });
-  const off = () => runHandlers.delete(runId);
+  const owner = getWorkspace(opts.cruxId);
+  if (owner) runOwners.set(runId, { id: owner.id, lifetimeId: owner.lifetimeId });
+  const off = () => {
+    runHandlers.delete(runId);
+    runOwners.delete(runId);
+  };
   const onAbort = () => {
     void a.interrupt(runId);
   };

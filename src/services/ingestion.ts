@@ -29,6 +29,11 @@ const folderToCrux = new Map<string, string>();
 async function cruxIdForFolder(folder: string): Promise<string | null> {
   if (folderToCrux.has(folder)) return folderToCrux.get(folder)!;
   const db = getSqliteClient();
+  const copy = await db.get<{ id: string }>(
+    "SELECT id FROM working_copies WHERE project_folder = ? AND phase IN ('preparing', 'ready')",
+    [folder],
+  );
+  if (copy) return copy.id;
   const rows = await db.all<{ id: string; meta: string | null }>(
     "SELECT id, meta FROM cruxes WHERE type = 'workspace'",
   );

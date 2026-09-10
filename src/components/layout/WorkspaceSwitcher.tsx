@@ -1,3 +1,4 @@
+import { copyIdentity } from '@/services/working-copies';
 import { documentsFor } from '@/services/workspace-documents';
 import { getWorkspace } from '@/stores/workspaceRegistry';
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -318,7 +319,13 @@ export default function WorkspaceSwitcher() {
               role="dialog"
               aria-modal="true"
               aria-label={
-                closing ? 'Close workspace' : renaming ? 'Rename Crux' : 'Switch Crux workspace'
+                closing
+                  ? 'Close workspace'
+                  : renaming
+                    ? copyIdentity(getWorkspace(renaming)?.data.getState().crux)
+                      ? 'Rename task'
+                      : 'Rename Crux'
+                    : 'Switch Crux workspace'
               }
               className="bg-surface-solid text-text border border-border rounded p-4 w-[min(30rem,calc(100vw-2rem))] shadow-modal"
               onKeyDown={(e) => {
@@ -377,9 +384,15 @@ export default function WorkspaceSwitcher() {
                   }}
                 >
                   <label>
-                    Crux title
+                    {copyIdentity(getWorkspace(renaming)?.data.getState().crux)
+                      ? 'Task name'
+                      : 'Crux title'}
                     <input
-                      aria-label="Crux title"
+                      aria-label={
+                        copyIdentity(getWorkspace(renaming)?.data.getState().crux)
+                          ? 'Task name'
+                          : 'Crux title'
+                      }
                       value={title}
                       onChange={(e) => setTitle(e.target.value)}
                       className="block border p-2 w-full"
@@ -492,7 +505,10 @@ export default function WorkspaceSwitcher() {
                         <button
                           onClick={() => {
                             setRenaming(active.id);
-                            setTitle(active.title);
+                            setTitle(
+                              copyIdentity(getWorkspace(active.id)?.data.getState().crux)?.title ??
+                                active.title,
+                            );
                           }}
                         >
                           Rename current Crux…

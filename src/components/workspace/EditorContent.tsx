@@ -1,3 +1,4 @@
+import { copyIdentity } from '@/services/working-copies';
 import { useWorkspaceUIStoreApi } from '@/stores/uiStore';
 import { documentsFor } from '@/services/workspace-documents';
 import { useStore } from 'zustand';
@@ -64,6 +65,10 @@ export default function EditorContent({
   saveRef,
   captureRef,
 }: EditorContentProps) {
+  const readOnlyTask = useCruxStore((s) => {
+    const copy = copyIdentity(s.crux);
+    return s.closing || (!!copy && copy.phase !== 'ready');
+  });
   const cruxStore = useCruxStoreApi();
   const uiStore = useWorkspaceUIStoreApi();
   const documents = documentsFor(cruxStore, uiStore);
@@ -548,6 +553,7 @@ export default function EditorContent({
             onChange={handleEditorChange}
             onMount={handleEditorMount}
             options={{
+              readOnly: readOnlyTask,
               minimap: { enabled: false },
               fontSize: editorFontSize,
               fontFamily: editorFontFamily,

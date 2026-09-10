@@ -1,3 +1,5 @@
+import { portableMeta } from './task-archive';
+import { assertCopyWritable } from './working-copies';
 /**
  * Publish module — the whole publish/unpublish pipeline behind one interface.
  *
@@ -10,7 +12,7 @@
  * a server, a builder, or SQLite; production callers omit `deps`.
  */
 
-import type { Crux, Artifact } from '@/api/types';
+import type { Crux, Artifact, ChatMessage } from '@/api/types';
 import { pathOf, isWorkspaceThumbnail } from '@/lib/artifact-path';
 import { PUBLIC_COVER_PATH } from '@/lib/public-cover';
 import { isGeneratedGuidePath } from './agents-md';
@@ -205,7 +207,7 @@ export function describePublishFailure(err: unknown): PublishFailure {
 
 // ── The pipeline ────────────────────────────────────────────────────────────
 
-function cruxUpsertFields(crux: Crux): Record<string, unknown> {
+export function cruxUpsertFields(crux: Crux, messages?: ChatMessage[]): Record<string, unknown> {
   return {
     title: crux.title,
     slug: crux.slug,
@@ -214,7 +216,7 @@ function cruxUpsertFields(crux: Crux): Record<string, unknown> {
     type: crux.type,
     kind: crux.kind,
     discoverable: crux.discoverable,
-    meta: crux.meta as Record<string, unknown>,
+    meta: { ...portableMeta(crux.meta), ...(messages ? { messages } : {}) },
   };
 }
 
@@ -225,8 +227,15 @@ function cruxUpsertFields(crux: Crux): Record<string, unknown> {
 export async function publishPipeline(
   crux: Crux,
   artifacts: Artifact[],
-  opts?: { onProgress?: (phase: PublishPhase) => void; deps?: PublishDeps },
+  opts?: {
+    onProgress?: (phase: PublishPhase) => void;
+    deps?: PublishDeps;
+    messages?: ChatMessage[];
+  },
 ): Promise<Crux> {
+  if (crux.type === 'working-copy' || crux.meta?.workingCopy)
+    throw new Error('Publish from Main after merging this task.');
+  if (!opts?.deps) await assertCopyWritable(crux.id);
   const deps = opts?.deps ?? (await defaultDeps());
   const progress = opts?.onProgress ?? (() => {});
 
@@ -236,10 +245,14 @@ export async function publishPipeline(
   progress('sync');
   const cruxExistsOnApi = await deps.api.exists(crux.id);
   if (cruxExistsOnApi) {
-    await deps.api.update(crux.id, cruxUpsertFields(crux));
+    await deps.api.update(crux.id, cruxUpsertFields(crux, opts?.messages));
   } else {
     // The API handles slug conflicts by hard-deleting stale records
-    await deps.api.create({ id: crux.id, ...cruxUpsertFields(crux), data: crux.data || '' });
+    await deps.api.create({
+      id: crux.id,
+      ...cruxUpsertFields(crux, opts?.messages),
+      data: crux.data || '',
+    });
   }
 
   // 2. Collect the files to publish.
@@ -312,6 +325,8 @@ export async function publishPipeline(
     ...(crux.meta as Record<string, unknown>),
     ...(updated.meta as Record<string, unknown>),
     publishedFingerprints,
+    messages: crux.meta?.messages,
+    settings: crux.meta?.settings,
   };
   await deps.local.updateCruxMeta(crux.id, mergedMeta);
   const mergedCrux: Crux = { ...crux, ...updated, meta: mergedMeta as Crux['meta'] };
@@ -334,6 +349,8 @@ export async function publishPipeline(
  * updated crux.
  */
 export async function unpublishPipeline(crux: Crux, opts?: { deps?: PublishDeps }): Promise<Crux> {
+  if (crux.type === 'working-copy' || crux.meta?.workingCopy) throw new Error('Publish from Main.');
+  if (!opts?.deps) await assertCopyWritable(crux.id);
   const deps = opts?.deps ?? (await defaultDeps());
 
   await deps.api.unpublish(crux.id);

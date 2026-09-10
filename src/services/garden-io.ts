@@ -5,7 +5,7 @@ import { clearAllSettings } from './settings';
 
 // ── Constants ────────────────────────────────────────────
 
-const SUPPORTED_MANIFEST_MAJOR = '1';
+const SUPPORTED_MANIFEST_MAJOR = '2';
 
 // ── Types ───────────────────────────────────────────────
 
@@ -37,7 +37,16 @@ async function toArrayBuffer(data: Blob | ArrayBuffer): Promise<ArrayBuffer> {
 
 // ── Wipe ────────────────────────────────────────────────
 
-const ALL_TABLES = ['cruxes', 'artifacts', 'dimensions', 'authors', 'settings'];
+const ALL_TABLES = [
+  'task_merges',
+  'working_copies',
+  'store',
+  'cruxes',
+  'artifacts',
+  'dimensions',
+  'authors',
+  'settings',
+];
 
 export async function wipeGarden(onProgress?: (status: string) => void): Promise<void> {
   await (await import('@/stores/workspaceRegistry')).prepareGardenReplacement();
@@ -74,6 +83,9 @@ export async function exportGarden(options: GardenExportOptions = {}): Promise<G
   const { author = null, onProgress } = options;
   const db = getSqliteClient();
 
+  if (await db.get("SELECT id FROM task_merges WHERE phase = 'applying'"))
+    throw new Error('Recover pending task merges before exporting the garden.');
+  const hasTasks = !!(await db.get('SELECT id FROM working_copies LIMIT 1'));
   onProgress?.('Exporting database...');
   const sqliteData = await db.export();
 
@@ -110,7 +122,10 @@ export async function exportGarden(options: GardenExportOptions = {}): Promise<G
       zip.file(`artifacts/${fingerprint}`, bytes);
       artifactCount++;
     } catch (err) {
-      console.warn(`Failed to extract artifact ${fingerprint}:`, err);
+      throw new Error(
+        `Garden backup stopped because an Artifact could not be read: ${fingerprint}`,
+        { cause: err },
+      );
     }
   }
 
@@ -123,7 +138,7 @@ export async function exportGarden(options: GardenExportOptions = {}): Promise<G
     'manifest.json',
     JSON.stringify(
       {
-        version: '1.0',
+        version: hasTasks ? '2.0' : '1.0',
         exportedAt: new Date().toISOString(),
         fingerprint,
         cruxCount,
@@ -166,7 +181,7 @@ export async function importGarden(options: GardenImportOptions): Promise<Garden
 
     const manifest = JSON.parse(await manifestFile.async('text'));
     const majorVersion = String(manifest.version ?? '').split('.')[0];
-    if (majorVersion !== SUPPORTED_MANIFEST_MAJOR) {
+    if (majorVersion !== '1' && majorVersion !== SUPPORTED_MANIFEST_MAJOR) {
       throw new Error(
         `Unsupported .garden format version "${manifest.version}". This app supports v${SUPPORTED_MANIFEST_MAJOR}.x.`,
       );
@@ -323,6 +338,21 @@ export async function importGarden(options: GardenImportOptions): Promise<Garden
     }
     throw err;
   }
+
+  // Provider sessions belong to the exporting installation, including Main's.
+  await db.run(`UPDATE cruxes SET meta = json_remove(meta,
+    '$.settings.agentSessionId', '$.settings.agentHost', '$.agentHost', '$.turnJob', '$.turnQueue')
+    WHERE meta IS NOT NULL`);
+
+  // A restored task always gets a fresh directory and provider session.
+  const { portableMeta } = await import('./task-archive');
+  const copies = await db.all<{ id: string; meta: string }>('SELECT id, meta FROM working_copies');
+  for (const copy of copies)
+    await db.run('UPDATE working_copies SET project_folder = NULL, meta = ? WHERE id = ?', [
+      JSON.stringify(portableMeta(copy.meta)),
+      copy.id,
+    ]);
+  await db.run("UPDATE task_merges SET phase = 'cancelled' WHERE phase = 'review'");
 
   // Desktop: the imported cruxes carry the *exporting* machine's absolute
   // Project Folder paths. Give them folders that exist here (no-op on web).

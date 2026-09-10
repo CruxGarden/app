@@ -1,3 +1,4 @@
+import { assertCopyWritable } from '../working-copies';
 import { getSqliteClient } from './client';
 import { fromRow } from './helpers';
 
@@ -92,6 +93,7 @@ export class SqliteStoreService implements IStoreService {
     mode: StoreMode = 'protected',
     visitorId?: string | null,
   ): Promise<void> {
+    await assertCopyWritable(cruxId);
     mode = normalizeStoreMode(mode);
     const db = getSqliteClient();
     const now = new Date().toISOString();
@@ -171,6 +173,7 @@ export class SqliteStoreService implements IStoreService {
   }
 
   async delete(cruxId: string, key: string, visitorId?: string | null): Promise<void> {
+    await assertCopyWritable(cruxId);
     const db = getSqliteClient();
     if (visitorId) {
       await db.run('DELETE FROM store WHERE crux_id = ? AND key = ? AND visitor_id = ?', [
@@ -193,6 +196,7 @@ export class SqliteStoreService implements IStoreService {
   }
 
   async clear(cruxId: string): Promise<void> {
+    await assertCopyWritable(cruxId);
     const db = getSqliteClient();
     await db.run('DELETE FROM store WHERE crux_id = ?', [cruxId]);
   }

@@ -147,7 +147,7 @@ describe('.crux format conformance (CRUX-FORMAT.md)', () => {
 
   // ── Manifest validation rules ─────────────────────────────────────────────
 
-  it('accepts any 1.x version, rejects other majors and a missing version', async () => {
+  it('accepts 1.x, requires a task graph for 2.x, and rejects unknown or missing versions', async () => {
     const crux = await makeWorkspace();
     const result = await exportCrux({ cruxId: crux.id });
 
@@ -170,7 +170,8 @@ describe('.crux format conformance (CRUX-FORMAT.md)', () => {
     expect(ok.cruxId).toBeDefined();
     await svc.crux.delete(ok.cruxId);
 
-    await expect(importCrux({ data: await withVersion('2.0') })).rejects.toThrow(/version/i);
+    await expect(importCrux({ data: await withVersion('2.0') })).rejects.toThrow(/tasks.json/i);
+    await expect(importCrux({ data: await withVersion('3.0') })).rejects.toThrow(/version/i);
     await expect(importCrux({ data: await withVersion(undefined) })).rejects.toThrow(/version/i);
   });
 

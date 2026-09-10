@@ -103,6 +103,7 @@ export class SqliteNative {
     fs.writeFileSync(dbPath, Buffer.from(data));
     this.db = new Database(dbPath);
     this.db.pragma('journal_mode = WAL');
+    this.db.exec(loadSchema());
     this.ensureColumns();
   }
 

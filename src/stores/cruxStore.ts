@@ -1,3 +1,4 @@
+import { assertCopyWritable } from '@/services/working-copies';
 import { create, useStore, type StoreApi } from 'zustand';
 import { useContext } from 'react';
 import { WorkspaceContext, workspaceSelection, trackWorkspacePromise } from './workspaceSelection';
@@ -643,7 +644,8 @@ export function createCruxStore(ui: StoreApi<UIState> = useUIStore) {
       set({ publishFailure: null, publishPhase: 'sync' });
       try {
         await saveMeta();
-        const mergedCrux = await publishPipeline(crux, artifacts || [], {
+        const mergedCrux = await publishPipeline(get().crux!, artifacts || [], {
+          messages: get().messages,
           onProgress: (phase) => set({ publishPhase: phase }),
         });
         set({ crux: mergedCrux });
@@ -857,6 +859,7 @@ export function createCruxStore(ui: StoreApi<UIState> = useUIStore) {
     // The snapshot lifecycle lives in services/growth (deep module); this action
     // gathers workspace state, runs the core, and applies the result.
     removeLatestSnapshot: async () => {
+      if (get().crux) await assertCopyWritable(get().crux!.id);
       if (
         get().isStreaming ||
         ['planning', 'running', 'checking'].includes(get().turnJob?.status ?? '')
@@ -901,6 +904,7 @@ export function createCruxStore(ui: StoreApi<UIState> = useUIStore) {
 
         const { crux, messages, messageSegmentStart, growths, growthCount } = get();
         if (!crux) return;
+        if (!options.taskOperation) await assertCopyWritable(crux.id);
 
         const deps = await defaultGrowthDeps();
         if (options.ifChanged && (await workspaceUnchangedSinceTip(crux, growths, deps))) return;
@@ -908,7 +912,7 @@ export function createCruxStore(ui: StoreApi<UIState> = useUIStore) {
         // Snapshot-with-screenshot: if a local preview is running (desktop),
         // screenshot its front page into preview.jpg first so the snapshot clone
         // carries a fresh thumbnail. Best-effort — never blocks the snapshot.
-        const previewShot = await captureWorkspacePreview(crux.id);
+        const previewShot = options.taskOperation ? null : await captureWorkspacePreview(crux.id);
         if (previewShot) {
           const existing = (get().workspaceArtifacts ?? get().artifacts).find(
             (a) => a.id === previewShot.id,
@@ -1064,6 +1068,7 @@ export function createCruxStore(ui: StoreApi<UIState> = useUIStore) {
     },
 
     revertToSnapshot: async (snapshotId: string) => {
+      if (get().crux) await assertCopyWritable(get().crux!.id);
       const { crux } = get();
       if (!crux) return;
       const { artifact, crux: cruxService } = getServices();
@@ -1089,7 +1094,10 @@ export function createCruxStore(ui: StoreApi<UIState> = useUIStore) {
       // Rebuild conversation via the chain walk (Growth module, single impl)
       const priorMessages = await collectChainMessages(
         snapshotId,
-        chainLookupFromService({ findById: (id) => cruxService.findById(id) }),
+        chainLookupFromService({
+          findById: (id) => cruxService.findById(id),
+          contentOwnerId: crux.meta?.workingCopy ? crux.id : undefined,
+        }),
       );
 
       // Reload workspace artifacts
@@ -1123,6 +1131,7 @@ export function createCruxStore(ui: StoreApi<UIState> = useUIStore) {
     },
 
     branchFromSnapshot: async (snapshotId: string, label: string) => {
+      if (get().crux) await assertCopyWritable(get().crux!.id);
       const { crux } = get();
       if (!crux) return;
       const { artifact, crux: cruxService } = getServices();
@@ -1147,7 +1156,15 @@ export function createCruxStore(ui: StoreApi<UIState> = useUIStore) {
 
       // Load snapshot messages — these become the conversation base for the branch
       const snapshotCrux = await cruxService.findById(snapshotId);
-      const snapshotMessages: ChatMessage[] = snapshotCrux.meta?.messages || [];
+      const snapshotMessages: ChatMessage[] = crux.meta?.workingCopy
+        ? await collectChainMessages(
+            snapshotId,
+            chainLookupFromService({
+              findById: (id) => cruxService.findById(id),
+              contentOwnerId: crux.id,
+            }),
+          )
+        : snapshotCrux.meta?.messages || [];
 
       // Reload workspace artifacts
       const newWorkspaceArtifacts = await artifact.findByResource('crux', crux.id);

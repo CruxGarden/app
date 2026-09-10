@@ -1,3 +1,5 @@
+import { assertMainWorkspace } from '@/services/working-copies';
+import { isServicesReady } from '@/services';
 import client from './client';
 import type { StoreExport } from '@/lib/store-export';
 
@@ -15,21 +17,25 @@ export interface LiveStoreEntry {
 }
 
 export async function listLive(cruxId: string): Promise<LiveStoreEntry[]> {
+  if (isServicesReady()) await assertMainWorkspace(cruxId);
   const { data } = await client.get<LiveStoreEntry[]>(`/store/${cruxId}`);
   return data;
 }
 
 /** Author delete: removes every slot of the key (public value and all visitors'). */
 export async function deleteLive(cruxId: string, key: string): Promise<void> {
+  if (isServicesReady()) await assertMainWorkspace(cruxId);
   await client.delete(`/store/${cruxId}/${encodeURIComponent(key)}`);
 }
 
 export async function clearLive(cruxId: string): Promise<void> {
+  if (isServicesReady()) await assertMainWorkspace(cruxId);
   await client.delete(`/store/${cruxId}`);
 }
 
 /** The whole live store as one document — the file Export saves. */
 export async function exportLive(cruxId: string): Promise<StoreExport> {
+  if (isServicesReady()) await assertMainWorkspace(cruxId);
   const { data } = await client.get<StoreExport>(`/store/${cruxId}/-/export`);
   return data;
 }
@@ -40,6 +46,7 @@ export async function importLive(
   doc: StoreExport,
   mode: 'merge' | 'replace' = 'merge',
 ): Promise<{ imported: number; skipped: number }> {
+  if (isServicesReady()) await assertMainWorkspace(cruxId);
   const { data } = await client.post<{ imported: number; skipped: number }>(
     `/store/${cruxId}/-/import`,
     doc,

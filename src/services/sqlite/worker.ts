@@ -397,14 +397,29 @@ async function importDb(data: ArrayBuffer): Promise<void> {
   // so a failure mid-import doesn't leave the database partially deleted.
   await exec(`ATTACH '${EXPORT_URI}' AS import_db`);
 
-  const tables = ['cruxes', 'artifacts', 'dimensions', 'authors', 'settings', 'store'];
+  const tables = [
+    'cruxes',
+    'artifacts',
+    'dimensions',
+    'authors',
+    'settings',
+    'store',
+    'working_copies',
+    'task_merges',
+  ];
+  const importedTables = new Set(
+    (await all("SELECT name FROM import_db.sqlite_master WHERE type = 'table'")).map(
+      (row) => row.name,
+    ),
+  );
   try {
     await exec('BEGIN TRANSACTION');
     for (const table of tables) {
       await run(`DELETE FROM ${table}`);
     }
     for (const table of tables) {
-      await run(`INSERT OR REPLACE INTO main.${table} SELECT * FROM import_db.${table}`);
+      if (importedTables.has(table))
+        await run(`INSERT OR REPLACE INTO main.${table} SELECT * FROM import_db.${table}`);
     }
     await exec('COMMIT');
   } catch (err) {

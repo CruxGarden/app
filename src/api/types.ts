@@ -157,6 +157,8 @@ export interface GrowthSnapshot {
 }
 
 export interface ChatMessage {
+  /** Idempotent, attributed insertion of a reviewed task transcript into Main. */
+  taskMergeId?: string;
   role: 'user' | 'assistant';
   content: string;
   timestamp?: string;

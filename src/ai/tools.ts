@@ -1,3 +1,4 @@
+import { assertCopyWritable } from '@/services/working-copies';
 import { getServices } from '@/services';
 import type { ToolResultContent } from '@/services/types';
 import { validateToolInput } from './validation';
@@ -409,6 +410,7 @@ export function createToolExecutor(
     }
 
     try {
+      if (MUTATING_TOOLS.includes(toolName)) await assertCopyWritable(cruxId);
       let result: string | ToolResultContent;
 
       switch (toolName) {

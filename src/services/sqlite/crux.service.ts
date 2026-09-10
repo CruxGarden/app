@@ -5,11 +5,23 @@ import { getSqliteClient } from './client';
 import { getLocalIdentity } from './identity';
 import { fromRow, buildInsert, buildUpdate, generateSlug } from './helpers';
 import { createProjectFolder } from '../project-folder';
+import {
+  findWorkingCopy,
+  assertNoOpenTasks,
+  workingCopyDocument,
+  updateCopyMeta,
+  assertMainWorkspace,
+  isTaskHistoryReference,
+} from '../working-copies';
 
 export class SqliteCruxService implements ICruxService {
   async findById(id: string): Promise<Crux> {
     const row = await getSqliteClient().get('SELECT * FROM cruxes WHERE id = ?', [id]);
-    if (!row) throw new NotFoundError('Crux not found');
+    if (!row) {
+      const copy = await workingCopyDocument(id);
+      if (copy) return copy;
+      throw new NotFoundError('Crux not found');
+    }
     return fromRow<Crux>(row);
   }
 
@@ -45,6 +57,8 @@ export class SqliteCruxService implements ICruxService {
   }
 
   async trash(cruxId: string): Promise<void> {
+    await assertMainWorkspace(cruxId);
+    await assertNoOpenTasks(cruxId);
     await getSqliteClient().run('UPDATE cruxes SET deleted = ? WHERE id = ? AND deleted IS NULL', [
       new Date().toISOString(),
       cruxId,
@@ -128,6 +142,11 @@ export class SqliteCruxService implements ICruxService {
   }
 
   async update(cruxId: string, updates: UpdateCruxInput): Promise<Crux> {
+    if (await findWorkingCopy(cruxId)) {
+      if (Object.keys(updates).some((key) => key !== 'meta' && key !== 'title'))
+        throw new Error('Change the Crux’s details in Main.');
+      return updateCopyMeta(cruxId, updates.meta ?? {}, updates.title);
+    }
     const existing = await this.findById(cruxId);
     const changes: Record<string, unknown> = { updated: new Date().toISOString() };
     if (updates.title !== undefined) changes.title = updates.title;
@@ -149,6 +168,27 @@ export class SqliteCruxService implements ICruxService {
 
   async delete(cruxId: string): Promise<void> {
     const db = getSqliteClient();
+    await assertMainWorkspace(cruxId);
+    await assertNoOpenTasks(cruxId);
+    if (await isTaskHistoryReference(cruxId))
+      throw new Error('This snapshot is used by a task or merge.');
+    const copies = await db.all<{ id: string }>('SELECT id FROM working_copies WHERE crux_id = ?', [
+      cruxId,
+    ]);
+    for (const copy of copies) {
+      await db.run(
+        'DELETE FROM artifacts WHERE resource_id = ? OR resource_id IN (SELECT target_id FROM dimensions WHERE source_id = ?)',
+        [copy.id, copy.id],
+      );
+      await db.run(
+        'DELETE FROM cruxes WHERE id IN (SELECT target_id FROM dimensions WHERE source_id = ?)',
+        [copy.id],
+      );
+      await db.run('DELETE FROM dimensions WHERE source_id = ?', [copy.id]);
+      await db.run('DELETE FROM store WHERE crux_id = ?', [copy.id]);
+    }
+    await db.run('DELETE FROM working_copies WHERE crux_id = ?', [cruxId]);
+    await db.run('DELETE FROM task_merges WHERE crux_id = ?', [cruxId]);
     await db.run('DELETE FROM artifacts WHERE resource_id = ?', [cruxId]);
     await db.run('DELETE FROM dimensions WHERE source_id = ? OR target_id = ?', [cruxId, cruxId]);
     await db.run('DELETE FROM cruxes WHERE id = ?', [cruxId]);

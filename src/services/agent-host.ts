@@ -397,6 +397,8 @@ function createWorkspaceHost(w: Workspace) {
     request: Extract<AgentHostRequest, { kind: 'tools/call' }>,
     action: 'publish' | 'unpublish',
   ): Promise<string> {
+    if (useCruxStore.getState().crux?.meta?.workingCopy)
+      return 'Error: Publishing belongs to Main. Open Main to continue.';
     if (!useAuthStore.getState().isAuthenticated) {
       return 'Error: No crux.garden account is connected. The person can connect one in Crux Garden → Settings → Account.';
     }
