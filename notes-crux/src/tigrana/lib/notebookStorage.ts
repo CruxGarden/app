@@ -16,7 +16,8 @@ export const notebookStorage = {
   },
   async readAssetDataUrl(notePath: string, link: string) {
     const path = resolveNotePath(notePath, link);
-    if (!path?.startsWith('assets/')) throw new Error('Image is outside this notebook.');
+    if (!path || !/\.(png|jpe?g|gif|webp)$/i.test(path))
+      throw new Error('Image is outside this notebook or is not a raster image.');
     return (await request<Document>('read', { path })).content;
   },
   async saveClipboardImageAsset(_workspace?: string) {

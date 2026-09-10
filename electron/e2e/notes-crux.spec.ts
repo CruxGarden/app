@@ -39,7 +39,7 @@ test('Notes Crux: create → write → image → Growth → restart → selected
     await expect(page.getByTestId('workshop-view')).toHaveAttribute('data-view', 'advanced');
     await page
       .getByTestId('workshop-view')
-      .getByRole('button', { name: 'Clean', exact: true })
+      .getByRole('button', { name: 'Use app', exact: true })
       .click();
     await frame()
       .getByRole('button', { name: /Research\/Field journal/ })

@@ -11,6 +11,7 @@ import { cn } from '@/lib/cn';
 import { useShallow } from 'zustand/react/shallow';
 import { workshopEntry } from '@/lib/workshop-entry';
 import { pathOf } from '@/lib/artifact-path';
+import EmbeddedAppActions from './EmbeddedAppActions';
 
 /** Auto-recovery boundary for Monaco disposal errors during pane reorder */
 class EditorErrorBoundary extends Component<{ children: ReactNode }, { retryKey: number }> {
@@ -177,10 +178,11 @@ export default function EditorPane() {
                 } else setView(mode);
               }}
             >
-              {mode === 'clean' ? 'Clean' : 'Advanced'}
+              {mode === 'clean' ? (isEmbeddedApp(crux) ? 'Use app' : 'Clean') : 'Advanced'}
             </button>
           ))}
         </div>
+        <EmbeddedAppActions />
         <div className="flex-1" />
         {view === 'advanced' && (
           <button

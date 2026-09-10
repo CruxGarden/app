@@ -67,7 +67,7 @@ test('Moqira: design → Mood → save on view switch → restart → public int
     expect(read().wireframes[1].nodes).toHaveLength(1);
     await page
       .getByTestId('workshop-view')
-      .getByRole('button', { name: 'Clean', exact: true })
+      .getByRole('button', { name: 'Use app', exact: true })
       .click();
     await expect(frame().getByRole('status')).toHaveText('Saved');
     // Import a portable Moqira file with a public link and an excluded wireframe.

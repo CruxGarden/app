@@ -1,3 +1,4 @@
+import { VaultImport } from './VaultImport';
 import { AppAppearance } from './AppAppearance';
 import { splitNote } from './note-file';
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -306,6 +307,13 @@ export default function Notebook() {
           />
           <button disabled={busy || !newPath.trim()}>Create note</button>
         </form>
+        <VaultImport
+          beforeImport={flush}
+          afterImport={async (next) => {
+            await list();
+            await open(next);
+          }}
+        />
         <AppAppearance />
         <p className="notebook-foot">
           Local to this Crux.

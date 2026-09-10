@@ -8,7 +8,9 @@ function safeRead(root, path) {
   if (
     typeof path !== 'string' ||
     /[\\\x00-\x1f:%?#]/.test(path) ||
-    path.split('/').some((p) => !p || p === '.' || p === '..' || p.startsWith('.'))
+    path
+      .split('/')
+      .some((p) => !p || p === '.' || p === '..' || (p.startsWith('.') && p !== '.assets'))
   )
     throw new Error('Invalid notebook path.');
   const realRoot = realpathSync(root);
@@ -50,8 +52,8 @@ export function readEdition(folder, { allowEmpty = false } = {}) {
             : null;
       if (!url || /^[a-z]+:/i.test(url)) return;
       const target = posix.normalize(posix.join(posix.dirname(path), decodeURIComponent(url)));
-      if (!/^assets\/[\w.-]+\.(png|jpe?g|gif|webp)$/i.test(target))
-        throw new Error(`Image in ${path} must be inside notebook/assets/.`);
+      if (!/\.(png|jpe?g|gif|webp)$/i.test(target))
+        throw new Error(`Image in ${path} must be a raster image inside the notebook.`);
       const bytes = safeRead(root, target);
       if (bytes.length > 5_000_000) throw new Error('Notebook images must be smaller than 5 MB.');
       const extension = target.split('.').pop().toLowerCase();
