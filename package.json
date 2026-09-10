@@ -20,11 +20,13 @@
     "format:check": "prettier --check \"src/**/*.{ts,tsx,css}\"",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:performance": "vitest run --config vitest.performance.config.ts",
+    "test:performance:check": "tsc -p tsconfig.performance.json && eslint performance electron/performance vitest.performance.config.ts electron/playwright.performance.config.ts --max-warnings=0",
     "postinstall": "patch-package",
     "generate:api": "openapi-typescript ../api/openapi.json -o src/api/generated/schema.d.ts --default-non-nullable false",
     "ai:smoke": "node scripts/ai-smoke.mjs",
     "5ws:harness": "esbuild scripts/5ws-harness.ts --bundle --platform=node --format=esm --packages=external --alias:@=./src --log-level=warning --outfile=node_modules/.cache/5ws-harness.mjs && node node_modules/.cache/5ws-harness.mjs",
-    "verify": "tsc -b --noEmit && eslint src --max-warnings=0 && vitest run && vite build"
+    "verify": "tsc -b --noEmit && npm run test:performance:check && eslint src --max-warnings=0 && vitest run && vite build"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^4.0.27",

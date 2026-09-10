@@ -1,0 +1,26 @@
+{
+  "count": 50000,
+  "seedMode": "archive",
+  "fileBytes": 1024,
+  "snapshots": 3,
+  "phaseTimeoutMs": 180000,
+  "changedFiles": 500,
+  "platform": "darwin",
+  "architecture": "arm64",
+  "cpu": "Apple M3 Pro",
+  "hostMemoryBytes": 38654705664,
+  "node": "v24.14.0",
+  "phases": [
+    {
+      "name": "initial-archive-import",
+      "status": "failed",
+      "error": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: locator('[data-workspace-id]')\nExpected: visible\nTimeout: 180000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 180000ms\u001b[22m\n\u001b[2m  - waiting for locator('[data-workspace-id]')\u001b[22m\n",
+      "durationMs": 180111,
+      "sampledElectronWorkingSetBytes": 1960230912,
+      "memorySamples": 181
+    }
+  ],
+  "startedAt": "2026-09-10T15:49:40.205Z",
+  "error": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: locator('[data-workspace-id]')\nExpected: visible\nTimeout: 180000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 180000ms\u001b[22m\n\u001b[2m  - waiting for locator('[data-workspace-id]')\u001b[22m\n",
+  "status": "failed"
+}
