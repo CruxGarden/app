@@ -3,12 +3,16 @@ import Markdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { resolveNotePath } from './bridge';
 import './notebook.css';
+export const noteUrl = (path: string) =>
+  '/notes/' + path.split('/').map(encodeURIComponent).join('/') + '/';
 export type Edition = {
   title: string;
   pages: { path: string; markdown: string }[];
   images: Record<string, string>;
 };
-export default function Reader({ edition }: { edition: Edition }) {
+export default function Reader({ edition, pagePath }: { edition: Edition; pagePath?: string }) {
+  const separate = pagePath !== undefined;
+  const hrefFor = (path: string) => (separate ? noteUrl(path) : '#' + encodeURIComponent(path));
   const [selected, setSelected] = useState(edition.pages[0]?.path ?? '');
   const [query, setQuery] = useState('');
   useEffect(() => {
@@ -24,23 +28,25 @@ export default function Reader({ edition }: { edition: Edition }) {
     window.addEventListener('hashchange', navigate);
     return () => window.removeEventListener('hashchange', navigate);
   }, [edition]);
-  const page = edition.pages.find((p) => p.path === selected);
+  const page = edition.pages.find((p) => p.path === (pagePath ?? selected));
   return (
     <div className="reader">
       <aside>
         <small>PUBLIC NOTEBOOK</small>
         <h1>{edition.title}</h1>
-        <input
-          aria-label="Search notebook"
-          placeholder="Search pages…"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-        />
+        {!separate && (
+          <input
+            aria-label="Search notebook"
+            placeholder="Search pages…"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+          />
+        )}
         <nav>
           {edition.pages
             .filter((p) => (p.path + p.markdown).toLowerCase().includes(query.toLowerCase()))
             .map((p) => (
-              <a key={p.path} href={'#' + encodeURIComponent(p.path)}>
+              <a key={p.path} href={hrefFor(p.path)}>
                 {p.path.replace(/\.md$/i, '')}
               </a>
             ))}
@@ -60,7 +66,7 @@ export default function Reader({ edition }: { edition: Edition }) {
                 const target = href ? resolveNotePath(page.path, href) : null;
                 return target ? (
                   edition.pages.some((p) => p.path === target) ? (
-                    <a href={'#' + encodeURIComponent(target)}>{children}</a>
+                    <a href={hrefFor(target)}>{children}</a>
                   ) : (
                     <span>{children}</span>
                   )

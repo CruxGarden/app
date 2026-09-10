@@ -29,6 +29,9 @@ export function readEdition(folder, { allowEmpty = false } = {}) {
     (!allowEmpty && !config.pages.length)
   )
     throw new Error('Select at least one note with “Include in public edition” before publishing.');
+  const layout = config.layout ?? 'single-page';
+  if (!['single-page', 'separate-pages'].includes(layout))
+    throw new Error('Choose single-page or separate-pages for the public notebook layout.');
   const images = {};
   const pages = [...new Set(config.pages)].map((path) => {
     if (typeof path !== 'string' || !/\.md$/i.test(path))
@@ -62,5 +65,5 @@ export function readEdition(folder, { allowEmpty = false } = {}) {
     });
     return { path, markdown };
   });
-  return { title: config.title, pages, images };
+  return { title: config.title, layout, pages, images };
 }

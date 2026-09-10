@@ -137,6 +137,8 @@ export function notebookSession(workspace: StoreApi<CruxState>) {
               !config ||
               typeof config.title !== 'string' ||
               !Array.isArray(config.pages) ||
+              (config.layout !== undefined &&
+                !['single-page', 'separate-pages'].includes(config.layout)) ||
               config.pages.some(
                 (p: unknown) => typeof p !== 'string' || !/\.md$/i.test(p) || !notebookPath(p),
               )

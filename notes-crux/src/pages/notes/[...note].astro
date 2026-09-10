@@ -1,0 +1,16 @@
+---
+import Reader from '../../Reader';
+import { readEdition } from '../../../scripts/edition.mjs';
+export function getStaticPaths() {
+  if (!import.meta.env.PROD) return [];
+  const edition = readEdition(process.cwd(), { allowEmpty: true });
+  if (edition.layout !== 'separate-pages') return [];
+  return edition.pages.map((page) => ({ params: { note: page.path }, props: { edition, pagePath: page.path } }));
+}
+const { edition, pagePath } = Astro.props;
+const title = pagePath.split('/').pop().replace(/\.md$/i, '');
+---
+<!doctype html>
+<html lang="en" data-theme="dark"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width"/><title>{title} — {edition.title}</title></head><body>
+<Reader edition={edition} pagePath={pagePath} />
+</body></html>

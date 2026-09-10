@@ -6,5 +6,7 @@ const edition = import.meta.env.PROD ? readEdition(process.cwd(), { allowEmpty: 
 ---
 <!doctype html>
 <html lang="en" data-theme="dark"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width"/><title>{edition?.title ?? 'Your notebook'}</title></head><body>
-{edition ? <Reader edition={edition} client:load /> : <Notebook client:only="react" />}
+{edition ? (edition.layout === 'separate-pages'
+  ? <Reader edition={edition} pagePath={edition.pages[0]?.path ?? ''} />
+  : <Reader edition={edition} client:load />) : <Notebook client:only="react" />}
 </body></html>
