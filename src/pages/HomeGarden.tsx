@@ -1,3 +1,5 @@
+import { useTendingRows } from '@/stores/tendingStore';
+import TendingLink from '@/components/tending/TendingLink';
 import { useState, useCallback, useEffect } from 'react';
 import { useAppStore } from '@/stores/appStore';
 import { useAvatarUrl } from '@/hooks/useAvatarUrl';
@@ -22,6 +24,12 @@ export default function HomeGarden() {
   const avatarUrl = useAvatarUrl(author);
   const { cruxList, loading, search, sortBy, setSearch, setSortBy, handleClearSearch, deleteCrux } =
     useGarden();
+
+  const tendingRows = useTendingRows();
+  const tendingCounts: Record<string, number> = {};
+  for (const row of tendingRows)
+    if (row.state.attention.length)
+      tendingCounts[row.cruxId] = (tendingCounts[row.cruxId] ?? 0) + 1;
 
   const thumbnails = useGardenStore((s) => s.thumbnails);
   const [showNewCrux, setShowNewCrux] = useState(false);
@@ -83,6 +91,7 @@ export default function HomeGarden() {
               </h1>
               <div className="flex items-center gap-1.5 mt-0.5">
                 <p className="text-sm text-text-muted">Home Garden</p>
+                <TendingLink />
                 {author && (
                   <IconButton
                     label="Public Garden"
@@ -168,6 +177,7 @@ export default function HomeGarden() {
           }}
           sortBy={sortBy}
           thumbnails={thumbnails}
+          tendingCounts={tendingCounts}
         />
       )}
 

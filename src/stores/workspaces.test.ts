@@ -12,7 +12,9 @@ import {
   openWorkspace,
   parseOpenWorkspaces,
   useWorkspaceRegistry,
+  workspaceTending,
 } from './workspaceRegistry';
+import { validateTendingTarget, stopTendingTarget } from '@/services/tending-actions';
 import { getServices, initServices } from '@/services';
 import { documentsFor } from '@/services/workspace-documents';
 import { recentOrder, nextRecent } from '@/lib/workspace-switching';
@@ -369,12 +371,52 @@ it('acknowledges a hidden completion when visited and shows each workspace queue
     turnQueue: ['next A'],
   });
   const summary = () => useWorkspaceRegistry.getState().entries.find((e) => e.id === wa.id)!.status;
-  expect(summary()).toBe('Done · 1 queued');
+  expect(summary()).toBe('Ready to review · 1 queued');
   await activateWorkspace(wa.id);
-  expect(summary()).toBe('Editing · 1 queued');
+  expect(summary()).toBe('Queued · 1 queued');
   await activateWorkspace(wb.id);
   wa.data.setState({ turnQueue: [] });
-  expect(summary()).toBe('Editing');
+  expect(summary()).toBe('Idle');
+});
+
+it('Tending rejects resolved and replacement approvals, including repeated requests for the same file', async () => {
+  const { wa, wb, fa } = await pair();
+  const first = wa.data.getState().requestDeleteApproval(fa.id, 'same.txt');
+  const before = workspaceTending(wa);
+  const target = { ...before, attentionId: before.attention[0]!.id };
+  expect(validateTendingTarget(target)).toBe(wa);
+  await activateWorkspace(wb.id);
+  await activateWorkspace(wa.id);
+  expect(validateTendingTarget(target)).toBe(wa);
+  wa.data.getState().dismissDelete(fa.id);
+  expect(await first).toBe(false);
+  const second = wa.data.getState().requestDeleteApproval(fa.id, 'same.txt');
+  expect(() => validateTendingTarget(target)).toThrow('This work changed');
+  expect(workspaceTending(wa).attention[0]?.id).not.toBe(target.attentionId);
+  wa.data.getState().dismissDelete(fa.id);
+  await second;
+});
+
+it('a Stop confirmation from an earlier turn cannot stop a replacement run', async () => {
+  const { wa } = await pair();
+  wa.data.setState({ turnJob: newTurnJob(wa.id, 'First run') });
+  const target = workspaceTending(wa);
+  wa.data.setState({ turnJob: { ...newTurnJob(wa.id, 'Replacement run'), id: 'replacement' } });
+  expect(() => stopTendingTarget(target)).toThrow('This work changed');
+  expect(wa.data.getState().turnJob?.id).toBe('replacement');
+});
+
+it('opening an editor with Collaboration hidden does not acknowledge an unseen result or rewrite content', async () => {
+  const { wa, wb } = await pair();
+  await activateWorkspace(wb.id);
+  wa.ui.getState().setPaneVisible('collaboration', false);
+  wa.data.setState({ turnJob: { ...newTurnJob(wa.id, 'Result'), status: 'done' } });
+  const content = wa.data.getState().crux;
+  await activateWorkspace(wa.id);
+  expect(workspaceTending(wa).attention.some((a) => a.kind === 'result')).toBe(true);
+  wa.ui.getState().setPaneVisible('collaboration', true);
+  expect(workspaceTending(wa).attention).toEqual([]);
+  expect(wa.data.getState().crux).toBe(content);
 });
 
 it('requires an open workspace to close before its Crux can be deleted', async () => {

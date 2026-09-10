@@ -126,17 +126,20 @@ test('parallel built-in turns keep files, history, and hidden approvals scoped t
       [b, 'Beta'],
     ] as const) {
       expect(readFileSync(join(copy.folder, 'shared.txt'), 'utf8')).toBe(`Owned by ${name}\n`);
-      const count = await page.evaluate(
-        async (id) =>
-          (
-            await window.electronAPI!.sqlite.all(
-              "SELECT id FROM dimensions WHERE source_id = ? AND type = 'growth'",
-              [id],
-            )
-          ).length,
-        copy.id,
-      );
-      expect(count).toBeGreaterThan(0);
+      await expect
+        .poll(() =>
+          page.evaluate(
+            async (id) =>
+              (
+                await window.electronAPI!.sqlite.all(
+                  "SELECT id FROM dimensions WHERE source_id = ? AND type = 'growth'",
+                  [id],
+                )
+              ).length,
+            copy.id,
+          ),
+        )
+        .toBeGreaterThan(0);
     }
     await choose('Alpha');
     await expect(page.getByText('Completed workspace Beta.', { exact: true })).toHaveCount(0);

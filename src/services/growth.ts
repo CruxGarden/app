@@ -441,12 +441,11 @@ export class SnapshotPolicy {
   ) {}
 
   /** Call after an AI turn that mutated files. */
-  notifyMutation(): void {
+  notifyMutation(): void | Promise<void> {
     const freq = this.getFrequency();
     if (freq === 'manual') return;
     if (freq === 'ai-turn') {
-      void this.snapshot();
-      return;
+      return this.snapshot();
     }
     if (this.timer) clearTimeout(this.timer);
     const delay = FREQUENCY_DELAYS[freq] ?? 5 * 60_000;

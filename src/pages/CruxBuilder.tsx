@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
+import TendingDestination from '@/components/workspace/TendingDestination';
 import TaskBar from '@/components/workspace/TaskBar';
 import { findWorkingCopy } from '@/services/working-copies';
 import { useCruxStore } from '@/stores/cruxStore';
@@ -118,6 +119,7 @@ function Builder() {
       <h1 tabIndex={-1} className="sr-only" data-workspace-heading>
         {crux?.title}
       </h1>
+      <TendingDestination />
       <SnapshotBanner />
       <TaskBar />
       <div className="flex-1 min-h-0">

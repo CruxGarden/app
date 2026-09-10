@@ -10,6 +10,7 @@ import type { TemplateLayout } from '@/templates';
 
 export interface AgentApproval {
   id: string;
+  requestedAt: string;
   /** Who is asking — an MCP client name, or "Claude Code" for the Agent Provider */
   agent: string;
   /** `tool`: the Agent Provider wants to run a tool the SDK will not auto-allow (ADR 0019) */
@@ -125,7 +126,7 @@ export interface UIState {
   // ChatPane renders the banner. Same contract as delete approvals: every
   // waiter must settle or the agent's call hangs forever.
   pendingAgentApprovals: AgentApproval[];
-  requestAgentApproval: (req: Omit<AgentApproval, 'id'>) => Promise<boolean>;
+  requestAgentApproval: (req: Omit<AgentApproval, 'id' | 'requestedAt'>) => Promise<boolean>;
   resolveAgentApproval: (id: string, approved: boolean) => void;
 
   // Explore modal
@@ -574,7 +575,12 @@ export function createUIStore(cruxId?: string) {
       new Promise<boolean>((resolve) => {
         const id = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
         agentApprovalResolvers.set(id, resolve);
-        set((s) => ({ pendingAgentApprovals: [...s.pendingAgentApprovals, { ...req, id }] }));
+        set((s) => ({
+          pendingAgentApprovals: [
+            ...s.pendingAgentApprovals,
+            { ...req, id, requestedAt: new Date().toISOString() },
+          ],
+        }));
       }),
     resolveAgentApproval: (id, approved) => {
       set((s) => ({ pendingAgentApprovals: s.pendingAgentApprovals.filter((a) => a.id !== id) }));

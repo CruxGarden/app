@@ -12,6 +12,7 @@ interface GardenGridProps {
   thumbnails?: Record<string, string>;
   /** cruxId → image URL (public gardens). */
   thumbnailUrls?: Record<string, string>;
+  tendingCounts?: Record<string, number>;
 }
 
 export default memo(function GardenGrid({
@@ -22,6 +23,7 @@ export default memo(function GardenGrid({
   hideMenu,
   thumbnails,
   thumbnailUrls,
+  tendingCounts,
 }: GardenGridProps) {
   return (
     <div
@@ -35,6 +37,7 @@ export default memo(function GardenGrid({
         <CruxCard
           key={crux.id}
           crux={crux}
+          tendingCount={tendingCounts?.[crux.id]}
           linkTo={linkBuilder?.(crux)}
           onDelete={onDelete}
           sortBy={sortBy}

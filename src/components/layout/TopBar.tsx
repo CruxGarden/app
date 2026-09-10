@@ -1,5 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { useUIStore, useWorkspaceUIStore, DEFAULT_PANE_ORDER } from '@/stores/uiStore';
+import TendingLink from '@/components/tending/TendingLink';
 import WorkspaceSwitcher from './WorkspaceSwitcher';
 import { useAppStore } from '@/stores/appStore';
 import IconButton from '@/components/ui/IconButton';
@@ -67,6 +68,7 @@ export default function TopBar() {
           <ChevronRightIcon />
         </span>
         <WorkspaceSwitcher />
+        <TendingLink />
       </div>
 
       {/* Right: pane toggles + console + user menu */}

@@ -1,3 +1,5 @@
+import TendingNotifications from '@/components/tending/TendingNotifications';
+import { startTendingCatalog } from '@/stores/tendingStore';
 import WorkspaceLifecycle from './WorkspaceLifecycle';
 import { restoreWorkspaceList } from '@/stores/workspaceRegistry';
 import { lazy, Suspense, useEffect, useRef, useState } from 'react';
@@ -39,6 +41,10 @@ export default function Shell() {
       })
       .catch(console.error);
   }, [servicesReady, navigate]);
+
+  useEffect(() => {
+    if (servicesReady) return startTendingCatalog();
+  }, [servicesReady]);
 
   // Reactive theme signals (--signal-audio/typing/agent) live for the app's lifetime
   useEffect(() => startSignals(), []);
@@ -105,6 +111,7 @@ export default function Shell() {
   return (
     <div className="flex flex-col h-screen overflow-hidden">
       <WorkspaceLifecycle />
+      {servicesReady && <TendingNotifications />}
       <MoodTextureLayers />
       {/* Top bar */}
       <div className="relative z-20 shrink-0">

@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback, lazy, Suspense } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/cn';
 import { formatDateTime } from '@/lib/format';
 import { useDismiss } from '@/hooks/useDismiss';
@@ -19,6 +19,7 @@ interface CruxCardProps {
   thumbnailFingerprint?: string;
   /** Already-resolved image URL (public pages, where there is no Blob Store). */
   thumbnailUrl?: string;
+  tendingCount?: number;
 }
 
 const KIND_LABELS: Record<string, string> = {
@@ -50,6 +51,7 @@ export default function CruxCard({
   hideMenu,
   thumbnailFingerprint,
   thumbnailUrl,
+  tendingCount,
 }: CruxCardProps) {
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -131,6 +133,12 @@ export default function CruxCard({
           </div>
         </div>
       </button>
+
+      {!!tendingCount && (
+        <Link to="/tending" className="px-3 pb-2 text-xs text-accent hover:underline">
+          {tendingCount} {tendingCount === 1 ? 'needs' : 'need'} tending
+        </Link>
+      )}
 
       {/* Three-dot menu */}
       {!hideMenu && (
