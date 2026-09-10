@@ -12,6 +12,14 @@ type AudioState = { trackName: string | null; enabled: boolean; playing: boolean
 test.describe('bundled moods', () => {
   for (const mood of [
     {
+      id: '80s-fantasy',
+      name: '80s Fantasy',
+      accent: '#28534e',
+      icons: 'line',
+      title: 'A tale taking shape',
+      greeting: 'Every great tale begins with a small act of making. What shall yours be?',
+    },
+    {
       id: '8-bit',
       name: '8-bit',
       accent: '#86efac',
@@ -116,7 +124,7 @@ test.describe('bundled moods', () => {
       await page.getByRole('button', { name: 'Mood', exact: true }).click();
       const built = page.getByTestId('bundled-moods');
       await expect(built).toBeVisible();
-      await expect(built.locator('[data-testid^="bundled-"]')).toHaveCount(22);
+      await expect(built.locator('[data-testid^="bundled-"]')).toHaveCount(23);
 
       await built.getByTestId('bundled-windows-95').getByRole('button', { name: 'Apply' }).click();
       await expect.poll(() => cssVar('--radius')).toBe('0px');
