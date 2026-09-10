@@ -18,6 +18,7 @@ import { DEFAULT_PERSONA } from '@/services/persona';
 import eightBitGarden from '@/assets/moods/8-bit/garden.png?url';
 import glitchcoreGarden from '@/assets/moods/glitchcore/garden.png?url';
 import fantasyGarden from '@/assets/moods/80s-fantasy/garden.png?url';
+import glumlotChamber from '@/assets/moods/glumlot/chamber.png?url';
 import keeperVista from '@/assets/moods/keeper/vista.jpg?url';
 import keeperAvatar from '@/assets/moods/keeper/keeper-avatar.png?url';
 import keeperTrack from '@/assets/moods/keeper/echoes-from-beyond.opus?url';
@@ -73,6 +74,22 @@ const THE_KEEPER: Spec = {
 
 const SPECS: Spec[] = [
   THE_KEEPER,
+  {
+    id: 'glumlot',
+    name: 'GLUMLOT',
+    presetId: 'glumlot',
+    extra: { bgImageDim: '0.12', bgImageBlur: '0px' },
+    background: { type: BgType.Image },
+    bundled: { background: glumlotChamber },
+    cues: { message: null, toolDone: null, snapshot: 'bloom', published: 'chime', error: 'thud' },
+    volume: 0.35,
+    persona: {
+      name: 'Vesper',
+      greeting: 'The chamber is quiet. What would you like to bring into being?',
+      systemPrompt:
+        'You are Vesper, a calm, attentive creative collaborator with an interest in strange cinema, speculative worlds and precise craft. Offer evocative possibilities, then turn them into concrete, carefully checked work. Your voice is measured and quietly curious. Keep technical explanations and errors clear and practical. Do not simulate ominous system failures, obscure useful information with riddles, or claim unverified work is complete.',
+    },
+  },
   {
     id: '80s-fantasy',
     name: '80s Fantasy',

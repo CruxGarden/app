@@ -6,9 +6,9 @@ import { DEFAULT_PERSONA } from '@/services/persona';
 import { tokenChoices } from './token-groups';
 
 describe('bundled Moods', () => {
-  it('ships twenty-three complete, valid packages with distinct ids', () => {
-    expect(BUNDLED_MOODS).toHaveLength(23);
-    expect(new Set(BUNDLED_MOODS.map((m) => m.id)).size).toBe(23);
+  it('ships twenty-four complete, valid packages with distinct ids', () => {
+    expect(BUNDLED_MOODS).toHaveLength(24);
+    expect(new Set(BUNDLED_MOODS.map((m) => m.id)).size).toBe(24);
     for (const m of BUNDLED_MOODS) {
       const ok = validateMoodPackage(JSON.parse(JSON.stringify(m)));
       expect(ok, `${m.id} validates`).toBeTruthy();
@@ -38,8 +38,8 @@ describe('bundled Moods', () => {
     // and validation (the shape a saved/imported package takes) keeps the sound block
     const ok = validateMoodPackage(JSON.parse(JSON.stringify(k)))!;
     expect(ok.sound).toEqual(k.sound);
-    // The Keeper, 8-bit, Glitchcore and 80s Fantasy ship backgrounds; only The Keeper brings a track.
-    expect(BUNDLED_MOODS.filter((m) => m.bundled)).toHaveLength(4);
+    // Five Moods ship backgrounds; only The Keeper brings a track.
+    expect(BUNDLED_MOODS.filter((m) => m.bundled)).toHaveLength(5);
     expect(BUNDLED_MOODS.filter((m) => m.bundled?.track)).toHaveLength(1);
   });
 
