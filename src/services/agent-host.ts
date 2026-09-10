@@ -79,11 +79,11 @@ export const HOST_TOOL_DEFINITIONS: ToolDefinition[] = [
 const HOST_TOOL_NAMES = new Set(HOST_TOOL_DEFINITIONS.map((t) => t.name));
 
 /** Everything an external agent can call: the collaborator's tools (files, search, check_site, Growth, theme, resonance) plus the product actions. */
-export function agentToolDefinitions(): ToolDefinition[] {
+export function agentToolDefinitions(cruxId?: string): ToolDefinition[] {
   // An external agent brings its own subagents; ours run only from the
   // Collaboration pane (B5), so `delegate` is not offered over MCP.
   return [
-    ...defaultToolDefinitions().filter((t) => t.name !== 'delegate'),
+    ...defaultToolDefinitions(cruxId).filter((t) => t.name !== 'delegate'),
     ...HOST_TOOL_DEFINITIONS,
   ];
 }
@@ -226,7 +226,7 @@ export function startAgentHostListener(): () => void {
 async function handleRequest(request: AgentHostRequest): Promise<unknown> {
   switch (request.kind) {
     case 'tools/list':
-      return agentToolDefinitions();
+      return agentToolDefinitions(request.cruxId);
     case 'tools/call': {
       const w = getWorkspace(request.cruxId);
       if (!w || w.phase !== 'ready') return toMcpResult(notOpenMessage());

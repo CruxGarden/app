@@ -222,6 +222,26 @@ const TEMPLATES: Template[] = [
     desktopOnly: true,
   },
   {
+    id: 'cardinal-drone',
+    label: 'Cardinal Drone',
+    description: 'Play a prepared modular instrument, shape its sound, or open the rack',
+    icon: <LayoutIcon />,
+    thumb: <BlankThumb />,
+    kind: 'webapp',
+    defaultTitle: 'Slow Sky',
+    desktopOnly: true,
+  },
+  {
+    id: 'onebigsky',
+    label: 'One Big Sky',
+    description: 'Play a flying arcade game with friends or bots, then make it your own',
+    icon: <LayoutIcon />,
+    thumb: <BlankThumb />,
+    kind: 'webapp',
+    defaultTitle: 'One Big Sky',
+    desktopOnly: true,
+  },
+  {
     id: 'astro-empty',
     label: 'Empty (Astro)',
     description: 'A real Astro project with one page — bring your own plan',
@@ -423,7 +443,7 @@ export default function NewCruxModal({ open, onClose }: NewCruxModalProps) {
           crux.id,
           !quickStart && template.id === 'notes'
             ? 27
-            : !quickStart && template.id === 'moqira'
+            : !quickStart && ['moqira', 'onebigsky', 'cardinal-drone'].includes(template.id)
               ? 22
               : undefined,
         );

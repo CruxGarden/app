@@ -1,6 +1,15 @@
-import { notebookPath, NOTEBOOK_ROOT, isNotebookImage } from './notebook-path';
+import { notebookPath, isNotebookImage } from './notebook-path';
 import { importNotebook } from './notebook-import';
-import { isEmbeddedApp, isMoqira, moqiraPath, validateMoqiraFile } from './embedded-app';
+import {
+  isEmbeddedApp,
+  isMoqira,
+  isCardinal,
+  embeddedContentRoot,
+  cardinalPath,
+  validateCardinalFile,
+  moqiraPath,
+  validateMoqiraFile,
+} from './embedded-app';
 import type { StoreApi } from 'zustand';
 import type { CruxState } from '@/stores/cruxStore';
 import { getServices } from '@/services';
@@ -42,7 +51,8 @@ export function notebookSession(workspace: StoreApi<CruxState>) {
       }
       const files = await artifact.findByResource('crux', owner);
       const moqira = isMoqira(state.crux);
-      const root = moqira ? 'mockups/' : NOTEBOOK_ROOT;
+      const cardinal = isCardinal(state.crux);
+      const root = embeddedContentRoot(state.crux);
       const op = request.op;
       if (op === 'list') {
         return files
@@ -52,7 +62,11 @@ export function notebookSession(workspace: StoreApi<CruxState>) {
             fingerprint: f.fingerprint,
           }));
       }
-      const path = moqira ? moqiraPath(request.path) : notebookPath(request.path);
+      const path = cardinal
+        ? cardinalPath(request.path)
+        : moqira
+          ? moqiraPath(request.path)
+          : notebookPath(request.path);
       let existing = files.find((f) => pathOf(f) === path);
       if (op === 'read') {
         // Watcher batches are debounced. Reconcile this file before opening it,
@@ -131,6 +145,7 @@ export function notebookSession(workspace: StoreApi<CruxState>) {
           });
         } else {
           if (moqira) validateMoqiraFile(path, request.content);
+          if (cardinal) validateCardinalFile(request.content);
           if (path === 'notebook/publish.json') {
             const config = JSON.parse(request.content);
             if (
@@ -150,7 +165,13 @@ export function notebookSession(workspace: StoreApi<CruxState>) {
       }
       await workspace.getState().refreshArtifacts();
       await workspace.getState().createSnapshot({
-        label: moqira ? 'Wireframes saved' : op === 'delete' ? 'Deleted a note' : 'Notebook saved',
+        label: cardinal
+          ? 'Instrument saved'
+          : moqira
+            ? 'Wireframes saved'
+            : op === 'delete'
+              ? 'Deleted a note'
+              : 'Notebook saved',
         ifChanged: true,
         silent: true,
       });

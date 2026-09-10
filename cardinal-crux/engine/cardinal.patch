@@ -1,0 +1,568 @@
+diff --git a/plugins/Makefile b/plugins/Makefile
+index 2f00fa3..045907b 100644
+--- a/plugins/Makefile
++++ b/plugins/Makefile
+@@ -396,8 +396,6 @@ PLUGIN_FILES += AriaModules/src/Splort.cpp
+ PLUGIN_FILES += AriaModules/src/Swerge.cpp
+ PLUGIN_FILES += AriaModules/src/Undular.cpp
+ 
+-MINIPLUGIN_FILES += AriaModules/src/Spleet.cpp
+-MINIPLUGIN_FILES += AriaModules/src/Swerge.cpp
+ 
+ # modules/types which are present in other plugins
+ ARIA_CUSTOM = Blank
+@@ -511,20 +509,11 @@ PLUGIN_FILES += AudibleInstruments/eurorack/streams/svf.cc
+ PLUGIN_FILES += AudibleInstruments/eurorack/streams/vactrol.cc
+ PLUGIN_FILES += AudibleInstruments/eurorack/streams/compressor.cc
+ 
+-MINIPLUGIN_FILES += AudibleInstruments/src/Plaits.cpp
+ # MINIPLUGIN_FILES += AudibleInstruments/eurorack/braids/macro_oscillator.cc
+ # MINIPLUGIN_FILES += AudibleInstruments/eurorack/braids/analog_oscillator.cc
+ # MINIPLUGIN_FILES += AudibleInstruments/eurorack/braids/digital_oscillator.cc
+ # MINIPLUGIN_FILES += AudibleInstruments/eurorack/braids/quantizer.cc
+ # MINIPLUGIN_FILES += AudibleInstruments/eurorack/braids/resources.cc
+-MINIPLUGIN_FILES += $(wildcard AudibleInstruments/eurorack/plaits/dsp/*.cc)
+-MINIPLUGIN_FILES += $(wildcard AudibleInstruments/eurorack/plaits/dsp/engine/*.cc)
+-MINIPLUGIN_FILES += $(wildcard AudibleInstruments/eurorack/plaits/dsp/speech/*.cc)
+-MINIPLUGIN_FILES += $(wildcard AudibleInstruments/eurorack/plaits/dsp/physical_modelling/*.cc)
+-MINIPLUGIN_FILES += AudibleInstruments/eurorack/plaits/resources.cc
+-MINIPLUGIN_FILES += AudibleInstruments/eurorack/stmlib/dsp/atan.cc
+-MINIPLUGIN_FILES += AudibleInstruments/eurorack/stmlib/dsp/units.cc
+-MINIPLUGIN_FILES += AudibleInstruments/eurorack/stmlib/utils/random.cc
+ 
+ # --------------------------------------------------------------
+ # Autinn
+@@ -546,7 +535,6 @@ PLUGIN_FILES += $(filter-out BaconPlugs/src/BaconPlugs.cpp,$(wildcard BaconPlugs
+ PLUGIN_FILES += $(wildcard BaconPlugs/libs/midifile/src/*.cpp)
+ PLUGIN_FILES += $(wildcard BaconPlugs/libs/open303-code/Source/DSPCode/*.cpp)
+ 
+-MINIPLUGIN_FILES += BaconPlugs/src/Style.cpp
+ 
+ # --------------------------------------------------------------
+ # Befaco
+@@ -903,13 +891,6 @@ PLUGIN_FILES += $(filter-out MockbaModular/src/plugin.cpp MockbaModular/src/Mock
+ # modules/types which are present in other plugins
+ MOCKBAMODULAR_CUSTOM = Blank Comparator
+ 
+-MINIPLUGIN_FILES += MockbaModular/src/CZOsc.cpp
+-MINIPLUGIN_FILES += MockbaModular/src/Filtah.cpp
+-MINIPLUGIN_FILES += MockbaModular/src/MaugOsc.cpp
+-MINIPLUGIN_FILES += MockbaModular/src/Mixah.cpp
+-MINIPLUGIN_FILES += MockbaModular/src/Pannah.cpp
+-MINIPLUGIN_FILES += MockbaModular/src/ReVoltah.cpp
+-MINIPLUGIN_FILES += MockbaModular/src/Shapah.cpp
+ 
+ # --------------------------------------------------------------
+ # Mog
+@@ -1151,23 +1132,6 @@ SURGEXT_FLAGS += -DSURGE_RACK_SURGE_VERSION=Cardinal
+ 
+ SURGEXT_FLAGS += -I$(abspath ../carla/source/modules)
+ 
+-MINIPLUGIN_FILES += surgext/src/Delay.cpp
+-MINIPLUGIN_FILES += surgext/src/DelayLineByFreq.cpp
+-MINIPLUGIN_FILES += surgext/src/DelayLineByFreqExpanded.cpp
+-MINIPLUGIN_FILES += surgext/src/EGxVCA.cpp
+-MINIPLUGIN_FILES += surgext/src/FX.cpp
+-MINIPLUGIN_FILES += surgext/src/LFO.cpp
+-MINIPLUGIN_FILES += surgext/src/Mixer.cpp
+-MINIPLUGIN_FILES += surgext/src/ModMatrix.cpp
+-MINIPLUGIN_FILES += surgext/src/QuadAD.cpp
+-MINIPLUGIN_FILES += surgext/src/QuadLFO.cpp
+-MINIPLUGIN_FILES += surgext/src/VCO.cpp
+-MINIPLUGIN_FILES += surgext/src/VCF.cpp
+-MINIPLUGIN_FILES += surgext/src/Waveshaper.cpp
+-MINIPLUGIN_FILES += surgext/src/XTModule.cpp
+-MINIPLUGIN_FILES += surgext/src/XTModuleWidget.cpp
+-MINIPLUGIN_FILES += surgext/src/XTStyle.cpp
+-MINIPLUGIN_FILES += surgext-helper/surgext-helper.cpp
+ 
+ # --------------------------------------------------------------
+ # unless_modules
+@@ -1519,24 +1483,15 @@ RESOURCE_FILES += $(wildcard Cardinal/res/*.png)
+ RESOURCE_FILES += Cardinal/res/Miku/Miku.png
+ 
+ MINIPLUGIN_LIST     = Cardinal
+-MINIPLUGIN_LIST    += AriaModules
+-MINIPLUGIN_LIST    += AudibleInstruments
++MINIPLUGIN_LIST += ValleyAudio
++MINIRESOURCE_FILES += $(filter ValleyAudio/%,$(RESOURCE_FILES))
++MINIPLUGIN_FILES += ValleyAudio/src/Plateau/Plateau.cpp ValleyAudio/src/Plateau/Dattorro.cpp ValleyAudio/src/dsp/filters/OnePoleFilters.cpp ValleyAudio/src/dsp/modulation/LinearEnvelope.cpp
++
+ MINIPLUGIN_LIST    += BogaudioModules
+ MINIPLUGIN_LIST    += Fundamental
+-MINIPLUGIN_LIST    += MockbaModular
+-MINIPLUGIN_LIST    += surgext
+ # MINIPLUGIN_LIST    += ValleyAudio
+ 
+-MINIRESOURCE_FILES  = AriaModules/res/components/jack-transparent.svg
+-MINIRESOURCE_FILES += AriaModules/res/components/pushbutton-500-off.svg
+-MINIRESOURCE_FILES += AriaModules/res/components/pushbutton-500-on.svg
+-MINIRESOURCE_FILES += AriaModules/res/components/pushbutton-500-pink.svg
+-MINIRESOURCE_FILES += AriaModules/res/components/screw.svg
+-MINIRESOURCE_FILES += AriaModules/res/faceplates/Spleet.svg
+-MINIRESOURCE_FILES += AriaModules/res/faceplates/Swerge.svg
+-MINIRESOURCE_FILES += AriaModules/res/signature/signature.svg
+ 
+-MINIRESOURCE_FILES += AudibleInstruments/res/Plaits.svg
+ # MINIRESOURCE_FILES += AudibleInstruments/res/hdad-segment14-1.002/Segment14.ttf
+ 
+ MINIRESOURCE_FILES += BogaudioModules/res/AD-dark.svg
+@@ -1704,52 +1659,7 @@ MINIRESOURCE_FILES += Fundamental/res/components/port.svg
+ MINIRESOURCE_FILES += Fundamental/res/components/Quantizer-keyboard.svg
+ MINIRESOURCE_FILES += Fundamental/res/components/Scope-bg.svg
+ 
+-MINIRESOURCE_FILES += MockbaModular/res/CZOsc.svg
+-MINIRESOURCE_FILES += MockbaModular/res/Empty_gray.svg
+-MINIRESOURCE_FILES += MockbaModular/res/Filtah.svg
+-MINIRESOURCE_FILES += MockbaModular/res/HSW_0.svg
+-MINIRESOURCE_FILES += MockbaModular/res/HSW_1.svg
+-MINIRESOURCE_FILES += MockbaModular/res/HSW_2.svg
+-MINIRESOURCE_FILES += MockbaModular/res/knob.svg
+-MINIRESOURCE_FILES += MockbaModular/res/MaugOsc.svg
+-MINIRESOURCE_FILES += MockbaModular/res/Mixah.svg
+-MINIRESOURCE_FILES += MockbaModular/res/Pannah.svg
+-MINIRESOURCE_FILES += MockbaModular/res/port.svg
+-MINIRESOURCE_FILES += MockbaModular/res/ReVoltah.svg
+-MINIRESOURCE_FILES += MockbaModular/res/screw.svg
+-MINIRESOURCE_FILES += MockbaModular/res/selector.svg
+-MINIRESOURCE_FILES += MockbaModular/res/Shapah.svg
+-
+-MINIRESOURCE_FILES += surgext/build/surge-data/configuration.xml
+-MINIRESOURCE_FILES += surgext/build/surge-data/windows.wt
+-MINIRESOURCE_FILES += surgext/res/xt/fonts/quicksand/Quicksand-Regular.ttf
+-MINIRESOURCE_FILES += surgext/res/xt/fonts/quicksand/Quicksand-Bold.ttf
+-MINIRESOURCE_FILES += surgext/res/xt/dark/components/fader_bg.svg
+-MINIRESOURCE_FILES += surgext/res/xt/dark/components/fader_bg_25.svg
+-MINIRESOURCE_FILES += surgext/res/xt/dark/components/fader_handle.svg
+-MINIRESOURCE_FILES += surgext/res/xt/dark/components/knob-9.svg
+-MINIRESOURCE_FILES += surgext/res/xt/dark/components/knob-12.svg
+-MINIRESOURCE_FILES += surgext/res/xt/dark/components/knob-14.svg
+-MINIRESOURCE_FILES += surgext/res/xt/dark/components/knob-16.svg
+-MINIRESOURCE_FILES += surgext/res/xt/dark/components/knob-pointer-9.svg
+-MINIRESOURCE_FILES += surgext/res/xt/dark/components/knob-pointer-12.svg
+-MINIRESOURCE_FILES += surgext/res/xt/dark/components/knob-pointer-14.svg
+-MINIRESOURCE_FILES += surgext/res/xt/dark/components/knob-pointer-16.svg
+-MINIRESOURCE_FILES += surgext/res/xt/dark/components/mod-button.svg
+-MINIRESOURCE_FILES += surgext/res/xt/dark/components/port.svg
+-MINIRESOURCE_FILES += surgext/res/xt/dark/panels/fx/BlankNoDisplay.svg
+-MINIRESOURCE_FILES += surgext/res/xt/dark/panels/other/EGLFO.svg
+-MINIRESOURCE_FILES += surgext/res/xt/dark/panels/other/Matrix.svg
+-MINIRESOURCE_FILES += surgext/res/xt/dark/panels/other/Mixer.svg
+-MINIRESOURCE_FILES += surgext/res/xt/dark/panels/vco/BlankVCO.svg
+-MINIRESOURCE_FILES += surgext/res/xt/glyphs/lt_0.svg
+-MINIRESOURCE_FILES += surgext/res/xt/glyphs/lt_1.svg
+-MINIRESOURCE_FILES += surgext/res/xt/glyphs/lt_2.svg
+-MINIRESOURCE_FILES += surgext/res/xt/glyphs/lt_3.svg
+-MINIRESOURCE_FILES += surgext/res/xt/glyphs/lt_4.svg
+-MINIRESOURCE_FILES += surgext/res/xt/glyphs/lt_5.svg
+-MINIRESOURCE_FILES += surgext/res/xt/glyphs/lt_6.svg
+-MINIRESOURCE_FILES += surgext/res/xt/glyphs/lt_7.svg
++
+ 
+ # MINIRESOURCE_FILES += ValleyAudio/res/DexterPanelDark.svg
+ # MINIRESOURCE_FILES += ValleyAudio/res/InterzonePanelDark.svg
+@@ -1840,6 +1750,8 @@ MINIRESOURCE_FILES += surgext/res/xt/glyphs/lt_7.svg
+ # MOD builds only have LV2 main and FX variant
+ ifeq ($(MOD_BUILD),true)
+ 
++
++
+ MINI_RESOURCES  = $(MINIPLUGIN_LIST:%=../bin/CardinalMini.lv2/resources/PluginManifests/%.json)
+ MINI_RESOURCES += $(MINIRESOURCE_FILES:%=../bin/CardinalMini.lv2/resources/%)
+ 
+diff --git a/plugins/plugins-mini.cpp b/plugins/plugins-mini.cpp
+index fadda3c..fac89b9 100644
+--- a/plugins/plugins-mini.cpp
++++ b/plugins/plugins-mini.cpp
+@@ -26,13 +26,6 @@
+ // Fundamental
+ #include "Fundamental/src/plugin.hpp"
+ 
+-// Aria
+-extern Model* modelSpleet;
+-extern Model* modelSwerge;
+-
+-// AudibleInstruments
+-#include "AudibleInstruments/src/plugin.hpp"
+-
+ // BogaudioModules - integrate theme/skin support
+ #include <mutex>
+ #include <string>
+@@ -56,22 +49,6 @@ extern Model* modelSwitch;
+ extern Model* modelSwitch18;
+ extern Model* modelUnison;
+ 
+-// MockbaModular
+-#include "MockbaModular/src/plugin.hpp"
+-#include "MockbaModular/src/MockbaModular.hpp"
+-#undef min
+-#define saveBack ignoreMockbaModular1
+-#define loadBack ignoreMockbaModular2
+-#include "MockbaModular/src/MockbaModular.cpp"
+-#undef saveBack
+-#undef loadBack
+-std::string loadBack(int) { return "res/Empty_gray.svg"; }
+-
+-// surgext
+-#include "surgext/src/SurgeXT.h"
+-void surgext_rack_initialize();
+-void surgext_rack_update_theme();
+-
+ // ValleyAudio
+ #include "ValleyAudio/src/Valley.hpp"
+ 
+@@ -81,11 +58,7 @@ std::vector<Model*> hostTerminalModels;
+ // plugin instances
+ Plugin* pluginInstance__Cardinal;
+ Plugin* pluginInstance__Fundamental;
+-Plugin* pluginInstance__Aria;
+-Plugin* pluginInstance__AudibleInstruments;
+ Plugin* pluginInstance__BogaudioModules;
+-Plugin* pluginInstance__MockbaModular;
+-Plugin* pluginInstance__surgext;
+ Plugin* pluginInstance__ValleyAudio;
+ 
+ namespace rack {
+@@ -276,72 +249,9 @@ static void initStatic__Fundamental()
+     }
+ }
+ 
+-static void initStatic__Aria()
+-{
+-    Plugin* const p = new Plugin;
+-    pluginInstance__Aria = p;
+ 
+-    const StaticPluginLoader spl(p, "AriaModules");
+-    if (spl.ok())
+-    {
+-        p->addModel(modelSpleet);
+-        p->addModel(modelSwerge);
+ 
+-        spl.removeModule("Aleister");
+-        spl.removeModule("Arcane");
+-        spl.removeModule("Atout");
+-        spl.removeModule("Blank");
+-        spl.removeModule("Darius");
+-        spl.removeModule("Grabby");
+-        spl.removeModule("Pokies4");
+-        spl.removeModule("Psychopump");
+-        spl.removeModule("Q");
+-        spl.removeModule("Qqqq");
+-        spl.removeModule("Quack");
+-        spl.removeModule("Quale");
+-        spl.removeModule("Rotatoes4");
+-        spl.removeModule("Smerge");
+-        spl.removeModule("Solomon16");
+-        spl.removeModule("Solomon4");
+-        spl.removeModule("Solomon8");
+-        spl.removeModule("Splirge");
+-        spl.removeModule("Splort");
+-        spl.removeModule("Undular");
+-
+-    }
+-}
+-
+-static void initStatic__AudibleInstruments()
+-{
+-    Plugin* const p = new Plugin;
+-    pluginInstance__AudibleInstruments = p;
+ 
+-    const StaticPluginLoader spl(p, "AudibleInstruments");
+-    if (spl.ok())
+-    {
+-        p->addModel(modelPlaits);
+-
+-        spl.removeModule("Blinds");
+-        spl.removeModule("Braids");
+-        spl.removeModule("Branches");
+-        spl.removeModule("Clouds");
+-        spl.removeModule("Elements");
+-        spl.removeModule("Frames");
+-        spl.removeModule("Kinks");
+-        spl.removeModule("Links");
+-        spl.removeModule("Marbles");
+-        spl.removeModule("Rings");
+-        spl.removeModule("Ripples");
+-        spl.removeModule("Shades");
+-        spl.removeModule("Shelves");
+-        spl.removeModule("Stages");
+-        spl.removeModule("Streams");
+-        spl.removeModule("Tides");
+-        spl.removeModule("Tides2");
+-        spl.removeModule("Veils");
+-        spl.removeModule("Warps");
+-    }
+-}
+ 
+ static void initStatic__BogaudioModules()
+ {
+@@ -471,183 +381,34 @@ static void initStatic__BogaudioModules()
+     }
+ }
+ 
+-static void initStatic__MockbaModular()
+-{
+-    Plugin* const p = new Plugin;
+-    pluginInstance__MockbaModular = p;
+ 
+-    const StaticPluginLoader spl(p, "MockbaModular");
+-    if (spl.ok())
+-    {
+-        p->addModel(modelCZOsc);
+-        p->addModel(modelFiltah);
+-        p->addModel(modelMaugOsc);
+-        p->addModel(modelMixah);
+-        p->addModel(modelPannah);
+-        p->addModel(modelReVoltah);
+-        p->addModel(modelShapah);
+ 
+-        spl.removeModule("Blank");
+-        spl.removeModule("Comparator");
+-        spl.removeModule("Countah");
+-        spl.removeModule("CZDblSine");
+-        spl.removeModule("CZPulse");
+-        spl.removeModule("CZReso1");
+-        spl.removeModule("CZReso2");
+-        spl.removeModule("CZReso3");
+-        spl.removeModule("CZSaw");
+-        spl.removeModule("CZSawPulse");
+-        spl.removeModule("CZSquare");
+-        spl.removeModule("Dividah");
+-        spl.removeModule("DualBUFFER");
+-        spl.removeModule("DualNOT");
+-        spl.removeModule("DualOR");
+-        spl.removeModule("DualNOR");
+-        spl.removeModule("DualAND");
+-        spl.removeModule("DualNAND");
+-        spl.removeModule("DualXOR");
+-        spl.removeModule("DualXNOR");
+-        spl.removeModule("Feidah");
+-        spl.removeModule("FeidahS");
+-        spl.removeModule("Holdah");
+-        spl.removeModule("MaugSaw");
+-        spl.removeModule("MaugSaw2");
+-        spl.removeModule("MaugShark");
+-        spl.removeModule("MaugSquare");
+-        spl.removeModule("MaugSquare2");
+-        spl.removeModule("MaugSquare3");
+-        spl.removeModule("MaugTriangle");
+-        spl.removeModule("Mixah3");
+-        spl.removeModule("PSelectah");
+-        spl.removeModule("Selectah");
+-        spl.removeModule("UDPClockMaster");
+-        spl.removeModule("UDPClockSlave");
+-    }
+-}
+ 
+-static void initStatic__surgext()
+-{
+-    Plugin* const p = new Plugin;
+-    pluginInstance__surgext = p;
+ 
+-    const StaticPluginLoader spl(p, "surgext");
+-    if (spl.ok())
+-    {
+-        p->addModel(modelVCOModern);
+-        p->addModel(modelVCOSine);
+-        /*
+-        p->addModel(modelVCOAlias);
+-        p->addModel(modelVCOClassic);
+-        p->addModel(modelVCOFM2);
+-        p->addModel(modelVCOFM3);
+-        p->addModel(modelVCOSHNoise);
+-        p->addModel(modelVCOString);
+-        p->addModel(modelVCOTwist);
+-        p->addModel(modelVCOWavetable);
+-        p->addModel(modelVCOWindow);
+-        */
+-        spl.removeModule("SurgeXTOSCAlias");
+-        spl.removeModule("SurgeXTOSCClassic");
+-        spl.removeModule("SurgeXTOSCFM2");
+-        spl.removeModule("SurgeXTOSCFM3");
+-        spl.removeModule("SurgeXTOSCSHNoise");
+-        spl.removeModule("SurgeXTOSCString");
+-        spl.removeModule("SurgeXTOSCTwist");
+-        spl.removeModule("SurgeXTOSCWavetable");
+-        spl.removeModule("SurgeXTOSCWindow");
+-
+-        // Add the ported ones
+-        p->addModel(modelSurgeLFO);
+-        p->addModel(modelSurgeMixer);
+-        p->addModel(modelSurgeMixerSlider);
+-        p->addModel(modelSurgeModMatrix);
+-        p->addModel(modelSurgeWaveshaper);
+-        /*
+-        p->addModel(modelSurgeDelay);
+-        p->addModel(modelSurgeDelayLineByFreq);
+-        p->addModel(modelSurgeDelayLineByFreqExpanded);
+-        p->addModel(modelSurgeDigitalRingMods);
+-        p->addModel(modelSurgeVCF);
+-        */
+-        spl.removeModule("SurgeXTDelay");
+-        spl.removeModule("SurgeXTDelayLineByFreq");
+-        spl.removeModule("SurgeXTDelayLineByFreqExpanded");
+-        spl.removeModule("SurgeXTDigitalRingMod");
+-        spl.removeModule("SurgeXTVCF");
+-
+-        p->addModel(modelFXNimbus);
+-        spl.removeModule("SurgeXTFXBonsai");
+-        spl.removeModule("SurgeXTFXChorus");
+-        spl.removeModule("SurgeXTFXChow");
+-        spl.removeModule("SurgeXTFXCombulator");
+-        spl.removeModule("SurgeXTDigitalRingMod");
+-        spl.removeModule("SurgeXTFXDistortion");
+-        spl.removeModule("SurgeXTFXExciter");
+-        spl.removeModule("SurgeXTFXEnsemble");
+-        spl.removeModule("SurgeXTFXFlanger");
+-        spl.removeModule("SurgeXTFXFrequencyShifter");
+-        spl.removeModule("SurgeXTFXNeuron");
+-        spl.removeModule("SurgeXTFXPhaser");
+-        spl.removeModule("SurgeXTFXResonator");
+-        spl.removeModule("SurgeXTFXReverb");
+-        spl.removeModule("SurgeXTFXReverb2");
+-        spl.removeModule("SurgeXTFXRingMod");
+-        spl.removeModule("SurgeXTFXRotarySpeaker");
+-        spl.removeModule("SurgeXTFXSpringReverb");
+-        spl.removeModule("SurgeXTFXTreeMonster");
+-        spl.removeModule("SurgeXTFXVocoder");
+ 
+-        /*
+-        p->addModel(modelEGxVCA);
+-        p->addModel(modelQuadAD);
+-        p->addModel(modelQuadLFO);
+-        p->addModel(modelUnisonHelper);
+-        p->addModel(modelUnisonHelperCVExpander);
+-        */
+-        spl.removeModule("SurgeXTEGxVCA");
+-        spl.removeModule("SurgeXTQuadAD");
+-        spl.removeModule("SurgeXTQuadLFO");
+-        spl.removeModule("SurgeXTUnisonHelper");
+-        spl.removeModule("SurgeXTUnisonHelperCVExpander");
+-
+-        surgext_rack_initialize();
+-    }
+-}
+ 
+-/*
+-static void initStatic__ValleyAudio()
+-{
++static void initStatic__ValleyAudio() {
+     Plugin* const p = new Plugin;
+     pluginInstance__ValleyAudio = p;
+-
+     const StaticPluginLoader spl(p, "ValleyAudio");
+-    if (spl.ok())
+-    {
+-        p->addModel(modelDexter);
+-        p->addModel(modelInterzone);
+-
++    if (spl.ok()) {
++        p->addModel(modelPlateau);
++        spl.removeModule("Topograph");
++        spl.removeModule("uGraph");
++        spl.removeModule("Dexter");
++        spl.removeModule("Interzone");
+         spl.removeModule("Amalgam");
+         spl.removeModule("Feline");
+-        spl.removeModule("Plateau");
+         spl.removeModule("Terrorform");
+-        spl.removeModule("Topograph");
+-        spl.removeModule("uGraph");
+     }
+ }
+-*/
+ 
+ void initStaticPlugins()
+ {
+     initStatic__Cardinal();
+     initStatic__Fundamental();
+-    initStatic__Aria();
+-    initStatic__AudibleInstruments();
+     initStatic__BogaudioModules();
+-    initStatic__MockbaModular();
+-    initStatic__surgext();
+-    /*
+     initStatic__ValleyAudio();
+-    */
+ }
+ 
+ void destroyStaticPlugins()
+@@ -670,10 +431,7 @@ void updateStaticPluginsDarkMode()
+             listener->defaultSkinChanged(skins._default);
+         }
+     }
+-    // surgext
+-    {
+-        surgext_rack_update_theme();
+-    }
++
+ }
+ 
+ }
+diff --git a/src/CardinalPlugin.cpp b/src/CardinalPlugin.cpp
+index 7360c59..1b98da5 100644
+--- a/src/CardinalPlugin.cpp
++++ b/src/CardinalPlugin.cpp
+@@ -158,6 +158,8 @@ struct ScopedContext {
+ 
+ // -----------------------------------------------------------------------------------------------------------
+ 
++static CardinalBasePlugin* gardenPlugin = nullptr;
++
+ class CardinalPlugin : public CardinalBasePlugin
+ {
+    #ifdef DISTRHO_OS_WASM
+@@ -218,6 +220,7 @@ public:
+           fNextExpectedFrame(0),
+           fWasBypassed(false)
+     {
++        if (!isDummyInstance()) gardenPlugin = this;
+         // check if first time loading a real instance
+         if (!fInitializer->shouldSaveSettings && !isDummyInstance())
+             fInitializer->loadSettings(true);
+@@ -320,6 +323,7 @@ public:
+ 
+     ~CardinalPlugin() override
+     {
++        if (gardenPlugin == this) gardenPlugin = nullptr;
+        #ifdef HAVE_LIBLO
+         if (fInitializer->remotePluginInstance == this)
+             fInitializer->remotePluginInstance = nullptr;
+@@ -1334,4 +1338,8 @@ Plugin* createPlugin()
+ 
+ // --------------------------------------------------------------------------------------------------------------------
+ 
++#ifdef DISTRHO_OS_WASM
++#include "GardenBridge.inc"
++#endif
++
+ END_NAMESPACE_DISTRHO
+diff --git a/src/Makefile.cardinal.mk b/src/Makefile.cardinal.mk
+index a8c81c6..ebee7e3 100644
+--- a/src/Makefile.cardinal.mk
++++ b/src/Makefile.cardinal.mk
+@@ -119,24 +119,6 @@ endif
+ # --------------------------------------------------------------
+ # surgext libraries
+ 
+-SURGE_DEP_PATH = $(abspath ../../deps/surge-build)
+-RACK_EXTRA_LIBS += $(SURGE_DEP_PATH)/src/common/libsurge-common.a
+-RACK_EXTRA_LIBS += $(SURGE_DEP_PATH)/src/common/libjuce_dsp_rack_sub.a
+-RACK_EXTRA_LIBS += $(SURGE_DEP_PATH)/libs/airwindows/libairwindows.a
+-RACK_EXTRA_LIBS += $(SURGE_DEP_PATH)/libs/eurorack/libeurorack.a
+-ifeq ($(DEBUG),true)
+-RACK_EXTRA_LIBS += $(SURGE_DEP_PATH)/libs/fmt/libfmtd.a
+-else
+-RACK_EXTRA_LIBS += $(SURGE_DEP_PATH)/libs/fmt/libfmt.a
+-endif
+-RACK_EXTRA_LIBS += $(SURGE_DEP_PATH)/libs/sqlite-3.23.3/libsqlite.a
+-RACK_EXTRA_LIBS += $(SURGE_DEP_PATH)/libs/sst/sst-plugininfra/libsst-plugininfra.a
+-ifneq ($(MACOS)$(WINDOWS),true)
+-RACK_EXTRA_LIBS += $(SURGE_DEP_PATH)/libs/sst/sst-plugininfra/libs/filesystem/libfilesystem.a
+-endif
+-RACK_EXTRA_LIBS += $(SURGE_DEP_PATH)/libs/sst/sst-plugininfra/libs/strnatcmp/libstrnatcmp.a
+-RACK_EXTRA_LIBS += $(SURGE_DEP_PATH)/libs/sst/sst-plugininfra/libs/tinyxml/libtinyxml.a
+-
+ # --------------------------------------------------------------
+ # Extra libraries to link against
+ 

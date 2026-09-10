@@ -74,6 +74,22 @@ export function getMockLanguageModel(): LanguageModel {
         warnings: [],
       }),
       doStream: async ({ prompt, abortSignal }) => {
+        const instrument = /\[instrument:(controls|preset)\]/.exec(lastUserText(prompt));
+        if (instrument) {
+          const rounds = toolResultsThisTurn(prompt);
+          if (!rounds.length) return toolCallStream('inspect_instrument', {});
+          if (rounds.length === 1)
+            return instrument[1] === 'controls'
+              ? toolCallStream('set_instrument_controls', {
+                  values: { tone: 0.2, space: 0.85 },
+                })
+              : toolCallStream('select_instrument_preset', { presetId: 'low-orbit' });
+          if (rounds.length === 2) return toolCallStream('inspect_instrument', {});
+          const failure = ['set_instrument_controls', 'select_instrument_preset']
+            .map((name) => toolResultText(prompt, name))
+            .find((result) => result?.startsWith('Error'));
+          return textStream(failure || `Instrument ${instrument[1]} saved and inspected.`);
+        }
         const workspace = /\[workspace:(\w+)(:delete)?\]/.exec(lastUserText(prompt));
         if (workspace) {
           if (prompt.at(-1)?.role === 'tool')

@@ -1,3 +1,10 @@
+import {
+  appToolDefinitions,
+  appToolFor,
+  executeAppTool,
+  isAppToolName,
+  isMutatingAppTool,
+} from '@/services/embedded-app-tool-registry';
 import { assertCopyWritable } from '@/services/working-copies';
 import { getServices } from '@/services';
 import type { ToolResultContent } from '@/services/types';
@@ -268,10 +275,11 @@ export const SITE_TOOL_DEFINITIONS: ToolDefinition[] = [
 ];
 
 /** The tool set to offer a workspace conversation on this platform. */
-export function defaultToolDefinitions(): ToolDefinition[] {
+export function defaultToolDefinitions(cruxId?: string): ToolDefinition[] {
   const site = can(Capability.Build) ? SITE_TOOL_DEFINITIONS : [];
   return [
     ...TOOL_DEFINITIONS,
+    ...appToolDefinitions(cruxId),
     ...site,
     ...GROWTH_TOOL_DEFINITIONS,
     ...THEME_TOOL_DEFINITIONS,
@@ -373,13 +381,20 @@ export function createToolExecutor(
     input: Record<string, unknown>,
   ): Promise<string | ToolResultContent> {
     // Validate inputs before execution
-    const validation = validateToolInput(toolName, input);
+    const appTool = appToolFor(cruxId, toolName);
+    const validation = isAppToolName(toolName)
+      ? { valid: true, error: undefined }
+      : validateToolInput(toolName, input);
     if (!validation.valid) {
       return formatToolError(toolName, validation.error!);
     }
 
     // Scope (B5): a worker may read anything, but only change what it was given.
-    const outside = scopeViolation(toolName, input, options.scope);
+    const outside = appTool
+      ? appTool.writes
+          .map((path) => scopeViolation('write_file', { path }, options.scope))
+          .find(Boolean)
+      : scopeViolation(toolName, input, options.scope);
     if (outside) return formatToolError(toolName, outside);
 
     const normPath = normalizeToolPath(input.path as string | undefined);
@@ -410,71 +425,75 @@ export function createToolExecutor(
     }
 
     try {
-      if (MUTATING_TOOLS.includes(toolName)) await assertCopyWritable(cruxId);
+      if (MUTATING_TOOLS.includes(toolName) || appTool?.writes.length)
+        await assertCopyWritable(cruxId);
       let result: string | ToolResultContent;
 
-      switch (toolName) {
-        case 'write_file':
-          result = await toolWriteFile(input, cruxId, artifactService);
-          break;
-        case 'edit_file':
-          result = await toolEditFile(input, cruxId, artifactService);
-          break;
-        case 'read_file':
-          result = await toolReadFile(input, cruxId, artifactService);
-          break;
-        case 'delete_file':
-          result = await toolDeleteFile(input, cruxId, artifactService, onDeleteRequest);
-          break;
-        case 'list_files':
-          result = await toolListFiles(cruxId, artifactService);
-          break;
-        case 'generate_image':
-          result = await toolGenerateImage(input, cruxId, artifactService, chatModel);
-          break;
-        case 'search_files':
-          result = await toolSearchFiles(input, cruxId, artifactService);
-          break;
-        case 'rename_file':
-          result = await toolRenameFile(input, cruxId, artifactService);
-          break;
-        case 'check_site':
-          result = await toolCheckSite(cruxId);
-          break;
-        case 'snapshot':
-        case 'list_snapshots':
-        case 'restore':
-        case 'branch':
-        case 'diff':
-          result = await runGrowthTool(toolName, input, { cruxId, requestedBy });
-          break;
-        case 'set_theme':
-        case 'get_theme':
-        case 'set_background':
-          result = await runThemeTool(toolName, input, { cruxId, chatModel });
-          break;
-        case 'remember':
-          // Garden Memory (B6): the one write path besides the person's own
-          // edits; the result is the line they see in the transcript.
-          result = await runMemoryTool(input);
-          break;
-        case 'load_skill':
-          result = runSkillTool(input);
-          break;
-        case 'delegate': {
-          // Fan out to Subagents (B5). Validation already ran; the runner is
-          // the app's, so the result is the merge summary the person also sees.
-          if (!options.delegate) return formatToolError('delegate', DELEGATE_UNAVAILABLE);
-          const parsed = validateDelegateInput(input);
-          if (!parsed.valid) return formatToolError('delegate', parsed.error);
-          result = await options.delegate(parsed.tasks);
-          // Merged files landed on the main line: nothing read before is current.
-          recentlyReadFiles.clear();
-          break;
+      if (isAppToolName(toolName))
+        result = JSON.stringify(await executeAppTool(cruxId, toolName, input));
+      else
+        switch (toolName) {
+          case 'write_file':
+            result = await toolWriteFile(input, cruxId, artifactService);
+            break;
+          case 'edit_file':
+            result = await toolEditFile(input, cruxId, artifactService);
+            break;
+          case 'read_file':
+            result = await toolReadFile(input, cruxId, artifactService);
+            break;
+          case 'delete_file':
+            result = await toolDeleteFile(input, cruxId, artifactService, onDeleteRequest);
+            break;
+          case 'list_files':
+            result = await toolListFiles(cruxId, artifactService);
+            break;
+          case 'generate_image':
+            result = await toolGenerateImage(input, cruxId, artifactService, chatModel);
+            break;
+          case 'search_files':
+            result = await toolSearchFiles(input, cruxId, artifactService);
+            break;
+          case 'rename_file':
+            result = await toolRenameFile(input, cruxId, artifactService);
+            break;
+          case 'check_site':
+            result = await toolCheckSite(cruxId);
+            break;
+          case 'snapshot':
+          case 'list_snapshots':
+          case 'restore':
+          case 'branch':
+          case 'diff':
+            result = await runGrowthTool(toolName, input, { cruxId, requestedBy });
+            break;
+          case 'set_theme':
+          case 'get_theme':
+          case 'set_background':
+            result = await runThemeTool(toolName, input, { cruxId, chatModel });
+            break;
+          case 'remember':
+            // Garden Memory (B6): the one write path besides the person's own
+            // edits; the result is the line they see in the transcript.
+            result = await runMemoryTool(input);
+            break;
+          case 'load_skill':
+            result = runSkillTool(input);
+            break;
+          case 'delegate': {
+            // Fan out to Subagents (B5). Validation already ran; the runner is
+            // the app's, so the result is the merge summary the person also sees.
+            if (!options.delegate) return formatToolError('delegate', DELEGATE_UNAVAILABLE);
+            const parsed = validateDelegateInput(input);
+            if (!parsed.valid) return formatToolError('delegate', parsed.error);
+            result = await options.delegate(parsed.tasks);
+            // Merged files landed on the main line: nothing read before is current.
+            recentlyReadFiles.clear();
+            break;
+          }
+          default:
+            return formatToolError(toolName, `Unknown tool: ${toolName}`);
         }
-        default:
-          return formatToolError(toolName, `Unknown tool: ${toolName}`);
-      }
 
       // A file whose content actually changed is no longer "read" — but a
       // FAILED edit changed nothing, and its error deliberately embeds the
@@ -482,6 +501,8 @@ export function createToolExecutor(
       // on failure made that retry impossible.
       if (didMutate(toolName, result)) {
         if (normPath) recentlyReadFiles.delete(normPath);
+        for (const path of appTool?.writes ?? [])
+          recentlyReadFiles.delete(normalizeToolPath(path)!);
         if (toolName === 'rename_file') {
           recentlyReadFiles.delete(normalizeToolPath(input.old_path as string)!);
           recentlyReadFiles.delete(normalizeToolPath(input.new_path as string)!);
@@ -532,7 +553,7 @@ export const DELETE_DECLINED = 'The user DECLINED';
  * prompt rebuilds and spurious snapshots.
  */
 export function didMutate(toolName: string, result: string | ToolResultContent): boolean {
-  if (!MUTATING_TOOLS.includes(toolName)) return false;
+  if (!MUTATING_TOOLS.includes(toolName) && !isMutatingAppTool(toolName)) return false;
   // Mutating tools always report as plain strings we author ourselves
   if (typeof result !== 'string') return false;
   if (result.startsWith('Error')) return false;

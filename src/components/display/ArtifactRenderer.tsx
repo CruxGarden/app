@@ -190,7 +190,7 @@ function HtmlRenderer({
         <iframe
           src={src}
           sandbox="allow-scripts allow-same-origin allow-popups allow-modals allow-downloads allow-forms"
-          allow="geolocation; camera; microphone; accelerometer; gyroscope; autoplay; fullscreen"
+          allow="geolocation; camera; microphone; accelerometer; gyroscope; autoplay; fullscreen; gamepad"
           className={`w-full h-full border-0 transition-opacity ${iframeLoaded ? 'opacity-100' : 'opacity-0'}`}
           onLoad={() => setIframeLoaded(true)}
           title="Published creation"
@@ -241,7 +241,7 @@ function ServiceWorkerHtmlRenderer({
       key={previewUrl}
       src={previewUrl}
       sandbox="allow-scripts allow-same-origin allow-popups allow-modals allow-downloads allow-forms"
-      allow="geolocation; camera; microphone; accelerometer; gyroscope; autoplay; fullscreen"
+      allow="geolocation; camera; microphone; accelerometer; gyroscope; autoplay; fullscreen; gamepad"
       className="w-full h-full border-0 bg-contrast"
       title="Published creation"
     />

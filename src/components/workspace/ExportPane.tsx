@@ -1,5 +1,5 @@
 import { useState, useCallback, useMemo } from 'react';
-import { isEmbeddedApp } from '@/services/embedded-app';
+import { isEmbeddedApp, isCardinal } from '@/services/embedded-app';
 import { useCruxStore } from '@/stores/cruxStore';
 import { useAppStore } from '@/stores/appStore';
 import { exportCrux, exportArtifactsZip } from '@/services/crux-io';
@@ -162,9 +162,15 @@ export default function ExportPane() {
         <div className="flex-1 overflow-y-auto min-h-0 p-3 flex flex-col gap-3">
           {isEmbeddedApp(crux) && (
             <PaneNote tone="muted" className="text-left whitespace-normal">
-              Complete editable Crux: includes app code, all content (including private notes or
-              designs), Collaboration, Tasks and Growth. Anyone with this file can open them. To
-              share selected content as a website, use Share.
+              {isCardinal(crux) ? (
+                'Complete instrument: includes its app, patch, presets, private Collaboration, Tasks and Growth. Anyone with this file can open them. Retain the included licenses and source information.'
+              ) : (
+                <>
+                  Complete editable Crux: includes app code, all content (including private notes or
+                  designs), Collaboration, Tasks and Growth. Anyone with this file can open them. To
+                  share selected content as a website, use Share.
+                </>
+              )}
             </PaneNote>
           )}
           <PaneSection label="Archive" aside={formatBytes(totalSize)}>

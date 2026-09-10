@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Slow Sky — Cardinal instrument</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body data-view="instrument">
+    <div id="canvas_wrapper">
+      <input type="file" id="canvas_file_open" hidden /><canvas
+        id="canvas"
+        tabindex="-1"
+        oncontextmenu="event.preventDefault()"
+      ></canvas>
+    </div>
+    <button id="back" hidden>Back to instrument</button>
+    <main>
+      <header>
+        <span class="eyebrow">A CARDINAL INSTRUMENT</span
+        ><button id="rack" disabled>Open rack ↗</button>
+        <h1>Slow Sky</h1>
+        <p>Two voices. A moving horizon. Room to get lost.</p>
+      </header>
+      <section class="instrument" aria-label="Cardinal drone instrument">
+        <div class="horizon" aria-hidden="true">
+          <div class="sun"></div>
+          <i></i><i></i><i></i>
+        </div>
+        <div class="transport">
+          <button id="play" disabled>Start sound</button
+          ><span id="playing" role="status">Silent</span>
+        </div>
+        <fieldset id="controls" disabled>
+          <legend>Shape the sound</legend>
+          <div id="sliders"></div>
+        </fieldset>
+      </section>
+      <section class="presets">
+        <label
+          >Preset<select id="preset" disabled>
+            <option value="">Choose a sound</option>
+          </select></label
+        ><label
+          >Name your preset<input
+            id="preset-name"
+            maxlength="100"
+            placeholder="Evening on Mars" /></label
+        ><button id="save-preset" disabled>Save preset</button>
+      </section>
+      <footer>
+        <span id="status" role="status">Opening Cardinal…</span
+        ><button id="save" disabled>Save now</button
+        ><button id="reload" disabled>Reload saved instrument</button>
+        <p id="error" role="alert" hidden></p>
+        <p>
+          The rack and these controls shape the same instrument. Patch edits and presets save with
+          Growth. Sound stops when you leave the instrument.
+        </p>
+        <p class="hint">
+          Ask your agent to shape the sound, or edit <code>music/instrument.json</code>, then reload
+          the saved instrument. <a href="README.md" target="_blank">About this instrument</a>
+        </p>
+      </footer>
+    </main>
+    <script type="module" src="app.js"></script>
+  </body>
+</html>

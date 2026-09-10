@@ -759,7 +759,7 @@ export default function EditorContent({
           key="preview"
           src={iframeSrc}
           sandbox="allow-scripts allow-same-origin allow-popups allow-modals allow-downloads allow-forms"
-          allow="geolocation; camera; microphone; accelerometer; gyroscope; autoplay; fullscreen"
+          allow="geolocation; camera; microphone; accelerometer; gyroscope; autoplay; fullscreen; gamepad"
           onLoad={(e) => {
             try {
               const doc = e.currentTarget.contentDocument;
