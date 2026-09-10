@@ -1,3 +1,4 @@
+import { deferNotebookAction } from '@/services/notebook-lifecycle';
 import { create, useStore } from 'zustand';
 import { useContext } from 'react';
 import { WorkspaceContext, workspaceSelection } from './workspaceSelection';
@@ -148,7 +149,7 @@ export interface UIState {
   // ── Layout actions ──
 
   /** Start a new Crux with Collaboration beside its clean preview. */
-  seedCruxLayout: (cruxId: string) => void;
+  seedCruxLayout: (cruxId: string, collaborationPercent?: number) => void;
   setActiveCrux: (id: string | null) => void;
   togglePane: (pane: PaneType) => void;
   setPaneVisible: (pane: PaneType, visible: boolean) => void;
@@ -554,6 +555,8 @@ export function createUIStore(cruxId?: string) {
 
     workshopView: 'clean',
     setWorkshopView: (workshopView) => {
+      if (deferNotebookAction(get().activeCruxId, () => get().setWorkshopView(workshopView)))
+        return;
       set({ workshopView });
       const id = get().activeCruxId;
       if (id) setSetting(`cruxgarden:workshop-view:${id}`, workshopView);
@@ -599,7 +602,7 @@ export function createUIStore(cruxId?: string) {
 
     // ── Layout actions ──
 
-    seedCruxLayout: (cruxId) => {
+    seedCruxLayout: (cruxId, collaborationPercent) => {
       const visibility: Record<string, boolean> = {};
       for (const pane of DEFAULT_PANE_ORDER) visibility[pane] = false;
       // Creation starts with a conversation and the result beside it. Template
@@ -608,7 +611,20 @@ export function createUIStore(cruxId?: string) {
       visibility.workshop = true;
       setSetting(
         cruxLayoutKey(cruxId),
-        JSON.stringify({ paneOrder: DEFAULT_PANE_ORDER, paneVisibility: visibility }),
+        JSON.stringify({
+          paneOrder: DEFAULT_PANE_ORDER,
+          paneVisibility: visibility,
+          ...(collaborationPercent
+            ? {
+                mosaicLayout: {
+                  direction: 'row',
+                  first: 'collaboration',
+                  second: 'workshop',
+                  splitPercentage: collaborationPercent,
+                },
+              }
+            : {}),
+        }),
       );
     },
     moodPanelOpen: false,
@@ -682,6 +698,7 @@ export function createUIStore(cruxId?: string) {
     },
 
     togglePane: (pane) => {
+      if (deferNotebookAction(get().activeCruxId, () => get().togglePane(pane))) return;
       const prev = get();
       const wasVisible = prev.paneVisibility[pane];
       const newVisibility = { ...prev.paneVisibility, [pane]: !wasVisible };
@@ -708,6 +725,8 @@ export function createUIStore(cruxId?: string) {
     },
 
     setPaneVisible: (pane, visible) => {
+      if (deferNotebookAction(get().activeCruxId, () => get().setPaneVisible(pane, visible)))
+        return;
       const prev = get();
       let newMosaic = prev.mosaicLayout;
       if (visible && !prev.paneVisibility[pane]) {
@@ -769,6 +788,7 @@ export function createUIStore(cruxId?: string) {
     // ── Editor tab actions ──
 
     openFile: (id, path, options) => {
+      if (deferNotebookAction(get().activeCruxId, () => get().openFile(id, path, options))) return;
       if (!options?.preserveWorkshopView) get().setWorkshopView('advanced');
       set((s) => {
         const existing = s.editor.tabs.find((t) => t.id === id);
@@ -822,6 +842,7 @@ export function createUIStore(cruxId?: string) {
     },
 
     setActiveTab: (id) => {
+      if (deferNotebookAction(get().activeCruxId, () => get().setActiveTab(id))) return;
       set((s) => ({ editor: { ...s.editor, activeTabId: id } }));
       const s = get();
       if (s.activeCruxId) saveEditorTabs(s.activeCruxId, s.editor);

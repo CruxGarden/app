@@ -7,3 +7,5 @@ release
 .DS_Store
 *.tsbuildinfo
 performance/.results/
+
+notes-crux/.astro/

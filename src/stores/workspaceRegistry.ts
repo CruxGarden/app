@@ -1,3 +1,4 @@
+import { flushNotebook } from '@/services/notebook-lifecycle';
 import { tendingState, tendingLabel, type TendingState } from '@/services/tending-state';
 import { findWorkingCopy } from '@/services/working-copies';
 import { maintainNotesManifest } from '@/services/notes-manifest';
@@ -120,7 +121,7 @@ function summarize(w: Workspace) {
     tending,
     title: s.crux?.title || 'Untitled',
     status: `${s.publishPhase ? 'Publishing' : tendingLabel(tending)}${s.turnQueue.length ? ` · ${s.turnQueue.length} queued` : ''}`,
-    dirty: w.ui.getState().editor.tabs.some((t) => t.dirty),
+    dirty: documentsFor(w.data, w.ui).hasDirty(),
   };
   const prev = useWorkspaceRegistry.getState().entries.find((e) => e.id === w.id);
   if (prev && JSON.stringify(prev) === JSON.stringify(next)) return;
@@ -255,6 +256,7 @@ export async function closeWorkspace(
   const docs = documentsFor(w.data, w.ui);
   if (docs.hasDirty() && !options.documents)
     throw new Error('Save or discard unsaved edits before closing.');
+  if (options.documents === 'save') await flushNotebook(w.id);
   w.phase = 'closing';
   w.data.setState({ closing: true });
   summarize(w);

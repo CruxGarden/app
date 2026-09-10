@@ -383,7 +383,7 @@ export async function exportCrux(options: ExportOptions): Promise<ExportResult> 
       title: crux.title,
       description: crux.description,
       type: crux.type,
-      kind: crux.meta?.kind ?? null,
+      kind: crux.kind ?? crux.meta?.kind ?? null,
       status: crux.status,
       visibility: crux.visibility,
       authorId: crux.authorId ?? null,

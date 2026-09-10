@@ -140,6 +140,8 @@ function AdvancedEditor() {
 /** Clean preview owns no editor tabs: changing views preserves their buffers and selection. */
 export default function EditorPane() {
   const crux = useCruxStore((s) => s.crux);
+  const historicalNotebook = useCruxStore((s) => s.crux?.kind === 'notes' && !!s.viewingSnapshotId);
+  const exitSnapshot = useCruxStore((s) => s.exitSnapshotView);
   const artifacts = useCruxStore((s) => s.artifacts);
   const view = useUIStore((s) => s.workshopView);
   const setView = useUIStore((s) => s.setWorkshopView);
@@ -205,7 +207,31 @@ export default function EditorPane() {
           Crux settings
         </button>
       </div>
-      {view === 'advanced' ? (
+      {view === 'clean' && historicalNotebook ? (
+        <div className="flex-1 flex flex-col items-center justify-center p-8 gap-4 text-center">
+          <h2 className="text-lg">Saved notebook checkpoint</h2>
+          <p className="text-sm text-text-muted">
+            Read the saved Markdown Artifacts in Advanced view. Return to the current notebook to
+            write.
+          </p>
+          <button
+            className={button}
+            onClick={() => {
+              const note = artifacts.find(
+                (a) => pathOf(a).startsWith('notebook/') && /\.md$/i.test(pathOf(a)),
+              );
+              setPane('artifacts', true);
+              if (note) openFile(note.id, pathOf(note));
+              else setView('advanced');
+            }}
+          >
+            Read saved notes
+          </button>
+          <button className={button} onClick={() => void exitSnapshot()}>
+            Return to current notebook
+          </button>
+        </div>
+      ) : view === 'advanced' ? (
         <div className="flex-1 min-h-0">
           <AdvancedEditor />
         </div>

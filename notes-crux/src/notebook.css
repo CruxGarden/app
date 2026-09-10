@@ -1,0 +1,253 @@
+:root {
+  color-scheme: dark;
+  --bg: #171d1c;
+  --text: #e5e9e1;
+  --muted: #a2aea3;
+  --border: #34413a;
+  --accent: #b8d39b;
+}
+* {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+  background: #171d1c;
+  color: #e5e9e1;
+  font:
+    15px/1.6 ui-sans-serif,
+    system-ui,
+    sans-serif;
+}
+.notebook-shell {
+  display: flex;
+  height: 100vh;
+  width: 100%;
+  background: #171d1c;
+  color: #e5e9e1;
+}
+.notebook-sidebar {
+  width: 240px;
+  flex-shrink: 0;
+  padding: 25px 18px;
+  display: flex;
+  gap: 18px;
+  flex-direction: column;
+  border-right: 1px solid #34413a;
+  background: #202824;
+}
+.notebook-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.notebook-brand > span {
+  font-size: 32px;
+  color: #b8d39b;
+}
+.notebook-brand strong {
+  font-size: 17px;
+}
+.notebook-brand small {
+  display: block;
+  color: #a2aea3;
+  font-size: 11px;
+}
+.notebook-shell input:not([type='checkbox']),
+.reader input {
+  padding: 10px 12px;
+  border: 1px solid #405044;
+  background: #171d1c;
+  border-radius: 7px;
+  color: #e5e9e1;
+  width: 100%;
+}
+.notebook-shell button,
+.reader button {
+  border: 1px solid #405044;
+  padding: 7px 12px;
+  border-radius: 6px;
+  background: #29372b;
+  color: #e5e9e1;
+  cursor: pointer;
+  font: inherit;
+}
+.notebook-shell button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.notebook-shell button:hover:not(:disabled) {
+  background: #3b4a37;
+}
+.notebook-sidebar nav {
+  flex: 1;
+  overflow: auto;
+}
+.notebook-sidebar nav button {
+  width: 100%;
+  text-align: left;
+  border: 0;
+  background: transparent;
+  margin-bottom: 5px;
+  overflow-wrap: anywhere;
+}
+.notebook-sidebar nav button.selected {
+  background: #3b4a37;
+}
+.notebook-sidebar nav span {
+  margin-right: 9px;
+  color: #a2aea3;
+}
+.notebook-sidebar form {
+  display: grid;
+  gap: 8px;
+  font-size: 12px;
+}
+.notebook-sidebar a,
+.notebook-foot {
+  font-size: 11px;
+  color: #a2aea3;
+  margin: 0;
+}
+.notebook-main {
+  flex: 1;
+  min-width: 0;
+  overflow: auto;
+}
+.notebook-toolbar {
+  padding: 14px 28px;
+  border-bottom: 1px solid #34413a;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12px;
+  color: #a2aea3;
+  position: sticky;
+  top: 0;
+  background: #171d1c;
+  z-index: 5;
+}
+.notebook-heading {
+  padding: 38px 8% 12px;
+}
+.notebook-heading p {
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  font-size: 11px;
+  color: #a2aea3;
+}
+.notebook-heading h1 {
+  font:
+    38px/1.2 Georgia,
+    serif;
+  margin: 10px 0 20px;
+}
+.notebook-heading label {
+  font-size: 12px;
+  color: #a2aea3;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.notebook-editor {
+  padding: 15px 8% 100px;
+}
+.notebook-editor .tiptap {
+  min-height: 300px;
+  outline: none;
+  color: #e5e9e1;
+}
+.notebook-editor img {
+  max-width: 100%;
+}
+.notebook-error {
+  margin: 20px;
+  padding: 14px;
+  border: 1px solid #c18d68;
+  background: #34281f;
+}
+.notebook-error p {
+  font-size: 12px;
+}
+.reader {
+  display: grid;
+  grid-template-columns: 240px 1fr;
+  min-height: 100vh;
+  background: #171d1c;
+  color: #e5e9e1;
+}
+.reader aside {
+  padding: 32px 20px;
+  border-right: 1px solid #34413a;
+}
+.reader nav a {
+  display: block;
+  color: #b8d39b;
+  padding: 8px 0;
+}
+.reader article {
+  padding: 45px 8%;
+  max-width: 950px;
+}
+.reader img {
+  max-width: 100%;
+}
+.reader a {
+  color: #b8d39b;
+}
+.reader h1 {
+  font-family: Georgia, serif;
+}
+.reader pre {
+  overflow: auto;
+  background: #202824;
+  padding: 15px;
+}
+.reader small {
+  color: #a2aea3;
+}
+@media (max-width: 650px) {
+  .notebook-sidebar {
+    width: 170px;
+    padding: 14px 10px;
+  }
+  .notebook-brand small {
+    display: none;
+  }
+  .notebook-heading {
+    padding: 25px;
+  }
+  .notebook-editor {
+    padding: 15px 25px;
+  }
+  .reader {
+    display: block;
+  }
+  .reader aside {
+    border-bottom: 1px solid #34413a;
+  }
+  .reader article {
+    padding: 25px;
+  }
+}
+
+html,
+body {
+  min-width: 0;
+  min-height: 0;
+  width: 100%;
+  overflow-x: hidden;
+}
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+.notebook-sidebar {
+  overflow-y: auto;
+}
