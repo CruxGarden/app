@@ -6,15 +6,16 @@ import { DEFAULT_PERSONA } from '@/services/persona';
 import { tokenChoices } from './token-groups';
 
 describe('bundled Moods', () => {
-  it('ships twenty complete, valid packages with distinct ids', () => {
-    expect(BUNDLED_MOODS).toHaveLength(20);
-    expect(new Set(BUNDLED_MOODS.map((m) => m.id)).size).toBe(20);
+  it('ships twenty-one complete, valid packages with distinct ids', () => {
+    expect(BUNDLED_MOODS).toHaveLength(21);
+    expect(new Set(BUNDLED_MOODS.map((m) => m.id)).size).toBe(21);
     for (const m of BUNDLED_MOODS) {
       const ok = validateMoodPackage(JSON.parse(JSON.stringify(m)));
       expect(ok, `${m.id} validates`).toBeTruthy();
       expect(ok!.sound.volume).toBeGreaterThanOrEqual(0);
       expect(ok!.sound.volume).toBeLessThanOrEqual(1);
       expect(ok!.sound.enabled).toBe(true);
+      expect(ok!.sound.cues).toEqual(m.sound.cues);
       expect(m.persona?.name, `${m.id} has a voice`).toBeTruthy();
     }
   });
@@ -37,8 +38,9 @@ describe('bundled Moods', () => {
     // and validation (the shape a saved/imported package takes) keeps the sound block
     const ok = validateMoodPackage(JSON.parse(JSON.stringify(k)))!;
     expect(ok.sound).toEqual(k.sound);
-    // no other bundled Mood ships files
-    expect(BUNDLED_MOODS.filter((m) => m.bundled)).toHaveLength(1);
+    // The Keeper and 8-bit ship backgrounds; only The Keeper brings a track.
+    expect(BUNDLED_MOODS.filter((m) => m.bundled)).toHaveLength(2);
+    expect(BUNDLED_MOODS.filter((m) => m.bundled?.track)).toHaveLength(1);
   });
 
   it('covers both modes and only uses real theme tokens', () => {
@@ -50,7 +52,7 @@ describe('bundled Moods', () => {
     }
   });
 
-  it('is not twenty palettes on one layout: shape, type and motion differ', () => {
+  it('varies beyond palettes on one layout: shape, type and motion differ', () => {
     const radii = new Set(BUNDLED_MOODS.map((m) => m.theme.overrides.radius ?? GARDEN_DARK.radius));
     const fonts = new Set(
       BUNDLED_MOODS.map((m) => m.theme.overrides.fontDisplay ?? GARDEN_DARK.fontDisplay),

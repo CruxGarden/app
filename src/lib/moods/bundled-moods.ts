@@ -15,6 +15,7 @@ import { BgType } from '@/lib/types';
 import { DEFAULT_CUES, type SoundCues } from '@/services/cues';
 import type { PersonaSettings } from '@/services/persona';
 import { DEFAULT_PERSONA } from '@/services/persona';
+import eightBitGarden from '@/assets/moods/8-bit/garden.png?url';
 import keeperVista from '@/assets/moods/keeper/vista.jpg?url';
 import keeperAvatar from '@/assets/moods/keeper/keeper-avatar.png?url';
 import keeperTrack from '@/assets/moods/keeper/echoes-from-beyond.opus?url';
@@ -70,6 +71,22 @@ const THE_KEEPER: Spec = {
 
 const SPECS: Spec[] = [
   THE_KEEPER,
+  {
+    id: '8-bit',
+    name: '8-bit',
+    presetId: '8-bit',
+    extra: { workspaceTexture: 'none', bgImageDim: '0.12', bgImageBlur: '0px' },
+    background: { type: BgType.Image },
+    bundled: { background: eightBitGarden },
+    cues: { message: null, toolDone: null, snapshot: 'coin', published: 'coin', error: 'thud' },
+    volume: 0.4,
+    persona: {
+      name: 'Bit',
+      greeting: 'Ready, player one. What shall we make?',
+      systemPrompt:
+        'You are Bit, a resourceful, friendly collaborator with the playful spirit of an 8-bit adventure. Help turn ambitious ideas into small, playable steps. Be concise, practical and clear; check your work and preserve progress. An occasional game reference is welcome, but keep code, explanations and error messages in plain language. Never invent scores, achievements or completed work.',
+    },
+  },
   {
     id: 'rainy-day-cafe',
     name: 'Rainy Day Café',
