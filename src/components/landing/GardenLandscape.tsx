@@ -3,7 +3,7 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GARDEN_PLACES, type GardenPlaceId, type GardenWorld } from './worlds';
 
-/** A small original diorama. Rendering is demand-driven: no perpetual RAF loop. */
+/** An original surreal garden. Rendering is demand-driven: no perpetual RAF loop. */
 export default function GardenLandscape({
   world,
   onSelect,
@@ -48,7 +48,7 @@ export default function GardenLandscape({
     renderer.domElement.dataset.testid = 'garden-canvas';
     const scene = new THREE.Scene();
     const camera = new THREE.OrthographicCamera(-12, 12, 10, -10, 0.1, 100);
-    camera.position.set(17, 15, 21);
+    camera.position.set(17, 13, 21);
     const controls = new OrbitControls(camera, renderer.domElement);
     controls.target.set(0, 1, 0);
     controls.enableZoom = false;
@@ -60,14 +60,17 @@ export default function GardenLandscape({
     controls.saveState();
     // Preserve vertical page scrolling on phones; horizontal gestures orbit.
     renderer.domElement.style.touchAction = 'pan-y';
-    scene.add(new THREE.HemisphereLight('#fff9e9', world.night ? '#625376' : '#8a9277', 2.5));
-    const sun = new THREE.DirectionalLight('#fff1d5', world.night ? 2.1 : 3);
+    scene.add(new THREE.HemisphereLight('#c4efff', '#24424c', 2));
+    const sun = new THREE.DirectionalLight('#ffdeac', 3.2);
     sun.position.set(-8, 17, 9);
     sun.castShadow = true;
     sun.shadow.mapSize.set(1024, 1024);
     Object.assign(sun.shadow.camera, { left: -14, right: 14, top: 14, bottom: -14 });
     sun.shadow.normalBias = 0.05;
     scene.add(sun);
+    const rim = new THREE.DirectionalLight('#79fff2', 3);
+    rim.position.set(6, 7, -8);
+    scene.add(rim);
     const garden = new THREE.Group();
     scene.add(garden);
     const materials: THREE.Material[] = [];
@@ -86,14 +89,21 @@ export default function GardenLandscape({
     const grass = material(world.ground),
       stone = material(world.rock),
       leaves = material(world.leaf);
-    const wall = material(world.id === 'glumlot' ? '#a79cba' : '#f2dfbd');
+    const wall = material(world.night ? '#707986' : '#c1cdc0');
     const roof = material(world.roof),
       wood = material('#685848'),
-      trim = material(world.night ? '#d9c9a7' : '#f7ecd1');
+      trim = material('#d5efb0');
     const glass = material(world.water, 0.38),
       water = material(world.water);
     const dark = material('#344d48'),
-      light = material(world.night ? '#ffcd8b' : '#b4d6cc');
+      light = material('#ffd18a');
+    light.emissive.set('#ff873b');
+    light.emissiveIntensity = 0.6;
+    water.emissive.set(world.water);
+    water.emissiveIntensity = 0.4;
+    const glow = material(world.roof);
+    glow.emissive.set(world.roof);
+    glow.emissiveIntensity = 1.5;
     const mesh = (
       parent: THREE.Object3D,
       geometry: THREE.BufferGeometry,
@@ -129,16 +139,62 @@ export default function GardenLandscape({
       0,
     );
     soil.scale.z = 0.76;
-    const shadow = mesh(
-      scene,
-      new THREE.CircleGeometry(11, 48),
-      new THREE.ShadowMaterial({ opacity: 0.12 }),
-      0,
-      -2.1,
-      0,
-    );
-    shadow.rotation.x = -Math.PI / 2;
-    materials.push(shadow.material);
+    // Suspended basalt roots, satellites and a luminous gateway silhouette.
+    // Everything is static until the visitor moves the camera.
+    for (let i = 0; i < 9; i++) {
+      const angle = i * 2.399;
+      const radius = 2 + (i % 3) * 1.7;
+      const rock = mesh(
+        garden,
+        new THREE.IcosahedronGeometry(1.7, 0),
+        stone,
+        Math.cos(angle) * radius,
+        -1.7 - (i % 3) * 0.65,
+        Math.sin(angle) * radius * 0.7,
+      );
+      rock.scale.set(1, 1.8 + (i % 2) * 0.6, 0.8);
+      rock.rotation.z = i * 0.28;
+    }
+    for (let i = 0; i < 7; i++) {
+      const angle = i * 1.9;
+      const fragment = mesh(
+        garden,
+        new THREE.IcosahedronGeometry(0.38 + (i % 3) * 0.2, 0),
+        stone,
+        Math.cos(angle) * 10.2,
+        -1.8 + (i % 3) * 1.8,
+        Math.sin(angle) * 6.8,
+      );
+      fragment.rotation.set(i, i * 0.4, i * 0.7);
+    }
+    const portal = new THREE.Group();
+    portal.position.set(-2, 5.5, -5.5);
+    portal.rotation.y = 0.65;
+    garden.add(portal);
+    mesh(portal, new THREE.TorusGeometry(3.8, 0.12, 8, 80), glow, 0, 0, 0);
+    const innerRing = mesh(portal, new THREE.TorusGeometry(3.52, 0.025, 6, 80), trim, 0, 0, 0);
+    innerRing.rotation.x = 0.15;
+    const planetMaterial = new THREE.MeshBasicMaterial({ color: world.roof });
+    materials.push(planetMaterial);
+    mesh(garden, new THREE.SphereGeometry(1.1, 24, 16), planetMaterial, 5.8, 7.7, -5);
+    const orbit = mesh(garden, new THREE.TorusGeometry(1.8, 0.035, 6, 64), glow, 5.8, 7.7, -5);
+    orbit.rotation.set(1.1, 0.3, -0.45);
+    const stars = new Float32Array(110 * 3);
+    for (let i = 0; i < 110; i++) {
+      stars[i * 3] = Math.sin(i * 127.1) * 19;
+      stars[i * 3 + 1] = Math.cos(i * 311.7) * 10 + 4;
+      stars[i * 3 + 2] = -12 + Math.sin(i * 73.3) * 8;
+    }
+    const starGeometry = new THREE.BufferGeometry();
+    starGeometry.setAttribute('position', new THREE.BufferAttribute(stars, 3));
+    const starMaterial = new THREE.PointsMaterial({
+      color: '#cce8d9',
+      size: 0.045,
+      transparent: true,
+      opacity: 0.6,
+    });
+    materials.push(starMaterial);
+    scene.add(new THREE.Points(starGeometry, starMaterial));
     // A winding watercourse runs behind the buildings, out over the island edge.
     const points = [
       [-7, 1, -1.6],
@@ -244,7 +300,7 @@ export default function GardenLandscape({
       [-2.7, -1.3],
     ];
     positions.forEach(([x = 0, z = 0], i) => {
-      const height = 1.4 + (i % 3) * 0.45;
+      const height = 1.6 + (i % 3) * 0.65;
       mesh(garden, new THREE.CylinderGeometry(0.11, 0.18, height, 6), wood, x, 1 + height / 2, z);
       if (world.id === 'ancient-egypt') {
         for (let j = 0; j < 5; j++) {
@@ -258,6 +314,27 @@ export default function GardenLandscape({
           );
           frond.rotation.y = -j * 1.26;
           frond.rotation.z = 0.18;
+        }
+      } else if (i % 3 === 0 && world.id !== '8-bit' && world.id !== 'siberian-blizzard') {
+        const cap = mesh(
+          garden,
+          new THREE.SphereGeometry(1.2, 12, 8, 0, Math.PI * 2, 0, Math.PI / 2),
+          i % 2 === 0 ? glow : roof,
+          x,
+          height + 1,
+          z,
+        );
+        cap.scale.y = 0.65;
+        for (let j = 0; j < 4; j++) {
+          const angle = j * 1.57;
+          mesh(
+            garden,
+            new THREE.SphereGeometry(0.13, 6, 4),
+            trim,
+            x + Math.cos(angle) * 0.65,
+            height + 1.55,
+            z + Math.sin(angle) * 0.65,
+          );
         }
       } else {
         const crown =
@@ -300,7 +377,7 @@ export default function GardenLandscape({
       const width = element.clientWidth,
         height = element.clientHeight;
       if (!width || !height) return;
-      const span = width / height < 1 ? 12.3 : 10;
+      const span = width / height < 1 ? 12.3 : 11;
       camera.left = (-span * width) / height;
       camera.right = (span * width) / height;
       camera.top = span;
@@ -368,7 +445,11 @@ export default function GardenLandscape({
       renderer.domElement.removeEventListener('pointerup', pointerUp);
       controls.dispose();
       scene.traverse((object) => {
-        if (object instanceof THREE.Mesh || object instanceof THREE.LineSegments)
+        if (
+          object instanceof THREE.Mesh ||
+          object instanceof THREE.LineSegments ||
+          object instanceof THREE.Points
+        )
           object.geometry.dispose();
       });
       materials.forEach((m) => m.dispose());
