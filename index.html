@@ -6,10 +6,22 @@
     <link rel="icon" type="image/png" sizes="192x192" href="/favicon-192.png" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <link rel="preload" href="/fonts/JetBrainsMono-Medium.woff2" as="font" type="font/woff2" crossorigin />
-    <meta name="description" content="Crux Garden — talk to an AI, make something, publish it at your own address. Local-first, open source, every version kept." />
-    <meta property="og:title" content="Crux Garden" />
-    <meta property="og:description" content="Talk to an AI, make something, publish it at your own address. Local-first, open source, every version kept." />
+    <link
+      rel="preload"
+      href="/fonts/JetBrainsMono-Medium.woff2"
+      as="font"
+      type="font/woff2"
+      crossorigin
+    />
+    <meta
+      name="description"
+      content="You can grow anything. A game, a website, a useful little tool. Build with AI, keep your history, and share what you make in Crux Garden."
+    />
+    <meta property="og:title" content="Crux Garden — You can grow anything" />
+    <meta
+      property="og:description"
+      content="A game. A world. A useful little tool. Start with a conversation. See what grows."
+    />
     <meta property="og:type" content="website" />
     <meta property="og:url" content="https://crux.garden/" />
     <meta property="og:image" content="https://crux.garden/apple-touch-icon.png" />
@@ -19,7 +31,10 @@
       /* #121314 matches the default dark palette --bg (obsidian preset).
          Hardcoded here because CSS custom properties aren't available before globals.css loads.
          If the default --bg changes, update this value to match. */
-      body { margin: 0; background: #121314; }
+      body {
+        margin: 0;
+        background: #121314;
+      }
       #splash {
         position: fixed;
         inset: 0;
@@ -51,7 +66,11 @@
         border-radius: 50%;
         animation: spin 0.8s linear infinite;
       }
-      @keyframes spin { to { transform: rotate(360deg); } }
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
     </style>
   </head>
   <body>
@@ -88,28 +107,25 @@
 
         // Only show splash on app routes — these need SQLite init time.
         // Landing, login, and public pages render immediately with no splash.
-        var isAppRoute = (
-          path.startsWith('/home') ||
-          path.startsWith('/c/') ||
-          path.startsWith('/settings')
-        );
+        var isAppRoute =
+          path.startsWith('/home') || path.startsWith('/c/') || path.startsWith('/settings');
         if (!isAppRoute) return;
 
         // 10 mood presets: [background, accent, text].
         // Source of truth: lib/moods/presets.ts — keep in sync.
         var presets = {
           // Dark presets
-          cafe:     ['#141312', '#C0A070', '#C0BEB8'],
-          ember:    ['#141213', '#B88880', '#C0BCBC'],
-          moss:     ['#121413', '#88A888', '#BCC0BC'],
-          slate:    ['#121316', '#8098B8', '#BCC0C8'],
+          cafe: ['#141312', '#C0A070', '#C0BEB8'],
+          ember: ['#141213', '#B88880', '#C0BCBC'],
+          moss: ['#121413', '#88A888', '#BCC0BC'],
+          slate: ['#121316', '#8098B8', '#BCC0C8'],
           obsidian: ['#121314', '#BFBFBF', '#BCBEBF'],
           // Light presets
-          parchment:['#f4ece0', '#6E4E28', '#1C1408'],
-          rose:     ['#F4EEEE', '#884050', '#1C0C10'],
-          sage:     ['#EEF2EC', '#3E6838', '#0C1808'],
-          mist:     ['#EEF0F4', '#3E5878', '#0C1018'],
-          ivory:    ['#F2F0EC', '#505048', '#141410']
+          parchment: ['#f4ece0', '#6E4E28', '#1C1408'],
+          rose: ['#F4EEEE', '#884050', '#1C0C10'],
+          sage: ['#EEF2EC', '#3E6838', '#0C1808'],
+          mist: ['#EEF0F4', '#3E5878', '#0C1018'],
+          ivory: ['#F2F0EC', '#505048', '#141410'],
         };
 
         // Read the user's theme mode (dark or light) from localStorage.
