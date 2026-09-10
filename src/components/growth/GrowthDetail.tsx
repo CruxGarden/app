@@ -1,4 +1,5 @@
 import { cn } from '@/lib/cn';
+import { appChangesLabel } from '@/services/app-changes';
 import { formatDateTime } from '@/lib/format';
 import type { Dimension, GrowthSnapshot } from '@/api/types';
 
@@ -75,6 +76,12 @@ export default function GrowthDetail({ growth, index, onClose }: GrowthDetailPro
       <div className="h-px bg-border" />
 
       {/* Snapshot fields */}
+      {appChangesLabel(growth.meta?.appChanges) && (
+        <SnapshotField
+          label="Changes since parent"
+          value={`${appChangesLabel(growth.meta?.appChanges)}. Restoring this checkpoint restores both the app and its content.`}
+        />
+      )}
       {snapshot ? (
         <div className="flex flex-col gap-2.5">
           <SnapshotField label="State" value={snapshot.state} />

@@ -1,4 +1,5 @@
 import { useState, useMemo, useCallback, useEffect } from 'react';
+import { isEmbeddedApp } from '@/services/embedded-app';
 import { Capability, can } from '@/lib/platform';
 import { useAuthStore } from '@/stores/authStore';
 import { useAppStore } from '@/stores/appStore';
@@ -314,8 +315,9 @@ export default function PublishPane() {
           ) : (
             <PaneSection label="Status" tone="dashed">
               <p className="text-xxs text-text-muted">
-                Not shared yet. Sharing publishes this crux at its own address, with its
-                conversation open to visitors.
+                {isEmbeddedApp(crux)
+                  ? 'Not shared yet. Share selected content as a read-only website at its own address. Private content and Collaboration stay here.'
+                  : 'Not shared yet. Sharing publishes this crux at its own address, with its conversation open to visitors.'}
               </p>
             </PaneSection>
           )}
@@ -338,7 +340,15 @@ export default function PublishPane() {
             </div>
           ) : needsAction ? (
             <PaneAction onClick={handlePublish} icon={<ShareIcon size={14} />}>
-              {remote?.state === 'gone' ? 'Share again' : isPublished ? 'Update' : 'Share'}
+              {isEmbeddedApp(crux)
+                ? isPublished
+                  ? 'Update shared content'
+                  : 'Share selected content'
+                : remote?.state === 'gone'
+                  ? 'Share again'
+                  : isPublished
+                    ? 'Update'
+                    : 'Share'}
             </PaneAction>
           ) : null}
 

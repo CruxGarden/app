@@ -52,3 +52,23 @@ test('frontmatter stays private even for a selected page', (t) => {
   write('Public.md', '---\ninternal: missing closing delimiter');
   assert.throws(() => readEdition(folder), /unclosed frontmatter/);
 });
+test('imported Tigrana images resolve while metadata and unselected content stay private', (t) => {
+  const { folder, write } = fixture(t);
+  for (const dir of ['Imported/Vault/Folder', 'Imported/Vault/.assets', 'Imported/Vault/.tigrana'])
+    mkdirSync(join(folder, 'notebook', dir), { recursive: true });
+  write(
+    'Imported/Vault/Folder/Note.md',
+    '---\nid: PRIVATE_ID\n---\n# Public\n![Image](../.assets/image.png)',
+  );
+  write('Imported/Vault/.assets/image.png', Buffer.from([1, 2, 3]));
+  write('Imported/Vault/.tigrana/metadata.json', '{"secret":"PRIVATE_METADATA"}');
+  write(
+    'publish.json',
+    JSON.stringify({ title: 'Vault', pages: ['Imported/Vault/Folder/Note.md'] }),
+  );
+  const edition = readEdition(folder);
+  assert.deepEqual(Object.keys(edition.images), ['Imported/Vault/.assets/image.png']);
+  assert.ok(!JSON.stringify(edition).includes('PRIVATE'));
+  write('Imported/Vault/Folder/Note.md', '![Escape](../../../../outside.png)');
+  assert.throws(() => readEdition(folder));
+});

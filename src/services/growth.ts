@@ -14,6 +14,8 @@
 import type { Artifact, ChatMessage, Crux, Dimension } from '@/api/types';
 import { pathOf, isWorkspaceThumbnail } from '@/lib/artifact-path';
 import { isGeneratedGuidePath } from './agents-md';
+import { appChanges } from './app-changes';
+import { isEmbeddedApp } from './embedded-app';
 
 // ── Deps ────────────────────────────────────────────────────────────────────
 
@@ -259,6 +261,13 @@ export async function createSnapshotCore(
   });
 
   const snapshotArtifacts = await deps.artifact.findByResource('crux', snapshotCrux.id);
+  const changes = isEmbeddedApp(crux)
+    ? appChanges(
+        crux,
+        parentCruxId ? await deps.artifact.findByResource('crux', parentCruxId) : [],
+        snapshotArtifacts,
+      )
+    : null;
   const preview = detectPreviewArtifact(snapshotArtifacts);
   const artifactNames = snapshotArtifacts
     .map((a) => pathOf(a))
@@ -272,6 +281,7 @@ export async function createSnapshotCore(
     weight: growthCount + 1,
     meta: {
       artifactCount,
+      ...(changes ? { appChanges: changes } : {}),
       ...(label ? { label } : {}),
       ...(requestedBy ? { requestedBy } : {}),
       ...(preview ? { preview } : {}),

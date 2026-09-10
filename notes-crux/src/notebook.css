@@ -286,3 +286,22 @@ body {
   background: var(--selection);
   color: var(--selection-text);
 }
+
+.vault-import {
+  font-size: 12px;
+}
+.vault-import-review {
+  position: fixed;
+  z-index: 40;
+  inset: 12% 8% auto;
+  max-height: 80vh;
+  overflow: auto;
+  padding: 24px;
+  background: var(--panel);
+  color: var(--text);
+  border: 1px solid var(--border);
+  box-shadow: 0 20px 80px #0006;
+}
+.vault-import-review button {
+  margin: 12px 8px 0 0;
+}

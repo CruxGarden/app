@@ -1,9 +1,11 @@
 import { useState } from 'react';
+import { isEmbeddedApp } from '@/services/embedded-app';
 import { useCruxStore } from '@/stores/cruxStore';
 import { cn } from '@/lib/cn';
 import { confirmDialog } from '@/stores/dialogStore';
 
 export default function SnapshotBanner() {
+  const embedded = useCruxStore((s) => isEmbeddedApp(s.crux));
   const viewingSnapshotId = useCruxStore((s) => s.viewingSnapshotId);
   const viewingSnapshotIndex = useCruxStore((s) => s.viewingSnapshotIndex);
   const growths = useCruxStore((s) => s.growths);
@@ -24,8 +26,9 @@ export default function SnapshotBanner() {
     if (
       await confirmDialog({
         title: 'Revert to snapshot',
-        message:
-          'Revert workspace to this snapshot? Your current state will be saved as a snapshot first.',
+        message: embedded
+          ? 'Restore the app code and all its content to this checkpoint? Later content will be replaced. Your current state will be saved as a snapshot first.'
+          : 'Revert workspace to this snapshot? Your current state will be saved as a snapshot first.',
         confirmLabel: 'Revert',
       })
     ) {

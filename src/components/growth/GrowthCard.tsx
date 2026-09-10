@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { appChangesLabel } from '@/services/app-changes';
 import { PhotoProvider, PhotoView } from 'react-photo-view';
 import 'react-photo-view/dist/react-photo-view.css';
 import { cn } from '@/lib/cn';
@@ -332,6 +333,11 @@ export default function GrowthCard({
 
       {/* Info panel */}
       <div className="flex flex-col gap-1 px-3 pt-2.5 pb-3">
+        {appChangesLabel(growth.meta?.appChanges) && (
+          <p className="text-xxs text-growth-card-text" data-testid="growth-app-changes">
+            {appChangesLabel(growth.meta?.appChanges)}
+          </p>
+        )}
         <div className="flex items-baseline justify-between gap-2">
           <p className="text-xs font-display font-medium text-growth-card-text truncate">
             {label ?? `Snapshot ${index + 1}`}

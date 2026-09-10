@@ -1,3 +1,5 @@
+import { notebookPath, NOTEBOOK_ROOT, isNotebookImage } from './notebook-path';
+import { importNotebook } from './notebook-import';
 import { isEmbeddedApp, isMoqira, moqiraPath, validateMoqiraFile } from './embedded-app';
 import type { StoreApi } from 'zustand';
 import type { CruxState } from '@/stores/cruxStore';
@@ -19,28 +21,7 @@ async function diskFile(owner: string, path: string): Promise<Uint8Array | null 
   }
 }
 
-export const NOTEBOOK_ROOT = 'notebook/';
-export function notebookPath(value: unknown): string {
-  if (
-    typeof value !== 'string' ||
-    value.length > 240 ||
-    !value ||
-    /[\\:%?#]/.test(value) ||
-    [...value].some((c) => c.charCodeAt(0) < 32)
-  )
-    throw new Error('Choose a relative notebook path.');
-  if (
-    value.split('/').some((part) => !part || part === '.' || part === '..' || part.startsWith('.'))
-  )
-    throw new Error('This path is outside the notebook.');
-  if (
-    !/\.md$/i.test(value) &&
-    value !== 'publish.json' &&
-    !/^assets\/[\w.-]+\.(png|jpe?g|gif|webp)$/i.test(value)
-  )
-    throw new Error('The notebook accepts Markdown and raster images.');
-  return NOTEBOOK_ROOT + value;
-}
+export { notebookPath } from './notebook-path';
 
 /** Serial requests bind to one Working Copy; the caller cannot choose another owner. */
 export function notebookSession(workspace: StoreApi<CruxState>) {
@@ -55,6 +36,10 @@ export function notebookSession(workspace: StoreApi<CruxState>) {
       if (state.viewingSnapshotId) throw new Error('Return to the current app to edit.');
       await flushIngestion();
       const { artifact } = getServices();
+      if (request.op === 'import' && state.crux?.kind === 'notes') {
+        await assertCopyWritable(owner);
+        return importNotebook(workspace, request);
+      }
       const files = await artifact.findByResource('crux', owner);
       const moqira = isMoqira(state.crux);
       const root = moqira ? 'mockups/' : NOTEBOOK_ROOT;
@@ -75,7 +60,7 @@ export function notebookSession(workspace: StoreApi<CruxState>) {
         const disk = await diskFile(owner, path);
         if (disk === null) throw new Error('This notebook file no longer exists.');
         if (disk && (await hashContent(disk)) !== existing?.fingerprint) {
-          if (path.startsWith('notebook/assets/')) {
+          if (isNotebookImage(path)) {
             await artifact.upload({
               resourceId: owner,
               blob: new Blob([disk as BlobPart], { type: guessMimeType(path) }),
@@ -93,7 +78,7 @@ export function notebookSession(workspace: StoreApi<CruxState>) {
           existing = (await artifact.findByResource('crux', owner)).find((f) => pathOf(f) === path);
         }
         if (!existing) throw new Error('This notebook file no longer exists.');
-        if (path.startsWith('notebook/assets/')) {
+        if (isNotebookImage(path)) {
           const blob = await artifact.downloadBlob(existing.id);
           const bytes = new Uint8Array(await blob.arrayBuffer());
           let binary = '';
@@ -133,7 +118,7 @@ export function notebookSession(workspace: StoreApi<CruxState>) {
       } else {
         if (typeof request.content !== 'string' || request.content.length > 8_000_000)
           throw new Error('The notebook file is too large.');
-        if (path.startsWith('notebook/assets/')) {
+        if (isNotebookImage(path)) {
           const match = /^data:(image\/(?:png|jpeg|gif|webp));base64,([A-Za-z0-9+/=]+)$/.exec(
             request.content,
           );
