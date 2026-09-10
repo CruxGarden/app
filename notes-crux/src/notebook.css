@@ -3,27 +3,40 @@
   --bg: #171d1c;
   --text: #e5e9e1;
   --muted: #a2aea3;
+  --text-muted: var(--muted);
   --border: #34413a;
   --accent: #b8d39b;
+  --panel: #202824;
+  --surface: #202824;
+  --surface-soft: var(--panel);
+  --surface-strong: var(--border);
+  --surface-muted: var(--panel);
+  --button: #29372b;
+  --button-text: var(--text);
+  --hover: #3b4a37;
+  --radius: 6px;
+  --input-radius: 7px;
+  --input: var(--bg);
+  --app-font-family: ui-sans-serif, system-ui, sans-serif;
+  --editor-font-family: var(--app-font-family);
+  --display-font: Georgia, serif;
+  --app-font-size: 15px;
 }
 * {
   box-sizing: border-box;
 }
 body {
   margin: 0;
-  background: #171d1c;
-  color: #e5e9e1;
-  font:
-    15px/1.6 ui-sans-serif,
-    system-ui,
-    sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  font: 15px/1.6 var(--app-font-family);
 }
 .notebook-shell {
   display: flex;
   height: 100vh;
   width: 100%;
-  background: #171d1c;
-  color: #e5e9e1;
+  background: var(--bg);
+  color: var(--text);
 }
 .notebook-sidebar {
   width: 240px;
@@ -32,8 +45,8 @@ body {
   display: flex;
   gap: 18px;
   flex-direction: column;
-  border-right: 1px solid #34413a;
-  background: #202824;
+  border-right: 1px solid var(--border);
+  background: var(--panel);
 }
 .notebook-brand {
   display: flex;
@@ -42,32 +55,32 @@ body {
 }
 .notebook-brand > span {
   font-size: 32px;
-  color: #b8d39b;
+  color: var(--accent);
 }
 .notebook-brand strong {
   font-size: 17px;
 }
 .notebook-brand small {
   display: block;
-  color: #a2aea3;
+  color: var(--muted);
   font-size: 11px;
 }
 .notebook-shell input:not([type='checkbox']),
 .reader input {
   padding: 10px 12px;
-  border: 1px solid #405044;
-  background: #171d1c;
-  border-radius: 7px;
-  color: #e5e9e1;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  border-radius: var(--input-radius);
+  color: var(--text);
   width: 100%;
 }
 .notebook-shell button,
 .reader button {
-  border: 1px solid #405044;
+  border: 1px solid var(--border);
   padding: 7px 12px;
-  border-radius: 6px;
-  background: #29372b;
-  color: #e5e9e1;
+  border-radius: var(--radius);
+  background: var(--button);
+  color: var(--text);
   cursor: pointer;
   font: inherit;
 }
@@ -76,7 +89,7 @@ body {
   cursor: default;
 }
 .notebook-shell button:hover:not(:disabled) {
-  background: #3b4a37;
+  background: var(--hover);
 }
 .notebook-sidebar nav {
   flex: 1;
@@ -91,11 +104,11 @@ body {
   overflow-wrap: anywhere;
 }
 .notebook-sidebar nav button.selected {
-  background: #3b4a37;
+  background: var(--hover);
 }
 .notebook-sidebar nav span {
   margin-right: 9px;
-  color: #a2aea3;
+  color: var(--muted);
 }
 .notebook-sidebar form {
   display: grid;
@@ -105,7 +118,7 @@ body {
 .notebook-sidebar a,
 .notebook-foot {
   font-size: 11px;
-  color: #a2aea3;
+  color: var(--muted);
   margin: 0;
 }
 .notebook-main {
@@ -115,15 +128,15 @@ body {
 }
 .notebook-toolbar {
   padding: 14px 28px;
-  border-bottom: 1px solid #34413a;
+  border-bottom: 1px solid var(--border);
   display: flex;
   justify-content: space-between;
   align-items: center;
   font-size: 12px;
-  color: #a2aea3;
+  color: var(--muted);
   position: sticky;
   top: 0;
-  background: #171d1c;
+  background: var(--bg);
   z-index: 5;
 }
 .notebook-heading {
@@ -133,17 +146,15 @@ body {
   text-transform: uppercase;
   letter-spacing: 0.15em;
   font-size: 11px;
-  color: #a2aea3;
+  color: var(--muted);
 }
 .notebook-heading h1 {
-  font:
-    38px/1.2 Georgia,
-    serif;
+  font: 38px/1.2 var(--display-font);
   margin: 10px 0 20px;
 }
 .notebook-heading label {
   font-size: 12px;
-  color: #a2aea3;
+  color: var(--muted);
   display: flex;
   align-items: center;
   gap: 8px;
@@ -154,7 +165,7 @@ body {
 .notebook-editor .tiptap {
   min-height: 300px;
   outline: none;
-  color: #e5e9e1;
+  color: var(--text);
 }
 .notebook-editor img {
   max-width: 100%;
@@ -172,16 +183,16 @@ body {
   display: grid;
   grid-template-columns: 240px 1fr;
   min-height: 100vh;
-  background: #171d1c;
-  color: #e5e9e1;
+  background: var(--bg);
+  color: var(--text);
 }
 .reader aside {
   padding: 32px 20px;
-  border-right: 1px solid #34413a;
+  border-right: 1px solid var(--border);
 }
 .reader nav a {
   display: block;
-  color: #b8d39b;
+  color: var(--accent);
   padding: 8px 0;
 }
 .reader article {
@@ -192,18 +203,18 @@ body {
   max-width: 100%;
 }
 .reader a {
-  color: #b8d39b;
+  color: var(--accent);
 }
 .reader h1 {
   font-family: Georgia, serif;
 }
 .reader pre {
   overflow: auto;
-  background: #202824;
+  background: var(--panel);
   padding: 15px;
 }
 .reader small {
-  color: #a2aea3;
+  color: var(--muted);
 }
 @media (max-width: 650px) {
   .notebook-sidebar {
@@ -223,7 +234,7 @@ body {
     display: block;
   }
   .reader aside {
-    border-bottom: 1px solid #34413a;
+    border-bottom: 1px solid var(--border);
   }
   .reader article {
     padding: 25px;
@@ -250,4 +261,28 @@ body {
 }
 .notebook-sidebar {
   overflow-y: auto;
+}
+
+.app-appearance {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  font-size: 12px;
+  align-items: center;
+}
+.app-appearance select {
+  background: var(--input);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: var(--input-radius);
+  padding: 6px;
+  font: inherit;
+  max-width: 100%;
+}
+.notebook-shell button {
+  color: var(--button-text);
+}
+.notebook-shell ::selection {
+  background: var(--selection);
+  color: var(--selection-text);
 }

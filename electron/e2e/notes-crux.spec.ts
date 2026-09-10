@@ -218,6 +218,12 @@ test('Notes Crux: create → write → image → Growth → restart → selected
       }, `http://127.0.0.1:${port}/`);
       await expect(frame().getByRole('heading', { name: 'My notebook' })).toBeVisible();
       await expect(frame().locator('article')).toContainText('quiet place');
+      await expect(frame().getByLabel('App appearance', { exact: true })).toHaveCount(0);
+      expect(
+        await frame()
+          .locator('html')
+          .evaluate((el) => getComputedStyle(el).getPropertyValue('--bg').trim()),
+      ).toBe('#171d1c');
       await expect(frame().locator('article img')).toHaveCount(1);
       await expect(frame().getByRole('button', { name: 'Save now' })).toHaveCount(0);
       await expect(frame().getByText('Private thoughts', { exact: true })).toHaveCount(0);

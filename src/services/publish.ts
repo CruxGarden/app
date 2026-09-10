@@ -1,3 +1,4 @@
+import { isEmbeddedApp, isMoqira } from './embedded-app';
 import { portableMeta } from './task-archive';
 import { assertCopyWritable } from './working-copies';
 /**
@@ -212,14 +213,13 @@ export function cruxUpsertFields(crux: Crux, messages?: ChatMessage[]): Record<s
     title: crux.title,
     slug: crux.slug,
     description: crux.description,
-    data: crux.kind === 'notes' ? '' : crux.data,
+    data: isEmbeddedApp(crux) ? '' : crux.data,
     type: crux.type,
     kind: crux.kind,
     discoverable: crux.discoverable,
-    meta:
-      crux.kind === 'notes'
-        ? { messages: [] }
-        : { ...portableMeta(crux.meta), ...(messages ? { messages } : {}) },
+    meta: isEmbeddedApp(crux)
+      ? { messages: [] }
+      : { ...portableMeta(crux.meta), ...(messages ? { messages } : {}) },
   };
 }
 
@@ -262,6 +262,26 @@ export async function publishPipeline(
       );
   }
 
+  if (isMoqira(crux)) {
+    const readJson = async (path: string) => {
+      const artifact = artifacts.find((a) => pathOf(a) === path);
+      if (!artifact) throw new Error('Moqira publication files are missing.');
+      return JSON.parse(await (await deps.local.downloadBlob(artifact.id)).text());
+    };
+    const selected = await readJson('mockups/publish.json');
+    const project = await readJson('mockups/project.json');
+    if (!Array.isArray(selected.wireframes) || !selected.wireframes.length)
+      throw new Error(
+        'Select at least one wireframe with “Include in public edition” before publishing.',
+      );
+    if (
+      selected.wireframes.some(
+        (id: unknown) => !project.wireframes?.some((frame: { id: string }) => frame.id === id),
+      )
+    )
+      throw new Error('A selected public wireframe is missing. Update the publication settings.');
+  }
+
   // 1. Upsert crux to API (create if not exists, update if it does).
   // A transient failure here aborts the publish: `exists` throwing is the
   // guard that stops us taking the destructive create path (see PublishDeps).
@@ -274,7 +294,7 @@ export async function publishPipeline(
     await deps.api.create({
       id: crux.id,
       ...cruxUpsertFields(crux, opts?.messages),
-      data: crux.kind === 'notes' ? '' : crux.data || '',
+      data: isEmbeddedApp(crux) ? '' : crux.data || '',
     });
   }
 
@@ -283,7 +303,7 @@ export async function publishPipeline(
   // history, visitors get the built output. A failed build fails the
   // publish; nothing half-deploys.
   let filesToPublish: PublishFile[];
-  if (crux.kind === 'notes' && !deps.site.isSiteCrux(artifacts))
+  if (isEmbeddedApp(crux) && !deps.site.isSiteCrux(artifacts))
     throw new Error(
       'This notebook is missing its site configuration. Restore it before publishing.',
     );
@@ -320,10 +340,9 @@ export async function publishPipeline(
   // and public pages can show it. Best-effort — a missing or unreadable
   // preview never blocks a publish. A file the user (or the site build) put at
   // that path wins; we never overwrite their bytes with ours.
-  const thumb =
-    crux.kind === 'notes'
-      ? undefined
-      : artifacts.find((a) => a.type === 'artifact' && isWorkspaceThumbnail(pathOf(a)));
+  const thumb = isEmbeddedApp(crux)
+    ? undefined
+    : artifacts.find((a) => a.type === 'artifact' && isWorkspaceThumbnail(pathOf(a)));
   const coverTaken = filesToPublish.some((f) => f.path === PUBLIC_COVER_PATH);
   if (thumb && coverTaken) {
     console.warn(`[publish] ${PUBLIC_COVER_PATH} exists in the crux — not shipping the thumbnail`);

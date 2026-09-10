@@ -1,3 +1,4 @@
+import { AppAppearance } from './AppAppearance';
 import { splitNote } from './note-file';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
@@ -305,6 +306,7 @@ export default function Notebook() {
           />
           <button disabled={busy || !newPath.trim()}>Create note</button>
         </form>
+        <AppAppearance />
         <p className="notebook-foot">
           Local to this Crux.
           <br />

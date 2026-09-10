@@ -434,3 +434,52 @@ it('refuses a Notes publication with no selected pages before calling the API', 
   expect(state.created).toHaveLength(0);
   expect(state.built).toBe(false);
 });
+
+it('publishes only Moqira build output and strips private Collaboration and covers', async () => {
+  const { deps, state } = makeDeps({ isSite: true });
+  deps.local.downloadBlob = async (id) =>
+    new Blob([
+      JSON.stringify(
+        id.includes('publish.json')
+          ? { title: 'Public', wireframes: ['one'] }
+          : { wireframes: [{ id: 'one' }] },
+      ),
+    ]);
+  const crux = makeCrux({
+    kind: 'webapp',
+    data: 'PRIVATE DATA',
+    meta: { template: 'moqira', messages: [{ role: 'user', content: 'PRIVATE CHAT' }] },
+  });
+  await publishPipeline(
+    crux,
+    [
+      makeArtifact('mockups/publish.json', 'selection'),
+      makeArtifact('mockups/project.json', 'project'),
+      makeArtifact('preview.jpg', 'private-cover'),
+    ],
+    { deps },
+  );
+  expect(state.created[0]?.data).toBe('');
+  expect(state.created[0]?.meta).toEqual({ messages: [] });
+  expect(state.built).toBe(true);
+  expect(
+    state.publishedFiles?.some(
+      (f) => f.path.startsWith('mockups/') || f.path === '_crux/cover.jpg',
+    ),
+  ).toBe(false);
+});
+it('rejects empty Moqira selection before syncing any metadata', async () => {
+  const { deps, state } = makeDeps({ isSite: true });
+  deps.local.downloadBlob = async () => new Blob(['{"wireframes":[]}']);
+  await expect(
+    publishPipeline(
+      makeCrux({ meta: { template: 'moqira' } }),
+      [
+        makeArtifact('mockups/publish.json', 'selection'),
+        makeArtifact('mockups/project.json', 'project'),
+      ],
+      { deps },
+    ),
+  ).rejects.toThrow('Select at least one wireframe');
+  expect(state.created).toHaveLength(0);
+});

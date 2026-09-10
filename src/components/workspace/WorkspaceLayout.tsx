@@ -1,3 +1,4 @@
+import { useAppAppearance } from '@/hooks/useAppAppearance';
 import { useNotebookProxy } from '@/hooks/useNotebookProxy';
 import { useWorkspaceUIStoreApi } from '@/stores/uiStore';
 import { copyIdentity } from '@/services/working-copies';
@@ -213,6 +214,7 @@ export default function WorkspaceLayout() {
   // Proxy crux:store:* postMessages from preview iframe to local SQLite
   useStoreProxy(crux?.id ?? null);
   useNotebookProxy(crux?.id ?? null);
+  useAppAppearance(crux?.id ?? null, crux?.kind === 'notes' || crux?.meta?.template === 'moqira');
 
   // Context menu handlers
   const handleNewFile = (parentPath: string) => {

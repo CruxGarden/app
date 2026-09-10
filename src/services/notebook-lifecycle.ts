@@ -1,4 +1,4 @@
-/** A notebook editor participates in the same save-before-leaving boundary as file tabs. */
+/** Embedded app editors participate in the same save-before-leaving boundary as file tabs. */
 type NotebookEditor = { dirty(): boolean; flush(): Promise<void> };
 const editors = new Map<string, NotebookEditor>();
 const resuming = new Set<string>();
@@ -27,7 +27,7 @@ export function deferNotebookAction(id: string | null, action: () => void): bool
       }
     })
     .catch(() => {
-      /* the notebook displays the save failure and retains its draft */
+      /* the app displays the save failure and retains its draft */
     });
   return true;
 }

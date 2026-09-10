@@ -1,3 +1,4 @@
+import { isEmbeddedApp, isMoqira } from '@/services/embedded-app';
 import { useBlocker } from 'react-router-dom';
 import {
   registerNotebookEditor,
@@ -20,7 +21,8 @@ export function useNotebookProxy(cruxId: string | null) {
       .catch(() => blocker.reset());
   }, [blocker, cruxId]);
   useEffect(() => {
-    if (!cruxId || workspace.getState().crux?.kind !== 'notes') return;
+    if (!cruxId || !isEmbeddedApp(workspace.getState().crux)) return;
+    const protocol = isMoqira(workspace.getState().crux) ? 'crux:app' : 'crux:notebook';
     const execute = notebookSession(workspace);
     let dirty = false;
     let peer: { source: MessageEventSource; origin: string } | null = null;
@@ -37,13 +39,13 @@ export function useNotebookProxy(cruxId: string | null) {
           peer = null;
         if (!peer)
           return dirty
-            ? Promise.reject(new Error('The notebook editor is unavailable.'))
+            ? Promise.reject(new Error('The app editor is unavailable.'))
             : Promise.resolve();
         return new Promise<void>((resolve, reject) => {
           const id = crypto.randomUUID();
           const timer = setTimeout(() => {
             flushes.delete(id);
-            reject(new Error('Notebook save was not confirmed.'));
+            reject(new Error('App save was not confirmed.'));
           }, 60000);
           flushes.set(id, {
             resolve: () => {
@@ -56,7 +58,7 @@ export function useNotebookProxy(cruxId: string | null) {
             },
           });
           peer!.source.postMessage(
-            { type: 'crux:notebook:flush', id },
+            { type: `${protocol}:flush`, id },
             { targetOrigin: peer!.origin },
           );
         });
@@ -64,7 +66,7 @@ export function useNotebookProxy(cruxId: string | null) {
     });
     function receive(event: MessageEvent) {
       if (
-        event.data?.type !== 'crux:notebook' ||
+        event.data?.type !== protocol ||
         typeof event.data.id !== 'string' ||
         !isPreviewOrigin(event.origin)
       )
@@ -74,7 +76,7 @@ export function useNotebookProxy(cruxId: string | null) {
       );
       if (!frame || new URL(frame.src, location.href).origin !== event.origin) return;
       peer = { source: event.source!, origin: event.origin };
-      if (workspace.getState().crux?.kind !== 'notes') return;
+      if (!isEmbeddedApp(workspace.getState().crux)) return;
       if (event.data.op === 'dirty') {
         dirty = event.data.dirty === true;
         workspace.setState({});
@@ -89,12 +91,12 @@ export function useNotebookProxy(cruxId: string | null) {
       }
       const answer = (result: unknown, error?: string) =>
         event.source?.postMessage(
-          { type: 'crux:notebook:result', id: event.data.id, result, error },
+          { type: `${protocol}:result`, id: event.data.id, result, error },
           { targetOrigin: event.origin },
         );
       void trackWorkspacePromise(workspace, execute(event.data)).then(
         (result) => answer(result),
-        (error) => answer(null, error instanceof Error ? error.message : 'Notebook save failed.'),
+        (error) => answer(null, error instanceof Error ? error.message : 'App save failed.'),
       );
     }
     window.addEventListener('message', receive);
@@ -102,7 +104,7 @@ export function useNotebookProxy(cruxId: string | null) {
       unregister();
       window.removeEventListener('message', receive);
       for (const pending of flushes.values())
-        pending.reject(new Error('Notebook editor closed before saving.'));
+        pending.reject(new Error('App editor closed before saving.'));
     };
   }, [cruxId, workspace]);
 }
