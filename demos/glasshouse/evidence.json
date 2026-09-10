@@ -1,0 +1,32 @@
+{
+  "scriptedCollaboration": true,
+  "publishBackend": "local mock API; not publicly deployed",
+  "tasks": [
+    {
+      "title": "Brand foundation",
+      "phase": "merged"
+    },
+    {
+      "title": "Checkout",
+      "phase": "merged"
+    },
+    {
+      "title": "Accessibility",
+      "phase": "merged"
+    },
+    {
+      "title": "Autumn campaign",
+      "phase": "ready"
+    }
+  ],
+  "snapshots": 15,
+  "artifactReferences": 258,
+  "uniqueBlobs": 20,
+  "archiveBytes": 212429,
+  "freshGardenHistoryVerified": true,
+  "combinedCheckoutVerified": true,
+  "keyboardFocusVerified": true,
+  "publishPayloadVerified": true,
+  "backupTaskGraphVerified": true,
+  "historicalStates": 15
+}

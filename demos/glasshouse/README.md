@@ -39,6 +39,54 @@ in one `.crux` file. Shared content is stored by fingerprint; Git is not require
 Publishing serves Main's website; the private archive carries the Task graph.
 The shop never takes payments or submits orders.
 
+## Completed example: two Tasks through a fresh-garden restore
+
+[`glasshouse-grown.crux`](glasshouse-grown.crux) is the finished example. Import it
+through **Home Garden → Add Crux → Import .crux file**. Checkout and Accessibility
+are merged into Main alongside Brand foundation; Autumn campaign remains ready
+for further work. The guide inside the Crux describes the original starting
+stage; use `glasshouse.crux` above to perform those merges yourself.
+
+To explore just the finished website, unzip
+[`glasshouse-website.zip`](glasshouse-website.zip) and open `index.html`. It uses
+local files and performs only a simulated checkout.
+
+The real Electron journey in `e2e/glasshouse-full-journey.spec.ts` passed on
+September 10, 2026. It:
+
+1. Created the demo through Tending and checked that the two Tasks had isolated
+   checkout behavior before merging.
+2. Reviewed, checked and merged Checkout and Accessibility separately, then
+   exercised the combined cart, simulated checkout, empty-bag response and
+   keyboard focus in Main.
+3. Used Share with a local mock API and verified that the outgoing website
+   included both changes and its private backup retained the Task graph.
+4. Exported the completed Crux, closed the app, launched a completely fresh
+   garden, and imported it. Historical Artifact fingerprints, checkpoint
+   conversations and merge ancestry survived. Runtime jobs and queues did not
+   transfer, by design. The reopened shop still passed its functional checks.
+
+The **212,429-byte archive (about 207 KiB)** preserves **15 Growth snapshots and
+four Tasks**. Its 258 Artifact references share only 20 unique content blobs.
+These measurements describe this small example, not a general performance
+benchmark. See [`evidence.json`](evidence.json) for the recorded results.
+
+This validates the workflow and portability with scripted Collaboration. It does
+not evaluate live AI output, perform a full accessibility audit, demonstrate
+real payments, or deploy a public website. Share was tested against a local mock
+API; the website and private archive are separate outputs.
+
+Screenshots from the verified fresh-garden restore:
+
+- [Finished shop](05-finished-site.png)
+- [Mobile shop](06-finished-mobile.png)
+- [Growth after reopening](04-reopened-growth.png)
+
+Regenerate the proof after building the app with
+`cd app/electron && npm run test:e2e -- e2e/glasshouse-full-journey.spec.ts`.
+It writes its exports, screenshots and evidence to `/private/tmp/glasshouse-proof`;
+normal test runs do not replace these tracked delivery files.
+
 ## Source and regeneration
 
 `src/demos/glasshouse/content.ts` owns the original site and guide.
