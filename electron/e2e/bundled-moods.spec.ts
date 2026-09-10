@@ -12,6 +12,14 @@ type AudioState = { trackName: string | null; enabled: boolean; playing: boolean
 test.describe('bundled moods', () => {
   for (const mood of [
     {
+      id: 'silent-hill',
+      name: 'Silent Hill',
+      accent: '#814b3d',
+      icons: 'line',
+      title: 'Something beyond the fog',
+      greeting: 'The fog can wait. What would you like to work on?',
+    },
+    {
       id: 'glumlot',
       name: 'GLUMLOT',
       accent: '#ff846c',
@@ -132,7 +140,7 @@ test.describe('bundled moods', () => {
       await page.getByRole('button', { name: 'Mood', exact: true }).click();
       const built = page.getByTestId('bundled-moods');
       await expect(built).toBeVisible();
-      await expect(built.locator('[data-testid^="bundled-"]')).toHaveCount(24);
+      await expect(built.locator('[data-testid^="bundled-"]')).toHaveCount(25);
 
       await built.getByTestId('bundled-windows-95').getByRole('button', { name: 'Apply' }).click();
       await expect.poll(() => cssVar('--radius')).toBe('0px');
