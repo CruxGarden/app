@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { lazy, Suspense, useEffect, useState } from 'react';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { publicApi } from '@/api';
 import type { ExploreCrux, ExploreTag } from '@/api/public';
 import { Button } from '@/components/ui';
@@ -31,7 +31,26 @@ import { publicCoverUrl } from '@/lib/public-cover';
  * download, Explore, the Mood (theme + sound) as a live demo, and the trust
  * statement (ADR 0008). Everything here works without an account.
  */
+const InterpretationsPrototype = import.meta.env.DEV
+  ? lazy(() => import('@/components/landing/InterpretationsPrototype'))
+  : null;
+
 export default function Landing() {
+  const [params] = useSearchParams();
+  if (
+    InterpretationsPrototype &&
+    ['warehouse', 'sunset', 'notebook'].includes(params.get('variant') ?? '')
+  ) {
+    return (
+      <Suspense fallback={null}>
+        <InterpretationsPrototype />
+      </Suspense>
+    );
+  }
+  return <LandingPage />;
+}
+
+function LandingPage() {
   const [initialWorld] = useState(initialHomepageWorld);
   const initialMood = bundledMood(initialWorld) ? initialWorld : 'the-keeper';
   useEffect(() => {
