@@ -16,8 +16,9 @@ const createIgnore = require('ignore');
  * - Atomic saves: chokidar's awaitWriteFinish holds events until the file
  *   stops changing, so editors' temp-write-then-rename pattern lands as one
  *   clean write.
- * - Self-write suppression: the app's own writes (markSelfWrite) are filtered
- *   here; the renderer additionally skips fingerprint-identical content.
+ * - Content-based echo suppression: forward writes to ingestion, which skips
+ *   fingerprint-identical content. Never discard events by time: an external
+ *   editor can change the same file immediately after an app write.
  * - Folder-deletion guard: if the Project Folder itself is gone at flush time,
  *   the unlink storm is discarded and a single `folder-missing` event is sent
  *   instead — a missing folder must never cascade into artifact deletion.
@@ -51,7 +52,6 @@ export interface WatchBatch {
 
 const DEBOUNCE_MS = 300;
 const MAX_WAIT_MS = 2000;
-const SELF_WRITE_TTL_MS = 3000;
 
 class FolderWatch {
   private watcher: any;
@@ -63,7 +63,6 @@ class FolderWatch {
   constructor(
     readonly folder: string,
     private onBatch: (batch: WatchBatch) => void,
-    private isSelfWrite: (folder: string, relPath: string) => boolean,
   ) {
     this.loadIgnores();
     this.watcher = chokidar.watch(folder, {
@@ -111,8 +110,6 @@ class FolderWatch {
     // Editing .cruxignore re-arms the rules (and is itself ingested)
     if (rel === '.cruxignore') this.loadIgnores();
 
-    if (this.isSelfWrite(this.folder, rel)) return;
-
     this.pending.set(rel, { type, relPath: rel });
     if (!this.firstEventAt) this.firstEventAt = Date.now();
 
@@ -144,36 +141,14 @@ class FolderWatch {
 
 export class ProjectWatcher {
   private watches = new Map<string, FolderWatch>();
-  private selfWrites = new Map<string, number>(); // `${folder}::${rel}` -> expiry
 
   constructor(private sendBatch: (batch: WatchBatch) => void) {}
-
-  /** Record an app-originated write so the watcher ignores its echo. */
-  markSelfWrite(folder: string, relPath: string): void {
-    this.selfWrites.set(`${path.resolve(folder)}::${relPath}`, Date.now() + SELF_WRITE_TTL_MS);
-    // Opportunistic pruning
-    if (this.selfWrites.size > 1000) {
-      const now = Date.now();
-      for (const [k, exp] of this.selfWrites) if (exp < now) this.selfWrites.delete(k);
-    }
-  }
-
-  private isSelfWrite = (folder: string, relPath: string): boolean => {
-    const key = `${path.resolve(folder)}::${relPath}`;
-    const expiry = this.selfWrites.get(key);
-    if (!expiry) return false;
-    if (Date.now() > expiry) {
-      this.selfWrites.delete(key);
-      return false;
-    }
-    return true;
-  };
 
   watch(folder: string): void {
     const key = path.resolve(folder);
     if (this.watches.has(key)) return;
     if (!fs.existsSync(key)) return;
-    this.watches.set(key, new FolderWatch(key, this.sendBatch, this.isSelfWrite));
+    this.watches.set(key, new FolderWatch(key, this.sendBatch));
   }
 
   async unwatch(folder: string): Promise<void> {

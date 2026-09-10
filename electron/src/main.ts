@@ -398,7 +398,6 @@ function setupIpc() {
   ipcMain.handle(
     'project:write-file',
     (_e: any, folder: string, relPath: string, data: Uint8Array) => {
-      watcher.markSelfWrite(folder, relPath);
       return projects.writeFile(folder, relPath, data);
     },
   );
@@ -406,14 +405,11 @@ function setupIpc() {
     projects.readFile(folder, relPath),
   );
   ipcMain.handle('project:delete-file', (_e: any, folder: string, relPath: string) => {
-    watcher.markSelfWrite(folder, relPath);
     return projects.deleteFile(folder, relPath);
   });
   ipcMain.handle(
     'project:rename-file',
     (_e: any, folder: string, fromRel: string, toRel: string) => {
-      watcher.markSelfWrite(folder, fromRel);
-      watcher.markSelfWrite(folder, toRel);
       return projects.renameFile(folder, fromRel, toRel);
     },
   );
