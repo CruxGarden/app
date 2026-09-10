@@ -33,6 +33,7 @@ test.describe('form-mode editor (site settings)', () => {
       await page.getByRole('button', { name: 'Add Crux' }).click();
       await page.getByRole('button', { name: /Astro Home Page/ }).click();
       await page.getByRole('button', { name: 'Create', exact: true }).click();
+      await page.getByRole('button', { name: 'Edit content', exact: true }).click();
 
       // Site settings → config.json opens in Form mode
       await page.getByRole('button', { name: 'Site settings' }).click({ timeout: 30_000 });

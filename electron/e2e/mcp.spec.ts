@@ -294,6 +294,7 @@ test.describe('Agent Host (MCP server per crux)', () => {
     let client: Client | null = null;
     try {
       await plantGarden(page, /^Blank/);
+      await page.getByRole('button', { name: 'Add files', exact: true }).click();
       await expect(page.getByRole('button', { name: 'New file' })).toBeVisible({
         timeout: 30_000,
       });

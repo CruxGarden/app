@@ -26,6 +26,7 @@ test.describe('mood builder', () => {
       await page.getByRole('button', { name: 'Add Crux' }).click();
       await page.getByRole('button', { name: /^Blank/ }).click();
       await page.getByRole('button', { name: 'Create', exact: true }).click();
+      await page.getByRole('button', { name: 'Add files', exact: true }).click();
       await expect(page.getByRole('button', { name: 'New file' })).toBeVisible({ timeout: 30_000 });
       const tile = page.locator('.mosaic-tile').first();
       await expect(tile).toHaveCSS('margin-left', '4px');

@@ -26,6 +26,7 @@ test.describe('acceptance journey (local half)', () => {
       await page.getByRole('button', { name: 'Add Crux' }).click();
       await page.getByRole('button', { name: /Astro Home Page/ }).click();
       await page.getByRole('button', { name: 'Create', exact: true }).click();
+      await page.getByRole('button', { name: 'Edit content', exact: true }).click();
 
       // Builder is the Workshop's home view for content-model cruxes
       const newPost = page.getByRole('button', { name: /new post/i });

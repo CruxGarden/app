@@ -126,6 +126,7 @@ async function provision(
       palette: sourceMeta.settings?.palette,
       snapshotFrequency: sourceMeta.settings?.snapshotFrequency,
       verifyOnDone: sourceMeta.settings?.verifyOnDone,
+      entryFile: sourceMeta.settings?.entryFile,
       activeBranch: baseId,
     },
     messages: prompt ? [{ role: 'user', content: prompt, timestamp: now }] : [],

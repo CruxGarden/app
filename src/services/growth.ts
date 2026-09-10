@@ -238,6 +238,7 @@ export async function createSnapshotCore(
     meta: {
       ...(options.merge ? { merge: options.merge } : {}),
       messages: segmentMessages,
+      settings: { entryFile: crux.meta?.settings?.entryFile ?? null },
       cumulativeMessageCount: messages.length,
       parentCruxId,
       ...(crux.meta?.workingCopy
@@ -857,6 +858,7 @@ export function headlessGrowthHost(cruxId: string, deps: GrowthHostDeps): Growth
 
     restore: async (snapshotId, actor) => {
       const { growth, number } = await resolve(snapshotId);
+      const target = await deps.crux.findById(growth.targetId);
       const safety = await safetySnapshot(SAFETY_LABEL_RESTORE, actor);
       const changes = await restoreFilesCore(cruxId, growth.targetId, deps);
       // The restored snapshot is the tip: conversation rebuilt from its chain,
@@ -866,7 +868,11 @@ export function headlessGrowthHost(cruxId: string, deps: GrowthHostDeps): Growth
         meta: {
           ...(crux.meta ?? {}),
           messages: [],
-          settings: { ...(crux.meta?.settings ?? {}), activeBranch: growth.targetId },
+          settings: {
+            ...(crux.meta?.settings ?? {}),
+            activeBranch: growth.targetId,
+            entryFile: target.meta?.settings?.entryFile ?? null,
+          },
         },
       });
       announceGrowthChange(cruxId, 'restore');
@@ -875,6 +881,7 @@ export function headlessGrowthHost(cruxId: string, deps: GrowthHostDeps): Growth
 
     branch: async (snapshotId, label, actor) => {
       const { growth, number } = await resolve(snapshotId);
+      const target = await deps.crux.findById(growth.targetId);
       const safety = await safetySnapshot(SAFETY_LABEL_BRANCH, actor);
       const changes = await restoreFilesCore(cruxId, growth.targetId, deps);
       const crux = await deps.crux.findById(cruxId);
@@ -887,7 +894,11 @@ export function headlessGrowthHost(cruxId: string, deps: GrowthHostDeps): Growth
         meta: {
           ...(crux.meta ?? {}),
           messages: [branchMessage],
-          settings: { ...(crux.meta?.settings ?? {}), activeBranch: growth.targetId },
+          settings: {
+            ...(crux.meta?.settings ?? {}),
+            activeBranch: growth.targetId,
+            entryFile: target.meta?.settings?.entryFile ?? null,
+          },
         },
       });
       announceGrowthChange(cruxId, 'branch');

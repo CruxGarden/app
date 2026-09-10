@@ -4,17 +4,11 @@ import { createCruxStore } from '@/stores/cruxStore';
 import { useUIStore } from '@/stores/uiStore';
 import { setSetting } from '@/services/settings';
 import { SettingsKey } from '@/lib/constants';
-import { getApiKey } from '@/ai/keys';
 import { importCrux } from '@/services/crux-io';
 import { useGardenStore } from '@/stores/gardenStore';
 import { Modal, Button } from '@/components/ui';
 import { cn } from '@/lib/cn';
-import {
-  FIVE_WS_NAME,
-  FIVE_WS_TEMPLATE_ID,
-  FIVE_WS_TAGLINE,
-  type TemplateLayout,
-} from '@/templates';
+import { FIVE_WS_NAME, FIVE_WS_TEMPLATE_ID, FIVE_WS_TAGLINE } from '@/templates';
 import { applyTemplateToCrux } from '@/services/crux-create';
 import type { CruxKind } from '@/api/types';
 import { Capability, can } from '@/lib/platform';
@@ -200,7 +194,7 @@ const TEMPLATES: Template[] = [
   {
     id: 'blank',
     label: 'Blank',
-    description: 'Empty workspace — grow anything from scratch',
+    description: 'Start with your own idea — no files or setup to choose',
     icon: <LayoutIcon />,
     thumb: <BlankThumb />,
     kind: 'webapp',
@@ -283,6 +277,7 @@ export default function NewCruxModal({ open, onClose }: NewCruxModalProps) {
   const [title, setTitle] = useState('My Crux');
   // Until the user types a title, it follows the selected template's default
   const [titleEdited, setTitleEdited] = useState(false);
+  const [idea, setIdea] = useState('');
   const [selectedTemplate, setSelectedTemplate] = useState<string>('blank');
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
@@ -297,6 +292,8 @@ export default function NewCruxModal({ open, onClose }: NewCruxModalProps) {
   const reset = () => {
     setTitle('My Crux');
     setTitleEdited(false);
+    setIdea('');
+    setCreateError(null);
     setSelectedTemplate('blank');
     setCreating(false);
   };
@@ -390,16 +387,14 @@ export default function NewCruxModal({ open, onClose }: NewCruxModalProps) {
 
       const crux = await createCrux(effectiveTitle);
 
-      let layout: TemplateLayout | null = null;
       if (!quickStart && template.id !== 'blank') {
         const applied = await applyTemplateToCrux(crux, template.id, template.kind);
-        layout = applied.layout;
         // Reflect the template's greeting immediately (loadCrux reads it later too)
         if (applied.messages) cruxStore.getState().setMessages(applied.messages);
       }
 
-      const hasApiKey = !!(await getApiKey('anthropic'));
-      useUIStore.getState().seedCruxLayout(crux.id, layout, hasApiKey ? 'ai' : 'manual');
+      useUIStore.getState().seedCruxLayout(crux.id);
+      if (idea.trim()) setSetting(`cruxgarden:composer:${crux.id}`, idea.trim());
 
       reset();
       onClose();
@@ -429,6 +424,27 @@ export default function NewCruxModal({ open, onClose }: NewCruxModalProps) {
   return (
     <Modal open={open} onClose={handleClose} size="screen" title="Add Crux">
       <div className="flex flex-col h-full gap-5">
+        <div className="shrink-0 space-y-2">
+          <h2 className="text-lg font-medium">What would you like to grow?</h2>
+          <p className="text-sm text-text-muted">
+            Start with an idea or choose a starting point. You can change everything as you go.
+          </p>
+          <label htmlFor="new-crux-idea" className="block text-xs text-text-muted">
+            Your idea (optional)
+          </label>
+          <textarea
+            id="new-crux-idea"
+            value={idea}
+            onChange={(e) => setIdea(e.target.value)}
+            placeholder="A tiny game, a page for my project, a reading list…"
+            disabled={creating || importing}
+            rows={2}
+            className={cn(inputClass, 'h-auto py-2 resize-y')}
+          />
+          <p className="text-xs text-text-muted">
+            Your idea becomes an editable message in Collaboration. Send it when you’re ready.
+          </p>
+        </div>
         {/* Name */}
         <div className="shrink-0">
           <label
@@ -457,7 +473,7 @@ export default function NewCruxModal({ open, onClose }: NewCruxModalProps) {
         {/* Template selector — scrollable */}
         <div className="flex-1 min-h-0 flex flex-col">
           <label className="block text-xs font-mono text-text-muted uppercase tracking-wider mb-2 shrink-0">
-            Template
+            Starting point
           </label>
           <div className="overflow-y-auto flex-1 min-h-0 pr-0.5">
             <div className="flex flex-col">

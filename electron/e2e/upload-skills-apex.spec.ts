@@ -45,6 +45,7 @@ async function plantBlankCrux(page: Page) {
   await page.getByRole('button', { name: 'Add Crux' }).click();
   await page.getByRole('button', { name: /^Blank/ }).click();
   await page.getByRole('button', { name: 'Create', exact: true }).click();
+  await page.getByRole('button', { name: 'Add files', exact: true }).click();
 }
 
 /** Open a pane if it is closed; never toggle an open one shut. */

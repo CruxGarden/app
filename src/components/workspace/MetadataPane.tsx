@@ -1,6 +1,7 @@
 import { useCruxStore } from '@/stores/cruxStore';
 import { useAppStore } from '@/stores/appStore';
 import MetadataContent from './MetadataContent';
+import EntryFileSettings from './EntryFileSettings';
 import { PaneEmpty } from './pane-ui';
 
 export default function MetadataPane() {
@@ -20,6 +21,7 @@ export default function MetadataPane() {
 
   return (
     <div className="flex flex-col h-full">
+      <EntryFileSettings />
       <MetadataContent
         crux={crux}
         summary={summary}

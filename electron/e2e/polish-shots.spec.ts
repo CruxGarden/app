@@ -43,6 +43,7 @@ test.describe('polish tour', () => {
 
       // Builder with a file and a conversation
       await createCrux(page, 'Solar Notes');
+      await page.getByRole('button', { name: 'Add files', exact: true }).click();
       await page.getByRole('button', { name: 'New file' }).click({ timeout: 30_000 });
       const nameInput = page.getByRole('tree').getByRole('textbox');
       await nameInput.fill('index.html');

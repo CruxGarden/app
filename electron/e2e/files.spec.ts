@@ -25,13 +25,14 @@ test.describe('files (Artifacts pane + Project Folder)', () => {
     const onDisk = (rel: string) => existsSync(join(projectFolder(), rel));
 
     try {
-      // Fresh garden → blank crux (its layout opens the Artifacts pane)
+      // Fresh garden → empty Crux → explicitly open file tools
       await page.getByRole('button', { name: /enter/i }).click();
       await page.getByText('Plant a new garden').click();
       await page.getByRole('button', { name: 'Welcome' }).click();
       await page.getByRole('button', { name: 'Add Crux' }).click();
       await page.getByRole('button', { name: /^Blank/ }).click();
       await page.getByRole('button', { name: 'Create', exact: true }).click();
+      await page.getByRole('button', { name: 'Add files', exact: true }).click();
       // An empty crux shows a drop zone, not a tree — the toolbar is the anchor.
       const newFile = page.getByRole('button', { name: 'New file' });
       await expect(newFile).toBeVisible({ timeout: 30_000 });
