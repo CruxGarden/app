@@ -7,6 +7,7 @@ import { launchApp } from './launch';
  * Output: e2e/.results/mood-<id>.png
  */
 const IDS = [
+  'siberian-blizzard',
   'silent-hill',
   'glumlot',
   '80s-fantasy',

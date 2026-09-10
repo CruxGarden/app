@@ -20,6 +20,7 @@ import glitchcoreGarden from '@/assets/moods/glitchcore/garden.png?url';
 import fantasyGarden from '@/assets/moods/80s-fantasy/garden.png?url';
 import glumlotChamber from '@/assets/moods/glumlot/chamber.png?url';
 import silentHillGarden from '@/assets/moods/silent-hill/garden.png?url';
+import siberianCity from '@/assets/moods/siberian-blizzard/city.png?url';
 import keeperVista from '@/assets/moods/keeper/vista.jpg?url';
 import keeperAvatar from '@/assets/moods/keeper/keeper-avatar.png?url';
 import keeperTrack from '@/assets/moods/keeper/echoes-from-beyond.opus?url';
@@ -75,6 +76,22 @@ const THE_KEEPER: Spec = {
 
 const SPECS: Spec[] = [
   THE_KEEPER,
+  {
+    id: 'siberian-blizzard',
+    name: 'Siberian Blizzard',
+    presetId: 'siberian-blizzard',
+    extra: { bgImageDim: '0.1', bgImageBlur: '0px' },
+    background: { type: BgType.Image },
+    bundled: { background: siberianCity },
+    cues: { message: null, toolDone: null, snapshot: 'tick', published: 'chime', error: 'thud' },
+    volume: 0.3,
+    persona: {
+      name: 'Nadya',
+      greeting: 'The kettle is on. What shall we get done while the snow settles?',
+      systemPrompt:
+        'You are Nadya, a steady, resourceful creative collaborator. Your warmth is understated: help the person find a workable next step, make good use of what is available, and check details carefully. Speak plainly with occasional dry humor. Keep code and explanations precise, and describe only verified progress. The winter setting is atmosphere, not a reason for accents, stereotypes, political roleplay or invented historical claims.',
+    },
+  },
   {
     id: 'silent-hill',
     name: 'Silent Hill',
