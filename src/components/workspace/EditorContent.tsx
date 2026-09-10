@@ -1,3 +1,4 @@
+import { deferNotebookAction } from '@/services/notebook-lifecycle';
 import { copyIdentity } from '@/services/working-copies';
 import { useWorkspaceUIStoreApi } from '@/stores/uiStore';
 import { documentsFor } from '@/services/workspace-documents';
@@ -69,7 +70,7 @@ export default function EditorContent({
 }: EditorContentProps) {
   const readOnlyTask = useCruxStore((s) => {
     const copy = copyIdentity(s.crux);
-    return s.closing || (!!copy && copy.phase !== 'ready');
+    return s.closing || !!s.viewingSnapshotId || (!!copy && copy.phase !== 'ready');
   });
   const cruxStore = useCruxStoreApi();
   const uiStore = useWorkspaceUIStoreApi();
@@ -645,17 +646,20 @@ export default function EditorContent({
             <SitePreviewControls
               site={site}
               onRefresh={() => {
-                const iframe = previewIframeRef.current;
-                if (!iframe) return;
-                try {
-                  iframe.contentWindow?.location.reload();
-                } catch {
-                  const src = iframe.src;
-                  iframe.src = 'about:blank';
-                  requestAnimationFrame(() => {
-                    iframe.src = src;
-                  });
-                }
+                const refresh = () => {
+                  const iframe = previewIframeRef.current;
+                  if (!iframe) return;
+                  try {
+                    iframe.contentWindow?.location.reload();
+                  } catch {
+                    const src = iframe.src;
+                    iframe.src = 'about:blank';
+                    requestAnimationFrame(() => {
+                      iframe.src = src;
+                    });
+                  }
+                };
+                if (!deferNotebookAction(cruxId, refresh)) refresh();
               }}
             />
           )}
@@ -664,8 +668,11 @@ export default function EditorContent({
               className="shrink-0 px-1.5 py-0.5 hover:text-text cursor-pointer"
               title="Return to the entry page"
               onClick={() => {
-                const iframe = previewIframeRef.current;
-                if (iframe && iframeSrc) iframe.src = iframeSrc;
+                const home = () => {
+                  const iframe = previewIframeRef.current;
+                  if (iframe && iframeSrc) iframe.src = iframeSrc;
+                };
+                if (!deferNotebookAction(cruxId, home)) home();
               }}
             >
               Home
@@ -677,8 +684,11 @@ export default function EditorContent({
               className="shrink-0 px-1.5 py-0.5 hover:text-text cursor-pointer"
               title="Reload the preview"
               onClick={() => {
-                const iframe = previewIframeRef.current;
-                if (iframe) iframe.setAttribute('src', iframe.src);
+                const refresh = () => {
+                  const iframe = previewIframeRef.current;
+                  if (iframe) iframe.setAttribute('src', iframe.src);
+                };
+                if (!deferNotebookAction(cruxId, refresh)) refresh();
               }}
             >
               Refresh

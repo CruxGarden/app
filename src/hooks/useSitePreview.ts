@@ -1,4 +1,5 @@
 import { folderForCrux } from '@/services/project-folder';
+import { flushNotebook } from '@/services/notebook-lifecycle';
 import { useCruxStoreApi } from '@/stores/cruxStore';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
@@ -146,6 +147,7 @@ export function useSitePreview(cruxId: string, filePath: string): SitePreview {
 
   const restart = useCallback(
     async (port?: number | null) => {
+      await flushNotebook(cruxId);
       if (port !== undefined) {
         // Remember the choice on the crux (null clears it), then restart on it.
         const { crux, updateCrux } = cruxStore.getState();

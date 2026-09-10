@@ -1,3 +1,4 @@
+import { getServices } from '@/services';
 import { useState, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { createCruxStore } from '@/stores/cruxStore';
@@ -201,6 +202,16 @@ const TEMPLATES: Template[] = [
     defaultTitle: 'My Crux',
   },
   {
+    id: 'notes',
+    label: 'Notes',
+    description: 'A local Markdown notebook you can customize and publish',
+    icon: <PencilIcon />,
+    thumb: <BlankThumb />,
+    kind: 'notes',
+    defaultTitle: 'My Notebook',
+    desktopOnly: true,
+  },
+  {
     id: 'astro-empty',
     label: 'Empty (Astro)',
     description: 'A real Astro project with one page — bring your own plan',
@@ -310,6 +321,9 @@ export default function NewCruxModal({ open, onClose }: NewCruxModalProps) {
           onProgress: (done, total) => setImportProgress({ done, total }),
         });
 
+        if (!result.layout && (await getServices().crux.findById(result.cruxId)).kind === 'notes')
+          useUIStore.getState().seedCruxLayout(result.cruxId, 27);
+
         if (result.layout) {
           const layout = result.layout;
           if (layout.paneOrder && layout.paneVisibility) {
@@ -393,7 +407,9 @@ export default function NewCruxModal({ open, onClose }: NewCruxModalProps) {
         if (applied.messages) cruxStore.getState().setMessages(applied.messages);
       }
 
-      useUIStore.getState().seedCruxLayout(crux.id);
+      useUIStore
+        .getState()
+        .seedCruxLayout(crux.id, !quickStart && template.id === 'notes' ? 27 : undefined);
       if (idea.trim()) setSetting(`cruxgarden:composer:${crux.id}`, idea.trim());
 
       reset();

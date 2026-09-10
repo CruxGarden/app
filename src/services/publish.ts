@@ -212,11 +212,14 @@ export function cruxUpsertFields(crux: Crux, messages?: ChatMessage[]): Record<s
     title: crux.title,
     slug: crux.slug,
     description: crux.description,
-    data: crux.data,
+    data: crux.kind === 'notes' ? '' : crux.data,
     type: crux.type,
     kind: crux.kind,
     discoverable: crux.discoverable,
-    meta: { ...portableMeta(crux.meta), ...(messages ? { messages } : {}) },
+    meta:
+      crux.kind === 'notes'
+        ? { messages: [] }
+        : { ...portableMeta(crux.meta), ...(messages ? { messages } : {}) },
   };
 }
 
@@ -238,6 +241,26 @@ export async function publishPipeline(
   if (!opts?.deps) await assertCopyWritable(crux.id);
   const deps = opts?.deps ?? (await defaultDeps());
   const progress = opts?.onProgress ?? (() => {});
+  if (crux.kind === 'notes') {
+    const manifest = artifacts.find((a) => pathOf(a) === 'notebook/publish.json');
+    if (!manifest) throw new Error('The notebook publication settings are missing.');
+    const selected = JSON.parse(await (await deps.local.downloadBlob(manifest.id)).text());
+    if (!Array.isArray(selected.pages) || !selected.pages.length)
+      throw new Error(
+        'Select at least one note with “Include in public edition” before publishing.',
+      );
+    if (
+      selected.pages.some(
+        (path: unknown) =>
+          typeof path !== 'string' ||
+          !/\.md$/i.test(path) ||
+          !artifacts.some((a) => pathOf(a) === 'notebook/' + path),
+      )
+    )
+      throw new Error(
+        'A selected public note is missing. Update the notebook publication settings.',
+      );
+  }
 
   // 1. Upsert crux to API (create if not exists, update if it does).
   // A transient failure here aborts the publish: `exists` throwing is the
@@ -251,7 +274,7 @@ export async function publishPipeline(
     await deps.api.create({
       id: crux.id,
       ...cruxUpsertFields(crux, opts?.messages),
-      data: crux.data || '',
+      data: crux.kind === 'notes' ? '' : crux.data || '',
     });
   }
 
@@ -260,6 +283,10 @@ export async function publishPipeline(
   // history, visitors get the built output. A failed build fails the
   // publish; nothing half-deploys.
   let filesToPublish: PublishFile[];
+  if (crux.kind === 'notes' && !deps.site.isSiteCrux(artifacts))
+    throw new Error(
+      'This notebook is missing its site configuration. Restore it before publishing.',
+    );
   if (deps.site.isSiteCrux(artifacts)) {
     progress('build');
     filesToPublish = await deps.site.buildForPublish(crux.id);
@@ -293,7 +320,10 @@ export async function publishPipeline(
   // and public pages can show it. Best-effort — a missing or unreadable
   // preview never blocks a publish. A file the user (or the site build) put at
   // that path wins; we never overwrite their bytes with ours.
-  const thumb = artifacts.find((a) => a.type === 'artifact' && isWorkspaceThumbnail(pathOf(a)));
+  const thumb =
+    crux.kind === 'notes'
+      ? undefined
+      : artifacts.find((a) => a.type === 'artifact' && isWorkspaceThumbnail(pathOf(a)));
   const coverTaken = filesToPublish.some((f) => f.path === PUBLIC_COVER_PATH);
   if (thumb && coverTaken) {
     console.warn(`[publish] ${PUBLIC_COVER_PATH} exists in the crux — not shipping the thumbnail`);

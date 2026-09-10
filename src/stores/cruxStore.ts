@@ -1,3 +1,4 @@
+import { flushNotebook } from '@/services/notebook-lifecycle';
 import { assertCopyWritable } from '@/services/working-copies';
 import { create, useStore, type StoreApi } from 'zustand';
 import { useContext } from 'react';
@@ -646,12 +647,13 @@ export function createCruxStore(ui: StoreApi<UIState> = useUIStore) {
     // The phase and the failure live here so the Share pane can show them
     // whichever button started the publish.
     publishCrux: async () => {
-      const { crux, artifacts, saveMeta } = get();
+      const { crux, saveMeta } = get();
       if (!crux) return false;
       set({ publishFailure: null, publishPhase: 'sync' });
       try {
+        await flushNotebook(crux.id);
         await saveMeta();
-        const mergedCrux = await publishPipeline(get().crux!, artifacts || [], {
+        const mergedCrux = await publishPipeline(get().crux!, get().artifacts || [], {
           messages: get().messages,
           onProgress: (phase) => set({ publishPhase: phase }),
         });
@@ -919,7 +921,10 @@ export function createCruxStore(ui: StoreApi<UIState> = useUIStore) {
         // Snapshot-with-screenshot: if a local preview is running (desktop),
         // screenshot its front page into preview.jpg first so the snapshot clone
         // carries a fresh thumbnail. Best-effort — never blocks the snapshot.
-        const previewShot = options.taskOperation ? null : await captureWorkspacePreview(crux.id);
+        const previewShot =
+          options.taskOperation || crux.kind === 'notes'
+            ? null
+            : await captureWorkspacePreview(crux.id);
         if (previewShot) {
           const existing = (get().workspaceArtifacts ?? get().artifacts).find(
             (a) => a.id === previewShot.id,
@@ -989,6 +994,8 @@ export function createCruxStore(ui: StoreApi<UIState> = useUIStore) {
     // Snapshot viewing actions
     viewSnapshot: async (snapshotId: string, index: number) => {
       const generation = ++viewGeneration;
+      await flushNotebook(get().crux?.id);
+      if (generation !== viewGeneration) return;
       const {
         crux,
         artifacts,
@@ -1077,6 +1084,7 @@ export function createCruxStore(ui: StoreApi<UIState> = useUIStore) {
     },
 
     revertToSnapshot: async (snapshotId: string) => {
+      await flushNotebook(get().crux?.id);
       if (get().crux) await assertCopyWritable(get().crux!.id);
       const { crux } = get();
       if (!crux) return;

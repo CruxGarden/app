@@ -388,3 +388,49 @@ describe('describePublishFailure', () => {
     expect(describePublishFailure(undefined).message).toBe('Publishing failed.');
   });
 });
+
+it('publishes only the built Notes edition and strips private metadata and thumbnails', async () => {
+  const { deps, state } = makeDeps({ isSite: true });
+  deps.local.downloadBlob = async () =>
+    new Blob([JSON.stringify({ title: 'Notebook', pages: ['Public.md'] })]);
+  const crux = makeCrux({
+    kind: 'notes',
+    data: 'PRIVATE DATA',
+    meta: {
+      messages: [{ role: 'user', content: 'PRIVATE CHAT' }],
+      settings: { systemPrompt: 'PRIVATE INSTRUCTIONS' },
+    },
+  });
+  await publishPipeline(
+    crux,
+    [
+      makeArtifact('notebook/publish.json', 'selection'),
+      makeArtifact('notebook/Public.md', 'public'),
+      makeArtifact('notebook/Secret.md', 'secret'),
+      makeArtifact('preview.jpg', 'private-photo'),
+    ],
+    { deps, messages: [{ role: 'user', content: 'PRIVATE CHAT' }] },
+  );
+  expect(state.built).toBe(true);
+  const sent = state.created[0]!;
+  expect(sent.data).toBe('');
+  expect(sent.meta).toEqual({ messages: [] });
+  expect(
+    state.publishedFiles?.some(
+      (f) => f.path === '_crux/cover.jpg' || f.path.startsWith('notebook/'),
+    ),
+  ).toBe(false);
+  expect(state.localMetaWrites[0]!.messages).toEqual(crux.meta?.messages);
+});
+
+it('refuses a Notes publication with no selected pages before calling the API', async () => {
+  const { deps, state } = makeDeps({ isSite: true });
+  deps.local.downloadBlob = async () => new Blob(['{"title":"Notebook","pages":[]}']);
+  await expect(
+    publishPipeline(makeCrux({ kind: 'notes' }), [makeArtifact('notebook/publish.json', 'empty')], {
+      deps,
+    }),
+  ).rejects.toThrow('Select at least one');
+  expect(state.created).toHaveLength(0);
+  expect(state.built).toBe(false);
+});

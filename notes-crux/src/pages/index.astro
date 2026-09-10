@@ -1,0 +1,10 @@
+---
+import Notebook from '../Notebook';
+import Reader from '../Reader';
+import { readEdition } from '../../scripts/edition.mjs';
+const edition = import.meta.env.PROD ? readEdition(process.cwd(), { allowEmpty: true }) : null;
+---
+<!doctype html>
+<html lang="en" data-theme="dark"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width"/><title>{edition?.title ?? 'Your notebook'}</title></head><body>
+{edition ? <Reader edition={edition} client:load /> : <Notebook client:only="react" />}
+</body></html>

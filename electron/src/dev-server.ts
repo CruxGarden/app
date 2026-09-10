@@ -192,6 +192,8 @@ export class DevServerManager {
         ...(this.launchProcess ? process.env : pnpmEnv()),
         CRUX_PREVIEW_READY_FILE: readyFile,
         CRUX_PREVIEW_READY_TOKEN: token,
+        // Garden owns this process; prevent Astro 7 from spawning an unowned agent daemon.
+        ASTRO_DEV_BACKGROUND: '1',
       };
       env.NODE_OPTIONS = `${env.NODE_OPTIONS ?? ''} --require ${JSON.stringify(hook)}`;
       proc = this.launchProcess

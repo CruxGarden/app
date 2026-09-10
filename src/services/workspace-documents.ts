@@ -1,3 +1,4 @@
+import { notebookIsDirty, flushNotebook } from './notebook-lifecycle';
 import { createStore, type StoreApi } from 'zustand/vanilla';
 import type { editor } from 'monaco-editor';
 import type { CruxState } from '@/stores/cruxStore';
@@ -107,12 +108,13 @@ export function createDocuments(data: StoreApi<CruxState>, ui: StoreApi<UIState>
       return pending;
     },
     async saveAll() {
+      await flushNotebook(data.getState().crux?.id);
       for (const id of entries.keys()) await this.save(id);
     },
     async drain() {
       await Promise.all([...saves.values()]);
     },
-    hasDirty: () => [...entries.keys()].some(dirty),
+    hasDirty: () => notebookIsDirty(data.getState().crux?.id) || [...entries.keys()].some(dirty),
     dispose() {
       for (const doc of entries.values()) doc.getState().model?.dispose();
       entries.clear();

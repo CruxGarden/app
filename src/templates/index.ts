@@ -223,6 +223,7 @@ export interface TemplateDefinition {
 // dozens/hundreds lives on crux.garden as clonable Template Cruxes, and
 // ecosystem templates arrive via TemplateDefinition.scaffold scripts.
 const loaders: Record<string, () => Promise<{ default: TemplateDefinition }>> = {
+  notes: () => import('./notes'),
   'astro-homepage': () => import('./astro-homepage'),
   'astro-blog': () => import('./astro-blog'),
   'astro-feed': () => import('./astro-feed'),
