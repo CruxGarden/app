@@ -1,3 +1,4 @@
+import { tendingState, tendingLabel, type TendingState } from '@/services/tending-state';
 import { findWorkingCopy } from '@/services/working-copies';
 import { maintainNotesManifest } from '@/services/notes-manifest';
 import { registerPreviewOwner } from '@/services/preview-owners';
@@ -35,6 +36,7 @@ export interface WorkspaceSummary {
   title: string;
   status: string;
   dirty: boolean;
+  tending?: TendingState;
 }
 const sessions = new Map<string, Workspace>();
 const KEY = 'cruxgarden:open-workspaces:v1';
@@ -71,36 +73,57 @@ export function parseOpenWorkspaces(raw: string | null): { ids: string[]; active
     return { ids: [], active: null };
   }
 }
-function statusOf(s: CruxState, w: Workspace): string {
-  if (w.phase !== 'ready')
-    return w.phase === 'error' ? 'Failed to open' : w.phase === 'closing' ? 'Closing' : 'Loading';
-  if (s.pendingDeletes.length || w.ui.getState().pendingAgentApprovals.length)
-    return 'Needs approval';
-  if (s.turnJob?.merge?.status === 'pending') return 'Needs merge';
-  if (s.publishPhase) return 'Publishing';
-  if (s.turnJob?.status === 'checking') return 'Checking';
-  if (s.isStreaming || ['planning', 'running'].includes(s.turnJob?.status ?? '')) return 'Working';
-  if (s.turnJob?.status === 'failed') return 'Failed';
-  if (s.turnJob?.status === 'done') {
-    if (useWorkspaceRegistry.getState().activeId === w.id) w.seenTurnId = s.turnJob.id;
-    if (w.seenTurnId !== s.turnJob.id) return 'Done';
-  }
-  return 'Editing';
+export function workspaceTending(w: Workspace): TendingState {
+  const s = w.data.getState();
+  return tendingState({
+    copyId: w.id,
+    cruxId: w.cruxId,
+    lifetimeId: w.lifetimeId,
+    phase: w.phase,
+    job: s.turnJob,
+    streaming: s.isStreaming,
+    settling: s.turnSettling,
+    queued: s.turnQueue.length,
+    seenTurnId: w.seenTurnId ?? getSetting(`cruxgarden:tending-seen:${w.id}`),
+    folderMissing: s.folderMissing,
+    requests: [
+      ...s.pendingDeletes.map((d) => ({
+        id: d.id,
+        requestedAt: d.requestedAt,
+        reason: 'File deletion needs approval',
+      })),
+      ...w.ui.getState().pendingAgentApprovals.map((a) => ({
+        id: a.id,
+        requestedAt: a.requestedAt,
+        reason: `${a.agent} needs permission`,
+      })),
+    ],
+  });
 }
 function summarize(w: Workspace) {
   const s = w.data.getState();
+  if (
+    s.turnJob?.status === 'done' &&
+    !s.turnSettling &&
+    !s.isStreaming &&
+    w.ui.getState().paneVisibility.collaboration &&
+    !s.viewingSnapshotId &&
+    useWorkspaceRegistry.getState().activeId === w.id &&
+    w.seenTurnId !== s.turnJob.id
+  ) {
+    w.seenTurnId = s.turnJob.id;
+    setSetting(`cruxgarden:tending-seen:${w.id}`, s.turnJob.id);
+  }
+  const tending = workspaceTending(w);
   const next = {
     id: w.id,
+    tending,
     title: s.crux?.title || 'Untitled',
-    status: `${statusOf(s, w)}${s.turnQueue.length ? ` · ${s.turnQueue.length} queued` : ''}`,
+    status: `${s.publishPhase ? 'Publishing' : tendingLabel(tending)}${s.turnQueue.length ? ` · ${s.turnQueue.length} queued` : ''}`,
     dirty: w.ui.getState().editor.tabs.some((t) => t.dirty),
   };
   const prev = useWorkspaceRegistry.getState().entries.find((e) => e.id === w.id);
-  if (
-    prev &&
-    Object.keys(next).every((k) => prev[k as keyof typeof prev] === next[k as keyof typeof next])
-  )
-    return;
+  if (prev && JSON.stringify(prev) === JSON.stringify(next)) return;
   useWorkspaceRegistry.setState((r) => ({
     entries: r.entries.some((e) => e.id === w.id)
       ? r.entries.map((e) => (e.id === w.id ? next : e))

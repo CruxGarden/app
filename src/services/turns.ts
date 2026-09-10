@@ -183,7 +183,7 @@ function createTurns(useCruxStore: StoreApi<CruxState>) {
         // A timed policy can fire long after the user moved on — snapshotting
         // then would capture a different crux entirely.
         if (useCruxStore.getState().crux?.id !== cruxId) return;
-        useCruxStore
+        return useCruxStore
           .getState()
           .createSnapshot({ silent: false, ifChanged: true })
           .catch((err) => console.warn('Auto-snapshot failed:', err));
@@ -374,7 +374,8 @@ function createTurns(useCruxStore: StoreApi<CruxState>) {
     model: string;
     pf: string;
   }): Promise<void> {
-    const { cruxId, job, apiKey, model, pf } = args;
+    const { cruxId, job: initialJob, apiKey, model, pf } = args;
+    const job = { ...initialJob, model };
     if (useCruxStore.getState().closing) return;
     const normalizedMessages = normalizedHistory(pf);
     const session = sessionFor(cruxId);
@@ -382,6 +383,7 @@ function createTurns(useCruxStore: StoreApi<CruxState>) {
     session.turn = controller;
     stopReasons.delete(cruxId);
 
+    useCruxStore.setState({ turnSettling: true });
     // The job: tracked by the store, persisted so a relaunch reports it.
     publishJob(job);
     useCruxStore.getState().setStreaming(true);
@@ -393,8 +395,10 @@ function createTurns(useCruxStore: StoreApi<CruxState>) {
 
     const run = (async () => {
       const owner = copyIdentity(useCruxStore.getState().crux)?.cruxId ?? cruxId;
-      if (taskSlots.busy(owner))
+      if (taskSlots.busy(owner)) {
+        publishJob({ ...job, status: 'queued' });
         useCruxStore.getState().appendStreamContent('Waiting for another task to finish…');
+      }
       let release: (() => void) | undefined;
       try {
         if (!taskSlotHolders.has(cruxId)) {
@@ -402,6 +406,7 @@ function createTurns(useCruxStore: StoreApi<CruxState>) {
           taskSlotHolders.add(cruxId);
         }
         useCruxStore.getState().clearStreamContent();
+        if (!controller.signal.aborted) publishJob(job);
         if (controller.signal.aborted) throw new Error('Stopped before starting the task.');
         await runJob({ cruxId, job, apiKey, model, normalizedMessages, pf, controller });
       } catch (error) {
@@ -424,7 +429,10 @@ function createTurns(useCruxStore: StoreApi<CruxState>) {
     try {
       await run;
     } finally {
-      if (activeRuns.get(cruxId) === run) activeRuns.delete(cruxId);
+      if (activeRuns.get(cruxId) === run) {
+        activeRuns.delete(cruxId);
+        useCruxStore.setState({ turnSettling: false });
+      }
     }
   }
 
@@ -646,7 +654,7 @@ function createTurns(useCruxStore: StoreApi<CruxState>) {
     // End-of-turn auto-snapshot — only for changes no step snapshot captured,
     // so a planned turn never doubles up on its last step.
     if (result.uncapturedMutation) {
-      session.policy.notifyMutation();
+      await session.policy.notifyMutation();
     }
 
     await runQueuedAfter(job);
@@ -867,7 +875,10 @@ function createTurns(useCruxStore: StoreApi<CruxState>) {
     try {
       await run;
     } finally {
-      if (activeRuns.get(cruxId) === run) activeRuns.delete(cruxId);
+      if (activeRuns.get(cruxId) === run) {
+        activeRuns.delete(cruxId);
+        useCruxStore.setState({ turnSettling: false });
+      }
     }
   }
 
@@ -938,7 +949,10 @@ function createTurns(useCruxStore: StoreApi<CruxState>) {
     try {
       await run;
     } finally {
-      if (activeRuns.get(cruxId) === run) activeRuns.delete(cruxId);
+      if (activeRuns.get(cruxId) === run) {
+        activeRuns.delete(cruxId);
+        useCruxStore.setState({ turnSettling: false });
+      }
     }
   }
 

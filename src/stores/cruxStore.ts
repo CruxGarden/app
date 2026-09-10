@@ -54,6 +54,8 @@ export interface CruxState {
 
   // Streaming state
   isStreaming: boolean;
+  /** Turn orchestration is still finishing checks, capture or queue handoff. */
+  turnSettling: boolean;
   streamingContent: string;
 
   // Background Turn (B3): the latest job for this crux and messages queued behind it.
@@ -78,7 +80,7 @@ export interface CruxState {
   snapshotMessageCount: number | null; // how many messages to show for this snapshot
 
   // Pending file deletions (awaiting user confirmation)
-  pendingDeletes: { artifactId: string; path: string }[];
+  pendingDeletes: { id: string; requestedAt: string; artifactId: string; path: string }[];
 
   // Desktop: the crux's Project Folder is registered but missing on disk
   folderMissing: boolean;
@@ -229,6 +231,7 @@ export function createCruxStore(ui: StoreApi<UIState> = useUIStore) {
     artifacts: [],
     summary: null,
     isStreaming: false,
+    turnSettling: false,
     streamingContent: '',
     turnJob: null,
     turnQueue: [],
@@ -616,6 +619,7 @@ export function createCruxStore(ui: StoreApi<UIState> = useUIStore) {
         artifacts: [],
         summary: null,
         isStreaming: false,
+        turnSettling: false,
         streamingContent: '',
         turnJob: null,
         turnQueue: [],
@@ -1213,7 +1217,10 @@ export function createCruxStore(ui: StoreApi<UIState> = useUIStore) {
       return new Promise<boolean>((resolve) => {
         deleteResolvers.set(artifactId, [resolve]);
         set((s) => ({
-          pendingDeletes: [...s.pendingDeletes, { artifactId, path }],
+          pendingDeletes: [
+            ...s.pendingDeletes,
+            { id: crypto.randomUUID(), requestedAt: new Date().toISOString(), artifactId, path },
+          ],
         }));
       });
     },

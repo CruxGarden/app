@@ -282,6 +282,26 @@ describe('removeLatestSnapshotCore', () => {
 describe('SnapshotPolicy', () => {
   afterEach(() => vi.useRealTimers());
 
+  it('lets a turn await its per-turn snapshot before reporting a reviewable result', async () => {
+    let finish!: () => void;
+    const capture = new Promise<void>((resolve) => {
+      finish = resolve;
+    });
+    const policy = new SnapshotPolicy(
+      () => 'ai-turn',
+      () => capture,
+    );
+    let settled = false;
+    const pending = Promise.resolve(policy.notifyMutation()).then(() => {
+      settled = true;
+    });
+    await Promise.resolve();
+    expect(settled).toBe(false);
+    finish();
+    await pending;
+    expect(settled).toBe(true);
+  });
+
   it('fires immediately on ai-turn and never on manual', () => {
     const snap = vi.fn();
     let freq: SnapshotFrequency = 'ai-turn';

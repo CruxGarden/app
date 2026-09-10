@@ -9,6 +9,7 @@ const Gateway = lazy(() => import('@/pages/Gateway'));
 const Landing = lazy(() => import('@/pages/Landing'));
 const BillingReturn = lazy(() => import('@/pages/BillingReturn'));
 const Plans = lazy(() => import('@/pages/Plans'));
+const Tending = lazy(() => import('@/pages/Tending'));
 const HomeGarden = lazy(() => import('@/pages/HomeGarden'));
 const CruxBuilder = lazy(() => import('@/pages/CruxBuilder'));
 const MoodBuilder = lazy(() => import('@/pages/MoodBuilder'));
@@ -80,12 +81,21 @@ const router = createBrowserRouter(
       ? [
           { path: '/home', element: <Navigate to="/" replace /> },
           { path: '/c/:id', element: <Navigate to="/" replace /> },
+          { path: '/tending', element: <Navigate to="/" replace /> },
           { path: '/mood', element: <Navigate to="/" replace /> },
         ]
       : []),
     {
       element: <Shell />,
       children: [
+        {
+          path: '/tending',
+          element: (
+            <ErrorBoundary>
+              <Tending />
+            </ErrorBoundary>
+          ),
+        },
         {
           path: '/home',
           element: (

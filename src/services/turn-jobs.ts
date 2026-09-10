@@ -79,6 +79,8 @@ export interface TurnCheck {
 
 export interface TurnJob {
   id: string;
+  /** Provider/model actually selected for this turn. */
+  model?: string;
   cruxId: string;
   status: TurnJobStatus;
   plan: TurnPlan;
