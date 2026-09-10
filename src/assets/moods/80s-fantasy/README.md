@@ -1,0 +1,7 @@
+# 80s Fantasy background
+
+`garden.png` was generated with the built-in image generation tool on 2026-09-09. The Mood ships the image locally; Apply ingests it into the Blob Store and exported Mood Packages carry it. Cormorant Garamond display text reuses the app's existing local font.
+
+Final prompt:
+
+> Use case: stylized-concept. Asset type: wide desktop wallpaper for Crux Garden's '80s Fantasy' Mood. Original lavish hand-painted fantasy paperback-cover / matte-painting atmosphere from the 1980s. A moonlit enchanted garden on a mountain terrace: ancient stone balustrades and climbing roses at the edges, a winding path into a mist-filled valley, a distant luminous castle on an impossible crag, tiny warm windows, a crescent moon above dramatic indigo mountains. Romantic, wondrous, slightly mysterious, beautiful practical miniature / painted cinema backdrop feeling. Oil and gouache brushwork, softly luminous edges, rich layered atmospheric perspective, subtle printed-paper texture. Midnight teal, deep plum, antique gold, moss, warm ivory, muted rose. Widescreen 16:9; the central half is quiet dark mist and open sky, with the castle small and high off center and detailed foliage/stonework near the outer edges and bottom corners, leaving room for workspace panels. No people, no text, no lettering, no logos, no UI, no watermark. Avoid modern glossy game renders, neon synthwave, pixel art, cartoon outlines.

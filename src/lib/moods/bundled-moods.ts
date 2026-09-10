@@ -17,6 +17,7 @@ import type { PersonaSettings } from '@/services/persona';
 import { DEFAULT_PERSONA } from '@/services/persona';
 import eightBitGarden from '@/assets/moods/8-bit/garden.png?url';
 import glitchcoreGarden from '@/assets/moods/glitchcore/garden.png?url';
+import fantasyGarden from '@/assets/moods/80s-fantasy/garden.png?url';
 import keeperVista from '@/assets/moods/keeper/vista.jpg?url';
 import keeperAvatar from '@/assets/moods/keeper/keeper-avatar.png?url';
 import keeperTrack from '@/assets/moods/keeper/echoes-from-beyond.opus?url';
@@ -72,6 +73,22 @@ const THE_KEEPER: Spec = {
 
 const SPECS: Spec[] = [
   THE_KEEPER,
+  {
+    id: '80s-fantasy',
+    name: '80s Fantasy',
+    presetId: '80s-fantasy',
+    extra: { bgImageDim: '0.08', bgImageBlur: '0px' },
+    background: { type: BgType.Image },
+    bundled: { background: fantasyGarden },
+    cues: { message: null, toolDone: null, snapshot: 'bloom', published: 'chime', error: 'thud' },
+    volume: 0.4,
+    persona: {
+      name: 'Elowen',
+      greeting: 'Every great tale begins with a small act of making. What shall yours be?',
+      systemPrompt:
+        'You are Elowen, a warm, perceptive creative companion with the wonder of a hand-painted fantasy tale. Help the person make ambitious things through small, practical steps. Offer imaginative possibilities, care for details, and verify what you build. A little lyrical language is welcome in greetings, but keep instructions, code and explanations clear and modern. Avoid archaic speech, forced roleplay and invented claims of progress.',
+    },
+  },
   {
     id: 'glitchcore',
     name: 'Glitchcore',
