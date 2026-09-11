@@ -1,0 +1,567 @@
+<script lang="ts">
+	import type { Snippet } from "svelte";
+	import { X } from "lucide-svelte";
+	import { LaneEffects } from "../../timeline/lane-effects.svelte";
+	import { OPAQUE_OUTPUT_EFFECTS } from "../../gl/effect-shaders";
+	import { ensureFontLoaded } from "../../text-overlay";
+	import {
+		DEFAULT_TEXT_STYLE,
+		type TextAlign,
+		type TextClip,
+		type TextLane,
+		type TextStyle,
+	} from "../../text";
+	import type { SpectrumData } from "../../types";
+	import type { AudioResponse } from "../../audio/auto-range";
+	import ColorPicker from "../ui/ColorPicker.svelte";
+	import EffectsPanel from "../ui/EffectsPanel.svelte";
+	import FontSelect from "../ui/FontSelect.svelte";
+	import RangeSlider from "../ui/RangeSlider.svelte";
+
+	const BLEND_MODES = [
+		"normal",
+		"multiply",
+		"screen",
+		"overlay",
+		"add",
+		"subtract",
+		"difference",
+		"exclusion",
+	] as const;
+
+	interface Props {
+		/** The lane the selected clip lives in; the panel edits its style. */
+		lane: TextLane | null;
+		clip: TextClip | null;
+		onLaneChange: (lane: TextLane) => void;
+		onClipChange: (clip: TextClip) => void;
+		onBeforeEdit?: (coalesceKey?: string) => void;
+		/** Deselects the clip, which puts the image effects back in the sidebar. */
+		onClose?: () => void;
+		hasTrack?: boolean;
+		spectrumData?: SpectrumData | null;
+		/** Forwarded to the lane's effect panel for its spectrum read-out. */
+		response?: AudioResponse;
+		/**
+		 * The sidebar's own settings, rendered between this clip's controls and
+		 * its effect chain. They belong to the sidebar, not to the clip — but a
+		 * selected lane puts a chain in the middle of that column, and settings
+		 * stranded below it read as belonging to the text's effects.
+		 */
+		settings?: Snippet;
+	}
+
+	let {
+		lane,
+		clip,
+		onLaneChange,
+		onClipChange,
+		onBeforeEdit,
+		onClose,
+		hasTrack = false,
+		spectrumData = null,
+		response = undefined,
+		settings,
+	}: Props = $props();
+
+	function setUnderEffects(under: boolean) {
+		if (!lane) return;
+		onBeforeEdit?.();
+		onLaneChange({ ...lane, underEffects: under });
+	}
+
+	function setStyle<K extends keyof TextStyle>(
+		key: K,
+		value: TextStyle[K],
+		coalesceKey?: string,
+	) {
+		if (!lane) return;
+		onBeforeEdit?.(coalesceKey);
+		onLaneChange({ ...lane, style: { ...lane.style, [key]: value } });
+	}
+
+	/**
+	 * Double-clicking a row — its label, its slider, its checkbox, its swatch —
+	 * puts that style back to the default. Bound on the row rather than the
+	 * control so it also reaches a native select, whose open popup swallows the
+	 * second click. Text fields and the open colour picker are left alone, so
+	 * double-click-to-select-a-word and picking a preset still work.
+	 */
+	function resetStyle(e: MouseEvent, key: keyof TextStyle) {
+		const t = e.target as HTMLElement | null;
+		if (t?.closest('input[type="text"], textarea, .picker')) return;
+		setStyle(key, DEFAULT_TEXT_STYLE[key]);
+	}
+
+	function setText(text: string) {
+		if (!clip) return;
+		onBeforeEdit?.(`text-body-${clip.id}`);
+		onClipChange({ ...clip, text });
+	}
+
+	// The lane's chain, mirrored for EffectsPanel to own and written back on
+	// every edit. Handled here rather than by the editor: the chain on show is
+	// this mirror, so the editor has nothing to apply an edit to.
+	const chain = new LaneEffects(
+		() => lane,
+		(next) => onLaneChange(next),
+		(key) => onBeforeEdit?.(key),
+	);
+	$effect(() => chain.sync());
+
+	let opaqueNames = $derived(
+		chain.effects
+			.filter((e) => e.enabled && OPAQUE_OUTPUT_EFFECTS.has(e.defId))
+			.map((e) => e.defId),
+	);
+</script>
+
+{#if !clip || !lane}
+	<p class="empty">Select a text clip to edit it.</p>
+{:else}
+	<div class="clip-panel">
+		<div class="panel-head">
+			<h3 class="panel-title">{lane.name}</h3>
+			{#if onClose}
+				<button
+					class="close-btn"
+					onclick={onClose}
+					title="Close (Esc)"
+					aria-label="Close text clip"
+				>
+					<X size={14} />
+				</button>
+			{/if}
+		</div>
+		<textarea
+			class="text-input"
+			placeholder="Type the text for this clip"
+			value={clip.text}
+			oninput={(e) => setText((e.currentTarget as HTMLTextAreaElement).value)}
+		></textarea>
+
+		<!-- svelte-ignore a11y_no_static_element_interactions -->
+		<div
+			class="row"
+			title="Typeface this clip is drawn in. Double-click to reset."
+			ondblclick={(e) => {
+				void ensureFontLoaded(DEFAULT_TEXT_STYLE.fontFamily);
+				resetStyle(e, "fontFamily");
+			}}
+		>
+			<label for="tc-font">Font</label>
+			<FontSelect
+				id="tc-font"
+				value={lane.style.fontFamily}
+				onChange={(family) => setStyle("fontFamily", family)}
+			/>
+		</div>
+
+		<!-- svelte-ignore a11y_no_static_element_interactions -->
+		<div
+			class="row"
+			title="Height of the text as a share of the frame, so it holds at any export size. Double-click to reset."
+			ondblclick={(e) => resetStyle(e, "size")}
+		>
+			<label for="tc-size">Size</label>
+			<RangeSlider
+				id="tc-size"
+				value={lane.style.size}
+				min={0.02}
+				max={0.5}
+				step={0.005}
+				oninput={(v) => setStyle("size", v, `tc-size-${clip.id}`)}
+			/>
+			<span class="val">{Math.round(lane.style.size * 100)}%</span>
+		</div>
+
+		<!-- svelte-ignore a11y_no_static_element_interactions -->
+		<div
+			class="row"
+			title="Which side of the position the text runs from. It also sets the edge several lines line up on. Double-click to reset."
+			ondblclick={(e) => resetStyle(e, "align")}
+		>
+			<label for="tc-align">Align</label>
+			<select
+				id="tc-align"
+				value={lane.style.align}
+				onchange={(e) =>
+					setStyle(
+						"align",
+						(e.currentTarget as HTMLSelectElement).value as TextAlign,
+					)}
+			>
+				<option value="left">Left</option>
+				<option value="center">Center</option>
+				<option value="right">Right</option>
+			</select>
+		</div>
+
+		<!-- svelte-ignore a11y_no_static_element_interactions -->
+		<div
+			class="row"
+			title="Where the text is anchored across the frame — 0 at the left edge, 100 at the right. Double-click to reset."
+			ondblclick={(e) => resetStyle(e, "x")}
+		>
+			<label for="tc-x">Position X</label>
+			<RangeSlider
+				id="tc-x"
+				value={lane.style.x}
+				min={0}
+				max={1}
+				step={0.01}
+				oninput={(v) => setStyle("x", v, `tc-x-${clip.id}`)}
+			/>
+			<span class="val">{Math.round(lane.style.x * 100)}</span>
+		</div>
+
+		<!-- svelte-ignore a11y_no_static_element_interactions -->
+		<div
+			class="row"
+			title="Where the text is anchored down the frame — 0 at the top edge, 100 at the bottom. Double-click to reset."
+			ondblclick={(e) => resetStyle(e, "y")}
+		>
+			<label for="tc-y">Position Y</label>
+			<RangeSlider
+				id="tc-y"
+				value={lane.style.y}
+				min={0}
+				max={1}
+				step={0.01}
+				oninput={(v) => setStyle("y", v, `tc-y-${clip.id}`)}
+			/>
+			<span class="val">{Math.round(lane.style.y * 100)}</span>
+		</div>
+
+		<!-- svelte-ignore a11y_no_static_element_interactions -->
+		<div
+			class="row"
+			title="Fill colour of the text. Double-click to reset."
+			ondblclick={(e) => resetStyle(e, "color")}
+		>
+			<label for="tc-color">Color</label>
+			<ColorPicker
+				id="tc-color"
+				value={lane.style.color}
+				defaultValue="#ffffff"
+				onChange={(hex) => setStyle("color", hex)}
+			/>
+		</div>
+
+		<!-- svelte-ignore a11y_no_static_element_interactions -->
+		<div
+			class="row"
+			title="Draw a stroke around each letter, which is what keeps text readable over a busy shot. Double-click to reset."
+			ondblclick={(e) => resetStyle(e, "outline")}
+		>
+			<label for="tc-outline">Outline</label>
+			<input
+				id="tc-outline"
+				type="checkbox"
+				checked={lane.style.outline}
+				onchange={(e) =>
+					setStyle("outline", (e.currentTarget as HTMLInputElement).checked)}
+			/>
+		</div>
+
+		{#if lane.style.outline}
+			<!-- svelte-ignore a11y_no_static_element_interactions -->
+			<div
+				class="row"
+				title="Colour of the stroke. The most contrast with the fill gives the most readable text. Double-click to reset."
+				ondblclick={(e) => resetStyle(e, "outlineColor")}
+			>
+				<label for="tc-outline-color">Outline color</label>
+				<ColorPicker
+					id="tc-outline-color"
+					value={lane.style.outlineColor}
+					defaultValue="#000000"
+					onChange={(hex) => setStyle("outlineColor", hex)}
+				/>
+			</div>
+			<!-- svelte-ignore a11y_no_static_element_interactions -->
+			<div
+				class="row"
+				title="Thickness of the stroke, in pixels at 720p and scaled from there. Double-click to reset."
+				ondblclick={(e) => resetStyle(e, "outlineWidth")}
+			>
+				<label for="tc-outline-w">Outline width</label>
+				<RangeSlider
+					id="tc-outline-w"
+					value={lane.style.outlineWidth}
+					min={0}
+					max={8}
+					step={0.5}
+					oninput={(v) => setStyle("outlineWidth", v, `tc-ow-${clip.id}`)}
+				/>
+				<span class="val">{lane.style.outlineWidth}</span>
+			</div>
+		{/if}
+
+		<!-- svelte-ignore a11y_no_static_element_interactions -->
+		<div
+			class="row"
+			title="How much of the text shows, against what is under it. Double-click to reset."
+			ondblclick={(e) => resetStyle(e, "opacity")}
+		>
+			<label for="tc-opacity">Opacity</label>
+			<RangeSlider
+				id="tc-opacity"
+				value={lane.style.opacity}
+				min={0}
+				max={1}
+				step={0.01}
+				oninput={(v) => setStyle("opacity", v, `tc-op-${clip.id}`)}
+			/>
+			<span class="val">{Math.round(lane.style.opacity * 100)}%</span>
+		</div>
+
+		<!-- svelte-ignore a11y_no_static_element_interactions -->
+		<div
+			class="row"
+			title="How the text's colours mix with the layers underneath instead of simply covering them. Double-click to reset."
+			ondblclick={(e) => resetStyle(e, "blendMode")}
+		>
+			<label for="tc-blend">Blend</label>
+			<select
+				id="tc-blend"
+				value={lane.style.blendMode}
+				onchange={(e) =>
+					setStyle(
+						"blendMode",
+						(e.currentTarget as HTMLSelectElement)
+							.value as TextStyle["blendMode"],
+					)}
+			>
+				{#each BLEND_MODES as mode (mode)}
+					<option value={mode}>{mode}</option>
+				{/each}
+			</select>
+		</div>
+
+		<!-- svelte-ignore a11y_no_static_element_interactions -->
+		<div
+			class="row"
+			title="When on, the text joins the frame before the image effects run, so they distort it too. When off, it's drawn over the finished frame and they leave it alone."
+		>
+			<label for="tc-under">Under effects</label>
+			<input
+				id="tc-under"
+				type="checkbox"
+				checked={lane.underEffects}
+				onchange={(e) =>
+					setUnderEffects((e.currentTarget as HTMLInputElement).checked)}
+			/>
+		</div>
+
+		{#if settings}
+			<div class="settings-slot">{@render settings()}</div>
+		{/if}
+
+		<h3 class="panel-title section" class:no-rule={!!settings}>Text effects</h3>
+		{#if opaqueNames.length > 0}
+			<p class="warn">
+				{opaqueNames.join(", ")} paints its own background, so it fills the frame
+				instead of following the letters.
+			</p>
+		{/if}
+		<EffectsPanel
+			bind:effects={() => chain.effects, (v) => (chain.effects = v)}
+			{hasTrack}
+			{spectrumData}
+			{response}
+			onVolumeLinkChange={(i, key, link) => chain.linkChange(i, key, link)}
+			onUserEdit={() => chain.commit()}
+			onEffectsReplaced={() => chain.commit()}
+			onBeforeUserEdit={onBeforeEdit}
+		/>
+	</div>
+{/if}
+
+<style>
+	.clip-panel {
+		display: flex;
+		flex-direction: column;
+		gap: 0.4rem;
+		padding: 0.75rem;
+		/* Sits at the top of the sidebar and keeps its natural height: the
+		   sidebar is one scroll region, so a scrollbar here would strand the
+		   settings below it at the bottom of the window. */
+		flex: 0 0 auto;
+		border-bottom: 1px solid var(--line);
+		/* Matches the effects panel this replaces. Without a width the sidebar is
+		   sized by this panel's content, and the help text alone is a single
+		   unbroken max-content line — enough to stretch the sidebar across the
+		   window the moment a clip is selected. */
+		width: 100%;
+		max-width: var(--sidebar-w);
+		box-sizing: border-box;
+	}
+
+	@media (max-width: 800px) {
+		.clip-panel {
+			width: 100%;
+			max-width: 100%;
+		}
+	}
+
+	/* Nothing shrinks: children keep their natural height and the panel scrolls. */
+	.clip-panel > :global(*) {
+		flex-shrink: 0;
+	}
+
+	/* The nested chain carries the same padding as it does in the sidebar, so it
+	   goes full-bleed here — inside this panel's padding too it sat in a double
+	   inset, reading as a sunken box rather than a continuation of the panel. */
+	.clip-panel :global(aside.effects-panel) {
+		width: auto;
+		max-width: none;
+		margin: 0 -0.75rem -0.75rem;
+	}
+
+	.empty {
+		padding: 0.75rem;
+		color: var(--text-3);
+		font-size: 0.75rem;
+	}
+
+	/* The lane names the panel; the clip's own text is the box below, so it is
+	   not repeated up here. */
+	.panel-head {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 0.5rem;
+	}
+
+	.close-btn {
+		display: flex;
+		align-items: center;
+		flex-shrink: 0;
+		padding: 2px;
+		border: none;
+		border-radius: 4px;
+		background: none;
+		color: var(--text-3);
+		cursor: pointer;
+	}
+
+	.close-btn:hover {
+		color: var(--text);
+	}
+
+	.panel-title {
+		font-size: 0.7rem;
+		font-weight: 600;
+		letter-spacing: 0.08em;
+		color: var(--text-3);
+		text-transform: uppercase;
+	}
+
+	.section {
+		margin-top: 0.5rem;
+		padding-top: 0.6rem;
+		border-top: 1px solid var(--line);
+	}
+
+	/* The settings above already close with a rule of their own. */
+	.section.no-rule {
+		margin-top: 0.75rem;
+		padding-top: 0;
+		border-top: none;
+	}
+
+	/* Edge to edge, like the chain below it: it is a sidebar section on loan,
+	   and it should read as one rather than as a boxed-in row of this panel. */
+	.settings-slot {
+		margin: 0.5rem -0.75rem 0;
+		border-top: 1px solid var(--line);
+	}
+
+	/* Mobile keeps them on the Settings tab, where they always were. */
+	@media (max-width: 800px) {
+		.settings-slot {
+			display: none;
+		}
+	}
+
+	.warn {
+		color: #d9a441;
+		font-size: 0.68rem;
+		line-height: 1.35;
+	}
+
+	.text-input {
+		min-height: 60px;
+		/* A textarea carries an intrinsic `cols` width that ignores the flex
+		   column it sits in. */
+		width: 100%;
+		box-sizing: border-box;
+		padding: 0.35rem;
+		border: 1px solid var(--line);
+		border-radius: 4px;
+		background: var(--surface);
+		color: var(--text);
+		font-size: 0.78rem;
+		font-family: inherit;
+		resize: vertical;
+	}
+
+	.row {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		font-size: 0.78rem;
+	}
+
+	.row label {
+		flex-shrink: 0;
+		min-width: 84px;
+		color: var(--text-2);
+		font-size: 0.75rem;
+		/* The row's double-click resets the style; without this it also selects
+		   the label text. */
+		user-select: none;
+	}
+
+	.row :global(.font-select) {
+		flex: 1;
+		min-width: 0;
+	}
+
+	/* The font picker is its own component, so the row's select styling has to
+	   reach across the boundary to keep it looking like the rest of the panel. */
+	.row :global(.font-select select) {
+		padding: 0.2rem 0.3rem;
+		border-radius: 4px;
+		background: var(--surface);
+		color: var(--text);
+		font-family: inherit;
+		font-size: 0.75rem;
+	}
+
+	.row select {
+		flex: 1;
+		/* Font names are long; without this the select refuses to shrink below
+		   its widest option and pushes the row wider than the panel. */
+		min-width: 0;
+		padding: 0.2rem 0.3rem;
+		border: 1px solid var(--line);
+		border-radius: 4px;
+		background: var(--surface);
+		color: var(--text);
+		font-size: 0.75rem;
+		font-family: inherit;
+	}
+
+	.row input[type="checkbox"] {
+		accent-color: #888;
+	}
+
+	.val {
+		min-width: 34px;
+		text-align: right;
+		color: var(--text-3);
+		font-size: 0.75rem;
+	}
+</style>

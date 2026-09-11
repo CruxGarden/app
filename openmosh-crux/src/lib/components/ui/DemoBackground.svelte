@@ -1,0 +1,316 @@
+<script lang="ts">
+	/**
+	 * Live mosh running behind the upload screen — the app demoing itself rather
+	 * than a video of it. Renders into the warm canvas App already keeps around
+	 * for shader pre-compilation, so the demo costs no extra WebGL context and
+	 * hands the same one straight to the editor when a file lands.
+	 */
+	import { untrack } from "svelte";
+	import { Play, Square } from "lucide-svelte";
+	import { GlRenderer } from "../../gl/renderer";
+	import { demoBackgroundEnabled, updateSettings } from "../../editor/settings";
+	import { loadDemoSources } from "../../demo/demo-sources";
+	import {
+		getDemoDirector,
+		missingDemoEffects,
+		stillDemoEffects,
+	} from "../../demo/demo-director";
+
+	interface Props {
+		warmCanvas: HTMLCanvasElement | null;
+		warmRenderer: GlRenderer | null;
+		/** Bound so the STOP button can also quiet things outside the demo. */
+		playing?: boolean;
+	}
+
+	let {
+		warmCanvas,
+		warmRenderer,
+		playing = $bindable(demoBackgroundEnabled()),
+	}: Props = $props();
+
+	let holder = $state<HTMLDivElement>(undefined!);
+	let sources = $state<HTMLImageElement[]>([]);
+
+	/** Seconds the demo takes to come up from black on its first frames. */
+	const FADE_SECONDS = 1.2;
+	const easeOut = (p: number) => 1 - (1 - p) ** 3;
+
+	/** Set once the render loop is wired up, so the button can drive it without
+	 * tearing down and reparenting the canvas on every toggle. */
+	let transport = $state<{
+		start: () => void;
+		stop: () => void;
+		blank: () => void;
+	} | null>(null);
+
+	function togglePlaying() {
+		playing = !playing;
+		updateSettings({ demoBackground: playing });
+	}
+
+	$effect(() => {
+		if (import.meta.env.DEV) {
+			const missing = missingDemoEffects();
+			if (missing.length > 0) {
+				console.warn("Demo references unknown effects:", missing);
+			}
+			const still = stillDemoEffects();
+			if (still.length > 0) {
+				console.warn(
+					"Demo's animated pool holds effects that never move:",
+					still,
+				);
+			}
+		}
+		let cancelled = false;
+		void loadDemoSources().then((imgs) => {
+			if (!cancelled) sources = imgs;
+		});
+		return () => {
+			cancelled = true;
+		};
+	});
+
+	$effect(() => {
+		const renderer = warmRenderer;
+		const canvas = warmCanvas;
+		const imgs = sources;
+		if (!renderer || !canvas || imgs.length === 0 || !holder) return;
+
+		canvas.style.cssText = "";
+		canvas.className = "demo-canvas";
+		holder.appendChild(canvas);
+
+		// Shared across modes and mounts, so the performance never restarts.
+		const director = getDemoDirector(imgs.length);
+		let shownIndex = -1;
+		/** Poster currently staged in the renderer's outgoing slot. */
+		let altIndex = -1;
+		let raf = 0;
+		// Fed a delta rather than wall-clock, so a pause doesn't silently skip
+		// the demo forward by however long it sat frozen.
+		let lastTs = 0;
+		/** Seconds of drawn demo so far, capped at FADE_SECONDS. */
+		let fadeT = 0;
+
+		// Driven off the render loop rather than a CSS transition: the fade has
+		// to start from a frame that was actually painted, and a class flipped
+		// around mount lands in the same frame as the first paint, so it just
+		// cuts. Sharing the loop's delta also means the ramp only advances on
+		// frames that really drew.
+		const advanceFade = (dt: number) => {
+			if (fadeT >= FADE_SECONDS) return;
+			fadeT = Math.min(FADE_SECONDS, fadeT + dt);
+			holder.style.opacity = String(easeOut(fadeT / FADE_SECONDS));
+		};
+
+		const drawFrame = () => {
+			const now = performance.now();
+			const dt = lastTs ? (now - lastTs) / 1000 : 0;
+			lastTs = now;
+			const frame = director.advance(dt);
+			if (frame.sourceIndex !== shownIndex) {
+				const img = imgs[frame.sourceIndex];
+				// First upload allocates the texture and FBOs; later cuts only
+				// swap pixels, since every poster shares one size.
+				if (shownIndex === -1) renderer.loadImage(img);
+				else renderer.updateSourceImage(img);
+				shownIndex = frame.sourceIndex;
+			}
+			const t = frame.transition;
+			if (t) {
+				// The outgoing poster goes in the alt slot so the blend crosses
+				// two different media, not just two effect chains.
+				if (t.fromSourceIndex !== altIndex) {
+					renderer.updateAltSourceImage(imgs[t.fromSourceIndex]);
+					altIndex = t.fromSourceIndex;
+				}
+				renderer.renderTransition(
+					t.effects,
+					frame.effects,
+					t.type,
+					t.progress,
+					t.seed,
+					t.direction,
+					t.density,
+					frame.time,
+					true,
+				);
+			} else {
+				renderer.render(frame.effects, frame.time);
+			}
+			// dt is 0 on the first frame after any start, so the priming draw
+			// paints the holder at opacity 0 before the ramp moves at all.
+			advanceFade(dt);
+		};
+
+		const loop = () => {
+			drawFrame();
+			raf = requestAnimationFrame(loop);
+		};
+
+		const stop = () => {
+			if (raf) cancelAnimationFrame(raf);
+			raf = 0;
+			lastTs = 0;
+		};
+		const start = () => {
+			if (!raf && !document.hidden) raf = requestAnimationFrame(loop);
+		};
+		// Stopping is a blackout, not a pause, so it cuts and re-fades on
+		// resume. A tab left in the background only calls stop().
+		const blank = () => {
+			fadeT = 0;
+			holder.style.opacity = "0";
+		};
+		const onVisibility = () => (document.hidden || !playing ? stop() : start());
+
+		// Prime the canvas so the first painted frame isn't a fade-in from
+		// nothing. Skipped when switched off, since off means a black screen
+		// rather than a held still. Untracked: this draw runs inside the effect
+		// body, so anything it touches would otherwise become a dependency and
+		// re-trigger the whole setup.
+		if (untrack(() => playing)) untrack(drawFrame);
+		document.addEventListener("visibilitychange", onVisibility);
+		transport = { start, stop, blank };
+
+		return () => {
+			stop();
+			transport = null;
+			document.removeEventListener("visibilitychange", onVisibility);
+			// The editor inherits this renderer; a poster left in the outgoing
+			// slot would surface in its first sequence transition.
+			renderer.clearAltSource();
+			// Park the canvas back where warmup left it, hidden — the editor
+			// reparents this exact element and expects it still attached. Same
+			// style as warmup, since by now it carries the demo's render size and
+			// would otherwise leave a page-tall box at the end of <body>.
+			canvas.style.cssText = GlRenderer.PARKED_CANVAS_STYLE;
+			canvas.className = "";
+			document.body.appendChild(canvas);
+		};
+	});
+
+	$effect(() => {
+		if (!transport) return;
+		if (playing) {
+			transport.start();
+		} else {
+			transport.stop();
+			transport.blank();
+		}
+	});
+</script>
+
+<div class="demo-bg" class:blank={!playing}>
+	<div class="demo-holder" bind:this={holder}></div>
+	<div class="scrim"></div>
+</div>
+
+{#if transport}
+	<button
+		class="demo-toggle"
+		onclick={togglePlaying}
+		title={playing
+			? "Black out the background demo"
+			: "Resume the background demo"}
+	>
+		{#if playing}
+			<Square size={12} />
+			STOP
+		{:else}
+			<Play size={12} />
+			ANIMATE
+		{/if}
+	</button>
+{/if}
+
+<style>
+	.demo-bg {
+		position: fixed;
+		inset: 0;
+		z-index: 0;
+		overflow: hidden;
+		pointer-events: none;
+		background: #000;
+	}
+
+	/* Switched off is the flat #121212 the upload screen had before the demo
+	   existed — inherited from :root, no gradient, no scrim. */
+	.demo-bg.blank {
+		background: #121212;
+	}
+
+	/* The scrim only exists to keep the UI readable over the mosh; over the
+	   blank grey it would just crush it back to black. */
+	.blank .scrim {
+		opacity: 0;
+	}
+
+	/* Starts black and comes up into the mosh — the first frame is a whole
+	   image appearing at once, so a hard cut reads as a flash. The ramp itself
+	   is an inline opacity written by the render loop, not a transition. */
+	.demo-holder {
+		position: absolute;
+		inset: 0;
+		opacity: 0;
+	}
+
+	.demo-holder :global(.demo-canvas) {
+		position: absolute;
+		inset: 0;
+		width: 100%;
+		height: 100%;
+		object-fit: cover;
+	}
+
+	/* Bottom left, opposite the GitHub link. Above the upload screen, which is
+	   a full-viewport flex layer and would otherwise swallow the click. */
+	.demo-toggle {
+		position: fixed;
+		bottom: 1rem;
+		left: 1rem;
+		z-index: 2;
+		display: inline-flex;
+		align-items: center;
+		gap: 0.4rem;
+		padding: 0.35rem 0.75rem;
+		border: 1.5px solid rgba(255, 255, 255, 0.14);
+		border-radius: 999px;
+		background: rgba(10, 10, 12, 0.5);
+		backdrop-filter: blur(16px);
+		-webkit-backdrop-filter: blur(16px);
+		color: #7d7d7d;
+		font-family: inherit;
+		font-size: 0.66rem;
+		font-weight: 600;
+		letter-spacing: 0.08em;
+		cursor: pointer;
+		transition:
+			color 0.2s,
+			border-color 0.2s;
+	}
+
+	.demo-toggle:hover {
+		border-color: rgba(255, 255, 255, 0.32);
+		color: #ccc;
+	}
+
+	/* The upload UI has to stay readable over whatever the mosh throws up:
+	   a heavy centre-weighted scrim, not a flat dim, so the corners keep some
+	   of the motion. */
+	.scrim {
+		position: absolute;
+		inset: 0;
+		transition: opacity 0.5s ease;
+		background:
+			radial-gradient(
+				ellipse 70% 60% at 50% 45%,
+				rgba(0, 0, 0, 0.92) 0%,
+				rgba(0, 0, 0, 0.78) 45%,
+				rgba(0, 0, 0, 0.6) 100%
+			),
+			linear-gradient(rgba(8, 8, 10, 0.55), rgba(8, 8, 10, 0.55));
+	}
+</style>

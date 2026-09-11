@@ -1,7 +1,9 @@
+import { importNativeAsset, readNativeAsset, validateNativeDocument } from './native-app-document';
 import { notebookPath, isNotebookImage } from './notebook-path';
 import { importNotebook } from './notebook-import';
 import {
   isEmbeddedApp,
+  isOpenMosh,
   isMoqira,
   isCardinal,
   samplerType,
@@ -48,6 +50,12 @@ export function notebookSession(workspace: StoreApi<CruxState>) {
       if (state.viewingSnapshotId) throw new Error('Return to the current app to edit.');
       await flushIngestion();
       const { artifact } = getServices();
+      const native = isOpenMosh(state.crux);
+      if (native && request.op === 'native-import') {
+        await assertCopyWritable(owner);
+        return importNativeAsset(owner, request.bytes, request.mimeType);
+      }
+      if (native && request.op === 'native-read') return readNativeAsset(owner, request.path);
       if (request.op === 'save-output') {
         if (
           typeof request.content !== 'string' ||
@@ -87,13 +95,17 @@ export function notebookSession(workspace: StoreApi<CruxState>) {
             fingerprint: f.fingerprint,
           }));
       }
-      const path = sampler
-        ? samplerPath(sampler, request.path)
-        : cardinal
-          ? cardinalPath(request.path)
-          : moqira
-            ? moqiraPath(request.path)
-            : notebookPath(request.path);
+      if (native && request.path !== 'project.json')
+        throw new Error('OpenMosh can access only its project document and imported assets.');
+      const path = native
+        ? 'data/project.json'
+        : sampler
+          ? samplerPath(sampler, request.path)
+          : cardinal
+            ? cardinalPath(request.path)
+            : moqira
+              ? moqiraPath(request.path)
+              : notebookPath(request.path);
       let existing = files.find((f) => pathOf(f) === path);
       if (op === 'read') {
         // Watcher batches are debounced. Reconcile this file before opening it,
@@ -184,6 +196,7 @@ export function notebookSession(workspace: StoreApi<CruxState>) {
             meta: { path },
           });
         } else {
+          if (native) await validateNativeDocument(owner, request.content);
           if (moqira) validateMoqiraFile(path, request.content);
           if (cardinal) validateCardinalFile(request.content);
           if (sampler) validateSamplerFile(sampler, request.content);
@@ -207,15 +220,16 @@ export function notebookSession(workspace: StoreApi<CruxState>) {
       }
       await workspace.getState().refreshArtifacts();
       await workspace.getState().createSnapshot({
-        label: sampler
-          ? 'Project saved'
-          : cardinal
-            ? 'Instrument saved'
-            : moqira
-              ? 'Wireframes saved'
-              : op === 'delete'
-                ? 'Deleted a note'
-                : 'Notebook saved',
+        label:
+          sampler || native
+            ? 'Project saved'
+            : cardinal
+              ? 'Instrument saved'
+              : moqira
+                ? 'Wireframes saved'
+                : op === 'delete'
+                  ? 'Deleted a note'
+                  : 'Notebook saved',
         ifChanged: true,
         silent: true,
       });

@@ -242,9 +242,9 @@ const TEMPLATES: Template[] = [
     desktopOnly: true,
   },
   {
-    id: 'tool-openmosh',
-    label: 'OpenMosh effects',
-    description: 'Creative · layer image effects and export a PNG',
+    id: 'openmosh-app',
+    label: 'OpenMosh',
+    description: 'Creative · the full image, video and slideshow editor',
     defaultTitle: 'Signal garden',
     icon: <LayoutIcon />,
     thumb: <BlankThumb />,
