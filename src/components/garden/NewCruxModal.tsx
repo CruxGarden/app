@@ -242,6 +242,15 @@ const TEMPLATES: Template[] = [
     desktopOnly: true,
   },
   {
+    id: 'audiomass-app',
+    label: 'AudioMass',
+    description: 'Creative · waveform effects, recordings and multitrack audio',
+    defaultTitle: 'My audio',
+    icon: <LayoutIcon />,
+    thumb: <BlankThumb />,
+    kind: 'webapp',
+  },
+  {
     id: 'minipaint-app',
     label: 'miniPaint',
     description: 'Creative · photo editing, paint, text and editable layers',
