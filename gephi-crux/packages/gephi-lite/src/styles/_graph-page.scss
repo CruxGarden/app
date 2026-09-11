@@ -1,0 +1,94 @@
+#graph-page {
+  // default background color which can be customized by user
+  background-color: var(--gl-body-bg);
+
+  .stage {
+    position: absolute;
+    inset: 0;
+  }
+
+  .sigma-container,
+  .sigma-layers {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    inset: 0;
+    margin: 0;
+  }
+
+  .react-sigma {
+    z-index: -1;
+  }
+
+  .graph-layout-grid {
+    z-index: -1;
+  }
+
+  .sigma-controls {
+    .btn-dark {
+      color: var(--bs-btn-hover-color);
+      background-color: var(--bs-btn-hover-bg);
+      border-color: var(--bs-btn-hover-border-color);
+
+      &:hover {
+        color: var(--bs-btn-color);
+        background-color: $black;
+        border-color: var(--bs-btn-border-color);
+      }
+    }
+  }
+
+  // z-indexing management:
+  .filler {
+    z-index: 110;
+  }
+
+  .stage {
+    z-index: 120;
+  }
+
+  .sigma-mouse {
+    z-index: 130;
+  }
+
+  .sigma-controls,
+  .panel {
+    z-index: 140;
+  }
+}
+
+#graph-title-edition {
+  z-index: 141;
+  top: -0.625rem !important;
+
+  > div {
+    textarea {
+      background-color: color-mix(
+        in hsl,
+        var(--gl-container-highest-bg),
+        var(--gl-body-color) $gl-sys-proportion-component-hover-color-mix
+      );
+      max-width: calc(100% - 4px);
+      height: 5rem;
+      padding-left: 0.45rem;
+      padding-right: 0.45rem;
+    }
+  }
+}
+
+:root {
+  --sigma-background-color: transparent;
+}
+
+ul.attributes-list {
+  li:not(:last-child) {
+    border-bottom: 1px solid var(--gl-container-border-color);
+  }
+}
+
+.selected-nodes-item,
+.selected-edges-item {
+  &:not(:last-child) {
+    margin-bottom: 1rem;
+  }
+}

@@ -96,6 +96,13 @@ export function getMockLanguageModel(): LanguageModel {
           }
           return toolCallStream('list_cruxspace_assets', {});
         }
+        if (lastUserText(prompt).includes('[gephi:title]')) {
+          const rounds = toolResultsThisTurn(prompt);
+          if (!rounds.length) return toolCallStream('inspect_gephi', {});
+          if (rounds.length === 1)
+            return toolCallStream('set_gephi_title', { title: 'Research connections' });
+          return textStream('Updated the network title and saved it in Garden.');
+        }
         if (lastUserText(prompt).includes('[jupyterlite:cell]')) {
           const rounds = toolResultsThisTurn(prompt);
           if (!rounds.length) return toolCallStream('inspect_jupyterlite', {});

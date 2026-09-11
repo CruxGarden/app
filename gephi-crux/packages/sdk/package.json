@@ -1,0 +1,44 @@
+{
+  "name": "@gephi/gephi-lite-sdk",
+  "description": "Gephi Lite core types and utils functions",
+  "version": "1.0.1",
+  "main": "dist/gephi-gephi-lite-sdk.cjs.js",
+  "module": "dist/gephi-gephi-lite-sdk.esm.js",
+  "files": [
+    "/dist"
+  ],
+  "scripts": {
+    "test": "vitest run src"
+  },
+  "sideEffects": false,
+  "homepage": "https://gephi.org/gephi-lite",
+  "bugs": "https://github.com/gephi/gephi-lite/issues",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/gephi/gephi-lite.git",
+    "directory": "packages/template"
+  },
+  "preconstruct": {
+    "entrypoints": [
+      "index.ts"
+    ]
+  },
+  "peerDependencies": {
+    "graphology": "^0.25.4"
+  },
+  "devDependencies": {
+    "graphology-types": "^0.24.8"
+  },
+  "license": "gpl-3.0",
+  "exports": {
+    ".": {
+      "module": "./dist/gephi-gephi-lite-sdk.esm.js",
+      "import": "./dist/gephi-gephi-lite-sdk.cjs.mjs",
+      "default": "./dist/gephi-gephi-lite-sdk.cjs.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "dependencies": {
+    "luxon": "^3.6.1"
+  }
+}

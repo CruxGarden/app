@@ -1,0 +1,108 @@
+
+body {
+  @extend .gl-text-ui;
+  font-family: "DM Sans", sans-serif;
+  background-color: var(--gl-body-bg);
+  color: var(--gl-body-color);
+}
+
+#root {
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+
+  header {
+    z-index: 200;
+
+    & > .row {
+      height: 40px;
+    }
+  }
+
+  main {
+    flex-shrink: 1;
+    flex-grow: 1;
+    overflow: hidden;
+    display: flex;
+    padding: 0;
+  }
+
+  // Mobile display:
+  @include media-breakpoint-down(sm) {
+    flex-direction: column-reverse;
+
+    header {
+      padding: 0 $gl-spacers-2;
+      border-top: 1px solid var(--gl-container-border-color);
+    }
+  }
+
+  @include media-breakpoint-up(sm) {
+    header {
+      padding: 0 $gl-spacers-3;
+    }
+  }
+}
+
+h1 {
+  @extend .gl-heading-1;
+}
+
+h2 {
+  @extend .gl-heading-2;
+}
+
+h3 {
+  @extend .gl-heading-3;
+}
+
+p,
+blockquote {
+  @extend .gl-text-section;
+}
+
+.gl-container-bg {
+  background-color: var(--gl-container-bg);
+  color: var(--gl-container-color);
+}
+
+.gl-container-high-bg {
+  @extend .gl-container-bg;
+  background-color: var(--gl-container-high-bg);
+}
+
+.gl-container-highest-bg {
+  @extend .gl-container-bg;
+  background-color: var(--gl-container-highest-bg);
+}
+
+.gl-actions {
+  @extend .gl-gap-2;
+  display: flex;
+  flex-direction: row;
+  width: 100%;
+  justify-content: end;
+}
+
+.gl-tooltip {
+  color: var(--gl-tooltip-color);
+  background-color: var(--gl-tooltip-bg);
+}
+
+.gl-alert-success,
+.gl-alert-info,
+.gl-alert-warning,
+.gl-alert-error {
+  background-color: color-mix(
+    in hsl,
+    var(--gl-container-highest-bg),
+    var(--gl-body-color) $gl-sys-proportion-component-hover-color-mix
+  );
+}
+
+a:not(.gl-btn) {
+  color: var(--gl-body-color) !important;
+  &:hover {
+    color: rgba(var(--gl-body-color-rgb), 0.9) !important;
+  }
+}

@@ -79,6 +79,12 @@ export function flushIngestion(): Promise<void> {
   return queueTail;
 }
 
+/** Reconcile a referenced file whose OS watcher notification may still be pending. */
+export async function reconcileProjectFile(folder: string, relPath: string): Promise<void> {
+  enqueue(() => processBatch({ folder, events: [{ type: 'write', relPath }] }));
+  await flushIngestion();
+}
+
 /** Notify interested UI (Artifacts panel, workshop) that a crux's files changed. */
 function announceChange(cruxId: string): void {
   window.dispatchEvent(new CustomEvent('crux:external-change', { detail: { cruxId } }));

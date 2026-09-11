@@ -1,3 +1,5 @@
+import { readNativeAsset } from './native-app-document';
+import { hashContent } from './sqlite/helpers';
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { initServices, getServices } from './index';
 import { initIngestion, stopIngestion, flushIngestion } from './ingestion';
@@ -88,6 +90,23 @@ describe('Ingestion (external edits → history)', () => {
     const { artifact } = getServices();
     return artifact.findByResource('crux', cruxId);
   }
+
+  it('reads a new fingerprinted native asset before its watcher event without writing disk', async () => {
+    const { crux, folder } = await makeCrux('Network');
+    const content = JSON.stringify({ nodes: ['a', 'b'] });
+    const fingerprint = await hashContent(content);
+    const path = `assets/${fingerprint}.bin`;
+    bridge.externalWrite(folder, 'data/' + path, content);
+    const writes = bridge.writeLog.length;
+    const result = await readNativeAsset(crux.id, path);
+    expect(new TextDecoder().decode(result.bytes)).toBe(content);
+    expect(bridge.writeLog).toHaveLength(writes);
+    expect(
+      (await artifactsOf(crux.id)).find((f) => f.meta?.path === 'data/' + path)?.fingerprint,
+    ).toBe(fingerprint);
+    bridge.externalWrite(folder, 'data/' + path, 'changed original');
+    await expect(readNativeAsset(crux.id, path)).rejects.toThrow('original media changed');
+  });
 
   it('records a new external file as an artifact', async () => {
     const { crux, folder } = await makeCrux('Site');

@@ -1,0 +1,421 @@
+import {
+  PiArrowCounterClockwise,
+  PiCheck,
+  PiGraph,
+  PiMagicWand,
+  PiPlay,
+  PiPolygon,
+  PiPolygonFill,
+  PiX,
+} from "react-icons/pi";
+
+## In short
+
+- Two types: default and toggle
+- Can contain an optional leading icon
+- Three styles: filled, outlined, and text
+- One size : medium
+- Keep labels concise and use sentence case
+
+## Specs
+
+### Types
+
+{<div className='w-auto d-flex justify-content-evenly p-5 gl-container-highest-bg'>
+
+<button className="gl-btn gl-btn-fill">Default</button>
+
+<div className="d-flex gl-gap-x-3">
+  <button className="gl-btn">Unselected</button>
+  <button className="gl-btn gl-btn-fill">Selected</button>
+</div>
+
+</div>}
+1. Default buttons: `gl-btn gl-btn-fill`
+2. Unselected toggle buttons: `gl-btn`
+3. Selected tpggme buttons: `gl-btn gl-btn-fill`
+
+### Styles
+
+#### Default Buttons
+
+{<div className='w-auto d-flex d-flex justify-content-evenly p-5 gl-container-highest-bg'>
+
+<button className="gl-btn gl-btn-fill">
+  <PiGraph className="" /> Filled
+</button>
+
+<button className="gl-btn gl-btn-outline">
+  <PiGraph className="" /> Outlined
+</button>
+
+<button className="gl-btn">
+  <PiGraph className="" /> Text
+</button>
+</div>}
+1. Filled buttons: `gl-btn gl-btn-fill`
+2. Outlined buttons: `gl-btn gl-btn-outline`
+3. Text buttons: `gl-btn`
+
+#### Toggle Buttons
+
+{<div className='w-auto d-flex justify-content-evenly p-5 gl-container-highest-bg'>
+
+<div className="d-flex gl-gap-x-3">
+  <button className="gl-btn">Unselected</button>
+  <button className="gl-btn gl-btn-fill">Selected</button>
+</div>
+
+<div className="d-flex gl-gap-x-3">
+  <button className="gl-btn gl-btn-outline">Unselected</button>
+  <button className="gl-btn gl-btn-fill">Selected</button>
+</div>
+
+</div>}
+1. Unselected **text** toggle buttons: `gl-btn`
+2. Selected **text** toggle buttons: `gl-btn gl-btn-fill`
+3. Unselected **outlined** toggle buttons: `gl-bt gl-btn-outline`
+4. Selected **outlined** toggle buttons: `gl-btn gl-btn-fill`
+
+### States
+
+#### Default
+
+##### Filled
+
+{<div className='w-auto d-flex justify-content-evenly p-5 gl-container-highest-bg'>
+
+<button className="gl-btn gl-btn-fill">Enabled</button>
+
+<button className="gl-btn gl-btn-fill" disabled>
+  Disabled
+</button>
+
+<button className="gl-btn gl-btn-fill gl-btn-fill-hovered">Hovered</button>
+
+<button className="gl-btn gl-btn-fill gl-btn-fill-focused">Focused</button>
+
+<button className="gl-btn gl-btn-fill gl-btn-fill-pressed">Pressed</button>
+
+</div>}
+
+##### Outlined
+
+{<div className='w-auto d-flex justify-content-evenly p-5 gl-container-highest-bg'>
+
+<button className="gl-btn gl-btn-outline">Enabled</button>
+
+<button className="gl-btn gl-btn-outline" disabled>
+  Disabled
+</button>
+
+<button className="gl-btn gl-btn-outline gl-btn-hovered">Hovered</button>
+
+<button className="gl-btn gl-btn-outline gl-btn-focused">Focused</button>
+
+<button className="gl-btn gl-btn-outline gl-btn-outline-pressed">Pressed</button>
+</div>}
+
+##### Text
+
+{<div className='w-auto d-flex d-flex justify-content-evenly p-5 gl-container-highest-bg'>
+
+<button className="gl-btn">Enabled</button>
+
+<button className="gl-btn" disabled>
+  Disabled
+</button>
+
+<button className="gl-btn gl-btn-hovered">Hovered</button>
+
+<button className="gl-btn gl-btn-focused">Focused</button>
+
+<button className="gl-btn gl-btn-pressed">Pressed</button>
+</div>}
+
+#### Toggle
+
+Note that the leading icon should always be field when the toggle button is selected / active.
+
+##### Text
+
+{
+
+<div className='w-auto d-flex flex-column gl-container-highest-bg gl-gap-4 p-5'>
+  <div className='w-auto d-flex justify-content-evenly align-items-center'>
+    <span className="gl-font-mono">1</span>
+
+    <button className="gl-btn"><PiPolygon className="gl-icon-size-text"/>Enabled</button>
+
+    <button className="gl-btn" disabled><PiPolygon className="gl-icon-size-text"/>Disabled</button>
+
+    <button className="gl-btn gl-btn-hovered"><PiPolygon className="gl-icon-size-text"/>Hovered</button>
+
+    <button className="gl-btn gl-btn-focused"><PiPolygon className="gl-icon-size-text"/>Focused</button>
+
+    <button className="gl-btn gl-btn-pressed"><PiPolygon className="gl-icon-size-text"/>Pressed</button>
+
+  </div>
+  <div className='w-auto d-flex justify-content-evenly align-items-center'>
+    <span className="gl-font-mono">2</span>
+
+    <button className="gl-btn gl-btn-fill"><PiPolygonFill className="gl-icon-size-text"/>Enabled</button>
+
+    <button className="gl-btn gl-btn-fill" disabled><PiPolygonFill className="gl-icon-size-text"/>Disabled</button>
+
+    <button className="gl-btn gl-btn-fill gl-btn-fill-hovered"><PiPolygonFill className="gl-icon-size-text"/>Hovered</button>
+
+    <button className="gl-btn gl-btn-fill gl-btn-fill-focused"><PiPolygonFill className="gl-icon-size-text"/>Focused</button>
+
+    <button className="gl-btn gl-btn-fill gl-btn-fill-pressed"><PiPolygonFill className="gl-icon-size-text"/>Pressed</button>
+
+  </div>
+</div>
+}
+
+1. Unselected
+2. Selected
+
+##### Outlined
+
+{
+
+<div className='w-auto d-flex flex-column gl-container-highest-bg gl-gap-4 p-5'>
+  <div className='w-auto d-flex justify-content-evenly align-items-center'>
+    <span className="gl-font-mono">1</span>
+
+    <button className="gl-btn gl-btn-outline"><PiPolygon className="gl-icon-size-text"/>Enabled</button>
+
+    <button className="gl-btn gl-btn-outline" disabled><PiPolygon className="gl-icon-size-text"/>Disabled</button>
+
+    <button className="gl-btn gl-btn-outline gl-btn-outline-hovered"><PiPolygon className="gl-icon-size-text"/>Hovered</button>
+
+    <button className="gl-btn gl-btn-outline gl-btn-outline-focused"><PiPolygon className="gl-icon-size-text"/>Focused</button>
+
+    <button className="gl-btn gl-btn-outline gl-btn-outline-pressed"><PiPolygon className="gl-icon-size-text"/>Pressed</button>
+
+  </div>
+  <div className='w-auto d-flex justify-content-evenly align-items-center'>
+    <span className="gl-font-mono">2</span>
+    <button className="gl-btn gl-btn-fill"><PiPolygonFill className="gl-icon-size-text"/>Enabled</button>
+
+    <button className="gl-btn gl-btn-fill" disabled><PiPolygonFill className="gl-icon-size-text"/>Disabled</button>
+
+    <button className="gl-btn gl-btn-fill gl-btn-fill-hovered"><PiPolygonFill className="gl-icon-size-text"/>Hovered</button>
+
+    <button className="gl-btn gl-btn-fill gl-btn-fill-focused"><PiPolygonFill className="gl-icon-size-text"/>Focused</button>
+
+    <button className="gl-btn gl-btn-fill gl-btn-fill-pressed"><PiPolygonFill className="gl-icon-size-text"/>Pressed</button>
+
+  </div>
+</div>
+}
+1. Unselected
+2. Selected
+
+### Size
+
+There is only one size of button for the moment, which can be refered as 'medium'.
+
+### Colors
+
+#### Bases
+
+Buttons are components and then use mostly components color variables.
+
+#### Background color
+
+- Text and outlined buttons backgrounds are transparent.
+- Filled buttons background is in `--gl-component-bg`.
+
+#### Borders
+
+The borders of the outlined buttons are in `--gl-component-border`.
+
+#### Text color
+
+Because text and outlined buttons backgrounds are transparent, their labels and icons are considered to be on the buttons container bakcground/surface. Therefore the text and icon color of these buttons is `--gl-container-color`.
+On the other side, because filled buttons background is in `--gl-component-bg`, their labels and icons are considered to be on the buttons itself, and then are in `--gl-component-color`.
+
+#### State colors
+
+Buttons states are mostly\* conveyed through their background colors. This background color is created by mixing the orignal background color of one button and the same color as its content with a fixed opacity.
+
+To do so we're using the color-mix css function.
+For exemple :
+
+`background-color: color-mix(in hsl, var(--gl-component-bg), var(--gl-component-color) $gl-sys-proportion-component-active-color-mix);`
+
+The opacity of each states are defined as gl variables:
+
+- `$gl-sys-proportion-component-hover-color-mix: $gl-ref-proportion-8; //8%`
+- `$gl-sys-proportion-component-focus-color-mix: $gl-ref-proportion-8; //8%`
+- `$gl-sys-proportion-component-active-color-mix: $gl-ref-proportion-24; //24%`
+- `$gl-sys-proportion-component-disabled-color-mix: $gl-ref-proportion-16; //16%`
+
+If other opacities are required, you can choose them from multiples of 4, and especially of 8. In this case, it will be essential to base your decisions on the contrast between the different states.
+
+\*The disabled state is conveyed by a change in the content color in addition to the background change. For text buttons the disabled state is only defined by the content color change.
+
+## Guidelines
+
+### Styles
+
+Buttons styles create hierarchy between actions, ranging from filled to text.
+{
+
+<div className="w-auto d-flex gl-gap-4 gl-text-section">
+  <div className="w-50 d-flex flex-column">
+    <div className="d-flex flex-column gl-gap-4 justify-content-start p-5 gl-container-highest-bg">
+      <div className='d-flex gl-gap-2'> 
+        <button className="gl-btn gl-btn-fill">Guess settings</button>
+        <button className="gl-btn gl-btn-outline">Reset</button>
+        <button className="gl-btn gl-btn-fill">
+          <PiPlay className="" /> Start
+        </button>
+      </div>
+      <div className='gl-border'> </div>
+      <div className="d-flex flex-column gl-gap-3">
+        <div className='d-flex gl-gap-2'>
+        <button className="gl-btn gl-btn-fill">Guess settings</button>
+        <button className="gl-btn gl-btn-outline">Reset</button>
+      </div>
+        <div>
+          <button className="gl-btn gl-btn-fill ">
+            <PiPlay className=""/> Start
+          </button>
+      </div>
+    </div>
+    </div>
+
+    <div className="pt-3">
+      <h6 className="gl-heading-3">
+        <PiX className="me-1 gl-icon-size-text" />
+        Don't
+      </h6>
+      <p>
+        Don’t use more than one filled buttons in the same group, pannel or modale. Consider presenting low-priority actions in sub-menus or as icon buttons.
+      </p>
+    </div>
+
+  </div>
+  <div className="w-50 d-flex flex-column">
+    <div className="d-flex flex-column gl-gap-4 justify-content-start p-5 gl-container-highest-bg">
+      <div className='d-flex gl-gap-2'> 
+        <button className="gl-btn gl-btn-outline gl-btn-icon"><PiMagicWand className="" /></button>
+        <button className="gl-btn gl-btn-outline gl-btn-icon"><PiArrowCounterClockwise className="" /></button>
+        <button className="gl-btn gl-btn-fill">
+          <PiPlay className="" /> Start
+        </button>
+      </div>
+      <div className='gl-border'> </div>
+      <div className="d-flex flex-column gl-gap-3">
+        <div className='d-flex gl-gap-2'>
+        <button className="gl-btn gl-btn-outline ">Guess settings</button>
+        <button className="gl-btn gl-btn-outline gl-btn-icon"><PiArrowCounterClockwise className="" /></button>
+      </div>
+        <div>
+          <button className="gl-btn gl-btn-fill ">
+            <PiPlay className=""/> Start
+          </button>
+        </div>
+    </div>
+    </div>
+
+    <div className="pt-3">
+      <h6 className="gl-heading-3">
+        <PiCheck className="me-1 gl-icon-size-text" />
+        Do
+      </h6>
+      <p>
+        Chose the main action of your pannel and highlight it with the fill style. Then, depending of the complexity and number of actions, chose what works the best between icon buttons, the outline style or sub menus.<span className='gl-text-muted'> In case of emergency : dropdown.</span>
+      </p>
+    </div>
+
+  </div>
+</div>
+}
+
+### Styles hierarchy
+
+While it always depends on the context, text buttons should be used commonly, and filled or outlined buttons should be used sparingly.
+{
+
+<div className="w-auto d-flex gl-gap-4 gl-text-section">
+  <div className="w-33 d-flex flex-column">
+    <div className="d-flex flex-column gl-gap-4 justify-content-start p-5 gl-container-highest-bg">
+      <div className="d-flex flex-column gl-gap-1">
+        <h6 className="gl-heading-3 ms-2">Open graph file</h6>
+        <button className="gl-btn gl-btn-fill">Open a local file</button>
+        <button className="gl-btn">Open an url</button>
+        <button className="gl-btn gl-btn-outline">Open on Github</button>
+      </div>
+    </div>
+    <div className="pt-3">
+      <h6 className="gl-heading-3">
+        <PiX className="me-1 gl-icon-size-text" />
+        Don't
+      </h6>
+      <p>
+        Text buttons don't work well when they are place next to other button style. In this context, their transparent
+        padding can feel awkward.
+      </p>
+    </div>
+  </div>
+  <div className="w-33 d-flex flex-column">
+    <div className="d-flex justify-content-start p-5 gl-container-highest-bg">
+      <div className="d-flex flex-column gl-gap-1">
+        <h6 className="gl-heading-3 ms-2">Open graph file</h6>
+        <button className="gl-btn">Open a local file</button>
+        <button className="gl-btn">Open an url</button>
+        <button className="gl-btn">Open on Github</button>
+      </div>
+    </div>
+    <div className="pt-3">
+      <h6 className="gl-heading-3">
+        <PiCheck className="me-1 gl-icon-size-text" />
+        Do
+      </h6>
+      <p>
+        In a group of buttons, using text style creates visual breathing room. This white space makes information more accessible and can sometimes help draw more attention. 
+      </p>
+    </div>
+  </div>
+
+  <div className="w-33 d-flex flex-column">
+    <div className="d-flex justify-content-start p-5 gl-container-highest-bg">
+      <div className="d-flex flex-column gl-gap-1">
+        <h6 className="gl-heading-3 ms-2">Open graph file</h6>
+        <button className="gl-btn gl-btn-fill">Open a local file</button>
+        <button className="gl-btn gl-btn-outline">Open an url</button>
+        <button className="gl-btn gl-btn-outline">Open on Github</button>
+      </div>
+    </div>
+    <div className="pt-3">
+      <h6 className="gl-heading-3">
+        <PiX className="me-1 gl-icon-size-text" />
+        Shouldn't
+      </h6>
+      <p>
+        Here, hierarchy between the actions is shown. However, it clutters the interface. Balance what is most important between suggesting actions and letting the users understand the options. They can make their decision by themself after reading, note that the order of the list still creates hierarchy.
+      </p>
+    </div>
+  </div>
+</div>
+}
+### Label Text
+{<p>Label text should be very brief, ideally 1–3 words. Use sentence case, which only capitalizes the first word and proper nouns. This allows the text to distinguish proper nouns, for example: Open in Gephi and Create node. Don’t truncate or wrap label text. It should always be fully visible on a single line.</p>
+}
+### Text Alignement
+When they are placed in a column, titles and text should be aligned on the buttons' label start.
+{
+<div className="w- auto d-flex flex-column gl-gap-4 justify-content-start p-5 gl-container-highest-bg align-items-center">
+  <div className="d-flex flex-column gl-gap-1">
+    <h6 className="gl-heading-3 ms-2">Title</h6>
+    <button className="gl-btn gl-btn-fill">Button</button>
+    <button className="gl-btn gl-btn-outline">Button</button>
+    <button className="gl-btn">Button</button>
+    <p className="m-0 ms-2">Text section</p>
+  </div>
+</div>
+}

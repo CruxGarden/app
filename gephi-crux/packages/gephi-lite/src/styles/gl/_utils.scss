@@ -1,0 +1,199 @@
+// Padding
+// ------------------------------------------
+@mixin padding-modifier {
+  @each $name, $space in $gl-spacers {
+    &-#{$name} {
+      padding: $space;
+    }
+  }
+}
+
+@mixin padding-x-modifier {
+  @each $name, $space in $gl-spacers {
+    &-#{$name} {
+      padding-left: $space;
+      padding-right: $space;
+    }
+  }
+}
+
+@mixin padding-y-modifier {
+  @each $name, $space in $gl-spacers {
+    &-#{$name} {
+      padding-top: $space;
+      padding-bottom: $space;
+    }
+  }
+}
+
+.gl-p {
+  @include padding-modifier;
+}
+
+.gl-px {
+  @include padding-x-modifier;
+}
+
+.gl-py {
+  @include padding-y-modifier;
+}
+
+
+// Margin
+// ------------------------------------------
+@mixin margin-modifier {
+  @each $name, $space in $gl-spacers {
+    &-#{$name} {
+      margin: $space;
+    }
+  }
+}
+
+@mixin margin-x-modifier {
+  @each $name, $space in $gl-spacers {
+    &-#{$name} {
+      margin-left: $space;
+      margin-right: $space;
+    }
+  }
+}
+
+@mixin margin-y-modifier {
+  @each $name, $space in $gl-spacers {
+    &-#{$name} {
+      margin-top: $space;
+      margin-bottom: $space;
+    }
+  }
+}
+
+.gl-m {
+  @include margin-modifier;
+}
+
+.gl-mx {
+  @include margin-x-modifier;
+}
+
+.gl-my {
+  @include margin-y-modifier;
+}
+
+// Gap
+// -------------------------------------------
+@mixin gap-modifier {
+  @each $name, $space in $gl-spacers {
+    &-#{$name} {
+      gap: $space;
+    }
+  }
+}
+
+@mixin gap-x-modifier {
+  @each $name, $space in $gl-spacers {
+    &-#{$name} {
+      column-gap: $space;
+    }
+  }
+}
+
+@mixin gap-y-modifier {
+  @each $name, $space in $gl-spacers {
+    &-#{$name} {
+      row-gap: $space;
+    }
+  }
+}
+
+.gl-gap {
+  @include gap-modifier;
+}
+
+.gl-gap-x {
+  @include gap-x-modifier;
+}
+
+.gl-gap-y {
+  @include gap-y-modifier;
+}
+
+// Rounded
+// -----------------------------------------
+@mixin border-radius-modifier {
+  @each $name, $radius in $gl-radius {
+    &-#{$name} {
+      border-radius: $radius;
+    }
+  }
+}
+
+.gl-rounded {
+  @include border-radius-modifier;
+}
+
+// Border
+// -----------------------------------------
+.gl-border {
+  border: 1px solid var(--gl-container-border-color);
+}
+
+
+// Text
+// -----------------------------------------
+// The font DM Mono allows letters to have the same width. It should be used as an exception to enhance understanding informations spread on multiple lines. For exemple, for numbers in the table of the Data Vue. 
+.gl-font-mono{
+  font-family: "DM Mono", monospace;
+}
+//UI style is the default text style of Gephi Lite. It is an utilitarian styles to use for short, interface-level content such as labels, buttons, inputs, navigation items, and component text.
+.gl-text-ui {
+    font-size: $gl-sys-font-size-text-ui;
+    line-height: $gl-sys-font-line-height-ui !important;
+}
+//Section style is used for longer passages of text in Gephi Lite. For example, consider using it for paragraphs or text spreading on more than one line.
+.gl-text-section {
+    font-size: $gl-sys-font-size-text-body;
+    line-height: $gl-sys-font-line-height-section !important;
+}
+//Smallest heading style, to be used for medium-emphasis text that remains relatively short. For example, consider using it to divide lists or secondary regions of pannels.
+.gl-heading-3 {
+  font-size: $gl-sys-font-size-heading-small;
+  font-weight: 700;
+  line-height: $gl-sys-font-line-height-heading !important;
+}
+.gl-heading-2{
+  //Medium heading style, to be used for high-emphasis text that remains relatively short. For example, consider using it as title of a pannel or a modale.
+  font-size: $gl-sys-font-size-heading-medium;
+  font-weight: 500;
+  line-height: $gl-sys-font-line-height-heading !important;
+}
+.gl-heading-1{
+  //Highest heading style, to be used for high-emphasis text that remains relatively short. For example, consider using it as title of a text section about Gephi Lite creators' developer skills. 
+  font-size: $gl-sys-font-size-heading-large;
+  font-weight: 500;
+  line-height: $gl-sys-font-line-height-heading !important;
+}
+.gl-text-muted {
+  color: var(--gl-container-muted-color);
+}
+
+
+// Icons
+// -----------------------------------------
+.gl-icon-size-text{
+  width: $gl-sys-size-icon-medium;
+  height: $gl-sys-size-icon-medium;
+}
+
+.gl-icon-size-heading{
+  width: $gl-sys-size-icon-largest;
+  height: $gl-sys-size-icon-largest;
+}
+
+// Shadows 
+.gl-shadow-high{
+  box-shadow: 0px 4px 8px 0px  rgba(var(--gl-overlay-high-shadow-rgb), $gl-sys-opacity-shadow-high) 
+}
+
+.gl-text-wrap-anywhere {
+  overflow-wrap: anywhere;
+}
