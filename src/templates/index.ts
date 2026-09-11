@@ -238,6 +238,7 @@ const loaders: Record<string, () => Promise<{ default: TemplateDefinition }>> = 
   'piskel-app': () => import('./piskel-app'),
   'rawgraphs-app': () => import('./rawgraphs-app'),
   'gephi-app': () => import('./gephi-app'),
+  'ketcher-app': () => import('./ketcher-app'),
   'jupyterlite-app': () => import('./jupyterlite-app'),
   'bitsy-app': () => import('./bitsy-app'),
   'audiomass-app': () => import('./audiomass-app'),

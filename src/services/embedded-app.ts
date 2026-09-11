@@ -10,6 +10,7 @@ const NATIVE_TEMPLATES = {
   'piskel-app': 'piskel',
   'rawgraphs-app': 'rawgraphs',
   'gephi-app': 'gephi',
+  'ketcher-app': 'ketcher',
   'jupyterlite-app': 'jupyterlite',
 } as const;
 /** Native adapters share the owner-bound document and binary bridge. */
