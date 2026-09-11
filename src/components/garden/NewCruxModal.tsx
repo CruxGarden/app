@@ -242,6 +242,15 @@ const TEMPLATES: Template[] = [
     desktopOnly: true,
   },
   {
+    id: 'bitsy-app',
+    label: 'Bitsy',
+    description: 'Creative · make tiny games, worlds, dialogue and music',
+    defaultTitle: 'My tiny world',
+    icon: <LayoutIcon />,
+    thumb: <BlankThumb />,
+    kind: 'webapp',
+  },
+  {
     id: 'audiomass-app',
     label: 'AudioMass',
     description: 'Creative · waveform effects, recordings and multitrack audio',

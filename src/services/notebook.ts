@@ -3,9 +3,7 @@ import { notebookPath, isNotebookImage } from './notebook-path';
 import { importNotebook } from './notebook-import';
 import {
   isEmbeddedApp,
-  isOpenMosh,
-  isMiniPaint,
-  isAudioMass,
+  nativeAppType,
   isMoqira,
   isCardinal,
   samplerType,
@@ -52,12 +50,8 @@ export function notebookSession(workspace: StoreApi<CruxState>) {
       if (state.viewingSnapshotId) throw new Error('Return to the current app to edit.');
       await flushIngestion();
       const { artifact } = getServices();
-      const nativeApp = isAudioMass(state.crux)
-        ? 'audiomass'
-        : isMiniPaint(state.crux)
-          ? 'minipaint'
-          : 'openmosh';
-      const native = isOpenMosh(state.crux) || isMiniPaint(state.crux) || isAudioMass(state.crux);
+      const nativeApp = nativeAppType(state.crux);
+      const native = nativeApp !== null;
       if (native && request.op === 'native-import') {
         await assertCopyWritable(owner);
         return importNativeAsset(owner, request.bytes, request.mimeType);

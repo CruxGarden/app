@@ -1,6 +1,20 @@
 import { TYPES, validateProject } from '../../tool-cruxes/shared/model.js';
 import { validateDocument } from '../../cardinal-crux/model.js';
 
+const NATIVE_TEMPLATES = {
+  'openmosh-app': 'openmosh',
+  'minipaint-app': 'minipaint',
+  'audiomass-app': 'audiomass',
+  'bitsy-app': 'bitsy',
+} as const;
+/** Native adapters share the owner-bound document and binary bridge. */
+export function nativeAppType(crux: { meta?: Record<string, unknown> } | null | undefined) {
+  const template = crux?.meta?.template;
+  return typeof template === 'string' && Object.hasOwn(NATIVE_TEMPLATES, template)
+    ? NATIVE_TEMPLATES[template as keyof typeof NATIVE_TEMPLATES]
+    : null;
+}
+
 export function isOpenMosh(crux: { meta?: Record<string, unknown> } | null | undefined) {
   return crux?.meta?.template === 'openmosh-app';
 }
@@ -20,7 +34,7 @@ export function isCardinal(crux: { meta?: Record<string, unknown> } | null | und
 export function embeddedContentRoot(
   crux: { kind?: string; meta?: Record<string, unknown> } | null | undefined,
 ) {
-  return samplerType(crux) || isOpenMosh(crux) || isMiniPaint(crux) || isAudioMass(crux)
+  return samplerType(crux) || nativeAppType(crux)
     ? 'data/'
     : isCardinal(crux)
       ? 'music/'
@@ -44,9 +58,7 @@ export function isEmbeddedApp(
   crux: { kind?: string; meta?: Record<string, unknown> } | null | undefined,
 ) {
   return (
-    isOpenMosh(crux) ||
-    isAudioMass(crux) ||
-    isMiniPaint(crux) ||
+    !!nativeAppType(crux) ||
     crux?.kind === 'notes' ||
     isMoqira(crux) ||
     isCardinal(crux) ||
@@ -97,13 +109,7 @@ export function samplerType(
   return TYPES.includes(type) ? type : null;
 }
 export function isLocalCreationTool(crux: { meta?: Record<string, unknown> } | null | undefined) {
-  return (
-    isAudioMass(crux) ||
-    isMiniPaint(crux) ||
-    isOpenMosh(crux) ||
-    isCardinal(crux) ||
-    !!samplerType(crux)
-  );
+  return !!nativeAppType(crux) || isCardinal(crux) || !!samplerType(crux);
 }
 export function samplerPath(type: string, value: unknown): string {
   if (value === 'project.json') return 'data/project.json';

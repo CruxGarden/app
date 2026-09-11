@@ -96,6 +96,13 @@ export function getMockLanguageModel(): LanguageModel {
           }
           return toolCallStream('list_cruxspace_assets', {});
         }
+        if (lastUserText(prompt).includes('[bitsy:title]')) {
+          const rounds = toolResultsThisTurn(prompt);
+          if (!rounds.length) return toolCallStream('inspect_bitsy', {});
+          if (rounds.length === 1)
+            return toolCallStream('set_bitsy_title', { title: 'The Midnight Garden' });
+          return textStream('Saved the Bitsy game title.');
+        }
         if (lastUserText(prompt).includes('[audiomass:track]')) {
           const rounds = toolResultsThisTurn(prompt);
           if (!rounds.length) return toolCallStream('inspect_audiomass', {});
