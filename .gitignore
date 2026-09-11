@@ -16,3 +16,5 @@ minipaint-crux/runtime/
 mermaid-crux/runtime/
 mermaid-crux/.svelte-kit/
 mermaid-crux/static/embed.js
+
+piskel-crux/dest/

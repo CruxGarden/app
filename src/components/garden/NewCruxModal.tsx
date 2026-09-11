@@ -242,6 +242,16 @@ const TEMPLATES: Template[] = [
     desktopOnly: true,
   },
   {
+    id: 'piskel-app',
+    label: 'Piskel',
+    description: 'Pixel art · sprites, layers and frame animation',
+    defaultTitle: 'My sprite',
+    icon: <LayoutIcon />,
+    thumb: <BlankThumb />,
+    kind: 'webapp',
+    desktopOnly: true,
+  },
+  {
     id: 'mermaid-app',
     label: 'Mermaid Live Editor',
     description: 'Diagrams · flowcharts, timelines and sequence diagrams',

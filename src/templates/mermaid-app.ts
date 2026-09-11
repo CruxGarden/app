@@ -5,12 +5,21 @@ const sources = import.meta.glob(
   { query: '?raw', import: 'default', eager: true },
 ) as Record<string, string>;
 const assets = import.meta.glob(
-  '../../mermaid-crux/{runtime/**/*,{static,tests}/**/*.{png,jpg,woff,woff2,ttf}}',
+  [
+    '../../mermaid-crux/{runtime/**/*,{static,tests}/**/*.{png,jpg,woff,woff2,ttf}}',
+    '!../../mermaid-crux/**/*.css',
+  ],
   { query: '?url', import: 'default', eager: true },
 ) as Record<string, string>;
+// Preserve stylesheet-relative URLs; Vite processes CSS imported with ?url.
+const styles = import.meta.glob('../../mermaid-crux/runtime/**/*.css', {
+  query: '?raw',
+  import: 'default',
+  eager: true,
+}) as Record<string, string>;
 const template: TemplateDefinition = {
   files: [
-    ...Object.entries(sources).map(([path, content]) => ({
+    ...Object.entries({ ...sources, ...styles }).map(([path, content]) => ({
       path: path.replace('../../mermaid-crux/', ''),
       content,
     })),

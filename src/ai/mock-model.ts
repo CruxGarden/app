@@ -96,6 +96,12 @@ export function getMockLanguageModel(): LanguageModel {
           }
           return toolCallStream('list_cruxspace_assets', {});
         }
+        if (lastUserText(prompt).includes('[piskel:speed]')) {
+          const rounds = toolResultsThisTurn(prompt);
+          if (!rounds.length) return toolCallStream('inspect_piskel', {});
+          if (rounds.length === 1) return toolCallStream('set_piskel_speed', { fps: 8 });
+          return textStream('Saved the sprite animation speed.');
+        }
         if (lastUserText(prompt).includes('[mermaid:diagram]')) {
           const rounds = toolResultsThisTurn(prompt);
           if (!rounds.length) return toolCallStream('inspect_mermaid', {});
