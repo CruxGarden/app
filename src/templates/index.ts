@@ -237,6 +237,7 @@ const loaders: Record<string, () => Promise<{ default: TemplateDefinition }>> = 
   'mermaid-app': () => import('./mermaid-app'),
   'piskel-app': () => import('./piskel-app'),
   'rawgraphs-app': () => import('./rawgraphs-app'),
+  'jupyterlite-app': () => import('./jupyterlite-app'),
   'bitsy-app': () => import('./bitsy-app'),
   'audiomass-app': () => import('./audiomass-app'),
   'minipaint-app': () => import('./minipaint-app'),

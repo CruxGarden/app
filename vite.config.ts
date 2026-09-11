@@ -31,7 +31,10 @@ export default defineConfig({
     include: ['src/**/*.test.ts'],
     // Template stylesheets must remain text, rather than Vitest's default CSS stub.
     css: {
-      include: [/5ws-site\/src\/styles\//, /(rawgraphs|piskel|mermaid|openmosh|minipaint)-crux\//],
+      include: [
+        /5ws-site\/src\/styles\//,
+        /(jupyterlite|rawgraphs|piskel|mermaid|openmosh|minipaint)-crux\//,
+      ],
     },
   },
 });

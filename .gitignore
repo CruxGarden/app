@@ -21,3 +21,7 @@ piskel-crux/dest/
 
 rawgraphs-crux/runtime/
 rawgraphs-crux/build/
+
+jupyterlite-crux/runtime/
+jupyterlite-crux/.build-venv/
+jupyterlite-crux/.cache/

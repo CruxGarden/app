@@ -1,7 +1,9 @@
 # Stage 1: Build
-FROM node:20-alpine AS builder
+FROM node:22-alpine AS builder
+RUN apk add --no-cache python3 py3-pip
 WORKDIR /app
 COPY package*.json ./
+COPY patches/ ./patches/
 RUN npm ci --legacy-peer-deps
 COPY . .
 ARG VITE_API_URL=http://localhost:3000

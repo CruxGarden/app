@@ -1,3 +1,4 @@
+import { validateProject as validateJupyterlite } from '../../jupyterlite-crux/garden/model.js';
 import { validateProject as validateRawgraphs } from '../../rawgraphs-crux/src/garden/model.js';
 import { validateProject as validatePiskel } from '../../piskel-crux/src/garden/model.js';
 import { validateProject as validateMermaid } from '../../mermaid-crux/static/garden/model.js';
@@ -79,11 +80,13 @@ export async function validateNativeDocument(
     | 'bitsy'
     | 'mermaid'
     | 'piskel'
-    | 'rawgraphs' = 'openmosh',
+    | 'rawgraphs'
+    | 'jupyterlite' = 'openmosh',
 ) {
   if (content.length > 4_000_000) throw new Error('The native project metadata is too large.');
   const doc = JSON.parse(content);
-  if (app === 'rawgraphs') validateRawgraphs(doc);
+  if (app === 'jupyterlite') validateJupyterlite(doc);
+  else if (app === 'rawgraphs') validateRawgraphs(doc);
   else if (app === 'piskel') validatePiskel(doc);
   else if (app === 'mermaid') validateMermaid(doc);
   else if (app === 'bitsy') validateBitsy(doc);

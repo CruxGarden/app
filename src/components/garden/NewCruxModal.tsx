@@ -242,6 +242,16 @@ const TEMPLATES: Template[] = [
     desktopOnly: true,
   },
   {
+    id: 'jupyterlite-app',
+    label: 'JupyterLite',
+    description: 'Research · Python notebooks, datasets and scientific plots',
+    defaultTitle: 'My research notebook',
+    icon: <LayoutIcon />,
+    thumb: <BlankThumb />,
+    kind: 'webapp',
+    desktopOnly: true,
+  },
+  {
     id: 'rawgraphs-app',
     label: 'RAWGraphs',
     description: 'Research · explore datasets and create publication figures',

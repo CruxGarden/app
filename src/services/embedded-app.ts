@@ -9,6 +9,7 @@ const NATIVE_TEMPLATES = {
   'mermaid-app': 'mermaid',
   'piskel-app': 'piskel',
   'rawgraphs-app': 'rawgraphs',
+  'jupyterlite-app': 'jupyterlite',
 } as const;
 /** Native adapters share the owner-bound document and binary bridge. */
 export function nativeAppType(crux: { meta?: Record<string, unknown> } | null | undefined) {
