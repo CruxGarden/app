@@ -96,6 +96,13 @@ export function getMockLanguageModel(): LanguageModel {
           }
           return toolCallStream('list_cruxspace_assets', {});
         }
+        if (lastUserText(prompt).includes('[ketcher:structure]')) {
+          const rounds = toolResultsThisTurn(prompt);
+          if (!rounds.length) return toolCallStream('inspect_ketcher', {});
+          if (rounds.length === 1)
+            return toolCallStream('set_ketcher_structure', { structure: 'CCO' });
+          return textStream('Drew ethanol and saved it in Garden.');
+        }
         if (lastUserText(prompt).includes('[gephi:title]')) {
           const rounds = toolResultsThisTurn(prompt);
           if (!rounds.length) return toolCallStream('inspect_gephi', {});

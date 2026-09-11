@@ -1,3 +1,4 @@
+import { KETCHER_TOOLS, ketcherCommand } from '@/ai/ketcher-tools';
 import { GEPHI_TOOLS, gephiCommand } from '@/ai/gephi-tools';
 import { JUPYTERLITE_TOOLS, jupyterliteCommand } from '@/ai/jupyterlite-tools';
 import { RAWGRAPHS_TOOLS, rawgraphsCommand } from '@/ai/rawgraphs-tools';
@@ -21,6 +22,7 @@ import type { AppToolDefinition } from './embedded-app-tool-registry';
 
 /** Trusted built-in adapters declare tools and affected files; frames cannot grant themselves tools. */
 export function embeddedAppToolAdapter(crux: { meta?: Record<string, unknown> } | null) {
+  if (nativeAppType(crux) === 'ketcher') return { tools: KETCHER_TOOLS, prepare: ketcherCommand };
   if (nativeAppType(crux) === 'gephi') return { tools: GEPHI_TOOLS, prepare: gephiCommand };
   if (nativeAppType(crux) === 'jupyterlite')
     return { tools: JUPYTERLITE_TOOLS, prepare: jupyterliteCommand };

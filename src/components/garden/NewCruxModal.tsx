@@ -243,6 +243,16 @@ const TEMPLATES: Template[] = [
     desktopOnly: true,
   },
   {
+    id: 'ketcher-app',
+    label: 'Ketcher',
+    description: 'Research · draw molecules and chemical reactions',
+    defaultTitle: 'My chemistry notebook',
+    icon: <LayoutIcon />,
+    thumb: <BlankThumb />,
+    kind: 'webapp',
+    desktopOnly: true,
+  },
+  {
     id: 'gephi-app',
     label: 'Gephi Lite',
     description: 'Research · explore networks, relationships and graph data',

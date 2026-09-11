@@ -33,7 +33,7 @@ export default defineConfig({
     css: {
       include: [
         /5ws-site\/src\/styles\//,
-        /(gephi|jupyterlite|rawgraphs|piskel|mermaid|openmosh|minipaint)-crux\//,
+        /(ketcher|gephi|jupyterlite|rawgraphs|piskel|mermaid|openmosh|minipaint)-crux\//,
       ],
     },
   },

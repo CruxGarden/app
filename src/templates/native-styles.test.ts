@@ -4,6 +4,7 @@ import { expect, it } from 'vitest';
 import { loadTemplate } from './index';
 for (const [id, root] of [
   ['gephi-app', 'gephi-crux'],
+  ['ketcher-app', 'ketcher-crux'],
   ['jupyterlite-app', 'jupyterlite-crux'],
   ['rawgraphs-app', 'rawgraphs-crux'],
   ['piskel-app', 'piskel-crux'],
