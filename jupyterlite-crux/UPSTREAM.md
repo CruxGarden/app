@@ -1,0 +1,13 @@
+# JupyterLite in Crux Garden
+
+Actual JupyterLite 0.8.3 and its native JupyterLab interface, with jupyterlite-pyodide-kernel 0.8.3 and Pyodide 314.0.4. The frontend is built using the upstream Python distribution; Garden customizes its configuration and supplies a persistence adapter, keeping the native notebook, cell, file-browser and export workflows.
+
+Upstream sources: https://github.com/jupyterlite/jupyterlite/tree/v0.8.3 , https://github.com/jupyterlite/pyodide-kernel/tree/v0.8.3 , https://github.com/pyodide/pyodide/tree/314.0.4 . Preserve LICENSE, vendor/PYODIDE-LICENSE, vendor/CPYTHON-LICENSE, runtime/build/third-party-licenses.json and the kernel extension's notices. Python wheels include their own licenses; the runtime bundler also checks the recorded hashes.
+
+Native memory storage is hydrated from the Crux. Each notebook or dataset has a separate fingerprinted JSON Artifact; data/project.json preserves the file hierarchy and open documents. Save flushes native document models, then confirms the Garden write. Kernel memory, native temporary checkpoints and UI preferences are separate from saved notebooks; code, Markdown, outputs, imported files and folders travel with the Crux and Growth. Kernels restart on reopen. Native .ipynb and file downloads remain available; whole-editor website publication is unavailable.
+
+Python, NumPy, Matplotlib and their core dependencies are bundled. A baseline calculation and PNG plot execute with external HTTP requests blocked. Additional Python packages and user-authored network requests may still need connectivity. This is browser Python, not a full native Python environment.
+
+Rebuild with Python 3.10+: `python3 scripts/build.py` (or `npm run build`). The build creates a local .build-venv and cache excluded by .cruxignore, installs the pinned build dependencies, builds upstream JupyterLite, checks the bundled runtime hashes and installs the Garden bridge. Source files in garden/ and scripts/ are editable. Build tools download dependencies; installed runtime operation does not invoke Python on the host.
+
+The Garden service tests cover complete Crux export/import, notebook outputs, folder metadata and Growth restore. Desktop acceptance covers native notebook creation/execution, a NumPy calculation and Matplotlib plot, CSV upload and Python file reads/writes with external HTTP blocked, scoped agent Markdown insertion, native .ipynb download, external conflict/reload and restart with the saved plot and cells followed by fresh Python execution reading the persisted result file. An app-created Crux also rebuilds from its packaged source; the clean Docker build is verified. See app/electron/e2e/jupyterlite-app.spec.ts in Garden source.

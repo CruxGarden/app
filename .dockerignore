@@ -32,3 +32,9 @@ CLAUDE.md
 
 scripts/
 poc/
+**/.build-venv
+**/.cache
+**/node_modules/
+**/.git/
+**/.svelte-kit/
+**/__pycache__/

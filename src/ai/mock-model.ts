@@ -96,6 +96,16 @@ export function getMockLanguageModel(): LanguageModel {
           }
           return toolCallStream('list_cruxspace_assets', {});
         }
+        if (lastUserText(prompt).includes('[jupyterlite:cell]')) {
+          const rounds = toolResultsThisTurn(prompt);
+          if (!rounds.length) return toolCallStream('inspect_jupyterlite', {});
+          if (rounds.length === 1)
+            return toolCallStream('append_jupyterlite_cell', {
+              cellType: 'markdown',
+              source: '## Findings\nThe measured mean is 4.0.',
+            });
+          return textStream('Added the findings cell and saved the notebook.');
+        }
         if (lastUserText(prompt).includes('[rawgraphs:size]')) {
           const rounds = toolResultsThisTurn(prompt);
           if (!rounds.length) return toolCallStream('inspect_rawgraphs', {});
