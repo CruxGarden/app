@@ -1,3 +1,4 @@
+import { validateProject as validateAudioMass } from '../../audiomass-crux/src/garden/model.js';
 import { validateProject as validateMiniPaint } from '../../minipaint-crux/garden/model.js';
 import { getServices } from './index';
 import { hashContent } from './sqlite/helpers';
@@ -67,11 +68,12 @@ export async function readNativeAsset(owner: string, path: unknown) {
 export async function validateNativeDocument(
   owner: string,
   content: string,
-  app: 'openmosh' | 'minipaint' = 'openmosh',
+  app: 'openmosh' | 'minipaint' | 'audiomass' = 'openmosh',
 ) {
   if (content.length > 4_000_000) throw new Error('The native project metadata is too large.');
   const doc = JSON.parse(content);
-  if (app === 'minipaint') validateMiniPaint(doc);
+  if (app === 'audiomass') validateAudioMass(doc);
+  else if (app === 'minipaint') validateMiniPaint(doc);
   else {
     if (
       !doc ||
@@ -126,7 +128,7 @@ export async function validateNativeDocument(
     }
     for (const child of Object.values(value)) visit(child, depth + 1);
   }
-  visit(app === 'minipaint' ? doc.project : doc.databases);
+  visit(app === 'openmosh' ? doc.databases : doc.project);
   // The caller flushes watcher ingestion first. Validate Blob Store references
   // without rereading every video on each slider edit; import/read verify disk bytes.
 }

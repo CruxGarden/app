@@ -96,6 +96,19 @@ export function getMockLanguageModel(): LanguageModel {
           }
           return toolCallStream('list_cruxspace_assets', {});
         }
+        if (lastUserText(prompt).includes('[audiomass:track]')) {
+          const rounds = toolResultsThisTurn(prompt);
+          if (!rounds.length) return toolCallStream('inspect_audiomass', {});
+          if (rounds.length === 1) {
+            const result = JSON.parse(toolResultText(prompt, 'inspect_audiomass') || '{}');
+            if (!result.tracks?.length) return textStream('Add a track first.');
+            return toolCallStream('rename_audiomass_track', {
+              id: result.tracks[0].id,
+              name: 'Garden recording',
+            });
+          }
+          return textStream('Saved the AudioMass track.');
+        }
         if (lastUserText(prompt).includes('[minipaint:layer]')) {
           const rounds = toolResultsThisTurn(prompt);
           if (!rounds.length) return toolCallStream('inspect_minipaint', {});

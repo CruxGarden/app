@@ -5,6 +5,7 @@ import {
   isEmbeddedApp,
   isOpenMosh,
   isMiniPaint,
+  isAudioMass,
   isMoqira,
   isCardinal,
   samplerType,
@@ -51,8 +52,12 @@ export function notebookSession(workspace: StoreApi<CruxState>) {
       if (state.viewingSnapshotId) throw new Error('Return to the current app to edit.');
       await flushIngestion();
       const { artifact } = getServices();
-      const nativeApp = isMiniPaint(state.crux) ? 'minipaint' : 'openmosh';
-      const native = isOpenMosh(state.crux) || isMiniPaint(state.crux);
+      const nativeApp = isAudioMass(state.crux)
+        ? 'audiomass'
+        : isMiniPaint(state.crux)
+          ? 'minipaint'
+          : 'openmosh';
+      const native = isOpenMosh(state.crux) || isMiniPaint(state.crux) || isAudioMass(state.crux);
       if (native && request.op === 'native-import') {
         await assertCopyWritable(owner);
         return importNativeAsset(owner, request.bytes, request.mimeType);
