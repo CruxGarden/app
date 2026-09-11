@@ -96,6 +96,25 @@ export function getMockLanguageModel(): LanguageModel {
           }
           return toolCallStream('list_cruxspace_assets', {});
         }
+        if (lastUserText(prompt).includes('[openmosh:effect]')) {
+          const rounds = toolResultsThisTurn(prompt);
+          if (!rounds.length) return toolCallStream('inspect_openmosh', {});
+          if (rounds.length === 1) {
+            const result = JSON.parse(toolResultText(prompt, 'inspect_openmosh') || '{}');
+            const effect = result.effects?.find((e: { defId: string }) => e.defId === 'posterize');
+            if (!effect) return textStream('Open media in OpenMosh first.');
+            return toolCallStream('set_openmosh_effect', {
+              instanceId: effect.instanceId,
+              enabled: true,
+              values: { levels: 4 },
+            });
+          }
+          if (rounds.length === 2) return toolCallStream('inspect_openmosh', {});
+          const result = toolResultText(prompt, 'set_openmosh_effect');
+          return textStream(
+            result?.startsWith('Error') ? result : 'Saved the native OpenMosh effect.',
+          );
+        }
         const sampler = /\[sampler:(openmosh|tables|smplr|playcanvas|excalidraw|univer)\]/.exec(
           lastUserText(prompt),
         );

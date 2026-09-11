@@ -1,0 +1,121 @@
+{
+  "googleFontsRevision": "8e44913e4ff26fc997e6856c1ec40ff4791c98c5",
+  "fonts": [
+    {
+      "font": "vt323.woff2",
+      "license": "https://raw.githubusercontent.com/google/fonts/8e44913e4ff26fc997e6856c1ec40ff4791c98c5/ofl/vt323/OFL.txt"
+    },
+    {
+      "font": "medievalsharp.woff2",
+      "license": "https://raw.githubusercontent.com/google/fonts/8e44913e4ff26fc997e6856c1ec40ff4791c98c5/ofl/medievalsharp/OFL.txt"
+    },
+    {
+      "font": "bungee.woff2",
+      "license": "https://raw.githubusercontent.com/google/fonts/8e44913e4ff26fc997e6856c1ec40ff4791c98c5/ofl/bungee/OFL.txt"
+    },
+    {
+      "font": "bungee-shade.woff2",
+      "license": "https://raw.githubusercontent.com/google/fonts/8e44913e4ff26fc997e6856c1ec40ff4791c98c5/ofl/bungeeshade/OFL.txt"
+    },
+    {
+      "font": "chonburi.woff2",
+      "license": "https://raw.githubusercontent.com/google/fonts/8e44913e4ff26fc997e6856c1ec40ff4791c98c5/ofl/chonburi/OFL.txt"
+    },
+    {
+      "font": "atomic-age.woff2",
+      "license": "https://raw.githubusercontent.com/google/fonts/8e44913e4ff26fc997e6856c1ec40ff4791c98c5/ofl/atomicage/OFL.txt"
+    },
+    {
+      "font": "limelight.woff2",
+      "license": "https://raw.githubusercontent.com/google/fonts/8e44913e4ff26fc997e6856c1ec40ff4791c98c5/ofl/limelight/OFL.txt"
+    },
+    {
+      "font": "bakbak-one.woff2",
+      "license": "https://raw.githubusercontent.com/google/fonts/8e44913e4ff26fc997e6856c1ec40ff4791c98c5/ofl/bakbakone/OFL.txt"
+    },
+    {
+      "font": "agu-display.woff2",
+      "license": "https://raw.githubusercontent.com/google/fonts/8e44913e4ff26fc997e6856c1ec40ff4791c98c5/ofl/agudisplay/OFL.txt"
+    },
+    {
+      "font": "coiny.woff2",
+      "license": "https://raw.githubusercontent.com/google/fonts/8e44913e4ff26fc997e6856c1ec40ff4791c98c5/ofl/coiny/OFL.txt"
+    },
+    {
+      "font": "balsamiq-sans.woff2",
+      "license": "https://raw.githubusercontent.com/google/fonts/8e44913e4ff26fc997e6856c1ec40ff4791c98c5/ofl/balsamiqsans/OFL.txt"
+    },
+    {
+      "font": "abril-fatface.woff2",
+      "license": "https://raw.githubusercontent.com/google/fonts/8e44913e4ff26fc997e6856c1ec40ff4791c98c5/ofl/abrilfatface/OFL.txt"
+    },
+    {
+      "font": "nosifer.woff2",
+      "license": "https://raw.githubusercontent.com/google/fonts/8e44913e4ff26fc997e6856c1ec40ff4791c98c5/ofl/nosifer/OFL.txt"
+    },
+    {
+      "font": "rubik-glitch.woff2",
+      "license": "https://raw.githubusercontent.com/google/fonts/8e44913e4ff26fc997e6856c1ec40ff4791c98c5/ofl/rubikglitch/OFL.txt"
+    },
+    {
+      "font": "jaini.woff2",
+      "license": "https://raw.githubusercontent.com/google/fonts/8e44913e4ff26fc997e6856c1ec40ff4791c98c5/ofl/jaini/OFL.txt"
+    },
+    {
+      "font": "changa.woff2",
+      "license": "https://raw.githubusercontent.com/google/fonts/8e44913e4ff26fc997e6856c1ec40ff4791c98c5/ofl/changa/OFL.txt"
+    },
+    {
+      "font": "shojumaru.woff2",
+      "license": "https://raw.githubusercontent.com/google/fonts/8e44913e4ff26fc997e6856c1ec40ff4791c98c5/ofl/shojumaru/OFL.txt"
+    },
+    {
+      "font": "calistoga.woff2",
+      "license": "https://raw.githubusercontent.com/google/fonts/8e44913e4ff26fc997e6856c1ec40ff4791c98c5/ofl/calistoga/OFL.txt"
+    },
+    {
+      "font": "new-rocker.woff2",
+      "license": "https://raw.githubusercontent.com/google/fonts/8e44913e4ff26fc997e6856c1ec40ff4791c98c5/ofl/newrocker/OFL.txt"
+    },
+    {
+      "font": "pirata-one.woff2",
+      "license": "https://raw.githubusercontent.com/google/fonts/8e44913e4ff26fc997e6856c1ec40ff4791c98c5/ofl/pirataone/OFL.txt"
+    },
+    {
+      "font": "monoton.woff2",
+      "license": "https://raw.githubusercontent.com/google/fonts/8e44913e4ff26fc997e6856c1ec40ff4791c98c5/ofl/monoton/OFL.txt"
+    },
+    {
+      "font": "special-elite.woff2",
+      "license": "https://raw.githubusercontent.com/google/fonts/8e44913e4ff26fc997e6856c1ec40ff4791c98c5/apache/specialelite/LICENSE.txt"
+    },
+    {
+      "font": "major-mono-display.woff2",
+      "license": "https://raw.githubusercontent.com/google/fonts/8e44913e4ff26fc997e6856c1ec40ff4791c98c5/ofl/majormonodisplay/OFL.txt"
+    },
+    {
+      "font": "press-start-2p.woff2",
+      "license": "https://raw.githubusercontent.com/google/fonts/8e44913e4ff26fc997e6856c1ec40ff4791c98c5/ofl/pressstart2p/OFL.txt"
+    },
+    {
+      "font": "faster-one.woff2",
+      "license": "https://raw.githubusercontent.com/google/fonts/8e44913e4ff26fc997e6856c1ec40ff4791c98c5/ofl/fasterone/OFL.txt"
+    },
+    {
+      "font": "eater.woff2",
+      "license": "https://raw.githubusercontent.com/google/fonts/8e44913e4ff26fc997e6856c1ec40ff4791c98c5/ofl/eater/OFL.txt"
+    },
+    {
+      "font": "girassol.woff2",
+      "license": "https://raw.githubusercontent.com/google/fonts/8e44913e4ff26fc997e6856c1ec40ff4791c98c5/ofl/girassol/OFL.txt"
+    },
+    {
+      "font": "joti-one.woff2",
+      "license": "https://raw.githubusercontent.com/google/fonts/8e44913e4ff26fc997e6856c1ec40ff4791c98c5/ofl/jotione/OFL.txt"
+    },
+    {
+      "font": "croissant-one.woff2",
+      "license": "https://raw.githubusercontent.com/google/fonts/8e44913e4ff26fc997e6856c1ec40ff4791c98c5/ofl/croissantone/OFL.txt"
+    }
+  ]
+}

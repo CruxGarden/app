@@ -1,0 +1,168 @@
+/* Only the latin subsets are declared, rather than importing the whole
+   fontsource package — vietnamese/greek/cyrillic never render here and their
+   @font-face rules only pad the render-blocking stylesheet. */
+@font-face {
+	font-family: "Archivo Variable";
+	font-style: normal;
+	font-display: swap;
+	font-weight: 100 900;
+	src: url("@fontsource-variable/archivo/files/archivo-latin-wght-normal.woff2")
+		format("woff2-variations");
+	unicode-range:
+		U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC,
+		U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212,
+		U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+	font-family: "Archivo Variable";
+	font-style: normal;
+	font-display: swap;
+	font-weight: 100 900;
+	src: url("@fontsource-variable/archivo/files/archivo-latin-ext-wght-normal.woff2")
+		format("woff2-variations");
+	unicode-range:
+		U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304,
+		U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB,
+		U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+@font-face {
+	font-family: "JetBrains Mono Variable";
+	font-style: normal;
+	font-display: swap;
+	font-weight: 100 800;
+	src: url("@fontsource-variable/jetbrains-mono/files/jetbrains-mono-latin-wght-normal.woff2")
+		format("woff2-variations");
+	unicode-range:
+		U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC,
+		U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212,
+		U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+	font-family: "JetBrains Mono Variable";
+	font-style: normal;
+	font-display: swap;
+	font-weight: 100 800;
+	src: url("@fontsource-variable/jetbrains-mono/files/jetbrains-mono-latin-ext-wght-normal.woff2")
+		format("woff2-variations");
+	unicode-range:
+		U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304,
+		U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB,
+		U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+*,
+*::before,
+*::after {
+	box-sizing: border-box;
+	margin: 0;
+	padding: 0;
+	-webkit-tap-highlight-color: transparent;
+}
+
+/* The app is a signal path: media enters, passes a chain of effects, leaves as a
+   file. The chrome is built like the rack around that signal — near-black
+   surfaces, engraved uppercase labels, mono for anything a number. Color is
+   reserved for state: a lit effect, a running clock, a live recording. */
+:root {
+	/* Surfaces, darkest to lightest */
+	--ink: #0a0a0c;
+	--surface: #101014;
+	--raised: #17171d;
+	--sunken: #08080a;
+
+	--line: rgba(255, 255, 255, 0.08);
+	--line-strong: rgba(255, 255, 255, 0.16);
+
+	--text: #ececf0;
+	--text-2: #9a9aa6;
+	--text-3: #62626e;
+	--text-4: #43434d;
+
+	/* State colors — each one means something, none are decorative */
+	--live: #6ee7c0; /* anything live: lit effects, active toggles, clocks, timelines */
+	--live-dim: #2f6a5b;
+	--mosh: #c6a2ea; /* mosh and presets — the generative actions */
+	--mosh-dim: #6a5080;
+	--rec: #ff5f56; /* recording, destructive */
+	--rec-dim: #7d3430;
+	--start: #f0b568; /* the static playhead — where playback starts from */
+	--start-dim: #8a6a3f;
+
+	/* The sidebar. Every panel that can take it over has to agree on this: a
+	   narrower one caps the column and leaves the chain below it overflowing
+	   sideways behind a horizontal scrollbar. */
+	--sidebar-w: 340px;
+
+	--r-1: 3px;
+	--r-2: 6px;
+	--r-3: 10px;
+	--r-pill: 999px;
+
+	/* Panels that float over the preview borrow the upload screen's frosting */
+	--glass: rgba(12, 12, 16, 0.62);
+	--blur: blur(18px) saturate(0.75);
+
+	--t-fast: 0.12s ease;
+	--t: 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+
+	--font-ui:
+		"Archivo Variable", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+	--font-mono:
+		"JetBrains Mono Variable", ui-monospace, "Cascadia Mono", Consolas,
+		monospace;
+
+	font-family: var(--font-ui);
+	line-height: 1.5;
+	font-weight: 400;
+	color: var(--text);
+	background-color: var(--ink);
+	font-synthesis: none;
+	text-rendering: optimizeLegibility;
+	-webkit-font-smoothing: antialiased;
+	-moz-osx-font-smoothing: grayscale;
+}
+
+body {
+	margin: 0;
+	min-height: calc(100svh - var(--garden-bar-height, 0px));
+}
+
+button:active {
+	opacity: 0.7;
+}
+
+/* Engraved rack label: every uppercase micro-label in the app is this. */
+.rack-label {
+	font-family: var(--font-mono);
+	font-size: 0.62rem;
+	font-weight: 600;
+	letter-spacing: 0.14em;
+	text-transform: uppercase;
+	color: var(--text-3);
+}
+
+/* Numbers never reflow as they tick. */
+.readout {
+	font-family: var(--font-mono);
+	font-variant-numeric: tabular-nums;
+	font-feature-settings: "zero" 1;
+}
+
+:focus-visible {
+	outline: 1.5px solid var(--live);
+	outline-offset: 2px;
+}
+
+#app {
+	width: 100%;
+	height: calc(100svh - var(--garden-bar-height, 0px));
+}
+
+/* No prefers-reduced-motion reset here on purpose. Windows ships that flag off
+   by default under "Show animations in Windows", so the blanket !important
+   version silently flattened every animation in the app, glitch effects
+   included, for anyone who had never thought about the setting. The upload
+   screen's STOP button is the opt-out this app offers instead. */

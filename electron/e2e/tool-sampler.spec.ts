@@ -4,7 +4,6 @@ import { join, resolve } from 'node:path';
 import { launchApp } from './launch';
 import { enterGarden, storedCrux } from './multi-crux-helpers';
 const examples = [
-  ['openmosh', 'OpenMosh effects'],
   ['tables', 'Tables'],
   ['smplr', 'Sample sequencer'],
   ['playcanvas', '3D Workshop'],
@@ -44,27 +43,7 @@ for (const [type, label] of examples)
         blocked.push(route.request().url());
         return route.abort();
       });
-      if (type === 'openmosh') {
-        await expect(frame.locator('#canvas')).toHaveAttribute('data-rendered', /\d+/);
-        await frame
-          .getByLabel('Import image')
-          .setInputFiles(resolve(__dirname, '../../tool-cruxes/openmosh/assets/demo.png'));
-        await expect.poll(() => doc().source).toMatch(/^assets\/[a-f0-9]{64}\.png$/);
-        const original = readFileSync(join(folder, 'data', doc().source));
-        expect(
-          original.equals(
-            readFileSync(resolve(__dirname, '../../tool-cruxes/openmosh/assets/demo.png')),
-          ),
-        ).toBe(true);
-        await frame.getByLabel('Effect', { exact: true }).selectOption('kaleido');
-        await frame.getByRole('button', { name: 'Add effect', exact: true }).click();
-        await expect.poll(() => doc().effects.length).toBe(2);
-        for (const kind of ['scanlines', 'mirror', 'data-bend']) {
-          await frame.getByLabel('Effect', { exact: true }).selectOption(kind);
-          await frame.getByRole('button', { name: 'Add effect', exact: true }).click();
-          await expect(frame.locator('#error')).toBeHidden();
-        }
-      } else if (type === 'tables') {
+      if (type === 'tables') {
         await expect(frame.locator('.tabulator-title-editor').first()).toHaveValue('Task');
         const cell = frame.locator('.tabulator-row').first().locator('[tabulator-field="task"]');
         await cell.dblclick();
@@ -116,7 +95,6 @@ for (const [type, label] of examples)
       await expect(
         page.getByText(`Saved ${type} project with app tools.`, { exact: true }),
       ).toBeVisible({ timeout: 35000 });
-      if (type === 'openmosh') await expect.poll(() => doc().effects[0].kind).toBe('posterize');
       if (type === 'tables') {
         await expect.poll(() => doc().rows[0].hours).toBe(9);
         expect(doc().rows[0].task).toBe('Plan the showcase');
@@ -139,20 +117,17 @@ for (const [type, label] of examples)
       await expect.poll(() => existsSync(output)).toBe(true);
       const bytes = readFileSync(output);
       expect(bytes.length).toBeGreaterThan(10);
-      if (type === 'openmosh') expect(bytes.subarray(1, 4).toString()).toBe('PNG');
       if (type === 'smplr' || type === 'playcanvas')
         expect(JSON.parse(bytes.toString())).toEqual(doc());
       if (type === 'tables') {
         expect(bytes.toString()).toContain('Plan the showcase');
         expect(bytes.toString()).toContain('Ready');
         page.once('dialog', (d) => d.accept());
-        await frame
-          .getByLabel('Import CSV', { exact: true })
-          .setInputFiles({
-            name: 'Contacts.csv',
-            mimeType: 'text/csv',
-            buffer: Buffer.from('Code,Name\n0012,"Rivera, Alex"'),
-          });
+        await frame.getByLabel('Import CSV', { exact: true }).setInputFiles({
+          name: 'Contacts.csv',
+          mimeType: 'text/csv',
+          buffer: Buffer.from('Code,Name\n0012,"Rivera, Alex"'),
+        });
         await expect.poll(() => doc().rows[0]?.['column-1']).toBe('0012');
         expect(doc().rows[0]['column-2']).toBe('Rivera, Alex');
       }
