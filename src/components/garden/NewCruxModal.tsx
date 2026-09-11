@@ -243,6 +243,16 @@ const TEMPLATES: Template[] = [
     desktopOnly: true,
   },
   {
+    id: 'twine-app',
+    label: 'Twine',
+    description: 'Creative · write and play interactive stories',
+    defaultTitle: 'My interactive story',
+    icon: <PencilIcon />,
+    thumb: <BlankThumb />,
+    kind: 'webapp',
+    desktopOnly: true,
+  },
+  {
     id: 'ketcher-app',
     label: 'Ketcher',
     description: 'Research · draw molecules and chemical reactions',

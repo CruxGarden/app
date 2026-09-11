@@ -1,0 +1,63 @@
+@import '../../../styles/animations.css';
+@import '../../../styles/typography.css';
+@import '../../../styles/metrics.css';
+
+.dialog-card {
+	height: 100%;
+	width: 100%;
+}
+
+.dialog-card.highlighted {
+	animation: 0.4s wiggle linear;
+}
+
+.dialog-card .card {
+	border-radius: var(--corner-round);
+	padding: 0;
+}
+
+.dialog-card h2 {
+	align-items: center;
+	display: grid;
+	grid-template-columns: 1fr auto;
+}
+
+.dialog-card h2 .dialog-card-header {
+	align-items: center;
+	display: flex;
+	flex-shrink: 1;
+	flex-grow: 1;
+	gap: var(--control-inner-padding);
+	min-width: 0;
+	padding-left: var(--grid-size);
+	white-space: nowrap;
+}
+
+.dialog-card h2 .dialog-card-header .icon-button {
+	display: flex;
+	font-size: 1rem;
+	font-weight: bold;
+	overflow: hidden;
+	text-align: left;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	max-width: 100%;
+	width: 100%;
+}
+
+.dialog-card.background h2 .dialog-card-header .icon-button {
+	font-size: 0.9rem;
+	font-weight: normal;
+	/* Push the button to be flush left with the header. */
+	margin-left: calc(-1 * var(--grid-size));
+	opacity: 0.75;
+}
+
+.dialog-card.background h2 .dialog-card-header .icon-button .tag-grid {
+	margin-right: var(--control-inner-padding);
+}
+
+.dialog-card .card-content {
+	flex: 1 1 content;
+	overflow: auto;
+}

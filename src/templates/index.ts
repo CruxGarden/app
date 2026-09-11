@@ -239,6 +239,7 @@ const loaders: Record<string, () => Promise<{ default: TemplateDefinition }>> = 
   'rawgraphs-app': () => import('./rawgraphs-app'),
   'gephi-app': () => import('./gephi-app'),
   'ketcher-app': () => import('./ketcher-app'),
+  'twine-app': () => import('./twine-app'),
   'jupyterlite-app': () => import('./jupyterlite-app'),
   'bitsy-app': () => import('./bitsy-app'),
   'audiomass-app': () => import('./audiomass-app'),

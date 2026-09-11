@@ -1,0 +1,12 @@
+@import '../../styles/colors.css';
+@import '../../styles/metrics.css';
+
+.marquee-selection {
+	position: absolute;
+	background: var(--light-blue-translucent);
+	top: 0;
+	left: 0;
+	width: 100px;
+	height: 100px;
+	transform-origin: top left;
+}
