@@ -1,3 +1,4 @@
+import { BLOCKBENCH_TOOLS, blockbenchCommand } from '@/ai/blockbench-tools';
 import { SVGEDIT_TOOLS, svgeditCommand } from '@/ai/svgedit-tools';
 import { TWINE_TOOLS, twineCommand } from '@/ai/twine-tools';
 import { KETCHER_TOOLS, ketcherCommand } from '@/ai/ketcher-tools';
@@ -24,6 +25,8 @@ import type { AppToolDefinition } from './embedded-app-tool-registry';
 
 /** Trusted built-in adapters declare tools and affected files; frames cannot grant themselves tools. */
 export function embeddedAppToolAdapter(crux: { meta?: Record<string, unknown> } | null) {
+  if (nativeAppType(crux) === 'blockbench')
+    return { tools: BLOCKBENCH_TOOLS, prepare: blockbenchCommand };
   if (nativeAppType(crux) === 'svgedit') return { tools: SVGEDIT_TOOLS, prepare: svgeditCommand };
   if (nativeAppType(crux) === 'twine') return { tools: TWINE_TOOLS, prepare: twineCommand };
   if (nativeAppType(crux) === 'ketcher') return { tools: KETCHER_TOOLS, prepare: ketcherCommand };

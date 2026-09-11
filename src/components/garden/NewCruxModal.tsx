@@ -243,6 +243,16 @@ const TEMPLATES: Template[] = [
     desktopOnly: true,
   },
   {
+    id: 'blockbench-app',
+    label: 'Blockbench',
+    description: 'Creative · low-poly 3D modeling, textures and animation',
+    defaultTitle: 'My 3D models',
+    icon: <PencilIcon />,
+    thumb: <BlankThumb />,
+    kind: 'webapp',
+    desktopOnly: true,
+  },
+  {
     id: 'svgedit-app',
     label: 'SVG-Edit',
     description: 'Creative · vector illustration, shapes and layers',

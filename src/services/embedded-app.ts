@@ -12,6 +12,7 @@ const NATIVE_TEMPLATES = {
   'gephi-app': 'gephi',
   'ketcher-app': 'ketcher',
   'twine-app': 'twine',
+  'blockbench-app': 'blockbench',
   'svgedit-app': 'svgedit',
   'jupyterlite-app': 'jupyterlite',
 } as const;

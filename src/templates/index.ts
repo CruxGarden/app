@@ -240,6 +240,7 @@ const loaders: Record<string, () => Promise<{ default: TemplateDefinition }>> = 
   'gephi-app': () => import('./gephi-app'),
   'ketcher-app': () => import('./ketcher-app'),
   'twine-app': () => import('./twine-app'),
+  'blockbench-app': () => import('./blockbench-app'),
   'svgedit-app': () => import('./svgedit-app'),
   'jupyterlite-app': () => import('./jupyterlite-app'),
   'bitsy-app': () => import('./bitsy-app'),
