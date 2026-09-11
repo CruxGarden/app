@@ -96,6 +96,35 @@ export function getMockLanguageModel(): LanguageModel {
           }
           return toolCallStream('list_cruxspace_assets', {});
         }
+        if (lastUserText(prompt).includes('[twine:passage]')) {
+          const rounds = toolResultsThisTurn(prompt);
+          if (!rounds.length) return toolCallStream('inspect_twine', {});
+          if (rounds.length === 1) {
+            const data = JSON.parse(toolResultText(prompt, 'inspect_twine') || '{}');
+            const story = data.stories?.[0];
+            const passage = story?.passageDetails?.find(
+              (p: { name: string }) => p.name === 'Follow',
+            );
+            if (!passage) return textStream('Create the Follow passage first.');
+            return toolCallStream('set_twine_passage', {
+              storyId: story.id,
+              passageId: passage.id,
+              text: 'The garden wakes. [[Epilogue]]',
+            });
+          }
+          return textStream('Updated the passage and created its linked destination in Garden.');
+        }
+        if (lastUserText(prompt).includes('[twine:title]')) {
+          const rounds = toolResultsThisTurn(prompt);
+          if (!rounds.length) return toolCallStream('inspect_twine', {});
+          if (rounds.length === 1) {
+            const data = JSON.parse(toolResultText(prompt, 'inspect_twine') || '{}');
+            const storyId = data.stories?.[0]?.id;
+            if (!storyId) return textStream('Create a story first.');
+            return toolCallStream('set_twine_title', { storyId, title: 'The Lantern Garden' });
+          }
+          return textStream('Renamed the story and saved it in Garden.');
+        }
         if (lastUserText(prompt).includes('[ketcher:structure]')) {
           const rounds = toolResultsThisTurn(prompt);
           if (!rounds.length) return toolCallStream('inspect_ketcher', {});

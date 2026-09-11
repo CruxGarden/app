@@ -11,6 +11,7 @@ const NATIVE_TEMPLATES = {
   'rawgraphs-app': 'rawgraphs',
   'gephi-app': 'gephi',
   'ketcher-app': 'ketcher',
+  'twine-app': 'twine',
   'jupyterlite-app': 'jupyterlite',
 } as const;
 /** Native adapters share the owner-bound document and binary bridge. */

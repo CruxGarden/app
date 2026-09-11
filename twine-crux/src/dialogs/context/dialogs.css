@@ -1,0 +1,48 @@
+@import '../../styles/animations.css';
+@import '../../styles/metrics.css';
+
+.dialogs {
+	bottom: var(--grid-size);
+	left: var(--grid-size);
+	pointer-events: none;
+	position: fixed;
+	right: var(--grid-size);
+	top: calc(
+		2 * var(--control-height) + var(--grid-size)
+	); /* below <top-bar> height */
+}
+
+.dialogs {
+	align-items: flex-end;
+	bottom: var(--grid-size);
+	display: flex;
+	flex-direction: column;
+	grid-gap: var(--grid-size);
+	justify-content: flex-end;
+	pointer-events: none;
+	position: fixed;
+	right: var(--grid-size);
+	top: calc(
+		2 * var(--control-height) + var(--grid-size)
+	); /* below <top-bar> height */
+	left: var(--grid-size);
+	bottom: var(--grid-size);
+}
+
+.dialogs .dialog-card, .dialogs .background-dialog-card {
+	flex: 1;
+	pointer-events: auto;
+}
+
+.dialogs .dialog-card.collapsed,
+.dialogs .dialog-card.fixed-size {
+	flex: 0;
+}
+
+.dialogs .maximized {
+	position: absolute;
+	top: 0;
+	left: 0;
+	right: 0;
+	bottom: 0;
+}
