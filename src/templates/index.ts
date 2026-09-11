@@ -1,3 +1,4 @@
+import { TOOL_INFO } from '@/lib/tool-info';
 /**
  * Crux templates — real starter files for each template type.
  *
@@ -267,7 +268,10 @@ export async function loadTemplate(id: string): Promise<TemplateDefinition | nul
   const loader = loaders[id];
   if (!loader) return null;
   const mod = await loader();
-  return mod.default;
+  const info = TOOL_INFO[id];
+  return info
+    ? { ...mod.default, meta: { ...mod.default.meta, toolInfo: { ...info } } }
+    : mod.default;
 }
 
 /**
