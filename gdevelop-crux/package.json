@@ -1,0 +1,11 @@
+{
+  "name": "crux-gdevelop-editor",
+  "version": "5.6.282-garden.1",
+  "private": true,
+  "license": "MIT",
+  "scripts": {
+    "setup": "node garden/build.cjs --install",
+    "build": "node garden/build.cjs",
+    "test": "node --test garden/*.test.cjs"
+  }
+}

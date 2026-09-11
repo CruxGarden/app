@@ -96,6 +96,15 @@ export function getMockLanguageModel(): LanguageModel {
           }
           return toolCallStream('list_cruxspace_assets', {});
         }
+        if (lastUserText(prompt).includes('[gdevelop:edit]')) {
+          const rounds = toolResultsThisTurn(prompt);
+          if (!rounds.length) return toolCallStream('inspect_gdevelop', {});
+          if (rounds.length === 1)
+            return toolCallStream('set_gdevelop_background', { scene: 'Scene', rgb: [32, 48, 64] });
+          if (rounds.length === 2)
+            return toolCallStream('set_gdevelop_name', { name: 'Garden game' });
+          return textStream('Named the game and changed the native scene background.');
+        }
         if (lastUserText(prompt).includes('[blockbench:rename]')) {
           const rounds = toolResultsThisTurn(prompt);
           if (!rounds.length) return toolCallStream('inspect_blockbench', {});
