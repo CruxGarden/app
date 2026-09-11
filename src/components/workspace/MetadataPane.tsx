@@ -1,3 +1,4 @@
+import ToolInfoSettings from './ToolInfoSettings';
 import { useCruxStore } from '@/stores/cruxStore';
 import { useAppStore } from '@/stores/appStore';
 import MetadataContent from './MetadataContent';
@@ -24,6 +25,7 @@ export default function MetadataPane() {
     <div className="flex flex-col h-full">
       <EntryFileSettings />
       <NotesSharingSettings />
+      <ToolInfoSettings />
       <MetadataContent
         crux={crux}
         summary={summary}
