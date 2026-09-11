@@ -1,3 +1,4 @@
+import { MERMAID_TOOLS, mermaidCommand } from '@/ai/mermaid-tools';
 import { BITSY_TOOLS, bitsyCommand } from '@/ai/bitsy-tools';
 import { AUDIOMASS_TOOLS, audiomassCommand } from '@/ai/audiomass-tools';
 import { INSTRUMENT_TOOLS, instrumentCommand } from '@/ai/instrument-tools';
@@ -16,6 +17,7 @@ import type { AppToolDefinition } from './embedded-app-tool-registry';
 
 /** Trusted built-in adapters declare tools and affected files; frames cannot grant themselves tools. */
 export function embeddedAppToolAdapter(crux: { meta?: Record<string, unknown> } | null) {
+  if (nativeAppType(crux) === 'mermaid') return { tools: MERMAID_TOOLS, prepare: mermaidCommand };
   if (nativeAppType(crux) === 'bitsy') return { tools: BITSY_TOOLS, prepare: bitsyCommand };
   if (isAudioMass(crux)) return { tools: AUDIOMASS_TOOLS, prepare: audiomassCommand };
   if (isMiniPaint(crux)) return { tools: MINIPAINT_TOOLS, prepare: minipaintCommand };

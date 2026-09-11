@@ -182,6 +182,7 @@ export async function startGarden(app) {
     validateProject(doc);
     if (doc.project) storage = Object.assign(Object.create(null), doc.project.storage);
     app.start();
+    if (!doc.project) app.hidePanel('aboutPanel');
     await settle();
     hydrating = false;
     workspace.inert = false;
