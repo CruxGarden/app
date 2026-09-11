@@ -3,12 +3,16 @@ import { LAYOUT_WORKSHOP } from './index';
 const sources = import.meta.glob(
   [
     '../../tool-cruxes/shared/*.{js,md,css}',
-    '../../tool-cruxes/{openmosh,tables,smplr,playcanvas}/{*.html,*.js,*.md,data/*.json,skills/**/*,samples/{LICENSE,provenance.json}}',
+    '../../tool-cruxes/{openmosh,tables,smplr,playcanvas,excalidraw,univer}/vendor/**/*.css',
+    '../../tool-cruxes/{openmosh,tables,smplr,playcanvas,excalidraw,univer}/{*.html,*.js,*.md,*.css,data/*.json,skills/**/*,samples/{LICENSE,provenance.json}}',
   ],
   { query: '?raw', import: 'default', eager: true },
 ) as Record<string, string>;
 const assets = import.meta.glob(
-  '../../tool-cruxes/{openmosh,tables,smplr,playcanvas}/{vendor/*,samples/*.wav,assets/*.png}',
+  [
+    '../../tool-cruxes/{openmosh,tables,smplr,playcanvas,excalidraw,univer}/{vendor/**/*,samples/*.wav,assets/*.png}',
+    '!../../tool-cruxes/**/vendor/**/*.css',
+  ],
   { query: '?url', import: 'default', eager: true },
 ) as Record<string, string>;
 export function samplerTemplate(type: string): TemplateDefinition {
@@ -25,6 +29,10 @@ export function samplerTemplate(type: string): TemplateDefinition {
       files.push({ path: relative.slice(type.length + 1), content, encoding: 'asset-url' });
   }
   const guidance: Record<string, string> = {
+    excalidraw:
+      'Draw shapes, connect ideas, add text or drop an image. Export a drawing, PNG or SVG.',
+    univer:
+      'Edit the example budget, add formulas and sheets. Export the workbook or a CSV of the active sheet.',
     openmosh:
       'Import an image, add effects and export a PNG. The original stays separate from your effect settings.',
     tables:

@@ -1,0 +1,87 @@
+{
+  "schemaVersion": 1,
+  "type": "univer",
+  "title": "Studio budget",
+  "workbook": {
+    "id": "budget",
+    "name": "Studio budget",
+    "appVersion": "0.25.1",
+    "locale": "enUS",
+    "styles": {},
+    "sheetOrder": ["budget-sheet"],
+    "sheets": {
+      "budget-sheet": {
+        "id": "budget-sheet",
+        "name": "Budget",
+        "rowCount": 100,
+        "columnCount": 20,
+        "cellData": {
+          "0": {
+            "0": {
+              "v": "Studio budget"
+            },
+            "1": {
+              "v": "Quantity"
+            },
+            "2": {
+              "v": "Unit cost"
+            },
+            "3": {
+              "v": "Total"
+            }
+          },
+          "1": {
+            "0": {
+              "v": "Sketchbooks"
+            },
+            "1": {
+              "v": 4
+            },
+            "2": {
+              "v": 12
+            },
+            "3": {
+              "f": "=B2*C2"
+            }
+          },
+          "2": {
+            "0": {
+              "v": "Workshop materials"
+            },
+            "1": {
+              "v": 2
+            },
+            "2": {
+              "v": 35
+            },
+            "3": {
+              "f": "=B3*C3"
+            }
+          },
+          "4": {
+            "2": {
+              "v": "Grand total"
+            },
+            "3": {
+              "f": "=SUM(D2:D3)"
+            }
+          }
+        },
+        "columnData": {
+          "0": {
+            "w": 240
+          },
+          "1": {
+            "w": 110
+          },
+          "2": {
+            "w": 130
+          },
+          "3": {
+            "w": 130
+          }
+        }
+      }
+    }
+  }
+}

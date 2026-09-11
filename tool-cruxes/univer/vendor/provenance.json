@@ -1,0 +1,18 @@
+{
+  "entry": "export {createUniver,LocaleType,mergeLocales} from '@univerjs/presets'; export {UniverSheetsCorePreset} from '@univerjs/preset-sheets-core'; export {default as enUS} from '@univerjs/preset-sheets-core/locales/en-US'; import '@univerjs/preset-sheets-core/lib/index.css';",
+  "build": "esbuild 0.25.12 production ESM; pinned npm lockfile; local fonts",
+  "artifacts": {
+    "THIRD-PARTY-NOTICES.md": {
+      "bytes": 426930,
+      "sha256": "390380170b7d5d0aae05dd58e5421361436e87a03e34cdca2e8e6b9a0791c1ec"
+    },
+    "engine.css": {
+      "bytes": 82325,
+      "sha256": "712ffe730a33853108b3c5c684e3da966557a4275ec97457ea03ccdc354963a1"
+    },
+    "engine.js": {
+      "bytes": 11014705,
+      "sha256": "44dd960373f75b3bc5654e98599e8a432d6e4d6fc77df3154ce368f1a5ad8492"
+    }
+  }
+}

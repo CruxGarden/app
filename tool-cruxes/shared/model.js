@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MIT
-export const TYPES = ['openmosh', 'tables', 'smplr', 'playcanvas'];
+import { validateProductivity, productivityStarter, productivityCommand } from './productivity.js';
+export const TYPES = ['openmosh', 'tables', 'smplr', 'playcanvas', 'excalidraw', 'univer'];
 export const SHAPES = ['box', 'sphere', 'cylinder', 'cone'];
 export const PADS = ['kick', 'snare', 'hat', 'clap'];
 export const EFFECTS = {
@@ -36,7 +37,9 @@ export function validateProject(doc, expectedType) {
     'Choose a version 1 project for this app.',
   );
   assert(text(doc.title), 'Give the project a title of 1–120 characters.');
-  if (doc.type === 'openmosh') {
+  if (['excalidraw', 'univer'].includes(doc.type)) {
+    validateProductivity(doc);
+  } else if (doc.type === 'openmosh') {
     assert(
       doc.source === null ||
         (typeof doc.source === 'string' &&
@@ -213,6 +216,7 @@ export function tableExample(name = 'projects') {
   };
 }
 export function starter(type) {
+  if (['excalidraw', 'univer'].includes(type)) return productivityStarter(type);
   if (type === 'tables') return tableExample();
   const common = { schemaVersion: 1, type };
   if (type === 'openmosh')
@@ -272,6 +276,8 @@ export function starter(type) {
   };
 }
 export function applyCommand(doc, command) {
+  if (['excalidraw', 'univer'].includes(doc.type))
+    return validateProject(productivityCommand(doc, command), doc.type);
   const next = structuredClone(doc);
   assert(object(command), 'Invalid app command.');
   if (command.op === 'effects' && doc.type === 'openmosh') {
