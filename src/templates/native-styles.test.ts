@@ -6,6 +6,7 @@ for (const [id, root] of [
   ['gephi-app', 'gephi-crux'],
   ['ketcher-app', 'ketcher-crux'],
   ['twine-app', 'twine-crux'],
+  ['blockbench-app', 'blockbench-crux'],
   ['svgedit-app', 'svgedit-crux'],
   ['jupyterlite-app', 'jupyterlite-crux'],
   ['rawgraphs-app', 'rawgraphs-crux'],

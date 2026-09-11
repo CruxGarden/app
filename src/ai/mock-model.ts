@@ -96,6 +96,20 @@ export function getMockLanguageModel(): LanguageModel {
           }
           return toolCallStream('list_cruxspace_assets', {});
         }
+        if (lastUserText(prompt).includes('[blockbench:rename]')) {
+          const rounds = toolResultsThisTurn(prompt);
+          if (!rounds.length) return toolCallStream('inspect_blockbench', {});
+          if (rounds.length === 1) {
+            const data = JSON.parse(toolResultText(prompt, 'inspect_blockbench') || '{}');
+            return toolCallStream('rename_blockbench_element', {
+              elementId: data.elements?.[0]?.id,
+              name: 'Lantern body',
+            });
+          }
+          if (rounds.length === 2)
+            return toolCallStream('set_blockbench_name', { name: 'Garden lantern' });
+          return textStream('Renamed the native model and lantern body.');
+        }
         if (lastUserText(prompt).includes('[svgedit:fill]')) {
           const rounds = toolResultsThisTurn(prompt);
           if (!rounds.length) return toolCallStream('inspect_svgedit', {});
