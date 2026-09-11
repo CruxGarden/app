@@ -9,6 +9,7 @@ const NATIVE_TEMPLATES = {
   'mermaid-app': 'mermaid',
   'piskel-app': 'piskel',
   'rawgraphs-app': 'rawgraphs',
+  'gephi-app': 'gephi',
   'jupyterlite-app': 'jupyterlite',
 } as const;
 /** Native adapters share the owner-bound document and binary bridge. */

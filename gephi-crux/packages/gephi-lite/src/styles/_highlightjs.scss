@@ -1,0 +1,20 @@
+@import "highlight.js/styles/default.css";
+
+div.code-thumb {
+  font-size: 10px;
+  min-height: 80px;
+  max-height: 240px;
+  overflow: hidden;
+  pre {
+    margin-bottom: 0;
+    white-space: pre-wrap; /* css-3 */
+    white-space: -moz-pre-wrap; /* Mozilla, since 1999 */
+    white-space: -pre-wrap; /* Opera 4-6 */
+    white-space: -o-pre-wrap; /* Opera 7 */
+    word-wrap: break-word; /* Internet Explorer 5.5+ */
+    code.hljs {
+      background: none;
+      padding: calc($spacer / 4);
+    }
+  }
+}

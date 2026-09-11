@@ -1,0 +1,36 @@
+{
+  "compilerOptions": {
+    "target": "es5",
+    "lib": ["dom", "dom.iterable", "esnext"],
+    "allowJs": true,
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "strict": true,
+    "forceConsistentCasingInFileNames": true,
+    "noFallthroughCasesInSwitch": true,
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "strictFunctionTypes": false,
+    "noEmit": true,
+    "typeRoots": ["node_modules"],
+    "strictNullChecks": true
+  },
+  "watchOptions": {
+    "excludeDirectories": ["**/node_modules"]
+  },
+  "files": [],
+  "references": [
+    {
+      "path": "./packages/sdk"
+    },
+    {
+      "path": "./packages/broadcast"
+    },
+    {
+      "path": "./packages/gephi-lite"
+    }
+  ]
+}

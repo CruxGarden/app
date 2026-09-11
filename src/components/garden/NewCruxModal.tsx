@@ -1,4 +1,5 @@
 import { getServices } from '@/services';
+import { isEmbeddedApp } from '@/services/embedded-app';
 import { useState, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { createCruxStore } from '@/stores/cruxStore';
@@ -242,6 +243,16 @@ const TEMPLATES: Template[] = [
     desktopOnly: true,
   },
   {
+    id: 'gephi-app',
+    label: 'Gephi Lite',
+    description: 'Research · explore networks, relationships and graph data',
+    defaultTitle: 'My research network',
+    icon: <LayoutIcon />,
+    thumb: <BlankThumb />,
+    kind: 'webapp',
+    desktopOnly: true,
+  },
+  {
     id: 'jupyterlite-app',
     label: 'JupyterLite',
     description: 'Research · Python notebooks, datasets and scientific plots',
@@ -478,7 +489,7 @@ export default function NewCruxModal({ open, onClose }: NewCruxModalProps) {
           onProgress: (done, total) => setImportProgress({ done, total }),
         });
 
-        if (!result.layout && (await getServices().crux.findById(result.cruxId)).kind === 'notes')
+        if (!result.layout && isEmbeddedApp(await getServices().crux.findById(result.cruxId)))
           useUIStore.getState().seedCruxLayout(result.cruxId, 27);
 
         if (result.layout) {

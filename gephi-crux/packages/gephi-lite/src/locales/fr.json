@@ -1,0 +1,1009 @@
+{
+  "appearance": {
+    "color": {
+      "color_all_items": "Couleur pour tous les {{items}}",
+      "data": "Fichier de données",
+      "data_description": "Toutes les couleurs des {{items}} sont celles du fichier de données d'entrée.",
+      "default_value": "Couleur pour {{items}} sans valeur valide",
+      "enable_color_shading": "Nuancer la couleur des {{items}}",
+      "fixed": "Une couleur constante",
+      "quali": "en tant que chaînes de caractères",
+      "quanti": "en tant que nombres",
+      "ranking_intro": "Ajoutez des points de couleur sur cette échelle",
+      "scale_point": "Point d'échelle",
+      "set_color_from": "Définir la couleur à partir de...",
+      "shading_attribute": "Nuancer les {{items}} suivant l'attribut...",
+      "shading_caption_1": "Les {{items}} sont nuancés vers la couleur",
+      "shading_caption_2": "suivant leur valeur de {{attribute}}.",
+      "shading_color": "Couleur cible",
+      "shading_factor": "Degré de variation",
+      "shading_factor_description": "Détermine à quel point les {{items}} doivent être nuancés. Utilisez 1 pour nuancer jusqu'à la couleur cible, ou 0.1 pour ne nuancer que jusqu'à 10% de la couleur cible.",
+      "source": "Nœuds sources",
+      "source_description": "Chaque lien est coloré en fonction de son nœud source.",
+      "target": "Nœuds cibles",
+      "target_description": "Chaque lien est coloré en fonction de son nœud cible.",
+      "title": "Couleur"
+    },
+    "graph": {
+      "background_color": "Couleur d'arrière-plan",
+      "layout_grid_color": "Couleur de la grille d'évaluation de la spatialisation"
+    },
+    "images": {
+      "data": "Fichier de données",
+      "data_description": "Toutes les images des {{items}} sont ceux du fichier de données d'entrée.",
+      "default_value": "Image pour {{items}} sans valeur valide",
+      "fixed": "Une URL fixe",
+      "fixed_label": "La même image pour chaque {{items}}",
+      "none": "Aucune image",
+      "none_description": "Tous les {{items}} n'ont pas d'image affichée.",
+      "set_labels_from": "Définir l'image à partir de...",
+      "title": "Images"
+    },
+    "labels": {
+      "adapts_to_zoom": "Dans quelle mesure les libellés doivent-ils augmenter avec le zoom",
+      "data": "Fichier de données",
+      "data_description": "Tous les libellés des {{items}} sont ceux du fichier de données d'entrée.",
+      "default_value": "Libellé pour {{items}} sans valeur valide",
+      "density": "Combien de libellés doivent apparaître à tout moment",
+      "ellipsis": {
+        "enabled": "Tronquer les labels",
+        "max_length": "Taille maximale des labels"
+      },
+      "fixed": "Un texte constant",
+      "fixed_label": "Libellé pour chaque {{items}}",
+      "fixed_label_size": "Taille du libellé pour chaque {{items}}",
+      "fixed_size": "Taille fixe",
+      "none": "Pas de libellé",
+      "none_description": "Tous les {{items}} n'ont pas de libellé affiché.",
+      "set_labels_from": "Définir le libellé à partir de...",
+      "set_labels_size_from": "Définir la taille du libellé à partir de...",
+      "size": "Taille des {{items}}",
+      "size_coef": "Tailles des libellés (plus grand rend les libellés plus grands)",
+      "title": "Libellés"
+    },
+    "menu": {
+      "background": "Arrière-plan",
+      "edges": "Liens",
+      "labels": "Libellés",
+      "nodes": "Nœuds"
+    },
+    "no_caption": "(pas de légende)",
+    "partition": "Partition",
+    "ranking": "Classement",
+    "show_edges": "Afficher les liens",
+    "size": {
+      "data": "Fichier de données",
+      "data_description": "Toutes les tailles des {{items}} sont celles du fichier de données d'entrée.",
+      "default_value": "Taille pour {{items}} sans valeur valide",
+      "fixed": "Une taille constante",
+      "interpolate": "Interpoler entre les valeurs personnalisées min et max",
+      "set_size_from": "Définir la taille à partir de...",
+      "size_all_items": "Taille pour tous les {{items}}",
+      "title": "Taille"
+    },
+    "title": "Apparence",
+    "transformation_methods": {
+      "linear": "linéaire",
+      "log": "logarithme",
+      "pow-2": "puissance 2",
+      "pow-3": "puissance 3",
+      "spline": "spline",
+      "sqrt": "racine carrée",
+      "title": "Méthodes de transformation"
+    },
+    "zIndex": {
+      "default_value": "",
+      "description": "Permet de modifier quels {{items}} doivent être affichés devant.",
+      "none": "Profondeur par défaut (plus rapide)",
+      "none_description": "Gephi Lite affiche tous les {{items}} dans l'ordre où il les rencontre.",
+      "reverse_order": "Inverse l'ordre des éléments (valeurs les plus basses devant)",
+      "set_values_from": "Trier la profondeur par...",
+      "title": "Profondeur"
+    }
+  },
+  "auth": {
+    "sign_in": "Se connecter à GitHub",
+    "sign_out": "Se déconnecter de GitHub",
+    "unauth_success": "Déconnexion réussie"
+  },
+  "cloud": {
+    "github": {
+      "auth": {
+        "asking_for_device_code": "Demande d'un code d'appareil à GitHub",
+        "copy_code": "Copiez le code ci-dessous et cliquez sur le bouton \"Ouvrir GitHub\". Une nouvelle fenêtre s'ouvrira, sur laquelle GitHub vous demandera le code",
+        "copy_success": "Code enregistré dans le presse-papiers",
+        "title": "Authentification GitHub",
+        "waiting_validation": "En attente de validation"
+      },
+      "disconnect": {
+        "action": "Déconnecter",
+        "message": "Êtes-vous sûr de vouloir vous déconnecter de GitHub ?",
+        "success": "Vous avez été déconnecté de GitHub",
+        "title": "Se déconnecter de GitHub ?"
+      },
+      "title": "GitHub"
+    }
+  },
+  "common": {
+    "add": "Ajouter",
+    "all": "Tous",
+    "apply": "Appliquer",
+    "cancel": "Annuler",
+    "clear": "Effacer",
+    "close": "Fermer",
+    "collapse": "Réduire",
+    "colon": ":",
+    "confirm": "Confirmer",
+    "copy": "Copier",
+    "created": "Créé",
+    "delete": "Supprimer",
+    "disabled": "Désactivé",
+    "download": "Télécharger",
+    "edit": "Modifier",
+    "enabled": "Activé",
+    "expand": "Agrandir",
+    "filename": "Nom du fichier",
+    "from": "De",
+    "hide": "Masquer",
+    "load-more": "Charger plus",
+    "loading": "Chargement",
+    "max": "Max",
+    "min": "Min",
+    "none": "Aucun",
+    "open": "Ouvrir",
+    "open_code_editor": "Ouvrir l'éditeur de code",
+    "open_file": "Ouvrir {{filename}}",
+    "remove": "Supprimer",
+    "reset": "Réinitialiser",
+    "save": "Enregistrer",
+    "save-and-run": "Enregistrer et exécuter",
+    "select": "Sélectionner...",
+    "show": "Afficher",
+    "show_less": "Afficher moins",
+    "show_more": "Afficher plus",
+    "size": "Taille",
+    "start": "Démarrer",
+    "stop": "Arrêter",
+    "submit": "Soumettre",
+    "to": "à",
+    "updated": "Mis à jour"
+  },
+  "context": {
+    "title": "Aperçu des données"
+  },
+  "datatable": {
+    "create_column": "Créer la colonne",
+    "duplicate_column": "Dupliquer la colonne",
+    "edges_matching": "<strong>{{count, number}}</strong> liens correspondent à la recherche",
+    "edges_matching_one": "<strong>{{count, number}}</strong> lien correspond à la recherche",
+    "edges_matching_zero": "<strong>Aucun</strong> lien correspond à la recherche",
+    "edges_not_matching": "<strong>{{count, number}}</strong> liens ne correspondent pas à la recherche",
+    "edges_not_matching_one": "<strong>{{count, number}}</strong> lien ne correspond pas à la recherche",
+    "edges_not_matching_zero": "<strong>Aucun}</strong> lien ne correspond pas à la recherche",
+    "insert_left": "Insérer une nouvelle colonne à gauche",
+    "insert_right": "Insérer une nouvelle colonne à droite",
+    "modify_column": "Modifier la colonne",
+    "move_left": "Déplacer à gauche",
+    "move_right": "Déplacer à droite",
+    "nodes_matching": "<strong>{{count, number}}</strong> nœuds correspondent à la recherche",
+    "nodes_matching_one": "<strong>{{count, number}}</strong> nœud correspond à la recherche",
+    "nodes_matching_zero": "<strong>Aucun</strong> nœud correspond à la recherche",
+    "nodes_not_matching": "<strong>{{count, number}}</strong> nœuds ne correspondent pas à la recherche",
+    "nodes_not_matching_one": "<strong>{{count, number}}</strong> nœud ne correspond pas à la recherche",
+    "nodes_not_matching_zero": "<strong>Aucun</strong> nœud ne correspond pas à la recherche",
+    "protected_columns": {
+      "data": "Données",
+      "degree": "Degré",
+      "id": "ID",
+      "preview": "Aperçu",
+      "selected": "Sélectionné ?",
+      "sourceId": "Source ID",
+      "targetId": "Cible ID"
+    },
+    "save_and_create_column": "Enregistrer et créer la colonne",
+    "save_cell": "Enregistrer la cellule",
+    "sort_asc": "Tri A→Z (0→9)",
+    "sort_desc": "Tri Z→A (9→0)"
+  },
+  "edition": {
+    "all_edges": "Tous les liens",
+    "all_nodes": "Tous les nœuds",
+    "code_editor": "Éditeur de code",
+    "confirm_delete_attributes": "Celà va supprimer {{nbValues}} valeurs du graphe. Êtes-vous sûr(e) de vouloir supprimer l'attribut {{name}} ?",
+    "confirm_delete_edges": "Êtes-vous sûr de vouloir supprimer {{count, number}} liens ?",
+    "confirm_delete_edges_one": "Êtes-vous sûr de vouloir supprimer ce lien ?",
+    "confirm_delete_nodes": "Êtes-vous sûr de vouloir supprimer {{count, number}} nœuds ?",
+    "confirm_delete_nodes_one": "Êtes-vous sûr de vouloir supprimer ce nœud ?",
+    "create_edges": "Créer un nouveau lien",
+    "create_edges_field": "Créer un attribut de liens",
+    "create_edges_field_success": "L'attribut de lien a été créé.",
+    "create_edges_scripted_field": "Créer un attribut de lien scripté",
+    "create_edges_scripted_field_success": "L'attribut de lien scripté a été créé.",
+    "create_edges_success": "Le lien a été créé avec succès.",
+    "create_nodes": "Créer un nouveau nœud",
+    "create_nodes_field": "Créer un attribut de nœud",
+    "create_nodes_field_success": "L'attribut de nœud a été créé.",
+    "create_nodes_scripted_field": "Créer un attribut de nœud scripté",
+    "create_nodes_scripted_field_success": "L'attribut de nœud scripté a été créé.",
+    "create_nodes_success": "Le nœud a été créé avec succès.",
+    "data_creation": "Création de données",
+    "delete_attribute": "Supprimer l'attribut",
+    "delete_attributes_success": "L'attribut '{{name}}' a bien été supprimé.",
+    "delete_edges": "Supprimer {{count, number}} liens",
+    "delete_edges_attributes": "Supprimer l'attribut '{{name}}' des liens",
+    "delete_edges_one": "Supprimer un lien",
+    "delete_edges_success": "Les {{count,number}} liens ont bien été supprimés.",
+    "delete_edges_success_one": "Le lien a été supprimé.",
+    "delete_edges_zero": "Supprimer les liens",
+    "delete_nodes": "Supprimer {{count, number}} nœuds",
+    "delete_nodes_attributes": "Supprimer l'attribut '{{name}}' des nœuds",
+    "delete_nodes_one": "Supprimer un nœud",
+    "delete_nodes_success": "Les {{count, number}} nœuds ont été supprimés.",
+    "delete_nodes_success_one": "Le nœud a été supprimé.",
+    "delete_nodes_zero": "Supprimer les nœuds",
+    "delete_selected_edges": "Supprimer les liens sélectionnés",
+    "delete_selected_edges_one": "Supprimer le lien sélectionné",
+    "delete_selected_nodes": "Supprimer les nœuds sélectionnés",
+    "delete_selected_nodes_one": "Supprimer le nœud sélectionné",
+    "delete_this_edges": "Supprimer ce lien",
+    "delete_this_nodes": "Supprimer ce nœud",
+    "edit_selected_edges": "Éditer les liens sélectionnés",
+    "edit_selected_edges_one": "Éditer le lien sélectionné",
+    "edit_selected_nodes": "Éditer les nœuds sélectionnés",
+    "edit_selected_nodes_one": "Éditer le nœud sélectionné",
+    "filtered_edges": "Liens filtrés seulement",
+    "filtered_nodes": "Nœuds filtrés seulement",
+    "merge_selected_nodes": "Fusionner les nœuds sélectionnés",
+    "multi": {
+      "select_attribute": "Sélectionner l'attribut à éditer pour la sélection",
+      "select_value": "Sélectionner une valeur à appliquer à la sélection"
+    },
+    "search_nodes": "Rechercher par libellé de nœud...",
+    "selected_edges": "Liens sélectionnés seulement",
+    "selected_nodes": "Nœuds sélectionnées seulement",
+    "update_edges": "Éditer le lien existant",
+    "update_edges_field": "Éditer l'attribut de liens",
+    "update_edges_field_success": "L'attribut de lien a bien été mis à jour.",
+    "update_edges_success": "Le lien a été mis à jour avec succès.",
+    "update_multiple_edges": "Éditer les liens existants",
+    "update_multiple_edges_success": "Les {{count,number}} liens ont bien été mis à jour.",
+    "update_multiple_nodes": "Éditer les nœuds éxistants",
+    "update_multiple_nodes_success": "Les {{count,number}} nœuds ont bien été mis à jour.",
+    "update_nodes": "Éditer le nœud existant",
+    "update_nodes_field": "Éditer l'attribut des nœuds",
+    "update_nodes_field_success": "L'attribut de nœud a bien été mis à jour.",
+    "update_nodes_success": "Le nœud a été mis à jour avec succès.",
+    "update_this_edges": "Éditer ce lien",
+    "update_this_nodes": "Éditer ce nœud"
+  },
+  "error": {
+    "deprecated": {
+      "gexf_search_params": "Le paramètre d'URL `gexf=` pour ouvrir un fichier automatiquement a été renommé `file=` dans la version 0.4.0. Utiliser le paramètre gexf est déprécié, et pourrait ne plus fonctionner dans une version future. Veuillez utiliser `file=` à la place."
+    },
+    "IMPORT_BAD_FILE_FORMAT": "Le fichier {{fileName}} n'est pas reconnue",
+    "IMPORT_BAD_VERSION": "Votre fichier provient d'une version précédente de Gephi-Lite ({{version}}) qui n'est pas compatible avec la version courante",
+    "form": {
+      "field_already_exists": "La colonne avec le label \"{{label}}\" utilise déjà l'identifiant \"{{id}}\".",
+      "max": "Le champ {{name}} doit être inférieur ou égal à {{max}}",
+      "min": "Le champ {{name}} doit être supérieur ou égal à {{min}}",
+      "required": "Le champ {{name}} est requis",
+      "unique": "Une autre entrée existe déjà avec cette valeur"
+    },
+    "message": "Désolé ! gephi-lite est en constante amélioration mais des bugs nous échappe... Vous pouvez signaler cette erreur sur GitHub en cliquant sur le bouton ci-dessous.",
+    "not_found": {
+      "paragraph": "Vous avez peut-être mal saisi l'adresse ou la page a été déplacée.",
+      "subtitle": "La page que vous recherchez n'existe pas.",
+      "title": "Page non trouvée"
+    },
+    "report": "Signaler l'erreur",
+    "reset": "Tout réinitialiser",
+    "retry": "Ré-essayer",
+    "title": "Erreur",
+    "unknown": "Une erreur inconnue s'est produite."
+  },
+  "file": {
+    "login_capabilities": "Vous pouvez vous connecter à GitHub depuis Gephi Lite pour enregistrer et charger des fichiers de graphe directement en tant que gists GitHub :",
+    "title": "Gestion des données"
+  },
+  "filters": {
+    "activated": "Filtre activé",
+    "add_filter": "Ajouter un filtre",
+    "create": {
+      "custom_script_description": "Ces filtres permettent d’écrire une fonction JavaScript qui indiquera, pour chaque nœud ou lien, s’il doit être conservé par le filtre.",
+      "edges_attributes_description": "Ces filtres permettent de filtrer les liens en fonction de leurs attributs. Certains types d’attributs sont désactivés car ils ne peuvent pas être utilisés pour filtrer.",
+      "no_edges_attributes": "Aucun attribut de lien",
+      "no_nodes_attributes": "Aucun attribut de nœud",
+      "nodes_attributes_description": "Ces filtres permettent de filtrer les nœuds en fonction de leurs attributs. Certains types d’attributs sont désactivés car ils ne peuvent pas être utilisés pour filtrer.",
+      "topological_description": "Ces filtres permettent de réduire la taille du réseau à l’aide de diverses méthodes topologiques.",
+      "what_kind": "Quel type de filtre voulez vous créer ?"
+    },
+    "create_filter": "Créer un filtre",
+    "custom_script": "Script personnalisé",
+    "desactivated": "Filtre désactivé, cliquez pour réactiver",
+    "description": "Ce panneau permet de filtrer le graphe en superposant des filtres.",
+    "disable_following": "Montrer le réseau",
+    "disable_following_subtitle": "c.a.d. désactiver tous les filtres suivants",
+    "edges_fields": "Attributs des liens",
+    "filter": "Filtre",
+    "full_graph": "Graphe entier",
+    "inapplicable": "Filtre désactivé : une seule valeur disponible.",
+    "insert": "Insérer un filtre",
+    "intermediate_graph": "Réseau intermédiaire",
+    "keepMissingValues": "Conserver les valeurs manquantes",
+    "noValueOption": "Pas de valeur",
+    "no_concurrent_edit": "Un seul filtre peut être modifié à la fois. Confirmez l'édition en cours pour modifier ce filtre.",
+    "nodes_fields": "Attributs des nœuds",
+    "range": "plage",
+    "script": "Filtre personnalisé",
+    "terms": "valeurs exactes",
+    "title": "Filtres",
+    "topological": "Topologie",
+    "topology": {
+      "ego": {
+        "core": "profondeur : distance maximum entre les nœuds à garder et le nœud « ego »",
+        "direction": {
+          "both": "tous les liens",
+          "in": "les liens entrant",
+          "label": "Suivre",
+          "out": "les liens sortants"
+        },
+        "ego": "Nœud « ego »",
+        "label": "Réseau égocentré"
+      },
+      "kCore": {
+        "core": "k : degré minimal des nœuds à garder",
+        "keepSelfLoop": "Garder les boucles",
+        "label": "K-Cœur"
+      },
+      "largestConnectedComponent": {
+        "label": "Composantes connexes",
+        "number": "Nombre de composantes à garder"
+      }
+    },
+    "using": "Utilisation",
+    "visible_graph": "Réseau visible",
+    "booleanTrueOption": "vrai",
+    "booleanFalseOption": "faux"
+  },
+  "gephi-lite": {
+    "info": "Plus d'informations sur Gephi Lite",
+    "open_welcome_modal": "Ouvrir la modale d'accueil",
+    "report_issue": "Signaler un problème",
+    "title": "Gephi Lite"
+  },
+  "github": {
+    "description": "Vous pouvez vous connecter à GitHub depuis Gephi Lite pour enregistrer et charger des fichiers de graphe directement en tant que gists GitHub.",
+    "logged_as": "Vous êtes actuellement connecté à GitHub en tant que {{username}}.",
+    "select_ui_language": "Sélectionner le langage de l'application",
+    "title": "Authentification GitHub"
+  },
+  "graph": {
+    "caption": {
+      "color": "Couleurs des {{itemType}}",
+      "disabled": "La légende est disponible une fois que l'apparence a été définie.",
+      "size": "Tailles des {{itemType}}",
+      "title": "Légende"
+    },
+    "clone_in_new_tab": {
+      "success": "La duplication de votre graphe a réussie.",
+      "title": "Dupliquer dans un nouvel onglet"
+    },
+    "control": {
+      "fullscreenEnter": "Activer le mode plein écran",
+      "fullscreenExit": "Quitter le mode plein écran",
+      "zoomIn": "Zoom avant",
+      "zoomOut": "Zoom arrière",
+      "zoomReset": "Afficher tout le graphe"
+    },
+    "export": {
+      "gexf": {
+        "error": "Une erreur s'est produite lors de l'export de votre graphe. Veuillez vérifier votre connexion ou réessayer ultérieurement.",
+        "success": "L'export en GEXF de votre graphe a bien été réalisé.",
+        "title": "Exporter en GEXF"
+      },
+      "png": {
+        "fields": {
+          "filename": "Nom du fichier",
+          "height": "Hauteur (en pixels)",
+          "preserve_camera": "Conserver la position actuelle de la caméra",
+          "width": "Largeur (en pixels)"
+        },
+        "success": "L'export PNG de votre graphe a bien été réalisé.",
+        "title": "Exporter une capture d'écran en PNG"
+      },
+      "title": "Exporter le graphe"
+    },
+    "metadata": {
+      "description": "Description",
+      "graph-title": "Titre",
+      "graph-type": "Type de graphe",
+      "graph-type-directed-warning": "Faire cette modification va faire perdre toutes les directions des arcs, car ils vont tous devenir dirigés.",
+      "graph-type-undirected-warning": "Faire cette modification va faire perdre toutes les directions des arcs, car ils vont tous devenir non dirigés.",
+      "title": "Métadonnées"
+    },
+    "model": {
+      "degree": "Degré",
+      "directed": "Orienté",
+      "directed_graph": "Réseau dirigé",
+      "dynamic": "dynamique",
+      "edges": "liens",
+      "edges-data": {
+        "attribute-name": "Nom de l'attribut",
+        "attribute-value": "Valeur de l'attribut",
+        "attributes": "Autres attributs",
+        "color": "Couleur du lien",
+        "id": "ID du lien",
+        "label": "Libellé du lien",
+        "new-attribute": "Ajouter un nouvel attribut",
+        "source": "Nœud source du lien",
+        "target": "Nœud cible du lien",
+        "weight": "Poids du lien"
+      },
+      "edges_one": "lien",
+      "edges_zero": "lien",
+      "field": {
+        "date-format": "Format de date",
+        "id": "Identifiant",
+        "label": "Label",
+        "separator": "Séparateur de mots-clefs",
+        "type": "Type",
+        "will_be_serialized_as": "{{type}} sera sérialisé sous la forme de"
+      },
+      "graph": "graph",
+      "mixed": "Mixte",
+      "mixed_graph": "Réseau mixte",
+      "no_attributes": "Il n'y a pas encore d'attribut dans le modèle.",
+      "nodes": "nœuds",
+      "nodes-data": {
+        "attribute-name": "Nom de l'attribut",
+        "attribute-value": "Valeur de l'attribut",
+        "attributes": "Autres attributs",
+        "color": "Couleur du nœud",
+        "id": "ID du nœud",
+        "label": "Libellé du nœud",
+        "new-attribute": "Ajouter un nouvel attribut",
+        "size": "Taille du nœud",
+        "x": "Position x du nœud",
+        "y": "Position y du nœud"
+      },
+      "nodes_one": "nœud",
+      "nodes_zero": "nœud",
+      "selfLoop": "Boucle ?",
+      "title": "Modèle d'attributs",
+      "undirected": "Non orienté",
+      "undirected_graph": "Réseau non-dirigé",
+      "warnings": {
+        "allMissing": "Aucune valeur dans le graphe",
+        "invalid_data": "La valeur \"{{value}}\" ne peut être interprétée comme un⋅e \"{{type}}\".",
+        "missing": "{{nbValues}} valeurs manquantes",
+        "wrong": "{{nbValues}} valeurs ne sont pas quantitatives"
+      }
+    },
+    "open": {
+      "github": {
+        "error": "Une erreur technique s'est produite. Veuillez vérifier votre connexion ou réessayer ultérieurement.",
+        "file-open-external": "Ouvrir {{filename}} sur GitHub",
+        "must-be-signed": "Cette fonctionnalité n'est disponible que si connecté à GitHub",
+        "no-data": "Vous n'avez aucun fichier GEXF, GRAPHML ou JSON au format Graphology d'enregistré sur GitHub",
+        "select-file": "Sélectionner un fichier",
+        "success": "Le fichier {{filename}} a bien été ouvert",
+        "title": "Ouvrir un fichier depuis GitHub"
+      },
+      "local": {
+        "button_text": "Sélectionner un fichier local",
+        "dragndrop_text": "Faites glisser-déposer un fichier GEXF, GRAPHML ou JSON au format Graphology.",
+        "error": "Une erreur s'est produite lors de l'ouverture du fichier. Veuillez vérifier que le fichier est valide et compatible avec la version courante.",
+        "success": "Le fichier {{filename}} a bien été ouvert",
+        "title": "Ouvrir un fichier local"
+      },
+      "new": {
+        "message": "Les données courantes seront perdues, voulez-vous continuer ?",
+        "success": "Graphe vide",
+        "title": "Nouveau graphe vide"
+      },
+      "remote": {
+        "error": "Une erreur s'est produite lors de l'ouverture du fichier. Veuillez vérifier votre connexion et vous assurer que le fichier est valide.",
+        "success": "Le fichier {{filename}} a bien été ouvert"
+      },
+      "title": "Ouvrir un fichier de graphe"
+    },
+    "partitioning": {
+      "description": "Pour appliquer l'apparence ou les filtres différemment sur différents groupes de {{items}}, partitionnez votre graphe en utilisant n'importe quel attribut qualitatif des nœuds.",
+      "missing_partition": "Ils sont regroupés dans une partition 'valeur manquante'.",
+      "missing_partition_preview": "Ils seront regroupés dans une partition 'valeur manquante'.",
+      "partition": "Partitionner les {{items}} sur",
+      "status_item": "Les {{items}} sont regroupés en",
+      "status_item_preview": "Les {{items}} seront regroupés en",
+      "status_no_partition": "Les {{items}} ne sont pas partitionnés",
+      "status_partition": "{{nbPartitions}} partitions en utilisant l'attribut '{{attribute}}'.",
+      "title": "Partitionnement",
+      "warning_nbMissing": "{{nbMissingValues}} {{items}} n'ont pas de valeur pour cet attribut."
+    },
+    "save": {
+      "github": {
+        "error": "Une erreur s'est produite lors de l'enregistrement de votre graphe. Veuillez vérifier votre connexion ou réessayer ultérieurement.",
+        "field": {
+          "description": "Description",
+          "filename": "Nom du fichier",
+          "isPublic": "Créer un Gist public"
+        },
+        "success": "Le fichier {{filename}} a bien été enregistré",
+        "title": "Enregistrer dans GitHub sous..."
+      },
+      "local": {
+        "description": "Cliquer ci-dessous pour télécharger le fichier JSON de l'espace de travail",
+        "error": "Une erreur s'est produite lors de l'enregistrement de votre graphe. Veuillez vérifier votre connexion ou réessayer ultérieurement.",
+        "success": "Le graphe a bien été enregistré",
+        "title": "Enregistrer en local"
+      },
+      "name": "Enregistrer",
+      "title": "Enregistrer l'espace de travail sous ..."
+    },
+    "title": "Graphe"
+  },
+  "layouts": {
+    "circlePack": {
+      "description": "Dispose les nœuds comme un graphique en bulles, en fonction des attributs spécifiés",
+      "parameters": {
+        "center": {
+          "description": "Centre de la spatialisation",
+          "title": "Centre"
+        },
+        "groupingField": {
+          "description": "Un attribut facultatif à utiliser pour regrouper les nœuds",
+          "title": "Attribut de hiérarchie"
+        },
+        "scale": {
+          "description": "Échelle de la spatialisation",
+          "title": "Échelle"
+        }
+      },
+      "title": "CirclePack"
+    },
+    "circular": {
+      "description": "Dispose les nœuds en cercle",
+      "parameters": {
+        "center": {
+          "description": "Centre du cercle",
+          "title": "Centre"
+        },
+        "scale": {
+          "description": "Échelle du cercle",
+          "title": "Échelle"
+        }
+      },
+      "title": "Circulaire"
+    },
+    "description": "Ce panneau permet de calculer de nouvelles coordonnées pour les nœuds du graphe.",
+    "exec": {
+      "started": "La spatialisation {{layout}} est en cours d'exécution",
+      "stopped": "La spatialisation {{layout}} a été arrêtée",
+      "success": "La spatialisation \"{{layout}}\" a bien été appliquée."
+    },
+    "fa2": {
+      "buttons": {
+        "autoSettings": {
+          "description": "Génère des paramètres qui conviennent le mieux au graphe actuel",
+          "title": "Estimer les paramètres"
+        }
+      },
+      "parameters": {
+        "adjustSizes": {
+          "description": "Les tailles des nœuds doivent-elles être prises en compte ?",
+          "title": "Tenir compte des tailles ?"
+        },
+        "barnesHutOptimize": {
+          "description": "Indique s'il faut utiliser l'approximation de Barnes-Hut pour calculer la répulsion en O(n*log(n)) au lieu de O(n^2), n étant le nombre de nœuds",
+          "title": "Optimisation de Barnes-Hut"
+        },
+        "barnesHutTheta": {
+          "description": "Paramètre theta de l'approximation de Barnes-Hut",
+          "title": "Theta de Barnes-Hut"
+        },
+        "edgeWeightInfluence": {
+          "description": "Influence des poids des liens sur la spatialisation",
+          "title": "Influence du poids des liens"
+        },
+        "gravity": {
+          "description": "Intensité de la gravité de la spatialisation",
+          "title": "Gravité"
+        },
+        "linLogMode": {
+          "description": "Indique s'il faut utiliser le modèle LinLog de Noack.",
+          "title": "Mode linLog"
+        },
+        "outboundAttractionDistribution": {
+          "title": "Distribution de l'attraction sortante"
+        },
+        "scalingRatio": {
+          "title": "Ratio de mise à l'échelle"
+        },
+        "slowDown": {
+          "title": "Ralentir ?"
+        },
+        "strongGravityMode": {
+          "title": "Mode de gravité intense ?"
+        }
+      },
+      "title": "ForceAtlas2"
+    },
+    "force": {
+      "parameters": {
+        "attraction": {
+          "description": "Importance de la force d'attraction qui attire chaque paire de nœuds connectés comme des élastiques",
+          "title": "Attraction"
+        },
+        "gravity": {
+          "description": "Importance de la force de gravité qui attire tous les nœuds vers le centre",
+          "title": "Gravité"
+        },
+        "inertia": {
+          "description": "Pourcentage du déplacement vectoriel d'un nœud qui est conservé à chaque étape. 0 signifie aucune inertie, 1 signifie aucune friction",
+          "title": "Inertie"
+        },
+        "maxMove": {
+          "description": "Longueur maximale qu'un nœud peut parcourir à chaque étape, en pixels",
+          "title": "Déplacement maximal"
+        },
+        "repulsion": {
+          "description": "Importance de la force de répulsion qui attire chaque paire de nœuds comme des aimants",
+          "title": "Répulsion"
+        }
+      },
+      "title": "Dirigée par la force"
+    },
+    "noverlap": {
+      "description": "Algorithme de disposition anti-collision",
+      "parameters": {
+        "expansion": {
+          "description": "Pourcentage de l'espace actuel que les nœuds peuvent tenter de dépasser",
+          "title": "Expansion"
+        },
+        "gridSize": {
+          "description": "Nombre de cellules de la grille qui subdivisent horizontalement et verticalement l'espace du graphe. Cela est utilisé comme un schéma d'optimisation. Réglez-le sur 1 pour obtenir une complexité temporelle O(n²), qui peut parfois être plus performante avec très peu de nœuds.",
+          "title": "Taille de la grille"
+        },
+        "margin": {
+          "description": "Marge à conserver entre les nœuds",
+          "title": "Marge"
+        },
+        "ratio": {
+          "description": "Mise à l'échelle du ratio des tailles des nœuds",
+          "title": "Ratio"
+        },
+        "speed": {
+          "description": "Facteur d'amortissement qui ralentit les mouvements des nœuds pour faciliter l'ensemble du processus",
+          "title": "Vitesse"
+        }
+      },
+      "title": "Noverlap"
+    },
+    "placeholder": "Sélectionner un algorithme de spatialisation",
+    "quality": {
+      "caption_CMax": "des liens sont plus courts que Δmax grâce à la spatialisation",
+      "caption_deltaMax": "Taille de la grille = Δmax = ",
+      "description": "Les nœuds connectés sont-ils rapprochés grâce à la spatialisation ?",
+      "enable": "Activer la \"connected-closeness\"",
+      "showGrid": "Afficher la grille Δmax",
+      "title": "Qualité de la spatialisation"
+    },
+    "random": {
+      "description": "Positionne chaque nœud de manière aléatoire en choisissant uniformément les coordonnées dans l'intervalle [0, 1)",
+      "parameters": {
+        "center": {
+          "description": "Centre de la spatialisation",
+          "title": "Centre"
+        },
+        "scale": {
+          "description": "Échelle de la spatialisation",
+          "title": "Échelle"
+        }
+      },
+      "title": "Aléatoire"
+    },
+    "script": {
+      "description": "Écrivez votre propre spatialisation en créant une fonction qui renvoie un objet {x, y} pour chaque nœud",
+      "title": "Spatialisation personnalisée"
+    },
+    "title": "Spatialisation"
+  },
+  "metrics": {
+    "attributes_placeholder": "Aucun",
+    "compute": "Calculer les métriques",
+    "compute_one": "Calculer une métrique",
+    "description": "Ce panneau permet de calculer de nouvelles attributs pour les nœuds ou les liens du graphe. Ces attributs peuvent ensuite être utilisés dans les autres panneaux, par exemple pour l'apparence ou le filtrage.",
+    "edges": {
+      "disparity": {
+        "attributes": {
+          "disparity": "Nom de l'attribut de disparité"
+        },
+        "parameters": {
+          "getEdgeWeight": {
+            "title": "Attribut de poids des liens"
+          }
+        },
+        "title": "Disparité"
+      },
+      "edgescript": {
+        "attributes": {
+          "custom": "Nom de l'attribut sur lequel stocker la métrique"
+        },
+        "description": "Définir une fonction qui calcule une métrique pour un lien.",
+        "title": "Métrique personnalisée de liens"
+      },
+      "simmelianStrength": {
+        "attributes": {
+          "simmelianStrength": "Nom de l'attribut de force simmelienne"
+        },
+        "title": "Force simmelienne"
+      }
+    },
+    "edges_attribute_already_exists": "Un attribut de lien nommé \"{{field}}\" existe déjà. Ses valeurs seront remplacées.",
+    "mixed": {
+      "louvainEdgeAmbiguity": {
+        "attributes": {
+          "ambiguityScore": "Attribut du score d'ambiguïté des liens (l'inverse du consensus de toutes les exécutions de Louvain, donc 0 si la décision est toujours la même, et 1 si elle varie 50% du temps)",
+          "bridgeNessEdgeScore": "Attribut de pontage des liens (c’est-à-dire 1 - le score de co-appartenance)",
+          "coMembershipScore": "Attribut de co-appartenance des liens (c’est-à-dire le pourcentage de fois où Louvain a assigné la même communauté aux deux extrémités d’un lien)",
+          "meanAmbiguityScore": "Moyenne des scores d'ambiguïté des liens adjacents",
+          "sourceCommunityId": "Classe de modularité des sources des liens (uniquement utilisé pour )"
+        },
+        "description": "Cet algorithme permet d'explorer l'ambiguïté dans la détection des communautés avec la méthode de Louvain. Il exécute l'algorithme de Louvain N fois, puis analyse comment les résultats varient au cours de multiples exécutions, en vérifiant pour chaque lien si ses extrémités appartiennent ou non à la même communauté.",
+        "parameters": {
+          "getEdgeWeight": {
+            "description": "Un attribut des liens qui peut représenter leurs poids.",
+            "title": "Attribut pour le poids des liens pour Louvain"
+          },
+          "resolution": {
+            "description": "Une résolution plus élevée devrait produire plus de communautés.",
+            "title": "Résolution"
+          },
+          "runs": {
+            "description": "Le nombre de fois qu'il faut exécuter la méthode de Louvain.",
+            "title": "Exécutions de Louvain"
+          }
+        },
+        "preview": "Observer visuellement l'ambiguïté",
+        "preview_description": "Une manière de représenter l'ambiguïté dans les liens visuellement, est de colorer les liens par la classe de modularité de leurs sources, puis de mettre en évidence les nœuds et les liens les plus ambigus.",
+        "preview_subtitle": "(ouvre un nouvel onglet)",
+        "title": "Ambiguïté des liens dans la méthode de Louvain"
+      }
+    },
+    "nodes": {
+      "betweennessCentrality": {
+        "attributes": {
+          "betweennessCentrality": "Nom de l'attribut de centralité d'intermédiarité"
+        },
+        "parameters": {
+          "getEdgeWeight": {
+            "title": "Attribut de poids des liens"
+          },
+          "normalize": {
+            "title": "Normaliser les résultats ?"
+          }
+        },
+        "title": "Centralité d'intermédiarité"
+      },
+      "degree": {
+        "attributes": {
+          "degree": "Nom de l'attribut de degré"
+        },
+        "parameters": {
+          "getEdgeWeight": {
+            "title": "Attribut de poids des liens"
+          },
+          "kind": {
+            "title": "Type de degré",
+            "values": {
+              "degree": "Degré",
+              "inDegree": "Degré entrant",
+              "outDegree": "Degré sortant"
+            }
+          }
+        },
+        "title": "Degré"
+      },
+      "hits": {
+        "attributes": {
+          "authorities": "Nom de l'attribut de score d'autorité",
+          "hubs": "Nom de l'attribut de score de hub"
+        },
+        "parameters": {
+          "getEdgeWeight": {
+            "title": "Attribut de poids des liens"
+          },
+          "maxIterations": {
+            "title": "Nombre maximal d'itérations"
+          },
+          "normalize": {
+            "title": "Normaliser les résultats ?"
+          },
+          "tolerance": {
+            "title": "Tolérance"
+          }
+        },
+        "title": "HITS"
+      },
+      "louvain": {
+        "attributes": {
+          "modularityClass": "Nom de l'attribut de classe de modularité"
+        },
+        "description": "Cet algorithme vise à diviser les nœuds en groupes densément connectés.",
+        "parameters": {
+          "fastLocalMoves": {
+            "description": "Indique s'il faut utiliser une optimisation bien connue basée sur une file d'attente pour traverser le graphe de manière plus efficace.",
+            "title": "Mouvements locaux rapides"
+          },
+          "getEdgeWeight": {
+            "description": "Un attribut de lien qui représente les poids des liens.",
+            "title": "Attribut de poids de lien"
+          },
+          "randomWalk": {
+            "description": "Indique s'il faut traverser le graphe de manière aléatoire.",
+            "title": "Marche aléatoire"
+          },
+          "resolution": {
+            "description": "Une résolution plus élevée devrait produire plus de communautés.",
+            "title": "Résolution"
+          }
+        },
+        "title": "Détection de communautés Louvain"
+      },
+      "nodescript": {
+        "attributes": {
+          "custom": "Nom de l'attribut sur lequel stocker la métrique"
+        },
+        "description": "Définir une fonction qui calcule une métrique pour un nœud.",
+        "title": "Métrique personnalisée de nœud"
+      },
+      "pagerank": {
+        "attributes": {
+          "pagerank": "Nom de l'attribut de PageRank"
+        },
+        "parameters": {
+          "alpha": {
+            "title": "Alpha"
+          },
+          "getEdgeWeight": {
+            "title": "Attribut de poids des liens"
+          },
+          "maxIterations": {
+            "title": "Nombre maximal d'itérations"
+          },
+          "tolerance": {
+            "title": "Tolérance"
+          }
+        },
+        "title": "PageRank"
+      }
+    },
+    "nodes_attribute_already_exists": "Un attribut de nœud nommé \"{{field}}\" existe déjà. Ses valeurs seront remplacées.",
+    "placeholder": "Sélectionner un algorithme",
+    "success": "Les métriques \"{{metrics}}\" ont été ajoutées aux données pour {{items}}.",
+    "success_one": "La métrique \"{{metrics}}\" a été ajoutée aux données pour {{items}}.",
+    "title": "Métriques"
+  },
+  "pages": {
+    "data": "Données",
+    "graph": "Réseau"
+  },
+  "providers": {
+    "github": "GitHub"
+  },
+  "search": {
+    "edges": {
+      "help": "Écrire quelque chose pour trouver un lien",
+      "no_result": "Aucun lien trouvée",
+      "other_result": "... et {{count, number}} autres liens",
+      "placeholder": "Rechercher un lien...",
+      "select_all": "Sélectionner tous les {{count, number}} liens"
+    },
+    "graph": {
+      "help": "Saisissez quelque chose pour rechercher",
+      "no_result": "Aucun résultat",
+      "other_result": "... et {{count, number}} autres résultats",
+      "placeholder": "Rechercher des nœuds, des liens...",
+      "select_all_edges": "Ajouter {{count, number}} liens à la sélection",
+      "select_all_nodes": "Ajouter {{count, number}} nœuds à la sélection"
+    },
+    "nodes": {
+      "help": "Écrire quelque chose pour trouver un nœud",
+      "no_result": "Aucun nœud trouvé",
+      "other_result": "... et {{count, number}} autres nœuds",
+      "placeholder": "Rechercher un nœud...",
+      "select_all": "Sélectionner tous les {{count, number}} nœuds"
+    }
+  },
+  "selection": {
+    "cursor": "Sélection simple",
+    "edge_no_label": "(libellé vide)",
+    "edges": "<strong>{{count, number}}</strong> liens sélectionnés",
+    "edges_one": "<strong>Un</strong> lien sélectionné",
+    "edges_zero": "<strong>Aucun</strong> lien sélectionné",
+    "empty_edges": "Ce lien n'a pas d'attribut",
+    "empty_nodes": "Ce nœud n'a pas d'attribut",
+    "focus_edges": "Sélectionner uniquement ce lien",
+    "focus_nodes": "Sélectionner uniquement ce nœud",
+    "hidden": "{{count, number}} cachés",
+    "hidden_edges": "<strong>{{count, number}}</strong> liens sélectionnés masqués",
+    "hidden_edges_one": "<strong>Un</strong> lien sélectionné masqué",
+    "hidden_nodes": "<strong>{{count, number}}</strong> nœuds sélectionnés masqués",
+    "hidden_nodes_one": "<strong>Un</strong> nœud sélectionné masqué",
+    "hidden_one": "un caché",
+    "hidden_zero": "aucun caché",
+    "lasso": "Sélection par lasso",
+    "locate_on_graph": "Localiser sur le graphe",
+    "marquee": "Sélection par rectangle",
+    "no_value": "Pas de valeur",
+    "node_no_label": "(libellé vide)",
+    "nodes": "<strong>{{count, number}}</strong> nœuds sélectionnés",
+    "nodes_one": "<strong>Un</strong> nœud sélectionné",
+    "nodes_zero": "<strong>Aucun</strong> nœud sélectionné",
+    "open_in_data": "Voir dans Données",
+    "open_in_graph": "Voir dans le Réseau",
+    "select_all": "Sélectionner tout",
+    "select_node_neighbors": "Sélectionner les voisins du nœud",
+    "unselect_all": "Tout désélectionner",
+    "unselect_all_hidden_edges": "Tout désélectionner pour les liens masqués",
+    "unselect_all_hidden_nodes": "Tout désélectionner pour les nœuds masqués",
+    "unselect_edges": "Désélectionner ce lien",
+    "unselect_nodes": "Désélectionner ce nœud",
+    "visible": "{{count, number}} visibles",
+    "visible_edges": "<strong>{{count, number}}</strong> liens sélectionnés visibles",
+    "visible_edges_one": "<strong>Un</strong> lien sélectionné visible",
+    "visible_edges_zero": "<strong>Aucun</strong> lien sélectionné visible",
+    "visible_nodes": "<strong>{{count, number}}</strong> nœuds sélectionnés visibles",
+    "visible_nodes_one": "<strong>Un</strong> nœud sélectionné visible",
+    "visible_nodes_zero": "<strong>Aucun</strong> nœud sélectionné visible",
+    "visible_one": "un visible",
+    "visible_zero": "aucun visible"
+  },
+  "settings": {
+    "danger-zone": {
+      "reset-state": {
+        "description": "Toutes les données courantes seront perdues, même celle stockée dans le navigateur. Voulez-vous continuer ?",
+        "success": "Mise à zéro de l'application",
+        "title": "Mise à zéro de l'état de l'application"
+      },
+      "title": "Danger zone"
+    },
+    "theme": {
+      "auto": "Auto",
+      "dark": "Sombre",
+      "light": "Clair"
+    },
+    "title": "User's settings"
+  },
+  "storage": {
+    "cannot_restore": "Votre graphe ne peut pas être restauré.",
+    "restore_successful": "Votre graphe de travail a été restauré."
+  },
+  "user": {
+    "avatar_alt": "Avatar de {{name}}"
+  },
+  "welcome": {
+    "disclaimer-1": "Gephi Lite est actuellement en cours de développement.",
+    "disclaimer-2": "N'hésitez pas à consulter le projet GitHub pour en savoir plus sur les fonctionnalités à venir ou pour signaler des bugs.",
+    "documentation": "documentation",
+    "logo": "Logo de Gephi",
+    "no_recent": "Aucun fichier distant n'a été ouvert dans ce navigateur pour le moment.",
+    "open_graph": "Ouvrir un fichier de graphe",
+    "open_recent": "Fichiers récemment ouverts",
+    "samples": "Exemples",
+    "title": "Bienvenue dans Gephi Lite",
+    "website": "Site internet"
+  },
+  "workspace": {
+    "menu": {
+      "duplicate": "Dupliquer dans un nouvel onglet",
+      "export_graph_file": "Exporter en fichier graph",
+      "export_image": "Exporter en image",
+      "github_signin": "Connectez-vous à GitHub",
+      "github_signout": "Se déconnecter de GitHub",
+      "new": "Créer un nouvel espace de travail",
+      "open": "Ouvrir ...",
+      "save": "Enregistrer",
+      "save_as": "Enregistrer sous..."
+    }
+  }
+}

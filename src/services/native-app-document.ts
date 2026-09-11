@@ -1,3 +1,5 @@
+import { reconcileProjectFile } from './ingestion';
+import { validateProject as validateGephi } from '../../gephi-crux/garden/model.js';
 import { validateProject as validateJupyterlite } from '../../jupyterlite-crux/garden/model.js';
 import { validateProject as validateRawgraphs } from '../../rawgraphs-crux/src/garden/model.js';
 import { validateProject as validatePiskel } from '../../piskel-crux/src/garden/model.js';
@@ -59,7 +61,18 @@ export async function importNativeAsset(owner: string, bytes: unknown, mimeType:
 export async function readNativeAsset(owner: string, path: unknown) {
   const full = nativeAssetPath(path);
   const service = getServices().artifact;
-  const existing = (await service.findByResource('crux', owner)).find((f) => pathOf(f) === full);
+  let existing = (await service.findByResource('crux', owner)).find((f) => pathOf(f) === full);
+  if (!existing) {
+    const folder = await folderForCrux(owner);
+    if (folder) {
+      // An external writer can publish the document before the OS reports its
+      // new asset. Verify the immutable filename, then use the normal ingestion
+      // queue; this records disk content without writing back to the folder.
+      await verifyOriginal(owner, full, full.slice(12, -4));
+      await reconcileProjectFile(folder, full);
+      existing = (await service.findByResource('crux', owner)).find((f) => pathOf(f) === full);
+    }
+  }
   if (!existing || existing.fingerprint !== full.slice(12, -4))
     throw new Error('The saved media is missing or has changed.');
   await verifyOriginal(owner, full, existing.fingerprint);
@@ -81,11 +94,13 @@ export async function validateNativeDocument(
     | 'mermaid'
     | 'piskel'
     | 'rawgraphs'
+    | 'gephi'
     | 'jupyterlite' = 'openmosh',
 ) {
   if (content.length > 4_000_000) throw new Error('The native project metadata is too large.');
   const doc = JSON.parse(content);
-  if (app === 'jupyterlite') validateJupyterlite(doc);
+  if (app === 'gephi') validateGephi(doc);
+  else if (app === 'jupyterlite') validateJupyterlite(doc);
   else if (app === 'rawgraphs') validateRawgraphs(doc);
   else if (app === 'piskel') validatePiskel(doc);
   else if (app === 'mermaid') validateMermaid(doc);

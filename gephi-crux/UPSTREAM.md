@@ -1,0 +1,13 @@
+# Gephi Lite in Crux Garden
+
+Actual Gephi Lite 1.0.2 at d906a957a23bbc3ed02c70be34816313f4f304e6, https://github.com/gephi/gephi-lite . The native application and SDK retain GPL-3.0 licensing in LICENSE.md. This is a local persistence adaptation with editable source, native graph analysis and native exports.
+
+Garden saves the dataset, appearance, filters, session parameters and preferences in separate fingerprinted Artifacts. Capture reads native atoms directly, including graphs beyond the upstream recovery cache threshold. Graph positions save after stopping an active layout. Camera position, selection, native file handles and recent-file lists are not part of the portable analysis. Stop layouts before closing the Crux. Initial agent tools inspect the network and edit its native title.
+
+Embedded initialization waits for Garden, disables startup URL imports/broadcast/authentication and uses isolated memory for native browser storage. Cloud login/save and duplicate-tab controls are omitted. Local native .json, GEXF and PNG downloads remain. Whole-editor publication is separate and unavailable. User-authored script filters and network image URLs retain native behavior.
+
+Rebuild with Node 22: npm ci && npm run build. Rollup and SWC are pinned explicitly to their existing versions to repair the upstream Linux-only optional dependency lock for Mac builds. Monaco is bundled locally; remote Google font imports are removed in favor of system fallbacks. Unused Gibson font assets are omitted. Bundled icon-font and runtime dependency notices are included. Garden retains the upstream native interface rather than replacing it.
+
+The runtime omits generated source maps after collecting notices; editable native source remains included. This avoids duplicating dependency source and reduces new-Crux copying. The fork also fixes plain Graphology JSON import being converted twice across Graphology versions, covered by a native regression test.
+
+The graph canvas uses its actual available panel dimensions rather than the full browser viewport. A ResizeObserver keeps rendering aligned as Workshop/native panels resize, and fit padding leaves room for edge labels. Desktop acceptance covers native import/layout/title editing, agent title edits, JSON/GEXF/PNG exports and JSON reimport, external conflicts, restart and complete-Crux import into a fresh profile while the original Project Folder is unavailable. The imported native graph remains editable. Service tests cover Growth restore and archive bytes; the upstream suite has 161 tests. An app-created Crux rebuilds from its packaged source. See the root BUILD-LOG and app/docs/gephi screenshots for the current verified revision.

@@ -1,0 +1,54 @@
+.modal-open-graph,
+.modal-save-graph {
+  .selected-component-wrapper {
+    @extend .gl-p-3;
+    flex-grow: 1;
+    overflow: auto;
+  }
+
+  .modal-body {
+    display: flex;
+    align-items: stretch;
+  }
+
+  .side-menu {
+    @extend .border-end;
+    @extend .gl-p-3;
+  }
+
+  @include media-breakpoint-down(md) {
+    .modal-body {
+      flex-direction: column;
+    }
+    .side-menu {
+      flex-direction: row;
+      justify-content: center;
+      border-right-width: 0;
+      border-bottom: $border-width solid $border-color;
+    }
+  }
+}
+
+.modal-open-graph {
+  .selected-component-wrapper {
+    height: 60dvh;
+  }
+
+  @include media-breakpoint-down(md) {
+    .selected-component-wrapper {
+      height: 70dvh;
+    }
+  }
+}
+
+.modal-save-graph {
+  .selected-component-wrapper {
+    height: 40dvh;
+  }
+
+  @include media-breakpoint-down(md) {
+    .selected-component-wrapper {
+      height: 70dvh;
+    }
+  }
+}

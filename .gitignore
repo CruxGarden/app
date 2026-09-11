@@ -25,3 +25,6 @@ rawgraphs-crux/build/
 jupyterlite-crux/runtime/
 jupyterlite-crux/.build-venv/
 jupyterlite-crux/.cache/
+
+# JupyterLite incremental build bookkeeping
+jupyterlite-crux/.jupyterlite.doit.db*

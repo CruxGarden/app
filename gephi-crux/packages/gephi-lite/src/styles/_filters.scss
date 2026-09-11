@@ -1,0 +1,147 @@
+.filter-item {
+  position: relative;
+  @extend .gl-py-3;
+
+  border-top: 1px solid var(--gl-container-border-color);
+
+  &.disabled {
+    @extend .gl-text-muted;
+    @extend .gl-py-3;
+    background-color: var(--gl-container-high-bg);
+  }
+
+  .filter-content {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    @extend .gl-gap-2;
+    @extend .gl-px-3;
+    @extend .gl-py-3;
+  }
+
+  .filter-title button {
+    @extend .gl-px-3;
+    border-radius: 0;
+  }
+  .filter-buttons {
+    @extend .gl-px-3;
+  }
+}
+
+.filter-graph {
+  @extend .gl-px-2;
+  @extend .gl-py-3;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-top: 1px solid var(--gl-container-border-color);
+}
+
+.filter-arrow-container {
+  @extend .gl-text-muted;
+  @extend .gl-px-3;
+  @extend .gl-my-4;
+  @extend .gl-gap-2;
+
+  .filter-arrow {
+    position: relative;
+    background: var(--gl-container-highest-bg);
+    font-size: 1.125rem;
+    height: 1.125rem;
+    line-height: 1rem;
+    text-align: center;
+  }
+}
+
+.range-filter-barchart {
+  @extend .list-unstyled;
+
+  margin-top: 0.8rem;
+  height: 80px;
+
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+
+  .bar {
+    position: relative;
+    height: 100%;
+    flex-grow: 1;
+
+    &:not(:last-child) {
+      margin-right: 1px;
+    }
+  }
+
+  .global,
+  .filtered {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    transition: height ease-in-out 0.2s;
+  }
+
+  .global {
+    background: var(--range-in-bg);
+  }
+  .filtered {
+    background: var(--range-out-bg);
+  }
+  .label {
+    position: absolute;
+    text-align: center;
+    width: 100%;
+    font-size: 0.8em;
+
+    &.inside {
+      top: 0;
+      color: var(--range-in-body);
+    }
+    &.outside {
+      bottom: 100%;
+      color: var(--range-out-body);
+    }
+  }
+}
+.rc-slider {
+  .rc-slider-handle {
+    background-color: white;
+    border-color: black;
+  }
+}
+.rc-slider-disabled {
+  background-color: unset !important;
+  .rc-slider-handle {
+    background-color: $gray-400 !important;
+  }
+}
+.range-inputs {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  margin-bottom: $gl-spacers-1;
+  @extend .gl-gap-1;
+
+  & > div {
+    display: flex;
+    flex-direction: row;
+    align-items: baseline;
+    @extend .gl-gap-2;
+
+    & > label {
+      min-width: 3rem;
+      flex-grow: 0;
+      flex-shrink: 0;
+      @extend .small;
+      @extend .form-check-label;
+    }
+
+    & > input {
+      flex-grow: 1;
+      flex-shrink: 1;
+      @extend .form-control;
+      @extend .form-control-sm;
+    }
+  }
+}

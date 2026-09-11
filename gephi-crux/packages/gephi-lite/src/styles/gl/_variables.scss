@@ -1,0 +1,231 @@
+//-------- Reference variables
+
+// Color
+//Neutral Palette
+$gl-ref-color-neutral-00: #ffffff;
+$gl-ref-color-neutral-05: #fafafa;
+$gl-ref-color-neutral-10: #f7f7f7;
+$gl-ref-color-neutral-20: #eeeeee;
+$gl-ref-color-neutral-30: #e7e7e7;
+$gl-ref-color-neutral-40: #d0d0d0;
+//$gl-ref-color-neutral-50: #d4d4d4;
+$gl-ref-color-neutral-50: #a9a9a9;
+$gl-ref-color-neutral-60: #696969;
+$gl-ref-color-neutral-65: #4c4c4c;
+$gl-ref-color-neutral-75: #333333;
+$gl-ref-color-neutral-80: #292929;
+$gl-ref-color-neutral-85: #212121;
+$gl-ref-color-neutral-95: #1d1d1d;
+$gl-ref-color-neutral-100: #000000;
+
+// Dimension
+$gl-ref-dimension-base: 0.5rem;
+$gl-ref-dimension-linear-0: calc($gl-ref-dimension-base * 0);
+$gl-ref-dimension-linear-050: calc($gl-ref-dimension-base * 0.5);
+$gl-ref-dimension-linear-100: $gl-ref-dimension-base;
+$gl-ref-dimension-linear-150: calc($gl-ref-dimension-base * 1.5);
+$gl-ref-dimension-linear-200: calc($gl-ref-dimension-base * 2);
+$gl-ref-dimension-linear-225: calc($gl-ref-dimension-base * 2.25);
+$gl-ref-dimension-linear-250: calc($gl-ref-dimension-base * 2.5);
+$gl-ref-dimension-linear-300: calc($gl-ref-dimension-base * 3);
+$gl-ref-dimension-linear-400: calc($gl-ref-dimension-base * 4);
+$gl-ref-dimension-linear-600: calc($gl-ref-dimension-base * 6);
+$gl-ref-dimension-linear-800: calc($gl-ref-dimension-base * 8);
+$gl-ref-dimension-linear-1600: calc($gl-ref-dimension-base * 16);
+$gl-ref-dimension-linear-3200: calc($gl-ref-dimension-base * 32);
+
+// Border Radius
+$gl-ref-radius-4: 0.25rem;
+$gl-ref-radius-8: 0.5rem;
+$gl-ref-radius-full: 99rem;
+
+// Proportion
+$gl-ref-proportion-4: 4%;
+$gl-ref-proportion-8: 8%;
+$gl-ref-proportion-12: 12%;
+$gl-ref-proportion-16: 16%;
+$gl-ref-proportion-24: 24%;
+$gl-ref-proportion-64: 64%;
+$gl-ref-proportion-80: 80%;
+
+// Decimal
+
+$gl-ref-decimal-101: 1.1;
+$gl-ref-decimal-102: 1.2;
+$gl-ref-decimal-104: 1.4;
+
+//-------- System variables
+
+// Background
+$gl-sys-color-bg: $gl-ref-color-neutral-10;
+$gl-sys-color-bg-high: $gl-ref-color-neutral-05;
+$gl-sys-color-bg-highest: $gl-ref-color-neutral-00;
+$gl-sys-color-bg-low: $gl-ref-color-neutral-10;
+$gl-sys-color-border: $gl-ref-color-neutral-30;
+$gl-sys-color-border-low: $gl-ref-color-neutral-40;
+$gl-sys-color-onBg: $gl-ref-color-neutral-80;
+$gl-sys-color-onBg-muted: $gl-ref-color-neutral-60;
+$gl-sys-color-shadow-high: $gl-ref-color-neutral-80;
+
+$gl-sys-color-dark-bg: $gl-ref-color-neutral-95;
+$gl-sys-color-dark-bg-high: $gl-ref-color-neutral-85;
+$gl-sys-color-dark-bg-higher: $gl-ref-color-neutral-80;
+$gl-sys-color-dark-bg-highest: $gl-ref-color-neutral-75;
+$gl-sys-color-dark-border: $gl-ref-color-neutral-65;
+$gl-sys-color-dark-onBg: $gl-ref-color-neutral-05;
+$gl-sys-color-dark-onBg-muted: $gl-ref-color-neutral-50;
+$gl-sys-color-dark-shadow-high: $gl-ref-color-neutral-100;
+
+//Component
+$gl-sys-color-component-bg: $gl-ref-color-neutral-80;
+$gl-sys-color-component-border: $gl-ref-color-neutral-80;
+$gl-sys-color-onComponentBg: $gl-ref-color-neutral-05;
+
+$gl-sys-color-dark-component-bg: $gl-ref-color-neutral-30;
+$gl-sys-color-dark-component-border: $gl-ref-color-neutral-30;
+$gl-sys-color-dark-onComponentBg: $gl-ref-color-neutral-80;
+
+//----Color Mix Proportion
+//----Components
+$gl-sys-proportion-component-hover-color-mix: $gl-ref-proportion-8; //8%
+$gl-sys-proportion-component-focus-color-mix: $gl-ref-proportion-8; //8%
+$gl-sys-proportion-component-active-color-mix: $gl-ref-proportion-24; //24%
+$gl-sys-proportion-component-disabled-color-mix: $gl-ref-proportion-16; //16%
+$gl-sys-proportion-component-border-active-color-mix: $gl-ref-proportion-64; //64%
+
+//----Cells
+$gl-sys-proportion-cell-hover-color-mix: $gl-ref-proportion-4;
+
+//----Opacity
+$gl-sys-opacity-onComponentBg-disabled: $gl-ref-proportion-80;
+$gl-sys-opacity-shadow-high: $gl-ref-proportion-16;
+
+//----Size
+//Icon
+$gl-sys-size-icon-small: $gl-ref-dimension-linear-150;
+$gl-sys-size-icon-medium: $gl-ref-dimension-linear-200;
+$gl-sys-size-icon-large: $gl-ref-dimension-linear-225;
+$gl-sys-size-icon-largest: $gl-ref-dimension-linear-600;
+
+//Container
+$gl-sys-size-container-large: $gl-ref-dimension-linear-3200;
+
+//----Space
+$gl-spacers-0: $gl-ref-dimension-linear-0;
+$gl-spacers-1: $gl-ref-dimension-linear-050;
+$gl-spacers-2: $gl-ref-dimension-linear-100;
+$gl-spacers-3: $gl-ref-dimension-linear-200;
+$gl-spacers-4: $gl-ref-dimension-linear-400;
+$gl-spacers-5: $gl-ref-dimension-linear-800;
+$gl-spacers: (
+  0: $gl-spacers-0,
+  1: $gl-spacers-1,
+  2: $gl-spacers-2,
+  3: $gl-spacers-3,
+  4: $gl-spacers-4,
+  5: $gl-spacers-5,
+);
+
+//---- Radius
+$gl-radius: (
+  0: 0,
+  1: $gl-ref-radius-4,
+  2: $gl-ref-radius-8,
+  3: $gl-ref-radius-full,
+);
+
+//---- Font
+
+// Font sizes
+$gl-sys-font-size-text-ui: $gl-ref-dimension-linear-200; // 16px
+$gl-sys-font-size-text-body: $gl-ref-dimension-linear-200; // 16px
+$gl-sys-font-size-heading-small: $gl-ref-dimension-linear-200; // 16px
+$gl-sys-font-size-heading-medium: $gl-ref-dimension-linear-250; // 20px
+$gl-sys-font-size-heading-large: $gl-ref-dimension-linear-300; // 24px
+
+// Line Height
+$gl-sys-font-line-height-ui: $gl-ref-decimal-101; // 1.1
+$gl-sys-font-line-height-section: $gl-ref-decimal-104; // 1.4
+$gl-sys-font-line-height-heading: $gl-ref-decimal-102; // 1.2
+
+@function hexToRGBString($hexColor) {
+  @return "#{red($hexColor)},#{green($hexColor)},#{blue($hexColor)}";
+}
+
+$colors-light: (
+  "body-bg": $gl-sys-color-bg,
+  "body-color": $gl-sys-color-onBg,
+  "body-muted-color": $gl-sys-color-onBg-muted,
+  "body-border-color": $gl-sys-color-border,
+  // Containers
+  "container-bg": $gl-sys-color-bg,
+  "container-high-bg": $gl-sys-color-bg-high,
+  "container-highest-bg": $gl-sys-color-bg-highest,
+  // only one type of text, muted text and border color to use in containers because of the sufficient contrast with the background color
+  "container-color": $gl-sys-color-onBg,
+  "container-muted-color": $gl-sys-color-onBg-muted,
+  "container-border-color": $gl-sys-color-border,
+  // Components
+  "component-bg": $gl-sys-color-component-bg,
+  "component-color": $gl-sys-color-onComponentBg,
+  "component-border-color": $gl-sys-color-component-border,
+  // Table
+  "table-border-color": $gl-sys-color-border-low,
+  "table-column-cell-editable-bg": $gl-sys-color-bg-highest,
+  "table-column-cell-non-editable-bg": $gl-sys-color-bg-highest,
+  "table-column-header-editable-bg": $gl-sys-color-bg-high,
+  "table-column-header-non-editable-bg": $gl-sys-color-bg-low,
+  // Shadows
+  "overlay-high-shadow": $gl-sys-color-shadow-high,
+  // Tooltip
+  "tooltip-color": $gl-ref-color-neutral-10,
+  "tooltip-bg": $gl-ref-color-neutral-95,
+  //
+  "error": $gl-ref-color-neutral-100,
+);
+
+$colors-dark: (
+  "body-bg": $gl-sys-color-dark-bg,
+  "body-color": $gl-sys-color-dark-onBg,
+  "body-muted-color": $gl-sys-color-dark-onBg-muted,
+  "body-border-color": $gl-sys-color-dark-border,
+  // Containers
+  "container-bg": $gl-sys-color-dark-bg,
+  "container-high-bg": $gl-sys-color-dark-bg-higher,
+  "container-highest-bg": $gl-sys-color-dark-bg-highest,
+  // only one type of text, muted text and border color to use in containers because of the sufficient contrast with the background color
+  "container-color": $gl-sys-color-dark-onBg,
+  "container-muted-color": $gl-sys-color-dark-onBg-muted,
+  "container-border-color": $gl-sys-color-dark-border,
+  // Components
+  "component-bg": $gl-sys-color-dark-component-bg,
+  "component-color": $gl-sys-color-dark-onComponentBg,
+  "component-border-color": $gl-sys-color-dark-component-border,
+  // Table
+  "table-border-color": $gl-sys-color-dark-bg-highest,
+  "table-column-cell-editable-bg": $gl-sys-color-dark-bg-higher,
+  "table-column-cell-non-editable-bg": $gl-sys-color-dark-bg-higher,
+  "table-column-header-editable-bg": $gl-sys-color-dark-bg-higher,
+  "table-column-header-non-editable-bg": $gl-sys-color-dark-bg-high,
+  //Shadows
+  "overlay-high-shadow": $gl-sys-color-dark-shadow-high,
+  // Tooltip
+  "tooltip-color": $gl-ref-color-neutral-10,
+  "tooltip-bg": $gl-ref-color-neutral-95,
+  //
+  "error": $gl-ref-color-neutral-00,
+);
+
+:root {
+  @each $name, $value in $colors-light {
+    --gl-#{$name}: #{$value};
+    --gl-#{$name}-rgb: #{hexToRGBString($value)};
+  }
+}
+
+:root[data-bs-theme="dark"] {
+  @each $name, $value in $colors-dark {
+    --gl-#{$name}: #{$value};
+    --gl-#{$name}-rgb: #{hexToRGBString($value)};
+  }
+}

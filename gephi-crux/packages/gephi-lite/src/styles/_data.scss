@@ -1,0 +1,90 @@
+.edit-node,
+.edit-edge,
+.edit-attribute {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  @extend .gl-gap-3;
+
+  .form-inputs {
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+    @extend .gl-gap-2;
+  }
+
+  .form-buttons {
+    justify-content: end;
+    display: flex;
+    @extend .gl-gap-2;
+  }
+}
+
+.edge-component {
+  display: flex;
+  flex-direction: column;
+  max-width: 100%;
+
+  .edge-source,
+  .edge-target {
+    line-height: normal;
+    @extend .small;
+    @extend .text-ellipsis;
+  }
+
+  .edge-wrapper {
+    display: flex;
+    justify-content: stretch;
+    align-items: stretch;
+  }
+
+  .edge {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    flex-grow: 0;
+    flex-shrink: 0;
+    width: 1em;
+    min-height: 1.5em;
+    margin: -0.2em 0;
+    @extend .small;
+
+    .edge-body {
+      flex-grow: 1;
+      flex-shrink: 1;
+      min-height: 0.6em;
+    }
+    .edge-arrow {
+      width: 0;
+      height: 0;
+      border-left: 0.3em solid transparent;
+      border-right: 0.3em solid transparent;
+      border-top: 0.6em solid red;
+      flex-shrink: 0;
+    }
+  }
+}
+
+.invalid-value {
+  @extend .text-muted;
+  @extend .gl-gap-1;
+  font-style: italic;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+
+  span {
+    @extend .text-truncate;
+    flex-grow: 1;
+    flex-shrink: 1;
+  }
+
+  .message-tooltip {
+    flex-grow: 0;
+    flex-shrink: 0;
+
+    .gl-btn {
+      @extend .text-dark;
+    }
+  }
+}
