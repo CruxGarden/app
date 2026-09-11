@@ -56,3 +56,16 @@ it('keeps embedded editors alive through data saves and generated thumbnails whi
     appPreviewKey({ kind: 'webapp' } as Crux, after),
   );
 });
+
+it('keeps the embedded app alive while saving reusable outputs and origin records', () => {
+  const mosh: Crux = { ...crux, kind: 'webapp', meta: { template: 'tool-openmosh' } };
+  const before = [file('index.html', 'app')];
+  const after = [
+    ...before,
+    file('exports/cover.png', 'image'),
+    file('exports/cover.asset.json', 'descriptor'),
+    file('cruxspace-assets/origin.json', 'origin'),
+  ];
+  expect(appPreviewKey(mosh, after)).toBe(appPreviewKey(mosh, before));
+  expect(appChanges(mosh, before, after)).toEqual({ app: 0, content: 3 });
+});

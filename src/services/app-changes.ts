@@ -7,6 +7,9 @@ export interface AppChanges {
   app: number;
   content: number;
 }
+function isOutputData(path: string) {
+  return path.startsWith('exports/') || path.startsWith('cruxspace-assets/');
+}
 /** App data and generated history/agent metadata must not restart a running editor. */
 export function appPreviewKey(crux: Crux | null, artifacts: Artifact[]): string {
   const root = isEmbeddedApp(crux) ? embeddedContentRoot(crux) : null;
@@ -15,7 +18,10 @@ export function appPreviewKey(crux: Crux | null, artifacts: Artifact[]): string 
       const path = pathOf(a);
       return (
         !root ||
-        (!path.startsWith(root) && !isWorkspaceThumbnail(path) && !isGeneratedGuidePath(path))
+        (!path.startsWith(root) &&
+          !isOutputData(path) &&
+          !isWorkspaceThumbnail(path) &&
+          !isGeneratedGuidePath(path))
       );
     })
     .map((a) => `${a.id}:${a.fingerprint || a.updated}`)
@@ -34,7 +40,7 @@ export function appChanges(crux: Crux, before: Artifact[], after: Artifact[]): A
     if (isWorkspaceThumbnail(path) || isGeneratedGuidePath(path) || path.endsWith('.keep'))
       continue;
     if (old.has(path) !== current.has(path) || old.get(path) !== current.get(path)) {
-      result[path.startsWith(contentRoot) ? 'content' : 'app']++;
+      result[path.startsWith(contentRoot) || isOutputData(path) ? 'content' : 'app']++;
     }
   }
   return result;

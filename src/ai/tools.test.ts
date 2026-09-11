@@ -69,6 +69,7 @@ describe('TOOL_DEFINITIONS', () => {
 describe('MUTATING_TOOLS', () => {
   it('lists every tool that changes workspace files', () => {
     expect(MUTATING_TOOLS).toEqual([
+      'use_cruxspace_asset',
       // Claude Code's own tools (Agent Provider, ADR 0019)
       'Write',
       'Edit',

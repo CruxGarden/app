@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { launchApp } from './launch';
 import { enterGarden, storedCrux } from './multi-crux-helpers';
-import { readFileSync, writeFileSync, existsSync } from 'node:fs';
+import { readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 for (const [type, label] of [
@@ -88,10 +88,24 @@ for (const [type, label] of [
       for (const kind of type === 'univer' ? ['project', 'csv'] : ['project', 'png', 'svg']) {
         const output = join(first.dir, 'exported-' + kind);
         await app.evaluate(({ session }, path) => {
-          session.defaultSession.once('will-download', (_event, item) => item.setSavePath(path));
+          const state = globalThis as typeof globalThis & { cruxExportDone?: Promise<string> };
+          state.cruxExportDone = new Promise((resolve) => {
+            session.defaultSession.once('will-download', (_event, item) => {
+              item.setSavePath(path);
+              item.once('done', (_event, result) => resolve(result));
+            });
+          });
         }, output);
         await frame.locator('#export-' + kind).click();
-        await expect.poll(() => existsSync(output)).toBe(true);
+        // File creation precedes download completion: wait for Electron's
+        // terminal event before reading bytes, including small JSON/SVG files.
+        expect(
+          await app.evaluate(
+            () =>
+              (globalThis as typeof globalThis & { cruxExportDone?: Promise<string> })
+                .cruxExportDone,
+          ),
+        ).toBe('completed');
         const bytes = readFileSync(output);
         if (kind === 'png') expect(bytes.subarray(1, 4).toString()).toBe('PNG');
         if (kind === 'svg') expect(bytes.toString()).toContain('<svg');

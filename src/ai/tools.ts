@@ -29,6 +29,7 @@ import {
   type DelegateTaskInput,
 } from './delegate-tool';
 import { scopeViolation, type WriteScope } from '@/lib/write-scope';
+import { CRUXSPACE_TOOLS, runCruxspaceTool } from './cruxspace-tools';
 
 /**
  * Tool definitions — ported from api/src/ai/ai.tools.ts.
@@ -284,6 +285,7 @@ export function defaultToolDefinitions(cruxId?: string): ToolDefinition[] {
     ...GROWTH_TOOL_DEFINITIONS,
     ...THEME_TOOL_DEFINITIONS,
     ...MEMORY_TOOL_DEFINITIONS,
+    ...CRUXSPACE_TOOLS,
     ...SKILL_TOOL_DEFINITIONS,
     DELEGATE_TOOL_DEFINITION,
   ];
@@ -433,6 +435,10 @@ export function createToolExecutor(
         result = JSON.stringify(await executeAppTool(cruxId, toolName, input));
       else
         switch (toolName) {
+          case 'list_cruxspace_assets':
+          case 'use_cruxspace_asset':
+            result = await runCruxspaceTool(toolName, input, cruxId, options.scope);
+            break;
           case 'write_file':
             result = await toolWriteFile(input, cruxId, artifactService);
             break;
@@ -1124,6 +1130,7 @@ function findArtifactByPath(artifacts: any[], path: string): any | null {
 
 /** Tool names that mutate files (trigger workspace-context refresh) */
 export const MUTATING_TOOLS = [
+  'use_cruxspace_asset',
   // Claude Code's own tools (Agent Provider, ADR 0019)
   'Write',
   'Edit',

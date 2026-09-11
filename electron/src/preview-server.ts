@@ -141,7 +141,10 @@ export class PreviewServer {
         // Always fresh — this is a live workspace, not a CDN
         'Cache-Control': 'no-store',
       });
-      fs.createReadStream(target).pipe(res);
+      const file = fs.createReadStream(target);
+      res.once('close', () => file.destroy());
+      file.once('error', () => res.destroy());
+      file.pipe(res);
     } catch {
       res.writeHead(500);
       res.end('Error');
@@ -168,7 +171,12 @@ export class PreviewServer {
   private async stopOwned(base: string): Promise<void> {
     const running = this.running.get(base);
     if (!running) return;
-    await new Promise<void>((resolve) => running.server.close(() => resolve()));
+    await new Promise<void>((resolve) => {
+      running.server.close(() => resolve());
+      // A closing preview can leave an active request behind. Stop accepting
+      // connections first, then release its sockets so app shutdown can finish.
+      running.server.closeAllConnections();
+    });
     releasePreviewPort(running.port, running.owner);
     if (this.running.get(base) === running) this.running.delete(base);
   }

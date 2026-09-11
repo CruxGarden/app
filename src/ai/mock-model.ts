@@ -74,6 +74,28 @@ export function getMockLanguageModel(): LanguageModel {
         warnings: [],
       }),
       doStream: async ({ prompt, abortSignal }) => {
+        if (lastUserText(prompt).includes('[cruxspace:cover]')) {
+          const last = prompt.at(-1);
+          const used = (name: string) =>
+            last?.role === 'tool' &&
+            last.content.some((c) => c.type === 'tool-result' && c.toolName === name);
+          if (used('use_cruxspace_asset'))
+            return textStream('Done — copied the selected Cruxspace artwork.');
+          if (used('list_cruxspace_assets')) {
+            const data = JSON.parse(toolResultText(prompt, 'list_cruxspace_assets') || '{}');
+            const space = data.spaces?.find((s: { assets: unknown[] }) => s.assets.length);
+            const asset = space?.assets[0];
+            if (!asset) return textStream('No Cruxspace artwork is available.');
+            return toolCallStream('use_cruxspace_asset', {
+              spaceId: space.id,
+              sourceCruxId: asset.sourceCruxId,
+              outputId: asset.id,
+              fingerprint: asset.fingerprint,
+              path: 'assets/agent-cover.png',
+            });
+          }
+          return toolCallStream('list_cruxspace_assets', {});
+        }
         const sampler = /\[sampler:(openmosh|tables|smplr|playcanvas|excalidraw|univer)\]/.exec(
           lastUserText(prompt),
         );
