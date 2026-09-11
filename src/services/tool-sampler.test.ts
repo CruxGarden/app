@@ -12,7 +12,7 @@ import { registerAppTools } from './embedded-app-tool-registry';
 import { createToolExecutor, defaultToolDefinitions, didMutate } from '@/ai/tools';
 import { starter, applyCommand } from '../../tool-cruxes/shared/model.js';
 beforeEach(() => initServices('local'));
-it.each(['tables', 'openmosh', 'smplr', 'playcanvas'])(
+it.each(['tables', 'openmosh', 'smplr', 'playcanvas', 'excalidraw', 'univer'])(
   'preserves %s documents through scoped commands, conflicts, Growth and archive roundtrip',
   async (type) => {
     const services = getServices();
@@ -26,6 +26,7 @@ it.each(['tables', 'openmosh', 'smplr', 'playcanvas'])(
     store.setState({ crux });
     const call = notebookSession(store);
     let document = starter(type);
+    const initialDocument = structuredClone(document);
     let saved = (await call({
       op: 'write',
       path: 'project.json',
@@ -33,6 +34,7 @@ it.each(['tables', 'openmosh', 'smplr', 'playcanvas'])(
       expected: null,
     })) as { fingerprint: string };
     expect(store.getState().growths.length).toBe(1);
+    const initialSnapshot = store.getState().growths[0]!.targetId;
     const adapter = embeddedAppToolAdapter(crux)!;
     const mutate = adapter.tools[1]!.name;
     const off = registerAppTools(crux.id, {
@@ -50,13 +52,17 @@ it.each(['tables', 'openmosh', 'smplr', 'playcanvas'])(
       },
     });
     const input =
-      type === 'tables'
-        ? { rows: [{ id: 'task-1', hours: 9 }] }
-        : type === 'openmosh'
-          ? { effects: [] }
-          : type === 'smplr'
-            ? { bpm: 130 }
-            : { objects: [{ id: 'center', color: '#ff0000' }] };
+      type === 'excalidraw'
+        ? { elements: [{ id: 'idea', backgroundColor: '#a5d8ff' }] }
+        : type === 'univer'
+          ? { sheetId: 'budget-sheet', cells: [{ address: 'B2', value: 8 }] }
+          : type === 'tables'
+            ? { rows: [{ id: 'task-1', hours: 9 }] }
+            : type === 'openmosh'
+              ? { effects: [] }
+              : type === 'smplr'
+                ? { bpm: 130 }
+                : { objects: [{ id: 'center', color: '#ff0000' }] };
     try {
       expect(defaultToolDefinitions(crux.id).map((t) => t.name)).toContain(mutate);
       expect(
@@ -89,48 +95,69 @@ it.each(['tables', 'openmosh', 'smplr', 'playcanvas'])(
     await expect(publishPipeline(crux, artifacts)).rejects.toThrow(
       'Website sharing is not available',
     );
+    await store.getState().revertToSnapshot(initialSnapshot);
+    const restored = (await services.artifact.findByResource('crux', crux.id)).find(
+      (f) => f.meta?.path === 'data/project.json',
+    )!;
+    expect(JSON.parse(await services.artifact.readContent(restored.id))).toEqual(initialDocument);
     store.setState({ viewingSnapshotId: 'past' });
     await expect(call({ op: 'read', path: 'project.json' })).rejects.toThrow('current app');
   },
 );
 
-it('preserves imported image bytes separately and rejects a mismatched content address', async () => {
-  const services = getServices();
-  const crux = await services.crux.create({
-    title: 'Images',
-    kind: 'webapp',
-    type: 'workspace',
-    meta: { template: 'tool-openmosh' },
-  });
-  const store = createCruxStore();
-  store.setState({ crux });
-  const call = notebookSession(store);
-  const content =
-    'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aPfkAAAAASUVORK5CYII=';
-  const bytes = Uint8Array.from(atob(content.split(',')[1]!), (c) => c.charCodeAt(0));
-  const hash = await hashContent(bytes);
-  const path = `assets/${hash}.png`;
-  await expect(
-    call({ op: 'write', path: `assets/${'0'.repeat(64)}.png`, content, expected: null }),
-  ).rejects.toThrow('original bytes');
-  await call({ op: 'write', path, content, expected: null });
-  const project = { ...starter('openmosh'), source: path };
-  await call({
-    op: 'write',
-    path: 'project.json',
-    content: JSON.stringify(project),
-    expected: null,
-  });
-  const imported = await importCrux({
-    data: (await exportCrux({ cruxId: crux.id })).blob,
-    mode: 'clone',
-  });
-  const files = await services.artifact.findByResource('crux', imported.cruxId);
-  const image = files.find((f) => f.meta?.path === 'data/' + path)!;
-  expect(
-    new Uint8Array(await (await services.artifact.downloadBlob(image.id)).arrayBuffer()),
-  ).toEqual(bytes);
-});
+it.each(['openmosh', 'excalidraw'])(
+  '%s preserves imported image bytes separately and rejects a mismatched content address',
+  async (type) => {
+    const services = getServices();
+    const crux = await services.crux.create({
+      title: 'Images',
+      kind: 'webapp',
+      type: 'workspace',
+      meta: { template: 'tool-' + type },
+    });
+    const store = createCruxStore();
+    store.setState({ crux });
+    const call = notebookSession(store);
+    const content =
+      'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aPfkAAAAASUVORK5CYII=';
+    const bytes = Uint8Array.from(atob(content.split(',')[1]!), (c) => c.charCodeAt(0));
+    const hash = await hashContent(bytes);
+    const path = `assets/${hash}.png`;
+    await expect(
+      call({ op: 'write', path: `assets/${'0'.repeat(64)}.png`, content, expected: null }),
+    ).rejects.toThrow('original bytes');
+    await call({ op: 'write', path, content, expected: null });
+    const project = starter(type);
+    if (type === 'openmosh') project.source = path;
+    else {
+      project.scene.assets.photo = path;
+      project.scene.elements.push({
+        id: 'image-1',
+        type: 'image',
+        fileId: 'photo',
+        x: 500,
+        y: 100,
+        width: 100,
+        height: 100,
+      });
+    }
+    await call({
+      op: 'write',
+      path: 'project.json',
+      content: JSON.stringify(project),
+      expected: null,
+    });
+    const imported = await importCrux({
+      data: (await exportCrux({ cruxId: crux.id })).blob,
+      mode: 'clone',
+    });
+    const files = await services.artifact.findByResource('crux', imported.cruxId);
+    const image = files.find((f) => f.meta?.path === 'data/' + path)!;
+    expect(
+      new Uint8Array(await (await services.artifact.downloadBlob(image.id)).arrayBuffer()),
+    ).toEqual(bytes);
+  },
+);
 
 it('acknowledges the bytes written, even when an external edit arrives during snapshot creation', async () => {
   const services = getServices();

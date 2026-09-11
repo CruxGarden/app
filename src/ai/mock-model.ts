@@ -74,13 +74,44 @@ export function getMockLanguageModel(): LanguageModel {
         warnings: [],
       }),
       doStream: async ({ prompt, abortSignal }) => {
-        const sampler = /\[sampler:(openmosh|tables|smplr|playcanvas)\]/.exec(lastUserText(prompt));
+        const sampler = /\[sampler:(openmosh|tables|smplr|playcanvas|excalidraw|univer)\]/.exec(
+          lastUserText(prompt),
+        );
         if (sampler) {
           const type = sampler[1]!;
           const scripts: Record<
             string,
             { inspect: string; mutate: string; input: Record<string, unknown> }
           > = {
+            excalidraw: {
+              inspect: 'inspect_whiteboard',
+              mutate: 'upsert_whiteboard_elements',
+              input: {
+                elements: [
+                  { id: 'idea', backgroundColor: '#a5d8ff' },
+                  {
+                    id: 'agent-label',
+                    type: 'text',
+                    text: 'Made together',
+                    x: 450,
+                    y: 120,
+                    width: 240,
+                    height: 40,
+                  },
+                ],
+              },
+            },
+            univer: {
+              inspect: 'inspect_workbook',
+              mutate: 'set_workbook_cells',
+              input: {
+                sheetId: 'budget-sheet',
+                cells: [
+                  { address: 'B2', value: 8 },
+                  { address: 'D6', value: '=SUM(D2:D3)' },
+                ],
+              },
+            },
             openmosh: {
               inspect: 'inspect_effects',
               mutate: 'set_effects',

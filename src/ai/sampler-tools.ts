@@ -1,6 +1,8 @@
 import type { AppToolDefinition } from '@/services/embedded-app-tool-registry';
 import { EFFECTS, PADS, SHAPES } from '../../tool-cruxes/shared/model.js';
 const names: Record<string, [string, string, string]> = {
+  excalidraw: ['inspect_whiteboard', 'upsert_whiteboard_elements', 'drawing'],
+  univer: ['inspect_workbook', 'set_workbook_cells', 'cells'],
   openmosh: ['inspect_effects', 'set_effects', 'effects'],
   tables: ['inspect_table', 'upsert_table_rows', 'rows'],
   smplr: ['inspect_pattern', 'set_pattern', 'pattern'],
@@ -17,6 +19,10 @@ export function samplerTools(type: string) {
   if (!namesForType) return null;
   const [inspect, mutate, op] = namesForType;
   const descriptions: Record<string, string> = {
+    excalidraw:
+      'Add or update 1–30 shapes by ID. New shapes need type; existing shapes retain unspecified properties. Coordinates are canvas pixels. Text uses type text; arrow width and height define its end. Inspect first for existing IDs.',
+    univer:
+      'Set 1–100 cells in an existing sheet. Inspect first for sheet IDs. Addresses are A1 notation; values are text, numbers, booleans or null to clear. Text starting with = is a formula. Existing cell formatting is retained.',
     openmosh:
       'Replace the ordered effect stack (up to eight). Inspect first for available effects and parameter ranges. Original images remain unchanged.',
     tables:
@@ -27,6 +33,48 @@ export function samplerTools(type: string) {
       'Insert scene objects or update existing object IDs. New objects need id, name, shape, hex color, position/rotation/scale arrays. Existing objects may supply changed fields only. Position and rotation are XYZ (degrees for rotation). Does not delete objects.',
   };
   const schemas: Record<string, ReturnType<typeof objectSchema>> = {
+    excalidraw: objectSchema(
+      {
+        elements: {
+          type: 'array',
+          minItems: 1,
+          maxItems: 30,
+          items: objectSchema(
+            {
+              id: { type: 'string' },
+              type: { type: 'string', enum: ['rectangle', 'ellipse', 'diamond', 'text', 'arrow'] },
+              x: { type: 'number' },
+              y: { type: 'number' },
+              width: { type: 'number', minimum: 1 },
+              height: { type: 'number', minimum: 1 },
+              text: { type: 'string', maxLength: 2000 },
+              strokeColor: { type: 'string' },
+              backgroundColor: { type: 'string' },
+            },
+            ['id'],
+          ),
+        },
+      },
+      ['elements'],
+    ),
+    univer: objectSchema(
+      {
+        sheetId: { type: 'string' },
+        cells: {
+          type: 'array',
+          minItems: 1,
+          maxItems: 100,
+          items: objectSchema(
+            {
+              address: { type: 'string', pattern: '^[A-Z]{1,3}[1-9][0-9]{0,3}$' },
+              value: { type: ['string', 'number', 'boolean', 'null'] },
+            },
+            ['address', 'value'],
+          ),
+        },
+      },
+      ['sheetId', 'cells'],
+    ),
     openmosh: objectSchema(
       {
         effects: {

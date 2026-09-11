@@ -56,3 +56,5 @@ for (const [name, pkg] of [
   await copyFile(`node_modules/${pkg}/LICENSE`, `${name}/vendor/LICENSE`);
 }
 await writeFile('runtime-provenance.json', JSON.stringify(provenance, null, 2) + '\n');
+
+await import('./productivity-build.mjs');

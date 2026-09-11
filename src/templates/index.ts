@@ -230,6 +230,10 @@ const loaders: Record<string, () => Promise<{ default: TemplateDefinition }>> = 
   moqira: () => import('./moqira'),
   onebigsky: () => import('./onebigsky'),
   'cardinal-drone': () => import('./cardinal-drone'),
+  'tool-excalidraw': () =>
+    import('./tool-sampler').then((m) => ({ default: m.samplerTemplate('excalidraw') })),
+  'tool-univer': () =>
+    import('./tool-sampler').then((m) => ({ default: m.samplerTemplate('univer') })),
   'tool-openmosh': () =>
     import('./tool-sampler').then((m) => ({ default: m.samplerTemplate('openmosh') })),
   'tool-tables': () =>

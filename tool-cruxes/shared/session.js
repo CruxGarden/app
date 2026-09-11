@@ -26,7 +26,7 @@ export function labeled(label, input, parent) {
   parent.append(el);
   return input;
 }
-export async function openProject(type, render, stop = () => {}) {
+export async function openProject(type, render, stop = () => {}, options = {}) {
   if (window.parent === window) throw new Error('Open this app inside Crux Garden Workshop.');
   let parentOrigin;
   const targetOrigin = () => (parentOrigin && parentOrigin !== 'null' ? parentOrigin : '*');
@@ -39,6 +39,8 @@ export async function openProject(type, render, stop = () => {}) {
   let active = true;
   let tail = Promise.resolve();
   let commands = Promise.resolve();
+  let changedVersion = 0;
+  let capturedVersion = 0;
   const send = (data) =>
     window.parent.postMessage(
       { type: 'crux:app', id: crypto.randomUUID(), ...data },
@@ -63,7 +65,7 @@ export async function openProject(type, render, stop = () => {}) {
       });
       window.parent.postMessage({ type: 'crux:app', id, ...data }, targetOrigin());
     });
-  const dirty = () => JSON.stringify(doc) !== saved;
+  const dirty = () => JSON.stringify(doc) !== saved || changedVersion !== capturedVersion;
   const status = () => {
     $('#save-state').textContent = failed
       ? 'Save needs attention'
@@ -75,11 +77,20 @@ export async function openProject(type, render, stop = () => {}) {
   const save = () => {
     clearTimeout(timer);
     const operation = tail.then(async () => {
-      if (!active || !doc || !dirty()) return;
-      validateProject(doc, type);
-      const content = JSON.stringify(doc);
-      $('#save-state').textContent = 'Saving…';
+      if (!active || !doc) return;
       try {
+        const version = changedVersion;
+        await options.capture?.();
+        capturedVersion = version;
+        if (JSON.stringify(doc) === saved) {
+          failed = false;
+          message(null);
+          status();
+          return;
+        }
+        validateProject(doc, type);
+        const content = JSON.stringify(doc);
+        $('#save-state').textContent = 'Saving…';
         const result = await call({
           op: 'write',
           path: 'project.json',
@@ -96,25 +107,35 @@ export async function openProject(type, render, stop = () => {}) {
         status();
         message(e);
         throw e;
+      } finally {
+        // Native editors can change while capture imports assets or waits for
+        // calculation. Keep those later edits scheduled for another save.
+        if (active && !failed && changedVersion !== capturedVersion) {
+          clearTimeout(timer);
+          timer = setTimeout(() => void save().catch(message), 400);
+        }
       }
     });
     tail = operation.catch(() => {});
     return operation;
   };
-  const show = async () => {
+  const show = async (context = {}) => {
     $('#title').value = doc.title;
-    await render(structuredClone(doc));
+    await render(structuredClone(doc), context);
     status();
   };
-  const update = async (reducer) => {
+  const update = async (reducer, { render: shouldRender = true, autosave = true } = {}) => {
     if (!active) throw new Error('This app has closed.');
     const next = structuredClone(doc);
     reducer(next);
     validateProject(next, type);
     doc = next;
-    await show();
-    clearTimeout(timer);
-    if (!failed) timer = setTimeout(() => void save().catch(() => {}), 400);
+    if (shouldRender) await show();
+    else status();
+    if (autosave) {
+      clearTimeout(timer);
+      if (!failed) timer = setTimeout(() => void save().catch(() => {}), 400);
+    }
   };
   const reload = async () => {
     if (doc && dirty() && !confirm('Discard this unsaved draft and load the saved project?'))
@@ -128,8 +149,9 @@ export async function openProject(type, render, stop = () => {}) {
     saved = JSON.stringify(doc);
     fingerprint = result.fingerprint;
     failed = false;
+    changedVersion = capturedVersion = 0;
     message(null);
-    await show();
+    await show({ reload: true });
   };
   const receive = (event) => {
     if (event.source !== window.parent || (parentOrigin && event.origin !== parentOrigin)) return;
@@ -149,17 +171,24 @@ export async function openProject(type, render, stop = () => {}) {
     } else if (data?.type === 'crux:app:command') {
       const run = commands.then(async () => {
         if (!doc) throw new Error('The app is still loading.');
-        if (data.command?.op === 'inspect')
-          return {
-            project:
-              doc.type === 'tables'
-                ? { ...doc, rows: doc.rows.slice(0, 50) }
-                : structuredClone(doc),
-            rowCount: doc.rows?.length,
-            ...(type === 'openmosh' ? { availableEffects: EFFECTS } : {}),
-            saved: !dirty(),
-            fingerprint,
-          };
+        if (data.command?.op === 'inspect') {
+          const inspection = tail.then(async () => {
+            await options.capture?.();
+            return {
+              project: options.inspect
+                ? options.inspect(doc)
+                : doc.type === 'tables'
+                  ? { ...doc, rows: doc.rows.slice(0, 50) }
+                  : structuredClone(doc),
+              rowCount: doc.rows?.length,
+              ...(type === 'openmosh' ? { availableEffects: EFFECTS } : {}),
+              saved: !dirty(),
+              fingerprint,
+            };
+          });
+          tail = inspection.catch(() => {});
+          return inspection;
+        }
         await save();
         const next = applyCommand(doc, data.command);
         stop();
@@ -170,8 +199,11 @@ export async function openProject(type, render, stop = () => {}) {
         return {
           saved: true,
           fingerprint,
-          project:
-            doc.type === 'tables' ? { ...doc, rows: doc.rows.slice(0, 50) } : structuredClone(doc),
+          project: options.inspect
+            ? options.inspect(doc)
+            : doc.type === 'tables'
+              ? { ...doc, rows: doc.rows.slice(0, 50) }
+              : structuredClone(doc),
         };
       });
       commands = run.catch(() => {});
@@ -207,6 +239,13 @@ export async function openProject(type, render, stop = () => {}) {
     save,
     reload,
     call,
+    changed() {
+      if (!active) return;
+      changedVersion++;
+      status();
+      clearTimeout(timer);
+      if (!failed) timer = setTimeout(() => void save().catch(message), 400);
+    },
     async importImage(file) {
       if (
         !file ||

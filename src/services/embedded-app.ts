@@ -82,7 +82,7 @@ export function isLocalCreationTool(crux: { meta?: Record<string, unknown> } | n
 export function samplerPath(type: string, value: unknown): string {
   if (value === 'project.json') return 'data/project.json';
   if (
-    type === 'openmosh' &&
+    ['openmosh', 'excalidraw'].includes(type) &&
     typeof value === 'string' &&
     /^assets\/[a-f0-9]{64}\.(png|jpg|webp|gif)$/.test(value)
   )

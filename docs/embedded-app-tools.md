@@ -34,7 +34,7 @@ report failure if saving conflicts; an error does not imply that no live paramet
 changed. Inspect before retrying after an uncertain result. Agents do not receive
 an implicit bypass of lifecycle, file scope or publication boundaries.
 
-Cardinal is the first built-in adapter: `inspect_instrument`,
+Cardinal supplies an instrument adapter: `inspect_instrument`,
 `set_instrument_controls`, and `select_instrument_preset`. Its controller serializes
 commands, saves pending manual changes first, updates the same native engine as
 the controls, and confirms the final save. It never starts audio automatically.
@@ -46,3 +46,5 @@ discovery, write scope, malformed inputs and error/mutation handling. The Cardin
 desktop journey drives a scripted model through the real Collaboration executor,
 frame command handler, native WASM engine, Project Folder and Growth path. A
 scripted model verifies integration, not the quality of a live model's choices.
+
+The local sampler adds OpenMosh, Tables, smplr, PlayCanvas, Excalidraw and Univer adapters through the same registry. `tool-cruxes/shared/session.js` accepts an optional asynchronous `capture` callback for native editors and a compact `inspect` projection. Capture commits the current editor buffer and runs inside the save queue. A generation counter keeps edits made during capture dirty and schedules a subsequent save. Render receives `{ reload: true }` when a saved document must replace the native draft, even if its JSON equals the last captured document. Native editor initialization, recalculation and image import errors must reject a save; a DOM canvas existing alone is not sufficient evidence that the editor works. See `productivity-tools/README.md` for verification and limits.
