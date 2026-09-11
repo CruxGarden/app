@@ -1,3 +1,4 @@
+import { validateProject as validateBitsy } from '../../bitsy-crux/editor/garden/model.js';
 import { validateProject as validateAudioMass } from '../../audiomass-crux/src/garden/model.js';
 import { validateProject as validateMiniPaint } from '../../minipaint-crux/garden/model.js';
 import { getServices } from './index';
@@ -68,11 +69,12 @@ export async function readNativeAsset(owner: string, path: unknown) {
 export async function validateNativeDocument(
   owner: string,
   content: string,
-  app: 'openmosh' | 'minipaint' | 'audiomass' = 'openmosh',
+  app: 'openmosh' | 'minipaint' | 'audiomass' | 'bitsy' = 'openmosh',
 ) {
   if (content.length > 4_000_000) throw new Error('The native project metadata is too large.');
   const doc = JSON.parse(content);
-  if (app === 'audiomass') validateAudioMass(doc);
+  if (app === 'bitsy') validateBitsy(doc);
+  else if (app === 'audiomass') validateAudioMass(doc);
   else if (app === 'minipaint') validateMiniPaint(doc);
   else {
     if (
