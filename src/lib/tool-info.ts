@@ -88,7 +88,7 @@ export function toolInfo(meta?: Record<string, unknown>): ToolInfo | null {
     return value as ToolInfo;
   return typeof meta?.template === 'string'
     ? Object.hasOwn(TOOL_INFO, meta.template)
-      ? TOOL_INFO[meta.template]
+      ? (TOOL_INFO[meta.template] ?? null)
       : null
     : null;
 }

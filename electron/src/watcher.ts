@@ -1,4 +1,9 @@
-const chokidar = require('chokidar');
+// Chokidar 4 uses a kqueue descriptor per file on macOS. Large Project
+// Folders can then prevent Electron's sandboxed child processes from starting.
+// The pinned macOS adapter retains Chokidar's FSEvents backend and the same
+// normalized events/atomic-write handling; other platforms keep Chokidar 4.
+const nativeMacWatch = process.platform === 'darwin';
+const chokidar = require(nativeMacWatch ? 'chokidar-fsevents' : 'chokidar');
 const fs = require('fs');
 const path = require('path');
 const createIgnore = require('ignore');
@@ -66,10 +71,15 @@ class FolderWatch {
   ) {
     this.loadIgnores();
     this.watcher = chokidar.watch(folder, {
+      ...(nativeMacWatch ? { useFsEvents: true } : {}),
       ignoreInitial: true,
       ignored: (p: string) => this.isIgnored(p),
       awaitWriteFinish: { stabilityThreshold: 200, pollInterval: 50 },
     });
+    if (nativeMacWatch && !this.watcher.options.useFsEvents) {
+      void this.watcher.close();
+      throw new Error('Native macOS file watching is unavailable.');
+    }
     this.watcher.on('add', (p: string) => this.record('write', p));
     this.watcher.on('change', (p: string) => this.record('write', p));
     this.watcher.on('unlink', (p: string) => this.record('delete', p));
