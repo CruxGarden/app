@@ -1,3 +1,4 @@
+import { validateProject as validateSvgedit } from '../../svgedit-crux/garden/model.js';
 import { validateProject as validateTwine } from '../../twine-crux/garden/model.js';
 import { validateProject as validateKetcher } from '../../ketcher-crux/garden/model.js';
 import { reconcileProjectFile } from './ingestion';
@@ -98,12 +99,14 @@ export async function validateNativeDocument(
     | 'rawgraphs'
     | 'gephi'
     | 'ketcher'
+    | 'svgedit'
     | 'twine'
     | 'jupyterlite' = 'openmosh',
 ) {
   if (content.length > 4_000_000) throw new Error('The native project metadata is too large.');
   const doc = JSON.parse(content);
-  if (app === 'twine') validateTwine(doc);
+  if (app === 'svgedit') validateSvgedit(doc);
+  else if (app === 'twine') validateTwine(doc);
   else if (app === 'ketcher') validateKetcher(doc);
   else if (app === 'gephi') validateGephi(doc);
   else if (app === 'jupyterlite') validateJupyterlite(doc);
