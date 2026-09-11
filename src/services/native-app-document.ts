@@ -1,3 +1,4 @@
+import { validateProject as validateRawgraphs } from '../../rawgraphs-crux/src/garden/model.js';
 import { validateProject as validatePiskel } from '../../piskel-crux/src/garden/model.js';
 import { validateProject as validateMermaid } from '../../mermaid-crux/static/garden/model.js';
 import { validateProject as validateBitsy } from '../../bitsy-crux/editor/garden/model.js';
@@ -71,11 +72,19 @@ export async function readNativeAsset(owner: string, path: unknown) {
 export async function validateNativeDocument(
   owner: string,
   content: string,
-  app: 'openmosh' | 'minipaint' | 'audiomass' | 'bitsy' | 'mermaid' | 'piskel' = 'openmosh',
+  app:
+    | 'openmosh'
+    | 'minipaint'
+    | 'audiomass'
+    | 'bitsy'
+    | 'mermaid'
+    | 'piskel'
+    | 'rawgraphs' = 'openmosh',
 ) {
   if (content.length > 4_000_000) throw new Error('The native project metadata is too large.');
   const doc = JSON.parse(content);
-  if (app === 'piskel') validatePiskel(doc);
+  if (app === 'rawgraphs') validateRawgraphs(doc);
+  else if (app === 'piskel') validatePiskel(doc);
   else if (app === 'mermaid') validateMermaid(doc);
   else if (app === 'bitsy') validateBitsy(doc);
   else if (app === 'audiomass') validateAudioMass(doc);

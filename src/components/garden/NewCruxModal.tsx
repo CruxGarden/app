@@ -242,6 +242,16 @@ const TEMPLATES: Template[] = [
     desktopOnly: true,
   },
   {
+    id: 'rawgraphs-app',
+    label: 'RAWGraphs',
+    description: 'Research · explore datasets and create publication figures',
+    defaultTitle: 'My research chart',
+    icon: <LayoutIcon />,
+    thumb: <BlankThumb />,
+    kind: 'webapp',
+    desktopOnly: true,
+  },
+  {
     id: 'piskel-app',
     label: 'Piskel',
     description: 'Pixel art · sprites, layers and frame animation',

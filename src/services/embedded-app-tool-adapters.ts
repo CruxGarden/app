@@ -1,3 +1,4 @@
+import { RAWGRAPHS_TOOLS, rawgraphsCommand } from '@/ai/rawgraphs-tools';
 import { PISKEL_TOOLS, piskelCommand } from '@/ai/piskel-tools';
 import { MERMAID_TOOLS, mermaidCommand } from '@/ai/mermaid-tools';
 import { BITSY_TOOLS, bitsyCommand } from '@/ai/bitsy-tools';
@@ -18,6 +19,8 @@ import type { AppToolDefinition } from './embedded-app-tool-registry';
 
 /** Trusted built-in adapters declare tools and affected files; frames cannot grant themselves tools. */
 export function embeddedAppToolAdapter(crux: { meta?: Record<string, unknown> } | null) {
+  if (nativeAppType(crux) === 'rawgraphs')
+    return { tools: RAWGRAPHS_TOOLS, prepare: rawgraphsCommand };
   if (nativeAppType(crux) === 'piskel') return { tools: PISKEL_TOOLS, prepare: piskelCommand };
   if (nativeAppType(crux) === 'mermaid') return { tools: MERMAID_TOOLS, prepare: mermaidCommand };
   if (nativeAppType(crux) === 'bitsy') return { tools: BITSY_TOOLS, prepare: bitsyCommand };

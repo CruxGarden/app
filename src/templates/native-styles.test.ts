@@ -3,6 +3,7 @@ import { resolve } from 'node:path';
 import { expect, it } from 'vitest';
 import { loadTemplate } from './index';
 for (const [id, root] of [
+  ['rawgraphs-app', 'rawgraphs-crux'],
   ['piskel-app', 'piskel-crux'],
   ['mermaid-app', 'mermaid-crux'],
   ['openmosh-app', 'openmosh-crux'],

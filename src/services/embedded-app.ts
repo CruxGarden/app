@@ -8,6 +8,7 @@ const NATIVE_TEMPLATES = {
   'bitsy-app': 'bitsy',
   'mermaid-app': 'mermaid',
   'piskel-app': 'piskel',
+  'rawgraphs-app': 'rawgraphs',
 } as const;
 /** Native adapters share the owner-bound document and binary bridge. */
 export function nativeAppType(crux: { meta?: Record<string, unknown> } | null | undefined) {
