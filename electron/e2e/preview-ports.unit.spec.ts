@@ -4,6 +4,8 @@ import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { spawn } from 'node:child_process';
 import { createServer } from 'node:http';
+import { createConnection } from 'node:net';
+import { once } from 'node:events';
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const { PreviewServer } =
   require('../dist/preview-server.js') as typeof import('../src/preview-server');
@@ -164,4 +166,39 @@ test('stop cancels a startup that never binds without waiting for the readiness 
   await manager.stop('never-ready');
   await rejected;
   expect(manager.status('never-ready').status).toBe('idle');
+});
+
+test('stopping a preview closes unfinished browser requests without stopping other Cruxes', async () => {
+  const root = mkdtempSync(join(tmpdir(), 'crux-port-test-'));
+  const a = join(root, 'A'),
+    b = join(root, 'B');
+  mkdirSync(a);
+  mkdirSync(b);
+  writeFileSync(join(a, 'index.html'), 'A');
+  writeFileSync(join(b, 'index.html'), 'B');
+  const manager = new PreviewServer((f) => resolve(f));
+  let client: ReturnType<typeof createConnection> | undefined;
+  let stopped: Promise<void> | undefined;
+  try {
+    const ua = await manager.start(a),
+      ub = await manager.start(b);
+    client = createConnection({ host: '127.0.0.1', port: Number(new URL(ua).port) });
+    await once(client, 'connect');
+    // A browser can leave a request unfinished while its page is closing.
+    client.on('error', () => {}); // Reset is expected when an owned preview stops.
+    const response = once(client, 'data');
+    client.write('POST / HTTP/1.1\r\nHost: localhost\r\nContent-Length: 1000\r\n\r\npartial');
+    await response;
+    let finished = false;
+    stopped = manager.stop(a).then(() => {
+      finished = true;
+    });
+    await expect.poll(() => finished, { timeout: 1500 }).toBe(true);
+    expect(await (await fetch(ub)).text()).toBe('B');
+  } finally {
+    client?.destroy();
+    await stopped;
+    await manager.stopAll();
+    rmSync(root, { recursive: true, force: true });
+  }
 });

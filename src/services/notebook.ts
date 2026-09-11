@@ -48,6 +48,27 @@ export function notebookSession(workspace: StoreApi<CruxState>) {
       if (state.viewingSnapshotId) throw new Error('Return to the current app to edit.');
       await flushIngestion();
       const { artifact } = getServices();
+      if (request.op === 'save-output') {
+        if (
+          typeof request.content !== 'string' ||
+          request.content.length > 5_400_000 ||
+          typeof request.label !== 'string'
+        )
+          throw new Error('Choose an image output and a name.');
+        const match = request.content.match(
+          /^data:(image\/(?:png|jpeg|webp|gif));base64,([A-Za-z0-9+/=]+)$/,
+        );
+        if (!match) throw new Error('Use a PNG, JPEG, WebP or GIF output.');
+        const bytes = Uint8Array.from(atob(match[2]!), (c) => c.charCodeAt(0));
+        const { saveCruxOutput } = await import('./cruxspace-assets');
+        const result = await saveCruxOutput(
+          owner,
+          new Blob([bytes], { type: match[1] }),
+          request.label,
+        );
+        await workspace.getState().refreshArtifacts();
+        return result;
+      }
       if (request.op === 'import' && state.crux?.kind === 'notes') {
         await assertCopyWritable(owner);
         return importNotebook(workspace, request);

@@ -139,6 +139,38 @@ async function renderImage(doc) {
   canvas.dataset.rendered = String(generation);
 }
 sourcePath = undefined;
+const outputName = document.createElement('input');
+outputName.value = 'Album artwork';
+outputName.maxLength = 120;
+outputName.setAttribute('aria-label', 'Output name');
+const outputStatus = document.createElement('span');
+outputStatus.setAttribute('role', 'status');
+const outputActions = document.createElement('div');
+outputActions.className = 'actions';
+outputActions.style.marginTop = '16px';
+outputActions.append(outputName);
+$('#canvas').parentElement.parentElement.append(outputActions);
+button(
+  'Save output for Cruxspace',
+  async () => {
+    await session.save();
+    await renderImage(session.doc);
+    outputStatus.textContent = 'Saving output…';
+    try {
+      await session.call({
+        op: 'save-output',
+        content: canvas.toDataURL('image/png'),
+        label: outputName.value,
+      });
+      outputStatus.textContent = 'Output ready in this Crux’s Cruxspaces';
+    } catch (error) {
+      outputStatus.textContent = '';
+      throw error;
+    }
+  },
+  outputActions,
+);
+outputActions.append(outputStatus);
 let session;
 try {
   session = await openProject('openmosh', async (doc) => {

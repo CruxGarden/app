@@ -1,6 +1,7 @@
 import { hasSkill, skillNames } from './skills';
 import { MEMORY_NOTE_MAX, MEMORY_SECTIONS, normalizeSection } from '@/services/memory';
 import { validateDelegateInput } from './delegate-tool';
+import { validateCruxspaceTool } from './cruxspace-tools';
 
 export interface ValidationResult {
   valid: boolean;
@@ -17,6 +18,9 @@ export function validateToolInput(
   input: Record<string, unknown>,
 ): ValidationResult {
   switch (toolName) {
+    case 'list_cruxspace_assets':
+    case 'use_cruxspace_asset':
+      return validateCruxspaceTool(toolName, input);
     case 'write_file':
       return validateWriteFile(input);
     case 'edit_file':

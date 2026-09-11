@@ -119,7 +119,12 @@ async function defaultDeps(): Promise<PublishDeps> {
 export function isInternalArtifactPath(path: string): boolean {
   const p = path.toLowerCase();
   return (
-    isWorkspaceThumbnail(p) || p === '.keep' || p.endsWith('/.keep') || isGeneratedGuidePath(path)
+    isWorkspaceThumbnail(p) ||
+    p === '.keep' ||
+    p.endsWith('/.keep') ||
+    isGeneratedGuidePath(path) ||
+    p.startsWith('cruxspace-assets/') ||
+    (p.startsWith('exports/') && p.endsWith('.asset.json'))
   );
 }
 

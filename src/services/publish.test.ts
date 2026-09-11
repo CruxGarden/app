@@ -11,6 +11,21 @@ import {
 } from './publish';
 import type { Crux, Artifact } from '@/api/types';
 
+it('publishes the selected image without exposing private Cruxspace origin records', async () => {
+  const { deps, state } = makeDeps({ exists: true });
+  await publishPipeline(
+    makeCrux(),
+    [
+      makeArtifact('index.html', 'page'),
+      makeArtifact('assets/cover.png', 'image'),
+      makeArtifact('cruxspace-assets/origin.json', 'private'),
+      makeArtifact('exports/cover.asset.json', 'descriptor'),
+    ],
+    { deps },
+  );
+  expect(state.publishedFiles?.map((f) => f.path)).toEqual(['index.html', 'assets/cover.png']);
+});
+
 function makeCrux(overrides: Partial<Crux> = {}): Crux {
   return {
     id: 'crux-1',
