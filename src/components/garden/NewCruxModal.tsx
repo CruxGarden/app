@@ -242,6 +242,16 @@ const TEMPLATES: Template[] = [
     desktopOnly: true,
   },
   {
+    id: 'mermaid-app',
+    label: 'Mermaid Live Editor',
+    description: 'Diagrams · flowcharts, timelines and sequence diagrams',
+    defaultTitle: 'My diagram',
+    icon: <LayoutIcon />,
+    thumb: <BlankThumb />,
+    kind: 'webapp',
+    desktopOnly: true,
+  },
+  {
     id: 'bitsy-app',
     label: 'Bitsy',
     description: 'Creative · make tiny games, worlds, dialogue and music',

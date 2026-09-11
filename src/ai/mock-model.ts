@@ -96,6 +96,15 @@ export function getMockLanguageModel(): LanguageModel {
           }
           return toolCallStream('list_cruxspace_assets', {});
         }
+        if (lastUserText(prompt).includes('[mermaid:diagram]')) {
+          const rounds = toolResultsThisTurn(prompt);
+          if (!rounds.length) return toolCallStream('inspect_mermaid', {});
+          if (rounds.length === 1)
+            return toolCallStream('set_mermaid_source', {
+              code: 'flowchart LR\n  Research --> Create\n  Create --> Share',
+            });
+          return textStream('Saved the Mermaid diagram.');
+        }
         if (lastUserText(prompt).includes('[bitsy:title]')) {
           const rounds = toolResultsThisTurn(prompt);
           if (!rounds.length) return toolCallStream('inspect_bitsy', {});

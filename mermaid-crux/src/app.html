@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Online FlowChart &amp; Diagrams Editor - Mermaid Live Editor</title>
+    <meta name="og:image" content="%sveltekit.assets%/favicon.svg" />
+    <meta
+      name="description"
+      content="Simplify documentation and avoid heavy tools. Open source Visio Alternative. Commonly used for explaining your code! Mermaid is a simple markdown-like script language for generating charts from text via javascript." />
+    <link rel="icon" type="image/svg+xml" href="%sveltekit.assets%/favicon.svg" />
+    <link rel="apple-touch-icon" href="%sveltekit.assets%/favicon.png" />
+    <link rel="mask-icon" href="%sveltekit.assets%/favicon.svg" color="#000000" />
+    <meta name="theme-color" content="#ff3670" />
+    <link rel="manifest" href="%sveltekit.assets%/manifest.json" />
+    <script>
+      history.replaceState(null, '', location.pathname.replace(/index\.html$/, '') + location.search + (parent === window ? location.hash : ''));
+      window.gardenReady = parent === window ? Promise.resolve(null) : import('/runtime/garden/bridge.js').then(m => m.startGarden());
+    </script>
+    %sveltekit.head%
+  </head>
+  <body>
+    <div id="svelte">%sveltekit.body%</div>
+  </body>
+</html>

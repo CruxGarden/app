@@ -6,6 +6,7 @@ const NATIVE_TEMPLATES = {
   'minipaint-app': 'minipaint',
   'audiomass-app': 'audiomass',
   'bitsy-app': 'bitsy',
+  'mermaid-app': 'mermaid',
 } as const;
 /** Native adapters share the owner-bound document and binary bridge. */
 export function nativeAppType(crux: { meta?: Record<string, unknown> } | null | undefined) {
