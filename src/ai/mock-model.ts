@@ -96,6 +96,20 @@ export function getMockLanguageModel(): LanguageModel {
           }
           return toolCallStream('list_cruxspace_assets', {});
         }
+        if (lastUserText(prompt).includes('[minipaint:layer]')) {
+          const rounds = toolResultsThisTurn(prompt);
+          if (!rounds.length) return toolCallStream('inspect_minipaint', {});
+          if (rounds.length === 1) {
+            const result = JSON.parse(toolResultText(prompt, 'inspect_minipaint') || '{}');
+            const layer = result.layers?.find((item: { type: string }) => item.type === 'image');
+            return toolCallStream('update_minipaint_layer', {
+              id: layer?.id,
+              name: 'Garden artwork',
+              opacity: 65,
+            });
+          }
+          return textStream('Saved the native miniPaint layer.');
+        }
         if (lastUserText(prompt).includes('[openmosh:effect]')) {
           const rounds = toolResultsThisTurn(prompt);
           if (!rounds.length) return toolCallStream('inspect_openmosh', {});

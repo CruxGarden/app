@@ -242,6 +242,15 @@ const TEMPLATES: Template[] = [
     desktopOnly: true,
   },
   {
+    id: 'minipaint-app',
+    label: 'miniPaint',
+    description: 'Creative · photo editing, paint, text and editable layers',
+    defaultTitle: 'My image',
+    icon: <LayoutIcon />,
+    thumb: <BlankThumb />,
+    kind: 'webapp',
+  },
+  {
     id: 'openmosh-app',
     label: 'OpenMosh',
     description: 'Creative · the full image, video and slideshow editor',
