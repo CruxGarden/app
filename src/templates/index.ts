@@ -242,6 +242,7 @@ const loaders: Record<string, () => Promise<{ default: TemplateDefinition }>> = 
   'ketcher-app': () => import('./ketcher-app'),
   'twine-app': () => import('./twine-app'),
   'blockbench-app': () => import('./blockbench-app'),
+  'gdevelop-app': () => import('./gdevelop-app'),
   'svgedit-app': () => import('./svgedit-app'),
   'jupyterlite-app': () => import('./jupyterlite-app'),
   'bitsy-app': () => import('./bitsy-app'),

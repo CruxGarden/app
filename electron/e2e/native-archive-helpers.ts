@@ -1,8 +1,38 @@
-import { expect, type Page } from '@playwright/test';
+import { expect, type Page, type ElectronApplication } from '@playwright/test';
 import { writeFileSync } from 'node:fs';
+import type { DownloadItem, Event } from 'electron';
 
 /** Exercise the real complete-Crux export, capturing its browser download bytes. */
-export async function exportNativeCrux(page: Page, path: string) {
+export async function exportNativeCrux(page: Page, path: string, app?: ElectronApplication) {
+  if (app) {
+    // Let Chromium stream large archives to disk instead of copying a Blob
+    // through several renderer strings and one oversized DevTools message.
+    await app.evaluate(({ session }, destination) => {
+      const state = globalThis as unknown as { __nativeDownload?: string };
+      state.__nativeDownload = undefined;
+      const listener = (_event: Event, item: DownloadItem) => {
+        if (!item.getFilename().endsWith('.crux')) return;
+        session.defaultSession.removeListener('will-download', listener);
+        item.setSavePath(destination);
+        item.once('done', (_event, result) => {
+          state.__nativeDownload = result;
+        });
+      };
+      session.defaultSession.on('will-download', listener);
+    }, path);
+    await page.getByRole('button', { name: 'Export complete Crux', exact: true }).click();
+    await page.getByRole('button', { name: 'Export Crux', exact: true }).click();
+    await expect
+      .poll(
+        () =>
+          app.evaluate(
+            () => (globalThis as unknown as { __nativeDownload?: string }).__nativeDownload,
+          ),
+        { timeout: 180000 },
+      )
+      .toBe('completed');
+    return;
+  }
   await page.evaluate(() => {
     const state = window as unknown as { __nativeArchive?: Blob };
     const blobs = new Map<string, Blob>();

@@ -243,6 +243,16 @@ const TEMPLATES: Template[] = [
     desktopOnly: true,
   },
   {
+    id: 'gdevelop-app',
+    label: 'GDevelop',
+    description: 'Creative · visual 2D and 3D game development',
+    defaultTitle: 'My game',
+    icon: <PencilIcon />,
+    thumb: <BlankThumb />,
+    kind: 'webapp',
+    desktopOnly: true,
+  },
+  {
     id: 'blockbench-app',
     label: 'Blockbench',
     description: 'Creative · low-poly 3D modeling, textures and animation',

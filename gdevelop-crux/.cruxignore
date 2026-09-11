@@ -1,0 +1,6 @@
+**/node_modules/
+newIDE/app/build/
+newIDE/app/resources/GDJS/
+newIDE/app/public/libGD.js
+newIDE/app/public/libGD.wasm
+newIDE/app/public/service-worker.js
