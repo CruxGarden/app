@@ -23,7 +23,7 @@ export async function startGarden(app) {
     '<span role="status">Opening Garden project…</span><button>Save project</button><button>Reload saved project</button>';
   const style = document.createElement('style');
   style.textContent =
-    '#garden-project{position:fixed;bottom:0;left:0;right:0;height:32px;z-index:10000;display:flex;gap:12px;align-items:center;padding:0 10px;background:#24282c;color:#fff;font:12px system-ui}#garden-project span{flex:1}#garden-project button{padding:3px 8px;color:#fff;background:#42494f;border:1px solid #697078;border-radius:3px}body{height:calc(100dvh - 34px)!important}#main-wrapper{bottom:34px!important}';
+    '#garden-project{position:fixed;bottom:0;left:0;right:0;height:32px;z-index:10000;display:flex;gap:12px;align-items:center;padding:0 10px;background:#24282c;color:#fff;font:12px system-ui}#garden-project span{flex:1}#garden-project button{padding:3px 8px;color:#fff;background:#42494f;border:1px solid #697078;border-radius:3px}body{height:calc(100dvh - 34px)!important}#main-wrapper{bottom:34px!important}.cheatsheet-link{bottom:44px!important}';
   document.head.append(style);
   document.body.append(bar);
   const workspace = document.querySelector('#main-wrapper');

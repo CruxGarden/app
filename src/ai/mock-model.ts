@@ -96,6 +96,13 @@ export function getMockLanguageModel(): LanguageModel {
           }
           return toolCallStream('list_cruxspace_assets', {});
         }
+        if (lastUserText(prompt).includes('[rawgraphs:size]')) {
+          const rounds = toolResultsThisTurn(prompt);
+          if (!rounds.length) return toolCallStream('inspect_rawgraphs', {});
+          if (rounds.length === 1)
+            return toolCallStream('set_rawgraphs_size', { width: 900, height: 550 });
+          return textStream('Resized the native chart and saved it in Garden.');
+        }
         if (lastUserText(prompt).includes('[piskel:speed]')) {
           const rounds = toolResultsThisTurn(prompt);
           if (!rounds.length) return toolCallStream('inspect_piskel', {});

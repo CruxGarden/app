@@ -18,3 +18,6 @@ mermaid-crux/.svelte-kit/
 mermaid-crux/static/embed.js
 
 piskel-crux/dest/
+
+rawgraphs-crux/runtime/
+rawgraphs-crux/build/
