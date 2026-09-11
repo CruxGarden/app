@@ -4,14 +4,23 @@ const sources = import.meta.glob(
   '../../minipaint-crux/{src/**/*,garden/*,package.json,package-lock.json,webpack.config.js,index.html,.babelrc,MIT-LICENSE.txt,README.md,UPSTREAM.md}',
   { query: '?raw', import: 'default', eager: true },
 ) as Record<string, string>;
-const assets = import.meta.glob('../../minipaint-crux/{images,runtime}/**/*', {
-  query: '?url',
+const assets = import.meta.glob(
+  ['../../minipaint-crux/{images,runtime}/**/*', '!../../minipaint-crux/**/*.css'],
+  {
+    query: '?url',
+    import: 'default',
+    eager: true,
+  },
+) as Record<string, string>;
+// Preserve stylesheet-relative URLs; Vite processes CSS imported with ?url.
+const styles = import.meta.glob('../../minipaint-crux/{images,runtime}/**/*.css', {
+  query: '?raw',
   import: 'default',
   eager: true,
 }) as Record<string, string>;
 const template: TemplateDefinition = {
   files: [
-    ...Object.entries(sources).map(([path, content]) => ({
+    ...Object.entries({ ...sources, ...styles }).map(([path, content]) => ({
       path: path.replace('../../minipaint-crux/', ''),
       content,
     })),

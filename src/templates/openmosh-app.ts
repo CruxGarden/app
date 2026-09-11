@@ -6,14 +6,23 @@ const sources = import.meta.glob(
   ],
   { query: '?raw', import: 'default', eager: true },
 ) as Record<string, string>;
-const assets = import.meta.glob('../../openmosh-crux/{runtime,public}/**/*', {
-  query: '?url',
+const assets = import.meta.glob(
+  ['../../openmosh-crux/{runtime,public}/**/*', '!../../openmosh-crux/**/*.css'],
+  {
+    query: '?url',
+    import: 'default',
+    eager: true,
+  },
+) as Record<string, string>;
+// Preserve stylesheet-relative URLs; Vite processes CSS imported with ?url.
+const styles = import.meta.glob('../../openmosh-crux/{runtime,public}/**/*.css', {
+  query: '?raw',
   import: 'default',
   eager: true,
 }) as Record<string, string>;
 const template: TemplateDefinition = {
   files: [
-    ...Object.entries(sources).map(([path, content]) => ({
+    ...Object.entries({ ...sources, ...styles }).map(([path, content]) => ({
       path: path.replace('../../openmosh-crux/', ''),
       content,
     })),

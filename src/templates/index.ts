@@ -235,6 +235,7 @@ const loaders: Record<string, () => Promise<{ default: TemplateDefinition }>> = 
   'tool-univer': () =>
     import('./tool-sampler').then((m) => ({ default: m.samplerTemplate('univer') })),
   'mermaid-app': () => import('./mermaid-app'),
+  'piskel-app': () => import('./piskel-app'),
   'bitsy-app': () => import('./bitsy-app'),
   'audiomass-app': () => import('./audiomass-app'),
   'minipaint-app': () => import('./minipaint-app'),
