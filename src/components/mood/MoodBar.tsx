@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/cn';
 import { useAudioStore } from '@/stores/audioStore';
@@ -22,24 +22,42 @@ import { PauseIcon, PlayIcon as PlayIconGlyph, SlidersIcon } from '@/components/
  * settings button is not shown.
  */
 
-function LevelBars({ level, playing }: { level: number; playing: boolean }) {
+const BARS = [
+  { k: 0.35, ms: 1900, delay: 0 },
+  { k: 0.7, ms: 2300, delay: 300 },
+  { k: 1, ms: 1700, delay: 150 },
+  { k: 0.55, ms: 2600, delay: 500 },
+];
+
+function LevelBars({ playing }: { playing: boolean }) {
   // Four bars that sway, subtly, while the track plays. The analyser's level sets how
   // tall they reach (a quiet passage, lower bars); when the analyser has
   // nothing to say — some sources give it silence — they still move, so the
   // bar always shows that sound is on.
-  const bars = [
-    { k: 0.35, ms: 1900, delay: 0 },
-    { k: 0.7, ms: 2300, delay: 300 },
-    { k: 1, ms: 1700, delay: 150 },
-    { k: 0.55, ms: 2600, delay: 500 },
-  ];
-  const reach = playing ? 0.55 + Math.min(1, Math.sqrt(level) * 1.6) * 0.45 : 0.15;
+  const ref = useRef<HTMLSpanElement>(null);
+  useEffect(() => {
+    // The analyser updates every animation frame. A React external-store
+    // subscription here schedules urgent root work each frame and can starve
+    // a large workspace's initial Suspense render. Only the meter needs painting.
+    const paint = (state: { level: number; playing: boolean }) => {
+      const reach = state.playing ? 0.55 + Math.min(1, Math.sqrt(state.level) * 1.6) * 0.45 : 0.15;
+      BARS.forEach((bar, i) => {
+        const el = ref.current?.children[i] as HTMLElement | undefined;
+        if (el) el.style.height = `${Math.max(2, reach * bar.k * 14)}px`;
+      });
+    };
+    paint(useAudioStore.getState());
+    return useAudioStore.subscribe((state, previous) => {
+      if (state.level !== previous.level || state.playing !== previous.playing) paint(state);
+    });
+  }, []);
   return (
     <span
+      ref={ref}
       className="flex items-end gap-[2px] h-3.5 w-3.5 motion-ambient react-accent-bars"
       aria-hidden
     >
-      {bars.map((b, i) => (
+      {BARS.map((b, i) => (
         <span
           key={i}
           className={cn(
@@ -47,7 +65,7 @@ function LevelBars({ level, playing }: { level: number; playing: boolean }) {
             playing && 'mood-bar-dance',
           )}
           style={{
-            height: `${Math.max(2, reach * b.k * 14)}px`,
+            height: '2px',
             animationDuration: `${b.ms}ms`,
             animationDelay: `${b.delay}ms`,
           }}
@@ -67,13 +85,12 @@ export default function MoodBar({
 }) {
   const navigate = useNavigate();
   const publicSite = isPublicSite();
-  const { track, enabled, playing, volume, level, init, toggle, setVolume } = useAudioStore(
+  const { track, enabled, playing, volume, init, toggle, setVolume } = useAudioStore(
     useShallow((s) => ({
       track: s.track,
       enabled: s.enabled,
       playing: s.playing,
       volume: s.volume,
-      level: s.level,
       init: s.init,
       toggle: s.toggle,
       setVolume: s.setVolume,
@@ -125,7 +142,7 @@ export default function MoodBar({
         aria-label={collapsed ? 'Expand Mood Bar' : publicSite ? 'Go to Moods' : 'Open Mood'}
         className="relative w-5 h-5 rounded-[var(--mood-bar-radius)] flex items-center justify-center cursor-pointer shrink-0 hover:bg-mood-bar-hover"
       >
-        <LevelBars level={level} playing={playing} />
+        <LevelBars playing={playing} />
         {aiPreview > 0 && (
           <span
             aria-label={`Theme preview: ${aiPreview} tokens`}
