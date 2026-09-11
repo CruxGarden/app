@@ -12,6 +12,7 @@ const NATIVE_TEMPLATES = {
   'gephi-app': 'gephi',
   'ketcher-app': 'ketcher',
   'twine-app': 'twine',
+  'svgedit-app': 'svgedit',
   'jupyterlite-app': 'jupyterlite',
 } as const;
 /** Native adapters share the owner-bound document and binary bridge. */

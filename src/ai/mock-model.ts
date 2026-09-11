@@ -96,6 +96,19 @@ export function getMockLanguageModel(): LanguageModel {
           }
           return toolCallStream('list_cruxspace_assets', {});
         }
+        if (lastUserText(prompt).includes('[svgedit:fill]')) {
+          const rounds = toolResultsThisTurn(prompt);
+          if (!rounds.length) return toolCallStream('inspect_svgedit', {});
+          if (rounds.length === 1) {
+            const data = JSON.parse(toolResultText(prompt, 'inspect_svgedit') || '{}');
+            const elementId = data.objects?.find((o: { type: string }) => o.type === 'rect')?.id;
+            if (!elementId) return textStream('Draw a rectangle first.');
+            return toolCallStream('set_svgedit_fill', { elementId, color: '#3b82f6' });
+          }
+          if (rounds.length === 2)
+            return toolCallStream('set_svgedit_title', { title: 'Lantern badge' });
+          return textStream('Colored the shape and saved the drawing in Garden.');
+        }
         if (lastUserText(prompt).includes('[twine:passage]')) {
           const rounds = toolResultsThisTurn(prompt);
           if (!rounds.length) return toolCallStream('inspect_twine', {});

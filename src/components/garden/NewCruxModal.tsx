@@ -243,6 +243,16 @@ const TEMPLATES: Template[] = [
     desktopOnly: true,
   },
   {
+    id: 'svgedit-app',
+    label: 'SVG-Edit',
+    description: 'Creative · vector illustration, shapes and layers',
+    defaultTitle: 'My vector drawing',
+    icon: <PencilIcon />,
+    thumb: <BlankThumb />,
+    kind: 'webapp',
+    desktopOnly: true,
+  },
+  {
     id: 'twine-app',
     label: 'Twine',
     description: 'Creative · write and play interactive stories',
