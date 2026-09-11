@@ -4,6 +4,7 @@ import { importNotebook } from './notebook-import';
 import {
   isEmbeddedApp,
   isOpenMosh,
+  isMiniPaint,
   isMoqira,
   isCardinal,
   samplerType,
@@ -50,7 +51,8 @@ export function notebookSession(workspace: StoreApi<CruxState>) {
       if (state.viewingSnapshotId) throw new Error('Return to the current app to edit.');
       await flushIngestion();
       const { artifact } = getServices();
-      const native = isOpenMosh(state.crux);
+      const nativeApp = isMiniPaint(state.crux) ? 'minipaint' : 'openmosh';
+      const native = isOpenMosh(state.crux) || isMiniPaint(state.crux);
       if (native && request.op === 'native-import') {
         await assertCopyWritable(owner);
         return importNativeAsset(owner, request.bytes, request.mimeType);
@@ -96,7 +98,7 @@ export function notebookSession(workspace: StoreApi<CruxState>) {
           }));
       }
       if (native && request.path !== 'project.json')
-        throw new Error('OpenMosh can access only its project document and imported assets.');
+        throw new Error('This app can access only its project document and imported assets.');
       const path = native
         ? 'data/project.json'
         : sampler
@@ -196,7 +198,7 @@ export function notebookSession(workspace: StoreApi<CruxState>) {
             meta: { path },
           });
         } else {
-          if (native) await validateNativeDocument(owner, request.content);
+          if (native) await validateNativeDocument(owner, request.content, nativeApp);
           if (moqira) validateMoqiraFile(path, request.content);
           if (cardinal) validateCardinalFile(request.content);
           if (sampler) validateSamplerFile(sampler, request.content);

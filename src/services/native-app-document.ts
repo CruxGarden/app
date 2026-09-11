@@ -1,3 +1,4 @@
+import { validateProject as validateMiniPaint } from '../../minipaint-crux/garden/model.js';
 import { getServices } from './index';
 import { hashContent } from './sqlite/helpers';
 import { folderForCrux } from './project-folder';
@@ -63,36 +64,43 @@ export async function readNativeAsset(owner: string, path: unknown) {
     fingerprint: existing.fingerprint,
   };
 }
-export async function validateNativeDocument(owner: string, content: string) {
+export async function validateNativeDocument(
+  owner: string,
+  content: string,
+  app: 'openmosh' | 'minipaint' = 'openmosh',
+) {
   if (content.length > 4_000_000) throw new Error('The native project metadata is too large.');
   const doc = JSON.parse(content);
-  if (
-    !doc ||
-    doc.version !== 1 ||
-    doc.app !== 'openmosh' ||
-    !doc.local ||
-    !doc.databases ||
-    typeof doc.local !== 'object' ||
-    typeof doc.databases !== 'object' ||
-    Array.isArray(doc.local) ||
-    Array.isArray(doc.databases)
-  )
-    throw new Error('Choose an OpenMosh project document.');
-  for (const [key, value] of Object.entries(doc.local)) {
-    if (!key.startsWith('openmosh') || typeof value !== 'string')
-      throw new Error('Invalid OpenMosh settings.');
-  }
-  for (const [db, stores] of Object.entries(doc.databases)) {
+  if (app === 'minipaint') validateMiniPaint(doc);
+  else {
     if (
-      !Object.hasOwn(OPENMOSH_STORES, db) ||
-      !stores ||
-      typeof stores !== 'object' ||
-      Array.isArray(stores)
+      !doc ||
+      doc.version !== 1 ||
+      doc.app !== 'openmosh' ||
+      !doc.local ||
+      !doc.databases ||
+      typeof doc.local !== 'object' ||
+      typeof doc.databases !== 'object' ||
+      Array.isArray(doc.local) ||
+      Array.isArray(doc.databases)
     )
-      throw new Error('Invalid OpenMosh storage.');
-    for (const [store, rows] of Object.entries(stores)) {
-      if (!OPENMOSH_STORES[db]!.includes(store) || !Array.isArray(rows) || rows.length > 10000)
-        throw new Error('Invalid OpenMosh records.');
+      throw new Error('Choose an OpenMosh project document.');
+    for (const [key, value] of Object.entries(doc.local)) {
+      if (!key.startsWith('openmosh') || typeof value !== 'string')
+        throw new Error('Invalid OpenMosh settings.');
+    }
+    for (const [db, stores] of Object.entries(doc.databases)) {
+      if (
+        !Object.hasOwn(OPENMOSH_STORES, db) ||
+        !stores ||
+        typeof stores !== 'object' ||
+        Array.isArray(stores)
+      )
+        throw new Error('Invalid OpenMosh storage.');
+      for (const [store, rows] of Object.entries(stores)) {
+        if (!OPENMOSH_STORES[db]!.includes(store) || !Array.isArray(rows) || rows.length > 10000)
+          throw new Error('Invalid OpenMosh records.');
+      }
     }
   }
   const files = new Map(
@@ -118,7 +126,7 @@ export async function validateNativeDocument(owner: string, content: string) {
     }
     for (const child of Object.values(value)) visit(child, depth + 1);
   }
-  visit(doc.databases);
+  visit(app === 'minipaint' ? doc.project : doc.databases);
   // The caller flushes watcher ingestion first. Validate Blob Store references
   // without rereading every video on each slider edit; import/read verify disk bytes.
 }

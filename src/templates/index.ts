@@ -234,6 +234,7 @@ const loaders: Record<string, () => Promise<{ default: TemplateDefinition }>> = 
     import('./tool-sampler').then((m) => ({ default: m.samplerTemplate('excalidraw') })),
   'tool-univer': () =>
     import('./tool-sampler').then((m) => ({ default: m.samplerTemplate('univer') })),
+  'minipaint-app': () => import('./minipaint-app'),
   'openmosh-app': () => import('./openmosh-app'),
   'tool-openmosh': () =>
     import('./tool-sampler').then((m) => ({ default: m.samplerTemplate('openmosh') })),
