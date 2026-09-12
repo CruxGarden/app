@@ -1,0 +1,18 @@
+:root {
+  --font-plus-jakarta-sans: system-ui;
+}
+body {
+  margin: 0;
+}
+html,
+body,
+#root {
+  height: 100%;
+}
+body {
+  background: #fafafa;
+}
+.dark body {
+  background: #141414;
+  color: #eee;
+}
