@@ -21,6 +21,7 @@ export class TrackPlayer {
   private analyser: AnalyserNode | null = null;
   private data: Uint8Array | null = null;
   private src: string | null = null;
+  private sourceRevision = 0;
   private volume = 0.7;
   private ducked = false;
   private level = 0;
@@ -116,6 +117,7 @@ export class TrackPlayer {
     if (this.src === src) return;
     const wasPlaying = this.playing;
     this.src = src;
+    this.sourceRevision++;
     this.el!.src = src;
     if (wasPlaying) await this.play();
   }
@@ -127,8 +129,19 @@ export class TrackPlayer {
   async play(): Promise<void> {
     this.ensureGraph();
     if (!this.src || !this.el) return;
+    const revision = this.sourceRevision;
     if (this.ctx?.state === 'suspended') await this.ctx.resume().catch(() => {});
-    await this.el.play();
+    if (revision !== this.sourceRevision) return;
+    try {
+      await this.el.play();
+    } catch (error) {
+      // Changing the Mood can replace src before Chromium acknowledges play.
+      // Only that superseded AbortError is cancellation; other failures remain visible.
+      if (revision !== this.sourceRevision && error instanceof Error && error.name === 'AbortError')
+        return;
+      throw error;
+    }
+    if (revision !== this.sourceRevision) return;
     this.ramp(this.target());
     this.startMeter();
   }

@@ -1,3 +1,4 @@
+import { OPENCUT_TOOLS, opencutCommand } from '@/ai/opencut-tools';
 import { PLAYCANVAS_EDITOR_TOOLS, playcanvasEditorCommand } from '@/ai/playcanvas-editor-tools';
 import { GDEVELOP_TOOLS, gdevelopCommand } from '@/ai/gdevelop-tools';
 import { BLOCKBENCH_TOOLS, blockbenchCommand } from '@/ai/blockbench-tools';
@@ -27,6 +28,7 @@ import type { AppToolDefinition } from './embedded-app-tool-registry';
 
 /** Trusted built-in adapters declare tools and affected files; frames cannot grant themselves tools. */
 export function embeddedAppToolAdapter(crux: { meta?: Record<string, unknown> } | null) {
+  if (nativeAppType(crux) === 'opencut') return { tools: OPENCUT_TOOLS, prepare: opencutCommand };
   if (nativeAppType(crux) === 'playcanvas-editor')
     return { tools: PLAYCANVAS_EDITOR_TOOLS, prepare: playcanvasEditorCommand };
   if (nativeAppType(crux) === 'gdevelop')

@@ -241,6 +241,7 @@ const loaders: Record<string, () => Promise<{ default: TemplateDefinition }>> = 
   'gephi-app': () => import('./gephi-app'),
   'ketcher-app': () => import('./ketcher-app'),
   'twine-app': () => import('./twine-app'),
+  'opencut-app': () => import('./opencut-app'),
   'playcanvas-editor-app': () => import('./playcanvas-editor-app'),
   'blockbench-app': () => import('./blockbench-app'),
   'gdevelop-app': () => import('./gdevelop-app'),

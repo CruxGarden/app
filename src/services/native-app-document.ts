@@ -1,3 +1,4 @@
+import { validateProject as validateOpenCut } from '../../opencut-crux/garden/model.js';
 import { validateProject as validatePlayCanvas } from '../../playcanvas-editor-crux/garden/model.js';
 import { validateProject as validateGDevelop } from '../../gdevelop-crux/garden/model.mjs';
 import { validateProject as validateBlockbench } from '../../blockbench-crux/garden/model.js';
@@ -93,6 +94,7 @@ export async function validateNativeDocument(
   owner: string,
   content: string,
   app:
+    | 'opencut'
     | 'playcanvas-editor'
     | 'openmosh'
     | 'minipaint'
@@ -111,7 +113,8 @@ export async function validateNativeDocument(
 ) {
   if (content.length > 4_000_000) throw new Error('The native project metadata is too large.');
   const doc = JSON.parse(content);
-  if (app === 'playcanvas-editor') validatePlayCanvas(doc);
+  if (app === 'opencut') validateOpenCut(doc);
+  else if (app === 'playcanvas-editor') validatePlayCanvas(doc);
   else if (app === 'gdevelop') validateGDevelop(doc);
   else if (app === 'blockbench') validateBlockbench(doc);
   else if (app === 'svgedit') validateSvgedit(doc);

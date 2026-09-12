@@ -243,6 +243,16 @@ const TEMPLATES: Template[] = [
     desktopOnly: true,
   },
   {
+    id: 'opencut-app',
+    label: 'OpenCut',
+    description: 'Creative · edit video, audio and titles with OpenCut Classic',
+    defaultTitle: 'My video',
+    icon: <PencilIcon />,
+    thumb: <BlankThumb />,
+    kind: 'webapp',
+    desktopOnly: true,
+  },
+  {
     id: 'playcanvas-editor-app',
     label: 'PlayCanvas Editor',
     description: 'Creative · local 3D scenes and classic JavaScript',

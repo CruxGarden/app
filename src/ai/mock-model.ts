@@ -105,6 +105,21 @@ export function getMockLanguageModel(): LanguageModel {
             return toolCallStream('set_gdevelop_name', { name: 'Garden game' });
           return textStream('Named the game and changed the native scene background.');
         }
+        if (lastUserText(prompt).includes('[opencut:edit]')) {
+          const rounds = toolResultsThisTurn(prompt);
+          if (!rounds.length) return toolCallStream('inspect_opencut', {});
+          if (rounds.length === 1) {
+            const data = JSON.parse(toolResultText(prompt, 'inspect_opencut') || '{}');
+            return toolCallStream('set_opencut_text', {
+              elementId: data.elements?.find((element: { type: string }) => element.type === 'text')
+                ?.id,
+              content: 'Garden film',
+            });
+          }
+          if (rounds.length === 2)
+            return toolCallStream('set_opencut_name', { name: 'Garden film' });
+          return textStream('Named the native video project and changed its title text.');
+        }
         if (lastUserText(prompt).includes('[playcanvas:rename]')) {
           const rounds = toolResultsThisTurn(prompt);
           if (!rounds.length) return toolCallStream('inspect_playcanvas_editor', {});
