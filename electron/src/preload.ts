@@ -82,6 +82,8 @@ const api: ElectronBridge = {
     capture: (folder: string) => ipcRenderer.invoke('project:capture', folder),
     setMode: (folder: string, relPath: string, mode: number) =>
       ipcRenderer.invoke('project:set-mode', folder, relPath, mode),
+    materialize: (folder: string, entries: { path: string; fingerprint: string; mode?: number }[]) =>
+      ipcRenderer.invoke('project:materialize', folder, entries) as Promise<number>,
     createFolder: (slug: string) =>
       ipcRenderer.invoke('project:create-folder', slug) as Promise<string>,
     ensureFolder: (folder: string) =>

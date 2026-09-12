@@ -6,6 +6,8 @@ export interface TaskFile {
   mimeType: string;
   encoding: string;
   mode: number;
+  /** Known byte size lets indexing register the blob without reading it. */
+  size?: number;
 }
 export type TaskManifest = Record<string, TaskFile>;
 export interface TaskConflict {

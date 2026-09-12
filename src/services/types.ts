@@ -77,6 +77,17 @@ export interface UploadArtifactInput {
   writeThrough?: boolean;
 }
 
+/** Index an Artifact whose bytes the Blob Store already holds; no hashing, no Project Folder write. */
+export interface RegisterArtifactInput {
+  resourceId: string;
+  path: string;
+  fingerprint: string;
+  size: number;
+  mimeType: string;
+  encoding: string;
+  meta?: { path?: string; [key: string]: unknown };
+}
+
 export interface UpdateArtifactInput {
   meta?: { path?: string; [key: string]: unknown };
   mimeType?: string;

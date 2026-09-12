@@ -6,6 +6,7 @@ import { assertCopyWritable, findWorkingCopy, serializeCopy } from './working-co
 import { flushIngestion } from './ingestion';
 import { folderForCrux } from './project-folder';
 import { growthHostFor } from './growth';
+import { guessMimeType } from './sqlite/helpers';
 
 export interface CruxOutput {
   version: 1;
@@ -23,6 +24,8 @@ export interface CruxspaceAsset extends CruxOutput {
 }
 export interface AssetOrigin {
   version: 1;
+  /** Present when a ZIP bundle was expanded: the relative entries written under `path`. */
+  unpacked?: string[];
   spaceId: string;
   spaceName: string;
   sourceCruxId: string;
@@ -34,11 +37,37 @@ export interface AssetOrigin {
   path: string;
   imported: string;
 }
+/** Output formats a member may advertise: raster images (v1), and since the game Cruxspace, audio and ZIP bundles. */
 const EXTENSIONS: Record<string, string> = {
   'image/png': 'png',
   'image/jpeg': 'jpg',
   'image/webp': 'webp',
   'image/gif': 'gif',
+  'audio/wav': 'wav',
+  'audio/x-wav': 'wav',
+  'audio/mpeg': 'mp3',
+  'application/zip': 'zip',
+};
+const MAX_OUTPUT = 32_000_000;
+const MAX_BUNDLE_ENTRIES = 2000;
+const MAX_BUNDLE_BYTES = 64_000_000;
+/** The family a destination path must match, and the words the errors use. */
+export function outputKind(mimeType: string): 'image' | 'audio' | 'bundle' {
+  return mimeType.startsWith('image/')
+    ? 'image'
+    : mimeType.startsWith('audio/')
+      ? 'audio'
+      : 'bundle';
+}
+const KIND_PATTERN = {
+  image: /\.(png|jpe?g|gif|webp)$/i,
+  audio: /\.(wav|mp3)$/i,
+  bundle: /\.zip$/i,
+};
+const KIND_EXAMPLE = {
+  image: 'assets/cover.png',
+  audio: 'assets/chime.wav',
+  bundle: 'assets/game.zip',
 };
 function validPath(path: string) {
   return (
@@ -60,12 +89,15 @@ export async function saveCruxOutput(
   blob: Blob,
   label: string,
 ): Promise<CruxOutput> {
-  return serializeCopy(owner, async () => {
+  // The checkpoint runs after the copy's serialization lock is released: the
+  // snapshot path itself updates the Working Copy under that lock, so taking
+  // it inside would wait on itself forever when a turn snapshot is queued.
+  const output = await serializeCopy(owner, async () => {
     await assertCopyWritable(owner);
     await getServices().crux.findById(owner);
     const ext = EXTENSIONS[blob.type];
-    if (!ext || !blob.size || blob.size > 4_000_000)
-      throw new Error('Choose a PNG, JPEG, WebP or GIF up to 4 MB.');
+    if (!ext || !blob.size || blob.size > MAX_OUTPUT)
+      throw new Error('Choose a PNG, JPEG, WebP, GIF, WAV, MP3 or ZIP up to 32 MB.');
     if (!label.trim() || label.length > 120)
       throw new Error('Name the output using up to 120 characters.');
     const bytes = new Uint8Array(await blob.arrayBuffer());
@@ -92,9 +124,10 @@ export async function saveCruxOutput(
       content: JSON.stringify(output, null, 2),
       meta: { path: `exports/${id}.asset.json` },
     });
-    await checkpoint(owner, `Output: ${output.label}`);
     return output;
   });
+  await checkpoint(owner, `Output: ${output.label}`);
+  return output;
 }
 
 export async function listCruxspaceAssets(spaceId: string): Promise<CruxspaceAsset[]> {
@@ -130,7 +163,7 @@ export async function listCruxspaceAssets(spaceId: string): Promise<CruxspaceAss
         !/^[a-f0-9]{64}$/.test(output.fingerprint) ||
         !Number.isSafeInteger(output.size) ||
         output.size <= 0 ||
-        output.size > 4_000_000 ||
+        output.size > MAX_OUTPUT ||
         typeof output.path !== 'string' ||
         !validPath(output.path) ||
         !EXTENSIONS[output.mimeType]
@@ -155,13 +188,15 @@ export interface UseCruxspaceAsset {
   outputId: string;
   fingerprint: string;
   targetCruxId: string;
+  /** A file path, or with `unpack` the folder a ZIP bundle is expanded into. */
   path: string;
+  unpack?: boolean;
 }
 export async function assetProvenancePath(path: string) {
   return `cruxspace-assets/${await hashContent(path)}.json`;
 }
 export async function copyCruxspaceAsset(input: UseCruxspaceAsset) {
-  return serializeCopy(input.targetCruxId, async () => {
+  const result = await serializeCopy(input.targetCruxId, async () => {
     const { artifact } = getServices();
     const space = await getCruxspace(input.spaceId);
     const copy = await findWorkingCopy(input.targetCruxId);
@@ -181,26 +216,34 @@ export async function copyCruxspaceAsset(input: UseCruxspaceAsset) {
       throw new Error(
         'This output is no longer available at the selected version. Refresh the assets.',
       );
+    const kind = outputKind(asset.mimeType);
+    const unpack = !!input.unpack;
+    if (unpack && kind !== 'bundle') throw new Error('Only a ZIP bundle can be unpacked.');
     if (
       !validPath(input.path) ||
-      !/\.(png|jpe?g|gif|webp)$/i.test(input.path) ||
-      input.path.startsWith('exports/')
+      input.path.startsWith('exports/') ||
+      (unpack ? /\.[a-z0-9]+$/i.test(input.path) : !KIND_PATTERN[kind].test(input.path))
     )
-      throw new Error('Choose a relative image path, for example assets/cover.png.');
+      throw new Error(
+        unpack
+          ? 'Choose a relative folder to unpack into, for example public/game.'
+          : `Choose a relative ${kind} path, for example ${KIND_EXAMPLE[kind]}.`,
+      );
     const files = await artifact.findByResource('crux', input.targetCruxId);
-    if (files.some((f) => pathOf(f).toLowerCase() === input.path.toLowerCase()))
-      throw new Error('A file already exists at this path. Choose a new path.');
     const folder = await folderForCrux(input.targetCruxId);
-    if (folder) {
-      let exists = false;
+    const taken = async (path: string) => {
+      if (files.some((f) => pathOf(f).toLowerCase() === path.toLowerCase())) return true;
+      if (!folder) return false;
       try {
-        await window.electronAPI!.project.readFile(folder, input.path);
-        exists = true;
+        await window.electronAPI!.project.readFile(folder, path);
+        return true;
       } catch (error) {
         if (!String(error).includes('ENOENT')) throw error;
+        return false;
       }
-      if (exists) throw new Error('A file already exists at this path. Choose a new path.');
-    }
+    };
+    if (!unpack && (await taken(input.path)))
+      throw new Error('A file already exists at this path. Choose a new path.');
     const source = (await artifact.findByResource('crux', asset.sourceCruxId)).find(
       (f) => pathOf(f) === asset.path,
     );
@@ -208,6 +251,32 @@ export async function copyCruxspaceAsset(input: UseCruxspaceAsset) {
     const blob = await artifact.downloadBlob(source.id);
     if ((await hashContent(new Uint8Array(await blob.arrayBuffer()))) !== input.fingerprint)
       throw new Error('The selected output changed. Refresh the assets.');
+    // A bundle is expanded into ordinary files under the chosen folder; the
+    // sidecar names every entry so the whole set can be traced to one output.
+    const entries: { path: string; blob: Blob }[] = [];
+    if (unpack) {
+      const { default: JSZip } = await import('jszip');
+      const zip = await JSZip.loadAsync(await blob.arrayBuffer());
+      let total = 0;
+      for (const [name, entry] of Object.entries(zip.files)) {
+        if (entry.dir) continue;
+        const target = `${input.path}/${name.replace(/^\.?\/+/, '')}`;
+        if (!validPath(target)) throw new Error(`The bundle contains an unusable path: ${name}`);
+        if (entries.length >= MAX_BUNDLE_ENTRIES)
+          throw new Error('The bundle has too many files to unpack (2,000 at most).');
+        const bytes = await entry.async('uint8array');
+        total += bytes.byteLength;
+        if (total > MAX_BUNDLE_BYTES)
+          throw new Error('The bundle is too large to unpack (64 MB).');
+        if (await taken(target))
+          throw new Error(`A file already exists at ${target}. Choose an empty folder.`);
+        entries.push({
+          path: target,
+          blob: new Blob([bytes as BlobPart], { type: guessMimeType(target) }),
+        });
+      }
+      if (!entries.length) throw new Error('The bundle has no files to unpack.');
+    }
     const origin: AssetOrigin = {
       version: 1,
       spaceId: space.id,
@@ -220,6 +289,7 @@ export async function copyCruxspaceAsset(input: UseCruxspaceAsset) {
       label: asset.label,
       path: input.path,
       imported: new Date().toISOString(),
+      ...(unpack ? { unpacked: entries.map((e) => e.path.slice(input.path.length + 1)) } : {}),
     };
     const provenancePath = await assetProvenancePath(input.path);
     if (files.some((f) => pathOf(f) === provenancePath))
@@ -231,13 +301,41 @@ export async function copyCruxspaceAsset(input: UseCruxspaceAsset) {
       content: JSON.stringify(origin, null, 2),
       meta: { path: provenancePath },
     });
-    const imported = await artifact.upload({
-      resourceId: input.targetCruxId,
-      blob,
-      mimeType: asset.mimeType,
-      meta: { path: input.path },
-    });
-    await checkpoint(input.targetCruxId, `Used ${asset.label} from ${space.name}`);
-    return { artifact: imported, origin, provenancePath };
+    let imported;
+    if (unpack) {
+      // Text entries become editable text Artifacts (a site can change the game
+      // page it received); everything else stays binary.
+      const textual = (type: string) =>
+        /^text\/|^application\/(javascript|json|xml)|\+xml$|\+json$/.test(type);
+      for (const entry of entries)
+        imported = textual(entry.blob.type)
+          ? await artifact.create({
+              resourceId: input.targetCruxId,
+              content: await entry.blob.text(),
+              meta: { path: entry.path },
+            })
+          : await artifact.upload({
+              resourceId: input.targetCruxId,
+              blob: entry.blob,
+              mimeType: entry.blob.type,
+              meta: { path: entry.path },
+            });
+    } else
+      imported = await artifact.upload({
+        resourceId: input.targetCruxId,
+        blob,
+        mimeType: asset.mimeType,
+        meta: { path: input.path },
+      });
+    return {
+      artifact: imported!,
+      origin,
+      provenancePath,
+      entries: entries.map((e) => e.path),
+      label: `Used ${asset.label} from ${space.name}`,
+    };
   });
+  // See saveCruxOutput: checkpoint only after releasing the copy's lock.
+  await checkpoint(input.targetCruxId, result.label);
+  return result;
 }

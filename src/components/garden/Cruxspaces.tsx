@@ -15,6 +15,7 @@ import {
 import {
   listCruxspaceAssets,
   copyCruxspaceAsset,
+  outputKind,
   type CruxspaceAsset,
 } from '@/services/cruxspace-assets';
 import { findWorkingCopy } from '@/services/working-copies';
@@ -22,6 +23,17 @@ import { findWorkingCopy } from '@/services/working-copies';
 const field = 'w-full rounded-[var(--radius-sm)] border border-border bg-bg p-2 text-sm text-text';
 function Thumbnail({ asset }: { asset: CruxspaceAsset }) {
   const url = useBlobUrl(asset.fingerprint, asset.mimeType);
+  const kind = outputKind(asset.mimeType);
+  if (kind !== 'image')
+    return (
+      <div
+        className="h-28 bg-bg rounded-[var(--radius-sm)] flex items-center justify-center text-sm text-text-muted"
+        aria-label={`${kind} output`}
+      >
+        {kind === 'audio' ? 'Audio' : 'Bundle'} · {asset.path.split('.').pop()!.toUpperCase()} ·{' '}
+        {Math.max(1, Math.round(asset.size / 1024))} KB
+      </div>
+    );
   return url ? (
     <img
       src={url}
@@ -55,6 +67,7 @@ export default function Cruxspaces({
   const [using, setUsing] = useState<CruxspaceAsset | null>(null);
   const [receiver, setReceiver] = useState('');
   const [path, setPath] = useState('');
+  const [unpack, setUnpack] = useState(false);
   const [result, setResult] = useState<{ path: string; id: string; label: string } | null>(null);
   const [refresh, setRefresh] = useState(0);
   const space = spaces.find((s) => s.id === selected);
@@ -180,7 +193,8 @@ export default function Cruxspaces({
           <h3 className="text-sm font-medium mb-2">Available outputs</h3>
           {assets.length === 0 ? (
             <p className="text-sm text-text-muted">
-              No outputs yet. In OpenMosh, choose “Save output for Cruxspace”.
+              No outputs yet. Save an image, sound or bundle to the Cruxspace from a member
+              app, for example “Save sheet to Cruxspace” in Piskel.
             </p>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 max-h-96 overflow-y-auto">
@@ -199,6 +213,7 @@ export default function Cruxspaces({
                       setUsing(asset);
                       setError('');
                       setReceiver(targetId ?? '');
+                      setUnpack(false);
                       setPath(`assets/cruxspace/${asset.id}.${asset.path.split('.').pop()}`);
                     }}
                   >
@@ -359,6 +374,7 @@ export default function Cruxspaces({
                 sourceCruxId: using.sourceCruxId,
                 targetCruxId: receiver,
                 path,
+                unpack,
               });
               setResult({ path: used.origin.path, id: receiver, label: using.label });
               setUsing(null);
@@ -388,8 +404,25 @@ export default function Cruxspaces({
               </select>
             </label>
           )}
+          {using && outputKind(using.mimeType) === 'bundle' && (
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={unpack}
+                onChange={(e) => {
+                  setUnpack(e.target.checked);
+                  setPath(
+                    e.target.checked
+                      ? `assets/cruxspace/${using.id}`
+                      : `assets/cruxspace/${using.id}.zip`,
+                  );
+                }}
+              />
+              Unpack the bundle into a folder
+            </label>
+          )}
           <label className="block text-sm">
-            Image path
+            {unpack ? 'Destination folder' : 'Destination path'}
             <input
               required
               className={field}
@@ -398,7 +431,8 @@ export default function Cruxspaces({
             />
           </label>
           <p className="text-xs text-text-muted">
-            For an Astro website, use public/assets/… and reference it on the page as /assets/….
+            For an Astro website, use public/assets/… (or public/game for an unpacked game) and
+            reference it on the page as /assets/… (or /game/index.html).
           </p>
           {error && (
             <p role="alert" className="text-error text-sm">

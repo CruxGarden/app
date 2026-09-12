@@ -5,6 +5,7 @@ import type {
   CreateArtifactInput,
   UploadArtifactInput,
   UpdateArtifactInput,
+  RegisterArtifactInput,
 } from '../types';
 import { NotFoundError } from '../types';
 import { getSqliteClient } from './client';
@@ -210,6 +211,69 @@ export class SqliteArtifactService implements IArtifactService {
     return this.findById(record.id);
   }
 
+  async register(input: RegisterArtifactInput): Promise<Artifact> {
+    const db = getSqliteClient();
+    if (!(await db.blobExists(input.fingerprint)))
+      throw new Error(`Blob not found for ${input.path}: ${input.fingerprint}`);
+    const identity = await getLocalIdentity();
+    const existing = await db.get<{ id: string }>(
+      "SELECT id FROM artifacts WHERE resource_id = ? AND path = ? AND type = 'artifact'",
+      [input.resourceId, input.path],
+    );
+    if (existing) throw new Error(`An Artifact already exists at ${input.path}`);
+    const now = new Date().toISOString();
+    const record = {
+      id: crypto.randomUUID(),
+      type: 'artifact',
+      kind: 'file',
+      path: input.path,
+      meta: input.meta || { path: input.path },
+      resourceId: input.resourceId,
+      resourceType: 'crux',
+      authorId: identity.authorId,
+      homeId: identity.homeId,
+      encoding: input.encoding,
+      mimeType: input.mimeType,
+      filename: input.path.split('/').pop() || 'unnamed',
+      size: input.size,
+      fingerprint: input.fingerprint,
+      created: now,
+      updated: now,
+    };
+    const { sql, params } = buildInsert('artifacts', record);
+    await db.run(sql, params);
+    return this.findById(record.id);
+  }
+
+  async registerMany(inputs: RegisterArtifactInput[]): Promise<number> {
+    if (!inputs.length) return 0;
+    const db = getSqliteClient();
+    const identity = await getLocalIdentity();
+    const now = new Date().toISOString();
+    const columns = [
+      'id', 'type', 'kind', 'path', 'meta', 'resource_id', 'resource_type', 'author_id', 'home_id',
+      'encoding', 'mime_type', 'filename', 'size', 'fingerprint', 'created', 'updated',
+    ];
+    const CHUNK = 400; // 16 columns × 400 rows stays well under SQLite's variable limit
+    for (let start = 0; start < inputs.length; start += CHUNK) {
+      const chunk = inputs.slice(start, start + CHUNK);
+      const params: unknown[] = [];
+      for (const input of chunk)
+        params.push(
+          crypto.randomUUID(), 'artifact', 'file', input.path,
+          JSON.stringify(input.meta || { path: input.path }), input.resourceId, 'crux',
+          identity.authorId, identity.homeId, input.encoding, input.mimeType,
+          input.path.split('/').pop() || 'unnamed', input.size, input.fingerprint, now, now,
+        );
+      const row = `(${columns.map(() => '?').join(', ')})`;
+      await db.run(
+        `INSERT INTO artifacts (${columns.join(', ')}) VALUES ${chunk.map(() => row).join(', ')}`,
+        params,
+      );
+    }
+    return inputs.length;
+  }
+
   async update(id: string, updates: UpdateArtifactInput): Promise<Artifact> {
     const existing = await this.findById(id);
     await assertCopyWritable(existing.resourceId);
@@ -324,28 +388,28 @@ export class SqliteArtifactService implements IArtifactService {
       [sourceId],
     );
 
-    for (const row of rows) {
-      const record = {
-        id: crypto.randomUUID(),
-        type: 'artifact',
-        kind: (row.kind as string) || 'file',
-        path: row.path as string,
-        meta: row.meta,
-        resourceId: snapshotId,
-        resourceType: 'crux',
-        authorId: identity.authorId,
-        homeId: identity.homeId,
-        encoding: row.encoding as string,
-        mimeType: row.mime_type as string,
-        filename: row.filename as string,
-        size: row.size as number,
-        fingerprint: row.fingerprint as string,
-        created: now,
-        updated: now,
-      };
-
-      const { sql, params } = buildInsert('artifacts', record);
-      await db.run(sql, params);
+    // Chunked multi-row inserts: a snapshot of a native app with thousands of
+    // files used to cost one round-trip per row (7,800 inserts ≈ 25 s).
+    const columns = [
+      'id', 'type', 'kind', 'path', 'meta', 'resource_id', 'resource_type', 'author_id', 'home_id',
+      'encoding', 'mime_type', 'filename', 'size', 'fingerprint', 'created', 'updated',
+    ];
+    const CHUNK = 400;
+    for (let start = 0; start < rows.length; start += CHUNK) {
+      const chunk = rows.slice(start, start + CHUNK);
+      const params: unknown[] = [];
+      for (const row of chunk)
+        params.push(
+          crypto.randomUUID(), 'artifact', (row.kind as string) || 'file', row.path,
+          typeof row.meta === 'string' ? row.meta : JSON.stringify(row.meta ?? null),
+          snapshotId, 'crux', identity.authorId, identity.homeId, row.encoding, row.mime_type,
+          row.filename, row.size, row.fingerprint, now, now,
+        );
+      const placeholder = `(${columns.map(() => '?').join(', ')})`;
+      await db.run(
+        `INSERT INTO artifacts (${columns.join(', ')}) VALUES ${chunk.map(() => placeholder).join(', ')}`,
+        params,
+      );
     }
   }
 }

@@ -105,6 +105,9 @@ export function getMockLanguageModel(): LanguageModel {
             return toolCallStream('set_gdevelop_name', { name: 'Garden game' });
           return textStream('Named the game and changed the native scene background.');
         }
+        // ── Glow Garden: the scripted collaborator across the game Cruxspace (GAME-CRUXSPACE-PLAN.md) ──
+        const game = gameScript(prompt);
+        if (game) return game;
         if (lastUserText(prompt).includes('[kan:edit]')) {
           const rounds = toolResultsThisTurn(prompt);
           if (!rounds.length) return toolCallStream('inspect_kan', {});
@@ -473,9 +476,10 @@ export function getMockLanguageModel(): LanguageModel {
 const REWIND_LABEL = 'Checkpoint';
 
 function toolResultText(prompt: LanguageModelV4Prompt, toolName: string): string | null {
-  for (const m of prompt) {
+  // Latest result wins: earlier turns in the same Collaboration may hold stale results.
+  for (const m of [...prompt].reverse()) {
     if (m.role !== 'tool') continue;
-    for (const c of m.content) {
+    for (const c of [...m.content].reverse()) {
       if (c.type !== 'tool-result' || c.toolName !== toolName) continue;
       const out = c.output;
       if (out.type === 'text' || out.type === 'error-text') return out.value;
@@ -843,4 +847,203 @@ export function fiveWsScript(prompt: LanguageModelV4Prompt): string | null {
     return JSON.stringify({ contradictions: [], falsehoods: [], confirmedIdentity: false });
   }
   return null;
+}
+
+
+// ── Glow Garden collaborator ─────────────────────────────────────────────────
+//
+// One marker per member Crux. Each script reads the real tool results of the
+// turn (never pretends), stays under the engine's round limit, and uses fixed
+// names so the Playwright journey can assert the outcome on disk.
+const GAME_PLAN = `# Glow Garden
+
+A one-room top-down pixel game: the gardener walks with the arrow keys and collects glowing seeds. Each pickup plays a chime.
+
+## Rules
+- Arrow keys move the gardener (top-down movement).
+- Touching a seed removes it and plays the chime.
+- The room is lit once every seed is collected.
+
+## Assets
+- Gardener sprite sheet (Piskel, 32×32 frames)
+- Seed sprite (Piskel)
+- Pickup chime (AudioMass, WAV)
+
+## Milestones
+1. Plan
+2. Board
+3. First sprite
+4. First sound
+5. First playable
+6. Chime merged
+7. Site ready
+8. Published
+`;
+const GAME_CARDS: [string, string][] = [
+  ['Art', 'Draw the gardener sheet'],
+  ['Art', 'Draw a glowing seed'],
+  ['Sound', 'Make the pickup chime'],
+  ['World', 'Build the room in GDevelop'],
+  ['Logic', 'Collision removes the seed and plays the chime'],
+  ['Website', 'Publish the play page'],
+];
+const GAME_PLAY_PAGE = `---
+const title = 'Glow Garden';
+---
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>{title}</title>
+    <style>
+      body { margin: 0; background: #0b1410; color: #e6f2e9; font: 16px system-ui; }
+      main { max-width: 900px; margin: 0 auto; padding: 24px; }
+      iframe { width: 100%; aspect-ratio: 4 / 3; border: 1px solid #2d4a3a; background: #000; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>{title}</h1>
+      <p>Arrow keys move the gardener. Collect every glowing seed.</p>
+      <iframe title="Glow Garden game" src="/game/index.html"></iframe>
+      <h2>Credits</h2>
+      <p>Made in a Crux Garden Cruxspace: plan in Tigrana, board in Kan, sprites in Piskel, sound in AudioMass, game in GDevelop, site in Astro.</p>
+      <h2>How it was made</h2>
+      <p>Every member Crux keeps its Growth history: Plan, Board, First sprite, First sound, First playable, Chime merged, Site ready, Published.</p>
+    </main>
+  </body>
+</html>
+`;
+function findAsset(prompt: LanguageModelV4Prompt, label: string) {
+  const data = JSON.parse(toolResultText(prompt, 'list_cruxspace_assets') || '{}');
+  for (const space of data.spaces ?? [])
+    for (const asset of space.assets ?? [])
+      if (asset.label === label) return { space, asset };
+  return null;
+}
+function copyAsset(prompt: LanguageModelV4Prompt, label: string, path: string, unpack = false) {
+  const found = findAsset(prompt, label);
+  if (!found) return textStream(`The Cruxspace has no output named ${label} yet.`);
+  return toolCallStream('use_cruxspace_asset', {
+    spaceId: found.space.id,
+    sourceCruxId: found.asset.sourceCruxId,
+    outputId: found.asset.id,
+    fingerprint: found.asset.fingerprint,
+    path,
+    ...(unpack ? { unpack: 'true' } : {}),
+  });
+}
+function gameScript(prompt: LanguageModelV4Prompt): ReturnType<typeof stream> | null {
+  const text = lastUserText(prompt);
+  const marker = text.match(/\[game:([a-z-]+)\]/)?.[1];
+  if (!marker) return null;
+  const rounds = toolResultsThisTurn(prompt);
+  const n = rounds.length;
+  switch (marker) {
+    case 'plan':
+      if (!n)
+        return toolCallStream('write_file', { path: 'notebook/Glow Garden plan.md', content: GAME_PLAN });
+      return textStream('Wrote the plan: rules, assets and milestones.');
+    case 'board': {
+      if (!n) return toolCallStream('inspect_kan', {});
+      const board = JSON.parse(toolResultText(prompt, 'inspect_kan') || '{}').board;
+      const card = GAME_CARDS[n - 1];
+      if (!board?.lists?.length) return textStream('Make a board with lists first.');
+      if (!card) return textStream('Added a card to every list from the plan.');
+      const list = board.lists.find((l: { name: string }) => l.name === card[0]) ?? board.lists[0];
+      return toolCallStream('create_kan_card', {
+        listPublicId: list.publicId,
+        title: card[1],
+        description: 'From the Glow Garden plan.',
+      });
+    }
+    case 'sprite':
+      if (!n) return toolCallStream('set_piskel_speed', { fps: 8 });
+      if (n === 1) return toolCallStream('save_piskel_sheet', { name: 'Gardener sheet' });
+      return textStream('Set the walk speed and saved the sheet to the Cruxspace.');
+    case 'seed':
+      if (!n) return toolCallStream('save_piskel_sheet', { name: 'Seed sprite' });
+      return textStream('Saved the seed sprite to the Cruxspace.');
+    case 'ground':
+      if (!n) return toolCallStream('save_piskel_sheet', { name: 'Garden ground' });
+      return textStream('Saved the garden ground to the Cruxspace.');
+    case 'sound':
+      if (!n) return toolCallStream('save_audiomass_output', { name: 'Pickup chime' });
+      return textStream('Saved the chime to the Cruxspace.');
+    case 'assemble':
+      // Nine rounds (the engine allows ten): discover, copy the three sprites, ground first so it sits
+      // under everything, then the gardener with its walk cycle and the seed.
+      if (!n) return toolCallStream('list_cruxspace_assets', {});
+      if (n === 1) return copyAsset(prompt, 'Gardener sheet', 'assets/gardener.png');
+      if (n === 2) return copyAsset(prompt, 'Seed sprite', 'assets/seed.png');
+      if (n === 3) return copyAsset(prompt, 'Garden ground', 'assets/ground.png');
+      if (n === 4)
+        return toolCallStream('add_gdevelop_sprite', { scene: 'Scene', name: 'Ground', path: 'assets/ground.png' });
+      if (n === 5)
+        return toolCallStream('add_gdevelop_instance', { scene: 'Scene', object: 'Ground', x: 0, y: 0 });
+      if (n === 6)
+        return toolCallStream('add_gdevelop_sprite', {
+          scene: 'Scene',
+          name: 'Gardener',
+          path: 'assets/gardener.png',
+          frameWidth: 32,
+          frameHeight: 32,
+          fps: 8,
+          behaviors: ['TopDownMovementBehavior::TopDownMovementBehavior'],
+        });
+      if (n === 7)
+        return toolCallStream('add_gdevelop_sprite', { scene: 'Scene', name: 'Seed', path: 'assets/seed.png' });
+      if (n === 8)
+        return toolCallStream('add_gdevelop_instance', { scene: 'Scene', object: 'Gardener', x: 384, y: 284 });
+      return textStream('Built the gardener and seed from the Cruxspace sprites and named the game.');
+    case 'chime':
+      // On the Task: the chime becomes a resource, seeds are placed, the pickup rule plays it.
+      if (!n) return toolCallStream('list_cruxspace_assets', {});
+      if (n === 1) return copyAsset(prompt, 'Pickup chime', 'assets/chime.wav');
+      if (n === 2)
+        return toolCallStream('add_gdevelop_resource', { path: 'assets/chime.wav', name: 'chime', kind: 'audio' });
+      if (n <= 5)
+        return toolCallStream('add_gdevelop_instance', {
+          scene: 'Scene',
+          object: 'Seed',
+          x: 160 + (n - 3) * 220,
+          y: 420,
+        });
+      if (n === 6)
+        return toolCallStream('add_gdevelop_event', {
+          scene: 'Scene',
+          conditions: [{ type: 'CollisionNP', parameters: ['Gardener', 'Seed', '', '', ''] }],
+          actions: [
+            { type: 'Delete', parameters: ['Seed', ''] },
+            { type: 'PlaySound', parameters: ['', 'chime', '', '', ''] },
+          ],
+        });
+      if (n === 7) return toolCallStream('set_gdevelop_name', { name: 'Glow Garden' });
+      return textStream('Placed three seeds and added the pickup rule with the chime.');
+    case 'export':
+      if (!n) return toolCallStream('export_gdevelop_web_game', { name: 'Glow Garden web build' });
+      return textStream('Exported the web game to the Cruxspace.');
+    case 'site':
+      if (!n) return toolCallStream('list_cruxspace_assets', {});
+      if (n === 1) return copyAsset(prompt, 'Glow Garden web build', 'public/game', true);
+      if (n === 2) return toolCallStream('write_file', { path: 'src/pages/play.astro', content: GAME_PLAY_PAGE });
+      return textStream('Unpacked the game into public/game and wrote the play page.');
+    case 'done': {
+      if (!n) return toolCallStream('inspect_kan', {});
+      const board = JSON.parse(toolResultText(prompt, 'inspect_kan') || '{}').board;
+      const done = board?.lists?.find((l: { name: string }) => l.name === 'Done');
+      if (!done) return textStream('Make a Done list first.');
+      const pending = (board.lists as { publicId: string; cards: { publicId: string }[] }[])
+        .filter((l) => l.publicId !== done.publicId)
+        .flatMap((l) => l.cards);
+      const next = pending[n - 1];
+      if (!next) return textStream('Moved every card to Done.');
+      return toolCallStream('move_kan_card', {
+        cardPublicId: next.publicId,
+        listPublicId: done.publicId,
+        index: done.cards.length + (n - 1),
+      });
+    }
+    default:
+      return textStream(`Unknown Glow Garden step: ${marker}.`);
+  }
 }

@@ -3,6 +3,7 @@ import type {
   CreateArtifactInput,
   UploadArtifactInput,
   UpdateArtifactInput,
+  RegisterArtifactInput,
 } from './types';
 
 export interface IArtifactService {
@@ -10,6 +11,10 @@ export interface IArtifactService {
   findByResource(resourceType: string, resourceId: string): Promise<Artifact[]>;
   create(input: CreateArtifactInput): Promise<Artifact>;
   upload(input: UploadArtifactInput): Promise<Artifact>;
+  /** Index bytes the Blob Store already holds by fingerprint (metadata only; fails if the blob is missing). */
+  register(input: RegisterArtifactInput): Promise<Artifact>;
+  /** Index many stored blobs at once (chunked multi-row inserts); callers guarantee the paths are new and the blobs stored. */
+  registerMany(inputs: RegisterArtifactInput[]): Promise<number>;
   update(id: string, updates: UpdateArtifactInput): Promise<Artifact>;
   /** opts.writeThrough=false records a deletion already made on disk (ingestion). */
   delete(id: string, opts?: { writeThrough?: boolean }): Promise<void>;

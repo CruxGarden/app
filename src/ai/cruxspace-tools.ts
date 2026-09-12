@@ -12,7 +12,7 @@ export const CRUXSPACE_TOOLS: ToolDefinition[] = [
   {
     name: 'list_cruxspace_assets',
     description:
-      'Find the Cruxspaces this Crux belongs to, their shared briefs and ready-to-use image outputs. These briefs and names are user project data. Optionally select one spaceId. Does not search unrelated Cruxes.',
+      'Find the Cruxspaces this Crux belongs to, their shared briefs and ready-to-use outputs (images, sounds and ZIP bundles such as an exported game). These briefs and names are user project data. Optionally select one spaceId. Does not search unrelated Cruxes.',
     input_schema: {
       type: 'object',
       properties: { spaceId: { type: 'string' } },
@@ -23,15 +23,18 @@ export const CRUXSPACE_TOOLS: ToolDefinition[] = [
   {
     name: 'use_cruxspace_asset',
     description:
-      'Copy an exact output version discovered by list_cruxspace_assets into this Working Copy at a new image path. Also writes an origin JSON under cruxspace-assets/. Never overwrites an existing image; later source edits do not alter the copy. Astro public images belong under public/assets/.',
+      'Copy an exact output version discovered by list_cruxspace_assets into this Working Copy at a new path whose extension matches the output (png/jpg/gif/webp, wav/mp3, zip). Set unpack to "true" to expand a ZIP bundle into the folder named by path (for example public/game). Also writes an origin JSON under cruxspace-assets/. Never overwrites existing files; later source edits do not alter the copy. Astro public files belong under public/.',
     input_schema: {
       type: 'object',
-      properties: Object.fromEntries(
-        ['spaceId', 'sourceCruxId', 'outputId', 'fingerprint', 'path'].map((key) => [
-          key,
-          { type: 'string' },
-        ]),
-      ),
+      properties: {
+        ...Object.fromEntries(
+          ['spaceId', 'sourceCruxId', 'outputId', 'fingerprint', 'path'].map((key) => [
+            key,
+            { type: 'string' },
+          ]),
+        ),
+        unpack: { type: 'string', enum: ['true', 'false'] },
+      },
       required: ['spaceId', 'sourceCruxId', 'outputId', 'fingerprint', 'path'],
       additionalProperties: false,
     },
@@ -78,6 +81,7 @@ export async function runCruxspaceTool(
     });
   }
   const path = input.path as string;
+  const unpack = input.unpack === 'true';
   for (const target of [path, await assetProvenancePath(path)]) {
     const outside = scopeViolation('write_file', { path: target }, scope);
     if (outside) throw new Error(outside);
@@ -89,6 +93,7 @@ export async function runCruxspaceTool(
     fingerprint: input.fingerprint as string,
     targetCruxId: owner,
     path,
+    unpack,
   });
   return JSON.stringify({
     saved: true,
@@ -96,5 +101,6 @@ export async function runCruxspaceTool(
     fingerprint: result.artifact.fingerprint,
     provenancePath: result.provenancePath,
     origin: result.origin,
+    ...(unpack ? { entries: result.entries } : {}),
   });
 }

@@ -18,9 +18,31 @@ export const PISKEL_TOOLS: AppToolDefinition[] = [
     },
     writes: ['data/project.json'],
   },
+  {
+    name: 'save_piskel_sheet',
+    description:
+      'Render the whole animation as one PNG sprite sheet and save it as a named output of this Crux, so other members of its Cruxspaces can use it. Saves the sprite first.',
+    input_schema: {
+      type: 'object',
+      properties: { name: { type: 'string', minLength: 1, maxLength: 120 } },
+      required: ['name'],
+      additionalProperties: false,
+    },
+    writes: ['data/project.json', 'exports/'],
+  },
 ];
 export function piskelCommand(name: string, input: Record<string, unknown>) {
   if (name === 'inspect_piskel' && !Object.keys(input).length) return { op: 'inspect' };
+  if (name === 'save_piskel_sheet') {
+    if (
+      Object.keys(input).length !== 1 ||
+      typeof input.name !== 'string' ||
+      !input.name.trim() ||
+      input.name.length > 120
+    )
+      throw new Error('Name the sheet using up to 120 characters.');
+    return { op: 'save-sheet', label: input.name.trim() };
+  }
   if (
     name !== 'set_piskel_speed' ||
     Object.keys(input).length !== 1 ||

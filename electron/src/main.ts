@@ -423,6 +423,11 @@ function setupIpc() {
   ipcMain.handle('project:set-mode', (_e: any, folder: string, relPath: string, mode: number) =>
     projects.setMode(folder, relPath, mode),
   );
+  ipcMain.handle(
+    'project:materialize',
+    (_e: any, folder: string, entries: { path: string; fingerprint: string; mode?: number }[]) =>
+      projects.materialize(folder, getBlobDir(), entries),
+  );
 
   // ── Preview server (ADR 0003) ───────────────────────────────
   previewServer = new PreviewServer((folder: string) => projects.resolveKnownFolder(folder));

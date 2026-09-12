@@ -223,3 +223,87 @@ it('discovers explicit member outputs and copies pinned bytes with portable prov
   const provenance = files.find((f) => f.meta?.path === used.provenancePath)!;
   expect(JSON.parse(await artifact.readContent(provenance.id))).toEqual(used.origin);
 });
+
+it('advertises sounds and ZIP bundles, matches destination extensions, and unpacks a bundle with one provenance record', async () => {
+  const { default: JSZip } = await import('jszip');
+  const { crux, artifact } = getServices();
+  const game = await crux.create({ title: 'Game', type: 'workspace' });
+  const site = await crux.create({ title: 'Site', type: 'workspace' });
+  const space = await createCruxspace({ name: 'Glow', brief: '', cruxIds: [game.id, site.id] });
+  const wav = new Blob([new Uint8Array([82, 73, 70, 70, 0, 0, 0, 0])], { type: 'audio/wav' });
+  const chime = await saveCruxOutput(game.id, wav, 'Pickup chime');
+  expect(chime.path).toBe(`exports/${chime.id}.wav`);
+  const zip = new JSZip();
+  zip.file('index.html', '<canvas></canvas>');
+  zip.file('runtime/game.js', 'console.log(1)');
+  zip.folder('empty');
+  const bundle = await saveCruxOutput(
+    game.id,
+    new Blob([(await zip.generateAsync({ type: 'uint8array' })) as BlobPart], { type: 'application/zip' }),
+    'Web game',
+  );
+  expect((await listCruxspaceAssets(space.id)).map((a) => a.label)).toEqual([
+    'Web game',
+    'Pickup chime',
+  ]);
+  await expect(
+    copyCruxspaceAsset({
+      spaceId: space.id,
+      outputId: chime.id,
+      sourceCruxId: game.id,
+      fingerprint: chime.fingerprint,
+      targetCruxId: site.id,
+      path: 'assets/chime.png',
+    }),
+  ).rejects.toThrow('relative audio path');
+  await expect(
+    copyCruxspaceAsset({
+      spaceId: space.id,
+      outputId: chime.id,
+      sourceCruxId: game.id,
+      fingerprint: chime.fingerprint,
+      targetCruxId: site.id,
+      path: 'assets/chime',
+      unpack: true,
+    }),
+  ).rejects.toThrow('Only a ZIP bundle');
+  const used = await copyCruxspaceAsset({
+    spaceId: space.id,
+    outputId: bundle.id,
+    sourceCruxId: game.id,
+    fingerprint: bundle.fingerprint,
+    targetCruxId: site.id,
+    path: 'public/game',
+    unpack: true,
+  });
+  expect(used.entries).toEqual(['public/game/index.html', 'public/game/runtime/game.js']);
+  expect(used.origin.unpacked).toEqual(['index.html', 'runtime/game.js']);
+  const files = await artifact.findByResource('crux', site.id);
+  expect(await artifact.readContent(files.find((f) => f.meta?.path === 'public/game/index.html')!.id)).toBe(
+    '<canvas></canvas>',
+  );
+  expect(files.find((f) => f.meta?.path === used.provenancePath)).toBeTruthy();
+  await expect(
+    copyCruxspaceAsset({
+      spaceId: space.id,
+      outputId: bundle.id,
+      sourceCruxId: game.id,
+      fingerprint: bundle.fingerprint,
+      targetCruxId: site.id,
+      path: 'public/game',
+      unpack: true,
+    }),
+  ).rejects.toThrow('already exists');
+  const execute = createToolExecutor(site.id);
+  const byAgent = JSON.parse(
+    (await execute('use_cruxspace_asset', {
+      spaceId: space.id,
+      sourceCruxId: game.id,
+      outputId: bundle.id,
+      fingerprint: bundle.fingerprint,
+      path: 'public/play',
+      unpack: 'true',
+    })) as string,
+  );
+  expect(byAgent.entries).toEqual(['public/play/index.html', 'public/play/runtime/game.js']);
+});
