@@ -105,6 +105,22 @@ export function getMockLanguageModel(): LanguageModel {
             return toolCallStream('set_gdevelop_name', { name: 'Garden game' });
           return textStream('Named the game and changed the native scene background.');
         }
+        if (lastUserText(prompt).includes('[playcanvas:rename]')) {
+          const rounds = toolResultsThisTurn(prompt);
+          if (!rounds.length) return toolCallStream('inspect_playcanvas_editor', {});
+          if (rounds.length === 1) {
+            const data = JSON.parse(toolResultText(prompt, 'inspect_playcanvas_editor') || '{}');
+            return toolCallStream('rename_playcanvas_editor_entity', {
+              entityId: data.entities?.find(
+                (entity: { name: string }) => entity.name === 'Garden Cube',
+              )?.id,
+              name: 'Agent cube',
+            });
+          }
+          if (rounds.length === 2)
+            return toolCallStream('set_playcanvas_editor_name', { name: 'Garden scene' });
+          return textStream('Named the scene and renamed its native cube.');
+        }
         if (lastUserText(prompt).includes('[blockbench:rename]')) {
           const rounds = toolResultsThisTurn(prompt);
           if (!rounds.length) return toolCallStream('inspect_blockbench', {});

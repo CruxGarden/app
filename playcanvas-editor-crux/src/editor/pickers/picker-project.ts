@@ -1,0 +1,968 @@
+import { Button, Container, Element, Label, Overlay, Panel } from '@playcanvas/pcui';
+
+import { bytesToHuman } from '@/common/utils';
+import { config } from '@/editor/config';
+
+const MENU_LABELS = new Map([
+    ['project-main', 'Project settings'],
+    ['scenes', 'Scenes'],
+    ['version control', 'Version control'],
+    ['builds-publish', 'Builds & Publish'],
+    ['team', 'Team']
+]);
+
+editor.once('load', () => {
+    // GLOBAL VARIABLES
+    let projectSettingsListMenu; // used to enable hot reload of sidebar menu text upon project name change
+    let currentProject; // used to display project stats
+    let currentUser;
+    let cmsView; // general CMS view
+    let reducedView; // alternative CMS view
+    let noAdminView; // alternative 'none' access level view
+    let lockedView; // alternative locked view
+    let alerts = []; // list of alerts
+
+    const IS_EMPTY_STATE = !config.project.id;
+    const EMPTY_THUMBNAIL_IMAGE = "url('/static/platform/images/home/blank_project.png')";
+    const FULLSCREEN_KEY = 'editor:picker:project:fullscreen';
+
+    // UI
+
+    // build project stats
+    let statsContainer;
+
+    // helper method to build alert
+    const buildAlert = (root: Container, alert: string, showButton = false, buttonText = '', funcParameters) => {
+        const alertContainer = new Container({
+            class: 'alert'
+        });
+        root.dom.appendChild(alertContainer.dom);
+
+        const alertTextContainer = new Container({
+            class: 'alert-text'
+        });
+        const alertInfo = new Element({
+            class: 'alert--info'
+        });
+        const alertText = new Label({
+            text: alert
+        });
+        alertContainer.append(alertTextContainer);
+        alertTextContainer.append(alertInfo);
+        alertTextContainer.append(alertText);
+
+        if (showButton && buttonText.length > 0) {
+            const button = new Button({
+                class: 'btn',
+                text: buttonText
+            });
+            alertContainer.append(button);
+
+            button.on('click', () => {
+                const callback = funcParameters.errorCallback;
+                if (funcParameters.currentUser) {
+                    // upgrade number of seats and add collaborator
+                    const currentUser = funcParameters.currentUser;
+                    editor.call(
+                        'users:updateSubscription',
+                        config.owner,
+                        { seats: currentUser.limits.seats + 1 },
+                        () => {
+                            currentUser.limits.seats++;
+                            editor.call('picker:team:management:createCollaborator');
+                        },
+                        (status, error) => {
+                            if (callback) {
+                                callback(status, error);
+                            }
+                        }
+                    );
+                } else if (funcParameters.url) {
+                    window.open(funcParameters.url, '_self'); // open upgrade screen
+                }
+            });
+        }
+
+        const alertClose = new Button({
+            class: 'alert-close'
+        });
+        alertContainer.append(alertClose);
+
+        alertClose.on('click', () => {
+            alertContainer.dom.remove();
+        });
+
+        return alertContainer;
+    };
+
+    // helper method to refresh project-specific UI components depending on current view
+    const refreshUI = () => {
+        if (currentProject.thumbnails) {
+            projectImg.style.backgroundImage = `url("${currentProject.thumbnails.m}")`;
+            deleteButton.hidden = false;
+            replaceButton.style.marginRight = '0px';
+        } else {
+            projectImg.style.backgroundImage = EMPTY_THUMBNAIL_IMAGE;
+            // Disable delete thumbnail button if no thumbnails
+            deleteButton.hidden = true;
+            replaceButton.style.marginRight = '6px';
+        }
+
+        if (reducedView) {
+            btnClose.hidden = false; // show close button for modal
+
+            overlay.class.add('reduced-view');
+
+            // if not admin, don't display thumbnail controls
+            thumbnailButtons.enabled =
+                (currentProject.access_level === 'admin' && currentProject.owner_id === config.self.id) ||
+                currentProject.id === config.project.id;
+            thumbnailButtons.style.opacity =
+                (currentProject.access_level === 'admin' && currentProject.owner_id === config.self.id) ||
+                currentProject.id === config.project.id
+                    ? '1'
+                    : '0';
+
+            menuOptions.scenes.item.hidden = true;
+            if (!IS_EMPTY_STATE) {
+                menuOptions['builds-publish'].item.hidden = true;
+                menuOptions['version control'].item.hidden = true;
+            }
+
+            // ensure all reduced view panels are visible
+            for (const key in menuOptions) {
+                if (key === 'project-main' || key === 'team') {
+                    menuOptions[key].item.hidden = false;
+                }
+            }
+
+            projectCMSButton.enabled = false;
+            projectCMSButton.hidden = true;
+
+            editorBtn.enabled = true;
+            editorBtn.hidden = false;
+
+            playBtn.hidden = false;
+            playBtn.enabled = currentProject.primary_app_url;
+        } else if (noAdminView) {
+            btnClose.hidden = false;
+
+            // hide and disable thumbnail controls
+            thumbnailButtons.enabled = false;
+            thumbnailButtons.style.opacity = '0';
+
+            menuOptions['project-main'].item.hidden = true;
+            menuOptions.scenes.item.hidden = true;
+            if (menuOptions['builds-publish']) {
+                menuOptions['builds-publish'].item.hidden = true;
+            }
+            if (menuOptions['version control']) {
+                menuOptions['version control'].item.hidden = true;
+            }
+
+            // ensure only team management panel is visible
+            menuOptions.team.item.hidden = false;
+
+            projectCMSButton.enabled = false;
+            projectCMSButton.hidden = true;
+
+            editorBtn.enabled = false;
+            editorBtn.hidden = true;
+
+            playBtn.hidden = true;
+            playBtn.enabled = false;
+        } else if (lockedView) {
+            btnClose.hidden = false;
+
+            // hide and disable thumbnail controls
+            thumbnailButtons.enabled = false;
+            thumbnailButtons.style.opacity = '0';
+
+            menuOptions['project-main'].item.hidden = false;
+            menuOptions.scenes.item.hidden = true;
+            menuOptions.team.item.hidden = true;
+            if (menuOptions['builds-publish']) {
+                menuOptions['builds-publish'].item.hidden = true;
+            }
+            if (menuOptions['version control']) {
+                menuOptions['version control'].item.hidden = true;
+            }
+
+            projectCMSButton.enabled = false;
+            projectCMSButton.hidden = true;
+
+            editorBtn.enabled = false;
+            editorBtn.hidden = true;
+
+            playBtn.hidden = true;
+            playBtn.enabled = false;
+        } else {
+            overlay.class.remove('reduced-view');
+
+            // if admin, enable thumbnail controls
+            thumbnailButtons.enabled =
+                (currentProject.access_level === 'admin' && currentProject.owner_id === config.self.id) ||
+                currentProject.id === config.project.id;
+
+            projectCMSButton.enabled = true;
+            projectCMSButton.hidden = false;
+
+            editorBtn.hidden = true;
+            editorBtn.enabled = false;
+
+            playBtn.hidden = true;
+            playBtn.enabled = false;
+
+            // ensure all panels are visible
+            for (const key in menuOptions) {
+                if (!menuOptions[key].panelOnly) {
+                    menuOptions[key].item.hidden = false;
+                }
+            }
+            editor.call('picker:project:main:cmsView');
+        }
+
+        if (statsContainer) {
+            statsContainer.destroy();
+        }
+        editor.call('picker:project:main:refreshUI');
+        editor.call('picker:team:management:refreshUI');
+        buildProjectStatsUI();
+    };
+
+    // overlay
+    const overlay = new Overlay({
+        clickable: true,
+        hidden: true,
+        class: 'picker-project'
+    });
+
+    let closeCallback: (() => boolean) | null = null;
+    let suspended = false;
+    let suspendClickable = true;
+    const originalOnPointerDown = (overlay as any)._onPointerDown;
+    (overlay as any)._onPointerDown = (evt: PointerEvent) => {
+        if (closeCallback && !closeCallback()) {
+            return;
+        }
+        const target = evt.target as HTMLElement;
+        const tooltip = target.closest('.pcui-tooltip');
+        if (target.closest('.pcui-menu') || tooltip?.querySelector('.primary-scene-tooltip')) {
+            return;
+        }
+        const targetOverlay = target.closest('.pcui-overlay');
+        if (targetOverlay && targetOverlay !== overlay.dom) {
+            return;
+        }
+        originalOnPointerDown(evt);
+    };
+
+    const root = editor.call('layout.root');
+    root.append(overlay);
+
+    // main panel
+    const panel = new Container({
+        class: 'project'
+    });
+    overlay.append(panel);
+
+    // left side panel
+    const leftPanel = new Container({
+        class: 'left'
+    });
+    panel.append(leftPanel);
+
+    const projectSummary = new Container({
+        class: 'project-summary'
+    });
+    leftPanel.append(projectSummary);
+
+    // project image
+    const projectImg = document.createElement('div');
+    projectImg.classList.add('image');
+    if (!IS_EMPTY_STATE) {
+        projectImg.style.backgroundImage = config.project.thumbnails.m
+            ? `url("${config.project.thumbnails.m}")`
+            : EMPTY_THUMBNAIL_IMAGE;
+    }
+    projectSummary.dom.appendChild(projectImg);
+
+    const projectSummaryText = new Container({
+        class: 'project-summary-text'
+    });
+    projectSummary.append(projectSummaryText);
+
+    const projectTitle = new Label({
+        class: 'project-name',
+        text: IS_EMPTY_STATE ? '' : config.project.name
+    });
+    projectSummaryText.append(projectTitle);
+
+    const buildProjectStatsUI = () => {
+        projectTitle.text = currentProject.name;
+
+        statsContainer = new Container({
+            id: 'project-stats',
+            class: 'project-stats'
+        });
+        projectSummary.append(statsContainer);
+
+        if (!noAdminView) {
+            const forksLabel = new Label({
+                text: `${currentProject.fork_count}`,
+                class: 'forks-stat'
+            });
+            statsContainer.append(forksLabel);
+
+            const viewsLabel = new Label({
+                text: `${currentProject.views}`,
+                class: 'views-stat'
+            });
+            statsContainer.append(viewsLabel);
+        }
+
+        const sizeLabel = new Label({
+            text: bytesToHuman(currentProject.size.total),
+            class: 'size-stat'
+        });
+        statsContainer.append(sizeLabel);
+    };
+
+    let uploadingImage = false;
+
+    const uploadProjectImage = function (file: File) {
+        if (
+            (!IS_EMPTY_STATE && !editor.call('permissions:write')) ||
+            uploadingImage ||
+            currentProject.access_level !== 'admin'
+        ) {
+            return;
+        }
+
+        const previousBackgroundImage = projectImg.style.backgroundImage;
+        projectImg.style.backgroundImage = `url("${config.url.static}/platform/images/common/ajax-loader.gif")`;
+        projectImg.classList.add('progress');
+
+        uploadingImage = true;
+
+        editor.call(
+            'images:upload',
+            file,
+            currentProject,
+            (data) => {
+                editor.call(
+                    'projects:save',
+                    currentProject,
+                    { image_url: data.url },
+                    () => {
+                        uploadingImage = false;
+                    },
+                    (err) => {
+                        // error
+                        uploadingImage = false;
+                        buildAlert(rightPanel, err);
+                        projectImg.style.backgroundImage = previousBackgroundImage;
+                        projectImg.classList.remove('progress');
+                    }
+                );
+            },
+            (status, data) => {
+                // error
+                uploadingImage = false;
+                buildAlert(rightPanel, data);
+                projectImg.style.backgroundImage = previousBackgroundImage;
+                projectImg.classList.remove('progress');
+            }
+        );
+    };
+
+    const dropRef = editor.call('drop:target', {
+        ref: projectImg,
+        filter: function (type: string, data: File[]) {
+            return editor.call('permissions:write') && leftPanel.enabled && !uploadingImage && type === 'files';
+        },
+        drop: function (type: string, data: File[]) {
+            if (type !== 'files') {
+                return;
+            }
+
+            const file = data[0];
+            if (!file) {
+                return;
+            }
+
+            if (!/^image\//.test(file.type)) {
+                return;
+            }
+
+            uploadProjectImage(file);
+        }
+    });
+
+    dropRef.class.add('drop-area-project-img');
+
+    // hidden file input to upload project image
+    const fileInput = document.createElement('input');
+    fileInput.type = 'file';
+    fileInput.accept = 'image/*';
+
+    let currentSelection = null;
+
+    projectImg.addEventListener('click', () => {
+        if (
+            !editor.call('permissions:write') ||
+            !leftPanel.enabled ||
+            currentProject.access_level !== 'admin' ||
+            currentProject.owner_id !== config.self.id
+        ) {
+            return;
+        }
+
+        fileInput.click();
+    });
+
+    fileInput.addEventListener('change', () => {
+        const file = fileInput.files[0];
+        fileInput.value = null;
+
+        uploadProjectImage(file);
+
+        statsContainer.style.backgroundImage = 'linear-gradient(rgba(0, 0, 0, 0.8) 15%, transparent)';
+        deleteButton.hidden = false;
+        replaceButton.style.marginRight = '0px';
+    });
+
+    // store all panels for each menu option
+    const menuOptions = {};
+    let defaultMenuOption = null;
+
+    // thumbnail buttons
+    const thumbnailButtons = new Container({
+        class: 'thumbnail-buttons'
+    });
+    projectSummary.append(thumbnailButtons);
+    thumbnailButtons.style.opacity = '0'; // thumbnail buttons start hidden
+
+    const replaceButton = new Button({
+        class: 'thumbnail-replace',
+        icon: 'E222',
+        text: ''
+    });
+    replaceButton.dom.setAttribute('aria-label', 'Replace project icon');
+    replaceButton.dom.setAttribute('title', 'Replace project icon');
+    thumbnailButtons.append(replaceButton);
+
+    replaceButton.on('click', () => {
+        fileInput.click(); // open file picker
+    });
+
+    const deleteButton = new Button({
+        class: 'thumbnail-delete',
+        icon: 'E124'
+    });
+    thumbnailButtons.append(deleteButton);
+
+    deleteButton.on('click', () => {
+        deleteThumbnail();
+        // Hide delete button and adjust margin
+        deleteButton.hidden = true;
+        replaceButton.style.marginRight = '6px';
+    });
+
+    // menu
+    const list = new Container({
+        dom: 'ul',
+        class: ['ui-list', 'selectable']
+    });
+    leftPanel.dom.appendChild(list.dom);
+
+    // project CMS button
+    const projectCMSButton = new Button({
+        class: 'project-cms-button',
+        text: 'See all projects',
+        enabled: !reducedView,
+        hidden: reducedView
+    });
+    leftPanel.append(projectCMSButton);
+
+    projectCMSButton.on('click', () => {
+        if (cmsView) {
+            editor.call('picker:project:cms:close');
+
+            if (!config.scene.id) {
+                editor.call('picker:project');
+            } else {
+                overlay.hidden = true;
+            }
+        } else {
+            editor.call('picker:project:cms');
+            overlay.hidden = true;
+        }
+    });
+
+    // editor CMS button
+    const editorBtn = new Button({
+        class: 'cms-editor-button',
+        icon: 'E294',
+        text: 'EDITOR',
+        enabled: reducedView,
+        hidden: !reducedView
+    });
+    leftPanel.append(editorBtn);
+
+    editorBtn.dom.addEventListener('mousedown', (e) => {
+        let target = '_self';
+        if (e.which === 2 || e.button === 4 || e.metaKey || e.ctrlKey) {
+            target = '_blank';
+        } // If middle click, open in new tab
+
+        let url = `${config.url.home}/editor/project/${currentProject.id}`;
+        const params = new URLSearchParams(location.search);
+        if (params.has('use_local_frontend')) {
+            url += `?use_local_frontend=${params.get('use_local_frontend')}`;
+        }
+
+        window.open(url, target);
+    });
+
+    // launch button
+    const playBtn = new Button({
+        class: 'cms-play-button',
+        icon: 'E131',
+        text: 'PLAY',
+        enabled: reducedView && currentProject.primary_app_url,
+        hidden: !reducedView
+    });
+    leftPanel.append(playBtn);
+
+    playBtn.on('click', () => {
+        window.open(currentProject.primary_app_url, '_blank');
+    });
+
+    // right side panel
+    const rightPanel = new Panel({
+        headerText: 'Project',
+        class: 'right'
+    });
+    panel.append(rightPanel);
+
+    // close button
+    const btnClose = new Button({
+        icon: 'E132',
+        class: 'close'
+    });
+    btnClose.on('click', () => {
+        if (currentSelection !== 'version control' || editor.call('vcgraph:isHidden')) {
+            overlay.hidden = true;
+        }
+    });
+    rightPanel.header.append(btnClose);
+
+    // fullscreen toggle — expands the picker to fill the viewport (right of the
+    // 40px left toolbar) even when the window is large enough for the small
+    // centered picker; hidden by css below the 1060px breakpoint where the
+    // picker is force-fullscreen anyway
+    let fullscreen = editor.call('localStorage:get', FULLSCREEN_KEY) === true;
+    const btnFullscreen = new Button({
+        class: 'fullscreen-toggle'
+    });
+    const applyFullscreen = () => {
+        overlay.class[fullscreen ? 'add' : 'remove']('fullscreen');
+        btnFullscreen.class[fullscreen ? 'add' : 'remove']('active');
+        btnFullscreen.dom.setAttribute('title', fullscreen ? 'Exit fullscreen' : 'Fullscreen');
+        // let hosted panels (e.g. version control) resize their panes to the larger viewport
+        editor.emit('picker:project:fullscreen', fullscreen);
+    };
+    btnFullscreen.on('click', () => {
+        fullscreen = !fullscreen;
+        editor.call('localStorage:set', FULLSCREEN_KEY, fullscreen);
+        applyFullscreen();
+    });
+    rightPanel.header.append(btnFullscreen);
+    applyFullscreen();
+
+    // hosted panels read the current state on show (this picker loads before them)
+    editor.method('picker:project:isFullscreen', () => fullscreen);
+
+    // LOCAL UTILS
+
+    const deleteThumbnail = () => {
+        editor.call('projects:save', currentProject, { image_url: 'blank' }, () => {
+            editor.call('picker:projects:deleteImage');
+        });
+    };
+
+    // activate menu option
+    const select = function (name: string) {
+        if (!name) {
+            return;
+        }
+
+        if (currentSelection === name) {
+            return;
+        }
+
+        currentSelection = name;
+
+        // if this is not a scene URL and not in reduced CMS view, disallow closing the popup
+        if (!IS_EMPTY_STATE && !config.scene.id && !reducedView && !noAdminView) {
+            editor.call('picker:project:setClosable', false);
+        } else {
+            // reset closable state
+            editor.call('picker:project:setClosable', true);
+        }
+
+        // hide all first
+        for (const key in menuOptions) {
+            menuOptions[key].item.class.remove('active');
+            menuOptions[key].panel.hidden = true;
+        }
+
+        // show desired option
+        menuOptions[name].item.class.add('active');
+        menuOptions[name].panel.hidden = false;
+        rightPanel.headerText = menuOptions[name].title;
+        rightPanel.content.dom.scrollTop = 0;
+    };
+
+    // ESC key should close popup
+    const onKeyDown = function (e: KeyboardEvent) {
+        if (e.target && /input|textarea/i.test(e.target.tagName)) {
+            return;
+        }
+
+        if (e.keyCode === 27 && overlay.clickable && !editor.call('picker:isOpen', 'conflict-manager')) {
+            overlay.hidden = true;
+        }
+    };
+
+    // EVENTS
+
+    // handle show
+    overlay.on('show', () => {
+        window.addEventListener('keydown', onKeyDown);
+
+        if (!statsContainer) {
+            buildProjectStatsUI();
+        }
+
+        projectImg.classList.remove('progress');
+        if (!IS_EMPTY_STATE) {
+            projectImg.style.backgroundImage = config.project.thumbnails.m
+                ? `url("${config.project.thumbnails.m}")`
+                : EMPTY_THUMBNAIL_IMAGE;
+        }
+
+        if (editor.call('permissions:write')) {
+            projectImg.classList.add('hover');
+        } else {
+            projectImg.classList.remove('hover');
+        }
+
+        // editor-blocking picker open
+        editor.emit('picker:open', 'project');
+    });
+
+    // handle hide
+    overlay.on('hide', () => {
+        currentSelection = null;
+
+        // unsubscribe from keydown
+        window.removeEventListener('keydown', onKeyDown);
+
+        // hide all panels
+        for (const key in menuOptions) {
+            menuOptions[key].panel.hidden = true;
+            menuOptions[key].item.class.remove('active');
+            menuOptions[key].item.class.remove('selected');
+            statsContainer.hidden = true;
+        }
+
+        // reset flags
+        noAdminView = false;
+        reducedView = false;
+        lockedView = false;
+
+        // editor-blocking picker closed
+        editor.emit('picker:close', 'project');
+    });
+
+    // register new panel / menu option
+    editor.method('picker:project:registerMenu', (name, title, panel, displayName = '') => {
+        const menuItem = new Container({
+            dom: 'li',
+            class: 'ui-list-item'
+        }) as Container & { text: string };
+        const menuItemText = document.createElement('span');
+        Object.defineProperty(menuItem, 'text', {
+            get() {
+                return menuItemText.textContent;
+            },
+            set(value: string) {
+                menuItemText.textContent = value;
+            }
+        });
+        menuItem.text = MENU_LABELS.get(name) || displayName || name;
+        menuItem.dom.appendChild(menuItemText);
+
+        if (title === 'PROJECT SETTINGS') {
+            projectSettingsListMenu = menuItem;
+        }
+
+        menuItem.class.add(name.replace(' ', '-'));
+        list.append(menuItem);
+
+        menuItem.on('click', () => {
+            select(name);
+        });
+
+        menuOptions[name] = {
+            item: menuItem,
+            title: title,
+            panel: panel,
+            panelOnly: false
+        };
+        panel.hidden = true;
+        rightPanel.append(panel);
+        return menuItem;
+    });
+
+    // register panel without a menu option
+    editor.method('picker:project:registerPanel', (name, title, panel) => {
+        // just do the regular registration but hide the menu
+        const item = editor.call('picker:project:registerMenu', name, title, panel);
+        menuOptions[name].panelOnly = true;
+        item.hidden = true;
+        item.class.add('hidden');
+        return item;
+    });
+
+    // set default menu option
+    editor.method('picker:project:setDefaultMenu', (name) => {
+        defaultMenuOption = name;
+    });
+
+    // open popup
+    editor.method('picker:project', (option, cms = false) => {
+        editor.call('projects:getOne', config.project.id, (res) => {
+            currentProject = res;
+            cmsView = cms;
+
+            refreshUI();
+
+            if (cmsView) {
+                btnClose.hidden = false; // display close button
+                overlay.class.add('cmsView');
+                projectCMSButton.text = 'Return to Project';
+            } else {
+                projectCMSButton.text = 'See all projects';
+            }
+
+            editor.call('users:loadOne', config.owner.id, (user) => {
+                currentUser = user;
+                overlay.hidden = false;
+            });
+        });
+
+        if (option === 'version control') {
+            closeCallback = () => editor.call('vcgraph:isHidden');
+        } else {
+            closeCallback = null;
+        }
+
+        select(option || defaultMenuOption);
+    });
+
+    // open reduced functionality popup
+    editor.method('picker:project:reduced', (project) => {
+        editor.call('projects:getOne', project.id, (res) => {
+            currentProject = res;
+            reducedView = true;
+
+            editor.call('users:loadOne', config.self.id, (user) => {
+                currentUser = user; // change this variable name
+                overlay.hidden = false;
+            });
+
+            refreshUI();
+
+            select('project-main'); // select project settings panel
+        });
+    });
+
+    // open no admin popup
+    editor.method('picker:project:noAdmin', (project) => {
+        overlay.class.add('noAdminView');
+        editor.call('projects:getOne', project.id, (res) => {
+            currentProject = res;
+            noAdminView = true;
+
+            editor.call('users:loadOne', config.self.id, (user) => {
+                currentUser = user; // change this variable name
+                overlay.hidden = false;
+            });
+
+            refreshUI();
+            btnClose.hidden = false;
+
+            select('team'); // select project settings panel
+        });
+    });
+
+    // open locked view popup
+    editor.method('picker:project:lockedView', (project) => {
+        overlay.class.add('noAdminView');
+        editor.call('projects:getOne', project.id, (res) => {
+            currentProject = res;
+            lockedView = true;
+
+            editor.call('users:loadOne', config.self.id, (user) => {
+                currentUser = user;
+                overlay.hidden = false;
+            });
+
+            refreshUI();
+            btnClose.hidden = false;
+
+            select('project-main'); // select main project panel
+            thumbnailButtons.style.opacity = '0';
+        });
+    });
+
+    // helper method to determine whether no admin view should be displayed
+    editor.method('picker:project:showNoAdmin', (project, collaborators) => {
+        let userIsCollaborator = false;
+        collaborators.forEach((collaborator) => {
+            if (collaborator.id === currentUser.id) {
+                userIsCollaborator = true;
+            }
+        });
+        return (
+            editor.call('project:management:isOrgAdmin', project.owner_id, currentUser) &&
+            !project.locked &&
+            collaborators.length >= 0 &&
+            !userIsCollaborator
+        );
+    });
+
+    // close popup
+    editor.method('picker:project:close', () => {
+        overlay.class.remove('cmsView');
+        overlay.class.remove('noAdminView');
+        overlay.hidden = true;
+    });
+
+    editor.method('picker:project:suspend', () => {
+        if (suspended || overlay.hidden) {
+            return;
+        }
+        suspended = true;
+        suspendClickable = overlay.clickable;
+        overlay.clickable = false;
+        overlay.class.add('vc-suspended');
+    });
+
+    editor.method('picker:project:resume', () => {
+        if (!suspended) {
+            return;
+        }
+        suspended = false;
+        overlay.class.remove('vc-suspended');
+        overlay.clickable = suspendClickable;
+    });
+
+    // prevent user closing popup
+    editor.method('picker:project:setClosable', (closable) => {
+        btnClose.hidden = !closable;
+        overlay.clickable = closable;
+    });
+
+    // disable / enable the state of the left panel
+    editor.method('picker:project:toggleLeftPanel', (enabled) => {
+        leftPanel.enabled = enabled;
+    });
+
+    // disables / enables a menu option on the left
+    editor.method('picker:project:toggleMenu', (name, enabled) => {
+        menuOptions[name].item.hidden = !enabled;
+        if (!enabled) {
+            menuOptions[name].panel.hidden = true;
+        }
+    });
+
+    // hook to retrieve project settings sidebar menu element (to enable hot reloading)
+    editor.method('picker:project:updateProjectSettingsMenuItem', (newName) => {
+        projectTitle.text = newName;
+        projectSettingsListMenu.text = MENU_LABELS.get('project-main') || 'Project settings';
+    });
+
+    // hook to upload project image
+    editor.method('picker:project:uploadImage', (file) => {
+        uploadProjectImage(file);
+    });
+
+    // hook to delete project image
+    editor.method('picker:projects:deleteImage', () => {
+        config.project.thumbnails = {};
+        projectImg.style.backgroundImage = EMPTY_THUMBNAIL_IMAGE;
+    });
+
+    // hook to get current project
+    editor.method('picker:project:getCurrent', () => {
+        return currentProject;
+    });
+
+    // hook to get current project owner
+    editor.method('picker:project:getOwner', () => {
+        return currentUser;
+    });
+
+    // hook to build an alert
+    editor.method('picker:project:buildAlert', (root, alert, btn, btnText, funcParams) => {
+        const newAlert = buildAlert(root, alert, btn, btnText, funcParams);
+        alerts.push(newAlert);
+    });
+
+    // hook to hide all alerts
+    editor.method('picker:project:hideAlerts', () => {
+        alerts.forEach((alert) => {
+            alert.style.display = 'none';
+            alert.destroy();
+        });
+        alerts = [];
+    });
+
+    // hook to display thumbnail controls
+    editor.method('picker:project:showThumbnailControls', () => {
+        if (currentProject.access_level === 'admin') {
+            thumbnailButtons.style.transform = 'scale(1)';
+            thumbnailButtons.style.opacity = '1';
+            thumbnailButtons.style.zIndex = '0';
+            thumbnailButtons.style.pointerEvents = 'all';
+        }
+    });
+
+    // hook to hide thumbnail controls
+    editor.method('picker:project:hideThumbnailControls', () => {
+        if (currentProject.access_level === 'admin') {
+            thumbnailButtons.style.transform = 'scale(0.92)';
+            thumbnailButtons.style.opacity = '0';
+            thumbnailButtons.style.zIndex = '-1';
+            thumbnailButtons.style.pointerEvents = 'none';
+        }
+    });
+
+    // subscribe to project image
+    editor.on('messenger:project.image', (data) => {
+        config.project.thumbnails = data.project.thumbnails;
+        projectImg.style.backgroundImage = `url("${data.project.thumbnails && data.project.thumbnails.m}")`;
+        projectImg.classList.remove('progress');
+    });
+
+    // subscribe to user project image (updates thumbnail on non-opened projects)
+    editor.on('messenger:project.user.image', (data) => {
+        config.project.thumbnails = data.project.thumbnails;
+        projectImg.style.backgroundImage = `url("${data.project.thumbnails && data.project.thumbnails.m}")`;
+        projectImg.classList.remove('progress');
+    });
+});

@@ -1,0 +1,115 @@
+import { Canvas } from '@playcanvas/pcui';
+import { LAYERID_DEPTH, Mouse, TouchDevice, WasmModule } from 'playcanvas';
+
+import { ReferencedFontHandler } from '@/common/referenced-font-handler';
+import { config } from '@/editor/config';
+
+import { ViewportApplication } from './viewport-application';
+
+editor.once('load', () => {
+    const canvas = new Canvas({
+        id: 'canvas-3d',
+        useDevicePixelRatio: true
+    });
+
+    let keepRendering = false;
+
+    const projectUserSettings = editor.call('settings:projectUser');
+
+    // Allow anti-aliasing to be forcibly disabled - this is useful for Selenium tests in
+    // order to ensure that the generated screenshots are consistent across different GPUs.
+    const disableAntiAliasing = /disableAntiAliasing=true/.test(location.search);
+
+    // create playcanvas application
+    let app: ViewportApplication;
+    try {
+        const canvasElement = canvas.dom as HTMLCanvasElement;
+        app = new ViewportApplication(canvasElement, {
+            mouse: new Mouse(canvasElement),
+            touch: 'ontouchstart' in window ? new TouchDevice(canvasElement) : null,
+            editorSettings: projectUserSettings.json().editor,
+            graphicsDeviceOptions: {
+                antialias: !disableAntiAliasing,
+                alpha: true
+            }
+        });
+
+        // Depth layer is where the framebuffer is copied to a texture to be used in the following layers.
+        // Move the depth layer to take place after World and Skydome layers, to capture both of them.
+        const depthLayer = app.scene.layers.getLayerById(LAYERID_DEPTH);
+        app.scene.layers.remove(depthLayer);
+        app.scene.layers.insertOpaque(depthLayer, 2);
+
+        app.enableBundles = false;
+    } catch (ex) {
+        editor.emit('viewport:error', ex);
+        return;
+    }
+
+    // swap the stock font handler for one that also resolves client-referenced fonts. this runs after
+    // the app has already called loader.enableRetry(), which only touches handlers registered at that
+    // point, so carry the retry count over or fonts alone would stop retrying a failed request
+    const stockFontHandler = app.loader.getHandler('font');
+    const fontHandler = new ReferencedFontHandler(app);
+    fontHandler.maxRetries = stockFontHandler?.maxRetries ?? 0;
+    app.loader.removeHandler('font');
+    app.loader.addHandler('font', fontHandler);
+
+    // set module configs
+    config.wasmModules.forEach((m: { moduleName: string; glueUrl: string; wasmUrl: string; fallbackUrl: string }) => {
+        WasmModule.setConfig(m.moduleName, {
+            glueUrl: m.glueUrl,
+            wasmUrl: m.wasmUrl,
+            fallbackUrl: m.fallbackUrl
+        });
+    });
+
+    projectUserSettings.on('*:set', (): void => {
+        app.setEditorSettings(projectUserSettings.json().editor);
+    });
+
+    // add canvas
+    editor.call('layout.viewport').prepend(canvas);
+
+    // get canvas
+    editor.method('viewport:canvas', () => {
+        return canvas;
+    });
+
+    // get app
+    editor.method('viewport:app', () => {
+        return app;
+    });
+
+    // re-render viewport
+    editor.method('viewport:render', () => {
+        app.redraw = true;
+    });
+
+    // returns true if the viewport should continuously render
+    editor.method('viewport:keepRendering', (value?: boolean) => {
+        if (typeof value === 'boolean') {
+            keepRendering = value;
+        }
+
+        return keepRendering;
+    });
+
+    // gsplat depth-sorting runs async on a worker; the sort for the resting camera
+    // can land just after the last frame. re-render once when a sort settles so the
+    // splat order is correct. self-terminating: a static camera skips the sort.
+    app.scene.on('gsplat:sorted', () => {
+        editor.call('viewport:render');
+    });
+
+    // unified gsplat streaming fires this when it has produced new data a render would
+    // show (a new set of splats after components changed, streamed LOD, or a completed
+    // sort waiting to be applied). render a frame so it becomes visible.
+    app.systems.gsplat.on('frame:request', () => {
+        editor.call('viewport:render');
+    });
+
+    app.start();
+
+    editor.emit('viewport:load', app);
+});

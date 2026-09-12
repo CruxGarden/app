@@ -1,0 +1,40 @@
+import { Button } from '@playcanvas/pcui';
+
+import { TooltipHandle } from '@/common/tooltips';
+
+editor.once('load', () => {
+    const toolbar = editor.call('layout.toolbar');
+
+    // settings button
+    const button = new Button({
+        class: ['pc-icon', 'editor-settings', 'bottom'],
+        icon: 'E134'
+    });
+    toolbar.append(button);
+    editor.call('toolbar:register', { id: 'settings', label: 'Settings', group: 'utility', button });
+
+    button.on('click', () => {
+        editor.call('selector:set', 'editorSettings', [editor.call('settings:projectUser')]);
+    });
+
+    editor.on('attributes:clear', () => {
+        button.class.remove('active');
+    });
+
+    editor.on('attributes:inspect[editorSettings]', () => {
+        editor.call('attributes.rootPanel').collapsed = false;
+
+        button.class.add('active');
+    });
+
+    editor.on('viewport:expand', (state) => {
+        button.enabled = !state;
+    });
+
+    TooltipHandle.attach({
+        target: button.dom,
+        text: 'Settings',
+        align: 'left',
+        root: editor.call('layout.root')
+    });
+});

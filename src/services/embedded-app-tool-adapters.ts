@@ -1,3 +1,4 @@
+import { PLAYCANVAS_EDITOR_TOOLS, playcanvasEditorCommand } from '@/ai/playcanvas-editor-tools';
 import { GDEVELOP_TOOLS, gdevelopCommand } from '@/ai/gdevelop-tools';
 import { BLOCKBENCH_TOOLS, blockbenchCommand } from '@/ai/blockbench-tools';
 import { SVGEDIT_TOOLS, svgeditCommand } from '@/ai/svgedit-tools';
@@ -26,6 +27,8 @@ import type { AppToolDefinition } from './embedded-app-tool-registry';
 
 /** Trusted built-in adapters declare tools and affected files; frames cannot grant themselves tools. */
 export function embeddedAppToolAdapter(crux: { meta?: Record<string, unknown> } | null) {
+  if (nativeAppType(crux) === 'playcanvas-editor')
+    return { tools: PLAYCANVAS_EDITOR_TOOLS, prepare: playcanvasEditorCommand };
   if (nativeAppType(crux) === 'gdevelop')
     return { tools: GDEVELOP_TOOLS, prepare: gdevelopCommand };
   if (nativeAppType(crux) === 'blockbench')

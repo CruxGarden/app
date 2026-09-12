@@ -1,0 +1,131 @@
+import { Button } from '@playcanvas/pcui';
+
+import { TooltipHandle } from '@/common/tooltips';
+
+editor.once('load', () => {
+    const root = editor.call('layout.root');
+    const toolbar = editor.call('layout.toolbar');
+
+    // manage if uv1 is missing
+    let uv1Missing = false;
+    let uv1MissingAssets = {};
+
+    // coordinate system
+    const buttonBake = new Button({
+        class: ['pc-icon', 'light-mapper'],
+        icon: 'E191'
+    });
+    toolbar.append(buttonBake);
+    editor.call('toolbar:register', { id: 'lightmapper', label: 'Bake Lightmaps', group: 'main', button: buttonBake });
+
+    buttonBake.on('click', () => {
+        editor.call('lightmapper:bake');
+        editor.call('entities:shadows:update');
+    });
+    editor.on('lightmapper:uv1Missing', (state) => {
+        if (state) {
+            buttonBake.class.add('active');
+        } else {
+            buttonBake.class.remove('active');
+        }
+    });
+
+    // tooltip
+    const tooltipBake = TooltipHandle.attach({
+        target: buttonBake.dom,
+        align: 'left',
+        root: root
+    });
+    tooltipBake.class.add('light-mapper');
+    tooltipBake.hoverable = true;
+    tooltipBake.text = 'Bake Lightmaps';
+
+    // auto toggle
+    const elAuto = document.createElement('div');
+
+    if (!editor.call('permissions:write')) {
+        elAuto.style.display = 'none';
+    }
+
+    editor.on('permissions:writeState', (state) => {
+        elAuto.style.display = state ? '' : 'none';
+    });
+
+    elAuto.classList.add('auto-toggle');
+    tooltipBake.innerElement.appendChild(elAuto);
+
+    // uv1 missing
+    const elUV1 = document.createElement('div');
+    elUV1.classList.add('uv1');
+    elUV1.textContent = 'UV1 is missing on some models. Please upload models with UV1 or use ';
+    tooltipBake.innerElement.appendChild(elUV1);
+
+    const btnAutoUnwrap = new Button({
+        text: 'Auto-Unwrap'
+    });
+    elUV1.appendChild(btnAutoUnwrap.dom);
+    btnAutoUnwrap.on('click', () => {
+        if (!uv1Missing) {
+            return;
+        }
+
+        const assetIds = Object.keys(uv1MissingAssets);
+        for (let i = 0; i < assetIds.length; i++) {
+            const assetId = assetIds[i];
+            if (!Object.prototype.hasOwnProperty.call(uv1MissingAssets, assetId)) {
+                continue;
+            }
+
+            const asset = uv1MissingAssets[assetId];
+            editor.call('assets:model:unwrap', asset);
+        }
+    });
+
+    // hotkey ctrl+b
+    editor.call('hotkey:register', 'lightmapper:bake', {
+        key: 'b',
+        ctrl: true,
+        callback: function () {
+            if (editor.call('picker:isOpen:otherThan', 'curve')) {
+                return;
+            }
+
+            editor.call('lightmapper:bake');
+            editor.call('entities:shadows:update');
+        }
+    });
+
+    editor.on('assets:model:unwrap', (asset) => {
+        if (!uv1MissingAssets[asset.get('id')]) {
+            return;
+        }
+
+        delete uv1MissingAssets[asset.get('id')];
+        editor.call('lightmapper:uv1missing', uv1MissingAssets);
+    });
+
+    editor.method('lightmapper:uv1missing', (assets) => {
+        if (assets === undefined) {
+            return uv1Missing;
+        }
+
+        uv1MissingAssets = assets;
+
+        const state = Object.keys(assets).length !== 0;
+
+        if (uv1Missing === state) {
+            return;
+        }
+
+        uv1Missing = state;
+        editor.emit('lightmapper:uv1Missing', uv1Missing);
+    });
+
+    tooltipBake.on('show', () => {
+        if (uv1Missing) {
+            elUV1.classList.remove('hidden');
+        } else {
+            elUV1.classList.add('hidden');
+        }
+    });
+});

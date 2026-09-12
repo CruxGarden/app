@@ -1,0 +1,7 @@
+services:
+  editor-test:
+    build: .
+    image: playcanvas/editor-test:latest
+    container_name: editor-test
+    env_file:
+      - .env

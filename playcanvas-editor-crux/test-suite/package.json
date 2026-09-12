@@ -1,0 +1,43 @@
+{
+  "name": "@playcanvas/editor-test",
+  "version": "0.0.1",
+  "description": "Editor Testing Suite",
+  "author": "PlayCanvas",
+  "license": "MIT",
+  "type": "module",
+  "devDependencies": {
+    "@playcanvas/eslint-config": "2.1.0",
+    "@playcanvas/observer": "1.7.1",
+    "@playwright/test": "1.59.0",
+    "@types/node": "22.5.0",
+    "@typescript-eslint/parser": "8.47.0",
+    "bottleneck": "2.19.5",
+    "dotenv": "17.2.3",
+    "eslint": "9.39.1",
+    "globals": "16.5.0",
+    "node-fetch": "3.3.2",
+    "tsx": "4.22.4"
+  },
+  "peerDependencies": {
+    "typescript": "^5.1.6",
+    "playwright": "^1.58.2"
+  },
+  "scripts": {
+    "codegen": "playwright codegen --load-storage .auth/state.json",
+    "lint": "eslint src test eslint.config.mjs",
+    "lint:fix": "eslint src test eslint.config.mjs --fix",
+    "publint": "publint",
+    "start": "tsx src/index.ts",
+    "report": "playwright show-report",
+    "test": "playwright test",
+    "test:ci": "playwright test --reporter list",
+    "test:debug": "playwright test --debug ",
+    "test:headed": "playwright test --headed",
+    "test:ui": "playwright test --ui",
+    "build:types": "tsc -p ../src/editor-api/tsconfig.types.json --noCheck",
+    "type:check": "npm run build:types && tsc --declaration --emitDeclarationOnly"
+  },
+  "engines": {
+    "node": ">=22.0.0"
+  }
+}

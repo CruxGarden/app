@@ -243,6 +243,16 @@ const TEMPLATES: Template[] = [
     desktopOnly: true,
   },
   {
+    id: 'playcanvas-editor-app',
+    label: 'PlayCanvas Editor',
+    description: 'Creative · local 3D scenes and classic JavaScript',
+    defaultTitle: 'My 3D scene',
+    icon: <PencilIcon />,
+    thumb: <BlankThumb />,
+    kind: 'webapp',
+    desktopOnly: true,
+  },
+  {
     id: 'gdevelop-app',
     label: 'GDevelop',
     description: 'Creative · visual 2D and 3D game development',

@@ -1,3 +1,4 @@
+import { validateProject as validatePlayCanvas } from '../../playcanvas-editor-crux/garden/model.js';
 import { validateProject as validateGDevelop } from '../../gdevelop-crux/garden/model.mjs';
 import { validateProject as validateBlockbench } from '../../blockbench-crux/garden/model.js';
 import { validateProject as validateSvgedit } from '../../svgedit-crux/garden/model.js';
@@ -37,12 +38,12 @@ async function verifyOriginal(owner: string, path: string, fingerprint: string) 
     );
 }
 export async function importNativeAsset(owner: string, bytes: unknown, mimeType: unknown) {
-  if (!(bytes instanceof ArrayBuffer) || !bytes.byteLength || bytes.byteLength > 128_000_000)
+  if (!(bytes instanceof ArrayBuffer) || bytes.byteLength > 128_000_000)
     throw new Error('Choose a media or font file up to 128 MB.');
   if (
     typeof mimeType !== 'string' ||
     mimeType.length > 100 ||
-    !/^(image|video|audio|font|application)\/[a-zA-Z0-9.+-]+$/.test(mimeType)
+    !/^(image|video|audio|font|application|text)\/[a-zA-Z0-9.+-]+$/.test(mimeType)
   )
     throw new Error('Choose a valid media or font type.');
   const fingerprint = await hashContent(new Uint8Array(bytes));
@@ -92,6 +93,7 @@ export async function validateNativeDocument(
   owner: string,
   content: string,
   app:
+    | 'playcanvas-editor'
     | 'openmosh'
     | 'minipaint'
     | 'audiomass'
@@ -109,7 +111,8 @@ export async function validateNativeDocument(
 ) {
   if (content.length > 4_000_000) throw new Error('The native project metadata is too large.');
   const doc = JSON.parse(content);
-  if (app === 'gdevelop') validateGDevelop(doc);
+  if (app === 'playcanvas-editor') validatePlayCanvas(doc);
+  else if (app === 'gdevelop') validateGDevelop(doc);
   else if (app === 'blockbench') validateBlockbench(doc);
   else if (app === 'svgedit') validateSvgedit(doc);
   else if (app === 'twine') validateTwine(doc);

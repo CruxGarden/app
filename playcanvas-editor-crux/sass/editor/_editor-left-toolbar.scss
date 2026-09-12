@@ -1,0 +1,224 @@
+@use 'sass:color';
+
+#layout-toolbar {
+    background-color: $bcg-darker;
+    z-index: 400; // Below PCUI Menu overlay (401) so context menus close when clicking toolbar
+
+    > .pcui-button {
+        display: block;
+        border: none;
+        border-radius: 0;
+        margin: 0;
+        width: 40px;
+        height: 40px;
+        flex-shrink: 0;
+
+        &.hidden {
+            display: none;
+        }
+
+        &.toolbar-user-hidden {
+            display: none !important;
+        }
+
+        &.toolbar-dragging {
+            opacity: 0.4;
+        }
+
+        &.logo {
+            background-image: none;
+            background-size: 80px 40px;
+            background-repeat: no-repeat;
+            background-position: 0 0;
+
+            &:hover {
+                background-position: -40px 0;
+            }
+
+            &.toolbar-done {
+                color: $text-primary;
+                background-color: $bcg-darkest;
+                background-image: none;
+                font-size: 20px;
+                line-height: 38px;
+                text-align: center;
+
+                &:hover,
+                &:focus {
+                    background-color: $bcg-dark;
+                }
+            }
+        }
+
+        &.icon,
+        &.pc-icon {
+            color: $text-dark;
+            line-height: 38px;
+            text-align: center;
+            background-color: $bcg-primary;
+
+            &.active {
+                color: $text-primary;
+                background-color: $bcg-darkest;
+
+                &:hover,
+                &:focus {
+                    background-color: color.mix($bcg-dark, $bcg-darkest, 50%);
+                }
+            }
+
+            &.light-mapper.active {
+                background-color: $bcg-primary;
+                color: $text-active;
+
+                &:hover,
+                &:focus {
+                    color: $text-primary;
+                    background-color: $bcg-dark;
+                }
+            }
+
+            &.disabled {
+                opacity: 1;
+                color: color.mix($text-dark, $bcg-primary, 30%);
+
+                &:hover,
+                &:focus {
+                    color: color.mix($text-dark, $bcg-primary, 30%);
+                    background-color: $bcg-primary;
+                }
+            }
+
+            &:hover,
+            &:focus {
+                color: $text-primary;
+                background-color: $bcg-dark;
+                box-shadow: none;
+            }
+        }
+
+        &.icon {
+            @extend .font-icon;
+
+            font-size: 24px;
+        }
+
+        &.pc-icon {
+            @extend .font-icon;
+
+            font-size: 20px;
+        }
+
+        &.push-top {
+            margin-top: auto;
+        }
+
+        &.bottom {
+            background-color: $bcg-darker;
+        }
+
+        &.github {
+            order: 1;
+        }
+
+        &.discord {
+            order: 2;
+        }
+
+        &.forum {
+            order: 3;
+        }
+
+        &.help-howdoi {
+            order: 4;
+        }
+
+        &.help-controls {
+            order: 5;
+        }
+
+        &.editor-settings {
+            order: 6;
+        }
+    }
+
+    &.toolbar-editing {
+        > .pcui-button[data-toolbar-id]:not(.hidden) {
+            display: block !important;
+            position: relative;
+            overflow: visible;
+            cursor: move;
+        }
+
+        .toolbar-visibility {
+            display: grid;
+        }
+    }
+
+    .toolbar-visibility {
+        position: absolute;
+        z-index: 1;
+        top: 0;
+        right: 0;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        box-sizing: border-box;
+        width: 20px;
+        height: 20px;
+        border: none;
+        border-radius: 0;
+        color: $text-primary;
+        background: $bcg-darkest;
+        font-family: pc-icon;
+        font-size: 14px;
+        line-height: 1;
+        cursor: pointer;
+
+        &:hover,
+        &:focus {
+            background: $bcg-dark;
+        }
+
+        &.toolbar-visibility-hidden {
+            color: $text-secondary;
+
+            &::after {
+                content: '';
+                position: absolute;
+                left: 3px;
+                right: 3px;
+                top: calc(50% - 1px);
+                height: 2px;
+                background: currentcolor;
+                transform: rotate(-45deg);
+                pointer-events: none;
+            }
+
+            &:hover,
+            &:focus {
+                color: $text-primary;
+            }
+        }
+    }
+}
+
+#layout-toolbar.hide-items > div {
+    display: none;
+}
+
+@media (max-height: 760px) {
+    #layout-toolbar > .pcui-button {
+        &.github,
+        &.discord,
+        &.forum,
+        &.help-howdoi,
+        &.help-controls {
+            display: none;
+        }
+
+        &.editor-settings {
+            margin-top: auto;
+        }
+    }
+}
