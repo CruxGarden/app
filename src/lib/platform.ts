@@ -110,6 +110,11 @@ export function isAiMock(): boolean {
   return !!bridge()?.test?.aiMock;
 }
 
+/** e2e only: CRUX_SILENT=1 — never start the soundscape or play cues (Daniel: test audio is distracting). */
+export function isSilent(): boolean {
+  return !!bridge()?.test?.silent;
+}
+
 /** e2e only: CRUX_AUTOBACKUP_QUIET_MS shortens automatic backup's quiet window. */
 export function autoBackupQuietMsKnob(): number | null {
   const v = bridge()?.test?.autoBackupQuietMs;

@@ -7,6 +7,7 @@ import { create } from 'zustand';
 import * as persist from '@/services/sound';
 import type { SoundTrack } from '@/services/sound';
 import { cuesPlayedCount, type CueKind } from '@/services/cues';
+import { isSilent } from '@/lib/platform';
 
 type PlayerModule = typeof import('@/audio/track');
 let playerPromise: Promise<PlayerModule['trackPlayer']> | null = null;
@@ -111,7 +112,7 @@ export const useAudioStore = create<AudioState>((set, get) => ({
 
   play: async () => {
     const { track, volume, enabled } = get();
-    if (!track || !enabled) return;
+    if (!track || !enabled || isSilent()) return;
     const url = await resolveTrackUrl(track);
     if (!url) return;
     const p = await getPlayer();
@@ -159,6 +160,7 @@ export const useAudioStore = create<AudioState>((set, get) => ({
 
   duck: async (on) => (await getPlayer()).duck(on),
   cue: async (kind) => {
+    if (isSilent()) return;
     const { playCueSound } = await import('@/audio/cues');
     const p = await getPlayer();
     await playCueSound(kind, p.context());

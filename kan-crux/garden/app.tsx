@@ -21,28 +21,35 @@ function View() {
   const { isOpen } = useModal();
   useLayoutEffect(() => setModalOpen(isOpen), [isOpen]);
   const route = useRouter();
+  // Native routes: /boards, /boards/:id, /cards/:id, /templates, /templates/:id, /templates/:id/cards/:id
+  const template = route.pathname.startsWith('/templates');
+  const card = /^\/(cards\/|templates\/[^/]+\/cards\/)/.test(route.pathname);
+  const board = !card && /^\/(boards|templates)\/[^/]+/.test(route.pathname);
   return (
     <>
       <nav className="border-b p-3">
         <Link href="/boards">Kan · Boards</Link>
+        <Link href="/templates" className="ml-4">
+          Templates
+        </Link>
         <span className="ml-6 text-light-900">
           {embedded ? 'Local workspace' : 'Local browser proof · changes are not yet saved'}
         </span>
       </nav>
       <main style={{ height: 'calc(100vh - 49px)' }}>
-        {route.pathname.startsWith('/boards/') ? (
-          <Board />
-        ) : route.pathname.startsWith('/cards/') ? (
+        {card ? (
           <div className="flex h-full">
             <div className="flex-1 overflow-auto">
-              <Card />
+              <Card isTemplate={template} />
             </div>
             <aside className="w-80 overflow-auto">
-              <CardRightPanel />
+              <CardRightPanel isTemplate={template} />
             </aside>
           </div>
+        ) : board ? (
+          <Board isTemplate={template} />
         ) : (
-          <Boards />
+          <Boards isTemplate={template} />
         )}
       </main>
       <Popup />

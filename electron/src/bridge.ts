@@ -335,6 +335,8 @@ export interface ElectronBridge {
     aiMock: boolean;
     /** CRUX_AGENT_MOCK=1 — the Agent Provider runs a scripted Claude Code. */
     agentMock: boolean;
+    /** CRUX_SILENT=1 — no soundscape or cues play (the e2e default; sound tests opt out). */
+    silent: boolean;
     autoBackupQuietMs: number | null;
   };
 }

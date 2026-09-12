@@ -55,7 +55,7 @@ function writeSilentWav(path: string, samples = 1000, rate = 8000) {
  */
 test.describe('settings AI, mood sound & persona', () => {
   test('AI: enable, add a provider key (masked, encrypted), remove it', async () => {
-    const { app, page, dir } = await launchApp();
+    const { app, page, dir } = await launchApp({ sound: true });
     const storageKeys = () =>
       page.evaluate(() =>
         Object.keys(localStorage).filter((k) => k.startsWith('cruxgarden:apiKey:')),
@@ -163,7 +163,7 @@ test.describe('settings AI, mood sound & persona', () => {
   });
 
   test('Mood → Sound: on/off, volume, remove, re-pick and add a track', async () => {
-    const { app, page } = await launchApp();
+    const { app, page } = await launchApp({ sound: true });
     const state = () =>
       page.evaluate(() =>
         (window as unknown as { __cruxAudio: { state: () => AudioState } }).__cruxAudio.state(),
@@ -253,7 +253,7 @@ test.describe('settings AI, mood sound & persona', () => {
   });
 
   test('Mood → Persona: name, greeting and avatar reach a new crux', async () => {
-    const { app, page } = await launchApp();
+    const { app, page } = await launchApp({ sound: true });
     const greeting = 'Fern here. What shall we grow?';
     try {
       await plantGarden(page);

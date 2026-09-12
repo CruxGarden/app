@@ -265,3 +265,250 @@ test('failed native edits block confirmation until corrected, while rejected age
   );
   assert.doesNotThrow(() => assertSavedOperations());
 });
+test('soft-deleted lists, cards, checklists and items stay in history while active order, moves and restore use only live records', async () => {
+  const { restoreRecords, captureRecords } = await import('./model');
+  restoreRecords(null);
+  const { publicId } = newBoard('Deletion');
+  const board = readBoard(publicId);
+  const list = board.lists[0].publicId;
+  const a = newCard(list, 'A');
+  const b = newCard(list, 'B');
+  const c = newCard(list, 'C');
+  dispatch('card.delete', { cardPublicId: b.publicId });
+  assert.deepEqual(
+    readBoard(publicId).lists[0].cards.map((card) => [card.title, card.index]),
+    [
+      ['A', 0],
+      ['C', 1],
+    ],
+  );
+  assert.throws(() => dispatch('card.byId', { cardPublicId: b.publicId }), /NOT_FOUND/);
+  // Moving around a tombstone must land on the visible position, not the array slot.
+  dispatch('card.update', { cardPublicId: c.publicId, index: 0 });
+  const d = newCard(list, 'D');
+  dispatch('card.update', { cardPublicId: d.publicId, index: 1 });
+  assert.deepEqual(
+    readBoard(publicId).lists[0].cards.map((card) => card.title),
+    ['C', 'D', 'A'],
+  );
+  assert.throws(() => dispatch('card.update', { cardPublicId: a.publicId, index: 3 }), /Invalid card index/);
+  const checklist = dispatch('checklist.create', { cardPublicId: a.publicId, name: 'Steps' }) as {
+    publicId: string;
+  };
+  const one = dispatch('checklist.createItem', { checklistPublicId: checklist.publicId, title: 'one' }) as { publicId: string };
+  dispatch('checklist.createItem', { checklistPublicId: checklist.publicId, title: 'two' });
+  dispatch('checklist.deleteItem', { checklistItemPublicId: one.publicId });
+  dispatch('checklist.update', { checklistPublicId: checklist.publicId, name: 'Renamed' });
+  let detail = cardDetailSchema.parse(dispatch('card.byId', { cardPublicId: a.publicId }));
+  assert.deepEqual(detail.checklists.map((l) => [l.name, l.items.map((i) => [i.title, i.index])]), [
+    ['Renamed', [['two', 0]]],
+  ]);
+  assert.equal(detail.activities[0].type, 'card.updated.checklist.renamed');
+  assert.equal(detail.activities[1].type, 'card.updated.checklist.item.deleted');
+  assert.equal(detail.activities[1].fromTitle, 'one');
+  dispatch('checklist.delete', { checklistPublicId: checklist.publicId });
+  assert.throws(() => dispatch('checklist.createItem', { checklistPublicId: checklist.publicId, title: 'x' }), /NOT_FOUND/);
+  dispatch('list.create', { boardPublicId: publicId, name: 'Third' });
+  dispatch('list.delete', { listPublicId: board.lists[1].publicId });
+  assert.deepEqual(
+    readBoard(publicId).lists.map((l) => [l.name, l.index]),
+    [
+      ['Ideas', 0],
+      ['Third', 1],
+    ],
+  );
+  // History and tombstones travel with the record; restore validates only the active order.
+  const records = captureRecords();
+  const stored = records['record-' + JSON.stringify(['kan', 'board', publicId])] as {
+    lists: { deletedAt: string | null; cards: { title: string; deletedAt: string | null }[] }[];
+  };
+  assert.equal(stored.lists.length, 3);
+  assert.equal(stored.lists[1].deletedAt !== null, true);
+  assert.equal(stored.lists[0].cards.find((card) => card.title === 'B')?.deletedAt !== null, true);
+  restoreRecords(null);
+  restoreRecords(records);
+  assert.deepEqual(
+    readBoard(publicId).lists[0].cards.map((card) => card.title),
+    ['C', 'D', 'A'],
+  );
+  detail = cardDetailSchema.parse(dispatch('card.byId', { cardPublicId: a.publicId }));
+  assert.equal(detail.checklists.length, 0);
+  assert.equal(detail.activities[0].type, 'card.updated.checklist.deleted');
+  dispatch('board.delete', { boardPublicId: publicId });
+  assert.throws(() => readBoard(publicId), /NOT_FOUND/);
+  assert.equal(
+    (dispatch('board.all', { workspacePublicId }) as { publicId: string }[]).some((b) => b.publicId === publicId),
+    false,
+  );
+});
+test('label rename and delete update card views after a JSON restore breaks shared references', async () => {
+  const { restoreRecords, captureRecords } = await import('./model');
+  restoreRecords(null);
+  const { publicId } = newBoard('Labels');
+  const board = readBoard(publicId);
+  const card = newCard(board.lists[0].publicId, 'Tagged');
+  const label = dispatch('label.create', { boardPublicId: publicId, name: 'Art', colourCode: '#ff0000' }) as { publicId: string };
+  const other = dispatch('label.create', { boardPublicId: publicId, name: 'Sound', colourCode: '#00ff00' }) as { publicId: string };
+  dispatch('card.addOrRemoveLabel', { cardPublicId: card.publicId, labelPublicId: label.publicId });
+  dispatch('card.addOrRemoveLabel', { cardPublicId: card.publicId, labelPublicId: other.publicId });
+  const records = captureRecords();
+  restoreRecords(null);
+  restoreRecords(records);
+  dispatch('label.update', { labelPublicId: label.publicId, name: 'Artwork', colourCode: '#0000ff' });
+  dispatch('label.delete', { labelPublicId: other.publicId });
+  const detail = cardDetailSchema.parse(dispatch('card.byId', { cardPublicId: card.publicId }));
+  assert.deepEqual(detail.labels, [{ publicId: label.publicId, name: 'Artwork', colourCode: '#0000ff' }]);
+  assert.deepEqual(detail.list.board.labels.map((l) => l.name), ['Artwork']);
+  assert.throws(() => dispatch('label.byPublicId', { labelPublicId: other.publicId }), /NOT_FOUND/);
+  assert.throws(
+    () => dispatch('card.addOrRemoveLabel', { cardPublicId: card.publicId, labelPublicId: other.publicId }),
+    /NOT_FOUND/,
+  );
+  const filtered = boardDetailSchema.parse(dispatch('board.byId', { boardPublicId: publicId, labels: [label.publicId] }));
+  assert.equal(filtered.lists[0].cards.length, 1);
+  assert.equal(filtered.lists[0].cards[0].labels[0].name, 'Artwork');
+  // Filtering by the deleted label matches nothing rather than stale copies.
+  const stale = boardDetailSchema.parse(dispatch('board.byId', { boardPublicId: publicId, labels: [other.publicId] }));
+  assert.equal(stale.lists[0].cards.length, 0);
+});
+test('comment edits and deletes keep native activity, counts and pagination consistent', () => {
+  const { publicId } = newBoard('Comments');
+  const board = readBoard(publicId);
+  const card = newCard(board.lists[0].publicId, 'Discussed');
+  const first = dispatch('card.addComment', { cardPublicId: card.publicId, comment: '<p>first</p>' }) as { publicId: string };
+  const second = dispatch('card.addComment', { cardPublicId: card.publicId, comment: '<p>second</p>' }) as { publicId: string };
+  dispatch('card.updateComment', { cardPublicId: card.publicId, commentPublicId: first.publicId, comment: '<p>edited</p>' });
+  let detail = cardDetailSchema.parse(dispatch('card.byId', { cardPublicId: card.publicId }));
+  const added = detail.activities.filter((a) => a.type === 'card.updated.comment.added');
+  assert.deepEqual(added.map((a) => [a.comment?.comment, !!a.comment?.updatedAt]), [
+    ['<p>second</p>', false],
+    ['<p>edited</p>', true],
+  ]);
+  assert.equal(detail.activities[0].type, 'card.updated.comment.updated');
+  dispatch('card.deleteComment', { cardPublicId: card.publicId, commentPublicId: second.publicId });
+  detail = cardDetailSchema.parse(dispatch('card.byId', { cardPublicId: card.publicId }));
+  assert.deepEqual(detail.activities.filter((a) => a.comment).map((a) => a.comment?.publicId), [first.publicId]);
+  assert.equal(readBoard(publicId).lists[0].cards[0].comments.length, 1);
+  const page = dispatch('card.getActivities', { cardPublicId: card.publicId, limit: 100 }) as { activities: { comment: { publicId: string } | null }[] };
+  assert.equal(page.activities.some((a) => a.comment?.publicId === second.publicId), false);
+  assert.throws(
+    () => dispatch('card.updateComment', { cardPublicId: card.publicId, commentPublicId: second.publicId, comment: 'x' }),
+    /NOT_FOUND/,
+  );
+});
+test('duplication copies the native subset with fresh identities and same-board scope', () => {
+  const { publicId } = newBoard('Duplicate');
+  const board = readBoard(publicId);
+  const card = newCard(board.lists[0].publicId, 'Source');
+  const label = dispatch('label.create', { boardPublicId: publicId, name: 'Keep', colourCode: '#123456' }) as { publicId: string };
+  dispatch('card.addOrRemoveLabel', { cardPublicId: card.publicId, labelPublicId: label.publicId });
+  dispatch('card.addOrRemoveMember', { cardPublicId: card.publicId, workspaceMemberPublicId: 'localmember1' });
+  const checklist = dispatch('checklist.create', { cardPublicId: card.publicId, name: 'Todo' }) as { publicId: string };
+  const item = dispatch('checklist.createItem', { checklistPublicId: checklist.publicId, title: 'done already' }) as { publicId: string };
+  dispatch('checklist.updateItem', { checklistItemPublicId: item.publicId, completed: true });
+  dispatch('card.addComment', { cardPublicId: card.publicId, comment: 'not copied' });
+  const copy = dispatch('card.duplicate', {
+    cardPublicId: card.publicId,
+    listPublicId: board.lists[1].publicId,
+    index: 0,
+    title: 'Copy',
+    copyLabels: true,
+    copyMembers: false,
+    copyChecklists: true,
+  }) as { publicId: string };
+  assert.notEqual(copy.publicId, card.publicId);
+  const detail = cardDetailSchema.parse(dispatch('card.byId', { cardPublicId: copy.publicId }));
+  assert.equal(detail.title, 'Copy');
+  assert.equal(detail.list.publicId, board.lists[1].publicId);
+  assert.deepEqual(detail.labels.map((l) => l.publicId), [label.publicId]);
+  assert.equal(detail.members.length, 0);
+  assert.equal(detail.checklists[0].items[0].completed, false);
+  assert.notEqual(detail.checklists[0].publicId, checklist.publicId);
+  assert.equal(detail.activities.some((a) => a.comment), false);
+  assert.equal(detail.activities.at(-1)?.type, 'card.created');
+  const original = cardDetailSchema.parse(dispatch('card.byId', { cardPublicId: card.publicId }));
+  assert.equal(original.members.length, 1);
+  assert.equal(original.checklists[0].items[0].completed, true);
+  const outside = readBoard(newBoard('Elsewhere').publicId);
+  assert.throws(
+    () =>
+      dispatch('card.duplicate', {
+        cardPublicId: card.publicId,
+        listPublicId: outside.lists[0].publicId,
+        copyLabels: false,
+        copyMembers: false,
+        copyChecklists: false,
+      }),
+    /outside its board/,
+  );
+  dispatch('card.addOrRemoveMember', { cardPublicId: card.publicId, workspaceMemberPublicId: 'localmember1' });
+  assert.equal(cardDetailSchema.parse(dispatch('card.byId', { cardPublicId: card.publicId })).members.length, 0);
+  assert.throws(
+    () => dispatch('card.addOrRemoveMember', { cardPublicId: card.publicId, workspaceMemberPublicId: 'nobody000000' }),
+    /NOT_FOUND/,
+  );
+});
+test('due date filters use the native ranges, OR selected keys and combine with list and label filters', () => {
+  const { publicId } = newBoard('Due');
+  const board = readBoard(publicId);
+  const list = board.lists[0].publicId;
+  const today = new Date();
+  today.setHours(12, 0, 0, 0);
+  const yesterday = new Date(today.getTime() - 86400000);
+  const inTwoDays = new Date(today.getTime() + 2 * 86400000);
+  const inTwentyDays = new Date(today.getTime() + 20 * 86400000);
+  const late = newCard(list, 'Late');
+  const now = newCard(list, 'Now');
+  const soon = newCard(list, 'Soon');
+  const later = newCard(list, 'Later');
+  const never = newCard(list, 'Never');
+  dispatch('card.update', { cardPublicId: late.publicId, dueDate: yesterday });
+  dispatch('card.update', { cardPublicId: now.publicId, dueDate: today });
+  dispatch('card.update', { cardPublicId: soon.publicId, dueDate: inTwoDays });
+  dispatch('card.update', { cardPublicId: later.publicId, dueDate: inTwentyDays });
+  const titles = (filters: string[], extra: Record<string, unknown> = {}) =>
+    boardDetailSchema
+      .parse(dispatch('board.byId', { boardPublicId: publicId, dueDateFilters: filters, ...extra }))
+      .lists.flatMap((l) => l.cards.map((c) => c.title));
+  assert.deepEqual(titles(['overdue']), ['Late']);
+  assert.deepEqual(titles(['today']), ['Now']);
+  assert.deepEqual(titles(['next-week']), ['Now', 'Soon']);
+  assert.deepEqual(titles(['next-month']), ['Later']);
+  assert.deepEqual(titles(['no-due-date']), ['Never']);
+  assert.deepEqual(titles(['overdue', 'no-due-date']), ['Late', 'Never']);
+  assert.deepEqual(titles([]), ['Late', 'Now', 'Soon', 'Later', 'Never']);
+  assert.deepEqual(titles(['overdue'], { lists: [board.lists[1].publicId] }), []);
+  assert.throws(() => dispatch('board.byId', { boardPublicId: publicId, dueDateFilters: ['someday'] }));
+});
+test('records saved before soft deletion restore with active defaults and a source board copies its snapshot', async () => {
+  const { restoreRecords } = await import('./model');
+  restoreRecords(null);
+  const { publicId } = newBoard('Legacy');
+  const board = readBoard(publicId);
+  const card = newCard(board.lists[0].publicId, 'Old');
+  const checklist = dispatch('checklist.create', { cardPublicId: card.publicId, name: 'Old list' }) as { publicId: string };
+  dispatch('checklist.createItem', { checklistPublicId: checklist.publicId, title: 'old item' });
+  dispatch('card.addComment', { cardPublicId: card.publicId, comment: 'old comment' });
+  // Earlier records only carried deletedAt on boards and comment bodies.
+  const legacy = JSON.parse(captureModel(), function (this: { comment?: unknown }, key, value) {
+    return key === 'deletedAt' && typeof this.comment !== 'string' ? undefined : value;
+  });
+  restoreModel(JSON.stringify(legacy));
+  const detail = cardDetailSchema.parse(dispatch('card.byId', { cardPublicId: card.publicId }));
+  assert.equal(detail.checklists[0].items[0].title, 'old item');
+  assert.equal(detail.activities.filter((a) => a.comment).length, 1);
+  assert.equal(readBoard(publicId).lists[0].cards[0].comments.length, 1);
+  const clone = dispatch('board.create', {
+    workspacePublicId,
+    name: 'Cloned',
+    lists: [],
+    labels: [],
+    sourceBoardPublicId: publicId,
+  }) as { publicId: string };
+  const cloned = readBoard(clone.publicId);
+  assert.deepEqual(cloned.lists.map((l) => l.name), ['Ideas', 'Making']);
+  assert.equal(cloned.lists[0].cards[0].title, 'Old');
+  assert.notEqual(cloned.lists[0].cards[0].publicId, card.publicId);
+  assert.equal(cloned.lists[0].cards[0].checklists[0].items[0].title, 'old item');
+  assert.equal(cloned.lists[0].cards[0].comments.length, 0);
+});

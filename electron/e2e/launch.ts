@@ -9,7 +9,7 @@ import { join } from 'node:path';
  * must NOT inherit ELECTRON_RUN_AS_NODE from the shell.
  */
 export async function launchApp(
-  opts: { env?: Record<string, string>; dir?: string } = {},
+  opts: { env?: Record<string, string>; dir?: string; sound?: boolean } = {},
 ): Promise<{ app: ElectronApplication; page: Page; dir: string }> {
   // Pass a previous run's `dir` to relaunch on the same garden (restart tests).
   const dir = opts.dir ?? mkdtempSync(join(tmpdir(), 'crux-e2e-'));
@@ -19,6 +19,9 @@ export async function launchApp(
   }
   env.CRUX_USER_DATA = join(dir, 'userData');
   env.CRUX_GARDEN_ROOT = join(dir, 'garden');
+  // Silent by default: the soundscape and cues are distracting while suites run.
+  // Tests about sound pass `sound: true`.
+  env.CRUX_SILENT = opts.sound ? '0' : '1';
   Object.assign(env, opts.env);
 
   // Ubuntu runners (24.04+) restrict unprivileged user namespaces, so Chromium's

@@ -58,12 +58,6 @@ const MENU_ITEMS: {
     requiresEdit: true,
   },
   {
-    action: "copyLink",
-    label: t`Copy link to card`,
-    icon: <HiLink className="h-4 w-4 shrink-0" />,
-    requiresEdit: false,
-  },
-  {
     action: "duplicate",
     label: t`Duplicate card`,
     icon: <HiOutlineDocumentDuplicate className="h-4 w-4 shrink-0" />,

@@ -1,5 +1,4 @@
-import { Dialog, Transition } from "@headlessui/react";
-import { Fragment } from "react";
+import { Dialog } from "@headlessui/react";
 
 import { useModal } from "~/providers/modal";
 
@@ -42,46 +41,28 @@ const Modal: React.FC<Props> = ({
     lg: "mt-[50vh]",
   };
 
+  // Local adaptation: mutations resolve instantly, so a modal can be closed while
+  // Headless UI's entrance transition is still running; that leaves the dialog
+  // stuck open. Mount and unmount the dialog directly instead of transitioning.
+  if (!shouldShow) return null;
   return (
-    <Transition.Root show={shouldShow} as={Fragment}>
-      <Dialog
-        as="div"
-        className="relative z-50"
-        onClose={shouldCloseOnClickOutside ? closeModal : () => null}
-      >
-        <Transition.Child
-          as={Fragment}
-          enter="ease-out duration-300"
-          enterFrom="opacity-0"
-          enterTo="opacity-100"
-          leave="ease-in duration-200"
-          leaveFrom="opacity-100"
-          leaveTo="opacity-0"
-        >
-          <div className="fixed inset-0 bg-light-50 bg-opacity-40 transition-opacity dark:bg-dark-50 dark:bg-opacity-40" />
-        </Transition.Child>
-
-        <div className="fixed inset-0 z-50 w-screen overflow-y-auto">
-          <div className={`flex min-h-full justify-center p-4 text-center sm:p-0 ${centered ? "items-center" : "items-start sm:items-start"}`}>
-            <Transition.Child
-              as={Fragment}
-              enter="ease-out duration-300"
-              enterFrom="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
-              enterTo="opacity-100 translate-y-0 sm:scale-100"
-              leave="ease-in duration-200"
-              leaveFrom="opacity-100 translate-y-0 sm:scale-100"
-              leaveTo="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
-            >
-              <Dialog.Panel
-                className={`relative ${centered ? "" : positionFromTopMap[positionFromTop]} w-full transform rounded-lg border border-light-600 bg-white/90 text-left shadow-3xl-light backdrop-blur-[6px] transition-all dark:border-dark-600 dark:bg-dark-100/90 dark:shadow-3xl-dark ${modalSizeMap[modalSize]}`}
-              >
-                {children}
-              </Dialog.Panel>
-            </Transition.Child>
-          </div>
+    <Dialog
+      as="div"
+      className="relative z-50"
+      open
+      onClose={shouldCloseOnClickOutside ? closeModal : () => null}
+    >
+      <div className="fixed inset-0 bg-light-50 bg-opacity-40 dark:bg-dark-50 dark:bg-opacity-40" />
+      <div className="fixed inset-0 z-50 w-screen overflow-y-auto">
+        <div className={`flex min-h-full justify-center p-4 text-center sm:p-0 ${centered ? "items-center" : "items-start sm:items-start"}`}>
+          <Dialog.Panel
+            className={`relative ${centered ? "" : positionFromTopMap[positionFromTop]} w-full transform rounded-lg border border-light-600 bg-white/90 text-left shadow-3xl-light backdrop-blur-[6px] dark:border-dark-600 dark:bg-dark-100/90 dark:shadow-3xl-dark ${modalSizeMap[modalSize]}`}
+          >
+            {children}
+          </Dialog.Panel>
         </div>
-      </Dialog>
-    </Transition.Root>
+      </div>
+    </Dialog>
   );
 };
 

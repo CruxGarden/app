@@ -243,6 +243,16 @@ const TEMPLATES: Template[] = [
     desktopOnly: true,
   },
   {
+    id: 'kan-app',
+    label: 'Kan',
+    description: 'Productivity · plan work on kanban boards with Kan',
+    defaultTitle: 'Launch board',
+    icon: <LayoutIcon />,
+    thumb: <BlankThumb />,
+    kind: 'webapp',
+    desktopOnly: true,
+  },
+  {
     id: 'opencut-app',
     label: 'OpenCut',
     description: 'Creative · edit video, audio and titles with OpenCut Classic',

@@ -53,9 +53,7 @@ import { MoveBoardForm } from "./components/MoveBoardForm";
 import { NewCardForm } from "./components/NewCardForm";
 import { NewListForm } from "./components/NewListForm";
 import { NewTemplateForm } from "./components/NewTemplateForm";
-import UpdateBoardSlugButton from "./components/UpdateBoardSlugButton";
 import { UpdateBoardSlugForm } from "./components/UpdateBoardSlugForm";
-import VisibilityButton from "./components/VisibilityButton";
 
 type PublicListId = string;
 
@@ -590,23 +588,6 @@ export default function BoardPage({ isTemplate }: { isTemplate?: boolean }) {
             )}
             {!isTemplate && (
               <>
-                <UpdateBoardSlugButton
-                  handleOnClick={() => openModal("UPDATE_BOARD_SLUG")}
-                  isLoading={isLoading}
-                  workspaceSlug={workspace.slug ?? ""}
-                  boardSlug={boardData?.slug ?? ""}
-                  boardPublicId={boardId ?? ""}
-                  visibility={boardData?.visibility ?? "private"}
-                  canEdit={canEditBoard}
-                />
-                <VisibilityButton
-                  visibility={boardData?.visibility ?? "private"}
-                  boardPublicId={boardId ?? ""}
-                  boardSlug={boardData?.slug ?? ""}
-                  queryParams={queryParams}
-                  isLoading={!boardData}
-                  isAdmin={workspace.role === "admin"}
-                />
                 {boardData && (
                   <Filters
                     labels={boardData.labels}

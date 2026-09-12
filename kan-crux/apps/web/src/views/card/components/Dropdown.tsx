@@ -2,7 +2,6 @@ import { t } from "@lingui/core/macro";
 import {
   HiEllipsisHorizontal,
   HiHashtag,
-  HiLink,
   HiOutlineCheckCircle,
   HiOutlineDocumentDuplicate,
   HiOutlineTrash,
@@ -60,29 +59,6 @@ export default function CardDropdown({
     },
   });
 
-  const handleCopyCardLink = async () => {
-    const path =
-      isTemplate && boardPublicId
-        ? `/templates/${boardPublicId}/cards/${cardPublicId}`
-        : `/cards/${cardPublicId}`;
-    const url = `${window.location.origin}${path}`;
-    try {
-      await navigator.clipboard.writeText(url);
-      showPopup({
-        header: t`Link copied`,
-        icon: "success",
-        message: t`Card URL copied to clipboard`,
-      });
-    } catch (error) {
-      console.error(error);
-      showPopup({
-        header: t`Unable to copy link`,
-        icon: "error",
-        message: t`Please try again.`,
-      });
-    }
-  };
-
   const handleCopyTicketId = async () => {
     if (!ticketNumber) return;
     try {
@@ -103,11 +79,6 @@ export default function CardDropdown({
   };
 
   const items = [
-    {
-      label: t`Copy card link`,
-      action: handleCopyCardLink,
-      icon: <HiLink className="h-[16px] w-[16px] text-dark-900" />,
-    },
     ...(ticketNumber
       ? [
           {

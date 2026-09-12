@@ -65,7 +65,7 @@ export function validateProject(doc) {
 				!object(value) ||
 				typeof value.route !== "string" ||
 				value.route.length > 2000 ||
-				(!/^#\/(boards(?:\/[\w-]{12})?|cards\/[\w-]{12})(?:\?[^#]*)?$/.test(value.route) &&
+				(!/^#\/(boards(?:\/[\w-]{12})?|cards\/[\w-]{12}|templates(?:\/[\w-]{12}(?:\/cards\/[\w-]{12})?)?)(?:\?[^#]*)?$/.test(value.route) &&
 					value.route !== "") ||
 				!object(value.preferences) ||
                 value.version !== 1 || !Number.isSafeInteger(value.cardNumber) || value.cardNumber < 0 ||

@@ -1,9 +1,7 @@
 import { useRouter } from "next/router";
 import { t } from "@lingui/core/macro";
 import {
-  HiArrowRightOnRectangle,
   HiEllipsisHorizontal,
-  HiLink,
   HiOutlineDocumentDuplicate,
   HiOutlineStar,
   HiOutlineTrash,
@@ -103,15 +101,6 @@ export default function BoardDropdown({
           },
         ]
       : []),
-    ...(!isTemplate && canEditBoard
-      ? [
-          {
-            label: t`Edit board URL`,
-            action: () => openModal("UPDATE_BOARD_SLUG"),
-            icon: <HiLink className="h-[16px] w-[16px] text-dark-900" />,
-          },
-        ]
-      : []),
     ...(!isTemplate && canArchiveBoard
       ? [
           {
@@ -119,17 +108,6 @@ export default function BoardDropdown({
             action: handleArchiveOrUnarchive,
             icon: (
               <IoArchiveOutline className="h-[16px] w-[16px] text-dark-900" />
-            ),
-          },
-        ]
-      : []),
-    ...(!isTemplate && canEditBoard
-      ? [
-          {
-            label: t`Move to workspace`,
-            action: () => openModal("MOVE_BOARD"),
-            icon: (
-              <HiArrowRightOnRectangle className="h-[16px] w-[16px] text-dark-900" />
             ),
           },
         ]
