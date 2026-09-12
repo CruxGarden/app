@@ -4,6 +4,7 @@ import type {
   CreateArtifactInput,
   UploadArtifactInput,
   UpdateArtifactInput,
+  RegisterArtifactInput,
 } from '../types';
 import { NotFoundError } from '../types';
 import * as cruxes from '@/api/cruxes';
@@ -101,6 +102,14 @@ export class ApiArtifactService implements IArtifactService {
       );
     }
     return cruxes.downloadArtifact(cached.resourceId, id);
+  }
+
+  async register(_input: RegisterArtifactInput): Promise<Artifact> {
+    throw new Error('register is a local-only operation');
+  }
+
+  async registerMany(_inputs: RegisterArtifactInput[]): Promise<number> {
+    throw new Error('registerMany is a local-only operation');
   }
 
   async computeSnapshotFingerprint(_resourceId: string): Promise<string> {

@@ -18,9 +18,31 @@ export const AUDIOMASS_TOOLS: AppToolDefinition[] = [
     },
     writes: ['data/project.json'],
   },
+  {
+    name: 'save_audiomass_output',
+    description:
+      'Save the current waveform as a named WAV output of this Crux so other members of its Cruxspaces (for example a game) can use it. Saves the project first.',
+    input_schema: {
+      type: 'object',
+      properties: { name: { type: 'string', minLength: 1, maxLength: 120 } },
+      required: ['name'],
+      additionalProperties: false,
+    },
+    writes: ['data/project.json', 'exports/'],
+  },
 ];
 export function audiomassCommand(name: string, input: Record<string, unknown>) {
   if (name === 'inspect_audiomass' && !Object.keys(input).length) return { op: 'inspect' };
+  if (name === 'save_audiomass_output') {
+    if (
+      Object.keys(input).length !== 1 ||
+      typeof input.name !== 'string' ||
+      !input.name.trim() ||
+      input.name.length > 120
+    )
+      throw new Error('Name the audio output using up to 120 characters.');
+    return { op: 'save-audio', label: input.name.trim() };
+  }
   if (
     name !== 'rename_audiomass_track' ||
     typeof input.id !== 'string' ||

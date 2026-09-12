@@ -1,6 +1,7 @@
 import { collectChainMessages } from './growth';
 import type { Crux } from '@/api/types';
 import { getServices } from './index';
+import { isEmbeddedApp } from './embedded-app';
 import { getSqliteClient } from './sqlite/client';
 import { buildInsert } from './sqlite/helpers';
 import { createProjectFolder } from './project-folder';
@@ -324,7 +325,19 @@ async function verifyTaskReviewCore(id: string): Promise<TaskReview> {
   if (taskManifestKey(before) !== taskManifestKey(review.manifest))
     throw new Error('The candidate changed. Prepare a new review.');
   let log = 'Static Artifacts: no build step. Inspect the combined preview before merging.';
-  if (before['package.json']) {
+  // An embedded app ships its runtime prebuilt; its package.json rebuilds the
+  // editor from source. Only a Task that changed app sources needs that build.
+  // Project data (records, imported assets, outputs, notebooks) does not.
+  const changed = new Set<string>();
+  for (const path of new Set([...Object.keys(review.main), ...Object.keys(review.manifest)]))
+    if (review.main[path]?.fingerprint !== review.manifest[path]?.fingerprint) changed.add(path);
+  const contentOnly = [...changed].every((path) =>
+    /^(data|assets|exports|cruxspace-assets|notebook|mockups|music)\//.test(path),
+  );
+  const owner = await getServices().crux.findById(review.cruxId);
+  if (before['package.json'] && isEmbeddedApp(owner) && contentOnly) {
+    log = `Embedded app: ${changed.size} project file(s) changed and no app source; the prebuilt runtime stands. Inspect the combined preview before merging.`;
+  } else if (before['package.json']) {
     const { checkSiteBuild } = await import('./site');
     const result = await checkSiteBuild(review.candidateId);
     if (!result?.ok)

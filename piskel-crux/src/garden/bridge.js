@@ -20,10 +20,10 @@ export async function startGarden(app) {
   const bar = document.createElement('div');
   bar.id = 'garden-project';
   bar.innerHTML =
-    '<span role="status">Opening Garden project…</span><button>Save project</button><button>Reload saved project</button>';
+    '<span role="status">Opening Garden project…</span><button>Save project</button><button>Reload saved project</button><input aria-label="Output name" value="Sprite sheet"><button>Save sheet to Cruxspace</button>';
   const style = document.createElement('style');
   style.textContent =
-    '#garden-project{position:fixed;bottom:0;left:0;right:0;height:32px;z-index:10000;display:flex;gap:12px;align-items:center;padding:0 10px;background:#24282c;color:#fff;font:12px system-ui}#garden-project span{flex:1}#garden-project button{padding:3px 8px;color:#fff;background:#42494f;border:1px solid #697078;border-radius:3px}body{height:calc(100dvh - 34px)!important}#main-wrapper{bottom:34px!important}.cheatsheet-link{bottom:44px!important}';
+    '#garden-project{position:fixed;bottom:0;left:0;right:0;height:32px;z-index:10000;display:flex;gap:12px;align-items:center;padding:0 10px;background:#24282c;color:#fff;font:12px system-ui}#garden-project span{flex:1}#garden-project button{padding:3px 8px;color:#fff;background:#42494f;border:1px solid #697078;border-radius:3px}#garden-project input{width:120px;padding:3px 6px;color:#fff;background:#151515;border:1px solid #697078;border-radius:3px;font:11px system-ui}body{height:calc(100dvh - 34px)!important}#main-wrapper{bottom:34px!important}.cheatsheet-link{bottom:44px!important}';
   document.head.append(style);
   document.body.append(bar);
   const workspace = document.querySelector('#main-wrapper');
@@ -176,9 +176,29 @@ export async function startGarden(app) {
     frames: app.piskelController.getFrameCount(),
     layers: app.piskelController.getLayers().map((layer) => layer.getName()),
   });
+  /** The native PNG spritesheet (all frames, best-fit columns) as an output the Cruxspace can use. */
+  async function saveSheet(label) {
+    if (hydrating) throw new Error('Wait for the sprite editor to open.');
+    const name = String(label ?? '').trim();
+    if (!name || name.length > 120) throw new Error('Name the sheet using up to 120 characters.');
+    await save();
+    const controller = app.piskelController;
+    const frames = controller.getFrameCount();
+    const columns = window.pskl.utils.Math.minmax(
+      Math.round(Math.sqrt(frames / (controller.getWidth() / controller.getHeight()))),
+      1,
+      frames,
+    );
+    const rows = Math.ceil(frames / columns);
+    const canvas = new window.pskl.rendering.PiskelRenderer(controller).renderAsCanvas(columns, rows);
+    const output = await call({ op: 'save-output', label: name, content: canvas.toDataURL('image/png') });
+    show('Sheet saved to Cruxspace');
+    return { ...output, frames, columns, rows, width: canvas.width, height: canvas.height };
+  }
   async function command(value) {
     if (hydrating) throw new Error('Wait for the sprite editor to open.');
     if (value.op === 'inspect') return inspect();
+    if (value.op === 'save-sheet') return saveSheet(value.label);
     if (value.op !== 'fps' || !Number.isInteger(value.fps) || value.fps < 1 || value.fps > 24)
       throw new Error('Choose an animation speed from 1 to 24 frames per second.');
     await save();
@@ -219,6 +239,9 @@ export async function startGarden(app) {
   bar.querySelectorAll('button')[1].onclick = () => {
     if (revision === saved || confirm('Discard the unsaved draft and reload the saved project?'))
       location.reload();
+  };
+  bar.querySelectorAll('button')[2].onclick = () => {
+    saveSheet(bar.querySelector('input').value).catch((error) => show(error.message));
   };
   try {
     const loaded = await call({ op: 'read', path: 'project.json' });

@@ -207,6 +207,10 @@ export async function startGarden() {
       failed(error) {
         show(error.message);
       },
+      // Ordinary files of this Crux (for example a sprite sheet copied in from a Cruxspace).
+      readFile: (path) => call({ op: 'read-file', path }),
+      // Advertise a finished export (the playable web game) to the Crux's Cruxspaces.
+      saveOutput: (label, bytes, mimeType) => call({ op: 'save-output', label, bytes, mimeType }),
       connect(api) {
         app = api;
         cover.remove();

@@ -220,6 +220,40 @@ export class ProjectFolders {
     }
   }
 
+  /**
+   * Write many files straight from the Blob Store (content-addressed files under
+   * `blobDir`) into a project folder: one IPC call instead of one per file, and
+   * no bytes crossing the renderer. Used to prepare Task Working Copies.
+   */
+  materialize(
+    folder: string,
+    blobDir: string,
+    entries: { path: string; fingerprint: string; mode?: number }[],
+  ): number {
+    if (!Array.isArray(entries) || entries.length > 20000)
+      throw new Error('materialize: choose up to 20,000 entries per call');
+    let written = 0;
+    for (const entry of entries) {
+      if (!/^[a-f0-9]{64}$/.test(entry.fingerprint))
+        throw new Error(`materialize: invalid fingerprint for ${entry.path}`);
+      const source = path.join(blobDir, entry.fingerprint);
+      if (!fs.existsSync(source)) throw new Error(`materialize: missing blob for ${entry.path}`);
+      const target = this.resolveInside(folder, entry.path);
+      this.assertNoSymlinks(folder, entry.path);
+      fs.mkdirSync(path.dirname(target), { recursive: true });
+      const temporary = `${target}.crux-write-${require('crypto').randomUUID()}`;
+      try {
+        fs.copyFileSync(source, temporary);
+        fs.chmodSync(temporary, (entry.mode ?? 0o644) & 0o777);
+        fs.renameSync(temporary, target);
+      } finally {
+        if (fs.existsSync(temporary)) fs.unlinkSync(temporary);
+      }
+      written++;
+    }
+    return written;
+  }
+
   setMode(folder: string, relPath: string, mode: number): void {
     this.assertNoSymlinks(folder, relPath);
     fs.chmodSync(this.resolveInside(folder, relPath), mode & 0o777);

@@ -9,3 +9,8 @@ Embedded beforeunload warnings defer to Garden’s flush and conflict handling. 
 Build with Node 22.22+ and npm ci --ignore-scripts / npm run build. Source, lockfile and dest/prod runtime are packaged with each Crux. Browser preferences and separate local sprite libraries are not part of the portable project. Limits: 100 layers, 2,000 frames per layer, 4,096-pixel dimensions and 64 million total layer pixels; native export/canvas limits may be lower. Original encoded imported files are represented by editable native pixels, not separately retained.
 
 Runtime CSS is packaged as raw text so Garden’s build cannot redirect icon/font URLs outside the Crux. This also applies to rebuilt Cruxes; previously created projects can rebuild from their packaged source to recover native stylesheet URLs.
+
+
+## Cruxspace outputs (2026-09-12)
+
+The Garden bar gained “Save sheet to Cruxspace”: the whole animation rendered by the native `PiskelRenderer` into one PNG sheet (best-fit columns) and saved as a named output of the Crux, so other members of its Cruxspaces can use it. The `save_piskel_sheet` App Tool does the same for the collaborator. See `GAME-CRUXSPACE-PLAN.md` at the repository root.

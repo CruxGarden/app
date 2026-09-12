@@ -7,3 +7,8 @@ Open src/index.html to run the app. There is no build step. The native waveform 
 The native browser-only named draft library is not the Garden project. Export drafts you want to keep or open them as the active project. Garden preserves decoded samples; it does not separately retain original compressed input files or their tags. Native .amss session and audio exports remain available. Limits: 128 tracks, 2000 clips, 256 MB of distinct decoded channel bytes. The waveform currently being edited is saved separately from multitrack clips; finish a clip edit with the native Apply control to commit it into the arrangement.
 
 Changes: direct native multitrack restore/rename seam; Garden save/restore and scoped agent commands; runtime dependency folder renamed from dist to runtime so it enters Growth. Embedded close is managed by Garden. No upstream backend replica. Keep LICENSE and THIRD_PARTY_NOTICES.md with this source; bundled codecs retain their own licenses. Public editor hosting is not enabled by this integration.
+
+
+## Cruxspace outputs (2026-09-12)
+
+The Garden bar gained “Save audio to Cruxspace”: the current waveform encoded as 16-bit PCM WAV in the bridge and saved as a named output of the Crux. The `save_audiomass_output` App Tool does the same for the collaborator. See `GAME-CRUXSPACE-PLAN.md` at the repository root.

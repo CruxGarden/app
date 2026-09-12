@@ -20,10 +20,10 @@ export async function startGarden(app) {
   const bar = document.createElement('div');
   bar.id = 'garden-project';
   bar.innerHTML =
-    '<span role="status">Opening Garden project…</span><button>Save project</button><button>Reload saved project</button>';
+    '<span role="status">Opening Garden project…</span><button>Save project</button><button>Reload saved project</button><input aria-label="Output name" value="Audio clip"><button>Save audio to Cruxspace</button>';
   const style = document.createElement('style');
   style.textContent =
-    '#garden-project{position:fixed;bottom:0;left:0;right:0;height:32px;z-index:10000;display:flex;gap:12px;align-items:center;padding:0 10px;background:#24282c;color:#fff;font:12px system-ui}#garden-project span{flex:1}#garden-project button{padding:3px 8px;color:#fff;background:#42494f;border:1px solid #697078;border-radius:3px}#app{height:calc(100% - 34px)!important}';
+    '#garden-project{position:fixed;bottom:0;left:0;right:0;height:32px;z-index:10000;display:flex;gap:12px;align-items:center;padding:0 10px;background:#24282c;color:#fff;font:12px system-ui}#garden-project span{flex:1}#garden-project button{padding:3px 8px;color:#fff;background:#42494f;border:1px solid #697078;border-radius:3px}#garden-project input{width:120px;padding:3px 6px;color:#fff;background:#151515;border:1px solid #697078;border-radius:3px;font:11px system-ui}#app{height:calc(100% - 34px)!important}';
   document.head.append(style);
   document.body.append(bar);
   const workspace = document.querySelector('#app');
@@ -201,10 +201,49 @@ export async function startGarden(app) {
       .getState()
       .clips.map(({ buffer, ...clip }) => ({ ...clip, seconds: buffer.duration })),
   });
+  /** The current waveform as 16-bit PCM WAV, saved as an output of this Crux for its Cruxspaces. */
+  async function saveAudio(label) {
+    const name = String(label ?? '').trim();
+    if (!name || name.length > 120) throw new Error('Name the audio using up to 120 characters.');
+    if (!app.engine.is_ready) throw new Error('Load or record audio first.');
+    await save();
+    const buffer = app.engine.wavesurfer.backend.buffer;
+    const channels = buffer.numberOfChannels;
+    const frames = buffer.length;
+    const bytes = new ArrayBuffer(44 + frames * channels * 2);
+    const view = new DataView(bytes);
+    const ascii = (offset, value) => {
+      for (let i = 0; i < value.length; i++) view.setUint8(offset + i, value.charCodeAt(i));
+    };
+    ascii(0, 'RIFF');
+    view.setUint32(4, 36 + frames * channels * 2, true);
+    ascii(8, 'WAVE');
+    ascii(12, 'fmt ');
+    view.setUint32(16, 16, true);
+    view.setUint16(20, 1, true);
+    view.setUint16(22, channels, true);
+    view.setUint32(24, buffer.sampleRate, true);
+    view.setUint32(28, buffer.sampleRate * channels * 2, true);
+    view.setUint16(32, channels * 2, true);
+    view.setUint16(34, 16, true);
+    ascii(36, 'data');
+    view.setUint32(40, frames * channels * 2, true);
+    const data = Array.from({ length: channels }, (_, i) => buffer.getChannelData(i));
+    let offset = 44;
+    for (let frame = 0; frame < frames; frame++)
+      for (let channel = 0; channel < channels; channel++, offset += 2) {
+        const sample = Math.max(-1, Math.min(1, data[channel][frame]));
+        view.setInt16(offset, sample < 0 ? sample * 0x8000 : sample * 0x7fff, true);
+      }
+    const output = await call({ op: 'save-output', label: name, bytes, mimeType: 'audio/wav' });
+    show('Audio saved to Cruxspace');
+    return { ...output, seconds: buffer.duration, channels, sampleRate: buffer.sampleRate };
+  }
   async function command(value) {
     await settle();
     if (hydrating) throw new Error('Wait for the project to open.');
     if (value.op === 'inspect') return inspect();
+    if (value.op === 'save-audio') return saveAudio(value.label);
     if (
       value.op !== 'rename-track' ||
       typeof value.id !== 'string' ||
@@ -251,6 +290,9 @@ export async function startGarden(app) {
   bar.querySelectorAll('button')[1].onclick = () => {
     if (revision === saved || confirm('Discard the unsaved draft and reload the saved project?'))
       location.reload();
+  };
+  bar.querySelectorAll('button')[2].onclick = () => {
+    saveAudio(bar.querySelector('input').value).catch((error) => show(error.message));
   };
   try {
     const loaded = await call({ op: 'read', path: 'project.json' });

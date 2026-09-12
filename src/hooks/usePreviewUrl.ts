@@ -40,6 +40,9 @@ function useDesktopPreviewUrl(
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const artifactKey = useMemo(() => appPreviewKey(crux, artifacts), [crux, artifacts]);
+  // Snapshot screenshots load the crux's entry (an embedded app lives at
+  // runtime/index.html; the server root would only answer "Not found").
+  const entryFile = String(crux?.meta?.settings?.entryFile ?? '').replace(/^\/+/, '');
 
   // Server lifecycle — one server per crux, shared by every editor tab
   // (leases; see lib/lease.ts) so tab switches don't restart it.
@@ -51,7 +54,7 @@ function useDesktopPreviewUrl(
       .then((serverUrl) => {
         if (cancelled || !serverUrl) return;
         setBase(serverUrl);
-        setActivePreview(cruxId, `${serverUrl}/`); // front page — snapshot screenshots
+        setActivePreview(cruxId, `${serverUrl}/${entryFile && entryFile !== 'index.html' ? entryFile : ''}`);
       })
       .catch((err) => console.error('[preview] failed to start server:', err));
 
@@ -63,7 +66,7 @@ function useDesktopPreviewUrl(
       void stopPreviewServer(cruxId);
       if (previewServerLeases.count(cruxId) === 0) setActivePreview(cruxId, null);
     };
-  }, [cruxId, enabled]);
+  }, [cruxId, enabled, entryFile]);
 
   // Reload the iframe when content changes (editor writes land on disk via
   // write-through; external edits announce via ingestion → artifacts refresh)

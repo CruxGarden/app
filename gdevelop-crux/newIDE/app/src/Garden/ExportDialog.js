@@ -3,10 +3,20 @@ import * as React from 'react';
 import Dialog from '../UI/Dialog';
 import RaisedButton from '../UI/RaisedButton';
 import { browserHTML5ExportPipeline as pipeline } from '../ExportAndShare/BrowserExporters/BrowserHTML5Export';
+import { exportWebGame } from './Project';
 export default function ExportDialog({ project, onClose }) {
   const [status, setStatus] = React.useState('Export a self-contained web game ZIP. This is a playable build; use Garden Export complete Crux to carry editable work and Growth.');
   const [busy, setBusy] = React.useState(false);
   return <Dialog open title="Export web game" onRequestClose={() => { if (!busy) onClose(); }} actions={[
+    <RaisedButton key="cruxspace" label={busy ? 'Exporting…' : 'Save web game to Cruxspace'} disabled={busy} onClick={async () => {
+      setBusy(true);
+      try {
+        setStatus('Building the game with GDevelop…');
+        const saved = await exportWebGame('Web game');
+        setStatus(`Saved the web game to this Crux (${Math.round(saved.size / 1024)} KB). Members of its Cruxspaces can unpack it into a website.`);
+      } catch (error) { setStatus('Export failed: ' + error.message); }
+      finally { setBusy(false); }
+    }} />,
     <RaisedButton key="export" label={busy ? 'Exporting…' : 'Download web game'} disabled={busy} onClick={async () => {
       setBusy(true);
       const context = { project, updateStepProgress: () => {} };

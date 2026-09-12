@@ -63,6 +63,45 @@ function isProbablyText(bytes: Uint8Array, mime: string): boolean {
   return true;
 }
 
+// ── Self-write expectations ─────────────────────────────────────────────────
+//
+// When the app projects many files into a folder itself (a Task Working Copy
+// materialized from the Blob Store), the watcher still reports every file.
+// Re-reading and re-hashing thousands of files the app just wrote is what made
+// starting a Task on a 400 MB native app take minutes; recording the expected
+// fingerprints lets those events pass without touching disk.
+
+const expectations = new Map<string, Map<string, { fingerprint: string; at: number }>>();
+const EXPECTATION_TTL = 10 * 60_000;
+
+/** Declare files the app is about to write with known content, so ingestion skips their echo. */
+export function expectProjectWrites(
+  folder: string,
+  entries: { relPath: string; fingerprint: string }[],
+): void {
+  const map = expectations.get(folder) ?? new Map();
+  const at = Date.now();
+  for (const entry of entries) map.set(entry.relPath, { fingerprint: entry.fingerprint, at });
+  expectations.set(folder, map);
+}
+
+/** True while the app has declared files under this folder (their directories are not external). */
+function hasExpectedUnder(folder: string, prefix: string): boolean {
+  const map = expectations.get(folder);
+  if (!map) return false;
+  for (const relPath of map.keys()) if (relPath.startsWith(prefix)) return true;
+  return false;
+}
+
+function takeExpectation(folder: string, relPath: string): string | null {
+  const map = expectations.get(folder);
+  const entry = map?.get(relPath);
+  if (!map || !entry) return null;
+  map.delete(relPath);
+  if (!map.size) expectations.delete(folder);
+  return Date.now() - entry.at <= EXPECTATION_TTL ? entry.fingerprint : null;
+}
+
 // ── Serial queue ────────────────────────────────────────────────────────────
 
 let queueTail: Promise<void> = Promise.resolve();
@@ -122,6 +161,7 @@ async function processBatch(batch: ChangeBatch): Promise<void> {
         // created as a side effect of file writes (or with contents arriving
         // in this batch) must not get `.keep` noise.
         const prefix = event.relPath + '/';
+        if (hasExpectedUnder(batch.folder, prefix)) continue;
         const hasBatchFiles = batch.events.some(
           (e) => e.type === 'write' && e.relPath.startsWith(prefix),
         );
@@ -163,6 +203,15 @@ async function processBatch(batch: ChangeBatch): Promise<void> {
       }
 
       // write
+      // The app wrote this file itself with known content and indexed it: no
+      // read, no hash, no database round-trip (thousands of those blocked the
+      // embedded app's first read behind the queue). An external edit that
+      // lands in the same batch produces its own later event.
+      if (takeExpectation(batch.folder, event.relPath)) continue;
+      const existing = await db.get<{ fingerprint: string | null }>(
+        "SELECT fingerprint FROM artifacts WHERE resource_id = ? AND path = ? AND type = 'artifact'",
+        [cruxId, event.relPath],
+      );
       let bytes: Uint8Array;
       try {
         bytes = await api.readFile(batch.folder, event.relPath);
@@ -172,10 +221,6 @@ async function processBatch(batch: ChangeBatch): Promise<void> {
 
       // Echo/no-op guard: content the store already has is not a change
       const fingerprint = await hashContent(bytes);
-      const existing = await db.get<{ fingerprint: string | null }>(
-        "SELECT fingerprint FROM artifacts WHERE resource_id = ? AND path = ? AND type = 'artifact'",
-        [cruxId, event.relPath],
-      );
       if (existing?.fingerprint === fingerprint) continue;
 
       const mime = guessMimeType(event.relPath);

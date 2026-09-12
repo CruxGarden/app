@@ -52,6 +52,41 @@ async function fixture() {
   return { main, a, b };
 }
 describe('parallel tasks', () => {
+  it('checks a content-only task on an embedded app without rebuilding its editor', async () => {
+    const { artifact, crux } = getServices();
+    const main = await crux.create({
+      title: 'Board',
+      kind: 'webapp',
+      type: 'workspace',
+      meta: { template: 'kan-app', settings: { entryFile: 'runtime/index.html' } },
+    });
+    await artifact.create({
+      resourceId: main.id,
+      content: JSON.stringify({ name: 'kan', scripts: { build: 'exit 1' } }),
+      meta: { path: 'package.json' },
+    });
+    await artifact.create({
+      resourceId: main.id,
+      content: JSON.stringify({ version: 1, app: 'kan', project: null }),
+      meta: { path: 'data/project.json' },
+    });
+    const task = await createTask(main.id, 'Plan the room');
+    await artifact.create({
+      resourceId: task.id,
+      content: JSON.stringify({ version: 1, app: 'kan', project: { state: { version: 1 } } }),
+      meta: { path: 'data/project.json' },
+    });
+    const review = await prepareTaskReview(task.id);
+    const verified = await verifyTaskReview(review.id);
+    expect(verified.verificationLog).toContain('prebuilt runtime stands');
+    expect(verified.verifiedKey).toBeTruthy();
+    // A source change still asks for the real build, which this environment cannot run.
+    const source = await createTask(main.id, 'Change the editor');
+    await artifact.create({ resourceId: source.id, content: 'export {}', meta: { path: 'src/app.ts' } });
+    const sourceReview = await prepareTaskReview(source.id);
+    await expect(verifyTaskReview(sourceReview.id)).rejects.toThrow(/Desktop Mode|build/);
+  });
+
   it('keeps files, Store, sessions and workspace identity independent without making another Crux row', async () => {
     const { main, a, b } = await fixture();
     await write(a.id, 'A');

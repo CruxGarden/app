@@ -112,6 +112,11 @@ export interface ProjectBridge {
   ensureFolder(folder: string): Promise<string>;
   folderExists(folder: string): Promise<boolean>;
   writeFile(folder: string, relPath: string, data: Uint8Array): Promise<void>;
+  /** Copy many Blob Store files into the folder in one call (Task Working Copies). Absent in older shells. */
+  materialize?(
+    folder: string,
+    entries: { path: string; fingerprint: string; mode?: number }[],
+  ): Promise<number>;
   readFile(folder: string, relPath: string): Promise<Uint8Array>;
   deleteFile(folder: string, relPath: string): Promise<void>;
   renameFile(folder: string, fromRel: string, toRel: string): Promise<void>;

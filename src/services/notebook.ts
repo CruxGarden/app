@@ -58,25 +58,62 @@ export function notebookSession(workspace: StoreApi<CruxState>) {
       }
       if (native && request.op === 'native-read') return readNativeAsset(owner, request.path);
       if (request.op === 'save-output') {
-        if (
-          typeof request.content !== 'string' ||
-          request.content.length > 5_400_000 ||
-          typeof request.label !== 'string'
-        )
-          throw new Error('Choose an image output and a name.');
-        const match = request.content.match(
-          /^data:(image\/(?:png|jpeg|webp|gif));base64,([A-Za-z0-9+/=]+)$/,
-        );
-        if (!match) throw new Error('Use a PNG, JPEG, WebP or GIF output.');
-        const bytes = Uint8Array.from(atob(match[2]!), (c) => c.charCodeAt(0));
+        // An embedded app advertises a finished output: a data URL, or raw bytes with a type.
+        if (typeof request.label !== 'string') throw new Error('Name the output.');
+        let blob: Blob;
+        if (request.bytes instanceof ArrayBuffer) {
+          if (typeof request.mimeType !== 'string' || request.bytes.byteLength > 32_000_000)
+            throw new Error('Use a PNG, JPEG, WebP, GIF, WAV, MP3 or ZIP output up to 32 MB.');
+          blob = new Blob([request.bytes], { type: request.mimeType });
+        } else {
+          if (typeof request.content !== 'string' || request.content.length > 44_000_000)
+            throw new Error('Choose an output and a name.');
+          const match = request.content.match(
+            /^data:(image\/(?:png|jpeg|webp|gif)|audio\/(?:wav|x-wav|mpeg)|application\/zip);base64,([A-Za-z0-9+/=]+)$/,
+          );
+          if (!match) throw new Error('Use a PNG, JPEG, WebP, GIF, WAV, MP3 or ZIP output.');
+          blob = new Blob([Uint8Array.from(atob(match[2]!), (c) => c.charCodeAt(0))], {
+            type: match[1],
+          });
+        }
         const { saveCruxOutput } = await import('./cruxspace-assets');
-        const result = await saveCruxOutput(
-          owner,
-          new Blob([bytes], { type: match[1] }),
-          request.label,
-        );
+        const result = await saveCruxOutput(owner, blob, request.label);
         await workspace.getState().refreshArtifacts();
         return result;
+      }
+      if (native && request.op === 'read-file') {
+        // A native app may consume ordinary files of its own Crux (for example
+        // an image or sound copied in from a Cruxspace), never its record store.
+        const path = typeof request.path === 'string' ? request.path : '';
+        if (
+          path.length > 240 ||
+          path.split('/').some((p) => !p || p === '.' || p === '..' || p.startsWith('.')) ||
+          !/^[\w /.-]+$/.test(path) ||
+          path.startsWith('data/') ||
+          !/\.(png|jpe?g|gif|webp|wav|mp3|zip|json|svg)$/i.test(path)
+        )
+          throw new Error('Choose a relative image, sound, bundle or JSON file in this Crux.');
+        const disk = await diskFile(owner, path);
+        if (disk === null) throw new Error('This file no longer exists.');
+        let file = (await artifact.findByResource('crux', owner)).find((f) => pathOf(f) === path);
+        if (disk && (await hashContent(disk)) !== file?.fingerprint) {
+          await artifact.upload({
+            resourceId: owner,
+            blob: new Blob([disk as BlobPart], { type: guessMimeType(path) }),
+            meta: { path },
+            writeThrough: false,
+          });
+          file = (await artifact.findByResource('crux', owner)).find((f) => pathOf(f) === path);
+        }
+        if (!file) throw new Error('This file no longer exists.');
+        if ((file.size ?? 0) > 32_000_000)
+          throw new Error('This file is too large to use (32 MB).');
+        const blob = await artifact.downloadBlob(file.id);
+        return {
+          bytes: await blob.arrayBuffer(),
+          mimeType: blob.type || guessMimeType(path),
+          fingerprint: file.fingerprint,
+        };
       }
       if (request.op === 'import' && state.crux?.kind === 'notes') {
         await assertCopyWritable(owner);
