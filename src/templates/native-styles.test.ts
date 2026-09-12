@@ -7,6 +7,7 @@ for (const [id, root] of [
   ['ketcher-app', 'ketcher-crux'],
   ['twine-app', 'twine-crux'],
   ['blockbench-app', 'blockbench-crux'],
+  ['opencut-app', 'opencut-crux'],
   ['playcanvas-editor-app', 'playcanvas-editor-crux'],
   ['svgedit-app', 'svgedit-crux'],
   ['jupyterlite-app', 'jupyterlite-crux'],
