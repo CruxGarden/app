@@ -30,6 +30,7 @@ export const TOOL_INFO: Record<string, ToolInfo> = {
   'gephi-app': native('Gephi Lite', 'gephi/gephi-lite'),
   'ketcher-app': native('Ketcher', 'epam/ketcher'),
   'twine-app': native('Twine', 'klembot/twinejs'),
+  'playcanvas-editor-app': native('PlayCanvas Editor', 'playcanvas/editor'),
   'blockbench-app': native('Blockbench', 'JannisX11/blockbench'),
   'gdevelop-app': native('GDevelop', '4ian/GDevelop'),
   'svgedit-app': native('SVG-Edit', 'SVG-Edit/svgedit'),

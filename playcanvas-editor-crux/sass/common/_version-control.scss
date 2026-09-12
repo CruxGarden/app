@@ -1,0 +1,319 @@
+.pcui-overlay.version-control-overlay {
+    z-index: 9999; // just below the confirm picker
+    &.show-behind-picker {
+        z-index: 299; // just below project picker
+    }
+
+    > .pcui-overlay-content {
+        z-index: 0;
+        position: fixed;
+        width: 480px;
+        left: 50%;
+        top: 50%;
+        height: auto;
+        border: 1px solid $border-primary;
+        border-radius: 6px;
+        background: $bcg-primary;
+        overflow: hidden;
+        transform: translate(-50%, -50%);
+        white-space: normal;
+
+        > .pcui-container.main {
+            display: block;
+            padding: 0;
+        }
+
+        .vc-overlay-header {
+            display: flex;
+            align-items: center;
+            min-height: 36px;
+            padding: 0 14px;
+            border-bottom: 1px solid $border-primary;
+            background: $bcg-dark;
+            top: auto;
+        }
+
+        .vc-heading {
+            @extend .font-bold;
+
+            margin: 0;
+            color: $text-primary;
+            font-size: 14px;
+            line-height: 1.2;
+        }
+
+        .vc-overlay-body {
+            padding: 12px;
+            top: auto;
+        }
+
+        .status-card {
+            border: 1px solid $border-primary;
+            border-radius: 6px;
+            background: $bcg-dark;
+            overflow: hidden;
+        }
+
+        .status-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            min-height: 56px;
+            padding: 11px 12px;
+            top: auto;
+        }
+
+        .icon-cell {
+            flex: none;
+            display: grid;
+            place-items: center;
+            width: 24px;
+            height: 24px;
+            color: $text-active;
+        }
+
+        .vc-overlay-icon {
+            position: relative;
+            display: grid;
+            place-items: center;
+            width: 24px;
+            height: 24px;
+            color: $text-active;
+
+            &.merge {
+                @extend .font-icon;
+
+                font-size: 21px;
+                line-height: 1;
+            }
+
+            &.hidden {
+                display: none;
+            }
+
+            .spinner {
+                width: 16px;
+                height: 16px;
+                border: 2px solid #773417;
+                border-top-color: $text-active;
+                border-radius: 50%;
+                animation: vc-overlay-spin 850ms linear infinite;
+            }
+
+            .check,
+            .cross {
+                position: relative;
+                display: block;
+                width: 18px;
+                height: 18px;
+            }
+
+            .check::before {
+                content: '';
+                position: absolute;
+                left: 50%;
+                top: 50%;
+                width: 12px;
+                height: 7px;
+                border-left: 2px solid #82d993;
+                border-bottom: 2px solid #82d993;
+                transform: translate(-50%, -62%) rotate(-45deg);
+                transform-origin: center;
+            }
+
+            .cross::before,
+            .cross::after {
+                content: '';
+                position: absolute;
+                left: 50%;
+                top: 50%;
+                width: 15px;
+                height: 2px;
+                border-radius: 2px;
+                background: #ff8a8a;
+                transform-origin: center;
+            }
+
+            .cross::before {
+                transform: translate(-50%, -50%) rotate(45deg);
+            }
+
+            .cross::after {
+                transform: translate(-50%, -50%) rotate(-45deg);
+            }
+        }
+
+        .copy {
+            flex: 1 1 auto;
+            min-width: 0;
+            white-space: normal;
+
+            .pcui-label {
+                margin: 0;
+                display: block;
+                line-height: 1.35;
+
+                &.title {
+                    @extend .font-bold;
+
+                    color: $text-primary;
+                    font-size: 14px;
+                }
+
+                &.message {
+                    margin-top: 4px;
+                    color: $text-dark;
+                    font-size: 12px;
+                }
+            }
+        }
+
+    }
+
+    &.merge-overlay {
+        z-index: 9998; // below other version control overlays
+
+        &.show-behind-picker {
+            z-index: 299; // just below project picker
+        }
+
+        > .pcui-overlay-content {
+            .pcui-container.switch-branch {
+                display: grid;
+                grid-template-columns: auto minmax(150px, 1fr) auto;
+                align-items: center;
+                gap: 8px;
+                margin-top: 10px;
+                white-space: nowrap;
+                top: auto;
+
+                > .pcui-label {
+                    flex: none;
+                    font-size: 12px;
+                    line-height: 28px;
+                    margin: 0;
+                }
+
+                > .pcui-select-input {
+                    min-width: 0;
+                    width: auto;
+                    height: 28px;
+                    margin: 0;
+                    font-size: 13px;
+                    line-height: 26px;
+
+                    .pcui-select-input-container-value {
+                        height: 28px;
+                        border-radius: 6px;
+                    }
+
+                    .pcui-select-input-value,
+                    .pcui-select-input-icon {
+                        height: 28px;
+                        line-height: 26px;
+                    }
+                }
+
+                > .pcui-button {
+                    flex: none;
+                    height: 28px;
+                    line-height: 26px;
+                    font-size: 13px;
+                }
+            }
+
+            .pcui-container.buttons {
+                position: relative;
+                width: 100%;
+                height: auto;
+                border-top: 1px solid $border-primary;
+                background: $bcg-dark;
+
+                > .pcui-container {
+                    position: static;
+                    width: 100%;
+                    text-align: right;
+                    padding: 8px 10px;
+                    box-sizing: border-box;
+
+                    .pcui-button {
+                        @extend .font-bold;
+
+                        font-size: 13px;
+                        width: 140px;
+                        height: 28px;
+                        line-height: 26px;
+                        text-align: center;
+                        border: 1px solid $border-primary;
+                        border-radius: 6px;
+                        background: $bcg-darkest;
+                        color: $text-secondary;
+                        box-shadow: none;
+                        transition: background 100ms, box-shadow 100ms;
+
+                        &:hover {
+                            background: $bcg-dark;
+                            box-shadow: $element-shadow-hover;
+                        }
+
+                        &.danger {
+                            border-color: #653235;
+                            background: #522f32;
+                            color: #ffb7b7;
+
+                            &:hover {
+                                background: #653235;
+                            }
+                        }
+
+                        &:active {
+                            box-shadow: none;
+                        }
+
+                        &.disabled {
+                            opacity: 0.2;
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@keyframes vc-overlay-spin {
+    to { transform: rotate(360deg); }
+}
+
+// mirrors .pcui-menu.picker-builds-menu so both pickers share one menu look
+.pcui-menu.version-control {
+    z-index: 100001;
+
+    .pcui-menu-item:not(.pcui-menu-item-has-children):hover > .pcui-menu-item-children {
+        opacity: 0;
+        visibility: hidden;
+    }
+
+    .pcui-menu-items {
+        border: 1px solid $border-primary;
+        border-radius: 6px;
+        overflow: hidden;
+    }
+
+    .pcui-menu-item-content {
+        font-size: 13px;
+
+        &:hover {
+            background-color: $bcg-dark;
+        }
+
+        > .pcui-label {
+            line-height: 30px;
+            margin: 0 0 0 10px;
+            padding: 0;
+        }
+    }
+
+    .pcui-menu-item.delete > .pcui-menu-item-content > .pcui-label {
+        color: $error-secondary;
+    }
+}

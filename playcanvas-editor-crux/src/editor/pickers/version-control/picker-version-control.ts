@@ -1,0 +1,1099 @@
+import { Button, Container, Overlay } from '@playcanvas/pcui';
+
+import { installEllipsisTooltips } from '@/common/ellipsis-tooltip';
+import { createLog } from '@/common/sentry';
+import { handleCallback } from '@/common/utils';
+import { config } from '@/editor/config';
+
+import { checkpointCreate as checkpointCreateJob, diffCreate } from '../../messenger/jobs';
+
+import { createBranchSwitcher } from './branch-switcher';
+import { setVcDialogHost, showVcDialog } from './dialogs';
+import { createChangesPanel } from './panel-changes';
+import { createDetailPanel } from './panel-detail';
+import { createHistoryPanel } from './panel-history';
+
+const log = createLog('<PATH>');
+
+// sidebar width bounds — these caps suit the small 1060px box; fullscreen lifts the
+// max (derived from the viewport so the main pane keeps room), reverting clamps back
+const SIDEBAR_KEY = 'editor:vc:sidebar:width';
+const SIDEBAR_DEFAULT_W = 300;
+const SIDEBAR_MIN_W = 260;
+const SIDEBAR_MAX_W = 720;
+// fullscreen fills the viewport right of the 40px left toolbar; keep at least this for main
+const VC_MAIN_MIN_W = 480;
+const FULLSCREEN_TOOLBAR_W = 40;
+// graph picker fullscreen state, persisted like the diff picker
+const VC_GRAPH_FULLSCREEN_KEY = 'editor:picker:vcgraph:fullscreen';
+// resize the graph paper after the fullscreen tween; slightly longer than the scss 200ms
+const VC_GRAPH_RESIZE_MS = 220;
+
+editor.once('load', () => {
+    if (config.project.settings.useLegacyScripts) {
+        return;
+    }
+
+    const events: { unbind: () => void }[] = [];
+    const projectUserSettings = editor.call('settings:projectUser');
+
+    let viewedBranch: any = config.self.branch;
+    let compareMode = false;
+    let compareSlots: { branch: any; checkpoint: any | null }[] = [];
+    let showNewCheckpointOnLoad = false;
+    const retainedDiffs = new Set<string>();
+
+    const diffId = (diff: any) => diff?.id ?? diff?.merge_id;
+
+    const retainDiff = (diff: any) => {
+        const id = diffId(diff);
+        if (typeof id === 'string') {
+            retainedDiffs.add(id);
+        }
+    };
+
+    const releaseDiff = (id: string) => {
+        if (!id || !retainedDiffs.delete(id)) {
+            return;
+        }
+        editor.emit('picker:diffManager:closed', id);
+        handleCallback(editor.api.globals.rest.merge.mergeDelete({ mergeId: id }), (err) => {
+            if (err) {
+                log.error(err);
+            }
+        });
+    };
+
+    const releaseDiffs = () => {
+        [...retainedDiffs].forEach(releaseDiff);
+    };
+
+    // ---- layout ----
+    const panel = new Container({ class: ['picker-version-control', 'picker-vc'], flex: true });
+    installEllipsisTooltips(panel.dom);
+    editor.call('picker:project:registerMenu', 'version control', 'Version Control', panel);
+
+    if (!editor.call('permissions:read')) {
+        editor.call('picker:project:toggleMenu', 'version control', false);
+    }
+    editor.on('permissions:set', () => {
+        editor.call('picker:project:toggleMenu', 'version control', editor.call('permissions:read'));
+    });
+
+    // floating surfaces must live inside the picker overlay (outside-click guard)
+    setVcDialogHost(panel);
+
+    // top bar
+    const topBar = new Container({ class: 'vc-top-bar' });
+    panel.append(topBar);
+
+    const switcher = createBranchSwitcher(panel);
+    topBar.append(switcher);
+
+    const topActions = new Container({ class: 'vc-top-actions' });
+    topBar.append(topActions);
+
+    const btnGraph = new Button({ text: 'Graph', icon: 'E399' });
+    topActions.append(btnGraph);
+
+    const btnCompare = new Button({ text: 'Compare', icon: 'E236' });
+    topActions.append(btnCompare);
+
+    const btnCheckpoint = new Button({ text: 'Checkpoint', icon: 'E120', class: 'vc-primary' });
+    topActions.append(btnCheckpoint);
+
+    // body
+    const body = new Container({ class: 'vc-body' });
+    panel.append(body);
+
+    const sidebar = new Container({
+        class: 'vc-sidebar',
+        width: editor.call('localStorage:get', SIDEBAR_KEY) || SIDEBAR_DEFAULT_W,
+        resizable: 'right',
+        resizeMin: SIDEBAR_MIN_W,
+        resizeMax: SIDEBAR_MAX_W
+    });
+    sidebar.on('resize', () => {
+        editor.call('localStorage:set', SIDEBAR_KEY, sidebar.width);
+    });
+    body.append(sidebar);
+
+    // viewing-other-branch banner
+    const banner = document.createElement('div');
+    banner.classList.add('vc-view-banner');
+    banner.hidden = true;
+    banner.innerHTML = 'Viewing <span class="name"></span>';
+    const bannerReturn = document.createElement('button');
+    bannerReturn.type = 'button';
+    bannerReturn.classList.add('return');
+    banner.appendChild(bannerReturn);
+    sidebar.dom.appendChild(banner);
+
+    // tabs
+    const tabs = document.createElement('div');
+    tabs.classList.add('vc-tabs');
+    sidebar.dom.appendChild(tabs);
+
+    const tabChanges = document.createElement('button');
+    tabChanges.type = 'button';
+    tabChanges.classList.add('vc-tab');
+    tabChanges.textContent = 'Changes';
+    tabs.appendChild(tabChanges);
+
+    const tabHistory = document.createElement('button');
+    tabHistory.type = 'button';
+    tabHistory.classList.add('vc-tab', 'active');
+    tabHistory.textContent = 'History';
+    tabs.appendChild(tabHistory);
+
+    const tabContent = new Container({ class: 'vc-tab-content' });
+    sidebar.append(tabContent);
+
+    const main = new Container({ class: 'vc-main' });
+    body.append(main);
+
+    // panels
+    const changes = createChangesPanel();
+    const history = createHistoryPanel();
+    const detail = createDetailPanel();
+
+    tabContent.append(changes.sidebar);
+    tabContent.append(history);
+    main.append(changes.summary);
+    main.append(detail);
+
+    // the picker can toggle fullscreen (picker-project); lift the sidebar + composer
+    // resize caps to the wider viewport while fullscreen, and clamp any oversized pane
+    // back into the small box when restored. driven by inline width/height, so the
+    // persisted value is the source of truth for clamping (the live getter reads 0 when hidden)
+    const applyResizeBounds = (full: boolean) => {
+        const sidebarMax = full
+            ? Math.max(SIDEBAR_MAX_W, window.innerWidth - FULLSCREEN_TOOLBAR_W - VC_MAIN_MIN_W)
+            : SIDEBAR_MAX_W;
+        sidebar.resizeMax = sidebarMax;
+        const w = editor.call('localStorage:get', SIDEBAR_KEY) || SIDEBAR_DEFAULT_W;
+        if (w > sidebarMax) {
+            sidebar.width = sidebarMax;
+            editor.call('localStorage:set', SIDEBAR_KEY, sidebarMax);
+        }
+        changes.sidebar.setComposerMax(full);
+    };
+
+    // compare bar
+    const compareBar = new Container({ class: 'vc-compare-bar', hidden: true });
+    panel.append(compareBar);
+    const slotA = document.createElement('span');
+    slotA.classList.add('slot');
+    compareBar.dom.appendChild(slotA);
+    const arrow = document.createElement('span');
+    arrow.textContent = '⇆';
+    compareBar.dom.appendChild(arrow);
+    const slotB = document.createElement('span');
+    slotB.classList.add('slot');
+    compareBar.dom.appendChild(slotB);
+    const btnRunCompare = new Button({ text: 'Compare', class: 'vc-primary' });
+    compareBar.append(btnRunCompare);
+
+    // progress widgets (kept infra)
+    const makeProgress = (progressText: string, finishText: string, errorText: string) => {
+        const w = editor.call('picker:versioncontrol:createProgressWidget', { progressText, finishText, errorText });
+        w.hidden = true;
+        main.append(w);
+        return w;
+    };
+    const progressCheckpoint = makeProgress(
+        'Creating checkpoint',
+        'Checkpoint created',
+        'Failed to create new checkpoint'
+    );
+    const progressDiff = makeProgress('Getting changes', 'Showing changes', 'Failed to get changes');
+    const progressBranch = makeProgress(
+        'Creating branch',
+        'Branch created - refreshing the browser',
+        'Failed to create new branch'
+    );
+    const progressClose = makeProgress('Closing branch', 'Branch closed', 'Failed to close branch');
+    const progressOpen = makeProgress('Opening branch', 'Branch opened', 'Failed to open branch');
+    const progressDelete = makeProgress('Deleting branch', 'Branch deleted', 'Failed to delete branch');
+    const progressMerge = makeProgress(
+        'Checking merge conflicts',
+        'Merge ready - opening merge review',
+        'Unable to auto merge'
+    );
+    const progressRestore = makeProgress(
+        'Restoring checkpoint',
+        'Checkpoint restored - refreshing the browser',
+        'Failed to restore checkpoint'
+    );
+    const progressHardReset = makeProgress(
+        'Performing hard reset to checkpoint',
+        'Finished - refreshing the browser',
+        'Failed to hard reset to checkpoint'
+    );
+    const progressSwitch = makeProgress(
+        'Switching branch',
+        'Switched branch - refreshing the browser',
+        'Failed to switch branch'
+    );
+
+    const showProgress = (w: any | null) => {
+        [
+            progressCheckpoint,
+            progressDiff,
+            progressBranch,
+            progressClose,
+            progressOpen,
+            progressDelete,
+            progressMerge,
+            progressRestore,
+            progressHardReset,
+            progressSwitch
+        ].forEach((p) => {
+            p.hidden = p !== w;
+        });
+        const op = !!w;
+        changes.summary.hidden = op || activeTab !== 'changes';
+        detail.hidden = op || activeTab !== 'history';
+    };
+
+    let panelsEnabled = true;
+    const togglePanels = (enabled: boolean) => {
+        panelsEnabled = enabled;
+        editor.call('picker:project:setClosable', enabled && config.scene.id);
+        editor.call('picker:project:toggleLeftPanel', enabled);
+        topBar.enabled = enabled;
+        sidebar.enabled = enabled;
+        compareBar.enabled = enabled;
+    };
+
+    // user navigation dismisses a finished (error) progress widget; never an active op
+    const clearStaleProgress = () => {
+        if (panelsEnabled) {
+            showProgress(null);
+        }
+    };
+
+    // ---- tab switching ----
+    let activeTab: 'changes' | 'history' = 'history';
+
+    const isViewingCurrent = () => viewedBranch.id === config.self.branch.id;
+
+    const setTab = (tab: 'changes' | 'history') => {
+        activeTab = tab;
+        tabChanges.classList.toggle('active', tab === 'changes');
+        tabHistory.classList.toggle('active', tab === 'history');
+        changes.sidebar.hidden = tab !== 'changes';
+        changes.summary.hidden = tab !== 'changes';
+        history.hidden = tab !== 'history';
+        detail.hidden = tab !== 'history';
+        if (tab === 'changes') {
+            changes.sidebar.refresh();
+        }
+    };
+
+    const updateTabsState = () => {
+        const canChanges = isViewingCurrent() && !compareMode;
+        tabChanges.disabled = !canChanges;
+        const count = changes.sidebar.count;
+        tabChanges.textContent = count === null ? 'Changes' : `Changes · ${count}`;
+        if (!canChanges && activeTab === 'changes') {
+            setTab('history');
+        }
+    };
+
+    changes.sidebar.on('count', updateTabsState);
+    tabChanges.addEventListener('click', () => {
+        if (!tabChanges.disabled) {
+            clearStaleProgress();
+            setTab('changes');
+        }
+    });
+    tabHistory.addEventListener('click', () => {
+        clearStaleProgress();
+        setTab('history');
+    });
+
+    // ---- viewed branch ----
+    const setViewedBranch = (branch: any) => {
+        viewedBranch = branch;
+        banner.hidden = isViewingCurrent();
+        const bannerName = banner.querySelector('.name') as HTMLElement;
+        bannerName.textContent = branch.name;
+        bannerName.title = branch.name;
+        bannerReturn.textContent = `Return to ${config.self.branch.name}`;
+        history.setBranch(branch);
+        detail.clear();
+        updateTabsState();
+        setTab('history');
+    };
+
+    bannerReturn.addEventListener('click', () => {
+        clearStaleProgress();
+        setViewedBranch(config.self.branch);
+    });
+    switcher.on('view', (branch: any) => {
+        clearStaleProgress();
+        setViewedBranch(branch);
+    });
+
+    // ---- history selection -> detail ----
+    let selectedCheckpoint: any = null;
+    const renderDetail = (checkpoint: any) => {
+        selectedCheckpoint = checkpoint;
+        if (!checkpoint) {
+            detail.clear();
+            return;
+        }
+        const all = history.checkpoints || [];
+        const index = all.findIndex((c: any) => c.id === checkpoint.id);
+        const previous = index >= 0 && index < all.length - 1 ? all[index + 1] : null;
+        detail.render(checkpoint, previous, {
+            branchId: viewedBranch.id,
+            isCurrentBranch: isViewingCurrent(),
+            canWrite: editor.call('permissions:write')
+        });
+    };
+    history.on('select', (checkpoint: any) => {
+        if (checkpoint) {
+            clearStaleProgress();
+        }
+        renderDetail(checkpoint);
+    });
+
+    // ---- diff viewing ----
+    const presentDiff = (diff: any) => {
+        // a pending diff is retained once it resolves; a resolved one immediately
+        if (diff && typeof diff.then === 'function') {
+            diff.then((d: any) => retainDiff(d)).catch(() => {
+                // intentionally empty
+            });
+        } else {
+            retainDiff(diff);
+        }
+        togglePanels(true);
+        showProgress(null);
+        requestAnimationFrame(() => {
+            editor.call('picker:versioncontrol:mergeOverlay:hide');
+            editor.call('picker:versioncontrol:diffPicker', diff);
+        });
+    };
+
+    const showNoChanges = () => {
+        progressDiff.setMessage('There are no changes');
+        setTimeout(() => {
+            editor.call('vcgraph:moveToForeground');
+            showProgress(null);
+        }, 1500);
+    };
+
+    const runDiff = (task: () => Promise<any>) => {
+        togglePanels(false);
+        showProgress(progressDiff);
+        requestAnimationFrame(() => {
+            task()
+                .then((diff: any) => {
+                    progressDiff.finish();
+                    togglePanels(true);
+                    if (diff && diff.numConflicts !== 0) {
+                        presentDiff(diff);
+                    } else {
+                        showNoChanges();
+                    }
+                })
+                .catch((err) => {
+                    progressDiff.finish(err instanceof Error ? err.message : `${err}`);
+                    togglePanels(true);
+                });
+        });
+    };
+
+    const viewDiff = (
+        srcBranchId: string,
+        srcCheckpointId: string | null,
+        dstBranchId: string,
+        dstCheckpointId: string | null
+    ) => {
+        runDiff(() => diffCreate({ srcBranchId, srcCheckpointId, dstBranchId, dstCheckpointId }));
+    };
+    panel.on(
+        'diff',
+        (srcBranchId: string, srcCheckpointId: string | null, dstBranchId: string, dstCheckpointId: string | null) => {
+            presentDiff(diffCreate({ srcBranchId, srcCheckpointId, dstBranchId, dstCheckpointId }));
+        }
+    );
+
+    // always use the modern overlay: a resolved diff renders instantly, a pending
+    // one (or a fresh job) opens with a loading state — no legacy spinner dialog
+    detail.on('openDiff', (checkpoint: any, previous: any, cached: any, pending: Promise<any>) => {
+        presentDiff(
+            cached ??
+                pending ??
+                diffCreate({
+                    srcBranchId: viewedBranch.id,
+                    srcCheckpointId: checkpoint.id,
+                    dstBranchId: viewedBranch.id,
+                    dstCheckpointId: previous.id
+                })
+        );
+    });
+    changes.summary.on('openDiff', (cached: any, pending: Promise<any>) => {
+        const b = config.self.branch;
+        presentDiff(
+            cached ??
+                pending ??
+                diffCreate({
+                    srcBranchId: b.id,
+                    srcCheckpointId: null,
+                    dstBranchId: b.id,
+                    dstCheckpointId: b.latestCheckpointId
+                })
+        );
+    });
+
+    // ---- compare mode ----
+    const slotLabel = (slot: { branch: any; checkpoint: any | null }) => {
+        return slot.checkpoint
+            ? `${slot.checkpoint.id.substring(0, 7)} · ${slot.branch.name}`
+            : `Working state · ${slot.branch.name}`;
+    };
+
+    const renderCompareBar = () => {
+        slotA.textContent = compareSlots[0] ? slotLabel(compareSlots[0]) : 'Pick a checkpoint…';
+        slotA.title = slotA.textContent;
+        slotA.classList.toggle('full', !!compareSlots[0]);
+        slotB.textContent = compareSlots[1] ? slotLabel(compareSlots[1]) : 'Pick another…';
+        slotB.title = slotB.textContent;
+        slotB.classList.toggle('full', !!compareSlots[1]);
+        btnRunCompare.enabled = compareSlots.length === 2;
+    };
+
+    const setCompareMode = (on: boolean) => {
+        compareMode = on;
+        compareSlots = [];
+        if (on) {
+            btnCompare.class.add('vc-compare-active');
+        } else {
+            btnCompare.class.remove('vc-compare-active');
+        }
+        btnCompare.text = on ? 'Exit Compare' : 'Compare';
+        compareBar.hidden = !on;
+        history.setCompareMode(on);
+        updateTabsState();
+        if (on) {
+            setTab('history');
+            renderCompareBar();
+        }
+    };
+
+    btnCompare.on('click', () => setCompareMode(!compareMode));
+
+    history.on('compare:change', (slots: { branch: any; checkpoint: any | null }[]) => {
+        compareSlots = slots;
+        renderCompareBar();
+    });
+
+    btnRunCompare.on('click', () => {
+        if (compareSlots.length !== 2) {
+            return;
+        }
+        const [a, b] = compareSlots;
+        setCompareMode(false);
+        viewDiff(
+            a.branch.id,
+            a.checkpoint ? a.checkpoint.id : null,
+            b.branch.id,
+            b.checkpoint ? b.checkpoint.id : null
+        );
+    });
+
+    // ---- checkpoint creation ----
+    const createCheckpoint = (
+        branchId: string,
+        description: string,
+        callback: (checkpoint?: any) => void,
+        useOverlay = true
+    ) => {
+        if (useOverlay) {
+            togglePanels(false);
+            showProgress(progressCheckpoint);
+        }
+        checkpointCreateJob({ projectId: config.project.id, branchId, description })
+            .then((checkpoint) => {
+                if (useOverlay) {
+                    progressCheckpoint.finish(null);
+                }
+                callback(checkpoint);
+            })
+            .catch((err) => {
+                if (useOverlay) {
+                    progressCheckpoint.finish(err instanceof Error ? err.message : `${err}`);
+                }
+                togglePanels(true);
+            });
+    };
+
+    // inline (no overlay) checkpoint creation from the pinned form;
+    // the new row lands in history and the changes list refreshes via
+    // messenger:checkpoint.createEnded (which also updates latestCheckpointId first)
+    changes.sidebar.on('create', (description: string) => {
+        changes.sidebar.setBusy(true);
+        checkpointCreateJob({ projectId: config.project.id, branchId: config.self.branch.id, description })
+            .then(() => {
+                changes.sidebar.resetForm();
+            })
+            .catch((err) => {
+                changes.sidebar.setBusy(false);
+                log.error(err);
+            });
+    });
+
+    // single entry point so compare mode and viewed branch are always reset first
+    const openCheckpointForm = () => {
+        if (compareMode) {
+            setCompareMode(false);
+        }
+        if (!isViewingCurrent()) {
+            setViewedBranch(config.self.branch);
+        }
+        clearStaleProgress();
+        setTab('changes');
+        changes.sidebar.focusForm();
+    };
+
+    btnCheckpoint.on('click', openCheckpointForm);
+
+    // ---- branch operations ----
+    switcher.on('switch', (branch: any) => {
+        togglePanels(false);
+        showProgress(progressSwitch);
+        handleCallback(editor.api.globals.rest.branches.branchCheckout({ branchId: branch.id }), (err) => {
+            progressSwitch.finish(err);
+            if (err) {
+                togglePanels(true);
+            }
+            // refresh handled by messenger
+        });
+    });
+
+    switcher.on('newBranch', () => openNewBranchDialog(null));
+    detail.on('newBranch', (checkpoint: any) => openNewBranchDialog(checkpoint));
+    panel.on('checkpoint:branch', (checkpoint: any, branch: any) => openNewBranchDialog(checkpoint, branch));
+
+    function openNewBranchDialog(checkpoint: any | null, branch?: any) {
+        const source = branch || (checkpoint ? viewedBranch : config.self.branch);
+        const fromId = checkpoint ? checkpoint.id : source.latestCheckpointId;
+        const dialog = showVcDialog({
+            title: 'New branch',
+            body: [
+                'From: ',
+                { bold: `${fromId ? fromId.substring(0, 7) : 'latest'}` },
+                ` · ${checkpoint ? `checkpoint of ${source.name}` : `latest checkpoint of ${source.name}`}`
+            ],
+            confirmText: 'Create Branch',
+            input: { placeholder: 'Branch name' },
+            onConfirm: ({ input }) => {
+                if (!input) {
+                    dialog.setError('Branch name is required');
+                    return;
+                }
+                dialog.close();
+                togglePanels(false);
+                showProgress(progressBranch);
+                handleCallback(
+                    editor.api.globals.rest.branches.branchCreate({
+                        name: input,
+                        projectId: config.project.id,
+                        sourceBranchId: source.id,
+                        sourceCheckpointId: checkpoint ? checkpoint.id : undefined
+                    }),
+                    (err) => {
+                        if (panel.hidden) {
+                            return;
+                        }
+                        // async success handled by messenger:branch.createEnded
+                        if (err && !/Request timed out/.test(err)) {
+                            progressBranch.finish(err);
+                            togglePanels(true);
+                        }
+                    }
+                );
+            }
+        });
+    }
+
+    switcher.on('merge', (branch: any) => {
+        const dialog = showVcDialog({
+            title: `Merge into ${config.self.branch.name}`,
+            body: [
+                { bold: branch.name },
+                ' → ',
+                { bold: config.self.branch.name },
+                '. Conflicts open the merge resolution view.'
+            ],
+            confirmText: 'Merge',
+            checkboxes: [
+                { key: 'srcCheckpoint', label: `Take a checkpoint of ${branch.name} first`, value: true },
+                { key: 'dstCheckpoint', label: `Take a checkpoint of ${config.self.branch.name} first`, value: true },
+                { key: 'closeSrc', label: `Close ${branch.name} after merging`, value: false }
+            ],
+            onConfirm: ({ checks }) => {
+                dialog.close();
+                runMerge(branch, checks.srcCheckpoint, checks.dstCheckpoint, checks.closeSrc);
+            }
+        });
+    });
+
+    function runMerge(
+        sourceBranch: any,
+        createSrcCheckpoint: boolean,
+        createDstCheckpoint: boolean,
+        closeSrc: boolean
+    ) {
+        togglePanels(false);
+
+        const merge = () => {
+            showProgress(progressMerge);
+
+            let evtOnMergeCreated = editor.on('messenger:merge.new', (data: any) => {
+                if (data.dst_branch_id !== config.self.branch.id) {
+                    return;
+                }
+                evtOnMergeCreated.unbind();
+                evtOnMergeCreated = null;
+                handleCallback(editor.api.globals.rest.merge.mergeGet({ mergeId: data.merge_id }), (err, mergeData) => {
+                    if (err) {
+                        progressMerge.finish(err);
+                        togglePanels(true);
+                        return;
+                    }
+                    config.self.branch.merge = mergeData;
+                    editor.call('picker:project:close');
+                    editor.call('picker:versioncontrol:mergeOverlay:hide');
+                    editor.call('picker:conflictManager');
+                });
+            });
+
+            handleCallback(
+                editor.api.globals.rest.merge.mergeCreate({
+                    srcBranchId: sourceBranch.id,
+                    dstBranchId: config.self.branch.id,
+                    srcBranchClose: closeSrc
+                }),
+                (err) => {
+                    if (panel.hidden) {
+                        return;
+                    }
+                    if (err && !/Request timed out/.test(err)) {
+                        progressMerge.finish(err);
+                        togglePanels(true);
+                        if (evtOnMergeCreated) {
+                            evtOnMergeCreated.unbind();
+                            evtOnMergeCreated = null;
+                        }
+                    }
+                }
+            );
+        };
+
+        const desc = `Checkpoint before merging branch "${sourceBranch.name}" into "${config.self.branch.name}"`;
+        if (createSrcCheckpoint) {
+            createCheckpoint(sourceBranch.id, desc, () => {
+                if (createDstCheckpoint) {
+                    createCheckpoint(config.self.branch.id, desc, merge);
+                } else {
+                    merge();
+                }
+            });
+        } else if (createDstCheckpoint) {
+            createCheckpoint(config.self.branch.id, desc, merge);
+        } else {
+            merge();
+        }
+    }
+
+    switcher.on('close', (branch: any) => {
+        const dialog = showVcDialog({
+            title: `Close ${branch.name}?`,
+            body: ['Closed branches can be re-opened later from the Closed filter.'],
+            confirmText: 'Close Branch',
+            checkboxes: [{ key: 'checkpoint', label: 'Take a checkpoint first', value: true }],
+            onConfirm: ({ checks }) => {
+                dialog.close();
+                const close = () => {
+                    showProgress(progressClose);
+                    handleCallback(editor.api.globals.rest.branches.branchClose({ branchId: branch.id }), (err) => {
+                        progressClose.finish(err);
+                        togglePanels(true);
+                        if (!err) {
+                            setTimeout(() => showProgress(null), 1000);
+                        }
+                    });
+                };
+                togglePanels(false);
+                if (checks.checkpoint) {
+                    createCheckpoint(branch.id, `Checkpoint before closing branch "${branch.name}"`, close);
+                } else {
+                    close();
+                }
+            }
+        });
+    });
+
+    switcher.on('open', (branch: any) => {
+        togglePanels(false);
+        showProgress(progressOpen);
+        handleCallback(editor.api.globals.rest.branches.branchOpen({ branchId: branch.id }), (err) => {
+            progressOpen.finish(err);
+            togglePanels(true);
+            if (!err) {
+                setTimeout(() => showProgress(null), 1000);
+            }
+        });
+    });
+
+    switcher.on('delete', (branch: any) => {
+        const dialog = showVcDialog({
+            title: `Delete ${branch.name}?`,
+            danger: true,
+            body: ['This permanently deletes the branch and its history. Type the branch name to confirm.'],
+            confirmText: 'Delete Branch',
+            input: { placeholder: branch.name },
+            confirmMatch: branch.name,
+            onConfirm: () => {
+                dialog.close();
+                togglePanels(false);
+                showProgress(progressDelete);
+                handleCallback(editor.api.globals.rest.branches.branchDelete({ branchId: branch.id }), (err) => {
+                    progressDelete.finish(err);
+                    togglePanels(true);
+                    if (!err) {
+                        setTimeout(() => showProgress(null), 1000);
+                    }
+                });
+            }
+        });
+    });
+
+    switcher.on('graph', (branch: any) => {
+        editor.call('picker:versioncontrol:graph', { branchId: branch.id });
+    });
+    btnGraph.on('click', () => {
+        editor.call('picker:versioncontrol:graph', { branchId: viewedBranch.id });
+    });
+
+    // ---- restore / hard reset ----
+    detail.on('restore', (checkpoint: any) => {
+        const dialog = showVcDialog({
+            title: 'Restore checkpoint?',
+            body: [
+                'The current state of ',
+                { bold: config.self.branch.name },
+                ' becomes checkpoint ',
+                { bold: checkpoint.id.substring(0, 7) },
+                '.'
+            ],
+            confirmText: 'Restore',
+            checkboxes: [{ key: 'checkpoint', label: 'Take a checkpoint of the current state first', value: true }],
+            onConfirm: ({ checks }) => {
+                dialog.close();
+                const restore = () => {
+                    showProgress(progressRestore);
+                    handleCallback(
+                        editor.api.globals.rest.checkpoints.checkpointRestore({
+                            checkpointId: checkpoint.id,
+                            branchId: config.self.branch.id
+                        }),
+                        (err) => {
+                            progressRestore.finish(err);
+                            if (err) {
+                                togglePanels(true);
+                            }
+                        }
+                    );
+                };
+                togglePanels(false);
+                if (checks.checkpoint) {
+                    createCheckpoint(
+                        config.self.branch.id,
+                        `Checkpoint before restoring "${checkpoint.id.substring(0, 7)}"`,
+                        restore
+                    );
+                } else {
+                    restore();
+                }
+            }
+        });
+    });
+    panel.on('checkpoint:restore', (checkpoint: any) => detail.emit('restore', checkpoint));
+
+    detail.on('hardReset', (checkpoint: any) => {
+        const dialog = showVcDialog({
+            title: 'Hard reset?',
+            danger: true,
+            body: [
+                'Deletes ALL checkpoints and changes after ',
+                { bold: checkpoint.id.substring(0, 7) },
+                '. This cannot be undone. Type the checkpoint id (first 7 characters) to confirm.'
+            ],
+            confirmText: 'Hard Reset',
+            input: { placeholder: checkpoint.id.substring(0, 7) },
+            confirmMatch: checkpoint.id.substring(0, 7),
+            onConfirm: () => {
+                dialog.close();
+                togglePanels(false);
+                showProgress(progressHardReset);
+                handleCallback(
+                    editor.api.globals.rest.checkpoints.checkpointHardReset({
+                        checkpointId: checkpoint.id,
+                        branchId: config.self.branch.id
+                    }),
+                    (err) => {
+                        progressHardReset.finish(err);
+                        if (err) {
+                            togglePanels(true);
+                        }
+                    }
+                );
+            }
+        });
+    });
+    panel.on('checkpoint:hardReset', (checkpoint: any) => detail.emit('hardReset', checkpoint));
+
+    // ---- vc graph host (a picker overlay, like the diff/conflict pickers) ----
+    const vcGraphOverlay = new Overlay({
+        class: ['picker-version-control', 'vc-graph-overlay'],
+        clickable: false,
+        hidden: true
+    });
+    editor.call('layout.root').append(vcGraphOverlay);
+    const vcGraphPanel = new Container({ class: 'vc-graph-panel', flex: true });
+    vcGraphOverlay.append(vcGraphPanel);
+    const vcNodeMenu = editor.call('vcgraph:makeNodeMenu', panel);
+    editor.call('layout.root').append(vcNodeMenu);
+
+    const onGraphKey = (e: KeyboardEvent) => {
+        if (e.key === 'Escape' && !vcGraphOverlay.hidden) {
+            e.stopPropagation();
+            vcGraphOverlay.hidden = true;
+        }
+    };
+    vcGraphOverlay.on('show', () => {
+        editor.emit('picker:open', 'vc-graph');
+        window.addEventListener('keydown', onGraphKey, true);
+    });
+    vcGraphOverlay.on('hide', () => {
+        window.removeEventListener('keydown', onGraphKey, true);
+        editor.call('vcgraph:moveToForeground');
+        vcGraphPanel.clear();
+        editor.emit('picker:close', 'vc-graph');
+    });
+
+    editor.method('vcgraph:closeGraphPanel', () => {
+        vcGraphOverlay.hidden = true; // 'hide' handler does foreground + clear + picker:close
+    });
+    editor.method('vcgraph:moveToBackground', () => vcGraphOverlay.class.add('vc-graph-background'));
+    editor.method('vcgraph:moveToForeground', () => vcGraphOverlay.class.remove('vc-graph-background'));
+    editor.method('vcgraph:isHidden', () => vcGraphOverlay.hidden);
+    editor.method('picker:versioncontrol:graph', (h: any) => {
+        editor.call('vcgraph:moveToForeground');
+        vcGraphOverlay.hidden = false; // open-only, like the diff/conflict pickers (was a toggle)
+
+        // header bar matching the diff/conflict pickers (reuses their .vc-diff-* styles)
+        const header = new Container({ class: 'vc-diff-top' });
+        const title = document.createElement('div');
+        title.classList.add('vc-diff-title');
+        title.textContent = 'Graph';
+        header.dom.appendChild(title);
+
+        // small box by default with a fullscreen toggle, mirroring the diff picker
+        let fullscreen = editor.call('localStorage:get', VC_GRAPH_FULLSCREEN_KEY) === true;
+        const fullscreenToggle = new Button({ class: 'vc-diff-fullscreen-toggle' });
+        const applyFullscreen = () => {
+            vcGraphOverlay.class[fullscreen ? 'add' : 'remove']('fullscreen');
+            fullscreenToggle.class[fullscreen ? 'add' : 'remove']('active');
+            fullscreenToggle.dom.setAttribute('title', fullscreen ? 'Exit fullscreen' : 'Fullscreen');
+        };
+        fullscreenToggle.on('click', () => {
+            fullscreen = !fullscreen;
+            editor.call('localStorage:set', VC_GRAPH_FULLSCREEN_KEY, fullscreen);
+            vcNodeMenu.hidden = true; // the graph repositions, so the open node menu would be left offset
+            applyFullscreen();
+            window.setTimeout(() => editor.call('vcgraph:resize'), VC_GRAPH_RESIZE_MS);
+        });
+        header.append(fullscreenToggle);
+        applyFullscreen();
+
+        const vcGraphCloseBtn = new Button({ icon: 'E132', class: 'vc-diff-close' });
+        vcGraphCloseBtn.on('click', () => {
+            editor.call('vcgraph:closeGraphPanel');
+            if (h.closeVcPicker) {
+                editor.call('picker:project:close');
+            }
+        });
+        header.append(vcGraphCloseBtn);
+
+        const vcGraphContainer = new Container({ class: 'vc-graph-container' });
+        vcGraphPanel.append(header);
+        vcGraphPanel.append(vcGraphContainer);
+        Object.assign(h, { vcGraphContainer, vcNodeMenu });
+        editor.call('vcgraph:showInitial', h);
+    });
+
+    // ---- messenger list maintenance ----
+    panel.on('show', () => {
+        setViewedBranch(config.self.branch);
+        // size the panes for the current fullscreen state (picker-project is loaded by
+        // now) and track live toggles; the subscription is dropped with events on hide
+        applyResizeBounds(editor.call('picker:project:isFullscreen') === true);
+        events.push(editor.on('picker:project:fullscreen', applyResizeBounds));
+        changes.sidebar.invalidate();
+        setCompareMode(false);
+        setTab(showNewCheckpointOnLoad ? 'changes' : 'history');
+        if (showNewCheckpointOnLoad) {
+            showNewCheckpointOnLoad = false;
+            changes.sidebar.focusForm();
+        }
+        showProgress(null);
+
+        events.push(
+            editor.on('permissions:writeState', () => {
+                updateTabsState();
+                // setBranch clears both the selection highlight and the detail pane
+                if (history.branch) {
+                    history.setBranch(history.branch);
+                }
+            })
+        );
+
+        // live-apply the auto-load-diffs setting to whatever is on screen (#2098)
+        events.push(
+            projectUserSettings.on('editor.vcAutoLoadDiffs:set', () => {
+                renderDetail(selectedCheckpoint);
+                if (activeTab === 'changes') {
+                    changes.sidebar.refresh();
+                }
+            })
+        );
+
+        events.push(
+            editor.on('messenger:checkpoint.createEnded', (data: any) => {
+                if (data.status === 'error') {
+                    return;
+                }
+                const b = switcher.getBranch(data.branch_id);
+                if (b) {
+                    b.latestCheckpointId = data.checkpoint_id;
+                }
+                if (config.self.branch.id === data.branch_id) {
+                    config.self.branch.latestCheckpointId = data.checkpoint_id;
+                    changes.sidebar.invalidate();
+                    // visible changes tab must not strand a stale list/skeleton
+                    if (activeTab === 'changes') {
+                        changes.sidebar.refresh(true);
+                    }
+                }
+                if (history.branch && history.branch.id === data.branch_id && history.checkpoints) {
+                    history.prependCheckpoint(editor.call('picker:versioncontrol:transformCheckpointData', data));
+                }
+            })
+        );
+
+        events.push(
+            editor.on('messenger:branch.close', (data: any) => {
+                switcher.removeBranch(data.branch_id);
+                if (viewedBranch.id === data.branch_id) {
+                    setViewedBranch(config.self.branch);
+                }
+            })
+        );
+        events.push(
+            editor.on('messenger:branch.delete', (data: any) => {
+                switcher.removeBranch(data.branch_id);
+                if (viewedBranch.id === data.branch_id) {
+                    setViewedBranch(config.self.branch);
+                }
+            })
+        );
+        events.push(editor.on('messenger:branch.open', () => switcher.refresh()));
+        events.push(
+            editor.on('messenger:branch.createEnded', (data: any) => {
+                if (data.user_id !== config.self.id) {
+                    return;
+                }
+                const err = data.status === 'error' ? data.message : null;
+                progressBranch.finish(err);
+                if (err) {
+                    togglePanels(true);
+                }
+            })
+        );
+
+        events.push(projectUserSettings.on('favoriteBranches:insert', () => switcher.refresh()));
+        events.push(projectUserSettings.on('favoriteBranches:remove', () => switcher.refresh()));
+
+        if (editor.call('viewport:inViewport')) {
+            editor.emit('viewport:hover', false);
+        }
+    });
+
+    panel.on('hide', () => {
+        releaseDiffs();
+        switcher.closePanel();
+        setCompareMode(false);
+        detail.clear();
+        showNewCheckpointOnLoad = false;
+        events.forEach((evt) => evt.unbind());
+        events.length = 0;
+        if (editor.call('viewport:inViewport')) {
+            editor.emit('viewport:hover', true);
+        }
+    });
+
+    editor.on('viewport:hover', (state: boolean) => {
+        if (state && !panel.hidden) {
+            setTimeout(() => {
+                editor.emit('viewport:hover', false);
+            }, 0);
+        }
+    });
+
+    // ---- public methods (preserved) ----
+    editor.method('picker:versioncontrol', () => {
+        editor.call('picker:project', 'version control');
+    });
+
+    editor.method('picker:versioncontrol:hasRetainedDiff', (id: string) => {
+        return retainedDiffs.has(id);
+    });
+
+    editor.method('picker:versioncontrol:releaseDiff', releaseDiff);
+
+    editor.method('picker:versioncontrol:transformCheckpointData', (data: any) => {
+        return {
+            id: data.checkpoint_id,
+            user: { id: data.user_id, fullName: data.user_full_name },
+            createdAt: new Date(data.created_at),
+            description: data.description
+        };
+    });
+
+    // ctrl+s hotkey opens the checkpoint form
+    editor.call('hotkey:register', 'new-checkpoint', {
+        key: 's',
+        ctrl: true,
+        callback: () => {
+            if (!editor.call('permissions:write')) {
+                return;
+            }
+            if (editor.call('picker:isOpen:otherThan', 'project')) {
+                return;
+            }
+            if (panel.hidden) {
+                showNewCheckpointOnLoad = true;
+                editor.call('picker:versioncontrol');
+            } else {
+                openCheckpointForm();
+            }
+        }
+    });
+});

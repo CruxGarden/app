@@ -1,0 +1,25 @@
+import { Button } from '@playcanvas/pcui';
+
+import { TooltipHandle } from '@/common/tooltips';
+
+editor.once('load', () => {
+    const toolbar = editor.call('layout.toolbar');
+
+    const button = new Button({
+        class: ['pc-icon', 'github', 'bottom', 'push-top'],
+        icon: 'E259'
+    });
+    toolbar.append(button);
+    editor.call('toolbar:register', { id: 'github', label: 'GitHub', group: 'utility', button });
+
+    button.on('click', () => {
+        window.open('https://github.com/playcanvas/editor/issues', '_blank');
+    });
+
+    TooltipHandle.attach({
+        target: button.dom,
+        text: 'Report Github Issues',
+        align: 'left',
+        root: editor.call('layout.root')
+    });
+});

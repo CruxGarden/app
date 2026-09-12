@@ -1,0 +1,171 @@
+import type { ObserverList } from '@playcanvas/observer';
+import { Button } from '@playcanvas/pcui';
+import type { Element as PcuiElement } from '@playcanvas/pcui';
+
+import type { EntityObserver } from '@/editor-api';
+
+import type { Attribute } from '../attribute.type.d';
+import { AttributesInspector } from '../attributes-inspector';
+
+import { ComponentInspector } from './component';
+import type { ComponentInspectorArgs } from './component';
+
+const ATTRIBUTES: Attribute[] = [
+    {
+        label: 'Assets',
+        path: 'components.animation.assets',
+        reference: 'animation:assets',
+        type: 'assets',
+        args: {
+            assetType: 'animation'
+        }
+    },
+    {
+        label: 'Speed',
+        path: 'components.animation.speed',
+        reference: 'animation:speed',
+        type: 'slider',
+        args: {
+            precision: 3,
+            step: 0.1,
+            sliderMin: -2,
+            sliderMax: 2
+        }
+    },
+    {
+        label: 'Activate',
+        path: 'components.animation.activate',
+        reference: 'animation:activate',
+        type: 'boolean'
+    },
+    {
+        label: 'Loop',
+        path: 'components.animation.loop',
+        reference: 'animation:loop',
+        type: 'boolean'
+    }
+];
+
+const CLASS_BUTTON_PLAY = 'animation-component-inspector-play';
+
+class AnimationComponentInspector extends ComponentInspector {
+    _assets: ObserverList;
+
+    constructor(args: ComponentInspectorArgs) {
+        args = Object.assign({}, args);
+        args.component = 'animation';
+
+        super(args);
+
+        this.headerText += ' (LEGACY)';
+
+        this._assets = args.assets;
+
+        this._attributesInspector = new AttributesInspector({
+            assets: args.assets,
+            history: args.history,
+            attributes: ATTRIBUTES,
+            templateOverridesInspector: this._templateOverridesInspector
+        });
+        this.append(this._attributesInspector);
+    }
+
+    _refreshPlayButtons(
+        entities: EntityObserver[],
+        assetList: { listItems: { assetId: string; element: PcuiElement }[] }
+    ) {
+        const listItems = assetList.listItems;
+        listItems.forEach((item) => {
+            this._addPlayButtonForAnimation(entities, item.assetId, item.element);
+        });
+    }
+
+    _addPlayButtonForAnimation(entities: EntityObserver[], assetId: string, listItem: PcuiElement) {
+        // destroy existing button
+        const existing = listItem.dom.querySelector(`.${CLASS_BUTTON_PLAY}`);
+        if (existing) {
+            existing.ui.destroy();
+        }
+
+        const label = listItem.dom.querySelector('.pcui-label');
+        if (!label) {
+            return;
+        }
+
+        if (!this._assets.get(assetId)) {
+            return;
+        }
+
+        const btn = new Button({
+            size: 'small',
+            icon: 'E131',
+            class: CLASS_BUTTON_PLAY
+        });
+
+        // play animation on click
+        btn.on('click', (evt) => {
+            evt.stopPropagation();
+            this._playAnimation(entities, assetId);
+        });
+
+        listItem.appendAfter(btn, label);
+    }
+
+    _playAnimation(entities: EntityObserver[], assetId: string | number) {
+        assetId = parseInt(assetId, 10);
+
+        for (let i = 0; i < entities.length; i++) {
+            const entity = entities[i];
+            if (!entity.entity || !entity.entity.animation) {
+                continue;
+            }
+
+            if (entity.entity.animation.assets.indexOf(assetId) === -1) {
+                entity.entity.animation._stopCurrentAnimation();
+                continue;
+            }
+
+            const name = entity.entity.animation.animationsIndex[assetId];
+            if (!name) {
+                continue;
+            }
+
+            entity.entity.animation.play(name);
+        }
+    }
+
+    _stopAnimation(entities: EntityObserver[]) {
+        for (let i = 0; i < entities.length; i++) {
+            const entity = entities[i];
+            if (!entity.entity || !entity.entity.animation) {
+                continue;
+            }
+
+            entity.entity.animation._stopCurrentAnimation();
+        }
+    }
+
+    link(entities: EntityObserver[]) {
+        super.link(entities);
+
+        const assetList = this._attributesInspector.getField('components.animation.assets');
+        this._refreshPlayButtons(entities, assetList);
+
+        // refresh play buttons when animations are added
+        assetList.on('change', () => {
+            this._refreshPlayButtons(entities, assetList);
+        });
+
+        this._stopAnimation(entities);
+    }
+
+    unlink() {
+        if (this._entities) {
+            this._stopAnimation(this._entities);
+        }
+
+        super.unlink();
+    }
+}
+
+export { AnimationComponentInspector };
