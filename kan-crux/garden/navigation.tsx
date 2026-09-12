@@ -12,7 +12,8 @@ const events = {
   },
 };
 function url(value: Destination) {
-  if (typeof value === 'string') return value;
+  // Native links such as `boards/${id}` are relative to the hosted root; local routes are absolute.
+  if (typeof value === 'string') return value.startsWith('/') ? value : '/' + value;
   const search = new URLSearchParams();
   Object.entries(value.query ?? {}).forEach(([key, value]) =>
     (Array.isArray(value) ? value : [value]).forEach((v) => search.append(key, v)),
@@ -47,11 +48,13 @@ function makeRoute(path: string) {
   const parsed = new URL(path, location.origin);
   const parts = parsed.pathname.split('/');
   const params =
-    parts[1] === 'boards' && parts[2]
-      ? { boardId: parts[2] }
-      : parts[1] === 'cards' && parts[2]
-        ? { cardId: parts[2] }
-        : {};
+    parts[1] === 'templates' && parts[2] && parts[3] === 'cards' && parts[4]
+      ? { boardId: parts[2], cardId: parts[4] }
+      : (parts[1] === 'boards' || parts[1] === 'templates') && parts[2]
+        ? { boardId: parts[2] }
+        : parts[1] === 'cards' && parts[2]
+          ? { cardId: parts[2] }
+          : {};
   const query: Record<string, string | string[]> = { ...params };
   for (const key of parsed.searchParams.keys()) {
     const values = parsed.searchParams.getAll(key);

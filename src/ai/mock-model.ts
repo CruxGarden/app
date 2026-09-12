@@ -105,6 +105,26 @@ export function getMockLanguageModel(): LanguageModel {
             return toolCallStream('set_gdevelop_name', { name: 'Garden game' });
           return textStream('Named the game and changed the native scene background.');
         }
+        if (lastUserText(prompt).includes('[kan:edit]')) {
+          const rounds = toolResultsThisTurn(prompt);
+          if (!rounds.length) return toolCallStream('inspect_kan', {});
+          if (rounds.length === 1) {
+            const data = JSON.parse(toolResultText(prompt, 'inspect_kan') || '{}');
+            return toolCallStream('create_kan_card', {
+              listPublicId: data.board?.lists?.[0]?.publicId,
+              title: 'Agent card',
+              description: 'Added by the scripted agent.',
+            });
+          }
+          if (rounds.length === 2) {
+            const created = JSON.parse(toolResultText(prompt, 'create_kan_card') || '{}');
+            return toolCallStream('rename_kan_card', {
+              cardPublicId: created.publicId,
+              title: 'Agent renamed card',
+            });
+          }
+          return textStream('Added a card to the first list and renamed it.');
+        }
         if (lastUserText(prompt).includes('[opencut:edit]')) {
           const rounds = toolResultsThisTurn(prompt);
           if (!rounds.length) return toolCallStream('inspect_opencut', {});

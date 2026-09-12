@@ -13,7 +13,7 @@ test.describe('sound: track + cues', () => {
   test.setTimeout(150_000);
 
   test('the Default Mood has a track; an AI turn cues and ducks', async () => {
-    const { app, page } = await launchApp({ env: { CRUX_AI_MOCK: '1' } });
+    const { app, page } = await launchApp({ sound: true, env: { CRUX_AI_MOCK: '1' } });
     const state = () =>
       page.evaluate(() =>
         (window as unknown as { __cruxAudio: { state: () => AudioState } }).__cruxAudio.state(),

@@ -33,7 +33,7 @@ export default defineConfig({
     css: {
       include: [
         /5ws-site\/src\/styles\//,
-        /(opencut|playcanvas-editor|gdevelop|blockbench|svgedit|twine|ketcher|gephi|jupyterlite|rawgraphs|piskel|mermaid|openmosh|minipaint)-crux\//,
+        /(kan|opencut|playcanvas-editor|gdevelop|blockbench|svgedit|twine|ketcher|gephi|jupyterlite|rawgraphs|piskel|mermaid|openmosh|minipaint)-crux\//,
       ],
     },
   },

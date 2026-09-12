@@ -11,7 +11,7 @@ test.describe('mood packages', () => {
   test.setTimeout(150_000);
 
   test('save current look, change, apply, delete', async () => {
-    const { app, page } = await launchApp();
+    const { app, page } = await launchApp({ sound: true });
     const cssVar = (name: string) =>
       page.evaluate(
         (n) => getComputedStyle(document.documentElement).getPropertyValue(n).trim(),

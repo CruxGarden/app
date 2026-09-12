@@ -61,7 +61,7 @@ test.describe('bundled moods', () => {
     },
   ]) {
     test(`${mood.name} applies its theme, garden image and persona and survives restart`, async () => {
-      const { app, page, dir } = await launchApp();
+      const { app, page, dir } = await launchApp({ sound: true });
       try {
         await enterGarden(page);
         await page.getByRole('button', { name: 'Mood', exact: true }).click();
@@ -89,7 +89,7 @@ test.describe('bundled moods', () => {
       } finally {
         await app.close();
       }
-      const again = await launchApp({ dir });
+      const again = await launchApp({ sound: true, dir });
       try {
         await expect
           .poll(() =>
@@ -114,7 +114,7 @@ test.describe('bundled moods', () => {
   }
 
   test('apply Windows 95 then Blade Runner Rain: shape, sound and voice follow', async () => {
-    const { app, page, dir } = await launchApp();
+    const { app, page, dir } = await launchApp({ sound: true });
     const cssVar = (name: string) =>
       page.evaluate(
         (n) => getComputedStyle(document.documentElement).getPropertyValue(n).trim(),
@@ -192,7 +192,7 @@ test.describe('bundled moods', () => {
     }
 
     // Relaunch on the same garden: the Gateway wears the worn Mood before Enter
-    const again = await launchApp({ dir });
+    const again = await launchApp({ sound: true, dir });
     try {
       const cssVar2 = (name: string) =>
         again.page.evaluate(

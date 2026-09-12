@@ -8,6 +8,7 @@ for (const [id, root] of [
   ['twine-app', 'twine-crux'],
   ['blockbench-app', 'blockbench-crux'],
   ['opencut-app', 'opencut-crux'],
+  ['kan-app', 'kan-crux'],
   ['playcanvas-editor-app', 'playcanvas-editor-crux'],
   ['svgedit-app', 'svgedit-crux'],
   ['jupyterlite-app', 'jupyterlite-crux'],
@@ -23,7 +24,7 @@ for (const [id, root] of [
     expect(styles.length).toBeGreaterThan(0);
     for (const f of styles) {
       expect(f.encoding).not.toBe('asset-url');
-      expect(f.content).toBe(readFileSync(resolve(root!, f.path), 'utf8'));
+      expect(f.content, f.path).toBe(readFileSync(resolve(root!, f.path), 'utf8'));
     }
   }, 30000);
 }

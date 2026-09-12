@@ -9,7 +9,7 @@ import { importNativeCrux } from './native-archive-helpers';
 
 test('large workspace opens while the soundtrack and its level meter keep playing', async () => {
   test.setTimeout(180000);
-  const { app, page, dir } = await launchApp();
+  const { app, page, dir } = await launchApp({ sound: true });
   const debug = await page.context().newCDPSession(page);
   try {
     page.on('console', (m) => {
