@@ -2,6 +2,7 @@ import { TYPES, validateProject } from '../../tool-cruxes/shared/model.js';
 import { validateDocument } from '../../cardinal-crux/model.js';
 
 const NATIVE_TEMPLATES = {
+  'kan-app': 'kan',
   'opencut-app': 'opencut',
   'playcanvas-editor-app': 'playcanvas-editor',
   'openmosh-app': 'openmosh',
