@@ -123,6 +123,7 @@ function buildStablePrompt(crux: Crux, artifacts: Artifact[]): string {
       (can(Capability.Build)
         ? "- **check_site** — Run the site's production build (Site Cruxes) and report errors. Nothing is published; this only verifies.\n"
         : '') +
+      '- **add_guestbook** — Put a guestbook block on this site (a section plus guestbook.js before </body> of the home page): visitors of the shared site sign in by email and leave a note, kept in this Crux\'s own Crux Store.\n' +
       '- **get_theme** / **set_theme** / **set_background** — Read and change the workspace look (theme tokens, backdrop). Load the mood-design skill before restyling.\n' +
       '- **snapshot** / **list_snapshots** / **restore** / **branch** / **diff** — Growth, the version history, as tools. See Growth below.\n' +
       '- **remember** — Save one line to Garden Memory when the person asks you to remember something or states a durable preference (see above).\n' +

@@ -1,3 +1,4 @@
+import { addGuestbook, describeAddGuestbook } from '@/services/guestbook';
 import {
   appToolDefinitions,
   appToolFor,
@@ -275,6 +276,21 @@ export const SITE_TOOL_DEFINITIONS: ToolDefinition[] = [
   },
 ];
 
+/** The guestbook block (V1-GAPS-PLAN §2.8) for any site Crux. */
+export const GUESTBOOK_TOOL_DEFINITION: ToolDefinition = {
+  name: 'add_guestbook',
+  description:
+    'Add a guestbook to this site: visitors of the shared site leave a note (name and message) after signing in by email; the notes live in this Crux\'s own Crux Store. ' +
+    'Writes guestbook.js (public/guestbook.js for an Astro site) and puts <section data-guestbook> plus the script tag into index.html or src/pages/index.astro before </body>. ' +
+    'USE WHEN: The user wants visitors to leave comments, sign a guestbook or say hello on their site. Idempotent: a page that already carries the block is left alone.',
+  input_schema: {
+    type: 'object',
+    properties: {},
+    required: [],
+    additionalProperties: false,
+  },
+};
+
 /** The tool set to offer a workspace conversation on this platform. */
 export function defaultToolDefinitions(cruxId?: string): ToolDefinition[] {
   const site = can(Capability.Build) ? SITE_TOOL_DEFINITIONS : [];
@@ -282,6 +298,7 @@ export function defaultToolDefinitions(cruxId?: string): ToolDefinition[] {
     ...TOOL_DEFINITIONS,
     ...appToolDefinitions(cruxId),
     ...site,
+    GUESTBOOK_TOOL_DEFINITION,
     ...GROWTH_TOOL_DEFINITIONS,
     ...THEME_TOOL_DEFINITIONS,
     ...MEMORY_TOOL_DEFINITIONS,
@@ -465,6 +482,9 @@ export function createToolExecutor(
             break;
           case 'check_site':
             result = await toolCheckSite(cruxId);
+            break;
+          case 'add_guestbook':
+            result = describeAddGuestbook(await addGuestbook(cruxId));
             break;
           case 'snapshot':
           case 'list_snapshots':
@@ -1142,6 +1162,7 @@ export const MUTATING_TOOLS = [
   'delete_file',
   'generate_image',
   'rename_file',
+  'add_guestbook',
   ...MUTATING_GROWTH_TOOLS,
   // Subagents (B5): the merge applies their files to the main line
   'delegate',

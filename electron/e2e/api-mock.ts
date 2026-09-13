@@ -304,6 +304,22 @@ export async function startMockApi(opts: { port?: number } = {}): Promise<MockAp
       res.end(file.bytes);
       return;
     }
+    // A published site served back (the guestbook journey): the API's publish injection stood
+    // in for — the page learns which crux it is and where the API lives (window.crux.publish).
+    const servedPublished = path.match(/^\/published\/([^/]+)\/(.+)$/);
+    if (servedPublished && method === 'GET') {
+      const file = (state.published[servedPublished[1]!] ?? []).find((f) => f.path === servedPublished[2]);
+      if (!file) return send(404, { message: 'Not found' });
+      let bytes = file.bytes;
+      if (file.path.endsWith('.html')) {
+        const tag = `<script data-crux-inject>window.crux=window.crux||{};window.crux.publish={cruxId:${JSON.stringify(servedPublished[1])},apiBase:${JSON.stringify(state.baseUrl)}};</script>`;
+        const html = bytes.toString('utf8');
+        bytes = Buffer.from(html.includes('</head>') ? html.replace('</head>', `${tag}</head>`) : tag + html);
+      }
+      res.writeHead(200, { 'Content-Type': file.mime ?? 'application/octet-stream', 'Content-Length': bytes.length });
+      res.end(bytes);
+      return;
+    }
     if (path === '/auth/code' && method === 'POST') return send(200, { message: 'sent' });
     if (path === '/auth/login' && method === 'POST') {
       state.loginEmail = String(bodyJson().email ?? 'tester@example.com');
@@ -718,7 +734,7 @@ export async function startMockApi(opts: { port?: number } = {}): Promise<MockAp
       // A visitor's write (the published page's SDK, or the Workshop's store proxy): one entry per key.
       if (method === 'PUT' && storeMatch![2]) {
         const key = decodeURIComponent(storeMatch![2]);
-        const { value, mode } = body as { value: unknown; mode?: string };
+        const { value, mode } = bodyJson() as { value: unknown; mode?: string };
         const m = mode === 'public' ? 'public' : 'protected';
         const visitorId = m === 'protected' ? 'visitor-tester' : null;
         state.store = state.store.filter((e) => !(e.key === key && e.visitorId === visitorId));

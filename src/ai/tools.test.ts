@@ -81,6 +81,7 @@ describe('MUTATING_TOOLS', () => {
       'delete_file',
       'generate_image',
       'rename_file',
+      'add_guestbook',
       // Growth tools that replace files (B0); snapshot/list/diff do not mutate
       'restore',
       'branch',

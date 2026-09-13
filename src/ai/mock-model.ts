@@ -311,6 +311,11 @@ export function getMockLanguageModel(): LanguageModel {
             });
           return textStream('Added the findings cell and saved the notebook.');
         }
+        if (lastUserText(prompt).includes('[site:guestbook]')) {
+          const rounds = toolResultsThisTurn(prompt);
+          if (!rounds.length) return toolCallStream('add_guestbook', {});
+          return textStream('Added a guestbook at the end of the home page; entries will show in the Store pane.');
+        }
         if (lastUserText(prompt).includes('[recorder:name]')) {
           const rounds = toolResultsThisTurn(prompt);
           if (!rounds.length) return toolCallStream('inspect_recordings', {});
