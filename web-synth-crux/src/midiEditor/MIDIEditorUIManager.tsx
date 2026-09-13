@@ -1,0 +1,647 @@
+import * as R from 'ramda';
+import { get, writable, type Writable } from 'svelte/store';
+
+import {
+  get_midi_editor_audio_connectables,
+  type MIDIEditorInstance,
+  type MIDIEditorInstanceView,
+  serializeNoteStore,
+  type SerializedMIDIEditorBaseInstance,
+  type SerializedMIDIEditorInstance,
+  type SerializedMIDIEditorState,
+  type SerializedMIDILine,
+} from 'src/midiEditor';
+import { buildDefaultCVOutputState, CVOutput } from 'src/midiEditor/CVOutput/CVOutput';
+import type MIDIEditorUIInstance from 'src/midiEditor/MIDIEditorUIInstance';
+import NoteStore from 'src/midiEditor/NoteStore';
+import { renderMIDIMinimap } from 'src/midiEditor/Minimap/MinimapRenderer';
+import { connect, updateConnectables } from 'src/patchNetwork/interface';
+import { MIDINode, mkBuildPasthroughInputCBs, type MIDIInputCbs } from 'src/patchNetwork/midiNode';
+import { getState } from 'src/redux';
+import { registerVcHideCb, unregisterVcHideCb } from 'src/ViewContextManager/VcHideStatusRegistry';
+
+export class ManagedMIDIEditorUIInstance {
+  public manager: MIDIEditorUIManager;
+  public id: string;
+  public name: string;
+  public view: MIDIEditorInstanceView;
+  public uiInst: MIDIEditorUIInstance | undefined;
+  public midiInput: MIDINode;
+  public midiOutput: MIDINode;
+  public midiInputCBs: MIDIInputCbs;
+  public notes: NoteStore;
+  public lastSetNoteVelocity: number;
+  public renderedMinimap: Writable<SVGSVGElement | undefined> = writable(undefined);
+  /**
+   * Incremented when the VC is unhidden to force React to mount a fresh canvas.  The old canvas
+   * can't be re-used because destroying the PIXI app on hide force-loses its WebGL context.
+   */
+  public uiGen = 0;
+
+  constructor(
+    manager: MIDIEditorUIManager,
+    name: string,
+    view: MIDIEditorInstanceView,
+    id: string,
+    lines: SerializedMIDILine[],
+    lastSetNoteVelocity: number | undefined
+  ) {
+    this.manager = manager;
+    this.id = id;
+    this.name = name;
+    this.view = view;
+    this.lastSetNoteVelocity = lastSetNoteVelocity ?? 90;
+    this.midiInputCBs = this.buildInstanceMIDIInputCbs();
+
+    this.midiInput = new MIDINode(() => this.midiInputCBs);
+    this.midiOutput = new MIDINode();
+    this.midiOutput.getInputCbs = mkBuildPasthroughInputCBs(this.midiOutput);
+    this.midiInput.connect(this.midiOutput);
+
+    this.notes = new NoteStore(lines.length);
+    for (const { midiNumber, notes } of lines) {
+      const lineIx = lines.length - midiNumber;
+      if (lineIx < 0 || lineIx >= lines.length) {
+        console.error(`Invalid midiNumber=${midiNumber} in serialized state; skipping`);
+        continue;
+      }
+      this.notes.loadLine(lineIx, notes);
+    }
+
+    registerVcHideCb(this.manager.vcId, this.onVcHiddenStatusChanged);
+  }
+
+  /**
+   * The UI instance (PIXI app + GL context) is destroyed while the VC is hidden and rebuilt
+   * against a fresh canvas when it's unhidden.
+   */
+  private onVcHiddenStatusChanged = (isHidden: boolean) => {
+    if (isHidden) {
+      if (this.uiInst) {
+        if (this.manager.activeUIInstance === this.uiInst) {
+          this.manager.activeUIInstance = undefined;
+        }
+        this.uiInst.destroy();
+        this.uiInst = undefined;
+      }
+      return;
+    }
+
+    const instances = get(this.manager.instances);
+    const wrapper = instances.find(inst => inst.id === this.id);
+    if (wrapper?.isExpanded && !this.uiInst) {
+      this.uiGen += 1;
+      this.manager.instances.set(instances);
+    }
+  };
+
+  public get lineCount(): number {
+    return this.notes.lineCount;
+  }
+
+  public serializeLines(): SerializedMIDILine[] {
+    return serializeNoteStore(this.notes);
+  }
+
+  private buildInstanceMIDIInputCbs = (): MIDIInputCbs => ({
+    onAttack: (note, velocity) => {
+      // if (!this.playbackHandler.isPlaying || this.playbackHandler.recordingCtx) {
+      this.midiInput.onAttack(note, velocity);
+      this.uiInst?.onGated(this.lineCount - note);
+      // }
+
+      if (this.manager.parentInst.playbackHandler.recordingCtx) {
+        this.manager.parentInst.playbackHandler.recordingCtx.onAttack(note, velocity);
+      }
+    },
+    onRelease: (note, velocity) => {
+      // if (!this.playbackHandler.isPlaying || this.playbackHandler.recordingCtx) {
+      this.midiInput.onRelease(note, velocity);
+      this.uiInst?.onUngated(this.lineCount - note);
+      // }
+
+      if (this.manager.parentInst.playbackHandler.recordingCtx) {
+        this.manager.parentInst.playbackHandler.recordingCtx.onRelease(note);
+      }
+    },
+    onPitchBend: bendAmount => {
+      if (
+        !this.manager.parentInst.playbackHandler.isPlaying ||
+        this.manager.parentInst.playbackHandler.recordingCtx
+      ) {
+        this.midiInput.outputCbs.forEach(cbs => cbs.onPitchBend(bendAmount));
+      }
+    },
+    onClearAll: () => {
+      if (
+        !this.manager.parentInst.playbackHandler.isPlaying ||
+        this.manager.parentInst.playbackHandler.recordingCtx
+      ) {
+        this.midiInput.outputCbs.forEach(cbs => cbs.onClearAll());
+      }
+      // TODO
+    },
+  });
+
+  public iterNotesWithCB = (
+    startBeatInclusive: number | null | undefined,
+    endBeatExclusive: number | null | undefined,
+    cb: (isAttack: boolean, lineIx: number, beat: number, velocity: number) => void
+  ) => {
+    this.notes.iterEvents(startBeatInclusive ?? 0, endBeatExclusive ?? null, cb);
+  };
+
+  public gate(lineIx: number, velocity: number) {
+    this.midiInputCBs.onAttack(this.lineCount - lineIx, velocity);
+  }
+
+  public ungate(lineIx: number) {
+    this.midiInputCBs.onRelease(this.lineCount - lineIx, 90);
+  }
+
+  public stopPlayback() {
+    this.midiOutput.clearAll();
+  }
+
+  public serialize(isExpanded: boolean): SerializedMIDIEditorInstance {
+    return {
+      isExpanded,
+      lines: this.serializeLines(),
+      name: this.name,
+      view: this.view,
+    };
+  }
+
+  public destroy() {
+    unregisterVcHideCb(this.manager.vcId, this.onVcHiddenStatusChanged);
+    this.uiInst?.destroy();
+    this.uiInst = undefined;
+  }
+}
+
+type BaseManagedInstance =
+  | { type: 'midiEditor'; instance: ManagedMIDIEditorUIInstance }
+  | { type: 'cvOutput'; instance: CVOutput };
+
+export type ManagedInstance = BaseManagedInstance & {
+  id: string;
+  isExpanded: boolean;
+};
+
+export class MIDIEditorUIManager {
+  public parentInst: MIDIEditorInstance;
+  public instances: Writable<ManagedInstance[]>;
+  private windowSize: { width: number; height: number } = {
+    width: window.innerWidth,
+    height: window.innerHeight,
+  };
+  public scrollHorizontalPx: Writable<number>;
+  private silentOutput: GainNode;
+  private ctx: AudioContext;
+  public readonly vcId: string;
+  public activeUIInstance: MIDIEditorUIInstance | undefined;
+  public velocityDisplayEnabled: boolean;
+
+  public setActiveUIInstanceID(id: string) {
+    const instances = get(this.instances);
+    const inst = instances.find(inst => inst.id === id);
+    if (!inst) {
+      console.error(`Could not find UI instance with ID ${id}`);
+      return;
+    }
+    if (inst.type !== 'midiEditor') {
+      console.error(`Instance with ID ${id} is not a MIDI editor`);
+      return;
+    }
+
+    this.activeUIInstance = inst.instance.uiInst;
+  }
+
+  public getMIDIEditorInstanceByID(id: string): ManagedMIDIEditorUIInstance | undefined {
+    const instances = get(this.instances);
+    const inst = instances.find(inst => inst.id === id);
+    if (!inst) {
+      console.error(`Could not find UI instance with ID ${id}`);
+      return undefined;
+    }
+    if (inst.type !== 'midiEditor') {
+      console.error(`Instance with ID ${id} is not a MIDI editor`);
+      return undefined;
+    }
+
+    return inst.instance;
+  }
+
+  public getUIInstanceByID(id: string): MIDIEditorUIInstance | undefined {
+    return this.getMIDIEditorInstanceByID(id)?.uiInst;
+  }
+
+  public setUIInstanceForID(id: string, instance: MIDIEditorUIInstance) {
+    const instances = get(this.instances);
+    const inst = instances.find(inst => inst.id === id);
+    if (!inst) {
+      console.error(`Could not find UI instance with ID ${id}`);
+      return;
+    }
+    if (inst.type !== 'midiEditor') {
+      console.error(`Instance with ID ${id} is not a MIDI editor`);
+      return;
+    }
+
+    inst.instance.uiInst = instance;
+    if (!this.activeUIInstance) {
+      this.activeUIInstance = instance;
+    }
+    this.instances.set(instances);
+  }
+
+  private pickFallbackActiveUIInstance() {
+    for (const inst of get(this.instances)) {
+      if (inst.type === 'midiEditor' && inst.isExpanded && inst.instance.uiInst) {
+        this.activeUIInstance = inst.instance.uiInst;
+        return;
+      }
+    }
+    this.activeUIInstance = undefined;
+  }
+
+  private setMinimapForID(id: string, svg: SVGSVGElement) {
+    const insts = get(this.instances);
+    const inst = insts.find(inst => inst.id === id);
+    // make sure it hasn't been toggled back to expanded in the meantime
+    if (!inst || inst.isExpanded || inst.type !== 'midiEditor') {
+      return;
+    }
+
+    inst.instance.renderedMinimap.set(svg);
+  }
+
+  public collapseUIInstance(id: string) {
+    const instances = get(this.instances);
+    const inst = instances.find(inst => inst.id === id);
+    if (!inst) {
+      console.error(`Could not find UI instance with ID ${id}`);
+      return;
+    }
+    if (!inst.isExpanded) {
+      console.error(`Instance with ID ${id} is not active`);
+      return;
+    }
+
+    let needsNewActiveUIInstance = false;
+    if (inst.type === 'midiEditor' && inst.instance.uiInst) {
+      const renderMinimapPromise = renderMIDIMinimap(
+        inst.instance.serializeLines(),
+        this.parentInst.baseView.beatsPerMeasure
+      );
+
+      needsNewActiveUIInstance = this.activeUIInstance === inst.instance.uiInst;
+
+      inst.instance.uiInst?.destroy();
+      inst.instance.uiInst = undefined;
+
+      renderMinimapPromise.then(svg => this.setMinimapForID(id, svg));
+    }
+    inst.isExpanded = false;
+    if (needsNewActiveUIInstance) {
+      this.pickFallbackActiveUIInstance();
+    }
+
+    this.resizeInstances(instances);
+    this.instances.set(instances);
+  }
+
+  public expandUIInstance(id: string) {
+    const instances = get(this.instances);
+    const inst = instances.find(inst => inst.id === id);
+    if (!inst) {
+      console.error(`Could not find UI instance with ID ${id}`);
+      return;
+    }
+    if (inst.isExpanded) {
+      console.error(`Instance with ID ${id} is already active`);
+      return;
+    }
+
+    inst.isExpanded = true;
+    if (inst.type === 'midiEditor') {
+      inst.instance.renderedMinimap.set(undefined);
+    }
+
+    this.resizeInstances(instances);
+    this.instances.set(instances);
+  }
+
+  public computeUIInstanceHeight(): number {
+    const instances = get(this.instances);
+    const cvOutputCount = instances.filter(inst => inst.type === 'cvOutput').length;
+    const midiEditorCount = instances.filter(inst => inst.type === 'midiEditor').length;
+    if (midiEditorCount === 1 && cvOutputCount <= 2) {
+      return this.windowSize.height - 100 * cvOutputCount - 140;
+    }
+    const activeInstanceCount =
+      instances.filter(inst => inst.type === 'midiEditor' && inst.isExpanded).length || 1;
+
+    const maxHeight = Math.max(500, this.windowSize.height - 700);
+    return R.clamp(500, maxHeight, (this.windowSize.height - 200) / activeInstanceCount);
+  }
+
+  private resizeInstances(instances: ManagedInstance[]) {
+    const height = this.computeUIInstanceHeight();
+    for (let i = 0; i < instances.length; i++) {
+      const inst = instances[i];
+      if (!inst.isExpanded) {
+        continue;
+      }
+
+      if (inst.type === 'midiEditor') {
+        inst.instance.uiInst?.setSize(this.windowSize.width, height);
+      }
+    }
+  }
+
+  public addMIDIEditorInstance(defaultActive = true) {
+    const instances = get(this.instances);
+    let instName = 'midi';
+    while (
+      instances.find(
+        inst =>
+          (inst.type === 'midiEditor' && inst.instance.name === instName) ||
+          (inst.type === 'cvOutput' && inst.instance.name === instName)
+      )
+    ) {
+      instName += '_1';
+    }
+
+    const maxMIDINumber = 120;
+    const lines: SerializedMIDILine[] = new Array(maxMIDINumber)
+      .fill(null)
+      .map((_, lineIx) => ({ notes: [], midiNumber: maxMIDINumber - lineIx }));
+    const id = genRandomStringID();
+    const instance = new ManagedMIDIEditorUIInstance(
+      this,
+      instName,
+      { scrollVerticalPx: 0 },
+      id,
+      lines,
+      undefined
+    );
+    instances.push({ type: 'midiEditor', id, isExpanded: defaultActive, instance });
+    this.resizeInstances(instances);
+    this.instances.set(instances);
+    updateConnectables(this.vcId, get_midi_editor_audio_connectables(this.vcId));
+  }
+
+  public addCVOutput() {
+    const insts = get(this.instances);
+    const cvOutputCount = insts.filter(inst => inst.type === 'cvOutput').length;
+    let name = `CV Output ${cvOutputCount + 1}`;
+    while (insts.some(inst => inst.instance.name === name)) {
+      name = `${name}_1`;
+    }
+    const cvOutput = new CVOutput(
+      this.parentInst,
+      this.ctx,
+      this.vcId,
+      name,
+      buildDefaultCVOutputState(this.vcId, name),
+      this.silentOutput
+    );
+    const id = genRandomStringID();
+    insts.push({ type: 'cvOutput', id, isExpanded: true, instance: cvOutput });
+    this.instances.set(insts);
+    setTimeout(() => updateConnectables(this.vcId, get_midi_editor_audio_connectables(this.vcId)));
+    return cvOutput;
+  }
+
+  public deleteCVOutput(name: string) {
+    const insts = get(this.instances);
+    const cvOutput = insts.find(inst => inst.type === 'cvOutput' && inst.instance.name === name);
+    if (!cvOutput || cvOutput.type !== 'cvOutput') {
+      console.error(`Could not find CV output with name ${name} to destroy`);
+      return;
+    }
+    const output = cvOutput.instance;
+    const reallyDelete = confirm(`Are you sure you want to delete the CV output "${output.name}"?`);
+    if (!reallyDelete) {
+      return;
+    }
+
+    output.destroy();
+    insts.splice(insts.indexOf(cvOutput), 1);
+    this.instances.set(insts);
+    this.resizeInstances(insts);
+    setTimeout(() => updateConnectables(this.vcId, get_midi_editor_audio_connectables(this.vcId)));
+  }
+
+  public deleteMIDIEditorInstance(id: string) {
+    const insts = get(this.instances);
+    const inst = insts.find(inst => inst.id === id);
+    if (!inst || inst.type !== 'midiEditor') {
+      console.error(`Could not find MIDI editor instance with ID ${id} to destroy`);
+      return;
+    }
+    const midiEditor = inst.instance;
+    const reallyDelete = confirm(
+      `Are you sure you want to delete the MIDI editor instance "${midiEditor.name}"?`
+    );
+    if (!reallyDelete) {
+      return;
+    }
+
+    const wasActive = !!this.activeUIInstance && this.activeUIInstance === midiEditor.uiInst;
+    midiEditor.destroy();
+    insts.splice(insts.indexOf(inst), 1);
+    if (wasActive) {
+      this.pickFallbackActiveUIInstance();
+    }
+    this.instances.set(insts);
+    this.resizeInstances(insts);
+    setTimeout(() => updateConnectables(this.vcId, get_midi_editor_audio_connectables(this.vcId)));
+  }
+
+  public renameInstance(oldName: string, newName: string) {
+    const insts = get(this.instances);
+    const inst = insts.find(inst => inst.instance.name === oldName);
+    if (!inst) {
+      console.error(`Could not find CV output with name ${oldName} to rename`);
+      return;
+    }
+    const output = inst.instance;
+
+    while (insts.some(inst => inst.instance.name === newName)) {
+      newName = `${newName}_1`;
+    }
+    output.name = newName;
+
+    this.instances.set(insts);
+
+    const connections = getState().viewContextManager.patchNetwork.connections;
+    // CV outputs expose their output port under the bare instance name
+    const oldInputName = `${oldName}_in`;
+    const newInputName = `${newName}_in`;
+    const oldOutputName = inst.type === 'cvOutput' ? oldName : `${oldName}_out`;
+    const newOutputName = inst.type === 'cvOutput' ? newName : `${newName}_out`;
+    const connectedInputs = connections.filter(
+      ([_from, to]) => to.vcId === this.vcId && to.name === oldInputName
+    );
+    const connectedOutputs = connections.filter(
+      ([from]) => from.vcId === this.vcId && from.name === oldOutputName
+    );
+    setTimeout(() => {
+      updateConnectables(this.vcId, get_midi_editor_audio_connectables(this.vcId));
+
+      for (const [from, to] of connectedInputs) {
+        connect(from, { ...to, name: newInputName });
+      }
+      for (const [from, to] of connectedOutputs) {
+        connect({ ...from, name: newOutputName }, to);
+      }
+    });
+  }
+
+  public gateInstance(instanceID: string, lineIx: number, velocity: number) {
+    const inst = this.getMIDIEditorInstanceByID(instanceID);
+    if (!inst) {
+      return;
+    }
+
+    inst.gate(lineIx, velocity);
+  }
+
+  public ungateInstance(instanceID: string, lineIx: number) {
+    const inst = this.getMIDIEditorInstanceByID(instanceID);
+    if (!inst) {
+      return;
+    }
+
+    inst.ungate(lineIx);
+  }
+
+  public updateLoopPoint(loopPoint: number | null) {
+    const insts = get(this.instances);
+    for (const inst of insts) {
+      if (inst.type === 'midiEditor') {
+        inst.instance.uiInst?.setLoopPoint(loopPoint);
+      }
+    }
+  }
+
+  constructor(
+    ctx: AudioContext,
+    parentInst: MIDIEditorInstance,
+    initialState: SerializedMIDIEditorState,
+    vcId: string
+  ) {
+    this.parentInst = parentInst;
+    this.scrollHorizontalPx = writable(initialState.view.scrollHorizontalBeats);
+    this.velocityDisplayEnabled = initialState.velocityDisplayEnabled ?? false;
+    this.ctx = ctx;
+    this.vcId = vcId;
+    this.silentOutput = new GainNode(ctx);
+    this.silentOutput.gain.value = 0;
+
+    const instances = initialState.instances.map(inst => {
+      if (inst.type === 'midiEditor') {
+        const instance = new ManagedMIDIEditorUIInstance(
+          this,
+          inst.state.name,
+          inst.state.view,
+          genRandomStringID(),
+          inst.state.lines,
+          inst.state.lastSetNoteVelocity
+        );
+
+        if (!inst.state.isExpanded) {
+          renderMIDIMinimap(inst.state.lines, this.parentInst.baseView.beatsPerMeasure).then(svg =>
+            this.setMinimapForID(instance.id, svg)
+          );
+        }
+
+        return {
+          type: 'midiEditor' as const,
+          id: instance.id,
+          isExpanded: inst.state.isExpanded,
+          instance,
+        };
+      } else if (inst.type === 'cvOutput') {
+        const instance = new CVOutput(
+          parentInst,
+          ctx,
+          vcId,
+          inst.state.name,
+          inst.state,
+          this.silentOutput
+        );
+        return {
+          type: 'cvOutput' as const,
+          id: genRandomStringID(),
+          isExpanded: inst.state.isExpanded,
+          instance,
+        };
+      } else {
+        throw new Error(`Unknown instance type ${(inst as any).type}`);
+      }
+    });
+    this.instances = writable(instances);
+  }
+
+  public setVelocityDisplayEnabled(enabled: boolean) {
+    this.velocityDisplayEnabled = enabled;
+    for (const inst of get(this.instances)) {
+      if (inst.type === 'midiEditor' && inst.isExpanded) {
+        inst.instance.uiInst?.setVelocityDisplayEnabled(enabled);
+      }
+    }
+  }
+
+  public updateAllViews() {
+    const insts = get(this.instances);
+    for (const inst of insts) {
+      if (inst.type === 'midiEditor' && inst.isExpanded) {
+        inst.instance.uiInst?.handleViewChange();
+      } else if (inst.type === 'cvOutput') {
+        inst.instance.handleViewChange(this.parentInst.baseView);
+      }
+    }
+  }
+
+  public stopAllPlayback() {
+    const insts = get(this.instances);
+    for (const inst of insts) {
+      if (inst.type === 'midiEditor') {
+        inst.instance.stopPlayback();
+      }
+    }
+  }
+
+  public serializeInstances(): SerializedMIDIEditorBaseInstance[] {
+    const insts = get(this.instances);
+    return insts.map(inst => {
+      if (inst.type === 'midiEditor') {
+        return { type: 'midiEditor', state: inst.instance.serialize(inst.isExpanded) };
+      } else if (inst.type === 'cvOutput') {
+        return { type: 'cvOutput', state: inst.instance.serialize() };
+      } else {
+        throw new Error(`Unknown instance type: ${(inst as any).type}`);
+      }
+    });
+  }
+
+  public handleWindowResize = (newWidth: number, newHeight: number) => {
+    this.windowSize = { width: newWidth, height: newHeight };
+    this.resizeInstances(get(this.instances));
+  };
+
+  public destroy() {
+    const insts = get(this.instances);
+    for (const inst of insts) {
+      if (inst.type === 'midiEditor') {
+        inst.instance.destroy();
+      } else if (inst.type === 'cvOutput') {
+        inst.instance.destroy();
+      }
+    }
+    this.instances.set([]);
+  }
+}

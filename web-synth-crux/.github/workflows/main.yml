@@ -1,0 +1,178 @@
+name: Build, Test, and Deploy
+
+on: [push]
+
+env:
+  EM_VERSION: 4.0.5
+  EM_CACHE_FOLDER: 'emsdk-cache'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: 'recursive'
+
+      # Caching
+      # \/ Disabled due to (what seems to be) a bug in the `actions/cache` action (issue filed)
+      # - name: Cache cargo binaries
+      #   id: cache-cargo-binaries
+      #   uses: actions/cache@v4
+      #   with:
+      #     path: ~/.cargo/bin
+      #     key: ${{ runner.os }}_nightly-2024-12-14_cargo-registry_just-0.5.1_wasm-bindgen-cli-0.2.54
+      - name: Cache cargo registry
+        uses: actions/cache@v4
+        env:
+          cache-name: cache-cargo-registry
+        with:
+          path: ~/.cargo/registry
+          key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('engine/Cargo.lock') }}
+      - name: Cache cargo index
+        uses: actions/cache@v4
+        env:
+          cache-name: cache-cargo-index
+        with:
+          path: ~/.cargo/git
+          key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('engine/Cargo.lock') }}
+      - name: Cache Rust lib build artifacts
+        uses: actions/cache@v4
+        env:
+          cache-name: cache-target-dir
+        with:
+          path: ./engine/target
+          key: ${{ runner.os }}-build-${{ env.cache-name }}_nightly-2025-11-25_${{ hashFiles('engine/Cargo.lock') }}
+      - name: Cache node modules
+        uses: actions/cache@v4
+        env:
+          cache-name: cache-node-modules
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('yarn.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-build-${{ env.cache-name }}-
+            ${{ runner.os }}-build-
+            ${{ runner.os }}-
+      - name: Get yarn cache directory path
+        id: yarn-cache-dir-path
+        run: echo "dir=$(yarn cache dir)" >> $GITHUB_ENV
+      - uses: actions/cache@v4
+        id: yarn-cache
+        with:
+          path: ${{ env.dir }}
+          key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-yarn-
+      - name: Cache Emscripten
+        id: cache-emscripten-system-libraries
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.EM_CACHE_FOLDER }}
+          key: ${{ env.EM_VERSION }}-${{ runner.os }}
+
+      # Set up build environment + toolchains with Rust nightly with Wasm support and NodeJS
+      - name: Install minimal Rust nightly
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: nightly-2025-11-25
+      - name: Use Rust nightly
+        run: rustup default nightly-2025-11-25
+      - name: Install Rust Wasm support
+        run: rustup target add wasm32-unknown-unknown
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.3'
+      - name: Setup Emscripten
+        uses: mymindstorm/setup-emsdk@v14
+        with:
+          version: ${{ env.EM_VERSION }}
+          actions-cache-folder: ${{ env.EM_CACHE_FOLDER }}
+          cache-key: emsdk-${{ env.EM_VERSION }}-${{ runner.os }}-${{ runner.arch }}
+      - name: Install SVGO SVG optimizer
+        run: yarn global add svgo
+      - name: Add globally installed yarn binaries to path
+        run: echo "$(yarn global bin)" >> $GITHUB_PATH
+
+      - name: Create custom binaries directory
+        run: mkdir ~/bin
+        # Built with `cargo install --target x86_64-unknown-linux-musl -f just`
+      - name: Install `just`
+        run: curl https://web-synth-ci-binaries.ameo.design/just -o ~/bin/just && chmod +x ~/bin/just
+        # Downloaded from Github like https://github.com/rustwasm/wasm-bindgen/releases/tag/0.2.92
+      - name: Install `wasm-bindgen-cli`
+        run: curl https://web-synth-ci-binaries.ameo.design/wasm-bindgen-0-2-92 -o ~/bin/wasm-bindgen && chmod +x ~/bin/wasm-bindgen
+      - name: Install `wasm-opt`
+        run: curl https://web-synth-ci-binaries.ameo.design/wasm-opt -o ~/bin/wasm-opt && chmod +x ~/bin/wasm-opt
+      - name: Install `wasm-strip`
+        run: curl https://web-synth-ci-binaries.ameo.design/wasm-strip -o ~/bin/wasm-strip && chmod +x ~/bin/wasm-strip
+      - name: Add custom binaries directory to the PATH
+        run: echo "$HOME/bin" >> $GITHUB_PATH
+
+      # Build all Rust modules into Wasm, run `wasm-bindgen`, compile JavaScript, and link everything together
+      - name: Install node modules
+        run: yarn
+      - name: Install docs node modules
+        run: cd docs/_layouts && yarn
+      - name: Build all wasm + javascript
+        run: just build-all
+        env:
+          FAUST_COMPILER_ENDPOINT: 'https://faust-compiler.ameo.design'
+
+      - name: Upload built site as artifacts
+        uses: actions/upload-artifact@v4.4.0
+        with:
+          name: dist
+          path: ./dist
+
+  cypress-test:
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download built site artifacts
+        uses: actions/download-artifact@v4.1.7
+        with:
+          name: dist
+          path: ./dist
+
+      # Run Cypress tests
+      - name: Cypress Run
+        uses: cypress-io/github-action@v6
+        with:
+          browser: chrome
+          start: yarn cypress:serve
+          wait-on: 'http://localhost:9000'
+        timeout-minutes: 30
+        env:
+          CYPRESS_NO_COMMAND_LOG: 0
+      - name: Upload recorded video as an artifact
+        uses: actions/upload-artifact@v4.4.0
+        if: failure()
+        with:
+          name: cypress_recordings
+          path: cypress/videos
+
+  deploy-static-site:
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - name: Install `phost`
+        run: pip3 install --user setuptools wheel && pip3 install --user "git+https://github.com/Ameobea/phost.git#egg=phost&subdirectory=client"
+      - name: Add `phost` to the `PATH`
+        run: echo "$HOME/.local/bin" >> $GITHUB_PATH
+      - name: Extract `phost` config from secrets
+        env: # Or as an environment variable
+          PHOST_CONFIG_BASE64: ${{ secrets.PHOST_CONFIG_BASE64 }}
+        run: mkdir ~/.phost; echo "$PHOST_CONFIG_BASE64" | base64 -d > ~/.phost/conf.toml
+      - name: Download built site artifacts
+        uses: actions/download-artifact@v4.1.7
+        with:
+          name: dist
+          path: ./dist
+      - name: Deploy
+        run: phost update notes patch ./dist

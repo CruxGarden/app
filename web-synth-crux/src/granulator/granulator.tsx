@@ -1,0 +1,317 @@
+import { Option } from 'funfix-core';
+import { Map as ImmMap } from 'immutable';
+import React, { Suspense } from 'react';
+
+import { ActiveSamplesByVcId } from 'src/granulator/activeSamples';
+import type {
+  GranulatorUIProps,
+  GranulatorControlPanelState,
+} from 'src/granulator/GranulatorUI';
+import { WaveformRenderer } from 'src/granulator/GranulatorUI/WaveformRenderer';
+import DummyNode from 'src/graphEditor/nodes/DummyNode';
+import { OverridableAudioParam } from 'src/graphEditor/nodes/util';
+import Loading from 'src/misc/Loading';
+import type { AudioConnectables, ConnectableInput, ConnectableOutput } from 'src/patchNetwork';
+import { updateConnectables } from 'src/patchNetwork/interface';
+import {
+  mkContainerCleanupHelper,
+  mkContainerHider,
+  mkContainerRenderHelper,
+  mkContainerUnhider,
+} from 'src/reactUtils';
+import type { SampleDescriptor } from 'src/sampleLibrary';
+import { AsyncOnce } from 'src/util';
+import { get, writable } from 'svelte/store';
+
+const ctx = new AudioContext();
+
+const GranulatorAWPRegistered = new AsyncOnce(
+  () =>
+    ctx.audioWorklet.addModule(
+      process.env.ASSET_PATH +
+        'GranulatorWorkletProcessor.js?cacheBust=' +
+        btoa(Math.random().toString())
+    ),
+  true
+);
+
+export interface GranulatorInstance {
+  node: AudioWorkletNode;
+  startSample: OverridableAudioParam;
+  endSample: OverridableAudioParam;
+  grainSize: OverridableAudioParam;
+  samplesBetweenGrains: OverridableAudioParam;
+  sampleSpeedRatio: OverridableAudioParam;
+  filterCutoff: OverridableAudioParam;
+  linearSlopeLength: OverridableAudioParam;
+  slopeLinearity: OverridableAudioParam;
+  movementSamplesPerSample: OverridableAudioParam;
+  selectedSample: SampleDescriptor | null;
+  waveformRenderer: WaveformRenderer;
+}
+
+export const GranulatorInstancesById = writable(ImmMap<string, GranulatorInstance>());
+
+const GranulatorUI = React.lazy(() => import('./GranulatorUI'));
+
+const getGranulatorDOMElementId = (vcId: string) => `granulator-${vcId}`;
+
+interface SerializedGranulator {
+  controlPanelState: GranulatorControlPanelState;
+  selectedSample: SampleDescriptor | null;
+  startSample: number | null;
+  endSample: number | null;
+}
+
+const serializeGranulator = (vcId: string): string => {
+  const inst = get(GranulatorInstancesById).get(vcId);
+  if (!inst) {
+    throw new Error(`No granulator instance with vcId=${vcId}`);
+  }
+  const controlPanelState: GranulatorControlPanelState = {
+    grain_size: inst.grainSize.manualControl.offset.value,
+    samples_between_grains: inst.samplesBetweenGrains.manualControl.offset.value,
+    sample_speed_ratio: inst.sampleSpeedRatio.manualControl.offset.value,
+    filter_cutoff: inst.filterCutoff.manualControl.offset.value,
+    linear_slope_length: inst.linearSlopeLength.manualControl.offset.value,
+    slope_linearity: inst.slopeLinearity.manualControl.offset.value,
+    movement_samples_per_sample: inst.movementSamplesPerSample.manualControl.offset.value,
+  };
+  const serialized: SerializedGranulator = {
+    controlPanelState,
+    selectedSample: inst.selectedSample,
+    startSample: inst.startSample.manualControl.offset.value,
+    endSample: inst.endSample.manualControl.offset.value,
+  };
+
+  return JSON.stringify(serialized);
+};
+
+const buildDefaultGranulatorState = (): SerializedGranulator => ({
+  controlPanelState: {
+    grain_size: 800.0,
+    samples_between_grains: 800.0,
+    sample_speed_ratio: 1.0,
+    filter_cutoff: 0.0,
+    linear_slope_length: 0.3,
+    slope_linearity: 0.6,
+    movement_samples_per_sample: 1,
+  },
+  selectedSample: null,
+  startSample: null,
+  endSample: null,
+});
+
+// Maps the old per-voice control keys onto the single-voice keys, falling back to defaults for
+// anything missing.
+const migrateControlPanelState = (cps: any): GranulatorControlPanelState => {
+  const defaults = buildDefaultGranulatorState().controlPanelState;
+  return {
+    grain_size: cps.grain_size ?? defaults.grain_size,
+    samples_between_grains:
+      cps.samples_between_grains ??
+      cps.voice_1_samples_between_grains ??
+      defaults.samples_between_grains,
+    sample_speed_ratio: cps.sample_speed_ratio ?? defaults.sample_speed_ratio,
+    filter_cutoff: cps.filter_cutoff ?? cps.voice_1_filter_cutoff ?? defaults.filter_cutoff,
+    linear_slope_length: cps.linear_slope_length ?? defaults.linear_slope_length,
+    slope_linearity: cps.slope_linearity ?? defaults.slope_linearity,
+    movement_samples_per_sample:
+      cps.movement_samples_per_sample ??
+      cps.voice_1_movement_samples_per_sample ??
+      defaults.movement_samples_per_sample,
+  };
+};
+
+const deserializeGranulator = (stateKey: string, serialized: string): SerializedGranulator => {
+  try {
+    const deserialized = JSON.parse(serialized);
+    if (!deserialized.controlPanelState) {
+      throw new Error();
+    }
+    return {
+      ...deserialized,
+      controlPanelState: migrateControlPanelState(deserialized.controlPanelState),
+    };
+  } catch (err) {
+    console.warn('Error deserializing granulator state: ', err);
+    // clear the bad key so the default state doesn't get persisted over it on unload
+    localStorage.removeItem(stateKey);
+    return buildDefaultGranulatorState();
+  }
+};
+
+const LazyGranulatorUI: React.FC<GranulatorUIProps> = props => (
+  <Suspense fallback={<Loading />}>
+    <GranulatorUI {...props} />
+  </Suspense>
+);
+
+export const build_granulator_audio_connectables = (vcId: string): AudioConnectables => {
+  const inst = get(GranulatorInstancesById).get(vcId);
+  if (!inst) {
+    return {
+      vcId,
+      inputs: ImmMap<string, ConnectableInput>()
+        .set('start_sample', { type: 'number', node: new DummyNode() })
+        .set('end sample', { type: 'number', node: new DummyNode() })
+        .set('filter cutoff', { type: 'number', node: new DummyNode() })
+        .set('sample speed ratio', { type: 'number', node: new DummyNode() })
+        .set('playhead movement speed ratio', { type: 'number', node: new DummyNode() })
+        .set('recording_input', { type: 'customAudio', node: new DummyNode() }),
+      outputs: ImmMap<string, ConnectableOutput>().set('output', {
+        type: 'customAudio',
+        node: new DummyNode(),
+      }),
+    };
+  }
+
+  return {
+    vcId,
+    inputs: ImmMap<string, ConnectableInput>()
+      .set('start_sample', { type: 'number', node: inst.startSample })
+      .set('end sample', { type: 'number', node: inst.endSample })
+      .set('filter cutoff', { type: 'number', node: inst.filterCutoff })
+      .set('sample speed ratio', { type: 'number', node: inst.sampleSpeedRatio })
+      .set('playhead movement speed ratio', {
+        type: 'number',
+        node: inst.movementSamplesPerSample,
+      })
+      .set('recording_input', { type: 'customAudio', node: inst.node }),
+    outputs: ImmMap<string, ConnectableOutput>().set('output', {
+      type: 'customAudio',
+      node: inst.node,
+    }),
+  };
+};
+
+const GranularWasm = new AsyncOnce(
+  () =>
+    fetch(
+      process.env.ASSET_PATH +
+        'granular.wasm?cacheBust=' +
+        (window.location.host.includes('localhost') ? '' : genRandomStringID())
+    ).then(res => res.arrayBuffer()),
+  true
+);
+
+export const init_granulator = async (stateKey: string) => {
+  const vcId = stateKey.split('_')[1]!;
+
+  const serialized = localStorage.getItem(stateKey);
+  const initialState: SerializedGranulator = Option.of(serialized)
+    .map(s => deserializeGranulator(stateKey, s))
+    .getOrElseL(buildDefaultGranulatorState);
+
+  const granularWasmPromise = GranularWasm.get();
+  const waveformRenderer = new WaveformRenderer();
+  GranulatorAWPRegistered.get().then(async () => {
+    const node = new AudioWorkletNode(ctx, 'granulator-audio-worklet-processor', {
+      channelCount: 1,
+      numberOfInputs: 1,
+      numberOfOutputs: 1,
+      channelInterpretation: 'discrete',
+      channelCountMode: 'explicit',
+    });
+
+    const params = node.parameters as any;
+    const inst: GranulatorInstance = {
+      node,
+      startSample: new OverridableAudioParam(ctx, params.get('start_sample')),
+      endSample: new OverridableAudioParam(ctx, params.get('end_sample')),
+      grainSize: new OverridableAudioParam(ctx, params.get('grain_size')),
+      samplesBetweenGrains: new OverridableAudioParam(ctx, params.get('samples_between_grains')),
+      sampleSpeedRatio: new OverridableAudioParam(ctx, params.get('sample_speed_ratio')),
+      filterCutoff: new OverridableAudioParam(ctx, params.get('filter_cutoff')),
+      linearSlopeLength: new OverridableAudioParam(ctx, params.get('linear_slope_length')),
+      slopeLinearity: new OverridableAudioParam(ctx, params.get('slope_linearity')),
+      movementSamplesPerSample: new OverridableAudioParam(
+        ctx,
+        params.get('movement_samples_per_sample')
+      ),
+      selectedSample: initialState.selectedSample,
+      waveformRenderer,
+    };
+    if (initialState.startSample !== null) {
+      inst.startSample.manualControl.offset.value = initialState.startSample;
+    } else {
+      inst.startSample.manualControl.offset.value = -1;
+    }
+    if (initialState.endSample !== null) {
+      inst.endSample.manualControl.offset.value = initialState.endSample;
+    } else {
+      inst.endSample.manualControl.offset.value = -1;
+    }
+
+    const granularWasm = await granularWasmPromise;
+    // Once we've fetched the Wasm bytes for the granular's DSP instance, we send them to the AWP
+    // to be instantiated and start.
+    node.port.postMessage({ type: 'setWasmBytes', wasmBytes: granularWasm });
+
+    GranulatorInstancesById.update(map => map.set(vcId, inst));
+    updateConnectables(vcId, build_granulator_audio_connectables(vcId));
+  });
+
+  // Since we asynchronously init, we need to update our connections manually once we've created a valid internal state
+  updateConnectables(vcId, build_granulator_audio_connectables(vcId));
+
+  if ((window as any).isHeadless) {
+    return;
+  }
+
+  const domId = getGranulatorDOMElementId(vcId);
+  const elem = document.createElement('div');
+  elem.id = domId;
+  elem.setAttribute(
+    'style',
+    'z-index: 2; width: 100%; height: calc(100vh - 34px); overflow-y: scroll; position: absolute; top: 0; left: 0; display: none;'
+  );
+  document.getElementById('content')!.appendChild(elem);
+
+  mkContainerRenderHelper({
+    Comp: LazyGranulatorUI,
+    getProps: (): GranulatorUIProps => ({
+      vcId,
+      initialState: initialState.controlPanelState,
+      selectedSample: initialState.selectedSample,
+      waveformRenderer,
+    }),
+  })(domId);
+};
+
+export const persist_granulator = (stateKey: string) => {
+  const vcId = stateKey.split('_')[1]!;
+  const serialized = serializeGranulator(vcId);
+  localStorage.setItem(stateKey, serialized);
+};
+
+export const cleanup_granulator = (stateKey: string) => {
+  persist_granulator(stateKey);
+
+  const vcId = stateKey.split('_')[1]!;
+
+  const inst = get(GranulatorInstancesById).get(vcId);
+  if (inst) {
+    inst.node.port.postMessage({ type: 'shutdown' });
+    inst.startSample.dispose();
+    inst.endSample.dispose();
+    inst.grainSize.dispose();
+    inst.samplesBetweenGrains.dispose();
+    inst.sampleSpeedRatio.dispose();
+    inst.filterCutoff.dispose();
+    inst.linearSlopeLength.dispose();
+    inst.slopeLinearity.dispose();
+    inst.movementSamplesPerSample.dispose();
+    inst.waveformRenderer.dispose();
+    GranulatorInstancesById.update(map => map.remove(vcId));
+  }
+
+  mkContainerCleanupHelper()(getGranulatorDOMElementId(vcId));
+};
+
+export const hide_granulator = mkContainerHider(getGranulatorDOMElementId);
+
+export const unhide_granulator = mkContainerUnhider(getGranulatorDOMElementId);
+
+export const granulator_list_used_samples = (vcId: string): SampleDescriptor[] =>
+  ActiveSamplesByVcId.get(vcId) ?? [];

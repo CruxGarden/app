@@ -1,0 +1,16 @@
+[package]
+authors = ["Casey Primozic <casey@cprimozic.net>"]
+edition = "2021"
+name = "adsr"
+version = "0.1.0"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+dsp = { path = "../dsp", default-features = false }
+common = { path = "../common", default-features = false }
+
+[features]
+exports = []
+default = ["exports"]

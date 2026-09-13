@@ -108,6 +108,19 @@ export function getMockLanguageModel(): LanguageModel {
         // ── Glow Garden: the scripted collaborator across the game Cruxspace (GAME-CRUXSPACE-PLAN.md) ──
         const game = gameScript(prompt);
         if (game) return game;
+        if (lastUserText(prompt).includes('[synth:edit]')) {
+          const rounds = toolResultsThisTurn(prompt);
+          if (!rounds.length) return toolCallStream('inspect_web_synth', {});
+          if (rounds.length === 1) return toolCallStream('set_web_synth_tempo', { bpm: 128 });
+          if (rounds.length === 2)
+            return toolCallStream('add_web_synth_module', { kind: 'midi_editor', title: 'Agent notes' });
+          if (rounds.length === 3) {
+            const data = JSON.parse(toolResultText(prompt, 'add_web_synth_module') || '{}');
+            const added = data.viewContexts?.find((vc: { title: string | null }) => vc.title === 'Agent notes');
+            return toolCallStream('rename_web_synth_module', { id: added?.id, title: 'Agent melody' });
+          }
+          return textStream('Set the tempo to 128 and added a MIDI editor named Agent melody.');
+        }
         if (lastUserText(prompt).includes('[kan:edit]')) {
           const rounds = toolResultsThisTurn(prompt);
           if (!rounds.length) return toolCallStream('inspect_kan', {});

@@ -243,6 +243,7 @@ const loaders: Record<string, () => Promise<{ default: TemplateDefinition }>> = 
   'twine-app': () => import('./twine-app'),
   'opencut-app': () => import('./opencut-app'),
   'kan-app': () => import('./kan-app'),
+  'web-synth-app': () => import('./web-synth-app'),
   'playcanvas-editor-app': () => import('./playcanvas-editor-app'),
   'blockbench-app': () => import('./blockbench-app'),
   'gdevelop-app': () => import('./gdevelop-app'),

@@ -853,6 +853,12 @@ function contentTypeFor(filePath: string): string {
   return CONTENT_TYPES[path.extname(filePath).toLowerCase()] ?? 'application/octet-stream';
 }
 
+// Embedded apps that share memory between AudioWorklets and the page (web-synth's
+// transport, compressor, FM synth, spectrogram) need SharedArrayBuffer. The shell
+// cannot be cross-origin isolated without breaking every other embedded app and
+// preview, so Chromium's feature flag enables it for non-isolated contexts.
+app.commandLine.appendSwitch('enable-features', 'SharedArrayBuffer');
+
 // Register crux-app:// as a privileged scheme (must be before app.whenReady)
 protocol.registerSchemesAsPrivileged([
   {

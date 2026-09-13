@@ -1,0 +1,32 @@
+html,
+body {
+  width: 100vw;
+  max-width: 100vw;
+  height: 100vh;
+  max-height: 100vh;
+  overflow: hidden;
+  position: relative !important;
+}
+
+body {
+  background-color: #151515;
+  margin: 0;
+  padding: 0;
+}
+
+body,
+h1,
+h2,
+h3,
+h4,
+h5 {
+  font-family: 'IBM Plex Sans', 'Open Sans', 'Roboto', sans-serif;
+}
+
+.control-panel .control-panel-container input {
+  margin-top: 0;
+}
+
+.control-panel .control-panel-container input[type='text'] {
+  height: 18px !important;
+}

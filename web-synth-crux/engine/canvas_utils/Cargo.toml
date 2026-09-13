@@ -1,0 +1,7 @@
+[package]
+authors = ["Casey Primozic <casey@cprimozic.net>"]
+edition = "2021"
+name = "canvas_utils"
+version = "0.1.0"
+
+[dependencies]

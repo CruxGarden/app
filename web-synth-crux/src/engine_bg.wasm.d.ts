@@ -1,0 +1,33 @@
+/* tslint:disable */
+/* eslint-disable */
+export const memory: WebAssembly.Memory;
+export function add_subgraph(a: number): void;
+export function cleanup_small_view(a: number, b: number, c: number, d: number): void;
+export function create_view_context(a: number, b: number, c: number, d: number, e: number, f: number, g: number): void;
+export function delete_subgraph(a: number, b: number): void;
+export function delete_vc_by_id(a: number, b: number): void;
+export function get_active_samples(a: number): void;
+export function get_state_key(a: number, b: number, c: number): void;
+export function get_vc_connectables(a: number, b: number): number;
+export function init(): void;
+export function load_serialized_subgraph(a: number, b: number, c: number): void;
+export function move_vfcs_to_subgraph(a: number, b: number, c: number, d: number): void;
+export function persist_vc_state(a: number, b: number): void;
+export function redo_view_change(): void;
+export function rename_subgraph(a: number, b: number, c: number, d: number): void;
+export function render_small_view(a: number, b: number, c: number, d: number): void;
+export function reset_vcm(): void;
+export function serialize_subgraph(a: number, b: number, c: number, d: number, e: number): void;
+export function set_active_subgraph_id(a: number, b: number): void;
+export function set_connections(a: number, b: number): void;
+export function set_foreign_connectables(a: number, b: number): void;
+export function set_vc_title(a: number, b: number, c: number, d: number): void;
+export function swap_vc_positions(a: number, b: number): void;
+export function switch_view_context(a: number, b: number): void;
+export function undo_view_change(): void;
+export function save_all(): void;
+export function handle_window_close(): void;
+export function __wbindgen_malloc(a: number, b: number): number;
+export function __wbindgen_realloc(a: number, b: number, c: number, d: number): number;
+export function __wbindgen_add_to_stack_pointer(a: number): number;
+export function __wbindgen_free(a: number, b: number, c: number): void;

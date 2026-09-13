@@ -1,0 +1,165 @@
+.fm-synth-demo {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.fm-synth-demo-controls {
+  display: flex;
+  flex-direction: row;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 12px;
+  margin-left: auto;
+  margin-right: auto;
+  max-width: 100%;
+  box-sizing: border-box;
+
+  > div {
+    overflow-y: auto;
+  }
+}
+
+.fm-synth-main-control-panel {
+  display: flex;
+  flex-direction: column;
+  background-color: rgb(35, 35, 35);
+  min-width: 400px;
+}
+
+@media screen and (max-width: 799px) {
+  .fm-synth-main-control-panel {
+    min-width: 100vw;
+  }
+
+  select,
+  input,
+  button {
+    font-size: 10px;
+  }
+}
+
+.fm-synth-mobile-links {
+  text-align: center;
+  display: flex;
+  flex-direction: row;
+  justify-content: space-around;
+}
+
+@media screen and (min-width: 800px) {
+  .fm-synth-mobile-links {
+    display: none;
+  }
+}
+
+@media screen and (min-height: 500px) {
+  .fm-synth-mobile-links {
+    display: flex;
+    flex-direction: column;
+
+    > br {
+      display: none;
+    }
+    > * {
+      margin-bottom: 8px;
+      font-size: 15px;
+    }
+  }
+}
+
+.fm-synth-filter-control-panel {
+  display: flex;
+  background: rgb(35, 35, 35);
+  min-width: 530px;
+  padding: 14px 14px 8px;
+  opacity: 0.95;
+  flex-basis: 700px;
+  flex-direction: column;
+}
+
+.midi-keyboard-wrapper {
+  display: flex;
+  justify-content: center;
+  flex: 1;
+  align-items: flex-end;
+}
+
+#root div.fm-synth-main-control-panel > div:nth-child(1) > div:nth-child(1) > div.control-panel-draggable > span {
+  color: rgb(216, 36, 36) !important;
+}
+
+#root
+  > div
+  > div.fm-synth-demo-controls
+  > div.fm-synth-main-control-panel
+  > div:nth-child(2)
+  > div:nth-child(1) {
+  color: white !important;
+}
+
+#simd-status {
+  max-width: 200px;
+  z-index: 5;
+}
+
+/* Make github corner smaller on Mobile so it doesn't cover up important UI */
+@media screen and (max-width: 799px) {
+  .github-corner > svg {
+    transform: scale(0.5) translate(40px, -40px);
+  }
+
+  .ReactPiano__NoteLabelContainer {
+    display: none;
+  }
+
+  #simd-status {
+    display: none !important;
+    pointer-events: none;
+    line-height: 1;
+  }
+
+  #fm-synth-links {
+    display: none;
+  }
+}
+
+@media screen and (min-width: 1000px) {
+  .midi-keyboard {
+    max-width: calc(100vw - 400px);
+  }
+}
+
+.fm-synth-demo-mobile-text {
+  padding-left: 10px;
+  padding-right: 10px;
+}
+
+@media screen and (max-height: 350px) {
+  .fm-synth-demo-mobile-text {
+    display: none;
+  }
+}
+
+@media screen and (max-height: 420px) {
+  .fm-synth-demo-mobile-text {
+    font-size: 14px;
+    line-height: 1.1;
+
+    p {
+      margin-top: 2px;
+      margin-bottom: 2px;
+    }
+  }
+}
+
+@media screen and (max-height: 388px) {
+  .fm-synth-demo-mobile-text {
+    font-size: 12px !important;
+    line-height: 1 !important;
+
+    p {
+      margin-top: 2px !important;
+      margin-bottom: 2px !important;
+    }
+  }
+}

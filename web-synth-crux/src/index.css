@@ -1,0 +1,92 @@
+* {
+  scrollbar-color: rgb(27, 27, 27);
+
+  &::-webkit-scrollbar {
+    width: 12px;
+    height: 12px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: rgb(27, 27, 27);
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: #424242;
+    outline: 1px solid #333;
+  }
+
+  &::-webkit-scrollbar-corner {
+    background: rgb(27, 27, 27);
+  }
+}
+
+html {
+  overflow-x: hidden;
+}
+
+body {
+  background-color: #151515;
+  margin: 0;
+  padding: 0;
+  color: #ddd;
+  height: 100vh;
+}
+
+#content {
+  width: 100%;
+}
+
+main#content {
+  left: 0;
+  top: 32px;
+  position: absolute;
+}
+
+a {
+  color: #ff2e88;
+}
+
+a:visited {
+  color: #a89984;
+}
+
+button {
+  background-color: rgb(54, 54, 54);
+  color: rgb(161, 161, 161);
+  border: none;
+  outline: 1px transparent;
+  font-family: 'Hack', 'Input Mono', 'Input', 'Oxygen Mono', monospace;
+  cursor: pointer;
+  font-size: 15px;
+  padding: 3px 8px;
+}
+
+input[type='text'],
+input[type='number'],
+input[type='password'],
+textarea {
+  border: 1px solid #666;
+  background-color: #191919;
+  border: 1px solid #979797;
+  outline: none;
+  color: #ccc;
+}
+
+button:disabled {
+  background-color: rgb(78, 78, 78);
+  color: rgb(133, 133, 133);
+  cursor: default;
+}
+
+.control-panel button {
+  font-size: 13.25px;
+}
+
+select {
+  height: 20px;
+  border: none;
+  border-radius: 0px;
+  outline: none;
+  background-color: rgb(54, 54, 54);
+  color: rgb(161, 161, 161);
+}

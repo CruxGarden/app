@@ -1,0 +1,89 @@
+.sequencer {
+  svg {
+    width: 100%;
+  }
+
+  rect {
+    fill: #181818;
+    stroke: #ddd;
+    cursor: pointer;
+  }
+
+  rect:hover {
+    fill: rgb(99, 116, 99);
+  }
+
+  rect.marked {
+    fill: rgb(85, 194, 85);
+  }
+
+  rect.marked:hover {
+    fill: rgb(120, 148, 120);
+  }
+
+  rect.editing {
+    fill: rgb(194, 85, 85);
+  }
+  rect.editing:hover {
+    fill: rgb(148, 120, 120);
+  }
+
+  rect.active {
+    fill: rgb(82, 87, 11);
+  }
+  rect.active.marked {
+    fill: rgb(137, 218, 44);
+  }
+}
+
+.sequencer-input-select {
+  .voice-input {
+    display: flex;
+    flex-direction: row;
+  }
+}
+
+.editing-voice-selector-wrapper {
+  width: 146px;
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  padding-left: 10px;
+  align-items: center;
+  font-family: 'Hack', 'Input Mono', 'Input', 'Oxygen Mono', monospace;
+  font-size: 13px;
+
+  span {
+    cursor: pointer;
+    min-width: 102px;
+    max-width: 102px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-height: 10px;
+    background-color: #222;
+    padding: 3px 2px;
+  }
+
+  .editing-voice-selector {
+    height: 16px;
+    width: 16px;
+    background-color: #43a;
+    margin: 12px;
+    cursor: pointer;
+  }
+}
+
+.editing-voice-selector.selected {
+  background-color: #96f;
+}
+
+.sequencer-grid-wrapper {
+  display: flex;
+  flex-direction: row;
+  margin-bottom: 30px;
+}
+
+.editing-voice-selectors {
+  display: flex;
+  flex-direction: column;
+}

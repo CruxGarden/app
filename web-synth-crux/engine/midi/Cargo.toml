@@ -1,0 +1,22 @@
+[package]
+authors = ["Casey Primozic <casey@cprimozic.net>"]
+edition = "2021"
+name = "midi"
+version = "0.1.0"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+futures = "0.3"
+# Disable logging staticly in release, making all log calls into no-ops
+log = { version = "0.4", features = [] }
+miniserde = "0.1.16"
+js-sys = "0.3"
+wasm-bindgen = "=0.2.92"
+wasm-bindgen-futures = "0.4"
+
+polysynth = { path = "../polysynth", default-features = false }
+common = { path = "../common" }
+wbg_logging = { path = "../wbg_logging" }
+rimd = { git = "https://github.com/Ameobea/rimd.git" }

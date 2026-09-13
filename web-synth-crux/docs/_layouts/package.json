@@ -1,0 +1,23 @@
+{
+  "name": "foam",
+  "private": true,
+  "description": "",
+  "version": "1.0.0",
+  "dependencies": {
+    "gatsby": "^3.0",
+    "gatsby-plugin-plausible": "^0.0.7",
+    "gatsby-theme-garden": "=0.1.66",
+    "react": "^18.3",
+    "react-dom": "^18.3"
+  },
+  "keywords": [
+    "foam"
+  ],
+  "license": "MIT",
+  "main": "n/a",
+  "scripts": {
+    "develop": "gatsby develop",
+    "build": "gatsby build --prefix-paths",
+    "start": "gatsby serve --prefix-paths"
+  }
+}
