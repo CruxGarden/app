@@ -24,6 +24,7 @@ const SyncPane = lazy(() => import('./SyncPane'));
 const PublishPane = lazy(() => import('./PublishPane'));
 const ExportPane = lazy(() => import('./ExportPane'));
 const StorePane = lazy(() => import('./StorePane'));
+const MediaPane = lazy(() => import('./MediaPane'));
 import ContextMenu from './ContextMenu';
 import MobilePaneSwitcher from './MobilePaneSwitcher';
 import {
@@ -36,6 +37,7 @@ import {
   RefreshIcon,
   RepeatIcon,
   StoreIcon,
+  SearchIcon,
   TagIcon,
 } from '@/components/ui/icons';
 import { useCruxStore } from '@/stores/cruxStore';
@@ -89,6 +91,7 @@ const PANE_COMPONENTS: Record<PaneType, React.ComponentType> = {
   publish: PublishPane,
   export: ExportPane,
   store: StorePane,
+  media: MediaPane,
 };
 
 // Memoized pane content — prevents React from re-diffing heavy subtrees
@@ -108,6 +111,7 @@ const PANE_MIN_WIDTH: Record<PaneType, number> = {
   sync: 200,
   publish: 270,
   store: 280,
+  media: 300,
 };
 
 const MemoizedPaneContent = memo(function MemoizedPaneContent({
@@ -173,6 +177,7 @@ const PANE_LABELS: Record<PaneType, string> = {
   publish: 'Share',
   export: 'Export',
   store: 'Store',
+  media: 'Find media',
 };
 
 function MobilePane({ pane }: { pane: PaneType }) {
@@ -193,6 +198,7 @@ const PANE_ICONS: Record<PaneType, React.ReactNode> = {
   publish: <RepeatIcon size={14} strokeWidth={2} />,
   export: <ExportIcon size={14} strokeWidth={2} />,
   store: <StoreIcon size={14} strokeWidth={2} />,
+  media: <SearchIcon size={14} strokeWidth={2} />,
 };
 
 // ── Main layout ─────────────────────────────────────────
@@ -357,6 +363,7 @@ export default function WorkspaceLayout() {
         sync: '--pane-sync',
         publish: '--pane-publish',
         store: '--pane-store',
+        media: '--pane-media',
       }[paneType];
 
       return (

@@ -425,6 +425,7 @@
   --pane-sync: #8c7cc8;
   --pane-publish: #c87ca8;
   --pane-store: #c0a070;
+  --pane-media: #5fa8a0;
   --bloom-bg1: #0a1810;
   --bloom-bg2: #060d08;
   --bloom-1: #1a5a99;
@@ -610,6 +611,10 @@
   --pane-store-button-icon: #c0a070;
   --pane-store-button-icon-active: #c0a070;
   --pane-store-button-border-active: rgba(192, 160, 112, 0.3);
+  --pane-media-button-active: rgba(95, 168, 160, 0.15);
+  --pane-media-button-icon: #5fa8a0;
+  --pane-media-button-icon-active: #5fa8a0;
+  --pane-media-button-border-active: rgba(95, 168, 160, 0.3);
 
   /* Pane header tokens */
   --pane-collaboration-header: rgba(212, 112, 128, 0.15);
@@ -655,6 +660,9 @@
   --pane-store-header: rgba(192, 160, 112, 0.15);
   --pane-store-header-border: rgba(192, 160, 112, 0.2);
   --pane-store-header-text: #c0a070;
+  --pane-media-header: rgba(95, 168, 160, 0.15);
+  --pane-media-header-border: rgba(95, 168, 160, 0.2);
+  --pane-media-header-text: #5fa8a0;
   --pane-store-header-icon: #c0a070;
   --pane-store-header-close: #c0a070;
   color-scheme: dark;

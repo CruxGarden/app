@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
 import type { AddressInfo } from 'node:net';
 
@@ -25,6 +27,8 @@ export interface MockApi {
   url: string;
   state: {
     failPublish: boolean;
+    /** This server's own URL (for canned file links). */
+    baseUrl: string;
     publishedVersion: number;
     /** The most recently created crux (publish.spec's single-crux view) */
     crux: Record<string, unknown> | null;
@@ -130,6 +134,7 @@ function parseMultipart(
 export async function startMockApi(opts: { port?: number } = {}): Promise<MockApi> {
   const state: MockApi['state'] = {
     failPublish: false,
+    baseUrl: '',
     publishedVersion: 0,
     crux: null,
     cruxes: {},
@@ -258,6 +263,47 @@ export async function startMockApi(opts: { port?: number } = {}): Promise<MockAp
       return sendRaw(200, f.mime, f.bytes);
     }
 
+    // Find media (CRUX_MEDIA_API points here): canned catalogues and three small files.
+    if (path.startsWith('/openverse/v1/images')) {
+      const q = parsedUrl.searchParams.get('q') ?? '';
+      const file = `${state.baseUrl}/media-file/seedling.png`;
+      return send(200, {
+        result_count: q ? 2 : 0,
+        results: q
+          ? [
+              { id: 'img-1', title: `Seedlings for ${q}`, url: file, thumbnail: file, creator: 'Ana Grower', creator_url: 'https://example.org/ana', license: 'by', license_version: '4.0', license_url: 'https://creativecommons.org/licenses/by/4.0/', attribution: `"Seedlings for ${q}" by Ana Grower is licensed under CC BY 4.0.`, foreign_landing_url: 'https://example.org/seedlings', filetype: 'png', width: 24, height: 24 },
+              { id: 'img-2', title: 'Potting bench', url: file, thumbnail: null, creator: 'Bo', license: 'cc0', license_version: '1.0', license_url: 'https://creativecommons.org/publicdomain/zero/1.0/', attribution: '"Potting bench" by Bo is marked CC0 1.0.', foreign_landing_url: 'https://example.org/bench', filetype: 'png', width: 24, height: 24 },
+            ]
+          : [],
+      });
+    }
+    if (path.startsWith('/openverse/v1/audio')) {
+      const q = parsedUrl.searchParams.get('q') ?? '';
+      return send(200, {
+        result_count: 1,
+        results: [{ id: 'aud-1', title: `Chime for ${q}`, url: `${state.baseUrl}/media-file/chime.wav`, thumbnail: null, creator: 'Cy Bell', license: 'by-sa', license_version: '4.0', license_url: 'https://creativecommons.org/licenses/by-sa/4.0/', attribution: `"Chime for ${q}" by Cy Bell is licensed under CC BY-SA 4.0.`, foreign_landing_url: 'https://example.org/chime', filetype: 'wav', duration: 500 }],
+      });
+    }
+    if (path === '/commons/w/api.php') {
+      return send(200, {
+        query: {
+          pages: {
+            '900': { pageid: 900, title: 'File:Bees at work.webm', imageinfo: [{ url: `${state.baseUrl}/media-file/bees.webm`, descriptionurl: 'https://commons.wikimedia.org/wiki/File:Bees_at_work.webm', mime: 'video/webm', width: 320, height: 240, extmetadata: { Artist: { value: '<a href="https://commons.wikimedia.org/wiki/User:Dee">Dee</a>' }, LicenseShortName: { value: 'CC BY-SA 4.0' }, LicenseUrl: { value: 'https://creativecommons.org/licenses/by-sa/4.0' } } }] },
+          },
+        },
+      });
+    }
+    if (path.startsWith('/media-file/')) {
+      const name = path.slice('/media-file/'.length);
+      const png = readFileSync(join(__dirname, 'fixtures/documents/seal.png'));
+      const wav = Buffer.concat([Buffer.from('RIFF'), Buffer.from([36, 8, 0, 0]), Buffer.from('WAVEfmt '), Buffer.from([16, 0, 0, 0, 1, 0, 1, 0, 0x44, 0xac, 0, 0, 0x88, 0x58, 1, 0, 2, 0, 16, 0]), Buffer.from('data'), Buffer.from([0, 8, 0, 0]), Buffer.alloc(2048)]);
+      const webm = Buffer.concat([Buffer.from([0x1a, 0x45, 0xdf, 0xa3]), Buffer.alloc(4096)]);
+      const file = name === 'seedling.png' ? { bytes: png, type: 'image/png' } : name === 'chime.wav' ? { bytes: wav, type: 'audio/wav' } : name === 'bees.webm' ? { bytes: webm, type: 'video/webm' } : null;
+      if (!file) return send(404, { message: 'Not found' });
+      res.writeHead(200, { 'Content-Type': file.type, 'Content-Length': file.bytes.length });
+      res.end(file.bytes);
+      return;
+    }
     if (path === '/auth/code' && method === 'POST') return send(200, { message: 'sent' });
     if (path === '/auth/login' && method === 'POST') {
       state.loginEmail = String(bodyJson().email ?? 'tester@example.com');
@@ -820,6 +866,7 @@ export async function startMockApi(opts: { port?: number } = {}): Promise<MockAp
   });
 
   await new Promise<void>((r) => server.listen(opts.port ?? 0, '127.0.0.1', r));
+  state.baseUrl = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
   const { port } = server.address() as AddressInfo;
   return {
     url: `http://127.0.0.1:${port}`,

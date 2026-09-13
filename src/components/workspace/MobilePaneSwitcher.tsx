@@ -10,6 +10,7 @@ import {
   RefreshIcon,
   StackIcon,
   StoreIcon,
+  SearchIcon,
   UploadIcon,
 } from '@/components/ui/icons';
 
@@ -49,6 +50,10 @@ const PANE_ICONS: Record<PaneType, { label: string; icon: React.ReactNode }> = {
   store: {
     label: 'Store',
     icon: <StoreIcon size={16} />,
+  },
+  media: {
+    label: 'Find media',
+    icon: <SearchIcon size={16} />,
   },
 };
 
