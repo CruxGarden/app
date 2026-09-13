@@ -11,6 +11,7 @@ for (const [id, root] of [
   ['kan-app', 'kan-crux'],
   ['web-synth-app', 'web-synth-crux'],
   ['hextris-app', 'hextris-crux'],
+  ['pptist-app', 'pptist-crux'],
   ['playcanvas-editor-app', 'playcanvas-editor-crux'],
   ['svgedit-app', 'svgedit-crux'],
   ['jupyterlite-app', 'jupyterlite-crux'],

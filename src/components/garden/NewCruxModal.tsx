@@ -243,6 +243,16 @@ const TEMPLATES: Template[] = [
     desktopOnly: true,
   },
   {
+    id: 'pptist-app',
+    label: 'PPTist',
+    description: 'Productivity · slides, themes and presenting with PPTist',
+    defaultTitle: 'Launch deck',
+    icon: <LayoutIcon />,
+    thumb: <BlankThumb />,
+    kind: 'webapp',
+    desktopOnly: true,
+  },
+  {
     id: 'kan-app',
     label: 'Kan',
     description: 'Productivity · plan work on kanban boards with Kan',

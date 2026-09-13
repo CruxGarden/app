@@ -35,6 +35,7 @@ export const TOOL_INFO: Record<string, ToolInfo> = {
   'web-synth-app': native('web-synth', 'Ameobea/web-synth'),
   'beepbox-app': native('BeepBox', 'johnnesky/beepbox'),
   'hextris-app': native('Hextris', 'Hextris/hextris'),
+  'pptist-app': native('PPTist', 'pipipi-pikachu/PPTist'),
   'underrun-app': native('Underrun', 'phoboslab/underrun'),
   'playcanvas-editor-app': native('PlayCanvas Editor', 'playcanvas/editor'),
   'blockbench-app': native('Blockbench', 'JannisX11/blockbench'),
