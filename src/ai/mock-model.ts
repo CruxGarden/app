@@ -108,6 +108,18 @@ export function getMockLanguageModel(): LanguageModel {
         // ── Glow Garden: the scripted collaborator across the game Cruxspace (GAME-CRUXSPACE-PLAN.md) ──
         const game = gameScript(prompt);
         if (game) return game;
+        if (lastUserText(prompt).includes('[calendar:edit]')) {
+          const rounds = toolResultsThisTurn(prompt);
+          if (!rounds.length) return toolCallStream('inspect_calendar', {});
+          if (rounds.length === 1)
+            return toolCallStream('add_calendar_event', {
+              title: 'Garden launch review',
+              start: '2026-09-15T10:00:00',
+              end: '2026-09-15T11:00:00',
+            });
+          if (rounds.length === 2) return toolCallStream('set_calendar_name', { name: 'Launch calendar' });
+          return textStream('Added Garden launch review and named the calendar Launch calendar.');
+        }
         if (lastUserText(prompt).includes('[am1:edit]')) {
           const rounds = toolResultsThisTurn(prompt);
           if (!rounds.length) return toolCallStream('inspect_am1', {});

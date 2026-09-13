@@ -38,6 +38,12 @@ export const TOOL_INFO: Record<string, ToolInfo> = {
   'pptist-app': native('PPTist', 'pipipi-pikachu/PPTist'),
   'wick-editor-app': native('Wick Editor', 'Wicklets/wick-editor'),
   'bentopdf-app': native('BentoPDF', 'alam00000/bentopdf'),
+  'eventcalendar-app': {
+    name: 'EventCalendar',
+    upstream: 'https://github.com/vkurko/calendar',
+    detailsPath: 'UPSTREAM.md',
+    relationship: 'A calendar organizer around the EventCalendar component. The calendar is upstream’s; the event form and Garden integration are Crux Garden’s.',
+  },
   'am-1-app': {
     name: 'AM-1',
     upstream: 'https://github.com/zacos-tech',

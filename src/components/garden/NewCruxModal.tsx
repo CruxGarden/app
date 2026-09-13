@@ -412,6 +412,16 @@ const TEMPLATES: Template[] = [
     desktopOnly: true,
   },
   {
+    id: 'eventcalendar-app',
+    label: 'Calendar',
+    description: 'Productivity · events, schedules and planning on an EventCalendar organizer',
+    defaultTitle: 'My calendar',
+    icon: <LayoutIcon />,
+    thumb: <BlankThumb />,
+    kind: 'webapp',
+    desktopOnly: true,
+  },
+  {
     id: 'am-1-app',
     label: 'AM-1',
     description: 'Music · a three-part Berlin-school arpeggio instrument, the AM-1 Arpeggio Machine',
