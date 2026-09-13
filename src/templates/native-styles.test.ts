@@ -13,6 +13,7 @@ for (const [id, root] of [
   ['hextris-app', 'hextris-crux'],
   ['pptist-app', 'pptist-crux'],
   ['wick-editor-app', 'wick-editor-crux'],
+  ['bentopdf-app', 'bentopdf-crux'],
   ['playcanvas-editor-app', 'playcanvas-editor-crux'],
   ['svgedit-app', 'svgedit-crux'],
   ['jupyterlite-app', 'jupyterlite-crux'],

@@ -1,0 +1,34 @@
+import{n as e,t}from"./lucide-C9_c3frN.js";import"./lucide-init-Ih7FDIdV.js";import{T as n,_ as r,b as i,s as a,v as o}from"./main-zNKB5GfW.js";import"./mobileMenu-7j8PZpA7.js";import"./simple-mode-footer-CB9AABmA.js";import"./full-width-BBZ3yaEn.js";import{n as s}from"./password-prompt-D7R3hKQ5.js";import{t as c}from"./load-pdf-document-olUNAWMZ.js";var l={file:null,pdfDoc:null},u=[];function d(e,t){return(e/t).toFixed(3)}function f(e,t,n){let r=e*t,i,a;switch(n){case`in`:i=r/5184,a=`in²`;break;case`mm`:i=r/5184*(25.4*25.4),a=`mm²`;break;case`px`:{let e=96/72;i=e*e*r,a=`px²`;break}default:i=r,a=`pt²`;break}return`${i.toFixed(2)} ${a}`}function p(){let e=u.length,t=new Map;u.forEach(e=>{let n=`${e.width.toFixed(2)}x${e.height.toFixed(2)}`,r=`${e.standardSize} (${e.orientation})`;t.set(n,{count:(t.get(n)?.count||0)+1,label:r,width:e.width,height:e.height})});let n=t.size>1;return{totalPages:e,uniqueSizesCount:t.size,uniqueSizes:Array.from(t.values()),hasMixedSizes:n}}function m(){let n=document.getElementById(`dimensions-summary`);if(!n)return;let r=p(),i=`
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+      <div class="bg-gray-900 border border-gray-700 rounded-lg p-4">
+        <p class="text-sm text-gray-400 mb-1">Total Pages</p>
+        <p class="text-2xl font-bold text-white">${r.totalPages}</p>
+      </div>
+      <div class="bg-gray-900 border border-gray-700 rounded-lg p-4">
+        <p class="text-sm text-gray-400 mb-1">Unique Page Sizes</p>
+        <p class="text-2xl font-bold text-white">${r.uniqueSizesCount}</p>
+      </div>
+      <div class="bg-gray-900 border border-gray-700 rounded-lg p-4">
+        <p class="text-sm text-gray-400 mb-1">Document Type</p>
+        <p class="text-2xl font-bold ${r.hasMixedSizes?`text-yellow-400`:`text-green-400`}">
+          ${r.hasMixedSizes?`Mixed Sizes`:`Uniform`}
+        </p>
+      </div>
+    </div>
+  `;r.hasMixedSizes&&(i+=`
+      <div class="bg-yellow-900/20 border border-yellow-500/30 rounded-lg p-4 mb-4">
+        <div class="flex items-start gap-3">
+          <i data-lucide="alert-triangle" class="w-5 h-5 text-yellow-400 mt-0.5 flex-shrink-0"></i>
+          <div>
+            <h4 class="text-yellow-200 font-semibold mb-2">Mixed Page Sizes Detected</h4>
+            <p class="text-sm text-gray-300 mb-3">This document contains pages with different dimensions:</p>
+            <ul class="space-y-1 text-sm text-gray-300">
+              ${r.uniqueSizes.map(e=>`
+                <li>• ${e.label}: ${e.count} page${e.count>1?`s`:``}</li>
+              `).join(``)}
+            </ul>
+          </div>
+        </div>
+      </div>
+    `),n.innerHTML=i,r.hasMixedSizes&&t({icons:e})}function h(e){let t=document.getElementById(`dimensions-table-body`);t&&(t.textContent=``,u.forEach(n=>{let i=r(n.width,e),a=r(n.height,e),o=d(n.width,n.height),s=f(n.width,n.height,e),c=document.createElement(`tr`),l=document.createElement(`td`);l.className=`px-4 py-3 text-white`,l.textContent=String(n.pageNum);let u=document.createElement(`td`);u.className=`px-4 py-3 text-gray-300`,u.textContent=`${i} x ${a} ${e}`;let p=document.createElement(`td`);p.className=`px-4 py-3 text-gray-300`,p.textContent=n.standardSize;let m=document.createElement(`td`);m.className=`px-4 py-3 text-gray-300`,m.textContent=n.orientation;let h=document.createElement(`td`);h.className=`px-4 py-3 text-gray-300`,h.textContent=o;let g=document.createElement(`td`);g.className=`px-4 py-3 text-gray-300`,g.textContent=s;let _=document.createElement(`td`);_.className=`px-4 py-3 text-gray-300`,_.textContent=`${n.rotation}°`,c.append(l,u,p,m,h,g,_),t.appendChild(c)}))}function g(){let e=document.getElementById(`units-select`)?.value||`pt`,t=[[`Page #`,`Width (${e})`,`Height (${e})`,`Standard Size`,`Orientation`,`Aspect Ratio`,`Area (${e}²)`,`Rotation`].join(`,`)];u.forEach(n=>{let i=r(n.width,e),a=r(n.height,e),o=d(n.width,n.height),s=f(n.width,n.height,e),c=[n.pageNum,i,a,n.standardSize,n.orientation,o,s,`${n.rotation}°`];t.push(c.join(`,`))});let n=t.join(`
+`);o(new Blob([n],{type:`text/csv;charset=utf-8;`}),`page-dimensions.csv`)}function _(){if(!l.pdfDoc)return;u=[],l.pdfDoc.getPages().forEach((e,t)=>{let{width:r,height:i}=e.getSize(),a=e.getRotation().angle||0;u.push({pageNum:t+1,width:r,height:i,orientation:r>i?`Landscape`:`Portrait`,standardSize:n(r,i),rotation:a})});let r=document.getElementById(`dimensions-results`),i=document.getElementById(`units-select`);m(),h(i.value),r&&r.classList.remove(`hidden`),i.addEventListener(`change`,e=>{h(e.target.value)});let a=document.getElementById(`export-csv-btn`);a&&a.addEventListener(`click`,g),t({icons:e})}function v(){l.file=null,l.pdfDoc=null,u=[];let e=document.getElementById(`file-display-area`);e&&(e.innerHTML=``);let t=document.getElementById(`dimensions-results`);t&&t.classList.add(`hidden`);let n=document.getElementById(`file-input`);n&&(n.value=``)}async function y(){let n=document.getElementById(`file-display-area`);if(n&&(n.innerHTML=``,l.file)){let r=document.createElement(`div`);r.className=`flex items-center justify-between bg-gray-700 p-3 rounded-lg text-sm`;let a=document.createElement(`div`);a.className=`flex flex-col overflow-hidden`;let o=document.createElement(`div`);o.className=`truncate font-medium text-gray-200 text-sm mb-1`,o.textContent=l.file.name;let s=document.createElement(`div`);s.className=`text-xs text-gray-400`,s.textContent=i(l.file.size),a.append(o,s);let c=document.createElement(`button`);c.className=`ml-4 text-red-400 hover:text-red-300 flex-shrink-0`,c.innerHTML=`<i data-lucide="trash-2" class="w-4 h-4"></i>`,c.onclick=function(){v()},r.append(a,c),n.appendChild(r),t({icons:e})}}async function b(e){if(e&&e.length>0){let t=e[0];if(t.type===`application/pdf`||t.name.toLowerCase().endsWith(`.pdf`))try{let e=await s(t);if(!e)return;e.pdf.destroy(),l.file=e.file,l.pdfDoc=await c(e.bytes),y(),_()}catch(e){console.error(`Error loading PDF:`,e),a(`Error`,`Failed to load PDF file.`)}}}document.addEventListener(`DOMContentLoaded`,function(){let e=document.getElementById(`file-input`),t=document.getElementById(`drop-zone`),n=document.getElementById(`back-to-tools`);n&&n.addEventListener(`click`,function(){window.location.href=`./`}),e&&t&&(e.addEventListener(`change`,function(e){b(e.target.files)}),t.addEventListener(`dragover`,function(e){e.preventDefault(),t.classList.add(`bg-gray-700`)}),t.addEventListener(`dragleave`,function(e){e.preventDefault(),t.classList.remove(`bg-gray-700`)}),t.addEventListener(`drop`,function(e){e.preventDefault(),t.classList.remove(`bg-gray-700`),b(e.dataTransfer?.files)}),e.addEventListener(`click`,function(){e.value=``}))});

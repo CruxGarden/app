@@ -412,6 +412,16 @@ const TEMPLATES: Template[] = [
     desktopOnly: true,
   },
   {
+    id: 'bentopdf-app',
+    label: 'BentoPDF',
+    description: 'Productivity · merge, split, edit, sign and convert PDFs with BentoPDF',
+    defaultTitle: 'My papers',
+    icon: <LayoutIcon />,
+    thumb: <BlankThumb />,
+    kind: 'webapp',
+    desktopOnly: true,
+  },
+  {
     id: 'wick-editor-app',
     label: 'Wick Editor',
     description: 'Creative · animations and interactive scenes with Wick Editor',
