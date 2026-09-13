@@ -18,7 +18,7 @@ describe('portable tool credits', () => {
   });
   it('supports older Cruxes without inventing the version of their installed files', () => {
     expect(toolInfo({ template: 'gdevelop-app' })?.detailsPath).toBe('UPSTREAM.md');
-    expect(toolInfo({ template: 'notes' })?.detailsPath).toBe('README.md');
+    expect(toolInfo({ template: 'notes' })?.detailsPath).toBe('UPSTREAM.md');
     expect(toolInfo({ template: 'blank' })).toBeNull();
     expect(
       toolInfo({

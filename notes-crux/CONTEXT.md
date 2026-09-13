@@ -1,0 +1,57 @@
+# Tigrana Context
+
+Domain language for Tigrana, a local-first, file-native desktop notes app whose durable content remains ordinary Markdown files and folders.
+
+## Language
+
+**Notebook**:
+A user-selected folder that is the source of truth for notes, folders, attachments, and Tigrana metadata.
+_Avoid_: Workspace, vault, project
+
+**Note**:
+An ordinary Markdown file inside a notebook.
+_Avoid_: Page, document
+
+**Note document**:
+The parsed representation of a note's Markdown content, including frontmatter, body text, validation state, outline, preview, and text stats.
+_Avoid_: Editor state, ProseMirror document
+
+**Note history**:
+The `.tigrana/history/notes` record of prior Markdown content for a note, keyed by stable note identity when available and retained by the native snapshot policy.
+_Avoid_: Undo stack, backups
+
+**Recently Deleted**:
+The `.tigrana/trash` holding area for deleted notes and folders, with an index of original paths, deletion times, and restore/purge state.
+_Avoid_: Trash can, recycle bin, archived notes
+
+**Notebook assets**:
+Files under `.assets/` that are referenced from Markdown notes, including pasted images saved by the native asset pipeline.
+_Avoid_: Uploads, blobs, media library
+
+**Folder**:
+A directory inside a notebook that participates in the note hierarchy.
+_Avoid_: Section, collection
+
+**Notebook path mutation**:
+A note or folder rename or move whose path change must be reflected across durable files, link index entries, metadata, open tabs, active selection, and edit locks.
+_Avoid_: File rename, move handler, path patch
+
+**Link index**:
+The rebuildable `.tigrana/index.json` cache that maps stable note and folder identities to paths and backlink relationships.
+_Avoid_: Search index, graph database
+
+**Notebook metadata**:
+The `.tigrana/metadata.json` file that stores app state tied to the notebook, such as ordering, pins, icons, bookmarks, expansion state, and note positions.
+_Avoid_: Preferences, settings
+
+**Native notebook storage**:
+The Rust-side storage boundary that validates notebook paths, owns note and folder lifecycle operations, reads and writes durable note files, maintains stable identities and link indexes, manages note history/trash/assets, and exposes narrow Tauri command adapters to React.
+_Avoid_: Backend blob, filesystem helpers, Tauri handlers
+
+**Notebook storage interface**:
+The frontend interface implemented by the Native and demo storage adapters. Its capability flags make non-durable demo limitations explicit while keeping storage selection out of callers.
+_Avoid_: API wrapper, backend service, Tauri switch
+
+**Active Note lifecycle**:
+The concurrency seam for the currently edited note: load generations, edit-lock ownership, accepted disk content, queued saves, serialized path changes, and filesystem-watcher reconciliation.
+_Avoid_: Editor state, save handlers, active note refs

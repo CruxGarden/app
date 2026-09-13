@@ -1,304 +1,243 @@
-import { test, expect } from '@playwright/test';
-import { readFileSync, writeFileSync, mkdirSync, readdirSync } from 'node:fs';
-import { join, resolve } from 'node:path';
-import { createServer } from 'node:http';
+import { test, expect, type Page } from '@playwright/test';
+import {
+  readFileSync,
+  writeFileSync,
+  readdirSync,
+  mkdirSync,
+  existsSync,
+  renameSync,
+} from 'node:fs';
+import { resolve, join } from 'node:path';
 import { launchApp } from './launch';
 import { enterGarden, storedCrux } from './multi-crux-helpers';
+import { exportNativeCrux, importNativeCrux } from './native-archive-helpers';
+import { openWindow, serve } from './public-site-helpers';
 
-const evidence = resolve(__dirname, '../../docs/notes-crux');
-test('Notes Crux: create → write → image → Growth → restart → selected public edition', async () => {
-  test.setTimeout(300000);
+/**
+ * The actual Tigrana (upstream's app in its browser mode, with the Garden's
+ * NotebookStorage): a note created and written with the real editor autosaves
+ * to notebook/, the host's flush follows a view switch, the public edition
+ * choices are kept, the notebook survives a restart, a stale external write is
+ * refused with the draft kept, the published edition keeps only the chosen
+ * notes, and a complete Crux archive imports into a clean Garden.
+ */
+const frameOf = (page: Page) => page.frameLocator('iframe[data-crux-id]');
+const status = (page: Page) => frameOf(page).locator('#garden-project [role=status]');
+const editor = (page: Page) => frameOf(page).locator('.tiptap').first();
+async function createNote(page: Page, title: string) {
+  // Tigrana adds the note as Untitled; opening it and naming it in the title field renames the file.
+  await frameOf(page).getByRole('button', { name: 'Add Note or Folder', exact: true }).click();
+  await frameOf(page).getByRole('menuitem', { name: /New Note/ }).click();
+  await frameOf(page).getByRole('button', { name: 'Untitled', exact: true }).first().click();
+  const field = frameOf(page).getByLabel('Note title', { exact: true });
+  await expect(field).toHaveValue('Untitled');
+  await field.fill(title);
+  await field.press('Enter');
+  await expect(frameOf(page).getByRole('button', { name: title, exact: true }).first()).toBeVisible();
+  await expect(editor(page)).toBeVisible();
+}
+
+test('Notes Crux: the actual Tigrana — write, flush, public choices, restart, conflict, edition, clean import', async () => {
+  test.setTimeout(12 * 60_000);
   let instance = await launchApp();
-  mkdirSync(evidence, { recursive: true });
   const dir = instance.dir;
+  const evidence = resolve(__dirname, '../../docs/notes');
+  mkdirSync(evidence, { recursive: true });
+  const archive = join(dir, 'field-notes.crux');
+  let folder = '';
+  const note = (path: string) => join(folder, 'notebook', path);
+  const publication = () => JSON.parse(readFileSync(note('publish.json'), 'utf8'));
   try {
     let page = instance.page;
-    await page.setViewportSize({ width: 1440, height: 1000 });
+    page.setDefaultTimeout(60000);
+    await page.setViewportSize({ width: 1600, height: 1050 });
     await enterGarden(page);
-    await page.getByRole('button', { name: 'Add Crux' }).click();
-    await page.getByRole('button', { name: /^Notes/ }).click();
-    await page.getByLabel('Name', { exact: true }).fill('Field notes');
-    await page.getByRole('button', { name: 'Create', exact: true }).click();
-    const id = (await page.locator('[data-workspace-id]').getAttribute('data-workspace-id'))!;
-    const folder = (await storedCrux(page, id)).projectFolder as string;
-    const frame = () => page.frameLocator('iframe[data-crux-id]');
-    await expect(frame().getByRole('heading', { name: 'Welcome', exact: true })).toBeVisible({
-      timeout: 120000,
-    });
-    await frame().getByLabel('New note', { exact: true }).fill('Research/Field journal');
-    await frame().getByRole('button', { name: 'Create note', exact: true }).click();
-    const editor = () => frame().locator('.tiptap[contenteditable=true]').first();
-    await expect(
-      frame().getByRole('heading', { name: 'Field journal', exact: true }),
-    ).toBeVisible();
-    await editor().fill('Today I found a quiet place for growing ideas.');
-    await page
-      .getByTestId('workshop-view')
-      .getByRole('button', { name: 'Advanced', exact: true })
-      .click();
-    await expect(page.getByTestId('workshop-view')).toHaveAttribute('data-view', 'advanced');
-    await page
-      .getByTestId('workshop-view')
-      .getByRole('button', { name: 'Use app', exact: true })
-      .click();
-    await frame()
-      .getByRole('button', { name: /Research\/Field journal/ })
-      .click();
-    await expect(frame().getByRole('status')).toContainText('Saved');
-    expect(readFileSync(join(folder, 'notebook/Research/Field journal.md'), 'utf8')).toContain(
-      'quiet place',
-    );
 
-    // Exercise the actual clipboard image handler; image bytes must reach the Project Folder.
-    await editor().evaluate((element) => {
-      const bytes = Uint8Array.from(
-        atob(
-          'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRZkAAAAASUVORK5CYII=',
-        ),
-        (c) => c.charCodeAt(0),
-      );
-      const clipboardData = new DataTransfer();
-      clipboardData.items.add(new File([bytes], 'Sketch.png', { type: 'image/png' }));
-      element.dispatchEvent(
-        new ClipboardEvent('paste', { clipboardData, bubbles: true, cancelable: true }),
-      );
+    await test.step('create; Tigrana opens the notebook and writes its own welcome note and metadata', async () => {
+      await page.getByRole('button', { name: 'Add Crux' }).click();
+      await page.getByRole('button', { name: /^Notes/ }).click();
+      await page.getByLabel('Name', { exact: true }).fill('Field notes');
+      await page.getByRole('button', { name: 'Create', exact: true }).click();
+      const id = (await page.locator('[data-workspace-id]').getAttribute('data-workspace-id'))!;
+      folder = (await storedCrux(page, id)).projectFolder as string;
+      console.log('Notes folder', folder);
+      await expect(status(page)).toHaveText('Saved', { timeout: 120000 });
+      await expect.poll(() => existsSync(note('Welcome.md')), { timeout: 60000 }).toBe(true);
+      await expect.poll(() => existsSync(note('.tigrana/metadata.json'))).toBe(true);
+      expect(existsSync(join(folder, 'runtime/index.html'))).toBe(true);
+      await page.screenshot({ path: join(evidence, 'notes-initial.png') });
     });
-    await expect(editor().locator('img')).toHaveCount(1);
-    await frame().getByRole('button', { name: 'Save now', exact: true }).click();
-    await expect
-      .poll(() => readFileSync(join(folder, 'notebook/Research/Field journal.md'), 'utf8'))
-      .toContain('../assets/');
-    await frame().getByLabel('Include in public edition').check();
-    await expect
-      .poll(() => JSON.parse(readFileSync(join(folder, 'notebook/publish.json'), 'utf8')).pages)
-      .toEqual(['Research/Field journal.md']);
-    // A second note remains private, as do the app's Collaboration and source files.
-    await frame().getByLabel('New note', { exact: true }).fill('Private thoughts');
-    await frame().getByRole('button', { name: 'Create note', exact: true }).click();
-    await editor().fill('PRIVATE_NOTE_SENTINEL_9e2a');
-    await frame().getByRole('button', { name: 'Save now', exact: true }).click();
-    await expect
-      .poll(() => readFileSync(join(folder, 'notebook/Private thoughts.md'), 'utf8'))
-      .toContain('PRIVATE_NOTE_SENTINEL');
-    await expect(frame().getByLabel('Include in public edition')).not.toBeChecked();
-    // An external edit cannot be silently replaced by the open rich editor.
-    const privatePath = join(folder, 'notebook/Private thoughts.md');
-    const header = '---\ninternal: PRIVATE_FRONTMATTER_SENTINEL\n---\n';
-    writeFileSync(privatePath, header + 'PRIVATE_NOTE_SENTINEL_9e2a from another editor');
-    await editor().fill('An unsaved conflicting draft');
-    await frame().getByRole('button', { name: 'Save now', exact: true }).click();
-    await expect(frame().getByRole('alert')).toContainText('changed elsewhere');
-    expect(readFileSync(privatePath, 'utf8')).toContain('from another editor');
-    page.once('dialog', (dialog) => dialog.accept());
-    await frame().getByRole('button', { name: 'Discard draft and reload', exact: true }).click();
-    await expect(editor()).toContainText('from another editor');
-    await editor().fill('PRIVATE_NOTE_SENTINEL_9e2a with frontmatter preserved');
-    await frame().getByRole('button', { name: 'Save now', exact: true }).click();
-    await expect
-      .poll(() => readFileSync(privatePath, 'utf8'))
-      .toBe(header + 'PRIVATE_NOTE_SENTINEL_9e2a with frontmatter preserved\n');
 
-    await frame()
-      .getByRole('button', { name: /Research\/Field journal/ })
-      .click();
-    await page.screenshot({ path: join(evidence, 'notebook.png') });
-    const growth = (await page.evaluate(
-      async (id) =>
-        window.electronAPI!.sqlite.get(
-          "SELECT COUNT(*) AS count FROM dimensions WHERE source_id = ? AND type = 'growth'",
-          [id],
-        ),
-      id,
-    )) as { count: number };
-    expect(growth.count).toBeGreaterThan(3);
-
-    const archivePath = join(evidence, 'field-notes.crux');
-    await page.evaluate(() => {
-      const state = window as unknown as { notebookExport?: Blob };
-      const blobs = new Map<string, Blob>();
-      const original = URL.createObjectURL.bind(URL);
-      URL.createObjectURL = (blob) => {
-        const url = original(blob);
-        if (blob instanceof Blob) blobs.set(url, blob);
-        return url;
-      };
-      const click = HTMLAnchorElement.prototype.click;
-      HTMLAnchorElement.prototype.click = function () {
-        if (this.download.endsWith('.crux')) state.notebookExport = blobs.get(this.href);
-        else click.call(this);
-      };
-    });
-    await page.getByRole('button', { name: 'Toggle export', exact: true }).click();
-    await page.getByRole('button', { name: 'Export Crux', exact: true }).click();
-    await expect
-      .poll(() =>
-        page.evaluate(() => !!(window as unknown as { notebookExport?: Blob }).notebookExport),
-      )
-      .toBe(true);
-    const encoded = await page.evaluate(async () => {
-      const bytes = new Uint8Array(
-        await (window as unknown as { notebookExport: Blob }).notebookExport.arrayBuffer(),
-      );
-      let text = '';
-      for (let i = 0; i < bytes.length; i += 0x8000)
-        text += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
-      return btoa(text);
-    });
-    writeFileSync(archivePath, Buffer.from(encoded, 'base64'));
-    await page.getByRole('button', { name: 'Toggle export', exact: true }).click();
-    await expect(page.getByRole('button', { name: 'Export Crux', exact: true })).toHaveCount(0);
-    await instance.app.close();
-    instance = await launchApp({ dir });
-    page = instance.page;
-    await page.getByRole('button', { name: /enter/i }).click();
-    await page.setViewportSize({ width: 1440, height: 1000 });
-    await expect(frame().getByRole('heading', { name: 'Welcome', exact: true })).toBeVisible({
-      timeout: 60000,
-    });
-    await frame()
-      .getByRole('button', { name: /Research\/Field journal/ })
-      .click();
-    await expect(editor()).toContainText('quiet place');
-    await expect(editor().locator('img')).toHaveCount(1);
-    await expect
-      .poll(() =>
-        editor()
-          .locator('img')
-          .evaluate((img: HTMLImageElement) => img.complete && img.naturalWidth > 0),
-      )
-      .toBe(true);
-    await expect(frame().getByLabel('Include in public edition')).toBeChecked();
-
-    // Same native build used by Publish, without sending anything to a public service.
-    const built = await page.evaluate(
-      async (folder) => window.electronAPI!.toolchain.build(folder),
-      folder,
-    );
-    expect(built.code, built.log).toBe(0);
-    const dist = join(folder, 'dist');
-    const allText = (path: string): string =>
-      readdirSync(path, { withFileTypes: true })
-        .map((f) =>
-          f.isDirectory() ? allText(join(path, f.name)) : readFileSync(join(path, f.name), 'utf8'),
+    await test.step('a person creates a note and writes in the real editor; autosave reaches the file', async () => {
+      await createNote(page, 'Field journal');
+      await editor(page).click();
+      await page.keyboard.type('A quiet place at the edge of the field.');
+      await expect
+        .poll(
+          () =>
+            existsSync(note('Field journal.md'))
+              ? readFileSync(note('Field journal.md'), 'utf8')
+              : '',
+          { timeout: 30000 },
         )
-        .join('\n');
-    expect(allText(dist)).not.toContain('PRIVATE_NOTE_SENTINEL');
-    expect(allText(dist)).not.toContain('PRIVATE_FRONTMATTER_SENTINEL');
-    expect(built.distFiles.some((p) => p.includes('notebook/Private'))).toBe(false);
-    const server = createServer((req, res) => {
-      const path =
-        req.url === '/' ? 'index.html' : decodeURIComponent(req.url!.slice(1).split('?')[0]!);
-      if (path.includes('..')) {
-        res.writeHead(404);
-        res.end();
-        return;
-      }
-      try {
-        res.setHeader(
-          'Content-Type',
-          path.endsWith('.js')
-            ? 'text/javascript'
-            : path.endsWith('.css')
-              ? 'text/css'
-              : path.endsWith('.txt')
-                ? 'text/plain'
-                : 'text/html',
-        );
-        res.end(readFileSync(join(dist, path)));
-      } catch {
-        res.writeHead(404);
-        res.end();
-      }
+        .toContain('quiet place');
+      await expect(status(page)).toHaveText('Saved');
+      await page.screenshot({ path: join(evidence, 'notes-writing.png') });
     });
-    await new Promise<void>((r) => server.listen(0, '127.0.0.1', r));
-    try {
-      const port = (server.address() as { port: number }).port;
-      await page.locator('iframe[data-crux-id]').evaluate((element: HTMLIFrameElement, url) => {
-        element.src = url;
-      }, `http://127.0.0.1:${port}/`);
-      await expect(frame().getByRole('heading', { name: 'My notebook' })).toBeVisible();
-      await expect(frame().locator('article')).toContainText('quiet place');
-      await expect(frame().getByLabel('App appearance', { exact: true })).toHaveCount(0);
-      expect(
-        await frame()
-          .locator('html')
-          .evaluate((el) => getComputedStyle(el).getPropertyValue('--bg').trim()),
-      ).toBe('#171d1c');
-      await expect(frame().locator('article img')).toHaveCount(1);
-      await expect(frame().getByRole('button', { name: 'Save now' })).toHaveCount(0);
-      await expect(frame().getByText('Private thoughts', { exact: true })).toHaveCount(0);
-      await page.screenshot({ path: join(evidence, 'public-edition.png') });
-      writeFileSync(
-        join(evidence, 'evidence.json'),
-        JSON.stringify(
-          {
-            growthCheckpoints: growth.count,
-            buildCode: built.code,
-            imageFiles: readdirSync(join(folder, 'notebook/assets')).length,
-            privateContentExcluded: true,
-          },
-          null,
-          2,
-        ),
-      );
-    } finally {
-      server.closeAllConnections();
-      await new Promise<void>((r) => server.close(() => r()));
-    }
-    const restored = await launchApp();
-    try {
-      await enterGarden(restored.page);
-      await restored.page.getByRole('button', { name: 'Add Crux', exact: true }).click();
-      const chooserReady = restored.page.waitForEvent('filechooser');
-      await restored.page.getByRole('button', { name: 'Import .crux file', exact: true }).click();
-      await (await chooserReady).setFiles(archivePath);
-      await expect(restored.page.locator('[data-workspace-id]')).toBeVisible();
-      const restoredId = (await restored.page
-        .locator('[data-workspace-id]')
-        .getAttribute('data-workspace-id'))!;
-      const restoredFolder = (await storedCrux(restored.page, restoredId)).projectFolder as string;
-      expect(
-        readFileSync(join(restoredFolder, 'notebook/Research/Field journal.md'), 'utf8'),
-      ).toContain('quiet place');
-      expect(readFileSync(join(restoredFolder, 'notebook/Private thoughts.md'), 'utf8')).toContain(
-        'PRIVATE_NOTE_SENTINEL',
-      );
-      expect(readdirSync(join(restoredFolder, 'notebook/assets'))).toHaveLength(1);
-      const restoredFrame = restored.page.frameLocator('iframe[data-crux-id]');
+
+    await test.step('switching the Workshop view flushes the last keystrokes', async () => {
+      await page.keyboard.type(' The wind carries seeds.');
+      await page
+        .getByTestId('workshop-view')
+        .getByRole('button', { name: 'Advanced', exact: true })
+        .click();
+      await expect(page.getByTestId('workshop-view')).toHaveAttribute('data-view', 'advanced');
+      expect(readFileSync(note('Field journal.md'), 'utf8')).toContain('carries seeds');
+      await page
+        .getByTestId('workshop-view')
+        .getByRole('button', { name: 'Use app', exact: true })
+        .click();
+      await expect(status(page)).toHaveText('Saved', { timeout: 120000 });
+    });
+
+    await test.step('a private note, and the public edition choices kept in publish.json', async () => {
+      await createNote(page, 'Private thoughts');
+      await editor(page).click();
+      await page.keyboard.type('PRIVATE_NOTE_SENTINEL_9e2a');
+      await expect
+        .poll(
+          () =>
+            existsSync(note('Private thoughts.md'))
+              ? readFileSync(note('Private thoughts.md'), 'utf8')
+              : '',
+          { timeout: 30000 },
+        )
+        .toContain('PRIVATE_NOTE_SENTINEL');
+      await frameOf(page).getByRole('button', { name: 'Public edition…' }).click();
+      await frameOf(page)
+        .locator('#garden-publication input[data-note="Field journal.md"]')
+        .check();
+      await expect.poll(() => publication().pages).toEqual(['Field journal.md']);
       await expect(
-        restoredFrame.getByRole('heading', { name: 'Welcome', exact: true }),
-      ).toBeVisible({ timeout: 120000 });
-      await restoredFrame.getByRole('button', { name: /Research\/Field journal/ }).click();
-      await expect(restoredFrame.locator('.tiptap')).toContainText('quiet place');
-      const restoredGrowth = (await restored.page.evaluate(
+        frameOf(page).locator('#garden-publication input[data-note="Private thoughts.md"]'),
+      ).not.toBeChecked();
+      await frameOf(page).getByRole('button', { name: 'Public edition…' }).click();
+      await expect(status(page)).toHaveText('Saved');
+      const id = (await page.locator('[data-workspace-id]').getAttribute('data-workspace-id'))!;
+      const growth = (await page.evaluate(
         async (id) =>
           window.electronAPI!.sqlite.get(
             "SELECT COUNT(*) AS count FROM dimensions WHERE source_id = ? AND type = 'growth'",
             [id],
           ),
-        restoredId,
+        id,
       )) as { count: number };
-      expect(restoredGrowth.count).toBe(growth.count);
-      const recorded = JSON.parse(readFileSync(join(evidence, 'evidence.json'), 'utf8'));
-      writeFileSync(
-        join(evidence, 'evidence.json'),
-        JSON.stringify(
-          {
-            ...recorded,
-            freshArchiveImport: true,
-            restoredGrowthCheckpoints: restoredGrowth.count,
-            immediateViewSwitchSaved: true,
-            externalConflictRecovered: true,
-            frontmatterPreserved: true,
-          },
-          null,
-          2,
-        ),
+      expect(growth.count).toBeGreaterThan(3);
+    });
+
+    const stopped = instance.app.waitForEvent('close');
+    await instance.app.evaluate(({ BrowserWindow }) =>
+      BrowserWindow.getAllWindows()
+        .find((w) => w.isVisible())!
+        .close(),
+    );
+    await stopped;
+    instance = await launchApp({ dir });
+    page = instance.page;
+    page.setDefaultTimeout(60000);
+    await page.setViewportSize({ width: 1600, height: 1050 });
+
+    await test.step('restart: the notes reopen; a stale external write is refused and the draft kept', async () => {
+      await page.getByRole('button', { name: /enter/i }).click();
+      await expect(status(page)).toHaveText('Saved', { timeout: 120000 });
+      await frameOf(page)
+        .getByRole('button', { name: /Field journal/ })
+        .first()
+        .click();
+      await expect(editor(page)).toContainText('quiet place');
+      writeFileSync(note('Field journal.md'), 'Changed from another editor.\n');
+      await editor(page).click();
+      await page.keyboard.press('End');
+      await page.keyboard.type(' More.');
+      await expect(frameOf(page).locator('#garden-project [role=alert]')).toContainText(
+        'changed elsewhere',
+        { timeout: 30000 },
       );
-    } finally {
-      await restored.app.close();
-    }
+      expect(readFileSync(note('Field journal.md'), 'utf8')).toContain('another editor');
+      page.once('dialog', (d) => d.accept());
+      await frameOf(page)
+        .getByRole('button', { name: 'Discard draft and reload', exact: true })
+        .click();
+      await expect(status(page)).toHaveText('Saved', { timeout: 120000 });
+      await frameOf(page)
+        .getByRole('button', { name: /Field journal/ })
+        .first()
+        .click();
+      await expect(editor(page)).toContainText('another editor');
+      await page.screenshot({ path: join(evidence, 'notes-reopened.png') });
+    });
+
+    await test.step('the published edition keeps only the chosen note', async () => {
+      const installed = await page.evaluate(
+        async (folder) => window.electronAPI!.toolchain.install(folder),
+        folder,
+      );
+      expect(installed.code, installed.log).toBe(0);
+      const built = await page.evaluate(
+        async (folder) => window.electronAPI!.toolchain.build(folder),
+        folder,
+      );
+      expect(built.code, built.log).toBe(0);
+      const dist = join(folder, 'dist');
+      const allText = (path: string): string =>
+        readdirSync(path, { withFileTypes: true })
+          .map((f) =>
+            f.isDirectory()
+              ? allText(join(path, f.name))
+              : readFileSync(join(path, f.name), 'utf8'),
+          )
+          .join('\n');
+      expect(allText(dist)).not.toContain('PRIVATE_NOTE_SENTINEL');
+      const server = await serve(dist);
+      try {
+        const site = await openWindow(instance.app, server.origin + '/');
+        await expect(site.getByRole('heading', { name: 'My notebook' })).toBeVisible();
+        await expect(site.locator('article')).toContainText('another editor');
+        await expect(site.getByLabel('App appearance', { exact: true })).toHaveCount(0);
+        await expect(site.getByText('Private thoughts', { exact: true })).toHaveCount(0);
+        await site.screenshot({ path: join(evidence, 'notes-public-edition.png') });
+        await site.close();
+      } finally {
+        await server.close();
+      }
+      await expect(status(page)).toHaveText('Saved', { timeout: 120000 });
+      await exportNativeCrux(page, archive, instance.app);
+    });
   } finally {
     await instance.app.close();
+  }
+
+  renameSync(folder, `${folder}-unavailable`);
+  const restored = await launchApp();
+  try {
+    const { page } = restored;
+    page.setDefaultTimeout(60000);
+    await page.setViewportSize({ width: 1600, height: 1050 });
+    await test.step('clean Garden: the complete Crux imports and the notes open in Tigrana', async () => {
+      await enterGarden(page);
+      await importNativeCrux(page, archive);
+      const id = (await page.locator('[data-workspace-id]').getAttribute('data-workspace-id'))!;
+      folder = (await storedCrux(page, id)).projectFolder;
+      await expect(status(page)).toHaveText('Saved', { timeout: 120000 });
+      await frameOf(page)
+        .getByRole('button', { name: /Field journal/ })
+        .first()
+        .click();
+      await expect(editor(page)).toContainText('another editor');
+      expect(publication().pages).toEqual(['Field journal.md']);
+      await page.screenshot({ path: join(evidence, 'notes-imported.png') });
+    });
+  } finally {
+    await restored.app.close();
   }
 });

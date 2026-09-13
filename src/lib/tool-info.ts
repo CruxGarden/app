@@ -18,7 +18,7 @@ const component = (name: string, repo: string, relationship: string): ToolInfo =
   detailsPath: 'README.md',
 });
 export const TOOL_INFO: Record<string, ToolInfo> = {
-  notes: native('Tigrana', 'downcastsystems/tigrana', 'README.md'),
+  notes: native('Tigrana', 'downcastsystems/tigrana'),
   moqira: native('Moqira', 'downcastsystems/moqira'),
   'minipaint-app': native('miniPaint', 'viliusle/miniPaint'),
   'openmosh-app': native('OpenMosh', 'zivavu/OpenMosh'),
