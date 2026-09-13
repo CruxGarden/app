@@ -12,6 +12,7 @@ const NATIVE_TEMPLATES = {
   'eventcalendar-app': 'eventcalendar',
   'formjs-app': 'formjs',
   'pdfme-app': 'pdfme',
+  'maps-app': 'maps',
   'am-1-app': 'am-1',
   'opencut-app': 'opencut',
   'playcanvas-editor-app': 'playcanvas-editor',
@@ -166,7 +167,7 @@ export function samplerType(
 /** Apps whose Crux stays on this machine: no public edition, so no Share. A form publishes its viewer edition. */
 export function isLocalCreationTool(crux: { meta?: Record<string, unknown> } | null | undefined) {
   const native = nativeAppType(crux);
-  return (!!native && native !== 'formjs') || isCardinal(crux) || !!samplerType(crux);
+  return (!!native && native !== 'formjs' && native !== 'maps') || isCardinal(crux) || !!samplerType(crux);
 }
 export function samplerPath(type: string, value: unknown): string {
   if (value === 'project.json') return 'data/project.json';

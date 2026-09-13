@@ -316,7 +316,8 @@ export async function publishPipeline(
     deps.site.isSiteCrux(artifacts) ||
     isMoqira(crux) ||
     crux.kind === 'notes' ||
-    nativeAppType(crux) === 'formjs';
+    nativeAppType(crux) === 'formjs' ||
+    nativeAppType(crux) === 'maps';
   if (isEmbeddedApp(crux) && !builds)
     throw new Error(
       'This notebook is missing its site configuration. Restore it before publishing.',

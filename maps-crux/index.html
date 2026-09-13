@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Map</title>
+    <link rel="stylesheet" href="./src/map.css" />
+  </head>
+  <body>
+    <header id="map-header">
+      <label>Map name <input id="map-name" maxlength="200" autocomplete="off" /></label>
+      <label>Basemap <select id="map-style" aria-label="Basemap">
+        <option value="liberty">Liberty</option>
+        <option value="bright">Bright</option>
+        <option value="positron">Positron</option>
+        <option value="dark">Dark</option>
+      </select></label>
+      <div role="toolbar" aria-label="Drawing" id="modes">
+        <button type="button" data-mode="select" aria-pressed="true">Select</button>
+        <button type="button" data-mode="point">Add place</button>
+        <button type="button" data-mode="linestring">Draw route</button>
+        <button type="button" data-mode="polygon">Draw area</button>
+        <button type="button" id="delete-feature">Remove</button>
+      </div>
+    </header>
+    <main>
+      <div id="map" aria-label="Map"></div>
+      <aside id="places" aria-label="Places">
+        <h2>Places</h2>
+        <ol id="place-list"></ol>
+        <section id="place-editor" hidden aria-label="Selected place">
+          <label>Title <input id="place-title" maxlength="200" /></label>
+          <label>Notes <textarea id="place-notes" rows="4" maxlength="2000"></textarea></label>
+          <label>Colour <input id="place-color" type="color" value="#2f6f4e" /></label>
+        </section>
+      </aside>
+    </main>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

@@ -311,6 +311,18 @@ export function getMockLanguageModel(): LanguageModel {
             });
           return textStream('Added the findings cell and saved the notebook.');
         }
+        if (lastUserText(prompt).includes('[map:places]')) {
+          const rounds = toolResultsThisTurn(prompt);
+          if (!rounds.length) return toolCallStream('inspect_map', {});
+          if (rounds.length === 1) return toolCallStream('set_map_name', { name: 'Seed swap walk' });
+          if (rounds.length === 2)
+            return toolCallStream('add_map_place', { title: 'Seed library', lng: -0.1195, lat: 51.5033, notes: 'Start here at 10', color: '#c0392b' });
+          if (rounds.length === 3)
+            return toolCallStream('add_map_place', { title: 'Community garden', lng: -0.0865, lat: 51.5045, notes: 'Bring pots' });
+          if (rounds.length === 4) return toolCallStream('fit_map', {});
+          if (rounds.length === 5) return toolCallStream('save_map_image', { name: 'Seed swap walk' });
+          return textStream('Named the map, added the seed library and the community garden, fitted the view and saved the picture.');
+        }
         if (lastUserText(prompt).includes('[layout:poster]')) {
           const rounds = toolResultsThisTurn(prompt);
           if (!rounds.length) return toolCallStream('inspect_layout', {});
