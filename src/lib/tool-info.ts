@@ -37,6 +37,7 @@ export const TOOL_INFO: Record<string, ToolInfo> = {
   'hextris-app': native('Hextris', 'Hextris/hextris'),
   'pptist-app': native('PPTist', 'pipipi-pikachu/PPTist'),
   'wick-editor-app': native('Wick Editor', 'Wicklets/wick-editor'),
+  'bentopdf-app': native('BentoPDF', 'alam00000/bentopdf'),
   'underrun-app': native('Underrun', 'phoboslab/underrun'),
   'playcanvas-editor-app': native('PlayCanvas Editor', 'playcanvas/editor'),
   'blockbench-app': native('Blockbench', 'JannisX11/blockbench'),

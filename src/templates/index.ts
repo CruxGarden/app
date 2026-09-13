@@ -248,6 +248,7 @@ const loaders: Record<string, () => Promise<{ default: TemplateDefinition }>> = 
   'hextris-app': () => import('./hextris-app'),
   'pptist-app': () => import('./pptist-app'),
   'wick-editor-app': () => import('./wick-editor-app'),
+  'bentopdf-app': () => import('./bentopdf-app'),
   'underrun-app': () => import('./underrun-app'),
   'playcanvas-editor-app': () => import('./playcanvas-editor-app'),
   'blockbench-app': () => import('./blockbench-app'),

@@ -18,6 +18,7 @@ import { BEEPBOX_TOOLS, beepboxCommand } from '@/ai/beepbox-tools';
 import { HEXTRIS_TOOLS, hextrisCommand } from '@/ai/hextris-tools';
 import { PPTIST_TOOLS, pptistCommand } from '@/ai/pptist-tools';
 import { WICK_TOOLS, wickCommand } from '@/ai/wick-editor-tools';
+import { BENTOPDF_TOOLS, bentopdfCommand } from '@/ai/bentopdf-tools';
 import { INSTRUMENT_TOOLS, instrumentCommand } from '@/ai/instrument-tools';
 import { samplerTools } from '@/ai/sampler-tools';
 import { OPENMOSH_TOOLS, openmoshCommand } from '@/ai/openmosh-tools';
@@ -30,6 +31,7 @@ import {
   isHextris,
   isPPTist,
   isWickEditor,
+  isBentoPDF,
   isMiniPaint,
   isCardinal,
   isOpenMosh,
@@ -64,6 +66,7 @@ export function embeddedAppToolAdapter(crux: { meta?: Record<string, unknown> } 
   if (isHextris(crux)) return { tools: HEXTRIS_TOOLS, prepare: hextrisCommand };
   if (isPPTist(crux)) return { tools: PPTIST_TOOLS, prepare: pptistCommand };
   if (isWickEditor(crux)) return { tools: WICK_TOOLS, prepare: wickCommand };
+  if (isBentoPDF(crux)) return { tools: BENTOPDF_TOOLS, prepare: bentopdfCommand };
   if (isMiniPaint(crux)) return { tools: MINIPAINT_TOOLS, prepare: minipaintCommand };
   if (isOpenMosh(crux)) return { tools: OPENMOSH_TOOLS, prepare: openmoshCommand };
   const type = samplerType(crux);

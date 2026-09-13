@@ -8,6 +8,7 @@ const NATIVE_TEMPLATES = {
   'hextris-app': 'hextris',
   'pptist-app': 'pptist',
   'wick-editor-app': 'wick-editor',
+  'bentopdf-app': 'bentopdf',
   'opencut-app': 'opencut',
   'playcanvas-editor-app': 'playcanvas-editor',
   'openmosh-app': 'openmosh',
@@ -39,6 +40,10 @@ export function isOpenMosh(crux: { meta?: Record<string, unknown> } | null | und
 
 export function isWickEditor(crux: { meta?: Record<string, unknown> } | null | undefined) {
   return crux?.meta?.template === 'wick-editor-app';
+}
+
+export function isBentoPDF(crux: { meta?: Record<string, unknown> } | null | undefined) {
+  return crux?.meta?.template === 'bentopdf-app';
 }
 
 export function isPPTist(crux: { meta?: Record<string, unknown> } | null | undefined) {

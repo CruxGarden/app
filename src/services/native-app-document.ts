@@ -4,6 +4,7 @@ import { validateProject as validateBeepBox } from '../../beepbox-crux/garden/do
 import { validateProject as validateHextris } from '../../hextris-crux/garden/document.js';
 import { validateProject as validatePPTist } from '../../pptist-crux/garden/document.js';
 import { validateProject as validateWick } from '../../wick-editor-crux/garden/document.js';
+import { validateProject as validateBentoPDF } from '../../bentopdf-crux/garden/document.js';
 import { validateProject as validateOpenCut } from '../../opencut-crux/garden/model.js';
 import { validateProject as validatePlayCanvas } from '../../playcanvas-editor-crux/garden/model.js';
 import { validateProject as validateGDevelop } from '../../gdevelop-crux/garden/model.mjs';
@@ -106,6 +107,7 @@ export async function validateNativeDocument(
     | 'hextris'
     | 'pptist'
     | 'wick-editor'
+    | 'bentopdf'
     | 'opencut'
     | 'playcanvas-editor'
     | 'openmosh'
@@ -131,6 +133,7 @@ export async function validateNativeDocument(
   else if (app === 'hextris') validateHextris(doc);
   else if (app === 'pptist') validatePPTist(doc);
   else if (app === 'wick-editor') validateWick(doc);
+  else if (app === 'bentopdf') validateBentoPDF(doc);
   else if (app === 'opencut') validateOpenCut(doc);
   else if (app === 'playcanvas-editor') validatePlayCanvas(doc);
   else if (app === 'gdevelop') validateGDevelop(doc);
