@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Layout</title>
+    <style>
+      html, body { height: 100%; margin: 0; font: 14px/1.4 system-ui, sans-serif; background: #f7f7f5; color: #1f2328; }
+      body { display: flex; flex-direction: column; }
+      #layout-header { display: flex; align-items: center; gap: 16px; padding: 8px 12px; border-bottom: 1px solid #d9d9d4; background: #fff; }
+      #layout-header label { display: flex; align-items: center; gap: 8px; font-weight: 600; }
+      #layout-header input, #layout-header select { font: inherit; font-weight: 400; padding: 4px 8px; border: 1px solid #c9c9c4; border-radius: 4px; }
+      #layout-header input { min-width: 240px; }
+      #layout-header [role=tablist] { display: flex; gap: 4px; margin-left: auto; }
+      #layout-header [role=tab] { font: inherit; padding: 4px 12px; border: 1px solid #c9c9c4; border-radius: 4px; background: #fff; cursor: pointer; }
+      #layout-header [role=tab][aria-selected=true] { background: #2f6f4e; color: #fff; border-color: #2f6f4e; }
+      main { flex: 1; min-height: 0; position: relative; }
+      #designer, #viewer { height: 100%; }
+    </style>
+    <script type="module" crossorigin src="./assets/index-CTO8jmy5.js"></script>
+  </head>
+  <body>
+    <header id="layout-header">
+      <label>Layout name <input id="layout-name" maxlength="200" autocomplete="off" /></label>
+      <label>Page <select id="layout-page" aria-label="Page size">
+        <option value="a4-portrait">A4 portrait</option>
+        <option value="a4-landscape">A4 landscape</option>
+        <option value="letter-portrait">Letter portrait</option>
+        <option value="letter-landscape">Letter landscape</option>
+        <option value="a5-portrait">A5 portrait</option>
+        <option value="square">Square 210 mm</option>
+      </select></label>
+      <div role="tablist" aria-label="Layout view">
+        <button type="button" role="tab" id="tab-design" aria-selected="true">Design</button>
+        <button type="button" role="tab" id="tab-preview" aria-selected="false">Preview</button>
+      </div>
+    </header>
+    <main>
+      <div id="designer" aria-label="Layout designer"></div>
+      <div id="viewer" hidden aria-label="Layout preview"></div>
+    </main>
+  </body>
+</html>

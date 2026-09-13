@@ -11,6 +11,7 @@ const NATIVE_TEMPLATES = {
   'bentopdf-app': 'bentopdf',
   'eventcalendar-app': 'eventcalendar',
   'formjs-app': 'formjs',
+  'pdfme-app': 'pdfme',
   'am-1-app': 'am-1',
   'opencut-app': 'opencut',
   'playcanvas-editor-app': 'playcanvas-editor',

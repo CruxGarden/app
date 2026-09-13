@@ -252,6 +252,7 @@ const loaders: Record<string, () => Promise<{ default: TemplateDefinition }>> = 
   'am-1-app': () => import('./am-1-app'),
   'eventcalendar-app': () => import('./eventcalendar-app'),
   'formjs-app': () => import('./formjs-app'),
+  'pdfme-app': () => import('./pdfme-app'),
   'underrun-app': () => import('./underrun-app'),
   'playcanvas-editor-app': () => import('./playcanvas-editor-app'),
   'blockbench-app': () => import('./blockbench-app'),
