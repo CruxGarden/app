@@ -311,6 +311,18 @@ export function getMockLanguageModel(): LanguageModel {
             });
           return textStream('Added the findings cell and saved the notebook.');
         }
+        if (lastUserText(prompt).includes('[layout:poster]')) {
+          const rounds = toolResultsThisTurn(prompt);
+          if (!rounds.length) return toolCallStream('inspect_layout', {});
+          if (rounds.length === 1) return toolCallStream('set_layout_name', { name: 'Open day poster' });
+          if (rounds.length === 2)
+            return toolCallStream('add_layout_text', { name: 'headline', text: 'Open day at the seed library', x: 15, y: 30, width: 180, height: 30, fontSize: 32, align: 'center' });
+          if (rounds.length === 3)
+            return toolCallStream('add_layout_text', { name: 'when', text: 'Saturday 3 October, 10 to 4', x: 15, y: 70, width: 180, height: 14, fontSize: 16, align: 'center' });
+          if (rounds.length === 4) return toolCallStream('save_layout_pdf', { name: 'Open day poster' });
+          if (rounds.length === 5) return toolCallStream('save_layout_image', { name: 'Open day poster' });
+          return textStream('Named the poster, set the headline and the date, and saved the PDF and the image to the Cruxspace.');
+        }
         if (lastUserText(prompt).includes('[form:build]')) {
           const rounds = toolResultsThisTurn(prompt);
           if (!rounds.length) return toolCallStream('inspect_form', {});

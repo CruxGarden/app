@@ -1,0 +1,25 @@
+{
+  "name": "pdfme-crux",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Page layout around pdfme (Designer, Viewer, generator) as a Crux Tool: posters, flyers, cards and menus to PDF and PNG",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "build:garden": "OUT_DIR=runtime vite build",
+    "check": "tsc --noEmit",
+    "test:garden": "node --test garden/document.test.mjs"
+  },
+  "dependencies": {
+    "@pdfme/common": "6.1.12",
+    "@pdfme/converter": "6.1.12",
+    "@pdfme/generator": "6.1.12",
+    "@pdfme/schemas": "6.1.12",
+    "@pdfme/ui": "6.1.12"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.0",
+    "vite": "^6.0.0"
+  }
+}

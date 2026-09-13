@@ -38,6 +38,12 @@ export const TOOL_INFO: Record<string, ToolInfo> = {
   'pptist-app': native('PPTist', 'pipipi-pikachu/PPTist'),
   'wick-editor-app': native('Wick Editor', 'Wicklets/wick-editor'),
   'bentopdf-app': native('BentoPDF', 'alam00000/bentopdf'),
+  'pdfme-app': {
+    name: 'pdfme',
+    upstream: 'https://github.com/pdfme/pdfme',
+    detailsPath: 'UPSTREAM.md',
+    relationship: 'A page layout tool around pdfme. The designer, viewer and PDF generator are upstream’s; the page, the Garden integration and the outputs are Crux Garden’s.',
+  },
   'formjs-app': {
     name: 'form-js',
     upstream: 'https://github.com/bpmn-io/form-js',

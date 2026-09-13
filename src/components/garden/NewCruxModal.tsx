@@ -472,6 +472,16 @@ const TEMPLATES: Template[] = [
     kind: 'webapp',
   },
   {
+    id: 'pdfme-app',
+    label: 'Layout',
+    description: 'Creative · posters, flyers, cards and menus laid out on a page with pdfme; PDF and PNG outputs',
+    defaultTitle: 'My layout',
+    icon: <LayoutIcon />,
+    thumb: <BlankThumb />,
+    kind: 'webapp',
+    desktopOnly: true,
+  },
+  {
     id: 'minipaint-app',
     label: 'miniPaint',
     description: 'Creative · photo editing, paint, text and editable layers',
