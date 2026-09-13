@@ -311,6 +311,17 @@ export function getMockLanguageModel(): LanguageModel {
             });
           return textStream('Added the findings cell and saved the notebook.');
         }
+        if (lastUserText(prompt).includes('[notes:document]')) {
+          const rounds = toolResultsThisTurn(prompt);
+          if (!rounds.length) return toolCallStream('inspect_notebook', {});
+          if (rounds.length === 1) return toolCallStream('export_note_docx', {});
+          return textStream('Exported the open note as a Word document in exports.');
+        }
+        if (lastUserText(prompt).includes('[notes:import]')) {
+          const rounds = toolResultsThisTurn(prompt);
+          if (!rounds.length) return toolCallStream('import_document', { path: 'inbox/Letter.docx' });
+          return textStream('Imported the letter into the notebook.');
+        }
         if (lastUserText(prompt).includes('[rawgraphs:size]')) {
           const rounds = toolResultsThisTurn(prompt);
           if (!rounds.length) return toolCallStream('inspect_rawgraphs', {});

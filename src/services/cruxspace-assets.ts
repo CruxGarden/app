@@ -47,6 +47,8 @@ const EXTENSIONS: Record<string, string> = {
   'audio/x-wav': 'wav',
   'audio/mpeg': 'mp3',
   'application/zip': 'zip',
+  'application/pdf': 'pdf',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'docx',
 };
 const MAX_OUTPUT = 32_000_000;
 const MAX_BUNDLE_ENTRIES = 2000;
@@ -97,7 +99,7 @@ export async function saveCruxOutput(
     await getServices().crux.findById(owner);
     const ext = EXTENSIONS[blob.type];
     if (!ext || !blob.size || blob.size > MAX_OUTPUT)
-      throw new Error('Choose a PNG, JPEG, WebP, GIF, WAV, MP3 or ZIP up to 32 MB.');
+      throw new Error('Choose a PNG, JPEG, WebP, GIF, WAV, MP3, ZIP, PDF or DOCX up to 32 MB.');
     if (!label.trim() || label.length > 120)
       throw new Error('Name the output using up to 120 characters.');
     const bytes = new Uint8Array(await blob.arrayBuffer());

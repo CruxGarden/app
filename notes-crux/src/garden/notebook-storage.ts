@@ -253,10 +253,12 @@ export function createGardenNotebookStorage(): NotebookStorage {
       return folderEntries(workspace);
     },
     async readNote(_workspace, path) {
+      garden.noteOpened(path);
       await ensureListed();
       return read(path);
     },
-    async acquireNoteEditLock() {
+    async acquireNoteEditLock(_workspace, path) {
+      garden.noteOpened(path);
       return { acquired: true };
     },
     async releaseNoteEditLock() {},
@@ -394,6 +396,15 @@ export function createGardenNotebookStorage(): NotebookStorage {
       return readMetadata();
     },
     async writeWorkspaceMetadata(_workspace, next): Promise<WorkspaceMetadataWriteResult> {
+      // The note the app has open is the position it touched last (opening a note updates it).
+      const latest = Object.values(next.notePositions ?? {}).reduce<{ path: string; lastOpenedAt: number } | null>(
+        (best, position) =>
+          position && typeof position.lastOpenedAt === 'number' && (!best || position.lastOpenedAt > best.lastOpenedAt)
+            ? { path: position.path, lastOpenedAt: position.lastOpenedAt }
+            : best,
+        null,
+      );
+      if (latest?.path) garden.noteOpened(latest.path);
       const current = await readMetadata();
       if (next.revision !== current.revision) return { applied: false, metadata: current };
       // Note positions (last opened, scroll) change on every open. Written to disk they would

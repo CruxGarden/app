@@ -72,7 +72,7 @@ export function useNotebookProxy(cruxId: string | null) {
                 },
               });
               peer!.source.postMessage(
-                { type: 'crux:app:command', id, command },
+                { type: `${protocol}:command`, id, command },
                 { targetOrigin: peer!.origin },
               );
             });
