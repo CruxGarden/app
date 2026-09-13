@@ -108,6 +108,13 @@ export function getMockLanguageModel(): LanguageModel {
         // ── Glow Garden: the scripted collaborator across the game Cruxspace (GAME-CRUXSPACE-PLAN.md) ──
         const game = gameScript(prompt);
         if (game) return game;
+        if (lastUserText(prompt).includes('[wick:edit]')) {
+          const rounds = toolResultsThisTurn(prompt);
+          if (!rounds.length) return toolCallStream('inspect_wick', {});
+          if (rounds.length === 1) return toolCallStream('set_wick_name', { name: 'Garden anim' });
+          if (rounds.length === 2) return toolCallStream('set_wick_framerate', { framerate: 24 });
+          return textStream('Named the project Garden anim and set 24 frames per second.');
+        }
         if (lastUserText(prompt).includes('[pptist:edit]')) {
           const rounds = toolResultsThisTurn(prompt);
           if (!rounds.length) return toolCallStream('inspect_pptist', {});

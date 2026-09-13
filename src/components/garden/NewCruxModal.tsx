@@ -412,6 +412,16 @@ const TEMPLATES: Template[] = [
     desktopOnly: true,
   },
   {
+    id: 'wick-editor-app',
+    label: 'Wick Editor',
+    description: 'Creative · animations and interactive scenes with Wick Editor',
+    defaultTitle: 'My animation',
+    icon: <PencilIcon />,
+    thumb: <BlankThumb />,
+    kind: 'webapp',
+    desktopOnly: true,
+  },
+  {
     id: 'audiomass-app',
     label: 'AudioMass',
     description: 'Creative · waveform effects, recordings and multitrack audio',
