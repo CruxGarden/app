@@ -7,6 +7,7 @@ const NATIVE_TEMPLATES = {
   'beepbox-app': 'beepbox',
   'hextris-app': 'hextris',
   'pptist-app': 'pptist',
+  'wick-editor-app': 'wick-editor',
   'opencut-app': 'opencut',
   'playcanvas-editor-app': 'playcanvas-editor',
   'openmosh-app': 'openmosh',
@@ -34,6 +35,10 @@ export function nativeAppType(crux: { meta?: Record<string, unknown> } | null | 
 
 export function isOpenMosh(crux: { meta?: Record<string, unknown> } | null | undefined) {
   return crux?.meta?.template === 'openmosh-app';
+}
+
+export function isWickEditor(crux: { meta?: Record<string, unknown> } | null | undefined) {
+  return crux?.meta?.template === 'wick-editor-app';
 }
 
 export function isPPTist(crux: { meta?: Record<string, unknown> } | null | undefined) {

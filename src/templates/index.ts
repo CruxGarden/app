@@ -247,6 +247,7 @@ const loaders: Record<string, () => Promise<{ default: TemplateDefinition }>> = 
   'beepbox-app': () => import('./beepbox-app'),
   'hextris-app': () => import('./hextris-app'),
   'pptist-app': () => import('./pptist-app'),
+  'wick-editor-app': () => import('./wick-editor-app'),
   'underrun-app': () => import('./underrun-app'),
   'playcanvas-editor-app': () => import('./playcanvas-editor-app'),
   'blockbench-app': () => import('./blockbench-app'),
