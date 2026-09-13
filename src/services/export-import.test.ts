@@ -2,6 +2,8 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import JSZip from 'jszip';
 import { initServices, type Services } from './index';
 import { exportCrux, importCrux, peekImport } from './crux-io';
+import { growthHostFor } from './growth';
+import { getSqliteClient } from './sqlite/client';
 
 /**
  * Export/Import round-trip tests — v3.1 format.
@@ -144,6 +146,22 @@ describe('Export / Import', () => {
   });
 
   describe('snapshots (version history)', () => {
+    it('keeps when each checkpoint was taken', async () => {
+      const { crux, dimension } = (await import('./index')).getServices();
+      const c = await crux.create({ title: 'Dated', type: 'workspace' });
+      const growth = await growthHostFor(c.id);
+      await growth.snapshot({ label: 'Then', requestedBy: 'person' });
+      const [before] = await dimension.findBySourceAndType(c.id, 'growth');
+      const back = new Date(Date.now() - 7 * 86400000).toISOString();
+      await getSqliteClient().run('UPDATE dimensions SET created = ? WHERE id = ?', [back, before!.id]);
+      const result = await exportCrux({ cruxId: c.id });
+      await crux.delete(c.id);
+      const imported = await importCrux({ data: result.blob });
+      const [after] = await dimension.findBySourceAndType(imported.cruxId, 'growth');
+      expect(after!.created).toBe(back);
+      expect((await crux.findById(after!.targetId)).created).toBe(back);
+    });
+
     it('exports and re-imports snapshots with growth dimensions', async () => {
       const crux = await svc.crux.create({ title: 'Versioned', type: 'workspace' });
 

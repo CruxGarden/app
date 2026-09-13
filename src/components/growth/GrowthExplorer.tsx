@@ -20,14 +20,17 @@ const action =
 export default function GrowthExplorer({
   cruxId,
   onClose,
+  initialSelectedId = null,
 }: {
   cruxId: string;
   onClose: () => void;
+  /** A checkpoint to open on, for example from the Cruxspace history. */
+  initialSelectedId?: string | null;
 }) {
   const [graph, setGraph] = useState<GrowthGraph | null>(null);
   const [error, setError] = useState('');
   const [mode, setMode] = useState<'2d' | '3d'>('2d');
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(initialSelectedId);
   const [expanded, setExpanded] = useState(false);
   const [fit, setFit] = useState(0);
   const [query, setQuery] = useState('');

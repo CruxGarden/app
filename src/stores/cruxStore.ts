@@ -21,6 +21,8 @@ import {
   workspaceUnchangedSinceTip,
   type SnapshotChainNode,
   type CreateSnapshotOptions,
+  restoreFilesCore,
+  defaultGrowthHostDeps,
 } from '@/services/growth';
 import {
   publishPipeline,
@@ -1098,16 +1100,8 @@ export function createCruxStore(ui: StoreApi<UIState> = useUIStore) {
         console.warn('Failed to auto-snapshot before revert:', err);
       }
 
-      // Delete all current workspace artifacts
-      const currentArtifacts = await artifact.findByResource('crux', crux.id);
-      await Promise.allSettled(currentArtifacts.map((a) => artifact.delete(a.id)));
-
-      // Clone snapshot artifacts to workspace. The clone is metadata-only
-      // (rows pointing at fingerprints) while the deletes above wrote through
-      // to disk — so on desktop the Project Folder would be EMPTY after a
-      // revert. Re-project the store onto the folder (no-op on web).
-      await artifact.cloneArtifactsToSnapshot(snapshotId, crux.id);
-      await projectAllArtifacts(crux.id);
+      // Only the files that differ move (Growth module, single impl).
+      await restoreFilesCore(crux.id, snapshotId, await defaultGrowthHostDeps());
 
       // Rebuild conversation via the chain walk (Growth module, single impl)
       const priorMessages = await collectChainMessages(
@@ -1166,16 +1160,8 @@ export function createCruxStore(ui: StoreApi<UIState> = useUIStore) {
         console.warn('Failed to auto-snapshot before branch:', err);
       }
 
-      // Delete current workspace artifacts
-      const currentArtifacts = await artifact.findByResource('crux', crux.id);
-      await Promise.allSettled(currentArtifacts.map((a) => artifact.delete(a.id)));
-
-      // Clone snapshot artifacts to workspace. The clone is metadata-only
-      // (rows pointing at fingerprints) while the deletes above wrote through
-      // to disk — so on desktop the Project Folder would be EMPTY after a
-      // revert. Re-project the store onto the folder (no-op on web).
-      await artifact.cloneArtifactsToSnapshot(snapshotId, crux.id);
-      await projectAllArtifacts(crux.id);
+      // Only the files that differ move (Growth module, single impl).
+      await restoreFilesCore(crux.id, snapshotId, await defaultGrowthHostDeps());
 
       // Load snapshot messages — these become the conversation base for the branch
       const snapshotCrux = await cruxService.findById(snapshotId);

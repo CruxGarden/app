@@ -93,6 +93,11 @@ function hasExpectedUnder(folder: string, prefix: string): boolean {
   return false;
 }
 
+function hasExpectation(folder: string, relPath: string): boolean {
+  const entry = expectations.get(folder)?.get(relPath);
+  return !!entry && Date.now() - entry.at <= EXPECTATION_TTL;
+}
+
 function takeExpectation(folder: string, relPath: string): string | null {
   const map = expectations.get(folder);
   const entry = map?.get(relPath);
@@ -191,6 +196,10 @@ async function processBatch(batch: ChangeBatch): Promise<void> {
       }
 
       if (event.type === 'delete') {
+        // A restore deletes a file and rewrites it moments later; the unlink
+        // event may arrive after the new row exists. The pending write
+        // expectation says the file is on its way back: keep the row.
+        if (hasExpectation(batch.folder, event.relPath)) continue;
         const row = await db.get<{ id: string }>(
           "SELECT id FROM artifacts WHERE resource_id = ? AND path = ? AND type = 'artifact'",
           [cruxId, event.relPath],

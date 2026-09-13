@@ -81,16 +81,22 @@ export default function GrowthGraphCanvas({
           ? '#293831'
           : l.kind === 'merge'
             ? '#dfb56f'
-            : '#648374'
+            : l.kind === 'transfer'
+              ? '#df94ab'
+              : '#648374'
       }
-      linkWidth={(l) => (l.kind === 'merge' ? 2 : 1)}
-      linkLineDash={(l) => (l.skipped ? [4, 3] : l.kind === 'copy' ? [2, 3] : null)}
+      linkWidth={(l) => (l.kind === 'merge' || l.kind === 'transfer' ? 2 : 1)}
+      linkLineDash={(l) =>
+        l.skipped ? [4, 3] : l.kind === 'copy' ? [2, 3] : l.kind === 'transfer' ? [7, 4] : null
+      }
       linkLabel={(l) =>
         l.skipped
           ? `${l.skipped} collapsed checkpoints`
           : l.kind === 'merge'
             ? 'Merged into Main'
-            : ''
+            : l.kind === 'transfer'
+              ? safeGraphLabel(`Used ${l.label ?? 'an output'}`)
+              : ''
       }
       linkDirectionalArrowLength={5}
       linkDirectionalArrowRelPos={0.8}

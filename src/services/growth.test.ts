@@ -603,3 +603,44 @@ describe('workspaceGrowthHost (over the store actions)', () => {
     expect(d.removed.map((f) => f.path)).toEqual(['index.html']);
   });
 });
+
+describe('restoreFilesCore (diff-based)', () => {
+  it('moves only the files that differ and leaves unchanged rows in place', async () => {
+    const { initServices, getServices } = await import('./index');
+    await initServices('local');
+    const { crux, artifact } = getServices();
+    const { growthHostFor, restoreFilesCore, defaultGrowthHostDeps } = await import('./growth');
+    const c = await crux.create({ title: 'Diff', type: 'workspace' });
+    await artifact.create({ resourceId: c.id, content: 'same', meta: { path: 'same.txt' } });
+    await artifact.create({ resourceId: c.id, content: 'old', meta: { path: 'changed.txt' } });
+    await artifact.create({ resourceId: c.id, content: 'gone later', meta: { path: 'removed.txt' } });
+    const snapshot = await (await growthHostFor(c.id)).snapshot({ label: 'Then', requestedBy: 'person' });
+    const keep = (await artifact.findByResource('crux', c.id)).find((a) => a.meta?.path === 'same.txt')!;
+    // Now: change one, remove one, add one.
+    const changed = (await artifact.findByResource('crux', c.id)).find((a) => a.meta?.path === 'changed.txt')!;
+    await artifact.delete(changed.id);
+    await artifact.create({ resourceId: c.id, content: 'new', meta: { path: 'changed.txt' } });
+    const removed = (await artifact.findByResource('crux', c.id)).find((a) => a.meta?.path === 'removed.txt')!;
+    await artifact.delete(removed.id);
+    await artifact.create({ resourceId: c.id, content: 'extra', meta: { path: 'added.txt' } });
+
+    const projected: string[][] = [];
+    const deps = await defaultGrowthHostDeps();
+    const diff = await restoreFilesCore(c.id, snapshot.id, {
+      ...deps,
+      projectPaths: async (_id, paths) => {
+        projected.push([...paths].sort());
+      },
+    });
+    const after = await artifact.findByResource('crux', c.id);
+    const byPath = new Map(after.map((a) => [a.meta?.path, a]));
+    expect([...byPath.keys()].sort()).toEqual(['changed.txt', 'removed.txt', 'same.txt']);
+    expect(byPath.get('same.txt')!.id).toBe(keep.id); // untouched
+    expect(await artifact.readContent(byPath.get('changed.txt')!.id)).toBe('old');
+    expect(await artifact.readContent(byPath.get('removed.txt')!.id)).toBe('gone later');
+    expect(projected).toEqual([['changed.txt', 'removed.txt']]); // only what differed reached the disk
+    expect(diff.added.map((f) => f.path)).toEqual(['removed.txt']);
+    expect(diff.removed.map((f) => f.path)).toEqual(['added.txt']);
+    expect(diff.modified.map((f) => f.path)).toEqual(['changed.txt']);
+  });
+});

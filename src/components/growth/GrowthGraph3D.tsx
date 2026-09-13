@@ -89,9 +89,11 @@ export default function GrowthGraph3D({
           ? '#293831'
           : l.kind === 'merge'
             ? '#dfb56f'
-            : '#648374'
+            : l.kind === 'transfer'
+              ? '#df94ab'
+              : '#648374'
       }
-      linkWidth={(l) => (l.kind === 'merge' ? 1.6 : 0.7)}
+      linkWidth={(l) => (l.kind === 'merge' || l.kind === 'transfer' ? 1.6 : 0.7)}
       linkOpacity={0.8}
       linkDirectionalArrowLength={5}
       linkDirectionalArrowRelPos={0.8}

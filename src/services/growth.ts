@@ -11,6 +11,7 @@
  * Deps are injectable for tests; production callers use `defaultGrowthDeps()`.
  */
 
+import type { RegisterArtifactInput } from './types';
 import type { Artifact, ChatMessage, Crux, Dimension } from '@/api/types';
 import { pathOf, isWorkspaceThumbnail } from '@/lib/artifact-path';
 import { isGeneratedGuidePath } from './agents-md';
@@ -33,6 +34,8 @@ export interface GrowthDeps {
     findByResource(type: string, id: string): Promise<Artifact[]>;
     /** Delete one artifact row; `writeThrough: false` keeps the disk untouched and frees an orphaned blob. */
     delete(id: string, opts?: { writeThrough?: boolean }): Promise<void>;
+    /** Add rows for files whose bytes the Blob Store already holds (a diff-based restore). */
+    registerMany?(inputs: RegisterArtifactInput[]): Promise<number>;
   };
   dimension: {
     create(input: Record<string, unknown>): Promise<Dimension>;
@@ -495,6 +498,8 @@ export interface GrowthHostDeps extends GrowthDeps {
   };
   /** Store → disk projection after a restore (no-op on web). */
   projectAll(cruxId: string): Promise<unknown>;
+  /** Store → disk projection of only these paths (no-op on web). */
+  projectPaths?(cruxId: string, paths: string[]): Promise<unknown>;
   /** Wait for in-flight external edits before capturing (no-op on web). */
   flush(): Promise<void>;
 }
@@ -503,7 +508,7 @@ export async function defaultGrowthHostDeps(): Promise<GrowthHostDeps> {
   const base = await defaultGrowthDeps();
   const { getServices } = await import('./index');
   const { dimension, artifact } = getServices();
-  const { projectAllArtifacts } = await import('./project-folder');
+  const { projectAllArtifacts, projectArtifactPaths } = await import('./project-folder');
   const { flushIngestion } = await import('./ingestion');
   return {
     ...base,
@@ -519,8 +524,10 @@ export async function defaultGrowthHostDeps(): Promise<GrowthHostDeps> {
       cloneArtifactsToSnapshot: (from, to) => artifact.cloneArtifactsToSnapshot(from, to),
       findByResource: (type, id) => artifact.findByResource(type, id),
       delete: (id, opts) => artifact.delete(id, opts),
+      registerMany: (inputs) => artifact.registerMany(inputs),
     },
     projectAll: projectAllArtifacts,
+    projectPaths: projectArtifactPaths,
     flush: flushIngestion,
   };
 }
@@ -729,15 +736,48 @@ export async function createSnapshotIfChanged(
 export async function restoreFilesCore(
   cruxId: string,
   snapshotId: string,
-  deps: Pick<GrowthHostDeps, 'artifact' | 'projectAll'>,
+  deps: Pick<GrowthHostDeps, 'artifact' | 'projectAll' | 'projectPaths'>,
 ): Promise<SnapshotDiff> {
   const before = await deps.artifact.findByResource('crux', cruxId);
-  await Promise.allSettled(before.map((a) => deps.artifact.delete(a.id)));
-  await deps.artifact.cloneArtifactsToSnapshot(snapshotId, cruxId);
-  await deps.projectAll(cruxId);
+  if (deps.artifact.registerMany && deps.projectPaths) {
+    // Only what differs moves: a game Crux of 7,800 files that changed in five
+    // keeps its rows and its disk for the rest (deleting and re-projecting
+    // every file took minutes and flooded the watcher).
+    const target = await deps.artifact.findByResource('crux', snapshotId);
+    const wanted = new Map(target.map((a) => [pathKey(a), a]));
+    const kept = new Set<string>();
+    const gone: Artifact[] = [];
+    for (const a of before) {
+      const want = wanted.get(pathKey(a));
+      if (want && want.fingerprint && want.fingerprint === a.fingerprint) kept.add(pathKey(a));
+      else gone.push(a);
+    }
+    await Promise.allSettled(gone.map((a) => deps.artifact.delete(a.id)));
+    const added = target.filter((a) => !kept.has(pathKey(a)) && a.fingerprint);
+    await deps.artifact.registerMany(
+      added.map((a) => ({
+        resourceId: cruxId,
+        path: pathKey(a),
+        fingerprint: a.fingerprint!,
+        size: Number(a.size) || 0,
+        mimeType: a.mimeType,
+        encoding: a.encoding,
+        meta: { ...(a.meta ?? {}), path: pathKey(a) },
+      })),
+    );
+    await deps.projectPaths(
+      cruxId,
+      added.map((a) => pathKey(a)),
+    );
+  } else {
+    await Promise.allSettled(before.map((a) => deps.artifact.delete(a.id)));
+    await deps.artifact.cloneArtifactsToSnapshot(snapshotId, cruxId);
+    await deps.projectAll(cruxId);
+  }
   const after = await deps.artifact.findByResource('crux', cruxId);
   return diffArtifactSets(before, after);
 }
+const pathKey = (a: Artifact) => String(a.meta?.path || a.filename);
 
 // ── Growth host seam ────────────────────────────────────────────────────────
 
