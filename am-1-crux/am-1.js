@@ -1,0 +1,1601 @@
+/* ================================================================
+   AM-1 · ARPEGGIO MACHINE — engine
+   One file, no dependencies, no build step.
+
+   READING ORDER — the sections below, top to bottom:
+
+     music         pure functions, no audio: scales, degree chords,
+                   scale-snap (the no-wrong-notes rail), FOLLOW,
+                   buildPattern + lenCycle (LEN). Also CAL — every
+                   ear-tuned constant — and the boot `state` literal.
+     audio         the Web Audio graph: initAudio wiring, the five
+                   voices inside playNote, the DRIVE circuits (the
+                   header's ERA selector: mk1 = 2026 lab-clean, mk2 =
+                   1983 CP3/gnarl/crunch + analog oscillators),
+                   procedural reverb IRs, the stereo phaser, the
+                   drone's six voices (strings + choir ensembles),
+                   applyMaster.
+     mod           the two LFOs: LFO1 (audio-rate osc + tick), LFO2
+                   (tick only), five waves incl. the Lorenz chaos,
+                   the ENTROPY thermal walks (state key: age).
+     clock         the lookahead scheduler — the machine's one
+                   inviolable. Pulse math, swing, syncIdx (parts
+                   join the grid in phase), start/stop, tab-hide.
+     chord input   the harmony surface: latch keyboard, degrees,
+                   KEY/SCALE/7THS, the seq recorder (melody notes or
+                   a chord progression — seqMode/progSeq; the clock
+                   auto-advances the progression), the seq bar
+                   (step on/off + phase markers), previewNote.
+     layer UI      the three part strips — built from LAYER_FIELDS
+                   by the seg/slider helpers (SEG_LABELS maps panel
+                   words like rytm onto stored values like arp).
+     master wiring the master/effects controls → state → applyMaster.
+     tools         WAV bounce, FIELDS (the parameter registry that
+                   generates serialize/load/UI refresh), patches +
+                   the factory bank (all owner-made; dispName shows
+                   "Berlin, Bees" over berlin_bees keys), the
+                   ANOMALY dice + its rails and logbook, INIT.
+     boot          session memory: restore am1.active if stored,
+                   else Berlin, Bees greets; era + live state persist
+                   every 3s. Nothing sounds until RUN.
+
+   Two tables rule everything: CAL (how it sounds) and FIELDS (what a
+   patch is). `state` is the single source of truth — the DOM is only
+   ever a rendering of it. Map + diagrams: AM-1-ARCHITECTURE.md.
+   Piece-by-piece tour for humans: AM-1-WALKTHROUGH.md.
+   ================================================================ */
+/* ============ music ============ */
+/* UI seam — the engine (music/audio/mod/clock) renders NOTHING. These
+   hooks are its only reach into the page; the UI layer installs the real
+   implementations down in `master wiring`. Headless runs (the test
+   harness, a future worker, the port's golden-vector rig) leave them as
+   no-ops and the engine neither knows nor cares. */
+const UI={partFire:(i,waitMs)=>{},transport:(running)=>{}};
+const KEYS=['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
+/* Six curated scales + 'free' (chromatic, the opt-out of the no-wrong-
+   notes law). Intervals in semitones from the key root. Everything
+   harmonic — chords, snapping, FOLLOW — derives from these rows. */
+const SCALES={
+  minor:[0,2,3,5,7,8,10], dorian:[0,2,3,5,7,9,10], phrygian:[0,1,3,5,7,8,10],
+  major:[0,2,4,5,7,9,11], lydian:[0,2,4,6,7,9,11], 'harm minor':[0,2,3,5,7,8,11],
+  free:[0,1,2,3,4,5,6,7,8,9,10,11]
+};
+const NUMERALS=['i','ii','iii','iv','v','vi','vii'];
+const ROLES={bass:{base:36,sub:true},arp:{base:48,sub:false},lead:{base:60,sub:false}};
+/* CAL — the calibration table. Every value here was tuned by ear in the
+   harness; this block ports verbatim to the hardware firmware. */
+const CAL={
+  drive:{taper:1.5,span:7,comp:1.3,bias:0.24,asym:0.22,floorG:0.35,tiltF:250,tiltDb:3.5,lpF:9000,lpHiF:18000,lpCurve:1.8,biasHz:7,biasK:0.09,nodeF:5200,spike:0.14,gnarlLo:0.65,crunch:0.45,crunchG:1.8},
+  fb:{taper:1.6,max:1.15,root:36},
+  cut:{base:16,span:10.25},
+  mod:{base:0.000556,span:324000,audioCap:180,tickCap:30,ageSwing:45,pitchSpan:0.7,shapeSpan:50,cutSwing:60,driveSwing:0.8,levelSwing:0.8,resoSwing:0.85,chaosK:2.2},
+  voice:{driftCents:4,humBase:0.92,humSpan:0.16,glideMax:0.35,sawDetune:1.006,duty:0.483,droopN:26,droopP:0.6,bow2:1.07,bow3:1.03,bellRatio:3.01,bellHit:3.2,bellTail:0.45,pluckFb:0.88,pluckFbSpan:0.115,pluckDampBase:900,pluckDampSpan:5000},
+  /* AGE — the Prophet Rev4 VINTAGE move, wearing the house name (the TM-1's
+     AGE knob is its sibling: same gesture, tape physics instead). Each PART
+     is a voice card that aged differently — fixed per-part miscalibrations
+     (cents / envelope speed / colour-filter offset), all scaled by the AGE
+     knob. At 0 the machine is clinical; 30 breathes; 100 is a rev-1 that
+     has properly lived. Constants tuned HOT at Daniel's call — the first
+     set whispered under the twin-saw detune and the room. */
+  /* AGE, linear law (8th pass, at Daniel's call: "as dial-in-able as
+     possible"): every instability quantity scales as a STRAIGHT LINE from
+     clean (0) to the seasick ceilings (100) — no calm plateau, no ignition
+     cliff. The knob is an instability fader; every position earns its keep.
+     At 100: walks ±~109¢ (lurches past ±150¢), drift ~145¢, scoops near a
+     semitone settling ~2/3s, one note in five sick. Melody dissolves into
+     contour; the grid never fails. The player fails — the clock never does. */
+  age:{partCents:[9,-12,5],droneCents:-15,partEnv:[1.08,0.92,1.14],partCut:[-0.06,0.09,-0.04],
+    walkMax:109,walkMin:4,walkSpan:5,walkRestless:0.7,slipMax:0.5,
+    driftMax:144,scoopMax:95,scoopTMin:0.05,scoopTSpan:0.09,settleStretch:2.4,
+    envJitMax:0.42,cutJit:0.10,humLo:0.5,humHi:2.4,
+    sickMax:0.2,sickVelHi:0.45,sickVelSpan:0.37,sickDurHi:0.75,sickDurSpan:0.45,aliveRamp:4},
+  phaser:{rate:0.11,stages:4,center:800,sweepCents:2400,q:0.5,fbMax:0.65,wetMax:0.5,wetTaper:0.6,makeup:0.42},
+  drone:{lvl:0.5,lp:420,detune:1.004,
+    /* strings — the 70s string-machine drone (Solina/Eminent school): saws
+       two octaves above the basement, through a two-tap ensemble chorus
+       (slow LFOs at unequal rates — the swirl that makes saws read as
+       strings), mellow lowpass instead of the sub-drone's dark one. */
+    strings:{lp:3400,lvl:0.38,det:1.007,d1:0.019,d2:0.026,r1:0.62,r2:0.87,depth:0.0032,tap:0.5},
+    /* choir — vowel formants for an open "ah": F1/F2/F3 at vocal-tract
+       frequencies, gains weighted like a chest voice; formants FIXED (a
+       moving vowel is speech, a held one is a choir); vibrato — singers
+       waver — rides the oscillators, not the filters. */
+    choir:{lp:3200,lvl:0.6,det:1.009,f1:640,f2:1080,f3:2650,q:9,g1:1.0,g2:0.55,g3:0.3,
+      vibHz:4.6,vibCents:3.4,d1:0.021,d2:0.029,r1:0.55,r2:0.8,depth:0.003,tap:0.5}},
+  bus:{dsum:0.6,dlyDamp:3200,compTh:-14,compRatio:4}
+};
+const state={
+  key:9, scale:'minor',                 /* A minor */
+  chord:[],                             /* chord tones as midi notes, anchored around octave 4 (C4=60) */
+  degree:0, seq:[], follow:false, sevenths:false,
+  tempo:112, running:false,
+  layers:[
+    {name:'PART I',   role:'bass', voice:'saw',    pattern:'up',     div:2, oct:1, shape:26, level:78, on:true, len:0, idx:-1},
+    {name:'PART II',  role:'arp',  voice:'square', pattern:'updown', div:1, oct:2, shape:20, level:60, on:true, len:0, idx:-1},
+    {name:'PART III', role:'lead', voice:'saw',    pattern:'up',     div:3, oct:2, shape:52, level:46, on:true, len:0, idx:-1}
+  ],
+  seqOff:[], progOff:[], swing:0, glide:0, pitch:0, drone:35, drive:15, fb:0, age:0, circuit:'mk1', cutoff:72, reso:18, vol:80,
+  dlyDiv:3, dlyFb:45, dlyMix:30, phase:0, verbType:'hall', verbSize:45, verbMix:25,
+  mod:{wave:'tri',target:'cutoff',rate:25,depth:0},
+  mod2:{wave:'tri',target:'pitch',rate:20,depth:0},
+  droneVoice:'saw', droneNote:'root'
+};
+function scaleNotes(){ return SCALES[state.scale].map(s=>(s+state.key)%12); }
+/* Nearest in-scale note to midi m (checks the octave either side).
+   In 'free' every note is in scale, so this becomes identity. */
+function snapToScale(m){
+  const sc=scaleNotes(); let best=m,d=99;
+  for(let o=-1;o<=1;o++)for(const pc of sc){
+    const cand=Math.floor(m/12)*12+pc+o*12, dd=Math.abs(cand-m);
+    if(dd<d){d=dd;best=cand}
+  }
+  return best;
+}
+/* A degree press builds its chord by stacked thirds: scale steps
+   0-2-4 (+6 with SEVENTHS armed — the diatonic 7th, maj7/m7/etc.
+   falling out of the scale for free). Octave wraps keep voicings
+   compact. */
+function degreeChord(deg){
+  const iv=SCALES[state.scale],n=iv.length;
+  const pick=k=>{const i=(deg+k)%n,o=Math.floor((deg+k)/n);return 60+state.key+iv[i]+o*12};
+  return state.sevenths?[pick(0),pick(2),pick(4),pick(6)]:[pick(0),pick(2),pick(4)];
+}
+function chordLabel(){
+  if(!state.chord.length)return '—';
+  if(state.degree>=0)return KEYS[state.key]+' '+state.scale+' · '+NUMERALS[state.degree];
+  return state.chord.map(m=>KEYS[m%12]).join(' ');
+}
+/* FOLLOW's transposer: move a note by scale STEPS, not semitones —
+   the recorded seq re-derives through the harmony (Berlin sequencer-
+   transpose), so one motif serves every degree. */
+function diatonicShift(m,steps){
+  const sc=SCALES[state.scale],n=sc.length,key=state.key;
+  const rel=m-key,oct=Math.floor(rel/12),pc=((rel%12)+12)%12;
+  let idx=0,best=99;
+  for(let i=0;i<n;i++){const d=Math.abs(sc[i]-pc);if(d<best){best=d;idx=i}}
+  const t=idx+steps,no=Math.floor(t/n),ni=((t%n)+n)%n;
+  return key+oct*12+sc[ni]+no*12;
+}
+/* Compile a part's playable note array. seq mode: the shared recorded
+   phrase (nulls = rests), FOLLOW-shifted, rebased into the part's role
+   register. chord modes: chord tones rebased (bass 36 / arp 48 / lead
+   60), stacked across OCTAVES, then shaped — 'updown' is a palindrome
+   with no doubled endpoints. Patterns are prebuilt so the scheduler's
+   hot path is just an index. */
+/* The dead-button cue: seq and rev are honest about needing material —
+   if an active part sits on either with nothing recorded, the header says
+   so instead of the machine guessing at a fallback. */
+function seqCue(){
+  if(!state.seq.length&&state.layers.some(l=>l.on&&(l.pattern==='seq'||l.pattern==='rev')))
+    stat('no seq recorded — press seq rec');
+}
+/* LEN — the Moog-960 stage count: 0 = auto (the pattern's natural length);
+   otherwise the material truncates or cycles to exactly len steps, so plain
+   triads phase against each other with no seq required. Random has no
+   cycle, so len passes through. */
+function lenCycle(notes,layer){
+  const L=layer.len|0;
+  if(!L||!notes.length||layer.pattern==='random')return notes;
+  const out=[];for(let i=0;i<L;i++)out.push(notes[i%notes.length]);
+  return out;
+}
+function buildPattern(layer){
+  if(layer.pattern==='seq'||layer.pattern==='rev'){
+    if(!state.seq.length)return[];
+    const shift=(state.follow&&state.degree>0)?state.degree:0;
+    let notes=[];
+    for(let o=0;o<layer.oct;o++)
+      notes=notes.concat(state.seq.map((n,si)=>(n==null||state.seqOff[si])?null:diatonicShift(n,shift)-60+ROLES[layer.role].base+12*o));
+    if(layer.pattern==='rev')notes=notes.slice().reverse();   /* the seq backwards — crab canon */
+    return lenCycle(notes,layer);
+  }
+  if(!state.chord.length)return[];
+  const base=[...state.chord].sort((a,b)=>a-b).map(m=>m-60+ROLES[layer.role].base);
+  let notes=[];
+  for(let o=0;o<layer.oct;o++)notes=notes.concat(base.map(n=>n+12*o));
+  if(layer.pattern==='down')notes=notes.slice().reverse();
+  if(layer.pattern==='updown'&&notes.length>2)
+    notes=notes.concat(notes.slice(1,-1).reverse());
+  return lenCycle(notes,layer);
+}
+console.log('AM-1 build: 2026-08-15 mod-revert');   /* stale-copy detector — if the console shows an older date, reload */
+/* ============ audio ============ */
+let ctx=null,master,preFilt,filt,shaper,dcBlock,anaSaw,anaPulse,driveIn,driveOut,drvTiltIn,drvTiltOut,drvRound,drvNodeLp,drvSum,drvRect,drvBiasLp,drvBiasG,phOut,phDry,phWet,phFbL,phFbR,phLfo,phLfoB,phDepth,phDepthB,phAps,fbDly,fbG,dly,dlyR,dsum,dmerge,dlyFbG,dlyWet,dlyDamp,comp,modOsc,scCut,scDrive,scVerb,scDlyFb,noiseBuf,recDest,droneNodes=null,bnc=null,verb,verb2,verbIn,vXfA,vXfB,verbTimer=null,verbActive=0,verbWet,lastVerbSize=-1,lastVerbType='',lastDrive=-1;
+/* Drive transfer curve: tanh normalized to unity at the rails, so the
+   output ceiling never moves — more drive = more snarl, not more level.
+   Also the feedback loop's safety limiter. */
+function curve(amount){
+  if(state.circuit==='mk1'){
+    /* MK1 — the original circuit, verbatim: bias-shifted tanh, identity at zero */
+    const k=amount*3,n=2048,c=new Float32Array(n);
+    if(k<=0){for(let i=0;i<n;i++)c[i]=i*2/n-1;return c}
+    const g=1+k,b=CAL.drive.bias*amount,dc=Math.tanh(g*b);
+    let peak=0;
+    for(let i=0;i<n;i++){const x=i*2/n-1;const y=Math.tanh(g*(x+b))-dc;c[i]=y;if(Math.abs(y)>peak)peak=Math.abs(y)}
+    for(let i=0;i<n;i++)c[i]/=peak;
+    return c;
+  }
+  /* CP3-school saturation: a bias-shifted tanh clips asymmetrically — one
+     polarity flattens before the other, the transistor-mixer move — which
+     adds EVEN harmonics (2nd, 4th) on top of tanh's odd ones. That octave-
+     up content is the nostalgic fizzle; symmetric tanh alone is too polite.
+     DC from the shifted operating point is subtracted here and a 12Hz
+     blocker downstream catches the program-dependent rest. Peak-normalized
+     so the ceiling never moves: more drive = more hair, never more level. */
+  const k=CAL.drive.floorG+amount*3,n=2048,c=new Float32Array(n);
+  const u=Math.max(0,Math.min(1,(amount-CAL.drive.gnarlLo)/(1-CAL.drive.gnarlLo)));   /* the gnarl fade */
+  const g=1+k+u*CAL.drive.crunchG,b=CAL.drive.bias*amount,a=CAL.drive.asym*(0.35+amount*0.65)*(1-u);
+  const cr=u*CAL.drive.crunch;   /* crunch: blend toward hard corners up top */
+  const sp=CAL.drive.spike*(1-u);   /* the just-clip spike lives below the gnarl */
+  const F=x=>{const w=g*(x+a*x*x+b);let t=Math.tanh(w);
+    if(sp>0&&w>2){const e=w-2;t+=sp*e*Math.exp(-2*e)}   /* + peak pulled past the settled clip level — the needle over the plateau, the fizz on pure waves */
+    return cr?t+(Math.max(-1,Math.min(1,w*1.4))-t)*cr:t};
+  const dc=F(0);
+  let peak=0;
+  for(let i=0;i<n;i++){const x=i*2/n-1;const y=F(x)-dc;c[i]=y;if(Math.abs(y)>peak)peak=Math.abs(y)}
+  for(let i=0;i<n;i++)c[i]/=peak;
+  return c;
+}
+/* Lazy graph construction on first RUN (browser autoplay policy).
+   Build order matters only in one place: the mod oscillator + scalers
+   wire up last, after every AudioParam they target exists — the test
+   suite audits this. Full wiring diagram: ARCHITECTURE.md §signal. */
+function initAudio(){
+  if(ctx)return;
+  ctx=new (window.AudioContext||window.webkitAudioContext)();
+  preFilt=ctx.createGain();
+  filt=ctx.createBiquadFilter();filt.type='lowpass';
+  {const NH=48,V=CAL.voice,z=new Float32Array(NH+1),ss=new Float32Array(NH+1),sp=new Float32Array(NH+1);
+   const droop=n=>Math.pow(1/(1+Math.pow(n/V.droopN,2)),V.droopP);
+   for(let n=1;n<=NH;n++){ss[n]=(1/n)*droop(n);sp[n]=(2/(n*Math.PI))*Math.sin(n*Math.PI*V.duty)*droop(n)}
+   ss[2]*=V.bow2;ss[3]*=V.bow3;
+   anaSaw=ctx.createPeriodicWave(z,ss);anaPulse=ctx.createPeriodicWave(z.slice(),sp);}
+  shaper=ctx.createWaveShaper();shaper.oversample='4x';
+  dly=ctx.createDelay(13);dlyR=ctx.createDelay(13);
+  dsum=ctx.createGain();dsum.gain.value=CAL.bus.dsum;
+  dsum.channelCount=1;dsum.channelCountMode='explicit';   /* mono into the ping-pong */
+  dmerge=ctx.createChannelMerger(2);
+  dlyFbG=ctx.createGain();dlyDamp=ctx.createBiquadFilter();
+  dlyDamp.type='lowpass';dlyDamp.frequency.value=CAL.bus.dlyDamp;
+  dlyWet=ctx.createGain();
+  comp=ctx.createDynamicsCompressor();comp.threshold.value=CAL.bus.compTh;comp.ratio.value=CAL.bus.compRatio;
+  master=ctx.createGain();
+  recDest=ctx.createMediaStreamDestination();
+  noiseBuf=ctx.createBuffer(1,(ctx.sampleRate*0.05)|0,ctx.sampleRate);
+  {const nd=noiseBuf.getChannelData(0);for(let i=0;i<nd.length;i++)nd[i]=Math.random()*2-1;}
+  if(!modTimer)modTimer=setInterval(modTick,15);
+  driveIn=ctx.createGain();driveOut=ctx.createGain();
+  preFilt.connect(filt);filt.connect(driveIn);
+  dcBlock=ctx.createBiquadFilter();dcBlock.type='highpass';dcBlock.frequency.value=12;dcBlock.Q.value=0.5;
+  drvTiltIn=ctx.createBiquadFilter();drvTiltIn.type='lowshelf';drvTiltIn.frequency.value=CAL.drive.tiltF;drvTiltIn.gain.value=CAL.drive.tiltDb;
+  drvTiltOut=ctx.createBiquadFilter();drvTiltOut.type='lowshelf';drvTiltOut.frequency.value=CAL.drive.tiltF;drvTiltOut.gain.value=-CAL.drive.tiltDb;
+  drvRound=ctx.createBiquadFilter();drvRound.type='lowpass';drvRound.frequency.value=CAL.drive.lpF;drvRound.Q.value=0.5;
+  drvSum=ctx.createGain();
+  drvNodeLp=ctx.createBiquadFilter();drvNodeLp.type='lowpass';drvNodeLp.frequency.value=19500;drvNodeLp.Q.value=0.6;   /* the CP3's summing-node cap — 3.3nF to ground BEFORE the transistors. Darken in, let the clip regenerate the brightness. 5.2k not 2.2k: the 2.2k figure assumes one 22k input; three parts + drone in parallel raise the node corner */
+  drvRect=ctx.createWaveShaper();
+  {const n=1024,rc=new Float32Array(n);for(let i=0;i<n;i++){const x=i*2/n-1;rc[i]=Math.abs(x)}drvRect.curve=rc}
+  drvBiasLp=ctx.createBiquadFilter();drvBiasLp.type='lowpass';drvBiasLp.frequency.value=CAL.drive.biasHz;
+  drvBiasG=ctx.createGain();drvBiasG.gain.value=0;
+  driveIn.connect(drvTiltIn);
+  drvTiltIn.connect(drvSum);
+  drvTiltIn.connect(drvRect);drvRect.connect(drvBiasLp);drvBiasLp.connect(drvBiasG);drvBiasG.connect(drvSum);   /* the charging cap: feedforward, no cycle */
+  drvSum.connect(drvNodeLp);drvNodeLp.connect(shaper);shaper.connect(dcBlock);dcBlock.connect(drvTiltOut);drvTiltOut.connect(drvRound);drvRound.connect(driveOut);
+  fbDly=ctx.createDelay(0.1);fbDly.delayTime.value=0.024;
+  fbG=ctx.createGain();fbG.gain.value=0;
+  driveOut.connect(fbDly);fbDly.connect(fbG);fbG.connect(preFilt);
+  /* phaser: driveOut → [dry + 4×allpass] → phOut → dry/delay/verb.
+     The scream loop above taps driveOut directly — pre-phaser — so the
+     tuned feedback's calibration is untouched. */
+  phOut=ctx.createGain();phDry=ctx.createGain();phWet=ctx.createGain();
+  phDry.gain.value=1;phWet.gain.value=0;
+  const phSplit=ctx.createChannelSplitter(2),phMerge=ctx.createChannelMerger(2);
+  driveOut.connect(phSplit);
+  phAps=[];
+  const mkChain=(chIn,chOut)=>{
+    let prev=null;const first=[];
+    for(let i=0;i<CAL.phaser.stages;i++){
+      const ap=ctx.createBiquadFilter();ap.type='allpass';
+      ap.frequency.value=CAL.phaser.center;ap.Q.value=CAL.phaser.q;
+      if(prev)prev.connect(ap);else{phSplit.connect(ap,chIn);first.push(ap)}
+      prev=ap;phAps.push(ap);
+    }
+    const fb=ctx.createGain();fb.gain.value=0;
+    const dl=ctx.createDelay(0.01);dl.delayTime.value=0;   /* Web Audio law: a cycle needs a DelayNode or it renders silence */
+    prev.connect(fb);fb.connect(dl);dl.connect(first[0]);
+    prev.connect(phMerge,0,chOut);
+    return {aps:phAps.slice(-CAL.phaser.stages),fb};
+  };
+  const chL=mkChain(0,0),chR=mkChain(1,1);
+  phFbL=chL.fb;phFbR=chR.fb;
+  phMerge.connect(phWet);phWet.connect(phOut);
+  driveOut.connect(phDry);phDry.connect(phOut);
+  /* quadrature sweep: two LFOs at the same rate, the right one started a
+     quarter-cycle late — a fixed 90° offset, so the channels counter-swirl */
+  phLfo=ctx.createOscillator();phLfo.frequency.value=CAL.phaser.rate;
+  phLfoB=ctx.createOscillator();phLfoB.frequency.value=CAL.phaser.rate;
+  phDepth=ctx.createGain();phDepth.gain.value=CAL.phaser.sweepCents;
+  phDepthB=ctx.createGain();phDepthB.gain.value=CAL.phaser.sweepCents;
+  phLfo.connect(phDepth);phLfoB.connect(phDepthB);
+  chL.aps.forEach(ap=>phDepth.connect(ap.detune));
+  chR.aps.forEach(ap=>phDepthB.connect(ap.detune));
+  const t0=ctx.currentTime+0.02;
+  phLfo.start(t0);phLfoB.start(t0+0.25/CAL.phaser.rate);
+  phOut.connect(comp);
+  phOut.connect(dsum);dsum.connect(dly);
+  dly.connect(dlyDamp);dlyDamp.connect(dlyR);
+  dlyR.connect(dlyFbG);dlyFbG.connect(dly);
+  dlyDamp.connect(dmerge,0,0);dlyR.connect(dmerge,0,1);
+  dmerge.connect(dlyWet);dlyWet.connect(comp);
+  verb=ctx.createConvolver();verb2=ctx.createConvolver();verbWet=ctx.createGain();
+  verbIn=ctx.createGain();vXfA=ctx.createGain();vXfB=ctx.createGain();
+  vXfA.gain.value=1;vXfB.gain.value=0;
+  phOut.connect(verbIn);dlyWet.connect(verbIn);
+  verbIn.connect(verb);verbIn.connect(verb2);   /* two rooms, one live — size/type changes fade to the idle one instead of beheading the tail */
+  verb.connect(vXfA);verb2.connect(vXfB);vXfA.connect(verbWet);vXfB.connect(verbWet);
+  verbWet.connect(comp);
+  comp.connect(master);master.connect(ctx.destination);master.connect(recDest);
+  modOsc=ctx.createOscillator();modOsc.type='triangle';modOsc.frequency.value=1;
+  scCut=ctx.createGain();scDrive=ctx.createGain();scVerb=ctx.createGain();scDlyFb=ctx.createGain();scDlyFb.gain.value=0;
+  scCut.gain.value=0;scDrive.gain.value=0;scVerb.gain.value=0;scDlyFb.gain.value=0;
+  [scCut,scDrive,scVerb,scDlyFb].forEach(g=>modOsc.connect(g));
+  scCut.connect(filt.frequency);scDrive.connect(driveIn.gain);scVerb.connect(verbWet.gain);scDlyFb.connect(dlyFbG.gain);
+  modOsc.start();
+  applyMaster();
+}
+/* Procedural impulse responses — no samples shipped. Shaped noise
+   decays: hall = plain exponential; plate = brighter, first-difference
+   whitened; spring = pitchy chirp (the sin term's frequency falls as t
+   rises); dark = one-pole lowpass walked down the tail. Regenerated
+   only when size/type change (guarded in applyMaster). */
+function makeIR(seconds,type){
+  const rate=ctx.sampleRate,len=Math.max(1,(rate*seconds)|0);
+  const ir=ctx.createBuffer(2,len,rate);
+  for(let ch=0;ch<2;ch++){
+    const d=ir.getChannelData(ch);
+    let lp=0,prev=0;
+    for(let i=0;i<len;i++){
+      const t=i/len,tt=i/rate;
+      let v=Math.random()*2-1;
+      if(type==='plate'){
+        const raw=v;v=(v-0.55*prev)*Math.pow(1-t,1.5);prev=raw;
+      }else if(type==='spring'){
+        v*=Math.pow(1-t,2.0)*(0.3+0.7*Math.max(0,Math.sin(6.283*(26+ch*3)*tt*(1-t*0.55))));
+      }else if(type==='dark'){
+        const a=0.02+0.22*(1-t);
+        lp+=a*(v-lp);v=lp*2.4*Math.pow(1-t,2.4);
+      }else{
+        v*=Math.pow(1-t,2.8);
+      }
+      d[i]=v;
+    }
+  }
+  return ir;
+}
+/* THE commit function: state → audio graph, every base value, one
+   place. Called freely by any control (regens are guarded: verb IR,
+   drive curve). The mod ticks deliberately recompute these same bases
+   ×(1+lfo) — see the ownership convention in ARCHITECTURE.md. Ends by
+   delegating to mod routing + drone lifecycle. */
+function applyMaster(){
+  if(!ctx)return;
+  if(state.verbSize!==lastVerbSize||state.verbType!==lastVerbType){
+    lastVerbSize=state.verbSize;lastVerbType=state.verbType;
+    if(!verb.buffer){const b=makeIR(0.3+state.verbSize/100*5,state.verbType);verb.buffer=b;verb2.buffer=b;}
+    else{clearTimeout(verbTimer);verbTimer=setTimeout(()=>{
+      const b=makeIR(0.3+state.verbSize/100*5,state.verbType),t=ctx.currentTime;
+      if(verbActive===0){verb2.buffer=b;vXfB.gain.setTargetAtTime(1,t,0.03);vXfA.gain.setTargetAtTime(0,t,0.03);verbActive=1}
+      else{verb.buffer=b;vXfA.gain.setTargetAtTime(1,t,0.03);vXfB.gain.setTargetAtTime(0,t,0.03);verbActive=0}
+    },120)}
+  }
+  verbWet.gain.value=state.verbMix/100*0.8;
+  filt.frequency.value=cutHz(state.cutoff);   /* 16 Hz .. ~19.5 kHz */
+  filt.Q.value=0.4+state.reso/100*11;
+  if(state.drive!==lastDrive){const d=state.drive/100;shaper.curve=curve(d);lastDrive=state.drive;
+    if(state.circuit==='mk1'){
+      /* MK1: flatten the CP3 stages out of the path — the old chain in behavior */
+      if(drvBiasG)drvBiasG.gain.value=0;
+      if(drvTiltIn){drvTiltIn.gain.value=0;drvTiltOut.gain.value=0;}
+      if(drvRound)drvRound.frequency.value=19500;
+      if(drvNodeLp)drvNodeLp.frequency.value=19500;
+      shaper.oversample='2x';
+    }else{
+      const u=Math.max(0,Math.min(1,(d-CAL.drive.gnarlLo)/(1-CAL.drive.gnarlLo)));
+      if(drvBiasG)drvBiasG.gain.value=-CAL.drive.biasK*(0.25+d*0.75)*(1-0.5*u);
+      if(drvTiltIn){drvTiltIn.gain.value=CAL.drive.tiltDb*(1-u);drvTiltOut.gain.value=-CAL.drive.tiltDb*(1-u);}
+      if(drvRound)drvRound.frequency.value=CAL.drive.lpF+Math.pow(d,CAL.drive.lpCurve)*(CAL.drive.lpHiF-CAL.drive.lpF);
+      if(drvNodeLp)drvNodeLp.frequency.value=CAL.drive.nodeF;   /* the node cap is not drive-dependent: it colors the 1983 mixer even clean */
+      shaper.oversample=u>0.5?'2x':'4x';   /* the aliasing dirt readmitted — the animal keeps its teeth */
+    }}
+  driveIn.gain.value=1+Math.pow(state.drive/100,CAL.drive.taper)*CAL.drive.span;
+  driveOut.gain.value=1/(1+state.drive/100*CAL.drive.comp);
+  fbG.gain.value=Math.pow(state.fb/100,CAL.fb.taper)*CAL.fb.max;
+  const fbF=mtof(CAL.fb.root+state.key)*Math.pow(2,state.pitch/12);
+  fbDly.delayTime.setTargetAtTime(1/fbF,ctx.currentTime,0.05);
+  dly.delayTime.value=state.dlyDiv*60/state.tempo/4;
+  dlyR.delayTime.value=state.dlyDiv*60/state.tempo/4;
+  const pa=state.phase/100,pw=Math.pow(pa,CAL.phaser.wetTaper)*CAL.phaser.wetMax;
+  phWet.gain.value=pw;
+  phDry.gain.value=1-pw;
+  phOut.gain.value=1+pw*CAL.phaser.makeup*2;   /* makeup: the 50/50 sum halves un-notched regions and the notches eat energy — restore the average so the swirl never reads as a volume drop */
+  phFbL.gain.value=pa*CAL.phaser.fbMax;phFbR.gain.value=pa*CAL.phaser.fbMax;
+  dlyFbG.gain.value=state.dlyFb/100;
+  dlyWet.gain.value=state.dlyMix/100*0.9;
+  master.gain.value=Math.pow(state.vol/100,1.4);
+  applyModRouting();
+  applyDrone();
+}
+/* Drone pitch = key root (basement octave, ~32–60Hz) + the NOTE offset:
+   fifth = +7 (the open-fifth power drone), high = +12 (lifts the floor).
+   The SINE voice sits a further octave up: a pure tone in the basement
+   has no harmonics to carry it on real speakers (saw survives down
+   there; sine cannot — Daniel's ear caught both). A pedal — it never
+   follows degrees; that's the design law, not an omission. */
+/* The thermal walk: four slow random walks (parts I-III + drone), each
+   wandering toward a new random target every few seconds — the sound of
+   oscillators warming and cooling. New notes sample their part's current
+   wander; the drone follows continuously. Scaled by AGE at use time. */
+const ageWalk={off:[0,0,0,0],tgt:[0,0,0,0],next:[0,0,0,0]};
+function ageWalkTick(dt){
+  const now=performance.now()/1000;
+  for(let i=0;i<4;i++){
+    if(now>ageWalk.next[i]){
+      ageWalk.tgt[i]=Math.random()*2-1;
+      if(Math.random()<CAL.age.slipMax*(effAge()/100))
+        ageWalk.tgt[i]*=1.15+Math.random()*0.35;   /* the lurch — a tuning slip */
+      const rl=1-CAL.age.walkRestless*(effAge()/100);   /* the warble: wander cycles shorten linearly with age */
+      ageWalk.next[i]=now+(CAL.age.walkMin+Math.random()*CAL.age.walkSpan)*rl;
+    }
+    ageWalk.off[i]+=(ageWalk.tgt[i]-ageWalk.off[i])*Math.min(1,dt*0.35);
+  }
+}
+function effAge(){return Math.max(0,Math.min(100,state.age+modAgeOff))}
+function ageWalkCents(i){return ageWalk.off[i]*CAL.age.walkMax*(effAge()/100)}
+function ageDrone(){return Math.pow(2,CAL.age.droneCents*(effAge()/100)/1200)}
+function droneRoot(){
+  return snapToScale(24+state.key)
+    +(state.droneNote==='fifth'?7:(state.droneNote==='high'||state.droneNote==='low')?12:0)
+    +(state.droneVoice==='sine'?12:(state.droneVoice==='strings'||state.droneVoice==='choir')?24:0);
+}
+function droneWave(){
+  return state.droneVoice==='square'?'square':state.droneVoice==='sine'?'sine':'sawtooth';
+}
+function setDroneWave(o){
+  const w=droneWave();
+  if(state.circuit==='mk2'&&w==='sawtooth')o.setPeriodicWave(anaSaw);
+  else if(state.circuit==='mk2'&&w==='square')o.setPeriodicWave(anaPulse);
+  else o.type=w;
+}
+function droneDet(){return state.droneVoice==='strings'?CAL.drone.strings.det:state.droneVoice==='choir'?CAL.drone.choir.det:CAL.drone.detune}
+/* Drone lifecycle: born on demand (running + amount>0), then only
+   retuned/reshaped — two detuned oscs (CAL.drone.detune ≈ one slow
+   beat) through a fixed 420Hz lowpass. Fades out rather than stopping
+   so RUN toggles never click. */
+function applyDrone(){
+  if(!ctx)return;
+  const kind=state.droneVoice==='strings'?'strings':state.droneVoice==='choir'?'choir':'plain';
+  const lvl=state.drone/100*(kind==='strings'?CAL.drone.strings.lvl:kind==='choir'?CAL.drone.choir.lvl:CAL.drone.lvl);
+  if(lvl>0&&state.running){
+    if(droneNodes&&droneNodes.kind!==kind){         /* voice family changed — rebuild */
+      const old=droneNodes,t=ctx.currentTime;droneNodes=null;
+      old.g.gain.setTargetAtTime(0,t,0.12);
+      [old.o1,old.o2,...(old.lfos||[])].forEach(o=>{try{o.stop(t+0.5)}catch(e){}});
+    }
+    if(!droneNodes){
+      const root=droneRoot(),pm=Math.pow(2,state.pitch/12);
+      const g=ctx.createGain();g.gain.value=0;
+      const f=ctx.createBiquadFilter();f.type='lowpass';
+      f.frequency.value=kind==='strings'?CAL.drone.strings.lp:kind==='choir'?CAL.drone.choir.lp:CAL.drone.lp;
+      const o1=ctx.createOscillator(),o2=ctx.createOscillator();
+      setDroneWave(o1);setDroneWave(o2);
+      o1.frequency.value=mtof(root)*pm*ageDrone();o2.frequency.value=mtof(root)*pm*droneDet()*ageDrone();
+      let lfos=[];
+      if(kind==='strings'){
+        /* the ensemble: dry + two LFO-swum delay taps — saws become strings */
+        const SC=CAL.drone.strings,mix=ctx.createGain();mix.gain.value=0.5;
+        o1.connect(mix);o2.connect(mix);
+        const dry=ctx.createGain();dry.gain.value=0.55;mix.connect(dry);dry.connect(f);
+        [[SC.d1,SC.r1],[SC.d2,SC.r2]].forEach(([d,r])=>{
+          const dl=ctx.createDelay(0.08);dl.delayTime.value=d;
+          const lfo=ctx.createOscillator();lfo.frequency.value=r;
+          const lg=ctx.createGain();lg.gain.value=SC.depth;
+          lfo.connect(lg);lg.connect(dl.delayTime);lfo.start();lfos.push(lfo);
+          const tg=ctx.createGain();tg.gain.value=SC.tap;
+          mix.connect(dl);dl.connect(tg);tg.connect(f);
+        });
+      }else if(kind==='choir'){
+        const CC=CAL.drone.choir,mix=ctx.createGain();mix.gain.value=0.5;
+        o1.connect(mix);o2.connect(mix);
+        /* singers waver: one shared vibrato on the throats, never the vowel */
+        const vib=ctx.createOscillator();vib.frequency.value=CC.vibHz;
+        const vg=ctx.createGain();vg.gain.value=CC.vibCents;
+        vib.connect(vg);vg.connect(o1.detune);vg.connect(o2.detune);
+        vib.start();lfos.push(vib);
+        /* the vowel: three fixed formant bandpasses in parallel */
+        const vowel=ctx.createGain();
+        [[CC.f1,CC.g1],[CC.f2,CC.g2],[CC.f3,CC.g3]].forEach(([fq,gv])=>{
+          const bp=ctx.createBiquadFilter();bp.type='bandpass';
+          bp.frequency.value=fq;bp.Q.value=CC.q;
+          const bg=ctx.createGain();bg.gain.value=gv;
+          mix.connect(bp);bp.connect(bg);bg.connect(vowel);
+        });
+        /* one throat becomes a section: the strings' two-tap ensemble */
+        const dry=ctx.createGain();dry.gain.value=0.55;vowel.connect(dry);dry.connect(f);
+        [[CC.d1,CC.r1],[CC.d2,CC.r2]].forEach(([d,r])=>{
+          const dl=ctx.createDelay(0.08);dl.delayTime.value=d;
+          const lfo=ctx.createOscillator();lfo.frequency.value=r;
+          const lg=ctx.createGain();lg.gain.value=CC.depth;
+          lfo.connect(lg);lg.connect(dl.delayTime);lfo.start();lfos.push(lfo);
+          const tg=ctx.createGain();tg.gain.value=CC.tap;
+          vowel.connect(dl);dl.connect(tg);tg.connect(f);
+        });
+      }else{o1.connect(f);o2.connect(f);}
+      f.connect(g);g.connect(preFilt);
+      o1.start();o2.start();
+      droneNodes={o1,o2,g,f,kind,lfos};
+    }
+    droneNodes.g.gain.setTargetAtTime(lvl,ctx.currentTime,0.4);
+    if(kind==='plain'){setDroneWave(droneNodes.o1);setDroneWave(droneNodes.o2);}
+    const root=droneRoot(),pm=Math.pow(2,state.pitch/12);
+    droneNodes.o1.frequency.setTargetAtTime(mtof(root)*pm*ageDrone(),ctx.currentTime,0.3);
+    droneNodes.o2.frequency.setTargetAtTime(mtof(root)*pm*droneDet()*ageDrone(),ctx.currentTime,0.3);
+  }else if(droneNodes){
+    droneNodes.g.gain.setTargetAtTime(0,ctx.currentTime,0.3);
+  }
+}
+function mtof(m){return 440*Math.pow(2,(m-69)/12)}
+/* One cutoff curve for the whole machine (knob, S&H tick, FM scaler):
+   16Hz–19.5kHz over ten octaves — 0 truly chokes (below the bass
+   fundamentals), 100 is truly open. Log because ears are. */
+const cutHz=c=>CAL.cut.base*Math.pow(2,Math.max(0,Math.min(100,c))/100*CAL.cut.span);
+const ROLE_COLOR={bass:1300,arp:4500,lead:9000};
+const PART_PAN=[-0.06,-0.33,0.33];
+/* The voice factory — one call builds one note's node cluster at
+   audio-clock time t, self-releasing (GC'd after stop).
+   SHAPE drives attack + duration (below noon = plucky, above = pads);
+   LEVEL → velocity with ±8% humanize; loudness compensation keeps long
+   soft shapes from swamping the mix.
+   GLIDE: notes start from the part's previous pitch and ramp in — the
+   ratio trick keeps stacked/detuned oscillators in tune while sliding.
+   Every osc also drifts ±4 cents over its life: the analog blur.
+   Voices are closed recipes, not engines: saw = twin detuned · glass =
+   sine stack with a beating octave (wine-glass rim) · bell = 2-op FM
+   with a strike envelope (bright hit → mellow ring) · pluck = Karplus-
+   Strong (noise burst in a tuned damped loop; SHAPE = string damping,
+   GLIDE retunes the string itself).
+   After the recipe: bass role adds a square sub an octave down, every
+   note passes its role-colour lowpass (tonal separation between parts),
+   then its stereo seat (bass near centre — mono-compatible low end). */
+function playNote(layer,midi,t,pi){
+  const sh=Math.max(0,Math.min(100,layer.shape+modShapeOff))/100;
+  const vin=effAge()/100,VA=CAL.age,alive=Math.min(1,vin*VA.aliveRamp);   /* the alive floor fades in by ~25 */
+  const age=1+(VA.partEnv[pi%3]-1)*vin+(Math.random()-0.5)*2*VA.envJitMax*vin;
+  let sick=1,sickVel=1;   /* decided first — the note's health shapes everything below */
+  if(Math.random()<VA.sickMax*vin){
+    /* severity rides the same linear law as probability: age 10 → a soft
+       note (vel ~0.41–0.71, clearly audible); age 100 → the deathbed
+       (0.08–0.38, barely a breath). A sick note is never a silent one. */
+    sickVel=(VA.sickVelHi-VA.sickVelSpan*vin)+Math.random()*0.3;
+    sick=VA.sickDurHi-VA.sickDurSpan*vin;
+  }
+  const atk=(sh<0.5?0.002+sh*0.02:0.002+Math.pow((sh-0.5)*2,1.9)*1.4)*age;
+  const dur=(0.04+Math.pow(sh,1.9)*4.8)*age*sick;
+  const humSpan=CAL.voice.humSpan*(VA.humLo+VA.humHi*vin)*alive;
+  const humF=1-(1-CAL.voice.humBase)*alive+Math.random()*humSpan;   /* exactly 1.0 at age 0 */
+  const vel=Math.pow(layer.level/100,1.3)*0.34*(1-Math.min(0.6,sh*0.6))
+    *humF*sickVel;   /* humanized level, widened by age — clinical at zero */
+  const g=ctx.createGain();g.gain.value=0;   /* silent from birth — mk2 free-run oscs may start early */
+  g.gain.setValueAtTime(0,t);
+  g.gain.linearRampToValueAtTime(vel,t+atk);
+  g.gain.exponentialRampToValueAtTime(0.001,t+atk+dur);
+  const f=mtof(midi)*Math.pow(2,(state.pitch+modPitchOff)/12+(VA.partCents[pi%3]*vin+ageWalkCents(pi%3))/1200),stopT=t+atk+dur+0.1;
+  const gt=state.glide/100*CAL.voice.glideMax;
+  const fromF=(gt>0&&layer._lastF&&layer._lastF!==f)?layer._lastF:null;
+  layer._lastF=f;
+  const setPitch=(o,freq)=>{                          /* glide + drift */
+    const ratio=freq/f;
+    if(fromF){
+      o.frequency.setValueAtTime(fromF*ratio,t);
+      o.frequency.exponentialRampToValueAtTime(freq,t+Math.min(gt,Math.max(0.02,dur*0.8)));
+    }else o.frequency.setValueAtTime(freq,t);
+    const dc=CAL.voice.driftCents*0.25*alive+VA.driftMax*vin;
+    const d1=(Math.random()*2-1)*dc;
+    const scoop=VA.scoopMax*vin*(0.4+Math.random()*0.9);
+    const settleT=Math.min(t+(VA.scoopTMin+Math.random()*VA.scoopTSpan)*(1+VA.settleStretch*vin),stopT-0.02);
+    o.detune.setValueAtTime(d1-scoop,t);                    /* born flat */
+    o.detune.linearRampToValueAtTime(d1,settleT);           /* sits down into pitch */
+    o.detune.linearRampToValueAtTime((Math.random()*2-1)*dc,stopT);
+  };
+  const mk=(type,freq,lvl)=>{
+    const o=ctx.createOscillator();
+    let st=t;
+    if(type==='anaSaw'||type==='anaPulse'){
+      o.setPeriodicWave(type==='anaSaw'?anaSaw:anaPulse);
+      const ph=(t*freq)%1;st=Math.max(ctx.currentTime,t-ph/freq);   /* free-run phase */
+    }else o.type=type;
+    setPitch(o,freq);
+    if(lvl!==1){const gg=ctx.createGain();gg.gain.value=lvl;o.connect(gg);gg.connect(g)}
+    else o.connect(g);
+    o.start(st);o.stop(stopT);
+  };
+  const MK2=state.circuit==='mk2';
+  if(layer.voice==='square')mk(MK2?'anaPulse':'square',f,1);
+  else if(layer.voice==='glass'){mk('sine',f,0.9);mk('sine',f*2.004,0.4);mk('sine',f*3,0.12)}
+  else if(layer.voice==='bell'){
+    const c=ctx.createOscillator();c.type='sine';setPitch(c,f);
+    const m=ctx.createOscillator();m.type='sine';setPitch(m,f*CAL.voice.bellRatio);
+    const mg=ctx.createGain();
+    mg.gain.setValueAtTime(f*CAL.voice.bellHit,t);
+    mg.gain.exponentialRampToValueAtTime(f*CAL.voice.bellTail,t+Math.max(0.15,(atk+dur)*0.45));
+    m.connect(mg);mg.connect(c.frequency);
+    c.connect(g);c.start(t);c.stop(stopT);m.start(t);m.stop(stopT);
+  }
+  else if(layer.voice==='pluck'){
+    const per=(1/f)*Math.pow(2,((Math.random()*8-4)*alive)/-1200);   /* string tolerance rides the alive ramp */
+    const src=ctx.createBufferSource();src.buffer=noiseBuf;
+    const dl=ctx.createDelay(0.2);
+    if(fromF){
+      dl.delayTime.setValueAtTime(1/fromF,t);
+      dl.delayTime.linearRampToValueAtTime(per,t+Math.min(gt,Math.max(0.02,dur*0.8)));
+    }else dl.delayTime.value=per;
+    const damp=ctx.createBiquadFilter();damp.type='lowpass';
+    damp.frequency.value=CAL.voice.pluckDampBase+sh*CAL.voice.pluckDampSpan;
+    const fb=ctx.createGain();
+    fb.gain.setValueAtTime(CAL.voice.pluckFb+Math.min(CAL.voice.pluckFbSpan,sh*CAL.voice.pluckFbSpan),t);
+    fb.gain.exponentialRampToValueAtTime(0.0001,stopT);
+    src.connect(dl);
+    dl.connect(damp);damp.connect(fb);fb.connect(dl);
+    damp.connect(g);
+    src.start(t);src.stop(t+Math.max(0.002,per*1.5));
+  }
+  else{const w=MK2?'anaSaw':'sawtooth';mk(w,f,1);mk(w,f*CAL.voice.sawDetune,0.5)}
+  if(ROLES[layer.role].sub)mk('square',f/2,0.5);
+  const rf=ctx.createBiquadFilter();                  /* role colour */
+  rf.type='lowpass';rf.frequency.value=(ROLE_COLOR[layer.role]||4000)*(1+VA.partCut[pi%3]*vin+(Math.random()-0.5)*VA.cutJit*vin);rf.Q.value=0.5;
+  const pan=ctx.createStereoPanner();                 /* stereo stage */
+  const bp=PART_PAN[pi||0]||0;
+  pan.pan.value=layer.role==='bass'?bp*0.2:bp;
+  g.connect(rf);rf.connect(pan);pan.connect(preFilt);
+}
+/* ============ mod ============ */
+let modLast=0,modShapeOff=0,modAgeOff=0,modTimer=null,modPitchOff=0;
+const lfoS={a:{phase:0,rnd:0,x:0.9,y:0.1,z:20},b:{phase:0,rnd:0,x:-0.4,y:1.1,z:24}};
+/* Shared LFO core — both LFOs advance through here. Wall-clock dt
+   (not tick count) so throttled tabs keep phase honest; a new random
+   value is drawn each wrap for S&H. Returns ±depth. */
+function lfoStep(slot,cfg,dt){
+  const hz=CAL.mod.base*Math.pow(CAL.mod.span,cfg.rate/100);
+  if(cfg.wave==='chaos'){
+    /* Lorenz attractor (σ=10 ρ=28 β=8/3), Euler-integrated at a speed set
+       by the rate knob — clamped substeps keep it stable at any rate. The
+       normalized x coordinate is the wave: smooth, bounded, never twice. */
+    let T=Math.min(hz,CAL.mod.tickCap)*dt*CAL.mod.chaosK;
+    const n=Math.max(1,Math.ceil(T/0.01)),h=T/n;
+    for(let k=0;k<n;k++){
+      const {x,y,z}=slot;
+      slot.x=x+h*10*(y-x);
+      slot.y=y+h*(x*(28-z)-y);
+      slot.z=z+h*(x*y-8/3*z);
+    }
+    return Math.max(-1,Math.min(1,slot.x/20))*(cfg.depth/100);
+  }
+  const prev=slot.phase;slot.phase=(slot.phase+dt*Math.min(hz,CAL.mod.tickCap))%1;
+  if(slot.phase<prev)slot.rnd=Math.random()*2-1;
+  const p=slot.phase;
+  const v=cfg.wave==='tri'?4*Math.abs(p-0.5)-1
+    :cfg.wave==='saw'?p*2-1
+    :cfg.wave==='sqr'?(p<0.5?1:-1)
+    :slot.rnd;
+  return v*(cfg.depth/100);
+}
+const modHz=()=>CAL.mod.base*Math.pow(CAL.mod.span,state.mod.rate/100);
+/* Control-rate side of LFO 1 (15ms): owns the rnd (S&H) wave and the
+   SHAPE target (a per-note value no AudioParam can reach). For tri/saw/
+   sqr on cutoff/drive/verb it yields — the real oscillator owns those,
+   sample-smooth to audio rate. Also drives LFO 2 every tick. */
+function modTick(){
+  if(!ctx)return;
+  const now=performance.now(),dt=modLast?(now-modLast)/1000:0;modLast=now;
+  const m=state.mod;
+  mod2Tick(dt);
+  const lfo=lfoStep(lfoS.a,m,dt);
+  modShapeOff=0;modAgeOff=0;
+  if(m.target==='shape')modShapeOff=lfo*CAL.mod.shapeSpan;
+  if(m.target==='phase'&&phWet&&phFbL){
+    const pa=Math.max(0,Math.min(1,state.phase/100*(1+lfo)));
+    const pw=Math.pow(pa,CAL.phaser.wetTaper)*CAL.phaser.wetMax;
+    phWet.gain.setTargetAtTime(pw,ctx.currentTime,0.012);
+    phDry.gain.setTargetAtTime(1-pw,ctx.currentTime,0.012);
+    phOut.gain.setTargetAtTime(1+pw*CAL.phaser.makeup*2,ctx.currentTime,0.012);
+    phFbL.gain.setTargetAtTime(pa*CAL.phaser.fbMax,ctx.currentTime,0.012);
+    phFbR.gain.setTargetAtTime(pa*CAL.phaser.fbMax,ctx.currentTime,0.012);
+  }
+  if(m.wave!=='rnd'&&m.wave!=='chaos')return;  /* the audio-rate oscillator owns the param */
+  if(m.target==='cutoff'){
+    const c=Math.max(0,Math.min(100,state.cutoff+lfo*CAL.mod.cutSwing));
+    filt.frequency.setTargetAtTime(cutHz(c),ctx.currentTime,0.012);
+  }else if(m.target==='drive'){
+    driveIn.gain.setTargetAtTime((1+Math.pow(state.drive/100,CAL.drive.taper)*CAL.drive.span)*Math.max(0.05,1+lfo*CAL.mod.driveSwing),ctx.currentTime,0.012);
+  }else if(m.target==='verb'){
+    verbWet.gain.setTargetAtTime(Math.max(0,state.verbMix/100*0.9*(1+lfo)),ctx.currentTime,0.012);
+  }else if(m.target==='dlyfb'){
+    dlyFbG.gain.setTargetAtTime(Math.max(0,Math.min(0.98,state.dlyFb/100*(1+lfo))),ctx.currentTime,0.012);   /* regen: dub swells, capped shy of runaway */
+  }
+}
+/* LFO 2 — control-rate by design; its targets are per-note (pitch) or
+   perceptually slow. pitch: ±0.7st offset picked up by new notes + the
+   drone live (tape wow slow, vibrato fast); feedbk/delay/level:
+   base×(1+lfo) rewritten every tick — self-healing, converges to base
+   at depth 0, floors clamp runaway. */
+function mod2Tick(dt){
+  const m2=state.mod2;ageWalkTick(dt);
+  const lfo2=lfoStep(lfoS.b,m2,dt);
+  modPitchOff=0;
+  if(m2.target==='pitch'){
+    modPitchOff=lfo2*CAL.mod.pitchSpan;
+  }else if(m2.target==='reso'){
+    filt.Q.setTargetAtTime(Math.max(0.2,(0.4+state.reso/100*11)*(1+lfo2*CAL.mod.resoSwing)),ctx.currentTime,0.012);
+  }else if(m2.target==='feedbk'){
+    fbG.gain.setTargetAtTime(Math.pow(state.fb/100,CAL.fb.taper)*CAL.fb.max*Math.max(0,1+lfo2),ctx.currentTime,0.012);
+  }else if(m2.target==='delay'){
+    dlyWet.gain.setTargetAtTime(Math.max(0,state.dlyMix/100*0.9*(1+lfo2)),ctx.currentTime,0.012);
+  }else if(m2.target==='level'){
+    master.gain.setTargetAtTime(Math.pow(state.vol/100,1.4)*Math.max(0.02,1+lfo2*CAL.mod.levelSwing),ctx.currentTime,0.012);
+  }else if(m2.target==='drone'&&droneNodes&&state.running){
+    const kind=droneNodes.kind,base=state.drone/100*(kind==='strings'?CAL.drone.strings.lvl:kind==='choir'?CAL.drone.choir.lvl:CAL.drone.lvl);
+    droneNodes.g.gain.setTargetAtTime(Math.max(0,base*(1+lfo2)),ctx.currentTime,0.012);   /* the bed breathes — amount-family, self-healing */
+  }
+  /* the drone breathes with the machine: mod2 pitch (when aimed there),
+     the AGE sag, and its own thermal walk, all in one live retune */
+  if(droneNodes&&(state.age>0||modAgeOff>0||(m2.target==='pitch'&&m2.depth>0))){
+    const pm=Math.pow(2,(state.pitch+modPitchOff)/12+ageWalkCents(3)/1200),r=mtof(droneRoot());
+    droneNodes.o1.frequency.setTargetAtTime(r*pm*ageDrone(),ctx.currentTime,0.05);
+    droneNodes.o2.frequency.setTargetAtTime(r*pm*droneDet()*ageDrone(),ctx.currentTime,0.05);
+  }
+}
+/* Audio-rate side of LFO 1: a real OscillatorNode through per-target
+   scaler gains summed into the AudioParams. Depth/target changes just
+   move scaler gains; wave 'rnd' zeroes them all and hands control back
+   to the tick. Cutoff swing scales with its centre so the sweep stays
+   musical anywhere on the knob. */
+function applyModRouting(){
+  if(!ctx||!modOsc)return;
+  const m=state.mod,d=m.depth/100;
+  modOsc.frequency.setTargetAtTime(Math.min(modHz(),CAL.mod.audioCap),ctx.currentTime,0.02);
+  if(m.wave!=='rnd'&&m.wave!=='chaos')modOsc.type=m.wave==='saw'?'sawtooth':m.wave==='sqr'?'square':'triangle';
+  const audio=(m.wave!=='rnd'&&m.wave!=='chaos');
+  const cutCenter=cutHz(state.cutoff);
+  scCut.gain.value=(audio&&m.target==='cutoff')?d*cutCenter*0.9:0;
+  const dBase=1+Math.pow(state.drive/100,CAL.drive.taper)*CAL.drive.span;
+  scDrive.gain.value=(audio&&m.target==='drive')?d*dBase*0.7:0;
+  scVerb.gain.value=(audio&&m.target==='verb')?d*state.verbMix/100*0.9:0;
+  scDlyFb.gain.value=(audio&&m.target==='dlyfb')?d*(state.dlyFb/100)*0.9:0;
+}
+/* ============ clock ============ */
+let pulse=0,nextT=0,timer=null,lookahead=0.16;   /* jank armor: 160ms window against main-thread stalls */
+const patterns=[[],[],[]];
+function syncIdx(l){l.idx=state.running?Math.ceil(pulse/l.div)-1:-1}
+function rebuildPatterns(){state.layers.forEach((l,i)=>{patterns[i]=buildPattern(l)})}
+/* The lookahead scheduler (the standard Web Audio pattern): every
+   25ms, schedule all pulses falling in the next `lookahead` seconds of
+   audio time. The interval may jitter; the audio clock times the notes.
+   Pulse = one 16th. Swing delays odd pulses. Each part fires when
+   pulse % division == 0 — different divisions against one grid IS the
+   polymeter. Held ×2 (ratchet) echoes the note at half the part's own
+   interval: a performed fill, never programmed. */
+function schedule(){
+  while(ctx&&nextT<ctx.currentTime+lookahead){
+    const p=pulse;
+    /* progression: one step per whole note (16 pulses). An automated
+       degree press — applies at schedule time exactly as a finger would. */
+    if(state.progSeq.length&&p%16===0){
+      const pi=Math.floor(p/16)%state.progSeq.length;
+      const st=state.progSeq[pi];
+      if(st!=null&&!state.progOff[pi]&&st!==state.degree)setChordFromDegree(st);
+      progLive(pi);
+    }
+    const swingOff=(p%2)?(state.swing/100)*(60/state.tempo/4)*0.33:0;
+    const t=nextT+swingOff;
+    state.layers.forEach((l,i)=>{
+      if(!l.on||!patterns[i].length)return;
+      if(p%l.div!==0)return;
+      l.idx++;
+      const seq=patterns[i];
+      const midi=l.pattern==='random'
+        ? seq[(Math.random()*seq.length)|0]
+        : seq[l.idx%seq.length];
+      if((l.pattern==='seq'||l.pattern==='rev')&&state.seq.length){
+        const cl=state.seq.length*l.oct;          /* octave-concat length, pre-LEN */
+        const j=l.idx%seq.length;                 /* position in the part's real cycle (post-LEN) */
+        seqPos[i]=l.pattern==='rev'
+          ? (cl-1-(j%cl))%state.seq.length        /* rev runs its lane backwards */
+          : j%state.seq.length;
+      }
+      if(midi==null)return;
+      playNote(l,midi,t,i);
+      if(l._rat)playNote(l,midi,t+l.div*(60/state.tempo/4)/2,i);
+      UI.partFire(i,Math.max(0,(t-ctx.currentTime)*1000));
+    });
+    pulse++;
+    nextT+=60/state.tempo/4;
+  }
+}
+/* Transport. Indices and glide memory reset so every run starts from
+   the pattern top; audio is built here on first press. */
+function start(){
+  initAudio();
+  if(ctx.state==='suspended')ctx.resume();
+  state.running=true;
+  pulse=0;nextT=ctx.currentTime+0.06;
+  state.layers.forEach(l=>{l.idx=-1;delete l._lastF});
+  rebuildPatterns();
+  if(!timer)timer=setInterval(schedule,25);
+  applyMaster();
+  UI.transport(true);
+}
+function stop(){
+  state.running=false;
+  if(timer){clearInterval(timer);timer=null}
+  applyDrone();
+  UI.transport(false);
+}
+/* Background-tab survival: hidden tabs clamp timers to ~1s, so the
+   lookahead stretches to 2.2s and the tick relaxes — music continues;
+   knob changes just land a couple of seconds late while you're not
+   looking. Snaps back on return. */
+/* platform lifecycle, not rendering — the one sanctioned document.* in
+   the engine zone (throttling defense; document.hidden is the platform
+   telling the clock about itself, not the engine painting the page) */
+document.addEventListener('visibilitychange',()=>{
+  lookahead=document.hidden?2.2:0.16;
+  if(timer){clearInterval(timer);timer=setInterval(schedule,document.hidden?250:25)}
+  if(document.hidden&&ctx&&state.running)schedule();   /* top up before throttling bites */
+});
+/* ============ chord input ============ */
+function setChordFromDegree(d){
+  state.degree=d;
+  state.chord=degreeChord(d);
+  afterChord();
+}
+let seqArmed=false;
+/* The bar is buttons, so the bar edits. Grammar borrowed from the rest of
+   the panel: select a step (it latches, amber), tap a key to set it, click
+   the selected step again to make it a rest, click past the end to extend.
+   No cursor, no pages — direct manipulation, same as everything else. */
+function seqShow(){
+  const prog=state.seqMode==='prog';
+  document.getElementById('seqShow').textContent=
+    prog?(state.progSeq.length?state.progSeq.map(d=>d==null?'\u2013':NUMERALS[d]).join(' '):'\u2014')
+        :(state.seq.length?state.seq.map(n=>n==null?'\u00b7':KEYS[n%12]).join(' '):'\u2014');
+  const mb=document.getElementById('seqMode');
+  if(mb){mb.textContent=prog?'chords':'melody';mb.setAttribute('aria-pressed',prog)}
+  const bar=document.getElementById('seqbar');bar.innerHTML='';
+  for(let i=0;i<16;i++){
+    const c=document.createElement('div');
+    if(prog){
+      const used=i<state.progSeq.length,d=used?state.progSeq[i]:null,off=used&&state.progOff[i];
+      c.className='c'+(used?(d==null?' rest':(off?' off':' note')):' empty');
+      c.textContent=used?(d==null?'–':NUMERALS[d]):'';
+      c.title=used?(d==null?'hold':NUMERALS[d]+(off?' — off, chord holds':' — click to switch off')):'';
+      c.onclick=()=>progStepClick(i);
+    }else{
+      const used=i<state.seq.length,off=used&&state.seqOff[i];
+      c.className='c'+(used?(state.seq[i]==null?' rest':(off?' off':' note')):' empty');
+      c.textContent=used?(state.seq[i]==null?'·':KEYS[state.seq[i]%12]):'';
+      c.title=used?(state.seq[i]==null?'rest':KEYS[state.seq[i]%12]+(off?' — off':' — click to switch off')):'';
+      c.onclick=()=>seqStepClick(i);
+    }
+    bar.appendChild(c);
+  }
+}
+/* light the progression step the clock is on — chords mode only */
+function progLive(idx){
+  if(state.seqMode!=='prog')return;
+  const bar=document.getElementById('seqbar');if(!bar)return;
+  [...bar.children].forEach((c,i)=>c.classList.toggle('plive',i===idx));
+}
+/* Click a step to switch it OFF and on again — the classic step-sequencer
+   gesture, and the bar's entire vocabulary. The note stays underneath; an
+   off step plays as a rest, so notes drop out of the phrase and come back
+   without re-recording. Writing is the recorder's job, not the bar's. */
+function seqStepClick(i){
+  if(i>=state.seq.length)return;
+  state.seqOff[i]=state.seqOff[i]?0:1;
+  seqShow();rebuildPatterns();
+}
+/* same grammar for the progression: an off step skips its press — the
+   previous chord holds. Live-safe: the scheduler reads it per advance. */
+function progStepClick(i){
+  if(i>=state.progSeq.length||state.progSeq[i]==null)return;
+  state.progOff[i]=state.progOff[i]?0:1;
+  seqShow();
+}
+
+/* running markers: each part on seq/rev shows its own position on the bar
+   (three thin lanes) — the phasing, visible */
+const seqPos=[-1,-1,-1];
+const seqMarks=[null,null,null],seqMarkAt=[-2,-2,-2];
+function paintSeqPos(){
+  if(!state.running)return;
+  const bar=document.getElementById('seqbar');
+  if(!bar.children.length)return;
+  state.layers.forEach((l,i)=>{
+    const active=l.on&&(l.pattern==='seq'||l.pattern==='rev')&&state.seq.length&&seqPos[i]>=0;
+    const want=active?seqPos[i]:-1;
+    if(want===seqMarkAt[i])return;               /* nothing moved — touch nothing */
+    if(!seqMarks[i]){seqMarks[i]=document.createElement('div');seqMarks[i].className='m m'+i}
+    if(want<0){seqMarks[i].remove()}
+    else{const cell=bar.children[want];if(cell)cell.appendChild(seqMarks[i])}
+    seqMarkAt[i]=want;
+  });
+}
+setInterval(paintSeqPos,90);
+/* The keyboard is two instruments: SEQ armed → append to the recorded
+   phrase (scale-snapped, 16 max); otherwise → latch/unlatch a chord
+   tone (leaves degree mode — you're building a custom chord). Latch is
+   the machine's native state: nothing here is momentary. */
+/* Recording is playing: an entered note sounds immediately, so you write a
+   melody by ear instead of by name. Uses the voice of whichever part is on
+   seq (or part III), at the pitch you pressed. */
+function previewNote(midi){
+  if(!ctx)return;
+  const l=state.layers.find(x=>x.on&&(x.pattern==='seq'||x.pattern==='rev'))||state.layers[2];
+  try{playNote({role:'lead',voice:l.voice,shape:Math.min(l.shape,45),level:Math.max(60,l.level)},
+    midi,ctx.currentTime+0.005,2)}catch(e){}
+}
+function toggleKbNote(m){
+  if(seqArmed){
+    if(state.seq.length<16){state.seqOff[state.seq.length]=0;state.seq.push(snapToScale(m));seqShow();rebuildPatterns();previewNote(snapToScale(m))}
+    return;
+  }
+  state.degree=-1;
+  const snapped=snapToScale(m);
+  const i=state.chord.indexOf(snapped);
+  if(i>=0)state.chord.splice(i,1);else state.chord.push(snapped);
+  afterChord();
+}
+function afterChord(){
+  rebuildPatterns();
+  drawKb();drawDegrees();
+  document.getElementById('chordName').textContent=chordLabel();
+  applyDrone();
+}
+/* keyboard UI: one octave C4..C5 */
+const KB=[[0,'w',0],[1,'b',0],[2,'w',1],[3,'b',1],[4,'w',2],[5,'w',3],[6,'b',3],
+  [7,'w',4],[8,'b',4],[9,'w',5],[10,'b',5],[11,'w',6],[12,'w',7]];
+function drawKb(){
+  const kb=document.getElementById('kb');kb.innerHTML='';
+  for(const[semi,type,pos]of KB){
+    const el=document.createElement('div');
+    const midi=60+semi;
+    if(type==='w'){
+      el.className='wk'+(state.chord.some(c=>((c%12)+12)%12===semi%12)?' on':'');
+      el.style.left=(pos*41)+'px';
+      const l=document.createElement('div');l.className='lbl';l.textContent=KEYS[semi%12];
+      el.appendChild(l);
+    }else{
+      el.className='bk'+(state.chord.some(c=>((c%12)+12)%12===semi%12)?' on':'');
+      el.style.left=(pos*41+31)+'px';
+    }
+    el.onclick=()=>toggleKbNote(midi);
+    kb.appendChild(el);
+  }
+}
+function drawDegrees(){
+  const row=document.getElementById('degRow');row.innerHTML='';
+  for(let d=0;d<7;d++){
+    const b=document.createElement('button');
+    b.className='deg';b.textContent=NUMERALS[d];
+    b.setAttribute('aria-pressed',state.degree===d);
+    b.onclick=()=>{
+      setChordFromDegree(d);   /* recording is playing — the press always sounds */
+      if(seqArmed&&state.seqMode==='prog'&&state.progSeq.length<16){state.progSeq.push(d);progShow()}
+    };
+    row.appendChild(b);
+  }
+}
+document.getElementById('seqRec').onclick=function(){
+  seqArmed=!seqArmed;this.setAttribute('aria-pressed',seqArmed);
+};
+document.getElementById('seqRest').onclick=()=>{
+  if(state.seqMode==='prog'){
+    if(state.progSeq.length<16){state.progSeq.push(null);progShow()}
+    return;
+  }
+  if(state.seq.length<16){state.seqOff[state.seq.length]=0;state.seq.push(null);seqShow();rebuildPatterns()}};
+document.getElementById('seqClr').onclick=()=>{
+  if(state.seqMode==='prog'){state.progSeq=[];state.progOff=[];seqShow();return}
+  state.seq=[];state.seqOff=[];seqShow();rebuildPatterns()};
+/* the prog line — roman numerals in the show span; – is a hold */
+function progShow(){
+  const el=document.getElementById('seqShow');
+  el.textContent=state.progSeq.length
+    ? state.progSeq.map(d=>d==null?'–':NUMERALS[d]).join(' ')
+    : '—';
+}
+document.getElementById('seqMode').onclick=function(){
+  state.seqMode=state.seqMode==='prog'?'mel':'prog';
+  const prog=state.seqMode==='prog';
+  this.textContent=prog?'chords':'melody';
+  this.setAttribute('aria-pressed',prog);
+  prog?progShow():seqShow();
+};
+document.getElementById('seqFollow').onclick=function(){
+  state.follow=!state.follow;this.setAttribute('aria-pressed',state.follow);rebuildPatterns();
+};
+const keySel=document.getElementById('key'),scaleSel=document.getElementById('scale');
+KEYS.forEach((k,i)=>{const o=document.createElement('option');o.value=i;o.textContent=k;keySel.appendChild(o)});
+Object.keys(SCALES).forEach(s=>{const o=document.createElement('option');o.textContent=s;scaleSel.appendChild(o)});
+keySel.value=state.key;scaleSel.value=state.scale;
+keySel.onchange=()=>{state.key=+keySel.value;if(state.degree>=0)setChordFromDegree(state.degree);else afterChord();applyMaster()};
+document.getElementById('btn7').onclick=function(){
+  state.sevenths=!state.sevenths;this.setAttribute('aria-pressed',state.sevenths);
+  if(state.degree>=0)setChordFromDegree(state.degree);else afterChord();
+};
+scaleSel.onchange=()=>{state.scale=scaleSel.value;if(state.degree>=0)setChordFromDegree(state.degree);else afterChord()};
+/* qwerty: asdfghjk = degrees, 1-4 quick divisions on ARP */
+document.addEventListener('keyup',e=>{
+  const rr='123'.indexOf(e.key);
+  if(rr>=0&&ratSet[rr])ratSet[rr](false);
+});
+document.addEventListener('keydown',e=>{
+  const tag=(e.target.tagName||'').toLowerCase();
+  if(tag==='input'||tag==='select'||tag==='textarea')return;
+  if(e.code==='Space'){e.preventDefault();state.running?stop():start();return}
+  if(e.key==='t'){tapTempo();return}
+  const rr='123'.indexOf(e.key);
+  if(rr>=0&&ratSet[rr]){ratSet[rr](true);return}
+  const i='asdfghj'.indexOf(e.key);
+  if(i>=0)setChordFromDegree(i);
+});
+let taps=[];
+/* Tap tempo: average of the recent tap intervals (window of 5); 2s of
+   silence forgets. For playing along with things that have no BPM
+   display — a TM-1 reel, a record, your head. */
+function tapTempo(){
+  const now=performance.now();
+  if(taps.length&&now-taps[taps.length-1]>2000)taps=[];
+  taps.push(now);if(taps.length>5)taps.shift();
+  if(taps.length<2)return;
+  let sum=0;for(let i=1;i<taps.length;i++)sum+=taps[i]-taps[i-1];
+  const bpm=Math.round(Math.max(5,Math.min(180,60000/(sum/(taps.length-1)))));
+  state.tempo=bpm;
+  document.getElementById('tempo').value=bpm;
+  document.getElementById('tempoOut').textContent=bpm;
+  applyMaster();stat('tempo '+bpm);
+}
+{const bt=document.getElementById('btnTap');if(bt)bt.onclick=tapTempo}   /* button retired from the header; the feature waits */
+/* ============ layer UI ============ */
+const PATTERNS=['up','down','updown','random','seq','rev'];
+const ratSet=[];
+/* The three part panels are generated, not hand-written — one
+   description, three instances (the same move the hardware makes with
+   one strip PCB placed three times). ×2 is the momentary per-part
+   ratchet (pointer-held or keys 1/2/3). */
+function drawLayers(){
+  const host=document.getElementById('layers');host.innerHTML='';
+  state.layers.forEach((l,i)=>{
+    const p=document.createElement('div');p.className='layer';
+    const h=document.createElement('h2');
+    const led=document.createElement('span');led.className='led';led.id='led'+i;
+    h.appendChild(led);h.appendChild(document.createTextNode(l.name));
+    const onB=document.createElement('button');
+    onB.textContent=l.on?'on':'off';onB.style.marginLeft='auto';
+    onB.setAttribute('aria-pressed',l.on);
+    onB.onclick=()=>{l.on=!l.on;if(l.on)syncIdx(l);onB.textContent=l.on?'on':'off';onB.setAttribute('aria-pressed',l.on)};
+    h.appendChild(onB);
+    const rat=document.createElement('button');
+    rat.textContent='\u00d72';rat.setAttribute('aria-pressed','false');
+    rat.style.marginLeft='6px';rat.title='ratchet \u2014 hold (key '+(i+1)+')';
+    const setR=v=>{l._rat=v;rat.setAttribute('aria-pressed',v)};
+    ratSet[i]=setR;
+    rat.addEventListener('pointerdown',()=>setR(true));
+    ['pointerup','pointerleave','pointercancel'].forEach(ev=>rat.addEventListener(ev,()=>setR(false)));
+    h.appendChild(rat);
+    p.appendChild(h);
+    p.appendChild(seg('role',['bass','arp','lead'],l.role,v=>{l.role=v;rebuildPatterns()}));
+    p.appendChild(seg('voice',['saw','square','glass','bell','pluck'],l.voice,v=>l.voice=v));
+    p.appendChild(seg('pattern',PATTERNS,l.pattern,v=>{l.pattern=v;syncIdx(l);rebuildPatterns();seqCue()}));
+    p.appendChild(seg('division',['1','2','3','4'],String(l.div),v=>{l.div=+v;syncIdx(l)}));
+    p.appendChild(slider('octaves',1,4,l.oct,v=>{l.oct=v;rebuildPatterns()}));
+    p.appendChild(slider('length',0,16,l.len||0,v=>{l.len=v;syncIdx(l);rebuildPatterns()},v=>v===0?'auto':v));
+    p.appendChild(slider('shape',0,100,l.shape,v=>l.shape=v));
+    p.appendChild(slider('level',0,100,l.level,v=>l.level=v));
+    host.appendChild(p);
+  });
+}
+/* display names for seg values whose panel word differs from the stored
+   value — 'arp' stays the internal role (patches, ROLE_COLOR, factory bank)
+   but the panel says RYTM: the middle player is the rhythm, shorthand. */
+const SEG_LABELS={arp:'rytm',phase:'phaser'};
+function seg(label,opts,cur,fn){
+  const row=document.createElement('div');row.className='ctl';
+  const lab=document.createElement('label');lab.textContent=label;row.appendChild(lab);
+  const wrap=document.createElement('div');wrap.className='seg';
+  opts.forEach(o=>{
+    const b=document.createElement('button');b.textContent=SEG_LABELS[o]||o;
+    b.setAttribute('aria-pressed',o===cur);
+    b.onclick=()=>{[...wrap.children].forEach(c=>c.setAttribute('aria-pressed',c===b));fn(o)};
+    wrap.appendChild(b);
+  });
+  row.appendChild(wrap);return row;
+}
+function slider(label,min,max,val,fn,fmt){
+  const F=fmt||(v=>v);
+  const row=document.createElement('div');row.className='ctl';
+  const lab=document.createElement('label');lab.textContent=label;row.appendChild(lab);
+  const r=document.createElement('input');r.type='range';r.min=min;r.max=max;r.value=val;
+  const out=document.createElement('output');out.textContent=F(val);
+  r.oninput=()=>{out.textContent=F(+r.value);fn(+r.value)};
+  row.appendChild(r);row.appendChild(out);return row;
+}
+/* ============ master wiring ============ */
+/* UI seam implementations — the engine's only reach into the page */
+UI.partFire=(i,wait)=>{const led=document.getElementById('led'+i);
+  setTimeout(()=>{led.classList.add('hot');setTimeout(()=>led.classList.remove('hot'),60)},wait)};
+UI.transport=r=>{document.getElementById('runLed').classList.toggle('hot',r);
+  const b=document.getElementById('btnRun');b.setAttribute('aria-pressed',r);b.textContent=r?'stop':'run';
+  b.classList.toggle('standby',!r)};   /* stopped = breathing red standby */
+document.getElementById('btnRun').classList.add('standby');
+document.getElementById('btnRun').onclick=()=>state.running?stop():start();
+[['tempo','tempo'],['swing','swing'],['glide','glide'],['drone','drone'],['drive','drive'],['age','age'],['cutoff','cutoff'],
+ ['reso','reso'],['fb','fb'],['vol','vol'],['dlyFb','dlyFb'],['dlyMix','dlyMix'],['phase','phase'],['verbSize','verbSize'],['verbMix','verbMix']].forEach(([id,key])=>{
+  const el=document.getElementById(id);
+  el.oninput=()=>{state[key]=+el.value;document.getElementById(id+'Out').textContent=el.value;applyMaster()};
+});
+document.getElementById('pitch').oninput=e=>{
+  let v=+e.target.value;
+  if(Math.abs(v)<0.45){v=0;e.target.value=0}
+  state.pitch=v;
+  document.getElementById('pitchOut').textContent=(v>0?'+':'')+v.toFixed(1);
+  applyMaster();
+};
+document.getElementById('modRate').oninput=e=>{state.mod.rate=+e.target.value;
+  document.getElementById('modRateOut').textContent=e.target.value;applyModRouting()};
+document.getElementById('modDepth').oninput=e=>{state.mod.depth=+e.target.value;
+  document.getElementById('modDepthOut').textContent=e.target.value;applyModRouting()};
+/* All segmented switches share one wiring and one refresh helper —
+   aria-pressed is the single visual state everywhere. */
+function wireSeg(id,fn){
+  document.querySelectorAll('#'+id+' button').forEach(b=>{
+    b.onclick=()=>{document.querySelectorAll('#'+id+' button').forEach(c=>c.setAttribute('aria-pressed',c===b));fn(b.dataset.v)};
+  });
+}
+function setSeg(id,val){
+  document.querySelectorAll('#'+id+' button').forEach(c=>c.setAttribute('aria-pressed',c.dataset.v===String(val)));
+}
+wireSeg('modWave',v=>{state.mod.wave=v;applyMaster()});
+wireSeg('modTarget',v=>{state.mod.target=v;applyMaster()});
+wireSeg('verbTypeSeg',v=>{state.verbType=v;applyMaster()});
+{const f=document.getElementById('mcForm');
+ if(f)f.addEventListener('submit',e=>{
+   e.preventDefault();
+   const done=()=>{f.innerHTML='<span class="footNote">Sent — check your inbox to confirm.</span>'};
+   try{
+     fetch(f.action,{method:'POST',mode:'no-cors',body:new FormData(f)}).then(done,done);
+   }catch(err){done()}
+ });}
+{const bm=document.getElementById('btnManual');
+ const setM=o=>{document.body.classList.toggle('manualOpen',o);bm.setAttribute('aria-pressed',o);
+   try{localStorage.setItem('am1.manual',o?'1':'0')}catch(e){}};
+ bm.onclick=()=>setM(!document.body.classList.contains('manualOpen'));
+ const bx=document.getElementById('manualClose');
+ if(bx)bx.onclick=()=>setM(false);
+ try{if(localStorage.getItem('am1.manual')==='1')setM(true)}catch(e){}}
+function syncCRT(){document.documentElement.classList.toggle('crt83',state.circuit==='mk2')}
+document.getElementById('circuitSel').onchange=e=>{state.circuit=e.target.value;lastDrive=-1;applyMaster();applyDrone();syncCRT()};   /* era swap re-voices drive + drone live, and turns the tube on */
+wireSeg('droneVoiceSeg',v=>{state.droneVoice=v;applyDrone()});
+wireSeg('droneNoteSeg',v=>{state.droneNote=v;applyDrone()});
+document.getElementById('mod2Rate').oninput=e=>{state.mod2.rate=+e.target.value;
+  document.getElementById('mod2RateOut').textContent=e.target.value};
+document.getElementById('mod2Depth').oninput=e=>{state.mod2.depth=+e.target.value;
+  document.getElementById('mod2DepthOut').textContent=e.target.value};
+wireSeg('mod2Wave',v=>state.mod2.wave=v);
+wireSeg('mod2Target',v=>{state.mod2.target=v;applyMaster()});
+wireSeg('dlyTimeSeg',v=>{state.dlyDiv=+v;applyMaster()});
+/* ============ tools ============ */
+const stat=t=>document.getElementById('stat').textContent=t?t.charAt(0).toUpperCase()+t.slice(1):t;
+function encodeWav(L,R,rate){
+  const n=L.length,buf=new ArrayBuffer(44+n*4),v=new DataView(buf);
+  const w=(o,str)=>{for(let i=0;i<str.length;i++)v.setUint8(o+i,str.charCodeAt(i))};
+  w(0,'RIFF');v.setUint32(4,36+n*4,true);w(8,'WAVE');w(12,'fmt ');
+  v.setUint32(16,16,true);v.setUint16(20,1,true);v.setUint16(22,2,true);
+  v.setUint32(24,rate,true);v.setUint32(28,rate*4,true);v.setUint16(32,4,true);v.setUint16(34,16,true);
+  w(36,'data');v.setUint32(40,n*4,true);
+  let o=44;
+  for(let i=0;i<n;i++){
+    v.setInt16(o,Math.max(-1,Math.min(1,L[i]))*32767,true);o+=2;
+    v.setInt16(o,Math.max(-1,Math.min(1,R[i]))*32767,true);o+=2;
+  }
+  return new Blob([buf],{type:'audio/wav'});
+}
+/* Bounce: tap the master through a ScriptProcessor (muted — some
+   engines idle an unconnected processor) and accumulate Float32 chunks;
+   second press stitches + encodes 16-bit WAV. ~23MB/min of RAM: fine
+   for sketches. AudioWorklet is the eventual successor. */
+document.getElementById('btnBounce').onclick=function(){
+  if(!ctx){stat('press run first');return}
+  if(!bnc){
+    const sp=ctx.createScriptProcessor(4096,2,2),mute=ctx.createGain();
+    mute.gain.value=0;
+    master.connect(sp);sp.connect(mute);mute.connect(ctx.destination);
+    bnc={sp,mute,chL:[],chR:[]};
+    sp.onaudioprocess=ev=>{
+      bnc.chL.push(new Float32Array(ev.inputBuffer.getChannelData(0)));
+      bnc.chR.push(new Float32Array(ev.inputBuffer.getChannelData(1)));
+    };
+    this.setAttribute('aria-pressed',true);stat('recording…');
+  }else{
+    master.disconnect(bnc.sp);bnc.sp.disconnect();bnc.mute.disconnect();
+    const len=bnc.chL.reduce((a,c)=>a+c.length,0);
+    const L=new Float32Array(len),R=new Float32Array(len);
+    let o=0;
+    for(let i=0;i<bnc.chL.length;i++){L.set(bnc.chL[i],o);R.set(bnc.chR[i],o);o+=bnc.chL[i].length}
+    const blob=encodeWav(L,R,ctx.sampleRate);
+    const nm=document.getElementById('patchName').value.trim().replace(/\W+/g,'_')||Date.now().toString().slice(-6);
+    const a=document.createElement('a');a.href=URL.createObjectURL(blob);
+    a.download='AM1_'+nm+'.wav';
+    document.body.appendChild(a);a.click();a.remove();
+    bnc=null;this.setAttribute('aria-pressed',false);stat('recorded \u00b7 wav');
+  }
+};
+/* FIELDS — the single source of truth for every patch parameter.
+   serialize, load-merge, and UI refresh are all generated from this table;
+   a field added here is a field everywhere. */
+const FIELDS=[
+  {k:'key',       d:9,      ui:{kind:'sel',   id:'key'}},
+  {k:'scale',     d:'minor',ui:{kind:'sel',   id:'scale'}},
+  {k:'chord',     d:[60,63,67], ui:null},
+  {k:'degree',    d:0,      ui:null},
+  {k:'seq',       d:[],     ui:{kind:'seq'}},
+  {k:'seqOff',    d:[],     ui:null},        /* muted steps — note kept, plays as a rest */
+  {k:'progOff',   d:[],     ui:null},        /* muted progression steps — degree kept, previous chord holds */
+  {k:'seqMode',   d:'mel',  ui:null},        /* what SEQ REC writes: mel notes | prog degrees */
+  {k:'progSeq',   d:[],     ui:null},        /* recorded degree progression; null = hold */
+  {k:'follow',    d:false,  ui:{kind:'press', id:'seqFollow'}},
+  {k:'sevenths',  d:false,  ui:{kind:'press', id:'btn7'}},
+  {k:'glide',     d:0,      ui:{kind:'slider',id:'glide'}},
+  {k:'pitch',     d:0,      ui:{kind:'pitch', id:'pitch'}},
+  {k:'tempo',     d:112,    ui:{kind:'slider',id:'tempo'}},
+  {k:'swing',     d:0,      ui:{kind:'slider',id:'swing'}},
+  {k:'drone',     d:35,     ui:{kind:'slider',id:'drone'}},
+  {k:'drive',     d:15,     ui:{kind:'slider',id:'drive'}},
+  {k:'age',       d:0,      ui:{kind:'slider',id:'age'}},
+  {k:'cutoff',    d:72,     ui:{kind:'slider',id:'cutoff'}},
+  {k:'reso',      d:18,     ui:{kind:'slider',id:'reso'}},
+  {k:'fb',        d:0,      ui:{kind:'slider',id:'fb'}},
+  {k:'vol',       d:80,     ui:{kind:'slider',id:'vol'}},
+  {k:'dlyDiv',    d:3,      ui:{kind:'seg',   id:'dlyTimeSeg'}},
+  {k:'dlyFb',     d:45,     ui:{kind:'slider',id:'dlyFb'}},
+  {k:'dlyMix',    d:30,     ui:{kind:'slider',id:'dlyMix'}},
+  {k:'phase',     d:0,      ui:{kind:'slider',id:'phase'}},
+  {k:'verbType',  d:'hall', ui:{kind:'seg',   id:'verbTypeSeg'}},
+  {k:'circuit',   d:'mk1',  ui:{kind:'sel',   id:'circuitSel'}},
+  {k:'verbSize',  d:45,     ui:{kind:'slider',id:'verbSize'}},
+  {k:'verbMix',   d:25,     ui:{kind:'slider',id:'verbMix'}},
+  {k:'mod',  d:{wave:'tri',target:'cutoff',rate:25,depth:0}, ui:{kind:'lfo',prefix:'mod'}},
+  {k:'mod2', d:{wave:'tri',target:'pitch', rate:20,depth:0}, ui:{kind:'lfo',prefix:'mod2'}},
+  {k:'droneVoice',d:'saw',  ui:{kind:'seg',   id:'droneVoiceSeg'}},
+  {k:'droneNote', d:'root', ui:{kind:'seg',   id:'droneNoteSeg'}}
+];
+const LAYER_FIELDS=['role','voice','pattern','div','oct','shape','level','on','len'];
+function fieldDefault(f){return JSON.parse(JSON.stringify(f.d))}
+/* JSON → state through the registry: missing fields take defaults
+   (old patches load forever), object fields merge per-key, arrays are
+   copied. Pure — no DOM, no audio — which is what makes patches
+   testable (round-trip + fuzz in the suite). */
+/* Boot seed: every registered field is guaranteed present in state — a
+   FIELDS row added without a state-literal entry seeds its default here
+   instead of sending NaN into the audio math. */
+FIELDS.forEach(f=>{if(state[f.k]===undefined)state[f.k]=fieldDefault(f)});
+function mergePatchIntoState(j){
+  if(j&&j.mod&&!['cutoff','shape','drive','verb','phase','dlyfb'].includes(j.mod.target))j.mod={...j.mod,target:'cutoff'};        /* guard: targets from retired experiments */
+  if(j&&j.mod2&&!['reso','pitch','feedbk','delay','level','drone'].includes(j.mod2.target))j.mod2={...j.mod2,target:'pitch'};
+  if(j.vintage!==undefined&&j.age===undefined)j.age=j.vintage;   /* pre-rename patches */
+  FIELDS.forEach(f=>{
+    const v=j[f.k];
+    if(v===undefined||v===null){state[f.k]=fieldDefault(f);return}
+    if(typeof f.d==='object'&&!Array.isArray(f.d)){state[f.k]=Object.assign(fieldDefault(f),v);return}
+    state[f.k]=Array.isArray(f.d)?JSON.parse(JSON.stringify(v)):v;
+  });
+  (j.layers||[]).forEach((jl,i)=>{
+    if(!state.layers[i])return;
+    LAYER_FIELDS.forEach(k=>{if(jl[k]!==undefined)state.layers[i][k]=jl[k]});
+    if(jl.len===undefined)state.layers[i].len=0;   /* pre-LEN patches load at auto */
+  });
+}
+function refreshUI(){
+  syncCRT();   /* the tube follows the circuit everywhere — patch loads, boot, era re-assert */
+  FIELDS.forEach(f=>{
+    if(!f.ui)return;
+    const u=f.ui,v=state[f.k];
+    if(u.kind==='slider'){
+      const el=document.getElementById(u.id);
+      el.value=v;document.getElementById(u.id+'Out').textContent=v;
+    }else if(u.kind==='seg'){setSeg(u.id,v)}
+    else if(u.kind==='press'){document.getElementById(u.id).setAttribute('aria-pressed',!!v)}
+    else if(u.kind==='sel'){document.getElementById(u.id).value=v}
+    else if(u.kind==='pitch'){
+      const el=document.getElementById(u.id);
+      el.value=v;
+      document.getElementById(u.id+'Out').textContent=(v>0?'+':'')+(+v).toFixed(1);
+    }else if(u.kind==='seq'){seqShow()}
+    else if(u.kind==='lfo'){
+      setSeg(u.prefix+'Wave',v.wave);setSeg(u.prefix+'Target',v.target);
+      [['Rate','rate'],['Depth','depth']].forEach(([sfx,key])=>{
+        const el=document.getElementById(u.prefix+sfx);
+        el.value=v[key];document.getElementById(u.prefix+sfx+'Out').textContent=v[key];
+      });
+    }
+  });
+}
+/* state → JSON via the registry; deep-snapshot so saved patches never
+   share references with the running machine. */
+function serializePatch(){
+  const p={v:1};
+  FIELDS.forEach(f=>p[f.k]=state[f.k]);
+  p.layers=state.layers.map(l=>{
+    const o={};LAYER_FIELDS.forEach(k=>o[k]=l[k]);return o;
+  });
+  return JSON.parse(JSON.stringify(p));
+}
+/* The one door every patch walks through — factory, bank, import,
+   paste, ANOMALY: merge, refresh, redraw, commit. */
+function applyPatch(j){
+  try{
+    mergePatchIntoState(j);
+    refreshUI();
+    drawLayers();afterChord();seqShow();applyMaster();stat('patch loaded');
+  }catch(e){stat('bad patch')}
+}
+/* ---------- patch bank ---------- */
+const FACTORY={
+/* the player's own patches (Aug 2026) — handed in by name, filed by genre; values verbatim */
+'wave_alone':{"v":1,"key":10,"scale":"lydian","chord":[74,77,81],"degree":2,"seq":[],"follow":false,"sevenths":false,"glide":15,"pitch":0,"tempo":125,"swing":49,"drone":0,"drive":11,"cutoff":46,"reso":31,"fb":8,"vol":80,"dlyDiv":2,"dlyFb":50,"dlyMix":15,"verbType":"spring","verbSize":68,"verbMix":37,"mod":{"wave":"tri","target":"cutoff","rate":63,"depth":28},"mod2":{"wave":"saw","target":"level","rate":42,"depth":28},"droneVoice":"square","droneNote":"high","layers":[{"role":"bass","voice":"bell","pattern":"up","div":2,"oct":3,"shape":75,"level":61,"on":true},{"role":"arp","voice":"saw","pattern":"down","div":2,"oct":2,"shape":43,"level":37,"on":true},{"role":"bass","voice":"glass","pattern":"up","div":2,"oct":1,"shape":92,"level":71,"on":true}]},
+'soft_amazed':{"v":1,"key":2,"scale":"major","chord":[71,74,78],"degree":5,"seq":[],"follow":false,"glide":0,"pitch":0,"tempo":120,"swing":0,"drone":0,"drive":6,"cutoff":50,"reso":8,"vol":78,"dlyDiv":3,"dlyFb":50,"dlyMix":100,"verbType":"dark","verbSize":77,"verbMix":22,"mod":{"wave":"tri","target":"cutoff","rate":60,"depth":100},"layers":[{"role":"bass","voice":"saw","pattern":"up","div":4,"oct":3,"shape":93,"level":63,"on":true},{"role":"lead","voice":"saw","pattern":"random","div":3,"oct":3,"shape":63,"level":57,"on":true},{"role":"lead","voice":"square","pattern":"up","div":3,"oct":2,"shape":53,"level":43,"on":true}]},
+'wave_badalamenti':{"v":1,"circuit":"mk2","key":2,"scale":"harm minor","chord":[62,65,69,73],"degree":0,"seq":[],"follow":false,"sevenths":true,"glide":0,"pitch":0,"tempo":125,"swing":0,"drone":20,"drive":12,"cutoff":52,"reso":24,"fb":15,"vol":80,"dlyDiv":3,"dlyFb":27,"dlyMix":28,"verbType":"dark","verbSize":45,"verbMix":27,"mod":{"wave":"sqr","target":"verb","rate":58,"depth":6},"mod2":{"wave":"tri","target":"delay","rate":48,"depth":2},"droneVoice":"saw","droneNote":"root","layers":[{"role":"bass","voice":"saw","pattern":"random","div":2,"oct":2,"shape":93,"level":64,"on":true},{"role":"lead","voice":"glass","pattern":"random","div":1,"oct":1,"shape":83,"level":60,"on":false},{"role":"bass","voice":"square","pattern":"down","div":4,"oct":3,"shape":14,"level":42,"on":false}]},
+'berlin_bees':{"v":1,"circuit":"mk1","key":0,"scale":"minor","chord":[60,63,67],"degree":0,"seq":[],"seqOff":[],"follow":false,"sevenths":false,"glide":0,"pitch":0,"tempo":120,"swing":0,"drone":30,"drive":10,"age":10,"cutoff":75,"reso":50,"fb":0,"vol":80,"dlyDiv":3,"dlyFb":61,"dlyMix":50,"phase":0,"verbType":"hall","verbSize":100,"verbMix":70,"mod":{"wave":"tri","target":"cutoff","rate":20,"depth":100},"mod2":{"wave":"tri","target":"pitch","rate":20,"depth":0},"droneVoice":"strings","droneNote":"root","layers":[{"role":"lead","voice":"bell","pattern":"up","div":3,"oct":3,"shape":58,"level":70,"on":true,"len":3},{"role":"arp","voice":"saw","pattern":"up","div":3,"oct":3,"shape":30,"level":70,"on":true,"len":4},{"role":"lead","voice":"square","pattern":"up","div":3,"oct":3,"shape":45,"level":50,"on":true,"len":5}]},
+'soft_calmness':{"v":1,"circuit":"mk2","key":2,"scale":"minor","chord":[67,70,74],"degree":3,"seq":[],"follow":false,"glide":0,"pitch":0,"tempo":30,"swing":46,"drone":0,"drive":75,"cutoff":21,"reso":0,"fb":0,"vol":100,"dlyDiv":3,"dlyFb":75,"dlyMix":50,"verbType":"dark","verbSize":100,"verbMix":100,"mod":{"wave":"tri","target":"drive","rate":50,"depth":50},"layers":[{"role":"lead","voice":"bell","pattern":"down","div":2,"oct":2,"shape":46,"level":75,"on":true},{"role":"bass","voice":"pluck","pattern":"updown","div":4,"oct":4,"shape":74,"level":100,"on":true},{"role":"arp","voice":"glass","pattern":"up","div":2,"oct":2,"shape":62,"level":75,"on":true}]},
+'wave_submerged':{"v":1,"circuit":"mk2","key":0,"scale":"minor","chord":[60,63,67,70],"degree":0,"seq":[],"follow":false,"sevenths":true,"glide":0,"pitch":0,"tempo":120,"swing":0,"drone":49,"drive":20,"cutoff":51,"reso":71,"fb":11,"vol":80,"dlyDiv":3,"dlyFb":50,"dlyMix":100,"verbType":"dark","verbSize":40,"verbMix":68,"mod":{"wave":"tri","target":"cutoff","rate":39,"depth":87},"mod2":{"wave":"tri","target":"delay","rate":22,"depth":92},"droneVoice":"saw","droneNote":"root","layers":[{"role":"arp","voice":"saw","pattern":"up","div":1,"oct":1,"shape":30,"level":70,"on":true},{"role":"bass","voice":"saw","pattern":"down","div":4,"oct":4,"shape":37,"level":70,"on":true},{"role":"lead","voice":"saw","pattern":"updown","div":1,"oct":4,"shape":50,"level":70,"on":true}]},
+'gnarl_malaise':{"v":1,"circuit":"mk2","key":9,"scale":"dorian","chord":[76,79,83,86],"degree":4,"seq":[],"follow":false,"sevenths":true,"glide":52,"pitch":0,"tempo":31,"swing":0,"drone":0,"drive":69,"cutoff":58,"reso":51,"fb":21,"vol":63,"dlyDiv":3,"dlyFb":60,"dlyMix":83,"verbType":"dark","verbSize":89,"verbMix":37,"mod":{"wave":"rnd","target":"drive","rate":9,"depth":1},"mod2":{"wave":"saw","target":"pitch","rate":18,"depth":19},"droneVoice":"square","droneNote":"fifth","layers":[{"role":"bass","voice":"square","pattern":"random","div":2,"oct":3,"shape":77,"level":73,"on":true},{"role":"lead","voice":"square","pattern":"random","div":3,"oct":3,"shape":94,"level":61,"on":true},{"role":"lead","voice":"glass","pattern":"up","div":1,"oct":2,"shape":80,"level":58,"on":true}]},
+'data_forever_fantasy':{"v":1,"key":0,"scale":"major","chord":[60,64,67,71],"degree":0,"seq":[],"follow":false,"sevenths":true,"glide":0,"pitch":0,"tempo":120,"swing":0,"drone":20,"drive":20,"cutoff":100,"reso":0,"fb":0,"vol":62,"dlyDiv":3,"dlyFb":47,"dlyMix":49,"verbType":"hall","verbSize":100,"verbMix":79,"mod":{"wave":"tri","target":"cutoff","rate":25,"depth":0},"mod2":{"wave":"tri","target":"pitch","rate":20,"depth":0},"droneVoice":"strings","droneNote":"high","layers":[{"role":"bass","voice":"saw","pattern":"random","div":2,"oct":4,"shape":30,"level":70,"on":true},{"role":"arp","voice":"saw","pattern":"up","div":1,"oct":3,"shape":53,"level":70,"on":true},{"role":"lead","voice":"bell","pattern":"updown","div":1,"oct":4,"shape":39,"level":70,"on":true}]},
+'gnarl_groove':{"v":1,"circuit":"mk2","key":9,"scale":"minor","chord":[69,72,76],"degree":0,"seq":[],"seqOff":[],"seqMode":"mel","progSeq":[],"follow":false,"sevenths":false,"glide":0,"pitch":0,"tempo":47,"swing":0,"drone":35,"drive":59,"age":100,"cutoff":65,"reso":18,"fb":37,"vol":80,"dlyDiv":3,"dlyFb":30,"dlyMix":86,"phase":0,"verbType":"hall","verbSize":45,"verbMix":25,"mod":{"wave":"tri","target":"cutoff","rate":52,"depth":91},"mod2":{"wave":"tri","target":"feedbk","rate":20,"depth":43},"droneVoice":"saw","droneNote":"root","layers":[{"role":"bass","voice":"saw","pattern":"up","div":2,"oct":1,"shape":26,"level":78,"on":true,"len":0},{"role":"arp","voice":"square","pattern":"updown","div":1,"oct":2,"shape":20,"level":60,"on":true,"len":0},{"role":"lead","voice":"saw","pattern":"up","div":3,"oct":2,"shape":52,"level":46,"on":true,"len":0}]},
+'soft_ivory_tower':{"v":1,"circuit":"mk1","key":10,"scale":"phrygian","chord":[75,78,82],"degree":3,"seq":[],"seqOff":[],"seqMode":"mel","progSeq":[],"follow":true,"sevenths":false,"glide":0,"pitch":0,"tempo":84,"swing":0,"drone":0,"drive":13,"age":0,"cutoff":67,"reso":0,"fb":0,"vol":80,"dlyDiv":2,"dlyFb":40,"dlyMix":23,"phase":0,"verbType":"dark","verbSize":100,"verbMix":100,"mod":{"wave":"saw","target":"drive","rate":58,"depth":32},"mod2":{"wave":"tri","target":"pitch","rate":20,"depth":0},"droneVoice":"saw","droneNote":"root","layers":[{"role":"bass","voice":"square","pattern":"updown","div":1,"oct":3,"shape":29,"level":86,"on":true,"len":0},{"role":"arp","voice":"saw","pattern":"random","div":4,"oct":3,"shape":56,"level":35,"on":true,"len":0},{"role":"lead","voice":"glass","pattern":"updown","div":4,"oct":1,"shape":69,"level":51,"on":true,"len":0}]},
+'wave_shimmer':{"v":1,"key":2,"scale":"lydian","chord":[69,73,76,80],"degree":4,"seq":[],"follow":false,"sevenths":true,"glide":0,"pitch":0,"tempo":114,"swing":0,"drone":0,"drive":12,"cutoff":51,"reso":7,"fb":4,"vol":80,"dlyDiv":2,"dlyFb":23,"dlyMix":14,"verbType":"dark","verbSize":43,"verbMix":30,"mod":{"wave":"tri","target":"shape","rate":63,"depth":32},"mod2":{"wave":"rnd","target":"feedbk","rate":17,"depth":21},"droneVoice":"sine","droneNote":"fifth","layers":[{"role":"bass","voice":"square","pattern":"up","div":3,"oct":2,"shape":42,"level":86,"on":true},{"role":"bass","voice":"bell","pattern":"down","div":2,"oct":2,"shape":76,"level":60,"on":true},{"role":"arp","voice":"glass","pattern":"up","div":1,"oct":2,"shape":72,"level":62,"on":true}]},
+'gnarl_scream':{"v":1,"key":5,"scale":"lydian","chord":[65,69,72,76],"degree":0,"seq":[],"seqOff":[],"follow":false,"sevenths":true,"glide":0,"pitch":-7.1,"tempo":180,"swing":0,"drone":44,"drive":59,"age":100,"cutoff":100,"reso":57,"fb":54,"vol":80,"dlyDiv":3,"dlyFb":39,"dlyMix":100,"phase":0,"verbType":"dark","verbSize":50,"verbMix":100,"mod":{"wave":"chaos","target":"drive","rate":81,"depth":100},"mod2":{"wave":"chaos","target":"pitch","rate":48,"depth":100},"droneVoice":"saw","droneNote":"high","layers":[{"role":"bass","voice":"glass","pattern":"up","div":1,"oct":4,"shape":49,"level":70,"on":true,"len":0},{"role":"arp","voice":"glass","pattern":"updown","div":1,"oct":4,"shape":45,"level":70,"on":true,"len":0},{"role":"lead","voice":"glass","pattern":"down","div":1,"oct":4,"shape":58,"level":70,"on":true,"len":0}]},
+'wave_burnt':{"v":1,"circuit":"mk2","key":0,"scale":"major","chord":[64,67,71],"degree":2,"seq":[],"follow":false,"glide":0,"pitch":0,"tempo":180,"swing":100,"drone":34,"drive":25,"cutoff":60,"reso":92,"fb":0,"vol":50,"dlyDiv":3,"dlyFb":65,"dlyMix":100,"verbType":"hall","verbSize":100,"verbMix":100,"mod":{"wave":"tri","target":"cutoff","rate":25,"depth":0},"layers":[{"role":"bass","voice":"saw","pattern":"updown","div":2,"oct":4,"shape":26,"level":100,"on":true},{"role":"arp","voice":"square","pattern":"updown","div":1,"oct":2,"shape":20,"level":60,"on":false},{"role":"lead","voice":"saw","pattern":"up","div":3,"oct":2,"shape":52,"level":46,"on":false}]},
+'soft_wash':{"v":1,"circuit":"mk2","key":10,"scale":"dorian","chord":[73,77,80],"degree":2,"seq":[],"follow":false,"glide":0,"pitch":0,"tempo":5,"swing":100,"drone":0,"drive":30,"cutoff":60,"reso":70,"vol":80,"dlyDiv":4,"dlyFb":50,"dlyMix":100,"verbType":"dark","verbSize":100,"verbMix":100,"mod":{"wave":"tri","target":"cutoff","rate":73,"depth":87},"layers":[{"role":"bass","voice":"saw","pattern":"updown","div":4,"oct":3,"shape":100,"level":66,"on":true},{"role":"bass","voice":"square","pattern":"updown","div":2,"oct":3,"shape":100,"level":73,"on":true},{"role":"arp","voice":"bell","pattern":"up","div":1,"oct":2,"shape":93,"level":77,"on":false}]},
+/* the fifteenth: his hand-tuned vespers — phaser pinned, delay wash */
+'soft_vespers':{"v":1,"circuit":"mk2","key":7,"scale":"major","chord":[67,71,74],"degree":0,"seq":[],"seqOff":[],"seqMode":"mel","progSeq":[],"follow":false,"sevenths":false,"glide":0,"pitch":-9.5,"tempo":56,"swing":0,"drone":25,"drive":8,"age":13,"cutoff":62,"reso":12,"fb":0,"vol":78,"dlyDiv":4,"dlyFb":30,"dlyMix":76,"phase":100,"verbType":"dark","verbSize":100,"verbMix":100,"mod":{"wave":"tri","target":"cutoff","rate":10,"depth":12},"mod2":{"wave":"tri","target":"pitch","rate":5,"depth":8},"droneVoice":"choir","droneNote":"root","layers":[{"role":"lead","voice":"glass","pattern":"up","div":4,"oct":1,"shape":55,"level":42,"on":true,"len":5},{"role":"arp","voice":"bell","pattern":"random","div":3,"oct":1,"shape":64,"level":30,"on":true,"len":0},{"role":"bass","voice":"saw","pattern":"up","div":4,"oct":1,"shape":40,"level":34,"on":false,"len":0}]},
+/* commissioned: the early-80s computer — fast bleeps, random electrical sequences */
+'data_relay':{"v":1,"key":9,"scale":"minor","chord":[69,72,76],"degree":0,"seq":[],"follow":false,"sevenths":false,"glide":0,"pitch":0,"tempo":152,"swing":0,"drone":0,"drive":8,"age":0,"phase":0,"cutoff":88,"reso":32,"fb":0,"vol":78,"dlyDiv":4,"dlyFb":30,"dlyMix":18,"verbType":"plate","verbSize":20,"verbMix":10,"mod":{"wave":"rnd","target":"cutoff","rate":78,"depth":38},"mod2":{"wave":"rnd","target":"level","rate":60,"depth":25},"layers":[
+{"role":"lead","voice":"glass","pattern":"random","div":1,"oct":2,"shape":4,"level":58,"on":true},
+{"role":"arp","voice":"square","pattern":"random","div":2,"oct":3,"shape":6,"level":50,"on":true},
+{"role":"bass","voice":"glass","pattern":"random","div":4,"oct":1,"shape":10,"level":46,"on":true}]},
+'gnarl_droop':{"v":1,"circuit":"mk2","key":5,"scale":"phrygian","chord":[65,68,72],"degree":0,"seq":[],"follow":false,"sevenths":false,"glide":70,"pitch":0,"tempo":38,"swing":0,"drone":10,"droneVoice":"saw","droneNote":"root","drive":95,"age":85,"fb":60,"phase":70,"cutoff":48,"reso":45,"vol":72,"dlyDiv":3,"dlyFb":55,"dlyMix":60,"verbType":"dark","verbSize":85,"verbMix":40,"mod":{"wave":"chaos","target":"cutoff","rate":20,"depth":45},"mod2":{"wave":"saw","target":"pitch","rate":10,"depth":55},"layers":[
+{"role":"bass","voice":"saw","pattern":"down","div":2,"oct":1,"shape":75,"level":78,"on":true},
+{"role":"arp","voice":"saw","pattern":"down","div":3,"oct":2,"shape":85,"level":58,"on":true},
+{"role":"lead","voice":"square","pattern":"down","div":4,"oct":1,"shape":90,"level":48,"on":true}]},
+/* commissioned: the clean-signal wing — trippy, dreamy, sludgey; drive stays home */
+'wave_mirage':{"v":1,"key":0,"scale":"free","chord":[60,61,66,68],"degree":-1,"seq":[],"follow":false,"sevenths":false,"glide":30,"pitch":0,"tempo":66,"swing":0,"drone":8,"droneVoice":"sine","droneNote":"high","drive":0,"age":25,"fb":0,"phase":85,"cutoff":72,"reso":20,"vol":78,"dlyDiv":4,"dlyFb":50,"dlyMix":45,"verbType":"hall","verbSize":90,"verbMix":50,"mod":{"wave":"chaos","target":"verb","rate":25,"depth":60},"mod2":{"wave":"chaos","target":"pitch","rate":25,"depth":30},"layers":[
+{"role":"lead","voice":"glass","pattern":"updown","div":3,"oct":2,"shape":70,"level":50,"on":true},
+{"role":"arp","voice":"bell","pattern":"random","div":4,"oct":2,"shape":78,"level":42,"on":true},
+{"role":"bass","voice":"glass","pattern":"up","div":4,"oct":1,"shape":60,"level":44,"on":true}]},
+'gnarl_sludge':{"v":1,"circuit":"mk2","key":0,"scale":"minor","chord":[60,63,67],"degree":0,"seq":[],"follow":false,"sevenths":false,"glide":80,"pitch":0,"tempo":20,"swing":0,"drone":10,"droneVoice":"square","droneNote":"root","drive":0,"age":35,"fb":0,"phase":0,"cutoff":30,"reso":28,"vol":80,"dlyDiv":2,"dlyFb":60,"dlyMix":40,"verbType":"dark","verbSize":75,"verbMix":35,"mod":{"wave":"tri","target":"cutoff","rate":4,"depth":18},"mod2":{"wave":"tri","target":"pitch","rate":8,"depth":10},"layers":[
+{"role":"bass","voice":"saw","pattern":"down","div":3,"oct":1,"shape":95,"level":80,"on":true},
+{"role":"arp","voice":"square","pattern":"up","div":4,"oct":1,"shape":92,"level":58,"on":true},
+{"role":"lead","voice":"saw","pattern":"down","div":4,"oct":2,"shape":88,"level":40,"on":true}]},
+'soft_sorrow':{"v":1,"key":5,"scale":"minor","chord":[65,68,72,75],"degree":0,"seq":[],"seqOff":[],"follow":false,"sevenths":true,"glide":10,"pitch":0,"tempo":30,"swing":0,"drone":10,"drive":51,"age":100,"cutoff":52,"reso":16,"fb":1,"vol":78,"dlyDiv":3,"dlyFb":50,"dlyMix":38,"phase":0,"verbType":"dark","circuit":"mk2","verbSize":85,"verbMix":100,"mod":{"wave":"chaos","target":"shape","rate":44,"depth":78},"mod2":{"wave":"tri","target":"feedbk","rate":9,"depth":70},"droneVoice":"choir","droneNote":"root","layers":[{"role":"arp","voice":"pluck","pattern":"down","div":1,"oct":3,"shape":22,"level":38,"on":true,"len":0},{"role":"lead","voice":"saw","pattern":"updown","div":3,"oct":1,"shape":85,"level":72,"on":true,"len":0},{"role":"lead","voice":"glass","pattern":"up","div":4,"oct":2,"shape":78,"level":42,"on":true,"len":0}]},
+/* commissioned: the synthwave wing — fun 80s, clean signal, tight clocks */
+'wave_night_drive':{"v":1,"key":9,"scale":"minor","chord":[69,72,76],"degree":0,"seq":[],"seqOff":[],"seqMode":"mel","progSeq":[],"follow":false,"sevenths":false,"glide":0,"pitch":0,"tempo":118,"swing":0,"drone":29,"drive":16,"age":10,"cutoff":89,"reso":80,"fb":0,"vol":80,"dlyDiv":4,"dlyFb":35,"dlyMix":48,"phase":0,"verbType":"dark","circuit":"mk2","verbSize":45,"verbMix":24,"mod":{"wave":"tri","target":"drive","rate":30,"depth":61},"mod2":{"wave":"tri","target":"delay","rate":32,"depth":90},"droneVoice":"saw","droneNote":"root","layers":[{"role":"bass","voice":"saw","pattern":"up","div":1,"oct":1,"shape":22,"level":85,"on":true,"len":0},{"role":"arp","voice":"square","pattern":"updown","div":2,"oct":1,"shape":35,"level":85,"on":true,"len":0},{"role":"lead","voice":"glass","pattern":"random","div":2,"oct":3,"shape":36,"level":52,"on":true,"len":5}]},
+'gnarl_disco_blues':{"v":1,"key":10,"scale":"minor","chord":[70,73,77],"degree":0,"seq":[null],"seqOff":[],"seqMode":"mel","progSeq":[],"follow":false,"sevenths":false,"glide":0,"pitch":0,"tempo":114,"swing":22,"drone":50,"drive":75,"age":48,"cutoff":82,"reso":76,"fb":17,"vol":80,"dlyDiv":2,"dlyFb":34,"dlyMix":34,"phase":42,"verbType":"dark","circuit":"mk1","verbSize":63,"verbMix":32,"mod":{"wave":"chaos","target":"drive","rate":68,"depth":55},"mod2":{"wave":"tri","target":"feedbk","rate":48,"depth":14},"droneVoice":"choir","droneNote":"high","layers":[{"role":"bass","voice":"square","pattern":"random","div":2,"oct":1,"shape":36,"level":72,"on":true,"len":0},{"role":"lead","voice":"pluck","pattern":"rev","div":2,"oct":3,"shape":24,"level":60,"on":false,"len":0},{"role":"lead","voice":"square","pattern":"down","div":2,"oct":1,"shape":53,"level":74,"on":true,"len":5}]},
+/* the second batch (Aug 2026) — handed in by name, filed by genre; eras by character */
+'data_hard_at_work':{"v":1,"key":6,"scale":"minor","chord":[73,76,80],"degree":4,"seq":[],"follow":false,"glide":0,"pitch":-12,"tempo":74,"swing":35,"drone":0,"drive":10,"cutoff":51,"reso":38,"vol":80,"dlyDiv":3,"dlyFb":38,"dlyMix":80,"verbType":"dark","verbSize":77,"verbMix":19,"mod":{"wave":"tri","target":"cutoff","rate":17,"depth":27},"layers":[{"role":"bass","voice":"bell","pattern":"random","div":4,"oct":3,"shape":15,"level":65,"on":true},{"role":"bass","voice":"glass","pattern":"down","div":4,"oct":2,"shape":36,"level":50,"on":false},{"role":"arp","voice":"square","pattern":"random","div":4,"oct":1,"shape":55,"level":44,"on":true}]},
+'data_future_ping':{"v":1,"circuit":"mk2","key":5,"scale":"dorian","chord":[67,70,74],"degree":1,"seq":[],"follow":false,"glide":0,"pitch":0,"tempo":135,"swing":0,"drone":0,"drive":30,"cutoff":83,"reso":84,"vol":80,"dlyDiv":3,"dlyFb":50,"dlyMix":100,"verbType":"dark","verbSize":69,"verbMix":49,"mod":{"wave":"tri","target":"cutoff","rate":15,"depth":100},"layers":[{"role":"bass","voice":"glass","pattern":"up","div":2,"oct":3,"shape":28,"level":76,"on":true},{"role":"bass","voice":"square","pattern":"down","div":2,"oct":3,"shape":32,"level":52,"on":true},{"role":"arp","voice":"saw","pattern":"random","div":1,"oct":3,"shape":34,"level":71,"on":true}]},
+'wave_alien':{"v":1,"circuit":"mk2","key":8,"scale":"phrygian","chord":[76,80,83],"degree":5,"seq":[],"seqOff":[],"seqMode":"mel","progSeq":[],"follow":false,"sevenths":false,"glide":31,"pitch":0,"tempo":11,"swing":0,"drone":30,"drive":2,"age":0,"cutoff":50,"reso":20,"fb":0,"vol":80,"dlyDiv":4,"dlyFb":60,"dlyMix":42,"phase":0,"verbType":"dark","verbSize":68,"verbMix":41,"mod":{"wave":"tri","target":"verb","rate":8,"depth":47},"mod2":{"wave":"tri","target":"pitch","rate":20,"depth":0},"droneVoice":"saw","droneNote":"root","layers":[{"role":"bass","voice":"square","pattern":"random","div":4,"oct":2,"shape":82,"level":62,"on":true,"len":0},{"role":"arp","voice":"square","pattern":"updown","div":2,"oct":2,"shape":67,"level":57,"on":true,"len":0},{"role":"lead","voice":"saw","pattern":"random","div":2,"oct":2,"shape":88,"level":73,"on":true,"len":0}]},
+'data_ping_city':{"v":1,"key":5,"scale":"dorian","chord":[65,68,72],"degree":0,"seq":[],"follow":false,"glide":0,"pitch":1,"tempo":133,"swing":0,"drone":0,"drive":14,"cutoff":65,"reso":48,"vol":80,"dlyDiv":3,"dlyFb":50,"dlyMix":100,"verbType":"hall","verbSize":37,"verbMix":24,"mod":{"wave":"tri","target":"shape","rate":59,"depth":0},"layers":[{"role":"bass","voice":"bell","pattern":"updown","div":4,"oct":2,"shape":19,"level":61,"on":false},{"role":"arp","voice":"bell","pattern":"down","div":2,"oct":2,"shape":51,"level":80,"on":false},{"role":"lead","voice":"square","pattern":"random","div":1,"oct":3,"shape":11,"level":57,"on":true}]},
+'gnarl_abyss':{"v":1,"circuit":"mk2","key":1,"scale":"phrygian","chord":[61,64,68],"degree":0,"seq":[],"follow":false,"glide":12,"pitch":-5,"tempo":148,"swing":65,"drone":41,"drive":89,"cutoff":36,"reso":82,"vol":80,"dlyDiv":3,"dlyFb":63,"dlyMix":100,"verbType":"dark","verbSize":100,"verbMix":100,"mod":{"wave":"rnd","target":"cutoff","rate":64,"depth":100},"layers":[{"role":"bass","voice":"saw","pattern":"updown","div":2,"oct":3,"shape":6,"level":86,"on":true},{"role":"arp","voice":"square","pattern":"down","div":3,"oct":3,"shape":5,"level":62,"on":true},{"role":"lead","voice":"saw","pattern":"random","div":3,"oct":3,"shape":100,"level":50,"on":true}]},
+'soft_muted_joy':{"v":1,"circuit":"mk2","key":4,"scale":"phrygian","chord":[64,67,71],"degree":0,"seq":[],"follow":false,"glide":0,"tempo":50,"swing":0,"drone":0,"drive":8,"cutoff":68,"reso":41,"vol":80,"dlyDiv":4,"dlyFb":31,"dlyMix":80,"verbType":"dark","verbSize":72,"verbMix":100,"mod":{"wave":"rnd","target":"verb","rate":41,"depth":15},"layers":[{"role":"bass","voice":"square","pattern":"random","div":4,"oct":3,"shape":100,"level":84,"on":true},{"role":"lead","voice":"glass","pattern":"up","div":1,"oct":2,"shape":52,"level":40,"on":true},{"role":"bass","voice":"square","pattern":"updown","div":4,"oct":3,"shape":55,"level":44,"on":true}]},
+'soft_vibrato':{"v":1,"circuit":"mk2","key":1,"scale":"major","chord":[66,70,73],"degree":3,"seq":[],"follow":false,"glide":19,"pitch":-12,"tempo":50,"swing":53,"drone":0,"drive":11,"cutoff":58,"reso":23,"vol":80,"dlyDiv":3,"dlyFb":45,"dlyMix":16,"verbType":"spring","verbSize":40,"verbMix":24,"mod":{"wave":"tri","target":"drive","rate":64,"depth":81},"layers":[{"role":"bass","voice":"square","pattern":"random","div":4,"oct":3,"shape":87,"level":62,"on":true},{"role":"arp","voice":"saw","pattern":"down","div":1,"oct":2,"shape":89,"level":57,"on":true},{"role":"arp","voice":"glass","pattern":"down","div":3,"oct":2,"shape":76,"level":61,"on":false}]},
+'wave_city_of_angels':{"v":1,"circuit":"mk1","key":9,"scale":"minor","chord":[69,72,76],"degree":0,"seq":[],"seqOff":[],"seqMode":"mel","progSeq":[],"follow":false,"sevenths":false,"glide":0,"pitch":1,"tempo":120,"swing":0,"drone":35,"drive":40,"age":0,"cutoff":80,"reso":0,"fb":0,"vol":80,"dlyDiv":3,"dlyFb":45,"dlyMix":30,"phase":0,"verbType":"hall","verbSize":45,"verbMix":25,"mod":{"wave":"tri","target":"cutoff","rate":69,"depth":75},"mod2":{"wave":"tri","target":"pitch","rate":20,"depth":0},"droneVoice":"saw","droneNote":"root","layers":[{"role":"bass","voice":"saw","pattern":"up","div":2,"oct":1,"shape":26,"level":78,"on":true,"len":0},{"role":"arp","voice":"square","pattern":"updown","div":1,"oct":2,"shape":20,"level":60,"on":true,"len":0},{"role":"lead","voice":"bell","pattern":"random","div":1,"oct":3,"shape":52,"level":46,"on":true,"len":0}]},
+'soft_alina':{"v":1,"circuit":"mk1","key":11,"scale":"minor","chord":[71,74,78],"degree":0,"seq":[],"seqOff":[],"seqMode":"mel","progSeq":[],"follow":false,"sevenths":false,"glide":0,"pitch":0,"tempo":10,"swing":0,"drone":8,"drive":0,"age":12,"cutoff":55,"reso":8,"fb":0,"vol":76,"dlyDiv":4,"dlyFb":20,"dlyMix":8,"phase":0,"verbType":"hall","verbSize":70,"verbMix":40,"mod":{"wave":"tri","target":"cutoff","rate":3,"depth":10},"mod2":{"wave":"tri","target":"level","rate":4,"depth":12},"droneVoice":"sine","droneNote":"root","layers":[{"role":"lead","voice":"glass","pattern":"up","div":4,"oct":4,"shape":65,"level":46,"on":true,"len":0},{"role":"arp","voice":"glass","pattern":"down","div":3,"oct":2,"shape":82,"level":40,"on":true,"len":0},{"role":"bass","voice":"bell","pattern":"up","div":4,"oct":1,"shape":90,"level":30,"on":false,"len":0}]},
+/* commissioned: the Berlin engine demos — seq + FOLLOW + rev + progression, finally in the bank */
+'berlin_phaedra':{"v":1,"circuit":"mk2","key":9,"scale":"minor","chord":[69,72,76],"degree":0,"seq":[69,72,76,74,72,null,76,72],"seqOff":[],"seqMode":"mel","progSeq":[0,0,5,6],"follow":true,"sevenths":false,"glide":0,"pitch":0,"tempo":116,"swing":0,"drone":10,"drive":20,"age":10,"cutoff":75,"reso":30,"fb":0,"vol":80,"dlyDiv":3,"dlyFb":45,"dlyMix":40,"phase":25,"verbType":"hall","verbSize":55,"verbMix":28,"mod":{"wave":"tri","target":"cutoff","rate":10,"depth":35},"mod2":{"wave":"tri","target":"pitch","rate":20,"depth":0},"droneVoice":"saw","droneNote":"root","layers":[{"role":"bass","voice":"saw","pattern":"up","div":1,"oct":1,"shape":22,"level":80,"on":true,"len":0},{"role":"arp","voice":"square","pattern":"seq","div":2,"oct":2,"shape":40,"level":58,"on":true,"len":0},{"role":"lead","voice":"saw","pattern":"rev","div":3,"oct":3,"shape":55,"level":38,"on":true,"len":0}]},
+'berlin_canon':{"v":1,"circuit":"mk1","key":4,"scale":"minor","chord":[69,72,76],"degree":3,"seq":[76,79,83,81,79,null],"seqOff":[],"seqMode":"mel","progSeq":[0,3,4,0],"follow":true,"sevenths":false,"glide":0,"pitch":0,"tempo":96,"swing":0,"drone":8,"drive":8,"age":15,"cutoff":60,"reso":14,"fb":0,"vol":78,"dlyDiv":4,"dlyFb":30,"dlyMix":25,"phase":40,"verbType":"dark","verbSize":60,"verbMix":35,"mod":{"wave":"tri","target":"cutoff","rate":8,"depth":16},"mod2":{"wave":"tri","target":"level","rate":7,"depth":14},"droneVoice":"strings","droneNote":"root","layers":[{"role":"arp","voice":"glass","pattern":"seq","div":2,"oct":2,"shape":60,"level":52,"on":true,"len":0},{"role":"lead","voice":"bell","pattern":"rev","div":2,"oct":2,"shape":64,"level":46,"on":true,"len":0},{"role":"bass","voice":"saw","pattern":"up","div":2,"oct":1,"shape":58,"level":70,"on":true,"len":0}]},
+/* commissioned: super quiet peaceful pads at the tempo floor — notes so slow they become swells */
+'soft_stillness':{"v":1,"circuit":"mk1","key":2,"scale":"lydian","chord":[62,66,69],"degree":0,"seq":[],"seqOff":[],"seqMode":"mel","progSeq":[],"follow":false,"sevenths":true,"glide":25,"pitch":0,"tempo":5,"swing":0,"drone":45,"droneVoice":"choir","droneNote":"root","drive":0,"age":8,"fb":0,"phase":15,"cutoff":45,"reso":5,"vol":70,"dlyDiv":4,"dlyFb":55,"dlyMix":45,"verbType":"hall","verbSize":90,"verbMix":60,"mod":{"wave":"tri","target":"cutoff","rate":4,"depth":14},"mod2":{"wave":"tri","target":"level","rate":6,"depth":10},"layers":[{"role":"bass","voice":"square","pattern":"up","div":4,"oct":1,"shape":90,"level":22,"on":true},{"role":"arp","voice":"glass","pattern":"updown","div":3,"oct":3,"shape":90,"level":28,"on":true},{"role":"lead","voice":"glass","pattern":"up","div":4,"oct":2,"shape":95,"level":40,"on":true}]},
+/* his: the feedback-melody technique's first named piece — chaos sings the tuned feedback over a circling saw trio */
+'soft_sad_carousel':{"v":1,"circuit":"mk1","key":9,"scale":"minor","chord":[74,77,81],"degree":3,"seq":[],"seqOff":[],"seqMode":"mel","progSeq":[],"follow":false,"sevenths":false,"glide":0,"pitch":0,"tempo":23,"swing":0,"drone":0,"drive":10,"age":0,"cutoff":55,"reso":62,"fb":39,"vol":80,"dlyDiv":3,"dlyFb":21,"dlyMix":78,"phase":51,"verbType":"dark","verbSize":72,"verbMix":84,"mod":{"wave":"tri","target":"cutoff","rate":39,"depth":77},"mod2":{"wave":"chaos","target":"feedbk","rate":69,"depth":100},"droneVoice":"saw","droneNote":"root","layers":[{"role":"bass","voice":"saw","pattern":"updown","div":1,"oct":4,"shape":60,"level":70,"on":true,"len":0},{"role":"arp","voice":"saw","pattern":"up","div":1,"oct":1,"shape":60,"level":70,"on":true,"len":9},{"role":"lead","voice":"saw","pattern":"updown","div":1,"oct":2,"shape":55,"level":85,"on":true,"len":9}]},
+/* his: stillness with every restraint maxed — the same pad, deeper asleep */
+'soft_faint_stirrings':{"v":1,"circuit":"mk1","key":2,"scale":"lydian","chord":[62,66,69],"degree":0,"seq":[],"seqOff":[],"seqMode":"mel","progSeq":[],"follow":false,"sevenths":true,"glide":25,"pitch":-8.1,"tempo":5,"swing":100,"drone":45,"drive":100,"age":8,"cutoff":45,"reso":5,"fb":0,"vol":70,"dlyDiv":4,"dlyFb":55,"dlyMix":45,"phase":100,"verbType":"hall","verbSize":90,"verbMix":60,"mod":{"wave":"tri","target":"cutoff","rate":4,"depth":14},"mod2":{"wave":"tri","target":"level","rate":6,"depth":10},"droneVoice":"choir","droneNote":"root","layers":[{"role":"bass","voice":"square","pattern":"up","div":4,"oct":1,"shape":90,"level":22,"on":true,"len":0},{"role":"arp","voice":"glass","pattern":"updown","div":3,"oct":3,"shape":90,"level":28,"on":true,"len":0},{"role":"lead","voice":"glass","pattern":"up","div":4,"oct":2,"shape":95,"level":40,"on":true,"len":0}]},
+/* commissioned: the fun-and-fast gap — uptempo synthwave joy and clinical speed */
+'wave_arcade':{"v":1,"circuit":"mk2","key":9,"scale":"dorian","chord":[69,72,76],"degree":0,"seq":[],"seqOff":[],"seqMode":"prog","progSeq":[0,0,0,0,3,3,3,3,6,6,6,6,3,3,3,3],"follow":false,"sevenths":false,"glide":0,"pitch":0,"tempo":145,"swing":0,"drone":12,"droneVoice":"saw","droneNote":"root","drive":8,"age":5,"fb":0,"phase":30,"cutoff":70,"reso":25,"vol":78,"dlyDiv":3,"dlyFb":40,"dlyMix":30,"verbType":"plate","verbSize":40,"verbMix":22,"mod":{"wave":"tri","target":"cutoff","rate":30,"depth":16},"mod2":{"wave":"tri","target":"level","rate":24,"depth":5},"layers":[
+{"role":"bass","voice":"square","pattern":"up","div":1,"oct":1,"shape":30,"level":78,"on":true},
+{"role":"arp","voice":"saw","pattern":"updown","div":2,"oct":2,"shape":45,"level":62,"on":true},
+{"role":"lead","voice":"pluck","pattern":"random","div":2,"oct":3,"shape":50,"level":50,"on":true}]},
+/* commissioned: as close to pure drone as the machine goes — every part off, the strings hold the floor */
+'soft_dim_horizon':{"v":1,"circuit":"mk2","key":2,"scale":"minor","chord":[62,65,69],"degree":0,"seq":[],"seqOff":[],"seqMode":"mel","progSeq":[],"follow":false,"sevenths":false,"glide":0,"pitch":0,"tempo":40,"swing":0,"drone":65,"drive":0,"age":30,"cutoff":55,"reso":8,"fb":0,"vol":90,"dlyDiv":4,"dlyFb":30,"dlyMix":81,"phase":20,"verbType":"dark","verbSize":80,"verbMix":50,"mod":{"wave":"chaos","target":"cutoff","rate":3,"depth":85},"mod2":{"wave":"chaos","target":"pitch","rate":30,"depth":60},"droneVoice":"saw","droneNote":"root","layers":[{"role":"bass","voice":"saw","pattern":"random","div":2,"oct":4,"shape":100,"level":90,"on":true,"len":0},{"role":"arp","voice":"glass","pattern":"updown","div":3,"oct":2,"shape":70,"level":40,"on":false,"len":0},{"role":"lead","voice":"glass","pattern":"up","div":4,"oct":3,"shape":80,"level":35,"on":false,"len":0}]}
+};
+const BANK_KEY='am1.patches';
+function readBank(){try{return JSON.parse(localStorage.getItem(BANK_KEY))||{}}catch(e){return{}}}
+function writeBank(b){try{localStorage.setItem(BANK_KEY,JSON.stringify(b));return true}catch(e){return false}}
+function dispName(n){
+  const cap=w=>w?w[0].toUpperCase()+w.slice(1):w;
+  const i=n.indexOf('_');
+  if(i<0)return cap(n);
+  return cap(n.slice(0,i))+', '+n.slice(i+1).split('_').map(cap).join(' ');
+}
+function refreshPatchList(sel){
+  const s=document.getElementById('patchList'),b=readBank();
+  s.innerHTML='<option value="">\u2014 patches \u2014</option>';
+  const gf=document.createElement('optgroup');gf.label='factory';
+  /* gnarl sinks to the bottom — the hellish shelf closes the list */
+  Object.keys(FACTORY).sort((a,b)=>((a.startsWith('gnarl_')?1:0)-(b.startsWith('gnarl_')?1:0))||a.localeCompare(b))
+    .forEach(n=>{const o=document.createElement('option');o.value='f:'+n;o.textContent=dispName(n);gf.appendChild(o)});
+  s.appendChild(gf);
+  const names=Object.keys(b).sort();
+  if(names.length){
+    const gs=document.createElement('optgroup');gs.label='saved';
+    names.forEach(n=>{const o=document.createElement('option');o.value='s:'+n;o.textContent=n;gs.appendChild(o)});
+    s.appendChild(gs);
+  }
+  if(sel)s.value=sel;
+}
+document.getElementById('btnPSave').onclick=()=>{
+  const n=document.getElementById('patchName').value.trim();
+  if(!n){stat('name the patch first');return}
+  const norm=n.toLowerCase().replace(/,\s*/g,'_').replace(/\s+/g,'_');
+  if(FACTORY[norm]||FACTORY[n]){stat('factory patch \u2014 save under a new name');return}
+  const b=readBank();b[n]=serializePatch();
+  stat(writeBank(b)?('saved \u00b7 '+n):'storage unavailable \u2014 use export');
+  activeSel='s:'+n;refreshPatchList(activeSel);
+};
+let activeSel='';   /* which patch-list entry the session is living on */
+document.getElementById('patchList').onchange=e=>{
+  const v=e.target.value;if(!v)return;activeSel=v;
+  const n=v.slice(2);
+  if(v[0]==='f'&&FACTORY[n]){
+    applyPatch(JSON.parse(JSON.stringify(FACTORY[n])));
+    document.getElementById('patchName').value=dispName(n);stat('loaded \u00b7 '+dispName(n));
+  }else{
+    const b=readBank();
+    if(b[n]){applyPatch(b[n]);document.getElementById('patchName').value=n;stat('loaded \u00b7 '+n)}
+  }
+};
+document.getElementById('btnPDel').onclick=()=>{
+  const sl=document.getElementById('patchList'),v=sl.value;
+  if(!v){stat('pick a patch to delete');return}
+  if(v[0]==='f'){stat('factory patches stay');return}
+  const n=v.slice(2);
+  const b=readBank();delete b[n];writeBank(b);
+refreshPatchList();stat('deleted \u00b7 '+n);
+};
+document.getElementById('btnPExport').onclick=()=>{
+  const n=document.getElementById('patchName').value.trim()||'patch';
+  const blob=new Blob([JSON.stringify(serializePatch(),null,1)],{type:'application/json'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);
+  a.download='AM1_'+n.replace(/\W+/g,'_')+'.json';
+  document.body.appendChild(a);a.click();a.remove();
+  stat('exported \u00b7 '+n);
+};
+document.getElementById('btnPImport').onclick=()=>document.getElementById('fileImport').click();
+document.getElementById('fileImport').onchange=async e=>{
+  const f=e.target.files[0];if(!f)return;
+  try{
+    const j=JSON.parse(await f.text());
+    applyPatch(j);
+    const n=(f.name.replace(/^AM1_/,'').replace(/\.json$/i,'').replace(/_/g,' ').trim())||'imported';
+    const b=readBank();b[n]=j;writeBank(b);
+    document.getElementById('patchName').value=n;
+    refreshPatchList('s:'+n);stat('imported \u00b7 '+n);
+  }catch(err){stat('bad patch file')}
+  e.target.value='';
+};
+/* The dice — a pure function rolling a complete LEGAL patch. The
+   rails: part 1 stays bass (a floor survives), free scale never dealt,
+   feedback ≤30 (the scream is chosen, not imposed), your output level
+   and seq preserved, 'deep' rolls (~1 in 5) go slow/dark/washed.
+   Sevenths ~30%. Fuzzed 300 rolls in the suite: every roll in scale,
+   in range. Chaos with a constitution. */
+function rollAnomaly(){
+  const r=(a,b)=>a+Math.random()*(b-a),ri=(a,b)=>Math.round(r(a,b)),pick=arr=>arr[(Math.random()*arr.length)|0];
+  const key=ri(0,11),scale=pick(['minor','dorian','phrygian','major','lydian','harm minor']);
+  const iv=SCALES[scale],n=iv.length,d=ri(0,6);
+  const pk=k=>60+key+iv[(d+k)%n]+12*Math.floor((d+k)/n);
+  const sev=Math.random()<0.3;
+  const patt=()=>pick(state.seq.length?['up','down','updown','random','seq','rev']:['up','down','updown','random']);
+  const deep=Math.random()<0.18;                     /* the slow rolls */
+  const onCount=pick([3,3,3,2,2,1]);                 /* trio, duet, or solo */
+  const onSet=[0,1,2].sort(()=>Math.random()-0.5).slice(0,onCount);
+  const j={v:1,key,scale,chord:sev?[pk(0),pk(2),pk(4),pk(6)]:[pk(0),pk(2),pk(4)],degree:d,seq:state.seq,follow:state.follow,sevenths:sev,
+    glide:deep?ri(25,65):(Math.random()<0.5?0:ri(10,55)),pitch:state.pitch,
+    tempo:deep?ri(10,35):ri(60,150),
+    swing:deep?0:(Math.random()<0.25?ri(20,60):0),
+    drone:Math.random()<0.75?0:ri(12,55),
+    drive:deep?ri(0,10):ri(0,16),cutoff:ri(40,85),reso:ri(5,60),fb:ri(0,30),age:deep?ri(35,80):ri(10,60),vol:state.vol,
+    dlyDiv:pick([2,3,4]),dlyFb:deep?ri(40,70):ri(20,60),dlyMix:deep?ri(20,45):ri(10,40),
+    phase:Math.random()<(deep?0.55:0.3)?ri(20,70):0,
+    verbType:deep?pick(['hall','dark','dark','plate']):pick(['hall','plate','spring','dark']),
+    verbSize:deep?ri(55,90):ri(25,80),verbMix:deep?ri(25,45):ri(10,40),
+    mod:{wave:pick(['tri','saw','sqr','rnd','chaos']),target:pick(['cutoff','shape','drive','verb','reso']),
+      rate:deep?ri(5,30):ri(10,70),depth:ri(0,50)},
+    mod2:{wave:pick(['tri','saw','sqr','rnd','chaos']),target:pick(['pitch','delay','level','feedbk','phase']),
+      rate:deep?ri(5,25):ri(10,55),depth:ri(0,35)},
+    droneVoice:pick(['saw','saw','square','sine','strings','choir']),
+    droneNote:pick(['root','root','root','fifth','high']),
+    layers:[0,1,2].map(i=>({role:i===0?'bass':pick(['bass','arp','lead']),
+      voice:pick(['saw','square','glass','bell','pluck']),pattern:patt(),
+      len:Math.random()<0.25?pick([5,7,9,11]):0,
+      div:pick([1,2,3,4]),oct:ri(1,3),
+      shape:deep?ri(65,100):ri(5,95),level:i===0?ri(60,88):ri(35,80),on:onSet.includes(i)}))};
+  return j;
+}
+/* The dice keeps a logbook: every roll is remembered (last 16), and
+   BACK walks to the one you blew past. Back returns the ROLL as dealt
+   — tweaks made between rolls are not recorded (save does that). */
+const rollHist=[];let histPos=-1;
+document.getElementById('btnAnomaly').onclick=()=>{
+  const j=rollAnomaly();
+  rollHist.push(j);if(rollHist.length>16)rollHist.shift();
+  histPos=rollHist.length-1;
+  applyPatch(j);stat('anomaly');
+};
+{const bb=document.getElementById('btnBack');if(bb)bb.onclick=()=>{
+  if(histPos<=0){stat(histPos<0?'no rolls yet':'no earlier rolls');return}
+  histPos--;applyPatch(rollHist[histPos]);
+  stat('anomaly · '+(rollHist.length-1-histPos)+' back');
+};}
+/* INIT: true zero — not the boot patch but NOTHING: parts off, effects
+   dry, drive/feedback/drone at 0, filter wide open, seq wiped, C minor
+   armed and waiting. The one deliberate non-zero is OUTPUT — a silent
+   init reads as a broken machine. Build up from silence. */
+document.getElementById('btnInit').onclick=()=>{
+  const j={v:1,key:0,scale:'minor',degree:0,seq:[],follow:false,sevenths:false,
+    glide:0,pitch:0,tempo:120,swing:0,drone:0,drive:0,fb:0,cutoff:100,reso:0,vol:80,
+    dlyDiv:3,dlyFb:0,dlyMix:0,verbType:'hall',verbSize:40,verbMix:0,
+    mod:{wave:'tri',target:'cutoff',rate:25,depth:0},
+    mod2:{wave:'tri',target:'pitch',rate:20,depth:0},
+    droneVoice:'saw',droneNote:'root',
+    layers:['bass','arp','lead'].map(r=>({role:r,voice:'saw',pattern:'up',div:1,oct:1,shape:30,level:70,on:false}))};
+  applyPatch(j);setChordFromDegree(0);
+  document.getElementById('patchName').value='';
+  stat('init · silence');
+};
+refreshPatchList();
+/* ============ boot ============ */
+const ACTIVE_KEY='am1.active',ERA_KEY='am1.era';
+let booted=false;
+try{
+  const a=localStorage.getItem(ACTIVE_KEY);
+  if(a){
+    const j=JSON.parse(a);
+    /* only the named {n,p} format restores — a nameless blob can't tell
+       the patches section the truth, so it's treated as no session */
+    if(j&&j.p&&j.n){
+      applyPatch(j.p);
+      activeSel=j.n;refreshPatchList(j.n);
+      const rn=j.n.slice(2);
+      document.getElementById('patchName').value=j.n[0]==='f'?dispName(rn):rn;
+      stat('session restored');booted=true;
+    }
+  }
+}catch(e){}
+if(!booted){
+  try{
+    applyPatch(JSON.parse(JSON.stringify(FACTORY['berlin_bees'])));
+    activeSel='f:berlin_bees';refreshPatchList(activeSel);
+    document.getElementById('patchName').value=dispName('berlin_bees');stat(dispName('berlin_bees'));
+  }catch(e){
+    drawLayers();setChordFromDegree(0);seqShow();
+  }
+  try{const er=localStorage.getItem(ERA_KEY);
+    if(er==='mk1'||er==='mk2'){state.circuit=er;refreshUI();applyMaster()}
+  }catch(e){}
+}
+function persistSession(){
+  try{
+    localStorage.setItem(ACTIVE_KEY,JSON.stringify({n:activeSel,p:serializePatch()}));
+    localStorage.setItem(ERA_KEY,state.circuit);
+  }catch(e){}
+}
+setInterval(persistSession,3000);
+window.addEventListener('pagehide',persistSession);

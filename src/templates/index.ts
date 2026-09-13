@@ -249,6 +249,7 @@ const loaders: Record<string, () => Promise<{ default: TemplateDefinition }>> = 
   'pptist-app': () => import('./pptist-app'),
   'wick-editor-app': () => import('./wick-editor-app'),
   'bentopdf-app': () => import('./bentopdf-app'),
+  'am-1-app': () => import('./am-1-app'),
   'underrun-app': () => import('./underrun-app'),
   'playcanvas-editor-app': () => import('./playcanvas-editor-app'),
   'blockbench-app': () => import('./blockbench-app'),

@@ -9,6 +9,7 @@ const NATIVE_TEMPLATES = {
   'pptist-app': 'pptist',
   'wick-editor-app': 'wick-editor',
   'bentopdf-app': 'bentopdf',
+  'am-1-app': 'am-1',
   'opencut-app': 'opencut',
   'playcanvas-editor-app': 'playcanvas-editor',
   'openmosh-app': 'openmosh',
@@ -44,6 +45,10 @@ export function isWickEditor(crux: { meta?: Record<string, unknown> } | null | u
 
 export function isBentoPDF(crux: { meta?: Record<string, unknown> } | null | undefined) {
   return crux?.meta?.template === 'bentopdf-app';
+}
+
+export function isAM1(crux: { meta?: Record<string, unknown> } | null | undefined) {
+  return crux?.meta?.template === 'am-1-app';
 }
 
 export function isPPTist(crux: { meta?: Record<string, unknown> } | null | undefined) {

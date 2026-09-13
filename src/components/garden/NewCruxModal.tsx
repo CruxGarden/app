@@ -412,6 +412,16 @@ const TEMPLATES: Template[] = [
     desktopOnly: true,
   },
   {
+    id: 'am-1-app',
+    label: 'AM-1',
+    description: 'Music · a three-part Berlin-school arpeggio instrument, the AM-1 Arpeggio Machine',
+    defaultTitle: 'My arpeggio',
+    icon: <LayoutIcon />,
+    thumb: <BlankThumb />,
+    kind: 'webapp',
+    desktopOnly: true,
+  },
+  {
     id: 'bentopdf-app',
     label: 'BentoPDF',
     description: 'Productivity · merge, split, edit, sign and convert PDFs with BentoPDF',

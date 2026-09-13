@@ -1,0 +1,469 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>AM-1 · ARPEGGIO MACHINE</title>
+<style>
+:root{
+  --bg:#131212;--panel:#1b1a19;--panel2:#232221;--hair:#37342f;
+  --t:#d6d1c7;--dim:#867f74;--faint:#524e46;
+  --led:#c8102e;--led-pale:#e8a1a8;--amber:#e0a43c;--amber-dim:#8a6a2c;
+  --cream:#e8dfc8;--cream-line:rgba(232,223,200,0.16);
+  --bevel-lt:rgba(255,250,240,0.05);--bevel-dk:rgba(0,0,0,0.5);
+}
+*{box-sizing:border-box}
+html{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+button,select,.kb,.kb *,.deg,#seqbar,#seqbar *{-webkit-user-select:none;user-select:none}
+html,body{margin:0;color:var(--t);
+  background:var(--bg) repeating-linear-gradient(0deg,rgba(255,250,240,0.01) 0 1px,transparent 1px 3px);
+  font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13px}
+.wrap{max-width:1060px;margin:0 auto;padding:20px 16px 60px}
+header{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;row-gap:8px;padding-bottom:10px;
+  border-bottom:1px solid var(--hair);
+  box-shadow:0 1px 0 var(--bevel-lt);}
+header h1,.plate b{color:var(--cream)}
+header h1{font-size:15px;letter-spacing:.28em;margin:0;font-weight:600}
+header .sub{color:var(--dim);font-size:11px;letter-spacing:.14em;text-transform:uppercase}
+header .run{margin-left:auto;display:flex;gap:8px;align-items:center}
+button{color:var(--t);border:1px solid var(--hair);border-radius:3px;
+  background:linear-gradient(180deg,#292826,#201e1c);
+  box-shadow:inset 0 1px 0 var(--bevel-lt),0 1px 2px var(--bevel-dk);
+  font:inherit;letter-spacing:.1em;text-transform:uppercase;font-size:11px;padding:7px 14px;cursor:pointer}
+button:active{box-shadow:inset 0 2px 4px var(--bevel-dk);transform:translateY(0.5px)}
+button:hover{border-color:var(--dim)}
+button[aria-pressed="true"]{background:#3a2226;border-color:var(--led);color:var(--led-pale);box-shadow:inset 0 1px 0 rgba(255,180,170,0.08)}
+button.anomaly{border-color:var(--amber-dim);color:var(--amber);text-shadow:0 0 7px rgba(224,164,60,0.5)}
+button.big{padding:9px 22px}
+.plate{margin:14px 0 18px;border:1px solid var(--hair);border-radius:3px;background:var(--panel);
+  padding:9px 12px;color:var(--dim);font-size:11px;letter-spacing:.08em;display:flex;gap:18px;flex-wrap:wrap}
+.plate b{color:var(--t);font-weight:600}
+/* keyboard + degrees */
+.kbrow{display:flex;gap:16px;flex-wrap:wrap;align-items:flex-start;margin-bottom:18px}
+.kbstack{flex:none;width:334px}
+#seqbar{display:flex;gap:2px;margin:8px 0 0;width:334px;flex:none}
+#seqbar .c{flex:1;height:20px;border:1px solid #2c2a26;border-radius:2px;background:#0e0d0c;box-shadow:inset 0 1px 3px rgba(0,0,0,0.6);
+  position:relative;cursor:pointer;font:9px/20px ui-monospace,Menlo,monospace;text-align:center;
+  color:#6a6a6a;letter-spacing:-0.3px;user-select:none;padding:0}
+#seqbar .c.note{background:linear-gradient(180deg,#463b28,#382e1e);border-color:#7a6640;color:#efe3c4;box-shadow:inset 0 1px 0 rgba(255,245,225,0.11)}
+#seqbar .c.off{background:#181818;border-color:#4a4034;color:#5c5348}
+#seqbar .c.rest{background:#1b1b1b;color:#3a3a3a}
+#seqbar .c.plive{background:#3a2226;border-color:var(--led);color:var(--led-pale);box-shadow:inset 0 1px 0 rgba(255,180,170,0.08)}
+#seqbar .c.empty{cursor:default;opacity:0.45}
+#seqbar .c .m{position:absolute;left:1px;right:1px;height:2px;border-radius:1px;opacity:0.95}
+#seqbar .c .m0{top:-1px;background:#c96}
+#seqbar .c .m1{top:4px;background:#9ad}
+#seqbar .c .m2{bottom:-1px;background:#b8a}
+@keyframes standby{0%,100%{box-shadow:0 0 0 0 rgba(255,64,48,0);background:var(--panel2)}50%{box-shadow:0 0 10px 2px rgba(255,64,48,0.55);background:#3a2226}}
+.standby{animation:standby 2.2s ease-in-out infinite}
+input[type="range"]{-webkit-appearance:none;appearance:none;background:transparent;height:18px}
+input[type="range"]::-webkit-slider-runnable-track{height:5px;border-radius:3px;
+  background:#0e0d0c;box-shadow:inset 0 1px 2px rgba(0,0,0,0.7),0 1px 0 var(--bevel-lt)}
+input[type="range"]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;margin-top:-4.5px;border-radius:50%;
+  background:radial-gradient(circle at 35% 30%,#454340,#292826 65%);border:1px solid #474441;
+  box-shadow:0 1px 2px rgba(0,0,0,0.6),inset 0 1px 0 rgba(255,250,240,0.14)}
+input[type="range"]::-moz-range-track{height:5px;border-radius:3px;background:#0e0d0c;box-shadow:inset 0 1px 2px rgba(0,0,0,0.7)}
+input[type="range"]::-moz-range-thumb{width:13px;height:13px;border-radius:50%;
+  background:radial-gradient(circle at 35% 30%,#454340,#292826 65%);border:1px solid #474441}
+output{color:var(--amber);text-shadow:0 0 6px rgba(224,164,60,0.3)}
+footer.pageFoot{margin-top:26px;padding-top:14px;border-top:1px solid var(--hair);
+  box-shadow:0 1px 0 var(--bevel-lt) inset;display:flex;gap:16px;align-items:center;flex-wrap:wrap;
+  font-size:11px;letter-spacing:.06em}
+footer.pageFoot a{color:var(--amber);text-decoration:none;text-shadow:0 0 6px rgba(224,164,60,0.25)}
+footer.pageFoot a:hover{text-decoration:underline}
+.footContact{display:inline-flex;align-items:center;gap:10px}
+.ghLink{display:inline-flex;align-items:center;color:var(--dim)}
+.ghLink:hover{color:var(--amber)}
+.ghLink svg{width:17px;height:17px;fill:currentColor}
+footer.pageFoot .footNote{margin-left:auto;color:var(--dim)}
+footer.pageFoot form{display:flex;gap:8px}
+footer.pageFoot input[type="email"]{background:var(--panel2);border:1px solid var(--hair);border-radius:3px;
+  color:var(--t);font:inherit;font-size:11px;padding:6px 9px;width:190px;
+  box-shadow:inset 0 1px 2px rgba(0,0,0,0.4)}
+footer.pageFoot input[type="submit"]{background:linear-gradient(180deg,#292826,#201e1c);color:var(--t);
+  border:1px solid var(--hair);border-radius:3px;font:inherit;font-size:11px;letter-spacing:.1em;
+  text-transform:uppercase;padding:6px 12px;cursor:pointer;box-shadow:inset 0 1px 0 var(--bevel-lt)}
+#manual{position:fixed;top:0;right:0;bottom:0;width:400px;z-index:50;overflow-y:auto;
+  background:linear-gradient(180deg,#1d1c1a,var(--panel));border-left:1px solid var(--hair);
+  box-shadow:-10px 0 28px rgba(0,0,0,0.55);padding:18px 22px 40px;
+  transform:translateX(105%);transition:transform .22s ease}
+body.manualOpen #manual{transform:none}
+@media (min-width:1500px){body.manualOpen .wrap{margin-right:calc((100% - 1060px)/2 + 210px)}}
+/* —— the 1983 tube (class on <html>, synced to the circuit) —— */
+html.crt83 body{filter:blur(0.3px);text-shadow:0 0 1.5px currentColor}
+html.crt83 body::before,html.crt83 body::after{content:"";position:fixed;pointer-events:none}
+html.crt83 body::before{top:0;left:0;width:100%;height:2px;z-index:99999;
+  background:rgba(0,0,0,0.22);animation:crtSweep 24s linear infinite}
+html.crt83 body::after{inset:0;z-index:99998;
+  background:linear-gradient(to bottom,transparent 50%,rgba(0,0,0,0.14) 51%);
+  background-size:100% 4px;animation:crtGrid 2s steps(60) infinite}
+html.crt83::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:100000;
+  border-radius:12px;box-shadow:inset 0 0 50px 10px rgba(0,0,0,0.3);
+  background:radial-gradient(ellipse 90% 80% at center,transparent 0%,transparent 70%,rgba(0,0,0,0.08) 85%,rgba(0,0,0,0.2) 100%)}
+@keyframes crtSweep{0%{transform:translate3d(0,-100%,0)}100%{transform:translate3d(0,100vh,0)}}
+@keyframes crtGrid{0%{background-position:0 0}100%{background-position:0 4px}}
+@media (prefers-reduced-motion:reduce){
+  html.crt83 body::before{display:none}
+  html.crt83 body::after{animation:none}
+}
+.manualX{position:absolute;top:10px;right:12px;padding:3px 10px;font-size:13px;line-height:1}
+#manual h3{font-size:11px;letter-spacing:.22em;color:var(--cream);text-transform:uppercase;
+  margin:18px 0 6px;border-bottom:1px solid var(--cream-line);padding-bottom:4px}
+#manual h3:first-child{margin-top:2px}
+#manual p{font-size:12px;line-height:1.55;color:var(--t);margin:6px 0}
+#manual b{color:var(--cream);font-weight:600}
+#manual .k{color:var(--amber)}
+html{overflow-x:hidden}
+.wrap{position:relative}
+.wrap::before,.wrap::after{content:"";position:absolute;top:10px;bottom:10px;width:26px;
+  background:
+    linear-gradient(90deg,rgba(255,240,210,0.10),rgba(0,0,0,0.28) 30%,rgba(0,0,0,0.05) 55%,rgba(0,0,0,0.4)),
+    repeating-linear-gradient(90deg,#46321f 0 2px,#3a2a1a 2px 5px,#412e1c 5px 7px),
+    repeating-linear-gradient(88deg,rgba(0,0,0,0.18) 0 1px,transparent 1px 11px),
+    #3a2a1a;
+  box-shadow:inset 0 0 8px rgba(0,0,0,0.55),0 2px 8px rgba(0,0,0,0.5)}
+.wrap::before{left:-30px;border-radius:7px 0 0 7px}
+.wrap::after{right:-30px;border-radius:0 7px 7px 0;
+  background:
+    linear-gradient(90deg,rgba(0,0,0,0.4),rgba(0,0,0,0.05) 45%,rgba(0,0,0,0.28) 70%,rgba(255,240,210,0.10)),
+    repeating-linear-gradient(90deg,#46321f 0 2px,#3a2a1a 2px 5px,#412e1c 5px 7px),
+    repeating-linear-gradient(92deg,rgba(0,0,0,0.18) 0 1px,transparent 1px 11px),
+    #3a2a1a}
+@media (max-width:1150px){.wrap::before,.wrap::after{display:none}}
+@media (max-width:720px){
+  .wrap{padding:14px 10px 48px}
+  header h1{font-size:20px}
+  #manual{width:100vw;border-left:none;padding:16px 16px 40px}
+  body.manualOpen .wrap{margin-right:0}
+  footer.pageFoot{flex-direction:column;align-items:flex-start;gap:10px}
+  .footContact{display:inline-flex;align-items:center;gap:10px}
+.ghLink{display:inline-flex;align-items:center;color:var(--dim)}
+.ghLink:hover{color:var(--amber)}
+.ghLink svg{width:17px;height:17px;fill:currentColor}
+footer.pageFoot .footNote{margin-left:0}
+  footer.pageFoot form{width:100%}
+  footer.pageFoot input[type="email"]{flex:1;width:auto}
+  input[type="range"]::-webkit-slider-thumb{width:18px;height:18px;margin-top:-6.5px}
+  input[type="range"]::-moz-range-thumb{width:17px;height:17px}
+  button{padding:8px 12px}
+  .ctl label{width:64px}
+  .deg{min-width:38px}
+  #patchName{width:110px}
+  #patchList{max-width:46vw}
+  .tools{gap:6px}
+  .row{flex-wrap:wrap;row-gap:8px}
+  header #btnManual,header .stat,header #btnInit,header #btnBounce,header .hdrDiv{display:none}
+  input[type="text"],input[type="email"],select{font-size:16px}
+  button{min-height:40px}
+  .layer,.master{padding:10px 10px}
+  .kbrow{gap:10px}
+  .ctl{gap:8px}
+  #manual p{font-size:13px;line-height:1.6}
+}
+@media (max-width:359px){
+  .kb{transform:scale(0.85);transform-origin:left top;margin-bottom:-14px}
+}
+.hdrDiv{display:inline-block;width:1px;height:18px;background:var(--hair);margin:0 8px;vertical-align:middle}
+header select#circuitSel{background:linear-gradient(180deg,#292826,#201e1c);border:1px solid var(--hair);border-radius:3px;color:var(--amber);font:inherit;font-size:11px;padding:4px 6px;text-shadow:0 0 6px rgba(224,164,60,0.35);box-shadow:inset 0 1px 0 var(--bevel-lt)}
+.kb{position:relative;height:96px;width:334px;flex:none}
+.kb .wk{position:absolute;top:0;width:46px;height:96px;border:1px solid var(--hair);
+  border-radius:0 0 4px 4px;cursor:pointer;
+  background:linear-gradient(180deg,#282624,#21201e);
+  box-shadow:inset 0 1px 0 var(--bevel-lt),inset 0 -3px 5px rgba(0,0,0,0.35)}
+.kb .wk.on{background:#3a2226;border-color:var(--led)}
+.kb .bk{position:absolute;top:0;width:28px;height:58px;border:1px solid #232120;
+  border-radius:0 0 3px 3px;z-index:2;cursor:pointer;
+  background:linear-gradient(180deg,#121110,#0a0909);
+  box-shadow:inset 0 1px 0 rgba(255,250,240,0.04),0 2px 3px rgba(0,0,0,0.5)}
+.kb .bk.on{background:#471a20;border-color:var(--led)}
+.kb .lbl{position:absolute;bottom:4px;width:100%;text-align:center;color:var(--faint);font-size:9px;pointer-events:none}
+.degrees{display:flex;flex-direction:column;gap:8px}
+.degrees .row{display:flex;gap:6px}
+.deg{min-width:44px}
+.selrow{display:flex;gap:10px;flex-wrap:wrap;row-gap:8px;align-items:center;color:var(--dim);font-size:11px;letter-spacing:.1em}
+select{background:var(--panel2);color:var(--t);border:1px solid var(--hair);border-radius:3px;font:inherit;font-size:11px;padding:5px 6px}
+/* layers */
+.layers{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:12px}
+.layer,.master{border:1px solid var(--hair);border-radius:4px;padding:12px 14px;
+  background:
+    repeating-linear-gradient(90deg,rgba(255,250,240,0.013) 0 1px,transparent 1px 4px),
+    linear-gradient(180deg,#201e1c,var(--panel));
+  box-shadow:inset 0 1px 0 var(--bevel-lt),inset 0 -1px 0 rgba(0,0,0,0.35),0 2px 5px var(--bevel-dk)}
+.layer h2,.master h2{margin:0 0 10px;font-size:11px;letter-spacing:.24em;color:var(--cream);font-weight:600;
+  text-shadow:0 1px 1px rgba(0,0,0,0.6);
+  border-bottom:1px solid var(--cream-line);padding-bottom:6px;
+  display:flex;align-items:center;gap:8px}
+.led{width:8px;height:8px;border-radius:50%;background:#2a2f32;flex:none;transition:background .04s}
+.led.hot{background:var(--led);box-shadow:0 0 6px var(--led)}
+.ctl{display:flex;align-items:center;gap:10px;margin:7px 0}
+.ctl label{width:74px;color:var(--dim);font-size:11px;letter-spacing:.1em;text-transform:uppercase;flex:none}
+.ctl input[type=range]{flex:1;accent-color:var(--led);min-width:0}
+.ctl output{width:44px;text-align:right;color:var(--t);font-variant-numeric:tabular-nums;font-size:11px;flex:none}
+.ctl .seg{display:flex;gap:4px;flex:1}
+.seg button{flex:1;padding:5px 2px;font-size:10px}
+.master{margin-top:12px}
+.master.harmony{background:linear-gradient(180deg,#151414,#121110);border-color:#3e3a33;margin-bottom:14px}
+.master.harmony .kbrow{margin-bottom:0;justify-content:space-between}
+.mgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:4px 26px}
+.tools{margin-top:16px;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.tools .stat{max-width:38vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-left:auto;color:var(--dim);font-size:11px;letter-spacing:.1em;min-height:16px}
+.note{margin-top:22px;color:var(--faint);font-size:11px;line-height:1.7;border-top:1px solid var(--hair);padding-top:12px}
+.note b{color:var(--dim)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>AM-1</h1><span class="sub">arpeggio machine</span>
+    <button id="btnManual" aria-pressed="false" style="padding:4px 10px;font-size:10px">manual</button>
+    <div class="run">
+      <span class="stat" id="stat">—</span>
+      <span class="hdrDiv" aria-hidden="true"></span>
+      <button id="btnInit">init</button>
+      <button id="btnBounce" aria-pressed="false">record</button>
+      <span class="hdrDiv" aria-hidden="true"></span>
+      <select id="circuitSel" aria-label="era">
+        <option value="mk1" selected>2026</option>
+        <option value="mk2">1983</option>
+      </select>
+      <button id="btnAnomaly" class="anomaly">anomaly</button>
+      <span class="led" id="runLed"></span>
+      <button class="big" id="btnRun" aria-pressed="false">run</button>
+    </div>
+  </header>
+
+  <div class="master">
+    <h2>PATCHES</h2>
+    <div class="tools" style="margin-top:0">
+      <input type="text" id="patchName" placeholder="patch name"
+        style="background:var(--panel2);border:1px solid var(--hair);border-radius:3px;color:var(--t);font:inherit;font-size:11px;padding:6px 8px;width:140px">
+      <button id="btnPSave">save</button>
+      <select id="patchList"></select>
+      <button id="btnPDel">delete</button>
+      <button id="btnPExport">export</button>
+      <button id="btnPImport">import</button>
+      <input type="file" id="fileImport" accept=".json,application/json" hidden>
+    </div>
+  </div>
+
+  <div class="master harmony">
+    <h2 style="display:flex;align-items:baseline">HARMONY<span id="chordName" style="margin-left:auto;color:var(--t);font-weight:400;letter-spacing:.08em;text-transform:none">—</span></h2>
+  <div class="kbrow">
+    <div class="kbstack">
+      <div class="kb" id="kb"></div>
+      <div id="seqbar" title="the recorded seq — click a step to switch it off"></div>
+    </div>
+    <div class="degrees">
+      <div class="selrow">
+        key <select id="key"></select>
+        scale <select id="scale"></select>
+        <button id="btn7" aria-pressed="false">7ths</button>
+      </div>
+      <div class="row" id="degRow"></div>
+      <div class="row">
+        <button id="seqMode" aria-pressed="false" title="what seq rec writes">melody</button>
+        <button id="seqRec" aria-pressed="false">seq rec</button>
+        <button id="seqRest">rest</button>
+        <button id="seqClr">clear</button>
+        <button id="seqFollow" aria-pressed="false">follow</button>
+      </div>
+      <div class="row">
+        <span id="seqShow" style="color:var(--faint);font-size:10px;width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">—</span>
+      </div>
+    </div>
+  </div>
+  </div>
+
+  <div class="layers" id="layers"></div>
+
+  <div class="master">
+    <h2>DRONE</h2>
+    <div class="mgrid">
+      <div>
+        <div class="ctl"><label>voice</label>
+          <div class="seg" id="droneVoiceSeg">
+            <button data-v="saw" aria-pressed="true">saw</button>
+            <button data-v="square" aria-pressed="false">square</button>
+            <button data-v="sine" aria-pressed="false">sine</button>
+            <button data-v="strings" aria-pressed="false">strings</button>
+            <button data-v="choir" aria-pressed="false">choir</button>
+          </div></div>
+        <div class="ctl"><label>note</label>
+          <div class="seg" id="droneNoteSeg">
+            <button data-v="root" aria-pressed="true">root</button>
+            <button data-v="fifth" aria-pressed="false">fifth</button>
+            <button data-v="high" aria-pressed="false">high 8ve</button>
+          </div></div>
+      </div>
+      <div>
+        <div class="ctl"><label for="drone">amount</label><input type="range" id="drone" min="0" max="100" value="35"><output id="droneOut">35</output></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="master">
+    <h2>EFFECTS</h2>
+    <div class="mgrid">
+      <div>
+        <div class="ctl"><label>delay</label>
+          <div class="seg" id="dlyTimeSeg">
+            <button data-v="2" aria-pressed="false">1/8</button>
+            <button data-v="3" aria-pressed="true">dot 1/8</button>
+            <button data-v="4" aria-pressed="false">1/4</button>
+          </div>
+        </div>
+        <div class="ctl"><label for="dlyFb">feedback</label><input type="range" id="dlyFb" min="0" max="95" value="45"><output id="dlyFbOut">45</output></div>
+        <div class="ctl"><label for="dlyMix">mix</label><input type="range" id="dlyMix" min="0" max="100" value="30"><output id="dlyMixOut">30</output></div>
+        <div class="ctl"><label for="phase">phaser</label><input type="range" id="phase" min="0" max="100" value="0"><output id="phaseOut">0</output></div>
+      </div>
+      <div>
+        <div class="ctl"><label>reverb type</label>
+          <div class="seg" id="verbTypeSeg">
+            <button data-v="hall" aria-pressed="true">hall</button>
+            <button data-v="plate" aria-pressed="false">plate</button>
+            <button data-v="spring" aria-pressed="false">spring</button>
+            <button data-v="dark" aria-pressed="false">dark</button>
+          </div>
+        </div>
+        <div class="ctl"><label for="verbSize">reverb size</label><input type="range" id="verbSize" min="0" max="100" value="45"><output id="verbSizeOut">45</output></div>
+        <div class="ctl"><label for="verbMix">reverb mix</label><input type="range" id="verbMix" min="0" max="100" value="25"><output id="verbMixOut">25</output></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="master">
+    <h2>MOD</h2>
+    <div class="mgrid">
+      <div>
+        <div class="ctl"><label>wave</label>
+          <div class="seg" id="modWave">
+            <button data-v="tri" aria-pressed="true">tri</button>
+            <button data-v="saw" aria-pressed="false">saw</button>
+            <button data-v="sqr" aria-pressed="false">sqr</button>
+            <button data-v="rnd" aria-pressed="false">rnd</button>
+            <button data-v="chaos" aria-pressed="false">chaos</button>
+          </div></div>
+        <div class="ctl"><label>target</label>
+          <div class="seg" id="modTarget">
+            <button data-v="cutoff" aria-pressed="true">cutoff</button>
+            <button data-v="shape" aria-pressed="false">shape</button>
+            <button data-v="drive" aria-pressed="false">drive</button>
+            <button data-v="verb" aria-pressed="false">verb</button>
+            <button data-v="phase" aria-pressed="false">phase</button>
+            <button data-v="dlyfb" aria-pressed="false">regen</button>
+          </div></div>
+        <div class="ctl"><label for="modRate">rate</label><input type="range" id="modRate" min="0" max="100" value="25"><output id="modRateOut">25</output></div>
+        <div class="ctl"><label for="modDepth">depth</label><input type="range" id="modDepth" min="0" max="100" value="0"><output id="modDepthOut">0</output></div>
+      </div>
+      <div>
+        <div class="ctl"><label>wave 2</label>
+          <div class="seg" id="mod2Wave">
+            <button data-v="tri" aria-pressed="true">tri</button>
+            <button data-v="saw" aria-pressed="false">saw</button>
+            <button data-v="sqr" aria-pressed="false">sqr</button>
+            <button data-v="rnd" aria-pressed="false">rnd</button>
+            <button data-v="chaos" aria-pressed="false">chaos</button>
+          </div></div>
+        <div class="ctl"><label>target 2</label>
+          <div class="seg" id="mod2Target">
+            <button data-v="reso" aria-pressed="false">reso</button>
+            <button data-v="pitch" aria-pressed="true">pitch</button>
+            <button data-v="feedbk" aria-pressed="false">feedbk</button>
+            <button data-v="delay" aria-pressed="false">delay</button>
+            <button data-v="level" aria-pressed="false">level</button>
+            <button data-v="drone" aria-pressed="false">drone</button>
+          </div></div>
+        <div class="ctl"><label for="mod2Rate">rate 2</label><input type="range" id="mod2Rate" min="0" max="100" value="20"><output id="mod2RateOut">20</output></div>
+        <div class="ctl"><label for="mod2Depth">depth 2</label><input type="range" id="mod2Depth" min="0" max="100" value="0"><output id="mod2DepthOut">0</output></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="master">
+    <h2>MASTER</h2>
+    <div class="mgrid">
+      <div>
+        <div class="ctl"><label for="tempo">tempo</label><input type="range" id="tempo" min="5" max="180" value="112"><output id="tempoOut">112</output></div>
+        <div class="ctl"><label for="pitch">pitch</label><input type="range" id="pitch" min="-12" max="12" step="0.1" value="0"><output id="pitchOut">0.0</output></div>
+        <div class="ctl"><label for="swing">swing</label><input type="range" id="swing" min="0" max="100" value="0"><output id="swingOut">0</output></div>
+        <div class="ctl"><label for="drive">drive</label><input type="range" id="drive" min="0" max="100" value="15"><output id="driveOut">15</output></div>
+
+        <div class="ctl"><label for="age">entropy</label><input type="range" id="age" min="0" max="100" value="0"><output id="ageOut">0</output></div>
+      </div>
+      <div>
+        <div class="ctl"><label for="cutoff">cutoff</label><input type="range" id="cutoff" min="0" max="100" value="72"><output id="cutoffOut">72</output></div>
+        <div class="ctl"><label for="reso">resonance</label><input type="range" id="reso" min="0" max="100" value="18"><output id="resoOut">18</output></div>
+        <div class="ctl"><label for="fb">feedback</label><input type="range" id="fb" min="0" max="100" value="0"><output id="fbOut">0</output></div>
+        <div class="ctl"><label for="glide">glide</label><input type="range" id="glide" min="0" max="100" value="0"><output id="glideOut">0</output></div>
+        <div class="ctl"><label for="vol">output</label><input type="range" id="vol" min="0" max="100" value="80"><output id="volOut">80</output></div>
+      </div>
+    </div>
+  </div>
+
+
+  <footer class="pageFoot">
+    <span class="footContact"><a href="https://github.com/zacos-tech" class="ghLink" target="_blank" rel="noopener" aria-label="ZACOS on GitHub"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg></a>
+    <a href="mailto:oldman@zacos.tech" class="footer-email">oldman@zacos.tech</a></span>
+    <span class="footNote">Follow AM-1 hardware progress</span>
+    <form id="mcForm"
+      action="https://tech.us13.list-manage.com/subscribe/post?u=4c2e196117cdb095809f3bb3b&amp;id=f31692b207&amp;f_id=00de34e5f0"
+      method="post"
+      class="mailchimp-form"
+      target="_self"
+      novalidate
+    >
+      <input type="email" name="EMAIL" id="mce-EMAIL" placeholder="Email" required />
+      <input type="submit" value="Confirm" />
+      <div aria-hidden="true" style="position: absolute; left: -5000px;">
+        <input type="text" name="b_4c2e196117cdb095809f3bb3b_f31692b207" tabindex="-1" value="" />
+      </div>
+    </form>
+  </footer>
+</div>
+
+<aside id="manual" aria-label="manual">
+  <button id="manualClose" class="manualX" aria-label="close manual">×</button>
+  <h3>The Machine</h3>
+  <p>Three arpeggio parts share one clock at divisions /1 to /4. A drone plays under them. Every note comes from the current chord, and the chord comes from the selected key and scale. <span class="k">RUN</span> starts and stops the clock.</p>
+
+  <h3>Harmony</h3>
+  <p><b>KEY</b> and <b>SCALE</b> set the pitch set. Six scales are available, plus <b>free</b>, which is chromatic and does not snap. The <b>DEGREE</b> buttons move the whole ensemble to another chord in the key while it plays. <b>7THS</b> adds a seventh to every chord. Chords can also be latched from the keyboard. All input is snapped to the scale.</p>
+
+  <h3>Parts</h3>
+  <p>The three parts are <b>BASS</b>, <b>RYTM</b> and <b>LEAD</b>. Each part has a voice (saw, square, glass, bell, pluck), a pattern (up, down, updown, random, seq, rev), a clock division, an octave span, note <b>SHAPE</b>, and <b>LEVEL</b>. <b>LEN</b> sets loop length from 0 to 16. At 0 the pattern uses its natural length. Parts with unequal lengths drift out of phase and meet again. Hold <span class="k">1</span>, <span class="k">2</span> or <span class="k">3</span> to double a part’s rate.</p>
+
+  <h3>Sequencer</h3>
+  <p><b>SEQ REC</b> arms recording. In melody mode the keyboard enters up to 16 notes, and <b>REST</b> enters a gap. A part set to <b>seq</b> plays the recording. <b>rev</b> plays it backward. <b>FOLLOW</b> moves the recording with the degree buttons. In chords mode the degree buttons record a progression instead, and REST records a hold. While running, a recorded progression advances the harmony one step per whole note. Melody and progression run at the same time. Steps in the bar can be clicked on and off. The moving marks show where each part is.</p>
+
+  <h3>Drone</h3>
+  <p>Five voices: <b>saw</b>, <b>square</b>, <b>sine</b> (one octave up), <b>strings</b>, and <b>choir</b>. Strings is a saw pair through an ensemble circuit. Choir is a fixed vowel with slow vibrato. <b>NOTE</b> puts the drone on the root, the fifth, or a high octave. The drone follows KEY, PITCH, LFO 2 and ENTROPY.</p>
+
+  <h3>Effects</h3>
+  <p><b>DELAY</b> is a tempo-synced ping-pong. Repeats lose treble as they go. <b>REVERB</b> has four rooms: hall, plate, spring, dark. <b>PHASER</b> is a four-stage sweep. The left and right channels sweep a quarter cycle apart.</p>
+
+  <h3>Mod</h3>
+  <p>Two LFOs. <b>LFO 1</b> reaches audio rate and targets cutoff, shape, drive, reverb, phaser or regen (delay feedback). <b>LFO 2</b> is slower and targets resonance, pitch, feedback, delay, level or the drone level. Waves: tri, saw, square, random, <b>chaos</b>. Chaos follows a Lorenz attractor and never repeats. At rate 0 a cycle takes about thirty minutes.</p>
+
+  <h3>Master</h3>
+  <p><b>TEMPO</b> runs 5 to 180. <b>SWING</b> shifts every second pulse. <b>PITCH</b> transposes up to an octave either way without touching the clock. <b>GLIDE</b> slides between notes. <b>DRIVE</b> is clean transistor color at low settings, clipping in the upper range, and aliased at the top. <b>ENTROPY</b> loosens playback from 0 to 100. At 0 the machine is exact. At 100, pitch wanders past a semitone, notes scoop in late, and about one in five plays weak. Timing is not affected. <b>FEEDBACK</b> returns the output through a delay tuned to the key. Above about 90 it howls on the tonic. <b>CUTOFF</b> and <b>RESONANCE</b> are one filter over everything. <b>OUTPUT</b> is the volume.</p>
+
+  <h3>Era</h3>
+  <p>The year selects the circuit. <b>2026</b> has exact oscillators and symmetric drive. <b>1983</b> has pulse-width oscillators, free-run phase, and asymmetric drive with bias memory. In 1983 the display also takes on a CRT filter. Each patch stores its year.</p>
+
+  <h3>Anomaly</h3>
+  <p>Rolls a complete patch inside the current scale.</p>
+
+  <h3>Patches</h3>
+  <p>38 factory patches. Patches save by name and travel as JSON files through export and import. The session is stored automatically and comes back on the next visit, year included. <b>INIT</b> clears the machine to zero. <b>RECORD</b> captures the output to a WAV file.</p>
+
+  <h3>Keys</h3>
+  <p><span class="k">space</span> run/stop · <span class="k">T</span> tap tempo · <span class="k">1/2/3</span> hold to ratchet · <span class="k">REST</span> during recording.</p>
+
+  <h3>Texture</h3>
+  <p>Stratified ostinato polyphony over a pedal point: interlocking arpeggios over a drone.</p>
+</aside>
+
+<script src="garden/bridge.js"></script>
+<script>gardenBoot("am-1.js")</script>
+</body>
+</html>
