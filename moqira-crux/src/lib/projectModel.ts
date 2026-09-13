@@ -1,4 +1,4 @@
-import type { MockupProject, Wireframe } from '../types';
+import type { MockupProject, Wireframe } from "../types";
 
 export type ProjectChangeOptions = {
   groupKey?: string;
@@ -15,19 +15,18 @@ export const maxProjectHistoryEntries = 100;
 export type IdFactory = (prefix: string) => string;
 
 export function wireframeBackground(wireframe: Wireframe | undefined) {
-  return wireframe?.background ?? 'white';
+  return wireframe?.background ?? "white";
 }
 
 export function wireframeShowGrid(wireframe: Wireframe | undefined) {
   return wireframe?.showGrid ?? true;
 }
 
-export function createDefaultAppearance(): MockupProject['appearance'] {
+export function createDefaultAppearance(): MockupProject["appearance"] {
   return {
-    colorScheme: 'system',
-    accentColor: '#2563eb',
-    appFontFamily:
-      'Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+    colorScheme: "system",
+    accentColor: "#2563eb",
+    appFontFamily: 'Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
     appFontSize: 14,
     accentTitlebar: false,
   };
@@ -37,28 +36,26 @@ export function createEmptyWireframe(id: string, name: string): Wireframe {
   return {
     id,
     name,
-    background: 'white',
+    background: "white",
     showGrid: true,
     nodes: [],
   };
 }
 
 export function createDefaultProject(createId: IdFactory): MockupProject {
-  const firstWireframeId = createId('wireframe');
+  const firstWireframeId = createId("wireframe");
   return {
     schemaVersion: 1,
-    name: 'New Project',
+    name: "New Project",
     activeWireframeId: firstWireframeId,
     appearance: createDefaultAppearance(),
-    wireframes: [createEmptyWireframe(firstWireframeId, 'Wireframe 1')],
+    wireframes: [createEmptyWireframe(firstWireframeId, "Wireframe 1")],
   };
 }
 
 export function uniqueWireframeName(baseName: string, wireframes: Wireframe[]) {
-  const normalizedNames = new Set(
-    wireframes.map((wireframe) => wireframe.name.trim().toLowerCase()),
-  );
-  const cleanBaseName = baseName.trim() || 'Wireframe';
+  const normalizedNames = new Set(wireframes.map((wireframe) => wireframe.name.trim().toLowerCase()));
+  const cleanBaseName = baseName.trim() || "Wireframe";
   if (!normalizedNames.has(cleanBaseName.toLowerCase())) return cleanBaseName;
   for (let index = 2; ; index += 1) {
     const candidate = `${cleanBaseName} ${index}`;
@@ -68,22 +65,18 @@ export function uniqueWireframeName(baseName: string, wireframes: Wireframe[]) {
 
 export function createNextWireframe(wireframes: Wireframe[], createId: IdFactory): Wireframe {
   return createEmptyWireframe(
-    createId('wireframe'),
+    createId("wireframe"),
     uniqueWireframeName(`Wireframe ${wireframes.length + 1}`, wireframes),
   );
 }
 
-export function duplicateWireframe(
-  sourceWireframe: Wireframe,
-  wireframes: Wireframe[],
-  createId: IdFactory,
-): Wireframe {
+export function duplicateWireframe(sourceWireframe: Wireframe, wireframes: Wireframe[], createId: IdFactory): Wireframe {
   return {
-    id: createId('wireframe'),
+    id: createId("wireframe"),
     name: uniqueWireframeName(`${sourceWireframe.name} copy`, wireframes),
     background: wireframeBackground(sourceWireframe),
     showGrid: wireframeShowGrid(sourceWireframe),
-    nodes: sourceWireframe.nodes.map((node) => ({ ...node, id: createId('node') })),
+    nodes: sourceWireframe.nodes.map((node) => ({ ...node, id: createId("node") })),
   };
 }
 
@@ -92,7 +85,7 @@ export function projectSnapshot(project: MockupProject) {
 }
 
 export function dirtyProjectSnapshot(project: MockupProject) {
-  return projectSnapshot({ ...project, activeWireframeId: '' });
+  return projectSnapshot({ ...project, activeWireframeId: "" });
 }
 
 export function createProjectHistory(project: MockupProject): ProjectHistory {
