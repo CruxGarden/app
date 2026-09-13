@@ -392,6 +392,16 @@ const TEMPLATES: Template[] = [
     desktopOnly: true,
   },
   {
+    id: 'beepbox-app',
+    label: 'BeepBox',
+    description: 'Music · sketch melodies, patterns and chiptune songs with BeepBox',
+    defaultTitle: 'My tune',
+    icon: <LayoutIcon />,
+    thumb: <BlankThumb />,
+    kind: 'webapp',
+    desktopOnly: true,
+  },
+  {
     id: 'audiomass-app',
     label: 'AudioMass',
     description: 'Creative · waveform effects, recordings and multitrack audio',

@@ -108,6 +108,13 @@ export function getMockLanguageModel(): LanguageModel {
         // ── Glow Garden: the scripted collaborator across the game Cruxspace (GAME-CRUXSPACE-PLAN.md) ──
         const game = gameScript(prompt);
         if (game) return game;
+        if (lastUserText(prompt).includes('[beepbox:edit]')) {
+          const rounds = toolResultsThisTurn(prompt);
+          if (!rounds.length) return toolCallStream('inspect_beepbox', {});
+          if (rounds.length === 1) return toolCallStream('set_beepbox_tempo', { tempo: 140 });
+          if (rounds.length === 2) return toolCallStream('set_beepbox_key', { key: 'D' });
+          return textStream('Set the tempo to 140 and the key to D.');
+        }
         if (lastUserText(prompt).includes('[synth:edit]')) {
           const rounds = toolResultsThisTurn(prompt);
           if (!rounds.length) return toolCallStream('inspect_web_synth', {});

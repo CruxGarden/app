@@ -1,0 +1,25 @@
+{
+	"files": [ "../synth/index.ts" ],
+	"compilerOptions": {
+		"types": [],
+		"typeRoots": ["../node_modules/@types"],
+		"lib": ["es2018", "dom", "dom.iterable"],
+		"rootDir": "../",
+		"outDir": "../build",
+		"target": "es2016",
+		"module": "nodenext",
+		"moduleResolution": "nodenext",
+		"sourceMap": true,
+		"declaration": true,
+		"declarationMap": true,
+		"removeComments": true,
+		"noImplicitAny": true,
+		"noImplicitThis": true,
+		"strictNullChecks": true,
+		"strictFunctionTypes": true,
+		"strictBindCallApply": true,
+		"noImplicitReturns": true,
+		"noFallthroughCasesInSwitch": true,
+		"noUnusedLocals": true
+	}
+}

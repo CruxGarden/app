@@ -4,6 +4,7 @@ import { validateDocument } from '../../cardinal-crux/model.js';
 const NATIVE_TEMPLATES = {
   'kan-app': 'kan',
   'web-synth-app': 'web-synth',
+  'beepbox-app': 'beepbox',
   'opencut-app': 'opencut',
   'playcanvas-editor-app': 'playcanvas-editor',
   'openmosh-app': 'openmosh',
@@ -31,6 +32,10 @@ export function nativeAppType(crux: { meta?: Record<string, unknown> } | null | 
 
 export function isOpenMosh(crux: { meta?: Record<string, unknown> } | null | undefined) {
   return crux?.meta?.template === 'openmosh-app';
+}
+
+export function isBeepBox(crux: { meta?: Record<string, unknown> } | null | undefined) {
+  return crux?.meta?.template === 'beepbox-app';
 }
 
 export function isWebSynth(crux: { meta?: Record<string, unknown> } | null | undefined) {

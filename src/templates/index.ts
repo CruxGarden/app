@@ -244,6 +244,7 @@ const loaders: Record<string, () => Promise<{ default: TemplateDefinition }>> = 
   'opencut-app': () => import('./opencut-app'),
   'kan-app': () => import('./kan-app'),
   'web-synth-app': () => import('./web-synth-app'),
+  'beepbox-app': () => import('./beepbox-app'),
   'playcanvas-editor-app': () => import('./playcanvas-editor-app'),
   'blockbench-app': () => import('./blockbench-app'),
   'gdevelop-app': () => import('./gdevelop-app'),
