@@ -49,8 +49,13 @@ const EXTENSIONS: Record<string, string> = {
   'application/zip': 'zip',
   'application/pdf': 'pdf',
   'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'docx',
+  'video/webm': 'webm',
+  'video/mp4': 'mp4',
 };
 const MAX_OUTPUT = 32_000_000;
+/** A recording is bigger than a picture: video outputs get their own cap. */
+const MAX_VIDEO_OUTPUT = 512_000_000;
+const maxFor = (type: string) => (type.startsWith('video/') ? MAX_VIDEO_OUTPUT : MAX_OUTPUT);
 const MAX_BUNDLE_ENTRIES = 2000;
 const MAX_BUNDLE_BYTES = 64_000_000;
 /** The family a destination path must match, and the words the errors use. */
@@ -98,8 +103,8 @@ export async function saveCruxOutput(
     await assertCopyWritable(owner);
     await getServices().crux.findById(owner);
     const ext = EXTENSIONS[blob.type];
-    if (!ext || !blob.size || blob.size > MAX_OUTPUT)
-      throw new Error('Choose a PNG, JPEG, WebP, GIF, WAV, MP3, ZIP, PDF or DOCX up to 32 MB.');
+    if (!ext || !blob.size || blob.size > maxFor(blob.type))
+      throw new Error('Choose a PNG, JPEG, WebP, GIF, WAV, MP3, ZIP, PDF, DOCX (32 MB) or a WebM/MP4 video (512 MB).');
     if (!label.trim() || label.length > 120)
       throw new Error('Name the output using up to 120 characters.');
     const bytes = new Uint8Array(await blob.arrayBuffer());

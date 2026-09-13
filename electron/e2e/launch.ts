@@ -29,6 +29,8 @@ export async function launchApp(
   // the sandbox is exercised by the macOS gate and by every developer run.
   const args = ['.'];
   if (process.platform === 'linux' && process.env.CI) args.push('--no-sandbox');
+  // A journey that records passes CRUX_FAKE_MEDIA=1: the main process adds Chromium's fake camera
+  // and microphone switches itself (see src/main.ts).
   const app = await electron.launch({ args, cwd: join(__dirname, '..'), env });
   // Keep what the main process prints: when no window ever appears, this is
   // the only evidence of why (a native module built for the wrong ABI, a

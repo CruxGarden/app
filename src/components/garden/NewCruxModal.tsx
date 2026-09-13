@@ -501,6 +501,16 @@ const TEMPLATES: Template[] = [
     kind: 'webapp',
   },
   {
+    id: 'recorder-app',
+    label: 'Record',
+    description: 'Creative · screen and camera recording with a camera bubble; recordings become outputs for OpenCut',
+    defaultTitle: 'My recordings',
+    icon: <LayoutIcon />,
+    thumb: <BlankThumb />,
+    kind: 'webapp',
+    desktopOnly: true,
+  },
+  {
     id: 'openmosh-app',
     label: 'OpenMosh',
     description: 'Creative · the full image, video and slideshow editor',

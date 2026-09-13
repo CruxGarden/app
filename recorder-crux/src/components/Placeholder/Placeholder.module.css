@@ -1,0 +1,24 @@
+.root {
+  display: grid;
+  place-items: center;
+  align-content: center;
+  justify-items: center;
+  row-gap: 16px;
+  background-color: white;
+  height: 100%;
+  color: var(--mui-palette-secondary-contrastText);
+}
+
+.title {
+  text-align: center;
+  font-weight: bold;
+}
+
+.cta {
+  background-color: black;
+  color: var(--mui-palette-primary-contrastText);
+}
+
+.cta:hover {
+  background-color: var(--mui-palette-primary-main);
+}

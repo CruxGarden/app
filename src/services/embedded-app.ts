@@ -13,6 +13,7 @@ const NATIVE_TEMPLATES = {
   'formjs-app': 'formjs',
   'pdfme-app': 'pdfme',
   'maps-app': 'maps',
+  'recorder-app': 'recorder',
   'am-1-app': 'am-1',
   'opencut-app': 'opencut',
   'playcanvas-editor-app': 'playcanvas-editor',
