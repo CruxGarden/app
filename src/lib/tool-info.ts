@@ -34,6 +34,8 @@ export const TOOL_INFO: Record<string, ToolInfo> = {
   'kan-app': native('Kan', 'kanbn/kan'),
   'web-synth-app': native('web-synth', 'Ameobea/web-synth'),
   'beepbox-app': native('BeepBox', 'johnnesky/beepbox'),
+  'hextris-app': native('Hextris', 'Hextris/hextris'),
+  'underrun-app': native('Underrun', 'phoboslab/underrun'),
   'playcanvas-editor-app': native('PlayCanvas Editor', 'playcanvas/editor'),
   'blockbench-app': native('Blockbench', 'JannisX11/blockbench'),
   'gdevelop-app': native('GDevelop', '4ian/GDevelop'),

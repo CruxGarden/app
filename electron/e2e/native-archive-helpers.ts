@@ -3,7 +3,14 @@ import { writeFileSync } from 'node:fs';
 import type { DownloadItem, Event } from 'electron';
 
 /** Exercise the real complete-Crux export, capturing its browser download bytes. */
-export async function exportNativeCrux(page: Page, path: string, app?: ElectronApplication) {
+export async function exportNativeCrux(
+  page: Page,
+  path: string,
+  app?: ElectronApplication,
+  /** How to reach the Export pane; embedded apps have the Workshop's "Export complete Crux" button. */
+  open: () => Promise<void> = () =>
+    page.getByRole('button', { name: 'Export complete Crux', exact: true }).click(),
+) {
   if (app) {
     // Let Chromium stream large archives to disk instead of copying a Blob
     // through several renderer strings and one oversized DevTools message.
@@ -20,7 +27,7 @@ export async function exportNativeCrux(page: Page, path: string, app?: ElectronA
       };
       session.defaultSession.on('will-download', listener);
     }, path);
-    await page.getByRole('button', { name: 'Export complete Crux', exact: true }).click();
+    await open();
     await page.getByRole('button', { name: 'Export Crux', exact: true }).click();
     await expect
       .poll(
@@ -52,7 +59,7 @@ export async function exportNativeCrux(page: Page, path: string, app?: ElectronA
       } else originalClick.call(this);
     };
   });
-  await page.getByRole('button', { name: 'Export complete Crux', exact: true }).click();
+  await open();
   await page.getByRole('button', { name: 'Export Crux', exact: true }).click();
   await expect
     .poll(

@@ -15,6 +15,7 @@ import { BITSY_TOOLS, bitsyCommand } from '@/ai/bitsy-tools';
 import { AUDIOMASS_TOOLS, audiomassCommand } from '@/ai/audiomass-tools';
 import { WEB_SYNTH_TOOLS, webSynthCommand } from '@/ai/web-synth-tools';
 import { BEEPBOX_TOOLS, beepboxCommand } from '@/ai/beepbox-tools';
+import { HEXTRIS_TOOLS, hextrisCommand } from '@/ai/hextris-tools';
 import { INSTRUMENT_TOOLS, instrumentCommand } from '@/ai/instrument-tools';
 import { samplerTools } from '@/ai/sampler-tools';
 import { OPENMOSH_TOOLS, openmoshCommand } from '@/ai/openmosh-tools';
@@ -24,6 +25,7 @@ import {
   isAudioMass,
   isWebSynth,
   isBeepBox,
+  isHextris,
   isMiniPaint,
   isCardinal,
   isOpenMosh,
@@ -55,6 +57,7 @@ export function embeddedAppToolAdapter(crux: { meta?: Record<string, unknown> } 
   if (isAudioMass(crux)) return { tools: AUDIOMASS_TOOLS, prepare: audiomassCommand };
   if (isWebSynth(crux)) return { tools: WEB_SYNTH_TOOLS, prepare: webSynthCommand };
   if (isBeepBox(crux)) return { tools: BEEPBOX_TOOLS, prepare: beepboxCommand };
+  if (isHextris(crux)) return { tools: HEXTRIS_TOOLS, prepare: hextrisCommand };
   if (isMiniPaint(crux)) return { tools: MINIPAINT_TOOLS, prepare: minipaintCommand };
   if (isOpenMosh(crux)) return { tools: OPENMOSH_TOOLS, prepare: openmoshCommand };
   const type = samplerType(crux);

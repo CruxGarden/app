@@ -26,7 +26,7 @@
     "generate:api": "openapi-typescript ../api/openapi.json -o src/api/generated/schema.d.ts --default-non-nullable false",
     "ai:smoke": "node scripts/ai-smoke.mjs",
     "5ws:harness": "esbuild scripts/5ws-harness.ts --bundle --platform=node --format=esm --packages=external --alias:@=./src --log-level=warning --outfile=node_modules/.cache/5ws-harness.mjs && node node_modules/.cache/5ws-harness.mjs",
-    "verify": "tsc -b --noEmit && npm run test:performance:check && eslint src --max-warnings=0 && npm run test:notes && npm run test:moqira && npm run test:onebigsky && npm run test:cardinal && npm run test:tool-sampler && npm run test:minipaint && npm run test:openmosh && npm run test:mermaid && npm run test:piskel && npm run test:rawgraphs && npm run test:jupyterlite && npm run test:gephi && npm run test:ketcher && npm run test:twine && npm run test:svgedit && npm run test:blockbench && npm run test:gdevelop && npm run test:playcanvas-editor && npm run test:opencut && npm run test:kan && npm run test:web-synth && npm run test:beepbox && vitest run && vite build",
+    "verify": "tsc -b --noEmit && npm run test:performance:check && eslint src --max-warnings=0 && npm run test:notes && npm run test:moqira && npm run test:onebigsky && npm run test:cardinal && npm run test:tool-sampler && npm run test:minipaint && npm run test:openmosh && npm run test:mermaid && npm run test:piskel && npm run test:rawgraphs && npm run test:jupyterlite && npm run test:gephi && npm run test:ketcher && npm run test:twine && npm run test:svgedit && npm run test:blockbench && npm run test:gdevelop && npm run test:playcanvas-editor && npm run test:opencut && npm run test:kan && npm run test:web-synth && npm run test:beepbox && npm run test:hextris && vitest run && vite build",
     "test:notes": "npm --prefix notes-crux ci --ignore-scripts && npm --prefix notes-crux run check && npm --prefix notes-crux test && npm --prefix notes-crux run build",
     "test:moqira": "npm --prefix moqira-crux ci --ignore-scripts && npm --prefix moqira-crux run check && npm --prefix moqira-crux test && npm --prefix moqira-crux run build",
     "test:onebigsky": "npm --prefix onebigsky-crux run check && npm --prefix onebigsky-crux test",
@@ -68,6 +68,7 @@
     "test:web-synth": "npm run build:web-synth && npm --prefix web-synth-crux run test:garden",
     "build:beepbox": "npm --prefix beepbox-crux ci --ignore-scripts && npm --prefix beepbox-crux run build:garden",
     "test:beepbox": "npm run build:beepbox && npm --prefix beepbox-crux run test:garden",
+    "test:hextris": "node --test hextris-crux/garden/document.test.mjs",
     "build:kan": "npm --prefix kan-crux ci --ignore-scripts && npm --prefix kan-crux run build",
     "test:kan": "npm run build:kan && npm --prefix kan-crux run check:garden && npm --prefix kan-crux run test:garden && npm --prefix kan-crux run test:browser && npm --prefix kan-crux run test:provider"
   },
