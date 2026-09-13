@@ -47,6 +47,8 @@ export const DEFAULT_IGNORES = [
 export interface WatchEvent {
   type: 'write' | 'delete' | 'mkdir' | 'rmdir';
   relPath: string;
+  /** For a write the app itself made: true when the file still carries that write, false when someone wrote after it. */
+  own?: boolean;
 }
 
 export interface WatchBatch {
@@ -68,6 +70,7 @@ class FolderWatch {
   constructor(
     readonly folder: string,
     private onBatch: (batch: WatchBatch) => void,
+    private ownWriteMtime: (absPath: string) => number | undefined = () => undefined,
   ) {
     this.loadIgnores();
     this.watcher = chokidar.watch(folder, {
@@ -134,6 +137,19 @@ class FolderWatch {
     const events = [...this.pending.values()];
     this.pending.clear();
     if (!events.length) return;
+    // A write the app made itself: the echo carries the same modification time;
+    // anything later is someone else's edit that landed in the same window.
+    for (const event of events) {
+      if (event.type !== 'write') continue;
+      const abs = path.join(this.folder, ...event.relPath.split('/'));
+      const at = this.ownWriteMtime(abs);
+      if (at === undefined) continue;
+      try {
+        event.own = fs.statSync(abs).mtimeMs === at;
+      } catch {
+        /* gone again; the delete follows */
+      }
+    }
 
     // Folder-deletion guard: never turn a missing folder into mass deletion
     if (!fs.existsSync(this.folder)) {
@@ -152,13 +168,16 @@ class FolderWatch {
 export class ProjectWatcher {
   private watches = new Map<string, FolderWatch>();
 
-  constructor(private sendBatch: (batch: WatchBatch) => void) {}
+  constructor(
+    private sendBatch: (batch: WatchBatch) => void,
+    private ownWriteMtime: (absPath: string) => number | undefined = () => undefined,
+  ) {}
 
   watch(folder: string): void {
     const key = path.resolve(folder);
     if (this.watches.has(key)) return;
     if (!fs.existsSync(key)) return;
-    this.watches.set(key, new FolderWatch(key, this.sendBatch));
+    this.watches.set(key, new FolderWatch(key, this.sendBatch, this.ownWriteMtime));
   }
 
   async unwatch(folder: string): Promise<void> {

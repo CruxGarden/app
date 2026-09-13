@@ -2,13 +2,13 @@ import { readNativeAsset } from './native-app-document';
 import { hashContent } from './sqlite/helpers';
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { initServices, getServices } from './index';
-import { initIngestion, stopIngestion, flushIngestion } from './ingestion';
+import { initIngestion, stopIngestion, flushIngestion, expectProjectWrites } from './ingestion';
 import { folderForCrux } from './project-folder';
 
 type Batch = {
   folder: string;
   folderMissing?: boolean;
-  events: { type: 'write' | 'delete' | 'mkdir' | 'rmdir'; relPath: string }[];
+  events: { type: 'write' | 'delete' | 'mkdir' | 'rmdir'; relPath: string; own?: boolean }[];
 };
 
 /** Fake bridge: in-memory fs + captured onChanged subscriber to push batches. */
@@ -292,5 +292,24 @@ describe('Ingestion (external edits → history)', () => {
     });
     await flushIngestion();
     expect(await artifactsOf(crux.id)).toHaveLength(0);
+  });
+  it('reads a declared write when the main process saw a later modification after it', async () => {
+    const { crux, folder } = await makeCrux('Task copy');
+    const { artifact } = getServices();
+    await artifact.create({ resourceId: crux.id, content: '<h1>Start</h1>', meta: { path: 'index.html' } });
+    const own = await hashContent('<h1>Start</h1>');
+    // The echo of the app's own write: nothing to read.
+    expectProjectWrites(folder, [{ relPath: 'index.html', fingerprint: own }]);
+    bridge.externalWrite(folder, 'index.html', '<h1>Edited outside</h1>');
+    bridge.emit({ folder, events: [{ type: 'write', relPath: 'index.html', own: true }] });
+    await flushIngestion();
+    expect((await artifactsOf(crux.id))[0]!.fingerprint).toBe(own);
+    // The same write coalesced with an external edit: the watcher says the file moved on.
+    expectProjectWrites(folder, [{ relPath: 'index.html', fingerprint: own }]);
+    bridge.emit({ folder, events: [{ type: 'write', relPath: 'index.html', own: false }] });
+    await flushIngestion();
+    expect((await artifactsOf(crux.id))[0]!.fingerprint).toBe(
+      await hashContent('<h1>Edited outside</h1>'),
+    );
   });
 });

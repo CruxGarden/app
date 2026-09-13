@@ -145,9 +145,23 @@ function shell({ title, headTitle, aside, article, script = '' }) {
   return `<!doctype html><html lang="en"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width"/><title>${escape(headTitle)}</title><style>${CSS}</style></head><body><div class="reader"><aside><small>PUBLIC NOTEBOOK</small><h1>${escape(title)}</h1>${aside}<small>Grown in Crux Garden<br/>A read-only edition</small></aside>${article}</div>${script}</body></html>`;
 }
 export async function buildEdition(folder, outDir = join(folder, 'dist')) {
-  const edition = readEdition(folder);
+  // A build with nothing chosen still builds (a Task's verification runs it before any
+  // page is public); sharing itself refuses an empty selection before it gets here.
+  const edition = readEdition(folder, { allowEmpty: true });
   rmSync(outDir, { recursive: true, force: true });
   mkdirSync(outDir, { recursive: true });
+  if (!edition.pages.length) {
+    writeFileSync(
+      join(outDir, 'index.html'),
+      shell({
+        title: edition.title || 'Notebook',
+        headTitle: edition.title || 'Notebook',
+        aside: '',
+        article: '<article><p>No pages are public yet. Choose notes with “Include in public edition”.</p></article>',
+      }),
+    );
+    return edition;
+  }
   if (edition.layout === 'separate-pages') {
     for (const page of edition.pages) {
       const nav = edition.pages

@@ -85,6 +85,7 @@ export function createGardenNotebookStorage(): NotebookStorage {
         contents.delete(path);
         times.delete(path);
       }
+    garden.imagesChanged();
   }
   const ensureListed = () => (listed ??= refresh());
 
@@ -395,6 +396,16 @@ export function createGardenNotebookStorage(): NotebookStorage {
     async writeWorkspaceMetadata(_workspace, next): Promise<WorkspaceMetadataWriteResult> {
       const current = await readMetadata();
       if (next.revision !== current.revision) return { applied: false, metadata: current };
+      // Note positions (last opened, scroll) change on every open. Written to disk they would
+      // give a Crux a checkpoint per visit and every Task a metadata conflict with Main, so they
+      // stay in memory until something structural (order, pins, icons, bookmarks) is written.
+      const structural = ({ notePositions: _positions, revision: _revision, ...rest }: WorkspaceMetadata) =>
+        JSON.stringify(rest);
+      if (structural(next) === structural(current)) {
+        const value = { ...next, revision: current.revision };
+        metadata = { value, fingerprint: metadata?.fingerprint ?? null };
+        return { applied: true, metadata: value };
+      }
       const value = { ...next, revision: current.revision + 1 };
       garden.mutating(1);
       try {
@@ -465,5 +476,12 @@ export function createGardenNotebookStorage(): NotebookStorage {
     return path;
   }
   garden.notesProvider(async () => (await storage.listNotes("")).map((note) => ({ path: note.path, title: note.title })));
+  // A note's image path is notebook-relative in Tigrana; a folder imported whole keeps its own
+  // .assets beside its notes, so the same path is found deeper when the root has no such file.
+  garden.imageResolver((src) => {
+    if (files.has(src)) return src;
+    const deeper = [...files.keys()].filter((path) => path.endsWith(`/${src}`)).sort();
+    return deeper[0] ?? null;
+  });
   return storage;
 }
