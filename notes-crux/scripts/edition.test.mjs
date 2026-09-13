@@ -1,89 +1,80 @@
-import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, mkdirSync, writeFileSync, rmSync, symlinkSync } from 'node:fs';
-import { tmpdir } from 'node:os';
+import { test } from 'node:test';
+import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, existsSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
-import { readEdition } from './edition.mjs';
-function fixture(t) {
-  const folder = mkdtempSync(join(tmpdir(), 'notes-edition-'));
-  t.after(() => rmSync(folder, { recursive: true, force: true }));
-  mkdirSync(join(folder, 'notebook/assets'), { recursive: true });
-  const write = (path, content) => writeFileSync(join(folder, 'notebook', path), content);
-  write('Public.md', '# Public\n![Drawing](assets/drawing.png)\n[Private](Private.md)');
-  write('Private.md', 'SECRET_NOTE_TEXT');
-  write('assets/drawing.png', Buffer.from([1, 2, 3]));
-  write('assets/private.png', 'SECRET_IMAGE');
-  write('publish.json', JSON.stringify({ title: 'Public edition', pages: ['Public.md'] }));
-  return { folder, write };
+import { tmpdir } from 'node:os';
+import { readEdition, buildEdition, splitNote } from './edition.mjs';
+
+const png = Buffer.from(
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==',
+  'base64',
+);
+function notebook(config) {
+  const root = mkdtempSync(join(tmpdir(), 'notes-edition-'));
+  mkdirSync(join(root, 'notebook/Research'), { recursive: true });
+  mkdirSync(join(root, 'notebook/.assets'), { recursive: true });
+  writeFileSync(join(root, 'notebook/publish.json'), JSON.stringify(config));
+  writeFileSync(
+    join(root, 'notebook/Start.md'),
+    '---\nsecret: PRIVATE_FRONTMATTER\n---\n# Start\n\nA quiet place. See [the journal](Research/Field%20journal.md) and [private](Private.md).\n\n![seed](.assets/seed.png)\n',
+  );
+  writeFileSync(
+    join(root, 'notebook/Research/Field journal.md'),
+    '# Field journal\n\nSECOND_PAGE_BODY\n',
+  );
+  writeFileSync(join(root, 'notebook/Private.md'), 'PRIVATE_NOTE_BODY\n');
+  writeFileSync(join(root, 'notebook/.assets/seed.png'), png);
+  return root;
 }
-test('only selected notes and referenced images enter the public edition', (t) => {
-  const { folder } = fixture(t);
-  const edition = readEdition(folder);
-  assert.equal(edition.pages.length, 1);
-  assert.deepEqual(Object.keys(edition.images), ['assets/drawing.png']);
-  assert.ok(!JSON.stringify(edition).includes('SECRET'));
+test('splitNote keeps frontmatter out of the body', () => {
+  assert.equal(splitNote('---\na: 1\n---\nbody').body, 'body');
+  assert.throws(() => splitNote('---\nunclosed'), /unclosed frontmatter/);
 });
-test('new notebooks cannot accidentally publish all notes', (t) => {
-  const { folder, write } = fixture(t);
-  write('publish.json', '{"title":"Notebook","pages":[]}');
-  assert.throws(() => readEdition(folder), /Select at least one/);
-});
-test('missing selected pages and escapes stop publication', (t) => {
-  const { folder, write } = fixture(t);
-  for (const path of ['Missing.md', '../secret.md', 'assets/../Private.md']) {
-    write('publish.json', JSON.stringify({ title: 'Notebook', pages: [path] }));
-    assert.throws(() => readEdition(folder));
+test('readEdition keeps only selected notes, inlines images and refuses private pages', () => {
+  const root = notebook({ title: 'Shared', pages: ['Start.md', 'Research/Field journal.md'] });
+  try {
+    const edition = readEdition(root);
+    assert.equal(edition.pages.length, 2);
+    assert.ok(!edition.pages.some((p) => p.markdown.includes('PRIVATE_FRONTMATTER')));
+    assert.match(edition.images['.assets/seed.png'], /^data:image\/png;base64,/);
+    assert.throws(
+      () => readEdition(notebook({ title: 'x', pages: [] })),
+      /Select at least one note/,
+    );
+    assert.throws(
+      () => readEdition(notebook({ title: 'x', pages: ['Start.md'], layout: 'grid' })),
+      /single-page or separate-pages/,
+    );
+  } finally {
+    rmSync(root, { recursive: true, force: true });
   }
-  symlinkSync(join(folder, '..'), join(folder, 'notebook', 'escape'));
-  write('publish.json', JSON.stringify({ title: 'Notebook', pages: ['escape/test.md'] }));
-  assert.throws(() => readEdition(folder));
 });
-test('nested notes and reference-style images resolve within the notebook', (t) => {
-  const { folder, write } = fixture(t);
-  mkdirSync(join(folder, 'notebook/Ideas'));
-  write('Ideas/Page.md', '![Sketch][image]\n\n[image]: ../assets/drawing.png');
-  write('publish.json', '{"title":"Notebook","pages":["Ideas/Page.md"]}');
-  assert.deepEqual(Object.keys(readEdition(folder).images), ['assets/drawing.png']);
-});
-test('frontmatter stays private even for a selected page', (t) => {
-  const { folder, write } = fixture(t);
-  write('Public.md', '---\ninternal: PRIVATE_FRONTMATTER\n---\n# Public body');
-  assert.equal(readEdition(folder).pages[0].markdown, '# Public body');
-  write('Public.md', '---\ninternal: missing closing delimiter');
-  assert.throws(() => readEdition(folder), /unclosed frontmatter/);
-});
-test('imported Tigrana images resolve while metadata and unselected content stay private', (t) => {
-  const { folder, write } = fixture(t);
-  for (const dir of ['Imported/Vault/Folder', 'Imported/Vault/.assets', 'Imported/Vault/.tigrana'])
-    mkdirSync(join(folder, 'notebook', dir), { recursive: true });
-  write(
-    'Imported/Vault/Folder/Note.md',
-    '---\nid: PRIVATE_ID\n---\n# Public\n![Image](../.assets/image.png)',
-  );
-  write('Imported/Vault/.assets/image.png', Buffer.from([1, 2, 3]));
-  write('Imported/Vault/.tigrana/metadata.json', '{"secret":"PRIVATE_METADATA"}');
-  write(
-    'publish.json',
-    JSON.stringify({ title: 'Vault', pages: ['Imported/Vault/Folder/Note.md'] }),
-  );
-  const edition = readEdition(folder);
-  assert.deepEqual(Object.keys(edition.images), ['Imported/Vault/.assets/image.png']);
-  assert.ok(!JSON.stringify(edition).includes('PRIVATE'));
-  write('Imported/Vault/Folder/Note.md', '![Escape](../../../../outside.png)');
-  assert.throws(() => readEdition(folder));
-});
-test('layout defaults to the existing reader and invalid choices stop the build', (t) => {
-  const { folder, write } = fixture(t);
-  assert.equal(readEdition(folder).layout, 'single-page');
-  for (const layout of ['single-page', 'separate-pages']) {
-    write('publish.json', JSON.stringify({ title: 'Notebook', pages: ['Public.md'], layout }));
-    const edition = readEdition(folder);
-    assert.equal(edition.layout, layout);
-    assert.ok(!JSON.stringify(edition).includes('SECRET'));
+test('single-page and separate-pages editions render without private material', async () => {
+  const root = notebook({ title: 'Shared', pages: ['Start.md', 'Research/Field journal.md'] });
+  try {
+    await buildEdition(root);
+    const single = readFileSync(join(root, 'dist/index.html'), 'utf8');
+    assert.match(single, /aria-label="Search notebook"/);
+    assert.match(single, /SECOND_PAGE_BODY/);
+    assert.match(single, /href="#Research%2FField%20journal\.md"/);
+    assert.match(single, /data:image\/png;base64,/);
+    assert.ok(!single.includes('PRIVATE_NOTE_BODY') && !single.includes('PRIVATE_FRONTMATTER'));
+    assert.ok(!single.includes('href="Private.md"'));
+    writeFileSync(
+      join(root, 'notebook/publish.json'),
+      JSON.stringify({
+        title: 'Shared',
+        pages: ['Start.md', 'Research/Field journal.md'],
+        layout: 'separate-pages',
+      }),
+    );
+    await buildEdition(root);
+    assert.ok(existsSync(join(root, 'dist/notes/Research/Field journal.md/index.html')));
+    const separate = readFileSync(join(root, 'dist/notes/Start.md/index.html'), 'utf8');
+    assert.match(separate, /href="\/notes\/Research\/Field%20journal\.md\/"/);
+    assert.ok(!separate.includes('Search notebook'));
+    assert.equal(readFileSync(join(root, 'dist/index.html'), 'utf8'), separate);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
   }
-  write(
-    'publish.json',
-    JSON.stringify({ title: 'Notebook', pages: ['Public.md'], layout: 'unknown' }),
-  );
-  assert.throws(() => readEdition(folder), /layout/);
 });

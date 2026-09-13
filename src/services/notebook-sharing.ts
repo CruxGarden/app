@@ -6,7 +6,8 @@ import { notebookSession } from './notebook';
 import { flushNotebook } from './notebook-lifecycle';
 
 export type NotebookLayout = 'single-page' | 'separate-pages';
-export const NOTEBOOK_PAGE_ROUTE = 'src/pages/notes/[...note].astro';
+/** The edition renderer that understands both layouts (older Notes Cruxes carried an Astro route). */
+export const NOTEBOOK_PAGE_ROUTE = 'scripts/edition.mjs';
 
 /** Change only layout, retaining selection and app-defined publication fields. */
 export async function setNotebookLayout(workspace: StoreApi<CruxState>, layout: NotebookLayout) {

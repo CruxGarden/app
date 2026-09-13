@@ -310,8 +310,8 @@ export async function publishPipeline(
   // history, visitors get the built output. A failed build fails the
   // publish; nothing half-deploys.
   let filesToPublish: PublishFile[];
-  // Moqira publishes its own public edition build (ADR 0029) without an Astro config.
-  const builds = deps.site.isSiteCrux(artifacts) || isMoqira(crux);
+  // Moqira and Notes publish their own public edition builds (ADR 0029, 0028) without an Astro config.
+  const builds = deps.site.isSiteCrux(artifacts) || isMoqira(crux) || crux.kind === 'notes';
   if (isEmbeddedApp(crux) && !builds)
     throw new Error(
       'This notebook is missing its site configuration. Restore it before publishing.',

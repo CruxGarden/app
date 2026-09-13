@@ -198,8 +198,12 @@ export function notebookSession(workspace: StoreApi<CruxState>) {
         );
       let writtenFingerprint: string | null = null;
       if (op === 'delete') {
-        if (!existing || !/\.md$/i.test(path))
-          throw new Error('Only an existing note can be deleted.');
+        // Notes, Tigrana folder sidecars and notebook images; never publication settings or metadata.
+        if (
+          !existing ||
+          !(/\.md$/i.test(path) || /\/\.tigrana\/folder\.json$/.test(path) || isNotebookImage(path))
+        )
+          throw new Error('Only an existing note, folder marker or image can be deleted.');
         // Preserve a recovery point even for a note changed by an external editor.
         await state.createSnapshot({
           label: 'Before deleting a note',

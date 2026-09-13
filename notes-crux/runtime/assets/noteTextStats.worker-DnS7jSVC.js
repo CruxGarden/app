@@ -1,0 +1,1 @@
+(function(){"use strict";function t(s){const e=s.replace(/!\[[^\]]*]\([^)]*\)/g,"").replace(/\[([^\]]+)]\([^)]*\)/g,"$1").replace(/[`*_>#-]/g," ").replace(/\s+/g," ").trim();return{words:e?e.split(/\s+/).length:0,characters:e.length}}self.onmessage=s=>{const e={requestId:s.data.requestId,stats:t(s.data.text)};self.postMessage(e)}})();
