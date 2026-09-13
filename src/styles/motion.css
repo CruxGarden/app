@@ -38,9 +38,26 @@
   --signal-audio: 0;
   --signal-typing: 0;
   --signal-agent: 0;
-  --motion-ms-fast: calc(var(--motion-duration-fast) * var(--motion-scale));
-  --motion-ms-base: calc(var(--motion-duration-base) * var(--motion-scale));
-  --motion-ms-slow: calc(var(--motion-duration-slow) * var(--motion-scale));
+  /* the person's Motion setting (ADR 0041; lib/moods/motion-intensity.ts) beside the Mood's scale */
+  --motion-intensity-scale: 1;
+  --motion-ms-fast: calc(
+    var(--motion-duration-fast) * var(--motion-scale) * var(--motion-intensity-scale)
+  );
+  --motion-ms-base: calc(
+    var(--motion-duration-base) * var(--motion-scale) * var(--motion-intensity-scale)
+  );
+  --motion-ms-slow: calc(
+    var(--motion-duration-slow) * var(--motion-scale) * var(--motion-intensity-scale)
+  );
+}
+
+/* ── Intensity (ADR 0041): <html data-motion-intensity> is the resolved level.
+   off: the scale is 0 (set inline with the attribute), so nothing plays.
+   subtle: enters and exits only — the loops are off. expressive: enters take
+   the Mood's spring curve (below, in the components layer). ── */
+html[data-motion-intensity='subtle'] .motion-attention,
+html[data-motion-intensity='subtle'] .motion-ambient {
+  animation-name: none !important;
 }
 
 /* ── Keyframes: enters ── */
@@ -545,6 +562,73 @@
   @container style(--motion-enter-bubble: pop) {
     .motion-enter-bubble {
       animation-timing-function: var(--motion-ease-spring);
+    }
+  }
+
+  /* ── Expressive (ADR 0041): every enter may overshoot; :where keeps the
+     specificity of a bare role class so the frames block below still wins ── */
+  .motion-enter-pane:where(html[data-motion-intensity='expressive'] *),
+  .motion-enter-dialog:where(html[data-motion-intensity='expressive'] *),
+  .motion-enter-dropdown:where(html[data-motion-intensity='expressive'] *),
+  .motion-enter-bubble:where(html[data-motion-intensity='expressive'] *),
+  .motion-enter-card:where(html[data-motion-intensity='expressive'] *),
+  .motion-enter-toast:where(html[data-motion-intensity='expressive'] *) {
+    animation-timing-function: var(--motion-ease-spring);
+  }
+
+  /* ── Frames (ADR 0041): a pixel Mood steps every role — motionFrames 4 | 6 | 8 ── */
+  @container style(--motion-frames: 4) {
+    .motion-enter-pane,
+    .motion-enter-dialog,
+    .motion-enter-dropdown,
+    .motion-enter-bubble,
+    .motion-enter-card,
+    .motion-enter-toast,
+    .motion-exit-dialog,
+    .motion-exit-dropdown,
+    .motion-exit-toast,
+    .motion-attention,
+    .motion-ambient {
+      animation-timing-function: steps(4, end);
+    }
+    .motion-press {
+      transition-timing-function: steps(4, end);
+    }
+  }
+  @container style(--motion-frames: 6) {
+    .motion-enter-pane,
+    .motion-enter-dialog,
+    .motion-enter-dropdown,
+    .motion-enter-bubble,
+    .motion-enter-card,
+    .motion-enter-toast,
+    .motion-exit-dialog,
+    .motion-exit-dropdown,
+    .motion-exit-toast,
+    .motion-attention,
+    .motion-ambient {
+      animation-timing-function: steps(6, end);
+    }
+    .motion-press {
+      transition-timing-function: steps(6, end);
+    }
+  }
+  @container style(--motion-frames: 8) {
+    .motion-enter-pane,
+    .motion-enter-dialog,
+    .motion-enter-dropdown,
+    .motion-enter-bubble,
+    .motion-enter-card,
+    .motion-enter-toast,
+    .motion-exit-dialog,
+    .motion-exit-dropdown,
+    .motion-exit-toast,
+    .motion-attention,
+    .motion-ambient {
+      animation-timing-function: steps(8, end);
+    }
+    .motion-press {
+      transition-timing-function: steps(8, end);
     }
   }
 

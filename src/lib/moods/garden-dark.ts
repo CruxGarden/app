@@ -416,6 +416,10 @@ export const GARDEN_DARK = {
   motionPress: 'none',
   motionAttention: 'pulse',
   motionAmbient: 'none',
+  // stepped motion for pixel Moods: 0 = smooth, else the number of frames each role plays in
+  motionFrames: '0',
+  // the Mood's default intensity (ADR 0041); the person's own setting overrides it
+  motionIntensity: 'normal',
 
   // ── Reactions (ADR 0014; lib/moods/signals.ts) ────────
   // 0..1: how far a live signal may move the interface. 0 = does not react.

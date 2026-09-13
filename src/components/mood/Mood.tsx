@@ -13,6 +13,7 @@ import {
 import { applyActiveMood } from '@/lib/moods/active';
 import ThemeTokensTab from './ThemeTokensTab';
 import SoundTab from './SoundTab';
+import MotionIntensityControl from './MotionIntensityControl';
 import PersonaAvatar from '@/components/persona/PersonaAvatar';
 import MoodBrowser from './MoodBrowser';
 import AssetsTab from './AssetsTab';
@@ -622,9 +623,10 @@ export default function MoodEditor({ initialTab = 'moods', compact = false }: Mo
             {label}
           </button>
         ))}
+        <div className="flex-1" />
+        <MotionIntensityControl />
         {compact && (
           <>
-            <div className="flex-1" />
             <button
               type="button"
               onClick={() => {
