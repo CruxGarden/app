@@ -173,4 +173,65 @@ test.describe('motion roles', () => {
       await app.close();
     }
   });
+
+  /**
+   * Screen changes (ADR 0041): opening a Crux from Home and going back run
+   * through document.startViewTransition; the Mood's pane-enter choice is
+   * mirrored on <html data-motion-pane> for the ::view-transition rules, and
+   * the opened card's title carries the name the breadcrumb takes over.
+   */
+  test('Home ↔ Crux changes screens through a view transition shaped by the Mood', async () => {
+    const { app, page } = await launchApp();
+    const pane = () => page.evaluate(() => document.documentElement.dataset.motionPane);
+    const transitions = () =>
+      page.evaluate(() => (window as unknown as { __vt: number }).__vt ?? 0);
+    try {
+      await page.getByRole('button', { name: /enter/i }).click();
+      await page.getByText('Plant a new garden').click();
+      await page.getByRole('button', { name: 'Welcome' }).click();
+      await page.getByRole('button', { name: 'Add Crux' }).click();
+      await page.getByRole('button', { name: /^Blank/ }).click();
+      await page.getByPlaceholder('My Crux').fill('Moving picture');
+      await page.getByRole('button', { name: 'Create', exact: true }).click();
+      await expect(page.locator('[data-workspace-id]')).toBeVisible();
+      // Garden Dark says none for panes: the swap is instant, still a transition
+      expect(await pane()).toBe('none');
+
+      await page.evaluate(() => {
+        const w = window as unknown as { __vt: number };
+        w.__vt = 0;
+        const original = document.startViewTransition.bind(document);
+        document.startViewTransition = ((cb: () => void | Promise<void>) => {
+          w.__vt += 1;
+          return original(cb);
+        }) as typeof document.startViewTransition;
+      });
+      await page.getByRole('button', { name: 'wanderer', exact: false }).first().click();
+      await expect(page.getByRole('button', { name: 'Add Crux' })).toBeVisible();
+      expect(await transitions()).toBe(1);
+
+      // The card being opened names its title before the old screen is captured
+      const card = page.getByRole('button', { name: 'Open Moving picture' });
+      await card.click();
+      await expect(page.locator('[data-workspace-id]')).toBeVisible();
+      expect(await transitions()).toBe(2);
+      const named = await page.evaluate(
+        () =>
+          (document.querySelector('[aria-label="Switch Crux workspace"] span') as HTMLElement)
+            .style.viewTransitionName,
+      );
+      expect(named).toMatch(/^crux-/);
+
+      // A Mood with a pane enter shapes the arrival: Spring Morning says fade
+      await page.getByRole('button', { name: 'Mood', exact: true }).click();
+      await page
+        .getByTestId('bundled-moods')
+        .getByTestId('bundled-spring-morning')
+        .getByRole('button', { name: 'Apply' })
+        .click();
+      await expect.poll(pane).toBe('fade');
+    } finally {
+      await app.close();
+    }
+  });
 });

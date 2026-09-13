@@ -3,7 +3,7 @@ import { documentsFor } from '@/services/workspace-documents';
 import { getWorkspace } from '@/stores/workspaceRegistry';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { useNavigate } from 'react-router-dom';
+import { useMoodNavigate } from '@/hooks/useMoodNavigate';
 import { useWorkspaceRegistry, openWorkspace, closeWorkspace } from '@/stores/workspaceRegistry';
 import { useUIStore } from '@/stores/uiStore';
 import { useDialogStore } from '@/stores/dialogStore';
@@ -71,7 +71,7 @@ function restoreFocus(id: string) {
 }
 export default function WorkspaceSwitcher() {
   const { entries, activeId } = useWorkspaceRegistry();
-  const navigate = useNavigate();
+  const navigate = useMoodNavigate();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [picker, setPicker] = useState(false);
@@ -278,8 +278,10 @@ export default function WorkspaceSwitcher() {
         className="text-xs font-display text-toolbar-text truncate max-w-64 cursor-pointer focus-visible:outline-2 focus-visible:outline-accent"
         onClick={beginSearch}
       >
-        {active?.title ?? 'Open Cruxes'} ▾{' '}
-        {entries.length > 1 || !active ? `(${entries.length})` : ''}
+        <span style={active ? { viewTransitionName: `crux-${active.id}` } : undefined}>
+          {active?.title ?? 'Open Cruxes'}
+        </span>{' '}
+        ▾ {entries.length > 1 || !active ? `(${entries.length})` : ''}
         {entries.some((e) => e.id !== activeId && /approval|merge|Failed|Done/.test(e.status))
           ? ' •'
           : ''}

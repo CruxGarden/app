@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
+import { useMoodNavigate, MOOD_LINK } from '@/hooks/useMoodNavigate';
 import { useCruxStore, useCruxStoreApi } from '@/stores/cruxStore';
 import { useWorkspaceUIStoreApi } from '@/stores/uiStore';
 import { useWorkspaceRegistry, closeCruxWorkspaces } from '@/stores/workspaceRegistry';
@@ -111,7 +112,7 @@ export default function TaskBar() {
   const crux = useCruxStore((s) => s.crux);
   const data = useCruxStoreApi();
   const ui = useWorkspaceUIStoreApi();
-  const navigate = useNavigate();
+  const navigate = useMoodNavigate();
   const entries = useWorkspaceRegistry((s) => s.entries);
   const identity = copyIdentity(crux);
   const mainId = identity?.cruxId ?? crux?.id;
@@ -181,6 +182,7 @@ export default function TaskBar() {
             aria-current={!identity ? 'page' : undefined}
             className={`px-3 py-1 rounded text-sm ${!identity ? 'bg-accent-muted text-accent' : 'text-text-muted'}`}
             to={url()}
+            {...MOOD_LINK}
           >
             Main
           </Link>
@@ -188,6 +190,7 @@ export default function TaskBar() {
             <Link
               key={t.id}
               to={url(t.id)}
+              {...MOOD_LINK}
               aria-current={crux.id === t.id ? 'page' : undefined}
               className={`px-3 py-1 rounded text-sm ${crux.id === t.id ? 'bg-accent-muted text-accent' : 'text-text-muted'}`}
             >
