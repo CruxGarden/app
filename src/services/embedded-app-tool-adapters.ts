@@ -14,6 +14,7 @@ import { MERMAID_TOOLS, mermaidCommand } from '@/ai/mermaid-tools';
 import { BITSY_TOOLS, bitsyCommand } from '@/ai/bitsy-tools';
 import { AUDIOMASS_TOOLS, audiomassCommand } from '@/ai/audiomass-tools';
 import { WEB_SYNTH_TOOLS, webSynthCommand } from '@/ai/web-synth-tools';
+import { BEEPBOX_TOOLS, beepboxCommand } from '@/ai/beepbox-tools';
 import { INSTRUMENT_TOOLS, instrumentCommand } from '@/ai/instrument-tools';
 import { samplerTools } from '@/ai/sampler-tools';
 import { OPENMOSH_TOOLS, openmoshCommand } from '@/ai/openmosh-tools';
@@ -22,6 +23,7 @@ import {
   nativeAppType,
   isAudioMass,
   isWebSynth,
+  isBeepBox,
   isMiniPaint,
   isCardinal,
   isOpenMosh,
@@ -52,6 +54,7 @@ export function embeddedAppToolAdapter(crux: { meta?: Record<string, unknown> } 
   if (nativeAppType(crux) === 'bitsy') return { tools: BITSY_TOOLS, prepare: bitsyCommand };
   if (isAudioMass(crux)) return { tools: AUDIOMASS_TOOLS, prepare: audiomassCommand };
   if (isWebSynth(crux)) return { tools: WEB_SYNTH_TOOLS, prepare: webSynthCommand };
+  if (isBeepBox(crux)) return { tools: BEEPBOX_TOOLS, prepare: beepboxCommand };
   if (isMiniPaint(crux)) return { tools: MINIPAINT_TOOLS, prepare: minipaintCommand };
   if (isOpenMosh(crux)) return { tools: OPENMOSH_TOOLS, prepare: openmoshCommand };
   const type = samplerType(crux);
