@@ -23,9 +23,31 @@ export const MINIPAINT_TOOLS: AppToolDefinition[] = [
     },
     writes: ['data/project.json'],
   },
+  {
+    name: 'save_minipaint_image',
+    description:
+      'Render every visible layer to one PNG and save it as a named output of this Crux, so other members of its Cruxspaces can use it. Saves the project first.',
+    input_schema: {
+      type: 'object',
+      properties: { name: { type: 'string', minLength: 1, maxLength: 120 } },
+      required: ['name'],
+      additionalProperties: false,
+    },
+    writes: ['data/project.json', 'exports/'],
+  },
 ];
 export function minipaintCommand(name: string, input: Record<string, unknown>) {
   if (name === 'inspect_minipaint') return { op: 'inspect' };
+  if (name === 'save_minipaint_image') {
+    if (
+      Object.keys(input).length !== 1 ||
+      typeof input.name !== 'string' ||
+      !input.name.trim() ||
+      input.name.length > 120
+    )
+      throw new Error('Name the image output (up to 120 characters).');
+    return { op: 'save-image', label: input.name.trim() };
+  }
   if (
     name !== 'update_minipaint_layer' ||
     !Number.isSafeInteger(input.id) ||
