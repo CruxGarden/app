@@ -94,7 +94,9 @@
      Tailwind's spacing unit and default transition follow the Mood, so
      p-3 / gap-2 / transition-colors everywhere respond to density and motion. */
   --spacing: calc(0.25rem * var(--density));
-  --default-transition-duration: calc(var(--motion-duration-fast, 150ms) * var(--motion-scale));
+  --default-transition-duration: calc(
+    var(--motion-duration-fast, 150ms) * var(--motion-scale) * var(--motion-intensity-scale, 1)
+  );
   /* The UI type scale (rem, so the Mood's fontScale reaches it). At a 16px root:
        3xs/2xs 10 · xxs 11 · xs 12 · sm 13 · base 15 · lg 17
      Nothing in the chrome sits under 10px; 13px is the working size for
@@ -719,8 +721,10 @@ body {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  :root {
-    /* Mood tokens are inline on html; the system preference must win. */
+  /* Until the app has resolved the person's Motion setting (ADR 0041), the
+     system preference wins; once <html data-motion-intensity> is set, the
+     setting decides (system → off, an explicit choice overrides). */
+  html:not([data-motion-intensity]) {
     --motion-scale: 0 !important;
   }
 }

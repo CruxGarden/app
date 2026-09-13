@@ -256,7 +256,7 @@
     background: transparent;
     opacity: 0;
     pointer-events: none;
-    transition: opacity calc(150ms * var(--motion-scale));
+    transition: opacity calc(150ms * var(--motion-scale) * var(--motion-intensity-scale, 1));
   }
   .mosaic.crux-mosaic-theme .mosaic-tile .mosaic-window:hover .mosaic-window-toolbar,
   .mosaic.crux-mosaic-theme .mosaic-tile .mosaic-window .mosaic-window-toolbar:focus-within {

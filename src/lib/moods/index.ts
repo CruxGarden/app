@@ -6,6 +6,7 @@
  */
 
 import { GARDEN_DARK, type MoodPalette, type MoodPaletteKey } from './garden-dark';
+import { applyMotionIntensity, watchReducedMotion } from './motion-intensity';
 import {
   cssValueFor,
   isAssetRef,
@@ -118,6 +119,9 @@ export function applyMoodPalette(palette: Partial<MoodPalette>, base: MoodPalett
   // ── icons ── a choice token CSS cannot act on: mirror it onto <html data-icon-set>
   // and tell mounted icons (components/ui/icons) to redraw for the set.
   applyIconSet(el.style.getPropertyValue('--icon-set').trim());
+  // ── motion ── the person's intensity resolves against the Mood's default (ADR 0041)
+  applyMotionIntensity(el);
+  watchReducedMotion();
   // Notify Monaco and other listeners that the palette changed
   // Delay slightly so var() references resolve before Monaco reads computed styles
   requestAnimationFrame(() => {

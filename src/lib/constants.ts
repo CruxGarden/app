@@ -57,6 +57,8 @@ export enum SettingsKey {
   ResonanceOptIn = 'cruxgarden:resonanceOptIn',
   ResonancePlaying = 'cruxgarden:resonancePlaying',
   MoodDockState = 'cruxgarden:moodDockState',
+  /** The person's motion intensity: system | off | subtle | normal | expressive (ADR 0041) */
+  MotionIntensity = 'cruxgarden:motionIntensity',
   ResonanceCues = 'cruxgarden:resonanceCues',
   /** Installed Mood Packages (JSON array, binaries by fingerprint in the Blob Store) */
   MoodPackages = 'cruxgarden:moodPackages',

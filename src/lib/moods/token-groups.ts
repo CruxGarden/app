@@ -32,6 +32,8 @@ export const TOKEN_CHOICES: Record<string, readonly string[]> = {
   motionPress: ['none', 'scale', 'sink'],
   motionAttention: ['none', 'pulse', 'blink', 'wiggle', 'glow'],
   motionAmbient: ['none', 'breathe', 'drift', 'float'],
+  motionFrames: ['0', '4', '6', '8'],
+  motionIntensity: ['subtle', 'normal', 'expressive'],
   // ── shape (shape.css) ──
   paneBorderStyle: ['solid', 'double', 'dashed', 'dotted', 'inset', 'outset', 'none'],
   paneCornerShape: ['round', 'bevel', 'scoop', 'notch', 'square'],
@@ -343,7 +345,7 @@ export const TOKEN_GROUPS: TokenGroup[] = [
   {
     id: 'motion',
     label: 'Motion',
-    hint: 'How things move: easing curves, three durations (all multiplied by motion scale, under Elevation & motion), and for each role — panes, dialogs, dropdowns, chat bubbles, cards, toasts — how it appears and leaves; how controls answer a press, how working indicators draw attention, and whether idle surfaces breathe.',
+    hint: 'How things move: easing curves, three durations (all multiplied by motion scale, under Elevation & motion), and for each role — panes, dialogs, dropdowns, chat bubbles, cards, toasts — how it appears and leaves; how controls answer a press, how working indicators draw attention, and whether idle surfaces breathe. Frames steps every motion for pixel Moods; intensity is the Mood\'s default for the person\'s Motion setting.',
     match: (k) => k.startsWith('motion') && k !== 'motionScale',
   },
   {
