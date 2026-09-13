@@ -1,0 +1,55 @@
+import type { MIDIInputCbs, MIDINode, MIDINodeMetadata } from 'src/patchNetwork/midiNode';
+import { writable, type Writable } from 'svelte/store';
+
+/**
+ * A `CustomAudioNode` that implements all node types, allowing it to be used as a placeholder node for situations such
+ * as loading and lazy initialization.
+ */
+export default class DummyNode extends GainNode implements Pick<MIDINode, keyof MIDINode> {
+  protected connectedInputs: MIDINode[] = [];
+  protected connectedOutputs: MIDINode[] = [];
+
+  public name = '';
+
+  constructor(name?: string) {
+    super(new AudioContext());
+    if (name) {
+      this.name = name;
+    }
+
+    this.inputCbs = Object.freeze({
+      onAttack: () => {},
+      onRelease: () => {},
+      onPitchBend: () => {},
+      onClearAll: () => {},
+      __dummyNodeName: this.name,
+    } as MIDIInputCbs);
+  }
+
+  public outputCbs = [];
+
+  public inputCbs: MIDIInputCbs;
+  public onAttack = () => {};
+  public onRelease = () => {};
+  public clearAll = () => {};
+  public clearHeld = () => {};
+
+  public onConnectionsChanged = () => {};
+  public registerOnConnectionsChangedCb = () => {};
+  public scheduleEvent = () => {};
+  public setInputCbs = () => {};
+  public needsUIThreadScheduling = false;
+  public needsAudioThreadScheduling = false;
+
+  public metadata: Writable<MIDINodeMetadata> = writable({ noteMetadata: new Map() });
+
+  public getInputCbs = () => this.inputCbs;
+
+  public connect(destinationNode: any) {
+    return destinationNode;
+  }
+
+  public disconnect() {}
+
+  public dispose() {}
+}

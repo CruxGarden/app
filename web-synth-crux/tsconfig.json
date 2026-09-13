@@ -1,0 +1,42 @@
+{
+  "compilerOptions": {
+    "skipLibCheck": true,
+    "module": "es2022",
+    "target": "es2022",
+    "resolveJsonModule": true,
+    "allowJs": true,
+    "moduleResolution": "node",
+    "outDir": "dist",
+    "lib": ["ESNext", "dom"],
+    "sourceMap": true,
+    "rootDir": ".",
+    "forceConsistentCasingInFileNames": true,
+    "strictFunctionTypes": false, // This is required by Jantix
+    "strict": true,
+    "allowSyntheticDefaultImports": true,
+    "esModuleInterop": true,
+    "suppressImplicitAnyIndexErrors": false,
+    "noUnusedLocals": true,
+    "typeRoots": ["./node_modules/@types"],
+    "types": ["node"],
+    "jsx": "react-jsx",
+    "baseUrl": ".",
+    "verbatimModuleSyntax": true,
+    "paths": {
+      "*": ["./node_modules/@types/*", "*"]
+    }
+  },
+  "include": ["./index.d.ts", "src/**/*", "svg.d.ts"],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "scripts",
+    "acceptance-tests",
+    "webpack",
+    "jest",
+    "deprecated",
+    "backend",
+    "faust-compiler",
+    "engine"
+  ]
+}

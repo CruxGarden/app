@@ -1,0 +1,12 @@
+.graph-editor-container {
+  display: flex;
+  flex-direction: row;
+}
+
+.litecontextmenu {
+  z-index: 4;
+}
+
+#node-panel {
+  display: none;
+}

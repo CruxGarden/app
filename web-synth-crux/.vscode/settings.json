@@ -1,0 +1,21 @@
+{
+  "typescript.validate.enable": true,
+  "typescript.reportStyleChecksAsWarnings": true,
+  "typescript.suggest.autoImports": true,
+  "typescript.suggest.enabled": true,
+  "typescript.tsdk": "node_modules/typescript/lib",
+  "eslint.validate": ["javascript", "javascriptreact", "typescript", "typescriptreact"],
+  "typescript.preferences.importModuleSpecifier": "non-relative",
+  "[markdown]": {
+    "editor.quickSuggestions": {
+      "comments": "on",
+      "strings": "on",
+      "other": "on"
+    },
+    "editor.formatOnSave": false
+  },
+  "gitlens.advanced.blame.customArguments": [
+    "--ignore-rev",
+    "1dfe67f13fe2a46ff96e5829a0ad153f6162ffcb"
+  ]
+}

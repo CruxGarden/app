@@ -1,0 +1,126 @@
+.midi-editor {
+  .midi-editor-controls {
+    display: flex;
+    flex-direction: row;
+    margin-left: 1px;
+    align-items: flex-end;
+    position: fixed;
+    z-index: 3;
+    background-color: #151515;
+    width: calc(100vw - 8px);
+
+    .midi-editor-control-button {
+      cursor: pointer;
+      font-size: 36px;
+      border: 1px solid #aaa;
+      height: 44px;
+      width: 44px;
+      line-height: 44px;
+      user-select: none;
+      margin-left: -1px;
+    }
+
+    .midi-editor-control-button.active {
+      color: magenta;
+    }
+
+    .midi-editor-control-button:hover {
+      background-color: rgba(255, 255, 255, 0.1);
+    }
+
+    .midi-editor-control-button:active {
+      background-color: rgba(255, 255, 255, 0.2);
+    }
+
+    .labeled-container {
+      display: flex;
+      flex-direction: column;
+
+      label {
+        line-height: 13px;
+        font-size: 10px;
+        margin-left: 2px;
+      }
+    }
+
+    input {
+      width: 50px;
+      height: 42px;
+      background-color: #151515;
+      color: #bababa;
+      border: 1px solid #aaa;
+      outline: none;
+    }
+
+    .midi-editor-beat-snap-controls {
+      display: flex;
+      flex-direction: row;
+      max-width: 90px;
+      flex-wrap: wrap;
+
+      .midi-editor-beat-snap-control-button {
+        height: 23px;
+        min-width: 22px;
+        flex-basis: 22px;
+        border: 1px solid #aaa;
+        box-sizing: border-box;
+        cursor: pointer;
+        padding-left: 5px;
+        font-size: 18px;
+        line-height: 22px;
+        margin-left: -1px;
+      }
+      .midi-editor-beat-snap-control-button:hover {
+        background-color: rgba(255, 255, 255, 0.1);
+      }
+      .midi-editor-beat-snap-control-button:nth-child(n + 5) {
+        border-top: none;
+      }
+      .midi-editor-beat-snap-control-button[data-active='true'] {
+        background-color: #820082;
+      }
+    }
+  }
+
+  .drag-handle {
+    width: 30px;
+    height: 18px;
+    border: 1px solid #999;
+    cursor: grab;
+    box-sizing: border-box;
+
+    /* vertical ridges to indicate that it's a handle */
+    background-image: repeating-linear-gradient(
+      90deg,
+      #888,
+      #888 2px,
+      #444 1px,
+      #444 4px
+    );
+  }
+
+  .drag-handle:active {
+    cursor: grabbing;
+  }
+}
+
+.expanded-midi-editor-instance {
+  display: flex;
+  position: relative;
+  border-top: 1px solid #888;
+}
+
+.midi-editor .expanded-midi-editor-instance:first-child {
+  border-top: none;
+}
+
+.collapse-midi-editor-instance,
+.expand-midi-editor-instance {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 18px;
+  line-height: 4px;
+  user-select: none;
+  width: 28px;
+}

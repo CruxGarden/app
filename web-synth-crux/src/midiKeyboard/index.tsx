@@ -1,0 +1,318 @@
+/**
+ * View context that creates a MIDI keyboard that is controllable via the normal keyboard and capable of being
+ * connected to MIDI modules.
+ */
+
+import * as R from 'ramda';
+
+import { MIDIInput } from 'src/midiKeyboard/midiInput';
+import {
+  MidiKeyboardCtxByStateKey,
+  type MappedOutput,
+  type MIDIKeyboardCtx,
+} from 'src/midiKeyboard/midiKeyboardCtx';
+import React from 'react';
+
+import type { MidiKeyboardVCProps } from 'src/midiKeyboard/MidiKeyboardVC';
+import { type MIDIInputCbs, MIDINode } from 'src/patchNetwork/midiNode';
+import { mkContainerCleanupHelper, mkContainerRenderHelper } from 'src/reactUtils';
+import { actionCreators, dispatch, getState, store } from 'src/redux';
+import {
+  buildFreshOutputDescriptorsByControlIndex,
+  computeMappedOutputValue,
+  type MidiKeyboardMappedOutputDescriptor,
+  MidiKeyboardMode,
+  type MidiKeyboardStateItem,
+} from 'src/redux/modules/midiKeyboard';
+import { create_empty_audio_connectables } from 'src/redux/modules/vcmUtils';
+import { disposeCSN, tryParseJson, UnreachableError } from 'src/util';
+
+export {
+  MidiKeyboardCtxByStateKey,
+  get_midi_keyboard_audio_connectables,
+  type MappedOutput,
+  type MIDIKeyboardCtx,
+} from 'src/midiKeyboard/midiKeyboardCtx';
+
+const ctx = new AudioContext();
+
+interface SerializedMidiKeyboardState extends Omit<MidiKeyboardStateItem, 'midiInput'> {
+  lastSeenRawMIDIControlValuesByControlIndex: { [controlIndex: number]: number };
+  lastSeenPitchBend: number;
+  lastSeenModWheel: number;
+  midiInput?: null;
+  mappedOutputs: (MidiKeyboardMappedOutputDescriptor & { name: string })[];
+}
+
+const getMidiKeyboardDomId = (vcId: string) => `midiKeyboard_${vcId}`;
+
+export const init_midi_keyboard = (stateKey: string) => {
+  const vcId = stateKey.split('_')[1]!;
+  const midiNode = new MIDINode();
+  let uiGenericControlCbs: ((controlIndex: number, controlValue: number) => void)[] = [];
+  const midiKeyboardCtx: MIDIKeyboardCtx = {
+    midiNode,
+    lastSeenPitchBend: 0,
+    lastSeenModWheel: 0,
+    mappedOutputs: [] as MappedOutput[],
+    lastSeenRawMIDIControlValuesByControlIndex: new Map(),
+    outputDescriptorsByControlIndex: new Map(),
+    registerGenericControlCb: cb => uiGenericControlCbs.push(cb),
+    deregisterGenericControlCb: cb => {
+      uiGenericControlCbs = uiGenericControlCbs.filter(ocb => ocb !== cb);
+    },
+  };
+  MidiKeyboardCtxByStateKey.set(stateKey, midiKeyboardCtx);
+
+  // Spy on generic control values produced by the underlying MIDI Node and udpate the last seen raw values map
+
+  const genericControlRecorderCBs: MIDIInputCbs = {
+    onAttack: (_note, _velocity) => {
+      // no-op
+    },
+    onRelease: (_note, _velocity) => {
+      // no-op
+    },
+    onPitchBend: _bendAmount => {
+      // no-op
+    },
+    onClearAll: () => {
+      // no-op
+    },
+    onGenericControl: (controlIndex: number, controlValue: number) => {
+      // Dunno what these mean but they tend to spam sometimes
+      if (controlIndex === 0) {
+        return;
+      }
+
+      midiKeyboardCtx.lastSeenRawMIDIControlValuesByControlIndex.set(controlIndex, controlValue);
+      uiGenericControlCbs.forEach(cb => cb(controlIndex, controlValue));
+      midiKeyboardCtx.outputDescriptorsByControlIndex
+        .get(controlIndex)
+        ?.forEach(({ outputDescriptor, output }) => {
+          const mappedValue = computeMappedOutputValue(outputDescriptor, controlValue);
+          output.csn.offset.value = mappedValue;
+        });
+    },
+  };
+  midiNode.connect(new MIDINode(() => genericControlRecorderCBs));
+
+  const elem = document.createElement('div');
+  elem.id = getMidiKeyboardDomId(vcId);
+  elem.setAttribute(
+    'style',
+    'z-index: 2; width: 100%; height: calc(100vh - 34px); overflow-y: scroll; position: absolute; top: 0; left: 0;'
+  );
+  document.getElementById('content')!.appendChild(elem);
+
+  const serialized = localStorage.getItem(stateKey);
+  const initialState = tryParseJson<SerializedMidiKeyboardState, undefined>(
+    serialized!,
+    undefined,
+    `Failed to parse localStorage state for MIDI keyboard with stateKey ${stateKey}; reverting to initial state.`
+  );
+  if (serialized !== null && initialState === undefined) {
+    // clear the corrupt-but-present key so the default state doesn't get persisted over it on unload
+    localStorage.removeItem(stateKey);
+  }
+
+  if (initialState) {
+    for (const [controlIndex, controlValue] of Object.entries(
+      initialState.lastSeenRawMIDIControlValuesByControlIndex ??
+        ({} as { [controlIndex: number]: number })
+    )) {
+      midiKeyboardCtx.lastSeenRawMIDIControlValuesByControlIndex.set(+controlIndex, controlValue);
+    }
+
+    midiKeyboardCtx.lastSeenModWheel = initialState.lastSeenModWheel ?? 0;
+    midiKeyboardCtx.lastSeenPitchBend = initialState.lastSeenPitchBend ?? 64;
+
+    midiKeyboardCtx.mappedOutputs = (initialState.mappedOutputs ?? []).map(outputDescriptor => {
+      const csn = ctx.createConstantSource();
+      csn.offset.value = computeMappedOutputValue(
+        outputDescriptor,
+        midiKeyboardCtx.lastSeenRawMIDIControlValuesByControlIndex.get(
+          outputDescriptor.controlIndex
+        ) ?? 0
+      );
+      csn.start();
+
+      return { name: outputDescriptor.name, csn };
+    });
+
+    midiKeyboardCtx.outputDescriptorsByControlIndex = buildFreshOutputDescriptorsByControlIndex(
+      midiKeyboardCtx.mappedOutputs,
+      initialState.mappedOutputs ?? []
+    );
+  }
+
+  const initialReduxState = initialState
+    ? {
+        ...initialState,
+        midiInput:
+          initialState.mode === MidiKeyboardMode.MidiInput
+            ? new MIDIInput(ctx, midiNode, initialState.midiInputName)
+            : undefined,
+        mappedOutputs: (initialState.mappedOutputs ?? []).map(descriptor =>
+          R.pick(['controlIndex', 'scale', 'shift', 'logScale'], descriptor)
+        ),
+      }
+    : undefined;
+
+  if (initialReduxState && initialState && initialReduxState.midiInput) {
+    initialReduxState.midiInput.pitchBendNode.offset.value = initialState.lastSeenPitchBend;
+    initialReduxState.midiInput.modWheelNode.offset.value = initialState.lastSeenModWheel;
+  }
+
+  dispatch(actionCreators.midiKeyboard.ADD_MIDI_KEYBOARD(stateKey, initialReduxState));
+
+  if ((window as any).isHeadless) {
+    return;
+  }
+
+  const props: MidiKeyboardVCProps = {
+    stateKey,
+    registerGenericControlCb: midiKeyboardCtx.registerGenericControlCb,
+    deregisterGenericControlCb: midiKeyboardCtx.deregisterGenericControlCb,
+  };
+  void import('src/midiKeyboard/MidiKeyboardVC').then(({ MidiKeyboardVC }) => {
+    if (!elem.isConnected) {
+      return;
+    }
+
+    mkContainerRenderHelper({
+      Comp: MidiKeyboardVC,
+      getProps: () => props,
+      store,
+    })(getMidiKeyboardDomId(vcId));
+  });
+};
+
+const getMidiKeyboardDomElem = (stateKey: string): HTMLDivElement | null => {
+  const vcId = stateKey.split('_')[1]!;
+
+  const elem = document.getElementById(getMidiKeyboardDomId(vcId));
+  if (!elem) {
+    console.warn(`Tried to get MIDI keyboard DOM node with VC ID ${vcId} but it wasn't mounted`);
+    return null;
+  }
+
+  return elem as HTMLDivElement;
+};
+
+const serializeMIDIKeyboard = (
+  ctx: MIDIKeyboardCtx,
+  stateKey: string
+): SerializedMidiKeyboardState => {
+  const instanceState = getState().midiKeyboard[stateKey];
+  if (!instanceState) {
+    throw new Error(`No MIDI keyboard state for MIDI keyboard with state key ${stateKey}`);
+  }
+
+  const lastSeenRawMIDIControlValuesByControlIndex: { [controlIndex: number]: number } = {};
+  for (const [
+    controlIndex,
+    controlValue,
+  ] of ctx.lastSeenRawMIDIControlValuesByControlIndex.entries()) {
+    lastSeenRawMIDIControlValuesByControlIndex[controlIndex] = controlValue;
+  }
+  const serialized: SerializedMidiKeyboardState = {
+    ...instanceState,
+    midiInput: null,
+    lastSeenModWheel: instanceState.midiInput?.modWheelNode.offset.value ?? 0,
+    lastSeenPitchBend: instanceState.midiInput?.pitchBendNode.offset.value ?? 0,
+    lastSeenRawMIDIControlValuesByControlIndex,
+    mappedOutputs: instanceState.mappedOutputs.map((descriptor, outputIx) => ({
+      ...descriptor,
+      name: ctx.mappedOutputs[outputIx].name,
+    })),
+  };
+  delete serialized.midiInput;
+
+  return serialized;
+};
+
+export const persist_midi_keyboard = (stateKey: string) => {
+  const ctx = MidiKeyboardCtxByStateKey.get(stateKey);
+  if (!ctx) {
+    throw new UnreachableError(
+      `No MIDI keyboard instance found for state key ${stateKey} when persisting`
+    );
+  }
+
+  const serialized = serializeMIDIKeyboard(ctx, stateKey);
+  localStorage.setItem(stateKey, JSON.stringify(serialized));
+};
+
+export const cleanup_midi_keyboard = (stateKey: string): string => {
+  const vcId = stateKey.split('_')[1]!;
+  const ctx = MidiKeyboardCtxByStateKey.get(stateKey);
+  if (!ctx) {
+    throw new UnreachableError(
+      `No MIDI keyboard instance found for state key ${stateKey} when cleaning up`
+    );
+  }
+
+  const serialized = serializeMIDIKeyboard(ctx, stateKey);
+
+  getState().midiKeyboard[stateKey]?.midiInput?.destroy();
+  ctx.mappedOutputs.forEach(output => disposeCSN(output.csn));
+  ctx.midiNode.dispose();
+  dispatch(actionCreators.midiKeyboard.DELETE_MIDI_KEYBOARD(stateKey));
+  MidiKeyboardCtxByStateKey.delete(stateKey);
+
+  const elem = getMidiKeyboardDomElem(stateKey);
+  if (!elem) {
+    return '';
+  }
+
+  mkContainerCleanupHelper()(getMidiKeyboardDomId(vcId));
+
+  return JSON.stringify(serialized);
+};
+
+export const hide_midi_keyboard = (stateKey: string) => {
+  const elem = getMidiKeyboardDomElem(stateKey);
+
+  if (elem) {
+    elem.style.display = 'none';
+  }
+};
+
+export const unhide_midi_keyboard = (stateKey: string) => {
+  const elem = getMidiKeyboardDomElem(stateKey);
+
+  if (elem) {
+    elem.style.display = 'block';
+  }
+};
+
+export const render_midi_keyboard_small_view = (stateKey: string, domId: string) => {
+  const vcId = stateKey.split('_')[1]!;
+  const ctx = MidiKeyboardCtxByStateKey.get(stateKey);
+  if (!ctx) {
+    console.warn(`No ctx found for midi keyboard VC with VC ID "${vcId}"`);
+    return create_empty_audio_connectables(vcId);
+  }
+
+  const LazySmallView = React.lazy(() =>
+    import('src/midiKeyboard/MidiKeyboardVC').then(m => ({
+      default: m.mkMidiKeyboardSmallView(
+        stateKey,
+        ctx.registerGenericControlCb,
+        ctx.deregisterGenericControlCb
+      ),
+    }))
+  );
+  const SmallView: React.FC = () =>
+    React.createElement(React.Suspense, { fallback: null }, React.createElement(LazySmallView));
+
+  mkContainerRenderHelper({
+    Comp: SmallView,
+    getProps: () => ({}),
+    store,
+  })(domId);
+};
+
+export const cleanup_midi_keyboard_small_view = (_vcId: string, domId: string) =>
+  mkContainerCleanupHelper({ preserveRoot: true })(domId);

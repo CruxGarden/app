@@ -1,0 +1,97 @@
+/* wavyjones oscilloscope */
+#synth-designer-oscilloscope {
+  width: 400px;
+  height: 200px;
+}
+
+.synth-module {
+  display: flex;
+  flex-direction: row;
+  padding-top: 2px;
+  overflow-x: scroll;
+
+  button,
+  select {
+    height: 20px;
+  }
+
+  .synth-remove-button {
+    color: #b22;
+    font-family:
+      Hack,
+      Oxygen Mono,
+      monospace;
+    cursor: pointer;
+    z-index: 3;
+    font-size: 22px;
+    transform: translate(4px, -2px);
+    position: absolute;
+  }
+
+  .effects {
+    display: flex;
+    flex-direction: row;
+
+    .add-effect {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+  }
+
+  .filter-control-panel {
+    svg.adsr-viz {
+      margin-top: 29px !important;
+    }
+  }
+
+  /* FM synth style overrides */
+  .configure-effects {
+    max-height: 80vh;
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+}
+
+.effect-module {
+  display: flex;
+  flex-direction: row;
+
+  .effect-module-connector-line-wrapper {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+
+    .effect-module-connector-line {
+      height: 0;
+      width: 16px;
+      border-bottom: 1px solid #ccc;
+    }
+  }
+}
+
+.remove-button {
+  color: #b22;
+  font-family:
+    Hack,
+    Oxygen Mono,
+    monospace;
+  cursor: pointer;
+}
+
+.synth-designer {
+  .presets-loading, .preset-fetch-error {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    padding: 4px;
+  }
+
+  .preset-fetch-error {
+    color: red;
+
+    button {
+      margin-left: 6px;
+    }
+  }
+}

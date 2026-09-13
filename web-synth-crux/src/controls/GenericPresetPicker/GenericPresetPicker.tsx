@@ -1,0 +1,262 @@
+import * as R from 'ramda';
+import React, { useMemo, useState } from 'react';
+import { useQuery } from 'react-query';
+import { useSelector } from 'react-redux';
+import { List, type RowComponentProps } from 'react-window';
+
+import { Tag } from 'src/controls/GenericPresetPicker/GenericPresetSaver';
+import { renderModalWithControls, type ModalCompProps } from 'src/controls/Modal';
+import BasicModal from 'src/misc/BasicModal';
+import { withReactQueryClient, withReduxProvider } from 'src/reactProviders';
+import { useContainerSize, useWindowSize } from 'src/reactUtils';
+import { genericPresetDispatch, store, type ReduxStore } from 'src/redux';
+import { genericPresetPickerActions } from 'src/redux/modules/genericPresetPicker';
+import StarIcon from './Star.svg';
+import './GenericPresetPicker.css';
+import { clamp } from 'src/util';
+
+interface SearchBarProps {
+  value: string;
+  onChange: (value: string) => void;
+}
+
+const SearchBar: React.FC<SearchBarProps> = ({ value, onChange }) => {
+  return (
+    <input
+      type='text'
+      className='generic-preset-picker-search-bar'
+      value={value}
+      onChange={e => onChange(e.target.value)}
+      placeholder='Search by name, description, tags'
+    />
+  );
+};
+
+export interface PresetDescriptor<T> {
+  id: string | number;
+  name: string;
+  description?: string | null | undefined;
+  tags?: string[];
+  preset: T;
+  userID?: number | null;
+  userName?: string | null;
+  isFeatured?: boolean;
+}
+
+type PresetRowProps = RowComponentProps;
+
+function mkPresetRow<T>(
+  filteredPresets: PresetDescriptor<T>[]
+): (props: PresetRowProps) => React.ReactElement {
+  const PresetRow: (props: PresetRowProps) => React.ReactElement = ({ index, style }) => {
+    const preset = filteredPresets[index];
+    const isSelected = useSelector(
+      (state: ReduxStore) => state.genericPresetPicker.selectedPresetID === preset.id
+    );
+
+    return (
+      <div
+        style={style}
+        className='generic-preset-picker-row'
+        data-selected={`${isSelected ?? false}`}
+        onClick={() =>
+          genericPresetDispatch(genericPresetPickerActions.setSelectedPresetID(preset.id))
+        }
+        title={preset.name}
+      >
+        {preset.isFeatured ? (
+          <div className='svg-wrapper' dangerouslySetInnerHTML={{ __html: StarIcon }} />
+        ) : null}
+        <div className='preset-name'>{preset.name}</div>
+      </div>
+    );
+  };
+  return React.memo(PresetRow) as (props: PresetRowProps) => React.ReactElement;
+}
+
+interface PresetInfoProps {
+  preset: PresetDescriptor<any>;
+  setSearchValue: (value: string) => void;
+  CustomPresetInfo?: React.FC<CustomPresetInfoProps<any>>;
+}
+
+const PresetInfo: React.FC<PresetInfoProps> = ({ preset, setSearchValue, CustomPresetInfo }) => (
+  <div className='preset-info'>
+    <div className='preset-info-item '>
+      <div>Name</div>
+      <div>{preset.name}</div>
+    </div>
+    {preset.description ? (
+      <div className='preset-info-item '>
+        <div>Description</div>
+        <div>{preset.description ?? ''}</div>
+      </div>
+    ) : null}
+    {preset.userName ? (
+      <div className='preset-info-item '>
+        <div>Author</div>
+        <div>{preset.userName}</div>
+      </div>
+    ) : null}
+    {preset.tags && preset.tags.length > 0 ? (
+      <div className='preset-info-item '>
+        <div>Tags</div>
+        <div className='tags-container'>
+          {preset.tags.map(tag => (
+            <Tag key={tag} isSelected name={tag} onClick={() => setSearchValue(tag)} />
+          ))}
+        </div>
+      </div>
+    ) : null}
+    {CustomPresetInfo ? <CustomPresetInfo preset={preset} /> : null}
+  </div>
+);
+
+const filterPresets = (presets: PresetDescriptor<any>[], searchValue: string) => {
+  if (searchValue === '') {
+    return presets;
+  }
+
+  return presets.filter(preset => {
+    const nameMatch = preset.name.toLowerCase().includes(searchValue.toLowerCase());
+    if (nameMatch) {
+      return true;
+    }
+    const descriptionMatch =
+      preset.description && preset.description.toLowerCase().includes(searchValue.toLowerCase());
+    if (descriptionMatch) {
+      return true;
+    }
+    const tagsMatch =
+      preset.tags && preset.tags.some(tag => tag.toLowerCase().includes(searchValue.toLowerCase()));
+    if (tagsMatch) {
+      return true;
+    }
+
+    return false;
+  });
+};
+
+interface GenericPresetPickerContainerProps {
+  style?: React.CSSProperties;
+  children: React.ReactNode;
+}
+
+const GenericPresetPickerContainer: React.FC<GenericPresetPickerContainerProps> = ({
+  children,
+  style,
+}) => (
+  <BasicModal className='generic-preset-picker' style={style}>
+    {children}
+  </BasicModal>
+);
+
+export interface CustomPresetInfoProps<T> {
+  preset: PresetDescriptor<T>;
+}
+
+export function mkGenericPresetPicker<T>(
+  getPresets: () => Promise<PresetDescriptor<T>[]> | PresetDescriptor<T>[],
+  style?: React.CSSProperties,
+  CustomPresetInfo?: React.FC<CustomPresetInfoProps<T>>
+): React.FC<ModalCompProps<PresetDescriptor<T>>> {
+  genericPresetDispatch(genericPresetPickerActions.setSelectedPresetID(null));
+  const presetQueryID = genRandomStringID() + '-presets';
+
+  const getSortedPresets = async () => {
+    const presets = await getPresets();
+    // put featured presets first, then sort by date modified descending
+    return R.sortWith(
+      [
+        R.descend((preset: PresetDescriptor<T>) => preset.isFeatured ?? false),
+        R.descend((preset: PresetDescriptor<T>) => preset.id),
+      ],
+      presets
+    );
+  };
+
+  const GenericPresetPicker: React.FC<ModalCompProps<PresetDescriptor<T>>> = ({
+    onSubmit,
+    onCancel,
+  }) => {
+    const { data: presets, error: fetchPresetsError } = useQuery(presetQueryID, getSortedPresets);
+    const windowSize = useWindowSize();
+    const { ref: leftBarContainerRef, size: leftBarContainerSize } = useContainerSize();
+    const [searchValue, setSearchValue] = useState('');
+    const selectedPresetID = useSelector(
+      (state: ReduxStore) => state.genericPresetPicker.selectedPresetID
+    );
+    const selectedPreset = useMemo(
+      () => (R.isNil(selectedPresetID) ? null : presets?.find(p => p.id === selectedPresetID)),
+      [presets, selectedPresetID]
+    );
+    const filteredPresets = useMemo(
+      () => (presets ? filterPresets(presets, searchValue) : null),
+      [presets, searchValue]
+    );
+    const PresetRow = useMemo(
+      () => (filteredPresets ? mkPresetRow(filteredPresets) : null),
+      [filteredPresets]
+    );
+
+    if (fetchPresetsError) {
+      return (
+        <GenericPresetPickerContainer style={style}>
+          <span style={{ color: 'red' }}>Error fetching presets: {`${fetchPresetsError}`}</span>
+        </GenericPresetPickerContainer>
+      );
+    } else if (!presets || !PresetRow) {
+      return (
+        <GenericPresetPickerContainer style={style}>
+          <span>Loading presets...</span>
+        </GenericPresetPickerContainer>
+      );
+    }
+
+    const presetListWidth = clamp(300, 500, windowSize.width * 0.18);
+
+    return (
+      <GenericPresetPickerContainer style={style}>
+        <div style={{ width: presetListWidth + 12, height: '100%' }} ref={leftBarContainerRef}>
+          <SearchBar value={searchValue} onChange={setSearchValue} />
+          <List
+            rowComponent={PresetRow}
+            className='preset-list'
+            style={{ height: leftBarContainerSize.height - 38, width: presetListWidth }}
+            rowHeight={24}
+            rowCount={filteredPresets?.length ?? 0}
+            rowProps={{}}
+          />
+        </div>
+        <div className='preset-info-wrapper'>
+          {selectedPreset ? (
+            <PresetInfo
+              preset={selectedPreset}
+              setSearchValue={setSearchValue}
+              CustomPresetInfo={CustomPresetInfo}
+            />
+          ) : (
+            <p className='select-preset-prompt'>
+              Select a preset from the list on the left to view info about it
+            </p>
+          )}
+          <div className='buttons-container'>
+            <button onClick={onCancel}>Cancel</button>
+            {selectedPreset ? <button onClick={() => onSubmit(selectedPreset)}>Load</button> : null}
+          </div>
+        </div>
+      </GenericPresetPickerContainer>
+    );
+  };
+  return withReduxProvider(store, withReactQueryClient(GenericPresetPicker)) as React.FC<
+    ModalCompProps<PresetDescriptor<T>>
+  >;
+}
+
+export function pickPresetWithModal<T>(
+  getPresets: () => Promise<PresetDescriptor<T>[]>,
+  style?: React.CSSProperties,
+  CustomPresetInfo?: React.FC<CustomPresetInfoProps<T>>
+) {
+  return renderModalWithControls(mkGenericPresetPicker(getPresets, style, CustomPresetInfo));
+}

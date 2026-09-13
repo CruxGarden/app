@@ -1,0 +1,295 @@
+@keyframes borderColor {
+  0% {
+    border-color: #0a414e;
+  }
+  25% {
+    border-color: #280550;
+  }
+  50% {
+    border-color: #4d063d;
+  }
+  75% {
+    border-color: #1a0b5c;
+  }
+  100% {
+    border-color: #0a414e;
+  }
+}
+
+@keyframes selectedUI {
+  0% {
+    background-position: 0% 74%;
+  }
+  50% {
+    background-position: 100% 27%;
+  }
+  100% {
+    background-position: 0% 74%;
+  }
+}
+
+.fm-synth-ui {
+  display: flex;
+  flex-direction: column;
+  background-color: #232323;
+  color: white;
+  width: 520px;
+  min-width: 520px;
+  overflow-y: auto;
+
+  h2 {
+    margin: 10px 0 -3px 0;
+    text-align: center;
+    font-family: Hack, 'Input Mono', Menlo, Monaco, Consolas, 'Courier New', monospace;
+    font-weight: normal;
+    font-size: 18px;
+  }
+
+  .hovered-modulation-entity {
+    width: 100%;
+    text-align: center;
+    text-transform: uppercase;
+    color: #ddd;
+    min-height: 22px;
+  }
+
+  .operator-square,
+  .operator-select {
+    border: 1px solid;
+    animation: borderColor 15s infinite linear;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+  }
+
+  .modulation-matrix {
+    display: flex;
+    flex-direction: column;
+    width: 490px;
+    margin-left: auto;
+    margin-right: auto;
+
+    * {
+      user-select: none;
+    }
+
+    .operator-row {
+      display: flex;
+      flex-direction: row;
+      justify-content: center;
+
+      > div {
+        flex-basis: 42px;
+        height: 42px;
+        display: flex;
+        font-size: 14px;
+        justify-content: center;
+      }
+
+      .operator-select {
+        cursor: pointer;
+        background-color: var(--highlight-2);
+        position: relative;
+      }
+      .operator-select[data-hovered='true'] {
+        background-color: #a1b95d;
+      }
+      .operator-select.operator-selected {
+        background: linear-gradient(300deg, #ce463f, #e8180e, #c60346, #bf0bb8);
+        background-size: 140% 140%;
+        animation: borderColor 15s infinite linear, selectedUI 8s ease infinite;
+      }
+      .operator-select.operator-selected[data-hovered='true'] {
+        background: #f17408;
+      }
+
+      .operator-square {
+        align-items: center;
+        cursor: pointer;
+        background-color: #121212;
+      }
+      .operator-square[data-active='true'] {
+        background: linear-gradient(300deg, #ce463f, #e8180e, #c60346, #bf0bb8);
+        background-size: 140% 140%;
+        animation: borderColor 15s infinite linear, selectedUI 8s ease infinite;
+      }
+      .operator-square.operator-square-feedback {
+        background-color: #340000;
+      }
+
+      .output-weight {
+        background-color: #121212;
+      }
+      .output-weight[data-selected='true'] {
+        background: linear-gradient(300deg, #ce463f, #e8180e, #c60346, #bf0bb8);
+        background-size: 140% 140%;
+        animation: borderColor 15s infinite linear, selectedUI 8s ease infinite;
+      }
+      .operator-weight-lens {
+        width: 100%;
+        height: 100%;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+      }
+
+      .adsr-param {
+        font-size: 12px;
+        text-align: center;
+        line-height: 1;
+      }
+    }
+  }
+
+  .effect-dot {
+    border-radius: 100%;
+    width: 4px;
+    height: 4px;
+    position: absolute;
+    bottom: 0.5px;
+    border: 1px solid #ccc;
+  }
+
+  .bottom-button-wrapper {
+    width: 440px;
+    margin-left: auto;
+    margin-right: auto;
+    display: flex;
+    flex-direction: row;
+
+    .main-effect-chain-selector {
+      background-color: var(--highlight-5);
+      text-align: center;
+      cursor: pointer;
+      padding: 3px;
+      margin: 2px 0px;
+      border: 1px solid #181818;
+      flex: 1;
+      user-select: none;
+      position: relative
+    }
+    .main-effect-chain-selector[data-active='true'] {
+      background: linear-gradient(300deg, #ce463f, #e8180e, #c60346, #bf0bb8);
+      background-size: 140% 140%;
+      animation: borderColor 15s infinite linear, selectedUI 8s ease infinite;
+    }
+    .main-effect-chain-selector:hover {
+      font-weight: bold;
+    }
+
+    .oscilloscope-button {
+      flex: 0;
+      margin-left: 4px;
+      padding-top: 2px;
+      background-color: var(--highlight-5);
+      border: 1px solid #181818;
+      padding: 0px 0px 2px 0px;
+      max-height: 24px;
+      margin-top: 2px;
+      cursor: pointer;
+
+      path {
+        fill: #fcfcfc;
+      }
+    }
+
+    .oscilloscope-button[data-active='true'] {
+      background: linear-gradient(300deg, #ce463f, #e8180e, #c60346, #bf0bb8);
+      background-size: 140% 140%;
+      animation: borderColor 15s infinite linear, selectedUI 8s ease infinite;
+    }
+  }
+}
+
+#fm-synth-oscilloscope {
+  width: 490px;
+  height: 240px;
+}
+
+.fm-synth-configuration {
+  background-color: #232323;
+  padding: 0px 2px;
+  height: 100%;
+  min-width: 500px;
+}
+
+.operator-config {
+  display: flex;
+  flex-direction: column;
+  max-height: 75vh;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-bottom: 20px;
+}
+
+.configure-modulation-index {
+  display: flex;
+  flex-direction: column;
+  width: 500px;
+}
+
+.configure-output-weight {
+  width: 500px;
+}
+
+.configure-effects {
+  width: 500px;
+
+  .effects-controls {
+    display: flex;
+    flex-direction: column;
+
+    .configure-effect {
+      border-bottom: 1px solid #494949;
+
+      .effect-management {
+        display: flex;
+        flex-direction: row;
+        text-transform: uppercase;
+        font-family: 'Hack', 'Input Mono', 'Input', 'Oxygen Mono', monospace;
+        opacity: 0.95;
+        align-items: center;
+
+        .bypass-checkbox {
+          margin-left: 16px;
+          filter: invert(1);
+          cursor: pointer;
+        }
+
+        .button-placeholder {
+          width: 20px;
+        }
+
+        button {
+          width: 20px;
+          padding: 0;
+        }
+        button:hover {
+          font-weight: bold;
+        }
+
+        button.toggle-collapsed {
+          height: 20px;
+          padding-left: 2px;
+          width: 24px;
+          margin-right: 3px;
+        }
+
+        .effect-title {
+          width: 500px;
+          text-align: center;
+          margin-left: -55px;
+          margin-right: 28px;
+          font-size: 14px;
+          padding-top: 4px;
+        }
+      }
+    }
+  }
+
+  .configure-effect:nth-child(even) {
+    background-color: #000;
+  }
+}

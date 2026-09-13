@@ -1,0 +1,13 @@
+[package]
+name = "event_scheduler"
+version = "0.1.0"
+authors = ["Casey Primozic <casey@cprimozic.net>"]
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+heapless = { version = "0.7", default-features = false }
+float-ord = "0.3"
+common = { path = "../common" }

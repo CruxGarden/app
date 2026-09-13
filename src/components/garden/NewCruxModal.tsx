@@ -382,6 +382,16 @@ const TEMPLATES: Template[] = [
     kind: 'webapp',
   },
   {
+    id: 'web-synth-app',
+    label: 'web-synth',
+    description: 'Music · modular synthesis, sequencing and sound design with web-synth',
+    defaultTitle: 'My synth',
+    icon: <LayoutIcon />,
+    thumb: <BlankThumb />,
+    kind: 'webapp',
+    desktopOnly: true,
+  },
+  {
     id: 'audiomass-app',
     label: 'AudioMass',
     description: 'Creative · waveform effects, recordings and multitrack audio',

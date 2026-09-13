@@ -1,0 +1,23 @@
+[package]
+authors = ["Casey Primozic <casey@cprimozic.net>"]
+edition = "2021"
+name = "engine"
+version = "0.1.0"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+wasm-bindgen = { version = "=0.2.92" }
+rand = "0.7"
+rand_pcg = "0.2.1"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+# Disable logging staticly in release, making all log calls into no-ops
+log = { version = "0.4", features = [] }
+uuid = { version = "1.2", features = ["serde"] }
+fxhash = "0.2"
+downcast-rs = "1.2"
+
+common = { path = "../common" }
+wbg_logging = { path = "../wbg_logging" }

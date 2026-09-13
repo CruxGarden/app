@@ -1,0 +1,86 @@
+<script lang="ts" module>
+  const buildSettings = (): ControlPanelSetting[] => [
+    { type: 'checkbox', label: 'enable safety limiter' },
+  ];
+</script>
+
+<script lang="ts">
+  import type { Writable } from 'svelte/store';
+
+  import SvelteControlPanel, {
+    type ControlPanelSetting,
+  } from 'src/controls/SvelteControlPanel/SvelteControlPanel.svelte';
+  import type {
+    CustomDestinationNode,
+    CustomDestinationNodeState,
+  } from 'src/graphEditor/nodes/CustomAudio/Destination/CustomDestinationNode';
+  import type { MixerLevelsViz } from 'src/graphEditor/nodes/CustomAudio/mixer/MixerLevelsViz';
+  import { onDestroy } from 'svelte';
+
+  const MixerLevelsVizPromise = import(
+    'src/graphEditor/nodes/CustomAudio/mixer/MixerLevelsViz'
+  ).then(m => m.MixerLevelsViz);
+
+  interface Props {
+    node: CustomDestinationNode;
+    state: Writable<CustomDestinationNodeState>;
+    sab: Writable<Float32Array | null>;
+  }
+
+  let { node, state: stateStore, sab }: Props = $props();
+
+  const handleChange = (key: string, val: any, _state: any) => {
+    switch (key) {
+      case 'enable safety limiter':
+        $stateStore.safetyLimiterEnabled = val;
+        node.setSafetyLimiterEnabled(val);
+        break;
+      default:
+        console.error(`Unknown setting key in custom destination node small view: ${key}`);
+    }
+  };
+
+  let settings = $derived(buildSettings());
+  let controlPanelState = $derived({ 'enable safety limiter': $stateStore.safetyLimiterEnabled });
+
+  let canvasRef: HTMLCanvasElement | null = $state(null);
+  let vizInst: MixerLevelsViz | null = $state(null);
+
+  $effect(() => {
+    if (!canvasRef || !$sab) {
+      vizInst?.destroy();
+    } else {
+      const canvas = canvasRef;
+      const sabVal = $sab;
+      MixerLevelsVizPromise.then(MixerLevelsViz => {
+        if (!canvas.isConnected) {
+          return;
+        }
+        vizInst = new MixerLevelsViz(canvas, 1);
+        vizInst.setAudioThreadBuffer(sabVal);
+      });
+    }
+  });
+
+  onDestroy(() => void vizInst?.destroy());
+</script>
+
+<div class="root">
+  <SvelteControlPanel
+    title="destination settings"
+    {settings}
+    width={500}
+    state={controlPanelState}
+    onChange={handleChange}
+  />
+  {#if $stateStore.safetyLimiterEnabled && $sab}
+    <canvas bind:this={canvasRef} style="width: 500px; background: black; margin-top: -60px"></canvas>
+  {/if}
+</div>
+
+<style lang="css">
+  .root {
+    display: flex;
+    flex-direction: column;
+  }
+</style>
