@@ -9,6 +9,7 @@ import { KETCHER_TOOLS, ketcherCommand } from '@/ai/ketcher-tools';
 import { GEPHI_TOOLS, gephiCommand } from '@/ai/gephi-tools';
 import { JUPYTERLITE_TOOLS, jupyterliteCommand } from '@/ai/jupyterlite-tools';
 import { RAWGRAPHS_TOOLS, rawgraphsCommand } from '@/ai/rawgraphs-tools';
+import { NOTES_TOOLS, notesCommand } from '@/ai/notes-tools';
 import { PISKEL_TOOLS, piskelCommand } from '@/ai/piskel-tools';
 import { MERMAID_TOOLS, mermaidCommand } from '@/ai/mermaid-tools';
 import { BITSY_TOOLS, bitsyCommand } from '@/ai/bitsy-tools';
@@ -44,7 +45,10 @@ import {
 import type { AppToolDefinition } from './embedded-app-tool-registry';
 
 /** Trusted built-in adapters declare tools and affected files; frames cannot grant themselves tools. */
-export function embeddedAppToolAdapter(crux: { meta?: Record<string, unknown> } | null) {
+export function embeddedAppToolAdapter(
+  crux: { kind?: string; meta?: Record<string, unknown> } | null,
+) {
+  if (crux?.kind === 'notes') return { tools: NOTES_TOOLS, prepare: notesCommand };
   if (nativeAppType(crux) === 'kan') return { tools: KAN_TOOLS, prepare: kanCommand };
   if (nativeAppType(crux) === 'opencut') return { tools: OPENCUT_TOOLS, prepare: opencutCommand };
   if (nativeAppType(crux) === 'playcanvas-editor')

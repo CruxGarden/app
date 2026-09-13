@@ -15,12 +15,12 @@
     "preview": "vite preview",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "tauri": "tauri",
-    "install:app": "npm run tauri -- build --bundles app && rm -rf \"/Applications/Tigrana.app\" && ditto \"src-tauri/target/release/bundle/macos/Tigrana.app\" \"/Applications/Tigrana.app\" && echo \"\u2713 Installed to /Applications\""
+    "install:app": "npm run tauri -- build --bundles app && rm -rf \"/Applications/Tigrana.app\" && ditto \"src-tauri/target/release/bundle/macos/Tigrana.app\" \"/Applications/Tigrana.app\" && echo \"✓ Installed to /Applications\""
   },
   "dependencies": {
+    "@floating-ui/dom": "^1.8.0",
     "@tauri-apps/api": "^2.0.0",
     "@tauri-apps/plugin-dialog": "^2.0.0",
-    "@floating-ui/dom": "^1.8.0",
     "@tiptap/core": "^3.29.2",
     "@tiptap/extension-code-block-lowlight": "^3.29.2",
     "@tiptap/extension-emoji": "^3.29.2",
@@ -33,9 +33,11 @@
     "@tiptap/react": "^3.29.2",
     "@tiptap/starter-kit": "^3.29.2",
     "@tiptap/suggestion": "^3.29.2",
+    "docx": "^9.7.1",
     "fuse.js": "^7.0.0",
     "lowlight": "^3.3.0",
     "lucide-react": "^0.468.0",
+    "mammoth": "^1.12.3",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "remark": "^15.0.1",
@@ -55,10 +57,10 @@
     "eslint": "^8.57.0",
     "eslint-plugin-react-hooks": "^4.6.2",
     "jsdom": "^24.1.3",
-    "typescript": "^5.5.3",
-    "vite": "^5.3.3",
-    "vitest": "^1.6.1",
     "remark-html": "^16.0.1",
-    "unified": "^11.0.5"
+    "typescript": "^5.5.3",
+    "unified": "^11.0.5",
+    "vite": "^5.3.3",
+    "vitest": "^1.6.1"
   }
 }

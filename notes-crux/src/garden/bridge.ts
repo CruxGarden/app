@@ -28,6 +28,7 @@ let publication: { title: string; pages: string[]; layout?: string } = { title: 
 let publicationFingerprint: string | null = null;
 let publicationTail: Promise<unknown> = Promise.resolve();
 let listNotes: (() => Promise<{ path: string; title: string }[]>) | null = null;
+let activeNote: string | null = null;
 let findImage: ((src: string) => string | null) | null = null;
 let sweepImages: (() => void) | null = null;
 
@@ -101,6 +102,19 @@ export const garden = {
   },
   notesProvider(fn: () => Promise<{ path: string; title: string }[]>) {
     listNotes = fn;
+  },
+  /** A passing notice in the bar (no conflict, nothing to reload): the status returns after a moment. */
+  warn(message: string) {
+    if (!alertBox || conflict) return;
+    alertBox.textContent = message;
+    alertBox.hidden = false;
+    setTimeout(() => {
+      if (!conflict && alertBox && alertBox.textContent === message) alertBox.hidden = true;
+    }, 4000);
+  },
+  /** The note the app last opened: the one Export note as DOCX and the App Tools act on by default. */
+  noteOpened(path: string) {
+    activeNote = path;
   },
   /** Where a note's relative image path lives in the notebook (an imported folder keeps its own .assets). */
   imageResolver(fn: (src: string) => string | null) {
@@ -282,6 +296,56 @@ function appearance(select: HTMLSelectElement) {
   window.parent.postMessage({ type: 'crux:appearance', op: 'get' }, '*');
 }
 
+/* Documents (V1-GAPS-PLAN.md §2.1): a Word document into the notebook, a note out as one. */
+const imagePath = (src: string) => (findImage?.(src.replace(/^\.?\//, '')) ?? src.replace(/^\.?\//, ''));
+async function importDocument(name: string, data: ArrayBuffer) {
+  const { docxToNotebookFiles } = await import('./document');
+  show('Reading document…');
+  const { stem, files } = await docxToNotebookFiles(name, data);
+  const result = (await call({ op: 'import', name: stem, files })) as { root: string; notes: number };
+  show(`Imported ${stem} into ${result.root}. Reloading…`);
+  setTimeout(() => location.reload(), 600);
+  return { root: result.root, note: `${result.root}/${stem}.md` };
+}
+async function exportNoteAsDocx(path: string | null) {
+  if (!path) throw new Error('Open a note first.');
+  const { noteToDocx, DOCX_MIME } = await import('./document');
+  await flush();
+  const note = (await call({ op: 'read', path })) as { content: string };
+  const title = path.split('/').pop()!.replace(/\.md$/i, '');
+  const folder = path.includes('/') ? path.slice(0, path.lastIndexOf('/') + 1) : '';
+  show('Writing document…');
+  const bytes = await noteToDocx(title, note.content, async (src) => {
+    if (/^(https?:|data:)/i.test(src)) return fetch(src).then((r) => (r.ok ? r.blob() : null)).catch(() => null);
+    const candidates = [imagePath(folder + src.replace(/^\.?\//, '')), imagePath(src)];
+    for (const candidate of candidates) {
+      const response = await fetch(`/notebook/${candidate.split('/').map(encodeURIComponent).join('/')}`).catch(() => null);
+      if (response?.ok) return response.blob();
+    }
+    return null;
+  });
+  const output = (await call({ op: 'save-output', label: `${title} (DOCX)`, bytes, mimeType: DOCX_MIME })) as Record<string, unknown>;
+  show(`Exported ${title} as a Word document (exports).`);
+  setTimeout(() => show(inFlight ? 'Saving…' : 'Saved'), 3000);
+  return { note: path, ...output };
+}
+async function runCommand(command: Record<string, unknown>) {
+  if (command.op === 'inspect') {
+    const notes = listNotes ? await listNotes() : [];
+    return { notes, activeNote, publication: { title: publication.title, pages: publication.pages } };
+  }
+  if (command.op === 'export-docx') {
+    const note = typeof command.note === 'string' && command.note ? command.note : activeNote;
+    return exportNoteAsDocx(note);
+  }
+  if (command.op === 'import-document') {
+    if (typeof command.path !== 'string') throw new Error('Name the document to import.');
+    const file = (await call({ op: 'read-bytes', path: command.path })) as { bytes: ArrayBuffer };
+    return importDocument(command.path.split('/').pop()!, file.bytes);
+  }
+  throw new Error(`Tigrana does not know the command ${String(command.op)}.`);
+}
+
 function mountBar() {
   bar = document.createElement('div');
   bar.id = 'garden-project';
@@ -297,6 +361,8 @@ function mountBar() {
     '<span role="status">Opening Garden notebook…</span><span role="alert" hidden></span>' +
     '<button type="button" data-reload hidden>Discard draft and reload</button>' +
     '<button type="button" data-import>Import notebook folder…</button>' +
+    '<button type="button" data-import-document>Import document…</button>' +
+    '<button type="button" data-export-docx>Export note as DOCX</button>' +
     '<button type="button" data-publication aria-expanded="false">Public edition…</button>' +
     '<label>Appearance <select aria-label="App appearance"><option value="garden">Garden Mood</option><option value="app">App appearance</option></select></label>';
   document.body.append(bar);
@@ -324,6 +390,29 @@ function mountBar() {
     };
     document.body.append(input);
     input.click();
+  };
+  bar.querySelector<HTMLButtonElement>('[data-import-document]')!.onclick = () => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+    input.setAttribute('aria-label', 'Import document');
+    input.style.position = 'fixed';
+    input.style.opacity = '0';
+    input.style.pointerEvents = 'none';
+    input.onchange = () => {
+      const file = input.files?.[0];
+      input.remove();
+      if (!file) return;
+      file
+        .arrayBuffer()
+        .then((data) => importDocument(file.name, data))
+        .catch((error) => garden.warn((error as Error).message));
+    };
+    document.body.append(input);
+    input.click();
+  };
+  bar.querySelector<HTMLButtonElement>('[data-export-docx]')!.onclick = () => {
+    exportNoteAsDocx(activeNote).catch((error) => garden.warn((error as Error).message));
   };
   const toggle = bar.querySelector<HTMLButtonElement>('[data-publication]')!;
   toggle.onclick = () => {
@@ -355,11 +444,11 @@ function listen() {
         (error) => send({ op: 'flushed', flushId: message.id, error: (error as Error).message }),
       );
     } else if (message.type === 'crux:notebook:command') {
-      send({
-        op: 'tool-result',
-        commandId: message.id,
-        error: 'Tigrana has no App Tools in this Crux yet.',
-      });
+      runCommand(message.command as Record<string, unknown>).then(
+        (result) => send({ op: 'tool-result', commandId: message.id, result }),
+        (error) =>
+          send({ op: 'tool-result', commandId: message.id, error: (error as Error).message }),
+      );
     }
   });
 }

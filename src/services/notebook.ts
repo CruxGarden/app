@@ -63,7 +63,7 @@ export function notebookSession(workspace: StoreApi<CruxState>) {
         let blob: Blob;
         if (request.bytes instanceof ArrayBuffer) {
           if (typeof request.mimeType !== 'string' || request.bytes.byteLength > 32_000_000)
-            throw new Error('Use a PNG, JPEG, WebP, GIF, WAV, MP3 or ZIP output up to 32 MB.');
+            throw new Error('Use a PNG, JPEG, WebP, GIF, WAV, MP3, ZIP, PDF or DOCX output up to 32 MB.');
           blob = new Blob([request.bytes], { type: request.mimeType });
         } else {
           if (typeof request.content !== 'string' || request.content.length > 44_000_000)
@@ -114,6 +114,21 @@ export function notebookSession(workspace: StoreApi<CruxState>) {
           mimeType: blob.type || guessMimeType(path),
           fingerprint: file.fingerprint,
         };
+      }
+      if (request.op === 'read-bytes' && state.crux?.kind === 'notes') {
+        // A document a person put in the Crux (a .docx beside the notebook) for Tigrana to import.
+        const path = typeof request.path === 'string' ? request.path : '';
+        if (
+          path.length > 240 ||
+          path.split('/').some((p) => !p || p === '.' || p === '..' || p.startsWith('.')) ||
+          !/^[\w /.()-]+$/.test(path) ||
+          !/\.docx$/i.test(path)
+        )
+          throw new Error('Choose a relative .docx file in this Crux.');
+        const disk = await diskFile(owner, path);
+        if (!disk) throw new Error('This document does not exist in the Crux.');
+        if (disk.byteLength > 32_000_000) throw new Error('This document is too large (32 MB).');
+        return { bytes: disk.buffer.slice(disk.byteOffset, disk.byteOffset + disk.byteLength) };
       }
       if (request.op === 'import' && state.crux?.kind === 'notes') {
         await assertCopyWritable(owner);
