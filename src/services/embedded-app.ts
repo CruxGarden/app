@@ -6,6 +6,7 @@ const NATIVE_TEMPLATES = {
   'web-synth-app': 'web-synth',
   'beepbox-app': 'beepbox',
   'hextris-app': 'hextris',
+  'pptist-app': 'pptist',
   'opencut-app': 'opencut',
   'playcanvas-editor-app': 'playcanvas-editor',
   'openmosh-app': 'openmosh',
@@ -33,6 +34,10 @@ export function nativeAppType(crux: { meta?: Record<string, unknown> } | null | 
 
 export function isOpenMosh(crux: { meta?: Record<string, unknown> } | null | undefined) {
   return crux?.meta?.template === 'openmosh-app';
+}
+
+export function isPPTist(crux: { meta?: Record<string, unknown> } | null | undefined) {
+  return crux?.meta?.template === 'pptist-app';
 }
 
 export function isHextris(crux: { meta?: Record<string, unknown> } | null | undefined) {
