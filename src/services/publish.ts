@@ -1,4 +1,4 @@
-import { isEmbeddedApp, isMoqira, isLocalCreationTool } from './embedded-app';
+import { isEmbeddedApp, isMoqira, isLocalCreationTool, nativeAppType } from './embedded-app';
 import { portableMeta } from './task-archive';
 import { assertCopyWritable } from './working-copies';
 /**
@@ -311,7 +311,12 @@ export async function publishPipeline(
   // publish; nothing half-deploys.
   let filesToPublish: PublishFile[];
   // Moqira and Notes publish their own public edition builds (ADR 0029, 0028) without an Astro config.
-  const builds = deps.site.isSiteCrux(artifacts) || isMoqira(crux) || crux.kind === 'notes';
+  // form-js Cruxes publish the viewer edition their own script renders (formjs-crux/scripts/edition.mjs).
+  const builds =
+    deps.site.isSiteCrux(artifacts) ||
+    isMoqira(crux) ||
+    crux.kind === 'notes' ||
+    nativeAppType(crux) === 'formjs';
   if (isEmbeddedApp(crux) && !builds)
     throw new Error(
       'This notebook is missing its site configuration. Restore it before publishing.',

@@ -1,0 +1,15 @@
+html, body { height: 100%; margin: 0; font: 14px/1.4 system-ui, sans-serif; background: #f7f7f5; color: #1f2328; }
+body { display: flex; flex-direction: column; }
+#form-header { display: flex; align-items: center; gap: 16px; padding: 8px 12px; border-bottom: 1px solid #d9d9d4; background: #fff; }
+#form-header label { display: flex; align-items: center; gap: 8px; font-weight: 600; }
+#form-header input { font: inherit; font-weight: 400; padding: 4px 8px; border: 1px solid #c9c9c4; border-radius: 4px; min-width: 260px; }
+#form-header [role=tablist] { display: flex; gap: 4px; margin-left: auto; }
+#form-header [role=tab] { font: inherit; padding: 4px 12px; border: 1px solid #c9c9c4; border-radius: 4px; background: #fff; cursor: pointer; }
+#form-header [role=tab][aria-selected=true] { background: #2f6f4e; color: #fff; border-color: #2f6f4e; }
+main { flex: 1; min-height: 0; position: relative; }
+#editor { height: 100%; }
+#preview { height: 100%; overflow: auto; padding: 24px; box-sizing: border-box; }
+#viewer { max-width: 720px; margin: 0 auto; background: #fff; padding: 16px 24px; border: 1px solid #d9d9d4; border-radius: 6px; }
+#preview .actions { max-width: 720px; margin: 12px auto 0; }
+#preview-submit { font: inherit; padding: 6px 16px; border: 1px solid #2f6f4e; border-radius: 4px; background: #2f6f4e; color: #fff; cursor: pointer; }
+#preview-result { max-width: 720px; margin: 16px auto 0; padding: 12px; background: #fff; border: 1px dashed #c9c9c4; white-space: pre-wrap; }

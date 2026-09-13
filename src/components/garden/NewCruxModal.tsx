@@ -413,6 +413,16 @@ const TEMPLATES: Template[] = [
     desktopOnly: true,
   },
   {
+    id: 'formjs-app',
+    label: 'Form',
+    description: 'Productivity · forms, questionnaires and sign-ups on form-js; answers land in the Crux Store',
+    defaultTitle: 'My form',
+    icon: <LayoutIcon />,
+    thumb: <BlankThumb />,
+    kind: 'webapp',
+    desktopOnly: true,
+  },
+  {
     id: 'eventcalendar-app',
     label: 'Calendar',
     description: 'Productivity · events, schedules and planning on an EventCalendar organizer',

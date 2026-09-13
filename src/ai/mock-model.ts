@@ -311,6 +311,16 @@ export function getMockLanguageModel(): LanguageModel {
             });
           return textStream('Added the findings cell and saved the notebook.');
         }
+        if (lastUserText(prompt).includes('[form:build]')) {
+          const rounds = toolResultsThisTurn(prompt);
+          if (!rounds.length) return toolCallStream('inspect_form', {});
+          if (rounds.length === 1) return toolCallStream('set_form_name', { name: 'Open day RSVP' });
+          if (rounds.length === 2)
+            return toolCallStream('add_form_field', { type: 'radio', label: 'Will you come?', key: 'coming', options: ['Yes', 'No'], required: true });
+          if (rounds.length === 3)
+            return toolCallStream('add_form_field', { type: 'textarea', label: 'Anything we should know?', key: 'notes' });
+          return textStream('Named the form Open day RSVP and added the coming and notes fields.');
+        }
         if (lastUserText(prompt).includes('[notes:document]')) {
           const rounds = toolResultsThisTurn(prompt);
           if (!rounds.length) return toolCallStream('inspect_notebook', {});
