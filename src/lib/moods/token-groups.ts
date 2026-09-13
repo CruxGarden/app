@@ -345,7 +345,7 @@ export const TOKEN_GROUPS: TokenGroup[] = [
   {
     id: 'motion',
     label: 'Motion',
-    hint: 'How things move: easing curves, three durations (all multiplied by motion scale, under Elevation & motion), and for each role — panes, dialogs, dropdowns, chat bubbles, cards, toasts — how it appears and leaves; how controls answer a press, how working indicators draw attention, and whether idle surfaces breathe. Frames steps every motion for pixel Moods; intensity is the Mood\'s default for the person\'s Motion setting.',
+    hint: 'How things move: easing curves, three durations (all multiplied by motion scale, under Elevation & motion), and for each role — panes, dialogs, dropdowns, chat bubbles, cards, toasts — how it appears and leaves; how controls answer a press, how working indicators draw attention, and whether idle surfaces breathe. Springs (stiffness damping mass) drive pops and expressive enters; frames steps every motion for pixel Moods; intensity is the Mood\'s default for the person\'s Motion setting.',
     match: (k) => k.startsWith('motion') && k !== 'motionScale',
   },
   {
@@ -380,7 +380,7 @@ export function groupTokens(): { group: TokenGroup; keys: string[] }[] {
 export function tokenKind(key: string): TokenKind {
   if (key in TOKEN_CHOICES) return 'choice';
   // ── motion ── easings are curves (text), durations are <time> lengths, bindings 0..1 numbers
-  if (/^motionEase/.test(key)) return 'text';
+  if (/^motionEase|^motionSpring/.test(key)) return 'text';
   if (/^motionDuration/.test(key)) return 'length';
   if (/^react/.test(key)) return 'number';
   if (/Texture$/.test(key) || FONT_ASSET_KEYS.has(key)) return 'asset';

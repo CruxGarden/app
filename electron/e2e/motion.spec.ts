@@ -2,11 +2,13 @@ import { test, expect } from '@playwright/test';
 import { launchApp } from './launch';
 
 /**
- * Motion is a Theme Token (ADR 0014): a dialog carries the role class
- * `.motion-enter-dialog` and the Mood decides what that means. Catppuccin
- * Mocha says `scale`, Sunday Paper says `none` — the same open Mood modal
- * changes its computed animation-name as each is applied, and closing under a
- * Mood with an exit plays `.motion-exit-dialog` before the modal unmounts.
+ * Motion is a Theme Token (ADR 0014, ADR 0041): a dialog names its role and
+ * the Mood decides what that means. Dialogs, dropdowns and toasts are driven
+ * by the Motion library from the same tokens (hooks/useMotionRole); the
+ * element carries `data-motion-choice` / `data-motion-exit` for evidence.
+ * Catppuccin Mocha says `scale`, Sunday Paper says `none` — the same open
+ * Mood modal changes as each is applied, and closing under a Mood with an
+ * exit plays it (inline styles move) before the modal unmounts.
  */
 test.describe('motion roles', () => {
   test('the Mood decides how the Mood modal enters and leaves', async () => {
@@ -27,51 +29,54 @@ test.describe('motion roles', () => {
       await page.getByRole('button', { name: 'Mood', exact: true }).click();
       const built = page.getByTestId('bundled-moods');
       await expect(built).toBeVisible();
-      const dialog = page.locator('.motion-enter-dialog').first();
-      const animation = () => dialog.evaluate((el) => getComputedStyle(el).animationName);
+      const dialog = page.locator('[data-motion-role="dialog"]').first();
+      const choice = () => dialog.getAttribute('data-motion-choice');
 
       // Garden Dark (the default) fades dialogs in
       expect(await cssVar('--motion-enter-dialog')).toBe('fade');
-      expect(await animation()).toBe('motion-in-fade');
+      expect(await choice()).toBe('fade');
+      // The enter settled at the rest state Motion wrote inline
+      await expect(dialog).toHaveCSS('opacity', '1');
 
       await built
         .getByTestId('bundled-catppuccin-mocha')
         .getByRole('button', { name: 'Apply' })
         .click();
       await expect.poll(() => cssVar('--motion-enter-dialog')).toBe('scale');
-      await expect.poll(animation).toBe('motion-in-scale');
-      // The spring curve travels with the Mood too
-      expect(await dialog.evaluate((el) => getComputedStyle(el).animationTimingFunction)).toContain(
-        'cubic-bezier',
-      );
+      await expect.poll(choice).toBe('scale');
+      // The spring travels with the Mood too: a pop would read the snappy spring token
+      expect(await cssVar('--motion-spring-snappy')).toMatch(/^\d+ \d+ \d+$/);
 
       await built
         .getByTestId('bundled-sunday-paper')
         .getByRole('button', { name: 'Apply' })
         .click();
       await expect.poll(() => cssVar('--motion-enter-dialog')).toBe('none');
-      await expect.poll(animation).toBe('none');
+      await expect.poll(choice).toBe('none');
+      expect(await dialog.getAttribute('data-motion-exit')).toBe('none');
 
       // Closing under Sunday Paper: no exit, the modal is simply gone
       await page.keyboard.press('Escape');
       await expect(page.getByTestId('bundled-moods')).toHaveCount(0);
 
-      // Re-open, back to Catppuccin, and closing now passes through the exit class
+      // Re-open, back to Catppuccin, and closing now plays the exit: the element
+      // stays mounted while Motion moves its inline style, then goes.
       await page.getByRole('button', { name: 'Mood', exact: true }).click();
       await built
         .getByTestId('bundled-catppuccin-mocha')
         .getByRole('button', { name: 'Apply' })
         .click();
       await expect.poll(() => cssVar('--motion-exit-dialog')).toBe('scale');
+      await expect.poll(() => dialog.getAttribute('data-motion-exit')).toBe('scale');
+      await expect(dialog).toHaveCSS('opacity', '1');
       await page.evaluate(() => {
         const w = window as unknown as { __sawExit: boolean };
         w.__sawExit = false;
-        new MutationObserver((muts) => {
-          for (const m of muts) {
-            if ((m.target as HTMLElement).classList?.contains('motion-exit-dialog'))
-              w.__sawExit = true;
-          }
-        }).observe(document.body, { attributes: true, subtree: true, attributeFilter: ['class'] });
+        const el = document.querySelector('[data-motion-role="dialog"]')!;
+        new MutationObserver(() => {
+          const opacity = parseFloat((el as HTMLElement).style.opacity || '1');
+          if (opacity < 1) w.__sawExit = true;
+        }).observe(el, { attributes: true, attributeFilter: ['style'] });
       });
       await page.keyboard.press('Escape');
       await expect(page.getByTestId('bundled-moods')).toHaveCount(0);

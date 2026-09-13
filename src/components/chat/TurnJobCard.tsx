@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react';
+import { motion } from 'motion/react';
+import { useMotionRole } from '@/hooks/useMotionRole';
 import { cn } from '@/lib/cn';
 import { useCruxStore } from '@/stores/cruxStore';
 import { confirmDialog } from '@/stores/dialogStore';
@@ -303,6 +305,7 @@ function CheckShot({ fingerprint, ok }: { fingerprint: string; ok: boolean }) {
  * the last snapshot. Everything the job can do, a person can do here.
  */
 export default function TurnJobCard() {
+  const toast = useMotionRole('toast');
   const { checkNow, dismissJob, removeQueued, runNextQueued, stopTurn } = useTurns();
   const job = useCruxStore((s) => s.turnJob);
   const queue = useCruxStore((s) => s.turnQueue);
@@ -370,11 +373,14 @@ export default function TurnJobCard() {
   );
 
   return (
-    <div
+    <motion.div
       data-testid="turn-job"
       data-status={job?.status ?? 'idle'}
       data-check={job?.check?.status ?? 'none'}
-      className="mx-3 mb-2 rounded-[var(--radius)] border border-border bg-chat-ai-bubble text-chat-ai-bubble-text text-xs motion-enter-toast"
+      data-motion-role="toast"
+      initial={toast.initial}
+      animate={toast.animate}
+      className="mx-3 mb-2 rounded-[var(--radius)] border border-border bg-chat-ai-bubble text-chat-ai-bubble-text text-xs"
     >
       {job && reveal && (
         <div className="px-3 pt-2 pb-2 space-y-1.5">
@@ -525,6 +531,6 @@ export default function TurnJobCard() {
           </ul>
         </div>
       )}
-    </div>
+    </motion.div>
   );
 }

@@ -416,6 +416,9 @@ export const GARDEN_DARK = {
   motionPress: 'none',
   motionAttention: 'pulse',
   motionAmbient: 'none',
+  // springs for the Motion library (ADR 0041): stiffness damping mass; pop and expressive enters use them
+  motionSpringSnappy: '500 35 1',
+  motionSpringSoft: '170 24 1',
   // stepped motion for pixel Moods: 0 = smooth, else the number of frames each role plays in
   motionFrames: '0',
   // the Mood's default intensity (ADR 0041); the person's own setting overrides it

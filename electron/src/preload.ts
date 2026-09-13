@@ -104,6 +104,8 @@ const api: ElectronBridge = {
       ipcRenderer.invoke('project:list-files', folder) as Promise<string[]>,
     watch: (folder: string) => ipcRenderer.invoke('project:watch', folder) as Promise<void>,
     unwatch: (folder: string) => ipcRenderer.invoke('project:unwatch', folder) as Promise<void>,
+    flush: (folder?: string) =>
+      ipcRenderer.invoke('project:flush', folder) as Promise<ChangeBatch[]>,
     onChanged: (callback: (batch: ChangeBatch) => void) => {
       const handler = (_event: unknown, batch: unknown) => callback(batch as ChangeBatch);
       ipcRenderer.on('project:changed', handler);

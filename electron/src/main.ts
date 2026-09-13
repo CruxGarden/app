@@ -448,6 +448,9 @@ function setupIpc() {
   );
   ipcMain.handle('project:watch', (_e: any, folder: string) => watcher.watch(folder));
   ipcMain.handle('project:unwatch', (_e: any, folder: string) => watcher.unwatch(folder));
+  // Cut the watcher's debounce short: the batches come back on the reply (an event sent
+  // during the handler could arrive after it), and the renderer records them itself.
+  ipcMain.handle('project:flush', (_e: any, folder?: string) => watcher?.flush(folder) ?? []);
   ipcMain.handle('project:list-files', (_e: any, folder: string) => projects.listFiles(folder));
   ipcMain.handle('project:capture', (_e: any, folder: string) => projects.capture(folder));
   ipcMain.handle('project:set-mode', (_e: any, folder: string, relPath: string, mode: number) =>

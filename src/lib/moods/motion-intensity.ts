@@ -65,6 +65,8 @@ export function motionIntensitySetting(): MotionIntensitySetting {
 export function setMotionIntensitySetting(value: MotionIntensitySetting): void {
   setSetting(SettingsKey.MotionIntensity, value);
   applyMotionIntensity();
+  // Motion-driven roles (hooks/useMotionRole) read their tokens again
+  document.dispatchEvent(new Event('palette-change'));
 }
 
 function reducedMotionQuery(): MediaQueryList | null {
@@ -101,5 +103,8 @@ export function watchReducedMotion(): void {
   const query = reducedMotionQuery();
   if (!query) return;
   watching = true;
-  query.addEventListener('change', () => applyMotionIntensity());
+  query.addEventListener('change', () => {
+    applyMotionIntensity();
+    document.dispatchEvent(new Event('palette-change'));
+  });
 }

@@ -187,6 +187,18 @@ test.describe('background turns (mock AI)', () => {
       await page.screenshot({ path: 'e2e/.results/background-4-relaunched.png' });
 
       writeFileSync(join(folderOf(gardenRoot), 'step-1.txt'), 'edited while closed\n');
+      // The edit is recorded once the OS reports it (a moment; a person's click
+      // never beats it) — restore then knows the file moved on.
+      const recorded = () =>
+        page.evaluate(async () => {
+          const row = (await window.electronAPI!.sqlite.get(
+            "SELECT a.fingerprint FROM artifacts a JOIN cruxes c ON c.id = a.resource_id WHERE c.type = 'workspace' AND a.path = 'step-1.txt'",
+            [],
+          )) as { fingerprint: string } | undefined;
+          return row?.fingerprint ?? null;
+        });
+      const before = await recorded();
+      await expect.poll(recorded, { timeout: 30_000 }).not.toBe(before);
       await card.getByRole('button', { name: 'Restore last snapshot' }).click();
       await page.getByRole('dialog').getByRole('button', { name: 'Restore' }).click();
       await expect

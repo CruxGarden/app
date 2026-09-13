@@ -1,7 +1,7 @@
 import { type ComponentProps } from 'react';
 import { cn } from '@/lib/cn';
 
-/** `ref` is an ordinary prop (React 19) so a Modal can hand the panel to useMotionExit. */
+/** `ref` is an ordinary prop (React 19) so callers can reach the panel element. */
 interface PanelProps extends ComponentProps<'div'> {
   padding?: 'sm' | 'md' | 'lg' | 'none';
 }

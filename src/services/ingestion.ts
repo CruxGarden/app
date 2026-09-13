@@ -123,6 +123,21 @@ export function flushIngestion(): Promise<void> {
   return queueTail;
 }
 
+/**
+ * Record what the OS watcher is still holding in its debounce, then wait for
+ * the queue. Growth calls this before a capture or a restore: an edit made a
+ * moment ago would otherwise be missed — the store would say a file already
+ * matches the snapshot while its disk keeps the edit.
+ */
+export async function settleIngestion(folder?: string): Promise<void> {
+  const api = bridge();
+  if (api?.flush) {
+    const batches = await api.flush(folder).catch(() => [] as ChangeBatch[]);
+    for (const batch of batches) enqueue(() => processBatch(batch));
+  }
+  await flushIngestion();
+}
+
 /** Reconcile a referenced file whose OS watcher notification may still be pending. */
 export async function reconcileProjectFile(folder: string, relPath: string): Promise<void> {
   enqueue(() => processBatch({ folder, events: [{ type: 'write', relPath }] }));

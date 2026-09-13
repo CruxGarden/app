@@ -126,6 +126,8 @@ export interface ProjectBridge {
   listFiles(folder: string): Promise<string[]>;
   watch(folder: string): Promise<void>;
   unwatch(folder: string): Promise<void>;
+  /** What the watcher still holds in its debounce, taken now (one folder or all); the caller records it. */
+  flush?(folder?: string): Promise<ChangeBatch[]>;
   onChanged(callback: (batch: ChangeBatch) => void): () => void;
 }
 
