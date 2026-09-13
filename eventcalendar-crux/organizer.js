@@ -181,6 +181,14 @@
         notes: '',
         ...event,
       };
+      // Without an end the component would guess one; give it the plain reading: a day, or an hour.
+      if (!e.end && e.start) {
+        const [date, time] = e.start.split('T');
+        const [y, m, d] = date.split('-').map(Number);
+        const [hh, mm] = (time || '00:00:00').split(':').map(Number);
+        const until = e.allDay ? new Date(y, m - 1, d + 1, 0, 0, 0) : new Date(y, m - 1, d, hh + 1, mm, 0);
+        e.end = iso(until);
+      }
       ec.addEvent(toCalendar(e));
       ec.gotoDate(e.start);
       commit();

@@ -107,7 +107,9 @@ export function getMockLanguageModel(): LanguageModel {
         }
         // ── Glow Garden: the scripted collaborator across the game Cruxspace (GAME-CRUXSPACE-PLAN.md) ──
         const game = gameScript(prompt);
-        if (game) return game;
+        if (game) return game;        const business = businessScript(prompt);
+        if (business) return business;
+
         if (lastUserText(prompt).includes('[calendar:edit]')) {
           const rounds = toolResultsThisTurn(prompt);
           if (!rounds.length) return toolCallStream('inspect_calendar', {});
@@ -998,6 +1000,150 @@ function copyAsset(prompt: LanguageModelV4Prompt, label: string, path: string, u
     path,
     ...(unpack ? { unpack: 'true' } : {}),
   });
+}
+const BUSINESS_BRIEF = `# Bloom & Ink brief
+
+A two-person illustration studio opening its first online shop.
+
+## Audience
+
+Independent authors and small presses who need cover art and spot illustrations, and people who buy prints.
+
+## Offer
+
+- Custom book cover: 480, three weeks, two revision rounds.
+- Spot illustration set (five pieces): 260.
+- Signed prints: 35 each, editions of fifty.
+
+## Brand notes
+
+Warm cream paper, deep ink blue, one accent of marigold. Hand-drawn, never glossy. The mark is a bloom growing from an ink drop.
+
+## Page copy (draft)
+
+Bloom & Ink makes covers people pick up. Tell us the story; we draw the door into it.
+`;
+const BUSINESS_CARDS: [string, string][] = [
+  ['Plan', 'Confirm prices and turnaround with both partners'],
+  ['Build', 'Draw the brand mark'],
+  ['Build', 'Write the offer page'],
+  ['Launch', 'Announce the shop to the newsletter'],
+  ['Launch', 'Open bookings for the first three covers'],
+];
+const BUSINESS_SITE_PAGE = `---
+import Base from '../layouts/Base.astro';
+---
+
+<Base>
+  <header class="hero">
+    <img src="/brand.png" alt="Bloom & Ink brand mark" width="160" height="160" />
+    <h1>Bloom &amp; Ink</h1>
+    <p class="tagline">Covers people pick up. Tell us the story; we draw the door into it.</p>
+  </header>
+  <section>
+    <h2>What we make</h2>
+    <ul>
+      <li>Custom book covers — 480, three weeks, two revision rounds</li>
+      <li>Spot illustration sets of five — 260</li>
+      <li>Signed prints — 35, editions of fifty</li>
+    </ul>
+  </section>
+  <section>
+    <h2>Opening</h2>
+    <p>Bookings for the first three covers open on launch day. Write to us and tell us what you are making.</p>
+  </section>
+</Base>
+`;
+/** Launch a Small Business — the second Cruxspace demo (BUSINESS-CRUXSPACE-PLAN.md). */
+function businessScript(prompt: LanguageModelV4Prompt): ReturnType<typeof stream> | null {
+  const text = lastUserText(prompt);
+  const marker = text.match(/\[business:([a-z-]+)\]/)?.[1];
+  if (!marker) return null;
+  const rounds = toolResultsThisTurn(prompt);
+  const n = rounds.length;
+  switch (marker) {
+    case 'brief':
+      if (!n)
+        return toolCallStream('write_file', { path: 'notebook/Bloom & Ink brief.md', content: BUSINESS_BRIEF });
+      return textStream('Wrote the brief: audience, offer, brand notes and page copy.');
+    case 'budget':
+      if (!n)
+        return toolCallStream('set_workbook_cells', {
+          sheetId: 'budget-sheet',
+          cells: [
+            { address: 'A1', value: 'Item' },
+            { address: 'B1', value: 'Cost' },
+            { address: 'C1', value: 'Price' },
+            { address: 'D1', value: 'Margin' },
+            { address: 'A2', value: 'Custom cover' },
+            { address: 'B2', value: 140 },
+            { address: 'C2', value: 480 },
+            { address: 'D2', value: '=C2-B2' },
+            { address: 'A3', value: 'Spot set' },
+            { address: 'B3', value: 90 },
+            { address: 'C3', value: 260 },
+            { address: 'D3', value: '=C3-B3' },
+            { address: 'A4', value: 'Signed print' },
+            { address: 'B4', value: 9 },
+            { address: 'C4', value: 35 },
+            { address: 'D4', value: '=C4-B4' },
+            { address: 'A6', value: 'Total margin' },
+            { address: 'D6', value: '=SUM(D2:D4)' },
+          ],
+        });
+      return textStream('Filled the launch budget with costs, prices and margins.');
+    case 'board': {
+      if (!n) return toolCallStream('inspect_kan', {});
+      const board = JSON.parse(toolResultText(prompt, 'inspect_kan') || '{}').board;
+      const card = BUSINESS_CARDS[n - 1];
+      if (!board?.lists?.length) return textStream('Make a board with lists first.');
+      if (!card) return textStream('Added the launch cards from the brief.');
+      const list = board.lists.find((l: { name: string }) => l.name === card[0]) ?? board.lists[0];
+      return toolCallStream('create_kan_card', {
+        listPublicId: list.publicId,
+        title: card[1],
+        description: 'From the Bloom & Ink brief.',
+      });
+    }
+    case 'brand':
+      if (!n) return toolCallStream('save_minipaint_image', { name: 'Brand mark' });
+      return textStream('Saved the brand mark to the Cruxspace.');
+    case 'calendar':
+      if (!n)
+        return toolCallStream('add_calendar_event', {
+          title: 'Launch day',
+          start: '2026-10-01T00:00:00',
+          allDay: true,
+          notes: 'Bookings open for the first three covers.',
+        });
+      if (n === 1) return toolCallStream('set_calendar_name', { name: 'Bloom & Ink launch' });
+      return textStream('Added Launch day and named the calendar Bloom & Ink launch.');
+    case 'site':
+      if (!n) return toolCallStream('list_cruxspace_assets', {});
+      if (n === 1) return copyAsset(prompt, 'Brand mark', 'public/brand.png');
+      // The starter's page exists: the tool contract is read before a full rewrite.
+      if (n === 2) return toolCallStream('read_file', { path: 'src/pages/index.astro' });
+      if (n === 3) return toolCallStream('write_file', { path: 'src/pages/index.astro', content: BUSINESS_SITE_PAGE });
+      return textStream('Placed the brand mark on the site and wrote the offer page.');
+    case 'done': {
+      if (!n) return toolCallStream('inspect_kan', {});
+      const board = JSON.parse(toolResultText(prompt, 'inspect_kan') || '{}').board;
+      const done = board?.lists?.find((l: { name: string }) => l.name === 'Done');
+      if (!done) return textStream('Make a Done list first.');
+      const pending = (board.lists as { publicId: string; cards: { publicId: string }[] }[])
+        .filter((l) => l.publicId !== done.publicId)
+        .flatMap((l) => l.cards);
+      const next = pending[n - 1];
+      if (!next) return textStream('Moved every card to Done.');
+      return toolCallStream('move_kan_card', {
+        cardPublicId: next.publicId,
+        listPublicId: done.publicId,
+        index: done.cards.length + (n - 1),
+      });
+    }
+    default:
+      return textStream(`Unknown Bloom & Ink step: ${marker}.`);
+  }
 }
 function gameScript(prompt: LanguageModelV4Prompt): ReturnType<typeof stream> | null {
   const text = lastUserText(prompt);

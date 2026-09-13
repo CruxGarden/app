@@ -16,10 +16,10 @@ export async function startGarden(app) {
   const bar = document.createElement('div');
   bar.id = 'garden-project';
   bar.innerHTML =
-    '<span role="status">Opening Garden project…</span><button>Save project</button><button>Reload saved project</button>';
+    '<span role="status">Opening Garden project…</span><button>Save project</button><button>Reload saved project</button><input aria-label="Output name" value="Image"><button>Save image to Cruxspace</button>';
   const style = document.createElement('style');
   style.textContent =
-    '#garden-project{position:fixed;bottom:0;left:0;right:0;height:32px;z-index:10000;display:flex;gap:12px;align-items:center;padding:0 10px;background:#24282c;color:#fff;font:12px system-ui}#garden-project span{flex:1}#garden-project button{padding:3px 8px;color:#fff;background:#42494f;border:1px solid #697078;border-radius:3px}.wrapper{bottom:34px!important}';
+    '#garden-project{position:fixed;bottom:0;left:0;right:0;height:32px;z-index:10000;display:flex;gap:12px;align-items:center;padding:0 10px;background:#24282c;color:#fff;font:12px system-ui}#garden-project span{flex:1}#garden-project button{padding:3px 8px;color:#fff;background:#42494f;border:1px solid #697078;border-radius:3px}#garden-project input{width:120px;padding:3px 6px;color:#fff;background:#151515;border:1px solid #697078;border-radius:3px;font:11px system-ui}.wrapper{bottom:34px!important}';
   document.head.append(style);
   document.body.append(bar);
   const workspace = document.querySelector('.wrapper');
@@ -150,9 +150,21 @@ export async function startGarden(app) {
       y,
     })),
   });
+  /** Render every visible layer to one PNG and save it as a named output of this Crux. */
+  async function saveImage(label) {
+    await save();
+    const canvas = document.createElement('canvas');
+    canvas.width = app.Config.WIDTH;
+    canvas.height = app.Config.HEIGHT;
+    app.Layers.convert_layers_to_canvas(canvas.getContext('2d'), null, false);
+    const output = await call({ op: 'save-output', label, content: canvas.toDataURL('image/png') });
+    show('Image saved to Cruxspace');
+    return { ...output, width: canvas.width, height: canvas.height };
+  }
   async function command(value) {
     await settle();
     if (value.op === 'inspect') return inspect();
+    if (value.op === 'save-image') return saveImage(value.label);
     if (value.op !== 'layer') throw new Error('Unsupported miniPaint operation.');
     const settings = {};
     if (typeof value.name === 'string' && value.name.length <= 200) settings.name = value.name;
@@ -203,6 +215,8 @@ export async function startGarden(app) {
     }
   });
   bar.querySelectorAll('button')[0].onclick = () => save().catch(() => {});
+  bar.querySelectorAll('button')[2].onclick = () =>
+    saveImage(bar.querySelector('input').value).catch((error) => show(error.message));
   bar.querySelectorAll('button')[1].onclick = () => {
     if (revision === saved || confirm('Discard the unsaved draft and reload the saved project?'))
       location.reload();
