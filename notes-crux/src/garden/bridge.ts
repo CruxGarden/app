@@ -28,6 +28,8 @@ let publication: { title: string; pages: string[]; layout?: string } = { title: 
 let publicationFingerprint: string | null = null;
 let publicationTail: Promise<unknown> = Promise.resolve();
 let listNotes: (() => Promise<{ path: string; title: string }[]>) | null = null;
+let findImage: ((src: string) => string | null) | null = null;
+let sweepImages: (() => void) | null = null;
 
 const send = (value: Record<string, unknown>) =>
   window.parent.postMessage(
@@ -99,6 +101,14 @@ export const garden = {
   },
   notesProvider(fn: () => Promise<{ path: string; title: string }[]>) {
     listNotes = fn;
+  },
+  /** Where a note's relative image path lives in the notebook (an imported folder keeps its own .assets). */
+  imageResolver(fn: (src: string) => string | null) {
+    findImage = fn;
+  },
+  /** The notebook listing changed: note images may resolve differently now. */
+  imagesChanged() {
+    sweepImages?.();
   },
 };
 
@@ -369,10 +379,13 @@ function resolveImages() {
     if (/^(data:|blob:)/i.test(current)) return; // a fresh paste shows its own bytes
     const src = img.getAttribute('data-markdown-src') || current;
     if (!src || external.test(src)) return;
-    const resolved = `/notebook/${src.replace(/^\.?\//, '').split('/').map(encodeURIComponent).join('/')}`;
+    const relative = src.replace(/^\.?\//, '');
+    const path = findImage?.(relative) ?? relative;
+    const resolved = `/notebook/${path.split('/').map(encodeURIComponent).join('/')}`;
     if (img.getAttribute('src') !== resolved) img.setAttribute('src', resolved);
   };
   const sweep = (root: ParentNode) => root.querySelectorAll('img').forEach(fix);
+  sweepImages = () => sweep(document);
   sweep(document);
   new MutationObserver((records) => {
     for (const record of records) {

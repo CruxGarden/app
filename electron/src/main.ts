@@ -355,7 +355,7 @@ function setupIpc() {
   // Watcher: external edits flow disk → store (ADR 0001 invariant)
   watcher = new ProjectWatcher((batch: unknown) => {
     mainWindow?.webContents.send('project:changed', batch);
-  });
+  }, (absPath: string) => projects.ownWriteMtime(absPath));
 
   // Watch every registered Project Folder from the start — external edits
   // count whether or not the crux is open in the app.

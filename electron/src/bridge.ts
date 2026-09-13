@@ -96,6 +96,8 @@ export interface UpdatesBridge {
 export interface WatchEvent {
   type: 'write' | 'delete' | 'mkdir' | 'rmdir';
   relPath: string;
+  /** For a write the app made itself: true when the file still carries that write, false when someone wrote after it. */
+  own?: boolean;
 }
 
 export interface ChangeBatch {

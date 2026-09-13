@@ -56,9 +56,9 @@ test('Glow Garden: plan, board, sprites, sound, game, export and site across one
 
     await test.step('1. Members and the Cruxspace', async () => {
       members.plan = await member(page, /^Notes/, 'Glow Garden plan');
-      await expect(frame(page).getByRole('heading', { name: 'Welcome', exact: true })).toBeVisible(
-        { timeout: 120000 },
-      );
+      await expect(frame(page).locator('#garden-project [role=status]')).toHaveText('Saved', {
+        timeout: 120000,
+      });
       members.board = await member(page, /^Kan/, 'Glow Garden board');
       await nativeReady(page);
       members.sprites = await member(page, /^Piskel/, 'Glow Garden sprites');
@@ -565,7 +565,10 @@ test('Glow Garden: plan, board, sprites, sound, game, export and site across one
       await expect(milestones.getByRole('listitem').filter({ hasText: 'Before revert' })).toHaveCount(0);
       await story.getByLabel('Include automatic saves').check();
       await expect(milestones.getByRole('listitem').filter({ hasText: 'Before revert' })).toHaveCount(7);
-      await expect(story.getByRole('region', { name: 'Members' }).getByRole('listitem').filter({ hasText: 'Glow Garden plan' })).toContainText('3 checkpoints');
+      // Tigrana saves its own metadata as it works, so the plan carries more than the three named checkpoints.
+      await expect(story.getByRole('region', { name: 'Members' }).getByRole('listitem').filter({ hasText: 'Glow Garden plan' })).toContainText(/\d+ checkpoints/);
+      const planRow = await story.getByRole('region', { name: 'Members' }).getByRole('listitem').filter({ hasText: 'Glow Garden plan' }).innerText();
+      expect(Number(planRow.match(/(\d+) checkpoints/)![1])).toBeGreaterThanOrEqual(3);
       await page.screenshot({ path: join(evidence, '13-reverted-story.png') });
       await story.getByRole('button', { name: 'Close Cruxspace history' }).click();
       const gameFolder = (await storedCrux(page, members.game.id)).projectFolder as string;

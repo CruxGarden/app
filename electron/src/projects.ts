@@ -157,9 +157,31 @@ export class ProjectFolders {
       const mode = fs.existsSync(target) ? fs.statSync(target).mode & 0o777 : 0o644;
       fs.writeFileSync(temporary, Buffer.from(data), { mode });
       fs.renameSync(temporary, target);
+      this.noteOwnWrite(target);
     } finally {
       if (fs.existsSync(temporary)) fs.unlinkSync(temporary);
     }
+  }
+
+  // The app's own writes, by the modification time they left on disk. The
+  // watcher asks for them when it reports a write: the same time means the
+  // event is the echo of our write; a later time means someone else wrote the
+  // file after us (an editor or an agent inside the debounce window), and the
+  // renderer must read it rather than trust what it wrote.
+  private ownWrites = new Map<string, number>();
+  private noteOwnWrite(target: string): void {
+    try {
+      if (this.ownWrites.size > 50000) this.ownWrites.clear();
+      this.ownWrites.set(target, fs.statSync(target).mtimeMs);
+    } catch {
+      /* the file vanished already; the watcher will report that */
+    }
+  }
+  /** The modification time of the app's last write to this file, consumed on first ask. */
+  ownWriteMtime(absPath: string): number | undefined {
+    const at = this.ownWrites.get(absPath);
+    if (at !== undefined) this.ownWrites.delete(absPath);
+    return at;
   }
 
   readFile(folder: string, relPath: string): Uint8Array {
@@ -246,6 +268,7 @@ export class ProjectFolders {
         fs.copyFileSync(source, temporary);
         fs.chmodSync(temporary, (entry.mode ?? 0o644) & 0o777);
         fs.renameSync(temporary, target);
+        this.noteOwnWrite(target);
       } finally {
         if (fs.existsSync(temporary)) fs.unlinkSync(temporary);
       }

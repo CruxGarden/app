@@ -1,10 +1,19 @@
 import { test, expect, type Page } from '@playwright/test';
-import { readFileSync, writeFileSync, mkdirSync, readdirSync, mkdtempSync } from 'node:fs';
+import {
+  readFileSync,
+  writeFileSync,
+  mkdirSync,
+  readdirSync,
+  mkdtempSync,
+  existsSync,
+  statSync,
+} from 'node:fs';
 import { join, resolve } from 'node:path';
 import { tmpdir } from 'node:os';
 import { createServer } from 'node:http';
 import { launchApp } from './launch';
 import { enterGarden, storedCrux } from './multi-crux-helpers';
+import { exportNativeCrux } from './native-archive-helpers';
 const evidence = resolve(__dirname, '../../docs/app-workflow');
 const png = Buffer.from(
   'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRZkAAAAASUVORK5CYII=',
@@ -40,7 +49,8 @@ test('import a Tigrana folder, customize in a Task, keep Main notes, Share selec
   writeFileSync(join(vault, 'unsupported.txt'), 'Not imported');
   try {
     const page = instance.page;
-    await page.setViewportSize({ width: 1600, height: 1050 });
+    page.setDefaultTimeout(60000);
+    await page.setViewportSize({ width: 2000, height: 1200 });
     await enterGarden(page);
     await page.getByRole('button', { name: 'Add Crux' }).click();
     await page.getByRole('button', { name: /^Notes/ }).click();
@@ -49,19 +59,27 @@ test('import a Tigrana folder, customize in a Task, keep Main notes, Share selec
     const main = (await page.locator('[data-workspace-id]').getAttribute('data-workspace-id'))!;
     const folder = (await storedCrux(page, main)).projectFolder as string;
     const frame = () => page.frameLocator('iframe[data-crux-id]');
-    await expect(frame().getByRole('heading', { name: 'Welcome', exact: true })).toBeVisible({
-      timeout: 120000,
-    });
-    await frame().getByLabel('Choose notebook folder').setInputFiles(vault);
-    const reviewImport = frame().getByRole('dialog', { name: 'Import notebook', exact: true });
-    await expect(reviewImport).toContainText('3 notes · 1 images · 1 unsupported files skipped');
-    await page.screenshot({ path: join(evidence, 'import-review.png') });
-    await reviewImport.getByRole('button', { name: 'Import notes', exact: true }).click();
-    await expect(reviewImport).toHaveCount(0, { timeout: 60000 });
+    const status = () => frame().locator('#garden-project [role=status]');
+    await expect(status()).toHaveText('Saved', { timeout: 120000 });
+    // The actual Tigrana (ADR 0040): the bar's Import notebook folder… takes the folder through
+    // the host; the notebook reloads with Imported/<name> in its tree.
+    const chooser = page.waitForEvent('filechooser');
+    await frame().getByRole('button', { name: 'Import notebook folder…', exact: true }).click();
+    await (await chooser).setFiles(vault);
+    await expect
+      .poll(() => existsSync(join(folder, 'notebook/Imported/Novel/Outline.md')), { timeout: 60000 })
+      .toBe(true);
+    await expect(status()).toHaveText('Saved', { timeout: 120000 });
+    const openNote = async (folderPath: string, title: string) => {
+      // Tigrana's Sections pane lists the top-level folders; choosing one shows its whole tree
+      // (subfolders unfolded) in the middle pane, where the note is picked by title.
+      await frame().locator(`.folder-row[data-folder-path="${folderPath.split('/')[0]}"]`).click();
+      await frame().locator('.unified-tree-pane').getByText(title, { exact: true }).click();
+      await expect(frame().locator('.tiptap').first()).toBeVisible();
+    };
     const outline = 'Imported/Novel/Outline';
-    await frame()
-      .getByRole('button', { name: new RegExp(outline) })
-      .click();
+    await openNote('Imported/Novel', 'Outline');
+    await page.screenshot({ path: join(evidence, 'import-review.png') });
     await expect(frame().locator('.tiptap img')).toHaveCount(1);
     await expect
       .poll(() =>
@@ -78,11 +96,14 @@ test('import a Tigrana folder, customize in a Task, keep Main notes, Share selec
     expect(JSON.parse(readFileSync(join(folder, 'notebook/publish.json'), 'utf8')).pages).toEqual(
       [],
     );
-    await frame().getByLabel('Include in public edition').check();
-    await frame()
-      .getByRole('button', { name: /Imported\/Novel\/Chapters\/One/ })
-      .click();
-    await frame().getByLabel('Include in public edition').check();
+    await frame().getByRole('button', { name: 'Public edition…' }).click();
+    await frame().locator('#garden-publication input[data-note="Imported/Novel/Outline.md"]').check();
+    await frame().locator('#garden-publication input[data-note="Imported/Novel/Chapters/One.md"]').check();
+    await expect
+      .poll(() => JSON.parse(readFileSync(join(folder, 'notebook/publish.json'), 'utf8')).pages)
+      .toEqual(['Imported/Novel/Outline.md', 'Imported/Novel/Chapters/One.md']);
+    await frame().getByRole('button', { name: 'Public edition…' }).click();
+    await expect(status()).toHaveText('Saved');
     await page
       .getByTestId('workshop-view')
       .getByRole('button', { name: 'Customize app', exact: true })
@@ -104,29 +125,31 @@ test('import a Tigrana folder, customize in a Task, keep Main notes, Share selec
         ]),
       taskId,
     )) as { project_folder: string };
-    const cssPath = join(taskRow.project_folder, 'src/notebook.css');
+    const cssPath = join(taskRow.project_folder, 'src/styles/app.css');
     writeFileSync(
       cssPath,
       readFileSync(cssPath, 'utf8') +
-        '\n/* Novel customization */\n.notebook-main h1 { color: rgb(171, 121, 231); }\n',
+        '\n/* Novel customization */\n.note-editor h1 { color: rgb(171, 121, 231); }\n',
     );
-    expect(readFileSync(join(folder, 'src/notebook.css'), 'utf8')).not.toContain(
+    expect(readFileSync(join(folder, 'src/styles/app.css'), 'utf8')).not.toContain(
       'Novel customization',
     );
-    await page.getByTestId('task-bar').getByRole('link', { name: 'Main', exact: true }).click();
-    await expect(page.locator('[data-workspace-id]')).toHaveAttribute('data-workspace-id', main);
+    // The task bar ignores a switch while the new task is still settling; ask again until it takes.
+    await expect(async () => {
+      await page.getByTestId('task-bar').getByRole('link', { name: 'Main', exact: true }).click();
+      await expect(page.locator('[data-workspace-id]')).toHaveAttribute('data-workspace-id', main, {
+        timeout: 5000,
+      });
+    }).toPass({ timeout: 60000 });
     await page
       .getByTestId('workshop-view')
       .getByRole('button', { name: 'Use app', exact: true })
       .click();
-    await frame()
-      .getByRole('button', { name: /Imported\/Novel\/Chapters\/One/ })
-      .click();
-    await frame()
-      .locator('.tiptap[contenteditable=true]')
-      .first()
-      .fill('The garden gate opened. NEWER_MAIN_CHAPTER');
-    await frame().getByRole('button', { name: 'Save now', exact: true }).click();
+    await expect(status()).toHaveText('Saved', { timeout: 120000 });
+    await openNote('Imported/Novel/Chapters', 'One');
+    await frame().locator('.tiptap').first().click();
+    await page.keyboard.press('Control+End');
+    await page.keyboard.type(' NEWER_MAIN_CHAPTER');
     await expect
       .poll(() => readFileSync(join(folder, 'notebook/Imported/Novel/Chapters/One.md'), 'utf8'))
       .toContain('NEWER_MAIN_CHAPTER');
@@ -134,14 +157,39 @@ test('import a Tigrana folder, customize in a Task, keep Main notes, Share selec
       .getByTestId('task-bar')
       .getByRole('link', { name: /^Customize app/ })
       .click();
+    // The task's own Tigrana reloads behind the source view and records the note it reopened;
+    // review once its metadata has settled, as a person would after the switch.
+    await expect(page.locator('[data-workspace-id]')).toHaveAttribute('data-workspace-id', taskId);
+    const taskMetadata = join(taskRow.project_folder, 'notebook/.tigrana/metadata.json');
+    const mtime = () => statSync(taskMetadata).mtimeMs;
+    await expect
+      .poll(
+        async () => {
+          const before = mtime();
+          await page.waitForTimeout(4000);
+          return mtime() === before;
+        },
+        { timeout: 60000 },
+      )
+      .toBe(true);
     await page.getByRole('button', { name: 'Review changes', exact: true }).click();
     const merge = page.getByRole('dialog', { name: 'Review changes for Main' });
-    await merge.getByRole('button', { name: 'Check combined result' }).click();
+    // The first check installs the toolchain into the task (pnpm-lock.yaml appears as a source
+    // change) and asks for a second look; the second check verifies the settled result.
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      await merge.getByRole('button', { name: 'Check combined result' }).click();
+      await expect(merge.getByRole('button', { name: 'Check combined result' })).toBeEnabled({
+        timeout: 300000,
+      });
+      if (await merge.getByRole('checkbox').isEnabled()) break;
+    }
     await expect(merge.getByRole('checkbox')).toBeEnabled({ timeout: 120000 });
     await merge.getByRole('checkbox').check();
     await merge.getByRole('button', { name: 'Merge into Main', exact: true }).click();
     await expect(merge).toHaveCount(0, { timeout: 60000 });
-    expect(readFileSync(join(folder, 'src/notebook.css'), 'utf8')).toContain('Novel customization');
+    expect(readFileSync(join(folder, 'src/styles/app.css'), 'utf8')).toContain(
+      'Novel customization',
+    );
     expect(readFileSync(join(folder, 'notebook/Imported/Novel/Chapters/One.md'), 'utf8')).toContain(
       'NEWER_MAIN_CHAPTER',
     );
@@ -153,13 +201,9 @@ test('import a Tigrana folder, customize in a Task, keep Main notes, Share selec
       .getByTestId('workshop-view')
       .getByRole('button', { name: 'Use app', exact: true })
       .click();
-    await expect(frame().getByRole('heading', { name: 'Welcome', exact: true })).toBeVisible({
-      timeout: 120000,
-    });
-    await frame()
-      .getByRole('button', { name: new RegExp(outline) })
-      .click();
-    await expect(frame().locator('.tiptap')).toContainText('First chapter');
+    await expect(status()).toHaveText('Saved', { timeout: 120000 });
+    await openNote('Imported/Novel', 'Outline');
+    await expect(frame().locator('.tiptap').first()).toContainText('First chapter');
     await page.screenshot({ path: join(evidence, 'customized-notebook.png') });
     await page.getByRole('button', { name: 'Toggle history', exact: true }).click();
     await expect(
@@ -184,45 +228,28 @@ test('import a Tigrana folder, customize in a Task, keep Main notes, Share selec
       ),
     ).toBeVisible();
     await page.getByRole('button', { name: 'Toggle share', exact: true }).click();
-    await page.evaluate(() => {
-      const state = window as unknown as { exportedCrux?: Blob };
-      const blobs = new Map<string, Blob>();
-      const original = URL.createObjectURL.bind(URL);
-      URL.createObjectURL = (blob) => {
-        const url = original(blob);
-        if (blob instanceof Blob) blobs.set(url, blob);
-        return url;
-      };
-      const click = HTMLAnchorElement.prototype.click;
-      HTMLAnchorElement.prototype.click = function () {
-        if (this.download.endsWith('.crux')) state.exportedCrux = blobs.get(this.href);
-        else click.call(this);
-      };
-    });
-    await page
-      .getByTestId('workshop-view')
-      .getByRole('button', { name: 'Export complete Crux', exact: true })
-      .click();
-    await expect(page.getByText(/Complete editable Crux: includes app code/)).toBeVisible();
-    await page.getByRole('button', { name: 'Export Crux', exact: true }).click();
-    await expect
-      .poll(() =>
-        page.evaluate(() => !!(window as unknown as { exportedCrux?: Blob }).exportedCrux),
-      )
-      .toBe(true);
-    const encoded = await page.evaluate(async () => {
-      const bytes = new Uint8Array(
-        await (window as unknown as { exportedCrux: Blob }).exportedCrux.arrayBuffer(),
-      );
-      let s = '';
-      for (let i = 0; i < bytes.length; i += 0x8000)
-        s += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
-      return btoa(s);
-    });
     const archivePath = join(evidence, 'novel-workshop.crux');
-    writeFileSync(archivePath, Buffer.from(encoded, 'base64'));
+    await exportNativeCrux(page, archivePath, instance.app, async () => {
+      // The Export pane opens from the Workshop; a click that lands while another pane is
+      // still closing can be swallowed, so ask again until the pane is there.
+      await expect(async () => {
+        await page
+          .getByTestId('workshop-view')
+          .getByRole('button', { name: 'Export complete Crux', exact: true })
+          .click();
+        await expect(page.getByRole('button', { name: 'Export Crux', exact: true })).toBeVisible({
+          timeout: 5000,
+        });
+      }).toPass({ timeout: 60000 });
+    });
+    await expect(page.getByText(/Complete editable Crux: includes app code/)).toBeVisible();
     await page.screenshot({ path: join(evidence, 'export-explanation.png') });
     await page.getByRole('button', { name: 'Toggle export', exact: true }).click();
+    const installed = await page.evaluate(
+      async (folder) => window.electronAPI!.toolchain.install(folder),
+      folder,
+    );
+    expect(installed.code, installed.log).toBe(0);
     const built = await page.evaluate(
       async (folder) => window.electronAPI!.toolchain.build(folder),
       folder,
@@ -267,11 +294,11 @@ test('import a Tigrana folder, customize in a Task, keep Main notes, Share selec
         },
         `http://127.0.0.1:${(server.address() as { port: number }).port}/`,
       );
-      await expect(frame().locator('article')).toBeVisible();
-      await frame().getByRole('link', { name: outline, exact: true }).click();
-      await expect(frame().locator('article img')).toHaveCount(1);
-      await frame().getByRole('link', { name: 'First chapter', exact: true }).click();
-      await expect(frame().locator('article')).toContainText('NEWER_MAIN_CHAPTER');
+      const site = frame();
+      await expect(site.locator('article').first()).toBeVisible();
+      await expect(site.locator('article img').first()).toBeVisible();
+      await expect(site.locator('body')).toContainText('NEWER_MAIN_CHAPTER');
+      await expect(site.locator('body')).not.toContainText('PRIVATE_NOVEL_ENDING');
       await page.screenshot({ path: join(evidence, 'shared-notebook.png') });
     } finally {
       server.closeAllConnections();
@@ -289,7 +316,7 @@ test('import a Tigrana folder, customize in a Task, keep Main notes, Share selec
         .locator('[data-workspace-id]')
         .getAttribute('data-workspace-id'))!;
       const importedFolder = (await storedCrux(restored.page, id)).projectFolder as string;
-      expect(readFileSync(join(importedFolder, 'src/notebook.css'), 'utf8')).toContain(
+      expect(readFileSync(join(importedFolder, 'src/styles/app.css'), 'utf8')).toContain(
         'Novel customization',
       );
       expect(
@@ -304,8 +331,8 @@ test('import a Tigrana folder, customize in a Task, keep Main notes, Share selec
       await expect(
         restored.page
           .frameLocator('iframe[data-crux-id]')
-          .getByRole('heading', { name: 'Welcome', exact: true }),
-      ).toBeVisible({ timeout: 120000 });
+          .locator('#garden-project [role=status]'),
+      ).toHaveText('Saved', { timeout: 120000 });
       writeFileSync(
         join(evidence, 'evidence.json'),
         JSON.stringify(

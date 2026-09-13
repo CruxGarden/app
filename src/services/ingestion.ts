@@ -216,7 +216,9 @@ async function processBatch(batch: ChangeBatch): Promise<void> {
       // read, no hash, no database round-trip (thousands of those blocked the
       // embedded app's first read behind the queue). An external edit that
       // lands in the same batch produces its own later event.
-      if (takeExpectation(batch.folder, event.relPath)) continue;
+      // Unless the main process saw a later modification time: then an external
+      // edit landed inside the same debounce window and the file must be read.
+      if (takeExpectation(batch.folder, event.relPath) && event.own !== false) continue;
       const existing = await db.get<{ fingerprint: string | null }>(
         "SELECT fingerprint FROM artifacts WHERE resource_id = ? AND path = ? AND type = 'artifact'",
         [cruxId, event.relPath],

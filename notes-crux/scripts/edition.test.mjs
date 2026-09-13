@@ -49,6 +49,16 @@ test('readEdition keeps only selected notes, inlines images and refuses private 
     rmSync(root, { recursive: true, force: true });
   }
 });
+test('an empty selection still builds a placeholder edition (a Task verification runs the build)', async () => {
+  const root = notebook({ title: 'Draft', pages: [] });
+  try {
+    const edition = await buildEdition(root);
+    assert.equal(edition.pages.length, 0);
+    assert.match(readFileSync(join(root, 'dist/index.html'), 'utf8'), /No pages are public yet/);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
 test('single-page and separate-pages editions render without private material', async () => {
   const root = notebook({ title: 'Shared', pages: ['Start.md', 'Research/Field journal.md'] });
   try {

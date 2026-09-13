@@ -88,7 +88,7 @@ test('Cruxspace connects a website, finished artwork and a tracker, retaining se
       .click();
     await page.getByRole('button', { name: 'Cruxspace assets', exact: true }).click();
     await page.getByRole('button', { name: 'Use Album cover', exact: true }).click();
-    await page.getByLabel('Image path').fill('assets/cover.png');
+    await page.getByLabel('Destination path').fill('assets/cover.png');
     await page.getByRole('button', { name: 'Copy selected version', exact: true }).click();
     await expect(page.getByRole('status').filter({ hasText: 'Copied Album cover' })).toContainText(
       'Copied Album cover',
