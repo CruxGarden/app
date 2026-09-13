@@ -1,21 +1,41 @@
 import type { TemplateDefinition } from './index';
 import { LAYOUT_WRITING } from './index';
+// The actual Moqira travels with the Crux: upstream's React source unchanged, the Tauri
+// stand-ins and Garden bridge under src/garden, the edition script, the pinned lockfile,
+// notes and the built runtime. Text stays text so the Crux is portable.
 const sources = import.meta.glob(
   [
-    '../../moqira-crux/{src/**/*,scripts/*,mockups/*,package.json,package-lock.json,astro.config.mjs,tsconfig.json,vitest.config.ts,README.md,.npmrc}',
+    '../../moqira-crux/{index.html,package.json,package-lock.json,tsconfig.json,.eslintrc.cjs,vite.config.ts,README.md,UPSTREAM.md,CONTEXT.md,.cruxignore}',
+    '../../moqira-crux/{src,scripts,docs,mockups}/**/*',
+    '!../../moqira-crux/**/node_modules/**',
   ],
   { query: '?raw', import: 'default', eager: true },
 ) as Record<string, string>;
+const runtime = import.meta.glob(
+  ['../../moqira-crux/runtime/**/*', '../../moqira-crux/moqira-icon.png'],
+  {
+    query: '?url',
+    import: 'default',
+    eager: true,
+  },
+) as Record<string, string>;
 const template: TemplateDefinition = {
-  files: Object.entries(sources).map(([path, content]) => ({
-    path: path.replace('../../moqira-crux/', ''),
-    content,
-  })),
+  files: [
+    ...Object.entries(sources).map(([path, content]) => ({
+      path: path.replace('../../moqira-crux/', ''),
+      content,
+    })),
+    ...Object.entries(runtime).map(([path, content]) => ({
+      path: path.replace('../../moqira-crux/', ''),
+      content,
+      encoding: 'asset-url' as const,
+    })),
+  ],
   layout: LAYOUT_WRITING,
-  meta: { settings: { entryFile: 'src/pages/index.astro' } },
+  meta: { settings: { entryFile: 'runtime/index.html' } },
   greeting:
-    'Your Moqira workspace is ready. Add controls to the canvas, create wireframes, and try Play mode. Changes save automatically with Growth history. Choose which wireframes belong in the public edition before publishing. Ask me to customize the app or help with your designs.',
+    'Your Moqira workspace is ready. Add controls to the canvas, create wireframes, and try Play mode. Save writes the project to this Crux with Growth history. Choose which wireframes belong in the public edition from the bar below the app.',
   context:
-    'Moqira is an editable wireframe app in an Astro shell. Private data lives in mockups/project.json; explicit publication choices in mockups/publish.json. Use the scoped crux:app bridge for data, never localStorage. Preserve Moqira attribution. Garden Mood affects only editor chrome, not canvas styling. Production builds include only selected wireframes; keep private data out of src/ and public/. Customize app sources in a Task to avoid overwriting newer design data on Main.',
+    'The actual Moqira (downcastsystems/moqira 1.0.3, upstream 0fbe079): its React app unchanged, believing it runs in Tauri while the Garden stands in for the Tauri modules. The project is mockups/project.json, read before the app starts and written by the app’s own Save (Cmd/Ctrl+S or the bar’s Save project); publication choices are mockups/publish.json; the public edition (npm run build) keeps only the chosen wireframes and opens read-only in interactive mode. Import a Moqira file through the app’s Open. Use the scoped crux:app bridge for data, never the filesystem. See UPSTREAM.md.',
 };
 export default template;

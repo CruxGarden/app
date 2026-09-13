@@ -1,98 +1,98 @@
 export type ComponentKind =
-  | 'accordion'
-  | 'alertBox'
-  | 'alertBoxAndroid'
-  | 'appBar'
-  | 'arrow'
-  | 'breadcrumbs'
-  | 'browser'
-  | 'rectangle'
-  | 'button'
-  | 'tabs'
-  | 'buttonBar'
-  | 'calendar'
-  | 'callout'
-  | 'chartBar'
-  | 'chartColumn'
-  | 'chartLine'
-  | 'chartPie'
-  | 'checkbox'
-  | 'checkboxList'
-  | 'circleButton'
-  | 'colorPicker'
-  | 'comboBox'
-  | 'coverFlow'
-  | 'dataGrid'
-  | 'dateChooser'
-  | 'datePicker'
-  | 'fieldSet'
-  | 'hCurlyBrace'
-  | 'hRule'
-  | 'hScrollBar'
-  | 'hSlider'
-  | 'hSplitter'
-  | 'helpButton'
-  | 'icon'
-  | 'iconText'
-  | 'image'
-  | 'iosKeyboard'
-  | 'iosMenu'
-  | 'iosPicker'
-  | 'ipad'
-  | 'iphone'
-  | 'link'
-  | 'linkBar'
-  | 'list'
-  | 'listIcon'
-  | 'menu'
-  | 'menuBar'
-  | 'modalScreen'
-  | 'multilineButton'
-  | 'numericStepper'
-  | 'onOffSwitch'
-  | 'playback'
-  | 'pointyButton'
-  | 'popover'
-  | 'progressBar'
-  | 'progressBarIndeterminate'
-  | 'radioButton'
-  | 'radioButtonGroup'
-  | 'redX'
-  | 'scratchOut'
-  | 'searchBox'
-  | 'searchBoxVoice'
-  | 'shape'
-  | 'siteMap'
-  | 'smartphone'
-  | 'squigglyLine'
-  | 'squigglyParagraph'
-  | 'stickyNote'
-  | 'streetMap'
-  | 'tabBar'
-  | 'tagCloud'
-  | 'textArea'
-  | 'textInput'
-  | 'textLabel'
-  | 'textParagraph'
-  | 'textSubtitle'
-  | 'textTitle'
-  | 'timePicker'
-  | 'toolbar'
-  | 'tooltip'
-  | 'treePane'
-  | 'vCurlyBrace'
-  | 'vRule'
-  | 'vScrollBar'
-  | 'vSlider'
-  | 'vSplitter'
-  | 'vTabs'
-  | 'videoPlayer'
-  | 'volumeSlider'
-  | 'webcam'
-  | 'window'
-  | 'dropdown'
-  | 'textbox'
-  | 'text';
+  | "accordion"
+  | "alertBox"
+  | "alertBoxAndroid"
+  | "appBar"
+  | "arrow"
+  | "breadcrumbs"
+  | "browser"
+  | "rectangle"
+  | "button"
+  | "tabs"
+  | "buttonBar"
+  | "calendar"
+  | "callout"
+  | "chartBar"
+  | "chartColumn"
+  | "chartLine"
+  | "chartPie"
+  | "checkbox"
+  | "checkboxList"
+  | "circleButton"
+  | "colorPicker"
+  | "comboBox"
+  | "coverFlow"
+  | "dataGrid"
+  | "dateChooser"
+  | "datePicker"
+  | "fieldSet"
+  | "hCurlyBrace"
+  | "hRule"
+  | "hScrollBar"
+  | "hSlider"
+  | "hSplitter"
+  | "helpButton"
+  | "icon"
+  | "iconText"
+  | "image"
+  | "iosKeyboard"
+  | "iosMenu"
+  | "iosPicker"
+  | "ipad"
+  | "iphone"
+  | "link"
+  | "linkBar"
+  | "list"
+  | "listIcon"
+  | "menu"
+  | "menuBar"
+  | "modalScreen"
+  | "multilineButton"
+  | "numericStepper"
+  | "onOffSwitch"
+  | "playback"
+  | "pointyButton"
+  | "popover"
+  | "progressBar"
+  | "progressBarIndeterminate"
+  | "radioButton"
+  | "radioButtonGroup"
+  | "redX"
+  | "scratchOut"
+  | "searchBox"
+  | "searchBoxVoice"
+  | "shape"
+  | "siteMap"
+  | "smartphone"
+  | "squigglyLine"
+  | "squigglyParagraph"
+  | "stickyNote"
+  | "streetMap"
+  | "tabBar"
+  | "tagCloud"
+  | "textArea"
+  | "textInput"
+  | "textLabel"
+  | "textParagraph"
+  | "textSubtitle"
+  | "textTitle"
+  | "timePicker"
+  | "toolbar"
+  | "tooltip"
+  | "treePane"
+  | "vCurlyBrace"
+  | "vRule"
+  | "vScrollBar"
+  | "vSlider"
+  | "vSplitter"
+  | "vTabs"
+  | "videoPlayer"
+  | "volumeSlider"
+  | "webcam"
+  | "window"
+  | "dropdown"
+  | "textbox"
+  | "text";
 
 export type CanvasNode = {
   id: string;
@@ -115,22 +115,22 @@ export type CanvasNode = {
   showBorder?: boolean;
   showScrollbar?: boolean;
   opacity?: number;
-  tabPlacement?: 'top' | 'bottom';
-  tabAlignment?: 'left' | 'center' | 'right';
-  textAlign?: 'left' | 'center' | 'right';
+  tabPlacement?: "top" | "bottom";
+  tabAlignment?: "left" | "center" | "right";
+  textAlign?: "left" | "center" | "right";
   textBold?: boolean;
   textItalic?: boolean;
   textUnderline?: boolean;
   textStrikethrough?: boolean;
   icon?: string;
   value?: string | number;
-  orientation?: 'horizontal' | 'vertical';
+  orientation?: "horizontal" | "vertical";
   variant?: string;
   placeholder?: string;
-  arrowLine?: 'curved' | 'straight';
+  arrowLine?: "curved" | "straight";
   arrowHeadStart?: boolean;
   arrowHeadEnd?: boolean;
-  arrowStrokeStyle?: 'solid' | 'dashed' | 'dotted';
+  arrowStrokeStyle?: "solid" | "dashed" | "dotted";
   arrowLabelPosition?: number;
   arrowStart?: CanvasPoint;
   arrowEnd?: CanvasPoint;
@@ -150,14 +150,14 @@ export type CanvasPoint = {
 };
 
 export type CanvasLink =
-  | { kind: 'wireframe'; wireframeId: string }
-  | { kind: 'url'; url: string }
-  | { kind: 'back' };
+  | { kind: "wireframe"; wireframeId: string }
+  | { kind: "url"; url: string }
+  | { kind: "back" };
 
 export type Wireframe = {
   id: string;
   name: string;
-  background?: 'white' | 'black';
+  background?: "white" | "black";
   showGrid?: boolean;
   nodes: CanvasNode[];
 };
@@ -171,7 +171,7 @@ export type MockupProject = {
 };
 
 export type ProjectAppearance = {
-  colorScheme: 'system' | 'light' | 'dark';
+  colorScheme: "system" | "light" | "dark";
   accentColor: string;
   appFontFamily: string;
   appFontSize: number;

@@ -1,6 +1,6 @@
-import type { CanvasNode } from '../types';
+import type { CanvasNode } from "../types";
 
-export type LayerAction = 'front' | 'back' | 'forward' | 'backward';
+export type LayerAction = "front" | "back" | "forward" | "backward";
 
 export type CanvasRect = {
   x: number;
@@ -10,7 +10,7 @@ export type CanvasRect = {
 };
 
 export type IdFactory = (prefix: string) => string;
-export type AlignmentSnapGuide = { axis: 'x' | 'y'; position: number };
+export type AlignmentSnapGuide = { axis: "x" | "y"; position: number };
 
 export type AlignmentSnapOptions = {
   nodes: CanvasNode[];
@@ -28,12 +28,7 @@ export function pointHitsNode(x: number, y: number, node: CanvasNode) {
   return x >= node.x && x <= node.x + node.width && y >= node.y && y <= node.y + node.height;
 }
 
-export function rectFromPoints(
-  startX: number,
-  startY: number,
-  currentX: number,
-  currentY: number,
-): CanvasRect {
+export function rectFromPoints(startX: number, startY: number, currentX: number, currentY: number): CanvasRect {
   const x = Math.min(startX, currentX);
   const y = Math.min(startY, currentY);
   return {
@@ -45,27 +40,14 @@ export function rectFromPoints(
 }
 
 export function rectIntersectsNode(rect: CanvasRect, node: CanvasNode) {
-  return (
-    rect.x <= node.x + node.width &&
-    rect.x + rect.width >= node.x &&
-    rect.y <= node.y + node.height &&
-    rect.y + rect.height >= node.y
-  );
+  return rect.x <= node.x + node.width && rect.x + rect.width >= node.x && rect.y <= node.y + node.height && rect.y + rect.height >= node.y;
 }
 
 export function rectContainsNode(rect: CanvasRect, node: CanvasNode) {
-  return (
-    rect.x <= node.x &&
-    rect.y <= node.y &&
-    rect.x + rect.width >= node.x + node.width &&
-    rect.y + rect.height >= node.y + node.height
-  );
+  return rect.x <= node.x && rect.y <= node.y && rect.x + rect.width >= node.x + node.width && rect.y + rect.height >= node.y + node.height;
 }
 
-function boundsForNodes(
-  nodes: CanvasNode[],
-  positions: Record<string, { x: number; y: number }>,
-): CanvasRect | null {
+function boundsForNodes(nodes: CanvasNode[], positions: Record<string, { x: number; y: number }>): CanvasRect | null {
   const positioned = nodes.flatMap((node) => {
     const position = positions[node.id];
     return position ? [{ ...node, ...position }] : [];
@@ -85,18 +67,13 @@ function bestAlignmentSnap(
   targets: number[],
   threshold: number,
 ): { delta: number; guides: number[] } {
-  let best: { start: number; guides: number[]; dist: number } = {
-    start: rawStart,
-    guides: [],
-    dist: threshold + 1,
-  };
+  let best: { start: number; guides: number[]; dist: number } = { start: rawStart, guides: [], dist: threshold + 1 };
   for (const target of targets) {
     for (const edge of [0, size / 2, size]) {
       const snapped = Math.round(target - edge);
       const dist = Math.abs(snapped - rawStart);
       if (dist < best.dist) best = { start: snapped, guides: [target], dist };
-      else if (dist === best.dist && best.start === snapped && !best.guides.includes(target))
-        best.guides.push(target);
+      else if (dist === best.dist && best.start === snapped && !best.guides.includes(target)) best.guides.push(target);
     }
   }
   return best.dist <= threshold
@@ -137,26 +114,14 @@ export function calculateAlignmentSnap({
     yTargets.push(node.y, node.y + node.height / 2, node.y + node.height);
   }
 
-  const snappedX = bestAlignmentSnap(
-    rawBoundsX,
-    originalBounds.x,
-    originalBounds.width,
-    xTargets,
-    threshold,
-  );
-  const snappedY = bestAlignmentSnap(
-    rawBoundsY,
-    originalBounds.y,
-    originalBounds.height,
-    yTargets,
-    threshold,
-  );
+  const snappedX = bestAlignmentSnap(rawBoundsX, originalBounds.x, originalBounds.width, xTargets, threshold);
+  const snappedY = bestAlignmentSnap(rawBoundsY, originalBounds.y, originalBounds.height, yTargets, threshold);
   return {
     deltaX: snappedX.delta,
     deltaY: snappedY.delta,
     guides: [
-      ...snappedX.guides.map((position) => ({ axis: 'x' as const, position })),
-      ...snappedY.guides.map((position) => ({ axis: 'y' as const, position })),
+      ...snappedX.guides.map((position) => ({ axis: "x" as const, position })),
+      ...snappedY.guides.map((position) => ({ axis: "y" as const, position })),
     ],
   };
 }
@@ -164,19 +129,19 @@ export function calculateAlignmentSnap({
 export function moveNodeLayer(nodes: CanvasNode[], ids: string[], action: LayerAction) {
   const selected = new Set(ids);
   if (!nodes.some((node) => selected.has(node.id))) return nodes;
-  if (action === 'front' || action === 'back') {
+  if (action === "front" || action === "back") {
     const moving = nodes.filter((node) => selected.has(node.id));
     const rest = nodes.filter((node) => !selected.has(node.id));
-    return action === 'front' ? [...rest, ...moving] : [...moving, ...rest];
+    return action === "front" ? [...rest, ...moving] : [...moving, ...rest];
   }
   const next = [...nodes];
-  if (action === 'forward') {
+  if (action === "forward") {
     for (let index = next.length - 2; index >= 0; index -= 1) {
       if (!selected.has(next[index].id) || selected.has(next[index + 1].id)) continue;
       [next[index], next[index + 1]] = [next[index + 1], next[index]];
     }
   }
-  if (action === 'backward') {
+  if (action === "backward") {
     for (let index = 1; index < next.length; index += 1) {
       if (!selected.has(next[index].id) || selected.has(next[index - 1].id)) continue;
       [next[index - 1], next[index]] = [next[index], next[index - 1]];
@@ -202,7 +167,7 @@ export function duplicateNodesInStack(nodes: CanvasNode[], ids: string[], create
   const duplicatesById = new Map(
     selectedNodesInStack(nodes, ids).map((node) => [
       node.id,
-      { ...node, id: createId('node'), x: node.x + 24, y: node.y + 24 },
+      { ...node, id: createId("node"), x: node.x + 24, y: node.y + 24 },
     ]),
   );
   return {
@@ -225,7 +190,7 @@ export function cloneNodesForPaste(
   const offsetY = point ? Math.round(point.y - minY) : 24;
   return clipboard.map((item) => ({
     ...item,
-    id: createId('node'),
+    id: createId("node"),
     x: Math.round(item.x + offsetX),
     y: Math.round(item.y + offsetY),
     name: item.name,

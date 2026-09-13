@@ -1,28 +1,41 @@
 {
-  "name": "crux-moqira",
+  "name": "moqira",
+  "version": "1.0.3",
   "private": true,
-  "version": "0.1.0",
+  "description": "A simple desktop wireframing app.",
   "type": "module",
   "scripts": {
-    "dev": "astro dev",
-    "build": "astro build",
+    "dev": "vite",
+    "build": "vite build --mode edition",
+    "build:garden": "OUT_DIR=runtime vite build",
     "check": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "preview": "vite preview",
+    "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
+    "tauri": "tauri",
+    "install:app": "npm run tauri -- build --bundles app && rm -rf \"/Applications/Moqira.app\" && ditto \"src-tauri/target/release/bundle/macos/Moqira.app\" \"/Applications/Moqira.app\" && echo \"\u2713 Installed to /Applications\""
   },
   "dependencies": {
-    "astro": "^7.3.2",
-    "@astrojs/react": "^6.0.5",
-    "react": "^19.0.0",
-    "react-dom": "^19.0.0",
+    "@tauri-apps/api": "^2.0.0",
+    "@tauri-apps/plugin-dialog": "^2.0.0",
     "lucide-react": "^0.468.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
     "uuid": "^10.0.0"
   },
   "devDependencies": {
-    "@types/react": "^19.0.0",
-    "@types/react-dom": "^19.0.0",
-    "@types/uuid": "^10.0.0",
-    "@types/node": "^22.0.0",
-    "typescript": "^5.7.0",
+    "@tauri-apps/cli": "^2.0.0",
+    "@types/node": "^20.14.10",
+    "@types/react": "^18.3.3",
+    "@types/react-dom": "^18.3.0",
+    "@typescript-eslint/eslint-plugin": "^7.15.0",
+    "@typescript-eslint/parser": "^7.15.0",
+    "@vitejs/plugin-react": "^4.3.1",
+    "eslint": "^8.57.0",
+    "eslint-plugin-react-hooks": "^4.6.2",
+    "typescript": "^5.5.3",
+    "vite": "^5.3.3",
     "vitest": "^4.1.9"
   }
 }
