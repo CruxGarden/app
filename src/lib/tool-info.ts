@@ -38,6 +38,12 @@ export const TOOL_INFO: Record<string, ToolInfo> = {
   'pptist-app': native('PPTist', 'pipipi-pikachu/PPTist'),
   'wick-editor-app': native('Wick Editor', 'Wicklets/wick-editor'),
   'bentopdf-app': native('BentoPDF', 'alam00000/bentopdf'),
+  'am-1-app': {
+    name: 'AM-1',
+    upstream: 'https://github.com/zacos-tech',
+    detailsPath: 'UPSTREAM.md',
+    relationship: 'Daniel’s AM-1 Arpeggio Machine from the ZACOS line, packaged as written with its source and notes.',
+  },
   'underrun-app': native('Underrun', 'phoboslab/underrun'),
   'playcanvas-editor-app': native('PlayCanvas Editor', 'playcanvas/editor'),
   'blockbench-app': native('Blockbench', 'JannisX11/blockbench'),

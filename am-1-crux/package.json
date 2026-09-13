@@ -1,0 +1,8 @@
+{
+  "name": "am-1-crux",
+  "private": true,
+  "description": "AM-1 Arpeggio Machine (ZACOS) as a Crux Tool",
+  "scripts": {
+    "test:garden": "node --test garden/document.test.mjs"
+  }
+}
