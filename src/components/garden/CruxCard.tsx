@@ -1,5 +1,6 @@
 import { useState, useRef, useCallback, lazy, Suspense } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
+import { useMoodNavigate } from '@/hooks/useMoodNavigate';
 import { cn } from '@/lib/cn';
 import { formatDateTime } from '@/lib/format';
 import { useDismiss } from '@/hooks/useDismiss';
@@ -53,7 +54,7 @@ export default function CruxCard({
   thumbnailUrl,
   tendingCount,
 }: CruxCardProps) {
-  const navigate = useNavigate();
+  const navigate = useMoodNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -80,7 +81,13 @@ export default function CruxCard({
       )}
     >
       <button
-        onClick={() => navigate(linkTo || `/c/${crux.id}`)}
+        onClick={(e) => {
+          // The title travels to the breadcrumb (View Transitions, ADR 0041): only the card
+          // being opened carries the name, set before the old screen is captured.
+          const title = e.currentTarget.querySelector('h3');
+          if (title) title.style.viewTransitionName = `crux-${crux.id}`;
+          navigate(linkTo || `/c/${crux.id}`);
+        }}
         className="flex flex-col text-left cursor-pointer outline-none flex-1"
         aria-label={`Open ${crux.title || crux.slug}`}
       >

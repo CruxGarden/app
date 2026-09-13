@@ -51,6 +51,47 @@
   );
 }
 
+/* ── Screen changes (View Transitions, ADR 0041): Home ↔ Crux, Crux ↔ Crux,
+   Task ↔ Task go through document.startViewTransition (hooks/useMoodNavigate).
+   The Mood's pane-enter choice, mirrored on <html data-motion-pane>, says how
+   the new screen arrives; the old one fades; a named element (the Crux title,
+   from card to breadcrumb) morphs. Durations are the Mood's × intensity, so
+   `off` is an instant swap. ── */
+::view-transition-old(root),
+::view-transition-new(root),
+::view-transition-group(*) {
+  animation-duration: var(--motion-ms-base);
+  animation-timing-function: var(--motion-ease-enter);
+}
+::view-transition-old(root) {
+  animation-name: motion-out-fade;
+  animation-timing-function: var(--motion-ease-exit);
+}
+html[data-motion-pane='none']::view-transition-old(root),
+html[data-motion-pane='none']::view-transition-new(root),
+html[data-motion-pane='none']::view-transition-group(*) {
+  animation: none;
+}
+html[data-motion-pane='fade']::view-transition-new(root) {
+  animation-name: motion-in-fade;
+}
+html[data-motion-pane='slide-up']::view-transition-new(root) {
+  animation-name: motion-in-slide-up;
+}
+html[data-motion-pane='slide-down']::view-transition-new(root) {
+  animation-name: motion-in-slide-down;
+}
+html[data-motion-pane='scale']::view-transition-new(root) {
+  animation-name: motion-in-scale;
+}
+html[data-motion-pane='pop']::view-transition-new(root) {
+  animation-name: motion-in-pop;
+  animation-timing-function: var(--motion-ease-spring);
+}
+html[data-motion-pane='drift']::view-transition-new(root) {
+  animation-name: motion-in-drift;
+}
+
 /* ── Intensity (ADR 0041): <html data-motion-intensity> is the resolved level.
    off: the scale is 0 (set inline with the attribute), so nothing plays.
    subtle: enters and exits only — the loops are off. expressive: enters take

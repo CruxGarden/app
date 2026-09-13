@@ -1,4 +1,4 @@
-import { useNavigate } from 'react-router-dom';
+import { useMoodNavigate } from '@/hooks/useMoodNavigate';
 import { useUIStore, useWorkspaceUIStore, DEFAULT_PANE_ORDER } from '@/stores/uiStore';
 import TendingLink from '@/components/tending/TendingLink';
 import WorkspaceSwitcher from './WorkspaceSwitcher';
@@ -15,7 +15,7 @@ import { Capability, can } from '@/lib/platform';
 import { useShallow } from 'zustand/react/shallow';
 
 export default function TopBar() {
-  const navigate = useNavigate();
+  const navigate = useMoodNavigate();
   const { paneOrder, paneVisibility, togglePane, activeCruxId } = useWorkspaceUIStore(
     useShallow((s) => ({
       paneOrder: s.paneOrder,

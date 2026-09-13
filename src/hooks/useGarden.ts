@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useMoodNavigate } from '@/hooks/useMoodNavigate';
 import { useGardenStore } from '@/stores/gardenStore';
 import { useCruxStore } from '@/stores/cruxStore';
 import { useShallow } from 'zustand/react/shallow';
@@ -18,7 +18,7 @@ export function useGarden() {
   );
 
   const createCrux = useCruxStore((s) => s.createCrux);
-  const navigate = useNavigate();
+  const navigate = useMoodNavigate();
 
   // Load on mount
   useEffect(() => {

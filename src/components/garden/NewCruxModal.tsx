@@ -2,7 +2,7 @@ import { getServices } from '@/services';
 import { startFromFiles } from '@/services/file-routing';
 import { isEmbeddedApp } from '@/services/embedded-app';
 import { useState, useRef, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useMoodNavigate } from '@/hooks/useMoodNavigate';
 import { createCruxStore } from '@/stores/cruxStore';
 import { useUIStore } from '@/stores/uiStore';
 import { setSetting } from '@/services/settings';
@@ -660,7 +660,7 @@ interface NewCruxModalProps {
 
 export default function NewCruxModal({ open, onClose }: NewCruxModalProps) {
   const [cruxStore] = useState(() => createCruxStore());
-  const navigate = useNavigate();
+  const navigate = useMoodNavigate();
   const createCrux = cruxStore.getState().createCrux;
   const refresh = useGardenStore((s) => s.load);
 

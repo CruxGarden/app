@@ -2,7 +2,7 @@ import { useTendingRows } from '@/stores/tendingStore';
 import { startFromFiles, filesFromDataTransfer } from '@/services/file-routing';
 import { importCrux } from '@/services/crux-io';
 import { importCruxspace } from '@/services/cruxspace-package';
-import { useNavigate } from 'react-router-dom';
+import { useMoodNavigate } from '@/hooks/useMoodNavigate';
 import TendingLink from '@/components/tending/TendingLink';
 import { useState, useCallback, useEffect } from 'react';
 import { useAppStore } from '@/stores/appStore';
@@ -29,7 +29,7 @@ export default function HomeGarden() {
   const avatarUrl = useAvatarUrl(author);
   const { cruxList, loading, search, sortBy, setSearch, setSortBy, handleClearSearch, deleteCrux, refresh } =
     useGarden();
-  const navigate = useNavigate();
+  const navigate = useMoodNavigate();
 
   const tendingRows = useTendingRows();
   const tendingCounts: Record<string, number> = {};

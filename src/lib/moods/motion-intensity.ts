@@ -93,6 +93,14 @@ export function applyMotionIntensity(
   );
   root.dataset.motionIntensity = level;
   root.style.setProperty('--motion-intensity-scale', String(MOTION_INTENSITY_SCALE[level]));
+  // Screen changes (View Transitions) cannot ask a style query on <html>: mirror the
+  // Mood's pane-enter choice as an attribute the ::view-transition rules key on.
+  const pane =
+    root.style.getPropertyValue('--motion-enter-pane').trim() ||
+    (typeof getComputedStyle === 'function'
+      ? getComputedStyle(root).getPropertyValue('--motion-enter-pane').trim()
+      : '');
+  root.dataset.motionPane = pane || 'none';
   return level;
 }
 
