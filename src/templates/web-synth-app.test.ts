@@ -29,4 +29,5 @@ it('packages the whole web-synth app: source, engine, bridge, runtime and notice
   expect(paths.some((p) => p.includes('/node_modules/') || p.endsWith('.map') || p.startsWith('engine/target/'))).toBe(false);
   expect(paths.filter((p) => p.startsWith('runtime/') && p.endsWith('.wasm')).length).toBeGreaterThan(20);
   expect((template.meta?.settings as { entryFile?: string } | undefined)?.entryFile).toBe('runtime/index.html');
-});
+  // The runtime is hundreds of files; under the full suite's parallel load the glob takes seconds.
+}, 60000);

@@ -8,6 +8,11 @@ export default tseslint.config(
   js.configs.recommended,
   ...tseslint.configs.recommended,
   {
+    // The guestbook block is a browser script written verbatim into site Cruxes.
+    files: ['src/lib/guestbook/*.js'],
+    languageOptions: { globals: { window: 'readonly', document: 'readonly', fetch: 'readonly', sessionStorage: 'readonly', setTimeout: 'readonly', clearTimeout: 'readonly', location: 'readonly' } },
+  },
+  {
     files: ['**/*.{ts,tsx}'],
     plugins: {
       'react-hooks': reactHooks,

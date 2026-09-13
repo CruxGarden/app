@@ -22,6 +22,7 @@ import * as domainsApi from '@/api/domains';
 import * as cruxesApi from '@/api/cruxes';
 import * as liveStore from '@/api/store';
 import CustomDomainSection from './CustomDomainSection';
+import GuestbookSection from './GuestbookSection';
 import { CheckIcon, CopyIcon, ExternalLinkIcon, PowerIcon, ShareIcon } from '@/components/ui/icons';
 
 /** What the spinner says while a publish runs — a site build is not instant. */
@@ -480,6 +481,8 @@ export default function PublishPane() {
               <CustomDomainSection cruxId={crux.id} />
             </>
           )}
+
+          {!isEmbeddedApp(crux) && <GuestbookSection cruxId={crux.id} artifacts={artifacts} />}
 
           {/* Visibility */}
           <PaneSection label="Visibility">

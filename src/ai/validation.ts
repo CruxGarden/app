@@ -30,6 +30,7 @@ export function validateToolInput(
       return validatePathOnly(input);
     case 'list_files':
     case 'check_site':
+    case 'add_guestbook':
     case 'set_theme':
     case 'get_theme':
     case 'set_background':
