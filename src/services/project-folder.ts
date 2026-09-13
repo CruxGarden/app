@@ -15,6 +15,7 @@ import { getSqliteClient } from './sqlite/client';
 import { isWorkspaceThumbnail } from '@/lib/artifact-path';
 import type { Artifact } from '@/api/types';
 import { findWorkingCopy } from './working-copies';
+import { expectProjectWrites } from './ingestion';
 
 function projectBridge(): ProjectBridge | null {
   if (!can(Capability.ProjectFolder)) return null;
@@ -205,16 +206,29 @@ export async function projectAllArtifacts(cruxId: string): Promise<string | null
   );
 
   const wanted = new Set<string>();
+  const entries: { path: string; fingerprint: string; mode?: number }[] = [];
   for (const row of rows) {
     const relPath = row.path || row.filename;
     if (!relPath || !row.fingerprint) continue;
     if (isWorkspaceThumbnail(relPath)) continue; // app state, not a user file
     wanted.add(relPath);
-    const bytes = await db.blobRead(row.fingerprint);
-    await api.writeFile(folder, relPath, bytes);
     const mode = JSON.parse(row.meta || '{}').mode;
-    if (typeof mode === 'number') await api.setMode?.(folder, relPath, mode);
+    entries.push({ path: relPath, fingerprint: row.fingerprint, mode: typeof mode === 'number' ? mode : undefined });
   }
+  // The watcher will see these writes; they are the store's own, not new edits.
+  expectProjectWrites(
+    folder,
+    entries.map((e) => ({ relPath: e.path, fingerprint: e.fingerprint })),
+  );
+  if (api.materialize) {
+    // One main-process copy from the Blob Store per batch; no bytes cross the renderer.
+    for (let start = 0; start < entries.length; start += 2000)
+      await api.materialize(folder, entries.slice(start, start + 2000));
+  } else
+    for (const e of entries) {
+      await api.writeFile(folder, e.path, await db.blobRead(e.fingerprint));
+      if (typeof e.mode === 'number') await api.setMode?.(folder, e.path, e.mode);
+    }
 
   // Remove non-ignored files the store doesn't know — this is an explicit
   // projection, so the store is authoritative for exactly this one moment.

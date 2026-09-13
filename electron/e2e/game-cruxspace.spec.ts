@@ -1,5 +1,5 @@
 import { test, expect, chromium } from '@playwright/test';
-import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
+import { readFileSync, writeFileSync, mkdirSync, existsSync, renameSync, statSync } from 'node:fs';
 import { createServer } from 'node:http';
 import { join, resolve } from 'node:path';
 import { launchApp } from './launch';
@@ -19,14 +19,16 @@ import {
   kanBoards,
   tone,
   importPiskelArt,
+  exportCruxspacePackage,
+  importCruxspacePackage,
 } from './game-cruxspace-helpers';
 
 /**
  * Glow Garden — a 2D pixel game made across Crux Tools in one Cruxspace by a
  * person and the scripted collaborator (GAME-CRUXSPACE-PLAN.md §7).
- * Phases A–B: members, plan, board, sprites, sound, the game on Main and on a
- * Task, the web export and the site files. Publish, history and the package
- * follow in later phases.
+ * Members, plan, board, sprites, sound, the game on Main and on a Task, the web
+ * export, the site, publish, the history walk, the board closed, and finally the
+ * `.cruxspace` package restored into a fresh Garden with every source folder gone.
  */
 test('Glow Garden: plan, board, sprites, sound, game, export and site across one Cruxspace', async () => {
   test.setTimeout(1800000);
@@ -37,6 +39,7 @@ test('Glow Garden: plan, board, sprites, sound, game, export and site across one
   const shot = (name: string) => first.page.screenshot({ path: join(evidence, `${name}.png`) });
   const pageErrors: string[] = [];
   const chime = join(first.dir, 'chime.wav');
+  const pkg = join(first.dir, 'glow-garden.cruxspace');
   const art = (name: string) => resolve(__dirname, 'fixtures/glow-garden', name);
   writeFileSync(chime, tone());
   const members: Record<string, { id: string; folder: string; title: string }> = {};
@@ -403,9 +406,86 @@ test('Glow Garden: plan, board, sprites, sound, game, export and site across one
         .toBe(6);
       await shot('10-done');
     });
+
+    await test.step('13a. Export the .cruxspace package from the hub', async () => {
+      await exportCruxspacePackage(page, first.app, 'Glow Garden', pkg);
+      expect(statSync(pkg).size).toBeGreaterThan(1_000_000);
+    });
     expect(pageErrors).toEqual([]);
   } finally {
     await first.app.close();
+  }
+
+  // Every source folder is gone: the package alone must carry the undertaking.
+  for (const m of Object.values(members)) renameSync(m.folder, `${m.folder}-unavailable`);
+  const second = await launchApp({ env: { CRUX_AI_MOCK: '1', CRUX_API_URL: api.url } });
+  try {
+    const { page } = second;
+    page.setDefaultTimeout(60000);
+    await page.setViewportSize({ width: 2000, height: 1200 });
+    page.on('pageerror', (e) => pageErrors.push(e.message));
+    await enterGarden(page);
+
+    await test.step('13b. Import the package into a fresh Garden; members and outputs return', async () => {
+      await importCruxspacePackage(page, pkg);
+      await expect(page.getByRole('status')).toContainText('Imported Glow Garden with 8 member Cruxes.');
+      const hub = page.getByRole('region', { name: 'Cruxspaces', exact: true });
+      for (const m of Object.values(members))
+        await expect(hub.getByRole('button', { name: `Open ${m.title}`, exact: true })).toBeVisible();
+      await expect(hub.getByRole('button', { name: /^Use / })).toHaveCount(5);
+      for (const label of ['Gardener sheet', 'Seed sprite', 'Garden ground', 'Glow Garden web build'])
+        await expect(hub.getByRole('button', { name: `Use ${label}`, exact: true })).toBeVisible();
+      // The Home Garden list refreshed too, not only the hub.
+      await expect(page.getByText('Your garden is empty')).toHaveCount(0);
+      await expect(page.getByRole('link', { name: /Glow Garden game/ }).or(page.getByText('Glow Garden game', { exact: true })).first()).toBeVisible();
+      await page.screenshot({ path: join(evidence, '13-imported-hub.png') });
+    });
+
+    await test.step('13c. The imported game Crux keeps its whole history', async () => {
+      await open(page, 'Glow Garden game');
+      await openWorkshop(page);
+      await nativeReady(page);
+      const collab = page.getByRole('button', { name: 'Toggle collaboration' });
+      if ((await collab.getAttribute('aria-pressed')) === 'true') await collab.click();
+      const pane = page.getByTestId('pane-body-history');
+      if (!(await pane.isVisible())) await page.getByRole('button', { name: 'Toggle history' }).click();
+      await pane.getByRole('button', { name: 'Whole Crux · branches & merges' }).click();
+      const graph = page.getByRole('dialog', { name: 'Whole Crux Growth' });
+      await expect(graph.getByRole('button', { name: 'Add pickup chime · merged', exact: true })).toBeVisible();
+      await graph.getByRole('button', { name: 'Expand checkpoints', exact: true }).click();
+      for (const label of ['First playable', 'Chime merged', 'Output: Glow Garden web build']) {
+        await graph.getByLabel('Find checkpoint').fill(label);
+        await expect(graph.getByRole('button', { name: new RegExp(`^${label} `) }).first()).toBeVisible();
+      }
+      await graph.getByLabel('Find checkpoint').fill('');
+      await graph.getByRole('button', { name: 'Fit graph', exact: true }).click();
+      await page.screenshot({ path: join(evidence, '13-imported-history.png') });
+      await page.keyboard.press('Escape');
+      await expect(graph).toHaveCount(0);
+    });
+
+    await test.step('13d. The imported site plays the game', async () => {
+      await open(page, 'Glow Garden site');
+      await openWorkshop(page);
+      const preview = page.locator('iframe[src^="http://127.0.0.1"]');
+      await expect(preview).toBeVisible({ timeout: 4 * 60_000 });
+      const origin = new URL((await preview.getAttribute('src'))!).origin;
+      const browser = await chromium.launch();
+      try {
+        const site = await browser.newPage({ viewport: { width: 1280, height: 900 } });
+        await site.goto(`${origin}/play`);
+        await expect(site.frameLocator('iframe[title="Glow Garden game"]').locator('canvas')).toBeVisible({
+          timeout: 120000,
+        });
+        await site.waitForTimeout(2500);
+        await site.screenshot({ path: join(evidence, '13-imported-play.png') });
+      } finally {
+        await browser.close();
+      }
+    });
+    expect(pageErrors).toEqual([]);
+  } finally {
+    await second.app.close();
     await api.close();
   }
 });

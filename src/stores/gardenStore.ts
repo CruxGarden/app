@@ -135,7 +135,19 @@ export const useGardenStore = create<GardenState>((set, get) => ({
     set({ sortBy: field, cruxList: filterAndSort(allCruxes, search, field) });
   },
 
+  /** Reload the lists in place: no `loading` flip, so the Home Garden stays mounted. */
   refresh: async () => {
-    await get().load();
+    try {
+      const { search, sortBy } = get();
+      const { crux: cruxService } = getServices();
+      const [data, trashed, thumbnails] = await Promise.all([
+        cruxService.listAll(),
+        cruxService.listTrashed(),
+        loadThumbnails(),
+      ]);
+      set({ allCruxes: data, cruxList: filterAndSort(data, search, sortBy), trashed, thumbnails });
+    } catch (err) {
+      console.error('[gardenStore] Failed to refresh cruxes:', err);
+    }
   },
 }));

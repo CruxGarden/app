@@ -87,6 +87,46 @@ export async function hashContent(content: string | Blob | Uint8Array): Promise<
 // ── SQL helpers ──────────────────────────────────────
 
 /** Build INSERT statement from an object */
+/** Rows that share one column set, in chunks that stay under SQLite's variable limit. */
+export function insertChunks(
+  rows: Record<string, unknown>[],
+  maxVariables = 8000,
+): Record<string, unknown>[][] {
+  const groups = new Map<string, Record<string, unknown>[]>();
+  for (const row of rows) {
+    const key = Object.keys(row).join('\u0000');
+    const group = groups.get(key);
+    if (group) group.push(row);
+    else groups.set(key, [row]);
+  }
+  const chunks: Record<string, unknown>[][] = [];
+  for (const group of groups.values()) {
+    const size = Math.max(1, Math.floor(maxVariables / Math.max(1, Object.keys(group[0]!).length)));
+    for (let start = 0; start < group.length; start += size)
+      chunks.push(group.slice(start, start + size));
+  }
+  return chunks;
+}
+
+/** One multi-row INSERT for rows sharing a column set (see insertChunks). */
+export function buildInsertMany(
+  table: string,
+  rows: Record<string, unknown>[],
+): { sql: string; params: unknown[] } {
+  const keys = Object.keys(rows[0]!);
+  const cols = keys.map(toSnake).join(', ');
+  const row = `(${keys.map(() => '?').join(', ')})`;
+  const params: unknown[] = [];
+  for (const data of rows)
+    for (const k of keys) {
+      const v = data[k];
+      params.push(
+        v !== null && typeof v === 'object' && !(v instanceof Uint8Array) ? JSON.stringify(v) : (v ?? null),
+      );
+    }
+  return { sql: `INSERT INTO ${table} (${cols}) VALUES ${rows.map(() => row).join(', ')}`, params };
+}
+
 export function buildInsert(
   table: string,
   data: Record<string, unknown>,

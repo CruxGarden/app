@@ -10,6 +10,14 @@ export interface Cruxspace {
   cruxIds: string[];
   created: string;
   updated: string;
+  /** Set when the record came in as a copy from a `.cruxspace` package. */
+  origin?: CruxspaceOrigin;
+}
+export interface CruxspaceOrigin {
+  spaceId: string;
+  exportedAt: string;
+  /** Original member id → the id it received here. */
+  members: Record<string, string>;
 }
 export type CruxspaceInput = Pick<Cruxspace, 'name' | 'brief' | 'cruxIds'>;
 const PREFIX = 'cruxgarden:cruxspace:';
@@ -54,6 +62,29 @@ export async function createCruxspace(input: CruxspaceInput): Promise<Cruxspace>
     id: crypto.randomUUID(),
     created: now,
     updated: now,
+  };
+  await getSqliteClient().run('INSERT INTO settings (key, value) VALUES (?, ?)', [
+    PREFIX + space.id,
+    JSON.stringify(space),
+  ]);
+  changed();
+  return space;
+}
+/** Record a Cruxspace with a chosen identity (package import); members must already exist. */
+export async function insertCruxspace(
+  input: CruxspaceInput & { id: string; created?: string; origin?: CruxspaceOrigin },
+): Promise<Cruxspace> {
+  const values = await inputValues(input);
+  if (await getCruxspace(input.id).catch(() => null))
+    throw new Error('A Cruxspace with this identity already exists.');
+  const now = new Date().toISOString();
+  const space: Cruxspace = {
+    ...values,
+    version: 1,
+    id: input.id,
+    created: input.created && Number.isFinite(Date.parse(input.created)) ? input.created : now,
+    updated: now,
+    ...(input.origin ? { origin: input.origin } : {}),
   };
   await getSqliteClient().run('INSERT INTO settings (key, value) VALUES (?, ?)', [
     PREFIX + space.id,

@@ -2,7 +2,7 @@
 import JSZip from 'jszip';
 import type { ExportOptions, ExportResult, ImportOptions, ImportResult } from './crux-io';
 import { getSqliteClient } from './sqlite/client';
-import { buildInsert, hashContent } from './sqlite/helpers';
+import { buildInsertMany, hashContent, insertChunks } from './sqlite/helpers';
 import { getLocalIdentity } from './sqlite/identity';
 import { getServices } from './index';
 import { createProjectFolder, projectAllArtifacts } from './project-folder';
@@ -294,6 +294,7 @@ export async function importTaskCrux(zip: JSZip, options: ImportOptions): Promis
       const columns = new Set(
         (await db.all<{ name: string }>(`PRAGMA table_info(${table})`)).map((c) => c.name),
       );
+      const prepared: Record<string, unknown>[] = [];
       for (const row of rows) {
         const next: Record<string, unknown> = Object.fromEntries(
           Object.entries(row).filter(([k]) => columns.has(k)),
@@ -326,9 +327,15 @@ export async function importTaskCrux(zip: JSZip, options: ImportOptions): Promis
           if (clone) next.slug = `${row.slug}-${String(next.id).slice(0, 8)}`;
         }
         if (table === 'working_copies') next.project_folder = null;
-        const insert = buildInsert(table, next);
+        prepared.push(next);
+      }
+      // One multi-row INSERT per chunk: a game Crux with Task lanes carries
+      // hundreds of thousands of Artifact rows, and one IPC round trip each
+      // took minutes.
+      for (const chunk of insertChunks(prepared)) {
+        const insert = buildInsertMany(table, chunk);
         await db.run(insert.sql, insert.params);
-        inserted.push({ table, id: String(next.id) });
+        for (const row of chunk) inserted.push({ table, id: String(row.id) });
       }
     }
     const cruxId = ids.get(archive.cruxId)!;
