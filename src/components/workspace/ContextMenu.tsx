@@ -1,7 +1,8 @@
 import { useEffect, useRef } from 'react';
 import { useWorkspaceUIStore as useUIStore } from '@/stores/uiStore';
 import { useDismiss } from '@/hooks/useDismiss';
-import { useMotionExit } from '@/hooks/useMotionExit';
+import { AnimatePresence, motion } from 'motion/react';
+import { useMotionRole } from '@/hooks/useMotionRole';
 import { cn } from '@/lib/cn';
 
 interface MenuItem {
@@ -41,7 +42,7 @@ export default function ContextMenu({
   const contextMenu = useUIStore((s) => s.contextMenu);
   const hideContextMenu = useUIStore((s) => s.hideContextMenu);
   const ref = useRef<HTMLDivElement>(null);
-  const motion = useMotionExit(contextMenu.visible, 'dropdown');
+  const role = useMotionRole('dropdown');
 
   // Close on click outside
   useDismiss(ref, hideContextMenu, contextMenu.visible);
@@ -55,8 +56,6 @@ export default function ContextMenu({
     document.addEventListener('keydown', handleKey);
     return () => document.removeEventListener('keydown', handleKey);
   }, [contextMenu.visible, hideContextMenu]);
-
-  if (!motion.mounted) return null;
 
   const { x, y, targetId, targetPath, isFolder, selectedIds } = contextMenu;
   const isMultiSelect = selectedIds.length > 1;
@@ -160,35 +159,38 @@ export default function ContextMenu({
   }
 
   return (
-    <div
-      ref={(el) => {
-        ref.current = el;
-        motion.ref.current = el;
-      }}
-      role="menu"
-      className={cn(
-        'fixed z-50 min-w-[140px] bg-dropdown border border-dropdown-border rounded-dropdown shadow-dropdown py-1 overflow-hidden',
-        motion.className,
-      )}
-      style={{ left: x, top: y }}
-    >
-      {items.map((item) => (
-        <button
-          key={item.label}
-          role="menuitem"
-          onClick={item.action}
-          disabled={item.disabled}
-          className={cn(
-            'w-full text-left px-3 py-1.5 text-xs font-mono transition-colors cursor-pointer',
-            'disabled:cursor-not-allowed',
-            item.destructive
-              ? 'text-error hover:bg-error-muted'
-              : 'text-text hover:bg-accent-muted/20',
-          )}
+    <AnimatePresence>
+      {contextMenu.visible && (
+        <motion.div
+          key="context-menu"
+          ref={ref}
+          role="menu"
+          data-motion-role="dropdown"
+          initial={role.initial}
+          animate={role.animate}
+          exit={role.exit}
+          className="fixed z-50 min-w-[140px] bg-dropdown border border-dropdown-border rounded-dropdown shadow-dropdown py-1 overflow-hidden"
+          style={{ left: x, top: y }}
         >
-          {item.label}
-        </button>
-      ))}
-    </div>
+          {items.map((item) => (
+            <button
+              key={item.label}
+              role="menuitem"
+              onClick={item.action}
+              disabled={item.disabled}
+              className={cn(
+                'w-full text-left px-3 py-1.5 text-xs font-mono transition-colors cursor-pointer',
+                'disabled:cursor-not-allowed',
+                item.destructive
+                  ? 'text-error hover:bg-error-muted'
+                  : 'text-text hover:bg-accent-muted/20',
+              )}
+            >
+              {item.label}
+            </button>
+          ))}
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
 }

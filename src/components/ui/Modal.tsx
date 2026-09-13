@@ -1,7 +1,8 @@
 import { type ReactNode, useEffect } from 'react';
 import { cn } from '@/lib/cn';
+import { AnimatePresence, motion } from 'motion/react';
 import Panel from './Panel';
-import { useMotionExit } from '@/hooks/useMotionExit';
+import { useMotionRole } from '@/hooks/useMotionRole';
 
 type ModalSize = 'sm' | 'md' | 'lg' | 'xl' | 'screen' | 'full';
 
@@ -74,67 +75,78 @@ export default function Modal({
     };
   }, [open, onClose]);
 
-  // The Mood's dialog motion: enters on mount, plays the exit before unmount
-  const motion = useMotionExit(open, 'dialog');
-  if (!motion.mounted) return null;
+  // The Mood's dialog motion (ADR 0041): Motion plays the enter on mount and the exit before unmount
+  const role = useMotionRole('dialog');
 
   return (
-    <div
-      data-modal-open={open || undefined}
-      className={cn(
-        'fixed inset-0 flex items-center justify-center',
-        layer === 'top' ? 'z-[70]' : 'z-50',
-      )}
-    >
-      <div className="absolute inset-0 modal-scrim" onClick={onClose} />
-      <Panel
-        ref={motion.ref}
-        padding="md"
-        className={cn(
-          'relative z-10 flex flex-col',
-          motion.className,
-          // Deep soft shadow carries the elevation the blur used to fake
-          'shadow-modal',
-          SIZE_CLASSES[size],
-          className,
-        )}
-      >
-        {title && (
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h2 className="font-display text-sm font-medium text-accent">{title}</h2>
-              {subtitle && <p className="text-xs text-text-muted mt-0.5">{subtitle}</p>}
-            </div>
-            <button
-              onClick={onClose}
-              className="text-text-muted hover:text-text cursor-pointer"
-              aria-label="Close"
-            >
-              <svg
-                width="14"
-                height="14"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="M18 6L6 18" />
-                <path d="M6 6l12 12" />
-              </svg>
-            </button>
-          </div>
-        )}
+    <AnimatePresence>
+      {open && (
         <div
+          key="modal"
+          data-modal-open
           className={cn(
-            'flex-1 min-h-0 flex flex-col overflow-hidden bg-bg/50 rounded-[var(--radius-sm)] border border-border',
-            !flush && 'p-4',
+            'fixed inset-0 flex items-center justify-center',
+            layer === 'top' ? 'z-[70]' : 'z-50',
           )}
         >
-          {children}
+          <div className="absolute inset-0 modal-scrim" onClick={onClose} />
+          <motion.div
+            data-motion-role="dialog"
+            data-motion-choice={role.choice.enter}
+            data-motion-exit={role.choice.exit}
+            initial={role.initial}
+            animate={role.animate}
+            exit={role.exit}
+            className={cn('relative z-10 flex', SIZE_CLASSES[size])}
+          >
+            <Panel
+              padding="md"
+              className={cn(
+                'flex flex-col w-full h-full',
+                // Deep soft shadow carries the elevation the blur used to fake
+                'shadow-modal',
+                className,
+              )}
+            >
+              {title && (
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <h2 className="font-display text-sm font-medium text-accent">{title}</h2>
+                    {subtitle && <p className="text-xs text-text-muted mt-0.5">{subtitle}</p>}
+                  </div>
+                  <button
+                    onClick={onClose}
+                    className="text-text-muted hover:text-text cursor-pointer"
+                    aria-label="Close"
+                  >
+                    <svg
+                      width="14"
+                      height="14"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <path d="M18 6L6 18" />
+                      <path d="M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+              )}
+              <div
+                className={cn(
+                  'flex-1 min-h-0 flex flex-col overflow-hidden bg-bg/50 rounded-[var(--radius-sm)] border border-border',
+                  !flush && 'p-4',
+                )}
+              >
+                {children}
+              </div>
+            </Panel>
+          </motion.div>
         </div>
-      </Panel>
-    </div>
+      )}
+    </AnimatePresence>
   );
 }

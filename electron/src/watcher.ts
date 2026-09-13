@@ -132,11 +132,23 @@ class FolderWatch {
   }
 
   private flush() {
+    const batch = this.collect();
+    if (batch) this.onBatch(batch);
+  }
+
+  /**
+   * Take what is pending now — the debounce is cut short — and return it as a
+   * batch instead of sending it. Null when nothing is pending. Growth calls
+   * this (through project:flush) before a capture or a restore so an edit made
+   * a moment ago is recorded before the store is compared with disk.
+   */
+  collect(): WatchBatch | null {
+    if (this.debounceTimer) clearTimeout(this.debounceTimer);
     this.debounceTimer = null;
     this.firstEventAt = 0;
     const events = [...this.pending.values()];
     this.pending.clear();
-    if (!events.length) return;
+    if (!events.length) return null;
     // A write the app made itself: the echo carries the same modification time;
     // anything later is someone else's edit that landed in the same window.
     for (const event of events) {
@@ -152,11 +164,8 @@ class FolderWatch {
     }
 
     // Folder-deletion guard: never turn a missing folder into mass deletion
-    if (!fs.existsSync(this.folder)) {
-      this.onBatch({ folder: this.folder, folderMissing: true, events: [] });
-      return;
-    }
-    this.onBatch({ folder: this.folder, events });
+    if (!fs.existsSync(this.folder)) return { folder: this.folder, folderMissing: true, events: [] };
+    return { folder: this.folder, events };
   }
 
   async close() {
@@ -187,6 +196,14 @@ export class ProjectWatcher {
       this.watches.delete(key);
       await watch.close();
     }
+  }
+
+  /** Everything the watches still hold, as batches, for one folder or all (see FolderWatch.collect). */
+  flush(folder?: string): WatchBatch[] {
+    const watches = folder
+      ? [this.watches.get(path.resolve(folder))].filter((w): w is FolderWatch => !!w)
+      : [...this.watches.values()];
+    return watches.map((w) => w.collect()).filter((b): b is WatchBatch => b !== null);
   }
 
   async closeAll(): Promise<void> {

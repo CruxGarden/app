@@ -509,7 +509,7 @@ export async function defaultGrowthHostDeps(): Promise<GrowthHostDeps> {
   const { getServices } = await import('./index');
   const { dimension, artifact } = getServices();
   const { projectAllArtifacts, projectArtifactPaths } = await import('./project-folder');
-  const { flushIngestion } = await import('./ingestion');
+  const { settleIngestion } = await import('./ingestion');
   return {
     ...base,
     dimension: {
@@ -528,7 +528,7 @@ export async function defaultGrowthHostDeps(): Promise<GrowthHostDeps> {
     },
     projectAll: projectAllArtifacts,
     projectPaths: projectArtifactPaths,
-    flush: flushIngestion,
+    flush: settleIngestion,
   };
 }
 
@@ -736,8 +736,13 @@ export async function createSnapshotIfChanged(
 export async function restoreFilesCore(
   cruxId: string,
   snapshotId: string,
-  deps: Pick<GrowthHostDeps, 'artifact' | 'projectAll' | 'projectPaths'>,
+  deps: Pick<GrowthHostDeps, 'artifact' | 'projectAll' | 'projectPaths'> &
+    Partial<Pick<GrowthHostDeps, 'flush'>>,
 ): Promise<SnapshotDiff> {
+  // An external edit still in the watcher's debounce must be recorded first:
+  // the diff below would otherwise call its file "already the snapshot's" and
+  // leave the edit on disk.
+  await deps.flush?.();
   const before = await deps.artifact.findByResource('crux', cruxId);
   if (deps.artifact.registerMany && deps.projectPaths) {
     // Only what differs moves: a game Crux of 7,800 files that changed in five

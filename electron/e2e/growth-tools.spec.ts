@@ -82,6 +82,10 @@ test.describe('growth tools (mock AI)', () => {
           await page.evaluate(() => window.history.back());
         });
       await page.getByText('My Crux', { exact: true }).first().click();
+      // Artifacts is not an open-by-default pane
+      await expect(page.getByRole('button', { name: 'Toggle artifacts' })).toBeVisible({ timeout: 30_000 });
+      if (!(await page.getByTestId('pane-body-artifacts').isVisible()))
+        await page.getByRole('button', { name: 'Toggle artifacts' }).click();
       const tree = page.getByRole('tree');
       await expect(tree).toBeVisible({ timeout: 30_000 });
       await tree.getByText('hello.txt', { exact: true }).click();

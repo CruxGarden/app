@@ -1,10 +1,13 @@
 import { useState } from 'react';
+import { motion } from 'motion/react';
+import { useMotionRole } from '@/hooks/useMotionRole';
 import { isEmbeddedApp } from '@/services/embedded-app';
 import { useCruxStore } from '@/stores/cruxStore';
 import { cn } from '@/lib/cn';
 import { confirmDialog } from '@/stores/dialogStore';
 
 export default function SnapshotBanner() {
+  const toast = useMotionRole('toast');
   const embedded = useCruxStore((s) => isEmbeddedApp(s.crux));
   const viewingSnapshotId = useCruxStore((s) => s.viewingSnapshotId);
   const viewingSnapshotIndex = useCruxStore((s) => s.viewingSnapshotIndex);
@@ -49,7 +52,12 @@ export default function SnapshotBanner() {
   );
 
   return (
-    <div className="flex items-center justify-between gap-3 px-3 py-1.5 bg-snapshot-banner text-snapshot-banner-text border-b border-snapshot-banner-border motion-enter-toast">
+    <motion.div
+      data-motion-role="toast"
+      initial={toast.initial}
+      animate={toast.animate}
+      className="flex items-center justify-between gap-3 px-3 py-1.5 bg-snapshot-banner text-snapshot-banner-text border-b border-snapshot-banner-border"
+    >
       <div className="flex items-center gap-2">
         <svg
           width="14"
@@ -112,6 +120,6 @@ export default function SnapshotBanner() {
           Back
         </button>
       </div>
-    </div>
+    </motion.div>
   );
 }
