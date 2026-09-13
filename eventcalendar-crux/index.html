@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Calendar</title>
+    <link rel="stylesheet" href="vendor/event-calendar.min.css" />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <main>
+      <div id="ec" aria-label="Calendar"></div>
+    </main>
+    <dialog id="event-dialog" aria-labelledby="event-dialog-title">
+      <form method="dialog" id="event-form">
+        <h2 id="event-dialog-title">New event</h2>
+        <label>Title <input name="title" required maxlength="200" autocomplete="off" /></label>
+        <label class="check"><input type="checkbox" name="allDay" /> All day</label>
+        <label>Starts <input type="datetime-local" name="start" required /></label>
+        <label>Ends <input type="datetime-local" name="end" /></label>
+        <label>Colour <input type="color" name="color" value="#2f6f4e" /></label>
+        <label>Notes <textarea name="notes" rows="3" maxlength="2000"></textarea></label>
+        <menu>
+          <button type="submit" value="delete" id="event-delete" class="danger">Delete</button>
+          <span class="grow"></span>
+          <button type="submit" value="cancel" formnovalidate>Cancel</button>
+          <button type="submit" value="save" id="event-save">Save</button>
+        </menu>
+      </form>
+    </dialog>
+    <script src="vendor/event-calendar.min.js"></script>
+    <script src="organizer.js"></script>
+    <script src="garden/bridge.js"></script>
+  </body>
+</html>

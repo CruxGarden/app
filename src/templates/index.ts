@@ -250,6 +250,7 @@ const loaders: Record<string, () => Promise<{ default: TemplateDefinition }>> = 
   'wick-editor-app': () => import('./wick-editor-app'),
   'bentopdf-app': () => import('./bentopdf-app'),
   'am-1-app': () => import('./am-1-app'),
+  'eventcalendar-app': () => import('./eventcalendar-app'),
   'underrun-app': () => import('./underrun-app'),
   'playcanvas-editor-app': () => import('./playcanvas-editor-app'),
   'blockbench-app': () => import('./blockbench-app'),
