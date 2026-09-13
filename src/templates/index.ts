@@ -245,6 +245,8 @@ const loaders: Record<string, () => Promise<{ default: TemplateDefinition }>> = 
   'kan-app': () => import('./kan-app'),
   'web-synth-app': () => import('./web-synth-app'),
   'beepbox-app': () => import('./beepbox-app'),
+  'hextris-app': () => import('./hextris-app'),
+  'underrun-app': () => import('./underrun-app'),
   'playcanvas-editor-app': () => import('./playcanvas-editor-app'),
   'blockbench-app': () => import('./blockbench-app'),
   'gdevelop-app': () => import('./gdevelop-app'),

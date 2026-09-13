@@ -1,6 +1,7 @@
 import { validateProject as validateKan } from '../../kan-crux/garden/document.js';
 import { validateProject as validateWebSynth } from '../../web-synth-crux/garden/document.js';
 import { validateProject as validateBeepBox } from '../../beepbox-crux/garden/document.js';
+import { validateProject as validateHextris } from '../../hextris-crux/garden/document.js';
 import { validateProject as validateOpenCut } from '../../opencut-crux/garden/model.js';
 import { validateProject as validatePlayCanvas } from '../../playcanvas-editor-crux/garden/model.js';
 import { validateProject as validateGDevelop } from '../../gdevelop-crux/garden/model.mjs';
@@ -100,6 +101,7 @@ export async function validateNativeDocument(
     | 'kan'
     | 'web-synth'
     | 'beepbox'
+    | 'hextris'
     | 'opencut'
     | 'playcanvas-editor'
     | 'openmosh'
@@ -122,6 +124,7 @@ export async function validateNativeDocument(
   if (app === 'kan') validateKan(doc);
   else if (app === 'web-synth') validateWebSynth(doc);
   else if (app === 'beepbox') validateBeepBox(doc);
+  else if (app === 'hextris') validateHextris(doc);
   else if (app === 'opencut') validateOpenCut(doc);
   else if (app === 'playcanvas-editor') validatePlayCanvas(doc);
   else if (app === 'gdevelop') validateGDevelop(doc);

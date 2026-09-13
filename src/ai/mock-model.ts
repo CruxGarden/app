@@ -108,6 +108,12 @@ export function getMockLanguageModel(): LanguageModel {
         // ── Glow Garden: the scripted collaborator across the game Cruxspace (GAME-CRUXSPACE-PLAN.md) ──
         const game = gameScript(prompt);
         if (game) return game;
+        if (lastUserText(prompt).includes('[hextris:reset]')) {
+          const rounds = toolResultsThisTurn(prompt);
+          if (!rounds.length) return toolCallStream('inspect_hextris', {});
+          if (rounds.length === 1) return toolCallStream('reset_hextris_progress', {});
+          return textStream('Cleared the saved game and high scores.');
+        }
         if (lastUserText(prompt).includes('[beepbox:edit]')) {
           const rounds = toolResultsThisTurn(prompt);
           if (!rounds.length) return toolCallStream('inspect_beepbox', {});

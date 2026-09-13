@@ -10,6 +10,7 @@ for (const [id, root] of [
   ['opencut-app', 'opencut-crux'],
   ['kan-app', 'kan-crux'],
   ['web-synth-app', 'web-synth-crux'],
+  ['hextris-app', 'hextris-crux'],
   ['playcanvas-editor-app', 'playcanvas-editor-crux'],
   ['svgedit-app', 'svgedit-crux'],
   ['jupyterlite-app', 'jupyterlite-crux'],
