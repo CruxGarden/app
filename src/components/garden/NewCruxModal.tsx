@@ -1,4 +1,5 @@
 import { getServices } from '@/services';
+import { startFromFiles } from '@/services/file-routing';
 import { isEmbeddedApp } from '@/services/embedded-app';
 import { useState, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -728,6 +729,25 @@ export default function NewCruxModal({ open, onClose }: NewCruxModalProps) {
     [handleImport],
   );
 
+  const startFileRef = useRef<HTMLInputElement>(null);
+  const handleStartFromFiles = useCallback(
+    async (files: File[]) => {
+      if (creating || importing) return;
+      setCreateError(null);
+      setCreating(true);
+      try {
+        const { cruxId } = await startFromFiles(files.map((file) => ({ path: file.name, file })));
+        reset();
+        onClose();
+        navigate(`/c/${cruxId}`);
+      } catch (err) {
+        setCreateError(err instanceof Error ? err.message : 'Could not start from that file.');
+        setCreating(false);
+      }
+    },
+    [creating, importing, navigate, onClose],
+  );
+
   const handleCreate = async (quickStart = false) => {
     if (creating || importing) return;
     setCreateError(null);
@@ -938,6 +958,28 @@ export default function NewCruxModal({ open, onClose }: NewCruxModalProps) {
               disabled={creating}
             >
               Import .crux file
+            </Button>
+          )}
+          <input
+            ref={startFileRef}
+            type="file"
+            multiple
+            className="hidden"
+            aria-label="Start from a file"
+            onChange={(e) => {
+              const files = Array.from(e.target.files ?? []);
+              e.target.value = '';
+              if (files.length) void handleStartFromFiles(files);
+            }}
+          />
+          {!importing && (
+            <Button
+              variant="ghost"
+              onClick={() => startFileRef.current?.click()}
+              disabled={creating}
+              title="A document, image, sound, video, PDF, notebook or project file becomes a Crux in the tool that opens it"
+            >
+              Start from a file…
             </Button>
           )}
           <Button onClick={() => handleCreate()} loading={creating} disabled={importing}>
