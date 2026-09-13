@@ -200,6 +200,10 @@ export interface TranscodeOutput {
   mimeType: string;
 }
 
+/** Find media: a fetch made by the main process (no page origin, no CORS), https only, size-capped. */
+export interface MediaBridge {
+  fetch(url: string, options?: { maxBytes?: number }): Promise<{ ok: boolean; status: number; mimeType: string; bytes: Uint8Array }>;
+}
 export interface FfmpegBridge {
   available(): Promise<boolean>;
   transcode(opts: {
@@ -332,6 +336,7 @@ export interface ElectronBridge {
   devserver: DevServerBridge;
   secrets: SecretsBridge;
   ffmpeg: FfmpegBridge;
+  media: MediaBridge;
   localai: LocalAiBridge;
   updates: UpdatesBridge;
   agentHost: AgentHostBridge;
@@ -339,6 +344,8 @@ export interface ElectronBridge {
   /** Test-only overrides, read from the environment the shell was launched with. */
   test: {
     apiUrl: string | null;
+    /** CRUX_MEDIA_API — Find media's catalogues and files come from this base instead of the public services. */
+    mediaApiBase: string | null;
     aiMock: boolean;
     /** CRUX_AGENT_MOCK=1 — the Agent Provider runs a scripted Claude Code. */
     agentMock: boolean;

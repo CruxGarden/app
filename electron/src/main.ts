@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, protocol, dialog, shell, desktopCapturer } = require('electron');
+const { app, BrowserWindow, ipcMain, protocol, dialog, shell, desktopCapturer, net } = require('electron');
 const { Readable } = require('node:stream');
 const path = require('path');
 const fs = require('fs');
@@ -661,6 +661,42 @@ function setupIpc() {
   ipcMain.handle('devserver:log', (_e: any, folder: string) => devServers.lastLog(folder));
 
   // ── FFmpeg transcode handler ──────────────────────────────
+  // Find media (V1-GAPS-PLAN.md §2.7): the renderer asks the main process to fetch a public
+  // catalogue or a file, so no page origin or CORS rule stands between a person and a result.
+  // https only, a size cap, a timeout; the caller checks the type of what came back.
+  ipcMain.handle('media:fetch', async (_e: any, url: string, options?: { maxBytes?: number }) => {
+    let target: URL;
+    try {
+      target = new URL(url);
+    } catch {
+      throw new Error('Not a URL.');
+    }
+    const base = process.env.CRUX_MEDIA_API;
+    if (target.protocol !== 'https:' && !(base && url.startsWith(base)))
+      throw new Error('Only https sources are fetched.');
+    const cap = Math.min(options?.maxBytes ?? 64_000_000, 512_000_000);
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 90_000);
+    try {
+      const response = await net.fetch(url, {
+        signal: controller.signal,
+        headers: { 'User-Agent': `CruxGarden/${app.getVersion()} (https://crux.garden)`, Accept: '*/*' },
+      });
+      const length = Number(response.headers.get('content-length') || 0);
+      if (length > cap) throw new Error(`That file is larger than the ${Math.round(cap / 1_000_000)} MB limit.`);
+      const buffer = Buffer.from(await response.arrayBuffer());
+      if (buffer.byteLength > cap) throw new Error(`That file is larger than the ${Math.round(cap / 1_000_000)} MB limit.`);
+      return {
+        ok: response.ok,
+        status: response.status,
+        mimeType: (response.headers.get('content-type') || '').split(';')[0].trim(),
+        bytes: new Uint8Array(buffer.buffer, buffer.byteOffset, buffer.byteLength),
+      };
+    } finally {
+      clearTimeout(timer);
+    }
+  });
+
   ipcMain.handle('ffmpeg:available', () => {
     return !!(ffmpegPath && fs.existsSync(ffmpegPath));
   });

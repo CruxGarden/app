@@ -177,6 +177,15 @@ const api: ElectronBridge = {
     detect: () => ipcRenderer.invoke('localai:detect'),
   },
 
+  media: {
+    fetch: (url: string, options?: { maxBytes?: number }) =>
+      ipcRenderer.invoke('media:fetch', url, options) as Promise<{
+        ok: boolean;
+        status: number;
+        mimeType: string;
+        bytes: Uint8Array;
+      }>,
+  },
   ffmpeg: {
     available: () => ipcRenderer.invoke('ffmpeg:available') as Promise<boolean>,
     transcode: (opts: { inputData: Uint8Array; inputName: string; isAudio: boolean }) =>
@@ -236,6 +245,7 @@ const api: ElectronBridge = {
   // CRUX_SILENT=1 keeps the soundscape and cues off (e2e default; sound tests opt out).
   test: {
     apiUrl: process.env.CRUX_API_URL ?? null,
+    mediaApiBase: process.env.CRUX_MEDIA_API ?? null,
     aiMock: process.env.CRUX_AI_MOCK === '1',
     agentMock: process.env.CRUX_AGENT_MOCK === '1',
     silent: process.env.CRUX_SILENT === '1',

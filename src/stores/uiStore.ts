@@ -32,7 +32,8 @@ export type PaneType =
   | 'sync'
   | 'publish'
   | 'export'
-  | 'store';
+  | 'store'
+  | 'media';
 
 /** Rainbow gradient colors for each pane — reads from CSS custom properties set by the palette system */
 export const PANE_COLORS: Record<PaneType, string> = {
@@ -45,6 +46,7 @@ export const PANE_COLORS: Record<PaneType, string> = {
   sync: 'var(--pane-sync)',
   publish: 'var(--pane-publish)',
   store: 'var(--pane-store)',
+  media: 'var(--pane-media)',
 };
 
 export type EditorViewMode = 'source' | 'preview' | 'form';
@@ -204,6 +206,7 @@ export const DEFAULT_PANE_ORDER: PaneType[] = [
   'sync',
   'publish',
   'store',
+  'media',
 ];
 const DEFAULT_VISIBILITY: Record<PaneType, boolean> = {
   history: false,
@@ -215,6 +218,7 @@ const DEFAULT_VISIBILITY: Record<PaneType, boolean> = {
   publish: false,
   export: false,
   store: false,
+  media: false,
 };
 
 // ── Mosaic layout helpers ────────────────────────────────
