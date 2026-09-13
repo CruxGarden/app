@@ -62,8 +62,11 @@ export function notebookSession(workspace: StoreApi<CruxState>) {
         if (typeof request.label !== 'string') throw new Error('Name the output.');
         let blob: Blob;
         if (request.bytes instanceof ArrayBuffer) {
-          if (typeof request.mimeType !== 'string' || request.bytes.byteLength > 32_000_000)
-            throw new Error('Use a PNG, JPEG, WebP, GIF, WAV, MP3, ZIP, PDF or DOCX output up to 32 MB.');
+          if (
+            typeof request.mimeType !== 'string' ||
+            request.bytes.byteLength > (request.mimeType.startsWith('video/') ? 512_000_000 : 32_000_000)
+          )
+            throw new Error('Use a PNG, JPEG, WebP, GIF, WAV, MP3, ZIP, PDF or DOCX output up to 32 MB, or a video up to 512 MB.');
           blob = new Blob([request.bytes], { type: request.mimeType });
         } else {
           if (typeof request.content !== 'string' || request.content.length > 44_000_000)

@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, protocol, dialog, shell } = require('electron');
+const { app, BrowserWindow, ipcMain, protocol, dialog, shell, desktopCapturer } = require('electron');
 const { Readable } = require('node:stream');
 const path = require('path');
 const fs = require('fs');
@@ -65,6 +65,12 @@ const isDev = !app.isPackaged;
 // getPath() call so both paths are stable. CRUX_USER_DATA overrides it so
 // automated UI tests (Playwright) run against a throwaway database.
 if (app.isPackaged) app.setName('Crux Garden');
+// Test-only (read like the other CRUX_* knobs): Chromium's fake camera and microphone, and no
+// media prompts, so a recording journey runs without hardware or a permission dialog.
+if (process.env.CRUX_FAKE_MEDIA) {
+  app.commandLine.appendSwitch('use-fake-device-for-media-stream');
+  app.commandLine.appendSwitch('use-fake-ui-for-media-stream');
+}
 const userDataPath = process.env.CRUX_USER_DATA || app.getPath('userData');
 app.setPath('userData', userDataPath);
 // Logs: installed builds write to the OS logs folder (macOS: ~/Library/Logs/Crux
@@ -180,6 +186,30 @@ function createWindow() {
   });
 
   setupLocalAiCors(mainWindow.webContents.session);
+  // Screen capture for embedded apps (Record): the system picker where the OS has one (macOS 15+),
+  // otherwise the primary screen with system audio.
+  // Camera and microphone for embedded apps (Record): the OS asks its own question; Electron's
+  // request is answered yes so the app can proceed to it. Everything else keeps Electron's default.
+  mainWindow.webContents.session.setPermissionRequestHandler(
+    (_webContents: any, _permission: string, callback: any) => callback(true),
+  );
+  // The synchronous check gates media in cross-origin frames (the Workshop's app frame):
+  // camera and microphone are a person's to grant in the OS dialog, so the app may ask.
+  mainWindow.webContents.session.setPermissionCheckHandler(
+    (_webContents: any, _permission: string) => true,
+  );
+  mainWindow.webContents.session.setDisplayMediaRequestHandler(
+    (_request: any, callback: any) => {
+      desktopCapturer
+        .getSources({ types: ['screen', 'window'] })
+        .then((sources: any[]) => {
+          if (!sources.length) return callback({});
+          callback({ video: sources[0], audio: 'loopback' });
+        })
+        .catch(() => callback({}));
+    },
+    { useSystemPicker: true },
+  );
   let cyclingWorkspaces = false;
   mainWindow.webContents.on('before-input-event', (event: any, input: any) => {
     if (input.isComposing || input.modifiers?.includes('altgr')) return;

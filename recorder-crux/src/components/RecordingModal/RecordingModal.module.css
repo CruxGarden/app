@@ -1,0 +1,11 @@
+:root {
+    --recording-modal-background: rgba(0, 0, 0, 0.5);
+}
+
+.convertButton:hover {
+    background-color: var(--mui-palette-primary-main);
+}
+
+.downloadButton:hover {
+    background-color: var(--mui-palette-primary-main);
+}

@@ -311,6 +311,12 @@ export function getMockLanguageModel(): LanguageModel {
             });
           return textStream('Added the findings cell and saved the notebook.');
         }
+        if (lastUserText(prompt).includes('[recorder:name]')) {
+          const rounds = toolResultsThisTurn(prompt);
+          if (!rounds.length) return toolCallStream('inspect_recordings', {});
+          if (rounds.length === 1) return toolCallStream('set_recorder_name', { name: 'Walkthrough takes' });
+          return textStream('Listed the recordings and named the Crux Walkthrough takes.');
+        }
         if (lastUserText(prompt).includes('[map:places]')) {
           const rounds = toolResultsThisTurn(prompt);
           if (!rounds.length) return toolCallStream('inspect_map', {});

@@ -38,6 +38,12 @@ export const TOOL_INFO: Record<string, ToolInfo> = {
   'pptist-app': native('PPTist', 'pipipi-pikachu/PPTist'),
   'wick-editor-app': native('Wick Editor', 'Wicklets/wick-editor'),
   'bentopdf-app': native('BentoPDF', 'alam00000/bentopdf'),
+  'recorder-app': {
+    name: 'Record',
+    upstream: 'https://github.com/addyosmani/recorder',
+    detailsPath: 'UPSTREAM.md',
+    relationship: 'The actual Record app, unchanged; the Garden bridge keeps its recordings as outputs of the Crux.',
+  },
   'maps-app': {
     name: 'MapLibre GL + Terra Draw',
     upstream: 'https://github.com/maplibre/maplibre-gl-js',

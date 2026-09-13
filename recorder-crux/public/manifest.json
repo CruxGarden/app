@@ -1,0 +1,41 @@
+{
+  "name": "Record",
+  "short_name": "Record",
+  "description": "A browser-based screen recorder with picture-in-picture support",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "rgba(0, 0, 0, 0.87)",
+  "icons": [
+    {
+      "src": "/icon-128.png",
+      "sizes": "128x128",
+      "type": "image/png"
+    },
+    {
+      "src": "/icon-256.png",
+      "sizes": "256x256",
+      "type": "image/png"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/screenshot-01.jpg",
+      "type": "image/jpeg",
+      "sizes": "2400x1350",
+      "form_factor": "wide"
+    },
+    {
+      "src": "/screenshot-02.jpg",
+      "type": "image/jpeg",
+      "sizes": "2400x1350",
+      "form_factor": "wide"
+    },
+    {
+        "src": "/screenshot-03.jpg",
+        "type": "image/jpeg",
+        "sizes": "2400x1350",
+        "form_factor": "wide"
+      }
+  ]
+}
