@@ -1,0 +1,9 @@
+{
+  "name": "formjs-crux",
+  "private": true,
+  "description": "Form builder around form-js (bpmn.io) as a Crux Tool; the public edition is the form-js viewer with answers in the Crux Store",
+  "scripts": {
+    "build": "node scripts/edition.mjs",
+    "test:garden": "node --test garden/document.test.mjs scripts/edition.test.mjs"
+  }
+}

@@ -38,6 +38,12 @@ export const TOOL_INFO: Record<string, ToolInfo> = {
   'pptist-app': native('PPTist', 'pipipi-pikachu/PPTist'),
   'wick-editor-app': native('Wick Editor', 'Wicklets/wick-editor'),
   'bentopdf-app': native('BentoPDF', 'alam00000/bentopdf'),
+  'formjs-app': {
+    name: 'form-js',
+    upstream: 'https://github.com/bpmn-io/form-js',
+    detailsPath: 'UPSTREAM.md',
+    relationship: 'A form builder around form-js (bpmn.io). The builder and viewer are upstream’s; the page, the Garden integration and the public edition with Crux Store answers are Crux Garden’s.',
+  },
   'eventcalendar-app': {
     name: 'EventCalendar',
     upstream: 'https://github.com/vkurko/calendar',

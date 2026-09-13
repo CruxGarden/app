@@ -669,6 +669,21 @@ export async function startMockApi(opts: { port?: number } = {}): Promise<MockAp
       }
       if (storeIo) return send(404, { message: 'Not found' });
       if (method === 'GET' && !storeMatch![2]) return send(200, state.store);
+      // A visitor's write (the published page's SDK, or the Workshop's store proxy): one entry per key.
+      if (method === 'PUT' && storeMatch![2]) {
+        const key = decodeURIComponent(storeMatch![2]);
+        const { value, mode } = body as { value: unknown; mode?: string };
+        const m = mode === 'public' ? 'public' : 'protected';
+        const visitorId = m === 'protected' ? 'visitor-tester' : null;
+        state.store = state.store.filter((e) => !(e.key === key && e.visitorId === visitorId));
+        state.store.push({ key, value, mode: m, visitorId, updatedAt: new Date().toISOString() });
+        return send(200, { value, mode: m });
+      }
+      if (method === 'GET' && storeMatch![2]) {
+        const key = decodeURIComponent(storeMatch![2]);
+        const entry = state.store.find((e) => e.key === key);
+        return entry ? send(200, { value: entry.value, mode: entry.mode, updatedAt: entry.updatedAt }) : send(404, { message: 'Not found' });
+      }
       if (method === 'DELETE' && storeMatch![2]) {
         const key = decodeURIComponent(storeMatch![2]);
         state.store = state.store.filter((e) => e.key !== key);

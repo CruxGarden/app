@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Form</title>
+    <link rel="stylesheet" href="vendor/form-js-editor.css" />
+    <link rel="stylesheet" href="vendor/form-js.css" />
+    <link rel="stylesheet" href="vendor/flatpickr/light.css" />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <header id="form-header">
+      <label>Form name <input id="form-name" maxlength="200" autocomplete="off" /></label>
+      <div role="tablist" aria-label="Form view">
+        <button type="button" role="tab" id="tab-edit" aria-selected="true">Edit</button>
+        <button type="button" role="tab" id="tab-preview" aria-selected="false">Preview</button>
+      </div>
+    </header>
+    <main>
+      <div id="editor" aria-label="Form builder"></div>
+      <section id="preview" hidden aria-label="Form preview">
+        <div id="viewer"></div>
+        <p class="actions"><button type="button" id="preview-submit">Submit</button></p>
+        <pre id="preview-result" hidden aria-label="Preview submission"></pre>
+      </section>
+    </main>
+    <script src="vendor/form-editor.umd.js"></script>
+    <script src="vendor/form-viewer.umd.js"></script>
+    <script src="builder.js"></script>
+    <script src="garden/bridge.js"></script>
+  </body>
+</html>

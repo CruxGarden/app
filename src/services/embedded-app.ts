@@ -10,6 +10,7 @@ const NATIVE_TEMPLATES = {
   'wick-editor-app': 'wick-editor',
   'bentopdf-app': 'bentopdf',
   'eventcalendar-app': 'eventcalendar',
+  'formjs-app': 'formjs',
   'am-1-app': 'am-1',
   'opencut-app': 'opencut',
   'playcanvas-editor-app': 'playcanvas-editor',
@@ -161,8 +162,10 @@ export function samplerType(
   const type = template.slice(5);
   return TYPES.includes(type) ? type : null;
 }
+/** Apps whose Crux stays on this machine: no public edition, so no Share. A form publishes its viewer edition. */
 export function isLocalCreationTool(crux: { meta?: Record<string, unknown> } | null | undefined) {
-  return !!nativeAppType(crux) || isCardinal(crux) || !!samplerType(crux);
+  const native = nativeAppType(crux);
+  return (!!native && native !== 'formjs') || isCardinal(crux) || !!samplerType(crux);
 }
 export function samplerPath(type: string, value: unknown): string {
   if (value === 'project.json') return 'data/project.json';

@@ -10,6 +10,7 @@ import { GEPHI_TOOLS, gephiCommand } from '@/ai/gephi-tools';
 import { JUPYTERLITE_TOOLS, jupyterliteCommand } from '@/ai/jupyterlite-tools';
 import { RAWGRAPHS_TOOLS, rawgraphsCommand } from '@/ai/rawgraphs-tools';
 import { NOTES_TOOLS, notesCommand } from '@/ai/notes-tools';
+import { FORMJS_TOOLS, formjsCommand } from '@/ai/formjs-tools';
 import { PISKEL_TOOLS, piskelCommand } from '@/ai/piskel-tools';
 import { MERMAID_TOOLS, mermaidCommand } from '@/ai/mermaid-tools';
 import { BITSY_TOOLS, bitsyCommand } from '@/ai/bitsy-tools';
@@ -50,6 +51,7 @@ export function embeddedAppToolAdapter(
 ) {
   if (crux?.kind === 'notes') return { tools: NOTES_TOOLS, prepare: notesCommand };
   if (nativeAppType(crux) === 'kan') return { tools: KAN_TOOLS, prepare: kanCommand };
+  if (nativeAppType(crux) === 'formjs') return { tools: FORMJS_TOOLS, prepare: formjsCommand };
   if (nativeAppType(crux) === 'opencut') return { tools: OPENCUT_TOOLS, prepare: opencutCommand };
   if (nativeAppType(crux) === 'playcanvas-editor')
     return { tools: PLAYCANVAS_EDITOR_TOOLS, prepare: playcanvasEditorCommand };

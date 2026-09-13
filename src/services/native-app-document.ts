@@ -7,6 +7,7 @@ import { validateProject as validateWick } from '../../wick-editor-crux/garden/d
 import { validateProject as validateBentoPDF } from '../../bentopdf-crux/garden/document.js';
 import { validateProject as validateAM1 } from '../../am-1-crux/garden/document.js';
 import { validateProject as validateEventCalendar } from '../../eventcalendar-crux/garden/document.js';
+import { validateProject as validateFormjs } from '../../formjs-crux/garden/document.js';
 import { validateProject as validateOpenCut } from '../../opencut-crux/garden/model.js';
 import { validateProject as validatePlayCanvas } from '../../playcanvas-editor-crux/garden/model.js';
 import { validateProject as validateGDevelop } from '../../gdevelop-crux/garden/model.mjs';
@@ -112,6 +113,7 @@ export async function validateNativeDocument(
     | 'bentopdf'
     | 'am-1'
     | 'eventcalendar'
+    | 'formjs'
     | 'opencut'
     | 'playcanvas-editor'
     | 'openmosh'
@@ -140,6 +142,7 @@ export async function validateNativeDocument(
   else if (app === 'bentopdf') validateBentoPDF(doc);
   else if (app === 'am-1') validateAM1(doc);
   else if (app === 'eventcalendar') validateEventCalendar(doc);
+  else if (app === 'formjs') validateFormjs(doc);
   else if (app === 'opencut') validateOpenCut(doc);
   else if (app === 'playcanvas-editor') validatePlayCanvas(doc);
   else if (app === 'gdevelop') validateGDevelop(doc);
