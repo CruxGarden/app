@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button, Modal } from '@/components/ui';
 import { getServices } from '@/services';
@@ -20,10 +20,17 @@ import {
 } from '@/services/cruxspace-assets';
 import { findWorkingCopy } from '@/services/working-copies';
 import { exportCruxspace, importCruxspace } from '@/services/cruxspace-package';
+import {
+  CRUXSPACE_MOMENT_CHANGED,
+  getCruxspaceMoment,
+  setCruxspaceMoment,
+} from '@/services/cruxspace-moment';
+import { startCruxspaceWalk } from '@/stores/cruxspaceWalk';
 import { isEmbeddedApp } from '@/services/embedded-app';
 import { useGardenStore } from '@/stores/gardenStore';
 import { useUIStore } from '@/stores/uiStore';
 
+const CruxspaceStory = lazy(() => import('./CruxspaceStory'));
 const field = 'w-full rounded-[var(--radius-sm)] border border-border bg-bg p-2 text-sm text-text';
 function Thumbnail({ asset }: { asset: CruxspaceAsset }) {
   const url = useBlobUrl(asset.fingerprint, asset.mimeType);
@@ -75,7 +82,15 @@ export default function Cruxspaces({
   const [result, setResult] = useState<{ path: string; id: string; label: string } | null>(null);
   const [refresh, setRefresh] = useState(0);
   const [status, setStatus] = useState('');
+  const [story, setStory] = useState(false);
+  const [moment, setMoment] = useState(getCruxspaceMoment);
   const packageInput = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    startCruxspaceWalk(); // background workspaces follow the walk even when none is on screen
+    const update = () => setMoment(getCruxspaceMoment());
+    window.addEventListener(CRUXSPACE_MOMENT_CHANGED, update);
+    return () => window.removeEventListener(CRUXSPACE_MOMENT_CHANGED, update);
+  }, []);
   const space = spaces.find((s) => s.id === selected);
   const load = useCallback(async () => {
     const [all, live, copy] = await Promise.all([
@@ -118,6 +133,7 @@ export default function Cruxspaces({
       await runOperation(operation);
     } catch (e) {
       setError((e as Error).message);
+      setStatus('');
     } finally {
       setBusy(false);
     }
@@ -239,6 +255,7 @@ export default function Cruxspaces({
                 Export Cruxspace
               </Button>
             )}
+            {space && <Button onClick={() => setStory(true)}>Cruxspace history</Button>}
             <Button
               disabled={busy}
               onClick={() => {
@@ -250,6 +267,19 @@ export default function Cruxspaces({
             </Button>
           </div>
           {space?.brief && <p className="text-sm whitespace-pre-wrap mb-4">{space.brief}</p>}
+          {moment && moment.spaceId === selected && (
+            <p
+              role="status"
+              aria-label="Walkthrough"
+              className="text-sm mb-4 flex flex-wrap items-center gap-2"
+            >
+              <span>
+                Walking through {moment.spaceName} · step {moment.step} of {moment.steps}:{' '}
+                {moment.title}. Members open read-only at that moment.
+              </span>
+              <Button onClick={() => setCruxspaceMoment(null)}>Back to now</Button>
+            </p>
+          )}
           {!targetId && (
             <div className="flex gap-2 flex-wrap mb-4" aria-label="Member Cruxes">
               {space?.cruxIds.map((id) => {
@@ -306,6 +336,11 @@ export default function Cruxspaces({
             ? 'Add this Crux to a Cruxspace in Home Garden to find related outputs.'
             : 'Create a Cruxspace for a website, its artwork and its plan. Each Crux keeps its own files and history.'}
         </p>
+      )}
+      {story && space && (
+        <Suspense fallback={null}>
+          <CruxspaceStory spaceId={space.id} onClose={() => setStory(false)} />
+        </Suspense>
       )}
       {result && (
         <div

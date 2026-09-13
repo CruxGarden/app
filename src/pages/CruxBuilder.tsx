@@ -1,8 +1,8 @@
-import { useEffect, useState } from 'react';
+import { lazy, Suspense, useEffect, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import TendingDestination from '@/components/workspace/TendingDestination';
 import TaskBar from '@/components/workspace/TaskBar';
-import { findWorkingCopy } from '@/services/working-copies';
+import { copyIdentity, findWorkingCopy } from '@/services/working-copies';
 import { useCruxStore } from '@/stores/cruxStore';
 import {
   activateWorkspace,
@@ -13,6 +13,8 @@ import {
 import { WorkspaceContext } from '@/stores/workspaceSelection';
 import { WorkspaceLayout } from '@/components/workspace';
 import SnapshotBanner from '@/components/growth/SnapshotBanner';
+import CruxspaceMomentBanner from '@/components/growth/CruxspaceMomentBanner';
+const GrowthExplorer = lazy(() => import('@/components/growth/GrowthExplorer'));
 import { APP_NAME } from '@/lib/constants';
 
 export default function CruxBuilder() {
@@ -81,6 +83,10 @@ export default function CruxBuilder() {
 }
 function Builder() {
   const crux = useCruxStore((s) => s.crux);
+  const [search, setSearch] = useSearchParams();
+  // `?growth=<checkpoint>`: arrive from the Cruxspace history at one checkpoint.
+  const growthId = search.get('growth');
+  const ownerId = crux && (copyIdentity(crux)?.cruxId ?? crux.id);
   useEffect(() => {
     document.title = crux?.title || APP_NAME;
     return () => {
@@ -93,7 +99,22 @@ function Builder() {
         {crux?.title}
       </h1>
       <TendingDestination />
+      <CruxspaceMomentBanner />
       <SnapshotBanner />
+      {growthId && ownerId && (
+        <Suspense fallback={null}>
+          <GrowthExplorer
+            key={ownerId}
+            cruxId={ownerId}
+            initialSelectedId={growthId}
+            onClose={() => {
+              const next = new URLSearchParams(search);
+              next.delete('growth');
+              setSearch(next, { replace: true });
+            }}
+          />
+        </Suspense>
+      )}
       <TaskBar />
       <div className="flex-1 min-h-0">
         <WorkspaceLayout />

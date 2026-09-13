@@ -4,7 +4,7 @@ import { createServer } from 'node:http';
 import { join, resolve } from 'node:path';
 import { launchApp } from './launch';
 import { startMockApi } from './api-mock';
-import { enterGarden } from './multi-crux-helpers';
+import { enterGarden, storedCrux } from './multi-crux-helpers';
 import {
   home,
   frame,
@@ -43,6 +43,7 @@ test('Glow Garden: plan, board, sprites, sound, game, export and site across one
   const art = (name: string) => resolve(__dirname, 'fixtures/glow-garden', name);
   writeFileSync(chime, tone());
   const members: Record<string, { id: string; folder: string; title: string }> = {};
+  let storyHeader = '';
   try {
     const { page } = first;
     page.setDefaultTimeout(60000);
@@ -393,6 +394,63 @@ test('Glow Garden: plan, board, sprites, sound, game, export and site across one
       await page.getByRole('button', { name: 'Toggle history' }).click();
     });
 
+    await test.step('12b. The Cruxspace story: about, members, milestones, graph, and a walkthrough that lands in the game', async () => {
+      await home(page);
+      await page.getByRole('combobox', { name: 'Cruxspace', exact: true }).selectOption({ label: 'Glow Garden' });
+      await page.getByRole('button', { name: 'Cruxspace history', exact: true }).click();
+      const story = page.getByRole('dialog', { name: 'Cruxspace history' });
+      await expect(story.getByRole('heading', { name: 'Glow Garden', level: 2 })).toBeVisible();
+      await expect(story).toContainText(/8 members · \d+ milestones · \d+ transfers between members/, { timeout: 60000 });
+      const header = (await story.locator('header').innerText()).match(/\d+ members · \d+ milestones · (\d+) transfers/)!;
+      expect(Number(header[1])).toBeGreaterThanOrEqual(5);
+      await expect(story.getByRole('region', { name: 'About this Cruxspace' })).toContainText('the gardener collects glowing seeds');
+      const members = story.getByRole('region', { name: 'Members' });
+      for (const [title, tool] of [['Glow Garden board', 'Kan'], ['Glow Garden sprites', 'Piskel'], ['Glow Garden game', 'GDevelop']])
+        await expect(members.getByRole('listitem').filter({ hasText: title })).toContainText(tool);
+      await expect(members.getByRole('listitem').filter({ hasText: 'Glow Garden game' })).toContainText(/1 Tasks/);
+      await expect(members.getByRole('listitem').filter({ hasText: 'Glow Garden sprites' })).toContainText('shared Gardener sheet');
+      const milestones = story.getByRole('list', { name: 'Milestone list' });
+      for (const title of ['First playable', 'Chime merged', 'Used Gardener sheet from Glow Garden', 'Output: Glow Garden web build'])
+        await expect(milestones.getByRole('listitem').filter({ hasText: title }).first()).toBeVisible();
+      await expect(story.getByTestId('cruxspace-canvas').locator('canvas')).toBeVisible();
+      await expect(story.getByRole('list', { name: 'Lanes' })).toContainText('Glow Garden game · Add pickup chime');
+      // Select a milestone: the graph focuses it and the inspector shows the checkpoint.
+      await milestones.getByRole('listitem').filter({ hasText: 'First playable' }).first().getByRole('button').first().click();
+      await expect(story.getByTestId('growth-inspector')).toContainText('First playable');
+      await story.getByRole('button', { name: 'Fit graph', exact: true }).click();
+      await shot('12b-cruxspace-history');
+      // Walk: start at step 1, step forward, then jump to "First playable" and open the game there.
+      await story.getByRole('button', { name: 'Start walkthrough', exact: true }).click();
+      const walk = story.getByRole('status', { name: 'Walkthrough' });
+      await expect(walk).toContainText(/step 1 of \d+/);
+      await walk.getByRole('button', { name: 'Next step', exact: true }).click();
+      await expect(walk).toContainText(/step 2 of \d+/);
+      await milestones.getByRole('listitem').filter({ hasText: 'First playable' }).first().getByRole('button', { name: 'Go to this moment' }).click();
+      await expect(walk).toContainText('First playable');
+      await milestones.getByRole('listitem').filter({ hasText: 'First playable' }).first().getByRole('button', { name: 'Open in Glow Garden game' }).click();
+      await expect(page.locator('[data-workspace-id]')).toBeVisible({ timeout: 60000 });
+      const graph = page.getByRole('dialog', { name: 'Whole Crux Growth' });
+      await expect(graph.getByTestId('growth-inspector')).toContainText('First playable', { timeout: 60000 });
+      await page.keyboard.press('Escape');
+      await expect(graph).toHaveCount(0);
+      const banner = page.getByRole('status', { name: 'Walkthrough' });
+      await expect(banner).toContainText('Walking through Glow Garden');
+      await expect(page.getByText(/Viewing snapshot \d+ of \d+/)).toBeVisible({ timeout: 120000 });
+      await expect(page.getByRole('img', { name: 'The app as it was at this checkpoint' })).toBeVisible({ timeout: 60000 });
+      await shot('12b-walkthrough-game');
+      // The board did not exist before its first checkpoint? It did; open it and it is read-only at that moment too.
+      await open(page, 'Glow Garden board');
+      await expect(page.getByRole('status', { name: 'Walkthrough' })).toContainText('First playable');
+      await expect(page.getByText(/Viewing snapshot \d+ of \d+/)).toBeVisible({ timeout: 120000 });
+      await page.getByRole('status', { name: 'Walkthrough' }).getByRole('button', { name: 'Back to now' }).click();
+      await expect(page.getByRole('status', { name: 'Walkthrough' })).toHaveCount(0);
+      await expect(page.getByText(/Viewing snapshot \d+ of \d+/)).toHaveCount(0, { timeout: 60000 });
+      // Ending the walk releases every member, including the game left open in the background.
+      await open(page, 'Glow Garden game');
+      await expect(page.getByRole('status', { name: 'Walkthrough' })).toHaveCount(0);
+      await expect(page.getByText(/Viewing snapshot \d+ of \d+/)).toHaveCount(0, { timeout: 60000 });
+    });
+
     await test.step('10. Board: everything moves to Done', async () => {
       await open(page, 'Glow Garden board');
       await nativeReady(page);
@@ -408,6 +466,14 @@ test('Glow Garden: plan, board, sprites, sound, game, export and site across one
     });
 
     await test.step('13a. Export the .cruxspace package from the hub', async () => {
+      // The story as it stands now (the board's closing turn added checkpoints after 12b).
+      await home(page);
+      await page.getByRole('button', { name: 'Cruxspace history', exact: true }).click();
+      const story = page.getByRole('dialog', { name: 'Cruxspace history' });
+      await expect(story).toContainText(/8 members · \d+ milestones · \d+ transfers/, { timeout: 60000 });
+      storyHeader = (await story.locator('header').innerText()).match(/\d+ members · \d+ milestones · \d+ transfers/)![0];
+      await story.getByRole('button', { name: 'Close Cruxspace history' }).click();
+      await expect(story).toHaveCount(0);
       await exportCruxspacePackage(page, first.app, 'Glow Garden', pkg);
       expect(statSync(pkg).size).toBeGreaterThan(1_000_000);
     });
@@ -462,6 +528,55 @@ test('Glow Garden: plan, board, sprites, sound, game, export and site across one
       await page.screenshot({ path: join(evidence, '13-imported-history.png') });
       await page.keyboard.press('Escape');
       await expect(graph).toHaveCount(0);
+    });
+
+    await test.step('13c2. The imported Cruxspace tells the same story', async () => {
+      await home(page);
+      await page.getByRole('button', { name: 'Cruxspace history', exact: true }).click();
+      const story = page.getByRole('dialog', { name: 'Cruxspace history' });
+      await expect(story.locator('header')).toContainText(storyHeader, { timeout: 60000 });
+      await expect(story.getByRole('list', { name: 'Milestone list' }).getByRole('listitem').filter({ hasText: 'Used Gardener sheet from Glow Garden' }).first()).toBeVisible();
+      await page.screenshot({ path: join(evidence, '13-imported-story.png') });
+      await story.getByRole('button', { name: 'Close Cruxspace history' }).click();
+      await expect(story).toHaveCount(0);
+    });
+
+    await test.step('13c3. Revert the whole imported Cruxspace to "First playable"', async () => {
+      await home(page);
+      await page.getByRole('button', { name: 'Cruxspace history', exact: true }).click();
+      const story = page.getByRole('dialog', { name: 'Cruxspace history' });
+      const milestones = story.getByRole('list', { name: 'Milestone list' });
+      await milestones.getByRole('listitem').filter({ hasText: 'First playable' }).first().getByRole('button', { name: 'Go to this moment' }).click();
+      const walk = story.getByRole('status', { name: 'Walkthrough' });
+      await expect(walk).toContainText('First playable');
+      await walk.getByRole('button', { name: 'Revert every member to this moment' }).click();
+      // Every member existed by then and is named with the checkpoint it returns to.
+      await expect(page.getByText('• Glow Garden game → First playable')).toBeVisible();
+      await expect(page.getByText(/• Glow Garden board → /)).toBeVisible();
+      await expect(page.getByText(/• Glow Garden sprites → First sprite/)).toBeVisible();
+      // The site's first checkpoint came after the game was first playable: it stays as it is.
+      await expect(page.getByText('Left as they are (they did not exist yet): Glow Garden site.')).toBeVisible();
+      await page.getByRole('button', { name: 'Revert every member', exact: true }).click();
+      await expect(story.getByRole('status', { name: 'Revert result' })).toContainText(/^Reverted Glow Garden plan, Glow Garden board, Glow Garden sprites, Glow Garden seed, Glow Garden ground, Glow Garden sound, Glow Garden game; left Glow Garden site as they were\. The current state is now this moment/, { timeout: 10 * 60_000 });
+      await expect(walk).toHaveCount(0);
+      // The story re-reads every member (the reopened game re-projects 7,800 files first).
+      await expect(story.getByRole('status', { name: 'Refreshing history' })).toHaveCount(0, { timeout: 5 * 60_000 });
+      // The safety checkpoints are automatic saves: hidden from the milestones, there when asked.
+      await expect(milestones.getByRole('listitem').filter({ hasText: 'Before revert' })).toHaveCount(0);
+      await story.getByLabel('Include automatic saves').check();
+      await expect(milestones.getByRole('listitem').filter({ hasText: 'Before revert' })).toHaveCount(7);
+      await expect(story.getByRole('region', { name: 'Members' }).getByRole('listitem').filter({ hasText: 'Glow Garden plan' })).toContainText('3 checkpoints');
+      await page.screenshot({ path: join(evidence, '13-reverted-story.png') });
+      await story.getByRole('button', { name: 'Close Cruxspace history' }).click();
+      const gameFolder = (await storedCrux(page, members.game.id)).projectFolder as string;
+      const game = () => nativeRecord(gameFolder, 'document');
+      await expect.poll(() => game()?.resources?.resources?.map((r: any) => r.name) ?? []).not.toContain('chime');
+      expect(game().layouts[0].instances.length).toBe(2);
+      await open(page, 'Glow Garden game');
+      await openWorkshop(page);
+      await nativeReady(page);
+      await expect(page.getByText(/Viewing snapshot \d+ of \d+/)).toHaveCount(0);
+      await page.screenshot({ path: join(evidence, '13-reverted-game.png') });
     });
 
     await test.step('13d. The imported site plays the game', async () => {

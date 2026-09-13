@@ -13,6 +13,7 @@ import { workshopEntry } from '@/lib/workshop-entry';
 import { pathOf } from '@/lib/artifact-path';
 import EmbeddedAppActions from './EmbeddedAppActions';
 import CruxspaceAssetsButton from './CruxspaceAssetsButton';
+import { useBlobUrl } from '@/hooks/useBlobUrl';
 
 /** Auto-recovery boundary for Monaco disposal errors during pane reorder */
 class EditorErrorBoundary extends Component<{ children: ReactNode }, { retryKey: number }> {
@@ -213,8 +214,11 @@ export default function EditorPane() {
         <CruxspaceAssetsButton />
       </div>
       {view === 'clean' && historicalNotebook ? (
-        <div className="flex-1 flex flex-col items-center justify-center p-8 gap-4 text-center">
+        <div className="flex-1 flex flex-col items-center justify-center p-8 gap-4 text-center min-h-0">
           <h2 className="text-lg">Saved app checkpoint</h2>
+          <CheckpointPicture
+            fingerprint={artifacts.find((a) => pathOf(a) === 'preview.jpg')?.fingerprint ?? null}
+          />
           <p className="text-sm text-text-muted">
             Read the saved Artifacts in Advanced view. Return to the current app to write.
           </p>
@@ -297,5 +301,18 @@ export default function EditorPane() {
         </div>
       )}
     </div>
+  );
+}
+
+/** How the app looked when the checkpoint was taken: the thumbnail saved with it. */
+function CheckpointPicture({ fingerprint }: { fingerprint: string | null }) {
+  const url = useBlobUrl(fingerprint, 'image/jpeg');
+  if (!url) return null;
+  return (
+    <img
+      src={url}
+      alt="The app as it was at this checkpoint"
+      className="max-h-[60%] max-w-full rounded-[var(--radius-sm)] border border-border object-contain"
+    />
   );
 }

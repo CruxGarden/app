@@ -187,6 +187,42 @@ export async function rehomeProjectFolders(
  * missing, writes every artifact, and removes non-ignored stray files so the
  * folder exactly matches the store. Returns the folder path (null on web).
  */
+/** Project only these paths from the store onto the Project Folder (no-op on web). */
+export async function projectArtifactPaths(cruxId: string, paths: string[]): Promise<string | null> {
+  const api = projectBridge();
+  if (!api) return null;
+  const folder = await folderForCrux(cruxId);
+  if (!folder) return null;
+  if (!paths.length) return folder;
+  await api.ensureFolder(folder);
+  const db = getSqliteClient();
+  const wanted = new Set(paths);
+  const rows = await db.all<{ path: string | null; filename: string; fingerprint: string | null; meta: string }>(
+    "SELECT path, filename, fingerprint, meta FROM artifacts WHERE resource_id = ? AND type = 'artifact'",
+    [cruxId],
+  );
+  const entries: { path: string; fingerprint: string; mode?: number }[] = [];
+  for (const row of rows) {
+    const relPath = row.path || row.filename;
+    if (!relPath || !row.fingerprint || !wanted.has(relPath)) continue;
+    const mode = JSON.parse(row.meta || '{}').mode;
+    entries.push({ path: relPath, fingerprint: row.fingerprint, mode: typeof mode === 'number' ? mode : undefined });
+  }
+  expectProjectWrites(
+    folder,
+    entries.map((e) => ({ relPath: e.path, fingerprint: e.fingerprint })),
+  );
+  if (api.materialize) {
+    for (let start = 0; start < entries.length; start += 2000)
+      await api.materialize(folder, entries.slice(start, start + 2000));
+  } else
+    for (const e of entries) {
+      await api.writeFile(folder, e.path, await db.blobRead(e.fingerprint));
+      if (typeof e.mode === 'number') await api.setMode?.(folder, e.path, e.mode);
+    }
+  return folder;
+}
+
 export async function projectAllArtifacts(cruxId: string): Promise<string | null> {
   const api = projectBridge();
   if (!api) return null;

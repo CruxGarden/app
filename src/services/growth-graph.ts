@@ -21,8 +21,10 @@ export interface GrowthNode {
 export interface GrowthLink {
   source: string;
   target: string;
-  kind: 'history' | 'merge' | 'copy';
+  /** `transfer`: a Cruxspace output used by another member (cruxspace-history). */
+  kind: 'history' | 'merge' | 'copy' | 'transfer';
   skipped: number;
+  label?: string;
 }
 export interface GrowthGraph {
   cruxId: string;

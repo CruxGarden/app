@@ -98,6 +98,8 @@ interface ExportedDimension {
   type: string;
   weight: number;
   meta: Record<string, unknown>;
+  /** When the checkpoint was taken; absent in archives written before 2026-09-13. */
+  created?: string;
 }
 
 // ── Helpers ─────────────────────────────────────────────
@@ -328,6 +330,7 @@ export async function exportCrux(options: ExportOptions): Promise<ExportResult> 
       type: growth.type,
       weight: growth.weight ?? i + 1,
       meta,
+      created: growth.created,
     });
   }
   const dimensionsJsonContent = JSON.stringify(exportedDimensions, null, 2);
@@ -749,13 +752,19 @@ export async function importCrux(options: ImportOptions): Promise<ImportResult> 
           delete dimMeta.thumbnailPath;
         }
 
-        await dimService.create({
+        const dim = await dimService.create({
           sourceId: newCrux.id,
           targetId: snapshotCrux.id,
           type: 'growth',
           weight: exportedDim?.weight ?? sv.index + 1,
           meta: Object.keys(dimMeta).length > 0 ? dimMeta : undefined,
         });
+        // History keeps its dates: a checkpoint taken last week was not taken at import time.
+        const taken = exportedDim?.created;
+        if (typeof taken === 'string' && Number.isFinite(Date.parse(taken))) {
+          await db.run('UPDATE dimensions SET created = ?, updated = ? WHERE id = ?', [taken, taken, dim.id]);
+          await db.run('UPDATE cruxes SET created = ?, updated = ? WHERE id = ?', [taken, taken, snapshotCrux.id]);
+        }
         restoredGrowthCount++;
       } catch (err) {
         console.warn(`Failed to import snapshot ${sv.index + 1}`, err);
