@@ -1,4 +1,5 @@
-import { expect, type Page, type FrameLocator } from '@playwright/test';
+import { expect, type Page, type FrameLocator, type ElectronApplication } from '@playwright/test';
+import type { DownloadItem, Event } from 'electron';
 import { readFileSync, readdirSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { storedCrux } from './multi-crux-helpers';
@@ -172,4 +173,52 @@ export async function importPiskelArt(
   }
   await expect(wizard).toBeHidden({ timeout: 30000 });
   page.off('dialog', accept);
+}
+
+/** Export the selected Cruxspace from the hub; Chromium streams the package to `destination`. */
+export async function exportCruxspacePackage(
+  page: Page,
+  app: ElectronApplication,
+  name: string,
+  destination: string,
+) {
+  await home(page);
+  await page.getByRole('combobox', { name: 'Cruxspace', exact: true }).selectOption({ label: name });
+  await app.evaluate(({ session }, path) => {
+    const state = globalThis as unknown as { __packageDownload?: string };
+    state.__packageDownload = undefined;
+    const listener = (_event: Event, item: DownloadItem) => {
+      if (!item.getFilename().endsWith('.cruxspace')) return;
+      session.defaultSession.removeListener('will-download', listener);
+      item.setSavePath(path);
+      item.once('done', (_event, result) => {
+        state.__packageDownload = result;
+      });
+    };
+    session.defaultSession.on('will-download', listener);
+  }, destination);
+  await page.getByRole('button', { name: 'Export Cruxspace', exact: true }).click();
+  await expect(page.getByRole('status')).toContainText(/^Exported .*\.cruxspace with \d+ member Cruxes\.$/, {
+    timeout: 10 * 60_000,
+  });
+  await expect
+    .poll(
+      () =>
+        app.evaluate(() => (globalThis as unknown as { __packageDownload?: string }).__packageDownload),
+      { timeout: 180000 },
+    )
+    .toBe('completed');
+}
+
+/** Import a `.cruxspace` package from the hub and wait for the space to be recorded. */
+export async function importCruxspacePackage(page: Page, path: string) {
+  await home(page);
+  const [chooser] = await Promise.all([
+    page.waitForEvent('filechooser'),
+    page.getByRole('button', { name: 'Import Cruxspace', exact: true }).click(),
+  ]);
+  await chooser.setFiles(path);
+  await expect(page.getByRole('status')).toContainText(/^Imported .* with \d+ member Cruxes\.$/, {
+    timeout: 10 * 60_000,
+  });
 }

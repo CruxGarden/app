@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button, Modal } from '@/components/ui';
 import { getServices } from '@/services';
@@ -19,6 +19,10 @@ import {
   type CruxspaceAsset,
 } from '@/services/cruxspace-assets';
 import { findWorkingCopy } from '@/services/working-copies';
+import { exportCruxspace, importCruxspace } from '@/services/cruxspace-package';
+import { isEmbeddedApp } from '@/services/embedded-app';
+import { useGardenStore } from '@/stores/gardenStore';
+import { useUIStore } from '@/stores/uiStore';
 
 const field = 'w-full rounded-[var(--radius-sm)] border border-border bg-bg p-2 text-sm text-text';
 function Thumbnail({ asset }: { asset: CruxspaceAsset }) {
@@ -70,6 +74,8 @@ export default function Cruxspaces({
   const [unpack, setUnpack] = useState(false);
   const [result, setResult] = useState<{ path: string; id: string; label: string } | null>(null);
   const [refresh, setRefresh] = useState(0);
+  const [status, setStatus] = useState('');
+  const packageInput = useRef<HTMLInputElement>(null);
   const space = spaces.find((s) => s.id === selected);
   const load = useCallback(async () => {
     const [all, live, copy] = await Promise.all([
@@ -116,6 +122,47 @@ export default function Cruxspaces({
       setBusy(false);
     }
   };
+  const exportPackage = () =>
+    action(async () => {
+      if (!space) return;
+      setStatus('Packing the Cruxspace…');
+      const result = await exportCruxspace({ spaceId: space.id, onProgress: setStatus });
+      const url = URL.createObjectURL(result.blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = result.filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      setStatus(
+        result.failed.length
+          ? `Exported ${result.filename}; ${result.failed.length} item(s) could not be included.`
+          : `Exported ${result.filename} with ${result.manifest.members.length} member Cruxes.`,
+      );
+    });
+  const importPackage = (file: File) =>
+    action(async () => {
+      setStatus(`Importing ${file.name}…`);
+      const result = await importCruxspace({ data: file, onProgress: setStatus });
+      // Imported members are new to this Garden: the list, and the Workshop for app members.
+      const { crux } = getServices();
+      for (const member of result.members)
+        if (isEmbeddedApp(await crux.findById(member.id)))
+          useUIStore.getState().seedCruxLayout(member.id, 27);
+      await useGardenStore.getState().refresh();
+      await load();
+      setSelected(result.space.id);
+      setStatus(
+        `Imported ${result.space.name} with ${result.members.length} member Cruxes${
+          result.space.origin ? ' as a copy' : ''
+        }.${
+          result.failedArtifacts.length
+            ? ` ${result.failedArtifacts.length} file(s) could not be restored.`
+            : ''
+        }`,
+      );
+    });
   const edit = (value: Cruxspace | 'new') => {
     setEditing(value);
     setError('');
@@ -137,8 +184,32 @@ export default function Cruxspaces({
             Related Cruxes, a shared brief and ready-to-use outputs.
           </p>
         </div>
-        {!targetId && <Button onClick={() => edit('new')}>Create Cruxspace</Button>}
+        {!targetId && (
+          <div className="flex gap-2 flex-wrap">
+            <Button onClick={() => edit('new')}>Create Cruxspace</Button>
+            <Button disabled={busy} onClick={() => packageInput.current?.click()}>
+              Import Cruxspace
+            </Button>
+            <input
+              ref={packageInput}
+              type="file"
+              accept=".cruxspace"
+              aria-label="Cruxspace package"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                e.target.value = '';
+                if (file) void importPackage(file);
+              }}
+            />
+          </div>
+        )}
       </div>
+      {status && !editing && !using && (
+        <p role="status" className="text-sm text-text-muted mb-3">
+          {status}
+        </p>
+      )}
       {error && !editing && !using && (
         <p role="alert" className="text-error text-sm mb-3">
           {error}
@@ -163,6 +234,11 @@ export default function Cruxspaces({
               ))}
             </select>
             {!targetId && space && <Button onClick={() => edit(space)}>Edit Cruxspace</Button>}
+            {!targetId && space && (
+              <Button disabled={busy} onClick={() => void exportPackage()}>
+                Export Cruxspace
+              </Button>
+            )}
             <Button
               disabled={busy}
               onClick={() => {

@@ -189,7 +189,16 @@ export class SqliteCruxService implements ICruxService {
     }
     await db.run('DELETE FROM working_copies WHERE crux_id = ?', [cruxId]);
     await db.run('DELETE FROM task_merges WHERE crux_id = ?', [cruxId]);
-    await db.run('DELETE FROM artifacts WHERE resource_id = ?', [cruxId]);
+    // The Main lane's own Growth snapshots go with it, as the Task lanes' did above;
+    // otherwise their rows and Artifacts linger and block restoring the same identities.
+    await db.run(
+      'DELETE FROM artifacts WHERE resource_id = ? OR resource_id IN (SELECT target_id FROM dimensions WHERE source_id = ?)',
+      [cruxId, cruxId],
+    );
+    await db.run(
+      "DELETE FROM cruxes WHERE kind = 'snapshot' AND id IN (SELECT target_id FROM dimensions WHERE source_id = ?)",
+      [cruxId],
+    );
     await db.run('DELETE FROM dimensions WHERE source_id = ? OR target_id = ?', [cruxId, cruxId]);
     await db.run('DELETE FROM cruxes WHERE id = ?', [cruxId]);
   }

@@ -108,3 +108,18 @@ describe('SQL builders', () => {
     expect(params).toEqual(['New Title', '{"growthCount":2}', 'crux-1']);
   });
 });
+
+describe('insertChunks / buildInsertMany', () => {
+  it('groups rows by column set, chunks under the variable limit, and binds JSON', async () => {
+    const { insertChunks, buildInsertMany } = await import('./helpers');
+    const rows = [
+      ...Array.from({ length: 5 }, (_, i) => ({ id: `a${i}`, meta: { i }, size: i })),
+      { id: 'b', note: 'other shape' },
+    ];
+    const chunks = insertChunks(rows, 6); // 3 columns → 2 rows per chunk
+    expect(chunks.map((c) => c.length)).toEqual([2, 2, 1, 1]);
+    const { sql, params } = buildInsertMany('artifacts', chunks[0]!);
+    expect(sql).toBe('INSERT INTO artifacts (id, meta, size) VALUES (?, ?, ?), (?, ?, ?)');
+    expect(params).toEqual(['a0', '{"i":0}', 0, 'a1', '{"i":1}', 1]);
+  });
+});
