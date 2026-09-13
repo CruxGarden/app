@@ -423,6 +423,16 @@ const TEMPLATES: Template[] = [
     desktopOnly: true,
   },
   {
+    id: 'maps-app',
+    label: 'Map',
+    description: 'Productivity · places, routes and areas on a MapLibre map with OpenFreeMap tiles; a public map page',
+    defaultTitle: 'My map',
+    icon: <LayoutIcon />,
+    thumb: <BlankThumb />,
+    kind: 'webapp',
+    desktopOnly: true,
+  },
+  {
     id: 'eventcalendar-app',
     label: 'Calendar',
     description: 'Productivity · events, schedules and planning on an EventCalendar organizer',

@@ -38,6 +38,12 @@ export const TOOL_INFO: Record<string, ToolInfo> = {
   'pptist-app': native('PPTist', 'pipipi-pikachu/PPTist'),
   'wick-editor-app': native('Wick Editor', 'Wicklets/wick-editor'),
   'bentopdf-app': native('BentoPDF', 'alam00000/bentopdf'),
+  'maps-app': {
+    name: 'MapLibre GL + Terra Draw',
+    upstream: 'https://github.com/maplibre/maplibre-gl-js',
+    detailsPath: 'UPSTREAM.md',
+    relationship: 'A map tool around MapLibre GL and Terra Draw with OpenFreeMap tiles. Rendering and drawing are upstream’s; the page, the places list, the Garden integration and the public map are Crux Garden’s.',
+  },
   'pdfme-app': {
     name: 'pdfme',
     upstream: 'https://github.com/pdfme/pdfme',
