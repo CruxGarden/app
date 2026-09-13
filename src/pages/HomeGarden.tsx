@@ -1,4 +1,8 @@
 import { useTendingRows } from '@/stores/tendingStore';
+import { startFromFiles, filesFromDataTransfer } from '@/services/file-routing';
+import { importCrux } from '@/services/crux-io';
+import { importCruxspace } from '@/services/cruxspace-package';
+import { useNavigate } from 'react-router-dom';
 import TendingLink from '@/components/tending/TendingLink';
 import { useState, useCallback, useEffect } from 'react';
 import { useAppStore } from '@/stores/appStore';
@@ -23,8 +27,9 @@ import * as cruxesApi from '@/api/cruxes';
 export default function HomeGarden() {
   const author = useAppStore((s) => s.author);
   const avatarUrl = useAvatarUrl(author);
-  const { cruxList, loading, search, sortBy, setSearch, setSortBy, handleClearSearch, deleteCrux } =
+  const { cruxList, loading, search, sortBy, setSearch, setSortBy, handleClearSearch, deleteCrux, refresh } =
     useGarden();
+  const navigate = useNavigate();
 
   const tendingRows = useTendingRows();
   const tendingCounts: Record<string, number> = {};
@@ -34,6 +39,37 @@ export default function HomeGarden() {
 
   const thumbnails = useGardenStore((s) => s.thumbnails);
   const [showNewCrux, setShowNewCrux] = useState(false);
+  const [dropping, setDropping] = useState(false);
+  const [dropNotice, setDropNotice] = useState('');
+  const handleDropFiles = useCallback(
+    async (dt: DataTransfer) => {
+      setDropNotice('');
+      try {
+        const single = dt.files.length === 1 ? dt.files[0]! : null;
+        if (single && /\.crux$/i.test(single.name)) {
+          setDropNotice(`Importing ${single.name}…`);
+          const result = await importCrux({ data: single, mode: 'clone' });
+          refresh();
+          navigate(`/c/${result.cruxId}`);
+          return;
+        }
+        if (single && /\.cruxspace$/i.test(single.name)) {
+          setDropNotice(`Importing ${single.name}…`);
+          await importCruxspace({ data: single });
+          refresh();
+          setDropNotice(`Imported ${single.name}.`);
+          return;
+        }
+        const { files, folder } = await filesFromDataTransfer(dt);
+        setDropNotice(`Starting from ${folder ?? files[0]?.path ?? 'the drop'}…`);
+        const { cruxId } = await startFromFiles(files, folder);
+        navigate(`/c/${cruxId}`);
+      } catch (err) {
+        setDropNotice(err instanceof Error ? err.message : 'Could not start from that drop.');
+      }
+    },
+    [navigate, refresh],
+  );
 
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState('');
@@ -66,7 +102,25 @@ export default function HomeGarden() {
   if (loading) return null;
 
   return (
-    <div className="p-4 sm:p-6 max-w-5xl mx-auto">
+    <div
+      className="p-4 sm:p-6 max-w-5xl mx-auto"
+      onDragOver={(e) => {
+        if (e.dataTransfer.types.includes('Files')) {
+          e.preventDefault();
+          setDropping(true);
+        }
+      }}
+      onDragLeave={(e) => {
+        if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setDropping(false);
+      }}
+      onDrop={(e) => {
+        if (!e.dataTransfer.types.includes('Files')) return;
+        e.preventDefault();
+        setDropping(false);
+        void handleDropFiles(e.dataTransfer);
+      }}
+      data-dropping={dropping || undefined}
+      data-testid="home-drop">
       {/* Header + Search panel */}
       <div className="bg-panel border border-border rounded-[var(--radius)] p-4 sm:p-5 mb-6">
         <div className="flex items-center justify-between gap-3 mb-4">
@@ -116,6 +170,11 @@ export default function HomeGarden() {
             <PlusCircleIcon size={20} />
           </IconButton>
         </div>
+        {(dropping || dropNotice) && (
+          <p role="status" className="text-xs text-text-muted mt-2">
+            {dropping ? 'Drop a file or folder to start a Crux from it.' : dropNotice}
+          </p>
+        )}
         <div className="flex items-center gap-3 mt-4">
           <div className="flex-1">
             <GardenSearch value={search} onChange={setSearch} />
