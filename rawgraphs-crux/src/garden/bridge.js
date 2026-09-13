@@ -15,10 +15,10 @@ export async function startGarden() {
   const bar = document.createElement('div')
   bar.id = 'garden-project'
   bar.innerHTML =
-    '<span role="status">Opening Garden project…</span><button>Save project</button><button>Reload saved project</button>'
+    '<span role="status">Opening Garden project…</span><button>Save project</button><button>Reload saved project</button><input aria-label="Output name" value="Figure"><button>Save figure to Cruxspace</button>'
   const style = document.createElement('style')
   style.textContent =
-    '#garden-project{position:fixed;bottom:0;left:0;right:0;height:32px;z-index:10000;display:flex;gap:12px;align-items:center;padding:0 10px;background:#24282c;color:#fff;font:12px system-ui}#garden-project span{flex:1}#garden-project button{padding:3px 8px;color:#fff;background:#42494f;border:1px solid #697078;border-radius:3px}body{padding-bottom:34px!important}'
+    '#garden-project{position:fixed;bottom:0;left:0;right:0;height:32px;z-index:10000;display:flex;gap:12px;align-items:center;padding:0 10px;background:#24282c;color:#fff;font:12px system-ui}#garden-project span{flex:1}#garden-project button{padding:3px 8px;color:#fff;background:#42494f;border:1px solid #697078;border-radius:3px}#garden-project input{width:120px;padding:3px 6px;color:#fff;background:#151515;border:1px solid #697078;border-radius:3px;font:11px system-ui}body{padding-bottom:34px!important}'
   document.head.append(style)
   document.body.append(bar)
   const workspace = document.querySelector('#root')
@@ -164,8 +164,45 @@ export async function startGarden() {
     tail = operation.catch(() => {})
     return operation
   }
+  /** The rendered chart (the largest SVG on the page) as a PNG output of this Crux for its Cruxspaces. */
+  async function saveFigure(label) {
+    await save()
+    const area = (el) => el.getBoundingClientRect().width * el.getBoundingClientRect().height
+    const svg = [...document.querySelectorAll('svg')].sort((a, b) => area(b) - area(a))[0]
+    if (!svg || svg.getBoundingClientRect().width < 50)
+      throw new Error('Map the data to a chart before saving a figure.')
+    const rect = svg.getBoundingClientRect()
+    const clone = svg.cloneNode(true)
+    clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg')
+    clone.setAttribute('width', String(Math.round(rect.width)))
+    clone.setAttribute('height', String(Math.round(rect.height)))
+    const url = URL.createObjectURL(
+      new Blob([new XMLSerializer().serializeToString(clone)], { type: 'image/svg+xml' })
+    )
+    try {
+      const image = await new Promise((resolve, reject) => {
+        const img = new Image()
+        img.onload = () => resolve(img)
+        img.onerror = () => reject(new Error('The chart could not be rendered.'))
+        img.src = url
+      })
+      const canvas = document.createElement('canvas')
+      canvas.width = Math.round(rect.width) * 2
+      canvas.height = Math.round(rect.height) * 2
+      const ctx = canvas.getContext('2d')
+      ctx.fillStyle = '#ffffff'
+      ctx.fillRect(0, 0, canvas.width, canvas.height)
+      ctx.drawImage(image, 0, 0, canvas.width, canvas.height)
+      const output = await call({ op: 'save-output', label, content: canvas.toDataURL('image/png') })
+      show('Figure saved to Cruxspace')
+      return { ...output, width: canvas.width, height: canvas.height }
+    } finally {
+      URL.revokeObjectURL(url)
+    }
+  }
   async function command(value) {
     if (hydrating || !app) throw new Error('Wait for the chart editor to open.')
+    if (value.op === 'save-figure') return saveFigure(value.label)
     await save()
     const result = await app.command(value)
     await settle()
@@ -216,6 +253,8 @@ export async function startGarden() {
     }
   })
   bar.querySelectorAll('button')[0].onclick = () => save().catch(() => {})
+  bar.querySelectorAll('button')[2].onclick = () =>
+    saveFigure(bar.querySelector('input').value).catch((error) => show(error.message))
   bar.querySelectorAll('button')[1].onclick = () => {
     if (
       revision === saved ||
