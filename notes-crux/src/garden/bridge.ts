@@ -355,10 +355,41 @@ function listen() {
 }
 if (embedded) listen();
 
+/**
+ * Note images. Upstream turns a note's relative image path into a file URL only
+ * under Tauri; in the Garden the preview server serves the whole Crux folder and
+ * the app runs from runtime/, so a note image lives at /notebook/<path> on the
+ * same origin. The editor keeps the Markdown path in data-markdown-src, so the
+ * displayed src can be replaced without touching what is saved.
+ */
+function resolveImages() {
+  const external = /^(https?:|asset:|blob:|file:|data:|\/)/i;
+  const fix = (img: HTMLImageElement) => {
+    const current = img.getAttribute('src') || '';
+    if (/^(data:|blob:)/i.test(current)) return; // a fresh paste shows its own bytes
+    const src = img.getAttribute('data-markdown-src') || current;
+    if (!src || external.test(src)) return;
+    const resolved = `/notebook/${src.replace(/^\.?\//, '').split('/').map(encodeURIComponent).join('/')}`;
+    if (img.getAttribute('src') !== resolved) img.setAttribute('src', resolved);
+  };
+  const sweep = (root: ParentNode) => root.querySelectorAll('img').forEach(fix);
+  sweep(document);
+  new MutationObserver((records) => {
+    for (const record of records) {
+      if (record.type === 'attributes') fix(record.target as HTMLImageElement);
+      record.addedNodes.forEach((node) => {
+        if (node instanceof HTMLImageElement) fix(node);
+        else if (node instanceof Element) sweep(node);
+      });
+    }
+  }).observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['src'] });
+}
+
 /** Called once the app has rendered (see boot.ts). */
 export async function attach() {
   if (!embedded) return;
   mountBar();
+  resolveImages();
   await loadPublication();
   show(inFlight ? 'Saving…' : 'Saved');
 }

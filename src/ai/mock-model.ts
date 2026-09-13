@@ -107,8 +107,11 @@ export function getMockLanguageModel(): LanguageModel {
         }
         // ── Glow Garden: the scripted collaborator across the game Cruxspace (GAME-CRUXSPACE-PLAN.md) ──
         const game = gameScript(prompt);
-        if (game) return game;        const business = businessScript(prompt);
+        if (game) return game;
+        const business = businessScript(prompt);
         if (business) return business;
+        const research = researchScript(prompt);
+        if (research) return research;
 
         if (lastUserText(prompt).includes('[calendar:edit]')) {
           const rounds = toolResultsThisTurn(prompt);
@@ -1054,6 +1057,70 @@ import Base from '../layouts/Base.astro';
   </section>
 </Base>
 `;
+const RESEARCH_QUESTION = `# Question
+
+Does more daily light make seedlings taller in their first two weeks?
+
+## Provenance
+
+Ten pea seedlings grown on the same windowsill in September 2026, each under a lamp timer set to a different number of hours per day. Measured with a ruler on day 14. Units: hours of light per day; height in centimetres. Made up for this demo; no real trial.
+
+## Limitations
+
+One plant per condition, one measurement, no repeats. A correlation here is a hint, not a finding.
+
+## Method
+
+1. Keep the measurements in \`seedlings.csv\`.
+2. In the computation notebook, fit a straight line and report the slope and the correlation.
+3. Plot height against light in the figure Crux.
+4. Write the conclusion here, with the figure.
+`;
+const RESEARCH_FINDINGS = `# Findings
+
+Height rises with daily light across the ten seedlings: the fitted line gains about 0.9 cm per extra hour of light, and the correlation is above 0.9.
+
+![Height against hours of light](figures/height-vs-light.png)
+
+With one plant per condition this is a hint worth a proper trial, not a result. Next: three plants per condition and a second measurement on day 21.
+`;
+/** Research a Question — the third Cruxspace demo (RESEARCH-CRUXSPACE-PLAN.md). */
+function researchScript(prompt: LanguageModelV4Prompt): ReturnType<typeof stream> | null {
+  const text = lastUserText(prompt);
+  const marker = text.match(/\[research:([a-z-]+)\]/)?.[1];
+  if (!marker) return null;
+  const rounds = toolResultsThisTurn(prompt);
+  const n = rounds.length;
+  switch (marker) {
+    case 'question':
+      if (!n) return toolCallStream('write_file', { path: 'notebook/Question.md', content: RESEARCH_QUESTION });
+      if (n === 1)
+        return toolCallStream('write_file', {
+          path: 'notebook/Lab log.md',
+          content: 'PRIVATE_LAB_LOG: lamp 3 flickered on day 9; the plant under it may read low.\n',
+        });
+      return textStream('Wrote the question, its provenance and the method, and a private lab log.');
+    case 'findings':
+      if (!n) return toolCallStream('inspect_jupyterlite', {});
+      if (n === 1)
+        return toolCallStream('append_jupyterlite_cell', {
+          cellType: 'markdown',
+          source: '## Findings\nAbout 0.9 cm of height per extra hour of light; correlation above 0.9. One plant per condition: a hint, not a result.',
+        });
+      return textStream('Added the findings cell and saved the notebook.');
+    case 'figure':
+      if (!n) return toolCallStream('set_rawgraphs_size', { width: 900, height: 550 });
+      if (n === 1) return toolCallStream('save_rawgraphs_figure', { name: 'Height vs light' });
+      return textStream('Sized the figure and saved it to the Cruxspace.');
+    case 'report':
+      if (!n) return toolCallStream('list_cruxspace_assets', {});
+      if (n === 1) return copyAsset(prompt, 'Height vs light', 'notebook/figures/height-vs-light.png');
+      if (n === 2) return toolCallStream('write_file', { path: 'notebook/Findings.md', content: RESEARCH_FINDINGS });
+      return textStream('Placed the figure in the notebook and wrote the findings.');
+    default:
+      return textStream(`Unknown research step: ${marker}.`);
+  }
+}
 /** Launch a Small Business — the second Cruxspace demo (BUSINESS-CRUXSPACE-PLAN.md). */
 function businessScript(prompt: LanguageModelV4Prompt): ReturnType<typeof stream> | null {
   const text = lastUserText(prompt);
