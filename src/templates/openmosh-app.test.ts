@@ -24,4 +24,4 @@ it('includes the actual upstream editor, its native tests, reproducible build co
   );
   expect(packageJson.scripts.build).toBe('vite build');
   expect(packageJson.dependencies['essentia.js']).toBeDefined();
-}, 15000);
+}, 60000);

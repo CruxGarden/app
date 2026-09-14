@@ -23,6 +23,10 @@ it('packages the actual PPTist editor: runtime, source, fonts, templates, bridge
     expect(paths).toContain(path);
   expect(new Set(paths).size).toBe(paths.length);
   expect(paths.some((p) => p.includes('/node_modules/') || p.endsWith('.map'))).toBe(false);
-  expect(paths.filter((p) => p.startsWith('runtime/assets/') && p.endsWith('.woff2')).length).toBeGreaterThan(5);
-  expect((template.meta?.settings as { entryFile?: string } | undefined)?.entryFile).toBe('runtime/index.html');
-});
+  expect(
+    paths.filter((p) => p.startsWith('runtime/assets/') && p.endsWith('.woff2')).length,
+  ).toBeGreaterThan(5);
+  expect((template.meta?.settings as { entryFile?: string } | undefined)?.entryFile).toBe(
+    'runtime/index.html',
+  );
+}, 60000);

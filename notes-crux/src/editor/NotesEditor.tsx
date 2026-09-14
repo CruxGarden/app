@@ -1,3 +1,5 @@
+import { embedded, registerNoteEditor } from '../garden/bridge';
+import { editOpenNote } from '../garden/editor-commands';
 import { CodeBlockLowlight } from "@tiptap/extension-code-block-lowlight";
 import { Extension, InputRule, PasteRule } from "@tiptap/core";
 import { Highlight } from "@tiptap/extension-highlight";
@@ -3017,6 +3019,20 @@ export function NotesEditor({ content, commandRequest, focusRequest, focusAtEndR
       selectMatchFromList(nextMatches, Math.min(findIndex, nextMatches.length - 1));
     });
   }, [editor, findIndex, findQuery, replaceText, selectMatchFromList]);
+
+  // Crux Garden: a scoped handle to the actual open editor, including native Undo.
+  useEffect(() => {
+    if (!embedded || !editor || !notePath) return;
+    return registerNoteEditor({
+      path: notePath,
+      read: () => htmlToMarkdown(editor.getHTML()),
+      edit: command => {
+        if (lastLoadedNote.current !== notePath || !editableRef.current) throw new Error('Wait for an editable note to finish opening.');
+        editOpenNote(editor, command);
+        deferredMarkdownRef.current?.flush();
+      },
+    });
+  }, [editor, notePath]);
 
   const replaceAllMatches = useCallback(() => {
     const query = findQuery.trim();

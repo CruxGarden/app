@@ -604,6 +604,126 @@ export function getMockLanguageModel(): LanguageModel {
             });
           return textStream('Named the form Open day RSVP and added the coming and notes fields.');
         }
+        if (lastUserText(prompt).includes('[productivity:note')) {
+          const rounds = toolResultsThisTurn(prompt);
+          const failure = rounds
+            .map((name) => toolResultText(prompt, name))
+            .find((value) => value?.startsWith('Error'));
+          if (failure) return textStream(failure);
+          if (!rounds.length) return toolCallStream('inspect_notebook', {});
+          const inspected = JSON.parse(toolResultText(prompt, 'inspect_notebook') || '{}');
+          const note = inspected.activeNote;
+          if (rounds.length === 1) return toolCallStream('read_open_note', { note });
+          const followup = lastUserText(prompt).includes('[productivity:note-followup]');
+          if (rounds.length === 2)
+            return followup
+              ? toolCallStream('replace_note_text', {
+                  note,
+                  search: 'Friday',
+                  replacement: 'Saturday',
+                })
+              : toolCallStream('replace_note_text', {
+                  note,
+                  search: 'Budget is 120.',
+                  replacement: 'Budget is 180.',
+                });
+          if (rounds.length === 3)
+            return followup
+              ? toolCallStream('export_note_docx', { note })
+              : toolCallStream('append_note_text', {
+                  note,
+                  text: 'Next steps: confirm the venue.',
+                });
+          return textStream(
+            followup
+              ? 'Updated the revised brief and exported Word.'
+              : 'Revised the brief and added next steps.',
+          );
+        }
+        if (lastUserText(prompt).includes('[productivity:budget')) {
+          const rounds = toolResultsThisTurn(prompt);
+          const failure = rounds
+            .map((name) => toolResultText(prompt, name))
+            .find((value) => value?.startsWith('Error'));
+          if (failure) return textStream(failure);
+          if (!rounds.length) return toolCallStream('inspect_workbook', {});
+          const followup = lastUserText(prompt).includes('[productivity:budget-followup]');
+          if (followup) {
+            if (rounds.length === 1)
+              return toolCallStream('read_workbook_range', {
+                sheetId: 'budget-sheet',
+                range: 'A1:D6',
+              });
+            if (rounds.length === 2)
+              return toolCallStream('set_workbook_cells', {
+                sheetId: 'budget-sheet',
+                cells: [{ address: 'C3', value: 40 }],
+              });
+            if (rounds.length === 3)
+              return toolCallStream('save_workbook_csv', {
+                sheetId: 'budget-sheet',
+                name: 'Revised budget',
+              });
+            return textStream('Updated the revised budget and saved CSV.');
+          }
+          if (rounds.length === 1)
+            return toolCallStream('add_workbook_sheet', {
+              name: 'Assumptions',
+              rows: 100,
+              columns: 20,
+            });
+          const added = JSON.parse(toolResultText(prompt, 'add_workbook_sheet') || '{}');
+          const sheetId = added.project?.sheets?.find(
+            (sheet: { name: string }) => sheet.name === 'Assumptions',
+          )?.id;
+          if (rounds.length === 2)
+            return toolCallStream('rename_workbook_sheet', {
+              sheetId,
+              name: 'Planning assumptions',
+            });
+          if (rounds.length === 3)
+            return toolCallStream('set_workbook_cells', {
+              sheetId,
+              cells: [
+                { address: 'A1', value: 'Reserve' },
+                { address: 'B1', value: 20 },
+                { address: 'A2', value: 'Budget total' },
+                { address: 'B2', value: '=Budget!D5' },
+              ],
+            });
+          if (rounds.length === 4)
+            return toolCallStream('set_workbook_cells', {
+              sheetId: 'budget-sheet',
+              cells: [
+                { address: 'B2', value: 8 },
+                { address: 'D6', value: '=SUM(D2:D3)' },
+              ],
+            });
+          if (rounds.length === 5)
+            return toolCallStream('format_workbook_range', {
+              sheetId: 'budget-sheet',
+              range: 'A1:D1',
+              bold: true,
+              background: '#d8ead5',
+            });
+          if (rounds.length === 6)
+            return toolCallStream('format_workbook_range', {
+              sheetId: 'budget-sheet',
+              range: 'C2:D6',
+              numberFormat: 'usd',
+            });
+          if (rounds.length === 7)
+            return toolCallStream('read_workbook_range', {
+              sheetId: 'budget-sheet',
+              range: 'A1:D6',
+            });
+          if (rounds.length === 8)
+            return toolCallStream('save_workbook_csv', {
+              sheetId: 'budget-sheet',
+              name: 'Workshop budget',
+            });
+          return textStream('Organized the budget, formatted costs and saved CSV.');
+        }
         if (lastUserText(prompt).includes('[notes:document]')) {
           const rounds = toolResultsThisTurn(prompt);
           if (!rounds.length) return toolCallStream('inspect_notebook', {});

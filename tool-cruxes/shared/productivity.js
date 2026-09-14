@@ -373,17 +373,33 @@ export function inspectProductivity(doc) {
       scene: { ...doc.scene, elements: doc.scene.elements.slice(0, 100) },
       elementCount: doc.scene.elements.length,
     };
+  let cellsLeft = 20;
+  const preview = (sheet) => {
+    const rows = {};
+    for (const [row, cells] of Object.entries(sheet.cellData || {})) {
+      for (const [col, cell] of Object.entries(cells)) {
+        if (!cell || cellsLeft <= 0) continue;
+        cellsLeft--;
+        rows[row] ??= {};
+        rows[row][col] = {
+          v: typeof cell.v === 'string' ? cell.v.slice(0, 80) : (cell.v ?? null),
+          ...(cell.f ? { f: cell.f.slice(0, 80) } : {}),
+        };
+      }
+    }
+    return rows;
+  };
   return {
     title: doc.title,
     type: doc.type,
+    previewLimit:
+      'First 20 populated cells across sheets; text/formulas truncated at 80 characters. Use read_workbook_range for more.',
     sheets: doc.workbook.sheetOrder.map((id) => ({
       id,
       name: doc.workbook.sheets[id].name,
       rowCount: doc.workbook.sheets[id].rowCount,
       columnCount: doc.workbook.sheets[id].columnCount,
-      firstRows: Object.fromEntries(
-        Object.entries(doc.workbook.sheets[id].cellData || {}).slice(0, 20),
-      ),
+      firstRows: preview(doc.workbook.sheets[id]),
     })),
   };
 }

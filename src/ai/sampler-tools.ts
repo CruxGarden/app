@@ -1,3 +1,4 @@
+import { WORKBOOK_TOOLS, workbookCommand } from './workbook-tools';
 import type { AppToolDefinition } from '@/services/embedded-app-tool-registry';
 import { EFFECTS, PADS, SHAPES } from '../../tool-cruxes/shared/model.js';
 const names: Record<string, [string, string, string]> = {
@@ -175,6 +176,7 @@ export function samplerTools(type: string) {
       writes: ['exports/'],
       timeoutMs: 2 * 60_000,
     });
+  if (type === 'univer') tools.push(...WORKBOOK_TOOLS);
   return {
     tools,
     prepare: (name: string, input: Record<string, unknown>) => {
@@ -194,6 +196,7 @@ export function samplerTools(type: string) {
           ...(typeof input.name === 'string' ? { label: input.name.trim() } : {}),
         };
       }
+      if (type === 'univer') return workbookCommand(name, input);
       const schema = schemas[type]!;
       if (
         name !== mutate ||
