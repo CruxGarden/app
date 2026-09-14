@@ -95,7 +95,7 @@ it('preserves native Piskel layers and sprite sheet bytes in Growth and complete
   expect(new Uint8Array(await raster.arrayBuffer())).toEqual(bytes);
 });
 
-it('scopes sprite agent commands to animation speed', () => {
+it('scopes sprite commands to the open native editor', () => {
   const a = embeddedAppToolAdapter({ meta: { template: 'piskel-app' } })!;
   expect(a.prepare('inspect_piskel', {})).toEqual({ op: 'inspect' });
   expect(a.prepare('set_piskel_speed', { fps: 8 })).toEqual({ op: 'fps', fps: 8 });

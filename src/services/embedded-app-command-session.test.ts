@@ -113,7 +113,7 @@ describe('embedded editor command lifecycle', () => {
 });
 
 it('ships the same standalone shared source with adopting embeds', () => {
-  for (const app of ['pptist', 'minipaint', 'jupyterlite'])
+  for (const app of ['pptist', 'minipaint', 'jupyterlite', 'piskel'])
     for (const file of [
       'command-session.js',
       'command-session.d.ts',
@@ -121,7 +121,13 @@ it('ships the same standalone shared source with adopting embeds', () => {
       'project-image.d.ts',
     ]) {
       expect(
-        readFileSync(new URL(`../../${app}-crux/garden/shared/${file}`, import.meta.url), 'utf8'),
+        readFileSync(
+          new URL(
+            `../../${app}-crux/${app === 'piskel' ? 'src/' : ''}garden/shared/${file}`,
+            import.meta.url,
+          ),
+          'utf8',
+        ),
       ).toBe(readFileSync(new URL(`../../embedded-apps/shared/${file}`, import.meta.url), 'utf8'));
     }
 });

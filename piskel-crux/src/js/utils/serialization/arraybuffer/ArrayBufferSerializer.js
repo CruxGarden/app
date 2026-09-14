@@ -42,7 +42,7 @@
    */
 
   ns.ArrayBufferSerializer = {
-    calculateRequiredBytes: function (piskel, framesData) {
+    calculateRequiredBytes: function (piskel, framesData, serializedHiddenFrames) {
       var descriptorNameLength = piskel.getDescriptor().name.length;
       var descriptorDescriptionLength =
         piskel.getDescriptor().description.length;
@@ -59,7 +59,7 @@
       bytes += 2 * 2;
 
       // Layers meta
-      bytes += 1 * 2;
+      bytes += 2 * 2; // Layer count and hidden-frame string length.
 
       /********/
       /* DATA */
@@ -69,6 +69,7 @@
 
       // Descriptor description
       bytes += descriptorDescriptionLength * 2;
+      bytes += serializedHiddenFrames.length * 2;
 
       // Layers
       for (var i = 0, layers = piskel.getLayers(); i < layers.length; i++) {
