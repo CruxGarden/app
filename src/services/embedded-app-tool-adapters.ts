@@ -18,6 +18,7 @@ import { GLSL_TOOLS, glslCommand } from '@/ai/glsl-tools';
 import { GLYPHR_TOOLS, glyphrCommand } from '@/ai/glyphr-tools';
 import { FMG_TOOLS, fmgCommand } from '@/ai/fmg-tools';
 import { ABC_TOOLS, abcCommand } from '@/ai/abc-tools';
+import { SIGNAL_TOOLS, signalCommand } from '@/ai/signal-tools';
 import { RECORDER_TOOLS, recorderCommand } from '@/ai/recorder-tools';
 import { PISKEL_TOOLS, piskelCommand } from '@/ai/piskel-tools';
 import { MERMAID_TOOLS, mermaidCommand } from '@/ai/mermaid-tools';
@@ -67,6 +68,7 @@ export function embeddedAppToolAdapter(
   if (nativeAppType(crux) === 'glyphr') return { tools: GLYPHR_TOOLS, prepare: glyphrCommand };
   if (nativeAppType(crux) === 'fmg') return { tools: FMG_TOOLS, prepare: fmgCommand };
   if (nativeAppType(crux) === 'abc') return { tools: ABC_TOOLS, prepare: abcCommand };
+  if (nativeAppType(crux) === 'signal') return { tools: SIGNAL_TOOLS, prepare: signalCommand };
   if (nativeAppType(crux) === 'recorder')
     return { tools: RECORDER_TOOLS, prepare: recorderCommand };
   if (nativeAppType(crux) === 'opencut') return { tools: OPENCUT_TOOLS, prepare: opencutCommand };

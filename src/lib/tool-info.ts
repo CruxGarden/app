@@ -73,6 +73,13 @@ export const TOOL_INFO: Record<string, ToolInfo> = {
     relationship:
       'A notation tool around abcjs (MIT) and the FluidR3 piano soundfont (MIT), both vendored unmodified; the page, the Garden integration and the outputs are Crux Garden’s.',
   },
+  'signal-app': {
+    name: 'signal',
+    upstream: 'https://github.com/ryohey/signal',
+    detailsPath: 'UPSTREAM.md',
+    relationship:
+      'The actual Signal sequencer (MIT) built from upstream’s source with a few marked changes (offline sounds, no analytics or cloud sign-in); the Garden integration and the outputs are Crux Garden’s.',
+  },
   'fmg-app': {
     name: 'Fantasy Map Generator',
     upstream: 'https://github.com/Azgaar/Fantasy-Map-Generator',
