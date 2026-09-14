@@ -5,6 +5,7 @@ import { launchApp } from './launch';
 import { startMockApi } from './api-mock';
 import { enterGarden, storedCrux } from './multi-crux-helpers';
 import { exportNativeCrux, importNativeCrux } from './native-archive-helpers';
+import { openBuilder } from './builder-helpers';
 
 /**
  * The Digital Garden template (Veka on Astro, with backlinks and a graph): a
@@ -47,7 +48,7 @@ test('Digital Garden: plant a note, wikilink, backlinks, graph, collaborator, sh
       id = (await page.locator('[data-workspace-id]').getAttribute('data-workspace-id'))!;
       folder = (await storedCrux(page, id)).projectFolder as string;
       await expect.poll(() => existsSync(note('growth-stages')), { timeout: 60000 }).toBe(true);
-      await page.getByRole('button', { name: 'Edit content', exact: true }).click();
+      await openBuilder(page);
       await expect(page.getByRole('button', { name: /new note/i }).first()).toBeVisible({
         timeout: 30000,
       });
@@ -240,7 +241,7 @@ test('Digital Garden: plant a note, wikilink, backlinks, graph, collaborator, sh
     await page.getByRole('button', { name: /enter/i }).click();
     await test.step('restart: the garden and its notes are still there', async () => {
       await expect(page.locator('[data-workspace-id]')).toBeVisible({ timeout: 60000 });
-      await page.getByRole('button', { name: 'Edit content', exact: true }).click();
+      await openBuilder(page);
       await expect(page.getByText('Moss').first()).toBeVisible({ timeout: 30000 });
       await expect(page.getByText('Compost').first()).toBeVisible();
       await page.screenshot({ path: join(evidence, 'garden-reopened.png') });
@@ -270,11 +271,7 @@ test('Digital Garden: plant a note, wikilink, backlinks, graph, collaborator, sh
       expect(existsSync(note('compost'))).toBe(true);
       expect(existsSync(join(folder, 'src/lib/wiki/links.mjs'))).toBe(true);
       expect(existsSync(join(folder, 'node_modules'))).toBe(false);
-      // The archive carried the layout as it was exported: open the Workshop again.
-      const edit = page.getByRole('button', { name: 'Edit content', exact: true });
-      if (!(await edit.isVisible().catch(() => false)))
-        await page.getByRole('button', { name: 'Toggle workshop' }).click();
-      await edit.click();
+      await openBuilder(page);
       await expect(page.getByText('Moss').first()).toBeVisible({ timeout: 30000 });
       await page.screenshot({ path: join(evidence, 'garden-imported.png') });
     });

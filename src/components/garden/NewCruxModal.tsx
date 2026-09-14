@@ -651,7 +651,7 @@ const TEMPLATES: Template[] = [
   {
     id: 'astro-blog',
     label: 'Astro Blog',
-    description: 'A real Astro site — live dev server, markdown posts',
+    description: 'A real Astro site on the Cactus theme — posts, notes, tags, search, dark mode',
     icon: <PencilIcon />,
     thumb: <BlogThumb />,
     kind: 'webapp',

@@ -69,9 +69,9 @@ describe('renderAgentsMd', () => {
     expect(md).toContain('Kind: Site Crux');
     expect(md).toContain('## Content Model');
     expect(md).toContain('### Collection: Posts (singular "Post")');
-    expect(md).toContain('src/pages/posts/*.md');
+    expect(md).toContain('content/posts/**/*.md');
     expect(md).toContain('### Builder actions');
-    expect(md).toContain('New Post — creates src/pages/posts/{slug}.md');
+    expect(md).toContain('New Post — creates content/posts/{slug}.md');
     expect(md).toContain('## Files and folder layout');
     expect(md).toContain('## Preview and verification');
     expect(md).toContain('`check_site`');
