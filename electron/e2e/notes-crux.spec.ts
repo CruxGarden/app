@@ -27,13 +27,17 @@ const editor = (page: Page) => frameOf(page).locator('.tiptap').first();
 async function createNote(page: Page, title: string) {
   // Tigrana adds the note as Untitled; opening it and naming it in the title field renames the file.
   await frameOf(page).getByRole('button', { name: 'Add Note or Folder', exact: true }).click();
-  await frameOf(page).getByRole('menuitem', { name: /New Note/ }).click();
+  await frameOf(page)
+    .getByRole('menuitem', { name: /New Note/ })
+    .click();
   await frameOf(page).getByRole('button', { name: 'Untitled', exact: true }).first().click();
   const field = frameOf(page).getByLabel('Note title', { exact: true });
   await expect(field).toHaveValue('Untitled');
   await field.fill(title);
   await field.press('Enter');
-  await expect(frameOf(page).getByRole('button', { name: title, exact: true }).first()).toBeVisible();
+  await expect(
+    frameOf(page).getByRole('button', { name: title, exact: true }).first(),
+  ).toBeVisible();
   await expect(editor(page)).toBeVisible();
 }
 

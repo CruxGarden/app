@@ -21,7 +21,11 @@ async function ready(page: Page) {
   await expect(status(page)).toHaveText('Saved to Garden', { timeout: 120000 });
   await expect(frameOf(page).locator('.fjs-palette-field').first()).toBeVisible();
 }
-async function dragBetween(page: Page, from: { x: number; y: number }, to: { x: number; y: number }) {
+async function dragBetween(
+  page: Page,
+  from: { x: number; y: number },
+  to: { x: number; y: number },
+) {
   await page.mouse.move(from.x, from.y);
   await page.mouse.down();
   await page.mouse.move(from.x + 6, from.y + 6);
@@ -43,7 +47,8 @@ test('Form: a dragged field and a typed name, agent fields, preview, publish wit
   let folder = '';
   let id = '';
   const doc = () => JSON.parse(readFileSync(join(folder, 'data/project.json'), 'utf8'));
-  const fields = () => (doc().project?.schema?.components ?? []) as { type: string; key?: string; label?: string }[];
+  const fields = () =>
+    (doc().project?.schema?.components ?? []) as { type: string; key?: string; label?: string }[];
   const errors: string[] = [];
   try {
     const { page } = first;
@@ -75,7 +80,9 @@ test('Form: a dragged field and a typed name, agent fields, preview, publish wit
         await middle(page, '.fjs-palette-field[data-field-type="textfield"]'),
         await middle(page, '.fjs-drop-container-vertical'),
       );
-      await expect(frameOf(page).locator('.fjs-editor-form-root .fjs-form-field')).not.toHaveCount(0);
+      await expect(frameOf(page).locator('.fjs-editor-form-root .fjs-form-field')).not.toHaveCount(
+        0,
+      );
       await ready(page);
       await expect.poll(() => fields().length, { timeout: 30000 }).toBe(1);
       expect(fields()[0].type).toBe('textfield');
@@ -89,7 +96,9 @@ test('Form: a dragged field and a typed name, agent fields, preview, publish wit
       await box.fill('Make this an RSVP [form:build]');
       await box.press('Enter');
       await expect(
-        page.getByText('Named the form Open day RSVP and added the coming and notes fields.', { exact: true }),
+        page.getByText('Named the form Open day RSVP and added the coming and notes fields.', {
+          exact: true,
+        }),
       ).toBeVisible({ timeout: 150000 });
       await ready(page);
       expect(doc().project.name).toBe('Open day RSVP');
@@ -113,26 +122,51 @@ test('Form: a dragged field and a typed name, agent fields, preview, publish wit
     });
 
     await test.step('Share selected content publishes the viewer edition; an answer from the served form reaches the Crux Store', async () => {
-      await page.getByTestId('workshop-view').getByRole('button', { name: 'Share selected content', exact: true }).click();
+      await page
+        .getByTestId('workshop-view')
+        .getByRole('button', { name: 'Share selected content', exact: true })
+        .click();
       const share = page.getByTestId('pane-body-publish');
       await share.getByRole('button', { name: 'Share selected content', exact: true }).click();
       await page.getByPlaceholder('email@example.com').fill('tester@example.com');
       await page.getByRole('button', { name: 'Send Code', exact: true }).click();
       await page.getByPlaceholder('Enter code').fill('123456');
       await page.getByRole('button', { name: 'Connect', exact: true }).click();
-      const backupAsk = page.getByRole('dialog').filter({ hasText: 'A published site is not a backup' });
+      const backupAsk = page
+        .getByRole('dialog')
+        .filter({ hasText: 'A published site is not a backup' });
       await expect(backupAsk).toBeVisible({ timeout: 60000 });
       await backupAsk.getByRole('button', { name: 'Share without a backup', exact: true }).click();
-      await expect(share.getByText(/^(Up to date|Changes to share)$/)).toBeVisible({ timeout: 6 * 60_000 });
+      await expect(share.getByText(/^(Up to date|Changes to share)$/)).toBeVisible({
+        timeout: 6 * 60_000,
+      });
       const published = api.state.published[id] ?? [];
       const paths = published.map((f) => f.path);
-      expect(paths).toEqual(expect.arrayContaining(['index.html', 'form.json', 'viewer.js', 'vendor/form-viewer.umd.js']));
-      expect(paths.some((p) => /^(data|vendor\/form-editor|garden)\//.test(p) || p === 'builder.js')).toBe(false);
-      expect(published.find((f) => f.path === 'index.html')!.bytes.toString('utf8')).toContain('<title>Open day RSVP</title>');
+      expect(paths).toEqual(
+        expect.arrayContaining([
+          'index.html',
+          'form.json',
+          'viewer.js',
+          'vendor/form-viewer.umd.js',
+        ]),
+      );
+      expect(
+        paths.some((p) => /^(data|vendor\/form-editor|garden)\//.test(p) || p === 'builder.js'),
+      ).toBe(false);
+      expect(published.find((f) => f.path === 'index.html')!.bytes.toString('utf8')).toContain(
+        '<title>Open day RSVP</title>',
+      );
       // The built edition sits in the Crux's dist/, served by the Crux's own preview server: the
       // Workshop frame can show it, and its answers go through the host's store proxy to the API.
-      const previewOrigin = new URL(await page.locator('iframe[data-crux-id]').getAttribute('src').then((s) => s!)).origin;
-      await page.locator('iframe[data-crux-id]').evaluate((el: HTMLIFrameElement, url) => { el.src = url; }, `${previewOrigin}/dist/index.html`);
+      const previewOrigin = new URL(
+        await page
+          .locator('iframe[data-crux-id]')
+          .getAttribute('src')
+          .then((s) => s!),
+      ).origin;
+      await page.locator('iframe[data-crux-id]').evaluate((el: HTMLIFrameElement, url) => {
+        el.src = url;
+      }, `${previewOrigin}/dist/index.html`);
       const served = frameOf(page);
       await expect(served.getByRole('heading', { name: 'Open day RSVP' })).toBeVisible();
       await served.getByLabel('Yes').check();
@@ -153,7 +187,10 @@ test('Form: a dragged field and a typed name, agent fields, preview, publish wit
       await expect.poll(async () => (await answers()).length, { timeout: 30000 }).toBe(1);
       const answer = (await answers())[0]!;
       expect(answer.mode).toBe('protected');
-      expect(JSON.parse(answer.value).data).toMatchObject({ coming: 'yes', notes: 'Bringing seeds' });
+      expect(JSON.parse(answer.value).data).toMatchObject({
+        coming: 'yes',
+        notes: 'Bringing seeds',
+      });
       await page.screenshot({ path: join(evidence, 'formjs-published.png') });
       await page.getByRole('button', { name: 'Toggle share' }).click();
     });
@@ -189,7 +226,9 @@ test('Form: a dragged field and a typed name, agent fields, preview, publish wit
     await test.step('clean Garden: the complete Crux imports and the form is edited', async () => {
       await importNativeCrux(page, archive);
       await expect(page.locator('[data-workspace-id]')).toBeVisible({ timeout: 60000 });
-      const importedId = (await page.locator('[data-workspace-id]').getAttribute('data-workspace-id'))!;
+      const importedId = (await page
+        .locator('[data-workspace-id]')
+        .getAttribute('data-workspace-id'))!;
       folder = (await storedCrux(page, importedId)).projectFolder;
       await ready(page);
       await expect(frameOf(page).getByText('Will you come?')).toBeVisible();

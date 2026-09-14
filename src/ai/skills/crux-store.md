@@ -1,5 +1,5 @@
 # Skill: crux-store
-Use when: building something stateful for a published crux — counters, guestbooks, votes, form submissions.
+Use when: building something stateful for a published crux (counters, guestbooks, votes, forms).
 
 Published cruxes have a persistent key-value store at `window.crux.store`. It works in both preview (local SQLite) and published (API) mode with no code changes.
 

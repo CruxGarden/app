@@ -219,7 +219,9 @@ test('Glow Garden: plan, board, sprites, sound, game, export and site across one
       // The copy dialog leaves through its exit animation first (Motion, ADR 0041): wait for it,
       // or "the last Close" is the one on its way out. Escape reaches the host only while the host
       // has focus; the assets dialog's own control always works.
-      await expect(page.getByRole('button', { name: 'Copy selected version', exact: true })).toHaveCount(0);
+      await expect(
+        page.getByRole('button', { name: 'Copy selected version', exact: true }),
+      ).toHaveCount(0);
       await page.getByRole('button', { name: 'Close', exact: true }).last().click();
       await expect(page.getByRole('button', { name: 'Use Seed sprite', exact: true })).toHaveCount(
         0,

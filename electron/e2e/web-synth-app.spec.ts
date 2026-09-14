@@ -98,7 +98,9 @@ test('web-synth: native modules, saved composition, agent tools, restart and cle
           best = Math.max(best, rms);
           await new Promise((r) => setTimeout(r, 100));
         }
-        document.dispatchEvent(new KeyboardEvent('keyup', { key: 'a', code: 'KeyA', bubbles: true }));
+        document.dispatchEvent(
+          new KeyboardEvent('keyup', { key: 'a', code: 'KeyA', bubbles: true }),
+        );
         return best;
       });
       console.log('web-synth output RMS', rms);

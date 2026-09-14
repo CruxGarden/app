@@ -1,5 +1,5 @@
 # Skill: feed
-Use when: the crux grew from the Feed template (a photo feed with per-photo pages).
+Use when: the crux grew from the Feed template (a photo feed).
 
 A photo feed built as an Astro Site Crux. The grid is `src/pages/index.astro`; each post is a markdown file in `src/pages/p/` with frontmatter `title`, `date`, `image` and `caption`, living at `/p/<slug>`.
 

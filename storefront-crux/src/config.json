@@ -1,0 +1,11 @@
+{
+  "name": "My Shop",
+  "tagline": "Small things, made well",
+  "about": "A small shop: a few products, each with its story, each bought through a hosted checkout you trust.",
+  "currency": "USD",
+  "contactEmail": "",
+  "snipcartApiKey": "",
+  "url": "",
+  "locale": "en",
+  "footerText": ""
+}

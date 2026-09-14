@@ -19,7 +19,12 @@ async function ready(page: Page) {
   // Upstream's welcome message opens on every fresh load; a person dismisses it the same way.
   const welcome = frameOf(page).getByText('Try it', { exact: true });
   if (await welcome.count()) await welcome.first().click();
-  await expect(frameOf(page).locator('#action-button-tooltip-tool-button-rectangle').filter({ visible: true }).first()).toBeVisible();
+  await expect(
+    frameOf(page)
+      .locator('#action-button-tooltip-tool-button-rectangle')
+      .filter({ visible: true })
+      .first(),
+  ).toBeVisible();
 }
 const projectOf = (page: Page) =>
   frameOf(page)
@@ -35,7 +40,11 @@ const projectOf = (page: Page) =>
 /** Draw a rectangle on the real canvas with the real tool. */
 async function drawRectangle(page: Page) {
   const frame = frameOf(page);
-  await frame.locator('#action-button-tooltip-tool-button-rectangle').filter({ visible: true }).first().click(); // the desktop toolbar; a mobile one shares the id
+  await frame
+    .locator('#action-button-tooltip-tool-button-rectangle')
+    .filter({ visible: true })
+    .first()
+    .click(); // the desktop toolbar; a mobile one shares the id
   const canvas = frame.locator('#canvas-container-wrapper canvas').first();
   const box = (await canvas.boundingBox())!;
   const x = box.x + box.width * 0.4;

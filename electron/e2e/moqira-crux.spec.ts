@@ -178,7 +178,11 @@ test('Moqira: the actual app — edit, save, Mood, open a file, public edition, 
 
     const stopped = instance.app.waitForEvent('close');
     // The visible window: a hidden thumbnail-capture window may exist at this moment.
-    await instance.app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows().find((w) => w.isVisible())!.close());
+    await instance.app.evaluate(({ BrowserWindow }) =>
+      BrowserWindow.getAllWindows()
+        .find((w) => w.isVisible())!
+        .close(),
+    );
     await stopped;
     instance = await launchApp({ dir });
     page = instance.page;
@@ -209,7 +213,10 @@ test('Moqira: the actual app — edit, save, Mood, open a file, public edition, 
 
     await test.step('the published edition keeps only the chosen wireframes and starts interactive', async () => {
       // As publishing does: install the project's own toolchain, then run its build.
-      const installed = await page.evaluate(async (folder) => window.electronAPI!.toolchain.install(folder), folder);
+      const installed = await page.evaluate(
+        async (folder) => window.electronAPI!.toolchain.install(folder),
+        folder,
+      );
       expect(installed.code, installed.log).toBe(0);
       const built = await page.evaluate(
         async (folder) => window.electronAPI!.toolchain.build(folder),

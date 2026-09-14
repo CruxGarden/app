@@ -23,7 +23,11 @@ const songOf = (page: Page) =>
     .locator('body')
     .evaluate(() => {
       const e = (window as any).gardenEditor;
-      return { tempo: e.doc.song.tempo, key: (window as any).beepbox.Config.keys[e.doc.song.key].name, hash: location.hash.length };
+      return {
+        tempo: e.doc.song.tempo,
+        key: (window as any).beepbox.Config.keys[e.doc.song.key].name,
+        hash: location.hash.length,
+      };
     });
 /** Place a note on the real pattern grid (the main pattern editor is the wide SVG). */
 async function placeNote(page: Page) {
@@ -84,13 +88,19 @@ test('BeepBox: notes on the real grid, saved song, agent tools, restart and clea
         const synth = (window as any).gardenEditor.doc.synth;
         const start = synth.playhead;
         await new Promise((r) => setTimeout(r, 700));
-        return { playing: synth.playing, moved: synth.playhead - start, sampleRate: synth.samplesPerSecond };
+        return {
+          playing: synth.playing,
+          moved: synth.playhead - start,
+          sampleRate: synth.samplesPerSecond,
+        };
       });
       console.log('BeepBox playback', progress);
       expect(progress.playing).toBe(true);
       expect(progress.moved).toBeGreaterThan(0);
       await frame.locator('.beepboxEditor button.pauseButton').click(); // Play becomes Pause while running
-      expect(await frame.locator('body').evaluate(() => (window as any).gardenEditor.doc.synth.playing)).toBe(false);
+      expect(
+        await frame.locator('body').evaluate(() => (window as any).gardenEditor.doc.synth.playing),
+      ).toBe(false);
     });
 
     await test.step('the scripted collaborator sets the tempo and the key', async () => {

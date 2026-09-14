@@ -61,43 +61,52 @@ test('Record: a camera recording saved into the Crux, agent naming, restart and 
       // A camera or screen needs the OS's permission dialogs, which no test can answer; the recording
       // itself is made the way Record makes it (MediaRecorder on a stream, a WebM blob) from a drawn
       // canvas, and saved the way Record saves it (a download link the bridge keeps in the Crux).
-      await frameOf(page).locator('body').evaluate(async () => {
-        const canvas = document.createElement('canvas');
-        canvas.width = 320;
-        canvas.height = 240;
-        const ctx = canvas.getContext('2d')!;
-        let hue = 0;
-        const paint = () => {
-          ctx.fillStyle = `hsl(${(hue += 7) % 360}, 70%, 50%)`;
-          ctx.fillRect(0, 0, 320, 240);
-          ctx.fillStyle = '#fff';
-          ctx.font = '48px sans-serif';
-          ctx.fillText('take', 100, 140);
-        };
-        const timer = setInterval(paint, 40);
-        const stream = canvas.captureStream(25);
-        const chunks: Blob[] = [];
-        const recorder = new MediaRecorder(stream, { mimeType: 'video/webm; codecs=vp9' });
-        recorder.ondataavailable = (e) => e.data.size && chunks.push(e.data);
-        const done = new Promise<void>((resolve) => (recorder.onstop = () => resolve()));
-        recorder.start();
-        await new Promise((r) => setTimeout(r, 1800));
-        recorder.stop();
-        await done;
-        clearInterval(timer);
-        const link = document.createElement('a');
-        link.href = URL.createObjectURL(new Blob(chunks, { type: 'video/webm' }));
-        link.download = 'recording.webm';
-        link.click();
-      });
+      await frameOf(page)
+        .locator('body')
+        .evaluate(async () => {
+          const canvas = document.createElement('canvas');
+          canvas.width = 320;
+          canvas.height = 240;
+          const ctx = canvas.getContext('2d')!;
+          let hue = 0;
+          const paint = () => {
+            ctx.fillStyle = `hsl(${(hue += 7) % 360}, 70%, 50%)`;
+            ctx.fillRect(0, 0, 320, 240);
+            ctx.fillStyle = '#fff';
+            ctx.font = '48px sans-serif';
+            ctx.fillText('take', 100, 140);
+          };
+          const timer = setInterval(paint, 40);
+          const stream = canvas.captureStream(25);
+          const chunks: Blob[] = [];
+          const recorder = new MediaRecorder(stream, { mimeType: 'video/webm; codecs=vp9' });
+          recorder.ondataavailable = (e) => e.data.size && chunks.push(e.data);
+          const done = new Promise<void>((resolve) => (recorder.onstop = () => resolve()));
+          recorder.start();
+          await new Promise((r) => setTimeout(r, 1800));
+          recorder.stop();
+          await done;
+          clearInterval(timer);
+          const link = document.createElement('a');
+          link.href = URL.createObjectURL(new Blob(chunks, { type: 'video/webm' }));
+          link.download = 'recording.webm';
+          link.click();
+        });
       await expect(status(page)).toContainText('Saved Hello take', { timeout: 60000 });
       await expect.poll(() => outputs(folder).map((o) => o.label)).toEqual(['Hello take']);
       const out = outputs(folder)[0]!;
       expect(out.mimeType).toBe('video/webm');
       expect(readFileSync(join(folder, out.path)).length).toBeGreaterThan(2000);
       expect(doc().project.recordings).toHaveLength(1);
-      expect(doc().project.recordings[0]).toMatchObject({ label: 'Hello take', mimeType: 'video/webm' });
-      await frameOf(page).locator('#garden-pip iframe').evaluate((el) => ((el as HTMLIFrameElement).contentWindow as Window & { close(): void }).close());
+      expect(doc().project.recordings[0]).toMatchObject({
+        label: 'Hello take',
+        mimeType: 'video/webm',
+      });
+      await frameOf(page)
+        .locator('#garden-pip iframe')
+        .evaluate((el) =>
+          ((el as HTMLIFrameElement).contentWindow as Window & { close(): void }).close(),
+        );
       await expect(frameOf(page).locator('#garden-pip')).toHaveCount(0);
       await page.screenshot({ path: join(evidence, 'recorder-saved.png') });
     });
@@ -108,7 +117,11 @@ test('Record: a camera recording saved into the Crux, agent naming, restart and 
       const box = page.getByPlaceholder('Send a message...');
       await box.fill('What do we have here? [recorder:name]');
       await box.press('Enter');
-      await expect(page.getByText('Listed the recordings and named the Crux Walkthrough takes.', { exact: true })).toBeVisible({ timeout: 150000 });
+      await expect(
+        page.getByText('Listed the recordings and named the Crux Walkthrough takes.', {
+          exact: true,
+        }),
+      ).toBeVisible({ timeout: 150000 });
       await expect.poll(() => doc().project.name).toBe('Walkthrough takes');
       await expect(frameOf(page).locator('#recorder-name')).toHaveValue('Walkthrough takes');
       await collab.click();
@@ -145,7 +158,9 @@ test('Record: a camera recording saved into the Crux, agent naming, restart and 
     await test.step('clean Garden: the complete Crux imports with its recording', async () => {
       await importNativeCrux(page, archive);
       await expect(page.locator('[data-workspace-id]')).toBeVisible({ timeout: 60000 });
-      const importedId = (await page.locator('[data-workspace-id]').getAttribute('data-workspace-id'))!;
+      const importedId = (await page
+        .locator('[data-workspace-id]')
+        .getAttribute('data-workspace-id'))!;
       folder = (await storedCrux(page, importedId)).projectFolder;
       await ready(page);
       expect(outputs(folder).map((o) => o.label)).toEqual(['Hello take']);

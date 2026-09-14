@@ -1,5 +1,5 @@
 # Skill: blog
-Use when: the crux grew from the Blog template (posts in content/posts).
+Use when: the crux grew from the Blog template (content/posts).
 
 A blog built as an Astro Site Crux on the Astro Cactus theme (MIT). Posts are Markdown files under `content/posts/` (a file, or a folder with an `index.md` and its images beside it); each becomes `/posts/<slug>`. Notes, the short form, live under `content/notes/` at `/notes/<slug>`; tags under `content/tags/` describe a tag at `/tags/<tag>`.
 

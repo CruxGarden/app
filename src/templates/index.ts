@@ -280,6 +280,7 @@ const loaders: Record<string, () => Promise<{ default: TemplateDefinition }>> = 
   'astro-blog': () => import('./astro-blog'),
   'digital-garden': () => import('./digital-garden'),
   'astro-recipes': () => import('./astro-recipes'),
+  'astro-storefront': () => import('./astro-storefront'),
   'astro-feed': () => import('./astro-feed'),
   'astro-media': () => import('./astro-media'),
   'astro-empty': () => import('./astro-empty'),

@@ -15,7 +15,8 @@ import { collaborator, outputs } from './game-cruxspace-helpers';
  */
 const DOCX_MIME = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
 const fixture = resolve(__dirname, 'fixtures/documents/Letter.docx');
-const documentXml = (path: string) => execFileSync('unzip', ['-p', path, 'word/document.xml']).toString('utf8');
+const documentXml = (path: string) =>
+  execFileSync('unzip', ['-p', path, 'word/document.xml']).toString('utf8');
 
 test('Notes documents: DOCX in through the bar and the collaborator, notes out as DOCX outputs, restart', async () => {
   test.setTimeout(420000);
@@ -54,7 +55,9 @@ test('Notes documents: DOCX in through the bar and the collaborator, notes out a
       const chooser = page.waitForEvent('filechooser');
       await frame().getByRole('button', { name: 'Import document…', exact: true }).click();
       await (await chooser).setFiles(fixture);
-      await expect.poll(() => existsSync(note('Imported/Letter/Letter.md')), { timeout: 60000 }).toBe(true);
+      await expect
+        .poll(() => existsSync(note('Imported/Letter/Letter.md')), { timeout: 60000 })
+        .toBe(true);
       await expect.poll(() => existsSync(note('Imported/Letter/.assets/Letter 1.png'))).toBe(true);
       const markdown = readFileSync(note('Imported/Letter/Letter.md'), 'utf8');
       expect(markdown).toContain('# Letter to the seed library');
@@ -69,14 +72,21 @@ test('Notes documents: DOCX in through the bar and the collaborator, notes out a
       await expect(editor).toContainText('LETTER_BODY_SENTINEL');
       await expect(editor.locator('table')).toHaveCount(1);
       await expect
-        .poll(() => editor.locator('img').first().evaluate((img: HTMLImageElement) => img.complete && img.naturalWidth > 0))
+        .poll(() =>
+          editor
+            .locator('img')
+            .first()
+            .evaluate((img: HTMLImageElement) => img.complete && img.naturalWidth > 0),
+        )
         .toBe(true);
       await page.screenshot({ path: join(evidence, 'notes-document-imported.png') });
     });
 
     await test.step('the note goes back out as a Word document output', async () => {
       await frame().getByRole('button', { name: 'Export note as DOCX', exact: true }).click();
-      await expect(status()).toContainText('Exported Letter as a Word document', { timeout: 60000 });
+      await expect(status()).toContainText('Exported Letter as a Word document', {
+        timeout: 60000,
+      });
       await expect.poll(() => outputs(folder).map((o) => o.label)).toEqual(['Letter (DOCX)']);
       const output = outputs(folder)[0]!;
       expect(output.mimeType).toBe(DOCX_MIME);
@@ -91,11 +101,21 @@ test('Notes documents: DOCX in through the bar and the collaborator, notes out a
     await test.step('the collaborator imports a document a person dropped into the Crux, and exports the open note', async () => {
       mkdirSync(join(folder, 'inbox'), { recursive: true });
       copyFileSync(fixture, join(folder, 'inbox', 'Letter.docx'));
-      await collaborator(page, 'Bring the letter in [notes:import]', 'Imported the letter into the notebook.');
-      await expect.poll(() => existsSync(note('Imported/Letter 2/Letter.md')), { timeout: 60000 }).toBe(true);
+      await collaborator(
+        page,
+        'Bring the letter in [notes:import]',
+        'Imported the letter into the notebook.',
+      );
+      await expect
+        .poll(() => existsSync(note('Imported/Letter 2/Letter.md')), { timeout: 60000 })
+        .toBe(true);
       await expect(status()).toHaveText('Saved', { timeout: 120000 });
       await openNote('Imported', 'Letter');
-      await collaborator(page, 'Hand me this note as a Word file [notes:document]', 'Exported the open note as a Word document in exports.');
+      await collaborator(
+        page,
+        'Hand me this note as a Word file [notes:document]',
+        'Exported the open note as a Word document in exports.',
+      );
       await expect.poll(() => outputs(folder).length, { timeout: 60000 }).toBe(2);
       await page.screenshot({ path: join(evidence, 'notes-document-exported.png') });
     });

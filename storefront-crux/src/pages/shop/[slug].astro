@@ -1,0 +1,64 @@
+---
+// Crux Garden: one product — picture, price, the buy button, the story.
+import { getCollection, render } from 'astro:content';
+import { Image } from 'astro:assets';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import BuyButton from '../../components/BuyButton.astro';
+import { withBase } from '../../lib/url';
+import { SITE } from '../../consts';
+
+export async function getStaticPaths() {
+  const entries = await getCollection('products');
+  return entries.map((entry) => ({ params: { slug: entry.id }, props: { entry } }));
+}
+
+const { entry } = Astro.props;
+const { Content } = await render(entry);
+const productSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'Product',
+  name: entry.data.name,
+  description: entry.data.description,
+  sku: entry.data.sku,
+  offers: {
+    '@type': 'Offer',
+    price: entry.data.price,
+    priceCurrency: entry.data.currency,
+    availability: 'https://schema.org/InStock',
+    ...(entry.data.buyUrl ? { url: entry.data.buyUrl } : {}),
+  },
+};
+---
+
+<BaseLayout
+  title={entry.data.name}
+  description={entry.data.description}
+  ogType="article"
+  image={withBase(`/og/shop/${entry.id}.png`)}
+>
+  <script type="application/ld+json" slot="head" set:html={JSON.stringify(productSchema)} />
+  <article class="product" data-pagefind-body>
+    <header class="page-head section article-head">
+      <p class="eyebrow">{entry.data.categories.join(' / ') || SITE.title}</p>
+      <h1>{entry.data.name}</h1>
+      <p class="lead">{entry.data.description}</p>
+      <div class="action-row">
+        <BuyButton product={entry} />
+      </div>
+      {
+        entry.data.image && (
+          <Image
+            class="article-image"
+            src={entry.data.image}
+            alt=""
+            widths={[720, 1040, 1400]}
+            sizes="(min-width: 900px) 72rem, 100vw"
+          />
+        )
+      }
+    </header>
+    <div class="section prose">
+      <Content />
+    </div>
+  </article>
+</BaseLayout>
