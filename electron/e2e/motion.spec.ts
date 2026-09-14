@@ -32,14 +32,14 @@ test.describe('motion roles', () => {
       const dialog = page.locator('[data-motion-role="dialog"]').first();
       const choice = () => dialog.getAttribute('data-motion-choice');
 
-      // Garden Dark (the default) fades dialogs in
-      expect(await cssVar('--motion-enter-dialog')).toBe('fade');
-      expect(await choice()).toBe('fade');
+      // Digital Fractal Garden (the Default Mood) drifts dialogs in
+      expect(await cssVar('--motion-enter-dialog')).toBe('drift');
+      expect(await choice()).toBe('drift');
       // The enter settled at the rest state Motion wrote inline
       await expect(dialog).toHaveCSS('opacity', '1');
 
       await built
-        .getByTestId('bundled-catppuccin-mocha')
+        .getByTestId('bundled-jade-capital')
         .getByRole('button', { name: 'Apply' })
         .click();
       await expect.poll(() => cssVar('--motion-enter-dialog')).toBe('scale');
@@ -48,22 +48,22 @@ test.describe('motion roles', () => {
       expect(await cssVar('--motion-spring-snappy')).toMatch(/^\d+ \d+ \d+$/);
 
       await built
-        .getByTestId('bundled-sunday-paper')
+        .getByTestId('bundled-mountain-grey')
         .getByRole('button', { name: 'Apply' })
         .click();
       await expect.poll(() => cssVar('--motion-enter-dialog')).toBe('none');
       await expect.poll(choice).toBe('none');
       expect(await dialog.getAttribute('data-motion-exit')).toBe('none');
 
-      // Closing under Sunday Paper: no exit, the modal is simply gone
+      // Closing under Mountain Grey: no exit, the modal is simply gone
       await page.keyboard.press('Escape');
       await expect(page.getByTestId('bundled-moods')).toHaveCount(0);
 
-      // Re-open, back to Catppuccin, and closing now plays the exit: the element
+      // Re-open, back to Jade Capital, and closing now plays the exit: the element
       // stays mounted while Motion moves its inline style, then goes.
       await page.getByRole('button', { name: 'Mood', exact: true }).click();
       await built
-        .getByTestId('bundled-catppuccin-mocha')
+        .getByTestId('bundled-jade-capital')
         .getByRole('button', { name: 'Apply' })
         .click();
       await expect.poll(() => cssVar('--motion-exit-dialog')).toBe('scale');
@@ -103,7 +103,10 @@ test.describe('motion roles', () => {
       );
     const level = () => page.evaluate(() => document.documentElement.dataset.motionIntensity);
     // Probe elements carrying role classes, so the check does not depend on what is on screen.
-    const probe = (cls: string, prop: 'animationName' | 'animationDuration' | 'animationTimingFunction') =>
+    const probe = (
+      cls: string,
+      prop: 'animationName' | 'animationDuration' | 'animationTimingFunction',
+    ) =>
       page.evaluate(
         ([c, p]) => {
           const el = document.createElement('div');
@@ -138,7 +141,7 @@ test.describe('motion roles', () => {
       await control.selectOption('subtle');
       await expect.poll(level).toBe('subtle');
       expect(await probe('motion-attention', 'animationName')).toBe('none');
-      expect(await probe('motion-enter-dialog', 'animationName')).toBe('motion-in-fade');
+      expect(await probe('motion-enter-dialog', 'animationName')).toBe('motion-in-drift');
 
       await control.selectOption('expressive');
       await expect.poll(level).toBe('expressive');
@@ -157,14 +160,17 @@ test.describe('motion roles', () => {
       await control.selectOption('system');
       await expect.poll(level).toBe('normal');
 
-      // A Mood may carry its own default: Siberian Blizzard says subtle
+      // A Mood may carry its own default: Mountain Grey says subtle
       const built = page.getByTestId('bundled-moods');
-      await built.getByTestId('bundled-siberian-blizzard').getByRole('button', { name: 'Apply' }).click();
+      await built
+        .getByTestId('bundled-mountain-grey')
+        .getByRole('button', { name: 'Apply' })
+        .click();
       await expect.poll(() => root('--motion-intensity')).toBe('subtle');
       await expect.poll(level).toBe('subtle');
 
-      // A pixel Mood steps every role in frames
-      await built.getByTestId('bundled-8-bit').getByRole('button', { name: 'Apply' }).click();
+      // A pixel Mood steps every role in frames: Raster Bars
+      await built.getByTestId('bundled-raster-bars').getByRole('button', { name: 'Apply' }).click();
       await expect.poll(() => root('--motion-frames')).toBe('4');
       await expect.poll(level).toBe('normal');
       expect(await probe('motion-enter-dialog', 'animationTimingFunction')).toBe('steps(4)');
@@ -194,8 +200,8 @@ test.describe('motion roles', () => {
       await page.getByPlaceholder('My Crux').fill('Moving picture');
       await page.getByRole('button', { name: 'Create', exact: true }).click();
       await expect(page.locator('[data-workspace-id]')).toBeVisible();
-      // Garden Dark says none for panes: the swap is instant, still a transition
-      expect(await pane()).toBe('none');
+      // Digital Fractal Garden fades panes: the new screen fades in
+      expect(await pane()).toBe('fade');
 
       await page.evaluate(() => {
         const w = window as unknown as { __vt: number };
@@ -217,19 +223,19 @@ test.describe('motion roles', () => {
       expect(await transitions()).toBe(2);
       const named = await page.evaluate(
         () =>
-          (document.querySelector('[aria-label="Switch Crux workspace"] span') as HTMLElement)
-            .style.viewTransitionName,
+          (document.querySelector('[aria-label="Switch Crux workspace"] span') as HTMLElement).style
+            .viewTransitionName,
       );
       expect(named).toMatch(/^crux-/);
 
-      // A Mood with a pane enter shapes the arrival: Spring Morning says fade
+      // A Mood without a pane enter makes the swap instant: Mountain Grey says none
       await page.getByRole('button', { name: 'Mood', exact: true }).click();
-      await page
-        .getByTestId('bundled-moods')
-        .getByTestId('bundled-spring-morning')
+      const built = page.getByTestId('bundled-moods');
+      await built
+        .getByTestId('bundled-mountain-grey')
         .getByRole('button', { name: 'Apply' })
         .click();
-      await expect.poll(pane).toBe('fade');
+      await expect.poll(pane).toBe('none');
     } finally {
       await app.close();
     }
@@ -250,16 +256,19 @@ test.describe('motion roles', () => {
       const built = page.getByTestId('bundled-moods');
       const intro = page.getByTestId('mood-intro');
 
-      await built.getByTestId('bundled-deep-sea').getByRole('button', { name: 'Apply' }).click();
+      await built
+        .getByTestId('bundled-coral-castle')
+        .getByRole('button', { name: 'Apply' })
+        .click();
       await expect(intro).toBeVisible();
-      await expect(intro).toContainText('Deep Sea');
+      await expect(intro).toContainText('Coral Castle');
       // It never takes the pointer: the modal underneath stays usable while it plays
       await expect(intro).toHaveCSS('pointer-events', 'none');
       await expect(intro).toHaveCount(0, { timeout: 20_000 });
 
       await page.getByRole('combobox', { name: 'Motion intensity' }).selectOption('subtle');
-      await built.getByTestId('bundled-8-bit').getByRole('button', { name: 'Apply' }).click();
-      await expect(page.getByText('Now wearing "8-bit".')).toBeVisible();
+      await built.getByTestId('bundled-raster-bars').getByRole('button', { name: 'Apply' }).click();
+      await expect(page.getByText('Now wearing "Raster Bars".')).toBeVisible();
       await page.waitForTimeout(600);
       await expect(intro).toHaveCount(0);
     } finally {

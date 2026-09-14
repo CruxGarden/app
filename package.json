@@ -89,6 +89,11 @@
     "build:moqira": "npm --prefix moqira-crux run build:garden",
     "build:notes": "npm --prefix notes-crux run build:garden"
   },
+  "browserslist": [
+    "Chrome >= 120",
+    "Safari >= 17",
+    "Firefox >= 120"
+  ],
   "dependencies": {
     "@ai-sdk/anthropic": "^4.0.27",
     "@ai-sdk/google": "^4.0.31",
@@ -101,6 +106,7 @@
     "clsx": "^2.1.1",
     "gsap": "^3.15.0",
     "jszip": "^3.10.1",
+    "liquid-glass-react": "^1.1.1",
     "mammoth": "^1.12.0",
     "material-icon-theme": "^5.32.0",
     "motion": "^13.2.0",

@@ -6,58 +6,58 @@ type AudioState = { trackName: string | null; enabled: boolean; playing: boolean
 
 /**
  * The built-in Moods apply as whole rooms: theme tokens, background,
- * sound and persona change together. The Keeper — the Default Mood — brings
+ * sound and persona change together. Digital Fractal Garden — the Default Mood — brings
  * its own background image and track.
  */
 test.describe('bundled moods', () => {
   for (const mood of [
     {
-      id: 'siberian-blizzard',
-      name: 'Siberian Blizzard',
-      accent: '#efbd77',
+      id: 'concrete-sky',
+      name: 'Concrete Sky',
+      accent: '#a9c0ce',
       icons: 'line',
-      title: 'Work through the winter',
-      greeting: 'The kettle is on. What shall we get done while the snow settles?',
+      title: 'A long view',
+      greeting: 'Concrete, fog and a long view. What are we building?',
     },
     {
-      id: 'silent-hill',
-      name: 'Silent Hill',
-      accent: '#814b3d',
+      id: 'mirror-meadow',
+      name: 'Mirror Meadow',
+      accent: '#b8663a',
       icons: 'line',
-      title: 'Something beyond the fog',
-      greeting: 'The fog can wait. What would you like to work on?',
+      title: 'A reflection',
+      greeting: 'The meadow reflects whatever you bring. What is it today?',
     },
     {
-      id: 'glumlot',
-      name: 'GLUMLOT',
-      accent: '#ff846c',
+      id: 'night-city',
+      name: 'Night City',
+      accent: '#ff7bb0',
       icons: 'line',
-      title: 'A signal from the chamber',
-      greeting: 'The chamber is quiet. What would you like to bring into being?',
+      title: 'Something for tonight',
+      greeting: 'The city is awake. What are we making tonight?',
     },
     {
-      id: '80s-fantasy',
-      name: '80s Fantasy',
-      accent: '#28534e',
+      id: 'coral-castle',
+      name: 'Coral Castle',
+      accent: '#ffc98a',
       icons: 'line',
-      title: 'A tale taking shape',
-      greeting: 'Every great tale begins with a small act of making. What shall yours be?',
+      title: 'Slow light',
+      greeting: 'Down here the light moves slowly. What are we making?',
     },
     {
-      id: '8-bit',
-      name: '8-bit',
-      accent: '#86efac',
+      id: 'raster-bars',
+      name: 'Raster Bars',
+      accent: '#4fbacc',
       icons: 'pixel',
-      title: 'A little pixel garden',
-      greeting: 'Ready, player one. What shall we make?',
+      title: 'A little demo',
+      greeting: 'LOAD "*",8,1 — ready. What are we writing?',
     },
     {
-      id: 'glitchcore',
-      name: 'Glitchcore',
-      accent: '#66f7ff',
-      icons: 'line',
-      title: 'Something from the noise',
-      greeting: 'Signal found. What are we making out of the noise?',
+      id: 'hibiscus',
+      name: 'Hibiscus',
+      accent: '#c95a3c',
+      icons: 'filled',
+      title: 'More colour than you thought',
+      greeting: 'Look closely: there is more colour than you thought. What shall we make?',
     },
   ]) {
     test(`${mood.name} applies its theme, garden image and persona and survives restart`, async () => {
@@ -113,7 +113,7 @@ test.describe('bundled moods', () => {
     });
   }
 
-  test('apply Windows 95 then Blade Runner Rain: shape, sound and voice follow', async () => {
+  test('apply Raster Bars then Night City: shape, sound and voice follow', async () => {
     const { app, page, dir } = await launchApp({ sound: true });
     const cssVar = (name: string) =>
       page.evaluate(
@@ -125,9 +125,10 @@ test.describe('bundled moods', () => {
         (window as unknown as { __cruxAudio: { state: () => AudioState } }).__cruxAudio.state(),
       );
     try {
-      // The Gateway itself wears The Keeper on a first run: vista and Moss before Enter
+      // The Gateway itself wears the Default Mood on a first run — Digital Fractal Garden
+      // (ADR 0043): the fractal render, copper accent, liquid glass, before Enter
       await expect(page.getByTestId('mood-background-image')).toBeVisible({ timeout: 30_000 });
-      await expect.poll(() => cssVar('--accent')).toBe('#88bc88');
+      await expect.poll(() => cssVar('--accent')).toBe('#5fd2a5');
       // …and the Mood's track is already playing from the bar
       const bar = page.getByRole('region', { name: 'Mood Bar' });
       await expect(bar).toContainText('Echoes From Beyond');
@@ -139,8 +140,11 @@ test.describe('bundled moods', () => {
       await expect(page.getByRole('region', { name: 'Mood Bar' })).toBeVisible({
         timeout: 30_000,
       });
-      // A fresh garden wears The Keeper: Moss accent, the vista, the track
-      await expect.poll(() => cssVar('--accent'), { timeout: 30_000 }).toBe('#88bc88');
+      // A fresh garden wears Digital Fractal Garden: copper accent, the render, glass, the track
+      await expect.poll(() => cssVar('--accent'), { timeout: 30_000 }).toBe('#5fd2a5');
+      await expect
+        .poll(() => page.evaluate(() => document.documentElement.dataset.surfaceStyle))
+        .toBe('glass');
       await expect.poll(() => cssVar('--background-type')).toBe('image');
       await expect(page.getByTestId('mood-background-image')).toBeVisible();
       await expect.poll(async () => (await audio()).trackName).toBe('Echoes From Beyond');
@@ -148,42 +152,43 @@ test.describe('bundled moods', () => {
       await page.getByRole('button', { name: 'Mood', exact: true }).click();
       const built = page.getByTestId('bundled-moods');
       await expect(built).toBeVisible();
-      await expect(built.locator('[data-testid^="bundled-"]')).toHaveCount(27);
+      await expect(built.locator('[data-testid^="bundled-"]')).toHaveCount(23);
 
-      await built.getByTestId('bundled-windows-95').getByRole('button', { name: 'Apply' }).click();
-      await expect.poll(() => cssVar('--radius')).toBe('0px');
-      // Windows 95 is quiet: no track, sound still on
+      await built.getByTestId('bundled-raster-bars').getByRole('button', { name: 'Apply' }).click();
+      await expect.poll(() => cssVar('--radius')).toBe('2px');
+      await expect.poll(() => cssVar('--motion-frames')).toBe('4');
+      // Raster Bars is quiet: no track, sound still on
       await expect.poll(async () => (await audio()).trackName).toBeNull();
       expect((await audio()).enabled).toBe(true);
 
-      await built
-        .getByTestId('bundled-blade-runner-rain')
-        .getByRole('button', { name: 'Apply' })
-        .click();
-      await expect.poll(() => cssVar('--accent')).toBe('#ff6a1a');
-      await expect.poll(() => cssVar('--background-type')).toBe('flow');
-      await page.screenshot({ path: 'e2e/.results/bundled-1-blade-runner.png' });
+      await built.getByTestId('bundled-night-city').getByRole('button', { name: 'Apply' }).click();
+      await expect.poll(() => cssVar('--accent')).toBe('#ff7bb0');
+      await expect.poll(() => cssVar('--background-type')).toBe('image');
+      await page.screenshot({ path: 'e2e/.results/bundled-1-night-city.png' });
 
-      // The persona rides along: the chat greeting is Deckard's
+      // The persona rides along: the chat greeting is Sol's
       await page.keyboard.press('Escape');
       await page.getByRole('button', { name: 'Add Crux' }).click();
       await page.getByRole('button', { name: /^Blank/ }).click();
       await page.getByRole('button', { name: 'Create', exact: true }).click();
-      await expect(page.getByText('Deckard').first()).toBeVisible({ timeout: 30_000 });
+      await expect(page.getByText('Sol').first()).toBeVisible({ timeout: 30_000 });
       await page.screenshot({ path: 'e2e/.results/bundled-2-workspace.png' });
 
-      // Back to The Keeper from the browser: the track and the vista return
+      // Back to the Default Mood from the browser: the track and the render return
       await page.getByRole('button', { name: 'Mood', exact: true }).click();
-      await built.getByTestId('bundled-the-keeper').getByRole('button', { name: 'Apply' }).click();
+      await built
+        .getByTestId('bundled-digital-fractal-garden')
+        .getByRole('button', { name: 'Apply' })
+        .click();
       await expect.poll(async () => (await audio()).trackName).toBe('Echoes From Beyond');
       await expect.poll(() => cssVar('--background-type')).toBe('image');
       await page.keyboard.press('Escape');
-      // A new crux greets with the Keeper's voice; its face sits on a theme gradient
+      // A new crux greets with Iris's voice; the fallback face sits on a theme gradient
       await page.getByRole('button', { name: /^wanderer-/ }).click(); // the username → Home Garden
       await page.getByRole('button', { name: 'Add Crux' }).click({ timeout: 30_000 });
       await page.getByRole('button', { name: /^Blank/ }).click();
       await page.getByRole('button', { name: 'Create', exact: true }).click();
-      await expect(page.getByText('The Keeper tends the garden').first()).toBeVisible({
+      await expect(page.getByText('A fractal is a bloom that keeps blooming').first()).toBeVisible({
         timeout: 30_000,
       });
       await expect(page.getByTestId('persona-avatar').first()).toBeVisible();
@@ -199,7 +204,7 @@ test.describe('bundled moods', () => {
           (n) => getComputedStyle(document.documentElement).getPropertyValue(n).trim(),
           name,
         );
-      await expect.poll(() => cssVar2('--accent'), { timeout: 30_000 }).toBe('#88bc88');
+      await expect.poll(() => cssVar2('--accent'), { timeout: 30_000 }).toBe('#5fd2a5');
       await expect(again.page.getByTestId('mood-background-image')).toBeVisible({
         timeout: 30_000,
       });

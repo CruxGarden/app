@@ -5,7 +5,7 @@ import { createHash } from 'node:crypto';
 import { launchApp } from './launch';
 import { enterGarden, storedCrux } from './multi-crux-helpers';
 
-test('One Big Sky: Mood, offline game, keyboard match, focus pause and preserved sources', async () => {
+test('One Big Sky: offline game, keyboard match, focus pause and preserved sources', async () => {
   test.setTimeout(150000);
   const evidence = resolve(__dirname, '../../docs/onebigsky');
   mkdirSync(evidence, { recursive: true });
@@ -16,17 +16,6 @@ test('One Big Sky: Mood, offline game, keyboard match, focus pause and preserved
     const { page } = first;
     await page.setViewportSize({ width: 1600, height: 1050 });
     await enterGarden(page);
-    await page.getByRole('button', { name: 'Mood', exact: true }).click();
-    await page.getByTestId('bundled-one-big-sky').getByRole('button', { name: 'Apply' }).click();
-    await expect
-      .poll(() =>
-        page.evaluate(() =>
-          getComputedStyle(document.documentElement).getPropertyValue('--accent').trim(),
-        ),
-      )
-      .toBe('#ffd08a');
-    await expect(page.getByTestId('mood-background-image')).toBeVisible();
-    await page.keyboard.press('Escape');
     await page.getByRole('button', { name: 'Add Crux' }).click();
     await page.getByRole('button', { name: /^One Big Sky/ }).click();
     await page.getByLabel('Name', { exact: true }).fill('One Big Sky arcade');
@@ -115,13 +104,14 @@ test('One Big Sky: Mood, offline game, keyboard match, focus pause and preserved
   const again = await launchApp({ dir: first.dir });
   try {
     const { page } = again;
+    // The Default Mood (Digital Fractal Garden) is back on relaunch; the game needs no Mood of its own
     await expect
       .poll(() =>
         page.evaluate(() =>
           getComputedStyle(document.documentElement).getPropertyValue('--accent').trim(),
         ),
       )
-      .toBe('#ffd08a');
+      .toBe('#5fd2a5');
     await expect(page.getByTestId('mood-background-image')).toBeVisible();
     await page.getByRole('button', { name: /enter/i }).click();
     await expect(page.locator('[data-workspace-id]')).toBeVisible();

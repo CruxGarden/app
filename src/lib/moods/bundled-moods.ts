@@ -1,30 +1,43 @@
 /**
- * Bundled Moods — complete looks that ship with the app: a theme preset (plus
- * a few extra tokens), a background, a persona voice, cues, and — where a
- * Mood has one — a track. They are ordinary Mood Packages, so Apply, Export
- * and Publish work exactly as for a Mood someone made. Most carry no binary
- * assets (textures and backgrounds are CSS); The Keeper ships its own
- * background, avatar and track as files inside the app (`bundled`).
+ * Bundled Moods — complete looks that ship with the app (ADR 0043): each one
+ * a render from Daniel's backgrounds folder, a theme drawn from that render's
+ * own colours, liquid glass by default, a voice, cues, and for the Default
+ * Mood a track. They are ordinary Mood Packages, so Apply, Export and Publish
+ * work exactly as for a Mood someone made. Every one ships its background as
+ * a file inside the app (`bundled`).
  *
- * The point is range: distinct rooms — shapes, type, density, motion and
- * voice all move together.
+ * Silhouettes stay square-ish (Daniel): round or bevel corners, solid frames;
+ * the range comes from colour, type, motion and voice.
  */
 import { MOOD_PRESETS } from './presets';
 import type { MoodPackage } from './packages';
 import { BgType } from '@/lib/types';
 import { DEFAULT_CUES, type SoundCues } from '@/services/cues';
 import type { PersonaSettings } from '@/services/persona';
-import { DEFAULT_PERSONA } from '@/services/persona';
-import eightBitGarden from '@/assets/moods/8-bit/garden.png?url';
-import glitchcoreGarden from '@/assets/moods/glitchcore/garden.png?url';
-import fantasyGarden from '@/assets/moods/80s-fantasy/garden.png?url';
-import glumlotChamber from '@/assets/moods/glumlot/chamber.png?url';
-import silentHillGarden from '@/assets/moods/silent-hill/garden.png?url';
-import siberianCity from '@/assets/moods/siberian-blizzard/city.png?url';
-import keeperVista from '@/assets/moods/keeper/vista.jpg?url';
-import keeperAvatar from '@/assets/moods/keeper/keeper-avatar.png?url';
 import keeperTrack from '@/assets/moods/keeper/echoes-from-beyond.opus?url';
-import oneBigSky from '@/assets/moods/one-big-sky/sky.png?url';
+import bg_digital_fractal_garden from '@/assets/moods/digital-fractal-garden/garden.webp?url';
+import bg_concrete_sky from '@/assets/moods/concrete-sky/garden.webp?url';
+import bg_general_store from '@/assets/moods/general-store/garden.webp?url';
+import bg_petal_river from '@/assets/moods/petal-river/garden.webp?url';
+import bg_night_city from '@/assets/moods/night-city/garden.webp?url';
+import bg_open_room from '@/assets/moods/open-room/garden.webp?url';
+import bg_cloud_courtyard from '@/assets/moods/cloud-courtyard/garden.webp?url';
+import bg_mirror_meadow from '@/assets/moods/mirror-meadow/garden.webp?url';
+import bg_jade_capital from '@/assets/moods/jade-capital/garden.webp?url';
+import bg_coral_castle from '@/assets/moods/coral-castle/garden.webp?url';
+import bg_lofi_sunset from '@/assets/moods/lofi-sunset/garden.webp?url';
+import bg_bismuth from '@/assets/moods/bismuth/garden.webp?url';
+import bg_mountain_grey from '@/assets/moods/mountain-grey/garden.webp?url';
+import bg_navy_dawn from '@/assets/moods/navy-dawn/garden.webp?url';
+import bg_pink_rooms from '@/assets/moods/pink-rooms/garden.webp?url';
+import bg_cymatics from '@/assets/moods/cymatics/garden.webp?url';
+import bg_summer_meadow from '@/assets/moods/summer-meadow/garden.webp?url';
+import bg_raster_bars from '@/assets/moods/raster-bars/garden.webp?url';
+import bg_hibiscus from '@/assets/moods/hibiscus/garden.webp?url';
+import bg_infinity_library from '@/assets/moods/infinity-library/garden.webp?url';
+import bg_static from '@/assets/moods/static/garden.webp?url';
+import bg_trance from '@/assets/moods/trance/garden.webp?url';
+import bg_neon_rain from '@/assets/moods/neon-rain/garden.webp?url';
 
 const CREATED = '2026-09-04T00:00:00.000Z';
 
@@ -52,537 +65,377 @@ interface Spec {
  * the Moss theme, the Keeper's voice and face, and one looping track,
  * "Echoes From Beyond". Ships as files; apply ingests them.
  */
-const THE_KEEPER: Spec = {
-  id: 'the-keeper',
-  name: 'The Keeper',
-  presetId: 'moss',
-  extra: {
-    // the vista carries the room: no bloom, a soft dim so panels stay legible
-    bgImageDim: '0.35',
-    bgImageBlur: '0px',
-  },
-  background: { type: BgType.Image },
-  volume: 0.5,
-  persona: {
-    name: DEFAULT_PERSONA.name,
-    greeting: DEFAULT_PERSONA.greeting,
-    systemPrompt: DEFAULT_PERSONA.systemPrompt,
-  },
-  bundled: {
-    background: keeperVista,
-    avatar: keeperAvatar,
-    track: { url: keeperTrack, name: 'Echoes From Beyond', type: 'audio/ogg' },
-  },
-};
-
+/** Digital Fractal Garden first: the Default Mood a new garden wears (ADR 0043). */
 const SPECS: Spec[] = [
-  THE_KEEPER,
   {
-    id: 'one-big-sky',
-    name: 'One Big Sky',
-    presetId: 'one-big-sky',
-    extra: { bgImageDim: '0.08', bgImageBlur: '0px' },
+    id: 'digital-fractal-garden',
+    name: 'Digital Fractal Garden',
+    presetId: 'digital-fractal-garden',
+    extra: { bgImageDim: '0.32', bgImageBlur: '0px' },
     background: { type: BgType.Image },
-    bundled: { background: oneBigSky },
-    cues: { message: null, toolDone: null, snapshot: 'coin', published: 'chime', error: 'thud' },
-    volume: 0.2,
-    persona: {
-      name: 'Skye',
-      greeting: 'There’s room up here for another idea. What shall we make?',
-      systemPrompt:
-        'You are Skye, a friendly, inventive creative collaborator with the lightness of an afternoon arcade adventure. Help the person turn ideas into playable experiments, explain decisions plainly, and verify what you build. Be practical and concise. Preserve their work and creative intent. Game references are welcome in moderation; never invent scores, progress or completed work.',
+    bundled: {
+      background: bg_digital_fractal_garden,
+      track: { url: keeperTrack, name: 'Echoes From Beyond', type: 'audio/ogg' },
     },
-  },
-  {
-    id: 'siberian-blizzard',
-    name: 'Siberian Blizzard',
-    presetId: 'siberian-blizzard',
-    extra: { bgImageDim: '0.1', bgImageBlur: '0px', motionIntensity: 'subtle' },
-    background: { type: BgType.Image },
-    bundled: { background: siberianCity },
-    cues: { message: null, toolDone: null, snapshot: 'tick', published: 'chime', error: 'thud' },
-    volume: 0.3,
-    persona: {
-      name: 'Nadya',
-      greeting: 'The kettle is on. What shall we get done while the snow settles?',
-      systemPrompt:
-        'You are Nadya, a steady, resourceful creative collaborator. Your warmth is understated: help the person find a workable next step, make good use of what is available, and check details carefully. Speak plainly with occasional dry humor. Keep code and explanations precise, and describe only verified progress. The winter setting is atmosphere, not a reason for accents, stereotypes, political roleplay or invented historical claims.',
-    },
-  },
-  {
-    id: 'silent-hill',
-    name: 'Silent Hill',
-    presetId: 'silent-hill',
-    extra: { bgImageDim: '0', bgImageBlur: '0px' },
-    background: { type: BgType.Image },
-    bundled: { background: silentHillGarden },
-    cues: { message: null, toolDone: null, snapshot: 'tick', published: 'tick', error: null },
-    volume: 0.25,
-    persona: {
-      name: 'Morrow',
-      greeting: 'The fog can wait. What would you like to work on?',
-      systemPrompt:
-        'You are Morrow, a patient, observant creative collaborator with a quiet, reflective voice. Notice small details, help the person find a clear next step, and verify your work. Your atmosphere is melancholy but your help is grounded and kind. Keep explanations and code straightforward. Never manufacture threats, jump scares, cryptic warnings or fake system failures, and never turn the conversation into unwanted horror roleplay.',
-    },
-  },
-  {
-    id: 'glumlot',
-    name: 'GLUMLOT',
-    presetId: 'glumlot',
-    extra: { bgImageDim: '0.12', bgImageBlur: '0px', motionSpringSnappy: '260 30 1', motionSpringSoft: '110 22 1' },
-    background: { type: BgType.Image },
-    bundled: { background: glumlotChamber },
     cues: { message: null, toolDone: null, snapshot: 'bloom', published: 'chime', error: 'thud' },
-    volume: 0.35,
+    volume: 0.5,
     persona: {
-      name: 'Vesper',
-      greeting: 'The chamber is quiet. What would you like to bring into being?',
+      name: 'Iris',
+      greeting: 'A fractal is a bloom that keeps blooming. What shall we grow?',
       systemPrompt:
-        'You are Vesper, a calm, attentive creative collaborator with an interest in strange cinema, speculative worlds and precise craft. Offer evocative possibilities, then turn them into concrete, carefully checked work. Your voice is measured and quietly curious. Keep technical explanations and errors clear and practical. Do not simulate ominous system failures, obscure useful information with riddles, or claim unverified work is complete.',
+        'You are Iris, a curious, precise and encouraging creative collaborator. Help the person find the shape of an idea and grow it step by step; check your work; say plainly what you did and what is next. Keep code and explanations exact. The fractal garden is atmosphere, not a reason for mysticism or invented claims.',
     },
   },
   {
-    id: '80s-fantasy',
-    name: '80s Fantasy',
-    presetId: '80s-fantasy',
-    extra: { bgImageDim: '0.08', bgImageBlur: '0px' },
+    id: 'concrete-sky',
+    name: 'Concrete Sky',
+    presetId: 'concrete-sky',
+    extra: { bgImageDim: '0.4', bgImageBlur: '0px' },
     background: { type: BgType.Image },
-    bundled: { background: fantasyGarden },
+    bundled: { background: bg_concrete_sky },
+    cues: { message: null, toolDone: null, snapshot: 'tick', published: 'chime', error: 'thud' },
+    volume: 0.4,
+    persona: {
+      name: 'Mara',
+      greeting: 'Concrete, fog and a long view. What are we building?',
+      systemPrompt:
+        "You are Mara, a calm, structural collaborator with an architect's eye. Favour clear plans, solid foundations and honest reporting of what stands and what does not. Keep code and explanations precise. The megastructure is atmosphere only.",
+    },
+  },
+  {
+    id: 'general-store',
+    name: 'General Store',
+    presetId: 'general-store',
+    extra: { bgImageDim: '0.4', bgImageBlur: '0px' },
+    background: { type: BgType.Image },
+    bundled: { background: bg_general_store },
+    cues: { message: null, toolDone: null, snapshot: 'tick', published: 'chime', error: 'thud' },
+    volume: 0.4,
+    persona: {
+      name: 'Wren',
+      greeting: "Store's open. What can I get you?",
+      systemPrompt:
+        'You are Wren, a practical, good-humoured collaborator who keeps a well-stocked shop: find the right part, fix what is broken, and say what it cost. Plain words, checked work, no invented inventory.',
+    },
+  },
+  {
+    id: 'petal-river',
+    name: 'Petal River',
+    presetId: 'petal-river',
+    extra: { bgImageDim: '0.34', bgImageBlur: '0px' },
+    background: { type: BgType.Image },
+    bundled: { background: bg_petal_river },
     cues: { message: null, toolDone: null, snapshot: 'bloom', published: 'chime', error: 'thud' },
     volume: 0.4,
     persona: {
-      name: 'Elowen',
-      greeting: 'Every great tale begins with a small act of making. What shall yours be?',
+      name: 'Lio',
+      greeting: "The river is carrying something bright. Let's follow it.",
       systemPrompt:
-        'You are Elowen, a warm, perceptive creative companion with the wonder of a hand-painted fantasy tale. Help the person make ambitious things through small, practical steps. Offer imaginative possibilities, care for details, and verify what you build. A little lyrical language is welcome in greetings, but keep instructions, code and explanations clear and modern. Avoid archaic speech, forced roleplay and invented claims of progress.',
+        'You are Lio, a gentle, observant collaborator. Help the person move an idea downstream one clear step at a time; check what you did; keep code exact and explanations short. The river is atmosphere only.',
     },
   },
   {
-    id: 'glitchcore',
-    name: 'Glitchcore',
-    presetId: 'glitchcore',
-    extra: { workspaceTexture: 'none', bgImageDim: '0.22', bgImageBlur: '0px' },
+    id: 'night-city',
+    name: 'Night City',
+    presetId: 'night-city',
+    extra: { bgImageDim: '0.34', bgImageBlur: '0px' },
     background: { type: BgType.Image },
-    bundled: { background: glitchcoreGarden },
-    cues: { message: null, toolDone: 'tick', snapshot: 'coin', published: 'chime', error: 'thud' },
-    volume: 0.35,
+    bundled: { background: bg_night_city },
+    cues: { message: null, toolDone: null, snapshot: 'coin', published: 'chime', error: 'thud' },
+    volume: 0.4,
     persona: {
-      name: 'Patch',
-      greeting: 'Signal found. What are we making out of the noise?',
+      name: 'Sol',
+      greeting: 'The city is awake. What are we making tonight?',
       systemPrompt:
-        'You are Patch, an inventive, sharp-eyed creative collaborator with an experimental digital-art sensibility. Find surprising combinations, make small deliberate experiments, and help the person turn rough ideas into working creations. Speak clearly and warmly, with dry wit when it fits. Keep prose, code and error messages readable. Never simulate corrupted output, invent errors or claim work is complete before checking it.',
+        'You are Sol, a bright, fast collaborator with a synth-pop pulse. Move quickly, keep it playable, check your work, and say what changed. No slang overload, no invented progress.',
     },
   },
   {
-    id: '8-bit',
-    name: '8-bit',
-    presetId: '8-bit',
-    extra: { workspaceTexture: 'none', bgImageDim: '0.12', bgImageBlur: '0px', motionFrames: '4' },
+    id: 'open-room',
+    name: 'Open Room',
+    presetId: 'open-room',
+    extra: { bgImageDim: '0.4', bgImageBlur: '0px' },
     background: { type: BgType.Image },
-    bundled: { background: eightBitGarden },
+    bundled: { background: bg_open_room },
+    cues: { message: null, toolDone: null, snapshot: 'tick', published: 'bloom', error: 'thud' },
+    volume: 0.4,
+    persona: {
+      name: 'Ash',
+      greeting: 'The room opens onto the woods. What shall we start?',
+      systemPrompt:
+        "You are Ash, a steady, unhurried collaborator. Make room for the person's idea, keep the next step small and real, verify before reporting. The reversed room is atmosphere only.",
+    },
+  },
+  {
+    id: 'cloud-courtyard',
+    name: 'Cloud Courtyard',
+    presetId: 'cloud-courtyard',
+    extra: { bgImageDim: '0.4', bgImageBlur: '0px' },
+    background: { type: BgType.Image },
+    bundled: { background: bg_cloud_courtyard },
+    cues: { message: null, toolDone: null, snapshot: 'bloom', published: 'chime', error: 'thud' },
+    volume: 0.4,
+    persona: {
+      name: 'Nell',
+      greeting: 'Clouds in the courtyard today. Where shall we begin?',
+      systemPrompt:
+        'You are Nell, a warm, clear-headed collaborator. Help the person see the whole picture, then do the one thing that moves it. Check work, keep code exact, no invented claims.',
+    },
+  },
+  {
+    id: 'mirror-meadow',
+    name: 'Mirror Meadow',
+    presetId: 'mirror-meadow',
+    extra: { bgImageDim: '0.12', bgImageBlur: '0px' },
+    background: { type: BgType.Image },
+    bundled: { background: bg_mirror_meadow },
+    cues: { message: null, toolDone: null, snapshot: 'tick', published: 'chime', error: 'thud' },
+    volume: 0.4,
+    persona: {
+      name: 'Fen',
+      greeting: 'The meadow reflects whatever you bring. What is it today?',
+      systemPrompt:
+        "You are Fen, a bright, kind collaborator. Reflect the person's idea back clearly, then build it in small verified steps. Plain language, exact code, honest progress.",
+    },
+  },
+  {
+    id: 'jade-capital',
+    name: 'Jade Capital',
+    presetId: 'jade-capital',
+    extra: { bgImageDim: '0.4', bgImageBlur: '0px' },
+    background: { type: BgType.Image },
+    bundled: { background: bg_jade_capital },
+    cues: { message: null, toolDone: null, snapshot: 'chime', published: 'chime', error: 'thud' },
+    volume: 0.4,
+    persona: {
+      name: 'Aurel',
+      greeting: 'The capital is quiet at this hour. What shall we raise?',
+      systemPrompt:
+        'You are Aurel, a composed, exacting collaborator. Build with care, name trade-offs plainly, verify before you report. Grandeur is the backdrop, not the tone.',
+    },
+  },
+  {
+    id: 'coral-castle',
+    name: 'Coral Castle',
+    presetId: 'coral-castle',
+    extra: { bgImageDim: '0.34', bgImageBlur: '0px' },
+    background: { type: BgType.Image },
+    bundled: { background: bg_coral_castle },
+    cues: { message: null, toolDone: null, snapshot: 'bloom', published: 'bloom', error: 'thud' },
+    volume: 0.4,
+    persona: {
+      name: 'Nerin',
+      greeting: 'Down here the light moves slowly. What are we making?',
+      systemPrompt:
+        "You are Nerin, a calm, deep-thinking collaborator. Take the person's idea seriously, work it through, check it, and surface only what is true. The sea is atmosphere only.",
+    },
+  },
+  {
+    id: 'lofi-sunset',
+    name: 'Lofi Sunset',
+    presetId: 'lofi-sunset',
+    extra: { bgImageDim: '0.06', bgImageBlur: '0px' },
+    background: { type: BgType.Image },
+    bundled: { background: bg_lofi_sunset },
+    cues: { message: null, toolDone: null, snapshot: 'tick', published: 'chime', error: 'thud' },
+    volume: 0.4,
+    persona: {
+      name: 'June',
+      greeting: 'Slow evening. What would you like to make?',
+      systemPrompt:
+        'You are June, an easygoing, focused collaborator. Keep things simple and finished; check your work; say what you did in a sentence or two. No hype.',
+    },
+  },
+  {
+    id: 'bismuth',
+    name: 'Bismuth',
+    presetId: 'bismuth',
+    extra: { bgImageDim: '0.34', bgImageBlur: '0px' },
+    background: { type: BgType.Image },
+    bundled: { background: bg_bismuth },
+    cues: { message: null, toolDone: null, snapshot: 'coin', published: 'chime', error: 'thud' },
+    volume: 0.4,
+    persona: {
+      name: 'Vex',
+      greeting: 'Every facet is a different colour. Which one first?',
+      systemPrompt:
+        'You are Vex, a sharp, inventive collaborator. Try the striking option, keep it working, verify it, report exactly. The crystal is atmosphere only.',
+    },
+  },
+  {
+    id: 'mountain-grey',
+    name: 'Mountain Grey',
+    presetId: 'mountain-grey',
+    extra: { bgImageDim: '0.1', bgImageBlur: '0px' },
+    background: { type: BgType.Image },
+    bundled: { background: bg_mountain_grey },
+    cues: { message: null, toolDone: null, snapshot: 'tick', published: 'tick', error: 'thud' },
+    volume: 0.4,
+    persona: {
+      name: 'Halden',
+      greeting: 'Fog on the ridge. What are we walking towards?',
+      systemPrompt:
+        'You are Halden, a quiet, deliberate collaborator. Fewer words, exact code, real checks, honest reports. The mountains are atmosphere only.',
+    },
+  },
+  {
+    id: 'navy-dawn',
+    name: 'Navy Dawn',
+    presetId: 'navy-dawn',
+    extra: { bgImageDim: '0.28', bgImageBlur: '0px' },
+    background: { type: BgType.Image },
+    bundled: { background: bg_navy_dawn },
+    cues: { message: null, toolDone: null, snapshot: 'tick', published: 'chime', error: 'thud' },
+    volume: 0.4,
+    persona: {
+      name: 'Kai',
+      greeting: 'The sky is turning. Early start?',
+      systemPrompt:
+        'You are Kai, an energetic, direct collaborator. Move the work forward, check it, and say what changed. Plain words, no invented progress.',
+    },
+  },
+  {
+    id: 'pink-rooms',
+    name: 'Pink Rooms',
+    presetId: 'pink-rooms',
+    extra: { bgImageDim: '0.34', bgImageBlur: '0px' },
+    background: { type: BgType.Image },
+    bundled: { background: bg_pink_rooms },
+    cues: { message: null, toolDone: null, snapshot: 'coin', published: 'chime', error: 'thud' },
+    volume: 0.4,
+    persona: {
+      name: 'Dee',
+      greeting: 'Every room is a different pink. Come in.',
+      systemPrompt:
+        'You are Dee, a playful, precise collaborator. Keep it light, keep it correct; check your work and say what you did. No emoji, no gushing.',
+    },
+  },
+  {
+    id: 'cymatics',
+    name: 'Cymatics',
+    presetId: 'cymatics',
+    extra: { bgImageDim: '0.22', bgImageBlur: '0px' },
+    background: { type: BgType.Image },
+    bundled: { background: bg_cymatics },
+    cues: { message: null, toolDone: null, snapshot: 'chime', published: 'chime', error: 'thud' },
+    volume: 0.4,
+    persona: {
+      name: 'Orin',
+      greeting: 'Sound made visible. What frequency are we on?',
+      systemPrompt:
+        "You are Orin, a focused, patient collaborator. Find the pattern in the person's idea and give it form, step by verified step. Exact code, short explanations.",
+    },
+  },
+  {
+    id: 'summer-meadow',
+    name: 'Summer Meadow',
+    presetId: 'summer-meadow',
+    extra: { bgImageDim: '0.12', bgImageBlur: '0px' },
+    background: { type: BgType.Image },
+    bundled: { background: bg_summer_meadow },
+    cues: { message: null, toolDone: null, snapshot: 'bloom', published: 'chime', error: 'thud' },
+    volume: 0.4,
+    persona: {
+      name: 'Clover',
+      greeting: 'Long grass, long light. What shall we make of the day?',
+      systemPrompt:
+        'You are Clover, a cheerful, grounded collaborator. Keep the work simple and growing; check it; say plainly what you did. The meadow is atmosphere only.',
+    },
+  },
+  {
+    id: 'raster-bars',
+    name: 'Raster Bars',
+    presetId: 'raster-bars',
+    extra: { bgImageDim: '0.4', bgImageBlur: '0px' },
+    background: { type: BgType.Image },
+    bundled: { background: bg_raster_bars },
     cues: { message: null, toolDone: null, snapshot: 'coin', published: 'coin', error: 'thud' },
     volume: 0.4,
     persona: {
-      name: 'Bit',
-      greeting: 'Ready, player one. What shall we make?',
+      name: 'Sid',
+      greeting: 'LOAD "*",8,1 — ready. What are we writing?',
       systemPrompt:
-        'You are Bit, a resourceful, friendly collaborator with the playful spirit of an 8-bit adventure. Help turn ambitious ideas into small, playable steps. Be concise, practical and clear; check your work and preserve progress. An occasional game reference is welcome, but keep code, explanations and error messages in plain language. Never invent scores, achievements or completed work.',
+        'You are Sid, a terse, clever collaborator from the demoscene. Small steps, tight code, honest results. A joke now and then; no invented cycles.',
     },
   },
   {
-    id: 'rainy-day-cafe',
-    name: 'Rainy Day Café',
-    presetId: 'rainy-day-cafe',
-    background: { type: BgType.Drift },
-    cues: { message: null, toolDone: null, snapshot: null, published: 'chime', error: 'thud' },
-    volume: 0.5,
-    persona: {
-      name: 'Marguerite',
-      greeting: 'Take your time. The rain isn’t going anywhere, and neither am I.',
-      systemPrompt:
-        'You are Marguerite, a quiet, attentive collaborator — the friend across the table on a rainy afternoon. Soft-spoken, unhurried, precise when it matters. You leave room for silence and never rush the person.',
-    },
-  },
-  {
-    id: 'spring-morning',
-    name: 'Spring Morning',
-    presetId: 'spring-morning',
-    background: { type: BgType.Bloom },
-    cues: { message: null, toolDone: null, snapshot: 'bloom', published: 'bloom', error: 'thud' },
-    volume: 0.45,
-    persona: {
-      name: 'Wren',
-      greeting: 'Morning. Something small to start with?',
-      systemPrompt:
-        'You are Wren, a light, delicate collaborator. Brief and gentle; you prefer the smallest change that works and you notice details. No hype, no heaviness.',
-    },
-  },
-  {
-    id: 'snowed-in',
-    name: 'Snowed In',
-    presetId: 'snowed-in',
-    background: { type: BgType.Drift },
-    cues: { message: null, toolDone: null, snapshot: null, published: 'chime', error: 'thud' },
-    volume: 0.45,
-    persona: {
-      name: 'Ilse',
-      greeting: 'Nowhere to be today. What shall we make of it?',
-      systemPrompt:
-        'You are Ilse, a calm, cosy collaborator for a snowed-in day. Warm, plain-spoken, patient. You keep things tidy and simple and enjoy slow, careful work.',
-    },
-  },
-  {
-    id: 'blade-runner-rain',
-    name: 'Blade Runner Rain',
-    presetId: 'blade-runner',
-    extra: {
-      paneCollaborationBorder: 'linear-gradient(135deg, #16d5e8, #ff6a1a)',
-      paneWorkshopBorder: 'linear-gradient(135deg, #ff6a1a, #ff3b8c)',
-      flowColor: '#ff3b8c',
-      flowBg: '#04050d',
-      flowSpeed: '0.5',
-      fontScale: '0.94',
-      motionScale: '1.3',
-      grainOpacity: '0.12',
-      paneHeaderLabelTracking: '0.2em',
-      moodBar: '#06070f',
-      moodBarBorder: '#16d5e8',
-      moodBarAccent: '#ff6a1a',
-      moodBarAccentText: '#04050d',
-      moodBarButton: 'var(--mood-bar-accent)',
-      moodBarRadius: '2px',
-    },
-    background: { type: BgType.Flow },
-    cues: { toolDone: 'tick', published: 'bloom', error: 'thud', message: null, snapshot: null },
-    volume: 0.6,
-    persona: {
-      name: 'Deckard',
-      greeting:
-        'Rain again. Tell me what you want built and I’ll get it done before the neon burns out.',
-      systemPrompt:
-        'You are Deckard, a laconic, dry, competent collaborator in a rain-soaked neon city. Short sentences. No exclamation marks. You care about craft and detail. When you finish work, describe it plainly.',
-    },
-  },
-  {
-    id: 'lofi-study-cafe',
-    name: 'Lofi Study Café',
-    presetId: 'lofi-cafe',
-    background: { type: BgType.Bloom },
-    cues: { toolDone: null, published: 'chime', snapshot: null, error: 'thud', message: null },
-    volume: 0.55,
-    persona: {
-      name: 'Juniper',
-      greeting: 'Hey. Coffee’s on. What are we making today?',
-      systemPrompt:
-        'You are Juniper, an easygoing study-buddy collaborator. Warm, encouraging, unhurried. You keep things simple, celebrate small progress, and never lecture.',
-    },
-  },
-  {
-    id: 'windows-95',
-    name: 'Windows 95',
-    presetId: 'windows-95',
-    extra: {
-      // ── motion ── instant through zero durations in the preset (not motionScale 0), so the blink still has a cadence
-      motionScale: '1',
-      cardHoverLift: '0px',
-      hoverBrightness: '1',
-      activeBrightness: '1',
-      elevationDropdown: '2px 2px 0 #000000',
-      elevationTooltip: '2px 2px 0 #000000',
-      focusRing: '#000000',
-      focusRingWidth: '1px',
-      moodBarRadius: '0px',
-      moodBarShadow: 'inset 1px 1px 0 #ffffff, inset -1px -1px 0 #808080',
-    },
-    background: { type: BgType.Blank },
-    cues: {
-      message: 'tick',
-      toolDone: 'tick',
-      snapshot: 'tick',
-      published: 'chime',
-      error: 'thud',
-    },
+    id: 'hibiscus',
+    name: 'Hibiscus',
+    presetId: 'hibiscus',
+    extra: { bgImageDim: '0.1', bgImageBlur: '0px' },
+    background: { type: BgType.Image },
+    bundled: { background: bg_hibiscus },
+    cues: { message: null, toolDone: null, snapshot: 'bloom', published: 'chime', error: 'thud' },
     volume: 0.4,
     persona: {
-      name: 'Assistant',
-      greeting: 'It looks like you’re making something. Would you like help with that?',
+      name: 'Rosa',
+      greeting: 'Look closely: there is more colour than you thought. What shall we make?',
       systemPrompt:
-        'You are a cheerful, slightly formal office assistant from 1995. You offer help proactively, use plain business English, and keep a can-do tone. You occasionally mention that a task is "just a few clicks away."',
+        'You are Rosa, a warm, attentive collaborator. Notice the detail that matters, do the work, check it, report plainly.',
     },
   },
   {
-    id: 'solarpunk-garden',
-    name: 'Solarpunk Garden',
-    presetId: 'solarpunk-garden',
-    background: { type: BgType.Bloom },
-    cues: { toolDone: null, snapshot: 'bloom', published: 'bloom', error: 'thud', message: null },
-    volume: 0.6,
-    persona: {
-      name: 'Sol',
-      greeting: 'The garden is awake. What shall we grow?',
-      systemPrompt:
-        'You are Sol, an optimistic, grounded collaborator who thinks in seasons and systems. You like things that last, reuse what exists, and favour clarity over cleverness. Gentle humour, no cynicism.',
-    },
-  },
-  {
-    id: 'terminal',
-    name: 'Terminal',
-    presetId: 'terminal',
-    extra: {
-      // ── motion ── instant through zero durations in the preset; the blink keeps its cadence
-      motionScale: '1',
-      cardHoverLift: '0px',
-      focusRingWidth: '2px',
-      fontScale: '1.08',
-      grainOpacity: '0.06',
-    },
-    background: { type: BgType.Blank },
-    cues: { message: null, toolDone: 'tick', snapshot: null, published: 'chime', error: 'thud' },
-    volume: 0.5,
-    persona: {
-      name: 'root',
-      greeting: '$ ready.',
-      systemPrompt:
-        'You are root: terse, exact, technical. Prefer code and commands to prose. One line when one line will do. No pleasantries, no emoji.',
-    },
-  },
-  {
-    id: 'sunday-paper',
-    name: 'Sunday Paper',
-    presetId: 'sunday-paper',
-    background: { type: BgType.Blank },
-    cues: { message: null, toolDone: null, snapshot: null, published: 'chime', error: 'thud' },
-    volume: 0.5,
-    persona: {
-      name: 'The Editor',
-      greeting: 'Good morning. What’s the story?',
-      systemPrompt:
-        'You are The Editor: literate, precise, a little wry. You care about structure and clean prose, you cut what does not earn its place, and you explain edits briefly. Serif sensibility.',
-    },
-  },
-  {
-    id: 'deep-sea',
-    name: 'Deep Sea',
-    presetId: 'deep-sea',
-    extra: {
-      driftColor: '#7fe3d8',
-      driftGlow: '#1e6bff',
-      driftBg: '#020914',
-      driftSpeed: '0.35',
-      driftDensity: '160',
-      elevationDropdown: '0 30px 60px -20px rgb(0 0 0 / 0.8)',
-      elevationPanel: '0 30px 80px -30px rgb(0 0 0 / 0.8)',
-      motionScale: '1.8',
-      motionSpringSnappy: '300 28 1',
-      motionSpringSoft: '120 20 1',
-      glassBlur: '20px',
-    },
-    background: { type: BgType.Drift },
-    cues: { message: null, toolDone: null, snapshot: 'bloom', published: 'bloom', error: 'thud' },
-    volume: 0.55,
-    persona: {
-      name: 'Nautilus',
-      greeting: 'Down here, everything moves slowly and nothing is lost. What are we diving for?',
-      systemPrompt:
-        'You are Nautilus, a calm, deep-voiced collaborator. Patient and thorough. You take your time to get things right and you say so. Metaphors of depth and pressure, used sparingly.',
-    },
-  },
-  {
-    id: 'pretty-in-pink',
-    name: 'Pretty in Pink',
-    presetId: 'pretty-in-pink',
-    extra: {
-      motionScale: '1.2',
-      cardHoverLift: '3px',
-      chipRadius: '9999px',
-      buttonRadius: '9999px',
-      bloomSpeed: '0.8',
-    },
-    background: { type: BgType.Bloom },
-    cues: {
-      message: 'chime',
-      toolDone: 'tick',
-      snapshot: 'bloom',
-      published: 'bloom',
-      error: 'thud',
-    },
-    volume: 0.6,
-    persona: {
-      name: 'Andie',
-      greeting: 'Okay. So. What are we making, and can it be fabulous?',
-      systemPrompt:
-        'You are Andie, an upbeat, funny, big-hearted 1980s collaborator. Enthusiastic without being saccharine, quick with a compliment, allergic to boring. You still do careful work.',
-    },
-  },
-  {
-    id: 'plain-form',
-    name: 'Plain Form',
-    presetId: 'plain-form',
-    background: { type: BgType.Blank },
-    cues: { message: null, toolDone: null, snapshot: null, published: 'tick', error: 'thud' },
-    volume: 0.3,
-    persona: {
-      name: 'The Clerk',
-      greeting: 'Good day. Please state what you require.',
-      systemPrompt:
-        'You are The Clerk: precise, brief and formal. You answer in complete sentences, never use exclamation marks, and when you have done something you confirm exactly what was done. No small talk, no metaphors, no emoji.',
-    },
-  },
-  {
-    id: 'catppuccin-mocha',
-    name: 'Catppuccin Mocha',
-    presetId: 'catppuccin-mocha',
-    background: { type: BgType.Bloom },
-    cues: { message: null, toolDone: 'tick', snapshot: null, published: 'chime', error: 'thud' },
-    volume: 0.5,
-    persona: {
-      name: 'Mocha',
-      greeting: 'Hey. Kettle’s on, terminal’s open. What are we building tonight?',
-      systemPrompt:
-        'You are Mocha, a warm, cosy, slightly playful collaborator who is comfortable with developers. Friendly and relaxed, fluent in code and tooling, quick to show a snippet rather than describe one. Pastel humour, never snark.',
-    },
-  },
-  {
-    id: 'geocities',
-    name: 'GeoCities',
-    presetId: 'homepage-97',
-    extra: {
-      // A handmade homepage: tiled stars outside, readable paper inside.
-      bg: '#000033',
-      toolbarLink: '#00ffff',
-      moodBarRadius: '0px',
-      accent: '#0000cc',
-      workspaceTexture:
-        'radial-gradient(circle at 12px 12px, #ffffcc 0 1px, transparent 1.5px), radial-gradient(circle at 47px 37px, #00ffff 0 1px, transparent 1.5px), radial-gradient(circle at 29px 61px, #ff99ff 0 1px, transparent 1.5px)',
-      workspaceTextureSize: '72px 72px',
-      workspaceTextureBlend: 'normal',
-      workspaceTextureOpacity: '1',
-      grainOpacity: '0',
-      paneHeaderShape: 'bar',
-      paneCornerShape: 'square',
-      controlCornerShape: 'square',
-      paneBorderStyle: 'outset',
-      dividerStyle: 'etched',
-      cardBorderStyle: 'double',
-      paneCollaborationBorder: '#c0c0c0',
-      paneArtifactsBorder: '#c0c0c0',
-      paneWorkshopBorder: '#c0c0c0',
-      paneDetailsBorder: '#c0c0c0',
-      paneHistoryBorder: '#c0c0c0',
-      paneExportBorder: '#c0c0c0',
-      paneSyncBorder: '#c0c0c0',
-      panePublishBorder: '#c0c0c0',
-      paneStoreBorder: '#c0c0c0',
-      chatComposer: '#ffffff',
-      iconSet: 'pixel',
-      motionFrames: '6',
-      motionScale: '1',
-      motionDurationFast: '80ms',
-      motionDurationBase: '180ms',
-      motionDurationSlow: '900ms',
-      motionEaseStandard: 'linear',
-      motionEnterPane: 'none',
-      motionEnterDialog: 'pop',
-      motionEnterDropdown: 'none',
-      motionEnterBubble: 'slide-up',
-      motionEnterCard: 'pop',
-      motionEnterToast: 'slide-down',
-      motionExitDialog: 'none',
-      motionExitDropdown: 'none',
-      motionExitToast: 'none',
-      motionPress: 'sink',
-      motionAttention: 'blink',
-      motionAmbient: 'none',
-    },
-    background: { type: BgType.Blank },
-    cues: {
-      message: 'chime',
-      toolDone: 'tick',
-      snapshot: 'chime',
-      published: 'bloom',
-      error: 'thud',
-    },
-    volume: 0.45,
-    persona: {
-      name: 'Webmaster',
-      greeting: 'Welcome to my little corner of the web! What are we putting online today?',
-      systemPrompt:
-        'You are Webmaster, a friendly, inventive collaborator with the handmade spirit of the early web. You love personal homepages, tiny experiments and people making things their own. A little enthusiasm and an occasional ASCII smile are welcome; keep the work clear, accessible and carefully checked. Never add fake visitor counters, broken links or under-construction clutter unless asked.',
-    },
-  },
-  {
-    id: 'graphite',
-    name: 'Graphite',
-    presetId: 'graphite',
-    background: { type: BgType.Blank },
-    // Quiet by default; the optional room tone is available in the Mixer.
-    volume: 0,
-    cues: { message: null, toolDone: null, snapshot: null, published: null, error: null },
-    persona: {
-      name: 'Graphite',
-      greeting: 'What would you like to work on?',
-      systemPrompt:
-        'You are Graphite, a calm and direct creative collaborator. Use plain language, keep responses concise, and focus on the work. Be attentive to details and verify your changes. Avoid theatrics, forced enthusiasm and decorative emoji.',
-    },
-  },
-  {
-    id: 'soft-serve',
-    name: 'Soft Serve',
-    presetId: 'soft-serve',
-    background: { type: BgType.Blank },
-    // Gentle: a soft tap when the crux goes live, quiet otherwise
-    cues: { message: null, toolDone: null, snapshot: null, published: 'tick', error: null },
+    id: 'infinity-library',
+    name: 'Infinity Library',
+    presetId: 'infinity-library',
+    extra: { bgImageDim: '0.42', bgImageBlur: '0px' },
+    background: { type: BgType.Image },
+    bundled: { background: bg_infinity_library },
+    cues: { message: null, toolDone: null, snapshot: 'tick', published: 'chime', error: 'thud' },
     volume: 0.4,
     persona: {
-      name: 'Pip',
-      greeting: 'Hi! What are we making?',
+      name: 'Quill',
+      greeting: 'Every shelf leads to another. What are we looking for?',
       systemPrompt:
-        'You are Pip, a cheerful, warm collaborator. Be brief — one sentence where one will do, never gushing, no exclamation pile-ups and no emoji. Get to the work, check it, and say plainly what you did.',
+        'You are Quill, a thoughtful, well-read collaborator. Find what is already known, build on it carefully, verify, and cite what you used. Exact code, no invented sources.',
     },
   },
   {
-    id: 'soft-serve-night',
-    name: 'Soft Serve Night',
-    presetId: 'soft-serve-night',
-    background: { type: BgType.Blank },
-    // Gentle: a soft tap when the crux goes live, quiet otherwise
-    cues: { message: null, toolDone: null, snapshot: null, published: 'tick', error: null },
+    id: 'static',
+    name: 'Static',
+    presetId: 'static',
+    extra: { bgImageDim: '0.4', bgImageBlur: '0px', grainOpacity: '0.16' },
+    background: { type: BgType.Image },
+    bundled: { background: bg_static },
+    cues: { message: null, toolDone: null, snapshot: 'coin', published: 'chime', error: 'thud' },
     volume: 0.4,
     persona: {
-      name: 'Pip',
-      greeting: 'Evening. What are we making?',
+      name: 'Nova',
+      greeting: "Signal in the noise. Let's find it.",
       systemPrompt:
-        'You are Pip, a cheerful, warm collaborator. Be brief — one sentence where one will do, never gushing, no exclamation pile-ups and no emoji. Get to the work, check it, and say plainly what you did.',
+        'You are Nova, a quick, curious collaborator who likes turning noise into form. Try things, keep what works, verify it, report plainly.',
     },
   },
   {
-    id: 'soft-serve-gray',
-    name: 'Soft Serve Gray',
-    presetId: 'soft-serve-gray',
-    background: { type: BgType.Blank },
-    // Gentle: a soft tap when the crux goes live, quiet otherwise
-    cues: { message: null, toolDone: null, snapshot: null, published: 'tick', error: null },
+    id: 'trance',
+    name: 'Trance',
+    presetId: 'trance',
+    extra: { bgImageDim: '0.4', bgImageBlur: '0px' },
+    background: { type: BgType.Image },
+    bundled: { background: bg_trance },
+    cues: { message: null, toolDone: null, snapshot: 'bloom', published: 'chime', error: 'thud' },
     volume: 0.4,
     persona: {
-      name: 'Pip',
-      greeting: 'Morning. What are we making?',
+      name: 'Zed',
+      greeting: 'The horizon is a doorway. Ready?',
       systemPrompt:
-        'You are Pip, a cheerful, warm collaborator. Be brief — one sentence where one will do, never gushing, no exclamation pile-ups and no emoji. Get to the work, check it, and say plainly what you did.',
+        'You are Zed, a calm, expansive collaborator. Hold the big picture, take the next concrete step, verify it, and say what changed. The cover art is atmosphere only.',
     },
   },
   {
-    id: 'soft-serve-black',
-    name: 'Soft Serve Black',
-    presetId: 'soft-serve-black',
-    background: { type: BgType.Blank },
-    // Gentle: a soft tap when the crux goes live, quiet otherwise
-    cues: { message: null, toolDone: null, snapshot: null, published: 'tick', error: null },
+    id: 'neon-rain',
+    name: 'Neon Rain',
+    presetId: 'neon-rain',
+    extra: { bgImageDim: '0.34', bgImageBlur: '0px' },
+    background: { type: BgType.Image },
+    bundled: { background: bg_neon_rain },
+    cues: { message: null, toolDone: null, snapshot: 'tick', published: 'bloom', error: 'thud' },
     volume: 0.4,
     persona: {
-      name: 'Pip',
-      greeting: 'Late one. What are we making?',
+      name: 'Rae',
+      greeting: 'Rain on neon. What are we building tonight?',
       systemPrompt:
-        'You are Pip, a cheerful, warm collaborator. Be brief — one sentence where one will do, never gushing, no exclamation pile-ups and no emoji. Get to the work, check it, and say plainly what you did.',
+        'You are Rae, a dry, sharp collaborator. Move the work along, keep it exact, check it, and say what changed. No noir monologues; the city is atmosphere only.',
     },
   },
 ];

@@ -17,6 +17,7 @@ import { cn } from '@/lib/cn';
 import { useDismiss } from '@/hooks/useDismiss';
 import { AnimatePresence, motion } from 'motion/react';
 import { useMotionRole } from '@/hooks/useMotionRole';
+import GlassSurface from '@/components/ui/GlassSurface';
 
 interface ModelSelectorProps {
   value: string;
@@ -121,114 +122,122 @@ export default function ModelSelector({ value, onChange, disabled }: ModelSelect
             initial={role.initial}
             animate={role.animate}
             exit={role.exit}
-            className="absolute left-0 bottom-full mb-1 z-50 min-w-48 max-h-[60vh] overflow-y-auto bg-model-selector-dropdown border border-model-selector-border rounded-dropdown shadow-dropdown py-1"
+            className="absolute left-0 bottom-full mb-1 z-50 min-w-48"
           >
-            {groups.map((group) => (
-              <div key={group.providerId}>
-                {(() => {
-                  const Icon = PROVIDER_ICONS[group.providerId];
-                  return (
+            <GlassSurface role="dropdown">
+              <div className="w-full max-h-[60vh] overflow-y-auto bg-model-selector-dropdown border border-model-selector-border rounded-dropdown shadow-dropdown py-1">
+                {groups.map((group) => (
+                  <div key={group.providerId}>
+                    {(() => {
+                      const Icon = PROVIDER_ICONS[group.providerId];
+                      return (
+                        <div className="px-3 py-1 text-2xs font-mono text-text-muted uppercase tracking-wider flex items-center gap-1.5">
+                          {Icon && <Icon size={10} />}
+                          {group.provider}
+                        </div>
+                      );
+                    })()}
+                    {group.models.map((model) => (
+                      <button
+                        key={model.id}
+                        onClick={() => {
+                          onChange(model.id);
+                          setOpen(false);
+                        }}
+                        className={cn(
+                          'w-full px-3 py-1.5 text-left text-xs font-mono transition-colors cursor-pointer',
+                          model.id === value
+                            ? 'text-accent bg-accent-muted'
+                            : 'text-text hover:bg-accent-muted',
+                        )}
+                      >
+                        {model.name}
+                      </button>
+                    ))}
+                  </div>
+                ))}
+
+                {/* Claude Code — the person's own agent, run in the Project Folder (ADR 0019) */}
+                {agentGroup && agent && (
+                  <div data-testid="model-group-claude-code">
                     <div className="px-3 py-1 text-2xs font-mono text-text-muted uppercase tracking-wider flex items-center gap-1.5">
-                      {Icon && <Icon size={10} />}
-                      {group.provider}
+                      {(() => {
+                        const Icon = PROVIDER_ICONS[CLAUDE_CODE_PROVIDER];
+                        return Icon ? <Icon size={10} /> : null;
+                      })()}
+                      Your agent
                     </div>
-                  );
-                })()}
-                {group.models.map((model) => (
-                  <button
-                    key={model.id}
-                    onClick={() => {
-                      onChange(model.id);
-                      setOpen(false);
-                    }}
-                    className={cn(
-                      'w-full px-3 py-1.5 text-left text-xs font-mono transition-colors cursor-pointer',
-                      model.id === value
-                        ? 'text-accent bg-accent-muted'
-                        : 'text-text hover:bg-accent-muted',
-                    )}
-                  >
-                    {model.name}
-                  </button>
-                ))}
-              </div>
-            ))}
-
-            {/* Claude Code — the person's own agent, run in the Project Folder (ADR 0019) */}
-            {agentGroup && agent && (
-              <div data-testid="model-group-claude-code">
-                <div className="px-3 py-1 text-2xs font-mono text-text-muted uppercase tracking-wider flex items-center gap-1.5">
-                  {(() => {
-                    const Icon = PROVIDER_ICONS[CLAUDE_CODE_PROVIDER];
-                    return Icon ? <Icon size={10} /> : null;
-                  })()}
-                  Your agent
-                </div>
-                {agentGroup.models.map((model) => (
-                  <button
-                    key={model.id}
-                    disabled={!agent.installed}
-                    title={
-                      agent.installed ? (agent.version ?? undefined) : (agent.reason ?? undefined)
-                    }
-                    onClick={() => {
-                      onChange(model.id);
-                      setOpen(false);
-                    }}
-                    className={cn(
-                      'w-full px-3 py-1.5 text-left text-xs font-mono transition-colors',
-                      !agent.installed
-                        ? 'text-text-muted/60 cursor-not-allowed'
-                        : model.id === value
-                          ? 'text-accent bg-accent-muted cursor-pointer'
-                          : 'text-text hover:bg-accent-muted cursor-pointer',
-                    )}
-                  >
-                    {model.name}
-                    {!agent.installed && (
-                      <span className="ml-1.5 text-2xs text-text-muted/70">· not installed</span>
-                    )}
-                  </button>
-                ))}
-              </div>
-            )}
-
-            {/* Local inference (desktop, running servers only) */}
-            {localEndpoints.map((endpoint) => (
-              <div key={endpoint.id}>
-                <div className="px-3 py-1 text-2xs font-mono text-text-muted uppercase tracking-wider">
-                  {endpoint.name} · local
-                </div>
-                {sortLocalModels(endpoint.models).map((name) => {
-                  const id = `${endpoint.id}/${name}`;
-                  return (
-                    <button
-                      key={id}
-                      onClick={() => {
-                        onChange(id);
-                        setOpen(false);
-                      }}
-                      className={cn(
-                        'w-full px-3 py-1.5 text-left text-xs font-mono transition-colors cursor-pointer',
-                        id === value
-                          ? 'text-accent bg-accent-muted'
-                          : 'text-text hover:bg-accent-muted',
-                      )}
-                    >
-                      {name}
-                      {isToolCapableLocalModel(name) && (
-                        <span className="ml-1.5 text-2xs text-accent/70">· tools</span>
-                      )}
-                    </button>
-                  );
-                })}
-                {endpoint.models.length === 0 && (
-                  <div className="px-3 py-1.5 text-xs font-mono text-text-muted">
-                    No models installed
+                    {agentGroup.models.map((model) => (
+                      <button
+                        key={model.id}
+                        disabled={!agent.installed}
+                        title={
+                          agent.installed
+                            ? (agent.version ?? undefined)
+                            : (agent.reason ?? undefined)
+                        }
+                        onClick={() => {
+                          onChange(model.id);
+                          setOpen(false);
+                        }}
+                        className={cn(
+                          'w-full px-3 py-1.5 text-left text-xs font-mono transition-colors',
+                          !agent.installed
+                            ? 'text-text-muted/60 cursor-not-allowed'
+                            : model.id === value
+                              ? 'text-accent bg-accent-muted cursor-pointer'
+                              : 'text-text hover:bg-accent-muted cursor-pointer',
+                        )}
+                      >
+                        {model.name}
+                        {!agent.installed && (
+                          <span className="ml-1.5 text-2xs text-text-muted/70">
+                            · not installed
+                          </span>
+                        )}
+                      </button>
+                    ))}
                   </div>
                 )}
+
+                {/* Local inference (desktop, running servers only) */}
+                {localEndpoints.map((endpoint) => (
+                  <div key={endpoint.id}>
+                    <div className="px-3 py-1 text-2xs font-mono text-text-muted uppercase tracking-wider">
+                      {endpoint.name} · local
+                    </div>
+                    {sortLocalModels(endpoint.models).map((name) => {
+                      const id = `${endpoint.id}/${name}`;
+                      return (
+                        <button
+                          key={id}
+                          onClick={() => {
+                            onChange(id);
+                            setOpen(false);
+                          }}
+                          className={cn(
+                            'w-full px-3 py-1.5 text-left text-xs font-mono transition-colors cursor-pointer',
+                            id === value
+                              ? 'text-accent bg-accent-muted'
+                              : 'text-text hover:bg-accent-muted',
+                          )}
+                        >
+                          {name}
+                          {isToolCapableLocalModel(name) && (
+                            <span className="ml-1.5 text-2xs text-accent/70">· tools</span>
+                          )}
+                        </button>
+                      );
+                    })}
+                    {endpoint.models.length === 0 && (
+                      <div className="px-3 py-1.5 text-xs font-mono text-text-muted">
+                        No models installed
+                      </div>
+                    )}
+                  </div>
+                ))}
               </div>
-            ))}
+            </GlassSurface>
           </motion.div>
         )}
       </AnimatePresence>

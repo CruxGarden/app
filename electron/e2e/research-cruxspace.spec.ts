@@ -411,7 +411,7 @@ test('Seed trial: question, dataset and fit, figure, findings and a public editi
 
     await test.step('8b. Import the package into a fresh Garden; members, the figure and the story return', async () => {
       await importCruxspacePackage(page, pkg);
-      await expect(page.getByRole('status')).toContainText(
+      await expect(page.getByRole('status').filter({ hasText: 'Imported' })).toContainText(
         'Imported Seed trial with 3 member Cruxes.',
       );
       const hub = page.getByRole('region', { name: 'Cruxspaces', exact: true });

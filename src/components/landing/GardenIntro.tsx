@@ -81,7 +81,8 @@ export default function GardenIntro({ initialMood }: { initialMood: string }) {
           <span className="grow-world-dot" />
           <span>UNREASONABLE POSSIBILITIES</span>
           <span className="grow-world-number">
-            {String(GARDEN_WORLDS.indexOf(world) + 1).padStart(2, '0')} / 08
+            {String(GARDEN_WORLDS.indexOf(world) + 1).padStart(2, '0')} /{' '}
+            {String(GARDEN_WORLDS.length).padStart(2, '0')}
           </span>
         </div>
         <ErrorBoundary

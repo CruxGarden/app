@@ -53,7 +53,11 @@ test('Bloom & Ink: brief, wireframe, budget, board, brand mark, calendar and sit
       // Moqira's stylesheet declares view transitions (Chromium reports the skipped one); miniPaint's
       // brush tool reads a null stroke state on the first synthetic pointer stroke (upstream, the stroke lands).
       if (e.message === 'Transition was skipped') return;
-      if (e.message === "Cannot read properties of null (reading '0')" && page.url().includes('/c/')) return;
+      if (
+        e.message === "Cannot read properties of null (reading '0')" &&
+        page.url().includes('/c/')
+      )
+        return;
       pageErrors.push(e.message);
     });
     page.on('console', (m) => {
@@ -505,7 +509,7 @@ test('Bloom & Ink: brief, wireframe, budget, board, brand mark, calendar and sit
 
     await test.step('12b. Import the package into a fresh Garden; members, the output and the story return', async () => {
       await importCruxspacePackage(page, pkg);
-      await expect(page.getByRole('status')).toContainText(
+      await expect(page.getByRole('status').filter({ hasText: 'Imported' })).toContainText(
         'Imported Bloom & Ink with 7 member Cruxes.',
       );
       const hub = page.getByRole('region', { name: 'Cruxspaces', exact: true });
@@ -540,10 +544,14 @@ test('Bloom & Ink: brief, wireframe, budget, board, brand mark, calendar and sit
         { timeout: 120000 },
       );
       // The calendar reopens on launch month (the collaborator moved it there); the open day is in the record.
-      await expect(frame(page).locator('.ec-event').filter({ hasText: 'Launch day' })).toHaveCount(1);
+      await expect(frame(page).locator('.ec-event').filter({ hasText: 'Launch day' })).toHaveCount(
+        1,
+      );
       const calendarFolder = (await storedCrux(page, members.calendar.id)).projectFolder as string;
       expect(
-        JSON.parse(readFileSync(join(calendarFolder, 'data/project.json'), 'utf8')).project.events.map((e: any) => e.title).sort(),
+        JSON.parse(readFileSync(join(calendarFolder, 'data/project.json'), 'utf8'))
+          .project.events.map((e: any) => e.title)
+          .sort(),
       ).toEqual(['Launch day', 'Studio open day']);
       await page.screenshot({ path: join(evidence, '12-imported-calendar.png') });
     });

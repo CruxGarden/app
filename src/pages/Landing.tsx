@@ -52,7 +52,7 @@ export default function Landing() {
 
 function LandingPage() {
   const [initialWorld] = useState(initialHomepageWorld);
-  const initialMood = bundledMood(initialWorld) ? initialWorld : 'the-keeper';
+  const initialMood = bundledMood(initialWorld) ? initialWorld : 'digital-fractal-garden';
   useEffect(() => {
     document.title = `${APP_NAME} — You can grow anything`;
     return () => {

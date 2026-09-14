@@ -185,6 +185,13 @@ export const GARDEN_DARK = {
   chatInputText: 'var(--text)',
   onError: '#ffffff',
   glassBlur: '12px',
+  // ── glass ── (ADR 0043; styles/glass.css) liquid glass: the Mood's default surface style and how its glass looks
+  surfaceStyle: 'solid',
+  glassOpacity: '68%',
+  glassSaturation: '150%',
+  glassHighlight: 'rgb(255 255 255 / 0.28)',
+  glassRefraction: '0.35',
+  glassLight: 'var(--accent)',
   focusRing: 'var(--accent)',
   focusRingWidth: '2px',
   focusRingOffset: '1px',

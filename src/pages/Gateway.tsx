@@ -51,7 +51,7 @@ async function wearGatewayMood(): Promise<void> {
   const { bundledMood } = await import('@/lib/moods/bundled-moods');
   const worn = getSetting(SettingsKey.WornMoodId);
   const fresh = !worn && !getSetting(SettingsKey.MoodPresetDark);
-  const keeper = bundledMood('the-keeper');
+  const keeper = bundledMood('digital-fractal-garden');
   if (fresh) {
     if (keeper) await applyMood(keeper, { sound: false });
   } else {
@@ -261,7 +261,7 @@ function BannerStep({
   return (
     <Panel padding="lg" className="w-fit flex flex-col items-center px-8 py-6">
       <h1 className="font-wordmark text-5xl font-semibold text-gateway-title">{APP_NAME}</h1>
-      <p className="text-gateway-subtitle text-lg mt-1">where ideas grow</p>
+      <p className="text-gateway-subtitle text-lg mt-1">grow anything</p>
 
       <div className="mt-6">
         <IconButton
@@ -476,11 +476,12 @@ function SetupStep({ onBack }: { onBack: () => void }) {
         await useAppStore.getState().updateAuthor({ username: trimmed });
       }
 
-      // A new garden wears the Default Mood — The Keeper: the vista, Moss, the
-      // Keeper's face and track. Restored gardens bring their own and skip this.
+      // A new garden wears the Default Mood — Digital Fractal Garden (ADR 0043):
+      // the fractal render, liquid glass, Iris's voice and the Keeper's track.
+      // Restored gardens bring their own and skip this.
       try {
         const { bundledMood } = await import('@/lib/moods/bundled-moods');
-        const keeper = bundledMood('the-keeper');
+        const keeper = bundledMood('digital-fractal-garden');
         if (keeper) await applyMood(keeper);
       } catch {
         /* the garden still opens; the Mood can be applied from the Mood modal */

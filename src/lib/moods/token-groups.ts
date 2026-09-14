@@ -41,6 +41,8 @@ export const TOKEN_CHOICES: Record<string, readonly string[]> = {
   paneHeaderShape: ['bar', 'tab', 'label', 'underline', 'none'],
   dividerStyle: ['hairline', 'double', 'dotted', 'dashed', 'etched', 'ornament', 'none'],
   cardBorderStyle: ['solid', 'double', 'dashed', 'none'],
+  // ── glass (glass.css) ──
+  surfaceStyle: ['solid', 'glass'],
   // ── icons (ui/icons) ──
   iconSet: ICON_SETS,
 };
@@ -131,7 +133,6 @@ const ELEVATION_KEYS = new Set([
   'elevationDropdown',
   'elevationTooltip',
   'scrim',
-  'glassBlur',
   'motionScale',
   'hoverBrightness',
   'activeBrightness',
@@ -238,6 +239,12 @@ export const TOKEN_GROUPS: TokenGroup[] = [
     label: 'Pane headers',
     hint: 'How every pane title bar is set: label font, size, case, tracking, icon and close visibility, alignment. Per-pane groups override case and alignment.',
     match: (k) => HEADER_KEYS.has(k),
+  },
+  {
+    id: 'glass',
+    label: 'Glass',
+    hint: 'Liquid glass (a person can switch it on over any Mood): whether this Mood wears glass by default, how much of each surface colour stays, the backdrop blur and saturation, the specular highlight, how far the backdrop wavers (0 = still) and the colour of the moving light.',
+    match: (k) => k === 'surfaceStyle' || k.startsWith('glass'),
   },
   {
     id: 'elevation',
@@ -381,6 +388,8 @@ export function tokenKind(key: string): TokenKind {
   if (key in TOKEN_CHOICES) return 'choice';
   // ── motion ── easings are curves (text), durations are <time> lengths, bindings 0..1 numbers
   if (/^motionEase|^motionSpring/.test(key)) return 'text';
+  if (/^glass(Opacity|Saturation)$/.test(key)) return 'text';
+  if (key === 'glassRefraction') return 'number';
   if (/^motionDuration/.test(key)) return 'length';
   if (/^react/.test(key)) return 'number';
   if (/Texture$/.test(key) || FONT_ASSET_KEYS.has(key)) return 'asset';

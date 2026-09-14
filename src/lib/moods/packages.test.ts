@@ -79,7 +79,7 @@ describe('Mood Packages', () => {
   });
 
   it('exports a bundled background before apply and retains its cues without changing the worn Mood', async () => {
-    const pkg = bundledMood('8-bit')!;
+    const pkg = bundledMood('raster-bars')!;
     const before = captureCurrentMood({ name: 'Before' });
     const original = structuredClone(pkg);
     const bytes = new Uint8Array([137, 80, 78, 71, 1, 2, 3]);
@@ -152,14 +152,14 @@ describe('Mood Packages', () => {
         thumbnailFingerprint: 'dark-fp',
         thumbnailFingerprintLight: 'light-fp',
       });
-      const pkg = bundledMood('rainy-day-cafe')!;
+      const pkg = bundledMood('general-store')!;
       await applyMood(pkg);
       const persona = getPersona();
       expect(persona.name).toBe(pkg.persona!.name);
       expect(persona.thumbnailFingerprint).toBe('dark-fp');
       expect(persona.thumbnailFingerprintLight).toBe('light-fp');
       expect(useAudioStore.getState().volume).toBe(pkg.sound.volume);
-      expect(useAudioStore.getState().track).toBeNull(); // Rainy Day Café is quiet
+      expect(useAudioStore.getState().track).toBeNull(); // General Store is quiet
       expect(sound.getEnabled()).toBe(true);
     } finally {
       if (hadWindow) delete g.window;

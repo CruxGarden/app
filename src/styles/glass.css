@@ -1,0 +1,189 @@
+/* ── Liquid glass (ADR 0043) ─────────────────────────────────────────────────
+   A person's switch over any Mood (lib/moods/liquid-glass.ts): with
+   <html data-surface-style="glass"> every surface the Mood paints solid
+   becomes translucent, blurred and saturated glass with a specular top edge,
+   the Mood's accent, text, fonts, shapes and pane colours untouched. Three
+   things move, all on the motion tokens and gated by the person's intensity:
+   light (the orbs in MoodTextureLayers, seen through the glass), a sheen that
+   sweeps each pane, and refraction — liquid-glass-react (components/ui/
+   GlassSurface) bends what sits behind menus and dropdowns, its displacement
+   from --glass-refraction; everything laid out — panes, dialogs, the TopBar,
+   the Mood bar, cards — takes the CSS frost below. The glass tokens:
+     --glass-opacity     how much of the surface colour stays (62% = frosted)
+     --glass-blur        backdrop blur radius
+     --glass-saturation  backdrop saturation (glass makes colour bloom)
+     --glass-highlight   the specular edge and sheen colour
+     --glass-refraction  0 = still; how far the backdrop wavers
+     --glass-light       the colour of the moving light
+   Nothing here applies while data-surface-style is solid. ── */
+
+/* ── Panes: the ring becomes a highlight, header and body become glass ── */
+html[data-surface-style='glass'] .mosaic.crux-mosaic-theme .mosaic-window {
+  background: color-mix(in srgb, var(--glass-highlight) 55%, transparent);
+  box-shadow:
+    0 24px 60px -28px rgb(0 0 0 / 0.55),
+    0 2px 6px -2px rgb(0 0 0 / 0.25);
+  overflow: hidden;
+}
+html[data-surface-style='glass'] .mosaic.crux-mosaic-theme .mosaic-window .mosaic-window-body {
+  background: color-mix(in srgb, var(--panel) var(--glass-opacity), transparent);
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturation));
+}
+html[data-surface-style='glass'] .mosaic.crux-mosaic-theme .mosaic-window .mosaic-window-toolbar {
+  background: color-mix(in srgb, var(--panel) var(--glass-opacity), transparent);
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturation));
+  box-shadow: inset 0 1px 0 var(--glass-highlight);
+}
+html[data-surface-style='glass']
+  .mosaic.crux-mosaic-theme
+  .mosaic-window
+  .mosaic-window-toolbar
+  > .pane-toolbar {
+  background: transparent;
+  border-color: color-mix(in srgb, var(--glass-highlight) 60%, transparent);
+}
+/* the sheen: a specular band sweeping across the whole pane */
+html[data-surface-style='glass'] .mosaic.crux-mosaic-theme .mosaic-window::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  pointer-events: none;
+  border-radius: inherit;
+  background: linear-gradient(
+    115deg,
+    transparent 38%,
+    color-mix(in srgb, var(--glass-highlight) 70%, transparent) 50%,
+    transparent 62%
+  );
+  background-size: 320% 100%;
+  background-position: 100% 0;
+  mix-blend-mode: screen;
+  animation: glass-sheen calc(var(--motion-ms-slow) * 60) linear infinite;
+}
+@keyframes glass-sheen {
+  0% {
+    background-position: 100% 0;
+  }
+  60% {
+    background-position: 0% 0;
+  }
+  100% {
+    background-position: 0% 0;
+  }
+}
+
+/* ── Chrome: the TopBar, the Mood bar, panels, dialogs, dropdowns, cards ── */
+html[data-surface-style='glass'] .bg-toolbar,
+html[data-surface-style='glass'] .bg-mood-bar,
+html[data-surface-style='glass'] .bg-panel,
+html[data-surface-style='glass'] .bg-dropdown,
+html[data-surface-style='glass'] .bg-model-selector-dropdown,
+html[data-surface-style='glass'] .bg-garden-card {
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturation));
+  box-shadow: inset 0 1px 0 var(--glass-highlight);
+}
+html[data-surface-style='glass'] .bg-toolbar {
+  background-color: color-mix(in srgb, var(--toolbar) var(--glass-opacity), transparent);
+}
+html[data-surface-style='glass'] .bg-mood-bar {
+  background-color: color-mix(in srgb, var(--mood-bar) var(--glass-opacity), transparent);
+}
+html[data-surface-style='glass'] .bg-panel {
+  background-color: color-mix(in srgb, var(--panel) var(--glass-opacity), transparent);
+}
+html[data-surface-style='glass'] .bg-dropdown {
+  background-color: color-mix(in srgb, var(--dropdown) var(--glass-opacity), transparent);
+}
+html[data-surface-style='glass'] .bg-model-selector-dropdown {
+  background-color: color-mix(
+    in srgb,
+    var(--model-selector-dropdown) var(--glass-opacity),
+    transparent
+  );
+}
+html[data-surface-style='glass'] .bg-garden-card {
+  background-color: color-mix(in srgb, var(--garden-card) var(--glass-opacity), transparent);
+}
+/* surfaces inside glass sit on blurred ground already: translucent, no second blur */
+html[data-surface-style='glass'] .bg-surface {
+  background-color: color-mix(in srgb, var(--surface) 70%, transparent);
+}
+html[data-surface-style='glass'] .bg-surface-solid {
+  background-color: color-mix(in srgb, var(--surface-solid) 82%, transparent);
+}
+html[data-surface-style='glass'] .bg-input {
+  background-color: color-mix(in srgb, var(--input) 60%, transparent);
+}
+html[data-surface-style='glass'] .modal-scrim {
+  backdrop-filter: blur(calc(var(--glass-blur) / 3));
+}
+
+/* ── Discrete surfaces inside a glass-surface: the library paints the glass; the
+   child keeps its border and shape but no second fill or blur ── */
+html[data-surface-style='glass'] .glass-surface .bg-panel,
+html[data-surface-style='glass'] .glass-surface .bg-dropdown,
+html[data-surface-style='glass'] .glass-surface .bg-model-selector-dropdown {
+  background-color: transparent;
+  backdrop-filter: none;
+  box-shadow: none;
+}
+html[data-surface-style='glass'] .glass-surface {
+  color: var(--text);
+}
+
+/* ── Light: the orbs behind everything (MoodTextureLayers renders them under glass) ── */
+.liquid-light {
+  overflow: hidden;
+}
+.liquid-orb {
+  position: absolute;
+  width: 55vmax;
+  height: 55vmax;
+  border-radius: 50%;
+  filter: blur(70px);
+  mix-blend-mode: screen;
+  opacity: 0.5;
+  will-change: transform;
+}
+.liquid-orb-1 {
+  left: -10vmax;
+  top: -12vmax;
+  background: radial-gradient(circle, var(--glass-light) 0%, transparent 62%);
+  animation: liquid-drift-1 calc(var(--motion-ms-slow) * 150) ease-in-out infinite alternate;
+}
+.liquid-orb-2 {
+  right: -14vmax;
+  top: 10vmax;
+  background: radial-gradient(circle, var(--pane-collaboration) 0%, transparent 62%);
+  animation: liquid-drift-2 calc(var(--motion-ms-slow) * 190) ease-in-out infinite alternate;
+}
+.liquid-orb-3 {
+  left: 20vmax;
+  bottom: -20vmax;
+  background: radial-gradient(circle, var(--pane-details) 0%, transparent 62%);
+  animation: liquid-drift-3 calc(var(--motion-ms-slow) * 170) ease-in-out infinite alternate;
+}
+@keyframes liquid-drift-1 {
+  to {
+    transform: translate(28vw, 22vh) scale(1.18);
+  }
+}
+@keyframes liquid-drift-2 {
+  to {
+    transform: translate(-30vw, 30vh) scale(0.9);
+  }
+}
+@keyframes liquid-drift-3 {
+  to {
+    transform: translate(26vw, -34vh) scale(1.12);
+  }
+}
+
+/* ── Intensity: off and subtle keep the glass still ── */
+html[data-motion-intensity='off'] .mosaic.crux-mosaic-theme .mosaic-window::after,
+html[data-motion-intensity='subtle'] .mosaic.crux-mosaic-theme .mosaic-window::after,
+html[data-motion-intensity='off'] .liquid-orb,
+html[data-motion-intensity='subtle'] .liquid-orb {
+  animation: none;
+}
