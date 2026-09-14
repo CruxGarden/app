@@ -1,4 +1,6 @@
 import { validateProject } from './model.js';
+import { createCommandSession } from './shared/command-session.js';
+import { spriteCommands } from './sprite.js';
 
 window.startPiskelGarden = () => startGarden(window.pskl.app).catch(console.error);
 
@@ -9,12 +11,12 @@ export async function startGarden(app) {
   }
   let origin;
   let expected = null;
+  let historyLoads = 0;
   let revision = 0,
     saved = 0,
     hydrating = true;
   let timer,
-    tail = Promise.resolve(),
-    commandTail = Promise.resolve();
+    tail = Promise.resolve();
   const pending = new Map();
   let assetCache = new Map();
   const bar = document.createElement('div');
@@ -68,9 +70,11 @@ export async function startGarden(app) {
     const deadline = Date.now() + 55000;
     while (
       app.mouseStateService.isLeftButtonPressed() ||
-      app.mouseStateService.isRightButtonPressed()
+      app.mouseStateService.isRightButtonPressed() ||
+      historyLoads > 0
     ) {
-      if (Date.now() > deadline) throw new Error('Finish the current stroke before saving.');
+      if (Date.now() > deadline)
+        throw new Error('Wait for the current stroke or native Undo/Redo to finish before saving.');
       await new Promise((resolve) => setTimeout(resolve, 40));
     }
   }
@@ -168,14 +172,6 @@ export async function startGarden(app) {
     tail = operation.catch(() => {});
     return operation;
   }
-  const inspect = () => ({
-    name: app.piskelController.getPiskel().getDescriptor().name,
-    width: app.piskelController.getWidth(),
-    height: app.piskelController.getHeight(),
-    fps: app.piskelController.getFPS(),
-    frames: app.piskelController.getFrameCount(),
-    layers: app.piskelController.getLayers().map((layer) => layer.getName()),
-  });
   /** The native PNG spritesheet (all frames, best-fit columns) as an output the Cruxspace can use. */
   async function saveSheet(label) {
     if (hydrating) throw new Error('Wait for the sprite editor to open.');
@@ -190,22 +186,27 @@ export async function startGarden(app) {
       frames,
     );
     const rows = Math.ceil(frames / columns);
-    const canvas = new window.pskl.rendering.PiskelRenderer(controller).renderAsCanvas(columns, rows);
-    const output = await call({ op: 'save-output', label: name, content: canvas.toDataURL('image/png') });
+    const canvas = new window.pskl.rendering.PiskelRenderer(controller).renderAsCanvas(
+      columns,
+      rows,
+    );
+    const output = await call({
+      op: 'save-output',
+      label: name,
+      content: canvas.toDataURL('image/png'),
+    });
     show('Sheet saved to Cruxspace');
     return { ...output, frames, columns, rows, width: canvas.width, height: canvas.height };
   }
-  async function command(value) {
-    if (hydrating) throw new Error('Wait for the sprite editor to open.');
-    if (value.op === 'inspect') return inspect();
-    if (value.op === 'save-sheet') return saveSheet(value.label);
-    if (value.op !== 'fps' || !Number.isInteger(value.fps) || value.fps < 1 || value.fps > 24)
-      throw new Error('Choose an animation speed from 1 to 24 frames per second.');
-    await save();
-    app.piskelController.setFPS(value.fps);
-    await save();
-    return inspect();
-  }
+  let sprite;
+  const commands = createCommandSession({
+    settle: async () => {
+      if (hydrating) throw new Error('Wait for the sprite editor to open.');
+      await settle();
+    },
+    prepare: (value) => sprite.prepare(value),
+    save,
+  });
   window.addEventListener('message', (event) => {
     if (event.source !== parent || (origin !== undefined && event.origin !== origin)) return;
     const message = event.data;
@@ -227,8 +228,7 @@ export async function startGarden(app) {
         (error) => send({ op: 'flushed', flushId: message.id, error: error.message }),
       );
     } else if (message.type === 'crux:app:command') {
-      const operation = commandTail.then(() => command(message.command));
-      commandTail = operation.catch(() => {});
+      const operation = commands.execute(message.command);
       operation.then(
         (result) => send({ op: 'tool-result', commandId: message.id, result }),
         (error) => send({ op: 'tool-result', commandId: message.id, error: error.message }),
@@ -249,6 +249,34 @@ export async function startGarden(app) {
     const doc = JSON.parse(loaded.content);
     validateProject(doc);
     app.init();
+    sprite = spriteCommands(app, window, saveSheet);
+    // Native history decodes PNG snapshots asynchronously. Commands and capture must
+    // wait for that callback, or an in-flight Undo could overwrite a newer edit.
+    const historyCodec = app.historyService.deserializer;
+    app.historyService.deserializer = {
+      deserialize(data, callback) {
+        historyLoads++;
+        let finished = false;
+        const finish = () => {
+          if (!finished) {
+            finished = true;
+            historyLoads--;
+          }
+        };
+        try {
+          return historyCodec.deserialize(data, (...args) => {
+            try {
+              return callback(...args);
+            } finally {
+              finish();
+            }
+          });
+        } catch (error) {
+          finish();
+          throw error;
+        }
+      },
+    };
     if (doc.project) await restore(doc.project);
     for (const key of [
       'HISTORY_STATE_SAVED',

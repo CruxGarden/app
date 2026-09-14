@@ -1033,6 +1033,89 @@ export function getMockLanguageModel(): LanguageModel {
             return toolCallStream('set_rawgraphs_size', { width: 900, height: 550 });
           return textStream('Resized the native chart and saved it in Garden.');
         }
+        if (lastUserText(prompt).includes('[piskel:depth-create]')) {
+          const rounds = toolResultsThisTurn(prompt);
+          const latest = (name: string) => JSON.parse(toolResultText(prompt, name) || '{}');
+          const seed: { x: number; y: number; color: string }[] = [];
+          for (let y = 17; y <= 25; y++)
+            for (let x = 12; x <= 21; x++)
+              if ((y < 20 && x >= 12 && x <= 21) || (y >= 20 && x >= 13 && x <= 20))
+                seed.push({ x, y, color: y === 17 ? '#f5b56b' : '#b76c46' });
+          for (let y = 8; y < 17; y++) seed.push({ x: 16, y, color: '#387c44' });
+          for (let y = 8; y < 13; y++)
+            for (let x = 10; x < 23; x++)
+              if ((x <= 15 && y <= 11 && x + y >= 19) || (x >= 17 && y <= 11 && x - y <= 13))
+                seed.push({ x, y, color: '#75bd66' });
+          if (!rounds.length)
+            return toolCallStream('inspect_piskel', {
+              frameIndex: 0,
+              layerIndex: 0,
+              width: 32,
+              height: 32,
+            });
+          if (rounds.length === 1)
+            return toolCallStream('paint_piskel_pixels', {
+              layerIndex: 0,
+              frameIndex: 0,
+              expectedHash: latest('inspect_piskel').expectedHash,
+              pixels: seed,
+            });
+          if (rounds.length === 2)
+            return toolCallStream('duplicate_piskel_frame', {
+              frameId: latest('paint_piskel_pixels').frameList[0].frameId,
+            });
+          if (rounds.length === 3)
+            return toolCallStream('paint_piskel_pixels', {
+              layerIndex: 0,
+              frameIndex: 1,
+              expectedHash: latest('duplicate_piskel_frame').expectedHash,
+              pixels: [
+                { x: 22, y: 9, color: 'transparent' },
+                { x: 22, y: 8, color: '#a9d77c' },
+                { x: 21, y: 7, color: '#a9d77c' },
+              ],
+            });
+          if (rounds.length === 4) return toolCallStream('insert_piskel_frame', { index: 2 });
+          if (rounds.length === 5)
+            return toolCallStream('move_piskel_frame', {
+              frameId: latest('insert_piskel_frame').frameList[2].frameId,
+              index: 0,
+            });
+          if (rounds.length === 6)
+            return toolCallStream('delete_piskel_frame', {
+              frameId: latest('move_piskel_frame').frameList[0].frameId,
+            });
+          if (rounds.length === 7) return toolCallStream('set_piskel_speed', { fps: 6 });
+          if (rounds.length === 8)
+            return toolCallStream('save_piskel_sheet', { name: 'Seedling animation' });
+          return textStream(
+            'Created an editable two-frame seedling animation and saved its sheet.',
+          );
+        }
+        if (lastUserText(prompt).includes('[piskel:depth-revise]')) {
+          const rounds = toolResultsThisTurn(prompt);
+          if (!rounds.length)
+            return toolCallStream('inspect_piskel', {
+              layerIndex: 0,
+              frameIndex: 1,
+              width: 32,
+              height: 32,
+            });
+          if (rounds.length === 1)
+            return toolCallStream('paint_piskel_pixels', {
+              layerIndex: 0,
+              frameIndex: 1,
+              expectedHash: JSON.parse(toolResultText(prompt, 'inspect_piskel') || '{}')
+                .expectedHash,
+              pixels: [
+                { x: 16, y: 20, color: '#ffe090' },
+                { x: 17, y: 20, color: '#ffe090' },
+              ],
+            });
+          if (rounds.length === 2)
+            return toolCallStream('save_piskel_sheet', { name: 'Revised seedling' });
+          return textStream('Added a pot highlight while preserving your drawing.');
+        }
         if (lastUserText(prompt).includes('[piskel:speed]')) {
           const rounds = toolResultsThisTurn(prompt);
           if (!rounds.length) return toolCallStream('inspect_piskel', {});

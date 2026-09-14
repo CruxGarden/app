@@ -52,20 +52,18 @@
       // Descriptor description
       var descriptorDescription = "";
       for (i = 0; i < descriptorDescriptionLength; i++) {
-        descriptorDescription = String.fromCharCode(
-          arr16[8 + descriptorNameLength + i]
-        );
+        descriptorDescription += String.fromCharCode(arr16[currentIndex + i]);
       }
       currentIndex += descriptorDescriptionLength;
 
       // Hidden frames
       var serializedHiddenFrames = "";
       for (i = 0; i < serializedHiddenFramesLength; i++) {
-        serializedHiddenFrames = String.fromCharCode(
-          arr16[8 + descriptorNameLength + i]
-        );
+        serializedHiddenFrames += String.fromCharCode(arr16[currentIndex + i]);
       }
-      var hiddenFrames = serializedHiddenFrames.split("-");
+      var hiddenFrames = serializedHiddenFrames
+        ? serializedHiddenFrames.split("-").map(Number)
+        : [];
       currentIndex += serializedHiddenFramesLength;
 
       // Layers

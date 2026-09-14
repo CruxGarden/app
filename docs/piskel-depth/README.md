@@ -1,0 +1,9 @@
+# Native sprite workflow
+
+Status: workflow verified, 2026-09-14.
+
+The scripted collaborator draws a 32×32 seedling, duplicates and revises its animation frame, inserts/moves/removes a spare frame, sets speed and exports a native PNG sheet. The journey adds a manual stroke, revises two pixels while checking every other pixel, exercises native structural and pixel Undo/Redo, compares all exported pixels, restarts, exports/imports a complete Crux with its original Project Folder unavailable, and continues native editing.
+
+Focused checks: seven native model/command/history-codec tests and eight host/shared tests pass. Native codec regressions reproduced truncated image bytes and broken description/hidden-index metadata before the two narrow upstream fixes. See `piskel-crux/UPSTREAM.md` for seams and upgrade checks. The existing desktop drawing/import/export/conflict/restart journey passed in 29.6 s. The full new journey passed in 49.5 s (50.3 s including runner overhead), including exact output pixels, native pixel/frame Undo/Redo, hidden-frame history, restart, clean import and further manual editing. Screenshots and the exported sheet were visually inspected. The full app verification passed 1,088 host tests, all bundled checks and the production build. Electron verification passed.
+
+This demonstrates a bounded native workflow, not full layer/transform/effect coverage or live-model usability. Testing also restored export-name trimming, deferred adapter setup until native controller initialization, respected the native 50 ms Undo/Redo throttle, and used the pointer speed slider because native frame shortcuts intercept its arrow keys. The speed-slider keyboard issue and clipped initial canvas zoom are recorded for UI polish. Runtime updates apply to newly created Cruxes; existing Project Folders retain their own runtime.

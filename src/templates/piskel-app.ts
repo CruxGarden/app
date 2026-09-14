@@ -38,6 +38,6 @@ const template: TemplateDefinition = {
   greeting:
     'Make pixel art and animated sprites in Piskel. Draw with the native tools, add frames and layers, then export PNG, GIF or an editable .piskel file. Garden saves your editable sprite automatically.',
   context:
-    'Actual Piskel source and runtime. Native sprites, layers and frames are saved in data/project.json with fingerprinted PNG sprite sheets in data/assets. Use inspect_piskel and set_piskel_speed while the app is open. Rebuild with npm ci --ignore-scripts and npm run build; dest/prod is tracked. Native browser backup libraries and preferences are separate. Native file exports remain; whole-editor publishing is unavailable. See UPSTREAM.md.',
+    'Actual Piskel source and runtime. Native sprites, layers and frames are saved in data/project.json with fingerprinted PNG sprite sheets in data/assets. Use inspect_piskel for frame IDs and bounded pixel regions, paint_piskel_pixels for targeted native edits, and the insert/duplicate/move/delete frame tools to animate. Native Undo invalidates frame IDs: inspect again. Save reusable PNG outputs with save_piskel_sheet. Rebuild with npm ci --ignore-scripts and npm run build; dest/prod is tracked. Native browser backup libraries and preferences are separate. Native file exports remain; whole-editor publishing is unavailable. See UPSTREAM.md.',
 };
 export default template;
