@@ -1,5 +1,5 @@
 # Skill: media
-Use when: the crux grew from the Media template (a page for sharing music and video).
+Use when: the crux grew from the Media template (music and video).
 
 A music and video page built as an Astro Site Crux. The list is `src/pages/index.astro`; each item is a markdown file in `src/pages/m/` with frontmatter `title`, `date`, `kind`, `media`, `cover` and `description`, living at `/m/<slug>`.
 

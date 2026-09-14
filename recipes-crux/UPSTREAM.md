@@ -1,0 +1,23 @@
+# Upstream: Astro Keel (the Recipe Book starter)
+
+- Source: https://github.com/kpab/astro-keel — "a minimal, neutral, and modern portfolio + blog theme for Astro" by kpab. Pinned: commit `84c55e1` (v0.2.0, 2026-09-03). License: MIT (`LICENSE`, kept verbatim).
+- Astro 7.2, self-hosted fonts (`@fontsource`), MDX, RSS, Pagefind search (a `postbuild` step), satori/sharp social-card images, a UI dictionary (`src/i18n`, `en` and `ja`), dark mode, Giscus comments off by default. Content collections `src/content/works/**` and `src/content/blog/**`.
+
+## What is upstream, unchanged
+
+`src/components`, `src/layouts`, `src/i18n`, `src/lib`, `src/styles`, `src/pages` except the two rewritten below, `public/`, `remark-reading-time.mjs`, `tsconfig.json`, dependencies, `README.md`.
+
+## What Crux Garden changed
+
+This fork is the Home Page fork (`homepage-crux`) with the works collection replaced by recipes — no licensed Astro recipe theme exists (CREATION-ADDITIONS-PLAN.md § Astro template research), so the collection is written here on a vetted base.
+
+- **`recipes` collection** (`src/content/recipes/**`): title, description, publishDate, prepTime and cookTime in minutes, servings, category, tags, an optional image; the body carries `## Ingredients` (a list) and `## Method` (numbered steps) so no YAML lists are needed. Pages: `/recipes/` grouped by category, `/recipes/<slug>/` with the facts up top, a checkbox-style ingredient list, a *Print recipe* button and a print stylesheet, schema.org Recipe JSON-LD, a social card. The works pages and collection are gone; the home page shows the latest recipes; nav, 404 and search point at recipes.
+
+- **Identity in `src/config.json`** (`src/consts.ts` reads it): name (the site title and home heading), tagline, about text, public address, locale, footer text. `SOCIAL_LINKS` keeps only the RSS icon (the GitHub link was the theme's).
+- **`astro.config.mjs`**: `base` dropped (the theme ships set up for a GitHub Pages subpath); `site` and the sitemap switch on only when the address is set, so a fresh site builds unshared.
+- **Home page and about page** rewritten to read the person's name, tagline and about text instead of the theme's placeholder essay; the works and posts sections are upstream's.
+- **`tech` on a work defaults to `[]`** so the Builder can create a work from title, description and date alone.
+- **Seed content** replaces the theme's sample works and posts (and their images): one post, one work.
+- pnpm lockfile generated from upstream's npm lockfile (`pnpm import`); `.cruxignore` keeps `node_modules/`, `dist/` and `.astro/` out of Growth. `astro check` reports one upstream type error in `og/[collection]/[slug].png.ts` (satori's VNode vs TypeScript 6) that predates the fork.
+
+Build: `pnpm install && pnpm build` (Node 22; Pagefind runs after the build).

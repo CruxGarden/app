@@ -1,0 +1,46 @@
+---
+// Crux Garden: the recipe book's index, grouped by category.
+import { getCollection } from 'astro:content';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { withBase } from '../../lib/url';
+import { SITE } from '../../consts';
+
+const recipes = (await getCollection('recipes'))
+  .filter((recipe) => !recipe.data.draft)
+  .sort((a, b) => b.data.publishDate.getTime() - a.data.publishDate.getTime());
+const categories = [...new Set(recipes.map((r) => r.data.category))].sort();
+---
+
+<BaseLayout title="Recipes" description={`Every recipe in ${SITE.title}.`}>
+  <section class="page-head section">
+    <p class="eyebrow">Recipes</p>
+    <h1>{SITE.title}</h1>
+    <p class="lead">{recipes.length} {recipes.length === 1 ? 'recipe' : 'recipes'}, by category.</p>
+  </section>
+
+  {
+    categories.map((category) => (
+      <section class="section" aria-label={category}>
+        <div class="section-heading">
+          <p class="eyebrow">{category}</p>
+        </div>
+        <div class="work-list">
+          {recipes
+            .filter((r) => r.data.category === category)
+            .map((recipe) => (
+              <article class="work-card">
+                <p class="entry-meta">
+                  {recipe.data.prepTime + recipe.data.cookTime} min · serves {recipe.data.servings}
+                  {recipe.data.tags.length > 0 && ` · ${recipe.data.tags.join(', ')}`}
+                </p>
+                <h2>
+                  <a href={withBase(`/recipes/${recipe.id}/`)}>{recipe.data.title}</a>
+                </h2>
+                <p>{recipe.data.description}</p>
+              </article>
+            ))}
+        </div>
+      </section>
+    ))
+  }
+</BaseLayout>
