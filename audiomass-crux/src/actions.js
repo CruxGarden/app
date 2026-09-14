@@ -659,6 +659,8 @@
 
 		function applyEffect( _offset, _duration, _fx ) {
 			var orig_buffer = wavesurfer.backend.buffer;
+			// Garden settlement hook: preserve the channel selection used to start rendering.
+			var active_channels = wavesurfer.ActiveChannels.slice ();
 
 			if (!_offset && !_duration)
 			{
@@ -691,6 +693,8 @@
 			source.start ();
 
 			var offline_callback = function( rendered_buffer ) {
+				if (wavesurfer.backend.buffer !== orig_buffer)
+					throw new Error('Audio changed during rendering. The effect result was discarded; inspect before retrying.');
 				var uber_buffer = wavesurfer.backend.ac.createBuffer(
 					orig_buffer.numberOfChannels,
 					orig_buffer.length,
@@ -703,7 +707,7 @@
 					var chan_data = orig_buffer.getChannelData (i);
 
 					// check if channel is active
-					if (wavesurfer.ActiveChannels[ i ] === 0)
+					if (active_channels[ i ] === 0)
 					{
 						uber_chan_data.set (
 							chan_data
@@ -726,7 +730,7 @@
 					);
 				}
 
-				loadDecoded ( uber_buffer );
+				if (!loadDecoded ( uber_buffer )) throw new Error('The rendered audio could not be loaded.');
 
 				if (filter.length > 0) {
 					for (var i = 0; i < filter.length; ++i) filter[i].disconnect ();
@@ -739,15 +743,24 @@
 				// -
 			};
 
-			var offline_renderer = audio_ctx.startRendering();
-			if (offline_renderer)
-				offline_renderer.then( offline_callback ).catch(function(err) {
-					console.log('Rendering failed: ' + err);
-				});
-			else
-				audio_ctx.oncomplete = function ( e ) {
-					offline_callback ( e.renderedBuffer );
-				};
+			// Garden observes native renders, including effects started by a person.
+			var effect_token = {};
+			master.fireEvent ('WillApplyAudioEffect', effect_token);
+			function failed (err) {
+				console.log ('Rendering failed: ' + err);
+				master.fireEvent ('DidFailAudioEffect', effect_token, String(err && err.message || err));
+			}
+			function completed (buffer) {
+				try {
+					offline_callback (buffer);
+					master.fireEvent ('DidApplyAudioEffect', effect_token);
+				} catch (err) { failed (err); }
+			}
+			try {
+				var offline_renderer = audio_ctx.startRendering();
+				if (offline_renderer) offline_renderer.then(completed).catch(failed);
+				else audio_ctx.oncomplete = function (e) { completed(e.renderedBuffer); };
+			} catch (err) { failed (err); }
 		};
 
 
@@ -916,7 +929,7 @@
 			}
 		}
 
-		function DownloadFile( with_name, format, kbps, selection, stereo, bit_depth, dither, callback, source_buffer ) {
+		function DownloadFile( with_name, format, kbps, selection, stereo, bit_depth, dither, callback, source_buffer, output ) {
 			var originalBuffer = source_buffer ||
 				(wavesurfer && wavesurfer.backend && wavesurfer.backend.buffer);
 			if (!originalBuffer) {
@@ -1012,6 +1025,11 @@
 				callback && callback ( val );
 			}
 
+			// Garden may receive native encoded bytes instead of starting a browser download.
+			if (output) worker.onerror = function (error) {
+				DownloadFileCancel ();
+				output.fail (error.message || 'Audio encoding failed.');
+			};
 			worker.onmessage = function( ev ) {
 				if (ev.data.percentage)
 				{
@@ -1099,6 +1117,7 @@
 			// function forceDownload ( mp3Data ) {
 			// 	var blob = new Blob (mp3Data, {type:'audio/mp3'});
 			function forceDownload ( blob ) {
+				if (output) { output.done (blob); return; }
 				var url = (window.URL || window.webkitURL).createObjectURL(blob);
 
 				var a = document.createElement( 'a' );

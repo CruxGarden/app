@@ -1,7 +1,7 @@
 import type { TemplateDefinition } from './index';
 import { LAYOUT_WORKSHOP } from './index';
 const sources = import.meta.glob(
-  '../../audiomass-crux/{LICENSE,THIRD_PARTY_NOTICES.md,README.md,UPSTREAM.md,src/**/*.{js,html,css,json,py,go,txt,md}}',
+  '../../audiomass-crux/{LICENSE,THIRD_PARTY_NOTICES.md,README.md,UPSTREAM.md,src/**/*.{js,ts,cjs,html,css,json,py,go,txt,md}}',
   { query: '?raw', import: 'default', eager: true },
 ) as Record<string, string>;
 const assets = import.meta.glob(
@@ -29,6 +29,6 @@ const template: TemplateDefinition = {
   greeting:
     'AudioMass is ready for recordings, waveform effects and multitrack arrangements. Your active audio project saves with this Crux. Use the native audio and session exports to take your work elsewhere.',
   context:
-    'Actual AudioMass source and editor. Entry src/index.html needs no build. data/project.json preserves the active waveform, native multitrack arrangement and markers; decoded PCM channels are immutable data/assets Artifacts. Use inspect_audiomass and rename_audiomass_track while open. Preserve the native model. Native named browser drafts are separate; open a draft to save it into this Crux. Whole-editor publishing is unavailable. See UPSTREAM.md.',
+    'Actual AudioMass source and editor. Entry src/index.html needs no build. data/project.json preserves the active waveform, native multitrack arrangement and markers; decoded PCM channels are immutable data/assets Artifacts. Inspect with inspect_audiomass before using waveform import, selection, effects, range/clipboard edits, silence and native history tools. Use current waveform/clipboard/history hashes to preserve manual edits. Save native WAV/MP3/FLAC waveform, range or arrangement mixdown outputs with save_audiomass_output. Linked clip edits update the arrangement automatically; detach before importing different audio. Native import retains one Undo checkpoint, reopening clears native Undo; Growth persists. Multitrack creation/arrangement and advanced effects remain native controls in this iteration. Preserve the native model. Native named browser drafts are separate; open a draft to save it into this Crux. Whole-editor publishing is unavailable. See UPSTREAM.md.',
 };
 export default template;

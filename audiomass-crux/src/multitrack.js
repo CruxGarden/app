@@ -373,6 +373,8 @@
 		}
 
 		q.getState = cloneState;
+        // Garden inspects clip-edit context before applying waveform commands.
+        q.gardenEditingClip = function () { return editing_clip; };
         // Garden restores the native model directly; no server emulation.
         q.gardenRestore = function (state) { editing_clip = null; restoreState(state); };
         q.gardenRenameTrack = function (id, name) {

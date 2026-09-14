@@ -1272,6 +1272,80 @@ export function getMockLanguageModel(): LanguageModel {
             return toolCallStream('set_bitsy_title', { title: 'The Midnight Garden' });
           return textStream('Saved the Bitsy game title.');
         }
+        const audioDepth = lastUserText(prompt).match(
+          /\[audiomass:depth-(load|mute|undo|redo|copy|paste|silence|trim|cut|delete|gain|normalize|fade-in|fade-out|reverse|exports|mixdown)\]/,
+        )?.[1];
+        if (audioDepth) {
+          const rounds = toolResultsThisTurn(prompt);
+          if (!rounds.length) return toolCallStream('inspect_audiomass', { sampleCount: 8 });
+          const inspected = JSON.parse(toolResultText(prompt, 'inspect_audiomass') || '{}');
+          const expectedWaveformHash = inspected.waveform?.waveformHash;
+          if (audioDepth === 'exports') {
+            const format = ['wav', 'mp3', 'flac'][rounds.length - 1];
+            if (format)
+              return toolCallStream('save_audiomass_output', {
+                name: 'Depth ' + format,
+                format,
+                target: format === 'wav' ? 'range' : 'waveform',
+                ...(format === 'wav' ? { start: 0.25, end: 0.5 } : {}),
+              });
+          } else if (rounds.length === 1) {
+            if (audioDepth === 'load')
+              return toolCallStream('load_audiomass_audio', {
+                path: 'fixture.wav',
+                ...(expectedWaveformHash ? { expectedWaveformHash } : {}),
+              });
+            if (audioDepth === 'mixdown')
+              return toolCallStream('save_audiomass_output', {
+                name: 'Depth mixdown',
+                target: 'mixdown',
+                format: 'wav',
+              });
+            if (audioDepth === 'undo' || audioDepth === 'redo')
+              return toolCallStream('audiomass_history', {
+                direction: audioDepth,
+                expectedWaveformHash,
+                expectedHistoryHash: inspected.history.historyHash,
+              });
+            if (
+              audioDepth === 'copy' ||
+              audioDepth === 'cut' ||
+              audioDepth === 'delete' ||
+              audioDepth === 'trim'
+            )
+              return toolCallStream('edit_audiomass_range', {
+                action: audioDepth,
+                start: 0.25,
+                end: 0.5,
+                expectedWaveformHash,
+              });
+            if (audioDepth === 'paste')
+              return toolCallStream('paste_audiomass_audio', {
+                at: 0.75,
+                expectedWaveformHash,
+                expectedClipboardHash: inspected.clipboard.clipboardHash,
+              });
+            if (audioDepth === 'silence')
+              return toolCallStream('insert_audiomass_silence', {
+                at: 0.5,
+                seconds: 0.25,
+                expectedWaveformHash,
+              });
+            return toolCallStream('apply_audiomass_effect', {
+              effect: audioDepth,
+              start: 0.25,
+              end: 0.5,
+              channels: [0],
+              expectedWaveformHash,
+              ...(audioDepth === 'gain'
+                ? { gainDb: -6 }
+                : audioDepth === 'normalize'
+                  ? { peak: 0.8 }
+                  : {}),
+            });
+          }
+          return textStream('Audio depth ' + audioDepth + ' complete.');
+        }
         if (lastUserText(prompt).includes('[audiomass:track]')) {
           const rounds = toolResultsThisTurn(prompt);
           if (!rounds.length) return toolCallStream('inspect_audiomass', {});
