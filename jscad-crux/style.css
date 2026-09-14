@@ -1,0 +1,15 @@
+/* The page around JSCAD: the app fills the window above the Garden bar. */
+html,
+body {
+  height: 100%;
+  min-height: 100%;
+  margin: 0;
+  font-family: 'Open Sans', sans-serif;
+}
+#jscad {
+  width: 100%;
+  height: 100%;
+}
+body.garden #jscad {
+  height: calc(100% - 34px);
+}

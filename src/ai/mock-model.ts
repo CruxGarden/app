@@ -343,6 +343,35 @@ export function getMockLanguageModel(): LanguageModel {
             return toolCallStream('set_recorder_name', { name: 'Walkthrough takes' });
           return textStream('Listed the recordings and named the Crux Walkthrough takes.');
         }
+        if (lastUserText(prompt).includes('[model:coaster]')) {
+          const rounds = toolResultsThisTurn(prompt);
+          if (!rounds.length) return toolCallStream('inspect_model', {});
+          if (rounds.length === 1) return toolCallStream('set_model_name', { name: 'Moss Coaster' });
+          if (rounds.length === 2)
+            return toolCallStream('set_model_source', {
+              source: [
+                '// Moss Coaster: a hexagon with a leaf groove for a cup',
+                "const jscad = require('@jscad/modeling')",
+                'const { cylinder, ellipse } = jscad.primitives',
+                'const { subtract, union } = jscad.booleans',
+                'const { translate, rotateZ } = jscad.transforms',
+                'const { extrudeLinear } = jscad.extrusions',
+                'const { colorize } = jscad.colors',
+                '',
+                'const main = () => {',
+                '  const hexagon = cylinder({ radius: 45, height: 6, segments: 6 })',
+                '  const leaf = extrudeLinear({ height: 2 }, ellipse({ radius: [22, 9], segments: 48 }))',
+                '  const groove = translate([0, 0, 5], union(leaf, rotateZ(Math.PI / 2, leaf)))',
+                '  return colorize([0.42, 0.62, 0.45], subtract(hexagon, groove))',
+                '}',
+                '',
+                'module.exports = { main }',
+                '',
+              ].join('\n'),
+            });
+          if (rounds.length === 3) return toolCallStream('save_model', { format: '3mf', name: 'Moss Coaster' });
+          return textStream('Named the model Moss Coaster, wrote a hexagonal coaster with a leaf groove and saved a 3MF of it.');
+        }
         if (lastUserText(prompt).includes('[song:tune]')) {
           const rounds = toolResultsThisTurn(prompt);
           if (!rounds.length) return toolCallStream('inspect_song', {});

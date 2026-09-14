@@ -19,6 +19,7 @@ const NATIVE_TEMPLATES = {
   'fmg-app': 'fmg',
   'abc-app': 'abc',
   'signal-app': 'signal',
+  'jscad-app': 'jscad',
   'recorder-app': 'recorder',
   'am-1-app': 'am-1',
   'opencut-app': 'opencut',
@@ -180,7 +181,8 @@ export function isLocalCreationTool(crux: { meta?: Record<string, unknown> } | n
       native !== 'maps' &&
       native !== 'p5' &&
       native !== 'glsl' &&
-      native !== 'abc') ||
+      native !== 'abc' &&
+      native !== 'jscad') ||
     isCardinal(crux) ||
     !!samplerType(crux)
   );

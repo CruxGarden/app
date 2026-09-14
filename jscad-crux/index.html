@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Model</title>
+    <link rel="stylesheet" type="text/css" href="css/demo.css" />
+    <link rel="icon" href="imgs/favicon.png" type="image/png" />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <noscript><h1>Please enable JavaScript to use this page</h1></noscript>
+    <div id="jscad"></div>
+    <script src="dist/jscad-web.min.js"></script>
+    <script>
+      // The JSCAD web application, exactly as upstream's demo page starts it
+      jscadWeb(document.getElementById('jscad'), { name: 'model', logging: false });
+    </script>
+    <script type="module" src="garden/bridge.js"></script>
+  </body>
+</html>

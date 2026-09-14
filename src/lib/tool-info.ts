@@ -73,6 +73,13 @@ export const TOOL_INFO: Record<string, ToolInfo> = {
     relationship:
       'A notation tool around abcjs (MIT) and the FluidR3 piano soundfont (MIT), both vendored unmodified; the page, the Garden integration and the outputs are Crux Garden’s.',
   },
+  'jscad-app': {
+    name: 'JSCAD',
+    upstream: 'https://github.com/jscad/OpenJSCAD.org',
+    detailsPath: 'UPSTREAM.md',
+    relationship:
+      'The actual JSCAD web application (MIT), its released bundle and examples vendored unmodified; the page, the Garden integration and the outputs are Crux Garden’s.',
+  },
   'signal-app': {
     name: 'signal',
     upstream: 'https://github.com/ryohey/signal',
