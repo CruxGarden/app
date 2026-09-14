@@ -113,7 +113,7 @@ describe('embedded editor command lifecycle', () => {
 });
 
 it('ships the same standalone shared source with adopting embeds', () => {
-  for (const app of ['pptist', 'minipaint', 'jupyterlite', 'piskel', 'blockbench'])
+  for (const app of ['pptist', 'minipaint', 'jupyterlite', 'piskel', 'blockbench', 'rawgraphs'])
     for (const file of [
       'command-session.js',
       'command-session.d.ts',
@@ -123,7 +123,7 @@ it('ships the same standalone shared source with adopting embeds', () => {
       expect(
         readFileSync(
           new URL(
-            `../../${app}-crux/${app === 'piskel' ? 'src/' : ''}garden/shared/${file}`,
+            `../../${app}-crux/${['piskel', 'rawgraphs'].includes(app) ? 'src/' : ''}garden/shared/${file}`,
             import.meta.url,
           ),
           'utf8',

@@ -1,3 +1,5 @@
+import { createCommandSession } from './shared/command-session.js'
+import { validateCommand } from './commands.js'
 import { validateProject, DATA_FIELDS } from './model.js'
 
 export async function startGarden() {
@@ -8,17 +10,16 @@ export async function startGarden() {
     saved = 0,
     hydrating = true
   let timer,
-    tail = Promise.resolve(),
-    commandTail = Promise.resolve()
+    tail = Promise.resolve()
   const pending = new Map()
   let assetCache = new Map()
   const bar = document.createElement('div')
   bar.id = 'garden-project'
   bar.innerHTML =
-    '<span role="status">Opening Garden project…</span><button>Save project</button><button>Reload saved project</button><input aria-label="Output name" value="Figure"><button>Save figure to Cruxspace</button>'
+    '<span role="status">Opening Garden project…</span><button>Save project</button><button>Reload saved project</button><input aria-label="Output name" value="Figure"><select aria-label="Output format"><option value="png">PNG</option><option value="svg">SVG</option><option value="jpeg">JPEG</option><option value="rawgraphs">Editable project</option></select><button>Save figure to Cruxspace</button>'
   const style = document.createElement('style')
   style.textContent =
-    '#garden-project{position:fixed;bottom:0;left:0;right:0;height:32px;z-index:10000;display:flex;gap:12px;align-items:center;padding:0 10px;background:#24282c;color:#fff;font:12px system-ui}#garden-project span{flex:1}#garden-project button{padding:3px 8px;color:#fff;background:#42494f;border:1px solid #697078;border-radius:3px}#garden-project input{width:120px;padding:3px 6px;color:#fff;background:#151515;border:1px solid #697078;border-radius:3px;font:11px system-ui}body{padding-bottom:34px!important}'
+    '#garden-project select{color:#fff;background:#24282c}#garden-project{position:fixed;bottom:0;left:0;right:0;height:32px;z-index:10000;display:flex;gap:12px;align-items:center;padding:0 10px;background:#24282c;color:#fff;font:12px system-ui}#garden-project span{flex:1}#garden-project button{padding:3px 8px;color:#fff;background:#42494f;border:1px solid #697078;border-radius:3px}#garden-project input{width:120px;padding:3px 6px;color:#fff;background:#151515;border:1px solid #697078;border-radius:3px;font:11px system-ui}body{padding-bottom:34px!important}'
   document.head.append(style)
   document.body.append(bar)
   const workspace = document.querySelector('#root')
@@ -65,6 +66,7 @@ export async function startGarden() {
   }
   async function settle() {
     const deadline = Date.now() + 55000
+    await app?.settle?.()
     await new Promise((resolve) => requestAnimationFrame(resolve))
     while (app?.busy()) {
       if (Date.now() > deadline)
@@ -73,6 +75,7 @@ export async function startGarden() {
         )
       await new Promise((resolve) => setTimeout(resolve, 40))
     }
+    await app?.settle?.()
   }
   async function capture() {
     const snapshot = structuredClone(await app.capture())
@@ -164,51 +167,92 @@ export async function startGarden() {
     tail = operation.catch(() => {})
     return operation
   }
-  /** The rendered chart (the largest SVG on the page) as a PNG output of this Crux for its Cruxspaces. */
-  async function saveFigure(label) {
+  async function saveFigure(label, format = 'png') {
     await save()
-    const area = (el) => el.getBoundingClientRect().width * el.getBoundingClientRect().height
-    const svg = [...document.querySelectorAll('svg')].sort((a, b) => area(b) - area(a))[0]
-    if (!svg || svg.getBoundingClientRect().width < 50)
-      throw new Error('Map the data to a chart before saving a figure.')
-    const rect = svg.getBoundingClientRect()
-    const clone = svg.cloneNode(true)
+    if (format === 'rawgraphs') {
+      const snapshot = await app.capture()
+      if (snapshot.type !== 'native')
+        throw Error('Load data before exporting an editable chart project.')
+      const output = await call({
+        op: 'save-output',
+        label,
+        mimeType: 'application/x-rawgraphs+json',
+        bytes: new TextEncoder().encode(JSON.stringify(snapshot.value)).buffer,
+      })
+      show('Figure saved to Cruxspace')
+      return output
+    }
+    const svg = app.svg()
+    if (!svg)
+      throw Error(
+        'Map the required chart dimensions and resolve rendering errors before exporting.'
+      )
+    const rect = svg.getBoundingClientRect(),
+      clone = svg.cloneNode(true)
+    if (!rect.width || !rect.height || rect.width > 4000 || rect.height > 4000)
+      throw Error('Use a rendered chart no larger than 4,000 pixels per side.')
     clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg')
     clone.setAttribute('width', String(Math.round(rect.width)))
     clone.setAttribute('height', String(Math.round(rect.height)))
-    const url = URL.createObjectURL(
-      new Blob([new XMLSerializer().serializeToString(clone)], { type: 'image/svg+xml' })
-    )
-    try {
-      const image = await new Promise((resolve, reject) => {
-        const img = new Image()
-        img.onload = () => resolve(img)
-        img.onerror = () => reject(new Error('The chart could not be rendered.'))
-        img.src = url
+    const xml = new XMLSerializer().serializeToString(clone)
+    let output
+    if (format === 'svg')
+      output = await call({
+        op: 'save-output',
+        label,
+        mimeType: 'image/svg+xml',
+        bytes: new TextEncoder().encode(xml).buffer,
       })
-      const canvas = document.createElement('canvas')
-      canvas.width = Math.round(rect.width) * 2
-      canvas.height = Math.round(rect.height) * 2
-      const ctx = canvas.getContext('2d')
-      ctx.fillStyle = '#ffffff'
-      ctx.fillRect(0, 0, canvas.width, canvas.height)
-      ctx.drawImage(image, 0, 0, canvas.width, canvas.height)
-      const output = await call({ op: 'save-output', label, content: canvas.toDataURL('image/png') })
-      show('Figure saved to Cruxspace')
-      return { ...output, width: canvas.width, height: canvas.height }
-    } finally {
-      URL.revokeObjectURL(url)
+    else {
+      const url = URL.createObjectURL(
+        new Blob([xml], { type: 'image/svg+xml' })
+      )
+      try {
+        const image = await new Promise((resolve, reject) => {
+          const img = new Image()
+          img.onload = () => resolve(img)
+          img.onerror = () => reject(Error('The chart could not be rendered.'))
+          img.src = url
+        })
+        const canvas = document.createElement('canvas')
+        canvas.width = Math.round(rect.width) * 2
+        canvas.height = Math.round(rect.height) * 2
+        const ctx = canvas.getContext('2d')
+        if (format === 'jpeg') {
+          ctx.fillStyle = '#fff'
+          ctx.fillRect(0, 0, canvas.width, canvas.height)
+        }
+        ctx.drawImage(image, 0, 0, canvas.width, canvas.height)
+        const blob = await new Promise((resolve) =>
+          canvas.toBlob(resolve, format === 'jpeg' ? 'image/jpeg' : 'image/png')
+        )
+        if (!blob) throw Error('The chart image could not be encoded.')
+        output = await call({
+          op: 'save-output',
+          label,
+          mimeType: blob.type,
+          bytes: await blob.arrayBuffer(),
+        })
+      } finally {
+        URL.revokeObjectURL(url)
+      }
     }
+    show('Figure saved to Cruxspace')
+    return output
   }
-  async function command(value) {
-    if (hydrating || !app) throw new Error('Wait for the chart editor to open.')
-    if (value.op === 'save-figure') return saveFigure(value.label)
-    await save()
-    const result = await app.command(value)
-    await settle()
-    await save()
-    return result
-  }
+  const commands = createCommandSession({
+    settle: async () => {
+      if (hydrating || !app) throw Error('Wait for the chart editor to open.')
+      await settle()
+    },
+    prepare: (value) => {
+      const v = validateCommand(value)
+      return v.op === 'save-figure'
+        ? { mutates: true, apply: () => saveFigure(v.label, v.format) }
+        : app.prepare(v)
+    },
+    save,
+  })
   window.addEventListener('message', (event) => {
     if (
       event.source !== window.parent ||
@@ -239,8 +283,7 @@ export async function startGarden() {
           send({ op: 'flushed', flushId: message.id, error: error.message })
       )
     } else if (message.type === 'crux:app:command') {
-      const operation = commandTail.then(() => command(message.command))
-      commandTail = operation.catch(() => {})
+      const operation = commands.execute(message.command)
       operation.then(
         (result) => send({ op: 'tool-result', commandId: message.id, result }),
         (error) =>
@@ -254,7 +297,13 @@ export async function startGarden() {
   })
   bar.querySelectorAll('button')[0].onclick = () => save().catch(() => {})
   bar.querySelectorAll('button')[2].onclick = () =>
-    saveFigure(bar.querySelector('input').value).catch((error) => show(error.message))
+    commands
+      .execute({
+        op: 'save-figure',
+        label: bar.querySelector('input').value,
+        format: bar.querySelector('select').value,
+      })
+      .catch((error) => show(error.message))
   bar.querySelectorAll('button')[1].onclick = () => {
     if (
       revision === saved ||

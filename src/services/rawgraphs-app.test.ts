@@ -88,6 +88,16 @@ it('preserves dataset bytes and chart mappings through Growth and complete Crux 
   expect(((await call({ op: 'read', path: 'project.json' })) as { content: string }).content).toBe(
     content,
   );
+  const editableBytes = new TextEncoder().encode(
+    JSON.stringify({ version: '1.2', rawData: [['Control', 2.5]] }),
+  );
+  const editable = (await call({
+    op: 'save-output',
+    label: 'Editable chart',
+    mimeType: 'application/x-rawgraphs+json',
+    bytes: editableBytes.buffer,
+  })) as { path: string };
+  expect(editable.path).toMatch(/\.rawgraphs$/);
   const imported = await importCrux({
     data: (await exportCrux({ cruxId: crux.id })).blob,
     mode: 'clone',
@@ -98,12 +108,16 @@ it('preserves dataset bytes and chart mappings through Growth and complete Crux 
       files.find((f) => f.meta?.path === 'data/project.json')!.id,
     ),
   ).toBe(content);
+  const portableOutput = await services.artifact.downloadBlob(
+    files.find((f) => f.meta?.path === editable.path)!.id,
+  );
+  expect(new Uint8Array(await portableOutput.arrayBuffer())).toEqual(editableBytes);
   const data = await services.artifact.downloadBlob(
     files.find((f) => f.meta?.path === 'data/' + asset.path)!.id,
   );
   expect(new Uint8Array(await data.arrayBuffer())).toEqual(bytes);
 });
-it('scopes chart tools to inspection and bounded dimensions', () => {
+it('scopes chart commands and rejects undeclared fields', () => {
   const a = embeddedAppToolAdapter({ meta: { template: 'rawgraphs-app' } })!;
   expect(a.prepare('inspect_rawgraphs', {})).toEqual({ op: 'inspect' });
   expect(a.prepare('set_rawgraphs_size', { width: 900, height: 550 })).toEqual({

@@ -44,7 +44,7 @@
     "format": "prettier --write src",
     "start": "react-scripts --openssl-legacy-provider start",
     "build": "node --openssl-legacy-provider scripts/build.cjs && node scripts/collect-licenses.cjs",
-    "test": "node --test scripts/project.test.cjs",
+    "test": "node --test scripts/*.test.cjs",
     "eject": "react-scripts eject"
   },
   "eslintConfig": {

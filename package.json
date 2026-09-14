@@ -43,7 +43,7 @@
     "test:mermaid": "pnpm --dir mermaid-crux install --frozen-lockfile --ignore-scripts && pnpm --dir mermaid-crux run check && pnpm --dir mermaid-crux exec vitest run && pnpm --dir mermaid-crux run build",
     "build:piskel": "node embedded-apps/sync-shared.mjs && npm --prefix piskel-crux ci --ignore-scripts && npm --prefix piskel-crux run build",
     "test:piskel": "npm run build:piskel && node --test piskel-crux/src/garden/*.test.mjs",
-    "build:rawgraphs": "yarn --cwd rawgraphs-crux install --frozen-lockfile --ignore-scripts && yarn --cwd rawgraphs-crux run build",
+    "build:rawgraphs": "node embedded-apps/sync-shared.mjs && yarn --cwd rawgraphs-crux install --frozen-lockfile --ignore-scripts && yarn --cwd rawgraphs-crux run build",
     "test:rawgraphs": "npm run build:rawgraphs && npm --prefix rawgraphs-crux test",
     "build:jupyterlite": "node embedded-apps/sync-shared.mjs && npm --prefix jupyterlite-crux run build",
     "test:jupyterlite": "npm run build:jupyterlite && npm --prefix jupyterlite-crux test",
