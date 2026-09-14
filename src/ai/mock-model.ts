@@ -470,6 +470,16 @@ export function getMockLanguageModel(): LanguageModel {
           if (rounds.length === 1) return toolCallStream('export_note_docx', {});
           return textStream('Exported the open note as a Word document in exports.');
         }
+        if (lastUserText(prompt).includes('[home:post]')) {
+          const rounds = toolResultsThisTurn(prompt);
+          if (!rounds.length)
+            return toolCallStream('write_file', {
+              path: 'src/content/blog/moss.md',
+              content:
+                "---\ntitle: 'Moss'\ndescription: 'The quiet ground cover of a garden.'\npublishDate: 2026-09-14T12:00:00Z\ntags:\n  - garden\n---\n\nMoss grows where nothing else bothers to. It is the first thing to arrive and the last to leave.\n",
+            });
+          return textStream('Drafted a post about moss and tagged it garden.');
+        }
         if (lastUserText(prompt).includes('[blog:post]')) {
           const rounds = toolResultsThisTurn(prompt);
           if (!rounds.length)
@@ -1225,10 +1235,10 @@ const BUSINESS_CARDS: [string, string][] = [
   ['Launch', 'Open bookings for the first three covers'],
 ];
 const BUSINESS_SITE_PAGE = `---
-import Base from '../layouts/Base.astro';
+import BaseLayout from '../layouts/BaseLayout.astro';
 ---
 
-<Base>
+<BaseLayout title="Bloom & Ink">
   <header class="hero">
     <img src="/brand.png" alt="Bloom & Ink brand mark" width="160" height="160" />
     <h1>Bloom &amp; Ink</h1>
@@ -1246,7 +1256,7 @@ import Base from '../layouts/Base.astro';
     <h2>Opening</h2>
     <p>Bookings for the first three covers open on launch day. Write to us and tell us what you are making.</p>
   </section>
-</Base>
+</BaseLayout>
 `;
 const RESEARCH_QUESTION = `# Question
 
