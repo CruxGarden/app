@@ -1,0 +1,6 @@
+# Upstream: abcjs
+
+- Library: [abcjs](https://github.com/paulrosen/abcjs) 6.7.0 by Paul Rosen — MIT (`licenses/abcjs-LICENSE.md`). Vendored unmodified from the npm package: `runtime/abcjs-basic-min.js` and `runtime/abcjs-audio.css`.
+- Soundfont: the `acoustic_grand_piano-mp3` set from [gleitz/midi-js-soundfonts](https://github.com/gleitz/midi-js-soundfonts) (FluidR3_GM, MIT — `licenses/midi-js-soundfonts-LICENSE.txt`) vendored under `runtime/soundfont/` (88 notes, 2 MB) so playback works offline; abcjs would otherwise fetch it from GitHub Pages. Other instruments a score asks for (`%%MIDI program`) are not vendored and fall back to silence for that voice.
+
+abcjs is a library, not an app (the EventCalendar rule): `index.html` is the smallest page around its editor — the ABC text on the left, the rendered score and the audio control on the right, a name field and a live line above. `garden/bridge.js` keeps the score in `data/project.json` (`{ name, abc, saved }`), saves on every editor change, renders the score to SVG or PNG for the Crux's outputs, and answers App Tools (`inspect`, `set-name`, `set-abc`, `save-image`). A shared page fetches the document and shows the score with playback, saving nothing. `garden/document.js` is the validator the host runs too.

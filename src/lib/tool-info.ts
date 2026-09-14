@@ -66,6 +66,13 @@ export const TOOL_INFO: Record<string, ToolInfo> = {
     relationship:
       'A digital garden on the Veka theme (MIT) as an Astro Site Crux: the theme’s components and pages are upstream’s; the settings file, offline fonts, the link index, backlinks and the graph are Crux Garden’s.',
   },
+  'abc-app': {
+    name: 'abcjs',
+    upstream: 'https://github.com/paulrosen/abcjs',
+    detailsPath: 'UPSTREAM.md',
+    relationship:
+      'A notation tool around abcjs (MIT) and the FluidR3 piano soundfont (MIT), both vendored unmodified; the page, the Garden integration and the outputs are Crux Garden’s.',
+  },
   'fmg-app': {
     name: 'Fantasy Map Generator',
     upstream: 'https://github.com/Azgaar/Fantasy-Map-Generator',

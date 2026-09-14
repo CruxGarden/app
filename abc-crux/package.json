@@ -1,0 +1,11 @@
+{
+  "name": "abc-crux",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Crux Garden's Notation tool: abcjs (MIT) with the piano soundfont vendored, a small page around its editor, and the Garden bridge.",
+  "scripts": {
+    "check": "node --check garden/bridge.js && node --check garden/document.js",
+    "test:garden": "node --test garden/document.test.mjs"
+  }
+}
