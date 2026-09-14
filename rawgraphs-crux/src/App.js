@@ -265,6 +265,8 @@ function App() {
     importProject,
     handleChartChange,
     charts: baseCharts,
+    mappingLoading,
+    rawViz,
   })
 
   const [isModalCustomChartOpen, setModalCustomChartOpen] = useState(false)

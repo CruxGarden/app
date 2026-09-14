@@ -1,5 +1,13 @@
 import { useEffect, useRef } from 'react'
-import { deserializeProject } from '@rawgraphs/rawgraphs-core'
+import { chartCommands } from './chart-commands'
+import { localeList } from '../constants'
+import { parseAndCheckData } from '../hooks/useDataLoaderUtils/parser'
+import {
+  deserializeProject,
+  parseDataset,
+  getOptionsConfig,
+  getDefaultDimensionAggregation,
+} from '@rawgraphs/rawgraphs-core'
 
 export default function useGarden({
   dataLoader,
@@ -12,11 +20,34 @@ export default function useGarden({
   importProject,
   handleChartChange,
   charts,
+  mappingLoading,
+  rawViz,
 }) {
   const api = useRef(null)
   const started = useRef(false)
+  const commands = useRef(null)
+  if (!commands.current)
+    commands.current = chartCommands(() => api.current.state, {
+      parseAndCheckData,
+      parseDataset,
+      getOptionsConfig,
+      getDefaultDimensionAggregation,
+    })
   api.current = {
-    busy: () => dataLoader.loading,
+    state: {
+      dataLoader,
+      dateLocale: localeList[dataLoader.locale],
+      currentChart,
+      mapping,
+      visualOptions,
+      setMapping,
+      setVisualOptions,
+      handleChartChange,
+      charts,
+      rawViz,
+    },
+    busy: () => dataLoader.loading || mappingLoading,
+    svg: () => rawViz?._node?.querySelector('svg'),
     hasData: () => !!dataLoader.data,
     capture: async () =>
       dataLoader.data
@@ -31,34 +62,13 @@ export default function useGarden({
               visualOptions,
             },
           },
-    inspect: () => ({
-      chart: currentChart.metadata.id,
-      columns: Object.keys(dataLoader.data?.dataTypes || {}),
-      rows: dataLoader.data?.dataset?.length || 0,
-      mapping,
-      visualOptions,
-    }),
-    command: async (command) => {
-      if (command.op === 'inspect') return api.current.inspect()
-      if (
-        command.op !== 'size' ||
-        !Number.isInteger(command.width) ||
-        !Number.isInteger(command.height) ||
-        command.width < 100 ||
-        command.width > 4000 ||
-        command.height < 100 ||
-        command.height > 4000
-      )
-        throw new Error(
-          'Choose figure dimensions between 100 and 4,000 pixels.'
-        )
-      setVisualOptions((previous) => ({
-        ...previous,
-        width: command.width,
-        height: command.height,
-      }))
-      await new Promise((resolve) => setTimeout(resolve, 0))
-      return api.current.inspect()
+    prepare: (value) => commands.current.prepare(value),
+    settle: async () => {
+      const input = document.activeElement
+      if (input?.matches('input,textarea,[contenteditable="true"]'))
+        input.blur()
+      // Native chart options debounce for 200 ms; settle that before reading the SVG.
+      await new Promise((resolve) => setTimeout(resolve, 250))
     },
   }
   useEffect(() => {
@@ -90,7 +100,9 @@ export default function useGarden({
       garden.connect({
         capture: () => api.current.capture(),
         busy: () => api.current.busy(),
-        command: (c) => api.current.command(c),
+        prepare: (c) => api.current.prepare(c),
+        settle: () => api.current.settle(),
+        svg: () => api.current.svg(),
       })
     }
     open().catch(garden.failed)

@@ -1,0 +1,14 @@
+# RAWGraphs chart authoring evidence
+
+2026-09-14. Scripted real-desktop acceptance for the general chart/data adapter. This is a verified workflow slice, not full RAWGraphs coverage or a live-model quality evaluation. Full app verification passed (1,092 host tests, all bundled checks and production build), as did Electron verification. After the final locale/invalid-date validation correction, nine native checks, eleven focused checks and the final desktop suite pass: native regression 27.8 s, unfinished draft 16.0 s, chart authoring 1.4 min, full Seed trial research journey 1.6 min. The research journey uses its isolated mock API; it is not live publication.
+
+The collaborator loads a three-column sales dataset, chooses a bar chart, maps dimensions, sets orientation/background/size and saves SVG. A person changes width; a subsequent collaborator turn edits one sales cell and saves PNG, JPEG and a native editable `.rawgraphs` project while preserving the manual layout, every other cell and mapping. The collaborator then switches to a bubble/scatter chart, maps two numerical columns and saves SVG without rewriting the dataset. Restart, complete export, removal of the original Project Folder, clean import into a fresh Garden and further native width editing all pass.
+
+Checks include exact raw rows, immutable data reuse for chart changes, mapping preservation, native project contents, raster signatures/dimensions and byte-identical portable SVG output. Source: `electron/e2e/rawgraphs-depth.spec.ts`. Existing `rawgraphs-app.spec.ts` retains native importer/exporter, external-conflict/reload, restart and unfinished-JSON-draft coverage. Nine native checks cover real parsing/type coercion, mapping defaults, scalar validation, stale data and intervening manual edits. Host tests cover tools, shared lifecycle, output portability and bundled rebuild source.
+
+- `sales.png`: actual 2× chart export after the cell revision and manual width change.
+- `sales-and-visits.svg`: actual native scatter export.
+- `native-charts.png`: both native chart and saved Collaboration.
+- `portable-charts.png`: fresh imported source, manually revised again.
+
+The first desktop attempt completed every revision/output but timed out waiting for a closing sentence in a Collaboration pane that had closed. Saved conversation inspection confirmed the successful result. Acceptance now waits for the persisted assistant result, and the pane-state symptom is tracked in the root UI plan. Native previews can clip when chart width exceeds available pane width; exports retain the full dimensions. No native document Undo is claimed. Complex scales/aggregations, repeated label styling, stacking, structured JSON selection and wider chart-family acceptance remain open work under the selected-app plan. Runtime updates apply to new Cruxes.

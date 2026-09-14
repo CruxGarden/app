@@ -49,6 +49,7 @@ const EXTENSIONS: Record<string, string> = {
   'audio/mpeg': 'mp3',
   'audio/midi': 'mid',
   'model/stl': 'stl',
+  'application/x-rawgraphs+json': 'rawgraphs',
   'model/gltf+json': 'gltf',
   'application/x-blockbench-model+json': 'bbmodel',
   'model/3mf': '3mf',
@@ -87,7 +88,8 @@ export function outputKind(mimeType: string): 'image' | 'audio' | 'bundle' {
 const KIND_PATTERN = {
   image: /\.(png|jpe?g|gif|webp|svg)$/i,
   audio: /\.(wav|mp3|mid)$/i,
-  bundle: /\.(zip|epub|otf|ttf|woff|woff2|stl|3mf|obj|amf|x3d|dxf|csv|pptx|ipynb|gltf|bbmodel)$/i,
+  bundle:
+    /\.(zip|epub|otf|ttf|woff|woff2|stl|3mf|obj|amf|x3d|dxf|csv|pptx|ipynb|gltf|bbmodel|rawgraphs)$/i,
 };
 const KIND_EXAMPLE = {
   image: 'assets/cover.png',

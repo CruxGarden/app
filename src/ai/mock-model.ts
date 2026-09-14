@@ -1088,6 +1088,78 @@ export function getMockLanguageModel(): LanguageModel {
             return toolCallStream('import_document', { path: 'inbox/Letter.docx' });
           return textStream('Imported the letter into the notebook.');
         }
+        if (lastUserText(prompt).includes('[rawgraphs:depth-create]')) {
+          const n = toolResultsThisTurn(prompt).length;
+          if (!n) return toolCallStream('list_rawgraphs_charts', { limit: 50 });
+          if (n === 1)
+            return toolCallStream('set_rawgraphs_data', {
+              text: 'Channel,Sales,Visits\nShop,24,120\nMarket,42,210\nOnline,35,170',
+            });
+          if (n === 2)
+            return toolCallStream('select_rawgraphs_chart', { chartId: 'rawgraphs.barchart' });
+          if (n === 3)
+            return toolCallStream('map_rawgraphs_columns', {
+              dimensions: { bars: ['Channel'], size: ['Sales'] },
+            });
+          if (n === 4)
+            return toolCallStream('set_rawgraphs_options', {
+              values: {
+                width: 900,
+                height: 550,
+                background: '#faf4e8',
+                barsOrientation: 'horizontal',
+              },
+            });
+          if (n === 5)
+            return toolCallStream('save_rawgraphs_figure', {
+              name: 'Sales overview',
+              format: 'svg',
+            });
+          return textStream('Created the editable sales chart.');
+        }
+        if (lastUserText(prompt).includes('[rawgraphs:depth-revise]')) {
+          const n = toolResultsThisTurn(prompt).length;
+          const inspection = () => JSON.parse(toolResultText(prompt, 'inspect_rawgraphs') || '{}');
+          if (!n) return toolCallStream('inspect_rawgraphs', {});
+          if (n === 1)
+            return toolCallStream('update_rawgraphs_cells', {
+              expectedDataHash: inspection().dataHash,
+              cells: [{ row: 1, column: 'Sales', value: '48' }],
+            });
+          if (n === 2)
+            return toolCallStream('save_rawgraphs_figure', {
+              name: 'Revised sales',
+              format: 'png',
+            });
+          if (n === 3)
+            return toolCallStream('save_rawgraphs_figure', {
+              name: 'Editable sales',
+              format: 'rawgraphs',
+            });
+          if (n === 4)
+            return toolCallStream('save_rawgraphs_figure', {
+              name: 'Sales photograph',
+              format: 'jpeg',
+            });
+          return textStream('Updated market sales and kept your manual layout.');
+        }
+        if (lastUserText(prompt).includes('[rawgraphs:depth-scatter]')) {
+          const n = toolResultsThisTurn(prompt).length;
+          if (!n)
+            return toolCallStream('select_rawgraphs_chart', { chartId: 'rawgraphs.bubblechart' });
+          if (n === 1) return toolCallStream('inspect_rawgraphs', {});
+          if (n === 2)
+            return toolCallStream('map_rawgraphs_columns', {
+              dimensions: { x: ['Visits'], y: ['Sales'] },
+            });
+          if (n === 3) return toolCallStream('set_rawgraphs_size', { width: 950, height: 600 });
+          if (n === 4)
+            return toolCallStream('save_rawgraphs_figure', {
+              name: 'Sales and visits',
+              format: 'svg',
+            });
+          return textStream('Compared sales and visits in a second chart.');
+        }
         if (lastUserText(prompt).includes('[rawgraphs:size]')) {
           const rounds = toolResultsThisTurn(prompt);
           if (!rounds.length) return toolCallStream('inspect_rawgraphs', {});
