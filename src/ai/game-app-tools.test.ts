@@ -18,6 +18,8 @@ describe('game Cruxspace app tools', () => {
     expect(audiomassCommand('save_audiomass_output', { name: 'Pickup chime' })).toEqual({
       op: 'save-audio',
       label: 'Pickup chime',
+      target: 'waveform',
+      format: 'wav',
     });
     expect(() => audiomassCommand('save_audiomass_output', { name: 'a'.repeat(121) })).toThrow();
   });
@@ -33,10 +35,18 @@ describe('game Cruxspace app tools', () => {
       ]),
     );
     expect(
-      gdevelopCommand('add_gdevelop_resource', { path: 'assets/chime.wav', name: 'chime', kind: 'audio' }),
+      gdevelopCommand('add_gdevelop_resource', {
+        path: 'assets/chime.wav',
+        name: 'chime',
+        kind: 'audio',
+      }),
     ).toEqual({ op: 'add-resource', path: 'assets/chime.wav', name: 'chime', kind: 'audio' });
     expect(() =>
-      gdevelopCommand('add_gdevelop_resource', { path: 'assets/chime.wav', name: 'chime', kind: 'font' }),
+      gdevelopCommand('add_gdevelop_resource', {
+        path: 'assets/chime.wav',
+        name: 'chime',
+        kind: 'font',
+      }),
     ).toThrow('image or audio');
     const sprite = {
       scene: 'Scene',
@@ -47,21 +57,32 @@ describe('game Cruxspace app tools', () => {
       fps: 8,
       behaviors: ['TopDownMovementBehavior::TopDownMovementBehavior'],
     };
-    expect(gdevelopCommand('add_gdevelop_sprite', sprite)).toEqual({ op: 'add-sprite-object', ...sprite });
-    expect(() => gdevelopCommand('add_gdevelop_sprite', { ...sprite, frameHeight: undefined })).toThrow();
+    expect(gdevelopCommand('add_gdevelop_sprite', sprite)).toEqual({
+      op: 'add-sprite-object',
+      ...sprite,
+    });
+    expect(() =>
+      gdevelopCommand('add_gdevelop_sprite', { ...sprite, frameHeight: undefined }),
+    ).toThrow();
     expect(() => gdevelopCommand('add_gdevelop_sprite', { ...sprite, fps: 0 })).toThrow();
     expect(() => gdevelopCommand('add_gdevelop_sprite', { ...sprite, other: true })).toThrow();
-    expect(gdevelopCommand('add_gdevelop_instance', { scene: 'Scene', object: 'Seed', x: 1, y: 2 })).toEqual({
+    expect(
+      gdevelopCommand('add_gdevelop_instance', { scene: 'Scene', object: 'Seed', x: 1, y: 2 }),
+    ).toEqual({
       op: 'add-instance',
       scene: 'Scene',
       object: 'Seed',
       x: 1,
       y: 2,
     });
-    expect(() => gdevelopCommand('add_gdevelop_instance', { scene: 'Scene', object: 'Seed', x: '1', y: 2 })).toThrow();
+    expect(() =>
+      gdevelopCommand('add_gdevelop_instance', { scene: 'Scene', object: 'Seed', x: '1', y: 2 }),
+    ).toThrow();
     const event = {
       scene: 'Scene',
-      conditions: [{ type: 'CollisionNP', parameters: ['Gardener', 'Seed', '', '', ''], inverted: false }],
+      conditions: [
+        { type: 'CollisionNP', parameters: ['Gardener', 'Seed', '', '', ''], inverted: false },
+      ],
       actions: [{ type: 'Delete', parameters: ['Seed', ''] }],
     };
     expect(gdevelopCommand('add_gdevelop_event', event)).toEqual({ op: 'add-event', ...event });
@@ -81,8 +102,19 @@ describe('game Cruxspace app tools', () => {
   it('accepts the unpack flag on Cruxspace transfers only as a string flag', () => {
     const use = CRUXSPACE_TOOLS.find((t) => t.name === 'use_cruxspace_asset')!;
     expect(Object.keys(use.input_schema.properties)).toContain('unpack');
-    const base = { spaceId: 's', sourceCruxId: 'c', outputId: 'o', fingerprint: 'f', path: 'public/game' };
-    expect(validateCruxspaceTool('use_cruxspace_asset', { ...base, unpack: 'true' }).valid).toBe(true);
-    expect(validateCruxspaceTool('use_cruxspace_asset', { ...base, unpack: true as unknown as string }).valid).toBe(false);
+    const base = {
+      spaceId: 's',
+      sourceCruxId: 'c',
+      outputId: 'o',
+      fingerprint: 'f',
+      path: 'public/game',
+    };
+    expect(validateCruxspaceTool('use_cruxspace_asset', { ...base, unpack: 'true' }).valid).toBe(
+      true,
+    );
+    expect(
+      validateCruxspaceTool('use_cruxspace_asset', { ...base, unpack: true as unknown as string })
+        .valid,
+    ).toBe(false);
   });
 });

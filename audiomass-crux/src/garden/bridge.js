@@ -1,3 +1,6 @@
+import { createCommandSession } from './shared/command-session.js';
+import { validateCommand } from './commands.js';
+import { audioCommands, checkRange } from './audio-commands.js';
 import { validateProject } from './model.js';
 
 const app = window.PKAudioEditor;
@@ -11,8 +14,7 @@ export async function startGarden(app) {
     saved = 0,
     hydrating = true;
   let timer,
-    tail = Promise.resolve(),
-    commandTail = Promise.resolve();
+    tail = Promise.resolve();
   const pending = new Map();
   const audioCache = new Map();
   let loading = false,
@@ -20,10 +22,10 @@ export async function startGarden(app) {
   const bar = document.createElement('div');
   bar.id = 'garden-project';
   bar.innerHTML =
-    '<span role="status">Opening Garden project…</span><button>Save project</button><button>Reload saved project</button><input aria-label="Output name" value="Audio clip"><button>Save audio to Cruxspace</button>';
+    '<span role="status">Opening Garden project…</span><button>Save project</button><button>Reload saved project</button><input aria-label="Output name" value="Audio clip"><select aria-label="Output target"><option value="waveform">Waveform</option><option value="range">Selection</option><option value="mixdown">Mixdown</option></select><select aria-label="Output format"><option value="wav">WAV</option><option value="mp3">MP3</option><option value="flac">FLAC</option></select><button>Save audio to Cruxspace</button>';
   const style = document.createElement('style');
   style.textContent =
-    '#garden-project{position:fixed;bottom:0;left:0;right:0;height:32px;z-index:10000;display:flex;gap:12px;align-items:center;padding:0 10px;background:#24282c;color:#fff;font:12px system-ui}#garden-project span{flex:1}#garden-project button{padding:3px 8px;color:#fff;background:#42494f;border:1px solid #697078;border-radius:3px}#garden-project input{width:120px;padding:3px 6px;color:#fff;background:#151515;border:1px solid #697078;border-radius:3px;font:11px system-ui}#app{height:calc(100% - 34px)!important}';
+    '#garden-project{position:fixed;bottom:0;left:0;right:0;height:32px;z-index:10000;display:flex;gap:12px;align-items:center;padding:0 10px;background:#24282c;color:#fff;font:12px system-ui}#garden-project span{flex:1}#garden-project button{padding:3px 8px;color:#fff;background:#42494f;border:1px solid #697078;border-radius:3px}#garden-project select{color:#fff;background:#151515;border:1px solid #697078;padding:3px;border-radius:3px}#garden-project input{width:120px;padding:3px 6px;color:#fff;background:#151515;border:1px solid #697078;border-radius:3px;font:11px system-ui}#app{height:calc(100% - 34px)!important}';
   document.head.append(style);
   document.body.append(bar);
   const workspace = document.querySelector('#app');
@@ -89,11 +91,63 @@ export async function startGarden(app) {
     recording = false;
     dirty();
   });
+  const effects = new Map();
+  let lastEffect = null;
+  let nativeHistory = { undo: 0, redo: 0, undoId: null, redoId: null };
+  app.listenFor('DidStateChange', (undo, redo) => {
+    nativeHistory = {
+      undo: undo.length,
+      redo: redo.length,
+      undoId: undo.at(-1)?.id ?? null,
+      redoId: redo[0]?.id ?? null,
+    };
+  });
+  app.listenFor('WillApplyAudioEffect', (token) => {
+    let resolve;
+    const promise = new Promise((r) => {
+      resolve = r;
+    });
+    lastEffect = { promise, resolve };
+    effects.set(token, lastEffect);
+  });
+  const finishEffect = (token, error) => {
+    effects.get(token)?.resolve({ error });
+    effects.delete(token);
+    if (error) show(error);
+    else dirty();
+  };
+  app.listenFor('DidApplyAudioEffect', (token) => finishEffect(token));
+  app.listenFor('DidFailAudioEffect', (token, error) => finishEffect(token, error));
+  async function runEffect(invoke) {
+    const previous = lastEffect;
+    invoke();
+    if (lastEffect === previous)
+      throw Error('The native effect did not start. Inspect the waveform and try again.');
+    let timeout;
+    try {
+      const result = await Promise.race([
+        lastEffect.promise,
+        new Promise((_, reject) => {
+          timeout = setTimeout(
+            () => reject(Error('The native effect is still processing. Inspect before retrying.')),
+            55000,
+          );
+        }),
+      ]);
+      if (result.error) throw Error(result.error);
+    } finally {
+      clearTimeout(timeout);
+    }
+  }
   async function settle() {
+    const input = document.activeElement;
+    if (input?.matches('input,textarea,[contenteditable=true]') && !bar.contains(input))
+      input.blur();
+    await new Promise((resolve) => requestAnimationFrame(resolve));
     if (recording || app.multitrack.IsRecording())
       throw new Error('Stop recording before saving this project.');
     const deadline = Date.now() + 55000;
-    while (loading || app.engine.in_fx) {
+    while (loading || app.engine.in_fx || effects.size) {
       if (Date.now() > deadline)
         throw new Error('Audio is still processing. Keep this editor open.');
       await new Promise((resolve) => setTimeout(resolve, 40));
@@ -188,75 +242,124 @@ export async function startGarden(app) {
     tail = operation.catch(() => {});
     return operation;
   }
-  const inspect = () => ({
-    waveform: app.engine.is_ready
-      ? {
-          seconds: app.engine.wavesurfer.backend.buffer.duration,
-          channels: app.engine.wavesurfer.backend.buffer.numberOfChannels,
-        }
-      : null,
-    multitrackOn: app.multitrack.IsOn(),
-    tracks: app.multitrack.getState().tracks,
-    clips: app.multitrack
-      .getState()
-      .clips.map(({ buffer, ...clip }) => ({ ...clip, seconds: buffer.duration })),
+  const nativeCommands = audioCommands(app, {
+    runEffect,
+    history: () => nativeHistory,
+    changed: dirty,
+    baseUrl: new URL('../', location.href).href,
   });
-  /** The current waveform as 16-bit PCM WAV, saved as an output of this Crux for its Cruxspaces. */
-  async function saveAudio(label) {
-    const name = String(label ?? '').trim();
-    if (!name || name.length > 120) throw new Error('Name the audio using up to 120 characters.');
-    if (!app.engine.is_ready) throw new Error('Load or record audio first.');
+  async function saveAudio(v) {
     await save();
-    const buffer = app.engine.wavesurfer.backend.buffer;
-    const channels = buffer.numberOfChannels;
-    const frames = buffer.length;
-    const bytes = new ArrayBuffer(44 + frames * channels * 2);
-    const view = new DataView(bytes);
-    const ascii = (offset, value) => {
-      for (let i = 0; i < value.length; i++) view.setUint8(offset + i, value.charCodeAt(i));
-    };
-    ascii(0, 'RIFF');
-    view.setUint32(4, 36 + frames * channels * 2, true);
-    ascii(8, 'WAVE');
-    ascii(12, 'fmt ');
-    view.setUint32(16, 16, true);
-    view.setUint16(20, 1, true);
-    view.setUint16(22, channels, true);
-    view.setUint32(24, buffer.sampleRate, true);
-    view.setUint32(28, buffer.sampleRate * channels * 2, true);
-    view.setUint16(32, channels * 2, true);
-    view.setUint16(34, 16, true);
-    ascii(36, 'data');
-    view.setUint32(40, frames * channels * 2, true);
-    const data = Array.from({ length: channels }, (_, i) => buffer.getChannelData(i));
-    let offset = 44;
-    for (let frame = 0; frame < frames; frame++)
-      for (let channel = 0; channel < channels; channel++, offset += 2) {
-        const sample = Math.max(-1, Math.min(1, data[channel][frame]));
-        view.setInt16(offset, sample < 0 ? sample * 0x8000 : sample * 0x7fff, true);
+    const wasInert = workspace.inert;
+    workspace.inert = true;
+    try {
+      let buffer = app.engine.is_ready ? app.engine.wavesurfer.backend.buffer : null;
+      let selection;
+      if (v.target === 'mixdown') {
+        const clips = app.multitrack.getState().clips;
+        if (!clips.length) throw Error('Add clips to the arrangement before exporting a mixdown.');
+        const end = Math.max(...clips.map((c) => c.start + c.out - c.in));
+        if (v.start !== undefined) {
+          checkRange({ duration: end }, v.start, v.end);
+          selection = [v.start, v.end];
+        }
+        if (
+          (selection ? selection[1] - selection[0] : end) * clips[0].buffer.sampleRate >
+          32_000_000
+        )
+          throw Error('Choose a shorter mixdown range.');
+        buffer = await new Promise((resolve, reject) => {
+          const timeout = setTimeout(
+            () => reject(Error('The native mixdown is still rendering.')),
+            55000,
+          );
+          try {
+            app.multitrack.MixdownAsync(selection, (b) => {
+              clearTimeout(timeout);
+              resolve(b);
+            });
+          } catch (error) {
+            clearTimeout(timeout);
+            reject(error);
+          }
+        });
+        selection = undefined;
+      } else if (v.target === 'range') {
+        checkRange(buffer, v.start, v.end);
+        selection = [v.start, v.end];
       }
-    const output = await call({ op: 'save-output', label: name, bytes, mimeType: 'audio/wav' });
-    show('Audio saved to Cruxspace');
-    return { ...output, seconds: buffer.duration, channels, sampleRate: buffer.sampleRate };
+      if (!buffer) throw Error('Load audio or create an arrangement first.');
+      if (buffer.numberOfChannels > 2)
+        throw Error('Native waveform outputs support mono or stereo audio.');
+      const seconds = selection ? selection[1] - selection[0] : buffer.duration;
+      if (
+        v.format === 'wav' &&
+        44 + seconds * buffer.sampleRate * buffer.numberOfChannels * 2 > 32_000_000
+      )
+        throw Error(
+          'Choose a shorter WAV range or MP3/FLAC; Cruxspace outputs are limited to 32 MB.',
+        );
+      const blob = await new Promise((resolve, reject) => {
+        const timeout = setTimeout(() => {
+          app.engine.FXPreviewHost.DownloadFileCancel();
+          reject(Error('Audio encoding timed out. Try a shorter selection.'));
+        }, 55000);
+        const done = (blob) => {
+          clearTimeout(timeout);
+          resolve(blob);
+        };
+        const fail = (message) => {
+          clearTimeout(timeout);
+          reject(Error(message));
+        };
+        try {
+          app.engine.FXPreviewHost.DownloadFile(
+            v.label,
+            v.format,
+            v.format === 'mp3' ? 192 : 5,
+            selection,
+            buffer.numberOfChannels === 2,
+            16,
+            false,
+            () => {},
+            buffer,
+            { done, fail },
+          );
+        } catch (error) {
+          fail(error.message);
+        }
+      });
+      const result = await call({
+        op: 'save-output',
+        label: v.label,
+        bytes: await blob.arrayBuffer(),
+        mimeType:
+          v.format === 'mp3' ? 'audio/mpeg' : v.format === 'flac' ? 'audio/flac' : 'audio/wav',
+      });
+      show('Audio saved to Cruxspace');
+      return {
+        ...result,
+        seconds,
+        channels: buffer.numberOfChannels,
+        sampleRate: buffer.sampleRate,
+      };
+    } finally {
+      workspace.inert = wasInert;
+    }
   }
-  async function command(value) {
-    await settle();
-    if (hydrating) throw new Error('Wait for the project to open.');
-    if (value.op === 'inspect') return inspect();
-    if (value.op === 'save-audio') return saveAudio(value.label);
-    if (
-      value.op !== 'rename-track' ||
-      typeof value.id !== 'string' ||
-      typeof value.name !== 'string' ||
-      !value.name.trim() ||
-      value.name.length > 200
-    )
-      throw new Error('Choose a track ID and name.');
-    await save();
-    app.multitrack.gardenRenameTrack(value.id, value.name);
-    await save();
-    return inspect();
-  }
+  const commands = createCommandSession({
+    settle: async () => {
+      if (hydrating) throw Error('Wait for the audio editor to open.');
+      await settle();
+    },
+    prepare: (input) => {
+      const v = validateCommand(input);
+      return v.op === 'save-audio'
+        ? { mutates: true, apply: () => saveAudio(v) }
+        : nativeCommands.prepare(v);
+    },
+    save,
+  });
   window.addEventListener('message', (event) => {
     if (event.source !== parent || (origin !== undefined && event.origin !== origin)) return;
     const message = event.data;
@@ -278,8 +381,7 @@ export async function startGarden(app) {
         (error) => send({ op: 'flushed', flushId: message.id, error: error.message }),
       );
     } else if (message.type === 'crux:app:command') {
-      const operation = commandTail.then(() => command(message.command));
-      commandTail = operation.catch(() => {});
+      const operation = commands.execute(message.command);
       operation.then(
         (result) => send({ op: 'tool-result', commandId: message.id, result }),
         (error) => send({ op: 'tool-result', commandId: message.id, error: error.message }),
@@ -292,7 +394,17 @@ export async function startGarden(app) {
       location.reload();
   };
   bar.querySelectorAll('button')[2].onclick = () => {
-    saveAudio(bar.querySelector('input').value).catch((error) => show(error.message));
+    const target = bar.querySelector('[aria-label="Output target"]').value;
+    const range = app.engine.wavesurfer.regions.list[0];
+    commands
+      .execute({
+        op: 'save-audio',
+        label: bar.querySelector('input').value,
+        target,
+        format: bar.querySelector('[aria-label="Output format"]').value,
+        ...(target === 'range' ? { start: range?.start, end: range?.end } : {}),
+      })
+      .catch((error) => show(error.message));
   };
   try {
     const loaded = await call({ op: 'read', path: 'project.json' });

@@ -110,3 +110,74 @@ it('scopes agent operations to a native track rename', () => {
     adapter.prepare('rename_audiomass_track', { id: 'mt1', name: 'Voice', path: '../other' }),
   ).toThrow();
 });
+
+it('validates general waveform tools and output formats through the host adapter', () => {
+  const adapter = embeddedAppToolAdapter({ meta: { template: 'audiomass-app' } })!;
+  const hash = 'a'.repeat(64);
+  expect(
+    adapter.prepare('apply_audiomass_effect', {
+      effect: 'gain',
+      gainDb: -6,
+      start: 0,
+      end: 0.5,
+      channels: [0],
+      expectedWaveformHash: hash,
+    }),
+  ).toEqual({
+    op: 'effect',
+    effect: 'gain',
+    gainDb: -6,
+    start: 0,
+    end: 0.5,
+    channels: [0],
+    expectedWaveformHash: hash,
+  });
+  expect(
+    adapter.prepare('save_audiomass_output', {
+      name: 'Lossless',
+      target: 'mixdown',
+      format: 'flac',
+    }),
+  ).toEqual({ op: 'save-audio', label: 'Lossless', target: 'mixdown', format: 'flac' });
+  for (const input of [
+    { effect: 'gain', gainDb: 40, start: 0, end: 0.5, expectedWaveformHash: hash },
+    { effect: 'mute', start: 0, end: 0.5 },
+    { effect: 'reverse', start: 0, end: 0.5, expectedWaveformHash: hash, script: 'anything' },
+  ])
+    expect(() => adapter.prepare('apply_audiomass_effect', input)).toThrow();
+  expect(() => adapter.prepare('load_audiomass_audio', { path: '../private.wav' })).toThrow();
+  expect(() =>
+    adapter.prepare('audiomass_history', { direction: 'undo', expectedWaveformHash: hash }),
+  ).toThrow(/history/);
+});
+
+it('retains lossless audio bytes and provenance when another member uses a FLAC output', async () => {
+  const { saveCruxOutput, listCruxspaceAssets, copyCruxspaceAsset } =
+    await import('./cruxspace-assets');
+  const { createCruxspace } = await import('./cruxspaces');
+  const { crux, artifact } = getServices();
+  const source = await crux.create({ title: 'Sound', type: 'workspace' }),
+    target = await crux.create({ title: 'Game', type: 'workspace' });
+  const space = await createCruxspace({ name: 'Game', brief: '', cruxIds: [source.id, target.id] });
+  const bytes = new Uint8Array([102, 76, 97, 67, 0, 1, 2, 3]);
+  const output = await saveCruxOutput(
+    source.id,
+    new Blob([bytes], { type: 'audio/flac' }),
+    'Lossless sound',
+  );
+  expect(output.path).toMatch(/\.flac$/);
+  expect((await listCruxspaceAssets(space.id))[0]!.mimeType).toBe('audio/flac');
+  const used = await copyCruxspaceAsset({
+    spaceId: space.id,
+    outputId: output.id,
+    sourceCruxId: source.id,
+    fingerprint: output.fingerprint,
+    targetCruxId: target.id,
+    path: 'assets/sound.flac',
+  });
+  expect(used.origin.fingerprint).toBe(output.fingerprint);
+  const file = (await artifact.findByResource('crux', target.id)).find(
+    (f) => f.meta?.path === 'assets/sound.flac',
+  )!;
+  expect(new Uint8Array(await (await artifact.downloadBlob(file.id)).arrayBuffer())).toEqual(bytes);
+});
