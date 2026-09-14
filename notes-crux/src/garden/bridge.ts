@@ -11,7 +11,7 @@ declare global {
     __CRUX_GARDEN__?: boolean;
   }
 }
-export const embedded = typeof window !== "undefined" && window.parent !== window;
+export const embedded = typeof window !== 'undefined' && window.parent !== window;
 
 let origin: string | undefined;
 const pending = new Map<string, { resolve: (v: unknown) => void; reject: (e: Error) => void }>();
@@ -24,7 +24,10 @@ let status: HTMLElement | null = null;
 let alertBox: HTMLElement | null = null;
 let bar: HTMLElement | null = null;
 let panel: HTMLElement | null = null;
-let publication: { title: string; pages: string[]; layout?: string } = { title: '', pages: [] };
+let publication: { title: string; pages: string[]; layout?: string; format?: string } = {
+  title: '',
+  pages: [],
+};
 let publicationFingerprint: string | null = null;
 let publicationTail: Promise<unknown> = Promise.resolve();
 let listNotes: (() => Promise<{ path: string; title: string }[]>) | null = null;
@@ -37,14 +40,14 @@ const send = (value: Record<string, unknown>) =>
     { type: 'crux:notebook', id: crypto.randomUUID(), ...value },
     origin && origin !== 'null' ? origin : '*',
   );
-export function call(value: Record<string, unknown>): Promise<unknown> {
+export function call(value: Record<string, unknown>, timeoutMs = 60000): Promise<unknown> {
   if (!embedded) return Promise.reject(new Error('Open this notebook inside Crux Garden.'));
   return new Promise((resolve, reject) => {
     const id = crypto.randomUUID();
     const timeout = setTimeout(() => {
       pending.delete(id);
       reject(new Error('Garden did not confirm the save. Your draft is still open.'));
-    }, 60000);
+    }, timeoutMs);
     pending.set(id, {
       resolve: (r) => {
         clearTimeout(timeout);
@@ -105,6 +108,7 @@ export const garden = {
   },
   /** A passing notice in the bar (no conflict, nothing to reload): the status returns after a moment. */
   warn(message: string) {
+    console.warn('[garden] ' + message);
     if (!alertBox || conflict) return;
     alertBox.textContent = message;
     alertBox.hidden = false;
@@ -147,6 +151,7 @@ async function loadPublication() {
         ? parsed.pages.filter((p: unknown) => typeof p === 'string')
         : [],
       ...(typeof parsed?.layout === 'string' ? { layout: parsed.layout } : {}),
+      ...(typeof parsed?.format === 'string' ? { format: parsed.format } : {}),
     };
   } catch {
     publication = { title: '', pages: [] };
@@ -165,6 +170,8 @@ function savePublication() {
       publicationFingerprint = latest.fingerprint;
       if (typeof parsed?.layout === 'string') publication.layout = parsed.layout;
       else delete publication.layout;
+      if (typeof parsed?.format === 'string') publication.format = parsed.format;
+      else delete publication.format;
     } catch {
       /* first write */
     }
@@ -297,12 +304,16 @@ function appearance(select: HTMLSelectElement) {
 }
 
 /* Documents (V1-GAPS-PLAN.md §2.1): a Word document into the notebook, a note out as one. */
-const imagePath = (src: string) => (findImage?.(src.replace(/^\.?\//, '')) ?? src.replace(/^\.?\//, ''));
+const imagePath = (src: string) =>
+  findImage?.(src.replace(/^\.?\//, '')) ?? src.replace(/^\.?\//, '');
 async function importDocument(name: string, data: ArrayBuffer) {
   const { docxToNotebookFiles } = await import('./document');
   show('Reading document…');
   const { stem, files } = await docxToNotebookFiles(name, data);
-  const result = (await call({ op: 'import', name: stem, files })) as { root: string; notes: number };
+  const result = (await call({ op: 'import', name: stem, files })) as {
+    root: string;
+    notes: number;
+  };
   show(`Imported ${stem} into ${result.root}. Reloading…`);
   setTimeout(() => location.reload(), 600);
   return { root: result.root, note: `${result.root}/${stem}.md` };
@@ -316,28 +327,62 @@ async function exportNoteAsDocx(path: string | null) {
   const folder = path.includes('/') ? path.slice(0, path.lastIndexOf('/') + 1) : '';
   show('Writing document…');
   const bytes = await noteToDocx(title, note.content, async (src) => {
-    if (/^(https?:|data:)/i.test(src)) return fetch(src).then((r) => (r.ok ? r.blob() : null)).catch(() => null);
+    if (/^(https?:|data:)/i.test(src))
+      return fetch(src)
+        .then((r) => (r.ok ? r.blob() : null))
+        .catch(() => null);
     const candidates = [imagePath(folder + src.replace(/^\.?\//, '')), imagePath(src)];
     for (const candidate of candidates) {
-      const response = await fetch(`/notebook/${candidate.split('/').map(encodeURIComponent).join('/')}`).catch(() => null);
+      const response = await fetch(
+        `/notebook/${candidate.split('/').map(encodeURIComponent).join('/')}`,
+      ).catch(() => null);
       if (response?.ok) return response.blob();
     }
     return null;
   });
-  const output = (await call({ op: 'save-output', label: `${title} (DOCX)`, bytes, mimeType: DOCX_MIME })) as Record<string, unknown>;
+  const output = (await call({
+    op: 'save-output',
+    label: `${title} (DOCX)`,
+    bytes,
+    mimeType: DOCX_MIME,
+  })) as Record<string, unknown>;
   show(`Exported ${title} as a Word document (exports).`);
   setTimeout(() => show(inFlight ? 'Saving…' : 'Saved'), 3000);
   return { note: path, ...output };
 }
+/** The book edition (the chosen notes as an EPUB), built by the host's edition build and kept as an output. */
+async function saveBook() {
+  show('Building the book…');
+  try {
+    // The edition build installs its renderer the first time: minutes, not seconds.
+    const output = (await call({ op: 'build-book' }, 10 * 60_000)) as Record<string, unknown>;
+    show(`Saved ${String(output.label)} as an output (exports).`);
+    setTimeout(() => show(inFlight ? 'Saving…' : 'Saved'), 3000);
+    return output;
+  } catch (error) {
+    show(inFlight ? 'Saving…' : 'Saved');
+    throw error;
+  }
+}
 async function runCommand(command: Record<string, unknown>) {
   if (command.op === 'inspect') {
     const notes = listNotes ? await listNotes() : [];
-    return { notes, activeNote, publication: { title: publication.title, pages: publication.pages } };
+    return {
+      notes,
+      activeNote,
+      publication: {
+        title: publication.title,
+        pages: publication.pages,
+        layout: publication.layout ?? 'single-page',
+        format: publication.format ?? 'web',
+      },
+    };
   }
   if (command.op === 'export-docx') {
     const note = typeof command.note === 'string' && command.note ? command.note : activeNote;
     return exportNoteAsDocx(note);
   }
+  if (command.op === 'save-book') return saveBook();
   if (command.op === 'import-document') {
     if (typeof command.path !== 'string') throw new Error('Name the document to import.');
     const file = (await call({ op: 'read-bytes', path: command.path })) as { bytes: ArrayBuffer };
@@ -363,6 +408,7 @@ function mountBar() {
     '<button type="button" data-import>Import notebook folder…</button>' +
     '<button type="button" data-import-document>Import document…</button>' +
     '<button type="button" data-export-docx>Export note as DOCX</button>' +
+    '<button type="button" data-save-book>Save book (EPUB)</button>' +
     '<button type="button" data-publication aria-expanded="false">Public edition…</button>' +
     '<label>Appearance <select aria-label="App appearance"><option value="garden">Garden Mood</option><option value="app">App appearance</option></select></label>';
   document.body.append(bar);
@@ -413,6 +459,9 @@ function mountBar() {
   };
   bar.querySelector<HTMLButtonElement>('[data-export-docx]')!.onclick = () => {
     exportNoteAsDocx(activeNote).catch((error) => garden.warn((error as Error).message));
+  };
+  bar.querySelector<HTMLButtonElement>('[data-save-book]')!.onclick = () => {
+    saveBook().catch((error) => garden.warn((error as Error).message));
   };
   const toggle = bar.querySelector<HTMLButtonElement>('[data-publication]')!;
   toggle.onclick = () => {
@@ -484,7 +533,12 @@ function resolveImages() {
         else if (node instanceof Element) sweep(node);
       });
     }
-  }).observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['src'] });
+  }).observe(document.body, {
+    childList: true,
+    subtree: true,
+    attributes: true,
+    attributeFilter: ['src'],
+  });
 }
 
 /** Called once the app has rendered (see boot.ts). */

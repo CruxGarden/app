@@ -4,6 +4,8 @@ import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, existsSync, rmSync
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { readEdition, buildEdition, splitNote } from './edition.mjs';
+import { createRequire } from 'node:module';
+const require = createRequire(import.meta.url);
 
 const png = Buffer.from(
   'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==',
@@ -84,6 +86,84 @@ test('single-page and separate-pages editions render without private material', 
     assert.match(separate, /href="\/notes\/Research\/Field%20journal\.md\/"/);
     assert.ok(!separate.includes('Search notebook'));
     assert.equal(readFileSync(join(root, 'dist/index.html'), 'utf8'), separate);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+// A small ZIP reader for the book: walks the central directory, inflates each entry.
+function unzip(bytes) {
+  const { inflateRawSync } = require('node:zlib');
+  let eocd = bytes.length - 22;
+  while (bytes.readUInt32LE(eocd) !== 0x06054b50) eocd--;
+  const count = bytes.readUInt16LE(eocd + 10);
+  let offset = bytes.readUInt32LE(eocd + 16);
+  const entries = [];
+  for (let i = 0; i < count; i++) {
+    assert.equal(bytes.readUInt32LE(offset), 0x02014b50);
+    const method = bytes.readUInt16LE(offset + 10);
+    const csize = bytes.readUInt32LE(offset + 20);
+    const nameLen = bytes.readUInt16LE(offset + 28);
+    const local = bytes.readUInt32LE(offset + 42);
+    const name = bytes.subarray(offset + 46, offset + 46 + nameLen).toString('utf8');
+    const dataStart = local + 30 + bytes.readUInt16LE(local + 26) + bytes.readUInt16LE(local + 28);
+    const packed = bytes.subarray(dataStart, dataStart + csize);
+    entries.push({ name, method, data: method === 0 ? packed : inflateRawSync(packed) });
+    offset += 46 + nameLen + bytes.readUInt16LE(offset + 30) + bytes.readUInt16LE(offset + 32);
+  }
+  return entries;
+}
+test('buildEdition with format epub writes the book beside the site and links to it', async () => {
+  const root = notebook({
+    title: 'Shared Journal',
+    pages: ['Start.md', 'Research/Field journal.md'],
+    format: 'epub',
+  });
+  try {
+    await buildEdition(root);
+    const index = readFileSync(join(root, 'dist/index.html'), 'utf8');
+    assert.match(index, /href="\/shared-journal\.epub" download/);
+    const bytes = readFileSync(join(root, 'dist/shared-journal.epub'));
+    // The first entry is the stored mimetype, as EPUB requires.
+    assert.equal(bytes.subarray(30, 38).toString(), 'mimetype');
+    assert.equal(bytes.subarray(38, 58).toString(), 'application/epub+zip');
+    const entries = unzip(bytes);
+    const names = entries.map((e) => e.name);
+    assert.deepEqual(names.slice(0, 5), [
+      'mimetype',
+      'META-INF/container.xml',
+      'OEBPS/package.opf',
+      'OEBPS/nav.xhtml',
+      'OEBPS/style.css',
+    ]);
+    assert.equal(entries[0].method, 0);
+    const text = (name) => entries.find((e) => e.name === name).data.toString('utf8');
+    assert.match(text('OEBPS/package.opf'), /<dc:title>Shared Journal<\/dc:title>/);
+    assert.match(text('OEBPS/package.opf'), /<itemref idref="ch1" \/><itemref idref="ch2" \/>/);
+    assert.match(text('OEBPS/nav.xhtml'), /<a href="text\/ch2.xhtml">Field journal<\/a>/);
+    const first = text('OEBPS/text/ch1.xhtml');
+    assert.match(first, /<h1>Start<\/h1>/);
+    assert.match(first, /<a href="ch2.xhtml">the journal<\/a>/);
+    assert.match(first, /<a data-private="true">private<\/a>/);
+    assert.match(first, /<img src="..\/images\/img1.png" alt="seed" \/>/);
+    assert.ok(names.includes('OEBPS/images/img1.png'));
+    assert.ok(!first.includes('PRIVATE_FRONTMATTER'));
+    assert.ok(!entries.some((e) => e.data.includes('PRIVATE_NOTE_BODY')));
+    assert.match(text('OEBPS/text/ch2.xhtml'), /SECOND_PAGE_BODY/);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+test('the web format writes no book and the site has no download link', async () => {
+  const root = notebook({ title: 'Shared', pages: ['Start.md'] });
+  try {
+    await buildEdition(root);
+    assert.ok(!existsSync(join(root, 'dist/shared.epub')));
+    assert.ok(!readFileSync(join(root, 'dist/index.html'), 'utf8').includes('Download the book'));
+    assert.throws(
+      () => readEdition(notebook({ title: 'x', pages: ['Start.md'], format: 'pdf' })),
+      /web or epub/,
+    );
   } finally {
     rmSync(root, { recursive: true, force: true });
   }

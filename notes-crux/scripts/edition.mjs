@@ -9,6 +9,7 @@ import { unified } from 'unified';
 import remarkParse from 'remark-parse';
 import remarkGfm from 'remark-gfm';
 import remarkHtml from 'remark-html';
+import { buildEpubBytes, slugOf } from './epub.mjs';
 
 /** Keep frontmatter byte-for-byte out of the public edition. */
 export function splitNote(markdown) {
@@ -66,6 +67,9 @@ export function readEdition(folder, { allowEmpty = false } = {}) {
   const layout = config.layout ?? 'single-page';
   if (!['single-page', 'separate-pages'].includes(layout))
     throw new Error('Choose single-page or separate-pages for the public notebook layout.');
+  const format = config.format ?? 'web';
+  if (!['web', 'epub'].includes(format))
+    throw new Error('Choose web or epub for the public notebook format.');
   const images = {};
   const pages = [...new Set(config.pages)].map((path) => {
     if (typeof path !== 'string' || !/\.md$/i.test(path))
@@ -99,7 +103,7 @@ export function readEdition(folder, { allowEmpty = false } = {}) {
     });
     return { path, markdown };
   });
-  return { title: config.title, layout, pages, images };
+  return { title: config.title, layout, format, pages, images };
 }
 
 const escape = (s) =>
@@ -120,7 +124,7 @@ body{margin:0;font:16px/1.6 system-ui,sans-serif;background:var(--bg);color:var(
 .reader article[hidden]{display:none}@media (max-width:650px){.reader{grid-template-columns:1fr}.reader aside{border-right:0;border-bottom:1px solid var(--border)}}`;
 
 /** Render one note's Markdown to HTML with links and images resolved against the edition. */
-async function renderPage(edition, page, hrefFor) {
+async function renderPage(edition, page, hrefFor, srcFor = (target, data) => data) {
   const file = await unified()
     .use(remarkParse)
     .use(remarkGfm)
@@ -137,12 +141,41 @@ async function renderPage(edition, page, hrefFor) {
   html = html.replace(/<img src="([^"]*)"/g, (m, src) => {
     const target = resolveNotePath(page.path, src);
     const image = target ? edition.images[target] : undefined;
-    return image ? `<img src="${image}"` : `<img alt="" src=""`;
+    return image ? `<img src="${escape(srcFor(target, image))}"` : `<img alt="" src=""`;
   });
   return html;
 }
-function shell({ title, headTitle, aside, article, script = '' }) {
-  return `<!doctype html><html lang="en"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width"/><title>${escape(headTitle)}</title><style>${CSS}</style></head><body><div class="reader"><aside><small>PUBLIC NOTEBOOK</small><h1>${escape(title)}</h1>${aside}<small>Grown in Crux Garden<br/>A read-only edition</small></aside>${article}</div>${script}</body></html>`;
+function shell({ title, headTitle, aside, article, script = '', book = '' }) {
+  const download = book
+    ? `<p><a class="book" href="/${escape(book)}" download>Download the book (EPUB)</a></p>`
+    : '';
+  return `<!doctype html><html lang="en"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width"/><title>${escape(headTitle)}</title><style>${CSS}</style></head><body><div class="reader"><aside><small>PUBLIC NOTEBOOK</small><h1>${escape(title)}</h1>${aside}${download}<small>Grown in Crux Garden<br/>A read-only edition</small></aside>${article}</div>${script}</body></html>`;
+}
+/** The book: one chapter per chosen note, links between them kept, images as files. */
+export async function buildEpub(edition, outFile) {
+  const chapterFile = new Map(edition.pages.map((p, i) => [p.path, `ch${i + 1}.xhtml`]));
+  const images = [];
+  const imageFile = new Map();
+  const srcFor = (target, data) => {
+    if (!imageFile.has(target)) {
+      const match = /^data:image\/(png|jpeg|gif|webp);base64,(.*)$/.exec(data);
+      if (!match) return data;
+      const name = `img${images.length + 1}.${match[1] === 'jpeg' ? 'jpg' : match[1]}`;
+      images.push({ name, type: `image/${match[1]}`, data: Buffer.from(match[2], 'base64') });
+      imageFile.set(target, `../images/${name}`);
+    }
+    return imageFile.get(target);
+  };
+  const chapters = [];
+  for (const page of edition.pages)
+    chapters.push({
+      path: page.path,
+      title: stem(page.path),
+      html: await renderPage(edition, page, (path) => chapterFile.get(path), srcFor),
+    });
+  const bytes = buildEpubBytes({ title: edition.title || 'Notebook', chapters, images });
+  writeFileSync(outFile, bytes);
+  return bytes;
 }
 export async function buildEdition(folder, outDir = join(folder, 'dist')) {
   // A build with nothing chosen still builds (a Task's verification runs it before any
@@ -157,11 +190,14 @@ export async function buildEdition(folder, outDir = join(folder, 'dist')) {
         title: edition.title || 'Notebook',
         headTitle: edition.title || 'Notebook',
         aside: '',
-        article: '<article><p>No pages are public yet. Choose notes with “Include in public edition”.</p></article>',
+        article:
+          '<article><p>No pages are public yet. Choose notes with “Include in public edition”.</p></article>',
       }),
     );
     return edition;
   }
+  const book = edition.format === 'epub' ? `${slugOf(edition.title || 'Notebook')}.epub` : '';
+  if (book) await buildEpub(edition, join(outDir, book));
   if (edition.layout === 'separate-pages') {
     for (const page of edition.pages) {
       const nav = edition.pages
@@ -175,6 +211,7 @@ export async function buildEdition(folder, outDir = join(folder, 'dist')) {
         headTitle: `${stem(page.path)} — ${edition.title}`,
         aside: `<nav>${nav}</nav>`,
         article: `<article><h2>${escape(stem(page.path))}</h2>${await renderPage(edition, page, noteUrl)}</article>`,
+        book,
       });
       const target = join(outDir, 'notes', ...page.path.split('/'), 'index.html');
       mkdirSync(dirname(target), { recursive: true });
@@ -202,6 +239,7 @@ export async function buildEdition(folder, outDir = join(folder, 'dist')) {
     aside: `<input aria-label="Search notebook" placeholder="Search pages…"/><nav>${nav}</nav>`,
     article: articles.join(''),
     script,
+    book,
   });
   writeFileSync(join(outDir, 'index.html'), html);
   return edition;
@@ -209,5 +247,7 @@ export async function buildEdition(folder, outDir = join(folder, 'dist')) {
 
 if (process.argv[1] && resolve(process.argv[1]) === resolve(new URL(import.meta.url).pathname)) {
   const edition = await buildEdition(process.cwd());
-  console.log(`Public edition: ${edition.pages.length} page(s), ${edition.layout}.`);
+  console.log(
+    `Public edition: ${edition.pages.length} page(s), ${edition.layout}${edition.format === 'epub' ? ', with the book' : ''}.`,
+  );
 }

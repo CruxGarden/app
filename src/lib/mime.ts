@@ -49,6 +49,7 @@ const MIME_BY_EXT: Record<string, string> = {
   bmp: 'image/bmp',
   // Documents
   pdf: 'application/pdf',
+  epub: 'application/epub+zip',
   // Archives
   zip: 'application/zip',
   tar: 'application/x-tar',

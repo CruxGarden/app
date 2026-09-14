@@ -64,9 +64,12 @@ export function notebookSession(workspace: StoreApi<CruxState>) {
         if (request.bytes instanceof ArrayBuffer) {
           if (
             typeof request.mimeType !== 'string' ||
-            request.bytes.byteLength > (request.mimeType.startsWith('video/') ? 512_000_000 : 32_000_000)
+            request.bytes.byteLength >
+              (request.mimeType.startsWith('video/') ? 512_000_000 : 32_000_000)
           )
-            throw new Error('Use a PNG, JPEG, WebP, GIF, WAV, MP3, ZIP, PDF or DOCX output up to 32 MB, or a video up to 512 MB.');
+            throw new Error(
+              'Use a PNG, JPEG, WebP, GIF, WAV, MP3, ZIP, PDF or DOCX output up to 32 MB, or a video up to 512 MB.',
+            );
           blob = new Blob([request.bytes], { type: request.mimeType });
         } else {
           if (typeof request.content !== 'string' || request.content.length > 44_000_000)
@@ -117,6 +120,34 @@ export function notebookSession(workspace: StoreApi<CruxState>) {
           mimeType: blob.type || guessMimeType(path),
           fingerprint: file.fingerprint,
         };
+      }
+      if (request.op === 'build-book' && state.crux?.kind === 'notes') {
+        // The book edition: the same build Share runs, and its EPUB kept as an output.
+        await assertCopyWritable(owner);
+        const manifest = (await artifact.findByResource('crux', owner)).find(
+          (f) => pathOf(f) === 'notebook/publish.json',
+        );
+        if (!manifest) throw new Error('The notebook publication settings are missing.');
+        const config = JSON.parse(await artifact.readContent(manifest.id));
+        if (config.format !== 'epub')
+          throw new Error(
+            'Choose “Web pages and an EPUB book” under Notebook sharing settings before saving the book.',
+          );
+        if (!Array.isArray(config.pages) || !config.pages.length)
+          throw new Error('Select at least one note with “Include in public edition” first.');
+        const { buildForPublish } = await import('./site');
+        const built = await buildForPublish(owner);
+        const book = built.find((file) => /\.epub$/i.test(file.path));
+        if (!book) throw new Error('The edition build produced no book.');
+        const { saveCruxOutput } = await import('./cruxspace-assets');
+        const label = `${typeof config.title === 'string' && config.title.trim() ? config.title.trim() : 'Notebook'} (EPUB)`;
+        const result = await saveCruxOutput(
+          owner,
+          new Blob([await book.blob.arrayBuffer()], { type: 'application/epub+zip' }),
+          label.slice(0, 120),
+        );
+        await workspace.getState().refreshArtifacts();
+        return result;
       }
       if (request.op === 'read-bytes' && state.crux?.kind === 'notes') {
         // A document a person put in the Crux (a .docx beside the notebook) for Tigrana to import.
@@ -268,6 +299,7 @@ export function notebookSession(workspace: StoreApi<CruxState>) {
               !Array.isArray(config.pages) ||
               (config.layout !== undefined &&
                 !['single-page', 'separate-pages'].includes(config.layout)) ||
+              (config.format !== undefined && !['web', 'epub'].includes(config.format)) ||
               config.pages.some(
                 (p: unknown) => typeof p !== 'string' || !/\.md$/i.test(p) || !notebookPath(p),
               )

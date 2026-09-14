@@ -6,7 +6,9 @@ import { copyIdentity } from '@/services/working-copies';
 import {
   NOTEBOOK_PAGE_ROUTE,
   setNotebookLayout,
+  setNotebookFormat,
   type NotebookLayout,
+  type NotebookFormat,
 } from '@/services/notebook-sharing';
 import { trackWorkspacePromise } from '@/stores/workspaceSelection';
 
@@ -20,6 +22,7 @@ export default function NotesSharingSettings() {
   const configFingerprint = config?.fingerprint;
   const supported = artifacts.some((file) => pathOf(file) === NOTEBOOK_PAGE_ROUTE);
   const [layout, setLayout] = useState<NotebookLayout>('single-page');
+  const [format, setFormat] = useState<NotebookFormat>('web');
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
   const [loaded, setLoaded] = useState(false);
@@ -30,11 +33,16 @@ export default function NotesSharingSettings() {
       void getServices()
         .artifact.readContent(configId)
         .then((content) => {
-          const value = JSON.parse(content).layout ?? 'single-page';
+          const parsed = JSON.parse(content);
+          const value = parsed.layout ?? 'single-page';
           if (!['single-page', 'separate-pages'].includes(value))
             throw new Error('Unknown public layout in notebook/publish.json.');
+          const book = parsed.format ?? 'web';
+          if (!['web', 'epub'].includes(book))
+            throw new Error('Unknown public format in notebook/publish.json.');
           if (active) {
             setLayout(value);
+            setFormat(book);
             setLoaded(true);
             setError('');
           }
@@ -82,6 +90,35 @@ export default function NotesSharingSettings() {
       <p className="text-xs text-text-muted">
         Share selected notes as one searchable reader or as individual HTML pages that work without
         JavaScript. Use Share to update the website; switching layouts changes note URLs.
+      </p>
+      <label htmlFor="notebook-public-format" className="block text-xs font-medium">
+        Book edition
+      </label>
+      <select
+        id="notebook-public-format"
+        value={format}
+        disabled={!loaded || !supported || saving || locked || (!!copy && copy.phase !== 'ready')}
+        className="w-full min-w-0 p-2 text-xs bg-surface-solid text-text border border-border rounded-[var(--radius-sm)]"
+        onChange={async (event) => {
+          const next = event.target.value as NotebookFormat;
+          setSaving(true);
+          setError('');
+          try {
+            await trackWorkspacePromise(workspace, setNotebookFormat(workspace, next));
+            setFormat(next);
+          } catch (err) {
+            setError((err as Error).message);
+          } finally {
+            setSaving(false);
+          }
+        }}
+      >
+        <option value="web">Web pages only</option>
+        <option value="epub">Web pages and an EPUB book</option>
+      </select>
+      <p className="text-xs text-text-muted">
+        With a book, the public edition offers the same notes as an EPUB to download, and Save book
+        (EPUB) in the notebook bar keeps a copy as an output for a Cruxspace.
       </p>
       {!supported && (
         <p className="text-xs text-text-muted">

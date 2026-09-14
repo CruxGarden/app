@@ -47,6 +47,7 @@ const EXTENSIONS: Record<string, string> = {
   'audio/x-wav': 'wav',
   'audio/mpeg': 'mp3',
   'application/zip': 'zip',
+  'application/epub+zip': 'epub',
   'application/pdf': 'pdf',
   'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'docx',
   'video/webm': 'webm',
@@ -69,7 +70,7 @@ export function outputKind(mimeType: string): 'image' | 'audio' | 'bundle' {
 const KIND_PATTERN = {
   image: /\.(png|jpe?g|gif|webp)$/i,
   audio: /\.(wav|mp3)$/i,
-  bundle: /\.zip$/i,
+  bundle: /\.(zip|epub)$/i,
 };
 const KIND_EXAMPLE = {
   image: 'assets/cover.png',
@@ -104,7 +105,9 @@ export async function saveCruxOutput(
     await getServices().crux.findById(owner);
     const ext = EXTENSIONS[blob.type];
     if (!ext || !blob.size || blob.size > maxFor(blob.type))
-      throw new Error('Choose a PNG, JPEG, WebP, GIF, WAV, MP3, ZIP, PDF, DOCX (32 MB) or a WebM/MP4 video (512 MB).');
+      throw new Error(
+        'Choose a PNG, JPEG, WebP, GIF, WAV, MP3, ZIP, PDF, DOCX (32 MB) or a WebM/MP4 video (512 MB).',
+      );
     if (!label.trim() || label.length > 120)
       throw new Error('Name the output using up to 120 characters.');
     const bytes = new Uint8Array(await blob.arrayBuffer());
@@ -273,8 +276,7 @@ export async function copyCruxspaceAsset(input: UseCruxspaceAsset) {
           throw new Error('The bundle has too many files to unpack (2,000 at most).');
         const bytes = await entry.async('uint8array');
         total += bytes.byteLength;
-        if (total > MAX_BUNDLE_BYTES)
-          throw new Error('The bundle is too large to unpack (64 MB).');
+        if (total > MAX_BUNDLE_BYTES) throw new Error('The bundle is too large to unpack (64 MB).');
         if (await taken(target))
           throw new Error(`A file already exists at ${target}. Choose an empty folder.`);
         entries.push({

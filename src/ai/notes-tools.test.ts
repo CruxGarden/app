@@ -8,9 +8,12 @@ describe('Notes App Tools', () => {
     expect(adapter.tools.map((t) => t.name)).toEqual([
       'inspect_notebook',
       'export_note_docx',
+      'save_notebook_book',
       'import_document',
     ]);
     expect(NOTES_TOOLS.find((t) => t.name === 'export_note_docx')!.writes).toEqual(['exports/']);
+    expect(notesCommand('save_notebook_book', {})).toEqual({ op: 'save-book' });
+    expect(() => notesCommand('save_notebook_book', { note: 'x' })).toThrow(/no arguments/);
   });
   it('prepares the bridge commands and refuses bad input', () => {
     expect(notesCommand('inspect_notebook', {})).toEqual({ op: 'inspect' });
