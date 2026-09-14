@@ -41,7 +41,99 @@ export const NOTES_TOOLS: AppToolDefinition[] = [
     writes: ['notebook/Imported/'],
   },
 ];
+const notePath = {
+  type: 'string',
+  minLength: 1,
+  maxLength: 240,
+  description: 'The activeNote path from inspect_notebook, relative to notebook/.',
+};
+for (const [name, description, properties, required, writes] of [
+  [
+    'read_open_note',
+    'Read 4,000 characters of Markdown from the live open note. Returns nextOffset for pagination.',
+    { note: notePath, offset: { type: 'integer', minimum: 0 } },
+    ['note'],
+    [],
+  ],
+  [
+    'replace_note_text',
+    'Replace one exact, unique phrase within a paragraph in the open note. Retains surrounding formatting and native Undo. Read first; ambiguous or missing text is refused.',
+    {
+      note: notePath,
+      search: { type: 'string', minLength: 1, maxLength: 2000 },
+      replacement: { type: 'string', maxLength: 2000 },
+    },
+    ['note', 'search', 'replacement'],
+    ['notebook/'],
+  ],
+  [
+    'append_note_text',
+    'Append plain text as new paragraphs to the open note. Newlines separate paragraphs; text is not interpreted as HTML or Markdown. Retains native Undo.',
+    { note: notePath, text: { type: 'string', minLength: 1, maxLength: 8000 } },
+    ['note', 'text'],
+    ['notebook/'],
+  ],
+] as const)
+  NOTES_TOOLS.push({
+    name,
+    description,
+    input_schema: {
+      type: 'object',
+      properties,
+      required: [...required],
+      additionalProperties: false,
+    },
+    writes: [...writes],
+  });
+
 export function notesCommand(name: string, input: Record<string, unknown>) {
+  const editOp: Record<string, string> = {
+    read_open_note: 'read-note',
+    replace_note_text: 'replace-text',
+    append_note_text: 'append-text',
+  };
+  if (editOp[name]) {
+    const allowed =
+      name === 'read_open_note'
+        ? ['note', 'offset']
+        : name === 'replace_note_text'
+          ? ['note', 'search', 'replacement']
+          : ['note', 'text'];
+    if (
+      Object.keys(input).some((k) => !allowed.includes(k)) ||
+      typeof input.note !== 'string' ||
+      input.note.length > 240 ||
+      !input.note.endsWith('.md') ||
+      input.note.split('/').some((p) => !p || p === '.' || p === '..') ||
+      input.note.includes('\\') ||
+      [...input.note].some((c) => c.charCodeAt(0) < 32)
+    )
+      throw new Error('Use the activeNote path from inspect_notebook and the documented inputs.');
+    if (
+      name === 'read_open_note' &&
+      input.offset !== undefined &&
+      (!Number.isSafeInteger(input.offset) || Number(input.offset) < 0)
+    )
+      throw new Error('Use a nonnegative integer offset.');
+    if (
+      name === 'replace_note_text' &&
+      (typeof input.search !== 'string' ||
+        !input.search ||
+        input.search.length > 2000 ||
+        typeof input.replacement !== 'string' ||
+        input.replacement.length > 2000 ||
+        /[\r\n]/.test(input.search + input.replacement))
+    )
+      throw new Error(
+        'Use search and replacement text within one paragraph, up to 2,000 characters.',
+      );
+    if (
+      name === 'append_note_text' &&
+      (typeof input.text !== 'string' || !input.text.trim() || input.text.length > 8000)
+    )
+      throw new Error('Append plain text of 1–8,000 characters.');
+    return { ...input, op: editOp[name] };
+  }
   if (name === 'inspect_notebook' && !Object.keys(input).length) return { op: 'inspect' };
   if (name === 'export_note_docx') {
     const keys = Object.keys(input);

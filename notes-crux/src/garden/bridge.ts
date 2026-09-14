@@ -35,6 +35,14 @@ let activeNote: string | null = null;
 let findImage: ((src: string) => string | null) | null = null;
 let sweepImages: (() => void) | null = null;
 
+type EditorHandle = { path: string; read: () => string; edit: (command: Record<string, unknown>) => void };
+let openEditor: EditorHandle | null = null;
+let commandTail: Promise<unknown> = Promise.resolve();
+export function registerNoteEditor(handle: EditorHandle) {
+  openEditor = handle;
+  return () => { if (openEditor === handle) openEditor = null; };
+}
+
 const send = (value: Record<string, unknown>) =>
   window.parent.postMessage(
     { type: 'crux:notebook', id: crypto.randomUUID(), ...value },
@@ -365,6 +373,22 @@ async function saveBook() {
   }
 }
 async function runCommand(command: Record<string, unknown>) {
+  if (['read-note', 'replace-text', 'append-text'].includes(String(command.op))) {
+    const editor = openEditor;
+    if (!editor || editor.path !== activeNote) throw new Error('Open a note first and wait for it to load.');
+    if (command.note !== editor.path) throw new Error('The open note changed. Inspect the notebook and use its activeNote path.');
+    await flush();
+    if (openEditor !== editor) throw new Error('The open note changed. Read it again.');
+    if (command.op === 'read-note') {
+      const text = editor.read();
+      const offset = Number(command.offset ?? 0);
+      if (!Number.isInteger(offset) || offset < 0 || offset > text.length) throw new Error('Use an offset within this note.');
+      return { note: editor.path, content: text.slice(offset, offset + 4000), length: text.length, nextOffset: offset + 4000 < text.length ? offset + 4000 : null };
+    }
+    editor.edit(command);
+    await flush();
+    return { note: editor.path, saved: true };
+  }
   if (command.op === 'inspect') {
     const notes = listNotes ? await listNotes() : [];
     return {
@@ -493,7 +517,9 @@ function listen() {
         (error) => send({ op: 'flushed', flushId: message.id, error: (error as Error).message }),
       );
     } else if (message.type === 'crux:notebook:command') {
-      runCommand(message.command as Record<string, unknown>).then(
+      const operation = commandTail.then(() => runCommand(message.command as Record<string, unknown>));
+      commandTail = operation.catch(() => {});
+      operation.then(
         (result) => send({ op: 'tool-result', commandId: message.id, result }),
         (error) =>
           send({ op: 'tool-result', commandId: message.id, error: (error as Error).message }),

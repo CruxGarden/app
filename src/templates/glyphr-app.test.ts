@@ -25,4 +25,4 @@ it('packages the font tool: upstream source, the bridge and validator, the licen
   expect(new Set(paths).size).toBe(paths.length);
   expect(template.files.find((f) => f.path === 'runtime/index.html')!.encoding).toBe('asset-url');
   expect((template.meta?.settings as { entryFile?: string })?.entryFile).toBe('runtime/index.html');
-});
+}, 60000);

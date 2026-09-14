@@ -10,6 +10,9 @@ describe('Notes App Tools', () => {
       'export_note_docx',
       'save_notebook_book',
       'import_document',
+      'read_open_note',
+      'replace_note_text',
+      'append_note_text',
     ]);
     expect(NOTES_TOOLS.find((t) => t.name === 'export_note_docx')!.writes).toEqual(['exports/']);
     expect(notesCommand('save_notebook_book', {})).toEqual({ op: 'save-book' });
@@ -29,4 +32,19 @@ describe('Notes App Tools', () => {
     });
     expect(() => notesCommand('import_document', { path: 'inbox/letter.txt' })).toThrow('.docx');
   });
+});
+
+it('bounds live note edits and requires a scoped notebook path', () => {
+  expect(
+    notesCommand('replace_note_text', { note: 'Brief.md', search: '120', replacement: '180' }),
+  ).toMatchObject({ op: 'replace-text' });
+  for (const note of ['../Brief.md', '/Brief.md', 'a\\Brief.md', 'Brief.md\n', ''])
+    expect(() => notesCommand('read_open_note', { note })).toThrow();
+  expect(() =>
+    notesCommand('replace_note_text', { note: 'Brief.md', search: 'one\ntwo', replacement: 'x' }),
+  ).toThrow();
+  expect(() =>
+    notesCommand('append_note_text', { note: 'Brief.md', text: 'x'.repeat(8001) }),
+  ).toThrow();
+  expect(() => notesCommand('read_open_note', { note: 'Brief.md', offset: -1 })).toThrow();
 });

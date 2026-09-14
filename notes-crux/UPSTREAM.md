@@ -13,3 +13,18 @@ This is the actual Tigrana: `src/` is upstream's React app unchanged except one 
 - `vite.config.ts`: relative paths and `OUT_DIR` for the Workshop runtime; upstream's suites run under Vitest with the Garden script excluded.
 
 Build: `npm install --ignore-scripts` (the lockfile is refreshed here), `npm run build:garden` → `runtime/` for the Workshop, `npm run build` → `dist/` public edition, `npm run check`, `npm test`.
+
+## Tool depth — 2026-09-14
+
+Marked additional upstream seam: `src/editor/NotesEditor.tsx` registers the open editor with the Garden bridge. `src/garden/editor-commands.ts` applies ordinary ProseMirror transactions, keeping native Undo and the existing autosave/fingerprint path. The bridge serializes commands and checks that the requested note is still open after pending edits drain.
+
+| Person's action | App Tool | Native seam |
+| --- | --- | --- |
+| Read the open note | `read_open_note` | Live editor → existing `htmlToMarkdown`; 4,000-character pages |
+| Find and replace a unique phrase | `replace_note_text` | Exact text within a paragraph, including across inline marks; `tr.insertText`; ambiguous/missing matches refused |
+| Type new paragraphs at the end | `append_note_text` | Paragraph/text nodes inserted in one transaction; text stays literal; separate Undo step |
+| Hand the note on as Word | Existing `export_note_docx` | Existing autosave drain and DOCX renderer |
+
+Edits require `activeNote` from `inspect_notebook`, preserve the remaining document and remain editable by the person. This does not add tracked changes or arbitrary document replacement. `editor-commands.test.ts` tests inline formatting, literal text, ambiguity, read-only refusal and Undo. Desktop coverage: `electron/e2e/productivity-depth.spec.ts` in the host app.
+
+These editor handles ship in new Notes Cruxes. Existing Project Folders keep their own runtime; no automatic upgrade is performed.
