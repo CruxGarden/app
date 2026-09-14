@@ -377,6 +377,14 @@
         q.gardenEditingClip = function () { return editing_clip; };
         // Garden restores the native model directly; no server emulation.
         q.gardenRestore = function (state) { editing_clip = null; restoreState(state); };
+        // Garden applies a validated, synchronous native arrangement transaction.
+        // Validation runs before this hook; one native Undo step retains original PCM.
+        q.gardenApplyArrangement = function (next, description) {
+            if (editing_clip) throw new Error('Detach the waveform before editing the arrangement.');
+            var previous = cloneState();
+            restoreState(next);
+            pushState(previous, description);
+        };
         q.gardenRenameTrack = function (id, name) {
             var t = tracks.find(function (t) { return t.id === id; });
             if (!t) throw new Error('Choose an existing track.');

@@ -1,5 +1,12 @@
+import { arrangementFields, validateArrangement } from './arrangement.js';
 import { validateProjectArtifactPath } from './shared/project-file.js';
 const fields = {
+  ...Object.fromEntries(
+    Object.entries(arrangementFields).map(([op, keys]) => [
+      op,
+      [...keys, 'expectedArrangementHash'],
+    ]),
+  ),
   inspect: ['offset', 'limit', 'sampleStart', 'sampleCount'],
   'load-audio': ['path', 'expectedWaveformHash'],
   selection: ['start', 'end', 'channels', 'expectedWaveformHash'],
@@ -37,6 +44,7 @@ export function validateCommand(input) {
     throw Error('Inspect native history first and supply expectedHistoryHash.');
   if (v.op === 'paste' && !v.expectedClipboardHash)
     throw Error('Inspect the native clipboard first and supply expectedClipboardHash.');
+  if (Object.hasOwn(arrangementFields, v.op)) return validateArrangement(v);
   if (v.op === 'inspect') {
     for (const [k, max] of [
       ['offset', 2000],

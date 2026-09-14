@@ -11,6 +11,8 @@ it('packages the actual AudioMass editor and its local runtimes', async () => {
     'src/runtime/wavesurfer.js',
     'src/garden/bridge.js',
     'src/garden/audio-commands.js',
+    'src/garden/arrangement.js',
+    'src/garden/tests/arrangement.test.cjs',
     'src/garden/commands.d.ts',
     'src/garden/shared/command-session.js',
     'src/garden/shared/project-file.js',

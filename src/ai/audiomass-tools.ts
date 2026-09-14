@@ -26,10 +26,129 @@ function tool(
     timeoutMs: 180000,
   };
 }
+const id = { type: 'string', minLength: 1, maxLength: 200 };
+const label = { type: 'string', minLength: 1, maxLength: 200 };
+const volume = { type: 'number', minimum: 0, maximum: 1 };
+const index = { type: 'integer', minimum: 0, maximum: 127 };
+const arrangementTools: Array<[string, string, string, Record<string, unknown>, string[]]> = [
+  [
+    'create_audiomass_track',
+    'create-track',
+    'Create a named native arrangement track, optionally at a zero-based index (otherwise append). At most 128 tracks.',
+    { name: label, index },
+    ['name'],
+  ],
+  [
+    'update_audiomass_track',
+    'update-track',
+    'Revise only supplied track fields: name, linear volume 0–1, pan -1 left to +1 right, mute or solo. Preserves clips and other tracks.',
+    {
+      id,
+      name: label,
+      volume,
+      pan: { type: 'number', minimum: -1, maximum: 1 },
+      mute: { type: 'boolean' },
+      solo: { type: 'boolean' },
+    },
+    ['id'],
+  ],
+  [
+    'move_audiomass_track',
+    'move-track',
+    'Move an existing track to a zero-based list index; its clips stay attached.',
+    { id, index },
+    ['id', 'index'],
+  ],
+  [
+    'delete_audiomass_track',
+    'delete-track',
+    'Remove an inspected track. Refuses nonempty tracks unless deleteClips is explicitly true. Keeps at least one track.',
+    { id, deleteClips: { type: 'boolean' } },
+    ['id'],
+  ],
+  [
+    'add_audiomass_clip',
+    'add-clip',
+    'Place the current detached mono/stereo waveform on a track at a timeline time in seconds. Optional sourceStart/sourceEnd trim within the source; source PCM remains unchanged. Load an audio Artifact first to use different source audio.',
+    {
+      trackId: id,
+      start: time,
+      name: label,
+      sourceStart: time,
+      sourceEnd: time,
+      expectedWaveformHash: hash,
+    },
+    ['trackId', 'start', 'expectedWaveformHash'],
+  ],
+  [
+    'update_audiomass_clip',
+    'update-clip',
+    'Revise supplied clip fields: name, destination track, timeline start, sourceStart/sourceEnd trim, fadeIn/fadeOut durations in seconds. Leaves source PCM and other clips intact. Fades are zero or at least 5 ms, and their combined duration must fit the trimmed clip.',
+    {
+      id,
+      trackId: id,
+      start: time,
+      name: label,
+      sourceStart: time,
+      sourceEnd: time,
+      fadeIn: time,
+      fadeOut: time,
+    },
+    ['id'],
+  ],
+  [
+    'duplicate_audiomass_clip',
+    'duplicate-clip',
+    'Duplicate an inspected clip at an explicit timeline start, optionally on a different track or with a different name. Shares source audio, retains trimming/fades and creates a new clip ID.',
+    { id, start: time, trackId: id, name: label },
+    ['id', 'start'],
+  ],
+  [
+    'split_audiomass_clip',
+    'split-clip',
+    'Split a clip at an exact timeline time in seconds, leaving at least one millisecond on each side. Shares source PCM, retains outer fades and clears fades at the cut. Does not snap to zero crossings.',
+    { id, at: time },
+    ['id', 'at'],
+  ],
+  [
+    'delete_audiomass_clip',
+    'delete-clip',
+    'Remove one inspected arrangement clip while keeping its track and all other clips.',
+    { id },
+    ['id'],
+  ],
+  [
+    'set_audiomass_mix',
+    'set-mix',
+    'Set native arrangement master volume, linear 0–1. Track settings remain unchanged.',
+    { volume },
+    ['volume'],
+  ],
+  [
+    'audiomass_arrangement_history',
+    'arrangement-history',
+    'Undo or redo one native history step from the arrangement. Native history is shared with waveform/manual edits. Also supply waveformHash if a waveform is loaded; native history resets on reopening, Growth persists.',
+    {
+      direction: { type: 'string', enum: ['undo', 'redo'] },
+      expectedHistoryHash: hash,
+      expectedWaveformHash: hash,
+    },
+    ['direction', 'expectedHistoryHash'],
+  ],
+];
 export const AUDIOMASS_TOOLS: AppToolDefinition[] = [
+  ...arrangementTools.map(([name, , description, properties, required]) =>
+    tool(
+      name,
+      description +
+        ' Inspect first and supply arrangementHash. Detach any linked waveform before arrangement edits. Uses native Undo and confirmed saves.',
+      { ...properties, expectedArrangementHash: hash },
+      [...required, 'expectedArrangementHash'],
+    ),
+  ),
   tool(
     'inspect_audiomass',
-    'Inspect the active waveform, per-channel peak/RMS/envelope, current waveformHash, selection, clipboardHash, native historyHash and paginated arrangement tracks/clips. Optional PCM sample window: at most 128 frames per channel. Inspect before editing. Native edits use millisecond boundaries; editing a linked clip also changes its arrangement audio.',
+    'Inspect the active waveform, per-channel peak/RMS/envelope, current waveformHash, selection, clipboardHash, native historyHash and paginated arrangement tracks/clips, arrangementHash and masterVolume. Optional PCM sample window: at most 128 frames per channel. Inspect before editing. Native edits use millisecond boundaries; editing a linked clip also changes its arrangement audio.',
     {
       offset: { type: 'integer', minimum: 0, maximum: 2000 },
       limit: { type: 'integer', minimum: 1, maximum: 50 },
@@ -139,6 +258,7 @@ export const AUDIOMASS_TOOLS: AppToolDefinition[] = [
   ),
 ];
 const operations: Record<string, string> = {
+  ...Object.fromEntries(arrangementTools.map(([name, op]) => [name, op])),
   inspect_audiomass: 'inspect',
   load_audiomass_audio: 'load-audio',
   select_audiomass_range: 'selection',

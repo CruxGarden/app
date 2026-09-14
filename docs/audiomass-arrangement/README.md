@@ -1,0 +1,9 @@
+# AudioMass arrangement acceptance
+
+Status: arrangement acceptance verified, 2026-09-14. The journey passed in 1.5 minutes; existing native regression passed in 21.9 seconds and waveform depth in 1.3 minutes. Both screenshots visually inspected. Full app verification passes all bundled checks, 1,095 host tests and the production build; Electron verification and ten final native tests pass.
+
+The scripted-model desktop journey (`electron/e2e/audiomass-arrangement.spec.ts`) loads a stereo audio Artifact, preserves a person's native track name, creates an Effects track, places and duplicates audio, trims/moves/fades/splits the duplicate, changes track mix settings and track order, exercises native Undo/Redo and deletion, and exports the actual native mixdown. It checks source PCM descriptors remain unchanged, the output has the expected duration and silent gap, confirms native manual mute produces silent exported PCM, then restarts and imports a complete Crux with the source Project Folder offline. Both restore paths check that repeated clips still share one decoded source buffer. Native manual renaming/Undo continues after import.
+
+Evidence files are created only by the acceptance journey: native-arrangement.png, portable-arrangement.png and arranged-chimes.wav. The test uses an isolated Garden and scripted model; it does not measure live-model effectiveness. Native/model tests cover invalid operations, manual-state preservation, source PCM sharing and stale arrangement detection. Host validation and portable source packaging are also checked.
+
+Eleven added tools expand AudioMass to 24. Markers, clip-editor opening, advanced processing/crossfades, tempo/grid and session interchange remain open; see the root Tool Depth plan and audiomass-crux/UPSTREAM.md. Existing Project Folders and previously built demo packages are not automatically upgraded.

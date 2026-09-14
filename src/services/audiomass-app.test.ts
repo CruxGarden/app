@@ -181,3 +181,26 @@ it('retains lossless audio bytes and provenance when another member uses a FLAC 
   )!;
   expect(new Uint8Array(await (await artifact.downloadBlob(file.id)).arrayBuffer())).toEqual(bytes);
 });
+
+it('arrangement tool contract exposes guarded scoped native edits', () => {
+  const adapter = embeddedAppToolAdapter({ meta: { template: 'audiomass-app' } })!;
+  const hash = 'b'.repeat(64);
+  expect(
+    adapter.prepare('create_audiomass_track', { name: 'Voice', expectedArrangementHash: hash }),
+  ).toEqual({ op: 'create-track', name: 'Voice', expectedArrangementHash: hash });
+  expect(
+    adapter.prepare('update_audiomass_clip', {
+      id: 'mc1',
+      fadeIn: 0.2,
+      expectedArrangementHash: hash,
+    }),
+  ).toEqual({ op: 'update-clip', id: 'mc1', fadeIn: 0.2, expectedArrangementHash: hash });
+  expect(() => adapter.prepare('delete_audiomass_track', { id: 'mt1' })).toThrow();
+  expect(() =>
+    adapter.prepare('update_audiomass_clip', {
+      id: 'mc1',
+      path: '../other',
+      expectedArrangementHash: hash,
+    }),
+  ).toThrow();
+});

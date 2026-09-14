@@ -182,9 +182,11 @@ export async function startGarden(app) {
     }
     return { __cruxAudio: { length: buffer.length, sampleRate: buffer.sampleRate, channels } };
   }
-  async function decodeAudio(value) {
+  async function decodeAudio(value, decoded) {
     if (!value) return null;
     const a = value.__cruxAudio;
+    const key = JSON.stringify(a);
+    if (decoded.has(key)) return decoded.get(key);
     const buffer = app.engine.wavesurfer.backend.ac.createBuffer(
       a.channels.length,
       a.length,
@@ -196,6 +198,7 @@ export async function startGarden(app) {
       buffer.copyToChannel(new Float32Array(asset.bytes), i);
       audioCache.set(ref.__cruxBinary.path.slice(7, -4), ref);
     }
+    decoded.set(key, buffer);
     return buffer;
   }
   async function capture() {
@@ -413,7 +416,9 @@ export async function startGarden(app) {
     validateProject(doc);
     if (doc.project) {
       const p = doc.project;
-      const waveform = await decodeAudio(p.waveform);
+      // Repeated/trimmed clips share source PCM after reopening too.
+      const decoded = new Map();
+      const waveform = await decodeAudio(p.waveform, decoded);
       if (waveform) {
         if (
           app.engine.LoadDB({
@@ -427,7 +432,7 @@ export async function startGarden(app) {
         )
           throw new Error('Could not restore the saved waveform.');
       }
-      for (const clip of p.multitrack.clips) clip.buffer = await decodeAudio(clip.buffer);
+      for (const clip of p.multitrack.clips) clip.buffer = await decodeAudio(clip.buffer, decoded);
       app.multitrack.gardenRestore(p.multitrack);
       app.mrk.loadEd(p.editorMarkers, false);
       app.mrk.loadMt(p.multitrackMarkers, false);
