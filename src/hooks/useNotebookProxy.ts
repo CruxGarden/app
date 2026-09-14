@@ -52,6 +52,7 @@ export function useNotebookProxy(cruxId: string | null) {
               return Promise.reject(
                 new Error('Open the current app in Workshop before using its tools.'),
               );
+            const wait = toolAdapter.tools.find((t) => t.name === name)?.timeoutMs ?? 60000;
             return new Promise((resolve, reject) => {
               const id = crypto.randomUUID();
               const timer = setTimeout(() => {
@@ -61,7 +62,7 @@ export function useNotebookProxy(cruxId: string | null) {
                     'App command was not confirmed. Inspect the app before retrying; a draft may remain.',
                   ),
                 );
-              }, 60000);
+              }, wait);
               commands.set(id, {
                 resolve: (result) => {
                   clearTimeout(timer);
@@ -136,7 +137,10 @@ export function useNotebookProxy(cruxId: string | null) {
       if (pending && cruxId) {
         removeSetting(pendingKey);
         try {
-          const { tool, input } = JSON.parse(pending) as { tool: string; input: Record<string, unknown> };
+          const { tool, input } = JSON.parse(pending) as {
+            tool: string;
+            input: Record<string, unknown>;
+          };
           if (toolAdapter!.tools.some((t) => t.name === tool))
             setTimeout(() => {
               void executeAppTool(cruxId!, tool, input).catch((error) =>

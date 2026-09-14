@@ -1,6 +1,10 @@
 import type { ToolDefinition } from '@/ai/tools';
 
-export type AppToolDefinition = ToolDefinition & { writes: readonly string[] };
+export type AppToolDefinition = ToolDefinition & {
+  writes: readonly string[];
+  /** How long the host waits for the app to confirm (default a minute; a build takes longer). */
+  timeoutMs?: number;
+};
 type Controller = {
   tools: readonly AppToolDefinition[];
   execute(name: string, input: Record<string, unknown>): Promise<unknown>;

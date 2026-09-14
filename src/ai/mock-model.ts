@@ -457,6 +457,12 @@ export function getMockLanguageModel(): LanguageModel {
           if (rounds.length === 1) return toolCallStream('export_note_docx', {});
           return textStream('Exported the open note as a Word document in exports.');
         }
+        if (lastUserText(prompt).includes('[notes:book]')) {
+          const rounds = toolResultsThisTurn(prompt);
+          if (!rounds.length) return toolCallStream('inspect_notebook', {});
+          if (rounds.length === 1) return toolCallStream('save_notebook_book', {});
+          return textStream('Built the book from the public notes and saved it in exports.');
+        }
         if (lastUserText(prompt).includes('[notes:import]')) {
           const rounds = toolResultsThisTurn(prompt);
           if (!rounds.length)
