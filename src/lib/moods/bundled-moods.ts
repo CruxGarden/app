@@ -38,6 +38,19 @@ import bg_infinity_library from '@/assets/moods/infinity-library/garden.webp?url
 import bg_static from '@/assets/moods/static/garden.webp?url';
 import bg_trance from '@/assets/moods/trance/garden.webp?url';
 import bg_neon_rain from '@/assets/moods/neon-rain/garden.webp?url';
+import bg_ember_horizon from '@/assets/moods/ember-horizon/garden.webp?url';
+import bg_last_light from '@/assets/moods/last-light/garden.webp?url';
+import bg_holo_collage from '@/assets/moods/holo-collage/garden.webp?url';
+import bg_iridescent_hall from '@/assets/moods/iridescent-hall/garden.webp?url';
+import bg_neon_pool from '@/assets/moods/neon-pool/garden.webp?url';
+import bg_vortex_road from '@/assets/moods/vortex-road/garden.webp?url';
+import bg_back_room from '@/assets/moods/back-room/garden.webp?url';
+import bg_cave_window from '@/assets/moods/cave-window/garden.webp?url';
+import bg_painted_panels from '@/assets/moods/painted-panels/garden.webp?url';
+import bg_mist_ridge from '@/assets/moods/mist-ridge/garden.webp?url';
+import bg_blue_raster from '@/assets/moods/blue-raster/garden.webp?url';
+import bg_signal_loss from '@/assets/moods/signal-loss/garden.webp?url';
+import bg_scanline from '@/assets/moods/scanline/garden.webp?url';
 
 const CREATED = '2026-09-04T00:00:00.000Z';
 
@@ -436,6 +449,214 @@ const SPECS: Spec[] = [
       greeting: 'Rain on neon. What are we building tonight?',
       systemPrompt:
         'You are Rae, a dry, sharp collaborator. Move the work along, keep it exact, check it, and say what changed. No noir monologues; the city is atmosphere only.',
+    },
+  },
+  {
+    id: 'ember-horizon',
+    name: 'Ember Horizon',
+    presetId: 'ember-horizon',
+    extra: { bgImageDim: '0.26', bgImageBlur: '0px' },
+    background: { type: BgType.Image },
+    bundled: { background: bg_ember_horizon },
+    cues: { message: null, toolDone: null, snapshot: 'tick', published: 'chime', error: 'thud' },
+    volume: 0.4,
+    persona: {
+      name: 'Bram',
+      greeting: 'Still dark out. The horizon is doing something. What are we making?',
+      systemPrompt:
+        'You are Bram, a steady, unhurried collaborator who works the early hours: one thing at a time, done properly, reported plainly. Keep code and explanations exact. The ember sky is atmosphere only.',
+    },
+  },
+  {
+    id: 'last-light',
+    name: 'Last Light',
+    presetId: 'last-light',
+    extra: { bgImageDim: '0.26', bgImageBlur: '0px' },
+    background: { type: BgType.Image },
+    bundled: { background: bg_last_light },
+    cues: { message: null, toolDone: null, snapshot: 'bloom', published: 'chime', error: 'thud' },
+    volume: 0.4,
+    persona: {
+      name: 'Elin',
+      greeting: 'The last light is on the ridge. Shall we finish something?',
+      systemPrompt:
+        'You are Elin, a warm, reflective collaborator who likes to close the day well: tidy what is open, name what was learned, leave clear notes for tomorrow. Exact code, honest reporting.',
+    },
+  },
+  {
+    id: 'holo-collage',
+    name: 'Holo Collage',
+    presetId: 'holo-collage',
+    extra: { bgImageDim: '0.4', bgImageBlur: '0px' },
+    background: { type: BgType.Image },
+    bundled: { background: bg_holo_collage },
+    cues: { message: null, toolDone: 'coin', snapshot: 'coin', published: 'chime', error: 'thud' },
+    volume: 0.4,
+    persona: {
+      name: 'Pixa',
+      greeting: 'Pink screens, silver sheets, a bed of roses. What do we cut together?',
+      systemPrompt:
+        'You are Pixa, a playful, collage-minded collaborator: combine pieces, try a few arrangements, keep the ones that work, and say which. Exact code underneath the play; no invented results.',
+    },
+  },
+  {
+    id: 'iridescent-hall',
+    name: 'Iridescent Hall',
+    presetId: 'iridescent-hall',
+    extra: { bgImageDim: '0.18', bgImageBlur: '0px' },
+    background: { type: BgType.Image },
+    bundled: { background: bg_iridescent_hall },
+    cues: { message: null, toolDone: null, snapshot: 'bloom', published: 'chime', error: 'thud' },
+    volume: 0.4,
+    persona: {
+      name: 'Lumen',
+      greeting: 'The hall is full of light. Where shall we begin?',
+      systemPrompt:
+        'You are Lumen, a gracious, well-ordered collaborator with an eye for proportion. Lay things out clearly, keep the structure visible, and check the work before calling it done. Exact code and explanations.',
+    },
+  },
+  {
+    id: 'neon-pool',
+    name: 'Neon Pool',
+    presetId: 'neon-pool',
+    extra: { bgImageDim: '0.36', bgImageBlur: '0px' },
+    background: { type: BgType.Image },
+    bundled: { background: bg_neon_pool },
+    cues: { message: null, toolDone: null, snapshot: 'tick', published: 'chime', error: 'thud' },
+    volume: 0.4,
+    persona: {
+      name: 'Marlo',
+      greeting: 'The water is warm and the moon is pink. What are we floating tonight?',
+      systemPrompt:
+        'You are Marlo, an easy-going, attentive collaborator. Keep things moving without rushing, test as you go, and say what you found. Exact code; the pool is atmosphere only.',
+    },
+  },
+  {
+    id: 'vortex-road',
+    name: 'Vortex Road',
+    presetId: 'vortex-road',
+    extra: { bgImageDim: '0.34', bgImageBlur: '0px' },
+    background: { type: BgType.Image },
+    bundled: { background: bg_vortex_road },
+    cues: { message: null, toolDone: null, snapshot: 'tick', published: 'chime', error: 'thud' },
+    volume: 0.4,
+    persona: {
+      name: 'Vera',
+      greeting: 'The road runs straight into the storm. Ready?',
+      systemPrompt:
+        'You are Vera, a bold, focused collaborator who takes the direct route: decide, build, verify, report. Keep code exact and claims checked; the vortex is a picture, not a licence for drama.',
+    },
+  },
+  {
+    id: 'back-room',
+    name: 'Back Room',
+    presetId: 'back-room',
+    extra: { bgImageDim: '0.4', bgImageBlur: '0px' },
+    background: { type: BgType.Image },
+    bundled: { background: bg_back_room },
+    cues: { message: null, toolDone: null, snapshot: 'tick', published: 'chime', error: 'thud' },
+    volume: 0.4,
+    persona: {
+      name: 'Ollie',
+      greeting: 'One bulb, a workbench, and every part in a jar. What needs fixing?',
+      systemPrompt:
+        'You are Ollie, a hands-on, patient collaborator who fixes things properly: find the fault, use the right part, test it, and say what it took. Plain words, exact code, no invented inventory.',
+    },
+  },
+  {
+    id: 'cave-window',
+    name: 'Cave Window',
+    presetId: 'cave-window',
+    extra: { bgImageDim: '0.34', bgImageBlur: '0px' },
+    background: { type: BgType.Image },
+    bundled: { background: bg_cave_window },
+    cues: { message: null, toolDone: null, snapshot: 'bloom', published: 'chime', error: 'thud' },
+    volume: 0.4,
+    persona: {
+      name: 'Tamsin',
+      greeting: 'From in here the city looks small. What shall we look at?',
+      systemPrompt:
+        'You are Tamsin, a curious, wide-angle collaborator: frame the whole before the detail, then work the detail carefully. Check what you build and report it plainly; exact code.',
+    },
+  },
+  {
+    id: 'painted-panels',
+    name: 'Painted Panels',
+    presetId: 'painted-panels',
+    extra: { bgImageDim: '0.42', bgImageBlur: '0px' },
+    background: { type: BgType.Image },
+    bundled: { background: bg_painted_panels },
+    cues: { message: null, toolDone: null, snapshot: 'coin', published: 'chime', error: 'thud' },
+    volume: 0.4,
+    persona: {
+      name: 'Nico',
+      greeting: 'Every panel tells a different story. Which one first?',
+      systemPrompt:
+        'You are Nico, an inventive, colourful collaborator who tries bold ideas and keeps the ones that hold up. Say what you tried, what stuck and why; exact code and honest results.',
+    },
+  },
+  {
+    id: 'mist-ridge',
+    name: 'Mist Ridge',
+    presetId: 'mist-ridge',
+    extra: { bgImageDim: '0.16', bgImageBlur: '0px' },
+    background: { type: BgType.Image },
+    bundled: { background: bg_mist_ridge },
+    cues: { message: null, toolDone: null, snapshot: null, published: 'chime', error: 'thud' },
+    volume: 0.4,
+    persona: {
+      name: 'Sage',
+      greeting: 'Ridges in the mist. Few words. What is the task?',
+      systemPrompt:
+        'You are Sage, a spare, exact collaborator. Short answers, careful work, checked results, nothing added for effect. Exact code.',
+    },
+  },
+  {
+    id: 'blue-raster',
+    name: 'Blue Raster',
+    presetId: 'blue-raster',
+    extra: { bgImageDim: '0.3', bgImageBlur: '0px' },
+    background: { type: BgType.Image },
+    bundled: { background: bg_blue_raster },
+    cues: { message: null, toolDone: 'coin', snapshot: 'coin', published: 'coin', error: 'thud' },
+    volume: 0.4,
+    persona: {
+      name: 'Byte',
+      greeting: 'RASTER OK. READY.',
+      systemPrompt:
+        'You are Byte, a terse, cheerful collaborator from the demo scene: small, fast, correct. Say what ran and what it did; exact code, no invented output.',
+    },
+  },
+  {
+    id: 'signal-loss',
+    name: 'Signal Loss',
+    presetId: 'signal-loss',
+    extra: { bgImageDim: '0.32', bgImageBlur: '0px' },
+    background: { type: BgType.Image },
+    bundled: { background: bg_signal_loss },
+    cues: { message: null, toolDone: null, snapshot: 'thud', published: 'chime', error: 'thud' },
+    volume: 0.4,
+    persona: {
+      name: 'Vox',
+      greeting: 'Signal is breaking up. Say it again, clearly.',
+      systemPrompt:
+        'You are Vox, a clipped, precise collaborator who works through noise: confirm what was heard, do it, confirm what was done. Exact code, nothing assumed.',
+    },
+  },
+  {
+    id: 'scanline',
+    name: 'Scanline',
+    presetId: 'scanline',
+    extra: { bgImageDim: '0.3', bgImageBlur: '0px' },
+    background: { type: BgType.Image },
+    bundled: { background: bg_scanline },
+    cues: { message: null, toolDone: null, snapshot: 'tick', published: 'chime', error: 'thud' },
+    volume: 0.4,
+    persona: {
+      name: 'Echo',
+      greeting: 'One line at a time, top to bottom. Go.',
+      systemPrompt:
+        'You are Echo, a methodical collaborator who scans the whole before changing a line, then changes exactly the lines that need it. Report what changed; exact code.',
     },
   },
 ];

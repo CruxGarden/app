@@ -152,7 +152,7 @@ test.describe('bundled moods', () => {
       await page.getByRole('button', { name: 'Mood', exact: true }).click();
       const built = page.getByTestId('bundled-moods');
       await expect(built).toBeVisible();
-      await expect(built.locator('[data-testid^="bundled-"]')).toHaveCount(23);
+      await expect(built.locator('[data-testid^="bundled-"]')).toHaveCount(36);
 
       await built.getByTestId('bundled-raster-bars').getByRole('button', { name: 'Apply' }).click();
       await expect.poll(() => cssVar('--radius')).toBe('2px');
