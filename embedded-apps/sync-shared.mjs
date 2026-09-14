@@ -8,7 +8,12 @@ const appRoot = fileURLToPath(new URL('../', import.meta.url));
 for (const app of ['pptist', 'minipaint']) {
   const destination = join(appRoot, `${app}-crux/garden/shared`);
   mkdirSync(destination, { recursive: true });
-  for (const file of ['command-session.js', 'command-session.d.ts']) {
+  for (const file of [
+    'command-session.js',
+    'command-session.d.ts',
+    'project-image.js',
+    'project-image.d.ts',
+  ]) {
     copyFileSync(join(appRoot, 'embedded-apps/shared', file), join(destination, file));
   }
 }

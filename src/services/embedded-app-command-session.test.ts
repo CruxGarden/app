@@ -114,7 +114,12 @@ describe('embedded editor command lifecycle', () => {
 
 it('ships the same standalone shared source with both reference embeds', () => {
   for (const app of ['pptist', 'minipaint'])
-    for (const file of ['command-session.js', 'command-session.d.ts']) {
+    for (const file of [
+      'command-session.js',
+      'command-session.d.ts',
+      'project-image.js',
+      'project-image.d.ts',
+    ]) {
       expect(
         readFileSync(new URL(`../../${app}-crux/garden/shared/${file}`, import.meta.url), 'utf8'),
       ).toBe(readFileSync(new URL(`../../embedded-apps/shared/${file}`, import.meta.url), 'utf8'));

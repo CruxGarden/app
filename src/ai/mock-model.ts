@@ -977,6 +977,87 @@ export function getMockLanguageModel(): LanguageModel {
           }
           return textStream('Saved the AudioMass track.');
         }
+        if (lastUserText(prompt).includes('[minipaint:depth-create]')) {
+          const rounds = toolResultsThisTurn(prompt);
+          if (!rounds.length) return toolCallStream('inspect_minipaint', {});
+          if (rounds.length === 1)
+            return toolCallStream('resize_minipaint_canvas', { width: 1200, height: 600 });
+          if (rounds.length === 2)
+            return toolCallStream('add_minipaint_rectangle', {
+              name: 'Backdrop',
+              x: 0,
+              y: 0,
+              width: 1200,
+              height: 600,
+              color: '#f2eadb',
+            });
+          if (rounds.length === 3)
+            return toolCallStream('add_minipaint_image', {
+              name: 'Seed illustration',
+              path: 'assets/seed.png',
+              x: 60,
+              y: 150,
+              width: 280,
+              height: 280,
+            });
+          if (rounds.length === 4)
+            return toolCallStream('add_minipaint_text', {
+              name: 'Headline',
+              text: 'Seed library event',
+              x: 400,
+              y: 100,
+              width: 720,
+              height: 130,
+              fontSize: 56,
+              color: '#234731',
+            });
+          if (rounds.length === 5)
+            return toolCallStream('add_minipaint_text', {
+              name: 'Details',
+              text: 'Friday at 10. Bring spare seeds.',
+              x: 400,
+              y: 280,
+              width: 700,
+              height: 150,
+              fontSize: 30,
+              color: '#234731',
+            });
+          if (rounds.length === 6) {
+            const initial = JSON.parse(toolResultText(prompt, 'inspect_minipaint') || '{}');
+            return toolCallStream('delete_minipaint_layer', { id: initial.layers[0].id });
+          }
+          if (rounds.length === 7)
+            return toolCallStream('save_minipaint_image', { name: 'Seed library banner' });
+          return textStream('Built an editable seed library banner.');
+        }
+        if (lastUserText(prompt).includes('[minipaint:depth-revise]')) {
+          const rounds = toolResultsThisTurn(prompt);
+          if (!rounds.length) return toolCallStream('inspect_minipaint', {});
+          const initial = JSON.parse(toolResultText(prompt, 'inspect_minipaint') || '{}');
+          const details = initial.layers.find(
+            (layer: { name: string }) => layer.name === 'Details',
+          );
+          if (rounds.length === 1)
+            return toolCallStream('update_minipaint_layer', {
+              id: details.id,
+              find: 'Friday',
+              replace: 'Saturday',
+              fontSize: 32,
+            });
+          if (rounds.length === 2)
+            return toolCallStream('reorder_minipaint_layer', { id: details.id, direction: 'down' });
+          if (rounds.length === 3)
+            return toolCallStream('reorder_minipaint_layer', { id: details.id, direction: 'up' });
+          if (rounds.length === 4)
+            return toolCallStream('resize_minipaint_canvas', {
+              width: 960,
+              height: 480,
+              scaleLayers: true,
+            });
+          if (rounds.length === 5)
+            return toolCallStream('save_minipaint_image', { name: 'Saturday banner' });
+          return textStream('Revised the banner, preserved your note and exported PNG.');
+        }
         if (lastUserText(prompt).includes('[minipaint:layer]')) {
           const rounds = toolResultsThisTurn(prompt);
           if (!rounds.length) return toolCallStream('inspect_minipaint', {});

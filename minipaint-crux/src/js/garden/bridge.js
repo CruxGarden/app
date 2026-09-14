@@ -1,4 +1,6 @@
 import { validateProject } from '../../../garden/model.js';
+import { validateCommand, textData, reviseText } from '../../../garden/commands.js';
+import { loadProjectImage } from '../../../garden/shared/project-image.js';
 import { createCommandSession } from '../../../garden/shared/command-session.js';
 
 export async function startGarden(app) {
@@ -13,6 +15,7 @@ export async function startGarden(app) {
   const pending = new Map();
   const actions = new Set();
   const rasterCache = new Map();
+  const rasterPaths = new Map();
   const bar = document.createElement('div');
   bar.id = 'garden-project';
   bar.innerHTML =
@@ -102,6 +105,7 @@ export async function startGarden(app) {
         rasterCache.set(data, ref);
       }
       image.data = ref;
+      rasterPaths.set(image.id, 'data/' + ref.__cruxBinary.path);
     }
     for (const key of rasterCache.keys()) if (!used.has(key)) rasterCache.delete(key);
     const result = { version: 1, app: 'minipaint', project };
@@ -112,6 +116,7 @@ export async function startGarden(app) {
     const operation = tail.then(async () => {
       clearTimeout(timer);
       await settle();
+      app.Layers.render(true);
       if (hydrating) throw new Error('Wait for the saved project to finish opening.');
       if (revision === saved) return;
       const saving = revision;
@@ -136,20 +141,42 @@ export async function startGarden(app) {
     tail = operation.catch(() => {});
     return operation;
   }
-  const inspect = () => ({
-    width: app.Config.WIDTH,
-    height: app.Config.HEIGHT,
-    selectedLayer: app.Config.layer?.id,
-    layers: app.Config.layers.map(({ id, name, type, visible, opacity, x, y }) => ({
-      id,
-      name,
-      type,
-      visible,
-      opacity,
-      x,
-      y,
-    })),
-  });
+  const inspect = (value = {}) => {
+    const offset = value.offset ?? 0;
+    const limit = value.limit ?? 20;
+    const layers = [...app.Config.layers].sort((a, b) => a.order - b.order);
+    return {
+      width: app.Config.WIDTH,
+      height: app.Config.HEIGHT,
+      selectedLayer: app.Config.layer?.id,
+      totalLayers: layers.length,
+      offset,
+      nextOffset: offset + limit < layers.length ? offset + limit : null,
+      layers: layers.slice(offset, offset + limit).map((layer) => ({
+        id: layer.id,
+        name: layer.name,
+        type: layer.type,
+        visible: layer.visible,
+        opacity: layer.opacity,
+        x: layer.x,
+        y: layer.y,
+        width: layer.width,
+        height: layer.height,
+        rotate: layer.rotate,
+        order: layer.order,
+        ...(layer.type === 'text'
+          ? {
+              text: layer.data
+                ?.map((line) => line.map((span) => span.text).join(''))
+                .join('\n')
+                .slice(0, 4000),
+              style: layer.data?.[0]?.[0]?.meta,
+            }
+          : {}),
+        ...(layer.type === 'image' ? { imagePath: rasterPaths.get(layer.id) } : {}),
+      })),
+    };
+  };
   /** Render every visible layer to one PNG and save it as a named output of this Crux. */
   async function saveImage(label) {
     await save();
@@ -161,51 +188,198 @@ export async function startGarden(app) {
     show('Image saved to Cruxspace');
     return { ...output, width: canvas.width, height: canvas.height };
   }
+  const findLayer = (id) => {
+    const layer = app.Config.layers.find((item) => item.id === id);
+    if (!layer) throw new Error('Layer no longer exists. Inspect miniPaint again.');
+    return layer;
+  };
+  function layerSettings(layer, value) {
+    const settings = {};
+    for (const key of ['name', 'visible', 'opacity', 'x', 'y', 'width', 'height', 'rotate'])
+      if (value[key] !== undefined) settings[key] = value[key];
+    const textEdit = ['find', 'fontSize', 'fontFamily'].some((key) => value[key] !== undefined);
+    if (textEdit && layer.type !== 'text')
+      throw new Error('Text and font edits require a text layer.');
+    if (layer.type === 'text' && (textEdit || value.color !== undefined))
+      settings.data = reviseText(layer.data, value);
+    else if (value.color !== undefined) {
+      if (layer.type !== 'rectangle')
+        throw new Error('Color edits support text and rectangles; use opacity for images.');
+      settings.params = { ...layer.params, fill_color: value.color };
+    }
+    return settings;
+  }
+  async function nativeEdit(label, actions) {
+    const result = await app.State.do_action(
+      new app.Actions.Bundle_action('garden_edit', label, [
+        new app.Actions.Refresh_layers_gui_action('undo'),
+        ...actions,
+        new app.Actions.Refresh_layers_gui_action('do'),
+      ]),
+    );
+    if (result.status !== 'completed')
+      throw new Error('The native edit could not be completed. Inspect before retrying.');
+  }
   const commands = createCommandSession({
     async settle() {
       if (hydrating) throw new Error('Wait for the image editor to finish opening.');
+      // miniPaint commits a person's text Undo action when its native input loses focus.
+      const input = document.getElementById('text_tool_keyboard_input');
+      if (document.activeElement === input) input.blur();
       await settle();
+      app.Layers.render(true);
     },
-    async save() { do { await save(); } while (revision !== saved || actions.size); },
-    prepare(value) {
-      if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('Choose a miniPaint operation.');
-      if (value.op === 'inspect' && Object.keys(value).length === 1)
-        return { mutates: false, apply: inspect };
-      if (value.op === 'save-image' && Object.keys(value).length === 2 &&
-          typeof value.label === 'string' && value.label.trim() && value.label.length <= 120)
+    async save() {
+      do {
+        await save();
+      } while (revision !== saved || actions.size);
+    },
+    prepare(raw) {
+      const value = validateCommand(raw);
+      if (value.op === 'inspect') return { mutates: false, apply: () => inspect(value) };
+      if (value.op === 'save-image')
         return { mutates: true, apply: () => saveImage(value.label.trim()) };
-      if (value.op !== 'layer' || Object.keys(value).some(key => !['op', 'id', 'name', 'visible', 'opacity'].includes(key)))
-        throw new Error('Unsupported miniPaint operation.');
-      if (!Number.isSafeInteger(value.id) || !app.Config.layers.some(layer => layer.id === value.id))
-        throw new Error('Layer no longer exists. Inspect miniPaint again.');
-      const settings = {};
-      if (value.name !== undefined) {
-        if (typeof value.name !== 'string' || value.name.length > 200) throw new Error('Use a layer name up to 200 characters.');
-        settings.name = value.name;
+      if (value.id !== undefined) {
+        const layer = findLayer(value.id);
+        if (value.op === 'layer') layerSettings(layer, value);
+        if (value.op === 'delete-layer' && app.Config.layers.length <= 1)
+          throw new Error('Keep at least one layer.');
+        if (value.op === 'reorder-layer') {
+          const target =
+            value.direction === 'up'
+              ? app.Layers.find_next(value.id)
+              : app.Layers.find_previous(value.id);
+          if (!target) throw new Error('The layer is already at that edge of the stack.');
+        }
       }
-      if (value.visible !== undefined) {
-        if (typeof value.visible !== 'boolean') throw new Error('Visibility must be true or false.');
-        settings.visible = value.visible;
-      }
-      if (value.opacity !== undefined) {
-        if (!Number.isFinite(value.opacity) || value.opacity < 0 || value.opacity > 100) throw new Error('Opacity must be between 0 and 100.');
-        settings.opacity = value.opacity;
-      }
-      if (!Object.keys(settings).length) throw new Error('Choose properties to change.');
+      if (value.op.startsWith('add-') && app.Config.layers.length >= 500)
+        throw new Error('Use up to 500 layers.');
       return {
         mutates: true,
         async apply() {
-          if (!app.Config.layers.some(layer => layer.id === value.id)) throw new Error('Layer no longer exists. Inspect miniPaint again.');
-          const result = await app.State.do_action(
-            new app.Actions.Bundle_action('garden_layer', 'Update Layer', [
-              new app.Actions.Refresh_layers_gui_action('undo'),
-              new app.Actions.Update_layer_action(value.id, settings),
-              new app.Actions.Refresh_layers_gui_action('do'),
-            ]),
-          );
-          if (result.status !== 'completed') throw new Error('The layer could not be changed.');
+          if (value.op === 'layer') {
+            await nativeEdit('Update Layer', [
+              new app.Actions.Update_layer_action(
+                value.id,
+                layerSettings(findLayer(value.id), value),
+              ),
+            ]);
+          } else if (value.op === 'delete-layer') {
+            if (app.Config.layers.length <= 1) throw new Error('Keep at least one layer.');
+            await nativeEdit('Delete Layer', [new app.Actions.Delete_layer_action(value.id)]);
+          } else if (value.op === 'reorder-layer') {
+            await nativeEdit('Reorder Layer', [
+              new app.Actions.Reorder_layer_action(value.id, value.direction === 'up' ? 1 : -1),
+            ]);
+          } else if (value.op === 'resize-canvas') {
+            const edits = [
+              new app.Actions.Prepare_canvas_action('undo'),
+              new app.Actions.Update_config_action({ WIDTH: value.width, HEIGHT: value.height }),
+            ];
+            if (value.scaleLayers) {
+              const sx = value.width / app.Config.WIDTH;
+              const sy = value.height / app.Config.HEIGHT;
+              for (const layer of app.Config.layers) {
+                const settings = {};
+                for (const key of ['x', 'width'])
+                  if (Number.isFinite(layer[key])) settings[key] = layer[key] * sx;
+                for (const key of ['y', 'height'])
+                  if (Number.isFinite(layer[key])) settings[key] = layer[key] * sy;
+                if (layer.type === 'text') {
+                  settings.data = JSON.parse(JSON.stringify(layer.data));
+                  for (const line of settings.data)
+                    for (const span of line)
+                      span.meta = {
+                        ...span.meta,
+                        size: (span.meta?.size ?? 40) * Math.min(sx, sy),
+                      };
+                }
+                edits.push(new app.Actions.Update_layer_action(layer.id, settings));
+              }
+            }
+            edits.push(new app.Actions.Prepare_canvas_action('do'));
+            await nativeEdit('Resize Canvas', edits);
+          } else {
+            const geometry = {
+              x: value.x,
+              y: value.y,
+              width: value.width,
+              height: value.height,
+              rotate: 0,
+            };
+            if (value.op === 'add-text') {
+              await nativeEdit('Add Text', [
+                new app.Actions.Insert_layer_action(
+                  {
+                    ...geometry,
+                    name: value.name || 'Text',
+                    type: 'text',
+                    is_vector: true,
+                    render_function: ['text', 'render'],
+                    data: textData(value.text, value),
+                    params: {
+                      boundary: 'box',
+                      kerning: 'metrics',
+                      text_direction: 'ltr',
+                      wrap_direction: 'ttb',
+                      halign: 'left',
+                      valign: 'top',
+                      wrap: 'word',
+                    },
+                  },
+                  false,
+                ),
+              ]);
+            } else if (value.op === 'add-rectangle') {
+              await nativeEdit('Add Rectangle', [
+                new app.Actions.Insert_layer_action(
+                  {
+                    ...geometry,
+                    name: value.name || 'Rectangle',
+                    type: 'rectangle',
+                    is_vector: true,
+                    render_function: ['rectangle', 'render'],
+                    color: null,
+                    params: {
+                      border: false,
+                      border_size: 0,
+                      border_color: '#000000',
+                      fill: true,
+                      fill_color: value.color || '#eeeeee',
+                      radius: 0,
+                      square: false,
+                    },
+                  },
+                  false,
+                ),
+              ]);
+            } else if (value.op === 'add-image') {
+              const loaded = await loadProjectImage(value.path, new URL('/', location.href).href);
+              try {
+                await nativeEdit('Import Image', [
+                  new app.Actions.Insert_layer_action(
+                    {
+                      ...geometry,
+                      name: value.name || value.path.split('/').at(-1),
+                      type: 'image',
+                      link: loaded.image,
+                      width_original: loaded.image.naturalWidth,
+                      height_original: loaded.image.naturalHeight,
+                    },
+                    false,
+                  ),
+                ]);
+              } finally {
+                loaded.release();
+              }
+            }
+            return app.Config.layer.id;
+          }
         },
-        result: inspect,
+        result: (createdLayerId) => ({
+          ...inspect(),
+          ...(createdLayerId === undefined ? {} : { createdLayerId }),
+        }),
       };
     },
   });
@@ -251,6 +425,7 @@ export async function startGarden(app) {
     if (doc.project) {
       for (const image of doc.project.data) {
         const ref = image.data;
+        rasterPaths.set(image.id, 'data/' + ref.__cruxBinary.path);
         const asset = await call({ op: 'native-read', path: ref.__cruxBinary.path });
         image.data = await new Promise((resolve, reject) => {
           const reader = new FileReader();
