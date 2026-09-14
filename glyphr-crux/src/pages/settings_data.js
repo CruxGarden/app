@@ -1,0 +1,305 @@
+/**
+ * Data that describes all the settings
+ */
+export default {
+	project: {
+		name: {
+			label: `Project name`,
+			description: `Name for this project. Can be different than the Font or Font Family name. Also, this will be used as the name of the saved Glyphr Studio Project (.gs2) file.`,
+		},
+		latestVersion: {
+			label: `Version`,
+			description: `The latest app version that edited this project file.`,
+			type: `Read only`,
+		},
+		initialVersion: {
+			label: `Initial version`,
+			description: `The app version this project file was first created with.`,
+			type: `Read only`,
+		},
+		id: {
+			label: `Project ID`,
+			description: `A unique ID used to identify this project.`,
+			type: `Read only`,
+		},
+		exportComponentsAsComposites: {
+			label: `Export components as composite glyphs`,
+			description: `When checked, characters that are built entirely from Components (using pure-position moves, with no resizing, rotating, or flipping) are exported as TrueType composite glyphs. This preserves the component structure so the font can round-trip back into Glyphr Studio with its components intact. When unchecked, these characters are flattened into plain outlines on export.<br><br>Note: This only applies to TrueType-flavored formats (.ttf, .woff, .woff2). OpenType/CFF (.otf) does not support composite glyphs, so components are always flattened for that format. Characters using resized, rotated, or flipped components are always flattened as well.`,
+			type: `Boolean`,
+		},
+		importComponentsFromComposites: {
+			label: `Import composite glyphs as components`,
+			description: `When checked, TrueType composite glyphs (like accented letters, which reference other glyphs at an x/y offset) are imported as Glyphr Studio Components and Component Instances. A shared Component Root is created once for each referenced base glyph and re-used (linked) by every character that needs it. When unchecked, composite glyphs are flattened into plain outlines on import.<br><br>Note: Only pure-position composites qualify. Composite components that are scaled, rotated, or use point-matching are always flattened.`,
+			type: `Boolean`,
+		},
+	},
+	font: {
+		family: {
+			label: `Font family`,
+			description: `Base font family name, that will be shared across font styles. This will also be used as the base name for exported font files.`,
+		},
+		style: {
+			label: `Font style`,
+			description: `Describes this font within the overall font family. Usually a combination of how bold this font is and if it is italic.`,
+			example: `Thin, ExtraLight, Light, <strong>Regular</strong>, Medium, SemiBold, <strong>Bold</strong>, ExtraBold, Black <br><br>Thin&nbsp;Italic, ExtraLight&nbsp;Italic, Light&nbsp;Italic, <strong>Italic</strong>, Medium&nbsp;Italic, SemiBold&nbsp;Italic, Bold&nbsp;Italic, ExtraBold&nbsp;Italic, Black&nbsp;Italic`,
+		},
+		version: {
+			label: `Font version`,
+			description: `If this font gets updates regularly, keep track of what version this iteration is. This is recommended to be in Semantic Versioning format, you can learn more at <a href="https://semver.org/" target="_blank">semver.org</a>.`,
+			example: `Version 1.0`,
+		},
+		description: {
+			label: `Font description`,
+			description: `Open-ended text to describe your font.`,
+		},
+		panose: {
+			label: `Panose-1`,
+			description: `PANOSE is a system that uses ten digits to describe the font's visual style.  A good overview can be found on Monotype's GitHub page: <a href="https://monotype.github.io/panose/pan1.htm" target="_blank">monotype.github.io/panose/pan2.htm</a><br>Each digit of the ten digits is separated by a space, and has a special meaning based on its position.`,
+			example: `<strong>0 0 0 0 0 0 0 0 0 0</strong><br>All zeros describe this font as 'any', which basically leaves it undefined. Use this as your default.
+			<br><br>
+			<strong>2 0 0 0 0 0 0 0 0 0</strong><br>The first digit determines the kind of font family this is, where digit 2 represents Latin typefaces.
+			<br><br>
+			Check out the interactive PANOSE builder to get more details on what each digit means.`,
+		},
+		upm: {
+			label: `Units per Em (UPM)`,
+			description: `UPM is the measure of the overall design space for a character in this font. Think of UPM like how many pixels of height you have to work with for each character.<br><br><b>Note!</b> Operating systems are picky about what UPM values they allow. In general, anything 1000 or below will work. Above 1000, many times only powers of 2 will work (like 1024, 2048, 4096, etc.).<br><br>Traditionally, UPM is either 1000 or 2048.`,
+			example: `1000, 2048`,
+			type: `Em`,
+		},
+		ascent: {
+			label: `Ascent`,
+			description: `Distance from the baseline to the top of square and tall lowercase letters (Like: b d h k l).`,
+			type: `Em`,
+		},
+		descent: {
+			label: `Descent`,
+			description: `Distance from the baseline to the bottom of letters that have square descenders (Like: p q y depending on style). This is expressed as a negative number.`,
+			type: `Em`,
+		},
+		capHeight: {
+			label: `Capital letter height`,
+			description: `Distance from the baseline to the top of square capital letters (Like: A B D E F H I K L M N P R T U V W X Y Z). Usually this is slightly smaller than the ascent.`,
+			type: `Em`,
+		},
+		xHeight: {
+			label: `X height`,
+			description: `Distance from the baseline to the top of square lowercase letters (Like: v w x z).`,
+			type: `Em`,
+		},
+		overshoot: {
+			label: `Overshoot`,
+			description: `Rounded characters are usually slightly larger than square characters to compensate for visual weight. For example, a lowercase 'o' will extend slightly above and below a lowercase 'x'. Overshoot is the measure of this distance.
+			<br>Note: This is used internally by Glyphr Studio, it is not exported to fonts.`,
+			type: `Em`,
+		},
+		lineGap: {
+			label: `Line gap`,
+			description: `When text wraps onto multiple lines, this is the distance between the bottom of one Em Square to the top of the next line's Em Square.`,
+			type: `Em`,
+		},
+		weight: {
+			label: `Font weight`,
+			description: `How bold this font is - a number between 100 and 900:
+				<br>100 : Thin
+				<br>200 : Extra-Light
+				<br>300 : Light
+				<br>400 : Regular
+				<br>500 : Medium
+				<br>600 : Semi-Bold
+				<br>700 : Bold
+				<br>800 : Extra-Bold
+				<br>900 : Black
+			`,
+			type: `Number`,
+		},
+		italicAngle: {
+			label: `Italic angle`,
+			description: `Most common degree of slant for glyphs in an italic font. Should be negative if leaning to the right.`,
+			type: `Degree`,
+		},
+		designer: { label: `Designer`, description: 'Person or team who created this font.' },
+		designerURL: { label: `Designer's URL`, description: '' },
+		manufacturer: { label: `Manufacturer`, description: 'Company who created this font.' },
+		manufacturerURL: { label: `Manufacturer's URL`, description: '' },
+		license: { label: `License`, description: 'License under which this font is released.' },
+		licenseURL: { label: `License URL`, description: '' },
+		copyright: { label: `Copyright`, description: '' },
+		trademark: { label: `Trademark`, description: '' },
+		variant: { label: `Font variant`, description: "Either 'normal' or 'small-caps'." },
+		stretch: {
+			label: `Font stretch`,
+			description: `How condensed or expanded this font is.`,
+			example: `normal, ultra-condensed, extra-condensed, condensed, semi-condensed, semi-expanded, expanded, extra-expanded, ultra-expanded`,
+		},
+		stemv: {
+			label: `Vertical stem`,
+			description: `Most common width measurement of vertical stems in this font.`,
+			type: `Em`,
+		},
+		stemh: {
+			label: `Horizontal stem`,
+			description: `Most common height measurement of horizontal stems in this font.`,
+			type: `Em`,
+		},
+		slope: {
+			label: `Slope`,
+			description: `The angle, in degrees counterclockwise from the vertical, of the dominant vertical strokes of the font. The value is negative for fonts that slope to the right.`,
+			type: `Degree`,
+		},
+		underlinePosition: {
+			label: `Underline position`,
+			description: `The ideal position of an underline with relation to the baseline (probably should be negative).`,
+			type: `Em`,
+		},
+		underlineThickness: {
+			label: `Underline thickness`,
+			description: `The ideal height of an underline.`,
+			type: `Em`,
+		},
+		strikethroughPosition: {
+			label: `Strikethrough position`,
+			description: `The ideal position of a strikethrough with relation to the baseline.`,
+			type: `Em`,
+		},
+		strikethroughThickness: {
+			label: `Strikethrough thickness`,
+			description: `The ideal height of a strikethrough.`,
+			type: `Em`,
+		},
+		overlinePosition: {
+			label: `Overline position`,
+			description: `The ideal position of an overline with relation to the baseline.`,
+			type: `Em`,
+		},
+		overlineThickness: {
+			label: `Overline thickness`,
+			description: `The ideal height of an overline.`,
+			type: `Em`,
+		},
+	},
+	app: {
+		stopPageNavigation: {
+			label: `Warn about unsaved changes on window close`,
+			description: `This will stop closing the window or tab with an "Are you sure?" message if you have unsaved changes.`,
+			type: `Boolean`,
+		},
+		formatSaveFile: {
+			label: `Format project file for reading`,
+			description: `Glyphr Studio Project files (.gs2) are text files in JSON format. By default, this file is saved to optimize for smaller file size. Setting this option to true formats the file to be more easily read by a human, but could increase the file size by 2x or more.`,
+			type: `Boolean`,
+		},
+		saveLivePreviews: {
+			label: `Save live previews`,
+			description: `Save the text blocks that you have defined for your Live Previews (both the page, and the 2nd window). These could be long, so you may want to turn them off for file size reasons.`,
+			type: `Boolean`,
+		},
+		autoSave: {
+			label: `Auto-save a copy of the project with each change`,
+			description: `When enabled, this option will use your browser's local storage to keep backups. These backups can be restored from the Open Projects page. Your browser's local storage is confined to this browser on this computer. If you use Glyphr Studio from another browser or on another computer, those backups will be available from there.`,
+			type: `Boolean`,
+		},
+		savePreferences: {
+			label: `Save app preferences locally`,
+			description: `App preferences can be saved locally to your computer, then loaded automatically when you come back to this project.`,
+			type: `Boolean`,
+		},
+		unlinkComponentInstances: {
+			label: `Unlink component instances when deleting their root`,
+			description: `When selected, this option will unlink component instances and turn them into normal paths if their component root is deleted (the glyph will look the same, but some component instances will end up as stand-alone path objects).<br>If this option is unselected, component instances will be deleted when their component root is deleted (the glyph will look different because it will have less shapes).`,
+			type: `Boolean`,
+		},
+		canvasDisplayModeFilled: {
+			label: 'Canvas display mode "Filled"',
+			description: `For shapes on the edit canvas, when the display mode is "Filled" the shapes will be shown as filled with black, similar to how they will appear in a text editor. When the display mode is "Outline" (or unselected), the shapes will be shown as outlines, which may help when editing complex shapes.<br><br>You can toggle this setting directly on the edit canvas, next to the lower-right view controls.<br><br>Clockwise paths will be shown as a slightly lighter blue outline than their counter-clockwise counterparts. Component Instances will be outlined in dark green.`,
+			type: 'Boolean',
+		},
+		directlyDragCurves: {
+			label: 'Directly click and drag curves to edit them',
+			description: `On the edit canvas, when in Path Edit mode (Pen tool) hover over a path's curve, then click and drag to move the curve directly. This will edit the handles of the two adjacent path points.`,
+			type: 'Boolean',
+		},
+		showNonCharPoints: {
+			label: `Show non-graphic control characters`,
+			description: `Show the Unicode code points represent things that aren't letters. In Unicode, the C0 and C1 control code or control character sets define control codes for use in text by computer systems that use ASCII and derivatives of ASCII.<br><br>This setting should probably stay turned off, control characters can probably be safely ignored.`,
+			type: `Boolean`,
+		},
+		itemChooserPageSize: {
+			label: `Number of items to show in the item chooser`,
+			description: `For Characters, Ligatures, Components, and Kern Groups, this is how many items to show in the item chooser menu. For projects with large numbers of items, splitting the items apart into pages can help the UI perform better.`,
+			type: `Number`,
+		},
+		previewText: {
+			label: `Project preview text`,
+			description: `What text to show when previewing a project or switching between projects. If left blank, the string 'Aa Bb Cc Xx Yy Zz' will be used.`,
+		},
+		exportLigatures: {
+			label: `Export Ligatures to fonts`,
+			description: `Uncheck this option if don't want ligature data exported to fonts.`,
+			type: `Boolean`,
+		},
+		exportKerning: {
+			label: `Export Kern information to fonts`,
+			description: `Uncheck this option if don't want kern data exported to fonts.`,
+			type: `Boolean`,
+		},
+		exportUneditedItems: {
+			label: `Export items that were created, but not edited`,
+			description: `When you create a Ligature or Component, or navigate to a Character, an empty glyph item is created
+			for you. It's possible to leave these items in an unedited state, essentially empty.<br><br>
+			If this option is checked, these empty items will be exported to fonts. If this option is unchecked,
+			these empty items will be filtered out, and not exported to fonts.<br><br>
+			In the item chooser, these empty items' names are shown in a green color.`,
+			type: `Boolean`,
+		},
+		moveShapesOnSVGDragDrop: {
+			label: `Move shapes when importing an SVG file`,
+			description: `When importing SVG to a single item, move the imported shapes to the origin (x = 0, y = shapes height).`,
+			type: `Boolean`,
+		},
+		autoSideBearingsOnSVGDragDrop: {
+			label: `Add default Side Bearings when importing an SVG file`,
+			description: `When importing SVG to a single item, move the imported shapes such that the left hand side x is at the Side Bearing value, and the set the Advance With of the item so that there is a Side Bearing's worth of space on the right hand side.
+			<br><br>
+			Set this value to -1 to disable it.
+			<br><br>
+			This setting overrides the 'Move shapes when importing an SVG file' setting.`,
+			type: `Em`,
+		},
+		autoRightBearingOnFirstShape: {
+			label: `Add default Right Side Bearing when the first shape is added`,
+			description: `When you add the first shape to a new Character or Ligature, automatically update the Advance Width such that the Right Side Bearing is the value specified here. This automatic Advance Width update will only happen one time per item, and won't apply to shapes imported from an SVG file.
+			<br><br>
+			Set this value to -1 to disable it.`,
+			type: `Em`,
+		},
+		highlightPointsNearPoints: {
+			label: `Highlight points that are near other points`,
+			description: `This option will highlight points that are very close to other points. Sometimes this happens when exporting SVG code from another app. It is best practice to reduce the number of points in a path as much as possible.
+			<br>
+			This option can be toggled from the Quality control panel.`,
+			type: `Em`,
+		},
+		highlightPointsNearHandles: {
+			label: `Highlight points with short handles`,
+			description: `This option will highlight points that have very short handles.  Sometimes this happens when exporting SVG code from another app. It is best practice to reduce the number of unnecessary handles in a path as much as possible.
+			<br>
+			This option can be toggled from the Quality control panel.`,
+			type: `Em`,
+		},
+		highlightPointsNearXZero: {
+			label: `Highlight points that are near x=0`,
+			description: `This option will highlight points that are near x=0. Sometimes this happens when exporting SVG code from another app.
+			<br>
+			This option can be toggled from the Quality control panel.`,
+			type: `Em`,
+		},
+		highlightPointsNearYZero: {
+			label: `Highlight points that are near y=0`,
+			description: `This option will highlight points that are near y=0. Sometimes this happens when exporting SVG code from another app.
+			<br>
+			This option can be toggled from the Quality control panel.`,
+			type: `Em`,
+		},
+	},
+};

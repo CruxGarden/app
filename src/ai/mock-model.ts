@@ -343,6 +343,19 @@ export function getMockLanguageModel(): LanguageModel {
             return toolCallStream('set_recorder_name', { name: 'Walkthrough takes' });
           return textStream('Listed the recordings and named the Crux Walkthrough takes.');
         }
+        if (lastUserText(prompt).includes('[font:letter]')) {
+          const rounds = toolResultsThisTurn(prompt);
+          if (!rounds.length) return toolCallStream('inspect_font', {});
+          if (rounds.length === 1) return toolCallStream('set_font_name', { name: 'Moss Sans' });
+          if (rounds.length === 2)
+            return toolCallStream('set_glyph_svg', {
+              char: 'A',
+              svg: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 700 700"><path d="M60 700 L300 0 L400 0 L640 700 L520 700 L460 520 L240 520 L180 700 Z M280 400 L420 400 L350 190 Z" fill="black"/></svg>',
+            });
+          if (rounds.length === 3)
+            return toolCallStream('save_font', { format: 'otf', name: 'Moss Sans' });
+          return textStream('Named the font Moss Sans, drew an A from SVG and saved the OTF.');
+        }
         if (lastUserText(prompt).includes('[shader:tweak]')) {
           const rounds = toolResultsThisTurn(prompt);
           if (!rounds.length) return toolCallStream('inspect_shader', {});

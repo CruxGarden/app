@@ -48,6 +48,10 @@ const EXTENSIONS: Record<string, string> = {
   'audio/mpeg': 'mp3',
   'application/zip': 'zip',
   'application/epub+zip': 'epub',
+  'font/otf': 'otf',
+  'font/ttf': 'ttf',
+  'font/woff': 'woff',
+  'font/woff2': 'woff2',
   'application/pdf': 'pdf',
   'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'docx',
   'video/webm': 'webm',
@@ -70,7 +74,7 @@ export function outputKind(mimeType: string): 'image' | 'audio' | 'bundle' {
 const KIND_PATTERN = {
   image: /\.(png|jpe?g|gif|webp)$/i,
   audio: /\.(wav|mp3)$/i,
-  bundle: /\.(zip|epub)$/i,
+  bundle: /\.(zip|epub|otf|ttf|woff|woff2)$/i,
 };
 const KIND_EXAMPLE = {
   image: 'assets/cover.png',
@@ -106,7 +110,7 @@ export async function saveCruxOutput(
     const ext = EXTENSIONS[blob.type];
     if (!ext || !blob.size || blob.size > maxFor(blob.type))
       throw new Error(
-        'Choose a PNG, JPEG, WebP, GIF, WAV, MP3, ZIP, PDF, DOCX (32 MB) or a WebM/MP4 video (512 MB).',
+        'Choose a PNG, JPEG, WebP, GIF, WAV, MP3, ZIP, PDF, DOCX, EPUB or font file (32 MB) or a WebM/MP4 video (512 MB).',
       );
     if (!label.trim() || label.length > 120)
       throw new Error('Name the output using up to 120 characters.');

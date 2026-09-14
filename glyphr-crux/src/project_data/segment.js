@@ -1,0 +1,955 @@
+import {
+	clone,
+	hasNonValues,
+	isVal,
+	parseNumber,
+	round,
+	xyPointsAreClose,
+} from '../common/functions.js';
+import { GlyphElement } from './glyph_element.js';
+import { Maxes } from './maxes.js';
+import { XYPoint } from './xy_point.js';
+
+/**
+ * Glyph Element > Segment
+ * A Segment stores and acts on a piece of a Path
+ * according to the mathematical definition of a
+ * Bezier curve.
+ *
+ * Paths in Glyphr Studio are a collection of
+ * Path Points, which themselves contain a point
+ * and two handles.  Bezier curves, on the other
+ * hand, are represented as two points, with two
+ * handles between them.
+ *
+ * This Segment object is basically here just to
+ * make Bezier math easier for Paths.
+ */
+export class Segment extends GlyphElement {
+	/**
+	 * Create a Segment
+	 * @param {Object} arg
+	 * @param {Number =} arg.p1x - First point x
+	 * @param {Number =} arg.p1y - First point y
+	 * @param {Number | undefined =} arg.p2x - First handle x
+	 * @param {Number | undefined =} arg.p2y - First handle y
+	 * @param {Number | undefined =} arg.p3x - Second handle x
+	 * @param {Number | undefined =} arg.p3y - Second handle y
+	 * @param {Number =} arg.p4x - Second point x
+	 * @param {Number =} arg.p4y - Second point y
+	 * @param {Boolean | String =} arg.point1ID - id for the first point
+	 * @param {Boolean | String =} arg.point2ID - id for the second point
+	 */
+	constructor({
+		p1x = 0,
+		p1y = 0,
+		p2x,
+		p2y,
+		p3x,
+		p3y,
+		p4x = 0,
+		p4y = 0,
+		point1ID = false,
+		point2ID = false,
+	} = {}) {
+		super();
+		this.p1x = parseNumber(p1x);
+		this.p1y = parseNumber(p1y);
+		this.p4x = parseNumber(p4x);
+		this.p4y = parseNumber(p4y);
+		// For lines, it's better to default p2 to p1 values, and p3 to p4 values
+
+		this.p2x = p2x === undefined ? this.p1x : parseNumber(p2x);
+		this.p2y = p2y === undefined ? this.p1y : parseNumber(p2y);
+		this.p3x = p3x === undefined ? this.p4x : parseNumber(p3x);
+		this.p3y = p3y === undefined ? this.p4y : parseNumber(p3y);
+
+		// IDs for stitching
+		if (point1ID) this.point1ID = point1ID;
+		if (point2ID) this.point2ID = point2ID;
+		this.objType = 'Segment';
+
+		this.recalculateMaxes();
+	}
+
+	// --------------------------------------------------------------
+	// Common Glyphr Studio object methods
+	// --------------------------------------------------------------
+
+	/**
+	 * Export object properties that need to be saved to a project file
+	 * @param {Boolean} verbose - export some extra stuff that makes the saved object more readable
+	 * @returns {*}
+	 */
+	save(verbose = false) {
+		const re = {
+			p1x: this.p1x,
+			p1y: this.p1y,
+			p2x: this.p2x,
+			p2y: this.p2y,
+			p3x: this.p3x,
+			p3y: this.p3y,
+			p4x: this.p4x,
+			p4y: this.p4y,
+		};
+
+		if (verbose) re.objType = this.objType;
+
+		return re;
+	}
+
+	/**
+	 * Create a nicely-formatted string for this object
+	 * @param {Number} level - how far down we are
+	 * @returns {String}
+	 */
+	print(level = 0) {
+		let ind = '';
+		for (let i = 0; i < level; i++) ind += '  ';
+
+		let re = `${ind}{Segment\n`;
+		ind += '  ';
+
+		re += `${ind + '  '}line: ${this.lineType}\n`;
+		re += `${ind + '  '}p1: ${this.p1x}/${this.p1y}\n`;
+		re += `${ind + '  '}p2: ${this.p2x}/${this.p2y}\n`;
+		re += `${ind + '  '}p3: ${this.p3x}/${this.p3y}\n`;
+		re += `${ind + '  '}p4: ${this.p4x}/${this.p4y}\n`;
+		re += `${ind + '  '}maxes: ${this.maxes.print(level + 1)}\n`;
+		re += `${ind.substring(2)}}`;
+
+		return re;
+	}
+
+	// --------------------------------------------------------------
+	// Getters
+	// --------------------------------------------------------------
+
+	/**
+	 * Vertical, Horizontal, Diagonal, or boolean False
+	 * @returns {*} - Line Type
+	 */
+	get lineType() {
+		if (!isVal(this._lineType)) this.determineLineType();
+		return this._lineType;
+	}
+
+	/**
+	 * Returns the length of this curve
+	 */
+	get length() {
+		if (this.cache.length) return this.cache.length;
+
+		this.cache.length = this.calculateLength();
+
+		return this.cache.length;
+	}
+
+	/**
+	 * Gets the length between p1 and p4
+	 * @returns {Number}
+	 */
+	get baseLength() {
+		return getLineLength(this.p1x, this.p1y, this.p4x, this.p4y);
+	}
+
+	/**
+	 * Gets the length between p1/p2/p3/p4
+	 * @returns {Number}
+	 */
+	get topLength() {
+		const a = getLineLength(this.p1x, this.p1y, this.p2x, this.p2y);
+		const b = getLineLength(this.p2x, this.p2y, this.p3x, this.p3y);
+		const c = getLineLength(this.p3x, this.p3y, this.p4x, this.p4y);
+
+		return a + b + c;
+	}
+
+	/**
+	 * A rough way of determining length without doing
+	 * calculus or recursion. quickLength will almost always
+	 * be greater than the actual length.
+	 * @returns {Number}
+	 */
+	get quickLength() {
+		return Math.max(this.topLength, this.baseLength);
+	}
+
+	/**
+	 * Get Maxes
+	 * @returns {Maxes}
+	 */
+	get maxes() {
+		if (!this.cache.maxes || hasNonValues(this.cache.maxes)) {
+			this.recalculateMaxes();
+		}
+
+		return new Maxes(this.cache.maxes);
+	}
+
+	/**
+	 * Returns named point properties as an array of 8 numbers
+	 */
+	get valuesAsArray() {
+		let re = [this.p1x, this.p1y, this.p2x, this.p2y, this.p3x, this.p3y, this.p4x, this.p4y];
+		return re;
+	}
+
+	/**
+	 * Returns true if this segment is a line, and not a curve.
+	 */
+	get isLine() {
+		if (xyPointsAreClose(this.p1x, this.p4x, 1) && xyPointsAreClose(this.p1y, this.p4y, 1))
+			return true;
+		if (isNaN(this.p2x) && isNaN(this.p2y) && isNaN(this.p3x) && isNaN(this.p3y)) return true;
+		if (this.lineType === 'horizontal' || this.lineType === 'vertical') return true;
+		return false;
+	}
+	// --------------------------------------------------------------
+	// Setters
+	// --------------------------------------------------------------
+
+	/**
+	 * Set Maxes
+	 * @param {Maxes} maxes
+	 * @returns {Path} - reference to this Segment
+	 */
+	set maxes(maxes) {
+		this.cache.maxes = {};
+		this.cache.maxes = new Maxes(maxes);
+	}
+
+	// --------------------------------------------------------------
+	// Splitting
+	// --------------------------------------------------------------
+
+	/**
+	 * Splits a segment at either an x/y value or a decimal %
+	 * @param {*} sp - decimal or x/y object
+	 * @returns {Array | Boolean} - Array with two segments resulting from the split
+	 */
+	split(sp = 0.5) {
+		if (typeof sp === 'object' && isVal(sp.x) && isVal(sp.y)) {
+			return this.splitAtPoint(sp);
+		} else if (!isNaN(sp)) {
+			return this.splitAtTime(sp);
+		}
+		return false;
+	}
+
+	/**
+	 * Splits a segment at a specific x/y position
+	 * @param {Object | XYPoint} co - x/y point where to split
+	 * @returns {Array | Boolean} - Array with two segments resulting from the split
+	 */
+	splitAtPoint(co) {
+		// log('Segment.splitAtPoint', 'start');
+		// log(`splitting at ${co.x} ${co.y}`);
+		if (this.containsTerminalPoint(co, 0.1)) return false;
+
+		if (this.lineType === 'horizontal' || this.lineType === 'vertical') {
+			let newX;
+			let newY;
+			let online = false;
+			if (this.lineType === 'horizontal') {
+				if (round(co.y, 2) === round(this.p1y, 2)) {
+					if (co.x > Math.min(this.p1x, this.p4x) && co.x < Math.max(this.p1x, this.p4x)) {
+						newX = co.x;
+						newY = this.p1y;
+						online = true;
+					}
+				}
+			} else if (this.lineType === 'vertical') {
+				if (round(co.x, 2) === round(this.p1x, 2)) {
+					if (co.y > Math.min(this.p1y, this.p4y) && co.y < Math.max(this.p1y, this.p4y)) {
+						newX = this.p1x;
+						newY = co.y;
+						online = true;
+					}
+				}
+			}
+			if (!online) {
+				// log('not on the line');
+				// log('Segment.splitAtPoint', 'end');
+				return false;
+			}
+			// log('returning simple line split');
+			// log('Segment.splitAtPoint', 'end');
+			return [
+				new Segment({
+					p1x: this.p1x,
+					p1y: this.p1y,
+					p4x: newX,
+					p4y: newY,
+				}),
+				new Segment({
+					p1x: newX,
+					p1y: newY,
+					p4x: this.p4x,
+					p4y: this.p4y,
+				}),
+			];
+		} else if (this.pointIsWithinMaxes(co)) {
+			const threshold = 0.1;
+			const sp = this.getSplitFromXYPoint(co, threshold);
+			// log('distance is ' + sp.distance);
+			if (sp && sp.distance < threshold) {
+				// log('splitting at ' + sp.split);
+				return this.splitAtTime(sp.split);
+			}
+		}
+		// log('Segment.splitAtPoint - returning false', 'end');
+		return false;
+	}
+
+	/**
+	 * Splits a segment based on a decimal value ("time" is a metaphor here, from 0 to 1 second)
+	 * @param {Number} t - decimal from 0 to 1 representing how far along the curve to split
+	 * @returns {Array} - Array with two segments resulting from the split
+	 */
+	splitAtTime(t = 0.5) {
+		// log('Segment.splitAtTime', 'start');
+		const rs = 1 - t;
+		// Do some math
+		const x12 = this.p1x * rs + this.p2x * t;
+		const y12 = this.p1y * rs + this.p2y * t;
+		const x23 = this.p2x * rs + this.p3x * t;
+		const y23 = this.p2y * rs + this.p3y * t;
+		const x34 = this.p3x * rs + this.p4x * t;
+		const y34 = this.p3y * rs + this.p4y * t;
+		const x123 = x12 * rs + x23 * t;
+		const y123 = y12 * rs + y23 * t;
+		const x234 = x23 * rs + x34 * t;
+		const y234 = y23 * rs + y34 * t;
+		const x1234 = x123 * rs + x234 * t;
+		const y1234 = y123 * rs + y234 * t;
+		// Return two new Segments
+		return [
+			new Segment({
+				p1x: this.p1x,
+				p1y: this.p1y,
+				p2x: x12,
+				p2y: y12,
+				p3x: x123,
+				p3y: y123,
+				p4x: x1234,
+				p4y: y1234,
+			}),
+			new Segment({
+				p1x: x1234,
+				p1y: y1234,
+				p2x: x234,
+				p2y: y234,
+				p3x: x34,
+				p3y: y34,
+				p4x: this.p4x,
+				p4y: this.p4y,
+			}),
+		];
+	}
+
+	/**
+	 * Splits a segment at many x/y points
+	 * @param {Array} points - collection of many XYPoint objects where to split
+	 * @param {Number} threshold - precision to look for a control point
+	 * @returns {Array} - Array with many segments resulting from the split
+	 */
+	splitAtManyPoints(points, threshold = 1) {
+		// log('Segment.splitAtManyPoints', 'start');
+		const segments = [new Segment(clone(this))];
+		let tr;
+		for (let x = 0; x < points.length; x++) {
+			for (let s = 0; s < segments.length; s++) {
+				if (!segments[s].containsTerminalPoint(points[x], threshold)) {
+					tr = segments[s].splitAtPoint(points[x]);
+					if (tr) {
+						segments.splice(s, 1, tr[0], tr[1]);
+					}
+				}
+			}
+		}
+		// log('split into ' + segments.length);
+		// log('Segment.splitAtManyPoints', 'end');
+		return segments;
+	}
+
+	/**
+	 * Checks to see if a point is inside the bounding box of this Segment
+	 * @param {Object} co - x/y point to check
+	 * @returns {Boolean}
+	 */
+	pointIsWithinMaxes(co) {
+		const m = this.maxes;
+		const re = co.x <= m.xMax && co.x >= m.xMin && co.y <= m.yMax && co.y >= m.yMin;
+		return re;
+	}
+
+	/**
+	 * Removes the "handle" control points, effectively making this a straight line
+	 * @returns {Segment}
+	 */
+	convertToLine() {
+		return new Segment({
+			p1x: this.p1x,
+			p1y: this.p1y,
+			p4x: this.p4x,
+			p4y: this.p4y,
+		});
+	}
+
+	/**
+	 * Given an x/y point, find the equivalent split distance t
+	 * @param {Object | XYPoint} point - place to look
+	 * @param {Number} threshold - how close to look
+	 * @returns {Object} - collection of results
+	 */
+	getSplitFromXYPoint(point, threshold = 1) {
+		// log(`getSplitFromXYPoint`, 'start');
+
+		const grains = this.quickLength * 1000;
+		let minDistance = 999999999;
+		let result = {};
+		let check;
+		let d;
+
+		for (let t = 0; t < 1; t += 1 / grains) {
+			check = this.findXYPointFromSplit(t);
+			// log(`checking x:${check.x}\ty:${check.y}\tt${t}`);
+
+			d = Math.sqrt(
+				(check.x - point.x) * (check.x - point.x) + (check.y - point.y) * (check.y - point.y)
+			);
+
+			if (d < minDistance) {
+				minDistance = d;
+				result = {
+					split: t,
+					distance: d,
+					x: check.x,
+					y: check.y,
+				};
+				if (threshold && result.distance < threshold) return result;
+			}
+		}
+		// log(`getSplitFromXYPoint`, 'end');
+		return result;
+	}
+
+	/**
+	 * Find the length of a curve, recursively
+	 * At small enough sizes, straight lines approximate a curve
+	 * @returns {Number}
+	 */
+	calculateLength() {
+		// this function is only used as an approximation
+		// threshold in em units
+
+		if (this.lineType) return this.baseLength;
+
+		let re;
+		const threshold = 10;
+
+		if (this.quickLength < threshold) {
+			return this.quickLength;
+		} else {
+			const s = this.split();
+			re = s[0].calculateLength() + s[1].calculateLength();
+			return re;
+		}
+	}
+
+	/**
+	 * Given a percent distance, return a x/y value
+	 * @param {Number} t - between 0 and 1
+	 * @returns {Object} - x and y
+	 */
+	findXYPointFromSplit(t = 0.5) {
+		const rs = 1 - t;
+		// Do some math
+		const x12 = this.p1x * rs + this.p2x * t;
+		const y12 = this.p1y * rs + this.p2y * t;
+		const x23 = this.p2x * rs + this.p3x * t;
+		const y23 = this.p2y * rs + this.p3y * t;
+		const x34 = this.p3x * rs + this.p4x * t;
+		const y34 = this.p3y * rs + this.p4y * t;
+		const x123 = x12 * rs + x23 * t;
+		const y123 = y12 * rs + y23 * t;
+		const x234 = x23 * rs + x34 * t;
+		const y234 = y23 * rs + y34 * t;
+		const x1234 = x123 * rs + x234 * t;
+		const y1234 = y123 * rs + y234 * t;
+		return { x: x1234, y: y1234 };
+	}
+
+	/**
+	 * Reverses the 'winding' of this segment
+	 * @returns {Segment}
+	 */
+	getReverse() {
+		return new Segment({
+			p1x: this.p4x,
+			p1y: this.p4y,
+			p2x: this.p3x,
+			p2y: this.p3y,
+			p3x: this.p2x,
+			p3y: this.p2y,
+			p4x: this.p1x,
+			p4y: this.p1y,
+		});
+	}
+
+	/**
+	 * Given a control point number, return a xy point
+	 * 1 - first 'PathPoint'
+	 * 2 - first 'Handle'
+	 * 3 - second 'Handle'
+	 * 4 - second 'PathPoint'
+	 * @param {Number} pt - Which point to return
+	 * @returns {Object} - x and y
+	 */
+	getXYPoint(pt) {
+		let result = { x: this.p4x, y: this.p4y }; // Default to pt 4
+		if (pt === 1) result = { x: this.p1x, y: this.p1y };
+		else if (pt === 2) result = { x: this.p2x, y: this.p2y };
+		else if (pt === 3) result = { x: this.p3x, y: this.p3y };
+
+		return result;
+	}
+
+	// --------------------------------------------------------------
+	// Bounds
+	// --------------------------------------------------------------
+
+	/**
+	 * A Bezier Segment can never be outside the bounding box
+	 * created by all 4 of it's control points
+	 * @returns {Maxes}
+	 */
+	getFastMaxes() {
+		const bounds = {
+			xMin: Math.min(this.p1x, Math.min(this.p2x, Math.min(this.p3x, this.p4x))),
+			yMin: Math.min(this.p1y, Math.min(this.p2y, Math.min(this.p3y, this.p4y))),
+			xMax: Math.max(this.p1x, Math.max(this.p2x, Math.max(this.p3x, this.p4x))),
+			yMax: Math.max(this.p1y, Math.max(this.p2y, Math.max(this.p3y, this.p4y))),
+		};
+		// log(`Segment.getFastMaxes - returning`);
+		// log(bounds);
+
+		return new Maxes(bounds);
+	}
+
+	/**
+	 * Calculate a precise bounding box for this Segment by solving cubic derivatives
+	 * and evaluating extrema in both x and y.
+	 */
+	recalculateMaxes() {
+		// Helper: cubic coefficients for one dimension
+		function getCubicCoefficients(p0, p1, p2, p3) {
+			return {
+				a: -p0 + 3 * p1 - 3 * p2 + p3,
+				b: 3 * p0 - 6 * p1 + 3 * p2,
+				c: 3 * (p1 - p0),
+				d: p0,
+			};
+		}
+
+		// Helper: evaluate cubic at t with coefficients
+		function evalCubic(t, c) {
+			return ((c.a * t + c.b) * t + c.c) * t + c.d;
+		}
+
+		// Helper: derivative roots in (0,1)
+		function derivativeRoots(c) {
+			const roots = [];
+			const A = 3 * c.a;
+			const B = 2 * c.b;
+			const C = c.c;
+			const EPS = 1e-9;
+
+			if (Math.abs(A) < EPS) {
+				if (Math.abs(B) < EPS) return roots; // constant derivative
+				const t = -C / B;
+				if (t > 0 && t < 1) roots.push(t);
+				return roots;
+			}
+
+			const disc = B * B - 4 * A * C;
+			if (disc < 0) return roots;
+			const sqrtDisc = Math.sqrt(disc);
+			const t1 = (-B + sqrtDisc) / (2 * A);
+			const t2 = (-B - sqrtDisc) / (2 * A);
+			if (t1 > 0 && t1 < 1) roots.push(t1);
+			if (t2 > 0 && t2 < 1) roots.push(t2);
+			return roots;
+		}
+
+		const cx = getCubicCoefficients(this.p1x, this.p2x, this.p3x, this.p4x);
+		const cy = getCubicCoefficients(this.p1y, this.p2y, this.p3y, this.p4y);
+
+		const candidates = new Set([0, 1]);
+		derivativeRoots(cx).forEach((t) => candidates.add(t));
+		derivativeRoots(cy).forEach((t) => candidates.add(t));
+
+		let bounds = {
+			xMin: Infinity,
+			yMin: Infinity,
+			xMax: -Infinity,
+			yMax: -Infinity,
+		};
+
+		candidates.forEach((t) => {
+			const x = evalCubic(t, cx);
+			const y = evalCubic(t, cy);
+			if (x < bounds.xMin) bounds.xMin = x;
+			if (x > bounds.xMax) bounds.xMax = x;
+			if (y < bounds.yMin) bounds.yMin = y;
+			if (y > bounds.yMax) bounds.yMax = y;
+		});
+
+		this.maxes = new Maxes(bounds);
+	}
+
+	// --------------------------------------------------------------
+	// Curve Checking
+	// --------------------------------------------------------------
+
+	/**
+	 * Checks to see if this (line) Segment is overlapped by
+	 * a larger (line) Segment.
+	 * Returning true basically means we can get rid of this Segment
+	 * @param {Segment} largeSegment - Larger segment to check against
+	 * @returns {Boolean}
+	 */
+	isLineOverlappedByLine(largeSegment) {
+		// log(`Segment.isLineOverlappedByLine`, 'start');
+
+		if (!this.lineType || !largeSegment.lineType) {
+			// log(`this.lineType: ${this.lineType} and largeSegment.lineType: ${largeSegment.lineType}`);
+			// log(`Segment.isLineOverlappedByLine`, 'end');
+			return false;
+		}
+
+		const c1 = largeSegment.containsPointOnLine(this.getXYPoint(1));
+		const c4 = largeSegment.containsPointOnLine(this.getXYPoint(4));
+
+		// log(`this.p1 / p4 is on largeSegment: ${c1} / ${c4}`);
+
+		// log(`returning ${c1&&c4}`);
+		// log(`Segment.isLineOverlappedByLine`, 'end');
+		return c1 && c4;
+	}
+
+	/**
+	 * Checks to see if an x/y value is one of the points of this Segment
+	 * @param {Object | XYPoint} pt - point to check
+	 * @param {Number} threshold - how close to check
+	 * @returns {String | false}
+	 */
+	containsTerminalPoint(pt, threshold = 1) {
+		if (this.containsStartPoint(pt, threshold)) return 'start';
+		else if (this.containsEndPoint(pt, threshold)) return 'end';
+		else return false;
+	}
+
+	/**
+	 * Checks to see if an x/y value is the start of this Segment
+	 * @param {Object | XYPoint} pt - point to check
+	 * @param {Number} threshold - how close to check
+	 * @returns {Boolean}
+	 */
+	containsStartPoint(pt, threshold = 1) {
+		return xyPointsAreClose(this.getXYPoint(1), pt, threshold);
+	}
+	/**
+	 * Checks to see if an x/y value is the end of this Segment
+	 * @param {Object | XYPoint} pt - point to check
+	 * @param {Number} threshold - how close to check
+	 * @returns {Boolean}
+	 */
+	containsEndPoint(pt, threshold = 1) {
+		return xyPointsAreClose(this.getXYPoint(4), pt, threshold);
+	}
+
+	/**
+	 * Checks to see if an x/y value is anywhere on this Segment
+	 * @param {Object | XYPoint} pt - point to check
+	 * @param {Number =} threshold - how close to check
+	 * @returns {Boolean}
+	 */
+	containsPointOnCurve(pt, threshold = 0.1) {
+		if (this.containsTerminalPoint(pt, threshold)) return true;
+		if (this.lineType) return this.containsPointOnLine(pt);
+		const t = this.getSplitFromXYPoint(pt, threshold);
+		if (t && t.distance < threshold) return true;
+		else return false;
+	}
+
+	/**
+	 * Checks to see if an x/y value is on this Line Segment
+	 * @param {Object | XYPoint} pt - point to check
+	 * @returns {Boolean}
+	 */
+	containsPointOnLine(pt) {
+		// log('Segment.containsPointOnLine', 'start');
+		// log('checking ' + pt.x + ' \t' + pt.y);
+		if (!this.lineType) {
+			// log('this is not a line, returning false');
+			return false;
+		}
+		if (this.containsTerminalPoint(pt)) {
+			// log('this segment contains the point as an end point, returning false');
+			return false;
+		}
+
+		/**
+		 * Checks to see if a middle value is between two other values
+		 * @param {Number} l - left point
+		 * @param {Number} m - middle point
+		 * @param {Number} r - right point
+		 * @returns {Boolean}
+		 */
+		function within(l, m, r) {
+			return (l <= m && m <= r) || (r <= m && m <= l);
+		}
+
+		if (
+			within(this.p1x, pt.x, this.p4x) &&
+			within(this.p1y, pt.y, this.p4y) &&
+			pointsAreCollinear(this.getXYPoint(1), this.getXYPoint(4), pt)
+		) {
+			// log('returning true');
+			return true;
+		}
+
+		// log('fallthrough returning false');
+		return false;
+	}
+
+	/**
+	 * Checks to see if this segment's last point is another Segment's first point
+	 * @param {Segment} s2 - other segment to check
+	 * @param {Number} threshold - how close to check
+	 * @returns {Boolean}
+	 */
+	precedes(s2, threshold = 1) {
+		const s1c4 = this.getXYPoint(4);
+		const s2c1 = s2.getXYPoint(1);
+
+		return xyPointsAreClose(s1c4, s2c1, threshold);
+	}
+
+	/**
+	 * Determines if this Segment is actually a Line Segment
+	 * and if so, what kind
+	 * @param {Number =} precision - how close to look
+	 * @returns {String | false}
+	 */
+	determineLineType(precision = 1) {
+		/**
+		 * @type {Boolean | String} type
+		 */
+		let type = false;
+
+		const rex =
+			round(this.p1x, precision) === round(this.p2x, precision) &&
+			round(this.p1x, precision) === round(this.p3x, precision) &&
+			round(this.p1x, precision) === round(this.p4x, precision);
+
+		const rey =
+			round(this.p1y, precision) === round(this.p2y, precision) &&
+			round(this.p1y, precision) === round(this.p3y, precision) &&
+			round(this.p1y, precision) === round(this.p4y, precision);
+
+		const red =
+			pointsAreCollinear(this.getXYPoint(1), this.getXYPoint(4), this.getXYPoint(2)) &&
+			pointsAreCollinear(this.getXYPoint(1), this.getXYPoint(4), this.getXYPoint(3));
+
+		if (rex) type = 'vertical';
+		else if (rey) type = 'horizontal';
+		else if (red) type = 'diagonal';
+		this._lineType = type;
+		return type;
+	}
+
+	/**
+	 * Rounds all the values in this Segment
+	 * @param {Number} precision - how many decimal places to round
+	 * @returns {Segment} - reference to this segment
+	 */
+	roundAll(precision = 3) {
+		this.p1x = round(this.p1x, precision);
+		this.p1y = round(this.p1y, precision);
+		this.p2x = round(this.p2x, precision);
+		this.p2y = round(this.p2y, precision);
+		this.p3x = round(this.p3x, precision);
+		this.p3y = round(this.p3y, precision);
+		this.p4x = round(this.p4x, precision);
+		this.p4y = round(this.p4y, precision);
+
+		return this;
+	}
+
+	/**
+	 * Adds handles to a line segment, effectively making it a
+	 * flat curve. Useful for Curve Offsetting math.
+	 */
+	addHandlesToLineSegment() {
+		if (this.lineType) {
+			this.p2x = this.p4x - this.p1x * (1 / 3);
+			this.p2y = this.p4y - this.p1y * (1 / 3);
+			this.p3x = this.p4x - this.p1x * (1 / 6);
+			this.p3y = this.p4y - this.p1y * (1 / 6);
+		}
+	}
+
+	// --------------------------------------------------------------
+	// Curve Offsetting
+	// --------------------------------------------------------------
+
+	/**
+	 * Returns a new Segment offset by a given distance.
+	 * This uses a simple approximation: for several t values, offset the curve by the normal,
+	 * then fit a new cubic Bezier through those points.
+	 * @param {Number} offsetDistance - distance to offset (positive = left, negative = right)
+	 * @param {Number} samples - how many points to sample
+	 * @returns {Segment}
+	 */
+	makeSegmentOffset(offsetDistance = 100, samples = 100) {
+
+		function getTangent(seg, t) {
+			const mt = 1 - t;
+			const dx =
+				-3 * mt * mt * seg.p1x +
+				3 * mt * mt * seg.p2x -
+				6 * mt * t * seg.p2x +
+				6 * mt * t * seg.p3x -
+				3 * t * t * seg.p3x +
+				3 * t * t * seg.p4x;
+			const dy =
+				-3 * mt * mt * seg.p1y +
+				3 * mt * mt * seg.p2y -
+				6 * mt * t * seg.p2y +
+				6 * mt * t * seg.p3y -
+				3 * t * t * seg.p3y +
+				3 * t * t * seg.p4y;
+			return { x: dx, y: dy };
+		}
+
+		function getNormal(tangent) {
+			const n = { x: -tangent.y, y: tangent.x };
+			const len = Math.sqrt(n.x * n.x + n.y * n.y);
+			return len === 0 ? { x: 0, y: 0 } : { x: n.x / len, y: n.y / len };
+		}
+
+		// Add handles to make ofsetting math better
+		this.addHandlesToLineSegment();
+
+		// Sample points and offset them
+		const ts = [];
+		for (let i = 0; i < samples; i++) ts.push(i / (samples - 1));
+		const offsetPoints = ts.map((t) => {
+			const pt = this.findXYPointFromSplit(t);
+			const tangent = getTangent(this, t);
+			const normal = getNormal(tangent);
+			return {
+				x: pt.x + offsetDistance * normal.x,
+				y: pt.y + offsetDistance * normal.y,
+				t,
+			};
+		});
+
+		// p1 and p4 are the offset endpoints
+		const p1 = offsetPoints[0];
+		const p4 = offsetPoints[offsetPoints.length - 1];
+
+		// Least-squares fit for p2 and p3
+		// See https://pomax.github.io/bezierinfo/#offsetting for details
+		// We'll use the standard cubic Bezier basis for t=1/3 and t=2/3
+		const t1 = 1 / 3;
+		const t2 = 2 / 3;
+		const b0 = (t) => Math.pow(1 - t, 3);
+		const b1 = (t) => 3 * Math.pow(1 - t, 2) * t;
+		const b2 = (t) => 3 * (1 - t) * Math.pow(t, 2);
+		const b3 = (t) => Math.pow(t, 3);
+
+		const pt1 = offsetPoints[Math.round((samples - 1) * t1)];
+		const pt2 = offsetPoints[Math.round((samples - 1) * t2)];
+
+		// Solve for p2 and p3 using the Bezier basis
+		// pt = b0*p1 + b1*p2 + b2*p3 + b3*p4
+		// => system of two equations for two unknowns (p2, p3)
+		const A = [
+			[b1(t1), b2(t1)],
+			[b1(t2), b2(t2)],
+		];
+		const bx = [pt1.x - b0(t1) * p1.x - b3(t1) * p4.x, pt2.x - b0(t2) * p1.x - b3(t2) * p4.x];
+		const by = [pt1.y - b0(t1) * p1.y - b3(t1) * p4.y, pt2.y - b0(t2) * p1.y - b3(t2) * p4.y];
+
+		/**
+		 * Solve 2x2 linear system
+		 * @param {Array} A
+		 * @param {Array} b
+		 * @param {String} dimension - 'x' or 'y'
+		 * @returns {[Number, Number]}
+		 */
+		function solve2x2(A, b, dimension = 'x') {
+			const det = A[0][0] * A[1][1] - A[0][1] * A[1][0];
+			if (Math.abs(det) < 1e-8) {
+				// fallback
+				if (dimension === 'x') return [p1.x, p4.x];
+				else return [p1.y, p4.y];
+			}
+			return [(A[1][1] * b[0] - A[0][1] * b[1]) / det, (-A[1][0] * b[0] + A[0][0] * b[1]) / det];
+		}
+
+		const [p2x, p3x] = solve2x2(A, bx, 'x');
+		const [p2y, p3y] = solve2x2(A, by, 'y');
+
+		return new Segment({
+			p1x: p1.x,
+			p1y: p1.y,
+			p2x,
+			p2y,
+			p3x,
+			p3y,
+			p4x: p4.x,
+			p4y: p4.y,
+		});
+	}
+}
+
+// --------------------------------------------------------------
+// Helpers
+// --------------------------------------------------------------
+
+/**
+ * Find the length between two points
+ * @param {Number} p1x
+ * @param {Number} p1y
+ * @param {Number} p2x
+ * @param {Number} p2y
+ * @returns {Number}
+ */
+export function getLineLength(p1x, p1y, p2x, p2y) {
+	const a = Math.abs(p1x - p2x);
+	const b = Math.abs(p1y - p2y);
+	const c = Math.sqrt(a * a + b * b);
+	return c;
+}
+
+/**
+ * Returns true if three points are in a straight line
+ * @param {Object | XYPoint} a - point to evaluate
+ * @param {Object | XYPoint} b - point to evaluate
+ * @param {Object | XYPoint} c - point to evaluate
+ * @param {Number =} precision - how close to compare
+ * @returns {Boolean}
+ */
+export function pointsAreCollinear(a, b, c, precision) {
+	precision = isVal(precision) ? precision : 3;
+
+	const s1 = (b.x - a.x) * (c.y - a.y);
+	const s2 = (c.x - a.x) * (b.y - a.y);
+
+	return round(s1, precision) === round(s2, precision);
+}

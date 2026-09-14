@@ -1,0 +1,158 @@
+import { SVGtoBezier } from 'svg-to-bezier';
+import { showError } from '../../controls/dialogs/dialogs.js';
+import { ControlPoint } from '../../project_data/control_point.js';
+import { Coord } from '../../project_data/coord.js';
+import { Glyph } from '../../project_data/glyph.js';
+import { Path } from '../../project_data/path.js';
+import { PathPoint } from '../../project_data/path_point.js';
+
+let importUPM;
+/**
+ * Imports SVG data shapes as a Glyphr Studio Glyph object
+ * @param {String} svgData - SVG document in text form
+ * @param {Boolean =} showErrors - pop an UI error dialog
+ * @param {Number =} projectUPM - upm for scaled handle length
+ * @returns {Glyph} - Glyphr Studio Glyph result
+ */
+export function ioSVG_convertSVGTagsToGlyph(svgData, showErrors = true, projectUPM = 2048) {
+	// log('ioSVG_convertSVGTagsToGlyph', 'start');
+
+	// log(`Passed svgData`);
+	// log(svgData);
+	importUPM = projectUPM;
+	const bezierData = SVGtoBezier(svgData);
+	// log(`Resulting Bezier Data`);
+	// log(bezierData);
+
+	if (showErrors && bezierData.length === 0) {
+		showError(`
+			Text on the operating system clipboard does not appear to be SVG, or there was an error parsing the SVG code.`);
+		// log('ioSVG_convertSVGTagsToGlyph', 'end');
+		return new Glyph();
+	}
+
+	let pathCounter = 0;
+	let newPaths = [];
+
+	bezierData.forEach((path) => {
+		// Remove line-to commands that don't go anywhere
+		path = path.filter((bezier) => {
+			return !(
+				bezier[0].x === bezier[3].x &&
+				bezier[0].y === bezier[3].y &&
+				bezier[1] === false &&
+				bezier[2] === false
+			);
+		});
+
+		if (path.length) {
+			pathCounter++;
+			// log(`START pathCounter: ${pathCounter}`);
+			let thisPath = new Path({ name: `Path ${pathCounter}` });
+			// log(`just after creating empty path: ${thisPath.winding}`);
+			let newPoint;
+
+			// Check if path is closed
+			const isPathClosed = path[0][0].x === path.at(-1)[3].x && path[0][0].y === path.at(-1)[3].y;
+			if (!isPathClosed) {
+				newPoint = new PathPoint({ projectUPM: importUPM });
+				newPoint.p = new ControlPoint({ coord: new Coord({ x: path[0][0].x, y: path[0][0].y }) });
+				if (path[0][1]) {
+					newPoint.h2 = new ControlPoint({
+						coord: new Coord({ x: path[0][1].x, y: path[0][1].y }),
+					});
+				}
+				thisPath.addPathPoint(newPoint);
+			}
+
+			for (let b = 0; b < path.length - 1; b++) {
+				// log(`>>>>Bezier path: ${b} and ${b + 1}`);
+				const seg1 = path[b];
+				let seg2 = path[b + 1];
+
+				// Check for non-continuous paths
+				if (seg1[3].x !== seg2[0].x || seg1[3].y !== seg2[0].y) {
+					// console.warn(`Segments do not share endpoints`);
+					const newSeg = [
+						{ x: seg1[3].x, y: seg1[3].y },
+						false,
+						false,
+						{ x: seg2[0].x, y: seg2[0].y },
+					];
+					path.splice(b + 1, 0, newSeg);
+					seg2 = newSeg;
+				}
+
+				// log(`seg1: ${JSON.stringify(seg1)}`);
+				thisPath.addPathPoint(makePathPointFromBeziers(seg1, seg2));
+				// log(thisPath.print());
+			}
+
+			if (isPathClosed) {
+				// log(`>>>>Bezier path: at(-1) and 0`);
+				thisPath.addPathPoint(makePathPointFromBeziers(path.at(-1), path[0]));
+			} else {
+				newPoint = new PathPoint({ projectUPM: importUPM });
+				newPoint.p = new ControlPoint({
+					coord: new Coord({ x: path.at(-1)[3].x, y: path.at(-1)[3].y }),
+				});
+				if (path.at(-1)[2]) {
+					newPoint.h1 = new ControlPoint({
+						coord: new Coord({ x: path.at(-1)[2].x, y: path.at(-1)[2].y }),
+					});
+				}
+				thisPath.addPathPoint(newPoint);
+			}
+
+			// log(`Done with one path:`);
+			// log(`\n⮟thisPath⮟`);
+			// log(thisPath);
+			newPaths.push(thisPath);
+			// log(`done creating this path: ${thisPath.winding}`);
+			// log(`END pathCounter: ${pathCounter}`);
+		}
+	});
+
+	const resultGlyph = new Glyph({ shapes: newPaths });
+	resultGlyph.changed();
+
+	// log(`RESULTING paths in a glyph`);
+	// log(resultGlyph);
+
+	// log('ioSVG_convertSVGTagsToGlyph', 'end');
+	return resultGlyph;
+}
+
+/**
+ * Given two Bezier paths, using the point in common, create
+ * a Glyphr Studio path point.
+ * @param {Object} seg1 - curve data in Bezier format
+ * @param {Object} seg2 - curve data in Bezier format
+ * @returns {PathPoint}
+ */
+function makePathPointFromBeziers(seg1, seg2) {
+	// log(`makePathPointFromBeziers`, 'start');
+	// log(`seg1: ${JSON.stringify(seg1)}`);
+	// log(`seg2: ${JSON.stringify(seg2)}`);
+
+	let newPoint = new PathPoint({ projectUPM: importUPM });
+	newPoint.p = new ControlPoint({ coord: { x: seg2[0].x, y: seg2[0].y } });
+
+	if (seg1[2]) {
+		newPoint.h1 = new ControlPoint({ coord: { x: seg1[2].x, y: seg1[2].y }, use: true });
+	} else {
+		// console.warn(`NOT SETTING h1`);
+		// log(seg1[2]);
+	}
+
+	if (seg2[1]) {
+		newPoint.h2 = new ControlPoint({ coord: { x: seg2[1].x, y: seg2[1].y }, use: true });
+	} else {
+		// console.warn(`NOT SETTING h2`);
+		// log(seg2[1]);
+	}
+
+	// log(newPoint.print());
+	// log(`makePathPointFromBeziers`, 'end');
+	return newPoint;
+}

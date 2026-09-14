@@ -1,0 +1,219 @@
+#app__wrapper {
+	background-color: var(--blue-l97);
+	height: 100%;
+	width: 100%;
+	min-height: 100%;
+	min-width: 100%;
+	position: absolute;
+	top: 0px;
+	left: 0px;
+	overflow: hidden;
+	display: grid;
+	grid-template-rows: 40px calc(100vh - 40px);
+}
+
+#app__top-bar {
+	grid-row: 1;
+	padding: 6px 0px 6px 11px;
+	z-index: 2000 !important;
+	display: grid;
+	grid-template-columns: 150px 150px 1fr;
+}
+
+#app__main-content {
+	grid-row: 2;
+	width: 100%;
+	min-width: 1000px;
+}
+
+#app__page {
+	height: 100%;
+	width: 100%;
+	min-height: 100%;
+	min-width: 100%;
+}
+
+.app__page-animation {
+	animation: var(--animate-fade-in);
+}
+
+.top-bar__logo {
+	display: inline-block;
+	margin-left: 2px;
+}
+
+.top-bar__logo svg {
+	fill: var(--blue-l50);
+}
+
+.top-bar__menus {
+	margin-left: 20px;
+	margin-top: 8px;
+	display: inline-block;
+	height: 28px;
+}
+
+.menu-entry-point,
+.menu-entry-point:hover,
+.menu-entry-point:active,
+.menu-entry-point:focus {
+	font-size: 0.8em;
+	padding: 2px 5px;
+	margin: 0px;
+	position: relative;
+	top: -2px;
+	background-color: transparent;
+	border: 1px solid transparent;
+	border-radius: 2px;
+	box-shadow: none;
+	color: var(--enabled-resting-lightText);
+}
+
+.menu-entry-point:hover {
+	color: var(--enabled-active-lightText);
+	background-color: var(--enabled-active-background);
+}
+
+.top-bar__bug-contact {
+	position: absolute;
+	opacity: 80%;
+	right: 10px;
+	top: 10px;
+	padding: 2px 4px;
+	background-color: var(--gray-l97);
+	border: 1px solid var(--gray-l90);
+	color: var(--gray-l10);
+	border-radius: 3px;
+	/* box-shadow: var(--l2-shadow); */
+}
+
+@media (min-width: 810px) {
+	.top-bar__bug-blurb {
+		display: inline-block !important;
+	}
+	.top-bar__bug-icon {
+		position: relative;
+		top: 1px;
+	}
+	.top-bar__bug-link {
+		display: inline-block !important;
+	}
+}
+.top-bar__bug-blurb {
+	display: none;
+}
+
+.top-bar__bug-link {
+	display: none;
+}
+
+.top-bar__bug-icon {
+	position: relative;
+	left: -2px;
+}
+
+.top-bar__bug-contact span {
+	font-size: 0.8em;
+	margin: 0;
+	padding: 0;
+}
+
+.top-bar__bug-contact svg {
+	height: 9px;
+	fill: var(--gray-l40);
+	margin-left: 4px;
+}
+
+.top-bar__bug-icon:hover svg {
+	fill: var(--gray-l10);
+}
+
+.top-bar__bug-link a {
+	font-size: 1em;
+	color: var(--gray-l10);
+}
+
+.top-bar__bug-link a:hover,
+.top-bar__bug-link a:focus,
+.top-bar__bug-link a:visited {
+	font-size: 1em;
+	color: black !important;
+}
+
+.top-bar__bug-link a:active {
+	color: black;
+}
+
+/*
+	Project Preview menu
+*/
+.project-preview__row-wrapper {
+	box-shadow: var(--l1-shadow-down);
+	border-radius: 8px;
+	padding: 10px;
+	padding-top: 5px;
+	margin-bottom: 10px;
+}
+
+.project-preview__super-title {
+	font-size: 0.75em;
+	letter-spacing: 0.2ch;
+	opacity: 80%;
+}
+
+.project-preview__row-wrapper display-canvas {
+	background-color: var(--gray-l97);
+	border-radius: 4px;
+	display: block;
+	height: 42px;
+	overflow: hidden;
+}
+
+.project-preview__primary {
+	background: linear-gradient(135deg, var(--blue-l35), var(--blue-l25));
+	border: 1px solid var(--blue-l60);
+}
+
+.project-preview__primary h3,
+.project-preview__primary .project-preview__super-title {
+	color: var(--blue-l90);
+}
+
+.project-preview__secondary {
+	background: linear-gradient(135deg, var(--gray-l95), var(--gray-l90));
+	border: 1px solid var(--gray-l90);
+}
+
+.project-preview__secondary h3,
+.project-preview__secondary .project-preview__super-title {
+	color: var(--gray-l20);
+}
+
+.project-preview__no-project {
+	background: linear-gradient(135deg, white, var(--blue-l95));
+	border: 1px dashed var(--blue-l60);
+	vertical-align: middle;
+	text-align: center;
+}
+
+.project-preview__no-project h3,
+.project-preview__no-project .project-preview__super-title {
+	color: var(--blue-l40);
+	opacity: 0.5;
+	margin: 5px 0px 0px 0px;
+}
+
+.project-preview__no-project:hover,
+.project-preview__secondary:hover {
+	cursor: pointer;
+	box-shadow: var(--l2-shadow-down);
+	border-color: var(--blue-l80);
+	position: relative;
+	top: -1px;
+	left: -1px;
+}
+.project-preview__no-project:hover,
+.project-preview__secondary:hover h3 {
+	opacity: 1;
+	border-color: var(--blue-l80);
+}
