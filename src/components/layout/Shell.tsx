@@ -16,6 +16,7 @@ const Settings = lazy(() => import('@/pages/Settings'));
 const Explore = lazy(() => import('@/pages/Explore'));
 const Mood = lazy(() => import('@/components/mood/Mood'));
 import MoodTextureLayers from './MoodTextureLayers';
+import MoodIntro from '@/components/mood/MoodIntro';
 import { MotionConfig } from 'motion/react';
 
 export default function Shell() {
@@ -117,6 +118,7 @@ export default function Shell() {
         <WorkspaceLifecycle />
         {servicesReady && <TendingNotifications />}
         <MoodTextureLayers />
+      <MoodIntro />
         {/* Top bar */}
         <div className="relative z-20 shrink-0">
           <TopBar />

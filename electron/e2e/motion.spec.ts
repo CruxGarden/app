@@ -234,4 +234,36 @@ test.describe('motion roles', () => {
       await app.close();
     }
   });
+
+  /**
+   * Set pieces (ADR 0041): wearing a Mood plays its intro — a GSAP timeline on
+   * the Mood's durations — and nothing plays under an intensity below normal.
+   */
+  test('wearing a Mood plays its intro; off and subtle keep it quiet', async () => {
+    const { app, page } = await launchApp();
+    try {
+      await page.getByRole('button', { name: /enter/i }).click();
+      await page.getByText('Plant a new garden').click();
+      await page.getByRole('button', { name: 'Welcome' }).click();
+      await expect(page.getByRole('region', { name: 'Mood Bar' })).toBeVisible({ timeout: 30_000 });
+      await page.getByRole('button', { name: 'Mood', exact: true }).click();
+      const built = page.getByTestId('bundled-moods');
+      const intro = page.getByTestId('mood-intro');
+
+      await built.getByTestId('bundled-deep-sea').getByRole('button', { name: 'Apply' }).click();
+      await expect(intro).toBeVisible();
+      await expect(intro).toContainText('Deep Sea');
+      // It never takes the pointer: the modal underneath stays usable while it plays
+      await expect(intro).toHaveCSS('pointer-events', 'none');
+      await expect(intro).toHaveCount(0, { timeout: 20_000 });
+
+      await page.getByRole('combobox', { name: 'Motion intensity' }).selectOption('subtle');
+      await built.getByTestId('bundled-8-bit').getByRole('button', { name: 'Apply' }).click();
+      await expect(page.getByText('Now wearing "8-bit".')).toBeVisible();
+      await page.waitForTimeout(600);
+      await expect(intro).toHaveCount(0);
+    } finally {
+      await app.close();
+    }
+  });
 });
