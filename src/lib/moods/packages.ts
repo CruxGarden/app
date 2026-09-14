@@ -313,6 +313,9 @@ export async function applyMood(pkg: MoodPackage, opts: { sound?: boolean } = {}
   useAudioStore.setState({ volume: pkg.sound.volume, enabled: pkg.sound.enabled });
   s.setVolume(pkg.sound.volume);
   await s.setTrack(track);
+  // The Mood intro (a set piece, ADR 0041) plays on a wear, never on a restore
+  if (typeof document !== 'undefined')
+    document.dispatchEvent(new CustomEvent('mood-worn', { detail: { name: pkg.name } }));
 }
 
 interface Shipped {

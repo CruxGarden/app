@@ -129,6 +129,7 @@ export const useMoodStore = create<MoodState>((set, get) => ({
       setSetting(SettingsKey.ActiveMoodId, moodId);
       set({ activeMoodId: moodId, activeMood: mood, avatarUrl, backgroundUrl });
       get().applyMood(mood);
+      document.dispatchEvent(new CustomEvent('mood-worn', { detail: { name: mood.title } }));
     } catch {
       setSetting(SettingsKey.ActiveMoodId, '');
       set({ activeMoodId: null, activeMood: null, avatarUrl: null, backgroundUrl: null });
