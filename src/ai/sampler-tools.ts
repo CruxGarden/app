@@ -163,11 +163,37 @@ export function samplerTools(type: string) {
       writes: ['data/project.json'],
     },
   ];
+  if (type === 'excalidraw')
+    tools.push({
+      name: 'save_whiteboard_image',
+      description:
+        'Render the whiteboard as a PNG (default) or SVG and save it as a named output of this Crux (exports/). Requires the current app open in Workshop.',
+      input_schema: objectSchema({
+        format: { type: 'string', enum: ['png', 'svg'] },
+        name: { type: 'string', minLength: 1, maxLength: 120 },
+      }),
+      writes: ['exports/'],
+      timeoutMs: 2 * 60_000,
+    });
   return {
     tools,
     prepare: (name: string, input: Record<string, unknown>) => {
       if (name === inspect && !Object.keys(input).length)
         return { op: 'inspect', ...(type === 'openmosh' ? { availableEffects: EFFECTS } : {}) };
+      if (type === 'excalidraw' && name === 'save_whiteboard_image') {
+        if (
+          Object.keys(input).some((k) => !['format', 'name'].includes(k)) ||
+          (input.format !== undefined && !['png', 'svg'].includes(input.format as string)) ||
+          (input.name !== undefined &&
+            (typeof input.name !== 'string' || !input.name.trim() || input.name.length > 120))
+        )
+          throw new Error('Choose png or svg and an output name up to 120 characters.');
+        return {
+          op: 'save-image',
+          format: input.format ?? 'png',
+          ...(typeof input.name === 'string' ? { label: input.name.trim() } : {}),
+        };
+      }
       const schema = schemas[type]!;
       if (
         name !== mutate ||
