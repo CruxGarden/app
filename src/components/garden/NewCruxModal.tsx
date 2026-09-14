@@ -325,6 +325,16 @@ const TEMPLATES: Template[] = [
     desktopOnly: true,
   },
   {
+    id: 'jscad-app',
+    label: 'Model',
+    description: 'Creative · parametric 3D modelling in JavaScript with JSCAD: code, parameters, a viewer; STL, 3MF, OBJ, SVG outputs for printing and cutting',
+    defaultTitle: 'My model',
+    icon: <PencilIcon />,
+    thumb: <BlankThumb />,
+    kind: 'webapp',
+    desktopOnly: true,
+  },
+  {
     id: 'signal-app',
     label: 'Song',
     description: 'Creative · a MIDI sequencer (Signal): piano roll, arrange view, tempo, built-in sounds; MIDI and WAV outputs',

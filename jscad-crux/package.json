@@ -1,0 +1,12 @@
+{
+  "name": "jscad-crux",
+  "version": "2.6.13",
+  "private": true,
+  "description": "JSCAD (parametric 3D modelling in JavaScript) as a Crux Garden creation tool",
+  "license": "MIT",
+  "scripts": {
+    "check": "node --check garden/bridge.js && node --check garden/document.js && node --check model.js",
+    "test:garden": "node --test garden/document.test.mjs"
+  },
+  "type": "module"
+}

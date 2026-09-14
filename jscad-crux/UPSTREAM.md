@@ -1,0 +1,7 @@
+# Upstream: JSCAD
+
+[jscad/OpenJSCAD.org](https://github.com/jscad/OpenJSCAD.org) — the web application `@jscad/web` 2.6.13 (release `f245ea3`, 2026-02-21), MIT (`licenses/jscad-LICENSE.txt`). Parametric 2D/3D CAD in JavaScript: an editor, a WebGL viewer, a parameters panel, exports to STL, 3MF, OBJ, AMF, X3D, SVG and DXF.
+
+Vendored unmodified in upstream's own layout next to the page (the bundle loads `./css/codemirror.css` and `examples/…` relative to the page's directory): the released bundle `dist/jscad-web.min.js` (what its demo page and openjscad.xyz load), `css/`, the three Open Sans faces the stylesheet names (`fonts/`, Apache-2.0), `imgs/`, and `examples/` — `@jscad/examples` 2.4.2 (MIT) laid out by upstream's own postinstall script (the app opens the first one at start). `index.html` starts the app exactly as upstream's `demo.html` does; the bridge drops `index.html` from the address so the examples resolve as they do at openjscad.xyz.
+
+`garden/bridge.js` is Crux Garden's: it opens the Editor tool, loads the saved source into JSCAD's own CodeMirror and presses its compile key, saves the source to `data/project.json` (`{ name, source, saved }`) after every editor change, and turns upstream's exports — file-saver's detached download anchor — into outputs of the Crux when framed. App Tools: `inspect`, `set-name`, `set-source`, `save-model`. A shared page loads the model and lets visitors edit, spin and download it. `garden/document.js` is the validator the host runs too; `model.js` is the starter (a rounded stone with a cord hole, parametric).

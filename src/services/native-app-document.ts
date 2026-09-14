@@ -16,6 +16,7 @@ import { validateProject as validateGlyphr } from '../../glyphr-crux/src/garden/
 import { validateProject as validateFmg } from '../../fmg-crux/garden/document.js';
 import { validateProject as validateAbc } from '../../abc-crux/garden/document.js';
 import { validateProject as validateSignal } from '../../signal-crux/garden/document.js';
+import { validateProject as validateJscad } from '../../jscad-crux/garden/document.js';
 import { validateProject as validateRecorder } from '../../recorder-crux/garden/document.js';
 import { validateProject as validateOpenCut } from '../../opencut-crux/garden/model.js';
 import { validateProject as validatePlayCanvas } from '../../playcanvas-editor-crux/garden/model.js';
@@ -131,6 +132,7 @@ export async function validateNativeDocument(
     | 'fmg'
     | 'abc'
     | 'signal'
+    | 'jscad'
     | 'recorder'
     | 'opencut'
     | 'playcanvas-editor'
@@ -169,6 +171,7 @@ export async function validateNativeDocument(
   else if (app === 'fmg') validateFmg(doc);
   else if (app === 'abc') validateAbc(doc);
   else if (app === 'signal') validateSignal(doc);
+  else if (app === 'jscad') validateJscad(doc);
   else if (app === 'recorder') validateRecorder(doc);
   else if (app === 'opencut') validateOpenCut(doc);
   else if (app === 'playcanvas-editor') validatePlayCanvas(doc);
