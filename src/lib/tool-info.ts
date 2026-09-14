@@ -66,6 +66,13 @@ export const TOOL_INFO: Record<string, ToolInfo> = {
     relationship:
       'A digital garden on the Veka theme (MIT) as an Astro Site Crux: the theme’s components and pages are upstream’s; the settings file, offline fonts, the link index, backlinks and the graph are Crux Garden’s.',
   },
+  'fmg-app': {
+    name: 'Fantasy Map Generator',
+    upstream: 'https://github.com/Azgaar/Fantasy-Map-Generator',
+    detailsPath: 'UPSTREAM.md',
+    relationship:
+      'A world-building tool around the actual Fantasy Map Generator (MIT): the generator, editors, styles and exports are upstream’s, unmodified; the Garden bridge, the document and the outputs are Crux Garden’s.',
+  },
   'glyphr-app': {
     name: 'Glyphr Studio 2',
     upstream: 'https://github.com/glyphr-studio/Glyphr-Studio-2',

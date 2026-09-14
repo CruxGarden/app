@@ -43,6 +43,7 @@ const EXTENSIONS: Record<string, string> = {
   'image/jpeg': 'jpg',
   'image/webp': 'webp',
   'image/gif': 'gif',
+  'image/svg+xml': 'svg',
   'audio/wav': 'wav',
   'audio/x-wav': 'wav',
   'audio/mpeg': 'mp3',
@@ -72,7 +73,7 @@ export function outputKind(mimeType: string): 'image' | 'audio' | 'bundle' {
       : 'bundle';
 }
 const KIND_PATTERN = {
-  image: /\.(png|jpe?g|gif|webp)$/i,
+  image: /\.(png|jpe?g|gif|webp|svg)$/i,
   audio: /\.(wav|mp3)$/i,
   bundle: /\.(zip|epub|otf|ttf|woff|woff2)$/i,
 };

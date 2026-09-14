@@ -75,9 +75,9 @@ export function notebookSession(workspace: StoreApi<CruxState>) {
           if (typeof request.content !== 'string' || request.content.length > 44_000_000)
             throw new Error('Choose an output and a name.');
           const match = request.content.match(
-            /^data:(image\/(?:png|jpeg|webp|gif)|audio\/(?:wav|x-wav|mpeg)|application\/zip);base64,([A-Za-z0-9+/=]+)$/,
+            /^data:(image\/(?:png|jpeg|webp|gif|svg\+xml)|audio\/(?:wav|x-wav|mpeg)|application\/zip);base64,([A-Za-z0-9+/=]+)$/,
           );
-          if (!match) throw new Error('Use a PNG, JPEG, WebP, GIF, WAV, MP3 or ZIP output.');
+          if (!match) throw new Error('Use a PNG, JPEG, WebP, GIF, SVG, WAV, MP3 or ZIP output.');
           blob = new Blob([Uint8Array.from(atob(match[2]!), (c) => c.charCodeAt(0))], {
             type: match[1],
           });

@@ -315,6 +315,17 @@ const TEMPLATES: Template[] = [
     desktopOnly: true,
   },
   {
+    id: 'fmg-app',
+    label: 'Fantasy Map',
+    description:
+      'Creative · Azgaar’s Fantasy Map Generator: a whole world to shape, PNG/SVG renders as outputs',
+    defaultTitle: 'My world',
+    icon: <PencilIcon />,
+    thumb: <BlankThumb />,
+    kind: 'webapp',
+    desktopOnly: true,
+  },
+  {
     id: 'glyphr-app',
     label: 'Font',
     description:

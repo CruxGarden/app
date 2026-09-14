@@ -13,6 +13,7 @@ import { validateProject as validateMaps } from '../../maps-crux/garden/document
 import { validateProject as validateP5 } from '../../p5-crux/garden/document.js';
 import { validateProject as validateGlsl } from '../../glsl-crux/garden/document.js';
 import { validateProject as validateGlyphr } from '../../glyphr-crux/src/garden/document.js';
+import { validateProject as validateFmg } from '../../fmg-crux/garden/document.js';
 import { validateProject as validateRecorder } from '../../recorder-crux/garden/document.js';
 import { validateProject as validateOpenCut } from '../../opencut-crux/garden/model.js';
 import { validateProject as validatePlayCanvas } from '../../playcanvas-editor-crux/garden/model.js';
@@ -125,6 +126,7 @@ export async function validateNativeDocument(
     | 'p5'
     | 'glsl'
     | 'glyphr'
+    | 'fmg'
     | 'recorder'
     | 'opencut'
     | 'playcanvas-editor'
@@ -160,6 +162,7 @@ export async function validateNativeDocument(
   else if (app === 'p5') validateP5(doc);
   else if (app === 'glsl') validateGlsl(doc);
   else if (app === 'glyphr') validateGlyphr(doc);
+  else if (app === 'fmg') validateFmg(doc);
   else if (app === 'recorder') validateRecorder(doc);
   else if (app === 'opencut') validateOpenCut(doc);
   else if (app === 'playcanvas-editor') validatePlayCanvas(doc);
