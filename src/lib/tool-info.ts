@@ -66,6 +66,13 @@ export const TOOL_INFO: Record<string, ToolInfo> = {
     relationship:
       'A digital garden on the Veka theme (MIT) as an Astro Site Crux: the theme’s components and pages are upstream’s; the settings file, offline fonts, the link index, backlinks and the graph are Crux Garden’s.',
   },
+  'glyphr-app': {
+    name: 'Glyphr Studio 2',
+    upstream: 'https://github.com/glyphr-studio/Glyphr-Studio-2',
+    detailsPath: 'UPSTREAM.md',
+    relationship:
+      'A font tool around the actual Glyphr Studio 2 (GPL-3.0-or-later): the editor, its pages, canvas and font engines are upstream’s, unmodified except for one script tag; the Garden bridge, the document and the outputs are Crux Garden’s and travel under the same license.',
+  },
   'glsl-app': {
     name: 'glslEditor',
     upstream: 'https://github.com/patriciogonzalezvivo/glslEditor',

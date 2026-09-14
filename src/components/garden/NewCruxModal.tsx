@@ -315,6 +315,17 @@ const TEMPLATES: Template[] = [
     desktopOnly: true,
   },
   {
+    id: 'glyphr-app',
+    label: 'Font',
+    description:
+      'Creative · Glyphr Studio 2, a font editor: draw glyphs, set metrics, build OTF/TTF/WOFF2 as outputs',
+    defaultTitle: 'My font',
+    icon: <PencilIcon />,
+    thumb: <BlankThumb />,
+    kind: 'webapp',
+    desktopOnly: true,
+  },
+  {
     id: 'glsl-app',
     label: 'Shader',
     description:

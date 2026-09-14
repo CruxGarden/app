@@ -1,0 +1,101 @@
+import { GlyphrStudioProject } from '../../../project_data/glyphr_studio_project';
+
+// OS/2 usWidthClass (1-9) -> CSS-style font-stretch keyword Glyphr Studio stores.
+const STRETCH_BY_WIDTH_CLASS = {
+	1: 'ultra-condensed',
+	2: 'extra-condensed',
+	3: 'condensed',
+	4: 'semi-condensed',
+	5: 'normal',
+	6: 'semi-expanded',
+	7: 'expanded',
+	8: 'extra-expanded',
+	9: 'ultra-expanded',
+};
+
+/**
+ * Finds metadata from the OS/2 table in a FontFlux font object,
+ * and pulls appropriate data into a provided Glyphr Studio Project.
+ * @param {Object} importedFont - FontFlux font object
+ * @param {GlyphrStudioProject} project - current Glyphr Studio Project
+ */
+export function importTable_os2(importedFont, project) {
+	const fontSettings = project.settings.font;
+	const info = importedFont.info;
+	if (!info) return;
+
+	fontSettings.ascent = 1 * (info.ascender || fontSettings.ascent);
+	fontSettings.descent = 1 * (info.descender || fontSettings.descent);
+	fontSettings.capHeight = 1 * (info.capHeight || fontSettings.capHeight);
+	fontSettings.xHeight = 1 * (info.xHeight || fontSettings.xHeight);
+	fontSettings.overshoot = fontSettings.upm > 2000 ? 30 : 20;
+	// FontFlux exposes the OS/2 usWeightClass as `info.weightClass`; reading
+	// `info.weight` (which FontFlux does not set) always fell back to 400.
+	fontSettings.weight = info.weightClass || info.weight || 400;
+	// OS/2 usWidthClass -> font-stretch keyword, so width round-trips.
+	if (STRETCH_BY_WIDTH_CLASS[info.widthClass]) {
+		fontSettings.stretch = STRETCH_BY_WIDTH_CLASS[info.widthClass];
+	}
+	// `info.weight` (which FontFlux does not set) always fell back to 400.
+	fontSettings.weight = info.weightClass || info.weight || 400;
+	// FontFlux returns panose as an array of ten numbers, but Glyphr Studio
+	// stores panose as a space-separated string.
+	if (Array.isArray(info.panose)) {
+		fontSettings.panose = info.panose.join(' ');
+	} else {
+		fontSettings.panose = info.panose || '0 0 0 0 0 0 0 0 0 0';
+	}
+}
+
+/*
+{
+    "version": 3,
+    "xAvgCharWidth": 954,
+    "usWeightClass": 400,
+    "usWidthClass": 5,
+    "fsType": 0,
+    "ySubscriptXSize": 650,
+    "ySubscriptYSize": 699,
+    "ySubscriptXOffset": 0,
+    "ySubscriptYOffset": 140,
+    "ySuperscriptXSize": 650,
+    "ySuperscriptYSize": 699,
+    "ySuperscriptXOffset": 0,
+    "ySuperscriptYOffset": 479,
+    "yStrikeoutSize": 49,
+    "yStrikeoutPosition": 258,
+    "sFamilyClass": 0,
+    "panose": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+    ],
+    "ulUnicodeRange1": 3,
+    "ulUnicodeRange2": 0,
+    "ulUnicodeRange3": 4194304,
+    "ulUnicodeRange4": 0,
+    "achVendID": "LaG ",
+    "fsSelection": 64,
+    "usFirstCharIndex": 1,
+    "usLastCharIndex": 65535,
+    "sTypoAscender": 1490,
+    "sTypoDescender": -430,
+    "sTypoLineGap": 0,
+    "usWinAscent": 1700,
+    "usWinDescent": 450,
+    "ulCodePageRange1": 1,
+    "ulCodePageRange2": 0,
+    "sxHeight": 1019,
+    "sCapHeight": 1490,
+    "usDefaultChar": 32,
+    "usBreakChar": 32,
+    "usMaxContent": 3
+}
+*/

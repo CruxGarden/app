@@ -1,0 +1,429 @@
+import { getProjectEditorImportTarget, setCurrentProjectEditor } from '../../app/main.js';
+import {
+	charToHex,
+	hexesToChars,
+	hexesToHexArray,
+	parseCharsInputAsHex,
+	validateAsHex,
+} from '../../common/character_ids.js';
+import { generateNewID } from '../../common/functions.js';
+import { updateProgressIndicator } from '../../controls/progress-indicator/progress_indicator.js';
+import { getUnicodeName } from '../../lib/unicode/unicode_names.js';
+import { makeLigatureID } from '../../pages/ligatures.js';
+import { sortCharacterRanges } from '../../pages/settings_project.js';
+import { KernGroup } from '../../project_data/kern_group.js';
+import { ProjectEditor } from '../../project_editor/project_editor.js';
+import { ioSVG_convertSVGTagsToGlyph } from '../svg_outlines/svg_outline_import.js';
+
+/**
+	IO > Import > SVG Font
+	Reading XML Text and parsing it into Glyphr
+	Studio Objects.  Relies heavily on
+	IO > Import > SVG Outline
+**/
+let glyphTags = [];
+let kernTags = [];
+
+/**
+ * Takes SVG code representing a SVG Font, and imports all its
+ * data into a Glyphr Studio Project. Also updates the import
+ * progress UI.
+ * @param {Object} font - SVG font object
+ * @param {Boolean} testing - is this a vitest test?
+ * @returns {Promise}
+ */
+export async function ioSVG_importSVGfont(font, testing = false) {
+	// log('ioSVG_importSVGfont', 'start');
+
+	const editor = testing ? new ProjectEditor() : getProjectEditorImportTarget();
+	const project = editor.project;
+	await updateProgressIndicator('Reading font data...');
+
+	// --------------------------------------------------------------
+	// Import Glyphs and Ligatures
+	// --------------------------------------------------------------
+	glyphTags = getTagsByName(font, 'glyph');
+	const finalGlyphs = {};
+	const finalLigatures = {};
+	let charCounter = 0;
+	await updateSVGImportProgressIndicator('character', 1);
+
+	// log(`\n⮟glyphTags⮟`);
+	// log(glyphTags);
+
+	// log(`charCounter: ${charCounter}`);
+	while (charCounter < glyphTags.length) {
+		await importOneGlyph(glyphTags[charCounter]);
+	}
+
+	async function importOneGlyph(glyph) {
+		// log(`importOneGlyph`, 'start');
+
+		// One Glyph or Ligature in the font
+		// log(`\nglyphTags[${charCounter}]`);
+		// log(glyph);
+
+		if (glyph && glyph.attributes) {
+			const attributes = glyph.attributes;
+			const glyphName = attributes['glyph-name'];
+
+			let uni = parseCharsInputAsHex(attributes.unicode);
+			if (attributes.unicode === ' ' || glyphName.toLowerCase() === 'space') {
+				uni = ['0x20'];
+			}
+
+			if (!attributes.unicode && glyphName.startsWith('uni')) {
+				const hex = validateAsHex(`0x${glyphName.substring(3)}`);
+				// log(`UNI detected ${glyphName} hex is ${hex}`);
+				if (hex) {
+					uni = [hex];
+					project.settings.app.showNonCharPoints = true;
+				}
+			}
+			// log(`attributes.unicode: |${attributes.unicode}| parsed as ${uni}`);
+
+			if (uni[0] === '0x0') {
+				// Check for .notdef
+				// log('!!! Skipping '+glyphName+' NO UNICODE !!!');
+				glyphTags.splice(charCounter, 1);
+			} else {
+				// log('GLYPH ' + charCounter + '/'+glyphTags.length+'\t unicode: ' + json(uni) + '\t attributes: ' + json(attributes));
+
+				const glyphSVG = `<svg><glyph d="${glyphTags[charCounter].attributes.d}"/></svg>`;
+				const newGlyph = ioSVG_convertSVGTagsToGlyph(glyphSVG, false);
+
+				// Get Advance Width
+				// log(`attributes['horiz-adv-x']: ${attributes['horiz-adv-x']}`);
+
+				const advanceWidth = parseInt(attributes['horiz-adv-x']);
+				newGlyph.advanceWidth = advanceWidth;
+
+				if (uni.length === 1) {
+					// It's a GLYPH
+					await updateSVGImportProgressIndicator('character', charCounter);
+					// log(`Detected Glyph`);
+					const single = uni[0];
+					if (!isNaN(Number(single))) project.incrementRangeCountFor(Number(single));
+					newGlyph.id = `glyph-${single}`;
+					// log(newGlyph);
+					finalGlyphs[`glyph-${single}`] = newGlyph;
+					if (getUnicodeName(single).startsWith('U+')) {
+						project.settings.app.showNonCharPoints = true;
+					}
+				} else {
+					// It's a LIGATURE
+					await updateSVGImportProgressIndicator('ligature', charCounter);
+					// log(`Detected Ligature`);
+					const joined = uni.join('');
+					// log(`joined: ${joined}`);
+					const chars = hexesToChars(joined);
+					// log(`chars: ${chars}`);
+					if (chars) {
+						const newID = makeLigatureID(chars);
+						if (newID) {
+							newGlyph.id = newID;
+							newGlyph.gsub = hexesToHexArray(joined);
+							finalLigatures[newID] = newGlyph;
+						}
+					}
+				}
+			}
+			// Done with loop, advance charCounter
+			charCounter++;
+		} else {
+			// glyphTags[charCounter] undefined
+			glyphTags.splice(charCounter, 1);
+		}
+
+		// log(`importOneGlyph`, 'end');
+	}
+
+	// --------------------------------------------------------------
+	// Import .notdef glyph
+	// --------------------------------------------------------------
+
+	let missingGlyph = getTagsByName(font, 'missing-glyph');
+	if (missingGlyph.length) {
+		const missingGlyphAttributes = missingGlyph[0].attributes;
+		const glyphSVG = `<svg><glyph d="${missingGlyphAttributes.d}"/></svg>`;
+		const newGlyph = ioSVG_convertSVGTagsToGlyph(glyphSVG, false);
+		const advanceWidth = parseInt(missingGlyphAttributes['horiz-adv-x']);
+		newGlyph.advanceWidth = advanceWidth;
+		project.incrementRangeCountFor(0);
+		newGlyph.id = `glyph-0x0`;
+		finalGlyphs[`glyph-0x0`] = newGlyph;
+		// log(`\n⮟finalGlyphs['glyph-0x0']⮟`);
+		// log(finalGlyphs[`glyph-0x0`]);
+	}
+
+	// --------------------------------------------------------------
+	// Import Kern data
+	// --------------------------------------------------------------
+
+	kernTags = getTagsByName(font, 'hkern');
+	// log(`\n⮟kernTags⮟`);
+	// log(kernTags);
+
+	const finalKerns = {};
+	let kernCount = 0;
+	await updateSVGImportProgressIndicator('kern pair', 1);
+
+	while (kernCount < kernTags.length) {
+		await importOneKern(kernTags[kernCount]);
+	}
+
+	async function importOneKern(thisKern) {
+		await updateSVGImportProgressIndicator('kern pair', kernCount + glyphTags.length);
+
+		// log('Kern Import - START ' + kernCount + '/' + kernTags.length);
+		let leftGroup = [];
+		let rightGroup = [];
+		// log('Kern Attributes: ' + json(thisKern.attributes, true));
+
+		if (thisKern) {
+			// log(`\nStarting kern ${kernCount}`);
+			// log(`\n⮟thisKern⮟`);
+			// log(thisKern);
+			// Get members by name
+			leftGroup = getKernMembersByName(thisKern.attributes.g1, glyphTags, leftGroup);
+			rightGroup = getKernMembersByName(thisKern.attributes.g2, glyphTags, rightGroup);
+
+			// log('kern groups by name ' + json(leftGroup, true) + ' ' + json(rightGroup, true));
+
+			// Get members by Unicode
+			leftGroup = getKernMembersByUnicodeID(thisKern.attributes.u1, glyphTags, leftGroup);
+			rightGroup = getKernMembersByUnicodeID(thisKern.attributes.u2, glyphTags, rightGroup);
+
+			// log('kern groups parsed as ' + json(leftGroup, true) + ' ' + json(rightGroup, true));
+
+			if (leftGroup.length && rightGroup.length) {
+				const newID = generateNewID(finalKerns, 'kern-');
+				const kernValue = thisKern.attributes.k || 0;
+				// log('Making a kern pair with k = ' + kernValue);
+				finalKerns[newID] = new KernGroup({
+					leftGroup: leftGroup,
+					rightGroup: rightGroup,
+					value: kernValue,
+				});
+				finalKerns[newID].id = newID;
+				// log('Made the new kern successfully.');
+				kernCount++;
+			} else {
+				kernTags.splice(kernCount, 1);
+				// log('Kern ' + json(thisKern.attributes, true) + ' returned an empty group.');
+			}
+		} else {
+			// thisKern undefined
+			kernTags.splice(kernCount, 1);
+		}
+	}
+
+	// --------------------------------------------------------------
+	// Finalize
+	// --------------------------------------------------------------
+
+	project.glyphs = finalGlyphs;
+	project.ligatures = finalLigatures;
+	project.kerning = finalKerns;
+
+	// Import Font Settings
+	// Check to make sure certain stuff is there
+	// space has horiz-adv-x
+
+	// Font Settings
+	const fontAttributes = getFirstTagInstance(font, 'font-face').attributes;
+	const fontSettings = project.settings.font;
+	const fname = fontAttributes['font-family'] || 'My Font';
+
+	fontSettings.family = fname;
+	fontSettings.style = fontAttributes['font-style'] || 'Regular';
+	fontSettings.panose = fontAttributes['panose-1'] || '0 0 0 0 0 0 0 0 0 0';
+	fontSettings.upm = 1 * fontAttributes['units-per-em'] || fontSettings.upm;
+	fontSettings.ascent = 1 * fontAttributes.ascent || fontSettings.ascent;
+	fontSettings.capHeight = 1 * fontAttributes['cap-height'] || fontSettings.capHeight;
+	fontSettings.xHeight = 1 * fontAttributes['x-height'] || fontSettings.xHeight;
+	fontSettings.descent = 1 * fontAttributes.descent || fontSettings.descent;
+	fontSettings.variant = fontAttributes['font-variant'] || 'normal';
+	fontSettings.weight = 1 * fontAttributes['font-weight'] || 400;
+	fontSettings.stretch = fontAttributes['font-stretch'] || 'normal';
+	fontSettings.underlinePosition = 1 * fontAttributes['underline-position'] || -100;
+	fontSettings.underlineThickness = 1 * fontAttributes['underline-thickness'] || 20;
+	fontSettings.strikethroughPosition =
+		1 * fontAttributes['strikethrough-position'] || fontSettings.xHeight / 2;
+	fontSettings.strikethroughThickness = 1 * fontAttributes['strikethrough-thickness'] || 20;
+	fontSettings.overlinePosition =
+		1 * fontAttributes['overline-position'] || fontSettings.ascent + 50;
+	fontSettings.overlineThickness = 1 * fontAttributes['overline-thickness'] || 20;
+
+	fontSettings.overshoot = fontSettings.upm > 2000 ? 30 : 20;
+	project.settings.project.name = fname;
+
+	// log(project);
+	if (testing) {
+		return editor.project.save();
+	} else {
+		setCurrentProjectEditor(editor);
+		editor.project.resetSessionStateForAllItems();
+		sortCharacterRanges();
+		editor.nav.page = 'Overview';
+		editor.navigate();
+	}
+
+	// log('ioSVG_importSVGfont', 'end');
+}
+
+/**
+ * Updates the progress bar
+ * @param {String} type - character, ligature, or kern pair
+ * @param {Number} counter - current counter number
+ */
+async function updateSVGImportProgressIndicator(type, counter) {
+	const total = glyphTags.length + kernTags.length;
+
+	await updateProgressIndicator(`
+			Importing ${type}:
+			<span class="progress-indicator__counter">${counter}</span>
+			 of
+			<span class="progress-indicator__counter">${total}</span>
+		`);
+}
+
+/**
+ * Recursively looks through data and returns any data that matches
+ * a specified list of tag names.
+ * @param {Object} obj - object to look through (in XMLtoJSON format)
+ * @param {Array | String} grabTags - list of tags to collect
+ * @returns {Array} - collection of objects representing tags
+ */
+function getTagsByName(obj, grabTags) {
+	// log('getTagsByName', 'start');
+	// log('grabTags: ' + JSON.stringify(grabTags));
+	// log('passed obj: ');
+	// log(obj);
+
+	if (typeof grabTags === 'string') grabTags = [grabTags];
+	let result = [];
+
+	if (obj.content) {
+		for (let c = 0; c < obj.content.length; c++) {
+			result = result.concat(getTagsByName(obj.content[c], grabTags));
+		}
+	} else {
+		if (grabTags.indexOf(obj.name) > -1) {
+			result = [obj];
+		}
+	}
+
+	// log('getTagsByName', 'end');
+	return result;
+}
+
+/**
+ * Returns the first instance of a given tag name
+ * from a XMLtoJSON object.
+ * @param {Object} obj - object to look through (in XMLtoJSON format)
+ * @param {String} tagname - tag to look for
+ * @returns {Object}
+ */
+export function getFirstTagInstance(obj, tagname) {
+	// log('getFirstTagInstance', 'start');
+	// log('finding ' + tagname + ' in:');
+	// log(obj);
+
+	if (tagname === obj.name) {
+		// log('getFirstTagInstance - tagname === obj.name', 'end');
+		return obj;
+	} else if (obj.content) {
+		for (let c = 0; c < obj.content.length; c++) {
+			const sub = getFirstTagInstance(obj.content[c], tagname);
+			if (sub) {
+				// log('getFirstTagInstance - looked through obj and found it', 'end');
+				return sub;
+			}
+		}
+	} else {
+		// log('getFirstTagInstance - NO obj.content FOUND', 'end');
+		return false;
+	}
+}
+
+/**
+ * Given names from a kern attribute value, go find the actual
+ * char from the font and collect all applicable Unicode IDs.
+ * @param {String} names - list of comma separated kern members
+ * @param {Array} chars - list of chars to check
+ * @param {Array} arr - result array to add to
+ * @param {Number =} limit - max char to check
+ * @returns {Array}
+ */
+function getKernMembersByName(names, chars, arr, limit) {
+	// log(`getKernMembersByName`, 'start');
+	// log(`names: ${names}`);
+
+	limit = limit || 0xffff;
+	if (names) {
+		const namesArr = names.split(',');
+
+		// Check all the glyph names
+		for (let n = 0; n < namesArr.length; n++) {
+			// Check all the chars
+			for (let c = 0; c < chars.length; c++) {
+				if (chars[c].attributes.unicode) {
+					// Push the match
+					if (namesArr[n] === chars[c].attributes['glyph-name']) {
+						const uni = parseCharsInputAsHex(chars[c].attributes.unicode);
+						if (1 * uni[0] < limit) arr = arr.concat(uni);
+					}
+				}
+			}
+		}
+	}
+
+	// log(`getKernMembersByName`, 'end');
+	return arr;
+}
+
+/**
+ * Given unicode ids from a kern attribute value, go find the actual
+ * char from the font and collect all applicable Unicode IDs.
+ * @param {String} ids - list of comma separated unicode ids
+ * @param {Array} chars - list of chars to check
+ * @param {Array} arr - result array to add to
+ * @param {Number =} limit - max char to check
+ * @returns {Array}
+ */
+function getKernMembersByUnicodeID(ids, chars, arr, limit) {
+	// log(`getKernMembersByUnicodeID`, 'start');
+	// log(`ids: ${ids}`);
+
+	limit = limit || 0xffff;
+	if (ids) {
+		const idArr = ids.split(',');
+		// log(`\n⮟idArr⮟`);
+		// log(idArr);
+		// Check all the IDs
+		for (let i = 0; i < idArr.length; i++) {
+			// Need to accept input in any char or hex format
+			const charArray = parseCharsInputAsHex(idArr[i]);
+			if (charArray.length === 1) {
+				const idHex = charArray[0];
+				// Check all the chars
+				for (let c = 0; c < chars.length; c++) {
+					if (chars[c].attributes.unicode) {
+						const charHex = charToHex(chars[c].attributes.unicode);
+						// Push the match
+						// log(`Comparing idHex: ${idHex} with charHex: ${charHex}`);
+						if (charHex !== false && idHex === charHex) {
+							if (Number(charHex) < limit) arr = arr.concat(charHex);
+					}
+				}
+			}
+		}
+		}
+	}
+
+	// log(`\n⮟returning⮟`);
+	// log(arr);
+	// log(`getKernMembersByUnicodeID`, 'end');
+	return arr;
+}
