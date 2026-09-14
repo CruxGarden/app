@@ -343,6 +343,17 @@ export function getMockLanguageModel(): LanguageModel {
             return toolCallStream('set_recorder_name', { name: 'Walkthrough takes' });
           return textStream('Listed the recordings and named the Crux Walkthrough takes.');
         }
+        if (lastUserText(prompt).includes('[score:tune]')) {
+          const rounds = toolResultsThisTurn(prompt);
+          if (!rounds.length) return toolCallStream('inspect_score', {});
+          if (rounds.length === 1) return toolCallStream('set_score_name', { name: 'Moss Waltz' });
+          if (rounds.length === 2)
+            return toolCallStream('set_score_abc', {
+              abc: 'X:1\nT:Moss Waltz\nC:The collaborator\nM:3/4\nL:1/4\nQ:1/4=120\nK:G\n|: G B d | g2 f | e d B | A3 | G B d | g2 a | b a f | g3 :|\n',
+            });
+          if (rounds.length === 3) return toolCallStream('save_score_image', { format: 'png', name: 'Moss Waltz' });
+          return textStream('Named the score Moss Waltz, wrote a waltz in G and saved a PNG of it.');
+        }
         if (lastUserText(prompt).includes('[map:world]')) {
           const rounds = toolResultsThisTurn(prompt);
           if (!rounds.length) return toolCallStream('inspect_map', {});

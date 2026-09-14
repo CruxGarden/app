@@ -17,6 +17,7 @@ const NATIVE_TEMPLATES = {
   'glsl-app': 'glsl',
   'glyphr-app': 'glyphr',
   'fmg-app': 'fmg',
+  'abc-app': 'abc',
   'recorder-app': 'recorder',
   'am-1-app': 'am-1',
   'opencut-app': 'opencut',
@@ -177,7 +178,8 @@ export function isLocalCreationTool(crux: { meta?: Record<string, unknown> } | n
       native !== 'formjs' &&
       native !== 'maps' &&
       native !== 'p5' &&
-      native !== 'glsl') ||
+      native !== 'glsl' &&
+      native !== 'abc') ||
     isCardinal(crux) ||
     !!samplerType(crux)
   );

@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Notation</title>
+    <link rel="stylesheet" href="runtime/abcjs-audio.css" />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <header id="score-header">
+      <label>Score name <input id="score-name" maxlength="200" autocomplete="off" /></label>
+      <span id="score-info" aria-live="polite"></span>
+    </header>
+    <main id="score">
+      <section id="edit">
+        <textarea id="abc" spellcheck="false" aria-label="ABC notation"></textarea>
+        <div id="warnings" aria-live="polite"></div>
+      </section>
+      <section id="view">
+        <div id="paper"></div>
+        <div id="audio"></div>
+      </section>
+    </main>
+    <script src="runtime/abcjs-basic-min.js"></script>
+    <script type="module" src="garden/bridge.js"></script>
+  </body>
+</html>

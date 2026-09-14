@@ -315,6 +315,16 @@ const TEMPLATES: Template[] = [
     desktopOnly: true,
   },
   {
+    id: 'abc-app',
+    label: 'Notation',
+    description: 'Creative · sheet music in ABC notation with abcjs: rendered and played as you type, scores as outputs, a page people can play',
+    defaultTitle: 'My score',
+    icon: <PencilIcon />,
+    thumb: <BlankThumb />,
+    kind: 'webapp',
+    desktopOnly: true,
+  },
+  {
     id: 'fmg-app',
     label: 'Fantasy Map',
     description:
