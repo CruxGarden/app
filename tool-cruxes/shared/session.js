@@ -190,6 +190,8 @@ export async function openProject(type, render, stop = () => {}, options = {}) {
           return inspection;
         }
         await save();
+        if (options.commands?.[data.command?.op])
+          return options.commands[data.command.op](data.command);
         const next = applyCommand(doc, data.command);
         stop();
         await update((d) => {

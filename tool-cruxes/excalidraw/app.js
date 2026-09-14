@@ -9,13 +9,66 @@ import {
 } from './vendor/engine.js';
 import { $, message, download, openProject } from './shared/session.js';
 import { inspectProductivity } from './shared/productivity.js';
-$('#app').innerHTML =
-  '<div class="tool-actions actions"><button id="export-png">Export PNG</button><button id="export-svg">Export SVG</button><button id="export-project">Export drawing</button><p>Draw, type, or drop a raster image. Your drawing and images save in this Crux.</p></div><div id="editor"></div>';
+const framed = window.parent !== window;
+$('#app').innerHTML = framed
+  ? '<div class="tool-actions actions"><button id="save-png">Save PNG to Cruxspace</button><button id="save-svg">Save SVG to Cruxspace</button><button id="export-png">Export PNG</button><button id="export-svg">Export SVG</button><button id="export-project">Export drawing</button><span id="output-state" role="status"></span><p>Draw, type, or drop a raster image. Your drawing and images save in this Crux.</p></div><div id="editor"></div>'
+  : '<div id="editor"></div>';
 let api,
   session,
   applying = false;
 let lastScene = '';
 const storedAssets = new Map();
+async function loadFiles(doc) {
+  const files = [];
+  for (const [id, path] of Object.entries(doc.scene.assets)) {
+    const response = await fetch('data/' + path);
+    if (!response.ok) throw new Error('A saved image is missing: ' + path);
+    const dataURL = await response.blob().then(
+      (blob) =>
+        new Promise((resolve, reject) => {
+          const r = new FileReader();
+          r.onload = () => resolve(r.result);
+          r.onerror = reject;
+          r.readAsDataURL(blob);
+        }),
+    );
+    storedAssets.set(dataURL, path);
+    files.push({ id, dataURL, mimeType: dataURL.slice(5, dataURL.indexOf(';')), created: 1 });
+  }
+  return files;
+}
+// A shared page shows the drawing in Excalidraw's view mode: pan, zoom, read; nothing saves.
+async function view() {
+  document.body.classList.add('view');
+  const response = await fetch('data/project.json');
+  if (!response.ok) throw new Error('This drawing is not available.');
+  const doc = await response.json();
+  document.title = doc.title || 'Whiteboard';
+  const files = await loadFiles(doc);
+  createRoot($('#editor')).render(
+    React.createElement(Excalidraw, {
+      initialData: {
+        elements: doc.scene.elements,
+        appState: doc.scene.appState,
+        files: Object.fromEntries(files.map((f) => [f.id, f])),
+        scrollToContent: true,
+      },
+      viewModeEnabled: true,
+      excalidrawAPI: (value) => {
+        api = value;
+        $('#editor').dataset.ready = 'true';
+      },
+      UIOptions: {
+        canvasActions: {
+          loadScene: false,
+          saveToActiveFile: false,
+          export: false,
+          saveAsImage: false,
+        },
+      },
+    }),
+  );
+}
 async function capture() {
   if (!api || applying) return;
   const elements = structuredClone(api.getSceneElementsIncludingDeleted());
@@ -52,22 +105,7 @@ async function render(doc, { reload = false } = {}) {
   if (!reload && lastScene === JSON.stringify(doc.scene)) return;
   applying = true;
   try {
-    const files = [];
-    for (const [id, path] of Object.entries(doc.scene.assets)) {
-      const response = await fetch('data/' + path);
-      if (!response.ok) throw new Error('A saved image is missing: ' + path);
-      const dataURL = await response.blob().then(
-        (blob) =>
-          new Promise((resolve, reject) => {
-            const r = new FileReader();
-            r.onload = () => resolve(r.result);
-            r.onerror = reject;
-            r.readAsDataURL(blob);
-          }),
-      );
-      storedAssets.set(dataURL, path);
-      files.push({ id, dataURL, mimeType: dataURL.slice(5, dataURL.indexOf(';')), created: 1 });
-    }
+    const files = await loadFiles(doc);
     if (!api) {
       await new Promise((resolve, reject) => {
         const timeout = setTimeout(
@@ -125,15 +163,54 @@ async function render(doc, { reload = false } = {}) {
     applying = false;
   }
 }
-try {
-  session = await openProject('excalidraw', render, () => {}, {
-    capture,
-    inspect: inspectProductivity,
+const exportOptions = () => ({
+  elements: api.getSceneElements(),
+  appState: { ...api.getAppState(), exportBackground: true },
+  files: api.getFiles(),
+});
+// An output of the Crux: the drawing as a PNG or SVG in exports/, from the bar or the collaborator.
+async function saveImage(format, label) {
+  const kind = format === 'svg' ? 'svg' : 'png';
+  const name =
+    String(label ?? '').trim() || `${session.doc.title || 'Whiteboard'} (${kind.toUpperCase()})`;
+  if (name.length > 120) throw new Error('Use an output name up to 120 characters.');
+  if (!api.getSceneElements().length) throw new Error('Draw something first.');
+  await session.save();
+  $('#output-state').textContent = `Rendering ${kind.toUpperCase()}…`;
+  const blob =
+    kind === 'png'
+      ? await exportToBlob({ ...exportOptions(), mimeType: 'image/png' })
+      : new Blob([(await exportToSvg(exportOptions())).outerHTML], { type: 'image/svg+xml' });
+  const output = await session.call({
+    op: 'save-output',
+    label: name,
+    bytes: await blob.arrayBuffer(),
+    mimeType: blob.type,
   });
-} catch (e) {
-  message(e);
+  $('#output-state').textContent = `Saved ${name} as an image output.`;
+  setTimeout(() => {
+    if ($('#output-state').textContent.startsWith('Saved ')) $('#output-state').textContent = '';
+  }, 4000);
+  return output;
 }
-for (const kind of ['png', 'svg', 'project'])
+if (!framed) {
+  view().catch((e) => {
+    $('#editor').textContent = e.message;
+  });
+} else {
+  try {
+    session = await openProject('excalidraw', render, () => {}, {
+      capture,
+      inspect: inspectProductivity,
+      commands: { 'save-image': (command) => saveImage(command.format, command.label) },
+    });
+  } catch (e) {
+    message(e);
+  }
+  for (const kind of ['png', 'svg'])
+    $(`#save-${kind}`).onclick = () => saveImage(kind).catch(message);
+}
+for (const kind of framed ? ['png', 'svg', 'project'] : [])
   $(`#export-${kind}`).onclick = async () => {
     try {
       await session.save();

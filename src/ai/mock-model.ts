@@ -343,17 +343,31 @@ export function getMockLanguageModel(): LanguageModel {
             return toolCallStream('set_recorder_name', { name: 'Walkthrough takes' });
           return textStream('Listed the recordings and named the Crux Walkthrough takes.');
         }
+        if (lastUserText(prompt).includes('[whiteboard:image]')) {
+          const rounds = toolResultsThisTurn(prompt);
+          if (!rounds.length) return toolCallStream('inspect_whiteboard', {});
+          if (rounds.length === 1)
+            return toolCallStream('save_whiteboard_image', {
+              format: 'svg',
+              name: 'Idea map, vector',
+            });
+          return textStream('Saved the whiteboard as an SVG output.');
+        }
         if (lastUserText(prompt).includes('[timeline:story]')) {
           const rounds = toolResultsThisTurn(prompt);
           if (!rounds.length) return toolCallStream('inspect_timeline', {});
-          if (rounds.length === 1) return toolCallStream('set_timeline_name', { name: 'A Garden Year, Told' });
+          if (rounds.length === 1)
+            return toolCallStream('set_timeline_name', { name: 'A Garden Year, Told' });
           if (rounds.length === 2)
             return toolCallStream('upsert_events', {
               events: [
                 {
                   unique_id: 'midsummer',
                   start_date: { year: 2026, month: 6, day: 21 },
-                  text: { headline: 'Midsummer evening', text: 'The longest day, spent entirely outside.' },
+                  text: {
+                    headline: 'Midsummer evening',
+                    text: 'The longest day, spent entirely outside.',
+                  },
                   media: {
                     url: 'https://upload.wikimedia.org/wikipedia/commons/thumb/4/4b/Sunset_2007-1.jpg/640px-Sunset_2007-1.jpg',
                     caption: 'The light at nine in the evening.',
@@ -365,17 +379,23 @@ export function getMockLanguageModel(): LanguageModel {
                   unique_id: 'heatwave',
                   start_date: { year: 2026, month: 7, day: 12 },
                   end_date: { year: 2026, month: 7, day: 19 },
-                  text: { headline: 'A week of heat', text: 'Watering at dawn and dusk; the lettuces bolted.' },
+                  text: {
+                    headline: 'A week of heat',
+                    text: 'Watering at dawn and dusk; the lettuces bolted.',
+                  },
                   group: 'Weather',
                 },
               ],
             });
-          return textStream('Named the timeline A Garden Year, Told and added two summer events with a picture.');
+          return textStream(
+            'Named the timeline A Garden Year, Told and added two summer events with a picture.',
+          );
         }
         if (lastUserText(prompt).includes('[model:coaster]')) {
           const rounds = toolResultsThisTurn(prompt);
           if (!rounds.length) return toolCallStream('inspect_model', {});
-          if (rounds.length === 1) return toolCallStream('set_model_name', { name: 'Moss Coaster' });
+          if (rounds.length === 1)
+            return toolCallStream('set_model_name', { name: 'Moss Coaster' });
           if (rounds.length === 2)
             return toolCallStream('set_model_source', {
               source: [
@@ -398,8 +418,11 @@ export function getMockLanguageModel(): LanguageModel {
                 '',
               ].join('\n'),
             });
-          if (rounds.length === 3) return toolCallStream('save_model', { format: '3mf', name: 'Moss Coaster' });
-          return textStream('Named the model Moss Coaster, wrote a hexagonal coaster with a leaf groove and saved a 3MF of it.');
+          if (rounds.length === 3)
+            return toolCallStream('save_model', { format: '3mf', name: 'Moss Coaster' });
+          return textStream(
+            'Named the model Moss Coaster, wrote a hexagonal coaster with a leaf groove and saved a 3MF of it.',
+          );
         }
         if (lastUserText(prompt).includes('[song:tune]')) {
           const rounds = toolResultsThisTurn(prompt);
@@ -418,12 +441,25 @@ export function getMockLanguageModel(): LanguageModel {
               [79, 79, 79],
             ];
             const notes = bars.flatMap((bar, b) =>
-              bar.map((noteNumber, i) => ({ tick: (b * 3 + i) * 480, duration: 440, noteNumber, velocity: i === 0 ? 110 : 90 })),
+              bar.map((noteNumber, i) => ({
+                tick: (b * 3 + i) * 480,
+                duration: 440,
+                noteNumber,
+                velocity: i === 0 ? 110 : 90,
+              })),
             );
-            return toolCallStream('set_track_notes', { track: 1, name: 'Melody', program: 0, tempo: 132, notes });
+            return toolCallStream('set_track_notes', {
+              track: 1,
+              name: 'Melody',
+              program: 0,
+              tempo: 132,
+              notes,
+            });
           }
           if (rounds.length === 3) return toolCallStream('save_song_audio', { name: 'Moss Waltz' });
-          return textStream('Named the song Moss Waltz, wrote a waltz melody in G on track 1 and saved a WAV of it.');
+          return textStream(
+            'Named the song Moss Waltz, wrote a waltz melody in G on track 1 and saved a WAV of it.',
+          );
         }
         if (lastUserText(prompt).includes('[score:tune]')) {
           const rounds = toolResultsThisTurn(prompt);
@@ -433,8 +469,11 @@ export function getMockLanguageModel(): LanguageModel {
             return toolCallStream('set_score_abc', {
               abc: 'X:1\nT:Moss Waltz\nC:The collaborator\nM:3/4\nL:1/4\nQ:1/4=120\nK:G\n|: G B d | g2 f | e d B | A3 | G B d | g2 a | b a f | g3 :|\n',
             });
-          if (rounds.length === 3) return toolCallStream('save_score_image', { format: 'png', name: 'Moss Waltz' });
-          return textStream('Named the score Moss Waltz, wrote a waltz in G and saved a PNG of it.');
+          if (rounds.length === 3)
+            return toolCallStream('save_score_image', { format: 'png', name: 'Moss Waltz' });
+          return textStream(
+            'Named the score Moss Waltz, wrote a waltz in G and saved a PNG of it.',
+          );
         }
         if (lastUserText(prompt).includes('[map:world]')) {
           const rounds = toolResultsThisTurn(prompt);

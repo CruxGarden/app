@@ -88,3 +88,18 @@ footer {
     height: calc(100vh - 220px);
   }
 }
+
+/* A shared page: the drawing alone, in view mode */
+body.view > header,
+body.view > footer,
+body.view .tool-actions {
+  display: none;
+}
+body.view #editor {
+  height: 100vh;
+  min-height: 100vh;
+}
+#output-state {
+  font: 13px system-ui;
+  color: #8fe4ca;
+}

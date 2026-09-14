@@ -1,4 +1,10 @@
-import { isEmbeddedApp, isMoqira, isLocalCreationTool, nativeAppType } from './embedded-app';
+import {
+  isEmbeddedApp,
+  isMoqira,
+  isLocalCreationTool,
+  nativeAppType,
+  samplerType,
+} from './embedded-app';
 import { portableMeta } from './task-archive';
 import { assertCopyWritable } from './working-copies';
 /**
@@ -319,7 +325,9 @@ export async function publishPipeline(
     nativeAppType(crux) === 'formjs' ||
     nativeAppType(crux) === 'maps';
   // A sketch or shader Crux publishes its page as it is: no build, the files are the site.
-  const publishesAsIs = ['p5', 'glsl', 'abc', 'jscad', 'timeline'].includes(nativeAppType(crux) ?? '');
+  const publishesAsIs =
+    ['p5', 'glsl', 'abc', 'jscad', 'timeline'].includes(nativeAppType(crux) ?? '') ||
+    samplerType(crux) === 'excalidraw';
   if (isEmbeddedApp(crux) && !builds && !publishesAsIs)
     throw new Error(
       'This notebook is missing its site configuration. Restore it before publishing.',

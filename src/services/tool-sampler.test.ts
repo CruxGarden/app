@@ -92,9 +92,15 @@ it.each(['tables', 'openmosh', 'smplr', 'playcanvas', 'excalidraw', 'univer'])(
     const files = await services.artifact.findByResource('crux', imported.cruxId);
     const file = files.find((f) => f.meta?.path === 'data/project.json')!;
     expect(JSON.parse(await services.artifact.readContent(file.id))).toEqual(document);
-    await expect(publishPipeline(crux, artifacts)).rejects.toThrow(
-      'Website sharing is not available',
-    );
+    // The Whiteboard shares its drawing as a view-mode page; the other samplers stay local
+    if (type === 'excalidraw')
+      await expect(publishPipeline(crux, artifacts)).rejects.not.toThrow(
+        'Website sharing is not available',
+      );
+    else
+      await expect(publishPipeline(crux, artifacts)).rejects.toThrow(
+        'Website sharing is not available',
+      );
     await store.getState().revertToSnapshot(initialSnapshot);
     const restored = (await services.artifact.findByResource('crux', crux.id)).find(
       (f) => f.meta?.path === 'data/project.json',
