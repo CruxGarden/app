@@ -13,6 +13,7 @@ const NATIVE_TEMPLATES = {
   'formjs-app': 'formjs',
   'pdfme-app': 'pdfme',
   'maps-app': 'maps',
+  'p5-app': 'p5',
   'recorder-app': 'recorder',
   'am-1-app': 'am-1',
   'opencut-app': 'opencut',
@@ -168,7 +169,11 @@ export function samplerType(
 /** Apps whose Crux stays on this machine: no public edition, so no Share. A form publishes its viewer edition. */
 export function isLocalCreationTool(crux: { meta?: Record<string, unknown> } | null | undefined) {
   const native = nativeAppType(crux);
-  return (!!native && native !== 'formjs' && native !== 'maps') || isCardinal(crux) || !!samplerType(crux);
+  return (
+    (!!native && native !== 'formjs' && native !== 'maps' && native !== 'p5') ||
+    isCardinal(crux) ||
+    !!samplerType(crux)
+  );
 }
 export function samplerPath(type: string, value: unknown): string {
   if (value === 'project.json') return 'data/project.json';

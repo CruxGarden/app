@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Sketch</title>
+    <link rel="stylesheet" href="style.css" />
+    <script src="runtime/p5.min.js"></script>
+  </head>
+  <body>
+    <header id="sketch-header">
+      <label>Sketch name <input id="sketch-name" maxlength="200" autocomplete="off" /></label>
+      <label>Seed <input id="sketch-seed" type="number" min="0" max="999999999" step="1" /></label>
+      <button type="button" id="sketch-restart">Restart</button>
+      <button type="button" id="sketch-pause" aria-pressed="false">Pause</button>
+      <span id="sketch-info" aria-live="polite"></span>
+    </header>
+    <main id="stage" aria-label="Sketch"></main>
+    <script type="module" src="garden/bridge.js"></script>
+  </body>
+</html>

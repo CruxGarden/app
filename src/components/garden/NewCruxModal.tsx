@@ -304,6 +304,17 @@ const TEMPLATES: Template[] = [
     desktopOnly: true,
   },
   {
+    id: 'p5-app',
+    label: 'Sketch',
+    description:
+      'Creative · generative art and live visuals with p5.js; a flow field to start, frames as outputs, a live page',
+    defaultTitle: 'My sketch',
+    icon: <PencilIcon />,
+    thumb: <BlankThumb />,
+    kind: 'webapp',
+    desktopOnly: true,
+  },
+  {
     id: 'svgedit-app',
     label: 'SVG-Edit',
     description: 'Creative · vector illustration, shapes and layers',
@@ -415,7 +426,8 @@ const TEMPLATES: Template[] = [
   {
     id: 'formjs-app',
     label: 'Form',
-    description: 'Productivity · forms, questionnaires and sign-ups on form-js; answers land in the Crux Store',
+    description:
+      'Productivity · forms, questionnaires and sign-ups on form-js; answers land in the Crux Store',
     defaultTitle: 'My form',
     icon: <LayoutIcon />,
     thumb: <BlankThumb />,
@@ -425,7 +437,8 @@ const TEMPLATES: Template[] = [
   {
     id: 'maps-app',
     label: 'Map',
-    description: 'Productivity · places, routes and areas on a MapLibre map with OpenFreeMap tiles; a public map page',
+    description:
+      'Productivity · places, routes and areas on a MapLibre map with OpenFreeMap tiles; a public map page',
     defaultTitle: 'My map',
     icon: <LayoutIcon />,
     thumb: <BlankThumb />,
@@ -445,7 +458,8 @@ const TEMPLATES: Template[] = [
   {
     id: 'am-1-app',
     label: 'AM-1',
-    description: 'Music · a three-part Berlin-school arpeggio instrument, the AM-1 Arpeggio Machine',
+    description:
+      'Music · a three-part Berlin-school arpeggio instrument, the AM-1 Arpeggio Machine',
     defaultTitle: 'My arpeggio',
     icon: <LayoutIcon />,
     thumb: <BlankThumb />,
@@ -484,7 +498,8 @@ const TEMPLATES: Template[] = [
   {
     id: 'pdfme-app',
     label: 'Layout',
-    description: 'Creative · posters, flyers, cards and menus laid out on a page with pdfme; PDF and PNG outputs',
+    description:
+      'Creative · posters, flyers, cards and menus laid out on a page with pdfme; PDF and PNG outputs',
     defaultTitle: 'My layout',
     icon: <LayoutIcon />,
     thumb: <BlankThumb />,
@@ -503,7 +518,8 @@ const TEMPLATES: Template[] = [
   {
     id: 'recorder-app',
     label: 'Record',
-    description: 'Creative · screen and camera recording with a camera bubble; recordings become outputs for OpenCut',
+    description:
+      'Creative · screen and camera recording with a camera bubble; recordings become outputs for OpenCut',
     defaultTitle: 'My recordings',
     icon: <LayoutIcon />,
     thumb: <BlankThumb />,

@@ -1,0 +1,11 @@
+{
+  "name": "p5-crux",
+  "private": true,
+  "version": "0.1.0",
+  "description": "A p5.js sketch as a Crux Tool: generative art and live visuals, frames saved as outputs, the sketch shareable as a page",
+  "type": "module",
+  "scripts": {
+    "check": "node --check sketch.js && node --check garden/bridge.js && node --check garden/document.js",
+    "test:garden": "node --test garden/document.test.mjs"
+  }
+}

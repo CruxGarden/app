@@ -42,37 +42,50 @@ export const TOOL_INFO: Record<string, ToolInfo> = {
     name: 'Record',
     upstream: 'https://github.com/addyosmani/recorder',
     detailsPath: 'UPSTREAM.md',
-    relationship: 'The actual Record app, unchanged; the Garden bridge keeps its recordings as outputs of the Crux.',
+    relationship:
+      'The actual Record app, unchanged; the Garden bridge keeps its recordings as outputs of the Crux.',
   },
   'maps-app': {
     name: 'MapLibre GL + Terra Draw',
     upstream: 'https://github.com/maplibre/maplibre-gl-js',
     detailsPath: 'UPSTREAM.md',
-    relationship: 'A map tool around MapLibre GL and Terra Draw with OpenFreeMap tiles. Rendering and drawing are upstream’s; the page, the places list, the Garden integration and the public map are Crux Garden’s.',
+    relationship:
+      'A map tool around MapLibre GL and Terra Draw with OpenFreeMap tiles. Rendering and drawing are upstream’s; the page, the places list, the Garden integration and the public map are Crux Garden’s.',
+  },
+  'p5-app': {
+    name: 'p5.js',
+    upstream: 'https://github.com/processing/p5.js',
+    detailsPath: 'UPSTREAM.md',
+    relationship:
+      'A creative-coding tool around p5.js. The library is upstream’s, unmodified; the page, the starter sketch, the Garden integration and the outputs are Crux Garden’s.',
   },
   'pdfme-app': {
     name: 'pdfme',
     upstream: 'https://github.com/pdfme/pdfme',
     detailsPath: 'UPSTREAM.md',
-    relationship: 'A page layout tool around pdfme. The designer, viewer and PDF generator are upstream’s; the page, the Garden integration and the outputs are Crux Garden’s.',
+    relationship:
+      'A page layout tool around pdfme. The designer, viewer and PDF generator are upstream’s; the page, the Garden integration and the outputs are Crux Garden’s.',
   },
   'formjs-app': {
     name: 'form-js',
     upstream: 'https://github.com/bpmn-io/form-js',
     detailsPath: 'UPSTREAM.md',
-    relationship: 'A form builder around form-js (bpmn.io). The builder and viewer are upstream’s; the page, the Garden integration and the public edition with Crux Store answers are Crux Garden’s.',
+    relationship:
+      'A form builder around form-js (bpmn.io). The builder and viewer are upstream’s; the page, the Garden integration and the public edition with Crux Store answers are Crux Garden’s.',
   },
   'eventcalendar-app': {
     name: 'EventCalendar',
     upstream: 'https://github.com/vkurko/calendar',
     detailsPath: 'UPSTREAM.md',
-    relationship: 'A calendar organizer around the EventCalendar component. The calendar is upstream’s; the event form and Garden integration are Crux Garden’s.',
+    relationship:
+      'A calendar organizer around the EventCalendar component. The calendar is upstream’s; the event form and Garden integration are Crux Garden’s.',
   },
   'am-1-app': {
     name: 'AM-1',
     upstream: 'https://github.com/zacos-tech',
     detailsPath: 'UPSTREAM.md',
-    relationship: 'Daniel’s AM-1 Arpeggio Machine from the ZACOS line, packaged as written with its source and notes.',
+    relationship:
+      'Daniel’s AM-1 Arpeggio Machine from the ZACOS line, packaged as written with its source and notes.',
   },
   'underrun-app': native('Underrun', 'phoboslab/underrun'),
   'playcanvas-editor-app': native('PlayCanvas Editor', 'playcanvas/editor'),

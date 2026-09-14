@@ -13,6 +13,7 @@ import { NOTES_TOOLS, notesCommand } from '@/ai/notes-tools';
 import { FORMJS_TOOLS, formjsCommand } from '@/ai/formjs-tools';
 import { PDFME_TOOLS, pdfmeCommand } from '@/ai/pdfme-tools';
 import { MAPS_TOOLS, mapsCommand } from '@/ai/maps-tools';
+import { P5_TOOLS, p5Command } from '@/ai/p5-tools';
 import { RECORDER_TOOLS, recorderCommand } from '@/ai/recorder-tools';
 import { PISKEL_TOOLS, piskelCommand } from '@/ai/piskel-tools';
 import { MERMAID_TOOLS, mermaidCommand } from '@/ai/mermaid-tools';
@@ -57,7 +58,9 @@ export function embeddedAppToolAdapter(
   if (nativeAppType(crux) === 'formjs') return { tools: FORMJS_TOOLS, prepare: formjsCommand };
   if (nativeAppType(crux) === 'pdfme') return { tools: PDFME_TOOLS, prepare: pdfmeCommand };
   if (nativeAppType(crux) === 'maps') return { tools: MAPS_TOOLS, prepare: mapsCommand };
-  if (nativeAppType(crux) === 'recorder') return { tools: RECORDER_TOOLS, prepare: recorderCommand };
+  if (nativeAppType(crux) === 'p5') return { tools: P5_TOOLS, prepare: p5Command };
+  if (nativeAppType(crux) === 'recorder')
+    return { tools: RECORDER_TOOLS, prepare: recorderCommand };
   if (nativeAppType(crux) === 'opencut') return { tools: OPENCUT_TOOLS, prepare: opencutCommand };
   if (nativeAppType(crux) === 'playcanvas-editor')
     return { tools: PLAYCANVAS_EDITOR_TOOLS, prepare: playcanvasEditorCommand };
