@@ -47,6 +47,7 @@ const EXTENSIONS: Record<string, string> = {
   'audio/wav': 'wav',
   'audio/x-wav': 'wav',
   'audio/mpeg': 'mp3',
+  'audio/midi': 'mid',
   'application/zip': 'zip',
   'application/epub+zip': 'epub',
   'font/otf': 'otf',
@@ -74,7 +75,7 @@ export function outputKind(mimeType: string): 'image' | 'audio' | 'bundle' {
 }
 const KIND_PATTERN = {
   image: /\.(png|jpe?g|gif|webp|svg)$/i,
-  audio: /\.(wav|mp3)$/i,
+  audio: /\.(wav|mp3|mid)$/i,
   bundle: /\.(zip|epub|otf|ttf|woff|woff2)$/i,
 };
 const KIND_EXAMPLE = {

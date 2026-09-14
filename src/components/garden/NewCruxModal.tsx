@@ -325,6 +325,16 @@ const TEMPLATES: Template[] = [
     desktopOnly: true,
   },
   {
+    id: 'signal-app',
+    label: 'Song',
+    description: 'Creative · a MIDI sequencer (Signal): piano roll, arrange view, tempo, built-in sounds; MIDI and WAV outputs',
+    defaultTitle: 'My song',
+    icon: <PencilIcon />,
+    thumb: <BlankThumb />,
+    kind: 'webapp',
+    desktopOnly: true,
+  },
+  {
     id: 'fmg-app',
     label: 'Fantasy Map',
     description:

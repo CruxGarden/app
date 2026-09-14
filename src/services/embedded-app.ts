@@ -18,6 +18,7 @@ const NATIVE_TEMPLATES = {
   'glyphr-app': 'glyphr',
   'fmg-app': 'fmg',
   'abc-app': 'abc',
+  'signal-app': 'signal',
   'recorder-app': 'recorder',
   'am-1-app': 'am-1',
   'opencut-app': 'opencut',

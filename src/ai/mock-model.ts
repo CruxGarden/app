@@ -343,6 +343,30 @@ export function getMockLanguageModel(): LanguageModel {
             return toolCallStream('set_recorder_name', { name: 'Walkthrough takes' });
           return textStream('Listed the recordings and named the Crux Walkthrough takes.');
         }
+        if (lastUserText(prompt).includes('[song:tune]')) {
+          const rounds = toolResultsThisTurn(prompt);
+          if (!rounds.length) return toolCallStream('inspect_song', {});
+          if (rounds.length === 1) return toolCallStream('set_song_name', { name: 'Moss Waltz' });
+          if (rounds.length === 2) {
+            // A waltz in G: three beats a bar, 480 ticks a beat
+            const bars = [
+              [67, 71, 74],
+              [79, 79, 77],
+              [76, 74, 71],
+              [69, 69, 69],
+              [67, 71, 74],
+              [79, 79, 81],
+              [83, 81, 77],
+              [79, 79, 79],
+            ];
+            const notes = bars.flatMap((bar, b) =>
+              bar.map((noteNumber, i) => ({ tick: (b * 3 + i) * 480, duration: 440, noteNumber, velocity: i === 0 ? 110 : 90 })),
+            );
+            return toolCallStream('set_track_notes', { track: 1, name: 'Melody', program: 0, tempo: 132, notes });
+          }
+          if (rounds.length === 3) return toolCallStream('save_song_audio', { name: 'Moss Waltz' });
+          return textStream('Named the song Moss Waltz, wrote a waltz melody in G on track 1 and saved a WAV of it.');
+        }
         if (lastUserText(prompt).includes('[score:tune]')) {
           const rounds = toolResultsThisTurn(prompt);
           if (!rounds.length) return toolCallStream('inspect_score', {});

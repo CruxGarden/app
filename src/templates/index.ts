@@ -259,6 +259,7 @@ const loaders: Record<string, () => Promise<{ default: TemplateDefinition }>> = 
   'glyphr-app': () => import('./glyphr-app'),
   'fmg-app': () => import('./fmg-app'),
   'abc-app': () => import('./abc-app'),
+  'signal-app': () => import('./signal-app'),
   'recorder-app': () => import('./recorder-app'),
   'underrun-app': () => import('./underrun-app'),
   'playcanvas-editor-app': () => import('./playcanvas-editor-app'),
