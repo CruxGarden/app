@@ -161,10 +161,16 @@ test('JupyterLite native notebook runs Python, plots, agent cells, export and re
       notebook().cells.some((c: any) => String(c.source).includes('The measured mean is 4.0.')),
     ).toBe(true);
     expect(doc().project.files.some((f: any) => f.path === 'renamed-observations.csv')).toBe(true);
+    // CodeMirror 6 keeps the cell's text on fill; select it all and replace it
     const input = frame.locator('.jp-Notebook .cm-content').first();
-    await input.fill(
+    await input.click();
+    await second.page.keyboard.press('Meta+A');
+    await second.page.keyboard.press('Backspace');
+    await second.page.keyboard.insertText(
       'import matplotlib.pyplot as plt\nplt.plot([1,2,3],[2,4,3])\nplt.show()\nprint("Reopened notebook:", open("result.txt").read())',
     );
+    await expect(input).toContainText('Reopened notebook');
+    await expect(input).not.toContainText('import csv');
     await input.press('Shift+Enter');
     await expect(
       frame
