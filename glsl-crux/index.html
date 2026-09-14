@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Shader</title>
+    <link rel="stylesheet" href="runtime/glslEditor.css" />
+    <link rel="stylesheet" href="style.css" />
+    <script src="runtime/glslEditor.min.js"></script>
+  </head>
+  <body>
+    <header id="shader-header">
+      <label>Shader name <input id="shader-name" maxlength="200" autocomplete="off" /></label>
+      <span id="shader-info" aria-live="polite"></span>
+    </header>
+    <main><div id="glsl_editor" aria-label="Shader editor"></div></main>
+    <script type="module" src="garden/bridge.js"></script>
+  </body>
+</html>

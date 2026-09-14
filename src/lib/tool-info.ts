@@ -59,6 +59,13 @@ export const TOOL_INFO: Record<string, ToolInfo> = {
     relationship:
       'A creative-coding tool around p5.js. The library is upstream’s, unmodified; the page, the starter sketch, the Garden integration and the outputs are Crux Garden’s.',
   },
+  'glsl-app': {
+    name: 'glslEditor',
+    upstream: 'https://github.com/patriciogonzalezvivo/glslEditor',
+    detailsPath: 'UPSTREAM.md',
+    relationship:
+      'A shader tool around glslEditor (The Book of Shaders’ editor, glslCanvas inside). The editor and its canvas are upstream’s, unmodified; the page, the Garden integration and the outputs are Crux Garden’s.',
+  },
   'pdfme-app': {
     name: 'pdfme',
     upstream: 'https://github.com/pdfme/pdfme',

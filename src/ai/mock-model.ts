@@ -343,6 +343,21 @@ export function getMockLanguageModel(): LanguageModel {
             return toolCallStream('set_recorder_name', { name: 'Walkthrough takes' });
           return textStream('Listed the recordings and named the Crux Walkthrough takes.');
         }
+        if (lastUserText(prompt).includes('[shader:tweak]')) {
+          const rounds = toolResultsThisTurn(prompt);
+          if (!rounds.length) return toolCallStream('inspect_shader', {});
+          if (rounds.length === 1) return toolCallStream('set_shader_name', { name: 'Warm rings' });
+          if (rounds.length === 2)
+            return toolCallStream('set_shader_source', {
+              source:
+                '#ifdef GL_ES\nprecision mediump float;\n#endif\nuniform vec2 u_resolution;\nuniform float u_time;\nvoid main() {\n  vec2 st = gl_FragCoord.xy / u_resolution.xy;\n  float d = length(st - 0.5);\n  float ring = smoothstep(0.02, 0.0, abs(sin(d * 24.0 - u_time)) - 0.4);\n  gl_FragColor = vec4(mix(vec3(0.1, 0.05, 0.02), vec3(1.0, 0.6, 0.2), ring), 1.0);\n}\n',
+            });
+          if (rounds.length === 3)
+            return toolCallStream('save_shader_frame', { name: 'Warm rings' });
+          return textStream(
+            'Named the shader Warm rings, replaced its source with warmer rings and saved a frame.',
+          );
+        }
         if (lastUserText(prompt).includes('[sketch:frame]')) {
           const rounds = toolResultsThisTurn(prompt);
           if (!rounds.length) return toolCallStream('inspect_sketch', {});

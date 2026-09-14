@@ -1,0 +1,9 @@
+html, body { height: 100%; margin: 0; background: #0e0f0d; color: #e7e5dc; font: 13px system-ui, sans-serif; }
+body { display: flex; flex-direction: column; }
+#shader-header { display: flex; gap: 12px; align-items: center; padding: 6px 12px; background: #171a17; border-bottom: 1px solid #2c302c; }
+#shader-header label { display: flex; gap: 6px; align-items: center; }
+#shader-header input { padding: 3px 6px; border: 1px solid #3a403a; border-radius: 4px; background: #0e0f0d; color: inherit; font: inherit; min-width: 220px; }
+#shader-info { color: #9aa297; margin-left: auto; }
+main { flex: 1; min-height: 0; overflow: auto; }
+#glsl_editor { min-height: 100%; }
+.ge_canvas_container { position: sticky !important; }

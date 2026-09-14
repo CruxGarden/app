@@ -14,6 +14,7 @@ const NATIVE_TEMPLATES = {
   'pdfme-app': 'pdfme',
   'maps-app': 'maps',
   'p5-app': 'p5',
+  'glsl-app': 'glsl',
   'recorder-app': 'recorder',
   'am-1-app': 'am-1',
   'opencut-app': 'opencut',
@@ -170,7 +171,11 @@ export function samplerType(
 export function isLocalCreationTool(crux: { meta?: Record<string, unknown> } | null | undefined) {
   const native = nativeAppType(crux);
   return (
-    (!!native && native !== 'formjs' && native !== 'maps' && native !== 'p5') ||
+    (!!native &&
+      native !== 'formjs' &&
+      native !== 'maps' &&
+      native !== 'p5' &&
+      native !== 'glsl') ||
     isCardinal(crux) ||
     !!samplerType(crux)
   );
