@@ -40,11 +40,32 @@ export function isAgentModel(model: string | undefined | null): boolean {
 }
 
 export const PROVIDERS: Record<string, ProviderInfo> = {
+  included: {
+    id: 'included',
+    name: 'Crux Garden',
+    defaultModel: 'garden-included',
+    models: [
+      {
+        id: 'garden-included',
+        name: 'Included collaborator',
+        contextWindow: 100000,
+        maxOutput: 8192,
+      },
+    ],
+    capabilities: ['Chat', 'Files'],
+    keyUrl: '/settings',
+  },
   anthropic: {
     id: 'anthropic',
     name: 'Anthropic',
     defaultModel: DEFAULT_MODEL,
     models: [
+      {
+        id: 'claude-fable-5-1',
+        name: 'Claude Fable 5.1',
+        contextWindow: 1000000,
+        maxOutput: 128000,
+      },
       { id: 'claude-sonnet-5', name: 'Claude Sonnet 5', contextWindow: 1000000, maxOutput: 128000 },
       { id: 'claude-fable-5', name: 'Claude Fable 5', contextWindow: 1000000, maxOutput: 128000 },
       { id: 'claude-opus-5', name: 'Claude Opus 5', contextWindow: 1000000, maxOutput: 128000 },
@@ -73,6 +94,7 @@ export const PROVIDERS: Record<string, ProviderInfo> = {
     name: 'OpenAI',
     defaultModel: 'gpt-5.6-terra',
     models: [
+      { id: 'gpt-6-astra', name: 'GPT-6 Astra', contextWindow: 1050000, maxOutput: 128000 },
       { id: 'gpt-5.6-sol', name: 'GPT-5.6 Sol', contextWindow: 1050000, maxOutput: 128000 },
       { id: 'gpt-5.6-terra', name: 'GPT-5.6 Terra', contextWindow: 1050000, maxOutput: 128000 },
       { id: 'gpt-5.6-luna', name: 'GPT-5.6 Luna', contextWindow: 1050000, maxOutput: 128000 },
@@ -85,6 +107,18 @@ export const PROVIDERS: Record<string, ProviderInfo> = {
     name: 'Google Gemini',
     defaultModel: 'gemini-3.6-flash',
     models: [
+      {
+        id: 'gemini-3.8-flash',
+        name: 'Gemini 3.8 Flash',
+        contextWindow: 1048576,
+        maxOutput: 65536,
+      },
+      {
+        id: 'gemini-3.7-flash',
+        name: 'Gemini 3.7 Flash',
+        contextWindow: 1048576,
+        maxOutput: 65536,
+      },
       {
         id: 'gemini-3.6-flash',
         name: 'Gemini 3.6 Flash',
@@ -105,7 +139,7 @@ export const PROVIDERS: Record<string, ProviderInfo> = {
       },
       {
         id: 'gemini-3.1-pro-preview',
-        name: 'Gemini 3.1 Pro',
+        name: 'Gemini 3.1 Pro (preview)',
         contextWindow: 1000000,
         maxOutput: 65536,
       },
@@ -183,6 +217,7 @@ export function getModelShortName(modelId?: string): string | null {
 
 /** Derive provider ID from a model string */
 export function getProviderForModel(model: string): string {
+  if (model === 'garden-included') return 'included';
   if (isAgentModel(model)) return CLAUDE_CODE_PROVIDER;
   const local = localProviderOf(model);
   if (local) return local;

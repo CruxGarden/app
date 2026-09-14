@@ -1,3 +1,4 @@
+import { getStoredTokens } from '@/api/client';
 import { SettingsKey, API_KEY_PREFIX } from '@/lib/constants';
 import { resolveModel } from './providers';
 import { LOCAL_API_KEY } from './local';
@@ -10,6 +11,7 @@ import { getSecret, setSecret, deleteSecret } from '@/services/secrets';
  * the old storage location.
  */
 export async function getApiKey(providerId: string): Promise<string | null> {
+  if (providerId === 'included') return getStoredTokens().accessToken ? 'included-session' : null;
   // Local inference authenticates nothing — never blocks on a missing key
   if (providerId === 'ollama' || providerId === 'lmstudio') return LOCAL_API_KEY;
 

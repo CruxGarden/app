@@ -29,7 +29,7 @@ export default function ApiKeySetup({
 }: ApiKeySetupProps) {
   // Claude Code (ADR 0019) is a provider without a key; desktop only.
   const providerIds = Object.keys(PROVIDERS).filter(
-    (id) => id !== CLAUDE_CODE_PROVIDER || can(Capability.AgentHost),
+    (id) => id !== 'included' && (id !== CLAUDE_CODE_PROVIDER || can(Capability.AgentHost)),
   );
   const [agent, setAgent] = useState<AgentStatus | null>(null);
   useEffect(() => {

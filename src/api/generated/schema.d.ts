@@ -1288,6 +1288,78 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/store/{cruxId}/-/export': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Export the whole store of a crux as one JSON document (author only)
+     * @description Shape: { format: "crux-store", version: 1, cruxId, exportedAt, public: { key: value }, protected: { visitorId: { key: value } } }. The same document is accepted by import — on this crux, another crux, or the workspace's local store.
+     */
+    get: operations['StoreController_exportAll'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/store/{cruxId}/-/import': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Import a store document into a crux (author only)
+     * @description Body is a document from export. Keys are upserted over what is there; `?mode=replace` empties the store first. Per-visitor values whose visitor is not an account are skipped and counted.
+     */
+    post: operations['StoreController_importAll'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/inference/usage': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: operations['InferenceController_usage'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/inference/v1/messages': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post: operations['InferenceController_stream'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1710,7 +1782,7 @@ export interface components {
        * @description A paid plan id
        * @enum {string}
        */
-      planId: 'gardener';
+      planId: 'gardener' | 'gardener_plus';
       /** @enum {string} */
       interval: 'month' | 'year';
     };
@@ -5906,6 +5978,136 @@ export interface operations {
       };
       /** @description Crux not found */
       404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  StoreController_exportAll: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        /** @description The published crux whose store this is */
+        cruxId: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description The store document */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Token required */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Not the crux author */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Crux not found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  StoreController_importAll: {
+    parameters: {
+      query: {
+        mode: string;
+      };
+      header?: never;
+      path: {
+        /** @description The published crux whose store this is */
+        cruxId: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description { imported, skipped } */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Not a Crux Store export */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Token required */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Not the crux author */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Crux not found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  InferenceController_usage: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  InferenceController_stream: {
+    parameters: {
+      query?: never;
+      header: {
+        'x-request-id': string;
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Anthropic Messages events; tools execute in the client. */
+      200: {
         headers: {
           [name: string]: unknown;
         };

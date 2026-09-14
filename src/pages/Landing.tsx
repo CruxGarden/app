@@ -121,7 +121,8 @@ function Hero() {
         <DownloadButtons download={download} />
         <p className="mt-4 text-xs text-text-muted max-w-md">
           Free includes the whole app, the AI on your own key, and 1 GB published and backed up.
-          Gardener adds room to grow and your own domain.{' '}
+          Gardener adds room to grow and your own domain. Check Plans for included collaboration
+          availability.{' '}
           <Link to="/plans" className="text-accent hover:underline">
             More room when you need it
           </Link>
@@ -458,8 +459,10 @@ function Trust() {
       <h2 className="font-display text-2xl text-text mb-3">What the app sends</h2>
       <ul className="text-sm text-text-muted flex flex-col gap-1.5 max-w-2xl">
         <li>
-          <span className="text-text">AI requests</span> go straight from your computer to the
-          provider you chose, with your own key. Or run a local model and send nothing.
+          <span className="text-text">AI requests with your own key</span> go from your computer to
+          your chosen provider. Included collaboration sends conversation and selected file context
+          through Crux Garden to Anthropic. Its usage ledger stores counts and costs, not
+          conversation content. Local models run on your computer.
         </li>
         <li>
           <span className="text-text">Publishing and sync</span> send only what you ask to publish

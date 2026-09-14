@@ -1,3 +1,5 @@
+import { onUsageChanged } from '@/lib/usage-events';
+import { useAuthStore } from '@/stores/authStore';
 import { useEffect, useState } from 'react';
 import { cn } from '@/lib/cn';
 import { formatBytes } from '@/lib/format';
@@ -13,6 +15,7 @@ export default function UsageSection({
   cruxId: string;
   refreshKey?: unknown;
 }) {
+  const accountId = useAuthStore((s) => s.account?.id);
   const [usage, setUsage] = useState<usageApi.CruxUsage | null>(null);
   const [account, setAccount] = useState<usageApi.AccountUsage | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -20,21 +23,36 @@ export default function UsageSection({
   useEffect(() => {
     let cancelled = false;
     setError(null);
-    Promise.all([usageApi.forCrux(cruxId), usageApi.me()])
-      .then(([u, a]) => {
-        if (cancelled) return;
-        setUsage(u);
-        setAccount(a);
-      })
-      .catch(() => {
-        if (!cancelled) setError('Usage is unavailable right now');
-      });
+    setUsage(null);
+    setAccount(null);
+    let revision = 0;
+    const load = () => {
+      const current = ++revision;
+      void Promise.all([usageApi.forCrux(cruxId), usageApi.me()])
+        .then(([u, a]) => {
+          if (cancelled || current !== revision) return;
+          setError(null);
+          setUsage(u);
+          setAccount(a);
+        })
+        .catch(() => {
+          if (!cancelled && current === revision) setError('Usage is unavailable right now');
+        });
+    };
+    load();
+    const off = onUsageChanged(load);
     return () => {
       cancelled = true;
+      off();
     };
-  }, [cruxId, refreshKey]);
+  }, [cruxId, refreshKey, accountId]);
 
-  if (error) return null;
+  if (error)
+    return (
+      <PaneSection label="Usage">
+        <p className="text-xxs text-text-muted">{error}</p>
+      </PaneSection>
+    );
   if (!usage || !account) return null;
   const pct = (part: number, whole: number) =>
     whole > 0 ? Math.min(100, (part / whole) * 100) : 0;
