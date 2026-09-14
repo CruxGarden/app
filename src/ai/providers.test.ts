@@ -36,3 +36,15 @@ describe('getProviderForModel', () => {
     expect(getProviderForModel('some-unknown-model')).toBe('anthropic');
   });
 });
+
+describe('September model refresh', () => {
+  it('routes included requests separately from BYOK and preserves existing choices', () => {
+    expect(getProviderForModel('garden-included')).toBe('included');
+    expect(getProviderForModel('gpt-6-astra')).toBe('openai');
+    expect(PROVIDERS.openai!.models.some((m) => m.id === 'gpt-6-astra')).toBe(true);
+    expect(PROVIDERS.anthropic!.models.some((m) => m.id === 'claude-fable-5-1')).toBe(true);
+    expect(PROVIDERS.google!.models.map((m) => m.id)).toEqual(
+      expect.arrayContaining(['gemini-3.8-flash', 'gemini-3.7-flash', 'gemini-3.6-flash']),
+    );
+  });
+});

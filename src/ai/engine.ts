@@ -1,3 +1,5 @@
+import { includedFetch, INCLUDED_MODEL } from '@/api/inference';
+import { API_BASE_URL } from '@/api/client';
 /**
  * The Collaboration engine — the AI conversation loop behind one seam.
  *
@@ -90,6 +92,12 @@ export function languageModelFor(model: string, apiKey: string): LanguageModel {
   if (isAiMock()) return getMockLanguageModel();
   const id = resolveModel(model);
   const provider = getProviderForModel(id);
+  if (id === INCLUDED_MODEL)
+    return createAnthropic({
+      apiKey: 'included-session',
+      baseURL: `${API_BASE_URL}/inference/v1`,
+      fetch: includedFetch,
+    })(id);
   // Local inference (Ollama / LM Studio): OpenAI-compatible localhost API,
   // no key. main.ts shims CORS for these ports on desktop.
   if (provider === 'ollama' || provider === 'lmstudio') {
@@ -345,6 +353,7 @@ export async function* runConversation(
       stopWhen: stepCountIs(MAX_ROUNDS),
       abortSignal: signal,
       maxOutputTokens: info?.maxOutput ?? 16384,
+      ...(model === INCLUDED_MODEL ? { maxRetries: 0 } : {}),
       // Refresh the workspace context block after mutations so the model sees
       // the updated file listing — the stable system prompt is untouched, so
       // the provider cache survives (workspace prompts only; custom prompts
@@ -495,7 +504,7 @@ async function summarizeEvicted(
   const cached = compactionCache.get(cacheKey);
   if (cached) return cached;
   try {
-    const { text } = await generateText({
+    const result = await (model === INCLUDED_MODEL ? streamText : generateText)({
       // Honour the injected model so the eval harness never reaches the network
       model: languageModel ?? languageModelFor(model, apiKey),
       system:
@@ -504,8 +513,9 @@ async function summarizeEvicted(
         'Write a dense factual summary in under 300 words — no preamble.',
       prompt: transcript,
       maxOutputTokens: 500,
+      ...(model === INCLUDED_MODEL ? { maxRetries: 0 } : {}),
     });
-    const summary = text.trim();
+    const summary = (await result.text).trim();
     if (!summary) return null;
     if (compactionCache.size >= COMPACTION_CACHE_LIMIT) {
       compactionCache.delete(compactionCache.keys().next().value!);
@@ -521,6 +531,7 @@ async function summarizeEvicted(
 function friendlyError(error: unknown): string {
   const e = error as { statusCode?: number; status?: number; message?: string };
   const status = e?.statusCode ?? e?.status;
+  if (e?.message?.includes('Included collaboration:')) return e.message;
   if (status === 429 || status === 529 || status === 503) {
     return 'The AI service is temporarily overloaded. Please try again in a moment.';
   }

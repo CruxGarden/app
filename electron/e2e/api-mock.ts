@@ -40,6 +40,9 @@ export interface MockApi {
     syncOverLimit?: boolean;
     /** Extra bytes counted against the storage budget (usage/me) */
     storageUsedBytes?: number;
+    includedUsagePercent?: number;
+    includedUncertain?: number;
+    failIncludedUsage?: boolean;
     /** The email of the last login; other@example.com is a second account */
     loginEmail?: string;
     /** Sync store: garden backup + synced crux archives, and transfer this period */
@@ -271,8 +274,37 @@ export async function startMockApi(opts: { port?: number } = {}): Promise<MockAp
         result_count: q ? 2 : 0,
         results: q
           ? [
-              { id: 'img-1', title: `Seedlings for ${q}`, url: file, thumbnail: file, creator: 'Ana Grower', creator_url: 'https://example.org/ana', license: 'by', license_version: '4.0', license_url: 'https://creativecommons.org/licenses/by/4.0/', attribution: `"Seedlings for ${q}" by Ana Grower is licensed under CC BY 4.0.`, foreign_landing_url: 'https://example.org/seedlings', filetype: 'png', width: 24, height: 24 },
-              { id: 'img-2', title: 'Potting bench', url: file, thumbnail: null, creator: 'Bo', license: 'cc0', license_version: '1.0', license_url: 'https://creativecommons.org/publicdomain/zero/1.0/', attribution: '"Potting bench" by Bo is marked CC0 1.0.', foreign_landing_url: 'https://example.org/bench', filetype: 'png', width: 24, height: 24 },
+              {
+                id: 'img-1',
+                title: `Seedlings for ${q}`,
+                url: file,
+                thumbnail: file,
+                creator: 'Ana Grower',
+                creator_url: 'https://example.org/ana',
+                license: 'by',
+                license_version: '4.0',
+                license_url: 'https://creativecommons.org/licenses/by/4.0/',
+                attribution: `"Seedlings for ${q}" by Ana Grower is licensed under CC BY 4.0.`,
+                foreign_landing_url: 'https://example.org/seedlings',
+                filetype: 'png',
+                width: 24,
+                height: 24,
+              },
+              {
+                id: 'img-2',
+                title: 'Potting bench',
+                url: file,
+                thumbnail: null,
+                creator: 'Bo',
+                license: 'cc0',
+                license_version: '1.0',
+                license_url: 'https://creativecommons.org/publicdomain/zero/1.0/',
+                attribution: '"Potting bench" by Bo is marked CC0 1.0.',
+                foreign_landing_url: 'https://example.org/bench',
+                filetype: 'png',
+                width: 24,
+                height: 24,
+              },
             ]
           : [],
       });
@@ -281,14 +313,48 @@ export async function startMockApi(opts: { port?: number } = {}): Promise<MockAp
       const q = parsedUrl.searchParams.get('q') ?? '';
       return send(200, {
         result_count: 1,
-        results: [{ id: 'aud-1', title: `Chime for ${q}`, url: `${state.baseUrl}/media-file/chime.wav`, thumbnail: null, creator: 'Cy Bell', license: 'by-sa', license_version: '4.0', license_url: 'https://creativecommons.org/licenses/by-sa/4.0/', attribution: `"Chime for ${q}" by Cy Bell is licensed under CC BY-SA 4.0.`, foreign_landing_url: 'https://example.org/chime', filetype: 'wav', duration: 500 }],
+        results: [
+          {
+            id: 'aud-1',
+            title: `Chime for ${q}`,
+            url: `${state.baseUrl}/media-file/chime.wav`,
+            thumbnail: null,
+            creator: 'Cy Bell',
+            license: 'by-sa',
+            license_version: '4.0',
+            license_url: 'https://creativecommons.org/licenses/by-sa/4.0/',
+            attribution: `"Chime for ${q}" by Cy Bell is licensed under CC BY-SA 4.0.`,
+            foreign_landing_url: 'https://example.org/chime',
+            filetype: 'wav',
+            duration: 500,
+          },
+        ],
       });
     }
     if (path === '/commons/w/api.php') {
       return send(200, {
         query: {
           pages: {
-            '900': { pageid: 900, title: 'File:Bees at work.webm', imageinfo: [{ url: `${state.baseUrl}/media-file/bees.webm`, descriptionurl: 'https://commons.wikimedia.org/wiki/File:Bees_at_work.webm', mime: 'video/webm', width: 320, height: 240, extmetadata: { Artist: { value: '<a href="https://commons.wikimedia.org/wiki/User:Dee">Dee</a>' }, LicenseShortName: { value: 'CC BY-SA 4.0' }, LicenseUrl: { value: 'https://creativecommons.org/licenses/by-sa/4.0' } } }] },
+            '900': {
+              pageid: 900,
+              title: 'File:Bees at work.webm',
+              imageinfo: [
+                {
+                  url: `${state.baseUrl}/media-file/bees.webm`,
+                  descriptionurl: 'https://commons.wikimedia.org/wiki/File:Bees_at_work.webm',
+                  mime: 'video/webm',
+                  width: 320,
+                  height: 240,
+                  extmetadata: {
+                    Artist: {
+                      value: '<a href="https://commons.wikimedia.org/wiki/User:Dee">Dee</a>',
+                    },
+                    LicenseShortName: { value: 'CC BY-SA 4.0' },
+                    LicenseUrl: { value: 'https://creativecommons.org/licenses/by-sa/4.0' },
+                  },
+                },
+              ],
+            },
           },
         },
       });
@@ -296,9 +362,24 @@ export async function startMockApi(opts: { port?: number } = {}): Promise<MockAp
     if (path.startsWith('/media-file/')) {
       const name = path.slice('/media-file/'.length);
       const png = readFileSync(join(__dirname, 'fixtures/documents/seal.png'));
-      const wav = Buffer.concat([Buffer.from('RIFF'), Buffer.from([36, 8, 0, 0]), Buffer.from('WAVEfmt '), Buffer.from([16, 0, 0, 0, 1, 0, 1, 0, 0x44, 0xac, 0, 0, 0x88, 0x58, 1, 0, 2, 0, 16, 0]), Buffer.from('data'), Buffer.from([0, 8, 0, 0]), Buffer.alloc(2048)]);
+      const wav = Buffer.concat([
+        Buffer.from('RIFF'),
+        Buffer.from([36, 8, 0, 0]),
+        Buffer.from('WAVEfmt '),
+        Buffer.from([16, 0, 0, 0, 1, 0, 1, 0, 0x44, 0xac, 0, 0, 0x88, 0x58, 1, 0, 2, 0, 16, 0]),
+        Buffer.from('data'),
+        Buffer.from([0, 8, 0, 0]),
+        Buffer.alloc(2048),
+      ]);
       const webm = Buffer.concat([Buffer.from([0x1a, 0x45, 0xdf, 0xa3]), Buffer.alloc(4096)]);
-      const file = name === 'seedling.png' ? { bytes: png, type: 'image/png' } : name === 'chime.wav' ? { bytes: wav, type: 'audio/wav' } : name === 'bees.webm' ? { bytes: webm, type: 'video/webm' } : null;
+      const file =
+        name === 'seedling.png'
+          ? { bytes: png, type: 'image/png' }
+          : name === 'chime.wav'
+            ? { bytes: wav, type: 'audio/wav' }
+            : name === 'bees.webm'
+              ? { bytes: webm, type: 'video/webm' }
+              : null;
       if (!file) return send(404, { message: 'Not found' });
       res.writeHead(200, { 'Content-Type': file.type, 'Content-Length': file.bytes.length });
       res.end(file.bytes);
@@ -308,15 +389,22 @@ export async function startMockApi(opts: { port?: number } = {}): Promise<MockAp
     // in for — the page learns which crux it is and where the API lives (window.crux.publish).
     const servedPublished = path.match(/^\/published\/([^/]+)\/(.+)$/);
     if (servedPublished && method === 'GET') {
-      const file = (state.published[servedPublished[1]!] ?? []).find((f) => f.path === servedPublished[2]);
+      const file = (state.published[servedPublished[1]!] ?? []).find(
+        (f) => f.path === servedPublished[2],
+      );
       if (!file) return send(404, { message: 'Not found' });
       let bytes = file.bytes;
       if (file.path.endsWith('.html')) {
         const tag = `<script data-crux-inject>window.crux=window.crux||{};window.crux.publish={cruxId:${JSON.stringify(servedPublished[1])},apiBase:${JSON.stringify(state.baseUrl)}};</script>`;
         const html = bytes.toString('utf8');
-        bytes = Buffer.from(html.includes('</head>') ? html.replace('</head>', `${tag}</head>`) : tag + html);
+        bytes = Buffer.from(
+          html.includes('</head>') ? html.replace('</head>', `${tag}</head>`) : tag + html,
+        );
       }
-      res.writeHead(200, { 'Content-Type': file.mime ?? 'application/octet-stream', 'Content-Length': bytes.length });
+      res.writeHead(200, {
+        'Content-Type': file.mime ?? 'application/octet-stream',
+        'Content-Length': bytes.length,
+      });
       res.end(bytes);
       return;
     }
@@ -394,11 +482,17 @@ export async function startMockApi(opts: { port?: number } = {}): Promise<MockAp
     const PLAN_LIMITS: Record<string, [number, number, number, number]> = {
       free: [1073741824, 1073741824, 100000, 0],
       gardener: [10737418240, 26843545600, 1000000, 10],
+      gardener_plus: [10737418240, 26843545600, 1000000, 10],
     };
     const planOf = (id: string) => ({
       id,
-      name: id[0]!.toUpperCase() + id.slice(1),
-      blurb: id === 'free' ? 'Publish a site, back up your garden.' : 'More room.',
+      name: id === 'gardener_plus' ? 'Gardener Plus' : id[0]!.toUpperCase() + id.slice(1),
+      blurb:
+        id === 'free'
+          ? 'Publish a site, back up your garden.'
+          : id === 'gardener_plus'
+            ? 'More included collaboration with Sonnet when allowance permits.'
+            : 'Included collaboration, publishing, and room to grow.',
       storageBytes: PLAN_LIMITS[id]![0],
       bandwidthBytesPerPeriod: PLAN_LIMITS[id]![1],
       storeRequestsPerPeriod: PLAN_LIMITS[id]![2],
@@ -414,12 +508,39 @@ export async function startMockApi(opts: { port?: number } = {}): Promise<MockAp
       canManage: state.billing.customer,
       provider: 'mock',
     });
+    if (path === '/inference/usage' && method === 'GET') {
+      if (state.failIncludedUsage) return send(503, { message: 'Unavailable' });
+      const plus = state.billing.planId === 'gardener_plus';
+      const percent = state.includedUsagePercent ?? 25;
+      return send(200, {
+        available: true,
+        eligible: state.billing.planId !== 'free',
+        planId: state.billing.planId,
+        model: plus ? 'claude-sonnet-5' : 'claude-haiku-4-5-20251001',
+        asOf: new Date().toISOString(),
+        windows:
+          state.billing.planId === 'free'
+            ? []
+            : [5, 720].map((durationHours) => ({
+                durationHours,
+                limitMicrodollars: 1000000,
+                usedMicrodollars: percent * 10000,
+                remainingMicrodollars: (100 - percent) * 10000,
+                nextReleaseAt: '2026-09-15T20:00:00Z',
+              })),
+        requests: 4,
+        recentRequests: [],
+        uncertainRequests: state.includedUncertain ?? 0,
+        activeRequests: 0,
+        tokens: { input: 100, output: 10, cacheRead: 0, cacheWrite: 0 },
+      });
+    }
     if (path === '/billing/plans' && method === 'GET') {
       return send(200, {
         provider: 'mock',
         instant: true,
         trialDays: 0,
-        plans: ['free', 'gardener'].map((id) => ({
+        plans: ['free', 'gardener', 'gardener_plus'].map((id) => ({
           plan: planOf(id),
           prices:
             id === 'free'
@@ -428,13 +549,13 @@ export async function startMockApi(opts: { port?: number } = {}): Promise<MockAp
                   {
                     interval: 'month',
                     priceId: `price_${id}_m`,
-                    amount: 500,
+                    amount: id === 'gardener_plus' ? 2000 : 1000,
                     currency: 'usd',
                   },
                   {
                     interval: 'year',
                     priceId: `price_${id}_y`,
-                    amount: 5000,
+                    amount: id === 'gardener_plus' ? 20000 : 10000,
                     currency: 'usd',
                   },
                 ],
@@ -744,7 +865,9 @@ export async function startMockApi(opts: { port?: number } = {}): Promise<MockAp
       if (method === 'GET' && storeMatch![2]) {
         const key = decodeURIComponent(storeMatch![2]);
         const entry = state.store.find((e) => e.key === key);
-        return entry ? send(200, { value: entry.value, mode: entry.mode, updatedAt: entry.updatedAt }) : send(404, { message: 'Not found' });
+        return entry
+          ? send(200, { value: entry.value, mode: entry.mode, updatedAt: entry.updatedAt })
+          : send(404, { message: 'Not found' });
       }
       if (method === 'DELETE' && storeMatch![2]) {
         const key = decodeURIComponent(storeMatch![2]);

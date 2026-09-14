@@ -41,8 +41,8 @@ export async function me(): Promise<BillingMe> {
   return data;
 }
 /** The plans that can be bought; mirrors the API's enum (contract-check.ts keeps them equal). */
-export type PaidPlanId = 'gardener';
-const PAID_PLAN_IDS: readonly PaidPlanId[] = ['gardener'];
+export type PaidPlanId = 'gardener' | 'gardener_plus';
+const PAID_PLAN_IDS: readonly PaidPlanId[] = ['gardener', 'gardener_plus'];
 /** Body of POST /billing/checkout — asserted against the API contract in contract-check.ts. */
 export interface CheckoutBody {
   planId: PaidPlanId;

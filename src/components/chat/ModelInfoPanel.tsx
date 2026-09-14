@@ -28,7 +28,7 @@ export default function ModelInfoPanel({ model, children }: ModelInfoPanelProps)
   const providerId = getProviderForModel(model);
   const provider = PROVIDERS[providerId];
 
-  const totalTokens = tokenUsage.inputTokens + tokenUsage.outputTokens;
+  const hasUsage = tokenUsage.inputTokens > 0 || tokenUsage.outputTokens > 0;
   const usagePercent = info
     ? Math.min((tokenUsage.inputTokens / info.contextWindow) * 100, 100)
     : 0;
@@ -54,7 +54,7 @@ export default function ModelInfoPanel({ model, children }: ModelInfoPanelProps)
         {children}
 
         {/* Always-visible usage bar — hidden when pane is narrow */}
-        {info && totalTokens > 0 && showBar && (
+        {info && hasUsage && showBar && (
           <div className="flex items-center gap-1.5 flex-1 min-w-0">
             <div className="flex-1 h-1.5 bg-border/30 rounded-full overflow-hidden min-w-8">
               <div
@@ -109,18 +109,19 @@ export default function ModelInfoPanel({ model, children }: ModelInfoPanelProps)
               <span className="text-text-muted">Messages</span>
               <span className="text-text">{messageCount}</span>
             </div>
-            {totalTokens > 0 && (
+            {hasUsage && (
               <>
                 <div className="flex justify-between items-center px-3 h-8">
-                  <span className="text-text-muted">Session</span>
-                  <span className="text-text">
-                    {formatTokens(tokenUsage.inputTokens)} in ·{' '}
-                    {formatTokens(tokenUsage.outputTokens)} out
-                  </span>
+                  <span className="text-text-muted">Input context</span>
+                  <span className="text-text">{formatTokens(tokenUsage.inputTokens)} tokens</span>
+                </div>
+                <div className="flex justify-between items-center px-3 h-8">
+                  <span className="text-text-muted">Session output</span>
+                  <span className="text-text">{formatTokens(tokenUsage.outputTokens)} tokens</span>
                 </div>
                 {tokenUsage.cachedInputTokens > 0 && (
                   <div className="flex justify-between items-center px-3 h-8">
-                    <span className="text-text-muted">Cache Reads</span>
+                    <span className="text-text-muted">Last cache read</span>
                     <span className="text-text">
                       {formatTokens(tokenUsage.cachedInputTokens)} tokens
                     </span>
@@ -128,7 +129,12 @@ export default function ModelInfoPanel({ model, children }: ModelInfoPanelProps)
                 )}
                 <div className="px-3 py-2 bg-surface/50">
                   <div className="flex justify-between items-center mb-1.5">
-                    <span className="text-text-muted">Context Used</span>
+                    <span
+                      className="text-text-muted"
+                      title="Estimated until the provider reports token usage"
+                    >
+                      Context used
+                    </span>
                     <span className={cn('text-text', usagePercent > 80 && 'text-error')}>
                       {usagePercent.toFixed(1)}%
                     </span>
@@ -181,14 +187,20 @@ export default function ModelInfoPanel({ model, children }: ModelInfoPanelProps)
 
           {/* API Key link */}
           <div>
-            <a
-              href={provider.keyUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-accent hover:underline text-xxs"
-            >
-              Manage API key →
-            </a>
+            {providerId === 'included' ? (
+              <span className="text-text-muted text-xxs">
+                Included allowance is in Settings → Usage.
+              </span>
+            ) : (
+              <a
+                href={provider.keyUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-accent hover:underline text-xxs"
+              >
+                Manage API key →
+              </a>
+            )}
           </div>
         </div>
       )}

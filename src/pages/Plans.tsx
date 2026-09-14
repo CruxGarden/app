@@ -41,10 +41,11 @@ export default function Plans() {
       <main className="relative z-10 flex-1 w-full max-w-4xl mx-auto px-4 sm:px-6 py-12 rounded-[var(--radius)] bg-bg/70 backdrop-blur-md mt-6 mb-12 border border-border/60">
         <h1 className="font-display text-3xl text-text">Plans</h1>
         <p className="text-sm text-text-muted mt-2 max-w-2xl">
-          Everything creative in Crux Garden is free: the app, the AI (on your own key), Moods,
-          versions, publishing. Gardener buys room for what you publish and back up, and your own
-          domain. Nothing is ever cut off for going over; new publishes pause at twice a plan, and
-          you hear from us long before that.
+          The app, Moods, Growth and basic publishing are free. Use your own AI key on any plan.
+          Gardener adds hosting room and your own domains; included collaboration is available when
+          enabled on your server. Gardener Plus adds more included allowance. Included AI pauses at
+          its usage limits, with no automatic overage charges. Storage above twice your plan limit
+          pauses new uploads and publishes.
         </p>
 
         {error && <p className="text-sm text-text-muted mt-8">Plans are unavailable right now.</p>}

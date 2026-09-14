@@ -4,8 +4,8 @@
 visitors can open "How was this made?" to read the conversation.
 
 Crux Garden is a local-first creative workspace for the Mac (Windows and Linux builds are in
-progress). Your work lives in ordinary folders on your disk; the AI runs on your own key or a
-local model; publishing is the only part that touches our servers.
+progress). Your work lives in ordinary folders on your disk; AI uses your own key, an included subscription allowance, or a
+local model. Publishing, sync and included collaboration use our servers as described below.
 
 - Website and downloads: https://crux.garden
 - Explore what people made: https://crux.garden/explore
@@ -30,8 +30,11 @@ cd electron && npm run verify && npm run build:all && npm run test:e2e   # Playw
 
 ## What the app sends over the network
 
-- **AI requests** go straight from your machine to the provider you chose, with your key — or to a
-  local model, sending nothing.
+- **AI with your own key** goes straight from your machine to your chosen provider.
+  **Included collaboration**, when configured, sends conversation and selected file context through
+  the Crux Garden API to Anthropic; the accounting ledger retains model, token counts, cost and status,
+  not prompt or response content. Tool execution and Project Folders stay local. Local models run
+  on your machine. Included usage has rolling limits and no automatic paid overages.
 - **Publishing and sync** send only what you ask to publish or back up, to crux.garden.
 - **Update checks** ask GitHub Releases for the latest version. You can turn them off in Settings →
   Desktop.

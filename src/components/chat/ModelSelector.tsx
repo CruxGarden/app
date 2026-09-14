@@ -1,3 +1,5 @@
+import { includedUsage } from '@/api/inference';
+import { useAuthStore } from '@/stores/authStore';
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { ChevronDownIcon } from '@/components/ui/icons';
 import { PROVIDERS, CLAUDE_CODE_PROVIDER } from '@/ai/providers';
@@ -67,6 +69,8 @@ function getProviderLabel(modelId: string): string {
 }
 
 export default function ModelSelector({ value, onChange, disabled }: ModelSelectorProps) {
+  const accountId = useAuthStore((s) => s.account?.id);
+  const [included, setIncluded] = useState(false);
   const [open, setOpen] = useState(false);
   const [localEndpoints, setLocalEndpoints] = useState<LocalAiEndpoint[]>([]);
   const [agent, setAgent] = useState<AgentStatus | null>(null);
@@ -85,7 +89,22 @@ export default function ModelSelector({ value, onChange, disabled }: ModelSelect
     }
   }, [open]);
 
-  const groups = getAllModels().filter((g) => g.providerId !== CLAUDE_CODE_PROVIDER);
+  useEffect(() => {
+    let cancelled = false;
+    setIncluded(false);
+    if (open && accountId)
+      void includedUsage()
+        .then((u) => {
+          if (!cancelled) setIncluded(u.available && u.eligible);
+        })
+        .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [open, accountId]);
+  const groups = getAllModels().filter(
+    (g) => g.providerId !== CLAUDE_CODE_PROVIDER && (g.providerId !== 'included' || included),
+  );
   const agentGroup = getAllModels().find((g) => g.providerId === CLAUDE_CODE_PROVIDER);
   const label = getModelLabel(value);
   const provider = getProviderLabel(value);

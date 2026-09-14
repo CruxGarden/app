@@ -1,3 +1,4 @@
+import IncludedUsagePanel from './IncludedUsagePanel';
 import { useEffect, useState } from 'react';
 import { useAuthStore } from '@/stores/authStore';
 import { Panel } from '@/components/ui';
@@ -11,22 +12,38 @@ import { onUsageChanged } from '@/lib/usage-events';
 /** Account-wide storage and bandwidth for the billing period, against the plan. */
 export default function UsageSettings() {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const accountId = useAuthStore((s) => s.account?.id);
   const cruxes = useGardenStore((s) => s.allCruxes);
   const [usage, setUsage] = useState<usageApi.AccountUsage | null>(null);
   const [past, setPast] = useState<usageApi.PeriodView[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    setUsage(null);
+    setPast([]);
+    setError(null);
     if (!isAuthenticated) return;
     let cancelled = false;
+    let revision = 0;
     const load = () => {
+      const current = ++revision;
       usageApi
         .me()
-        .then((u) => !cancelled && setUsage(u))
-        .catch(() => !cancelled && setError('Usage is unavailable right now'));
+        .then((u) => {
+          if (!cancelled && current === revision) {
+            setUsage(u);
+            setError(null);
+          }
+        })
+        .catch(() => {
+          if (!cancelled && current === revision) {
+            setUsage(null);
+            setError('Usage is unavailable right now');
+          }
+        });
       usageApi
         .periods()
-        .then((p) => !cancelled && setPast(p))
+        .then((p) => !cancelled && current === revision && setPast(p))
         .catch(() => {});
     };
     load();
@@ -35,7 +52,7 @@ export default function UsageSettings() {
       cancelled = true;
       off();
     };
-  }, [isAuthenticated]);
+  }, [isAuthenticated, accountId]);
 
   if (!isAuthenticated) return null;
 
@@ -52,6 +69,7 @@ export default function UsageSettings() {
           </span>
         )}
       </div>
+      <IncludedUsagePanel />
       {error && <p className="text-xs text-text-muted">{error}</p>}
       {usage && (
         <div className="flex flex-col gap-4">
@@ -117,7 +135,7 @@ export default function UsageSettings() {
                   <th className="py-1 font-normal">Published crux</th>
                   <th className="py-1 font-normal text-right">Storage</th>
                   <th className="py-1 font-normal text-right">Bandwidth</th>
-                  <th className="py-1 font-normal text-right">Visits</th>
+                  <th className="py-1 font-normal text-right">Requests</th>
                   <th className="py-1 font-normal text-right">Store</th>
                 </tr>
               </thead>
@@ -177,21 +195,23 @@ export default function UsageSettings() {
           )}
           {(usage.budgets.storage.overSoft || usage.budgets.bandwidth.overSoft) && (
             <p className="text-xs text-warning" data-testid="over-soft">
-              You're past the soft limit on your {usage.plan.name} plan. Nothing is cut off; new
-              publishes stop at twice the plan. A bigger plan is one click up in Plan.
+              You're past a soft limit on your {usage.plan.name} plan. Storage above twice the plan
+              blocks new uploads and publishes. Bandwidth and Crux Store request limits are
+              advisory.
             </p>
           )}
           <p className="text-xxs text-text-muted" data-testid="settlement-note">
-            Published sites and sync backups share these limits. Visit counts settle{' '}
+            Published sites and sync backups share these limits. Request counts settle{' '}
             {usage.settlement.graceHours} hours after the period ends
             {usage.reconciliation
               ? usage.reconciliation.status === 'ok'
                 ? ' · checked against CloudFront: matches'
                 : usage.reconciliation.status === 'gap'
-                  ? ' · checked against CloudFront: some visits not yet counted'
+                  ? ' · checked against CloudFront: some requests not yet counted'
                   : ''
               : ''}
-            . Shown, not enforced yet — plans that raise them are coming.
+            . Storage is enforced above twice the plan limit; bandwidth and Crux Store request
+            limits are advisory.
           </p>
         </div>
       )}
