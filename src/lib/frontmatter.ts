@@ -72,8 +72,12 @@ export function interpolate(
     .replaceAll('{today}', vars.today);
 }
 
-/** Convert a single-star glob ('src/pages/posts/*.md') to a path matcher. */
+/** Convert a glob ('src/pages/posts/*.md', 'src/content/wiki/**\/*.md') to a path matcher: `*` one segment, `**\/` any depth. */
 export function globToRegex(glob: string): RegExp {
-  const escaped = glob.replace(/[.+^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '[^/]+');
+  const escaped = glob
+    .replace(/[.+^${}()|[\]\\]/g, '\\$&')
+    .replace(/\*\*\//g, '§')
+    .replace(/\*/g, '[^/]+')
+    .replace(/§/g, '(?:[^/]+/)*');
   return new RegExp(`^${escaped}$`);
 }

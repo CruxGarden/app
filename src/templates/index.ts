@@ -277,6 +277,7 @@ const loaders: Record<string, () => Promise<{ default: TemplateDefinition }>> = 
     import('./tool-sampler').then((m) => ({ default: m.samplerTemplate('playcanvas') })),
   'astro-homepage': () => import('./astro-homepage'),
   'astro-blog': () => import('./astro-blog'),
+  'digital-garden': () => import('./digital-garden'),
   'astro-feed': () => import('./astro-feed'),
   'astro-media': () => import('./astro-media'),
   'astro-empty': () => import('./astro-empty'),

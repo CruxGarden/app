@@ -457,6 +457,18 @@ export function getMockLanguageModel(): LanguageModel {
           if (rounds.length === 1) return toolCallStream('export_note_docx', {});
           return textStream('Exported the open note as a Word document in exports.');
         }
+        if (lastUserText(prompt).includes('[garden:note]')) {
+          const rounds = toolResultsThisTurn(prompt);
+          if (!rounds.length)
+            return toolCallStream('write_file', {
+              path: 'src/content/wiki/notes/moss.md',
+              content:
+                '---\ntitle: "Moss"\ndescription: "The quiet ground cover of a garden."\ncreatedAt: 2026-09-14\nupdatedAt: 2026-09-14\ntags: ["gardening"]\ngrowthStage: "seedling"\n---\n\nMoss grows where nothing else bothers to. It is the first thing to arrive and the last to leave; see [[Tending notes]] for why that matters and [[growth-stages|the stages]] it never seems to pass.\n',
+            });
+          return textStream(
+            'Planted a seedling about moss, linked to Tending notes and Growth stages.',
+          );
+        }
         if (lastUserText(prompt).includes('[notes:book]')) {
           const rounds = toolResultsThisTurn(prompt);
           if (!rounds.length) return toolCallStream('inspect_notebook', {});

@@ -1,0 +1,42 @@
+---
+// Linked from: the notes that link to this one (Crux Garden's addition to Veka).
+import { gardenIndex, hrefFor } from "@/lib/wiki/garden-index";
+import { Badge } from "@/components/ui/badge";
+
+interface Props {
+  id: string;
+}
+const { id } = Astro.props;
+const index = gardenIndex();
+const sources = (index.incoming.get(id) ?? [])
+  .map((from) => index.nodes.find((n) => n.id === from))
+  .filter((n): n is NonNullable<typeof n> => Boolean(n))
+  .sort((a, b) => a.title.localeCompare(b.title));
+---
+
+<section class="mt-12 border-t border-border pt-6" aria-label="Linked from" data-backlinks>
+  <h2 class="mb-3 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+    Linked from · {sources.length}
+  </h2>
+  {
+    sources.length === 0 ? (
+      <p class="text-sm text-muted-foreground">No other note links here yet.</p>
+    ) : (
+      <ul class="grid grid-cols-1 gap-2 sm:grid-cols-2">
+        {sources.map((note) => (
+          <li>
+            <a
+              href={hrefFor(note.id)}
+              class="flex items-center justify-between gap-3 rounded-md border border-border px-3 py-2 text-sm transition-colors hover:bg-card"
+            >
+              <span class="truncate">{note.title}</span>
+              <Badge variant="secondary" class="shrink-0 text-[11px] leading-none">
+                {note.growthStage}
+              </Badge>
+            </a>
+          </li>
+        ))}
+      </ul>
+    )
+  }
+</section>

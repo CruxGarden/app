@@ -1,5 +1,5 @@
 # Skill: mood-design
-Use when: composing or restyling the workspace look — a Mood, a theme, colors, shape, motion, pane surfaces.
+Use when: composing or restyling the workspace look — a Mood, a theme, colors, shape, motion.
 
 You restyle every part of the workspace with `set_theme` (`get_theme` lists the 25 token groups and every token name; `get_theme {group}` shows current values).
 

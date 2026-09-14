@@ -77,18 +77,34 @@ export async function runScaffold(cruxId: string, pnpmArgs: string[]): Promise<v
   }
 }
 
-/** Ensure node_modules exists (runs `pnpm install` on first use). */
-export async function ensureInstalled(cruxId: string): Promise<void> {
-  const ctx = await siteContext(cruxId);
-  if (!ctx) return;
-  const { api, folder } = ctx;
-  if (!(await api.toolchain.hasPackageJson(folder))) return;
-  if (await api.toolchain.isInstalled(folder)) return;
+/** One install at a time per crux: a second caller waits on the first instead of racing it. */
+const installs = new Map<string, Promise<void>>();
 
-  const result = await api.toolchain.install(folder);
-  if (result.code !== 0) {
-    throw new SiteBuildError('Dependency install failed', result.log);
-  }
+/**
+ * Ensure the project's dependencies are installed (runs `pnpm install` on
+ * first use). Concurrent callers — the preview mounting twice while the first
+ * install runs — share one install; the toolchain's own "installed" check
+ * waits for pnpm's completion marker, not for node_modules/ to appear.
+ */
+export function ensureInstalled(cruxId: string): Promise<void> {
+  const pending = installs.get(cruxId);
+  if (pending) return pending;
+  const run = (async () => {
+    const ctx = await siteContext(cruxId);
+    if (!ctx) return;
+    const { api, folder } = ctx;
+    if (!(await api.toolchain.hasPackageJson(folder))) return;
+    if (await api.toolchain.isInstalled(folder)) return;
+
+    const result = await api.toolchain.install(folder);
+    if (result.code !== 0) {
+      throw new SiteBuildError('Dependency install failed', result.log);
+    }
+  })().finally(() => {
+    if (installs.get(cruxId) === run) installs.delete(cruxId);
+  });
+  installs.set(cruxId, run);
+  return run;
 }
 
 // ── Dev-server leases ───────────────────────────────────────────────────────

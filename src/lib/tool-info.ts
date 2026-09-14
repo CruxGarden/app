@@ -59,6 +59,13 @@ export const TOOL_INFO: Record<string, ToolInfo> = {
     relationship:
       'A creative-coding tool around p5.js. The library is upstream’s, unmodified; the page, the starter sketch, the Garden integration and the outputs are Crux Garden’s.',
   },
+  'digital-garden': {
+    name: 'Veka',
+    upstream: 'https://github.com/masmuss/veka',
+    detailsPath: 'UPSTREAM.md',
+    relationship:
+      'A digital garden on the Veka theme (MIT) as an Astro Site Crux: the theme’s components and pages are upstream’s; the settings file, offline fonts, the link index, backlinks and the graph are Crux Garden’s.',
+  },
   'glsl-app': {
     name: 'glslEditor',
     upstream: 'https://github.com/patriciogonzalezvivo/glslEditor',
