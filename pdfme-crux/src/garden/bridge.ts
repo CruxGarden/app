@@ -1,3 +1,4 @@
+import { validateLayoutEdit } from '../../garden/commands';
 // Garden bridge for the layout tool (Crux Garden). The layout keeps its state
 // as plain data (name, page, pdfme template); inside a Crux the saved layout
 // loads before the designer shows, every change marks the project dirty, a
@@ -89,28 +90,32 @@ export function attach(layout: Layout) {
     tail = operation.catch(() => {});
     return operation;
   }
-  function inspect() {
+  function inspect(pageIndex = 0, offset = 0) {
     const s = layout.snapshot();
+    if (!s.template.schemas[pageIndex]) throw Error('Choose an existing page index.');
     return {
       name: s.name,
       page: s.page,
       pages: layout.pages,
-      blocks: (s.template.schemas[0] ?? []).map((b) => ({
+      pageCount: s.template.schemas.length,
+      pageIndex,
+      nextOffset: offset + 20 < s.template.schemas[pageIndex].length ? offset + 20 : null,
+      blocks: s.template.schemas[pageIndex].slice(offset, offset + 20).map((b) => ({
         name: b.name,
         type: b.type,
-        content: typeof b.content === 'string' ? b.content.slice(0, 200) : undefined,
+        content: typeof b.content === 'string' ? b.content.slice(0, 120) : undefined,
         position: b.position,
         width: b.width,
         height: b.height,
       })),
     };
   }
-  async function saveOutput(kind: 'pdf' | 'png', label: string) {
+  async function saveOutput(kind: 'pdf' | 'png', label: string, pageIndex = 0) {
     const name = label.trim() || layout.snapshot().name;
     if (name.length > 120) throw new Error('Use an output name up to 120 characters.');
     await save();
     show(kind === 'pdf' ? 'Rendering PDF…' : 'Rendering image…');
-    const bytes = kind === 'pdf' ? (await layout.pdf()).buffer : await layout.png();
+    const bytes = kind === 'pdf' ? (await layout.pdf()).buffer : await layout.png(pageIndex);
     const output = (await call({
       op: 'save-output',
       label: kind === 'pdf' ? name : `${name} (image)`,
@@ -123,9 +128,12 @@ export function attach(layout: Layout) {
   }
   async function command(value: Record<string, unknown>) {
     if (hydrating) throw new Error('Wait for the layout to open.');
-    if (value.op === 'inspect') return inspect();
+    if (['inspect', 'add-text', 'add-page', 'update-block'].includes(String(value.op))) validateLayoutEdit(value);
+    if (value.op === 'inspect') return inspect(Number(value.pageIndex ?? 0), Number(value.offset ?? 0));
+    if (value.op === 'add-page') { const result = layout.addPage(); await save(); return { ...inspect(result.pageIndex), ...result }; }
+    if (value.op === 'update-block') { layout.updateBlock(value); await save(); return inspect(Number(value.pageIndex ?? 0)); }
     if (value.op === 'save-pdf') return saveOutput('pdf', String(value.label ?? ''));
-    if (value.op === 'save-image') return saveOutput('png', String(value.label ?? ''));
+    if (value.op === 'save-image') return saveOutput('png', String(value.label ?? ''), Number(value.pageIndex ?? 0));
     if (value.op === 'set-name') {
       const name = String(value.name ?? '').trim();
       if (!name || name.length > 200) throw new Error('Use a layout name up to 200 characters.');
@@ -142,6 +150,7 @@ export function attach(layout: Layout) {
       layout.addText({
         name: typeof value.name === 'string' ? value.name : undefined,
         text,
+        pageIndex: Number(value.pageIndex ?? 0),
         x: num(value.x, 'x', 0, 1000),
         y: num(value.y, 'y', 0, 1000),
         width: num(value.width, 'width', 1, 1000),
@@ -188,7 +197,7 @@ export function attach(layout: Layout) {
       '<span role="status">Opening Garden project…</span>' +
       '<label>Output name <input id="output-name" maxlength="120" placeholder="Layout" /></label>' +
       '<button type="button" id="save-pdf">Save PDF to Cruxspace</button>' +
-      '<button type="button" id="save-image">Save image to Cruxspace</button>';
+      '<label>Image page <input id="image-page" type="number" min="1" max="100" value="1" style="width:42px" /></label><button type="button" id="save-image">Save image to Cruxspace</button>';
     const style = document.createElement('style');
     style.textContent =
       '#garden-project{position:fixed;bottom:0;left:0;right:0;height:34px;z-index:100000;display:flex;gap:10px;align-items:center;padding:0 12px;background:#1f2a24;color:#e6e4dc;font:12px system-ui;border-top:1px solid #3a403c}#garden-project [role=status]{flex:1}#garden-project label{display:flex;gap:6px;align-items:center}#garden-project input{padding:2px 6px;background:#2f3a34;color:#e6e4dc;border:1px solid #556059;border-radius:3px;font:inherit}#garden-project button{padding:3px 8px;color:#e6e4dc;background:#2f3a34;border:1px solid #556059;border-radius:3px;font:inherit}body{padding-bottom:34px;box-sizing:border-box}';
@@ -197,7 +206,7 @@ export function attach(layout: Layout) {
     status = bar.querySelector('span');
     const label = () => (bar.querySelector('#output-name') as HTMLInputElement).value;
     (bar.querySelector('#save-pdf') as HTMLButtonElement).onclick = () => saveOutput('pdf', label()).catch((e) => show((e as Error).message));
-    (bar.querySelector('#save-image') as HTMLButtonElement).onclick = () => saveOutput('png', label()).catch((e) => show((e as Error).message));
+    (bar.querySelector('#save-image') as HTMLButtonElement).onclick = () => saveOutput('png', label(), Number((bar.querySelector('#image-page') as HTMLInputElement).value) - 1).catch((e) => show((e as Error).message));
     try {
       const loaded = (await call({ op: 'read', path: 'project.json' })) as { content: string; fingerprint: string };
       expected = loaded.fingerprint;

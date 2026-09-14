@@ -10,3 +10,9 @@ pdfme is a page layout designer and PDF generator: a WYSIWYG Designer (text, mul
 - A layout is a local creation tool (no public edition); its outputs travel to a site or a notebook through a Cruxspace.
 
 Build: `npm install`, `npm run build:garden` → `runtime/`; `npm run check`; `npm run test:garden`.
+
+## Multi-page handouts (2026-09-14)
+
+App Tools inspect a chosen page in bounded batches, append pages, add text on a chosen page, update named blocks without dropping other pages, and select the page rendered to PNG. The native Designer still edits the same template through its public `updateTemplate`/`onChangeTemplate` API. The person can add pages with the header button or native page controls, edit/select blocks in the Designer and choose “Image page” in the output bar.
+
+pdfme 6.1.12's public template update does not register native per-page Undo. Garden therefore records whole-layout changes from both native Designer callbacks and collaborator commands in one history, exposed as Undo/Redo header buttons and Command/Control+Z, Shift+Z or Y. It survives pane resize/remount during the session, covers page additions and name/size edits, and discards Redo after new edits. History is transient and bounded to 40 entries / 16 MB of past snapshots; saved layouts and outputs still use the fingerprint-guarded Garden bridge. Existing Project Folders retain their runtime. The round-trip journey is `electron/e2e/web-print-depth.spec.ts`.

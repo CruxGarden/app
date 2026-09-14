@@ -220,6 +220,7 @@ export async function startGarden() {
 		const initial = doc.project ? await decodeProject(doc.project) : null;
 		return {
 			initial,
+			call,
 			flush: save,
 			changed: dirty,
 			failed(error) {

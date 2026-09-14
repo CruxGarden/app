@@ -1,3 +1,4 @@
+import { validateDrawingCommand, shapeAttributes, styleAttributes } from './commands.js'
 import { startGarden } from './bridge.js'
 import { validateProject, installMemoryStorage } from './model.js'
 import Editor from '../Editor.js'
@@ -73,7 +74,38 @@ garden.connect({
     return project
   },
   async command (command) {
-    if (command.op === 'inspect') return { title: canvas.getDocumentTitle(), ...canvas.getResolution(), elements: canvas.getSvgContent().querySelectorAll('path,rect,circle,ellipse,text,image,polygon,polyline,line').length, objects: [...canvas.getSvgContent().querySelectorAll('path,rect,circle,ellipse,text,polygon,polyline,line')].slice(0, 200).map(e => ({ id: e.id, type: e.localName, fill: e.getAttribute('fill') })) }
+    if (['inspect', 'add-shape', 'set-object', 'remove-object', 'save-svg'].includes(command.op)) {
+      validateDrawingCommand(command)
+      if (command.op === 'inspect') {
+        const objects = [...canvas.getSvgContent().querySelectorAll('path,rect,circle,ellipse,text,image,polygon,polyline,line')]
+        const offset = command.offset || 0
+        return { title: canvas.getDocumentTitle(), ...canvas.getResolution(), elements: objects.length, objects: objects.slice(offset, offset + 20).map(e => ({ id: e.id, type: e.localName, fill: e.getAttribute('fill'), attributes: Object.fromEntries([...new Set(Object.values(shapeAttributes).flat()), ...styleAttributes, 'transform'].filter(k => e.hasAttribute(k)).map(k => [k, e.getAttribute(k)])), ...(e.localName === 'text' ? { text: e.textContent.slice(0, 120), truncated: e.textContent.length > 120 } : {}) })), nextOffset: offset + 20 < objects.length ? offset + 20 : null }
+      }
+      if (command.op === 'save-svg') return saveSvg(command.name)
+      let element
+      if (command.op === 'add-shape') {
+        element = canvas.addSVGElementsFromJson({ element: command.type, attr: { id: canvas.getNextId(), fill: '#24583e', ...command.attributes }, ...(command.type === 'text' ? { children: [command.text] } : {}) })
+        canvas.endChanges({ cmd: new canvas.history.InsertElementCommand(element), elem: element })
+        canvas.selectOnly([element])
+      } else {
+        element = [...canvas.getSvgContent().querySelectorAll('rect,ellipse,text,path,circle,line,polygon,polyline')].find(e => e.id === command.elementId)
+        if (!element) throw Error('Choose an existing editable object from inspection.')
+        const allowed = [...(shapeAttributes[element.localName] || []), ...styleAttributes]
+        if (Object.keys(command.attributes || {}).some(k => !allowed.includes(k)) || (command.text !== undefined && element.localName !== 'text')) throw Error('These attributes do not apply to this object type.')
+        canvas.selectOnly([element])
+        if (command.op === 'remove-object') canvas.deleteSelectedElements()
+        else {
+          for (const [key, value] of Object.entries(command.attributes || {})) canvas.changeSelectedAttribute(key, value)
+          if (command.text !== undefined) {
+            canvas.changeSelectedAttribute('#text', command.text)
+            // Refresh the native field too; stale keyup text must not overwrite the edit.
+            canvas.call('selected', [element])
+          }
+        }
+      }
+      garden.changed()
+      return { elementId: element.id, saved: true }
+    }
     if (command.op === 'set-fill') {
       if (typeof command.color !== 'string' || !/^(#[a-fA-F0-9]{6}|none)$/.test(command.color)) throw new Error('Choose a six-digit hex color or none.')
       const element = [...canvas.getSvgContent().querySelectorAll('path,rect,circle,ellipse,text,polygon,polyline,line')].find(e => e.id === command.elementId)
@@ -89,3 +121,12 @@ garden.connect({
     return { title: canvas.getDocumentTitle() }
   }
 })
+
+async function saveSvg(name) {
+  await garden.flush()
+  return garden.call({ op: 'save-output', label: name, bytes: new TextEncoder().encode(canvas.getSvgString()).buffer, mimeType: 'image/svg+xml' })
+}
+const saveSvgButton = document.createElement('button')
+saveSvgButton.textContent = 'Save SVG to Cruxspace'
+saveSvgButton.onclick = () => saveSvg(canvas.getDocumentTitle() || 'Drawing').catch(garden.failed)
+document.getElementById('garden-project').append(saveSvgButton)
