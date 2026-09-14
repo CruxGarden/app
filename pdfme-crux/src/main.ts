@@ -1,3 +1,5 @@
+import { layoutHistory } from '../garden/history';
+import { validateLayoutEdit } from '../garden/commands';
 // The layout tool around pdfme: the actual Designer for laying out a page,
 // the Viewer for a preview, the generator for PDF and the converter for PNG.
 // The Crux keeps a name and the pdfme template as plain data; inside a Crux
@@ -32,7 +34,25 @@ let designer: Designer | null = null;
 let viewer: Viewer | null = null;
 let hydrating = false;
 const listeners: (() => void)[] = [];
-const notify = () => listeners.forEach((fn) => fn());
+let history = layoutHistory(state);
+const emit = () => { syncHistoryButtons(); listeners.forEach((fn) => fn()); };
+const notify = () => { history.record(state); emit(); };
+function syncHistoryButtons() {
+  (document.getElementById('layout-undo') as HTMLButtonElement).disabled = !history.canUndo;
+  (document.getElementById('layout-redo') as HTMLButtonElement).disabled = !history.canRedo;
+}
+function travel(direction: 'undo' | 'redo') {
+  const next = history[direction]();
+  if (!next) return;
+  Object.assign(state, next);
+  nameInput.value = state.name;
+  pageSelect.value = state.page;
+  hydrating = true;
+  designer?.updateTemplate(state.template);
+  hydrating = false;
+  if (!viewerEl.hidden) showPreview(true);
+  emit();
+}
 const nameInput = document.getElementById('layout-name') as HTMLInputElement;
 const pageSelect = document.getElementById('layout-page') as HTMLSelectElement;
 const tabDesign = document.getElementById('tab-design')!;
@@ -98,6 +118,15 @@ pageSelect.addEventListener('change', () => {
 });
 tabDesign.onclick = () => showPreview(false);
 tabPreview.onclick = () => showPreview(true);
+document.getElementById('layout-undo')!.onclick = () => travel('undo');
+document.getElementById('layout-redo')!.onclick = () => travel('redo');
+document.getElementById('layout-add-page')!.onclick = () => layout.addPage();
+window.addEventListener('keydown', e => {
+  if ((e.metaKey || e.ctrlKey) && (e.key.toLowerCase() === 'z' || e.key.toLowerCase() === 'y')) {
+    e.preventDefault(); e.stopImmediatePropagation();
+    travel(e.shiftKey || e.key.toLowerCase() === 'y' ? 'redo' : 'undo');
+  }
+}, true);
 
 async function pdf(): Promise<Uint8Array> {
   return generate({ template: state.template, inputs: getInputFromTemplate(state.template), plugins });
@@ -111,6 +140,8 @@ export const layout = {
     nameInput.value = state.name;
     pageSelect.value = state.page;
     mount();
+    history = layoutHistory(state);
+    syncHistoryButtons();
   },
   snapshot: (): LayoutState => JSON.parse(JSON.stringify(state)),
   onChange(fn: () => void) {
@@ -127,10 +158,17 @@ export const layout = {
     pageSelect.dispatchEvent(new Event('change'));
   },
   /** Append a text block to the first page (millimetres from the top-left). */
-  addText(field: { name?: string; text: string; x: number; y: number; width: number; height: number; fontSize?: number; align?: string }) {
-    const page = state.template.schemas[0] ?? [];
-    const name = field.name || `text_${page.length + 1}`;
-    if (page.some((s) => s.name === name)) throw new Error(`A block named ${name} exists already.`);
+  addText(field: { name?: string; text: string; x: number; y: number; width: number; height: number; fontSize?: number; align?: string; pageIndex?: number }) {
+    validateLayoutEdit({ ...field, op: 'add-text' });
+    const pageIndex = field.pageIndex ?? 0;
+    const page = state.template.schemas[pageIndex];
+    if (!page) throw Error('Inspect the layout for an existing page index.');
+    if (page.length >= 500) throw Error('This page already has 500 blocks.');
+    const all = state.template.schemas.flat();
+    let suffix = all.length + 1;
+    while (all.some(s => s.name === `text_${suffix}`)) suffix++;
+    const name = field.name || `text_${suffix}`;
+    if (all.some((s) => s.name === name)) throw new Error(`A block named ${name} exists already.`);
     const block = {
       name,
       type: 'text',
@@ -142,15 +180,38 @@ export const layout = {
       alignment: field.align ?? 'left',
       verticalAlignment: 'top',
     };
-    state.template = { ...state.template, schemas: [[...page, block], ...state.template.schemas.slice(1)] };
+    state.template = { ...state.template, schemas: state.template.schemas.map((p, i) => i === pageIndex ? [...p, block] : p) };
     designer?.updateTemplate(state.template);
     notify();
     return block;
   },
+  addPage() {
+    if (state.template.schemas.length >= 100) throw Error('This layout already has 100 pages.');
+    state.template = { ...state.template, schemas: [...state.template.schemas, []] };
+    designer?.updateTemplate(state.template);
+    notify();
+    return { pageIndex: state.template.schemas.length - 1 };
+  },
+  updateBlock(edit: Record<string, unknown>) {
+    validateLayoutEdit({ ...edit, op: 'update-block' });
+    const pageIndex = Number(edit.pageIndex ?? 0);
+    const page = state.template.schemas[pageIndex];
+    const block = page?.find(b => b.name === edit.name);
+    if (!block) throw Error('Inspect this page for an existing named block.');
+    if (block.type !== 'text' && ['text', 'fontSize', 'align'].some(k => edit[k] !== undefined)) throw Error('Text, font size and alignment require a text block.');
+    const updated: typeof block & Record<string, unknown> = { ...block, position: { x: edit.x === undefined ? block.position.x : Number(edit.x), y: edit.y === undefined ? block.position.y : Number(edit.y) } };
+    for (const k of ['width', 'height', 'fontSize']) if (edit[k] !== undefined) updated[k] = edit[k];
+    if (edit.text !== undefined) updated.content = String(edit.text);
+    if (edit.align !== undefined) updated.alignment = edit.align;
+    state.template = { ...state.template, schemas: state.template.schemas.map((p, i) => i === pageIndex ? p.map(b => b === block ? updated : b) : p) };
+    designer?.updateTemplate(state.template);
+    notify();
+  },
   preview: showPreview,
   pdf,
-  async png(): Promise<ArrayBuffer> {
-    const [first] = await pdf2img(await pdf(), { range: { start: 0, end: 1 }, scale: 2 });
+  async png(pageIndex = 0): Promise<ArrayBuffer> {
+    if (!Number.isInteger(pageIndex) || pageIndex < 0 || pageIndex >= state.template.schemas.length) throw Error('Choose an existing page index.');
+    const [first] = await pdf2img(await pdf(), { range: { start: pageIndex, end: pageIndex + 1 }, scale: 2 });
     if (!first) throw new Error('The layout has no page.');
     return first;
   },

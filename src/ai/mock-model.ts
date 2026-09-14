@@ -263,6 +263,94 @@ export function getMockLanguageModel(): LanguageModel {
             return toolCallStream('set_blockbench_name', { name: 'Garden lantern' });
           return textStream('Renamed the native model and lantern body.');
         }
+        if (lastUserText(prompt).includes('[webprint:svg]')) {
+          const rounds = toolResultsThisTurn(prompt);
+          const steps: [string, Record<string, unknown>][] = [
+            ['inspect_svgedit', {}],
+            [
+              'add_svgedit_shape',
+              {
+                type: 'rect',
+                attributes: { x: 30, y: 220, width: 340, height: 95, fill: '#d8ead5' },
+              },
+            ],
+            [
+              'add_svgedit_shape',
+              {
+                type: 'text',
+                attributes: { x: 50, y: 275, 'font-size': 28, fill: '#24583e' },
+                text: 'Seed library',
+              },
+            ],
+          ];
+          if (rounds.length < steps.length) return toolCallStream(...steps[rounds.length]!);
+          return textStream('Added the site badge with editable shapes and text.');
+        }
+        if (lastUserText(prompt).includes('[webprint:svg-revise]')) {
+          const rounds = toolResultsThisTurn(prompt);
+          if (!rounds.length) return toolCallStream('inspect_svgedit', {});
+          const data = JSON.parse(toolResultText(prompt, 'inspect_svgedit') || '{}');
+          if (rounds.length === 1)
+            return toolCallStream('set_svgedit_object', {
+              elementId: data.objects.find((o: { type: string }) => o.type === 'text').id,
+              text: 'Seed swap Saturday',
+            });
+          if (rounds.length === 2)
+            return toolCallStream('save_svgedit_svg', { name: 'Site badge' });
+          return textStream('Revised the badge and saved reusable SVG.');
+        }
+        if (lastUserText(prompt).includes('[webprint:layout]')) {
+          const rounds = toolResultsThisTurn(prompt);
+          const steps: [string, Record<string, unknown>][] = [
+            [
+              'add_layout_text',
+              {
+                name: 'headline',
+                text: 'Seed library',
+                x: 20,
+                y: 25,
+                width: 160,
+                height: 20,
+                fontSize: 28,
+              },
+            ],
+            ['add_layout_page', {}],
+            [
+              'add_layout_text',
+              {
+                pageIndex: 1,
+                name: 'details',
+                text: 'Bring seeds to share.',
+                x: 20,
+                y: 25,
+                width: 160,
+                height: 30,
+                fontSize: 18,
+              },
+            ],
+          ];
+          if (rounds.length < steps.length) return toolCallStream(...steps[rounds.length]!);
+          return textStream('Prepared the two-page handout.');
+        }
+        if (lastUserText(prompt).includes('[webprint:layout-revise]')) {
+          const rounds = toolResultsThisTurn(prompt);
+          const steps: [string, Record<string, unknown>][] = [
+            ['inspect_layout', { pageIndex: 1 }],
+            [
+              'update_layout_block',
+              {
+                pageIndex: 1,
+                name: 'details',
+                text: 'Bring seeds to share on Saturday.',
+                fontSize: 20,
+              },
+            ],
+            ['save_layout_pdf', { name: 'Seed swap handout' }],
+            ['save_layout_image', { name: 'Handout details', pageIndex: 1 }],
+          ];
+          if (rounds.length < steps.length) return toolCallStream(...steps[rounds.length]!);
+          return textStream('Revised page two and exported the handout.');
+        }
         if (lastUserText(prompt).includes('[svgedit:fill]')) {
           const rounds = toolResultsThisTurn(prompt);
           if (!rounds.length) return toolCallStream('inspect_svgedit', {});
