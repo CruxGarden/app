@@ -122,23 +122,31 @@ export function getMockLanguageModel(): LanguageModel {
               start: '2026-09-15T10:00:00',
               end: '2026-09-15T11:00:00',
             });
-          if (rounds.length === 2) return toolCallStream('set_calendar_name', { name: 'Launch calendar' });
+          if (rounds.length === 2)
+            return toolCallStream('set_calendar_name', { name: 'Launch calendar' });
           return textStream('Added Garden launch review and named the calendar Launch calendar.');
         }
         if (lastUserText(prompt).includes('[am1:edit]')) {
           const rounds = toolResultsThisTurn(prompt);
           if (!rounds.length) return toolCallStream('inspect_am1', {});
           if (rounds.length === 1) return toolCallStream('set_am1_tempo', { tempo: 96 });
-          if (rounds.length === 2) return toolCallStream('set_am1_key', { key: 'D', scale: 'dorian' });
+          if (rounds.length === 2)
+            return toolCallStream('set_am1_key', { key: 'D', scale: 'dorian' });
           return textStream('Set the tempo to 96 and the key to D dorian.');
         }
         if (lastUserText(prompt).includes('[bentopdf:edit]')) {
           const rounds = toolResultsThisTurn(prompt);
           if (!rounds.length) return toolCallStream('inspect_bentopdf', {});
-          if (rounds.length === 1) return toolCallStream('set_bentopdf_name', { name: 'Garden papers' });
+          if (rounds.length === 1)
+            return toolCallStream('set_bentopdf_name', { name: 'Garden papers' });
           if (rounds.length === 2)
-            return toolCallStream('rotate_bentopdf_document', { document: 'sample.pdf', degrees: 90 });
-          return textStream('Named the project Garden papers and rotated sample.pdf by 90 degrees.');
+            return toolCallStream('rotate_bentopdf_document', {
+              document: 'sample.pdf',
+              degrees: 90,
+            });
+          return textStream(
+            'Named the project Garden papers and rotated sample.pdf by 90 degrees.',
+          );
         }
         if (lastUserText(prompt).includes('[wick:edit]')) {
           const rounds = toolResultsThisTurn(prompt);
@@ -150,8 +158,10 @@ export function getMockLanguageModel(): LanguageModel {
         if (lastUserText(prompt).includes('[pptist:edit]')) {
           const rounds = toolResultsThisTurn(prompt);
           if (!rounds.length) return toolCallStream('inspect_pptist', {});
-          if (rounds.length === 1) return toolCallStream('set_pptist_title', { title: 'Garden launch' });
-          if (rounds.length === 2) return toolCallStream('add_pptist_slide', { text: 'Agent agenda' });
+          if (rounds.length === 1)
+            return toolCallStream('set_pptist_title', { title: 'Garden launch' });
+          if (rounds.length === 2)
+            return toolCallStream('add_pptist_slide', { text: 'Agent agenda' });
           return textStream('Titled the deck Garden launch and added an agenda slide.');
         }
         if (lastUserText(prompt).includes('[hextris:reset]')) {
@@ -172,11 +182,19 @@ export function getMockLanguageModel(): LanguageModel {
           if (!rounds.length) return toolCallStream('inspect_web_synth', {});
           if (rounds.length === 1) return toolCallStream('set_web_synth_tempo', { bpm: 128 });
           if (rounds.length === 2)
-            return toolCallStream('add_web_synth_module', { kind: 'midi_editor', title: 'Agent notes' });
+            return toolCallStream('add_web_synth_module', {
+              kind: 'midi_editor',
+              title: 'Agent notes',
+            });
           if (rounds.length === 3) {
             const data = JSON.parse(toolResultText(prompt, 'add_web_synth_module') || '{}');
-            const added = data.viewContexts?.find((vc: { title: string | null }) => vc.title === 'Agent notes');
-            return toolCallStream('rename_web_synth_module', { id: added?.id, title: 'Agent melody' });
+            const added = data.viewContexts?.find(
+              (vc: { title: string | null }) => vc.title === 'Agent notes',
+            );
+            return toolCallStream('rename_web_synth_module', {
+              id: added?.id,
+              title: 'Agent melody',
+            });
           }
           return textStream('Set the tempo to 128 and added a MIDI editor named Agent melody.');
         }
@@ -314,46 +332,108 @@ export function getMockLanguageModel(): LanguageModel {
         if (lastUserText(prompt).includes('[site:guestbook]')) {
           const rounds = toolResultsThisTurn(prompt);
           if (!rounds.length) return toolCallStream('add_guestbook', {});
-          return textStream('Added a guestbook at the end of the home page; entries will show in the Store pane.');
+          return textStream(
+            'Added a guestbook at the end of the home page; entries will show in the Store pane.',
+          );
         }
         if (lastUserText(prompt).includes('[recorder:name]')) {
           const rounds = toolResultsThisTurn(prompt);
           if (!rounds.length) return toolCallStream('inspect_recordings', {});
-          if (rounds.length === 1) return toolCallStream('set_recorder_name', { name: 'Walkthrough takes' });
+          if (rounds.length === 1)
+            return toolCallStream('set_recorder_name', { name: 'Walkthrough takes' });
           return textStream('Listed the recordings and named the Crux Walkthrough takes.');
+        }
+        if (lastUserText(prompt).includes('[sketch:frame]')) {
+          const rounds = toolResultsThisTurn(prompt);
+          if (!rounds.length) return toolCallStream('inspect_sketch', {});
+          if (rounds.length === 1)
+            return toolCallStream('set_sketch_name', { name: 'Seven winds' });
+          if (rounds.length === 2) return toolCallStream('set_sketch_seed', { seed: 7 });
+          if (rounds.length === 3)
+            return toolCallStream('save_sketch_frame', { name: 'Seven winds' });
+          return textStream('Named the sketch Seven winds, set the seed to 7 and saved a frame.');
         }
         if (lastUserText(prompt).includes('[map:places]')) {
           const rounds = toolResultsThisTurn(prompt);
           if (!rounds.length) return toolCallStream('inspect_map', {});
-          if (rounds.length === 1) return toolCallStream('set_map_name', { name: 'Seed swap walk' });
+          if (rounds.length === 1)
+            return toolCallStream('set_map_name', { name: 'Seed swap walk' });
           if (rounds.length === 2)
-            return toolCallStream('add_map_place', { title: 'Seed library', lng: -0.1195, lat: 51.5033, notes: 'Start here at 10', color: '#c0392b' });
+            return toolCallStream('add_map_place', {
+              title: 'Seed library',
+              lng: -0.1195,
+              lat: 51.5033,
+              notes: 'Start here at 10',
+              color: '#c0392b',
+            });
           if (rounds.length === 3)
-            return toolCallStream('add_map_place', { title: 'Community garden', lng: -0.0865, lat: 51.5045, notes: 'Bring pots' });
+            return toolCallStream('add_map_place', {
+              title: 'Community garden',
+              lng: -0.0865,
+              lat: 51.5045,
+              notes: 'Bring pots',
+            });
           if (rounds.length === 4) return toolCallStream('fit_map', {});
-          if (rounds.length === 5) return toolCallStream('save_map_image', { name: 'Seed swap walk' });
-          return textStream('Named the map, added the seed library and the community garden, fitted the view and saved the picture.');
+          if (rounds.length === 5)
+            return toolCallStream('save_map_image', { name: 'Seed swap walk' });
+          return textStream(
+            'Named the map, added the seed library and the community garden, fitted the view and saved the picture.',
+          );
         }
         if (lastUserText(prompt).includes('[layout:poster]')) {
           const rounds = toolResultsThisTurn(prompt);
           if (!rounds.length) return toolCallStream('inspect_layout', {});
-          if (rounds.length === 1) return toolCallStream('set_layout_name', { name: 'Open day poster' });
+          if (rounds.length === 1)
+            return toolCallStream('set_layout_name', { name: 'Open day poster' });
           if (rounds.length === 2)
-            return toolCallStream('add_layout_text', { name: 'headline', text: 'Open day at the seed library', x: 15, y: 30, width: 180, height: 30, fontSize: 32, align: 'center' });
+            return toolCallStream('add_layout_text', {
+              name: 'headline',
+              text: 'Open day at the seed library',
+              x: 15,
+              y: 30,
+              width: 180,
+              height: 30,
+              fontSize: 32,
+              align: 'center',
+            });
           if (rounds.length === 3)
-            return toolCallStream('add_layout_text', { name: 'when', text: 'Saturday 3 October, 10 to 4', x: 15, y: 70, width: 180, height: 14, fontSize: 16, align: 'center' });
-          if (rounds.length === 4) return toolCallStream('save_layout_pdf', { name: 'Open day poster' });
-          if (rounds.length === 5) return toolCallStream('save_layout_image', { name: 'Open day poster' });
-          return textStream('Named the poster, set the headline and the date, and saved the PDF and the image to the Cruxspace.');
+            return toolCallStream('add_layout_text', {
+              name: 'when',
+              text: 'Saturday 3 October, 10 to 4',
+              x: 15,
+              y: 70,
+              width: 180,
+              height: 14,
+              fontSize: 16,
+              align: 'center',
+            });
+          if (rounds.length === 4)
+            return toolCallStream('save_layout_pdf', { name: 'Open day poster' });
+          if (rounds.length === 5)
+            return toolCallStream('save_layout_image', { name: 'Open day poster' });
+          return textStream(
+            'Named the poster, set the headline and the date, and saved the PDF and the image to the Cruxspace.',
+          );
         }
         if (lastUserText(prompt).includes('[form:build]')) {
           const rounds = toolResultsThisTurn(prompt);
           if (!rounds.length) return toolCallStream('inspect_form', {});
-          if (rounds.length === 1) return toolCallStream('set_form_name', { name: 'Open day RSVP' });
+          if (rounds.length === 1)
+            return toolCallStream('set_form_name', { name: 'Open day RSVP' });
           if (rounds.length === 2)
-            return toolCallStream('add_form_field', { type: 'radio', label: 'Will you come?', key: 'coming', options: ['Yes', 'No'], required: true });
+            return toolCallStream('add_form_field', {
+              type: 'radio',
+              label: 'Will you come?',
+              key: 'coming',
+              options: ['Yes', 'No'],
+              required: true,
+            });
           if (rounds.length === 3)
-            return toolCallStream('add_form_field', { type: 'textarea', label: 'Anything we should know?', key: 'notes' });
+            return toolCallStream('add_form_field', {
+              type: 'textarea',
+              label: 'Anything we should know?',
+              key: 'notes',
+            });
           return textStream('Named the form Open day RSVP and added the coming and notes fields.');
         }
         if (lastUserText(prompt).includes('[notes:document]')) {
@@ -364,7 +444,8 @@ export function getMockLanguageModel(): LanguageModel {
         }
         if (lastUserText(prompt).includes('[notes:import]')) {
           const rounds = toolResultsThisTurn(prompt);
-          if (!rounds.length) return toolCallStream('import_document', { path: 'inbox/Letter.docx' });
+          if (!rounds.length)
+            return toolCallStream('import_document', { path: 'inbox/Letter.docx' });
           return textStream('Imported the letter into the notebook.');
         }
         if (lastUserText(prompt).includes('[rawgraphs:size]')) {
@@ -977,7 +1058,6 @@ export function fiveWsScript(prompt: LanguageModelV4Prompt): string | null {
   return null;
 }
 
-
 // ── Glow Garden collaborator ─────────────────────────────────────────────────
 //
 // One marker per member Crux. Each script reads the real tool results of the
@@ -1044,8 +1124,7 @@ const title = 'Glow Garden';
 function findAsset(prompt: LanguageModelV4Prompt, label: string) {
   const data = JSON.parse(toolResultText(prompt, 'list_cruxspace_assets') || '{}');
   for (const space of data.spaces ?? [])
-    for (const asset of space.assets ?? [])
-      if (asset.label === label) return { space, asset };
+    for (const asset of space.assets ?? []) if (asset.label === label) return { space, asset };
   return null;
 }
 function copyAsset(prompt: LanguageModelV4Prompt, label: string, path: string, unpack = false) {
@@ -1149,19 +1228,26 @@ function researchScript(prompt: LanguageModelV4Prompt): ReturnType<typeof stream
   const n = rounds.length;
   switch (marker) {
     case 'question':
-      if (!n) return toolCallStream('write_file', { path: 'notebook/Question.md', content: RESEARCH_QUESTION });
+      if (!n)
+        return toolCallStream('write_file', {
+          path: 'notebook/Question.md',
+          content: RESEARCH_QUESTION,
+        });
       if (n === 1)
         return toolCallStream('write_file', {
           path: 'notebook/Lab log.md',
           content: 'PRIVATE_LAB_LOG: lamp 3 flickered on day 9; the plant under it may read low.\n',
         });
-      return textStream('Wrote the question, its provenance and the method, and a private lab log.');
+      return textStream(
+        'Wrote the question, its provenance and the method, and a private lab log.',
+      );
     case 'findings':
       if (!n) return toolCallStream('inspect_jupyterlite', {});
       if (n === 1)
         return toolCallStream('append_jupyterlite_cell', {
           cellType: 'markdown',
-          source: '## Findings\nAbout 0.9 cm of height per extra hour of light; correlation above 0.9. One plant per condition: a hint, not a result.',
+          source:
+            '## Findings\nAbout 0.9 cm of height per extra hour of light; correlation above 0.9. One plant per condition: a hint, not a result.',
         });
       return textStream('Added the findings cell and saved the notebook.');
     case 'figure':
@@ -1170,8 +1256,13 @@ function researchScript(prompt: LanguageModelV4Prompt): ReturnType<typeof stream
       return textStream('Sized the figure and saved it to the Cruxspace.');
     case 'report':
       if (!n) return toolCallStream('list_cruxspace_assets', {});
-      if (n === 1) return copyAsset(prompt, 'Height vs light', 'notebook/figures/height-vs-light.png');
-      if (n === 2) return toolCallStream('write_file', { path: 'notebook/Findings.md', content: RESEARCH_FINDINGS });
+      if (n === 1)
+        return copyAsset(prompt, 'Height vs light', 'notebook/figures/height-vs-light.png');
+      if (n === 2)
+        return toolCallStream('write_file', {
+          path: 'notebook/Findings.md',
+          content: RESEARCH_FINDINGS,
+        });
       return textStream('Placed the figure in the notebook and wrote the findings.');
     default:
       return textStream(`Unknown research step: ${marker}.`);
@@ -1187,7 +1278,10 @@ function businessScript(prompt: LanguageModelV4Prompt): ReturnType<typeof stream
   switch (marker) {
     case 'brief':
       if (!n)
-        return toolCallStream('write_file', { path: 'notebook/Bloom & Ink brief.md', content: BUSINESS_BRIEF });
+        return toolCallStream('write_file', {
+          path: 'notebook/Bloom & Ink brief.md',
+          content: BUSINESS_BRIEF,
+        });
       return textStream('Wrote the brief: audience, offer, brand notes and page copy.');
     case 'budget':
       if (!n)
@@ -1246,7 +1340,11 @@ function businessScript(prompt: LanguageModelV4Prompt): ReturnType<typeof stream
       if (n === 1) return copyAsset(prompt, 'Brand mark', 'public/brand.png');
       // The starter's page exists: the tool contract is read before a full rewrite.
       if (n === 2) return toolCallStream('read_file', { path: 'src/pages/index.astro' });
-      if (n === 3) return toolCallStream('write_file', { path: 'src/pages/index.astro', content: BUSINESS_SITE_PAGE });
+      if (n === 3)
+        return toolCallStream('write_file', {
+          path: 'src/pages/index.astro',
+          content: BUSINESS_SITE_PAGE,
+        });
       return textStream('Placed the brand mark on the site and wrote the offer page.');
     case 'done': {
       if (!n) return toolCallStream('inspect_kan', {});
@@ -1277,7 +1375,10 @@ function gameScript(prompt: LanguageModelV4Prompt): ReturnType<typeof stream> | 
   switch (marker) {
     case 'plan':
       if (!n)
-        return toolCallStream('write_file', { path: 'notebook/Glow Garden plan.md', content: GAME_PLAN });
+        return toolCallStream('write_file', {
+          path: 'notebook/Glow Garden plan.md',
+          content: GAME_PLAN,
+        });
       return textStream('Wrote the plan: rules, assets and milestones.');
     case 'board': {
       if (!n) return toolCallStream('inspect_kan', {});
@@ -1313,9 +1414,18 @@ function gameScript(prompt: LanguageModelV4Prompt): ReturnType<typeof stream> | 
       if (n === 2) return copyAsset(prompt, 'Seed sprite', 'assets/seed.png');
       if (n === 3) return copyAsset(prompt, 'Garden ground', 'assets/ground.png');
       if (n === 4)
-        return toolCallStream('add_gdevelop_sprite', { scene: 'Scene', name: 'Ground', path: 'assets/ground.png' });
+        return toolCallStream('add_gdevelop_sprite', {
+          scene: 'Scene',
+          name: 'Ground',
+          path: 'assets/ground.png',
+        });
       if (n === 5)
-        return toolCallStream('add_gdevelop_instance', { scene: 'Scene', object: 'Ground', x: 0, y: 0 });
+        return toolCallStream('add_gdevelop_instance', {
+          scene: 'Scene',
+          object: 'Ground',
+          x: 0,
+          y: 0,
+        });
       if (n === 6)
         return toolCallStream('add_gdevelop_sprite', {
           scene: 'Scene',
@@ -1327,16 +1437,31 @@ function gameScript(prompt: LanguageModelV4Prompt): ReturnType<typeof stream> | 
           behaviors: ['TopDownMovementBehavior::TopDownMovementBehavior'],
         });
       if (n === 7)
-        return toolCallStream('add_gdevelop_sprite', { scene: 'Scene', name: 'Seed', path: 'assets/seed.png' });
+        return toolCallStream('add_gdevelop_sprite', {
+          scene: 'Scene',
+          name: 'Seed',
+          path: 'assets/seed.png',
+        });
       if (n === 8)
-        return toolCallStream('add_gdevelop_instance', { scene: 'Scene', object: 'Gardener', x: 384, y: 284 });
-      return textStream('Built the gardener and seed from the Cruxspace sprites and named the game.');
+        return toolCallStream('add_gdevelop_instance', {
+          scene: 'Scene',
+          object: 'Gardener',
+          x: 384,
+          y: 284,
+        });
+      return textStream(
+        'Built the gardener and seed from the Cruxspace sprites and named the game.',
+      );
     case 'chime':
       // On the Task: the chime becomes a resource, seeds are placed, the pickup rule plays it.
       if (!n) return toolCallStream('list_cruxspace_assets', {});
       if (n === 1) return copyAsset(prompt, 'Pickup chime', 'assets/chime.wav');
       if (n === 2)
-        return toolCallStream('add_gdevelop_resource', { path: 'assets/chime.wav', name: 'chime', kind: 'audio' });
+        return toolCallStream('add_gdevelop_resource', {
+          path: 'assets/chime.wav',
+          name: 'chime',
+          kind: 'audio',
+        });
       if (n <= 5)
         return toolCallStream('add_gdevelop_instance', {
           scene: 'Scene',
@@ -1361,7 +1486,11 @@ function gameScript(prompt: LanguageModelV4Prompt): ReturnType<typeof stream> | 
     case 'site':
       if (!n) return toolCallStream('list_cruxspace_assets', {});
       if (n === 1) return copyAsset(prompt, 'Glow Garden web build', 'public/game', true);
-      if (n === 2) return toolCallStream('write_file', { path: 'src/pages/play.astro', content: GAME_PLAY_PAGE });
+      if (n === 2)
+        return toolCallStream('write_file', {
+          path: 'src/pages/play.astro',
+          content: GAME_PLAY_PAGE,
+        });
       return textStream('Unpacked the game into public/game and wrote the play page.');
     case 'done': {
       if (!n) return toolCallStream('inspect_kan', {});

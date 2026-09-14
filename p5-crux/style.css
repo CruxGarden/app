@@ -1,0 +1,11 @@
+html, body { height: 100%; margin: 0; background: #0e0f0d; color: #e7e5dc; font: 13px system-ui, sans-serif; }
+body { display: flex; flex-direction: column; }
+#sketch-header { display: flex; gap: 12px; align-items: center; padding: 6px 12px; background: #171a17; border-bottom: 1px solid #2c302c; }
+#sketch-header label { display: flex; gap: 6px; align-items: center; }
+#sketch-header input { padding: 3px 6px; border: 1px solid #3a403a; border-radius: 4px; background: #0e0f0d; color: inherit; font: inherit; }
+#sketch-header input[type=number] { width: 9em; }
+#sketch-header button { padding: 3px 10px; border: 1px solid #3a403a; border-radius: 4px; background: #232823; color: inherit; font: inherit; cursor: pointer; }
+#sketch-header button[aria-pressed=true] { background: #2f6f4e; border-color: #2f6f4e; }
+#sketch-info { color: #9aa297; margin-left: auto; }
+#stage { flex: 1; min-height: 0; display: grid; place-items: center; }
+#stage canvas { max-width: 100%; max-height: 100%; }

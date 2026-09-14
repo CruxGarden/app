@@ -318,7 +318,8 @@ export async function publishPipeline(
     crux.kind === 'notes' ||
     nativeAppType(crux) === 'formjs' ||
     nativeAppType(crux) === 'maps';
-  if (isEmbeddedApp(crux) && !builds)
+  // A sketch Crux publishes its page as it is: no build, the files are the site.
+  if (isEmbeddedApp(crux) && !builds && nativeAppType(crux) !== 'p5')
     throw new Error(
       'This notebook is missing its site configuration. Restore it before publishing.',
     );
