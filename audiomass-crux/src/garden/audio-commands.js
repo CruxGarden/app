@@ -1,3 +1,9 @@
+import {
+  arrangementFields,
+  arrangementHash,
+  sameArrangement,
+  editArrangement,
+} from './arrangement.js';
 import { validateCommand } from './commands.js';
 import { loadProjectBlob } from './shared/project-file.js';
 const tick = () => new Promise((r) => setTimeout(r, 0));
@@ -135,6 +141,8 @@ export function audioCommands(app, { runEffect, history, changed, baseUrl }) {
       editingClipId: clip(),
       tracks: mt.tracks.slice(offset, offset + limit),
       totalTracks: mt.tracks.length,
+      arrangementHash: await arrangementHash(mt, audioHash),
+      masterVolume: mt.master_vol,
       clips: mt.clips
         .slice(offset, offset + limit)
         .map(({ buffer, ...c }) => ({ ...c, seconds: buffer.duration })),
@@ -148,7 +156,8 @@ export function audioCommands(app, { runEffect, history, changed, baseUrl }) {
   function prepare(input) {
     const v = validateCommand(input),
       initial = buffer(),
-      initialContext = context();
+      initialContext = context(),
+      initialArrangement = app.multitrack.getState();
     const readOnly = ['inspect', 'selection', 'playback'].includes(v.op);
     return {
       mutates: !readOnly,
@@ -164,6 +173,42 @@ export function audioCommands(app, { runEffect, history, changed, baseUrl }) {
           );
         if (buffer() !== initial || context() !== initialContext)
           throw Error('The audio changed during validation. Inspect again.');
+        if (Object.hasOwn(arrangementFields, v.op)) {
+          if (clip()) throw Error('Detach the waveform before editing the arrangement.');
+          const current = app.multitrack.getState();
+          if (
+            !sameArrangement(initialArrangement, current) ||
+            v.expectedArrangementHash !== (await arrangementHash(current, audioHash)) ||
+            !sameArrangement(current, app.multitrack.getState()) ||
+            buffer() !== initial ||
+            context() !== initialContext
+          )
+            throw Error('The arrangement changed. Inspect and use its current arrangementHash.');
+          if (v.op === 'arrangement-history') {
+            const before = JSON.stringify(history());
+            if (
+              v.expectedHistoryHash !== (await historyHash()) ||
+              before !== JSON.stringify(history())
+            )
+              throw Error('Native history changed. Inspect again.');
+            if (buffer() && v.expectedWaveformHash !== (await fingerprint()))
+              throw Error('Supply the current waveformHash before changing native history.');
+            if (
+              !sameArrangement(current, app.multitrack.getState()) ||
+              buffer() !== initial ||
+              context() !== initialContext ||
+              before !== JSON.stringify(history())
+            )
+              throw Error('Audio or history changed during validation. Inspect again.');
+            if (!history()[v.direction]) throw Error(`There is no native ${v.direction} step.`);
+            app.fireEvent(v.direction === 'undo' ? 'StateRequestUndo' : 'StateRequestRedo');
+            return;
+          }
+          const next = editArrangement(current, v, buffer());
+          if (sameArrangement(current, next)) return;
+          app.multitrack.gardenApplyArrangement(next, 'Edit arrangement: ' + v.op);
+          return;
+        }
         if (v.op === 'view') {
           app.multitrack.Toggle(v.view === 'multitrack');
           changed();

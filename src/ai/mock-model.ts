@@ -1272,6 +1272,83 @@ export function getMockLanguageModel(): LanguageModel {
             return toolCallStream('set_bitsy_title', { title: 'The Midnight Garden' });
           return textStream('Saved the Bitsy game title.');
         }
+        const audioArrange = lastUserText(prompt).match(
+          /\[audiomass:arrange-(track|place|duplicate|revise|split|mix|master|move|undo|redo|remove|delete-track|export)\]/,
+        )?.[1];
+        if (audioArrange) {
+          const rounds = toolResultsThisTurn(prompt);
+          if (!rounds.length) return toolCallStream('inspect_audiomass', {});
+          if (rounds.length === 1) {
+            const st = JSON.parse(toolResultText(prompt, 'inspect_audiomass') || '{}');
+            const guard = { expectedArrangementHash: st.arrangementHash };
+            const target = st.tracks.find((t: { name: string }) => t.name === 'Effects');
+            const clip = st.clips.find((c: { name: string }) => c.name === 'Chime');
+            const echo = st.clips.find((c: { name: string }) => c.name === 'Echo');
+            if (audioArrange === 'track')
+              return toolCallStream('create_audiomass_track', { ...guard, name: 'Effects' });
+            if (audioArrange === 'place')
+              return toolCallStream('add_audiomass_clip', {
+                ...guard,
+                expectedWaveformHash: st.waveform.waveformHash,
+                trackId: target.id,
+                start: 0,
+                name: 'Chime',
+              });
+            if (audioArrange === 'duplicate')
+              return toolCallStream('duplicate_audiomass_clip', {
+                ...guard,
+                id: clip.id,
+                start: 1.25,
+                name: 'Echo',
+              });
+            if (audioArrange === 'revise')
+              return toolCallStream('update_audiomass_clip', {
+                ...guard,
+                id: echo.id,
+                start: 1.5,
+                sourceStart: 0.1,
+                sourceEnd: 0.9,
+                fadeIn: 0.1,
+                fadeOut: 0.2,
+              });
+            if (audioArrange === 'split')
+              return toolCallStream('split_audiomass_clip', { ...guard, id: echo.id, at: 1.9 });
+            if (audioArrange === 'mix')
+              return toolCallStream('update_audiomass_track', {
+                ...guard,
+                id: target.id,
+                volume: 0.6,
+                pan: -0.25,
+                mute: false,
+                solo: true,
+              });
+            if (audioArrange === 'master')
+              return toolCallStream('set_audiomass_mix', { ...guard, volume: 0.8 });
+            if (audioArrange === 'move')
+              return toolCallStream('move_audiomass_track', { ...guard, id: target.id, index: 0 });
+            if (audioArrange === 'undo' || audioArrange === 'redo')
+              return toolCallStream('audiomass_arrangement_history', {
+                ...guard,
+                direction: audioArrange,
+                expectedHistoryHash: st.history.historyHash,
+                ...(st.waveform ? { expectedWaveformHash: st.waveform.waveformHash } : {}),
+              });
+            if (audioArrange === 'remove')
+              return toolCallStream('delete_audiomass_clip', { ...guard, id: st.clips.at(-1).id });
+            if (audioArrange === 'delete-track')
+              return toolCallStream('delete_audiomass_track', {
+                ...guard,
+                id: st.tracks.find((t: { id: string }) => t.id !== target.id).id,
+              });
+            if (audioArrange === 'export')
+              return toolCallStream('save_audiomass_output', {
+                name: 'Arranged chimes',
+                target: 'mixdown',
+                format: 'wav',
+              });
+          }
+          return textStream('Audio arrangement ' + audioArrange + ' complete.');
+        }
         const audioDepth = lastUserText(prompt).match(
           /\[audiomass:depth-(load|mute|undo|redo|copy|paste|silence|trim|cut|delete|gain|normalize|fade-in|fade-out|reverse|exports|mixdown)\]/,
         )?.[1];
