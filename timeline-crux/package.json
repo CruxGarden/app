@@ -1,0 +1,12 @@
+{
+  "name": "timeline-crux",
+  "version": "3.9.13",
+  "private": true,
+  "type": "module",
+  "description": "TimelineJS (Knight Lab) as a Crux Garden creation tool",
+  "license": "MPL-2.0",
+  "scripts": {
+    "check": "node --check garden/bridge.js && node --check garden/document.js && node --check app.js && node -e \"JSON.parse(require('fs').readFileSync('timeline.json','utf8'))\"",
+    "test:garden": "node --test garden/document.test.mjs"
+  }
+}

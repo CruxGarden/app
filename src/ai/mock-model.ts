@@ -343,6 +343,35 @@ export function getMockLanguageModel(): LanguageModel {
             return toolCallStream('set_recorder_name', { name: 'Walkthrough takes' });
           return textStream('Listed the recordings and named the Crux Walkthrough takes.');
         }
+        if (lastUserText(prompt).includes('[timeline:story]')) {
+          const rounds = toolResultsThisTurn(prompt);
+          if (!rounds.length) return toolCallStream('inspect_timeline', {});
+          if (rounds.length === 1) return toolCallStream('set_timeline_name', { name: 'A Garden Year, Told' });
+          if (rounds.length === 2)
+            return toolCallStream('upsert_events', {
+              events: [
+                {
+                  unique_id: 'midsummer',
+                  start_date: { year: 2026, month: 6, day: 21 },
+                  text: { headline: 'Midsummer evening', text: 'The longest day, spent entirely outside.' },
+                  media: {
+                    url: 'https://upload.wikimedia.org/wikipedia/commons/thumb/4/4b/Sunset_2007-1.jpg/640px-Sunset_2007-1.jpg',
+                    caption: 'The light at nine in the evening.',
+                    credit: 'Wikimedia Commons',
+                  },
+                  group: 'Weather',
+                },
+                {
+                  unique_id: 'heatwave',
+                  start_date: { year: 2026, month: 7, day: 12 },
+                  end_date: { year: 2026, month: 7, day: 19 },
+                  text: { headline: 'A week of heat', text: 'Watering at dawn and dusk; the lettuces bolted.' },
+                  group: 'Weather',
+                },
+              ],
+            });
+          return textStream('Named the timeline A Garden Year, Told and added two summer events with a picture.');
+        }
         if (lastUserText(prompt).includes('[model:coaster]')) {
           const rounds = toolResultsThisTurn(prompt);
           if (!rounds.length) return toolCallStream('inspect_model', {});

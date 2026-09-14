@@ -1,0 +1,7 @@
+# Upstream: TimelineJS
+
+[NUKnightLab/TimelineJS3](https://github.com/NUKnightLab/TimelineJS3) 3.9.13 at `b67839f` (master, 2026-09-10) — MPL-2.0 (`licenses/timelinejs-LICENSE.txt`, authors in `timelinejs-AUTHORS.txt`). Northwestern University Knight Lab's storytelling timeline: a slide for every event with dates, text and media, a navigable time axis with groups and eras.
+
+Vendored unmodified: upstream's own build (`npm run build` → `dist/`: `runtime/js/timeline.js`, the locale files, `runtime/css/timeline.css` with its icon font, the font and theme stylesheets). Upstream's lockfile was a step behind its `package.json` (adm-zip), so the build ran after `npm install`; no source was changed. Fonts other than `default` load Google Fonts when chosen, as upstream does.
+
+TimelineJS is a library with no editor of its own (authoring at timeline.knightlab.com is a Google Sheet), so the page carries the smallest editor around it: `app.js` keeps the TimelineJS JSON and a form of events (headline, start and end dates, text, media URL and caption, group) in step and rebuilds the timeline as you type. `garden/bridge.js` keeps `{ name, timeline }` in `data/project.json` (`timeline` is TimelineJS's JSON: `title`, `events`, `eras`, `scale`), saves after every change, and answers App Tools (`inspect`, `set-name`, `set-timeline`, `upsert-events`, `remove-events`). A shared page shows the timeline alone (`?edit` shows the editor, saving nothing). `garden/document.js` validates the TimelineJS JSON shape; `timeline.json` is the starter (a garden year).
