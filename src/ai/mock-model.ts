@@ -470,6 +470,16 @@ export function getMockLanguageModel(): LanguageModel {
           if (rounds.length === 1) return toolCallStream('export_note_docx', {});
           return textStream('Exported the open note as a Word document in exports.');
         }
+        if (lastUserText(prompt).includes('[shop:product]')) {
+          const rounds = toolResultsThisTurn(prompt);
+          if (!rounds.length)
+            return toolCallStream('write_file', {
+              path: 'src/content/products/moss-jar.md',
+              content:
+                "---\nname: 'Moss jar'\ndescription: 'A closed jar of living moss for a desk.'\nprice: 18\ncurrency: USD\ncategories:\n  - Living\npublishDate: 2026-09-14T12:00:00Z\n---\n\nSealed glass, a pinch of soil, moss from the north side of the garden. Mist it once a month.\n",
+            });
+          return textStream('Added the moss jar to the shop at 18 dollars.');
+        }
         if (lastUserText(prompt).includes('[recipes:recipe]')) {
           const rounds = toolResultsThisTurn(prompt);
           if (!rounds.length)

@@ -28,14 +28,18 @@ test('SVG-Edit native drawing, images, agent styling, exports and portable editi
   const draw = async (page: Page, frame: FrameLocator, tool: string, dx = 0) => {
     // Wait for Workshop's pane transition before dragging native SVG coordinates.
     await frame.locator('#svgcontent').evaluate(async (el) => {
-      let previous = '', stableSince = performance.now();
+      let previous = '',
+        stableSince = performance.now();
       const deadline = stableSince + 5000;
       while (performance.now() < deadline) {
         await new Promise(requestAnimationFrame);
         const r = el.getBoundingClientRect();
-        const current = [r.x,r.y,r.width,r.height].join(',');
-        if (current !== previous) { previous=current; stableSince=performance.now(); }
-        if (performance.now()-stableSince > 300) return;
+        const current = [r.x, r.y, r.width, r.height].join(',');
+        if (current !== previous) {
+          previous = current;
+          stableSince = performance.now();
+        }
+        if (performance.now() - stableSince > 300) return;
       }
       throw new Error('Workshop drawing coordinates did not settle.');
     });
@@ -69,8 +73,8 @@ test('SVG-Edit native drawing, images, agent styling, exports and portable editi
     console.log('SVG-Edit folder', folder);
     await draw(page, frame, '#tools_rect .menu-button');
     await expect(frame.locator('#svgcontent rect')).toHaveCount(1);
-    await expect(frame.locator('#svgcontent rect')).toHaveAttribute('width','170');
-    await expect(frame.locator('#svgcontent rect')).toHaveAttribute('height','105');
+    await expect(frame.locator('#svgcontent rect')).toHaveAttribute('width', '170');
+    await expect(frame.locator('#svgcontent rect')).toHaveAttribute('height', '105');
     await frame.getByRole('button', { name: 'Save project', exact: true }).click();
     await expect.poll(() => state('svg')).toContain('<rect');
     const png = Buffer.from(
@@ -165,9 +169,9 @@ test('SVG-Edit native drawing, images, agent styling, exports and portable editi
     await expect(frame.locator('#svgcontent rect')).toHaveAttribute('fill', '#3b82f6');
     await expect(frame.locator('#svgcontent image')).toHaveCount(1);
     expect(doc().project[imageKey]).toEqual(imageRef);
-    await expect(frame.locator('#svgcontent rect')).toHaveAttribute('width','170');
-    await expect(frame.locator('#svgcontent rect')).toHaveAttribute('height','105');
-    await expect(frame.locator('#svgcontent rect')).toHaveAttribute('x','60');
+    await expect(frame.locator('#svgcontent rect')).toHaveAttribute('width', '170');
+    await expect(frame.locator('#svgcontent rect')).toHaveAttribute('height', '105');
+    await expect(frame.locator('#svgcontent rect')).toHaveAttribute('x', '60');
     await second.page.screenshot({
       path: join(evidence, 'svgedit-reopened.png'),
       animations: 'disabled',

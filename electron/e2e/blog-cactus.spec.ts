@@ -86,7 +86,10 @@ test('Blog (Cactus): Builder post, live route, collaborator post, share, restart
             if (await preview.isVisible()) return 'ready';
             if (await failed.isVisible().catch(() => false)) {
               const log = await page.evaluate((f) => window.electronAPI!.devserver.log(f), folder);
-              throw new Error(`preview failed: ${log.slice(-2000)}`);
+              const astroLog = existsSync(join(folder, '.astro/dev.log'))
+                ? readFileSync(join(folder, '.astro/dev.log'), 'utf8').slice(-2000)
+                : '(no .astro/dev.log)';
+              throw new Error(`preview failed: ${log.slice(-2000)}\nastro: ${astroLog}`);
             }
             return 'waiting';
           },

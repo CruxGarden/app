@@ -29,7 +29,12 @@ test('Layout: a named page, agent text blocks with PDF and PNG outputs, preview,
   const archive = join(first.dir, 'layout.crux');
   let folder = '';
   const doc = () => JSON.parse(readFileSync(join(folder, 'data/project.json'), 'utf8'));
-  const blocks = () => (doc().project?.template?.schemas?.[0] ?? []) as { name: string; type: string; content?: string }[];
+  const blocks = () =>
+    (doc().project?.template?.schemas?.[0] ?? []) as {
+      name: string;
+      type: string;
+      content?: string;
+    }[];
   const errors: string[] = [];
   try {
     const { page } = first;
@@ -68,14 +73,20 @@ test('Layout: a named page, agent text blocks with PDF and PNG outputs, preview,
       await box.fill('Make the open day poster [layout:poster]');
       await box.press('Enter');
       await expect(
-        page.getByText('Named the poster, set the headline and the date, and saved the PDF and the image to the Cruxspace.', { exact: true }),
+        page.getByText(
+          'Named the poster, set the headline and the date, and saved the PDF and the image to the Cruxspace.',
+          { exact: true },
+        ),
       ).toBeVisible({ timeout: 240000 });
       await ready(page);
       expect(doc().project.name).toBe('Open day poster');
       expect(blocks().map((b) => b.name)).toEqual(['headline', 'when']);
       await expect(frameOf(page).getByText('Open day at the seed library')).toBeVisible();
       const outs = outputs(folder);
-      expect(outs.map((o) => o.label).sort()).toEqual(['Open day poster', 'Open day poster (image)']);
+      expect(outs.map((o) => o.label).sort()).toEqual([
+        'Open day poster',
+        'Open day poster (image)',
+      ]);
       const pdf = outs.find((o) => o.mimeType === 'application/pdf')!;
       const png = outs.find((o) => o.mimeType === 'image/png')!;
       expect(readFileSync(join(folder, pdf.path)).subarray(0, 4).toString()).toBe('%PDF');
@@ -89,10 +100,14 @@ test('Layout: a named page, agent text blocks with PDF and PNG outputs, preview,
     await test.step('a person saves an image from the bar with their own name; Preview renders the page', async () => {
       await frameOf(page).locator('#output-name').fill('Poster proof');
       await frameOf(page).locator('#save-image').click();
-      await expect(status(page)).toContainText('Saved Poster proof as an image output', { timeout: 60000 });
+      await expect(status(page)).toContainText('Saved Poster proof as an image output', {
+        timeout: 60000,
+      });
       await expect.poll(() => outputs(folder).length).toBe(3);
       await frameOf(page).getByRole('tab', { name: 'Preview' }).click();
-      await expect(frameOf(page).locator('#viewer').getByText('Saturday 3 October, 10 to 4')).toBeVisible();
+      await expect(
+        frameOf(page).locator('#viewer').getByText('Saturday 3 October, 10 to 4'),
+      ).toBeVisible();
       await page.screenshot({ path: join(evidence, 'pdfme-preview.png') });
       await frameOf(page).getByRole('tab', { name: 'Design' }).click();
       await ready(page);
@@ -130,7 +145,9 @@ test('Layout: a named page, agent text blocks with PDF and PNG outputs, preview,
     await test.step('clean Garden: the complete Crux imports and the person renames the poster', async () => {
       await importNativeCrux(page, archive);
       await expect(page.locator('[data-workspace-id]')).toBeVisible({ timeout: 60000 });
-      const importedId = (await page.locator('[data-workspace-id]').getAttribute('data-workspace-id'))!;
+      const importedId = (await page
+        .locator('[data-workspace-id]')
+        .getAttribute('data-workspace-id'))!;
       folder = (await storedCrux(page, importedId)).projectFolder;
       await ready(page);
       await expect(frameOf(page).getByText('Open day at the seed library')).toBeVisible();

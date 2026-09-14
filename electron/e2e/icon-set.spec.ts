@@ -35,10 +35,7 @@ test.describe('icon set', () => {
       expect(await page.locator('svg[data-icon]:not([data-set="pixel"])').count()).toBe(0);
 
       // A filled Mood flips the whole surface again
-      await built
-        .getByTestId('bundled-hibiscus')
-        .getByRole('button', { name: 'Apply' })
-        .click();
+      await built.getByTestId('bundled-hibiscus').getByRole('button', { name: 'Apply' }).click();
       await expect(page.locator('html[data-icon-set="filled"]')).toHaveCount(1);
       await expect(explore).toHaveAttribute('data-set', 'filled');
       await page.keyboard.press('Escape');

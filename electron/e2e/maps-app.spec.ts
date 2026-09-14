@@ -33,7 +33,12 @@ test('Map: a clicked place, agent places with a picture, publish, restart and cl
   let folder = '';
   let id = '';
   const doc = () => JSON.parse(readFileSync(join(folder, 'data/project.json'), 'utf8'));
-  const features = () => (doc().project?.features ?? []) as { id: string; geometry: { type: string }; properties: { title?: string; notes?: string } }[];
+  const features = () =>
+    (doc().project?.features ?? []) as {
+      id: string;
+      geometry: { type: string };
+      properties: { title?: string; notes?: string };
+    }[];
   const errors: string[] = [];
   try {
     const { page } = first;
@@ -70,7 +75,10 @@ test('Map: a clicked place, agent places with a picture, publish, restart and cl
       await expect(frameOf(page).locator('#place-list li').first()).toHaveText('Meeting point');
       await ready(page);
       await expect.poll(() => features().length, { timeout: 30000 }).toBe(1);
-      expect(features()[0]).toMatchObject({ geometry: { type: 'Point' }, properties: { title: 'Meeting point' } });
+      expect(features()[0]).toMatchObject({
+        geometry: { type: 'Point' },
+        properties: { title: 'Meeting point' },
+      });
       expect(doc().project.name).toBe('Walk');
       await page.screenshot({ path: join(evidence, 'maps-place.png') });
     });
@@ -82,11 +90,18 @@ test('Map: a clicked place, agent places with a picture, publish, restart and cl
       await box.fill('Plan the seed swap walk [map:places]');
       await box.press('Enter');
       await expect(
-        page.getByText('Named the map, added the seed library and the community garden, fitted the view and saved the picture.', { exact: true }),
+        page.getByText(
+          'Named the map, added the seed library and the community garden, fitted the view and saved the picture.',
+          { exact: true },
+        ),
       ).toBeVisible({ timeout: 240000 });
       await ready(page);
       expect(doc().project.name).toBe('Seed swap walk');
-      expect(features().map((f) => f.properties.title)).toEqual(['Meeting point', 'Seed library', 'Community garden']);
+      expect(features().map((f) => f.properties.title)).toEqual([
+        'Meeting point',
+        'Seed library',
+        'Community garden',
+      ]);
       await expect(frameOf(page).locator('#place-list li')).toHaveCount(3);
       const outs = outputs(folder);
       expect(outs.map((o) => o.label)).toEqual(['Seed swap walk']);
@@ -99,22 +114,31 @@ test('Map: a clicked place, agent places with a picture, publish, restart and cl
     await test.step('a person saves their own picture from the bar', async () => {
       await frameOf(page).locator('#output-name').fill('Walk map');
       await frameOf(page).locator('#save-image').click();
-      await expect(status(page)).toContainText('Saved Walk map as an image output', { timeout: 60000 });
+      await expect(status(page)).toContainText('Saved Walk map as an image output', {
+        timeout: 60000,
+      });
       await expect.poll(() => outputs(folder).length).toBe(2);
     });
 
     await test.step('Share selected content publishes the read-only map; served from the Crux it lists the places', async () => {
-      await page.getByTestId('workshop-view').getByRole('button', { name: 'Share selected content', exact: true }).click();
+      await page
+        .getByTestId('workshop-view')
+        .getByRole('button', { name: 'Share selected content', exact: true })
+        .click();
       const share = page.getByTestId('pane-body-publish');
       await share.getByRole('button', { name: 'Share selected content', exact: true }).click();
       await page.getByPlaceholder('email@example.com').fill('tester@example.com');
       await page.getByRole('button', { name: 'Send Code', exact: true }).click();
       await page.getByPlaceholder('Enter code').fill('123456');
       await page.getByRole('button', { name: 'Connect', exact: true }).click();
-      const backupAsk = page.getByRole('dialog').filter({ hasText: 'A published site is not a backup' });
+      const backupAsk = page
+        .getByRole('dialog')
+        .filter({ hasText: 'A published site is not a backup' });
       await expect(backupAsk).toBeVisible({ timeout: 60000 });
       await backupAsk.getByRole('button', { name: 'Share without a backup', exact: true }).click();
-      await expect(share.getByText(/^(Up to date|Changes to share)$/)).toBeVisible({ timeout: 8 * 60_000 });
+      await expect(share.getByText(/^(Up to date|Changes to share)$/)).toBeVisible({
+        timeout: 8 * 60_000,
+      });
       const published = api.state.published[id] ?? [];
       const paths = published.map((f) => f.path);
       expect(paths).toContain('index.html');
@@ -122,12 +146,18 @@ test('Map: a clicked place, agent places with a picture, publish, restart and cl
       const html = published.find((f) => f.path === 'index.html')!.bytes.toString('utf8');
       expect(html).toContain('window.__MAP__');
       expect(html).toContain('Seed swap walk');
-      const previewOrigin = new URL((await page.locator('iframe[data-crux-id]').getAttribute('src'))!).origin;
-      await page.locator('iframe[data-crux-id]').evaluate((el: HTMLIFrameElement, url) => { el.src = url; }, `${previewOrigin}/dist/index.html`);
+      const previewOrigin = new URL(
+        (await page.locator('iframe[data-crux-id]').getAttribute('src'))!,
+      ).origin;
+      await page.locator('iframe[data-crux-id]').evaluate((el: HTMLIFrameElement, url) => {
+        el.src = url;
+      }, `${previewOrigin}/dist/index.html`);
       const served = frameOf(page);
       await expect(served.getByRole('heading', { name: 'Seed swap walk', level: 1 })).toBeVisible();
       await expect(served.locator('#place-list li')).toHaveCount(3);
-      await expect(served.locator('#place-list li').nth(1)).toContainText('Seed library — Start here at 10');
+      await expect(served.locator('#place-list li').nth(1)).toContainText(
+        'Seed library — Start here at 10',
+      );
       await expect(served.locator('.maplibregl-canvas')).toBeVisible({ timeout: 60000 });
       await page.screenshot({ path: join(evidence, 'maps-published.png') });
       await page.getByRole('button', { name: 'Toggle share' }).click();
@@ -165,7 +195,9 @@ test('Map: a clicked place, agent places with a picture, publish, restart and cl
     await test.step('clean Garden: the complete Crux imports and a place is removed', async () => {
       await importNativeCrux(page, archive);
       await expect(page.locator('[data-workspace-id]')).toBeVisible({ timeout: 60000 });
-      const importedId = (await page.locator('[data-workspace-id]').getAttribute('data-workspace-id'))!;
+      const importedId = (await page
+        .locator('[data-workspace-id]')
+        .getAttribute('data-workspace-id'))!;
       folder = (await storedCrux(page, importedId)).projectFolder;
       await ready(page);
       await expect(frameOf(page).locator('#place-list li')).toHaveCount(3);

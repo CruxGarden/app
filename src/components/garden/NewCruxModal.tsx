@@ -671,6 +671,17 @@ const TEMPLATES: Template[] = [
     desktopOnly: true,
   },
   {
+    id: 'astro-storefront',
+    label: 'Storefront',
+    description:
+      'A small shop on the Keel theme — products with prices, a buy link or a Snipcart cart, a blog',
+    icon: <PencilIcon />,
+    thumb: <BlogThumb />,
+    kind: 'webapp',
+    defaultTitle: 'My Shop',
+    desktopOnly: true,
+  },
+  {
     id: 'digital-garden',
     label: 'Digital Garden',
     description:

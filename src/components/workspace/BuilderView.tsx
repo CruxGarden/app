@@ -52,6 +52,11 @@ function artifactPaths(useCruxStore: ReturnType<typeof useCruxStoreApi>): Set<st
   );
 }
 
+/** An item's label: its title, or the first declared field (a product's `name`, a shelf entry's `question`). */
+function itemLabel(data: Record<string, string>, collection: ContentCollection): string {
+  return data.title || (collection.fields[0] ? data[collection.fields[0].key] : '') || '';
+}
+
 /** Filenames already present under `folder` (e.g. 'public/images'). */
 function namesInFolder(paths: Set<string>, folder: string): Set<string> {
   const prefix = folder + '/';
@@ -765,7 +770,7 @@ function CollectionSection({ collection }: { collection: ContentCollection }) {
               >
                 <span className="flex items-center gap-2">
                   <span className="text-sm text-text truncate">
-                    {data.title || item.path.split('/').pop()}
+                    {itemLabel(data, collection) || item.path.split('/').pop()}
                   </span>
                   {data.draft === 'true' && (
                     <span className="shrink-0 px-1.5 py-0.5 text-2xs rounded bg-border text-text-muted">
@@ -781,7 +786,7 @@ function CollectionSection({ collection }: { collection: ContentCollection }) {
                 onClick={async () => {
                   if (
                     await confirmDialog({
-                      message: `Delete "${data.title || item.path}"? It stays in history.`,
+                      message: `Delete "${itemLabel(data, collection) || item.path}"? It stays in history.`,
                       confirmLabel: 'Delete',
                       danger: true,
                     })

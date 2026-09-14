@@ -1,0 +1,45 @@
+---
+// Crux Garden: how a product is bought. A hosted checkout link when the product
+// has one; the Snipcart cart when the shop has a key; otherwise an enquiry.
+import type { CollectionEntry } from 'astro:content';
+import { SITE } from '../consts';
+import { withBase } from '../lib/url';
+
+interface Props {
+  product: CollectionEntry<'products'>;
+}
+const { product } = Astro.props;
+const { name, description, price, currency, buyUrl, image } = product.data;
+const money = new Intl.NumberFormat(SITE.locale, { style: 'currency', currency }).format(price);
+const url = withBase(`/shop/${product.id}/`);
+---
+
+{
+  buyUrl ? (
+    <a class="button" href={buyUrl} rel="noopener noreferrer" data-buy="link">
+      Buy · {money}
+    </a>
+  ) : SITE.snipcartApiKey ? (
+    <button
+      class="button snipcart-add-item"
+      type="button"
+      data-buy="cart"
+      data-item-id={product.id}
+      data-item-name={name}
+      data-item-price={price}
+      data-item-url={url}
+      data-item-description={description}
+      data-item-image={image?.src}
+    >
+      Add to cart · {money}
+    </button>
+  ) : SITE.contactEmail ? (
+    <a class="button" href={`mailto:${SITE.contactEmail}?subject=${encodeURIComponent(name)}`} data-buy="enquire">
+      Enquire · {money}
+    </a>
+  ) : (
+    <span class="button" aria-disabled="true" data-buy="none">
+      {money}
+    </span>
+  )
+}

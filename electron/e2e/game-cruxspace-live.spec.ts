@@ -63,8 +63,16 @@ async function ask(page: Page, message: string, continues = 3): Promise<string> 
     if (!capped) break;
     text = 'Please continue where you left off and finish the task.';
   }
-  const messages = ((await storedCrux(page, id)).messages ?? []) as { role: string; content?: string }[];
-  return [...messages].reverse().find((m) => m.role === 'assistant')?.content?.trim() ?? '';
+  const messages = ((await storedCrux(page, id)).messages ?? []) as {
+    role: string;
+    content?: string;
+  }[];
+  return (
+    [...messages]
+      .reverse()
+      .find((m) => m.role === 'assistant')
+      ?.content?.trim() ?? ''
+  );
 }
 
 async function addProviderKey(page: Page) {

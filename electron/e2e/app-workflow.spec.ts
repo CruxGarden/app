@@ -67,13 +67,17 @@ test('import a Tigrana folder, customize in a Task, keep Main notes, Share selec
     await frame().getByRole('button', { name: 'Import notebook folder…', exact: true }).click();
     await (await chooser).setFiles(vault);
     await expect
-      .poll(() => existsSync(join(folder, 'notebook/Imported/Novel/Outline.md')), { timeout: 60000 })
+      .poll(() => existsSync(join(folder, 'notebook/Imported/Novel/Outline.md')), {
+        timeout: 60000,
+      })
       .toBe(true);
     await expect(status()).toHaveText('Saved', { timeout: 120000 });
     const openNote = async (folderPath: string, title: string) => {
       // Tigrana's Sections pane lists the top-level folders; choosing one shows its whole tree
       // (subfolders unfolded) in the middle pane, where the note is picked by title.
-      await frame().locator(`.folder-row[data-folder-path="${folderPath.split('/')[0]}"]`).click();
+      await frame()
+        .locator(`.folder-row[data-folder-path="${folderPath.split('/')[0]}"]`)
+        .click();
       await frame().locator('.unified-tree-pane').getByText(title, { exact: true }).click();
       await expect(frame().locator('.tiptap').first()).toBeVisible();
     };
@@ -97,8 +101,12 @@ test('import a Tigrana folder, customize in a Task, keep Main notes, Share selec
       [],
     );
     await frame().getByRole('button', { name: 'Public edition…' }).click();
-    await frame().locator('#garden-publication input[data-note="Imported/Novel/Outline.md"]').check();
-    await frame().locator('#garden-publication input[data-note="Imported/Novel/Chapters/One.md"]').check();
+    await frame()
+      .locator('#garden-publication input[data-note="Imported/Novel/Outline.md"]')
+      .check();
+    await frame()
+      .locator('#garden-publication input[data-note="Imported/Novel/Chapters/One.md"]')
+      .check();
     await expect
       .poll(() => JSON.parse(readFileSync(join(folder, 'notebook/publish.json'), 'utf8')).pages)
       .toEqual(['Imported/Novel/Outline.md', 'Imported/Novel/Chapters/One.md']);
@@ -329,9 +337,7 @@ test('import a Tigrana folder, customize in a Task, keep Main notes, Share selec
         growth.map((m) => m.appChanges),
       );
       await expect(
-        restored.page
-          .frameLocator('iframe[data-crux-id]')
-          .locator('#garden-project [role=status]'),
+        restored.page.frameLocator('iframe[data-crux-id]').locator('#garden-project [role=status]'),
       ).toHaveText('Saved', { timeout: 120000 });
       writeFileSync(
         join(evidence, 'evidence.json'),

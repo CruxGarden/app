@@ -17,12 +17,12 @@ test('the glass switch: system follows the Mood, off is solid, on is glass; ligh
   const evidence = resolve(__dirname, '../../docs/moods');
   const style = () => page.evaluate(() => document.documentElement.dataset.surfaceStyle);
   const bodyFilter = () =>
-    page
-      .locator('.mosaic-window.pane-collaboration > .mosaic-window-body')
-      .evaluate((el) => {
-        const cs = getComputedStyle(el);
-        return cs.getPropertyValue('backdrop-filter') || cs.getPropertyValue('-webkit-backdrop-filter');
-      });
+    page.locator('.mosaic-window.pane-collaboration > .mosaic-window-body').evaluate((el) => {
+      const cs = getComputedStyle(el);
+      return (
+        cs.getPropertyValue('backdrop-filter') || cs.getPropertyValue('-webkit-backdrop-filter')
+      );
+    });
   try {
     await page.setViewportSize({ width: 1600, height: 1000 });
     await page.waitForTimeout(1200);
@@ -46,7 +46,10 @@ test('the glass switch: system follows the Mood, off is solid, on is glass; ligh
     await page.screenshot({ path: join(evidence, 'default-crux.png') });
 
     // Menus are liquid glass surfaces (liquid-glass-react)
-    await page.getByRole('button', { name: /Claude|Model|GPT|Sonnet/ }).first().click();
+    await page
+      .getByRole('button', { name: /Claude|Model|GPT|Sonnet/ })
+      .first()
+      .click();
     await expect(page.locator('.glass-surface [data-glass-role="dropdown"]')).toHaveCount(1);
     await page.keyboard.press('Escape');
 
@@ -65,7 +68,10 @@ test('the glass switch: system follows the Mood, off is solid, on is glass; ligh
     await expect.poll(style).toBe('glass');
     await expect(page.getByTestId('liquid-light')).toHaveCount(1);
     const orbAnimation = () =>
-      page.locator('.liquid-orb').first().evaluate((el) => getComputedStyle(el).animationName);
+      page
+        .locator('.liquid-orb')
+        .first()
+        .evaluate((el) => getComputedStyle(el).animationName);
     expect(await orbAnimation()).toBe('liquid-drift-1');
     await page.getByRole('combobox', { name: 'Motion intensity' }).selectOption('subtle');
     await expect.poll(orbAnimation).toBe('none');

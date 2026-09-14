@@ -39,18 +39,28 @@ test('Start from a file: a document becomes a notebook, an image a miniPaint Cru
       expect(existsSync(join(folder, 'inbox/Letter.docx'))).toBe(true);
       await expect(page.getByText(/Started from Letter\.docx/)).toBeVisible();
       await expect
-        .poll(() => existsSync(join(folder, 'notebook/Imported/Letter/Letter.md')), { timeout: 120000 })
+        .poll(() => existsSync(join(folder, 'notebook/Imported/Letter/Letter.md')), {
+          timeout: 120000,
+        })
         .toBe(true);
-      expect(readFileSync(join(folder, 'notebook/Imported/Letter/Letter.md'), 'utf8')).toContain('LETTER_BODY_SENTINEL');
+      expect(readFileSync(join(folder, 'notebook/Imported/Letter/Letter.md'), 'utf8')).toContain(
+        'LETTER_BODY_SENTINEL',
+      );
       await page.screenshot({ path: join(evidence, 'file-drop-docx.png') });
     });
 
     await test.step('a Markdown file: a note in a Notes Crux', async () => {
       await home(page);
       const { folder } = await startFrom(join(fixtures, 'documents/field-notes.md'));
-      await expect.poll(() => existsSync(join(folder, 'notebook/Imported/field-notes/field-notes.md'))).toBe(true);
-      expect(readFileSync(join(folder, 'notebook/Imported/field-notes/field-notes.md'), 'utf8')).toContain('FIELD_NOTES_SENTINEL');
-      await expect(page.frameLocator('iframe[data-crux-id]').locator('#garden-project [role=status]')).toHaveText('Saved', { timeout: 120000 });
+      await expect
+        .poll(() => existsSync(join(folder, 'notebook/Imported/field-notes/field-notes.md')))
+        .toBe(true);
+      expect(
+        readFileSync(join(folder, 'notebook/Imported/field-notes/field-notes.md'), 'utf8'),
+      ).toContain('FIELD_NOTES_SENTINEL');
+      await expect(
+        page.frameLocator('iframe[data-crux-id]').locator('#garden-project [role=status]'),
+      ).toHaveText('Saved', { timeout: 120000 });
     });
 
     await test.step('an image: a miniPaint Crux with the image in it', async () => {
@@ -59,7 +69,9 @@ test('Start from a file: a document becomes a notebook, an image a miniPaint Cru
       expect(existsSync(join(folder, 'images/seal.png'))).toBe(true);
       await expect(page.getByText(/Started from seal\.png/)).toBeVisible();
       await expect(page.getByText(/Open it from miniPaint/)).toBeVisible();
-      await expect(page.frameLocator('iframe[data-crux-id]').locator('#garden-project [role=status]')).toContainText(/Saved|Opening/, { timeout: 120000 });
+      await expect(
+        page.frameLocator('iframe[data-crux-id]').locator('#garden-project [role=status]'),
+      ).toContainText(/Saved|Opening/, { timeout: 120000 });
       await page.screenshot({ path: join(evidence, 'file-drop-image.png') });
     });
 
@@ -70,13 +82,17 @@ test('Start from a file: a document becomes a notebook, an image a miniPaint Cru
           (el, { name, content }) => {
             const dt = new DataTransfer();
             dt.items.add(new File([content], name, { type: 'text/plain' }));
-            el.dispatchEvent(new DragEvent('drop', { dataTransfer: dt, bubbles: true, cancelable: true }));
+            el.dispatchEvent(
+              new DragEvent('drop', { dataTransfer: dt, bubbles: true, cancelable: true }),
+            );
           },
           { name, content },
         );
       };
       await drop('setup.exe', 'MZ');
-      await expect(page.getByRole('status').filter({ hasText: 'No Crux Tool opens setup.exe' })).toBeVisible();
+      await expect(
+        page.getByRole('status').filter({ hasText: 'No Crux Tool opens setup.exe' }),
+      ).toBeVisible();
       await drop('seedlings.csv', readFileSync(join(fixtures, 'seed-trial/seedlings.csv'), 'utf8'));
       await expect(page.locator('[data-workspace-id]')).toBeVisible({ timeout: 60000 });
       const id = (await currentId(page))!;

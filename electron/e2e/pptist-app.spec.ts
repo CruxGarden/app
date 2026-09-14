@@ -43,7 +43,8 @@ test('PPTist: real slide and picture edits, saved deck with media Artifacts, age
     page.setDefaultTimeout(60000);
     page.on('pageerror', (e) => errors.push(e.message));
     page.on('console', (m) => {
-      if (m.type() === 'error' || m.type() === 'warning') console.log('APP:', m.type(), m.text().slice(0, 300));
+      if (m.type() === 'error' || m.type() === 'warning')
+        console.log('APP:', m.type(), m.text().slice(0, 300));
     });
     await page.setViewportSize({ width: 1800, height: 1100 });
     await enterGarden(page);

@@ -42,7 +42,9 @@ test('Kan boards, attachments, agent cards, conflicts, restart, complete import 
   const originals = () =>
     Object.entries(doc().project ?? {})
       .filter(([key]) => key.startsWith('file-'))
-      .map(([, value]: [string, any]) => readFileSync(join(folder, 'data', value.__cruxBinary.path)));
+      .map(([, value]: [string, any]) =>
+        readFileSync(join(folder, 'data', value.__cruxBinary.path)),
+      );
   const ready = async (page: Page) => {
     const frame = page.frameLocator('iframe[data-crux-id]');
     await expect(frame.locator('#garden-project [role=status]')).toHaveText('Saved to Garden', {
@@ -111,10 +113,9 @@ test('Kan boards, attachments, agent cards, conflicts, restart, complete import 
     const chat = page.getByPlaceholder('Send a message...');
     await chat.fill('Add a card for the agent [kan:edit]');
     await chat.press('Enter');
-    await expect.poll(() => cards('Game plan'), { timeout: 60000 }).toEqual([
-      'Draw the hero sprite',
-      'Agent renamed card',
-    ]);
+    await expect
+      .poll(() => cards('Game plan'), { timeout: 60000 })
+      .toEqual(['Draw the hero sprite', 'Agent renamed card']);
     await frame.getByRole('link', { name: 'Kan · Boards', exact: true }).click();
     await frame.getByText('Game plan', { exact: true }).click();
     await expect(frame.getByText('Agent renamed card', { exact: true })).toBeVisible();
@@ -140,7 +141,12 @@ test('Kan boards, attachments, agent cards, conflicts, restart, complete import 
     const hash = createHash('sha256').update(bytes).digest('hex');
     writeFileSync(join(folder, 'data/assets', hash + '.bin'), bytes);
     external.project[key] = {
-      __cruxBinary: { path: `assets/${hash}.bin`, kind: 'buffer', type: 'application/json', size: bytes.length },
+      __cruxBinary: {
+        path: `assets/${hash}.bin`,
+        kind: 'buffer',
+        type: 'application/json',
+        size: bytes.length,
+      },
     };
     writeFileSync(join(folder, 'data/project.json'), JSON.stringify(external));
     await addCard(frame, 'Unsaved draft card');
@@ -150,7 +156,9 @@ test('Kan boards, attachments, agent cards, conflicts, restart, complete import 
     await frame.getByRole('button', { name: 'Reload saved project', exact: true }).click();
     await frame.getByRole('button', { name: 'Discard and reload', exact: true }).click();
     frame = await ready(page);
-    await expect(frame.getByRole('textbox', { name: 'Board name', exact: true })).toHaveValue('External plan');
+    await expect(frame.getByRole('textbox', { name: 'Board name', exact: true })).toHaveValue(
+      'External plan',
+    );
     await expect(frame.getByText('Unsaved draft card', { exact: true })).toHaveCount(0);
     await addCard(frame, 'Compose the theme');
     await save(frame);

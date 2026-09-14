@@ -71,7 +71,13 @@ test('Notes Share uploads only selected saved content; failed updates retain the
     await editor.click();
     await page.keyboard.type('PRIVATE_RESEARCH_NOT_FOR_VISITORS');
     await expect
-      .poll(() => (existsSync(note('Private research.md')) ? readFileSync(note('Private research.md'), 'utf8') : ''), { timeout: 30000 })
+      .poll(
+        () =>
+          existsSync(note('Private research.md'))
+            ? readFileSync(note('Private research.md'), 'utf8')
+            : '',
+        { timeout: 30000 },
+      )
       .toContain('PRIVATE_RESEARCH_NOT_FOR_VISITORS');
     await expect(status(page)).toHaveText('Saved');
 
@@ -132,9 +138,7 @@ test('Notes Share uploads only selected saved content; failed updates retain the
     api.state.failPublish = false;
     await share.getByRole('button', { name: 'Update shared content', exact: true }).click();
     await shareWithoutBackup(page);
-    await expect
-      .poll(() => api.state.publishedVersion, { timeout: 120000 })
-      .toBe(firstVersion + 1);
+    await expect.poll(() => api.state.publishedVersion, { timeout: 120000 }).toBe(firstVersion + 1);
     await shared(page, share);
     expect(uploaded()).toContain('lantern in the woods');
     expect(uploaded()).not.toContain('PRIVATE_RESEARCH_NOT_FOR_VISITORS');
@@ -182,12 +186,20 @@ test('Moqira Share replaces the public selection while retaining excluded frames
       ...project.wireframes[0],
       id: 'alternative',
       name: 'Alternative',
-      nodes: [{ ...project.wireframes[0].nodes[0], id: 'alt-button', text: 'Private alternative prototype' }],
+      nodes: [
+        {
+          ...project.wireframes[0].nodes[0],
+          id: 'alt-button',
+          text: 'Private alternative prototype',
+        },
+      ],
     });
     project.activeWireframeId = project.wireframes[0].id;
     const chooser = page.waitForEvent('filechooser');
     await frame.getByRole('button', { name: 'Open project file…', exact: true }).click();
-    await (await chooser).setFiles({
+    await (
+      await chooser
+    ).setFiles({
       name: 'prototype.moq',
       mimeType: 'application/json',
       buffer: Buffer.from(JSON.stringify(project)),
@@ -239,7 +251,10 @@ test('Moqira Share replaces the public selection while retaining excluded frames
     await shared(page, share);
     expect(uploaded()).toContain('Private alternative prototype');
     expect(uploaded()).not.toContain('Original public prototype');
-    expect(read().wireframes.map((w: { name: string }) => w.name)).toEqual(['Public screen', 'Alternative']);
+    expect(read().wireframes.map((w: { name: string }) => w.name)).toEqual([
+      'Public screen',
+      'Alternative',
+    ]);
     await expect(frame.getByRole('button', { name: /Public screen/ })).toBeVisible();
 
     // Nothing chosen: refused, the last edition stands.
