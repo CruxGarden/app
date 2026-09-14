@@ -315,6 +315,17 @@ const TEMPLATES: Template[] = [
     desktopOnly: true,
   },
   {
+    id: 'glsl-app',
+    label: 'Shader',
+    description:
+      'Creative · live GLSL fragment shaders in glslEditor; rings of light to start, frames as outputs, a live page',
+    defaultTitle: 'My shader',
+    icon: <PencilIcon />,
+    thumb: <BlankThumb />,
+    kind: 'webapp',
+    desktopOnly: true,
+  },
+  {
     id: 'svgedit-app',
     label: 'SVG-Edit',
     description: 'Creative · vector illustration, shapes and layers',

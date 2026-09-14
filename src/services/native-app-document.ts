@@ -11,6 +11,7 @@ import { validateProject as validateFormjs } from '../../formjs-crux/garden/docu
 import { validateProject as validatePdfme } from '../../pdfme-crux/garden/document.js';
 import { validateProject as validateMaps } from '../../maps-crux/garden/document.js';
 import { validateProject as validateP5 } from '../../p5-crux/garden/document.js';
+import { validateProject as validateGlsl } from '../../glsl-crux/garden/document.js';
 import { validateProject as validateRecorder } from '../../recorder-crux/garden/document.js';
 import { validateProject as validateOpenCut } from '../../opencut-crux/garden/model.js';
 import { validateProject as validatePlayCanvas } from '../../playcanvas-editor-crux/garden/model.js';
@@ -121,6 +122,7 @@ export async function validateNativeDocument(
     | 'pdfme'
     | 'maps'
     | 'p5'
+    | 'glsl'
     | 'recorder'
     | 'opencut'
     | 'playcanvas-editor'
@@ -154,6 +156,7 @@ export async function validateNativeDocument(
   else if (app === 'pdfme') validatePdfme(doc);
   else if (app === 'maps') validateMaps(doc);
   else if (app === 'p5') validateP5(doc);
+  else if (app === 'glsl') validateGlsl(doc);
   else if (app === 'recorder') validateRecorder(doc);
   else if (app === 'opencut') validateOpenCut(doc);
   else if (app === 'playcanvas-editor') validatePlayCanvas(doc);

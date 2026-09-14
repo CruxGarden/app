@@ -1,0 +1,11 @@
+{
+  "name": "glsl-crux",
+  "private": true,
+  "version": "0.1.0",
+  "description": "glslEditor as a Crux Tool: a live GLSL fragment-shader editor, frames saved as outputs, the shader shareable as a live page",
+  "type": "module",
+  "scripts": {
+    "check": "node --check garden/bridge.js && node --check garden/document.js",
+    "test:garden": "node --test garden/document.test.mjs"
+  }
+}

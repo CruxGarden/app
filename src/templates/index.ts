@@ -255,6 +255,7 @@ const loaders: Record<string, () => Promise<{ default: TemplateDefinition }>> = 
   'pdfme-app': () => import('./pdfme-app'),
   'maps-app': () => import('./maps-app'),
   'p5-app': () => import('./p5-app'),
+  'glsl-app': () => import('./glsl-app'),
   'recorder-app': () => import('./recorder-app'),
   'underrun-app': () => import('./underrun-app'),
   'playcanvas-editor-app': () => import('./playcanvas-editor-app'),
