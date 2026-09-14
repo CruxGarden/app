@@ -45,7 +45,7 @@
     "test:piskel": "npm run build:piskel && node --test piskel-crux/src/garden/model.test.mjs",
     "build:rawgraphs": "yarn --cwd rawgraphs-crux install --frozen-lockfile --ignore-scripts && yarn --cwd rawgraphs-crux run build",
     "test:rawgraphs": "npm run build:rawgraphs && npm --prefix rawgraphs-crux test",
-    "build:jupyterlite": "npm --prefix jupyterlite-crux run build",
+    "build:jupyterlite": "node embedded-apps/sync-shared.mjs && npm --prefix jupyterlite-crux run build",
     "test:jupyterlite": "npm run build:jupyterlite && npm --prefix jupyterlite-crux test",
     "prepare:astro-editors": "npm --prefix notes-crux install --ignore-scripts && npm run build:notes && npm --prefix moqira-crux install --ignore-scripts && npm run build:moqira",
     "build:gephi": "npm --prefix gephi-crux ci && npm --prefix gephi-crux run build",

@@ -92,6 +92,13 @@ it('retains native notebook cells, outputs and folders through Growth and portab
   expect(((await call({ op: 'read', path: 'project.json' })) as { content: string }).content).toBe(
     content,
   );
+  const output = (await call({
+    op: 'save-output',
+    label: 'Analysis notebook',
+    mimeType: 'application/x-ipynb+json',
+    bytes: bytes.buffer,
+  })) as { path: string };
+  expect(output.path).toMatch(/\.ipynb$/);
   const imported = await importCrux({
     data: (await exportCrux({ cruxId: crux.id })).blob,
     mode: 'clone',
@@ -106,8 +113,12 @@ it('retains native notebook cells, outputs and folders through Growth and portab
     files.find((f) => f.meta?.path === 'data/' + asset.path)!.id,
   );
   expect(new Uint8Array(await data.arrayBuffer())).toEqual(bytes);
+  const exportedNotebook = files.find((f) => f.meta?.path === output.path)!;
+  expect(
+    new Uint8Array(await (await services.artifact.downloadBlob(exportedNotebook.id)).arrayBuffer()),
+  ).toEqual(bytes);
 });
-it('limits agent commands to native notebook inspection and bounded cell insertion', () => {
+it('validates native notebook commands and keeps cell insertion separate from execution', () => {
   const a = embeddedAppToolAdapter({ meta: { template: 'jupyterlite-app' } })!;
   expect(a.prepare('inspect_jupyterlite', {})).toEqual({ op: 'inspect' });
   expect(a.prepare('append_jupyterlite_cell', { cellType: 'code', source: '1+1' })).toEqual({

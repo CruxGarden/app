@@ -63,6 +63,7 @@ const EXTENSIONS: Record<string, string> = {
   'application/pdf': 'pdf',
   'application/vnd.openxmlformats-officedocument.presentationml.presentation': 'pptx',
   'text/csv': 'csv',
+  'application/x-ipynb+json': 'ipynb',
   'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'docx',
   'video/webm': 'webm',
   'video/mp4': 'mp4',
@@ -84,7 +85,7 @@ export function outputKind(mimeType: string): 'image' | 'audio' | 'bundle' {
 const KIND_PATTERN = {
   image: /\.(png|jpe?g|gif|webp|svg)$/i,
   audio: /\.(wav|mp3|mid)$/i,
-  bundle: /\.(zip|epub|otf|ttf|woff|woff2|stl|3mf|obj|amf|x3d|dxf|csv|pptx)$/i,
+  bundle: /\.(zip|epub|otf|ttf|woff|woff2|stl|3mf|obj|amf|x3d|dxf|csv|pptx|ipynb)$/i,
 };
 const KIND_EXAMPLE = {
   image: 'assets/cover.png',

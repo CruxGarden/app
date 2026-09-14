@@ -5,6 +5,6 @@
   "type": "module",
   "scripts": {
     "build": "node scripts/build.cjs",
-    "test": "node --test garden/model.test.js"
+    "test": "node --test garden/*.test.js"
   }
 }

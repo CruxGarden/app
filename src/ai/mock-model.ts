@@ -460,6 +460,97 @@ export function getMockLanguageModel(): LanguageModel {
             return toolCallStream('set_gephi_title', { title: 'Research connections' });
           return textStream('Updated the network title and saved it in Garden.');
         }
+        if (lastUserText(prompt).includes('[jupyterlite:depth-create]')) {
+          const rounds = toolResultsThisTurn(prompt);
+          const cellId = JSON.parse(
+            toolResultText(prompt, 'append_jupyterlite_cell') || '{}',
+          ).cellId;
+          const source =
+            'import csv\nimport numpy as np\nimport matplotlib.pyplot as plt\nwith open("observations.csv") as f:\n    values = [float(row["Height"]) for row in csv.DictReader(f)]\nprint("Mean height:", float(np.mean(values)))\nplt.figure(figsize=(5, 3))\nplt.bar(["A", "B", "C"], values, color="#42866b")\nplt.ylabel("Height (cm)")\nplt.title("Seedling trial")\nplt.tight_layout()\nplt.show()';
+          if (!rounds.length)
+            return toolCallStream('create_jupyterlite_notebook', { name: 'seed-trial.ipynb' });
+          if (rounds.length === 1)
+            return toolCallStream('append_jupyterlite_cell', {
+              cellType: 'markdown',
+              source: '## Seedling trial\nThree measurements from the shared garden.',
+            });
+          if (rounds.length === 2)
+            return toolCallStream('append_jupyterlite_cell', { cellType: 'code', source });
+          if (rounds.length === 3) return toolCallStream('run_jupyterlite_cell', { cellId });
+          if (rounds.length === 4)
+            return toolCallStream('replace_jupyterlite_cell_text', {
+              cellId,
+              find: 'row["Height"]',
+              replace: 'row["Height_cm"]',
+            });
+          if (rounds.length === 5) return toolCallStream('run_jupyterlite_cell', { cellId });
+          if (rounds.length === 6) {
+            const result = JSON.parse(toolResultText(prompt, 'run_jupyterlite_cell') || '{}');
+            const outputIndex = result.cells?.[0]?.outputs?.find(
+              (o: { exportablePng?: boolean }) => o.exportablePng,
+            )?.outputIndex;
+            return toolCallStream('save_jupyterlite_plot', {
+              cellId,
+              outputIndex,
+              name: 'Seedling heights',
+            });
+          }
+          if (rounds.length === 7)
+            return toolCallStream('save_jupyterlite_notebook', { name: 'Seed trial analysis' });
+          return textStream(
+            'Analyzed the seed trial, corrected the column error and saved the notebook and plot.',
+          );
+        }
+        if (lastUserText(prompt).includes('[jupyterlite:depth-note]')) {
+          const rounds = toolResultsThisTurn(prompt);
+          if (!rounds.length) return toolCallStream('inspect_jupyterlite', {});
+          if (rounds.length === 1) {
+            const result = JSON.parse(toolResultText(prompt, 'inspect_jupyterlite') || '{}');
+            return toolCallStream('replace_jupyterlite_cell_text', {
+              cellId: result.cells?.find((c: { type: string }) => c.type === 'markdown')?.id,
+              find: 'Three measurements',
+              replace: 'Three measured seedlings',
+            });
+          }
+          return textStream('Clarified the introduction while retaining your note.');
+        }
+        if (lastUserText(prompt).includes('[jupyterlite:depth-revise]')) {
+          const rounds = toolResultsThisTurn(prompt);
+          const result = JSON.parse(toolResultText(prompt, 'inspect_jupyterlite') || '{}');
+          const note = result.cells?.find((c: { type: string }) => c.type === 'markdown');
+          const empty = result.cells?.find((c: { source: string }) => c.source === '');
+          const steps: [string, Record<string, unknown>][] = [
+            ['inspect_jupyterlite', {}],
+            [
+              'replace_jupyterlite_cell_text',
+              { cellId: note?.id, find: 'shared garden', replace: 'community garden' },
+            ],
+            ['move_jupyterlite_cell', { cellId: note?.id, direction: 'up' }],
+            ['delete_jupyterlite_cell', { cellId: empty?.id }],
+            [
+              'insert_jupyterlite_cell',
+              {
+                index: 2,
+                cellType: 'markdown',
+                source: '## Findings\nMean height is 4 cm. This small sample is descriptive.',
+              },
+            ],
+            ['save_jupyterlite_notebook', { name: 'Revised seed trial' }],
+          ];
+          if (rounds.length < steps.length) return toolCallStream(...steps[rounds.length]!);
+          return textStream('Revised the analysis and preserved your lab note.');
+        }
+        if (lastUserText(prompt).includes('[jupyterlite:depth-rerun]')) {
+          const rounds = toolResultsThisTurn(prompt);
+          if (!rounds.length) return toolCallStream('inspect_jupyterlite', {});
+          if (rounds.length === 1) {
+            const result = JSON.parse(toolResultText(prompt, 'inspect_jupyterlite') || '{}');
+            return toolCallStream('run_jupyterlite_cell', {
+              cellId: result.cells?.find((c: { type: string }) => c.type === 'code')?.id,
+            });
+          }
+          return textStream('Re-executed the saved analysis in a fresh kernel.');
+        }
         if (lastUserText(prompt).includes('[jupyterlite:cell]')) {
           const rounds = toolResultsThisTurn(prompt);
           if (!rounds.length) return toolCallStream('inspect_jupyterlite', {});
