@@ -16,6 +16,7 @@ const NATIVE_TEMPLATES = {
   'p5-app': 'p5',
   'glsl-app': 'glsl',
   'glyphr-app': 'glyphr',
+  'fmg-app': 'fmg',
   'recorder-app': 'recorder',
   'am-1-app': 'am-1',
   'opencut-app': 'opencut',

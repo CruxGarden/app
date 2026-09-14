@@ -343,6 +343,14 @@ export function getMockLanguageModel(): LanguageModel {
             return toolCallStream('set_recorder_name', { name: 'Walkthrough takes' });
           return textStream('Listed the recordings and named the Crux Walkthrough takes.');
         }
+        if (lastUserText(prompt).includes('[map:world]')) {
+          const rounds = toolResultsThisTurn(prompt);
+          if (!rounds.length) return toolCallStream('inspect_map', {});
+          if (rounds.length === 1) return toolCallStream('set_map_name', { name: 'Moss Isles' });
+          if (rounds.length === 2)
+            return toolCallStream('save_map_image', { format: 'png', name: 'Moss Isles' });
+          return textStream('Named the world Moss Isles and saved a PNG of it.');
+        }
         if (lastUserText(prompt).includes('[font:letter]')) {
           const rounds = toolResultsThisTurn(prompt);
           if (!rounds.length) return toolCallStream('inspect_font', {});
