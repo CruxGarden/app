@@ -73,6 +73,13 @@ export const TOOL_INFO: Record<string, ToolInfo> = {
     relationship:
       'A notation tool around abcjs (MIT) and the FluidR3 piano soundfont (MIT), both vendored unmodified; the page, the Garden integration and the outputs are Crux Garden’s.',
   },
+  'timeline-app': {
+    name: 'TimelineJS',
+    upstream: 'https://github.com/NUKnightLab/TimelineJS3',
+    detailsPath: 'UPSTREAM.md',
+    relationship:
+      'Knight Lab’s TimelineJS (MPL-2.0) vendored unmodified as upstream builds it; the event editor around it, the Garden integration and the shared page are Crux Garden’s.',
+  },
   'jscad-app': {
     name: 'JSCAD',
     upstream: 'https://github.com/jscad/OpenJSCAD.org',

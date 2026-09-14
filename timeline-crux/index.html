@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Timeline</title>
+    <link rel="stylesheet" href="runtime/css/timeline.css" />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <header id="top">
+      <label>Timeline <input id="timeline-name" maxlength="200" placeholder="Timeline" /></label>
+      <span id="info"></span>
+    </header>
+    <main id="split">
+      <aside id="editor" aria-label="Events">
+        <section class="block">
+          <h2>Title slide</h2>
+          <label>Headline <input id="title-headline" maxlength="300" /></label>
+          <label>Text <textarea id="title-text" rows="3"></textarea></label>
+        </section>
+        <section class="block">
+          <h2>Events</h2>
+          <ol id="events"></ol>
+          <button type="button" id="add-event">Add event</button>
+        </section>
+      </aside>
+      <div id="timeline-embed"></div>
+    </main>
+    <!-- TimelineJS, upstream's build, unmodified -->
+    <script src="runtime/js/timeline.js"></script>
+    <script src="app.js"></script>
+    <script type="module" src="garden/bridge.js"></script>
+  </body>
+</html>

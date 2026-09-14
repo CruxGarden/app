@@ -261,6 +261,7 @@ const loaders: Record<string, () => Promise<{ default: TemplateDefinition }>> = 
   'abc-app': () => import('./abc-app'),
   'signal-app': () => import('./signal-app'),
   'jscad-app': () => import('./jscad-app'),
+  'timeline-app': () => import('./timeline-app'),
   'recorder-app': () => import('./recorder-app'),
   'underrun-app': () => import('./underrun-app'),
   'playcanvas-editor-app': () => import('./playcanvas-editor-app'),

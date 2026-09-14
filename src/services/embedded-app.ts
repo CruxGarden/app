@@ -20,6 +20,7 @@ const NATIVE_TEMPLATES = {
   'abc-app': 'abc',
   'signal-app': 'signal',
   'jscad-app': 'jscad',
+  'timeline-app': 'timeline',
   'recorder-app': 'recorder',
   'am-1-app': 'am-1',
   'opencut-app': 'opencut',
@@ -182,7 +183,8 @@ export function isLocalCreationTool(crux: { meta?: Record<string, unknown> } | n
       native !== 'p5' &&
       native !== 'glsl' &&
       native !== 'abc' &&
-      native !== 'jscad') ||
+      native !== 'jscad' &&
+      native !== 'timeline') ||
     isCardinal(crux) ||
     !!samplerType(crux)
   );

@@ -319,7 +319,7 @@ export async function publishPipeline(
     nativeAppType(crux) === 'formjs' ||
     nativeAppType(crux) === 'maps';
   // A sketch or shader Crux publishes its page as it is: no build, the files are the site.
-  const publishesAsIs = ['p5', 'glsl', 'abc', 'jscad'].includes(nativeAppType(crux) ?? '');
+  const publishesAsIs = ['p5', 'glsl', 'abc', 'jscad', 'timeline'].includes(nativeAppType(crux) ?? '');
   if (isEmbeddedApp(crux) && !builds && !publishesAsIs)
     throw new Error(
       'This notebook is missing its site configuration. Restore it before publishing.',

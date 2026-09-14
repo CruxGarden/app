@@ -1,0 +1,35 @@
+{
+  "title": {
+    "text": {
+      "headline": "A Garden Year",
+      "text": "Twelve months in a small garden: what was planted, what came up, and what the weather did."
+    }
+  },
+  "events": [
+    {
+      "unique_id": "first-seeds",
+      "start_date": { "year": 2026, "month": 3, "day": 14 },
+      "text": { "headline": "First seeds in trays", "text": "Tomatoes, basil and a row of sweet peas on the windowsill." },
+      "group": "Planting"
+    },
+    {
+      "unique_id": "beds-dug",
+      "start_date": { "year": 2026, "month": 4, "day": 4 },
+      "text": { "headline": "Beds dug and mulched", "text": "Two new raised beds, filled with last year’s leaf mould." },
+      "group": "Work"
+    },
+    {
+      "unique_id": "first-bloom",
+      "start_date": { "year": 2026, "month": 5, "day": 20 },
+      "text": { "headline": "First sweet pea in bloom", "text": "Pale pink, along the north fence." },
+      "group": "Blooms"
+    },
+    {
+      "unique_id": "harvest",
+      "start_date": { "year": 2026, "month": 8, "day": 9 },
+      "end_date": { "year": 2026, "month": 9, "day": 30 },
+      "text": { "headline": "Tomato harvest", "text": "Seven weeks of tomatoes; the basil kept up." },
+      "group": "Harvest"
+    }
+  ]
+}

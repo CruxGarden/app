@@ -1,0 +1,137 @@
+/* The page around TimelineJS: a small event editor on the left, the timeline on the right. */
+:root {
+  --ink: #1f2a24;
+  --paper: #f6f4ec;
+  --line: #d6d2c4;
+  --accent: #4f8a63;
+}
+html,
+body {
+  height: 100%;
+  margin: 0;
+  font: 14px/1.4 system-ui, sans-serif;
+  color: var(--ink);
+  background: var(--paper);
+}
+body {
+  display: flex;
+  flex-direction: column;
+}
+#top {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--line);
+  background: #fff;
+}
+#top label {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  font-weight: 600;
+}
+#top input {
+  font: inherit;
+  padding: 4px 8px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  min-width: 18em;
+}
+#info {
+  margin-left: auto;
+  color: #66705f;
+  font-size: 12px;
+}
+#split {
+  flex: 1;
+  display: flex;
+  min-height: 0;
+}
+#editor {
+  width: 340px;
+  flex: none;
+  overflow: auto;
+  padding: 12px;
+  border-right: 1px solid var(--line);
+  background: #fbfaf5;
+}
+#editor h2 {
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin: 8px 0;
+  color: #66705f;
+}
+#editor .block + .block {
+  margin-top: 16px;
+}
+#editor label {
+  display: block;
+  margin: 6px 0;
+  font-size: 12px;
+  color: #4a5346;
+}
+#editor input,
+#editor textarea,
+#editor select {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  font: inherit;
+  font-size: 13px;
+  padding: 4px 6px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: #fff;
+}
+#editor .dates {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 6px;
+}
+#events {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+#events .event {
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 8px;
+  margin-bottom: 10px;
+  background: #fff;
+}
+#events .event header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-weight: 600;
+}
+#editor button {
+  font: inherit;
+  padding: 5px 10px;
+  border: 1px solid var(--accent);
+  border-radius: 4px;
+  color: #fff;
+  background: var(--accent);
+  cursor: pointer;
+}
+#editor button.remove {
+  padding: 2px 8px;
+  color: #7a2e2e;
+  background: transparent;
+  border-color: var(--line);
+}
+#timeline-embed {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+}
+body.view #editor,
+body.view #top {
+  display: none;
+}
+body.garden #split {
+  padding-bottom: 34px;
+}

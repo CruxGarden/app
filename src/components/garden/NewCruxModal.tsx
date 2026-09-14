@@ -325,6 +325,16 @@ const TEMPLATES: Template[] = [
     desktopOnly: true,
   },
   {
+    id: 'timeline-app',
+    label: 'Timeline',
+    description: 'Creative · a storytelling timeline with TimelineJS: events with dates, text, pictures and video, groups and eras; a page people scroll through',
+    defaultTitle: 'My timeline',
+    icon: <PencilIcon />,
+    thumb: <BlankThumb />,
+    kind: 'webapp',
+    desktopOnly: true,
+  },
+  {
     id: 'jscad-app',
     label: 'Model',
     description: 'Creative · parametric 3D modelling in JavaScript with JSCAD: code, parameters, a viewer; STL, 3MF, OBJ, SVG outputs for printing and cutting',
