@@ -10,3 +10,7 @@ Changes: Garden startup/bridge, scoped layer agent operations, runtime output di
 Native image imports retain the editor's decoded pixels in lossless PNG form, not the original camera file or all original EXIF metadata. External Google font discovery remains an upstream online feature; custom fonts are not currently packaged into the Crux. Use locally available fonts for offline projects. Native exports are available; whole-editor website/Explore distribution is not enabled by this integration.
 
 The top-level code is MIT; retain MIT-LICENSE.txt, upstream helper notices in src/js/libs and dependency notices. Bundled third-party helpers and optional assets retain their own terms. A complete public distribution audit is separate work.
+
+## Shared command lifecycle, 2026-09-14
+
+`src/js/garden/bridge.js` adopts the common serialized settle → validate → confirm pending edits → native action → settle → confirm result lifecycle. Layer updates continue through miniPaint's native Bundle/Update actions and Undo. `garden/shared/command-session.{js,d.ts}` are generated copies of Garden's canonical `embedded-apps/shared/` helper, synchronized before the host build and included in the portable source. Standalone builds need no parent-repository files. Review the action/capture hooks and run manual/agent/Undo/restart/export checks on every upstream update. This adoption does not yet add missing image-creation operations.

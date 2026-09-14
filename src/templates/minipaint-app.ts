@@ -1,7 +1,7 @@
 import type { TemplateDefinition } from './index';
 import { LAYOUT_WORKSHOP } from './index';
 const sources = import.meta.glob(
-  '../../minipaint-crux/{src/**/*,garden/*,package.json,package-lock.json,webpack.config.js,index.html,.babelrc,MIT-LICENSE.txt,README.md,UPSTREAM.md}',
+  '../../minipaint-crux/{src/**/*,garden/**/*,package.json,package-lock.json,webpack.config.js,index.html,.babelrc,MIT-LICENSE.txt,README.md,UPSTREAM.md}',
   { query: '?raw', import: 'default', eager: true },
 ) as Record<string, string>;
 const assets = import.meta.glob(

@@ -1,4 +1,5 @@
 import { validateProject } from '../../../garden/model.js';
+import { createCommandSession } from '../../../garden/shared/command-session.js';
 
 export async function startGarden(app) {
   if (parent === window) return;
@@ -8,8 +9,7 @@ export async function startGarden(app) {
     saved = 0,
     hydrating = true;
   let timer,
-    tail = Promise.resolve(),
-    commandTail = Promise.resolve();
+    tail = Promise.resolve();
   const pending = new Map();
   const actions = new Set();
   const rasterCache = new Map();
@@ -161,30 +161,54 @@ export async function startGarden(app) {
     show('Image saved to Cruxspace');
     return { ...output, width: canvas.width, height: canvas.height };
   }
-  async function command(value) {
-    await settle();
-    if (value.op === 'inspect') return inspect();
-    if (value.op === 'save-image') return saveImage(value.label);
-    if (value.op !== 'layer') throw new Error('Unsupported miniPaint operation.');
-    const settings = {};
-    if (typeof value.name === 'string' && value.name.length <= 200) settings.name = value.name;
-    if (typeof value.visible === 'boolean') settings.visible = value.visible;
-    if (typeof value.opacity === 'number' && value.opacity >= 0 && value.opacity <= 100)
-      settings.opacity = value.opacity;
-    if (!Object.keys(settings).length || !Number.isSafeInteger(value.id))
-      throw new Error('Choose a layer and valid properties.');
-    await save();
-    const result = await app.State.do_action(
-      new app.Actions.Bundle_action('garden_layer', 'Update Layer', [
-        new app.Actions.Refresh_layers_gui_action('undo'),
-        new app.Actions.Update_layer_action(value.id, settings),
-        new app.Actions.Refresh_layers_gui_action('do'),
-      ]),
-    );
-    if (result.status !== 'completed') throw new Error('The layer could not be changed.');
-    await save();
-    return inspect();
-  }
+  const commands = createCommandSession({
+    async settle() {
+      if (hydrating) throw new Error('Wait for the image editor to finish opening.');
+      await settle();
+    },
+    async save() { do { await save(); } while (revision !== saved || actions.size); },
+    prepare(value) {
+      if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('Choose a miniPaint operation.');
+      if (value.op === 'inspect' && Object.keys(value).length === 1)
+        return { mutates: false, apply: inspect };
+      if (value.op === 'save-image' && Object.keys(value).length === 2 &&
+          typeof value.label === 'string' && value.label.trim() && value.label.length <= 120)
+        return { mutates: true, apply: () => saveImage(value.label.trim()) };
+      if (value.op !== 'layer' || Object.keys(value).some(key => !['op', 'id', 'name', 'visible', 'opacity'].includes(key)))
+        throw new Error('Unsupported miniPaint operation.');
+      if (!Number.isSafeInteger(value.id) || !app.Config.layers.some(layer => layer.id === value.id))
+        throw new Error('Layer no longer exists. Inspect miniPaint again.');
+      const settings = {};
+      if (value.name !== undefined) {
+        if (typeof value.name !== 'string' || value.name.length > 200) throw new Error('Use a layer name up to 200 characters.');
+        settings.name = value.name;
+      }
+      if (value.visible !== undefined) {
+        if (typeof value.visible !== 'boolean') throw new Error('Visibility must be true or false.');
+        settings.visible = value.visible;
+      }
+      if (value.opacity !== undefined) {
+        if (!Number.isFinite(value.opacity) || value.opacity < 0 || value.opacity > 100) throw new Error('Opacity must be between 0 and 100.');
+        settings.opacity = value.opacity;
+      }
+      if (!Object.keys(settings).length) throw new Error('Choose properties to change.');
+      return {
+        mutates: true,
+        async apply() {
+          if (!app.Config.layers.some(layer => layer.id === value.id)) throw new Error('Layer no longer exists. Inspect miniPaint again.');
+          const result = await app.State.do_action(
+            new app.Actions.Bundle_action('garden_layer', 'Update Layer', [
+              new app.Actions.Refresh_layers_gui_action('undo'),
+              new app.Actions.Update_layer_action(value.id, settings),
+              new app.Actions.Refresh_layers_gui_action('do'),
+            ]),
+          );
+          if (result.status !== 'completed') throw new Error('The layer could not be changed.');
+        },
+        result: inspect,
+      };
+    },
+  });
   window.addEventListener('message', (event) => {
     if (event.source !== parent || (origin !== undefined && event.origin !== origin)) return;
     const message = event.data;
@@ -206,9 +230,7 @@ export async function startGarden(app) {
         (error) => send({ op: 'flushed', flushId: message.id, error: error.message }),
       );
     } else if (message.type === 'crux:app:command') {
-      const operation = commandTail.then(() => command(message.command));
-      commandTail = operation.catch(() => {});
-      operation.then(
+      commands.execute(message.command).then(
         (result) => send({ op: 'tool-result', commandId: message.id, result }),
         (error) => send({ op: 'tool-result', commandId: message.id, error: error.message }),
       );

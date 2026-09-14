@@ -50,6 +50,12 @@ export const useSnapshotStore = defineStore('snapshot', {
 
       // 获取当前indexeddb中全部快照的ID
       const allKeys = await db.snapshots.orderBy('id').keys()
+      // Garden: explicit checkpoints and a delayed UI checkpoint may describe
+      // the same state. A no-op must neither add an Undo step nor discard Redo.
+      const currentKey = allKeys[this.snapshotCursor]
+      const current = currentKey === undefined ? undefined : await db.snapshots.get(currentKey as number)
+      if (current && JSON.stringify(current.slides) === JSON.stringify(slidesStore.slides)) return
+
   
       let needDeleteKeys: IndexableTypeArray = []
   

@@ -59,7 +59,7 @@ onMounted(async () => {
     }
 
     await deleteDiscardedDB()
-    snapshotStore.initSnapshotDatabase()
+    await snapshotStore.initSnapshotDatabase()
   }
 })
 

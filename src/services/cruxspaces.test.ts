@@ -239,7 +239,9 @@ it('advertises sounds and ZIP bundles, matches destination extensions, and unpac
   zip.folder('empty');
   const bundle = await saveCruxOutput(
     game.id,
-    new Blob([(await zip.generateAsync({ type: 'uint8array' })) as BlobPart], { type: 'application/zip' }),
+    new Blob([(await zip.generateAsync({ type: 'uint8array' })) as BlobPart], {
+      type: 'application/zip',
+    }),
     'Web game',
   );
   expect((await listCruxspaceAssets(space.id)).map((a) => a.label)).toEqual([
@@ -279,9 +281,9 @@ it('advertises sounds and ZIP bundles, matches destination extensions, and unpac
   expect(used.entries).toEqual(['public/game/index.html', 'public/game/runtime/game.js']);
   expect(used.origin.unpacked).toEqual(['index.html', 'runtime/game.js']);
   const files = await artifact.findByResource('crux', site.id);
-  expect(await artifact.readContent(files.find((f) => f.meta?.path === 'public/game/index.html')!.id)).toBe(
-    '<canvas></canvas>',
-  );
+  expect(
+    await artifact.readContent(files.find((f) => f.meta?.path === 'public/game/index.html')!.id),
+  ).toBe('<canvas></canvas>');
   expect(files.find((f) => f.meta?.path === used.provenancePath)).toBeTruthy();
   await expect(
     copyCruxspaceAsset({
@@ -306,4 +308,35 @@ it('advertises sounds and ZIP bundles, matches destination extensions, and unpac
     })) as string,
   );
   expect(byAgent.entries).toEqual(['public/play/index.html', 'public/play/runtime/game.js']);
+});
+
+it('keeps an editable PPTX output intact when another Cruxspace member uses it', async () => {
+  const { crux, artifact } = getServices();
+  const source = await crux.create({ title: 'Presentation', type: 'workspace' });
+  const target = await crux.create({ title: 'Event site', type: 'workspace' });
+  const space = await createCruxspace({
+    name: 'Launch',
+    brief: '',
+    cruxIds: [source.id, target.id],
+  });
+  const bytes = new Uint8Array([80, 75, 3, 4, 1, 2, 3]);
+  const output = await saveCruxOutput(
+    source.id,
+    new Blob([bytes], {
+      type: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+    }),
+    'Editable deck',
+  );
+  expect(output.path).toMatch(/\.pptx$/);
+  const copied = await copyCruxspaceAsset({
+    spaceId: space.id,
+    outputId: output.id,
+    sourceCruxId: source.id,
+    fingerprint: output.fingerprint,
+    targetCruxId: target.id,
+    path: 'assets/deck.pptx',
+  });
+  expect(
+    new Uint8Array(await (await artifact.downloadBlob(copied.artifact.id)).arrayBuffer()),
+  ).toEqual(bytes);
 });
