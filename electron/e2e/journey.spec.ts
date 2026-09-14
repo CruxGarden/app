@@ -60,7 +60,7 @@ test.describe('acceptance journey (local half)', () => {
       // Opening the .md in the editor starts astro dev; first run installs deps.
       const preview = page.locator('iframe[src^="http://127.0.0.1"]');
       await expect(preview).toBeVisible({ timeout: 4 * 60_000 });
-      await expect(preview).toHaveAttribute('src', /\/posts\/hello-from-playwright$/);
+      await expect(preview).toHaveAttribute('src', /\/blog\/hello-from-playwright$/);
       await page.screenshot({ path: 'e2e/.results/journey-2-preview.png' });
 
       // The dev server is a real local web server — leave the app's chrome and

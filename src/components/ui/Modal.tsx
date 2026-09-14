@@ -1,4 +1,5 @@
 import { type ReactNode, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { cn } from '@/lib/cn';
 import { AnimatePresence, motion } from 'motion/react';
 import Panel from './Panel';
@@ -78,7 +79,11 @@ export default function Modal({
   // The Mood's dialog motion (ADR 0041): Motion plays the enter on mount and the exit before unmount
   const role = useMotionRole('dialog');
 
-  return (
+  // Rendered at <body>: a dialog inside a glass surface would otherwise be trapped by the
+  // panel's backdrop-filter, which makes that panel the containing block of `fixed` children
+  // (the Create Cruxspace dialog was clipped to the Cruxspaces section's height, ADR 0043).
+  if (typeof document === 'undefined') return null;
+  return createPortal(
     <AnimatePresence>
       {open && (
         <div
@@ -147,6 +152,7 @@ export default function Modal({
           </motion.div>
         </div>
       )}
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body,
   );
 }

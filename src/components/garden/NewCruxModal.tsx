@@ -641,7 +641,8 @@ const TEMPLATES: Template[] = [
   {
     id: 'astro-homepage',
     label: 'Astro Home Page',
-    description: 'Your page on the internet — hero, about, links, and posts',
+    description:
+      'Your page on the internet on the Keel theme — name, about, works, writing, search',
     icon: <HomeIcon />,
     thumb: <HomeThumb />,
     kind: 'webapp',

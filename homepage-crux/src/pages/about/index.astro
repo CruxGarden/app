@@ -1,0 +1,29 @@
+---
+// The prose on this page is placeholder copy — rewrite it as your own. It is
+// intentionally *not* in `src/i18n/`: the dictionary holds UI chrome, so a
+// translator isn't handed someone else's biography, and you don't have to open
+// a dictionary file to edit your own about page.
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { SITE } from '../../consts';
+import { t } from '../../i18n';
+---
+
+<BaseLayout title={t('about.title')} description={`About ${SITE.title}.`}>
+  <section class="page-head section">
+    <p class="eyebrow">{t('about.eyebrow')}</p>
+    <h1>{SITE.title}</h1>
+    <p class="lead">{SITE.about || SITE.description}</p>
+  </section>
+  <section class="section prose-grid">
+    <div>
+      <p class="eyebrow">{t('about.eyebrow')}</p>
+      <h2>{SITE.description}</h2>
+    </div>
+    <div class="prose-stack">
+      <p>
+        This page is yours to write: it is <code>src/pages/about/index.astro</code>, and the name,
+        tagline and about text above come from the site settings.
+      </p>
+    </div>
+  </section>
+</BaseLayout>
