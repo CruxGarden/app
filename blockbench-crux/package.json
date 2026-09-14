@@ -148,7 +148,7 @@
     "publish-types": "npm publish ./types",
     "generate-docs": "npm run generate-types && npx typedoc --options typedoc.json",
     "build": "node garden/build.cjs",
-    "test:garden": "node --test garden/model.test.mjs"
+    "test:garden": "node --test garden/*.test.mjs garden/*.test.js"
   },
   "overrides": {
     "three": "$three"
