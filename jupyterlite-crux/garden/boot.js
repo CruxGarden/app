@@ -1,4 +1,5 @@
 import { startGarden } from './bridge.js';
+import { notebookCommands } from './notebook.js';
 export const garden = window.parent === window ? null : await startGarden();
 async function connect() {
   const deadline = Date.now() + 90000;
@@ -76,47 +77,14 @@ async function connect() {
     const active = app.shell.currentWidget?.context?.path;
     return { files, open, active: open.includes(active) ? active : null };
   };
-  const inspect = async () => {
-    const current = app.shell.currentWidget;
-    return {
-      active: current?.context?.path || null,
-      open: widgets().map((w) => w.context.path),
-      cells:
-        current?.context?.model?.sharedModel?.cells?.map((c, i) => ({
-          index: i,
-          type: c.cell_type,
-          source: c.getSource(),
-        })) || [],
-    };
-  };
+  const commands = notebookCommands(app, garden.saveOutput);
   garden.connect({
     capture,
     busy: () =>
       widgets().some((w) =>
         ['busy', 'starting'].includes(w.sessionContext?.session?.kernel?.status),
       ),
-    command: async (command) => {
-      if (command.op === 'inspect') return inspect();
-      if (
-        command.op !== 'append-cell' ||
-        !['code', 'markdown'].includes(command.cellType) ||
-        typeof command.source !== 'string' ||
-        command.source.length > 20000
-      )
-        throw new Error('Choose a code or Markdown cell up to 20,000 characters.');
-      const widget = app.shell.currentWidget,
-        model = widget?.context?.model?.sharedModel;
-      if (!model?.cells) throw new Error('Open a notebook before adding a cell.');
-      model.insertCell(model.cells.length, {
-        cell_type: command.cellType,
-        source: command.source,
-        metadata: {},
-        ...(command.cellType === 'code' ? { outputs: [], execution_count: null } : {}),
-      });
-      widget.content.activeCellIndex = model.cells.length - 1;
-      await widget.context.save();
-      return inspect();
-    },
+    prepare: commands.prepare,
   });
 }
 if (garden) connect().catch(garden.failed);
