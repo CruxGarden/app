@@ -660,6 +660,17 @@ const TEMPLATES: Template[] = [
     desktopOnly: true,
   },
   {
+    id: 'astro-recipes',
+    label: 'Recipe Book',
+    description:
+      'Recipes with times, servings, ingredients and steps on the Keel theme — printable, searchable',
+    icon: <PencilIcon />,
+    thumb: <BlogThumb />,
+    kind: 'webapp',
+    defaultTitle: 'My Recipe Book',
+    desktopOnly: true,
+  },
+  {
     id: 'digital-garden',
     label: 'Digital Garden',
     description:

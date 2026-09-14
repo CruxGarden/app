@@ -1,5 +1,5 @@
 # Skill: homepage
-Use when: the crux grew from the Home Page template (a personal site with works and writing).
+Use when: the crux grew from the Home Page template (works and writing).
 
 A personal home page built as an Astro Site Crux on the Astro Keel theme (MIT). The front page shows the person's name, tagline and about text, then the latest works and posts; `/about/`, `/works/`, `/blog/`, `/search/` and `/rss.xml` come with it.
 

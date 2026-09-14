@@ -1,5 +1,5 @@
 # Skill: astro-basics
-Use when: working in any Site Crux — an Astro project with a build step (astro.config.* present).
+Use when: working in any Site Crux (an Astro project with a build step).
 
 This crux is a real toolchain project, NOT a browser-only static site. What that changes:
 

@@ -470,6 +470,16 @@ export function getMockLanguageModel(): LanguageModel {
           if (rounds.length === 1) return toolCallStream('export_note_docx', {});
           return textStream('Exported the open note as a Word document in exports.');
         }
+        if (lastUserText(prompt).includes('[recipes:recipe]')) {
+          const rounds = toolResultsThisTurn(prompt);
+          if (!rounds.length)
+            return toolCallStream('write_file', {
+              path: 'src/content/recipes/moss-tea.md',
+              content:
+                "---\ntitle: 'Moss tea'\ndescription: 'A green infusion for a slow afternoon.'\npublishDate: 2026-09-14T12:00:00Z\nprepTime: 5\ncookTime: 10\nservings: 2\ncategory: 'Drinks'\ntags:\n  - garden\n---\n\n## Ingredients\n\n- 2 tsp green tea\n- 1 sprig mint\n- 500 ml water\n\n## Method\n\n1. Bring the water to just under the boil.\n2. Pour over the tea and mint; steep for four minutes.\n3. Strain and drink slowly.\n",
+            });
+          return textStream('Wrote the moss tea recipe with its ingredients and method.');
+        }
         if (lastUserText(prompt).includes('[home:post]')) {
           const rounds = toolResultsThisTurn(prompt);
           if (!rounds.length)
