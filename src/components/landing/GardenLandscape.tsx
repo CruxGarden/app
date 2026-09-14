@@ -127,7 +127,7 @@ export default function GardenLandscape({
       y: number,
       z: number,
     ) => mesh(parent, new THREE.BoxGeometry(size[0], size[1], size[2]), mat, x, y, z);
-    const segments = world.id === '8-bit' ? 4 : 13;
+    const segments = world.id === 'raster-bars' ? 4 : 13;
     const base = mesh(garden, new THREE.CylinderGeometry(8.7, 7, 2.4, segments), stone, 0, -0.7, 0);
     base.scale.z = 0.76;
     const soil = mesh(
@@ -315,7 +315,7 @@ export default function GardenLandscape({
           frond.rotation.y = -j * 1.26;
           frond.rotation.z = 0.18;
         }
-      } else if (i % 3 === 0 && world.id !== '8-bit' && world.id !== 'siberian-blizzard') {
+      } else if (i % 3 === 0 && world.id !== 'raster-bars' && world.id !== 'mountain-grey') {
         const cap = mesh(
           garden,
           new THREE.SphereGeometry(1.2, 12, 8, 0, Math.PI * 2, 0, Math.PI / 2),
@@ -338,9 +338,9 @@ export default function GardenLandscape({
         }
       } else {
         const crown =
-          world.id === '8-bit'
+          world.id === 'raster-bars'
             ? new THREE.BoxGeometry(1.3, 1.5, 1.3)
-            : world.id === 'siberian-blizzard'
+            : world.id === 'mountain-grey'
               ? new THREE.ConeGeometry(0.85, 2, 6)
               : new THREE.IcosahedronGeometry(0.9, 0);
         const tree = mesh(garden, crown, leaves, x, height + 1.35, z);

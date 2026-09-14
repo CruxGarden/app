@@ -3,6 +3,7 @@ import { useWorkspaceUIStore as useUIStore } from '@/stores/uiStore';
 import { useDismiss } from '@/hooks/useDismiss';
 import { AnimatePresence, motion } from 'motion/react';
 import { useMotionRole } from '@/hooks/useMotionRole';
+import GlassSurface from '@/components/ui/GlassSurface';
 import { cn } from '@/lib/cn';
 
 interface MenuItem {
@@ -169,26 +170,30 @@ export default function ContextMenu({
           initial={role.initial}
           animate={role.animate}
           exit={role.exit}
-          className="fixed z-50 min-w-[140px] bg-dropdown border border-dropdown-border rounded-dropdown shadow-dropdown py-1 overflow-hidden"
+          className="fixed z-50 min-w-[140px]"
           style={{ left: x, top: y }}
         >
-          {items.map((item) => (
-            <button
-              key={item.label}
-              role="menuitem"
-              onClick={item.action}
-              disabled={item.disabled}
-              className={cn(
-                'w-full text-left px-3 py-1.5 text-xs font-mono transition-colors cursor-pointer',
-                'disabled:cursor-not-allowed',
-                item.destructive
-                  ? 'text-error hover:bg-error-muted'
-                  : 'text-text hover:bg-accent-muted/20',
-              )}
-            >
-              {item.label}
-            </button>
-          ))}
+          <GlassSurface role="dropdown">
+            <div className="w-full bg-dropdown border border-dropdown-border rounded-dropdown shadow-dropdown py-1 overflow-hidden">
+              {items.map((item) => (
+                <button
+                  key={item.label}
+                  role="menuitem"
+                  onClick={item.action}
+                  disabled={item.disabled}
+                  className={cn(
+                    'w-full text-left px-3 py-1.5 text-xs font-mono transition-colors cursor-pointer',
+                    'disabled:cursor-not-allowed',
+                    item.destructive
+                      ? 'text-error hover:bg-error-muted'
+                      : 'text-text hover:bg-accent-muted/20',
+                  )}
+                >
+                  {item.label}
+                </button>
+              ))}
+            </div>
+          </GlassSurface>
         </motion.div>
       )}
     </AnimatePresence>

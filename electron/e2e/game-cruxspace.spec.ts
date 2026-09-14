@@ -97,9 +97,9 @@ test('Glow Garden: plan, board, sprites, sound, game, export and site across one
       await expect
         .poll(() => existsSync(join(members.plan.folder, 'notebook/Glow Garden plan.md')))
         .toBe(true);
-      expect(readFileSync(join(members.plan.folder, 'notebook/Glow Garden plan.md'), 'utf8')).toContain(
-        '## Milestones',
-      );
+      expect(
+        readFileSync(join(members.plan.folder, 'notebook/Glow Garden plan.md'), 'utf8'),
+      ).toContain('## Milestones');
       await snapshot(page, 'Plan');
       await shot('02-plan');
     });
@@ -145,31 +145,41 @@ test('Glow Garden: plan, board, sprites, sound, game, export and site across one
       // a person then touches one pixel so the Crux's history shows a real edit.
       await importPiskelArt(page, piskel, art('gardener-sheet.png'), { width: 32, height: 32 });
       await piskel.locator('[data-tool-id=tool-pen]').click();
-      await piskel.locator('#drawing-canvas-container').click({ position: { x: 180, y: 400 }, delay: 100 });
+      await piskel
+        .locator('#drawing-canvas-container')
+        .click({ position: { x: 180, y: 400 }, delay: 100 });
       await collaborator(
         page,
         'Set the walk speed and share the sheet [game:sprite]',
         'Set the walk speed and saved the sheet to the Cruxspace.',
       );
-      await expect.poll(() => outputs(members.sprites.folder).map((o) => o.label)).toEqual([
-        'Gardener sheet',
-      ]);
+      await expect
+        .poll(() => outputs(members.sprites.folder).map((o) => o.label))
+        .toEqual(['Gardener sheet']);
       await snapshot(page, 'First sprite');
       await shot('04-sprites');
       await open(page, 'Glow Garden seed');
       const seed = await nativeReady(page);
       await importPiskelArt(page, seed, art('seed.png'));
-      await collaborator(page, 'Share the seed [game:seed]', 'Saved the seed sprite to the Cruxspace.');
-      await expect.poll(() => outputs(members.seed.folder).map((o) => o.label)).toEqual([
-        'Seed sprite',
-      ]);
+      await collaborator(
+        page,
+        'Share the seed [game:seed]',
+        'Saved the seed sprite to the Cruxspace.',
+      );
+      await expect
+        .poll(() => outputs(members.seed.folder).map((o) => o.label))
+        .toEqual(['Seed sprite']);
       await open(page, 'Glow Garden ground');
       const ground = await nativeReady(page);
       await importPiskelArt(page, ground, art('garden-ground.png'));
-      await collaborator(page, 'Share the ground [game:ground]', 'Saved the garden ground to the Cruxspace.');
-      await expect.poll(() => outputs(members.ground.folder).map((o) => o.label)).toEqual([
-        'Garden ground',
-      ]);
+      await collaborator(
+        page,
+        'Share the ground [game:ground]',
+        'Saved the garden ground to the Cruxspace.',
+      );
+      await expect
+        .poll(() => outputs(members.ground.folder).map((o) => o.label))
+        .toEqual(['Garden ground']);
     });
 
     await test.step('5. Sound', async () => {
@@ -182,12 +192,16 @@ test('Glow Garden: plan, board, sprites, sound, game, export and site across one
       await audio.getByText('Load from Computer', { exact: true }).click();
       await (await chooser).setFiles(chime);
       await expect
-        .poll(() => !!JSON.parse(readFileSync(join(members.sound.folder, 'data/project.json'), 'utf8')).project?.waveform)
+        .poll(
+          () =>
+            !!JSON.parse(readFileSync(join(members.sound.folder, 'data/project.json'), 'utf8'))
+              .project?.waveform,
+        )
         .toBe(true);
       await collaborator(page, 'Share the chime [game:sound]', 'Saved the chime to the Cruxspace.');
-      await expect.poll(() => outputs(members.sound.folder).map((o) => o.mimeType)).toEqual([
-        'audio/wav',
-      ]);
+      await expect
+        .poll(() => outputs(members.sound.folder).map((o) => o.mimeType))
+        .toEqual(['audio/wav']);
       await snapshot(page, 'First sound');
       await shot('05-sound');
     });
@@ -199,10 +213,17 @@ test('Glow Garden: plan, board, sprites, sound, game, export and site across one
       await page.getByRole('button', { name: 'Use Seed sprite', exact: true }).click();
       await page.getByLabel('Destination path').fill('assets/seed-manual.png');
       await page.getByRole('button', { name: 'Copy selected version', exact: true }).click();
-      await expect(page.getByRole('status').filter({ hasText: 'Copied Seed sprite' })).toBeVisible();
-      // Escape reaches the host only while the host has focus; the dialog's own control always works.
+      await expect(
+        page.getByRole('status').filter({ hasText: 'Copied Seed sprite' }),
+      ).toBeVisible();
+      // The copy dialog leaves through its exit animation first (Motion, ADR 0041): wait for it,
+      // or "the last Close" is the one on its way out. Escape reaches the host only while the host
+      // has focus; the assets dialog's own control always works.
+      await expect(page.getByRole('button', { name: 'Copy selected version', exact: true })).toHaveCount(0);
       await page.getByRole('button', { name: 'Close', exact: true }).last().click();
-      await expect(page.getByRole('button', { name: 'Use Seed sprite', exact: true })).toHaveCount(0);
+      await expect(page.getByRole('button', { name: 'Use Seed sprite', exact: true })).toHaveCount(
+        0,
+      );
       expect(existsSync(join(members.game.folder, 'assets/seed-manual.png'))).toBe(true);
       await collaborator(
         page,
@@ -263,10 +284,14 @@ test('Glow Garden: plan, board, sprites, sound, game, export and site across one
     await test.step('8. Export the web game to the Cruxspace', async () => {
       await openWorkshop(page);
       await nativeReady(page);
-      await collaborator(page, 'Export the game [game:export]', 'Exported the web game to the Cruxspace.');
-      await expect.poll(() => outputs(members.game.folder).map((o) => o.mimeType)).toEqual([
-        'application/zip',
-      ]);
+      await collaborator(
+        page,
+        'Export the game [game:export]',
+        'Exported the web game to the Cruxspace.',
+      );
+      await expect
+        .poll(() => outputs(members.game.folder).map((o) => o.mimeType))
+        .toEqual(['application/zip']);
     });
 
     await test.step('9. The site receives the game and gets a play page', async () => {
@@ -276,7 +301,9 @@ test('Glow Garden: plan, board, sprites, sound, game, export and site across one
         'Put the game on the site [game:site]',
         'Unpacked the game into public/game and wrote the play page.',
       );
-      await expect.poll(() => existsSync(join(members.site.folder, 'public/game/index.html'))).toBe(true);
+      await expect
+        .poll(() => existsSync(join(members.site.folder, 'public/game/index.html')))
+        .toBe(true);
       expect(readFileSync(join(members.site.folder, 'src/pages/play.astro'), 'utf8')).toContain(
         '/game/index.html',
       );
@@ -297,7 +324,9 @@ test('Glow Garden: plan, board, sprites, sound, game, export and site across one
         await expect(site.getByRole('heading', { name: 'Glow Garden', level: 1 })).toBeVisible({
           timeout: 120000,
         });
-        await expect(site.frameLocator('iframe[title="Glow Garden game"]').locator('canvas')).toBeVisible({
+        await expect(
+          site.frameLocator('iframe[title="Glow Garden game"]').locator('canvas'),
+        ).toBeVisible({
           timeout: 120000,
         });
         await site.waitForTimeout(2500); // let the runtime draw its first frames
@@ -314,7 +343,9 @@ test('Glow Garden: plan, board, sprites, sound, game, export and site across one
       await page.getByRole('button', { name: 'Send Code' }).click();
       await page.getByPlaceholder('Enter code').fill('123456');
       await page.getByRole('button', { name: 'Connect', exact: true }).click();
-      const backupAsk = page.getByRole('dialog').filter({ hasText: 'A published site is not a backup' });
+      const backupAsk = page
+        .getByRole('dialog')
+        .filter({ hasText: 'A published site is not a backup' });
       await expect(backupAsk).toBeVisible({ timeout: 60000 });
       await backupAsk.getByRole('button', { name: 'Back up and share' }).click();
       await expect(page.getByText('Up to date')).toBeVisible({ timeout: 6 * 60_000 });
@@ -324,10 +355,15 @@ test('Glow Garden: plan, board, sprites, sound, game, export and site across one
       expect(paths.some((p) => /^play\/index\.html$|^play\.html$/.test(p))).toBe(true);
       // Serve exactly what was published and load the play page in a fresh browser.
       const server = createServer((request, response) => {
-        const name = decodeURIComponent(new URL(request.url!, 'http://x').pathname).replace(/^\/+/, '');
+        const name = decodeURIComponent(new URL(request.url!, 'http://x').pathname).replace(
+          /^\/+/,
+          '',
+        );
         const file =
           published.find((f) => f.path === name) ??
-          published.find((f) => f.path === `${name.replace(/\/$/, '')}/index.html`.replace(/^\//, '')) ??
+          published.find(
+            (f) => f.path === `${name.replace(/\/$/, '')}/index.html`.replace(/^\//, ''),
+          ) ??
           published.find((f) => f.path === (name ? `${name}/index.html` : 'index.html'));
         if (!file) {
           response.writeHead(404);
@@ -346,7 +382,9 @@ test('Glow Garden: plan, board, sprites, sound, game, export and site across one
         site.on('pageerror', (e) => errors.push(e.message));
         await site.goto(`http://127.0.0.1:${port}/play/`);
         await expect(site.getByRole('heading', { name: 'Glow Garden', level: 1 })).toBeVisible();
-        await expect(site.frameLocator('iframe[title="Glow Garden game"]').locator('canvas')).toBeVisible({
+        await expect(
+          site.frameLocator('iframe[title="Glow Garden game"]').locator('canvas'),
+        ).toBeVisible({
           timeout: 120000,
         });
         await site.waitForTimeout(2500);
@@ -367,17 +405,23 @@ test('Glow Garden: plan, board, sprites, sound, game, export and site across one
       const collab = page.getByRole('button', { name: 'Toggle collaboration' });
       if ((await collab.getAttribute('aria-pressed')) === 'true') await collab.click();
       const pane = page.getByTestId('pane-body-history');
-      if (!(await pane.isVisible())) await page.getByRole('button', { name: 'Toggle history' }).click();
+      if (!(await pane.isVisible()))
+        await page.getByRole('button', { name: 'Toggle history' }).click();
       await expect(pane).toBeVisible();
       await pane.getByRole('button', { name: 'Whole Crux · branches & merges' }).click();
       const graph = page.getByRole('dialog', { name: 'Whole Crux Growth' });
       await expect(graph).toBeVisible();
-      await expect(graph.getByRole('button', { name: 'Add pickup chime · merged', exact: true })).toBeVisible();
+      await expect(
+        graph.getByRole('button', { name: 'Add pickup chime · merged', exact: true }),
+      ).toBeVisible();
       await expect(graph.getByTestId('growth-canvas-2d').locator('canvas')).toBeVisible();
       await graph.getByRole('button', { name: 'Expand checkpoints', exact: true }).click();
       for (const label of ['First playable', 'Chime merged', 'Output: Glow Garden web build']) {
         await graph.getByLabel('Find checkpoint').fill(label);
-        await graph.getByRole('button', { name: new RegExp(`^${label} `) }).first().click();
+        await graph
+          .getByRole('button', { name: new RegExp(`^${label} `) })
+          .first()
+          .click();
         await expect(graph.getByTestId('growth-inspector')).toContainText(label);
       }
       await graph.getByLabel('Find checkpoint').fill('');
@@ -396,26 +440,58 @@ test('Glow Garden: plan, board, sprites, sound, game, export and site across one
 
     await test.step('12b. The Cruxspace story: about, members, milestones, graph, and a walkthrough that lands in the game', async () => {
       await home(page);
-      await page.getByRole('combobox', { name: 'Cruxspace', exact: true }).selectOption({ label: 'Glow Garden' });
+      await page
+        .getByRole('combobox', { name: 'Cruxspace', exact: true })
+        .selectOption({ label: 'Glow Garden' });
       await page.getByRole('button', { name: 'Cruxspace history', exact: true }).click();
       const story = page.getByRole('dialog', { name: 'Cruxspace history' });
       await expect(story.getByRole('heading', { name: 'Glow Garden', level: 2 })).toBeVisible();
-      await expect(story).toContainText(/8 members · \d+ milestones · \d+ transfers between members/, { timeout: 60000 });
-      const header = (await story.locator('header').innerText()).match(/\d+ members · \d+ milestones · (\d+) transfers/)!;
+      await expect(story).toContainText(
+        /8 members · \d+ milestones · \d+ transfers between members/,
+        { timeout: 60000 },
+      );
+      const header = (await story.locator('header').innerText()).match(
+        /\d+ members · \d+ milestones · (\d+) transfers/,
+      )!;
       expect(Number(header[1])).toBeGreaterThanOrEqual(5);
-      await expect(story.getByRole('region', { name: 'About this Cruxspace' })).toContainText('the gardener collects glowing seeds');
+      await expect(story.getByRole('region', { name: 'About this Cruxspace' })).toContainText(
+        'the gardener collects glowing seeds',
+      );
       const members = story.getByRole('region', { name: 'Members' });
-      for (const [title, tool] of [['Glow Garden board', 'Kan'], ['Glow Garden sprites', 'Piskel'], ['Glow Garden game', 'GDevelop']])
+      for (const [title, tool] of [
+        ['Glow Garden board', 'Kan'],
+        ['Glow Garden sprites', 'Piskel'],
+        ['Glow Garden game', 'GDevelop'],
+      ])
         await expect(members.getByRole('listitem').filter({ hasText: title })).toContainText(tool);
-      await expect(members.getByRole('listitem').filter({ hasText: 'Glow Garden game' })).toContainText(/1 Tasks/);
-      await expect(members.getByRole('listitem').filter({ hasText: 'Glow Garden sprites' })).toContainText('shared Gardener sheet');
+      await expect(
+        members.getByRole('listitem').filter({ hasText: 'Glow Garden game' }),
+      ).toContainText(/1 Tasks/);
+      await expect(
+        members.getByRole('listitem').filter({ hasText: 'Glow Garden sprites' }),
+      ).toContainText('shared Gardener sheet');
       const milestones = story.getByRole('list', { name: 'Milestone list' });
-      for (const title of ['First playable', 'Chime merged', 'Used Gardener sheet from Glow Garden', 'Output: Glow Garden web build'])
-        await expect(milestones.getByRole('listitem').filter({ hasText: title }).first()).toBeVisible();
+      for (const title of [
+        'First playable',
+        'Chime merged',
+        'Used Gardener sheet from Glow Garden',
+        'Output: Glow Garden web build',
+      ])
+        await expect(
+          milestones.getByRole('listitem').filter({ hasText: title }).first(),
+        ).toBeVisible();
       await expect(story.getByTestId('cruxspace-canvas').locator('canvas')).toBeVisible();
-      await expect(story.getByRole('list', { name: 'Lanes' })).toContainText('Glow Garden game · Add pickup chime');
+      await expect(story.getByRole('list', { name: 'Lanes' })).toContainText(
+        'Glow Garden game · Add pickup chime',
+      );
       // Select a milestone: the graph focuses it and the inspector shows the checkpoint.
-      await milestones.getByRole('listitem').filter({ hasText: 'First playable' }).first().getByRole('button').first().click();
+      await milestones
+        .getByRole('listitem')
+        .filter({ hasText: 'First playable' })
+        .first()
+        .getByRole('button')
+        .first()
+        .click();
       await expect(story.getByTestId('growth-inspector')).toContainText('First playable');
       await story.getByRole('button', { name: 'Fit graph', exact: true }).click();
       await shot('12b-cruxspace-history');
@@ -425,30 +501,53 @@ test('Glow Garden: plan, board, sprites, sound, game, export and site across one
       await expect(walk).toContainText(/step 1 of \d+/);
       await walk.getByRole('button', { name: 'Next step', exact: true }).click();
       await expect(walk).toContainText(/step 2 of \d+/);
-      await milestones.getByRole('listitem').filter({ hasText: 'First playable' }).first().getByRole('button', { name: 'Go to this moment' }).click();
+      await milestones
+        .getByRole('listitem')
+        .filter({ hasText: 'First playable' })
+        .first()
+        .getByRole('button', { name: 'Go to this moment' })
+        .click();
       await expect(walk).toContainText('First playable');
-      await milestones.getByRole('listitem').filter({ hasText: 'First playable' }).first().getByRole('button', { name: 'Open in Glow Garden game' }).click();
+      await milestones
+        .getByRole('listitem')
+        .filter({ hasText: 'First playable' })
+        .first()
+        .getByRole('button', { name: 'Open in Glow Garden game' })
+        .click();
       await expect(page.locator('[data-workspace-id]')).toBeVisible({ timeout: 60000 });
       const graph = page.getByRole('dialog', { name: 'Whole Crux Growth' });
-      await expect(graph.getByTestId('growth-inspector')).toContainText('First playable', { timeout: 60000 });
+      await expect(graph.getByTestId('growth-inspector')).toContainText('First playable', {
+        timeout: 60000,
+      });
       await page.keyboard.press('Escape');
       await expect(graph).toHaveCount(0);
       const banner = page.getByRole('status', { name: 'Walkthrough' });
       await expect(banner).toContainText('Walking through Glow Garden');
       await expect(page.getByText(/Viewing snapshot \d+ of \d+/)).toBeVisible({ timeout: 120000 });
-      await expect(page.getByRole('img', { name: 'The app as it was at this checkpoint' })).toBeVisible({ timeout: 60000 });
+      await expect(
+        page.getByRole('img', { name: 'The app as it was at this checkpoint' }),
+      ).toBeVisible({ timeout: 60000 });
       await shot('12b-walkthrough-game');
       // The board did not exist before its first checkpoint? It did; open it and it is read-only at that moment too.
       await open(page, 'Glow Garden board');
-      await expect(page.getByRole('status', { name: 'Walkthrough' })).toContainText('First playable');
+      await expect(page.getByRole('status', { name: 'Walkthrough' })).toContainText(
+        'First playable',
+      );
       await expect(page.getByText(/Viewing snapshot \d+ of \d+/)).toBeVisible({ timeout: 120000 });
-      await page.getByRole('status', { name: 'Walkthrough' }).getByRole('button', { name: 'Back to now' }).click();
+      await page
+        .getByRole('status', { name: 'Walkthrough' })
+        .getByRole('button', { name: 'Back to now' })
+        .click();
       await expect(page.getByRole('status', { name: 'Walkthrough' })).toHaveCount(0);
-      await expect(page.getByText(/Viewing snapshot \d+ of \d+/)).toHaveCount(0, { timeout: 60000 });
+      await expect(page.getByText(/Viewing snapshot \d+ of \d+/)).toHaveCount(0, {
+        timeout: 60000,
+      });
       // Ending the walk releases every member, including the game left open in the background.
       await open(page, 'Glow Garden game');
       await expect(page.getByRole('status', { name: 'Walkthrough' })).toHaveCount(0);
-      await expect(page.getByText(/Viewing snapshot \d+ of \d+/)).toHaveCount(0, { timeout: 60000 });
+      await expect(page.getByText(/Viewing snapshot \d+ of \d+/)).toHaveCount(0, {
+        timeout: 60000,
+      });
     });
 
     await test.step('10. Board: everything moves to Done', async () => {
@@ -470,8 +569,12 @@ test('Glow Garden: plan, board, sprites, sound, game, export and site across one
       await home(page);
       await page.getByRole('button', { name: 'Cruxspace history', exact: true }).click();
       const story = page.getByRole('dialog', { name: 'Cruxspace history' });
-      await expect(story).toContainText(/8 members · \d+ milestones · \d+ transfers/, { timeout: 60000 });
-      storyHeader = (await story.locator('header').innerText()).match(/\d+ members · \d+ milestones · \d+ transfers/)![0];
+      await expect(story).toContainText(/8 members · \d+ milestones · \d+ transfers/, {
+        timeout: 60000,
+      });
+      storyHeader = (await story.locator('header').innerText()).match(
+        /\d+ members · \d+ milestones · \d+ transfers/,
+      )![0];
       await story.getByRole('button', { name: 'Close Cruxspace history' }).click();
       await expect(story).toHaveCount(0);
       await exportCruxspacePackage(page, first.app, 'Glow Garden', pkg);
@@ -494,16 +597,30 @@ test('Glow Garden: plan, board, sprites, sound, game, export and site across one
 
     await test.step('13b. Import the package into a fresh Garden; members and outputs return', async () => {
       await importCruxspacePackage(page, pkg);
-      await expect(page.getByRole('status')).toContainText('Imported Glow Garden with 8 member Cruxes.');
+      await expect(page.getByRole('status').filter({ hasText: 'Imported' })).toContainText(
+        'Imported Glow Garden with 8 member Cruxes.',
+      );
       const hub = page.getByRole('region', { name: 'Cruxspaces', exact: true });
       for (const m of Object.values(members))
-        await expect(hub.getByRole('button', { name: `Open ${m.title}`, exact: true })).toBeVisible();
+        await expect(
+          hub.getByRole('button', { name: `Open ${m.title}`, exact: true }),
+        ).toBeVisible();
       await expect(hub.getByRole('button', { name: /^Use / })).toHaveCount(5);
-      for (const label of ['Gardener sheet', 'Seed sprite', 'Garden ground', 'Glow Garden web build'])
+      for (const label of [
+        'Gardener sheet',
+        'Seed sprite',
+        'Garden ground',
+        'Glow Garden web build',
+      ])
         await expect(hub.getByRole('button', { name: `Use ${label}`, exact: true })).toBeVisible();
       // The Home Garden list refreshed too, not only the hub.
       await expect(page.getByText('Your garden is empty')).toHaveCount(0);
-      await expect(page.getByRole('link', { name: /Glow Garden game/ }).or(page.getByText('Glow Garden game', { exact: true })).first()).toBeVisible();
+      await expect(
+        page
+          .getByRole('link', { name: /Glow Garden game/ })
+          .or(page.getByText('Glow Garden game', { exact: true }))
+          .first(),
+      ).toBeVisible();
       await page.screenshot({ path: join(evidence, '13-imported-hub.png') });
     });
 
@@ -514,14 +631,19 @@ test('Glow Garden: plan, board, sprites, sound, game, export and site across one
       const collab = page.getByRole('button', { name: 'Toggle collaboration' });
       if ((await collab.getAttribute('aria-pressed')) === 'true') await collab.click();
       const pane = page.getByTestId('pane-body-history');
-      if (!(await pane.isVisible())) await page.getByRole('button', { name: 'Toggle history' }).click();
+      if (!(await pane.isVisible()))
+        await page.getByRole('button', { name: 'Toggle history' }).click();
       await pane.getByRole('button', { name: 'Whole Crux · branches & merges' }).click();
       const graph = page.getByRole('dialog', { name: 'Whole Crux Growth' });
-      await expect(graph.getByRole('button', { name: 'Add pickup chime · merged', exact: true })).toBeVisible();
+      await expect(
+        graph.getByRole('button', { name: 'Add pickup chime · merged', exact: true }),
+      ).toBeVisible();
       await graph.getByRole('button', { name: 'Expand checkpoints', exact: true }).click();
       for (const label of ['First playable', 'Chime merged', 'Output: Glow Garden web build']) {
         await graph.getByLabel('Find checkpoint').fill(label);
-        await expect(graph.getByRole('button', { name: new RegExp(`^${label} `) }).first()).toBeVisible();
+        await expect(
+          graph.getByRole('button', { name: new RegExp(`^${label} `) }).first(),
+        ).toBeVisible();
       }
       await graph.getByLabel('Find checkpoint').fill('');
       await graph.getByRole('button', { name: 'Fit graph', exact: true }).click();
@@ -535,7 +657,13 @@ test('Glow Garden: plan, board, sprites, sound, game, export and site across one
       await page.getByRole('button', { name: 'Cruxspace history', exact: true }).click();
       const story = page.getByRole('dialog', { name: 'Cruxspace history' });
       await expect(story.locator('header')).toContainText(storyHeader, { timeout: 60000 });
-      await expect(story.getByRole('list', { name: 'Milestone list' }).getByRole('listitem').filter({ hasText: 'Used Gardener sheet from Glow Garden' }).first()).toBeVisible();
+      await expect(
+        story
+          .getByRole('list', { name: 'Milestone list' })
+          .getByRole('listitem')
+          .filter({ hasText: 'Used Gardener sheet from Glow Garden' })
+          .first(),
+      ).toBeVisible();
       await page.screenshot({ path: join(evidence, '13-imported-story.png') });
       await story.getByRole('button', { name: 'Close Cruxspace history' }).click();
       await expect(story).toHaveCount(0);
@@ -546,7 +674,12 @@ test('Glow Garden: plan, board, sprites, sound, game, export and site across one
       await page.getByRole('button', { name: 'Cruxspace history', exact: true }).click();
       const story = page.getByRole('dialog', { name: 'Cruxspace history' });
       const milestones = story.getByRole('list', { name: 'Milestone list' });
-      await milestones.getByRole('listitem').filter({ hasText: 'First playable' }).first().getByRole('button', { name: 'Go to this moment' }).click();
+      await milestones
+        .getByRole('listitem')
+        .filter({ hasText: 'First playable' })
+        .first()
+        .getByRole('button', { name: 'Go to this moment' })
+        .click();
       const walk = story.getByRole('status', { name: 'Walkthrough' });
       await expect(walk).toContainText('First playable');
       await walk.getByRole('button', { name: 'Revert every member to this moment' }).click();
@@ -555,25 +688,47 @@ test('Glow Garden: plan, board, sprites, sound, game, export and site across one
       await expect(page.getByText(/• Glow Garden board → /)).toBeVisible();
       await expect(page.getByText(/• Glow Garden sprites → First sprite/)).toBeVisible();
       // The site's first checkpoint came after the game was first playable: it stays as it is.
-      await expect(page.getByText('Left as they are (they did not exist yet): Glow Garden site.')).toBeVisible();
+      await expect(
+        page.getByText('Left as they are (they did not exist yet): Glow Garden site.'),
+      ).toBeVisible();
       await page.getByRole('button', { name: 'Revert every member', exact: true }).click();
-      await expect(story.getByRole('status', { name: 'Revert result' })).toContainText(/^Reverted Glow Garden plan, Glow Garden board, Glow Garden sprites, Glow Garden seed, Glow Garden ground, Glow Garden sound, Glow Garden game; left Glow Garden site as they were\. The current state is now this moment/, { timeout: 10 * 60_000 });
+      await expect(story.getByRole('status', { name: 'Revert result' })).toContainText(
+        /^Reverted Glow Garden plan, Glow Garden board, Glow Garden sprites, Glow Garden seed, Glow Garden ground, Glow Garden sound, Glow Garden game; left Glow Garden site as they were\. The current state is now this moment/,
+        { timeout: 10 * 60_000 },
+      );
       await expect(walk).toHaveCount(0);
       // The story re-reads every member (the reopened game re-projects 7,800 files first).
-      await expect(story.getByRole('status', { name: 'Refreshing history' })).toHaveCount(0, { timeout: 5 * 60_000 });
+      await expect(story.getByRole('status', { name: 'Refreshing history' })).toHaveCount(0, {
+        timeout: 5 * 60_000,
+      });
       // The safety checkpoints are automatic saves: hidden from the milestones, there when asked.
-      await expect(milestones.getByRole('listitem').filter({ hasText: 'Before revert' })).toHaveCount(0);
+      await expect(
+        milestones.getByRole('listitem').filter({ hasText: 'Before revert' }),
+      ).toHaveCount(0);
       await story.getByLabel('Include automatic saves').check();
-      await expect(milestones.getByRole('listitem').filter({ hasText: 'Before revert' })).toHaveCount(7);
+      await expect(
+        milestones.getByRole('listitem').filter({ hasText: 'Before revert' }),
+      ).toHaveCount(7);
       // Tigrana saves its own metadata as it works, so the plan carries more than the three named checkpoints.
-      await expect(story.getByRole('region', { name: 'Members' }).getByRole('listitem').filter({ hasText: 'Glow Garden plan' })).toContainText(/\d+ checkpoints/);
-      const planRow = await story.getByRole('region', { name: 'Members' }).getByRole('listitem').filter({ hasText: 'Glow Garden plan' }).innerText();
+      await expect(
+        story
+          .getByRole('region', { name: 'Members' })
+          .getByRole('listitem')
+          .filter({ hasText: 'Glow Garden plan' }),
+      ).toContainText(/\d+ checkpoints/);
+      const planRow = await story
+        .getByRole('region', { name: 'Members' })
+        .getByRole('listitem')
+        .filter({ hasText: 'Glow Garden plan' })
+        .innerText();
       expect(Number(planRow.match(/(\d+) checkpoints/)![1])).toBeGreaterThanOrEqual(3);
       await page.screenshot({ path: join(evidence, '13-reverted-story.png') });
       await story.getByRole('button', { name: 'Close Cruxspace history' }).click();
       const gameFolder = (await storedCrux(page, members.game.id)).projectFolder as string;
       const game = () => nativeRecord(gameFolder, 'document');
-      await expect.poll(() => game()?.resources?.resources?.map((r: any) => r.name) ?? []).not.toContain('chime');
+      await expect
+        .poll(() => game()?.resources?.resources?.map((r: any) => r.name) ?? [])
+        .not.toContain('chime');
       expect(game().layouts[0].instances.length).toBe(2);
       await open(page, 'Glow Garden game');
       await openWorkshop(page);
@@ -592,7 +747,9 @@ test('Glow Garden: plan, board, sprites, sound, game, export and site across one
       try {
         const site = await browser.newPage({ viewport: { width: 1280, height: 900 } });
         await site.goto(`${origin}/play`);
-        await expect(site.frameLocator('iframe[title="Glow Garden game"]').locator('canvas')).toBeVisible({
+        await expect(
+          site.frameLocator('iframe[title="Glow Garden game"]').locator('canvas'),
+        ).toBeVisible({
           timeout: 120000,
         });
         await site.waitForTimeout(2500);

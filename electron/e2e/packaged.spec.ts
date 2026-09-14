@@ -37,7 +37,7 @@ test.describe('packaged app', () => {
       await expect(page.getByRole('heading', { name: 'Crux Garden' })).toBeVisible({
         timeout: 30_000,
       });
-      await expect(page.getByText('where ideas grow')).toBeVisible();
+      await expect(page.getByText('grow anything')).toBeVisible();
       const info = await app.evaluate(async ({ app: a }) => ({
         packaged: a.isPackaged,
         name: a.getName(),

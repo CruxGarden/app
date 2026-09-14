@@ -160,7 +160,11 @@ export async function importPiskelArt(
   const replace = wizard.locator('.import-mode-replace-button').filter({ visible: true }).first();
   for (let attempt = 0; attempt < 4 && (await wizard.isVisible()); attempt++) {
     // Piskel's canvas overlay can sit above the dialog at large viewports; the buttons are plain click listeners.
-    await wizard.locator('.import-next-button').filter({ visible: true }).first().dispatchEvent('click');
+    await wizard
+      .locator('.import-next-button')
+      .filter({ visible: true })
+      .first()
+      .dispatchEvent('click');
     // An empty sprite is replaced at once; otherwise the wizard asks Combine or Replace.
     await Promise.race([
       replace.waitFor({ state: 'visible', timeout: 5000 }).catch(() => {}),
@@ -183,7 +187,9 @@ export async function exportCruxspacePackage(
   destination: string,
 ) {
   await home(page);
-  await page.getByRole('combobox', { name: 'Cruxspace', exact: true }).selectOption({ label: name });
+  await page
+    .getByRole('combobox', { name: 'Cruxspace', exact: true })
+    .selectOption({ label: name });
   await app.evaluate(({ session }, path) => {
     const state = globalThis as unknown as { __packageDownload?: string };
     state.__packageDownload = undefined;
@@ -198,13 +204,18 @@ export async function exportCruxspacePackage(
     session.defaultSession.on('will-download', listener);
   }, destination);
   await page.getByRole('button', { name: 'Export Cruxspace', exact: true }).click();
-  await expect(page.getByRole('status')).toContainText(/^Exported .*\.cruxspace with \d+ member Cruxes\.$/, {
+  // Other status lines share the page (Tending's count, the Cruxspaces hint): match the export's own.
+  await expect(
+    page.getByRole('status').filter({ hasText: /Exported .*\.cruxspace/ }),
+  ).toContainText(/^Exported .*\.cruxspace with \d+ member Cruxes\.$/, {
     timeout: 10 * 60_000,
   });
   await expect
     .poll(
       () =>
-        app.evaluate(() => (globalThis as unknown as { __packageDownload?: string }).__packageDownload),
+        app.evaluate(
+          () => (globalThis as unknown as { __packageDownload?: string }).__packageDownload,
+        ),
       { timeout: 180000 },
     )
     .toBe('completed');

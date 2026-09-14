@@ -7,7 +7,7 @@ test.describe('desktop smoke', () => {
     try {
       // Gateway: wordmark + tagline
       await expect(page.getByRole('heading', { name: 'Crux Garden' })).toBeVisible();
-      await expect(page.getByText('where ideas grow')).toBeVisible();
+      await expect(page.getByText('grow anything')).toBeVisible();
       await page.screenshot({ path: 'e2e/.results/gateway.png' });
 
       // Enter → fresh install offers to plant a garden

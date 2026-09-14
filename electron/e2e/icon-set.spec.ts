@@ -25,7 +25,7 @@ test.describe('icon set', () => {
 
       await page.getByRole('button', { name: 'Mood', exact: true }).click();
       const built = page.getByTestId('bundled-moods');
-      await built.getByTestId('bundled-windows-95').getByRole('button', { name: 'Apply' }).click();
+      await built.getByTestId('bundled-raster-bars').getByRole('button', { name: 'Apply' }).click();
 
       await expect(page.locator('html[data-icon-set="pixel"]')).toHaveCount(1);
       await expect(explore).toHaveAttribute('data-set', 'pixel');
@@ -36,7 +36,7 @@ test.describe('icon set', () => {
 
       // A filled Mood flips the whole surface again
       await built
-        .getByTestId('bundled-pretty-in-pink')
+        .getByTestId('bundled-hibiscus')
         .getByRole('button', { name: 'Apply' })
         .click();
       await expect(page.locator('html[data-icon-set="filled"]')).toHaveCount(1);

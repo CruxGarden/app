@@ -7,6 +7,7 @@
 
 import { GARDEN_DARK, type MoodPalette, type MoodPaletteKey } from './garden-dark';
 import { applyMotionIntensity, watchReducedMotion } from './motion-intensity';
+import { applyLiquidGlass } from './liquid-glass';
 import {
   cssValueFor,
   isAssetRef,
@@ -122,6 +123,8 @@ export function applyMoodPalette(palette: Partial<MoodPalette>, base: MoodPalett
   // ── motion ── the person's intensity resolves against the Mood's default (ADR 0041)
   applyMotionIntensity(el);
   watchReducedMotion();
+  // ── glass ── the person's liquid glass switch resolves against the Mood's surfaceStyle (ADR 0043)
+  applyLiquidGlass(el);
   // Notify Monaco and other listeners that the palette changed
   // Delay slightly so var() references resolve before Monaco reads computed styles
   requestAnimationFrame(() => {

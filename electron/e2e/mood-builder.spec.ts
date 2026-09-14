@@ -29,11 +29,14 @@ test.describe('mood builder', () => {
       await page.getByRole('button', { name: 'Add files', exact: true }).click();
       await expect(page.getByRole('button', { name: 'New file' })).toBeVisible({ timeout: 30_000 });
       const tile = page.locator('.mosaic-tile').first();
-      await expect(tile).toHaveCSS('margin-left', '4px');
+      // The Default Mood (Digital Fractal Garden) sets a 10px pane gap
+      await expect(tile).toHaveCSS('margin-left', '10px');
 
-      // Mood modal → Open Mood Builder → lands on the Theme tab
+      // Mood modal → Open Mood Builder → lands on the Theme tab. Glass off first: the
+      // checks below read a pane's own colour, not its tint through the glass.
       await page.getByRole('button', { name: 'Mood', exact: true }).click();
       await expect(page.getByRole('heading', { name: 'Mood' })).toBeVisible();
+      await page.getByRole('combobox', { name: 'Liquid glass' }).selectOption('off');
       await page.getByRole('button', { name: 'Open Mood Builder' }).click();
       await expect(page.getByRole('heading', { name: 'Mood Builder' })).toBeVisible();
       await expect(page.getByRole('heading', { name: 'Mood', exact: true })).toHaveCount(0);
@@ -77,7 +80,8 @@ test.describe('mood builder', () => {
         'border-radius',
         '0px',
       );
-      await expect(page.locator('.mosaic-window.pane-workshop')).toHaveCSS('border-radius', '8px');
+      // the Default Mood's radius
+      await expect(page.locator('.mosaic-window.pane-workshop')).toHaveCSS('border-radius', '12px');
       await page.getByRole('button', { name: 'Toggle share' }).click();
       await expect(
         page.locator('.mosaic-window.pane-publish').getByText('Nothing to share yet'),

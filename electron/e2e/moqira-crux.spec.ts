@@ -69,7 +69,7 @@ test('Moqira: the actual app — edit, save, Mood, open a file, public edition, 
         .first()
         .evaluate((el) => getComputedStyle(el).fontFamily);
       await page.getByRole('button', { name: 'Mood', exact: true }).click();
-      await page.getByTestId('bundled-8-bit').getByRole('button', { name: 'Apply' }).click();
+      await page.getByTestId('bundled-raster-bars').getByRole('button', { name: 'Apply' }).click();
       await page
         .locator('[data-modal-open]')
         .getByRole('button', { name: 'Close', exact: true })
