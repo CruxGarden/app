@@ -3,8 +3,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { publicApi } from '@/api';
 import type { ExploreCrux, ExploreTag } from '@/api/public';
 import { Button } from '@/components/ui';
-import GardenIntro from '@/components/landing/GardenIntro';
-import { initialHomepageWorld } from '@/components/landing/worlds';
+import GardenHero from '@/components/landing/GardenHero';
 import '@/components/landing/garden-home.css';
 import { useAudioStore } from '@/stores/audioStore';
 import { useShallow } from 'zustand/react/shallow';
@@ -51,8 +50,8 @@ export default function Landing() {
 }
 
 function LandingPage() {
-  const [initialWorld] = useState(initialHomepageWorld);
-  const initialMood = bundledMood(initialWorld) ? initialWorld : 'digital-fractal-garden';
+  // The site wears the Default Mood (ADR 0043); the Mood section lets a visitor try the others.
+  const initialMood = 'digital-fractal-garden';
   useEffect(() => {
     document.title = `${APP_NAME} — You can grow anything`;
     return () => {
@@ -64,7 +63,7 @@ function LandingPage() {
     <div className="grow-home">
       <SiteHeader />
       <main>
-        <GardenIntro initialMood={initialWorld} />
+        <GardenHero />
         <div className="grow-details">
           <ExploreSection />
           <HowItWorks />
@@ -415,7 +414,7 @@ function MoodSection({ initialMood }: { initialMood: string }) {
         <span>
           {track
             ? 'A Mood can bring its own soundtrack. Play it when you’re ready.'
-            : 'This Mood is quiet. Wear The Keeper to hear the garden.'}
+            : 'This Mood is quiet. Wear Digital Fractal Garden to hear the garden.'}
         </span>
       </div>
     </section>

@@ -631,3 +631,37 @@
     transition: none;
   }
 }
+
+/* ── The hero: the Gateway's look on the website (ADR 0043) — the Default
+      Mood's render full bleed under a dim, the frosted wordmark card, the
+      player; the header floats over it. ── */
+.grow-hero {
+  position: relative;
+  min-height: 100vh;
+  margin-top: -88px;
+  padding: 88px 4% 6rem;
+  display: grid;
+  place-items: center;
+  background-size: cover;
+  background-position: center;
+  isolation: isolate;
+}
+.grow-hero-dim {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: rgb(0 0 0 / 0.32);
+}
+.grow-hero-card {
+  position: relative;
+  z-index: 1;
+}
+.grow-hero-player {
+  position: absolute;
+  left: 50%;
+  bottom: 3.5rem;
+  transform: translateX(-50%);
+}
+.grow-home .grow-header {
+  border-bottom-color: transparent;
+}
