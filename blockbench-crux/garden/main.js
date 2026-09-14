@@ -1,4 +1,5 @@
 import { startGarden } from './bridge.js';
+import { modelCommands } from './model-commands.js';
 import { validateProject, memoryStorage, packModels, unpackModel } from './model.js';
 const garden = await startGarden();
 try {
@@ -134,7 +135,19 @@ try {
       garden.failed(error);
     }
   };
+  const commands = modelCommands(window, {
+    changed: garden.changed,
+    saveOutput: garden.saveOutput,
+    modelCount: () => models.size,
+    models: () =>
+      [...models].map(([id, model]) => ({ id, name: String(model.name).slice(0, 200) })),
+    activeId: () => (window.Project ? logical(Project) : null),
+  });
   garden.connect({
+    settle() {
+      const input = document.activeElement;
+      if (input?.matches('input,textarea,[contenteditable="true"]')) input.blur();
+    },
     busy: () =>
       pointer ||
       !!window.open_dialog ||
@@ -150,46 +163,7 @@ try {
       refreshLibrary();
       return packModels(models, index, memory.preferences());
     },
-    async command(command) {
-      if (command.op === 'inspect')
-        return {
-          models: [...models].map(([id, m]) => ({ id, name: m.name })),
-          active: window.Project ? logical(Project) : null,
-          name: window.Project?.name,
-          elements: window.Project?.elements
-            .slice(0, 200)
-            .map((e) => ({ id: e.uuid, type: e.type, name: e.name, from: e.from, to: e.to })),
-          textures: window.Project?.textures.length,
-          animations: window.Project?.animations.map((a) => ({ name: a.name, length: a.length })),
-        };
-      if (!window.Project) throw new Error('Open a model first.');
-      if (
-        command.op === 'set-name' &&
-        typeof command.name === 'string' &&
-        command.name.trim() &&
-        command.name.length <= 200
-      ) {
-        Project.name = command.name.trim();
-        Project.saved = false;
-        garden.changed();
-        return { name: Project.name };
-      }
-      if (
-        command.op === 'rename-element' &&
-        typeof command.name === 'string' &&
-        command.name.trim() &&
-        command.name.length <= 200
-      ) {
-        const element = Project.elements.find((e) => e.uuid === command.elementId);
-        if (!element) throw new Error('Choose an existing model element from inspect_blockbench.');
-        Undo.initEdit({ elements: [element] });
-        element.name = command.name.trim();
-        Undo.finishEdit('Rename element');
-        garden.changed();
-        return { id: element.uuid, name: element.name };
-      }
-      throw new Error('Unsupported model operation or invalid arguments.');
-    },
+    prepare: commands.prepare,
   });
 } catch (error) {
   garden.failed(error);

@@ -56,7 +56,7 @@
     "test:twine": "npm run build:twine && npm --prefix twine-crux run check && npm --prefix twine-crux run test:garden && npm --prefix twine-crux run test:native",
     "build:svgedit": "npm --prefix svgedit-crux ci --ignore-scripts && npm --prefix svgedit-crux run build",
     "test:svgedit": "npm run build:svgedit && npm --prefix svgedit-crux run test:garden && npm --prefix svgedit-crux run test:native",
-    "build:blockbench": "npm --prefix blockbench-crux ci --ignore-scripts && npm --prefix blockbench-crux run build",
+    "build:blockbench": "node embedded-apps/sync-shared.mjs && npm --prefix blockbench-crux ci --ignore-scripts && npm --prefix blockbench-crux run build",
     "test:blockbench": "npm run build:blockbench && npm --prefix blockbench-crux run test:garden",
     "build:gdevelop": "npm --prefix gdevelop-crux run setup",
     "test:gdevelop": "npm --prefix gdevelop-crux run setup && npm --prefix gdevelop-crux test",

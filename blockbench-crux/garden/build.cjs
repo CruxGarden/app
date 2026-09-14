@@ -12,8 +12,18 @@ fs.mkdirSync(runtime);
 for (const dir of ['assets', 'css', 'font', 'icons', 'lib', 'garden'])
   fs.cpSync(path.join(root, dir), path.join(runtime, dir), { recursive: true });
 for (const name of fs.readdirSync(path.join(runtime, 'garden')))
-  if (!['main.js', 'model.js', 'bridge.js', 'storage.js'].includes(name))
-    fs.unlinkSync(path.join(runtime, 'garden', name));
+  if (
+    ![
+      'main.js',
+      'model.js',
+      'bridge.js',
+      'storage.js',
+      'commands.js',
+      'model-commands.js',
+      'shared',
+    ].includes(name)
+  )
+    fs.rmSync(path.join(runtime, 'garden', name), { recursive: true, force: true });
 fs.mkdirSync(path.join(runtime, 'dist'));
 fs.copyFileSync(path.join(root, 'dist/bundle.js'), path.join(runtime, 'dist/bundle.js'));
 for (const name of ['favicon.png', 'icon_full.png', 'LICENSE.MD', 'UPSTREAM.md'])

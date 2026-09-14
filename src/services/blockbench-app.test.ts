@@ -71,6 +71,24 @@ it('retains native models, animations and texture components through Growth and 
   expect(((await call({ op: 'read', path: 'project.json' })) as { content: string }).content).toBe(
     content,
   );
+  const exported = [];
+  for (const [mimeType, extension, text] of [
+    ['model/gltf+json', 'gltf', '{"asset":{"version":"2.0"},"scenes":[]}'],
+    [
+      'application/x-blockbench-model+json',
+      'bbmodel',
+      '{"meta":{"format_version":"5.0"},"elements":[]}',
+    ],
+  ]) {
+    const output = (await call({
+      op: 'save-output',
+      label: extension,
+      mimeType,
+      bytes: new TextEncoder().encode(text).buffer,
+    })) as { path: string };
+    expect(output.path.endsWith('.' + extension)).toBe(true);
+    exported.push({ path: output.path, text });
+  }
   const imported = await importCrux({
     data: (await exportCrux({ cruxId: crux.id })).blob,
     mode: 'clone',
@@ -81,6 +99,11 @@ it('retains native models, animations and texture components through Growth and 
       files.find((f) => f.meta?.path === 'data/project.json')!.id,
     ),
   ).toBe(content);
+  for (const output of exported) {
+    const artifact = files.find((f) => f.meta?.path === output.path)!;
+    const blob = await services.artifact.downloadBlob(artifact.id);
+    expect(await blob.text()).toBe(output.text);
+  }
   for (const asset of assets) {
     const data = await services.artifact.downloadBlob(
       files.find((f) => f.meta?.path === 'data/' + asset.path)!.id,

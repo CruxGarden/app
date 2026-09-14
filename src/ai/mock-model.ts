@@ -302,6 +302,68 @@ export function getMockLanguageModel(): LanguageModel {
             return toolCallStream('set_playcanvas_editor_name', { name: 'Garden scene' });
           return textStream('Named the scene and renamed its native cube.');
         }
+        if (lastUserText(prompt).includes('[blockbench:depth-create]')) {
+          const rounds = toolResultsThisTurn(prompt);
+          const result = (name: string) => JSON.parse(toolResultText(prompt, name) || '{}');
+          const parentId = result('add_blockbench_group').createdId;
+          if (!rounds.length)
+            return toolCallStream('create_blockbench_model', { name: 'Seedling stand' });
+          if (rounds.length === 1) return toolCallStream('add_blockbench_group', { name: 'Stand' });
+          if (rounds.length === 2)
+            return toolCallStream('add_blockbench_cube', {
+              name: 'Shelf',
+              from: [-8, 12, -5],
+              to: [8, 14, 5],
+              parentId,
+            });
+          if (rounds.length === 3)
+            return toolCallStream('add_blockbench_cube', {
+              name: 'Left support',
+              from: [-7, 0, -4],
+              to: [-5, 12, 4],
+              parentId,
+            });
+          if (rounds.length === 4)
+            return toolCallStream('add_blockbench_cube', {
+              name: 'Right support',
+              from: [5, 0, -4],
+              to: [7, 12, 4],
+              parentId,
+            });
+          if (rounds.length === 5)
+            return toolCallStream('add_blockbench_cube', {
+              name: 'Temporary brace',
+              from: [-4, 5, -1],
+              to: [4, 6, 1],
+              parentId,
+            });
+          if (rounds.length === 6)
+            return toolCallStream('move_blockbench_element', {
+              elementId: result('add_blockbench_cube').createdId,
+              parentId: 'root',
+            });
+          if (rounds.length === 7)
+            return toolCallStream('delete_blockbench_element', {
+              elementId: result('add_blockbench_cube').createdId,
+            });
+          return textStream('Built an editable three-part stand.');
+        }
+        if (lastUserText(prompt).includes('[blockbench:depth-revise]')) {
+          const rounds = toolResultsThisTurn(prompt);
+          const result = JSON.parse(toolResultText(prompt, 'inspect_blockbench') || '{}');
+          const shelf = result.elements?.find((e: { name: string }) => e.name.startsWith('Shelf'));
+          if (!rounds.length) return toolCallStream('inspect_blockbench', {});
+          if (rounds.length === 1)
+            return toolCallStream('update_blockbench_cube', {
+              elementId: shelf.id,
+              to: [10, 14, 5],
+            });
+          if (rounds.length === 2)
+            return toolCallStream('save_blockbench_model', { name: 'Revised editable stand' });
+          if (rounds.length === 3)
+            return toolCallStream('save_blockbench_gltf', { name: 'Revised stand scene' });
+          return textStream('Widened the shelf while preserving your name and painted texture.');
+        }
         if (lastUserText(prompt).includes('[blockbench:rename]')) {
           const rounds = toolResultsThisTurn(prompt);
           if (!rounds.length) return toolCallStream('inspect_blockbench', {});

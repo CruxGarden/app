@@ -1,4 +1,5 @@
 import { validateProject } from './model.js';
+import { createCommandSession } from './shared/command-session.js';
 
 export async function startGarden() {
   let app;
@@ -8,17 +9,16 @@ export async function startGarden() {
     saved = 0,
     hydrating = true;
   let timer,
-    tail = Promise.resolve(),
-    commandTail = Promise.resolve();
+    tail = Promise.resolve();
   const pending = new Map();
   let assetCache = new Map();
   const bar = document.createElement('div');
   bar.id = 'garden-project';
   bar.innerHTML =
-    '<span role="status">Opening Garden project…</span><button>Save project</button><button>Reload saved project</button>';
+    '<span role="status">Opening Garden project…</span><button>Save project</button><button>Reload saved project</button><input aria-label="Output name" value="3D prop"><button>Save model output</button><button>Save glTF output</button>';
   const style = document.createElement('style');
   style.textContent =
-    '#garden-project{position:fixed;bottom:0;left:0;right:0;height:32px;z-index:10000;display:flex;gap:12px;align-items:center;padding:0 10px;background:#24282c;color:#fff;font:12px system-ui}#garden-project span{flex:1}#garden-project button{padding:3px 8px;color:#fff;background:#42494f;border:1px solid #697078;border-radius:3px}#root{height:calc(100dvh - 34px)!important}';
+    '#garden-project{position:fixed;bottom:0;left:0;right:0;height:32px;z-index:10000;display:flex;gap:12px;align-items:center;padding:0 10px;background:#24282c;color:#fff;font:12px system-ui}#garden-project span{flex:1}#garden-project button{padding:3px 8px;color:#fff;background:#42494f;border:1px solid #697078;border-radius:3px}#garden-project input{width:110px;color:#fff;background:#151515;border:1px solid #697078;padding:3px 6px}#root{height:calc(100dvh - 34px)!important}';
   document.head.append(style);
   document.body.append(bar);
   const cover = document.createElement('div');
@@ -63,6 +63,7 @@ export async function startGarden() {
   }
   async function settle() {
     const deadline = Date.now() + 55000;
+    await app?.settle?.();
     await new Promise((resolve) => requestAnimationFrame(resolve));
     while (app?.busy()) {
       if (Date.now() > deadline)
@@ -143,12 +144,18 @@ export async function startGarden() {
     tail = operation.catch(() => {});
     return operation;
   }
-  async function command(value) {
-    if (hydrating || !app) throw new Error('Wait for the model editor to open.');
+  const commands = createCommandSession({
+    settle: async () => {
+      if (hydrating || !app) throw new Error('Wait for the model editor to open.');
+      await settle();
+    },
+    prepare: (value) => app.prepare(value),
+    save,
+  });
+  async function saveOutput(label, bytes, mimeType) {
     await save();
-    const result = await app.command(value);
-    await settle();
-    await save();
+    const result = await call({ op: 'save-output', label, bytes, mimeType });
+    show('Output saved to Cruxspace');
     return result;
   }
   window.addEventListener('message', (event) => {
@@ -172,8 +179,7 @@ export async function startGarden() {
         (error) => send({ op: 'flushed', flushId: message.id, error: error.message }),
       );
     } else if (message.type === 'crux:app:command') {
-      const operation = commandTail.then(() => command(message.command));
-      commandTail = operation.catch(() => {});
+      const operation = commands.execute(message.command);
       operation.then(
         (result) => send({ op: 'tool-result', commandId: message.id, result }),
         (error) =>
@@ -193,6 +199,14 @@ export async function startGarden() {
     )
       window.location.reload();
   };
+  for (const [index, op] of [
+    [2, 'save-model'],
+    [3, 'save-gltf'],
+  ])
+    bar.querySelectorAll('button')[index].onclick = () =>
+      commands
+        .execute({ op, label: bar.querySelector('input').value })
+        .catch((error) => show(error.message));
   try {
     const loaded = await call({ op: 'read', path: 'project.json' });
     expected = loaded.fingerprint;
@@ -201,6 +215,7 @@ export async function startGarden() {
     const initial = doc.project ? await decodeProject(doc.project) : null;
     return {
       initial,
+      saveOutput,
       flush: save,
       changed: dirty,
       failed(error) {

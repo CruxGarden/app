@@ -113,7 +113,7 @@ describe('embedded editor command lifecycle', () => {
 });
 
 it('ships the same standalone shared source with adopting embeds', () => {
-  for (const app of ['pptist', 'minipaint', 'jupyterlite', 'piskel'])
+  for (const app of ['pptist', 'minipaint', 'jupyterlite', 'piskel', 'blockbench'])
     for (const file of [
       'command-session.js',
       'command-session.d.ts',
