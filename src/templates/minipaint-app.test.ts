@@ -16,6 +16,8 @@ it('packages the actual miniPaint app and rebuildable source', async () => {
     '.babelrc',
     'webpack.config.js',
     'MIT-LICENSE.txt',
+    'garden/shared/command-session.js',
+    'garden/shared/command-session.d.ts',
     'data/project.json',
   ])
     expect(paths.has(path), path).toBe(true);

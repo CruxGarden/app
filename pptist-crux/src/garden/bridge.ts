@@ -1,6 +1,7 @@
 /**
- * Garden bridge for PPTist (Crux Garden). The editor is untouched: the
- * presentation PPTist keeps in its Pinia store, in the exact shape of its own
+ * Garden bridge for PPTist (Crux Garden). The native model and interface remain;
+ * narrow history/export hooks are documented in UPSTREAM.md. The presentation
+ * PPTist keeps in its Pinia store, in the exact shape of its own
  * JSON export, is the Garden document. Before the editor shows, the saved
  * presentation goes into the store; every store change marks the project
  * dirty and a confirmed save writes it back through the host. Pictures, video
@@ -9,6 +10,13 @@
  */
 import { validateProject } from '../../garden/document.js'
 import type { Slide, SlideTheme } from '@/types/slides'
+import { nextTick } from 'vue'
+import { flushEditorBuffers } from './editor-buffers'
+import { useMainStore, useSnapshotStore } from '@/store'
+import useExport from '@/hooks/useExport'
+import { commitHistorySnapshot } from '@/hooks/useHistorySnapshot'
+import { createCommandSession } from '../../garden/shared/command-session.js'
+import { validateCommand, resolveTargets, replaceText, textElement, type PptistCommand } from '../../garden/commands.js'
 
 type SlidesStore = {
   title: string
@@ -22,6 +30,7 @@ type SlidesStore = {
   setViewportSize(size: number): void
   setViewportRatio(ratio: number): void
   addSlide(slide: Slide | Slide[]): void
+  deleteSlide(id: string): void
   updateSlideIndex(index: number): void
   $subscribe(cb: () => void): () => void
 }
@@ -34,7 +43,6 @@ let saved = 0
 let hydrating = true
 let timer: ReturnType<typeof setTimeout> | undefined
 let tail: Promise<unknown> = Promise.resolve()
-let commandTail: Promise<unknown> = Promise.resolve()
 let store: SlidesStore | null = null
 let status: HTMLElement | null = null
 const pending = new Map<string, { resolve: (v: any) => void; reject: (e: Error) => void }>()
@@ -139,6 +147,8 @@ function save(): Promise<void> {
   const operation = tail.then(async () => {
     clearTimeout(timer)
     if (hydrating) throw new Error('Wait for the saved presentation to finish opening.')
+    flushEditorBuffers()
+    await nextTick()
     if (revision === saved) return
     const saving = revision
     try {
@@ -158,62 +168,108 @@ function save(): Promise<void> {
   return operation
 }
 
-function inspect() {
+function inspect(value: PptistCommand = { op: 'inspect' }) {
   const s = store!
-  // Plain data only: reactive proxies cannot cross postMessage.
-  return JSON.parse(JSON.stringify({
-    title: s.title,
-    slides: s.slides.map((slide, index) => ({
-      index,
-      id: slide.id,
-      elements: slide.elements.length,
-      texts: slide.elements
-        .filter(el => el.type === 'text')
-        .map(el => ((el as any).content as string).replace(/<[^>]+>/g, '').trim())
-        .filter(Boolean)
-        .slice(0, 10),
+  const offset = value.offset ?? 0
+  const limit = value.limit ?? 20
+  const summary = {
+    title: s.title, currentSlide: s.slideIndex, totalSlides: s.slides.length,
+    width: s.viewportSize, height: s.viewportSize * s.viewportRatio, themeColors: s.theme.themeColors,
+  }
+  const plain = (html: string) => {
+    const node = document.createElement('div')
+    node.innerHTML = html
+    return node.textContent ?? ''
+  }
+  const slide = value.slideId ? resolveTargets(s.slides, value).slide : undefined
+  if (slide) return JSON.parse(JSON.stringify({
+    ...summary, slideId: slide.id, totalElements: slide.elements.length,
+    offset, nextOffset: offset + limit < slide.elements.length ? offset + limit : null,
+    elements: slide.elements.slice(offset, offset + limit).map(el => ({
+      id: el.id, type: el.type, left: el.left, top: el.top, width: el.width, height: 'height' in el ? el.height : undefined,
+      rotate: 'rotate' in el ? el.rotate : undefined, locked: !!el.lock, groupId: el.groupId,
+      ...(el.type === 'text' ? { text: plain(el.content).slice(0, 4000), textTruncated: plain(el.content).length > 4000 } : {}),
     })),
-    currentSlide: s.slideIndex,
-    width: s.viewportSize,
-    height: s.viewportSize * s.viewportRatio,
-    themeColors: s.theme.themeColors,
+  }))
+  return JSON.parse(JSON.stringify({
+    ...summary, offset, nextOffset: offset + limit < s.slides.length ? offset + limit : null,
+    slides: s.slides.slice(offset, offset + limit).map((slide, index) => ({
+      index: offset + index, id: slide.id, elements: slide.elements.length,
+      texts: slide.elements.flatMap(el => el.type === 'text' ? [plain(el.content).slice(0, 300)] : []).slice(0, 5),
+    })),
   }))
 }
-async function command(value: any) {
-  if (hydrating) throw new Error('Wait for the presentation to open.')
-  if (!store) throw new Error('The editor is not running.')
-  if (value.op === 'inspect') return inspect()
-  if (value.op === 'set-title') {
-    const title = String(value.title ?? '')
-    if (!title.trim() || title.length > 200) throw new Error('Use a title up to 200 characters.')
-    store.setTitle(title.trim())
-  } else if (value.op === 'add-slide') {
-    const text = value.text === undefined ? null : String(value.text)
-    if (text !== null && (!text.trim() || text.length > 2000)) throw new Error('Use slide text up to 2000 characters.')
-    const id = crypto.randomUUID().slice(0, 10)
-    const slide: any = { id, elements: [] }
-    if (text) {
-      const escaped = text.replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[c]!)
-      slide.elements.push({
-        type: 'text',
-        id: crypto.randomUUID().slice(0, 10),
-        left: 100,
-        top: 100,
-        width: store.viewportSize - 200,
-        height: 100,
-        rotate: 0,
-        content: `<p><span style="font-size: 40px">${escaped}</span></p>`,
-        defaultFontName: store.theme.fontName,
-        defaultColor: store.theme.fontColor,
-        lineHeight: 1.2,
-      })
+
+const commands = createCommandSession<unknown>({
+  async settle() {
+    if (hydrating || !store || useSnapshotStore().snapshotLength < 1) throw new Error('Wait for the presentation and native history to finish opening.')
+    // Flush native edit buffers before leaving the active editor or inspecting it.
+    flushEditorBuffers()
+    await nextTick()
+    if (document.activeElement instanceof HTMLElement && document.activeElement.isContentEditable) document.activeElement.blur()
+    await nextTick()
+  },
+  async save() { do { await save() } while (revision !== saved) },
+  prepare(raw) {
+    const value = validateCommand(raw)
+    const s = store!
+    if (value.op === 'save-presentation') return {
+      mutates: true,
+      apply: () => useExport().exportPPTX(s.slides, false, false, async blob => call({
+        op: 'save-output', label: value.name!.trim(), bytes: await blob.arrayBuffer(),
+        mimeType: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+      })),
     }
-    store.addSlide(slide as Slide)
-  } else throw new Error('Unsupported PPTist operation.')
-  dirty()
-  await save()
-  return inspect()
-}
+    const { element } = resolveTargets(s.slides, value)
+    if (value.find !== undefined && element?.type === 'text') replaceText(element.content, value.find, value.replace!)
+    if (value.op === 'add-slide' && s.slides.length >= 500) throw new Error('A presentation can contain up to 500 slides.')
+    return {
+      mutates: value.op !== 'inspect',
+      async apply() {
+        if (value.op === 'inspect') return
+        // A pending person's edit and this command are separate native Undo steps.
+        await commitHistorySnapshot()
+        const { slide, element } = resolveTargets(s.slides, value)
+        if (value.op === 'set-title') s.setTitle(value.title!)
+        else if (value.op === 'add-slide') {
+          const newSlide: Slide = { id: crypto.randomUUID().slice(0, 10), elements: [] }
+          if (value.text) newSlide.elements.push(textElement({ ...value, left: 100, top: 100, width: s.viewportSize - 200, height: 100, fontSize: 40 }, s.theme))
+          s.updateSlideIndex(s.slides.length - 1)
+          s.addSlide(newSlide)
+        }
+        else if (value.op === 'move-slide') {
+          const updated = [...s.slides]
+          updated.splice(updated.findIndex(item => item.id === slide!.id), 1)
+          updated.splice(value.index!, 0, slide!)
+          s.setSlides(updated)
+          s.updateSlideIndex(value.index!)
+        }
+        else if (value.op === 'delete-slide') {
+          s.deleteSlide(slide!.id) // native removal also preserves section headings
+        }
+        else {
+          const elements = [...slide!.elements]
+          if (value.op === 'add-text') elements.push(textElement(value, s.theme))
+          else if (value.op === 'delete-element') elements.splice(elements.findIndex(item => item.id === element!.id), 1)
+          else if (value.op === 'edit-element') {
+            const updated = { ...element! }
+            for (const key of ['left', 'top'] as const) if (value[key] !== undefined) updated[key] = value[key]!
+            if (updated.type !== 'line') for (const key of ['width', 'height', 'rotate'] as const) if (value[key] !== undefined) updated[key] = value[key]!
+            if (value.find !== undefined && updated.type === 'text') updated.content = replaceText(updated.content, value.find, value.replace!)
+            elements[elements.findIndex(item => item.id === element!.id)] = updated
+          }
+          s.setSlides(s.slides.map(item => item.id === slide!.id ? { ...item, elements } : item))
+          s.updateSlideIndex(s.slides.findIndex(item => item.id === slide!.id))
+        }
+        useMainStore().setActiveElementIdList([])
+        await nextTick()
+        await commitHistorySnapshot()
+        dirty()
+      },
+      result: () => inspect(value.slideId && value.op !== 'delete-slide' ? { op: 'inspect', slideId: value.slideId } : value.op === 'inspect' ? value : { op: 'inspect' }),
+    }
+  },
+})
 
 /** Called from App.vue before the editor shows. Returns false when not inside a Crux. */
 export async function gardenBoot(slides: SlidesStore): Promise<boolean> {
@@ -221,7 +277,7 @@ export async function gardenBoot(slides: SlidesStore): Promise<boolean> {
   store = slides
   const bar = document.createElement('div')
   bar.id = 'garden-project'
-  bar.innerHTML = '<span role="status">Opening Garden project…</span><button>Save project</button><button>Reload saved project</button>'
+  bar.innerHTML = '<span role="status">Opening Garden project…</span><button>Save project</button><button>Reload saved project</button><button>Save PPTX to Cruxspace</button>'
   const style = document.createElement('style')
   style.textContent =
     '#garden-project{position:fixed;bottom:0;left:0;right:0;height:32px;z-index:100000;display:flex;gap:12px;align-items:center;padding:0 10px;background:#24282c;color:#fff;font:12px system-ui}#garden-project span{flex:1}#garden-project button{padding:3px 8px;color:#fff;background:#42494f;border:1px solid #697078;border-radius:3px}#app{height:calc(100vh - 32px)!important}'
@@ -248,9 +304,7 @@ export async function gardenBoot(slides: SlidesStore): Promise<boolean> {
         error => send({ op: 'flushed', flushId: message.id, error: error.message }),
       )
     } else if (message.type === 'crux:app:command') {
-      const operation = commandTail.then(() => command(message.command))
-      commandTail = operation.catch(() => {})
-      operation.then(
+      commands.execute(message.command).then(
         result => {
           try {
             send({ op: 'tool-result', commandId: message.id, result })
@@ -264,6 +318,7 @@ export async function gardenBoot(slides: SlidesStore): Promise<boolean> {
   })
   const buttons = bar.querySelectorAll('button')
   buttons[0].onclick = () => save().catch(() => {})
+  buttons[2].onclick = () => commands.execute({ op: 'save-presentation', name: store!.title }).catch(error => show(error.message))
   buttons[1].onclick = () => {
     if (revision === saved || confirm('Discard the unsaved draft and reload the saved presentation?')) location.reload()
   }

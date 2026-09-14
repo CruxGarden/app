@@ -481,7 +481,8 @@ export default () => {
   }
 
   // 导出PPTX文件
-  const exportPPTX = (_slides: Slide[], masterOverwrite: boolean, ignoreMedia: boolean) => {
+  // Garden: an optional output sink reuses the native exporter without a download.
+  const exportPPTX = (_slides: Slide[], masterOverwrite: boolean, ignoreMedia: boolean, output?: (blob: Blob) => Promise<unknown>) => {
     exporting.value = true
     const pptx = new pptxgen()
     setPPTXLayout(pptx)
@@ -990,12 +991,20 @@ export default () => {
       }
     }
 
-    setTimeout(() => {
-      pptx.writeFile({ fileName: `${title.value}.pptx` }).then(() => exporting.value = false).catch(() => {
+    return new Promise<unknown>((resolve, reject) => setTimeout(() => {
+      const writing = output
+        ? pptx.write({ outputType: 'blob' }).then(blob => output(blob as Blob))
+        : pptx.writeFile({ fileName: `${title.value}.pptx` })
+      writing.then(value => {
+        exporting.value = false
+        resolve(value)
+      }).catch(error => {
         exporting.value = false
         message.error('导出失败')
+        if (output) reject(error)
+        else resolve(undefined) // native UI reports its error; no unhandled rejection
       })
-    }, 200)
+    }, 200))
   }
 
   return {

@@ -18,6 +18,8 @@ it('packages the actual PPTist editor: runtime, source, fonts, templates, bridge
     'LICENSE',
     'UPSTREAM.md',
     '.cruxignore',
+    'garden/shared/command-session.js',
+    'garden/shared/command-session.d.ts',
     'data/project.json',
   ])
     expect(paths).toContain(path);

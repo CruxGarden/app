@@ -155,6 +155,59 @@ export function getMockLanguageModel(): LanguageModel {
           if (rounds.length === 2) return toolCallStream('set_wick_framerate', { framerate: 24 });
           return textStream('Named the project Garden anim and set 24 frames per second.');
         }
+        if (lastUserText(prompt).includes('[pptist:depth-create]')) {
+          const rounds = toolResultsThisTurn(prompt);
+          if (!rounds.length) return toolCallStream('inspect_pptist', {});
+          if (rounds.length === 1)
+            return toolCallStream('set_pptist_title', { title: 'Seed library launch' });
+          if (rounds.length === 2)
+            return toolCallStream('add_pptist_slide', { text: 'Seed library · Friday' });
+          if (rounds.length === 4)
+            return toolCallStream('add_pptist_slide', { text: 'How to take part' });
+          if (rounds.length === 3 || rounds.length === 5) {
+            const deck = JSON.parse(toolResultText(prompt, 'add_pptist_slide') || '{}');
+            const slideId = deck.slides.at(-1).id;
+            return toolCallStream('add_pptist_text', {
+              slideId,
+              text:
+                rounds.length === 3
+                  ? 'Share local seeds. Grow something together.'
+                  : 'Bring spare seeds. Label the variety. Take a packet home.',
+              left: 100,
+              top: 245,
+              width: 760,
+              height: 140,
+              fontSize: 28,
+              color: '#28523b',
+            });
+          }
+          const original = JSON.parse(toolResultText(prompt, 'inspect_pptist') || '{}');
+          const remove = original.slides[rounds.length - 6];
+          if (remove) return toolCallStream('delete_pptist_slide', { slideId: remove.id });
+          return textStream('Built an editable two-slide seed library deck.');
+        }
+        if (lastUserText(prompt).includes('[pptist:depth-revise]')) {
+          const rounds = toolResultsThisTurn(prompt);
+          if (!rounds.length) return toolCallStream('inspect_pptist', {});
+          const inspected = JSON.parse(toolResultText(prompt, 'inspect_pptist') || '{}');
+          if (rounds.length === 1)
+            return toolCallStream('inspect_pptist', { slideId: inspected.slides[0].id });
+          if (rounds.length === 2) {
+            const element = inspected.elements.find((item: { text?: string }) =>
+              item.text?.includes('Friday'),
+            );
+            return toolCallStream('edit_pptist_element', {
+              slideId: inspected.slideId,
+              elementId: element.id,
+              find: 'Friday',
+              replace: 'Saturday',
+              top: 80,
+            });
+          }
+          if (rounds.length === 3)
+            return toolCallStream('save_pptist_presentation', { name: 'Seed library launch' });
+          return textStream('Moved the event to Saturday, preserved your note and exported PPTX.');
+        }
         if (lastUserText(prompt).includes('[pptist:edit]')) {
           const rounds = toolResultsThisTurn(prompt);
           if (!rounds.length) return toolCallStream('inspect_pptist', {});

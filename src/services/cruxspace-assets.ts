@@ -61,6 +61,7 @@ const EXTENSIONS: Record<string, string> = {
   'font/woff': 'woff',
   'font/woff2': 'woff2',
   'application/pdf': 'pdf',
+  'application/vnd.openxmlformats-officedocument.presentationml.presentation': 'pptx',
   'text/csv': 'csv',
   'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'docx',
   'video/webm': 'webm',
@@ -83,7 +84,7 @@ export function outputKind(mimeType: string): 'image' | 'audio' | 'bundle' {
 const KIND_PATTERN = {
   image: /\.(png|jpe?g|gif|webp|svg)$/i,
   audio: /\.(wav|mp3|mid)$/i,
-  bundle: /\.(zip|epub|otf|ttf|woff|woff2|stl|3mf|obj|amf|x3d|dxf|csv)$/i,
+  bundle: /\.(zip|epub|otf|ttf|woff|woff2|stl|3mf|obj|amf|x3d|dxf|csv|pptx)$/i,
 };
 const KIND_EXAMPLE = {
   image: 'assets/cover.png',

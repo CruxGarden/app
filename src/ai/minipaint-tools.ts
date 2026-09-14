@@ -37,7 +37,7 @@ export const MINIPAINT_TOOLS: AppToolDefinition[] = [
   },
 ];
 export function minipaintCommand(name: string, input: Record<string, unknown>) {
-  if (name === 'inspect_minipaint') return { op: 'inspect' };
+  if (name === 'inspect_minipaint' && !Object.keys(input).length) return { op: 'inspect' };
   if (name === 'save_minipaint_image') {
     if (
       Object.keys(input).length !== 1 ||

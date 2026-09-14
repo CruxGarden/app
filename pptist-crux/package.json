@@ -12,7 +12,7 @@
     "lint": "eslint . --ext .vue,.js,.jsx,.cjs,.mjs,.ts,.tsx,.cts,.mts --fix --ignore-path .gitignore",
     "prepare": "husky install",
     "build:garden": "OUT_DIR=runtime vite build && node garden/notices.mjs",
-    "test:garden": "node --test garden/document.test.mjs"
+    "test:garden": "node --test garden/*.test.mjs"
   },
   "author": "pipipi_pikachu@163.com",
   "homepage": "https://github.com/pipipi-pikachu/PPTist",

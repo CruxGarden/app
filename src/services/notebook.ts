@@ -68,7 +68,7 @@ export function notebookSession(workspace: StoreApi<CruxState>) {
               (request.mimeType.startsWith('video/') ? 512_000_000 : 32_000_000)
           )
             throw new Error(
-              'Use a PNG, JPEG, WebP, GIF, WAV, MP3, ZIP, PDF, DOCX, EPUB or font output up to 32 MB, or a video up to 512 MB.',
+              'Use a PNG, JPEG, WebP, GIF, WAV, MP3, ZIP, PDF, DOCX, PPTX, EPUB or font output up to 32 MB, or a video up to 512 MB.',
             );
           blob = new Blob([request.bytes], { type: request.mimeType });
         } else {

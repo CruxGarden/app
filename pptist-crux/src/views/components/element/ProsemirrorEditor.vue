@@ -8,8 +8,9 @@
 </template>
 
 <script lang="ts" setup>
-import { computed, onMounted, onUnmounted, useTemplateRef, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, onUnmounted, useTemplateRef, watch } from 'vue'
 import { debounce } from 'lodash'
+import { registerEditorBuffer } from '@/garden/editor-buffers'
 import { storeToRefs } from 'pinia'
 import { useKeyboardStore, useMainStore } from '@/store'
 import type { EditorView } from 'prosemirror-view'
@@ -51,6 +52,7 @@ const { ctrlOrShiftKeyActive } = storeToRefs(useKeyboardStore())
 
 const editorViewRef = useTemplateRef<HTMLElement>('editorViewRef')
 let editorView: EditorView
+let unregisterBuffer: (() => void) | undefined
 
 // 富文本的各种交互事件监听：
 // 聚焦时取消全局快捷键事件
@@ -297,7 +299,13 @@ onMounted(() => {
     },
     editable: () => props.editable,
   })
+  // Garden: saving captures pending text immediately, without changing focus.
+  unregisterBuffer = registerEditorBuffer(() => { handleInput.flush() })
   if (props.autoFocus) editorView.focus()
+})
+onBeforeUnmount(() => {
+  handleInput.flush()
+  unregisterBuffer?.()
 })
 onUnmounted(() => {
   editorView && editorView.destroy()

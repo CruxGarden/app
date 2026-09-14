@@ -190,7 +190,11 @@ onUnmounted(() => {
 })
 
 const updateContent = (content: string, ignore = false) => {
+  // Garden: a pending editor can flush while its slide is being deselected.
+  const owner = slidesStore.slides.find(slide => slide.elements.some(el => el.id === props.elementInfo.id))
+  if (!owner) return
   slidesStore.updateElement({
+    slideId: owner.id,
     id: props.elementInfo.id,
     props: { content },
   })
