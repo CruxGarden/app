@@ -62,9 +62,14 @@ export class Toolchain {
     });
   }
 
+  /**
+   * Installed means pnpm finished: it writes node_modules/.modules.yaml last.
+   * A bare node_modules/ appears the moment an install starts, and a dev server
+   * spawned on that signal found no `astro` binary ("Command astro not found").
+   */
   isInstalled(folder: string): boolean {
     const cwd = this.resolveKnownFolder(folder);
-    return fs.existsSync(path.join(cwd, 'node_modules'));
+    return fs.existsSync(path.join(cwd, 'node_modules', '.modules.yaml'));
   }
 
   hasPackageJson(folder: string): boolean {

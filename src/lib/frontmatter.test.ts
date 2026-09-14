@@ -52,6 +52,14 @@ describe('frontmatter', () => {
     ).toBe('src/pages/posts/hi.md');
   });
 
+  it('matches double-star globs at any depth', () => {
+    const re = globToRegex('src/content/wiki/**/*.md');
+    expect(re.test('src/content/wiki/index.md')).toBe(true);
+    expect(re.test('src/content/wiki/notes/a.md')).toBe(true);
+    expect(re.test('src/content/wiki/notes/deep/er/a.md')).toBe(true);
+    expect(re.test('src/content/wiki/notes/a.mdx')).toBe(false);
+    expect(re.test('src/content/other/a.md')).toBe(false);
+  });
   it('matches single-star globs', () => {
     const re = globToRegex('src/pages/posts/*.md');
     expect(re.test('src/pages/posts/hello.md')).toBe(true);

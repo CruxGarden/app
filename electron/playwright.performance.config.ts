@@ -3,6 +3,8 @@ import { defineConfig } from '@playwright/test';
 // Opt-in: hardware-dependent measurements must not make the ordinary UI gate flaky.
 export default defineConfig({
   testDir: './performance',
+  globalSetup: './e2e/global-setup.ts',
+  globalTeardown: './e2e/global-teardown.ts',
   timeout: 30 * 60_000,
   expect: { timeout: 60_000 },
   workers: 1,

@@ -1,5 +1,5 @@
 # Skill: parallel-work
-Use when: you are about to delegate wide, independent work (captions for many photos, a set of translations).
+Use when: you are about to delegate wide, independent work (captions for many photos, translations).
 
 Fan out with the `delegate` tool: each task runs as a worker on its own Growth branch, started from the same files, and may only change the files you give it. The app merges the branches back when every worker has ended.
 

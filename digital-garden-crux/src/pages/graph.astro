@@ -1,0 +1,119 @@
+---
+// The graph: every note a node (coloured by growth stage), every link an edge.
+// force-graph (MIT) draws it on a canvas; clicking a node opens the note.
+import BaseLayout from "@/layouts/BaseLayout.astro";
+import { SITE } from "@/lib/site-config";
+import { gardenIndex } from "@/lib/wiki/garden-index";
+
+const index = gardenIndex();
+const stages = ["seedling", "budding", "evergreen"] as const;
+---
+
+<BaseLayout title={`Graph - ${SITE.title}`} description="Every note and the links between them.">
+  <main class="mx-auto max-w-7xl px-4 py-8">
+    <header class="mb-4 flex flex-wrap items-end justify-between gap-4">
+      <div>
+        <h1 class="text-2xl font-bold tracking-tight">Graph</h1>
+        <p class="mt-1 text-sm text-muted-foreground">
+          {index.nodes.length} notes, {index.edges.length} links. Click a note to open it.
+        </p>
+      </div>
+      <ul class="flex gap-4 text-xs text-muted-foreground" aria-label="Growth stages">
+        {
+          stages.map((stage) => (
+            <li class="flex items-center gap-1.5">
+              <span class="inline-block size-2.5 rounded-full" data-stage-dot={stage} />
+              {stage}
+            </li>
+          ))
+        }
+      </ul>
+    </header>
+    <div
+      id="garden-graph"
+      class="h-[70vh] min-h-[420px] w-full overflow-hidden rounded-xl border border-border bg-card"
+      data-nodes={index.nodes.length}
+      data-links={index.edges.length}
+      role="img"
+      aria-label={`Graph of ${index.nodes.length} notes and ${index.edges.length} links`}
+    >
+    </div>
+  </main>
+</BaseLayout>
+
+<style>
+  [data-stage-dot="seedling"] {
+    background: #7cb342;
+  }
+  [data-stage-dot="budding"] {
+    background: #26a69a;
+  }
+  [data-stage-dot="evergreen"] {
+    background: #1b5e20;
+  }
+  :global(.dark) [data-stage-dot="evergreen"] {
+    background: #66bb6a;
+  }
+</style>
+
+<script>
+  import ForceGraph from "force-graph";
+
+  const STAGE_COLORS: Record<string, string> = {
+    seedling: "#7cb342",
+    budding: "#26a69a",
+    evergreen: "#1b5e20",
+  };
+  const STAGE_COLORS_DARK: Record<string, string> = { ...STAGE_COLORS, evergreen: "#66bb6a" };
+
+  interface Node {
+    id: string;
+    title: string;
+    growthStage: string;
+    links: number;
+    href: string;
+    x?: number;
+    y?: number;
+  }
+
+  async function mount() {
+    const el = document.getElementById("garden-graph");
+    if (!el || el.dataset.mounted) return;
+    el.dataset.mounted = "true";
+    const data = (await fetch("/graph.json").then((r) => r.json())) as {
+      nodes: Node[];
+      links: { source: string; target: string }[];
+    };
+    const dark = () => document.documentElement.classList.contains("dark");
+    const ink = () => (dark() ? "#e8e6e1" : "#1a1a18");
+    const graph = new ForceGraph(el)
+      .graphData(data)
+      .width(el.clientWidth)
+      .height(el.clientHeight)
+      .backgroundColor("rgba(0,0,0,0)")
+      .nodeId("id")
+      .nodeLabel((n) => (n as Node).title)
+      .nodeVal((n) => 2 + (n as Node).links)
+      .nodeColor((n) => (dark() ? STAGE_COLORS_DARK : STAGE_COLORS)[(n as Node).growthStage] ?? "#888")
+      .nodeCanvasObjectMode(() => "after")
+      .nodeCanvasObject((node, ctx, scale) => {
+        const n = node as Node;
+        if (scale < 1.2 && n.links < 3) return;
+        ctx.font = `${Math.max(10, 12 / scale)}px system-ui, sans-serif`;
+        ctx.textAlign = "center";
+        ctx.textBaseline = "top";
+        ctx.fillStyle = ink();
+        ctx.fillText(n.title, n.x ?? 0, (n.y ?? 0) + 4 + Math.sqrt(2 + n.links) * 2);
+      })
+      .linkColor(() => (dark() ? "rgba(232,230,225,0.25)" : "rgba(26,26,24,0.2)"))
+      .linkDirectionalArrowLength(3)
+      .linkDirectionalArrowRelPos(1)
+      .onNodeClick((node) => {
+        location.href = (node as Node).href;
+      });
+    el.dataset.ready = "true";
+    window.addEventListener("resize", () => graph.width(el.clientWidth).height(el.clientHeight));
+  }
+  document.addEventListener("astro:page-load", mount);
+  mount();
+</script>

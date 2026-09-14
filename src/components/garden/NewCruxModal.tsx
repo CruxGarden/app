@@ -648,6 +648,17 @@ const TEMPLATES: Template[] = [
     desktopOnly: true,
   },
   {
+    id: 'digital-garden',
+    label: 'Digital Garden',
+    description:
+      'A garden of linked notes on Astro — wikilinks, growth stages, backlinks, a graph, search',
+    icon: <PencilIcon />,
+    thumb: <BlogThumb />,
+    kind: 'webapp',
+    defaultTitle: 'My Digital Garden',
+    desktopOnly: true,
+  },
+  {
     id: 'astro-feed',
     label: 'Astro Feed',
     description: 'A photo feed — profile, square grid, a page per picture',
