@@ -81,9 +81,17 @@ test.describe('growth tools (mock AI)', () => {
         .catch(async () => {
           await page.evaluate(() => window.history.back());
         });
-      await page.getByText('My Crux', { exact: true }).first().click();
+      // Back into the open workspace through the switcher (the Home card's text also appears in the switcher's list)
+      await page.getByRole('button', { name: 'Switch Crux workspace' }).click();
+      await page
+        .getByRole('dialog', { name: 'Switch Crux workspace' })
+        .getByRole('button', { name: /^(✓ )?My Crux / })
+        .click();
+      await expect(page.locator('[data-workspace-id]')).toBeVisible({ timeout: 30_000 });
       // Artifacts is not an open-by-default pane
-      await expect(page.getByRole('button', { name: 'Toggle artifacts' })).toBeVisible({ timeout: 30_000 });
+      await expect(page.getByRole('button', { name: 'Toggle artifacts' })).toBeVisible({
+        timeout: 30_000,
+      });
       if (!(await page.getByTestId('pane-body-artifacts').isVisible()))
         await page.getByRole('button', { name: 'Toggle artifacts' }).click();
       const tree = page.getByRole('tree');
@@ -137,13 +145,14 @@ test.describe('AGENTS.md per Project Folder', () => {
       expect(agents).toContain('# AGENTS.md');
       expect(agents).toContain('Template: Astro Blog');
       expect(agents).toContain('## Content Model');
-      expect(agents).toContain('src/pages/posts/*.md');
-      expect(agents).toContain('New Post — creates src/pages/posts/{slug}.md');
+      expect(agents).toContain('content/posts/**/*.md');
+      expect(agents).toContain('New Post — creates content/posts/{slug}.md');
       expect(agents).toContain('`check_site`');
       expect(agents).toContain('## Never touch');
       expect(agents).toContain('## Recording work (Growth)');
       expect(agents).toContain('## Voice');
-      expect(agents).toMatch(/\*\*The Keeper\*\*/);
+      // The default persona's name, bold, under Voice (the Keeper until ADR 0043; Iris since)
+      expect(agents).toMatch(/## Voice[\s\S]*\*\*[A-Z][\w ]+\*\*/);
 
       await expect
         .poll(() => fileOnDisk('CLAUDE.md'), { timeout: 30_000 })

@@ -470,6 +470,16 @@ export function getMockLanguageModel(): LanguageModel {
           if (rounds.length === 1) return toolCallStream('export_note_docx', {});
           return textStream('Exported the open note as a Word document in exports.');
         }
+        if (lastUserText(prompt).includes('[blog:post]')) {
+          const rounds = toolResultsThisTurn(prompt);
+          if (!rounds.length)
+            return toolCallStream('write_file', {
+              path: 'content/posts/moss.md',
+              content:
+                '---\ntitle: "Moss"\ndescription: "The quiet ground cover of a garden."\npublishDate: "2026-09-14"\ntags: ["garden"]\n---\n\nMoss grows where nothing else bothers to. It is the first thing to arrive and the last to leave.\n',
+            });
+          return textStream('Drafted a post about moss and tagged it garden.');
+        }
         if (lastUserText(prompt).includes('[garden:note]')) {
           const rounds = toolResultsThisTurn(prompt);
           if (!rounds.length)

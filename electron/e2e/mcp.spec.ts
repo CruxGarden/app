@@ -6,6 +6,7 @@ import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
 import { launchApp } from './launch';
+import { openBuilder } from './builder-helpers';
 import { startMockApi } from './api-mock';
 
 /**
@@ -148,6 +149,7 @@ test.describe('Agent Host (MCP server per crux)', () => {
     let client: Client | null = null;
     try {
       await plantGarden(page, /Astro Blog/);
+      await openBuilder(page);
       await expect(page.getByRole('button', { name: /new post/i })).toBeVisible({
         timeout: 30_000,
       });
@@ -180,13 +182,13 @@ test.describe('Agent Host (MCP server per crux)', () => {
       expect(persona.name.length).toBeGreaterThan(0);
 
       // ── write_file → disk, Artifacts tree, Collaboration ───────────────────
-      const post = 'src/pages/posts/hello-from-mcp.md';
+      const post = 'content/posts/hello-from-mcp.md';
       const written = await client.callTool({
         name: 'write_file',
         arguments: {
           path: post,
           content:
-            '---\ntitle: Hello from MCP\ndate: 2026-09-04\ndescription: Written by an external agent\n---\n\nAn external agent wrote this post over MCP.\n',
+            '---\ntitle: Hello from MCP\npublishDate: 2026-09-04\ndescription: Written by an external agent\n---\n\nAn external agent wrote this post over MCP.\n',
         },
       });
       expect(written.isError ?? false).toBe(false);
@@ -201,7 +203,7 @@ test.describe('Agent Host (MCP server per crux)', () => {
       await page.getByRole('button', { name: 'Toggle artifacts' }).click();
       const tree = page.getByRole('tree');
       await expect(tree).toBeVisible({ timeout: 30_000 });
-      for (const dirName of ['src', 'pages', 'posts']) {
+      for (const dirName of ['content', 'posts']) {
         await tree.getByText(dirName, { exact: true }).click();
       }
       await expect(tree.getByText('hello-from-mcp.md', { exact: true })).toBeVisible();

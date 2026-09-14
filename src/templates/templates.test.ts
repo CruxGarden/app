@@ -18,6 +18,12 @@ const TEMPLATE_IDS = [
   FIVE_WS_TEMPLATE_ID,
 ] as const;
 
+/** The fixed folder a collection glob looks in: 'src/pages/posts/*.md' and 'content/posts/**\/*.md' both give their posts folder. */
+function collectionDir(glob: string): string {
+  const star = glob.indexOf('*');
+  return (star === -1 ? glob : glob.slice(0, star)).replace(/\/$/, '');
+}
+
 describe('applyTemplateMeta', () => {
   const def: TemplateDefinition = {
     files: [],
@@ -131,8 +137,8 @@ describe('shipped template definitions', () => {
           field.key,
         );
       }
-      // Items land where the glob looks for them
-      const globDir = collection.glob.slice(0, collection.glob.lastIndexOf('/'));
+      // Items land where the glob looks for them (the fixed folder before any `*`)
+      const globDir = collectionDir(collection.glob);
       expect(collection.new.pathTemplate.startsWith(globDir + '/')).toBe(true);
     }
   });
@@ -140,7 +146,7 @@ describe('shipped template definitions', () => {
   it.each(TEMPLATE_IDS)('%s: sample posts carry the recipe frontmatter keys', async (id) => {
     const def = (await loadTemplate(id))!;
     for (const collection of def.contentModel?.collections ?? []) {
-      const dir = collection.glob.slice(0, collection.glob.lastIndexOf('/'));
+      const dir = collectionDir(collection.glob);
       const samples = def.files.filter(
         (f) => f.path.startsWith(dir + '/') && f.path.endsWith('.md'),
       );
@@ -156,7 +162,7 @@ describe('shipped template definitions', () => {
   it.each(TEMPLATE_IDS)('%s: ignores build machinery and ships an astro config', async (id) => {
     const def = (await loadTemplate(id))!;
     const paths = def.files.map((f) => f.path);
-    expect(paths).toContain('astro.config.mjs');
+    expect(paths.some((p) => /^astro\.config\.(mjs|ts)$/.test(p))).toBe(true);
     expect(paths).toContain('package.json');
 
     const cruxignore = def.files.find((f) => f.path === '.cruxignore');
