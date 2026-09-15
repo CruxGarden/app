@@ -12,6 +12,13 @@ import {
 } from "./canvasNodeSemantics";
 
 describe("canvasNodeSemantics", () => {
+  it("lets the person edit a subtitle created by the native palette or an agent", () => {
+    const subtitle = createCanvasNode("textSubtitle", 48, 266, "subtitle");
+    subtitle.text = "A little fixing. A lot of good company.";
+
+    expect(editableTextField(subtitle)).toBe("text");
+  });
+
   it("creates label components at a compact default font size", () => {
     expect(createCanvasNode("textLabel", 0, 0, "label").fontSize).toBe(14);
   });
