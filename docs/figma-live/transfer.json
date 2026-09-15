@@ -1,0 +1,26 @@
+{
+  "sha256": "a72ead5060ad224c866f02fee04c34550699060484b43e414385c9cde9054369",
+  "sourceNode": "5:2",
+  "importedThrough": "Figma companion file import",
+  "transfer": {
+    "version": 1,
+    "spaceId": "524456ad-081f-439b-8382-f1e2c94b5ae0",
+    "spaceName": "Made together — Figma to Astro",
+    "sourceCruxId": "acc52b60-8aa3-4fbe-b9c3-9020c84b6f79",
+    "sourceTitle": "Garden gathering design",
+    "outputId": "8ccfd828-bc0c-42da-aa2d-79a7e6c28e42",
+    "sourcePath": "exports/8ccfd828-bc0c-42da-aa2d-79a7e6c28e42.png",
+    "fingerprint": "a72ead5060ad224c866f02fee04c34550699060484b43e414385c9cde9054369",
+    "label": "Our shared garden artwork",
+    "path": "public/garden-gathering.png",
+    "imported": "2026-09-15T20:01:51.457Z",
+    "externalSource": {
+      "app": "figma",
+      "documentUrl": "https://www.figma.com/design/1UGF8VTtWSz0D3pjGvOWwf?node-id=5-2",
+      "method": "file-import",
+      "nodeId": "5:2"
+    }
+  },
+  "designId": "acc52b60-8aa3-4fbe-b9c3-9020c84b6f79",
+  "siteId": "73c91088-69da-4954-9dda-29d8770906d4"
+}

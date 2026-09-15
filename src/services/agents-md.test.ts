@@ -52,6 +52,15 @@ async function inputForTemplate(templateId: string): Promise<AgentsMdInput> {
 }
 
 describe('renderAgentsMd', () => {
+  it('describes a Figma companion without telling its agent to build a website', async () => {
+    const md = renderAgentsMd(await inputForTemplate('figma'));
+    expect(md).toContain('Kind: Figma Crux');
+    expect(md).toContain('figma/project.json');
+    expect(md).toContain('editable canvas lives in Figma');
+    expect(md).toContain('does not restore the remote Figma document');
+    expect(md).not.toContain('index.html');
+    expect(md).not.toContain('esm.sh');
+  });
   it.each(TEMPLATE_IDS)('%s: renders a stable file (snapshot)', async (id) => {
     const input = await inputForTemplate(id);
     const first = renderAgentsMd(input);

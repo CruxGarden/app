@@ -32,12 +32,19 @@ function run(argv) {
   var b = input.bounds;
   if (![b.x,b.y,b.width,b.height].every(Number.isFinite) || b.width < 400 || b.height < 300)
     throw new Error('Invalid window size.');
+  function place(bounds) {
+    // macOS clamps growth at the current screen edge. Shrink first so moving
+    // right/down can fit, then move before growing at the new origin.
+    var current = w.size();
+    w.size = [Math.min(current[0],bounds.width),Math.min(current[1],bounds.height)];
+    w.position = [bounds.x,bounds.y];
+    w.size = [bounds.width,bounds.height];
+  }
   try {
-    w.size = [b.width,b.height];
-    w.position = [b.x,b.y];
+    place(b);
     return JSON.stringify(snapshot());
   } catch (error) {
-    try { w.size = [before.bounds.width,before.bounds.height]; w.position = [before.bounds.x,before.bounds.y]; }
+    try { place(before.bounds); }
     catch (_) { throw new Error('Placement failed and Figma could not be restored. Arrange its window manually.'); }
     throw error;
   }
@@ -147,7 +154,23 @@ export class FigmaDesktop {
     const previous = this.previous;
     if (!previous) return;
     try {
-      await command({ action: 'set', expected: previous.arranged, bounds: previous.figma.bounds });
+      const restored = await command({
+        action: 'set',
+        expected: previous.arranged,
+        bounds: previous.figma.bounds,
+      });
+      if (
+        Object.keys(previous.figma.bounds).some(
+          (key) =>
+            Math.abs(
+              restored.bounds[key as keyof WindowRect] -
+                previous.figma.bounds[key as keyof WindowRect],
+            ) > 3,
+        )
+      )
+        throw new Error(
+          'Figma could not return to its original size. Arrange its window manually.',
+        );
     } finally {
       const win = this.window();
       if (win && !win.isDestroyed()) {

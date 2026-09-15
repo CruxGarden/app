@@ -91,7 +91,10 @@ export default function FigmaPane() {
       </p>
     );
   return (
-    <div className="h-full min-h-0 overflow-auto p-5" data-testid="figma-companion">
+    <div
+      className="h-full min-h-0 overflow-auto bg-surface-solid p-5"
+      data-testid="figma-companion"
+    >
       <div className="max-w-xl mx-auto space-y-5">
         <header className="space-y-2">
           <p className="text-xs text-text-muted">External app · Proof of concept</p>
@@ -232,19 +235,23 @@ export default function FigmaPane() {
           </section>
         )}
         <section className="space-y-2" aria-label="Figma tool connection">
-          <h3 className="text-sm font-medium">Agent connection</h3>
+          <h3 className="text-sm font-medium">Use Figma tools</h3>
           <p className="text-sm text-text-muted">
-            Figma MCP editing is not connected through this companion yet. A supported,
-            authenticated Figma client is required for the live trial.
+            Choose Claude Code in Collaboration with its official Figma plugin installed and
+            connected. Ask it to inspect the linked design, make an editable revision, or upload an
+            Artifact. Review tool requests in Collaboration.
           </p>
           <p className="text-xs text-text-muted">
-            Saving a link or arranging windows does not grant design access.
+            Claude Code uses its own Figma authorization. A saved link does not grant access, and
+            other Collaboration providers are not connected by this companion.
           </p>
         </section>
         <section className="space-y-3" aria-label="Import Figma export">
           <h3 className="text-sm font-medium">Bring an asset back</h3>
           <p className="text-sm text-text-muted">
-            Import a Figma export as an output, then use it in another member of your Cruxspace.
+            Ask your collaborator to download a Figma export into this Project Folder, or export it
+            yourself. Import the file below to share it with another member of your Cruxspace. Link
+            the exported frame first so its source is recorded correctly.
           </p>
           <label className="block text-sm" htmlFor="figma-output-label">
             Asset name
