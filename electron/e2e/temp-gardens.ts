@@ -13,6 +13,7 @@ import { join } from 'node:path';
  */
 const PREFIXES = [
   'crux-e2e-',
+  'crux-kan-rebuild-', // standalone source-rebuild proof from kan-app.spec.ts
   'crux-vault-fixture-',
   'crux-archives-',
   'crux-store-',

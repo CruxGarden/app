@@ -291,23 +291,33 @@ test('soft-deleted lists, cards, checklists and items stay in history while acti
     readBoard(publicId).lists[0].cards.map((card) => card.title),
     ['C', 'D', 'A'],
   );
-  assert.throws(() => dispatch('card.update', { cardPublicId: a.publicId, index: 3 }), /Invalid card index/);
+  assert.throws(
+    () => dispatch('card.update', { cardPublicId: a.publicId, index: 3 }),
+    /Invalid card index/,
+  );
   const checklist = dispatch('checklist.create', { cardPublicId: a.publicId, name: 'Steps' }) as {
     publicId: string;
   };
-  const one = dispatch('checklist.createItem', { checklistPublicId: checklist.publicId, title: 'one' }) as { publicId: string };
+  const one = dispatch('checklist.createItem', {
+    checklistPublicId: checklist.publicId,
+    title: 'one',
+  }) as { publicId: string };
   dispatch('checklist.createItem', { checklistPublicId: checklist.publicId, title: 'two' });
   dispatch('checklist.deleteItem', { checklistItemPublicId: one.publicId });
   dispatch('checklist.update', { checklistPublicId: checklist.publicId, name: 'Renamed' });
   let detail = cardDetailSchema.parse(dispatch('card.byId', { cardPublicId: a.publicId }));
-  assert.deepEqual(detail.checklists.map((l) => [l.name, l.items.map((i) => [i.title, i.index])]), [
-    ['Renamed', [['two', 0]]],
-  ]);
+  assert.deepEqual(
+    detail.checklists.map((l) => [l.name, l.items.map((i) => [i.title, i.index])]),
+    [['Renamed', [['two', 0]]]],
+  );
   assert.equal(detail.activities[0].type, 'card.updated.checklist.renamed');
   assert.equal(detail.activities[1].type, 'card.updated.checklist.item.deleted');
   assert.equal(detail.activities[1].fromTitle, 'one');
   dispatch('checklist.delete', { checklistPublicId: checklist.publicId });
-  assert.throws(() => dispatch('checklist.createItem', { checklistPublicId: checklist.publicId, title: 'x' }), /NOT_FOUND/);
+  assert.throws(
+    () => dispatch('checklist.createItem', { checklistPublicId: checklist.publicId, title: 'x' }),
+    /NOT_FOUND/,
+  );
   dispatch('list.create', { boardPublicId: publicId, name: 'Third' });
   dispatch('list.delete', { listPublicId: board.lists[1].publicId });
   assert.deepEqual(
@@ -337,7 +347,9 @@ test('soft-deleted lists, cards, checklists and items stay in history while acti
   dispatch('board.delete', { boardPublicId: publicId });
   assert.throws(() => readBoard(publicId), /NOT_FOUND/);
   assert.equal(
-    (dispatch('board.all', { workspacePublicId }) as { publicId: string }[]).some((b) => b.publicId === publicId),
+    (dispatch('board.all', { workspacePublicId }) as { publicId: string }[]).some(
+      (b) => b.publicId === publicId,
+    ),
     false,
   );
 });
@@ -347,52 +359,103 @@ test('label rename and delete update card views after a JSON restore breaks shar
   const { publicId } = newBoard('Labels');
   const board = readBoard(publicId);
   const card = newCard(board.lists[0].publicId, 'Tagged');
-  const label = dispatch('label.create', { boardPublicId: publicId, name: 'Art', colourCode: '#ff0000' }) as { publicId: string };
-  const other = dispatch('label.create', { boardPublicId: publicId, name: 'Sound', colourCode: '#00ff00' }) as { publicId: string };
+  const label = dispatch('label.create', {
+    boardPublicId: publicId,
+    name: 'Art',
+    colourCode: '#ff0000',
+  }) as { publicId: string };
+  const other = dispatch('label.create', {
+    boardPublicId: publicId,
+    name: 'Sound',
+    colourCode: '#00ff00',
+  }) as { publicId: string };
   dispatch('card.addOrRemoveLabel', { cardPublicId: card.publicId, labelPublicId: label.publicId });
   dispatch('card.addOrRemoveLabel', { cardPublicId: card.publicId, labelPublicId: other.publicId });
   const records = captureRecords();
   restoreRecords(null);
   restoreRecords(records);
-  dispatch('label.update', { labelPublicId: label.publicId, name: 'Artwork', colourCode: '#0000ff' });
+  dispatch('label.update', {
+    labelPublicId: label.publicId,
+    name: 'Artwork',
+    colourCode: '#0000ff',
+  });
   dispatch('label.delete', { labelPublicId: other.publicId });
   const detail = cardDetailSchema.parse(dispatch('card.byId', { cardPublicId: card.publicId }));
-  assert.deepEqual(detail.labels, [{ publicId: label.publicId, name: 'Artwork', colourCode: '#0000ff' }]);
-  assert.deepEqual(detail.list.board.labels.map((l) => l.name), ['Artwork']);
+  assert.deepEqual(detail.labels, [
+    { publicId: label.publicId, name: 'Artwork', colourCode: '#0000ff' },
+  ]);
+  assert.deepEqual(
+    detail.list.board.labels.map((l) => l.name),
+    ['Artwork'],
+  );
   assert.throws(() => dispatch('label.byPublicId', { labelPublicId: other.publicId }), /NOT_FOUND/);
   assert.throws(
-    () => dispatch('card.addOrRemoveLabel', { cardPublicId: card.publicId, labelPublicId: other.publicId }),
+    () =>
+      dispatch('card.addOrRemoveLabel', {
+        cardPublicId: card.publicId,
+        labelPublicId: other.publicId,
+      }),
     /NOT_FOUND/,
   );
-  const filtered = boardDetailSchema.parse(dispatch('board.byId', { boardPublicId: publicId, labels: [label.publicId] }));
+  const filtered = boardDetailSchema.parse(
+    dispatch('board.byId', { boardPublicId: publicId, labels: [label.publicId] }),
+  );
   assert.equal(filtered.lists[0].cards.length, 1);
   assert.equal(filtered.lists[0].cards[0].labels[0].name, 'Artwork');
   // Filtering by the deleted label matches nothing rather than stale copies.
-  const stale = boardDetailSchema.parse(dispatch('board.byId', { boardPublicId: publicId, labels: [other.publicId] }));
+  const stale = boardDetailSchema.parse(
+    dispatch('board.byId', { boardPublicId: publicId, labels: [other.publicId] }),
+  );
   assert.equal(stale.lists[0].cards.length, 0);
 });
 test('comment edits and deletes keep native activity, counts and pagination consistent', () => {
   const { publicId } = newBoard('Comments');
   const board = readBoard(publicId);
   const card = newCard(board.lists[0].publicId, 'Discussed');
-  const first = dispatch('card.addComment', { cardPublicId: card.publicId, comment: '<p>first</p>' }) as { publicId: string };
-  const second = dispatch('card.addComment', { cardPublicId: card.publicId, comment: '<p>second</p>' }) as { publicId: string };
-  dispatch('card.updateComment', { cardPublicId: card.publicId, commentPublicId: first.publicId, comment: '<p>edited</p>' });
+  const first = dispatch('card.addComment', {
+    cardPublicId: card.publicId,
+    comment: '<p>first</p>',
+  }) as { publicId: string };
+  const second = dispatch('card.addComment', {
+    cardPublicId: card.publicId,
+    comment: '<p>second</p>',
+  }) as { publicId: string };
+  dispatch('card.updateComment', {
+    cardPublicId: card.publicId,
+    commentPublicId: first.publicId,
+    comment: '<p>edited</p>',
+  });
   let detail = cardDetailSchema.parse(dispatch('card.byId', { cardPublicId: card.publicId }));
   const added = detail.activities.filter((a) => a.type === 'card.updated.comment.added');
-  assert.deepEqual(added.map((a) => [a.comment?.comment, !!a.comment?.updatedAt]), [
-    ['<p>second</p>', false],
-    ['<p>edited</p>', true],
-  ]);
+  assert.deepEqual(
+    added.map((a) => [a.comment?.comment, !!a.comment?.updatedAt]),
+    [
+      ['<p>second</p>', false],
+      ['<p>edited</p>', true],
+    ],
+  );
   assert.equal(detail.activities[0].type, 'card.updated.comment.updated');
   dispatch('card.deleteComment', { cardPublicId: card.publicId, commentPublicId: second.publicId });
   detail = cardDetailSchema.parse(dispatch('card.byId', { cardPublicId: card.publicId }));
-  assert.deepEqual(detail.activities.filter((a) => a.comment).map((a) => a.comment?.publicId), [first.publicId]);
+  assert.deepEqual(
+    detail.activities.filter((a) => a.comment).map((a) => a.comment?.publicId),
+    [first.publicId],
+  );
   assert.equal(readBoard(publicId).lists[0].cards[0].comments.length, 1);
-  const page = dispatch('card.getActivities', { cardPublicId: card.publicId, limit: 100 }) as { activities: { comment: { publicId: string } | null }[] };
-  assert.equal(page.activities.some((a) => a.comment?.publicId === second.publicId), false);
+  const page = dispatch('card.getActivities', { cardPublicId: card.publicId, limit: 100 }) as {
+    activities: { comment: { publicId: string } | null }[];
+  };
+  assert.equal(
+    page.activities.some((a) => a.comment?.publicId === second.publicId),
+    false,
+  );
   assert.throws(
-    () => dispatch('card.updateComment', { cardPublicId: card.publicId, commentPublicId: second.publicId, comment: 'x' }),
+    () =>
+      dispatch('card.updateComment', {
+        cardPublicId: card.publicId,
+        commentPublicId: second.publicId,
+        comment: 'x',
+      }),
     /NOT_FOUND/,
   );
 });
@@ -400,11 +463,23 @@ test('duplication copies the native subset with fresh identities and same-board 
   const { publicId } = newBoard('Duplicate');
   const board = readBoard(publicId);
   const card = newCard(board.lists[0].publicId, 'Source');
-  const label = dispatch('label.create', { boardPublicId: publicId, name: 'Keep', colourCode: '#123456' }) as { publicId: string };
+  const label = dispatch('label.create', {
+    boardPublicId: publicId,
+    name: 'Keep',
+    colourCode: '#123456',
+  }) as { publicId: string };
   dispatch('card.addOrRemoveLabel', { cardPublicId: card.publicId, labelPublicId: label.publicId });
-  dispatch('card.addOrRemoveMember', { cardPublicId: card.publicId, workspaceMemberPublicId: 'localmember1' });
-  const checklist = dispatch('checklist.create', { cardPublicId: card.publicId, name: 'Todo' }) as { publicId: string };
-  const item = dispatch('checklist.createItem', { checklistPublicId: checklist.publicId, title: 'done already' }) as { publicId: string };
+  dispatch('card.addOrRemoveMember', {
+    cardPublicId: card.publicId,
+    workspaceMemberPublicId: 'localmember1',
+  });
+  const checklist = dispatch('checklist.create', { cardPublicId: card.publicId, name: 'Todo' }) as {
+    publicId: string;
+  };
+  const item = dispatch('checklist.createItem', {
+    checklistPublicId: checklist.publicId,
+    title: 'done already',
+  }) as { publicId: string };
   dispatch('checklist.updateItem', { checklistItemPublicId: item.publicId, completed: true });
   dispatch('card.addComment', { cardPublicId: card.publicId, comment: 'not copied' });
   const copy = dispatch('card.duplicate', {
@@ -420,11 +495,17 @@ test('duplication copies the native subset with fresh identities and same-board 
   const detail = cardDetailSchema.parse(dispatch('card.byId', { cardPublicId: copy.publicId }));
   assert.equal(detail.title, 'Copy');
   assert.equal(detail.list.publicId, board.lists[1].publicId);
-  assert.deepEqual(detail.labels.map((l) => l.publicId), [label.publicId]);
+  assert.deepEqual(
+    detail.labels.map((l) => l.publicId),
+    [label.publicId],
+  );
   assert.equal(detail.members.length, 0);
   assert.equal(detail.checklists[0].items[0].completed, false);
   assert.notEqual(detail.checklists[0].publicId, checklist.publicId);
-  assert.equal(detail.activities.some((a) => a.comment), false);
+  assert.equal(
+    detail.activities.some((a) => a.comment),
+    false,
+  );
   assert.equal(detail.activities.at(-1)?.type, 'card.created');
   const original = cardDetailSchema.parse(dispatch('card.byId', { cardPublicId: card.publicId }));
   assert.equal(original.members.length, 1);
@@ -441,10 +522,20 @@ test('duplication copies the native subset with fresh identities and same-board 
       }),
     /outside its board/,
   );
-  dispatch('card.addOrRemoveMember', { cardPublicId: card.publicId, workspaceMemberPublicId: 'localmember1' });
-  assert.equal(cardDetailSchema.parse(dispatch('card.byId', { cardPublicId: card.publicId })).members.length, 0);
+  dispatch('card.addOrRemoveMember', {
+    cardPublicId: card.publicId,
+    workspaceMemberPublicId: 'localmember1',
+  });
+  assert.equal(
+    cardDetailSchema.parse(dispatch('card.byId', { cardPublicId: card.publicId })).members.length,
+    0,
+  );
   assert.throws(
-    () => dispatch('card.addOrRemoveMember', { cardPublicId: card.publicId, workspaceMemberPublicId: 'nobody000000' }),
+    () =>
+      dispatch('card.addOrRemoveMember', {
+        cardPublicId: card.publicId,
+        workspaceMemberPublicId: 'nobody000000',
+      }),
     /NOT_FOUND/,
   );
 });
@@ -478,7 +569,9 @@ test('due date filters use the native ranges, OR selected keys and combine with 
   assert.deepEqual(titles(['overdue', 'no-due-date']), ['Late', 'Never']);
   assert.deepEqual(titles([]), ['Late', 'Now', 'Soon', 'Later', 'Never']);
   assert.deepEqual(titles(['overdue'], { lists: [board.lists[1].publicId] }), []);
-  assert.throws(() => dispatch('board.byId', { boardPublicId: publicId, dueDateFilters: ['someday'] }));
+  assert.throws(() =>
+    dispatch('board.byId', { boardPublicId: publicId, dueDateFilters: ['someday'] }),
+  );
 });
 test('records saved before soft deletion restore with active defaults and a source board copies its snapshot', async () => {
   const { restoreRecords } = await import('./model');
@@ -486,7 +579,10 @@ test('records saved before soft deletion restore with active defaults and a sour
   const { publicId } = newBoard('Legacy');
   const board = readBoard(publicId);
   const card = newCard(board.lists[0].publicId, 'Old');
-  const checklist = dispatch('checklist.create', { cardPublicId: card.publicId, name: 'Old list' }) as { publicId: string };
+  const checklist = dispatch('checklist.create', {
+    cardPublicId: card.publicId,
+    name: 'Old list',
+  }) as { publicId: string };
   dispatch('checklist.createItem', { checklistPublicId: checklist.publicId, title: 'old item' });
   dispatch('card.addComment', { cardPublicId: card.publicId, comment: 'old comment' });
   // Earlier records only carried deletedAt on boards and comment bodies.
@@ -506,9 +602,152 @@ test('records saved before soft deletion restore with active defaults and a sour
     sourceBoardPublicId: publicId,
   }) as { publicId: string };
   const cloned = readBoard(clone.publicId);
-  assert.deepEqual(cloned.lists.map((l) => l.name), ['Ideas', 'Making']);
+  assert.deepEqual(
+    cloned.lists.map((l) => l.name),
+    ['Ideas', 'Making'],
+  );
   assert.equal(cloned.lists[0].cards[0].title, 'Old');
   assert.notEqual(cloned.lists[0].cards[0].publicId, card.publicId);
   assert.equal(cloned.lists[0].cards[0].checklists[0].items[0].title, 'old item');
   assert.equal(cloned.lists[0].cards[0].comments.length, 0);
+});
+
+test('board and card depth commands preserve native manual content, labels, dates and checklist history', async () => {
+  const { executeCommand: command } = await import('./commands');
+  const { revisionToken, restoreRecords } = await import('./model');
+  restoreRecords(null);
+  const edit = (input: Record<string, unknown>) =>
+    command({ ...input, expectedState: revisionToken() });
+  const board = edit({ op: 'create-board', name: 'Launch', lists: ['Ideas', 'Doing'] }) as {
+    publicId: string;
+  };
+  const lists = readBoard(board.publicId).lists;
+  const card = newCard(lists[0].publicId, 'Draft');
+  dispatch('card.update', {
+    cardPublicId: card.publicId,
+    title: 'Manual title',
+    description: '<p><strong>Keep formatting</strong></p>',
+  });
+  edit({ op: 'card-details', cardPublicId: card.publicId, dueDate: '2026-09-22T16:00:00Z' });
+  const label = edit({
+    op: 'create-label',
+    boardPublicId: board.publicId,
+    name: 'Release',
+    colourCode: '#336699',
+  }) as { publicId: string };
+  edit({
+    op: 'set-label',
+    cardPublicId: card.publicId,
+    labelPublicId: label.publicId,
+    assigned: true,
+  });
+  edit({
+    op: 'set-label',
+    cardPublicId: card.publicId,
+    labelPublicId: label.publicId,
+    assigned: true,
+  });
+  edit({ op: 'update-label', labelPublicId: label.publicId, name: 'Ready' });
+  const checklist = edit({
+    op: 'create-checklist',
+    cardPublicId: card.publicId,
+    name: 'Before release',
+  }) as { publicId: string };
+  const first = edit({
+    op: 'create-item',
+    checklistPublicId: checklist.publicId,
+    title: 'Test the build',
+  }) as { publicId: string };
+  const second = edit({
+    op: 'create-item',
+    checklistPublicId: checklist.publicId,
+    title: 'Write notes',
+  }) as { publicId: string };
+  edit({ op: 'update-item', checklistItemPublicId: second.publicId, index: 0, completed: true });
+  edit({ op: 'update-checklist', checklistPublicId: checklist.publicId, name: 'Checklist' });
+  const detail = cardDetailSchema.parse(dispatch('card.byId', { cardPublicId: card.publicId }));
+  assert.equal(detail.title, 'Manual title');
+  assert.equal(detail.description, '<p><strong>Keep formatting</strong></p>');
+  assert.equal(detail.dueDate?.toISOString(), '2026-09-22T16:00:00.000Z');
+  assert.deepEqual(
+    detail.labels.map((l) => [l.name, l.colourCode]),
+    [['Ready', '#336699']],
+  );
+  assert.deepEqual(
+    detail.checklists[0].items.map((i) => [i.title, i.completed]),
+    [
+      ['Write notes', true],
+      ['Test the build', false],
+    ],
+  );
+  const copy = edit({
+    op: 'duplicate-card',
+    cardPublicId: card.publicId,
+    listPublicId: lists[1].publicId,
+    title: 'Follow-up',
+  }) as { publicId: string };
+  const duplicate = cardDetailSchema.parse(dispatch('card.byId', { cardPublicId: copy.publicId }));
+  assert.equal(duplicate.checklists[0].items[0].completed, false);
+  assert.notEqual(duplicate.checklists[0].publicId, checklist.publicId);
+  edit({ op: 'delete-item', checklistItemPublicId: first.publicId });
+  edit({ op: 'delete-card', cardPublicId: copy.publicId });
+  const saved = captureModel();
+  restoreModel(saved);
+  assert.equal(
+    cardDetailSchema.parse(dispatch('card.byId', { cardPublicId: card.publicId })).checklists[0]
+      .items.length,
+    1,
+  );
+  assert.equal(readBoard(board.publicId).lists[1].cards.length, 0);
+  assert.ok(
+    (command({ op: 'read-card', cardPublicId: card.publicId }) as { stateToken: string })
+      .stateToken,
+  );
+});
+test('stale tokens, invalid details and nonempty-list removal cannot overwrite manual work', async () => {
+  const { executeCommand: command } = await import('./commands');
+  const { revisionToken, restoreRecords } = await import('./model');
+  restoreRecords(null);
+  const board = newBoard('Preserve');
+  const list = readBoard(board.publicId).lists[0];
+  const card = newCard(list.publicId, 'First');
+  const stale = revisionToken();
+  dispatch('card.update', { cardPublicId: card.publicId, title: 'Manual change' });
+  const before = captureModel();
+  assert.throws(
+    () =>
+      command({
+        op: 'card-details',
+        cardPublicId: card.publicId,
+        title: 'Stale title',
+        expectedState: stale,
+      }),
+    /changed since inspection/,
+  );
+  for (const op of [
+    { op: 'card-details', cardPublicId: card.publicId, dueDate: 'tomorrow' },
+    { op: 'card-details', cardPublicId: card.publicId },
+    { op: 'update-list', listPublicId: list.publicId, index: 999, name: 'Wrong' },
+    { op: 'delete-list', listPublicId: list.publicId },
+  ])
+    assert.throws(() => command({ ...op, expectedState: revisionToken() }));
+  assert.equal(captureModel(), before);
+  command({
+    op: 'card-details',
+    cardPublicId: card.publicId,
+    description: '<not markup>',
+    expectedState: revisionToken(),
+  });
+  assert.equal(
+    cardDetailSchema.parse(dispatch('card.byId', { cardPublicId: card.publicId })).description,
+    '<p>&lt;not markup&gt;</p>',
+  );
+  command({
+    op: 'delete-list',
+    listPublicId: list.publicId,
+    deleteCards: true,
+    expectedState: revisionToken(),
+  });
+  assert.equal(readBoard(board.publicId).lists.length, 1);
+  assert.ok(captureModel().includes('Manual change'));
 });

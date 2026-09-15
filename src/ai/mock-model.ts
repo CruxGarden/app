@@ -251,6 +251,104 @@ export function getMockLanguageModel(): LanguageModel {
           }
           return textStream('Set the tempo to 128 and added a MIDI editor named Agent melody.');
         }
+        const kanDepth = lastUserText(prompt).match(/\[kan:depth-([a-z-]+)\]/)?.[1];
+        if (kanDepth) {
+          const rounds = toolResultsThisTurn(prompt);
+          const result = (name: string) => JSON.parse(toolResultText(prompt, name) || '{}');
+          if (!rounds.length) return toolCallStream('inspect_kan', {});
+          const inspected = result('inspect_kan');
+          const board = inspected.board;
+          const card = board?.lists?.flatMap((list: { cards: unknown[] }) => list.cards)?.[0];
+          if (rounds.length === 1) {
+            const expectedState = inspected.stateToken;
+            if (kanDepth === 'board')
+              return toolCallStream('create_kan_board', {
+                name: 'Launch',
+                lists: ['Ideas', 'Doing', 'Done'],
+                expectedState,
+              });
+            if (kanDepth === 'card')
+              return toolCallStream('create_kan_card', {
+                listPublicId: board.lists[0].publicId,
+                title: 'Ship the home page',
+              });
+            if (kanDepth === 'label')
+              return toolCallStream('create_kan_label', {
+                boardPublicId: board.publicId,
+                name: 'Launch priority',
+                colourCode: '#a855f7',
+                expectedState,
+              });
+            if (kanDepth === 'reorder')
+              return toolCallStream('update_kan_list', {
+                listPublicId: board.lists.find((list: { name: string }) => list.name === 'Done')
+                  .publicId,
+                name: 'Shipped',
+                index: 1,
+                expectedState,
+              });
+            return toolCallStream('read_kan_card', { cardPublicId: card.publicId });
+          }
+          if (rounds.length === 2 && !['board', 'card', 'label', 'reorder'].includes(kanDepth)) {
+            const detail = result('read_kan_card');
+            const expectedState = detail.stateToken;
+            const cardPublicId = detail.card.publicId;
+            if (kanDepth === 'details')
+              return toolCallStream('update_kan_card_details', {
+                cardPublicId,
+                dueDate: '2026-10-01T12:00:00Z',
+                expectedState,
+              });
+            if (kanDepth === 'assign')
+              return toolCallStream('set_kan_card_label', {
+                cardPublicId,
+                labelPublicId: board.labels[0].publicId,
+                assigned: true,
+                expectedState,
+              });
+            if (kanDepth === 'checklist')
+              return toolCallStream('create_kan_checklist', {
+                cardPublicId,
+                name: 'Release checks',
+                expectedState,
+              });
+            if (kanDepth === 'item')
+              return toolCallStream('add_kan_checklist_item', {
+                checklistPublicId: detail.card.checklists[0].publicId,
+                title: 'Check small screens',
+                expectedState,
+              });
+            if (kanDepth === 'complete')
+              return toolCallStream('update_kan_checklist_item', {
+                checklistItemPublicId: detail.card.checklists[0].items[0].publicId,
+                title: 'Small screens verified',
+                completed: true,
+                expectedState,
+              });
+            if (kanDepth === 'duplicate')
+              return toolCallStream('duplicate_kan_card', {
+                cardPublicId,
+                listPublicId: board.lists.find((list: { name: string }) => list.name === 'Doing')
+                  .publicId,
+                title: 'Follow-up',
+                expectedState,
+              });
+            if (kanDepth === 'delete-copy')
+              return toolCallStream('delete_kan_card', {
+                cardPublicId: board.lists
+                  .flatMap((list: { cards: { title: string; publicId: string }[] }) => list.cards)
+                  .find((item: { title: string }) => item.title === 'Follow-up').publicId,
+                expectedState,
+              });
+            if (kanDepth === 'rename-checklist')
+              return toolCallStream('rename_kan_checklist', {
+                checklistPublicId: detail.card.checklists[0].publicId,
+                name: 'Ready to ship',
+                expectedState,
+              });
+          }
+          return textStream('Kan depth ' + kanDepth + ' complete.');
+        }
         if (lastUserText(prompt).includes('[kan:edit]')) {
           const rounds = toolResultsThisTurn(prompt);
           if (!rounds.length) return toolCallStream('inspect_kan', {});

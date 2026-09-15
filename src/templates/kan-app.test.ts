@@ -15,6 +15,8 @@ it('packages the native kanban views, local adaptation, source and a reproducibl
     'packages/api/src/schemas/board.ts',
     'garden/model.ts',
     'garden/bridge.js',
+    'garden/commands-schema.ts',
+    'garden/shared/command-session.js',
     'garden/document.js',
     'garden/notices.mjs',
     'garden/model.test.ts',
