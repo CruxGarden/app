@@ -1,3 +1,5 @@
+import { COMPOSITING_FIELDS, validateCompositingCommand } from './compositing.js';
+export { BLEND_MODES } from './compositing.js';
 import { RASTER_FIELDS, validateRasterCommand } from './raster.js';
 import { validateEditingCommand, EDITING_FIELDS } from './editing.js';
 import { validateProjectImagePath } from './shared/project-image.js';
@@ -6,8 +8,19 @@ const style = ['fontSize', 'fontFamily', 'color'];
 const fields = {
   ...EDITING_FIELDS,
   ...RASTER_FIELDS,
+  ...COMPOSITING_FIELDS,
   inspect: ['offset', 'limit'],
-  layer: ['id', 'name', 'visible', 'opacity', ...geometry, ...style, 'find', 'replace'],
+  layer: [
+    'id',
+    'name',
+    'visible',
+    'opacity',
+    'composition',
+    ...geometry,
+    ...style,
+    'find',
+    'replace',
+  ],
   'save-image': ['label'],
   'add-text': ['name', 'text', 'x', 'y', 'width', 'height', ...style],
   'add-rectangle': ['name', 'x', 'y', 'width', 'height', 'color'],
@@ -107,6 +120,7 @@ export function validateCommand(value) {
   if (value.op === 'add-image') validateProjectImagePath(value.path);
   validateEditingCommand(value);
   validateRasterCommand(value);
+  validateCompositingCommand(value);
   return { ...value };
 }
 

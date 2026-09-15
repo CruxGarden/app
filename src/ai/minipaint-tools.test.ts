@@ -87,3 +87,19 @@ it('routes shared selection and raster operations with scoped writes and rejects
     minipaintCommand('fill_minipaint_pixels', { id: 3, mode: 'selection', color: '#123456', x: 1 }),
   ).toThrow();
 });
+
+it('routes layer conversion and compositing with explicit merge scope', () => {
+  expect(minipaintCommand('rasterize_minipaint_layer', { id: 2 }).op).toBe('rasterize-layer');
+  expect(minipaintCommand('merge_minipaint_layers', { mode: 'selected', ids: [2, 3] }).op).toBe(
+    'merge-layers',
+  );
+  expect(
+    minipaintCommand('update_minipaint_layer', { id: 2, composition: 'screen' }).composition,
+  ).toBe('screen');
+  expect(() =>
+    minipaintCommand('merge_minipaint_layers', { mode: 'visible', ids: [2, 3] }),
+  ).toThrow();
+  expect(() =>
+    minipaintCommand('update_minipaint_layer', { id: 2, composition: 'darker' }),
+  ).toThrow();
+});

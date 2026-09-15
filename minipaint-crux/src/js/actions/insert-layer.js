@@ -70,7 +70,7 @@ export class Insert_layer_action extends Base_action {
 		let image_load_promise;
 		if (layer.type == 'image') {
 			
-			if(layer.name.toLowerCase().indexOf('.svg') == layer.name.length - 4){
+			if (this.settings?.is_vector === undefined && layer.name.toLowerCase().endsWith('.svg')) {
 				// We have svg
 				layer.is_vector = true;
 			}

@@ -1,3 +1,4 @@
+import { BLEND_MODES, compositionPlan } from '../../../garden/compositing.js';
 import {
   brushLayer,
   revisedFilters,
@@ -173,6 +174,7 @@ export async function startGarden(app) {
       selection: selectedRegion(app.Config.layer?.id),
       history: { canUndo: app.State.can_undo(), canRedo: app.State.can_redo() },
       availableFilters: FILTER_BOUNDS,
+      availableCompositions: BLEND_MODES,
       totalLayers: layers.length,
       offset,
       nextOffset: offset + limit < layers.length ? offset + limit : null,
@@ -182,6 +184,7 @@ export async function startGarden(app) {
         type: layer.type,
         visible: layer.visible,
         opacity: layer.opacity,
+        composition: layer.composition,
         x: layer.x,
         y: layer.y,
         width: layer.width,
@@ -233,7 +236,17 @@ export async function startGarden(app) {
   };
   function layerSettings(layer, value) {
     const settings = {};
-    for (const key of ['name', 'visible', 'opacity', 'x', 'y', 'width', 'height', 'rotate'])
+    for (const key of [
+      'name',
+      'visible',
+      'opacity',
+      'composition',
+      'x',
+      'y',
+      'width',
+      'height',
+      'rotate',
+    ])
       if (value[key] !== undefined) settings[key] = value[key];
     const textEdit = ['find', 'fontSize', 'fontFamily'].some((key) => value[key] !== undefined);
     if (textEdit && layer.type !== 'text')
@@ -303,6 +316,9 @@ export async function startGarden(app) {
           if (!target) throw new Error('The layer is already at that edge of the stack.');
         }
       }
+      const composite = ['rasterize-layer', 'merge-layers'].includes(value.op)
+        ? compositionPlan(app.Config, value)
+        : null;
       if (value.op === 'edit-filter') revisedFilters(findLayer(value.id), value);
       if (value.op === 'crop-canvas') cropLayers(app.Config, value);
       if (['selection', 'erase', 'fill'].includes(value.op)) {
@@ -333,7 +349,60 @@ export async function startGarden(app) {
             throw new Error(
               'The image changed while preparing the edit. Inspect miniPaint before retrying.',
             );
-          if (value.op === 'selection') {
+          if (composite) {
+            const canvas = document.createElement('canvas');
+            canvas.width = composite.width;
+            canvas.height = composite.height;
+            const ctx = canvas.getContext('2d');
+            const rasterize = value.op === 'rasterize-layer';
+            const original = composite.layers[0];
+            app.Layers.render_success = true;
+            if (rasterize) {
+              // render_object bakes geometry/filters, but not layer opacity/composition.
+              app.Layers.render_object(ctx, { ...original, visible: true });
+            } else if (value.mode === 'visible') {
+              app.Layers.convert_layers_to_canvas(ctx, null, false);
+            } else {
+              for (const layer of composite.layers) {
+                ctx.globalAlpha = layer.opacity / 100;
+                ctx.globalCompositeOperation = 'source-over';
+                app.Layers.render_object(ctx, layer);
+              }
+            }
+            if (!app.Layers.render_success)
+              throw new Error('Native layer rendering failed. No layers were replaced.');
+            const link = new Image();
+            link.src = canvas.toDataURL('image/png');
+            await link.decode();
+            checkDraft();
+            if (revision !== preparedRevision)
+              throw new Error(
+                'The image changed during rendering. Inspect miniPaint before retrying.',
+              );
+            await nativeEdit(rasterize ? 'Rasterize Layer' : 'Merge Layers', [
+              new app.Actions.Insert_layer_action(
+                {
+                  type: 'image',
+                  is_vector: false,
+                  link,
+                  name: value.name || (rasterize ? original.name + ' (raster)' : 'Merged layers'),
+                  x: 0,
+                  y: 0,
+                  width: canvas.width,
+                  height: canvas.height,
+                  width_original: canvas.width,
+                  height_original: canvas.height,
+                  order: composite.order,
+                  opacity: rasterize ? original.opacity : 100,
+                  composition: rasterize ? original.composition : 'source-over',
+                  visible: rasterize ? original.visible : true,
+                },
+                false,
+              ),
+              ...composite.layers.map((layer) => new app.Actions.Delete_layer_action(layer.id)),
+            ]);
+            return app.Config.layer.id;
+          } else if (value.op === 'selection') {
             const edits = [];
             if (app.Config.layer.id !== value.id)
               edits.push(new app.Actions.Select_layer_action(value.id));
@@ -521,6 +590,7 @@ export async function startGarden(app) {
                       ...geometry,
                       name: value.name || value.path.split('/').at(-1),
                       type: 'image',
+                      is_vector: false,
                       link: loaded.image,
                       width_original: loaded.image.naturalWidth,
                       height_original: loaded.image.naturalHeight,

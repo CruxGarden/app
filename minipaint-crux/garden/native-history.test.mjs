@@ -121,3 +121,53 @@ test('native raster history captures a temporary canvas before reset and retains
   await assert.rejects(new Action({ toDataURL: () => 'rejected' }, 3).do(), /Undo history/);
   assert.equal(layer.link.src, stable);
 });
+
+test('native insertion honors explicit raster identity and does not classify short names as SVG', async () => {
+  const source = readFileSync(new URL('../src/js/actions/insert-layer.js', import.meta.url), 'utf8')
+    .replace(/^import .*;\r?\n/gm, '')
+    .replace('export class', 'return class');
+  const config = { TOOL: { name: 'image' }, COLOR: '#000000', layers: [], layer: null };
+  const app = {
+    Layers: {
+      auto_increment: 1,
+      get_layer: (id) => config.layers.find((l) => l.id === id),
+      render() {},
+    },
+    GUI: { GUI_layers: { render_layers() {} } },
+  };
+  const Action = new Function('app', 'config', 'Base_action', 'alertify', source)(
+    app,
+    config,
+    Base_action,
+    {
+      error: (message) => {
+        throw Error(message);
+      },
+    },
+  );
+  for (const [name, classification, expected] of [
+    ['Cat', undefined, false],
+    ['art.svg', false, false],
+    ['art.svg', undefined, true],
+    ['art.png', true, true],
+  ]) {
+    const edit = new Action(
+      {
+        type: 'image',
+        name,
+        link: { src: 'decoded' },
+        width: 20,
+        height: 20,
+        ...(classification === undefined ? {} : { is_vector: classification }),
+      },
+      false,
+    );
+    await edit.do();
+    assert.equal(config.layer.is_vector, expected, name);
+    await edit.undo();
+    assert.equal(config.layers.length, 0);
+    await edit.do();
+    assert.equal(config.layer.is_vector, expected, name + ' redo');
+    await edit.undo();
+  }
+});

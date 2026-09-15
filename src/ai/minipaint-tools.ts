@@ -1,5 +1,5 @@
 import type { AppToolDefinition } from '@/services/embedded-app-tool-registry';
-import { FONTS, validateCommand } from '../../minipaint-crux/garden/commands.js';
+import { FONTS, BLEND_MODES, validateCommand } from '../../minipaint-crux/garden/commands.js';
 
 const geometry = {
   x: { type: 'number', minimum: -32768, maximum: 32768 },
@@ -32,7 +32,7 @@ export const MINIPAINT_TOOLS: AppToolDefinition[] = [
   {
     name: 'inspect_minipaint',
     description:
-      'Inspect canvas size and native layers, back to front: IDs, names, geometry, visibility, opacity, text, live filters with IDs/values, brush summaries, native history availability and available image Artifact paths, original raster dimensions and the active native rectangular selection (canvas coordinates; session-local). Bounded to 20 layers by default; page with offset/limit (maximum 50).',
+      'Inspect canvas size and native layers, back to front: IDs, names, geometry, visibility, opacity, composition, text, live filters with IDs/values, brush summaries, native history availability and available image Artifact paths, original raster dimensions and the active native rectangular selection (canvas coordinates; session-local). Bounded to 20 layers by default; page with offset/limit (maximum 50).',
     input_schema: {
       type: 'object',
       properties: {
@@ -47,13 +47,14 @@ export const MINIPAINT_TOOLS: AppToolDefinition[] = [
   {
     name: 'update_minipaint_layer',
     description:
-      'Revise a native layer by ID from inspection: name, visibility, opacity or geometry. Text layers also accept fontSize/fontFamily/color and one unique exact find/replace phrase, preserving other text and formatting. Rectangle color changes its fill. Uses native Undo and confirmed save.',
+      'Revise a native layer by ID from inspection: name, visibility, opacity, native composition/blend mode or geometry. source-atop uses the native clipping behavior; other modes follow Canvas compositing. Text layers also accept fontSize/fontFamily/color and one unique exact find/replace phrase, preserving other text and formatting. Rectangle color changes its fill. Uses native Undo and confirmed save.',
     input_schema: {
       type: 'object',
       properties: {
         id: { type: 'integer' },
         name: layerName,
         visible: { type: 'boolean' },
+        composition: { type: 'string', enum: BLEND_MODES },
         opacity: { type: 'number', minimum: 0, maximum: 100 },
         ...geometry,
         rotate: { type: 'number', minimum: -360, maximum: 360 },
@@ -291,6 +292,40 @@ export const MINIPAINT_TOOLS: AppToolDefinition[] = [
     writes: ['data/project.json'],
   },
   {
+    name: 'rasterize_minipaint_layer',
+    description:
+      'Convert one inspected text, shape, brush or image layer into editable raster pixels using the native renderer. Bakes rotation, geometry and live filters within the current canvas bounds; off-canvas pixels are clipped. Keeps visibility, opacity, blend mode and stack position; returns a new createdLayerId. Hidden layers can be rasterized without becoming visible. Text/shape data is replaced: duplicate first if needed. One native Undo restores the editable original. Confirms PNG pixels and project save.',
+    input_schema: {
+      type: 'object',
+      properties: { id: { type: 'integer' }, name: layerName },
+      required: ['id'],
+      additionalProperties: false,
+    },
+    writes: ['data/project.json', 'data/assets/'],
+  },
+  {
+    name: 'merge_minipaint_layers',
+    description:
+      'Combine layers into one editable raster at canvas size; bakes filters/opacity and clips off-canvas content. selected requires 2–500 adjacent visible layer IDs with source-over composition; backdrop-dependent blends refuse. visible uses the native complete composite of all visible layers, preserving hidden layers separately in their existing order (revealing them cannot restore their old interleaving with merged layers). The result occupies the highest replaced position with normal composition and 100% opacity. Returns createdLayerId. Source layers are replaced; duplicate first if needed. One native Undo restores all original layers, order and editing data. Confirms project and pixels save.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        mode: { type: 'string', enum: ['selected', 'visible'] },
+        ids: {
+          type: 'array',
+          minItems: 2,
+          maxItems: 500,
+          uniqueItems: true,
+          items: { type: 'integer' },
+        },
+        name: layerName,
+      },
+      required: ['mode'],
+      additionalProperties: false,
+    },
+    writes: ['data/project.json', 'data/assets/'],
+  },
+  {
     name: 'minipaint_history',
     description:
       'Undo or redo one native editor transaction, including person or agent edits. Inspect canUndo/canRedo first; this session-local history resets when the app reloads. Saves the restored project. This affects the latest edit, not necessarily your own.',
@@ -316,6 +351,8 @@ export const MINIPAINT_TOOLS: AppToolDefinition[] = [
   },
 ];
 const operations: Record<string, string> = {
+  rasterize_minipaint_layer: 'rasterize-layer',
+  merge_minipaint_layers: 'merge-layers',
   select_minipaint_region: 'selection',
   erase_minipaint_pixels: 'erase',
   fill_minipaint_pixels: 'fill',

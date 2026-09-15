@@ -1,0 +1,27 @@
+[
+  {
+    "left": "Composite before",
+    "right": "Rasterized plate",
+    "maxChannelDelta": 1
+  },
+  {
+    "left": "Composite before",
+    "right": "Rasterized hidden",
+    "maxChannelDelta": 0
+  },
+  {
+    "left": "Composite before",
+    "right": "Rasterized rasterize",
+    "maxChannelDelta": 1
+  },
+  {
+    "left": "Selected before",
+    "right": "Selected after",
+    "maxChannelDelta": 1
+  },
+  {
+    "left": "Visible before",
+    "right": "Visible after",
+    "maxChannelDelta": 0
+  }
+]
