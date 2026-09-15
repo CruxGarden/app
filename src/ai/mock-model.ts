@@ -1901,6 +1901,86 @@ export function getMockLanguageModel(): LanguageModel {
           }
           return textStream('Saved the AudioMass track.');
         }
+        if (lastUserText(prompt).includes('[minipaint:photo-create]')) {
+          const rounds = toolResultsThisTurn(prompt);
+          if (!rounds.length) return toolCallStream('inspect_minipaint', { offset: 1, limit: 1 });
+          const original = JSON.parse(toolResultText(prompt, 'inspect_minipaint') || '{}')
+            .layers[0];
+          if (rounds.length === 1)
+            return toolCallStream('duplicate_minipaint_layer', {
+              id: original.id,
+              name: 'Edited image',
+            });
+          if (rounds.length === 2)
+            return toolCallStream('update_minipaint_layer', { id: original.id, visible: false });
+          // The new layer ID is the compact trailing field even if older inspection data was shortened.
+          const copyId = Number(
+            toolResultText(prompt, 'duplicate_minipaint_layer')?.match(
+              /"createdLayerId"\s*:\s*(\d+)/,
+            )?.[1],
+          );
+          if (rounds.length === 3)
+            return toolCallStream('edit_minipaint_filter', {
+              id: copyId,
+              action: 'add',
+              filter: 'brightness',
+              value: 30,
+            });
+          if (rounds.length === 4)
+            return toolCallStream('edit_minipaint_filter', {
+              id: copyId,
+              action: 'add',
+              filter: 'contrast',
+              value: 15,
+            });
+          if (rounds.length === 5)
+            return toolCallStream('paint_minipaint_stroke', {
+              name: 'Painted underline',
+              color: '#c65a36',
+              size: 12,
+              points: [
+                [320, 208],
+                [460, 212],
+                [620, 208],
+                [820, 211],
+              ],
+            });
+          if (rounds.length === 6)
+            return toolCallStream('crop_minipaint_canvas', {
+              x: 20,
+              y: 20,
+              width: 920,
+              height: 440,
+            });
+          return textStream('Added editable paint, live photo adjustments and a reversible crop.');
+        }
+        if (lastUserText(prompt).includes('[minipaint:photo-revise]')) {
+          const rounds = toolResultsThisTurn(prompt);
+          if (!rounds.length) return toolCallStream('inspect_minipaint', { offset: 4, limit: 1 });
+          const inspected = toolResultText(prompt, 'inspect_minipaint') || '{}';
+          const id = Number(
+            inspected.match(/"id"\s*:\s*(\d+),\s*"name"\s*:\s*"Edited image"/)?.[1],
+          );
+          if (rounds.length === 1)
+            return toolCallStream('edit_minipaint_filter', {
+              id,
+              action: 'update',
+              filterId: 1,
+              filter: 'brightness',
+              value: -25,
+            });
+          if (rounds.length === 2)
+            return toolCallStream('minipaint_history', { direction: 'undo' });
+          if (rounds.length === 3)
+            return toolCallStream('minipaint_history', { direction: 'redo' });
+          if (rounds.length === 4)
+            return toolCallStream('edit_minipaint_filter', { id, action: 'remove', filterId: 2 });
+          if (rounds.length === 5)
+            return toolCallStream('save_minipaint_image', { name: 'Painted banner' });
+          return textStream(
+            'Revised live filters and saved the painted banner, preserving your text.',
+          );
+        }
         if (lastUserText(prompt).includes('[minipaint:depth-create]')) {
           const rounds = toolResultsThisTurn(prompt);
           if (!rounds.length) return toolCallStream('inspect_minipaint', {});

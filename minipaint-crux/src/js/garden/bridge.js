@@ -1,3 +1,10 @@
+import {
+  brushLayer,
+  revisedFilters,
+  duplicateLayer,
+  cropLayers,
+  FILTER_BOUNDS,
+} from '../../../garden/editing.js';
 import { validateProject } from '../../../garden/model.js';
 import { validateCommand, textData, reviseText } from '../../../garden/commands.js';
 import { loadProjectImage } from '../../../garden/shared/project-image.js';
@@ -149,6 +156,8 @@ export async function startGarden(app) {
       width: app.Config.WIDTH,
       height: app.Config.HEIGHT,
       selectedLayer: app.Config.layer?.id,
+      history: { canUndo: app.State.can_undo(), canRedo: app.State.can_redo() },
+      availableFilters: FILTER_BOUNDS,
       totalLayers: layers.length,
       offset,
       nextOffset: offset + limit < layers.length ? offset + limit : null,
@@ -164,6 +173,14 @@ export async function startGarden(app) {
         height: layer.height,
         rotate: layer.rotate,
         order: layer.order,
+        filters: (layer.filters ?? []).slice(0, 100).map((filter) => ({
+          id: filter.id,
+          name: filter.name,
+          params: filter.params,
+        })),
+        ...(layer.type === 'brush'
+          ? { strokeCount: layer.data?.length, color: layer.color, brushSize: layer.params?.size }
+          : {}),
         ...(layer.type === 'text'
           ? {
               text: layer.data
@@ -236,6 +253,19 @@ export async function startGarden(app) {
     },
     prepare(raw) {
       const value = validateCommand(raw);
+      const preparedRevision = revision;
+      const checkDraft = () => {
+        if (
+          app.Config.layers.some((layer) => layer.status === 'draft') ||
+          [...document.querySelectorAll('#popups .popup')].some(
+            (popup) => popup.getClientRects().length,
+          )
+        )
+          throw new Error(
+            'Finish the current drawing or close the native dialog before using an agent tool.',
+          );
+      };
+      checkDraft();
       if (value.op === 'inspect') return { mutates: false, apply: () => inspect(value) };
       if (value.op === 'save-image')
         return { mutates: true, apply: () => saveImage(value.label.trim()) };
@@ -252,12 +282,67 @@ export async function startGarden(app) {
           if (!target) throw new Error('The layer is already at that edge of the stack.');
         }
       }
-      if (value.op.startsWith('add-') && app.Config.layers.length >= 500)
+      if (value.op === 'edit-filter') revisedFilters(findLayer(value.id), value);
+      if (value.op === 'crop-canvas') cropLayers(app.Config, value);
+      if (
+        value.op === 'history' &&
+        !(value.direction === 'undo' ? app.State.can_undo() : app.State.can_redo())
+      )
+        throw new Error(`Nothing to ${value.direction}. Native history is session-local.`);
+      if (
+        (value.op.startsWith('add-') || value.op === 'duplicate-layer') &&
+        app.Config.layers.length >= 500
+      )
         throw new Error('Use up to 500 layers.');
       return {
         mutates: true,
         async apply() {
-          if (value.op === 'layer') {
+          checkDraft();
+          if (revision !== preparedRevision)
+            throw new Error(
+              'The image changed while preparing the edit. Inspect miniPaint before retrying.',
+            );
+          if (value.op === 'add-brush' || value.op === 'duplicate-layer') {
+            const layer =
+              value.op === 'add-brush'
+                ? brushLayer(value)
+                : duplicateLayer(findLayer(value.id), value.name);
+            if (layer.type === 'image') {
+              // Garden imports release their temporary blob URL after decoding. Cloning
+              // that URL cannot reload it; copy the native decoded pixels instead.
+              const canvas = document.createElement('canvas');
+              canvas.width = layer.width_original;
+              canvas.height = layer.height_original;
+              canvas.getContext('2d').drawImage(findLayer(value.id).link, 0, 0);
+              layer.link.src = canvas.toDataURL('image/png');
+              await layer.link.decode();
+              checkDraft();
+              if (revision !== preparedRevision)
+                throw new Error(
+                  'The image changed while loading the copy. Inspect miniPaint before retrying.',
+                );
+            }
+            await nativeEdit(value.op === 'add-brush' ? 'Paint Brush Stroke' : 'Duplicate Layer', [
+              new app.Actions.Insert_layer_action(layer, false),
+            ]);
+            return app.Config.layer.id;
+          } else if (value.op === 'edit-filter') {
+            await nativeEdit('Edit Live Filter', [
+              new app.Actions.Update_layer_action(value.id, {
+                filters: revisedFilters(findLayer(value.id), value),
+              }),
+            ]);
+          } else if (value.op === 'crop-canvas') {
+            const edits = cropLayers(app.Config, value);
+            await nativeEdit('Crop Canvas', [
+              new app.Actions.Prepare_canvas_action('undo'),
+              ...edits.map(({ id, settings }) => new app.Actions.Update_layer_action(id, settings)),
+              new app.Actions.Update_config_action({ WIDTH: value.width, HEIGHT: value.height }),
+              new app.Actions.Prepare_canvas_action('do'),
+            ]);
+          } else if (value.op === 'history') {
+            await app.State[value.direction === 'undo' ? 'undo_action' : 'redo_action']();
+          } else if (value.op === 'layer') {
             await nativeEdit('Update Layer', [
               new app.Actions.Update_layer_action(
                 value.id,

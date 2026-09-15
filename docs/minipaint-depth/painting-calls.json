@@ -1,0 +1,285 @@
+[
+  {
+    "name": "inspect_minipaint",
+    "id": "mock-1789490222892",
+    "input": {},
+    "result": "{\"width\":604,\"height\":779,\"selectedLayer\":1,\"history\":{\"canUndo\":true,\"canRedo\":false},\"availableFilters\":{\"brightness\":[-100,100],\"contrast\":[-100,100],\"saturate\":[-100,100],\"hue-rotate\":[0,360],\"blur\":[0,50],\"grayscale\":[0,100],\"sepia\":[0,100],\"invert\":[0,100]},\"totalLayers\":1,\"offset\":0,\"nextOffset\":null,\"layers\":[{\"id\":1,\"name\":\"Brush #1\",\"type\":null,\"visible\":true,\"opacity\":100,\"x\":0,\"y\":0,\"width\":null,\"height\":null,\"rotate\":0,\"order\":1,\"filters\":[]}]}"
+  },
+  {
+    "name": "resize_minipaint_canvas",
+    "id": "mock-1789490222909",
+    "input": {
+      "width": 1200,
+      "height": 600
+    },
+    "result": "{\"width\":1200,\"height\":600,\"selectedLayer\":1,\"history\":{\"canUndo\":true,\"canRedo\":false},\"availableFilters\":{\"brightness\":[-100,100],\"contrast\":[-100,100],\"saturate\":[-100,100],\"hue-rotate\":[0,360],\"blur\":[0,50],\"grayscale\":[0,100],\"sepia\":[0,100],\"invert\":[0,100]},\"totalLayers\":1,\"offset\":0,\"nextOffset\":null,\"layers\":[{\"id\":1,\"name\":\"Brush #1\",\"type\":null,\"visible\":true,\"opacity\":100,\"x\":0,\"y\":0,\"width\":null,\"height\":null,\"rotate\":0,\"order\":1,\"filters\":[]}]}"
+  },
+  {
+    "name": "add_minipaint_rectangle",
+    "id": "mock-1789490223963",
+    "input": {
+      "name": "Backdrop",
+      "x": 0,
+      "y": 0,
+      "width": 1200,
+      "height": 600,
+      "color": "#f2eadb"
+    },
+    "result": "{\"width\":1200,\"height\":600,\"selectedLayer\":2,\"history\":{\"canUndo\":true,\"canRedo\":false},\"availableFilters\":{\"brightness\":[-100,100],\"contrast\":[-100,100],\"saturate\":[-100,100],\"hue-rotate\":[0,360],\"blur\":[0,50],\"grayscale\":[0,100],\"sepia\":[0,100],\"invert\":[0,100]},\"totalLayers\":2,\"offset\":0,\"nextOffset\":null,\"layers\":[{\"id\":1,\"name\":\"Brush #1\",\"type\":null,\"visible\":true,\"opacity\":100,\"x\":0,\"y\":0,\"width\":null,\"height\":null,\"rotate\":0,\"order\":1,\"filters\":[]},{\"id\":2,\"name\":\"Backdrop\",\"type\":\"rectangle\",\"visible\":true,\"opacity\":100,\"x\":0,\"y\":0,\"width\":1200,\"height\":600,\"rotate\":0,\"order\":2,\"filters\":[]}],\"createdLayerId\":2}"
+  },
+  {
+    "name": "add_minipaint_image",
+    "id": "mock-1789490224975",
+    "input": {
+      "name": "Seed illustration",
+      "path": "assets/seed.png",
+      "x": 60,
+      "y": 150,
+      "width": 280,
+      "height": 280
+    },
+    "result": "{\"width\":1200,\"height\":600,\"selectedLayer\":3,\"history\":{\"canUndo\":true,\"canRedo\":false},\"availableFilters\":{\"brightness\":[-100,100],\"contrast\":[-100,100],\"saturate\":[-100,100],\"hue-rotate\":[0,360],\"blur\":[0,50],\"grayscale\":[0,100],\"sepia\":[0,100],\"invert\":[0,100]},\"totalLayers\":3,\"offset\":0,\"nextOffset\":null,\"layers\":[{\"id\":1,\"name\":\"Brush #1\",\"type\":null,\"visible\":true,\"opacity\":100,\"x\":0,\"y\":0,\"width\":null,\"height\":null,\"rotate\":0,\"order\":1,\"filters\":[]},{\"id\":2,\"name\":\"Backdrop\",\"type\":\"rectangle\",\"visible\":true,\"opacity\":100,\"x\":0,\"y\":0,\"width\":1200,\"height\":600,\"rotate\":0,\"order\":2,\"filters\":[]},{\"id\":3,\"name\":\"Seed illustration\",\"type\":\"image\",\"visible\":true,\"opacity\":100,\"x\":60,\"y\":150,\"width\":280,\"height\":280,\"rotate\":0,\"order\":3,\"filters\":[],\"imagePath\":\"data/assets/491f4facefaaf1190a8008725a63fa05677014f8216a6899f20ea42378a08b5e.bin\"}],\"createdLayerId\":3}"
+  },
+  {
+    "name": "add_minipaint_text",
+    "id": "mock-1789490226003",
+    "input": {
+      "name": "Headline",
+      "text": "Seed library event",
+      "x": 400,
+      "y": 100,
+      "width": 720,
+      "height": 130,
+      "fontSize": 56,
+      "color": "#234731"
+    },
+    "result": "{\"width\":1200,\"height\":600,\"selectedLayer\":4,\"history\":{\"canUndo\":true,\"canRedo\":false},\"availableFilters\":{\"brightness\":[-100,100],\"contrast\":[-100,100],\"saturate\":[-100,100],\"hue-rotate\":[0,360],\"blur\":[0,50],\"grayscale\":[0,100],\"sepia\":[0,100],\"invert\":[0,100]},\"totalLayers\":4,\"offset\":0,\"nextOffset\":null,\"layers\":[{\"id\":1,\"name\":\"Brush #1\",\"type\":null,\"visible\":true,\"opacity\":100,\"x\":0,\"y\":0,\"width\":null,\"height\":null,\"rotate\":0,\"order\":1,\"filters\":[]},{\"id\":2,\"name\":\"Backdrop\",\"type\":\"rectangle\",\"visible\":true,\"opacity\":100,\"x\":0,\"y\":0,\"width\":1200,\"height\":600,\"rotate\":0,\"order\":2,\"filters\":[]},{\"id\":3,\"name\":\"Seed illustration\",\"type\":\"image\",\"visible\":true,\"opacity\":100,\"x\":60,\"y\":150,\"width\":280,\"height\":280,\"rotate\":0,\"order\":3,\"filters\":[],\"imagePath\":\"data/assets/491f4facefaaf1190a8008725a63fa05677014f8216a6899f20ea42378a08b5e.bin\"},{\"id\":4,\"name\":\"Headline\",\"type\":\"text\",\"visible\":true,\"opacity\":100,\"x\":400,\"y\":100,\"width\":720,\"height\":130,\"rotate\":0,\"order\":4,\"filters\":[],\"text\":\"Seed library event\",\"style\":{\"size\":56,\"family\":\"Arial\",\"fill_color\":\"#234731\"}}],\"createdLayerId\":4}"
+  },
+  {
+    "name": "add_minipaint_text",
+    "id": "mock-1789490227026",
+    "input": {
+      "name": "Details",
+      "text": "Friday at 10. Bring spare seeds.",
+      "x": 400,
+      "y": 280,
+      "width": 700,
+      "height": 150,
+      "fontSize": 30,
+      "color": "#234731"
+    },
+    "result": "{\"width\":1200,\"height\":600,\"selectedLayer\":5,\"history\":{\"canUndo\":true,\"canRedo\":false},\"availableFilters\":{\"brightness\":[-100,100],\"contrast\":[-100,100],\"saturate\":[-100,100],\"hue-rotate\":[0,360],\"blur\":[0,50],\"grayscale\":[0,100],\"sepia\":[0,100],\"invert\":[0,100]},\"totalLayers\":5,\"offset\":0,\"nextOffset\":null,\"layers\":[{\"id\":1,\"name\":\"Brush #1\",\"type\":null,\"visible\":true,\"opacity\":100,\"x\":0,\"y\":0,\"width\":null,\"height\":null,\"rotate\":0,\"order\":1,\"filters\":[]},{\"id\":2,\"name\":\"Backdrop\",\"type\":\"rectangle\",\"visible\":true,\"opacity\":100,\"x\":0,\"y\":0,\"width\":1200,\"height\":600,\"rotate\":0,\"order\":2,\"filters\":[]},{\"id\":3,\"name\":\"Seed illustration\",\"type\":\"image\",\"visible\":true,\"opacity\":100,\"x\":60,\"y\":150,\"width\":280,\"height\":280,\"rotate\":0,\"order\":3,\"filters\":[],\"imagePath\":\"data/assets/491f4facefaaf1190a8008725a63fa05677014f8216a6899f20ea42378a08b5e.bin\"},{\"id\":4,\"name\":\"Headline\",\"type\":\"text\",\"visible\":true,\"opacity\":100,\"x\":400,\"y\":100,\"width\":720,\"height\":130,\"rotate\":0,\"order\":4,\"filters\":[],\"text\":\"Seed library event\",\"style\":{\"size\":56,\"family\":\"Arial\",\"fill_color\":\"#234731\"}},{\"id\":5,\"name\":\"Details\",\"type\":\"text\",\"visible\":true,\"opacity\":100,\"x\":400,\"y\":280,\"width\":700,\"height\":150,\"rotate\":0,\"order\":5,\"filters\":[],\"text\":\"Friday at 10. Bring spare seeds.\",\"style\":{\"size\":30,\"family\":\"Arial\",\"fill_color\":\"#234731\"}}],\"createdLayerId\":5}"
+  },
+  {
+    "name": "delete_minipaint_layer",
+    "id": "mock-1789490228066",
+    "input": {
+      "id": 1
+    },
+    "result": "{\"width\":1200,\"height\":600,\"selectedLayer\":5,\"history\":{\"canUndo\":true,\"canRedo\":false},\"availableFilters\":{\"brightness\":[-100,100],\"contrast\":[-100,100],\"saturate\":[-100,100],\"hue-rotate\":[0,360],\"blur\":[0,50],\"grayscale\":[0,100],\"sepia\":[0,100],\"invert\":[0,100]},\"totalLayers\":4,\"offset\":0,\"nextOffset\":null,\"layers\":[{\"id\":2,\"name\":\"Backdrop\",\"type\":\"rectangle\",\"visible\":true,\"opacity\":100,\"x\":0,\"y\":0,\"width\":1200,\"height\":600,\"rotate\":0,\"order\":2,\"filters\":[]},{\"id\":3,\"name\":\"Seed illustration\",\"type\":\"image\",\"visible\":true,\"opacity\":100,\"x\":60,\"y\":150,\"width\":280,\"height\":280,\"rotate\":0,\"order\":3,\"filters\":[],\"imagePath\":\"data/assets/491f4facefaaf1190a8008725a63fa05677014f8216a6899f20ea42378a08b5e.bin\"},{\"id\":4,\"name\":\"Headline\",\"type\":\"text\",\"visible\":true,\"opacity\":100,\"x\":400,\"y\":100,\"width\":720,\"height\":130,\"rotate\":0,\"order\":4,\"filters\":[],\"text\":\"Seed library event\",\"style\":{\"size\":56,\"family\":\"Arial\",\"fill_color\":\"#234731\"}},{\"id\":5,\"name\":\"Details\",\"type\":\"text\",\"visible\":true,\"opacity\":100,\"x\":400,\"y\":280,\"width\":700,\"height\":150,\"rotate\":0,\"order\":5,\"filters\":[],\"text\":\"Friday at 10. Bring spare seeds.\",\"style\":{\"size\":30,\"family\":\"Arial\",\"fill_color\":\"#234731\"}}]}"
+  },
+  {
+    "name": "save_minipaint_image",
+    "id": "mock-1789490229076",
+    "input": {
+      "name": "Seed library banner"
+    },
+    "result": "{\"version\":1,\"id\":\"38d1e2dd-4dd8-4592-8ac3-83c313d7a1a6\",\"label\":\"Seed library banner\",\"path\":\"exports/38d1e2dd-4dd8-4592-8ac3-83c313d7a1a6.png\",\"fingerprint\":\"801ef9d94bc1b122dcc66147f114042e3953619f78b60b0dc5e959babb3a1e21\",\"mimeType\":\"image/png\",\"size\":74603,\"created\":\"2026-09-15T16:37:09.090Z\",\"width\":1200,\"height\":600}"
+  },
+  {
+    "name": "inspect_minipaint",
+    "id": "mock-1789490232495",
+    "input": {},
+    "result": "{\"width\":1200,\"height\":600,\"selectedLayer\":5,\"history\":{\"canUndo\":true,\"canRedo\":false},\"availableFilters\":{\"brightness\":[-100,100],\"contrast\":[-100,100],\"saturate\":[-100,100],\"hue-rotate\":[0,360],\"blur\":[0,50],\"grayscale\":[0,100],\"sepia\":[0,100],\"invert\":[0,100]},\"totalLayers\":4,\"offset\":0,\"nextOffset\":null,\"layers\":[{\"id\":2,\"name\":\"Backdrop\",\"type\":\"rectangle\",\"visible\":true,\"opacity\":100,\"x\":0,\"y\":0,\"width\":1200,\"height\":600,\"rotate\":0,\"order\":2,\"filters\":[]},{\"id\":3,\"name\":\"Seed illustration\",\"type\":\"image\",\"visible\":true,\"opacity\":100,\"x\":60,\"y\":150,\"width\":280,\"height\":280,\"rotate\":0,\"order\":3,\"filters\":[],\"imagePath\":\"data/assets/491f4facefaaf1190a8008725a63fa05677014f8216a6899f20ea42378a08b5e.bin\"},{\"id\":4,\"name\":\"Headline\",\"type\":\"text\",\"visible\":true,\"opacity\":100,\"x\":400,\"y\":100,\"width\":720,\"height\":130,\"rotate\":0,\"order\":4,\"filters\":[],\"text\":\"Seed library event\",\"style\":{\"size\":56,\"family\":\"Arial\",\"fill_color\":\"#234731\"}},{\"id\":5,\"name\":\"Details\",\"type\":\"text\",\"visible\":true,\"opacity\":100,\"x\":400,\"y\":280,\"width\":700,\"height\":150,\"rotate\":0,\"order\":5,\"filters\":[],\"text\":\"Friday at 10. Bring spare seeds. Bring envelopes.\",\"style\":{\"size\":30,\"family\":\"Arial\",\"fill_color\":\"#234731\"}}]}"
+  },
+  {
+    "name": "update_minipaint_layer",
+    "id": "mock-1789490232512",
+    "input": {
+      "id": 5,
+      "find": "Friday",
+      "replace": "Saturday",
+      "fontSize": 32
+    },
+    "result": "{\"width\":1200,\"height\":600,\"selectedLayer\":5,\"history\":{\"canUndo\":true,\"canRedo\":false},\"availableFilters\":{\"brightness\":[-100,100],\"contrast\":[-100,100],\"saturate\":[-100,100],\"hue-rotate\":[0,360],\"blur\":[0,50],\"grayscale\":[0,100],\"sepia\":[0,100],\"invert\":[0,100]},\"totalLayers\":4,\"offset\":0,\"nextOffset\":null,\"layers\":[{\"id\":2,\"name\":\"Backdrop\",\"type\":\"rectangle\",\"visible\":true,\"opacity\":100,\"x\":0,\"y\":0,\"width\":1200,\"height\":600,\"rotate\":0,\"order\":2,\"filters\":[]},{\"id\":3,\"name\":\"Seed illustration\",\"type\":\"image\",\"visible\":true,\"opacity\":100,\"x\":60,\"y\":150,\"width\":280,\"height\":280,\"rotate\":0,\"order\":3,\"filters\":[],\"imagePath\":\"data/assets/491f4facefaaf1190a8008725a63fa05677014f8216a6899f20ea42378a08b5e.bin\"},{\"id\":4,\"name\":\"Headline\",\"type\":\"text\",\"visible\":true,\"opacity\":100,\"x\":400,\"y\":100,\"width\":720,\"height\":130,\"rotate\":0,\"order\":4,\"filters\":[],\"text\":\"Seed library event\",\"style\":{\"size\":56,\"family\":\"Arial\",\"fill_color\":\"#234731\"}},{\"id\":5,\"name\":\"Details\",\"type\":\"text\",\"visible\":true,\"opacity\":100,\"x\":400,\"y\":280,\"width\":700,\"height\":150,\"rotate\":0,\"order\":5,\"filters\":[],\"text\":\"Saturday at 10. Bring spare seeds. Bring envelopes.\",\"style\":{\"size\":32,\"family\":\"Arial\",\"fill_color\":\"#234731\"}}]}"
+  },
+  {
+    "name": "reorder_minipaint_layer",
+    "id": "mock-1789490233580",
+    "input": {
+      "id": 5,
+      "direction": "down"
+    },
+    "result": "{\"width\":1200,\"height\":600,\"selectedLayer\":5,\"history\":{\"canUndo\":true,\"canRedo\":false},\"availableFilters\":{\"brightness\":[-100,100],\"contrast\":[-100,100],\"saturate\":[-100,100],\"hue-rotate\":[0,360],\"blur\":[0,50],\"grayscale\":[0,100],\"sepia\":[0,100],\"invert\":[0,100]},\"totalLayers\":4,\"offset\":0,\"nextOffset\":null,\"layers\":[{\"id\":2,\"name\":\"Backdrop\",\"type\":\"rectangle\",\"visible\":true,\"opacity\":100,\"x\":0,\"y\":0,\"width\":1200,\"height\":600,\"rotate\":0,\"order\":2,\"filters\":[]},{\"id\":3,\"name\":\"Seed illustration\",\"type\":\"image\",\"visible\":true,\"opacity\":100,\"x\":60,\"y\":150,\"width\":280,\"height\":280,\"rotate\":0,\"order\":3,\"filters\":[],\"imagePath\":\"data/assets/491f4facefaaf1190a8008725a63fa05677014f8216a6899f20ea42378a08b5e.bin\"},{\"id\":5,\"name\":\"Details\",\"type\":\"text\",\"visible\":true,\"opacity\":100,\"x\":400,\"y\":280,\"width\":700,\"height\":150,\"rotate\":0,\"order\":4,\"filters\":[],\"text\":\"Saturday at 10. Bring spare seeds. Bring envelopes.\",\"style\":{\"size\":32,\"family\":\"Arial\",\"fill_color\":\"#234731\"}},{\"id\":4,\"name\":\"Headline\",\"type\":\"text\",\"visible\":true,\"opacity\":100,\"x\":400,\"y\":100,\"width\":720,\"height\":130,\"rotate\":0,\"order\":5,\"filters\":[],\"text\":\"Seed library event\",\"style\":{\"size\":56,\"family\":\"Arial\",\"fill_color\":\"#234731\"}}]}"
+  },
+  {
+    "name": "reorder_minipaint_layer",
+    "id": "mock-1789490234600",
+    "input": {
+      "id": 5,
+      "direction": "up"
+    },
+    "result": "{\"width\":1200,\"height\":600,\"selectedLayer\":5,\"history\":{\"canUndo\":true,\"canRedo\":false},\"availableFilters\":{\"brightness\":[-100,100],\"contrast\":[-100,100],\"saturate\":[-100,100],\"hue-rotate\":[0,360],\"blur\":[0,50],\"grayscale\":[0,100],\"sepia\":[0,100],\"invert\":[0,100]},\"totalLayers\":4,\"offset\":0,\"nextOffset\":null,\"layers\":[{\"id\":2,\"name\":\"Backdrop\",\"type\":\"rectangle\",\"visible\":true,\"opacity\":100,\"x\":0,\"y\":0,\"width\":1200,\"height\":600,\"rotate\":0,\"order\":2,\"filters\":[]},{\"id\":3,\"name\":\"Seed illustration\",\"type\":\"image\",\"visible\":true,\"opacity\":100,\"x\":60,\"y\":150,\"width\":280,\"height\":280,\"rotate\":0,\"order\":3,\"filters\":[],\"imagePath\":\"data/assets/491f4facefaaf1190a8008725a63fa05677014f8216a6899f20ea42378a08b5e.bin\"},{\"id\":4,\"name\":\"Headline\",\"type\":\"text\",\"visible\":true,\"opacity\":100,\"x\":400,\"y\":100,\"width\":720,\"height\":130,\"rotate\":0,\"order\":4,\"filters\":[],\"text\":\"Seed library event\",\"style\":{\"size\":56,\"family\":\"Arial\",\"fill_color\":\"#234731\"}},{\"id\":5,\"name\":\"Details\",\"type\":\"text\",\"visible\":true,\"opacity\":100,\"x\":400,\"y\":280,\"width\":700,\"height\":150,\"rotate\":0,\"order\":5,\"filters\":[],\"text\":\"Saturday at 10. Bring spare seeds. Bring envelopes.\",\"style\":{\"size\":32,\"family\":\"Arial\",\"fill_color\":\"#234731\"}}]}"
+  },
+  {
+    "name": "resize_minipaint_canvas",
+    "id": "mock-1789490235605",
+    "input": {
+      "width": 960,
+      "height": 480,
+      "scaleLayers": true
+    },
+    "result": "{\"width\":960,\"height\":480,\"selectedLayer\":5,\"history\":{\"canUndo\":true,\"canRedo\":false},\"availableFilters\":{\"brightness\":[-100,100],\"contrast\":[-100,100],\"saturate\":[-100,100],\"hue-rotate\":[0,360],\"blur\":[0,50],\"grayscale\":[0,100],\"sepia\":[0,100],\"invert\":[0,100]},\"totalLayers\":4,\"offset\":0,\"nextOffset\":null,\"layers\":[{\"id\":2,\"name\":\"Backdrop\",\"type\":\"rectangle\",\"visible\":true,\"opacity\":100,\"x\":0,\"y\":0,\"width\":960,\"height\":480,\"rotate\":0,\"order\":2,\"filters\":[]},{\"id\":3,\"name\":\"Seed illustration\",\"type\":\"image\",\"visible\":true,\"opacity\":100,\"x\":48,\"y\":120,\"width\":224,\"height\":224,\"rotate\":0,\"order\":3,\"filters\":[],\"imagePath\":\"data/assets/491f4facefaaf1190a8008725a63fa05677014f8216a6899f20ea42378a08b5e.bin\"},{\"id\":4,\"name\":\"Headline\",\"type\":\"text\",\"visible\":true,\"opacity\":100,\"x\":320,\"y\":80,\"width\":576,\"height\":104,\"rotate\":0,\"order\":4,\"filters\":[],\"text\":\"Seed library event\",\"style\":{\"size\":44.800000000000004,\"family\":\"Arial\",\"fill_color\":\"#234731\"}},{\"id\":5,\"name\":\"Details\",\"type\":\"text\",\"visible\":true,\"opacity\":100,\"x\":320,\"y\":224,\"width\":560,\"height\":120,\"rotate\":0,\"order\":5,\"filters\":[],\"text\":\"Saturday at 10. Bring spare seeds. Bring envelopes.\",\"style\":{\"size\":25.6,\"family\":\"Arial\",\"fill_color\":\"#234731\"}}]}"
+  },
+  {
+    "name": "save_minipaint_image",
+    "id": "mock-1789490236609",
+    "input": {
+      "name": "Saturday banner"
+    },
+    "result": "{\"version\":1,\"id\":\"05c57848-2cac-451d-92ea-8f44854fadcb\",\"label\":\"Saturday banner\",\"path\":\"exports/05c57848-2cac-451d-92ea-8f44854fadcb.png\",\"fingerprint\":\"fc7856bb8da2e5819ef302381375b5404724a5f9a080f3d74efde006b8607d1c\",\"mimeType\":\"image/png\",\"size\":57107,\"created\":\"2026-09-15T16:37:16.619Z\",\"width\":960,\"height\":480}"
+  },
+  {
+    "name": "inspect_minipaint",
+    "id": "mock-1789490241648",
+    "input": {
+      "offset": 1,
+      "limit": 1
+    },
+    "result": "{\"width\":960,\"height\":480,\"selectedLayer\":5,\"history\":{\"canUndo\":true,\"canRedo\":false},\"availableFilters\":{\"brightness\":[-100,100],\"contrast\":[-100,100],\"saturate\":[-100,100],\"hue-rotate\":[0,360],\"blur\":[0,50],\"grayscale\":[0,100],\"sepia\":[0,100],\"invert\":[0,100]},\"totalLayers\":4,\"offset\":1,\"nextOffset\":2,\"layers\":[{\"id\":3,\"name\":\"Seed illustration\",\"type\":\"image\",\"visible\":true,\"opacity\":100,\"x\":48,\"y\":120,\"width\":224,\"height\":224,\"rotate\":0,\"order\":3,\"filters\":[],\"imagePath\":\"data/assets/491f4facefaaf1190a8008725a63fa05677014f8216a6899f20ea42378a08b5e.bin\"}]}"
+  },
+  {
+    "name": "duplicate_minipaint_layer",
+    "id": "mock-1789490241662",
+    "input": {
+      "id": 3,
+      "name": "Edited image"
+    },
+    "result": "{\"width\":960,\"height\":480,\"selectedLayer\":6,\"history\":{\"canUndo\":true,\"canRedo\":false},\"availableFilters\":{\"brightness\":[-100,100],\"contrast\":[-100,100],\"saturate\":[-100,100],\"hue-rotate\":[0,360],\"blur\":[0,50],\"grayscale\":[0,100],\"sepia\":[0,100],\"invert\":[0,100]},\"totalLayers\":5,\"offset\":0,\"nextOffset\":null,\"layers\":[{\"id\":2,\"name\":\"Backdrop\",\"type\":\"rectangle\",\"visible\":true,\"opacity\":100,\"x\":0,\"y\":0,\"width\":960,\"height\":480,\"rotate\":0,\"order\":2,\"filters\":[]},{\"id\":3,\"name\":\"Seed illustration\",\"type\":\"image\",\"visible\":true,\"opacity\":100,\"x\":48,\"y\":120,\"width\":224,\"height\":224,\"rotate\":0,\"order\":3,\"filters\":[],\"imagePath\":\"data/assets/491f4facefaaf1190a8008725a63fa05677014f8216a6899f20ea42378a08b5e.bin\"},{\"id\":4,\"name\":\"Headline\",\"type\":\"text\",\"visible\":true,\"opacity\":100,\"x\":320,\"y\":80,\"width\":576,\"height\":104,\"rotate\":0,\"order\":4,\"filters\":[],\"text\":\"Seed library event\",\"style\":{\"size\":44.800000000000004,\"family\":\"Arial\",\"fill_color\":\"#234731\"}},{\"id\":5,\"name\":\"Details\",\"type\":\"text\",\"visible\":true,\"opacity\":100,\"x\":320,\"y\":224,\"width\":560,\"height\":120,\"rotate\":0,\"order\":5,\"filters\":[],\"text\":\"Saturday at 10. Bring spare seeds. Bring envelopes.\",\"style\":{\"size\":25.6,\"family\":\"Arial\",\"fill_color\":\"#234731\"}},{\"id\":6,\"name\":\"Edited image\",\"type\":\"image\",\"visible\":true,\"opacity\":100,\"x\":48,\"y\":120,\"width\":224,\"height\":224,\"rotate\":0,\"order\":6,\"filters\":[],\"imagePath\":\"data/assets/491f4facefaaf1190a8008725a63fa05677014f8216a6899f20ea42378a08b5e.bin\"}],\"createdLayerId\":6}"
+  },
+  {
+    "name": "update_minipaint_layer",
+    "id": "mock-1789490242779",
+    "input": {
+      "id": 3,
+      "visible": false
+    },
+    "result": "{\"width\":960,\"height\":480,\"selectedLayer\":6,\"history\":{\"canUndo\":true,\"canRedo\":false},\"availableFilters\":{\"brightness\":[-100,100],\"contrast\":[-100,100],\"saturate\":[-100,100],\"hue-rotate\":[0,360],\"blur\":[0,50],\"grayscale\":[0,100],\"sepia\":[0,100],\"invert\":[0,100]},\"totalLayers\":5,\"offset\":0,\"nextOffset\":null,\"layers\":[{\"id\":2,\"name\":\"Backdrop\",\"type\":\"rectangle\",\"visible\":true,\"opacity\":100,\"x\":0,\"y\":0,\"width\":960,\"height\":480,\"rotate\":0,\"order\":2,\"filters\":[]},{\"id\":3,\"name\":\"Seed illustration\",\"type\":\"image\",\"visible\":false,\"opacity\":100,\"x\":48,\"y\":120,\"width\":224,\"height\":224,\"rotate\":0,\"order\":3,\"filters\":[],\"imagePath\":\"data/assets/491f4facefaaf1190a8008725a63fa05677014f8216a6899f20ea42378a08b5e.bin\"},{\"id\":4,\"name\":\"Headline\",\"type\":\"text\",\"visible\":true,\"opacity\":100,\"x\":320,\"y\":80,\"width\":576,\"height\":104,\"rotate\":0,\"order\":4,\"filters\":[],\"text\":\"Seed library event\",\"style\":{\"size\":44.800000000000004,\"family\":\"Arial\",\"fill_color\":\"#234731\"}},{\"id\":5,\"name\":\"Details\",\"type\":\"text\",\"visible\":true,\"opacity\":100,\"x\":320,\"y\":224,\"width\":560,\"height\":120,\"rotate\":0,\"order\":5,\"filters\":[],\"text\":\"Saturday at 10. Bring spare seeds. Bring envelopes.\",\"style\":{\"size\":25.6,\"family\":\"Arial\",\"fill_color\":\"#234731\"}},{\"id\":6,\"name\":\"Edited image\",\"type\":\"image\",\"visible\":true,\"opacity\":100,\"x\":48,\"y\":120,\"width\":224,\"height\":224,\"rotate\":0,\"order\":6,\"filters\":[],\"imagePath\":\"data/assets/491f4facefaaf1190a8008725a63fa05677014f8216a6899f20ea42378a08b5e.bin\"}]}"
+  },
+  {
+    "name": "edit_minipaint_filter",
+    "id": "mock-1789490243814",
+    "input": {
+      "id": 6,
+      "action": "add",
+      "filter": "brightness",
+      "value": 30
+    },
+    "result": "{\"width\":960,\"height\":480,\"selectedLayer\":6,\"history\":{\"canUndo\":true,\"canRedo\":false},\"availableFilters\":{\"brightness\":[-100,100],\"contrast\":[-100,100],\"saturate\":[-100,100],\"hue-rotate\":[0,360],\"blur\":[0,50],\"grayscale\":[0,100],\"sepia\":[0,100],\"invert\":[0,100]},\"totalLayers\":5,\"offset\":0,\"nextOffset\":null,\"layers\":[{\"id\":2,\"name\":\"Backdrop\",\"type\":\"rectangle\",\"visible\":true,\"opacity\":100,\"x\":0,\"y\":0,\"width\":960,\"height\":480,\"rotate\":0,\"order\":2,\"filters\":[]},{\"id\":3,\"name\":\"Seed illustration\",\"type\":\"image\",\"visible\":false,\"opacity\":100,\"x\":48,\"y\":120,\"width\":224,\"height\":224,\"rotate\":0,\"order\":3,\"filters\":[],\"imagePath\":\"data/assets/491f4facefaaf1190a8008725a63fa05677014f8216a6899f20ea42378a08b5e.bin\"},{\"id\":4,\"name\":\"Headline\",\"type\":\"text\",\"visible\":true,\"opacity\":100,\"x\":320,\"y\":80,\"width\":576,\"height\":104,\"rotate\":0,\"order\":4,\"filters\":[],\"text\":\"Seed library event\",\"style\":{\"size\":44.800000000000004,\"family\":\"Arial\",\"fill_color\":\"#234731\"}},{\"id\":5,\"name\":\"Details\",\"type\":\"text\",\"visible\":true,\"opacity\":100,\"x\":320,\"y\":224,\"width\":560,\"height\":120,\"rotate\":0,\"order\":5,\"filters\":[],\"text\":\"Saturday at 10. Bring spare seeds. Bring envelopes.\",\"style\":{\"size\":25.6,\"family\":\"Arial\",\"fill_color\":\"#234731\"}},{\"id\":6,\"name\":\"Edited image\",\"type\":\"image\",\"visible\":true,\"opacity\":100,\"x\":48,\"y\":120,\"width\":224,\"height\":224,\"rotate\":0,\"order\":6,\"filters\":[{\"id\":1,\"name\":\"brightness\",\"params\":{\"value\":30}}],\"imagePath\":\"data/assets/491f4facefaaf1190a8008725a63fa05677014f8216a6899f20ea42378a08b5e.bin\"}]}"
+  },
+  {
+    "name": "edit_minipaint_filter",
+    "id": "mock-1789490244828",
+    "input": {
+      "id": 6,
+      "action": "add",
+      "filter": "contrast",
+      "value": 15
+    },
+    "result": "{\"width\":960,\"height\":480,\"selectedLayer\":6,\"history\":{\"canUndo\":true,\"canRedo\":false},\"availableFilters\":{\"brightness\":[-100,100],\"contrast\":[-100,100],\"saturate\":[-100,100],\"hue-rotate\":[0,360],\"blur\":[0,50],\"grayscale\":[0,100],\"sepia\":[0,100],\"invert\":[0,100]},\"totalLayers\":5,\"offset\":0,\"nextOffset\":null,\"layers\":[{\"id\":2,\"name\":\"Backdrop\",\"type\":\"rectangle\",\"visible\":true,\"opacity\":100,\"x\":0,\"y\":0,\"width\":960,\"height\":480,\"rotate\":0,\"order\":2,\"filters\":[]},{\"id\":3,\"name\":\"Seed illustration\",\"type\":\"image\",\"visible\":false,\"opacity\":100,\"x\":48,\"y\":120,\"width\":224,\"height\":224,\"rotate\":0,\"order\":3,\"filters\":[],\"imagePath\":\"data/assets/491f4facefaaf1190a8008725a63fa05677014f8216a6899f20ea42378a08b5e.bin\"},{\"id\":4,\"name\":\"Headline\",\"type\":\"text\",\"visible\":true,\"opacity\":100,\"x\":320,\"y\":80,\"width\":576,\"height\":104,\"rotate\":0,\"order\":4,\"filters\":[],\"text\":\"Seed library event\",\"style\":{\"size\":44.800000000000004,\"family\":\"Arial\",\"fill_color\":\"#234731\"}},{\"id\":5,\"name\":\"Details\",\"type\":\"text\",\"visible\":true,\"opacity\":100,\"x\":320,\"y\":224,\"width\":560,\"height\":120,\"rotate\":0,\"order\":5,\"filters\":[],\"text\":\"Saturday at 10. Bring spare seeds. Bring envelopes.\",\"style\":{\"size\":25.6,\"family\":\"Arial\",\"fill_color\":\"#234731\"}},{\"id\":6,\"name\":\"Edited image\",\"type\":\"image\",\"visible\":true,\"opacity\":100,\"x\":48,\"y\":120,\"width\":224,\"height\":224,\"rotate\":0,\"order\":6,\"filters\":[{\"id\":1,\"name\":\"brightness\",\"params\":{\"value\":30}},{\"id\":2,\"name\":\"contrast\",\"params\":{\"value\":15}}],\"imagePath\":\"data/assets/491f4facefaaf1190a8008725a63fa05677014f8216a6899f20ea42378a08b5e.bin\"}]}"
+  },
+  {
+    "name": "paint_minipaint_stroke",
+    "id": "mock-1789490245845",
+    "input": {
+      "name": "Painted underline",
+      "color": "#c65a36",
+      "size": 12,
+      "points": [
+        [
+          320,
+          208
+        ],
+        [
+          460,
+          212
+        ],
+        [
+          620,
+          208
+        ],
+        [
+          820,
+          211
+        ]
+      ]
+    },
+    "result": "{\"width\":960,\"height\":480,\"selectedLayer\":7,\"history\":{\"canUndo\":true,\"canRedo\":false},\"availableFilters\":{\"brightness\":[-100,100],\"contrast\":[-100,100],\"saturate\":[-100,100],\"hue-rotate\":[0,360],\"blur\":[0,50],\"grayscale\":[0,100],\"sepia\":[0,100],\"invert\":[0,100]},\"totalLayers\":6,\"offset\":0,\"nextOffset\":null,\"layers\":[{\"id\":2,\"name\":\"Backdrop\",\"type\":\"rectangle\",\"visible\":true,\"opacity\":100,\"x\":0,\"y\":0,\"width\":960,\"height\":480,\"rotate\":0,\"order\":2,\"filters\":[]},{\"id\":3,\"name\":\"Seed illustration\",\"type\":\"image\",\"visible\":false,\"opacity\":100,\"x\":48,\"y\":120,\"width\":224,\"height\":224,\"rotate\":0,\"order\":3,\"filters\":[],\"imagePath\":\"data/assets/491f4facefaaf1190a8008725a63fa05677014f8216a6899f20ea42378a08b5e.bin\"},{\"id\":4,\"name\":\"Headline\",\"type\":\"text\",\"visible\":true,\"opacity\":100,\"x\":320,\"y\":80,\"width\":576,\"height\":104,\"rotate\":0,\"order\":4,\"filters\":[],\"text\":\"Seed library event\",\"style\":{\"size\":44.800000000000004,\"family\":\"Arial\",\"fill_color\":\"#234731\"}},{\"id\":5,\"name\":\"Details\",\"type\":\"text\",\"visible\":true,\"opacity\":100,\"x\":320,\"y\":224,\"width\":560,\"height\":120,\"rotate\":0,\"order\":5,\"filters\":[],\"text\":\"Saturday at 10. Bring spare seeds. Bring envelopes.\",\"style\":{\"size\":25.6,\"family\":\"Arial\",\"fill_color\":\"#234731\"}},{\"id\":6,\"name\":\"Edited image\",\"type\":\"image\",\"visible\":true,\"opacity\":100,\"x\":48,\"y\":120,\"width\":224,\"height\":224,\"rotate\":0,\"order\":6,\"filters\":[{\"id\":1,\"name\":\"brightness\",\"params\":{\"value\":30}},{\"id\":2,\"name\":\"contrast\",\"params\":{\"value\":15}}],\"imagePath\":\"data/assets/491f4facefaaf1190a8008725a63fa05677014f8216a6899f20ea42378a08b5e.bin\"},{\"id\":7,\"name\":\"Painted underline\",\"type\":\"brush\",\"visible\":true,\"opacity\":100,\"x\":320,\"y\":208,\"width\":500,\"height\":4,\"rotate\":null,\"order\":7,\"filters\":[],\"strokeCount\":1,\"color\":\"#c65a36\",\"brushSize\":12}],\"createdLayerId\":7}"
+  },
+  {
+    "name": "crop_minipaint_canvas",
+    "id": "mock-1789490246888",
+    "input": {
+      "x": 20,
+      "y": 20,
+      "width": 920,
+      "height": 440
+    },
+    "result": "{\"width\":920,\"height\":440,\"selectedLayer\":7,\"history\":{\"canUndo\":true,\"canRedo\":false},\"availableFilters\":{\"brightness\":[-100,100],\"contrast\":[-100,100],\"saturate\":[-100,100],\"hue-rotate\":[0,360],\"blur\":[0,50],\"grayscale\":[0,100],\"sepia\":[0,100],\"invert\":[0,100]},\"totalLayers\":6,\"offset\":0,\"nextOffset\":null,\"layers\":[{\"id\":2,\"name\":\"Backdrop\",\"type\":\"rectangle\",\"visible\":true,\"opacity\":100,\"x\":-20,\"y\":-20,\"width\":960,\"height\":480,\"rotate\":0,\"order\":2,\"filters\":[]},{\"id\":3,\"name\":\"Seed illustration\",\"type\":\"image\",\"visible\":false,\"opacity\":100,\"x\":28,\"y\":100,\"width\":224,\"height\":224,\"rotate\":0,\"order\":3,\"filters\":[],\"imagePath\":\"data/assets/491f4facefaaf1190a8008725a63fa05677014f8216a6899f20ea42378a08b5e.bin\"},{\"id\":4,\"name\":\"Headline\",\"type\":\"text\",\"visible\":true,\"opacity\":100,\"x\":300,\"y\":60,\"width\":576,\"height\":104,\"rotate\":0,\"order\":4,\"filters\":[],\"text\":\"Seed library event\",\"style\":{\"size\":44.800000000000004,\"family\":\"Arial\",\"fill_color\":\"#234731\"}},{\"id\":5,\"name\":\"Details\",\"type\":\"text\",\"visible\":true,\"opacity\":100,\"x\":300,\"y\":204,\"width\":560,\"height\":120,\"rotate\":0,\"order\":5,\"filters\":[],\"text\":\"Saturday at 10. Bring spare seeds. Bring envelopes.\",\"style\":{\"size\":25.6,\"family\":\"Arial\",\"fill_color\":\"#234731\"}},{\"id\":6,\"name\":\"Edited image\",\"type\":\"image\",\"visible\":true,\"opacity\":100,\"x\":28,\"y\":100,\"width\":224,\"height\":224,\"rotate\":0,\"order\":6,\"filters\":[{\"id\":1,\"name\":\"brightness\",\"params\":{\"value\":30}},{\"id\":2,\"name\":\"contrast\",\"params\":{\"value\":15}}],\"imagePath\":\"data/assets/491f4facefaaf1190a8008725a63fa05677014f8216a6899f20ea42378a08b5e.bin\"},{\"id\":7,\"name\":\"Painted underline\",\"type\":\"brush\",\"visible\":true,\"opacity\":100,\"x\":300,\"y\":188,\"width\":500,\"height\":4,\"rotate\":null,\"order\":7,\"filters\":[],\"strokeCount\":1,\"color\":\"#c65a36\",\"brushSize\":12}]}"
+  },
+  {
+    "name": "inspect_minipaint",
+    "id": "mock-1789490250221",
+    "input": {
+      "offset": 4,
+      "limit": 1
+    },
+    "result": "{\"width\":920,\"height\":440,\"selectedLayer\":5,\"history\":{\"canUndo\":true,\"canRedo\":false},\"availableFilters\":{\"brightness\":[-100,100],\"contrast\":[-100,100],\"saturate\":[-100,100],\"hue-rotate\":[0,360],\"blur\":[0,50],\"grayscale\":[0,100],\"sepia\":[0,100],\"invert\":[0,100]},\"totalLayers\":6,\"offset\":4,\"nextOffset\":5,\"layers\":[{\"id\":6,\"name\":\"Edited image\",\"type\":\"image\",\"visible\":true,\"opacity\":100,\"x\":28,\"y\":100,\"width\":224,\"height\":224,\"rotate\":0,\"order\":6,\"filters\":[{\"id\":1,\"name\":\"brightness\",\"params\":{\"value\":30}},{\"id\":2,\"name\":\"contrast\",\"params\":{\"value\":15}}],\"imagePath\":\"data/assets/491f4facefaaf1190a8008725a63fa05677014f8216a6899f20ea42378a08b5e.bin\"}]}"
+  },
+  {
+    "name": "edit_minipaint_filter",
+    "id": "mock-1789490250235",
+    "input": {
+      "id": 6,
+      "action": "update",
+      "filterId": 1,
+      "filter": "brightness",
+      "value": -25
+    },
+    "result": "{\"width\":920,\"height\":440,\"selectedLayer\":5,\"history\":{\"canUndo\":true,\"canRedo\":false},\"availableFilters\":{\"brightness\":[-100,100],\"contrast\":[-100,100],\"saturate\":[-100,100],\"hue-rotate\":[0,360],\"blur\":[0,50],\"grayscale\":[0,100],\"sepia\":[0,100],\"invert\":[0,100]},\"totalLayers\":6,\"offset\":0,\"nextOffset\":null,\"layers\":[{\"id\":2,\"name\":\"Backdrop\",\"type\":\"rectangle\",\"visible\":true,\"opacity\":100,\"x\":-20,\"y\":-20,\"width\":960,\"height\":480,\"rotate\":0,\"order\":2,\"filters\":[]},{\"id\":3,\"name\":\"Seed illustration\",\"type\":\"image\",\"visible\":false,\"opacity\":100,\"x\":28,\"y\":100,\"width\":224,\"height\":224,\"rotate\":0,\"order\":3,\"filters\":[],\"imagePath\":\"data/assets/491f4facefaaf1190a8008725a63fa05677014f8216a6899f20ea42378a08b5e.bin\"},{\"id\":4,\"name\":\"Headline\",\"type\":\"text\",\"visible\":true,\"opacity\":100,\"x\":300,\"y\":60,\"width\":576,\"height\":104,\"rotate\":0,\"order\":4,\"filters\":[],\"text\":\"Seed library event\",\"style\":{\"size\":44.800000000000004,\"family\":\"Arial\",\"fill_color\":\"#234731\"}},{\"id\":5,\"name\":\"Details\",\"type\":\"text\",\"visible\":true,\"opacity\":100,\"x\":300,\"y\":204,\"width\":560,\"height\":120,\"rotate\":0,\"order\":5,\"filters\":[],\"text\":\"Saturday at 10. Bring spare seeds. Bring envelopes. Hand-lettered by me.\",\"style\":{\"size\":25.6,\"family\":\"Arial\",\"fill_color\":\"#234731\"}},{\"id\":6,\"name\":\"Edited image\",\"type\":\"image\",\"visible\":true,\"opacity\":100,\"x\":28,\"y\":100,\"width\":224,\"height\":224,\"rotate\":0,\"order\":6,\"filters\":[{\"id\":1,\"name\":\"brightness\",\"params\":{\"value\":-25}},{\"id\":2,\"name\":\"contrast\",\"params\":{\"value\":15}}],\"imagePath\":\"data/assets/491f4facefaaf1190a8008725a63fa05677014f8216a6899f20ea42378a08b5e.bin\"},{\"id\":7,\"name\":\"Painted underline\",\"type\":\"brush\",\"visible\":true,\"opacity\":100,\"x\":300,\"y\":188,\"width\":500,\"height\":4,\"rotate\":null,\"order\":7,\"filters\":[],\"strokeCount\":1,\"color\":\"#c65a36\",\"brushSize\":12}]}"
+  },
+  {
+    "name": "minipaint_history",
+    "id": "mock-1789490251365",
+    "input": {
+      "direction": "undo"
+    },
+    "result": "{\"width\":920,\"height\":440,\"selectedLayer\":5,\"history\":{\"canUndo\":true,\"canRedo\":true},\"availableFilters\":{\"brightness\":[-100,100],\"contrast\":[-100,100],\"saturate\":[-100,100],\"hue-rotate\":[0,360],\"blur\":[0,50],\"grayscale\":[0,100],\"sepia\":[0,100],\"invert\":[0,100]},\"totalLayers\":6,\"offset\":0,\"nextOffset\":null,\"layers\":[{\"id\":2,\"name\":\"Backdrop\",\"type\":\"rectangle\",\"visible\":true,\"opacity\":100,\"x\":-20,\"y\":-20,\"width\":960,\"height\":480,\"rotate\":0,\"order\":2,\"filters\":[]},{\"id\":3,\"name\":\"Seed illustration\",\"type\":\"image\",\"visible\":false,\"opacity\":100,\"x\":28,\"y\":100,\"width\":224,\"height\":224,\"rotate\":0,\"order\":3,\"filters\":[],\"imagePath\":\"data/assets/491f4facefaaf1190a8008725a63fa05677014f8216a6899f20ea42378a08b5e.bin\"},{\"id\":4,\"name\":\"Headline\",\"type\":\"text\",\"visible\":true,\"opacity\":100,\"x\":300,\"y\":60,\"width\":576,\"height\":104,\"rotate\":0,\"order\":4,\"filters\":[],\"text\":\"Seed library event\",\"style\":{\"size\":44.800000000000004,\"family\":\"Arial\",\"fill_color\":\"#234731\"}},{\"id\":5,\"name\":\"Details\",\"type\":\"text\",\"visible\":true,\"opacity\":100,\"x\":300,\"y\":204,\"width\":560,\"height\":120,\"rotate\":0,\"order\":5,\"filters\":[],\"text\":\"Saturday at 10. Bring spare seeds. Bring envelopes. Hand-lettered by me.\",\"style\":{\"size\":25.6,\"family\":\"Arial\",\"fill_color\":\"#234731\"}},{\"id\":6,\"name\":\"Edited image\",\"type\":\"image\",\"visible\":true,\"opacity\":100,\"x\":28,\"y\":100,\"width\":224,\"height\":224,\"rotate\":0,\"order\":6,\"filters\":[{\"id\":1,\"name\":\"brightness\",\"params\":{\"value\":30}},{\"id\":2,\"name\":\"contrast\",\"params\":{\"value\":15}}],\"imagePath\":\"data/assets/491f4facefaaf1190a8008725a63fa05677014f8216a6899f20ea42378a08b5e.bin\"},{\"id\":7,\"name\":\"Painted underline\",\"type\":\"brush\",\"visible\":true,\"opacity\":100,\"x\":300,\"y\":188,\"width\":500,\"height\":4,\"rotate\":null,\"order\":7,\"filters\":[],\"strokeCount\":1,\"color\":\"#c65a36\",\"brushSize\":12}]}"
+  },
+  {
+    "name": "minipaint_history",
+    "id": "mock-1789490252481",
+    "input": {
+      "direction": "redo"
+    },
+    "result": "{\"width\":920,\"height\":440,\"selectedLayer\":5,\"history\":{\"canUndo\":true,\"canRedo\":false},\"availableFilters\":{\"brightness\":[-100,100],\"contrast\":[-100,100],\"saturate\":[-100,100],\"hue-rotate\":[0,360],\"blur\":[0,50],\"grayscale\":[0,100],\"sepia\":[0,100],\"invert\":[0,100]},\"totalLayers\":6,\"offset\":0,\"nextOffset\":null,\"layers\":[{\"id\":2,\"name\":\"Backdrop\",\"type\":\"rectangle\",\"visible\":true,\"opacity\":100,\"x\":-20,\"y\":-20,\"width\":960,\"height\":480,\"rotate\":0,\"order\":2,\"filters\":[]},{\"id\":3,\"name\":\"Seed illustration\",\"type\":\"image\",\"visible\":false,\"opacity\":100,\"x\":28,\"y\":100,\"width\":224,\"height\":224,\"rotate\":0,\"order\":3,\"filters\":[],\"imagePath\":\"data/assets/491f4facefaaf1190a8008725a63fa05677014f8216a6899f20ea42378a08b5e.bin\"},{\"id\":4,\"name\":\"Headline\",\"type\":\"text\",\"visible\":true,\"opacity\":100,\"x\":300,\"y\":60,\"width\":576,\"height\":104,\"rotate\":0,\"order\":4,\"filters\":[],\"text\":\"Seed library event\",\"style\":{\"size\":44.800000000000004,\"family\":\"Arial\",\"fill_color\":\"#234731\"}},{\"id\":5,\"name\":\"Details\",\"type\":\"text\",\"visible\":true,\"opacity\":100,\"x\":300,\"y\":204,\"width\":560,\"height\":120,\"rotate\":0,\"order\":5,\"filters\":[],\"text\":\"Saturday at 10. Bring spare seeds. Bring envelopes. Hand-lettered by me.\",\"style\":{\"size\":25.6,\"family\":\"Arial\",\"fill_color\":\"#234731\"}},{\"id\":6,\"name\":\"Edited image\",\"type\":\"image\",\"visible\":true,\"opacity\":100,\"x\":28,\"y\":100,\"width\":224,\"height\":224,\"rotate\":0,\"order\":6,\"filters\":[{\"id\":1,\"name\":\"brightness\",\"params\":{\"value\":-25}},{\"id\":2,\"name\":\"contrast\",\"params\":{\"value\":15}}],\"imagePath\":\"data/assets/491f4facefaaf1190a8008725a63fa05677014f8216a6899f20ea42378a08b5e.bin\"},{\"id\":7,\"name\":\"Painted underline\",\"type\":\"brush\",\"visible\":true,\"opacity\":100,\"x\":300,\"y\":188,\"width\":500,\"height\":4,\"rotate\":null,\"order\":7,\"filters\":[],\"strokeCount\":1,\"color\":\"#c65a36\",\"brushSize\":12}]}"
+  },
+  {
+    "name": "edit_minipaint_filter",
+    "id": "mock-1789490253495",
+    "input": {
+      "id": 6,
+      "action": "remove",
+      "filterId": 2
+    },
+    "result": "{\"width\":920,\"height\":440,\"selectedLayer\":5,\"history\":{\"canUndo\":true,\"canRedo\":false},\"availableFilters\":{\"brightness\":[-100,100],\"contrast\":[-100,100],\"saturate\":[-100,100],\"hue-rotate\":[0,360],\"blur\":[0,50],\"grayscale\":[0,100],\"sepia\":[0,100],\"invert\":[0,100]},\"totalLayers\":6,\"offset\":0,\"nextOffset\":null,\"layers\":[{\"id\":2,\"name\":\"Backdrop\",\"type\":\"rectangle\",\"visible\":true,\"opacity\":100,\"x\":-20,\"y\":-20,\"width\":960,\"height\":480,\"rotate\":0,\"order\":2,\"filters\":[]},{\"id\":3,\"name\":\"Seed illustration\",\"type\":\"image\",\"visible\":false,\"opacity\":100,\"x\":28,\"y\":100,\"width\":224,\"height\":224,\"rotate\":0,\"order\":3,\"filters\":[],\"imagePath\":\"data/assets/491f4facefaaf1190a8008725a63fa05677014f8216a6899f20ea42378a08b5e.bin\"},{\"id\":4,\"name\":\"Headline\",\"type\":\"text\",\"visible\":true,\"opacity\":100,\"x\":300,\"y\":60,\"width\":576,\"height\":104,\"rotate\":0,\"order\":4,\"filters\":[],\"text\":\"Seed library event\",\"style\":{\"size\":44.800000000000004,\"family\":\"Arial\",\"fill_color\":\"#234731\"}},{\"id\":5,\"name\":\"Details\",\"type\":\"text\",\"visible\":true,\"opacity\":100,\"x\":300,\"y\":204,\"width\":560,\"height\":120,\"rotate\":0,\"order\":5,\"filters\":[],\"text\":\"Saturday at 10. Bring spare seeds. Bring envelopes. Hand-lettered by me.\",\"style\":{\"size\":25.6,\"family\":\"Arial\",\"fill_color\":\"#234731\"}},{\"id\":6,\"name\":\"Edited image\",\"type\":\"image\",\"visible\":true,\"opacity\":100,\"x\":28,\"y\":100,\"width\":224,\"height\":224,\"rotate\":0,\"order\":6,\"filters\":[{\"id\":1,\"name\":\"brightness\",\"params\":{\"value\":-25}}],\"imagePath\":\"data/assets/491f4facefaaf1190a8008725a63fa05677014f8216a6899f20ea42378a08b5e.bin\"},{\"id\":7,\"name\":\"Painted underline\",\"type\":\"brush\",\"visible\":true,\"opacity\":100,\"x\":300,\"y\":188,\"width\":500,\"height\":4,\"rotate\":null,\"order\":7,\"filters\":[],\"strokeCount\":1,\"color\":\"#c65a36\",\"brushSize\":12}]}"
+  },
+  {
+    "name": "save_minipaint_image",
+    "id": "mock-1789490254535",
+    "input": {
+      "name": "Painted banner"
+    },
+    "result": "{\"version\":1,\"id\":\"f6312cde-ff34-4160-af49-1e2c0af85d3e\",\"label\":\"Painted banner\",\"path\":\"exports/f6312cde-ff34-4160-af49-1e2c0af85d3e.png\",\"fingerprint\":\"d21c605de80458e9d77017f8611c2eb52c5bffc093297eab0c51bccfdc33facb\",\"mimeType\":\"image/png\",\"size\":72913,\"created\":\"2026-09-15T16:37:34.550Z\",\"width\":920,\"height\":440}"
+  }
+]

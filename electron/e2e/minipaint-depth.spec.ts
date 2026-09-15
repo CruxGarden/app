@@ -1,9 +1,9 @@
-import { test, expect } from '@playwright/test';
-import { copyFileSync, readFileSync, mkdirSync, renameSync } from 'node:fs';
+import { test, expect, type Page } from '@playwright/test';
+import { copyFileSync, readFileSync, mkdirSync, renameSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { launchApp } from './launch';
 import { enterGarden, storedCrux } from './multi-crux-helpers';
-import { collaborator, outputs } from './game-cruxspace-helpers';
+import { outputs } from './game-cruxspace-helpers';
 import { exportNativeCrux, importNativeCrux } from './native-archive-helpers';
 
 test('miniPaint depth: native banner creation, person/agent revision, Undo, PNG, restart and portable editing', async () => {
@@ -14,6 +14,44 @@ test('miniPaint depth: native banner creation, person/agent revision, Undo, PNG,
   const evidence = resolve(__dirname, '../../docs/minipaint-depth');
   mkdirSync(evidence, { recursive: true });
   let folder = '';
+  let painted = false;
+  const evidenceCalls: any[] = [];
+  const collaborator = async (
+    page: Page,
+    message: string,
+    closing: string,
+    missingFilter = false,
+  ) => {
+    const id = (await page.locator('[data-workspace-id]').getAttribute('data-workspace-id'))!;
+    const previous = new Set((await storedCrux(page, id)).messages.map((m: any) => m.timestamp));
+    const toggle = page.getByRole('button', { name: 'Toggle collaboration' });
+    if ((await toggle.getAttribute('aria-pressed')) !== 'true') await toggle.click();
+    const box = page.getByPlaceholder('Send a message...');
+    await box.fill(message);
+    await box.press('Enter');
+    // An imported archive already contains earlier closing text. Wait for this turn,
+    // and collect its calls before manual edits move its messages into Growth.
+    await expect
+      .poll(
+        async () =>
+          (await storedCrux(page, id)).messages.some(
+            (m: any) => !previous.has(m.timestamp) && m.content === closing,
+          ),
+        { timeout: 150000 },
+      )
+      .toBe(true);
+    const calls = (await storedCrux(page, id)).messages
+      .filter((m: any) => !previous.has(m.timestamp) && m.content === closing)
+      .flatMap((m: any) => m.toolCalls ?? []);
+    expect(calls.length).toBeGreaterThan(0);
+    const errors = calls.filter((call: any) => call.result?.startsWith('Error'));
+    if (missingFilter) {
+      expect(errors).toHaveLength(1);
+      expect(errors[0].result).toContain('Filter no longer exists');
+    } else expect(errors).toEqual([]);
+    evidenceCalls.push(...calls);
+    return calls;
+  };
   const frame = () => instance.page.frameLocator('iframe[data-crux-id]');
   const doc = () => JSON.parse(readFileSync(join(folder, 'data/project.json'), 'utf8'));
   const layer = (name: string) => doc().project.layers.find((item: any) => item.name === name);
@@ -71,7 +109,36 @@ test('miniPaint depth: native banner creation, person/agent revision, Undo, PNG,
     await save();
     expect(text('Details')).toContain(note.trim());
   };
+  const photoCheck = () => {
+    expect(doc().project.layers).toHaveLength(6);
+    expect(doc().project.info.width).toBe(920);
+    expect(doc().project.info.height).toBe(440);
+    expect(text('Details')).toContain('Bring envelopes. Hand-lettered by me.');
+    expect(layer('Seed illustration').visible).toBe(false);
+    expect(layer('Edited image').filters).toEqual([
+      { id: 1, name: 'brightness', params: { value: -25 } },
+    ]);
+    expect(layer('Painted underline').type).toBe('brush');
+    expect(layer('Painted underline').x).toBe(300);
+    expect(layer('Painted underline').data[0]).toEqual([
+      [0, 0, 12],
+      [140, 4, 12],
+      [300, 0, 12],
+      [500, 3, 12],
+    ]);
+    const imageIds = ['Seed illustration', 'Edited image'].map((name) => layer(name).id);
+    const rasters = imageIds.map(
+      (id) => doc().project.data.find((item: any) => item.id === id).data,
+    );
+    expect(rasters[0]).toEqual(rasters[1]); // live filters leave original raster pixels untouched
+    const png = readFileSync(
+      join(folder, outputs(folder).find((item) => item.label === 'Painted banner')!.path),
+    );
+    expect(png.readUInt32BE(16)).toBe(920);
+    expect(png.readUInt32BE(20)).toBe(440);
+  };
   const check = () => {
+    if (painted) return photoCheck();
     expect(doc().project.layers).toHaveLength(4);
     expect(doc().project.info.width).toBe(960);
     expect(doc().project.info.height).toBe(480);
@@ -192,6 +259,85 @@ test('miniPaint depth: native banner creation, person/agent revision, Undo, PNG,
       join(folder, outputs(folder).find((item) => item.label === 'Saturday banner')!.path),
       join(evidence, 'banner.png'),
     );
+    await collaborator(
+      page,
+      'Add paint and photo adjustments [minipaint:photo-create]',
+      'Added editable paint, live photo adjustments and a reversible crop.',
+    );
+    await save();
+    const createdPhotoMetadata = await storedCrux(
+      page,
+      (await page.locator('[data-workspace-id]').getAttribute('data-workspace-id'))!,
+    );
+    expect(
+      createdPhotoMetadata.messages
+        .flatMap((message: any) => message.toolCalls ?? [])
+        .filter((call: any) => call.result?.startsWith('Error')),
+    ).toEqual([]);
+    expect(layer('Edited image').filters.map((filter: any) => filter.params.value)).toEqual([
+      30, 15,
+    ]);
+    await appendDetails(' Hand-lettered by me.');
+    await collaborator(
+      page,
+      'Revise the photo effects [minipaint:photo-revise]',
+      'Revised live filters and saved the painted banner, preserving your text.',
+    );
+    await save();
+    painted = true;
+    photoCheck();
+    // Native Undo must restore the removed filter, then restore the prior updated value.
+    await hideChat();
+    await history('Undo');
+    await expect.poll(() => layer('Edited image').filters.length).toBe(2);
+    await history('Undo');
+    await expect.poll(() => layer('Edited image').filters[0].params.value).toBe(30);
+    expect(layer('Edited image').filters[1].params.value).toBe(15);
+    await history('Redo');
+    await expect.poll(() => layer('Edited image').filters[0].params.value).toBe(-25);
+    await history('Redo');
+    await expect.poll(() => layer('Edited image').filters.length).toBe(1);
+    await save();
+    photoCheck();
+    const paintedOutput = readFileSync(
+      join(folder, outputs(folder).find((item) => item.label === 'Painted banner')!.path),
+    );
+    const originalOutput = readFileSync(
+      join(folder, outputs(folder).find((item) => item.label === 'Saturday banner')!.path),
+    );
+    // Compare the same photo region after accounting for the crop; assert actual rendered changes.
+    const pixels = await frame()
+      .locator('body')
+      .evaluate(
+        async (_, sources) => {
+          const read = async (base64: string, x: number, y: number) => {
+            const image = new Image();
+            image.src = 'data:image/png;base64,' + base64;
+            await image.decode();
+            const canvas = document.createElement('canvas');
+            canvas.width = canvas.height = 100;
+            const ctx = canvas.getContext('2d')!;
+            ctx.drawImage(image, x, y, 100, 100, 0, 0, 100, 100);
+            return Array.from(ctx.getImageData(0, 0, 100, 100).data);
+          };
+          return {
+            before: await read(sources.before, 90, 170),
+            after: await read(sources.after, 70, 150),
+            stroke: (await read(sources.after, 370, 188)).slice(0, 4),
+          };
+        },
+        { before: originalOutput.toString('base64'), after: paintedOutput.toString('base64') },
+      );
+    expect(pixels.after).not.toEqual(pixels.before);
+    expect(pixels.stroke).toEqual([198, 90, 54, 255]);
+    expect(evidenceCalls).toHaveLength(27);
+    writeFileSync(join(evidence, 'painting-calls.json'), JSON.stringify(evidenceCalls, null, 2));
+    copyFileSync(
+      join(folder, outputs(folder).find((item) => item.label === 'Painted banner')!.path),
+      join(evidence, 'painted-banner.png'),
+    );
+    await frame().getByRole('button', { name: 'Fit', exact: true }).click();
+    await page.screenshot({ path: join(evidence, 'native-painting.png') });
     await instance.app.close();
 
     instance = await launchApp({ dir });
@@ -202,7 +348,7 @@ test('miniPaint depth: native banner creation, person/agent revision, Undo, PNG,
     await exportNativeCrux(page, archive, instance.app);
     await instance.app.close();
     renameSync(folder, folder + '.source-offline');
-    instance = await launchApp();
+    instance = await launchApp({ env: { CRUX_AI_MOCK: '1' } });
     page = instance.page;
     await page.setViewportSize({ width: 1800, height: 1100 });
     await enterGarden(page);
@@ -221,6 +367,21 @@ test('miniPaint depth: native banner creation, person/agent revision, Undo, PNG,
     await history('Redo');
     await expect.poll(() => text('Details')).toContain('Welcome!');
     await save();
+    const importedCalls = await collaborator(
+      page,
+      'Check imported filters [minipaint:photo-revise]',
+      'Revised live filters and saved the painted banner, preserving your text.',
+      true,
+    );
+    // Imported project has no contrast filter: this deliberately tests a scoped refusal.
+    expect(importedCalls).toHaveLength(6);
+    writeFileSync(
+      join(evidence, 'portable-painting-calls.json'),
+      JSON.stringify(importedCalls, null, 2),
+    );
+    await save();
+    photoCheck();
+    await hideChat();
     await page.screenshot({ path: join(evidence, 'portable-editing.png') });
   } finally {
     await instance.app.close().catch(() => {});
