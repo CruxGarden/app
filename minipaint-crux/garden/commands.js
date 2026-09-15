@@ -1,9 +1,11 @@
+import { RASTER_FIELDS, validateRasterCommand } from './raster.js';
 import { validateEditingCommand, EDITING_FIELDS } from './editing.js';
 import { validateProjectImagePath } from './shared/project-image.js';
 const geometry = ['x', 'y', 'width', 'height', 'rotate'];
 const style = ['fontSize', 'fontFamily', 'color'];
 const fields = {
   ...EDITING_FIELDS,
+  ...RASTER_FIELDS,
   inspect: ['offset', 'limit'],
   layer: ['id', 'name', 'visible', 'opacity', ...geometry, ...style, 'find', 'replace'],
   'save-image': ['label'],
@@ -104,6 +106,7 @@ export function validateCommand(value) {
       throw Error('Use a non-negative offset and a limit between 1 and 50.');
   if (value.op === 'add-image') validateProjectImagePath(value.path);
   validateEditingCommand(value);
+  validateRasterCommand(value);
   return { ...value };
 }
 

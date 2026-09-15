@@ -293,11 +293,11 @@ class Selection_class extends Base_tools_class {
 		//adapt to origin size
 		mouse_x = this.adaptSize(mouse_x, 'width');
 		mouse_y = this.adaptSize(mouse_y, 'height');
-		selection.width = this.adaptSize(selection.width, 'width');
-		selection.height = this.adaptSize(selection.height, 'height');
+		const width = this.adaptSize(selection.width, 'width');
+		const height = this.adaptSize(selection.height, 'height');
 
 		//do erase
-		this.tmpCanvasCtx.clearRect(mouse_x, mouse_y, selection.width, selection.height);
+		this.tmpCanvasCtx.clearRect(mouse_x, mouse_y, width, height);
 
 		app.State.do_action(
 			new app.Actions.Bundle_action('delete_selection', 'Delete Selection', [

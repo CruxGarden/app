@@ -9,6 +9,13 @@ import { validateProject } from '../../../garden/model.js';
 import { validateCommand, textData, reviseText } from '../../../garden/commands.js';
 import { loadProjectImage } from '../../../garden/shared/project-image.js';
 import { createCommandSession } from '../../../garden/shared/command-session.js';
+import {
+  rasterGeometry,
+  rasterSelection,
+  rasterSeed,
+  fillPixels,
+  eraseStroke,
+} from '../../../garden/raster.js';
 
 export async function startGarden(app) {
   if (parent === window) return;
@@ -92,6 +99,12 @@ export async function startGarden(app) {
   async function settle() {
     while (actions.size) await Promise.all([...actions]);
   }
+  const selectionTool = () => app.GUI.GUI_tools.tools_modules.selection.object;
+  const selectedRegion = (id) => {
+    if (app.Config.TOOL.name !== 'selection' || app.Config.layer?.id !== id) return null;
+    const region = selectionTool().selection;
+    return region.width > 0 && region.height > 0 ? { ...region } : null;
+  };
   async function capture() {
     const project = JSON.parse(app.FileSave.export_as_json());
     const used = new Set();
@@ -156,6 +169,8 @@ export async function startGarden(app) {
       width: app.Config.WIDTH,
       height: app.Config.HEIGHT,
       selectedLayer: app.Config.layer?.id,
+      activeTool: app.Config.TOOL.name,
+      selection: selectedRegion(app.Config.layer?.id),
       history: { canUndo: app.State.can_undo(), canRedo: app.State.can_redo() },
       availableFilters: FILTER_BOUNDS,
       totalLayers: layers.length,
@@ -174,7 +189,7 @@ export async function startGarden(app) {
         rotate: layer.rotate,
         order: layer.order,
         filters: (layer.filters ?? []).slice(0, 100).map((filter) => ({
-          id: filter.id,
+          id: Number(filter.id),
           name: filter.name,
           params: filter.params,
         })),
@@ -190,7 +205,13 @@ export async function startGarden(app) {
               style: layer.data?.[0]?.[0]?.meta,
             }
           : {}),
-        ...(layer.type === 'image' ? { imagePath: rasterPaths.get(layer.id) } : {}),
+        ...(layer.type === 'image'
+          ? {
+              imagePath: rasterPaths.get(layer.id),
+              originalWidth: layer.width_original,
+              originalHeight: layer.height_original,
+            }
+          : {}),
       })),
     };
   };
@@ -256,7 +277,7 @@ export async function startGarden(app) {
       const preparedRevision = revision;
       const checkDraft = () => {
         if (
-          app.Config.layers.some((layer) => layer.status === 'draft') ||
+          app.Config.layers.some((layer) => layer.status === 'draft' || layer.link_canvas) ||
           [...document.querySelectorAll('#popups .popup')].some(
             (popup) => popup.getClientRects().length,
           )
@@ -284,6 +305,16 @@ export async function startGarden(app) {
       }
       if (value.op === 'edit-filter') revisedFilters(findLayer(value.id), value);
       if (value.op === 'crop-canvas') cropLayers(app.Config, value);
+      if (['selection', 'erase', 'fill'].includes(value.op)) {
+        const layer = findLayer(value.id);
+        rasterGeometry(layer);
+        if (value.op === 'selection') {
+          if (value.action === 'set') rasterSelection(layer, value);
+          else if (!selectedRegion(value.id))
+            throw new Error('There is no selection on this layer.');
+        } else if (value.mode === 'selection') rasterSelection(layer, selectedRegion(value.id));
+        else if (value.op === 'fill') rasterSeed(layer, value);
+      }
       if (
         value.op === 'history' &&
         !(value.direction === 'undo' ? app.State.can_undo() : app.State.can_redo())
@@ -302,7 +333,50 @@ export async function startGarden(app) {
             throw new Error(
               'The image changed while preparing the edit. Inspect miniPaint before retrying.',
             );
-          if (value.op === 'add-brush' || value.op === 'duplicate-layer') {
+          if (value.op === 'selection') {
+            const edits = [];
+            if (app.Config.layer.id !== value.id)
+              edits.push(new app.Actions.Select_layer_action(value.id));
+            if (app.Config.TOOL.name !== 'selection')
+              edits.push(new app.Actions.Activate_tool_action('selection'));
+            edits.push(
+              value.action === 'set'
+                ? new app.Actions.Set_selection_action(value.x, value.y, value.width, value.height)
+                : new app.Actions.Reset_selection_action(selectionTool().selection),
+            );
+            await nativeEdit('Select Image Region', edits);
+          } else if (value.op === 'erase' || value.op === 'fill') {
+            const layer = findLayer(value.id);
+            const canvas = document.createElement('canvas');
+            canvas.width = layer.width_original;
+            canvas.height = layer.height_original;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(layer.link, 0, 0);
+            const region =
+              value.mode === 'selection' ? rasterSelection(layer, selectedRegion(value.id)) : null;
+            if (value.op === 'erase') {
+              if (region) {
+                ctx.globalCompositeOperation = 'destination-out';
+                ctx.globalAlpha = (value.opacity ?? 100) / 100;
+                ctx.fillRect(region.x, region.y, region.width, region.height);
+              } else eraseStroke(ctx, layer, value);
+            } else {
+              const pixels = ctx.getImageData(0, 0, canvas.width, canvas.height);
+              fillPixels(
+                pixels,
+                region ? null : rasterSeed(layer, value),
+                value.color,
+                value.opacity ?? 100,
+                value.tolerance ?? 0,
+                value.mode === 'global',
+                region,
+              );
+              ctx.putImageData(pixels, 0, 0);
+            }
+            await nativeEdit(value.op === 'erase' ? 'Erase Image Pixels' : 'Fill Image Pixels', [
+              new app.Actions.Update_layer_image_action(canvas, value.id),
+            ]);
+          } else if (value.op === 'add-brush' || value.op === 'duplicate-layer') {
             const layer =
               value.op === 'add-brush'
                 ? brushLayer(value)

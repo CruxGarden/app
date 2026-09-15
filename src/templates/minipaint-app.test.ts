@@ -12,6 +12,7 @@ it('packages the actual miniPaint app and rebuildable source', async () => {
     'src/js/garden/bridge.js',
     'garden/model.js',
     'garden/editing.js',
+    'garden/raster.js',
     'garden/commands.js',
     'package.json',
     'package-lock.json',

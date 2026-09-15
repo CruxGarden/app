@@ -1,11 +1,9 @@
 import app from './../app.js';
 import config from './../config.js';
-import Helper_class from './../libs/helpers.js';
 import alertify from './../../../node_modules/alertifyjs/build/alertify.min.js';
 import image_store from './store/image-store.js';
 import { Base_action } from './base.js';
 
-const Helper = new Helper_class();
 
 export class Update_layer_image_action extends Base_action {
 	/**
@@ -16,7 +14,8 @@ export class Update_layer_image_action extends Base_action {
 	 */
 	constructor(canvas, layer_id) {
 		super('update_layer_image', 'Update Layer Image');
-		this.canvas = canvas;
+		// Native callers may clear their temporary canvas before this async action runs.
+		this.canvas_data_url = canvas ? canvas.toDataURL('image/png') : null;
 		if (layer_id == null)
 			layer_id = config.layer.id;
 		this.layer_id = parseInt(layer_id);
@@ -45,24 +44,8 @@ export class Update_layer_image_action extends Base_action {
 			} catch (error) {
 				throw new Error('Aborted - problem retrieving cached image from database');
 			}
-		} else if (this.canvas) {
-			if (Helper.is_edge_or_ie() == false && typeof(FileReader) !== 'undefined') {
-				// Update image using blob and FileReader (async)
-				await new Promise((resolve) => {
-					this.canvas.toBlob((blob) => {
-						var reader = new FileReader();
-						reader.onloadend = () => {
-							canvas_data_url = reader.result;
-							resolve();
-						}
-						reader.readAsDataURL(blob);
-					}, 'image/png');
-				});
-			}
-			else {
-				// Slow way for IE, Edge
-				canvas_data_url = this.canvas.toDataURL();
-			}
+		} else {
+			canvas_data_url = this.canvas_data_url;
 		}
 
 		// Store data url in database
@@ -71,17 +54,19 @@ export class Update_layer_image_action extends Base_action {
 				if (this.reference_layer._link_database_id) {
 					this.old_image_id = this.reference_layer._link_database_id;
 				} else {
-					this.old_image_id = await image_store.add(this.reference_layer.link.src);
+					// Imported images can retain decoded pixels after their blob URL is revoked.
+					const original = document.createElement('canvas');
+					original.width = this.reference_layer.width_original;
+					original.height = this.reference_layer.height_original;
+					original.getContext('2d').drawImage(this.reference_layer.link, 0, 0);
+					this.old_image_id = await image_store.add(original.toDataURL('image/png'));
 				}
 			}
 			if (!this.new_image_id) {
 				this.new_image_id = await image_store.add(canvas_data_url);
 			}
 		} catch (error) {
-			console.log(error);
-			requestAnimationFrame(() => {
-				app.State.free(0, this.database_estimate || 1)
-			});
+			throw new Error('Aborted - unable to preserve image Undo history');
 		}
 
 		// Estimate storage size
@@ -91,10 +76,11 @@ export class Update_layer_image_action extends Base_action {
 
 		// Assign layer properties
 		this.reference_layer.link.src = canvas_data_url;
+		await this.reference_layer.link.decode();
 		this.old_link_database_id = this.reference_layer._link_database_id;
 		this.reference_layer._link_database_id = this.new_image_id;
 
-		this.canvas = null;
+		this.canvas_data_url = null;
 		config.need_render = true;
 	}
 
@@ -110,6 +96,7 @@ export class Update_layer_image_action extends Base_action {
 		if (this.old_image_id != null) {
 			try {
 				this.reference_layer.link.src = await image_store.get(this.old_image_id);
+				await this.reference_layer.link.decode();
 			} catch (error) {
 				throw new Error('Failed to retrieve image from store');
 			}
@@ -139,7 +126,7 @@ export class Update_layer_image_action extends Base_action {
 				this.old_image_id = null;
 			}
 		}
-		this.canvas = null;
+		this.canvas_data_url = null;
 		this.old_link_database_id = null;
 		this.reference_layer = null;
 		if (has_error) {

@@ -17,8 +17,11 @@ export class Add_layer_filter_action extends Base_action {
 		this.layer_id = parseInt(layer_id);
 		this.name = name;
 		this.params = params;
-		this.filter_id = filter_id;
+		// Native dialog data attributes are strings; keep persisted filter IDs numeric.
+		this.filter_id = filter_id == null ? null : Number(filter_id);
 		this.reference_layer = null;
+		this.old_filters = null;
+		this.inserted_id = null;
 	}
 
 	async do() {
@@ -27,25 +30,24 @@ export class Add_layer_filter_action extends Base_action {
 		if (!this.reference_layer) {
 			throw new Error('Aborted - layer with specified id doesn\'t exist');
 		}
-		var filter = {
-			id: this.filter_id,
+		const filters = this.reference_layer.filters;
+		if (this.filter_id != null && (!Number.isSafeInteger(this.filter_id) || this.filter_id < 1))
+			throw new Error('Aborted - filter with specified id does not exist');
+		const index = filters.findIndex(filter => filter.id == this.filter_id);
+		if (this.filter_id && index < 0)
+			throw new Error('Aborted - filter with specified id does not exist');
+		this.old_filters = structuredClone(filters);
+		if (!this.filter_id && this.inserted_id == null) {
+			this.inserted_id = 1;
+			while (filters.some(filter => Number(filter.id) === this.inserted_id)) this.inserted_id++;
+		}
+		const filter = {
+			id: this.filter_id || this.inserted_id,
 			name: this.name,
-			params: this.params,
+			params: structuredClone(this.params),
 		};
-		if(this.filter_id) {
-			//update
-			for(var i in this.reference_layer.filters) {
-				if(this.reference_layer.filters[i].id == this.filter_id){
-					this.reference_layer.filters[i] = filter;
-					break;
-				}
-			}
-		}
-		else{
-			//insert
-			filter.id = Math.floor(Math.random() * 999999999) + 1; // A good UUID library would
-			this.reference_layer.filters.push(filter);
-		}
+		if (this.filter_id) filters[index] = filter;
+		else filters.push(filter);
 		config.need_render = true;
 		app.GUI.GUI_layers.render_layers();
 	}
@@ -53,7 +55,8 @@ export class Add_layer_filter_action extends Base_action {
 	async undo() {
 		super.undo();
 		if (this.reference_layer) {
-			this.reference_layer.filters.pop();
+			this.reference_layer.filters = this.old_filters;
+			this.old_filters = null;
 			this.reference_layer = null;
 		}
 		config.need_render = true;
@@ -63,5 +66,6 @@ export class Add_layer_filter_action extends Base_action {
 	free() {
 		this.reference_layer = null;
 		this.params = null;
+		this.old_filters = null;
 	}
 }
