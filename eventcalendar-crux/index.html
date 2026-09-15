@@ -16,8 +16,8 @@
         <h2 id="event-dialog-title">New event</h2>
         <label>Title <input name="title" required maxlength="200" autocomplete="off" /></label>
         <label class="check"><input type="checkbox" name="allDay" /> All day</label>
-        <label>Starts <input type="datetime-local" name="start" required /></label>
-        <label>Ends <input type="datetime-local" name="end" /></label>
+        <label>Starts <input type="datetime-local" step="1" name="start" required /></label>
+        <label>Ends <input type="datetime-local" step="1" name="end" /></label>
         <label>Colour <input type="color" name="color" value="#2f6f4e" /></label>
         <label>Notes <textarea name="notes" rows="3" maxlength="2000"></textarea></label>
         <menu>
@@ -29,7 +29,7 @@
       </form>
     </dialog>
     <script src="vendor/event-calendar.min.js"></script>
-    <script src="organizer.js"></script>
-    <script src="garden/bridge.js"></script>
+    <script type="module" src="organizer.js"></script>
+    <script type="module" src="garden/bridge.js"></script>
   </body>
 </html>

@@ -1,3 +1,6 @@
+import { validateProject } from './document.js';
+import { createCalendarCommands } from './commands.js';
+import { createCommandSession } from './shared/command-session.js';
 // Garden bridge for the calendar organizer (Crux Garden). The organizer keeps
 // the calendar as plain data; inside a Crux the saved calendar loads before
 // the component shows, every change the organizer records marks the project
@@ -7,50 +10,6 @@
 (function () {
   const embedded = parent !== window;
   if (!embedded) return;
-  const object = (v) => v !== null && typeof v === 'object' && !Array.isArray(v);
-  const LOCAL = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/;
-  const validateProject = (doc) => {
-    if (
-      !object(doc) ||
-      doc.version !== 1 ||
-      doc.app !== 'eventcalendar' ||
-      Object.keys(doc).some((k) => !['version', 'app', 'project'].includes(k))
-    )
-      throw Error('Invalid calendar project.');
-    if (doc.project === null) return;
-    const p = doc.project;
-    if (
-      !object(p) ||
-      Object.keys(p).some((k) => !['name', 'view', 'date', 'events', 'saved'].includes(k))
-    )
-      throw Error('Invalid calendar record.');
-    if (typeof p.name !== 'string' || !p.name.trim() || p.name.length > 200)
-      throw Error('Invalid calendar name.');
-    if (typeof p.view !== 'string' || !/^[a-zA-Z]{4,40}$/.test(p.view))
-      throw Error('Invalid calendar view.');
-    if (typeof p.date !== 'string' || (p.date && !/^\d{4}-\d{2}-\d{2}$/.test(p.date)))
-      throw Error('Invalid calendar date.');
-    if (!Array.isArray(p.events) || p.events.length > 20000) throw Error('Invalid event list.');
-    for (const e of p.events) {
-      if (
-        !object(e) ||
-        Object.keys(e).some(
-          (k) => !['id', 'title', 'start', 'end', 'allDay', 'color', 'notes'].includes(k),
-        )
-      )
-        throw Error('Invalid event.');
-      if (typeof e.id !== 'string' || !e.id || e.id.length > 40) throw Error('Invalid event id.');
-      if (typeof e.title !== 'string' || !e.title.trim() || e.title.length > 200)
-        throw Error('Invalid event title.');
-      if (typeof e.start !== 'string' || !LOCAL.test(e.start)) throw Error('Invalid event start.');
-      if (typeof e.end !== 'string' || (e.end && !LOCAL.test(e.end)))
-        throw Error('Invalid event end.');
-      if (typeof e.allDay !== 'boolean') throw Error('Invalid all-day flag.');
-      if (typeof e.color !== 'string' || (e.color && !/^#[0-9a-fA-F]{6}$/.test(e.color)))
-        throw Error('Invalid event colour.');
-      if (typeof e.notes !== 'string' || e.notes.length > 2000) throw Error('Invalid event notes.');
-    }
-  };
   let origin,
     expected = null,
     revision = 0,
@@ -60,6 +19,8 @@
     status = null;
   let tail = Promise.resolve(),
     commandTail = Promise.resolve();
+  const sessionId = crypto.randomUUID();
+  const stateToken = () => sessionId + ':' + revision;
   const pending = new Map();
   const show = (text) => {
     if (status) status.textContent = text;
@@ -100,6 +61,8 @@
     const operation = tail.then(async () => {
       clearTimeout(timer);
       if (hydrating) throw new Error('Wait for the saved calendar to finish opening.');
+      if (organizer.hasDraft())
+        throw Error('Finish or cancel the open event form before saving or leaving Calendar.');
       if (revision === saved) return;
       const saving = revision;
       try {
@@ -128,46 +91,22 @@
     tail = operation.catch(() => {});
     return operation;
   }
-  function inspect() {
-    const p = organizer.snapshot();
-    return {
-      name: p.name,
-      view: p.view,
-      date: p.date,
-      events: p.events.map((e) => ({
-        id: e.id,
-        title: e.title,
-        start: e.start,
-        end: e.end,
-        allDay: e.allDay,
-        notes: e.notes,
-      })),
-    };
-  }
-  async function command(value) {
-    if (hydrating) throw new Error('Wait for the calendar to open.');
-    if (value.op === 'inspect') return inspect();
-    if (value.op === 'set-name') {
-      const name = String(value.name ?? '').trim();
-      if (!name || name.length > 200) throw new Error('Use a calendar name up to 200 characters.');
-      organizer.setName(name);
-    } else if (value.op === 'add-event') {
-      const title = String(value.title ?? '').trim();
-      const start = String(value.start ?? '');
-      const end = value.end === undefined ? '' : String(value.end);
-      if (!title || title.length > 200) throw new Error('Use an event title up to 200 characters.');
-      if (!LOCAL.test(start) || (end && !LOCAL.test(end)))
-        throw new Error('Use local times like 2026-09-15T10:00:00.');
-      if (end && end < start) throw new Error('The end must not be before the start.');
-      const notes = value.notes === undefined ? '' : String(value.notes);
-      if (notes.length > 2000) throw new Error('Use notes up to 2000 characters.');
-      organizer.addEvent({ title, start, end, allDay: value.allDay === true, notes });
-    } else if (value.op === 'remove-event') {
-      if (!organizer.removeEvent(String(value.id ?? ''))) throw new Error('No event with that id.');
-    } else throw new Error('Unsupported calendar operation.');
-    await save();
-    return inspect();
-  }
+  const commands = createCalendarCommands({
+    organizer,
+    stateToken,
+    saveOutput: (value) => call({ op: 'save-output', ...value }),
+  });
+  const session = createCommandSession({
+    settle: async () => {
+      if (hydrating) throw Error('Wait for the calendar to open.');
+      if (organizer.hasDraft())
+        throw Error('Finish or cancel the open event form before using Calendar tools.');
+      await new Promise((resolve) => requestAnimationFrame(resolve));
+    },
+    prepare: (value) => commands.prepare(value),
+    save,
+  });
+  const command = (value) => session.execute(value);
   window.addEventListener('message', (event) => {
     if (event.source !== parent || (origin !== undefined && event.origin !== origin)) return;
     const message = event.data;
@@ -200,10 +139,12 @@
   async function boot() {
     const bar = document.createElement('div');
     bar.id = 'garden-project';
-    bar.innerHTML = '<span role="status">Opening Garden project…</span>';
+    bar.innerHTML =
+      '<span role="status">Opening Garden project…</span><button>Save project</button>';
+    bar.querySelector('button').onclick = () => save().catch((error) => show(error.message));
     const style = document.createElement('style');
     style.textContent =
-      '#garden-project{position:fixed;bottom:0;left:0;right:0;height:32px;z-index:100000;display:flex;align-items:center;padding:0 12px;background:#1f2a24;color:#e6e4dc;font:12px system-ui;border-top:1px solid #3a403c}main{height:calc(100% - 32px)!important}';
+      '#garden-project{position:fixed;bottom:0;left:0;right:0;height:32px;z-index:100000;display:flex;gap:12px;align-items:center;padding:0 12px;background:#1f2a24;color:#e6e4dc;font:12px system-ui;border-top:1px solid #3a403c}#garden-project span{flex:1}#garden-project button{padding:3px 8px;color:#e6e4dc;background:#35433a;border:1px solid #64756a;border-radius:3px}main{height:calc(100% - 32px)!important}';
     document.head.append(style);
     document.body.append(bar);
     status = bar.querySelector('span');

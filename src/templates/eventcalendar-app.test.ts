@@ -13,6 +13,8 @@ it('packages the calendar organizer: the EventCalendar bundle with license and r
     'vendor/README.md',
     'garden/bridge.js',
     'garden/document.js',
+    'garden/commands.js',
+    'garden/shared/command-session.js',
     'UPSTREAM.md',
     '.cruxignore',
     'data/project.json',

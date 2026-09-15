@@ -1,0 +1,11 @@
+# Calendar event-editing tools
+
+Status: verified (2026-09-14).
+
+Nine tools cover bounded date-range inspection and full event reading, naming, creation, scoped revision, duplication, deletion, view/date navigation and CSV output. New targeted writes require a fresh state token. The organizer calls the existing EventCalendar APIs; the upstream vendor bundle is unchanged. Shared command validation and confirmed-save sequencing travel with the source.
+
+Manual notes and colors survive unrelated edits. Seconds survive both native form edits and restart/import. Invalid date strings and reversed intervals fail before native mutation; an invalid manual interval stays in its form. Opening an event form marks it dirty, and agent commands/flushes refuse until it is saved or cancelled. The desktop test proves the agent refusal keeps the unfinished title and leaves the saved event unchanged.
+
+The calendar retains its floating local-time model. Missing end means one hour or one day; all-day tool boundaries must be midnight. There is no native Undo: Growth preserves saved versions. Timezones, recurrence, resource scheduling and iCalendar interchange remain separate future capabilities. CSV is a data table, with full notes and optional overlapping-date filtering, saved through Garden's existing output protocol.
+
+Acceptance: six native tests and focused host/shared/source-packaging checks; existing native selection/drag/form/agent/restart/import desktop journey passed in 26.1s; the expanded manual-preservation/draft/CSV/restart/complete-import/continuation journey passed against the final build in 32.7s. The generic mock landing-page verifier is off in this native journey; it checks records, visible events and output bytes directly. Both final screenshots and the CSV evidence were inspected. Full app verification passed all bundled checks/builds, 1,097 host tests and production build; Electron verification passed. Final desktop acceptance includes save-bar styling and the declared exports/ write scope. The imported preview still clips at the right edge; UI-POLISH-PLAN.md tracks the shared sizing investigation. This is deterministic execution/persistence evidence, not a real-model efficacy claim.

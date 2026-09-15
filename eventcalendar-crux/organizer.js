@@ -1,3 +1,5 @@
+import { defaultEnd } from './garden/commands.js';
+import { validLocal } from './garden/document.js';
 // The organizer around EventCalendar (vkurko/calendar, MIT): the actual calendar
 // component with every view and its drag-and-drop editing, plus the one thing
 // the component leaves to its host, an event form. The event list is plain
@@ -8,7 +10,7 @@
   const pad = (n) => String(n).padStart(2, '0');
   const iso = (d) =>
     d instanceof Date && !Number.isNaN(d.getTime())
-      ? `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}:00`
+      ? `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`
       : '';
   const text = (title) =>
     typeof title === 'string'
@@ -52,6 +54,18 @@
   /* The event form: the calendar's own selection or a clicked event fills it; Save, Delete or Cancel. */
   const dialog = document.getElementById('event-dialog');
   const form = document.getElementById('event-form');
+  const asTime = (value) => (value.length === 16 ? value + ':00' : value);
+  form.addEventListener('input', () => form.elements.end.setCustomValidity(''));
+  form.addEventListener('submit', (event) => {
+    if (event.submitter?.value !== 'save') return;
+    const start = asTime(form.elements.start.value),
+      end = asTime(form.elements.end.value);
+    if (!validLocal(start) || (end && (!validLocal(end) || end < start))) {
+      event.preventDefault();
+      form.elements.end.setCustomValidity('Use a valid end time that is not before the start.');
+      form.elements.end.reportValidity();
+    }
+  });
   function ask(draft, existing) {
     document.getElementById('event-dialog-title').textContent = existing
       ? 'Edit event'
@@ -59,14 +73,15 @@
     document.getElementById('event-delete').hidden = !existing;
     form.elements.title.value = draft.title;
     form.elements.allDay.checked = draft.allDay;
-    form.elements.start.value = draft.start.slice(0, 16);
-    form.elements.end.value = draft.end.slice(0, 16);
+    form.elements.start.value = draft.start;
+    form.elements.end.value = draft.end;
     form.elements.color.value = draft.color || '#2f6f4e';
     form.elements.notes.value = draft.notes || '';
     return new Promise((resolve) => {
       dialog.onclose = () => {
         const action = dialog.returnValue;
         dialog.returnValue = '';
+        notify();
         if (action === 'save')
           resolve({
             action,
@@ -74,8 +89,8 @@
               id: draft.id,
               title: form.elements.title.value.trim(),
               allDay: form.elements.allDay.checked,
-              start: form.elements.start.value ? form.elements.start.value + ':00' : draft.start,
-              end: form.elements.end.value ? form.elements.end.value + ':00' : '',
+              start: form.elements.start.value ? asTime(form.elements.start.value) : draft.start,
+              end: form.elements.end.value ? asTime(form.elements.end.value) : '',
               color: form.elements.color.value,
               notes: form.elements.notes.value.trim(),
             },
@@ -83,6 +98,7 @@
         else resolve({ action });
       };
       dialog.showModal();
+      notify();
       form.elements.title.focus();
     });
   }
@@ -126,7 +142,7 @@
         );
         ec.unselect();
         if (answer.action !== 'save' || !answer.event.title) return;
-        answer.event.id = crypto.randomUUID().slice(0, 8);
+        answer.event.id = crypto.randomUUID();
         ec.addEvent(toCalendar(answer.event));
         commit();
       },
@@ -172,7 +188,7 @@
     },
     addEvent(event) {
       const e = {
-        id: crypto.randomUUID().slice(0, 8),
+        id: crypto.randomUUID(),
         title: '',
         start: '',
         end: '',
@@ -183,16 +199,25 @@
       };
       // Without an end the component would guess one; give it the plain reading: a day, or an hour.
       if (!e.end && e.start) {
-        const [date, time] = e.start.split('T');
-        const [y, m, d] = date.split('-').map(Number);
-        const [hh, mm] = (time || '00:00:00').split(':').map(Number);
-        const until = e.allDay ? new Date(y, m - 1, d + 1, 0, 0, 0) : new Date(y, m - 1, d, hh + 1, mm, 0);
-        e.end = iso(until);
+        e.end = defaultEnd(e);
       }
       ec.addEvent(toCalendar(e));
       ec.gotoDate(e.start);
       commit();
       return e.id;
+    },
+    hasDraft: () => dialog.open,
+    updateEvent(event) {
+      if (!ec.getEventById(event.id)) throw Error('No event with that id.');
+      ec.updateEvent(toCalendar(event));
+      commit();
+    },
+    setView(view, date) {
+      if (view) ec.setOption('view', view);
+      if (date) ec.gotoDate(date);
+      project.view = ec.getView().type;
+      project.date = iso(ec.getOption('date')).slice(0, 10);
+      notify();
     },
     removeEvent(id) {
       if (!ec.getEventById(id)) return false;
