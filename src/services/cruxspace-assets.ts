@@ -1,3 +1,4 @@
+import { parseFigmaReference } from '../../electron/src/figma-reference';
 import { getServices } from './index';
 import { getCruxspace } from './cruxspaces';
 import { hashContent } from './sqlite/helpers';
@@ -8,6 +9,26 @@ import { folderForCrux } from './project-folder';
 import { growthHostFor } from './growth';
 import { guessMimeType } from './sqlite/helpers';
 
+/** The remote source of an imported export; it is not a remote-document backup. */
+export interface ExternalOutputSource {
+  app: 'figma';
+  documentUrl: string;
+  nodeId?: string;
+  method: 'file-import' | 'mcp';
+}
+function cleanExternalSource(source: ExternalOutputSource): ExternalOutputSource {
+  if (source.app !== 'figma' || !['file-import', 'mcp'].includes(source.method))
+    throw new Error('Unsupported external output source.');
+  const ref = parseFigmaReference(source.documentUrl);
+  if (source.nodeId !== undefined && source.nodeId !== ref.nodeId)
+    throw new Error('The source frame does not match its Figma link.');
+  return {
+    app: 'figma',
+    documentUrl: ref.url,
+    method: source.method,
+    ...(ref.nodeId ? { nodeId: ref.nodeId } : {}),
+  };
+}
 export interface CruxOutput {
   version: 1;
   id: string;
@@ -17,6 +38,7 @@ export interface CruxOutput {
   mimeType: string;
   size: number;
   created: string;
+  externalSource?: ExternalOutputSource;
 }
 export interface CruxspaceAsset extends CruxOutput {
   sourceCruxId: string;
@@ -36,6 +58,7 @@ export interface AssetOrigin {
   label: string;
   path: string;
   imported: string;
+  externalSource?: ExternalOutputSource;
 }
 /** Output formats a member may advertise: raster images (v1), and since the game Cruxspace, audio and ZIP bundles. */
 const EXTENSIONS: Record<string, string> = {
@@ -117,7 +140,9 @@ export async function saveCruxOutput(
   owner: string,
   blob: Blob,
   label: string,
+  externalSource?: ExternalOutputSource,
 ): Promise<CruxOutput> {
+  const source = externalSource ? cleanExternalSource(externalSource) : undefined;
   // The checkpoint runs after the copy's serialization lock is released: the
   // snapshot path itself updates the Working Copy under that lock, so taking
   // it inside would wait on itself forever when a turn snapshot is queued.
@@ -142,6 +167,7 @@ export async function saveCruxOutput(
       mimeType: blob.type,
       size: blob.size,
       created: new Date().toISOString(),
+      ...(source ? { externalSource: source } : {}),
     };
     const { artifact } = getServices();
     await artifact.upload({
@@ -178,6 +204,8 @@ export async function listCruxspaceAssets(spaceId: string): Promise<CruxspaceAss
       let output: CruxOutput;
       try {
         output = JSON.parse(await artifact.readContent(descriptor.id));
+        if (output.externalSource)
+          output.externalSource = cleanExternalSource(output.externalSource);
       } catch {
         continue;
       }
@@ -319,6 +347,7 @@ export async function copyCruxspaceAsset(input: UseCruxspaceAsset) {
       label: asset.label,
       path: input.path,
       imported: new Date().toISOString(),
+      ...(asset.externalSource ? { externalSource: asset.externalSource } : {}),
       ...(unpack ? { unpacked: entries.map((e) => e.path.slice(input.path.length + 1)) } : {}),
     };
     const provenancePath = await assetProvenancePath(input.path);

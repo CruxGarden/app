@@ -214,6 +214,16 @@ const TEMPLATES: Template[] = [
     desktopOnly: true,
   },
   {
+    id: 'figma',
+    label: 'Figma',
+    description: 'Design together in Figma · keep your brief and exported assets in Garden',
+    icon: <LayoutIcon />,
+    thumb: <BlankThumb />,
+    kind: 'webapp',
+    defaultTitle: 'My Figma design',
+    desktopOnly: true,
+  },
+  {
     id: 'moqira',
     label: 'Mockups',
     description: 'Design wireframes with Moqira, then share an interactive public edition',
@@ -317,7 +327,8 @@ const TEMPLATES: Template[] = [
   {
     id: 'abc-app',
     label: 'Notation',
-    description: 'Creative · sheet music in ABC notation with abcjs: rendered and played as you type, scores as outputs, a page people can play',
+    description:
+      'Creative · sheet music in ABC notation with abcjs: rendered and played as you type, scores as outputs, a page people can play',
     defaultTitle: 'My score',
     icon: <PencilIcon />,
     thumb: <BlankThumb />,
@@ -327,7 +338,8 @@ const TEMPLATES: Template[] = [
   {
     id: 'timeline-app',
     label: 'Timeline',
-    description: 'Creative · a storytelling timeline with TimelineJS: events with dates, text, pictures and video, groups and eras; a page people scroll through',
+    description:
+      'Creative · a storytelling timeline with TimelineJS: events with dates, text, pictures and video, groups and eras; a page people scroll through',
     defaultTitle: 'My timeline',
     icon: <PencilIcon />,
     thumb: <BlankThumb />,
@@ -337,7 +349,8 @@ const TEMPLATES: Template[] = [
   {
     id: 'jscad-app',
     label: 'Model',
-    description: 'Creative · parametric 3D modelling in JavaScript with JSCAD: code, parameters, a viewer; STL, 3MF, OBJ, SVG outputs for printing and cutting',
+    description:
+      'Creative · parametric 3D modelling in JavaScript with JSCAD: code, parameters, a viewer; STL, 3MF, OBJ, SVG outputs for printing and cutting',
     defaultTitle: 'My model',
     icon: <PencilIcon />,
     thumb: <BlankThumb />,
@@ -347,7 +360,8 @@ const TEMPLATES: Template[] = [
   {
     id: 'signal-app',
     label: 'Song',
-    description: 'Creative · a MIDI sequencer (Signal): piano roll, arrange view, tempo, built-in sounds; MIDI and WAV outputs',
+    description:
+      'Creative · a MIDI sequencer (Signal): piano roll, arrange view, tempo, built-in sounds; MIDI and WAV outputs',
     defaultTitle: 'My song',
     icon: <PencilIcon />,
     thumb: <BlankThumb />,

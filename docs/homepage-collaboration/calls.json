@@ -1,0 +1,104 @@
+[
+  {
+    "name": "read_file",
+    "id": "mock-1789500444357",
+    "input": {
+      "path": "src/content/blog/compost.md"
+    },
+    "result": "---\ntitle: Compost\ndescription: A neighbourhood garden gathering.\npublishDate: 2026-09-14T12:00:00Z\ntags: [garden]\n---\n\nOur first draft.\n\nBring your own gloves.\n"
+  },
+  {
+    "name": "edit_file",
+    "id": "mock-1789500444618",
+    "input": {
+      "path": "src/content/blog/compost.md",
+      "old_string": "Our first draft.",
+      "new_string": "We meet on Saturday."
+    },
+    "result": "Edited file: src/content/blog/compost.md"
+  },
+  {
+    "name": "read_file",
+    "id": "mock-1789500454584",
+    "input": {
+      "path": "src/content/blog/compost.md"
+    },
+    "result": "---\ntitle: Compost\ndescription: A neighbourhood garden gathering.\npublishDate: 2026-09-14T12:00:00Z\ntags: [garden, community]\n---\n\nWe meet on Saturday.\n\nBring your own gloves.\n\nA note from Alex.\n"
+  },
+  {
+    "name": "edit_file",
+    "id": "mock-1789500454793",
+    "input": {
+      "path": "src/content/blog/compost.md",
+      "old_string": "We meet on Saturday.",
+      "new_string": "We meet at noon on Saturday."
+    },
+    "result": "Error: Edit failed: old_string not found in src/content/blog/compost.md. The file content may have changed. Call read_file to get the current contents, then retry edit_file with the exact text from the read.\n\nCurrent file contents:\n```\n---\ntitle: Compost\ndescription: A neighbourhood garden gathering.\npublishDate: 2026-09-14T12:00:00Z\ntags: [garden, community]\n---\n\nWe meet on Sunday.\n\nBring your own gloves.\n\nA note from Alex.\n\n```"
+  },
+  {
+    "name": "read_file",
+    "id": "mock-1789500454852",
+    "input": {
+      "path": "src/content/blog/compost.md"
+    },
+    "result": "---\ntitle: Compost\ndescription: A neighbourhood garden gathering.\npublishDate: 2026-09-14T12:00:00Z\ntags: [garden, community]\n---\n\nWe meet on Sunday.\n\nBring your own gloves.\n\nA note from Alex.\n"
+  },
+  {
+    "name": "edit_file",
+    "id": "mock-1789500454877",
+    "input": {
+      "path": "src/content/blog/compost.md",
+      "old_string": "We meet on Sunday.",
+      "new_string": "We meet at noon on Sunday."
+    },
+    "result": "Edited file: src/content/blog/compost.md"
+  },
+  {
+    "name": "check_site",
+    "id": "mock-1789500459906",
+    "input": {},
+    "result": "Build FAILED. Fix the errors below, then run check_site again to verify:\n\n(node:36432) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.\n(Use `Electron --trace-warnings ...` to show where the warning was created)\n\n> astro-keel@0.2.0 build /private/var/folders/b6/zrhvt9kn7rs6vsl63dflnmtc0000gn/T/crux-e2e-X6YSm1/garden/my-home-page-mu32cx88\n> astro build\n\n(node:36453) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.\n(Use `Electron --trace-warnings ...` to show where the warning was created)\n15:27:41 [content] Syncing content\n[InvalidContentEntryDataError] blog → compost data does not match collection schema.\n\n  publishDate**: **publishDate: Expected type `\"date\"`, received `\"object\"`\n\n  Hint:\n    See https://docs.astro.build/en/guides/content-collections/ for more information on content schemas.\n  Error reference:\n    https://docs.astro.build/en/reference/errors/invalid-content-entry-data-error/\n  Location:\n    /private/var/folders/b6/zrhvt9kn7rs6vsl63dflnmtc0000gn/T/crux-e2e-X6YSm1/garden/my-home-page-mu32cx88/src/content/blog/compost.md:0:0\n  Stack trace:\n    at getEntryData (/private/var/folders/b6/zrhvt9kn7rs6vsl63dflnmtc0000gn/T/crux-e2e-X6YSm1/garden/my-home-page-mu32cx88/node_modules/.pnpm/astro@7.2.9_@astrojs+markdown-remark@7.2.4_@emnapi+core@1.11.1_@emnapi+runtime@1.11.3_@types+node@24.13.2_yaml@2.9.0/node_modules/astro/dist/content/utils.js:122:16)\n    at async eval (/private/var/folders/b6/zrhvt9kn7rs6vsl63dflnmtc0000gn/T/crux-e2e-X6YSm1/garden/my-home-page-mu32cx88/node_modules/.pnpm/astro@7.2.9_@astrojs+markdown-remark@7.2.4_@emnapi+core@1.11.1_@emnapi+runtime@1.11.3_@types+node@24.13.2_yaml@2.9.0/node_modules/astro/dist/content/loaders/glob.js:225:13)\n\u001b[41m\u001b[30m ELIFECYCLE \u001b[39m\u001b[49m \u001b[31mCommand failed with exit code 1.\u001b[39m"
+  },
+  {
+    "name": "read_file",
+    "id": "mock-1789500461492",
+    "input": {
+      "path": "src/content/blog/compost.md"
+    },
+    "result": "---\ntitle: Compost\ndescription: A neighbourhood garden gathering.\npublishDate: not-a-date\ntags: [garden, community]\n---\n\nWe meet at noon on Sunday.\n\nBring your own gloves.\n\nA note from Alex.\n"
+  },
+  {
+    "name": "edit_file",
+    "id": "mock-1789500461496",
+    "input": {
+      "path": "src/content/blog/compost.md",
+      "old_string": "publishDate: not-a-date",
+      "new_string": "publishDate: 2026-09-14T12:00:00Z"
+    },
+    "result": "Edited file: src/content/blog/compost.md"
+  },
+  {
+    "name": "check_site",
+    "id": "mock-1789500461503",
+    "input": {},
+    "result": "Build passed — the site compiles cleanly."
+  },
+  {
+    "name": "read_file",
+    "id": "mock-1789500478068",
+    "input": {
+      "path": "src/content/blog/compost.md"
+    },
+    "result": "---\ntitle: Compost\ndescription: A neighbourhood garden gathering.\npublishDate: 2026-09-14T12:00:00Z\ntags: [garden, community]\n---\n\nWe meet at noon on Sunday.\n\nBring your own gloves.\n\nA note from Alex.\n\nWe will make this together.\n"
+  },
+  {
+    "name": "edit_file",
+    "id": "mock-1789500478091",
+    "input": {
+      "path": "src/content/blog/compost.md",
+      "old_string": "Bring your own gloves.",
+      "new_string": "Bring your own gloves and a reusable cup."
+    },
+    "result": "Edited file: src/content/blog/compost.md"
+  }
+]

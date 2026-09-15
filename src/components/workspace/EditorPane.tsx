@@ -1,3 +1,4 @@
+import FigmaPane from './FigmaPane';
 import { isEmbeddedApp } from '@/services/embedded-app';
 import { useRef, useState, useEffect, Component, type ReactNode } from 'react';
 import { useWorkspaceUIStore as useUIStore } from '@/stores/uiStore';
@@ -213,7 +214,9 @@ export default function EditorPane() {
         </button>
         <CruxspaceAssetsButton />
       </div>
-      {view === 'clean' && historicalNotebook ? (
+      {view === 'clean' && crux?.meta?.template === 'figma' ? (
+        <FigmaPane key={crux.id} />
+      ) : view === 'clean' && historicalNotebook ? (
         <div className="flex-1 flex flex-col items-center justify-center p-8 gap-4 text-center min-h-0">
           <h2 className="text-lg">Saved app checkpoint</h2>
           <CheckpointPicture
