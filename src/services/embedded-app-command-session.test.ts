@@ -124,6 +124,7 @@ it('ships the same standalone shared source with adopting embeds', () => {
     'kan',
     'eventcalendar',
     'moqira',
+    'gdevelop',
   ])
     for (const file of [
       'command-session.js',

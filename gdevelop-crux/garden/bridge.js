@@ -1,3 +1,4 @@
+import { createCommandSession } from './shared/command-session.js';
 import { validateProject } from './model.mjs';
 
 export async function startGarden() {
@@ -8,8 +9,7 @@ export async function startGarden() {
     saved = 0,
     hydrating = true;
   let timer,
-    tail = Promise.resolve(),
-    commandTail = Promise.resolve();
+    tail = Promise.resolve();
   const pending = new Map();
   let assetCache = new Map();
   const bar = document.createElement('div');
@@ -144,14 +144,17 @@ export async function startGarden() {
     tail = operation.catch(() => {});
     return operation;
   }
-  async function command(value) {
-    if (hydrating || !app) throw new Error('Wait for the game editor to open.');
-    await save();
-    const result = await app.command(value);
-    await settle();
-    await save();
-    return result;
-  }
+  const commands = createCommandSession({
+    settle,
+    prepare(value) {
+      if (hydrating || !app) throw new Error('Wait for the game editor to open.');
+      return {
+        mutates: !['inspect', 'read-content', 'catalogue'].includes(value?.op),
+        apply: () => app.command(value),
+      };
+    },
+    save,
+  });
   window.addEventListener('message', (event) => {
     if (event.source !== window.parent || (origin !== undefined && event.origin !== origin)) return;
     const message = event.data;
@@ -173,8 +176,7 @@ export async function startGarden() {
         (error) => send({ op: 'flushed', flushId: message.id, error: error.message }),
       );
     } else if (message.type === 'crux:app:command') {
-      const operation = commandTail.then(() => command(message.command));
-      commandTail = operation.catch(() => {});
+      const operation = commands.execute(message.command);
       operation.then(
         (result) => send({ op: 'tool-result', commandId: message.id, result }),
         (error) =>

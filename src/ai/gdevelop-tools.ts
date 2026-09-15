@@ -2,8 +2,57 @@ import type { AppToolDefinition } from '@/services/embedded-app-tool-registry';
 export const GDEVELOP_TOOLS: AppToolDefinition[] = [
   {
     name: 'inspect_gdevelop',
-    description: 'Inspect the native game name and first 100 scenes with object and event counts.',
-    input_schema: { type: 'object', properties: {}, required: [], additionalProperties: false },
+    description:
+      'Inspect the current native game: paginated scene overview, or objects, instances, events, layers, variables or resources. Omit scene for global objects/variables/resources. Results include JSON pointers for read_gdevelop_content; paths/indexes can shift after structural edits. Large entries are explicitly summarized.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        scene: { type: 'string', minLength: 1, maxLength: 200 },
+        section: {
+          type: 'string',
+          enum: ['objects', 'instances', 'events', 'layers', 'variables', 'resources'],
+        },
+        offset: { type: 'integer', minimum: 0, maximum: 1000000 },
+        limit: { type: 'integer', minimum: 1, maximum: 50 },
+      },
+      required: [],
+      additionalProperties: false,
+    },
+    writes: [],
+  },
+  {
+    name: 'read_gdevelop_content',
+    description:
+      'Read exact native game JSON at a pointer returned by inspect_gdevelop (e.g. /layouts/0/events/0 or /layouts/0/objects/0/behaviors). Empty path reads the root. Large values return text chunks with nextOffset and contentFingerprint; pass that as expectedFingerprint for subsequent chunks to reject changed content, concatenate before parsing, or read a smaller childPath. Includes native fields and nested events without modifying the game.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        path: { type: 'string', maxLength: 500 },
+        expectedFingerprint: { type: 'string', pattern: '^[a-f0-9]{64}$' },
+        offset: { type: 'integer', minimum: 0, maximum: 1000000 },
+        limit: { type: 'integer', minimum: 1, maximum: 8000 },
+      },
+      required: ['path'],
+      additionalProperties: false,
+    },
+    writes: [],
+  },
+  {
+    name: 'list_gdevelop_capabilities',
+    description:
+      'Search the loaded native action, condition, behavior or object catalogue by query, with pagination. Request an exact action/condition type for ordered parameter types, defaults, optional and code-only slots. Use this before constructing native events; catalogue entries describe the editor and do not imply dedicated Garden editing tools for every entry.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        kind: { type: 'string', enum: ['action', 'condition', 'behavior', 'object'] },
+        query: { type: 'string', minLength: 1, maxLength: 200 },
+        type: { type: 'string', minLength: 1, maxLength: 200 },
+        offset: { type: 'integer', minimum: 0, maximum: 1000000 },
+        limit: { type: 'integer', minimum: 1, maximum: 50 },
+      },
+      required: ['kind'],
+      additionalProperties: false,
+    },
     writes: [],
   },
   {
@@ -103,7 +152,11 @@ export const GDEVELOP_TOOLS: AppToolDefinition[] = [
             type: 'object',
             properties: {
               type: { type: 'string', maxLength: 200 },
-              parameters: { type: 'array', maxItems: 12, items: { type: 'string', maxLength: 500 } },
+              parameters: {
+                type: 'array',
+                maxItems: 12,
+                items: { type: 'string', maxLength: 500 },
+              },
               inverted: { type: 'boolean' },
             },
             required: ['type', 'parameters'],
@@ -117,7 +170,11 @@ export const GDEVELOP_TOOLS: AppToolDefinition[] = [
             type: 'object',
             properties: {
               type: { type: 'string', maxLength: 200 },
-              parameters: { type: 'array', maxItems: 12, items: { type: 'string', maxLength: 500 } },
+              parameters: {
+                type: 'array',
+                maxItems: 12,
+                items: { type: 'string', maxLength: 500 },
+              },
             },
             required: ['type', 'parameters'],
             additionalProperties: false,
@@ -154,7 +211,7 @@ const instructions = (value: unknown, allowInverted: boolean) =>
         typeof item === 'object' &&
         str((item as { type?: unknown }).type, 200) &&
         Array.isArray((item as { parameters?: unknown }).parameters) &&
-        ((item as { parameters: unknown[] }).parameters.length <= 12) &&
+        (item as { parameters: unknown[] }).parameters.length <= 12 &&
         (item as { parameters: unknown[] }).parameters.every(
           (p) => typeof p === 'string' && p.length <= 500,
         ) &&
@@ -162,7 +219,9 @@ const instructions = (value: unknown, allowInverted: boolean) =>
           (key) =>
             key === 'type' ||
             key === 'parameters' ||
-            (allowInverted && key === 'inverted' && typeof (item as { inverted?: unknown }).inverted === 'boolean'),
+            (allowInverted &&
+              key === 'inverted' &&
+              typeof (item as { inverted?: unknown }).inverted === 'boolean'),
         ),
     ));
 export function gdevelopCommand(name: string, input: Record<string, unknown>) {
@@ -173,7 +232,9 @@ export function gdevelopCommand(name: string, input: Record<string, unknown>) {
       !str(input.name, 100) ||
       (input.kind !== 'image' && input.kind !== 'audio')
     )
-      throw new Error('Choose a file path in this Crux, a resource name and a kind: image or audio.');
+      throw new Error(
+        'Choose a file path in this Crux, a resource name and a kind: image or audio.',
+      );
     return { op: 'add-resource', path: input.path, name: input.name, kind: input.kind };
   }
   if (name === 'add_gdevelop_sprite') {
@@ -228,7 +289,74 @@ export function gdevelopCommand(name: string, input: Record<string, unknown>) {
       throw new Error('Name the exported game using up to 120 characters.');
     return { op: 'export-web-game', name: input.name };
   }
-  if (name === 'inspect_gdevelop' && !Object.keys(input).length) return { op: 'inspect' };
+  if (['inspect_gdevelop', 'read_gdevelop_content', 'list_gdevelop_capabilities'].includes(name)) {
+    const allowed =
+      name === 'inspect_gdevelop'
+        ? ['scene', 'section', 'offset', 'limit']
+        : name === 'read_gdevelop_content'
+          ? ['path', 'offset', 'limit', 'expectedFingerprint']
+          : ['kind', 'query', 'type', 'offset', 'limit'];
+    const maxLimit = name === 'read_gdevelop_content' ? 8000 : 50;
+    if (
+      Object.keys(input).some((key) => !allowed.includes(key)) ||
+      (input.offset !== undefined &&
+        (!Number.isSafeInteger(input.offset) ||
+          (input.offset as number) < 0 ||
+          (input.offset as number) > 1000000)) ||
+      (input.limit !== undefined &&
+        (!Number.isInteger(input.limit) ||
+          (input.limit as number) < 1 ||
+          (input.limit as number) > maxLimit))
+    )
+      throw new Error(
+        `Use only the listed inspection fields, an offset from 0 to 1000000 and a limit from 1 to ${maxLimit}.`,
+      );
+    if (name === 'inspect_gdevelop') {
+      if (
+        (input.scene !== undefined && !str(input.scene, 200)) ||
+        (input.section !== undefined &&
+          !['objects', 'instances', 'events', 'layers', 'variables', 'resources'].includes(
+            input.section as string,
+          )) ||
+        (input.scene !== undefined &&
+          (input.section === undefined || input.section === 'resources')) ||
+        (['instances', 'events', 'layers'].includes(input.section as string) &&
+          input.scene === undefined)
+      )
+        throw new Error(
+          'Choose an existing scene and section; omit scene for global objects, variables or resources.',
+        );
+      return { op: 'inspect', ...input };
+    }
+    if (name === 'read_gdevelop_content') {
+      if (
+        typeof input.path !== 'string' ||
+        input.path.length > 500 ||
+        (input.path !== '' && !input.path.startsWith('/')) ||
+        /~(?![01])/.test(input.path)
+      )
+        throw new Error(
+          'Choose a JSON pointer returned by inspection, or an empty path for the root.',
+        );
+      if (
+        input.expectedFingerprint !== undefined &&
+        (typeof input.expectedFingerprint !== 'string' ||
+          !/^[a-f0-9]{64}$/.test(input.expectedFingerprint))
+      )
+        throw new Error('Use the contentFingerprint returned by the first read.');
+      return { op: 'read-content', ...input };
+    }
+    if (
+      !['action', 'condition', 'behavior', 'object'].includes(input.kind as string) ||
+      (input.query !== undefined && !str(input.query, 200)) ||
+      (input.type !== undefined && !str(input.type, 200)) ||
+      (input.query !== undefined && input.type !== undefined)
+    )
+      throw new Error(
+        'Choose a capability kind and either a search query or an exact native type.',
+      );
+    return { op: 'catalogue', ...input };
+  }
   if (
     name === 'set_gdevelop_name' &&
     Object.keys(input).length === 1 &&

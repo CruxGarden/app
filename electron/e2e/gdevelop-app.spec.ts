@@ -48,6 +48,50 @@ test('GDevelop native game editing, local preview, agent changes and portable re
           : route.abort(),
       );
   };
+  const inspectThroughTools = async (page: Page, stage: string) => {
+    const id = (await page.locator('[data-workspace-id]').getAttribute('data-workspace-id'))!;
+    const original = JSON.stringify(game());
+    const previous = (await storedCrux(page, id)).messages.length;
+    const toggle = page.getByRole('button', { name: 'Toggle collaboration' });
+    if ((await toggle.getAttribute('aria-pressed')) !== 'true') await toggle.click();
+    const chat = page.getByPlaceholder('Send a message...');
+    await chat.fill('Inspect my game and discover its native event parameters [gdevelop:inspect]');
+    await chat.press('Enter');
+    await expect
+      .poll(
+        async () =>
+          (await storedCrux(page, id)).messages
+            .slice(previous)
+            .some((m: any) => m.content === 'GDevelop inspection complete.'),
+        { timeout: 60000 },
+      )
+      .toBe(true);
+    const calls = (await storedCrux(page, id)).messages
+      .slice(previous)
+      .flatMap((m: any) => m.toolCalls || []);
+    expect(calls).toHaveLength(7);
+    expect(calls.filter((c: any) => c.result?.startsWith('Error'))).toEqual([]);
+    const results = calls.map((c: any) => JSON.parse(c.result));
+    expect(results[1].items[0].path).toBe('/layouts/0/objects/0');
+    expect(results[2].items[0].value.name).toBe('NewSprite');
+    expect(JSON.parse(results[3].text).some((b: any) => b.type.includes('TopDownMovement'))).toBe(
+      true,
+    );
+    expect(results[5].items[0].type).toBe('PlaySound');
+    expect(results[5].items[0].parameters[0].codeOnly).toBe(true);
+    expect(results[6].items[0].parameters[0].type).toBe('objectList');
+    expect(JSON.stringify(game())).toBe(original);
+    const inspectionEvidence = resolve(__dirname, '../../docs/gdevelop-inspection');
+    mkdirSync(inspectionEvidence, { recursive: true });
+    writeFileSync(join(inspectionEvidence, stage + '-calls.json'), JSON.stringify(calls, null, 2));
+    await page.screenshot({
+      path: join(inspectionEvidence, stage + '.png'),
+      animations: 'disabled',
+    });
+    await expect(
+      page.frameLocator('iframe[data-crux-id]').locator('#garden-project [role=status]'),
+    ).toHaveText('Saved to Garden');
+  };
   const addInstance = async (f: FrameLocator) => {
     await f.getByText('NewSprite', { exact: true }).click({ button: 'right' });
     await f.getByText('Add instance to the scene', { exact: true }).click();
@@ -94,6 +138,7 @@ test('GDevelop native game editing, local preview, agent changes and portable re
     mediaRef = doc().project[mediaKey];
     expect(Buffer.from(state(mediaKey).bytes, 'base64').toString()).toContain('tomato');
     expect(game().resources.resources[0].file).toMatch(/^garden:media-/);
+    await inspectThroughTools(page, 'native');
     await f.locator('#toolbar-preview-button').click();
     await expect(f.frameLocator('#garden-game-preview iframe').locator('canvas')).toBeVisible({
       timeout: 30000,
@@ -235,7 +280,7 @@ test('GDevelop native game editing, local preview, agent changes and portable re
   }
   const oldFolder = folder;
   renameSync(oldFolder, oldFolder + '-unavailable');
-  const third = await launchApp();
+  const third = await launchApp({ env: { CRUX_AI_MOCK: '1' } });
   try {
     await third.page.setViewportSize({ width: 2000, height: 1200 });
     await localOnly(third.page);
@@ -246,6 +291,7 @@ test('GDevelop native game editing, local preview, agent changes and portable re
     folder = (await storedCrux(third.page, id)).projectFolder;
     expect(folder).not.toBe(oldFolder);
     expect(doc().project[mediaKey]).toEqual(mediaRef);
+    await inspectThroughTools(third.page, 'portable');
     await addInstance(f);
     await save(f);
     expect(game().layouts[0].instances).toHaveLength(2);

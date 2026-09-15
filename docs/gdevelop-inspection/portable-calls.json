@@ -1,0 +1,64 @@
+[
+  {
+    "name": "inspect_gdevelop",
+    "id": "mock-1789442864312",
+    "input": {},
+    "result": "{\"name\":\"External game\",\"total\":1,\"offset\":0,\"nextOffset\":null,\"scenes\":[{\"name\":\"Scene\",\"path\":\"/layouts/0\",\"objects\":1,\"instances\":1,\"events\":0}],\"sections\":[\"objects\",\"instances\",\"events\",\"layers\",\"variables\",\"resources\"],\"globalObjectsPath\":\"/objects\",\"resourcesPath\":\"/resources/resources\",\"note\":\"Paths and array indexes describe this inspection; inspect again after structural edits. Read any native subtree with read_gdevelop_content.\"}"
+  },
+  {
+    "name": "inspect_gdevelop",
+    "id": "mock-1789442864350",
+    "input": {
+      "scene": "Scene",
+      "section": "objects",
+      "limit": 5
+    },
+    "result": "{\"section\":\"objects\",\"scene\":\"Scene\",\"path\":\"/layouts/0/objects\",\"total\":1,\"offset\":0,\"nextOffset\":null,\"items\":[{\"path\":\"/layouts/0/objects/0\",\"value\":{\"adaptCollisionMaskAutomatically\":true,\"animations\":[{\"directions\":[{\"looping\":false,\"sprites\":[{\"centerPoint\":{\"automatic\":true,\"name\":\"centre\",\"x\":0,\"y\":0},\"customCollisionMask\":[[{\"x\":0,\"y\":0},{\"x\":64,\"y\":0},{\"x\":64,\"y\":64},{\"x\":0,\"y\":64}]],\"hasCustomCollisionMask\":true,\"image\":\"sprite.svg\",\"originPoint\":{\"name\":\"origine\",\"x\":0,\"y\":0},\"points\":[]}],\"timeBetweenFrames\":0.08}],\"name\":\"\",\"useMultipleDirections\":false}],\"assetStoreId\":\"\",\"behaviors\":[{\"acceleration\":400,\"allowDiagonals\":true,\"angleOffset\":0,\"angularMaxSpeed\":180,\"customIsometryAngle\":30,\"deceleration\":800,\"ignoreDefaultControls\":false,\"maxSpeed\":200,\"movementAngleOffset\":0,\"name\":\"TopDownMovement\",\"rotateObject\":true,\"type\":\"TopDownMovementBehavior::TopDownMovementBehavior\",\"useLegacyTurnBack\":false,\"viewpoint\":\"TopDown\"}],\"effects\":[],\"name\":\"NewSprite\",\"persistentUuid\":\"bd6791b1-d289-4294-8d95-60496ff6117b\",\"type\":\"Sprite\",\"updateIfNotVisible\":false,\"variables\":[]},\"complete\":true}]}"
+  },
+  {
+    "name": "inspect_gdevelop",
+    "id": "mock-1789442864369",
+    "input": {
+      "scene": "Scene",
+      "section": "instances",
+      "limit": 5
+    },
+    "result": "{\"section\":\"instances\",\"scene\":\"Scene\",\"path\":\"/layouts/0/instances\",\"total\":1,\"offset\":0,\"nextOffset\":null,\"items\":[{\"path\":\"/layouts/0/instances/0\",\"value\":{\"angle\":0,\"customSize\":false,\"height\":0,\"initialVariables\":[],\"keepRatio\":true,\"layer\":\"\",\"name\":\"NewSprite\",\"numberProperties\":[],\"persistentUuid\":\"b1c91397-9a5b-43b4-b3fc-5ed34ee29e10\",\"stringProperties\":[],\"width\":0,\"x\":400,\"y\":300,\"zOrder\":1},\"complete\":true}]}"
+  },
+  {
+    "name": "read_gdevelop_content",
+    "id": "mock-1789442864386",
+    "input": {
+      "path": "/layouts/0/objects/0/behaviors"
+    },
+    "result": "{\"path\":\"/layouts/0/objects/0/behaviors\",\"contentFingerprint\":\"fe5a0f0bdbbdf5adbb86a37d67fe870e85251b30ba6331545b4e5d1520b419bf\",\"format\":\"json\",\"offset\":0,\"totalCharacters\":346,\"text\":\"[{\\\"acceleration\\\":400,\\\"allowDiagonals\\\":true,\\\"angleOffset\\\":0,\\\"angularMaxSpeed\\\":180,\\\"customIsometryAngle\\\":30,\\\"deceleration\\\":800,\\\"ignoreDefaultControls\\\":false,\\\"maxSpeed\\\":200,\\\"movementAngleOffset\\\":0,\\\"name\\\":\\\"TopDownMovement\\\",\\\"rotateObject\\\":true,\\\"type\\\":\\\"TopDownMovementBehavior::TopDownMovementBehavior\\\",\\\"useLegacyTurnBack\\\":false,\\\"viewpoint\\\":\\\"TopDown\\\"}]\",\"nextOffset\":null,\"childPaths\":[\"/layouts/0/objects/0/behaviors/0\"],\"note\":\"Text chunks use JavaScript string offsets; concatenate chunks from an unchanged document before parsing. Prefer a child path for large content.\"}"
+  },
+  {
+    "name": "list_gdevelop_capabilities",
+    "id": "mock-1789442864404",
+    "input": {
+      "kind": "action",
+      "query": "sound",
+      "limit": 5
+    },
+    "result": "{\"kind\":\"action\",\"total\":14,\"offset\":0,\"nextOffset\":5,\"items\":[{\"type\":\"FadeSoundVolume\",\"label\":\"Fade the volume of a sound played on a channel.\",\"description\":\"Fade the volume of a sound played on a channel to the specified volume within the specified duration.\",\"extension\":\"BuiltinAudio\"},{\"type\":\"PauseSoundChannel\",\"label\":\"Pause the sound of a channel\",\"description\":\"Pause the sound played on the specified channel.\",\"extension\":\"BuiltinAudio\"},{\"type\":\"PlaySound\",\"label\":\"Play a sound\",\"description\":\"Play a sound.\",\"extension\":\"BuiltinAudio\"},{\"type\":\"PlaySoundOnChannel\",\"label\":\"Play a sound on a channel\",\"description\":\"Play a sound (small audio file) on a specific channel,\\nso you'll be able to manipulate it.\",\"extension\":\"BuiltinAudio\"},{\"type\":\"PreloadSound\",\"label\":\"Preload a sound file\",\"description\":\"Preload a sound file in memory.\",\"extension\":\"BuiltinAudio\"}],\"note\":\"These are native editor capabilities, not a promise that every operation has a Garden tool. For action/condition parameters, request the exact type; retain code-only slots in native parameter order. Labels/descriptions are excerpts; truncated defaults and extra info are explicitly flagged.\"}"
+  },
+  {
+    "name": "list_gdevelop_capabilities",
+    "id": "mock-1789442864417",
+    "input": {
+      "kind": "action",
+      "type": "PlaySound"
+    },
+    "result": "{\"kind\":\"action\",\"total\":1,\"offset\":0,\"nextOffset\":null,\"items\":[{\"type\":\"PlaySound\",\"label\":\"Play a sound\",\"description\":\"Play a sound.\",\"extension\":\"BuiltinAudio\",\"parameterCount\":5,\"parameters\":[{\"index\":0,\"type\":\"currentScene\",\"description\":\"\",\"optional\":false,\"codeOnly\":true,\"defaultValue\":\"\",\"defaultValueTruncated\":false,\"extraInfo\":\"\",\"extraInfoTruncated\":false},{\"index\":1,\"type\":\"soundfile\",\"description\":\"Audio file (or audio resource name)\",\"optional\":false,\"codeOnly\":false,\"defaultValue\":\"\",\"defaultValueTruncated\":false,\"extraInfo\":\"\",\"extraInfoTruncated\":false},{\"index\":2,\"type\":\"yesorno\",\"description\":\"Repeat the sound\",\"optional\":true,\"codeOnly\":false,\"defaultValue\":\"no\",\"defaultValueTruncated\":false,\"extraInfo\":\"\",\"extraInfoTruncated\":false},{\"index\":3,\"type\":\"expression\",\"description\":\"Volume\",\"optional\":true,\"codeOnly\":false,\"defaultValue\":\"100\",\"defaultValueTruncated\":false,\"extraInfo\":\"\",\"extraInfoTruncated\":false},{\"index\":4,\"type\":\"expression\",\"description\":\"Pitch (speed)\",\"optional\":true,\"codeOnly\":false,\"defaultValue\":\"1\",\"defaultValueTruncated\":false,\"extraInfo\":\"\",\"extraInfoTruncated\":false}],\"parametersComplete\":true,\"canHaveSubInstructions\":false}],\"note\":\"These are native editor capabilities, not a promise that every operation has a Garden tool. For action/condition parameters, request the exact type; retain code-only slots in native parameter order. Labels/descriptions are excerpts; truncated defaults and extra info are explicitly flagged.\"}"
+  },
+  {
+    "name": "list_gdevelop_capabilities",
+    "id": "mock-1789442864437",
+    "input": {
+      "kind": "condition",
+      "type": "CollisionNP"
+    },
+    "result": "{\"kind\":\"condition\",\"total\":1,\"offset\":0,\"nextOffset\":null,\"items\":[{\"type\":\"CollisionNP\",\"label\":\"Collision\",\"description\":\"Test the collision between two objects using their collision masks.\",\"extension\":\"BuiltinObject\",\"parameterCount\":5,\"parameters\":[{\"index\":0,\"type\":\"objectList\",\"description\":\"Object\",\"optional\":false,\"codeOnly\":false,\"defaultValue\":\"\",\"defaultValueTruncated\":false,\"extraInfo\":\"\",\"extraInfoTruncated\":false},{\"index\":1,\"type\":\"objectList\",\"description\":\"Object\",\"optional\":false,\"codeOnly\":false,\"defaultValue\":\"\",\"defaultValueTruncated\":false,\"extraInfo\":\"\",\"extraInfoTruncated\":false},{\"index\":2,\"type\":\"conditionInverted\",\"description\":\"\",\"optional\":false,\"codeOnly\":true,\"defaultValue\":\"\",\"defaultValueTruncated\":false,\"extraInfo\":\"\",\"extraInfoTruncated\":false},{\"index\":3,\"type\":\"currentScene\",\"description\":\"\",\"optional\":false,\"codeOnly\":true,\"defaultValue\":\"\",\"defaultValueTruncated\":false,\"extraInfo\":\"\",\"extraInfoTruncated\":false},{\"index\":4,\"type\":\"yesorno\",\"description\":\"Ignore objects that are touching each other on their edges, but are not overlapping (default: no)\",\"optional\":true,\"codeOnly\":false,\"defaultValue\":\"no\",\"defaultValueTruncated\":false,\"extraInfo\":\"\",\"extraInfoTruncated\":false}],\"parametersComplete\":true,\"canHaveSubInstructions\":false}],\"note\":\"These are native editor capabilities, not a promise that every operation has a Garden tool. For action/condition parameters, request the exact type; retain code-only slots in native parameter order. Labels/descriptions are excerpts; truncated defaults and extra info are explicitly flagged.\"}"
+  }
+]
