@@ -417,7 +417,7 @@ export function linkKeyForIndex(prefix: string, label: string, index: number) {
 }
 
 export function extractMarkdownLinks(text: string) {
-  const names = [...text.matchAll(/\[([^\]]+)\]/g)].map((match) => match[1].trim()).filter(Boolean);
+  const names = [...text.matchAll(/\[([^\]]+)\]/g)].map((match) => match[1]!.trim()).filter(Boolean);
   return [...new Set(names)];
 }
 

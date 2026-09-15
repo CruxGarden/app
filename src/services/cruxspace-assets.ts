@@ -51,6 +51,7 @@ const EXTENSIONS: Record<string, string> = {
   'audio/midi': 'mid',
   'model/stl': 'stl',
   'application/x-rawgraphs+json': 'rawgraphs',
+  'application/x-moqira+json': 'moq',
   'model/gltf+json': 'gltf',
   'application/x-blockbench-model+json': 'bbmodel',
   'model/3mf': '3mf',
@@ -90,7 +91,7 @@ const KIND_PATTERN = {
   image: /\.(png|jpe?g|gif|webp|svg)$/i,
   audio: /\.(wav|mp3|flac|mid)$/i,
   bundle:
-    /\.(zip|epub|otf|ttf|woff|woff2|stl|3mf|obj|amf|x3d|dxf|csv|pptx|ipynb|gltf|bbmodel|rawgraphs)$/i,
+    /\.(zip|epub|otf|ttf|woff|woff2|stl|3mf|obj|amf|x3d|dxf|csv|pptx|ipynb|gltf|bbmodel|rawgraphs|moq)$/i,
 };
 const KIND_EXAMPLE = {
   image: 'assets/cover.png',

@@ -1,3 +1,4 @@
+import { MOQIRA_TOOLS, moqiraCommand } from '@/ai/moqira-tools';
 import { KAN_TOOLS, kanCommand } from '@/ai/kan-tools';
 import { OPENCUT_TOOLS, opencutCommand } from '@/ai/opencut-tools';
 import { PLAYCANVAS_EDITOR_TOOLS, playcanvasEditorCommand } from '@/ai/playcanvas-editor-tools';
@@ -50,6 +51,7 @@ import {
   isAM1,
   isEventCalendar,
   isMiniPaint,
+  isMoqira,
   isCardinal,
   isOpenMosh,
   samplerType,
@@ -60,6 +62,7 @@ import type { AppToolDefinition } from './embedded-app-tool-registry';
 export function embeddedAppToolAdapter(
   crux: { kind?: string; meta?: Record<string, unknown> } | null,
 ) {
+  if (isMoqira(crux)) return { tools: MOQIRA_TOOLS, prepare: moqiraCommand };
   if (crux?.kind === 'notes') return { tools: NOTES_TOOLS, prepare: notesCommand };
   if (nativeAppType(crux) === 'kan') return { tools: KAN_TOOLS, prepare: kanCommand };
   if (nativeAppType(crux) === 'formjs') return { tools: FORMJS_TOOLS, prepare: formjsCommand };
@@ -72,7 +75,8 @@ export function embeddedAppToolAdapter(
   if (nativeAppType(crux) === 'abc') return { tools: ABC_TOOLS, prepare: abcCommand };
   if (nativeAppType(crux) === 'signal') return { tools: SIGNAL_TOOLS, prepare: signalCommand };
   if (nativeAppType(crux) === 'jscad') return { tools: JSCAD_TOOLS, prepare: jscadCommand };
-  if (nativeAppType(crux) === 'timeline') return { tools: TIMELINE_TOOLS, prepare: timelineCommand };
+  if (nativeAppType(crux) === 'timeline')
+    return { tools: TIMELINE_TOOLS, prepare: timelineCommand };
   if (nativeAppType(crux) === 'recorder')
     return { tools: RECORDER_TOOLS, prepare: recorderCommand };
   if (nativeAppType(crux) === 'opencut') return { tools: OPENCUT_TOOLS, prepare: opencutCommand };

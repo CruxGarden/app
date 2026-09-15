@@ -15,10 +15,11 @@ for (const app of [
   'audiomass',
   'kan',
   'eventcalendar',
+  'moqira',
 ]) {
   const destination = join(
     appRoot,
-    `${app}-crux/${['piskel', 'rawgraphs', 'audiomass'].includes(app) ? 'src/' : ''}garden/shared`,
+    `${app}-crux/${['piskel', 'rawgraphs', 'audiomass', 'moqira'].includes(app) ? 'src/' : ''}garden/shared`,
   );
   mkdirSync(destination, { recursive: true });
   for (const file of [
