@@ -74,6 +74,30 @@ export function getMockLanguageModel(): LanguageModel {
         warnings: [],
       }),
       doStream: async ({ prompt, abortSignal }) => {
+        const miniPaintCall = (name: string, input: Record<string, unknown>) => {
+          let token: string | undefined;
+          for (const message of [...prompt].reverse()) {
+            if (message.role !== 'tool') continue;
+            for (const result of [...message.content].reverse()) {
+              if (result.type !== 'tool-result' || !result.toolName.includes('minipaint')) continue;
+              const output = result.output;
+              const value =
+                output.type === 'text' || output.type === 'error-text'
+                  ? output.value
+                  : output.type === 'json' || output.type === 'error-json'
+                    ? JSON.stringify(output.value)
+                    : '';
+              token = value.match(/"stateToken"\s*:\s*"([^"\n]+)"/)?.[1];
+              if (token) break;
+            }
+            if (token) break;
+          }
+          return toolCallStream(name, {
+            ...(name !== 'inspect_minipaint' && token ? { expectedState: token } : {}),
+            ...input,
+          });
+        };
+
         if (lastUserText(prompt).includes('[cruxspace:cover]')) {
           const last = prompt.at(-1);
           const used = (name: string) =>
@@ -1901,6 +1925,52 @@ export function getMockLanguageModel(): LanguageModel {
           }
           return textStream('Saved the AudioMass track.');
         }
+        const freshnessScenario = lastUserText(prompt).match(
+          /\[minipaint:fresh-(create|inspect|edit|retry|history|missing|import|import-retry)\]/,
+        )?.[1];
+        if (freshnessScenario) {
+          const rounds = toolResultsThisTurn(prompt);
+          const inspected = toolResultText(prompt, 'inspect_minipaint') || '';
+          const id = Number(
+            inspected.match(/"id"\s*:\s*(\d+),\s*"name"\s*:\s*"Shared panel"/)?.[1],
+          );
+          if (freshnessScenario === 'create') {
+            if (!rounds.length)
+              return miniPaintCall('resize_minipaint_canvas', { width: 400, height: 240 });
+            if (rounds.length === 1)
+              return miniPaintCall('add_minipaint_rectangle', {
+                name: 'Shared panel',
+                x: 20,
+                y: 30,
+                width: 180,
+                height: 100,
+                color: '#558855',
+              });
+          } else if (freshnessScenario === 'import' || freshnessScenario === 'import-retry') {
+            if (freshnessScenario === 'import-retry' && !rounds.length)
+              return miniPaintCall('inspect_minipaint', {});
+            if (rounds.length === (freshnessScenario === 'import' ? 0 : 1))
+              return miniPaintCall('add_minipaint_image', {
+                name: 'Marker',
+                path: 'assets/marker.png',
+                x: 280,
+                y: 100,
+                width: 40,
+                height: 40,
+              });
+          } else if (freshnessScenario === 'inspect') {
+            if (!rounds.length) return miniPaintCall('inspect_minipaint', {});
+          } else if (freshnessScenario === 'retry') {
+            if (!rounds.length) return miniPaintCall('inspect_minipaint', {});
+            if (rounds.length === 1)
+              return miniPaintCall('update_minipaint_layer', { id, x: 80, color: '#4477aa' });
+          } else if (freshnessScenario === 'history') {
+            if (!rounds.length) return miniPaintCall('minipaint_history', { direction: 'undo' });
+          } else if (freshnessScenario === 'missing') {
+            if (!rounds.length) return toolCallStream('update_minipaint_layer', { id, x: 80 });
+          } else if (!rounds.length) return miniPaintCall('update_minipaint_layer', { id, x: 80 });
+          return textStream('Freshness ' + freshnessScenario + ' complete.');
+        }
         const compositeScenario = lastUserText(prompt).match(
           /\[minipaint:composite-(create|rasterize|plate|hidden|selected|visible|refuse|continue)\]/,
         )?.[1];
@@ -1977,6 +2047,7 @@ export function getMockLanguageModel(): LanguageModel {
             ];
           } else if (compositeScenario === 'selected') {
             calls = [
+              ['inspect_minipaint', { limit: 10 }],
               [
                 'paint_minipaint_stroke',
                 {
@@ -2043,15 +2114,15 @@ export function getMockLanguageModel(): LanguageModel {
               ['save_minipaint_image', { name: 'Continued composite' }],
             ];
           }
-          if (rounds.length < calls.length) return toolCallStream(...calls[rounds.length]!);
+          if (rounds.length < calls.length) return miniPaintCall(...calls[rounds.length]!);
           return textStream('Composite ' + compositeScenario + ' complete.');
         }
         if (lastUserText(prompt).includes('[minipaint:raster-create]')) {
           const rounds = toolResultsThisTurn(prompt);
           if (!rounds.length)
-            return toolCallStream('resize_minipaint_canvas', { width: 600, height: 360 });
+            return miniPaintCall('resize_minipaint_canvas', { width: 600, height: 360 });
           if (rounds.length === 1)
-            return toolCallStream('add_minipaint_image', {
+            return miniPaintCall('add_minipaint_image', {
               name: 'Region study',
               path: 'assets/regions.png',
               x: 40,
@@ -2065,21 +2136,21 @@ export function getMockLanguageModel(): LanguageModel {
             )?.[1],
           );
           if (rounds.length === 2)
-            return toolCallStream('edit_minipaint_filter', {
+            return miniPaintCall('edit_minipaint_filter', {
               id,
               action: 'add',
               filter: 'brightness',
               value: 5,
             });
           if (rounds.length === 3)
-            return toolCallStream('edit_minipaint_filter', {
+            return miniPaintCall('edit_minipaint_filter', {
               id,
               action: 'add',
               filter: 'contrast',
               value: 10,
             });
           if (rounds.length === 4)
-            return toolCallStream('select_minipaint_region', {
+            return miniPaintCall('select_minipaint_region', {
               id,
               action: 'set',
               x: 60,
@@ -2088,31 +2159,29 @@ export function getMockLanguageModel(): LanguageModel {
               height: 40,
             });
           if (rounds.length === 5)
-            return toolCallStream('fill_minipaint_pixels', {
+            return miniPaintCall('fill_minipaint_pixels', {
               id,
               mode: 'selection',
               color: '#ff0000',
             });
           if (rounds.length === 6)
-            return toolCallStream('erase_minipaint_pixels', {
+            return miniPaintCall('erase_minipaint_pixels', {
               id,
               mode: 'stroke',
               points: [[110, 105]],
               size: 60,
             });
-          if (rounds.length === 7)
-            return toolCallStream('minipaint_history', { direction: 'undo' });
-          if (rounds.length === 8)
-            return toolCallStream('minipaint_history', { direction: 'redo' });
+          if (rounds.length === 7) return miniPaintCall('minipaint_history', { direction: 'undo' });
+          if (rounds.length === 8) return miniPaintCall('minipaint_history', { direction: 'redo' });
           return textStream('Prepared editable image regions and reversible erasing.');
         }
         if (lastUserText(prompt).includes('[minipaint:raster-fill]')) {
           const rounds = toolResultsThisTurn(prompt);
-          if (!rounds.length) return toolCallStream('inspect_minipaint', { offset: 0, limit: 1 });
+          if (!rounds.length) return miniPaintCall('inspect_minipaint', { offset: 0, limit: 1 });
           const result = toolResultText(prompt, 'inspect_minipaint') || '{}';
           const id = Number(result.match(/"id"\s*:\s*(\d+),\s*"name"\s*:\s*"Region study"/)?.[1]);
           if (rounds.length === 1)
-            return toolCallStream('fill_minipaint_pixels', {
+            return miniPaintCall('fill_minipaint_pixels', {
               id,
               mode: 'contiguous',
               x: 50,
@@ -2120,7 +2189,7 @@ export function getMockLanguageModel(): LanguageModel {
               color: '#0000ff',
             });
           if (rounds.length === 2)
-            return toolCallStream('fill_minipaint_pixels', {
+            return miniPaintCall('fill_minipaint_pixels', {
               id,
               mode: 'global',
               x: 400,
@@ -2128,18 +2197,18 @@ export function getMockLanguageModel(): LanguageModel {
               color: '#00ff00',
             });
           if (rounds.length === 3)
-            return toolCallStream('save_minipaint_image', { name: 'Region study' });
+            return miniPaintCall('save_minipaint_image', { name: 'Region study' });
           return textStream(
             'Filled separate image regions and erased a stroke; the native selection is ready for you.',
           );
         }
         if (lastUserText(prompt).includes('[minipaint:raster-continue]')) {
           const rounds = toolResultsThisTurn(prompt);
-          if (!rounds.length) return toolCallStream('inspect_minipaint', { offset: 0, limit: 1 });
+          if (!rounds.length) return miniPaintCall('inspect_minipaint', { offset: 0, limit: 1 });
           const result = toolResultText(prompt, 'inspect_minipaint') || '{}';
           const id = Number(result.match(/"id"\s*:\s*(\d+),\s*"name"\s*:\s*"Region study"/)?.[1]);
           if (rounds.length === 1)
-            return toolCallStream('select_minipaint_region', {
+            return miniPaintCall('select_minipaint_region', {
               id,
               action: 'set',
               x: 280,
@@ -2148,40 +2217,39 @@ export function getMockLanguageModel(): LanguageModel {
               height: 40,
             });
           if (rounds.length === 2)
-            return toolCallStream('erase_minipaint_pixels', { id, mode: 'selection' });
+            return miniPaintCall('erase_minipaint_pixels', { id, mode: 'selection' });
           if (rounds.length === 3)
-            return toolCallStream('select_minipaint_region', { id, action: 'clear' });
-          if (rounds.length === 4)
-            return toolCallStream('minipaint_history', { direction: 'undo' });
+            return miniPaintCall('select_minipaint_region', { id, action: 'clear' });
+          if (rounds.length === 4) return miniPaintCall('minipaint_history', { direction: 'undo' });
           if (rounds.length === 5)
-            return toolCallStream('fill_minipaint_pixels', {
+            return miniPaintCall('fill_minipaint_pixels', {
               id,
               mode: 'selection',
               color: '#ffaa00',
               opacity: 50,
             });
           if (rounds.length === 6)
-            return toolCallStream('select_minipaint_region', { id, action: 'clear' });
+            return miniPaintCall('select_minipaint_region', { id, action: 'clear' });
           if (rounds.length === 7)
-            return toolCallStream('erase_minipaint_pixels', { id, mode: 'selection' });
+            return miniPaintCall('erase_minipaint_pixels', { id, mode: 'selection' });
           if (rounds.length === 8)
-            return toolCallStream('save_minipaint_image', { name: 'Region continuation' });
+            return miniPaintCall('save_minipaint_image', { name: 'Region continuation' });
           return textStream(
             'Continued raster editing, preserving your manual change and refusing an absent selection.',
           );
         }
         if (lastUserText(prompt).includes('[minipaint:photo-create]')) {
           const rounds = toolResultsThisTurn(prompt);
-          if (!rounds.length) return toolCallStream('inspect_minipaint', { offset: 1, limit: 1 });
+          if (!rounds.length) return miniPaintCall('inspect_minipaint', { offset: 1, limit: 1 });
           const original = JSON.parse(toolResultText(prompt, 'inspect_minipaint') || '{}')
             .layers[0];
           if (rounds.length === 1)
-            return toolCallStream('duplicate_minipaint_layer', {
+            return miniPaintCall('duplicate_minipaint_layer', {
               id: original.id,
               name: 'Edited image',
             });
           if (rounds.length === 2)
-            return toolCallStream('update_minipaint_layer', { id: original.id, visible: false });
+            return miniPaintCall('update_minipaint_layer', { id: original.id, visible: false });
           // The new layer ID is the compact trailing field even if older inspection data was shortened.
           const copyId = Number(
             toolResultText(prompt, 'duplicate_minipaint_layer')?.match(
@@ -2189,21 +2257,21 @@ export function getMockLanguageModel(): LanguageModel {
             )?.[1],
           );
           if (rounds.length === 3)
-            return toolCallStream('edit_minipaint_filter', {
+            return miniPaintCall('edit_minipaint_filter', {
               id: copyId,
               action: 'add',
               filter: 'brightness',
               value: 30,
             });
           if (rounds.length === 4)
-            return toolCallStream('edit_minipaint_filter', {
+            return miniPaintCall('edit_minipaint_filter', {
               id: copyId,
               action: 'add',
               filter: 'contrast',
               value: 15,
             });
           if (rounds.length === 5)
-            return toolCallStream('paint_minipaint_stroke', {
+            return miniPaintCall('paint_minipaint_stroke', {
               name: 'Painted underline',
               color: '#c65a36',
               size: 12,
@@ -2215,7 +2283,7 @@ export function getMockLanguageModel(): LanguageModel {
               ],
             });
           if (rounds.length === 6)
-            return toolCallStream('crop_minipaint_canvas', {
+            return miniPaintCall('crop_minipaint_canvas', {
               x: 20,
               y: 20,
               width: 920,
@@ -2225,38 +2293,36 @@ export function getMockLanguageModel(): LanguageModel {
         }
         if (lastUserText(prompt).includes('[minipaint:photo-revise]')) {
           const rounds = toolResultsThisTurn(prompt);
-          if (!rounds.length) return toolCallStream('inspect_minipaint', { offset: 4, limit: 1 });
+          if (!rounds.length) return miniPaintCall('inspect_minipaint', { offset: 4, limit: 1 });
           const inspected = toolResultText(prompt, 'inspect_minipaint') || '{}';
           const id = Number(
             inspected.match(/"id"\s*:\s*(\d+),\s*"name"\s*:\s*"Edited image"/)?.[1],
           );
           if (rounds.length === 1)
-            return toolCallStream('edit_minipaint_filter', {
+            return miniPaintCall('edit_minipaint_filter', {
               id,
               action: 'update',
               filterId: 1,
               filter: 'brightness',
               value: -25,
             });
-          if (rounds.length === 2)
-            return toolCallStream('minipaint_history', { direction: 'undo' });
-          if (rounds.length === 3)
-            return toolCallStream('minipaint_history', { direction: 'redo' });
+          if (rounds.length === 2) return miniPaintCall('minipaint_history', { direction: 'undo' });
+          if (rounds.length === 3) return miniPaintCall('minipaint_history', { direction: 'redo' });
           if (rounds.length === 4)
-            return toolCallStream('edit_minipaint_filter', { id, action: 'remove', filterId: 2 });
+            return miniPaintCall('edit_minipaint_filter', { id, action: 'remove', filterId: 2 });
           if (rounds.length === 5)
-            return toolCallStream('save_minipaint_image', { name: 'Painted banner' });
+            return miniPaintCall('save_minipaint_image', { name: 'Painted banner' });
           return textStream(
             'Revised live filters and saved the painted banner, preserving your text.',
           );
         }
         if (lastUserText(prompt).includes('[minipaint:depth-create]')) {
           const rounds = toolResultsThisTurn(prompt);
-          if (!rounds.length) return toolCallStream('inspect_minipaint', {});
+          if (!rounds.length) return miniPaintCall('inspect_minipaint', {});
           if (rounds.length === 1)
-            return toolCallStream('resize_minipaint_canvas', { width: 1200, height: 600 });
+            return miniPaintCall('resize_minipaint_canvas', { width: 1200, height: 600 });
           if (rounds.length === 2)
-            return toolCallStream('add_minipaint_rectangle', {
+            return miniPaintCall('add_minipaint_rectangle', {
               name: 'Backdrop',
               x: 0,
               y: 0,
@@ -2265,7 +2331,7 @@ export function getMockLanguageModel(): LanguageModel {
               color: '#f2eadb',
             });
           if (rounds.length === 3)
-            return toolCallStream('add_minipaint_image', {
+            return miniPaintCall('add_minipaint_image', {
               name: 'Seed illustration',
               path: 'assets/seed.png',
               x: 60,
@@ -2274,7 +2340,7 @@ export function getMockLanguageModel(): LanguageModel {
               height: 280,
             });
           if (rounds.length === 4)
-            return toolCallStream('add_minipaint_text', {
+            return miniPaintCall('add_minipaint_text', {
               name: 'Headline',
               text: 'Seed library event',
               x: 400,
@@ -2285,7 +2351,7 @@ export function getMockLanguageModel(): LanguageModel {
               color: '#234731',
             });
           if (rounds.length === 5)
-            return toolCallStream('add_minipaint_text', {
+            return miniPaintCall('add_minipaint_text', {
               name: 'Details',
               text: 'Friday at 10. Bring spare seeds.',
               x: 400,
@@ -2297,47 +2363,47 @@ export function getMockLanguageModel(): LanguageModel {
             });
           if (rounds.length === 6) {
             const initial = JSON.parse(toolResultText(prompt, 'inspect_minipaint') || '{}');
-            return toolCallStream('delete_minipaint_layer', { id: initial.layers[0].id });
+            return miniPaintCall('delete_minipaint_layer', { id: initial.layers[0].id });
           }
           if (rounds.length === 7)
-            return toolCallStream('save_minipaint_image', { name: 'Seed library banner' });
+            return miniPaintCall('save_minipaint_image', { name: 'Seed library banner' });
           return textStream('Built an editable seed library banner.');
         }
         if (lastUserText(prompt).includes('[minipaint:depth-revise]')) {
           const rounds = toolResultsThisTurn(prompt);
-          if (!rounds.length) return toolCallStream('inspect_minipaint', {});
+          if (!rounds.length) return miniPaintCall('inspect_minipaint', {});
           const initial = JSON.parse(toolResultText(prompt, 'inspect_minipaint') || '{}');
           const details = initial.layers.find(
             (layer: { name: string }) => layer.name === 'Details',
           );
           if (rounds.length === 1)
-            return toolCallStream('update_minipaint_layer', {
+            return miniPaintCall('update_minipaint_layer', {
               id: details.id,
               find: 'Friday',
               replace: 'Saturday',
               fontSize: 32,
             });
           if (rounds.length === 2)
-            return toolCallStream('reorder_minipaint_layer', { id: details.id, direction: 'down' });
+            return miniPaintCall('reorder_minipaint_layer', { id: details.id, direction: 'down' });
           if (rounds.length === 3)
-            return toolCallStream('reorder_minipaint_layer', { id: details.id, direction: 'up' });
+            return miniPaintCall('reorder_minipaint_layer', { id: details.id, direction: 'up' });
           if (rounds.length === 4)
-            return toolCallStream('resize_minipaint_canvas', {
+            return miniPaintCall('resize_minipaint_canvas', {
               width: 960,
               height: 480,
               scaleLayers: true,
             });
           if (rounds.length === 5)
-            return toolCallStream('save_minipaint_image', { name: 'Saturday banner' });
+            return miniPaintCall('save_minipaint_image', { name: 'Saturday banner' });
           return textStream('Revised the banner, preserved your note and exported PNG.');
         }
         if (lastUserText(prompt).includes('[minipaint:layer]')) {
           const rounds = toolResultsThisTurn(prompt);
-          if (!rounds.length) return toolCallStream('inspect_minipaint', {});
+          if (!rounds.length) return miniPaintCall('inspect_minipaint', {});
           if (rounds.length === 1) {
             const result = JSON.parse(toolResultText(prompt, 'inspect_minipaint') || '{}');
             const layer = result.layers?.find((item: { type: string }) => item.type === 'image');
-            return toolCallStream('update_minipaint_layer', {
+            return miniPaintCall('update_minipaint_layer', {
               id: layer?.id,
               name: 'Garden artwork',
               opacity: 65,
@@ -3166,7 +3232,12 @@ function businessScript(prompt: LanguageModelV4Prompt): ReturnType<typeof stream
       });
     }
     case 'brand':
-      if (!n) return toolCallStream('save_minipaint_image', { name: 'Brand mark' });
+      if (!n) return toolCallStream('inspect_minipaint', {});
+      if (n === 1)
+        return toolCallStream('save_minipaint_image', {
+          name: 'Brand mark',
+          expectedState: JSON.parse(toolResultText(prompt, 'inspect_minipaint') || '{}').stateToken,
+        });
       return textStream('Saved the brand mark to the Cruxspace.');
     case 'calendar':
       if (!n)

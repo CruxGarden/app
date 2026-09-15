@@ -350,6 +350,27 @@ export const MINIPAINT_TOOLS: AppToolDefinition[] = [
     writes: ['data/project.json', 'exports/'],
   },
 ];
+// A blank editor may be initialized without inspection. Once artwork exists,
+// the native boundary requires a returned state token, including for insertions.
+for (const tool of MINIPAINT_TOOLS) {
+  if (tool.name === 'inspect_minipaint') {
+    tool.description +=
+      ' Returns a session-local stateToken for the next edit; inspection does not encode the raster again.';
+    continue;
+  }
+  tool.input_schema.properties = {
+    ...tool.input_schema.properties,
+    expectedState: {
+      type: 'string',
+      maxLength: 128,
+      pattern: '^mp:[A-Za-z0-9-]+:[1-9][0-9]*$',
+      description:
+        'stateToken from the latest inspection or successful miniPaint result. Required once the canvas contains artwork.',
+    },
+  };
+  tool.description +=
+    ' Pass expectedState from the latest miniPaint result; stale or missing state refuses once artwork exists. Inspect again after manual edits, selection changes, Undo or reload. View-only zoom does not invalidate it.';
+}
 const operations: Record<string, string> = {
   rasterize_minipaint_layer: 'rasterize-layer',
   merge_minipaint_layers: 'merge-layers',
@@ -375,9 +396,16 @@ export function minipaintCommand(name: string, input: Record<string, unknown>) {
   if (!Object.hasOwn(operations, name) || Object.hasOwn(input, 'op'))
     throw new Error('Choose a supported miniPaint operation.');
   if (name === 'save_minipaint_image') {
-    if (Object.keys(input).length !== 1 || typeof input.name !== 'string')
+    if (
+      Object.keys(input).some((key) => !['name', 'expectedState'].includes(key)) ||
+      typeof input.name !== 'string'
+    )
       throw new Error('Name the image output.');
-    return validateCommand({ op: 'save-image', label: input.name.trim() });
+    return validateCommand({
+      op: 'save-image',
+      label: input.name.trim(),
+      ...(input.expectedState === undefined ? {} : { expectedState: input.expectedState }),
+    });
   }
   return validateCommand({ ...input, op: operations[name] });
 }

@@ -162,7 +162,7 @@ test('miniPaint compositing preserves native pixels, editable Undo, hidden layer
     expect(layer('Title')).toEqual(originalTitle);
     await history('Redo');
     expect(layer('Title raster').type).toBe('image');
-    await collaborate('selected', 5);
+    await collaborate('selected', 6);
     await pixelsEqual('Selected before', 'Selected after');
     expect(layer('Title raster')).toBeUndefined();
     expect(layer('Underline')).toBeUndefined();

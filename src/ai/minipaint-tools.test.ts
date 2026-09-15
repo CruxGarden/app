@@ -103,3 +103,17 @@ it('routes layer conversion and compositing with explicit merge scope', () => {
     minipaintCommand('update_minipaint_layer', { id: 2, composition: 'darker' }),
   ).toThrow();
 });
+
+it('passes freshness tokens through every mutation including output saves', () => {
+  const expectedState = 'mp:session:2';
+  expect(minipaintCommand('save_minipaint_image', { name: 'Picture', expectedState })).toEqual({
+    op: 'save-image',
+    label: 'Picture',
+    expectedState,
+  });
+  for (const tool of MINIPAINT_TOOLS) {
+    if (tool.name === 'inspect_minipaint') continue;
+    expect(tool.input_schema.properties).toHaveProperty('expectedState');
+  }
+  expect(() => minipaintCommand('update_minipaint_layer', { id: 1, expectedState })).toThrow();
+});

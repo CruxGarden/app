@@ -1,3 +1,4 @@
+import { createStateGuard } from '../../../garden/freshness.js';
 import { BLEND_MODES, compositionPlan } from '../../../garden/compositing.js';
 import {
   brushLayer,
@@ -31,6 +32,9 @@ export async function startGarden(app) {
   const actions = new Set();
   const rasterCache = new Map();
   const rasterPaths = new Map();
+  let nativeBusy = false;
+  let nativeEpoch = 0;
+  const activePointers = new Set();
   const bar = document.createElement('div');
   bar.id = 'garden-project';
   bar.innerHTML =
@@ -82,15 +86,19 @@ export async function startGarden(app) {
   for (const name of ['do_action', 'undo_action', 'redo_action']) {
     const original = app.State[name].bind(app.State);
     app.State[name] = (...args) => {
-      const operation = Promise.resolve().then(() => original(...args));
+      // Native gestures read the newly inserted layer immediately after do_action.
+      // Observe completion without deferring the action's synchronous first steps.
+      const operation = Promise.resolve(original(...args));
       actions.add(operation);
       operation.then(
         () => {
           actions.delete(operation);
+          nativeEpoch++;
           dirty();
         },
         () => {
           actions.delete(operation);
+          nativeEpoch++;
           dirty();
         },
       );
@@ -106,6 +114,58 @@ export async function startGarden(app) {
     const region = selectionTool().selection;
     return region.width > 0 && region.height > 0 ? { ...region } : null;
   };
+  const stateGuard = createStateGuard(() => ({
+    config: app.Config,
+    history: app.State,
+    epoch: nativeEpoch,
+    selection: selectedRegion(app.Config.layer?.id),
+  }));
+  // A native transaction can await image storage/decoding. Prevent the person's
+  // input from entering that short transaction; the host Collaboration stays usable.
+  for (const event of [
+    'pointerdown',
+    'pointerup',
+    'pointermove',
+    'mousedown',
+    'mouseup',
+    'mousemove',
+    'keydown',
+    'keyup',
+    'wheel',
+    'input',
+    'change',
+  ])
+    document.addEventListener(
+      event,
+      (e) => {
+        if (nativeBusy && e.isTrusted) {
+          e.preventDefault();
+          e.stopImmediatePropagation();
+        }
+      },
+      { capture: true, passive: false },
+    );
+  document.addEventListener(
+    'pointerdown',
+    (e) => {
+      if (workspace.contains(e.target)) activePointers.add(e.pointerId);
+    },
+    true,
+  );
+  const releasePointer = (e) => activePointers.delete(e.pointerId);
+  document.addEventListener('pointerup', releasePointer, true);
+  document.addEventListener('pointercancel', releasePointer, true);
+  async function exclusiveNative(operation) {
+    const wasInert = workspace.inert;
+    nativeBusy = true;
+    workspace.inert = true;
+    try {
+      return await operation();
+    } finally {
+      nativeBusy = false;
+      workspace.inert = wasInert;
+    }
+  }
   async function capture() {
     const project = JSON.parse(app.FileSave.export_as_json());
     const used = new Set();
@@ -167,6 +227,7 @@ export async function startGarden(app) {
     const limit = value.limit ?? 20;
     const layers = [...app.Config.layers].sort((a, b) => a.order - b.order);
     return {
+      stateToken: stateGuard.current(),
       width: app.Config.WIDTH,
       height: app.Config.HEIGHT,
       selectedLayer: app.Config.layer?.id,
@@ -261,12 +322,14 @@ export async function startGarden(app) {
     return settings;
   }
   async function nativeEdit(label, actions) {
-    const result = await app.State.do_action(
-      new app.Actions.Bundle_action('garden_edit', label, [
-        new app.Actions.Refresh_layers_gui_action('undo'),
-        ...actions,
-        new app.Actions.Refresh_layers_gui_action('do'),
-      ]),
+    const result = await exclusiveNative(() =>
+      app.State.do_action(
+        new app.Actions.Bundle_action('garden_edit', label, [
+          new app.Actions.Refresh_layers_gui_action('undo'),
+          ...actions,
+          new app.Actions.Refresh_layers_gui_action('do'),
+        ]),
+      ),
     );
     if (result.status !== 'completed')
       throw new Error('The native edit could not be completed. Inspect before retrying.');
@@ -275,8 +338,13 @@ export async function startGarden(app) {
     async settle() {
       if (hydrating) throw new Error('Wait for the image editor to finish opening.');
       // miniPaint commits a person's text Undo action when its native input loses focus.
-      const input = document.getElementById('text_tool_keyboard_input');
-      if (document.activeElement === input) input.blur();
+      const input = document.activeElement;
+      if (
+        input instanceof HTMLElement &&
+        !bar.contains(input) &&
+        input.matches('input,textarea,select,[contenteditable=true]')
+      )
+        input.blur();
       await settle();
       app.Layers.render(true);
     },
@@ -287,9 +355,11 @@ export async function startGarden(app) {
     },
     prepare(raw) {
       const value = validateCommand(raw);
-      const preparedRevision = revision;
+      const preparedState = stateGuard.current();
       const checkDraft = () => {
         if (
+          activePointers.size ||
+          nativeBusy ||
           app.Config.layers.some((layer) => layer.status === 'draft' || layer.link_canvas) ||
           [...document.querySelectorAll('#popups .popup')].some(
             (popup) => popup.getClientRects().length,
@@ -301,8 +371,21 @@ export async function startGarden(app) {
       };
       checkDraft();
       if (value.op === 'inspect') return { mutates: false, apply: () => inspect(value) };
+      if (value.expectedState !== undefined || app.Config.layers.some((layer) => layer.type))
+        stateGuard.require(value.expectedState);
+      const checkFresh = () => {
+        checkDraft();
+        stateGuard.require(preparedState);
+      };
       if (value.op === 'save-image')
-        return { mutates: true, apply: () => saveImage(value.label.trim()) };
+        return {
+          mutates: true,
+          apply: () => {
+            checkFresh();
+            return saveImage(value.label.trim());
+          },
+          result: (output) => ({ ...output, stateToken: stateGuard.current() }),
+        };
       if (value.id !== undefined) {
         const layer = findLayer(value.id);
         if (value.op === 'layer') layerSettings(layer, value);
@@ -344,11 +427,7 @@ export async function startGarden(app) {
       return {
         mutates: true,
         async apply() {
-          checkDraft();
-          if (revision !== preparedRevision)
-            throw new Error(
-              'The image changed while preparing the edit. Inspect miniPaint before retrying.',
-            );
+          checkFresh();
           if (composite) {
             const canvas = document.createElement('canvas');
             canvas.width = composite.width;
@@ -374,11 +453,7 @@ export async function startGarden(app) {
             const link = new Image();
             link.src = canvas.toDataURL('image/png');
             await link.decode();
-            checkDraft();
-            if (revision !== preparedRevision)
-              throw new Error(
-                'The image changed during rendering. Inspect miniPaint before retrying.',
-              );
+            checkFresh();
             await nativeEdit(rasterize ? 'Rasterize Layer' : 'Merge Layers', [
               new app.Actions.Insert_layer_action(
                 {
@@ -459,11 +534,7 @@ export async function startGarden(app) {
               canvas.getContext('2d').drawImage(findLayer(value.id).link, 0, 0);
               layer.link.src = canvas.toDataURL('image/png');
               await layer.link.decode();
-              checkDraft();
-              if (revision !== preparedRevision)
-                throw new Error(
-                  'The image changed while loading the copy. Inspect miniPaint before retrying.',
-                );
+              checkFresh();
             }
             await nativeEdit(value.op === 'add-brush' ? 'Paint Brush Stroke' : 'Duplicate Layer', [
               new app.Actions.Insert_layer_action(layer, false),
@@ -484,7 +555,9 @@ export async function startGarden(app) {
               new app.Actions.Prepare_canvas_action('do'),
             ]);
           } else if (value.op === 'history') {
-            await app.State[value.direction === 'undo' ? 'undo_action' : 'redo_action']();
+            await exclusiveNative(() =>
+              app.State[value.direction === 'undo' ? 'undo_action' : 'redo_action'](),
+            );
           } else if (value.op === 'layer') {
             await nativeEdit('Update Layer', [
               new app.Actions.Update_layer_action(
@@ -584,6 +657,7 @@ export async function startGarden(app) {
             } else if (value.op === 'add-image') {
               const loaded = await loadProjectImage(value.path, new URL('/', location.href).href);
               try {
+                checkFresh();
                 await nativeEdit('Import Image', [
                   new app.Actions.Insert_layer_action(
                     {
