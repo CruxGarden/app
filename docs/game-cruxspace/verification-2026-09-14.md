@@ -1,0 +1,9 @@
+# Game workflow regression — 2026-09-14
+
+The complete Glow Garden desktop journey passed in 7.1 minutes against app `f6d86b9e`, with the final test-harness changes. It covers plan/board/sprites/audio, game assembly, task review/merge, native web export, Astro preview, mock publication, Growth and Cruxspace walkthroughs, complete package export/fresh import, whole-Cruxspace revert and imported-site playback. This uses the scripted collaborator and isolated mock API, not live AI or publication.
+
+The harness removes its closed source test Garden and Blob Store immediately after successful package export, keeping the package. Original source paths are asserted absent before launching the import Garden. `CRUX_E2E_KEEP=1` retains renamed source folders for debugging. Electron `npm run verify` passes; the product's full app gate passed all bundled checks/builds, 1,097 host tests and production build before these test-only changes.
+
+The final run used `--trace=off`, retaining screenshot and browser/network diagnostic evidence without trace growth. Earlier retries encountered confirmed ENOSPC during import and one unexplained missing-canvas timeout in the Astro preview. The same exported game subsequently loaded in an isolated browser with no JavaScript errors; the final full run passed without product changes or relaxed assertions. The earlier review-dialog timeout also did not recur in the follow-up runs. The intermittent timeout causes are not established; preview diagnostics remain to aid any recurrence.
+
+Final preview, imported playback and reverted editor screenshots were visually inspected. The reverted editor's Growth cards show blank thumbnail areas; root UI-POLISH-PLAN.md records that observation for investigation. Other screenshots in this directory include historical runs; the three committed with this verification note are the final inspected evidence.
