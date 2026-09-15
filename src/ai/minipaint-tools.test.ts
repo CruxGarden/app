@@ -25,3 +25,31 @@ it('declares scoped image imports and maps native canvas/layer commands', () => 
   ] as const)
     expect(() => minipaintCommand(name, value)).toThrow();
 });
+
+it('routes painting, live filters, crop and shared native history with bounded arguments', () => {
+  expect(minipaintCommand('paint_minipaint_stroke', { points: [[4, 5]], size: 12 })).toEqual({
+    op: 'add-brush',
+    points: [[4, 5]],
+    size: 12,
+  });
+  expect(
+    minipaintCommand('edit_minipaint_filter', {
+      id: 4,
+      action: 'update',
+      filterId: 2,
+      filter: 'brightness',
+      value: -25,
+    }).op,
+  ).toBe('edit-filter');
+  expect(
+    minipaintCommand('crop_minipaint_canvas', { x: 10, y: 20, width: 400, height: 300 }).op,
+  ).toBe('crop-canvas');
+  expect(minipaintCommand('duplicate_minipaint_layer', { id: 4 }).op).toBe('duplicate-layer');
+  expect(minipaintCommand('minipaint_history', { direction: 'undo' }).op).toBe('history');
+  expect(() =>
+    minipaintCommand('edit_minipaint_filter', { id: 4, action: 'add', filter: 'blur', value: 90 }),
+  ).toThrow();
+  expect(() =>
+    minipaintCommand('paint_minipaint_stroke', { points: [[1, 2]], size: 12, path: 'x' }),
+  ).toThrow();
+});

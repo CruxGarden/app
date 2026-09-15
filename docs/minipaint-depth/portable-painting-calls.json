@@ -1,0 +1,57 @@
+[
+  {
+    "name": "inspect_minipaint",
+    "id": "mock-1789490280894",
+    "input": {
+      "offset": 4,
+      "limit": 1
+    },
+    "result": "{\"width\":920,\"height\":440,\"selectedLayer\":5,\"history\":{\"canUndo\":true,\"canRedo\":false},\"availableFilters\":{\"brightness\":[-100,100],\"contrast\":[-100,100],\"saturate\":[-100,100],\"hue-rotate\":[0,360],\"blur\":[0,50],\"grayscale\":[0,100],\"sepia\":[0,100],\"invert\":[0,100]},\"totalLayers\":6,\"offset\":4,\"nextOffset\":5,\"layers\":[{\"id\":6,\"name\":\"Edited image\",\"type\":\"image\",\"visible\":true,\"opacity\":100,\"x\":28,\"y\":100,\"width\":224,\"height\":224,\"rotate\":0,\"order\":6,\"filters\":[{\"id\":1,\"name\":\"brightness\",\"params\":{\"value\":-25}}],\"imagePath\":\"data/assets/491f4facefaaf1190a8008725a63fa05677014f8216a6899f20ea42378a08b5e.bin\"}]}"
+  },
+  {
+    "name": "edit_minipaint_filter",
+    "id": "mock-1789490280912",
+    "input": {
+      "id": 6,
+      "action": "update",
+      "filterId": 1,
+      "filter": "brightness",
+      "value": -25
+    },
+    "result": "{\"width\":920,\"height\":440,\"selectedLayer\":5,\"history\":{\"canUndo\":true,\"canRedo\":false},\"availableFilters\":{\"brightness\":[-100,100],\"contrast\":[-100,100],\"saturate\":[-100,100],\"hue-rotate\":[0,360],\"blur\":[0,50],\"grayscale\":[0,100],\"sepia\":[0,100],\"invert\":[0,100]},\"totalLayers\":6,\"offset\":0,\"nextOffset\":null,\"layers\":[{\"id\":2,\"name\":\"Backdrop\",\"type\":\"rectangle\",\"visible\":true,\"opacity\":100,\"x\":-20,\"y\":-20,\"width\":960,\"height\":480,\"rotate\":0,\"order\":2,\"filters\":[]},{\"id\":3,\"name\":\"Seed illustration\",\"type\":\"image\",\"visible\":false,\"opacity\":100,\"x\":28,\"y\":100,\"width\":224,\"height\":224,\"rotate\":0,\"order\":3,\"filters\":[],\"imagePath\":\"data/assets/491f4facefaaf1190a8008725a63fa05677014f8216a6899f20ea42378a08b5e.bin\"},{\"id\":4,\"name\":\"Headline\",\"type\":\"text\",\"visible\":true,\"opacity\":100,\"x\":300,\"y\":60,\"width\":576,\"height\":104,\"rotate\":0,\"order\":4,\"filters\":[],\"text\":\"Seed library event\",\"style\":{\"size\":44.800000000000004,\"family\":\"Arial\",\"fill_color\":\"#234731\"}},{\"id\":5,\"name\":\"Details\",\"type\":\"text\",\"visible\":true,\"opacity\":100,\"x\":300,\"y\":204,\"width\":560,\"height\":120,\"rotate\":0,\"order\":5,\"filters\":[],\"text\":\"Saturday at 10. Bring spare seeds. Bring envelopes. Hand-lettered by me. Welcome!\",\"style\":{\"size\":25.6,\"family\":\"Arial\",\"fill_color\":\"#234731\"}},{\"id\":6,\"name\":\"Edited image\",\"type\":\"image\",\"visible\":true,\"opacity\":100,\"x\":28,\"y\":100,\"width\":224,\"height\":224,\"rotate\":0,\"order\":6,\"filters\":[{\"id\":1,\"name\":\"brightness\",\"params\":{\"value\":-25}}],\"imagePath\":\"data/assets/491f4facefaaf1190a8008725a63fa05677014f8216a6899f20ea42378a08b5e.bin\"},{\"id\":7,\"name\":\"Painted underline\",\"type\":\"brush\",\"visible\":true,\"opacity\":100,\"x\":300,\"y\":188,\"width\":500,\"height\":4,\"rotate\":null,\"order\":7,\"filters\":[],\"strokeCount\":1,\"color\":\"#c65a36\",\"brushSize\":12}]}"
+  },
+  {
+    "name": "minipaint_history",
+    "id": "mock-1789490281018",
+    "input": {
+      "direction": "undo"
+    },
+    "result": "{\"width\":920,\"height\":440,\"selectedLayer\":5,\"history\":{\"canUndo\":true,\"canRedo\":true},\"availableFilters\":{\"brightness\":[-100,100],\"contrast\":[-100,100],\"saturate\":[-100,100],\"hue-rotate\":[0,360],\"blur\":[0,50],\"grayscale\":[0,100],\"sepia\":[0,100],\"invert\":[0,100]},\"totalLayers\":6,\"offset\":0,\"nextOffset\":null,\"layers\":[{\"id\":2,\"name\":\"Backdrop\",\"type\":\"rectangle\",\"visible\":true,\"opacity\":100,\"x\":-20,\"y\":-20,\"width\":960,\"height\":480,\"rotate\":0,\"order\":2,\"filters\":[]},{\"id\":3,\"name\":\"Seed illustration\",\"type\":\"image\",\"visible\":false,\"opacity\":100,\"x\":28,\"y\":100,\"width\":224,\"height\":224,\"rotate\":0,\"order\":3,\"filters\":[],\"imagePath\":\"data/assets/491f4facefaaf1190a8008725a63fa05677014f8216a6899f20ea42378a08b5e.bin\"},{\"id\":4,\"name\":\"Headline\",\"type\":\"text\",\"visible\":true,\"opacity\":100,\"x\":300,\"y\":60,\"width\":576,\"height\":104,\"rotate\":0,\"order\":4,\"filters\":[],\"text\":\"Seed library event\",\"style\":{\"size\":44.800000000000004,\"family\":\"Arial\",\"fill_color\":\"#234731\"}},{\"id\":5,\"name\":\"Details\",\"type\":\"text\",\"visible\":true,\"opacity\":100,\"x\":300,\"y\":204,\"width\":560,\"height\":120,\"rotate\":0,\"order\":5,\"filters\":[],\"text\":\"Saturday at 10. Bring spare seeds. Bring envelopes. Hand-lettered by me. Welcome!\",\"style\":{\"size\":25.6,\"family\":\"Arial\",\"fill_color\":\"#234731\"}},{\"id\":6,\"name\":\"Edited image\",\"type\":\"image\",\"visible\":true,\"opacity\":100,\"x\":28,\"y\":100,\"width\":224,\"height\":224,\"rotate\":0,\"order\":6,\"filters\":[{\"id\":1,\"name\":\"brightness\",\"params\":{\"value\":-25}}],\"imagePath\":\"data/assets/491f4facefaaf1190a8008725a63fa05677014f8216a6899f20ea42378a08b5e.bin\"},{\"id\":7,\"name\":\"Painted underline\",\"type\":\"brush\",\"visible\":true,\"opacity\":100,\"x\":300,\"y\":188,\"width\":500,\"height\":4,\"rotate\":null,\"order\":7,\"filters\":[],\"strokeCount\":1,\"color\":\"#c65a36\",\"brushSize\":12}]}"
+  },
+  {
+    "name": "minipaint_history",
+    "id": "mock-1789490281094",
+    "input": {
+      "direction": "redo"
+    },
+    "result": "{\"width\":920,\"height\":440,\"selectedLayer\":5,\"history\":{\"canUndo\":true,\"canRedo\":false},\"availableFilters\":{\"brightness\":[-100,100],\"contrast\":[-100,100],\"saturate\":[-100,100],\"hue-rotate\":[0,360],\"blur\":[0,50],\"grayscale\":[0,100],\"sepia\":[0,100],\"invert\":[0,100]},\"totalLayers\":6,\"offset\":0,\"nextOffset\":null,\"layers\":[{\"id\":2,\"name\":\"Backdrop\",\"type\":\"rectangle\",\"visible\":true,\"opacity\":100,\"x\":-20,\"y\":-20,\"width\":960,\"height\":480,\"rotate\":0,\"order\":2,\"filters\":[]},{\"id\":3,\"name\":\"Seed illustration\",\"type\":\"image\",\"visible\":false,\"opacity\":100,\"x\":28,\"y\":100,\"width\":224,\"height\":224,\"rotate\":0,\"order\":3,\"filters\":[],\"imagePath\":\"data/assets/491f4facefaaf1190a8008725a63fa05677014f8216a6899f20ea42378a08b5e.bin\"},{\"id\":4,\"name\":\"Headline\",\"type\":\"text\",\"visible\":true,\"opacity\":100,\"x\":300,\"y\":60,\"width\":576,\"height\":104,\"rotate\":0,\"order\":4,\"filters\":[],\"text\":\"Seed library event\",\"style\":{\"size\":44.800000000000004,\"family\":\"Arial\",\"fill_color\":\"#234731\"}},{\"id\":5,\"name\":\"Details\",\"type\":\"text\",\"visible\":true,\"opacity\":100,\"x\":300,\"y\":204,\"width\":560,\"height\":120,\"rotate\":0,\"order\":5,\"filters\":[],\"text\":\"Saturday at 10. Bring spare seeds. Bring envelopes. Hand-lettered by me. Welcome!\",\"style\":{\"size\":25.6,\"family\":\"Arial\",\"fill_color\":\"#234731\"}},{\"id\":6,\"name\":\"Edited image\",\"type\":\"image\",\"visible\":true,\"opacity\":100,\"x\":28,\"y\":100,\"width\":224,\"height\":224,\"rotate\":0,\"order\":6,\"filters\":[{\"id\":1,\"name\":\"brightness\",\"params\":{\"value\":-25}}],\"imagePath\":\"data/assets/491f4facefaaf1190a8008725a63fa05677014f8216a6899f20ea42378a08b5e.bin\"},{\"id\":7,\"name\":\"Painted underline\",\"type\":\"brush\",\"visible\":true,\"opacity\":100,\"x\":300,\"y\":188,\"width\":500,\"height\":4,\"rotate\":null,\"order\":7,\"filters\":[],\"strokeCount\":1,\"color\":\"#c65a36\",\"brushSize\":12}]}"
+  },
+  {
+    "name": "edit_minipaint_filter",
+    "id": "mock-1789490281160",
+    "input": {
+      "id": 6,
+      "action": "remove",
+      "filterId": 2
+    },
+    "result": "Error in edit_minipaint_filter: Filter no longer exists. Inspect miniPaint again.. Check the input parameters and try again."
+  },
+  {
+    "name": "save_minipaint_image",
+    "id": "mock-1789490281174",
+    "input": {
+      "name": "Painted banner"
+    },
+    "result": "{\"version\":1,\"id\":\"8bc620c6-4f6a-4eee-9d57-749da7ef0fe4\",\"label\":\"Painted banner\",\"path\":\"exports/8bc620c6-4f6a-4eee-9d57-749da7ef0fe4.png\",\"fingerprint\":\"58716855250a98e431ea7dceb7648a9a2f036ca2b7c78733af6b1ec2be9c3c7f\",\"mimeType\":\"image/png\",\"size\":75050,\"created\":\"2026-09-15T16:38:01.196Z\",\"width\":920,\"height\":440}"
+  }
+]

@@ -17,7 +17,7 @@ export const MINIPAINT_TOOLS: AppToolDefinition[] = [
   {
     name: 'inspect_minipaint',
     description:
-      'Inspect canvas size and native layers, back to front: IDs, names, geometry, visibility, opacity, text and available image Artifact paths. Bounded to 20 layers by default; page with offset/limit (maximum 50).',
+      'Inspect canvas size and native layers, back to front: IDs, names, geometry, visibility, opacity, text live filters with IDs/values, brush summaries, native history availability and available image Artifact paths. Bounded to 20 layers by default; page with offset/limit (maximum 50).',
     input_schema: {
       type: 'object',
       properties: {
@@ -137,6 +137,105 @@ export const MINIPAINT_TOOLS: AppToolDefinition[] = [
     writes: ['data/project.json'],
   },
   {
+    name: 'paint_minipaint_stroke',
+    description:
+      'Paint one smooth, round, constant-width native brush stroke as a separate editable layer. points are 1–1000 [x,y] pairs in canvas pixels; one point paints a dot. Supports color, size and opacity. Inspect canvas first; move, hide, reorder or delete the returned layer independently. Native Undo and confirmed save.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        name: layerName,
+        points: {
+          type: 'array',
+          minItems: 1,
+          maxItems: 1000,
+          items: {
+            type: 'array',
+            minItems: 2,
+            maxItems: 2,
+            items: { type: 'number', minimum: -32768, maximum: 32768 },
+          },
+        },
+        size: { type: 'number', minimum: 1, maximum: 256 },
+        color: style.color,
+        opacity: { type: 'number', minimum: 0, maximum: 100 },
+      },
+      required: ['points', 'size'],
+      additionalProperties: false,
+    },
+    writes: ['data/project.json'],
+  },
+  {
+    name: 'duplicate_minipaint_layer',
+    description:
+      'Duplicate a native layer in place by inspected ID, preserving editable text, brush data, filters or original raster pixels. Optionally name the copy. Returns createdLayerId. Useful for retaining an original photo before editing. Native Undo and confirmed save.',
+    input_schema: {
+      type: 'object',
+      properties: { id: { type: 'integer' }, name: layerName },
+      required: ['id'],
+      additionalProperties: false,
+    },
+    writes: ['data/project.json', 'data/assets/'],
+  },
+  {
+    name: 'edit_minipaint_filter',
+    description:
+      'Add, update or remove a native live layer filter without rewriting original pixels. Inspect filter IDs and order first. add needs filter/value; update also needs filterId and must keep its type; remove needs only filterId. Brightness/contrast/saturate: -100..100 (0 neutral); hue-rotate: 0..360 degrees; blur: 0..50 pixels; grayscale/sepia/invert: 0..100 percent. Unrelated filters/order stay intact. One native Undo step and confirmed save.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        id: { type: 'integer' },
+        action: { type: 'string', enum: ['add', 'update', 'remove'] },
+        filterId: { type: 'integer', minimum: 1 },
+        filter: {
+          type: 'string',
+          enum: [
+            'brightness',
+            'contrast',
+            'saturate',
+            'hue-rotate',
+            'blur',
+            'grayscale',
+            'sepia',
+            'invert',
+          ],
+        },
+        value: { type: 'number', minimum: -100, maximum: 360 },
+      },
+      required: ['id', 'action'],
+      additionalProperties: false,
+    },
+    writes: ['data/project.json'],
+  },
+  {
+    name: 'crop_minipaint_canvas',
+    description:
+      'Crop to an integer rectangle inside the current canvas: x/y identify its top-left, width/height its size. Moves every layer to the new canvas origin, retaining off-canvas pixels and editable content. No resampling. Native Undo restores canvas and all layer positions together; confirms save.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        x: { type: 'integer', minimum: 0, maximum: 8191 },
+        y: { type: 'integer', minimum: 0, maximum: 8191 },
+        width: { type: 'integer', minimum: 1, maximum: 8192 },
+        height: { type: 'integer', minimum: 1, maximum: 8192 },
+      },
+      required: ['x', 'y', 'width', 'height'],
+      additionalProperties: false,
+    },
+    writes: ['data/project.json'],
+  },
+  {
+    name: 'minipaint_history',
+    description:
+      'Undo or redo one native editor transaction, including person or agent edits. Inspect canUndo/canRedo first; this session-local history resets when the app reloads. Saves the restored project. This affects the latest edit, not necessarily your own.',
+    input_schema: {
+      type: 'object',
+      properties: { direction: { type: 'string', enum: ['undo', 'redo'] } },
+      required: ['direction'],
+      additionalProperties: false,
+    },
+    writes: ['data/project.json', 'data/assets/'],
+  },
+  {
     name: 'save_minipaint_image',
     description:
       'Render every visible layer to a PNG output of this Crux for use in a Cruxspace. Saves the editable layered project first; confirms the output save.',
@@ -150,6 +249,11 @@ export const MINIPAINT_TOOLS: AppToolDefinition[] = [
   },
 ];
 const operations: Record<string, string> = {
+  paint_minipaint_stroke: 'add-brush',
+  duplicate_minipaint_layer: 'duplicate-layer',
+  edit_minipaint_filter: 'edit-filter',
+  crop_minipaint_canvas: 'crop-canvas',
+  minipaint_history: 'history',
   inspect_minipaint: 'inspect',
   update_minipaint_layer: 'layer',
   add_minipaint_text: 'add-text',
