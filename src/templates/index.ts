@@ -229,6 +229,7 @@ export interface TemplateDefinition {
 const loaders: Record<string, () => Promise<{ default: TemplateDefinition }>> = {
   notes: () => import('./notes'),
   moqira: () => import('./moqira'),
+  figma: () => import('./figma'),
   onebigsky: () => import('./onebigsky'),
   'cardinal-drone': () => import('./cardinal-drone'),
   'tool-excalidraw': () =>

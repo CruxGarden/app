@@ -1533,6 +1533,51 @@ export function getMockLanguageModel(): LanguageModel {
             });
           return textStream('Wrote the moss tea recipe with its ingredients and method.');
         }
+        const homeHandoff = lastUserText(prompt).match(
+          /\[home:collaborate-(revise|changed|repair|continue)\]/,
+        )?.[1];
+        if (homeHandoff) {
+          const n = toolResultsThisTurn(prompt).length;
+          const path = 'src/content/blog/compost.md';
+          if (homeHandoff === 'repair') {
+            if (n === 0 || n === 3) return toolCallStream('check_site', {});
+            if (n === 1) return toolCallStream('read_file', { path });
+            if (n === 2)
+              return toolCallStream('edit_file', {
+                path,
+                old_string: 'publishDate: not-a-date',
+                new_string: 'publishDate: 2026-09-14T12:00:00Z',
+              });
+          } else {
+            if (n === 0 || (homeHandoff === 'changed' && n === 2))
+              return toolCallStream('read_file', { path });
+            if (n === 1) {
+              if (homeHandoff !== 'continue') await waitForMockHandoff(abortSignal);
+              return toolCallStream('edit_file', {
+                path,
+                old_string:
+                  homeHandoff === 'revise'
+                    ? 'Our first draft.'
+                    : homeHandoff === 'changed'
+                      ? 'We meet on Saturday.'
+                      : 'Bring your own gloves.',
+                new_string:
+                  homeHandoff === 'revise'
+                    ? 'We meet on Saturday.'
+                    : homeHandoff === 'changed'
+                      ? 'We meet at noon on Saturday.'
+                      : 'Bring your own gloves and a reusable cup.',
+              });
+            }
+            if (homeHandoff === 'changed' && n === 3)
+              return toolCallStream('edit_file', {
+                path,
+                old_string: 'We meet on Sunday.',
+                new_string: 'We meet at noon on Sunday.',
+              });
+          }
+          return textStream('Home collaboration ' + homeHandoff + ' complete.');
+        }
         if (lastUserText(prompt).includes('[home:post]')) {
           const rounds = toolResultsThisTurn(prompt);
           if (!rounds.length)
@@ -2646,6 +2691,27 @@ function countToolResults(prompt: LanguageModelV4Prompt, toolName: string): numb
 }
 
 /** Wait like a provider would — and die with the request when it is aborted. */
+// Desktop test coordination exists only in this mock provider. Real provider
+// requests never listen for these events or pause at this seam.
+function waitForMockHandoff(signal?: AbortSignal): Promise<void> {
+  return new Promise((resolve, reject) => {
+    if (signal?.aborted) return reject(new DOMException('Aborted', 'AbortError'));
+    const finish = (error?: Error) => {
+      clearTimeout(timer);
+      window.removeEventListener('crux:mock-continue', resume);
+      signal?.removeEventListener('abort', abort);
+      if (error) reject(error);
+      else resolve();
+    };
+    const resume = () => finish();
+    const abort = () => finish(new DOMException('Aborted', 'AbortError'));
+    const timer = setTimeout(() => finish(new Error('Mock handoff timed out.')), 60000);
+    window.addEventListener('crux:mock-continue', resume, { once: true });
+    signal?.addEventListener('abort', abort, { once: true });
+    window.dispatchEvent(new Event('crux:mock-pause'));
+  });
+}
+
 function think(ms: number, signal?: AbortSignal): Promise<void> {
   return new Promise((resolve, reject) => {
     if (signal?.aborted) return reject(new DOMException('Aborted', 'AbortError'));

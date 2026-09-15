@@ -1,4 +1,13 @@
-const { app, BrowserWindow, ipcMain, protocol, dialog, shell, desktopCapturer, net } = require('electron');
+const {
+  app,
+  BrowserWindow,
+  ipcMain,
+  protocol,
+  dialog,
+  shell,
+  desktopCapturer,
+  net,
+} = require('electron');
 const { Readable } = require('node:stream');
 const path = require('path');
 const fs = require('fs');
@@ -365,6 +374,35 @@ function setupIpc() {
   const projects = new ProjectFolders(desktopConfig);
   selfTestHooks.projects = projects;
 
+  if (process.platform === 'darwin') {
+    const { FigmaDesktop } = require('./figma-desktop');
+    const { screen, systemPreferences } = require('electron');
+    const figmaDesktop = new FigmaDesktop(() => mainWindow, screen, systemPreferences);
+    const trustedFigmaCaller = (event: any) => {
+      if (
+        event.sender !== mainWindow?.webContents ||
+        event.senderFrame !== mainWindow?.webContents.mainFrame
+      )
+        throw new Error('Window placement is only available from Garden.');
+    };
+    ipcMain.handle('figma:open', (event: any) => {
+      trustedFigmaCaller(event);
+      return figmaDesktop.open();
+    });
+    ipcMain.handle('figma:status', (event: any) => {
+      trustedFigmaCaller(event);
+      return figmaDesktop.status();
+    });
+    ipcMain.handle('figma:arrange', (event: any, side: 'left' | 'right') => {
+      trustedFigmaCaller(event);
+      return figmaDesktop.arrange(side);
+    });
+    ipcMain.handle('figma:restore', (event: any) => {
+      trustedFigmaCaller(event);
+      return figmaDesktop.restore();
+    });
+  }
+
   ipcMain.handle('desktop:config', () => ({
     gardenRoot: desktopConfig.gardenRoot,
   }));
@@ -383,9 +421,12 @@ function setupIpc() {
   });
 
   // Watcher: external edits flow disk → store (ADR 0001 invariant)
-  watcher = new ProjectWatcher((batch: unknown) => {
-    mainWindow?.webContents.send('project:changed', batch);
-  }, (absPath: string) => projects.ownWriteMtime(absPath));
+  watcher = new ProjectWatcher(
+    (batch: unknown) => {
+      mainWindow?.webContents.send('project:changed', batch);
+    },
+    (absPath: string) => projects.ownWriteMtime(absPath),
+  );
 
   // Watch every registered Project Folder from the start — external edits
   // count whether or not the crux is open in the app.
@@ -683,12 +724,17 @@ function setupIpc() {
     try {
       const response = await net.fetch(url, {
         signal: controller.signal,
-        headers: { 'User-Agent': `CruxGarden/${app.getVersion()} (https://crux.garden)`, Accept: '*/*' },
+        headers: {
+          'User-Agent': `CruxGarden/${app.getVersion()} (https://crux.garden)`,
+          Accept: '*/*',
+        },
       });
       const length = Number(response.headers.get('content-length') || 0);
-      if (length > cap) throw new Error(`That file is larger than the ${Math.round(cap / 1_000_000)} MB limit.`);
+      if (length > cap)
+        throw new Error(`That file is larger than the ${Math.round(cap / 1_000_000)} MB limit.`);
       const buffer = Buffer.from(await response.arrayBuffer());
-      if (buffer.byteLength > cap) throw new Error(`That file is larger than the ${Math.round(cap / 1_000_000)} MB limit.`);
+      if (buffer.byteLength > cap)
+        throw new Error(`That file is larger than the ${Math.round(cap / 1_000_000)} MB limit.`);
       return {
         ok: response.ok,
         status: response.status,

@@ -20,6 +20,16 @@ import type {
  * `window.electronAPI` to know it's running in Electron.
  */
 const api: ElectronBridge = {
+  ...(process.platform === 'darwin'
+    ? {
+        figmaDesktop: {
+          open: () => ipcRenderer.invoke('figma:open'),
+          status: () => ipcRenderer.invoke('figma:status'),
+          arrange: (side: 'left' | 'right') => ipcRenderer.invoke('figma:arrange', side),
+          restore: () => ipcRenderer.invoke('figma:restore'),
+        },
+      }
+    : {}),
   sqlite: {
     run: (sql: string, params?: unknown[]) => ipcRenderer.invoke('sqlite:run', sql, params),
     get: (sql: string, params?: unknown[]) => ipcRenderer.invoke('sqlite:get', sql, params),
@@ -82,8 +92,10 @@ const api: ElectronBridge = {
     capture: (folder: string) => ipcRenderer.invoke('project:capture', folder),
     setMode: (folder: string, relPath: string, mode: number) =>
       ipcRenderer.invoke('project:set-mode', folder, relPath, mode),
-    materialize: (folder: string, entries: { path: string; fingerprint: string; mode?: number }[]) =>
-      ipcRenderer.invoke('project:materialize', folder, entries) as Promise<number>,
+    materialize: (
+      folder: string,
+      entries: { path: string; fingerprint: string; mode?: number }[],
+    ) => ipcRenderer.invoke('project:materialize', folder, entries) as Promise<number>,
     createFolder: (slug: string) =>
       ipcRenderer.invoke('project:create-folder', slug) as Promise<string>,
     ensureFolder: (folder: string) =>

@@ -46,6 +46,7 @@ declare global {
 }
 
 export enum Capability {
+  FigmaWindowArrangement = 'figmaWindowArrangement',
   /** Real Project Folder per crux on the local filesystem (ADR 0001). */
   ProjectFolder = 'projectFolder',
   /** External edits to Project Folders are watched and ingested. */
@@ -83,6 +84,8 @@ export function can(capability: Capability): boolean {
   const api = bridge();
   if (!api) return false;
   switch (capability) {
+    case Capability.FigmaWindowArrangement:
+      return !!api.figmaDesktop;
     case Capability.ProjectFolder:
     case Capability.ExternalEdit: // watcher + ingestion ride the project bridge
       return !!api.project;

@@ -204,7 +204,10 @@ export interface TranscodeOutput {
 
 /** Find media: a fetch made by the main process (no page origin, no CORS), https only, size-capped. */
 export interface MediaBridge {
-  fetch(url: string, options?: { maxBytes?: number }): Promise<{ ok: boolean; status: number; mimeType: string; bytes: Uint8Array }>;
+  fetch(
+    url: string,
+    options?: { maxBytes?: number },
+  ): Promise<{ ok: boolean; status: number; mimeType: string; bytes: Uint8Array }>;
 }
 export interface FfmpegBridge {
   available(): Promise<boolean>;
@@ -327,9 +330,18 @@ export interface AgentProviderBridge {
   onPermission(cb: (request: AgentPermissionRequest) => void): () => void;
 }
 
+/** Optional macOS POC. Placement and MCP connectivity are independent. */
+export interface FigmaDesktopBridge {
+  open(): Promise<void>;
+  status(): Promise<{ arranged: boolean; accessibility: boolean }>;
+  arrange(side: 'left' | 'right'): Promise<{ arranged: boolean; accessibility: boolean }>;
+  restore(): Promise<{ arranged: boolean; accessibility: boolean }>;
+}
+
 // ── the whole bridge ────────────────────────────────────────────────────────
 
 export interface ElectronBridge {
+  figmaDesktop?: FigmaDesktopBridge;
   sqlite: SqliteBridge;
   desktop: DesktopBridge;
   project: ProjectBridge;
