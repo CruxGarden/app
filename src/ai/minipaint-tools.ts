@@ -13,11 +13,26 @@ const style = {
   color: { type: 'string', pattern: '^#[a-fA-F0-9]{6}$' },
 } as const;
 const layerName = { type: 'string', maxLength: 200 } as const;
+const stroke = {
+  points: {
+    type: 'array',
+    minItems: 1,
+    maxItems: 1000,
+    items: {
+      type: 'array',
+      minItems: 2,
+      maxItems: 2,
+      items: { type: 'number', minimum: -32768, maximum: 32768 },
+    },
+  },
+  size: { type: 'number', minimum: 1, maximum: 256 },
+  opacity: { type: 'number', minimum: 0, maximum: 100 },
+} as const;
 export const MINIPAINT_TOOLS: AppToolDefinition[] = [
   {
     name: 'inspect_minipaint',
     description:
-      'Inspect canvas size and native layers, back to front: IDs, names, geometry, visibility, opacity, text live filters with IDs/values, brush summaries, native history availability and available image Artifact paths. Bounded to 20 layers by default; page with offset/limit (maximum 50).',
+      'Inspect canvas size and native layers, back to front: IDs, names, geometry, visibility, opacity, text, live filters with IDs/values, brush summaries, native history availability and available image Artifact paths, original raster dimensions and the active native rectangular selection (canvas coordinates; session-local). Bounded to 20 layers by default; page with offset/limit (maximum 50).',
     input_schema: {
       type: 'object',
       properties: {
@@ -165,6 +180,58 @@ export const MINIPAINT_TOOLS: AppToolDefinition[] = [
     writes: ['data/project.json'],
   },
   {
+    name: 'select_minipaint_region',
+    description:
+      'Set or clear the native rectangular selection on an unrotated image layer. Set needs x/y/width/height in canvas pixels and selects that layer/tool so the person can continue manually. Clear needs only id/action. Selection is session-local and is not saved in exported projects; shared native Undo restores it. Inspect again before selection edits.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        id: { type: 'integer' },
+        action: { type: 'string', enum: ['set', 'clear'] },
+        ...geometry,
+      },
+      required: ['id', 'action'],
+      additionalProperties: false,
+    },
+    writes: ['data/project.json'],
+  },
+  {
+    name: 'erase_minipaint_pixels',
+    description:
+      'Erase original pixels on an unrotated raster image layer, retaining its geometry and live filters. mode=stroke needs points/size in canvas pixels (round constant-width stroke; one point is a dot); mode=selection erases the currently inspected native rectangle. opacity defaults to 100%. Display scaling/position are handled. Stroke ignores selection; rectangular edits round outward to whole original pixels. Native Undo and confirmed save; original source Artifact stays intact.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        id: { type: 'integer' },
+        mode: { type: 'string', enum: ['stroke', 'selection'] },
+        ...stroke,
+      },
+      required: ['id', 'mode'],
+      additionalProperties: false,
+    },
+    writes: ['data/project.json', 'data/assets/'],
+  },
+  {
+    name: 'fill_minipaint_pixels',
+    description:
+      'Fill original pixels on an unrotated raster layer with a hex color. contiguous fills four-connected pixels matching the seed x/y in canvas coordinates; global fills all matching pixels on that layer; selection fills the inspected native rectangle without a seed. tolerance is 0–100 percent per RGBA channel (default 0); opacity is source-over 0–100% (default 100). Matching uses original pixels before live filters. Seed fills ignore selection; rectangular edges round outward to original pixels. Hard-edged fill, no feathering. Native Undo and confirmed save; source Artifact and other layers stay intact.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        id: { type: 'integer' },
+        mode: { type: 'string', enum: ['contiguous', 'global', 'selection'] },
+        x: geometry.x,
+        y: geometry.y,
+        color: style.color,
+        opacity: stroke.opacity,
+        tolerance: { type: 'number', minimum: 0, maximum: 100 },
+      },
+      required: ['id', 'mode', 'color'],
+      additionalProperties: false,
+    },
+    writes: ['data/project.json', 'data/assets/'],
+  },
+  {
     name: 'duplicate_minipaint_layer',
     description:
       'Duplicate a native layer in place by inspected ID, preserving editable text, brush data, filters or original raster pixels. Optionally name the copy. Returns createdLayerId. Useful for retaining an original photo before editing. Native Undo and confirmed save.',
@@ -249,6 +316,9 @@ export const MINIPAINT_TOOLS: AppToolDefinition[] = [
   },
 ];
 const operations: Record<string, string> = {
+  select_minipaint_region: 'selection',
+  erase_minipaint_pixels: 'erase',
+  fill_minipaint_pixels: 'fill',
   paint_minipaint_stroke: 'add-brush',
   duplicate_minipaint_layer: 'duplicate-layer',
   edit_minipaint_filter: 'edit-filter',

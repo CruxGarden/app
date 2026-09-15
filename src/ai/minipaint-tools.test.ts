@@ -53,3 +53,37 @@ it('routes painting, live filters, crop and shared native history with bounded a
     minipaintCommand('paint_minipaint_stroke', { points: [[1, 2]], size: 12, path: 'x' }),
   ).toThrow();
 });
+
+it('routes shared selection and raster operations with scoped writes and rejects ambiguous edits', () => {
+  expect(
+    minipaintCommand('select_minipaint_region', {
+      id: 3,
+      action: 'set',
+      x: 10,
+      y: 20,
+      width: 30,
+      height: 40,
+    }).op,
+  ).toBe('selection');
+  expect(minipaintCommand('erase_minipaint_pixels', { id: 3, mode: 'selection' }).op).toBe('erase');
+  expect(
+    minipaintCommand('fill_minipaint_pixels', {
+      id: 3,
+      mode: 'global',
+      x: 10,
+      y: 20,
+      color: '#123456',
+    }).op,
+  ).toBe('fill');
+  for (const name of ['erase_minipaint_pixels', 'fill_minipaint_pixels'])
+    expect(MINIPAINT_TOOLS.find((tool) => tool.name === name)?.writes).toEqual([
+      'data/project.json',
+      'data/assets/',
+    ]);
+  expect(() =>
+    minipaintCommand('erase_minipaint_pixels', { id: 3, mode: 'stroke', points: [] }),
+  ).toThrow();
+  expect(() =>
+    minipaintCommand('fill_minipaint_pixels', { id: 3, mode: 'selection', color: '#123456', x: 1 }),
+  ).toThrow();
+});

@@ -1,5 +1,7 @@
 # miniPaint composition, painting and live adjustments
 
+Later verified family: [raster regions and native history](../minipaint-raster/README.md), including erasing, selection/fill and the native manual filter-Undo repair. The dated checkpoints below retain their original scope.
+
 ## Painting checkpoint — 2026-09-15
 
 Five added tools bring miniPaint to fourteen: native brush strokes, layer duplication, eight live filter types with add/update/remove, arbitrary in-canvas crop and shared native Undo/Redo. The expanded desktop journey passed in 1.2 minutes: 27 scripted tool calls in the original Garden without errors and six after complete export/fresh import, with exactly one deliberate missing-filter refusal.

@@ -18,7 +18,7 @@ export const EDITING_FIELDS = {
 };
 
 export function validateEditingCommand(value) {
-  if (value.op === 'add-brush') {
+  if (value.op === 'add-brush' || (value.op === 'erase' && value.mode === 'stroke')) {
     if (!Number.isFinite(value.size) || value.size < 1 || value.size > 256)
       throw Error('Use a brush size between 1 and 256 canvas pixels.');
     if (
@@ -96,7 +96,7 @@ export function revisedFilters(layer, value) {
   const filters = structuredClone(layer.filters ?? []);
   if (filters.length > 100 || (value.action === 'add' && filters.length >= 100))
     throw Error('Use up to 100 live filters per layer.');
-  const index = filters.findIndex((filter) => filter.id === value.filterId);
+  const index = filters.findIndex((filter) => Number(filter.id) === value.filterId);
   if (value.action !== 'add' && index < 0)
     throw Error('Filter no longer exists. Inspect miniPaint again.');
   if (value.action === 'remove') filters.splice(index, 1);
@@ -109,7 +109,7 @@ export function revisedFilters(layer, value) {
     };
   } else {
     let id = 1;
-    while (filters.some((filter) => filter.id === id)) id++;
+    while (filters.some((filter) => Number(filter.id) === id)) id++;
     filters.push({ id, name: value.filter, params: { value: value.value } });
   }
   return filters;

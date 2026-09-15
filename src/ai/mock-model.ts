@@ -1901,6 +1901,130 @@ export function getMockLanguageModel(): LanguageModel {
           }
           return textStream('Saved the AudioMass track.');
         }
+        if (lastUserText(prompt).includes('[minipaint:raster-create]')) {
+          const rounds = toolResultsThisTurn(prompt);
+          if (!rounds.length)
+            return toolCallStream('resize_minipaint_canvas', { width: 600, height: 360 });
+          if (rounds.length === 1)
+            return toolCallStream('add_minipaint_image', {
+              name: 'Region study',
+              path: 'assets/regions.png',
+              x: 40,
+              y: 60,
+              width: 400,
+              height: 200,
+            });
+          const id = Number(
+            toolResultText(prompt, 'add_minipaint_image')?.match(
+              /"createdLayerId"\s*:\s*(\d+)/,
+            )?.[1],
+          );
+          if (rounds.length === 2)
+            return toolCallStream('edit_minipaint_filter', {
+              id,
+              action: 'add',
+              filter: 'brightness',
+              value: 5,
+            });
+          if (rounds.length === 3)
+            return toolCallStream('edit_minipaint_filter', {
+              id,
+              action: 'add',
+              filter: 'contrast',
+              value: 10,
+            });
+          if (rounds.length === 4)
+            return toolCallStream('select_minipaint_region', {
+              id,
+              action: 'set',
+              x: 60,
+              y: 80,
+              width: 80,
+              height: 40,
+            });
+          if (rounds.length === 5)
+            return toolCallStream('fill_minipaint_pixels', {
+              id,
+              mode: 'selection',
+              color: '#ff0000',
+            });
+          if (rounds.length === 6)
+            return toolCallStream('erase_minipaint_pixels', {
+              id,
+              mode: 'stroke',
+              points: [[110, 105]],
+              size: 60,
+            });
+          if (rounds.length === 7)
+            return toolCallStream('minipaint_history', { direction: 'undo' });
+          if (rounds.length === 8)
+            return toolCallStream('minipaint_history', { direction: 'redo' });
+          return textStream('Prepared editable image regions and reversible erasing.');
+        }
+        if (lastUserText(prompt).includes('[minipaint:raster-fill]')) {
+          const rounds = toolResultsThisTurn(prompt);
+          if (!rounds.length) return toolCallStream('inspect_minipaint', { offset: 0, limit: 1 });
+          const result = toolResultText(prompt, 'inspect_minipaint') || '{}';
+          const id = Number(result.match(/"id"\s*:\s*(\d+),\s*"name"\s*:\s*"Region study"/)?.[1]);
+          if (rounds.length === 1)
+            return toolCallStream('fill_minipaint_pixels', {
+              id,
+              mode: 'contiguous',
+              x: 50,
+              y: 65,
+              color: '#0000ff',
+            });
+          if (rounds.length === 2)
+            return toolCallStream('fill_minipaint_pixels', {
+              id,
+              mode: 'global',
+              x: 400,
+              y: 65,
+              color: '#00ff00',
+            });
+          if (rounds.length === 3)
+            return toolCallStream('save_minipaint_image', { name: 'Region study' });
+          return textStream(
+            'Filled separate image regions and erased a stroke; the native selection is ready for you.',
+          );
+        }
+        if (lastUserText(prompt).includes('[minipaint:raster-continue]')) {
+          const rounds = toolResultsThisTurn(prompt);
+          if (!rounds.length) return toolCallStream('inspect_minipaint', { offset: 0, limit: 1 });
+          const result = toolResultText(prompt, 'inspect_minipaint') || '{}';
+          const id = Number(result.match(/"id"\s*:\s*(\d+),\s*"name"\s*:\s*"Region study"/)?.[1]);
+          if (rounds.length === 1)
+            return toolCallStream('select_minipaint_region', {
+              id,
+              action: 'set',
+              x: 280,
+              y: 80,
+              width: 80,
+              height: 40,
+            });
+          if (rounds.length === 2)
+            return toolCallStream('erase_minipaint_pixels', { id, mode: 'selection' });
+          if (rounds.length === 3)
+            return toolCallStream('select_minipaint_region', { id, action: 'clear' });
+          if (rounds.length === 4)
+            return toolCallStream('minipaint_history', { direction: 'undo' });
+          if (rounds.length === 5)
+            return toolCallStream('fill_minipaint_pixels', {
+              id,
+              mode: 'selection',
+              color: '#ffaa00',
+              opacity: 50,
+            });
+          if (rounds.length === 6)
+            return toolCallStream('select_minipaint_region', { id, action: 'clear' });
+          if (rounds.length === 7)
+            return toolCallStream('erase_minipaint_pixels', { id, mode: 'selection' });
+          if (rounds.length === 8)
+            return toolCallStream('save_minipaint_image', { name: 'Region continuation' });
+          return textStream(
+            'Continued raster editing, preserving your manual change and refusing an absent selection.',
+          );
+        }
         if (lastUserText(prompt).includes('[minipaint:photo-create]')) {
           const rounds = toolResultsThisTurn(prompt);
           if (!rounds.length) return toolCallStream('inspect_minipaint', { offset: 1, limit: 1 });
@@ -2463,9 +2587,11 @@ function systemText(prompt: LanguageModelV4Prompt): string {
     .join('\n');
 }
 
-/** The scripted inspection verdict: the heading is missing until the fix reply is quoted. */
+/** Only the landing-page scenario has a scripted missing heading. Other mock
+ * workflows assert their own native output in e2e; never run its repair on them. */
 export function verdictFor(inspectionText: string): { ok: boolean; problems: string[] } {
-  return inspectionText.includes(LANDING_FIXED_REPLY)
+  return inspectionText.includes(LANDING_FIXED_REPLY) ||
+    !inspectionText.includes(LANDING_DONE_REPLY)
     ? { ok: true, problems: [] }
     : { ok: false, problems: [LANDING_MISSING] };
 }

@@ -52,6 +52,10 @@ test('filter editing preserves other filters, values, order and original undo ba
   assert.throws(() =>
     revisedFilters(layer, { action: 'update', filterId: 7, filter: 'contrast', value: 0 }),
   );
+  // Older native dialog edits persisted data-attribute IDs as strings.
+  const legacy = { type: 'image', filters: [{ id: '1', name: 'sepia', params: { value: 10 } }] };
+  assert.deepEqual(revisedFilters(legacy, { action: 'remove', filterId: 1 }), []);
+  assert.equal(revisedFilters(legacy, { action: 'add', filter: 'brightness', value: 5 })[1].id, 2);
 });
 
 test('duplication isolates editable data and image elements without copying private caches', () => {
