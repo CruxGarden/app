@@ -3,6 +3,7 @@ import * as React from 'react';
 import { t } from '@lingui/macro';
 import { exportProject, importProject } from './ProjectArchive';
 import { serializeToJSObject } from '../Utils/Serializer';
+import { prepareGardenSceneCommand } from './SceneTools';
 import { inspectGame, readGameContent, gameCatalogue } from '../../../../garden/inspection.mjs';
 import { validateNativeDocument } from '../../../../garden/model.mjs';
 import { putFile, getBrowserSWPreviewBaseUrl, getBrowserSWPreviewRootUrl } from '../ExportAndShare/BrowserExporters/BrowserSWPreviewLauncher/BrowserSWPreviewIndexedDB';
@@ -97,6 +98,7 @@ export function useGardenProject(project, changes) {
     };
     context().garden.connect({
       capture, busy,
+      prepare: command => prepareGardenSceneCommand(() => currentProject, command),
       saved: () => nativeChanges?.sealUnsavedChanges(),
       command: async command => {
         if (!currentProject) throw new Error('Open a game before using its tools.');

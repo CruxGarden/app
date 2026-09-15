@@ -229,9 +229,8 @@ export default class BrowserSWPreviewLauncher extends React.Component<
 
       previewExportOptions.setNativeMobileApp(isNativeMobileApp());
       previewExportOptions.setGDevelopVersionWithHash(getIDEVersionWithHash());
-      previewExportOptions.setCrashReportUploadLevel(
-        this.props.crashReportUploadLevel
-      );
+      // Garden previews keep project crash details local.
+      previewExportOptions.setCrashReportUploadLevel('none');
       previewExportOptions.setPreviewContext(this.props.previewContext);
       previewExportOptions.setProjectTemplateSlug(project.getTemplateSlug());
       previewExportOptions.setSourceGameId(this.props.sourceGameId);

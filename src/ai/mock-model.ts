@@ -96,6 +96,51 @@ export function getMockLanguageModel(): LanguageModel {
           }
           return toolCallStream('list_cruxspace_assets', {});
         }
+        const sceneAction = lastUserText(prompt).match(/\[gdevelop:scene-([a-z-]+)\]/)?.[1];
+        if (sceneAction) {
+          const rounds = toolResultsThisTurn(prompt);
+          if (!rounds.length && sceneAction !== 'stale')
+            return toolCallStream('inspect_gdevelop_scene', { scene: 'Scene' });
+          if (
+            (sceneAction === 'stale' && !rounds.length) ||
+            (sceneAction !== 'stale' && rounds.length === 1)
+          ) {
+            const raw = toolResultText(prompt, 'inspect_gdevelop_scene') || '{}';
+            if (raw.startsWith('Error')) return textStream('Scene inspection failed: ' + raw);
+            const inspected = JSON.parse(raw);
+            const base = { scene: 'Scene', expectedState: inspected.expectedState };
+            const id = inspected.instances[0].id;
+            if (sceneAction === 'select')
+              return toolCallStream('select_gdevelop_instances', { ...base, ids: [id] });
+            if (sceneAction === 'edit' || sceneAction === 'stale')
+              return toolCallStream('edit_gdevelop_instances', {
+                ...base,
+                updates: [{ id, x: 123, width: 96, height: 80, opacity: 200 }],
+              });
+            if (sceneAction === 'add')
+              return toolCallStream('add_gdevelop_instance', {
+                scene: 'Scene',
+                object: inspected.instances[0].object,
+                x: 300,
+                y: 200,
+              });
+            if (sceneAction === 'duplicate')
+              return toolCallStream('duplicate_gdevelop_instances', {
+                ...base,
+                ids: [id],
+                dx: 100,
+                dy: 0,
+              });
+            if (sceneAction === 'delete')
+              return toolCallStream('delete_gdevelop_instances', {
+                ...base,
+                ids: [inspected.instances[inspected.instances.length - 1].id],
+              });
+            if (sceneAction === 'undo' || sceneAction === 'redo')
+              return toolCallStream('gdevelop_scene_history', { ...base, direction: sceneAction });
+          }
+          return textStream('GDevelop scene ' + sceneAction + ' complete.');
+        }
         if (lastUserText(prompt).includes('[gdevelop:inspect]')) {
           const rounds = toolResultsThisTurn(prompt);
           if (!rounds.length) return toolCallStream('inspect_gdevelop', {});

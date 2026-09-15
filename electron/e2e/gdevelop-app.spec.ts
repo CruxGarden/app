@@ -14,6 +14,7 @@ test('GDevelop native game editing, local preview, agent changes and portable re
   let folder = '',
     mediaKey = '';
   let mediaRef: unknown;
+  const nativeErrors: string[] = [];
   const evidence = resolve(__dirname, '../../docs/gdevelop');
   mkdirSync(evidence, { recursive: true });
   const archive = join(first.dir, 'game.crux');
@@ -40,6 +41,37 @@ test('GDevelop native game editing, local preview, agent changes and portable re
     });
   };
   const localOnly = async (page: Page) => {
+    // Native debugger crashes can be caught by GDevelop before Playwright sees a pageerror.
+    await page.addInitScript(() =>
+      window.addEventListener('message', (event) => {
+        if (typeof event.data !== 'string') return;
+        try {
+          const message = JSON.parse(event.data);
+          if (message.command === 'game.crashed')
+            console.error(
+              'GDevelop preview crash',
+              JSON.stringify(message.payload?.exception || message.payload).slice(0, 5000),
+            );
+        } catch {
+          /* Ordinary non-JSON window message. */
+        }
+      }),
+    );
+
+    page.on('pageerror', (error) => {
+      nativeErrors.push(error.message);
+      console.log('GDevelop page error', error.message);
+    });
+    page.on('console', (message) => {
+      if (message.type() === 'error') {
+        console.log('GDevelop console error', message.text());
+        if (message.text().startsWith('GDevelop preview crash')) nativeErrors.push(message.text());
+      }
+    });
+    page.on('requestfailed', (request) =>
+      console.log('GDevelop request failed', request.url(), request.failure()?.errorText),
+    );
+
     await page
       .context()
       .route(/^https?:\/\//, (route) =>
@@ -92,6 +124,95 @@ test('GDevelop native game editing, local preview, agent changes and portable re
       page.frameLocator('iframe[data-crux-id]').locator('#garden-project [role=status]'),
     ).toHaveText('Saved to Garden');
   };
+  const editThroughTools = async (page: Page, f: FrameLocator, stage: string) => {
+    const id = (await page.locator('[data-workspace-id]').getAttribute('data-workspace-id'))!;
+    const dir = resolve(__dirname, '../../docs/gdevelop-instances');
+    mkdirSync(dir, { recursive: true });
+    const evidenceCalls: unknown[] = [];
+    const manualY = stage === 'native' ? 77 : 88;
+    const run = async (action: string, stale = false) => {
+      // Growth may move earlier messages into a snapshot after a mutation.
+      const previous = new Set((await storedCrux(page, id)).messages.map((m: any) => m.timestamp));
+      const chat = page.getByPlaceholder('Send a message...');
+      await chat.fill('Revise the placed sprite [gdevelop:scene-' + action + ']');
+      await chat.press('Enter');
+      await expect
+        .poll(
+          async () =>
+            (await storedCrux(page, id)).messages.some(
+              (m: any) =>
+                !previous.has(m.timestamp) &&
+                m.content === 'GDevelop scene ' + action + ' complete.',
+            ),
+          { timeout: 60000 },
+        )
+        .toBe(true);
+      const calls = (await storedCrux(page, id)).messages
+        .filter(
+          (m: any) =>
+            !previous.has(m.timestamp) && m.content === 'GDevelop scene ' + action + ' complete.',
+        )
+        .flatMap((m: any) => m.toolCalls || []);
+      evidenceCalls.push(...calls);
+      const errors = calls.filter((c: any) => c.result?.startsWith('Error'));
+      if (stale) {
+        expect(errors).toHaveLength(1);
+        expect(errors[0].result).toContain('changed since inspection');
+      } else expect(errors).toEqual([]);
+      return calls;
+    };
+    await run('select');
+    // A person changes Y through the actual native property field, after inspection.
+    const y = f.locator('#instance-properties-editor input').nth(1);
+    await y.fill(String(manualY));
+    await y.press('Enter');
+    await save(f);
+    await expect.poll(() => game().layouts[0].instances[0].y).toBe(manualY);
+    const manual = JSON.stringify(game().layouts[0].instances);
+    await run('stale', true);
+    expect(JSON.stringify(game().layouts[0].instances)).toBe(manual);
+    await run('edit');
+    expect(game().layouts[0].instances[0]).toMatchObject({
+      x: 123,
+      y: manualY,
+      width: 96,
+      height: 80,
+      opacity: 200,
+    });
+    await expect(f.locator('#instance-properties-editor input').first()).toHaveValue('123');
+    const edited = JSON.stringify(game().layouts[0].instances);
+    await page.screenshot({ path: join(dir, stage + '-edited.png'), animations: 'disabled' });
+    await f.getByRole('button', { name: 'Undo the last changes', exact: true }).click();
+    await save(f);
+    await expect.poll(() => JSON.stringify(game().layouts[0].instances)).toBe(manual);
+    await f.getByRole('button', { name: 'Redo the last changes', exact: true }).click();
+    await save(f);
+    await expect.poll(() => JSON.stringify(game().layouts[0].instances)).toBe(edited);
+    await run('duplicate');
+    const duplicated = game().layouts[0].instances;
+    expect(duplicated).toHaveLength(2);
+    expect(duplicated[1].persistentUuid).not.toBe(duplicated[0].persistentUuid);
+    expect(duplicated[1]).toMatchObject({ x: 223, y: manualY, width: 96, height: 80 });
+    const both = JSON.stringify(duplicated);
+    await run('delete');
+    expect(JSON.stringify(game().layouts[0].instances)).toBe(edited);
+    await run('undo');
+    expect(JSON.stringify(game().layouts[0].instances)).toBe(both);
+    await run('redo');
+    expect(JSON.stringify(game().layouts[0].instances)).toBe(edited);
+    // Restore native size through history so the existing export/playback assertions remain meaningful.
+    await run('undo'); // undo delete
+    await run('undo'); // undo duplicate
+    await run('undo'); // undo transform, preserving the person's Y edit
+    expect(JSON.stringify(game().layouts[0].instances)).toBe(manual);
+    await run('add');
+    expect(game().layouts[0].instances).toHaveLength(2);
+    expect(game().layouts[0].instances[1]).toMatchObject({ name: 'NewSprite', x: 300, y: 200 });
+    await run('undo');
+    expect(JSON.stringify(game().layouts[0].instances)).toBe(manual);
+    writeFileSync(join(dir, stage + '-calls.json'), JSON.stringify(evidenceCalls, null, 2));
+    await page.screenshot({ path: join(dir, stage + '.png'), animations: 'disabled' });
+  };
   const addInstance = async (f: FrameLocator) => {
     await f.getByText('NewSprite', { exact: true }).click({ button: 'right' });
     await f.getByText('Add instance to the scene', { exact: true }).click();
@@ -100,13 +221,6 @@ test('GDevelop native game editing, local preview, agent changes and portable re
     const { page } = first;
     await page.setViewportSize({ width: 2000, height: 1200 });
     await localOnly(page);
-    page.on('pageerror', (error) => console.log('GDevelop page error', error.message));
-    page.on('console', (message) => {
-      if (message.type() === 'error') console.log('GDevelop console error', message.text());
-    });
-    page.on('requestfailed', (request) =>
-      console.log('GDevelop request failed', request.url(), request.failure()?.errorText),
-    );
     await enterGarden(page);
     await page.getByRole('button', { name: 'Add Crux' }).click();
     await page.getByRole('button', { name: /^GDevelop/ }).click();
@@ -139,6 +253,7 @@ test('GDevelop native game editing, local preview, agent changes and portable re
     expect(Buffer.from(state(mediaKey).bytes, 'base64').toString()).toContain('tomato');
     expect(game().resources.resources[0].file).toMatch(/^garden:media-/);
     await inspectThroughTools(page, 'native');
+    await editThroughTools(page, f, 'native');
     await f.locator('#toolbar-preview-button').click();
     await expect(f.frameLocator('#garden-game-preview iframe').locator('canvas')).toBeVisible({
       timeout: 30000,
@@ -150,6 +265,12 @@ test('GDevelop native game editing, local preview, agent changes and portable re
       }),
     );
     await running.waitForFunction(() => (window as any).__observedScene);
+    expect(
+      await running.evaluate(
+        () =>
+          (window as any).__observedScene.getGame().getAdditionalOptions().crashReportUploadLevel,
+      ),
+    ).toBe('none');
     const beforeX = await running.evaluate(() =>
       (window as any).__observedScene.getObjects('NewSprite')[0].getX(),
     );
@@ -292,6 +413,7 @@ test('GDevelop native game editing, local preview, agent changes and portable re
     expect(folder).not.toBe(oldFolder);
     expect(doc().project[mediaKey]).toEqual(mediaRef);
     await inspectThroughTools(third.page, 'portable');
+    await editThroughTools(third.page, f, 'portable');
     await addInstance(f);
     await save(f);
     expect(game().layouts[0].instances).toHaveLength(2);
@@ -311,6 +433,18 @@ test('GDevelop native game editing, local preview, agent changes and portable re
     await f.getByText('Add instance to the scene', { exact: true }).click();
     await save(f);
     await f.getByRole('button', { name: '3D', exact: true }).click();
+    await expect
+      .poll(
+        async () => {
+          for (const frame of third.page.frames())
+            if (await frame.locator('#free-camera-button').count()) return true;
+          return false;
+        },
+        { timeout: 30000 },
+      )
+      .toBe(true);
+    expect(nativeErrors).toEqual([]);
+
     await f.locator('#toolbar-preview-button').click();
     await expect(f.frameLocator('#garden-game-preview iframe').locator('canvas')).toBeVisible();
     const gameFrame = third.page
@@ -333,6 +467,8 @@ test('GDevelop native game editing, local preview, agent changes and portable re
       path: join(evidence, 'gdevelop-3d.png'),
       animations: 'disabled',
     });
+    expect(nativeErrors).toEqual([]);
+    await expect(f.getByText('The 3D editor or the game crashed', { exact: true })).toHaveCount(0);
   } finally {
     await third.app.close();
     renameSync(oldFolder + '-unavailable', oldFolder);
