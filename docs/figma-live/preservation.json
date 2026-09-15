@@ -1,0 +1,18 @@
+{
+  "sha256": "a9564ddaadb4e10308e1d595e9df241613ce0a7189a4ee07827498a2b17778e4",
+  "copies": [
+    {
+      "resource_id": "bf666496-1d62-4642-a39d-b2603aa7ca20",
+      "fingerprint": "a9564ddaadb4e10308e1d595e9df241613ce0a7189a4ee07827498a2b17778e4"
+    },
+    {
+      "resource_id": "25126d35-b94d-4355-9ad3-74f80ab68899",
+      "fingerprint": "a9564ddaadb4e10308e1d595e9df241613ce0a7189a4ee07827498a2b17778e4"
+    },
+    {
+      "resource_id": "e6786745-bc9f-4d67-b6a8-3aa0be675c5b",
+      "fingerprint": "a9564ddaadb4e10308e1d595e9df241613ce0a7189a4ee07827498a2b17778e4"
+    }
+  ],
+  "recordedAfterRestart": true
+}

@@ -66,7 +66,7 @@ export default function MobilePaneSwitcher() {
   );
 
   return (
-    <div className="flex items-center justify-around h-12 border-t border-border bg-surface/30 shrink-0">
+    <div className="flex items-center h-12 min-w-0 overflow-x-auto border-t border-border bg-surface-solid shrink-0">
       {(Object.keys(PANE_ICONS) as PaneType[]).map((pane) => {
         const { label, icon } = PANE_ICONS[pane];
         const isActive = mobileActivePane === pane;
@@ -77,7 +77,7 @@ export default function MobilePaneSwitcher() {
             onClick={() => setMobileActivePane(pane)}
             style={isActive ? { color: PANE_COLORS[pane] } : undefined}
             className={cn(
-              'flex flex-col items-center gap-0.5 px-3 py-1 rounded-[var(--radius-sm)] transition-colors cursor-pointer',
+              'flex shrink-0 flex-col items-center gap-0.5 px-3 py-1 rounded-[var(--radius-sm)] transition-colors cursor-pointer',
               !isActive && 'text-text-muted',
             )}
           >

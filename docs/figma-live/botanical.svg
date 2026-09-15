@@ -1,0 +1,9 @@
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="260" height="420" viewBox="0 0 260 420" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="Botanical illustration">
+<circle id="Sun" cx="190" cy="70" r="50" fill="#DE944A"/>
+<ellipse id="Left leaf" cx="85" cy="174" rx="65" ry="34" fill="#406B4A"/>
+<ellipse id="Right leaf" cx="190" cy="130" rx="60" ry="34" fill="#668C5C"/>
+<rect id="Stem" x="130" y="130" width="8" height="210" rx="4" fill="#1F4030"/>
+<rect id="Terracotta pot" x="48" y="298" width="172" height="110" rx="24" fill="#B85E3D"/>
+</g>
+</svg>

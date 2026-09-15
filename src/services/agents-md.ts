@@ -75,8 +75,8 @@ export function renderAgentsMdSections(input: AgentsMdInput): AgentsMdSections {
   return {
     about: renderAbout(input.crux, site, templateId, skillsForCrux(input.crux, input.artifacts)),
     contentModel: contentModel ? renderContentModel(contentModel) : null,
-    conventions: renderConventions(site, contentModel),
-    preview: renderPreview(site, canBuild),
+    conventions: templateId === 'figma' ? FIGMA_CONVENTIONS : renderConventions(site, contentModel),
+    preview: templateId === 'figma' ? FIGMA_PREVIEW : renderPreview(site, canBuild),
     handsOff: renderHandsOff(site),
     recording: RECORDING,
     voice: renderVoice(input.persona),
@@ -96,7 +96,7 @@ function renderAbout(
   const lines = ['## About this crux'];
   lines.push(`- Title: ${crux.title || 'Untitled'}`);
   lines.push(
-    `- Kind: ${site ? 'Site Crux (a real toolchain project with a build step)' : describeKind(crux.kind)}`,
+    `- Kind: ${templateId === 'figma' ? 'Figma Crux (external editable design with local brief and exports)' : site ? 'Site Crux (a real toolchain project with a build step)' : describeKind(crux.kind)}`,
   );
   if (templateId) lines.push(`- Template: ${templateDisplayName(templateId)} (\`${templateId}\`)`);
   // The know-how for this kind of crux is a skill (B6) — the same text the
@@ -107,7 +107,9 @@ function renderAbout(
   lines.push(
     '',
     'This folder is a Crux — a creative project in Crux Garden: a conversation with an AI plus the files it produces, with every version kept as Growth history. ' +
-      'The folder is the truth: whatever you write here is what the crux is. Edits are ingested into history automatically.',
+      (templateId === 'figma'
+        ? 'This Project Folder preserves the brief, references and downloaded assets. The editable canvas lives in Figma; changing a local file does not edit that canvas.'
+        : 'The folder is the truth: whatever you write here is what the crux is. Edits are ingested into history automatically.'),
   );
   return lines.join('\n');
 }
@@ -130,6 +132,23 @@ function describeKind(kind: string | undefined): string {
       return 'general (files served as written — no build step)';
   }
 }
+
+const FIGMA_CONVENTIONS = [
+  '## Files and folder layout',
+  '- `figma/project.json` stores the linked Figma file/frame; `brief.md` stores the creative brief.',
+  '- Local Artifacts may be uploaded to Figma through its authenticated MCP tools. Download completed exports into this Project Folder so Garden can ingest them.',
+  '- The companion imports exported files as Cruxspace outputs with source provenance. Keep a receipt naming the actual Figma file/frame for agent-downloaded assets.',
+  '- Use the installed Figma skills and current MCP tools for native edits. Inspect the current design before each change and preserve intervening manual work.',
+  '- This is an external-app companion, not a website. Do not create an index page or install a web toolchain to operate Figma.',
+].join('\n');
+
+const FIGMA_PREVIEW = [
+  '## Preview and verification',
+  '- Inspect the editable native design and its rendered result in Figma after changes; verify downloaded asset bytes locally.',
+  '- Report unavailable tools, authentication failures and refused edits honestly. Opening a link or arranging windows does not grant MCP access.',
+  '- Growth preserves the local brief, references, exports and conversation. It does not restore the remote Figma document or its history.',
+  '- Website publishing and site-build checks do not apply to this companion. Reuse outputs in another Cruxspace member when building a site.',
+].join('\n');
 
 function renderConventions(site: boolean, model: ContentModel | undefined): string {
   const lines = ['## Files and folder layout'];

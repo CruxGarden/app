@@ -65,6 +65,12 @@ test('Figma companion saves its reference and imports an attributed asset', asyn
       method: 'file-import',
     });
     await page.screenshot({ path: join(evidence, 'companion.png'), fullPage: true });
+    await page.setViewportSize({ width: 420, height: 900 });
+    await page.getByRole('button', { name: 'Workshop', exact: true }).click();
+    await expect(companion).toBeVisible();
+    const linkBounds = await companion.getByLabel('Figma file or frame link').boundingBox();
+    expect(linkBounds!.x + linkBounds!.width).toBeLessThanOrEqual(420);
+    await page.screenshot({ path: join(evidence, 'companion-narrow.png'), fullPage: true });
     expect(errors).toEqual([]);
   } finally {
     await instance.app.close();

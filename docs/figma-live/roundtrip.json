@@ -1,0 +1,102 @@
+{
+  "figma": {
+    "fileKey": "1UGF8VTtWSz0D3pjGvOWwf",
+    "page": {
+      "id": "0:1",
+      "name": "Page 1"
+    },
+    "sourceUrl": "https://www.figma.com/design/1UGF8VTtWSz0D3pjGvOWwf?node-id=5-2",
+    "source": {
+      "nodeId": "5:2",
+      "name": "Garden gathering \u2014 shared revision",
+      "untouched": true,
+      "eventDetailsNodeId": "5:7"
+    },
+    "untouchedSiblings": [
+      {
+        "nodeId": "3:2",
+        "name": "Garden gathering \u2014 editable original"
+      }
+    ],
+    "newRevision": {
+      "nodeId": "6:2",
+      "name": "Garden-agent revision",
+      "url": "https://www.figma.com/design/1UGF8VTtWSz0D3pjGvOWwf?node-id=6-2",
+      "position": {
+        "x": 2320,
+        "y": 80,
+        "width": 960,
+        "height": 720
+      },
+      "createdBy": "use_figma clone of 5:2 (real write call; succeeded despite whoami reporting a View seat)",
+      "eventDetailsNodeId": "6:7",
+      "visualImprovements": [
+        "frame cornerRadius 24 (node 6:2)",
+        "56x3 terracotta accent rule between Description and Event details (node 6:14)",
+        "soft drop shadow on Terracotta pot (node 6:13)"
+      ],
+      "stamp": {
+        "nodeId": "6:15",
+        "name": "Garden stamp (uploaded garden-stamp.svg)",
+        "children": [
+          {
+            "nodeId": "6:16",
+            "type": "VECTOR"
+          },
+          {
+            "nodeId": "6:17",
+            "type": "TEXT",
+            "characters": "Made together"
+          }
+        ],
+        "imageHash": "d27422c1b3fb1ad03ee9b8c9c312183f0124e442",
+        "placement": "absolute-positioned child of 6:2 at x=688 y=604, 216x60, 56px from right and bottom edges; 37px below Event copy bottom (567), no overlap with Event details or illustration"
+      }
+    }
+  },
+  "preservedEventText": "EDITED \u00b7 10 AM\nThe community garden",
+  "localPaths": {
+    "uploadSource": "garden-stamp.svg",
+    "download": "figma-output.png"
+  },
+  "transfers": {
+    "upload": {
+      "tool": "upload_assets + HTTP POST (multipart, image/svg+xml)",
+      "sizeBytes": 219,
+      "result": "success, placedOnNodeId 6:15"
+    },
+    "download": {
+      "tool": "get_screenshot (MCP-rendered PNG of node 6:2)",
+      "file": "figma-output.png",
+      "dimensions": "960x720 RGBA",
+      "sizeBytes": 48234,
+      "sha256": "a9564ddaadb4e10308e1d595e9df241613ce0a7189a4ee07827498a2b17778e4",
+      "note": "download_assets export of 6:2 was attempted twice and rejected by the Starter-plan MCP tool call limit; figma-output.png is the MCP get_screenshot render of the finished frame, fetched before the limit hit."
+    }
+  },
+  "verification": {
+    "writeAccess": "confirmed by real clone/edit/upload calls, not inferred from seat label",
+    "finalMetadata6_2": "get_metadata confirmed children: Event copy 6:3 (Eyebrow 6:4, Headline 6:5, Description 6:6, Accent rule 6:14, Event details 6:7), Botanical illustration 6:8 (6:9\u20136:13), Garden stamp 6:15 (6:16, 6:17)",
+    "eventTextCheck": "use_figma read of 6:7 characters === 'EDITED \u00b7 10 AM\\nThe community garden' after every write",
+    "renderCheck": "figma-output.png inspected: text intact, stamp bottom-right and distinct from event text, accent rule and rounded corners visible",
+    "sourceCheck": "page children read after edits: 3:2 and 5:2 unchanged in name, position and size; 5:2 metadata re-check blocked by rate limit"
+  },
+  "limits": {
+    "hit": "Figma MCP tool call limit on the Starter plan (View/Collab and Dev/Full seats: up to 20 read tool calls per month)",
+    "blocked": [
+      "download_assets export of 6:2",
+      "final get_metadata re-read of 5:2"
+    ]
+  },
+  "notTouched": [
+    "3:2",
+    "5:2",
+    "publishing",
+    "sharing",
+    ".crux",
+    "AGENTS.md",
+    "CLAUDE.md"
+  ],
+  "recordedOn": "2026-09-15",
+  "evidenceNote": "Agent-written receipt, with account identifiers removed and its unverified completion timestamp replaced by the observed date. Source frames were not independently compared after the final action because the read limit was reached."
+}

@@ -1,7 +1,9 @@
-# Figma companion foundation — 2026-09-15
+# Figma companion — 2026-09-15
 
-The isolated Electron journey `electron/e2e/figma-companion.spec.ts` passes in 7.1 seconds (11 seconds total). It creates the Figma Crux Type through the picker, refuses an invalid link, persists a canonical file/frame reference, and imports an SVG fixture with its source reference and explicit `file-import` provenance. The screenshot was visually inspected; no page errors were captured.
+The isolated Electron fixture journey passes in 5.7 seconds against the verified production bundle. It creates the Figma Crux Type, refuses an invalid link, saves a canonical frame reference, imports an SVG with explicit `file-import` provenance and checks the companion at 420 pixels wide. Both screenshots were visually inspected; no page errors were captured. The narrower header/footer and stronger companion background improve readability while preserving Mood styling.
 
-This is a fixture-based Garden UI test, not a live Figma MCP trial. It does not contact Figma, prove that Figma authored the fixture, arrange native windows or certify the narrow companion layout. Service tests separately verify Cruxspace asset transfer and complete Crux export/import preservation.
+This fixture test never contacts Figma. Separate [live evidence](../figma-live/README.md) records Garden’s Claude Code native edits, local SVG upload, returned MCP-rendered image, Growth/restart persistence, real-image Cruxspace/Astro transfer and native Mac arrangement. Figma’s Starter read limit refused the final dedicated export call; the returned PNG is clearly attributed as a successful MCP screenshot render.
 
-Full app `npm run verify` passes, including 1,127 tests across 193 files and the production build. Electron `npm run verify` passes. Live MCP editing, manual-edit handoff, native macOS arrange/restore, real exported asset reuse in Astro, and narrow-window acceptance remain pending.
+Full app `npm run verify` passes: all bundled gates/builds, 1,128 host tests in 193 files and production build (1m26s). Electron verification passes. The guide now describes the external canvas and local assets accurately; the companion explains the supported Claude Code plugin/authorization path without claiming every provider is connected.
+
+This is a working local POC with further UX work: repeated per-action approvals, manual registration of downloaded files as Cruxspace outputs, native Undo/Redo and concurrent-edit acceptance remain explicit follow-ups.

@@ -46,7 +46,7 @@ export default function TopBar() {
     >
       {/* Left: branding + breadcrumb */}
       <div
-        className="flex items-center gap-1.5 min-w-0"
+        className="flex flex-1 items-center gap-1.5 min-w-0"
         style={desktopChrome ? ({ WebkitAppRegion: 'no-drag' } as React.CSSProperties) : undefined}
       >
         {username ? (
@@ -54,7 +54,8 @@ export default function TopBar() {
             onClick={() => navigate('/home')}
             className="shrink-0 text-xs font-medium font-display text-toolbar-link cursor-pointer whitespace-nowrap hover:underline"
           >
-            {username}
+            <span className="md:hidden">Garden</span>
+            <span className="hidden md:inline">{username}</span>
           </button>
         ) : (
           <button
@@ -68,17 +69,19 @@ export default function TopBar() {
           <ChevronRightIcon />
         </span>
         <WorkspaceSwitcher />
-        <TendingLink />
+        <div className="hidden md:block">
+          <TendingLink />
+        </div>
       </div>
 
       {/* Right: pane toggles + console + user menu */}
       <div
-        className="flex items-center gap-1"
+        className="flex shrink-0 items-center gap-1"
         style={desktopChrome ? ({ WebkitAppRegion: 'no-drag' } as React.CSSProperties) : undefined}
       >
         {activeCruxId && (
           <>
-            <div className="flex items-center">
+            <div className="hidden md:flex items-center">
               {/* Enabled panes — in paneOrder */}
               <div className="flex items-center gap-1">
                 {enabledPanes.map((paneType) => {
@@ -148,11 +151,13 @@ export default function TopBar() {
                 </div>
               )}
             </div>
-            <div className="w-px h-5 bg-toolbar-divider mx-1" />
+            <div className="hidden md:block w-px h-5 bg-toolbar-divider mx-1" />
           </>
         )}
-        <MoodBar className="mr-1" />
-        <div className="w-px h-5 bg-toolbar-divider mx-1" />
+        <div className="hidden md:block">
+          <MoodBar className="mr-1" />
+        </div>
+        <div className="hidden md:block w-px h-5 bg-toolbar-divider mx-1" />
         <IconButton
           label="Explore"
           size="sm"

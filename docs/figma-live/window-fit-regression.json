@@ -1,0 +1,31 @@
+{
+  "date": "2026-09-15",
+  "before": {
+    "x": 828,
+    "y": 33,
+    "width": 900,
+    "height": 1084
+  },
+  "requested": {
+    "x": 432,
+    "y": 33,
+    "width": 1296,
+    "height": 1084
+  },
+  "observedBeforeFix": {
+    "x": 432,
+    "y": 33,
+    "width": 900,
+    "height": 1084
+  },
+  "observedAfterFix": {
+    "x": 432,
+    "y": 33,
+    "width": 1296,
+    "height": 1084
+  },
+  "cause": "macOS clamps a resize at the current right screen edge before repositioning",
+  "fix": "shrink if needed, move, then resize; same ordering for rollback and restore",
+  "reproduction": "two failing real macOS desktop trials; instrumented reproduction 6.4s",
+  "fixedTrial": "real macOS test passed in 6.8s; diagnostics removed before final run"
+}
