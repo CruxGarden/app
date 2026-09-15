@@ -122,6 +122,7 @@ it('ships the same standalone shared source with adopting embeds', () => {
     'rawgraphs',
     'audiomass',
     'kan',
+    'eventcalendar',
   ])
     for (const file of [
       'command-session.js',

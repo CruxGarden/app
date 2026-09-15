@@ -113,6 +113,56 @@ export function getMockLanguageModel(): LanguageModel {
         const research = researchScript(prompt);
         if (research) return research;
 
+        const calendarDepth = lastUserText(prompt).match(/\[calendar:depth-([a-z-]+)\]/)?.[1];
+        if (calendarDepth) {
+          const rounds = toolResultsThisTurn(prompt);
+          if (!rounds.length) return toolCallStream('inspect_calendar', {});
+          if (calendarDepth === 'draft') return textStream('Calendar depth draft complete.');
+          const inspected = JSON.parse(toolResultText(prompt, 'inspect_calendar') || '{}');
+          if (rounds.length === 1) {
+            const expectedState = inspected.stateToken;
+            const id = inspected.events.find(
+              (e: { title: string }) => !e.title.includes('Follow-up'),
+            )?.id;
+            if (calendarDepth === 'create')
+              return toolCallStream('add_calendar_event', {
+                title: 'Launch review',
+                start: '2026-09-15T10:00:30',
+                end: '2026-09-15T11:30:30',
+                notes: 'Original note',
+                color: '#663399',
+              });
+            if (calendarDepth === 'revise')
+              return toolCallStream('update_calendar_event', {
+                id,
+                start: '2026-09-16T14:00:30',
+                end: '2026-09-16T15:30:30',
+                expectedState,
+              });
+            if (calendarDepth === 'duplicate')
+              return toolCallStream('duplicate_calendar_event', {
+                id,
+                start: '2026-09-18T09:00:30',
+                title: 'Follow-up review',
+                expectedState,
+              });
+            if (calendarDepth === 'view')
+              return toolCallStream('set_calendar_view', {
+                view: 'listWeek',
+                date: '2026-09-16',
+                expectedState,
+              });
+            if (calendarDepth === 'export')
+              return toolCallStream('save_calendar_csv', { label: 'Launch schedule' });
+            if (calendarDepth === 'read') return toolCallStream('read_calendar_event', { id });
+            if (calendarDepth === 'remove')
+              return toolCallStream('remove_calendar_event', {
+                id: inspected.events.find((e: { title: string }) => e.title.includes('Follow-up'))
+                  .id,
+              });
+          }
+          return textStream('Calendar depth ' + calendarDepth + ' complete.');
+        }
         if (lastUserText(prompt).includes('[calendar:edit]')) {
           const rounds = toolResultsThisTurn(prompt);
           if (!rounds.length) return toolCallStream('inspect_calendar', {});

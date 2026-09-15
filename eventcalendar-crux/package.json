@@ -1,8 +1,9 @@
 {
   "name": "eventcalendar-crux",
   "private": true,
+  "type": "module",
   "description": "Calendar organizer around EventCalendar (vkurko/calendar) as a Crux Tool",
   "scripts": {
-    "test:garden": "node --test garden/document.test.mjs"
+    "test:garden": "node --test garden/*.test.mjs"
   }
 }

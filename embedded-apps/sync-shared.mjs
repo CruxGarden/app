@@ -14,6 +14,7 @@ for (const app of [
   'rawgraphs',
   'audiomass',
   'kan',
+  'eventcalendar',
 ]) {
   const destination = join(
     appRoot,
