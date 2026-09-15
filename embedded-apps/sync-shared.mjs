@@ -16,6 +16,7 @@ for (const app of [
   'kan',
   'eventcalendar',
   'moqira',
+  'gdevelop',
 ]) {
   const destination = join(
     appRoot,

@@ -96,6 +96,38 @@ export function getMockLanguageModel(): LanguageModel {
           }
           return toolCallStream('list_cruxspace_assets', {});
         }
+        if (lastUserText(prompt).includes('[gdevelop:inspect]')) {
+          const rounds = toolResultsThisTurn(prompt);
+          if (!rounds.length) return toolCallStream('inspect_gdevelop', {});
+          // Deliberately scripted integration coverage, not a real-model evaluation.
+          const overview = JSON.parse(toolResultText(prompt, 'inspect_gdevelop') || '{}');
+          const scene = overview.scenes?.[0]?.name || overview.scene;
+          if (rounds.length === 1)
+            return toolCallStream('inspect_gdevelop', { scene, section: 'objects', limit: 5 });
+          if (rounds.length === 2)
+            return toolCallStream('inspect_gdevelop', { scene, section: 'instances', limit: 5 });
+          if (rounds.length === 3)
+            return toolCallStream('read_gdevelop_content', {
+              path: overview.path.replace(/\/instances$/, '/objects/0/behaviors'),
+            });
+          if (rounds.length === 4)
+            return toolCallStream('list_gdevelop_capabilities', {
+              kind: 'action',
+              query: 'sound',
+              limit: 5,
+            });
+          if (rounds.length === 5)
+            return toolCallStream('list_gdevelop_capabilities', {
+              kind: 'action',
+              type: 'PlaySound',
+            });
+          if (rounds.length === 6)
+            return toolCallStream('list_gdevelop_capabilities', {
+              kind: 'condition',
+              type: 'CollisionNP',
+            });
+          return textStream('GDevelop inspection complete.');
+        }
         if (lastUserText(prompt).includes('[gdevelop:edit]')) {
           const rounds = toolResultsThisTurn(prompt);
           if (!rounds.length) return toolCallStream('inspect_gdevelop', {});

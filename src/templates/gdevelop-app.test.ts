@@ -9,6 +9,8 @@ it('packages the native game editor, local runtime and source build inputs', asy
     'runtime/GDJS/Runtime/index.html',
     'garden/build.cjs',
     'garden/model.mjs',
+    'garden/inspection.mjs',
+    'garden/shared/command-session.js',
     'newIDE/app/.babelrc.json',
     'newIDE/app/.linguirc',
     'newIDE/app/src/BrowserApp.js',

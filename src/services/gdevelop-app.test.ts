@@ -3,6 +3,7 @@ import { initServices, getServices } from './index';
 import { createCruxStore } from '@/stores/cruxStore';
 import { notebookSession } from './notebook';
 import { exportCrux, importCrux } from './crux-io';
+import { GDEVELOP_TOOLS } from '@/ai/gdevelop-tools';
 import { embeddedAppToolAdapter } from './embedded-app-tool-adapters';
 beforeEach(() => initServices('local'));
 it('retains native scenes, events and original-media components through Growth and portable Crux archives', async () => {
@@ -103,4 +104,46 @@ it('limits agent edits to existing scene parameters and bounded names', () => {
   ).toThrow();
   expect(() => a.prepare('set_gdevelop_name', { name: 'x', code: 'run()' })).toThrow();
   expect(() => a.prepare('set_gdevelop_name', { name: 'x'.repeat(201) })).toThrow();
+});
+
+it('exposes read-only native inspection and metadata with bounded, strict inputs', () => {
+  const adapter = embeddedAppToolAdapter({ meta: { template: 'gdevelop-app' } })!;
+  for (const name of ['inspect_gdevelop', 'read_gdevelop_content', 'list_gdevelop_capabilities'])
+    expect(GDEVELOP_TOOLS.find((tool) => tool.name === name)?.writes).toEqual([]);
+  expect(
+    adapter.prepare('inspect_gdevelop', { scene: 'Play', section: 'events', offset: 2, limit: 3 }),
+  ).toEqual({ op: 'inspect', scene: 'Play', section: 'events', offset: 2, limit: 3 });
+  expect(
+    adapter.prepare('read_gdevelop_content', {
+      path: '/layouts/0/objects/0/behaviors',
+      expectedFingerprint: 'a'.repeat(64),
+    }),
+  ).toMatchObject({ op: 'read-content' });
+  expect(
+    adapter.prepare('list_gdevelop_capabilities', { kind: 'condition', type: 'CollisionNP' }),
+  ).toEqual({ op: 'catalogue', kind: 'condition', type: 'CollisionNP' });
+  for (const input of [
+    { limit: 51 },
+    { offset: -1 },
+    { scene: 'Play' },
+    { section: 'events' },
+    { scene: 'Play', section: 'resources' },
+    { section: 'code' },
+    { extra: true },
+  ])
+    expect(() => adapter.prepare('inspect_gdevelop', input)).toThrow();
+  for (const input of [
+    { path: 'layouts' },
+    { path: '/bad~2' },
+    { path: '', limit: 8001 },
+    { path: '', expectedFingerprint: 'bad' },
+  ])
+    expect(() => adapter.prepare('read_gdevelop_content', input)).toThrow();
+  for (const input of [
+    { kind: 'script' },
+    { kind: 'action', type: 'Delete', query: 'delete' },
+    { kind: 'action', query: ' ' },
+    { kind: 'object', code: 'x' },
+  ])
+    expect(() => adapter.prepare('list_gdevelop_capabilities', input)).toThrow();
 });

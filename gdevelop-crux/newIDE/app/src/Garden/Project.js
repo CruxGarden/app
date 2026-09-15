@@ -3,6 +3,7 @@ import * as React from 'react';
 import { t } from '@lingui/macro';
 import { exportProject, importProject } from './ProjectArchive';
 import { serializeToJSObject } from '../Utils/Serializer';
+import { inspectGame, readGameContent, gameCatalogue } from '../../../../garden/inspection.mjs';
 import { validateNativeDocument } from '../../../../garden/model.mjs';
 import { putFile, getBrowserSWPreviewBaseUrl, getBrowserSWPreviewRootUrl } from '../ExportAndShare/BrowserExporters/BrowserSWPreviewLauncher/BrowserSWPreviewIndexedDB';
 import { browserHTML5ExportPipeline as exportPipeline } from '../ExportAndShare/BrowserExporters/BrowserHTML5Export';
@@ -99,13 +100,11 @@ export function useGardenProject(project, changes) {
       saved: () => nativeChanges?.sealUnsavedChanges(),
       command: async command => {
         if (!currentProject) throw new Error('Open a game before using its tools.');
-        if (command.op === 'inspect') return {
-          name: currentProject.getName(),
-          scenes: Array.from({ length: Math.min(100, currentProject.getLayoutsCount()) }, (_, i) => {
-            const scene = currentProject.getLayoutAt(i);
-            return { name: scene.getName(), objects: scene.getObjectsCount(), events: scene.getEvents().getEventsCount() };
-          }),
-        };
+        if (command.op === 'inspect' || command.op === 'read-content') {
+          const document = serializeToJSObject(currentProject, 'serializeTo', { canonicalEventSerialization: true });
+          return command.op === 'inspect' ? inspectGame(document, command) : readGameContent(document, command);
+        }
+        if (command.op === 'catalogue') return gameCatalogue(gd, currentProject.getCurrentPlatform(), command);
         if (command.op === 'set-name' && typeof command.name === 'string' && command.name.trim() && command.name.length <= 200) {
           currentProject.setName(command.name.trim());
           nativeChanges.triggerUnsavedChanges();
