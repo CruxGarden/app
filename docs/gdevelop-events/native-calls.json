@@ -1,0 +1,349 @@
+[
+  {
+    "name": "inspect_gdevelop_events",
+    "id": "mock-1789486574027",
+    "input": {
+      "scene": "Scene"
+    },
+    "result": "{\"scene\":\"Scene\",\"path\":[],\"section\":\"events\",\"total\":0,\"offset\":0,\"nextOffset\":null,\"items\":[],\"note\":\"Paths expire after any edit. Reinspect before changing events. Instruction parameters are native expression strings; metadata checks do not prove their runtime meaning. Preview the game to verify behavior.\",\"expectedState\":\"000b6b207e189dd1f020171b9545243e805574bb314667d90ccc09c67463e32a\",\"canUndo\":false,\"canRedo\":false}"
+  },
+  {
+    "name": "edit_gdevelop_event",
+    "id": "mock-1789486574069",
+    "input": {
+      "scene": "Scene",
+      "expectedState": "000b6b207e189dd1f020171b9545243e805574bb314667d90ccc09c67463e32a",
+      "action": "insert",
+      "parent": [],
+      "index": 0,
+      "kind": "comment",
+      "text": "Movement notes"
+    },
+    "result": "{\"scene\":\"Scene\",\"changed\":\"insert\",\"canUndo\":true,\"canRedo\":false,\"note\":\"Saved through native event history. Reinspect paths before another edit. Preview to verify the meaning of expressions.\"}"
+  },
+  {
+    "name": "inspect_gdevelop_events",
+    "id": "mock-1789486577545",
+    "input": {
+      "scene": "Scene"
+    },
+    "result": "{\"scene\":\"Scene\",\"path\":[],\"section\":\"events\",\"total\":1,\"offset\":0,\"nextOffset\":null,\"items\":[{\"path\":[0],\"type\":\"BuiltinCommonInstructions::Comment\",\"disabled\":false,\"canHaveSubEvents\":false,\"children\":0,\"conditions\":null,\"actions\":null,\"text\":\"Movement notes\",\"textTruncated\":false}],\"note\":\"Paths expire after any edit. Reinspect before changing events. Instruction parameters are native expression strings; metadata checks do not prove their runtime meaning. Preview the game to verify behavior.\",\"expectedState\":\"75f5df5cd51637655e64a14248fea70679a1e72077aa84dbbde454847a9152a3\",\"canUndo\":true,\"canRedo\":false}"
+  },
+  {
+    "name": "edit_gdevelop_event",
+    "id": "mock-1789486582228",
+    "input": {
+      "scene": "Scene",
+      "expectedState": "75f5df5cd51637655e64a14248fea70679a1e72077aa84dbbde454847a9152a3",
+      "action": "update",
+      "eventPath": [0],
+      "text": "This must not overwrite the person"
+    },
+    "result": "Error in edit_gdevelop_event: Events or the project changed since inspection or while saving. Inspect again before retrying.. Check the input parameters and try again."
+  },
+  {
+    "name": "inspect_gdevelop_events",
+    "id": "mock-1789486582889",
+    "input": {
+      "scene": "Scene"
+    },
+    "result": "{\"scene\":\"Scene\",\"path\":[],\"section\":\"events\",\"total\":1,\"offset\":0,\"nextOffset\":null,\"items\":[{\"path\":[0],\"type\":\"BuiltinCommonInstructions::Comment\",\"disabled\":false,\"canHaveSubEvents\":false,\"children\":0,\"conditions\":null,\"actions\":null,\"text\":\"Person: keep keyboard movement\",\"textTruncated\":false}],\"note\":\"Paths expire after any edit. Reinspect before changing events. Instruction parameters are native expression strings; metadata checks do not prove their runtime meaning. Preview the game to verify behavior.\",\"expectedState\":\"d1849de63e5563a9a8b37de87af1f91d87e2d3f41e7cea9c50f59d70865f88cb\",\"canUndo\":true,\"canRedo\":false}"
+  },
+  {
+    "name": "edit_gdevelop_event",
+    "id": "mock-1789486582940",
+    "input": {
+      "scene": "Scene",
+      "expectedState": "d1849de63e5563a9a8b37de87af1f91d87e2d3f41e7cea9c50f59d70865f88cb",
+      "action": "insert",
+      "parent": [],
+      "index": 1,
+      "kind": "group",
+      "text": "Movement rules"
+    },
+    "result": "{\"scene\":\"Scene\",\"changed\":\"insert\",\"canUndo\":true,\"canRedo\":false,\"note\":\"Saved through native event history. Reinspect paths before another edit. Preview to verify the meaning of expressions.\"}"
+  },
+  {
+    "name": "inspect_gdevelop_events",
+    "id": "mock-1789486586976",
+    "input": {
+      "scene": "Scene"
+    },
+    "result": "{\"scene\":\"Scene\",\"path\":[],\"section\":\"events\",\"total\":2,\"offset\":0,\"nextOffset\":null,\"items\":[{\"path\":[0],\"type\":\"BuiltinCommonInstructions::Comment\",\"disabled\":false,\"canHaveSubEvents\":false,\"children\":0,\"conditions\":null,\"actions\":null,\"text\":\"Person: keep keyboard movement\",\"textTruncated\":false},{\"path\":[1],\"type\":\"BuiltinCommonInstructions::Group\",\"disabled\":false,\"canHaveSubEvents\":true,\"children\":0,\"conditions\":null,\"actions\":null,\"text\":\"Movement rules\",\"textTruncated\":false}],\"note\":\"Paths expire after any edit. Reinspect before changing events. Instruction parameters are native expression strings; metadata checks do not prove their runtime meaning. Preview the game to verify behavior.\",\"expectedState\":\"f30a438e5701cc54c0c36542d6f8710b51e3a58c6fdafb9c88417a33505d35f9\",\"canUndo\":true,\"canRedo\":false}"
+  },
+  {
+    "name": "edit_gdevelop_event",
+    "id": "mock-1789486587025",
+    "input": {
+      "scene": "Scene",
+      "expectedState": "f30a438e5701cc54c0c36542d6f8710b51e3a58c6fdafb9c88417a33505d35f9",
+      "action": "insert",
+      "parent": [1],
+      "index": 0,
+      "kind": "standard",
+      "disabled": true
+    },
+    "result": "{\"scene\":\"Scene\",\"changed\":\"insert\",\"canUndo\":true,\"canRedo\":false,\"note\":\"Saved through native event history. Reinspect paths before another edit. Preview to verify the meaning of expressions.\"}"
+  },
+  {
+    "name": "inspect_gdevelop_events",
+    "id": "mock-1789486590157",
+    "input": {
+      "scene": "Scene"
+    },
+    "result": "{\"scene\":\"Scene\",\"path\":[],\"section\":\"events\",\"total\":2,\"offset\":0,\"nextOffset\":null,\"items\":[{\"path\":[0],\"type\":\"BuiltinCommonInstructions::Comment\",\"disabled\":false,\"canHaveSubEvents\":false,\"children\":0,\"conditions\":null,\"actions\":null,\"text\":\"Person: keep keyboard movement\",\"textTruncated\":false},{\"path\":[1],\"type\":\"BuiltinCommonInstructions::Group\",\"disabled\":false,\"canHaveSubEvents\":true,\"children\":1,\"conditions\":null,\"actions\":null,\"text\":\"Movement rules\",\"textTruncated\":false}],\"note\":\"Paths expire after any edit. Reinspect before changing events. Instruction parameters are native expression strings; metadata checks do not prove their runtime meaning. Preview the game to verify behavior.\",\"expectedState\":\"8469ce88466ba1152a25c461c3f65fea013fe240477498d4b8656017ab8b8770\",\"canUndo\":true,\"canRedo\":false}"
+  },
+  {
+    "name": "edit_gdevelop_instruction",
+    "id": "mock-1789486590189",
+    "input": {
+      "scene": "Scene",
+      "expectedState": "8469ce88466ba1152a25c461c3f65fea013fe240477498d4b8656017ab8b8770",
+      "eventPath": [1, 0],
+      "list": "conditions",
+      "instructionPath": [0],
+      "action": "insert",
+      "instruction": {
+        "type": "DepartScene",
+        "parameters": [""],
+        "inverted": false
+      }
+    },
+    "result": "{\"scene\":\"Scene\",\"changed\":\"insert\",\"canUndo\":true,\"canRedo\":false,\"note\":\"Saved through native event history. Reinspect paths before another edit. Preview to verify the meaning of expressions.\"}"
+  },
+  {
+    "name": "inspect_gdevelop_events",
+    "id": "mock-1789486593346",
+    "input": {
+      "scene": "Scene"
+    },
+    "result": "{\"scene\":\"Scene\",\"path\":[],\"section\":\"events\",\"total\":2,\"offset\":0,\"nextOffset\":null,\"items\":[{\"path\":[0],\"type\":\"BuiltinCommonInstructions::Comment\",\"disabled\":false,\"canHaveSubEvents\":false,\"children\":0,\"conditions\":null,\"actions\":null,\"text\":\"Person: keep keyboard movement\",\"textTruncated\":false},{\"path\":[1],\"type\":\"BuiltinCommonInstructions::Group\",\"disabled\":false,\"canHaveSubEvents\":true,\"children\":1,\"conditions\":null,\"actions\":null,\"text\":\"Movement rules\",\"textTruncated\":false}],\"note\":\"Paths expire after any edit. Reinspect before changing events. Instruction parameters are native expression strings; metadata checks do not prove their runtime meaning. Preview the game to verify behavior.\",\"expectedState\":\"0f48591a4f3c3f6b0dc3596dacd28db47e6b0809557505a7d7d2bcd551125f24\",\"canUndo\":true,\"canRedo\":false}"
+  },
+  {
+    "name": "edit_gdevelop_instruction",
+    "id": "mock-1789486593387",
+    "input": {
+      "scene": "Scene",
+      "expectedState": "0f48591a4f3c3f6b0dc3596dacd28db47e6b0809557505a7d7d2bcd551125f24",
+      "eventPath": [1, 0],
+      "list": "conditions",
+      "instructionPath": [0],
+      "action": "update",
+      "instruction": {
+        "type": "DepartScene",
+        "parameters": [""],
+        "inverted": true
+      }
+    },
+    "result": "{\"scene\":\"Scene\",\"changed\":\"update\",\"canUndo\":true,\"canRedo\":false,\"note\":\"Saved through native event history. Reinspect paths before another edit. Preview to verify the meaning of expressions.\"}"
+  },
+  {
+    "name": "inspect_gdevelop_events",
+    "id": "mock-1789486596615",
+    "input": {
+      "scene": "Scene"
+    },
+    "result": "{\"scene\":\"Scene\",\"path\":[],\"section\":\"events\",\"total\":2,\"offset\":0,\"nextOffset\":null,\"items\":[{\"path\":[0],\"type\":\"BuiltinCommonInstructions::Comment\",\"disabled\":false,\"canHaveSubEvents\":false,\"children\":0,\"conditions\":null,\"actions\":null,\"text\":\"Person: keep keyboard movement\",\"textTruncated\":false},{\"path\":[1],\"type\":\"BuiltinCommonInstructions::Group\",\"disabled\":false,\"canHaveSubEvents\":true,\"children\":1,\"conditions\":null,\"actions\":null,\"text\":\"Movement rules\",\"textTruncated\":false}],\"note\":\"Paths expire after any edit. Reinspect before changing events. Instruction parameters are native expression strings; metadata checks do not prove their runtime meaning. Preview the game to verify behavior.\",\"expectedState\":\"0275ddc6e6efff3683a488bc91dd37e42c6fb17d05058d4d0eea5a7364b7e013\",\"canUndo\":true,\"canRedo\":false}"
+  },
+  {
+    "name": "edit_gdevelop_event",
+    "id": "mock-1789486596649",
+    "input": {
+      "scene": "Scene",
+      "expectedState": "0275ddc6e6efff3683a488bc91dd37e42c6fb17d05058d4d0eea5a7364b7e013",
+      "action": "duplicate",
+      "eventPath": [1, 0],
+      "parent": [1],
+      "index": 1
+    },
+    "result": "{\"scene\":\"Scene\",\"changed\":\"duplicate\",\"canUndo\":true,\"canRedo\":false,\"note\":\"Saved through native event history. Reinspect paths before another edit. Preview to verify the meaning of expressions.\"}"
+  },
+  {
+    "name": "inspect_gdevelop_events",
+    "id": "mock-1789486600938",
+    "input": {
+      "scene": "Scene"
+    },
+    "result": "{\"scene\":\"Scene\",\"path\":[],\"section\":\"events\",\"total\":2,\"offset\":0,\"nextOffset\":null,\"items\":[{\"path\":[0],\"type\":\"BuiltinCommonInstructions::Comment\",\"disabled\":false,\"canHaveSubEvents\":false,\"children\":0,\"conditions\":null,\"actions\":null,\"text\":\"Person: keep keyboard movement\",\"textTruncated\":false},{\"path\":[1],\"type\":\"BuiltinCommonInstructions::Group\",\"disabled\":false,\"canHaveSubEvents\":true,\"children\":2,\"conditions\":null,\"actions\":null,\"text\":\"Movement rules\",\"textTruncated\":false}],\"note\":\"Paths expire after any edit. Reinspect before changing events. Instruction parameters are native expression strings; metadata checks do not prove their runtime meaning. Preview the game to verify behavior.\",\"expectedState\":\"8bdd6b3d732e0e74ad5c1ea5802662b9975caa49f003eda3e6c5a7b6c15387c6\",\"canUndo\":true,\"canRedo\":false}"
+  },
+  {
+    "name": "edit_gdevelop_event",
+    "id": "mock-1789486600994",
+    "input": {
+      "scene": "Scene",
+      "expectedState": "8bdd6b3d732e0e74ad5c1ea5802662b9975caa49f003eda3e6c5a7b6c15387c6",
+      "action": "move",
+      "eventPath": [1, 1],
+      "parent": [],
+      "index": 2
+    },
+    "result": "{\"scene\":\"Scene\",\"changed\":\"move\",\"canUndo\":true,\"canRedo\":false,\"note\":\"Saved through native event history. Reinspect paths before another edit. Preview to verify the meaning of expressions.\"}"
+  },
+  {
+    "name": "inspect_gdevelop_events",
+    "id": "mock-1789486604327",
+    "input": {
+      "scene": "Scene"
+    },
+    "result": "{\"scene\":\"Scene\",\"path\":[],\"section\":\"events\",\"total\":3,\"offset\":0,\"nextOffset\":null,\"items\":[{\"path\":[0],\"type\":\"BuiltinCommonInstructions::Comment\",\"disabled\":false,\"canHaveSubEvents\":false,\"children\":0,\"conditions\":null,\"actions\":null,\"text\":\"Person: keep keyboard movement\",\"textTruncated\":false},{\"path\":[1],\"type\":\"BuiltinCommonInstructions::Group\",\"disabled\":false,\"canHaveSubEvents\":true,\"children\":1,\"conditions\":null,\"actions\":null,\"text\":\"Movement rules\",\"textTruncated\":false},{\"path\":[2],\"type\":\"BuiltinCommonInstructions::Standard\",\"disabled\":true,\"canHaveSubEvents\":true,\"children\":0,\"conditions\":1,\"actions\":0,\"textTruncated\":false}],\"note\":\"Paths expire after any edit. Reinspect before changing events. Instruction parameters are native expression strings; metadata checks do not prove their runtime meaning. Preview the game to verify behavior.\",\"expectedState\":\"fc6d16b1e3b22b08ffe69367179959b2c657c21b0de171e42b1679e6354b2b93\",\"canUndo\":true,\"canRedo\":false}"
+  },
+  {
+    "name": "edit_gdevelop_event",
+    "id": "mock-1789486604368",
+    "input": {
+      "scene": "Scene",
+      "expectedState": "fc6d16b1e3b22b08ffe69367179959b2c657c21b0de171e42b1679e6354b2b93",
+      "action": "remove",
+      "eventPath": [2]
+    },
+    "result": "{\"scene\":\"Scene\",\"changed\":\"remove\",\"canUndo\":true,\"canRedo\":false,\"note\":\"Saved through native event history. Reinspect paths before another edit. Preview to verify the meaning of expressions.\"}"
+  },
+  {
+    "name": "inspect_gdevelop_events",
+    "id": "mock-1789486610469",
+    "input": {
+      "scene": "Scene"
+    },
+    "result": "{\"scene\":\"Scene\",\"path\":[],\"section\":\"events\",\"total\":3,\"offset\":0,\"nextOffset\":null,\"items\":[{\"path\":[0],\"type\":\"BuiltinCommonInstructions::Comment\",\"disabled\":false,\"canHaveSubEvents\":false,\"children\":0,\"conditions\":null,\"actions\":null,\"text\":\"Person: keep keyboard movement\",\"textTruncated\":false},{\"path\":[1],\"type\":\"BuiltinCommonInstructions::Group\",\"disabled\":false,\"canHaveSubEvents\":true,\"children\":1,\"conditions\":null,\"actions\":null,\"text\":\"Movement rules\",\"textTruncated\":false},{\"path\":[2],\"type\":\"BuiltinCommonInstructions::Standard\",\"disabled\":true,\"canHaveSubEvents\":true,\"children\":0,\"conditions\":1,\"actions\":0,\"textTruncated\":false}],\"note\":\"Paths expire after any edit. Reinspect before changing events. Instruction parameters are native expression strings; metadata checks do not prove their runtime meaning. Preview the game to verify behavior.\",\"expectedState\":\"df93114a4e8e771784c0d52ac76a736ae95a9e89ecf46e70241de195570d64bc\",\"canUndo\":true,\"canRedo\":true}"
+  },
+  {
+    "name": "gdevelop_event_history",
+    "id": "mock-1789486610509",
+    "input": {
+      "scene": "Scene",
+      "expectedState": "df93114a4e8e771784c0d52ac76a736ae95a9e89ecf46e70241de195570d64bc",
+      "direction": "redo"
+    },
+    "result": "{\"scene\":\"Scene\",\"changed\":\"redo\",\"canUndo\":true,\"canRedo\":false,\"note\":\"Saved through native event history. Reinspect paths before another edit. Preview to verify the meaning of expressions.\"}"
+  },
+  {
+    "name": "inspect_gdevelop_events",
+    "id": "mock-1789486613773",
+    "input": {
+      "scene": "Scene"
+    },
+    "result": "{\"scene\":\"Scene\",\"path\":[],\"section\":\"events\",\"total\":2,\"offset\":0,\"nextOffset\":null,\"items\":[{\"path\":[0],\"type\":\"BuiltinCommonInstructions::Comment\",\"disabled\":false,\"canHaveSubEvents\":false,\"children\":0,\"conditions\":null,\"actions\":null,\"text\":\"Person: keep keyboard movement\",\"textTruncated\":false},{\"path\":[1],\"type\":\"BuiltinCommonInstructions::Group\",\"disabled\":false,\"canHaveSubEvents\":true,\"children\":1,\"conditions\":null,\"actions\":null,\"text\":\"Movement rules\",\"textTruncated\":false}],\"note\":\"Paths expire after any edit. Reinspect before changing events. Instruction parameters are native expression strings; metadata checks do not prove their runtime meaning. Preview the game to verify behavior.\",\"expectedState\":\"e023b5c888c507880207361527d1b618584a3f80b8f9c7c4409c44e186103484\",\"canUndo\":true,\"canRedo\":false}"
+  },
+  {
+    "name": "edit_gdevelop_instruction",
+    "id": "mock-1789486613818",
+    "input": {
+      "scene": "Scene",
+      "expectedState": "e023b5c888c507880207361527d1b618584a3f80b8f9c7c4409c44e186103484",
+      "eventPath": [1, 0],
+      "list": "conditions",
+      "instructionPath": [0],
+      "action": "remove"
+    },
+    "result": "{\"scene\":\"Scene\",\"changed\":\"remove\",\"canUndo\":true,\"canRedo\":false,\"note\":\"Saved through native event history. Reinspect paths before another edit. Preview to verify the meaning of expressions.\"}"
+  },
+  {
+    "name": "inspect_gdevelop_events",
+    "id": "mock-1789486617080",
+    "input": {
+      "scene": "Scene"
+    },
+    "result": "{\"scene\":\"Scene\",\"path\":[],\"section\":\"events\",\"total\":2,\"offset\":0,\"nextOffset\":null,\"items\":[{\"path\":[0],\"type\":\"BuiltinCommonInstructions::Comment\",\"disabled\":false,\"canHaveSubEvents\":false,\"children\":0,\"conditions\":null,\"actions\":null,\"text\":\"Person: keep keyboard movement\",\"textTruncated\":false},{\"path\":[1],\"type\":\"BuiltinCommonInstructions::Group\",\"disabled\":false,\"canHaveSubEvents\":true,\"children\":1,\"conditions\":null,\"actions\":null,\"text\":\"Movement rules\",\"textTruncated\":false}],\"note\":\"Paths expire after any edit. Reinspect before changing events. Instruction parameters are native expression strings; metadata checks do not prove their runtime meaning. Preview the game to verify behavior.\",\"expectedState\":\"a94276405891a635ad5706a66378fd6760d9e7e6b3df3a161249484be586528c\",\"canUndo\":true,\"canRedo\":false}"
+  },
+  {
+    "name": "gdevelop_event_history",
+    "id": "mock-1789486617126",
+    "input": {
+      "scene": "Scene",
+      "expectedState": "a94276405891a635ad5706a66378fd6760d9e7e6b3df3a161249484be586528c",
+      "direction": "undo"
+    },
+    "result": "{\"scene\":\"Scene\",\"changed\":\"undo\",\"canUndo\":true,\"canRedo\":true,\"note\":\"Saved through native event history. Reinspect paths before another edit. Preview to verify the meaning of expressions.\"}"
+  },
+  {
+    "name": "inspect_gdevelop_events",
+    "id": "mock-1789486620597",
+    "input": {
+      "scene": "Scene"
+    },
+    "result": "{\"scene\":\"Scene\",\"path\":[],\"section\":\"events\",\"total\":2,\"offset\":0,\"nextOffset\":null,\"items\":[{\"path\":[0],\"type\":\"BuiltinCommonInstructions::Comment\",\"disabled\":false,\"canHaveSubEvents\":false,\"children\":0,\"conditions\":null,\"actions\":null,\"text\":\"Person: keep keyboard movement\",\"textTruncated\":false},{\"path\":[1],\"type\":\"BuiltinCommonInstructions::Group\",\"disabled\":false,\"canHaveSubEvents\":true,\"children\":1,\"conditions\":null,\"actions\":null,\"text\":\"Movement rules\",\"textTruncated\":false}],\"note\":\"Paths expire after any edit. Reinspect before changing events. Instruction parameters are native expression strings; metadata checks do not prove their runtime meaning. Preview the game to verify behavior.\",\"expectedState\":\"189bc316046c007550c61b9d14b4cb797dfdfacce60d648d83a3bf0f2bc21d22\",\"canUndo\":true,\"canRedo\":true}"
+  },
+  {
+    "name": "edit_gdevelop_event",
+    "id": "mock-1789486620633",
+    "input": {
+      "scene": "Scene",
+      "expectedState": "189bc316046c007550c61b9d14b4cb797dfdfacce60d648d83a3bf0f2bc21d22",
+      "action": "update",
+      "eventPath": [1],
+      "text": "Revised movement rules"
+    },
+    "result": "{\"scene\":\"Scene\",\"changed\":\"update\",\"canUndo\":true,\"canRedo\":false,\"note\":\"Saved through native event history. Reinspect paths before another edit. Preview to verify the meaning of expressions.\"}"
+  },
+  {
+    "name": "inspect_gdevelop_events",
+    "id": "mock-1789486624889",
+    "input": {
+      "scene": "Scene"
+    },
+    "result": "{\"scene\":\"Scene\",\"path\":[],\"section\":\"events\",\"total\":2,\"offset\":0,\"nextOffset\":null,\"items\":[{\"path\":[0],\"type\":\"BuiltinCommonInstructions::Comment\",\"disabled\":false,\"canHaveSubEvents\":false,\"children\":0,\"conditions\":null,\"actions\":null,\"text\":\"Person: keep keyboard movement\",\"textTruncated\":false},{\"path\":[1],\"type\":\"BuiltinCommonInstructions::Group\",\"disabled\":false,\"canHaveSubEvents\":true,\"children\":1,\"conditions\":null,\"actions\":null,\"text\":\"Revised movement rules\",\"textTruncated\":false}],\"note\":\"Paths expire after any edit. Reinspect before changing events. Instruction parameters are native expression strings; metadata checks do not prove their runtime meaning. Preview the game to verify behavior.\",\"expectedState\":\"79ddc545549ed5b85d5e2231515a9c05171f366f592a715cd656389d06f50bed\",\"canUndo\":true,\"canRedo\":false}"
+  },
+  {
+    "name": "edit_gdevelop_instruction",
+    "id": "mock-1789486624945",
+    "input": {
+      "scene": "Scene",
+      "expectedState": "79ddc545549ed5b85d5e2231515a9c05171f366f592a715cd656389d06f50bed",
+      "eventPath": [1, 0],
+      "list": "conditions",
+      "instructionPath": [0],
+      "action": "update",
+      "instruction": {
+        "type": "DepartScene",
+        "parameters": [""],
+        "inverted": false
+      }
+    },
+    "result": "{\"scene\":\"Scene\",\"changed\":\"update\",\"canUndo\":true,\"canRedo\":false,\"note\":\"Saved through native event history. Reinspect paths before another edit. Preview to verify the meaning of expressions.\"}"
+  },
+  {
+    "name": "inspect_gdevelop_events",
+    "id": "mock-1789486628279",
+    "input": {
+      "scene": "Scene"
+    },
+    "result": "{\"scene\":\"Scene\",\"path\":[],\"section\":\"events\",\"total\":2,\"offset\":0,\"nextOffset\":null,\"items\":[{\"path\":[0],\"type\":\"BuiltinCommonInstructions::Comment\",\"disabled\":false,\"canHaveSubEvents\":false,\"children\":0,\"conditions\":null,\"actions\":null,\"text\":\"Person: keep keyboard movement\",\"textTruncated\":false},{\"path\":[1],\"type\":\"BuiltinCommonInstructions::Group\",\"disabled\":false,\"canHaveSubEvents\":true,\"children\":1,\"conditions\":null,\"actions\":null,\"text\":\"Revised movement rules\",\"textTruncated\":false}],\"note\":\"Paths expire after any edit. Reinspect before changing events. Instruction parameters are native expression strings; metadata checks do not prove their runtime meaning. Preview the game to verify behavior.\",\"expectedState\":\"66e44f11bd0a62285f90bbe56623578253a5032b9bb92bbf9e5f8d9180a4b481\",\"canUndo\":true,\"canRedo\":false}"
+  },
+  {
+    "name": "edit_gdevelop_instruction",
+    "id": "mock-1789486628317",
+    "input": {
+      "scene": "Scene",
+      "expectedState": "66e44f11bd0a62285f90bbe56623578253a5032b9bb92bbf9e5f8d9180a4b481",
+      "eventPath": [1, 0],
+      "list": "actions",
+      "instructionPath": [0],
+      "action": "insert",
+      "instruction": {
+        "type": "MettreX",
+        "parameters": ["NewSprite", "=", "123"]
+      }
+    },
+    "result": "{\"scene\":\"Scene\",\"changed\":\"insert\",\"canUndo\":true,\"canRedo\":false,\"note\":\"Saved through native event history. Reinspect paths before another edit. Preview to verify the meaning of expressions.\"}"
+  },
+  {
+    "name": "inspect_gdevelop_events",
+    "id": "mock-1789486632598",
+    "input": {
+      "scene": "Scene"
+    },
+    "result": "{\"scene\":\"Scene\",\"path\":[],\"section\":\"events\",\"total\":2,\"offset\":0,\"nextOffset\":null,\"items\":[{\"path\":[0],\"type\":\"BuiltinCommonInstructions::Comment\",\"disabled\":false,\"canHaveSubEvents\":false,\"children\":0,\"conditions\":null,\"actions\":null,\"text\":\"Person: keep keyboard movement\",\"textTruncated\":false},{\"path\":[1],\"type\":\"BuiltinCommonInstructions::Group\",\"disabled\":false,\"canHaveSubEvents\":true,\"children\":1,\"conditions\":null,\"actions\":null,\"text\":\"Revised movement rules\",\"textTruncated\":false}],\"note\":\"Paths expire after any edit. Reinspect before changing events. Instruction parameters are native expression strings; metadata checks do not prove their runtime meaning. Preview the game to verify behavior.\",\"expectedState\":\"76dd6b66e33f1a0a85817fc89c4ddaf3ef2c8bb9b1adc9c8d66b7f33c20a72dd\",\"canUndo\":true,\"canRedo\":false}"
+  },
+  {
+    "name": "edit_gdevelop_event",
+    "id": "mock-1789486632637",
+    "input": {
+      "scene": "Scene",
+      "expectedState": "76dd6b66e33f1a0a85817fc89c4ddaf3ef2c8bb9b1adc9c8d66b7f33c20a72dd",
+      "action": "update",
+      "eventPath": [1, 0],
+      "disabled": false
+    },
+    "result": "{\"scene\":\"Scene\",\"changed\":\"update\",\"canUndo\":true,\"canRedo\":false,\"note\":\"Saved through native event history. Reinspect paths before another edit. Preview to verify the meaning of expressions.\"}"
+  }
+]

@@ -182,7 +182,7 @@ test('GDevelop native game editing, local preview, agent changes and portable re
     await expect(f.locator('#instance-properties-editor input').first()).toHaveValue('123');
     const edited = JSON.stringify(game().layouts[0].instances);
     await page.screenshot({ path: join(dir, stage + '-edited.png'), animations: 'disabled' });
-    await f.getByRole('button', { name: 'Undo the last changes', exact: true }).click();
+    await f.getByRole('button', { name: /^Undo the last changes/ }).click();
     await save(f);
     await expect.poll(() => JSON.stringify(game().layouts[0].instances)).toBe(manual);
     await f.getByRole('button', { name: 'Redo the last changes', exact: true }).click();
@@ -254,7 +254,7 @@ test('GDevelop native game editing, local preview, agent changes and portable re
     };
     await run('inspect');
     // The person changes the real behavior form after the collaborator's inspection.
-    await f.getByText('NewSprite', { exact: true }).last().dblclick();
+    await f.locator('#objects-list').getByText('NewSprite', { exact: true }).dblclick();
     await f.getByText('Behaviors', { exact: true }).last().click();
     const acceleration = f.getByRole('dialog').locator('input#Acceleration');
     const manualAcceleration = stage === 'native' ? 555 : 666;
@@ -287,7 +287,7 @@ test('GDevelop native game editing, local preview, agent changes and portable re
     );
     expect(doc().project[mediaKey]).toEqual(mediaRef);
     // Reopen native settings to verify the same values remain directly editable.
-    await f.getByText('NewSprite', { exact: true }).last().dblclick();
+    await f.locator('#objects-list').getByText('NewSprite', { exact: true }).dblclick();
     await f.getByText('Behaviors', { exact: true }).last().click();
     await expect(acceleration).toHaveValue(String(manualAcceleration));
     await expect(f.getByRole('dialog').locator('input#MaxSpeed')).toHaveValue('420');
@@ -296,8 +296,100 @@ test('GDevelop native game editing, local preview, agent changes and portable re
     await save(f);
     writeFileSync(join(dir, stage + '-calls.json'), JSON.stringify(evidenceCalls, null, 2));
   };
+  const editEventsThroughTools = async (page: Page, f: FrameLocator, stage: string) => {
+    const dir = resolve(__dirname, '../../docs/gdevelop-events');
+    mkdirSync(dir, { recursive: true });
+    const evidenceCalls: unknown[] = [];
+    const events = () => game().layouts[0].events;
+    const manualText =
+      stage === 'native'
+        ? 'Person: keep keyboard movement'
+        : 'Person: imported rules still editable';
+    if (stage === 'portable') {
+      expect(events()[0].comment).toBe('Person: keep keyboard movement');
+      expect(events()[1].events[0].conditions[0].type.inverted).toBe(false);
+      expect(events()[1].events[0].actions[0].parameters).toEqual(['NewSprite', '=', '123']);
+    }
+    await f.getByText('Scene (Events)', { exact: true }).click();
+    const id = (await page.locator('[data-workspace-id]').getAttribute('data-workspace-id'))!;
+    const run = async (action: string, stale = false) => {
+      const previous = new Set((await storedCrux(page, id)).messages.map((m: any) => m.timestamp));
+      const chat = page.getByPlaceholder('Send a message...');
+      await chat.fill(`Revise the game rules [gdevelop:event-${action}]`);
+      await chat.press('Enter');
+      const done = 'GDevelop event ' + action + ' complete.';
+      await expect
+        .poll(
+          async () =>
+            (await storedCrux(page, id)).messages.some(
+              (m: any) => !previous.has(m.timestamp) && m.content === done,
+            ),
+          { timeout: 60000 },
+        )
+        .toBe(true);
+      const calls = (await storedCrux(page, id)).messages
+        .filter((m: any) => !previous.has(m.timestamp) && m.content === done)
+        .flatMap((m: any) => m.toolCalls || []);
+      evidenceCalls.push(...calls);
+      const errors = calls.filter((c: any) => c.result?.startsWith('Error'));
+      if (stale) {
+        expect(errors).toHaveLength(1);
+        expect(errors[0].result).toContain('changed since inspection');
+      } else expect(errors).toEqual([]);
+    };
+    if (stage === 'native') await run('comment');
+    await run('inspect');
+    await f
+      .getByText(stage === 'native' ? 'Movement notes' : 'Person: keep keyboard movement', {
+        exact: true,
+      })
+      .click();
+    await f.locator('textarea#comment-title').fill(manualText);
+    await f.locator('textarea#comment-title').press('Tab');
+    await save(f);
+    await expect.poll(() => events()[0].comment).toBe(manualText);
+    const manual = JSON.stringify(game());
+    await run('stale', true);
+    expect(JSON.stringify(game())).toBe(manual);
+    if (stage === 'native') {
+      await run('group');
+      await run('standard');
+      await run('condition');
+    }
+    await run('revise');
+    expect(events()[1].events[0].conditions[0].type.inverted).toBe(true);
+    await run('duplicate');
+    expect(events()[1].events).toHaveLength(2);
+    await run('move');
+    expect(events()).toHaveLength(3);
+    await run('remove');
+    expect(events()).toHaveLength(2);
+    // The native toolbar and tool history operate on the same event history.
+    await f.getByRole('button', { name: /^Undo the last changes/ }).click();
+    await save(f);
+    expect(events()).toHaveLength(3);
+    await run('redo');
+    expect(events()).toHaveLength(2);
+    await run('delete-condition');
+    expect(events()[1].events[0].conditions).toHaveLength(0);
+    await run('undo');
+    expect(events()[1].events[0].conditions[0].type.inverted).toBe(true);
+    await run('rename');
+    await run('start');
+    if (stage === 'native') await run('action');
+    await run('activate');
+    expect(events()[0].comment).toBe(manualText);
+    expect(doc().project[mediaKey]).toEqual(mediaRef);
+    await expect(f.getByText('Revised movement rules', { exact: true })).toBeVisible();
+    await page.screenshot({ path: join(dir, stage + '.png'), animations: 'disabled' });
+    writeFileSync(join(dir, stage + '-calls.json'), JSON.stringify(evidenceCalls, null, 2));
+    await f.getByText('Scene', { exact: true }).first().click();
+  };
   const addInstance = async (f: FrameLocator) => {
-    await f.getByText('NewSprite', { exact: true }).click({ button: 'right' });
+    await f
+      .locator('#objects-list')
+      .getByText('NewSprite', { exact: true })
+      .click({ button: 'right' });
     await f.getByText('Add instance to the scene', { exact: true }).click();
   };
   try {
@@ -338,6 +430,7 @@ test('GDevelop native game editing, local preview, agent changes and portable re
     await inspectThroughTools(page, 'native');
     await editThroughTools(page, f, 'native');
     await editObjectThroughTools(page, f, 'native');
+    await editEventsThroughTools(page, f, 'native');
     await f.locator('#toolbar-preview-button').click();
     await expect(f.frameLocator('#garden-game-preview iframe').locator('canvas')).toBeVisible({
       timeout: 30000,
@@ -358,6 +451,7 @@ test('GDevelop native game editing, local preview, agent changes and portable re
     const beforeX = await running.evaluate(() =>
       (window as any).__observedScene.getObjects('NewSprite')[0].getX(),
     );
+    expect(beforeX).toBe(123);
     await running.locator('canvas').click();
     await page.keyboard.down('ArrowRight');
     await expect
@@ -499,6 +593,7 @@ test('GDevelop native game editing, local preview, agent changes and portable re
     await inspectThroughTools(third.page, 'portable');
     await editThroughTools(third.page, f, 'portable');
     await editObjectThroughTools(third.page, f, 'portable');
+    await editEventsThroughTools(third.page, f, 'portable');
     await addInstance(f);
     await save(f);
     expect(game().layouts[0].instances).toHaveLength(2);

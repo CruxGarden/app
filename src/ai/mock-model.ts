@@ -96,6 +96,77 @@ export function getMockLanguageModel(): LanguageModel {
           }
           return toolCallStream('list_cruxspace_assets', {});
         }
+        const eventAction = lastUserText(prompt).match(/\[gdevelop:event-([a-z-]+)\]/)?.[1];
+        if (eventAction) {
+          const rounds = toolResultsThisTurn(prompt);
+          if (!rounds.length && eventAction !== 'stale')
+            return toolCallStream('inspect_gdevelop_events', { scene: 'Scene' });
+          if (eventAction === 'inspect' || rounds.length >= (eventAction === 'stale' ? 1 : 2))
+            return textStream('GDevelop event ' + eventAction + ' complete.');
+          const raw = toolResultText(prompt, 'inspect_gdevelop_events') || '';
+          const expectedState = /"expectedState":"([a-f0-9]{64})"/.exec(raw)?.[1];
+          if (!expectedState) return textStream('Event inspection unavailable.');
+          const base = { scene: 'Scene', expectedState };
+          if (['undo', 'redo'].includes(eventAction))
+            return toolCallStream('gdevelop_event_history', { ...base, direction: eventAction });
+          const edits: Record<string, Record<string, unknown>> = {
+            comment: {
+              action: 'insert',
+              parent: [],
+              index: 0,
+              kind: 'comment',
+              text: 'Movement notes',
+            },
+            group: {
+              action: 'insert',
+              parent: [],
+              index: 1,
+              kind: 'group',
+              text: 'Movement rules',
+            },
+            standard: { action: 'insert', parent: [1], index: 0, kind: 'standard', disabled: true },
+            stale: { action: 'update', eventPath: [0], text: 'This must not overwrite the person' },
+            duplicate: { action: 'duplicate', eventPath: [1, 0], parent: [1], index: 1 },
+            move: { action: 'move', eventPath: [1, 1], parent: [], index: 2 },
+            remove: { action: 'remove', eventPath: [2] },
+            rename: { action: 'update', eventPath: [1], text: 'Revised movement rules' },
+            activate: { action: 'update', eventPath: [1, 0], disabled: false },
+          };
+          if (edits[eventAction])
+            return toolCallStream('edit_gdevelop_event', { ...base, ...edits[eventAction] });
+          if (eventAction === 'action')
+            return toolCallStream('edit_gdevelop_instruction', {
+              ...base,
+              eventPath: [1, 0],
+              list: 'actions',
+              instructionPath: [0],
+              action: 'insert',
+              instruction: { type: 'MettreX', parameters: ['NewSprite', '=', '123'] },
+            });
+          if (['condition', 'revise', 'start', 'delete-condition'].includes(eventAction))
+            return toolCallStream('edit_gdevelop_instruction', {
+              ...base,
+              eventPath: [1, 0],
+              list: 'conditions',
+              instructionPath: [0],
+              action:
+                eventAction === 'condition'
+                  ? 'insert'
+                  : ['revise', 'start'].includes(eventAction)
+                    ? 'update'
+                    : 'remove',
+              ...(eventAction === 'delete-condition'
+                ? {}
+                : {
+                    instruction: {
+                      type: 'DepartScene',
+                      parameters: [''],
+                      inverted: eventAction === 'revise',
+                    },
+                  }),
+            });
+          return textStream('Unknown event test action.');
+        }
         const objectAction = lastUserText(prompt).match(/\[gdevelop:object-([a-z-]+)\]/)?.[1];
         if (objectAction) {
           const rounds = toolResultsThisTurn(prompt);

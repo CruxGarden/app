@@ -1,9 +1,11 @@
 import type { AppToolDefinition } from '@/services/embedded-app-tool-registry';
 import { GDEVELOP_SCENE_TOOLS, gdevelopSceneCommand } from './gdevelop-scene-tools';
 import { GDEVELOP_OBJECT_TOOLS, gdevelopObjectCommand } from './gdevelop-object-tools';
+import { GDEVELOP_EVENT_TOOLS, gdevelopEventCommand } from './gdevelop-event-tools';
 export const GDEVELOP_TOOLS: AppToolDefinition[] = [
   ...GDEVELOP_SCENE_TOOLS,
   ...GDEVELOP_OBJECT_TOOLS,
+  ...GDEVELOP_EVENT_TOOLS,
   {
     name: 'inspect_gdevelop',
     description:
@@ -230,6 +232,8 @@ const instructions = (value: unknown, allowInverted: boolean) =>
         ),
     ));
 export function gdevelopCommand(name: string, input: Record<string, unknown>) {
+  const eventCommand = gdevelopEventCommand(name, input);
+  if (eventCommand) return eventCommand;
   const objectCommand = gdevelopObjectCommand(name, input);
   if (objectCommand) return objectCommand;
   const sceneCommand = gdevelopSceneCommand(name, input);

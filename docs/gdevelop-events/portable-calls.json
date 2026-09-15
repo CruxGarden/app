@@ -1,0 +1,232 @@
+[
+  {
+    "name": "inspect_gdevelop_events",
+    "id": "mock-1789486839220",
+    "input": {
+      "scene": "Scene"
+    },
+    "result": "{\"scene\":\"Scene\",\"path\":[],\"section\":\"events\",\"total\":2,\"offset\":0,\"nextOffset\":null,\"items\":[{\"path\":[0],\"type\":\"BuiltinCommonInstructions::Comment\",\"disabled\":false,\"canHaveSubEvents\":false,\"children\":0,\"conditions\":null,\"actions\":null,\"text\":\"Person: keep keyboard movement\",\"textTruncated\":false},{\"path\":[1],\"type\":\"BuiltinCommonInstructions::Group\",\"disabled\":false,\"canHaveSubEvents\":true,\"children\":1,\"conditions\":null,\"actions\":null,\"text\":\"Revised movement rules\",\"textTruncated\":false}],\"note\":\"Paths expire after any edit. Reinspect before changing events. Instruction parameters are native expression strings; metadata checks do not prove their runtime meaning. Preview the game to verify behavior.\",\"expectedState\":\"24ade3c33f19faf5014a42a9fa5bf66cfb94cbd6a0b9f6c441f0009ee784b299\",\"canUndo\":false,\"canRedo\":false}"
+  },
+  {
+    "name": "edit_gdevelop_event",
+    "id": "mock-1789486843769",
+    "input": {
+      "scene": "Scene",
+      "expectedState": "24ade3c33f19faf5014a42a9fa5bf66cfb94cbd6a0b9f6c441f0009ee784b299",
+      "action": "update",
+      "eventPath": [0],
+      "text": "This must not overwrite the person"
+    },
+    "result": "Error in edit_gdevelop_event: Events or the project changed since inspection or while saving. Inspect again before retrying.. Check the input parameters and try again."
+  },
+  {
+    "name": "inspect_gdevelop_events",
+    "id": "mock-1789486845046",
+    "input": {
+      "scene": "Scene"
+    },
+    "result": "{\"scene\":\"Scene\",\"path\":[],\"section\":\"events\",\"total\":2,\"offset\":0,\"nextOffset\":null,\"items\":[{\"path\":[0],\"type\":\"BuiltinCommonInstructions::Comment\",\"disabled\":false,\"canHaveSubEvents\":false,\"children\":0,\"conditions\":null,\"actions\":null,\"text\":\"Person: imported rules still editable\",\"textTruncated\":false},{\"path\":[1],\"type\":\"BuiltinCommonInstructions::Group\",\"disabled\":false,\"canHaveSubEvents\":true,\"children\":1,\"conditions\":null,\"actions\":null,\"text\":\"Revised movement rules\",\"textTruncated\":false}],\"note\":\"Paths expire after any edit. Reinspect before changing events. Instruction parameters are native expression strings; metadata checks do not prove their runtime meaning. Preview the game to verify behavior.\",\"expectedState\":\"b1e9d321cca7537aa63da9e3492b4f96242c9a46a73eae119359fb8b3b02264b\",\"canUndo\":true,\"canRedo\":false}"
+  },
+  {
+    "name": "edit_gdevelop_instruction",
+    "id": "mock-1789486845106",
+    "input": {
+      "scene": "Scene",
+      "expectedState": "b1e9d321cca7537aa63da9e3492b4f96242c9a46a73eae119359fb8b3b02264b",
+      "eventPath": [1, 0],
+      "list": "conditions",
+      "instructionPath": [0],
+      "action": "update",
+      "instruction": {
+        "type": "DepartScene",
+        "parameters": [""],
+        "inverted": true
+      }
+    },
+    "result": "{\"scene\":\"Scene\",\"changed\":\"update\",\"canUndo\":true,\"canRedo\":false,\"note\":\"Saved through native event history. Reinspect paths before another edit. Preview to verify the meaning of expressions.\"}"
+  },
+  {
+    "name": "inspect_gdevelop_events",
+    "id": "mock-1789486849304",
+    "input": {
+      "scene": "Scene"
+    },
+    "result": "{\"scene\":\"Scene\",\"path\":[],\"section\":\"events\",\"total\":2,\"offset\":0,\"nextOffset\":null,\"items\":[{\"path\":[0],\"type\":\"BuiltinCommonInstructions::Comment\",\"disabled\":false,\"canHaveSubEvents\":false,\"children\":0,\"conditions\":null,\"actions\":null,\"text\":\"Person: imported rules still editable\",\"textTruncated\":false},{\"path\":[1],\"type\":\"BuiltinCommonInstructions::Group\",\"disabled\":false,\"canHaveSubEvents\":true,\"children\":1,\"conditions\":null,\"actions\":null,\"text\":\"Revised movement rules\",\"textTruncated\":false}],\"note\":\"Paths expire after any edit. Reinspect before changing events. Instruction parameters are native expression strings; metadata checks do not prove their runtime meaning. Preview the game to verify behavior.\",\"expectedState\":\"f2c09aec3183933eca3169ef2799575ec35e646c4215043017e8744b9aaeec8e\",\"canUndo\":true,\"canRedo\":false}"
+  },
+  {
+    "name": "edit_gdevelop_event",
+    "id": "mock-1789486849357",
+    "input": {
+      "scene": "Scene",
+      "expectedState": "f2c09aec3183933eca3169ef2799575ec35e646c4215043017e8744b9aaeec8e",
+      "action": "duplicate",
+      "eventPath": [1, 0],
+      "parent": [1],
+      "index": 1
+    },
+    "result": "{\"scene\":\"Scene\",\"changed\":\"duplicate\",\"canUndo\":true,\"canRedo\":false,\"note\":\"Saved through native event history. Reinspect paths before another edit. Preview to verify the meaning of expressions.\"}"
+  },
+  {
+    "name": "inspect_gdevelop_events",
+    "id": "mock-1789486853462",
+    "input": {
+      "scene": "Scene"
+    },
+    "result": "{\"scene\":\"Scene\",\"path\":[],\"section\":\"events\",\"total\":2,\"offset\":0,\"nextOffset\":null,\"items\":[{\"path\":[0],\"type\":\"BuiltinCommonInstructions::Comment\",\"disabled\":false,\"canHaveSubEvents\":false,\"children\":0,\"conditions\":null,\"actions\":null,\"text\":\"Person: imported rules still editable\",\"textTruncated\":false},{\"path\":[1],\"type\":\"BuiltinCommonInstructions::Group\",\"disabled\":false,\"canHaveSubEvents\":true,\"children\":2,\"conditions\":null,\"actions\":null,\"text\":\"Revised movement rules\",\"textTruncated\":false}],\"note\":\"Paths expire after any edit. Reinspect before changing events. Instruction parameters are native expression strings; metadata checks do not prove their runtime meaning. Preview the game to verify behavior.\",\"expectedState\":\"eb40d17ac0f4cba06a4b73f9a156abcbf0401f943b26cecf291b1fec3a64bffa\",\"canUndo\":true,\"canRedo\":false}"
+  },
+  {
+    "name": "edit_gdevelop_event",
+    "id": "mock-1789486853515",
+    "input": {
+      "scene": "Scene",
+      "expectedState": "eb40d17ac0f4cba06a4b73f9a156abcbf0401f943b26cecf291b1fec3a64bffa",
+      "action": "move",
+      "eventPath": [1, 1],
+      "parent": [],
+      "index": 2
+    },
+    "result": "{\"scene\":\"Scene\",\"changed\":\"move\",\"canUndo\":true,\"canRedo\":false,\"note\":\"Saved through native event history. Reinspect paths before another edit. Preview to verify the meaning of expressions.\"}"
+  },
+  {
+    "name": "inspect_gdevelop_events",
+    "id": "mock-1789486857627",
+    "input": {
+      "scene": "Scene"
+    },
+    "result": "{\"scene\":\"Scene\",\"path\":[],\"section\":\"events\",\"total\":3,\"offset\":0,\"nextOffset\":null,\"items\":[{\"path\":[0],\"type\":\"BuiltinCommonInstructions::Comment\",\"disabled\":false,\"canHaveSubEvents\":false,\"children\":0,\"conditions\":null,\"actions\":null,\"text\":\"Person: imported rules still editable\",\"textTruncated\":false},{\"path\":[1],\"type\":\"BuiltinCommonInstructions::Group\",\"disabled\":false,\"canHaveSubEvents\":true,\"children\":1,\"conditions\":null,\"actions\":null,\"text\":\"Revised movement rules\",\"textTruncated\":false},{\"path\":[2],\"type\":\"BuiltinCommonInstructions::Standard\",\"disabled\":false,\"canHaveSubEvents\":true,\"children\":0,\"conditions\":1,\"actions\":1,\"textTruncated\":false}],\"note\":\"Paths expire after any edit. Reinspect before changing events. Instruction parameters are native expression strings; metadata checks do not prove their runtime meaning. Preview the game to verify behavior.\",\"expectedState\":\"111839ba8618a4d2b2b22affafe7fe6c456b9f6fcd8756e87d587e2978eabd68\",\"canUndo\":true,\"canRedo\":false}"
+  },
+  {
+    "name": "edit_gdevelop_event",
+    "id": "mock-1789486857683",
+    "input": {
+      "scene": "Scene",
+      "expectedState": "111839ba8618a4d2b2b22affafe7fe6c456b9f6fcd8756e87d587e2978eabd68",
+      "action": "remove",
+      "eventPath": [2]
+    },
+    "result": "{\"scene\":\"Scene\",\"changed\":\"remove\",\"canUndo\":true,\"canRedo\":false,\"note\":\"Saved through native event history. Reinspect paths before another edit. Preview to verify the meaning of expressions.\"}"
+  },
+  {
+    "name": "inspect_gdevelop_events",
+    "id": "mock-1789486864965",
+    "input": {
+      "scene": "Scene"
+    },
+    "result": "{\"scene\":\"Scene\",\"path\":[],\"section\":\"events\",\"total\":3,\"offset\":0,\"nextOffset\":null,\"items\":[{\"path\":[0],\"type\":\"BuiltinCommonInstructions::Comment\",\"disabled\":false,\"canHaveSubEvents\":false,\"children\":0,\"conditions\":null,\"actions\":null,\"text\":\"Person: imported rules still editable\",\"textTruncated\":false},{\"path\":[1],\"type\":\"BuiltinCommonInstructions::Group\",\"disabled\":false,\"canHaveSubEvents\":true,\"children\":1,\"conditions\":null,\"actions\":null,\"text\":\"Revised movement rules\",\"textTruncated\":false},{\"path\":[2],\"type\":\"BuiltinCommonInstructions::Standard\",\"disabled\":false,\"canHaveSubEvents\":true,\"children\":0,\"conditions\":1,\"actions\":1,\"textTruncated\":false}],\"note\":\"Paths expire after any edit. Reinspect before changing events. Instruction parameters are native expression strings; metadata checks do not prove their runtime meaning. Preview the game to verify behavior.\",\"expectedState\":\"ca1c35e4b4e864e40c4247bdf3e7fafefbd938be6ed293a23eb17c151838bd85\",\"canUndo\":true,\"canRedo\":true}"
+  },
+  {
+    "name": "gdevelop_event_history",
+    "id": "mock-1789486865019",
+    "input": {
+      "scene": "Scene",
+      "expectedState": "ca1c35e4b4e864e40c4247bdf3e7fafefbd938be6ed293a23eb17c151838bd85",
+      "direction": "redo"
+    },
+    "result": "{\"scene\":\"Scene\",\"changed\":\"redo\",\"canUndo\":true,\"canRedo\":false,\"note\":\"Saved through native event history. Reinspect paths before another edit. Preview to verify the meaning of expressions.\"}"
+  },
+  {
+    "name": "inspect_gdevelop_events",
+    "id": "mock-1789486869470",
+    "input": {
+      "scene": "Scene"
+    },
+    "result": "{\"scene\":\"Scene\",\"path\":[],\"section\":\"events\",\"total\":2,\"offset\":0,\"nextOffset\":null,\"items\":[{\"path\":[0],\"type\":\"BuiltinCommonInstructions::Comment\",\"disabled\":false,\"canHaveSubEvents\":false,\"children\":0,\"conditions\":null,\"actions\":null,\"text\":\"Person: imported rules still editable\",\"textTruncated\":false},{\"path\":[1],\"type\":\"BuiltinCommonInstructions::Group\",\"disabled\":false,\"canHaveSubEvents\":true,\"children\":1,\"conditions\":null,\"actions\":null,\"text\":\"Revised movement rules\",\"textTruncated\":false}],\"note\":\"Paths expire after any edit. Reinspect before changing events. Instruction parameters are native expression strings; metadata checks do not prove their runtime meaning. Preview the game to verify behavior.\",\"expectedState\":\"6483a83f5a4c8247ad1ac1c9144bffdd5aa204589c67f94a1f5e2faf9b02db47\",\"canUndo\":true,\"canRedo\":false}"
+  },
+  {
+    "name": "edit_gdevelop_instruction",
+    "id": "mock-1789486869530",
+    "input": {
+      "scene": "Scene",
+      "expectedState": "6483a83f5a4c8247ad1ac1c9144bffdd5aa204589c67f94a1f5e2faf9b02db47",
+      "eventPath": [1, 0],
+      "list": "conditions",
+      "instructionPath": [0],
+      "action": "remove"
+    },
+    "result": "{\"scene\":\"Scene\",\"changed\":\"remove\",\"canUndo\":true,\"canRedo\":false,\"note\":\"Saved through native event history. Reinspect paths before another edit. Preview to verify the meaning of expressions.\"}"
+  },
+  {
+    "name": "inspect_gdevelop_events",
+    "id": "mock-1789486873711",
+    "input": {
+      "scene": "Scene"
+    },
+    "result": "{\"scene\":\"Scene\",\"path\":[],\"section\":\"events\",\"total\":2,\"offset\":0,\"nextOffset\":null,\"items\":[{\"path\":[0],\"type\":\"BuiltinCommonInstructions::Comment\",\"disabled\":false,\"canHaveSubEvents\":false,\"children\":0,\"conditions\":null,\"actions\":null,\"text\":\"Person: imported rules still editable\",\"textTruncated\":false},{\"path\":[1],\"type\":\"BuiltinCommonInstructions::Group\",\"disabled\":false,\"canHaveSubEvents\":true,\"children\":1,\"conditions\":null,\"actions\":null,\"text\":\"Revised movement rules\",\"textTruncated\":false}],\"note\":\"Paths expire after any edit. Reinspect before changing events. Instruction parameters are native expression strings; metadata checks do not prove their runtime meaning. Preview the game to verify behavior.\",\"expectedState\":\"6c2228ae5848e0143fec26f947ed00f5d21be00fe0c592b90d671a48f3853aac\",\"canUndo\":true,\"canRedo\":false}"
+  },
+  {
+    "name": "gdevelop_event_history",
+    "id": "mock-1789486873767",
+    "input": {
+      "scene": "Scene",
+      "expectedState": "6c2228ae5848e0143fec26f947ed00f5d21be00fe0c592b90d671a48f3853aac",
+      "direction": "undo"
+    },
+    "result": "{\"scene\":\"Scene\",\"changed\":\"undo\",\"canUndo\":true,\"canRedo\":true,\"note\":\"Saved through native event history. Reinspect paths before another edit. Preview to verify the meaning of expressions.\"}"
+  },
+  {
+    "name": "inspect_gdevelop_events",
+    "id": "mock-1789486878218",
+    "input": {
+      "scene": "Scene"
+    },
+    "result": "{\"scene\":\"Scene\",\"path\":[],\"section\":\"events\",\"total\":2,\"offset\":0,\"nextOffset\":null,\"items\":[{\"path\":[0],\"type\":\"BuiltinCommonInstructions::Comment\",\"disabled\":false,\"canHaveSubEvents\":false,\"children\":0,\"conditions\":null,\"actions\":null,\"text\":\"Person: imported rules still editable\",\"textTruncated\":false},{\"path\":[1],\"type\":\"BuiltinCommonInstructions::Group\",\"disabled\":false,\"canHaveSubEvents\":true,\"children\":1,\"conditions\":null,\"actions\":null,\"text\":\"Revised movement rules\",\"textTruncated\":false}],\"note\":\"Paths expire after any edit. Reinspect before changing events. Instruction parameters are native expression strings; metadata checks do not prove their runtime meaning. Preview the game to verify behavior.\",\"expectedState\":\"de6ad8a57313b7e1722cfe3e41408732a474429548e66725a1859d1e7f40614f\",\"canUndo\":true,\"canRedo\":true}"
+  },
+  {
+    "name": "edit_gdevelop_event",
+    "id": "mock-1789486878274",
+    "input": {
+      "scene": "Scene",
+      "expectedState": "de6ad8a57313b7e1722cfe3e41408732a474429548e66725a1859d1e7f40614f",
+      "action": "update",
+      "eventPath": [1],
+      "text": "Revised movement rules"
+    },
+    "result": "{\"scene\":\"Scene\",\"changed\":\"update\",\"canUndo\":true,\"canRedo\":false,\"note\":\"Saved through native event history. Reinspect paths before another edit. Preview to verify the meaning of expressions.\"}"
+  },
+  {
+    "name": "inspect_gdevelop_events",
+    "id": "mock-1789486880517",
+    "input": {
+      "scene": "Scene"
+    },
+    "result": "{\"scene\":\"Scene\",\"path\":[],\"section\":\"events\",\"total\":2,\"offset\":0,\"nextOffset\":null,\"items\":[{\"path\":[0],\"type\":\"BuiltinCommonInstructions::Comment\",\"disabled\":false,\"canHaveSubEvents\":false,\"children\":0,\"conditions\":null,\"actions\":null,\"text\":\"Person: imported rules still editable\",\"textTruncated\":false},{\"path\":[1],\"type\":\"BuiltinCommonInstructions::Group\",\"disabled\":false,\"canHaveSubEvents\":true,\"children\":1,\"conditions\":null,\"actions\":null,\"text\":\"Revised movement rules\",\"textTruncated\":false}],\"note\":\"Paths expire after any edit. Reinspect before changing events. Instruction parameters are native expression strings; metadata checks do not prove their runtime meaning. Preview the game to verify behavior.\",\"expectedState\":\"1bf5ffc49c9f42be4eb1e3e7cc2427f93467ec847a962ac81fc0a9047098efcf\",\"canUndo\":true,\"canRedo\":false}"
+  },
+  {
+    "name": "edit_gdevelop_instruction",
+    "id": "mock-1789486880572",
+    "input": {
+      "scene": "Scene",
+      "expectedState": "1bf5ffc49c9f42be4eb1e3e7cc2427f93467ec847a962ac81fc0a9047098efcf",
+      "eventPath": [1, 0],
+      "list": "conditions",
+      "instructionPath": [0],
+      "action": "update",
+      "instruction": {
+        "type": "DepartScene",
+        "parameters": [""],
+        "inverted": false
+      }
+    },
+    "result": "{\"scene\":\"Scene\",\"changed\":\"update\",\"canUndo\":true,\"canRedo\":false,\"note\":\"Saved through native event history. Reinspect paths before another edit. Preview to verify the meaning of expressions.\"}"
+  },
+  {
+    "name": "inspect_gdevelop_events",
+    "id": "mock-1789486884912",
+    "input": {
+      "scene": "Scene"
+    },
+    "result": "{\"scene\":\"Scene\",\"path\":[],\"section\":\"events\",\"total\":2,\"offset\":0,\"nextOffset\":null,\"items\":[{\"path\":[0],\"type\":\"BuiltinCommonInstructions::Comment\",\"disabled\":false,\"canHaveSubEvents\":false,\"children\":0,\"conditions\":null,\"actions\":null,\"text\":\"Person: imported rules still editable\",\"textTruncated\":false},{\"path\":[1],\"type\":\"BuiltinCommonInstructions::Group\",\"disabled\":false,\"canHaveSubEvents\":true,\"children\":1,\"conditions\":null,\"actions\":null,\"text\":\"Revised movement rules\",\"textTruncated\":false}],\"note\":\"Paths expire after any edit. Reinspect before changing events. Instruction parameters are native expression strings; metadata checks do not prove their runtime meaning. Preview the game to verify behavior.\",\"expectedState\":\"3dec88d2e2aab8320282855ce259bebfc7d0f0ed4f1db61abfe8db45413476fe\",\"canUndo\":true,\"canRedo\":false}"
+  },
+  {
+    "name": "edit_gdevelop_event",
+    "id": "mock-1789486884987",
+    "input": {
+      "scene": "Scene",
+      "expectedState": "3dec88d2e2aab8320282855ce259bebfc7d0f0ed4f1db61abfe8db45413476fe",
+      "action": "update",
+      "eventPath": [1, 0],
+      "disabled": false
+    },
+    "result": "{\"scene\":\"Scene\",\"changed\":\"update\",\"canUndo\":true,\"canRedo\":false,\"note\":\"Saved through native event history. Reinspect paths before another edit. Preview to verify the meaning of expressions.\"}"
+  }
+]

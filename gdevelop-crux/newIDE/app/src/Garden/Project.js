@@ -5,6 +5,7 @@ import { exportProject, importProject } from './ProjectArchive';
 import { serializeToJSObject } from '../Utils/Serializer';
 import { prepareGardenSceneCommand } from './SceneTools';
 import { prepareGardenObjectCommand } from './ObjectTools';
+import { prepareGardenEventCommand } from './EventTools';
 import { inspectGame, readGameContent, gameCatalogue } from '../../../../garden/inspection.mjs';
 import { validateNativeDocument } from '../../../../garden/model.mjs';
 import { putFile, getBrowserSWPreviewBaseUrl, getBrowserSWPreviewRootUrl } from '../ExportAndShare/BrowserExporters/BrowserSWPreviewLauncher/BrowserSWPreviewIndexedDB';
@@ -99,7 +100,7 @@ export function useGardenProject(project, changes) {
     };
     context().garden.connect({
       capture, busy,
-      prepare: command => prepareGardenSceneCommand(() => currentProject, command) || prepareGardenObjectCommand(() => currentProject, command),
+      prepare: command => prepareGardenSceneCommand(() => currentProject, command) || prepareGardenObjectCommand(() => currentProject, command) || prepareGardenEventCommand(() => currentProject, command),
       saved: () => nativeChanges?.sealUnsavedChanges(),
       command: async command => {
         if (!currentProject) throw new Error('Open a game before using its tools.');
