@@ -1,4 +1,5 @@
 // @flow
+import { registerGardenEventsEditor, unregisterGardenEventsEditor } from '../Garden/EventTools';
 import { t, Trans } from '@lingui/macro';
 import { I18n } from '@lingui/react';
 import { type I18n as I18nType } from '@lingui/core';
@@ -386,12 +387,14 @@ export class EventsSheetComponentWithoutHandle extends React.Component<
   }
 
   componentDidMount() {
+    registerGardenEventsEditor(this);
     this.setState({ allEventsMetadata: enumerateEventsMetadata() });
     this.resourceExternallyChangedCallbackId = registerOnResourceExternallyChangedCallback(
       this.onResourceExternallyChanged.bind(this)
     );
   }
   componentWillUnmount() {
+    unregisterGardenEventsEditor(this);
     unregisterOnResourceExternallyChangedCallback(
       this.resourceExternallyChangedCallbackId
     );
