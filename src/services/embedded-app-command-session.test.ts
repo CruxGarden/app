@@ -123,6 +123,7 @@ it('ships the same standalone shared source with adopting embeds', () => {
     'audiomass',
     'kan',
     'eventcalendar',
+    'moqira',
   ])
     for (const file of [
       'command-session.js',
@@ -135,7 +136,7 @@ it('ships the same standalone shared source with adopting embeds', () => {
       expect(
         readFileSync(
           new URL(
-            `../../${app}-crux/${['piskel', 'rawgraphs', 'audiomass'].includes(app) ? 'src/' : ''}garden/shared/${file}`,
+            `../../${app}-crux/${['piskel', 'rawgraphs', 'audiomass', 'moqira'].includes(app) ? 'src/' : ''}garden/shared/${file}`,
             import.meta.url,
           ),
           'utf8',

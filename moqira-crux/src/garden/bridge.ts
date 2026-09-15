@@ -1,5 +1,5 @@
 /**
- * Garden side of Moqira (Crux Garden). The app is upstream's, unchanged; it
+ * Garden side of Moqira (Crux Garden). The native app has a narrow tool hook; it
  * believes it runs inside Tauri because src/garden/tauri-*.ts stand in for the
  * Tauri modules (see vite.config.ts). This file is what those stand-ins talk
  * to: the Crux's one project file (mockups/project.json) read before the app
@@ -12,6 +12,10 @@
  */
 import type { MockupProject } from '../types';
 import { emit } from './tauri-event';
+import { createCommandSession } from './shared/command-session.js';
+import { loadProjectImage } from './shared/project-image.js';
+import { createMoqiraCommands } from './commands';
+import { readNativeMoqira, nativeStateToken, actNative, settleNative } from './native-tools';
 
 type Publication = { title: string; wireframes: string[] };
 declare global {
@@ -126,6 +130,7 @@ export const garden = {
   async save(next: MockupProject): Promise<void> {
     if (edition) return; // a public edition keeps nothing
     if (!embedded) throw new Error('Open this app inside Crux Garden to save.');
+    if (saving) await saving;
     const content = JSON.stringify(validate(next), null, 2);
     const operation = (async () => {
       show('Saving…');
@@ -189,7 +194,10 @@ function watchSaveState() {
   };
   // Only the app's own tree: the Garden bar and panel change with every status update.
   new MutationObserver((records) => {
-    if (records.some((r) => !(r.target as Element).closest?.('#garden-project, #garden-publication'))) read();
+    if (
+      records.some((r) => !(r.target as Element).closest?.('#garden-project, #garden-publication'))
+    )
+      read();
   }).observe(document.body, {
     subtree: true,
     childList: true,
@@ -199,26 +207,56 @@ function watchSaveState() {
   read();
 }
 
-/** Ask the app to save through its own menu path and wait for the write. */
+/** Use native Save and await the host acknowledgement; newer manual work stays dirty. */
 async function flush(): Promise<void> {
-  const el = document.querySelector<HTMLElement>('.save-state');
-  const dirty =
-    !el || el.classList.contains('is-dirty') || el.getAttribute('aria-label') === 'Not saved';
-  if (!dirty && !saving) return;
-  if (!saving) emit('menu-save-project');
-  const started = Date.now();
-  while (Date.now() - started < 60000) {
-    if (saving) {
-      await saving;
-      return;
+  await settleNative();
+  if (saving) await saving;
+  if (conflict) throw Error(conflict);
+  const native = readNativeMoqira();
+  if (!native.dirty && JSON.stringify(native.project) === JSON.stringify(project)) return;
+  if (!(await native.save())) throw Error('Moqira did not save the project.');
+  await settleNative();
+  if (readNativeMoqira().dirty)
+    throw Error('Moqira changed while saving. Your newer draft remains open; inspect again.');
+}
+
+const commands = createMoqiraCommands({
+  read: readNativeMoqira,
+  stateToken: nativeStateToken,
+  act: actNative,
+  async loadImage(path) {
+    const loaded = await loadProjectImage(path, new URL('../', location.href).href);
+    try {
+      const blob = await (await fetch(loaded.image.src)).blob();
+      const imageDataUrl = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onerror = () => reject(Error('Could not read the image Artifact.'));
+        reader.onload = () => resolve(String(reader.result));
+        reader.readAsDataURL(blob);
+      });
+      return {
+        imageDataUrl,
+        imageMimeType: blob.type,
+        imageNaturalWidth: loaded.image.naturalWidth,
+        imageNaturalHeight: loaded.image.naturalHeight,
+      };
+    } finally {
+      loaded.release();
     }
-    await new Promise((r) => setTimeout(r, 50));
-    const now = document.querySelector<HTMLElement>('.save-state');
-    if (now && !now.classList.contains('is-dirty') && now.getAttribute('aria-label') === 'Saved')
-      return;
-    if (conflict) throw new Error(conflict);
-  }
-  throw new Error('The app did not finish saving.');
+  },
+  saveOutput: (label, bytes) =>
+    call({ op: 'save-output', label, mimeType: 'application/x-moqira+json', bytes }),
+});
+const commandSession = createCommandSession({
+  settle: settleNative,
+  prepare: commands.prepare,
+  save: flush,
+});
+let toolTail: Promise<unknown> = Promise.resolve();
+function enqueue<T>(operation: () => Promise<T>): Promise<T> {
+  const next = toolTail.then(operation);
+  toolTail = next.catch(() => {});
+  return next;
 }
 
 function savePublication() {
@@ -407,12 +445,16 @@ function listen() {
       if (message.error) request?.reject(new Error(message.error));
       else request?.resolve(message.result);
     } else if (message.type === 'crux:app:flush') {
-      flush().then(
+      enqueue(flush).then(
         () => send({ op: 'flushed', flushId: message.id }),
         (error) => send({ op: 'flushed', flushId: message.id, error: (error as Error).message }),
       );
     } else if (message.type === 'crux:app:command') {
-      send({ op: 'tool-result', commandId: message.id, error: 'Moqira has no App Tools yet.' });
+      enqueue(() => commandSession.execute(message.command)).then(
+        (result) => send({ op: 'tool-result', commandId: message.id, result }),
+        (error) =>
+          send({ op: 'tool-result', commandId: message.id, error: (error as Error).message }),
+      );
     }
   });
 }

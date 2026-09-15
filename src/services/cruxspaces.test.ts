@@ -340,3 +340,43 @@ it('keeps an editable PPTX output intact when another Cruxspace member uses it',
     new Uint8Array(await (await artifact.downloadBlob(copied.artifact.id)).arrayBuffer()),
   ).toEqual(bytes);
 });
+
+it('keeps editable Moqira output bytes through Cruxspace transfer and complete export/import', async () => {
+  const { crux, artifact } = getServices();
+  const source = await crux.create({ title: 'Mockups', type: 'workspace' });
+  const target = await crux.create({ title: 'Design handoff', type: 'workspace' });
+  const space = await createCruxspace({ name: 'Shop', brief: '', cruxIds: [source.id, target.id] });
+  const content = JSON.stringify({
+    schemaVersion: 1,
+    name: 'Shop',
+    wireframes: [
+      { id: 'home', nodes: [{ kind: 'image', imageDataUrl: 'data:image/png;base64,AAAA' }] },
+    ],
+  });
+  const output = await saveCruxOutput(
+    source.id,
+    new Blob([content], { type: 'application/x-moqira+json' }),
+    'Editable design',
+  );
+  expect(output.path).toMatch(/\.moq$/);
+  const copied = await copyCruxspaceAsset({
+    spaceId: space.id,
+    sourceCruxId: source.id,
+    targetCruxId: target.id,
+    outputId: output.id,
+    fingerprint: output.fingerprint,
+    path: 'assets/shop.moq',
+  });
+  const copy = (await artifact.findByResource('crux', target.id)).find(
+    (file) => file.meta?.path === copied.origin.path,
+  )!;
+  expect(await (await artifact.downloadBlob(copy.id)).text()).toBe(content);
+  const imported = await importCrux({
+    data: (await exportCrux({ cruxId: source.id })).blob,
+    mode: 'clone',
+  });
+  const portable = (await artifact.findByResource('crux', imported.cruxId)).find(
+    (file) => file.meta?.path === output.path,
+  )!;
+  expect(await (await artifact.downloadBlob(portable.id)).text()).toBe(content);
+});

@@ -1,3 +1,5 @@
+import { useGardenTools } from "./garden/native-tools";
+import { acknowledgeSavedProject } from "./garden/saved-state";
 import { open as openDialog, save as saveDialog } from "@tauri-apps/plugin-dialog";
 import { listen } from "@tauri-apps/api/event";
 import { getCurrentWindow } from "@tauri-apps/api/window";
@@ -1272,12 +1274,12 @@ function App() {
       const projectToSave = { ...project, name: projectNameFromPath(nextPath) };
       await saveProjectFile(nextPath, projectToSave);
       endProjectHistoryGroup();
-      setProjectHistory((current) => ({ ...current, present: projectToSave }));
+      savedProjectSnapshotRef.current = dirtyProjectSnapshot(projectToSave);
+      setProjectHistory((current) => acknowledgeSavedProject(current, project, projectToSave));
       setProjectPath(nextPath);
       localStorage.setItem(projectPathKey, nextPath);
       await writeLastProjectPath(nextPath);
       setRecentProjects((current) => addRecentProject(current, nextPath, projectToSave.name));
-      savedProjectSnapshotRef.current = dirtyProjectSnapshot(projectToSave);
       setSaveToast(`Saved ${fileNameFromPath(nextPath)}`);
       return true;
     },
@@ -1888,6 +1890,17 @@ function App() {
     }));
     return wireframe.id;
   }, [activeWireframe, mutateProject, project.wireframes]);
+
+  // Garden integration: native model/history callbacks, without a parallel editor model.
+  useGardenTools({
+    project, selectedIds, interactive: interactiveMode,
+    get dirty() { return dirtyProjectSnapshot(project) !== savedProjectSnapshotRef.current; },
+    get busy() { return !!(!projectPath || textEditorRef.current || renameWireframe || dragState || selectionRect || arrowDraw || paletteDrag || settingsOpen || closePromptOpen || quickAccessOpen || openingProjectRef.current || projectDialogOpenRef.current); },
+    canUndo: projectHistory.past.length > 0, canRedo: projectHistory.future.length > 0,
+    commit: (updater) => { endProjectHistoryGroup(); commitProjectChange(updater); },
+    selectWireframe, selectNodes: selectMany, setInteractive: setInteractiveMode,
+    undo: undoProjectChange, redo: redoProjectChange, save: saveProject,
+  });
 
   const effectiveRightCollapsed = rightCollapsed || interactiveMode;
 

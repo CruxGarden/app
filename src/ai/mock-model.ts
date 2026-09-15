@@ -113,6 +113,114 @@ export function getMockLanguageModel(): LanguageModel {
         const research = researchScript(prompt);
         if (research) return research;
 
+        const moqiraDepth = lastUserText(prompt).match(/\[moqira:depth-([a-z-]+)\]/)?.[1];
+        if (moqiraDepth) {
+          const rounds = toolResultsThisTurn(prompt);
+          if (!rounds.length) return toolCallStream('inspect_moqira', {});
+          if (moqiraDepth === 'draft') return textStream('Moqira depth draft complete.');
+          const inspected = JSON.parse(toolResultText(prompt, 'inspect_moqira') || '{}');
+          const wireframeId = inspected.wireframes[0].id;
+          if (rounds.length === 1) return toolCallStream('read_moqira_wireframe', { wireframeId });
+          const screen = JSON.parse(toolResultText(prompt, 'read_moqira_wireframe') || '{}');
+          if (rounds.length === 2) {
+            const expectedState = screen.stateToken;
+            const title = screen.components.find((c: { kind: string }) => c.kind === 'textTitle');
+            const button = screen.components.find((c: { kind: string }) => c.kind === 'button');
+            if (moqiraDepth === 'catalogue')
+              return toolCallStream('list_moqira_components', { query: 'button', limit: 5 });
+            if (moqiraDepth === 'create')
+              return toolCallStream('add_moqira_components', {
+                wireframeId,
+                expectedState,
+                components: [
+                  {
+                    kind: 'textTitle',
+                    properties: {
+                      text: 'Bloom & Ink',
+                      name: 'Hero',
+                      x: 60,
+                      y: 60,
+                      width: 460,
+                      height: 60,
+                      fontSize: 36,
+                    },
+                  },
+                  {
+                    kind: 'textParagraph',
+                    properties: {
+                      text: 'Handmade paper goods for everyday ideas.',
+                      x: 60,
+                      y: 140,
+                      width: 470,
+                      height: 60,
+                    },
+                  },
+                  {
+                    kind: 'button',
+                    properties: {
+                      text: 'Explore the collection',
+                      x: 60,
+                      y: 235,
+                      width: 220,
+                      height: 45,
+                    },
+                  },
+                ],
+              });
+            if (moqiraDepth === 'revise')
+              return toolCallStream('update_moqira_components', {
+                wireframeId,
+                expectedState,
+                patches: [{ id: title.id, properties: { width: 540, x: 70 } }],
+              });
+            if (moqiraDepth === 'screen')
+              return toolCallStream('create_moqira_wireframe', {
+                name: 'Collection',
+                expectedState,
+              });
+            if (moqiraDepth === 'link')
+              return toolCallStream('set_moqira_link', {
+                wireframeId,
+                id: button.id,
+                key: 'whole',
+                link: { kind: 'wireframe', wireframeId: inspected.wireframes[1].id },
+                expectedState,
+              });
+            if (moqiraDepth === 'home')
+              return toolCallStream('set_moqira_view', {
+                wireframeId,
+                interactive: false,
+                expectedState,
+              });
+            if (moqiraDepth === 'play')
+              return toolCallStream('set_moqira_view', {
+                wireframeId,
+                interactive: true,
+                expectedState,
+              });
+            if (moqiraDepth === 'duplicate')
+              return toolCallStream('duplicate_moqira_components', {
+                wireframeId,
+                ids: [button.id],
+                expectedState,
+              });
+            if (moqiraDepth === 'undo' || moqiraDepth === 'redo')
+              return toolCallStream('moqira_history', { direction: moqiraDepth, expectedState });
+            if (moqiraDepth === 'image')
+              return toolCallStream('add_moqira_image', {
+                wireframeId,
+                path: 'brand.png',
+                x: 60,
+                y: 340,
+                width: 80,
+                height: 80,
+                expectedState,
+              });
+            if (moqiraDepth === 'export')
+              return toolCallStream('save_moqira_project', { label: 'Editable shop design' });
+          }
+          return textStream('Moqira depth ' + moqiraDepth + ' complete.');
+        }
         const calendarDepth = lastUserText(prompt).match(/\[calendar:depth-([a-z-]+)\]/)?.[1];
         if (calendarDepth) {
           const rounds = toolResultsThisTurn(prompt);
