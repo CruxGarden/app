@@ -39,8 +39,18 @@ const workspace = {
 type Deletable = { deletedAt: Date | null };
 type Label = z.infer<typeof labelSchema> & Deletable;
 type Member = (typeof workspace)['members'][number];
-type ChecklistItem = { publicId: string; title: string; completed: boolean; index: number } & Deletable;
-type Checklist = { publicId: string; name: string; index: number; items: ChecklistItem[] } & Deletable;
+type ChecklistItem = {
+  publicId: string;
+  title: string;
+  completed: boolean;
+  index: number;
+} & Deletable;
+type Checklist = {
+  publicId: string;
+  name: string;
+  index: number;
+  items: ChecklistItem[];
+} & Deletable;
 const attachmentSchema = z.object({
   publicId: id,
   name: z.string().min(1).max(1000),
@@ -88,7 +98,13 @@ export const onModelChange = (listener: () => void) => {
   listeners.add(listener);
   return () => listeners.delete(listener);
 };
-const changed = () => listeners.forEach((listener) => listener());
+const commandSession = crypto.randomUUID();
+let revision = 0;
+export const revisionToken = () => commandSession + ':' + revision;
+const changed = () => {
+  revision++;
+  listeners.forEach((listener) => listener());
+};
 export const attachmentBusy = () => pendingAttachments > 0;
 /** Soft-deleted records stay in their arrays as history; only active records are visible or indexed. */
 const active = <T extends Deletable>(items: T[]) => items.filter((item) => !item.deletedAt);
@@ -276,7 +292,11 @@ const cardView = (board: Board, card: Card) => ({
   comments: active(card.comments).map(({ publicId }) => ({ publicId })),
 });
 const activeActivities = (card: Card) => card.activities.filter((a) => !a.comment?.deletedAt);
-const listSummary = (list: List) => ({ publicId: list.publicId, name: list.name, index: list.index });
+const listSummary = (list: List) => ({
+  publicId: list.publicId,
+  name: list.name,
+  index: list.index,
+});
 const labelView = ({ publicId, name, colourCode }: Label) => ({ publicId, name, colourCode });
 function archiveCards(cards: Card[], deletedAt: Date) {
   for (const card of active(cards)) {
@@ -432,7 +452,10 @@ function run(path: string, input: unknown): unknown {
             }));
             copy.activities = copy.activities.map((event) =>
               event.label
-                ? { ...event, label: { ...event.label, publicId: labelIds.get(event.label.publicId)! } }
+                ? {
+                    ...event,
+                    label: { ...event.label, publicId: labelIds.get(event.label.publicId)! },
+                  }
                 : event,
             );
             return copy;
@@ -454,7 +477,9 @@ function run(path: string, input: unknown): unknown {
         })
         .parse(input);
       const board = getBoard(args.boardPublicId);
-      const ranges = convertDueDateFiltersToRanges((args.dueDateFilters ?? []) as DueDateFilterKey[]);
+      const ranges = convertDueDateFiltersToRanges(
+        (args.dueDateFilters ?? []) as DueDateFilterKey[],
+      );
       const dueDateMatches = (dueDate: Date | null) =>
         !ranges.length ||
         ranges.some((range) =>
@@ -654,11 +679,9 @@ function run(path: string, input: unknown): unknown {
       const destination = args.listPublicId ? getList(args.listPublicId) : { board, list };
       if (destination.board !== board) throw new Error('Cannot move a card outside its board');
       const nextIndex =
-        args.index ?? (destination.list === list ? card.index : active(destination.list.cards).length);
-      if (
-        nextIndex >
-        active(destination.list.cards).length - (destination.list === list ? 1 : 0)
-      )
+        args.index ??
+        (destination.list === list ? card.index : active(destination.list.cards).length);
+      if (nextIndex > active(destination.list.cards).length - (destination.list === list ? 1 : 0))
         throw new Error('Invalid card index');
       if (args.title !== undefined && args.title !== card.title)
         activity(card, 'card.updated.title', { fromTitle: card.title, toTitle: args.title });
@@ -772,7 +795,9 @@ function run(path: string, input: unknown): unknown {
     case 'card.addOrRemoveLabel': {
       const args = z.object({ cardPublicId: id, labelPublicId: id }).strict().parse(input);
       const { board, card } = getCard(args.cardPublicId);
-      const label = requireValue(active(board.labels).find((l) => l.publicId === args.labelPublicId));
+      const label = requireValue(
+        active(board.labels).find((l) => l.publicId === args.labelPublicId),
+      );
       const index = card.labels.findIndex((l) => l.publicId === label.publicId);
       const newLabel = index < 0;
       if (newLabel) card.labels.push(labelView(label));
@@ -855,7 +880,12 @@ function run(path: string, input: unknown): unknown {
       };
       checklist.items.push(item);
       activity(card, 'card.updated.checklist.item.added', { toTitle: item.title });
-      return { publicId: item.publicId, title: item.title, completed: item.completed, index: item.index };
+      return {
+        publicId: item.publicId,
+        title: item.title,
+        completed: item.completed,
+        index: item.index,
+      };
     }
     case 'checklist.updateItem': {
       const args = z
@@ -888,7 +918,12 @@ function run(path: string, input: unknown): unknown {
         item.completed = args.completed;
       }
       if (args.index !== undefined) move(checklist.items, item, args.index);
-      return { publicId: item.publicId, title: item.title, completed: item.completed, index: item.index };
+      return {
+        publicId: item.publicId,
+        title: item.title,
+        completed: item.completed,
+        index: item.index,
+      };
     }
     case 'checklist.deleteItem': {
       const args = z.object({ checklistItemPublicId: id }).strict().parse(input);
@@ -1023,16 +1058,14 @@ const storedCardSchema = boardDetailSchema.shape.lists.element.shape.cards.eleme
   checklists: z.array(storedChecklistSchema),
   comments: z.array(z.object({ publicId: z.string(), deletedAt })),
 });
-const storedBoardSchema = boardDetailSchema
-  .omit({ allLists: true })
-  .extend({
-    type: z.enum(['regular', 'template']),
-    deletedAt,
-    labels: z.array(labelSchema.extend({ deletedAt })),
-    lists: z.array(
-      boardDetailSchema.shape.lists.element.extend({ deletedAt, cards: z.array(storedCardSchema) }),
-    ),
-  });
+const storedBoardSchema = boardDetailSchema.omit({ allLists: true }).extend({
+  type: z.enum(['regular', 'template']),
+  deletedAt,
+  labels: z.array(labelSchema.extend({ deletedAt })),
+  lists: z.array(
+    boardDetailSchema.shape.lists.element.extend({ deletedAt, cards: z.array(storedCardSchema) }),
+  ),
+});
 const stateSchema = z
   .object({
     version: z.literal(1),

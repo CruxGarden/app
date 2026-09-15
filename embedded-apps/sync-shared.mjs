@@ -13,6 +13,7 @@ for (const app of [
   'blockbench',
   'rawgraphs',
   'audiomass',
+  'kan',
 ]) {
   const destination = join(
     appRoot,

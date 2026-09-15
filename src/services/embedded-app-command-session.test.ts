@@ -121,6 +121,7 @@ it('ships the same standalone shared source with adopting embeds', () => {
     'blockbench',
     'rawgraphs',
     'audiomass',
+    'kan',
   ])
     for (const file of [
       'command-session.js',

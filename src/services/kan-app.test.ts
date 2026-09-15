@@ -1,3 +1,4 @@
+import { embeddedAppToolAdapter } from './embedded-app-tool-adapters';
 import { beforeEach, expect, it } from 'vitest';
 import { initServices, getServices } from './index';
 import { createCruxStore } from '@/stores/cruxStore';
@@ -154,4 +155,26 @@ it('restricts agent commands to native identities and declared fields', () => {
     }),
   ).toThrow();
   expect(() => kanCommand('create_kan_card', { listPublicId: 'bad', title: 'Ready' })).toThrow();
+});
+
+it('validates guarded Kan board/card details through the shared command schema', () => {
+  const adapter = embeddedAppToolAdapter({ meta: { template: 'kan-app' } })!;
+  const expectedState = '12345678-1234-1234-1234-123456789abc:8';
+  expect(
+    adapter.prepare('create_kan_board', { name: 'Launch', lists: ['Ideas'], expectedState }),
+  ).toEqual({ op: 'create-board', name: 'Launch', lists: ['Ideas'], expectedState });
+  expect(
+    adapter.prepare('update_kan_card_details', {
+      cardPublicId: 'nativecard01',
+      dueDate: null,
+      expectedState,
+    }),
+  ).toEqual({ op: 'card-details', cardPublicId: 'nativecard01', dueDate: null, expectedState });
+  expect(() => adapter.prepare('delete_kan_card', { cardPublicId: 'nativecard01' })).toThrow();
+  expect(() =>
+    adapter.prepare('update_kan_checklist_item', {
+      checklistItemPublicId: 'nativeitem01',
+      expectedState,
+    }),
+  ).toThrow();
 });

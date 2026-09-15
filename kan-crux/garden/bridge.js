@@ -1,3 +1,5 @@
+import { createCommandSession } from './shared/command-session.js';
+import { commandSchema } from './commands-schema';
 import { validateProject } from './document.js';
 
 export async function startGarden() {
@@ -196,14 +198,23 @@ export async function startGarden() {
     tail = operation.catch(() => {});
     return operation;
   }
-  async function command(value) {
-    if (hydrating || !app) throw new Error('Wait for the Kan editor to open.');
-    await save(true);
-    const result = await app.command(value);
-    await settle();
-    await save(true);
-    return result;
-  }
+  const commandSession = createCommandSession({
+    settle: async () => {
+      if (hydrating || !app) throw new Error('Wait for the Kan editor to open.');
+      await app.beforeSave(true);
+      for (const flush of draftFlushers) await flush();
+      await settle();
+    },
+    prepare: (value) => {
+      const args = commandSchema.parse(value);
+      return {
+        mutates: !['inspect', 'read-card'].includes(args.op),
+        apply: () => app.command(args),
+      };
+    },
+    save: () => save(true),
+  });
+  const command = (value) => commandSession.execute(value);
   window.addEventListener('message', (event) => {
     if (event.source !== window.parent || (origin !== undefined && event.origin !== origin)) return;
     const message = event.data;

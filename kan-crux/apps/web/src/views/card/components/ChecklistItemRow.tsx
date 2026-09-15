@@ -1,6 +1,5 @@
 import type { DraggableProvided } from "react-beautiful-dnd";
 import { t } from "@lingui/core/macro";
-import { useState } from "react";
 import { HiXMark } from "react-icons/hi2";
 import { RiDraggable } from "react-icons/ri";
 import { twMerge } from "tailwind-merge";
@@ -34,7 +33,8 @@ export default function ChecklistItemRow({
 }: ChecklistItemRowProps) {
   const utils = api.useUtils();
   const { showPopup } = usePopup();
-  const [completed, setCompleted] = useState(item.completed);
+  // Native optimistic query state also reflects external edits and rollback.
+  const completed = item.completed;
 
   const updateItem = api.checklist.updateItem.useMutation({
     onMutate: async (vars) => {
@@ -104,7 +104,6 @@ export default function ChecklistItemRow({
 
   const handleToggleCompleted = () => {
     if (viewOnly) return;
-    setCompleted((prev) => !prev);
     updateItem.mutate({
       checklistItemPublicId: item.publicId,
       completed: !completed,
