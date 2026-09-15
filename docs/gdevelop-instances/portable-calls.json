@@ -1,0 +1,235 @@
+[
+  {
+    "name": "inspect_gdevelop_scene",
+    "id": "mock-1789451056581",
+    "input": {
+      "scene": "Scene"
+    },
+    "result": "{\"scene\":\"Scene\",\"expectedState\":\"5aa21ac7c049b5372845000ba393977540b8b337d3db609df4a5ec24937def40\",\"total\":1,\"offset\":0,\"nextOffset\":null,\"instances\":[{\"id\":\"f2bfee3a-fbce-46d4-9c98-f95c8a5b4406\",\"object\":\"NewSprite\",\"x\":400,\"y\":77,\"z\":0,\"angle\":0,\"rotationX\":0,\"rotationY\":0,\"customSize\":false,\"width\":0,\"height\":0,\"customDepth\":false,\"depth\":0,\"layer\":\"\",\"zOrder\":1,\"opacity\":255,\"flippedX\":false,\"flippedY\":false,\"hidden\":false,\"locked\":false}],\"selectedIds\":[],\"canUndo\":false,\"canRedo\":false,\"note\":\"History is the active scene instance history only. Width/height/depth are stored custom dimensions and apply only when their custom-size flag is true. Inspect again after edits, Undo/Redo or reopening.\"}"
+  },
+  {
+    "name": "select_gdevelop_instances",
+    "id": "mock-1789451056621",
+    "input": {
+      "scene": "Scene",
+      "expectedState": "5aa21ac7c049b5372845000ba393977540b8b337d3db609df4a5ec24937def40",
+      "ids": [
+        "f2bfee3a-fbce-46d4-9c98-f95c8a5b4406"
+      ]
+    },
+    "result": "{\"selectedIds\":[\"f2bfee3a-fbce-46d4-9c98-f95c8a5b4406\"]}"
+  },
+  {
+    "name": "edit_gdevelop_instances",
+    "id": "mock-1789451059885",
+    "input": {
+      "scene": "Scene",
+      "expectedState": "5aa21ac7c049b5372845000ba393977540b8b337d3db609df4a5ec24937def40",
+      "updates": [
+        {
+          "id": "f2bfee3a-fbce-46d4-9c98-f95c8a5b4406",
+          "x": 123,
+          "width": 96,
+          "height": 80,
+          "opacity": 200
+        }
+      ]
+    },
+    "result": "Error in edit_gdevelop_instances: The scene changed since inspection or while saving. Inspect again before retrying.. Check the input parameters and try again."
+  },
+  {
+    "name": "inspect_gdevelop_scene",
+    "id": "mock-1789451060361",
+    "input": {
+      "scene": "Scene"
+    },
+    "result": "{\"scene\":\"Scene\",\"expectedState\":\"26b8adb7afb840664b651248c4efde9ddf50c6f6773ce3caf8320d04f4040b30\",\"total\":1,\"offset\":0,\"nextOffset\":null,\"instances\":[{\"id\":\"f2bfee3a-fbce-46d4-9c98-f95c8a5b4406\",\"object\":\"NewSprite\",\"x\":400,\"y\":88,\"z\":0,\"angle\":0,\"rotationX\":0,\"rotationY\":0,\"customSize\":false,\"width\":0,\"height\":0,\"customDepth\":false,\"depth\":0,\"layer\":\"\",\"zOrder\":1,\"opacity\":255,\"flippedX\":false,\"flippedY\":false,\"hidden\":false,\"locked\":false}],\"selectedIds\":[\"f2bfee3a-fbce-46d4-9c98-f95c8a5b4406\"],\"canUndo\":true,\"canRedo\":false,\"note\":\"History is the active scene instance history only. Width/height/depth are stored custom dimensions and apply only when their custom-size flag is true. Inspect again after edits, Undo/Redo or reopening.\"}"
+  },
+  {
+    "name": "edit_gdevelop_instances",
+    "id": "mock-1789451060396",
+    "input": {
+      "scene": "Scene",
+      "expectedState": "26b8adb7afb840664b651248c4efde9ddf50c6f6773ce3caf8320d04f4040b30",
+      "updates": [
+        {
+          "id": "f2bfee3a-fbce-46d4-9c98-f95c8a5b4406",
+          "x": 123,
+          "width": 96,
+          "height": 80,
+          "opacity": 200
+        }
+      ]
+    },
+    "result": "{\"scene\":\"Scene\",\"affectedIds\":[\"f2bfee3a-fbce-46d4-9c98-f95c8a5b4406\"],\"total\":1,\"canUndo\":true,\"canRedo\":false}"
+  },
+  {
+    "name": "inspect_gdevelop_scene",
+    "id": "mock-1789451068006",
+    "input": {
+      "scene": "Scene"
+    },
+    "result": "{\"scene\":\"Scene\",\"expectedState\":\"0af6a758f015b9b6493b3684a6a29c8ec03e473b11d42074c43a6b5d248e8ee8\",\"total\":1,\"offset\":0,\"nextOffset\":null,\"instances\":[{\"id\":\"f2bfee3a-fbce-46d4-9c98-f95c8a5b4406\",\"object\":\"NewSprite\",\"x\":123,\"y\":88,\"z\":0,\"angle\":0,\"rotationX\":0,\"rotationY\":0,\"customSize\":true,\"width\":96,\"height\":80,\"customDepth\":false,\"depth\":0,\"layer\":\"\",\"zOrder\":1,\"opacity\":200,\"flippedX\":false,\"flippedY\":false,\"hidden\":false,\"locked\":false}],\"selectedIds\":[],\"canUndo\":true,\"canRedo\":false,\"note\":\"History is the active scene instance history only. Width/height/depth are stored custom dimensions and apply only when their custom-size flag is true. Inspect again after edits, Undo/Redo or reopening.\"}"
+  },
+  {
+    "name": "duplicate_gdevelop_instances",
+    "id": "mock-1789451068045",
+    "input": {
+      "scene": "Scene",
+      "expectedState": "0af6a758f015b9b6493b3684a6a29c8ec03e473b11d42074c43a6b5d248e8ee8",
+      "ids": [
+        "f2bfee3a-fbce-46d4-9c98-f95c8a5b4406"
+      ],
+      "dx": 100,
+      "dy": 0
+    },
+    "result": "{\"scene\":\"Scene\",\"affectedIds\":[\"f9912d75-b831-4284-8d1e-87440bb82741\"],\"total\":2,\"canUndo\":true,\"canRedo\":false}"
+  },
+  {
+    "name": "inspect_gdevelop_scene",
+    "id": "mock-1789451071122",
+    "input": {
+      "scene": "Scene"
+    },
+    "result": "{\"scene\":\"Scene\",\"expectedState\":\"80b4129394ed1ca61d30735defa6c67d2765c9e51cc9df0fed92b1ad9b55b587\",\"total\":2,\"offset\":0,\"nextOffset\":null,\"instances\":[{\"id\":\"f2bfee3a-fbce-46d4-9c98-f95c8a5b4406\",\"object\":\"NewSprite\",\"x\":123,\"y\":88,\"z\":0,\"angle\":0,\"rotationX\":0,\"rotationY\":0,\"customSize\":true,\"width\":96,\"height\":80,\"customDepth\":false,\"depth\":0,\"layer\":\"\",\"zOrder\":1,\"opacity\":200,\"flippedX\":false,\"flippedY\":false,\"hidden\":false,\"locked\":false},{\"id\":\"f9912d75-b831-4284-8d1e-87440bb82741\",\"object\":\"NewSprite\",\"x\":223,\"y\":88,\"z\":0,\"angle\":0,\"rotationX\":0,\"rotationY\":0,\"customSize\":true,\"width\":96,\"height\":80,\"customDepth\":false,\"depth\":0,\"layer\":\"\",\"zOrder\":1,\"opacity\":200,\"flippedX\":false,\"flippedY\":false,\"hidden\":false,\"locked\":false}],\"selectedIds\":[\"f9912d75-b831-4284-8d1e-87440bb82741\"],\"canUndo\":true,\"canRedo\":false,\"note\":\"History is the active scene instance history only. Width/height/depth are stored custom dimensions and apply only when their custom-size flag is true. Inspect again after edits, Undo/Redo or reopening.\"}"
+  },
+  {
+    "name": "delete_gdevelop_instances",
+    "id": "mock-1789451071160",
+    "input": {
+      "scene": "Scene",
+      "expectedState": "80b4129394ed1ca61d30735defa6c67d2765c9e51cc9df0fed92b1ad9b55b587",
+      "ids": [
+        "f9912d75-b831-4284-8d1e-87440bb82741"
+      ]
+    },
+    "result": "{\"scene\":\"Scene\",\"affectedIds\":[],\"total\":1,\"canUndo\":true,\"canRedo\":false}"
+  },
+  {
+    "name": "inspect_gdevelop_scene",
+    "id": "mock-1789451074253",
+    "input": {
+      "scene": "Scene"
+    },
+    "result": "{\"scene\":\"Scene\",\"expectedState\":\"14a505a7930a75129411dc7cdd0891fc1bc3ed566d9928cd940ee37f06aafd55\",\"total\":1,\"offset\":0,\"nextOffset\":null,\"instances\":[{\"id\":\"f2bfee3a-fbce-46d4-9c98-f95c8a5b4406\",\"object\":\"NewSprite\",\"x\":123,\"y\":88,\"z\":0,\"angle\":0,\"rotationX\":0,\"rotationY\":0,\"customSize\":true,\"width\":96,\"height\":80,\"customDepth\":false,\"depth\":0,\"layer\":\"\",\"zOrder\":1,\"opacity\":200,\"flippedX\":false,\"flippedY\":false,\"hidden\":false,\"locked\":false}],\"selectedIds\":[],\"canUndo\":true,\"canRedo\":false,\"note\":\"History is the active scene instance history only. Width/height/depth are stored custom dimensions and apply only when their custom-size flag is true. Inspect again after edits, Undo/Redo or reopening.\"}"
+  },
+  {
+    "name": "gdevelop_scene_history",
+    "id": "mock-1789451074285",
+    "input": {
+      "scene": "Scene",
+      "expectedState": "14a505a7930a75129411dc7cdd0891fc1bc3ed566d9928cd940ee37f06aafd55",
+      "direction": "undo"
+    },
+    "result": "{\"scene\":\"Scene\",\"affectedIds\":[],\"total\":2,\"canUndo\":true,\"canRedo\":true}"
+  },
+  {
+    "name": "inspect_gdevelop_scene",
+    "id": "mock-1789451077379",
+    "input": {
+      "scene": "Scene"
+    },
+    "result": "{\"scene\":\"Scene\",\"expectedState\":\"60ccde14fc650cacceaea77e3ffa8e43efa339bc29211f433e38a5c6a65b36e1\",\"total\":2,\"offset\":0,\"nextOffset\":null,\"instances\":[{\"id\":\"f2bfee3a-fbce-46d4-9c98-f95c8a5b4406\",\"object\":\"NewSprite\",\"x\":123,\"y\":88,\"z\":0,\"angle\":0,\"rotationX\":0,\"rotationY\":0,\"customSize\":true,\"width\":96,\"height\":80,\"customDepth\":false,\"depth\":0,\"layer\":\"\",\"zOrder\":1,\"opacity\":200,\"flippedX\":false,\"flippedY\":false,\"hidden\":false,\"locked\":false},{\"id\":\"f9912d75-b831-4284-8d1e-87440bb82741\",\"object\":\"NewSprite\",\"x\":223,\"y\":88,\"z\":0,\"angle\":0,\"rotationX\":0,\"rotationY\":0,\"customSize\":true,\"width\":96,\"height\":80,\"customDepth\":false,\"depth\":0,\"layer\":\"\",\"zOrder\":1,\"opacity\":200,\"flippedX\":false,\"flippedY\":false,\"hidden\":false,\"locked\":false}],\"selectedIds\":[],\"canUndo\":true,\"canRedo\":true,\"note\":\"History is the active scene instance history only. Width/height/depth are stored custom dimensions and apply only when their custom-size flag is true. Inspect again after edits, Undo/Redo or reopening.\"}"
+  },
+  {
+    "name": "gdevelop_scene_history",
+    "id": "mock-1789451077423",
+    "input": {
+      "scene": "Scene",
+      "expectedState": "60ccde14fc650cacceaea77e3ffa8e43efa339bc29211f433e38a5c6a65b36e1",
+      "direction": "redo"
+    },
+    "result": "{\"scene\":\"Scene\",\"affectedIds\":[],\"total\":1,\"canUndo\":true,\"canRedo\":false}"
+  },
+  {
+    "name": "inspect_gdevelop_scene",
+    "id": "mock-1789451080544",
+    "input": {
+      "scene": "Scene"
+    },
+    "result": "{\"scene\":\"Scene\",\"expectedState\":\"179b1fe0db57b50db7c15f4a87f3e5f071f2eb1c45014322947b11c56e1cf29f\",\"total\":1,\"offset\":0,\"nextOffset\":null,\"instances\":[{\"id\":\"f2bfee3a-fbce-46d4-9c98-f95c8a5b4406\",\"object\":\"NewSprite\",\"x\":123,\"y\":88,\"z\":0,\"angle\":0,\"rotationX\":0,\"rotationY\":0,\"customSize\":true,\"width\":96,\"height\":80,\"customDepth\":false,\"depth\":0,\"layer\":\"\",\"zOrder\":1,\"opacity\":200,\"flippedX\":false,\"flippedY\":false,\"hidden\":false,\"locked\":false}],\"selectedIds\":[],\"canUndo\":true,\"canRedo\":false,\"note\":\"History is the active scene instance history only. Width/height/depth are stored custom dimensions and apply only when their custom-size flag is true. Inspect again after edits, Undo/Redo or reopening.\"}"
+  },
+  {
+    "name": "gdevelop_scene_history",
+    "id": "mock-1789451080588",
+    "input": {
+      "scene": "Scene",
+      "expectedState": "179b1fe0db57b50db7c15f4a87f3e5f071f2eb1c45014322947b11c56e1cf29f",
+      "direction": "undo"
+    },
+    "result": "{\"scene\":\"Scene\",\"affectedIds\":[],\"total\":2,\"canUndo\":true,\"canRedo\":true}"
+  },
+  {
+    "name": "inspect_gdevelop_scene",
+    "id": "mock-1789451083716",
+    "input": {
+      "scene": "Scene"
+    },
+    "result": "{\"scene\":\"Scene\",\"expectedState\":\"af30d7a31b07c2a5436a7d33161c4d67bf1270c5e99a838f3f958612d410e0b7\",\"total\":2,\"offset\":0,\"nextOffset\":null,\"instances\":[{\"id\":\"f2bfee3a-fbce-46d4-9c98-f95c8a5b4406\",\"object\":\"NewSprite\",\"x\":123,\"y\":88,\"z\":0,\"angle\":0,\"rotationX\":0,\"rotationY\":0,\"customSize\":true,\"width\":96,\"height\":80,\"customDepth\":false,\"depth\":0,\"layer\":\"\",\"zOrder\":1,\"opacity\":200,\"flippedX\":false,\"flippedY\":false,\"hidden\":false,\"locked\":false},{\"id\":\"f9912d75-b831-4284-8d1e-87440bb82741\",\"object\":\"NewSprite\",\"x\":223,\"y\":88,\"z\":0,\"angle\":0,\"rotationX\":0,\"rotationY\":0,\"customSize\":true,\"width\":96,\"height\":80,\"customDepth\":false,\"depth\":0,\"layer\":\"\",\"zOrder\":1,\"opacity\":200,\"flippedX\":false,\"flippedY\":false,\"hidden\":false,\"locked\":false}],\"selectedIds\":[],\"canUndo\":true,\"canRedo\":true,\"note\":\"History is the active scene instance history only. Width/height/depth are stored custom dimensions and apply only when their custom-size flag is true. Inspect again after edits, Undo/Redo or reopening.\"}"
+  },
+  {
+    "name": "gdevelop_scene_history",
+    "id": "mock-1789451083758",
+    "input": {
+      "scene": "Scene",
+      "expectedState": "af30d7a31b07c2a5436a7d33161c4d67bf1270c5e99a838f3f958612d410e0b7",
+      "direction": "undo"
+    },
+    "result": "{\"scene\":\"Scene\",\"affectedIds\":[],\"total\":1,\"canUndo\":true,\"canRedo\":true}"
+  },
+  {
+    "name": "inspect_gdevelop_scene",
+    "id": "mock-1789451086967",
+    "input": {
+      "scene": "Scene"
+    },
+    "result": "{\"scene\":\"Scene\",\"expectedState\":\"7a62fbe1eeb44e5fec17b7808ea215d6d2c20708d9258de21767fac5f7b0bf22\",\"total\":1,\"offset\":0,\"nextOffset\":null,\"instances\":[{\"id\":\"f2bfee3a-fbce-46d4-9c98-f95c8a5b4406\",\"object\":\"NewSprite\",\"x\":123,\"y\":88,\"z\":0,\"angle\":0,\"rotationX\":0,\"rotationY\":0,\"customSize\":true,\"width\":96,\"height\":80,\"customDepth\":false,\"depth\":0,\"layer\":\"\",\"zOrder\":1,\"opacity\":200,\"flippedX\":false,\"flippedY\":false,\"hidden\":false,\"locked\":false}],\"selectedIds\":[],\"canUndo\":true,\"canRedo\":true,\"note\":\"History is the active scene instance history only. Width/height/depth are stored custom dimensions and apply only when their custom-size flag is true. Inspect again after edits, Undo/Redo or reopening.\"}"
+  },
+  {
+    "name": "gdevelop_scene_history",
+    "id": "mock-1789451087006",
+    "input": {
+      "scene": "Scene",
+      "expectedState": "7a62fbe1eeb44e5fec17b7808ea215d6d2c20708d9258de21767fac5f7b0bf22",
+      "direction": "undo"
+    },
+    "result": "{\"scene\":\"Scene\",\"affectedIds\":[],\"total\":1,\"canUndo\":true,\"canRedo\":true}"
+  },
+  {
+    "name": "inspect_gdevelop_scene",
+    "id": "mock-1789451090161",
+    "input": {
+      "scene": "Scene"
+    },
+    "result": "{\"scene\":\"Scene\",\"expectedState\":\"866e39b671ccccfef27727b903409465b16706e992e478f7c1c6b80b5fed799e\",\"total\":1,\"offset\":0,\"nextOffset\":null,\"instances\":[{\"id\":\"f2bfee3a-fbce-46d4-9c98-f95c8a5b4406\",\"object\":\"NewSprite\",\"x\":400,\"y\":88,\"z\":0,\"angle\":0,\"rotationX\":0,\"rotationY\":0,\"customSize\":false,\"width\":0,\"height\":0,\"customDepth\":false,\"depth\":0,\"layer\":\"\",\"zOrder\":1,\"opacity\":255,\"flippedX\":false,\"flippedY\":false,\"hidden\":false,\"locked\":false}],\"selectedIds\":[],\"canUndo\":true,\"canRedo\":true,\"note\":\"History is the active scene instance history only. Width/height/depth are stored custom dimensions and apply only when their custom-size flag is true. Inspect again after edits, Undo/Redo or reopening.\"}"
+  },
+  {
+    "name": "add_gdevelop_instance",
+    "id": "mock-1789451090196",
+    "input": {
+      "scene": "Scene",
+      "object": "NewSprite",
+      "x": 300,
+      "y": 200
+    },
+    "result": "{\"scene\":\"Scene\",\"affectedIds\":[\"30e4abb2-bcd8-4093-bf47-07030fa1d94f\"],\"total\":2,\"canUndo\":true,\"canRedo\":false}"
+  },
+  {
+    "name": "inspect_gdevelop_scene",
+    "id": "mock-1789451093605",
+    "input": {
+      "scene": "Scene"
+    },
+    "result": "{\"scene\":\"Scene\",\"expectedState\":\"3096563ba5923e6739b08d289178ab3b2482f0d955a20c07a8468dc05e6c9880\",\"total\":2,\"offset\":0,\"nextOffset\":null,\"instances\":[{\"id\":\"f2bfee3a-fbce-46d4-9c98-f95c8a5b4406\",\"object\":\"NewSprite\",\"x\":400,\"y\":88,\"z\":0,\"angle\":0,\"rotationX\":0,\"rotationY\":0,\"customSize\":false,\"width\":0,\"height\":0,\"customDepth\":false,\"depth\":0,\"layer\":\"\",\"zOrder\":1,\"opacity\":255,\"flippedX\":false,\"flippedY\":false,\"hidden\":false,\"locked\":false},{\"id\":\"30e4abb2-bcd8-4093-bf47-07030fa1d94f\",\"object\":\"NewSprite\",\"x\":300,\"y\":200,\"z\":0,\"angle\":0,\"rotationX\":0,\"rotationY\":0,\"customSize\":false,\"width\":0,\"height\":0,\"customDepth\":false,\"depth\":0,\"layer\":\"\",\"zOrder\":0,\"opacity\":255,\"flippedX\":false,\"flippedY\":false,\"hidden\":false,\"locked\":false}],\"selectedIds\":[\"30e4abb2-bcd8-4093-bf47-07030fa1d94f\"],\"canUndo\":true,\"canRedo\":false,\"note\":\"History is the active scene instance history only. Width/height/depth are stored custom dimensions and apply only when their custom-size flag is true. Inspect again after edits, Undo/Redo or reopening.\"}"
+  },
+  {
+    "name": "gdevelop_scene_history",
+    "id": "mock-1789451093648",
+    "input": {
+      "scene": "Scene",
+      "expectedState": "3096563ba5923e6739b08d289178ab3b2482f0d955a20c07a8468dc05e6c9880",
+      "direction": "undo"
+    },
+    "result": "{\"scene\":\"Scene\",\"affectedIds\":[],\"total\":1,\"canUndo\":true,\"canRedo\":true}"
+  }
+]

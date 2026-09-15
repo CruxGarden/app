@@ -5,6 +5,7 @@ import { type I18n as I18nType } from '@lingui/core';
 import { t } from '@lingui/macro';
 
 import * as React from 'react';
+import { registerGardenSceneEditor, unregisterGardenSceneEditor } from '../Garden/SceneTools';
 import LayerRemoveDialog from '../LayersList/LayerRemoveDialog';
 import LayerEditorDialog from '../LayersList/LayerEditorDialog';
 import ObjectInstanceVariablesDialog from '../VariablesList/ObjectInstanceVariablesDialog';
@@ -384,6 +385,7 @@ export default class SceneEditor extends React.Component<Props, State> {
   }
 
   componentDidMount() {
+    registerGardenSceneEditor(this);
     // Sync the saved gameEditorMode from instancesEditorSettings to MainFrame.
     if (
       this.props.isActive &&
@@ -456,6 +458,7 @@ export default class SceneEditor extends React.Component<Props, State> {
   }
 
   componentWillUnmount() {
+    unregisterGardenSceneEditor(this);
     unregisterOnResourceExternallyChangedCallback(
       this.resourceExternallyChangedCallbackId
     );
@@ -3101,6 +3104,7 @@ export default class SceneEditor extends React.Component<Props, State> {
                   />
                   <EditorsDisplay
                     ref={ref => (this.editorDisplay = ref)}
+                    unsavedChanges={this.props.unsavedChanges}
                     gameEditorMode={this.props.gameEditorMode}
                     onRestartInGameEditor={this.props.onRestartInGameEditor}
                     showRestartInGameEditorAfterErrorButton={

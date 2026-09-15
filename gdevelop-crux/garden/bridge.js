@@ -148,6 +148,8 @@ export async function startGarden() {
     settle,
     prepare(value) {
       if (hydrating || !app) throw new Error('Wait for the game editor to open.');
+      const prepared = app.prepare?.(value);
+      if (prepared) return prepared;
       return {
         mutates: !['inspect', 'read-content', 'catalogue'].includes(value?.op),
         apply: () => app.command(value),

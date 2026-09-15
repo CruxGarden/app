@@ -1,5 +1,7 @@
 import type { AppToolDefinition } from '@/services/embedded-app-tool-registry';
+import { GDEVELOP_SCENE_TOOLS, gdevelopSceneCommand } from './gdevelop-scene-tools';
 export const GDEVELOP_TOOLS: AppToolDefinition[] = [
+  ...GDEVELOP_SCENE_TOOLS,
   {
     name: 'inspect_gdevelop',
     description:
@@ -123,7 +125,8 @@ export const GDEVELOP_TOOLS: AppToolDefinition[] = [
   },
   {
     name: 'add_gdevelop_instance',
-    description: 'Place an instance of an existing object in a scene at x, y.',
+    description:
+      'Place an instance of an existing object at x, y in the currently open native scene tab. Uses native scene history and refresh; requires finished property-field editing.',
     input_schema: {
       type: 'object',
       properties: {
@@ -225,6 +228,8 @@ const instructions = (value: unknown, allowInverted: boolean) =>
         ),
     ));
 export function gdevelopCommand(name: string, input: Record<string, unknown>) {
+  const sceneCommand = gdevelopSceneCommand(name, input);
+  if (sceneCommand) return sceneCommand;
   if (name === 'add_gdevelop_resource') {
     if (
       Object.keys(input).length !== 3 ||
