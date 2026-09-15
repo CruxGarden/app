@@ -1901,6 +1901,151 @@ export function getMockLanguageModel(): LanguageModel {
           }
           return textStream('Saved the AudioMass track.');
         }
+        const compositeScenario = lastUserText(prompt).match(
+          /\[minipaint:composite-(create|rasterize|plate|hidden|selected|visible|refuse|continue)\]/,
+        )?.[1];
+        if (compositeScenario) {
+          const rounds = toolResultsThisTurn(prompt);
+          const created = (tool: string) =>
+            Number(toolResultText(prompt, tool)?.match(/"createdLayerId"\s*:\s*(\d+)/)?.[1]);
+          const inspected = toolResultText(prompt, 'inspect_minipaint') || '';
+          const named = (name: string) =>
+            Number(
+              inspected.match(
+                new RegExp('"id"\\s*:\\s*(\\d+),\\s*"name"\\s*:\\s*"' + name + '"'),
+              )?.[1],
+            );
+          let calls: Array<[string, Record<string, unknown>]>;
+          if (compositeScenario === 'create') {
+            calls = [
+              ['resize_minipaint_canvas', { width: 400, height: 240 }],
+              [
+                'add_minipaint_rectangle',
+                { name: 'Backdrop', x: 0, y: 0, width: 400, height: 240, color: '#dbdfd2' },
+              ],
+              [
+                'add_minipaint_rectangle',
+                { name: 'Blue plate', x: 50, y: 60, width: 220, height: 130, color: '#2e65b4' },
+              ],
+              [
+                'update_minipaint_layer',
+                {
+                  id: created('add_minipaint_rectangle'),
+                  opacity: 70,
+                  composition: 'multiply',
+                  rotate: 12,
+                },
+              ],
+              [
+                'edit_minipaint_filter',
+                {
+                  id: created('add_minipaint_rectangle'),
+                  action: 'add',
+                  filter: 'contrast',
+                  value: 15,
+                },
+              ],
+              [
+                'add_minipaint_rectangle',
+                {
+                  name: 'Hidden original',
+                  x: 20,
+                  y: 20,
+                  width: 300,
+                  height: 200,
+                  color: '#111111',
+                },
+              ],
+              [
+                'update_minipaint_layer',
+                { id: created('add_minipaint_rectangle'), visible: false },
+              ],
+              [
+                'add_minipaint_text',
+                {
+                  name: 'Title',
+                  text: 'MAKE TOGETHER',
+                  x: 22,
+                  y: 30,
+                  width: 370,
+                  height: 50,
+                  fontSize: 32,
+                  color: '#c84134',
+                },
+              ],
+              ['save_minipaint_image', { name: 'Composite before' }],
+            ];
+          } else if (compositeScenario === 'selected') {
+            calls = [
+              [
+                'paint_minipaint_stroke',
+                {
+                  name: 'Underline',
+                  points: [
+                    [24, 92],
+                    [270, 92],
+                  ],
+                  size: 8,
+                  color: '#c84134',
+                },
+              ],
+              ['inspect_minipaint', { limit: 10 }],
+              ['save_minipaint_image', { name: 'Selected before' }],
+              [
+                'merge_minipaint_layers',
+                {
+                  mode: 'selected',
+                  ids: [named('Title raster'), named('Underline')],
+                  name: 'Lettering',
+                },
+              ],
+              ['save_minipaint_image', { name: 'Selected after' }],
+            ];
+          } else if (['rasterize', 'plate', 'hidden'].includes(compositeScenario)) {
+            const target =
+              compositeScenario === 'plate'
+                ? 'Blue plate'
+                : compositeScenario === 'hidden'
+                  ? 'Hidden original'
+                  : 'Title';
+            const name =
+              compositeScenario === 'plate'
+                ? 'Plate raster'
+                : compositeScenario === 'hidden'
+                  ? 'Cat'
+                  : 'Title raster';
+            calls = [
+              ['inspect_minipaint', { limit: 10 }],
+              ['rasterize_minipaint_layer', { id: named(target), name }],
+              ['save_minipaint_image', { name: 'Rasterized ' + compositeScenario }],
+            ];
+          } else if (compositeScenario === 'visible') {
+            calls = [
+              ['save_minipaint_image', { name: 'Visible before' }],
+              ['merge_minipaint_layers', { mode: 'visible', name: 'Working composite' }],
+              ['save_minipaint_image', { name: 'Visible after' }],
+            ];
+          } else if (compositeScenario === 'refuse') {
+            calls = [
+              ['inspect_minipaint', { limit: 10 }],
+              [
+                'merge_minipaint_layers',
+                { mode: 'selected', ids: [named('Backdrop'), named('Blue plate')] },
+              ],
+            ];
+          } else {
+            calls = [
+              ['inspect_minipaint', { limit: 10 }],
+              [
+                'erase_minipaint_pixels',
+                { id: named('Working composite'), mode: 'stroke', points: [[350, 200]], size: 30 },
+              ],
+              ['save_minipaint_image', { name: 'Continued composite' }],
+            ];
+          }
+          if (rounds.length < calls.length) return toolCallStream(...calls[rounds.length]!);
+          return textStream('Composite ' + compositeScenario + ' complete.');
+        }
         if (lastUserText(prompt).includes('[minipaint:raster-create]')) {
           const rounds = toolResultsThisTurn(prompt);
           if (!rounds.length)

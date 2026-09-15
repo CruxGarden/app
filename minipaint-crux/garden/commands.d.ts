@@ -1,3 +1,4 @@
+export const BLEND_MODES: string[];
 export const FONTS: string[];
 export function validateCommand(value: unknown): Record<string, unknown> & { op: string };
 export function textData(
