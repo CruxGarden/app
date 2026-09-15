@@ -96,6 +96,67 @@ export function getMockLanguageModel(): LanguageModel {
           }
           return toolCallStream('list_cruxspace_assets', {});
         }
+        const objectAction = lastUserText(prompt).match(/\[gdevelop:object-([a-z-]+)\]/)?.[1];
+        if (objectAction) {
+          const rounds = toolResultsThisTurn(prompt);
+          const base = { scene: 'Scene', object: 'NewSprite', scope: 'scene' };
+          if (!rounds.length && objectAction !== 'stale')
+            return toolCallStream('inspect_gdevelop_object', {
+              ...base,
+              section: objectAction === 'animation' ? 'animations' : 'behaviors',
+            });
+          const raw = toolResultText(prompt, 'inspect_gdevelop_object') || '{}';
+          if (raw.startsWith('Error')) return textStream('Object inspection failed: ' + raw);
+          if (objectAction === 'stale') {
+            if (rounds.length) return textStream('GDevelop object stale complete.');
+            // Older results are shortened to head/tail text by buildNormalizedMessages.
+            // This deliberate stale test needs only the retained identity and token.
+            const expectedState = /"expectedState":"([a-f0-9]{64})"/.exec(raw)?.[1];
+            const behavior = /"behavior":("(?:[^"\\]|\\.)*")/.exec(raw)?.[1];
+            if (!expectedState || !behavior)
+              return textStream('Earlier object identity is unavailable.');
+            return toolCallStream('edit_gdevelop_properties', {
+              ...base,
+              expectedState,
+              behavior: JSON.parse(behavior),
+              updates: [
+                { name: 'MaxSpeed', value: 420 },
+                { name: 'AllowDiagonals', value: false },
+              ],
+            });
+          }
+          const info = JSON.parse(raw);
+          if (rounds.length === 1 && ['inspect', 'edit'].includes(objectAction)) {
+            const behavior = info.items?.find((b: { type?: string }) =>
+              b.type?.includes('TopDownMovement'),
+            )?.name;
+            if (!behavior) return textStream('No movement behavior found.');
+            return toolCallStream('inspect_gdevelop_object', {
+              ...base,
+              section: 'properties',
+              behavior,
+            });
+          }
+          if (objectAction === 'animation' && rounds.length === 1)
+            return toolCallStream('edit_gdevelop_animation', {
+              ...base,
+              expectedState: info.expectedState,
+              animation: 0,
+              fps: 12,
+              loop: false,
+            });
+          if (objectAction === 'edit' && rounds.length === 2)
+            return toolCallStream('edit_gdevelop_properties', {
+              ...base,
+              expectedState: info.expectedState,
+              behavior: info.behavior,
+              updates: [
+                { name: 'MaxSpeed', value: 420 },
+                { name: 'AllowDiagonals', value: false },
+              ],
+            });
+          return textStream('GDevelop object ' + objectAction + ' complete.');
+        }
         const sceneAction = lastUserText(prompt).match(/\[gdevelop:scene-([a-z-]+)\]/)?.[1];
         if (sceneAction) {
           const rounds = toolResultsThisTurn(prompt);

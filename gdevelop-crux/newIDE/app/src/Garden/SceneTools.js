@@ -19,7 +19,7 @@ const identity = (value) => {
 };
 export const registerGardenSceneEditor = (editor) => editors.add(editor);
 export const unregisterGardenSceneEditor = (editor) => editors.delete(editor);
-function editorFor(project, scene) {
+export function editorFor(project, scene) {
   const editor = [...editors].find(
     (e) =>
       project &&
@@ -36,14 +36,14 @@ function editorFor(project, scene) {
     );
   return editor;
 }
-function checkInput() {
+export function checkInput() {
   const active = document.activeElement;
   if (active && (active.matches('input,textarea') || active.isContentEditable))
     throw new Error(
       'Finish the active native text/number edit and click outside its field before using scene tools.'
     );
 }
-const snapshot = (editor) =>
+export const snapshot = (editor) =>
   JSON.stringify({
     editor: identity(editor),
     history: identity(editor.state.history),

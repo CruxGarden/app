@@ -213,6 +213,89 @@ test('GDevelop native game editing, local preview, agent changes and portable re
     writeFileSync(join(dir, stage + '-calls.json'), JSON.stringify(evidenceCalls, null, 2));
     await page.screenshot({ path: join(dir, stage + '.png'), animations: 'disabled' });
   };
+  const editObjectThroughTools = async (page: Page, f: FrameLocator, stage: string) => {
+    if (stage === 'portable') {
+      expect(
+        game().layouts[0].objects[0].behaviors.find((b: any) => b.type.includes('TopDownMovement')),
+      ).toMatchObject({ acceleration: 555, maxSpeed: 420, allowDiagonals: false });
+      expect(game().layouts[0].objects[0].animations[0].directions[0]).toMatchObject({
+        timeBetweenFrames: 1 / 12,
+        looping: false,
+      });
+    }
+    const id = (await page.locator('[data-workspace-id]').getAttribute('data-workspace-id'))!;
+    const dir = resolve(__dirname, '../../docs/gdevelop-objects');
+    mkdirSync(dir, { recursive: true });
+    const evidenceCalls: any[] = [];
+    const run = async (action: string, stale = false) => {
+      const previous = new Set((await storedCrux(page, id)).messages.map((m: any) => m.timestamp));
+      const chat = page.getByPlaceholder('Send a message...');
+      await chat.fill('Revise my movement and animation [gdevelop:object-' + action + ']');
+      await chat.press('Enter');
+      const done = 'GDevelop object ' + action + ' complete.';
+      await expect
+        .poll(
+          async () =>
+            (await storedCrux(page, id)).messages.some(
+              (m: any) => !previous.has(m.timestamp) && m.content === done,
+            ),
+          { timeout: 60000 },
+        )
+        .toBe(true);
+      const calls = (await storedCrux(page, id)).messages
+        .filter((m: any) => !previous.has(m.timestamp) && m.content === done)
+        .flatMap((m: any) => m.toolCalls || []);
+      evidenceCalls.push(...calls);
+      const errors = calls.filter((c: any) => c.result?.startsWith('Error'));
+      if (stale) {
+        expect(errors).toHaveLength(1);
+        expect(errors[0].result).toContain('changed since inspection');
+      } else expect(errors).toEqual([]);
+    };
+    await run('inspect');
+    // The person changes the real behavior form after the collaborator's inspection.
+    await f.getByText('NewSprite', { exact: true }).last().dblclick();
+    await f.getByText('Behaviors', { exact: true }).last().click();
+    const acceleration = f.getByRole('dialog').locator('input#Acceleration');
+    const manualAcceleration = stage === 'native' ? 555 : 666;
+    await acceleration.fill(String(manualAcceleration));
+    await acceleration.press('Tab');
+    await f.getByRole('button', { name: 'Apply', exact: true }).click();
+    await save(f);
+    const movement = () =>
+      game().layouts[0].objects[0].behaviors.find((b: any) => b.type.includes('TopDownMovement'));
+    await expect.poll(() => movement().acceleration).toBe(manualAcceleration);
+    const manual = JSON.stringify(game());
+    await run('stale', true);
+    expect(JSON.stringify(game())).toBe(manual);
+    await run('edit');
+    expect(movement()).toMatchObject({
+      acceleration: manualAcceleration,
+      maxSpeed: 420,
+      allowDiagonals: false,
+    });
+    const originalSprites = JSON.stringify(
+      game().layouts[0].objects[0].animations[0].directions[0].sprites,
+    );
+    await run('animation');
+    expect(game().layouts[0].objects[0].animations[0].directions[0]).toMatchObject({
+      timeBetweenFrames: 1 / 12,
+      looping: false,
+    });
+    expect(JSON.stringify(game().layouts[0].objects[0].animations[0].directions[0].sprites)).toBe(
+      originalSprites,
+    );
+    expect(doc().project[mediaKey]).toEqual(mediaRef);
+    // Reopen native settings to verify the same values remain directly editable.
+    await f.getByText('NewSprite', { exact: true }).last().dblclick();
+    await f.getByText('Behaviors', { exact: true }).last().click();
+    await expect(acceleration).toHaveValue(String(manualAcceleration));
+    await expect(f.getByRole('dialog').locator('input#MaxSpeed')).toHaveValue('420');
+    await page.screenshot({ path: join(dir, stage + '.png'), animations: 'disabled' });
+    await f.getByRole('button', { name: 'Apply', exact: true }).click();
+    await save(f);
+    writeFileSync(join(dir, stage + '-calls.json'), JSON.stringify(evidenceCalls, null, 2));
+  };
   const addInstance = async (f: FrameLocator) => {
     await f.getByText('NewSprite', { exact: true }).click({ button: 'right' });
     await f.getByText('Add instance to the scene', { exact: true }).click();
@@ -254,6 +337,7 @@ test('GDevelop native game editing, local preview, agent changes and portable re
     expect(game().resources.resources[0].file).toMatch(/^garden:media-/);
     await inspectThroughTools(page, 'native');
     await editThroughTools(page, f, 'native');
+    await editObjectThroughTools(page, f, 'native');
     await f.locator('#toolbar-preview-button').click();
     await expect(f.frameLocator('#garden-game-preview iframe').locator('canvas')).toBeVisible({
       timeout: 30000,
@@ -414,6 +498,7 @@ test('GDevelop native game editing, local preview, agent changes and portable re
     expect(doc().project[mediaKey]).toEqual(mediaRef);
     await inspectThroughTools(third.page, 'portable');
     await editThroughTools(third.page, f, 'portable');
+    await editObjectThroughTools(third.page, f, 'portable');
     await addInstance(f);
     await save(f);
     expect(game().layouts[0].instances).toHaveLength(2);
