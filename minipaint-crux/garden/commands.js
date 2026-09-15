@@ -38,7 +38,15 @@ export function validateCommand(value) {
     !Object.hasOwn(fields, value.op)
   )
     throw Error('Choose a supported miniPaint operation.');
-  const allowed = fields[value.op];
+  const allowed =
+    value.op === 'inspect' ? fields[value.op] : [...fields[value.op], 'expectedState'];
+  if (
+    value.expectedState !== undefined &&
+    (typeof value.expectedState !== 'string' ||
+      !/^mp:[A-Za-z0-9-]+:[1-9][0-9]*$/.test(value.expectedState) ||
+      value.expectedState.length > 128)
+  )
+    throw Error('Use the stateToken from inspect_minipaint as expectedState.');
   if (Object.keys(value).some((key) => key !== 'op' && !allowed.includes(key)))
     throw Error('Unexpected miniPaint property.');
   if (allowed.includes('id') && !Number.isSafeInteger(value.id))
@@ -105,7 +113,10 @@ export function validateCommand(value) {
         'Use a unique phrase within one text line and a replacement (up to 2000 characters).',
       );
   }
-  if (value.op === 'layer' && Object.keys(value).length < 3)
+  if (
+    value.op === 'layer' &&
+    Object.keys(value).filter((key) => key !== 'expectedState').length < 3
+  )
     throw Error('Choose a property to update.');
   if (value.op === 'reorder-layer' && !['up', 'down'].includes(value.direction))
     throw Error('Move the layer up or down in the stack.');

@@ -548,6 +548,55 @@ describe('createToolExecutor', () => {
   });
 
   describe('edit_file recovery', () => {
+    it('revises a post while preserving unrelated edits saved after the agent read it', async () => {
+      const path = 'src/content/blog/shared-garden.md';
+      const original = '---\ntitle: Shared garden\ntags: [garden]\n---\n\nOur first draft.\n';
+      const { artifact } = (await import('@/services')).getServices();
+      await artifact.create({ resourceId: cruxId, content: original, meta: { path } });
+      expect(await execute('read_file', { path })).toBe(original);
+      // A separate writer saves through the real service after the agent's read.
+      const manual = original.replace('[garden]', '[garden, community]') + '\nA note from Alex.\n';
+      await artifact.create({ resourceId: cruxId, content: manual, meta: { path } });
+      expect(
+        await execute('edit_file', {
+          path,
+          old_string: 'Our first draft.',
+          new_string: 'Our garden opens on Saturday.',
+        }),
+      ).toBe(`Edited file: ${path}`);
+      expect(await execute('read_file', { path })).toBe(
+        manual.replace('Our first draft.', 'Our garden opens on Saturday.'),
+      );
+    });
+
+    it('refuses a changed post passage, then allows revision from its current contents', async () => {
+      const path = 'src/content/blog/shared-garden.md';
+      const original = '---\ntitle: Shared garden\n---\n\nWe meet on Saturday.\n';
+      const { artifact } = (await import('@/services')).getServices();
+      await artifact.create({ resourceId: cruxId, content: original, meta: { path } });
+      await execute('read_file', { path });
+      const manual = original.replace('Saturday', 'Sunday') + '\nBring your own gloves.\n';
+      await artifact.create({ resourceId: cruxId, content: manual, meta: { path } });
+      const refused = await execute('edit_file', {
+        path,
+        old_string: 'We meet on Saturday.',
+        new_string: 'We meet at noon on Saturday.',
+      });
+      expect(refused).toContain('old_string not found');
+      expect(didMutate('edit_file', refused)).toBe(false);
+      expect(await execute('read_file', { path })).toBe(manual);
+      expect(
+        await execute('edit_file', {
+          path,
+          old_string: 'We meet on Sunday.',
+          new_string: 'We meet at noon on Sunday.',
+        }),
+      ).toBe(`Edited file: ${path}`);
+      expect(await execute('read_file', { path })).toBe(
+        manual.replace('We meet on Sunday.', 'We meet at noon on Sunday.'),
+      );
+    });
+
     it('keeps the read mark after a failed edit so the retry works', async () => {
       await execute('write_file', { path: 'retry.txt', content: 'hello world' });
       await execute('read_file', { path: 'retry.txt' });

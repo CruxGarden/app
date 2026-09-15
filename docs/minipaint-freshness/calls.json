@@ -1,0 +1,171 @@
+[
+  {
+    "name": "resize_minipaint_canvas",
+    "id": "mock-1789498354849",
+    "input": {
+      "width": 400,
+      "height": 240
+    },
+    "result": "{\"stateToken\":\"mp:714fe8eb-8109-4fb3-9513-2149029e3c40:2\",\"width\":400,\"height\":240,\"selectedLayer\":1,\"activeTool\":\"brush\",\"selection\":null,\"history\":{\"canUndo\":true,\"canRedo\":false},\"availableFilters\":{\"brightness\":[-100,100],\"contrast\":[-100,100],\"saturate\":[-100,100],\"hue-rotate\":[0,360],\"blur\":[0,50],\"grayscale\":[0,100],\"sepia\":[0,100],\"invert\":[0,100]},\"availableCompositions\":[\"source-over\",\"multiply\",\"screen\",\"overlay\",\"darken\",\"lighten\",\"color-dodge\",\"color-burn\",\"hard-light\",\"soft-light\",\"difference\",\"exclusion\",\"hue\",\"saturation\",\"color\",\"luminosity\",\"lighter\",\"copy\",\"source-in\",\"source-out\",\"source-atop\",\"destination-over\",\"destination-in\",\"destination-out\",\"destination-atop\",\"xor\"],\"totalLayers\":1,\"offset\":0,\"nextOffset\":null,\"layers\":[{\"id\":1,\"name\":\"Brush #1\",\"type\":null,\"visible\":true,\"opacity\":100,\"composition\":\"source-over\",\"x\":0,\"y\":0,\"width\":null,\"height\":null,\"rotate\":0,\"order\":1,\"filters\":[]}]}"
+  },
+  {
+    "name": "add_minipaint_rectangle",
+    "id": "mock-1789498355989",
+    "input": {
+      "expectedState": "mp:714fe8eb-8109-4fb3-9513-2149029e3c40:2",
+      "name": "Shared panel",
+      "x": 20,
+      "y": 30,
+      "width": 180,
+      "height": 100,
+      "color": "#558855"
+    },
+    "result": "{\"stateToken\":\"mp:714fe8eb-8109-4fb3-9513-2149029e3c40:3\",\"width\":400,\"height\":240,\"selectedLayer\":2,\"activeTool\":\"brush\",\"selection\":null,\"history\":{\"canUndo\":true,\"canRedo\":false},\"availableFilters\":{\"brightness\":[-100,100],\"contrast\":[-100,100],\"saturate\":[-100,100],\"hue-rotate\":[0,360],\"blur\":[0,50],\"grayscale\":[0,100],\"sepia\":[0,100],\"invert\":[0,100]},\"availableCompositions\":[\"source-over\",\"multiply\",\"screen\",\"overlay\",\"darken\",\"lighten\",\"color-dodge\",\"color-burn\",\"hard-light\",\"soft-light\",\"difference\",\"exclusion\",\"hue\",\"saturation\",\"color\",\"luminosity\",\"lighter\",\"copy\",\"source-in\",\"source-out\",\"source-atop\",\"destination-over\",\"destination-in\",\"destination-out\",\"destination-atop\",\"xor\"],\"totalLayers\":2,\"offset\":0,\"nextOffset\":null,\"layers\":[{\"id\":1,\"name\":\"Brush #1\",\"type\":null,\"visible\":true,\"opacity\":100,\"composition\":\"source-over\",\"x\":0,\"y\":0,\"width\":null,\"height\":null,\"rotate\":0,\"order\":1,\"filters\":[]},{\"id\":2,\"name\":\"Shared panel\",\"type\":\"rectangle\",\"visible\":true,\"opacity\":100,\"composition\":\"source-over\",\"x\":20,\"y\":30,\"width\":180,\"height\":100,\"rotate\":0,\"order\":2,\"filters\":[]}],\"createdLayerId\":2}"
+  },
+  {
+    "name": "inspect_minipaint",
+    "id": "mock-1789498358327",
+    "input": {},
+    "result": "{\"stateToken\":\"mp:714fe8eb-8109-4fb3-9513-2149029e3c40:3\",\"width\":400,\"height\":240,\"selectedLayer\":2,\"activeTool\":\"brush\",\"selection\":null,\"history\":{\"canUndo\":true,\"canRedo\":false},\"availableFilters\":{\"brightness\":[-100,100],\"contrast\":[-100,100],\"saturate\":[-100,100],\"hue-rotate\":[0,360],\"blur\":[0,50],\"grayscale\":[0,100],\"sepia\":[0,100],\"invert\":[0,100]},\"availableCompositions\":[\"source-over\",\"multiply\",\"screen\",\"overlay\",\"darken\",\"lighten\",\"color-dodge\",\"color-burn\",\"hard-light\",\"soft-light\",\"difference\",\"exclusion\",\"hue\",\"saturation\",\"color\",\"luminosity\",\"lighter\",\"copy\",\"source-in\",\"source-out\",\"source-atop\",\"destination-over\",\"destination-in\",\"destination-out\",\"destination-atop\",\"xor\"],\"totalLayers\":2,\"offset\":0,\"nextOffset\":null,\"layers\":[{\"id\":1,\"name\":\"Brush #1\",\"type\":null,\"visible\":true,\"opacity\":100,\"composition\":\"source-over\",\"x\":0,\"y\":0,\"width\":null,\"height\":null,\"rotate\":0,\"order\":1,\"filters\":[]},{\"id\":2,\"name\":\"Shared panel\",\"type\":\"rectangle\",\"visible\":true,\"opacity\":100,\"composition\":\"source-over\",\"x\":20,\"y\":30,\"width\":180,\"height\":100,\"rotate\":0,\"order\":2,\"filters\":[]}]}"
+  },
+  {
+    "name": "update_minipaint_layer",
+    "id": "mock-1789498358862",
+    "input": {
+      "expectedState": "mp:714fe8eb-8109-4fb3-9513-2149029e3c40:3",
+      "id": 2,
+      "x": 80
+    },
+    "result": "Error in update_minipaint_layer: The image or native selection/history changed since inspection. Call inspect_minipaint and review the current artwork before retrying with its stateToken as expectedState.. Check the input parameters and try again."
+  },
+  {
+    "name": "inspect_minipaint",
+    "id": "mock-1789498360518",
+    "input": {},
+    "result": "{\"stateToken\":\"mp:714fe8eb-8109-4fb3-9513-2149029e3c40:4\",\"width\":400,\"height\":240,\"selectedLayer\":2,\"activeTool\":\"brush\",\"selection\":null,\"history\":{\"canUndo\":true,\"canRedo\":false},\"availableFilters\":{\"brightness\":[-100,100],\"contrast\":[-100,100],\"saturate\":[-100,100],\"hue-rotate\":[0,360],\"blur\":[0,50],\"grayscale\":[0,100],\"sepia\":[0,100],\"invert\":[0,100]},\"availableCompositions\":[\"source-over\",\"multiply\",\"screen\",\"overlay\",\"darken\",\"lighten\",\"color-dodge\",\"color-burn\",\"hard-light\",\"soft-light\",\"difference\",\"exclusion\",\"hue\",\"saturation\",\"color\",\"luminosity\",\"lighter\",\"copy\",\"source-in\",\"source-out\",\"source-atop\",\"destination-over\",\"destination-in\",\"destination-out\",\"destination-atop\",\"xor\"],\"totalLayers\":2,\"offset\":0,\"nextOffset\":null,\"layers\":[{\"id\":1,\"name\":\"Brush #1\",\"type\":null,\"visible\":true,\"opacity\":100,\"composition\":\"source-over\",\"x\":0,\"y\":0,\"width\":null,\"height\":null,\"rotate\":0,\"order\":1,\"filters\":[]},{\"id\":2,\"name\":\"Shared panel\",\"type\":\"rectangle\",\"visible\":true,\"opacity\":60,\"composition\":\"source-over\",\"x\":20,\"y\":30,\"width\":180,\"height\":100,\"rotate\":0,\"order\":2,\"filters\":[]}]}"
+  },
+  {
+    "name": "update_minipaint_layer",
+    "id": "mock-1789498360531",
+    "input": {
+      "expectedState": "mp:714fe8eb-8109-4fb3-9513-2149029e3c40:4",
+      "id": 2,
+      "x": 80,
+      "color": "#4477aa"
+    },
+    "result": "{\"stateToken\":\"mp:714fe8eb-8109-4fb3-9513-2149029e3c40:5\",\"width\":400,\"height\":240,\"selectedLayer\":2,\"activeTool\":\"brush\",\"selection\":null,\"history\":{\"canUndo\":true,\"canRedo\":false},\"availableFilters\":{\"brightness\":[-100,100],\"contrast\":[-100,100],\"saturate\":[-100,100],\"hue-rotate\":[0,360],\"blur\":[0,50],\"grayscale\":[0,100],\"sepia\":[0,100],\"invert\":[0,100]},\"availableCompositions\":[\"source-over\",\"multiply\",\"screen\",\"overlay\",\"darken\",\"lighten\",\"color-dodge\",\"color-burn\",\"hard-light\",\"soft-light\",\"difference\",\"exclusion\",\"hue\",\"saturation\",\"color\",\"luminosity\",\"lighter\",\"copy\",\"source-in\",\"source-out\",\"source-atop\",\"destination-over\",\"destination-in\",\"destination-out\",\"destination-atop\",\"xor\"],\"totalLayers\":2,\"offset\":0,\"nextOffset\":null,\"layers\":[{\"id\":1,\"name\":\"Brush #1\",\"type\":null,\"visible\":true,\"opacity\":100,\"composition\":\"source-over\",\"x\":0,\"y\":0,\"width\":null,\"height\":null,\"rotate\":0,\"order\":1,\"filters\":[]},{\"id\":2,\"name\":\"Shared panel\",\"type\":\"rectangle\",\"visible\":true,\"opacity\":60,\"composition\":\"source-over\",\"x\":80,\"y\":30,\"width\":180,\"height\":100,\"rotate\":0,\"order\":2,\"filters\":[]}]}"
+  },
+  {
+    "name": "update_minipaint_layer",
+    "id": "mock-1789498363206",
+    "input": {
+      "id": 2,
+      "x": 80
+    },
+    "result": "Error in update_minipaint_layer: The image or native selection/history changed since inspection. Call inspect_minipaint and review the current artwork before retrying with its stateToken as expectedState.. Check the input parameters and try again."
+  },
+  {
+    "name": "inspect_minipaint",
+    "id": "mock-1789498363654",
+    "input": {},
+    "result": "{\"stateToken\":\"mp:714fe8eb-8109-4fb3-9513-2149029e3c40:5\",\"width\":400,\"height\":240,\"selectedLayer\":2,\"activeTool\":\"brush\",\"selection\":null,\"history\":{\"canUndo\":true,\"canRedo\":false},\"availableFilters\":{\"brightness\":[-100,100],\"contrast\":[-100,100],\"saturate\":[-100,100],\"hue-rotate\":[0,360],\"blur\":[0,50],\"grayscale\":[0,100],\"sepia\":[0,100],\"invert\":[0,100]},\"availableCompositions\":[\"source-over\",\"multiply\",\"screen\",\"overlay\",\"darken\",\"lighten\",\"color-dodge\",\"color-burn\",\"hard-light\",\"soft-light\",\"difference\",\"exclusion\",\"hue\",\"saturation\",\"color\",\"luminosity\",\"lighter\",\"copy\",\"source-in\",\"source-out\",\"source-atop\",\"destination-over\",\"destination-in\",\"destination-out\",\"destination-atop\",\"xor\"],\"totalLayers\":2,\"offset\":0,\"nextOffset\":null,\"layers\":[{\"id\":1,\"name\":\"Brush #1\",\"type\":null,\"visible\":true,\"opacity\":100,\"composition\":\"source-over\",\"x\":0,\"y\":0,\"width\":null,\"height\":null,\"rotate\":0,\"order\":1,\"filters\":[]},{\"id\":2,\"name\":\"Shared panel\",\"type\":\"rectangle\",\"visible\":true,\"opacity\":60,\"composition\":\"source-over\",\"x\":80,\"y\":30,\"width\":180,\"height\":100,\"rotate\":0,\"order\":2,\"filters\":[]}]}"
+  },
+  {
+    "name": "minipaint_history",
+    "id": "mock-1789498367221",
+    "input": {
+      "expectedState": "mp:714fe8eb-8109-4fb3-9513-2149029e3c40:5",
+      "direction": "undo"
+    },
+    "result": "Error in minipaint_history: The image or native selection/history changed since inspection. Call inspect_minipaint and review the current artwork before retrying with its stateToken as expectedState.. Check the input parameters and try again."
+  },
+  {
+    "name": "inspect_minipaint",
+    "id": "mock-1789498367774",
+    "input": {},
+    "result": "{\"stateToken\":\"mp:714fe8eb-8109-4fb3-9513-2149029e3c40:6\",\"width\":400,\"height\":240,\"selectedLayer\":2,\"activeTool\":\"brush\",\"selection\":null,\"history\":{\"canUndo\":true,\"canRedo\":false},\"availableFilters\":{\"brightness\":[-100,100],\"contrast\":[-100,100],\"saturate\":[-100,100],\"hue-rotate\":[0,360],\"blur\":[0,50],\"grayscale\":[0,100],\"sepia\":[0,100],\"invert\":[0,100]},\"availableCompositions\":[\"source-over\",\"multiply\",\"screen\",\"overlay\",\"darken\",\"lighten\",\"color-dodge\",\"color-burn\",\"hard-light\",\"soft-light\",\"difference\",\"exclusion\",\"hue\",\"saturation\",\"color\",\"luminosity\",\"lighter\",\"copy\",\"source-in\",\"source-out\",\"source-atop\",\"destination-over\",\"destination-in\",\"destination-out\",\"destination-atop\",\"xor\"],\"totalLayers\":2,\"offset\":0,\"nextOffset\":null,\"layers\":[{\"id\":1,\"name\":\"Brush #1\",\"type\":null,\"visible\":true,\"opacity\":100,\"composition\":\"source-over\",\"x\":0,\"y\":0,\"width\":null,\"height\":null,\"rotate\":0,\"order\":1,\"filters\":[]},{\"id\":2,\"name\":\"Shared panel\",\"type\":\"rectangle\",\"visible\":true,\"opacity\":60,\"composition\":\"source-over\",\"x\":80,\"y\":30,\"width\":180,\"height\":100,\"rotate\":0,\"order\":2,\"filters\":[]}]}"
+  },
+  {
+    "name": "update_minipaint_layer",
+    "id": "mock-1789498368622",
+    "input": {
+      "expectedState": "mp:714fe8eb-8109-4fb3-9513-2149029e3c40:6",
+      "id": 2,
+      "x": 80
+    },
+    "result": "{\"stateToken\":\"mp:714fe8eb-8109-4fb3-9513-2149029e3c40:7\",\"width\":400,\"height\":240,\"selectedLayer\":2,\"activeTool\":\"brush\",\"selection\":null,\"history\":{\"canUndo\":true,\"canRedo\":false},\"availableFilters\":{\"brightness\":[-100,100],\"contrast\":[-100,100],\"saturate\":[-100,100],\"hue-rotate\":[0,360],\"blur\":[0,50],\"grayscale\":[0,100],\"sepia\":[0,100],\"invert\":[0,100]},\"availableCompositions\":[\"source-over\",\"multiply\",\"screen\",\"overlay\",\"darken\",\"lighten\",\"color-dodge\",\"color-burn\",\"hard-light\",\"soft-light\",\"difference\",\"exclusion\",\"hue\",\"saturation\",\"color\",\"luminosity\",\"lighter\",\"copy\",\"source-in\",\"source-out\",\"source-atop\",\"destination-over\",\"destination-in\",\"destination-out\",\"destination-atop\",\"xor\"],\"totalLayers\":2,\"offset\":0,\"nextOffset\":null,\"layers\":[{\"id\":1,\"name\":\"Brush #1\",\"type\":null,\"visible\":true,\"opacity\":100,\"composition\":\"source-over\",\"x\":0,\"y\":0,\"width\":null,\"height\":null,\"rotate\":0,\"order\":1,\"filters\":[]},{\"id\":2,\"name\":\"Shared panel\",\"type\":\"rectangle\",\"visible\":true,\"opacity\":60,\"composition\":\"source-over\",\"x\":80,\"y\":30,\"width\":180,\"height\":100,\"rotate\":0,\"order\":2,\"filters\":[]}]}"
+  },
+  {
+    "name": "inspect_minipaint",
+    "id": "mock-1789498370275",
+    "input": {},
+    "result": "{\"stateToken\":\"mp:714fe8eb-8109-4fb3-9513-2149029e3c40:7\",\"width\":400,\"height\":240,\"selectedLayer\":2,\"activeTool\":\"brush\",\"selection\":null,\"history\":{\"canUndo\":true,\"canRedo\":false},\"availableFilters\":{\"brightness\":[-100,100],\"contrast\":[-100,100],\"saturate\":[-100,100],\"hue-rotate\":[0,360],\"blur\":[0,50],\"grayscale\":[0,100],\"sepia\":[0,100],\"invert\":[0,100]},\"availableCompositions\":[\"source-over\",\"multiply\",\"screen\",\"overlay\",\"darken\",\"lighten\",\"color-dodge\",\"color-burn\",\"hard-light\",\"soft-light\",\"difference\",\"exclusion\",\"hue\",\"saturation\",\"color\",\"luminosity\",\"lighter\",\"copy\",\"source-in\",\"source-out\",\"source-atop\",\"destination-over\",\"destination-in\",\"destination-out\",\"destination-atop\",\"xor\"],\"totalLayers\":2,\"offset\":0,\"nextOffset\":null,\"layers\":[{\"id\":1,\"name\":\"Brush #1\",\"type\":null,\"visible\":true,\"opacity\":100,\"composition\":\"source-over\",\"x\":0,\"y\":0,\"width\":null,\"height\":null,\"rotate\":0,\"order\":1,\"filters\":[]},{\"id\":2,\"name\":\"Shared panel\",\"type\":\"rectangle\",\"visible\":true,\"opacity\":60,\"composition\":\"source-over\",\"x\":80,\"y\":30,\"width\":180,\"height\":100,\"rotate\":0,\"order\":2,\"filters\":[]}]}"
+  },
+  {
+    "name": "update_minipaint_layer",
+    "id": "mock-1789498371272",
+    "input": {
+      "expectedState": "mp:714fe8eb-8109-4fb3-9513-2149029e3c40:7",
+      "id": 2,
+      "x": 80
+    },
+    "result": "Error in update_minipaint_layer: Finish the current drawing or close the native dialog before using an agent tool.. Check the input parameters and try again."
+  },
+  {
+    "name": "inspect_minipaint",
+    "id": "mock-1789498373346",
+    "input": {},
+    "result": "{\"stateToken\":\"mp:714fe8eb-8109-4fb3-9513-2149029e3c40:9\",\"width\":400,\"height\":240,\"selectedLayer\":3,\"activeTool\":\"brush\",\"selection\":null,\"history\":{\"canUndo\":true,\"canRedo\":false},\"availableFilters\":{\"brightness\":[-100,100],\"contrast\":[-100,100],\"saturate\":[-100,100],\"hue-rotate\":[0,360],\"blur\":[0,50],\"grayscale\":[0,100],\"sepia\":[0,100],\"invert\":[0,100]},\"availableCompositions\":[\"source-over\",\"multiply\",\"screen\",\"overlay\",\"darken\",\"lighten\",\"color-dodge\",\"color-burn\",\"hard-light\",\"soft-light\",\"difference\",\"exclusion\",\"hue\",\"saturation\",\"color\",\"luminosity\",\"lighter\",\"copy\",\"source-in\",\"source-out\",\"source-atop\",\"destination-over\",\"destination-in\",\"destination-out\",\"destination-atop\",\"xor\"],\"totalLayers\":3,\"offset\":0,\"nextOffset\":null,\"layers\":[{\"id\":1,\"name\":\"Brush #1\",\"type\":null,\"visible\":true,\"opacity\":100,\"composition\":\"source-over\",\"x\":0,\"y\":0,\"width\":null,\"height\":null,\"rotate\":0,\"order\":1,\"filters\":[]},{\"id\":2,\"name\":\"Shared panel\",\"type\":\"rectangle\",\"visible\":true,\"opacity\":60,\"composition\":\"source-over\",\"x\":80,\"y\":30,\"width\":180,\"height\":100,\"rotate\":0,\"order\":2,\"filters\":[]},{\"id\":3,\"name\":\"Brush #3\",\"type\":\"brush\",\"visible\":true,\"opacity\":100,\"composition\":\"source-over\",\"x\":12.903225806451612,\"y\":12.903225806451612,\"width\":0,\"height\":0,\"rotate\":null,\"order\":3,\"filters\":[],\"strokeCount\":1,\"color\":\"#008000\",\"brushSize\":4}]}"
+  },
+  {
+    "name": "update_minipaint_layer",
+    "id": "mock-1789498373373",
+    "input": {
+      "expectedState": "mp:714fe8eb-8109-4fb3-9513-2149029e3c40:9",
+      "id": 2,
+      "x": 80,
+      "color": "#4477aa"
+    },
+    "result": "{\"stateToken\":\"mp:714fe8eb-8109-4fb3-9513-2149029e3c40:10\",\"width\":400,\"height\":240,\"selectedLayer\":3,\"activeTool\":\"brush\",\"selection\":null,\"history\":{\"canUndo\":true,\"canRedo\":false},\"availableFilters\":{\"brightness\":[-100,100],\"contrast\":[-100,100],\"saturate\":[-100,100],\"hue-rotate\":[0,360],\"blur\":[0,50],\"grayscale\":[0,100],\"sepia\":[0,100],\"invert\":[0,100]},\"availableCompositions\":[\"source-over\",\"multiply\",\"screen\",\"overlay\",\"darken\",\"lighten\",\"color-dodge\",\"color-burn\",\"hard-light\",\"soft-light\",\"difference\",\"exclusion\",\"hue\",\"saturation\",\"color\",\"luminosity\",\"lighter\",\"copy\",\"source-in\",\"source-out\",\"source-atop\",\"destination-over\",\"destination-in\",\"destination-out\",\"destination-atop\",\"xor\"],\"totalLayers\":3,\"offset\":0,\"nextOffset\":null,\"layers\":[{\"id\":1,\"name\":\"Brush #1\",\"type\":null,\"visible\":true,\"opacity\":100,\"composition\":\"source-over\",\"x\":0,\"y\":0,\"width\":null,\"height\":null,\"rotate\":0,\"order\":1,\"filters\":[]},{\"id\":2,\"name\":\"Shared panel\",\"type\":\"rectangle\",\"visible\":true,\"opacity\":60,\"composition\":\"source-over\",\"x\":80,\"y\":30,\"width\":180,\"height\":100,\"rotate\":0,\"order\":2,\"filters\":[]},{\"id\":3,\"name\":\"Brush #3\",\"type\":\"brush\",\"visible\":true,\"opacity\":100,\"composition\":\"source-over\",\"x\":12.903225806451612,\"y\":12.903225806451612,\"width\":0,\"height\":0,\"rotate\":null,\"order\":3,\"filters\":[],\"strokeCount\":1,\"color\":\"#008000\",\"brushSize\":4}]}"
+  },
+  {
+    "name": "inspect_minipaint",
+    "id": "mock-1789498376154",
+    "input": {},
+    "result": "{\"stateToken\":\"mp:f0f81afb-3526-48b7-b5ac-287087cd188f:1\",\"width\":400,\"height\":240,\"selectedLayer\":2,\"activeTool\":\"brush\",\"selection\":null,\"history\":{\"canUndo\":true,\"canRedo\":false},\"availableFilters\":{\"brightness\":[-100,100],\"contrast\":[-100,100],\"saturate\":[-100,100],\"hue-rotate\":[0,360],\"blur\":[0,50],\"grayscale\":[0,100],\"sepia\":[0,100],\"invert\":[0,100]},\"availableCompositions\":[\"source-over\",\"multiply\",\"screen\",\"overlay\",\"darken\",\"lighten\",\"color-dodge\",\"color-burn\",\"hard-light\",\"soft-light\",\"difference\",\"exclusion\",\"hue\",\"saturation\",\"color\",\"luminosity\",\"lighter\",\"copy\",\"source-in\",\"source-out\",\"source-atop\",\"destination-over\",\"destination-in\",\"destination-out\",\"destination-atop\",\"xor\"],\"totalLayers\":3,\"offset\":0,\"nextOffset\":null,\"layers\":[{\"id\":1,\"name\":\"Brush #1\",\"type\":null,\"visible\":true,\"opacity\":100,\"composition\":\"source-over\",\"x\":0,\"y\":0,\"width\":null,\"height\":null,\"rotate\":0,\"order\":1,\"filters\":[]},{\"id\":2,\"name\":\"Shared panel\",\"type\":\"rectangle\",\"visible\":true,\"opacity\":60,\"composition\":\"source-over\",\"x\":80,\"y\":30,\"width\":180,\"height\":100,\"rotate\":0,\"order\":2,\"filters\":[]},{\"id\":3,\"name\":\"Brush #3\",\"type\":\"brush\",\"visible\":true,\"opacity\":100,\"composition\":\"source-over\",\"x\":12.903225806451612,\"y\":12.903225806451612,\"width\":0,\"height\":0,\"rotate\":null,\"order\":3,\"filters\":[],\"strokeCount\":1,\"color\":\"#008000\",\"brushSize\":4}]}"
+  },
+  {
+    "name": "add_minipaint_image",
+    "id": "mock-1789498377228",
+    "input": {
+      "expectedState": "mp:f0f81afb-3526-48b7-b5ac-287087cd188f:1",
+      "name": "Marker",
+      "path": "assets/marker.png",
+      "x": 280,
+      "y": 100,
+      "width": 40,
+      "height": 40
+    },
+    "result": "Error in add_minipaint_image: The image or native selection/history changed since inspection. Call inspect_minipaint and review the current artwork before retrying with its stateToken as expectedState.. Check the input parameters and try again."
+  },
+  {
+    "name": "inspect_minipaint",
+    "id": "mock-1789498379607",
+    "input": {},
+    "result": "{\"stateToken\":\"mp:f0f81afb-3526-48b7-b5ac-287087cd188f:2\",\"width\":400,\"height\":240,\"selectedLayer\":2,\"activeTool\":\"brush\",\"selection\":null,\"history\":{\"canUndo\":true,\"canRedo\":false},\"availableFilters\":{\"brightness\":[-100,100],\"contrast\":[-100,100],\"saturate\":[-100,100],\"hue-rotate\":[0,360],\"blur\":[0,50],\"grayscale\":[0,100],\"sepia\":[0,100],\"invert\":[0,100]},\"availableCompositions\":[\"source-over\",\"multiply\",\"screen\",\"overlay\",\"darken\",\"lighten\",\"color-dodge\",\"color-burn\",\"hard-light\",\"soft-light\",\"difference\",\"exclusion\",\"hue\",\"saturation\",\"color\",\"luminosity\",\"lighter\",\"copy\",\"source-in\",\"source-out\",\"source-atop\",\"destination-over\",\"destination-in\",\"destination-out\",\"destination-atop\",\"xor\"],\"totalLayers\":3,\"offset\":0,\"nextOffset\":null,\"layers\":[{\"id\":1,\"name\":\"Brush #1\",\"type\":null,\"visible\":true,\"opacity\":100,\"composition\":\"source-over\",\"x\":0,\"y\":0,\"width\":null,\"height\":null,\"rotate\":0,\"order\":1,\"filters\":[]},{\"id\":2,\"name\":\"Shared panel\",\"type\":\"rectangle\",\"visible\":true,\"opacity\":55,\"composition\":\"source-over\",\"x\":80,\"y\":30,\"width\":180,\"height\":100,\"rotate\":0,\"order\":2,\"filters\":[]},{\"id\":3,\"name\":\"Brush #3\",\"type\":\"brush\",\"visible\":true,\"opacity\":100,\"composition\":\"source-over\",\"x\":12.903225806451612,\"y\":12.903225806451612,\"width\":0,\"height\":0,\"rotate\":null,\"order\":3,\"filters\":[],\"strokeCount\":1,\"color\":\"#008000\",\"brushSize\":4}]}"
+  },
+  {
+    "name": "add_minipaint_image",
+    "id": "mock-1789498379628",
+    "input": {
+      "expectedState": "mp:f0f81afb-3526-48b7-b5ac-287087cd188f:2",
+      "name": "Marker",
+      "path": "assets/marker.png",
+      "x": 280,
+      "y": 100,
+      "width": 40,
+      "height": 40
+    },
+    "result": "{\"stateToken\":\"mp:f0f81afb-3526-48b7-b5ac-287087cd188f:3\",\"width\":400,\"height\":240,\"selectedLayer\":4,\"activeTool\":\"brush\",\"selection\":null,\"history\":{\"canUndo\":true,\"canRedo\":false},\"availableFilters\":{\"brightness\":[-100,100],\"contrast\":[-100,100],\"saturate\":[-100,100],\"hue-rotate\":[0,360],\"blur\":[0,50],\"grayscale\":[0,100],\"sepia\":[0,100],\"invert\":[0,100]},\"availableCompositions\":[\"source-over\",\"multiply\",\"screen\",\"overlay\",\"darken\",\"lighten\",\"color-dodge\",\"color-burn\",\"hard-light\",\"soft-light\",\"difference\",\"exclusion\",\"hue\",\"saturation\",\"color\",\"luminosity\",\"lighter\",\"copy\",\"source-in\",\"source-out\",\"source-atop\",\"destination-over\",\"destination-in\",\"destination-out\",\"destination-atop\",\"xor\"],\"totalLayers\":4,\"offset\":0,\"nextOffset\":null,\"layers\":[{\"id\":1,\"name\":\"Brush #1\",\"type\":null,\"visible\":true,\"opacity\":100,\"composition\":\"source-over\",\"x\":0,\"y\":0,\"width\":null,\"height\":null,\"rotate\":0,\"order\":1,\"filters\":[]},{\"id\":2,\"name\":\"Shared panel\",\"type\":\"rectangle\",\"visible\":true,\"opacity\":55,\"composition\":\"source-over\",\"x\":80,\"y\":30,\"width\":180,\"height\":100,\"rotate\":0,\"order\":2,\"filters\":[]},{\"id\":3,\"name\":\"Brush #3\",\"type\":\"brush\",\"visible\":true,\"opacity\":100,\"composition\":\"source-over\",\"x\":12.903225806451612,\"y\":12.903225806451612,\"width\":0,\"height\":0,\"rotate\":null,\"order\":3,\"filters\":[],\"strokeCount\":1,\"color\":\"#008000\",\"brushSize\":4},{\"id\":4,\"name\":\"Marker\",\"type\":\"image\",\"visible\":true,\"opacity\":100,\"composition\":\"source-over\",\"x\":280,\"y\":100,\"width\":40,\"height\":40,\"rotate\":0,\"order\":4,\"filters\":[],\"imagePath\":\"data/assets/689627ad1ae0ae4fc00fd07183924b3700e9360dac5e72bd51dc40d5ab954dd4.bin\",\"originalWidth\":4,\"originalHeight\":4}],\"createdLayerId\":4}"
+  }
+]
