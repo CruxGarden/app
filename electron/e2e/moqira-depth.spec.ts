@@ -6,6 +6,53 @@ import { enterGarden, storedCrux } from './multi-crux-helpers';
 import { exportNativeCrux, importNativeCrux } from './native-archive-helpers';
 import { outputs } from './game-cruxspace-helpers';
 
+test('Moqira subtitles remain directly editable after saving and reopening the app', async () => {
+  test.setTimeout(120000);
+  const { app, page } = await launchApp();
+  try {
+    await enterGarden(page);
+    await page.getByRole('button', { name: 'Add Crux', exact: true }).click();
+    await page.getByRole('button', { name: /^Mockups/ }).click();
+    await page.getByRole('button', { name: 'Create', exact: true }).click();
+    const frame = page.frameLocator('iframe[data-crux-id]');
+    const status = frame.locator('#garden-project [role=status]');
+    await expect(status).toHaveText('Saved', { timeout: 90000 });
+    const id = (await page.locator('[data-workspace-id]').getAttribute('data-workspace-id'))!;
+    const folder = (await storedCrux(page, id)).projectFolder;
+    await frame.locator('.library-item').getByText('Text Subtitle', { exact: true }).click();
+    await frame.locator('.canvas-node').dblclick();
+    const editor = frame.locator('.floating-text-editor textarea');
+    await editor.fill('Fix it together. Keep it longer.');
+    await editor.press('Meta+Enter');
+    await frame.getByRole('button', { name: 'Save project', exact: true }).click();
+    await expect(status).toHaveText('Saved');
+    const subtitle = () =>
+      JSON.parse(readFileSync(join(folder, 'mockups/project.json'), 'utf8')).wireframes[0].nodes[0];
+    expect(subtitle()).toMatchObject({
+      kind: 'textSubtitle',
+      text: 'Fix it together. Keep it longer.',
+    });
+    await page
+      .getByTestId('workshop-view')
+      .getByRole('button', { name: 'Advanced', exact: true })
+      .click();
+    await page
+      .getByTestId('workshop-view')
+      .getByRole('button', { name: 'Use app', exact: true })
+      .click();
+    await expect(status).toHaveText('Saved', { timeout: 90000 });
+    await frame.locator('.canvas-node').dblclick();
+    await expect(editor).toHaveValue('Fix it together. Keep it longer.');
+    await editor.fill('A second direct revision');
+    await editor.press('Meta+Enter');
+    await frame.getByRole('button', { name: 'Save project', exact: true }).click();
+    await expect(status).toHaveText('Saved');
+    expect(subtitle().text).toBe('A second direct revision');
+  } finally {
+    await app.close();
+  }
+});
+
 test('Moqira tools create editable screens, preserve manual work, use native history and survive a complete import', async () => {
   test.setTimeout(360000);
   let instance = await launchApp({ env: { CRUX_AI_MOCK: '1' } });

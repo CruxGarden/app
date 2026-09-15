@@ -319,6 +319,7 @@ export function editableTextField(node: CanvasNode): "text" | "options" | "value
     "textInput",
     "textLabel",
     "textParagraph",
+    "textSubtitle",
     "textTitle",
     "tooltip",
     "vCurlyBrace",
