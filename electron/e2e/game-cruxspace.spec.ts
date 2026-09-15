@@ -1,5 +1,13 @@
 import { test, expect, chromium } from '@playwright/test';
-import { readFileSync, writeFileSync, mkdirSync, existsSync, renameSync, statSync } from 'node:fs';
+import {
+  readFileSync,
+  writeFileSync,
+  mkdirSync,
+  existsSync,
+  renameSync,
+  rmSync,
+  statSync,
+} from 'node:fs';
 import { createServer } from 'node:http';
 import { join, resolve } from 'node:path';
 import { launchApp } from './launch';
@@ -320,8 +328,20 @@ test('Glow Garden: plan, board, sprites, sound, game, export and site across one
       await expect(preview).toBeVisible({ timeout: 4 * 60_000 });
       const origin = new URL((await preview.getAttribute('src'))!).origin;
       const browser = await chromium.launch();
+      const diagnostics: string[] = [];
       try {
         const site = await browser.newPage({ viewport: { width: 1280, height: 900 } });
+        site.on('pageerror', (error) => diagnostics.push(`Page: ${error.message}`));
+        site.on('console', (message) => {
+          if (message.type() === 'error') diagnostics.push(`Console: ${message.text()}`);
+        });
+        site.on('requestfailed', (request) =>
+          diagnostics.push(`Request: ${request.url()} ${request.failure()?.errorText}`),
+        );
+        site.on('response', (response) => {
+          if (response.status() >= 400)
+            diagnostics.push(`HTTP ${response.status()}: ${response.url()}`);
+        });
         await site.goto(`${origin}/play`);
         await expect(site.getByRole('heading', { name: 'Glow Garden', level: 1 })).toBeVisible({
           timeout: 120000,
@@ -334,6 +354,10 @@ test('Glow Garden: plan, board, sprites, sound, game, export and site across one
         await site.waitForTimeout(2500); // let the runtime draw its first frames
         await site.screenshot({ path: join(evidence, '09b-site-preview.png') });
       } finally {
+        await test.info().attach('game-preview-diagnostics', {
+          body: diagnostics.join('\n') || 'No browser errors recorded.',
+          contentType: 'text/plain',
+        });
         await browser.close();
       }
     });
@@ -587,8 +611,16 @@ test('Glow Garden: plan, board, sprites, sound, game, export and site across one
     await first.app.close();
   }
 
-  // Every source folder is gone: the package alone must carry the undertaking.
-  for (const m of Object.values(members)) renameSync(m.folder, `${m.folder}-unavailable`);
+  // The first app is closed and its package is complete. Drop its disposable
+  // source Garden and Blob Store before import, avoiding two multi-GB Gardens
+  // on disk together. Keep the package beside them; it alone must carry the work.
+  if (process.env.CRUX_E2E_KEEP === '1') {
+    for (const m of Object.values(members)) renameSync(m.folder, `${m.folder}-unavailable`);
+  } else {
+    rmSync(join(first.dir, 'garden'), { recursive: true, force: true });
+    rmSync(join(first.dir, 'userData'), { recursive: true, force: true });
+  }
+  for (const m of Object.values(members)) expect(existsSync(m.folder)).toBe(false);
   const second = await launchApp({ env: { CRUX_AI_MOCK: '1', CRUX_API_URL: api.url } });
   try {
     const { page } = second;
