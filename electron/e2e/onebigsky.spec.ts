@@ -104,7 +104,7 @@ test('One Big Sky: offline game, keyboard match, focus pause and preserved sourc
   const again = await launchApp({ dir: first.dir });
   try {
     const { page } = again;
-    // The Default Mood (Digital Fractal Garden) is back on relaunch; the game needs no Mood of its own
+    // The Default Mood (Fractal Garden) is back on relaunch; the game needs no Mood of its own
     await expect
       .poll(() =>
         page.evaluate(() =>

@@ -29,8 +29,8 @@ test.describe('mood builder', () => {
       await page.getByRole('button', { name: 'Add files', exact: true }).click();
       await expect(page.getByRole('button', { name: 'New file' })).toBeVisible({ timeout: 30_000 });
       const tile = page.locator('.mosaic-tile').first();
-      // The Default Mood (Digital Fractal Garden) sets a 10px pane gap
-      await expect(tile).toHaveCSS('margin-left', '10px');
+      // The Default Mood (Fractal Garden) sets a 12px pane gap
+      await expect(tile).toHaveCSS('margin-left', '12px');
 
       // Mood modal → Open Mood Builder → lands on the Theme tab. Glass off first: the
       // checks below read a pane's own colour, not its tint through the glass.
@@ -81,7 +81,7 @@ test.describe('mood builder', () => {
         '0px',
       );
       // the Default Mood's radius
-      await expect(page.locator('.mosaic-window.pane-workshop')).toHaveCSS('border-radius', '12px');
+      await expect(page.locator('.mosaic-window.pane-workshop')).toHaveCSS('border-radius', '14px');
       await page.getByRole('button', { name: 'Toggle share' }).click();
       await expect(
         page.locator('.mosaic-window.pane-publish').getByText('Nothing to share yet'),

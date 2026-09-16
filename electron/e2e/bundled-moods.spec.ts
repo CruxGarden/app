@@ -6,7 +6,7 @@ type AudioState = { trackName: string | null; enabled: boolean; playing: boolean
 
 /**
  * The built-in Moods apply as whole rooms: theme tokens, background,
- * sound and persona change together. Digital Fractal Garden — the Default Mood — brings
+ * sound and persona change together. Fractal Garden — the Default Mood — brings
  * its own background image and track.
  */
 test.describe('bundled moods', () => {
@@ -125,7 +125,7 @@ test.describe('bundled moods', () => {
         (window as unknown as { __cruxAudio: { state: () => AudioState } }).__cruxAudio.state(),
       );
     try {
-      // The Gateway itself wears the Default Mood on a first run — Digital Fractal Garden
+      // The Gateway itself wears the Default Mood on a first run — Fractal Garden
       // (ADR 0043): the fractal render, copper accent, liquid glass, before Enter
       await expect(page.getByTestId('mood-background-image')).toBeVisible({ timeout: 30_000 });
       await expect.poll(() => cssVar('--accent')).toBe('#5fd2a5');
@@ -140,7 +140,7 @@ test.describe('bundled moods', () => {
       await expect(page.getByRole('region', { name: 'Mood Bar' })).toBeVisible({
         timeout: 30_000,
       });
-      // A fresh garden wears Digital Fractal Garden: copper accent, the render, glass, the track
+      // A fresh garden wears Fractal Garden: copper accent, the render, glass, the track
       await expect.poll(() => cssVar('--accent'), { timeout: 30_000 }).toBe('#5fd2a5');
       await expect
         .poll(() => page.evaluate(() => document.documentElement.dataset.surfaceStyle))
