@@ -137,6 +137,9 @@ html[data-surface-style='glass']
   :is(
     .border-border,
     [class*='border-border/'],
+    [class*='bg-surface/'],
+    [class*='bg-surface-solid/'],
+    [class*='bg-bg/'],
     .border-input-border,
     .border-surface-border,
     .border-panel-border,
@@ -146,6 +149,17 @@ html[data-surface-style='glass']
     .divide-border > :not([hidden]) ~ :not([hidden])
   ) {
   border-color: transparent;
+}
+/* opacity variants (bg-surface/50 …) are the same shade, opaque */
+html[data-surface-style='glass']
+  :is(.mosaic-window-body, .bg-panel, .bg-dropdown, .bg-model-selector-dropdown, .bg-garden-card)
+  :is([class*='bg-surface/'], [class*='bg-bg/']) {
+  background-color: var(--surface);
+}
+html[data-surface-style='glass']
+  :is(.mosaic-window-body, .bg-panel, .bg-dropdown, .bg-model-selector-dropdown, .bg-garden-card)
+  [class*='bg-surface-solid/'] {
+  background-color: var(--surface-solid);
 }
 html[data-surface-style='glass']
   :is(.mosaic-window-body, .bg-panel, .bg-dropdown, .bg-garden-card)
@@ -274,20 +288,20 @@ html[data-surface-style='glass'] :is(.bg-primary-button, .bg-chat-send-button, .
   color: var(--text);
   background: color-mix(
     in srgb,
-    var(--accent) 24%,
+    var(--accent) 16%,
     color-mix(in srgb, var(--panel) var(--glass-opacity), transparent)
   );
-  border-color: color-mix(in srgb, var(--accent) 50%, var(--glass-highlight));
+  border-color: color-mix(in srgb, var(--accent) 22%, var(--glass-highlight));
   box-shadow:
-    inset 0 1px 0 color-mix(in srgb, var(--accent) 35%, var(--glass-highlight)),
+    inset 0 1px 0 color-mix(in srgb, var(--accent) 18%, var(--glass-highlight)),
     0 1px 2px rgb(0 0 0 / 0.22);
 }
 html[data-surface-style='glass']
   :is(.bg-primary-button, .bg-chat-send-button, .bg-gateway-button):hover:not(:disabled) {
   background: color-mix(
     in srgb,
-    var(--accent) 34%,
+    var(--accent) 26%,
     color-mix(in srgb, var(--panel) var(--glass-opacity), transparent)
   );
-  border-color: color-mix(in srgb, var(--accent) 70%, var(--glass-highlight));
+  border-color: color-mix(in srgb, var(--accent) 40%, var(--glass-highlight));
 }
