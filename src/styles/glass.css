@@ -137,6 +137,9 @@ html[data-surface-style='glass']
   :is(
     .border-border,
     [class*='border-border/'],
+    .border-input-border,
+    .border-surface-border,
+    .border-panel-border,
     .bg-surface,
     .bg-surface-solid,
     .bg-input,
@@ -148,6 +151,22 @@ html[data-surface-style='glass']
   :is(.mosaic-window-body, .bg-panel, .bg-dropdown, .bg-garden-card)
   .bg-input:is(:focus-within, :focus) {
   border-color: color-mix(in srgb, var(--accent) 55%, transparent);
+}
+/* a Panel nested inside a primary surface (Settings sections, wizard steps) is
+   an inner shade, not a second pane: opaque, one step lighter, no frame */
+html[data-surface-style='glass']
+  :is(.mosaic-window-body, .bg-panel, .bg-dropdown, .bg-garden-card)
+  .bg-panel {
+  background-color: var(--surface);
+  backdrop-filter: none;
+  border-color: transparent;
+  box-shadow: none;
+  isolation: auto;
+}
+html[data-surface-style='glass']
+  :is(.mosaic-window-body, .bg-panel, .bg-dropdown, .bg-garden-card)
+  .bg-panel::before {
+  content: none;
 }
 html[data-surface-style='glass'] .modal-scrim {
   backdrop-filter: blur(calc(var(--glass-blur) / 3));
