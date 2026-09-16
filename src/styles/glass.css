@@ -17,21 +17,53 @@
      --glass-light       the colour of the moving light
    Nothing here applies while data-surface-style is solid. ── */
 
-/* ── Panes: the ring becomes a highlight, header and body become glass ── */
-html[data-surface-style='glass'] .mosaic.crux-mosaic-theme .mosaic-window {
-  background: color-mix(in srgb, var(--glass-highlight) 55%, transparent);
+/* ── The primary glass surfaces ─────────────────────────────────────────────
+   One frame, one frost, one sheen. Everything that reads as glass is listed
+   here once: the panes, the TopBar and Mood bar, panels (modals, the Gateway
+   wizard), dropdowns and garden cards. Buttons take the same frost below.
+   Everything laid *inside* one of these is opaque and flat. */
+
+/* frame: highlight ring, depth, and a stacking context for the sheen */
+html[data-surface-style='glass']
+  :is(
+    .mosaic.crux-mosaic-theme .mosaic-window,
+    .bg-panel,
+    .bg-dropdown,
+    .bg-model-selector-dropdown,
+    .bg-garden-card
+  ) {
+  position: relative;
+  isolation: isolate;
+  border-color: color-mix(in srgb, var(--glass-highlight) 60%, transparent);
   box-shadow:
+    inset 0 1px 0 var(--glass-highlight),
     0 24px 60px -28px rgb(0 0 0 / 0.55),
     0 2px 6px -2px rgb(0 0 0 / 0.25);
+}
+html[data-surface-style='glass'] .mosaic.crux-mosaic-theme .mosaic-window {
+  background: color-mix(in srgb, var(--glass-highlight) 55%, transparent);
   overflow: hidden;
 }
-html[data-surface-style='glass'] .mosaic.crux-mosaic-theme .mosaic-window .mosaic-window-body {
-  background: color-mix(in srgb, var(--panel) var(--glass-opacity), transparent);
+
+/* frost: the surface's own colour at --glass-opacity over a blurred backdrop */
+html[data-surface-style='glass']
+  :is(
+    .mosaic.crux-mosaic-theme .mosaic-window :is(.mosaic-window-body, .mosaic-window-toolbar),
+    .bg-toolbar,
+    .bg-mood-bar,
+    .bg-panel,
+    .bg-dropdown,
+    .bg-model-selector-dropdown,
+    .bg-garden-card
+  ) {
+  background-color: color-mix(
+    in srgb,
+    var(--_glass-tint, var(--panel)) var(--glass-opacity),
+    transparent
+  );
   backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturation));
 }
 html[data-surface-style='glass'] .mosaic.crux-mosaic-theme .mosaic-window .mosaic-window-toolbar {
-  background: color-mix(in srgb, var(--panel) var(--glass-opacity), transparent);
-  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturation));
   box-shadow: inset 0 1px 0 var(--glass-highlight);
 }
 html[data-surface-style='glass']
@@ -40,14 +72,37 @@ html[data-surface-style='glass']
   .mosaic-window-toolbar
   > .pane-toolbar {
   background: transparent;
+  border-color: transparent;
+}
+html[data-surface-style='glass'] :is(.bg-toolbar, .bg-mood-bar) {
   border-color: color-mix(in srgb, var(--glass-highlight) 60%, transparent);
 }
-/* the sheen: a specular band sweeping across the whole pane */
-html[data-surface-style='glass'] .mosaic.crux-mosaic-theme .mosaic-window::after {
+/* each chrome surface tints the frost with its own Mood token */
+html[data-surface-style='glass'] .bg-toolbar {
+  --_glass-tint: var(--toolbar);
+}
+html[data-surface-style='glass'] .bg-mood-bar {
+  --_glass-tint: var(--mood-bar);
+}
+html[data-surface-style='glass'] .bg-dropdown {
+  --_glass-tint: var(--dropdown);
+}
+html[data-surface-style='glass'] .bg-model-selector-dropdown {
+  --_glass-tint: var(--model-selector-dropdown);
+}
+html[data-surface-style='glass'] .bg-garden-card {
+  --_glass-tint: var(--garden-card);
+}
+
+/* sheen: a specular band that crosses each surface once a minute. It is
+   painted under the frost (::before at z-index -1 inside the frame's stacking
+   context), so content sits over it and only the glass catches the light. */
+html[data-surface-style='glass']
+  :is(.mosaic.crux-mosaic-theme .mosaic-window, .bg-panel, .bg-garden-card)::before {
   content: '';
   position: absolute;
   inset: 0;
-  z-index: 3;
+  z-index: -1;
   pointer-events: none;
   border-radius: inherit;
   background: linear-gradient(
@@ -59,13 +114,13 @@ html[data-surface-style='glass'] .mosaic.crux-mosaic-theme .mosaic-window::after
   background-size: 320% 100%;
   background-position: 100% 0;
   mix-blend-mode: screen;
-  animation: glass-sheen calc(var(--motion-ms-slow) * 60) linear infinite;
+  animation: glass-sheen 60s ease-in-out infinite;
 }
 @keyframes glass-sheen {
   0% {
     background-position: 100% 0;
   }
-  60% {
+  7% {
     background-position: 0% 0;
   }
   100% {
@@ -73,47 +128,26 @@ html[data-surface-style='glass'] .mosaic.crux-mosaic-theme .mosaic-window::after
   }
 }
 
-/* ── Chrome: the TopBar, the Mood bar, panels, dialogs, dropdowns, cards ── */
-html[data-surface-style='glass'] .bg-toolbar,
-html[data-surface-style='glass'] .bg-mood-bar,
-html[data-surface-style='glass'] .bg-panel,
-html[data-surface-style='glass'] .bg-dropdown,
-html[data-surface-style='glass'] .bg-model-selector-dropdown,
-html[data-surface-style='glass'] .bg-garden-card {
-  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturation));
-  box-shadow: inset 0 1px 0 var(--glass-highlight);
+/* ── Inside a primary surface: flat, opaque shades instead of outlines ──────
+   Sections separate by tone, not by lines: surfaces and inputs keep their
+   opaque Mood colour, and hairline dividers and outlines are dropped. Inputs
+   regain an accent ring only while focused. */
+html[data-surface-style='glass']
+  :is(.mosaic-window-body, .bg-panel, .bg-dropdown, .bg-model-selector-dropdown, .bg-garden-card)
+  :is(
+    .border-border,
+    [class*='border-border/'],
+    .bg-surface,
+    .bg-surface-solid,
+    .bg-input,
+    .divide-border > :not([hidden]) ~ :not([hidden])
+  ) {
+  border-color: transparent;
 }
-html[data-surface-style='glass'] .bg-toolbar {
-  background-color: color-mix(in srgb, var(--toolbar) var(--glass-opacity), transparent);
-}
-html[data-surface-style='glass'] .bg-mood-bar {
-  background-color: color-mix(in srgb, var(--mood-bar) var(--glass-opacity), transparent);
-}
-html[data-surface-style='glass'] .bg-panel {
-  background-color: color-mix(in srgb, var(--panel) var(--glass-opacity), transparent);
-}
-html[data-surface-style='glass'] .bg-dropdown {
-  background-color: color-mix(in srgb, var(--dropdown) var(--glass-opacity), transparent);
-}
-html[data-surface-style='glass'] .bg-model-selector-dropdown {
-  background-color: color-mix(
-    in srgb,
-    var(--model-selector-dropdown) var(--glass-opacity),
-    transparent
-  );
-}
-html[data-surface-style='glass'] .bg-garden-card {
-  background-color: color-mix(in srgb, var(--garden-card) var(--glass-opacity), transparent);
-}
-/* surfaces inside glass sit on blurred ground already: translucent, no second blur */
-html[data-surface-style='glass'] .bg-surface {
-  background-color: color-mix(in srgb, var(--surface) 70%, transparent);
-}
-html[data-surface-style='glass'] .bg-surface-solid {
-  background-color: color-mix(in srgb, var(--surface-solid) 82%, transparent);
-}
-html[data-surface-style='glass'] .bg-input {
-  background-color: color-mix(in srgb, var(--input) 60%, transparent);
+html[data-surface-style='glass']
+  :is(.mosaic-window-body, .bg-panel, .bg-dropdown, .bg-garden-card)
+  .bg-input:is(:focus-within, :focus) {
+  border-color: color-mix(in srgb, var(--accent) 55%, transparent);
 }
 html[data-surface-style='glass'] .modal-scrim {
   backdrop-filter: blur(calc(var(--glass-blur) / 3));
@@ -181,9 +215,60 @@ html[data-surface-style='glass'] .glass-surface {
 }
 
 /* ── Intensity: off and subtle keep the glass still ── */
-html[data-motion-intensity='off'] .mosaic.crux-mosaic-theme .mosaic-window::after,
-html[data-motion-intensity='subtle'] .mosaic.crux-mosaic-theme .mosaic-window::after,
+html[data-motion-intensity='off']
+  :is(.mosaic.crux-mosaic-theme .mosaic-window, .bg-panel, .bg-garden-card)::before,
+html[data-motion-intensity='subtle']
+  :is(.mosaic.crux-mosaic-theme .mosaic-window, .bg-panel, .bg-garden-card)::before,
 html[data-motion-intensity='off'] .liquid-orb,
 html[data-motion-intensity='subtle'] .liquid-orb {
   animation: none;
+}
+
+/* ── Glass buttons: keyed off the button token classes every button already
+   wears (the shared Button and the hand-styled ones alike), so the frost is
+   defined once: the panes' frost, the border carrying the shading, colour
+   only on the primary action ── */
+html[data-surface-style='glass']
+  :is(.bg-action-button, .bg-snapshot-banner-button, .bg-profile-button, .bg-mood-bar-button) {
+  background: color-mix(in srgb, var(--panel) var(--glass-opacity), transparent);
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturation));
+  border-color: color-mix(in srgb, var(--glass-highlight) 90%, transparent);
+  box-shadow:
+    inset 0 1px 0 var(--glass-highlight),
+    0 1px 2px rgb(0 0 0 / 0.22);
+}
+html[data-surface-style='glass']
+  :is(
+    .bg-action-button,
+    .bg-snapshot-banner-button,
+    .bg-profile-button,
+    .bg-mood-bar-button
+  ):hover:not(:disabled) {
+  background: color-mix(
+    in srgb,
+    var(--text) 8%,
+    color-mix(in srgb, var(--panel) var(--glass-opacity), transparent)
+  );
+  border-color: var(--glass-highlight);
+}
+html[data-surface-style='glass'] :is(.bg-primary-button, .bg-chat-send-button, .bg-gateway-button) {
+  color: var(--text);
+  background: color-mix(
+    in srgb,
+    var(--accent) 24%,
+    color-mix(in srgb, var(--panel) var(--glass-opacity), transparent)
+  );
+  border-color: color-mix(in srgb, var(--accent) 50%, var(--glass-highlight));
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, var(--accent) 35%, var(--glass-highlight)),
+    0 1px 2px rgb(0 0 0 / 0.22);
+}
+html[data-surface-style='glass']
+  :is(.bg-primary-button, .bg-chat-send-button, .bg-gateway-button):hover:not(:disabled) {
+  background: color-mix(
+    in srgb,
+    var(--accent) 34%,
+    color-mix(in srgb, var(--panel) var(--glass-opacity), transparent)
+  );
+  border-color: color-mix(in srgb, var(--accent) 70%, var(--glass-highlight));
 }

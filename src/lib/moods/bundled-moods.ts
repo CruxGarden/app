@@ -78,13 +78,13 @@ interface Spec {
  * the Moss theme, the Keeper's voice and face, and one looping track,
  * "Echoes From Beyond". Ships as files; apply ingests them.
  */
-/** Digital Fractal Garden first: the Default Mood a new garden wears (ADR 0043). */
+/** Fractal Garden first: the Default Mood a new garden wears (ADR 0043). */
 const SPECS: Spec[] = [
   {
     id: 'digital-fractal-garden',
-    name: 'Digital Fractal Garden',
+    name: 'Fractal Garden',
     presetId: 'digital-fractal-garden',
-    extra: { bgImageDim: '0.32', bgImageBlur: '0px' },
+    extra: { bgImageDim: '0.46', bgImageBlur: '0px' },
     background: { type: BgType.Image },
     bundled: {
       background: bg_digital_fractal_garden,

@@ -476,7 +476,7 @@ function SetupStep({ onBack }: { onBack: () => void }) {
         await useAppStore.getState().updateAuthor({ username: trimmed });
       }
 
-      // A new garden wears the Default Mood — Digital Fractal Garden (ADR 0043):
+      // A new garden wears the Default Mood — Fractal Garden (ADR 0043):
       // the fractal render, liquid glass, Iris's voice and the Keeper's track.
       // Restored gardens bring their own and skip this.
       try {

@@ -415,7 +415,7 @@ function MoodSection({ initialMood }: { initialMood: string }) {
         <span>
           {track
             ? 'A Mood can bring its own soundtrack. Play it when you’re ready.'
-            : 'This Mood is quiet. Wear Digital Fractal Garden to hear the garden.'}
+            : 'This Mood is quiet. Wear Fractal Garden to hear the garden.'}
         </span>
       </div>
     </section>

@@ -20,7 +20,7 @@ describe('bundled Moods (ADR 0043: the backgrounds set)', () => {
     }
   });
 
-  it('Digital Fractal Garden is the Default Mood: first, glass, the fractal render, Iris, the one track', () => {
+  it('Fractal Garden is the Default Mood: first, glass, the fractal render, Iris, the one track', () => {
     const d = BUNDLED_MOODS[0]!;
     expect(d.id).toBe('digital-fractal-garden');
     expect(d.theme.section).toBe('Dark');

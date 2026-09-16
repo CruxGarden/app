@@ -32,7 +32,7 @@ test.describe('motion roles', () => {
       const dialog = page.locator('[data-motion-role="dialog"]').first();
       const choice = () => dialog.getAttribute('data-motion-choice');
 
-      // Digital Fractal Garden (the Default Mood) drifts dialogs in
+      // Fractal Garden (the Default Mood) drifts dialogs in
       expect(await cssVar('--motion-enter-dialog')).toBe('drift');
       expect(await choice()).toBe('drift');
       // The enter settled at the rest state Motion wrote inline
@@ -200,7 +200,7 @@ test.describe('motion roles', () => {
       await page.getByPlaceholder('My Crux').fill('Moving picture');
       await page.getByRole('button', { name: 'Create', exact: true }).click();
       await expect(page.locator('[data-workspace-id]')).toBeVisible();
-      // Digital Fractal Garden fades panes: the new screen fades in
+      // Fractal Garden fades panes: the new screen fades in
       expect(await pane()).toBe('fade');
 
       await page.evaluate(() => {
