@@ -22,7 +22,10 @@ export default defineConfig({
   },
   build: {
     outDir: 'dist',
-    sourcemap: true,
+    // Sourcemaps are for debugging a local build. The crux.garden build skips
+    // them: generating them for a bundle this size is what exhausts Node's heap
+    // on a CI runner, and publishing them would serve our source to visitors.
+    sourcemap: !process.env.VITE_PUBLIC_SITE,
   },
   test: {
     globals: true,
