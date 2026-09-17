@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { PlasmaProvider, Plasma } from '@cruxgarden/plasma-ui';
 import { APP_NAME } from '@/lib/constants';
 import '@/components/landing/teaser.css';
@@ -9,7 +9,7 @@ const MAILCHIMP_ACTION =
 /** Mailchimp's bot trap: a real person never fills a field they cannot see. */
 const HONEYPOT_FIELD = 'b_4c2e196117cdb095809f3bb3b_f31692b207';
 
-const SUBSCRIBED_MESSAGE = 'Thank you, we will notify you at launch.';
+const SUBSCRIBED_MESSAGE = 'Thank you, we will notify you at launch';
 /**
  * Mailchimp's own flow: the form posts to Mailchimp and Mailchimp redirects
  * back to crux.garden. That redirect carries nothing that says who arrived, so
@@ -52,6 +52,12 @@ export default function Landing({ subscribed = false }: { subscribed?: boolean }
   // Read once on mount; a return trip is a fresh load and reads it again.
   const [remembered] = useState(hasSubscribed);
   const answered = subscribed || remembered;
+
+  // Landing on /subscribed is itself proof, and it may be the first time this
+  // browser has seen the form — someone confirming the mail on their phone.
+  useEffect(() => {
+    if (subscribed) rememberSubscribed();
+  }, [subscribed]);
   return (
     <div className="teaser">
       <PlasmaProvider
@@ -105,7 +111,7 @@ export default function Landing({ subscribed = false }: { subscribed?: boolean }
                   type="email"
                   name="EMAIL"
                   id="mce-EMAIL"
-                  placeholder="you@example.com"
+                  placeholder="keeper@crux.garden"
                   autoComplete="email"
                   required
                 />
