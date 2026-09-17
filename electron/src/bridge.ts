@@ -288,12 +288,28 @@ export interface AgentStatus {
 }
 
 export interface AgentStartOptions {
+  provider?: string;
   runId: string;
   cruxId: string;
   cwd: string;
   prompt: string;
   sessionId?: string | null;
   appendSystemPrompt?: string;
+}
+
+export interface AgentToolRequest {
+  requestId: string;
+  runId: string;
+  cruxId: string;
+  name: string;
+  input: Record<string, unknown>;
+}
+export interface AgentToolResult {
+  content: Array<
+    { type: 'text'; text: string } | { type: 'image'; data: string; mimeType: string }
+  >;
+  isError?: boolean;
+  hadMutation?: boolean;
 }
 
 /** Main → renderer: the agent wants to use a tool the SDK will not auto-allow. */
@@ -321,7 +337,9 @@ export type AgentEvent =
   | { type: 'result'; costUsd: number; durationMs: number; numTurns: number; isError: boolean };
 
 export interface AgentProviderBridge {
-  status(force?: boolean): Promise<AgentStatus>;
+  status(force?: boolean, provider?: string): Promise<AgentStatus>;
+  onToolRequest(cb: (request: AgentToolRequest) => void): () => void;
+  respondTool(requestId: string, result: AgentToolResult): void;
   /** Resolves when the turn's stream has ended; events arrive through onEvent meanwhile. */
   start(opts: AgentStartOptions): Promise<void>;
   interrupt(runId: string): Promise<void>;
@@ -342,6 +360,7 @@ export interface FigmaDesktopBridge {
 
 export interface ElectronBridge {
   figmaDesktop?: FigmaDesktopBridge;
+  blenderDesktop?: FigmaDesktopBridge;
   sqlite: SqliteBridge;
   desktop: DesktopBridge;
   project: ProjectBridge;

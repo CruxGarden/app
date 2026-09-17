@@ -1,41 +1,41 @@
 [
   {
     "name": "inspect_gdevelop",
-    "id": "mock-1789442864312",
+    "id": "mock-1789486772769",
     "input": {},
-    "result": "{\"name\":\"External game\",\"total\":1,\"offset\":0,\"nextOffset\":null,\"scenes\":[{\"name\":\"Scene\",\"path\":\"/layouts/0\",\"objects\":1,\"instances\":1,\"events\":0}],\"sections\":[\"objects\",\"instances\",\"events\",\"layers\",\"variables\",\"resources\"],\"globalObjectsPath\":\"/objects\",\"resourcesPath\":\"/resources/resources\",\"note\":\"Paths and array indexes describe this inspection; inspect again after structural edits. Read any native subtree with read_gdevelop_content.\"}"
+    "result": "{\"name\":\"External game\",\"total\":1,\"offset\":0,\"nextOffset\":null,\"scenes\":[{\"name\":\"Scene\",\"path\":\"/layouts/0\",\"objects\":1,\"instances\":1,\"events\":2}],\"sections\":[\"objects\",\"instances\",\"events\",\"layers\",\"variables\",\"resources\"],\"globalObjectsPath\":\"/objects\",\"resourcesPath\":\"/resources/resources\",\"note\":\"Paths and array indexes describe this inspection; inspect again after structural edits. Read any native subtree with read_gdevelop_content.\"}"
   },
   {
     "name": "inspect_gdevelop",
-    "id": "mock-1789442864350",
+    "id": "mock-1789486772827",
     "input": {
       "scene": "Scene",
       "section": "objects",
       "limit": 5
     },
-    "result": "{\"section\":\"objects\",\"scene\":\"Scene\",\"path\":\"/layouts/0/objects\",\"total\":1,\"offset\":0,\"nextOffset\":null,\"items\":[{\"path\":\"/layouts/0/objects/0\",\"value\":{\"adaptCollisionMaskAutomatically\":true,\"animations\":[{\"directions\":[{\"looping\":false,\"sprites\":[{\"centerPoint\":{\"automatic\":true,\"name\":\"centre\",\"x\":0,\"y\":0},\"customCollisionMask\":[[{\"x\":0,\"y\":0},{\"x\":64,\"y\":0},{\"x\":64,\"y\":64},{\"x\":0,\"y\":64}]],\"hasCustomCollisionMask\":true,\"image\":\"sprite.svg\",\"originPoint\":{\"name\":\"origine\",\"x\":0,\"y\":0},\"points\":[]}],\"timeBetweenFrames\":0.08}],\"name\":\"\",\"useMultipleDirections\":false}],\"assetStoreId\":\"\",\"behaviors\":[{\"acceleration\":400,\"allowDiagonals\":true,\"angleOffset\":0,\"angularMaxSpeed\":180,\"customIsometryAngle\":30,\"deceleration\":800,\"ignoreDefaultControls\":false,\"maxSpeed\":200,\"movementAngleOffset\":0,\"name\":\"TopDownMovement\",\"rotateObject\":true,\"type\":\"TopDownMovementBehavior::TopDownMovementBehavior\",\"useLegacyTurnBack\":false,\"viewpoint\":\"TopDown\"}],\"effects\":[],\"name\":\"NewSprite\",\"persistentUuid\":\"bd6791b1-d289-4294-8d95-60496ff6117b\",\"type\":\"Sprite\",\"updateIfNotVisible\":false,\"variables\":[]},\"complete\":true}]}"
+    "result": "{\"section\":\"objects\",\"scene\":\"Scene\",\"path\":\"/layouts/0/objects\",\"total\":1,\"offset\":0,\"nextOffset\":null,\"items\":[{\"path\":\"/layouts/0/objects/0\",\"value\":{\"adaptCollisionMaskAutomatically\":true,\"animations\":[{\"directions\":[{\"looping\":false,\"sprites\":[{\"centerPoint\":{\"automatic\":true,\"name\":\"centre\",\"x\":0,\"y\":0},\"customCollisionMask\":[[{\"x\":0,\"y\":0},{\"x\":64,\"y\":0},{\"x\":64,\"y\":64},{\"x\":0,\"y\":64}]],\"hasCustomCollisionMask\":true,\"image\":\"sprite.svg\",\"originPoint\":{\"name\":\"origine\",\"x\":0,\"y\":0},\"points\":[]}],\"timeBetweenFrames\":0.08333333333333333}],\"name\":\"\",\"useMultipleDirections\":false}],\"assetStoreId\":\"\",\"behaviors\":[{\"acceleration\":555,\"allowDiagonals\":false,\"angleOffset\":0,\"angularMaxSpeed\":180,\"customIsometryAngle\":30,\"deceleration\":800,\"ignoreDefaultControls\":false,\"maxSpeed\":420,\"movementAngleOffset\":0,\"name\":\"TopDownMovement\",\"rotateObject\":true,\"type\":\"TopDownMovementBehavior::TopDownMovementBehavior\",\"useLegacyTurnBack\":false,\"viewpoint\":\"TopDown\"}],\"effects\":[],\"name\":\"NewSprite\",\"persistentUuid\":\"b729a7c4-2c62-4e03-8eeb-14a660c785cb\",\"type\":\"Sprite\",\"updateIfNotVisible\":false,\"variables\":[]},\"complete\":true}]}"
   },
   {
     "name": "inspect_gdevelop",
-    "id": "mock-1789442864369",
+    "id": "mock-1789486772881",
     "input": {
       "scene": "Scene",
       "section": "instances",
       "limit": 5
     },
-    "result": "{\"section\":\"instances\",\"scene\":\"Scene\",\"path\":\"/layouts/0/instances\",\"total\":1,\"offset\":0,\"nextOffset\":null,\"items\":[{\"path\":\"/layouts/0/instances/0\",\"value\":{\"angle\":0,\"customSize\":false,\"height\":0,\"initialVariables\":[],\"keepRatio\":true,\"layer\":\"\",\"name\":\"NewSprite\",\"numberProperties\":[],\"persistentUuid\":\"b1c91397-9a5b-43b4-b3fc-5ed34ee29e10\",\"stringProperties\":[],\"width\":0,\"x\":400,\"y\":300,\"zOrder\":1},\"complete\":true}]}"
+    "result": "{\"section\":\"instances\",\"scene\":\"Scene\",\"path\":\"/layouts/0/instances\",\"total\":1,\"offset\":0,\"nextOffset\":null,\"items\":[{\"path\":\"/layouts/0/instances/0\",\"value\":{\"angle\":0,\"customSize\":false,\"height\":0,\"initialVariables\":[],\"keepRatio\":true,\"layer\":\"\",\"name\":\"NewSprite\",\"numberProperties\":[],\"persistentUuid\":\"d16f5335-4251-4e65-8e51-f46fa19eb03c\",\"stringProperties\":[],\"width\":0,\"x\":400,\"y\":77,\"zOrder\":1},\"complete\":true}]}"
   },
   {
     "name": "read_gdevelop_content",
-    "id": "mock-1789442864386",
+    "id": "mock-1789486772904",
     "input": {
       "path": "/layouts/0/objects/0/behaviors"
     },
-    "result": "{\"path\":\"/layouts/0/objects/0/behaviors\",\"contentFingerprint\":\"fe5a0f0bdbbdf5adbb86a37d67fe870e85251b30ba6331545b4e5d1520b419bf\",\"format\":\"json\",\"offset\":0,\"totalCharacters\":346,\"text\":\"[{\\\"acceleration\\\":400,\\\"allowDiagonals\\\":true,\\\"angleOffset\\\":0,\\\"angularMaxSpeed\\\":180,\\\"customIsometryAngle\\\":30,\\\"deceleration\\\":800,\\\"ignoreDefaultControls\\\":false,\\\"maxSpeed\\\":200,\\\"movementAngleOffset\\\":0,\\\"name\\\":\\\"TopDownMovement\\\",\\\"rotateObject\\\":true,\\\"type\\\":\\\"TopDownMovementBehavior::TopDownMovementBehavior\\\",\\\"useLegacyTurnBack\\\":false,\\\"viewpoint\\\":\\\"TopDown\\\"}]\",\"nextOffset\":null,\"childPaths\":[\"/layouts/0/objects/0/behaviors/0\"],\"note\":\"Text chunks use JavaScript string offsets; concatenate chunks from an unchanged document before parsing. Prefer a child path for large content.\"}"
+    "result": "{\"path\":\"/layouts/0/objects/0/behaviors\",\"contentFingerprint\":\"4edfe148656ed0cf98bca771ce10899bac2ea2447ea0ec3d83848d4aed1b0c5c\",\"format\":\"json\",\"offset\":0,\"totalCharacters\":347,\"text\":\"[{\\\"acceleration\\\":555,\\\"allowDiagonals\\\":false,\\\"angleOffset\\\":0,\\\"angularMaxSpeed\\\":180,\\\"customIsometryAngle\\\":30,\\\"deceleration\\\":800,\\\"ignoreDefaultControls\\\":false,\\\"maxSpeed\\\":420,\\\"movementAngleOffset\\\":0,\\\"name\\\":\\\"TopDownMovement\\\",\\\"rotateObject\\\":true,\\\"type\\\":\\\"TopDownMovementBehavior::TopDownMovementBehavior\\\",\\\"useLegacyTurnBack\\\":false,\\\"viewpoint\\\":\\\"TopDown\\\"}]\",\"nextOffset\":null,\"childPaths\":[\"/layouts/0/objects/0/behaviors/0\"],\"note\":\"Text chunks use JavaScript string offsets; concatenate chunks from an unchanged document before parsing. Prefer a child path for large content.\"}"
   },
   {
     "name": "list_gdevelop_capabilities",
-    "id": "mock-1789442864404",
+    "id": "mock-1789486772931",
     "input": {
       "kind": "action",
       "query": "sound",
@@ -45,7 +45,7 @@
   },
   {
     "name": "list_gdevelop_capabilities",
-    "id": "mock-1789442864417",
+    "id": "mock-1789486772956",
     "input": {
       "kind": "action",
       "type": "PlaySound"
@@ -54,7 +54,7 @@
   },
   {
     "name": "list_gdevelop_capabilities",
-    "id": "mock-1789442864437",
+    "id": "mock-1789486772982",
     "input": {
       "kind": "condition",
       "type": "CollisionNP"

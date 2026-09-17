@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { cn } from '@/lib/cn';
 import { getApiKey, setApiKey, removeApiKey } from '@/ai/keys';
 import { isLocalModel } from '@/ai/local';
-import { PROVIDERS, CLAUDE_CODE_PROVIDER } from '@/ai/providers';
+import { PROVIDERS, isAgentModel } from '@/ai/providers';
 import { agentStatus } from '@/services/agent-provider';
 import { Capability, can } from '@/lib/platform';
 import type { AgentStatus } from '../../../electron/src/bridge';
@@ -29,11 +29,16 @@ export default function ApiKeySetup({
 }: ApiKeySetupProps) {
   // Claude Code (ADR 0019) is a provider without a key; desktop only.
   const providerIds = Object.keys(PROVIDERS).filter(
-    (id) => id !== 'included' && (id !== CLAUDE_CODE_PROVIDER || can(Capability.AgentHost)),
+    (id) => id !== 'included' && (!isAgentModel(id) || can(Capability.AgentHost)),
   );
-  const [agent, setAgent] = useState<AgentStatus | null>(null);
+  const [agents, setAgents] = useState<Record<string, AgentStatus>>({});
   useEffect(() => {
-    if (can(Capability.AgentHost)) void agentStatus().then(setAgent);
+    if (can(Capability.AgentHost))
+      for (const provider of Object.values(PROVIDERS).filter((provider) => provider.agent)) {
+        void agentStatus(true, provider.id).then((status) =>
+          setAgents((current) => ({ ...current, [provider.id]: status })),
+        );
+      }
   }, []);
   const [hints, setHints] = useState<Record<string, string>>({});
   const [inputs, setInputs] = useState<Record<string, string>>({});
@@ -44,7 +49,7 @@ export default function ApiKeySetup({
     (async () => {
       const newHints: Record<string, string> = {};
       for (const id of providerIds) {
-        if (isLocalModel(PROVIDERS[id]!.defaultModel) || id === CLAUDE_CODE_PROVIDER) continue; // no key
+        if (isLocalModel(PROVIDERS[id]!.defaultModel) || isAgentModel(id)) continue; // no key
         const key = await getApiKey(id);
         if (key) {
           newHints[id] = `${key.slice(0, 7)}...${key.slice(-4)}`;
@@ -83,6 +88,7 @@ export default function ApiKeySetup({
     <div className="space-y-3">
       {providerIds.map((providerId, idx) => {
         const provider = PROVIDERS[providerId]!;
+        const agent = agents[providerId] ?? null;
         const Icon = PROVIDER_ICONS[providerId];
         const hint = hints[providerId];
         const input = inputs[providerId] || '';
@@ -106,16 +112,17 @@ export default function ApiKeySetup({
                 >
                   {provider.name}
                 </a>
-                {providerId === CLAUDE_CODE_PROVIDER ? (
+                {isAgentModel(providerId) ? (
                   <span
                     className="text-xs font-mono text-text-muted/70"
-                    data-testid="claude-code-status"
+                    data-testid={`${providerId}-status`}
                   >
                     {agent === null
-                      ? 'Looking for Claude Code…'
-                      : agent.installed
-                        ? `Installed${agent.version ? ` · ${agent.version}` : ''} — uses your Claude Code login, no key here`
-                        : 'Not installed — install Claude Code, sign in once from a terminal, then restart'}
+                      ? `Looking for ${provider.name}…`
+                      : agent.installed && !agent.reason
+                        ? `Installed${agent.version ? ` · ${agent.version}` : ''} — uses your ${provider.name} login, no key here`
+                        : (agent.reason ??
+                          `Install ${provider.name} and sign in, then reopen Settings`)}
                   </span>
                 ) : local ? (
                   <span className="text-xs font-mono text-text-muted/70">
@@ -144,7 +151,7 @@ export default function ApiKeySetup({
             </div>
 
             {/* Key input */}
-            {!local && providerId !== CLAUDE_CODE_PROVIDER && (
+            {!local && !isAgentModel(providerId) && (
               <div className="flex items-center gap-2">
                 <input
                   type="password"

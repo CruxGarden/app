@@ -130,7 +130,10 @@ export interface UIState {
   // ChatPane renders the banner. Same contract as delete approvals: every
   // waiter must settle or the agent's call hangs forever.
   pendingAgentApprovals: AgentApproval[];
-  requestAgentApproval: (req: Omit<AgentApproval, 'id' | 'requestedAt'>) => Promise<boolean>;
+  requestAgentApproval: (
+    req: Omit<AgentApproval, 'id' | 'requestedAt'>,
+    signal?: AbortSignal,
+  ) => Promise<boolean>;
   resolveAgentApproval: (id: string, approved: boolean) => void;
 
   // Explore modal
@@ -581,10 +584,19 @@ export function createUIStore(cruxId?: string) {
     settingsOpen: false,
     setSettingsOpen: (open) => set({ settingsOpen: open }),
     pendingAgentApprovals: [],
-    requestAgentApproval: (req) =>
+    requestAgentApproval: (req, signal) =>
       new Promise<boolean>((resolve) => {
+        if (signal?.aborted) {
+          resolve(false);
+          return;
+        }
         const id = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
-        agentApprovalResolvers.set(id, resolve);
+        const abort = () => get().resolveAgentApproval(id, false);
+        agentApprovalResolvers.set(id, (allow) => {
+          signal?.removeEventListener('abort', abort);
+          resolve(allow);
+        });
+        signal?.addEventListener('abort', abort, { once: true });
         set((s) => ({
           pendingAgentApprovals: [
             ...s.pendingAgentApprovals,

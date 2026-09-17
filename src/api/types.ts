@@ -218,6 +218,8 @@ export interface CruxMeta {
     agentHost?: boolean;
     /** The Claude Code session this crux's Agent Provider turns resume (ADR 0019). */
     agentSessionId?: string;
+    /** Private resumable session per hosted provider; stripped on copy/import. */
+    agentSessions?: Record<string, string>;
     /** Check automatically after a turn that claims to be done (B4). On unless false. */
     verifyOnDone?: boolean;
     /** Port the site's dev server should try first (1024–65535); ephemeral when unset or taken. */

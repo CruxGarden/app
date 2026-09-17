@@ -5,17 +5,6 @@
     "width": 1400,
     "height": 900
   },
-  "arranged": {
-    "x": 0,
-    "y": 33,
-    "width": 420,
-    "height": 1084
-  },
-  "restored": {
-    "x": 164,
-    "y": 45,
-    "width": 1400,
-    "height": 900
-  },
-  "status": "passed"
+  "status": "failed",
+  "error": "Error invoking remote method 'figma:arrange': Error: y]; w.size = [bounds.width,bounds.height]; } try { place(b); return JSON.stringify(snapshot()); } catch (error) { try { place(before.bounds); } catch (_) { throw new Error('Placement failed and ' + input.label + ' could not be restored. Arrange its window manually.'); } throw error; } } {\"action\":\"inspect\",\"label\":\"Figma\",\"bundleId\":\"com.figma.Desktop\"} execution error: Error: Error: Keep one Figma window open for automatic placement, or arrange manually. (-2700)"
 }

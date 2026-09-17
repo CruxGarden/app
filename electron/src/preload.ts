@@ -8,6 +8,8 @@ import type {
   AgentHostRequest,
   AgentHostResponse,
   AgentStatus,
+  AgentToolRequest,
+  AgentToolResult,
   AgentStartOptions,
   AgentPermissionRequest,
   AgentEvent,
@@ -22,6 +24,12 @@ import type {
 const api: ElectronBridge = {
   ...(process.platform === 'darwin'
     ? {
+        blenderDesktop: {
+          open: () => ipcRenderer.invoke('blender:open'),
+          status: () => ipcRenderer.invoke('blender:status'),
+          arrange: (side: 'left' | 'right') => ipcRenderer.invoke('blender:arrange', side),
+          restore: () => ipcRenderer.invoke('blender:restore'),
+        },
         figmaDesktop: {
           open: () => ipcRenderer.invoke('figma:open'),
           status: () => ipcRenderer.invoke('figma:status'),
@@ -233,8 +241,15 @@ const api: ElectronBridge = {
     respond: (response: AgentHostResponse) => ipcRenderer.send('agent-host:response', response),
   },
   agent: {
-    status: (force?: boolean) =>
-      ipcRenderer.invoke('agent:status', !!force) as Promise<AgentStatus>,
+    onToolRequest: (cb: (request: AgentToolRequest) => void) => {
+      const handler = (_e: unknown, request: AgentToolRequest) => cb(request);
+      ipcRenderer.on('agent:tool-request', handler);
+      return () => ipcRenderer.removeListener('agent:tool-request', handler);
+    },
+    respondTool: (requestId: string, result: AgentToolResult) =>
+      ipcRenderer.send('agent:tool-response', { requestId, result }),
+    status: (force?: boolean, provider?: string) =>
+      ipcRenderer.invoke('agent:status', !!force, provider) as Promise<AgentStatus>,
     start: (opts: AgentStartOptions) => ipcRenderer.invoke('agent:start', opts) as Promise<void>,
     interrupt: (runId: string) => ipcRenderer.invoke('agent:interrupt', runId) as Promise<void>,
     answer: (requestId: string, allow: boolean) =>

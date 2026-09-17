@@ -1,0 +1,57 @@
+{
+  "meshes": [
+    {
+      "name": "GardenPot",
+      "vertices": 220,
+      "material": "Terracotta"
+    },
+    {
+      "name": "Leaf_A",
+      "vertices": 18,
+      "material": "SproutLeaf"
+    },
+    {
+      "name": "Leaf_B",
+      "vertices": 18,
+      "material": "SproutLeaf"
+    },
+    {
+      "name": "Leaf_C",
+      "vertices": 18,
+      "material": "SproutLeaf"
+    },
+    {
+      "name": "Leaf_D",
+      "vertices": 18,
+      "material": "SproutLeaf"
+    },
+    {
+      "name": "Leaf_E",
+      "vertices": 18,
+      "material": "SproutLeaf"
+    },
+    {
+      "name": "Soil",
+      "vertices": 30,
+      "material": "Soil"
+    },
+    {
+      "name": "SproutStem",
+      "vertices": 30,
+      "material": "SproutStem"
+    }
+  ],
+  "bounds": {
+    "min": [
+      -0.800000011920929,
+      0,
+      -0.7608451843261719
+    ],
+    "max": [
+      0.800000011920929,
+      1.643866683193849,
+      0.7608451843261719
+    ]
+  },
+  "animations": 0
+}

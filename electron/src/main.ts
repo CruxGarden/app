@@ -1,3 +1,4 @@
+import type { AgentRuntimeDeps } from './agent-runtime';
 const {
   app,
   BrowserWindow,
@@ -23,6 +24,8 @@ const { AppLog } = require('./log');
 const { Updater } = require('./updater');
 const { AgentHost } = require('./mcp-server');
 const { AgentProvider } = require('./agent-provider');
+const { AgentRuntimeRegistry, AgentToolBroker } = require('./agent-runtime');
+const { CodexProvider } = require('./codex-provider');
 
 // ffmpeg-static provides a bundled ffmpeg binary
 let ffmpegPath: string;
@@ -378,6 +381,13 @@ function setupIpc() {
     const { FigmaDesktop } = require('./figma-desktop');
     const { screen, systemPreferences } = require('electron');
     const figmaDesktop = new FigmaDesktop(() => mainWindow, screen, systemPreferences);
+    const { CompanionDesktop } = require('./companion-desktop');
+    const blenderDesktop = new CompanionDesktop(
+      () => mainWindow,
+      screen,
+      systemPreferences,
+      'blender',
+    );
     const trustedFigmaCaller = (event: any) => {
       if (
         event.sender !== mainWindow?.webContents ||
@@ -385,6 +395,22 @@ function setupIpc() {
       )
         throw new Error('Window placement is only available from Garden.');
     };
+    ipcMain.handle('blender:open', (event: any) => {
+      trustedFigmaCaller(event);
+      return blenderDesktop.open();
+    });
+    ipcMain.handle('blender:status', (event: any) => {
+      trustedFigmaCaller(event);
+      return blenderDesktop.status();
+    });
+    ipcMain.handle('blender:arrange', (event: any, side: 'left' | 'right') => {
+      trustedFigmaCaller(event);
+      return blenderDesktop.arrange(side);
+    });
+    ipcMain.handle('blender:restore', (event: any) => {
+      trustedFigmaCaller(event);
+      return blenderDesktop.restore();
+    });
     ipcMain.handle('figma:open', (event: any) => {
       trustedFigmaCaller(event);
       return figmaDesktop.open();
@@ -610,7 +636,17 @@ function setupIpc() {
   );
 
   // Agent Provider (ADR 0019): Claude Code driven by the SDK, in this process.
-  agentProvider = new AgentProvider({
+  const toolBroker = new AgentToolBroker((request: unknown) => {
+    if (!mainWindow || mainWindow.isDestroyed()) return false;
+    mainWindow.webContents.send('agent:tool-request', request);
+    return true;
+  });
+  ipcMain.on('agent:tool-response', (event: any, response: any) => {
+    if (event.sender !== mainWindow?.webContents) return;
+    toolBroker.answer(response.requestId, response.result);
+  });
+  const runtimeDeps: AgentRuntimeDeps = {
+    callTool: (options, name, input, signal) => toolBroker.call(options, name, input, signal),
     sendEvent: (runId: string, event: unknown) => {
       for (const w of BrowserWindow.getAllWindows())
         if (!w.isDestroyed()) w.webContents.send('agent:event', { runId, event });
@@ -623,8 +659,14 @@ function setupIpc() {
     log: debugLog,
     version: app.getVersion(),
     mock: process.env.CRUX_AGENT_MOCK === '1',
-  });
-  ipcMain.handle('agent:status', (_e: any, force: boolean) => agentProvider.status(force));
+  };
+  agentProvider = new AgentRuntimeRegistry([
+    new AgentProvider(runtimeDeps),
+    new CodexProvider(runtimeDeps),
+  ]);
+  ipcMain.handle('agent:status', (_e: any, force: boolean, provider?: string) =>
+    agentProvider.status(force, provider),
+  );
   ipcMain.handle('agent:start', (_e: any, opts: any) => {
     // The folder must be one of ours: the SDK gets the resolved path, nothing else.
     const cwd = projects.resolveKnownFolder(opts?.cwd);

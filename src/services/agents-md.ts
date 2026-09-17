@@ -75,8 +75,18 @@ export function renderAgentsMdSections(input: AgentsMdInput): AgentsMdSections {
   return {
     about: renderAbout(input.crux, site, templateId, skillsForCrux(input.crux, input.artifacts)),
     contentModel: contentModel ? renderContentModel(contentModel) : null,
-    conventions: templateId === 'figma' ? FIGMA_CONVENTIONS : renderConventions(site, contentModel),
-    preview: templateId === 'figma' ? FIGMA_PREVIEW : renderPreview(site, canBuild),
+    conventions:
+      templateId === 'blender'
+        ? BLENDER_CONVENTIONS
+        : templateId === 'figma'
+          ? FIGMA_CONVENTIONS
+          : renderConventions(site, contentModel),
+    preview:
+      templateId === 'blender'
+        ? BLENDER_PREVIEW
+        : templateId === 'figma'
+          ? FIGMA_PREVIEW
+          : renderPreview(site, canBuild),
     handsOff: renderHandsOff(site),
     recording: RECORDING,
     voice: renderVoice(input.persona),
@@ -96,7 +106,7 @@ function renderAbout(
   const lines = ['## About this crux'];
   lines.push(`- Title: ${crux.title || 'Untitled'}`);
   lines.push(
-    `- Kind: ${templateId === 'figma' ? 'Figma Crux (external editable design with local brief and exports)' : site ? 'Site Crux (a real toolchain project with a build step)' : describeKind(crux.kind)}`,
+    `- Kind: ${templateId === 'blender' ? 'Blender Crux (native editable scene with local renders and exports)' : templateId === 'figma' ? 'Figma Crux (external editable design with local brief and exports)' : site ? 'Site Crux (a real toolchain project with a build step)' : describeKind(crux.kind)}`,
   );
   if (templateId) lines.push(`- Template: ${templateDisplayName(templateId)} (\`${templateId}\`)`);
   // The know-how for this kind of crux is a skill (B6) — the same text the
@@ -132,6 +142,20 @@ function describeKind(kind: string | undefined): string {
       return 'general (files served as written — no build step)';
   }
 }
+
+const BLENDER_CONVENTIONS = [
+  '## Files and folder layout',
+  '- Save the native scene as `scene.blend` in this Project Folder. `blender/project.json` records that convention; `brief.md` holds the creative brief.',
+  '- Pack resources into the scene or keep relative dependencies in the Project Folder. Save PNG renders and GLB exports here; register a saved Artifact as an output in the companion.',
+  '- Use the separately configured Blender MCP connection through Claude Code. Inspect the live scene before changing it; preserve manual contributions and unrelated objects. Do not reset another open scene.',
+  '- Never claim native collaboration from a headless script alone. Do not create an index page or install a web toolchain for this companion.',
+].join('\n');
+const BLENDER_PREVIEW = [
+  '## Preview and verification',
+  '- Inspect both the native editable scene and the rendered result. Reopen exported GLB files to check meshes and materials before sharing them.',
+  '- Save the .blend file after native edits; Growth preserves saved local bytes, not unsaved Blender memory. Restoring a file does not reload an already open Blender scene.',
+  '- Report missing MCP access honestly. Opening or arranging Blender does not connect an agent. Website publishing and site-build checks do not apply.',
+].join('\n');
 
 const FIGMA_CONVENTIONS = [
   '## Files and folder layout',

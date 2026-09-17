@@ -214,6 +214,16 @@ const TEMPLATES: Template[] = [
     desktopOnly: true,
   },
   {
+    id: 'blender',
+    label: 'Blender',
+    description: 'Model together in Blender · keep scenes, renders and game assets in Garden',
+    icon: <LayoutIcon />,
+    thumb: <BlankThumb />,
+    kind: 'webapp',
+    defaultTitle: 'My Blender scene',
+    desktopOnly: true,
+  },
+  {
     id: 'figma',
     label: 'Figma',
     description: 'Design together in Figma · keep your brief and exported assets in Garden',

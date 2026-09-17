@@ -17,6 +17,35 @@ async function fixture(id?: string) {
   return { store, crux, call: notebookSession(store) };
 }
 describe('notebook Artifact bridge', () => {
+  it('lets a native game read a GLB Artifact while keeping private records and traversal blocked', async () => {
+    const { crux, artifact } = getServices();
+    const game = await crux.create({
+      title: 'Game',
+      kind: 'webapp',
+      type: 'workspace',
+      meta: { template: 'gdevelop-app' },
+    });
+    const store = createCruxStore();
+    store.setState({ crux: game });
+    const call = notebookSession(store);
+    const bytes = new Uint8Array([0x67, 0x6c, 0x54, 0x46, 2, 0, 0, 0]);
+    const saved = await artifact.upload({
+      resourceId: game.id,
+      blob: new Blob([bytes], { type: 'model/gltf-binary' }),
+      mimeType: 'model/gltf-binary',
+      meta: { path: 'assets/prop.glb' },
+    });
+    const result = (await call({ op: 'read-file', path: 'assets/prop.glb' })) as {
+      bytes: ArrayBuffer;
+      mimeType: string;
+      fingerprint: string;
+    };
+    expect(new Uint8Array(result.bytes)).toEqual(bytes);
+    expect(result.mimeType).toBe('model/gltf-binary');
+    expect(result.fingerprint).toBe(saved.fingerprint);
+    for (const path of ['../prop.glb', 'data/prop.glb', '.private/prop.glb', '/prop.glb'])
+      await expect(call({ op: 'read-file', path })).rejects.toThrow('relative');
+  });
   it.each([
     '../secret.md',
     '/secret.md',

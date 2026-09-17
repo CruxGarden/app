@@ -28,10 +28,11 @@ export default function ModelInfoPanel({ model, children }: ModelInfoPanelProps)
   const providerId = getProviderForModel(model);
   const provider = PROVIDERS[providerId];
 
-  const hasUsage = tokenUsage.inputTokens > 0 || tokenUsage.outputTokens > 0;
-  const usagePercent = info
-    ? Math.min((tokenUsage.inputTokens / info.contextWindow) * 100, 100)
-    : 0;
+  const hasUsage = !provider?.agent && (tokenUsage.inputTokens > 0 || tokenUsage.outputTokens > 0);
+  const usagePercent =
+    info && info.contextWindow > 0
+      ? Math.min((tokenUsage.inputTokens / info.contextWindow) * 100, 100)
+      : 0;
   const barColor =
     usagePercent > 80 ? 'bg-meter-danger' : usagePercent > 50 ? 'bg-meter-warn' : 'bg-meter-fill';
 
@@ -99,11 +100,15 @@ export default function ModelInfoPanel({ model, children }: ModelInfoPanelProps)
           <div className="rounded overflow-hidden border border-border/30">
             <div className="flex justify-between items-center px-3 h-8 bg-surface/50">
               <span className="text-text-muted">Context</span>
-              <span className="text-text">{formatTokens(info.contextWindow)} tokens</span>
+              <span className="text-text">
+                {provider.agent ? 'Managed by agent' : `${formatTokens(info.contextWindow)} tokens`}
+              </span>
             </div>
             <div className="flex justify-between items-center px-3 h-8">
               <span className="text-text-muted">Max Response</span>
-              <span className="text-text">{formatTokens(info.maxOutput)} tokens</span>
+              <span className="text-text">
+                {provider.agent ? 'Managed by agent' : `${formatTokens(info.maxOutput)} tokens`}
+              </span>
             </div>
             <div className="flex justify-between items-center px-3 h-8 bg-surface/50">
               <span className="text-text-muted">Messages</span>

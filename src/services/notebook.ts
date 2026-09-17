@@ -89,16 +89,18 @@ export function notebookSession(workspace: StoreApi<CruxState>) {
       }
       if (native && request.op === 'read-file') {
         // A native app may consume ordinary files of its own Crux (for example
-        // an image or sound copied in from a Cruxspace), never its record store.
+        // an image, sound or model copied in from a Cruxspace), never its record store.
         const path = typeof request.path === 'string' ? request.path : '';
         if (
           path.length > 240 ||
           path.split('/').some((p) => !p || p === '.' || p === '..' || p.startsWith('.')) ||
           !/^[\w /.-]+$/.test(path) ||
           path.startsWith('data/') ||
-          !/\.(png|jpe?g|gif|webp|wav|mp3|zip|json|svg)$/i.test(path)
+          !/\.(png|jpe?g|gif|webp|wav|mp3|zip|json|svg|glb)$/i.test(path)
         )
-          throw new Error('Choose a relative image, sound, bundle or JSON file in this Crux.');
+          throw new Error(
+            'Choose a relative image, sound, GLB model, bundle or JSON file in this Crux.',
+          );
         const disk = await diskFile(owner, path);
         if (disk === null) throw new Error('This file no longer exists.');
         let file = (await artifact.findByResource('crux', owner)).find((f) => pathOf(f) === path);

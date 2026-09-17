@@ -1,0 +1,47 @@
+{
+  "recordedAfterRestart": true,
+  "preserved": [
+    {
+      "path": "scene.blend",
+      "hash": "d990ef104782f2afa5b468c0c4d37c890b427823c044dc962e36306f26c0d3c5",
+      "copies": [
+        {
+          "resource_id": "b0df62fd-e003-4190-86c8-475ad2f1c7b4",
+          "fingerprint": "d990ef104782f2afa5b468c0c4d37c890b427823c044dc962e36306f26c0d3c5"
+        },
+        {
+          "resource_id": "b38683b8-293b-4430-af3a-afe26533d439",
+          "fingerprint": "d990ef104782f2afa5b468c0c4d37c890b427823c044dc962e36306f26c0d3c5"
+        }
+      ]
+    },
+    {
+      "path": "sprout.png",
+      "hash": "ba3a7fa752603bd81902981aa08dfd116ed77143f43fdd32bcc22d421ed80a9b",
+      "copies": [
+        {
+          "resource_id": "b0df62fd-e003-4190-86c8-475ad2f1c7b4",
+          "fingerprint": "ba3a7fa752603bd81902981aa08dfd116ed77143f43fdd32bcc22d421ed80a9b"
+        },
+        {
+          "resource_id": "b38683b8-293b-4430-af3a-afe26533d439",
+          "fingerprint": "ba3a7fa752603bd81902981aa08dfd116ed77143f43fdd32bcc22d421ed80a9b"
+        }
+      ]
+    },
+    {
+      "path": "sprout.glb",
+      "hash": "3f98367999f00ecd983f3ff27488b0785acd2fab1e655b7d44f7115d6994ed0d",
+      "copies": [
+        {
+          "resource_id": "b0df62fd-e003-4190-86c8-475ad2f1c7b4",
+          "fingerprint": "3f98367999f00ecd983f3ff27488b0785acd2fab1e655b7d44f7115d6994ed0d"
+        },
+        {
+          "resource_id": "b38683b8-293b-4430-af3a-afe26533d439",
+          "fingerprint": "3f98367999f00ecd983f3ff27488b0785acd2fab1e655b7d44f7115d6994ed0d"
+        }
+      ]
+    }
+  ]
+}

@@ -94,15 +94,31 @@ export const GDEVELOP_TOOLS: AppToolDefinition[] = [
   {
     name: 'add_gdevelop_resource',
     description:
-      'Register an image or audio file of this Crux (for example one copied in with use_cruxspace_asset) as a named native GDevelop resource.',
+      'Register an image, audio or GLB model file of this Crux (for example one copied in with use_cruxspace_asset) as a named native GDevelop resource.',
     input_schema: {
       type: 'object',
       properties: {
         path: { type: 'string', minLength: 1, maxLength: 240 },
         name: { type: 'string', minLength: 1, maxLength: 100 },
-        kind: { type: 'string', enum: ['image', 'audio'] },
+        kind: { type: 'string', enum: ['image', 'audio', 'model3D'] },
       },
       required: ['path', 'name', 'kind'],
+      additionalProperties: false,
+    },
+    writes: ['data/project.json'],
+  },
+  {
+    name: 'add_gdevelop_object',
+    description:
+      'Create a native object with default settings in an existing scene. Find its exact type with list_gdevelop_capabilities; use inspect/edit object properties to configure it and add_gdevelop_instance to place it. Supports native 3D Model and Text objects among the loaded catalogue. Sprite artwork has the dedicated add_gdevelop_sprite workflow. Does not replace existing objects; Growth preserves saved object edits.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        scene: { type: 'string', minLength: 1, maxLength: 200 },
+        name: { type: 'string', pattern: '^[A-Za-z_][A-Za-z0-9_]{0,99}$' },
+        type: { type: 'string', minLength: 1, maxLength: 200 },
+      },
+      required: ['scene', 'name', 'type'],
       additionalProperties: false,
     },
     writes: ['data/project.json'],
@@ -238,15 +254,26 @@ export function gdevelopCommand(name: string, input: Record<string, unknown>) {
   if (objectCommand) return objectCommand;
   const sceneCommand = gdevelopSceneCommand(name, input);
   if (sceneCommand) return sceneCommand;
+  if (name === 'add_gdevelop_object') {
+    if (
+      Object.keys(input).length !== 3 ||
+      !str(input.scene, 200) ||
+      !str(input.type, 200) ||
+      typeof input.name !== 'string' ||
+      !/^[A-Za-z_][A-Za-z0-9_]{0,99}$/.test(input.name)
+    )
+      throw new Error('Choose a scene, new object name and native type from the catalogue.');
+    return { op: 'add-object', ...input };
+  }
   if (name === 'add_gdevelop_resource') {
     if (
       Object.keys(input).length !== 3 ||
       !str(input.path, 240) ||
       !str(input.name, 100) ||
-      (input.kind !== 'image' && input.kind !== 'audio')
+      !['image', 'audio', 'model3D'].includes(String(input.kind))
     )
       throw new Error(
-        'Choose a file path in this Crux, a resource name and a kind: image or audio.',
+        'Choose a file path in this Crux, a resource name and a kind: image, audio or model3D.',
       );
     return { op: 'add-resource', path: input.path, name: input.name, kind: input.kind };
   }

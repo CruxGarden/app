@@ -22,7 +22,7 @@ export async function nativeReady(page: Page, timeout = 180000) {
 }
 
 /** Create a member from the Add Crux menu with a fixed title; returns id and Project Folder. */
-export async function member(page: Page, menu: RegExp, title: string) {
+export async function member(page: Page, menu: RegExp, title: string, creationTimeout = 60000) {
   await home(page);
   await page.getByRole('button', { name: 'Add Crux', exact: true }).click();
   await page.getByRole('button', { name: menu }).click();
@@ -30,7 +30,7 @@ export async function member(page: Page, menu: RegExp, title: string) {
   if (await name.count()) await name.fill(title);
   else await page.getByPlaceholder('My Crux').fill(title);
   await page.getByRole('button', { name: 'Create', exact: true }).click();
-  await expect(page.locator('[data-workspace-id]')).toBeVisible({ timeout: 60000 });
+  await expect(page.locator('[data-workspace-id]')).toBeVisible({ timeout: creationTimeout });
   const id = (await page.locator('[data-workspace-id]').getAttribute('data-workspace-id'))!;
   const folder = (await storedCrux(page, id)).projectFolder as string;
   return { id, folder, title };

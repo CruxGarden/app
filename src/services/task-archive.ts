@@ -33,6 +33,7 @@ export function portableMeta(raw: unknown): Record<string, unknown> {
   if (meta.settings) {
     meta.settings = { ...meta.settings };
     delete meta.settings.agentSessionId;
+    delete meta.settings.agentSessions;
     delete meta.settings.agentHost;
   }
   return meta;

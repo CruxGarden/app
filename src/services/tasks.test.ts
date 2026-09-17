@@ -82,7 +82,11 @@ describe('parallel tasks', () => {
     expect(verified.verifiedKey).toBeTruthy();
     // A source change still asks for the real build, which this environment cannot run.
     const source = await createTask(main.id, 'Change the editor');
-    await artifact.create({ resourceId: source.id, content: 'export {}', meta: { path: 'src/app.ts' } });
+    await artifact.create({
+      resourceId: source.id,
+      content: 'export {}',
+      meta: { path: 'src/app.ts' },
+    });
     const sourceReview = await prepareTaskReview(source.id);
     await expect(verifyTaskReview(sourceReview.id)).rejects.toThrow(/Desktop Mode|build/);
   });
@@ -156,7 +160,12 @@ describe('parallel tasks', () => {
     await verifyTaskReview(review.id);
     await applyTaskReview(review.id);
     await getServices().crux.update(b.id, {
-      meta: { settings: { agentSessionId: 'do-not-resume' } },
+      meta: {
+        settings: {
+          agentSessionId: 'do-not-resume',
+          agentSessions: { codex: 'do-not-resume-codex' },
+        },
+      },
     });
     const backup = await exportCrux({ cruxId: main.id });
     expect(backup.failed).toEqual([]);
@@ -339,7 +348,10 @@ describe('parallel tasks', () => {
         meta: {
           ...s.crux!.meta,
           projectFolder: '/private/local',
-          settings: { agentSessionId: 'private-session' },
+          settings: {
+            agentSessionId: 'private-session',
+            agentSessions: { codex: 'private-codex-session' },
+          },
         },
       },
       s.messages,
@@ -348,6 +360,7 @@ describe('parallel tasks', () => {
     expect(JSON.stringify(projection)).not.toContain('Private B');
     expect(JSON.stringify(projection)).not.toContain('/private/local');
     expect(JSON.stringify(projection)).not.toContain('private-session');
+    expect(JSON.stringify(projection)).not.toContain('private-codex-session');
     const copy = await getServices().crux.findById(b.id);
     await expect(publishPipeline(copy, [])).rejects.toThrow('Main');
     await expect(unpublishPipeline(copy)).rejects.toThrow('Main');

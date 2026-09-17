@@ -339,6 +339,8 @@ export function getMockLanguageModel(): LanguageModel {
           return textStream('Named the game and changed the native scene background.');
         }
         // ── Glow Garden: the scripted collaborator across the game Cruxspace (GAME-CRUXSPACE-PLAN.md) ──
+        const creativeGame = creativeGameScript(prompt);
+        if (creativeGame) return creativeGame;
         const game = gameScript(prompt);
         if (game) return game;
         const business = businessScript(prompt);
@@ -3346,6 +3348,183 @@ function businessScript(prompt: LanguageModelV4Prompt): ReturnType<typeof stream
       return textStream(`Unknown Bloom & Ink step: ${marker}.`);
   }
 }
+// Regression recipe: actual externally authored assets, native editor tools.
+// This proves integration, not autonomous real-model game design.
+function creativeGameScript(prompt: LanguageModelV4Prompt): ReturnType<typeof stream> | null {
+  const stage = lastUserText(prompt).match(/\[creative-game:([a-z-]+)\]/)?.[1];
+  if (!stage) return null;
+  const n = toolResultsThisTurn(prompt).length;
+  const base = { scene: 'Scene', scope: 'scene' };
+  const edit = (object: string, updates: { name: string; value: string | number }[]) =>
+    toolCallStream('edit_gdevelop_properties', {
+      ...base,
+      object,
+      expectedState: JSON.parse(toolResultText(prompt, 'inspect_gdevelop_object') || '{}')
+        .expectedState,
+      updates,
+    });
+  if (stage === 'assets') {
+    if (!n) return toolCallStream('list_cruxspace_assets', {});
+    if (n === 1) return copyAsset(prompt, 'Blender sprout', 'assets/sprout.glb');
+    if (n === 2) return copyAsset(prompt, 'Figma garden artwork', 'assets/title.png');
+    if (n === 3) return copyAsset(prompt, 'Gardener sheet', 'assets/gardener.png');
+    if (n === 4)
+      return toolCallStream('add_gdevelop_resource', {
+        path: 'assets/sprout.glb',
+        name: 'SproutModel',
+        kind: 'model3D',
+      });
+    if (n === 5)
+      return toolCallStream('list_gdevelop_capabilities', {
+        kind: 'object',
+        type: 'Scene3D::Model3DObject',
+      });
+    if (n === 6)
+      return toolCallStream('add_gdevelop_object', {
+        scene: 'Scene',
+        name: 'Sprout',
+        type: 'Scene3D::Model3DObject',
+      });
+    if (n === 7) return copyAsset(prompt, 'Pickup chime', 'assets/chime.wav');
+    if (n === 8)
+      return toolCallStream('add_gdevelop_resource', {
+        path: 'assets/chime.wav',
+        name: 'Chime',
+        kind: 'audio',
+      });
+  } else if (stage === 'model') {
+    if (!n) return toolCallStream('inspect_gdevelop_object', { ...base, object: 'Sprout' });
+    if (n === 1)
+      return edit('Sprout', [
+        { name: 'modelResourceName', value: 'SproutModel' },
+        { name: 'width', value: 80 },
+        { name: 'height', value: 80 },
+        { name: 'depth', value: 110 },
+        { name: 'rotationX', value: 35 },
+        { name: 'materialType', value: 'Basic' },
+      ]);
+    if (n <= 4)
+      return toolCallStream('add_gdevelop_instance', {
+        scene: 'Scene',
+        object: 'Sprout',
+        x: 220 + (n - 2) * 180,
+        y: 340,
+      });
+    if (n === 5)
+      return toolCallStream('set_gdevelop_background', { scene: 'Scene', rgb: [235, 239, 217] });
+  } else if (stage === 'art') {
+    if (!n)
+      return toolCallStream('add_gdevelop_sprite', {
+        scene: 'Scene',
+        name: 'Artwork',
+        path: 'assets/title.png',
+      });
+    if (n === 1)
+      return toolCallStream('add_gdevelop_instance', {
+        scene: 'Scene',
+        object: 'Artwork',
+        x: 24,
+        y: 24,
+      });
+    if (n === 2) return toolCallStream('inspect_gdevelop_scene', { scene: 'Scene' });
+    if (n === 3) {
+      const state = JSON.parse(toolResultText(prompt, 'inspect_gdevelop_scene') || '{}');
+      return toolCallStream('edit_gdevelop_instances', {
+        scene: 'Scene',
+        expectedState: state.expectedState,
+        updates: [
+          {
+            id: state.instances.find((i: { object: string }) => i.object === 'Artwork').id,
+            width: 256,
+            height: 192,
+          },
+        ],
+      });
+    }
+    if (n === 4)
+      return toolCallStream('add_gdevelop_sprite', {
+        scene: 'Scene',
+        name: 'Gardener',
+        path: 'assets/gardener.png',
+        frameWidth: 32,
+        frameHeight: 32,
+        fps: 8,
+        behaviors: ['TopDownMovementBehavior::TopDownMovementBehavior'],
+      });
+    if (n === 5)
+      return toolCallStream('add_gdevelop_instance', {
+        scene: 'Scene',
+        object: 'Gardener',
+        x: 100,
+        y: 360,
+      });
+    if (n === 6)
+      return toolCallStream('add_gdevelop_object', {
+        scene: 'Scene',
+        name: 'Score',
+        type: 'TextObject::Text',
+      });
+  } else if (stage === 'play') {
+    if (!n) return toolCallStream('inspect_gdevelop_object', { ...base, object: 'Score' });
+    if (n === 1)
+      return edit('Score', [
+        { name: 'text', value: 'Collect three sprouts · Arrow keys' },
+        { name: 'characterSize', value: 22 },
+        { name: 'color', value: '35;65;40' },
+      ]);
+    if (n === 2)
+      return toolCallStream('add_gdevelop_instance', {
+        scene: 'Scene',
+        object: 'Score',
+        x: 310,
+        y: 50,
+      });
+    if (n === 3)
+      return toolCallStream('add_gdevelop_event', {
+        scene: 'Scene',
+        conditions: [{ type: 'CollisionNP', parameters: ['Gardener', 'Sprout', '', '', ''] }],
+        actions: [
+          { type: 'Delete', parameters: ['Sprout', ''] },
+          { type: 'PlaySound', parameters: ['', 'Chime', '', '', ''] },
+        ],
+      });
+    if (n === 4)
+      return toolCallStream('add_gdevelop_event', {
+        scene: 'Scene',
+        conditions: [],
+        actions: [
+          {
+            type: 'TextObject::String',
+            parameters: [
+              'Score',
+              '=',
+              '"Sprouts: " + ToString(3 - SceneInstancesCount(Sprout)) + "/3 · Arrow keys"',
+            ],
+          },
+        ],
+      });
+    if (n === 5)
+      return toolCallStream('set_gdevelop_name', { name: 'Made together — Garden gathering' });
+  } else if (stage === 'export') {
+    if (!n) return toolCallStream('export_gdevelop_web_game', { name: 'Shared garden game' });
+  } else if (stage === 'site') {
+    if (!n) return toolCallStream('list_cruxspace_assets', {});
+    if (n === 1) return copyAsset(prompt, 'Shared garden game', 'public/game', true);
+    if (n === 2) return copyAsset(prompt, 'Figma garden artwork', 'public/garden-artwork.png');
+    if (n === 3) return copyAsset(prompt, 'Blender sprout render', 'public/sprout.png');
+    if (n === 4)
+      return toolCallStream('write_file', {
+        path: 'src/pages/play.astro',
+        content: `---
+---
+<!doctype html><html lang="en"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width"/><title>Garden gathering — Made together</title>
+<style>body{margin:0;background:#f3f1e7;color:#23412e;font:18px/1.6 system-ui,sans-serif}main{max-width:1120px;margin:auto;padding:48px 24px}header{display:flex;justify-content:space-between;border-bottom:1px solid #bcc8b4;padding-bottom:20px}h1{font-size:clamp(36px,5vw,64px);line-height:1.1;letter-spacing:-2px;max-width:800px}p{max-width:760px}section{margin-top:48px}.sources{display:grid;grid-template-columns:3fr 2fr;gap:24px;align-items:start}img{width:100%;border-radius:12px}figure{margin:0}figcaption{font-size:15px;margin-top:10px}iframe{display:block;width:100%;aspect-ratio:4/3;border:0;border-radius:12px;background:#e7ecd8}a{color:inherit}@media(max-width:650px){.sources{grid-template-columns:1fr}}</style></head>
+<body><main><header><strong>GARDEN GATHERING</strong><span>Made together</span></header><h1>A little room to grow. A small world to play.</h1><p>Design in Figma. Shape a sprout in Blender. Animate in Piskel, make a sound in AudioMass and bring it all together in GDevelop.</p><section><h2>Collect the garden</h2><p>Use the arrow keys to collect all three sprouts. Each prop began as an editable Blender model.</p><iframe title="Shared garden game" src="/game/index.html"></iframe></section><section class="sources"><figure><img src="/garden-artwork.png" alt="Shared Figma garden artwork with the preserved EDITED contribution"/><figcaption>Our actual Garden-agent Figma trial artwork, reused here with its source attribution.</figcaption></figure><figure><img src="/sprout.png" alt="The Blender sprout used in the game"/><figcaption>The saved Blender source also supplies a render for this page.</figcaption></figure></section><section><h2>Keep making it yours</h2><p>The editable design, model, animation, sound and game remain in their source Cruxes. This integration demonstration combines real Garden-agent Figma and Blender outputs with a scripted receiving-game recipe.</p></section></main></body></html>`,
+      });
+  }
+  return textStream(`Creative game ${stage} complete.`);
+}
+
 function gameScript(prompt: LanguageModelV4Prompt): ReturnType<typeof stream> | null {
   const text = lastUserText(prompt);
   const marker = text.match(/\[game:([a-z-]+)\]/)?.[1];

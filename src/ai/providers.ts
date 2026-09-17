@@ -17,6 +17,7 @@ export interface ModelInfo {
 }
 
 export interface ProviderInfo {
+  agent?: boolean;
   id: string;
   name: string;
   defaultModel: string;
@@ -33,10 +34,11 @@ export const DEFAULT_MODEL = 'claude-sonnet-5';
  * Project Folder on the person's own Claude Code login. One "model" id; the
  * real model is whatever their Claude Code is set to.
  */
+export const CODEX_PROVIDER = 'codex';
 export const CLAUDE_CODE_PROVIDER = 'claude-code';
 export const CLAUDE_CODE_MODEL = 'claude-code';
 export function isAgentModel(model: string | undefined | null): boolean {
-  return model === CLAUDE_CODE_MODEL;
+  return !!model && PROVIDERS[model]?.agent === true;
 }
 
 export const PROVIDERS: Record<string, ProviderInfo> = {
@@ -80,6 +82,7 @@ export const PROVIDERS: Record<string, ProviderInfo> = {
     keyUrl: 'https://console.anthropic.com/settings/keys',
   },
   [CLAUDE_CODE_PROVIDER]: {
+    agent: true,
     id: CLAUDE_CODE_PROVIDER,
     name: 'Claude Code',
     defaultModel: CLAUDE_CODE_MODEL,
@@ -88,6 +91,15 @@ export const PROVIDERS: Record<string, ProviderInfo> = {
     ],
     capabilities: ['Chat', 'Files'],
     keyUrl: 'https://claude.com/product/claude-code',
+  },
+  [CODEX_PROVIDER]: {
+    agent: true,
+    id: CODEX_PROVIDER,
+    name: 'Codex',
+    defaultModel: CODEX_PROVIDER,
+    models: [{ id: CODEX_PROVIDER, name: 'Codex', contextWindow: 0, maxOutput: 0 }],
+    capabilities: ['Chat', 'Files'],
+    keyUrl: 'https://developers.openai.com/codex/cli/',
   },
   openai: {
     id: 'openai',
@@ -218,7 +230,7 @@ export function getModelShortName(modelId?: string): string | null {
 /** Derive provider ID from a model string */
 export function getProviderForModel(model: string): string {
   if (model === 'garden-included') return 'included';
-  if (isAgentModel(model)) return CLAUDE_CODE_PROVIDER;
+  if (isAgentModel(model)) return model;
   const local = localProviderOf(model);
   if (local) return local;
   if (model.startsWith('claude')) return 'anthropic';

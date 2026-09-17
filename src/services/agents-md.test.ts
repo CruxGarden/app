@@ -52,6 +52,14 @@ async function inputForTemplate(templateId: string): Promise<AgentsMdInput> {
 }
 
 describe('renderAgentsMd', () => {
+  it('describes saved Blender source and live native editing without a website toolchain', async () => {
+    const md = renderAgentsMd(await inputForTemplate('blender'));
+    expect(md).toContain('Kind: Blender Crux');
+    expect(md).toContain('scene.blend');
+    expect(md).toContain('not unsaved Blender memory');
+    expect(md).not.toContain('index.html');
+    expect(md).not.toContain('esm.sh');
+  });
   it('describes a Figma companion without telling its agent to build a website', async () => {
     const md = renderAgentsMd(await inputForTemplate('figma'));
     expect(md).toContain('Kind: Figma Crux');

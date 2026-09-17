@@ -8,6 +8,7 @@ import { prepareGardenObjectCommand } from './ObjectTools';
 import { prepareGardenEventCommand } from './EventTools';
 import { inspectGame, readGameContent, gameCatalogue } from '../../../../garden/inspection.mjs';
 import { validateNativeDocument } from '../../../../garden/model.mjs';
+import { addNativeObject, validateResourceFile } from '../../../../garden/creation.mjs';
 import { putFile, getBrowserSWPreviewBaseUrl, getBrowserSWPreviewRootUrl } from '../ExportAndShare/BrowserExporters/BrowserSWPreviewLauncher/BrowserSWPreviewIndexedDB';
 import { browserHTML5ExportPipeline as exportPipeline } from '../ExportAndShare/BrowserExporters/BrowserHTML5Export';
 const gd = global.gd;
@@ -121,6 +122,11 @@ export function useGardenProject(project, changes) {
         }
         // Garden operations below use the same native gd APIs as the editors:
         // resources from files of this Crux, sprite objects, instances, standard events.
+        if (command.op === 'add-object') {
+          const result = addNativeObject(gd, currentProject, command);
+          nativeChanges.triggerUnsavedChanges();
+          return result;
+        }
         if (command.op === 'add-resource') return addResource(command);
         if (command.op === 'add-sprite-object') return addSpriteObject(command);
         if (command.op === 'add-instance') return addInstance(command);
@@ -143,17 +149,20 @@ async function fileFromCrux(path, name) {
   const read = await context().garden.readFile(path);
   return new File([read.bytes], name, { type: read.mimeType });
 }
-/** Register a file of this Crux (image or audio) as a named native resource. */
+/** Register a file of this Crux (image, audio or GLB) as a named native resource. */
 async function addResource({ path, name, kind }) {
   const resourceName = validName(name);
-  if (!resourceName || (kind !== 'image' && kind !== 'audio')) throw new Error('Choose a resource name (letters, digits, underscores) and a kind: image or audio.');
-  const manager = currentProject.getResourcesManager();
+  if (!resourceName || !['image', 'audio', 'model3D'].includes(kind)) throw new Error('Choose a resource name (letters, digits, underscores) and a kind: image, audio or model3D.');
+  const project = currentProject;
+  const manager = project.getResourcesManager();
   if (manager.hasResource(resourceName)) throw new Error('A resource with this name already exists.');
   const file = await fileFromCrux(path, path.split('/').pop());
-  if (kind === 'image' ? !file.type.startsWith('image/') : !file.type.startsWith('audio/')) throw new Error(`The file at ${path} is not a ${kind}.`);
-  const resource = kind === 'image' ? new gd.ImageResource() : new gd.AudioResource();
+  validateResourceFile(kind, new Uint8Array(await file.arrayBuffer()), file.type);
+  const mediaUrl = await addMedia(file);
+  if (currentProject !== project || manager.hasResource(resourceName)) throw new Error('The game or resource name changed while importing. Inspect again.');
+  const resource = kind === 'image' ? new gd.ImageResource() : kind === 'audio' ? new gd.AudioResource() : new gd.Model3DResource();
   resource.setName(resourceName);
-  resource.setFile(await addMedia(file));
+  resource.setFile(mediaUrl);
   manager.addResource(resource);
   resource.delete();
   nativeChanges.triggerUnsavedChanges();
