@@ -5,6 +5,7 @@ import { useAppStore } from '@/stores/appStore';
 import App from './App';
 import { dismissSplash } from '@/lib/splash';
 import './styles/globals.css';
+import { isPublicSite } from '@/lib/site';
 
 // Dropping a file or link onto a region with no drop handler makes the browser
 // NAVIGATE the top-level document to it. In the desktop shell that would swap
@@ -90,8 +91,17 @@ window.addEventListener('unhandledrejection', (e) => {
 // - Cross-origin (VITE_PREVIEW_ORIGIN set): load hidden receiver iframe on preview.crux.garden
 //   The receiver registers its own SW. No same-origin SW needed.
 // - Same-origin (no VITE_PREVIEW_ORIGIN): register SW on this origin (local dev fallback)
-if (import.meta.env.VITE_PREVIEW_ORIGIN) {
+// The teaser has no crux to preview, so it does not pay for the receiver.
+// waitForReceiver brings it up on first use if a later route needs one.
+const TEASER_PATHS = ['/', '/subscribed'];
+const needsPreview = !(isPublicSite() && TEASER_PATHS.includes(window.location.pathname));
+
+if (import.meta.env.VITE_PREVIEW_ORIGIN && needsPreview) {
   import('@/lib/previewCache').then(({ initPreviewReceiver }) => initPreviewReceiver());
-} else if ('serviceWorker' in navigator && navigator.serviceWorker) {
+} else if (
+  !import.meta.env.VITE_PREVIEW_ORIGIN &&
+  'serviceWorker' in navigator &&
+  navigator.serviceWorker
+) {
   navigator.serviceWorker.register('/preview-sw.js').catch(() => {});
 }

@@ -93,6 +93,9 @@ export function initPreviewReceiver(): void {
 
 /** Wait for the receiver iframe to be ready. */
 async function waitForReceiver(): Promise<boolean> {
+  // Pages that never preview skip the receiver at startup, so bring it up on
+  // first use. initPreviewReceiver is idempotent.
+  if (!receiverReady) initPreviewReceiver();
   if (!receiverReady) return false;
   const timeout = new Promise<'timeout'>((resolve) => setTimeout(() => resolve('timeout'), 5000));
   const result = await Promise.race([receiverReady.then(() => 'ready' as const), timeout]);
