@@ -149,16 +149,18 @@
 }
 
 /* ── The track ──────────────────────────────────────────────────────────────
-   One row under the signup: play/pause, stop, the name, and volume. Quiet by
-   design - it is the last thing on the panel and should read as an offer, not
-   a feature. */
+   Its own surface in the top-left corner: play/pause, stop, the name and
+   volume on one row. Sits above the centred panel in the stacking order but
+   never near it, and never drags. */
 .teaser-track {
+  position: fixed;
+  top: 16px;
+  left: 16px;
+  z-index: 2;
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-top: 18px;
-  padding-top: 14px;
-  border-top: 1px solid rgb(255 255 255 / 0.1);
+  padding: 8px 12px 8px 8px;
 }
 
 .teaser-track-btn {

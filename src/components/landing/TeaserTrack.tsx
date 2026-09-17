@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { Plasma } from '@cruxgarden/plasma-ui';
 
 /**
  * The teaser's track. Streamed, never autoplayed, and never fetched until
@@ -8,6 +9,10 @@ import { useEffect, useRef, useState } from 'react';
  * Play/pause resumes where it left off; stop rewinds. Volume is remembered
  * per browser, because being handed the same loud surprise on every visit is
  * the thing people mind about music on a page.
+ *
+ * It sits in the corner as its own surface. fuse={false} because it is fixed
+ * chrome: on a narrow screen it comes within blending distance of the panel
+ * behind it, and the two merging into one blob is not the intent.
  */
 const TRACK_SRC = 'https://s3.us-east-1.amazonaws.com/publish.crux.garden/sad-carousel.opus';
 const TRACK_NAME = 'Sad Carousel';
@@ -87,7 +92,16 @@ export default function TeaserTrack() {
   };
 
   return (
-    <div className="teaser-track" data-plasma-nodrag>
+    <Plasma
+      className="teaser-track"
+      radius={14}
+      tint="#061016"
+      opacity={0.55}
+      frost={0.5}
+      fuse={false}
+      lean={false}
+      data-plasma-nodrag
+    >
       {/* preload="none": nothing is fetched until the first play. */}
       <audio ref={audio} src={TRACK_SRC} preload="none" />
 
@@ -142,6 +156,6 @@ export default function TeaserTrack() {
           }
         }}
       />
-    </div>
+    </Plasma>
   );
 }
