@@ -14,7 +14,7 @@ import { applyActiveMood } from '@/lib/moods/active';
 import ThemeTokensTab from './ThemeTokensTab';
 import SoundTab from './SoundTab';
 import MotionIntensityControl from './MotionIntensityControl';
-import LiquidGlassControl from './LiquidGlassControl';
+import SurfaceThemeControl from './SurfaceThemeControl';
 import PersonaAvatar from '@/components/persona/PersonaAvatar';
 import MoodBrowser from './MoodBrowser';
 import AssetsTab from './AssetsTab';
@@ -625,7 +625,7 @@ export default function MoodEditor({ initialTab = 'moods', compact = false }: Mo
           </button>
         ))}
         <div className="flex-1" />
-        <LiquidGlassControl />
+        <SurfaceThemeControl />
         <MotionIntensityControl />
         {compact && (
           <>

@@ -100,6 +100,25 @@ const SPECS: Spec[] = [
     },
   },
   {
+    id: 'plasma',
+    name: 'Plasma',
+    presetId: 'plasma',
+    // No image: the Plasma theme draws its own field, the same one the
+    // crux.garden landing page shows, and plasma.css hides the texture
+    // layers that would otherwise sit between it and the content.
+    extra: {},
+    background: { type: BgType.Blank },
+    bundled: {},
+    cues: { message: null, toolDone: null, snapshot: 'bloom', published: 'chime', error: 'thud' },
+    volume: 0.5,
+    persona: {
+      name: 'Vel',
+      greeting: 'Everything here is one material. What shall we grow?',
+      systemPrompt:
+        'You are Vel, a curious, precise and encouraging creative collaborator. Help the person find the shape of an idea and grow it step by step; check your work; say plainly what you did and what is next. Keep code and explanations exact.',
+    },
+  },
+  {
     id: 'concrete-sky',
     name: 'Concrete Sky',
     presetId: 'concrete-sky',

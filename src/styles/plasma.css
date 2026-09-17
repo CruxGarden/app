@@ -1,0 +1,91 @@
+/* ── Plasma ─────────────────────────────────────────────────────────────────
+   <html data-surface-style="plasma"> hands every primary surface to one
+   shared WebGL material (@cruxgarden/plasma-ui, mounted by PlasmaStage and
+   attached by PlasmaSurfaces). The material draws the panel — its fill, its
+   rim, its shadow, and the way it fuses with a neighbour — so the CSS here
+   mostly gets out of the way: the surface goes transparent and keeps only
+   what the shader cannot know about, which is where the text sits.
+
+   Everything laid *inside* one of these is opaque and flat, exactly as under
+   glass: there are no plasma panes inside plasma panes.
+   Nothing here applies while data-surface-style is solid or glass. ── */
+
+html[data-surface-style='plasma'] {
+  /* The material supplies the page's ground; the body colour would sit over
+     the canvas and hide it. */
+  --plasma-inner: color-mix(in srgb, var(--surface) 88%, transparent);
+}
+
+html[data-surface-style='plasma'] body {
+  background: transparent;
+}
+
+/* The primary surfaces: drawn by the material, so no fill, no border, no
+   shadow of their own. The radius stays — PlasmaSurfaces reads it back to
+   tell the shader what shape to cut. */
+html[data-surface-style='plasma']
+  :is(
+    .mosaic.crux-mosaic-theme .mosaic-window,
+    .bg-panel,
+    .bg-dropdown,
+    .bg-model-selector-dropdown,
+    .bg-garden-card,
+    .bg-toolbar,
+    .bg-mood-bar
+  ) {
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
+}
+
+/* Inner surfaces: flat shades, no translucency, no second material. Mirrors
+   the glass contract so a Mood reads the same way under either theme. */
+html[data-surface-style='plasma']
+  :is(
+    .mosaic.crux-mosaic-theme .mosaic-window,
+    .bg-panel,
+    .bg-dropdown,
+    .bg-model-selector-dropdown,
+    .bg-garden-card
+  )
+  :is(.bg-surface, .bg-surface-solid, .bg-input, .bg-panel) {
+  background: var(--plasma-inner);
+  backdrop-filter: none;
+  box-shadow: none;
+}
+
+/* Dividers and outlines inside a pane give way to the shade above. */
+html[data-surface-style='plasma']
+  :is(
+    .mosaic.crux-mosaic-theme .mosaic-window,
+    .bg-panel,
+    .bg-dropdown,
+    .bg-model-selector-dropdown,
+    .bg-garden-card
+  )
+  :is(.border-border, [class*='border-border/'], .border-input-border, .divide-border) {
+  border-color: transparent;
+}
+
+/* The Mood's own texture layers would sit between the material and the
+   content; under Plasma the field is the texture. */
+/* The Mood's own background and texture layers would sit between the material
+   and the content; under Plasma the field is the background. */
+html[data-surface-style='plasma']
+  :is(.mood-texture, .mood-grain, .liquid-light, .mood-bg-image, .mood-bg-dim) {
+  display: none;
+}
+
+/* Text keeps its contrast over a moving field. */
+html[data-surface-style='plasma']
+  :is(.mosaic.crux-mosaic-theme .mosaic-window, .bg-panel, .bg-garden-card) {
+  text-shadow: 0 1px 2px rgb(0 0 0 / 0.35);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html[data-surface-style='plasma']
+    :is(.mosaic.crux-mosaic-theme .mosaic-window, .bg-panel, .bg-garden-card) {
+    text-shadow: none;
+  }
+}

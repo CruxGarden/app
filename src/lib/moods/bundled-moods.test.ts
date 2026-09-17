@@ -5,9 +5,9 @@ import { GARDEN_DARK } from './garden-dark';
 import { tokenChoices } from './token-groups';
 
 describe('bundled Moods (ADR 0043: the backgrounds set)', () => {
-  it('ships thirty-six complete, valid packages with distinct ids', () => {
-    expect(BUNDLED_MOODS).toHaveLength(36);
-    expect(new Set(BUNDLED_MOODS.map((m) => m.id)).size).toBe(36);
+  it('ships thirty-seven complete, valid packages with distinct ids', () => {
+    expect(BUNDLED_MOODS).toHaveLength(37);
+    expect(new Set(BUNDLED_MOODS.map((m) => m.id)).size).toBe(37);
     for (const m of BUNDLED_MOODS) {
       const ok = validateMoodPackage(JSON.parse(JSON.stringify(m)));
       expect(ok, `${m.id} validates`).toBeTruthy();
@@ -34,9 +34,13 @@ describe('bundled Moods (ADR 0043: the backgrounds set)', () => {
     const ok = validateMoodPackage(JSON.parse(JSON.stringify(d)))!;
     expect(ok.sound).toEqual(d.sound);
     // every Mood is a render from backgrounds/; only the default brings a track
-    expect(BUNDLED_MOODS.every((m) => m.bundled?.background && m.background.type === 'image')).toBe(
-      true,
-    );
+    // Every Mood is a render from backgrounds/ - except Plasma, whose
+    // material draws its own field, the one the landing page shows.
+    expect(
+      BUNDLED_MOODS.filter((m) => m.theme.overrides.surfaceStyle !== 'plasma').every(
+        (m) => m.bundled?.background && m.background.type === 'image',
+      ),
+    ).toBe(true);
     expect(BUNDLED_MOODS.filter((m) => m.bundled?.track)).toHaveLength(1);
     // The Keeper is no longer a Mood; its track and face live on as the default's sound and the fallback avatar
     expect(bundledMood('the-keeper')).toBeUndefined();
@@ -57,6 +61,9 @@ describe('bundled Moods (ADR 0043: the backgrounds set)', () => {
   it('wears liquid glass by default, with the opacity readability needs over a render', () => {
     for (const m of BUNDLED_MOODS) {
       const o = m.theme.overrides;
+      // Plasma is the one Mood built for the other theme: the material
+      // draws its surfaces, so the glass tokens below do not apply to it.
+      if (o.surfaceStyle === 'plasma') continue;
       expect(o.surfaceStyle, m.id).toBe('glass');
       const opacity = parseFloat(o.glassOpacity ?? '0');
       expect(opacity, `${m.id} glass opacity`).toBeGreaterThanOrEqual(
@@ -94,7 +101,7 @@ describe('bundled Moods (ADR 0043: the backgrounds set)', () => {
     expect(pick('paneHeaderShape').size).toBeGreaterThanOrEqual(3);
     expect(pick('paneCornerShape').size).toBe(2);
     expect(pick('iconSet').size).toBe(3);
-    expect(new Set(BUNDLED_MOODS.map((m) => m.persona!.name)).size).toBe(36);
+    expect(new Set(BUNDLED_MOODS.map((m) => m.persona!.name)).size).toBe(37);
     // named rooms the journeys lean on
     expect(bundledMood('raster-bars')?.theme.overrides.motionFrames).toBe('4');
     expect(bundledMood('raster-bars')?.theme.overrides.iconSet).toBe('pixel');

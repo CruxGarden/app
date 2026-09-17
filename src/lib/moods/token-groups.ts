@@ -42,7 +42,7 @@ export const TOKEN_CHOICES: Record<string, readonly string[]> = {
   dividerStyle: ['hairline', 'double', 'dotted', 'dashed', 'etched', 'ornament', 'none'],
   cardBorderStyle: ['solid', 'double', 'dashed', 'none'],
   // ── glass (glass.css) ──
-  surfaceStyle: ['solid', 'glass'],
+  surfaceStyle: ['solid', 'glass', 'plasma'],
   // ── icons (ui/icons) ──
   iconSet: ICON_SETS,
 };
