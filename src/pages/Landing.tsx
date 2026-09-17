@@ -26,6 +26,31 @@ const SUBSCRIBED_MESSAGE = 'Thank you, we will notify you at launch.';
 const SINK = 'mc-response-sink';
 
 /**
+ * Remembers that this browser subscribed, so a return visit — including the
+ * one Mailchimp sends after the confirmation mail — shows the thank-you rather
+ * than asking again. Per-browser and easily cleared, so it is a courtesy, not
+ * a record: the list itself lives at Mailchimp.
+ */
+const SUBSCRIBED_KEY = 'crux-garden-subscribed';
+
+function rememberSubscribed() {
+  try {
+    localStorage.setItem(SUBSCRIBED_KEY, new Date().toISOString());
+  } catch {
+    // Private windows and blocked storage throw; the thank-you still shows for
+    // this visit, it just will not survive a reload.
+  }
+}
+
+function hasSubscribed() {
+  try {
+    return localStorage.getItem(SUBSCRIBED_KEY) !== null;
+  } catch {
+    return false;
+  }
+}
+
+/**
  * crux.garden — the teaser. Plasma UI's aurora field, moving on its own behind
  * one liquid glass panel, set to the library's loudest configuration: every
  * motion field open, ambient drops orbiting, a drop trailing the pointer.
@@ -37,7 +62,8 @@ const SINK = 'mc-response-sink';
  */
 /** `/subscribed` renders the same teaser with the form already answered. */
 export default function Landing({ subscribed = false }: { subscribed?: boolean }) {
-  const [sent, setSent] = useState(false);
+  // Read once on mount: a reload or a return visit re-reads it anyway.
+  const [sent, setSent] = useState(hasSubscribed);
   const answered = subscribed || sent;
 
   return (
@@ -84,7 +110,10 @@ export default function Landing({ subscribed = false }: { subscribed?: boolean }
                 method="post"
                 name="mc-embedded-subscribe-form"
                 target={SINK}
-                onSubmit={() => setSent(true)}
+                onSubmit={() => {
+                  rememberSubscribed();
+                  setSent(true);
+                }}
                 data-plasma-nodrag
               >
                 <label className="teaser-hidden" htmlFor="mce-EMAIL">
