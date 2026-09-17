@@ -112,7 +112,14 @@ export default function Landing({ subscribed = false }: { subscribed?: boolean }
           {/* The panel carries the plate's colour itself: one surface, not a
               solid card floating on glass. No padding prop — it writes an
               inline style that would beat the stylesheet. */}
-          <Plasma className="teaser-panel" radius={24} tint="#061016" opacity={0.55} frost={0.5}>
+          <Plasma
+            className="teaser-panel"
+            radius={24}
+            tint="#061016"
+            opacity={0.55}
+            frost={0.5}
+            draggable
+          >
             <h1 className="teaser-title">{APP_NAME}</h1>
             <p className="teaser-line">Grow Anything</p>
 
