@@ -43,42 +43,52 @@ export default function Landing() {
         pointerDrop
       >
         <main className="teaser-stage">
-          <Plasma className="teaser-panel" radius={28} padding={18}>
-            <div className="teaser-plate">
-              <h1 className="teaser-title">{APP_NAME}</h1>
-              <p className="teaser-line">Grow Anything</p>
+          {/* The panel carries the plate's colour itself: one surface, not a
+              solid card floating on glass. */}
+          <Plasma
+            className="teaser-panel"
+            radius={24}
+            padding={0}
+            tint="#061016"
+            opacity={0.55}
+            frost={0.5}
+          >
+            <h1 className="teaser-title">{APP_NAME}</h1>
+            <p className="teaser-line">Grow Anything</p>
 
-              <form
-                className="teaser-signup"
-                action={MAILCHIMP_ACTION}
-                method="post"
-                name="mc-embedded-subscribe-form"
-                target="_self"
-                noValidate
-                data-plasma-nodrag
-              >
-                <label className="teaser-hidden" htmlFor="mce-EMAIL">
-                  Email address
-                </label>
-                <input
-                  className="teaser-email"
-                  type="email"
-                  name="EMAIL"
-                  id="mce-EMAIL"
-                  placeholder="you@example.com"
-                  autoComplete="email"
-                  required
-                />
-                <input type="hidden" name="tags" value="7209613,7209430" />
-                {/* Off-screen rather than display:none — bots skip hidden fields. */}
-                <div aria-hidden="true" className="teaser-trap">
-                  <input type="text" name={HONEYPOT_FIELD} tabIndex={-1} defaultValue="" />
-                </div>
-                <button className="teaser-submit" type="submit" name="subscribe">
-                  Notify me
-                </button>
-              </form>
-            </div>
+            {/* target=_blank: Mailchimp's confirmation opens beside the teaser
+                rather than replacing it. */}
+            <form
+              className="teaser-signup"
+              action={MAILCHIMP_ACTION}
+              method="post"
+              name="mc-embedded-subscribe-form"
+              target="_blank"
+              rel="noopener"
+              noValidate
+              data-plasma-nodrag
+            >
+              <label className="teaser-hidden" htmlFor="mce-EMAIL">
+                Email address
+              </label>
+              <input
+                className="teaser-email"
+                type="email"
+                name="EMAIL"
+                id="mce-EMAIL"
+                placeholder="you@example.com"
+                autoComplete="email"
+                required
+              />
+              <input type="hidden" name="tags" value="7209613,7209430" />
+              {/* Off-screen rather than display:none — bots skip hidden fields. */}
+              <div aria-hidden="true" className="teaser-trap">
+                <input type="text" name={HONEYPOT_FIELD} tabIndex={-1} defaultValue="" />
+              </div>
+              <button className="teaser-submit" type="submit" name="subscribe">
+                Notify me
+              </button>
+            </form>
           </Plasma>
         </main>
       </PlasmaProvider>
