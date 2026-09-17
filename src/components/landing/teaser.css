@@ -1,7 +1,6 @@
-/* crux.garden teaser: Plasma UI's aurora field, one glass panel, a plate inside
-   it. The plate is the workspace example's pattern — glass carries the panel,
-   a quiet solid surface carries the text so it stays readable while the field
-   moves underneath. */
+/* crux.garden teaser: Plasma UI's aurora field and one glass panel over it.
+   The panel is tinted and frosted in the component itself rather than wrapping
+   a solid card, so the whole thing reads as a single surface. */
 .teaser {
   position: fixed;
   inset: 0;
@@ -21,16 +20,10 @@
 
 .teaser-panel {
   width: min(30rem, 100%);
-}
-
-.teaser-plate {
   display: grid;
   gap: 0.35rem;
   place-items: center;
   padding: clamp(1.75rem, 5vw, 2.75rem) clamp(1.5rem, 5vw, 2.5rem);
-  border-radius: 14px;
-  background: rgb(6 16 22 / 0.55);
-  border: 1px solid rgb(238 244 246 / 0.14);
   text-align: center;
 }
 
@@ -58,53 +51,59 @@
   color: #9ff3e4;
 }
 
-/* Signup: one row on a comfortable viewport, stacked when the panel narrows. */
+/* Signup: the field and its button are one control — a single rounded rect
+   with a divider between them, not two pills sitting next to each other. */
 .teaser-signup {
   display: flex;
-  gap: 8px;
   margin-top: clamp(1.25rem, 3vw, 1.75rem);
   width: 100%;
+  border: 1px solid rgb(238 244 246 / 0.22);
+  border-radius: 10px;
+  background: rgb(0 0 0 / 0.22);
+  overflow: hidden; /* clips the children's corners to the container's radius */
+  transition: border-color 160ms ease;
+}
+
+.teaser-signup:focus-within {
+  border-color: #9ff3e4;
 }
 
 .teaser-email,
 .teaser-submit {
   font-family: var(--font-body, 'Outfit', system-ui, sans-serif);
   font-size: 0.95rem;
-  border-radius: 999px;
-  border: 1px solid rgb(238 244 246 / 0.22);
-  padding: 0.65rem 1.1rem;
-  transition:
-    border-color 160ms ease,
-    background-color 160ms ease;
+  border: 0;
+  border-radius: 0;
+  padding: 0.7rem 1rem;
+  background: transparent;
+  color: #eef4f6;
 }
 
 .teaser-email {
   flex: 1;
   min-width: 0; /* a flex item defaults to its content width; inputs overflow without this */
-  background: rgb(0 0 0 / 0.22);
-  color: #eef4f6;
 }
 
 .teaser-email::placeholder {
   color: rgb(238 244 246 / 0.45);
 }
 
+/* The container shows the focus ring, so the field inside does not draw one. */
+.teaser-email:focus,
 .teaser-email:focus-visible {
   outline: none;
-  border-color: #9ff3e4;
 }
 
 .teaser-submit {
+  border-left: 1px solid rgb(238 244 246 / 0.22);
   background: rgb(159 243 228 / 0.16);
-  border-color: rgb(159 243 228 / 0.45);
-  color: #eef4f6;
   white-space: nowrap;
   cursor: pointer;
+  transition: background-color 160ms ease;
 }
 
 .teaser-submit:hover {
   background: rgb(159 243 228 / 0.28);
-  border-color: #9ff3e4;
 }
 
 /* Mailchimp's bot trap. Off-screen, never focusable, never announced. */
@@ -123,9 +122,12 @@
   white-space: nowrap;
 }
 
+/* Stays one row on a phone; the padding gives way instead of the layout. */
 @media (max-width: 480px) {
-  .teaser-signup {
-    flex-direction: column;
+  .teaser-email,
+  .teaser-submit {
+    padding: 0.65rem 0.75rem;
+    font-size: 0.9rem;
   }
 }
 
