@@ -1,9 +1,14 @@
-/* crux.garden teaser: the Fractal Garden render, one liquid glass panel, nothing else. */
+/* crux.garden teaser: Plasma UI's aurora field, one glass panel, a plate inside
+   it. The plate is the workspace example's pattern — glass carries the panel,
+   a quiet solid surface carries the text so it stays readable while the field
+   moves underneath. */
 .teaser {
   position: fixed;
   inset: 0;
   overflow: hidden;
-  background: #15130f;
+  /* The field paints over this; it only shows for the first frame and behind
+     the shader if WebGL is unavailable. */
+  background: #04111c;
 }
 
 .teaser-stage {
@@ -15,35 +20,116 @@
 }
 
 .teaser-panel {
+  width: min(30rem, 100%);
+}
+
+.teaser-plate {
   display: grid;
   gap: 0.35rem;
   place-items: center;
-  padding: clamp(2rem, 6vw, 3.75rem) clamp(2.5rem, 9vw, 5.5rem);
+  padding: clamp(1.75rem, 5vw, 2.75rem) clamp(1.5rem, 5vw, 2.5rem);
+  border-radius: 14px;
+  background: rgb(6 16 22 / 0.55);
+  border: 1px solid rgb(238 244 246 / 0.14);
   text-align: center;
 }
 
 .teaser-title {
   margin: 0;
-  font-family: var(--font-display, 'JetBrains Mono', monospace);
+  /* The wordmark serif the app uses for its name, not an app font. */
+  font-family: var(--font-wordmark, 'Cormorant Garamond', Georgia, serif);
   /* Fluid rather than stepped: the panel is the only thing on the page, so it
-     should hold the same proportion of a phone and a display. */
-  font-size: clamp(2rem, 7vw, 4.5rem);
+     should hold the same proportion of a phone and a display. A serif at this
+     size carries more weight per point, so it runs a little larger. */
+  font-size: clamp(2.4rem, 7.5vw, 4rem);
   font-weight: 500;
-  letter-spacing: -0.02em;
+  letter-spacing: 0.01em;
   line-height: 1.05;
-  color: #efe8da;
+  color: #eef4f6;
 }
 
 .teaser-line {
   margin: 0;
   font-family: var(--font-body, 'Outfit', system-ui, sans-serif);
-  font-size: clamp(0.95rem, 2.2vw, 1.35rem);
+  font-size: clamp(0.9rem, 2vw, 1.15rem);
   letter-spacing: 0.34em;
   text-indent: 0.34em; /* letter-spacing pads the right edge; this recentres it */
   text-transform: uppercase;
-  color: #5fd2a5;
+  color: #9ff3e4;
 }
 
+/* Signup: one row on a comfortable viewport, stacked when the panel narrows. */
+.teaser-signup {
+  display: flex;
+  gap: 8px;
+  margin-top: clamp(1.25rem, 3vw, 1.75rem);
+  width: 100%;
+}
+
+.teaser-email,
+.teaser-submit {
+  font-family: var(--font-body, 'Outfit', system-ui, sans-serif);
+  font-size: 0.95rem;
+  border-radius: 999px;
+  border: 1px solid rgb(238 244 246 / 0.22);
+  padding: 0.65rem 1.1rem;
+  transition:
+    border-color 160ms ease,
+    background-color 160ms ease;
+}
+
+.teaser-email {
+  flex: 1;
+  min-width: 0; /* a flex item defaults to its content width; inputs overflow without this */
+  background: rgb(0 0 0 / 0.22);
+  color: #eef4f6;
+}
+
+.teaser-email::placeholder {
+  color: rgb(238 244 246 / 0.45);
+}
+
+.teaser-email:focus-visible {
+  outline: none;
+  border-color: #9ff3e4;
+}
+
+.teaser-submit {
+  background: rgb(159 243 228 / 0.16);
+  border-color: rgb(159 243 228 / 0.45);
+  color: #eef4f6;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.teaser-submit:hover {
+  background: rgb(159 243 228 / 0.28);
+  border-color: #9ff3e4;
+}
+
+/* Mailchimp's bot trap. Off-screen, never focusable, never announced. */
+.teaser-trap {
+  position: absolute;
+  left: -5000px;
+}
+
+/* Labelled for screen readers without showing a label in the teaser. */
+.teaser-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+@media (max-width: 480px) {
+  .teaser-signup {
+    flex-direction: column;
+  }
+}
+
+/* The field never stops moving; honour a request for stillness. */
 @media (prefers-reduced-motion: reduce) {
   .teaser * {
     animation: none !important;
