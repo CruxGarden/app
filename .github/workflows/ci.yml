@@ -26,10 +26,13 @@ jobs:
           cache-dependency-path: |
             package-lock.json
             electron/package-lock.json
-      - run: npm ci
-      - run: npm run verify # tsc + eslint + vitest + vite build — the same gate the agent runs
+      # Electron's deps come first: the web verify typechecks
+      # electron/performance and electron/playwright.performance.config.ts,
+      # which import @playwright/test from electron/node_modules.
       - run: npm ci
         working-directory: electron
+      - run: npm ci
+      - run: npm run verify # tsc + eslint + vitest + vite build — the same gate the agent runs
       - run: npm run verify
         working-directory: electron
 
