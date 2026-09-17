@@ -31,8 +31,11 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      # build:public skips the `prebuild` hook, which builds 24 embedded crux
+      # apps the public site never serves. Those builds are what failed here
+      # (gdevelop) and what made the bundle large enough to exhaust the heap.
       - name: Build Vite app
-        run: npm run build
+        run: npm run build:public
         env:
           # Rollup holds the whole module graph in memory; the runner has far
           # more RAM than Node claims by default.
