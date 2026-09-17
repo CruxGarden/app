@@ -105,9 +105,6 @@ export default function Landing({ subscribed = false }: { subscribed?: boolean }
         ambientDrops
         pointerDrop
       >
-        {/* Its own surface in the corner, outside the centred stage. */}
-        <TeaserTrack />
-
         <main className="teaser-stage">
           {/* The panel carries the plate's colour itself: one surface, not a
               solid card floating on glass. No padding prop — it writes an
@@ -160,6 +157,9 @@ export default function Landing({ subscribed = false }: { subscribed?: boolean }
               </form>
             )}
           </Plasma>
+
+          {/* Under the panel, clear of its blend distance. Draggable from here. */}
+          <TeaserTrack />
         </main>
       </PlasmaProvider>
     </div>
