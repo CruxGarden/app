@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { PlasmaProvider, Plasma } from '@cruxgarden/plasma-ui';
 import { APP_NAME } from '@/lib/constants';
 import '@/components/landing/teaser.css';
@@ -10,11 +11,32 @@ const HONEYPOT_FIELD = 'b_4c2e196117cdb095809f3bb3b_f31692b207';
 
 const SUBSCRIBED_MESSAGE = 'Thank you, we will notify you at launch.';
 /**
- * Mailchimp's own flow: the form posts to Mailchimp and Mailchimp redirects.
- * Point the audience's thank-you pages at https://crux.garden/subscribed,
- * under Forms and response emails in the form builder, and people land back
- * here on the route below with the form already answered.
+ * Mailchimp's own flow: the form posts to Mailchimp and Mailchimp redirects
+ * back to crux.garden. That redirect carries nothing that says who arrived, so
+ * the browser notes the submit on its way out and reads it on the way back in.
+ *
+ * Per-browser and easily cleared, so it is a courtesy rather than a record:
+ * the list itself lives at Mailchimp. Confirming from another device shows the
+ * form again, which costs nothing.
  */
+const SUBSCRIBED_KEY = 'crux-garden-subscribed';
+
+function rememberSubscribed() {
+  try {
+    localStorage.setItem(SUBSCRIBED_KEY, new Date().toISOString());
+  } catch {
+    // Private windows and blocked storage throw. The redirect still lands, it
+    // just lands on the form.
+  }
+}
+
+function hasSubscribed() {
+  try {
+    return localStorage.getItem(SUBSCRIBED_KEY) !== null;
+  } catch {
+    return false;
+  }
+}
 /**
  * crux.garden — the teaser. Plasma UI's aurora field, moving on its own behind
  * one liquid glass panel, set to the library's loudest configuration: every
@@ -27,6 +49,9 @@ const SUBSCRIBED_MESSAGE = 'Thank you, we will notify you at launch.';
  */
 /** `/subscribed` renders the same teaser with the form already answered. */
 export default function Landing({ subscribed = false }: { subscribed?: boolean }) {
+  // Read once on mount; a return trip is a fresh load and reads it again.
+  const [remembered] = useState(hasSubscribed);
+  const answered = subscribed || remembered;
   return (
     <div className="teaser">
       <PlasmaProvider
@@ -58,7 +83,7 @@ export default function Landing({ subscribed = false }: { subscribed?: boolean }
             <h1 className="teaser-title">{APP_NAME}</h1>
             <p className="teaser-line">Grow Anything</p>
 
-            {subscribed ? (
+            {answered ? (
               <p className="teaser-sent" role="status">
                 {SUBSCRIBED_MESSAGE}
               </p>
@@ -69,6 +94,7 @@ export default function Landing({ subscribed = false }: { subscribed?: boolean }
                 method="post"
                 name="mc-embedded-subscribe-form"
                 target="_self"
+                onSubmit={rememberSubscribed}
                 data-plasma-nodrag
               >
                 <label className="teaser-hidden" htmlFor="mce-EMAIL">
