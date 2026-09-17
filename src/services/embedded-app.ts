@@ -186,7 +186,7 @@ export function isLocalCreationTool(crux: { meta?: Record<string, unknown> } | n
       native !== 'jscad' &&
       native !== 'timeline') ||
     isCardinal(crux) ||
-    crux?.meta?.template === 'figma' ||
+    ['figma', 'blender'].includes(String(crux?.meta?.template)) ||
     // the Whiteboard sampler shares its drawing as a view-mode page; the other samplers stay local
     (samplerType(crux) !== null && samplerType(crux) !== 'excalidraw')
   );

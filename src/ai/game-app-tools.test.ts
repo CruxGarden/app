@@ -47,7 +47,33 @@ describe('game Cruxspace app tools', () => {
         name: 'chime',
         kind: 'font',
       }),
-    ).toThrow('image or audio');
+    ).toThrow('image, audio or model3D');
+    expect(
+      gdevelopCommand('add_gdevelop_resource', {
+        path: 'assets/sprout.glb',
+        name: 'SproutModel',
+        kind: 'model3D',
+      }),
+    ).toEqual({
+      op: 'add-resource',
+      path: 'assets/sprout.glb',
+      name: 'SproutModel',
+      kind: 'model3D',
+    });
+    expect(
+      gdevelopCommand('add_gdevelop_object', {
+        scene: 'Play',
+        name: 'Sprout',
+        type: 'Scene3D::Model3DObject',
+      }),
+    ).toEqual({ op: 'add-object', scene: 'Play', name: 'Sprout', type: 'Scene3D::Model3DObject' });
+    expect(() =>
+      gdevelopCommand('add_gdevelop_object', {
+        scene: 'Play',
+        name: 'bad name',
+        type: 'TextObject::Text',
+      }),
+    ).toThrow();
     const sprite = {
       scene: 'Scene',
       name: 'Gardener',

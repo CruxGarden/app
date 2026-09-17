@@ -2,7 +2,8 @@ import { includedUsage } from '@/api/inference';
 import { useAuthStore } from '@/stores/authStore';
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { ChevronDownIcon } from '@/components/ui/icons';
-import { PROVIDERS, CLAUDE_CODE_PROVIDER } from '@/ai/providers';
+import { PROVIDERS, isAgentModel } from '@/ai/providers';
+import { Capability, can } from '@/lib/platform';
 import { agentStatus } from '@/services/agent-provider';
 import type { AgentStatus } from '../../../electron/src/bridge';
 import {
@@ -73,7 +74,7 @@ export default function ModelSelector({ value, onChange, disabled }: ModelSelect
   const [included, setIncluded] = useState(false);
   const [open, setOpen] = useState(false);
   const [localEndpoints, setLocalEndpoints] = useState<LocalAiEndpoint[]>([]);
-  const [agent, setAgent] = useState<AgentStatus | null>(null);
+  const [agents, setAgents] = useState<Record<string, AgentStatus>>({});
   const menuRef = useRef<HTMLDivElement>(null);
 
   const close = useCallback(() => setOpen(false), []);
@@ -85,7 +86,12 @@ export default function ModelSelector({ value, onChange, disabled }: ModelSelect
     if (open) {
       detectLocalEndpoints(true).then(setLocalEndpoints);
       // Claude Code (ADR 0019) is offered only where a binary exists — desktop, installed.
-      void agentStatus().then(setAgent);
+      if (can(Capability.AgentHost))
+        for (const provider of Object.values(PROVIDERS).filter((provider) => provider.agent)) {
+          void agentStatus(true, provider.id).then((status) =>
+            setAgents((current) => ({ ...current, [provider.id]: status })),
+          );
+        }
     }
   }, [open]);
 
@@ -103,9 +109,9 @@ export default function ModelSelector({ value, onChange, disabled }: ModelSelect
     };
   }, [open, accountId]);
   const groups = getAllModels().filter(
-    (g) => g.providerId !== CLAUDE_CODE_PROVIDER && (g.providerId !== 'included' || included),
+    (g) => !isAgentModel(g.providerId) && (g.providerId !== 'included' || included),
   );
-  const agentGroup = getAllModels().find((g) => g.providerId === CLAUDE_CODE_PROVIDER);
+  const agentGroups = getAllModels().filter((g) => isAgentModel(g.providerId));
   const label = getModelLabel(value);
   const provider = getProviderLabel(value);
   const providerId = getProviderId(value);
@@ -177,47 +183,53 @@ export default function ModelSelector({ value, onChange, disabled }: ModelSelect
                 ))}
 
                 {/* Claude Code — the person's own agent, run in the Project Folder (ADR 0019) */}
-                {agentGroup && agent && (
-                  <div data-testid="model-group-claude-code">
-                    <div className="px-3 py-1 text-2xs font-mono text-text-muted uppercase tracking-wider flex items-center gap-1.5">
-                      {(() => {
-                        const Icon = PROVIDER_ICONS[CLAUDE_CODE_PROVIDER];
-                        return Icon ? <Icon size={10} /> : null;
-                      })()}
-                      Your agent
+                {agentGroups.map((agentGroup) => {
+                  const agent = agents[agentGroup.providerId];
+                  if (!agent) return null;
+                  const available = agent.installed && !agent.reason;
+                  return (
+                    <div
+                      key={agentGroup.providerId}
+                      data-testid={`model-group-${agentGroup.providerId}`}
+                    >
+                      <div className="px-3 py-1 text-2xs font-mono text-text-muted uppercase tracking-wider flex items-center gap-1.5">
+                        {(() => {
+                          const Icon = PROVIDER_ICONS[agentGroup.providerId];
+                          return Icon ? <Icon size={10} /> : null;
+                        })()}
+                        Your agent
+                      </div>
+                      {agentGroup.models.map((model) => (
+                        <button
+                          key={model.id}
+                          disabled={!available}
+                          title={
+                            available ? (agent.version ?? undefined) : (agent.reason ?? undefined)
+                          }
+                          onClick={() => {
+                            onChange(model.id);
+                            setOpen(false);
+                          }}
+                          className={cn(
+                            'w-full px-3 py-1.5 text-left text-xs font-mono transition-colors',
+                            !available
+                              ? 'text-text-muted/60 cursor-not-allowed'
+                              : model.id === value
+                                ? 'text-accent bg-accent-muted cursor-pointer'
+                                : 'text-text hover:bg-accent-muted cursor-pointer',
+                          )}
+                        >
+                          {model.name}
+                          {!available && (
+                            <span className="ml-1.5 text-2xs text-text-muted/70">
+                              · {agent.installed ? 'unavailable' : 'not installed'}
+                            </span>
+                          )}
+                        </button>
+                      ))}
                     </div>
-                    {agentGroup.models.map((model) => (
-                      <button
-                        key={model.id}
-                        disabled={!agent.installed}
-                        title={
-                          agent.installed
-                            ? (agent.version ?? undefined)
-                            : (agent.reason ?? undefined)
-                        }
-                        onClick={() => {
-                          onChange(model.id);
-                          setOpen(false);
-                        }}
-                        className={cn(
-                          'w-full px-3 py-1.5 text-left text-xs font-mono transition-colors',
-                          !agent.installed
-                            ? 'text-text-muted/60 cursor-not-allowed'
-                            : model.id === value
-                              ? 'text-accent bg-accent-muted cursor-pointer'
-                              : 'text-text hover:bg-accent-muted cursor-pointer',
-                        )}
-                      >
-                        {model.name}
-                        {!agent.installed && (
-                          <span className="ml-1.5 text-2xs text-text-muted/70">
-                            · not installed
-                          </span>
-                        )}
-                      </button>
-                    ))}
-                  </div>
-                )}
+                  );
+                })}
 
                 {/* Local inference (desktop, running servers only) */}
                 {localEndpoints.map((endpoint) => (

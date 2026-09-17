@@ -1,0 +1,177 @@
+{
+  "before": {
+    "ready": true,
+    "petals": 5,
+    "vertices": 12170,
+    "frame": 101,
+    "selected": null,
+    "lastGrab": null,
+    "grabs": 0,
+    "maxDisplacement": 0,
+    "offsets": [
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    "motion": true,
+    "camera": {
+      "x": 0,
+      "y": 0,
+      "z": 650
+    },
+    "bounds": [
+      381.70298889940943,
+      385.85032530951787,
+      238.33535381444435
+    ]
+  },
+  "held": {
+    "ready": true,
+    "petals": 5,
+    "vertices": 12170,
+    "frame": 330,
+    "selected": "BloomPetal_02",
+    "lastGrab": "BloomPetal_02",
+    "grabs": 1,
+    "maxDisplacement": 0.6619676578834688,
+    "offsets": [
+      0,
+      0.7631309580909053,
+      0,
+      0,
+      0
+    ],
+    "motion": true,
+    "camera": {
+      "x": 0,
+      "y": 0,
+      "z": 650
+    },
+    "bounds": [
+      381.2290580540805,
+      386.97670535234727,
+      220.5019905619804
+    ]
+  },
+  "release1": {
+    "ready": true,
+    "petals": 5,
+    "vertices": 12170,
+    "frame": 384,
+    "selected": null,
+    "lastGrab": "BloomPetal_02",
+    "grabs": 1,
+    "maxDisplacement": 0.44043273553054885,
+    "offsets": [
+      0,
+      0.5077405994647456,
+      0,
+      0,
+      0
+    ],
+    "motion": true,
+    "camera": {
+      "x": 0,
+      "y": 0,
+      "z": 650
+    },
+    "bounds": [
+      380.7252971684071,
+      386.8585574720412,
+      217.6357498785389
+    ]
+  },
+  "release5": {
+    "ready": true,
+    "petals": 5,
+    "vertices": 12170,
+    "frame": 598,
+    "selected": null,
+    "lastGrab": "BloomPetal_02",
+    "grabs": 1,
+    "maxDisplacement": 0.03964286384687383,
+    "offsets": [
+      0,
+      0.04570117030439236,
+      0,
+      0,
+      0
+    ],
+    "motion": true,
+    "camera": {
+      "x": 0,
+      "y": 0,
+      "z": 650
+    },
+    "bounds": [
+      377.2923886476624,
+      385.23840578863417,
+      214.34319759255644
+    ]
+  },
+  "reset": {
+    "ready": true,
+    "petals": 5,
+    "vertices": 12170,
+    "frame": 656,
+    "selected": null,
+    "lastGrab": "BloomPetal_02",
+    "grabs": 1,
+    "maxDisplacement": 0,
+    "offsets": [
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    "motion": false,
+    "camera": {
+      "x": 0,
+      "y": 0,
+      "z": 650
+    },
+    "bounds": [
+      376.24094005129746,
+      384.1350035990787,
+      231.57431313235492
+    ]
+  },
+  "keyboardRipple": {
+    "ready": true,
+    "petals": 5,
+    "vertices": 12170,
+    "frame": 684,
+    "selected": null,
+    "lastGrab": "BloomPetal_02",
+    "grabs": 1,
+    "maxDisplacement": 0.030568765156153633,
+    "offsets": [
+      0.03525174167196854,
+      0.03387033764054306,
+      0.010705382690380646,
+      0.04162869450554264,
+      0.019463577835267094
+    ],
+    "motion": false,
+    "camera": {
+      "x": 0,
+      "y": 0,
+      "z": 650
+    },
+    "bounds": [
+      376.24094005129746,
+      384.1350035990787,
+      231.57431313235492
+    ]
+  },
+  "mobileControls": {
+    "x": 217.828125,
+    "y": 764.8125,
+    "width": 62.015625,
+    "height": 37
+  },
+  "errors": []
+}

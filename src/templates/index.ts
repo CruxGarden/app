@@ -230,6 +230,7 @@ const loaders: Record<string, () => Promise<{ default: TemplateDefinition }>> = 
   notes: () => import('./notes'),
   moqira: () => import('./moqira'),
   figma: () => import('./figma'),
+  blender: () => import('./blender'),
   onebigsky: () => import('./onebigsky'),
   'cardinal-drone': () => import('./cardinal-drone'),
   'tool-excalidraw': () =>

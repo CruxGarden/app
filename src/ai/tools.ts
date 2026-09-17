@@ -280,7 +280,7 @@ export const SITE_TOOL_DEFINITIONS: ToolDefinition[] = [
 export const GUESTBOOK_TOOL_DEFINITION: ToolDefinition = {
   name: 'add_guestbook',
   description:
-    'Add a guestbook to this site: visitors of the shared site leave a note (name and message) after signing in by email; the notes live in this Crux\'s own Crux Store. ' +
+    "Add a guestbook to this site: visitors of the shared site leave a note (name and message) after signing in by email; the notes live in this Crux's own Crux Store. " +
     'Writes guestbook.js (public/guestbook.js for an Astro site) and puts <section data-guestbook> plus the script tag into index.html or src/pages/index.astro before </body>. ' +
     'USE WHEN: The user wants visitors to leave comments, sign a guestbook or say hello on their site. Idempotent: a page that already carries the block is left alone.',
   input_schema: {
@@ -332,6 +332,8 @@ export function subagentToolDefinitions(): ToolDefinition[] {
 
 /** Options for a tool executor beyond the crux it is bound to. */
 export interface ToolExecutorOptions {
+  /** Stop queued hosted calls before they enter the executor. */
+  signal?: AbortSignal;
   /**
    * Who the tools act for — recorded on every snapshot they take (ADR 0013).
    * 'collaborator' (default) is the built-in AI; the MCP server passes
@@ -399,6 +401,8 @@ export function createToolExecutor(
     toolName: string,
     input: Record<string, unknown>,
   ): Promise<string | ToolResultContent> {
+    if (options.signal?.aborted)
+      return formatToolError(toolName, 'The originating agent turn has stopped.');
     // Validate inputs before execution
     const appTool = appToolFor(cruxId, toolName);
     const validation = isAppToolName(toolName)

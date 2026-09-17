@@ -341,7 +341,7 @@ export async function importGarden(options: GardenImportOptions): Promise<Garden
 
   // Provider sessions belong to the exporting installation, including Main's.
   await db.run(`UPDATE cruxes SET meta = json_remove(meta,
-    '$.settings.agentSessionId', '$.settings.agentHost', '$.agentHost', '$.turnJob', '$.turnQueue')
+    '$.settings.agentSessionId', '$.settings.agentSessions', '$.settings.agentHost', '$.agentHost', '$.turnJob', '$.turnQueue')
     WHERE meta IS NOT NULL`);
 
   // A restored task always gets a fresh directory and provider session.

@@ -1,0 +1,382 @@
+[
+  {
+    "name": "inspect_gdevelop_object",
+    "id": "mock-1789509573186",
+    "input": {
+      "scene": "Scene",
+      "scope": "scene",
+      "object": "Score"
+    },
+    "result": "{\"object\":\"Score\",\"type\":\"TextObject::Text\",\"scope\":\"scene\",\"section\":\"properties\",\"total\":18,\"offset\":0,\"nextOffset\":null,\"items\":[{\"name\":\"bold\",\"type\":\"boolean\",\"value\":\"false\",\"valueTruncated\":false,\"label\":\"Bold\",\"description\":\"\",\"writable\":true,\"hidden\":false,\"choices\":[],\"choicesTruncated\":false,\"extraInfo\":[]},{\"name\":\"characterSize\",\"type\":\"number\",\"value\":\"20\",\"valueTruncated\":false,\"label\":\"Font size\",\"description\":\"\",\"writable\":true,\"hidden\":false,\"choices\":[],\"choicesTruncated\":false,\"extraInfo\":[]},{\"name\":\"color\",\"type\":\"color\",\"value\":\"0;0;0\",\"valueTruncated\":false,\"label\":\"Color\",\"description\":\"\",\"writable\":true,\"hidden\":false,\"choices\":[],\"choicesTruncated\":false,\"extraInfo\":[]},{\"name\":\"font\",\"type\":\"resource\",\"value\":\"\",\"valueTruncated\":false,\"label\":\"Font\",\"description\":\"\",\"writable\":true,\"hidden\":false,\"choices\":[],\"choicesTruncated\":false,\"extraInfo\":[\"font\"]},{\"name\":\"isOutlineEnabled\",\"type\":\"boolean\",\"value\":\"false\",\"valueTruncated\":false,\"label\":\"Show outline\",\"description\":\"\",\"writable\":true,\"hidden\":false,\"choices\":[],\"choicesTruncated\":false,\"extraInfo\":[]},{\"name\":\"isShadowEnabled\",\"type\":\"boolean\",\"value\":\"false\",\"valueTruncated\":false,\"label\":\"Show shadow\",\"description\":\"\",\"writable\":true,\"hidden\":false,\"choices\":[],\"choicesTruncated\":false,\"extraInfo\":[]},{\"name\":\"italic\",\"type\":\"boolean\",\"value\":\"false\",\"valueTruncated\":false,\"label\":\"Italic\",\"description\":\"\",\"writable\":true,\"hidden\":false,\"choices\":[],\"choicesTruncated\":false,\"extraInfo\":[]},{\"name\":\"lineHeight\",\"type\":\"number\",\"value\":\"0\",\"valueTruncated\":false,\"label\":\"Line height\",\"description\":\"\",\"writable\":true,\"hidden\":false,\"choices\":[],\"choicesTruncated\":false,\"extraInfo\":[]},{\"name\":\"outlineColor\",\"type\":\"color\",\"value\":\"255;255;255\",\"valueTruncated\":false,\"label\":\"Color\",\"description\":\"\",\"writable\":true,\"hidden\":false,\"choices\":[],\"choicesTruncated\":false,\"extraInfo\":[]},{\"name\":\"outlineThickness\",\"type\":\"number\",\"value\":\"2\",\"valueTruncated\":false,\"label\":\"Thickness\",\"description\":\"\",\"writable\":true,\"hidden\":false,\"choices\":[],\"choicesTruncated\":false,\"extraInfo\":[]},{\"name\":\"shadowAngle\",\"type\":\"number\",\"value\":\"90\",\"valueTruncated\":false,\"label\":\"Angle\",\"description\":\"\",\"writable\":true,\"hidden\":false,\"choices\":[],\"choicesTruncated\":false,\"extraInfo\":[]},{\"name\":\"shadowBlurRadius\",\"type\":\"number\",\"value\":\"2\",\"valueTruncated\":false,\"label\":\"Blur radius\",\"description\":\"\",\"writable\":true,\"hidden\":false,\"choices\":[],\"choicesTruncated\":false,\"extraInfo\":[]},{\"name\":\"shadowColor\",\"type\":\"color\",\"value\":\"0;0;0\",\"valueTruncated\":false,\"label\":\"Color\",\"description\":\"\",\"writable\":true,\"hidden\":false,\"choices\":[],\"choicesTruncated\":false,\"extraInfo\":[]},{\"name\":\"shadowDistance\",\"type\":\"number\",\"value\":\"4\",\"valueTruncated\":false,\"label\":\"Distance\",\"description\":\"\",\"writable\":true,\"hidden\":false,\"choices\":[],\"choicesTruncated\":false,\"extraInfo\":[]},{\"name\":\"shadowOpacity\",\"type\":\"number\",\"value\":\"127\",\"valueTruncated\":false,\"label\":\"Opacity\",\"description\":\"\",\"writable\":true,\"hidden\":false,\"choices\":[],\"choicesTruncated\":false,\"extraInfo\":[]},{\"name\":\"text\",\"type\":\"multilinestring\",\"value\":\"Text\",\"valueTruncated\":false,\"label\":\"Text\",\"description\":\"\",\"writable\":true,\"hidden\":false,\"choices\":[],\"choicesTruncated\":false,\"extraInfo\":[]},{\"name\":\"textAlignment\",\"type\":\"choice\",\"value\":\"left\",\"valueTruncated\":false,\"label\":\"Alignment\",\"description\":\"Alignment of the text when multiple lines are displayed\",\"writable\":true,\"hidden\":false,\"choices\":[\"left\",\"center\",\"right\"],\"choicesTruncated\":false,\"extraInfo\":[]},{\"name\":\"verticalTextAlignment\",\"type\":\"choice\",\"value\":\"top\",\"valueTruncated\":false,\"label\":\"Vertical alignment\",\"description\":\"\",\"writable\":true,\"hidden\":false,\"choices\":[\"top\",\"center\",\"bottom\"],\"choicesTruncated\":false,\"extraInfo\":[]}],\"note\":\"Property values are native strings; edits use typed JSON values. Only writable descriptors are supported. Inspection tokens expire after any project edit. Object/behavior/animation edits are not part of native scene-instance Undo; Growth preserves saved versions.\",\"expectedState\":\"b8321359b9c980f8bf7a45908bcc266625a25703c39a307900fa75502a7ecd33\"}"
+  },
+  {
+    "name": "edit_gdevelop_properties",
+    "id": "mock-1789509573220",
+    "input": {
+      "scene": "Scene",
+      "scope": "scene",
+      "object": "Score",
+      "expectedState": "b8321359b9c980f8bf7a45908bcc266625a25703c39a307900fa75502a7ecd33",
+      "updates": [
+        {
+          "name": "text",
+          "value": "Collect three sprouts · Arrow keys"
+        },
+        {
+          "name": "characterSize",
+          "value": 22
+        },
+        {
+          "name": "color",
+          "value": "35;65;40"
+        }
+      ]
+    },
+    "result": "{\"object\":\"Score\",\"scope\":\"scene\",\"changed\":[\"text\",\"characterSize\",\"color\"],\"note\":\"Saved through native object editing. Scene-instance Undo does not undo object settings; Growth preserves saved versions.\"}"
+  },
+  {
+    "name": "add_gdevelop_instance",
+    "id": "mock-1789509575609",
+    "input": {
+      "scene": "Scene",
+      "object": "Score",
+      "x": 310,
+      "y": 50
+    },
+    "result": "{\"scene\":\"Scene\",\"affectedIds\":[\"af875ee1-a36b-4231-a631-b816da9aa13c\"],\"total\":6,\"canUndo\":true,\"canRedo\":false}"
+  },
+  {
+    "name": "add_gdevelop_event",
+    "id": "mock-1789509577961",
+    "input": {
+      "scene": "Scene",
+      "conditions": [
+        {
+          "type": "CollisionNP",
+          "parameters": [
+            "Gardener",
+            "Sprout",
+            "",
+            "",
+            ""
+          ]
+        }
+      ],
+      "actions": [
+        {
+          "type": "Delete",
+          "parameters": [
+            "Sprout",
+            ""
+          ]
+        },
+        {
+          "type": "PlaySound",
+          "parameters": [
+            "",
+            "Chime",
+            "",
+            "",
+            ""
+          ]
+        }
+      ]
+    },
+    "result": "{\"scene\":\"Scene\",\"events\":1}"
+  },
+  {
+    "name": "add_gdevelop_event",
+    "id": "mock-1789509580353",
+    "input": {
+      "scene": "Scene",
+      "conditions": [],
+      "actions": [
+        {
+          "type": "TextObject::String",
+          "parameters": [
+            "Score",
+            "=",
+            "\"Sprouts: \" + ToString(3 - SceneInstancesCount(Sprout)) + \"/3 · Arrow keys\""
+          ]
+        }
+      ]
+    },
+    "result": "{\"scene\":\"Scene\",\"events\":2}"
+  },
+  {
+    "name": "set_gdevelop_name",
+    "id": "mock-1789509582674",
+    "input": {
+      "name": "Made together — Garden gathering"
+    },
+    "result": "{\"name\":\"Made together — Garden gathering\"}"
+  },
+  {
+    "name": "inspect_gdevelop_object",
+    "id": "mock-1789509547103",
+    "input": {
+      "scene": "Scene",
+      "scope": "scene",
+      "object": "Sprout"
+    },
+    "result": "{\"object\":\"Sprout\",\"type\":\"Scene3D::Model3DObject\",\"scope\":\"scene\",\"section\":\"properties\",\"total\":14,\"offset\":0,\"nextOffset\":null,\"items\":[{\"name\":\"centerLocation\",\"type\":\"choice\",\"value\":\"CenteredOnZ\",\"valueTruncated\":false,\"label\":\"Center point\",\"description\":\"\",\"writable\":true,\"hidden\":false,\"choices\":[\"ModelOrigin\",\"ObjectCenter\",\"CenteredOnZ\",\"BottomCenterZ\",\"BottomCenterY\"],\"choicesTruncated\":false,\"extraInfo\":[]},{\"name\":\"crossfadeDuration\",\"type\":\"number\",\"value\":\"0.1000000014901161\",\"valueTruncated\":false,\"label\":\"Crossfade duration\",\"description\":\"\",\"writable\":true,\"hidden\":false,\"choices\":[],\"choicesTruncated\":false,\"extraInfo\":[]},{\"name\":\"depth\",\"type\":\"number\",\"value\":\"100\",\"valueTruncated\":false,\"label\":\"Depth\",\"description\":\"\",\"writable\":true,\"hidden\":false,\"choices\":[],\"choicesTruncated\":false,\"extraInfo\":[]},{\"name\":\"height\",\"type\":\"number\",\"value\":\"100\",\"valueTruncated\":false,\"label\":\"Height\",\"description\":\"\",\"writable\":true,\"hidden\":false,\"choices\":[],\"choicesTruncated\":false,\"extraInfo\":[]},{\"name\":\"isCastingShadow\",\"type\":\"boolean\",\"value\":\"true\",\"valueTruncated\":false,\"label\":\"Shadow casting\",\"description\":\"\",\"writable\":true,\"hidden\":false,\"choices\":[],\"choicesTruncated\":false,\"extraInfo\":[]},{\"name\":\"isReceivingShadow\",\"type\":\"boolean\",\"value\":\"true\",\"valueTruncated\":false,\"label\":\"Shadow receiving\",\"description\":\"\",\"writable\":true,\"hidden\":false,\"choices\":[],\"choicesTruncated\":false,\"extraInfo\":[]},{\"name\":\"keepAspectRatio\",\"type\":\"boolean\",\"value\":\"true\",\"valueTruncated\":false,\"label\":\"Reduce initial dimensions to keep aspect ratio\",\"description\":\"\",\"writable\":true,\"hidden\":false,\"choices\":[],\"choicesTruncated\":false,\"extraInfo\":[]},{\"name\":\"materialType\",\"type\":\"choice\",\"value\":\"StandardWithoutMetalness\",\"valueTruncated\":false,\"label\":\"Material\",\"description\":\"\",\"writable\":true,\"hidden\":false,\"choices\":[\"Basic\",\"StandardWithoutMetalness\",\"KeepOriginal\"],\"choicesTruncated\":false,\"extraInfo\":[]},{\"name\":\"modelResourceName\",\"type\":\"resource\",\"value\":\"\",\"valueTruncated\":false,\"label\":\"3D model\",\"description\":\"\",\"writable\":true,\"hidden\":false,\"choices\":[],\"choicesTruncated\":false,\"extraInfo\":[\"model3D\"]},{\"name\":\"originLocation\",\"type\":\"choice\",\"value\":\"ModelOrigin\",\"valueTruncated\":false,\"label\":\"Origin point\",\"description\":\"\",\"writable\":true,\"hidden\":false,\"choices\":[\"ModelOrigin\",\"TopLeft\",\"ObjectCenter\",\"BottomCenterZ\",\"BottomCenterY\"],\"choicesTruncated\":false,\"extraInfo\":[]},{\"name\":\"rotationX\",\"type\":\"number\",\"value\":\"90\",\"valueTruncated\":false,\"label\":\"X\",\"description\":\"Rotation around X axis\",\"writable\":true,\"hidden\":false,\"choices\":[],\"choicesTruncated\":false,\"extraInfo\":[]},{\"name\":\"rotationY\",\"type\":\"number\",\"value\":\"0\",\"valueTruncated\":false,\"label\":\"Y\",\"description\":\"Rotation around Y axis\",\"writable\":true,\"hidden\":false,\"choices\":[],\"choicesTruncated\":false,\"extraInfo\":[]},{\"name\":\"rotationZ\",\"type\":\"number\",\"value\":\"90\",\"valueTruncated\":false,\"label\":\"Z\",\"description\":\"Rotation around Z axis\",\"writable\":true,\"hidden\":false,\"choices\":[],\"choicesTruncated\":false,\"extraInfo\":[]},{\"name\":\"width\",\"type\":\"number\",\"value\":\"100\",\"valueTruncated\":false,\"label\":\"Width\",\"description\":\"\",\"writable\":true,\"hidden\":false,\"choices\":[],\"choicesTruncated\":false,\"extraInfo\":[]}],\"note\":\"Property values are native strings; edits use typed JSON values. Only writable descriptors are supported. Inspection tokens expire after any project edit. Object/behavior/animation edits are not part of native scene-instance Undo; Growth preserves saved versions.\",\"expectedState\":\"8db28e5913d73665f620aa07a9112d57cc7584c3c4eff2e0bdb67de698e38ccf\"}"
+  },
+  {
+    "name": "edit_gdevelop_properties",
+    "id": "mock-1789509547139",
+    "input": {
+      "scene": "Scene",
+      "scope": "scene",
+      "object": "Sprout",
+      "expectedState": "8db28e5913d73665f620aa07a9112d57cc7584c3c4eff2e0bdb67de698e38ccf",
+      "updates": [
+        {
+          "name": "modelResourceName",
+          "value": "SproutModel"
+        },
+        {
+          "name": "width",
+          "value": 80
+        },
+        {
+          "name": "height",
+          "value": 80
+        },
+        {
+          "name": "depth",
+          "value": 110
+        },
+        {
+          "name": "rotationX",
+          "value": 35
+        },
+        {
+          "name": "materialType",
+          "value": "Basic"
+        }
+      ]
+    },
+    "result": "{\"object\":\"Sprout\",\"scope\":\"scene\",\"changed\":[\"modelResourceName\",\"width\",\"height\",\"depth\",\"rotationX\",\"materialType\"],\"note\":\"Saved through native object editing. Scene-instance Undo does not undo object settings; Growth preserves saved versions.\"}"
+  },
+  {
+    "name": "add_gdevelop_instance",
+    "id": "mock-1789509549205",
+    "input": {
+      "scene": "Scene",
+      "object": "Sprout",
+      "x": 220,
+      "y": 340
+    },
+    "result": "{\"scene\":\"Scene\",\"affectedIds\":[\"1b9c40c4-15a6-4d21-a3d6-681e17c70a77\"],\"total\":1,\"canUndo\":true,\"canRedo\":false}"
+  },
+  {
+    "name": "add_gdevelop_instance",
+    "id": "mock-1789509551498",
+    "input": {
+      "scene": "Scene",
+      "object": "Sprout",
+      "x": 400,
+      "y": 340
+    },
+    "result": "{\"scene\":\"Scene\",\"affectedIds\":[\"7853a1bd-1734-478b-af68-68b22aba29c9\"],\"total\":2,\"canUndo\":true,\"canRedo\":false}"
+  },
+  {
+    "name": "add_gdevelop_instance",
+    "id": "mock-1789509553633",
+    "input": {
+      "scene": "Scene",
+      "object": "Sprout",
+      "x": 580,
+      "y": 340
+    },
+    "result": "{\"scene\":\"Scene\",\"affectedIds\":[\"271646c8-d537-4dbc-9cc0-054101d94425\"],\"total\":3,\"canUndo\":true,\"canRedo\":false}"
+  },
+  {
+    "name": "set_gdevelop_background",
+    "id": "mock-1789509555775",
+    "input": {
+      "scene": "Scene",
+      "rgb": [
+        235,
+        239,
+        217
+      ]
+    },
+    "result": "{\"scene\":\"Scene\",\"rgb\":[235,239,217]}"
+  },
+  {
+    "name": "list_cruxspace_assets",
+    "id": "mock-1789509529200",
+    "input": {},
+    "result": "{\"spaces\":[{\"id\":\"8d87f6b4-85e3-4ca5-9a10-6acd678aac7b\",\"name\":\"Shared garden\",\"brief\":\"Figma artwork and Blender props join Piskel animation and AudioMass sound in a native GDevelop game. This focused integration uses actual Garden-agent art and a scripted game recipe; the full demo also retains Notes, Kan and Astro.\",\"assets\":[{\"version\":1,\"id\":\"bc9f52fa-99fb-4095-a8cb-39f92530776d\",\"label\":\"Pickup chime\",\"path\":\"exports/bc9f52fa-99fb-4095-a8cb-39f92530776d.wav\",\"fingerprint\":\"009a81a5663c75e61e8e34aaca77f7d9cecf73e225d5b4880995fadc710a2231\",\"mimeType\":\"audio/wav\",\"size\":44142,\"created\":\"2026-09-15T21:57:55.806Z\",\"sourceCruxId\":\"6fdd4513-cddc-4020-b4ea-da9061985e39\",\"sourceTitle\":\"Shared garden sound\"},{\"version\":1,\"id\":\"d8ce1f65-bfb5-4959-ac94-b11c092cc17d\",\"label\":\"Gardener sheet\",\"path\":\"exports/d8ce1f65-bfb5-4959-ac94-b11c092cc17d.png\",\"fingerprint\":\"5af86234e48ce505cd98348f3bedf624e00456f8d3cdbd5b8c578fda7dac1519\",\"mimeType\":\"image/png\",\"size\":971,\"created\":\"2026-09-15T21:57:47.988Z\",\"sourceCruxId\":\"07e0fc4a-3c6f-4194-b973-311a7f1f08cc\",\"sourceTitle\":\"Shared garden sprites\"},{\"version\":1,\"id\":\"27897b63-f64d-40e6-8ecf-d6dfcf445015\",\"label\":\"Blender sprout render\",\"path\":\"exports/27897b63-f64d-40e6-8ecf-d6dfcf445015.png\",\"fingerprint\":\"ba3a7fa752603bd81902981aa08dfd116ed77143f43fdd32bcc22d421ed80a9b\",\"mimeType\":\"image/png\",\"size\":424953,\"created\":\"2026-09-15T21:57:39.744Z\",\"externalSource\":{\"app\":\"blender\",\"scenePath\":\"scene.blend\",\"sceneFingerprint\":\"d990ef104782f2afa5b468c0c4d37c890b427823c044dc962e36306f26c0d3c5\",\"method\":\"saved-artifact\"},\"sourceCruxId\":\"0ad1c1a0-2ab5-4de6-846c-69d09634f1df\",\"sourceTitle\":\"Shared garden model\"},{\"version\":1,\"id\":\"ec988fe1-6eea-4af4-84c9-a3e82b09c078\",\"label\":\"Blender sprout\",\"path\":\"exports/ec988fe1-6eea-4af4-84c9-a3e82b09c078.glb\",\"fingerprint\":\"3f98367999f00ecd983f3ff27488b0785acd2fab1e655b7d44f7115d6994ed0d\",\"mimeType\":\"model/gltf-binary\",\"size\":16108,\"created\":\"2026-09-15T21:57:39.666Z\",\"externalSource\":{\"app\":\"blender\",\"scenePath\":\"scene.blend\",\"sceneFingerprint\":\"d990ef104782f2afa5b468c0c4d37c890b427823c044dc962e36306f26c0d3c5\",\"method\":\"saved-artifact\"},\"sourceCruxId\":\"0ad1c1a0-2ab5-4de6-846c-69d09634f1df\",\"sourceTitle\":\"Shared garden model\"},{\"version\":1,\"id\":\"a2929a67-e18b-470a-a263-8946c41887f0\",\"label\":\"Figma garden artwork\",\"path\":\"exports/a2929a67-e18b-470a-a263-8946c41887f0.png\",\"fingerprint\":\"a9564ddaadb4e10308e1d595e9df241613ce0a7189a4ee07827498a2b17778e4\",\"mimeType\":\"image/png\",\"size\":48234,\"created\":\"2026-09-15T21:57:37.917Z\",\"externalSource\":{\"app\":\"figma\",\"documentUrl\":\"https://www.figma.com/design/1UGF8VTtWSz0D3pjGvOWwf?node-id=6-2\",\"method\":\"file-import\",\"nodeId\":\"6:2\"},\"sourceCruxId\":\"c8e5b533-7e91-419c-8a96-69d60116ee68\",\"sourceTitle\":\"Shared garden design\"}],\"outputCount\":5}],\"spaceCount\":1}"
+  },
+  {
+    "name": "use_cruxspace_asset",
+    "id": "mock-1789509529444",
+    "input": {
+      "spaceId": "8d87f6b4-85e3-4ca5-9a10-6acd678aac7b",
+      "sourceCruxId": "0ad1c1a0-2ab5-4de6-846c-69d09634f1df",
+      "outputId": "ec988fe1-6eea-4af4-84c9-a3e82b09c078",
+      "fingerprint": "3f98367999f00ecd983f3ff27488b0785acd2fab1e655b7d44f7115d6994ed0d",
+      "path": "assets/sprout.glb"
+    },
+    "result": "{\"saved\":true,\"path\":\"assets/sprout.glb\",\"fingerprint\":\"3f98367999f00ecd983f3ff27488b0785acd2fab1e655b7d44f7115d6994ed0d\",\"provenancePath\":\"cruxspace-assets/2e85d75331b72058288e0ac4172c55a5a6d6ccf1e099e9fdebab288174bf513a.json\",\"origin\":{\"version\":1,\"spaceId\":\"8d87f6b4-85e3-4ca5-9a10-6acd678aac7b\",\"spaceName\":\"Shared garden\",\"sourceCruxId\":\"0ad1c1a0-2ab5-4de6-846c-69d09634f1df\",\"sourceTitle\":\"Shared garden model\",\"outputId\":\"ec988fe1-6eea-4af4-84c9-a3e82b09c078\",\"sourcePath\":\"exports/ec988fe1-6eea-4af4-84c9-a3e82b09c078.glb\",\"fingerprint\":\"3f98367999f00ecd983f3ff27488b0785acd2fab1e655b7d44f7115d6994ed0d\",\"label\":\"Blender sprout\",\"path\":\"assets/sprout.glb\",\"imported\":\"2026-09-15T21:58:49.758Z\",\"externalSource\":{\"app\":\"blender\",\"scenePath\":\"scene.blend\",\"sceneFingerprint\":\"d990ef104782f2afa5b468c0c4d37c890b427823c044dc962e36306f26c0d3c5\",\"method\":\"saved-artifact\"}}}"
+  },
+  {
+    "name": "use_cruxspace_asset",
+    "id": "mock-1789509531448",
+    "input": {
+      "spaceId": "8d87f6b4-85e3-4ca5-9a10-6acd678aac7b",
+      "sourceCruxId": "c8e5b533-7e91-419c-8a96-69d60116ee68",
+      "outputId": "a2929a67-e18b-470a-a263-8946c41887f0",
+      "fingerprint": "a9564ddaadb4e10308e1d595e9df241613ce0a7189a4ee07827498a2b17778e4",
+      "path": "assets/title.png"
+    },
+    "result": "{\"saved\":true,\"path\":\"assets/title.png\",\"fingerprint\":\"a9564ddaadb4e10308e1d595e9df241613ce0a7189a4ee07827498a2b17778e4\",\"provenancePath\":\"cruxspace-assets/61364842c391e65504d205aab23c652cb888725ac36a2fd431b30f5a404bf0bd.json\",\"origin\":{\"version\":1,\"spaceId\":\"8d87f6b4-85e3-4ca5-9a10-6acd678aac7b\",\"spaceName\":\"Shared garden\",\"sourceCruxId\":\"c8e5b533-7e91-419c-8a96-69d60116ee68\",\"sourceTitle\":\"Shared garden design\",\"outputId\":\"a2929a67-e18b-470a-a263-8946c41887f0\",\"sourcePath\":\"exports/a2929a67-e18b-470a-a263-8946c41887f0.png\",\"fingerprint\":\"a9564ddaadb4e10308e1d595e9df241613ce0a7189a4ee07827498a2b17778e4\",\"label\":\"Figma garden artwork\",\"path\":\"assets/title.png\",\"imported\":\"2026-09-15T21:58:51.866Z\",\"externalSource\":{\"app\":\"figma\",\"documentUrl\":\"https://www.figma.com/design/1UGF8VTtWSz0D3pjGvOWwf?node-id=6-2\",\"method\":\"file-import\",\"nodeId\":\"6:2\"}}}"
+  },
+  {
+    "name": "use_cruxspace_asset",
+    "id": "mock-1789509533445",
+    "input": {
+      "spaceId": "8d87f6b4-85e3-4ca5-9a10-6acd678aac7b",
+      "sourceCruxId": "07e0fc4a-3c6f-4194-b973-311a7f1f08cc",
+      "outputId": "d8ce1f65-bfb5-4959-ac94-b11c092cc17d",
+      "fingerprint": "5af86234e48ce505cd98348f3bedf624e00456f8d3cdbd5b8c578fda7dac1519",
+      "path": "assets/gardener.png"
+    },
+    "result": "{\"saved\":true,\"path\":\"assets/gardener.png\",\"fingerprint\":\"5af86234e48ce505cd98348f3bedf624e00456f8d3cdbd5b8c578fda7dac1519\",\"provenancePath\":\"cruxspace-assets/e34d18e0608542da0187e6125982474bc4d870137a2e2158201f0427a536474e.json\",\"origin\":{\"version\":1,\"spaceId\":\"8d87f6b4-85e3-4ca5-9a10-6acd678aac7b\",\"spaceName\":\"Shared garden\",\"sourceCruxId\":\"07e0fc4a-3c6f-4194-b973-311a7f1f08cc\",\"sourceTitle\":\"Shared garden sprites\",\"outputId\":\"d8ce1f65-bfb5-4959-ac94-b11c092cc17d\",\"sourcePath\":\"exports/d8ce1f65-bfb5-4959-ac94-b11c092cc17d.png\",\"fingerprint\":\"5af86234e48ce505cd98348f3bedf624e00456f8d3cdbd5b8c578fda7dac1519\",\"label\":\"Gardener sheet\",\"path\":\"assets/gardener.png\",\"imported\":\"2026-09-15T21:58:53.781Z\"}}"
+  },
+  {
+    "name": "add_gdevelop_resource",
+    "id": "mock-1789509537257",
+    "input": {
+      "path": "assets/sprout.glb",
+      "name": "SproutModel",
+      "kind": "model3D"
+    },
+    "result": "{\"resource\":\"SproutModel\",\"kind\":\"model3D\",\"size\":16108}"
+  },
+  {
+    "name": "list_gdevelop_capabilities",
+    "id": "mock-1789509539729",
+    "input": {
+      "kind": "object",
+      "type": "Scene3D::Model3DObject"
+    },
+    "result": "{\"kind\":\"object\",\"total\":1,\"offset\":0,\"nextOffset\":null,\"items\":[{\"type\":\"Scene3D::Model3DObject\",\"label\":\"3D Model\",\"description\":\"An animated 3D model, useful for most elements of a 3D game.\",\"extension\":\"Scene3D\"}],\"note\":\"These are native editor capabilities, not a promise that every operation has a Garden tool. For action/condition parameters, request the exact type; retain code-only slots in native parameter order. Labels/descriptions are excerpts; truncated defaults and extra info are explicitly flagged.\"}"
+  },
+  {
+    "name": "add_gdevelop_object",
+    "id": "mock-1789509539797",
+    "input": {
+      "scene": "Scene",
+      "name": "Sprout",
+      "type": "Scene3D::Model3DObject"
+    },
+    "result": "{\"scene\":\"Scene\",\"object\":\"Sprout\",\"type\":\"Scene3D::Model3DObject\",\"note\":\"Created with native defaults. Inspect properties to configure resources, dimensions and text; add instances to place it. Growth preserves object edits.\"}"
+  },
+  {
+    "name": "use_cruxspace_asset",
+    "id": "mock-1789509542004",
+    "input": {
+      "spaceId": "8d87f6b4-85e3-4ca5-9a10-6acd678aac7b",
+      "sourceCruxId": "6fdd4513-cddc-4020-b4ea-da9061985e39",
+      "outputId": "bc9f52fa-99fb-4095-a8cb-39f92530776d",
+      "fingerprint": "009a81a5663c75e61e8e34aaca77f7d9cecf73e225d5b4880995fadc710a2231",
+      "path": "assets/chime.wav"
+    },
+    "result": "{\"saved\":true,\"path\":\"assets/chime.wav\",\"fingerprint\":\"009a81a5663c75e61e8e34aaca77f7d9cecf73e225d5b4880995fadc710a2231\",\"provenancePath\":\"cruxspace-assets/c08b4362ab38c446183c3f8b45cd70780f95f192c8136362198baf0f9b46ba60.json\",\"origin\":{\"version\":1,\"spaceId\":\"8d87f6b4-85e3-4ca5-9a10-6acd678aac7b\",\"spaceName\":\"Shared garden\",\"sourceCruxId\":\"6fdd4513-cddc-4020-b4ea-da9061985e39\",\"sourceTitle\":\"Shared garden sound\",\"outputId\":\"bc9f52fa-99fb-4095-a8cb-39f92530776d\",\"sourcePath\":\"exports/bc9f52fa-99fb-4095-a8cb-39f92530776d.wav\",\"fingerprint\":\"009a81a5663c75e61e8e34aaca77f7d9cecf73e225d5b4880995fadc710a2231\",\"label\":\"Pickup chime\",\"path\":\"assets/chime.wav\",\"imported\":\"2026-09-15T21:59:02.216Z\"}}"
+  },
+  {
+    "name": "add_gdevelop_resource",
+    "id": "mock-1789509543965",
+    "input": {
+      "path": "assets/chime.wav",
+      "name": "Chime",
+      "kind": "audio"
+    },
+    "result": "{\"resource\":\"Chime\",\"kind\":\"audio\",\"size\":44142}"
+  },
+  {
+    "name": "add_gdevelop_sprite",
+    "id": "mock-1789509558430",
+    "input": {
+      "scene": "Scene",
+      "name": "Artwork",
+      "path": "assets/title.png"
+    },
+    "result": "{\"scene\":\"Scene\",\"object\":\"Artwork\",\"frames\":[\"Artwork_1\"],\"behaviors\":[]}"
+  },
+  {
+    "name": "add_gdevelop_instance",
+    "id": "mock-1789509560915",
+    "input": {
+      "scene": "Scene",
+      "object": "Artwork",
+      "x": 24,
+      "y": 24
+    },
+    "result": "{\"scene\":\"Scene\",\"affectedIds\":[\"a4988254-e632-47f4-a8f4-2d81765ba7b5\"],\"total\":4,\"canUndo\":true,\"canRedo\":false}"
+  },
+  {
+    "name": "inspect_gdevelop_scene",
+    "id": "mock-1789509563194",
+    "input": {
+      "scene": "Scene"
+    },
+    "result": "{\"scene\":\"Scene\",\"expectedState\":\"f1a1654a6f6b402f839cf6b6dd4bb14162ee55d1eb461ca37e401c4374bce34b\",\"total\":4,\"offset\":0,\"nextOffset\":null,\"instances\":[{\"id\":\"1b9c40c4-15a6-4d21-a3d6-681e17c70a77\",\"object\":\"Sprout\",\"x\":220,\"y\":340,\"z\":0,\"angle\":0,\"rotationX\":0,\"rotationY\":0,\"customSize\":false,\"width\":0,\"height\":0,\"customDepth\":false,\"depth\":0,\"layer\":\"\",\"zOrder\":0,\"opacity\":255,\"flippedX\":false,\"flippedY\":false,\"hidden\":false,\"locked\":false},{\"id\":\"7853a1bd-1734-478b-af68-68b22aba29c9\",\"object\":\"Sprout\",\"x\":400,\"y\":340,\"z\":0,\"angle\":0,\"rotationX\":0,\"rotationY\":0,\"customSize\":false,\"width\":0,\"height\":0,\"customDepth\":false,\"depth\":0,\"layer\":\"\",\"zOrder\":0,\"opacity\":255,\"flippedX\":false,\"flippedY\":false,\"hidden\":false,\"locked\":false},{\"id\":\"271646c8-d537-4dbc-9cc0-054101d94425\",\"object\":\"Sprout\",\"x\":580,\"y\":340,\"z\":0,\"angle\":0,\"rotationX\":0,\"rotationY\":0,\"customSize\":false,\"width\":0,\"height\":0,\"customDepth\":false,\"depth\":0,\"layer\":\"\",\"zOrder\":0,\"opacity\":255,\"flippedX\":false,\"flippedY\":false,\"hidden\":false,\"locked\":false},{\"id\":\"a4988254-e632-47f4-a8f4-2d81765ba7b5\",\"object\":\"Artwork\",\"x\":24,\"y\":24,\"z\":0,\"angle\":0,\"rotationX\":0,\"rotationY\":0,\"customSize\":false,\"width\":0,\"height\":0,\"customDepth\":false,\"depth\":0,\"layer\":\"\",\"zOrder\":0,\"opacity\":255,\"flippedX\":false,\"flippedY\":false,\"hidden\":false,\"locked\":false}],\"selectedIds\":[\"a4988254-e632-47f4-a8f4-2d81765ba7b5\"],\"canUndo\":true,\"canRedo\":false,\"note\":\"History is the active scene instance history only. Width/height/depth are stored custom dimensions and apply only when their custom-size flag is true. Inspect again after edits, Undo/Redo or reopening.\"}"
+  },
+  {
+    "name": "edit_gdevelop_instances",
+    "id": "mock-1789509563213",
+    "input": {
+      "scene": "Scene",
+      "expectedState": "f1a1654a6f6b402f839cf6b6dd4bb14162ee55d1eb461ca37e401c4374bce34b",
+      "updates": [
+        {
+          "id": "a4988254-e632-47f4-a8f4-2d81765ba7b5",
+          "width": 256,
+          "height": 192
+        }
+      ]
+    },
+    "result": "{\"scene\":\"Scene\",\"affectedIds\":[\"a4988254-e632-47f4-a8f4-2d81765ba7b5\"],\"total\":4,\"canUndo\":true,\"canRedo\":false}"
+  },
+  {
+    "name": "add_gdevelop_sprite",
+    "id": "mock-1789509565437",
+    "input": {
+      "scene": "Scene",
+      "name": "Gardener",
+      "path": "assets/gardener.png",
+      "frameWidth": 32,
+      "frameHeight": 32,
+      "fps": 8,
+      "behaviors": [
+        "TopDownMovementBehavior::TopDownMovementBehavior"
+      ]
+    },
+    "result": "{\"scene\":\"Scene\",\"object\":\"Gardener\",\"frames\":[\"Gardener_1\",\"Gardener_2\",\"Gardener_3\",\"Gardener_4\"],\"behaviors\":[\"TopDownMovementBehavior::TopDownMovementBehavior\"]}"
+  },
+  {
+    "name": "add_gdevelop_instance",
+    "id": "mock-1789509567984",
+    "input": {
+      "scene": "Scene",
+      "object": "Gardener",
+      "x": 100,
+      "y": 360
+    },
+    "result": "{\"scene\":\"Scene\",\"affectedIds\":[\"587a7804-54a3-4d15-a6af-b2edab18ed61\"],\"total\":5,\"canUndo\":true,\"canRedo\":false}"
+  },
+  {
+    "name": "add_gdevelop_object",
+    "id": "mock-1789509570366",
+    "input": {
+      "scene": "Scene",
+      "name": "Score",
+      "type": "TextObject::Text"
+    },
+    "result": "{\"scene\":\"Scene\",\"object\":\"Score\",\"type\":\"TextObject::Text\",\"note\":\"Created with native defaults. Inspect properties to configure resources, dimensions and text; add instances to place it. Growth preserves object edits.\"}"
+  }
+]

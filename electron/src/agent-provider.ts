@@ -3,6 +3,8 @@ import * as os from 'node:os';
 import * as path from 'node:path';
 import { execFile } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
+import { z } from 'zod';
+import { GARDEN_TOOL_SPECS, type AgentRuntimeDeps } from './agent-runtime';
 import {
   mapSdkMessage,
   newMapperState,
@@ -41,6 +43,7 @@ export interface AgentStatus {
 }
 
 export interface AgentStartOptions {
+  provider?: string;
   runId: string;
   cruxId: string;
   cwd: string;
@@ -60,16 +63,10 @@ export interface AgentPermissionRequest {
   summary: string;
 }
 
-export interface AgentProviderDeps {
-  sendEvent(runId: string, event: AgentEvent): void;
-  /** False when there is no window to ask — the permission is then denied. */
-  sendPermission(request: AgentPermissionRequest): boolean;
-  log(message: string): void;
-  version: string;
-  mock: boolean;
-}
+export type AgentProviderDeps = AgentRuntimeDeps;
 
 interface Run {
+  toolMutation?: boolean;
   controller: AbortController;
   query: { interrupt(): Promise<unknown> } | null;
 }
@@ -116,6 +113,7 @@ export function findClaudeBinary(env: NodeJS.ProcessEnv = process.env): string |
 }
 
 export class AgentProvider {
+  readonly id = 'claude-code';
   private runs = new Map<string, Run>();
   private pending = new Map<
     string,
@@ -163,14 +161,19 @@ export class AgentProvider {
     const run: Run = { controller, query: null };
     this.runs.set(opts.runId, run);
     const state = newMapperState();
+    let doneSent = false;
     const emit = (event: AgentEvent) => this.deps.sendEvent(opts.runId, event);
     try {
       const stream = this.deps.mock ? this.mockQuery(opts, run) : await this.sdkQuery(opts, run);
       for await (const msg of stream) {
         if (controller.signal.aborted) break;
-        for (const event of mapSdkMessage(msg, state)) emit(event);
+        state.hadMutation ||= run.toolMutation === true;
+        for (const event of mapSdkMessage(msg, state)) {
+          if (event.type === 'done') doneSent = true;
+          emit(event);
+        }
       }
-      if (!state.text && !controller.signal.aborted && this.runs.has(opts.runId)) {
+      if (!doneSent) {
         // The stream ended without a result message (interrupted early, or a
         // spawn failure the SDK reported on stderr only): close the turn out.
         this.ensureDone(state, emit);
@@ -181,8 +184,10 @@ export class AgentProvider {
         this.deps.log(`Agent Provider run ${opts.runId} failed: ${e?.stack || e}`);
         emit({ type: 'error', message: friendlyError(e) });
       }
-      this.ensureDone(state, emit);
+      state.hadMutation ||= run.toolMutation === true;
+      if (!doneSent) this.ensureDone(state, emit);
     } finally {
+      run.controller.abort();
       this.runs.delete(opts.runId);
     }
   }
@@ -195,6 +200,7 @@ export class AgentProvider {
   async interrupt(runId: string): Promise<void> {
     const run = this.runs.get(runId);
     if (!run) return;
+    run.controller.abort();
     try {
       await run.query?.interrupt();
     } catch {
@@ -256,10 +262,31 @@ export class AgentProvider {
       throw new Error(status.reason || 'Claude Code is not installed on this machine.');
     }
     const sdk = await importEsm('@anthropic-ai/claude-agent-sdk');
+    const schemas = [
+      z.object({ query: z.string(), offset: z.number().int().nonnegative().optional() }),
+      z.object({ name: z.string(), input: z.record(z.string(), z.unknown()) }),
+    ];
+    const garden = sdk.createSdkMcpServer({
+      name: 'crux_garden',
+      version: this.deps.version,
+      tools: GARDEN_TOOL_SPECS.map((tool, index) =>
+        sdk.tool(
+          tool.name,
+          tool.description,
+          schemas[index]!.shape,
+          async (input: Record<string, unknown>) => {
+            const result = await this.deps.callTool(opts, tool.name, input, run.controller.signal);
+            run.toolMutation ||= result.hadMutation === true;
+            return { content: result.content, isError: result.isError };
+          },
+        ),
+      ),
+    });
     const query = sdk.query({
       prompt: opts.prompt,
       options: {
         cwd: opts.cwd,
+        mcpServers: { crux_garden: garden },
         resume: opts.sessionId || undefined,
         pathToClaudeCodeExecutable: status.path,
         // Edits inside the Project Folder are the point; Growth keeps every

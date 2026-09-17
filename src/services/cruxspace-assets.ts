@@ -10,13 +10,35 @@ import { growthHostFor } from './growth';
 import { guessMimeType } from './sqlite/helpers';
 
 /** The remote source of an imported export; it is not a remote-document backup. */
-export interface ExternalOutputSource {
-  app: 'figma';
-  documentUrl: string;
-  nodeId?: string;
-  method: 'file-import' | 'mcp';
-}
+export type ExternalOutputSource =
+  | {
+      app: 'figma';
+      documentUrl: string;
+      nodeId?: string;
+      method: 'file-import' | 'mcp';
+    }
+  | {
+      app: 'blender';
+      scenePath: string;
+      sceneFingerprint: string;
+      method: 'saved-artifact';
+    };
 function cleanExternalSource(source: ExternalOutputSource): ExternalOutputSource {
+  if (source.app === 'blender') {
+    if (
+      source.method !== 'saved-artifact' ||
+      !validPath(source.scenePath) ||
+      !source.scenePath.endsWith('.blend') ||
+      !/^[a-f0-9]{64}$/.test(source.sceneFingerprint)
+    )
+      throw new Error('Invalid Blender scene provenance.');
+    return {
+      app: 'blender',
+      scenePath: source.scenePath,
+      sceneFingerprint: source.sceneFingerprint,
+      method: 'saved-artifact',
+    };
+  }
   if (source.app !== 'figma' || !['file-import', 'mcp'].includes(source.method))
     throw new Error('Unsupported external output source.');
   const ref = parseFigmaReference(source.documentUrl);
@@ -76,6 +98,7 @@ const EXTENSIONS: Record<string, string> = {
   'application/x-rawgraphs+json': 'rawgraphs',
   'application/x-moqira+json': 'moq',
   'model/gltf+json': 'gltf',
+  'model/gltf-binary': 'glb',
   'application/x-blockbench-model+json': 'bbmodel',
   'model/3mf': '3mf',
   'model/obj': 'obj',
@@ -114,7 +137,7 @@ const KIND_PATTERN = {
   image: /\.(png|jpe?g|gif|webp|svg)$/i,
   audio: /\.(wav|mp3|flac|mid)$/i,
   bundle:
-    /\.(zip|epub|otf|ttf|woff|woff2|stl|3mf|obj|amf|x3d|dxf|csv|pptx|ipynb|gltf|bbmodel|rawgraphs|moq)$/i,
+    /\.(zip|epub|otf|ttf|woff|woff2|stl|3mf|obj|amf|x3d|dxf|csv|pptx|ipynb|gltf|glb|bbmodel|rawgraphs|moq)$/i,
 };
 const KIND_EXAMPLE = {
   image: 'assets/cover.png',

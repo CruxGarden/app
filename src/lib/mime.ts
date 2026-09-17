@@ -50,6 +50,10 @@ const MIME_BY_EXT: Record<string, string> = {
   // Documents
   pdf: 'application/pdf',
   epub: 'application/epub+zip',
+  // Native scenes and portable models
+  blend: 'application/x-blender',
+  glb: 'model/gltf-binary',
+  gltf: 'model/gltf+json',
   // Archives
   zip: 'application/zip',
   tar: 'application/x-tar',

@@ -1,17 +1,18 @@
 [
   {
     "name": "inspect_minipaint",
-    "id": "mock-1789493571940",
+    "id": "mock-1789498423951",
     "input": {
       "offset": 0,
       "limit": 1
     },
-    "result": "{\"width\":600,\"height\":360,\"selectedLayer\":2,\"activeTool\":\"brush\",\"selection\":null,\"history\":{\"canUndo\":true,\"canRedo\":false},\"availableFilters\":{\"brightness\":[-100,100],\"contrast\":[-100,100],\"saturate\":[-100,100],\"hue-rotate\":[0,360],\"blur\":[0,50],\"grayscale\":[0,100],\"sepia\":[0,100],\"invert\":[0,100]},\"totalLayers\":1,\"offset\":0,\"nextOffset\":null,\"layers\":[{\"id\":2,\"name\":\"Region study\",\"type\":\"image\",\"visible\":true,\"opacity\":100,\"x\":40,\"y\":60,\"width\":400,\"height\":200,\"rotate\":0,\"order\":2,\"filters\":[{\"id\":1,\"name\":\"brightness\",\"params\":{\"value\":25}},{\"id\":2,\"name\":\"contrast\",\"params\":{\"value\":10}}],\"imagePath\":\"data/assets/f03227e2a35898fe8123810fa7dde79c2c80eb7adf9c33a25361654e3bb65e10.bin\",\"originalWidth\":20,\"originalHeight\":20}]}"
+    "result": "{\"stateToken\":\"mp:e5cd132c-cc90-47d0-93f5-20567f48f7c9:1\",\"width\":600,\"height\":360,\"selectedLayer\":2,\"activeTool\":\"brush\",\"selection\":null,\"history\":{\"canUndo\":true,\"canRedo\":false},\"availableFilters\":{\"brightness\":[-100,100],\"contrast\":[-100,100],\"saturate\":[-100,100],\"hue-rotate\":[0,360],\"blur\":[0,50],\"grayscale\":[0,100],\"sepia\":[0,100],\"invert\":[0,100]},\"availableCompositions\":[\"source-over\",\"multiply\",\"screen\",\"overlay\",\"darken\",\"lighten\",\"color-dodge\",\"color-burn\",\"hard-light\",\"soft-light\",\"difference\",\"exclusion\",\"hue\",\"saturation\",\"color\",\"luminosity\",\"lighter\",\"copy\",\"source-in\",\"source-out\",\"source-atop\",\"destination-over\",\"destination-in\",\"destination-out\",\"destination-atop\",\"xor\"],\"totalLayers\":1,\"offset\":0,\"nextOffset\":null,\"layers\":[{\"id\":2,\"name\":\"Region study\",\"type\":\"image\",\"visible\":true,\"opacity\":100,\"composition\":\"source-over\",\"x\":40,\"y\":60,\"width\":400,\"height\":200,\"rotate\":0,\"order\":2,\"filters\":[{\"id\":1,\"name\":\"brightness\",\"params\":{\"value\":25}},{\"id\":2,\"name\":\"contrast\",\"params\":{\"value\":10}}],\"imagePath\":\"data/assets/f03227e2a35898fe8123810fa7dde79c2c80eb7adf9c33a25361654e3bb65e10.bin\",\"originalWidth\":20,\"originalHeight\":20}]}"
   },
   {
     "name": "select_minipaint_region",
-    "id": "mock-1789493571954",
+    "id": "mock-1789498423967",
     "input": {
+      "expectedState": "mp:e5cd132c-cc90-47d0-93f5-20567f48f7c9:1",
       "id": 2,
       "action": "set",
       "x": 280,
@@ -19,58 +20,64 @@
       "width": 80,
       "height": 40
     },
-    "result": "{\"width\":600,\"height\":360,\"selectedLayer\":2,\"activeTool\":\"selection\",\"selection\":{\"x\":280,\"y\":80,\"width\":80,\"height\":40},\"history\":{\"canUndo\":true,\"canRedo\":false},\"availableFilters\":{\"brightness\":[-100,100],\"contrast\":[-100,100],\"saturate\":[-100,100],\"hue-rotate\":[0,360],\"blur\":[0,50],\"grayscale\":[0,100],\"sepia\":[0,100],\"invert\":[0,100]},\"totalLayers\":1,\"offset\":0,\"nextOffset\":null,\"layers\":[{\"id\":2,\"name\":\"Region study\",\"type\":\"image\",\"visible\":true,\"opacity\":100,\"x\":40,\"y\":60,\"width\":400,\"height\":200,\"rotate\":0,\"order\":2,\"filters\":[{\"id\":1,\"name\":\"brightness\",\"params\":{\"value\":25}},{\"id\":2,\"name\":\"contrast\",\"params\":{\"value\":10}}],\"imagePath\":\"data/assets/f03227e2a35898fe8123810fa7dde79c2c80eb7adf9c33a25361654e3bb65e10.bin\",\"originalWidth\":20,\"originalHeight\":20}]}"
+    "result": "{\"stateToken\":\"mp:e5cd132c-cc90-47d0-93f5-20567f48f7c9:2\",\"width\":600,\"height\":360,\"selectedLayer\":2,\"activeTool\":\"selection\",\"selection\":{\"x\":280,\"y\":80,\"width\":80,\"height\":40},\"history\":{\"canUndo\":true,\"canRedo\":false},\"availableFilters\":{\"brightness\":[-100,100],\"contrast\":[-100,100],\"saturate\":[-100,100],\"hue-rotate\":[0,360],\"blur\":[0,50],\"grayscale\":[0,100],\"sepia\":[0,100],\"invert\":[0,100]},\"availableCompositions\":[\"source-over\",\"multiply\",\"screen\",\"overlay\",\"darken\",\"lighten\",\"color-dodge\",\"color-burn\",\"hard-light\",\"soft-light\",\"difference\",\"exclusion\",\"hue\",\"saturation\",\"color\",\"luminosity\",\"lighter\",\"copy\",\"source-in\",\"source-out\",\"source-atop\",\"destination-over\",\"destination-in\",\"destination-out\",\"destination-atop\",\"xor\"],\"totalLayers\":1,\"offset\":0,\"nextOffset\":null,\"layers\":[{\"id\":2,\"name\":\"Region study\",\"type\":\"image\",\"visible\":true,\"opacity\":100,\"composition\":\"source-over\",\"x\":40,\"y\":60,\"width\":400,\"height\":200,\"rotate\":0,\"order\":2,\"filters\":[{\"id\":1,\"name\":\"brightness\",\"params\":{\"value\":25}},{\"id\":2,\"name\":\"contrast\",\"params\":{\"value\":10}}],\"imagePath\":\"data/assets/f03227e2a35898fe8123810fa7dde79c2c80eb7adf9c33a25361654e3bb65e10.bin\",\"originalWidth\":20,\"originalHeight\":20}]}"
   },
   {
     "name": "erase_minipaint_pixels",
-    "id": "mock-1789493572046",
+    "id": "mock-1789498424063",
     "input": {
+      "expectedState": "mp:e5cd132c-cc90-47d0-93f5-20567f48f7c9:2",
       "id": 2,
       "mode": "selection"
     },
-    "result": "{\"width\":600,\"height\":360,\"selectedLayer\":2,\"activeTool\":\"selection\",\"selection\":{\"x\":280,\"y\":80,\"width\":80,\"height\":40},\"history\":{\"canUndo\":true,\"canRedo\":false},\"availableFilters\":{\"brightness\":[-100,100],\"contrast\":[-100,100],\"saturate\":[-100,100],\"hue-rotate\":[0,360],\"blur\":[0,50],\"grayscale\":[0,100],\"sepia\":[0,100],\"invert\":[0,100]},\"totalLayers\":1,\"offset\":0,\"nextOffset\":null,\"layers\":[{\"id\":2,\"name\":\"Region study\",\"type\":\"image\",\"visible\":true,\"opacity\":100,\"x\":40,\"y\":60,\"width\":400,\"height\":200,\"rotate\":0,\"order\":2,\"filters\":[{\"id\":1,\"name\":\"brightness\",\"params\":{\"value\":25}},{\"id\":2,\"name\":\"contrast\",\"params\":{\"value\":10}}],\"imagePath\":\"data/assets/80d4ac16ccf09955919de9f14ae5060f8de8fec247f4107643f2247f8a5ef806.bin\",\"originalWidth\":20,\"originalHeight\":20}]}"
+    "result": "{\"stateToken\":\"mp:e5cd132c-cc90-47d0-93f5-20567f48f7c9:3\",\"width\":600,\"height\":360,\"selectedLayer\":2,\"activeTool\":\"selection\",\"selection\":{\"x\":280,\"y\":80,\"width\":80,\"height\":40},\"history\":{\"canUndo\":true,\"canRedo\":false},\"availableFilters\":{\"brightness\":[-100,100],\"contrast\":[-100,100],\"saturate\":[-100,100],\"hue-rotate\":[0,360],\"blur\":[0,50],\"grayscale\":[0,100],\"sepia\":[0,100],\"invert\":[0,100]},\"availableCompositions\":[\"source-over\",\"multiply\",\"screen\",\"overlay\",\"darken\",\"lighten\",\"color-dodge\",\"color-burn\",\"hard-light\",\"soft-light\",\"difference\",\"exclusion\",\"hue\",\"saturation\",\"color\",\"luminosity\",\"lighter\",\"copy\",\"source-in\",\"source-out\",\"source-atop\",\"destination-over\",\"destination-in\",\"destination-out\",\"destination-atop\",\"xor\"],\"totalLayers\":1,\"offset\":0,\"nextOffset\":null,\"layers\":[{\"id\":2,\"name\":\"Region study\",\"type\":\"image\",\"visible\":true,\"opacity\":100,\"composition\":\"source-over\",\"x\":40,\"y\":60,\"width\":400,\"height\":200,\"rotate\":0,\"order\":2,\"filters\":[{\"id\":1,\"name\":\"brightness\",\"params\":{\"value\":25}},{\"id\":2,\"name\":\"contrast\",\"params\":{\"value\":10}}],\"imagePath\":\"data/assets/80d4ac16ccf09955919de9f14ae5060f8de8fec247f4107643f2247f8a5ef806.bin\",\"originalWidth\":20,\"originalHeight\":20}]}"
   },
   {
     "name": "select_minipaint_region",
-    "id": "mock-1789493573279",
+    "id": "mock-1789498425230",
     "input": {
+      "expectedState": "mp:e5cd132c-cc90-47d0-93f5-20567f48f7c9:3",
       "id": 2,
       "action": "clear"
     },
-    "result": "{\"width\":600,\"height\":360,\"selectedLayer\":2,\"activeTool\":\"selection\",\"selection\":null,\"history\":{\"canUndo\":true,\"canRedo\":false},\"availableFilters\":{\"brightness\":[-100,100],\"contrast\":[-100,100],\"saturate\":[-100,100],\"hue-rotate\":[0,360],\"blur\":[0,50],\"grayscale\":[0,100],\"sepia\":[0,100],\"invert\":[0,100]},\"totalLayers\":1,\"offset\":0,\"nextOffset\":null,\"layers\":[{\"id\":2,\"name\":\"Region study\",\"type\":\"image\",\"visible\":true,\"opacity\":100,\"x\":40,\"y\":60,\"width\":400,\"height\":200,\"rotate\":0,\"order\":2,\"filters\":[{\"id\":1,\"name\":\"brightness\",\"params\":{\"value\":25}},{\"id\":2,\"name\":\"contrast\",\"params\":{\"value\":10}}],\"imagePath\":\"data/assets/80d4ac16ccf09955919de9f14ae5060f8de8fec247f4107643f2247f8a5ef806.bin\",\"originalWidth\":20,\"originalHeight\":20}]}"
+    "result": "{\"stateToken\":\"mp:e5cd132c-cc90-47d0-93f5-20567f48f7c9:4\",\"width\":600,\"height\":360,\"selectedLayer\":2,\"activeTool\":\"selection\",\"selection\":null,\"history\":{\"canUndo\":true,\"canRedo\":false},\"availableFilters\":{\"brightness\":[-100,100],\"contrast\":[-100,100],\"saturate\":[-100,100],\"hue-rotate\":[0,360],\"blur\":[0,50],\"grayscale\":[0,100],\"sepia\":[0,100],\"invert\":[0,100]},\"availableCompositions\":[\"source-over\",\"multiply\",\"screen\",\"overlay\",\"darken\",\"lighten\",\"color-dodge\",\"color-burn\",\"hard-light\",\"soft-light\",\"difference\",\"exclusion\",\"hue\",\"saturation\",\"color\",\"luminosity\",\"lighter\",\"copy\",\"source-in\",\"source-out\",\"source-atop\",\"destination-over\",\"destination-in\",\"destination-out\",\"destination-atop\",\"xor\"],\"totalLayers\":1,\"offset\":0,\"nextOffset\":null,\"layers\":[{\"id\":2,\"name\":\"Region study\",\"type\":\"image\",\"visible\":true,\"opacity\":100,\"composition\":\"source-over\",\"x\":40,\"y\":60,\"width\":400,\"height\":200,\"rotate\":0,\"order\":2,\"filters\":[{\"id\":1,\"name\":\"brightness\",\"params\":{\"value\":25}},{\"id\":2,\"name\":\"contrast\",\"params\":{\"value\":10}}],\"imagePath\":\"data/assets/80d4ac16ccf09955919de9f14ae5060f8de8fec247f4107643f2247f8a5ef806.bin\",\"originalWidth\":20,\"originalHeight\":20}]}"
   },
   {
     "name": "minipaint_history",
-    "id": "mock-1789493573315",
+    "id": "mock-1789498425307",
     "input": {
+      "expectedState": "mp:e5cd132c-cc90-47d0-93f5-20567f48f7c9:4",
       "direction": "undo"
     },
-    "result": "{\"width\":600,\"height\":360,\"selectedLayer\":2,\"activeTool\":\"selection\",\"selection\":{\"x\":280,\"y\":80,\"width\":80,\"height\":40},\"history\":{\"canUndo\":true,\"canRedo\":true},\"availableFilters\":{\"brightness\":[-100,100],\"contrast\":[-100,100],\"saturate\":[-100,100],\"hue-rotate\":[0,360],\"blur\":[0,50],\"grayscale\":[0,100],\"sepia\":[0,100],\"invert\":[0,100]},\"totalLayers\":1,\"offset\":0,\"nextOffset\":null,\"layers\":[{\"id\":2,\"name\":\"Region study\",\"type\":\"image\",\"visible\":true,\"opacity\":100,\"x\":40,\"y\":60,\"width\":400,\"height\":200,\"rotate\":0,\"order\":2,\"filters\":[{\"id\":1,\"name\":\"brightness\",\"params\":{\"value\":25}},{\"id\":2,\"name\":\"contrast\",\"params\":{\"value\":10}}],\"imagePath\":\"data/assets/80d4ac16ccf09955919de9f14ae5060f8de8fec247f4107643f2247f8a5ef806.bin\",\"originalWidth\":20,\"originalHeight\":20}]}"
+    "result": "{\"stateToken\":\"mp:e5cd132c-cc90-47d0-93f5-20567f48f7c9:5\",\"width\":600,\"height\":360,\"selectedLayer\":2,\"activeTool\":\"selection\",\"selection\":{\"x\":280,\"y\":80,\"width\":80,\"height\":40},\"history\":{\"canUndo\":true,\"canRedo\":true},\"availableFilters\":{\"brightness\":[-100,100],\"contrast\":[-100,100],\"saturate\":[-100,100],\"hue-rotate\":[0,360],\"blur\":[0,50],\"grayscale\":[0,100],\"sepia\":[0,100],\"invert\":[0,100]},\"availableCompositions\":[\"source-over\",\"multiply\",\"screen\",\"overlay\",\"darken\",\"lighten\",\"color-dodge\",\"color-burn\",\"hard-light\",\"soft-light\",\"difference\",\"exclusion\",\"hue\",\"saturation\",\"color\",\"luminosity\",\"lighter\",\"copy\",\"source-in\",\"source-out\",\"source-atop\",\"destination-over\",\"destination-in\",\"destination-out\",\"destination-atop\",\"xor\"],\"totalLayers\":1,\"offset\":0,\"nextOffset\":null,\"layers\":[{\"id\":2,\"name\":\"Region study\",\"type\":\"image\",\"visible\":true,\"opacity\":100,\"composition\":\"source-over\",\"x\":40,\"y\":60,\"width\":400,\"height\":200,\"rotate\":0,\"order\":2,\"filters\":[{\"id\":1,\"name\":\"brightness\",\"params\":{\"value\":25}},{\"id\":2,\"name\":\"contrast\",\"params\":{\"value\":10}}],\"imagePath\":\"data/assets/80d4ac16ccf09955919de9f14ae5060f8de8fec247f4107643f2247f8a5ef806.bin\",\"originalWidth\":20,\"originalHeight\":20}]}"
   },
   {
     "name": "fill_minipaint_pixels",
-    "id": "mock-1789493573349",
+    "id": "mock-1789498425341",
     "input": {
+      "expectedState": "mp:e5cd132c-cc90-47d0-93f5-20567f48f7c9:5",
       "id": 2,
       "mode": "selection",
       "color": "#ffaa00",
       "opacity": 50
     },
-    "result": "{\"width\":600,\"height\":360,\"selectedLayer\":2,\"activeTool\":\"selection\",\"selection\":{\"x\":280,\"y\":80,\"width\":80,\"height\":40},\"history\":{\"canUndo\":true,\"canRedo\":false},\"availableFilters\":{\"brightness\":[-100,100],\"contrast\":[-100,100],\"saturate\":[-100,100],\"hue-rotate\":[0,360],\"blur\":[0,50],\"grayscale\":[0,100],\"sepia\":[0,100],\"invert\":[0,100]},\"totalLayers\":1,\"offset\":0,\"nextOffset\":null,\"layers\":[{\"id\":2,\"name\":\"Region study\",\"type\":\"image\",\"visible\":true,\"opacity\":100,\"x\":40,\"y\":60,\"width\":400,\"height\":200,\"rotate\":0,\"order\":2,\"filters\":[{\"id\":1,\"name\":\"brightness\",\"params\":{\"value\":25}},{\"id\":2,\"name\":\"contrast\",\"params\":{\"value\":10}}],\"imagePath\":\"data/assets/4a61d1eafdef86419dccb7a5ff3eb03ab7567daa56c007b3c207a560ef814ffc.bin\",\"originalWidth\":20,\"originalHeight\":20}]}"
+    "result": "{\"stateToken\":\"mp:e5cd132c-cc90-47d0-93f5-20567f48f7c9:6\",\"width\":600,\"height\":360,\"selectedLayer\":2,\"activeTool\":\"selection\",\"selection\":{\"x\":280,\"y\":80,\"width\":80,\"height\":40},\"history\":{\"canUndo\":true,\"canRedo\":false},\"availableFilters\":{\"brightness\":[-100,100],\"contrast\":[-100,100],\"saturate\":[-100,100],\"hue-rotate\":[0,360],\"blur\":[0,50],\"grayscale\":[0,100],\"sepia\":[0,100],\"invert\":[0,100]},\"availableCompositions\":[\"source-over\",\"multiply\",\"screen\",\"overlay\",\"darken\",\"lighten\",\"color-dodge\",\"color-burn\",\"hard-light\",\"soft-light\",\"difference\",\"exclusion\",\"hue\",\"saturation\",\"color\",\"luminosity\",\"lighter\",\"copy\",\"source-in\",\"source-out\",\"source-atop\",\"destination-over\",\"destination-in\",\"destination-out\",\"destination-atop\",\"xor\"],\"totalLayers\":1,\"offset\":0,\"nextOffset\":null,\"layers\":[{\"id\":2,\"name\":\"Region study\",\"type\":\"image\",\"visible\":true,\"opacity\":100,\"composition\":\"source-over\",\"x\":40,\"y\":60,\"width\":400,\"height\":200,\"rotate\":0,\"order\":2,\"filters\":[{\"id\":1,\"name\":\"brightness\",\"params\":{\"value\":25}},{\"id\":2,\"name\":\"contrast\",\"params\":{\"value\":10}}],\"imagePath\":\"data/assets/4a61d1eafdef86419dccb7a5ff3eb03ab7567daa56c007b3c207a560ef814ffc.bin\",\"originalWidth\":20,\"originalHeight\":20}]}"
   },
   {
     "name": "select_minipaint_region",
-    "id": "mock-1789493574385",
+    "id": "mock-1789498426382",
     "input": {
+      "expectedState": "mp:e5cd132c-cc90-47d0-93f5-20567f48f7c9:6",
       "id": 2,
       "action": "clear"
     },
-    "result": "{\"width\":600,\"height\":360,\"selectedLayer\":2,\"activeTool\":\"selection\",\"selection\":null,\"history\":{\"canUndo\":true,\"canRedo\":false},\"availableFilters\":{\"brightness\":[-100,100],\"contrast\":[-100,100],\"saturate\":[-100,100],\"hue-rotate\":[0,360],\"blur\":[0,50],\"grayscale\":[0,100],\"sepia\":[0,100],\"invert\":[0,100]},\"totalLayers\":1,\"offset\":0,\"nextOffset\":null,\"layers\":[{\"id\":2,\"name\":\"Region study\",\"type\":\"image\",\"visible\":true,\"opacity\":100,\"x\":40,\"y\":60,\"width\":400,\"height\":200,\"rotate\":0,\"order\":2,\"filters\":[{\"id\":1,\"name\":\"brightness\",\"params\":{\"value\":25}},{\"id\":2,\"name\":\"contrast\",\"params\":{\"value\":10}}],\"imagePath\":\"data/assets/4a61d1eafdef86419dccb7a5ff3eb03ab7567daa56c007b3c207a560ef814ffc.bin\",\"originalWidth\":20,\"originalHeight\":20}]}"
+    "result": "{\"stateToken\":\"mp:e5cd132c-cc90-47d0-93f5-20567f48f7c9:7\",\"width\":600,\"height\":360,\"selectedLayer\":2,\"activeTool\":\"selection\",\"selection\":null,\"history\":{\"canUndo\":true,\"canRedo\":false},\"availableFilters\":{\"brightness\":[-100,100],\"contrast\":[-100,100],\"saturate\":[-100,100],\"hue-rotate\":[0,360],\"blur\":[0,50],\"grayscale\":[0,100],\"sepia\":[0,100],\"invert\":[0,100]},\"availableCompositions\":[\"source-over\",\"multiply\",\"screen\",\"overlay\",\"darken\",\"lighten\",\"color-dodge\",\"color-burn\",\"hard-light\",\"soft-light\",\"difference\",\"exclusion\",\"hue\",\"saturation\",\"color\",\"luminosity\",\"lighter\",\"copy\",\"source-in\",\"source-out\",\"source-atop\",\"destination-over\",\"destination-in\",\"destination-out\",\"destination-atop\",\"xor\"],\"totalLayers\":1,\"offset\":0,\"nextOffset\":null,\"layers\":[{\"id\":2,\"name\":\"Region study\",\"type\":\"image\",\"visible\":true,\"opacity\":100,\"composition\":\"source-over\",\"x\":40,\"y\":60,\"width\":400,\"height\":200,\"rotate\":0,\"order\":2,\"filters\":[{\"id\":1,\"name\":\"brightness\",\"params\":{\"value\":25}},{\"id\":2,\"name\":\"contrast\",\"params\":{\"value\":10}}],\"imagePath\":\"data/assets/4a61d1eafdef86419dccb7a5ff3eb03ab7567daa56c007b3c207a560ef814ffc.bin\",\"originalWidth\":20,\"originalHeight\":20}]}"
   },
   {
     "name": "erase_minipaint_pixels",
-    "id": "mock-1789493574414",
+    "id": "mock-1789498426410",
     "input": {
+      "expectedState": "mp:e5cd132c-cc90-47d0-93f5-20567f48f7c9:7",
       "id": 2,
       "mode": "selection"
     },
@@ -78,10 +85,11 @@
   },
   {
     "name": "save_minipaint_image",
-    "id": "mock-1789493574418",
+    "id": "mock-1789498426415",
     "input": {
+      "expectedState": "mp:e5cd132c-cc90-47d0-93f5-20567f48f7c9:7",
       "name": "Region continuation"
     },
-    "result": "{\"version\":1,\"id\":\"4b6bfb00-2bf0-45b6-9e3e-f3c937e4f365\",\"label\":\"Region continuation\",\"path\":\"exports/4b6bfb00-2bf0-45b6-9e3e-f3c937e4f365.png\",\"fingerprint\":\"c500c27253e6fae4df1b529388f58fd0bf97104153986f19363d5b8e24804e86\",\"mimeType\":\"image/png\",\"size\":16037,\"created\":\"2026-09-15T17:32:54.429Z\",\"width\":600,\"height\":360}"
+    "result": "{\"version\":1,\"id\":\"5ab4a1d7-afa3-49c2-a784-02fc9fa65bb8\",\"label\":\"Region continuation\",\"path\":\"exports/5ab4a1d7-afa3-49c2-a784-02fc9fa65bb8.png\",\"fingerprint\":\"c500c27253e6fae4df1b529388f58fd0bf97104153986f19363d5b8e24804e86\",\"mimeType\":\"image/png\",\"size\":16037,\"created\":\"2026-09-15T18:53:46.423Z\",\"width\":600,\"height\":360,\"stateToken\":\"mp:e5cd132c-cc90-47d0-93f5-20567f48f7c9:7\"}"
   }
 ]

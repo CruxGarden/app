@@ -1,0 +1,8 @@
+{
+  "content": [
+    {
+      "type": "text",
+      "text": "{\n  \"result\": {\n    \"shapes\": [\n      {\n        \"id\": \"9d1e0580-e652-808b-8008-a5304d93e358\",\n        \"name\": \"Garden MCP proof\",\n        \"width\": 240.00000953674316,\n        \"height\": 160.0000023841858\n      }\n    ],\n    \"svg\": \"<svg width=\\\"240\\\" xmlns=\\\"http://www.w3.org/2000/svg\\\" height=\\\"160\\\" id=\\\"screenshot-9d1e0580-e652-808b-8008-a5304d93e358\\\" viewBox=\\\"0 0 240 160\\\" xmlns:xlink=\\\"http://www.w3.org/1999/xlink\\\" fill=\\\"none\\\" version=\\\"1.1\\\"><g id=\\\"shape-9d1e0580-e652-808b-8008-a5304d93e358\\\"><g class=\\\"fills\\\" id=\\\"fills-9d1e0580-e652-808b-8008-a5304d93e358\\\"><rect rx=\\\"24\\\" ry=\\\"24\\\" x=\\\"0\\\" y=\\\"0\\\" transform=\\\"matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)\\\" width=\\\"240.00000953674316\\\" height=\\\"160.0000023841858\\\" style=\\\"fill: rgb(136, 204, 153); fill-opacity: 1;\\\"/></g></g></svg>\"\n  },\n  \"log\": \"\"\n}"
+    }
+  ]
+}

@@ -9,7 +9,7 @@ import { useAppStore } from '@/stores/appStore';
 import { runConversation, type ConversationEvent } from '@/ai/engine';
 import { createToolExecutor } from '@/ai/tools';
 import { getApiKey } from '@/ai/keys';
-import { getProviderForModel, resolveModel, CLAUDE_CODE_PROVIDER } from '@/ai/providers';
+import { getProviderForModel, resolveModel, isAgentModel } from '@/ai/providers';
 import { agentStatus, runAgentTurn } from '@/services/agent-provider';
 import { isAiMock } from '@/lib/platform';
 import { playCue, duckAudio } from '@/services/cues';
@@ -272,12 +272,12 @@ function createTurns(useCruxStore: StoreApi<CruxState>) {
     const model = resolveModel(crux.meta?.settings?.model);
     const providerId = getProviderForModel(model);
     // The Agent Provider (ADR 0019) needs no key: Claude Code's own login pays.
-    if (providerId === CLAUDE_CODE_PROVIDER) {
-      const status = await agentStatus();
+    if (isAgentModel(model)) {
+      const status = await agentStatus(false, providerId);
       return {
         model,
         providerId,
-        apiKey: status.installed ? 'agent' : null,
+        apiKey: status.installed && !status.reason ? 'agent' : null,
         reason: status.reason,
       };
     }
@@ -299,10 +299,9 @@ function createTurns(useCruxStore: StoreApi<CruxState>) {
     if (!apiKey) {
       store.addMessage({
         role: 'assistant',
-        content:
-          providerId === CLAUDE_CODE_PROVIDER
-            ? `${reason ?? 'Claude Code is not available.'} Install Claude Code and sign in once from a terminal, or pick another model.`
-            : `No API key configured for ${providerId}. Add one in Settings to start chatting.`,
+        content: isAgentModel(model)
+          ? `${reason ?? 'The agent is unavailable.'} Check its installation and sign-in, or pick another model.`
+          : `No API key configured for ${providerId}. Add one in Settings to start chatting.`,
       });
       return;
     }
@@ -496,17 +495,22 @@ function createTurns(useCruxStore: StoreApi<CruxState>) {
         return (async function* (): AsyncGenerator<ConversationEvent> {
           yield {
             type: 'error',
-            message: 'Claude Code needs a Project Folder; this crux has none on this machine.',
+            message: 'This agent needs a Project Folder; this Crux has none on this machine.',
           };
           yield { type: 'done', textContent: '', hadMutation: false };
         })();
       }
       const persona = getPersona();
+      const provider = getProviderForModel(model);
       return runAgentTurn({
+        provider,
         cruxId,
         cwd,
         prompt: lastUserMessage(),
-        sessionId: crux?.meta?.settings?.agentSessionId ?? null,
+        sessionId:
+          crux?.meta?.settings?.agentSessions?.[provider] ??
+          (provider === 'claude-code' ? crux?.meta?.settings?.agentSessionId : null) ??
+          null,
         appendSystemPrompt: persona.systemPrompt
           ? `You are working inside Crux Garden as "${persona.name}". ${persona.systemPrompt}`
           : undefined,
@@ -514,7 +518,10 @@ function createTurns(useCruxStore: StoreApi<CruxState>) {
         onSession: (sessionId) => {
           if (!stillHere()) return;
           const s = useCruxStore.getState();
-          const settings = { ...(s.crux?.meta?.settings ?? {}), agentSessionId: sessionId };
+          const settings = {
+            ...(s.crux?.meta?.settings ?? {}),
+            agentSessions: { ...s.crux?.meta?.settings?.agentSessions, [provider]: sessionId },
+          };
           s.patchCruxMeta({ settings });
         },
       });
@@ -528,7 +535,7 @@ function createTurns(useCruxStore: StoreApi<CruxState>) {
 
     const result = await runTurnJob(args.job, {
       run: () =>
-        getProviderForModel(model) === CLAUDE_CODE_PROVIDER
+        isAgentModel(model)
           ? agentRun()
           : runConversation(
               apiKey,

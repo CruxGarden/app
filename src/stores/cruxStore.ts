@@ -1236,6 +1236,7 @@ export function createCruxStore(ui: StoreApi<UIState> = useUIStore) {
     },
 
     confirmDelete: async (artifactId: string) => {
+      if (!get().pendingDeletes.some((request) => request.artifactId === artifactId)) return;
       const { crux } = get();
       try {
         if (!crux) return;

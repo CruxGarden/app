@@ -1,0 +1,43 @@
+{
+  "revision": 1,
+  "status": "completed",
+  "date": "2026-09-15",
+  "agent": "Iris (Claude Code) via crux-blender-poc MCP",
+  "blender_version": "5.2.0 LTS",
+  "scene_name": "Crux Garden disposable Blender POC",
+  "scene_name_confirmed_before_edit": true,
+  "native_source": "/private/var/folders/b6/zrhvt9kn7rs6vsl63dflnmtc0000gn/T/crux-e2e-FmofuA/garden/blender-live-collaborator-mu361kyg/scene.blend",
+  "outputs": {
+    "blend": "scene.blend",
+    "png": "sprout.png",
+    "glb": "sprout.glb"
+  },
+  "render": { "engine": "BLENDER_EEVEE", "resolution": [640, 640], "format": "PNG" },
+  "glb_export": {
+    "tool": "export_scene",
+    "bytes": 16108,
+    "root": "GardenPot",
+    "exported_objects": ["GardenPot", "Leaf_A", "Leaf_B", "Leaf_C", "Leaf_D", "Leaf_E", "Soil", "SproutStem"],
+    "excluded": ["StudioFloor", "StudioBackdrop", "Light", "FillLight", "RimLight", "Camera"]
+  },
+  "prop_objects": ["GardenPot", "Soil", "SproutStem", "Leaf_A", "Leaf_B", "Leaf_C", "Leaf_D", "Leaf_E"],
+  "studio_objects": ["StudioFloor", "StudioBackdrop", "Light", "FillLight", "RimLight", "Camera"],
+  "materials": ["Terracotta", "Soil", "SproutLeaf", "SproutStem", "StudioBackdrop"],
+  "changes_to_initial_scene": [
+    "Default Cube removed (disposable scene only)",
+    "Existing Camera repositioned to a 3/4 hero shot, lens 60mm",
+    "Existing Light kept and converted to an Area key light; FillLight and RimLight added"
+  ],
+  "checks": {
+    "viewport_screenshot_reviewed": true,
+    "render_png_reviewed": true,
+    "blend_saved_not_dirty": true,
+    "pack_all": "FINISHED (no external files to pack)",
+    "glb_reopened_in_blender": false
+  },
+  "unsuccessful_or_skipped": [
+    "get_addon_status failed with 'No module named blender_mcp.config'; telemetry state therefore not read, and not changed.",
+    "GLB was not re-imported for verification, to avoid adding objects to the live scene. Export tool reported all 8 prop meshes written.",
+    "Backdrop corner edge is visible at the left of the render; left as-is per instruction to skip further styling."
+  ]
+}

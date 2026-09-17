@@ -1,0 +1,66 @@
+[
+  {
+    "version": 1,
+    "spaceId": "8d87f6b4-85e3-4ca5-9a10-6acd678aac7b",
+    "spaceName": "Shared garden",
+    "sourceCruxId": "0ad1c1a0-2ab5-4de6-846c-69d09634f1df",
+    "sourceTitle": "Shared garden model",
+    "outputId": "ec988fe1-6eea-4af4-84c9-a3e82b09c078",
+    "sourcePath": "exports/ec988fe1-6eea-4af4-84c9-a3e82b09c078.glb",
+    "fingerprint": "3f98367999f00ecd983f3ff27488b0785acd2fab1e655b7d44f7115d6994ed0d",
+    "label": "Blender sprout",
+    "path": "assets/sprout.glb",
+    "imported": "2026-09-15T21:58:49.758Z",
+    "externalSource": {
+      "app": "blender",
+      "scenePath": "scene.blend",
+      "sceneFingerprint": "d990ef104782f2afa5b468c0c4d37c890b427823c044dc962e36306f26c0d3c5",
+      "method": "saved-artifact"
+    }
+  },
+  {
+    "version": 1,
+    "spaceId": "8d87f6b4-85e3-4ca5-9a10-6acd678aac7b",
+    "spaceName": "Shared garden",
+    "sourceCruxId": "c8e5b533-7e91-419c-8a96-69d60116ee68",
+    "sourceTitle": "Shared garden design",
+    "outputId": "a2929a67-e18b-470a-a263-8946c41887f0",
+    "sourcePath": "exports/a2929a67-e18b-470a-a263-8946c41887f0.png",
+    "fingerprint": "a9564ddaadb4e10308e1d595e9df241613ce0a7189a4ee07827498a2b17778e4",
+    "label": "Figma garden artwork",
+    "path": "assets/title.png",
+    "imported": "2026-09-15T21:58:51.866Z",
+    "externalSource": {
+      "app": "figma",
+      "documentUrl": "https://www.figma.com/design/1UGF8VTtWSz0D3pjGvOWwf?node-id=6-2",
+      "method": "file-import",
+      "nodeId": "6:2"
+    }
+  },
+  {
+    "version": 1,
+    "spaceId": "8d87f6b4-85e3-4ca5-9a10-6acd678aac7b",
+    "spaceName": "Shared garden",
+    "sourceCruxId": "6fdd4513-cddc-4020-b4ea-da9061985e39",
+    "sourceTitle": "Shared garden sound",
+    "outputId": "bc9f52fa-99fb-4095-a8cb-39f92530776d",
+    "sourcePath": "exports/bc9f52fa-99fb-4095-a8cb-39f92530776d.wav",
+    "fingerprint": "009a81a5663c75e61e8e34aaca77f7d9cecf73e225d5b4880995fadc710a2231",
+    "label": "Pickup chime",
+    "path": "assets/chime.wav",
+    "imported": "2026-09-15T21:59:02.216Z"
+  },
+  {
+    "version": 1,
+    "spaceId": "8d87f6b4-85e3-4ca5-9a10-6acd678aac7b",
+    "spaceName": "Shared garden",
+    "sourceCruxId": "07e0fc4a-3c6f-4194-b973-311a7f1f08cc",
+    "sourceTitle": "Shared garden sprites",
+    "outputId": "d8ce1f65-bfb5-4959-ac94-b11c092cc17d",
+    "sourcePath": "exports/d8ce1f65-bfb5-4959-ac94-b11c092cc17d.png",
+    "fingerprint": "5af86234e48ce505cd98348f3bedf624e00456f8d3cdbd5b8c578fda7dac1519",
+    "label": "Gardener sheet",
+    "path": "assets/gardener.png",
+    "imported": "2026-09-15T21:58:53.781Z"
+  }
+]

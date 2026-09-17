@@ -51,6 +51,7 @@ export function GeminiIcon({ size = 14 }: { size?: number }) {
 export const PROVIDER_ICONS: Record<string, React.FC<{ size?: number }>> = {
   anthropic: AnthropicIcon,
   'claude-code': AnthropicIcon,
+  codex: OpenAIIcon,
   openai: OpenAIIcon,
   google: GeminiIcon,
 };

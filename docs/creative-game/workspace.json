@@ -1,0 +1,35 @@
+{
+  "dir": "/var/folders/b6/zrhvt9kn7rs6vsl63dflnmtc0000gn/T/crux-e2e-AqnriK",
+  "members": {
+    "design": {
+      "id": "c8e5b533-7e91-419c-8a96-69d60116ee68",
+      "folder": "/var/folders/b6/zrhvt9kn7rs6vsl63dflnmtc0000gn/T/crux-e2e-AqnriK/garden/shared-garden-design-mu37q6f8",
+      "title": "Shared garden design"
+    },
+    "model": {
+      "id": "0ad1c1a0-2ab5-4de6-846c-69d09634f1df",
+      "folder": "/var/folders/b6/zrhvt9kn7rs6vsl63dflnmtc0000gn/T/crux-e2e-AqnriK/garden/shared-garden-model-mu37q7eu",
+      "title": "Shared garden model"
+    },
+    "sprites": {
+      "id": "07e0fc4a-3c6f-4194-b973-311a7f1f08cc",
+      "folder": "/var/folders/b6/zrhvt9kn7rs6vsl63dflnmtc0000gn/T/crux-e2e-AqnriK/garden/shared-garden-sprites-mu37q8v7",
+      "title": "Shared garden sprites"
+    },
+    "sound": {
+      "id": "6fdd4513-cddc-4020-b4ea-da9061985e39",
+      "folder": "/var/folders/b6/zrhvt9kn7rs6vsl63dflnmtc0000gn/T/crux-e2e-AqnriK/garden/shared-garden-sound-mu37qg5x",
+      "title": "Shared garden sound"
+    },
+    "game": {
+      "id": "a68e270f-b4b0-4083-808f-74d83160d9b5",
+      "folder": "/var/folders/b6/zrhvt9kn7rs6vsl63dflnmtc0000gn/T/crux-e2e-AqnriK/garden/shared-garden-game-mu37qm9t",
+      "title": "Shared garden game"
+    },
+    "site": {
+      "id": "dce546b1-6e47-4711-87f5-cd01d5d3aee0",
+      "folder": "/var/folders/b6/zrhvt9kn7rs6vsl63dflnmtc0000gn/T/crux-e2e-AqnriK/garden/shared-garden-site-mu37rof7",
+      "title": "Shared garden site"
+    }
+  }
+}
