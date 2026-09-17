@@ -10,12 +10,15 @@ import { Plasma } from '@cruxgarden/plasma-ui';
  * per browser, because being handed the same loud surprise on every visit is
  * the thing people mind about music on a page.
  *
- * It sits in the corner as its own surface. fuse={false} because it is fixed
- * chrome: on a narrow screen it comes within blending distance of the panel
- * behind it, and the two merging into one blob is not the intent.
+ * It sits in the corner as its own surface, and can be dragged anywhere.
+ * fuse={false} because it is chrome: on a narrow screen it comes within
+ * blending distance of the panel behind it, and the two merging into one blob
+ * is not the intent - but dragged together they should still keep their own
+ * outlines.
  */
-const TRACK_SRC = 'https://s3.us-east-1.amazonaws.com/publish.crux.garden/sad-carousel.opus';
-const TRACK_NAME = 'Sad Carousel';
+const TRACK_SRC = 'https://s3.us-east-1.amazonaws.com/publish.crux.garden/sagittarius-a-star.m4a';
+/** Not shown - it names the controls for anyone using a screen reader. */
+const TRACK_NAME = 'Sagittarius A*';
 const VOLUME_KEY = 'crux-garden-volume';
 
 const DEFAULT_VOLUME = 0.6;
@@ -100,10 +103,26 @@ export default function TeaserTrack() {
       frost={0.5}
       fuse={false}
       lean={false}
-      data-plasma-nodrag
+      draggable
     >
       {/* preload="none": nothing is fetched until the first play. */}
       <audio ref={audio} src={TRACK_SRC} preload="none" />
+
+      {/* Something to hold. Every other pixel of this panel is a button or a
+          slider, and those suppress dragging - without a grip the panel is
+          draggable in principle and immovable in practice. */}
+      <span className="teaser-grip" aria-hidden="true">
+        <svg viewBox="0 0 6 16" width="6" height="16">
+          <g fill="currentColor">
+            <circle cx="1.5" cy="4" r="1.1" />
+            <circle cx="4.5" cy="4" r="1.1" />
+            <circle cx="1.5" cy="8" r="1.1" />
+            <circle cx="4.5" cy="8" r="1.1" />
+            <circle cx="1.5" cy="12" r="1.1" />
+            <circle cx="4.5" cy="12" r="1.1" />
+          </g>
+        </svg>
+      </span>
 
       <button
         type="button"
@@ -135,7 +154,11 @@ export default function TeaserTrack() {
         </svg>
       </button>
 
-      <span className="teaser-track-name">{failed ? 'Track unavailable' : TRACK_NAME}</span>
+      {failed && (
+        <span className="teaser-hidden" role="status">
+          {TRACK_NAME} is unavailable
+        </span>
+      )}
 
       <input
         className="teaser-volume"

@@ -160,7 +160,27 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 8px 12px 8px 8px;
+  padding: 8px 14px 8px 8px;
+}
+
+/* The only part of the row that is not a control, so the only part that can
+   start a drag. */
+.teaser-grip {
+  display: inline-flex;
+  align-items: center;
+  flex: 0 0 auto;
+  padding: 0 2px;
+  color: rgb(207 230 238 / 0.32);
+  cursor: grab;
+}
+.teaser-grip:hover {
+  color: rgb(207 230 238 / 0.6);
+}
+.teaser-track[data-plasma-dragging] .teaser-grip {
+  cursor: grabbing;
+}
+.teaser-grip svg {
+  display: block;
 }
 
 .teaser-track-btn {
@@ -190,17 +210,6 @@
 }
 .teaser-track-btn svg {
   display: block;
-}
-
-.teaser-track-name {
-  flex: 1 1 auto;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-family: var(--font-body, 'Outfit', system-ui, sans-serif);
-  font-size: 0.78rem;
-  color: rgb(207 230 238 / 0.62);
 }
 
 /* A slim track with a single round thumb, the same in both engines. */
