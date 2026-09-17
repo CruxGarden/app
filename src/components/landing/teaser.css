@@ -147,3 +147,103 @@
   line-height: 1.5;
   color: #f7a8d8;
 }
+
+/* ── The track ──────────────────────────────────────────────────────────────
+   One row under the signup: play/pause, stop, the name, and volume. Quiet by
+   design - it is the last thing on the panel and should read as an offer, not
+   a feature. */
+.teaser-track {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px solid rgb(255 255 255 / 0.1);
+}
+
+.teaser-track-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  flex: 0 0 auto;
+  padding: 0;
+  border: 1px solid rgb(255 255 255 / 0.16);
+  border-radius: 999px;
+  background: rgb(255 255 255 / 0.06);
+  color: #cfe6ee;
+  cursor: pointer;
+  transition:
+    background 160ms ease,
+    color 160ms ease;
+}
+.teaser-track-btn:hover:not(:disabled) {
+  background: rgb(255 255 255 / 0.14);
+  color: #fff;
+}
+.teaser-track-btn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+.teaser-track-btn svg {
+  display: block;
+}
+
+.teaser-track-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--font-body, 'Outfit', system-ui, sans-serif);
+  font-size: 0.78rem;
+  color: rgb(207 230 238 / 0.62);
+}
+
+/* A slim track with a single round thumb, the same in both engines. */
+.teaser-volume {
+  flex: 0 0 84px;
+  width: 84px;
+  height: 18px;
+  margin: 0;
+  background: transparent;
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+}
+.teaser-volume:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+.teaser-volume::-webkit-slider-runnable-track {
+  height: 3px;
+  border-radius: 999px;
+  background: rgb(255 255 255 / 0.18);
+}
+.teaser-volume::-moz-range-track {
+  height: 3px;
+  border-radius: 999px;
+  background: rgb(255 255 255 / 0.18);
+}
+.teaser-volume::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 11px;
+  height: 11px;
+  margin-top: -4px;
+  border: 0;
+  border-radius: 999px;
+  background: #9ff3e4;
+}
+.teaser-volume::-moz-range-thumb {
+  width: 11px;
+  height: 11px;
+  border: 0;
+  border-radius: 999px;
+  background: #9ff3e4;
+}
+.teaser-volume:focus-visible {
+  outline: 2px solid #9ff3e4;
+  outline-offset: 3px;
+}
