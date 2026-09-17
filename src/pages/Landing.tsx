@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { PlasmaProvider, Plasma } from '@cruxgarden/plasma-ui';
 import { APP_NAME } from '@/lib/constants';
+import TeaserTrack from '@/components/landing/TeaserTrack';
 import '@/components/landing/teaser.css';
 
 /** Mailchimp posts the form directly; no embed script, so nothing third-party runs here. */
@@ -148,6 +149,8 @@ export default function Landing({ subscribed = false }: { subscribed?: boolean }
                 </button>
               </form>
             )}
+
+            <TeaserTrack />
           </Plasma>
         </main>
       </PlasmaProvider>
