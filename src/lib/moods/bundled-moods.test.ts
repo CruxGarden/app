@@ -20,30 +20,39 @@ describe('bundled Moods (ADR 0043: the backgrounds set)', () => {
     }
   });
 
-  it('Fractal Garden is the Default Mood: first, glass, the fractal render, Iris, the one track', () => {
+  it('Plasma is the Default Mood: first, the material, Vel, no render', () => {
     const d = BUNDLED_MOODS[0]!;
-    expect(d.id).toBe('digital-fractal-garden');
+    expect(d.id).toBe('plasma');
     expect(d.theme.section).toBe('Dark');
-    expect(d.theme.overrides.accent).toBe('#5fd2a5');
-    expect(d.theme.overrides.surfaceStyle).toBe('glass');
-    expect(d.background.type).toBe('image');
-    expect(d.persona?.name).toBe('Iris');
-    expect(d.bundled?.background).toMatch(/digital-fractal-garden/);
-    expect(d.bundled?.track).toMatchObject({ name: 'Echoes From Beyond', type: 'audio/ogg' });
-    expect(d.sound.track).toBeNull();
+    expect(d.theme.overrides.accent).toBe('#9ff3e4');
+    expect(d.theme.overrides.surfaceStyle).toBe('plasma');
+    // The one Mood with no render: the material draws its own field, the
+    // same one the crux.garden landing page shows.
+    expect(d.background.type).toBe('blank');
+    expect(d.bundled?.background).toBeUndefined();
+    expect(d.persona?.name).toBe('Vel');
     const ok = validateMoodPackage(JSON.parse(JSON.stringify(d)))!;
     expect(ok.sound).toEqual(d.sound);
-    // every Mood is a render from backgrounds/; only the default brings a track
+  });
+
+  it('Fractal Garden keeps the render, Iris and the one track', () => {
+    const f = bundledMood('digital-fractal-garden')!;
+    expect(f.theme.section).toBe('Dark');
+    expect(f.theme.overrides.accent).toBe('#5fd2a5');
+    expect(f.theme.overrides.surfaceStyle).toBe('glass');
+    expect(f.background.type).toBe('image');
+    expect(f.persona?.name).toBe('Iris');
+    expect(f.bundled?.background).toMatch(/digital-fractal-garden/);
+    expect(f.bundled?.track).toMatchObject({ name: 'Echoes From Beyond', type: 'audio/ogg' });
+    expect(f.sound.track).toBeNull();
     // Every Mood is a render from backgrounds/ - except Plasma, whose
-    // material draws its own field, the one the landing page shows.
+    // material draws its own field - and exactly one brings a track.
     expect(
       BUNDLED_MOODS.filter((m) => m.theme.overrides.surfaceStyle !== 'plasma').every(
         (m) => m.bundled?.background && m.background.type === 'image',
       ),
     ).toBe(true);
     expect(BUNDLED_MOODS.filter((m) => m.bundled?.track)).toHaveLength(1);
-    // The Keeper is no longer a Mood; its track and face live on as the default's sound and the fallback avatar
-    expect(bundledMood('the-keeper')).toBeUndefined();
   });
 
   it('covers both modes and only uses real theme tokens', () => {

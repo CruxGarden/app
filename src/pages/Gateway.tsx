@@ -51,7 +51,7 @@ async function wearGatewayMood(): Promise<void> {
   const { bundledMood } = await import('@/lib/moods/bundled-moods');
   const worn = getSetting(SettingsKey.WornMoodId);
   const fresh = !worn && !getSetting(SettingsKey.MoodPresetDark);
-  const keeper = bundledMood('digital-fractal-garden');
+  const keeper = bundledMood('plasma');
   if (fresh) {
     if (keeper) await applyMood(keeper, { sound: false });
   } else {
@@ -477,11 +477,11 @@ function SetupStep({ onBack }: { onBack: () => void }) {
       }
 
       // A new garden wears the Default Mood — Fractal Garden (ADR 0043):
-      // the fractal render, liquid glass, Iris's voice and the Keeper's track.
+      // the plasma material, its aurora field and Vel's voice.
       // Restored gardens bring their own and skip this.
       try {
         const { bundledMood } = await import('@/lib/moods/bundled-moods');
-        const keeper = bundledMood('digital-fractal-garden');
+        const keeper = bundledMood('plasma');
         if (keeper) await applyMood(keeper);
       } catch {
         /* the garden still opens; the Mood can be applied from the Mood modal */

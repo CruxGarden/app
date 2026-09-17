@@ -242,8 +242,8 @@ export const TOKEN_GROUPS: TokenGroup[] = [
   },
   {
     id: 'glass',
-    label: 'Glass',
-    hint: 'Liquid glass (a person can switch it on over any Mood): whether this Mood wears glass by default, how much of each surface colour stays, the backdrop blur and saturation, the specular highlight, how far the backdrop wavers (0 = still) and the colour of the moving light.',
+    label: 'Surface',
+    hint: 'The surface this Mood wears by default - plasma (one shared WebGL material), glass, or solid - and, when it is glass, how much of each surface colour stays, the backdrop blur and saturation, the specular highlight, how far the backdrop wavers (0 = still) and the colour of the moving light. Plasma draws its own surfaces, so the glass tokens below do not apply to it.',
     match: (k) => k === 'surfaceStyle' || k.startsWith('glass'),
   },
   {
@@ -352,7 +352,7 @@ export const TOKEN_GROUPS: TokenGroup[] = [
   {
     id: 'motion',
     label: 'Motion',
-    hint: 'How things move: easing curves, three durations (all multiplied by motion scale, under Elevation & motion), and for each role — panes, dialogs, dropdowns, chat bubbles, cards, toasts — how it appears and leaves; how controls answer a press, how working indicators draw attention, and whether idle surfaces breathe. Springs (stiffness damping mass) drive pops and expressive enters; frames steps every motion for pixel Moods; intensity is the Mood\'s default for the person\'s Motion setting.',
+    hint: "How things move: easing curves, three durations (all multiplied by motion scale, under Elevation & motion), and for each role — panes, dialogs, dropdowns, chat bubbles, cards, toasts — how it appears and leaves; how controls answer a press, how working indicators draw attention, and whether idle surfaces breathe. Springs (stiffness damping mass) drive pops and expressive enters; frames steps every motion for pixel Moods; intensity is the Mood's default for the person's Motion setting.",
     match: (k) => k.startsWith('motion') && k !== 'motionScale',
   },
   {

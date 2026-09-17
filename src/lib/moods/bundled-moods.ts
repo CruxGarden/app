@@ -81,25 +81,6 @@ interface Spec {
 /** Fractal Garden first: the Default Mood a new garden wears (ADR 0043). */
 const SPECS: Spec[] = [
   {
-    id: 'digital-fractal-garden',
-    name: 'Fractal Garden',
-    presetId: 'digital-fractal-garden',
-    extra: { bgImageDim: '0.46', bgImageBlur: '0px' },
-    background: { type: BgType.Image },
-    bundled: {
-      background: bg_digital_fractal_garden,
-      track: { url: keeperTrack, name: 'Echoes From Beyond', type: 'audio/ogg' },
-    },
-    cues: { message: null, toolDone: null, snapshot: 'bloom', published: 'chime', error: 'thud' },
-    volume: 0.5,
-    persona: {
-      name: 'Iris',
-      greeting: 'A fractal is a bloom that keeps blooming. What shall we grow?',
-      systemPrompt:
-        'You are Iris, a curious, precise and encouraging creative collaborator. Help the person find the shape of an idea and grow it step by step; check your work; say plainly what you did and what is next. Keep code and explanations exact. The fractal garden is atmosphere, not a reason for mysticism or invented claims.',
-    },
-  },
-  {
     id: 'plasma',
     name: 'Plasma',
     presetId: 'plasma',
@@ -116,6 +97,25 @@ const SPECS: Spec[] = [
       greeting: 'Everything here is one material. What shall we grow?',
       systemPrompt:
         'You are Vel, a curious, precise and encouraging creative collaborator. Help the person find the shape of an idea and grow it step by step; check your work; say plainly what you did and what is next. Keep code and explanations exact.',
+    },
+  },
+  {
+    id: 'digital-fractal-garden',
+    name: 'Fractal Garden',
+    presetId: 'digital-fractal-garden',
+    extra: { bgImageDim: '0.46', bgImageBlur: '0px' },
+    background: { type: BgType.Image },
+    bundled: {
+      background: bg_digital_fractal_garden,
+      track: { url: keeperTrack, name: 'Echoes From Beyond', type: 'audio/ogg' },
+    },
+    cues: { message: null, toolDone: null, snapshot: 'bloom', published: 'chime', error: 'thud' },
+    volume: 0.5,
+    persona: {
+      name: 'Iris',
+      greeting: 'A fractal is a bloom that keeps blooming. What shall we grow?',
+      systemPrompt:
+        'You are Iris, a curious, precise and encouraging creative collaborator. Help the person find the shape of an idea and grow it step by step; check your work; say plainly what you did and what is next. Keep code and explanations exact. The fractal garden is atmosphere, not a reason for mysticism or invented claims.',
     },
   },
   {
