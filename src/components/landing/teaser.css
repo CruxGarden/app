@@ -147,8 +147,3 @@
   line-height: 1.5;
   color: #9ff3e4;
 }
-
-/* Where the form posts. Mailchimp's page renders here and is never seen. */
-.teaser-sink {
-  display: none;
-}
