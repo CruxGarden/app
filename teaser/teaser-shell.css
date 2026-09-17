@@ -1,0 +1,38 @@
+/* The teaser stands alone: no Tailwind, no globals.css, no theme engine.
+   Just the two font faces the panel actually uses and the tokens teaser.css
+   reads. Both files are already in public/fonts, so nothing is fetched from
+   a third party. Keep the @font-face blocks in step with globals.css. */
+
+@font-face {
+  font-family: 'Outfit';
+  src: url('/fonts/Outfit-Regular.woff2') format('woff2');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Cormorant Garamond';
+  src: url('/fonts/CormorantGaramond-Latin.woff2') format('woff2');
+  font-weight: 300 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+:root {
+  --font-body: 'Outfit', sans-serif;
+  --font-wordmark: 'Cormorant Garamond', Georgia, serif;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: #04111c;
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+}
