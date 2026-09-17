@@ -35,6 +35,20 @@ const router = createBrowserRouter(
       path: '/',
       element: <ErrorBoundary>{publicSite ? <Landing /> : <Gateway />}</ErrorBoundary>,
     },
+    // Where Mailchimp returns people after they subscribe: the same teaser with
+    // the form already answered. Only the public site has it.
+    ...(publicSite
+      ? [
+          {
+            path: '/subscribed',
+            element: (
+              <ErrorBoundary>
+                <Landing subscribed />
+              </ErrorBoundary>
+            ),
+          },
+        ]
+      : []),
     {
       path: '/plans',
       element: (

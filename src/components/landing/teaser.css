@@ -138,3 +138,17 @@
     transition: none !important;
   }
 }
+
+/* Shown in the form's place after Mailchimp sends them back. */
+.teaser-sent {
+  margin: clamp(1.25rem, 3vw, 1.75rem) 0 0;
+  font-family: var(--font-body, 'Outfit', system-ui, sans-serif);
+  font-size: 0.95rem;
+  line-height: 1.5;
+  color: #9ff3e4;
+}
+
+/* Where the form posts. Mailchimp's page renders here and is never seen. */
+.teaser-sink {
+  display: none;
+}
