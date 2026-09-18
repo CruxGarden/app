@@ -104,7 +104,7 @@
     "build:moqira": "npm --prefix moqira-crux run build:garden",
     "build:notes": "npm --prefix notes-crux run build:garden",
     "prebuild:all": "npm run prepare:astro-editors && npm run build:openmosh && npm run build:minipaint && npm run build:mermaid && npm run build:piskel && npm run build:rawgraphs && npm run build:jupyterlite && npm run build:gephi && npm run build:ketcher && npm run build:twine && npm run build:svgedit && npm run build:blockbench && npm run build:gdevelop && npm run build:playcanvas-editor && npm run build:opencut && npm run build:kan && npm run build:web-synth && npm run build:beepbox && npm run build:pptist && npm run build:wick && npm run build:bentopdf && npm run build:glyphr && npm run build:fmg && npm run build:signal",
-    "verify:core": "tsc -b --noEmit && npm run test:performance:check && eslint src --max-warnings=0 && npm run build:teaser"
+    "verify:core": "tsc -b --noEmit && eslint src --max-warnings=0 && npm run build:teaser"
   },
   "browserslist": [
     "Chrome >= 120",

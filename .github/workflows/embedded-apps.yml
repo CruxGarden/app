@@ -1,0 +1,176 @@
+name: Embedded apps (on demand)
+
+# The two dozen vendored upstream apps take tens of minutes to install and build,
+# and their failures are rarely about the change in front of you. They are not on
+# the pull-request path any more: run this from the Actions tab when you touch a
+# *-crux package or before a release, and once a week so nothing rots unseen.
+#
+# Day-to-day website and app work is gated by ci.yml, which finishes in seconds.
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 6 * * 1' # Mondays, 06:00 UTC
+
+jobs:
+  desktop:
+    name: desktop typecheck, lint and performance configs
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            electron/package-lock.json
+      # Electron's deps come first: test:performance:check typechecks
+      # electron/performance and electron/playwright.performance.config.ts,
+      # which import @playwright/test from electron/node_modules.
+      - run: npm ci
+        working-directory: electron
+      - run: npm ci
+      - run: npm run test:performance:check
+      - run: npm run verify
+        working-directory: electron
+
+  app-suites:
+    name: embedded app suites
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      # A verify installs node_modules for two dozen upstream apps (~16 GB) and
+      # writes a ~1 GB dist. ubuntu-latest ships with only ~21 GB free, so the
+      # job ran out of disk. Reclaim the preinstalled toolchains we never use.
+      - name: Free disk space
+        run: |
+          df -h /
+          sudo rm -rf /usr/local/lib/android /usr/share/dotnet /opt/ghc \
+            /usr/local/share/boost /usr/local/lib/node_modules \
+            /usr/share/swift /opt/hostedtoolcache/CodeQL || true
+          sudo docker image prune --all --force || true
+          df -h /
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            electron/package-lock.json
+      - run: npm ci
+        working-directory: electron
+      - run: npm ci
+      - run: npm run verify
+
+  e2e:
+    name: e2e (real desktop app, macOS)
+    runs-on: macos-latest
+    if: github.event_name != 'pull_request'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            electron/package-lock.json
+      - run: npm ci
+      - run: npm ci
+        working-directory: electron
+      - run: npm run build:all
+        working-directory: electron
+      - run: npx playwright install chromium
+        working-directory: electron
+      - run: npx playwright test
+        working-directory: electron
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: e2e-results
+          path: electron/e2e/.results
+          if-no-files-found: ignore
+
+  e2e-linux:
+    name: e2e (real desktop app, Linux — advisory)
+    runs-on: ubuntu-latest
+    continue-on-error: true # ADR 0007 amendment: build-only until this is green
+    steps:
+      - uses: actions/checkout@v4
+      # A verify installs node_modules for two dozen upstream apps (~16 GB) and
+      # writes a ~1 GB dist. ubuntu-latest ships with only ~21 GB free, so the
+      # job ran out of disk. Reclaim the preinstalled toolchains we never use.
+      - name: Free disk space
+        run: |
+          df -h /
+          sudo rm -rf /usr/local/lib/android /usr/share/dotnet /opt/ghc \
+            /usr/local/share/boost /usr/local/lib/node_modules \
+            /usr/share/swift /opt/hostedtoolcache/CodeQL || true
+          sudo docker image prune --all --force || true
+          df -h /
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            electron/package-lock.json
+      - run: npm ci
+      - run: npm ci
+        working-directory: electron
+      - run: npm run build:all
+        working-directory: electron
+      - run: npx playwright install --with-deps chromium
+        working-directory: electron
+      # Ubuntu 24.04 AppArmor blocks Electron's user-namespace sandbox; allow it for this run
+      - run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0 || true
+      - run: xvfb-run -a npx playwright test e2e/smoke.spec.ts e2e/files.spec.ts e2e/settings.spec.ts e2e/paths.unit.spec.ts e2e/updater.unit.spec.ts e2e/multi-crux.spec.ts e2e/multi-crux-keyboard.spec.ts e2e/multi-crux-lifecycle.spec.ts e2e/multi-crux-turns.spec.ts e2e/preview-ports.unit.spec.ts
+        working-directory: electron
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: e2e-results-linux
+          path: electron/e2e/.results
+          if-no-files-found: ignore
+
+  workspace-pr:
+    name: multi-Crux workspaces (macOS)
+    if: github.event_name == 'pull_request'
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            electron/package-lock.json
+      - run: npm ci
+      - run: npm ci
+        working-directory: electron
+      - run: npm run build:all
+        working-directory: electron
+      - run: npx playwright test e2e/multi-crux.spec.ts e2e/multi-crux-keyboard.spec.ts e2e/multi-crux-lifecycle.spec.ts e2e/multi-crux-turns.spec.ts e2e/multi-crux-preview.spec.ts e2e/preview-ports.unit.spec.ts
+        working-directory: electron
+      - run: npm run test:e2e:apps
+        working-directory: electron
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: workspace-pr-results
+          path: electron/e2e/.results
+          if-no-files-found: ignore
