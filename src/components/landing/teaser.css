@@ -17,9 +17,10 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  /* Clear of the provider's 56px blend distance, so the two surfaces read as
-     two even before fuse={false} has anything to say about it. */
-  gap: 72px;
+  /* Inside the provider's 56px blend distance but outside the 28px at which
+     edges latch, so the two surfaces bulge toward each other without ever
+     becoming one shape. */
+  gap: 36px;
   padding: 24px;
 }
 
