@@ -14,7 +14,11 @@ const sources = import.meta.glob(
   { query: '?raw', import: 'default', eager: true },
 ) as Record<string, string>;
 const runtime = import.meta.glob(
-  ['../../timeline-crux/runtime/**/*', '!../../timeline-crux/runtime/css/**/*.css'],
+  [
+    '../../timeline-crux/runtime/**/*',
+    '!../../timeline-crux/runtime/**/*.map',
+    '!../../timeline-crux/runtime/css/**/*.css',
+  ],
   { query: '?url', import: 'default', eager: true },
 ) as Record<string, string>;
 const template: TemplateDefinition = {
@@ -28,7 +32,10 @@ const template: TemplateDefinition = {
       content,
       encoding: 'asset-url' as const,
     })),
-    { path: 'data/project.json', content: JSON.stringify({ version: 1, app: 'timeline', project: null }) },
+    {
+      path: 'data/project.json',
+      content: JSON.stringify({ version: 1, app: 'timeline', project: null }),
+    },
   ],
   layout: LAYOUT_WORKSHOP,
   meta: { settings: { entryFile: 'index.html' } },

@@ -13,6 +13,7 @@ const source = import.meta.glob(
 const assets = import.meta.glob(
   [
     '../../twine-crux/runtime/**/*',
+    '!../../twine-crux/runtime/**/*.map',
     '!../../twine-crux/runtime/**/*.css',
     '../../twine-crux/{src,public}/**/*.{png,jpg,jpeg,gif,ico,woff,woff2,ttf,eot}',
   ],

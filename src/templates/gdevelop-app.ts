@@ -9,6 +9,7 @@ const assets = import.meta.glob(
     '../../gdevelop-crux/newIDE/electron-app/app/package.json',
     '../../gdevelop-crux/Binaries/embuild/GDevelop.js/{libGD.js,libGD.wasm}',
     '../../gdevelop-crux/runtime/**/*',
+    '!../../gdevelop-crux/runtime/**/*.map',
     '!../../gdevelop-crux/**/node_modules/**',
     '!../../gdevelop-crux/**/.git/**',
     '!../../gdevelop-crux/**/.env*',

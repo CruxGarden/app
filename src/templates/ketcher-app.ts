@@ -9,7 +9,11 @@ const source = import.meta.glob(
   { query: '?raw', import: 'default', eager: true },
 ) as Record<string, string>;
 const assets = import.meta.glob(
-  ['../../ketcher-crux/runtime/**/*', '!../../ketcher-crux/runtime/**/*.css'],
+  [
+    '../../ketcher-crux/runtime/**/*',
+    '!../../ketcher-crux/runtime/**/*.map',
+    '!../../ketcher-crux/runtime/**/*.css',
+  ],
   { query: '?url', import: 'default', eager: true },
 ) as Record<string, string>;
 const template: TemplateDefinition = {

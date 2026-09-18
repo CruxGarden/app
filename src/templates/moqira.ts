@@ -12,7 +12,11 @@ const sources = import.meta.glob(
   { query: '?raw', import: 'default', eager: true },
 ) as Record<string, string>;
 const runtime = import.meta.glob(
-  ['../../moqira-crux/runtime/**/*', '../../moqira-crux/moqira-icon.png'],
+  [
+    '../../moqira-crux/runtime/**/*',
+    '!../../moqira-crux/runtime/**/*.map',
+    '../../moqira-crux/moqira-icon.png',
+  ],
   {
     query: '?url',
     import: 'default',

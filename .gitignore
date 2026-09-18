@@ -28,3 +28,7 @@ jupyterlite-crux/.cache/
 
 # JupyterLite incremental build bookkeeping
 jupyterlite-crux/.jupyterlite.doit.db*
+
+# Playwright output from the embedded apps' own suites
+test-results/
+*-crux/test-results/

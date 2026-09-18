@@ -11,6 +11,7 @@ const source = import.meta.glob(
 const assets = import.meta.glob(
   [
     '../../blockbench-crux/runtime/**/*',
+    '!../../blockbench-crux/runtime/**/*.map',
     '!../../blockbench-crux/runtime/**/*.css',
     '../../blockbench-crux/{*.png,*.ico}',
     '../../blockbench-crux/{assets,font,icons,lib}/**/*.{png,jpg,jpeg,webp,gif,ico,woff,woff2,ttf,eot,svg}',

@@ -22,6 +22,7 @@ const source = import.meta.glob(
 const assets = import.meta.glob(
   [
     '../../signal-crux/runtime/**/*',
+    '!../../signal-crux/runtime/**/*.map',
     '../../signal-crux/app/src/assets/*.png',
     '../../signal-crux/app/public/*.png',
   ],

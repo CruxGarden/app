@@ -10,11 +10,14 @@ const sources = import.meta.glob(
   ],
   { query: '?raw', import: 'default', eager: true },
 ) as Record<string, string>;
-const runtime = import.meta.glob(['../../glsl-crux/runtime/**/*'], {
-  query: '?url',
-  import: 'default',
-  eager: true,
-}) as Record<string, string>;
+const runtime = import.meta.glob(
+  ['../../glsl-crux/runtime/**/*', '!../../glsl-crux/runtime/**/*.map'],
+  {
+    query: '?url',
+    import: 'default',
+    eager: true,
+  },
+) as Record<string, string>;
 const template: TemplateDefinition = {
   files: [
     ...Object.entries(sources).map(([path, content]) => ({

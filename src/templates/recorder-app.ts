@@ -11,12 +11,30 @@ const sources = import.meta.glob(
   ],
   { query: '?raw', import: 'default', eager: true },
 ) as Record<string, string>;
-const runtime = import.meta.glob(['../../recorder-crux/runtime/**/*', '../../recorder-crux/public/**/*'], { query: '?url', import: 'default', eager: true }) as Record<string, string>;
+const runtime = import.meta.glob(
+  [
+    '../../recorder-crux/runtime/**/*',
+    '!../../recorder-crux/runtime/**/*.map',
+    '../../recorder-crux/public/**/*',
+    '!../../recorder-crux/public/**/*.map',
+  ],
+  { query: '?url', import: 'default', eager: true },
+) as Record<string, string>;
 const template: TemplateDefinition = {
   files: [
-    ...Object.entries(sources).map(([path, content]) => ({ path: path.replace('../../recorder-crux/', ''), content })),
-    ...Object.entries(runtime).map(([path, content]) => ({ path: path.replace('../../recorder-crux/', ''), content, encoding: 'asset-url' as const })),
-    { path: 'data/project.json', content: JSON.stringify({ version: 1, app: 'recorder', project: null }) },
+    ...Object.entries(sources).map(([path, content]) => ({
+      path: path.replace('../../recorder-crux/', ''),
+      content,
+    })),
+    ...Object.entries(runtime).map(([path, content]) => ({
+      path: path.replace('../../recorder-crux/', ''),
+      content,
+      encoding: 'asset-url' as const,
+    })),
+    {
+      path: 'data/project.json',
+      content: JSON.stringify({ version: 1, app: 'recorder', project: null }),
+    },
   ],
   layout: LAYOUT_WORKSHOP,
   meta: { settings: { entryFile: 'runtime/index.html' } },

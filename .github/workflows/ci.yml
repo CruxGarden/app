@@ -16,6 +16,17 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      # A verify installs node_modules for two dozen upstream apps (~16 GB) and
+      # writes a ~1 GB dist. ubuntu-latest ships with only ~21 GB free, so the
+      # job ran out of disk. Reclaim the preinstalled toolchains we never use.
+      - name: Free disk space
+        run: |
+          df -h /
+          sudo rm -rf /usr/local/lib/android /usr/share/dotnet /opt/ghc \
+            /usr/local/share/boost /usr/local/lib/node_modules \
+            /usr/share/swift /opt/hostedtoolcache/CodeQL || true
+          sudo docker image prune --all --force || true
+          df -h /
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
@@ -77,6 +88,17 @@ jobs:
     continue-on-error: true # ADR 0007 amendment: build-only until this is green
     steps:
       - uses: actions/checkout@v4
+      # A verify installs node_modules for two dozen upstream apps (~16 GB) and
+      # writes a ~1 GB dist. ubuntu-latest ships with only ~21 GB free, so the
+      # job ran out of disk. Reclaim the preinstalled toolchains we never use.
+      - name: Free disk space
+        run: |
+          df -h /
+          sudo rm -rf /usr/local/lib/android /usr/share/dotnet /opt/ghc \
+            /usr/local/share/boost /usr/local/lib/node_modules \
+            /usr/share/swift /opt/hostedtoolcache/CodeQL || true
+          sudo docker image prune --all --force || true
+          df -h /
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
