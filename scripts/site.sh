@@ -12,21 +12,29 @@ set -euo pipefail
 
 APP_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
-# ── Node: honor .nvmrc, survive shells whose default node is ancient ─────────
+# ── Node: use the one on PATH when it will do, else ask nvm ──────────────────
+# CI installs Node through setup-node, which leaves nvm present but without
+# this version — `nvm use` then fails and took the whole build with it. So:
+# accept the Node already on PATH first, and treat every nvm attempt as best
+# effort. Only the version check at the end is allowed to fail the script.
 WANT_NODE="$(cat "$APP_DIR/.nvmrc" 2>/dev/null || echo 22)"
-if command -v nvm >/dev/null 2>&1; then
-  nvm use "$WANT_NODE" >/dev/null
-elif [ -s "$HOME/.nvm/nvm.sh" ]; then
-  # shellcheck disable=SC1091
-  . "$HOME/.nvm/nvm.sh"
-  nvm use "$WANT_NODE" >/dev/null
-else
+node_major() { command -v node >/dev/null 2>&1 && node -p 'process.versions.node.split(".")[0]' 2>/dev/null || echo 0; }
+
+if [ "$(node_major)" -lt 18 ]; then
+  if command -v nvm >/dev/null 2>&1; then
+    nvm use "$WANT_NODE" >/dev/null 2>&1 || true
+  elif [ -s "$HOME/.nvm/nvm.sh" ]; then
+    # shellcheck disable=SC1091
+    . "$HOME/.nvm/nvm.sh" || true
+    nvm use "$WANT_NODE" >/dev/null 2>&1 || true
+  fi
+fi
+if [ "$(node_major)" -lt 18 ]; then
   CANDIDATE="$(ls -d "$HOME/.nvm/versions/node/v${WANT_NODE%%.*}"*/bin 2>/dev/null | sort -V | tail -1 || true)"
   [ -n "$CANDIDATE" ] && export PATH="$CANDIDATE:$PATH"
 fi
-NODE_MAJOR="$(node -p 'process.versions.node.split(".")[0]')"
-if [ "$NODE_MAJOR" -lt 18 ]; then
-  echo "error: node $(node --version) is too old (need >= 18; .nvmrc wants $WANT_NODE)" >&2
+if [ "$(node_major)" -lt 18 ]; then
+  echo "error: node $(node --version 2>/dev/null || echo 'not found') is too old (need >= 18; .nvmrc wants $WANT_NODE)" >&2
   exit 1
 fi
 
