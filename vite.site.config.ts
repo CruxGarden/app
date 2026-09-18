@@ -17,9 +17,11 @@ import path from 'path';
 export default defineConfig({
   plugins: [react()],
   root: 'site',
-  // The same 8080 the app uses: you run one or the other, not both.
-  server: { port: 8080 },
-  preview: { port: 8080 },
+  // 8081, deliberately not the app's 8080: desktop.sh --dev probes 8080 and
+  // points Electron at whatever answers, so a website server there would be
+  // loaded inside the desktop shell instead of the app.
+  server: { port: 8081 },
+  preview: { port: 8081 },
   publicDir: path.resolve(__dirname, 'public'),
   resolve: {
     alias: {

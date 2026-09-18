@@ -106,7 +106,8 @@
     "build:site": "vite build --config vite.site.config.ts",
     "build:site:single": "npm run build:site && node site/build-single.mjs",
     "dev:site": "vite --config vite.site.config.ts",
-    "preview:site": "vite preview --config vite.site.config.ts"
+    "preview:site": "vite preview --config vite.site.config.ts",
+    "dev:app": "./scripts/desktop.sh --dev"
   },
   "browserslist": [
     "Chrome >= 120",

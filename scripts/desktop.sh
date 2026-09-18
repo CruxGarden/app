@@ -7,10 +7,15 @@
 # Usage:
 #   ./scripts/desktop.sh              # build if needed, launch the app
 #   ./scripts/desktop.sh --rebuild    # force a fresh web build first
-#   ./scripts/desktop.sh --dev       # HMR mode: launch against the Vite dev server
+#   ./scripts/desktop.sh --dev        # HMR mode: launch against the Vite dev server
 #   ./scripts/desktop.sh --live       # against the PRODUCTION API (api.crux.garden) — publish for real
 #   ./scripts/desktop.sh --selftest   # run the in-app integration self-test (8 checks)
 #   ./scripts/desktop.sh --logs       # tail the desktop debug log
+#
+# The npm entry points, which are what you normally want:
+#   npm run dev:app             # the desktop app, HMR
+#   npm run dev:app -- --live   # the same, against the production API
+#   npm run dev:site            # the crux.garden website, on :8081
 #
 set -euo pipefail
 
@@ -109,6 +114,12 @@ case "$MODE" in
       echo "· starting Vite dev server on :8080…"
       (cd "$APP_DIR" && npm run dev >/dev/null 2>&1 &)
       for _ in $(seq 1 30); do nc -z 127.0.0.1 8080 2>/dev/null && break; sleep 1; done
+    elif [ "$LIVE" = 1 ]; then
+      # VITE_* is read by the dev server at startup, so a server that is already
+      # up was built against whatever target it was started with — possibly not
+      # production. Say so rather than let --live appear to have been honoured.
+      echo "· warning: a dev server is already on :8080; --live only applies to one this script starts."
+      echo "           Stop it and re-run if you need the production API."
     fi
     echo "· launching (dev server, HMR)"
     exec "${LAUNCH[@]}" env CRUX_DEV_SERVER=http://localhost:8080 \
