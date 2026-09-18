@@ -1,5 +1,7 @@
 import { lazy, Suspense, useSyncExternalStore } from 'react';
 import { createBrowserRouter, RouterProvider, Navigate } from 'react-router-dom';
+import PlasmaStage from '@/components/plasma/PlasmaStage';
+import PlasmaSurfaces from '@/components/plasma/PlasmaSurfaces';
 import { isPublicSite } from '@/lib/site';
 import ErrorBoundary from '@/components/ui/ErrorBoundary';
 import AnimatedBackground from '@/components/layout/AnimatedBackground';
@@ -151,9 +153,16 @@ export default function App() {
   return (
     <ErrorBoundary>
       {!homepage && <AnimatedBackground />}
-      <Suspense fallback={null}>
-        <RouterProvider router={router} />
-      </Suspense>
+      {/* Above the router, not inside Shell. Only four routes are Shell's
+          children — /home, /c/:id, /tending, /mood — so a material mounted
+          there left the Gateway, Explore, Plans, the public pages and the
+          404 flat. The Gateway is the first screen anyone ever sees. */}
+      <PlasmaStage>
+        <PlasmaSurfaces />
+        <Suspense fallback={null}>
+          <RouterProvider router={router} />
+        </Suspense>
+      </PlasmaStage>
     </ErrorBoundary>
   );
 }

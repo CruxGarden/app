@@ -355,6 +355,13 @@ export const GARDEN_DARK = {
 
   // ── Workspace layout (the mosaic chrome) ─────────────
   paneGap: '4px',
+  // Plasma surface theme: how much material shows around a pane, and what the
+  // content sits on inside it. The plate exists because plasma is the quietest
+  // material there will be — a busier one (wood grain, stone) needs a calmer
+  // plate, and that is a value here rather than a redesign. Both are the
+  // person's to set, in the Mood Builder.
+  plasmaFrame: '10px',
+  plasmaPlate: 'color-mix(in srgb, var(--surface) 82%, transparent)',
   paneRadius: 'var(--radius)',
   paneBorderWidth: '1px',
   paneHeaderHeight: '28px',

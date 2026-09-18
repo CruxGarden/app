@@ -94,6 +94,8 @@ const LAYOUT_KEYS = new Set([
   'scrollbarWidth',
   'cardHoverLift',
   'paneGap',
+  'plasmaFrame',
+  'plasmaPlate',
   'paneRadius',
   'paneBorderWidth',
   'paneHeaderHeight',

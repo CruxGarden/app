@@ -15,10 +15,12 @@ html[data-surface-style='plasma'] {
      the canvas and hide it. */
   --plasma-inner: color-mix(in srgb, var(--surface) 88%, transparent);
 
-  /* A pane's contents sit straight on the material. Give this a colour and
-     they get a plate instead — the first thing to reach for if a busy pane
-     reads as noisy over a moving field. */
-  --plasma-pane-plate: transparent;
+  /* --plasma-frame and --plasma-plate are Mood tokens (see garden-dark.ts):
+     a pane is a frame of material with a plate inside it, the way the
+     plasma-ui workspace example builds one, and how much of each is the
+     person's call. They are never absent — the Mood pipeline writes every
+     token onto <html> — so they carry no fallback here, which is also what
+     the token-coverage test looks for. */
 
   /* paneGap is the Mood's to set — the Plasma Mood carries 12px, and the
      palette writes it onto <html>, which beats anything declared here. It is
@@ -57,18 +59,37 @@ html[data-surface-style='plasma']
    on top. All four have to give way or the material is simply behind a solid
    panel and never seen. */
 html[data-surface-style='plasma'] .mosaic.crux-mosaic-theme .mosaic-window {
-  /* the ring's width, which has nothing left to paint */
-  padding: 0;
+  /* Was the border ring's width; now it is how much material shows around the
+     plate. The ring itself has nothing left to paint. */
+  padding: var(--plasma-frame);
+  /* The plate is rounded like the material around it, not inset-concentric.
+     Geometry says the inner corner should be the outer minus the frame; the
+     eye says a plate inside a liquid panel should look like the same shape
+     again, and the eye is the one looking. */
+  --pane-inner-radius: var(--pane-radius);
 }
 html[data-surface-style='plasma']
   .mosaic.crux-mosaic-theme
   .mosaic-window
   :is(.mosaic-window-toolbar, .mosaic-window-body) {
-  background: var(--plasma-pane-plate);
+  background: var(--plasma-plate);
   background-blend-mode: normal;
   backdrop-filter: none;
   box-shadow: none;
   border-color: transparent;
+}
+/* The header and body are one plate, so only the outer corners round. */
+html[data-surface-style='plasma']
+  .mosaic.crux-mosaic-theme
+  .mosaic-window
+  .mosaic-window-toolbar {
+  border-radius: var(--pane-inner-radius) var(--pane-inner-radius) 0 0;
+}
+html[data-surface-style='plasma']
+  .mosaic.crux-mosaic-theme
+  .mosaic-window
+  .mosaic-window-body {
+  border-radius: 0 0 var(--pane-inner-radius) var(--pane-inner-radius);
 }
 html[data-surface-style='plasma']
   .mosaic.crux-mosaic-theme
@@ -136,6 +157,15 @@ html[data-surface-style='plasma']
   background: var(--plasma-inner);
   backdrop-filter: none;
   box-shadow: none;
+}
+
+/* A crux card is one surface, not a black rectangle sitting on one. The
+   thumbnail paints an opaque plate so a card with no image reads as a card;
+   here the material is already doing that, and the plate only cuts the card in
+   half. An actual thumbnail still covers it, because the image is above. */
+html[data-surface-style='plasma'] .bg-garden-card-thumbnail {
+  background: transparent;
+  border-bottom-color: transparent;
 }
 
 /* Dividers and outlines inside a pane give way to the shade above. */

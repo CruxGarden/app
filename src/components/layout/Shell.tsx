@@ -17,8 +17,6 @@ const Settings = lazy(() => import('@/pages/Settings'));
 const Explore = lazy(() => import('@/pages/Explore'));
 const Mood = lazy(() => import('@/components/mood/Mood'));
 import MoodTextureLayers from './MoodTextureLayers';
-import PlasmaStage from '@/components/plasma/PlasmaStage';
-import PlasmaSurfaces from '@/components/plasma/PlasmaSurfaces';
 import MoodIntro from '@/components/mood/MoodIntro';
 import { MotionConfig } from 'motion/react';
 
@@ -58,7 +56,9 @@ export default function Shell() {
   // there do the traffic lights exist, and only there does anything need to
   // leave room for them — the Plasma dock does.
   useEffect(() => {
-    document.documentElement.dataset.desktopChrome = can(Capability.DesktopChrome) ? 'true' : 'false';
+    document.documentElement.dataset.desktopChrome = can(Capability.DesktopChrome)
+      ? 'true'
+      : 'false';
   }, []);
 
   useEffect(() => {
@@ -124,91 +124,85 @@ export default function Shell() {
     // Motion never applies its own reduced-motion rule: the person's motion intensity (ADR 0041)
     // already maps prefers-reduced-motion to instant through the tokens every role reads.
     <MotionConfig reducedMotion="never">
-      {/* Under the Plasma theme this mounts the shared material and attaches
-          every primary surface to it; under Glass and Custom it is a
-          pass-through and no canvas or render loop exists. */}
-      <PlasmaStage>
-        <PlasmaSurfaces />
-        <div className="flex flex-col h-screen overflow-hidden">
-          <WorkspaceLifecycle />
-          {servicesReady && <TendingNotifications />}
-          <MoodTextureLayers />
-          <MoodIntro />
-          {/* Top bar */}
-          <div className="plasma-drag-strip relative z-20 shrink-0">
-            <TopBar />
-          </div>
-
-          {/* Main */}
-          <main className="relative flex-1 min-h-0 overflow-y-auto">
-            {initError ? (
-              <div role="alert" className="flex h-full items-center justify-center p-8 text-center">
-                <div className="max-w-sm flex flex-col gap-2">
-                  <h2 className="font-display text-base text-text">Crux Garden couldn't start</h2>
-                  <p className="text-xs text-text-muted">{initError}</p>
-                </div>
-              </div>
-            ) : servicesReady ? (
-              <Outlet />
-            ) : null}
-          </main>
-
-          {/* App confirm/alert dialogs (replaces window.confirm/alert) */}
-          <DialogHost />
-
-          {/* Console Modal */}
-          {aiEnabled && (
-            <Modal
-              open={consoleOpen}
-              onClose={() => setConsoleOpen(false)}
-              size="lg"
-              title="Console — The Keeper"
-              className="h-[min(520px,70vh)]"
-              flush
-            >
-              <Suspense fallback={null}>
-                <Console />
-              </Suspense>
-            </Modal>
-          )}
-
-          {/* Mood Modal — quick picks; the Mood Builder page has the full editor */}
-          <Modal
-            open={moodPanelOpen}
-            onClose={() => useUIStore.getState().setMoodPanelOpen(false)}
-            size="screen"
-            title="Mood"
-          >
-            <Suspense fallback={null}>
-              <Mood compact />
-            </Suspense>
-          </Modal>
-
-          {/* Settings Modal */}
-          <Modal
-            open={settingsOpen}
-            onClose={() => useUIStore.getState().setSettingsOpen(false)}
-            size="screen"
-            title="Settings"
-          >
-            <Suspense fallback={null}>
-              <Settings />
-            </Suspense>
-          </Modal>
-
-          {/* Explore Modal */}
-          <Modal
-            open={exploreOpen}
-            onClose={() => useUIStore.getState().setExploreOpen(false)}
-            size="screen"
-            title="Explore"
-          >
-            <Suspense fallback={null}>
-              <Explore onNavigate={() => useUIStore.getState().setExploreOpen(false)} />
-            </Suspense>
-          </Modal>
+      <div className="flex flex-col h-screen overflow-hidden">
+        <WorkspaceLifecycle />
+        {servicesReady && <TendingNotifications />}
+        <MoodTextureLayers />
+        <MoodIntro />
+        {/* Top bar */}
+        <div className="plasma-drag-strip relative z-20 shrink-0">
+          <TopBar />
         </div>
-      </PlasmaStage>
+
+        {/* Main */}
+        <main className="relative flex-1 min-h-0 overflow-y-auto">
+          {initError ? (
+            <div role="alert" className="flex h-full items-center justify-center p-8 text-center">
+              <div className="max-w-sm flex flex-col gap-2">
+                <h2 className="font-display text-base text-text">Crux Garden couldn't start</h2>
+                <p className="text-xs text-text-muted">{initError}</p>
+              </div>
+            </div>
+          ) : servicesReady ? (
+            <Outlet />
+          ) : null}
+        </main>
+
+        {/* App confirm/alert dialogs (replaces window.confirm/alert) */}
+        <DialogHost />
+
+        {/* Console Modal */}
+        {aiEnabled && (
+          <Modal
+            open={consoleOpen}
+            onClose={() => setConsoleOpen(false)}
+            size="lg"
+            title="Console — The Keeper"
+            className="h-[min(520px,70vh)]"
+            flush
+          >
+            <Suspense fallback={null}>
+              <Console />
+            </Suspense>
+          </Modal>
+        )}
+
+        {/* Mood Modal — quick picks; the Mood Builder page has the full editor */}
+        <Modal
+          open={moodPanelOpen}
+          onClose={() => useUIStore.getState().setMoodPanelOpen(false)}
+          size="screen"
+          title="Mood"
+        >
+          <Suspense fallback={null}>
+            <Mood compact />
+          </Suspense>
+        </Modal>
+
+        {/* Settings Modal */}
+        <Modal
+          open={settingsOpen}
+          onClose={() => useUIStore.getState().setSettingsOpen(false)}
+          size="screen"
+          title="Settings"
+        >
+          <Suspense fallback={null}>
+            <Settings />
+          </Suspense>
+        </Modal>
+
+        {/* Explore Modal */}
+        <Modal
+          open={exploreOpen}
+          onClose={() => useUIStore.getState().setExploreOpen(false)}
+          size="screen"
+          title="Explore"
+        >
+          <Suspense fallback={null}>
+            <Explore onNavigate={() => useUIStore.getState().setExploreOpen(false)} />
+          </Suspense>
+        </Modal>
+      </div>
     </MotionConfig>
   );
 }

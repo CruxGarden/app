@@ -30,6 +30,26 @@ const FUSING = [
 
 const FIXED = ['.bg-toolbar', '.bg-mood-bar', '.crux-taskbar'].join(',');
 
+/**
+ * A surface is a container, not a control. The panel classes are shared with
+ * inputs and selects — Tending styles its search box `bg-panel` — and a text
+ * field that fuses with its neighbour and refracts the wallpaper is not a text
+ * field any more. Anything that takes typing or clicking keeps its flat paint.
+ */
+const CONTROLS = new Set(['INPUT', 'SELECT', 'TEXTAREA', 'BUTTON', 'OPTION', 'LABEL', 'A']);
+/**
+ * And a surface is something you can see. Below this the material reads as
+ * noise, and every one of them spends a slot out of maxSurfaces that a real
+ * panel wanted.
+ */
+const MIN_SIDE = 96;
+
+function isSurface(el: HTMLElement) {
+  if (CONTROLS.has(el.tagName)) return false;
+  const r = el.getBoundingClientRect();
+  return r.width >= MIN_SIDE && r.height >= MIN_SIDE / 2;
+}
+
 export default function PlasmaSurfaces() {
   const on = usePlasmaOn();
   // The runtime half of the context: stable, so a Mood changing a colour does
@@ -52,8 +72,12 @@ export default function PlasmaSurfaces() {
 
     const sync = () => {
       const wanted = new Set<HTMLElement>();
-      document.querySelectorAll<HTMLElement>(FUSING).forEach((el) => wanted.add(el));
-      document.querySelectorAll<HTMLElement>(FIXED).forEach((el) => wanted.add(el));
+      document.querySelectorAll<HTMLElement>(FUSING).forEach((el) => {
+        if (isSurface(el)) wanted.add(el);
+      });
+      document.querySelectorAll<HTMLElement>(FIXED).forEach((el) => {
+        if (isSurface(el)) wanted.add(el);
+      });
 
       for (const [el, handle] of handles) {
         if (!wanted.has(el) || !el.isConnected) {
