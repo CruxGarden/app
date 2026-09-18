@@ -67,6 +67,36 @@ export default function TeaserTrack() {
     if (audio.current) audio.current.volume = volume;
   }, [volume]);
 
+  // Leaving the page silences the track; coming back resumes it, but only if
+  // this is what paused it. A track the person paused themselves stays paused.
+  useEffect(() => {
+    const el = audio.current;
+    if (!el) return;
+    let pausedByUs = false;
+    const away = () => {
+      if (el.paused) return;
+      pausedByUs = true;
+      el.pause();
+    };
+    const back = () => {
+      if (!pausedByUs) return;
+      pausedByUs = false;
+      if (document.visibilityState !== 'visible') return;
+      void el.play().catch(() => setPlaying(false));
+    };
+    const onVisibility = () => (document.hidden ? away() : back());
+    document.addEventListener('visibilitychange', onVisibility);
+    // Switching apps or windows does not always change visibility, so listen
+    // for focus too; `back` is idempotent when both fire.
+    addEventListener('blur', away);
+    addEventListener('focus', back);
+    return () => {
+      document.removeEventListener('visibilitychange', onVisibility);
+      removeEventListener('blur', away);
+      removeEventListener('focus', back);
+    };
+  }, []);
+
   const toggle = async () => {
     const el = audio.current;
     if (!el) return;
