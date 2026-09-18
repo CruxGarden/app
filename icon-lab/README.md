@@ -21,9 +21,19 @@ round caps, so this reimplements the material rather than registering shapes
 with the library: the same field, palette and edge treatment, over an SDF that
 can express the mark.
 
-The proportions come from the favicon: a 24 box, a circle at r=10, bars 8
-long, and `stroke-width: 1.5` — which is a half-thickness of 0.75, the thing
-that made the first attempt's ring twice as heavy as it should have been.
+The proportions are measured off `electron/build/icon.png`, not taken from
+`favicon.svg` — the desktop icon is not drawn to the same ratios, and going
+from the SVG gave a ring too large and a plus too small. In units where the
+ring's outer radius is 10:
+
+| | |
+|---|---|
+| ring centreline | 8.99 |
+| stroke half-thickness | 1.01 |
+| plus half-length | 4.99 |
+| mark across the frame | 67.8% |
+
+One stroke weight throughout, which is what makes it read as a single mark.
 
 The field is procedural, so frost supersamples it with a spiral of taps
 instead of needing the library's blur chain.

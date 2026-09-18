@@ -74,18 +74,24 @@ float sdRoundBox(vec2 p, vec2 b, float r){
   vec2 q = abs(p) - b + r;
   return min(max(q.x,q.y),0.) + length(max(q,0.)) - r;
 }
-/** Ring and cross, exactly the favicon's proportions: r=10 and an 8-long bar
-    on a 24 box, with the stroke width carried over as the solid thickness. */
+/** Ring and cross, measured off electron/build/icon.png rather than taken
+    from the favicon - the desktop icon is not drawn to the same proportions.
+    In units where the ring's OUTER radius is 10:
+      ring centreline 8.99, stroke half-thickness 1.01
+      plus half-length 4.99, same 1.01 stroke, fully rounded caps
+    One stroke weight throughout, which is what makes it read as one mark. */
 float mark(vec2 p, float s){
-  float ring = abs(length(p) - 10.*s) - .75*s;   // stroke-width 1.5 => half is .75
-  float barH = sdRoundBox(p, vec2(4.0*s, 0.75*s), .75*s);
-  float barV = sdRoundBox(p, vec2(0.75*s, 4.0*s), .75*s);
+  float ring = abs(length(p) - 8.99*s) - 1.01*s;
+  float barH = sdRoundBox(p, vec2(4.99*s, 1.01*s), 1.01*s);
+  float barV = sdRoundBox(p, vec2(1.01*s, 4.99*s), 1.01*s);
   return min(ring, min(barH, barV));
 }
 
 void main(){
   vec2 frag = vec2(gl_FragCoord.x, uRes.y - gl_FragCoord.y);
-  float s = min(uRes.x, uRes.y) / 26.;                 // the 24 box, with the icon's margin
+  // The real icon's mark spans 67.8% of its frame: outer radius 10 units maps
+  // to 0.339 of the shorter side.
+  float s = min(uRes.x, uRes.y) * .0339;
   vec2 p = frag - uRes*.5;
 
   float d = mark(p, s);
@@ -100,7 +106,7 @@ void main(){
     vec2 e = vec2(1.2, 0.);
     vec2 g = vec2(mark(p+e.xy,s)-mark(p-e.xy,s), mark(p+e.yx,s)-mark(p-e.yx,s));
     vec2 n = g / (length(g) + 1e-4);
-    float inside = clamp(-d / (.75*s), 0., 1.);        // 0 at the edge, 1 at the core
+    float inside = clamp(-d / (1.01*s), 0., 1.);       // 0 at the edge, 1 at the core
     float bevel = 1. - smoothstep(0., .55, inside);
     float lift = sqrt(max(1. - bevel*bevel, 0.));
 
