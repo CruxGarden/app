@@ -10,11 +10,9 @@ import { Plasma } from '@cruxgarden/plasma-ui';
  * per browser, because being handed the same loud surprise on every visit is
  * the thing people mind about music on a page.
  *
- * It sits in the corner as its own surface, and can be dragged anywhere.
- * fuse={false} because it is chrome: on a narrow screen it comes within
- * blending distance of the panel behind it, and the two merging into one blob
- * is not the intent - but dragged together they should still keep their own
- * outlines.
+ * Its own surface under the panel, and draggable anywhere. It fuses: it sits
+ * inside the provider's blend distance, so the two bulge toward each other
+ * without joining, and dragging it against the panel merges them properly.
  */
 const TRACK_SRC = 'https://s3.us-east-1.amazonaws.com/publish.crux.garden/sagittarius-a-star.m4a';
 /** Not shown - it names the controls for anyone using a screen reader. */
@@ -101,7 +99,6 @@ export default function TeaserTrack() {
       tint="#061016"
       opacity={0.55}
       frost={0.5}
-      fuse={false}
       lean={false}
       draggable
     >
