@@ -17,6 +17,9 @@ import path from 'path';
 export default defineConfig({
   plugins: [react()],
   root: 'site',
+  // The same 8080 the app uses: you run one or the other, not both.
+  server: { port: 8080 },
+  preview: { port: 8080 },
   publicDir: path.resolve(__dirname, 'public'),
   resolve: {
     alias: {

@@ -104,7 +104,9 @@
     "prebuild:all": "npm run prepare:astro-editors && npm run build:openmosh && npm run build:minipaint && npm run build:mermaid && npm run build:piskel && npm run build:rawgraphs && npm run build:jupyterlite && npm run build:gephi && npm run build:ketcher && npm run build:twine && npm run build:svgedit && npm run build:blockbench && npm run build:gdevelop && npm run build:playcanvas-editor && npm run build:opencut && npm run build:kan && npm run build:web-synth && npm run build:beepbox && npm run build:pptist && npm run build:wick && npm run build:bentopdf && npm run build:glyphr && npm run build:fmg && npm run build:signal",
     "verify:core": "tsc -b --noEmit && eslint src --max-warnings=0 && node scripts/check-site-graph.mjs && npm run build:site",
     "build:site": "vite build --config vite.site.config.ts",
-    "build:site:single": "npm run build:site && node site/build-single.mjs"
+    "build:site:single": "npm run build:site && node site/build-single.mjs",
+    "dev:site": "vite --config vite.site.config.ts",
+    "preview:site": "vite preview --config vite.site.config.ts"
   },
   "browserslist": [
     "Chrome >= 120",
