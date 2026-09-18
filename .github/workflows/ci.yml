@@ -22,8 +22,9 @@ jobs:
           cache: npm
           cache-dependency-path: package-lock.json
       - run: npm ci
-      # Typecheck, lint and build the crux.garden landing page. Nothing else:
-      # no Electron deps, no embedded apps, no Python. Seconds, so website work
-      # is never waiting on a toolchain it did not touch. Everything heavier
-      # lives in embedded-apps.yml and runs on demand.
+      # Typecheck, lint and build the crux.garden public website — today a
+      # landing page, in time Explore and the public crux and garden pages.
+      # Nothing else: no Electron deps, no embedded apps, no Python. Seconds,
+      # so website work never waits on a toolchain it did not touch.
+      # Everything heavier lives in embedded-apps.yml and runs on demand.
       - run: npm run verify:core
