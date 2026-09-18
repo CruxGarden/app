@@ -3,10 +3,15 @@ import { PlasmaProvider } from '@cruxgarden/plasma-ui';
 import { usePlasmaOn } from './usePlasmaOn';
 
 /**
- * The Plasma theme's material. One WebGL canvas behind the whole app, with
- * the settings the crux.garden teaser uses — the aurora field, an iridescent
- * rim, long stretch and flow, ambient drops — so the workspace and the
- * landing page are recognisably the same thing.
+ * The Plasma theme's material: one WebGL canvas behind the whole app.
+ *
+ * The settings are the workspace example's, near enough — mood, frost, a
+ * short blend and the library's own defaults for everything else. That
+ * example is the look this theme is aiming at: panels that read as clean
+ * glass tiles and only fuse when they are actually pushed together. The
+ * teaser's settings (viscosity 0, stretch 2.5, flow 2, dispersion 2.2,
+ * ambient drops) are the opposite end of the same dials and belong on a
+ * landing page, not under a text editor.
  *
  * It mounts only while the Plasma theme is on: the provider owns a canvas, a
  * render loop and a resize listener, and none of that should exist under
@@ -18,26 +23,20 @@ export default function PlasmaStage({ children }: { children: ReactNode }) {
   return (
     <PlasmaProvider
       theme="dark"
-      mood="aurora"
-      tint="#ffffff"
-      opacity={0}
-      frost={0.25}
-      rimColor="iridescent"
-      rim={1.3}
-      rimWidth={1.4}
-      highlight={1}
-      edgeLine={1}
-      viscosity={0}
-      stretch={2.5}
-      flow={2}
-      blend={56}
-      refraction={1.4}
-      dispersion={2.2}
-      elevation={0.5}
-      ambientDrops
-      pointerDrop
+      mood="tidal"
+      frost={0.35}
+      // Surfaces fuse below blend/2 = 10px. --pane-gap under Plasma puts 14px
+      // between two tiles, so panes stay distinct until something moves them
+      // together — the workspace example's behaviour, and the reason the gap
+      // and this number have to be read as one setting.
+      blend={20}
+      grid={24}
+      // Quieter than the defaults, because this sits under Monaco and a
+      // streaming conversation rather than behind a hero.
+      flow={0}
+      ambientDrops={false}
       // The app shows far more surfaces at once than the teaser's one panel.
-      // This is compiled into the shaders, so it is fixed for the mount.
+      // Changing this recompiles the shaders, so it is set once, here.
       maxSurfaces={24}
       // Behind the app's content, above the page background.
       zIndex={-7}

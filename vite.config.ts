@@ -10,12 +10,17 @@ export default defineConfig({
     alias: {
       '@': path.resolve(__dirname, './src'),
     },
+    // @cruxgarden/plasma-ui takes React as a peer and calls hooks. Without
+    // this, its `react` import resolved to a second pre-bundled copy and every
+    // hook inside PlasmaProvider threw "Cannot read properties of null
+    // (reading 'useState')" — the invalid-hook-call error, wearing a disguise.
+    dedupe: ['react', 'react-dom'],
   },
   server: {
     port: 8080,
   },
   optimizeDeps: {
-    exclude: ['wa-sqlite'],
+    exclude: ['wa-sqlite', '@cruxgarden/plasma-ui'],
   },
   worker: {
     format: 'es',

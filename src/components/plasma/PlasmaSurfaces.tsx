@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { usePlasma } from '@cruxgarden/plasma-ui';
+import { usePlasmaRuntime } from '@cruxgarden/plasma-ui';
 import type { ShapeHandle } from '@cruxgarden/plasma-ui';
 import { usePlasmaOn } from './usePlasmaOn';
 
@@ -13,7 +13,7 @@ import { usePlasmaOn } from './usePlasmaOn';
  * A MutationObserver keeps up as panes open and close.
  *
  * Chrome that must never bleed into a neighbour — the TopBar, the Mood bar —
- * registers with fuse:false, which is what those props are for.
+ * registers with fuse:false, which is what that prop is for.
  */
 const FUSING = [
   '.mosaic.crux-mosaic-theme .mosaic-window',
@@ -27,7 +27,9 @@ const FIXED = ['.bg-toolbar', '.bg-mood-bar'].join(',');
 
 export default function PlasmaSurfaces() {
   const on = usePlasmaOn();
-  const { renderer } = usePlasma();
+  // The runtime half of the context: stable, so a Mood changing a colour does
+  // not re-run any of this.
+  const { renderer } = usePlasmaRuntime();
 
   useEffect(() => {
     if (!on || !renderer) return;
@@ -56,18 +58,48 @@ export default function PlasmaSurfaces() {
           renderer.register(el, {
             radius: radiusOf(el),
             lean: 0,
-            frost: 0.55,
+            // frost and elevation are left to the provider, so one Mood
+            // setting moves every surface together.
             fuse: !el.matches(FIXED),
           }),
         );
       });
     };
 
+    // Two full-document queries per mutation is not survivable in this app: a
+    // streaming reply and a keystroke in Monaco both mutate the DOM dozens of
+    // times a second, and none of those mutations open or close a pane. The
+    // work is coalesced into one frame, and mutations that cannot have
+    // changed the surface set are dropped before it is even scheduled.
+    let queued = 0;
+    const schedule = () => {
+      if (queued) return;
+      queued = requestAnimationFrame(() => {
+        queued = 0;
+        sync();
+      });
+    };
+
+    const touchesSurfaces = (records: MutationRecord[]) =>
+      records.some((r) =>
+        [...r.addedNodes, ...r.removedNodes].some(
+          (n) =>
+            n.nodeType === Node.ELEMENT_NODE &&
+            ((n as Element).matches(FUSING) ||
+              (n as Element).matches(FIXED) ||
+              !!(n as Element).querySelector(FUSING) ||
+              !!(n as Element).querySelector(FIXED)),
+        ),
+      );
+
     sync();
-    const observer = new MutationObserver(sync);
+    const observer = new MutationObserver((records) => {
+      if (touchesSurfaces(records)) schedule();
+    });
     observer.observe(document.body, { childList: true, subtree: true });
     return () => {
       observer.disconnect();
+      if (queued) cancelAnimationFrame(queued);
       handles.forEach((h) => h.remove());
       handles.clear();
     };

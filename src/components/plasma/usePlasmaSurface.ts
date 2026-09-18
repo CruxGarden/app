@@ -1,5 +1,5 @@
 import { useEffect, type RefObject } from 'react';
-import { usePlasma } from '@cruxgarden/plasma-ui';
+import { usePlasmaRuntime } from '@cruxgarden/plasma-ui';
 import { usePlasmaOn } from './usePlasmaOn';
 
 /**
@@ -16,7 +16,7 @@ export function usePlasmaSurface(
   options: { radius?: number; frost?: number; fuse?: boolean; lean?: number } = {},
 ) {
   const on = usePlasmaOn();
-  const { renderer } = usePlasma();
+  const { renderer } = usePlasmaRuntime();
   const { radius = 14, frost = 0.55, fuse = true, lean = 0 } = options;
 
   useEffect(() => {

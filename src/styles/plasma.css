@@ -14,6 +14,19 @@ html[data-surface-style='plasma'] {
   /* The material supplies the page's ground; the body colour would sit over
      the canvas and hide it. */
   --plasma-inner: color-mix(in srgb, var(--surface) 88%, transparent);
+
+  /* A pane's contents sit straight on the material. Give this a colour and
+     they get a plate instead — the first thing to reach for if a busy pane
+     reads as noisy over a moving field. */
+  --plasma-pane-plate: transparent;
+
+  /* paneGap is the Mood's to set — the Plasma Mood carries 12px, and the
+     palette writes it onto <html>, which beats anything declared here. It is
+     recorded because it is half of one setting: surfaces fuse when they are
+     closer than blend/2, so a gap under 10px at PlasmaStage's blend of 20
+     would melt every pane into one permanent sheet. A Mood that wants Plasma
+     needs paneGap above that, or a blend to match. */
+  --workspace-padding: 8px;
 }
 
 html[data-surface-style='plasma'] body {
@@ -37,6 +50,33 @@ html[data-surface-style='plasma']
   border-color: transparent;
   box-shadow: none;
   backdrop-filter: none;
+}
+
+/* A pane is three opaque layers deep: the window paints the border ring, the
+   toolbar and body paint --panel over it, and the header paints its own token
+   on top. All four have to give way or the material is simply behind a solid
+   panel and never seen. */
+html[data-surface-style='plasma'] .mosaic.crux-mosaic-theme .mosaic-window {
+  /* the ring's width, which has nothing left to paint */
+  padding: 0;
+}
+html[data-surface-style='plasma']
+  .mosaic.crux-mosaic-theme
+  .mosaic-window
+  :is(.mosaic-window-toolbar, .mosaic-window-body) {
+  background: var(--plasma-pane-plate);
+  background-blend-mode: normal;
+  backdrop-filter: none;
+  box-shadow: none;
+  border-color: transparent;
+}
+html[data-surface-style='plasma']
+  .mosaic.crux-mosaic-theme
+  .mosaic-window
+  .mosaic-window-toolbar
+  > .pane-toolbar {
+  background: transparent;
+  border-color: transparent;
 }
 
 /* Inner surfaces: flat shades, no translucency, no second material. Mirrors
