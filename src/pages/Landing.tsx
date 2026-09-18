@@ -10,6 +10,18 @@ const MAILCHIMP_ACTION =
 /** Mailchimp's bot trap: a real person never fills a field they cannot see. */
 const HONEYPOT_FIELD = 'b_4c2e196117cdb095809f3bb3b_f31692b207';
 
+/**
+ * The field behind everything. Aurora's own palette ends on a violet accent,
+ * which is what put a pink blob in the corner; this keeps its deep base and
+ * runs the other two through green instead, so the page is one colour family.
+ * Spring and blend are aurora's, unchanged.
+ */
+const FIELD = {
+  colors: ['#050b12', '#0f5e46', '#3fbf8f'] as [string, string, string],
+  blend: 40,
+  spring: { stiffness: 120, damping: 11 },
+};
+
 const SUBSCRIBED_MESSAGE = 'Thank you, we will notify you at launch';
 /**
  * Mailchimp's own flow: the form posts to Mailchimp and Mailchimp redirects
@@ -86,7 +98,7 @@ export default function Landing({ subscribed = false }: { subscribed?: boolean }
     <div className="teaser">
       <PlasmaProvider
         theme="dark"
-        mood="aurora"
+        mood={FIELD}
         tint="#ffffff"
         opacity={0}
         frost={0.25}
