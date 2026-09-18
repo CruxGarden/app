@@ -12,9 +12,14 @@ import { usePlasmaOn } from './usePlasmaOn';
  * several of them (Mosaic windows, portalled dialogs) are not ours to wrap.
  * A MutationObserver keeps up as panes open and close.
  *
- * Chrome that must never bleed into a neighbour — the TopBar, the Mood bar —
- * registers with fuse:false, which is what that prop is for.
+ * Every surface registers with fuse:false: each one is its own drop, with its
+ * own rim and its own corners, and two panes side by side never run together.
+ * Fusing is the library's signature, but it is a layout claim as much as a
+ * look — a pane that melts into its neighbour when a splitter moves is a pane
+ * whose edges the design can no longer rely on. Flip FUSE_PANES to watch them
+ * behave like one sheet instead.
  */
+const FUSE_PANES = false;
 const FUSING = [
   '.mosaic.crux-mosaic-theme .mosaic-window',
   '.bg-panel',
@@ -60,7 +65,7 @@ export default function PlasmaSurfaces() {
             lean: 0,
             // frost and elevation are left to the provider, so one Mood
             // setting moves every surface together.
-            fuse: !el.matches(FIXED),
+            fuse: FUSE_PANES && !el.matches(FIXED),
           }),
         );
       });
