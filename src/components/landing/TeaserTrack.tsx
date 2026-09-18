@@ -102,8 +102,10 @@ export default function TeaserTrack() {
       lean={false}
       draggable
     >
-      {/* preload="none": nothing is fetched until the first play. */}
-      <audio ref={audio} src={TRACK_SRC} preload="none" />
+      {/* preload="none": nothing is fetched until the first play. It loops, so
+          the page keeps its soundtrack until someone stops it - the browser
+          caches the file after the first pass rather than re-fetching it. */}
+      <audio ref={audio} src={TRACK_SRC} preload="none" loop />
 
       {/* Something to hold. Every other pixel of this panel is a button or a
           slider, and those suppress dragging - without a grip the panel is
