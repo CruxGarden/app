@@ -9,7 +9,7 @@ import { join } from 'node:path';
  * must NOT inherit ELECTRON_RUN_AS_NODE from the shell.
  */
 export async function launchApp(
-  opts: { env?: Record<string, string>; dir?: string; sound?: boolean } = {},
+  opts: { env?: Record<string, string>; dir?: string; sound?: boolean; args?: string[] } = {},
 ): Promise<{ app: ElectronApplication; page: Page; dir: string }> {
   // Pass a previous run's `dir` to relaunch on the same garden (restart tests).
   const dir = opts.dir ?? mkdtempSync(join(tmpdir(), 'crux-e2e-'));
@@ -27,7 +27,13 @@ export async function launchApp(
   // Ubuntu runners (24.04+) restrict unprivileged user namespaces, so Chromium's
   // sandbox cannot start and firstWindow() times out. CI on Linux runs unsandboxed;
   // the sandbox is exercised by the macOS gate and by every developer run.
-  const args = ['.'];
+  // Chromium switches go before the app path: Electron reads `electron
+  // [switches] <path>`, and anything after the path is handed to the app
+  // instead. The performance suite passes --force-device-scale-factor=2,
+  // because the plasma renderer sizes its canvas by min(devicePixelRatio,
+  // quality) and at a scale factor of 1 every quality tier draws exactly the
+  // same number of pixels — the sweep measures nothing.
+  const args = [...(opts.args ?? []), '.'];
   if (process.platform === 'linux' && process.env.CI) args.push('--no-sandbox');
   // A journey that records passes CRUX_FAKE_MEDIA=1: the main process adds Chromium's fake camera
   // and microphone switches itself (see src/main.ts).

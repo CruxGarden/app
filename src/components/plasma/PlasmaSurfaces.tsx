@@ -38,6 +38,11 @@ export default function PlasmaSurfaces() {
 
   useEffect(() => {
     if (!on || !renderer) return;
+    // A handle on the material for the performance suite, which pushes quality
+    // past every tier to find where this machine actually breaks. Dev only —
+    // it is dropped from a production build with the branch.
+    if (import.meta.env.DEV)
+      (window as unknown as { __plasmaRenderer?: unknown }).__plasmaRenderer = renderer;
     const handles = new Map<HTMLElement, ShapeHandle>();
 
     const radiusOf = (el: HTMLElement) => {
