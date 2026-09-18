@@ -17,10 +17,9 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  /* Inside the provider's 56px blend distance but outside the 28px at which
-     edges latch, so the two surfaces bulge toward each other without ever
-     becoming one shape. */
-  gap: 36px;
+  /* Well inside the 28px at which edges latch, so the two arrive as one
+     shape with a tab beneath it. Drag the player away and they separate. */
+  gap: 8px;
   padding: 24px;
 }
 
