@@ -1,5 +1,5 @@
 /**
- * Fold the built teaser into one HTML file that can be dropped anywhere.
+ * Fold the built website into one HTML file that can be dropped anywhere.
  *
  * Vite emits a page plus hashed assets; this inlines all of them - script,
  * stylesheet, both fonts and the favicon - so the result has no relative

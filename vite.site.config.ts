@@ -3,11 +3,11 @@ import react from '@vitejs/plugin-react';
 import path from 'path';
 
 /**
- * The crux.garden teaser, built on its own.
+ * The crux.garden public website, built on its own.
  *
  * The main config builds the whole product: every Template Crux's source is
  * globbed in as text, so the bundle is gigabytes and the build expects each
- * template's own toolchain to be installed. The teaser needs none of that —
+ * template's own toolchain to be installed. The website needs none of that —
  * it is one component and a WebGL panel — so it gets its own root and pulls
  * in only what it imports.
  *
@@ -16,7 +16,7 @@ import path from 'path';
  */
 export default defineConfig({
   plugins: [react()],
-  root: 'teaser',
+  root: 'site',
   publicDir: path.resolve(__dirname, 'public'),
   resolve: {
     alias: {

@@ -31,11 +31,12 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      # crux.garden serves the teaser and nothing else, so it is built on its
-      # own: one page, no Template Cruxes, no embedded apps. Seconds rather
-      # than minutes, and it cannot be broken by a template's toolchain.
-      - name: Build teaser
-        run: npm run build:teaser
+      # crux.garden is built on its own from site/, which shares components with
+      # the desktop app through src/ but never reaches src/templates/ or a
+      # vendored *-crux package — scripts/check-site-graph.mjs enforces that.
+      # Seconds rather than minutes, and no template's toolchain can break it.
+      - name: Build the website
+        run: npm run build:site
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4

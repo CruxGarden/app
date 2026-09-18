@@ -1,17 +1,17 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import Landing from '@/pages/Landing';
-import './teaser-shell.css';
+import './site-shell.css';
 
 /**
- * The teaser's own entry point.
+ * The public website's own entry point.
  *
  * crux.garden serves one page right now, so this build carries one page. It
  * imports Landing and nothing else: no router, no stores, no SQLite, and
  * above all none of the Template Cruxes, whose sources the main bundle pulls
  * in as text and whose toolchains it expects to find installed.
  *
- * Mailchimp returns people to /subscribed, which is the same teaser with the
+ * Mailchimp returns people to /subscribed, which is the same page with the
  * form already answered — one comparison rather than a routing table.
  */
 /**
