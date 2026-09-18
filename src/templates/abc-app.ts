@@ -11,11 +11,14 @@ const sources = import.meta.glob(
   ],
   { query: '?raw', import: 'default', eager: true },
 ) as Record<string, string>;
-const runtime = import.meta.glob(['../../abc-crux/runtime/**/*'], {
-  query: '?url',
-  import: 'default',
-  eager: true,
-}) as Record<string, string>;
+const runtime = import.meta.glob(
+  ['../../abc-crux/runtime/**/*', '!../../abc-crux/runtime/**/*.map'],
+  {
+    query: '?url',
+    import: 'default',
+    eager: true,
+  },
+) as Record<string, string>;
 const template: TemplateDefinition = {
   files: [
     ...Object.entries(sources).map(([path, content]) => ({
@@ -27,7 +30,10 @@ const template: TemplateDefinition = {
       content,
       encoding: 'asset-url' as const,
     })),
-    { path: 'data/project.json', content: JSON.stringify({ version: 1, app: 'abc', project: null }) },
+    {
+      path: 'data/project.json',
+      content: JSON.stringify({ version: 1, app: 'abc', project: null }),
+    },
   ],
   layout: LAYOUT_WORKSHOP,
   meta: { settings: { entryFile: 'index.html' } },

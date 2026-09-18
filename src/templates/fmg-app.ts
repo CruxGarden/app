@@ -17,6 +17,7 @@ const source = import.meta.glob(
 const assets = import.meta.glob(
   [
     '../../fmg-crux/runtime/**/*',
+    '!../../fmg-crux/runtime/**/*.map',
     '!../../fmg-crux/runtime/**/*.css',
     '../../fmg-crux/public/**/*.{png,jpg,jpeg,gif,webp,ico,woff,woff2,ttf,eot}',
   ],

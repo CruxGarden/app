@@ -12,6 +12,7 @@ const source = import.meta.glob(
 const assets = import.meta.glob(
   [
     '../../svgedit-crux/runtime/**/*',
+    '!../../svgedit-crux/runtime/**/*.map',
     '!../../svgedit-crux/runtime/**/*.css',
     '../../svgedit-crux/{src,packages,tests}/**/*.{png,jpg,jpeg,gif,ico,woff,woff2,ttf,eot}',
     '!../../svgedit-crux/packages/**/dist/**',

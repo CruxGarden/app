@@ -13,6 +13,7 @@ const source = import.meta.glob(
 const assets = import.meta.glob(
   [
     '../../gephi-crux/runtime/**/*',
+    '!../../gephi-crux/runtime/**/*.map',
     '!../../gephi-crux/runtime/**/*.css',
     '../../gephi-crux/packages/*/{src,public}/**/*.{png,ico,ttf,eot,woff,woff2}',
   ],

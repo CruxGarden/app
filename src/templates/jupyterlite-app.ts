@@ -5,7 +5,11 @@ const sources = import.meta.glob(
   { query: '?raw', import: 'default', eager: true },
 ) as Record<string, string>;
 const assets = import.meta.glob(
-  ['../../jupyterlite-crux/runtime/**/*', '!../../jupyterlite-crux/runtime/**/*.css'],
+  [
+    '../../jupyterlite-crux/runtime/**/*',
+    '!../../jupyterlite-crux/runtime/**/*.map',
+    '!../../jupyterlite-crux/runtime/**/*.css',
+  ],
   { query: '?url', import: 'default', eager: true },
 ) as Record<string, string>;
 const styles = import.meta.glob('../../jupyterlite-crux/runtime/**/*.css', {

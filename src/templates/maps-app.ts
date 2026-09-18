@@ -11,12 +11,25 @@ const sources = import.meta.glob(
   ],
   { query: '?raw', import: 'default', eager: true },
 ) as Record<string, string>;
-const runtime = import.meta.glob(['../../maps-crux/runtime/**/*'], { query: '?url', import: 'default', eager: true }) as Record<string, string>;
+const runtime = import.meta.glob(
+  ['../../maps-crux/runtime/**/*', '!../../maps-crux/runtime/**/*.map'],
+  { query: '?url', import: 'default', eager: true },
+) as Record<string, string>;
 const template: TemplateDefinition = {
   files: [
-    ...Object.entries(sources).map(([path, content]) => ({ path: path.replace('../../maps-crux/', ''), content })),
-    ...Object.entries(runtime).map(([path, content]) => ({ path: path.replace('../../maps-crux/', ''), content, encoding: 'asset-url' as const })),
-    { path: 'data/project.json', content: JSON.stringify({ version: 1, app: 'maps', project: null }) },
+    ...Object.entries(sources).map(([path, content]) => ({
+      path: path.replace('../../maps-crux/', ''),
+      content,
+    })),
+    ...Object.entries(runtime).map(([path, content]) => ({
+      path: path.replace('../../maps-crux/', ''),
+      content,
+      encoding: 'asset-url' as const,
+    })),
+    {
+      path: 'data/project.json',
+      content: JSON.stringify({ version: 1, app: 'maps', project: null }),
+    },
   ],
   layout: LAYOUT_WORKSHOP,
   meta: { settings: { entryFile: 'runtime/index.html' } },

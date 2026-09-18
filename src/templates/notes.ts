@@ -14,7 +14,11 @@ const sources = import.meta.glob(
   { query: '?raw', import: 'default', eager: true },
 ) as Record<string, string>;
 const runtime = import.meta.glob(
-  ['../../notes-crux/runtime/**/*', '../../notes-crux/tigrana-icon.png'],
+  [
+    '../../notes-crux/runtime/**/*',
+    '!../../notes-crux/runtime/**/*.map',
+    '../../notes-crux/tigrana-icon.png',
+  ],
   {
     query: '?url',
     import: 'default',

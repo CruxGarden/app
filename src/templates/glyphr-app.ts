@@ -16,6 +16,7 @@ const source = import.meta.glob(
 const assets = import.meta.glob(
   [
     '../../glyphr-crux/runtime/**/*',
+    '!../../glyphr-crux/runtime/**/*.map',
     '!../../glyphr-crux/runtime/**/*.css',
     '../../glyphr-crux/favicon.ico',
     '../../glyphr-crux/src/**/*.{png,jpg,jpeg,gif,ico,woff,woff2,ttf,otf,eot}',

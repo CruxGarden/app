@@ -35,9 +35,9 @@
     "test:cardinal": "npm --prefix cardinal-crux run check && npm --prefix cardinal-crux test",
     "test:tool-sampler": "npm --prefix tool-cruxes ci --ignore-scripts && npm --prefix tool-cruxes run check && npm --prefix tool-cruxes test && npm --prefix tool-cruxes run build",
     "build:openmosh": "npm --prefix openmosh-crux ci --ignore-scripts && npm --prefix openmosh-crux run build",
-    "prebuild": "npm run prepare:astro-editors && npm run build:openmosh && npm run build:minipaint && npm run build:mermaid && npm run build:piskel && npm run build:rawgraphs && npm run build:jupyterlite && npm run build:gephi && npm run build:ketcher && npm run build:twine && npm run build:svgedit && npm run build:blockbench && npm run build:gdevelop && npm run build:playcanvas-editor && npm run build:opencut && npm run build:kan && npm run build:web-synth && npm run build:beepbox && npm run build:pptist && npm run build:wick && npm run build:bentopdf && npm run build:glyphr && npm run build:fmg && npm run build:signal",
-    "predev": "npm run prepare:astro-editors && npm run build:openmosh && npm run build:minipaint && npm run build:mermaid && npm run build:piskel && npm run build:rawgraphs && npm run build:jupyterlite && npm run build:gephi && npm run build:ketcher && npm run build:twine && npm run build:svgedit && npm run build:blockbench && npm run build:gdevelop && npm run build:playcanvas-editor && npm run build:opencut && npm run build:kan && npm run build:web-synth && npm run build:beepbox && npm run build:pptist && npm run build:wick && npm run build:bentopdf && npm run build:glyphr && npm run build:fmg && npm run build:signal",
-    "prestart": "npm run prepare:astro-editors && npm run build:openmosh && npm run build:minipaint && npm run build:mermaid && npm run build:piskel && npm run build:rawgraphs && npm run build:jupyterlite && npm run build:gephi && npm run build:ketcher && npm run build:twine && npm run build:svgedit && npm run build:blockbench && npm run build:gdevelop && npm run build:playcanvas-editor && npm run build:opencut && npm run build:kan && npm run build:web-synth && npm run build:beepbox && npm run build:pptist && npm run build:wick && npm run build:bentopdf && npm run build:glyphr && npm run build:fmg && npm run build:signal",
+    "prebuild": "node scripts/prebuild.mjs",
+    "predev": "node scripts/prebuild.mjs",
+    "prestart": "node scripts/prebuild.mjs",
     "test:audiomass": "node embedded-apps/sync-shared.mjs && node --test audiomass-crux/src/garden/tests/*.cjs",
     "test:openmosh": "npm --prefix openmosh-crux ci --ignore-scripts && npm --prefix openmosh-crux run check && npm --prefix openmosh-crux test && npm --prefix openmosh-crux run build",
     "build:minipaint": "node embedded-apps/sync-shared.mjs && npm --prefix minipaint-crux ci --ignore-scripts && npm --prefix minipaint-crux run build",
@@ -102,7 +102,8 @@
     "test:recorder": "npm --prefix recorder-crux run test:garden",
     "build:recorder": "npm --prefix recorder-crux run build:garden",
     "build:moqira": "npm --prefix moqira-crux run build:garden",
-    "build:notes": "npm --prefix notes-crux run build:garden"
+    "build:notes": "npm --prefix notes-crux run build:garden",
+    "prebuild:all": "npm run prepare:astro-editors && npm run build:openmosh && npm run build:minipaint && npm run build:mermaid && npm run build:piskel && npm run build:rawgraphs && npm run build:jupyterlite && npm run build:gephi && npm run build:ketcher && npm run build:twine && npm run build:svgedit && npm run build:blockbench && npm run build:gdevelop && npm run build:playcanvas-editor && npm run build:opencut && npm run build:kan && npm run build:web-synth && npm run build:beepbox && npm run build:pptist && npm run build:wick && npm run build:bentopdf && npm run build:glyphr && npm run build:fmg && npm run build:signal"
   },
   "browserslist": [
     "Chrome >= 120",

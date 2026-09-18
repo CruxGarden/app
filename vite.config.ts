@@ -22,7 +22,11 @@ export default defineConfig({
   },
   build: {
     outDir: 'dist',
-    sourcemap: true,
+    // Source maps for the embedded apps came to 297 MB, and Electron copies the
+    // whole of `dist` into the packaged app (electron/package.json
+    // `extraResources`), so every user downloaded them. Opt in with
+    // CRUX_SOURCEMAPS=1 when debugging a production build.
+    sourcemap: process.env.CRUX_SOURCEMAPS === '1',
   },
   test: {
     globals: true,
