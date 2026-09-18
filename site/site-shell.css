@@ -30,6 +30,17 @@ body,
   height: 100%;
 }
 
+/* The site is one fixed screen, so the document has nothing to scroll — but
+   iOS still rubber-bands it on a pull-down, and when the URL bar collapses
+   with it the WebGL field is resized mid-gesture and flickers. Refuse the
+   overscroll instead. Revisit when the site grows a page that does scroll:
+   this belongs on the landing route rather than the shell at that point. */
+html,
+body {
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
 body {
   margin: 0;
   background: #04111c;

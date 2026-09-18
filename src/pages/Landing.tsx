@@ -164,7 +164,7 @@ export default function Landing({ subscribed = false }: { subscribed?: boolean }
                   <input type="text" name={HONEYPOT_FIELD} tabIndex={-1} defaultValue="" />
                 </div>
                 <button className="teaser-submit" type="submit" name="subscribe">
-                  Notify me
+                  Notify
                 </button>
               </form>
             )}

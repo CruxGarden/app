@@ -17,9 +17,12 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  /* Well inside the 28px at which edges latch, so the two arrive as one
-     shape with a tab beneath it. Drag the player away and they separate. */
-  gap: 8px;
+  /* Close enough that the two rims reach for each other — the panel's lower
+     edge bulges down, the player's upper edge bulges up, and as the field
+     moves they sometimes touch — but far enough that they never settle into
+     one shape. Measured against plasma-ui 0.2.3: at 36px they latch into a
+     single blob with a neck, and by 60px they stop reaching. */
+  gap: 48px;
   padding: 24px;
 }
 
@@ -52,7 +55,7 @@
   font-size: clamp(0.9rem, 2vw, 1.15rem);
   letter-spacing: 0.34em;
   text-indent: 0.34em; /* letter-spacing pads the right edge; this recentres it */
-  text-transform: uppercase;
+  text-transform: lowercase;
   color: #9ff3e4;
 }
 
