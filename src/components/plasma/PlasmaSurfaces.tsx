@@ -28,7 +28,7 @@ const FUSING = [
   '.bg-garden-card',
 ].join(',');
 
-const FIXED = ['.bg-toolbar', '.bg-mood-bar'].join(',');
+const FIXED = ['.bg-toolbar', '.bg-mood-bar', '.crux-taskbar'].join(',');
 
 export default function PlasmaSurfaces() {
   const on = usePlasmaOn();
@@ -68,8 +68,10 @@ export default function PlasmaSurfaces() {
           renderer.register(el, {
             radius: radiusOf(el),
             lean: 0,
-            // frost and elevation are left to the provider, so one Mood
-            // setting moves every surface together.
+            // frost is left to the provider, so one Mood setting moves every
+            // surface together. Chrome sits above the workspace rather than in
+            // it, and reads as a dock rather than a pane, so it floats higher.
+            elevation: el.matches(FIXED) ? 0.5 : null,
             fuse: FUSE_PANES && !el.matches(FIXED),
           }),
         );

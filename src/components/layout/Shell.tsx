@@ -10,6 +10,7 @@ import { useUIStore } from '@/stores/uiStore';
 import { useAppStore } from '@/stores/appStore';
 import { dismissSplash } from '@/lib/splash';
 import { startSignals } from '@/lib/moods/signals';
+import { Capability, can } from '@/lib/platform';
 
 const Console = lazy(() => import('@/components/keeper/Console'));
 const Settings = lazy(() => import('@/pages/Settings'));
@@ -52,6 +53,13 @@ export default function Shell() {
 
   // Reactive theme signals (--signal-audio/typing/agent) live for the app's lifetime
   useEffect(() => startSignals(), []);
+
+  // Frameless-window chrome, as an attribute the stylesheets can read. Only
+  // there do the traffic lights exist, and only there does anything need to
+  // leave room for them — the Plasma dock does.
+  useEffect(() => {
+    document.documentElement.dataset.desktopChrome = can(Capability.DesktopChrome) ? 'true' : 'false';
+  }, []);
 
   useEffect(() => {
     if (servicesReady) return;
@@ -127,7 +135,7 @@ export default function Shell() {
           <MoodTextureLayers />
           <MoodIntro />
           {/* Top bar */}
-          <div className="relative z-20 shrink-0">
+          <div className="plasma-drag-strip relative z-20 shrink-0">
             <TopBar />
           </div>
 
