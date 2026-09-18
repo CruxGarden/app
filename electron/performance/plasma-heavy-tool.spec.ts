@@ -18,7 +18,7 @@ import { enterGarden } from '../e2e/multi-crux-helpers';
  * difference between the two themes is the number that decides whether the
  * theme can be the default.
  *
- *   npx vite --port 8080          # in app/, warmed once in a browser
+ *   npx vite build                # in app/ — this one runs against dist/
  *   npm run test:performance -- performance/plasma-heavy-tool.spec.ts
  *
  * Needs gdevelop-crux built (npm run build:gdevelop). It is a long build; the
@@ -109,9 +109,12 @@ async function setTier(page: Page, tier: string) {
 test('plasma with GDevelop open', async () => {
   test.setTimeout(30 * 60_000);
   mkdirSync(SHOTS, { recursive: true });
-  const { app, page } = await launchApp({
-    env: { CRUX_DEV_SERVER: 'http://localhost:8080', CRUX_AI_MOCK: '1' },
-  });
+  // Against the built app, not the dev server: the GDevelop template globs the
+  // whole gdevelop-crux tree as URL imports, which Vite serves as thousands of
+  // separate requests and cannot deliver inside one dynamic import. Run
+  // `npm run build` (or `npx vite build`) first. It is also the more honest
+  // measurement — this is the code that ships.
+  const { app, page } = await launchApp({ env: { CRUX_AI_MOCK: '1' } });
   const runs: Record<string, unknown> = {};
   const report: Record<string, unknown> = { when: new Date().toISOString(), cpu: cpus()[0]?.model };
   try {
@@ -186,7 +189,24 @@ test('plasma with GDevelop open', async () => {
     }
     runs['glass/gdevelop-working'] = await busyGlass;
 
+    // Glass has been second in every pair so far, and second is the warmer,
+    // more loaded slot — so a difference in its favour would be trustworthy
+    // and a difference against it would not. Run the same thing once more with
+    // Plasma last; if the gap survives the swap it is the theme, not the order.
     await setSurface(page, 'plasma');
+    await setTier(page, 'high');
+    const busyAgain = sample(page, SAMPLE_MS);
+    for (let i = 0; i < 12; i++) {
+      await frame
+        .getByRole('button', { name: 'Add object', exact: true })
+        .click({ timeout: 4000 })
+        .catch(() => {});
+      await page.keyboard.press('Escape').catch(() => {});
+      await page.mouse.move(900 + i * 12, 600 + (i % 5) * 20);
+      await page.waitForTimeout(350);
+    }
+    runs['plasma-high/gdevelop-working (order reversed)'] = await busyAgain;
+
     await page.screenshot({ path: `${SHOTS}/41-gdevelop-end.png` });
     report.runs = runs;
     writeFileSync(`${SHOTS}/plasma-heavy-tool.json`, JSON.stringify(report, null, 2));
