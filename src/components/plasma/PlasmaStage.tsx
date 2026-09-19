@@ -1,9 +1,10 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import { PlasmaCanvas, PlasmaProvider } from '@cruxgarden/plasma-ui';
 import { usePlasmaOn } from './usePlasmaOn';
 import { usePlasmaTier } from './usePlasmaTier';
 import { PLASMA_TIERS } from './tiers';
 import { GROUND_CLASS } from './ground';
+import { usePlasmaOptics } from './usePlasmaOptics';
 
 /**
  * The Plasma theme's material: one WebGL canvas behind the whole app.
@@ -22,38 +23,27 @@ import { GROUND_CLASS } from './ground';
  * render loop and a resize listener, and none of that should exist under
  * Glass or Custom. Surfaces attach themselves through PlasmaSurfaces.
  */
-/** A numeric Mood token off <html>, live as the Mood changes. */
-function readOptics() {
-  const cs = getComputedStyle(document.documentElement);
-  const num = (name: string, fallback: number) => {
-    const v = parseFloat(cs.getPropertyValue(name));
-    return Number.isFinite(v) ? Math.max(0, Math.min(3, v)) : fallback;
-  };
-  return { refraction: num('--plasma-refraction', 1), dispersion: num('--plasma-dispersion', 1) };
-}
-function usePlasmaOptics() {
-  const [optics, setOptics] = useState(readOptics);
-  useEffect(() => {
-    const update = () => setOptics(readOptics());
-    update();
-    document.addEventListener('palette-change', update);
-    return () => document.removeEventListener('palette-change', update);
-  }, []);
-  return optics;
-}
-
 export default function PlasmaStage({ children }: { children: ReactNode }) {
   const on = usePlasmaOn();
   const tier = usePlasmaTier();
   const optics = usePlasmaOptics();
   if (!on) return <>{children}</>;
+  const t = PLASMA_TIERS[tier];
   return (
     <PlasmaProvider
       theme="dark"
-      mood="tidal"
-      {...PLASMA_TIERS[tier]}
-      // The Mood's optics: refraction, and dispersion — the chromatic
-      // aberration in the bend, the Mood's `plasmaDispersion` token.
+      {...t}
+      // The Mood's material: the field it paints, the tint and body of every
+      // surface, the rim, how high they float — and the optics: refraction,
+      // and dispersion, the chromatic aberration in the bend. Frost is the
+      // Mood's too, capped by the tier (a weak GPU turns the blur chains off).
+      mood={{ colors: optics.colors, blend: 20, spring: { stiffness: 170, damping: 16 } }}
+      tint={optics.tint}
+      opacity={optics.opacity}
+      frost={Math.min(optics.frost, t.frost ?? 1)}
+      rim={optics.rim}
+      rimWidth={optics.rimWidth}
+      elevation={optics.elevation}
       refraction={optics.refraction}
       dispersion={optics.dispersion}
       // Surfaces would fuse below blend/2 = 10px, and the Plasma Mood's

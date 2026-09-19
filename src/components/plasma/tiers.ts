@@ -21,7 +21,9 @@ import type { PlasmaProviderProps } from '@cruxgarden/plasma-ui';
  *
  * The rest are effects that each cost a pass or a chunk of one — the blur
  * chains behind `frost`, the extra geometry behind `ambientDrops`, the
- * per-frame displacement behind `flow`.
+ * per-frame displacement behind `flow`. `frost` here is a cap on the Mood's
+ * own `plasmaFrost` token, not the value: the Mood says how milky the
+ * material is, the tier says how much of that this machine can afford.
  *
  * The renderer also clamps itself at 2.6 megapixels however high quality goes,
  * so the worst case is bounded: a 4K display does not cost 4K of plasma.
@@ -35,10 +37,10 @@ export const PLASMA_TIERS: Record<PlasmaTier, Partial<PlasmaProviderProps>> = {
   low: { quality: 0.7, frost: 0, pointerDrop: false, ambientDrops: false, flow: 0, stretch: 0.5 },
   medium: { quality: 1, frost: 0.2, pointerDrop: true, ambientDrops: false, flow: 0, stretch: 1 },
   // The default, and what the workspace example looks like.
-  high: { quality: 1.25, frost: 0.35, pointerDrop: true, ambientDrops: false, flow: 0, stretch: 1 },
+  high: { quality: 1.25, frost: 0.6, pointerDrop: true, ambientDrops: false, flow: 0, stretch: 1 },
   ultra: {
     quality: 1.75,
-    frost: 0.45,
+    frost: 1,
     pointerDrop: true,
     ambientDrops: true,
     flow: 0.4,

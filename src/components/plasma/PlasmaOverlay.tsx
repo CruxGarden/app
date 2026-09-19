@@ -9,6 +9,7 @@ import { plasmaGround } from './ground';
 import { usePlasmaOn } from './usePlasmaOn';
 import { usePlasmaTier } from './usePlasmaTier';
 import { PLASMA_TIERS } from './tiers';
+import { usePlasmaOptics } from './usePlasmaOptics';
 
 /**
  * The material above the scrim.
@@ -38,6 +39,7 @@ export default function PlasmaOverlay({
 }) {
   const on = usePlasmaOn();
   const tier = usePlasmaTier();
+  const optics = usePlasmaOptics();
   const [ground, setGround] = useState<HTMLCanvasElement | null>(plasmaGround);
   useEffect(() => {
     if (!on) return;
@@ -53,19 +55,27 @@ export default function PlasmaOverlay({
   return (
     <PlasmaProvider
       theme="dark"
-      mood="tidal"
+      // The same material as the ground — the Mood's tint, frost, rim and
+      // optics — so a dialog reads as one of the panes, only higher.
+      mood={{ colors: optics.colors, blend: 20, spring: { stiffness: 170, damping: 16 } }}
+      tint={optics.tint}
+      opacity={optics.opacity}
+      frost={Math.min(optics.frost, t.frost ?? 1)}
+      rim={optics.rim}
+      rimWidth={optics.rimWidth}
+      refraction={optics.refraction}
+      dispersion={optics.dispersion}
       ground="clear"
       background={ground}
       canvas={false}
       quality={Math.min(t.quality ?? 1.25, 1.25)}
-      frost={t.frost}
       pointerDrop={false}
       ambientDrops={false}
       flow={0}
       stretch={0}
       grain={0}
       glow={0}
-      elevation={0.7}
+      elevation={Math.min(1, optics.elevation + 0.3)}
       blend={20}
       maxSurfaces={2}
     >
@@ -95,7 +105,7 @@ function OverlaySurface({
     // off this); it comes back if the material cannot draw here.
     const host = el.closest<HTMLElement>('[data-modal-open]');
     host?.setAttribute('data-plasma-overlay', '');
-    const handle = renderer.register(el, { radius, lean: 0, fuse: false, elevation: 0.7 });
+    const handle = renderer.register(el, { radius, lean: 0, fuse: false });
     return () => {
       handle.remove();
       host?.removeAttribute('data-plasma-overlay');

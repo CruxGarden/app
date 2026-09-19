@@ -241,8 +241,44 @@ export const MOOD_PRESETS: MoodPresetDef[] = [
       border: '#1d2c39',
       text: '#e8f2f6',
       textMuted: '#93a7b3',
-      // A little more fringe than the library default: the material is the Mood.
-      plasmaDispersion: '1.5',
+      // The landing page's material (pages/Landing.tsx): the aurora field,
+      // every surface tinted the panel colour and half solid, frosted, a
+      // strong iridescent rim, a longer bend with more fringe, floating a
+      // little higher. With the tint doing the panel's work there is no
+      // plate inside a pane and no frame around one: the material is the pane.
+      plasmaField: '#050b12 #0f5e46 #b04bd6',
+      plasmaTint: '#061016',
+      plasmaOpacity: '0.55',
+      plasmaFrost: '0.5',
+      plasmaRim: '1.3',
+      plasmaRimWidth: '1.4',
+      plasmaRefraction: '1.4',
+      plasmaDispersion: '2.2',
+      plasmaElevation: '0.5',
+      plasmaPlate: 'transparent',
+      plasmaFrame: '0px',
+      plasmaInner: 'rgb(0 0 0 / 0.22)',
+      // The landing page's controls: one muted register for every control —
+      // a translucent accent wash for the primary button, a fainter one for
+      // the rest, light text on both, hairline light borders, and a field
+      // that is a darker well in the same material rather than a solid box.
+      primaryButton: 'rgb(159 243 228 / 0.16)',
+      primaryButtonHover: 'rgb(159 243 228 / 0.28)',
+      primaryButtonText: '#eef4f6',
+      primaryButtonBorder: 'rgb(238 244 246 / 0.22)',
+      primaryButtonBorderHover: 'rgb(238 244 246 / 0.32)',
+      actionButton: 'rgb(238 244 246 / 0.06)',
+      actionButtonHover: 'rgb(159 243 228 / 0.16)',
+      actionButtonText: '#d5e2e6',
+      actionButtonTextHover: '#eef4f6',
+      actionButtonBorder: 'rgb(238 244 246 / 0.16)',
+      actionButtonBorderHover: 'rgb(238 244 246 / 0.28)',
+      input: 'rgb(0 0 0 / 0.22)',
+      inputBorder: 'rgb(238 244 246 / 0.22)',
+      inputBorderActive: 'rgb(238 244 246 / 0.45)',
+      inputOutline: 'rgb(159 243 228 / 0.22)',
+      buttonDisabled: 'rgb(238 244 246 / 0.06)',
+      buttonDisabledText: 'rgb(238 244 246 / 0.4)',
       paneCollaboration: '#8fd6c4',
       paneArtifacts: '#c8ba9d',
       paneWorkshop: '#c5c89d',

@@ -96,8 +96,16 @@ const LAYOUT_KEYS = new Set([
   'paneGap',
   'plasmaFrame',
   'plasmaPlate',
+  'plasmaInner',
   'plasmaRefraction',
   'plasmaDispersion',
+  'plasmaField',
+  'plasmaTint',
+  'plasmaOpacity',
+  'plasmaFrost',
+  'plasmaRim',
+  'plasmaRimWidth',
+  'plasmaElevation',
   'paneRadius',
   'paneBorderWidth',
   'paneHeaderHeight',
@@ -393,8 +401,14 @@ export function tokenKind(key: string): TokenKind {
   // ── motion ── easings are curves (text), durations are <time> lengths, bindings 0..1 numbers
   if (/^motionEase|^motionSpring/.test(key)) return 'text';
   if (/^glass(Opacity|Saturation)$/.test(key)) return 'text';
-  if (key === 'glassRefraction' || key === 'plasmaRefraction' || key === 'plasmaDispersion')
+  if (
+    /^(glassRefraction|plasmaRefraction|plasmaDispersion|plasmaOpacity|plasmaFrost|plasmaRim|plasmaRimWidth|plasmaElevation)$/.test(
+      key,
+    )
+  )
     return 'number';
+  if (key === 'plasmaField') return 'text';
+  if (/^plasma(Tint|Plate|Inner)$/.test(key)) return 'color';
   if (/^motionDuration/.test(key)) return 'length';
   if (/^react/.test(key)) return 'number';
   if (/Texture$/.test(key) || FONT_ASSET_KEYS.has(key)) return 'asset';

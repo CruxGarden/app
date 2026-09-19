@@ -362,12 +362,28 @@ export const GARDEN_DARK = {
   // person's to set, in the Mood Builder.
   plasmaFrame: '10px',
   plasmaPlate: 'color-mix(in srgb, var(--surface) 82%, transparent)',
+  // What sits inside a pane under Plasma — inputs, inner panels, wells — a
+  // flat shade with no second material. A Mood whose tint does the panel's
+  // work (the Plasma Mood) makes it a translucent dark instead.
+  plasmaInner: 'color-mix(in srgb, var(--surface) 88%, transparent)',
   // The material's optics (plasma-ui props): how far the field bends behind
   // a pane, and how far the red and blue of that bend split — chromatic
   // aberration, the fringe a real lens leaves. 1 is the library's default;
   // 0 is none; 3 is a prism.
   plasmaRefraction: '1',
   plasmaDispersion: '1',
+  // The material itself (plasma-ui provider props), so a Mood can carry the
+  // look the landing page has: the field's three colours (deep, mid, accent),
+  // the tint every surface carries and how solid it is, how frosted the
+  // material is (the quality tier caps this), the rim's strength and width,
+  // and how high the surfaces float. Defaults are the library's.
+  plasmaField: '#04111c #0f4c5c #6a5acd',
+  plasmaTint: '#ffffff',
+  plasmaOpacity: '0',
+  plasmaFrost: '0.35',
+  plasmaRim: '1',
+  plasmaRimWidth: '1',
+  plasmaElevation: '0.35',
   paneRadius: 'var(--radius)',
   paneBorderWidth: '1px',
   paneHeaderHeight: '28px',

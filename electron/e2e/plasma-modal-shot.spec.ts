@@ -1,6 +1,6 @@
 import { test } from '@playwright/test';
 import { launchApp } from './launch';
-import { enterGarden } from './multi-crux-helpers';
+import { createCrux, enterGarden } from './multi-crux-helpers';
 
 /**
  * Evidence, not a gate: a dialog under the Plasma theme, drawn by its own
@@ -20,9 +20,15 @@ test('plasma modal shot', async () => {
     await page.waitForTimeout(1500);
     await page.screenshot({ path: `${SHOTS}/plasma-modal-add-crux.png` });
     await page.keyboard.press('Escape');
+    await page.waitForTimeout(800);
+    await page.screenshot({ path: `${SHOTS}/plasma-home.png` });
     await page.keyboard.press('ControlOrMeta+,');
     await page.waitForTimeout(1500);
     await page.screenshot({ path: `${SHOTS}/plasma-modal-settings.png` });
+    await page.keyboard.press('Escape');
+    await createCrux(page, 'Material');
+    await page.waitForTimeout(1500);
+    await page.screenshot({ path: `${SHOTS}/plasma-builder.png` });
   } finally {
     await app.close();
   }

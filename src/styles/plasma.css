@@ -11,11 +11,7 @@
    Nothing here applies while data-surface-style is solid or glass. ── */
 
 html[data-surface-style='plasma'] {
-  /* The material supplies the page's ground; the body colour would sit over
-     the canvas and hide it. */
-  --plasma-inner: color-mix(in srgb, var(--surface) 88%, transparent);
-
-  /* --plasma-frame and --plasma-plate are Mood tokens (see garden-dark.ts):
+  /* --plasma-inner, --plasma-frame and --plasma-plate are Mood tokens (see garden-dark.ts):
      a pane is a frame of material with a plate inside it, the way the
      plasma-ui workspace example builds one, and how much of each is the
      person's call. They are never absent — the Mood pipeline writes every
