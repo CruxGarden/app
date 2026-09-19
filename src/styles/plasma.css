@@ -35,6 +35,30 @@ html[data-surface-style='plasma'] body {
   background: transparent;
 }
 
+/* Contents arrive after the material. A surface forms in over about half a
+   second (the renderer's critically damped spring), and its element carries
+   data-plasma-forming for exactly that long; the children wait, then fade
+   in over the Mood's fast beat. Never under reduced motion (the attribute
+   is not set) and never with Motion off (the person asked for no motion). */
+html[data-surface-style='plasma']:not([data-motion-intensity='off']) [data-plasma-forming] > * {
+  opacity: 0;
+  /* Hidden at once; the transition is for arriving, not for leaving. */
+  transition: none;
+}
+html[data-surface-style='plasma']:not([data-motion-intensity='off'])
+  :is(
+    :where(.mosaic.crux-mosaic-theme) .mosaic-window,
+    .bg-panel,
+    .bg-garden-card,
+    .bg-toolbar,
+    .bg-public-top-bar,
+    .bg-mood-bar,
+    .crux-taskbar
+  )
+  > * {
+  transition: opacity var(--motion-ms-fast) ease-out;
+}
+
 /* The primary surfaces: drawn by the material, so no fill, no border, no
    shadow of their own. The radius stays — PlasmaSurfaces reads it back to
    tell the shader what shape to cut. */
@@ -168,6 +192,14 @@ html[data-surface-style='plasma']
   border-color: var(--plasma-overlay-border);
   box-shadow: var(--shadow-modal);
   text-shadow: none;
+}
+/* A dialog the overlay canvas is drawing (PlasmaOverlay sets the attribute
+   once its material is live): the plate steps aside and the material is the
+   panel — its rim is the edge, its elevation is the shadow. */
+html[data-surface-style='plasma'] [data-modal-open][data-plasma-overlay] > * > .bg-panel {
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
 }
 /* The content well inside a dialog reads as a recess again, not a hole. */
 html[data-surface-style='plasma'] [data-modal-open] .bg-panel > .bg-bg\/50 {

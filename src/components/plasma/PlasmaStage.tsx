@@ -1,8 +1,9 @@
 import { useEffect, useState, type ReactNode } from 'react';
-import { PlasmaProvider } from '@cruxgarden/plasma-ui';
+import { PlasmaCanvas, PlasmaProvider } from '@cruxgarden/plasma-ui';
 import { usePlasmaOn } from './usePlasmaOn';
 import { usePlasmaTier } from './usePlasmaTier';
 import { PLASMA_TIERS } from './tiers';
+import { GROUND_CLASS } from './ground';
 
 /**
  * The Plasma theme's material: one WebGL canvas behind the whole app.
@@ -65,9 +66,13 @@ export default function PlasmaStage({ children }: { children: ReactNode }) {
       // The app shows far more surfaces at once than the teaser's one panel.
       // Changing this recompiles the shaders, so it is set once, here.
       maxSurfaces={24}
-      // Behind the app's content, above the page background.
-      zIndex={-7}
+      // The overlays (PlasmaOverlay: a dialog above the scrim) sample this
+      // canvas as their background, so its frames are kept after they show.
+      preserveDrawingBuffer
+      canvas={false}
     >
+      {/* Behind the app's content, above the page background. */}
+      <PlasmaCanvas zIndex={-7} className={GROUND_CLASS} />
       {children}
     </PlasmaProvider>
   );

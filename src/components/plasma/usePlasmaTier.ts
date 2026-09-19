@@ -14,7 +14,10 @@ export function usePlasmaTier(): PlasmaTier {
     document.addEventListener('palette-change', update);
     // A settings control writes the attribute directly; watch for that too.
     const obs = new MutationObserver(update);
-    obs.observe(document.documentElement, { attributes: true, attributeFilter: ['data-plasma-tier'] });
+    obs.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['data-plasma-tier'],
+    });
     return () => {
       document.removeEventListener('palette-change', update);
       obs.disconnect();

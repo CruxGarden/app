@@ -36,7 +36,14 @@ export const PLASMA_TIERS: Record<PlasmaTier, Partial<PlasmaProviderProps>> = {
   medium: { quality: 1, frost: 0.2, pointerDrop: true, ambientDrops: false, flow: 0, stretch: 1 },
   // The default, and what the workspace example looks like.
   high: { quality: 1.25, frost: 0.35, pointerDrop: true, ambientDrops: false, flow: 0, stretch: 1 },
-  ultra: { quality: 1.75, frost: 0.45, pointerDrop: true, ambientDrops: true, flow: 0.4, stretch: 1.4 },
+  ultra: {
+    quality: 1.75,
+    frost: 0.45,
+    pointerDrop: true,
+    ambientDrops: true,
+    flow: 0.4,
+    stretch: 1.4,
+  },
 };
 
 export const DEFAULT_TIER: PlasmaTier = 'high';

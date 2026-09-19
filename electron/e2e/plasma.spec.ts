@@ -50,13 +50,32 @@ test('plasma: overlays paint a plate, pages wear a dock, controls keep their pai
       expect(home.some((c) => c.includes('bg-toolbar'))).toBe(true);
     }
 
-    // A dialog: plate, not transparent; and not a registered shape.
+    // A dialog: drawn by its own overlay canvas above the scrim where the
+    // material can run (the plate steps aside), a painted plate where it
+    // cannot; never a shape on the ground canvas either way.
     await page.getByRole('button', { name: 'Add Crux' }).click();
     const dialog = page.locator('[data-modal-open] .bg-panel').first();
     await expect(dialog).toBeVisible();
-    const dialogStyle = await bg('[data-modal-open] .bg-panel');
-    expect(dialogStyle?.bg).not.toBe(transparent);
-    expect(dialogStyle?.border).not.toBe(transparent);
+    const overlay = page.locator('[data-modal-open][data-plasma-overlay]');
+    if (await overlay.count()) {
+      await expect(overlay.locator('canvas')).toHaveCount(1);
+      expect((await bg('[data-modal-open] .bg-panel'))?.bg).toBe(transparent);
+      // The contents wait for the material, then arrive: the forming mark
+      // clears within a second and nothing is left held at opacity 0.
+      await expect(page.locator('[data-plasma-forming]')).toHaveCount(0, { timeout: 3_000 });
+      await expect
+        .poll(() =>
+          page.evaluate(
+            () =>
+              getComputedStyle(document.querySelector('[data-modal-open] .bg-panel > *')!).opacity,
+          ),
+        )
+        .toBe('1');
+    } else {
+      const dialogStyle = await bg('[data-modal-open] .bg-panel');
+      expect(dialogStyle?.bg).not.toBe(transparent);
+      expect(dialogStyle?.border).not.toBe(transparent);
+    }
     const withDialog = await shapes();
     if (withDialog && home) {
       const panels = (list: string[]) => list.filter((c) => c.includes('bg-panel')).length;

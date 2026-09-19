@@ -1,9 +1,12 @@
-import { type ReactNode, useEffect } from 'react';
+import { type ReactNode, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { cn } from '@/lib/cn';
 import { AnimatePresence, motion } from 'motion/react';
 import Panel from './Panel';
 import { useMotionRole } from '@/hooks/useMotionRole';
+import PlasmaOverlay from '@/components/plasma/PlasmaOverlay';
+import { usePlasmaOn } from '@/components/plasma/usePlasmaOn';
+import { FORMING_ATTR } from '@cruxgarden/plasma-ui';
 
 type ModalSize = 'sm' | 'md' | 'lg' | 'xl' | 'screen' | 'full';
 
@@ -78,6 +81,9 @@ export default function Modal({
 
   // The Mood's dialog motion (ADR 0041): Motion plays the enter on mount and the exit before unmount
   const role = useMotionRole('dialog');
+  // Under the Plasma theme the panel is drawn by a second canvas above the scrim (PlasmaOverlay).
+  const panelRef = useRef<HTMLDivElement>(null);
+  const plasma = usePlasmaOn();
 
   // Rendered at <body>: a dialog inside a glass surface would otherwise be trapped by the
   // panel's backdrop-filter, which makes that panel the containing block of `fixed` children
@@ -95,6 +101,7 @@ export default function Modal({
           )}
         >
           <div className="absolute inset-0 modal-scrim" onClick={onClose} />
+          <PlasmaOverlay surface={panelRef} />
           <motion.div
             data-motion-role="dialog"
             data-motion-choice={role.choice.enter}
@@ -105,6 +112,11 @@ export default function Modal({
             className={cn('relative z-10 flex', SIZE_CLASSES[size])}
           >
             <Panel
+              ref={panelRef}
+              // Marked as forming from the first paint, so the contents never
+              // show before the material: the overlay's renderer clears the
+              // mark when the surface has formed, or at once if it cannot draw.
+              {...(plasma ? { [FORMING_ATTR]: '' } : {})}
               padding="md"
               className={cn(
                 'flex flex-col w-full h-full',
