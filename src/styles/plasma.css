@@ -204,10 +204,22 @@ html[data-surface-style='plasma'] [data-modal-open][data-plasma-overlay] > * > .
   border-color: transparent;
   box-shadow: none;
 }
-/* The content well inside a dialog reads as a recess again, not a hole. */
+/* Inside a dialog the material is the only surface (Daniel, 2026-09-19: the
+   landing page's one clean card). The content well is not a recess and the
+   sections (Settings' Panels) are not boxes: both go flat, and a hairline of
+   the Mood's text keeps neighbouring sections apart. */
 html[data-surface-style='plasma'] [data-modal-open] .bg-panel > .bg-bg\/50 {
-  background: color-mix(in srgb, var(--bg) 55%, transparent);
-  border-color: color-mix(in srgb, var(--border) 70%, transparent);
+  background: transparent;
+  border-color: transparent;
+}
+html[data-surface-style='plasma'] [data-modal-open] .bg-panel .bg-panel {
+  background: transparent;
+  border-color: transparent;
+  border-radius: 0;
+  box-shadow: none;
+}
+html[data-surface-style='plasma'] [data-modal-open] .bg-panel .bg-panel + .bg-panel {
+  border-top-color: color-mix(in srgb, var(--text) 12%, transparent);
 }
 
 /* Inner surfaces: flat shades, no translucency, no second material. Mirrors
