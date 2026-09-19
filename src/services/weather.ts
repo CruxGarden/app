@@ -1,9 +1,9 @@
 /**
- * The weather at the garden (GARDEN-SCHEDULER-PLAN §2): a small poll of
- * Open-Meteo — no key, no account — for the place the person set in
- * Tending. When the sky changes kind (clear → rain) it raises the garden's
- * `weather` event, so a Schedule can wear a Mood that matches, dim the
- * plasma, or just say so. Nothing is fetched until a schedule asks.
+ * The weather at the garden (GARDEN-SCHEDULER-PLAN §2): a small poll of the
+ * person's own weather endpoint for the place they set in Tending. When the
+ * sky changes kind (clear → rain) it raises the garden's `weather` event, so
+ * a Schedule can wear a Mood that matches, dim the plasma, or just say so.
+ * Nothing is fetched until a schedule asks, and nothing is built in.
  */
 import { getSetting, setSetting } from './settings';
 import { emitGardenEvent } from './garden-events';
@@ -74,48 +74,62 @@ export function getWeather(): Weather | null {
   }
 }
 
+/**
+ * Where the weather comes from: a URL the person set, and nothing else. No
+ * third party is built in (Daniel, 2026-09-19). The endpoint is theirs — a
+ * home station, a Home Assistant sensor, a Crux Function, a crux.garden
+ * endpoint one day — and it answers a GET of `<url>?lat=<lat>&lon=<lon>`
+ * with JSON: `{ "kind": "rain", "temperature": 12.5, "day": true }`, where
+ * `kind` is one of the six, or a WMO `code` in its place. Anything extra is
+ * ignored. The source is fetched only while a weather schedule is on.
+ */
+export const WEATHER_URL_KEY = 'cruxgarden:weatherUrl';
+
+export function getWeatherUrl(): string {
+  return (getSetting(WEATHER_URL_KEY) as string | null) ?? '';
+}
+export function setWeatherUrl(url: string) {
+  setSetting(WEATHER_URL_KEY, url.trim());
+  setSetting(WEATHER_KEY, '');
+  if (url.trim() && getLocation()) void pollWeather();
+}
+
+/** The answer a weather endpoint gives; `kind` or a WMO `code`. */
+export function parseWeatherAnswer(raw: unknown, now = new Date()): Weather {
+  if (!raw || typeof raw !== 'object')
+    throw new Error('The weather endpoint did not answer with JSON.');
+  const v = raw as Record<string, unknown>;
+  const kind =
+    typeof v.kind === 'string' && WEATHER_KINDS.some((k) => k.id === v.kind)
+      ? (v.kind as WeatherKind)
+      : typeof v.code === 'number'
+        ? kindFromCode(v.code)
+        : null;
+  if (!kind) throw new Error('The weather endpoint gave no kind or WMO code.');
+  return {
+    kind,
+    temperature: typeof v.temperature === 'number' ? v.temperature : NaN,
+    day: v.day !== false,
+    at: now.toISOString(),
+  };
+}
+
 /** Test seam: the fetchers. */
 export interface WeatherSource {
   current(loc: Location): Promise<Weather>;
-  geocode(query: string): Promise<Location[]>;
   here(): Promise<Location>;
 }
 
-const openMeteo: WeatherSource = {
+const own: WeatherSource = {
   async current(loc) {
-    const url =
-      `https://api.open-meteo.com/v1/forecast?latitude=${loc.lat}&longitude=${loc.lon}` +
-      `&current=temperature_2m,weather_code,is_day&timezone=auto`;
-    const res = await fetch(url);
-    if (!res.ok) throw new Error(`Weather: ${res.status}`);
-    const json = (await res.json()) as {
-      current: { temperature_2m: number; weather_code: number; is_day: number };
-    };
-    return {
-      kind: kindFromCode(json.current.weather_code),
-      temperature: json.current.temperature_2m,
-      day: json.current.is_day === 1,
-      at: new Date().toISOString(),
-    };
-  },
-  async geocode(query) {
-    const url = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(query)}&count=5&language=en&format=json`;
-    const res = await fetch(url);
-    if (!res.ok) throw new Error(`Geocoding: ${res.status}`);
-    const json = (await res.json()) as {
-      results?: {
-        name: string;
-        admin1?: string;
-        country?: string;
-        latitude: number;
-        longitude: number;
-      }[];
-    };
-    return (json.results ?? []).map((r) => ({
-      name: [r.name, r.admin1, r.country].filter(Boolean).join(', '),
-      lat: r.latitude,
-      lon: r.longitude,
-    }));
+    const base = getWeatherUrl();
+    if (!base) throw new Error('No weather source set.');
+    const url = new URL(base);
+    url.searchParams.set('lat', String(loc.lat));
+    url.searchParams.set('lon', String(loc.lon));
+    const res = await fetch(url.toString());
+    if (!res.ok) throw new Error(`Weather source: ${res.status}`);
+    return parseWeatherAnswer(await res.json());
   },
   here() {
     return new Promise((resolve, reject) => {
@@ -135,11 +149,10 @@ const openMeteo: WeatherSource = {
   },
 };
 
-let source: WeatherSource = openMeteo;
+let source: WeatherSource = own;
 export function setWeatherSource(next: Partial<WeatherSource>) {
   source = { ...source, ...next };
 }
-export const geocode = (q: string) => source.geocode(q);
 export const locateHere = () => source.here();
 
 /**
@@ -148,7 +161,7 @@ export const locateHere = () => source.here();
  */
 export async function pollWeather(now = new Date()): Promise<Weather | null> {
   const loc = getLocation();
-  if (!loc) return null;
+  if (!loc || !getWeatherUrl()) return null;
   let w: Weather;
   try {
     w = { ...(await source.current(loc)), at: now.toISOString() };
@@ -169,7 +182,7 @@ export async function pollWeather(now = new Date()): Promise<Weather | null> {
 
 export function describeWeather(w: Weather): string {
   const label = WEATHER_KINDS.find((k) => k.id === w.kind)?.label ?? w.kind;
-  return `${label}, ${Math.round(w.temperature)}°C`;
+  return Number.isFinite(w.temperature) ? `${label}, ${Math.round(w.temperature)}°C` : label;
 }
 
 let ticker: ReturnType<typeof setInterval> | null = null;

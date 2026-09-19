@@ -23,7 +23,8 @@ import {
   type GardenEventName,
 } from './garden-events';
 import { runScheduleActions } from './schedule-actions';
-import { watchWeather, type WeatherKind } from './weather';
+import { getLocation, watchWeather, type WeatherKind } from './weather';
+import { nextSun, type SunPhase } from './sun';
 
 export const SCHEDULES_KEY = 'cruxgarden:schedules';
 /** The master switch for the schedules a Mood brings along. */
@@ -48,7 +49,9 @@ export type Trigger =
    */
   | { kind: 'timer'; phases: TimerPhase[]; rounds: number; startOn?: GardenEventName }
   /** The weather at the garden's location turns to this kind (or changes at all). */
-  | { kind: 'weather'; condition: WeatherKind | 'any' };
+  | { kind: 'weather'; condition: WeatherKind | 'any' }
+  /** The sun at the garden's location: dawn, sunrise, sunset, dusk — computed here, no service. */
+  | { kind: 'sun'; phase: SunPhase };
 
 export interface TimerPhase {
   label: string;
@@ -165,6 +168,8 @@ export function isTrigger(v: unknown): v is Trigger {
       );
     case 'weather':
       return WEATHER.includes(t.condition as WeatherKind);
+    case 'sun':
+      return ['dawn', 'sunrise', 'sunset', 'dusk'].includes(t.phase as string);
     default:
       return false;
   }
@@ -288,6 +293,10 @@ export function nextDue(trigger: Trigger, after: Date, anchor?: string): string 
     }
     case 'cron':
       return nextCron(trigger.expr, after)?.toISOString() ?? null;
+    case 'sun': {
+      const loc = getLocation();
+      return loc ? (nextSun(trigger.phase, after, loc.lat, loc.lon)?.toISOString() ?? null) : null;
+    }
     default:
       return null;
   }
@@ -318,7 +327,11 @@ function makeSchedule(input: ScheduleInput, now: Date): Schedule {
   };
   // A one-off in the past is due now; a repeat starts from now.
   if (schedule.trigger.kind === 'at') schedule.next = schedule.trigger.when;
-  else if (schedule.trigger.kind === 'every' || schedule.trigger.kind === 'cron')
+  else if (
+    schedule.trigger.kind === 'every' ||
+    schedule.trigger.kind === 'cron' ||
+    schedule.trigger.kind === 'sun'
+  )
     schedule.next = nextDue(schedule.trigger, now, now.toISOString()) ?? undefined;
   return schedule;
 }
@@ -417,7 +430,10 @@ export function setScheduleEnabled(id: string, enabled: boolean, now = new Date(
     if (s.id !== id) return s;
     const on = { ...s, enabled };
     // Switching a repeat back on starts it from now, not from a stale `next`.
-    if (enabled && (s.trigger.kind === 'every' || s.trigger.kind === 'cron'))
+    if (
+      enabled &&
+      (s.trigger.kind === 'every' || s.trigger.kind === 'cron' || s.trigger.kind === 'sun')
+    )
       on.next = nextDue(s.trigger, now, now.toISOString()) ?? undefined;
     return on;
   });
@@ -448,12 +464,15 @@ export function tickSchedules(now = new Date()): Firing[] {
   const next = useSchedules.getState().schedules.map((s): Schedule => {
     if (!active(s)) return s;
     const tr = s.trigger;
-    if (tr.kind === 'at' || tr.kind === 'every' || tr.kind === 'cron') {
+    if (tr.kind === 'at' || tr.kind === 'every' || tr.kind === 'cron' || tr.kind === 'sun') {
       const due = s.next ? Date.parse(s.next) : tr.kind === 'at' ? Date.parse(tr.when) : NaN;
       if (Number.isNaN(due)) {
-        // A repeat with no `next` yet (an upgraded record): start it from now.
+        // A repeat with no `next` yet (an upgraded record, or a sun trigger
+        // waiting for a place): start it from now, or keep waiting.
+        const next = nextDue(tr, now, now.toISOString()) ?? undefined;
+        if (!next) return s;
         changed = true;
-        return { ...s, next: nextDue(tr, now, now.toISOString()) ?? undefined };
+        return { ...s, next };
       }
       if (due > t) return s;
       const missed = t - due > MISSED_AFTER_MS;
@@ -467,7 +486,9 @@ export function tickSchedules(now = new Date()): Firing[] {
               ? `Due ${when.toLocaleTimeString([], { timeStyle: 'short' })}.`
               : tr.kind === 'every'
                 ? `Every ${tr.minutes} min.`
-                : `On schedule.`,
+                : tr.kind === 'sun'
+                  ? `${SUN_LABEL[tr.phase]} at ${when.toLocaleTimeString([], { timeStyle: 'short' })}.`
+                  : `On schedule.`,
           missed,
           now,
         ),
@@ -749,8 +770,17 @@ export function describeTrigger(tr: Trigger, cruxTitle: (id?: string) => string)
       }${tr.startOn ? `, starts when ${EVENT_LABEL[tr.startOn]}` : ''}`;
     case 'weather':
       return tr.condition === 'any' ? 'when the weather changes' : `when it turns ${tr.condition}`;
+    case 'sun':
+      return `at ${SUN_LABEL[tr.phase].toLowerCase()}${getLocation() ? '' : ' (set a place in the form)'}`;
   }
 }
+
+const SUN_LABEL: Record<SunPhase, string> = {
+  dawn: 'Dawn',
+  sunrise: 'Sunrise',
+  sunset: 'Sunset',
+  dusk: 'Dusk',
+};
 
 /** m:ss for a countdown. */
 export function formatRemaining(ms: number): string {

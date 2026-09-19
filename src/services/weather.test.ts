@@ -2,13 +2,16 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import {
   LOCATION_KEY,
   WEATHER_KEY,
+  WEATHER_URL_KEY,
   describeWeather,
   getLocation,
   getWeather,
   kindFromCode,
+  parseWeatherAnswer,
   pollWeather,
   setLocation,
   setWeatherSource,
+  setWeatherUrl,
   watchWeather,
 } from './weather';
 import { setSetting } from './settings';
@@ -20,15 +23,35 @@ describe('weather (GARDEN-SCHEDULER-PLAN)', () => {
   beforeEach(() => {
     setSetting(LOCATION_KEY, '');
     setSetting(WEATHER_KEY, '');
+    setSetting(WEATHER_URL_KEY, 'https://station.example/weather');
     calls = 0;
     setWeatherSource({
       current: async () => {
         calls++;
         return { kind: kindFromCode(code), temperature: 17.6, day: true, at: '' };
       },
-      geocode: async (q) => [{ name: `${q}, Somewhere`, lat: 1, lon: 2 }],
       here: async () => ({ name: 'Here', lat: 3, lon: 4 }),
     });
+  });
+
+  it("reads the person's own endpoint's answer: a kind, or a WMO code; refuses anything else", () => {
+    expect(parseWeatherAnswer({ kind: 'snow', temperature: -2, day: false })).toMatchObject({
+      kind: 'snow',
+      temperature: -2,
+      day: false,
+    });
+    expect(parseWeatherAnswer({ code: 95 })).toMatchObject({ kind: 'storm', day: true });
+    expect(describeWeather(parseWeatherAnswer({ code: 0 }))).toBe('Clear');
+    expect(() => parseWeatherAnswer({ kind: 'plaid' })).toThrow(/kind or WMO code/);
+    expect(() => parseWeatherAnswer('rain')).toThrow(/JSON/);
+  });
+
+  it('with no endpoint set nothing is fetched at all', async () => {
+    setWeatherUrl('');
+    setLocation({ name: 'X', lat: 0, lon: 0 });
+    await new Promise((r) => setTimeout(r, 0));
+    expect(await pollWeather()).toBeNull();
+    expect(calls).toBe(0);
   });
 
   it('folds WMO codes to six kinds', () => {

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { Button, Toggle } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import { useGardenStore } from '@/stores/gardenStore';
@@ -34,14 +34,16 @@ import { SettingsKey } from '@/lib/constants';
 import {
   WEATHER_KINDS,
   describeWeather,
-  geocode,
   getLocation,
   getWeather,
+  getWeatherUrl,
   locateHere,
   setLocation,
+  setWeatherUrl,
   type Location,
   type WeatherKind,
 } from '@/services/weather';
+import { SUN_PHASES, sunTimes, type SunPhase } from '@/services/sun';
 
 /**
  * Schedules on the Tending page (GARDEN-SCHEDULER-PLAN §2): a cron for the
@@ -131,32 +133,25 @@ function TimerControls({ s }: { s: Schedule }) {
   );
 }
 
-/** Where the garden is, for the weather: a place typed, or "use my location". */
-function LocationRow() {
+/** Where the garden is: latitude and longitude typed, or the device's own location. Nothing is looked up anywhere. */
+function LocationRow({ children }: { children?: ReactNode }) {
   const [loc, setLoc] = useState<Location | null>(() => getLocation());
-  const [query, setQuery] = useState('');
-  const [found, setFound] = useState<Location[]>([]);
+  const [lat, setLat] = useState('');
+  const [lon, setLon] = useState('');
+  const [name, setName] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
-  const weather = getWeather();
   const pick = (l: Location | null) => {
     setLocation(l);
     setLoc(l);
-    setFound([]);
-    setQuery('');
-  };
-  const search = async () => {
-    setBusy(true);
     setError('');
-    try {
-      const list = await geocode(query.trim());
-      if (!list.length) setError('No place by that name.');
-      setFound(list);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
-    } finally {
-      setBusy(false);
-    }
+  };
+  const typed = () => {
+    const la = Number(lat);
+    const lo = Number(lon);
+    if (!Number.isFinite(la) || !Number.isFinite(lo) || Math.abs(la) > 90 || Math.abs(lo) > 180)
+      return setError('Latitude −90…90 and longitude −180…180.');
+    pick({ name: name.trim() || `${la.toFixed(2)}, ${lo.toFixed(2)}`, lat: la, lon: lo });
   };
   const here = async () => {
     setBusy(true);
@@ -170,11 +165,14 @@ function LocationRow() {
     }
   };
   return (
-    <div className="flex flex-col gap-1.5" data-testid="weather-location">
+    <div className="flex flex-col gap-1.5" data-testid="garden-location">
       {loc ? (
         <div className="flex flex-wrap items-center gap-2">
           <span className="text-text">{loc.name}</span>
-          {weather && <span className="text-text-muted">{describeWeather(weather)}</span>}
+          <span className="text-text-muted">
+            {loc.lat.toFixed(2)}, {loc.lon.toFixed(2)}
+          </span>
+          {children}
           <button
             type="button"
             onClick={() => pick(null)}
@@ -186,47 +184,79 @@ function LocationRow() {
       ) : (
         <div className="flex flex-wrap items-center gap-2">
           <input
-            aria-label="Place"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') {
-                e.preventDefault();
-                void search();
-              }
-            }}
-            placeholder="A town or city"
-            className={cn(field, 'w-48')}
+            aria-label="Place name"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="Name (optional)"
+            className={cn(field, 'w-36')}
           />
-          <Button size="sm" variant="secondary" onClick={search} disabled={busy || !query.trim()}>
-            Find
+          <input
+            aria-label="Latitude"
+            value={lat}
+            onChange={(e) => setLat(e.target.value)}
+            placeholder="Latitude"
+            inputMode="decimal"
+            className={cn(field, 'w-24')}
+          />
+          <input
+            aria-label="Longitude"
+            value={lon}
+            onChange={(e) => setLon(e.target.value)}
+            placeholder="Longitude"
+            inputMode="decimal"
+            className={cn(field, 'w-24')}
+          />
+          <Button size="sm" variant="secondary" onClick={typed} disabled={!lat || !lon}>
+            Set
           </Button>
           <Button size="sm" variant="ghost" onClick={here} disabled={busy}>
             Use my location
           </Button>
         </div>
       )}
-      {found.length > 0 && (
-        <ul className="flex flex-wrap gap-1">
-          {found.map((l) => (
-            <li key={`${l.lat},${l.lon}`}>
-              <button
-                type="button"
-                onClick={() => pick(l)}
-                className="px-2 py-0.5 rounded-[var(--radius-sm)] border border-border hover:border-accent cursor-pointer"
-              >
-                {l.name}
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
       {error && <span className="text-error">{error}</span>}
+    </div>
+  );
+}
+
+/** The person's own weather endpoint — nothing is built in. */
+function WeatherSourceRow() {
+  const [url, setUrl] = useState(getWeatherUrl);
+  const weather = getWeather();
+  return (
+    <div className="flex flex-col gap-1.5" data-testid="weather-source">
+      <div className="flex flex-wrap items-center gap-2">
+        <input
+          aria-label="Weather endpoint"
+          value={url}
+          onChange={(e) => setUrl(e.target.value)}
+          onBlur={() => setWeatherUrl(url)}
+          placeholder="https://your-station.local/weather"
+          className={cn(field, 'w-80 font-mono')}
+        />
+        {weather && <span className="text-text-muted">{describeWeather(weather)}</span>}
+      </div>
       <span className="text-2xs text-text-muted">
-        Checked every quarter hour from Open-Meteo while a weather schedule is on; nothing else is
-        sent.
+        Yours to run: it is asked <code>?lat=&lon=</code> every quarter hour while a weather
+        schedule is on and answers JSON like{' '}
+        <code>{'{ "kind": "rain", "temperature": 12.5, "day": true }'}</code> (a WMO{' '}
+        <code>code</code> works in place of <code>kind</code>). No service is built in.
       </span>
     </div>
+  );
+}
+
+/** Today's sun at the place, so the person can see what the trigger means. */
+function SunToday() {
+  const loc = getLocation();
+  if (!loc) return null;
+  const t = sunTimes(new Date(), loc.lat, loc.lon);
+  const fmt = (d: Date | null) => (d ? d.toLocaleTimeString([], { timeStyle: 'short' }) : '—');
+  return (
+    <span className="text-text-muted" data-testid="sun-today">
+      today: dawn {fmt(t.dawn)} · sunrise {fmt(t.sunrise)} · sunset {fmt(t.sunset)} · dusk{' '}
+      {fmt(t.dusk)}
+    </span>
   );
 }
 
@@ -266,6 +296,7 @@ export default function SchedulesSection() {
   const [rounds, setRounds] = useState(TIMER_PRESETS[0]!.rounds);
   const [startOn, setStartOn] = useState<GardenEventName | ''>('');
   const [condition, setCondition] = useState<WeatherKind | 'any'>('any');
+  const [sunPhase, setSunPhase] = useState<SunPhase>('sunset');
   const [forMood, setForMood] = useState(false);
   const wornMoodId = (getSetting(SettingsKey.WornMoodId) as string | null) || '';
   const [moodsOn, setMoodsOn] = useState(moodSchedulesEnabled);
@@ -308,6 +339,8 @@ export default function SchedulesSection() {
         return { kind: 'timer', phases, rounds, ...(startOn ? { startOn } : {}) };
       case 'weather':
         return { kind: 'weather', condition };
+      case 'sun':
+        return { kind: 'sun', phase: sunPhase };
     }
   };
 
@@ -358,10 +391,10 @@ export default function SchedulesSection() {
           <h2 className="font-display text-base text-heading">Schedules</h2>
           <p className="text-xs text-text-muted">
             A cron for the garden: at a time, on an interval, on a cron line, a timer with phases,
-            when something happens, when the weather turns, or when a Crux sits untouched — then
-            alert, sound a cue, notify, wear a Mood, send a prompt, or run a tool. They run while
-            the app is open, or from the menu bar in docked mode; one that comes due while it is
-            closed says so when you are back.
+            at dawn or dusk, when something happens, when the weather turns, or when a Crux sits
+            untouched — then alert, sound a cue, notify, wear a Mood, send a prompt, or run a tool.
+            They run while the app is open, or from the menu bar in docked mode; one that comes due
+            while it is closed says so when you are back.
           </p>
         </div>
         <Button size="sm" variant="secondary" onClick={() => setAdding((v) => !v)}>
@@ -404,6 +437,7 @@ export default function SchedulesSection() {
               <option value="cron">On a cron line</option>
               <option value="timer">A timer with phases (a pomodoro)</option>
               <option value="event">When something happens in the garden</option>
+              <option value="sun">At dawn, sunrise, sunset or dusk</option>
               <option value="weather">When the weather turns</option>
               <option value="untouched">When a Crux sits untouched</option>
             </select>
@@ -622,8 +656,33 @@ export default function SchedulesSection() {
                     </option>
                   ))}
                 </select>
+                <span className="text-text-muted">Source</span>
+                <WeatherSourceRow />
                 <span className="text-text-muted">Place</span>
                 <LocationRow />
+              </>
+            )}
+            {kind === 'sun' && (
+              <>
+                <label htmlFor="schedule-sun" className="text-text-muted">
+                  Moment
+                </label>
+                <select
+                  id="schedule-sun"
+                  value={sunPhase}
+                  onChange={(e) => setSunPhase(e.target.value as SunPhase)}
+                  className={field}
+                >
+                  {SUN_PHASES.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.label}
+                    </option>
+                  ))}
+                </select>
+                <span className="text-text-muted">Place</span>
+                <LocationRow>
+                  <SunToday />
+                </LocationRow>
               </>
             )}
             {(kind === 'event' || kind === 'untouched') && (

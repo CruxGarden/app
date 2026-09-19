@@ -449,4 +449,28 @@ describe('schedules (GARDEN-SCHEDULER-PLAN)', () => {
     syncMoodSchedules('plasma', [], at(0));
     expect(list().map((s) => s.title)).toEqual(['Mine']);
   });
+
+  it('a sun trigger waits for a place, then fires at the next sunset there — computed, not fetched', () => {
+    setSetting('cruxgarden:location', '');
+    const s = addSchedule(
+      {
+        title: 'Evening Mood',
+        trigger: { kind: 'sun', phase: 'sunset' },
+        actions: [{ kind: 'mood', moodId: 'last-light' }],
+      },
+      at(0),
+    );
+    expect(s.next).toBeUndefined();
+    expect(describeTrigger(s.trigger, () => '')).toBe('at sunset (set a place in the form)');
+    expect(tickSchedules(at(MIN))).toEqual([]);
+    setSetting('cruxgarden:location', JSON.stringify({ name: 'Greenwich', lat: 51.48, lon: 0 }));
+    expect(tickSchedules(at(2 * MIN))).toEqual([]);
+    const next = useSchedules.getState().schedules[0]!.next!;
+    // 2026-09-19 at Greenwich: sunset about 18:11 UTC.
+    expect(next.slice(0, 13)).toBe('2026-09-19T18');
+    const fired = tickSchedules(new Date(Date.parse(next) + MIN));
+    expect(fired.map((f) => f.reason)).toEqual([expect.stringMatching(/^Sunset at /)]);
+    expect(useSchedules.getState().schedules[0]!.next!.slice(0, 10)).toBe('2026-09-20');
+    setSetting('cruxgarden:location', '');
+  });
 });
