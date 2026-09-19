@@ -61,7 +61,7 @@ export const THEME_TOOL_DEFINITIONS: ToolDefinition[] = [
         patch: {
           type: 'object',
           description:
-            'Your own cue: { version: 1, name, voices: [{ wave: sine|triangle|square|sawtooth|noise, notes: ["E5","B5"], at: [0, 0.08], dur, attack, release, level }], filter?: { type, hz, q }, fx?: { delay?: { time, feedback }, bitcrush? }, gain }. Seconds, levels 0..1, three seconds at most.',
+            'Your own cue: { version: 1, name, voices: [{ wave: sine|triangle|square|sawtooth|noise, notes: ["E5","B5"], at: [0, 0.08], dur, attack, release, level }], filter?: { type, hz, q }, fx?: { delay?: { time, feedback, mix }, reverb?: { seconds, mix }, bitcrush? }, gain }. Seconds, levels 0..1, three seconds at most.',
         },
         silent: { type: 'boolean', description: 'true to play nothing on this event.' },
         try: { type: 'boolean', description: 'Play it once now.' },

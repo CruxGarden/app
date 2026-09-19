@@ -104,7 +104,7 @@ export const CUE_PRESETS: CuePreset[] = [
     group: 'garden',
     patch: patch('Dew', [v('sine', ['G5', 'D6'], [0, 0.09], 0.06, 0.5, 0.7, { attack: 0.01 })], {
       filter: { type: 'lowpass', hz: 3200, q: 0.7 },
-      fx: { delay: { time: 0.18, feedback: 0.25 } },
+      fx: { delay: { time: 0.18, feedback: 0.25, mix: 0.4 }, reverb: { seconds: 1.2, mix: 0.3 } },
     }),
   },
   {
@@ -121,6 +121,7 @@ export const CUE_PRESETS: CuePreset[] = [
     group: 'garden',
     patch: patch('Root', [v('sine', ['D3', 'A3'], [0, 0.2], 0.3, 0.9, 0.8, { attack: 0.03 })], {
       filter: { type: 'lowpass', hz: 900, q: 0.8 },
+      fx: { reverb: { seconds: 2, mix: 0.4 } },
     }),
   },
   // ── 8-bit: square waves, crushed ──
@@ -187,7 +188,12 @@ export const CUE_PRESETS: CuePreset[] = [
     patch: patch(
       'Ripple',
       [v('triangle', ['E4', 'B4', 'E5'], [0, 0.11, 0.22], 0.08, 0.6, 0.6, { attack: 0.02 })],
-      { fx: { delay: { time: 0.22, feedback: 0.35 } } },
+      {
+        fx: {
+          delay: { time: 0.22, feedback: 0.35, mix: 0.5 },
+          reverb: { seconds: 1.6, mix: 0.35 },
+        },
+      },
     ),
   },
   {

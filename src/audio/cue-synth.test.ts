@@ -60,6 +60,7 @@ function fakeContext() {
       node('filter', { type: 'lowpass', frequency: param('f'), Q: param('q') }),
     createDelay: () => node('delay', { delayTime: param('delay') }),
     createWaveShaper: () => node('shaper', { curve: null }),
+    createConvolver: () => node('room', { buffer: null }),
     createBuffer: (_c: number, length: number) => ({
       getChannelData: () => new Float32Array(length),
     }),
@@ -119,6 +120,9 @@ describe('cue synth', () => {
     scheduleCue(ctx, dew, 0);
     expect(log.some((l) => l.startsWith('filter ->'))).toBe(true);
     expect(log.some((l) => l.startsWith('delay ->'))).toBe(true);
+    expect(log.some((l) => l.startsWith('room ->'))).toBe(true);
+    // A room lengthens the tail the engine reports.
+    expect(cueLength(dew)).toBeGreaterThan(cueLength({ ...dew, fx: { delay: dew.fx!.delay } }));
     const { ctx: c2, log: log2 } = fakeContext();
     scheduleCue(c2, CUE_PRESETS.find((p) => p.id === 'hop')!.patch, 0);
     expect(log2.some((l) => l.startsWith('shaper ->'))).toBe(true);
@@ -141,6 +145,9 @@ describe('cue synth', () => {
       parseCuePatch({ ...base, voices: [{ ...base.voices[0], notes: ['X9'], at: [0] }] }),
     ).toThrow(/note/);
     expect(() => parseCuePatch({ ...base, fx: { bitcrush: 1 } })).toThrow(/bit depth/);
+    expect(() => parseCuePatch({ ...base, fx: { reverb: { seconds: 9, mix: 0.5 } } })).toThrow(
+      /reverb length/,
+    );
   });
 
   it('a choice is a preset id or a patch; anything else is silent', () => {

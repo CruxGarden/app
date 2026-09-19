@@ -37,7 +37,7 @@ test('a cue is a preset from the bank, or one of your own', async () => {
     const editor = page.getByTestId('cue-editor');
     await expect(editor).toBeVisible();
     await expect(editor.getByLabel('Cue name')).toHaveValue('Dew (yours)');
-    await editor.getByLabel('Wave').selectOption('square');
+    await editor.getByLabel('Wave', { exact: true }).selectOption('square');
     await editor.getByLabel('Cue name').fill('Two drops');
     await editor.getByLabel('Notes').fill('A5 E5 A4');
     await editor.getByLabel('Notes').press('Enter');

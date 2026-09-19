@@ -38,8 +38,10 @@ export interface CuePatch {
   voices: CueVoice[];
   filter?: { type: 'lowpass' | 'highpass' | 'bandpass'; hz: number; q?: number };
   fx?: {
-    /** Delay time and feedback 0..0.9. */
-    delay?: { time: number; feedback: number };
+    /** Echo: time in seconds, feedback 0..0.9, mix 0..1 (wet share). */
+    delay?: { time: number; feedback: number; mix?: number };
+    /** Reverb: a generated room, seconds of tail and mix 0..1. */
+    reverb?: { seconds: number; mix: number };
     /** Bit depth 2..16; anything below 16 crushes. */
     bitcrush?: number;
   };
@@ -126,13 +128,21 @@ export function parseCuePatch(raw: unknown): CuePatch {
       fx.delay = {
         time: num(d.time, 0.01, 1, 'delay time'),
         feedback: num(d.feedback, 0, 0.9, 'delay feedback'),
+        mix: num(d.mix, 0, 1, 'delay mix', 0.5),
+      };
+    }
+    if (x.reverb !== undefined) {
+      const r = (x.reverb ?? {}) as Record<string, unknown>;
+      fx.reverb = {
+        seconds: num(r.seconds, 0.1, 4, 'reverb length'),
+        mix: num(r.mix, 0, 1, 'reverb mix'),
       };
     }
     if (x.bitcrush !== undefined) fx.bitcrush = num(x.bitcrush, 2, 16, 'bit depth');
   }
   const patch: CuePatch = { version: 1, name, voices, gain: num(o.gain, 0, 1, 'gain', 0.18) };
   if (filter) patch.filter = filter;
-  if (fx && (fx.delay || fx.bitcrush !== undefined)) patch.fx = fx;
+  if (fx && (fx.delay || fx.reverb || fx.bitcrush !== undefined)) patch.fx = fx;
   if (cueLength(patch) > CUE_MAX_SECONDS + 1)
     throw new Error(`A cue may not sound longer than ${CUE_MAX_SECONDS} seconds`);
   return patch;
@@ -143,6 +153,7 @@ export function cueLength(patch: CuePatch): number {
   let end = 0;
   for (const v of patch.voices) for (const t of v.at) end = Math.max(end, t + v.dur + v.release);
   if (patch.fx?.delay) end += patch.fx.delay.time * 3;
+  if (patch.fx?.reverb) end += patch.fx.reverb.seconds;
   return end;
 }
 
@@ -159,8 +170,37 @@ export interface CueContext {
   createBiquadFilter(): BiquadFilterNode;
   createDelay(maxDelayTime?: number): DelayNode;
   createWaveShaper(): WaveShaperNode;
+  createConvolver(): ConvolverNode;
   createBuffer(channels: number, length: number, sampleRate: number): AudioBuffer;
   createBufferSource(): AudioBufferSourceNode;
+}
+
+/** A xorshift so a generated buffer is the same every time, everywhere. */
+function fillNoise(data: Float32Array, seed: number, decay?: (i: number) => number) {
+  let x = seed;
+  for (let i = 0; i < data.length; i++) {
+    x ^= x << 13;
+    x ^= x >>> 17;
+    x ^= x << 5;
+    const n = ((x >>> 0) / 0xffffffff) * 2 - 1;
+    data[i] = decay ? n * decay(i) : n;
+  }
+}
+
+const roomCache = new WeakMap<CueContext, Map<number, AudioBuffer>>();
+/** A room: exponentially decaying noise, the classic generated impulse. */
+function roomBuffer(ctx: CueContext, seconds: number): AudioBuffer {
+  let rooms = roomCache.get(ctx);
+  if (!rooms) roomCache.set(ctx, (rooms = new Map()));
+  const key = Math.round(seconds * 100);
+  let buf = rooms.get(key);
+  if (buf) return buf;
+  const length = Math.max(1, Math.floor(ctx.sampleRate * seconds));
+  buf = ctx.createBuffer(2, length, ctx.sampleRate);
+  for (let c = 0; c < 2; c++)
+    fillNoise(buf.getChannelData(c), 0x9e3779b1 + c * 7919, (i) => Math.pow(1 - i / length, 3));
+  rooms.set(key, buf);
+  return buf;
 }
 
 let noiseCache: WeakMap<CueContext, AudioBuffer> | null = null;
@@ -168,17 +208,9 @@ function noiseBuffer(ctx: CueContext): AudioBuffer {
   noiseCache ??= new WeakMap();
   let buf = noiseCache.get(ctx);
   if (buf) return buf;
-  const seconds = 1;
-  buf = ctx.createBuffer(1, Math.floor(ctx.sampleRate * seconds), ctx.sampleRate);
-  const data = buf.getChannelData(0);
-  // Deterministic white noise: the same "seed" everywhere, so a cue sounds the same twice.
-  let x = 0x2f6e2b1;
-  for (let i = 0; i < data.length; i++) {
-    x ^= x << 13;
-    x ^= x >>> 17;
-    x ^= x << 5;
-    data[i] = ((x >>> 0) / 0xffffffff) * 2 - 1;
-  }
+  buf = ctx.createBuffer(1, Math.floor(ctx.sampleRate), ctx.sampleRate);
+  // Deterministic white noise: the same seed everywhere, so a cue sounds the same twice.
+  fillNoise(buf.getChannelData(0), 0x2f6e2b1);
   noiseCache.set(ctx, buf);
   return buf;
 }
@@ -215,6 +247,18 @@ export function scheduleCue(ctx: CueContext, patch: CuePatch, at = ctx.currentTi
     f.connect(head);
     head = f;
   }
+  if (patch.fx?.reverb) {
+    const room = ctx.createConvolver();
+    room.buffer = roomBuffer(ctx, patch.fx.reverb.seconds);
+    const wet = ctx.createGain();
+    wet.gain.value = patch.fx.reverb.mix;
+    room.connect(wet);
+    wet.connect(head);
+    const dry = ctx.createGain();
+    dry.gain.value = 1 - patch.fx.reverb.mix * 0.5;
+    dry.connect(head);
+    head = mergeInto(ctx, dry, room);
+  }
   if (patch.fx?.delay) {
     const d = ctx.createDelay(1);
     d.delayTime.value = patch.fx.delay.time;
@@ -225,7 +269,7 @@ export function scheduleCue(ctx: CueContext, patch: CuePatch, at = ctx.currentTi
     d.connect(head);
     // dry stays on `head`; wet joins through the delay
     const wet = ctx.createGain();
-    wet.gain.value = 0.5;
+    wet.gain.value = patch.fx.delay.mix ?? 0.5;
     wet.connect(d);
     head = mergeInto(ctx, head, wet);
   }
@@ -268,6 +312,7 @@ export function scheduleCue(ctx: CueContext, patch: CuePatch, at = ctx.currentTi
     });
   }
   if (patch.fx?.delay) end += patch.fx.delay.time * 3;
+  if (patch.fx?.reverb) end += patch.fx.reverb.seconds;
   return end;
 }
 
@@ -292,4 +337,27 @@ export async function playCuePatch(
   const c = ctx ?? (own ??= new AudioContext());
   if (c.state === 'suspended') await c.resume().catch(() => {});
   scheduleCue(c, patch, c.currentTime, level);
+}
+
+/**
+ * Render a patch offline and return a mono trace, downsampled to `points`
+ * peaks, for drawing. Null where OfflineAudioContext does not exist (tests).
+ */
+export async function renderCueTrace(patch: CuePatch, points = 240): Promise<Float32Array | null> {
+  if (typeof OfflineAudioContext === 'undefined') return null;
+  const rate = 22050;
+  const seconds = Math.min(CUE_MAX_SECONDS + 1, Math.max(0.1, cueLength(patch) + 0.05));
+  const ctx = new OfflineAudioContext(1, Math.ceil(rate * seconds), rate);
+  scheduleCue(ctx as unknown as CueContext, patch, 0, 1);
+  const rendered = await ctx.startRendering();
+  const data = rendered.getChannelData(0);
+  const out = new Float32Array(points);
+  const per = Math.max(1, Math.floor(data.length / points));
+  for (let p = 0; p < points; p++) {
+    let peak = 0;
+    for (let i = p * per; i < Math.min(data.length, (p + 1) * per); i++)
+      peak = Math.max(peak, Math.abs(data[i]!));
+    out[p] = peak;
+  }
+  return out;
 }
