@@ -80,6 +80,7 @@ const api: ElectronBridge = {
     openWeb: (url: string) => ipcRenderer.invoke('desktop:open-web', url) as Promise<void>,
     info: () => ipcRenderer.invoke('desktop:info') as Promise<DesktopInfo>,
     openLogs: () => ipcRenderer.invoke('desktop:open-logs') as Promise<void>,
+    setDocked: (on: boolean) => ipcRenderer.invoke('desktop:set-docked', on) as Promise<void>,
   },
 
   updates: {

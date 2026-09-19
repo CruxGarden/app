@@ -43,6 +43,12 @@ export interface DesktopBridge {
   info(): Promise<DesktopInfo>;
   /** Reveal the local log folder (ADR 0008: logs are local, user-inspectable). */
   openLogs(): Promise<void>;
+  /**
+   * Docked mode: closing the window hides it and the app keeps running from
+   * the menu bar (a tray icon with Open and Quit), so Schedules keep ticking
+   * and Alerts keep collecting. Off, closing the window is closing the app.
+   */
+  setDocked?(on: boolean): Promise<void>;
 }
 
 export interface DesktopInfo {

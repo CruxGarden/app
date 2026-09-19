@@ -2,7 +2,15 @@ import { useEffect, useState } from 'react';
 import { Panel, Button, Toggle } from '@/components/ui';
 import { Capability, can } from '@/lib/platform';
 import type { DesktopInfo, UpdateState } from '@/lib/platform';
-import { getDesktopInfo, openLogs, openWeb, updates, shortenHomePath } from '@/services/desktop';
+import {
+  getDesktopInfo,
+  openLogs,
+  openWeb,
+  updates,
+  shortenHomePath,
+  isDockedMode,
+  setDockedMode,
+} from '@/services/desktop';
 import { RELEASES_URL } from '@/lib/site';
 
 /**
@@ -13,6 +21,7 @@ export default function DesktopSettings() {
   const desktop = can(Capability.Updates);
   const [info, setInfo] = useState<DesktopInfo | null>(null);
   const [state, setState] = useState<UpdateState | null>(null);
+  const [dockedMode, setDocked] = useState(() => isDockedMode());
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
@@ -133,6 +142,22 @@ export default function DesktopSettings() {
           The update check is the only routine network call this app makes on its own. Nothing
           downloads without your click; once downloaded, the update installs when you quit the app
           or click Restart to update.
+        </p>
+
+        <div className="divider my-1" />
+
+        <Toggle
+          label="Keep running in the menu bar when the window closes"
+          checked={dockedMode}
+          onChange={(on) => {
+            setDocked(on);
+            void setDockedMode(on);
+          }}
+        />
+        <p className="text-xxs text-text-muted">
+          Docked mode: closing the window puts it away and the garden keeps running — Schedules
+          tick, Alerts collect — with Open and Quit in the menu bar. Off, closing the window closes
+          the app.
         </p>
 
         <div className="divider my-1" />

@@ -96,6 +96,8 @@ export enum SettingsKey {
   AgentMetricsCapture = 'cruxgarden:agentMetricsCapture',
   /** Where Save writes the report, relative to the Garden Root */
   AgentMetricsPath = 'cruxgarden:agentMetricsPath',
+  /** Docked mode: keep running from the menu bar when the window closes */
+  DockedMode = 'cruxgarden:dockedMode',
 
   // Layout
   GlobalLayout = 'cruxgarden:layout:global',

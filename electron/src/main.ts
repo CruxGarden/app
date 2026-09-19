@@ -36,6 +36,49 @@ try {
 }
 
 let mainWindow: any = null;
+// Docked mode (GARDEN-SCHEDULER-PLAN): closing the window hides it; the app
+// lives on in the menu bar until Quit. `quitting` tells the close handler the
+// difference between the red button and Cmd+Q / the tray's Quit.
+let docked = false;
+let quitting = false;
+let tray: any = null;
+function showMainWindow() {
+  if (!mainWindow) {
+    createWindow();
+    return;
+  }
+  mainWindow.show();
+  mainWindow.focus();
+}
+function setDocked(on: boolean) {
+  docked = on;
+  if (on && !tray) {
+    const { Tray, Menu, nativeImage } = require('electron');
+    const image = nativeImage
+      .createFromPath(path.join(__dirname, '../build/icon.png'))
+      .resize({ width: 18, height: 18 });
+    if (process.platform === 'darwin') image.setTemplateImage(false);
+    tray = new Tray(image);
+    tray.setToolTip('Crux Garden');
+    tray.setContextMenu(
+      Menu.buildFromTemplate([
+        { label: 'Open Crux Garden', click: () => showMainWindow() },
+        { type: 'separator' },
+        {
+          label: 'Quit Crux Garden',
+          click: () => {
+            quitting = true;
+            app.quit();
+          },
+        },
+      ]),
+    );
+    tray.on('click', () => showMainWindow());
+  } else if (!on && tray) {
+    tray.destroy();
+    tray = null;
+  }
+}
 let workspaceCloseGuard = false;
 let workspaceClosePending = false;
 let workspaceMayClose = false;
@@ -194,6 +237,9 @@ function createWindow() {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
       nodeIntegration: false,
+      // Schedules tick in the window; a hidden window in docked mode must
+      // keep its timers.
+      backgroundThrottling: false,
     },
   });
 
@@ -256,7 +302,15 @@ function createWindow() {
       mainWindow?.webContents.send('workspace:command', 'cancel');
     }
   });
-  mainWindow.on('close', (event: any) => requestWorkspaceClose(event));
+  mainWindow.on('close', (event: any) => {
+    // The red button in docked mode: put the window away, keep the garden running.
+    if (docked && !quitting) {
+      event.preventDefault();
+      mainWindow.hide();
+      return;
+    }
+    requestWorkspaceClose(event);
+  });
 
   // The preload re-runs on every top-level navigation, so navigating this
   // window anywhere else would hand `electronAPI` — BYOK secrets, raw SQL,
@@ -562,6 +616,7 @@ function setupIpc() {
     logsDir,
     userDataDir: app.getPath('userData'),
   }));
+  ipcMain.handle('desktop:set-docked', (_e: any, on: boolean) => setDocked(!!on));
   ipcMain.handle('desktop:open-logs', () => {
     shell.openPath(logsDir);
   });
@@ -1054,9 +1109,8 @@ app.whenReady().then(() => {
   createWindow();
 
   app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) {
-      createWindow();
-    }
+    if (BrowserWindow.getAllWindows().length === 0) createWindow();
+    else if (mainWindow && !mainWindow.isVisible()) showMainWindow();
   });
 });
 
@@ -1077,6 +1131,7 @@ app.on('window-all-closed', () => {
 let teardown: Promise<void> | null = null;
 let teardownDone = false;
 app.on('before-quit', (event: any) => {
+  quitting = true;
   if (requestWorkspaceClose(event)) return;
   if (teardownDone) return;
   event.preventDefault();

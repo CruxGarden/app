@@ -241,6 +241,8 @@ export const MOOD_PRESETS: MoodPresetDef[] = [
       border: '#1d2c39',
       text: '#e8f2f6',
       textMuted: '#93a7b3',
+      // A little more fringe than the library default: the material is the Mood.
+      plasmaDispersion: '1.5',
       paneCollaboration: '#8fd6c4',
       paneArtifacts: '#c8ba9d',
       paneWorkshop: '#c5c89d',

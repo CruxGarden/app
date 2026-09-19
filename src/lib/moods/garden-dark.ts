@@ -362,6 +362,12 @@ export const GARDEN_DARK = {
   // person's to set, in the Mood Builder.
   plasmaFrame: '10px',
   plasmaPlate: 'color-mix(in srgb, var(--surface) 82%, transparent)',
+  // The material's optics (plasma-ui props): how far the field bends behind
+  // a pane, and how far the red and blue of that bend split — chromatic
+  // aberration, the fringe a real lens leaves. 1 is the library's default;
+  // 0 is none; 3 is a prism.
+  plasmaRefraction: '1',
+  plasmaDispersion: '1',
   paneRadius: 'var(--radius)',
   paneBorderWidth: '1px',
   paneHeaderHeight: '28px',

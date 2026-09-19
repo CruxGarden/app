@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { PlasmaProvider } from '@cruxgarden/plasma-ui';
 import { usePlasmaOn } from './usePlasmaOn';
 import { usePlasmaTier } from './usePlasmaTier';
@@ -21,15 +21,40 @@ import { PLASMA_TIERS } from './tiers';
  * render loop and a resize listener, and none of that should exist under
  * Glass or Custom. Surfaces attach themselves through PlasmaSurfaces.
  */
+/** A numeric Mood token off <html>, live as the Mood changes. */
+function readOptics() {
+  const cs = getComputedStyle(document.documentElement);
+  const num = (name: string, fallback: number) => {
+    const v = parseFloat(cs.getPropertyValue(name));
+    return Number.isFinite(v) ? Math.max(0, Math.min(3, v)) : fallback;
+  };
+  return { refraction: num('--plasma-refraction', 1), dispersion: num('--plasma-dispersion', 1) };
+}
+function usePlasmaOptics() {
+  const [optics, setOptics] = useState(readOptics);
+  useEffect(() => {
+    const update = () => setOptics(readOptics());
+    update();
+    document.addEventListener('palette-change', update);
+    return () => document.removeEventListener('palette-change', update);
+  }, []);
+  return optics;
+}
+
 export default function PlasmaStage({ children }: { children: ReactNode }) {
   const on = usePlasmaOn();
   const tier = usePlasmaTier();
+  const optics = usePlasmaOptics();
   if (!on) return <>{children}</>;
   return (
     <PlasmaProvider
       theme="dark"
       mood="tidal"
       {...PLASMA_TIERS[tier]}
+      // The Mood's optics: refraction, and dispersion — the chromatic
+      // aberration in the bend, the Mood's `plasmaDispersion` token.
+      refraction={optics.refraction}
+      dispersion={optics.dispersion}
       // Surfaces would fuse below blend/2 = 10px, and the Plasma Mood's
       // paneGap puts more than that between two tiles — but PlasmaSurfaces
       // registers every surface with fuse:false anyway, so panes keep their
