@@ -694,19 +694,22 @@ function AccordionHeader({
     <button
       onClick={onToggle}
       className={cn(
-        'w-full flex items-center justify-between px-3 py-2 rounded-[var(--radius-sm)]',
+        'w-full flex items-center justify-between gap-3 px-3 py-2 rounded-[var(--radius-sm)]',
         'text-left cursor-pointer',
         open
           ? 'bg-surface border border-accent/20 text-accent'
           : 'text-text-muted hover:text-text hover:bg-surface/50',
       )}
     >
-      <span className="text-xs font-mono uppercase tracking-wider">{label}</span>
-      <div className="flex items-center gap-2">
+      <span className="text-xs font-mono uppercase tracking-wider shrink-0 whitespace-nowrap">
+        {label}
+      </span>
+      <div className="flex items-center gap-2 min-w-0">
         {!open && summary && (
           <span
+            title={summary}
             className={cn(
-              'text-2xs font-mono',
+              'text-2xs font-mono truncate',
               required ? 'text-error' : completed ? 'text-accent' : 'text-text-muted',
             )}
           >

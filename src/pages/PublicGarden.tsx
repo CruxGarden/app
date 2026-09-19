@@ -1,11 +1,12 @@
 import { useEffect, useState, useCallback, useMemo } from 'react';
-import { useParams } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 import { publicApi } from '@/api';
 import type { Author, Crux } from '@/api/types';
 import { resolveAvatarUrl } from '@/stores/authStore';
 import { PublicTopBar } from '@/components/display';
 import { GardenGrid, GardenSearch } from '@/components/garden';
 import { Button } from '@/components/ui';
+import CruxBloom from '@/components/brand/CruxBloom';
 import { cn } from '@/lib/cn';
 import { APP_NAME } from '@/lib/constants';
 
@@ -92,24 +93,15 @@ export default function PublicGarden() {
   }
 
   if (state === 'not-found') {
-    return (
-      <div className="relative min-h-screen flex flex-col items-center justify-center px-4">
-        <div className="relative z-10 text-center">
-          <h1 className="font-display text-4xl font-bold text-text mb-2">Not found</h1>
-          <p className="text-text-muted">This author doesn't exist</p>
-        </div>
-      </div>
-    );
+    return <Missing title="No garden here" body={`There is no @${username} at this address.`} />;
   }
 
   if (state === 'error') {
     return (
-      <div className="relative min-h-screen flex flex-col items-center justify-center px-4">
-        <div className="relative z-10 text-center">
-          <h1 className="font-display text-4xl font-bold text-text mb-2">Something went wrong</h1>
-          <p className="text-text-muted">We couldn't load this profile</p>
-        </div>
-      </div>
+      <Missing
+        title="Couldn't reach this garden"
+        body="crux.garden did not answer. Check your connection and try again."
+      />
     );
   }
 
@@ -174,6 +166,22 @@ export default function PublicGarden() {
         ) : (
           <GardenGrid cruxes={filteredCruxes} linkBuilder={linkBuilder} sortBy={sortBy} hideMenu />
         )}
+      </div>
+    </div>
+  );
+}
+
+/** The page when there is nothing to show: a missing author, or no answer. */
+function Missing({ title, body }: { title: string; body: string }) {
+  return (
+    <div className="relative min-h-screen flex flex-col items-center justify-center px-4">
+      <div className="relative z-10 text-center max-w-md">
+        <CruxBloom size={64} className="mx-auto mb-6 opacity-30" />
+        <h1 className="font-display text-3xl text-text mb-2">{title}</h1>
+        <p className="text-text-muted mb-8">{body}</p>
+        <Link to="/">
+          <Button variant="secondary">Return to Garden</Button>
+        </Link>
       </div>
     </div>
   );

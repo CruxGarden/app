@@ -146,7 +146,7 @@ export default function GrowthTimeline({
           <div className="flex flex-col gap-3 p-3">
             {/* Capture controls — hidden while viewing a snapshot */}
             {!isViewingSnapshot && !showLabelInput && (
-              <div className="flex items-center gap-1.5">
+              <div className="flex flex-wrap items-center gap-1.5">
                 <PaneAction
                   onClick={() => setShowLabelInput(true)}
                   disabled={isCreatingGrowth}

@@ -20,15 +20,11 @@ import { usePlasmaOn } from './usePlasmaOn';
  * behave like one sheet instead.
  */
 const FUSE_PANES = false;
-const FUSING = [
-  '.mosaic.crux-mosaic-theme .mosaic-window',
-  '.bg-panel',
-  '.bg-dropdown',
-  '.bg-model-selector-dropdown',
-  '.bg-garden-card',
-].join(',');
+const FUSING = ['.mosaic.crux-mosaic-theme .mosaic-window', '.bg-panel', '.bg-garden-card'].join(
+  ',',
+);
 
-const FIXED = ['.bg-toolbar', '.bg-mood-bar', '.crux-taskbar'].join(',');
+const FIXED = ['.bg-toolbar', '.bg-public-top-bar', '.bg-mood-bar', '.crux-taskbar'].join(',');
 
 /**
  * A surface is a container, not a control. The panel classes are shared with
@@ -46,6 +42,11 @@ const MIN_SIDE = 96;
 
 function isSurface(el: HTMLElement) {
   if (CONTROLS.has(el.tagName)) return false;
+  // A dialog lives above the scrim, where the canvas cannot reach; it paints
+  // its own plate (plasma.css) and must not register, or the material draws
+  // its shape under the scrim and squares off the corners of whatever it
+  // overlaps.
+  if (el.closest('[data-modal-open]')) return false;
   const r = el.getBoundingClientRect();
   return r.width >= MIN_SIDE && r.height >= MIN_SIDE / 2;
 }

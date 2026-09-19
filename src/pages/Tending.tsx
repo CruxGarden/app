@@ -106,7 +106,11 @@ export default function Tending() {
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="text-xs text-text-muted mb-1">Your garden at work</p>
-          <h1 ref={heading} tabIndex={-1} className="text-xl font-display text-heading">
+          <h1
+            ref={heading}
+            tabIndex={-1}
+            className="text-xl font-display text-heading outline-none"
+          >
             Tending
           </h1>
           <p className="text-sm text-text-muted mt-2">

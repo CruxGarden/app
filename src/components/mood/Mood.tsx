@@ -603,7 +603,7 @@ export default function MoodEditor({ initialTab = 'moods', compact = false }: Mo
   return (
     <div className="select-none flex-1 flex flex-col min-h-0">
       {/* Tabs */}
-      <div className="flex items-center gap-1 pb-3 mb-3 border-b border-border shrink-0">
+      <div className="flex flex-wrap items-center gap-x-1 gap-y-2 pb-3 mb-3 border-b border-border shrink-0">
         {(
           [
             ['moods', 'Moods'],
@@ -617,7 +617,7 @@ export default function MoodEditor({ initialTab = 'moods', compact = false }: Mo
             key={t}
             onClick={() => setTab(t)}
             className={cn(
-              'px-2.5 py-1 text-xs font-display font-medium rounded-[var(--radius-sm)] cursor-pointer',
+              'px-2.5 py-1 text-xs font-display font-medium rounded-[var(--radius-sm)] cursor-pointer shrink-0',
               tab === t ? 'text-text bg-surface' : 'text-text-muted hover:text-text',
             )}
           >
@@ -635,7 +635,7 @@ export default function MoodEditor({ initialTab = 'moods', compact = false }: Mo
                 useUIStore.getState().setMoodPanelOpen(false);
                 navigate('/mood?tab=theme');
               }}
-              className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-body rounded-[var(--radius-sm)] border border-border bg-surface text-text hover:border-accent hover:text-accent transition-colors cursor-pointer"
+              className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-body whitespace-nowrap shrink-0 rounded-[var(--radius-sm)] border border-border bg-surface text-text hover:border-accent hover:text-accent transition-colors cursor-pointer"
             >
               Open Mood Builder
               <span aria-hidden>→</span>

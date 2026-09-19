@@ -19,6 +19,7 @@ import { cn } from '@/lib/cn';
 import { formatDate } from '@/lib/format';
 import { publicCoverUrl } from '@/lib/public-cover';
 import { APP_NAME } from '@/lib/constants';
+import PageHeader from '@/components/layout/PageHeader';
 
 type ResultType = 'cruxes' | 'authors';
 
@@ -695,15 +696,7 @@ export function ExplorePage() {
 
   return (
     <div className="flex flex-col min-h-screen">
-      <header className="relative z-20 flex items-center h-8 px-3 border-b border-border bg-surface-solid shrink-0">
-        <div className="flex items-center gap-1.5 text-2xs font-mono">
-          <a href="/" className="shrink-0 text-text-muted hover:underline">
-            {APP_NAME}
-          </a>
-          <span className="text-text-muted/40">/</span>
-          <span className="text-text">Explore</span>
-        </div>
-      </header>
+      <PageHeader title="Explore" />
 
       <div className="relative z-10 flex-1 overflow-y-auto p-4 sm:p-6 max-w-5xl mx-auto w-full">
         <Explore key={epoch} initial={initial} onStateChange={onStateChange} />

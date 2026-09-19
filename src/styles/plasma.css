@@ -38,16 +38,23 @@ html[data-surface-style='plasma'] body {
 /* The primary surfaces: drawn by the material, so no fill, no border, no
    shadow of their own. The radius stays — PlasmaSurfaces reads it back to
    tell the shader what shape to cut. */
+/* :where() keeps this rule at the specificity of a single class under the
+   attribute, so the overlay rule below can take a dialog back without a
+   specificity contest against `.mosaic.crux-mosaic-theme .mosaic-window`. */
 html[data-surface-style='plasma']
   :is(
-    .mosaic.crux-mosaic-theme .mosaic-window,
+    :where(.mosaic.crux-mosaic-theme) .mosaic-window,
     .bg-panel,
     .bg-dropdown,
     .bg-model-selector-dropdown,
     .bg-garden-card,
     .bg-toolbar,
+    .bg-public-top-bar,
     .bg-mood-bar
-  ) {
+  ):where(:not(input, select, textarea)) {
+  /* A control that borrows a panel class (Tending's search box is `bg-panel`)
+     keeps its paint: PlasmaSurfaces never registers it, so with no fill of
+     its own it would simply vanish. */
   background: transparent;
   border-color: transparent;
   box-shadow: none;
@@ -79,16 +86,10 @@ html[data-surface-style='plasma']
   border-color: transparent;
 }
 /* The header and body are one plate, so only the outer corners round. */
-html[data-surface-style='plasma']
-  .mosaic.crux-mosaic-theme
-  .mosaic-window
-  .mosaic-window-toolbar {
+html[data-surface-style='plasma'] .mosaic.crux-mosaic-theme .mosaic-window .mosaic-window-toolbar {
   border-radius: var(--pane-inner-radius) var(--pane-inner-radius) 0 0;
 }
-html[data-surface-style='plasma']
-  .mosaic.crux-mosaic-theme
-  .mosaic-window
-  .mosaic-window-body {
+html[data-surface-style='plasma'] .mosaic.crux-mosaic-theme .mosaic-window .mosaic-window-body {
   border-radius: 0 0 var(--pane-inner-radius) var(--pane-inner-radius);
 }
 html[data-surface-style='plasma']
@@ -118,12 +119,17 @@ html[data-surface-style='plasma'] {
   --plasma-titlebar-strip: 38px;
 }
 html[data-surface-style='plasma']
-  :is(header.bg-toolbar, .bg-mood-bar, .crux-taskbar) {
+  :is(header.bg-toolbar, header.bg-public-top-bar, .bg-mood-bar, .crux-taskbar) {
   margin: var(--plasma-dock-inset);
   margin-bottom: 0;
   border-radius: var(--pane-radius);
   border-bottom: none;
   border-color: transparent;
+}
+/* The public pages' bar is a thin strip elsewhere; as a dock it takes the
+   TopBar's height so the two read as the same chrome. */
+html[data-surface-style='plasma'] header.bg-public-top-bar {
+  height: var(--toolbar-height);
 }
 /* The two stack, so the lower one only needs the gap between them. */
 html[data-surface-style='plasma'] .crux-taskbar {
@@ -141,6 +147,32 @@ html[data-surface-style='plasma'][data-desktop-chrome='true'] header.bg-toolbar 
 html[data-surface-style='plasma'][data-desktop-chrome='true'] header.bg-toolbar:first-child,
 html[data-surface-style='plasma'][data-desktop-chrome='true'] .plasma-drag-strip {
   -webkit-app-region: drag;
+}
+
+/* Overlays: a dialog sits above the scrim and a menu above the pane it
+   opened from, and the material is one canvas behind everything, so it can
+   never reach either — the dialog would be drawn under the scrim and the
+   menu under the pane's plate. They paint their own plate instead, and
+   PlasmaSurfaces leaves them unregistered so they stop cutting notches into
+   the surfaces beneath them. */
+html[data-surface-style='plasma'] {
+  /* Lifted a step above the panel colour: the scrim darkens the field to
+     nearly the panel's own value, and a plate the same shade as what it sits
+     on is a plate nobody can see. */
+  --plasma-overlay: color-mix(in srgb, var(--panel) 91%, var(--text) 9%);
+  --plasma-overlay-border: color-mix(in srgb, var(--border) 55%, var(--text) 45%);
+}
+html[data-surface-style='plasma']
+  :is([data-modal-open] .bg-panel, .bg-dropdown, .bg-model-selector-dropdown) {
+  background: var(--plasma-overlay);
+  border-color: var(--plasma-overlay-border);
+  box-shadow: var(--shadow-modal);
+  text-shadow: none;
+}
+/* The content well inside a dialog reads as a recess again, not a hole. */
+html[data-surface-style='plasma'] [data-modal-open] .bg-panel > .bg-bg\/50 {
+  background: color-mix(in srgb, var(--bg) 55%, transparent);
+  border-color: color-mix(in srgb, var(--border) 70%, transparent);
 }
 
 /* Inner surfaces: flat shades, no translucency, no second material. Mirrors

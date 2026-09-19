@@ -42,7 +42,8 @@ type Stats = {
 
 function summarise(deltas: number[], longestTask: number): Stats {
   const d = deltas.slice(1).sort((a, b) => a - b);
-  const at = (q: number) => Math.round(d[Math.min(d.length - 1, Math.floor(d.length * q))] * 100) / 100;
+  const at = (q: number) =>
+    Math.round((d[Math.min(d.length - 1, Math.floor(d.length * q))] ?? 0) * 100) / 100;
   const total = d.reduce((a, b) => a + b, 0);
   return {
     frames: d.length,

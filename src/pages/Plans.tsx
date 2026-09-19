@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
 import * as billingApi from '@/api/billing';
 import { formatBytes } from '@/lib/format';
 import { APP_NAME } from '@/lib/constants';
+import PageHeader from '@/components/layout/PageHeader';
 import { cn } from '@/lib/cn';
 
 /**
@@ -28,17 +28,9 @@ export default function Plans() {
 
   return (
     <div className="flex flex-col min-h-screen">
-      <header className="relative z-20 flex items-center h-8 px-3 border-b border-border bg-surface-solid shrink-0">
-        <div className="flex items-center gap-1.5 text-2xs font-mono">
-          <Link to="/" className="shrink-0 text-text-muted hover:underline">
-            {APP_NAME}
-          </Link>
-          <span className="text-text-muted/40">/</span>
-          <span className="text-text">Plans</span>
-        </div>
-      </header>
+      <PageHeader title="Plans" />
 
-      <main className="relative z-10 flex-1 w-full max-w-4xl mx-auto px-4 sm:px-6 py-12 rounded-[var(--radius)] bg-bg/70 backdrop-blur-md mt-6 mb-12 border border-border/60">
+      <main className="relative z-10 w-full max-w-4xl mx-auto px-6 sm:px-8 py-10 rounded-[var(--radius)] bg-panel border border-panel-border shadow-panel mt-6 mb-12 text-panel-text">
         <h1 className="font-display text-3xl text-text">Plans</h1>
         <p className="text-sm text-text-muted mt-2 max-w-2xl">
           The app, Moods, Growth and basic publishing are free. Use your own AI key on any plan.

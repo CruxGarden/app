@@ -999,8 +999,11 @@ export default function NewCruxModal({ open, onClose }: NewCruxModalProps) {
           <p className="text-sm text-text-muted">
             Start with an idea or choose a starting point. You can change everything as you go.
           </p>
-          <label htmlFor="new-crux-idea" className="block text-xs text-text-muted">
-            Your idea (optional)
+          <label
+            htmlFor="new-crux-idea"
+            className="block text-xs font-mono text-text-muted uppercase tracking-wider pt-3 mb-2"
+          >
+            Your idea <span className="normal-case tracking-normal">(optional)</span>
           </label>
           <textarea
             id="new-crux-idea"
@@ -1064,8 +1067,16 @@ export default function NewCruxModal({ open, onClose }: NewCruxModalProps) {
                     selectedTemplate === t.id ? 'bg-accent-muted/30' : 'hover:bg-accent-muted/15',
                   )}
                 >
-                  <div className="w-10 h-10 shrink-0 rounded-[var(--radius-sm)] overflow-hidden border border-border">
-                    {t.thumb}
+                  <div
+                    className={cn(
+                      'w-10 h-10 shrink-0 rounded-[var(--radius-sm)] flex items-center justify-center',
+                      selectedTemplate === t.id
+                        ? 'bg-accent-muted text-accent'
+                        : 'bg-surface text-text-muted',
+                    )}
+                    aria-hidden
+                  >
+                    {t.icon}
                   </div>
                   <div className="flex-1 min-w-0">
                     <span

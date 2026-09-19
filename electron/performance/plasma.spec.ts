@@ -54,7 +54,8 @@ type Stats = {
 
 function summarise(deltas: number[], longestTask: number): Stats {
   const d = deltas.slice(1).sort((a, b) => a - b); // the first delta spans the call itself
-  const at = (q: number) => Math.round(d[Math.min(d.length - 1, Math.floor(d.length * q))] * 100) / 100;
+  const at = (q: number) =>
+    Math.round((d[Math.min(d.length - 1, Math.floor(d.length * q))] ?? 0) * 100) / 100;
   const total = d.reduce((a, b) => a + b, 0);
   return {
     frames: d.length,
@@ -121,7 +122,9 @@ async function setTier(page: Page, tier: string) {
 async function canvasPixels(page: Page) {
   return page.evaluate(() => {
     const c = document.querySelector('canvas') as HTMLCanvasElement | null;
-    return c ? { w: c.width, h: c.height, megapixels: Math.round((c.width * c.height) / 1e4) / 100 } : null;
+    return c
+      ? { w: c.width, h: c.height, megapixels: Math.round((c.width * c.height) / 1e4) / 100 }
+      : null;
   });
 }
 
@@ -179,7 +182,11 @@ test('plasma: tiers, panes, load and headroom', async () => {
     await setSurface(page, 'plasma');
     for (const tier of TIERS) {
       await setTier(page, tier);
-      runs[`plasma-${tier}/2-panes`] = { panes: 2, canvas: await canvasPixels(page), ...(await sample(page)) };
+      runs[`plasma-${tier}/2-panes`] = {
+        panes: 2,
+        canvas: await canvasPixels(page),
+        ...(await sample(page)),
+      };
     }
 
     // ── 3. Busy app: a streaming reply and typing, at the default tier ───
@@ -211,9 +218,17 @@ test('plasma: tiers, panes, load and headroom', async () => {
     report.panesOpened = { attempted: opened.length, visible: panes };
     await page.screenshot({ path: `${SHOTS}/30-all-panes.png` });
 
-    runs[`plasma-high/${panes}-panes`] = { panes, canvas: await canvasPixels(page), ...(await sample(page)) };
+    runs[`plasma-high/${panes}-panes`] = {
+      panes,
+      canvas: await canvasPixels(page),
+      ...(await sample(page)),
+    };
     await setTier(page, 'ultra');
-    runs[`plasma-ultra/${panes}-panes`] = { panes, canvas: await canvasPixels(page), ...(await sample(page)) };
+    runs[`plasma-ultra/${panes}-panes`] = {
+      panes,
+      canvas: await canvasPixels(page),
+      ...(await sample(page)),
+    };
     await setSurface(page, 'glass');
     runs[`glass/${panes}-panes`] = { panes, ...(await sample(page)) };
 
@@ -251,7 +266,10 @@ test('plasma: tiers, panes, load and headroom', async () => {
         // parks it on window in dev) and configure() the quality up.
         const r = (
           window as unknown as {
-            __plasmaRenderer?: { settings: Record<string, unknown>; configure: (s: unknown) => void };
+            __plasmaRenderer?: {
+              settings: Record<string, unknown>;
+              configure: (s: unknown) => void;
+            };
           }
         ).__plasmaRenderer;
         if (!r) return false;
@@ -273,7 +291,7 @@ test('plasma: tiers, panes, load and headroom', async () => {
       }
       // The renderer clamps to MAX_PIXELS (2.6MP) on its own, so past the
       // point where the canvas stops growing there is nothing left to raise.
-      if (headroom.length > 1 && ratio === (headroom[headroom.length - 2].ratio as number)) break;
+      if (headroom.length > 1 && ratio === headroom[headroom.length - 2]?.ratio) break;
     }
     runs['headroom'] = {
       basePixels,
