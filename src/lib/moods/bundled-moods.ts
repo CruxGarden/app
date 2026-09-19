@@ -90,7 +90,14 @@ const SPECS: Spec[] = [
     extra: {},
     background: { type: BgType.Blank },
     bundled: {},
-    cues: { message: null, toolDone: null, snapshot: 'bloom', published: 'chime', error: 'thud' },
+    // The Plasma register of the cue bank (SYNTH-CUES-PLAN): wet, low, brief.
+    cues: {
+      message: null,
+      toolDone: 'drop',
+      snapshot: 'ripple',
+      published: 'ripple',
+      error: 'membrane',
+    },
     volume: 0.5,
     persona: {
       name: 'Vel',

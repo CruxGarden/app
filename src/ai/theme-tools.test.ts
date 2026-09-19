@@ -93,3 +93,59 @@ describe('theme tools', () => {
     expect(getThemePreview().accent).toBe('#00f0ff');
   });
 });
+
+describe('cue tools (SYNTH-CUES-PLAN)', () => {
+  it('list_cue_presets shows the bank by register and what plays now', async () => {
+    const out = (await runThemeTool('list_cue_presets', {})) as string;
+    expect(out).toMatch(/Now playing:/);
+    expect(out).toMatch(/snapshot \(Snapshot taken\): Bloom/);
+    expect(out).toMatch(/Classic: coin \(8-bit coin\), tick \(Tick\)/);
+    expect(out).toMatch(/Plasma: drop \(Drop\)/);
+  });
+
+  it('set_cue takes a preset, a patch of your own, or silence, and refuses the rest', async () => {
+    const { getCues, saveCues, DEFAULT_CUES } = await import('@/services/cues');
+    try {
+      expect(await runThemeTool('set_cue', { event: 'snapshot', preset: 'ripple' })).toBe(
+        'snapshot now plays Ripple.',
+      );
+      expect(getCues().snapshot).toBe('ripple');
+      expect(await runThemeTool('set_cue', { event: 'error', silent: true })).toBe(
+        'error now plays Silent.',
+      );
+      expect(getCues().error).toBeNull();
+      const patch = {
+        version: 1,
+        name: 'Two drops',
+        voices: [
+          {
+            wave: 'sine',
+            notes: ['A5', 'E5'],
+            at: [0, 0.08],
+            dur: 0.03,
+            attack: 0.005,
+            release: 0.2,
+            level: 0.8,
+          },
+        ],
+        gain: 0.2,
+      };
+      expect(await runThemeTool('set_cue', { event: 'toolDone', patch })).toBe(
+        'toolDone now plays Two drops.',
+      );
+      expect((getCues().toolDone as { name: string }).name).toBe('Two drops');
+      expect(await runThemeTool('set_cue', { event: 'toolDone', preset: 'no-such' })).toMatch(
+        /no preset named/,
+      );
+      expect(await runThemeTool('set_cue', { event: 'dance', preset: 'tick' })).toMatch(
+        /event must be one of/,
+      );
+      expect(await runThemeTool('set_cue', { event: 'toolDone', patch: { version: 1 } })).toMatch(
+        /not playable/,
+      );
+      expect(await runThemeTool('set_cue', { event: 'toolDone' })).toMatch(/give a preset id/);
+    } finally {
+      saveCues({ ...DEFAULT_CUES });
+    }
+  });
+});

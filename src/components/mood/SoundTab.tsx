@@ -16,10 +16,15 @@ import {
   CUE_KINDS,
   getCues,
   saveCues,
+  cueLabel,
   type CueEvent,
   type CueKind,
   type SoundCues,
 } from '@/services/cues';
+import { CUE_GROUPS } from '@/audio/cue-presets';
+import CueEditor from './CueEditor';
+import { resolveCue } from '@/services/cues';
+import type { CuePatch } from '@/audio/cue-synth';
 import { PauseIcon, PlayIcon } from '@/components/ui/icons';
 
 /**
@@ -54,6 +59,7 @@ export default function SoundTab() {
   const fileRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
   const [cues, setCues] = useState<SoundCues>(() => getCues());
+  const [crafting, setCrafting] = useState<CueEvent | null>(null);
   const updateCue = (ev: CueEvent, kind: CueKind | null) => {
     const next = { ...cues, [ev]: kind };
     setCues(next);
@@ -236,29 +242,75 @@ export default function SoundTab() {
               </div>
               <select
                 aria-label={`Cue for ${ev.label}`}
-                value={cues[ev.id] ?? ''}
-                onChange={(e) => updateCue(ev.id, (e.target.value || null) as CueKind | null)}
+                value={
+                  typeof cues[ev.id] === 'string'
+                    ? (cues[ev.id] as string)
+                    : cues[ev.id]
+                      ? '__own'
+                      : ''
+                }
+                onChange={(e) => {
+                  if (e.target.value === '__own') return;
+                  updateCue(ev.id, (e.target.value || null) as CueKind | null);
+                }}
                 className="h-7 rounded-[var(--radius-sm)] border border-border bg-surface px-1.5 text-xxs text-text"
               >
                 <option value="">Silent</option>
-                {CUE_KINDS.map((k) => (
-                  <option key={k.id} value={k.id}>
-                    {k.label}
-                  </option>
+                {cues[ev.id] && typeof cues[ev.id] !== 'string' && (
+                  <option value="__own">{cueLabel(cues[ev.id])} (yours)</option>
+                )}
+                {CUE_GROUPS.map((g) => (
+                  <optgroup key={g.id} label={g.label}>
+                    {CUE_KINDS.filter((k) => k.group === g.id).map((k) => (
+                      <option key={k.id} value={k.id}>
+                        {k.label}
+                      </option>
+                    ))}
+                  </optgroup>
                 ))}
               </select>
-              <Button
-                variant="ghost"
-                size="sm"
-                disabled={!cues[ev.id]}
-                onClick={() => cues[ev.id] && void cue(cues[ev.id]!)}
-                aria-label={`Preview cue for ${ev.label}`}
-              >
-                Try
-              </Button>
+              <div className="flex items-center gap-1">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  disabled={!cues[ev.id]}
+                  onClick={() => cues[ev.id] && void cue(cues[ev.id]!)}
+                  aria-label={`Preview cue for ${ev.label}`}
+                >
+                  Try
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  aria-pressed={crafting === ev.id}
+                  aria-label={`Craft cue for ${ev.label}`}
+                  onClick={() => {
+                    if (crafting === ev.id) return setCrafting(null);
+                    // Start from what plays now, or from the plainest preset.
+                    if (typeof cues[ev.id] !== 'object' || !cues[ev.id]) {
+                      const start = resolveCue(cues[ev.id] ?? 'tick')!;
+                      updateCue(ev.id, { ...start, name: `${start.name} (yours)` });
+                    }
+                    setCrafting(ev.id);
+                  }}
+                >
+                  Craft…
+                </Button>
+              </div>
             </div>
           ))}
         </div>
+        {crafting && cues[crafting] && typeof cues[crafting] === 'object' && (
+          <CueEditor
+            value={cues[crafting] as CuePatch}
+            onChange={(patch) => updateCue(crafting, patch)}
+            onTry={() => void cue(cues[crafting]!)}
+            onReset={() => {
+              updateCue(crafting, 'tick');
+              setCrafting(null);
+            }}
+          />
+        )}
       </section>
     </div>
   );

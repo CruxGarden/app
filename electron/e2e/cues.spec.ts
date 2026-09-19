@@ -24,11 +24,20 @@ test.describe('sound: track + cues', () => {
       await page.getByRole('button', { name: 'Welcome' }).click();
       const dock = page.getByRole('region', { name: 'Mood Bar' });
       await expect(dock).toBeVisible({ timeout: 30_000 });
-      // A fresh garden wears The Keeper: its track is already the Mood's
+      // The Default Mood is Plasma, which has no track; wear Fractal Garden,
+      // whose track is Echoes From Beyond, and press play once (the opt-in).
+      await page.getByRole('button', { name: 'Mood', exact: true }).click();
+      await page
+        .getByTestId('bundled-moods')
+        .getByTestId('bundled-digital-fractal-garden')
+        .getByRole('button', { name: 'Apply' })
+        .click();
+      await page.keyboard.press('Escape');
       await expect
         .poll(async () => (await state()).trackName, { timeout: 30_000 })
         .toBe('Echoes From Beyond');
-      // It started on the Gateway (the room is set before you enter) and kept going
+      if (!(await state()).playing)
+        await dock.getByRole('button', { name: 'Play soundscape' }).click();
       await expect.poll(async () => (await state()).playing, { timeout: 15_000 }).toBe(true);
       await page.screenshot({ path: 'e2e/.results/cues-1-playing.png' });
 

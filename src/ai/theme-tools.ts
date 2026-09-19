@@ -27,9 +27,49 @@ import { groupTokens, tokenKind, tokenLabel, tokenChoices } from '@/lib/moods/to
 import type { ToolDefinition } from './tools';
 import type { ToolResultContent } from '@/services/types';
 
-export const THEME_TOOL_NAMES = ['set_theme', 'get_theme', 'set_background'] as const;
+export const THEME_TOOL_NAMES = [
+  'set_theme',
+  'get_theme',
+  'set_background',
+  'list_cue_presets',
+  'set_cue',
+] as const;
 
 export const THEME_TOOL_DEFINITIONS: ToolDefinition[] = [
+  {
+    name: 'list_cue_presets',
+    description:
+      'List the Sound Cue presets the Mood can play on events (reply, tool finished, snapshot, shared, failed), grouped by register (classic, garden, 8-bit, office, plasma, bare), and what each event plays now. ' +
+      'USE WHEN: before set_cue, or when the person asks what the app sounds like.',
+    input_schema: { type: 'object', properties: {}, required: [], additionalProperties: false },
+  },
+  {
+    name: 'set_cue',
+    description:
+      'Choose what the Mood plays on an event: a preset id from list_cue_presets, a patch of your own (a small synth description: voices with wave, notes, onsets, hold, attack, release, level; optional filter, delay, bitcrush; gain), or null for silence. ' +
+      'This is a lasting change to the Mood, exactly like Mood → Sound: only when the person asked for it. ' +
+      'try: true plays the cue once so they can hear it (only after they have turned sound on).',
+    input_schema: {
+      type: 'object',
+      properties: {
+        event: {
+          type: 'string',
+          enum: ['message', 'toolDone', 'snapshot', 'published', 'error'],
+          description: 'Which event.',
+        },
+        preset: { type: 'string', description: 'A preset id from list_cue_presets.' },
+        patch: {
+          type: 'object',
+          description:
+            'Your own cue: { version: 1, name, voices: [{ wave: sine|triangle|square|sawtooth|noise, notes: ["E5","B5"], at: [0, 0.08], dur, attack, release, level }], filter?: { type, hz, q }, fx?: { delay?: { time, feedback }, bitcrush? }, gain }. Seconds, levels 0..1, three seconds at most.',
+        },
+        silent: { type: 'boolean', description: 'true to play nothing on this event.' },
+        try: { type: 'boolean', description: 'Play it once now.' },
+      },
+      required: ['event'],
+      additionalProperties: false,
+    },
+  },
   {
     name: 'get_theme',
     description:
@@ -306,6 +346,10 @@ export async function runThemeTool(
         return toolSetTheme(input);
       case 'set_background':
         return await toolSetBackground(input, ctx);
+      case 'list_cue_presets':
+        return await toolListCuePresets();
+      case 'set_cue':
+        return await toolSetCue(input);
       default:
         return `Unknown theme tool: ${name}`;
     }
@@ -314,6 +358,45 @@ export async function runThemeTool(
     console.warn(`[theme-tools] ${name} failed`, err);
     return `${name}: failed — ${err instanceof Error ? err.message : String(err)}`;
   }
+}
+
+async function toolListCuePresets(): Promise<string> {
+  const { CUE_PRESETS, CUE_GROUPS } = await import('@/audio/cue-presets');
+  const { getCues, CUE_EVENTS, cueLabel } = await import('@/services/cues');
+  const cues = getCues();
+  const lines = ['Now playing:'];
+  for (const ev of CUE_EVENTS) lines.push(`  ${ev.id} (${ev.label}): ${cueLabel(cues[ev.id])}`);
+  lines.push('', 'Presets:');
+  for (const g of CUE_GROUPS) {
+    const ids = CUE_PRESETS.filter((p) => p.group === g.id).map((p) => `${p.id} (${p.name})`);
+    if (ids.length) lines.push(`  ${g.label}: ${ids.join(', ')}`);
+  }
+  return lines.join('\n');
+}
+
+async function toolSetCue(input: Record<string, unknown>): Promise<string> {
+  const { getCues, saveCues, CUE_EVENTS, cueLabel, parseCueChoice, playCue } =
+    await import('@/services/cues');
+  const { parseCuePatch } = await import('@/audio/cue-synth');
+  const event = input.event as (typeof CUE_EVENTS)[number]['id'];
+  if (!CUE_EVENTS.some((e) => e.id === event))
+    return `set_cue: event must be one of ${CUE_EVENTS.map((e) => e.id).join(', ')}`;
+  let choice: ReturnType<typeof parseCueChoice>;
+  if (input.silent === true) choice = null;
+  else if (typeof input.preset === 'string') {
+    choice = parseCueChoice(input.preset);
+    if (!choice) return `set_cue: no preset named "${input.preset}" — list_cue_presets shows them`;
+  } else if (input.patch && typeof input.patch === 'object') {
+    try {
+      choice = parseCuePatch(input.patch);
+    } catch (err) {
+      return `set_cue: the patch is not playable — ${err instanceof Error ? err.message : String(err)}`;
+    }
+  } else return 'set_cue: give a preset id, a patch, or silent: true';
+  const next = { ...getCues(), [event]: choice };
+  saveCues(next);
+  if (input.try === true && choice) await playCue(event);
+  return `${event} now plays ${cueLabel(choice)}.`;
 }
 
 /** Executor for callers with no workspace (the Keeper console). */
@@ -332,6 +415,7 @@ export const THEME_TOOL_GUIDANCE =
   'Use mode "preview" to indicate what you are doing — tint the pane you are working in, warm the accent while a long step runs — and clear it with reset: true when you finish. ' +
   'Pane border and body tokens accept CSS gradients: set e.g. paneWorkshopBorder to "linear-gradient(135deg, #00f0ff, #7cff00)" (with paneBorderWidth "3px") to show that pane is being worked on, or a solid color for a state — green done, red failed — then reset. ' +
   'Use mode "persist" only when the user asks for a lasting change to how the workspace looks. ' +
+  'Sound Cues are part of the Mood too: list_cue_presets shows the bank and what each event plays; set_cue changes one event to a preset, a patch of your own, or silence — a lasting change, so only when asked; try: true lets them hear it. ' +
   'Never persist a change the user did not ask for. ' +
   "Edits to an existing mix (layer, updateMix) rewrite the user's mix and are saved, so only make them when asked. " +
   'set_background changes what sits behind the panes: generate an image from a prompt, use a workspace image, or pick bloom/drift/flow/blank — when the user asks for a backdrop, or when a theme you are building wants one.\n\n';

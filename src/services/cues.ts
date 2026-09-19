@@ -5,9 +5,16 @@
  */
 import { getSetting, setSetting } from './settings';
 import { SettingsKey } from '@/lib/constants';
+import { CUE_PRESETS, cuePreset, type CueGroup } from '@/audio/cue-presets';
+import { parseCuePatch, type CuePatch } from '@/audio/cue-synth';
 
 export type CueEvent = 'message' | 'toolDone' | 'snapshot' | 'published' | 'error';
-export type CueKind = 'chime' | 'tick' | 'bloom' | 'thud' | 'coin';
+/**
+ * What plays on an event: a preset id from the bank, or a patch of your own
+ * (SYNTH-CUES-PLAN). The five original ids are presets, so every Mood saved
+ * before the synth still reads.
+ */
+export type CueKind = string | CuePatch;
 export type SoundCues = Record<CueEvent, CueKind | null>;
 
 export const CUE_EVENTS: { id: CueEvent; label: string; hint: string }[] = [
@@ -17,13 +24,41 @@ export const CUE_EVENTS: { id: CueEvent; label: string; hint: string }[] = [
   { id: 'published', label: 'Shared', hint: 'the crux went live' },
   { id: 'error', label: 'Something failed', hint: 'a publish or tool error' },
 ];
-export const CUE_KINDS: { id: CueKind; label: string }[] = [
-  { id: 'coin', label: '8-bit coin' },
-  { id: 'tick', label: 'Tick' },
-  { id: 'chime', label: 'Chime' },
-  { id: 'bloom', label: 'Bloom' },
-  { id: 'thud', label: 'Thud' },
-];
+/** The preset bank as the picker lists it. */
+export const CUE_KINDS: { id: string; label: string; group: CueGroup }[] = CUE_PRESETS.map((p) => ({
+  id: p.id,
+  label: p.name,
+  group: p.group,
+}));
+
+/** A saved choice to something the engine can play; null when it is nothing playable. */
+export function resolveCue(kind: CueKind | null | undefined): CuePatch | null {
+  if (!kind) return null;
+  if (typeof kind === 'string') return cuePreset(kind)?.patch ?? null;
+  try {
+    return parseCuePatch(kind);
+  } catch {
+    return null;
+  }
+}
+
+/** Validate a choice from a package or a setting; strings must name a preset, objects must parse. */
+export function parseCueChoice(value: unknown): CueKind | null {
+  if (value === null || value === undefined) return null;
+  if (typeof value === 'string') return cuePreset(value) ? value : null;
+  try {
+    return parseCuePatch(value);
+  } catch {
+    return null;
+  }
+}
+
+/** A choice's display name. */
+export function cueLabel(kind: CueKind | null | undefined): string {
+  if (!kind) return 'Silent';
+  if (typeof kind === 'string') return cuePreset(kind)?.name ?? kind;
+  return kind.name;
+}
 
 export const DEFAULT_CUES: SoundCues = {
   message: null,
@@ -40,9 +75,8 @@ export function getCues(): SoundCues {
     const parsed = JSON.parse(raw) as Partial<Record<CueEvent, unknown>>;
     const out = { ...DEFAULT_CUES };
     for (const ev of Object.keys(out) as CueEvent[]) {
-      const v = parsed[ev];
-      if (v === null) out[ev] = null;
-      else if (CUE_KINDS.some((k) => k.id === v)) out[ev] = v as CueKind;
+      if (!Object.hasOwn(parsed, ev)) continue;
+      out[ev] = parseCueChoice(parsed[ev]);
     }
     return out;
   } catch {

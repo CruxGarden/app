@@ -125,22 +125,30 @@ test.describe('bundled moods', () => {
         (window as unknown as { __cruxAudio: { state: () => AudioState } }).__cruxAudio.state(),
       );
     try {
-      // The Gateway itself wears the Default Mood on a first run — Fractal Garden
-      // (ADR 0043): the fractal render, copper accent, liquid glass, before Enter
-      await expect(page.getByTestId('mood-background-image')).toBeVisible({ timeout: 30_000 });
-      await expect.poll(() => cssVar('--accent')).toBe('#5fd2a5');
-      // …and the Mood's track is already playing from the bar
+      // The Gateway itself wears the Default Mood on a first run — Plasma since
+      // 2026-09-17: the material's own field (no image), its mint accent, no track
+      await expect.poll(() => cssVar('--accent'), { timeout: 30_000 }).toBe('#9ff3e4');
+      await expect
+        .poll(() => page.evaluate(() => document.documentElement.dataset.surfaceStyle))
+        .toBe('plasma');
       const bar = page.getByRole('region', { name: 'Mood Bar' });
-      await expect(bar).toContainText('Echoes From Beyond');
-      await expect.poll(async () => (await audio()).trackName).toBe('Echoes From Beyond');
-      await expect.poll(async () => (await audio()).playing, { timeout: 15_000 }).toBe(true);
+      await expect(bar).toContainText('No track');
+      await expect.poll(async () => (await audio()).trackName).toBeNull();
       await page.getByRole('button', { name: /enter/i }).click();
       await page.getByText('Plant a new garden').click();
       await page.getByRole('button', { name: 'Welcome' }).click();
       await expect(page.getByRole('region', { name: 'Mood Bar' })).toBeVisible({
         timeout: 30_000,
       });
-      // A fresh garden wears Fractal Garden: copper accent, the render, glass, the track
+      // A fresh garden wears Plasma too; Fractal Garden is one Apply away and brings its track
+      await expect.poll(() => cssVar('--accent'), { timeout: 30_000 }).toBe('#9ff3e4');
+      await page.getByRole('button', { name: 'Mood', exact: true }).click();
+      await page
+        .getByTestId('bundled-moods')
+        .getByTestId('bundled-digital-fractal-garden')
+        .getByRole('button', { name: 'Apply' })
+        .click();
+      await page.keyboard.press('Escape');
       await expect.poll(() => cssVar('--accent'), { timeout: 30_000 }).toBe('#5fd2a5');
       await expect
         .poll(() => page.evaluate(() => document.documentElement.dataset.surfaceStyle))
@@ -152,7 +160,7 @@ test.describe('bundled moods', () => {
       await page.getByRole('button', { name: 'Mood', exact: true }).click();
       const built = page.getByTestId('bundled-moods');
       await expect(built).toBeVisible();
-      await expect(built.locator('[data-testid^="bundled-"]')).toHaveCount(36);
+      await expect(built.locator('[data-testid^="bundled-"]')).toHaveCount(37);
 
       await built.getByTestId('bundled-raster-bars').getByRole('button', { name: 'Apply' }).click();
       await expect.poll(() => cssVar('--radius')).toBe('2px');

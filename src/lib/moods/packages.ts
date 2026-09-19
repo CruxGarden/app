@@ -21,7 +21,7 @@ import { SettingsKey } from '@/lib/constants';
 import { BgType } from '@/lib/types';
 import type { PersonaSettings } from '@/services/persona';
 import { getPersona, savePersona } from '@/services/persona';
-import { DEFAULT_CUES, getCues, saveCues, type SoundCues } from '@/services/cues';
+import { DEFAULT_CUES, getCues, saveCues, parseCueChoice, type SoundCues } from '@/services/cues';
 import * as sound from '@/services/sound';
 import { validateTrack, type SoundTrack } from '@/services/sound';
 import { getAssets, addAsset, isAssetRef, refFingerprint, kindOf, type MoodAsset } from './assets';
@@ -115,8 +115,7 @@ export function validateMoodPackage(raw: unknown): MoodPackage | null {
   for (const k of Object.keys(cues) as (keyof SoundCues)[]) {
     const v = (snd.cues as Record<string, unknown> | undefined)?.[k];
     if (v === null) cues[k] = null;
-    else if (v === 'tick' || v === 'chime' || v === 'bloom' || v === 'thud' || v === 'coin')
-      cues[k] = v;
+    else if (v !== undefined) cues[k] = parseCueChoice(v);
   }
   const persona =
     p.persona && typeof p.persona === 'object' ? (p.persona as PersonaSettings) : undefined;
