@@ -91,17 +91,15 @@ export default function IncludedUsagePanel() {
               </div>
               <p className="text-xs text-text-muted">
                 {usage.planId === 'gardener_plus'
-                  ? 'Sonnet handles requests while its allowance permits; Haiku continues within the remaining included allowance.'
-                  : 'Haiku handles included requests.'}{' '}
+                  ? 'Sonnet handles included requests, thinking at full depth.'
+                  : 'Sonnet handles included requests, thinking at a moderate depth.'}{' '}
                 Usage varies with conversation length, files, tool calls and response size. Both
                 rolling limits apply. Allowance returns as individual requests age out; annual
                 billing uses the same windows.
               </p>
               <p className="text-xxs text-text-muted">
-                Preferred model for the next request:{' '}
-                {getModelShortName(usage.model) ?? usage.model}.
-                {usage.planId === 'gardener_plus' && ' The request size can require Haiku instead.'}{' '}
-                Updated {new Date(usage.asOf).toLocaleTimeString()}.
+                Model for the next request: {getModelShortName(usage.model) ?? usage.model}. Updated{' '}
+                {new Date(usage.asOf).toLocaleTimeString()}.
               </p>
               {usage.uncertainRequests > 0 && (
                 <p className="text-xs text-warning">
