@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "id": "glyphr-app",
+  "name": "Font",
+  "description": "Creative · Glyphr Studio 2, a font editor: draw glyphs, set metrics, build OTF/TTF/WOFF2 as outputs",
+  "kind": "webapp",
+  "defaultTitle": "My font",
+  "icon": "pencil",
+  "desktopOnly": true,
+  "order": 19,
+  "bundled": false,
+  "app": "glyphr",
+  "entryFile": "runtime/index.html",
+  "contentRoot": "data/",
+  "layout": "workshop",
+  "document": {
+    "path": "data/project.json",
+    "seed": {
+      "version": 1,
+      "app": "glyphr",
+      "project": null
+    }
+  },
+  "share": false,
+  "toolInfo": {
+    "name": "Glyphr Studio 2",
+    "upstream": "https://github.com/glyphr-studio/Glyphr-Studio-2",
+    "relationship": "A font tool around the actual Glyphr Studio 2 (GPL-3.0-or-later): the editor, its pages, canvas and font engines are upstream’s, unmodified except for one script tag; the Garden bridge, the document and the outputs are Crux Garden’s and travel under the same license.",
+    "detailsPath": "UPSTREAM.md"
+  },
+  "routes": [],
+  "greeting": "Your font opens in Glyphr Studio: draw glyphs on the Characters page, set metrics under Settings, and every change saves to Garden. Save font to Cruxspace builds an OTF, TTF, WOFF or WOFF2 as an output. Ask me to name the font or draw a letter from SVG.",
+  "context": "A font editor around the actual Glyphr Studio 2 (2.10, GPL-3.0-or-later; the fork keeps upstream’s source and notices, built into runtime/). The whole Glyphr Studio project (the same object a .gs2 file holds) lives in data/project.json with the font’s name; the bridge saves after every history step. App Tools: inspect_font, set_font_name, set_glyph_svg (draw one character from SVG outlines: an <svg> with paths/polygons/rects/circles; the outlines are flipped and scaled to the em), save_font (otf/ttf/woff/woff2 into exports/ — at least one glyph must be drawn). Read data/project.json before large changes; never edit runtime/. Sharing the editor as a website is not offered; the built fonts are the outputs. See UPSTREAM.md.",
+  "host": "garden/host-tools.ts"
+}

@@ -1,0 +1,45 @@
+{
+  "version": 1,
+  "id": "bentopdf-app",
+  "name": "BentoPDF",
+  "description": "Productivity · merge, split, edit, sign and convert PDFs with BentoPDF",
+  "kind": "webapp",
+  "defaultTitle": "My papers",
+  "icon": "layout",
+  "desktopOnly": true,
+  "order": 36,
+  "bundled": false,
+  "app": "bentopdf",
+  "entryFile": "runtime/index.html",
+  "contentRoot": "data/",
+  "layout": "workshop",
+  "document": {
+    "path": "data/project.json",
+    "seed": {
+      "version": 1,
+      "app": "bentopdf",
+      "project": {
+        "name": "PDF work",
+        "documents": []
+      }
+    }
+  },
+  "share": false,
+  "toolInfo": {
+    "name": "BentoPDF",
+    "upstream": "https://github.com/alam00000/bentopdf",
+    "relationship": "Built with BentoPDF. Crux Garden adapts its editor for local projects, Growth and Collaboration.",
+    "detailsPath": "UPSTREAM.md"
+  },
+  "routes": [
+    {
+      "extensions": [
+        ".pdf"
+      ],
+      "folder": "documents"
+    }
+  ],
+  "greeting": "Work on PDFs with BentoPDF: pick a tool, load a file, and the result is saved to this Crux instead of downloaded. Every paper you load and everything made from it stays here.",
+  "context": "Actual BentoPDF 2.8.8 (Simple Mode: every tool, no marketing pages), pinned upstream 597e369, built with its own Vite toolchain into runtime/ with offline PyMuPDF, Ghostscript, CoherentPDF, LibreOffice and pdf.js. Inside the Crux every result a tool would download is saved as a binary Artifact under data/assets and every loaded file is kept the same way; data/project.json lists them (name, type, size, pages, tool, time). App Tools inspect that list, name the project, rotate a document and merge documents; they add results and never delete. OCR and the digital-signature certificate proxy still use the network, as upstream. See UPSTREAM.md.",
+  "host": "garden/host-tools.ts"
+}

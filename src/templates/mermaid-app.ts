@@ -1,5 +1,4 @@
-import type { TemplateDefinition } from './index';
-import { LAYOUT_WORKSHOP } from './index';
+import type { ToolTemplateFiles } from './index';
 const sources = import.meta.glob(
   '../../mermaid-crux/{*.json,*.yaml,*.js,*.mjs,LICENSE,*.md,{src,static,tests}/**/*.{ts,js,svelte,css,html,json,svg,md}}',
   { query: '?raw', import: 'default', eager: true },
@@ -17,7 +16,7 @@ const styles = import.meta.glob('../../mermaid-crux/runtime/**/*.css', {
   import: 'default',
   eager: true,
 }) as Record<string, string>;
-const template: TemplateDefinition = {
+const template: ToolTemplateFiles = {
   files: [
     ...Object.entries({ ...sources, ...styles }).map(([path, content]) => ({
       path: path.replace('../../mermaid-crux/', ''),
@@ -28,17 +27,7 @@ const template: TemplateDefinition = {
       content,
       encoding: 'asset-url' as const,
     })),
-    {
-      path: 'data/project.json',
-      content: JSON.stringify({ version: 1, app: 'mermaid', project: null }),
-    },
     { path: '.cruxignore', content: '.svelte-kit/\n' },
   ],
-  layout: LAYOUT_WORKSHOP,
-  meta: { settings: { entryFile: 'runtime/edit/index.html' } },
-  greeting:
-    'Create flowcharts, timelines, sequence diagrams and more in Mermaid Live Editor. Edit the source or configuration, use the native presets and history, then export SVG or PNG. Garden keeps the editable project.',
-  context:
-    'Actual Mermaid Live Editor source and static runtime. data/project.json carries native codeStore/configuration and saved histories. Use inspect_mermaid and set_mermaid_source while open. Native source/config errors are editable drafts. Rebuild with pnpm install and pnpm build; runtime/ is tracked, .svelte-kit/ and node_modules are ignored. Native SVG/PNG exports are supported. Local preview URLs are not publicly hosted diagrams. Whole-editor publishing is unavailable. See UPSTREAM.md.',
 };
 export default template;

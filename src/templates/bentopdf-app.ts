@@ -1,5 +1,4 @@
-import type { TemplateDefinition } from './index';
-import { LAYOUT_WORKSHOP } from './index';
+import type { ToolTemplateFiles } from './index';
 // The actual BentoPDF travels with the Crux (AGPL-3.0): source, the vendored engine packages,
 // the pinned lockfile, the Garden bridge, the built runtime with its offline WASM and notices.
 // The large public/ folders (LibreOffice, the pdf.js viewers, the PyMuPDF and Ghostscript WASM)
@@ -27,7 +26,7 @@ const styles = import.meta.glob(
   ],
   { query: '?raw', import: 'default', eager: true },
 ) as Record<string, string>;
-const template: TemplateDefinition = {
+const template: ToolTemplateFiles = {
   files: [
     ...Object.entries(styles).map(([path, content]) => ({
       path: path.replace('../../bentopdf-crux/', ''),
@@ -38,20 +37,6 @@ const template: TemplateDefinition = {
       content,
       encoding: 'asset-url' as const,
     })),
-    {
-      path: 'data/project.json',
-      content: JSON.stringify({
-        version: 1,
-        app: 'bentopdf',
-        project: { name: 'PDF work', documents: [] },
-      }),
-    },
   ],
-  layout: LAYOUT_WORKSHOP,
-  meta: { settings: { entryFile: 'runtime/index.html' } },
-  greeting:
-    'Work on PDFs with BentoPDF: pick a tool, load a file, and the result is saved to this Crux instead of downloaded. Every paper you load and everything made from it stays here.',
-  context:
-    'Actual BentoPDF 2.8.8 (Simple Mode: every tool, no marketing pages), pinned upstream 597e369, built with its own Vite toolchain into runtime/ with offline PyMuPDF, Ghostscript, CoherentPDF, LibreOffice and pdf.js. Inside the Crux every result a tool would download is saved as a binary Artifact under data/assets and every loaded file is kept the same way; data/project.json lists them (name, type, size, pages, tool, time). App Tools inspect that list, name the project, rotate a document and merge documents; they add results and never delete. OCR and the digital-signature certificate proxy still use the network, as upstream. See UPSTREAM.md.',
 };
 export default template;

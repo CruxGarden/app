@@ -1,5 +1,4 @@
-import type { TemplateDefinition } from './index';
-import { LAYOUT_WORKSHOP } from './index';
+import type { ToolTemplateFiles } from './index';
 // The Fantasy Map Generator travels with the Crux: upstream's source, the Garden
 // bridge, the lockfile and notices as text; the built app (runtime/) and its
 // images, textures and heightmaps as assets.
@@ -22,7 +21,7 @@ const assets = import.meta.glob(
   ],
   { query: '?url', import: 'default', eager: true },
 ) as Record<string, string>;
-const template: TemplateDefinition = {
+const template: ToolTemplateFiles = {
   files: [
     ...Object.entries(source).map(([path, content]) => ({
       path: path.replace('../../fmg-crux/', ''),
@@ -33,16 +32,6 @@ const template: TemplateDefinition = {
       content,
       encoding: 'asset-url' as const,
     })),
-    {
-      path: 'data/project.json',
-      content: JSON.stringify({ version: 1, app: 'fmg', project: null }),
-    },
   ],
-  layout: LAYOUT_WORKSHOP,
-  meta: { settings: { entryFile: 'runtime/index.html' } },
-  greeting:
-    'A new world opens in Azgaar’s Fantasy Map Generator: coastlines, rivers, states, cultures, burgs and roads, all editable. The map saves to Garden as you work; Save image to Cruxspace renders it as a PNG or SVG output. Ask me to name the world, describe it, or generate another.',
-  context:
-    'A world-building tool around the actual Fantasy Map Generator (Azgaar, 1.152, MIT; the fork keeps upstream’s source and notices, built into runtime/). The whole .map save lives in data/project.json with the world’s name and seed; the bridge saves it after changes. App Tools: inspect_map (name, seed, size, cells, burgs, states, cultures), set_map_name, new_map (a fresh world, optional seed — ask before replacing an edited map), save_map_image (PNG or SVG into exports/). The app’s own menus (layers, tools, style, export, notes) do everything else; its “Save to machine” downloads a .map that also loads here. Never edit runtime/. Sharing the editor as a website is not offered; the rendered images are the outputs. See UPSTREAM.md.',
 };
 export default template;

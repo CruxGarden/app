@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "id": "fmg-app",
+  "name": "Fantasy Map",
+  "description": "Creative · Azgaar’s Fantasy Map Generator: a whole world to shape, PNG/SVG renders as outputs",
+  "kind": "webapp",
+  "defaultTitle": "My world",
+  "icon": "pencil",
+  "desktopOnly": true,
+  "order": 18,
+  "bundled": false,
+  "app": "fmg",
+  "entryFile": "runtime/index.html",
+  "contentRoot": "data/",
+  "layout": "workshop",
+  "document": {
+    "path": "data/project.json",
+    "seed": {
+      "version": 1,
+      "app": "fmg",
+      "project": null
+    }
+  },
+  "share": false,
+  "toolInfo": {
+    "name": "Fantasy Map Generator",
+    "upstream": "https://github.com/Azgaar/Fantasy-Map-Generator",
+    "relationship": "A world-building tool around the actual Fantasy Map Generator (MIT): the generator, editors, styles and exports are upstream’s, unmodified; the Garden bridge, the document and the outputs are Crux Garden’s.",
+    "detailsPath": "UPSTREAM.md"
+  },
+  "routes": [],
+  "greeting": "A new world opens in Azgaar’s Fantasy Map Generator: coastlines, rivers, states, cultures, burgs and roads, all editable. The map saves to Garden as you work; Save image to Cruxspace renders it as a PNG or SVG output. Ask me to name the world, describe it, or generate another.",
+  "context": "A world-building tool around the actual Fantasy Map Generator (Azgaar, 1.152, MIT; the fork keeps upstream’s source and notices, built into runtime/). The whole .map save lives in data/project.json with the world’s name and seed; the bridge saves it after changes. App Tools: inspect_map (name, seed, size, cells, burgs, states, cultures), set_map_name, new_map (a fresh world, optional seed — ask before replacing an edited map), save_map_image (PNG or SVG into exports/). The app’s own menus (layers, tools, style, export, notes) do everything else; its “Save to machine” downloads a .map that also loads here. Never edit runtime/. Sharing the editor as a website is not offered; the rendered images are the outputs. See UPSTREAM.md.",
+  "host": "garden/host-tools.ts"
+}

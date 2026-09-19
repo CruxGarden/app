@@ -1,4 +1,6 @@
 import { TOOL_INFO } from '@/lib/tool-info';
+import { toolManifest } from '@/services/crux-tools/registry';
+import type { CruxToolManifest } from '@/services/crux-tools/manifest';
 /**
  * Crux templates — real starter files for each template type.
  *
@@ -14,6 +16,16 @@ export interface TemplateFile {
   /** Binary bundled assets, decoded into Blob Store bytes during creation. */
   encoding?: 'base64' | 'asset-url';
   mimeType?: string;
+}
+
+/**
+ * What a bundled Crux Tool's template module still owns: the recipe that
+ * packs its files into the build. Everything else — greeting, context,
+ * layout, entry file, the seeded document, provenance — is the tool's
+ * manifest (ADR 0050), and `loadTemplate` assembles the definition from both.
+ */
+export interface ToolTemplateFiles {
+  files: TemplateFile[];
 }
 
 /**
@@ -226,82 +238,110 @@ export interface TemplateDefinition {
 // are the Empty Crux (blank) plus real toolchain projects; the library of
 // dozens/hundreds lives on crux.garden as clonable Template Cruxes, and
 // ecosystem templates arrive via TemplateDefinition.scaffold scripts.
-const loaders: Record<string, () => Promise<{ default: TemplateDefinition }>> = {
-  notes: () => import('./notes'),
-  moqira: () => import('./moqira'),
-  figma: () => import('./figma'),
-  blender: () => import('./blender'),
-  onebigsky: () => import('./onebigsky'),
-  'cardinal-drone': () => import('./cardinal-drone'),
-  'tool-excalidraw': () =>
-    import('./tool-sampler').then((m) => ({ default: m.samplerTemplate('excalidraw') })),
-  'tool-univer': () =>
-    import('./tool-sampler').then((m) => ({ default: m.samplerTemplate('univer') })),
-  'mermaid-app': () => import('./mermaid-app'),
-  'piskel-app': () => import('./piskel-app'),
-  'rawgraphs-app': () => import('./rawgraphs-app'),
-  'gephi-app': () => import('./gephi-app'),
-  'ketcher-app': () => import('./ketcher-app'),
-  'twine-app': () => import('./twine-app'),
-  'opencut-app': () => import('./opencut-app'),
-  'kan-app': () => import('./kan-app'),
-  'web-synth-app': () => import('./web-synth-app'),
-  'beepbox-app': () => import('./beepbox-app'),
-  'hextris-app': () => import('./hextris-app'),
-  'pptist-app': () => import('./pptist-app'),
-  'wick-editor-app': () => import('./wick-editor-app'),
-  'bentopdf-app': () => import('./bentopdf-app'),
-  'am-1-app': () => import('./am-1-app'),
-  'eventcalendar-app': () => import('./eventcalendar-app'),
-  'formjs-app': () => import('./formjs-app'),
-  'pdfme-app': () => import('./pdfme-app'),
-  'maps-app': () => import('./maps-app'),
-  'p5-app': () => import('./p5-app'),
-  'glsl-app': () => import('./glsl-app'),
-  'glyphr-app': () => import('./glyphr-app'),
-  'fmg-app': () => import('./fmg-app'),
-  'abc-app': () => import('./abc-app'),
-  'signal-app': () => import('./signal-app'),
-  'jscad-app': () => import('./jscad-app'),
-  'timeline-app': () => import('./timeline-app'),
-  'recorder-app': () => import('./recorder-app'),
-  'underrun-app': () => import('./underrun-app'),
-  'playcanvas-editor-app': () => import('./playcanvas-editor-app'),
-  'blockbench-app': () => import('./blockbench-app'),
-  'gdevelop-app': () => import('./gdevelop-app'),
-  'svgedit-app': () => import('./svgedit-app'),
-  'jupyterlite-app': () => import('./jupyterlite-app'),
-  'bitsy-app': () => import('./bitsy-app'),
-  'audiomass-app': () => import('./audiomass-app'),
-  'minipaint-app': () => import('./minipaint-app'),
-  'openmosh-app': () => import('./openmosh-app'),
-  'tool-openmosh': () =>
-    import('./tool-sampler').then((m) => ({ default: m.samplerTemplate('openmosh') })),
-  'tool-tables': () =>
-    import('./tool-sampler').then((m) => ({ default: m.samplerTemplate('tables') })),
-  'tool-smplr': () =>
-    import('./tool-sampler').then((m) => ({ default: m.samplerTemplate('smplr') })),
-  'tool-playcanvas': () =>
-    import('./tool-sampler').then((m) => ({ default: m.samplerTemplate('playcanvas') })),
-  'astro-homepage': () => import('./astro-homepage'),
-  'astro-blog': () => import('./astro-blog'),
-  'digital-garden': () => import('./digital-garden'),
-  'astro-recipes': () => import('./astro-recipes'),
-  'astro-storefront': () => import('./astro-storefront'),
-  'astro-feed': () => import('./astro-feed'),
-  'astro-media': () => import('./astro-media'),
-  'astro-empty': () => import('./astro-empty'),
-  [FIVE_WS_TEMPLATE_ID]: () => import('./5ws'),
+const loaders: Record<string, () => Promise<{ default: TemplateDefinition | ToolTemplateFiles }>> =
+  {
+    notes: () => import('./notes'),
+    moqira: () => import('./moqira'),
+    figma: () => import('./figma'),
+    blender: () => import('./blender'),
+    onebigsky: () => import('./onebigsky'),
+    'cardinal-drone': () => import('./cardinal-drone'),
+    'tool-excalidraw': () =>
+      import('./tool-sampler').then((m) => ({ default: m.samplerTemplate('excalidraw') })),
+    'tool-univer': () =>
+      import('./tool-sampler').then((m) => ({ default: m.samplerTemplate('univer') })),
+    'mermaid-app': () => import('./mermaid-app'),
+    'piskel-app': () => import('./piskel-app'),
+    'rawgraphs-app': () => import('./rawgraphs-app'),
+    'gephi-app': () => import('./gephi-app'),
+    'ketcher-app': () => import('./ketcher-app'),
+    'twine-app': () => import('./twine-app'),
+    'opencut-app': () => import('./opencut-app'),
+    'kan-app': () => import('./kan-app'),
+    'web-synth-app': () => import('./web-synth-app'),
+    'beepbox-app': () => import('./beepbox-app'),
+    'hextris-app': () => import('./hextris-app'),
+    'pptist-app': () => import('./pptist-app'),
+    'wick-editor-app': () => import('./wick-editor-app'),
+    'bentopdf-app': () => import('./bentopdf-app'),
+    'am-1-app': () => import('./am-1-app'),
+    'eventcalendar-app': () => import('./eventcalendar-app'),
+    'formjs-app': () => import('./formjs-app'),
+    'pdfme-app': () => import('./pdfme-app'),
+    'maps-app': () => import('./maps-app'),
+    'p5-app': () => import('./p5-app'),
+    'glsl-app': () => import('./glsl-app'),
+    'glyphr-app': () => import('./glyphr-app'),
+    'fmg-app': () => import('./fmg-app'),
+    'abc-app': () => import('./abc-app'),
+    'signal-app': () => import('./signal-app'),
+    'jscad-app': () => import('./jscad-app'),
+    'timeline-app': () => import('./timeline-app'),
+    'recorder-app': () => import('./recorder-app'),
+    'underrun-app': () => import('./underrun-app'),
+    'playcanvas-editor-app': () => import('./playcanvas-editor-app'),
+    'blockbench-app': () => import('./blockbench-app'),
+    'gdevelop-app': () => import('./gdevelop-app'),
+    'svgedit-app': () => import('./svgedit-app'),
+    'jupyterlite-app': () => import('./jupyterlite-app'),
+    'bitsy-app': () => import('./bitsy-app'),
+    'audiomass-app': () => import('./audiomass-app'),
+    'minipaint-app': () => import('./minipaint-app'),
+    'openmosh-app': () => import('./openmosh-app'),
+    'tool-openmosh': () =>
+      import('./tool-sampler').then((m) => ({ default: m.samplerTemplate('openmosh') })),
+    'tool-tables': () =>
+      import('./tool-sampler').then((m) => ({ default: m.samplerTemplate('tables') })),
+    'tool-smplr': () =>
+      import('./tool-sampler').then((m) => ({ default: m.samplerTemplate('smplr') })),
+    'tool-playcanvas': () =>
+      import('./tool-sampler').then((m) => ({ default: m.samplerTemplate('playcanvas') })),
+    'astro-homepage': () => import('./astro-homepage'),
+    'astro-blog': () => import('./astro-blog'),
+    'digital-garden': () => import('./digital-garden'),
+    'astro-recipes': () => import('./astro-recipes'),
+    'astro-storefront': () => import('./astro-storefront'),
+    'astro-feed': () => import('./astro-feed'),
+    'astro-media': () => import('./astro-media'),
+    'astro-empty': () => import('./astro-empty'),
+    [FIVE_WS_TEMPLATE_ID]: () => import('./5ws'),
+  };
+
+const LAYOUTS: Record<CruxToolManifest['layout'], TemplateLayout> = {
+  workshop: LAYOUT_WORKSHOP,
+  chat: LAYOUT_CHAT,
+  writing: LAYOUT_WRITING,
+  visual: LAYOUT_VISUAL,
 };
+
+/** A tool's definition from its manifest plus the files its module packs. */
+export function templateFromManifest(
+  manifest: CruxToolManifest,
+  files: TemplateFile[],
+): TemplateDefinition {
+  return {
+    files: manifest.document
+      ? [
+          ...files,
+          { path: manifest.document.path, content: JSON.stringify(manifest.document.seed) },
+        ]
+      : files,
+    layout: LAYOUTS[manifest.layout],
+    meta: { settings: { entryFile: manifest.entryFile }, toolInfo: { ...manifest.toolInfo } },
+    greeting: manifest.greeting,
+    context: manifest.context || undefined,
+  };
+}
 
 export async function loadTemplate(id: string): Promise<TemplateDefinition | null> {
   const loader = loaders[id];
   if (!loader) return null;
   const mod = await loader();
+  const manifest = toolManifest(id);
+  if (manifest) return templateFromManifest(manifest, mod.default.files);
+  const def = mod.default as TemplateDefinition;
   const info = TOOL_INFO[id];
-  return info
-    ? { ...mod.default, meta: { ...mod.default.meta, toolInfo: { ...info } } }
-    : mod.default;
+  return info ? { ...def, meta: { ...def.meta, toolInfo: { ...info } } } : def;
 }
 
 /**

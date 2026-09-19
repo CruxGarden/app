@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "id": "maps-app",
+  "name": "Map",
+  "description": "Productivity · places, routes and areas on a MapLibre map with OpenFreeMap tiles; a public map page",
+  "kind": "webapp",
+  "defaultTitle": "My map",
+  "icon": "layout",
+  "desktopOnly": true,
+  "order": 33,
+  "bundled": false,
+  "app": "maps",
+  "entryFile": "runtime/index.html",
+  "contentRoot": "data/",
+  "layout": "workshop",
+  "document": {
+    "path": "data/project.json",
+    "seed": {
+      "version": 1,
+      "app": "maps",
+      "project": null
+    }
+  },
+  "share": true,
+  "toolInfo": {
+    "name": "MapLibre GL + Terra Draw",
+    "upstream": "https://github.com/maplibre/maplibre-gl-js",
+    "relationship": "A map tool around MapLibre GL and Terra Draw with OpenFreeMap tiles. Rendering and drawing are upstream’s; the page, the places list, the Garden integration and the public map are Crux Garden’s.",
+    "detailsPath": "UPSTREAM.md"
+  },
+  "routes": [],
+  "greeting": "Make a map: choose a basemap, add places by clicking, draw routes and areas, and name and colour them in the list. Save image in the bar puts the map picture into this Crux’s outputs; Share selected content publishes the map as a page.",
+  "context": "A map tool around the actual MapLibre GL (6.9.0, BSD-3) and Terra Draw (1.33.0, MIT) with OpenFreeMap tiles (OpenStreetMap data, no key). The Crux keeps the map as plain data in data/project.json: a name, a basemap (liberty, bright, positron, dark), the view and the features as GeoJSON with title, notes and colour. App Tools inspect the map, name it, choose the basemap, add a place at lng/lat, remove a place by id, fit the view and save the map picture as a PNG output. The public edition is the read-only map with its places. See UPSTREAM.md.",
+  "host": "garden/host-tools.ts"
+}

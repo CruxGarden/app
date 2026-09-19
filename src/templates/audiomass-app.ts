@@ -1,5 +1,4 @@
-import type { TemplateDefinition } from './index';
-import { LAYOUT_WORKSHOP } from './index';
+import type { ToolTemplateFiles } from './index';
 const sources = import.meta.glob(
   '../../audiomass-crux/{LICENSE,THIRD_PARTY_NOTICES.md,README.md,UPSTREAM.md,src/**/*.{js,ts,cjs,html,css,json,py,go,txt,md}}',
   { query: '?raw', import: 'default', eager: true },
@@ -8,7 +7,7 @@ const assets = import.meta.glob(
   '../../audiomass-crux/src/**/*.{wasm,png,jpg,svg,woff,woff2,ttf,eot,mp3,mp4}',
   { query: '?url', import: 'default', eager: true },
 ) as Record<string, string>;
-const template: TemplateDefinition = {
+const template: ToolTemplateFiles = {
   files: [
     ...Object.entries(sources).map(([path, content]) => ({
       path: path.replace('../../audiomass-crux/', ''),
@@ -19,16 +18,6 @@ const template: TemplateDefinition = {
       content,
       encoding: 'asset-url' as const,
     })),
-    {
-      path: 'data/project.json',
-      content: JSON.stringify({ version: 1, app: 'audiomass', project: null }),
-    },
   ],
-  layout: LAYOUT_WORKSHOP,
-  meta: { settings: { entryFile: 'src/index.html' } },
-  greeting:
-    'AudioMass is ready for recordings, waveform effects and multitrack arrangements. Your active audio project saves with this Crux. Use the native audio and session exports to take your work elsewhere.',
-  context:
-    'Actual AudioMass source and editor. Entry src/index.html needs no build. data/project.json preserves the active waveform, native multitrack arrangement and markers; decoded PCM channels are immutable data/assets Artifacts. Inspect with inspect_audiomass before using waveform import, selection, effects, range/clipboard edits, silence and native history tools. Use current waveform/clipboard/history hashes to preserve manual edits. Save native WAV/MP3/FLAC waveform, range or arrangement mixdown outputs with save_audiomass_output. Linked clip edits update the arrangement automatically; detach before importing different audio. Native import retains one Undo checkpoint, reopening clears native Undo; Growth persists. Use arrangementHash for track creation/revision/order/removal, waveform-to-clip placement, clip move/trim/duplicate/split/fades/removal and master mix tools. Detach a linked waveform before arrangement changes. Advanced effects, markers and session commands remain native controls in this iteration. Preserve the native model. Native named browser drafts are separate; open a draft to save it into this Crux. Whole-editor publishing is unavailable. See UPSTREAM.md.',
 };
 export default template;

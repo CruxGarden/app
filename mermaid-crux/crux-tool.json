@@ -1,0 +1,43 @@
+{
+  "version": 1,
+  "id": "mermaid-app",
+  "name": "Mermaid Live Editor",
+  "description": "Diagrams · flowcharts, timelines and sequence diagrams",
+  "kind": "webapp",
+  "defaultTitle": "My diagram",
+  "icon": "layout",
+  "desktopOnly": true,
+  "order": 28,
+  "bundled": false,
+  "app": "mermaid",
+  "entryFile": "runtime/edit/index.html",
+  "contentRoot": "data/",
+  "layout": "workshop",
+  "document": {
+    "path": "data/project.json",
+    "seed": {
+      "version": 1,
+      "app": "mermaid",
+      "project": null
+    }
+  },
+  "share": false,
+  "toolInfo": {
+    "name": "Mermaid Live Editor",
+    "upstream": "https://github.com/mermaid-js/mermaid-live-editor",
+    "relationship": "Built with Mermaid Live Editor. Crux Garden adapts its editor for local projects, Growth and Collaboration.",
+    "detailsPath": "UPSTREAM.md"
+  },
+  "routes": [
+    {
+      "extensions": [
+        ".mmd",
+        ".mermaid"
+      ],
+      "folder": "inbox"
+    }
+  ],
+  "greeting": "Create flowcharts, timelines, sequence diagrams and more in Mermaid Live Editor. Edit the source or configuration, use the native presets and history, then export SVG or PNG. Garden keeps the editable project.",
+  "context": "Actual Mermaid Live Editor source and static runtime. data/project.json carries native codeStore/configuration and saved histories. Use inspect_mermaid and set_mermaid_source while open. Native source/config errors are editable drafts. Rebuild with pnpm install and pnpm build; runtime/ is tracked, .svelte-kit/ and node_modules are ignored. Native SVG/PNG exports are supported. Local preview URLs are not publicly hosted diagrams. Whole-editor publishing is unavailable. See UPSTREAM.md.",
+  "host": "garden/host-tools.ts"
+}

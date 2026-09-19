@@ -1,5 +1,4 @@
-import type { TemplateDefinition } from './index';
-import { LAYOUT_WORKSHOP } from './index';
+import type { ToolTemplateFiles } from './index';
 const assets = import.meta.glob(
   [
     '../../gdevelop-crux/{package.json,tsconfig.json,LICENSE.md,UPSTREAM.md,CMakeLists.txt,.cruxignore}',
@@ -31,7 +30,7 @@ const styles = import.meta.glob(
   ],
   { query: '?raw', import: 'default', eager: true },
 ) as Record<string, string>;
-const template: TemplateDefinition = {
+const template: ToolTemplateFiles = {
   files: [
     ...Object.entries(assets).map(([path, content]) => ({
       path: path.replace('../../gdevelop-crux/', ''),
@@ -42,16 +41,6 @@ const template: TemplateDefinition = {
       path: path.replace('../../gdevelop-crux/', ''),
       content,
     })),
-    {
-      path: 'data/project.json',
-      content: JSON.stringify({ version: 1, app: 'gdevelop', project: null }),
-    },
   ],
-  layout: LAYOUT_WORKSHOP,
-  meta: { settings: { entryFile: 'runtime/index.html' } },
-  greeting:
-    'Build scenes, objects and events with GDevelop. Garden keeps the editable game and imported assets. Preview plays the game here; Export web game creates a playable ZIP. Export complete Crux carries the editor, project and Growth together.',
-  context:
-    'Native GDevelop 5.6.282 web editor. data/project.json references separate native document, original media and preference Artifacts. IndexedDB is a generated preview cache. Import original files from your device. Use Garden Collaboration and Growth; upstream hosted accounts, builds, store and Spine runtime are not supplied. App Tools discover native capabilities, inspect and edit objects, behaviors, scene instances and events, import image/audio/GLB resources, create native objects and export playable web games. Discover exact native types before creation; inspect object properties to configure resources, then place instances. Native history coverage differs by operation; consult returned guidance and UPSTREAM.md. npm run setup installs pinned dependencies and rebuilds the editor; npm run build reuses dependencies. See UPSTREAM.md for current adaptation scope and verification status. Whole-editor publication is unavailable.',
 };
 export default template;

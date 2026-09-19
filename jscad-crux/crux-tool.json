@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "id": "jscad-app",
+  "name": "Model",
+  "description": "Creative · parametric 3D modelling in JavaScript with JSCAD: code, parameters, a viewer; STL, 3MF, OBJ, SVG outputs for printing and cutting",
+  "kind": "webapp",
+  "defaultTitle": "My model",
+  "icon": "pencil",
+  "desktopOnly": true,
+  "order": 16,
+  "bundled": false,
+  "app": "jscad",
+  "entryFile": "index.html",
+  "contentRoot": "data/",
+  "layout": "workshop",
+  "document": {
+    "path": "data/project.json",
+    "seed": {
+      "version": 1,
+      "app": "jscad",
+      "project": null
+    }
+  },
+  "share": true,
+  "toolInfo": {
+    "name": "JSCAD",
+    "upstream": "https://github.com/jscad/OpenJSCAD.org",
+    "relationship": "The actual JSCAD web application (MIT), its released bundle and examples vendored unmodified; the page, the Garden integration and the outputs are Crux Garden’s.",
+    "detailsPath": "UPSTREAM.md"
+  },
+  "routes": [],
+  "greeting": "A parametric model opens in JSCAD: a rounded stone with a cord hole to start. Edit the code on the right and press shift + enter to rebuild, change the parameters below the viewer, and Save model to Cruxspace keeps an STL, 3MF, OBJ or SVG as an output for printing or cutting. Ask me to model something and I will write the code.",
+  "context": "A modelling tool around the actual JSCAD web application (2.6, MIT; upstream’s released bundle vendored unmodified with its examples). The model’s whole JSCAD source and name live in data/project.json; the bridge saves after every editor change. App Tools: inspect_model (name, source, evaluation error, export formats), set_model_name, set_model_source (the whole source; the result reports errors — CommonJS, require(\"@jscad/modeling\"), main(params) returning geometry, optional getParameterDefinitions()), save_model (stl by default, or 3mf, obj, amf, x3d, svg, dxf into exports/). JSCAD essentials: primitives (cube, cuboid, roundedCuboid, sphere, cylinder, torus, polygon, circle, rectangle), booleans (union, subtract, intersect), transforms (translate, rotate, scale, mirror), extrusions (extrudeLinear, extrudeRotate), expansions (expand, offset), hulls, colors.colorize([r,g,b], geom); units are millimetres. Read data/project.json before editing. Sharing publishes the page as it is: visitors can edit, spin and download the model. See UPSTREAM.md.",
+  "host": "garden/host-tools.ts"
+}

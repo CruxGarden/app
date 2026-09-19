@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "id": "formjs-app",
+  "name": "Form",
+  "description": "Productivity · forms, questionnaires and sign-ups on form-js; answers land in the Crux Store",
+  "kind": "webapp",
+  "defaultTitle": "My form",
+  "icon": "layout",
+  "desktopOnly": true,
+  "order": 32,
+  "bundled": false,
+  "app": "formjs",
+  "entryFile": "index.html",
+  "contentRoot": "data/",
+  "layout": "workshop",
+  "document": {
+    "path": "data/project.json",
+    "seed": {
+      "version": 1,
+      "app": "formjs",
+      "project": null
+    }
+  },
+  "share": true,
+  "toolInfo": {
+    "name": "form-js",
+    "upstream": "https://github.com/bpmn-io/form-js",
+    "relationship": "A form builder around form-js (bpmn.io). The builder and viewer are upstream’s; the page, the Garden integration and the public edition with Crux Store answers are Crux Garden’s.",
+    "detailsPath": "UPSTREAM.md"
+  },
+  "routes": [],
+  "greeting": "Build a form: drag fields from the palette, set their labels and options on the right, name the form, and use Preview to try it. Share selected content publishes the form; answers arrive in this Crux’s Store.",
+  "context": "A form builder around the actual form-js (bpmn.io, 1.26.0, MIT with watermark clause, vendored under vendor/): the FormEditor for building, the Form viewer for previews and the public edition. The Crux keeps the form as plain data in data/project.json: a name and the form-js schema. App Tools inspect the form, name it, add a field (textfield, textarea, number, checkbox, checklist, radio, select, datetime, taglist, text, separator) and remove a field by key. Publishing renders dist/ with the viewer; each visitor submission is a Crux Store entry response:<time>-<id> (protected mode: the visitor and the author can read it). See UPSTREAM.md.",
+  "host": "garden/host-tools.ts"
+}

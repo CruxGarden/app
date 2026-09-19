@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "id": "beepbox-app",
+  "name": "BeepBox",
+  "description": "Music · sketch melodies, patterns and chiptune songs with BeepBox",
+  "kind": "webapp",
+  "defaultTitle": "My tune",
+  "icon": "layout",
+  "desktopOnly": true,
+  "order": 31,
+  "bundled": false,
+  "app": "beepbox",
+  "entryFile": "website/index.html",
+  "contentRoot": "data/",
+  "layout": "workshop",
+  "document": {
+    "path": "data/project.json",
+    "seed": {
+      "version": 1,
+      "app": "beepbox",
+      "project": null
+    }
+  },
+  "share": false,
+  "toolInfo": {
+    "name": "BeepBox",
+    "upstream": "https://github.com/johnnesky/beepbox",
+    "relationship": "Built with BeepBox. Crux Garden adapts its editor for local projects, Growth and Collaboration.",
+    "detailsPath": "UPSTREAM.md"
+  },
+  "routes": [],
+  "greeting": "Sketch a tune with BeepBox. Click the pattern grid to place notes, pick instruments per channel, set the tempo and press play. Garden saves the song with every change.",
+  "context": "Actual BeepBox, pinned upstream 355e510. The song is the string BeepBox puts in its URL, saved as data/project.json after each change; reopening restores it. App Tools inspect the song (key, tempo, beats per bar, bars, channels), set the tempo and set the key; they change the song the way a pasted link does and never start playback. MP3 export uses a local lamejs copy; BeepBox preferences and its song recovery list stay in the browser profile. Source, lockfile and notices travel with the Crux; npm ci --ignore-scripts && npm run build:garden rebuilds website/. See UPSTREAM.md.",
+  "host": "garden/host-tools.ts"
+}

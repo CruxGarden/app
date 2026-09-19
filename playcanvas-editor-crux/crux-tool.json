@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "id": "playcanvas-editor-app",
+  "name": "PlayCanvas Editor",
+  "description": "Creative · local 3D scenes and classic JavaScript",
+  "kind": "webapp",
+  "defaultTitle": "My 3D scene",
+  "icon": "pencil",
+  "desktopOnly": true,
+  "order": 10,
+  "bundled": false,
+  "app": "playcanvas-editor",
+  "entryFile": "runtime/index.html",
+  "contentRoot": "data/",
+  "layout": "workshop",
+  "document": {
+    "path": "data/project.json",
+    "seed": {
+      "version": 1,
+      "app": "playcanvas-editor",
+      "project": null
+    }
+  },
+  "share": false,
+  "toolInfo": {
+    "name": "PlayCanvas Editor",
+    "upstream": "https://github.com/playcanvas/editor",
+    "relationship": "Built with PlayCanvas Editor. Crux Garden adapts its editor for local projects, Growth and Collaboration.",
+    "detailsPath": "UPSTREAM.md"
+  },
+  "routes": [],
+  "greeting": "Build a 3D scene with PlayCanvas Editor. Edit native entities, cameras, lights and primitive shapes. Import images, create materials and write classic JavaScript scripts. Launch runs your saved scene locally. Garden preserves scene data, original assets and code together.",
+  "context": "Actual PlayCanvas Editor 2.32.0, adapted for a single local scene with render, camera, light and script components. Local assets: images, materials, classic .js scripts, text, JSON and folders. Other components, model conversion, ESM/TypeScript compilation, multiplayer, hosted asset store and publishing are not implemented. Bundled Monaco replaces the hosted code collaboration service. Saved native scene/settings/assets and original file bytes live in fingerprinted Artifacts referenced by data/project.json; browser storage is not the project home. Native undo is session state; Growth preserves saved versions. App Tools inspect the scene, name the project and rename an entity. Source, pinned lockfile and notices travel with the Crux. npm ci && npm run build:garden rebuilds the local runtime. See UPSTREAM.md.",
+  "host": "garden/host-tools.ts"
+}

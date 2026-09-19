@@ -1,5 +1,4 @@
-import type { TemplateDefinition } from './index';
-import { LAYOUT_WORKSHOP } from './index';
+import type { ToolTemplateFiles } from './index';
 const source = import.meta.glob(
   [
     '../../blockbench-crux/{*.json,*.js,*.html,*.md,*.MD,.cruxignore}',
@@ -18,7 +17,7 @@ const assets = import.meta.glob(
   ],
   { query: '?url', import: 'default', eager: true },
 ) as Record<string, string>;
-const template: TemplateDefinition = {
+const template: ToolTemplateFiles = {
   files: [
     ...Object.entries(source).map(([path, content]) => ({
       path: path.replace('../../blockbench-crux/', ''),
@@ -29,16 +28,6 @@ const template: TemplateDefinition = {
       content,
       encoding: 'asset-url' as const,
     })),
-    {
-      path: 'data/project.json',
-      content: JSON.stringify({ version: 1, app: 'blockbench', project: null }),
-    },
   ],
-  layout: LAYOUT_WORKSHOP,
-  meta: { settings: { entryFile: 'runtime/index.html' } },
-  greeting:
-    'Model, paint and animate with Blockbench. Garden saves your model library and embedded textures. Closing a model tab keeps it in the library; use Reopen model to return to it. Native export produces ordinary model files. Export complete Crux carries the editor, models and history together.',
-  context:
-    'Actual Blockbench 5.1.6 web editor. Native BBModel documents, embedded media and preferences persist in separate fingerprinted Artifacts referenced by data/project.json. Browser storage is transient. Remote plugins, cloud collaboration, browser auto-backups and PWA installation are disabled. Import textures locally for portability. Undo and playback are transient. Agents can create Generic Models, add cubes/groups, inspect and revise geometry, arrange/delete parts through native Undo, and save native BBModel or embedded-media glTF outputs. Geometry tools currently target Generic Models; other formats keep their native manual tools. GPL-3.0-or-later source, pinned lockfile and notices travel with the Crux. npm ci --ignore-scripts && npm run build rebuilds runtime. Whole-editor publication unavailable. See UPSTREAM.md.',
 };
 export default template;

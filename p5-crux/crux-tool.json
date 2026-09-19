@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "id": "p5-app",
+  "name": "Sketch",
+  "description": "Creative · generative art and live visuals with p5.js; a flow field to start, frames as outputs, a live page",
+  "kind": "webapp",
+  "defaultTitle": "My sketch",
+  "icon": "pencil",
+  "desktopOnly": true,
+  "order": 13,
+  "bundled": false,
+  "app": "p5",
+  "entryFile": "index.html",
+  "contentRoot": "data/",
+  "layout": "workshop",
+  "document": {
+    "path": "data/project.json",
+    "seed": {
+      "version": 1,
+      "app": "p5",
+      "project": null
+    }
+  },
+  "share": true,
+  "toolInfo": {
+    "name": "p5.js",
+    "upstream": "https://github.com/processing/p5.js",
+    "relationship": "A creative-coding tool around p5.js. The library is upstream’s, unmodified; the page, the starter sketch, the Garden integration and the outputs are Crux Garden’s.",
+    "detailsPath": "UPSTREAM.md"
+  },
+  "routes": [],
+  "greeting": "A p5.js sketch: a flow field to start. Edit sketch.js (or ask me to change it) and the preview restarts; the seed in the bar gives a different drawing, Save frame puts the picture into this Crux’s outputs, and Share selected content publishes the sketch as a live page.",
+  "context": "A creative-coding tool around the actual p5.js (2.3.3, LGPL-2.1, unmodified at runtime/p5.min.js). The sketch is sketch.js, an ordinary p5 global-mode sketch loaded by garden/bridge.js once the seed is known (window.garden.seed; window.garden.frame(n) reports frames; window.garden.saveFrame(label) saves the canvas as a PNG output). The Crux keeps a name and the seed in data/project.json. To change what the sketch draws, read and edit sketch.js with the file tools — keep setup() and draw(), keep reading the seed from window.garden, and declare top-level variables with var (a restart reloads the file in place, so a top-level let or const would already be declared) — then restart_sketch. App Tools inspect the sketch, name it, set its seed (restarts), restart it, pause and resume, and save a frame. Sharing publishes the page as it is, so it must stay self-contained (no remote scripts). See UPSTREAM.md.",
+  "host": "garden/host-tools.ts"
+}

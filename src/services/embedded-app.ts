@@ -1,50 +1,14 @@
 import { TYPES, validateProject } from '../../tool-cruxes/shared/model.js';
 import { validateDocument } from '../../cardinal-crux/model.js';
+import { manifestFor, nativeAppTypes } from '@/services/crux-tools/registry';
 
-const NATIVE_TEMPLATES = {
-  'kan-app': 'kan',
-  'web-synth-app': 'web-synth',
-  'beepbox-app': 'beepbox',
-  'hextris-app': 'hextris',
-  'pptist-app': 'pptist',
-  'wick-editor-app': 'wick-editor',
-  'bentopdf-app': 'bentopdf',
-  'eventcalendar-app': 'eventcalendar',
-  'formjs-app': 'formjs',
-  'pdfme-app': 'pdfme',
-  'maps-app': 'maps',
-  'p5-app': 'p5',
-  'glsl-app': 'glsl',
-  'glyphr-app': 'glyphr',
-  'fmg-app': 'fmg',
-  'abc-app': 'abc',
-  'signal-app': 'signal',
-  'jscad-app': 'jscad',
-  'timeline-app': 'timeline',
-  'recorder-app': 'recorder',
-  'am-1-app': 'am-1',
-  'opencut-app': 'opencut',
-  'playcanvas-editor-app': 'playcanvas-editor',
-  'openmosh-app': 'openmosh',
-  'minipaint-app': 'minipaint',
-  'audiomass-app': 'audiomass',
-  'bitsy-app': 'bitsy',
-  'mermaid-app': 'mermaid',
-  'piskel-app': 'piskel',
-  'rawgraphs-app': 'rawgraphs',
-  'gephi-app': 'gephi',
-  'ketcher-app': 'ketcher',
-  'twine-app': 'twine',
-  'blockbench-app': 'blockbench',
-  'gdevelop-app': 'gdevelop',
-  'svgedit-app': 'svgedit',
-  'jupyterlite-app': 'jupyterlite',
-} as const;
+/** Template id → native app type, from every tool's manifest (ADR 0050). */
+const NATIVE_TEMPLATES: Record<string, string> = nativeAppTypes();
 /** Native adapters share the owner-bound document and binary bridge. */
 export function nativeAppType(crux: { meta?: Record<string, unknown> } | null | undefined) {
   const template = crux?.meta?.template;
   return typeof template === 'string' && Object.hasOwn(NATIVE_TEMPLATES, template)
-    ? NATIVE_TEMPLATES[template as keyof typeof NATIVE_TEMPLATES]
+    ? NATIVE_TEMPLATES[template]!
     : null;
 }
 
@@ -175,16 +139,9 @@ export function samplerType(
 }
 /** Apps whose Crux stays on this machine: no public edition, so no Share. A form publishes its viewer edition. */
 export function isLocalCreationTool(crux: { meta?: Record<string, unknown> } | null | undefined) {
-  const native = nativeAppType(crux);
+  const manifest = manifestFor(crux);
+  if (manifest) return !manifest.share;
   return (
-    (!!native &&
-      native !== 'formjs' &&
-      native !== 'maps' &&
-      native !== 'p5' &&
-      native !== 'glsl' &&
-      native !== 'abc' &&
-      native !== 'jscad' &&
-      native !== 'timeline') ||
     isCardinal(crux) ||
     ['figma', 'blender'].includes(String(crux?.meta?.template)) ||
     // the Whiteboard sampler shares its drawing as a view-mode page; the other samplers stay local

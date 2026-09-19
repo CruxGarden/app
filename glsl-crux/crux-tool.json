@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "id": "glsl-app",
+  "name": "Shader",
+  "description": "Creative · live GLSL fragment shaders in glslEditor; rings of light to start, frames as outputs, a live page",
+  "kind": "webapp",
+  "defaultTitle": "My shader",
+  "icon": "pencil",
+  "desktopOnly": true,
+  "order": 20,
+  "bundled": false,
+  "app": "glsl",
+  "entryFile": "index.html",
+  "contentRoot": "data/",
+  "layout": "workshop",
+  "document": {
+    "path": "data/project.json",
+    "seed": {
+      "version": 1,
+      "app": "glsl",
+      "project": null
+    }
+  },
+  "share": true,
+  "toolInfo": {
+    "name": "glslEditor",
+    "upstream": "https://github.com/patriciogonzalezvivo/glslEditor",
+    "relationship": "A shader tool around glslEditor (The Book of Shaders’ editor, glslCanvas inside). The editor and its canvas are upstream’s, unmodified; the page, the Garden integration and the outputs are Crux Garden’s.",
+    "detailsPath": "UPSTREAM.md"
+  },
+  "routes": [],
+  "greeting": "A live fragment shader: rings of light to start. Edit the GLSL beside the canvas and it recompiles as you type; Save frame puts the picture into this Crux’s outputs; Share selected content publishes the shader as a live page.",
+  "context": "A creative-coding tool around the actual glslEditor (0.0.24, MIT; The Book of Shaders’ editor, glslCanvas inside it), unmodified at runtime/. The Crux keeps the name and the whole fragment shader in data/project.json; the editor shows it live with u_resolution, u_time and u_mouse. App Tools inspect the shader (name, size, uniforms, whether it compiles), name it, replace its source (GLSL ES with a main()) and save a frame as a PNG output. Read data/project.json for the current source before changing it; keep shaders self-contained (no #include, no textures yet). Sharing publishes the page as it is. See UPSTREAM.md.",
+  "host": "garden/host-tools.ts"
+}

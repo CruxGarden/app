@@ -1,0 +1,45 @@
+{
+  "version": 1,
+  "id": "ketcher-app",
+  "name": "Ketcher",
+  "description": "Research · draw molecules and chemical reactions",
+  "kind": "webapp",
+  "defaultTitle": "My chemistry notebook",
+  "icon": "layout",
+  "desktopOnly": true,
+  "order": 23,
+  "bundled": false,
+  "app": "ketcher",
+  "entryFile": "runtime/index.html",
+  "contentRoot": "data/",
+  "layout": "workshop",
+  "document": {
+    "path": "data/project.json",
+    "seed": {
+      "version": 1,
+      "app": "ketcher",
+      "project": null
+    }
+  },
+  "share": false,
+  "toolInfo": {
+    "name": "Ketcher",
+    "upstream": "https://github.com/epam/ketcher",
+    "relationship": "Built with Ketcher. Crux Garden adapts its editor for local projects, Growth and Collaboration.",
+    "detailsPath": "UPSTREAM.md"
+  },
+  "routes": [
+    {
+      "extensions": [
+        ".ket",
+        ".mol",
+        ".sdf",
+        ".rxn"
+      ],
+      "folder": "inbox"
+    }
+  ],
+  "greeting": "Draw molecules and reactions in Ketcher. Use its native structure tools, import chemistry files, and export structures or images. Garden saves the drawing, editor settings and your custom template library.",
+  "context": "Actual Ketcher 3.13.0 native browser editor with the local Indigo chemistry engine. Native KET and editor settings/custom templates persist as separate fingerprinted Artifacts referenced by data/project.json. Browser storage is isolated per Crux and reconstructed from Artifacts. inspect_ketcher and set_ketcher_structure use native chemistry APIs. Native chemical/image exports remain. Macromolecules are disabled. App source, pinned dependencies and license notices travel with the Crux; npm ci && npm run build rebuilds runtime. Whole-editor publishing is unavailable. See UPSTREAM.md.",
+  "host": "garden/host-tools.ts"
+}

@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "id": "gdevelop-app",
+  "name": "GDevelop",
+  "description": "Creative · visual 2D and 3D game development",
+  "kind": "webapp",
+  "defaultTitle": "My game",
+  "icon": "pencil",
+  "desktopOnly": true,
+  "order": 11,
+  "bundled": false,
+  "app": "gdevelop",
+  "entryFile": "runtime/index.html",
+  "contentRoot": "data/",
+  "layout": "workshop",
+  "document": {
+    "path": "data/project.json",
+    "seed": {
+      "version": 1,
+      "app": "gdevelop",
+      "project": null
+    }
+  },
+  "share": false,
+  "toolInfo": {
+    "name": "GDevelop",
+    "upstream": "https://github.com/4ian/GDevelop",
+    "relationship": "Built with GDevelop. Crux Garden adapts its editor for local projects, Growth and Collaboration.",
+    "detailsPath": "UPSTREAM.md"
+  },
+  "routes": [],
+  "greeting": "Build scenes, objects and events with GDevelop. Garden keeps the editable game and imported assets. Preview plays the game here; Export web game creates a playable ZIP. Export complete Crux carries the editor, project and Growth together.",
+  "context": "Native GDevelop 5.6.282 web editor. data/project.json references separate native document, original media and preference Artifacts. IndexedDB is a generated preview cache. Import original files from your device. Use Garden Collaboration and Growth; upstream hosted accounts, builds, store and Spine runtime are not supplied. App Tools discover native capabilities, inspect and edit objects, behaviors, scene instances and events, import image/audio/GLB resources, create native objects and export playable web games. Discover exact native types before creation; inspect object properties to configure resources, then place instances. Native history coverage differs by operation; consult returned guidance and UPSTREAM.md. npm run setup installs pinned dependencies and rebuilds the editor; npm run build reuses dependencies. See UPSTREAM.md for current adaptation scope and verification status. Whole-editor publication is unavailable.",
+  "host": "garden/host-tools.ts"
+}

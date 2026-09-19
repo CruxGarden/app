@@ -1,0 +1,48 @@
+{
+  "version": 1,
+  "id": "audiomass-app",
+  "name": "AudioMass",
+  "description": "Creative · waveform effects, recordings and multitrack audio",
+  "kind": "webapp",
+  "defaultTitle": "My audio",
+  "icon": "layout",
+  "desktopOnly": false,
+  "order": 38,
+  "bundled": false,
+  "app": "audiomass",
+  "entryFile": "src/index.html",
+  "contentRoot": "data/",
+  "layout": "workshop",
+  "document": {
+    "path": "data/project.json",
+    "seed": {
+      "version": 1,
+      "app": "audiomass",
+      "project": null
+    }
+  },
+  "share": false,
+  "toolInfo": {
+    "name": "AudioMass",
+    "upstream": "https://github.com/pkalogiros/AudioMass",
+    "relationship": "Built with AudioMass. Crux Garden adapts its editor for local projects, Growth and Collaboration.",
+    "detailsPath": "UPSTREAM.md"
+  },
+  "routes": [
+    {
+      "extensions": [
+        ".wav",
+        ".mp3",
+        ".ogg",
+        ".flac",
+        ".m4a",
+        ".aiff",
+        ".aif"
+      ],
+      "folder": "audio"
+    }
+  ],
+  "greeting": "AudioMass is ready for recordings, waveform effects and multitrack arrangements. Your active audio project saves with this Crux. Use the native audio and session exports to take your work elsewhere.",
+  "context": "Actual AudioMass source and editor. Entry src/index.html needs no build. data/project.json preserves the active waveform, native multitrack arrangement and markers; decoded PCM channels are immutable data/assets Artifacts. Inspect with inspect_audiomass before using waveform import, selection, effects, range/clipboard edits, silence and native history tools. Use current waveform/clipboard/history hashes to preserve manual edits. Save native WAV/MP3/FLAC waveform, range or arrangement mixdown outputs with save_audiomass_output. Linked clip edits update the arrangement automatically; detach before importing different audio. Native import retains one Undo checkpoint, reopening clears native Undo; Growth persists. Use arrangementHash for track creation/revision/order/removal, waveform-to-clip placement, clip move/trim/duplicate/split/fades/removal and master mix tools. Detach a linked waveform before arrangement changes. Advanced effects, markers and session commands remain native controls in this iteration. Preserve the native model. Native named browser drafts are separate; open a draft to save it into this Crux. Whole-editor publishing is unavailable. See UPSTREAM.md.",
+  "host": "garden/host-tools.ts"
+}

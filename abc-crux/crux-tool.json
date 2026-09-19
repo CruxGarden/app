@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "id": "abc-app",
+  "name": "Notation",
+  "description": "Creative · sheet music in ABC notation with abcjs: rendered and played as you type, scores as outputs, a page people can play",
+  "kind": "webapp",
+  "defaultTitle": "My score",
+  "icon": "pencil",
+  "desktopOnly": true,
+  "order": 14,
+  "bundled": false,
+  "app": "abc",
+  "entryFile": "index.html",
+  "contentRoot": "data/",
+  "layout": "workshop",
+  "document": {
+    "path": "data/project.json",
+    "seed": {
+      "version": 1,
+      "app": "abc",
+      "project": null
+    }
+  },
+  "share": true,
+  "toolInfo": {
+    "name": "abcjs",
+    "upstream": "https://github.com/paulrosen/abcjs",
+    "relationship": "A notation tool around abcjs (MIT) and the FluidR3 piano soundfont (MIT), both vendored unmodified; the page, the Garden integration and the outputs are Crux Garden’s.",
+    "detailsPath": "UPSTREAM.md"
+  },
+  "routes": [],
+  "greeting": "A score in ABC notation, rendered and played as you type: a jig to start. Edit the ABC on the left, press play under the score, and Save score to Cruxspace keeps an SVG or PNG as an output; Share selected content publishes the score as a page people can play.",
+  "context": "A notation tool around abcjs (6.7.0, MIT; vendored unmodified in runtime/, with the FluidR3 piano soundfont for offline playback). The Crux keeps the score’s name and whole ABC text in data/project.json; the page is abcjs’s editor with playback. App Tools: inspect_score, set_score_name, set_score_abc (the whole ABC: X:, T:, M:, L:, K: headers then the tune; keep line breaks), save_score_image (SVG or PNG into exports/). ABC essentials: notes C D E F G A B c d e f g a b (lowercase an octave up), numbers for lengths relative to L:, | bar lines, |: :| repeats, z rests, ^ _ = accidentals, \"chords in quotes\". Read data/project.json before editing. Sharing publishes the page as it is. See UPSTREAM.md.",
+  "host": "garden/host-tools.ts"
+}

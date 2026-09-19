@@ -1,5 +1,4 @@
-import type { TemplateDefinition } from './index';
-import { LAYOUT_WORKSHOP } from './index';
+import type { ToolTemplateFiles } from './index';
 // The actual PPTist editor travels with the Crux (AGPL-3.0): Vue source, fonts,
 // bundled templates, the Garden bridge, the pinned lockfile, the built runtime and notices.
 const assets = import.meta.glob(
@@ -27,7 +26,7 @@ const styles = import.meta.glob(
     eager: true,
   },
 ) as Record<string, string>;
-const template: TemplateDefinition = {
+const template: ToolTemplateFiles = {
   files: [
     ...Object.entries(styles).map(([path, content]) => ({
       path: path.replace('../../pptist-crux/', ''),
@@ -38,16 +37,6 @@ const template: TemplateDefinition = {
       content,
       encoding: 'asset-url' as const,
     })),
-    {
-      path: 'data/project.json',
-      content: JSON.stringify({ version: 1, app: 'pptist', project: null }),
-    },
   ],
-  layout: LAYOUT_WORKSHOP,
-  meta: { settings: { entryFile: 'runtime/index.html' } },
-  greeting:
-    'Build a presentation with PPTist. Add slides, place text, shapes, pictures and charts, pick a theme, then present from the play button. Garden saves the deck with every change.',
-  context:
-    'Actual PPTist 2.0.0, pinned upstream e491258 (interface in Chinese; PPTist has no i18n). The presentation is PPTist’s own JSON export shape saved as data/project.json after each change, with inserted pictures, video and audio stored as binary Artifacts under data/assets; reopening restores it. App Tools inspect bounded slide and element lists with IDs, add editable text boxes, replace exact text while preserving formatting, arrange elements, reorder/delete slides and save PPTX outputs. Native Undo covers slide/element edits; title changes follow upstream behavior outside slide history. Inspect first and revise specific elements; tools never start the presentation. AI generation, image search and remote templates need PPTist’s hosted server and fail clearly offline; bundled templates and fonts are local. Source, lockfile and notices travel with the Crux; npm ci --ignore-scripts && npm run build:garden rebuilds runtime/. See UPSTREAM.md.',
 };
 export default template;

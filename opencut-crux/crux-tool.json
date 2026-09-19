@@ -1,0 +1,46 @@
+{
+  "version": 1,
+  "id": "opencut-app",
+  "name": "OpenCut",
+  "description": "Creative · edit video, audio and titles with OpenCut Classic",
+  "kind": "webapp",
+  "defaultTitle": "My video",
+  "icon": "pencil",
+  "desktopOnly": true,
+  "order": 9,
+  "bundled": false,
+  "app": "opencut",
+  "entryFile": "runtime/index.html",
+  "contentRoot": "data/",
+  "layout": "workshop",
+  "document": {
+    "path": "data/project.json",
+    "seed": {
+      "version": 1,
+      "app": "opencut",
+      "project": null
+    }
+  },
+  "share": false,
+  "toolInfo": {
+    "name": "OpenCut Classic",
+    "upstream": "https://github.com/opencut-app/opencut-classic",
+    "relationship": "Built with OpenCut Classic. Crux Garden adapts its editor for local projects, Growth and Collaboration.",
+    "detailsPath": "UPSTREAM.md"
+  },
+  "routes": [
+    {
+      "extensions": [
+        ".mp4",
+        ".webm",
+        ".mov",
+        ".mkv",
+        ".m4v"
+      ],
+      "folder": "media"
+    }
+  ],
+  "greeting": "Make a video with OpenCut. Import your clips, arrange and trim the timeline, add text, then export a video. Garden preserves your project library and original media together.",
+  "context": "Actual OpenCut Classic editor, pinned source cf5e79e. Native media, timeline, text, preview and video export remain. Native project records, library, preferences and original bytes live in fingerprinted Artifacts referenced by data/project.json. Native Undo is session state; Growth preserves saved versions. App Tools inspect the timeline, name a project and change an existing text element. Local originals up to 128 MB each; system fonts and browser codec availability apply. Online sound/sticker catalogues, model-downloading transcription, hosted accounts and whole-editor publishing are excluded. Upstream Classic is archived; this is an independent adaptation. Source, pinned lockfile and notices travel with the Crux. npm ci --ignore-scripts && npm run build rebuilds the browser runtime using the pinned published native WASM package. See UPSTREAM.md.",
+  "host": "garden/host-tools.ts"
+}

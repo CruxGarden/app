@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "id": "hextris-app",
+  "name": "Hextris",
+  "description": "Play the hexagonal block puzzle, then remix its sources",
+  "kind": "webapp",
+  "defaultTitle": "Hextris",
+  "icon": "layout",
+  "desktopOnly": true,
+  "order": 47,
+  "bundled": true,
+  "app": "hextris",
+  "entryFile": "index.html",
+  "contentRoot": "data/",
+  "layout": "workshop",
+  "document": {
+    "path": "data/project.json",
+    "seed": {
+      "version": 1,
+      "app": "hextris",
+      "project": null
+    }
+  },
+  "share": false,
+  "toolInfo": {
+    "name": "Hextris",
+    "upstream": "https://github.com/Hextris/hextris",
+    "relationship": "Built with Hextris. Crux Garden adapts its editor for local projects, Growth and Collaboration.",
+    "detailsPath": "UPSTREAM.md"
+  },
+  "routes": [],
+  "greeting": "Hextris is ready. Press the hexagon to start, rotate with the arrow keys and match colours before the blocks pile up. Garden keeps your saved game and high scores; change the sources under js/ and style/ to make it your own.",
+  "context": "Actual Hextris, pinned upstream 3f4847d, running from its source files with no build. The game’s saved state and high scores (the two localStorage strings it writes) are saved as data/project.json and restored on reopen. App Tools inspect the game (state, score, high scores, saved game) and reset progress; they never play the game. The ad, analytics and Google Fonts tags were removed; everything else is upstream. The sources are Artifacts: editing them changes the game on the next reload, with Growth keeping the history. See UPSTREAM.md.",
+  "host": "garden/host-tools.ts"
+}

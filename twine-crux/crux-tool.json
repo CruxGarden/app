@@ -1,0 +1,43 @@
+{
+  "version": 1,
+  "id": "twine-app",
+  "name": "Twine",
+  "description": "Creative · write and play interactive stories",
+  "kind": "webapp",
+  "defaultTitle": "My interactive story",
+  "icon": "pencil",
+  "desktopOnly": true,
+  "order": 22,
+  "bundled": false,
+  "app": "twine",
+  "entryFile": "runtime/index.html",
+  "contentRoot": "data/",
+  "layout": "workshop",
+  "document": {
+    "path": "data/project.json",
+    "seed": {
+      "version": 1,
+      "app": "twine",
+      "project": null
+    }
+  },
+  "share": false,
+  "toolInfo": {
+    "name": "Twine",
+    "upstream": "https://github.com/klembot/twinejs",
+    "relationship": "Built with Twine. Crux Garden adapts its editor for local projects, Growth and Collaboration.",
+    "detailsPath": "UPSTREAM.md"
+  },
+  "routes": [
+    {
+      "extensions": [
+        ".twee",
+        ".tw"
+      ],
+      "folder": "inbox"
+    }
+  ],
+  "greeting": "Write an interactive story in Twine. Create passages, link choices, and play the result. Garden saves your story library and settings; Twine can export playable HTML, and Export complete Crux preserves your editable library with its history.",
+  "context": "Actual Twine 2.12.0 browser editor with bundled native story formats. Stories, passages, preferences and format records persist as separate fingerprinted Artifacts referenced by data/project.json. Native passage drafts finish saving before Garden closes or checkpoints the app. Play/Test/Proof render native output in a sandboxed preview. inspect_twine lists story IDs; set_twine_title renames through the native reducer; set_twine_passage replaces one existing passage and creates destinations for new links using native behavior. Native HTML/Twee exports remain. External media and user-added remote formats remain external references; built-in formats run locally. Source and GPL-3.0 license travel with the Crux; npm ci --ignore-scripts && npm run build rebuilds runtime. Whole-editor publication unavailable. See UPSTREAM.md.",
+  "host": "garden/host-tools.ts"
+}

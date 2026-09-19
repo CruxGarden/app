@@ -114,44 +114,7 @@ export async function readNativeAsset(owner: string, path: unknown) {
 export async function validateNativeDocument(
   owner: string,
   content: string,
-  app:
-    | 'kan'
-    | 'web-synth'
-    | 'beepbox'
-    | 'hextris'
-    | 'pptist'
-    | 'wick-editor'
-    | 'bentopdf'
-    | 'am-1'
-    | 'eventcalendar'
-    | 'formjs'
-    | 'pdfme'
-    | 'maps'
-    | 'p5'
-    | 'glsl'
-    | 'glyphr'
-    | 'fmg'
-    | 'abc'
-    | 'signal'
-    | 'jscad'
-    | 'timeline'
-    | 'recorder'
-    | 'opencut'
-    | 'playcanvas-editor'
-    | 'openmosh'
-    | 'minipaint'
-    | 'audiomass'
-    | 'bitsy'
-    | 'mermaid'
-    | 'piskel'
-    | 'rawgraphs'
-    | 'gephi'
-    | 'ketcher'
-    | 'blockbench'
-    | 'gdevelop'
-    | 'svgedit'
-    | 'twine'
-    | 'jupyterlite' = 'openmosh',
+  app: string = 'openmosh',
 ) {
   if (content.length > 4_000_000) throw new Error('The native project metadata is too large.');
   const doc = JSON.parse(content);

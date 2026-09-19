@@ -1,0 +1,42 @@
+{
+  "version": 1,
+  "id": "pptist-app",
+  "name": "PPTist",
+  "description": "Productivity · slides, themes and presenting with PPTist",
+  "kind": "webapp",
+  "defaultTitle": "Launch deck",
+  "icon": "layout",
+  "desktopOnly": true,
+  "order": 7,
+  "bundled": false,
+  "app": "pptist",
+  "entryFile": "runtime/index.html",
+  "contentRoot": "data/",
+  "layout": "workshop",
+  "document": {
+    "path": "data/project.json",
+    "seed": {
+      "version": 1,
+      "app": "pptist",
+      "project": null
+    }
+  },
+  "share": false,
+  "toolInfo": {
+    "name": "PPTist",
+    "upstream": "https://github.com/pipipi-pikachu/PPTist",
+    "relationship": "Built with PPTist. Crux Garden adapts its editor for local projects, Growth and Collaboration.",
+    "detailsPath": "UPSTREAM.md"
+  },
+  "routes": [
+    {
+      "extensions": [
+        ".pptx"
+      ],
+      "folder": "inbox"
+    }
+  ],
+  "greeting": "Build a presentation with PPTist. Add slides, place text, shapes, pictures and charts, pick a theme, then present from the play button. Garden saves the deck with every change.",
+  "context": "Actual PPTist 2.0.0, pinned upstream e491258 (interface in Chinese; PPTist has no i18n). The presentation is PPTist’s own JSON export shape saved as data/project.json after each change, with inserted pictures, video and audio stored as binary Artifacts under data/assets; reopening restores it. App Tools inspect bounded slide and element lists with IDs, add editable text boxes, replace exact text while preserving formatting, arrange elements, reorder/delete slides and save PPTX outputs. Native Undo covers slide/element edits; title changes follow upstream behavior outside slide history. Inspect first and revise specific elements; tools never start the presentation. AI generation, image search and remote templates need PPTist’s hosted server and fail clearly offline; bundled templates and fonts are local. Source, lockfile and notices travel with the Crux; npm ci --ignore-scripts && npm run build:garden rebuilds runtime/. See UPSTREAM.md.",
+  "host": "garden/host-tools.ts"
+}

@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "id": "kan-app",
+  "name": "Kan",
+  "description": "Productivity · plan work on kanban boards with Kan",
+  "kind": "webapp",
+  "defaultTitle": "Launch board",
+  "icon": "layout",
+  "desktopOnly": true,
+  "order": 8,
+  "bundled": false,
+  "app": "kan",
+  "entryFile": "runtime/index.html",
+  "contentRoot": "data/",
+  "layout": "workshop",
+  "document": {
+    "path": "data/project.json",
+    "seed": {
+      "version": 1,
+      "app": "kan",
+      "project": null
+    }
+  },
+  "share": false,
+  "toolInfo": {
+    "name": "Kan",
+    "upstream": "https://github.com/kanbn/kan",
+    "relationship": "Built with Kan. Crux Garden adapts its editor for local projects, Growth and Collaboration.",
+    "detailsPath": "UPSTREAM.md"
+  },
+  "routes": [],
+  "greeting": "Plan work with Kan. Make a board, add lists and cards, then track labels, due dates, checklists, comments and attachments. Garden preserves every board and original attachment together.",
+  "context": "Actual Kan kanban boards, pinned upstream 386cdcd. Native boards, lists, cards, labels, members, due dates and filters, checklists, comments, attachments, card duplication, archive and templates remain, for one local owner. Deleted records stay in history; each board is a separate fingerprinted record referenced by data/project.json, with original attachment bytes up to 64 MB each. App Tools inspect boards and card details; create and organize boards/lists/cards; edit due dates, labels and checklists; duplicate and soft-delete cards. New mutations require stateToken from a fresh inspection as expectedState. Kan has native activity history; use Growth for saved version recovery. Comments, members and attachments remain manual controls. Kan cards are project planning; Garden Tasks and Tending are execution and review, and nothing synchronizes them automatically. Hosted accounts, invitations, board URLs, public visibility, Trello import, integrations and billing are excluded. Source, pinned lockfile and notices travel with the Crux; npm ci --ignore-scripts && npm run build rebuilds runtime/. See UPSTREAM.md.",
+  "host": "garden/host-tools.ts"
+}

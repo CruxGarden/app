@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "id": "bitsy-app",
+  "name": "Bitsy",
+  "description": "Creative · make tiny games, worlds, dialogue and music",
+  "kind": "webapp",
+  "defaultTitle": "My tiny world",
+  "icon": "layout",
+  "desktopOnly": false,
+  "order": 29,
+  "bundled": false,
+  "app": "bitsy",
+  "entryFile": "editor/index.html",
+  "contentRoot": "data/",
+  "layout": "workshop",
+  "document": {
+    "path": "data/project.json",
+    "seed": {
+      "version": 1,
+      "app": "bitsy",
+      "project": null
+    }
+  },
+  "share": false,
+  "toolInfo": {
+    "name": "Bitsy",
+    "upstream": "https://github.com/le-doux/bitsy",
+    "relationship": "Built with Bitsy. Crux Garden adapts its editor for local projects, Growth and Collaboration.",
+    "detailsPath": "UPSTREAM.md"
+  },
+  "routes": [],
+  "greeting": "Make a tiny world with Bitsy. Draw rooms and sprites, write dialogue, make music, then play and export your game with the native tools. Garden keeps your editable project.",
+  "context": "Actual Bitsy 8.14.0 editor and engine. editor/index.html runs directly, no build step. data/project.json carries native game data, custom font and settings via the native Store interface. Keep Bitsy formats intact. Use inspect_bitsy and set_bitsy_title while the editor is open. Native HTML export produces a playable game. Whole-editor Garden publishing is unavailable. See UPSTREAM.md.",
+  "host": "garden/host-tools.ts"
+}

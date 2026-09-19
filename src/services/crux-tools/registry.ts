@@ -1,0 +1,75 @@
+/**
+ * Every Crux Tool the app can see, read from the tools' own manifests
+ * (ADR 0050). Today that is the `*-crux/crux-tool.json` files compiled into
+ * the build; installed tools join the same map when their Template Crux's
+ * manifest Artifact is read (CRUX-TOOLS-DISTRIBUTION-PLAN §3).
+ *
+ * Nothing here knows a tool by name. The picker, the app-type map, the
+ * provenance record, the drop routes and the share rule are all views over
+ * this one list.
+ */
+import { parseManifest, type CruxToolManifest } from './manifest';
+import type { ToolInfo } from '@/lib/tool-info';
+
+const raw = import.meta.glob('../../../*-crux/crux-tool.json', {
+  eager: true,
+  import: 'default',
+}) as Record<string, unknown>;
+
+const manifests = new Map<string, CruxToolManifest>();
+for (const [path, value] of Object.entries(raw)) {
+  const m = parseManifest(value);
+  const folder = path.replace(/^.*\/([^/]+)-crux\/crux-tool\.json$/, '$1');
+  if (m.id !== `${folder}-app`)
+    throw new Error(`crux-tool.json in ${folder}-crux declares id ${m.id}; expected ${folder}-app`);
+  if (manifests.has(m.id)) throw new Error(`two manifests declare ${m.id}`);
+  manifests.set(m.id, m);
+}
+
+/** Every tool, in creation-menu order. */
+export function toolManifests(): CruxToolManifest[] {
+  return [...manifests.values()].sort((a, b) => a.order - b.order || a.id.localeCompare(b.id));
+}
+
+export function toolManifest(id: string | null | undefined): CruxToolManifest | null {
+  return (id && manifests.get(id)) || null;
+}
+
+/** The manifest behind a Crux, by its template id. */
+export function manifestFor(
+  crux: { meta?: Record<string, unknown> } | null | undefined,
+): CruxToolManifest | null {
+  const template = crux?.meta?.template;
+  return typeof template === 'string' ? toolManifest(template) : null;
+}
+
+/** Template id → native app type, for every tool that has one. */
+export function nativeAppTypes(): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const m of manifests.values()) out[m.id] = m.app;
+  return out;
+}
+
+/** Template id → provenance, as `TOOL_INFO` used to list it. */
+export function toolInfos(): Record<string, ToolInfo> {
+  const out: Record<string, ToolInfo> = {};
+  for (const m of manifests.values()) out[m.id] = { ...m.toolInfo };
+  return out;
+}
+
+/** Drop routes declared by tools, in menu order. */
+export function toolRoutes(): {
+  test: RegExp;
+  route: { templateId: string; kind: CruxToolManifest['kind']; tool: string; folder: string };
+}[] {
+  const out: ReturnType<typeof toolRoutes> = [];
+  for (const m of toolManifests())
+    for (const r of m.routes) {
+      const alts = r.extensions.map((e) => e.slice(1).replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+      out.push({
+        test: new RegExp(`\\.(${alts.join('|')})$`, 'i'),
+        route: { templateId: m.id, kind: m.kind, tool: m.name, folder: r.folder },
+      });
+    }
+  return out;
+}

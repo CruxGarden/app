@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "id": "web-synth-app",
+  "name": "web-synth",
+  "description": "Music · modular synthesis, sequencing and sound design with web-synth",
+  "kind": "webapp",
+  "defaultTitle": "My synth",
+  "icon": "layout",
+  "desktopOnly": true,
+  "order": 30,
+  "bundled": false,
+  "app": "web-synth",
+  "entryFile": "runtime/index.html",
+  "contentRoot": "data/",
+  "layout": "workshop",
+  "document": {
+    "path": "data/project.json",
+    "seed": {
+      "version": 1,
+      "app": "web-synth",
+      "project": null
+    }
+  },
+  "share": false,
+  "toolInfo": {
+    "name": "web-synth",
+    "upstream": "https://github.com/Ameobea/web-synth",
+    "relationship": "Built with web-synth. Crux Garden adapts its editor for local projects, Growth and Collaboration.",
+    "detailsPath": "UPSTREAM.md"
+  },
+  "routes": [],
+  "greeting": "Make sound with web-synth: a modular synth and DAW in the browser. Add modules from the + menu, patch them in the graph editor, play the MIDI keyboard, sequence notes and shape the mix. Garden saves the whole composition with every change.",
+  "context": "Actual web-synth, pinned upstream d9e7026. The composition is exactly what web-synth keeps in its own browser storage, saved as data/project.json after each change; reopening restores it. App Tools inspect the composition (modules, connections, tempo), set the tempo, add a module and rename one; they never start audio. Composition sharing, presets from the hosted backend and Faust/Soul code compilation need services that are not bundled and fail clearly. Samples from a chosen folder or the remote library are not yet portable with the Crux. Source, engine, lockfiles and notices travel with the Crux; rebuilding the WebAssembly engine needs nightly Rust and wasm-bindgen 0.2.92, then `yarn build:garden` rebuilds runtime/. See UPSTREAM.md.",
+  "host": "garden/host-tools.ts"
+}

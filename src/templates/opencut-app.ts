@@ -1,5 +1,4 @@
-import type { TemplateDefinition } from './index';
-import { LAYOUT_WORKSHOP } from './index';
+import type { ToolTemplateFiles } from './index';
 const source = import.meta.glob(
   [
     '../../opencut-crux/{package.json,package-lock.json,tsconfig.json,vite.config.mjs,index.html,LICENSE,UPSTREAM.md,.cruxignore,.npmrc,Cargo.toml,Cargo.lock}',
@@ -19,7 +18,7 @@ const assets = import.meta.glob(
   ],
   { query: '?url', import: 'default', eager: true },
 ) as Record<string, string>;
-const template: TemplateDefinition = {
+const template: ToolTemplateFiles = {
   files: [
     ...Object.entries(source).map(([path, content]) => ({
       path: path.replace('../../opencut-crux/', ''),
@@ -30,16 +29,6 @@ const template: TemplateDefinition = {
       content,
       encoding: 'asset-url' as const,
     })),
-    {
-      path: 'data/project.json',
-      content: JSON.stringify({ version: 1, app: 'opencut', project: null }),
-    },
   ],
-  layout: LAYOUT_WORKSHOP,
-  meta: { settings: { entryFile: 'runtime/index.html' } },
-  greeting:
-    'Make a video with OpenCut. Import your clips, arrange and trim the timeline, add text, then export a video. Garden preserves your project library and original media together.',
-  context:
-    'Actual OpenCut Classic editor, pinned source cf5e79e. Native media, timeline, text, preview and video export remain. Native project records, library, preferences and original bytes live in fingerprinted Artifacts referenced by data/project.json. Native Undo is session state; Growth preserves saved versions. App Tools inspect the timeline, name a project and change an existing text element. Local originals up to 128 MB each; system fonts and browser codec availability apply. Online sound/sticker catalogues, model-downloading transcription, hosted accounts and whole-editor publishing are excluded. Upstream Classic is archived; this is an independent adaptation. Source, pinned lockfile and notices travel with the Crux. npm ci --ignore-scripts && npm run build rebuilds the browser runtime using the pinned published native WASM package. See UPSTREAM.md.',
 };
 export default template;

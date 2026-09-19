@@ -17,10 +17,14 @@ import type { CruxKind } from '@/api/types';
 import { Capability, can } from '@/lib/platform';
 import { alertDialog } from '@/stores/dialogStore';
 import { HomeIcon, LayoutIcon, PencilIcon } from '@/components/ui/icons';
+import { toolManifests } from '@/services/crux-tools/registry';
+import type { ToolIcon } from '@/services/crux-tools/manifest';
 
 // ── Templates ────────────────────────────────────────────
 
 interface Template {
+  /** Position in the menu; tools carry theirs in the manifest. */
+  order: number;
   id: string;
   label: string;
   description: string;
@@ -193,8 +197,10 @@ function FiveWsThumb() {
   );
 }
 
-const TEMPLATES: Template[] = [
+/** Entries the app itself owns; every Crux Tool comes from its manifest (ADR 0050). */
+const OWN_TEMPLATES: Template[] = [
   {
+    order: 0,
     id: 'blank',
     label: 'Blank',
     description: 'Start with your own idea — no files or setup to choose',
@@ -204,6 +210,7 @@ const TEMPLATES: Template[] = [
     defaultTitle: 'My Crux',
   },
   {
+    order: 1,
     id: 'notes',
     label: 'Notes',
     description: 'A local Markdown notebook you can customize and publish',
@@ -214,6 +221,7 @@ const TEMPLATES: Template[] = [
     desktopOnly: true,
   },
   {
+    order: 2,
     id: 'blender',
     label: 'Blender',
     description: 'Model together in Blender · keep scenes, renders and game assets in Garden',
@@ -224,6 +232,7 @@ const TEMPLATES: Template[] = [
     desktopOnly: true,
   },
   {
+    order: 3,
     id: 'figma',
     label: 'Figma',
     description: 'Design together in Figma · keep your brief and exported assets in Garden',
@@ -234,6 +243,7 @@ const TEMPLATES: Template[] = [
     desktopOnly: true,
   },
   {
+    order: 4,
     id: 'moqira',
     label: 'Mockups',
     description: 'Design wireframes with Moqira, then share an interactive public edition',
@@ -244,6 +254,7 @@ const TEMPLATES: Template[] = [
     desktopOnly: true,
   },
   {
+    order: 5,
     id: 'tool-excalidraw',
     label: 'Whiteboard',
     description: 'Visual thinking · draw diagrams and map ideas with Excalidraw',
@@ -254,6 +265,7 @@ const TEMPLATES: Template[] = [
     desktopOnly: true,
   },
   {
+    order: 6,
     id: 'tool-univer',
     label: 'Spreadsheet',
     description: 'Productivity · budgets, formulas and workbooks with Univer',
@@ -264,376 +276,7 @@ const TEMPLATES: Template[] = [
     desktopOnly: true,
   },
   {
-    id: 'pptist-app',
-    label: 'PPTist',
-    description: 'Productivity · slides, themes and presenting with PPTist',
-    defaultTitle: 'Launch deck',
-    icon: <LayoutIcon />,
-    thumb: <BlankThumb />,
-    kind: 'webapp',
-    desktopOnly: true,
-  },
-  {
-    id: 'kan-app',
-    label: 'Kan',
-    description: 'Productivity · plan work on kanban boards with Kan',
-    defaultTitle: 'Launch board',
-    icon: <LayoutIcon />,
-    thumb: <BlankThumb />,
-    kind: 'webapp',
-    desktopOnly: true,
-  },
-  {
-    id: 'opencut-app',
-    label: 'OpenCut',
-    description: 'Creative · edit video, audio and titles with OpenCut Classic',
-    defaultTitle: 'My video',
-    icon: <PencilIcon />,
-    thumb: <BlankThumb />,
-    kind: 'webapp',
-    desktopOnly: true,
-  },
-  {
-    id: 'playcanvas-editor-app',
-    label: 'PlayCanvas Editor',
-    description: 'Creative · local 3D scenes and classic JavaScript',
-    defaultTitle: 'My 3D scene',
-    icon: <PencilIcon />,
-    thumb: <BlankThumb />,
-    kind: 'webapp',
-    desktopOnly: true,
-  },
-  {
-    id: 'gdevelop-app',
-    label: 'GDevelop',
-    description: 'Creative · visual 2D and 3D game development',
-    defaultTitle: 'My game',
-    icon: <PencilIcon />,
-    thumb: <BlankThumb />,
-    kind: 'webapp',
-    desktopOnly: true,
-  },
-  {
-    id: 'blockbench-app',
-    label: 'Blockbench',
-    description: 'Creative · low-poly 3D modeling, textures and animation',
-    defaultTitle: 'My 3D models',
-    icon: <PencilIcon />,
-    thumb: <BlankThumb />,
-    kind: 'webapp',
-    desktopOnly: true,
-  },
-  {
-    id: 'p5-app',
-    label: 'Sketch',
-    description:
-      'Creative · generative art and live visuals with p5.js; a flow field to start, frames as outputs, a live page',
-    defaultTitle: 'My sketch',
-    icon: <PencilIcon />,
-    thumb: <BlankThumb />,
-    kind: 'webapp',
-    desktopOnly: true,
-  },
-  {
-    id: 'abc-app',
-    label: 'Notation',
-    description:
-      'Creative · sheet music in ABC notation with abcjs: rendered and played as you type, scores as outputs, a page people can play',
-    defaultTitle: 'My score',
-    icon: <PencilIcon />,
-    thumb: <BlankThumb />,
-    kind: 'webapp',
-    desktopOnly: true,
-  },
-  {
-    id: 'timeline-app',
-    label: 'Timeline',
-    description:
-      'Creative · a storytelling timeline with TimelineJS: events with dates, text, pictures and video, groups and eras; a page people scroll through',
-    defaultTitle: 'My timeline',
-    icon: <PencilIcon />,
-    thumb: <BlankThumb />,
-    kind: 'webapp',
-    desktopOnly: true,
-  },
-  {
-    id: 'jscad-app',
-    label: 'Model',
-    description:
-      'Creative · parametric 3D modelling in JavaScript with JSCAD: code, parameters, a viewer; STL, 3MF, OBJ, SVG outputs for printing and cutting',
-    defaultTitle: 'My model',
-    icon: <PencilIcon />,
-    thumb: <BlankThumb />,
-    kind: 'webapp',
-    desktopOnly: true,
-  },
-  {
-    id: 'signal-app',
-    label: 'Song',
-    description:
-      'Creative · a MIDI sequencer (Signal): piano roll, arrange view, tempo, built-in sounds; MIDI and WAV outputs',
-    defaultTitle: 'My song',
-    icon: <PencilIcon />,
-    thumb: <BlankThumb />,
-    kind: 'webapp',
-    desktopOnly: true,
-  },
-  {
-    id: 'fmg-app',
-    label: 'Fantasy Map',
-    description:
-      'Creative · Azgaar’s Fantasy Map Generator: a whole world to shape, PNG/SVG renders as outputs',
-    defaultTitle: 'My world',
-    icon: <PencilIcon />,
-    thumb: <BlankThumb />,
-    kind: 'webapp',
-    desktopOnly: true,
-  },
-  {
-    id: 'glyphr-app',
-    label: 'Font',
-    description:
-      'Creative · Glyphr Studio 2, a font editor: draw glyphs, set metrics, build OTF/TTF/WOFF2 as outputs',
-    defaultTitle: 'My font',
-    icon: <PencilIcon />,
-    thumb: <BlankThumb />,
-    kind: 'webapp',
-    desktopOnly: true,
-  },
-  {
-    id: 'glsl-app',
-    label: 'Shader',
-    description:
-      'Creative · live GLSL fragment shaders in glslEditor; rings of light to start, frames as outputs, a live page',
-    defaultTitle: 'My shader',
-    icon: <PencilIcon />,
-    thumb: <BlankThumb />,
-    kind: 'webapp',
-    desktopOnly: true,
-  },
-  {
-    id: 'svgedit-app',
-    label: 'SVG-Edit',
-    description: 'Creative · vector illustration, shapes and layers',
-    defaultTitle: 'My vector drawing',
-    icon: <PencilIcon />,
-    thumb: <BlankThumb />,
-    kind: 'webapp',
-    desktopOnly: true,
-  },
-  {
-    id: 'twine-app',
-    label: 'Twine',
-    description: 'Creative · write and play interactive stories',
-    defaultTitle: 'My interactive story',
-    icon: <PencilIcon />,
-    thumb: <BlankThumb />,
-    kind: 'webapp',
-    desktopOnly: true,
-  },
-  {
-    id: 'ketcher-app',
-    label: 'Ketcher',
-    description: 'Research · draw molecules and chemical reactions',
-    defaultTitle: 'My chemistry notebook',
-    icon: <LayoutIcon />,
-    thumb: <BlankThumb />,
-    kind: 'webapp',
-    desktopOnly: true,
-  },
-  {
-    id: 'gephi-app',
-    label: 'Gephi Lite',
-    description: 'Research · explore networks, relationships and graph data',
-    defaultTitle: 'My research network',
-    icon: <LayoutIcon />,
-    thumb: <BlankThumb />,
-    kind: 'webapp',
-    desktopOnly: true,
-  },
-  {
-    id: 'jupyterlite-app',
-    label: 'JupyterLite',
-    description: 'Research · Python notebooks, datasets and scientific plots',
-    defaultTitle: 'My research notebook',
-    icon: <LayoutIcon />,
-    thumb: <BlankThumb />,
-    kind: 'webapp',
-    desktopOnly: true,
-  },
-  {
-    id: 'rawgraphs-app',
-    label: 'RAWGraphs',
-    description: 'Research · explore datasets and create publication figures',
-    defaultTitle: 'My research chart',
-    icon: <LayoutIcon />,
-    thumb: <BlankThumb />,
-    kind: 'webapp',
-    desktopOnly: true,
-  },
-  {
-    id: 'piskel-app',
-    label: 'Piskel',
-    description: 'Pixel art · sprites, layers and frame animation',
-    defaultTitle: 'My sprite',
-    icon: <LayoutIcon />,
-    thumb: <BlankThumb />,
-    kind: 'webapp',
-    desktopOnly: true,
-  },
-  {
-    id: 'mermaid-app',
-    label: 'Mermaid Live Editor',
-    description: 'Diagrams · flowcharts, timelines and sequence diagrams',
-    defaultTitle: 'My diagram',
-    icon: <LayoutIcon />,
-    thumb: <BlankThumb />,
-    kind: 'webapp',
-    desktopOnly: true,
-  },
-  {
-    id: 'bitsy-app',
-    label: 'Bitsy',
-    description: 'Creative · make tiny games, worlds, dialogue and music',
-    defaultTitle: 'My tiny world',
-    icon: <LayoutIcon />,
-    thumb: <BlankThumb />,
-    kind: 'webapp',
-  },
-  {
-    id: 'web-synth-app',
-    label: 'web-synth',
-    description: 'Music · modular synthesis, sequencing and sound design with web-synth',
-    defaultTitle: 'My synth',
-    icon: <LayoutIcon />,
-    thumb: <BlankThumb />,
-    kind: 'webapp',
-    desktopOnly: true,
-  },
-  {
-    id: 'beepbox-app',
-    label: 'BeepBox',
-    description: 'Music · sketch melodies, patterns and chiptune songs with BeepBox',
-    defaultTitle: 'My tune',
-    icon: <LayoutIcon />,
-    thumb: <BlankThumb />,
-    kind: 'webapp',
-    desktopOnly: true,
-  },
-  {
-    id: 'formjs-app',
-    label: 'Form',
-    description:
-      'Productivity · forms, questionnaires and sign-ups on form-js; answers land in the Crux Store',
-    defaultTitle: 'My form',
-    icon: <LayoutIcon />,
-    thumb: <BlankThumb />,
-    kind: 'webapp',
-    desktopOnly: true,
-  },
-  {
-    id: 'maps-app',
-    label: 'Map',
-    description:
-      'Productivity · places, routes and areas on a MapLibre map with OpenFreeMap tiles; a public map page',
-    defaultTitle: 'My map',
-    icon: <LayoutIcon />,
-    thumb: <BlankThumb />,
-    kind: 'webapp',
-    desktopOnly: true,
-  },
-  {
-    id: 'eventcalendar-app',
-    label: 'Calendar',
-    description: 'Productivity · events, schedules and planning on an EventCalendar organizer',
-    defaultTitle: 'My calendar',
-    icon: <LayoutIcon />,
-    thumb: <BlankThumb />,
-    kind: 'webapp',
-    desktopOnly: true,
-  },
-  {
-    id: 'am-1-app',
-    label: 'AM-1',
-    description:
-      'Music · a three-part Berlin-school arpeggio instrument, the AM-1 Arpeggio Machine',
-    defaultTitle: 'My arpeggio',
-    icon: <LayoutIcon />,
-    thumb: <BlankThumb />,
-    kind: 'webapp',
-    desktopOnly: true,
-  },
-  {
-    id: 'bentopdf-app',
-    label: 'BentoPDF',
-    description: 'Productivity · merge, split, edit, sign and convert PDFs with BentoPDF',
-    defaultTitle: 'My papers',
-    icon: <LayoutIcon />,
-    thumb: <BlankThumb />,
-    kind: 'webapp',
-    desktopOnly: true,
-  },
-  {
-    id: 'wick-editor-app',
-    label: 'Wick Editor',
-    description: 'Creative · animations and interactive scenes with Wick Editor',
-    defaultTitle: 'My animation',
-    icon: <PencilIcon />,
-    thumb: <BlankThumb />,
-    kind: 'webapp',
-    desktopOnly: true,
-  },
-  {
-    id: 'audiomass-app',
-    label: 'AudioMass',
-    description: 'Creative · waveform effects, recordings and multitrack audio',
-    defaultTitle: 'My audio',
-    icon: <LayoutIcon />,
-    thumb: <BlankThumb />,
-    kind: 'webapp',
-  },
-  {
-    id: 'pdfme-app',
-    label: 'Layout',
-    description:
-      'Creative · posters, flyers, cards and menus laid out on a page with pdfme; PDF and PNG outputs',
-    defaultTitle: 'My layout',
-    icon: <LayoutIcon />,
-    thumb: <BlankThumb />,
-    kind: 'webapp',
-    desktopOnly: true,
-  },
-  {
-    id: 'minipaint-app',
-    label: 'miniPaint',
-    description: 'Creative · photo editing, paint, text and editable layers',
-    defaultTitle: 'My image',
-    icon: <LayoutIcon />,
-    thumb: <BlankThumb />,
-    kind: 'webapp',
-  },
-  {
-    id: 'recorder-app',
-    label: 'Record',
-    description:
-      'Creative · screen and camera recording with a camera bubble; recordings become outputs for OpenCut',
-    defaultTitle: 'My recordings',
-    icon: <LayoutIcon />,
-    thumb: <BlankThumb />,
-    kind: 'webapp',
-    desktopOnly: true,
-  },
-  {
-    id: 'openmosh-app',
-    label: 'OpenMosh',
-    description: 'Creative · the full image, video and slideshow editor',
-    defaultTitle: 'Signal garden',
-    icon: <LayoutIcon />,
-    thumb: <BlankThumb />,
-    kind: 'webapp',
-    desktopOnly: true,
-  },
-  {
+    order: 43,
     id: 'tool-tables',
     label: 'Tables',
     description: 'Business & productivity · projects, contacts and inventory',
@@ -644,6 +287,7 @@ const TEMPLATES: Template[] = [
     desktopOnly: true,
   },
   {
+    order: 44,
     id: 'tool-smplr',
     label: 'Sample sequencer',
     description: 'Creative · sample pads and a saved sixteen-step rhythm',
@@ -654,6 +298,7 @@ const TEMPLATES: Template[] = [
     desktopOnly: true,
   },
   {
+    order: 45,
     id: 'tool-playcanvas',
     label: '3D Workshop',
     description: 'Creative · build an interactive scene with PlayCanvas',
@@ -664,6 +309,7 @@ const TEMPLATES: Template[] = [
     desktopOnly: true,
   },
   {
+    order: 46,
     id: 'cardinal-drone',
     label: 'Cardinal Drone',
     description: 'Play a prepared modular instrument, shape its sound, or open the rack',
@@ -674,26 +320,7 @@ const TEMPLATES: Template[] = [
     desktopOnly: true,
   },
   {
-    id: 'hextris-app',
-    label: 'Hextris',
-    description: 'Play the hexagonal block puzzle, then remix its sources',
-    icon: <LayoutIcon />,
-    thumb: <BlankThumb />,
-    kind: 'webapp',
-    defaultTitle: 'Hextris',
-    desktopOnly: true,
-  },
-  {
-    id: 'underrun-app',
-    label: 'Underrun',
-    description: 'Play a 13 KB WebGL shooter, then remix its sources',
-    icon: <LayoutIcon />,
-    thumb: <BlankThumb />,
-    kind: 'webapp',
-    defaultTitle: 'Underrun',
-    desktopOnly: true,
-  },
-  {
+    order: 49,
     id: 'onebigsky',
     label: 'One Big Sky',
     description: 'Play a flying arcade game with friends or bots, then make it your own',
@@ -704,6 +331,7 @@ const TEMPLATES: Template[] = [
     desktopOnly: true,
   },
   {
+    order: 50,
     id: 'astro-empty',
     label: 'Empty (Astro)',
     description: 'A real Astro project with one page — bring your own plan',
@@ -714,6 +342,7 @@ const TEMPLATES: Template[] = [
     desktopOnly: true,
   },
   {
+    order: 51,
     id: 'astro-homepage',
     label: 'Astro Home Page',
     description:
@@ -725,6 +354,7 @@ const TEMPLATES: Template[] = [
     desktopOnly: true,
   },
   {
+    order: 52,
     id: 'astro-blog',
     label: 'Astro Blog',
     description: 'A real Astro site on the Cactus theme — posts, notes, tags, search, dark mode',
@@ -735,6 +365,7 @@ const TEMPLATES: Template[] = [
     desktopOnly: true,
   },
   {
+    order: 53,
     id: 'astro-recipes',
     label: 'Recipe Book',
     description:
@@ -746,6 +377,7 @@ const TEMPLATES: Template[] = [
     desktopOnly: true,
   },
   {
+    order: 54,
     id: 'astro-storefront',
     label: 'Storefront',
     description:
@@ -757,6 +389,7 @@ const TEMPLATES: Template[] = [
     desktopOnly: true,
   },
   {
+    order: 55,
     id: 'digital-garden',
     label: 'Digital Garden',
     description:
@@ -768,6 +401,7 @@ const TEMPLATES: Template[] = [
     desktopOnly: true,
   },
   {
+    order: 56,
     id: 'astro-feed',
     label: 'Astro Feed',
     description: 'A photo feed — profile, square grid, a page per picture',
@@ -778,6 +412,7 @@ const TEMPLATES: Template[] = [
     desktopOnly: true,
   },
   {
+    order: 57,
     id: 'astro-media',
     label: 'Astro Media',
     description: 'Share music and video — players, pages, ffmpeg conversion on import',
@@ -788,6 +423,7 @@ const TEMPLATES: Template[] = [
     desktopOnly: true,
   },
   {
+    order: 58,
     id: FIVE_WS_TEMPLATE_ID,
     label: FIVE_WS_NAME,
     description: FIVE_WS_TAGLINE,
@@ -798,6 +434,26 @@ const TEMPLATES: Template[] = [
     desktopOnly: true,
   },
 ];
+const ICONS: Record<ToolIcon, React.ReactNode> = {
+  layout: <LayoutIcon />,
+  pencil: <PencilIcon />,
+  home: <HomeIcon />,
+};
+const TEMPLATES: Template[] = [
+  ...OWN_TEMPLATES,
+  ...toolManifests().map((m) => ({
+    order: m.order,
+    id: m.id,
+    label: m.name,
+    description: m.description,
+    icon: ICONS[m.icon],
+    thumb: <BlankThumb />,
+    kind: m.kind,
+    defaultTitle: m.defaultTitle,
+    desktopOnly: m.desktopOnly,
+  })),
+].sort((a, b) => a.order - b.order);
+
 // ── Component ────────────────────────────────────────────
 
 interface NewCruxModalProps {

@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "id": "recorder-app",
+  "name": "Record",
+  "description": "Creative · screen and camera recording with a camera bubble; recordings become outputs for OpenCut",
+  "kind": "webapp",
+  "defaultTitle": "My recordings",
+  "icon": "layout",
+  "desktopOnly": true,
+  "order": 41,
+  "bundled": false,
+  "app": "recorder",
+  "entryFile": "runtime/index.html",
+  "contentRoot": "data/",
+  "layout": "workshop",
+  "document": {
+    "path": "data/project.json",
+    "seed": {
+      "version": 1,
+      "app": "recorder",
+      "project": null
+    }
+  },
+  "share": false,
+  "toolInfo": {
+    "name": "Record",
+    "upstream": "https://github.com/addyosmani/recorder",
+    "relationship": "The actual Record app, unchanged; the Garden bridge keeps its recordings as outputs of the Crux.",
+    "detailsPath": "UPSTREAM.md"
+  },
+  "routes": [],
+  "greeting": "Record your screen, your camera, or both with a camera bubble: choose a layout, press Record, and Stop when done. A finished recording saved from the app becomes an output of this Crux that OpenCut can use.",
+  "context": "The actual Record (addyosmani/recorder, dac533b, MIT): screen, camera or both with picture-in-picture, a teleprompter and a countdown, recorded as WebM in the browser. Inside a Crux the recording the app offers for download is kept as an output under exports/ (named from the bar’s Output name) and listed in data/project.json with the Crux’s name. App Tools inspect the recordings and name the Crux; recording starts and stops by hand. The MP4 conversion needs cross-origin isolation the Crux does not provide, so WebM is the format. See UPSTREAM.md.",
+  "host": "garden/host-tools.ts"
+}

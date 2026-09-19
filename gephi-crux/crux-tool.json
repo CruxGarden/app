@@ -1,0 +1,43 @@
+{
+  "version": 1,
+  "id": "gephi-app",
+  "name": "Gephi Lite",
+  "description": "Research · explore networks, relationships and graph data",
+  "kind": "webapp",
+  "defaultTitle": "My research network",
+  "icon": "layout",
+  "desktopOnly": true,
+  "order": 24,
+  "bundled": false,
+  "app": "gephi",
+  "entryFile": "runtime/index.html",
+  "contentRoot": "data/",
+  "layout": "workshop",
+  "document": {
+    "path": "data/project.json",
+    "seed": {
+      "version": 1,
+      "app": "gephi",
+      "project": null
+    }
+  },
+  "share": false,
+  "toolInfo": {
+    "name": "Gephi Lite",
+    "upstream": "https://github.com/gephi/gephi-lite",
+    "relationship": "Built with Gephi Lite. Crux Garden adapts its editor for local projects, Growth and Collaboration.",
+    "detailsPath": "UPSTREAM.md"
+  },
+  "routes": [
+    {
+      "extensions": [
+        ".gexf",
+        ".graphml"
+      ],
+      "folder": "inbox"
+    }
+  ],
+  "greeting": "Explore connections in the native Gephi Lite editor. Open a graph file or sample, adjust its layout and appearance, inspect its data, and export a figure. Garden saves the graph and analysis settings automatically.",
+  "context": "Actual Gephi Lite 1.0.2 browser app. Native graph, layout positions, filters, appearance, analysis parameters and preferences persist as separate fingerprinted Artifacts referenced by data/project.json. Native JSON/GEXF/PNG exports remain. Stop running layouts before closing. inspect_gephi and set_gephi_title operate on native graph state. Source and GPL-3.0 license travel with the Crux; npm ci && npm run build rebuilds runtime. Cloud login and duplicate-browser-tab controls are omitted. Whole-editor publishing is unavailable. See UPSTREAM.md.",
+  "host": "garden/host-tools.ts"
+}

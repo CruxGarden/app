@@ -1,0 +1,26 @@
+{
+  "version": 1,
+  "id": "underrun-app",
+  "name": "Underrun",
+  "description": "Play a 13 KB WebGL shooter, then remix its sources",
+  "kind": "webapp",
+  "defaultTitle": "Underrun",
+  "icon": "layout",
+  "desktopOnly": true,
+  "order": 48,
+  "bundled": true,
+  "app": "underrun",
+  "entryFile": "index.html",
+  "contentRoot": "notebook/",
+  "layout": "workshop",
+  "share": true,
+  "toolInfo": {
+    "name": "Underrun",
+    "upstream": "https://github.com/phoboslab/underrun",
+    "relationship": "Built with Underrun. Crux Garden adapts its editor for local projects, Growth and Collaboration.",
+    "detailsPath": "UPSTREAM.md"
+  },
+  "routes": [],
+  "greeting": "Underrun is ready. Click the canvas to start (that also unlocks the audio), move with WASD, aim and shoot with the mouse. The whole game is a few source files under source/: change them and reload to remix it.",
+  "context": "Actual Underrun by Dominic Szablewski (js13kGames 2018), pinned upstream f933e29, running from source through upstream’s debug entry with no build; build.sh and shrinkit.js produce the 13 KB version. The game keeps no saved state, so there is no Garden document and no App Tools; the Crux is the playable game plus its editable sources, with Growth keeping the history. See UPSTREAM.md."
+}

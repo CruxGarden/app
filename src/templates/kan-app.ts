@@ -1,5 +1,4 @@
-import type { TemplateDefinition } from './index';
-import { LAYOUT_WORKSHOP } from './index';
+import type { ToolTemplateFiles } from './index';
 // Modified Kan source travels with the Crux (AGPL-3.0): the browser views,
 // shared/API schema packages, the local Garden adaptation, tooling and notices.
 // Hosted-only packages (database, email, billing, MCP, end-to-end) stay in the
@@ -33,7 +32,7 @@ const styles = import.meta.glob(
   ],
   { query: '?raw', import: 'default', eager: true },
 ) as Record<string, string>;
-const template: TemplateDefinition = {
+const template: ToolTemplateFiles = {
   files: [
     ...Object.entries(styles).map(([path, content]) => ({
       path: path.replace('../../kan-crux/', ''),
@@ -44,16 +43,6 @@ const template: TemplateDefinition = {
       content,
       encoding: 'asset-url' as const,
     })),
-    {
-      path: 'data/project.json',
-      content: JSON.stringify({ version: 1, app: 'kan', project: null }),
-    },
   ],
-  layout: LAYOUT_WORKSHOP,
-  meta: { settings: { entryFile: 'runtime/index.html' } },
-  greeting:
-    'Plan work with Kan. Make a board, add lists and cards, then track labels, due dates, checklists, comments and attachments. Garden preserves every board and original attachment together.',
-  context:
-    'Actual Kan kanban boards, pinned upstream 386cdcd. Native boards, lists, cards, labels, members, due dates and filters, checklists, comments, attachments, card duplication, archive and templates remain, for one local owner. Deleted records stay in history; each board is a separate fingerprinted record referenced by data/project.json, with original attachment bytes up to 64 MB each. App Tools inspect boards and card details; create and organize boards/lists/cards; edit due dates, labels and checklists; duplicate and soft-delete cards. New mutations require stateToken from a fresh inspection as expectedState. Kan has native activity history; use Growth for saved version recovery. Comments, members and attachments remain manual controls. Kan cards are project planning; Garden Tasks and Tending are execution and review, and nothing synchronizes them automatically. Hosted accounts, invitations, board URLs, public visibility, Trello import, integrations and billing are excluded. Source, pinned lockfile and notices travel with the Crux; npm ci --ignore-scripts && npm run build rebuilds runtime/. See UPSTREAM.md.',
 };
 export default template;

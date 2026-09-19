@@ -1,5 +1,4 @@
-import type { TemplateDefinition } from './index';
-import { LAYOUT_WORKSHOP } from './index';
+import type { ToolTemplateFiles } from './index';
 const sources = import.meta.glob(
   '../../rawgraphs-crux/{*.json,*.md,LICENSE,yarn.lock,.prettierrc,{src,public,scripts}/**/*.{js,cjs,ts,json,html,css,scss,md,txt,svg,csv,tsv}}',
   { query: '?raw', import: 'default', eager: true },
@@ -16,7 +15,7 @@ const styles = import.meta.glob('../../rawgraphs-crux/runtime/**/*.css', {
   import: 'default',
   eager: true,
 }) as Record<string, string>;
-const template: TemplateDefinition = {
+const template: ToolTemplateFiles = {
   files: [
     ...Object.entries({ ...sources, ...styles }).map(([path, content]) => ({
       path: path.replace('../../rawgraphs-crux/', ''),
@@ -27,16 +26,6 @@ const template: TemplateDefinition = {
       content,
       encoding: 'asset-url' as const,
     })),
-    {
-      path: 'data/project.json',
-      content: JSON.stringify({ version: 1, app: 'rawgraphs', project: null }),
-    },
   ],
-  layout: LAYOUT_WORKSHOP,
-  meta: { settings: { entryFile: 'runtime/index.html' } },
-  greeting:
-    'Turn a dataset into a figure with RAWGraphs. Paste or import your data, choose a chart, drag columns into its dimensions, then export SVG, PNG or an editable .rawgraphs project. Garden saves the dataset and chart automatically.',
-  context:
-    'Actual RAWGraphs editor source and runtime. data/project.json stores native chart mapping and visual options; immutable JSON data/assets preserve source input and raw rows. App Tools load CSV/TSV, list/select bundled charts, inspect rows/types/dimensions, map columns, revise guarded cells and column types, change supported native visual options and save PNG/SVG/JPEG/editable-project outputs. Native complex color scales and stacking remain manual in this iteration. Use fresh data hashes before replacing or editing data. Rebuild with yarn install --frozen-lockfile --ignore-scripts and yarn build (Yarn 1.22.22, Node 22). The bundled chart catalog works locally; custom JavaScript chart modules are disabled in Garden. URL/SPARQL imports require their remote source; saved datasets reopen locally. Native exports remain; whole-editor publishing is unavailable. See UPSTREAM.md.',
 };
 export default template;
