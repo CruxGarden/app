@@ -3,6 +3,7 @@ import { Panel, ApiKeySetup, Toggle } from '@/components/ui';
 import { getSetting, setSetting } from '@/services/settings';
 import { SettingsKey } from '@/lib/constants';
 import { useUIStore } from '@/stores/uiStore';
+import AgentMetricsSection from './AgentMetricsSection';
 import { cn } from '@/lib/cn';
 
 export default function AiSettings() {
@@ -43,6 +44,10 @@ export default function AiSettings() {
             <Toggle checked={aiEnabled} onChange={handleAiToggle} label="Enable AI Tools" />
           </div>
           {aiEnabled && <ApiKeySetup />}
+          <div className="border-t border-border pt-4">
+            <h3 className="mb-3 font-display text-xs font-medium text-text">Metrics</h3>
+            <AgentMetricsSection />
+          </div>
         </div>
       )}
     </Panel>

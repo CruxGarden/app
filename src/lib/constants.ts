@@ -90,6 +90,12 @@ export enum SettingsKey {
   AiEnabled = 'cruxgarden:aiEnabled',
   DefaultModel = 'cruxgarden:defaultModel',
   ApiKeyAnthropic = 'cruxgarden:apiKey:anthropic',
+  /** Running agent speed/accuracy counters (JSON, see services/agent-metrics.ts) */
+  AgentMetrics = 'cruxgarden:agentMetrics',
+  /** Record those counters at all ('false' to stop; recording is on by default) */
+  AgentMetricsCapture = 'cruxgarden:agentMetricsCapture',
+  /** Where Save writes the report, relative to the Garden Root */
+  AgentMetricsPath = 'cruxgarden:agentMetricsPath',
 
   // Layout
   GlobalLayout = 'cruxgarden:layout:global',

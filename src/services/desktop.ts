@@ -92,6 +92,30 @@ export async function openLogs(): Promise<void> {
   await desktopBridge()?.openLogs?.();
 }
 
+/**
+ * Append text to a file inside the Garden Root, creating it if it is not there
+ * yet. The main process refuses anything that resolves outside a known root,
+ * so `relPath` is relative by construction. Returns the full path written, or
+ * null on web (no filesystem to append to).
+ *
+ * Read-then-write, not an O_APPEND handle: the bridge only offers whole-file
+ * reads and writes, and these files are a few kilobytes of counters.
+ */
+export async function appendGardenFile(relPath: string, text: string): Promise<string | null> {
+  if (typeof window === 'undefined') return null;
+  const project = window.electronAPI?.project ?? null;
+  const root = await getGardenRoot();
+  if (!project || !root) return null;
+  let existing = '';
+  try {
+    existing = new TextDecoder().decode(await project.readFile(root, relPath));
+  } catch {
+    /* not there yet — the append creates it */
+  }
+  await project.writeFile(root, relPath, new TextEncoder().encode(existing + text));
+  return `${root}/${relPath}`;
+}
+
 // ── Updates (ADR 0007) ──────────────────────────────────────────────────────
 
 function updatesBridge() {

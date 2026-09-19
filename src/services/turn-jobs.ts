@@ -1,5 +1,6 @@
 import type { ChatMessage, ToolCall, TurnCheckSummary, TurnJobSummary } from '@/api/types';
 import type { ConversationEvent } from '@/ai/engine';
+import type { TurnMeter } from './agent-metrics';
 import { didMutate } from '@/ai/tools';
 import { isSubagentActive, type MergeState, type SubagentRun } from './subagents';
 
@@ -437,6 +438,8 @@ export interface TurnRunnerDeps {
   /** Consulted after the loop: did the user stop the job (and why)? */
   stopReason?: () => TurnStopReason | null;
   aborted?: () => boolean;
+  /** Meter for this turn's speed and tool accuracy (`services/agent-metrics.ts`). */
+  metrics?: TurnMeter;
 }
 
 export interface TurnRunResult {
@@ -486,6 +489,7 @@ export async function runTurnJob(initial: TurnJob, deps: TurnRunnerDeps): Promis
 
   try {
     for await (const event of deps.run()) {
+      deps.metrics?.observe(event);
       switch (event.type) {
         case 'text': {
           content += event.content;
@@ -589,6 +593,7 @@ export async function runTurnJob(initial: TurnJob, deps: TurnRunnerDeps): Promis
   const stopReason = deps.stopReason?.() ?? null;
   const wasAborted = !!stopReason || !!deps.aborted?.();
   const finalStatus: TurnJobStatus = wasAborted ? 'interrupted' : sawError ? 'failed' : 'done';
+  deps.metrics?.finish(finalStatus);
   await publish(finishJob(job, finalStatus, { stopReason: stopReason ?? undefined }));
 
   return {

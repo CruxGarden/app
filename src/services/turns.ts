@@ -14,6 +14,7 @@ import { agentStatus, runAgentTurn } from '@/services/agent-provider';
 import { isAiMock } from '@/lib/platform';
 import { playCue, duckAudio } from '@/services/cues';
 import { chatSessionFor } from '@/services/chat-session';
+import { meterTurn } from '@/services/agent-metrics';
 import type { SnapshotFrequency } from '@/services/growth';
 import { isSiteCrux } from '@/services/site';
 import { getPersona, getPersonaFingerprint, personaSnapshotOf } from '@/services/persona';
@@ -534,6 +535,7 @@ function createTurns(useCruxStore: StoreApi<CruxState>) {
     };
 
     const result = await runTurnJob(args.job, {
+      metrics: meterTurn({ model }),
       run: () =>
         isAgentModel(model)
           ? agentRun()
