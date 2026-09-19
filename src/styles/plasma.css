@@ -86,6 +86,13 @@ html[data-surface-style='plasma']
    on top. All four have to give way or the material is simply behind a solid
    panel and never seen. */
 html[data-surface-style='plasma'] .mosaic.crux-mosaic-theme .mosaic-window {
+  /* The window paints its border colour as its whole background under the
+     other themes (the ring technique, globals.css) with a specificity the
+     transparent rule above — deliberately kept low with :where() — cannot
+     beat. Said again here at full weight, or the material and its rim never
+     show through a pane at all. */
+  background: transparent;
+  box-shadow: none;
   /* Was the border ring's width; now it is how much material shows around the
      plate. The ring itself has nothing left to paint. */
   padding: var(--plasma-frame);
