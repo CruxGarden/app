@@ -54,7 +54,7 @@ export const THEME_TOOL_DEFINITIONS: ToolDefinition[] = [
       properties: {
         event: {
           type: 'string',
-          enum: ['message', 'toolDone', 'snapshot', 'published', 'error'],
+          enum: ['message', 'toolDone', 'snapshot', 'published', 'error', 'alert'],
           description: 'Which event.',
         },
         preset: { type: 'string', description: 'A preset id from list_cue_presets.' },

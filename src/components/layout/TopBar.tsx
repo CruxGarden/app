@@ -1,6 +1,7 @@
 import { useMoodNavigate } from '@/hooks/useMoodNavigate';
 import { useUIStore, useWorkspaceUIStore, DEFAULT_PANE_ORDER } from '@/stores/uiStore';
 import TendingLink from '@/components/tending/TendingLink';
+import AlertsBell from '@/components/tending/AlertsBell';
 import WorkspaceSwitcher from './WorkspaceSwitcher';
 import { useAppStore } from '@/stores/appStore';
 import IconButton from '@/components/ui/IconButton';
@@ -72,6 +73,7 @@ export default function TopBar() {
         <div className="hidden md:block">
           <TendingLink />
         </div>
+        <AlertsBell />
       </div>
 
       {/* Right: pane toggles + console + user menu */}

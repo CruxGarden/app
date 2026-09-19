@@ -31,6 +31,7 @@ export { default as PowerIcon } from './PowerIcon';
 export { default as RefreshIcon } from './RefreshIcon';
 export { default as RepeatIcon } from './RepeatIcon';
 export { default as SearchIcon } from './SearchIcon';
+export { default as BellIcon } from './BellIcon';
 export { default as ShareIcon } from './ShareIcon';
 export { default as SlidersIcon } from './SlidersIcon';
 export { default as SproutIcon } from './SproutIcon';

@@ -8,7 +8,7 @@ import { SettingsKey } from '@/lib/constants';
 import { CUE_PRESETS, cuePreset, type CueGroup } from '@/audio/cue-presets';
 import { parseCuePatch, type CuePatch } from '@/audio/cue-synth';
 
-export type CueEvent = 'message' | 'toolDone' | 'snapshot' | 'published' | 'error';
+export type CueEvent = 'message' | 'toolDone' | 'snapshot' | 'published' | 'error' | 'alert';
 /**
  * What plays on an event: a preset id from the bank, or a patch of your own
  * (SYNTH-CUES-PLAN). The five original ids are presets, so every Mood saved
@@ -23,6 +23,7 @@ export const CUE_EVENTS: { id: CueEvent; label: string; hint: string }[] = [
   { id: 'snapshot', label: 'Snapshot taken', hint: 'a version was captured' },
   { id: 'published', label: 'Shared', hint: 'the crux went live' },
   { id: 'error', label: 'Something failed', hint: 'a publish or tool error' },
+  { id: 'alert', label: 'Alert arrives', hint: 'something needs you, or a reminder is due' },
 ];
 /** The preset bank as the picker lists it. */
 export const CUE_KINDS: { id: string; label: string; group: CueGroup }[] = CUE_PRESETS.map((p) => ({
@@ -66,6 +67,7 @@ export const DEFAULT_CUES: SoundCues = {
   snapshot: 'bloom',
   published: 'chime',
   error: 'thud',
+  alert: 'ping',
 };
 
 export function getCues(): SoundCues {
