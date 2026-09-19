@@ -49,7 +49,7 @@ export type ConversationEvent =
       id: string;
       input: Record<string, unknown>;
     }
-  | { type: 'tool_result'; name: string; id: string; result: string }
+  | { type: 'tool_result'; name: string; id: string; result: string; error?: boolean }
   /**
    * One model round finished (its text streamed, its tool calls executed and
    * their results returned). The step boundary a Background Turn snapshots
@@ -408,6 +408,7 @@ export async function* runConversation(
             name: part.toolName,
             id: part.toolCallId,
             result: `Error: ${String((part as { error?: unknown }).error ?? 'tool failed')}`,
+            error: true,
           };
           break;
 

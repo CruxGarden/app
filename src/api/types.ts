@@ -203,6 +203,13 @@ export interface ToolCall {
   name: string;
   input: Record<string, unknown>;
   result?: string;
+  /**
+   * Set from the producer's own status (a tool-error part, Claude Code's
+   * `is_error`, Codex's failed/declined item). Absent on records saved before
+   * this existed; the pane then falls back to an "Error:" prefix, never to
+   * searching the result body for words.
+   */
+  error?: boolean;
 }
 
 export interface CruxMeta {

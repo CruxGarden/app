@@ -19,6 +19,13 @@ export interface AgentApproval {
   /** For `tool`: the tool's name and a one-line summary (the command, the url…) */
   tool?: string;
   detail?: string;
+  /**
+   * For `tool`: the complete arguments, so the person can read the whole
+   * command or code before allowing it. The banner shows `detail` and opens
+   * this on request; a truncated one-liner was the only review available
+   * during the live Penpot sessions (UI-POLISH-PLAN, 2026-09-15).
+   */
+  input?: Record<string, unknown>;
 }
 
 // ── Pane Types ──────────────────────────────────────────

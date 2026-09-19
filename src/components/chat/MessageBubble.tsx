@@ -215,13 +215,18 @@ function ToolCallItem({ tc }: { tc: ToolCall }) {
   const [expanded, setExpanded] = useState(false);
   const label = getToolLabel(tc);
   const hasResult = !!tc.result;
-  const isError =
-    tc.result?.includes('ERROR') || tc.result?.includes('Error') || tc.result?.includes('failed');
+  // Explicit status from the event seam; older records only have the text,
+  // and for those the "Error:" prefix every producer writes is the signal.
+  // Searching the body painted successful tool discovery red, because the
+  // schemas it returns mention errors (UI-POLISH-PLAN, 2026-09-15).
+  const isError = tc.error ?? /^(Error|ERROR)\b/.test(tc.result ?? '');
 
   return (
     <div>
       <button
         onClick={() => hasResult && setExpanded((v) => !v)}
+        data-testid="tool-call"
+        data-error={isError ? 'true' : 'false'}
         className={cn(
           'text-xs font-mono bg-code-block rounded px-2 py-1 flex items-center gap-1.5 w-full text-left transition-colors',
           hasResult ? 'cursor-pointer hover:bg-surface-hover' : 'cursor-default',

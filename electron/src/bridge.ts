@@ -327,7 +327,7 @@ export interface AgentPermissionRequest {
 export type AgentEvent =
   | { type: 'text'; content: string }
   | { type: 'tool_start'; name: string; id: string; input: Record<string, unknown> }
-  | { type: 'tool_result'; name: string; id: string; result: string }
+  | { type: 'tool_result'; name: string; id: string; result: string; error?: boolean }
   | { type: 'step_end'; index: number }
   | { type: 'usage'; inputTokens: number; outputTokens: number; cachedInputTokens: number }
   | { type: 'info'; message: string }

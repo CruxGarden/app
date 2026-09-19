@@ -110,6 +110,7 @@ export function mapCodexNotification(method: string, params: any, state: CodexSt
       type: 'tool_result',
       name,
       id,
+      error,
       result:
         (error ? 'Error: ' : '') +
         (typeof result === 'string'

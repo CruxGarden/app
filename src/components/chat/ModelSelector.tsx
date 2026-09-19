@@ -170,7 +170,9 @@ export default function ModelSelector({ value, onChange, disabled }: ModelSelect
         )}
       >
         {SelectedIcon && <SelectedIcon size={12} />}
-        <span className="text-text-muted">{provider}</span>
+        {/* An agent provider has one model named after itself; "Claude Code
+            Claude Code" told the person nothing twice. */}
+        {provider !== label && <span className="text-text-muted">{provider}</span>}
         <span>{label}</span>
         <ChevronDownIcon
           size={8}

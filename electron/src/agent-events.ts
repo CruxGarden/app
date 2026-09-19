@@ -11,7 +11,7 @@
 export type AgentEvent =
   | { type: 'text'; content: string }
   | { type: 'tool_start'; name: string; id: string; input: Record<string, unknown> }
-  | { type: 'tool_result'; name: string; id: string; result: string }
+  | { type: 'tool_result'; name: string; id: string; result: string; error?: boolean }
   | { type: 'step_end'; index: number }
   | { type: 'usage'; inputTokens: number; outputTokens: number; cachedInputTokens: number }
   | { type: 'info'; message: string }
@@ -133,7 +133,13 @@ export function mapSdkMessage(msg: unknown, state: MapperState): AgentEvent[] {
         const result = toolResultText(block);
         const isError = block.is_error === true;
         if (!isError && AGENT_MUTATING_TOOLS.includes(name)) state.hadMutation = true;
-        out.push({ type: 'tool_result', id, name, result: isError ? `Error: ${result}` : result });
+        out.push({
+          type: 'tool_result',
+          id,
+          name,
+          result: isError ? `Error: ${result}` : result,
+          error: isError,
+        });
       }
       if (sawResult) out.push({ type: 'step_end', index: state.round++ });
       break;

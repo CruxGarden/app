@@ -530,7 +530,10 @@ export async function runTurnJob(initial: TurnJob, deps: TurnRunnerDeps): Promis
 
         case 'tool_result': {
           const tc = toolCalls.find((t) => t.id === event.id);
-          if (tc) tc.result = event.result;
+          if (tc) {
+            tc.result = event.result;
+            if (event.error !== undefined) tc.error = event.error;
+          }
           deps.onToolDone?.();
           if (didMutate(event.name, event.result)) {
             mutatedSinceSnapshot = true;

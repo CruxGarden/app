@@ -90,6 +90,13 @@ test.describe('agent provider (mock Claude Code)', () => {
       await expect(approvals).toContainText('Claude Code');
       await expect(approvals).toContainText('Bash');
       await expect(approvals).toContainText('echo hello from claude code');
+      // The whole request is readable before answering, not just a one-liner.
+      await approvals.getByRole('button', { name: 'Review the full request' }).click();
+      await expect(page.getByTestId('agent-approval-review')).toContainText(
+        'command:\necho hello from claude code',
+      );
+      await approvals.getByRole('button', { name: 'Hide the full request' }).click();
+      await expect(page.getByTestId('agent-approval-review')).toHaveCount(0);
       await approvals.getByRole('button', { name: 'Not now' }).click();
       await expect(chat.getByText(/Skipped the command, as you asked/)).toBeVisible({
         timeout: 30_000,
@@ -104,6 +111,12 @@ test.describe('agent provider (mock Claude Code)', () => {
       await approvals.getByRole('button', { name: 'Allow' }).click();
       await expect(chat.getByText(/The command ran/)).toBeVisible({ timeout: 30_000 });
       await expect(chat.getByText(/Ran echo hello from claude code/)).toHaveCount(2); // declined + allowed
+      // Red means the producer said so (is_error), never that the result body
+      // mentioned an error: the declined run is red, the allowed one is not.
+      await expect(chat.locator('[data-testid="tool-call"][data-error="true"]')).toHaveCount(1);
+      await expect(
+        chat.locator('[data-testid="tool-call"][data-error="false"]').first(),
+      ).toBeVisible();
 
       // Settings → AI: installed, no key field
       await page.keyboard.press('ControlOrMeta+,');

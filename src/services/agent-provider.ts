@@ -125,6 +125,7 @@ export function startAgentPermissionListener(): () => void {
           action: 'tool',
           tool: request.toolName,
           detail: request.summary,
+          input: request.input,
           cruxId: request.cruxId,
         },
         owner.signal,

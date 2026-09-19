@@ -45,7 +45,7 @@ test('Codex shares Garden tools, resumes its own session, and asks in Collaborat
     await expect(chat.getByText(/Resuming Codex/)).toBeVisible();
     await expect.poll(readNote).toContain('run a command');
     // A provider switch must not pass the Codex session id to Claude or vice versa.
-    await chat.getByRole('button', { name: 'Codex Codex', exact: true }).click();
+    await chat.getByRole('button', { name: 'Codex', exact: true }).click();
     await page
       .getByTestId('model-group-claude-code')
       .getByRole('button', { name: 'Claude Code' })
@@ -54,7 +54,7 @@ test('Codex shares Garden tools, resumes its own session, and asks in Collaborat
     await composer.press('Enter');
     await expect(chat.getByText(/Starting fresh/)).toBeVisible({ timeout: 30_000 });
     await expect(chat.getByText(/Done — the note is in agent-note.md/)).toBeVisible();
-    await chat.getByRole('button', { name: 'Claude Code Claude Code', exact: true }).click();
+    await chat.getByRole('button', { name: 'Claude Code', exact: true }).click();
     await page.getByTestId('model-group-codex').getByRole('button', { name: 'Codex' }).click();
     await composer.fill('run again');
     await composer.press('Enter');

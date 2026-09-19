@@ -21,9 +21,7 @@ test('author a Penpot study with the Garden collaborator', async () => {
     const chat = page.getByTestId('pane-body-collaboration');
     if (!(await chat.isVisible()))
       await page.getByRole('button', { name: 'Toggle collaboration' }).click();
-    await expect(
-      chat.getByRole('button', { name: 'Claude Code Claude Code', exact: true }),
-    ).toBeVisible();
+    await expect(chat.getByRole('button', { name: 'Claude Code', exact: true })).toBeVisible();
     const composer = page.getByPlaceholder('Send a message...');
     await composer.fill(prompt);
     await composer.press('Enter');
