@@ -12,6 +12,7 @@
 import { create } from 'zustand';
 import { getSetting, setSetting } from './settings';
 import type { TendingTarget } from './tending-state';
+import { emitGardenEvent } from './garden-events';
 
 export const ALERTS_KEY = 'cruxgarden:alerts';
 const CAP = 200;
@@ -134,6 +135,10 @@ export function raiseAlert(input: {
   next.sort((a, b) => (a.at < b.at ? 1 : a.at > b.at ? -1 : 0));
   useAlerts.setState({ alerts: next });
   persist(next);
+  // A schedule may listen for alerts; one raised by a schedule's own action
+  // is not announced, or an alert-triggered alert would never stop.
+  if (!existing && input.kind !== 'reminder' && input.kind !== 'run')
+    emitGardenEvent('alert', { cruxId: input.cruxId, detail: input.title });
   return alert;
 }
 
@@ -174,4 +179,11 @@ export function alertAge(at: string, now = new Date()): string {
   if (s < 3600) return `${Math.round(s / 60)} min ago`;
   if (s < 86400) return `${Math.round(s / 3600)} h ago`;
   return `${Math.round(s / 86400)} d ago`;
+}
+
+// Test/diagnostic hook: how many alerts want attention now.
+if (typeof window !== 'undefined') {
+  (window as unknown as { __cruxAlerts?: unknown }).__cruxAlerts = {
+    count: () => openAlerts().length,
+  };
 }

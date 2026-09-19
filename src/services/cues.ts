@@ -7,6 +7,7 @@ import { getSetting, setSetting } from './settings';
 import { SettingsKey } from '@/lib/constants';
 import { CUE_PRESETS, cuePreset, type CueGroup } from '@/audio/cue-presets';
 import { parseCuePatch, type CuePatch } from '@/audio/cue-synth';
+import { emitGardenEvent } from './garden-events';
 
 export type CueEvent = 'message' | 'toolDone' | 'snapshot' | 'published' | 'error' | 'alert';
 /**
@@ -95,8 +96,13 @@ export function cuesPlayedCount(): number {
   return cuesPlayed;
 }
 
-/** Play the Mood's cue for an event (no-op before the user opted into sound). */
-export async function playCue(event: CueEvent): Promise<void> {
+/**
+ * Play the Mood's cue for an event (no-op before the user opted into sound).
+ * The event itself is announced to the garden whether or not it is heard:
+ * a Schedule may be listening (services/garden-events.ts).
+ */
+export async function playCue(event: CueEvent, cruxId?: string): Promise<void> {
+  emitGardenEvent(event, cruxId ? { cruxId } : {});
   if (typeof window === 'undefined') return;
   const { useAudioStore } = await import('@/stores/audioStore');
   const s = useAudioStore.getState();

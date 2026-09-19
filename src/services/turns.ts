@@ -555,7 +555,7 @@ function createTurns(useCruxStore: StoreApi<CruxState>) {
       onText: (delta) => {
         if (stillHere()) useCruxStore.getState().appendStreamContent(delta);
       },
-      onToolDone: () => void playCue('toolDone'),
+      onToolDone: () => void playCue('toolDone', useCruxStore.getState().crux?.id),
       onMutation: () => {
         // Refresh artifacts after mutation operations (debounced to coalesce rapid tool calls)
         if (session.refreshTimer) clearTimeout(session.refreshTimer);
@@ -858,7 +858,7 @@ function createTurns(useCruxStore: StoreApi<CruxState>) {
       timestamp: new Date().toISOString(),
       personaFingerprint: pf,
     });
-    void playCue('error');
+    void playCue('error', useCruxStore.getState().crux?.id);
     await launch({ cruxId, job, apiKey: apiKey!, model, pf });
   }
 

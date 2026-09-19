@@ -660,7 +660,7 @@ export function createCruxStore(ui: StoreApi<UIState> = useUIStore) {
           onProgress: (phase) => set({ publishPhase: phase }),
         });
         set({ crux: mergedCrux });
-        void playCue('published');
+        void playCue('published', get().crux?.id);
         return true;
       } catch (err) {
         console.error('[publish] failed:', err);
@@ -965,7 +965,7 @@ export function createCruxStore(ui: StoreApi<UIState> = useUIStore) {
           });
         }
         await get().saveMeta();
-        void playCue('snapshot');
+        void playCue('snapshot', get().crux?.id);
 
         // Fire-and-forget AI summary — scoped to the segment this snapshot captured
         if (!options.silent) {

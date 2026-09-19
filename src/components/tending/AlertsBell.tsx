@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/cn';
 import { useDismiss } from '@/hooks/useDismiss';
@@ -29,6 +29,18 @@ export default function AlertsBell() {
   const navigate = useNavigate();
   const close = useCallback(() => setShown(false), []);
   useDismiss(ref, close, shown);
+  // Escape closes the list, like any menu.
+  useEffect(() => {
+    if (!shown) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.stopPropagation();
+        setShown(false);
+      }
+    };
+    window.addEventListener('keydown', onKey, true);
+    return () => window.removeEventListener('keydown', onKey, true);
+  }, [shown]);
 
   const go = (a: Alert) => {
     setShown(false);
