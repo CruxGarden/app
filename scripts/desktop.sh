@@ -12,6 +12,13 @@
 #   ./scripts/desktop.sh --selftest   # run the in-app integration self-test (8 checks)
 #   ./scripts/desktop.sh --logs       # tail the desktop debug log
 #
+# The everyday three, from app/:
+#   npm run dev:site          # the web app in the browser (Vite, :8080)
+#   npm run dev:app           # the desktop app on that dev server (HMR)
+#   npm run dev:app --live    # the same, against the production API
+# npm keeps a bare `--live` for itself (npm_config_live), so the script reads
+# it from there as well as from its own arguments.
+#
 set -euo pipefail
 
 APP_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -52,6 +59,8 @@ for arg in "$@"; do
     *) echo "unknown flag: $arg" >&2; exit 1 ;;
   esac
 done
+# `npm run dev:app --live`: npm swallows the flag and exposes it as config.
+[ "${npm_config_live:-}" = "true" ] && LIVE=1
 
 # ── API target ───────────────────────────────────────────────────────────────
 # VITE_* values are baked into the web bundle at build time. --live points the
@@ -107,8 +116,11 @@ case "$MODE" in
   dev)
     if ! nc -z 127.0.0.1 8080 2>/dev/null; then
       echo "· starting Vite dev server on :8080…"
+      # VITE_API_URL is read by the dev server at start, so --live is exported above.
       (cd "$APP_DIR" && npm run dev >/dev/null 2>&1 &)
       for _ in $(seq 1 30); do nc -z 127.0.0.1 8080 2>/dev/null && break; sleep 1; done
+    elif [ "$LIVE" = 1 ]; then
+      echo "· a dev server is already on :8080 — it keeps the API target it started with; restart it for --live to take"
     fi
     echo "· launching (dev server, HMR)"
     exec "${LAUNCH[@]}" env CRUX_DEV_SERVER=http://localhost:8080 \

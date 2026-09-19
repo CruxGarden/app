@@ -7,6 +7,8 @@
   "scripts": {
     "start": "vite --port 8080",
     "dev": "vite --port 8080",
+    "dev:site": "vite --port 8080",
+    "dev:app": "./scripts/desktop.sh --dev",
     "build": "tsc -b && vite build",
     "build:public": "tsc -b && vite build",
     "preview": "vite preview --port 8080",

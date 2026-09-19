@@ -14,10 +14,15 @@ local model. Publishing, sync and included collaboration use our servers as desc
 ## Run it from source
 
 ```bash
-nvm use                                   # Node 22
-npm install && npm run dev                # web app on http://localhost:8080
-cd electron && npm install && npm run dev # desktop shell against the dev server
+nvm use                       # Node 22
+npm install
+npm run dev:site              # the web app in the browser, http://localhost:8080
+npm run dev:app               # the desktop app on that dev server (HMR); starts it if needed
+npm run dev:app --live        # the same, against the production API — publishes are real
 ```
+
+`dev:app` is `scripts/desktop.sh --dev`; the script also builds and launches the
+bundled app (`npm run desktop`, `desktop:live`, `desktop:rebuild`, `desktop:selftest`).
 
 Build a DMG without a certificate: `cd electron && npm run dist:mac:unsigned`.
 
