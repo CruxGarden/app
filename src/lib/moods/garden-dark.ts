@@ -34,11 +34,16 @@ export const GARDEN_DARK = {
 
   // ── From accent ──────────────────────────────────────
   accentMuted: '#1a2723',
-  primaryButton: 'var(--accent)',
-  primaryButtonHover: 'color-mix(in srgb, var(--accent) 85%, black)',
-  primaryButtonText: 'var(--bg)',
-  primaryButtonBorder: 'var(--accent)',
-  primaryButtonBorderHover: 'color-mix(in srgb, var(--accent) 85%, black)',
+  // The landing page's register (Daniel, 2026-09-19: "I prefer the more muted
+  // button color, compared to the loud bright buttons"): a translucent wash
+  // of the Mood's own accent with the Mood's text on it and a hairline of
+  // light, not a solid accent fill with dark text. Every Mood inherits it
+  // through its own accent; a Mood that wants the loud fill sets these.
+  primaryButton: 'color-mix(in srgb, var(--accent) 16%, transparent)',
+  primaryButtonHover: 'color-mix(in srgb, var(--accent) 28%, transparent)',
+  primaryButtonText: 'var(--text)',
+  primaryButtonBorder: 'color-mix(in srgb, var(--text) 22%, transparent)',
+  primaryButtonBorderHover: 'color-mix(in srgb, var(--text) 32%, transparent)',
   chatUserBubble: 'color-mix(in srgb, var(--accent) 15%, transparent)',
   chatUserBubbleText: 'var(--accent)',
   chatUserBubbleBorder: 'transparent',
@@ -65,9 +70,9 @@ export const GARDEN_DARK = {
   flowBg: 'var(--bg)',
   iconButtonIconHover: 'var(--accent)',
   iconButtonHover: 'var(--accent-muted)',
-  actionButtonHover: 'var(--accent-muted)',
+  actionButtonHover: 'color-mix(in srgb, var(--accent) 16%, transparent)',
   actionButtonTextHover: 'var(--text)',
-  actionButtonBorderHover: 'color-mix(in srgb, var(--accent) 30%, transparent)',
+  actionButtonBorderHover: 'color-mix(in srgb, var(--text) 28%, transparent)',
   profileButtonHover: 'color-mix(in srgb, var(--accent) 15%, transparent)',
   gardenCardHover: 'var(--accent-muted)',
   // Note: --accent-muted is auto-computed as solid hex in applyMoodPalette
@@ -138,7 +143,7 @@ export const GARDEN_DARK = {
   settingsPanelBorder: 'var(--border)',
   settingsDivider: 'var(--border)',
   codeBlockBorder: 'var(--border)',
-  actionButtonBorder: 'var(--border)',
+  actionButtonBorder: 'color-mix(in srgb, var(--text) 16%, transparent)',
   profileButtonBorder: 'var(--border)',
   scrollbarTrack: 'transparent',
   markdownHr: 'var(--border)',
@@ -215,8 +220,8 @@ export const GARDEN_DARK = {
   meterDanger: 'var(--error)',
   meterRadius: '9999px',
   meterHeight: '6px',
-  buttonDisabled: 'var(--border)',
-  buttonDisabledText: 'var(--text-muted)',
+  buttonDisabled: 'color-mix(in srgb, var(--text) 6%, transparent)',
+  buttonDisabledText: 'color-mix(in srgb, var(--text) 40%, transparent)',
   toolbarHeight: '48px',
   fileTreeRowHeight: '26px',
   fileTreeIndent: '20px',
@@ -242,7 +247,7 @@ export const GARDEN_DARK = {
   toolbarLink: 'var(--accent)',
   publicTopBar: 'var(--panel)',
   profileButton: 'transparent',
-  actionButton: 'transparent',
+  actionButton: 'color-mix(in srgb, var(--text) 6%, transparent)',
   brandAi: '#D97757',
 
   // ── From error ───────────────────────────────────────
@@ -360,30 +365,38 @@ export const GARDEN_DARK = {
   // material there will be — a busier one (wood grain, stone) needs a calmer
   // plate, and that is a value here rather than a redesign. Both are the
   // person's to set, in the Mood Builder.
-  plasmaFrame: '10px',
-  plasmaPlate: 'color-mix(in srgb, var(--surface) 82%, transparent)',
+  // The landing page's material is the base for every Mood that wears the
+  // plasma surface (Daniel, 2026-09-19: "all the plasma should be like that"):
+  // the tint does the panel's work, so there is no plate inside a pane and no
+  // frame around one — the material is the pane. A Mood that wants a plate
+  // sets these.
+  plasmaFrame: '0px',
+  plasmaPlate: 'transparent',
   // What sits inside a pane under Plasma — inputs, inner panels, wells — a
-  // flat shade with no second material. A Mood whose tint does the panel's
-  // work (the Plasma Mood) makes it a translucent dark instead.
-  plasmaInner: 'color-mix(in srgb, var(--surface) 88%, transparent)',
+  // translucent well of the Mood's own ground, no second material.
+  plasmaInner: 'color-mix(in srgb, var(--bg) 45%, transparent)',
   // The material's optics (plasma-ui props): how far the field bends behind
   // a pane, and how far the red and blue of that bend split — chromatic
   // aberration, the fringe a real lens leaves. 1 is the library's default;
   // 0 is none; 3 is a prism.
-  plasmaRefraction: '1',
-  plasmaDispersion: '1',
+  plasmaRefraction: '1.4',
+  plasmaDispersion: '2.2',
   // The material itself (plasma-ui provider props), so a Mood can carry the
   // look the landing page has: the field's three colours (deep, mid, accent),
   // the tint every surface carries and how solid it is, how frosted the
   // material is (the quality tier caps this), the rim's strength and width,
   // and how high the surfaces float. Defaults are the library's.
-  plasmaField: '#04111c #0f4c5c #6a5acd',
-  plasmaTint: '#ffffff',
-  plasmaOpacity: '0',
-  plasmaFrost: '0.35',
-  plasmaRim: '1',
-  plasmaRimWidth: '1',
-  plasmaElevation: '0.35',
+  // The landing page's field (plasma-ui's aurora), every surface tinted the
+  // Mood's own panel colour and half solid, frosted, a strong iridescent
+  // rim, floating a little higher. Read live by PlasmaStage; the tint may be
+  // any CSS colour and follows the Mood.
+  plasmaField: '#050b12 #0f5e46 #b04bd6',
+  plasmaTint: 'var(--panel)',
+  plasmaOpacity: '0.55',
+  plasmaFrost: '0.5',
+  plasmaRim: '1.3',
+  plasmaRimWidth: '1.4',
+  plasmaElevation: '0.5',
   paneRadius: 'var(--radius)',
   paneBorderWidth: '1px',
   paneHeaderHeight: '28px',

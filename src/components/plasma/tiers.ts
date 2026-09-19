@@ -27,6 +27,10 @@ import type { PlasmaProviderProps } from '@cruxgarden/plasma-ui';
  *
  * The renderer also clamps itself at 2.6 megapixels however high quality goes,
  * so the worst case is bounded: a 4K display does not cost 4K of plasma.
+ *
+ * The pointer drop — the bead of liquid that follows the pointer — is off in
+ * every tier (Daniel, 2026-09-19: "don't show the drop in the pointer"); the
+ * material answers the pointer with the edge highlight alone.
  */
 export type PlasmaTier = 'low' | 'medium' | 'high' | 'ultra';
 
@@ -35,13 +39,13 @@ export const PLASMA_TIERS: Record<PlasmaTier, Partial<PlasmaProviderProps>> = {
   // the field softens and the cost drops by the square. The only tier that
   // helps a weak GPU on a 1080p screen.
   low: { quality: 0.7, frost: 0, pointerDrop: false, ambientDrops: false, flow: 0, stretch: 0.5 },
-  medium: { quality: 1, frost: 0.2, pointerDrop: true, ambientDrops: false, flow: 0, stretch: 1 },
+  medium: { quality: 1, frost: 0.2, pointerDrop: false, ambientDrops: false, flow: 0, stretch: 1 },
   // The default, and what the workspace example looks like.
-  high: { quality: 1.25, frost: 0.6, pointerDrop: true, ambientDrops: false, flow: 0, stretch: 1 },
+  high: { quality: 1.25, frost: 0.6, pointerDrop: false, ambientDrops: false, flow: 0, stretch: 1 },
   ultra: {
     quality: 1.75,
     frost: 1,
-    pointerDrop: true,
+    pointerDrop: false,
     ambientDrops: true,
     flow: 0.4,
     stretch: 1.4,

@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { refreshBundledPresets } from '@/lib/moods/bundled-moods';
 import { applyActiveMood } from '@/lib/moods/active';
 import { getSetting, setSetting } from '@/services/settings';
 import { SettingsKey } from '@/lib/constants';
@@ -27,8 +28,10 @@ function applyToDOM(activeMode: ThemeMode) {
 const initial = (getSetting(SettingsKey.Theme) as ThemeMode | null) ?? ThemeMode.Dark;
 const initialResolved = resolveMode(initial);
 
-// Apply the saved Mood immediately to prevent flash
+// Apply the saved Mood immediately to prevent flash — after the bundled
+// Moods' theme copies have caught up with the bundled Moods as they ship now.
 if (typeof document !== 'undefined') {
+  refreshBundledPresets();
   applyToDOM(initialResolved);
   applyActiveMood(initialResolved === ThemeMode.Light ? 'Light' : 'Dark');
 }

@@ -10,6 +10,7 @@
  * the range comes from colour, type, motion and voice.
  */
 import { MOOD_PRESETS } from './presets';
+import { refreshPresets } from './user-presets';
 import type { MoodPackage } from './packages';
 import { BgType } from '@/lib/types';
 import { DEFAULT_CUES, type SoundCues } from '@/services/cues';
@@ -748,4 +749,20 @@ export const BUNDLED_MOODS: MoodPackage[] = SPECS.map(build);
 
 export function bundledMood(id: string): MoodPackage | undefined {
   return BUNDLED_MOODS.find((m) => m.id === id);
+}
+
+/**
+ * At boot: the theme copies that wearing a bundled Mood left behind follow
+ * the bundled Mood as it ships now, so a change to the Plasma Mood reaches a
+ * garden that is wearing it without a re-Apply. Returns the ids refreshed.
+ */
+export function refreshBundledPresets(): string[] {
+  return refreshPresets(
+    BUNDLED_MOODS.map((m) => ({
+      id: `user-${m.id}`,
+      name: m.name,
+      section: m.theme.section,
+      overrides: m.theme.overrides,
+    })),
+  );
 }

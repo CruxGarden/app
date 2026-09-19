@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { BUNDLED_MOODS, bundledMood } from './bundled-moods';
+import { BUNDLED_MOODS, bundledMood, refreshBundledPresets } from './bundled-moods';
+import { getUserPresets, saveUserPreset } from './user-presets';
 import { validateMoodPackage } from './packages';
 import { GARDEN_DARK } from './garden-dark';
 import { tokenChoices } from './token-groups';
@@ -119,5 +120,32 @@ describe('bundled Moods (ADR 0043: the backgrounds set)', () => {
     expect(bundledMood('mountain-grey')?.theme.overrides.motionIntensity).toBe('subtle');
     expect(bundledMood('jade-capital')?.theme.overrides.motionExitDialog).toBe('scale');
     expect(bundledMood('coral-castle')?.theme.overrides.motionAmbient).toBe('float');
+  });
+
+  it("a garden wearing a bundled Mood follows the Mood as it ships now, and a person's own preset is left alone", () => {
+    saveUserPreset({
+      id: 'user-plasma',
+      name: 'Plasma',
+      section: 'Dark',
+      overrides: { accent: '#9ff3e4', plasmaFrame: '10px' },
+      author: 'Crux Garden',
+    });
+    saveUserPreset({
+      id: 'user-night-city',
+      name: 'Mine',
+      section: 'Dark',
+      overrides: { accent: '#fff' },
+      author: 'daniel',
+    });
+    expect(refreshBundledPresets()).toEqual(['user-plasma']);
+    const plasma = getUserPresets().find((p) => p.id === 'user-plasma')!;
+    expect(plasma.overrides.plasmaFrame).toBe('0px');
+    expect(plasma.overrides.plasmaPlate).toBe('transparent');
+    expect(plasma.overrides).toEqual(bundledMood('plasma')!.theme.overrides);
+    expect(getUserPresets().find((p) => p.id === 'user-night-city')!.overrides).toEqual({
+      accent: '#fff',
+    });
+    // Up to date: nothing to do.
+    expect(refreshBundledPresets()).toEqual([]);
   });
 });

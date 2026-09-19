@@ -7,9 +7,21 @@ function readOptics() {
     const v = parseFloat(cs.getPropertyValue(name));
     return Number.isFinite(v) ? Math.max(0, Math.min(max, v)) : fallback;
   };
+  // Any CSS colour the token resolves to — a hex, an rgb(), a color-mix()
+  // of the Mood's panel — read back through a probe as the hex the library
+  // takes. A var() is already substituted in the computed custom property.
   const hex = (name: string, fallback: string) => {
     const v = cs.getPropertyValue(name).trim();
-    return /^#[0-9a-f]{3,8}$/i.test(v) ? v : fallback;
+    if (/^#[0-9a-f]{6}$/i.test(v)) return v;
+    if (!v) return fallback;
+    const probe = document.createElement('span');
+    probe.style.color = v;
+    document.body.appendChild(probe);
+    const rgb = getComputedStyle(probe).color;
+    probe.remove();
+    const m = /^rgba?\((\d+),\s*(\d+),\s*(\d+)/.exec(rgb) ?? /^rgb\((\d+) (\d+) (\d+)/.exec(rgb);
+    if (!m) return fallback;
+    return '#' + [m[1], m[2], m[3]].map((c) => Number(c).toString(16).padStart(2, '0')).join('');
   };
   // Three hex colours — deep, mid, accent — the field is painted from.
   const field = cs

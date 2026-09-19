@@ -96,6 +96,37 @@ export function saveUserPreset(input: {
   return preset;
 }
 
+/**
+ * Bring the presets that bundled Moods wrote (`user-<mood id>`, author
+ * "Crux Garden") up to the bundled theme as it ships today. A garden that
+ * wore the Plasma Mood in the morning kept the morning's tokens for good,
+ * because Apply copies the theme into a user preset once; the person's own
+ * edits live in the overrides layer, never in that copy, so refreshing the
+ * copy loses nothing of theirs. Returns the ids it changed.
+ */
+export function refreshPresets(
+  current: {
+    id: string;
+    name: string;
+    section: 'Dark' | 'Light';
+    overrides: Record<string, string>;
+  }[],
+): string[] {
+  const mine = getUserPresets();
+  const changed: string[] = [];
+  const next = mine.map((p) => {
+    const fresh = current.find((c) => c.id === p.id);
+    if (!fresh || p.author !== 'Crux Garden') return p;
+    const overrides = clean(fresh.overrides);
+    if (JSON.stringify(overrides) === JSON.stringify(p.overrides) && p.section === fresh.section)
+      return p;
+    changed.push(p.id);
+    return { ...p, name: fresh.name, section: fresh.section, overrides };
+  });
+  if (changed.length) write(next);
+  return changed;
+}
+
 export function deleteUserPreset(id: string): void {
   write(getUserPresets().filter((p) => p.id !== id));
 }
