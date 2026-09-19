@@ -26,6 +26,8 @@ export interface ActionRuntime {
   prompt(cruxId: string, prompt: string): Promise<void>;
   tool(cruxId: string, tool: string, input: Record<string, unknown>): Promise<string>;
   cruxTitle(cruxId: string): string;
+  /** Wear a Mood by id; resolves to its name, or null when there is no such Mood. */
+  wearMood(moodId: string): Promise<string | null>;
 }
 
 let runtime: ActionRuntime = {
@@ -63,6 +65,14 @@ let runtime: ActionRuntime = {
   },
   cruxTitle(cruxId) {
     return cruxId;
+  },
+  async wearMood(moodId) {
+    const { bundledMood } = await import('@/lib/moods/bundled-moods');
+    const { getInstalledMoods, applyMood } = await import('@/lib/moods/packages');
+    const pkg = bundledMood(moodId) ?? getInstalledMoods().find((m) => m.id === moodId);
+    if (!pkg) return null;
+    await applyMood(pkg);
+    return pkg.name;
   },
 };
 
@@ -114,6 +124,18 @@ async function runOne(s: Schedule, a: Action, index: number, ctx: FiringContext)
           at: ctx.now.toISOString(),
         });
       }
+      return;
+    }
+    case 'mood': {
+      const name = await runtime.wearMood(a.moodId);
+      if (name === null)
+        raiseAlert({
+          key,
+          kind: 'run',
+          title: `${s.title} · no such Mood`,
+          body: `${a.moodId} is not bundled or installed. ${ctx.reason}`,
+          at: ctx.now.toISOString(),
+        });
       return;
     }
     case 'tool': {

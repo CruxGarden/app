@@ -71,6 +71,8 @@ interface Spec {
   persona: Pick<PersonaSettings, 'name' | 'greeting' | 'systemPrompt'>;
   /** Files shipped inside the app — see MoodPackage.bundled */
   bundled?: MoodPackage['bundled'];
+  /** Schedules the Mood brings along — see MoodPackage.schedules */
+  schedules?: MoodPackage['schedules'];
 }
 
 /**
@@ -486,6 +488,15 @@ const SPECS: Spec[] = [
     bundled: { background: bg_ember_horizon },
     cues: { message: null, toolDone: null, snapshot: 'tick', published: 'chime', error: 'thud' },
     volume: 0.4,
+    // The early Mood hands over to the evening one at dusk; Last Light hands back at dawn.
+    schedules: [
+      {
+        id: 'ember-horizon-dusk',
+        title: 'Dusk: wear Last Light',
+        trigger: { kind: 'cron', expr: '0 18 * * *' },
+        actions: [{ kind: 'mood', moodId: 'last-light' }],
+      },
+    ],
     persona: {
       name: 'Bram',
       greeting: 'Still dark out. The horizon is doing something. What are we making?',
@@ -502,6 +513,14 @@ const SPECS: Spec[] = [
     bundled: { background: bg_last_light },
     cues: { message: null, toolDone: null, snapshot: 'bloom', published: 'chime', error: 'thud' },
     volume: 0.4,
+    schedules: [
+      {
+        id: 'last-light-dawn',
+        title: 'Dawn: wear Ember Horizon',
+        trigger: { kind: 'cron', expr: '0 6 * * *' },
+        actions: [{ kind: 'mood', moodId: 'ember-horizon' }],
+      },
+    ],
     persona: {
       name: 'Elin',
       greeting: 'The last light is on the ridge. Shall we finish something?',
@@ -721,6 +740,7 @@ function build(spec: Spec): MoodPackage {
       cues: { ...DEFAULT_CUES, ...(spec.cues ?? {}) },
     },
     ...(spec.bundled ? { bundled: spec.bundled } : {}),
+    ...(spec.schedules ? { schedules: spec.schedules } : {}),
   };
 }
 

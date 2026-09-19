@@ -25,6 +25,13 @@ import { DEFAULT_CUES, getCues, saveCues, parseCueChoice, type SoundCues } from 
 import * as sound from '@/services/sound';
 import { validateTrack, type SoundTrack } from '@/services/sound';
 import { getAssets, addAsset, isAssetRef, refFingerprint, kindOf, type MoodAsset } from './assets';
+import {
+  isAction,
+  isTrigger,
+  moodSchedules,
+  syncMoodSchedules,
+  type MoodSchedule,
+} from '@/services/schedules';
 
 export interface MoodPackage {
   format: 'crux-mood';
@@ -45,6 +52,13 @@ export interface MoodPackage {
   assets?: MoodAsset[];
   /** The Mood's sound: one looping track, its volume, on/off, and the cues. */
   sound: MoodSound;
+  /**
+   * Schedules the Mood brings along (GARDEN-SCHEDULER-PLAN): a cron that
+   * wears its night variant at dusk, a timer for its way of working. Applied
+   * with the Mood, replaced by the next Mood's, each switchable in Tending
+   * and all of them behind one switch.
+   */
+  schedules?: MoodSchedule[];
   /**
    * Files a bundled Mood ships inside the app (URLs). On apply they are
    * ingested into the Blob Store where there is one, so what the user then
@@ -144,7 +158,27 @@ export function validateMoodPackage(raw: unknown): MoodPackage | null {
       enabled: snd.enabled !== false,
       cues,
     },
+    ...(Array.isArray(p.schedules) && p.schedules.length
+      ? { schedules: p.schedules.flatMap(cleanSchedule) }
+      : {}),
   };
+}
+
+function cleanSchedule(raw: unknown): MoodSchedule[] {
+  if (!raw || typeof raw !== 'object') return [];
+  const s = raw as Record<string, unknown>;
+  if (typeof s.title !== 'string' || !isTrigger(s.trigger) || !Array.isArray(s.actions)) return [];
+  const actions = s.actions.filter(isAction);
+  if (!actions.length) return [];
+  return [
+    {
+      id: typeof s.id === 'string' && s.id ? s.id : crypto.randomUUID(),
+      title: s.title,
+      trigger: s.trigger,
+      actions,
+      ...(typeof s.enabled === 'boolean' ? { enabled: s.enabled } : {}),
+    },
+  ];
 }
 
 export function getInstalledMoods(): MoodPackage[] {
@@ -214,6 +248,7 @@ export function captureCurrentMood(input: {
       enabled: sound.getEnabled(),
       cues: getCues(),
     },
+    ...(moodSchedules().length ? { schedules: moodSchedules() } : {}),
   };
 }
 
@@ -299,6 +334,11 @@ export async function applyMood(pkg: MoodPackage, opts: { sound?: boolean } = {}
 
   setSetting(SettingsKey.WornMoodId, pkg.id);
   if (opts.sound === false) return;
+
+  // The Mood's schedules take over from the previous Mood's. Like sound, they
+  // are the garden's — the Gateway's pre-garden wear (`sound: false`) has no
+  // garden to keep them in and wears the Mood again once one exists.
+  syncMoodSchedules(pkg.id, pkg.schedules ?? []);
 
   // Sound — the package's track, volume, on/off and cues take over.
   const track = shipped.track ?? pkg.sound.track;

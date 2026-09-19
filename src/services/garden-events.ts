@@ -3,7 +3,9 @@
  * available to anything that wants to hook them (GARDEN-SCHEDULER-PLAN):
  * a reply arrived, a tool finished, a snapshot was taken, a Crux was shared,
  * something failed, an alert was raised, the app launched. A Schedule can
- * trigger on any of them. Tiny and synchronous; listeners never throw out.
+ * trigger on any of them. Timers and the weather report here too, so a
+ * timer can start another, and a Mood can follow the sky. Tiny and
+ * synchronous; listeners never throw out.
  */
 export type GardenEventName =
   | 'launch'
@@ -12,7 +14,10 @@ export type GardenEventName =
   | 'snapshot'
   | 'published'
   | 'error'
-  | 'alert';
+  | 'alert'
+  | 'timerPhase'
+  | 'timerDone'
+  | 'weather';
 
 export interface GardenEvent {
   name: GardenEventName;
@@ -20,6 +25,8 @@ export interface GardenEvent {
   cruxId?: string;
   /** A short human line about it, never prompt text. */
   detail?: string;
+  /** Small facts about it: a timer's schedule id, the weather's kind. */
+  data?: Record<string, string>;
 }
 
 export const GARDEN_EVENTS: { id: GardenEventName; label: string }[] = [
@@ -30,6 +37,9 @@ export const GARDEN_EVENTS: { id: GardenEventName; label: string }[] = [
   { id: 'published', label: 'A Crux is shared' },
   { id: 'error', label: 'Something fails' },
   { id: 'alert', label: 'An alert is raised' },
+  { id: 'timerPhase', label: 'A timer changes phase' },
+  { id: 'timerDone', label: 'A timer finishes' },
+  { id: 'weather', label: 'The weather changes' },
 ];
 
 type Listener = (event: GardenEvent) => void;
@@ -42,9 +52,9 @@ export function onGardenEvent(listener: Listener): () => void {
 
 export function emitGardenEvent(
   name: GardenEventName,
-  extra: { cruxId?: string; detail?: string } = {},
+  extra: { cruxId?: string; detail?: string; data?: Record<string, string>; at?: string } = {},
 ): GardenEvent {
-  const event: GardenEvent = { name, at: new Date().toISOString(), ...extra };
+  const event: GardenEvent = { name, at: extra.at ?? new Date().toISOString(), ...extra };
   for (const l of listeners) {
     try {
       l(event);

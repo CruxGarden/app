@@ -190,4 +190,44 @@ describe('Mood Packages', () => {
     expect(pkg.sound.cues.toolDone).toBeNull();
     expect((pkg as unknown as Record<string, unknown>).resonance).toBeUndefined();
   });
+
+  it('carries schedules: validated on read, captured from the worn Mood, applied with it', async () => {
+    const { useSchedules, initSchedules, SCHEDULES_KEY } = await import('@/services/schedules');
+    setSetting(SCHEDULES_KEY, '[]');
+    initSchedules();
+    const pkg = validateMoodPackage({
+      format: 'crux-mood',
+      name: 'Tides',
+      schedules: [
+        {
+          id: 'high',
+          title: 'High tide',
+          trigger: { kind: 'cron', expr: '0 6 * * *' },
+          actions: [{ kind: 'mood', moodId: 'coral-castle' }],
+          enabled: false,
+        },
+        { title: 'Broken', trigger: { kind: 'nope' }, actions: [{ kind: 'alert' }] },
+        { title: 'Nothing to do', trigger: { kind: 'every', minutes: 5 }, actions: [] },
+      ],
+    })!;
+    expect(pkg.schedules?.map((s) => s.id)).toEqual(['high']);
+    await applyMood(pkg);
+    const list = useSchedules.getState().schedules;
+    expect(list.map((s) => [s.title, s.source, s.moodId, s.enabled])).toEqual([
+      ['High tide', 'mood', 'mood-tides', false],
+    ]);
+    // Captured back out with the Mood, and gone when another Mood is worn.
+    expect(captureCurrentMood({ name: 'Tides again' }).schedules).toEqual([
+      { ...pkg.schedules![0], enabled: false },
+    ]);
+    expect(bundledMood('ember-horizon')!.schedules?.[0]).toMatchObject({
+      title: 'Dusk: wear Last Light',
+      actions: [{ kind: 'mood', moodId: 'last-light' }],
+    });
+    expect(bundledMood('last-light')!.schedules?.[0]!.actions).toEqual([
+      { kind: 'mood', moodId: 'ember-horizon' },
+    ]);
+    await applyMood(validateMoodPackage({ format: 'crux-mood', name: 'Plain' })!);
+    expect(useSchedules.getState().schedules).toEqual([]);
+  });
 });
