@@ -17,6 +17,7 @@ import { confirmDialog } from '@/stores/dialogStore';
 import { Button } from '@/components/ui';
 import { can, Capability } from '@/lib/platform';
 import { useGardenStore } from '@/stores/gardenStore';
+import SchedulesSection from '@/components/tending/SchedulesSection';
 
 function elapsed(since: string, now: number): string {
   const seconds = Math.max(0, Math.floor((now - Date.parse(since)) / 1000));
@@ -152,6 +153,7 @@ export default function Tending() {
       <p className="sr-only" role="status">
         {count} tasks need tending. {working} working.
       </p>
+      <SchedulesSection />
       <div className="flex flex-wrap gap-3">
         <input
           aria-label="Search Tending"
