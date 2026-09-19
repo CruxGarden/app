@@ -125,7 +125,7 @@ test('Tending routes Claude Code permissions and refuses a stale desktop notific
     const id = await createCrux(page, 'Agent decisions');
     await page
       .getByTestId('pane-body-collaboration')
-      .getByRole('button', { name: /Claude Sonnet 5/ })
+      .getByTestId('model-selector')
       .click();
     await page
       .getByTestId('model-group-claude-code')

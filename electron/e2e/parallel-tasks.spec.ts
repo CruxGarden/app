@@ -166,7 +166,7 @@ test('Claude Code task turns use separate sessions and directories and route hid
     await createCrux(page, 'Agent tasks');
     await page
       .getByTestId('pane-body-collaboration')
-      .getByRole('button', { name: /Claude Sonnet 5/ })
+      .getByTestId('model-selector')
       .click();
     await page
       .getByTestId('model-group-claude-code')

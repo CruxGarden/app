@@ -28,7 +28,7 @@ test('real Codex discovers Garden tools and saves an Artifact from Collaboration
     const chat = page.getByTestId('pane-body-collaboration');
     if (!(await chat.isVisible()))
       await page.getByRole('button', { name: 'Toggle collaboration' }).click();
-    await chat.getByRole('button', { name: /Claude Sonnet 5/ }).click();
+    await chat.getByTestId('model-selector').click();
     await page.getByTestId('model-group-codex').getByRole('button', { name: 'Codex' }).click();
     const composer = page.getByPlaceholder('Send a message...');
     await composer.fill(

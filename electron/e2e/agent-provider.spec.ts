@@ -36,9 +36,7 @@ test.describe('agent provider (mock Claude Code)', () => {
       await ensurePane(page, 'collaboration', 'Toggle collaboration');
 
       // The picker offers the agent under its own heading
-      const picker = page.getByTestId('pane-body-collaboration').getByRole('button', {
-        name: /Claude Sonnet 5/,
-      });
+      const picker = page.getByTestId('pane-body-collaboration').getByTestId('model-selector');
       await picker.click();
       const group = page.getByTestId('model-group-claude-code');
       await expect(group).toContainText('Your agent');

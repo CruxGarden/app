@@ -46,7 +46,7 @@ test('Garden agent edits a disposable Penpot design and brings its real SVG back
       const chat = page.getByTestId('pane-body-collaboration');
       if (!(await chat.isVisible()))
         await page.getByRole('button', { name: 'Toggle collaboration' }).click();
-      await chat.getByRole('button', { name: /Claude Sonnet 5/ }).click();
+      await chat.getByTestId('model-selector').click();
       await page
         .getByTestId(`model-group-${provider}`)
         .getByRole('button', { name: provider === 'codex' ? 'Codex' : 'Claude Code' })

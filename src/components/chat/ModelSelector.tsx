@@ -1,6 +1,6 @@
 import { includedUsage } from '@/api/inference';
 import { useAuthStore } from '@/stores/authStore';
-import { useState, useRef, useCallback, useEffect } from 'react';
+import { useState, useRef, useCallback, useEffect, useLayoutEffect } from 'react';
 import { ChevronDownIcon } from '@/components/ui/icons';
 import { PROVIDERS, isAgentModel } from '@/ai/providers';
 import { Capability, can } from '@/lib/platform';
@@ -76,9 +76,45 @@ export default function ModelSelector({ value, onChange, disabled }: ModelSelect
   const [localEndpoints, setLocalEndpoints] = useState<LocalAiEndpoint[]>([]);
   const [agents, setAgents] = useState<Record<string, AgentStatus>>({});
   const menuRef = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  /**
+   * Where the menu opens, and how tall it may be.
+   *
+   * The pane normally sits at the bottom of the window, so the menu opens
+   * upward. But the control row moves — expanding the model info panel pushes
+   * the button near the top — and a height capped against the viewport is not
+   * a height that fits above the button. Measure the real room on both sides
+   * and cap against that, or the list opens off the top edge.
+   */
+  const [placement, setPlacement] = useState<{ side: 'top' | 'bottom'; maxHeight: number }>({
+    side: 'top',
+    maxHeight: 0,
+  });
 
   const close = useCallback(() => setOpen(false), []);
   useDismiss(menuRef, close, open);
+
+  useLayoutEffect(() => {
+    if (!open) return;
+    const measure = () => {
+      const rect = buttonRef.current?.getBoundingClientRect();
+      if (!rect) return;
+      const gap = 8;
+      const above = rect.top - gap;
+      const below = window.innerHeight - rect.bottom - gap;
+      const cap = window.innerHeight * 0.6;
+      // Keep opening upward while there is real room; flip only when below is
+      // genuinely roomier, so the common case does not move under the cursor.
+      const side = above >= below ? 'top' : 'bottom';
+      const room = side === 'top' ? above : below;
+      // A floor keeps the menu usable (and scrollable) in a cramped pane
+      // rather than collapsing to a sliver.
+      setPlacement({ side, maxHeight: Math.max(140, Math.min(cap, room)) });
+    };
+    measure();
+    window.addEventListener('resize', measure);
+    return () => window.removeEventListener('resize', measure);
+  }, [open]);
 
   // Re-probe local servers each time the menu opens (fast when none run),
   // so the list tracks the user starting/stopping Ollama or LM Studio.
@@ -121,6 +157,10 @@ export default function ModelSelector({ value, onChange, disabled }: ModelSelect
   return (
     <div ref={menuRef} className="relative">
       <button
+        ref={buttonRef}
+        data-testid="model-selector"
+        aria-haspopup="listbox"
+        aria-expanded={open}
         onClick={() => !disabled && setOpen(!open)}
         disabled={disabled}
         className={cn(
@@ -143,14 +183,22 @@ export default function ModelSelector({ value, onChange, disabled }: ModelSelect
         {open && (
           <motion.div
             key="models"
+            data-testid="model-selector-menu"
             data-motion-role="dropdown"
             initial={role.initial}
             animate={role.animate}
             exit={role.exit}
-            className="absolute left-0 bottom-full mb-1 z-50 min-w-48"
+            data-placement={placement.side}
+            className={cn(
+              'absolute left-0 z-50 min-w-48',
+              placement.side === 'top' ? 'bottom-full mb-1' : 'top-full mt-1',
+            )}
           >
             <GlassSurface role="dropdown">
-              <div className="w-full max-h-[60vh] overflow-y-auto bg-model-selector-dropdown border border-model-selector-border rounded-dropdown shadow-dropdown py-1">
+              <div
+                style={{ maxHeight: placement.maxHeight || undefined }}
+                className="w-full overflow-y-auto bg-model-selector-dropdown border border-model-selector-border rounded-dropdown shadow-dropdown py-1"
+              >
                 {groups.map((group) => (
                   <div key={group.providerId}>
                     {(() => {

@@ -19,7 +19,7 @@ test('Codex shares Garden tools, resumes its own session, and asks in Collaborat
     const chat = page.getByTestId('pane-body-collaboration');
     if (!(await chat.isVisible()))
       await page.getByRole('button', { name: 'Toggle collaboration' }).click();
-    await chat.getByRole('button', { name: /Claude Sonnet 5/ }).click();
+    await chat.getByTestId('model-selector').click();
     await page.getByTestId('model-group-codex').getByRole('button', { name: 'Codex' }).click();
     const composer = page.getByPlaceholder('Send a message...');
     await composer.fill('Leave a note using Garden tools');

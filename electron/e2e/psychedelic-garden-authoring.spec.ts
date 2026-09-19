@@ -157,7 +157,7 @@ test('author the persistent Psychedelic Garden through its real tools', async ()
               await chatToggle.click();
             const chat = page.getByTestId('pane-body-collaboration');
             if (!(await chat.getByRole('button', { name: 'Claude Code', exact: true }).count())) {
-              await chat.getByRole('button', { name: /Claude Sonnet/ }).click();
+              await chat.getByTestId('model-selector').click();
               await page
                 .getByTestId('model-group-claude-code')
                 .getByRole('button', { name: 'Claude Code', exact: true })
