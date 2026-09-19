@@ -9,6 +9,13 @@ import { launchApp } from './launch';
  * Project Folder → the reply streams in → the auto-snapshot fires. No provider
  * key, no network.
  */
+
+/** The Plasma Mood opens only Collaboration and Workshop; the tree lives in Artifacts. */
+async function showArtifacts(page: import('@playwright/test').Page) {
+  if (!(await page.getByTestId('pane-body-artifacts').isVisible()))
+    await page.getByRole('button', { name: 'Toggle artifacts' }).click();
+}
+
 test.describe('collaboration (mock AI)', () => {
   test.setTimeout(120_000);
 
@@ -36,6 +43,7 @@ test.describe('collaboration (mock AI)', () => {
       await input.press('Enter');
 
       // Tool ran for real: file in the tree and on disk
+      await showArtifacts(page);
       await expect(page.getByRole('tree').getByText('hello.txt', { exact: true })).toBeVisible({
         timeout: 30_000,
       });
@@ -89,6 +97,7 @@ test.describe('collaboration (mock AI)', () => {
       await expect(input).toHaveCount(0);
 
       await expect.poll(() => onDisk('hello.txt'), { timeout: 30_000 }).toBe(true);
+      await showArtifacts(page);
       await expect(page.getByRole('tree').getByText('hello.txt', { exact: true })).toBeVisible();
 
       // Bring the pane back: the completed turn is there
