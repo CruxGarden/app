@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { parseManifest } from './manifest';
-import { toolManifests, toolManifest, nativeAppTypes, toolInfos, toolRoutes } from './registry';
+import { toolManifests, toolManifest, nativeAppTypes, toolInfos } from './registry';
 import { loadTemplate } from '@/templates';
 import { TOOL_INFO } from '@/lib/tool-info';
 import { nativeAppType, isLocalCreationTool } from '@/services/embedded-app';

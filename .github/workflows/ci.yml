@@ -5,6 +5,10 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+  schedule:
+    # The full Crux Tool catalog, weekly (ADR 0050): PR gates build only the
+    # starter set; every tool's build and suite still run, here, on Sundays.
+    - cron: '0 6 * * 0'
 
 concurrency:
   group: ci-${{ github.ref }}
@@ -13,6 +17,7 @@ concurrency:
 jobs:
   verify:
     name: verify (web + electron)
+    if: github.event_name != 'schedule' # the weekly run is the catalog job below
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -40,6 +45,8 @@ jobs:
     name: e2e (real desktop app, macOS)
     runs-on: macos-latest
     needs: verify
+    env:
+      CRUX_BUNDLE_TOOLS: all # the journeys open every tool (ADR 0050)
     # macOS minutes bill at 10x: only on main and manual runs, not on every PR push
     if: github.event_name != 'pull_request'
     steps:
@@ -110,6 +117,8 @@ jobs:
     if: github.event_name == 'pull_request'
     runs-on: macos-latest
     needs: verify
+    env:
+      CRUX_BUNDLE_TOOLS: all # test:e2e:apps opens every tool (ADR 0050)
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -137,3 +146,29 @@ jobs:
           name: workspace-pr-results
           path: electron/e2e/.results
           if-no-files-found: ignore
+
+  catalog:
+    name: full Crux Tool catalog (weekly)
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    env:
+      CRUX_BUNDLE_TOOLS: all
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            electron/package-lock.json
+      - run: df -h /
+      - run: npm ci
+        working-directory: electron
+      - run: npm ci
+      - run: npm run verify
+      - run: du -sh dist && df -h /

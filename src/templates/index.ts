@@ -1,5 +1,6 @@
 import { TOOL_INFO } from '@/lib/tool-info';
 import { toolManifest } from '@/services/crux-tools/registry';
+import { loaders as toolLoaders } from 'virtual:crux-tools';
 import type { CruxToolManifest } from '@/services/crux-tools/manifest';
 /**
  * Crux templates — real starter files for each template type.
@@ -240,6 +241,8 @@ export interface TemplateDefinition {
 // ecosystem templates arrive via TemplateDefinition.scaffold scripts.
 const loaders: Record<string, () => Promise<{ default: TemplateDefinition | ToolTemplateFiles }>> =
   {
+    // Every bundled Crux Tool's module, chosen at build time (ADR 0050).
+    ...toolLoaders,
     notes: () => import('./notes'),
     moqira: () => import('./moqira'),
     figma: () => import('./figma'),
@@ -250,44 +253,6 @@ const loaders: Record<string, () => Promise<{ default: TemplateDefinition | Tool
       import('./tool-sampler').then((m) => ({ default: m.samplerTemplate('excalidraw') })),
     'tool-univer': () =>
       import('./tool-sampler').then((m) => ({ default: m.samplerTemplate('univer') })),
-    'mermaid-app': () => import('./mermaid-app'),
-    'piskel-app': () => import('./piskel-app'),
-    'rawgraphs-app': () => import('./rawgraphs-app'),
-    'gephi-app': () => import('./gephi-app'),
-    'ketcher-app': () => import('./ketcher-app'),
-    'twine-app': () => import('./twine-app'),
-    'opencut-app': () => import('./opencut-app'),
-    'kan-app': () => import('./kan-app'),
-    'web-synth-app': () => import('./web-synth-app'),
-    'beepbox-app': () => import('./beepbox-app'),
-    'hextris-app': () => import('./hextris-app'),
-    'pptist-app': () => import('./pptist-app'),
-    'wick-editor-app': () => import('./wick-editor-app'),
-    'bentopdf-app': () => import('./bentopdf-app'),
-    'am-1-app': () => import('./am-1-app'),
-    'eventcalendar-app': () => import('./eventcalendar-app'),
-    'formjs-app': () => import('./formjs-app'),
-    'pdfme-app': () => import('./pdfme-app'),
-    'maps-app': () => import('./maps-app'),
-    'p5-app': () => import('./p5-app'),
-    'glsl-app': () => import('./glsl-app'),
-    'glyphr-app': () => import('./glyphr-app'),
-    'fmg-app': () => import('./fmg-app'),
-    'abc-app': () => import('./abc-app'),
-    'signal-app': () => import('./signal-app'),
-    'jscad-app': () => import('./jscad-app'),
-    'timeline-app': () => import('./timeline-app'),
-    'recorder-app': () => import('./recorder-app'),
-    'underrun-app': () => import('./underrun-app'),
-    'playcanvas-editor-app': () => import('./playcanvas-editor-app'),
-    'blockbench-app': () => import('./blockbench-app'),
-    'gdevelop-app': () => import('./gdevelop-app'),
-    'svgedit-app': () => import('./svgedit-app'),
-    'jupyterlite-app': () => import('./jupyterlite-app'),
-    'bitsy-app': () => import('./bitsy-app'),
-    'audiomass-app': () => import('./audiomass-app'),
-    'minipaint-app': () => import('./minipaint-app'),
-    'openmosh-app': () => import('./openmosh-app'),
     'tool-openmosh': () =>
       import('./tool-sampler').then((m) => ({ default: m.samplerTemplate('openmosh') })),
     'tool-tables': () =>

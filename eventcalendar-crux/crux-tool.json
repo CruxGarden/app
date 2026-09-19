@@ -2,7 +2,7 @@
   "version": 1,
   "id": "eventcalendar-app",
   "name": "Calendar",
-  "description": "Productivity · events, schedules and planning on an EventCalendar organizer",
+  "description": "Productivity \u00b7 events, schedules and planning on an EventCalendar organizer",
   "kind": "webapp",
   "defaultTitle": "My calendar",
   "icon": "layout",
@@ -25,7 +25,7 @@
   "toolInfo": {
     "name": "EventCalendar",
     "upstream": "https://github.com/vkurko/calendar",
-    "relationship": "A calendar organizer around the EventCalendar component. The calendar is upstream’s; the event form and Garden integration are Crux Garden’s.",
+    "relationship": "A calendar organizer around the EventCalendar component. The calendar is upstream\u2019s; the event form and Garden integration are Crux Garden\u2019s.",
     "detailsPath": "UPSTREAM.md"
   },
   "routes": [

@@ -17,7 +17,7 @@ import type { CruxKind } from '@/api/types';
 import { Capability, can } from '@/lib/platform';
 import { alertDialog } from '@/stores/dialogStore';
 import { HomeIcon, LayoutIcon, PencilIcon } from '@/components/ui/icons';
-import { toolManifests } from '@/services/crux-tools/registry';
+import { toolManifests, isToolAvailable } from '@/services/crux-tools/registry';
 import type { ToolIcon } from '@/services/crux-tools/manifest';
 
 // ── Templates ────────────────────────────────────────────
@@ -593,6 +593,10 @@ export default function NewCruxModal({ open, onClose }: NewCruxModalProps) {
 
   const handleCreate = async (quickStart = false) => {
     if (creating || importing) return;
+    if (!quickStart && !isToolAvailable(template.id)) {
+      setCreateError(`${template.label} is not included in this build.`);
+      return;
+    }
     setCreateError(null);
     setCreating(true);
     try {
@@ -742,6 +746,11 @@ export default function NewCruxModal({ open, onClose }: NewCruxModalProps) {
                       )}
                     >
                       {t.label}
+                      {!isToolAvailable(t.id) && (
+                        <span className="ml-2 text-2xs font-mono text-text-muted">
+                          not in this build
+                        </span>
+                      )}
                     </span>
                     {t.description && (
                       <span className="text-xs text-text-muted block truncate">
@@ -753,8 +762,15 @@ export default function NewCruxModal({ open, onClose }: NewCruxModalProps) {
               ))}
             </div>
           </div>
-          {template.id !== 'blank' && (
-            <p className="text-xxs text-text-muted mt-1.5 shrink-0">{template.description}</p>
+          {!isToolAvailable(template.id) ? (
+            <p className="text-xxs text-text-muted mt-1.5 shrink-0" data-testid="tool-not-bundled">
+              {template.label} is not included in this build. Install it from its .crux package to
+              create from it.
+            </p>
+          ) : (
+            template.id !== 'blank' && (
+              <p className="text-xxs text-text-muted mt-1.5 shrink-0">{template.description}</p>
+            )
           )}
         </div>
 
@@ -836,9 +852,18 @@ export default function NewCruxModal({ open, onClose }: NewCruxModalProps) {
               Start from a file…
             </Button>
           )}
-          <Button onClick={() => handleCreate()} loading={creating} disabled={importing}>
-            Create
-          </Button>
+          {isToolAvailable(template.id) ? (
+            <Button onClick={() => handleCreate()} loading={creating} disabled={importing}>
+              Create
+            </Button>
+          ) : (
+            <Button
+              onClick={() => importInputRef.current?.click()}
+              disabled={creating || importing}
+            >
+              Install from .crux…
+            </Button>
+          )}
         </div>
         {createError && (
           <p role="alert" className="mt-2 text-xs text-error">

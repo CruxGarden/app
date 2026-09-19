@@ -10,12 +10,14 @@
  */
 import { parseManifest, type CruxToolManifest } from './manifest';
 import type { ToolInfo } from '@/lib/tool-info';
+import { bundled } from 'virtual:crux-tools';
 
 const raw = import.meta.glob('../../../*-crux/crux-tool.json', {
   eager: true,
   import: 'default',
 }) as Record<string, unknown>;
 
+const available = new Set(bundled);
 const manifests = new Map<string, CruxToolManifest>();
 for (const [path, value] of Object.entries(raw)) {
   const m = parseManifest(value);
@@ -57,14 +59,14 @@ export function toolInfos(): Record<string, ToolInfo> {
   return out;
 }
 
-/** Drop routes declared by tools, in menu order. */
+/** Drop routes declared by tools this build can create from, in menu order. */
 export function toolRoutes(): {
   test: RegExp;
   route: { templateId: string; kind: CruxToolManifest['kind']; tool: string; folder: string };
 }[] {
   const out: ReturnType<typeof toolRoutes> = [];
   for (const m of toolManifests())
-    for (const r of m.routes) {
+    for (const r of available.has(m.id) ? m.routes : []) {
       const alts = r.extensions.map((e) => e.slice(1).replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
       out.push({
         test: new RegExp(`\\.(${alts.join('|')})$`, 'i'),
@@ -72,4 +74,14 @@ export function toolRoutes(): {
       });
     }
   return out;
+}
+
+/**
+ * Whether this build can create from the tool right now. A manifest is
+ * always known; the tool's files are in the build only when it was bundled
+ * (or CRUX_BUNDLE_TOOLS=all). Everything else installs from a .crux package
+ * (CRUX-TOOLS-DISTRIBUTION-PLAN §3).
+ */
+export function isToolAvailable(id: string): boolean {
+  return !toolManifest(id) || available.has(id);
 }
