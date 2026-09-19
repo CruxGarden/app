@@ -31,7 +31,9 @@ async function showPreview(page: Page, title: string) {
 }
 test('two tasks own separate disk files and previews, merge into Main, and survive restart', async () => {
   test.setTimeout(180000);
-  let { app, page, dir } = await launchApp();
+  const first = await launchApp();
+  const dir = first.dir;
+  let { app, page } = first;
   try {
     await enterGarden(page);
     const main = await createCrux(page, 'Parallel web app');
@@ -164,10 +166,7 @@ test('Claude Code task turns use separate sessions and directories and route hid
   try {
     await enterGarden(page);
     await createCrux(page, 'Agent tasks');
-    await page
-      .getByTestId('pane-body-collaboration')
-      .getByTestId('model-selector')
-      .click();
+    await page.getByTestId('pane-body-collaboration').getByTestId('model-selector').click();
     await page
       .getByTestId('model-group-claude-code')
       .getByRole('button', { name: 'Claude Code' })
@@ -207,7 +206,10 @@ test('Claude Code task turns use separate sessions and directories and route hid
           window.electronAPI!.sqlite.get('SELECT meta FROM working_copies WHERE id = ?', [id]),
         copy.id,
       )) as { meta: string };
-      sessions.push(JSON.parse(row.meta).settings.agentSessionId);
+      // Sessions are kept per provider since the hosted-agent runtime (ADR 0046);
+      // the single agentSessionId is only read for records from before it.
+      const settings = JSON.parse(row.meta).settings;
+      sessions.push(settings.agentSessions?.['claude-code'] ?? settings.agentSessionId);
     }
     expect(sessions.every(Boolean)).toBe(true);
     expect(new Set(sessions).size).toBe(2);
