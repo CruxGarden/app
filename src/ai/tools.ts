@@ -31,7 +31,9 @@ import {
 } from './delegate-tool';
 import { scopeViolation, type WriteScope } from '@/lib/write-scope';
 import { CRUXSPACE_TOOLS, runCruxspaceTool } from './cruxspace-tools';
-import { runFfmpeg, describeRun } from '@/services/native-tools';
+import { runFfmpeg, describeRun, renderVideo } from '@/services/native-tools';
+import { captureLocalPreview } from '@/services/preview-capture';
+import { activePreviewUrl } from '@/lib/preview-registry';
 
 /**
  * Tool definitions — ported from api/src/ai/ai.tools.ts.
@@ -311,6 +313,61 @@ export const NATIVE_TOOL_DEFINITIONS: ToolDefinition[] = [
   },
 ];
 
+/** The preview as an image or a video, from the shell's own capture window (step 5). */
+export const CAPTURE_TOOL_DEFINITIONS: ToolDefinition[] = [
+  {
+    name: 'capture_preview',
+    description:
+      "Screenshot the crux's running preview (optionally a page path inside it) to exports/<name>.jpg, 1280×900, and return the path — then read_file it to look. " +
+      'USE WHEN: checking what a page looks like before saying it is done, or when the person asks for a picture of it.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        path: {
+          type: 'string',
+          description:
+            'A page path inside the preview, e.g. "about.html". Default: the entry page.',
+        },
+        name: { type: 'string', description: 'Output name without extension. Default "preview".' },
+      },
+      required: [],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'render_video',
+    description:
+      'Record the crux\'s running preview as a video: frames at fps until the page sets document.body.dataset.done = "1" (or max_seconds), then the bundled ffmpeg writes exports/<name>.mp4. The page is opened with ?auto=1 so a timeline page starts at once. ' +
+      'USE WHEN: a page is an animation, a spot or a demo and the person wants it as a video file.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        path: {
+          type: 'string',
+          description: 'A page path inside the preview. Default: the entry page.',
+        },
+        name: { type: 'string', description: 'Output name without extension. Default "render".' },
+        fps: {
+          type: 'integer',
+          minimum: 1,
+          maximum: 60,
+          description: 'Frames per second. Default 30.',
+        },
+        max_seconds: {
+          type: 'integer',
+          minimum: 1,
+          maximum: 180,
+          description: 'Stop after this long if the page never says done. Default 60.',
+        },
+        width: { type: 'integer', minimum: 320, maximum: 3840 },
+        height: { type: 'integer', minimum: 240, maximum: 2160 },
+      },
+      required: [],
+      additionalProperties: false,
+    },
+  },
+];
+
 /** The guestbook block (V1-GAPS-PLAN §2.8) for any site Crux. */
 export const GUESTBOOK_TOOL_DEFINITION: ToolDefinition = {
   name: 'add_guestbook',
@@ -329,7 +386,9 @@ export const GUESTBOOK_TOOL_DEFINITION: ToolDefinition = {
 /** The tool set to offer a workspace conversation on this platform. */
 export function defaultToolDefinitions(cruxId?: string): ToolDefinition[] {
   const site = can(Capability.Build) ? SITE_TOOL_DEFINITIONS : [];
-  const native = can(Capability.NativeTools) ? NATIVE_TOOL_DEFINITIONS : [];
+  const native = can(Capability.NativeTools)
+    ? [...NATIVE_TOOL_DEFINITIONS, ...CAPTURE_TOOL_DEFINITIONS]
+    : [];
   return [
     ...TOOL_DEFINITIONS,
     ...appToolDefinitions(cruxId),
@@ -527,6 +586,41 @@ export function createToolExecutor(
           case 'add_guestbook':
             result = describeAddGuestbook(await addGuestbook(cruxId));
             break;
+          case 'capture_preview': {
+            const base = activePreviewUrl(cruxId);
+            if (!base)
+              return formatToolError(toolName, 'The preview is not running for this crux.');
+            const url = new URL(String(input.path ?? ''), base.endsWith('/') ? base : base + '/')
+              .href;
+            const blob = await captureLocalPreview(url);
+            const name = String(input.name ?? 'preview').replace(/[^A-Za-z0-9._-]+/g, '-');
+            const outPath = `exports/${name}.jpg`;
+            await getServices().artifact.upload({
+              resourceId: cruxId,
+              resourceType: 'crux',
+              blob,
+              mimeType: 'image/jpeg',
+              meta: { path: outPath },
+            });
+            result = `Captured ${url} → ${outPath} (1280×900). read_file it to look.`;
+            break;
+          }
+          case 'render_video': {
+            const base = activePreviewUrl(cruxId);
+            if (!base)
+              return formatToolError(toolName, 'The preview is not running for this crux.');
+            const page = new URL(String(input.path ?? ''), base);
+            page.searchParams.set('auto', '1');
+            const r = await renderVideo(cruxId, page.href, {
+              name: input.name as string | undefined,
+              fps: input.fps as number | undefined,
+              maxSeconds: input.max_seconds as number | undefined,
+              width: input.width as number | undefined,
+              height: input.height as number | undefined,
+            });
+            result = `Rendered ${r.path}: ${r.seconds.toFixed(1)}s, ${r.frames} frames, encoded in ${(r.encode.ms / 1000).toFixed(1)}s.`;
+            break;
+          }
           case 'run_ffmpeg': {
             const args = (input.args as string[]).map(String);
             const run = await runFfmpeg(cruxId, args);

@@ -19,6 +19,7 @@ import { getMonacoLanguage, getExtension } from '@/lib/monacoLanguages';
 import { pathOf, basename } from '@/lib/artifact-path';
 import { isImageMime, isVideoMime } from '@/lib/mime';
 import { Capability, can } from '@/lib/platform';
+import PreviewCaptureActions from './PreviewCaptureActions';
 import {
   previewFor,
   mountedIframeSrc,
@@ -715,6 +716,7 @@ export default function EditorContent({
           >
             Open ↗
           </button>
+          <PreviewCaptureActions cruxId={cruxId} base={target.localBase} page={clean ? path : ''} />
         </div>
       )}
       {/* Site crux: dev server is installing/starting (or failed) */}

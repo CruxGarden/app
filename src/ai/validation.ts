@@ -61,6 +61,9 @@ export function validateToolInput(
     }
     case 'run_ffmpeg':
       return validateRunFfmpeg(input);
+    case 'capture_preview':
+    case 'render_video':
+      return validateCapture(input);
     default:
       return { valid: false, error: `Unknown tool: ${toolName}` };
   }
@@ -325,5 +328,27 @@ function validateRunFfmpeg(input: Record<string, unknown>): ValidationResult {
   }
   if (input.description !== undefined && typeof input.description !== 'string')
     return { valid: false, error: 'description must be a string' };
+  return { valid: true };
+}
+
+/** capture_preview / render_video (step 5): a page path inside the preview, a name, numbers within range. */
+function validateCapture(input: Record<string, unknown>): ValidationResult {
+  if (input.path !== undefined) {
+    if (typeof input.path !== 'string') return { valid: false, error: 'path must be a string' };
+    if (/^[a-z]+:|^\/\/|\.\./i.test(input.path))
+      return { valid: false, error: 'path must be a page inside the preview' };
+  }
+  if (input.name !== undefined && typeof input.name !== 'string')
+    return { valid: false, error: 'name must be a string' };
+  for (const [k, lo, hi] of [
+    ['fps', 1, 60],
+    ['max_seconds', 1, 180],
+    ['width', 320, 3840],
+    ['height', 240, 2160],
+  ] as const) {
+    const v = input[k];
+    if (v !== undefined && (typeof v !== 'number' || v < lo || v > hi))
+      return { valid: false, error: `${k} must be a number from ${lo} to ${hi}` };
+  }
   return { valid: true };
 }

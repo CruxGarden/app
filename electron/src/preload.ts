@@ -201,6 +201,16 @@ const api: ElectronBridge = {
   },
 
   native: {
+    record: (opts: {
+      cruxId: string;
+      url: string;
+      subdir?: string;
+      fps?: number;
+      maxSeconds?: number;
+      width?: number;
+      height?: number;
+    }) =>
+      ipcRenderer.invoke('preview:record', opts) as Promise<{ frames: number; seconds: number }>,
     run: (opts: { cruxId: string; tool: 'ffmpeg'; args: string[]; timeoutMs?: number }) =>
       ipcRenderer.invoke('native:run', opts) as Promise<{
         code: number;

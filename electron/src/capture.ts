@@ -28,7 +28,70 @@ function isLoopbackHttp(url: string): boolean {
 const LOAD_TIMEOUT_MS = 15000;
 const SETTLE_MS = 700;
 
+/**
+ * A contained hidden window on a local preview URL, handed to `fn` once the
+ * page has loaded and settled; destroyed afterwards. The screenshot and the
+ * frame recorder (record.ts) share it.
+ */
+export async function withCaptureWindow<T>(
+  url: string,
+  size: { width: number; height: number },
+  fn: (win: any) => Promise<T>,
+  loadTimeoutMs = LOAD_TIMEOUT_MS,
+): Promise<T> {
+  if (!isLoopbackHttp(url)) {
+    throw new Error('capture is limited to local preview URLs');
+  }
+  const captureSession = session.fromPartition(`crux-capture-${Date.now()}`, { cache: false });
+  const win = new BrowserWindow({
+    width: size.width,
+    height: size.height,
+    show: false,
+    webPreferences: {
+      sandbox: true,
+      contextIsolation: true,
+      nodeIntegration: false,
+      backgroundThrottling: false,
+      session: captureSession,
+    },
+  });
+  const blockOffsite = (event: { preventDefault(): void }, target: string) => {
+    if (!isLoopbackHttp(target)) event.preventDefault();
+  };
+  win.webContents.on('will-navigate', blockOffsite);
+  win.webContents.on('will-redirect', blockOffsite);
+  win.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
+  captureSession.webRequest.onBeforeRequest((details: any, callback: any) => {
+    callback({ cancel: !isLoopbackHttp(details.url) });
+  });
+  const timeout = new Promise<never>((_, reject) =>
+    setTimeout(() => reject(new Error('capture timed out')), loadTimeoutMs),
+  );
+  try {
+    await Promise.race([win.loadURL(url), timeout]);
+    await Promise.race([new Promise((resolve) => setTimeout(resolve, SETTLE_MS)), timeout]);
+    const finalUrl = win.webContents.getURL();
+    if (finalUrl && !isLoopbackHttp(finalUrl)) {
+      throw new Error('capture aborted: preview navigated off the local server');
+    }
+    return await fn(win);
+  } finally {
+    if (!win.isDestroyed()) win.destroy();
+  }
+}
+
 export async function capturePreviewUrl(url: string): Promise<Buffer> {
+  return withCaptureWindow(url, { width: 1280, height: 900 }, async (win) => {
+    const image = await win.webContents.capturePage();
+    // Pin output size regardless of the display's scale factor, so thumbnails
+    // (and their fingerprints) don't differ per machine.
+    return image.resize({ width: 1280, height: 900 }).toJPEG(85);
+  });
+}
+
+// The pre-refactor body, kept a moment for reference; delete after step 5 lands.
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+async function capturePreviewUrlLegacy(url: string): Promise<Buffer> {
   if (!isLoopbackHttp(url)) {
     throw new Error('capture is limited to local preview URLs');
   }

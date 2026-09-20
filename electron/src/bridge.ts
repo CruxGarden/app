@@ -217,6 +217,16 @@ export interface MediaBridge {
 }
 /** Native tools (MAKING-THE-AD-PARITY gap 13): a bundled binary run inside a crux folder. */
 export interface NativeToolsBridge {
+  /** Frames from a local preview page into <crux>/<subdir>/fNNNN.png (step 5). */
+  record(opts: {
+    cruxId: string;
+    url: string;
+    subdir?: string;
+    fps?: number;
+    maxSeconds?: number;
+    width?: number;
+    height?: number;
+  }): Promise<{ frames: number; seconds: number; lastPoll?: string }>;
   run(opts: {
     cruxId: string;
     tool: 'ffmpeg';
@@ -224,7 +234,7 @@ export interface NativeToolsBridge {
     timeoutMs?: number;
   }): Promise<{ code: number; ms: number; stderrTail: string }>;
   onProgress(
-    callback: (event: { cruxId: string; tool: string; progress: number }) => void,
+    callback: (event: { cruxId: string; tool: string; progress: number; frames?: number }) => void,
   ): () => void;
 }
 export interface FfmpegBridge {

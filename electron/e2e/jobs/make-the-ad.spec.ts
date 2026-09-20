@@ -113,9 +113,9 @@ test('make the ad with Crux Garden', async () => {
     await runTurn(
       page,
       [
-        'Now render the spot to a video inside this crux. Make the frames (headless Chrome at 30 fps into frames/f%04d.png, ?auto=1, until document.body.dataset.done is "1"),',
-        'then call the crux tool run_ffmpeg — find it with garden_search_tools("ffmpeg") and call it with garden_call_tool — to write exports/ad.mp4 (libx264, yuv420p, -y).',
-        'Do not run ffmpeg yourself; the crux tool runs the bundled one inside this folder. Tell me the duration when it is done.',
+        'Now render the spot to a video inside this crux with the crux tool render_video — find it with garden_search_tools("video") and call it with garden_call_tool, name "ad", fps 30.',
+        "It records the preview from the app's own capture window until the page sets document.body.dataset.done and encodes exports/ad.mp4 with the bundled ffmpeg. Do not use Chrome or ffmpeg yourself.",
+        'Then capture_preview to look at the page, and tell me the duration when it is done.',
       ].join(' '),
       25,
     );

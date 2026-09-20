@@ -731,6 +731,51 @@ function setupIpc() {
     },
   );
 
+  // ── Frames from the preview (step 5): into <crux folder>/<subdir>/ ──
+  ipcMain.handle(
+    'preview:record',
+    async (
+      e: any,
+      opts: {
+        cruxId: string;
+        url: string;
+        subdir?: string;
+        fps?: number;
+        maxSeconds?: number;
+        width?: number;
+        height?: number;
+      },
+    ) => {
+      const crux = lookupCrux(opts.cruxId);
+      if (!crux) throw new Error('This crux has no Project Folder');
+      const folder = path.resolve(crux.folder);
+      const sub = (opts.subdir ?? 'frames').replace(/\\/g, '/');
+      if (path.isAbsolute(sub) || sub.split('/').some((p) => p === '..' || p === ''))
+        throw new Error(`Use a folder name inside the crux: ${sub}`);
+      const dir = path.resolve(folder, sub);
+      if (!dir.startsWith(folder + path.sep))
+        throw new Error('Frames must land inside the crux folder');
+      const { recordPreviewUrl } = require('./record') as typeof import('./record');
+      return recordPreviewUrl(
+        opts.url,
+        {
+          dir,
+          fps: opts.fps ?? 30,
+          maxSeconds: Math.min(opts.maxSeconds ?? 60, 180),
+          width: opts.width ?? 1280,
+          height: opts.height ?? 720,
+        },
+        (frames, seconds) =>
+          e.sender.send('native:progress', {
+            cruxId: opts.cruxId,
+            tool: 'record',
+            progress: Math.min(seconds / Math.min(opts.maxSeconds ?? 60, 180), 1),
+            frames,
+          }),
+      );
+    },
+  );
+
   agentHost = new AgentHost({
     lookupCrux,
     resolveKnownFolder: (folder: string) => projects.resolveKnownFolder(folder),

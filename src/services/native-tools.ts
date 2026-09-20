@@ -27,8 +27,58 @@ export async function runFfmpeg(
   return api.run({ cruxId, tool: 'ffmpeg', args, ...opts });
 }
 
+/** Frames from the crux's running preview into `<subdir>/fNNNN.png` (step 5). */
+export async function recordPreview(
+  cruxId: string,
+  url: string,
+  opts: {
+    subdir?: string;
+    fps?: number;
+    maxSeconds?: number;
+    width?: number;
+    height?: number;
+  } = {},
+): Promise<{ frames: number; seconds: number; lastPoll?: string }> {
+  const api = typeof window !== 'undefined' ? window.electronAPI?.native : undefined;
+  if (!api) throw new Error('Native tools are not available here (desktop only).');
+  return api.record({ cruxId, url, ...opts });
+}
+
+/** Record the preview, then encode the frames with the bundled ffmpeg: `exports/<name>.mp4`. */
+export async function renderVideo(
+  cruxId: string,
+  url: string,
+  opts: { name?: string; fps?: number; maxSeconds?: number; width?: number; height?: number } = {},
+): Promise<{ path: string; frames: number; seconds: number; encode: NativeRunResult }> {
+  const fps = opts.fps ?? 30;
+  const name = (opts.name ?? 'render').replace(/[^A-Za-z0-9._-]+/g, '-').replace(/\.mp4$/i, '');
+  const subdir = `exports/${name}-frames`;
+  const rec = await recordPreview(cruxId, url, { subdir, fps, ...opts });
+  if (rec.frames === 0) throw new Error('No frames were captured.');
+  console.info('[render] frames', rec.frames, 'last poll of done:', rec.lastPoll);
+  const path = `exports/${name}.mp4`;
+  const encode = await runFfmpeg(cruxId, [
+    '-y',
+    '-framerate',
+    String(fps),
+    '-i',
+    `${subdir}/f%04d.png`,
+    '-c:v',
+    'libx264',
+    '-pix_fmt',
+    'yuv420p',
+    '-crf',
+    '20',
+    '-movflags',
+    '+faststart',
+    path,
+  ]);
+  if (encode.code !== 0) throw new Error(describeRun(['…'], encode));
+  return { path, frames: rec.frames, seconds: rec.seconds, encode };
+}
+
 export function onNativeProgress(
-  cb: (event: { cruxId: string; tool: string; progress: number }) => void,
+  cb: (event: { cruxId: string; tool: string; progress: number; frames?: number }) => void,
 ): () => void {
   const api = typeof window !== 'undefined' ? window.electronAPI?.native : undefined;
   return api ? api.onProgress(cb) : () => {};

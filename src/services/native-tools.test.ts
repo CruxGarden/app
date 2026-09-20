@@ -24,11 +24,25 @@ describe('native tools, step 1', () => {
     ).toBe('ffmpeg exited 1 after 0.1s.\na.webm: No such file');
   });
 
-  it('offers run_ffmpeg only where the platform can run native tools', async () => {
+  it('validates capture_preview and render_video (step 5)', async () => {
+    const { validateToolInput } = await import('@/ai/validation');
+    expect(validateToolInput('render_video', {}).valid).toBe(true);
+    expect(validateToolInput('render_video', { fps: 30, max_seconds: 10, name: 'ad' }).valid).toBe(
+      true,
+    );
+    expect(validateToolInput('render_video', { fps: 0 }).valid).toBe(false);
+    expect(validateToolInput('capture_preview', { path: 'https://x' }).valid).toBe(false);
+    expect(validateToolInput('capture_preview', { path: '../x.html' }).valid).toBe(false);
+    expect(validateToolInput('capture_preview', { path: 'about.html' }).valid).toBe(true);
+  });
+
+  it('offers the native and capture tools only where the platform can run them', async () => {
     const { defaultToolDefinitions, NATIVE_TOOL_DEFINITIONS } = await import('@/ai/tools');
     expect(NATIVE_TOOL_DEFINITIONS.map((t) => t.name)).toEqual(['run_ffmpeg']);
     const names = defaultToolDefinitions().map((t) => t.name);
     expect(names).toContain('run_ffmpeg');
+    expect(names).toContain('capture_preview');
+    expect(names).toContain('render_video');
     expect(names).not.toContain('check_site');
   });
 });
