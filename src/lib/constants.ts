@@ -9,9 +9,13 @@ export const API_KEY_PREFIX = 'cruxgarden:apiKey:';
  * sync, and export surfaces serialize that table wholesale (`db.export()`),
  * so exclusion happens here, by construction, not per-consumer.
  */
+/** Per-crux function secrets kept locally: `cruxgarden:fn-secrets:<cruxId>` → JSON map. */
+export const FN_SECRETS_PREFIX = 'cruxgarden:fn-secrets:';
+
 export function isSecretSettingKey(key: string): boolean {
   return (
     key.startsWith(API_KEY_PREFIX) ||
+    key.startsWith(FN_SECRETS_PREFIX) ||
     key === 'apiKey:anthropic' || // legacy unprefixed SQLite row
     key === SettingsKey.AccessToken ||
     key === SettingsKey.RefreshToken ||

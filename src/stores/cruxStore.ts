@@ -661,11 +661,14 @@ export function createCruxStore(ui: StoreApi<UIState> = useUIStore) {
         });
         set({ crux: mergedCrux });
         void playCue('published', get().crux?.id);
-        // The API declares the crux's schedules when its functions load; ask it now.
+        // The API declares the crux's schedules when its functions load; ask it
+        // now — and the secrets set here before the first share go with it.
         void import('@/services/crux-functions').then(
-          ({ functionFiles, listPublishedFunctions }) => {
-            if (functionFiles(get().artifacts || []).length)
-              return listPublishedFunctions(mergedCrux.id).catch(() => undefined);
+          async ({ functionFiles, listPublishedFunctions, localSecrets, putRemoteSecret }) => {
+            if (!functionFiles(get().artifacts || []).length) return;
+            for (const [name, value] of Object.entries(localSecrets(mergedCrux.id)))
+              await putRemoteSecret(mergedCrux.id, name, value).catch(() => undefined);
+            await listPublishedFunctions(mergedCrux.id).catch(() => undefined);
           },
         );
         return true;

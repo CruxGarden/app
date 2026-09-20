@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { handlerSource } from './crux-functions';
+import { handlerSource, egressAllowed } from './crux-functions';
 import { normalizeSchedule, cronError } from './cron';
 
 describe('Crux Functions — When → Then', () => {
@@ -27,5 +27,14 @@ describe('Crux Functions — When → Then', () => {
     expect(cronError('every 90m')).toMatch(/minutes go up to 59/);
     expect(cronError('every 10m')).toBeNull();
     expect(cronError('nope')).toMatch(/five/);
+  });
+  it('lets ctx.fetch out only to listed hosts, with a wildcard for subdomains', () => {
+    const allow = ['api.example.com', '*.stripe.com'];
+    expect(egressAllowed('api.example.com', allow)).toBe(true);
+    expect(egressAllowed('API.EXAMPLE.COM', allow)).toBe(true);
+    expect(egressAllowed('stripe.com', allow)).toBe(true);
+    expect(egressAllowed('api.stripe.com', allow)).toBe(true);
+    expect(egressAllowed('evil.example.org', allow)).toBe(false);
+    expect(egressAllowed('anything', [])).toBe(false);
   });
 });

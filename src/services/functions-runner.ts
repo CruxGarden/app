@@ -1,7 +1,13 @@
 import type { Artifact } from '@/api/types';
 import { getServices } from '@/services';
 import { pathOf } from '@/lib/artifact-path';
-import { functionFiles, type CallResult } from './crux-functions';
+import {
+  egressAllowed,
+  egressHosts,
+  functionFiles,
+  localSecrets,
+  type CallResult,
+} from './crux-functions';
 
 function findArtifactByPath(artifacts: Artifact[], path: string): Artifact | null {
   const normalized = path.replace(/^\//, '');
@@ -53,9 +59,19 @@ const WORKER_PRELUDE = `
     if (m.op !== 'run') return;
     const module = { exports: {} };
     class FunctionReject extends Error { constructor(message, status) { super(message); this.status = status || 400; } }
+    const secrets = m.secrets || {};
     const ctx = Object.freeze({
+      crux: { id: m.cruxId },
       visitor: m.visitorId ? { id: m.visitorId, isOwner: m.visitorId === m.ownerId } : null,
       owner: { id: m.ownerId },
+      secrets: Object.freeze({
+        get: (name) => (Object.prototype.hasOwnProperty.call(secrets, String(name)) ? secrets[String(name)] : null),
+        has: (name) => Object.prototype.hasOwnProperty.call(secrets, String(name)),
+      }),
+      fetch: (url, init) => ask('fetch', { url: String(url), init: init || {} }).then((r) => ({
+        ok: r.ok, status: r.status, headers: r.headers,
+        text: async () => r.text, json: async () => JSON.parse(r.text),
+      })),
       event: m.event ?? null,
       now: () => new Date().toISOString(),
       log: (...a) => { logs.push(a.map((x) => (typeof x === 'string' ? x : JSON.stringify(x))).join(' ')); },
@@ -118,6 +134,8 @@ export async function runLocalHandler(
 ): Promise<CallResult> {
   const started = Date.now();
   const { store } = getServices();
+  const egress = /ctx\.fetch/.test(code) ? await egressHosts(cruxId) : [];
+  const secrets = /ctx\.secrets/.test(code) ? localSecrets(cruxId) : {};
   const url = URL.createObjectURL(new Blob([WORKER_PRELUDE], { type: 'text/javascript' }));
   const worker = new Worker(url);
   const visitorId = input.visitorId ?? null;
@@ -186,6 +204,53 @@ export async function runLocalHandler(
           }
           return;
         }
+        if (m.op === 'fetch') {
+          try {
+            const target = new URL(String(m.url));
+            if (target.protocol !== 'http:' && target.protocol !== 'https:')
+              throw new Error('fetch: only http and https');
+            if (!egressAllowed(target.hostname, egress))
+              throw new Error(
+                `fetch: ${target.hostname} is not in functions/egress.json ("hosts")`,
+              );
+            const init = (m.init ?? {}) as Record<string, unknown>;
+            const headers: Record<string, string> = {};
+            for (const [k, v] of Object.entries((init.headers as Record<string, unknown>) ?? {}))
+              headers[k] = String(v);
+            const body =
+              init.body === undefined || init.body === null
+                ? undefined
+                : typeof init.body === 'string'
+                  ? init.body
+                  : JSON.stringify(init.body);
+            if (
+              body !== undefined &&
+              !Object.keys(headers).some((k) => k.toLowerCase() === 'content-type')
+            )
+              headers['content-type'] = 'application/json';
+            const ctl = new AbortController();
+            const t = setTimeout(() => ctl.abort(), 4000);
+            const res = await fetch(target, {
+              method: String(init.method ?? 'GET').toUpperCase(),
+              headers,
+              body,
+              signal: ctl.signal,
+            }).finally(() => clearTimeout(t));
+            const text = await res.text();
+            const outHeaders: Record<string, string> = {};
+            res.headers.forEach((v, k) => {
+              outHeaders[k] = v;
+            });
+            worker.postMessage({
+              op: 'answer',
+              id: m.id,
+              value: { ok: res.ok, status: res.status, headers: outHeaders, text },
+            });
+          } catch (err) {
+            worker.postMessage({ op: 'answer', id: m.id, error: (err as Error).message });
+          }
+          return;
+        }
         if (m.op === 'emit') {
           try {
             const r = await emitLocal(cruxId, m.name as string, m.data, visitorId, depth + 1);
@@ -213,6 +278,8 @@ export async function runLocalHandler(
         visitorId,
         // In the workspace the one visitor is the author: the owner.
         ownerId: visitorId,
+        cruxId,
+        secrets,
       });
     });
   } finally {

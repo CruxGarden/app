@@ -1,4 +1,6 @@
 import { test, expect, request } from '@playwright/test';
+import { mkdirSync, readdirSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { launchApp } from './launch';
 import { enterGarden, createCrux, addArtifact } from './multi-crux-helpers';
 import { LOCAL_API, LOCAL_API_LOG, useLocalApi, signInLocally } from './local-api-helpers';
@@ -15,7 +17,7 @@ test.skip(!LOCAL_API || !LOCAL_API_LOG, 'set CRUX_LOCAL_API and CRUX_LOCAL_API_L
 
 test('a crux gets a backend: functions run and events reach their handlers', async () => {
   test.setTimeout(420000);
-  const { app, page } = await launchApp();
+  const { app, page, dir } = await launchApp();
   try {
     await page.setViewportSize({ width: 1600, height: 1000 });
     await enterGarden(page);
@@ -53,6 +55,33 @@ test('a crux gets a backend: functions run and events reach their handlers', asy
     await rule.getByRole('button', { name: 'Add handler' }).click();
     await expect(fns.getByTestId('function-tick')).toBeVisible();
 
+    // A secret and an outbound call (F1): the handler reads ctx.secrets and
+    // reaches the one host functions/egress.json allows — the API itself here.
+    const garden = join(dir, 'garden');
+    const folder = join(garden, readdirSync(garden)[0]!);
+    mkdirSync(join(folder, 'functions'), { recursive: true });
+    writeFileSync(
+      join(folder, 'functions', 'egress.json'),
+      JSON.stringify({ hosts: ['127.0.0.1', 'localhost'] }),
+    );
+    writeFileSync(
+      join(folder, 'functions', 'remote.js'),
+      [
+        'export default async function (req, ctx) {',
+        '  const token = ctx.secrets.get("TOKEN");',
+        `  const r = await ctx.fetch("${LOCAL_API}/fn/" + ctx.crux.id + "/hello", { method: "POST", body: { via: "remote" } });`,
+        '  return { hasToken: !!token, len: (token || "").length, remoteStatus: r.status, echoed: (await r.json()).echo };',
+        '}',
+        '',
+      ].join('\n'),
+    );
+    await expect(fns.getByTestId('function-remote')).toBeVisible({ timeout: 30_000 });
+    const secrets = fns.getByTestId('function-secrets');
+    await secrets.getByRole('textbox', { name: 'Secret name' }).fill('TOKEN');
+    await secrets.getByRole('textbox', { name: 'Secret value' }).fill('s3cret');
+    await secrets.getByRole('button', { name: 'Set' }).click();
+    await expect(secrets).toContainText('TOKEN');
+
     // Share it (the first share asks about a backup).
     await page.getByRole('button', { name: 'Share', exact: true }).click();
     const backupAsk = page
@@ -68,8 +97,17 @@ test('a crux gets a backend: functions run and events reach their handlers', asy
     expect(listed.map((f: { name: string }) => f.name).sort()).toEqual([
       'hello',
       'on-ping',
+      'remote',
       'tick',
     ]);
+    // The secret reaches the address right after the share (the app pushes what
+    // was set here); the handler reads it and calls out through ctx.fetch.
+    await expect
+      .poll(async () => (await api.post(`/fn/${id}/remote`, { data: {} })).json(), {
+        timeout: 20_000,
+        intervals: [1_000],
+      })
+      .toEqual({ hasToken: true, len: 6, remoteStatus: 200, echoed: { via: 'remote' } });
     expect(listed.find((f: { name: string }) => f.name === 'tick')).toMatchObject({
       schedule: '*/1 * * * *',
       nextRun: expect.any(String),
