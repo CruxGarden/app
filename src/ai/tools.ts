@@ -383,6 +383,8 @@ export const GUESTBOOK_TOOL_DEFINITION: ToolDefinition = {
   },
 };
 
+import { WORKSPACE_TOOL_DEFINITIONS, runWorkspaceTool } from './workspace-tools';
+
 /** The tool set to offer a workspace conversation on this platform. */
 export function defaultToolDefinitions(cruxId?: string): ToolDefinition[] {
   const site = can(Capability.Build) ? SITE_TOOL_DEFINITIONS : [];
@@ -397,6 +399,7 @@ export function defaultToolDefinitions(cruxId?: string): ToolDefinition[] {
     GUESTBOOK_TOOL_DEFINITION,
     ...GROWTH_TOOL_DEFINITIONS,
     ...THEME_TOOL_DEFINITIONS,
+    ...WORKSPACE_TOOL_DEFINITIONS,
     ...MEMORY_TOOL_DEFINITIONS,
     ...CRUXSPACE_TOOLS,
     ...SKILL_TOOL_DEFINITIONS,
@@ -638,6 +641,10 @@ export function createToolExecutor(
           case 'get_theme':
           case 'set_background':
             result = await runThemeTool(toolName, input, { cruxId, chatModel });
+            break;
+          case 'show':
+          case 'test_function':
+            result = await runWorkspaceTool(toolName, input, { cruxId });
             break;
           case 'remember':
             // Garden Memory (B6): the one write path besides the person's own

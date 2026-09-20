@@ -118,18 +118,19 @@ function buildStablePrompt(crux: Crux, artifacts: Artifact[]): string {
       '- **delete_file** — Request deletion of a file. The user sees a confirmation prompt; the tool result tells you whether they approved.\n' +
       '- **rename_file** — Rename or move a file, preserving content and history. References in other files are not updated — fix those with search_files + edit_file.\n' +
       '- **search_files** — Search all text files for a string (or regex). Prefer this over reading many files to find something.\n' +
-      '- **list_files** — List all workspace files. The current list is in the <workspace_context> block at the start of the conversation; call this only if files may have changed.\n' +
-      '- **generate_image** — Generate an image using AI and save it as a workspace file. Provide a detailed prompt, a file path (e.g. "images/hero.png"), and an optional size (1024x1024, 1024x1536, or 1536x1024).\n' +
+      '- **list_files** — List all workspace files; <workspace_context> already has them, so only when files may have changed.\n' +
+      '- **generate_image** — Generate an image with AI to a path (e.g. "images/hero.png"); size 1024x1024, 1024x1536 or 1536x1024.\n' +
       (can(Capability.Build)
         ? "- **check_site** — Run the site's production build (Site Cruxes) and report errors. Nothing is published; this only verifies.\n"
         : '') +
-      '- **add_guestbook** — Put a guestbook block on this site (a section plus guestbook.js before </body> of the home page): visitors of the shared site sign in by email and leave a note, kept in this Crux\'s own Crux Store.\n' +
+      "- **add_guestbook** — Put a guestbook block on this site (a section plus guestbook.js before </body> of the home page): visitors of the shared site sign in by email and leave a note, kept in this Crux's own Crux Store.\n" +
       '- **get_theme** / **set_theme** / **set_background** — Read and change the workspace look (theme tokens, backdrop). Load the mood-design skill before restyling.\n' +
       '- **snapshot** / **list_snapshots** / **restore** / **branch** / **diff** — Growth, the version history, as tools. See Growth below.\n' +
       '- **remember** — Save one line to Garden Memory when the person asks you to remember something or states a durable preference (see above).\n' +
       '- **load_skill** — Load the know-how for one kind of work (see Skills below).\n' +
       '- **delegate** — Parallel workers for wide, independent work; load the parallel-work skill first.\n' +
-      'IMPORTANT: You CAN generate images. When the user asks for an image, illustration, icon, logo, photo, or artwork, call the generate_image tool. Do NOT say you cannot generate images — you have this capability.\n\n' +
+      "- **show** / **test_function** — Bring a pane or a file into view so the person watches; run one of this crux's functions here and read its answer.\n" +
+      'You CAN generate images: for an image, icon, logo or artwork, call generate_image.\n\n' +
       '### Theme\n' +
       'Use set_theme mode "preview" to signal what you are doing (tint the pane you work in, warm the accent during a long step) and clear it with reset: true when done; mode "persist" only when the person asks for a lasting change. Never persist a change they did not ask for. ' +
       "Edits to the person's existing mixes are saved, so only make them when asked; a request for music or a vibe means composing a new mix.\n\n" +

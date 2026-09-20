@@ -1,3 +1,4 @@
+import { validateWorkspaceTool } from './workspace-tools';
 import { hasSkill, skillNames } from './skills';
 import { MEMORY_NOTE_MAX, MEMORY_SECTIONS, normalizeSection } from '@/services/memory';
 import { validateDelegateInput } from './delegate-tool';
@@ -64,6 +65,9 @@ export function validateToolInput(
     case 'capture_preview':
     case 'render_video':
       return validateCapture(input);
+    case 'show':
+    case 'test_function':
+      return validateWorkspaceTool(toolName, input);
     default:
       return { valid: false, error: `Unknown tool: ${toolName}` };
   }

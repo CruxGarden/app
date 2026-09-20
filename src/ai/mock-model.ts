@@ -1281,6 +1281,18 @@ export function getMockLanguageModel(): LanguageModel {
             return toolCallStream('save_font', { format: 'otf', name: 'Moss Sans' });
           return textStream('Named the font Moss Sans, drew an A from SVG and saved the OTF.');
         }
+        if (lastUserText(prompt).includes('[crux:operate]')) {
+          // The crux collaborator shows its work and tests a function (collaborator-operates.spec).
+          const rounds = toolResultsThisTurn(prompt);
+          const steps: [string, Record<string, unknown>][] = [
+            ['show', { what: 'pane', pane: 'history' }],
+            ['show', { what: 'file', path: 'index.html' }],
+            ['test_function', { name: 'hello', body: { n: 7 } }],
+          ];
+          const step = steps[rounds.length];
+          if (step) return toolCallStream(step[0], step[1]);
+          return textStream('Opened History, showed the page, and hello answered with the echo.');
+        }
         if (lastUserText(prompt).includes('[garden:operate]')) {
           // The Keeper reads the screen and the garden, chooses a collaborator, exports (keeper-operates.spec).
           const rounds = toolResultsThisTurn(prompt);

@@ -104,6 +104,8 @@ export function getToolLabel(tc: ToolCall): string {
         return `Showed ${String(tc.input?.title ?? tc.input?.cruxId ?? 'a crux')}`;
       return `Showed ${what || 'the garden'}`;
     }
+    case 'test_function':
+      return `Tested ${String(tc.input?.name ?? tc.input?.event ?? 'a function')}`;
     case 'read_crux':
       return `Read ${String(tc.input?.title ?? tc.input?.cruxId ?? 'a crux')}`;
     case 'snapshot_crux':
