@@ -8,9 +8,10 @@
  * electron-builder copies that folder into the app.
  *
  * Only binaries that carry everything they need are staged: a copy is the
- * whole job. ffmpeg and ffprobe arrive as npm packages and need no staging at
- * all; pandoc and typst are single static binaries, so they are copied from
- * the build machine's own install.
+ * whole job. ffmpeg arrives as an npm package that holds one platform's
+ * binary, so it needs no staging; ffprobe's package holds every platform's,
+ * so the wanted one is copied out and the package left out of the bundle;
+ * pandoc and typst are single static binaries copied from the build machine.
  *
  * ImageMagick is deliberately **not** staged. Its Homebrew build records
  * absolute paths in the binary, in nineteen libraries and in 131 libtool
@@ -27,12 +28,14 @@
 import {
   chmodSync,
   copyFileSync,
+  existsSync,
   mkdirSync,
   readdirSync,
   realpathSync,
   rmSync,
   statSync,
 } from 'node:fs';
+import { createRequire } from 'node:module';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -45,6 +48,27 @@ const exe = (name) => (isWindows ? `${name}.exe` : name);
 
 /** Binaries that carry everything they need, so a copy is enough. */
 const TOOLS = ['pandoc', 'typst'];
+
+/**
+ * ffprobe comes from npm, but that package carries a binary for every
+ * platform — 233 MB of which one is wanted. So it is staged like the rest and
+ * the package itself is left out of the bundle.
+ */
+function stageFfprobe() {
+  let from;
+  try {
+    from = createRequire(import.meta.url)('ffprobe-static');
+  } catch {
+    return false;
+  }
+  const source = typeof from === 'string' ? from : from?.path;
+  if (!source || !existsSync(source)) return false;
+  const to = join(target, exe('ffprobe'));
+  copyFileSync(source, to);
+  chmodSync(to, 0o755);
+  console.log(`✓ ffprobe: ${source}`);
+  return true;
+}
 
 /** Where a build machine keeps the tools, best first. */
 function findOnMachine(name) {
@@ -78,7 +102,7 @@ function sizeOf(dir) {
 rmSync(target, { recursive: true, force: true });
 mkdirSync(target, { recursive: true });
 
-let staged = 0;
+let staged = stageFfprobe() ? 1 : 0;
 for (const name of TOOLS) {
   const source = findOnMachine(name);
   if (!source) {

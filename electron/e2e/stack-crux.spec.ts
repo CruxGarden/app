@@ -164,6 +164,48 @@ test('a stack crux describes its compose file, refuses what reaches outside, and
       timeout: 30_000,
     });
 
+    // A secret the stack reads is supplied at start and never written down:
+    // it is in the Crux's secrets, not in compose.yaml and not in .env.
+    await page.evaluate(
+      ([id]) =>
+        localStorage.setItem(
+          `cruxgarden:fn-secrets:${id}`,
+          JSON.stringify({ STACK_SECRET: 'from-the-secret-store' }),
+        ),
+      [await page.locator('[data-workspace-id]').first().getAttribute('data-workspace-id')],
+    );
+    await useStack(`services:
+  # Prints the secret it was given, then stops.
+  teller:
+    image: alpine:3
+    restart: "no"
+    command: ["sh", "-c", "echo SECRET_IS=\${STACK_SECRET:-nothing}"]
+    environment:
+      STACK_SECRET: \${STACK_SECRET:-}
+`);
+    // Compose resolves it as empty — a secret is for the run, not for a panel.
+    await expect(bench.locator('#env')).toContainText('STACK_SECRET', { timeout: 60_000 });
+    await bench.getByRole('button', { name: 'Start', exact: true }).first().click();
+    await expect(bench.locator('#output')).toContainText(/teller|Creat|Network/i, {
+      timeout: 180_000,
+    });
+    await bench.locator('#logs-details summary').click();
+    await bench.locator('#log-service').selectOption('teller');
+    await bench.getByRole('button', { name: 'Show the last 200 lines' }).click();
+    await expect(bench.locator('#output')).toContainText('SECRET_IS=from-the-secret-store', {
+      timeout: 120_000,
+    });
+    // It is nowhere on disk.
+    expect(readFileSync(join(folder, 'compose.yaml'), 'utf8')).not.toContain(
+      'from-the-secret-store',
+    );
+    if (existsSync(join(folder, '.env')))
+      expect(readFileSync(join(folder, '.env'), 'utf8')).not.toContain('from-the-secret-store');
+    await bench.getByRole('button', { name: 'Stop and remove' }).click();
+    await expect(bench.locator('#output')).toContainText(/Remov|Network|Container/i, {
+      timeout: 120_000,
+    });
+
     // With a runner on the machine, it really runs.
     test.skip(!hasRunner(), 'this machine has no Docker or Podman');
     await useStack(`services:
