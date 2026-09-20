@@ -476,6 +476,8 @@ export async function startMockApi(opts: { port?: number } = {}): Promise<MockAp
         storeKeys: storageBytes ? 2 : 0,
         storeReads: storageBytes ? 30 : 0,
         storeWrites: storageBytes ? 4 : 0,
+        fnCalls: 0,
+        fnMs: 0,
       };
     };
     // ── billing (ADR 0012): mock provider — checkout "pays" instantly
@@ -749,6 +751,8 @@ export async function startMockApi(opts: { port?: number } = {}): Promise<MockAp
         keys: cruxes.reduce((n, c) => n + c.storeKeys, 0),
         reads: cruxes.reduce((n, c) => n + c.storeReads, 0),
         writes: cruxes.reduce((n, c) => n + c.storeWrites, 0),
+        fnCalls: 0,
+        fnMs: 0,
         requests: 0,
       };
       store.requests = store.reads + store.writes;

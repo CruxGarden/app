@@ -197,7 +197,7 @@ function renderConventions(site: boolean, model: ContentModel | undefined): stri
     );
   }
   lines.push(
-    "- `functions/` is the crux's backend: `functions/<name>.js` exports `default async function (req, ctx)` and answers `POST /fn/<cruxId>/<name>` (the page calls it with `crux.fn(name, body)`); `functions/on-<event>.js` runs when the crux emits `<event>` (`crux.emit`, a Store write as `store:write`, or `ctx.emit`), with an optional `export const match = 'score*'`. `ctx` holds `store` (get/set/list/del), `visitor`, `event`, `emit`, `now`, `log`, `json`, `reject`; nothing else — no network, filesystem or process. Functions run where the crux is shared.",
+    "- `functions/` is the crux's backend: `functions/<name>.js` exports `default async function (req, ctx)` and answers `POST /fn/<cruxId>/<name>` (the page calls it with `crux.fn(name, body)`); `functions/on-<event>.js` runs when the crux emits `<event>` (`crux.emit`, a Store write as `store:write`, or `ctx.emit`), with an optional `export const match = 'score*'`. `ctx` holds `store` (get/set/list/del), `visitor`, `event`, `emit`, `now`, `log`, `json`, `reject`; nothing else — no network, filesystem or process. They run in the workspace too (a bare worker against the local Store) and at the address once shared, so test them before sharing: the page loads `<script src=\"crux.js\"></script>` (the Share pane's starter writes `crux.js`; it steps aside for the published client). A `store:write` handler sees `{ key, value, mode, before }` and `ctx.reject(message, status)` refuses the write.",
   );
   lines.push('- Paths are relative to this folder, forward slashes, no leading `/`.');
   if (model?.settings) {

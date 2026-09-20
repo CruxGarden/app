@@ -23,12 +23,18 @@ export interface CruxUsage {
   storeKeys: number;
   storeReads: number;
   storeWrites: number;
+  /** Crux Functions this period: handler runs and their milliseconds */
+  fnCalls: number;
+  fnMs: number;
 }
 export interface StoreUsage {
   storageBytes: number;
   keys: number;
   reads: number;
   writes: number;
+  /** function runs count as Store requests toward the budget */
+  fnCalls: number;
+  fnMs: number;
   requests: number;
 }
 export interface SyncObjectUsage {

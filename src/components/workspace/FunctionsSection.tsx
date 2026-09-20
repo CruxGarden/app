@@ -13,14 +13,17 @@ import {
   type WhenThen,
   type CallResult,
 } from '@/services/crux-functions';
+import { callLocalFunction, emitLocal } from '@/services/functions-runner';
+import { useAppStore } from '@/stores/appStore';
 import { PaneSection, PaneHint, PaneNote } from './pane-ui';
 
 /**
  * The Functions block of the Share pane (CRUX-FUNCTIONS-PLAN F0 + F6): the
  * crux's backend. What `functions/` holds; a starter HTTP handler; the
- * When → Then rows that write an event handler without code; and, once the
- * crux is shared, Run and Emit against the API as the signed-in person —
- * the same calls the page makes with `crux.fn` and `crux.emit`.
+ * When → Then rows that write an event handler without code; and Run and
+ * Emit — here, against the local runner and Store, until the crux is shared,
+ * then against the API as the signed-in person — the same calls the page
+ * makes with `crux.fn` and `crux.emit`.
  */
 export default function FunctionsSection({
   cruxId,
@@ -66,7 +69,7 @@ export default function FunctionsSection({
     act('starter', async () => {
       const path = await writeStarterFunction(cruxId);
       await refreshArtifacts();
-      return `Wrote ${path}. Share to run it.`;
+      return `Wrote ${path} and crux.js — add <script src="crux.js"></script> to the page and call crux.fn('hello').`;
     });
 
   const addRule = () =>
@@ -79,25 +82,30 @@ export default function FunctionsSection({
       await refreshArtifacts();
       setBuilding(false);
       setEvent('');
-      return `Wrote ${path}. Share to run it.`;
+      return `Wrote ${path}. It runs here on every emit, and at the address once shared.`;
     });
 
   const run = (name: string) =>
     act(`run:${name}`, async () => {
-      const r = await callFunction(cruxId, name, {});
+      const r = local
+        ? await callLocalFunction(cruxId, name, {}, useAppStore.getState().author?.id ?? null)
+        : await callFunction(cruxId, name, {});
       setResults((m) => ({ ...m, [name]: r }));
-      return `${name} answered ${r.status}${r.ms !== null ? ` in ${r.ms} ms` : ''}.`;
+      return `${name} answered ${r.status}${r.ms !== null ? ` in ${r.ms} ms` : ''}${local ? ' here' : ' at the address'}.`;
     });
 
   const emit = (name: string) =>
     act(`emit:${name}`, async () => {
-      const r = await emitEvent(cruxId, name, {});
+      const r = local
+        ? await emitLocal(cruxId, name, {}, useAppStore.getState().author?.id ?? null)
+        : await emitEvent(cruxId, name, {});
       for (const [handler, res] of Object.entries(r.results))
         setResults((m) => ({ ...m, [handler]: res }));
-      return `${name} reached ${r.handlers} handler${r.handlers === 1 ? '' : 's'}.`;
+      return `${name} reached ${r.handlers} handler${r.handlers === 1 ? '' : 's'}${local ? ' here' : ' at the address'}.`;
     });
 
-  const canCall = published && authenticated;
+  const local = !published;
+  const canCall = local || authenticated;
   const thenKind = then.kind;
 
   return (
@@ -158,10 +166,12 @@ export default function FunctionsSection({
           </ul>
         )}
         {files.length > 0 && !canCall && (
+          <PaneHint align="left">Connect your account to run them from here.</PaneHint>
+        )}
+        {files.length > 0 && local && (
           <PaneHint align="left">
-            {published
-              ? 'Connect your account to run them from here.'
-              : 'Share the crux and its functions run at the address.'}
+            They run here, against this crux's local Store. Share the crux and they run at the
+            address.
           </PaneHint>
         )}
         {files.length > 0 && canCall && changesToShare && (

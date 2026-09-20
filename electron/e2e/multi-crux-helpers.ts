@@ -71,12 +71,13 @@ export async function wearMaterial(page: Page, id: string) {
   const tone = id.replace(/^plasma-/, '');
   const hue = Object.entries(hues).find(([, [l, d]]) => l === tone || d === tone);
   if (!hue) throw new Error(`${id} is not a material Mood`);
-  const mode = hue[1][0] === tone ? 'Light' : 'Dark';
+  const [hueName, [light]] = hue;
+  const mode = light === tone ? 'Light' : 'Dark';
   const picker = page.getByTestId('material-moods');
   await picker.getByTestId('material-material').getByRole('button', { name: material }).click();
   await picker.getByTestId('material-mode').getByRole('button', { name: mode }).click();
   await picker
     .getByTestId('material-hue')
-    .getByRole('button', { name: hue[0][0].toUpperCase() + hue[0].slice(1), exact: true })
+    .getByRole('button', { name: hueName.charAt(0).toUpperCase() + hueName.slice(1), exact: true })
     .click();
 }

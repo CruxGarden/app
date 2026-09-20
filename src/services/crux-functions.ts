@@ -86,6 +86,91 @@ export default async function (req, ctx) {
 }
 `;
 
+/**
+ * `crux.js` — the page's handle on its crux, shipped as a file in the crux so
+ * the same page works in the workspace preview (where Crux Garden serves the
+ * folder verbatim, ADR 0003) and at the shared address (where the publish
+ * injection's own client takes over and this file steps aside). In the
+ * workspace every call is a postMessage to Crux Garden: the Store answers
+ * from the local Store, functions run in the local runner, events reach
+ * `crux.on` the same way.
+ */
+export const CLIENT_PATH = 'crux.js';
+export const CLIENT_SOURCE = `// crux.js — this page's handle on its crux: crux.store, crux.fn, crux.emit, crux.on.
+// Written by Crux Garden. In the workspace it talks to Crux Garden; where the crux is
+// shared, Crux Garden's own client is injected and this file does nothing.
+(function () {
+  if (window.crux && window.crux.fn) return;
+  window.crux = window.crux || {};
+  var framed = window.parent !== window;
+  function ask(type, payload) {
+    return new Promise(function (resolve, reject) {
+      if (!framed) return reject(new Error('Open this page in Crux Garden, or share the crux'));
+      var id = Math.random().toString(36).slice(2);
+      var timer = setTimeout(function () { window.removeEventListener('message', hear); reject(new Error(type + ' timed out')); }, 8000);
+      function hear(e) {
+        if (!e.data || e.data.id !== id || e.data.type !== type + ':res') return;
+        clearTimeout(timer); window.removeEventListener('message', hear); resolve(e.data);
+      }
+      window.addEventListener('message', hear);
+      window.parent.postMessage(Object.assign({ type: type, id: id }, payload), '*');
+    });
+  }
+  if (!window.crux.store) {
+    window.crux.store = {
+      get: function (key) { return ask('crux:store:get', { key: key }).then(function (r) { return r.value === undefined ? null : r.value; }); },
+      set: function (key, value, opts) {
+        var mode = (opts && opts.mode) || 'protected';
+        return ask('crux:store:set', { key: key, value: value, mode: mode }).then(function (r) { if (r.error) throw new Error(r.error); });
+      },
+      increment: function (key, by) { return ask('crux:store:inc', { key: key, by: by || 1 }).then(function (r) { return r.value; }); },
+      delete: function (key) { window.parent.postMessage({ type: 'crux:store:del', key: key }, '*'); return Promise.resolve(); },
+      list: function () { return ask('crux:store:list', {}).then(function (r) { return r.keys || []; }); }
+    };
+  }
+  window.crux.fn = function (name, body) {
+    return ask('crux:fn:call', { name: name, body: body === undefined ? null : body }).then(function (r) {
+      if (r.status >= 400) throw new Error((r.body && r.body.error) || ('Function ' + name + ' failed: ' + r.status));
+      return r.body;
+    });
+  };
+  window.crux.emit = function (name, data) {
+    return ask('crux:fn:emit', { name: name, data: data === undefined ? null : data }).then(function (r) {
+      if (r.refused) throw new Error(r.refused.message);
+      return { event: r.event, handlers: r.handlers };
+    });
+  };
+  var listening = false;
+  window.crux.on = function (name, cb) {
+    if (!framed) return function () {};
+    if (!listening) { listening = true; window.parent.postMessage({ type: 'crux:fn:on' }, '*'); }
+    function hear(e) {
+      if (!e.data || e.data.type !== 'crux:fn:event' || !e.data.event) return;
+      var ev = e.data.event;
+      if (name === '*' || ev.name === name) cb(ev.data, ev);
+    }
+    window.addEventListener('message', hear);
+    return function () { window.removeEventListener('message', hear); };
+  };
+  if (framed) window.parent.postMessage({ type: 'crux:ready' }, '*');
+})();
+`;
+
+/** Write `crux.js` into the crux unless it is already there; returns whether it was written. */
+export async function writeClientFile(cruxId: string): Promise<boolean> {
+  const { artifact } = getServices();
+  const existing = await artifact.findByResource('crux', cruxId);
+  if (existing.some((a) => a.type === 'artifact' && pathOf(a) === CLIENT_PATH)) return false;
+  await artifact.create({
+    resourceId: cruxId,
+    resourceType: 'crux',
+    content: CLIENT_SOURCE,
+    mimeType: 'text/javascript',
+    meta: { path: CLIENT_PATH },
+  });
+  return true;
+}
+
 const NAME_RE = /^[A-Za-z0-9._-]+$/;
 
 export function validateEventName(name: string): string | null {
@@ -127,6 +212,7 @@ export async function writeStarterFunction(cruxId: string, name = 'hello'): Prom
     mimeType: 'text/javascript',
     meta: { path },
   });
+  await writeClientFile(cruxId);
   return path;
 }
 
