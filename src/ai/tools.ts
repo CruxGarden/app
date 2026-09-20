@@ -337,7 +337,7 @@ export const CAPTURE_TOOL_DEFINITIONS: ToolDefinition[] = [
   {
     name: 'render_video',
     description:
-      'Record the crux\'s running preview as a video: frames at fps until the page sets document.body.dataset.done = "1" (or max_seconds), then the bundled ffmpeg writes exports/<name>.mp4. The page is opened with ?auto=1 so a timeline page starts at once. ' +
+      'Record the crux\'s running preview as a video: frames at fps until the page sets document.body.dataset.done = "1" (or max_seconds), then the bundled ffmpeg writes exports/<name>.mp4 (the frames stay under .crux/render/, outside Artifacts and exports). The page is opened with ?auto=1 so a timeline page starts at once. ' +
       'USE WHEN: a page is an animation, a spot or a demo and the person wants it as a video file.',
     input_schema: {
       type: 'object',

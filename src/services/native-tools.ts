@@ -52,7 +52,10 @@ export async function renderVideo(
 ): Promise<{ path: string; frames: number; seconds: number; encode: NativeRunResult }> {
   const fps = opts.fps ?? 30;
   const name = (opts.name ?? 'render').replace(/[^A-Za-z0-9._-]+/g, '-').replace(/\.mp4$/i, '');
-  const subdir = `exports/${name}-frames`;
+  // Frames are working state, not work: under `.crux/` the watcher never
+  // ingests them, so they are neither Artifacts nor part of an export (a
+  // thirty-second spot's frames made a 71 MiB .crux on 2026-09-20).
+  const subdir = `.crux/render/${name}`;
   const rec = await recordPreview(cruxId, url, { subdir, fps, ...opts });
   if (rec.frames === 0) throw new Error('No frames were captured.');
   console.info('[render] frames', rec.frames, 'last poll of done:', rec.lastPoll);

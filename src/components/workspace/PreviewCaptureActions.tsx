@@ -64,7 +64,7 @@ export default function PreviewCaptureActions({
     const ok = await confirmDialog({
       title: 'Export as video',
       message:
-        'Records the preview at 30 fps until the page says it is done (or 60 seconds), then writes exports/render.mp4. The frames stay beside it.',
+        'Records the preview at 30 fps until the page says it is done (or 60 seconds), then writes exports/render.mp4.',
       confirmLabel: 'Export',
     });
     if (!ok) return;

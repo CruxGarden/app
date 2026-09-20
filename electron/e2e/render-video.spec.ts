@@ -63,7 +63,9 @@ test('a timeline page becomes a video and a screenshot from the preview bar', as
     await expect
       .poll(() => existsSync(out) && statSync(out).size > 2000, { timeout: 120_000 })
       .toBe(true);
-    const frames = readdirSync(join(folder, 'exports', 'render-frames')).filter((f) =>
+    // Frames live under .crux/render/, which the watcher never ingests.
+    expect(existsSync(join(folder, 'exports', 'render-frames'))).toBe(false);
+    const frames = readdirSync(join(folder, '.crux', 'render', 'render')).filter((f) =>
       f.endsWith('.png'),
     );
     // ~2.4 s at 30 fps, stopped by the page's own done flag rather than the cap
