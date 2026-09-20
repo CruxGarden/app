@@ -8,10 +8,10 @@ import { GARDEN_DARK } from './garden-dark';
 import { tokenChoices } from './token-groups';
 
 describe('bundled Moods (the backgrounds set, the soft suite and the Plasma family)', () => {
-  it('ships sixty-five Moods and shelves Office, all complete and valid with distinct ids', () => {
-    expect(BUNDLED_MOODS).toHaveLength(65);
+  it('ships sixty-six Moods and shelves Office, all complete and valid with distinct ids', () => {
+    expect(BUNDLED_MOODS).toHaveLength(66);
     expect(SHELVED_MOODS.map((m) => m.id)).toEqual(['office']);
-    expect(new Set(ALL.map((m) => m.id)).size).toBe(66);
+    expect(new Set(ALL.map((m) => m.id)).size).toBe(67);
     for (const m of ALL) {
       const ok = validateMoodPackage(JSON.parse(JSON.stringify(m)));
       expect(ok, `${m.id} validates`).toBeTruthy();
@@ -114,7 +114,7 @@ describe('bundled Moods (the backgrounds set, the soft suite and the Plasma fami
     expect(pick('paneHeaderShape').size).toBeGreaterThanOrEqual(3);
     expect(pick('paneCornerShape').size).toBe(2);
     expect(pick('iconSet').size).toBe(3);
-    expect(new Set(ALL.map((m) => m.persona!.name)).size).toBe(66);
+    expect(new Set(ALL.map((m) => m.persona!.name)).size).toBe(67);
     // named rooms the journeys lean on
     expect(bundledMood('raster-bars')?.theme.overrides.motionFrames).toBe('4');
     expect(bundledMood('raster-bars')?.theme.overrides.iconSet).toBe('pixel');

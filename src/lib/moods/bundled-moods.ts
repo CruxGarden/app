@@ -12,6 +12,7 @@
 import { MOOD_PRESETS } from './presets';
 import { refreshPresets } from './user-presets';
 import type { MoodPackage } from './packages';
+import { SITEMETRIC_RED } from './presets';
 import { BgType } from '@/lib/types';
 import { DEFAULT_CUES, type SoundCues } from '@/services/cues';
 import type { PersonaSettings } from '@/services/persona';
@@ -219,6 +220,35 @@ const SPECS: Spec[] = [
     },
   },
   ...PLASMA_SPECS,
+  {
+    id: 'sitemetric',
+    name: 'Sitemetric',
+    presetId: 'sitemetric',
+    // Red, black and white: the black of Soft Black, with the company's red
+    // carrying the accent and every pane, so the tools read as theirs.
+    extra: {
+      paneCollaboration: SITEMETRIC_RED,
+      paneArtifacts: SITEMETRIC_RED,
+      paneWorkshop: SITEMETRIC_RED,
+      paneDetails: SITEMETRIC_RED,
+      paneHistory: SITEMETRIC_RED,
+      paneExport: SITEMETRIC_RED,
+      paneSync: SITEMETRIC_RED,
+      panePublish: SITEMETRIC_RED,
+      paneStore: SITEMETRIC_RED,
+      paneTasks: SITEMETRIC_RED,
+    },
+    background: { type: BgType.Blank },
+    bundled: {},
+    cues: { message: null, toolDone: null, snapshot: null, published: 'chime', error: 'thud' },
+    volume: 0.3,
+    persona: {
+      name: 'Meridian',
+      greeting: 'Everything is up. What are we working on?',
+      systemPrompt:
+        'You are Meridian, the collaborator for a working day at Sitemetric: direct, exact, and not given to ceremony. Prefer the shortest correct answer. When something is running, say what and where; when something failed, read the log before guessing and quote what it actually printed. Keep code precise and explanations short.',
+    },
+  },
   {
     id: 'soft-black',
     name: 'Soft Black',

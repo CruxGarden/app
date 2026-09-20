@@ -559,6 +559,13 @@ const SOFT_BLACK: SoftTone = {
   error: '#d98a84',
   glassHighlight: 'rgb(255 255 255 / 0.06)',
 };
+/**
+ * Sitemetric's red. Their brand is red, black and white, and this is the one
+ * colour in it that is theirs — everything else in the Mood is the black and
+ * white it sits on. Changing the brand is changing this line.
+ */
+export const SITEMETRIC_RED = '#e70022';
+
 const SOFT_TONES: SoftTone[] = [
   SOFT_BLACK,
   lightTone({
@@ -660,6 +667,29 @@ const SOFT_TONES: SoftTone[] = [
     inkHover: '#333333',
     inkRgb: '34 34 34',
     paper: '#fafafa',
+  }),
+  // Sitemetric: Soft Black with the company's own red (Daniel: "base it from
+  // Soft Black maybe … sitemetric red should be used as the accent and tool
+  // colors"; "the colors are red black and white"). One constant holds the
+  // red, so changing the brand is changing a line.
+  darkTone({
+    id: 'sitemetric',
+    name: 'Sitemetric',
+    bg: '#000000',
+    surface: '#0e0e0e',
+    panel: '#121212',
+    toolbar: '#0a0a0a',
+    accent: SITEMETRIC_RED,
+    accentMuted: '#2a0a0e',
+    border: '#242424',
+    text: '#e8e8e8',
+    textMuted: '#8c8c8c',
+    heading: '#f2f2f2',
+    field: '#000000 #0d0b0b #1b1818',
+    tint: '#130b0d',
+    lightRgb: '232 232 232',
+    plate: 'rgb(14 14 14 / 0.9)',
+    dialog: 'rgb(12 12 12 / 0.96)',
   }),
   // The muted dark side of each colour (Daniel: "the dark versions of all
   // those colors, muted though").
@@ -877,6 +907,7 @@ function plasmaOverrides(t: SoftTone): Record<string, string> {
   };
 }
 const PLASMA_NAMES: Record<string, string> = {
+  sitemetric: 'Plasma Sitemetric',
   'soft-black': 'Plasma Black',
   'soft-white': 'Plasma Light',
   'soft-gray': 'Plasma Gray',
