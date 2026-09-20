@@ -792,7 +792,16 @@ function setupIpc() {
     'containers:compose',
     async (
       e: any,
-      opts: { cruxId: string; verb: string; service?: string; tail?: number; timeoutMs?: number },
+      opts: {
+        cruxId: string;
+        verb: string;
+        service?: string;
+        tail?: number;
+        timeoutMs?: number;
+        profiles?: string[];
+        /** Values for `${NAME}` in the file; the Crux's secrets travel this way. */
+        env?: Record<string, string>;
+      },
     ) => {
       const { runCompose, COMPOSE_VERBS } =
         require('./containers') as typeof import('./containers');

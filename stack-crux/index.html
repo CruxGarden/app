@@ -16,6 +16,21 @@
 
       <section id="refusals" class="refusals" hidden></section>
 
+      <section id="setup" class="setup">
+        <h2>This machine</h2>
+        <p class="hint">
+          The stack has sensible defaults. What you change here is yours alone: settings go in
+          <code>.env</code> beside the compose file, and anything structural goes in
+          <code>compose.override.yaml</code>, which Compose merges over the stack everyone shares.
+        </p>
+        <div id="profiles" class="profiles"></div>
+        <div id="settings" class="settings"></div>
+        <p class="setup-actions">
+          <button id="add-override" type="button">Add an override file</button>
+          <span id="files-note" class="hint"></span>
+        </p>
+      </section>
+
       <section class="controls">
         <button id="up" type="button" class="primary">Start</button>
         <button id="stop" type="button">Stop</button>

@@ -2665,13 +2665,15 @@ export function getMockLanguageModel(): LanguageModel {
         if (last?.role === 'tool') {
           const used = (name: string) =>
             last.content.some((c) => c.type === 'tool-result' && c.toolName === name);
-          return textStream(
-            used('set_theme')
-              ? 'Done — I painted it.'
-              : used('set_background')
-                ? 'Done — new backdrop.'
-                : 'Done — I wrote that file for you.',
-          );
+          // A stack turn has more than one step, so it answers for itself below.
+          if (!used('compose_ps') && !used('compose_up') && !used('compose_down'))
+            return textStream(
+              used('set_theme')
+                ? 'Done — I painted it.'
+                : used('set_background')
+                  ? 'Done — new backdrop.'
+                  : 'Done — I wrote that file for you.',
+            );
         }
         const text = lastUserText(prompt);
         // "slowly": hold the tool call back so a test can act mid-turn
@@ -2691,6 +2693,24 @@ export function getMockLanguageModel(): LanguageModel {
             },
             mode: 'preview',
           });
+        }
+        // "stack": the collaborator drives a Stack Crux — ask what is running,
+        // start it, then say what happened. Proves compose_* runs through the
+        // whole Collaboration loop, not just from the bench.
+        if (/\bstack\b/i.test(text)) {
+          const answered = (name: string) =>
+            prompt.some(
+              (m) =>
+                m.role === 'tool' &&
+                m.content.some((c) => c.type === 'tool-result' && c.toolName === name),
+            );
+          if (!answered('compose_ps')) return toolCallStream('compose_ps', {});
+          if (/\bstart\b/i.test(text) && !answered('compose_up'))
+            return toolCallStream('compose_up', {});
+          if (/\bstop\b/i.test(text) && !answered('compose_down'))
+            return toolCallStream('compose_down', {});
+          const seen = toolResultText(prompt, 'compose_up') || toolResultText(prompt, 'compose_ps');
+          return textStream(`The stack answered: ${String(seen).slice(0, 200)}`);
         }
         if (/\bwrite\b/i.test(text)) {
           return toolCallStream('write_file', {

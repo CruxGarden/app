@@ -6,7 +6,31 @@
   var $ = function (id) {
     return document.getElementById(id);
   };
-  var state = { runner: null, reading: null, running: [], busy: false, lines: [] };
+  var state = {
+    runner: null,
+    reading: null,
+    running: [],
+    busy: false,
+    lines: [],
+    // Profiles the person has switched on for this machine, kept in the
+    // browser: which optional parts you run is yours, not the stack's.
+    on: [],
+  };
+
+  function recallProfiles() {
+    try {
+      state.on = JSON.parse(sessionStorage.getItem('stack:profiles') || '[]') || [];
+    } catch (e) {
+      state.on = [];
+    }
+  }
+  function rememberProfiles() {
+    try {
+      sessionStorage.setItem('stack:profiles', JSON.stringify(state.on));
+    } catch (e) {
+      /* a private window may refuse */
+    }
+  }
 
   function esc(s) {
     return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) {
@@ -78,7 +102,15 @@
   }
 
   function renderServices() {
-    var services = (state.reading && state.reading.services) || [];
+    var services = ((state.reading && state.reading.services) || []).filter(function (s) {
+      // A service in a profile stays out of the way until it is switched on.
+      return (
+        !s.profiles.length ||
+        s.profiles.some(function (p) {
+          return state.on.indexOf(p) >= 0;
+        })
+      );
+    });
     var box = $('services');
     if (!services.length) {
       box.innerHTML =
@@ -165,6 +197,156 @@
         .join('');
   }
 
+  // ── Overrides: what this machine does differently ─────────────────────
+  function renderProfiles() {
+    var all = (state.reading && state.reading.profiles) || [];
+    var box = $('profiles');
+    if (!all.length) {
+      box.innerHTML = '';
+      return;
+    }
+    box.innerHTML =
+      '<h3>Optional parts</h3>' +
+      all
+        .map(function (name) {
+          var on = state.on.indexOf(name) >= 0;
+          return (
+            '<label class="profile"><input type="checkbox" data-profile="' +
+            esc(name) +
+            '"' +
+            (on ? ' checked' : '') +
+            '> ' +
+            esc(name) +
+            '</label>'
+          );
+        })
+        .join('');
+    box.querySelectorAll('[data-profile]').forEach(function (input) {
+      input.addEventListener('change', function () {
+        var name = input.getAttribute('data-profile');
+        state.on = input.checked
+          ? state.on.concat([name])
+          : state.on.filter(function (x) {
+              return x !== name;
+            });
+        rememberProfiles();
+        renderServices();
+      });
+    });
+  }
+
+  function renderSettings() {
+    var vars = (state.reading && state.reading.variables) || [];
+    var box = $('settings');
+    if (!vars.length) {
+      box.innerHTML = '';
+      return;
+    }
+    box.innerHTML =
+      '<h3>Settings</h3>' +
+      '<table class="settings-table"><tbody>' +
+      vars
+        .map(function (v) {
+          var where = v.fromEnv ? 'set here' : v.fallback !== undefined ? 'default' : 'not set';
+          return (
+            '<tr><th>' +
+            esc(v.name) +
+            '</th><td><input data-setting="' +
+            esc(v.name) +
+            '" placeholder="' +
+            esc(v.fallback === undefined ? '' : v.fallback) +
+            '"></td><td class="where">' +
+            esc(where) +
+            '</td></tr>'
+          );
+        })
+        .join('') +
+      '</tbody></table>' +
+      '<p class="hint">Blank keeps the default. A value is written to <code>.env</code>, which ' +
+      'travels with the Crux — a password belongs in the Crux\u2019s secrets instead, and is handed ' +
+      'to Compose at start without ever being written down.</p>' +
+      '<p><button id="save-settings" type="button">Save settings</button></p>';
+    $('save-settings').addEventListener('click', saveSettings);
+  }
+
+  function saveSettings() {
+    var inputs = $('settings').querySelectorAll('[data-setting]');
+    var lines = [];
+    for (var i = 0; i < inputs.length; i++) {
+      var value = inputs[i].value.trim();
+      if (value) lines.push(inputs[i].getAttribute('data-setting') + '=' + value);
+    }
+    busy(true);
+    say('Saving settings…');
+    garden
+      .read('.env')
+      .then(function (existing) {
+        // Keep anything already there that the compose file does not name.
+        var keep = String(existing || '')
+          .split('\n')
+          .filter(function (line) {
+            var name = /^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=/.exec(line);
+            if (!name) return line.trim().length > 0 && line.trim()[0] === '#';
+            return !lines.some(function (l) {
+              return l.split('=')[0] === name[1];
+            });
+          });
+        return garden.write('.env', keep.concat(lines).join('\n').trim() + '\n');
+      })
+      .then(function () {
+        say('Saved to .env. Start the stack again to use them.', 'ok');
+        return refresh(false);
+      })
+      .catch(function (error) {
+        say(String((error && error.message) || error), 'warn');
+      })
+      .then(function () {
+        busy(false);
+      });
+  }
+
+  function renderFiles() {
+    var files = (state.reading && state.reading.files) || [];
+    var hasOverride = files.some(function (f) {
+      return f.indexOf('override') >= 0;
+    });
+    $('files-note').textContent = files.length
+      ? 'Compose reads ' + files.join(', then ') + '.'
+      : '';
+    $('add-override').hidden = hasOverride || !files.length;
+  }
+
+  function addOverride() {
+    busy(true);
+    garden
+      .write(
+        'compose.override.yaml',
+        [
+          '# Yours, merged over compose.yaml by Compose itself.',
+          '# Anything here wins, and the rest of the stack is untouched.',
+          '#',
+          '# services:',
+          '#   postgres:',
+          '#     ports:',
+          '#       - "55432:5432"',
+          '',
+        ].join('\n'),
+      )
+      .then(function () {
+        say(
+          'Wrote compose.override.yaml. Edit it in Artifacts; it is checked like the stack.',
+          'ok',
+        );
+        return refresh(false);
+      })
+      .catch(function (error) {
+        say(String((error && error.message) || error), 'warn');
+      })
+      .then(function () {
+        busy(false);
+      });
+  }
+
   function renderTitle() {
     var services = (state.reading && state.reading.services) || [];
     var withPorts = services.filter(function (s) {
@@ -183,6 +365,8 @@
   // ── Doing things ──────────────────────────────────────────────────────
   function run(verb, opts) {
     if (state.busy) return;
+    opts = opts || {};
+    if (state.on.length) opts.profiles = state.on;
     busy(true);
     state.lines = [];
     say(
@@ -238,6 +422,9 @@
         state.reading = reading;
         renderTitle();
         renderRefusals();
+        renderProfiles();
+        renderSettings();
+        renderFiles();
         // `ps` needs a runner; without one the file still describes itself.
         return state.runner
           ? garden.services().catch(function () {
@@ -285,6 +472,8 @@
   $('refresh').addEventListener('click', function () {
     refresh(true);
   });
+  $('add-override').addEventListener('click', addOverride);
+  recallProfiles();
   $('logs').addEventListener('click', function () {
     showLogs($('log-service').value);
   });

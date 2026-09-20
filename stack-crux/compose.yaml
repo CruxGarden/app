@@ -2,6 +2,29 @@
 # sample data. Edit this file — it is an ordinary Artifact of this Crux, so
 # every change is kept in Growth, and publishing the Crux shares the stack
 # with whoever installs it.
+#
+# Sensible defaults, overridable per machine. Every setting below is written
+# ${NAME:-default}, so the stack runs unchanged and a `.env` beside this file
+# changes it here without touching the file everyone shares:
+#
+#     POSTGRES_PORT=55432
+#     API_PORT=3001
+#
+# A secret belongs in the Crux's secrets rather than in `.env`, and is handed
+# to Compose as environment at start. For anything structural, put a
+# `compose.override.yaml` beside this file; Compose merges it over this one and
+# Crux Garden checks both before it starts anything.
+#
+# The API image is published for x86-64 only, so `platform:` is pinned below
+# and Apple silicon runs it under emulation — slower, but it works. Set
+# API_PLATFORM in `.env` if you have a native build.
+#
+# A service can also be made optional with a Compose profile, so one stack can
+# serve different setups:
+#
+#     profiles: [extras]
+#
+# Services in a profile stay out of the way until you switch the profile on.
 
 # The project name is set by Crux Garden to this Crux, so a stop can only
 # reach the containers this Crux started.
@@ -38,9 +61,10 @@ services:
       timeout: 5s
       retries: 5
 
-  # Database Migrations (runs once before API starts)
+  # Database Migrations (runs once before the API starts)
   migrations:
     image: ghcr.io/cruxgarden/api:latest
+    platform: ${API_PLATFORM:-linux/amd64}
     depends_on:
       postgres:
         condition: service_healthy
@@ -53,6 +77,7 @@ services:
   # Crux Garden API - Nursery Configuration
   api:
     image: ghcr.io/cruxgarden/api:latest
+    platform: ${API_PLATFORM:-linux/amd64}
     restart: unless-stopped
     depends_on:
       migrations:
@@ -75,6 +100,10 @@ services:
       # Security
       JWT_SECRET: ${JWT_SECRET:-your-super-secret-jwt-key-min-32-chars-for-development-only}
       NURSERY_MODE: ${NURSERY_MODE:-true}
+
+      # The API refuses to boot in production without Stripe keys; the nursery
+      # is a demo, so it runs the mock billing provider on purpose.
+      BILLING_ALLOW_MOCK: ${BILLING_ALLOW_MOCK:-1}
 
       # AWS SES (optional for nursery)
       AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-dummy}

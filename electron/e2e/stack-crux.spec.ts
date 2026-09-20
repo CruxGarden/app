@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { execFileSync } from 'node:child_process';
-import { readdirSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { launchApp } from './launch';
 import { enterGarden } from './multi-crux-helpers';
@@ -95,8 +95,62 @@ test('a stack crux describes its compose file, refuses what reaches outside, and
     await expect(bench.locator('#services')).toContainText('Says hello and stops.');
     await expect(bench.locator('#about')).toContainText('1 service in this Crux');
 
+    // The overrides: what this machine does differently, from the page.
+    await useStack(`services:
+  # Always here.
+  core:
+    image: alpine:3
+    command: ["sleep", "5"]
+    ports:
+      - "\${CORE_PORT:-8099}:80"
+
+  # Only when you ask for it.
+  extra:
+    image: alpine:3
+    profiles: [extras]
+    command: ["sleep", "5"]
+`);
+    // A service in a profile stays out of the way until it is switched on.
+    await expect(bench.locator('#services')).toContainText('core', { timeout: 30_000 });
+    await expect(bench.locator('#services')).not.toContainText('extra');
+    await bench.locator('input[data-profile="extras"]').check();
+    await expect(bench.locator('#services')).toContainText('extra');
+
+    // A setting is written to .env, which Compose reads by itself.
+    await expect(bench.locator('th', { hasText: 'CORE_PORT' })).toBeVisible();
+    await bench.locator('input[data-setting="CORE_PORT"]').fill('8123');
+    await bench.getByRole('button', { name: 'Save settings' }).click();
+    await expect
+      .poll(
+        () => (existsSync(join(folder, '.env')) ? readFileSync(join(folder, '.env'), 'utf8') : ''),
+        {
+          timeout: 30_000,
+          intervals: [1000],
+        },
+      )
+      .toContain('CORE_PORT=8123');
+
+    // And an override file, which Compose merges over the shared stack.
+    await bench.getByRole('button', { name: 'Add an override file' }).click();
+    await expect
+      .poll(() => existsSync(join(folder, 'compose.override.yaml')), {
+        timeout: 30_000,
+        intervals: [1000],
+      })
+      .toBe(true);
+    // Both files are read now, and both are checked.
+    await expect(bench.locator('#files-note')).toContainText('compose.override.yaml', {
+      timeout: 30_000,
+    });
+
     // With a runner on the machine, it really runs.
     test.skip(!hasRunner(), 'this machine has no Docker or Podman');
+    await useStack(`services:
+  # Says hello and stops.
+  hello:
+    image: hello-world
+    restart: "no"
+`);
     await expect(bench.locator('.runner')).toHaveClass(/ok/, { timeout: 30_000 });
     await bench.getByRole('button', { name: 'Start' }).first().click();
     await expect(bench.locator('#output')).toContainText(/hello|Pull|Creat|Network/i, {

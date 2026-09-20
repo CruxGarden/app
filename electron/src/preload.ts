@@ -286,8 +286,22 @@ const api: ElectronBridge = {
       } | null>,
     inspect: (opts: { cruxId: string; file?: string }) =>
       ipcRenderer.invoke('containers:inspect', opts) as Promise<{
-        services: { name: string; image?: string; ports: number[] }[];
+        services: {
+          name: string;
+          image?: string;
+          about?: string;
+          ports: { host: number; container?: number }[];
+          dependsOn: string[];
+          healthcheck: boolean;
+          restart?: string;
+          envKeys: string[];
+          volumes: string[];
+          profiles: string[];
+        }[];
         refusals: string[];
+        files: string[];
+        profiles: string[];
+        variables: { name: string; fallback?: string; fromEnv: boolean }[];
       }>,
     compose: (opts: {
       cruxId: string;

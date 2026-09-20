@@ -12,14 +12,35 @@ export type ComposeVerb = 'up' | 'down' | 'ps' | 'logs' | 'pull' | 'config' | 's
 export interface ComposeService {
   name: string;
   image?: string;
+  /** The comment above it in the file. */
+  about?: string;
   /** Host ports the file asks for, as written. */
-  ports: number[];
+  ports: { host: number; container?: number }[];
+  dependsOn: string[];
+  healthcheck: boolean;
+  restart?: string;
+  envKeys: string[];
+  volumes: string[];
+  /** Compose profiles it belongs to; empty means it always runs. */
+  profiles: string[];
+}
+
+/** A `${NAME}` the stack reads, and the default that makes it work unchanged. */
+export interface ComposeVariable {
+  name: string;
+  fallback?: string;
+  /** Set in the Crux's `.env` — whether, never what. */
+  fromEnv: boolean;
 }
 
 export interface ComposeReading {
   services: ComposeService[];
   /** Why the stack must not start. Empty means it may run. */
   refusals: string[];
+  /** The files Compose will read, base first, override after. */
+  files: string[];
+  profiles: string[];
+  variables: ComposeVariable[];
 }
 
 export interface ComposeRunner {
@@ -54,12 +75,21 @@ export async function inspectCompose(cruxId: string, file?: string): Promise<Com
   return api().inspect({ cruxId, file });
 }
 
+/**
+ * One compose verb for this Crux.
+ *
+ * The Crux's own secrets are handed to Compose as environment, so a stack can
+ * read `${JWT_SECRET}` without anyone writing the value into a file that gets
+ * published. Non-secret settings belong in `.env` beside the compose file,
+ * which Compose reads by itself and which travels with the Crux.
+ */
 export async function compose(
   cruxId: string,
   verb: ComposeVerb,
-  opts: { service?: string; tail?: number; timeoutMs?: number } = {},
+  opts: { service?: string; tail?: number; timeoutMs?: number; profiles?: string[] } = {},
 ): Promise<{ code: number; output: string }> {
-  return api().compose({ cruxId, verb, ...opts });
+  const { localSecrets } = await import('./crux-functions');
+  return api().compose({ cruxId, verb, env: localSecrets(cruxId), ...opts });
 }
 
 /** Lines from a run in flight; pulling images takes minutes. */

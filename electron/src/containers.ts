@@ -64,12 +64,33 @@ export interface ComposeService {
   envKeys: string[];
   /** Named volumes and paths it mounts, as written. */
   volumes: string[];
+  /** Compose profiles it belongs to; empty means it always runs. */
+  profiles: string[];
+}
+
+/**
+ * A setting the stack reads, as `${NAME}` or `${NAME:-default}` in the file.
+ * A default makes the stack work out of the box; a value in `.env` or the
+ * Crux's secrets overrides it for this machine.
+ */
+export interface ComposeVariable {
+  name: string;
+  /** What the file falls back to, when it names one. */
+  fallback?: string;
+  /** Set in the Crux's `.env`. The value is not reported — only that it is set. */
+  fromEnv: boolean;
 }
 
 export interface ComposeReading {
   services: ComposeService[];
   /** Why this file must not be started, if so. Empty means it may run. */
   refusals: string[];
+  /** The files Compose will actually read, in the order it merges them. */
+  files: string[];
+  /** Every profile the stack names, so optional services can be offered. */
+  profiles: string[];
+  /** The settings it reads, with the defaults that make it work unchanged. */
+  variables: ComposeVariable[];
 }
 
 let runnerCache: ComposeRunner | null | undefined;
@@ -118,7 +139,7 @@ function scanYaml(text: string): { services: ComposeService[]; lines: string[] }
   const services: ComposeService[] = [];
   let inServices = false;
   let current: ComposeService | null = null;
-  let block: 'ports' | 'environment' | 'volumes' | 'depends_on' | null = null;
+  let block: 'ports' | 'environment' | 'volumes' | 'depends_on' | 'profiles' | null = null;
   let comment: string[] = [];
 
   const blank = (name: string, about: string[]): ComposeService => ({
@@ -129,6 +150,7 @@ function scanYaml(text: string): { services: ComposeService[]; lines: string[] }
     healthcheck: false,
     envKeys: [],
     volumes: [],
+    profiles: [],
   });
 
   for (const raw of lines) {
@@ -167,8 +189,28 @@ function scanYaml(text: string): { services: ComposeService[]; lines: string[] }
     if (indent <= 4) {
       block = null;
       const key = /^\s*([\w.-]+)\s*:/.exec(line)?.[1];
-      if (key === 'ports' || key === 'environment' || key === 'volumes' || key === 'depends_on')
+      if (
+        key === 'ports' ||
+        key === 'environment' ||
+        key === 'volumes' ||
+        key === 'depends_on' ||
+        key === 'profiles'
+      )
         block = key;
+      // A list can be written inline — `profiles: [api]` — as well as over
+      // several lines, and a compose file may use either.
+      const inline = /^\s*[\w.-]+\s*:\s*\[(.*)\]\s*$/.exec(line)?.[1];
+      if (block && inline !== undefined) {
+        const items = inline
+          .split(',')
+          .map((part) => part.trim().replace(/^["']|["']$/g, ''))
+          .filter(Boolean);
+        if (block === 'profiles') current.profiles.push(...items);
+        if (block === 'volumes') current.volumes.push(...items);
+        if (block === 'depends_on') current.dependsOn.push(...items);
+        block = null;
+        continue;
+      }
       if (key === 'image') current.image = line.split(':').slice(1).join(':').trim();
       if (key === 'restart')
         current.restart = line
@@ -193,6 +235,10 @@ function scanYaml(text: string): { services: ComposeService[]; lines: string[] }
     }
     if (block === 'volumes' && item) {
       current.volumes.push(item);
+      continue;
+    }
+    if (block === 'profiles' && item) {
+      current.profiles.push(item);
       continue;
     }
     if (block === 'depends_on') {
@@ -221,13 +267,68 @@ function scanYaml(text: string): { services: ComposeService[]; lines: string[] }
  * folder or above the person's own privileges is a no, with the reason named
  * so they can change the file rather than guess.
  */
-export function inspectCompose(folder: string, file = 'compose.yaml'): ComposeReading {
-  const at = path.join(folder, file);
-  if (!fs.existsSync(at)) return { services: [], refusals: [`There is no ${file} in this Crux.`] };
-  const text = fs.readFileSync(at, 'utf8');
-  const { services, lines } = scanYaml(text);
+export function inspectCompose(folder: string, file?: string): ComposeReading {
+  const files = file ? [file] : composeFiles(folder);
+  const blank = { services: [], profiles: [], variables: [] };
+  if (!files.length)
+    return { ...blank, files: [], refusals: ['There is no compose.yaml in this Crux.'] };
+
+  const set = envNames(folder);
+  const merged = new Map<string, ComposeService>();
+  const variables = new Map<string, ComposeVariable>();
   const refusals: string[] = [];
 
+  // Base first, then the override on top — the order Compose merges them.
+  for (const name of files) {
+    const at = path.join(folder, name);
+    if (!fs.existsSync(at)) continue;
+    const text = fs.readFileSync(at, 'utf8');
+    variablesIn(text, variables, set);
+    const { services, lines } = scanYaml(text);
+    for (const service of services) {
+      const already = merged.get(service.name);
+      // An override adds to a service rather than replacing it, so a later
+      // file's ports and mounts are added to what the base already asked for.
+      merged.set(
+        service.name,
+        already
+          ? {
+              ...already,
+              ...service,
+              about: service.about ?? already.about,
+              image: service.image ?? already.image,
+              restart: service.restart ?? already.restart,
+              healthcheck: already.healthcheck || service.healthcheck,
+              ports: [...already.ports, ...service.ports],
+              dependsOn: [...new Set([...already.dependsOn, ...service.dependsOn])],
+              envKeys: [...new Set([...already.envKeys, ...service.envKeys])],
+              volumes: [...new Set([...already.volumes, ...service.volumes])],
+              profiles: [...new Set([...already.profiles, ...service.profiles])],
+            }
+          : service,
+      );
+    }
+    for (const reason of refusalsIn(lines))
+      refusals.push(files.length > 1 ? `${name}: ${reason}` : reason);
+  }
+
+  const services = [...merged.values()];
+  return {
+    services,
+    files,
+    refusals: [...new Set(refusals)],
+    profiles: [...new Set(services.flatMap((s) => s.profiles))].sort(),
+    variables: [...variables.values()].sort((a, b) => a.name.localeCompare(b.name)),
+  };
+}
+
+/**
+ * Why a file must not be started. Deliberately blunt: anything that reaches
+ * outside the Crux folder, or above the person's own privileges, is a no with
+ * the reason named so they can change the file rather than guess.
+ */
+function refusalsIn(lines: string[]): string[] {
+  const refusals: string[] = [];
   for (const raw of lines) {
     const line = raw.trim();
     if (/^#/.test(line)) continue;
@@ -244,7 +345,65 @@ export function inspectCompose(folder: string, file = 'compose.yaml'): ComposeRe
     if (/^\s*build\s*:/.test(raw) && /\.\./.test(raw))
       refusals.push('A service builds from a directory above the Crux.');
   }
-  return { services, refusals: [...new Set(refusals)] };
+  return [...new Set(refusals)];
+}
+
+/**
+ * The files Compose will actually read, base first.
+ *
+ * Compose merges an override file over the base without being told to, which
+ * is exactly how a stack carries sensible defaults and a machine carries its
+ * own changes — and exactly why every one of them must be checked. A refusal
+ * that only reads the base would let an override mount the disk.
+ */
+export function composeFiles(folder: string): string[] {
+  const bases = ['compose.yaml', 'compose.yml', 'docker-compose.yaml', 'docker-compose.yml'];
+  const overrides = [
+    'compose.override.yaml',
+    'compose.override.yml',
+    'docker-compose.override.yaml',
+    'docker-compose.override.yml',
+  ];
+  const found: string[] = [];
+  const base = bases.find((name) => fs.existsSync(path.join(folder, name)));
+  if (base) found.push(base);
+  const override = overrides.find((name) => fs.existsSync(path.join(folder, name)));
+  if (override) found.push(override);
+  return found;
+}
+
+/**
+ * The names set in the Crux's `.env`, which Compose reads by itself. Only the
+ * names: a value there is the person's business, and the bench says whether a
+ * setting is set, never what it is.
+ */
+function envNames(folder: string): Set<string> {
+  const at = path.join(folder, '.env');
+  if (!fs.existsSync(at)) return new Set();
+  const names = new Set<string>();
+  try {
+    for (const line of fs.readFileSync(at, 'utf8').split('\n')) {
+      const name = /^\s*(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*=/.exec(line)?.[1];
+      if (name) names.add(name);
+    }
+  } catch {
+    /* unreadable is the same as unset */
+  }
+  return names;
+}
+
+/** Every `${NAME}` and `${NAME:-default}` the files read. */
+function variablesIn(text: string, into: Map<string, ComposeVariable>, set: Set<string>): void {
+  for (const match of text.matchAll(/\$\{([A-Za-z_][A-Za-z0-9_]*)(?::?-([^}]*))?\}/g)) {
+    const name = match[1]!;
+    const existing = into.get(name);
+    const fallback = match[2];
+    if (existing) {
+      if (existing.fallback === undefined && fallback !== undefined) existing.fallback = fallback;
+      continue;
+    }
+    into.set(name, { name, fallback, fromEnv: set.has(name) });
+  }
 }
 
 /** The project name a Crux's containers carry, so nothing else is ever touched. */
@@ -263,6 +422,14 @@ export interface ComposeRunOptions {
   service?: string;
   tail?: number;
   timeoutMs?: number;
+  /** Compose profiles to include, for the optional parts of a stack. */
+  profiles?: string[];
+  /**
+   * Settings handed to Compose as environment, for `${NAME}` the file reads.
+   * The Crux's secrets arrive this way so a password never has to be written
+   * into a file that gets published.
+   */
+  env?: Record<string, string>;
 }
 
 /**
@@ -281,6 +448,10 @@ export async function runCompose(
   if (!COMPOSE_VERBS.includes(opts.verb)) throw new Error(`Not allowed: ${opts.verb}`);
   if (opts.service && !/^[\w.-]{1,64}$/.test(opts.service))
     throw new Error(`Not a service name: ${opts.service}`);
+  for (const profile of opts.profiles ?? [])
+    if (!/^[\w.-]{1,64}$/.test(profile)) throw new Error(`Not a profile name: ${profile}`);
+  for (const name of Object.keys(opts.env ?? {}))
+    if (!/^[A-Za-z_][A-Za-z0-9_]{0,63}$/.test(name)) throw new Error(`Not a setting name: ${name}`);
 
   if (opts.verb === 'up' || opts.verb === 'start') {
     const reading = inspectCompose(opts.folder);
@@ -290,6 +461,7 @@ export async function runCompose(
 
   return new Promise((resolve, reject) => {
     const args = ['compose', '--project-name', projectName(opts.cruxId)];
+    for (const profile of opts.profiles ?? []) args.push('--profile', profile);
     if (opts.verb === 'up') args.push('up', '--detach', '--remove-orphans');
     else if (opts.verb === 'down') args.push('down', '--remove-orphans');
     else if (opts.verb === 'logs')
@@ -300,7 +472,11 @@ export async function runCompose(
 
     const proc = spawn(runner.program, args, {
       cwd: opts.folder,
-      env: { ...process.env, COMPOSE_PROJECT_NAME: projectName(opts.cruxId) },
+      env: {
+        ...process.env,
+        ...(opts.env ?? {}),
+        COMPOSE_PROJECT_NAME: projectName(opts.cruxId),
+      },
     });
     let output = '';
     const feed = (chunk: Buffer) => {

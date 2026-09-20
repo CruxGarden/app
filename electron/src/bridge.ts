@@ -283,12 +283,32 @@ export interface NativeToolsBridge {
 export interface ComposeService {
   name: string;
   image?: string;
-  ports: number[];
+  about?: string;
+  ports: { host: number; container?: number }[];
+  dependsOn: string[];
+  healthcheck: boolean;
+  restart?: string;
+  envKeys: string[];
+  volumes: string[];
+  profiles: string[];
+}
+export interface ComposeVariable {
+  name: string;
+  /** What the file falls back to — a stack with defaults runs unchanged. */
+  fallback?: string;
+  /** Set in the Crux's `.env`. Whether, never what. */
+  fromEnv: boolean;
 }
 export interface ComposeReading {
   services: ComposeService[];
   /** Why the stack must not start, if so — empty means it may run. */
   refusals: string[];
+  /** The files Compose will read, base first, override after. */
+  files: string[];
+  /** Every profile named, so optional services can be offered. */
+  profiles: string[];
+  /** The settings the stack reads, with their defaults. */
+  variables: ComposeVariable[];
 }
 export interface ContainersBridge {
   /** What this machine can run a stack with (docker or podman), or null. */
@@ -302,6 +322,10 @@ export interface ContainersBridge {
     service?: string;
     tail?: number;
     timeoutMs?: number;
+    /** Compose profiles to include — the optional parts of a stack. */
+    profiles?: string[];
+    /** Values for `${NAME}` in the file; the Crux's secrets travel this way. */
+    env?: Record<string, string>;
   }): Promise<{ code: number; output: string }>;
   /** Lines from a compose run in flight — pulling images is slow. */
   onOutput(callback: (event: { cruxId: string; verb: string; line: string }) => void): () => void;
