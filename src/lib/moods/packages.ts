@@ -352,7 +352,9 @@ export async function applyMood(pkg: MoodPackage, opts: { sound?: boolean } = {}
   useAudioStore.setState({ volume: pkg.sound.volume, enabled: pkg.sound.enabled });
   s.setVolume(pkg.sound.volume);
   await s.setTrack(track);
-  // The Mood intro (a set piece, ADR 0041) plays on a wear, never on a restore
+  // A wear, as opposed to a restore at startup: cues and journeys listen. The
+  // intro that used to play here (a wash and the name) is gone — Daniel,
+  // 2026-09-19: "it feels corny".
   if (typeof document !== 'undefined')
     document.dispatchEvent(new CustomEvent('mood-worn', { detail: { name: pkg.name } }));
 }

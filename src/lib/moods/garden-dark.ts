@@ -52,6 +52,9 @@ export const GARDEN_DARK = {
   chatSendButtonIcon: 'var(--bg)',
   chatInputBorderFocus: 'var(--accent)',
   inputBorderActive: 'var(--accent)',
+  // Every control answers the pointer (Daniel, 2026-09-19: "any interactive
+  // input needs a hover state, the app must feel like a living thing").
+  inputBorderHover: 'color-mix(in srgb, var(--input-border) 60%, var(--text))',
   inputOutline: 'color-mix(in srgb, var(--accent) 30%, transparent)',
   badge: 'color-mix(in srgb, var(--accent) 15%, transparent)',
   badgeText: 'var(--accent)',
@@ -206,6 +209,10 @@ export const GARDEN_DARK = {
   paneHeaderHoverBrightness: '1.15',
   cardHoverLift: '2px',
   buttonRadius: 'var(--radius-sm)',
+  // A dialog's title: the display face by default; a Mood may set the
+  // wordmark serif and a larger size (the Plasma Mood does).
+  dialogTitleFont: 'var(--font-display)',
+  dialogTitleSize: '0.875rem',
   inputRadius: 'var(--radius-sm)',
   cardRadius: 'var(--radius)',
   chipRadius: '9999px',
@@ -274,6 +281,7 @@ export const GARDEN_DARK = {
   paneSync: '#8c7cc8',
   panePublish: '#c87ca8',
   paneStore: '#c0a070',
+  paneTasks: '#8fbf6a',
 
   // ── Pane derived (all reference their base) ──────────
   ...paneTokens('paneCollaboration'),
@@ -285,6 +293,7 @@ export const GARDEN_DARK = {
   ...paneTokens('paneSync'),
   ...paneTokens('panePublish'),
   ...paneTokens('paneStore'),
+  ...paneTokens('paneTasks'),
 
   // ── Markdown ─────────────────────────────────────────
   markdownText: 'var(--text)',
@@ -391,17 +400,77 @@ export const GARDEN_DARK = {
   // rim, floating a little higher. Read live by PlasmaStage; the tint may be
   // any CSS colour and follows the Mood.
   plasmaField: '#050b12 #0f5e46 #b04bd6',
-  plasmaTint: 'var(--panel)',
+  // The landing page tints with a near-black teal (#061016); a Mood's panel
+  // colour is lighter than that, so panes tinted with it alone read more
+  // see-through than the landing card (Daniel). The base leans the tint
+  // toward the Mood's ground, which is the same depth for every Mood.
+  plasmaTint: 'color-mix(in srgb, var(--bg) 70%, var(--panel))',
   plasmaOpacity: '0.55',
   plasmaFrost: '0.5',
-  plasmaRim: '1.3',
+  plasmaRim: '0.65',
   plasmaRimWidth: '1.4',
+  // The rim's colour: 'iridescent' (the spectrum), 'tint' (each surface's own), or a colour — a hairline edge.
+  plasmaRimColor: 'iridescent',
+  // Outline smoothing: 1 softens every silhouette, 0 keeps a 0-radius corner hard.
+  plasmaSmoothness: '1',
+  // The hairline at a surface's edge (what reads as an edge when the rim is 0), and
+  // how much of its own cast the material puts on what shows through it.
+  // How close two surfaces come before the material joins them (px); thin
+  // gutters need a small blend or the panes read as one slab.
+  plasmaBlend: '20',
+  plasmaEdgeLine: '1',
+  plasmaWash: '1',
   plasmaElevation: '0.5',
+  // The liquid itself (plasma-ui's motion props): how far the outline
+  // ripples (flow), how far the surface trails a moving pane (stretch), how
+  // thick it is (viscosity, 0 watery to 1 thick), and whether decorative
+  // drops drift about. Library defaults here; the Plasma Mood carries the
+  // landing page's water — flow 2, stretch 2.5, viscosity 0, drops on.
+  plasmaFlow: '0',
+  plasmaStretch: '1',
+  plasmaViscosity: '0.5',
+  plasmaAmbientDrops: 'off',
+  // The form-in: whether a new surface grows from nothing, how fast (1 is a
+  // quarter second, 2 an eighth), and whether a removed one shrinks away.
+  plasmaFormIn: 'on',
+  plasmaFormSpeed: '1',
+  plasmaFormOut: 'on',
+  // The pointer, three ways (Daniel, 2026-09-19: "two settings, turning the
+  // cursor plasma on/off and turning the cursor plasma interaction on/off"):
+  // the bead of liquid that follows it, the pull of the surface toward it as
+  // it nears an edge, and the light the edges throw toward it — each its own.
+  plasmaPointerDrop: 'off',
+  plasmaPointerPull: 'on',
+  plasmaPointerLight: 'on',
+  // Whether the chrome — the top bar, menus and dialogs — is the material too,
+  // or flat translucent plates above it, the material kept to the garden's
+  // panels and the panes (Daniel, 2026-09-19: "keep the plasma to the main
+  // garden … we should pull back on the plasma styling").
+  plasmaChrome: 'material',
+  // The material's voices, each 0 to silence it: the sheen drifting across a
+  // surface's body, the halo it casts on the field, the grain over the
+  // field. A business Mood turns them all down.
+  // What lies under the surfaces: 'field' paints the material's own aurora;
+  // any CSS colour is a still ground of that colour (a faint luminance drift).
+  plasmaBackground: 'field',
+  // The shadow that keeps text legible over the moving field; none on a still light ground.
+  plasmaTextShadow: '0 1px 2px rgb(0 0 0 / 0.35)',
+  plasmaShimmer: '1',
+  plasmaGlow: '1',
+  plasmaGrain: '1',
+  // Flat chrome's plate: its colour for a menu and the bar, its colour for a
+  // dialog (which stands over a page of text), and how far it frosts what is
+  // behind it.
+  plasmaChromePlate: 'color-mix(in srgb, var(--toolbar) 86%, transparent)',
+  plasmaChromeDialog: 'color-mix(in srgb, var(--toolbar) 95%, transparent)',
+  plasmaChromeFrost: '24px',
   paneRadius: 'var(--radius)',
   paneBorderWidth: '1px',
   paneHeaderHeight: '28px',
   paneHeaderRadius: 'var(--radius-sm)',
   paneHeaderPadding: '6px',
+  // Room between a pane's frame and what it holds; a Mood may open it up.
+  paneBodyPadding: '8px',
   workspacePadding: '4px',
   // Pane header anatomy
   paneHeaderLabelFont: 'var(--font-mono)',
@@ -496,6 +565,7 @@ export const GARDEN_DARK = {
   fontFaceDisplay: 'none',
   fontFaceBody: 'none',
   fontFaceMono: 'none',
+  fontFaceReading: 'none',
 
   // ── Image background ─────────────────────────────────
   bgImageDim: '0',
@@ -514,6 +584,11 @@ export const GARDEN_DARK = {
   fontDisplay: "'JetBrains Mono', monospace",
   fontBody: "'Outfit', sans-serif",
   fontMono: "'JetBrains Mono', monospace",
+  // The Collaboration's reading face: what the collaborator says is prose,
+  // set in a serif like a page, while the person's own words, the tool rows
+  // and the controls keep the UI faces (Daniel, 2026-09-20: "our
+  // collaboration should be this nice looking").
+  fontReading: "Georgia, 'Iowan Old Style', 'Times New Roman', serif",
 } as const;
 
 /** Generate derived pane tokens that all reference the base pane color via var() */

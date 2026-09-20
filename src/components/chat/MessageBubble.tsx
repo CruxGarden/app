@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { cn } from '@/lib/cn';
 import { getPersona } from '@/services/persona';
-import type { ChatMessage, ToolCall } from '@/api/types';
+import type { ChatMessage } from '@/api/types';
+import ToolCallRows from './ToolCallRows';
 import { getModelShortName } from '@/ai/providers';
 import MarkdownRenderer from './MarkdownRenderer';
 import { ConsoleAvatar } from '@/components/keeper/Console';
@@ -134,129 +135,6 @@ function UserAvatar({
   );
 }
 
-/** The last two path segments — Claude Code's tools speak in absolute paths. */
-function shortPath(v: unknown): string {
-  const parts = String(v ?? '')
-    .split('/')
-    .filter(Boolean);
-  return parts.slice(-2).join('/');
-}
-
-function getToolLabel(tc: ToolCall): string {
-  switch (tc.name) {
-    case 'write_file':
-      return `Wrote ${String(tc.input?.path ?? '')}`;
-    case 'edit_file':
-      return `Edited ${String(tc.input?.path ?? '')}`;
-    case 'read_file':
-      return `Read ${String(tc.input?.path ?? '')}`;
-    case 'delete_file':
-      return `Deleted ${String(tc.input?.path ?? '')}`;
-    case 'list_files':
-      return 'Listed files';
-    case 'set_palette':
-      return 'Applied palette';
-    case 'get_palette':
-      return 'Read palette';
-    case 'generate_image':
-      return `Generated ${String(tc.input?.path ?? 'image')}`;
-    case 'rename_file':
-      return `Renamed ${String(tc.input?.old_path ?? '')} → ${String(tc.input?.new_path ?? '')}`;
-    case 'search_files':
-      return `Searched for ${String(tc.input?.query ?? '')}`;
-    case 'check_site':
-      return 'Checked the build';
-    case 'snapshot':
-      return tc.input?.label ? `Snapshot "${String(tc.input.label)}"` : 'Took a snapshot';
-    case 'list_snapshots':
-      return 'Listed snapshots';
-    case 'restore':
-      return `Restored snapshot ${String(tc.input?.snapshotId ?? '')}`;
-    case 'branch':
-      return tc.input?.label
-        ? `Branched "${String(tc.input.label)}"`
-        : `Branched from ${String(tc.input?.snapshotId ?? '')}`;
-    case 'diff':
-      return 'Compared snapshots';
-    case 'remember':
-      return `Remembered ${String(tc.input?.section ?? 'a note')}`;
-    case 'load_skill':
-      return `Loaded skill ${String(tc.input?.name ?? '')}`;
-    // Claude Code's own tools (Agent Provider, ADR 0019)
-    case 'Read':
-      return `Read ${shortPath(tc.input?.file_path)}`;
-    case 'Write':
-      return `Wrote ${shortPath(tc.input?.file_path)}`;
-    case 'Edit':
-    case 'MultiEdit':
-      return `Edited ${shortPath(tc.input?.file_path)}`;
-    case 'NotebookEdit':
-      return `Edited ${shortPath(tc.input?.notebook_path)}`;
-    case 'Bash':
-      return `Ran ${String(tc.input?.command ?? '').slice(0, 80)}`;
-    case 'Glob':
-      return `Found files ${String(tc.input?.pattern ?? '')}`;
-    case 'Grep':
-      return `Searched for ${String(tc.input?.pattern ?? '')}`;
-    case 'WebFetch':
-      return `Fetched ${String(tc.input?.url ?? '')}`;
-    case 'WebSearch':
-      return `Searched the web for ${String(tc.input?.query ?? '')}`;
-    case 'Task':
-      return `Delegated: ${String(tc.input?.description ?? '')}`;
-    case 'TodoWrite':
-      return 'Updated the plan';
-    default:
-      return tc.name.startsWith('mcp__') ? tc.name.split('__').slice(-1)[0]! : tc.name;
-  }
-}
-
-function ToolCallItem({ tc }: { tc: ToolCall }) {
-  const [expanded, setExpanded] = useState(false);
-  const label = getToolLabel(tc);
-  const hasResult = !!tc.result;
-  // Explicit status from the event seam; older records only have the text,
-  // and for those the "Error:" prefix every producer writes is the signal.
-  // Searching the body painted successful tool discovery red, because the
-  // schemas it returns mention errors (UI-POLISH-PLAN, 2026-09-15).
-  const isError = tc.error ?? /^(Error|ERROR)\b/.test(tc.result ?? '');
-
-  return (
-    <div>
-      <button
-        onClick={() => hasResult && setExpanded((v) => !v)}
-        data-testid="tool-call"
-        data-error={isError ? 'true' : 'false'}
-        className={cn(
-          'text-xs font-mono bg-code-block rounded px-2 py-1 flex items-center gap-1.5 w-full text-left transition-colors',
-          hasResult ? 'cursor-pointer hover:bg-surface-hover' : 'cursor-default',
-          isError ? 'text-error/70' : 'text-chat-text-muted',
-        )}
-      >
-        {hasResult && (
-          <svg
-            width="8"
-            height="8"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2.5"
-            className={cn('shrink-0 transition-transform', expanded && 'rotate-90')}
-          >
-            <path d="m9 6 6 6-6 6" />
-          </svg>
-        )}
-        <span className="truncate">{label}</span>
-      </button>
-      {expanded && tc.result && (
-        <pre className="mt-1 mx-1 px-2 py-1.5 text-2xs font-mono leading-relaxed bg-code-block rounded border border-code-block-border text-chat-text-muted overflow-x-auto max-h-48 overflow-y-auto whitespace-pre-wrap break-words">
-          {tc.result}
-        </pre>
-      )}
-    </div>
-  );
-}
-
 export default function MessageBubble({
   message,
   avatarUrl,
@@ -278,39 +156,59 @@ export default function MessageBubble({
   const fromCheck = isUser && message.origin === 'check';
   const authorName = fromCheck ? 'Check' : isUser ? authorSnapshot?.username || null : null;
 
-  return (
-    <div
-      className={cn('flex gap-2 items-end', isUser ? 'justify-end' : 'justify-start')}
-      {...(fromCheck ? { 'data-testid': 'check-message' } : {})}
-    >
-      {!isUser && <MessageAvatar fingerprint={message.personaFingerprint} />}
+  const footer: string[] = [];
+  if (!isUser && message.model) footer.push(getModelShortName(message.model) || message.model);
+
+  if (isUser) {
+    return (
       <div
-        className={cn(
-          'max-w-[85%] rounded-bubble px-3 py-2 text-sm break-words border motion-enter-bubble',
-          isUser
-            ? 'bg-chat-user-bubble text-chat-user-bubble-text border-chat-user-bubble-border'
-            : 'bg-chat-ai-bubble text-chat-ai-bubble-text border-chat-ai-bubble-border',
-        )}
+        className="flex gap-2 items-end justify-end motion-enter-bubble"
+        {...(fromCheck ? { 'data-testid': 'check-message' } : {})}
       >
+        <div className="max-w-[82%] min-w-0">
+          {authorName && (
+            <div className="text-2xs font-mono text-chat-text-muted/80 mb-1 text-right">
+              {authorName}
+            </div>
+          )}
+          <div
+            className={cn(
+              'rounded-bubble px-3.5 py-2 text-sm break-words border',
+              'bg-chat-user-bubble text-chat-user-bubble-text border-chat-user-bubble-border',
+            )}
+          >
+            <p className="whitespace-pre-wrap">{message.content}</p>
+          </div>
+        </div>
+        <UserAvatar message={message} fallbackUrl={avatarUrl} fallbackInitial={userInitial} />
+      </div>
+    );
+  }
+
+  // The collaborator's reply reads like a page: no bubble, the Mood's reading
+  // face, the work it did folded beneath it, the record of the turn in a
+  // quiet footer line.
+  return (
+    <div className="flex gap-1.5 items-start motion-enter-bubble" data-role="assistant">
+      <div className="pt-0.5">
+        <MessageAvatar fingerprint={message.personaFingerprint} />
+      </div>
+      {/* The reply's border is a rule beside it (transparent unless the Mood colours it). */}
+      <div className="min-w-0 flex-1 pl-2 border-l-2 border-chat-ai-bubble-border text-chat-ai-bubble-text">
         {personaName && <div className="text-2xs font-mono text-accent mb-1">{personaName}</div>}
-        {authorName && <div className="text-2xs font-mono text-accent mb-1">{authorName}</div>}
-        {isUser ? (
-          <p className="whitespace-pre-wrap">{message.content}</p>
-        ) : (
+        <div className="font-reading text-[0.95rem] leading-[1.6] break-words">
           <MarkdownRenderer content={message.content} />
-        )}
+        </div>
 
         {message.toolCalls && message.toolCalls.length > 0 && (
-          <div className="mt-2 space-y-1">
-            {message.toolCalls.map((tc, i) => (
-              <ToolCallItem key={tc.id || i} tc={tc} />
-            ))}
+          <div className="mt-2">
+            <ToolCallRows calls={message.toolCalls} />
           </div>
         )}
 
         {/* Background Turn record: "Ran 3 steps · 2 snapshots" (planned turns only —
             a one-step reply reads exactly as it always did) */}
-        {!isUser && message.job && (message.job.steps > 1 || message.job.status !== 'done') && (
+        {message.job && (message.job.steps > 1 || message.job.status !== 'done') && (
           <div
             className="mt-1.5 text-2xs font-mono text-chat-text-muted/70"
             data-testid="turn-summary"
@@ -318,18 +216,14 @@ export default function MessageBubble({
             {describeJobSummary(message.job)}
           </div>
         )}
-        {!isUser && message.job?.check && <CheckLine check={message.job.check} />}
+        {message.job?.check && <CheckLine check={message.job.check} />}
 
-        {/* Model badge for assistant messages */}
-        {!isUser && message.model && (
-          <div className="mt-1.5 text-2xs font-mono text-chat-text-muted/50 text-right">
-            {getModelShortName(message.model) || message.model}
+        {footer.length > 0 && (
+          <div className="mt-1.5 text-2xs font-mono text-chat-text-muted/50">
+            {footer.join(' · ')}
           </div>
         )}
       </div>
-      {isUser && (
-        <UserAvatar message={message} fallbackUrl={avatarUrl} fallbackInitial={userInitial} />
-      )}
     </div>
   );
 }

@@ -1,3 +1,4 @@
+import { apiBaseUrl } from '@/api/client';
 import { create } from 'zustand';
 import * as authApi from '@/api/auth';
 import { getStoredTokens, storeTokens, clearTokens } from '@/api/client';
@@ -70,8 +71,7 @@ export function resolveAvatarUrl(
   if (url.startsWith('data:') || url.startsWith('http')) return url;
 
   // API-relative path (for public pages viewing other authors)
-  const base = import.meta.env.VITE_API_URL || 'http://localhost:3000';
-  return `${base}${url}?v=${author?.updated || ''}`;
+  return `${apiBaseUrl()}${url}?v=${author?.updated || ''}`;
 }
 
 /**

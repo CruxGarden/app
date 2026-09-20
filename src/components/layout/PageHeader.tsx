@@ -18,7 +18,7 @@ export default function PageHeader({ title, children }: { title: string; childre
       <div className="flex items-center gap-1.5 min-w-0">
         <Link
           to="/"
-          className="shrink-0 text-sm font-display font-medium text-toolbar-text whitespace-nowrap hover:underline"
+          className="shrink-0 text-sm font-display font-medium text-toolbar-text whitespace-nowrap px-2 py-1 rounded-[var(--radius-sm)] hover:bg-action-button-hover"
         >
           {APP_NAME}
         </Link>

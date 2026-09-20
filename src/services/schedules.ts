@@ -76,7 +76,9 @@ export type Action =
   | { kind: 'prompt'; cruxId: string; prompt: string }
   | { kind: 'tool'; cruxId: string; tool: string; input: Record<string, unknown> }
   /** Wear a Mood — bundled or installed — by id. Time of day, weather, a timer's break. */
-  | { kind: 'mood'; moodId: string };
+  | { kind: 'mood'; moodId: string }
+  /** Call a published Crux's function (CRUX-FUNCTIONS-PLAN): cron jobs for your published app. */
+  | { kind: 'fn'; cruxId: string; name: string; input: Record<string, unknown> };
 
 export interface Schedule {
   id: string;
@@ -190,6 +192,8 @@ export function isAction(v: unknown): v is Action {
       return typeof a.cruxId === 'string' && typeof a.tool === 'string' && !!a.input;
     case 'mood':
       return typeof a.moodId === 'string' && !!a.moodId;
+    case 'fn':
+      return typeof a.cruxId === 'string' && typeof a.name === 'string' && !!a.name && !!a.input;
     default:
       return false;
   }

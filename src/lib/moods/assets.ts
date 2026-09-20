@@ -156,6 +156,7 @@ export const FONT_FACE_FAMILIES: Record<string, string> = {
   fontFaceDisplay: 'MoodFontDisplay',
   fontFaceBody: 'MoodFontBody',
   fontFaceMono: 'MoodFontMono',
+  fontFaceReading: 'MoodFontReading',
 };
 const loadedFaces = new Map<string, string>(); // family → fingerprint
 

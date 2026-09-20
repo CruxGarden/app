@@ -9,6 +9,7 @@ import { useUIStore } from '@/stores/uiStore';
 import { useDialogStore } from '@/stores/dialogStore';
 import { getServices } from '@/services';
 import { recentOrder, nextRecent } from '@/lib/workspace-switching';
+import { useActiveCruxspaces } from '@/hooks/useActiveCruxspaces';
 
 const focusByCrux = new Map<string, { selector: string; start?: number; end?: number }>();
 function rememberFocus(id: string | null, target = document.activeElement) {
@@ -51,14 +52,18 @@ function restoreFocus(id: string) {
       return;
     }
     const root = document.querySelector(`[data-workspace-id="${id}"]`);
-    const el =
-      root?.querySelector<HTMLElement>(
-        saved?.selector ?? 'textarea[placeholder="Send a message..."]',
-      ) ?? root?.querySelector<HTMLElement>('[data-workspace-heading]');
-    if (!el) {
-      if (++frames < 120) requestAnimationFrame(restore);
+    // Under Plasma a pane's contents mount after its surface forms, so the
+    // composer can be a few hundred milliseconds away: keep looking for what
+    // was wanted before settling for the workspace heading.
+    const wanted = root?.querySelector<HTMLElement>(
+      saved?.selector ?? 'textarea[placeholder="Send a message..."]',
+    );
+    if (!wanted && ++frames < 240) {
+      requestAnimationFrame(restore);
       return;
     }
+    const el = wanted ?? root?.querySelector<HTMLElement>('[data-workspace-heading]');
+    if (!el) return;
     el.focus();
     if (
       saved?.start !== undefined &&
@@ -76,6 +81,10 @@ export default function WorkspaceSwitcher() {
   const [query, setQuery] = useState('');
   const [picker, setPicker] = useState(false);
   const [available, setAvailable] = useState<{ id: string; title: string; slug: string }[]>([]);
+  // The Cruxes of the Cruxspace the active Crux is in, open or not, so the
+  // switcher moves within a Cruxspace (Garden › Cruxspace › Crux).
+  const { current: space, rootId } = useActiveCruxspaces();
+  const [members, setMembers] = useState<{ id: string; title: string; slug: string }[]>([]);
   const [index, setIndex] = useState(0);
   const [recent, setRecent] = useState<{ ids: string[]; index: number } | null>(null);
   const recentRef = useRef(recent);
@@ -91,7 +100,9 @@ export default function WorkspaceSwitcher() {
   const invoking = useRef<HTMLElement | null>(null);
   const active = entries.find((e) => e.id === activeId);
   const modal = open || !!closing || !!renaming;
-  const rows = (picker ? available : entries).filter((e) =>
+  const rows = (
+    picker ? available : [...entries, ...members.filter((m) => !entries.some((e) => e.id === m.id))]
+  ).filter((e) =>
     `${e.title} ${'slug' in e ? e.slug : ''}`.toLowerCase().includes(query.toLowerCase()),
   );
   useEffect(() => {
@@ -114,7 +125,7 @@ export default function WorkspaceSwitcher() {
   }, [busy]);
   const choose = useCallback(
     (id: string) => {
-      if (!entries.some((e) => e.id === id) && !picker) {
+      if (!entries.some((e) => e.id === id) && !members.some((m) => m.id === id) && !picker) {
         cancel();
         return;
       }
@@ -125,7 +136,7 @@ export default function WorkspaceSwitcher() {
       navigate(`/c/${id}`);
       restoreFocus(id);
     },
-    [entries, navigate, picker, cancel],
+    [entries, members, navigate, picker, cancel],
   );
   const beginSearch = useCallback(() => {
     invoking.current = document.activeElement as HTMLElement;
@@ -134,7 +145,22 @@ export default function WorkspaceSwitcher() {
     setQuery('');
     setIndex(0);
     setOpen(true);
-  }, []);
+    setMembers([]);
+    if (space && rootId) {
+      const ids = space.cruxIds.filter((id) => id !== rootId);
+      void getServices()
+        .crux.listAll()
+        .then((cruxes) =>
+          setMembers(
+            ids.flatMap((id) => {
+              const c = cruxes.find((x) => x.id === id);
+              return c ? [{ id: c.id, title: c.title || 'Untitled', slug: c.slug }] : [];
+            }),
+          ),
+        )
+        .catch(() => setMembers([]));
+    }
+  }, [space, rootId]);
   useEffect(() => {
     if (closing || renaming) dialog.current?.querySelector<HTMLElement>('input, button')?.focus();
     else if (open) search.current?.focus();
@@ -275,7 +301,7 @@ export default function WorkspaceSwitcher() {
         aria-keyshortcuts="Control+Alt+K Meta+Alt+K Control+Tab"
         aria-expanded={open}
         title="Switch Crux · Cmd/Ctrl+Alt+K · Ctrl+Tab for recent Cruxes"
-        className="text-xs font-display text-toolbar-text truncate max-w-64 cursor-pointer focus-visible:outline-2 focus-visible:outline-accent"
+        className="text-xs font-display text-toolbar-text truncate max-w-64 cursor-pointer px-2 py-1 rounded-[var(--radius-sm)] hover:bg-action-button-hover focus-visible:outline-2 focus-visible:outline-accent"
         onClick={beginSearch}
       >
         <span style={active ? { viewTransitionName: `crux-${active.id}` } : undefined}>
@@ -411,8 +437,20 @@ export default function WorkspaceSwitcher() {
                 <>
                   <input
                     ref={search}
-                    aria-label={picker ? 'Find a Crux in your garden' : 'Find an open Crux'}
-                    placeholder={picker ? 'Find a Crux in your garden…' : 'Find an open Crux…'}
+                    aria-label={
+                      picker
+                        ? 'Find a Crux in your garden'
+                        : space
+                          ? `Find a Crux in ${space.name}`
+                          : 'Find an open Crux'
+                    }
+                    placeholder={
+                      picker
+                        ? 'Find a Crux in your garden…'
+                        : space
+                          ? `Find a Crux in ${space.name}…`
+                          : 'Find an open Crux…'
+                    }
                     value={query}
                     onChange={(e) => {
                       setQuery(e.target.value);
@@ -450,7 +488,11 @@ export default function WorkspaceSwitcher() {
                             {row.title}
                           </span>
                           <span className="text-xs text-text-muted">
-                            {'status' in row ? row.status : row.slug}
+                            {'status' in row
+                              ? row.status
+                              : !picker && space
+                                ? `In ${space.name} · not open`
+                                : row.slug}
                             {'dirty' in row && row.dirty ? ' · Unsaved edits' : ''}
                             {rows.filter((r) => r.title === row.title).length > 1
                               ? ` · ${row.id.slice(0, 8)}`

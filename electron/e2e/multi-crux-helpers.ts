@@ -41,3 +41,42 @@ export async function addArtifact(page: Page, path: string) {
   await page.getByRole('tree').getByText(path, { exact: true }).click();
   await expect(page.locator('.monaco-editor textarea').first()).toBeVisible();
 }
+
+/**
+ * The Mood browser's shelf (Daniel, 2026-09-19): the earlier renders and the
+ * Office study sit collapsed under the bundled set. Open it before picking one.
+ */
+export async function openMoodShelf(page: Page) {
+  const shelf = page.getByTestId('shelved-moods');
+  if (!(await shelf.evaluate((el) => (el as HTMLDetailsElement).open)))
+    await shelf.locator('summary').click();
+}
+
+/**
+ * Wear a material Mood from the Mood browser's picker (open the Mood menu
+ * first): the id names its material, hue and mode — `plasma-fjord`,
+ * `soft-black`, `umber`… (MaterialMoods.tsx).
+ */
+export async function wearMaterial(page: Page, id: string) {
+  const hues: Record<string, [string, string]> = {
+    neutral: ['soft-white', 'soft-black'],
+    gray: ['soft-gray', 'graphite'],
+    parchment: ['parchment', 'umber'],
+    fjord: ['fjord', 'harbor'],
+    blush: ['blush', 'mulberry'],
+    sage: ['sage', 'moss'],
+    lilac: ['lilac', 'plum'],
+  };
+  const material = id.startsWith('plasma-') ? 'Plasma' : 'Soft';
+  const tone = id.replace(/^plasma-/, '');
+  const hue = Object.entries(hues).find(([, [l, d]]) => l === tone || d === tone);
+  if (!hue) throw new Error(`${id} is not a material Mood`);
+  const mode = hue[1][0] === tone ? 'Light' : 'Dark';
+  const picker = page.getByTestId('material-moods');
+  await picker.getByTestId('material-material').getByRole('button', { name: material }).click();
+  await picker.getByTestId('material-mode').getByRole('button', { name: mode }).click();
+  await picker
+    .getByTestId('material-hue')
+    .getByRole('button', { name: hue[0][0].toUpperCase() + hue[0].slice(1), exact: true })
+    .click();
+}

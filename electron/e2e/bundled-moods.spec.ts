@@ -160,15 +160,14 @@ test.describe('bundled moods', () => {
       await page.getByRole('button', { name: 'Mood', exact: true }).click();
       const built = page.getByTestId('bundled-moods');
       await expect(built).toBeVisible();
-      await expect(built.locator('[data-testid^="bundled-"]')).toHaveCount(37);
-
+      // The HyperMoods: the material Moods sit in the picker above, Office on the shelf.
+      await expect(built.locator('[data-testid^="bundled-"]')).toHaveCount(36);
       await built.getByTestId('bundled-raster-bars').getByRole('button', { name: 'Apply' }).click();
       await expect.poll(() => cssVar('--radius')).toBe('2px');
       await expect.poll(() => cssVar('--motion-frames')).toBe('4');
       // Raster Bars is quiet: no track, sound still on
       await expect.poll(async () => (await audio()).trackName).toBeNull();
       expect((await audio()).enabled).toBe(true);
-
       await built.getByTestId('bundled-night-city').getByRole('button', { name: 'Apply' }).click();
       await expect.poll(() => cssVar('--accent')).toBe('#ff7bb0');
       await expect.poll(() => cssVar('--background-type')).toBe('image');

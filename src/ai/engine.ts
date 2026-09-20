@@ -1,5 +1,5 @@
 import { includedFetch, INCLUDED_MODEL } from '@/api/inference';
-import { API_BASE_URL } from '@/api/client';
+import { apiBaseUrl } from '@/api/client';
 /**
  * The Collaboration engine — the AI conversation loop behind one seam.
  *
@@ -95,7 +95,7 @@ export function languageModelFor(model: string, apiKey: string): LanguageModel {
   if (id === INCLUDED_MODEL)
     return createAnthropic({
       apiKey: 'included-session',
-      baseURL: `${API_BASE_URL}/inference/v1`,
+      baseURL: `${apiBaseUrl()}/inference/v1`,
       fetch: includedFetch,
     })(id);
   // Local inference (Ollama / LM Studio): OpenAI-compatible localhost API,

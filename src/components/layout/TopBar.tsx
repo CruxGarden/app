@@ -4,6 +4,7 @@ import TendingLink from '@/components/tending/TendingLink';
 import AlertsBell from '@/components/tending/AlertsBell';
 import TimerChip from '@/components/tending/TimerChip';
 import WorkspaceSwitcher from './WorkspaceSwitcher';
+import CruxspaceCrumb from './CruxspaceCrumb';
 import { useAppStore } from '@/stores/appStore';
 import IconButton from '@/components/ui/IconButton';
 import UserMenu from '@/components/auth/UserMenu';
@@ -54,7 +55,7 @@ export default function TopBar() {
         {username ? (
           <button
             onClick={() => navigate('/home')}
-            className="shrink-0 text-xs font-medium font-display text-toolbar-link cursor-pointer whitespace-nowrap hover:underline"
+            className="shrink-0 text-xs font-medium font-display text-toolbar-link cursor-pointer whitespace-nowrap px-2 py-1 rounded-[var(--radius-sm)] hover:bg-action-button-hover"
           >
             <span className="md:hidden">Garden</span>
             <span className="hidden md:inline">{username}</span>
@@ -62,7 +63,7 @@ export default function TopBar() {
         ) : (
           <button
             onClick={() => navigate('/')}
-            className="shrink-0 cursor-pointer text-sm font-display font-medium text-toolbar-text whitespace-nowrap hover:underline"
+            className="shrink-0 cursor-pointer text-sm font-display font-medium text-toolbar-text whitespace-nowrap px-2 py-1 rounded-[var(--radius-sm)] hover:bg-action-button-hover"
           >
             {APP_NAME}
           </button>
@@ -70,6 +71,7 @@ export default function TopBar() {
         <span className="text-toolbar-text-muted shrink-0">
           <ChevronRightIcon />
         </span>
+        <CruxspaceCrumb />
         <WorkspaceSwitcher />
         <div className="hidden md:block">
           <TendingLink />
@@ -85,7 +87,12 @@ export default function TopBar() {
       >
         {activeCruxId && (
           <>
-            <div className="hidden md:flex items-center">
+            {/* The builder's lane header — the pane toggles — sits in the same
+                flat pill as the sound chip (Daniel, 2026-09-20). */}
+            <div
+              className="hidden md:flex items-center h-7 px-1 bg-mood-bar border border-mood-bar-border rounded-[var(--mood-bar-radius)] shadow-mood-bar"
+              data-testid="builder-lane"
+            >
               {/* Enabled panes — in paneOrder */}
               <div className="flex items-center gap-1">
                 {enabledPanes.map((paneType) => {

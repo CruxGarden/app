@@ -29,14 +29,14 @@ test.describe('mood builder', () => {
       await page.getByRole('button', { name: 'Add files', exact: true }).click();
       await expect(page.getByRole('button', { name: 'New file' })).toBeVisible({ timeout: 30_000 });
       const tile = page.locator('.mosaic-tile').first();
-      // The Default Mood (Fractal Garden) sets a 12px pane gap
-      await expect(tile).toHaveCSS('margin-left', '12px');
+      // The Default Mood (Plasma) sets a 14px pane gap
+      await expect(tile).toHaveCSS('margin-left', '14px');
 
       // Mood modal → Open Mood Builder → lands on the Theme tab. Glass off first: the
       // checks below read a pane's own colour, not its tint through the glass.
       await page.getByRole('button', { name: 'Mood', exact: true }).click();
       await expect(page.getByRole('heading', { name: 'Mood' })).toBeVisible();
-      await page.getByRole('combobox', { name: 'Liquid glass' }).selectOption('off');
+      await page.getByRole('combobox', { name: 'Surface theme' }).selectOption('custom');
       await page.getByRole('button', { name: 'Open Mood Builder' }).click();
       await expect(page.getByRole('heading', { name: 'Mood Builder' })).toBeVisible();
       await expect(page.getByRole('heading', { name: 'Mood', exact: true })).toHaveCount(0);
@@ -80,18 +80,18 @@ test.describe('mood builder', () => {
         'border-radius',
         '0px',
       );
-      // the Default Mood's radius
-      await expect(page.locator('.mosaic-window.pane-workshop')).toHaveCSS('border-radius', '14px');
+      // the Default Mood's radius (Plasma: 16px since the Tigrana pass)
+      await expect(page.locator('.mosaic-window.pane-workshop')).toHaveCSS('border-radius', '16px');
       await page.getByRole('button', { name: 'Toggle share' }).click();
       await expect(
         page.locator('.mosaic-window.pane-publish').getByText('Nothing to share yet'),
       ).toHaveCSS('color', 'rgb(255, 0, 0)');
-      const workshop = page.locator('.mosaic-window.pane-workshop .mosaic-window-body').first();
-      await expect(workshop).toHaveCSS('background-color', 'rgb(17, 34, 51)');
-      const collaboration = page
-        .locator('.mosaic-window.pane-collaboration .mosaic-window-body')
-        .first();
-      await expect(collaboration).not.toHaveCSS('background-color', 'rgb(17, 34, 51)');
+      // Under Plasma the material paints the pane (the body is transparent by
+      // design); the pane's own colour is read from its token, which the
+      // Workshop pane carries and Collaboration does not.
+      const bodyVar = (pane: string) => cssVar(`--pane-${pane}-body`);
+      await expect.poll(() => bodyVar('workshop')).toBe('#112233');
+      expect(await bodyVar('collaboration')).not.toBe('#112233');
       await page.screenshot({ path: 'e2e/.results/mood-2-workspace.png' });
 
       // Restart the app on the same garden: the theme comes back

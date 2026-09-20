@@ -27,10 +27,12 @@ export default function cruxTools(root: string): Plugin {
     },
     load(source) {
       if (source !== resolved) return null;
+      // Serving and testing see every tool unless CRUX_BUNDLE_TOOLS says
+      // otherwise (a dev server that behaves like the packaged build, to try
+      // installing what it lacks); a build takes the starter set by default.
       const mode =
-        command === 'serve' || process.env.VITEST
-          ? 'all'
-          : process.env.CRUX_BUNDLE_TOOLS || 'bundled';
+        process.env.CRUX_BUNDLE_TOOLS ||
+        (command === 'serve' || process.env.VITEST ? 'all' : 'bundled');
       const ids: string[] = [];
       for (const entry of readdirSync(root).sort()) {
         if (!entry.endsWith('-crux')) continue;

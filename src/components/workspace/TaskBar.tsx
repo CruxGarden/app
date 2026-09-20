@@ -1,3 +1,4 @@
+import TaskDetails from './TaskDetails';
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useMoodNavigate, MOOD_LINK } from '@/hooks/useMoodNavigate';
@@ -174,17 +175,18 @@ export default function TaskBar() {
   return (
     <>
       <div
-        className="crux-taskbar shrink-0 px-3 py-2 border-b border-border bg-panel space-y-2"
+        className="task-pane h-full min-h-0 overflow-auto flex flex-col gap-3"
         data-testid="task-bar"
       >
-        <div className="flex items-center gap-2 flex-wrap" aria-label="Crux tasks">
+        {/* A pane like any other: Main and the tasks as a list, the actions below. */}
+        <nav className="task-pane-list flex flex-col gap-0.5" aria-label="Crux tasks">
           <Link
             aria-current={!identity ? 'page' : undefined}
-            className={`px-3 py-1 rounded text-sm ${!identity ? 'bg-accent-muted text-accent' : 'text-text-muted'}`}
+            className={`flex items-center justify-between gap-2 px-3 py-1.5 rounded-[var(--radius-sm)] text-sm hover:bg-action-button-hover ${!identity ? 'bg-accent-muted text-accent' : 'text-text-muted hover:text-text'}`}
             to={url()}
             {...MOOD_LINK}
           >
-            Main
+            <span className="truncate">Main</span>
           </Link>
           {tasks.map((t) => (
             <Link
@@ -192,16 +194,19 @@ export default function TaskBar() {
               to={url(t.id)}
               {...MOOD_LINK}
               aria-current={crux.id === t.id ? 'page' : undefined}
-              className={`px-3 py-1 rounded text-sm ${crux.id === t.id ? 'bg-accent-muted text-accent' : 'text-text-muted'}`}
+              className={`flex items-center justify-between gap-2 px-3 py-1.5 rounded-[var(--radius-sm)] text-sm hover:bg-action-button-hover ${crux.id === t.id ? 'bg-accent-muted text-accent' : 'text-text-muted hover:text-text'}`}
             >
-              {t.title}
-              <span className="ml-2 text-xxs">
+              <span className="truncate">{t.title}</span>
+              <span className="text-xxs shrink-0">
                 {t.phase === 'ready'
                   ? (entries.find((e) => e.id === t.id)?.status ?? 'Ready')
                   : t.phase}
               </span>
             </Link>
           ))}
+        </nav>
+        <TaskDetails />
+        <div className="task-pane-actions flex items-center gap-2 flex-wrap">
           <Button
             size="sm"
             variant="secondary"

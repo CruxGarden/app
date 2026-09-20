@@ -36,7 +36,9 @@ test('Timeline: the garden year renders and saves, a person edits events, the co
     page.setDefaultTimeout(60000);
     page.on('console', (message) => {
       if (message.type() === 'error' || message.text().includes('[garden]'))
-        console.log(`[renderer ${message.type()}] ${message.text().slice(0, 500)} ${message.location().url}`);
+        console.log(
+          `[renderer ${message.type()}] ${message.text().slice(0, 500)} ${message.location().url}`,
+        );
     });
     page.on('pageerror', (e) => errors.push(e.message));
     await page.setViewportSize({ width: 1600, height: 1000 });
@@ -60,11 +62,19 @@ test('Timeline: the garden year renders and saves, a person edits events, the co
     await test.step('a person renames the timeline, edits a headline and adds an event', async () => {
       const frame = frameOf(page);
       await frame.locator('#timeline-name').fill('Our Garden Year');
-      await frame.locator('#events .event').first().locator('[data-field=headline]').fill('First seeds on the sill');
+      await frame
+        .locator('#events .event')
+        .first()
+        .locator('[data-field=headline]')
+        .fill('First seeds on the sill');
       await ready(page);
-      await expect.poll(() => doc().project.timeline.events[0].text.headline).toBe('First seeds on the sill');
+      await expect
+        .poll(() => doc().project.timeline.events[0].text.headline)
+        .toBe('First seeds on the sill');
       expect(doc().project.name).toBe('Our Garden Year');
-      await expect(frame.locator('.tl-timemarker-content-container', { hasText: 'First seeds on the sill' })).toBeVisible();
+      await expect(
+        frame.locator('.tl-timemarker-content-container', { hasText: 'First seeds on the sill' }),
+      ).toBeVisible();
       await frame.getByRole('button', { name: 'Add event' }).click();
       const added = frame.locator('#events .event').last();
       await added.locator('[data-field=headline]').fill('Frost warning');
@@ -84,29 +94,43 @@ test('Timeline: the garden year renders and saves, a person edits events, the co
       await box.fill('Add the summer [timeline:story]');
       await box.press('Enter');
       await expect(
-        page.getByText('Named the timeline A Garden Year, Told and added two summer events with a picture.', { exact: true }),
+        page.getByText(
+          'Named the timeline A Garden Year, Told and added two summer events with a picture.',
+          { exact: true },
+        ),
       ).toBeVisible({ timeout: 240000 });
       await ready(page);
       expect(doc().project.name).toBe('A Garden Year, Told');
       expect(doc().project.timeline.events).toHaveLength(7);
-      expect(doc().project.timeline.events.find((e: { unique_id: string }) => e.unique_id === 'midsummer')!.media.url).toContain('http');
+      expect(
+        doc().project.timeline.events.find(
+          (e: { unique_id: string }) => e.unique_id === 'midsummer',
+        )!.media.url,
+      ).toContain('http');
       await expect(frameOf(page).locator('.tl-timemarker')).toHaveCount(7);
       await collab.click();
       await page.screenshot({ path: join(evidence, 'timeline-agent.png') });
     });
 
     await test.step('Share publishes the page with TimelineJS', async () => {
-      await page.getByTestId('workshop-view').getByRole('button', { name: 'Share selected content', exact: true }).click();
+      await page
+        .getByTestId('workshop-view')
+        .getByRole('button', { name: 'Share selected content', exact: true })
+        .click();
       const share = page.getByTestId('pane-body-publish');
       await share.getByRole('button', { name: 'Share selected content', exact: true }).click();
       await page.getByPlaceholder('email@example.com').fill('tester@example.com');
       await page.getByRole('button', { name: 'Send Code', exact: true }).click();
       await page.getByPlaceholder('Enter code').fill('123456');
       await page.getByRole('button', { name: 'Connect', exact: true }).click();
-      const backupAsk = page.getByRole('dialog').filter({ hasText: 'A published site is not a backup' });
+      const backupAsk = page
+        .getByRole('dialog')
+        .filter({ hasText: 'A published site is not a backup' });
       await expect(backupAsk).toBeVisible({ timeout: 60000 });
       await backupAsk.getByRole('button', { name: 'Share without a backup', exact: true }).click();
-      await expect(share.getByText(/^(Up to date|Changes to share)$/)).toBeVisible({ timeout: 6 * 60_000 });
+      await expect(share.getByText(/^(Up to date|Changes to share)$/)).toBeVisible({
+        timeout: 6 * 60_000,
+      });
       const paths = (api.state.published[id] ?? []).map((f) => f.path);
       expect(paths).toEqual(
         expect.arrayContaining([
@@ -153,7 +177,9 @@ test('Timeline: the garden year renders and saves, a person edits events, the co
     await enterGarden(page);
     await test.step('clean Garden: the complete Crux imports and the timeline renders', async () => {
       await importNativeCrux(page, archive);
-      const importedId = (await page.locator('[data-workspace-id]').getAttribute('data-workspace-id'))!;
+      const importedId = (await page
+        .locator('[data-workspace-id]')
+        .getAttribute('data-workspace-id'))!;
       folder = (await storedCrux(page, importedId)).projectFolder;
       await ready(page);
       await expect(frameOf(page).locator('#timeline-name')).toHaveValue('A Garden Year, Told');

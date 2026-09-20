@@ -28,6 +28,8 @@ export interface ActionRuntime {
   cruxTitle(cruxId: string): string;
   /** Wear a Mood by id; resolves to its name, or null when there is no such Mood. */
   wearMood(moodId: string): Promise<string | null>;
+  /** Call a published Crux's function through the API; resolves to a one-line account of the answer. */
+  fn(cruxId: string, name: string, input: Record<string, unknown>): Promise<string>;
 }
 
 let runtime: ActionRuntime = {
@@ -65,6 +67,13 @@ let runtime: ActionRuntime = {
   },
   cruxTitle(cruxId) {
     return cruxId;
+  },
+  async fn(cruxId, name, input) {
+    const { callFunction } = await import('./crux-functions');
+    const r = await callFunction(cruxId, name, input);
+    const body = typeof r.body === 'string' ? r.body : JSON.stringify(r.body);
+    if (r.status >= 400) throw new Error(`${r.status}: ${body}`);
+    return `${r.status} ${body}`;
   },
   async wearMood(moodId) {
     const { bundledMood } = await import('@/lib/moods/bundled-moods');
@@ -136,6 +145,29 @@ async function runOne(s: Schedule, a: Action, index: number, ctx: FiringContext)
           body: `${a.moodId} is not bundled or installed. ${ctx.reason}`,
           at: ctx.now.toISOString(),
         });
+      return;
+    }
+    case 'fn': {
+      try {
+        const out = await runtime.fn(a.cruxId, a.name, a.input);
+        raiseAlert({
+          key,
+          kind: 'run',
+          title: `${s.title} · ${a.name}()`,
+          body: excerpt(out || 'Done.'),
+          cruxId: a.cruxId,
+          at: ctx.now.toISOString(),
+        });
+      } catch (err) {
+        raiseAlert({
+          key,
+          kind: 'run',
+          title: `${s.title} · ${a.name}() failed`,
+          body: excerpt(err instanceof Error ? err.message : String(err)),
+          cruxId: a.cruxId,
+          at: ctx.now.toISOString(),
+        });
+      }
       return;
     }
     case 'tool': {

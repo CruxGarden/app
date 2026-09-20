@@ -32,7 +32,9 @@ test('Song: a new song saves, a person adds a track and saves MIDI, the collabor
     page.setDefaultTimeout(60000);
     page.on('console', (message) => {
       if (message.type() === 'error' || message.text().includes('[garden]'))
-        console.log(`[renderer ${message.type()}] ${message.text().slice(0, 500)} ${message.location().url}`);
+        console.log(
+          `[renderer ${message.type()}] ${message.text().slice(0, 500)} ${message.location().url}`,
+        );
     });
     page.on('pageerror', (e) => errors.push(e.message));
     await page.setViewportSize({ width: 1700, height: 1050 });
@@ -48,7 +50,11 @@ test('Song: a new song saves, a person adds a track and saves MIDI, the collabor
       await ready(page);
       await expect.poll(() => doc().project?.midi?.__cruxBinary?.size ?? 0).toBeGreaterThan(14);
       expect(existsSync(join(folder, 'data', doc().project.midi.__cruxBinary.path))).toBe(true);
-      expect(readFileSync(join(folder, 'data', doc().project.midi.__cruxBinary.path)).subarray(0, 4).toString()).toBe('MThd');
+      expect(
+        readFileSync(join(folder, 'data', doc().project.midi.__cruxBinary.path))
+          .subarray(0, 4)
+          .toString(),
+      ).toBe('MThd');
       await expect(frameOf(page).getByText('Acoustic Grand Piano').first()).toBeVisible();
       await page.screenshot({ path: join(evidence, 'signal-initial.png') });
     });
@@ -57,14 +63,21 @@ test('Song: a new song saves, a person adds a track and saves MIDI, the collabor
       const frame = frameOf(page);
       const before = doc().project.midi.__cruxBinary.path;
       // The track list is collapsed by default: the arrow at the left of the toolbar opens it
-      await frame.locator('button', { has: frame.locator('svg') }).first().dispatchEvent('mousedown');
+      await frame
+        .locator('button', { has: frame.locator('svg') })
+        .first()
+        .dispatchEvent('mousedown');
       await frame.getByText('Add Track').click();
       await expect(status(page)).toHaveText(/Unsaved changes|Saving song…|Saved to Garden/);
-      await expect.poll(() => doc().project.midi.__cruxBinary.path, { timeout: 60000 }).not.toBe(before);
+      await expect
+        .poll(() => doc().project.midi.__cruxBinary.path, { timeout: 60000 })
+        .not.toBe(before);
       await ready(page);
       await frame.locator('#output-name').fill('Sketch, MIDI');
       await frame.locator('#save-output').click();
-      await expect(status(page)).toContainText('Saved Sketch, MIDI as a MIDI output', { timeout: 60000 });
+      await expect(status(page)).toContainText('Saved Sketch, MIDI as a MIDI output', {
+        timeout: 60000,
+      });
       await expect.poll(() => outputs(folder).length).toBe(1);
       const [midi] = outputs(folder);
       expect(midi!.mimeType).toBe('audio/midi');
@@ -80,9 +93,12 @@ test('Song: a new song saves, a person adds a track and saves MIDI, the collabor
       await box.fill('Write me a waltz [song:tune]');
       await box.press('Enter');
       await expect(
-        page.getByText('Named the song Moss Waltz, wrote a waltz melody in G on track 1 and saved a WAV of it.', {
-          exact: true,
-        }),
+        page.getByText(
+          'Named the song Moss Waltz, wrote a waltz melody in G on track 1 and saved a WAV of it.',
+          {
+            exact: true,
+          },
+        ),
       ).toBeVisible({ timeout: 8 * 60_000 });
       await ready(page);
       expect(doc().project.name).toBe('Moss Waltz');
@@ -126,7 +142,9 @@ test('Song: a new song saves, a person adds a track and saves MIDI, the collabor
     await enterGarden(page);
     await test.step('clean Garden: the complete Crux imports and the song opens', async () => {
       await importNativeCrux(page, archive);
-      const importedId = (await page.locator('[data-workspace-id]').getAttribute('data-workspace-id'))!;
+      const importedId = (await page
+        .locator('[data-workspace-id]')
+        .getAttribute('data-workspace-id'))!;
       folder = (await storedCrux(page, importedId)).projectFolder;
       await ready(page);
       await expect(frameOf(page).getByText('Melody')).toBeVisible({ timeout: 60000 });

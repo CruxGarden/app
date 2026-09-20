@@ -117,6 +117,7 @@
     "@ai-sdk/openai": "^4.0.27",
     "@ai-sdk/openai-compatible": "^3.0.20",
     "@cruxgarden/plasma-ui": "^0.5.0",
+    "@fontsource-variable/inter": "^5.3.0",
     "@google/genai": "^1.45.0",
     "@monaco-editor/react": "^4.7.0",
     "ai": "^7.0.47",

@@ -39,7 +39,9 @@ test('Model: the stone evaluates and saves, a person edits and saves an STL, the
     page.setDefaultTimeout(60000);
     page.on('console', (message) => {
       if (message.type() === 'error' || message.text().includes('[garden]'))
-        console.log(`[renderer ${message.type()}] ${message.text().slice(0, 500)} ${message.location().url}`);
+        console.log(
+          `[renderer ${message.type()}] ${message.text().slice(0, 500)} ${message.location().url}`,
+        );
     });
     page.on('pageerror', (e) => errors.push(e.message));
     await page.setViewportSize({ width: 1700, height: 1050 });
@@ -73,7 +75,9 @@ test('Model: the stone evaluates and saves, a person edits and saves an STL, the
       expect(doc().project.name).toBe('Moss Stone');
       await frame.locator('#output-name').fill('Stone, print');
       await frame.locator('#save-model').click();
-      await expect(status(page)).toContainText('Saved Stone, print as a STL output', { timeout: 120000 });
+      await expect(status(page)).toContainText('Saved Stone, print as a STL output', {
+        timeout: 120000,
+      });
       await expect.poll(() => outputs(folder).length).toBe(1);
       const [stl] = outputs(folder);
       expect(stl!.mimeType).toBe('model/stl');
@@ -89,9 +93,12 @@ test('Model: the stone evaluates and saves, a person edits and saves an STL, the
       await box.fill('Model me a coaster [model:coaster]');
       await box.press('Enter');
       await expect(
-        page.getByText('Named the model Moss Coaster, wrote a hexagonal coaster with a leaf groove and saved a 3MF of it.', {
-          exact: true,
-        }),
+        page.getByText(
+          'Named the model Moss Coaster, wrote a hexagonal coaster with a leaf groove and saved a 3MF of it.',
+          {
+            exact: true,
+          },
+        ),
       ).toBeVisible({ timeout: 8 * 60_000 });
       await ready(page);
       expect(doc().project.name).toBe('Moss Coaster');
@@ -105,17 +112,24 @@ test('Model: the stone evaluates and saves, a person edits and saves an STL, the
     });
 
     await test.step('Share publishes the page with the bundle and the examples', async () => {
-      await page.getByTestId('workshop-view').getByRole('button', { name: 'Share selected content', exact: true }).click();
+      await page
+        .getByTestId('workshop-view')
+        .getByRole('button', { name: 'Share selected content', exact: true })
+        .click();
       const share = page.getByTestId('pane-body-publish');
       await share.getByRole('button', { name: 'Share selected content', exact: true }).click();
       await page.getByPlaceholder('email@example.com').fill('tester@example.com');
       await page.getByRole('button', { name: 'Send Code', exact: true }).click();
       await page.getByPlaceholder('Enter code').fill('123456');
       await page.getByRole('button', { name: 'Connect', exact: true }).click();
-      const backupAsk = page.getByRole('dialog').filter({ hasText: 'A published site is not a backup' });
+      const backupAsk = page
+        .getByRole('dialog')
+        .filter({ hasText: 'A published site is not a backup' });
       await expect(backupAsk).toBeVisible({ timeout: 60000 });
       await backupAsk.getByRole('button', { name: 'Share without a backup', exact: true }).click();
-      await expect(share.getByText(/^(Up to date|Changes to share)$/)).toBeVisible({ timeout: 6 * 60_000 });
+      await expect(share.getByText(/^(Up to date|Changes to share)$/)).toBeVisible({
+        timeout: 6 * 60_000,
+      });
       const paths = (api.state.published[id] ?? []).map((f) => f.path);
       expect(paths).toEqual(
         expect.arrayContaining([
@@ -163,7 +177,9 @@ test('Model: the stone evaluates and saves, a person edits and saves an STL, the
     await enterGarden(page);
     await test.step('clean Garden: the complete Crux imports and the coaster evaluates', async () => {
       await importNativeCrux(page, archive);
-      const importedId = (await page.locator('[data-workspace-id]').getAttribute('data-workspace-id'))!;
+      const importedId = (await page
+        .locator('[data-workspace-id]')
+        .getAttribute('data-workspace-id'))!;
       folder = (await storedCrux(page, importedId)).projectFolder;
       await ready(page);
       await expect(frameOf(page).locator('#model-name')).toHaveValue('Moss Coaster');

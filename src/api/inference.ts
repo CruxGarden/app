@@ -1,5 +1,5 @@
 import { useAuthStore } from '@/stores/authStore';
-import client, { API_BASE_URL, getStoredTokens } from './client';
+import client, { apiBaseUrl, getStoredTokens } from './client';
 import { notifyUsageChanged } from '@/lib/usage-events';
 export const INCLUDED_MODEL = 'garden-included';
 export interface IncludedUsage {
@@ -39,7 +39,7 @@ export const includedFetch: typeof fetch = async (_input, init) => {
   const accountToken = getStoredTokens().accessToken;
   if (!accountToken) throw new Error('Sign in to use your included collaborator.');
   const send = (token: string) =>
-    fetch(`${API_BASE_URL}/inference/v1/messages`, {
+    fetch(`${apiBaseUrl()}/inference/v1/messages`, {
       method: 'POST',
       body: init?.body,
       signal: init?.signal,

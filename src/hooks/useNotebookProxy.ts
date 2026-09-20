@@ -8,7 +8,7 @@ import {
   notebookIsOpen,
   flushNotebook,
 } from '@/services/notebook-lifecycle';
-import { useEffect } from 'react';
+import { useEffect, useSyncExternalStore } from 'react';
 import { useCruxStoreApi } from '@/stores/cruxStore';
 import { trackWorkspacePromise } from '@/stores/workspaceSelection';
 import { notebookSession } from '@/services/notebook';
@@ -23,8 +23,15 @@ export function useNotebookProxy(cruxId: string | null) {
       .then(() => blocker.proceed())
       .catch(() => blocker.reset());
   }, [blocker, cruxId]);
+  // Whether the Crux is an embedded app is live: a Crux marked a Tool
+  // template (its kind) stops being one, and the editor registered for its
+  // frame must go with the frame — a stale registration held every pane
+  // toggle and the workspace's close behind a flush that could never answer.
+  const embedded = useSyncExternalStore(workspace.subscribe, () =>
+    isEmbeddedApp(workspace.getState().crux),
+  );
   useEffect(() => {
-    if (!cruxId || !isEmbeddedApp(workspace.getState().crux)) return;
+    if (!cruxId || !embedded) return;
     const protocol = workspace.getState().crux?.kind === 'notes' ? 'crux:notebook' : 'crux:app';
     const execute = notebookSession(workspace);
     let dirty = false;
@@ -192,5 +199,5 @@ export function useNotebookProxy(cruxId: string | null) {
           new Error('App closed before the command was confirmed. Inspect before retrying.'),
         );
     };
-  }, [cruxId, workspace]);
+  }, [cruxId, workspace, embedded]);
 }

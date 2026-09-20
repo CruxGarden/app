@@ -1,4 +1,5 @@
 import { useWorkspaceUIStoreApi } from '@/stores/uiStore';
+import PlasmaOverlay from '@/components/plasma/PlasmaOverlay';
 import { useCruxStoreApi } from '@/stores/cruxStore';
 import { useRef, useState, useCallback, useMemo, useEffect } from 'react';
 import { walkEntry } from '@/lib/file-drop';
@@ -16,6 +17,7 @@ import { revealProjectFolder } from '@/services/project-folder';
 import { confirmDialog } from '@/stores/dialogStore';
 import { confirmAndDeleteArtifacts } from '@/components/artifacts/safeDelete';
 import { expandTreeSelection, FOLDER_ID_PREFIX } from '@/components/artifacts/treeData';
+import ConvertActions from '@/components/artifacts/ConvertActions';
 
 function RevealIcon() {
   return (
@@ -145,6 +147,7 @@ export default function ArtifactsPane() {
   const emptyDragCountRef = useRef(0);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [uploadMenuOpen, setUploadMenuOpen] = useState(false);
+  const uploadMenuRef = useRef<HTMLDivElement>(null);
   const [fileInfoOpen, setFileInfoOpen] = useState(false);
   const [isDraggingOverEmpty, setIsDraggingOverEmpty] = useState(false);
 
@@ -593,7 +596,16 @@ export default function ArtifactsPane() {
           <UploadIcon />
         </button>
         {uploadMenuOpen && (
-          <div className="absolute top-full right-0 mt-1 z-50 bg-dropdown border border-dropdown-border rounded-dropdown shadow-dropdown overflow-hidden">
+          <div
+            ref={uploadMenuRef}
+            className="absolute top-full right-0 mt-1 z-50 bg-dropdown border border-dropdown-border rounded-dropdown shadow-dropdown overflow-hidden"
+            data-plasma-host
+          >
+            <PlasmaOverlay
+              surfaces={[{ ref: uploadMenuRef, radius: 12, elevation: 0.6 }]}
+              zIndex={-1}
+              canvasStyle={{ position: 'fixed' }}
+            />
             <button
               className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-text hover:bg-surface transition-colors whitespace-nowrap cursor-pointer"
               onClick={() => {
@@ -778,6 +790,7 @@ export default function ArtifactsPane() {
               <FieldRow label="Updated">
                 <span>{formatDateTime(selectedArtifact.updated)}</span>
               </FieldRow>
+              <ConvertActions artifact={selectedArtifact} />
             </div>
           )}
         </div>

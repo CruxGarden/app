@@ -31,6 +31,7 @@ import {
 } from './delegate-tool';
 import { scopeViolation, type WriteScope } from '@/lib/write-scope';
 import { CRUXSPACE_TOOLS, runCruxspaceTool } from './cruxspace-tools';
+import { runFfmpeg, describeRun } from '@/services/native-tools';
 
 /**
  * Tool definitions — ported from api/src/ai/ai.tools.ts.
@@ -276,6 +277,40 @@ export const SITE_TOOL_DEFINITIONS: ToolDefinition[] = [
   },
 ];
 
+/**
+ * Native tools (MAKING-THE-AD-PARITY gap 13, step 1): the bundled ffmpeg run
+ * inside this crux's folder. The seam confines every path argument to the
+ * folder and allows only the file protocol; outputs land as Artifacts through
+ * the watcher like any other write to the folder.
+ */
+export const NATIVE_TOOL_DEFINITIONS: ToolDefinition[] = [
+  {
+    name: 'run_ffmpeg',
+    description:
+      'Run the bundled ffmpeg inside this crux folder with the given arguments (no "ffmpeg" word, no shell). ' +
+      'Paths are relative to the crux folder and must stay inside it; outputs become Artifacts. ' +
+      'USE WHEN: converting media (webm → mp4, wav → m4a), making a video from a folder of frames ' +
+      '(e.g. ["-framerate","30","-i","frames/f%04d.png","-c:v","libx264","-pix_fmt","yuv420p","exports/ad.mp4"]), ' +
+      'trimming, extracting frames or a contact sheet, muxing audio onto video. Always pass "-y" to overwrite an output you mean to replace.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        args: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'ffmpeg arguments, one per item, exactly as on a command line.',
+        },
+        description: {
+          type: 'string',
+          description: 'What this run does, in a few words (shown to the person).',
+        },
+      },
+      required: ['args'],
+      additionalProperties: false,
+    },
+  },
+];
+
 /** The guestbook block (V1-GAPS-PLAN §2.8) for any site Crux. */
 export const GUESTBOOK_TOOL_DEFINITION: ToolDefinition = {
   name: 'add_guestbook',
@@ -294,10 +329,12 @@ export const GUESTBOOK_TOOL_DEFINITION: ToolDefinition = {
 /** The tool set to offer a workspace conversation on this platform. */
 export function defaultToolDefinitions(cruxId?: string): ToolDefinition[] {
   const site = can(Capability.Build) ? SITE_TOOL_DEFINITIONS : [];
+  const native = can(Capability.NativeTools) ? NATIVE_TOOL_DEFINITIONS : [];
   return [
     ...TOOL_DEFINITIONS,
     ...appToolDefinitions(cruxId),
     ...site,
+    ...native,
     GUESTBOOK_TOOL_DEFINITION,
     ...GROWTH_TOOL_DEFINITIONS,
     ...THEME_TOOL_DEFINITIONS,
@@ -490,6 +527,12 @@ export function createToolExecutor(
           case 'add_guestbook':
             result = describeAddGuestbook(await addGuestbook(cruxId));
             break;
+          case 'run_ffmpeg': {
+            const args = (input.args as string[]).map(String);
+            const run = await runFfmpeg(cruxId, args);
+            result = describeRun(args, run);
+            break;
+          }
           case 'snapshot':
           case 'list_snapshots':
           case 'restore':

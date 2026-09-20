@@ -226,6 +226,680 @@ const NO_BLOOM = {
   bloomOpacity: '0',
 };
 
+/**
+ * The soft Moods (Daniel, 2026-09-19): one basis — the library's "clear as
+ * water" recipe over a solid ground, frosted, a mild lens, a hairline edge,
+ * nothing moving, 10 px corners, thin gutters, flat chrome, Inter — in a
+ * handful of tones: Soft Black, Soft White, Parchment, Fjord (the blue
+ * Parchment) and Blush (the pink). Only the tones differ.
+ */
+interface SoftTone {
+  id: string;
+  name: string;
+  section: 'Dark' | 'Light';
+  bg: string;
+  surface: string;
+  panel: string;
+  toolbar: string;
+  /** The hairline under the bar and every edge, as an rgb() with alpha. */
+  line: string;
+  accent: string;
+  accentMuted: string;
+  border: string;
+  text: string;
+  textMuted: string;
+  heading: string;
+  /** Three near-equal colours the field is painted in (kept warm-neutral: the material's cast leans cool). */
+  field: string;
+  tint: string;
+  inner: string;
+  plate: string;
+  dialog: string;
+  primary: { bg: string; hover: string; text: string; border: string; borderHover: string };
+  action: {
+    bg: string;
+    hover: string;
+    text: string;
+    textHover: string;
+    border: string;
+    borderHover: string;
+  };
+  input: { bg: string; border: string; hover: string; active: string; outline: string };
+  disabled: { bg: string; text: string };
+  success: string;
+  warning: string;
+  error: string;
+  glassHighlight: string;
+}
+function softOverrides(t: SoftTone): Record<string, string> {
+  return {
+    bg: t.bg,
+    surface: t.surface,
+    panel: t.panel,
+    surfaceSolid: t.panel,
+    toolbar: t.toolbar,
+    toolbarBorder: t.line,
+    accent: t.accent,
+    accentMuted: t.accentMuted,
+    border: t.border,
+    text: t.text,
+    textMuted: t.textMuted,
+    heading: t.heading,
+    caption: t.textMuted,
+    success: t.success,
+    warning: t.warning,
+    error: t.error,
+    fontDisplay: "'Inter', 'Outfit', sans-serif",
+    fontBody: "'Inter', 'Outfit', sans-serif",
+    fontMono: "'JetBrains Mono', monospace",
+    fontScale: '1',
+    plasmaField: t.field,
+    // A solid ground, no field (Daniel: "remove the plasma background and just make it solid black").
+    plasmaBackground: t.bg,
+    plasmaTint: t.tint,
+    plasmaOpacity: '0.72',
+    // Frosted and subtle: a soft mist, a mild lens.
+    plasmaFrost: '0.8',
+    plasmaRim: '0',
+    plasmaRimWidth: '1',
+    plasmaRimColor: 'tint',
+    plasmaEdgeLine: '0.35',
+    // Thin gutters: a small blend, or the panes join into one slab.
+    plasmaBlend: '4',
+    plasmaRefraction: '0.6',
+    plasmaDispersion: '0.5',
+    plasmaElevation: '0.08',
+    plasmaShimmer: '0',
+    plasmaGlow: '0',
+    plasmaWash: '0',
+    plasmaGrain: '0',
+    plasmaSmoothness: '1',
+    plasmaFlow: '0',
+    plasmaStretch: '1',
+    plasmaViscosity: '1',
+    plasmaAmbientDrops: 'off',
+    plasmaPointerDrop: 'off',
+    plasmaPointerPull: 'off',
+    plasmaPointerLight: 'off',
+    plasmaFormIn: 'on',
+    plasmaFormSpeed: '2',
+    plasmaFormOut: 'on',
+    plasmaPlate: 'transparent',
+    plasmaFrame: '0px',
+    plasmaInner: t.inner,
+    plasmaTextShadow: 'none',
+    plasmaChrome: 'flat',
+    plasmaChromePlate: t.plate,
+    plasmaChromeDialog: t.dialog,
+    plasmaChromeFrost: '24px',
+    primaryButton: t.primary.bg,
+    primaryButtonHover: t.primary.hover,
+    primaryButtonText: t.primary.text,
+    primaryButtonBorder: t.primary.border,
+    primaryButtonBorderHover: t.primary.borderHover,
+    actionButton: t.action.bg,
+    actionButtonHover: t.action.hover,
+    actionButtonText: t.action.text,
+    actionButtonTextHover: t.action.textHover,
+    actionButtonBorder: t.action.border,
+    actionButtonBorderHover: t.action.borderHover,
+    input: t.input.bg,
+    inputBorder: t.input.border,
+    inputBorderHover: t.input.hover,
+    inputBorderActive: t.input.active,
+    inputOutline: t.input.outline,
+    buttonDisabled: t.disabled.bg,
+    buttonDisabledText: t.disabled.text,
+    paneHeaderLabelFont: 'var(--font-body)',
+    paneHeaderLabelSize: '13px',
+    paneHeaderLabelWeight: '600',
+    paneHeaderLabelCase: 'none',
+    paneHeaderLabelTracking: '0',
+    paneHeaderHeight: '40px',
+    paneHeaderPadding: '6px 14px',
+    paneBodyPadding: '12px',
+    dialogTitleFont: 'var(--font-body)',
+    dialogTitleSize: '1.125rem',
+    radius: '10px',
+    radiusSm: '8px',
+    radiusLg: '12px',
+    chipRadius: '8px',
+    paneCornerShape: 'round',
+    controlCornerShape: 'round',
+    paneHeaderShape: 'bar',
+    paneBorderStyle: 'solid',
+    dividerStyle: 'hairline',
+    cardBorderStyle: 'solid',
+    // Thin, but the frost of two neighbours must not meet: 12 px between panes.
+    paneGap: '6px',
+    workspacePadding: '6px',
+    motionEnterPane: 'none',
+    motionEnterDialog: 'none',
+    motionEnterDropdown: 'none',
+    motionEnterBubble: 'none',
+    motionEnterCard: 'none',
+    motionEnterToast: 'none',
+    motionExitDialog: 'none',
+    motionExitDropdown: 'none',
+    motionExitToast: 'none',
+    motionPress: 'none',
+    motionAttention: 'none',
+    motionAmbient: 'none',
+    surfaceStyle: 'plasma',
+    glassOpacity: '90%',
+    glassBlur: '20px',
+    glassSaturation: '100%',
+    glassHighlight: t.glassHighlight,
+    glassRefraction: '0',
+    glassLight: '#ffffff',
+  };
+}
+/** A light tone's controls, derived from its ink (the dark accent) and paper. */
+function lightTone(
+  base: Pick<
+    SoftTone,
+    | 'id'
+    | 'name'
+    | 'bg'
+    | 'surface'
+    | 'panel'
+    | 'toolbar'
+    | 'accent'
+    | 'accentMuted'
+    | 'border'
+    | 'text'
+    | 'textMuted'
+    | 'heading'
+    | 'field'
+    | 'tint'
+  > & {
+    ink: string;
+    inkHover: string;
+    inkRgb: string;
+    paper: string;
+  },
+): SoftTone {
+  const a = (alpha: string) => `rgb(${base.inkRgb} / ${alpha})`;
+  return {
+    ...base,
+    section: 'Light',
+    line: a('0.08'),
+    inner: 'rgb(255 255 255 / 0.4)',
+    plate: `color-mix(in srgb, ${base.panel} 90%, transparent)`,
+    dialog: `color-mix(in srgb, ${base.panel} 97%, transparent)`,
+    primary: {
+      bg: base.ink,
+      hover: base.inkHover,
+      text: '#ffffff',
+      border: 'transparent',
+      borderHover: 'transparent',
+    },
+    action: {
+      bg: a('0.04'),
+      hover: a('0.08'),
+      text: base.ink,
+      textHover: base.heading,
+      border: a('0.1'),
+      borderHover: a('0.18'),
+    },
+    input: {
+      bg: base.paper,
+      border: a('0.12'),
+      hover: a('0.22'),
+      active: a('0.4'),
+      outline: a('0.1'),
+    },
+    disabled: { bg: a('0.05'), text: a('0.35') },
+    success: '#2f7d4f',
+    warning: '#9a6b12',
+    error: '#b3261e',
+    glassHighlight: 'rgb(255 255 255 / 0.4)',
+  } as SoftTone;
+}
+/** A dark tone's controls, derived from its light (the pale accent) and its ground. */
+function darkTone(
+  base: Pick<
+    SoftTone,
+    | 'id'
+    | 'name'
+    | 'bg'
+    | 'surface'
+    | 'panel'
+    | 'toolbar'
+    | 'accent'
+    | 'accentMuted'
+    | 'border'
+    | 'text'
+    | 'textMuted'
+    | 'heading'
+    | 'field'
+    | 'tint'
+  > & { lightRgb: string; plate: string; dialog: string },
+): SoftTone {
+  const a = (alpha: string) => `rgb(${base.lightRgb} / ${alpha})`;
+  return {
+    ...base,
+    section: 'Dark',
+    line: a('0.07'),
+    inner: 'rgb(0 0 0 / 0.3)',
+    primary: {
+      bg: a('0.12'),
+      hover: a('0.2'),
+      text: base.heading,
+      border: a('0.14'),
+      borderHover: a('0.24'),
+    },
+    action: {
+      bg: a('0.05'),
+      hover: a('0.1'),
+      text: base.accent,
+      textHover: base.heading,
+      border: a('0.1'),
+      borderHover: a('0.18'),
+    },
+    input: {
+      bg: base.toolbar,
+      border: a('0.12'),
+      hover: a('0.22'),
+      active: a('0.4'),
+      outline: a('0.12'),
+    },
+    disabled: { bg: a('0.05'), text: a('0.35') },
+    success: '#8fbf9f',
+    warning: '#c9b27a',
+    error: '#d98a84',
+    glassHighlight: 'rgb(255 255 255 / 0.06)',
+  };
+}
+const SOFT_BLACK: SoftTone = {
+  id: 'soft-black',
+  name: 'Soft Black',
+  section: 'Dark',
+  bg: '#000000',
+  surface: '#0e0e0e',
+  panel: '#121212',
+  toolbar: '#0a0a0a',
+  line: 'rgb(255 255 255 / 0.07)',
+  accent: '#d6d6d6',
+  accentMuted: '#1e1e1e',
+  border: '#242424',
+  text: '#e8e8e8',
+  textMuted: '#8c8c8c',
+  heading: '#f2f2f2',
+  field: '#000000 #0d0b0b #1b1818',
+  tint: '#0f0b0b',
+  inner: 'rgb(0 0 0 / 0.3)',
+  plate: 'rgb(14 14 14 / 0.88)',
+  dialog: 'rgb(12 12 12 / 0.95)',
+  primary: {
+    bg: 'rgb(255 255 255 / 0.12)',
+    hover: 'rgb(255 255 255 / 0.2)',
+    text: '#f4f4f4',
+    border: 'rgb(255 255 255 / 0.14)',
+    borderHover: 'rgb(255 255 255 / 0.24)',
+  },
+  action: {
+    bg: 'rgb(255 255 255 / 0.05)',
+    hover: 'rgb(255 255 255 / 0.1)',
+    text: '#d6d6d6',
+    textHover: '#f4f4f4',
+    border: 'rgb(255 255 255 / 0.1)',
+    borderHover: 'rgb(255 255 255 / 0.18)',
+  },
+  input: {
+    bg: '#0a0a0a',
+    border: 'rgb(255 255 255 / 0.12)',
+    hover: 'rgb(255 255 255 / 0.22)',
+    active: 'rgb(255 255 255 / 0.4)',
+    outline: 'rgb(255 255 255 / 0.12)',
+  },
+  disabled: { bg: 'rgb(255 255 255 / 0.05)', text: 'rgb(255 255 255 / 0.35)' },
+  success: '#8fbf9f',
+  warning: '#c9b27a',
+  error: '#d98a84',
+  glassHighlight: 'rgb(255 255 255 / 0.06)',
+};
+const SOFT_TONES: SoftTone[] = [
+  SOFT_BLACK,
+  lightTone({
+    id: 'soft-white',
+    name: 'Soft White',
+    bg: '#ffffff',
+    surface: '#f4f4f4',
+    panel: '#f8f8f8',
+    toolbar: '#fbfbfb',
+    accent: '#2b2b2b',
+    accentMuted: '#ebebeb',
+    border: '#dcdcdc',
+    text: '#1c1c1c',
+    textMuted: '#6e6e6e',
+    heading: '#111111',
+    field: '#ffffff #f5f3f3 #eae7e7',
+    tint: '#fbf9f9',
+    ink: '#2b2b2b',
+    inkHover: '#141414',
+    inkRgb: '0 0 0',
+    paper: '#ffffff',
+  }),
+  lightTone({
+    id: 'parchment',
+    name: 'Parchment',
+    bg: '#f3ead9',
+    surface: '#f7f0e2',
+    panel: '#faf4e8',
+    toolbar: '#f7f0e2',
+    accent: '#6b4f2a',
+    accentMuted: '#eadfc9',
+    border: '#dccfb5',
+    text: '#2b2418',
+    textMuted: '#7a6d58',
+    heading: '#1f1a11',
+    field: '#f3ead9 #f0e6d3 #e8dcc6',
+    tint: '#faf4e8',
+    ink: '#6b4f2a',
+    inkHover: '#54391a',
+    inkRgb: '43 36 24',
+    paper: '#fffaf0',
+  }),
+  lightTone({
+    id: 'fjord',
+    name: 'Fjord',
+    bg: '#e3ebf3',
+    surface: '#eaf0f6',
+    panel: '#eef3f8',
+    toolbar: '#eaf0f6',
+    accent: '#2e4f78',
+    accentMuted: '#d9e4f0',
+    border: '#c7d4e2',
+    text: '#1c2733',
+    textMuted: '#5f6f80',
+    heading: '#14202b',
+    field: '#e3ebf3 #e0e8f0 #d8e2ec',
+    tint: '#eef3f8',
+    ink: '#2e4f78',
+    inkHover: '#1f3a5c',
+    inkRgb: '28 39 51',
+    paper: '#f7fafd',
+  }),
+  lightTone({
+    id: 'blush',
+    name: 'Blush',
+    bg: '#f6e6ea',
+    surface: '#f9edf0',
+    panel: '#fbf1f3',
+    toolbar: '#f9edf0',
+    accent: '#8a3d5a',
+    accentMuted: '#f0d9e0',
+    border: '#e4c8d1',
+    text: '#2f1f26',
+    textMuted: '#7d6570',
+    heading: '#23161c',
+    field: '#f6e6ea #f4e2e6 #eed8dd',
+    tint: '#fbf1f3',
+    ink: '#8a3d5a',
+    inkHover: '#6e2c46',
+    inkRgb: '47 31 38',
+    paper: '#fff8fa',
+  }),
+  lightTone({
+    id: 'soft-gray',
+    name: 'Soft Gray',
+    bg: '#e9e9e9',
+    surface: '#f0f0f0',
+    panel: '#f4f4f4',
+    toolbar: '#f0f0f0',
+    accent: '#4a4a4a',
+    accentMuted: '#e0e0e0',
+    border: '#d0d0d0',
+    text: '#222222',
+    textMuted: '#6b6b6b',
+    heading: '#161616',
+    field: '#e9e9e9 #e6e4e4 #dedbdb',
+    tint: '#f4f4f4',
+    ink: '#4a4a4a',
+    inkHover: '#333333',
+    inkRgb: '34 34 34',
+    paper: '#fafafa',
+  }),
+  // The muted dark side of each colour (Daniel: "the dark versions of all
+  // those colors, muted though").
+  darkTone({
+    id: 'umber',
+    name: 'Umber',
+    bg: '#171310',
+    surface: '#1f1a16',
+    panel: '#241e19',
+    toolbar: '#1a1613',
+    accent: '#c9ad86',
+    accentMuted: '#3a2f25',
+    border: '#3a3029',
+    text: '#ece2d3',
+    textMuted: '#9d8f7d',
+    heading: '#f3ebdf',
+    field: '#171310 #1b1613 #221c17',
+    tint: '#221b16',
+    lightRgb: '236 226 211',
+    plate: 'rgb(31 26 22 / 0.9)',
+    dialog: 'rgb(28 23 19 / 0.96)',
+  }),
+  darkTone({
+    id: 'harbor',
+    name: 'Harbor',
+    bg: '#0f151c',
+    surface: '#161d25',
+    panel: '#1a222b',
+    toolbar: '#121920',
+    accent: '#9fb9d6',
+    accentMuted: '#26313d',
+    border: '#2c3742',
+    text: '#e1e8f0',
+    textMuted: '#8d9aa8',
+    heading: '#eef3f8',
+    field: '#0f151c #131a21 #182029',
+    tint: '#182028',
+    lightRgb: '225 232 240',
+    plate: 'rgb(22 29 37 / 0.9)',
+    dialog: 'rgb(20 26 33 / 0.96)',
+  }),
+  darkTone({
+    id: 'mulberry',
+    name: 'Mulberry',
+    bg: '#1a1216',
+    surface: '#22181d',
+    panel: '#271c22',
+    toolbar: '#1d1419',
+    accent: '#d9a6bb',
+    accentMuted: '#3b2830',
+    border: '#3e2d35',
+    text: '#efe3e8',
+    textMuted: '#a08c95',
+    heading: '#f6ecf0',
+    field: '#1a1216 #1e151a #251b20',
+    tint: '#241a1f',
+    lightRgb: '239 227 232',
+    plate: 'rgb(34 24 29 / 0.9)',
+    dialog: 'rgb(30 21 26 / 0.96)',
+  }),
+  // Gray's dark side, so every hue has a light and a dark.
+  darkTone({
+    id: 'graphite',
+    name: 'Graphite',
+    bg: '#121212',
+    surface: '#1a1a1a',
+    panel: '#1e1e1e',
+    toolbar: '#161616',
+    accent: '#bdbdbd',
+    accentMuted: '#2c2c2c',
+    border: '#333333',
+    text: '#e4e4e4',
+    textMuted: '#909090',
+    heading: '#f0f0f0',
+    field: '#121212 #171515 #1e1c1c',
+    tint: '#1b1818',
+    lightRgb: '228 228 228',
+    plate: 'rgb(26 26 26 / 0.9)',
+    dialog: 'rgb(24 24 24 / 0.96)',
+  }),
+  // The garden's own colour, and the violet between Blush and Fjord.
+  lightTone({
+    id: 'sage',
+    name: 'Sage',
+    bg: '#e6ede6',
+    surface: '#edf2ed',
+    panel: '#f1f5f1',
+    toolbar: '#edf2ed',
+    accent: '#3d6b4f',
+    accentMuted: '#dbe7dd',
+    border: '#c9d6cb',
+    text: '#1d2a21',
+    textMuted: '#61726a',
+    heading: '#152019',
+    field: '#e6ede6 #e3ebe3 #dbe4dc',
+    tint: '#f1f5f1',
+    ink: '#3d6b4f',
+    inkHover: '#2c5139',
+    inkRgb: '29 42 33',
+    paper: '#f8fbf8',
+  }),
+  lightTone({
+    id: 'lilac',
+    name: 'Lilac',
+    bg: '#ece6f3',
+    surface: '#f1edf6',
+    panel: '#f4f1f8',
+    toolbar: '#f1edf6',
+    accent: '#5d4a86',
+    accentMuted: '#e3dced',
+    border: '#d3cade',
+    text: '#241d31',
+    textMuted: '#6b6478',
+    heading: '#1a1425',
+    field: '#ece6f3 #e9e3f0 #e1dbea',
+    tint: '#f4f1f8',
+    ink: '#5d4a86',
+    inkHover: '#47366a',
+    inkRgb: '36 29 49',
+    paper: '#faf8fc',
+  }),
+  darkTone({
+    id: 'moss',
+    name: 'Moss',
+    bg: '#0f1712',
+    surface: '#161f19',
+    panel: '#1a241d',
+    toolbar: '#121a15',
+    accent: '#a9c8b2',
+    accentMuted: '#26352b',
+    border: '#2c3a31',
+    text: '#e2ebe4',
+    textMuted: '#8ea093',
+    heading: '#eef4ef',
+    field: '#0f1712 #131b16 #18211b',
+    tint: '#18211b',
+    lightRgb: '226 235 228',
+    plate: 'rgb(22 31 25 / 0.9)',
+    dialog: 'rgb(20 28 23 / 0.96)',
+  }),
+  darkTone({
+    id: 'plum',
+    name: 'Plum',
+    bg: '#16121b',
+    surface: '#1d1824',
+    panel: '#221c2a',
+    toolbar: '#19141f',
+    accent: '#c3add9',
+    accentMuted: '#30273b',
+    border: '#372d42',
+    text: '#e9e3f0',
+    textMuted: '#978da3',
+    heading: '#f2edf6',
+    field: '#16121b #1a151f #201a27',
+    tint: '#201a26',
+    lightRgb: '233 227 240',
+    plate: 'rgb(29 24 36 / 0.9)',
+    dialog: 'rgb(26 21 32 / 0.96)',
+  }),
+];
+const SOFT_MOODS: MoodPresetDef[] = SOFT_TONES.map((t) => ({
+  id: t.id,
+  name: t.name,
+  section: t.section,
+  overrides: softOverrides(t),
+}));
+
+/**
+ * The Plasma family (Daniel, 2026-09-19: "there needs to be a light mode of
+ * plasma, with all the same shades as the ones we're doing, including a black
+ * and white version"): the teaser's material — aurora field, iridescent rim,
+ * water, dispersion — in every soft tone. Same tone, the material turned up.
+ */
+function plasmaOverrides(t: SoftTone): Record<string, string> {
+  const light = t.section === 'Light';
+  return {
+    ...softOverrides(t),
+    // The field painted from the tone: its ground, its muted accent, its accent.
+    plasmaField: `${t.bg} ${t.accentMuted} ${t.accent}`,
+    plasmaBackground: 'field',
+    plasmaOpacity: '0.55',
+    plasmaFrost: '0.5',
+    plasmaRim: '0.65',
+    plasmaRimWidth: '1.4',
+    plasmaRimColor: 'iridescent',
+    plasmaEdgeLine: '1',
+    plasmaBlend: '20',
+    plasmaRefraction: '1.4',
+    plasmaDispersion: '2.2',
+    plasmaElevation: '0.5',
+    plasmaShimmer: '1',
+    plasmaGlow: '1',
+    plasmaWash: '1',
+    plasmaGrain: light ? '0.5' : '1',
+    plasmaFlow: '0',
+    plasmaStretch: '2.5',
+    plasmaViscosity: '0',
+    plasmaAmbientDrops: 'on',
+    plasmaPointerPull: 'on',
+    plasmaPointerLight: 'on',
+    plasmaFormSpeed: '1',
+    plasmaTextShadow: light ? 'none' : '0 1px 2px rgb(0 0 0 / 0.35)',
+    plasmaChromeFrost: '48px',
+    radius: '16px',
+    radiusSm: '10px',
+    radiusLg: '18px',
+    chipRadius: '10px',
+    paneHeaderLabelSize: '15px',
+    paneHeaderHeight: '44px',
+    paneHeaderPadding: '8px 16px',
+    paneBodyPadding: '16px',
+    dialogTitleSize: '1.25rem',
+    paneGap: '14px',
+    workspacePadding: '12px',
+  };
+}
+const PLASMA_NAMES: Record<string, string> = {
+  'soft-black': 'Plasma Black',
+  'soft-white': 'Plasma Light',
+  'soft-gray': 'Plasma Gray',
+  graphite: 'Plasma Graphite',
+  parchment: 'Plasma Parchment',
+  fjord: 'Plasma Fjord',
+  blush: 'Plasma Blush',
+  sage: 'Plasma Sage',
+  lilac: 'Plasma Lilac',
+  umber: 'Plasma Umber',
+  harbor: 'Plasma Harbor',
+  mulberry: 'Plasma Mulberry',
+  moss: 'Plasma Moss',
+  plum: 'Plasma Plum',
+};
+export const PLASMA_TONE_IDS = SOFT_TONES.map((t) => `plasma-${t.id}`);
+const PLASMA_MOODS: MoodPresetDef[] = SOFT_TONES.map((t) => ({
+  id: `plasma-${t.id}`,
+  name: PLASMA_NAMES[t.id] ?? `Plasma ${t.name}`,
+  section: t.section,
+  overrides: plasmaOverrides(t),
+}));
+
 export const MOOD_PRESETS: MoodPresetDef[] = [
   {
     id: 'plasma',
@@ -236,7 +910,8 @@ export const MOOD_PRESETS: MoodPresetDef[] = [
       surface: '#0d1620',
       panel: '#0d1620',
       surfaceSolid: '#0d1620',
-      toolbar: '#0d1620',
+      toolbar: '#0a1219',
+      toolbarBorder: 'rgb(238 244 246 / 0.08)',
       accent: '#9ff3e4',
       border: '#1d2c39',
       text: '#e8f2f6',
@@ -250,11 +925,33 @@ export const MOOD_PRESETS: MoodPresetDef[] = [
       plasmaTint: '#061016',
       plasmaOpacity: '0.55',
       plasmaFrost: '0.5',
-      plasmaRim: '1.3',
-      plasmaRimWidth: '1.4',
+      // Tigrana's rim: a hair of iridescence, no more (Daniel: "he's pulled
+      // back even further with the iridescent border").
+      plasmaRim: '0.35',
+      plasmaRimWidth: '0.9',
+      paneBodyPadding: '16px',
+      // Flat translucent chrome — bar, menus, dialogs; only the garden's
+      // panels and the panes are material. Frosted the landing page's dark
+      // green, all the way, so only vague shapes come through (Daniel:
+      // "frosted that dark green like on the crux garden landing page …
+      // these menus seem a bit too dark").
+      plasmaChrome: 'flat',
+      // Sampled from the landing page: a cool teal-grey, low saturation —
+      // rgb(28 58 57) where the field is bright, rgb(19 31 32) where dark
+      // (Daniel: "yours is too bright, this looks mossy and cool, muted").
+      plasmaChromePlate: 'rgb(20 38 38 / 0.74)',
+      plasmaChromeDialog: 'rgb(18 34 34 / 0.86)',
+      plasmaChromeFrost: '48px',
       plasmaRefraction: '1.4',
       plasmaDispersion: '2.2',
       plasmaElevation: '0.5',
+      // The teaser's water, minus the ripple (Daniel: "just right except there
+      // should be no flow"): the surface trails a moving pane, watery rather
+      // than thick, and drops drift about the field.
+      plasmaFlow: '0',
+      plasmaStretch: '2.5',
+      plasmaViscosity: '0',
+      plasmaAmbientDrops: 'on',
       plasmaPlate: 'transparent',
       plasmaFrame: '0px',
       plasmaInner: 'rgb(0 0 0 / 0.22)',
@@ -303,18 +1000,38 @@ export const MOOD_PRESETS: MoodPresetDef[] = [
         '#26241f',
         '#989389',
       ),
-      motionEnterPane: 'fade',
-      motionEnterDialog: 'drift',
-      motionEnterDropdown: 'scale',
-      motionEnterBubble: 'slide-up',
-      motionEnterCard: 'fade',
-      motionEnterToast: 'slide-down',
-      motionExitDialog: 'fade',
+      // No motion but the material's (Daniel: "no animation except for the
+      // plasma, don't want to do too much"): things appear, the plasma forms.
+      motionEnterPane: 'none',
+      motionEnterDialog: 'none',
+      motionEnterDropdown: 'none',
+      motionEnterBubble: 'none',
+      motionEnterCard: 'none',
+      motionEnterToast: 'none',
+      motionExitDialog: 'none',
       motionExitDropdown: 'none',
-      motionExitToast: 'fade',
-      motionPress: 'scale',
-      motionAttention: 'pulse',
-      motionAmbient: 'breathe',
+      motionExitToast: 'none',
+      motionPress: 'none',
+      motionAttention: 'none',
+      motionAmbient: 'none',
+      // Tigrana's type and sizing (Daniel, 2026-09-19: "copy this design …
+      // subtler with better sizing and white space … I like the font as
+      // well"): Inter for the body, bold Inter on pane headers and dialog
+      // titles, a taller header with a full inset, wider gutters between
+      // and around the panes. The wordmark keeps its serif.
+      fontBody: "'Inter', 'Outfit', sans-serif",
+      fontScale: '1.04',
+      paneHeaderLabelFont: 'var(--font-body)',
+      paneHeaderLabelSize: '15px',
+      paneHeaderLabelWeight: '600',
+      paneHeaderLabelCase: 'none',
+      paneHeaderLabelTracking: '0',
+      paneHeaderHeight: '44px',
+      paneHeaderPadding: '8px 16px',
+      dialogTitleFont: 'var(--font-body)',
+      dialogTitleSize: '1.25rem',
+      workspacePadding: '12px',
+      inputBorderHover: 'rgb(238 244 246 / 0.4)',
       motionSpringSnappy: '340 28 1',
       motionSpringSoft: '150 20 1',
       paneHeaderShape: 'bar',
@@ -323,8 +1040,8 @@ export const MOOD_PRESETS: MoodPresetDef[] = [
       paneBorderStyle: 'solid',
       dividerStyle: 'hairline',
       cardBorderStyle: 'solid',
-      radius: '14px',
-      paneGap: '12px',
+      radius: '16px',
+      paneGap: '14px',
       surfaceStyle: 'plasma',
       glassOpacity: '78%',
       glassBlur: '28px',
@@ -334,6 +1051,138 @@ export const MOOD_PRESETS: MoodPresetDef[] = [
       glassLight: '#b04bd6',
     },
   },
+  {
+    // Office: what the material becomes when everything expressive is turned
+    // down — a study for a business Mood (Daniel, 2026-09-19: "try to create
+    // an office inspired mood based on plasma, see how well it does, what's
+    // missing"). Light, neutral, square-cornered, no rim, no bend, no sheen,
+    // no halo, no grain, no drops; frosted flat plates over a still field;
+    // Inter throughout; flat chrome; the form-in fast.
+    id: 'office',
+    name: 'Office',
+    section: 'Light',
+    overrides: {
+      bg: '#d5e4f3',
+      surface: '#eef4fb',
+      panel: '#f3f7fc',
+      surfaceSolid: '#f3f7fc',
+      toolbar: '#eef4fb',
+      toolbarBorder: 'rgb(31 41 51 / 0.1)',
+      accent: '#2f6fed',
+      accentMuted: '#dfe8fb',
+      border: '#bfd2e6',
+      text: '#1f2933',
+      textMuted: '#5b6773',
+      heading: '#1f2933',
+      caption: '#5b6773',
+      success: '#2f7d4f',
+      warning: '#9a6b12',
+      error: '#b3261e',
+      fontDisplay: "'Inter', 'Outfit', sans-serif",
+      fontBody: "'Inter', 'Outfit', sans-serif",
+      fontMono: "'JetBrains Mono', monospace",
+      fontScale: '1',
+      // A still baby-blue field, no aurora: three near-equal blues.
+      plasmaField: '#cfe0f2 #d8e7f5 #c9dcef',
+      plasmaBackground: '#d5e4f3',
+      plasmaTextShadow: 'none',
+      plasmaTint: '#f3f7fc',
+      plasmaOpacity: '0.93',
+      plasmaFrost: '0.8',
+      // A hairline edge in the border colour, like an input plate; not the spectrum.
+      plasmaRim: '0.7',
+      plasmaRimWidth: '0.8',
+      plasmaRimColor: '#b9cde3',
+      // Hard corners: no outline smoothing on a 0 radius.
+      plasmaSmoothness: '0',
+      plasmaRefraction: '0.1',
+      plasmaDispersion: '0',
+      // Flat, like an iOS input plate: no lift, a hairline edge instead.
+      plasmaElevation: '0',
+      plasmaShimmer: '0',
+      plasmaGlow: '0',
+      plasmaGrain: '0',
+      plasmaFlow: '0',
+      plasmaStretch: '1',
+      plasmaViscosity: '1',
+      plasmaAmbientDrops: 'off',
+      plasmaPointerDrop: 'off',
+      plasmaPointerPull: 'off',
+      plasmaPointerLight: 'off',
+      plasmaFormIn: 'on',
+      plasmaFormSpeed: '2',
+      plasmaFormOut: 'on',
+      plasmaPlate: 'transparent',
+      plasmaFrame: '1px',
+      plasmaInner: 'rgb(255 255 255 / 0.4)',
+      plasmaChrome: 'flat',
+      plasmaChromePlate: 'rgb(243 247 252 / 0.92)',
+      plasmaChromeDialog: 'rgb(243 247 252 / 0.98)',
+      plasmaChromeFrost: '24px',
+      primaryButton: '#2f6fed',
+      primaryButtonHover: '#2559c4',
+      primaryButtonText: '#ffffff',
+      primaryButtonBorder: 'transparent',
+      primaryButtonBorderHover: 'transparent',
+      actionButton: 'rgb(31 41 51 / 0.05)',
+      actionButtonHover: 'rgb(31 41 51 / 0.1)',
+      actionButtonText: '#1f2933',
+      actionButtonTextHover: '#1f2933',
+      actionButtonBorder: 'rgb(31 41 51 / 0.12)',
+      actionButtonBorderHover: 'rgb(31 41 51 / 0.2)',
+      input: '#ffffff',
+      inputBorder: '#cfd6df',
+      inputBorderHover: '#9fb3ce',
+      inputBorderActive: '#2f6fed',
+      inputOutline: 'rgb(47 111 237 / 0.25)',
+      buttonDisabled: 'rgb(31 41 51 / 0.06)',
+      buttonDisabledText: 'rgb(31 41 51 / 0.4)',
+      paneHeaderLabelFont: 'var(--font-body)',
+      paneHeaderLabelSize: '13px',
+      paneHeaderLabelWeight: '600',
+      paneHeaderLabelCase: 'none',
+      paneHeaderLabelTracking: '0',
+      paneHeaderHeight: '40px',
+      paneHeaderPadding: '6px 14px',
+      paneBodyPadding: '12px',
+      dialogTitleFont: 'var(--font-body)',
+      dialogTitleSize: '1.125rem',
+      radius: '0px',
+      radiusSm: '0px',
+      radiusLg: '0px',
+      chipRadius: '0px',
+      // A 0 radius is square already; 'round' keeps the shape rule the bundled set holds to.
+      paneCornerShape: 'round',
+      controlCornerShape: 'round',
+      paneHeaderShape: 'bar',
+      paneBorderStyle: 'solid',
+      dividerStyle: 'hairline',
+      cardBorderStyle: 'solid',
+      paneGap: '8px',
+      workspacePadding: '8px',
+      motionEnterPane: 'none',
+      motionEnterDialog: 'none',
+      motionEnterDropdown: 'none',
+      motionEnterBubble: 'none',
+      motionEnterCard: 'none',
+      motionEnterToast: 'none',
+      motionExitDialog: 'none',
+      motionExitDropdown: 'none',
+      motionExitToast: 'none',
+      motionPress: 'none',
+      motionAttention: 'none',
+      motionAmbient: 'none',
+      surfaceStyle: 'plasma',
+      glassOpacity: '92%',
+      glassBlur: '20px',
+      glassSaturation: '100%',
+      glassHighlight: 'rgb(255 255 255 / 0.3)',
+      glassRefraction: '0',
+      glassLight: '#ffffff',
+    },
+  },
+  ...SOFT_MOODS,
+  ...PLASMA_MOODS,
   {
     id: 'one-big-sky',
     name: 'One Big Sky',

@@ -59,6 +59,7 @@ const ACTION_LABEL: Record<Action['kind'], string> = {
   prompt: 'Send a prompt',
   tool: 'Run a tool',
   mood: 'Wear a Mood',
+  fn: 'Call a function',
 };
 
 const allMoods = () => [
@@ -82,6 +83,8 @@ function describeAction(a: Action, cruxTitle: (id?: string) => string): string {
       return `${a.tool} on ${cruxTitle(a.cruxId)}`;
     case 'mood':
       return `Wear ${allMoods().find((m) => m.id === a.moodId)?.name ?? a.moodId}`;
+    case 'fn':
+      return `${a.name}() on ${cruxTitle(a.cruxId)}`;
   }
 }
 
@@ -317,6 +320,7 @@ export default function SchedulesSection() {
       prompt: { kind: 'prompt', cruxId: first, prompt: '' },
       tool: { kind: 'tool', cruxId: first, tool: 'list_files', input: {} },
       mood: { kind: 'mood', moodId: moods[0]?.id ?? 'plasma' },
+      fn: { kind: 'fn', cruxId: first, name: 'hello', input: {} },
     };
     setActions((list) => [...list, blank[k]]);
   };
@@ -798,6 +802,41 @@ export default function SchedulesSection() {
                         placeholder="Summarise this week's changes into NOTES.md"
                         rows={2}
                         className={cn(field, 'h-auto py-1.5')}
+                      />
+                    </>
+                  )}
+                  {a.kind === 'fn' && (
+                    <>
+                      {cruxSelect(
+                        `schedule-fn-crux-${i}`,
+                        a.cruxId,
+                        (v) => setAction(i, { ...a, cruxId: v }),
+                        '',
+                      )}
+                      <input
+                        aria-label={`Function ${i + 1}`}
+                        value={a.name}
+                        onChange={(e) => setAction(i, { ...a, name: e.target.value })}
+                        placeholder="the handler's name — functions/<name>.js"
+                        className={`${field} font-mono`}
+                      />
+                      <textarea
+                        aria-label={`Function input ${i + 1}`}
+                        defaultValue={JSON.stringify(a.input)}
+                        onBlur={(e) => {
+                          try {
+                            const parsed = JSON.parse(e.target.value || '{}') as Record<
+                              string,
+                              unknown
+                            >;
+                            setAction(i, { ...a, input: parsed });
+                            setError('');
+                          } catch {
+                            setError(`Function input ${i + 1} must be JSON.`);
+                          }
+                        }}
+                        rows={2}
+                        className={cn(field, 'h-auto py-1.5 font-mono')}
                       />
                     </>
                   )}

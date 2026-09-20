@@ -108,17 +108,7 @@ export default function ChatPanel() {
           </div>
         </div>
       ) : (
-        <div className="border-t border-border">
-          {/* One control row: model + usage on the left, the check controls on the right;
-              wraps onto two lines when the pane is narrow. */}
-          <div className="px-3 pt-2 pb-1 flex items-center gap-x-3 gap-y-1.5 flex-wrap">
-            <div className="flex-1 min-w-[200px]">
-              <ModelInfoPanel model={model}>
-                <ModelSelector value={model} onChange={setModel} disabled={isStreaming} />
-              </ModelInfoPanel>
-            </div>
-            <CheckControls busy={isStreaming || isJobRunning} />
-          </div>
+        <div className="border-t border-border/60">
           <TurnJobCard />
           <MessageInput
             onSend={send}
@@ -127,6 +117,16 @@ export default function ChatPanel() {
             isStreaming={isStreaming || isJobRunning}
             history={history}
           />
+          {/* Beneath the composer: the model chip and usage on the left, the
+              check controls on the right; wraps onto two lines when narrow. */}
+          <div className="px-3 pb-2 flex items-center gap-x-3 gap-y-1.5 flex-wrap">
+            <div className="flex-1 min-w-[200px]">
+              <ModelInfoPanel model={model}>
+                <ModelSelector value={model} onChange={setModel} disabled={isStreaming} />
+              </ModelInfoPanel>
+            </div>
+            <CheckControls busy={isStreaming || isJobRunning} />
+          </div>
         </div>
       )}
     </div>

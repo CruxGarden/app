@@ -10,15 +10,28 @@ async function task(page: Page, title: string) {
   await page.getByLabel('Maximum simultaneous turns', { exact: true }).selectOption('1');
   await page.getByRole('button', { name: 'Save and start task' }).click();
   await expect(page.getByRole('dialog', { name: 'New task', exact: true })).toHaveCount(0);
-  const id = (await page.locator('[data-workspace-id]').getAttribute('data-workspace-id'))!;
-  const row = (await page.evaluate(
-    async (id) =>
-      window.electronAPI!.sqlite.get('SELECT project_folder FROM working_copies WHERE id = ?', [
-        id,
-      ]),
-    id,
-  )) as { project_folder: string };
-  return { id, folder: row.project_folder };
+  // The builder switches to the task's copy as the dialog leaves; wait until
+  // the workspace on screen is a task with its folder ready.
+  let id = '';
+  let row: { project_folder: string } | undefined;
+  await expect
+    .poll(
+      async () => {
+        id = (await page.locator('[data-workspace-id]').getAttribute('data-workspace-id')) ?? '';
+        row = (await page.evaluate(
+          async (id) =>
+            window.electronAPI!.sqlite.get(
+              "SELECT project_folder FROM working_copies WHERE id = ? AND role = 'task'",
+              [id],
+            ),
+          id,
+        )) as { project_folder: string } | undefined;
+        return row?.project_folder ?? null;
+      },
+      { timeout: 15000 },
+    )
+    .not.toBeNull();
+  return { id, folder: row!.project_folder };
 }
 async function tend(page: Page) {
   await page
@@ -123,10 +136,7 @@ test('Tending routes Claude Code permissions and refuses a stale desktop notific
   try {
     await enterGarden(page);
     const id = await createCrux(page, 'Agent decisions');
-    await page
-      .getByTestId('pane-body-collaboration')
-      .getByTestId('model-selector')
-      .click();
+    await page.getByTestId('pane-body-collaboration').getByTestId('model-selector').click();
     await page
       .getByTestId('model-group-claude-code')
       .getByRole('button', { name: 'Claude Code' })

@@ -200,6 +200,20 @@ const api: ElectronBridge = {
     detect: () => ipcRenderer.invoke('localai:detect'),
   },
 
+  native: {
+    run: (opts: { cruxId: string; tool: 'ffmpeg'; args: string[]; timeoutMs?: number }) =>
+      ipcRenderer.invoke('native:run', opts) as Promise<{
+        code: number;
+        ms: number;
+        stderrTail: string;
+      }>,
+    onProgress: (callback: (event: { cruxId: string; tool: string; progress: number }) => void) => {
+      const handler = (_e: unknown, event: { cruxId: string; tool: string; progress: number }) =>
+        callback(event);
+      ipcRenderer.on('native:progress', handler);
+      return () => ipcRenderer.removeListener('native:progress', handler);
+    },
+  },
   media: {
     fetch: (url: string, options?: { maxBytes?: number }) =>
       ipcRenderer.invoke('media:fetch', url, options) as Promise<{
@@ -269,12 +283,16 @@ const api: ElectronBridge = {
       return () => ipcRenderer.removeListener('agent:permission', handler);
     },
   },
-  // CRUX_API_URL lets the e2e suite point the app at a local mock API.
+  // The address of the API this garden meets (ADR 0049): CRUX_API_URL at
+  // launch pins it — the e2e suite's mock API, or a deliberate override;
+  // otherwise the garden's own setting decides (api/client.ts).
+  config: {
+    apiUrl: process.env.CRUX_API_URL ?? null,
+  },
   // CRUX_AI_MOCK=1 swaps the language model for a scripted mock (e2e).
   // CRUX_AUTOBACKUP_QUIET_MS shortens automatic backup's quiet window (e2e).
   // CRUX_SILENT=1 keeps the soundscape and cues off (e2e default; sound tests opt out).
   test: {
-    apiUrl: process.env.CRUX_API_URL ?? null,
     mediaApiBase: process.env.CRUX_MEDIA_API ?? null,
     aiMock: process.env.CRUX_AI_MOCK === '1',
     agentMock: process.env.CRUX_AGENT_MOCK === '1',

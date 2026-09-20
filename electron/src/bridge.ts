@@ -215,6 +215,18 @@ export interface MediaBridge {
     options?: { maxBytes?: number },
   ): Promise<{ ok: boolean; status: number; mimeType: string; bytes: Uint8Array }>;
 }
+/** Native tools (MAKING-THE-AD-PARITY gap 13): a bundled binary run inside a crux folder. */
+export interface NativeToolsBridge {
+  run(opts: {
+    cruxId: string;
+    tool: 'ffmpeg';
+    args: string[];
+    timeoutMs?: number;
+  }): Promise<{ code: number; ms: number; stderrTail: string }>;
+  onProgress(
+    callback: (event: { cruxId: string; tool: string; progress: number }) => void,
+  ): () => void;
+}
 export interface FfmpegBridge {
   available(): Promise<boolean>;
   transcode(opts: {
@@ -375,14 +387,19 @@ export interface ElectronBridge {
   devserver: DevServerBridge;
   secrets: SecretsBridge;
   ffmpeg: FfmpegBridge;
+  native: NativeToolsBridge;
   media: MediaBridge;
   localai: LocalAiBridge;
   updates: UpdatesBridge;
   agentHost: AgentHostBridge;
   agent: AgentProviderBridge;
+  /** The garden's configuration as launched (ADR 0049). */
+  config: {
+    /** CRUX_API_URL — pins the API address for this launch; null lets the garden's setting decide. */
+    apiUrl: string | null;
+  };
   /** Test-only overrides, read from the environment the shell was launched with. */
   test: {
-    apiUrl: string | null;
     /** CRUX_MEDIA_API — Find media's catalogues and files come from this base instead of the public services. */
     mediaApiBase: string | null;
     aiMock: boolean;

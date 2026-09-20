@@ -55,6 +55,7 @@ The person has these buttons in the Builder; when they ask for the same thing in
 - Dependencies go in \`package.json\`; the app runs \`pnpm install\` for you.
 - Write real \`.astro\`, \`.md\`, \`.ts\` files — the toolchain compiles them. No CDN import maps or \`React.createElement\` workarounds here.
 - Markdown content needs correct frontmatter; follow the Content Model exactly so the Builder and the files agree.
+- \`functions/\` is the crux's backend: \`functions/<name>.js\` exports \`default async function (req, ctx)\` and answers \`POST /fn/<cruxId>/<name>\` (the page calls it with \`crux.fn(name, body)\`); \`functions/on-<event>.js\` runs when the crux emits \`<event>\` (\`crux.emit\`, a Store write as \`store:write\`, or \`ctx.emit\`), with an optional \`export const match = 'score*'\`. \`ctx\` holds \`store\` (get/set/list/del), \`visitor\`, \`event\`, \`emit\`, \`now\`, \`log\`, \`json\`, \`reject\`; nothing else — no network, filesystem or process. Functions run where the crux is shared.
 - Paths are relative to this folder, forward slashes, no leading \`/\`.
 - \`src/config.json\` is edited by the person as a form — keep it valid JSON with exactly its keys.
 - Posts are \`content/posts/**/*.md\` (served at \`/posts/\`).
@@ -109,6 +110,7 @@ This folder is a Crux — a creative project in Crux Garden: a conversation with
 - Dependencies go in \`package.json\`; the app runs \`pnpm install\` for you.
 - Write real \`.astro\`, \`.md\`, \`.ts\` files — the toolchain compiles them. No CDN import maps or \`React.createElement\` workarounds here.
 - Markdown content needs correct frontmatter; follow the Content Model exactly so the Builder and the files agree.
+- \`functions/\` is the crux's backend: \`functions/<name>.js\` exports \`default async function (req, ctx)\` and answers \`POST /fn/<cruxId>/<name>\` (the page calls it with \`crux.fn(name, body)\`); \`functions/on-<event>.js\` runs when the crux emits \`<event>\` (\`crux.emit\`, a Store write as \`store:write\`, or \`ctx.emit\`), with an optional \`export const match = 'score*'\`. \`ctx\` holds \`store\` (get/set/list/del), \`visitor\`, \`event\`, \`emit\`, \`now\`, \`log\`, \`json\`, \`reject\`; nothing else — no network, filesystem or process. Functions run where the crux is shared.
 - Paths are relative to this folder, forward slashes, no leading \`/\`.
 
 ## Preview and verification
@@ -187,6 +189,7 @@ The person has these buttons in the Builder; when they ask for the same thing in
 - Dependencies go in \`package.json\`; the app runs \`pnpm install\` for you.
 - Write real \`.astro\`, \`.md\`, \`.ts\` files — the toolchain compiles them. No CDN import maps or \`React.createElement\` workarounds here.
 - Markdown content needs correct frontmatter; follow the Content Model exactly so the Builder and the files agree.
+- \`functions/\` is the crux's backend: \`functions/<name>.js\` exports \`default async function (req, ctx)\` and answers \`POST /fn/<cruxId>/<name>\` (the page calls it with \`crux.fn(name, body)\`); \`functions/on-<event>.js\` runs when the crux emits \`<event>\` (\`crux.emit\`, a Store write as \`store:write\`, or \`ctx.emit\`), with an optional \`export const match = 'score*'\`. \`ctx\` holds \`store\` (get/set/list/del), \`visitor\`, \`event\`, \`emit\`, \`now\`, \`log\`, \`json\`, \`reject\`; nothing else — no network, filesystem or process. Functions run where the crux is shared.
 - Paths are relative to this folder, forward slashes, no leading \`/\`.
 - \`src/config.json\` is edited by the person as a form — keep it valid JSON with exactly its keys.
 - Posts are \`src/pages/p/*.md\` (served at \`/p/\`).
@@ -276,6 +279,7 @@ The person has these buttons in the Builder; when they ask for the same thing in
 - Dependencies go in \`package.json\`; the app runs \`pnpm install\` for you.
 - Write real \`.astro\`, \`.md\`, \`.ts\` files — the toolchain compiles them. No CDN import maps or \`React.createElement\` workarounds here.
 - Markdown content needs correct frontmatter; follow the Content Model exactly so the Builder and the files agree.
+- \`functions/\` is the crux's backend: \`functions/<name>.js\` exports \`default async function (req, ctx)\` and answers \`POST /fn/<cruxId>/<name>\` (the page calls it with \`crux.fn(name, body)\`); \`functions/on-<event>.js\` runs when the crux emits \`<event>\` (\`crux.emit\`, a Store write as \`store:write\`, or \`ctx.emit\`), with an optional \`export const match = 'score*'\`. \`ctx\` holds \`store\` (get/set/list/del), \`visitor\`, \`event\`, \`emit\`, \`now\`, \`log\`, \`json\`, \`reject\`; nothing else — no network, filesystem or process. Functions run where the crux is shared.
 - Paths are relative to this folder, forward slashes, no leading \`/\`.
 - \`src/config.json\` is edited by the person as a form — keep it valid JSON with exactly its keys.
 - Posts are \`src/content/blog/**/*.md\` (served at \`/blog/\`).
@@ -359,6 +363,7 @@ The person has these buttons in the Builder; when they ask for the same thing in
 - Dependencies go in \`package.json\`; the app runs \`pnpm install\` for you.
 - Write real \`.astro\`, \`.md\`, \`.ts\` files — the toolchain compiles them. No CDN import maps or \`React.createElement\` workarounds here.
 - Markdown content needs correct frontmatter; follow the Content Model exactly so the Builder and the files agree.
+- \`functions/\` is the crux's backend: \`functions/<name>.js\` exports \`default async function (req, ctx)\` and answers \`POST /fn/<cruxId>/<name>\` (the page calls it with \`crux.fn(name, body)\`); \`functions/on-<event>.js\` runs when the crux emits \`<event>\` (\`crux.emit\`, a Store write as \`store:write\`, or \`ctx.emit\`), with an optional \`export const match = 'score*'\`. \`ctx\` holds \`store\` (get/set/list/del), \`visitor\`, \`event\`, \`emit\`, \`now\`, \`log\`, \`json\`, \`reject\`; nothing else — no network, filesystem or process. Functions run where the crux is shared.
 - Paths are relative to this folder, forward slashes, no leading \`/\`.
 - \`src/config.json\` is edited by the person as a form — keep it valid JSON with exactly its keys.
 - Media are \`src/pages/m/*.md\` (served at \`/m/\`).

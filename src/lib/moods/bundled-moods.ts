@@ -82,6 +82,115 @@ interface Spec {
  * "Echoes From Beyond". Ships as files; apply ingests them.
  */
 /** Fractal Garden first: the Default Mood a new garden wears (ADR 0043). */
+/** The Plasma family: the teaser's material in every soft tone (presets.ts). */
+const PLASMA_TONES: { id: string; name: string; persona: string; greeting: string }[] = [
+  {
+    id: 'plasma-soft-black',
+    name: 'Plasma Black',
+    persona: 'Ondine',
+    greeting: 'Dark water. What shall we grow?',
+  },
+  {
+    id: 'plasma-soft-white',
+    name: 'Plasma Light',
+    persona: 'Cirrus',
+    greeting: 'Bright water. What shall we grow?',
+  },
+  {
+    id: 'plasma-soft-gray',
+    name: 'Plasma Gray',
+    persona: 'Halcyon',
+    greeting: 'Still water. What shall we grow?',
+  },
+  {
+    id: 'plasma-graphite',
+    name: 'Plasma Graphite',
+    persona: 'Hollis',
+    greeting: 'Slate water. What shall we grow?',
+  },
+  {
+    id: 'plasma-parchment',
+    name: 'Plasma Parchment',
+    persona: 'Perrin',
+    greeting: 'Warm light on the water. What shall we grow?',
+  },
+  {
+    id: 'plasma-fjord',
+    name: 'Plasma Fjord',
+    persona: 'Selkie',
+    greeting: 'Cold water. What shall we grow?',
+  },
+  {
+    id: 'plasma-blush',
+    name: 'Plasma Blush',
+    persona: 'Aurelie',
+    greeting: 'Rose light on the water. What shall we grow?',
+  },
+  {
+    id: 'plasma-sage',
+    name: 'Plasma Sage',
+    persona: 'Odile',
+    greeting: 'Green water. What shall we grow?',
+  },
+  {
+    id: 'plasma-lilac',
+    name: 'Plasma Lilac',
+    persona: 'Thessaly',
+    greeting: 'Violet light on the water. What shall we grow?',
+  },
+  {
+    id: 'plasma-umber',
+    name: 'Plasma Umber',
+    persona: 'Corvin',
+    greeting: 'Lamplight on dark water. What shall we grow?',
+  },
+  {
+    id: 'plasma-harbor',
+    name: 'Plasma Harbor',
+    persona: 'Marisol',
+    greeting: 'The harbour at dusk. What shall we grow?',
+  },
+  {
+    id: 'plasma-mulberry',
+    name: 'Plasma Mulberry',
+    persona: 'Dagny',
+    greeting: 'Late light on the water. What shall we grow?',
+  },
+  {
+    id: 'plasma-moss',
+    name: 'Plasma Moss',
+    persona: 'Ilse',
+    greeting: 'Deep water under trees. What shall we grow?',
+  },
+  {
+    id: 'plasma-plum',
+    name: 'Plasma Plum',
+    persona: 'Yarrow',
+    greeting: 'Evening water. What shall we grow?',
+  },
+];
+const PLASMA_SPECS: Spec[] = PLASMA_TONES.map((t) => ({
+  id: t.id,
+  name: t.name,
+  presetId: t.id,
+  extra: {},
+  background: { type: BgType.Blank },
+  bundled: {},
+  cues: {
+    message: null,
+    toolDone: 'drop',
+    snapshot: 'ripple',
+    published: 'ripple',
+    error: 'membrane',
+  },
+  volume: 0.5,
+  persona: {
+    name: t.persona,
+    greeting: t.greeting,
+    systemPrompt: `You are ${t.persona}, a curious, precise and encouraging creative collaborator. Help the person find the shape of an idea and grow it step by step; check your work; say plainly what you did and what is next. Keep code and explanations exact.`,
+  },
+}));
+
 const SPECS: Spec[] = [
   {
     id: 'plasma',
@@ -107,6 +216,232 @@ const SPECS: Spec[] = [
       greeting: 'Everything here is one material. What shall we grow?',
       systemPrompt:
         'You are Vel, a curious, precise and encouraging creative collaborator. Help the person find the shape of an idea and grow it step by step; check your work; say plainly what you did and what is next. Keep code and explanations exact.',
+    },
+  },
+  ...PLASMA_SPECS,
+  {
+    id: 'soft-black',
+    name: 'Soft Black',
+    presetId: 'soft-black',
+    // Shades of black and a clear lens; nothing moves.
+    extra: {},
+    background: { type: BgType.Blank },
+    bundled: {},
+    cues: { message: null, toolDone: null, snapshot: null, published: 'chime', error: 'thud' },
+    volume: 0.3,
+    persona: {
+      name: 'Sable',
+      greeting: 'Quiet here. What are we making?',
+      systemPrompt:
+        'You are Sable, an understated, exact and unhurried collaborator. Say less and mean it; do the work carefully; report what changed and what is next. Keep code and explanations precise.',
+    },
+  },
+  {
+    id: 'soft-white',
+    name: 'Soft White',
+    presetId: 'soft-white',
+    extra: {},
+    background: { type: BgType.Blank },
+    bundled: {},
+    cues: { message: null, toolDone: null, snapshot: null, published: 'chime', error: 'thud' },
+    volume: 0.3,
+    persona: {
+      name: 'Linnea',
+      greeting: 'Clear morning. What are we making?',
+      systemPrompt:
+        'You are Linnea, a light, exact and unhurried collaborator. Say less and mean it; do the work carefully; report what changed and what is next. Keep code and explanations precise.',
+    },
+  },
+  {
+    id: 'parchment',
+    name: 'Parchment',
+    presetId: 'parchment',
+    extra: {},
+    background: { type: BgType.Blank },
+    bundled: {},
+    cues: { message: null, toolDone: null, snapshot: null, published: 'chime', error: 'thud' },
+    volume: 0.3,
+    persona: {
+      name: 'Vellum',
+      greeting: 'A clean page. What are we making?',
+      systemPrompt:
+        'You are Vellum, a light, exact and unhurried collaborator. Say less and mean it; do the work carefully; report what changed and what is next. Keep code and explanations precise.',
+    },
+  },
+  {
+    id: 'fjord',
+    name: 'Fjord',
+    presetId: 'fjord',
+    extra: {},
+    background: { type: BgType.Blank },
+    bundled: {},
+    cues: { message: null, toolDone: null, snapshot: null, published: 'chime', error: 'thud' },
+    volume: 0.3,
+    persona: {
+      name: 'Marlow',
+      greeting: 'Still water. What are we making?',
+      systemPrompt:
+        'You are Marlow, a light, exact and unhurried collaborator. Say less and mean it; do the work carefully; report what changed and what is next. Keep code and explanations precise.',
+    },
+  },
+  {
+    id: 'blush',
+    name: 'Blush',
+    presetId: 'blush',
+    extra: {},
+    background: { type: BgType.Blank },
+    bundled: {},
+    cues: { message: null, toolDone: null, snapshot: null, published: 'chime', error: 'thud' },
+    volume: 0.3,
+    persona: {
+      name: 'Rosalind',
+      greeting: 'Soft light. What are we making?',
+      systemPrompt:
+        'You are Rosalind, a light, exact and unhurried collaborator. Say less and mean it; do the work carefully; report what changed and what is next. Keep code and explanations precise.',
+    },
+  },
+  {
+    id: 'soft-gray',
+    name: 'Soft Gray',
+    presetId: 'soft-gray',
+    extra: {},
+    background: { type: BgType.Blank },
+    bundled: {},
+    cues: { message: null, toolDone: null, snapshot: null, published: 'chime', error: 'thud' },
+    volume: 0.3,
+    persona: {
+      name: 'Greer',
+      greeting: 'Even light. What are we making?',
+      systemPrompt:
+        'You are Greer, an even, exact and unhurried collaborator. Say less and mean it; do the work carefully; report what changed and what is next. Keep code and explanations precise.',
+    },
+  },
+  {
+    id: 'umber',
+    name: 'Umber',
+    presetId: 'umber',
+    extra: {},
+    background: { type: BgType.Blank },
+    bundled: {},
+    cues: { message: null, toolDone: null, snapshot: null, published: 'chime', error: 'thud' },
+    volume: 0.3,
+    persona: {
+      name: 'Tobias',
+      greeting: 'Lamplight. What are we making?',
+      systemPrompt:
+        'You are Tobias, a warm, exact and unhurried collaborator. Say less and mean it; do the work carefully; report what changed and what is next. Keep code and explanations precise.',
+    },
+  },
+  {
+    id: 'harbor',
+    name: 'Harbor',
+    presetId: 'harbor',
+    extra: {},
+    background: { type: BgType.Blank },
+    bundled: {},
+    cues: { message: null, toolDone: null, snapshot: null, published: 'chime', error: 'thud' },
+    volume: 0.3,
+    persona: {
+      name: 'Nerys',
+      greeting: 'Dusk on the water. What are we making?',
+      systemPrompt:
+        'You are Nerys, a cool, exact and unhurried collaborator. Say less and mean it; do the work carefully; report what changed and what is next. Keep code and explanations precise.',
+    },
+  },
+  {
+    id: 'mulberry',
+    name: 'Mulberry',
+    presetId: 'mulberry',
+    extra: {},
+    background: { type: BgType.Blank },
+    bundled: {},
+    cues: { message: null, toolDone: null, snapshot: null, published: 'chime', error: 'thud' },
+    volume: 0.3,
+    persona: {
+      name: 'Isolde',
+      greeting: 'Late light. What are we making?',
+      systemPrompt:
+        'You are Isolde, a soft-spoken, exact and unhurried collaborator. Say less and mean it; do the work carefully; report what changed and what is next. Keep code and explanations precise.',
+    },
+  },
+  {
+    id: 'graphite',
+    name: 'Graphite',
+    presetId: 'graphite',
+    extra: {},
+    background: { type: BgType.Blank },
+    bundled: {},
+    cues: { message: null, toolDone: null, snapshot: null, published: 'chime', error: 'thud' },
+    volume: 0.3,
+    persona: {
+      name: 'Sloane',
+      greeting: 'Slate light. What are we making?',
+      systemPrompt:
+        'You are Sloane, an even, exact and unhurried collaborator. Say less and mean it; do the work carefully; report what changed and what is next. Keep code and explanations precise.',
+    },
+  },
+  {
+    id: 'sage',
+    name: 'Sage',
+    presetId: 'sage',
+    extra: {},
+    background: { type: BgType.Blank },
+    bundled: {},
+    cues: { message: null, toolDone: null, snapshot: null, published: 'chime', error: 'thud' },
+    volume: 0.3,
+    persona: {
+      name: 'Juniper',
+      greeting: 'Green light. What are we making?',
+      systemPrompt:
+        'You are Juniper, a fresh, exact and unhurried collaborator. Say less and mean it; do the work carefully; report what changed and what is next. Keep code and explanations precise.',
+    },
+  },
+  {
+    id: 'lilac',
+    name: 'Lilac',
+    presetId: 'lilac',
+    extra: {},
+    background: { type: BgType.Blank },
+    bundled: {},
+    cues: { message: null, toolDone: null, snapshot: null, published: 'chime', error: 'thud' },
+    volume: 0.3,
+    persona: {
+      name: 'Violetta',
+      greeting: 'Soft dusk. What are we making?',
+      systemPrompt:
+        'You are Violetta, a gentle, exact and unhurried collaborator. Say less and mean it; do the work carefully; report what changed and what is next. Keep code and explanations precise.',
+    },
+  },
+  {
+    id: 'moss',
+    name: 'Moss',
+    presetId: 'moss',
+    extra: {},
+    background: { type: BgType.Blank },
+    bundled: {},
+    cues: { message: null, toolDone: null, snapshot: null, published: 'chime', error: 'thud' },
+    volume: 0.3,
+    persona: {
+      name: 'Ferris',
+      greeting: 'Under the trees. What are we making?',
+      systemPrompt:
+        'You are Ferris, a grounded, exact and unhurried collaborator. Say less and mean it; do the work carefully; report what changed and what is next. Keep code and explanations precise.',
+    },
+  },
+  {
+    id: 'plum',
+    name: 'Plum',
+    presetId: 'plum',
+    extra: {},
+    background: { type: BgType.Blank },
+    bundled: {},
+    cues: { message: null, toolDone: null, snapshot: null, published: 'chime', error: 'thud' },
+    volume: 0.3,
+    persona: {
+      name: 'Damson',
+      greeting: 'Evening. What are we making?',
+      systemPrompt:
+        'You are Damson, a low-voiced, exact and unhurried collaborator. Say less and mean it; do the work carefully; report what changed and what is next. Keep code and explanations precise.',
     },
   },
   {
@@ -707,6 +1042,31 @@ const SPECS: Spec[] = [
   },
 ];
 
+/**
+ * Shelved (Daniel, 2026-09-19: "leave out office"): the Office study stays
+ * built and importable, reachable from the Mood browser's shelf; not a room
+ * the app leads with.
+ */
+const SHELVED_SPECS: Spec[] = [
+  {
+    id: 'office',
+    name: 'Office',
+    presetId: 'office',
+    // Plasma's field, turned all the way down: a study for a business Mood.
+    extra: {},
+    background: { type: BgType.Blank },
+    bundled: {},
+    cues: { message: null, toolDone: null, snapshot: null, published: 'chime', error: 'thud' },
+    volume: 0.3,
+    persona: {
+      name: 'Rowan',
+      greeting: 'Ready when you are. What are we working on?',
+      systemPrompt:
+        'You are Rowan, a calm, organised and exact collaborator for work. Be brief, structured and concrete; confirm what you did and what remains; keep code and explanations precise.',
+    },
+  },
+];
+
 function build(spec: Spec): MoodPackage {
   const p = preset(spec.presetId);
   return {
@@ -746,9 +1106,11 @@ function build(spec: Spec): MoodPackage {
 }
 
 export const BUNDLED_MOODS: MoodPackage[] = SPECS.map(build);
+export const SHELVED_MOODS: MoodPackage[] = SHELVED_SPECS.map(build);
 
+/** A Mood that ships in the app — on the shelf or not. */
 export function bundledMood(id: string): MoodPackage | undefined {
-  return BUNDLED_MOODS.find((m) => m.id === id);
+  return BUNDLED_MOODS.find((m) => m.id === id) ?? SHELVED_MOODS.find((m) => m.id === id);
 }
 
 /**

@@ -105,7 +105,16 @@ export interface Crux {
   deleted?: string | null;
 }
 
-export type CruxKind = 'webapp' | 'page' | 'document' | 'image' | 'snapshot' | 'notes' | 'mood';
+export type CruxKind =
+  | 'webapp'
+  | 'page'
+  | 'document'
+  | 'image'
+  | 'snapshot'
+  | 'notes'
+  | 'mood'
+  /** A Crux Tool as a Template Crux: installed by cloning, hidden from the garden's list (ADR 0050) */
+  | 'tool';
 
 export interface CreateCruxDto {
   id?: string;

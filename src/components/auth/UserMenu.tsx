@@ -1,4 +1,5 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
+import PlasmaOverlay from '@/components/plasma/PlasmaOverlay';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/stores/authStore';
 import { useUIStore } from '@/stores/uiStore';
@@ -19,6 +20,12 @@ export default function UserMenu() {
     useShallow((s) => ({ mode: s.mode, setMode: s.setMode })),
   );
   const [open, setOpen] = useState(false);
+  const menuPanelRef = useRef<HTMLDivElement>(null);
+  // The top bar the menu grows out of, for the Plasma overlay.
+  const barRef = useRef<HTMLElement | null>(null);
+  useEffect(() => {
+    barRef.current = menuRef.current?.closest<HTMLElement>('.bg-toolbar') ?? null;
+  }, [open]);
   const menuRef = useRef<HTMLDivElement>(null);
 
   // Close on outside click
@@ -56,8 +63,21 @@ export default function UserMenu() {
       </button>
 
       {open ? (
-        <div className="absolute right-0 top-full w-48 pt-2 z-50">
-          <div className="bg-dropdown border border-dropdown-border rounded-dropdown shadow-dropdown py-1">
+        <div className="absolute right-0 top-full w-48 pt-2 z-50" data-plasma-host="right">
+          {/* Under Plasma the menu is material grown out of the top bar: an
+              overlay draws the bar and the menu as one fused shape (PlasmaOverlay). */}
+          <PlasmaOverlay
+            surfaces={[
+              { ref: barRef, radius: 14, fuse: true, formIn: false, elevation: 0.5, claim: true },
+              { ref: menuPanelRef, radius: 12, fuse: true, elevation: 0.5 },
+            ]}
+            zIndex={-1}
+            canvasStyle={{ position: 'fixed' }}
+          />
+          <div
+            ref={menuPanelRef}
+            className="bg-dropdown border border-dropdown-border rounded-dropdown shadow-dropdown py-1"
+          >
             {author ? (
               <button
                 onClick={() => {

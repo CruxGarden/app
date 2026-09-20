@@ -1,4 +1,5 @@
 import { deferNotebookAction } from '@/services/notebook-lifecycle';
+import { leaveSurface } from '@/components/plasma/leave';
 import { create, useStore } from 'zustand';
 import { useContext } from 'react';
 import { WorkspaceContext, workspaceSelection } from './workspaceSelection';
@@ -31,6 +32,7 @@ export interface AgentApproval {
 // ── Pane Types ──────────────────────────────────────────
 
 export type PaneType =
+  | 'tasks'
   | 'history'
   | 'collaboration'
   | 'artifacts'
@@ -44,6 +46,7 @@ export type PaneType =
 
 /** Rainbow gradient colors for each pane — reads from CSS custom properties set by the palette system */
 export const PANE_COLORS: Record<PaneType, string> = {
+  tasks: 'var(--pane-tasks)',
   collaboration: 'var(--pane-collaboration)',
   artifacts: 'var(--pane-artifacts)',
   workshop: 'var(--pane-workshop)',
@@ -207,6 +210,7 @@ function nameFromPath(path: string): string {
 }
 
 export const DEFAULT_PANE_ORDER: PaneType[] = [
+  'tasks',
   'collaboration',
   'artifacts',
   'workshop',
@@ -219,6 +223,8 @@ export const DEFAULT_PANE_ORDER: PaneType[] = [
   'media',
 ];
 const DEFAULT_VISIBILITY: Record<PaneType, boolean> = {
+  // Tasks is a pane like any other (Daniel, 2026-09-19): on by default.
+  tasks: true,
   history: false,
   collaboration: true,
   artifacts: false,
@@ -299,6 +305,9 @@ interface PersistedLayout {
 }
 
 const GLOBAL_LAYOUT_KEY = SettingsKey.GlobalLayout;
+// Every task's workspace has its own view (Daniel, 2026-09-19): its own
+// layout, the Tasks pane open by default because that is where tasks are
+// made and managed; closing it there is the person's choice.
 const cruxLayoutKey = (id: string) => `cruxgarden:layout:${id}`;
 const editorTabsKey = (id: string) => `cruxgarden:editor-tabs:${id}`;
 const folderStateKey = (id: string) => `cruxgarden:folder-state:${id}`;
@@ -430,6 +439,14 @@ function validateLayout(layout: PersistedLayout): ValidatedLayout {
     // Build from visible panes in order
     const visiblePanes = validOrder.filter((p) => validVisibility[p]);
     mosaicLayout = buildMosaicTree(visiblePanes);
+  } else {
+    // A pane that is visible but not in the saved tree (a pane added since
+    // the layout was saved — the tasks pane, for a garden from before it
+    // existed) joins the tree where a fresh one would put it.
+    const leaves = new Set(getMosaicLeaves(mosaicLayout));
+    for (const pane of validOrder)
+      if (validVisibility[pane] && !leaves.has(pane))
+        mosaicLayout = addPaneToMosaic(mosaicLayout, pane);
   }
 
   return { paneOrder: validOrder, paneVisibility: validVisibility, mosaicLayout };
@@ -632,21 +649,28 @@ export function createUIStore(cruxId?: string) {
       // Builder actions remain available in Advanced; no provider-specific guess.
       visibility.collaboration = true;
       visibility.workshop = true;
+      // Tasks is a pane like any other (Daniel, 2026-09-19): on by default,
+      // beside the rest, dragged wherever it is wanted or closed.
+      visibility.tasks = DEFAULT_VISIBILITY.tasks;
       setSetting(
         cruxLayoutKey(cruxId),
         JSON.stringify({
           paneOrder: DEFAULT_PANE_ORDER,
           paneVisibility: visibility,
-          ...(collaborationPercent
-            ? {
-                mosaicLayout: {
-                  direction: 'row',
-                  first: 'collaboration',
-                  second: 'workshop',
-                  splitPercentage: collaborationPercent,
-                },
-              }
-            : {}),
+          // Tasks stands as a narrow column on the left — a pane like any
+          // other, to be dragged elsewhere or closed — beside the conversation
+          // and the result.
+          mosaicLayout: {
+            direction: 'row',
+            first: 'tasks',
+            second: {
+              direction: 'row',
+              first: 'collaboration',
+              second: 'workshop',
+              splitPercentage: collaborationPercent ?? 50,
+            },
+            splitPercentage: 20,
+          },
         }),
       );
     },
@@ -722,29 +746,34 @@ export function createUIStore(cruxId?: string) {
 
     togglePane: (pane) => {
       if (deferNotebookAction(get().activeCruxId, () => get().togglePane(pane))) return;
-      const prev = get();
-      const wasVisible = prev.paneVisibility[pane];
-      const newVisibility = { ...prev.paneVisibility, [pane]: !wasVisible };
+      const apply = () => {
+        const prev = get();
+        const wasVisible = prev.paneVisibility[pane];
+        const newVisibility = { ...prev.paneVisibility, [pane]: !wasVisible };
 
-      // Update mosaic tree: add or remove the pane
-      let newMosaic: MosaicNode<PaneType> | null;
-      if (!wasVisible) {
-        newMosaic = addPaneToMosaic(prev.mosaicLayout, pane);
-      } else {
-        newMosaic = prev.mosaicLayout ? removePaneFromMosaic(prev.mosaicLayout, pane) : null;
-      }
+        // Update mosaic tree: add or remove the pane
+        let newMosaic: MosaicNode<PaneType> | null;
+        if (!wasVisible) {
+          newMosaic = addPaneToMosaic(prev.mosaicLayout, pane);
+        } else {
+          newMosaic = prev.mosaicLayout ? removePaneFromMosaic(prev.mosaicLayout, pane) : null;
+        }
 
-      // Derive pane order from the mosaic tree leaves
-      const newOrder = newMosaic ? getMosaicLeaves(newMosaic) : prev.paneOrder;
+        // Derive pane order from the mosaic tree leaves
+        const newOrder = newMosaic ? getMosaicLeaves(newMosaic) : prev.paneOrder;
 
-      set({ paneVisibility: newVisibility, paneOrder: newOrder, mosaicLayout: newMosaic });
-      const s = get();
-      const layout = {
-        paneOrder: s.paneOrder,
-        paneVisibility: s.paneVisibility,
-        mosaicLayout: s.mosaicLayout,
+        set({ paneVisibility: newVisibility, paneOrder: newOrder, mosaicLayout: newMosaic });
+        const s = get();
+        const layout = {
+          paneOrder: s.paneOrder,
+          paneVisibility: s.paneVisibility,
+          mosaicLayout: s.mosaicLayout,
+        };
+        saveLayout(s.activeCruxId ? cruxLayoutKey(s.activeCruxId) : GLOBAL_LAYOUT_KEY, layout);
       };
-      saveLayout(s.activeCruxId ? cruxLayoutKey(s.activeCruxId) : GLOBAL_LAYOUT_KEY, layout);
+      // A pane closing under Plasma fades its contents first, then leaves.
+      if (get().paneVisibility[pane]) leaveSurface(`.mosaic-window.pane-${pane}`, apply);
+      else apply();
     },
 
     setPaneVisible: (pane, visible) => {

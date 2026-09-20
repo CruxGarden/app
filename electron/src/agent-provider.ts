@@ -168,6 +168,14 @@ export class AgentProvider {
       for await (const msg of stream) {
         if (controller.signal.aborted) break;
         state.hadMutation ||= run.toolMutation === true;
+        // The MCP servers the agent actually got — the garden's own above all.
+        // Logged because "the crux_garden server is not in this session" was
+        // otherwise invisible from outside (MAKING-IT-POSSIBLE-STEPS, step 2).
+        {
+          const sys = msg as { type?: string; subtype?: string; mcp_servers?: unknown };
+          if (sys?.type === 'system' && sys.subtype === 'init')
+            this.deps.log(`[claude-code] mcp servers: ${JSON.stringify(sys.mcp_servers ?? [])}`);
+        }
         for (const event of mapSdkMessage(msg, state)) {
           if (event.type === 'done') doneSent = true;
           emit(event);
@@ -264,7 +272,11 @@ export class AgentProvider {
     const sdk = await importEsm('@anthropic-ai/claude-agent-sdk');
     const schemas = [
       z.object({ query: z.string(), offset: z.number().int().nonnegative().optional() }),
-      z.object({ name: z.string(), input: z.record(z.string(), z.unknown()) }),
+      // Not z.record: with zod 4 the SDK cannot serialize it, and the server
+      // then connects with an EMPTY tool list — silently. Found 2026-09-20
+      // (MAKING-IT-POSSIBLE-STEPS, step 2): the agent in the pane never had
+      // a single garden tool. A loose object serializes.
+      z.object({ name: z.string(), input: z.looseObject({}) }),
     ];
     const garden = sdk.createSdkMcpServer({
       name: 'crux_garden',
@@ -292,6 +304,13 @@ export class AgentProvider {
         // Edits inside the Project Folder are the point; Growth keeps every
         // version. Bash and anything outside the folder still ask.
         permissionMode: 'acceptEdits',
+        // The garden's own two tools need no click: discovery is harmless and
+        // every tool behind garden_call_tool keeps its own in-app approval
+        // (delete, publish) — the same rule as acceptEdits for the folder.
+        allowedTools: [
+          'mcp__crux_garden__garden_search_tools',
+          'mcp__crux_garden__garden_call_tool',
+        ],
         includePartialMessages: true,
         persistSession: true,
         settingSources: ['user', 'project'],

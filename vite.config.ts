@@ -17,6 +17,11 @@ export default defineConfig({
     // (reading 'useState')" — the invalid-hook-call error, wearing a disguise.
     dedupe: ['react', 'react-dom'],
   },
+  // A tool's built runtime is shipped as files, never imported: every path
+  // under a `*-crux/runtime/` is an asset, so the dev server serves an
+  // extensionless LICENSE or a .txt with `?url` instead of parsing it as a
+  // module (Twine, BentoPDF, GDevelop and most of the others carry such files).
+  assetsInclude: [/-crux\/runtime\//],
   server: {
     port: 8080,
   },

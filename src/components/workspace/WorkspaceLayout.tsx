@@ -1,9 +1,12 @@
 import { useAppAppearance } from '@/hooks/useAppAppearance';
+import TaskBar from './TaskBar';
+import { WORKSPACE_ATTR } from '@/components/plasma/PlasmaStage';
+import { useSurfaceFormed } from '@/components/plasma/useSurfaceFormed';
 import { useNotebookProxy } from '@/hooks/useNotebookProxy';
 import { useWorkspaceUIStoreApi } from '@/stores/uiStore';
 import { copyIdentity } from '@/services/working-copies';
 import { useCruxStoreApi } from '@/stores/cruxStore';
-import { lazy, memo, Suspense, useCallback, type CSSProperties } from 'react';
+import { lazy, memo, Suspense, useCallback, type CSSProperties, useEffect } from 'react';
 import { DndProvider } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
 import { MosaicWithoutDragDropContext, MosaicWindow } from 'react-mosaic-component';
@@ -82,6 +85,7 @@ const STREAMING_READY = new Set([
 // ── Pane component registry ─────────────────────────────
 
 const PANE_COMPONENTS: Record<PaneType, React.ComponentType> = {
+  tasks: TaskBar,
   history: HistoryPane,
   collaboration: ChatPane,
   artifacts: ArtifactsPane,
@@ -102,6 +106,7 @@ const PANE_COMPONENTS: Record<PaneType, React.ComponentType> = {
  * number — a file tree lives in less than a conversation does.
  */
 const PANE_MIN_WIDTH: Record<PaneType, number> = {
+  tasks: 110,
   collaboration: 260,
   artifacts: 160,
   workshop: 280,
@@ -138,9 +143,13 @@ function PaneBody({ paneType }: { paneType: PaneType }) {
   const loaded = useCruxStore((s) => !!s.crux);
   const copy = useCruxStore((s) => copyIdentity(s.crux));
   const { ref, isTooNarrow } = usePaneWidth(PANE_MIN_WIDTH[paneType]);
+  // Under Plasma the pane's contents mount once its surface has formed, so
+  // Monaco, an app's iframe or a long conversation do not compete with the
+  // material's arrival for the same frames.
+  const formed = useSurfaceFormed(ref);
   return (
     <div ref={ref} className="h-full min-h-0 flex flex-col" data-testid={`pane-body-${paneType}`}>
-      {copy && ['publish', 'sync', 'details', 'export'].includes(paneType) ? (
+      {!formed ? null : copy && ['publish', 'sync', 'details', 'export'].includes(paneType) ? (
         <PaneEmpty
           title="Available in Main"
           description="Open Main to manage the Crux’s details, publishing and complete backup."
@@ -168,6 +177,7 @@ function PaneBody({ paneType }: { paneType: PaneType }) {
 // Title case here; the Mood decides the rendered case (--pane-header-label-case,
 // uppercase by default), so a theme can ask for "Collaboration" or "collaboration".
 const PANE_LABELS: Record<PaneType, string> = {
+  tasks: 'Tasks',
   history: 'History',
   collaboration: 'Collaboration',
   artifacts: 'Artifacts',
@@ -189,6 +199,7 @@ function MobilePane({ pane }: { pane: PaneType }) {
 
 // Header glyphs come from the icon module so the Mood's iconSet (line | filled | pixel) applies.
 const PANE_ICONS: Record<PaneType, React.ReactNode> = {
+  tasks: <RepeatIcon size={14} strokeWidth={2} />,
   history: <ActivityIcon size={14} strokeWidth={2} />,
   collaboration: <ChatIcon size={14} strokeWidth={2} />,
   artifacts: <FolderIcon size={14} strokeWidth={2} />,
@@ -204,6 +215,11 @@ const PANE_ICONS: Record<PaneType, React.ReactNode> = {
 // ── Main layout ─────────────────────────────────────────
 
 export default function WorkspaceLayout() {
+  // The builder is open: the material calms its ripple while it is (PlasmaStage).
+  useEffect(() => {
+    document.documentElement.setAttribute(WORKSPACE_ATTR, '');
+    return () => document.documentElement.removeAttribute(WORKSPACE_ATTR);
+  }, []);
   const cruxStore = useCruxStoreApi();
   const uiStore = useWorkspaceUIStoreApi();
   const mosaicLayout = useUIStore((s) => s.mosaicLayout);
@@ -354,6 +370,7 @@ export default function WorkspaceLayout() {
     (paneType: PaneType, path: MosaicBranch[]) => {
       // Pane header tokens — read directly from CSS vars set by the mood palette
       const prefix = {
+        tasks: '--pane-tasks',
         collaboration: '--pane-collaboration',
         artifacts: '--pane-artifacts',
         workshop: '--pane-workshop',

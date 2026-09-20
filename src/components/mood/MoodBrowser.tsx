@@ -5,7 +5,9 @@ import { ExportIcon, ShareIcon, CloseIcon } from '@/components/ui/icons';
 import { getSetting } from '@/services/settings';
 import { SettingsKey } from '@/lib/constants';
 import { useAppStore } from '@/stores/appStore';
-import { BUNDLED_MOODS } from '@/lib/moods/bundled-moods';
+import { BUNDLED_MOODS, SHELVED_MOODS } from '@/lib/moods/bundled-moods';
+import MaterialMoods from './MaterialMoods';
+import { materialChoice } from '@/lib/moods/material';
 import { GARDEN_DARK } from '@/lib/moods';
 import {
   applyMood,
@@ -181,6 +183,9 @@ function MoodCard({
     </div>
   );
 }
+
+/** The HyperMoods: every bundled room that is not a material Mood (Plasma itself counts as one). */
+const HYPER_MOODS = BUNDLED_MOODS.filter((m) => m.id !== 'plasma' && !materialChoice(m.id));
 
 export default function MoodBrowser() {
   const [moods, setMoods] = useState<MoodPackage[]>(() => getInstalledMoods());
@@ -371,16 +376,20 @@ export default function MoodBrowser() {
         </p>
       )}
 
+      {/* Material Moods: three choices and two switches (MaterialMoods). */}
+      <MaterialMoods wornId={wornId} busy={busy !== null} onWear={doApply} />
+
+      {/* HyperMoods: the rooms with their own render, track, cues and effects. */}
       <section className="flex flex-col gap-2" data-testid="bundled-moods">
         <div className="flex items-baseline justify-between">
-          <h3 className="text-xxs font-mono uppercase tracking-wider text-caption">Built in</h3>
+          <h3 className="text-xxs font-mono uppercase tracking-wider text-caption">HyperMoods</h3>
           <span className="text-2xs text-text-muted">
-            {BUNDLED_MOODS.length} rooms — look, sound and voice change together. Click one to wear
-            it.
+            {HYPER_MOODS.length} rooms — a render, a sound and a voice, made as one. Click one to
+            wear it.
           </span>
         </div>
         <div className="grid gap-3 grid-cols-[repeat(auto-fill,minmax(180px,1fr))]">
-          {BUNDLED_MOODS.map((pkg) => (
+          {HYPER_MOODS.map((pkg) => (
             <MoodCard
               key={pkg.id}
               pkg={pkg}
@@ -392,6 +401,29 @@ export default function MoodBrowser() {
             />
           ))}
         </div>
+      </section>
+
+      {/* The shelf: the Office study, still here, not what the app leads with. */}
+      <details className="mt-2" data-testid="shelved-moods">
+        <summary className="cursor-pointer text-xxs font-mono uppercase tracking-wider text-caption hover:text-text">
+          Shelved · {SHELVED_MOODS.length} earlier rooms
+        </summary>
+        <div className="grid gap-3 grid-cols-[repeat(auto-fill,minmax(180px,1fr))] mt-2">
+          {SHELVED_MOODS.map((pkg) => (
+            <MoodCard
+              key={pkg.id}
+              pkg={pkg}
+              worn={wornId === pkg.id}
+              busy={busy === pkg.id}
+              onApply={() => void doApply(pkg)}
+              onExport={() => void doExport(pkg)}
+              testId={`bundled-${pkg.id}`}
+            />
+          ))}
+        </div>
+      </details>
+
+      <section className="flex flex-col gap-2">
         <h3 className="text-xxs font-mono uppercase tracking-wider text-caption mt-3">Yours</h3>
       </section>
 

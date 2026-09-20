@@ -47,28 +47,52 @@ test('opening a crux: frames while the panes arrive, plasma vs glass', async () 
     };
     await home();
     // A second Crux with real content: the Notes template, so the Workshop
-    // loads an app in an iframe and Artifacts has files — closer to what a
-    // person opens than a blank Crux.
-    await page.getByRole('button', { name: 'Add Crux' }).click();
-    await page.getByRole('button', { name: /^Notes/ }).click();
-    await page.locator('[data-modal-open] input[value="My Notebook"]').fill('Notes perf');
-    await page.getByRole('button', { name: 'Create', exact: true }).click();
-    await page.locator('[data-workspace-id]').first().waitFor();
-    await page.waitForTimeout(2000);
+    // loads an app in an iframe and Artifacts has files — and a third, the
+    // Mermaid Live Editor with the Metadata pane open too, the shape of the
+    // Crux Daniel saw stutter.
+    const fromTemplate = async (pattern: RegExp, name: string) => {
+      await page.getByRole('button', { name: 'Add Crux' }).click();
+      await page.getByRole('button', { name: pattern }).click();
+      await page.locator('[data-modal-open] input').first().fill(name);
+      await page.getByRole('button', { name: 'Create', exact: true }).click();
+      await page.locator('[data-workspace-id]').first().waitFor();
+      await page.waitForTimeout(2500);
+    };
+    await fromTemplate(/^Notes/, 'Notes perf');
+    await home();
+    await fromTemplate(/^Mermaid/, 'Mermaid perf');
+    await page.getByRole('button', { name: 'Toggle metadata' }).click();
+    await page.waitForTimeout(1500);
     await home();
 
-    for (const [style, crux] of [
-      ['plasma', 'Builder perf'],
-      ['glass', 'Builder perf'],
-      ['plasma', 'Notes perf'],
-      ['glass', 'Notes perf'],
-    ] as const) {
-      await page.evaluate((s) => {
-        document.documentElement.dataset.surfaceStyle = s;
-        document.dispatchEvent(new Event('palette-change'));
-      }, style);
+    const cases = [
+      { key: 'plasma · blank · wait', style: 'plasma', crux: 'Builder perf', wait: true },
+      { key: 'plasma · Notes · wait', style: 'plasma', crux: 'Notes perf', wait: true },
+      {
+        key: 'plasma · Mermaid+Metadata · wait',
+        style: 'plasma',
+        crux: 'Mermaid perf',
+        wait: true,
+      },
+      {
+        key: 'plasma · Mermaid+Metadata · no wait',
+        style: 'plasma',
+        crux: 'Mermaid perf',
+        wait: false,
+      },
+      { key: 'glass · Mermaid+Metadata', style: 'glass', crux: 'Mermaid perf', wait: true },
+    ] as const;
+    for (const { key, style, crux, wait } of cases) {
+      await page.evaluate(
+        ([s, w]) => {
+          document.documentElement.dataset.surfaceStyle = s;
+          if (w) delete document.documentElement.dataset.plasmaWait;
+          else document.documentElement.dataset.plasmaWait = 'off';
+          document.dispatchEvent(new Event('palette-change'));
+        },
+        [style, wait] as const,
+      );
       await page.waitForTimeout(2500);
-      const key = `${style}:${crux}`;
       results[key] ??= [];
       for (let round = 0; round < 3; round++) {
         // Arm the sampler, then click; the sampler resolves on its own clock.

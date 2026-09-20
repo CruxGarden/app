@@ -6,6 +6,7 @@ import { choiceDialog } from '@/stores/dialogStore';
 import { cn } from '@/lib/cn';
 import { Capability, can } from '@/lib/platform';
 import { getGardenRoot, chooseGardenRoot, shortenHomePath } from '@/services/desktop';
+import InstalledTools from './InstalledTools';
 
 const WIPE_CONFIRMATION = 'delete me';
 /** An export this recent counts as "you have a copy" — the wipe skips the offer. */
@@ -214,6 +215,8 @@ export default function DataSettings() {
             </>
           )}
 
+          <hr className="divider my-6" />
+          <InstalledTools />
           <hr className="divider my-6" />
 
           <h3 className="font-display text-sm font-medium text-error mb-2">Danger zone</h3>

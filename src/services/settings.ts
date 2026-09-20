@@ -28,6 +28,8 @@ export async function flushSettings(): Promise<void> {
 // Keys that must be readable synchronously before services init (written to
 // localStorage as a cache so the first paint uses the right theme/background).
 const SYNC_KEYS: Set<string> = new Set([
+  // The API address is read before anything talks to it (api/client.ts).
+  SettingsKey.ApiUrl,
   SettingsKey.Theme,
   SettingsKey.Tint,
   SettingsKey.BackgroundType,

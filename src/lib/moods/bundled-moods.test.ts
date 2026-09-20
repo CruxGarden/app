@@ -1,15 +1,18 @@
 import { describe, it, expect } from 'vitest';
-import { BUNDLED_MOODS, bundledMood, refreshBundledPresets } from './bundled-moods';
+import { BUNDLED_MOODS, SHELVED_MOODS, bundledMood, refreshBundledPresets } from './bundled-moods';
+
+const ALL = [...BUNDLED_MOODS, ...SHELVED_MOODS];
 import { getUserPresets, saveUserPreset } from './user-presets';
 import { validateMoodPackage } from './packages';
 import { GARDEN_DARK } from './garden-dark';
 import { tokenChoices } from './token-groups';
 
-describe('bundled Moods (ADR 0043: the backgrounds set)', () => {
-  it('ships thirty-seven complete, valid packages with distinct ids', () => {
-    expect(BUNDLED_MOODS).toHaveLength(37);
-    expect(new Set(BUNDLED_MOODS.map((m) => m.id)).size).toBe(37);
-    for (const m of BUNDLED_MOODS) {
+describe('bundled Moods (the backgrounds set, the soft suite and the Plasma family)', () => {
+  it('ships sixty-five Moods and shelves Office, all complete and valid with distinct ids', () => {
+    expect(BUNDLED_MOODS).toHaveLength(65);
+    expect(SHELVED_MOODS.map((m) => m.id)).toEqual(['office']);
+    expect(new Set(ALL.map((m) => m.id)).size).toBe(66);
+    for (const m of ALL) {
       const ok = validateMoodPackage(JSON.parse(JSON.stringify(m)));
       expect(ok, `${m.id} validates`).toBeTruthy();
       expect(ok!.sound.volume).toBeGreaterThanOrEqual(0);
@@ -48,12 +51,14 @@ describe('bundled Moods (ADR 0043: the backgrounds set)', () => {
     expect(f.sound.track).toBeNull();
     // Every Mood is a render from backgrounds/ - except Plasma, whose
     // material draws its own field - and exactly one brings a track.
+    // Every glass Mood is a render from backgrounds/; the material Moods —
+    // Plasma, its family and the soft suite — draw their own ground.
     expect(
-      BUNDLED_MOODS.filter((m) => m.theme.overrides.surfaceStyle !== 'plasma').every(
+      ALL.filter((m) => m.theme.overrides.surfaceStyle !== 'plasma').every(
         (m) => m.bundled?.background && m.background.type === 'image',
       ),
     ).toBe(true);
-    expect(BUNDLED_MOODS.filter((m) => m.bundled?.track)).toHaveLength(1);
+    expect(ALL.filter((m) => m.bundled?.track)).toHaveLength(1);
   });
 
   it('covers both modes and only uses real theme tokens', () => {
@@ -62,14 +67,14 @@ describe('bundled Moods (ADR 0043: the backgrounds set)', () => {
     expect(BUNDLED_MOODS.filter((m) => m.theme.section === 'Light').length).toBeGreaterThanOrEqual(
       4,
     );
-    for (const m of BUNDLED_MOODS) {
+    for (const m of ALL) {
       const unknown = Object.keys(m.theme.overrides).filter((k) => !(k in GARDEN_DARK));
       expect(unknown, `${m.id} unknown tokens`).toEqual([]);
     }
   });
 
   it('wears liquid glass by default, with the opacity readability needs over a render', () => {
-    for (const m of BUNDLED_MOODS) {
+    for (const m of ALL) {
       const o = m.theme.overrides;
       // Plasma is the one Mood built for the other theme: the material
       // draws its surfaces, so the glass tokens below do not apply to it.
@@ -84,7 +89,7 @@ describe('bundled Moods (ADR 0043: the backgrounds set)', () => {
   });
 
   it('stays square-ish (Daniel): round or bevel corners, solid hairline frames, no gradient rings', () => {
-    for (const m of BUNDLED_MOODS) {
+    for (const m of ALL) {
       const o = m.theme.overrides;
       expect(['round', 'bevel'], `${m.id} corners`).toContain(o.paneCornerShape);
       expect(o.paneBorderStyle, `${m.id} frame`).toBe('solid');
@@ -99,9 +104,7 @@ describe('bundled Moods (ADR 0043: the backgrounds set)', () => {
   it('varies beyond palettes: radius, gutters, type, motion, voice and silhouette all move', () => {
     const pick = (key: string) =>
       new Set(
-        BUNDLED_MOODS.map(
-          (m) => m.theme.overrides[key] ?? (GARDEN_DARK as Record<string, string>)[key],
-        ),
+        ALL.map((m) => m.theme.overrides[key] ?? (GARDEN_DARK as Record<string, string>)[key]),
       );
     expect(pick('radius').size).toBeGreaterThanOrEqual(5);
     expect(pick('paneGap').size).toBeGreaterThanOrEqual(4);
@@ -111,7 +114,7 @@ describe('bundled Moods (ADR 0043: the backgrounds set)', () => {
     expect(pick('paneHeaderShape').size).toBeGreaterThanOrEqual(3);
     expect(pick('paneCornerShape').size).toBe(2);
     expect(pick('iconSet').size).toBe(3);
-    expect(new Set(BUNDLED_MOODS.map((m) => m.persona!.name)).size).toBe(37);
+    expect(new Set(ALL.map((m) => m.persona!.name)).size).toBe(66);
     // named rooms the journeys lean on
     expect(bundledMood('raster-bars')?.theme.overrides.motionFrames).toBe('4');
     expect(bundledMood('raster-bars')?.theme.overrides.iconSet).toBe('pixel');

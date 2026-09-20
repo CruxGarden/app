@@ -44,14 +44,23 @@ export class SqliteCruxService implements ICruxService {
 
   async listAll(): Promise<Crux[]> {
     const rows = await getSqliteClient().all(
-      "SELECT * FROM cruxes WHERE deleted IS NULL AND (kind IS NULL OR kind != 'snapshot') AND type != 'mood' ORDER BY updated DESC",
+      "SELECT * FROM cruxes WHERE deleted IS NULL AND (kind IS NULL OR kind NOT IN ('snapshot', 'tool')) AND type != 'mood' ORDER BY updated DESC",
+    );
+    return rows.map((r) => fromRow<Crux>(r));
+  }
+
+  /** The Cruxes of one kind — the installed Crux Tools are `kind: 'tool'` and stay out of `listAll`. */
+  async listByKind(kind: string): Promise<Crux[]> {
+    const rows = await getSqliteClient().all(
+      'SELECT * FROM cruxes WHERE deleted IS NULL AND kind = ? ORDER BY updated DESC',
+      [kind],
     );
     return rows.map((r) => fromRow<Crux>(r));
   }
 
   async listTrashed(): Promise<Crux[]> {
     const rows = await getSqliteClient().all(
-      "SELECT * FROM cruxes WHERE deleted IS NOT NULL AND (kind IS NULL OR kind != 'snapshot') AND type != 'mood' ORDER BY deleted DESC",
+      "SELECT * FROM cruxes WHERE deleted IS NOT NULL AND (kind IS NULL OR kind NOT IN ('snapshot', 'tool')) AND type != 'mood' ORDER BY deleted DESC",
     );
     return rows.map((r) => fromRow<Crux>(r));
   }

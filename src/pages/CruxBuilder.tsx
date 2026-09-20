@@ -1,7 +1,6 @@
 import { lazy, Suspense, useEffect, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import TendingDestination from '@/components/workspace/TendingDestination';
-import TaskBar from '@/components/workspace/TaskBar';
 import { copyIdentity, findWorkingCopy } from '@/services/working-copies';
 import { useCruxStore } from '@/stores/cruxStore';
 import {
@@ -115,7 +114,6 @@ function Builder() {
           />
         </Suspense>
       )}
-      <TaskBar />
       <div className="flex-1 min-h-0">
         <WorkspaceLayout />
       </div>

@@ -5,14 +5,14 @@
  * can be viewed without logging in.
  */
 
-import { API_BASE_URL } from './client';
+import { apiBaseUrl } from './client';
 import type { Author, Crux, Artifact } from './types';
 
-const base = API_BASE_URL;
+const base = () => apiBaseUrl();
 
 function authorPath(username: string): string {
   const clean = username.startsWith('@') ? username.slice(1) : username;
-  return `${base}/authors/${clean}`;
+  return `${base()}/authors/${clean}`;
 }
 
 export async function getAuthor(username: string): Promise<Author> {
@@ -114,7 +114,7 @@ export interface ExploreTag {
 export async function explore(
   params?: ExploreParams,
 ): Promise<{ items: (ExploreCrux | ExploreAuthor)[]; totalPages: number; currentPage: number }> {
-  const url = new URL(`${base}/explore`);
+  const url = new URL(`${base()}/explore`);
   if (params?.q) url.searchParams.set('q', params.q);
   if (params?.type) url.searchParams.set('type', params.type);
   if (params?.sort) url.searchParams.set('sort', params.sort);
@@ -137,7 +137,7 @@ export async function explore(
 }
 
 export async function exploreTags(limit?: number, kind?: string): Promise<ExploreTag[]> {
-  const url = new URL(`${base}/explore/tags`);
+  const url = new URL(`${base()}/explore/tags`);
   if (kind) url.searchParams.set('kind', kind);
   if (limit) url.searchParams.set('limit', String(limit));
   const res = await fetch(url.toString());

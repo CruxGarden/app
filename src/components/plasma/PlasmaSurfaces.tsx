@@ -24,7 +24,9 @@ const FUSING = ['.mosaic.crux-mosaic-theme .mosaic-window', '.bg-panel', '.bg-ga
   ',',
 );
 
-const FIXED = ['.bg-toolbar', '.bg-public-top-bar', '.bg-mood-bar', '.crux-taskbar'].join(',');
+const FIXED = ['.bg-toolbar', '.bg-public-top-bar', '.bg-mood-bar'].join(',');
+/** Set by PlasmaOverlay on a ground surface it has taken over. */
+export const CLAIMED_ATTR = 'data-plasma-claimed';
 
 /**
  * A surface is a container, not a control. The panel classes are shared with
@@ -42,6 +44,9 @@ const MIN_SIDE = 96;
 
 function isSurface(el: HTMLElement) {
   if (CONTROLS.has(el.tagName)) return false;
+  // Claimed by an overlay (a menu growing out of the top bar draws the bar on
+  // its own canvas meanwhile): the ground leaves it alone until it is back.
+  if (el.hasAttribute(CLAIMED_ATTR)) return false;
   // A dialog lives above the scrim, where the canvas cannot reach; it paints
   // its own plate (plasma.css) and must not register, or the material draws
   // its shape under the scrim and squares off the corners of whatever it
@@ -68,7 +73,8 @@ export default function PlasmaSurfaces() {
 
     const radiusOf = (el: HTMLElement) => {
       const r = parseFloat(getComputedStyle(el).borderTopLeftRadius);
-      return Number.isFinite(r) && r > 0 ? r : 14;
+      // 0 is a corner too (Daniel: hard edges when the radius is 0).
+      return Number.isFinite(r) && r >= 0 ? r : 14;
     };
 
     const sync = () => {
@@ -76,9 +82,11 @@ export default function PlasmaSurfaces() {
       document.querySelectorAll<HTMLElement>(FUSING).forEach((el) => {
         if (isSurface(el)) wanted.add(el);
       });
-      document.querySelectorAll<HTMLElement>(FIXED).forEach((el) => {
-        if (isSurface(el)) wanted.add(el);
-      });
+      // Flat chrome (the Mood's plasmaChrome): the docks are not surfaces.
+      if (document.documentElement.getAttribute('data-plasma-chrome') !== 'flat')
+        document.querySelectorAll<HTMLElement>(FIXED).forEach((el) => {
+          if (isSurface(el)) wanted.add(el);
+        });
 
       for (const [el, handle] of handles) {
         if (!wanted.has(el) || !el.isConnected) {
@@ -98,6 +106,9 @@ export default function PlasmaSurfaces() {
             // it, and reads as a dock rather than a pane, so it floats higher.
             elevation: el.matches(FIXED) ? 0.5 : null,
             fuse: FUSE_PANES && !el.matches(FIXED),
+            // A dock handed to an overlay must not shrink away on the ground
+            // while the overlay's copy stands in for it: it leaves at once.
+            formOut: el.matches(FIXED) ? false : null,
           }),
         );
       });
@@ -118,23 +129,37 @@ export default function PlasmaSurfaces() {
     };
 
     const touchesSurfaces = (records: MutationRecord[]) =>
-      records.some((r) =>
-        [...r.addedNodes, ...r.removedNodes].some(
-          (n) =>
-            n.nodeType === Node.ELEMENT_NODE &&
-            ((n as Element).matches(FUSING) ||
-              (n as Element).matches(FIXED) ||
-              !!(n as Element).querySelector(FUSING) ||
-              !!(n as Element).querySelector(FIXED)),
-        ),
+      records.some(
+        (r) =>
+          r.type === 'attributes' ||
+          [...r.addedNodes, ...r.removedNodes].some(
+            (n) =>
+              n.nodeType === Node.ELEMENT_NODE &&
+              ((n as Element).matches(FUSING) ||
+                (n as Element).matches(FIXED) ||
+                !!(n as Element).querySelector(FUSING) ||
+                !!(n as Element).querySelector(FIXED)),
+          ),
       );
 
     sync();
+    // A Mood change moves the corner radius (Office asks for 0 where Plasma
+    // had 16); the surfaces already registered take the new one.
+    const recorner = () => {
+      for (const [el, handle] of handles) handle.update({ radius: radiusOf(el) });
+    };
+    document.addEventListener('palette-change', recorner);
     const observer = new MutationObserver((records) => {
       if (touchesSurfaces(records)) schedule();
     });
-    observer.observe(document.body, { childList: true, subtree: true });
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: [CLAIMED_ATTR],
+    });
     return () => {
+      document.removeEventListener('palette-change', recorner);
       observer.disconnect();
       if (queued) cancelAnimationFrame(queued);
       handles.forEach((h) => h.remove());

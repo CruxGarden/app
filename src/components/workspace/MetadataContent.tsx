@@ -13,12 +13,21 @@ const VISIBILITY_COLORS: Record<CruxVisibility, string> = {
   private: 'bg-error-muted text-error',
 };
 
-const KIND_OPTIONS: (CruxKind | undefined)[] = [undefined, 'webapp', 'page', 'document', 'image'];
+// 'tool' marks a Crux Tool's Template Crux (ADR 0050): published whole, installed by cloning.
+const KIND_OPTIONS: (CruxKind | undefined)[] = [
+  undefined,
+  'webapp',
+  'page',
+  'document',
+  'image',
+  'tool',
+];
 const KIND_LABELS: Record<string, string> = {
   webapp: 'Web App',
   page: 'Page',
   document: 'Document',
   image: 'Image',
+  tool: 'Tool template',
 };
 
 // ── Field Components ─────────────────────────────────

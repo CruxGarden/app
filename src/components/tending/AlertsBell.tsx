@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import PlasmaOverlay from '@/components/plasma/PlasmaOverlay';
 import { useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/cn';
 import { useDismiss } from '@/hooks/useDismiss';
@@ -29,6 +30,11 @@ export default function AlertsBell() {
   const navigate = useNavigate();
   const close = useCallback(() => setShown(false), []);
   useDismiss(ref, close, shown);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const barRef = useRef<HTMLElement | null>(null);
+  useEffect(() => {
+    barRef.current = ref.current?.closest<HTMLElement>('.bg-toolbar') ?? null;
+  }, [shown]);
   // Escape closes the list, like any menu.
   useEffect(() => {
     if (!shown) return;
@@ -80,8 +86,24 @@ export default function AlertsBell() {
         )}
       </IconButton>
       {shown && (
-        <div className="absolute left-0 top-full w-80 pt-2 z-50" data-testid="alerts-menu">
-          <div className="bg-dropdown border border-dropdown-border rounded-dropdown shadow-dropdown py-1 max-h-[60vh] overflow-y-auto">
+        <div
+          className="absolute left-0 top-full w-80 pt-2 z-50"
+          data-testid="alerts-menu"
+          data-plasma-host
+        >
+          {/* Under Plasma the inbox is the top bar's material grown down (PlasmaOverlay). */}
+          <PlasmaOverlay
+            surfaces={[
+              { ref: barRef, radius: 14, fuse: true, formIn: false, elevation: 0.5, claim: true },
+              { ref: panelRef, radius: 12, fuse: true, elevation: 0.5 },
+            ]}
+            zIndex={-1}
+            canvasStyle={{ position: 'fixed' }}
+          />
+          <div
+            ref={panelRef}
+            className="bg-dropdown border border-dropdown-border rounded-dropdown shadow-dropdown py-1 max-h-[60vh] overflow-y-auto"
+          >
             <div className="px-3 py-2 flex items-center justify-between border-b border-border">
               <span className="text-xs font-display font-medium text-text">Alerts</span>
               <span className="text-2xs font-mono text-text-muted">

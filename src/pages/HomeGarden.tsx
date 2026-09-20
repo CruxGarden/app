@@ -18,7 +18,7 @@ import TrashSection from '@/components/garden/TrashSection';
 import Cruxspaces from '@/components/garden/Cruxspaces';
 import { TRASH_RETENTION_DAYS } from '@/stores/gardenStore';
 import { openGardenPage } from '@/lib/public-url';
-import { IconButton, Modal, Button } from '@/components/ui';
+import { IconButton, Modal, Button, PlasmaButton } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import { GlobeIcon, PlusCircleIcon } from '@/components/ui/icons';
 import { useAuthStore } from '@/stores/authStore';
@@ -27,8 +27,17 @@ import * as cruxesApi from '@/api/cruxes';
 export default function HomeGarden() {
   const author = useAppStore((s) => s.author);
   const avatarUrl = useAvatarUrl(author);
-  const { cruxList, loading, search, sortBy, setSearch, setSortBy, handleClearSearch, deleteCrux, refresh } =
-    useGarden();
+  const {
+    cruxList,
+    loading,
+    search,
+    sortBy,
+    setSearch,
+    setSortBy,
+    handleClearSearch,
+    deleteCrux,
+    refresh,
+  } = useGarden();
   const navigate = useMoodNavigate();
 
   const tendingRows = useTendingRows();
@@ -120,7 +129,8 @@ export default function HomeGarden() {
         void handleDropFiles(e.dataTransfer);
       }}
       data-dropping={dropping || undefined}
-      data-testid="home-drop">
+      data-testid="home-drop"
+    >
       {/* Header + Search panel */}
       <div className="bg-panel border border-border rounded-[var(--radius)] p-4 sm:p-5 mb-6">
         <div className="flex items-center justify-between gap-3 mb-4">
@@ -228,7 +238,7 @@ export default function HomeGarden() {
           <p className="text-sm text-text-muted max-w-[34ch] mb-5">
             Start from a template or a blank page and talk to the AI to grow it.
           </p>
-          <Button onClick={() => setShowNewCrux(true)}>Plant your first crux</Button>
+          <PlasmaButton onClick={() => setShowNewCrux(true)}>Plant your first crux</PlasmaButton>
         </div>
       ) : (
         <GardenGrid

@@ -1,4 +1,5 @@
 import { includedUsage } from '@/api/inference';
+import PlasmaOverlay from '@/components/plasma/PlasmaOverlay';
 import { useAuthStore } from '@/stores/authStore';
 import { useState, useRef, useCallback, useEffect, useLayoutEffect } from 'react';
 import { ChevronDownIcon } from '@/components/ui/icons';
@@ -93,6 +94,7 @@ export default function ModelSelector({ value, onChange, disabled }: ModelSelect
 
   const close = useCallback(() => setOpen(false), []);
   useDismiss(menuRef, close, open);
+  const pickerRef = useRef<HTMLDivElement>(null);
 
   useLayoutEffect(() => {
     if (!open) return;
@@ -181,6 +183,22 @@ export default function ModelSelector({ value, onChange, disabled }: ModelSelect
         />
       </button>
 
+      {/* Under Plasma the picker is a raised surface of the material: the canvas sits
+
+
+          beside the animated menu, not inside it — a transform would misplace a fixed
+
+
+          canvas — one step below the menu in the pane's own stacking order. */}
+
+      {open && (
+        <PlasmaOverlay
+          surfaces={[{ ref: pickerRef, radius: 12, elevation: 0.6 }]}
+          zIndex={49}
+          canvasStyle={{ position: 'fixed' }}
+        />
+      )}
+
       <AnimatePresence>
         {open && (
           <motion.div
@@ -195,9 +213,11 @@ export default function ModelSelector({ value, onChange, disabled }: ModelSelect
               'absolute left-0 z-50 min-w-48',
               placement.side === 'top' ? 'bottom-full mb-1' : 'top-full mt-1',
             )}
+            data-plasma-host
           >
             <GlassSurface role="dropdown">
               <div
+                ref={pickerRef}
                 style={{ maxHeight: placement.maxHeight || undefined }}
                 className="w-full overflow-y-auto bg-model-selector-dropdown border border-model-selector-border rounded-dropdown shadow-dropdown py-1"
               >

@@ -10,7 +10,7 @@ export default function TendingLink({ cruxId }: { cruxId?: string }) {
   return (
     <Link
       to="/tending"
-      className="text-xs text-accent hover:underline px-2 py-1"
+      className="text-xs text-accent px-2 py-1 rounded-[var(--radius-sm)] hover:bg-action-button-hover"
       aria-label={
         cruxId ? `${count} need tending` : `Tending${count ? `, ${count} need tending` : ''}`
       }

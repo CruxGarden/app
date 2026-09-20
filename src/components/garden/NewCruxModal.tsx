@@ -9,7 +9,7 @@ import { setSetting } from '@/services/settings';
 import { SettingsKey } from '@/lib/constants';
 import { importCrux } from '@/services/crux-io';
 import { useGardenStore } from '@/stores/gardenStore';
-import { Modal, Button } from '@/components/ui';
+import { Modal, Button, PlasmaButton } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import { FIVE_WS_NAME, FIVE_WS_TEMPLATE_ID, FIVE_WS_TAGLINE } from '@/templates';
 import { applyTemplateToCrux } from '@/services/crux-create';
@@ -17,7 +17,8 @@ import type { CruxKind } from '@/api/types';
 import { Capability, can } from '@/lib/platform';
 import { alertDialog } from '@/stores/dialogStore';
 import { HomeIcon, LayoutIcon, PencilIcon } from '@/components/ui/icons';
-import { toolManifests, isToolAvailable } from '@/services/crux-tools/registry';
+import { toolManifests, isToolAvailable, toolManifest } from '@/services/crux-tools/registry';
+import { useInstalledTools, installToolFromCrux } from '@/services/crux-tools/installed';
 import type { ToolIcon } from '@/services/crux-tools/manifest';
 
 // ── Templates ────────────────────────────────────────────
@@ -480,6 +481,8 @@ export default function NewCruxModal({ open, onClose }: NewCruxModalProps) {
   const [importing, setImporting] = useState(false);
   const [importProgress, setImportProgress] = useState({ done: 0, total: 0 });
 
+  // Installed tools count as available; re-render as one arrives (Explore → Install).
+  useInstalledTools();
   const template = (TEMPLATES.find((t) => t.id === selectedTemplate) ?? TEMPLATES[0])!;
 
   const reset = () => {
@@ -502,6 +505,24 @@ export default function NewCruxModal({ open, onClose }: NewCruxModalProps) {
           mode: 'clone',
           onProgress: (done, total) => setImportProgress({ done, total }),
         });
+
+        // A Crux Tool's package (its Template Crux, `meta.template` a tool
+        // this build lacks) installs the tool instead of opening as a Crux:
+        // the Crux becomes the tool's Template Crux and the picker's Create works.
+        const imported = await getServices().crux.findById(result.cruxId);
+        const toolId = typeof imported?.meta?.template === 'string' ? imported.meta.template : null;
+        if (toolId && toolManifest(toolId) && !isToolAvailable(toolId)) {
+          const tool = await installToolFromCrux(result.cruxId);
+          if (tool) {
+            refresh();
+            setSelectedTemplate(toolId);
+            void alertDialog(
+              `${toolManifest(toolId)!.name} is installed. Create from it here whenever you like.`,
+              'Tool installed',
+            );
+            return;
+          }
+        }
 
         if (!result.layout && isEmbeddedApp(await getServices().crux.findById(result.cruxId)))
           useUIStore.getState().seedCruxLayout(result.cruxId, 27);
@@ -713,6 +734,7 @@ export default function NewCruxModal({ open, onClose }: NewCruxModalProps) {
               {TEMPLATES.filter((t) => !t.desktopOnly || can(Capability.Build)).map((t) => (
                 <button
                   key={t.id}
+                  data-template-id={t.id}
                   onClick={() => {
                     setSelectedTemplate(t.id);
                     if (!titleEdited && t.defaultTitle) {
@@ -748,7 +770,7 @@ export default function NewCruxModal({ open, onClose }: NewCruxModalProps) {
                       {t.label}
                       {!isToolAvailable(t.id) && (
                         <span className="ml-2 text-2xs font-mono text-text-muted">
-                          not in this build
+                          not installed
                         </span>
                       )}
                     </span>
@@ -764,8 +786,8 @@ export default function NewCruxModal({ open, onClose }: NewCruxModalProps) {
           </div>
           {!isToolAvailable(template.id) ? (
             <p className="text-xxs text-text-muted mt-1.5 shrink-0" data-testid="tool-not-bundled">
-              {template.label} is not included in this build. Install it from its .crux package to
-              create from it.
+              {template.label} is not installed. Install it from Explore, or from its .crux package,
+              to create from it.
             </p>
           ) : (
             template.id !== 'blank' && (
@@ -853,16 +875,28 @@ export default function NewCruxModal({ open, onClose }: NewCruxModalProps) {
             </Button>
           )}
           {isToolAvailable(template.id) ? (
-            <Button onClick={() => handleCreate()} loading={creating} disabled={importing}>
+            <PlasmaButton onClick={() => handleCreate()} loading={creating} disabled={importing}>
               Create
-            </Button>
+            </PlasmaButton>
           ) : (
-            <Button
-              onClick={() => importInputRef.current?.click()}
-              disabled={creating || importing}
-            >
-              Install from .crux…
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="secondary"
+                onClick={() => importInputRef.current?.click()}
+                disabled={creating || importing}
+              >
+                Install from .crux…
+              </Button>
+              <Button
+                onClick={() => {
+                  onClose();
+                  useUIStore.getState().openExplore('tool');
+                }}
+                disabled={creating || importing}
+              >
+                Install from Explore
+              </Button>
+            </div>
           )}
         </div>
         {createError && (

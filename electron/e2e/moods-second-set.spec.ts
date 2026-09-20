@@ -37,7 +37,10 @@ test('the second set of bundled Moods applies and paints', async () => {
   const evidence = resolve(__dirname, '../../docs/moods-second-set');
   mkdirSync(evidence, { recursive: true });
   const cssVar = (name: string) =>
-    page.evaluate((n) => getComputedStyle(document.documentElement).getPropertyValue(n).trim(), name);
+    page.evaluate(
+      (n) => getComputedStyle(document.documentElement).getPropertyValue(n).trim(),
+      name,
+    );
   try {
     await page.setViewportSize({ width: 1600, height: 1000 });
     await page.getByRole('button', { name: /enter/i }).click();
@@ -48,19 +51,26 @@ test('the second set of bundled Moods applies and paints', async () => {
     await page.getByRole('button', { name: 'Create', exact: true }).click();
     await expect(page.locator('.mosaic-window.pane-collaboration')).toBeVisible();
     await page.getByRole('button', { name: 'Mood', exact: true }).click();
-    await expect(page.getByTestId('bundled-moods').locator('[data-testid^="bundled-"]')).toHaveCount(36);
+    await expect(
+      page.getByTestId('bundled-moods').locator('[data-testid^="bundled-"]'),
+    ).toHaveCount(36);
     await page.keyboard.press('Escape');
     for (const mood of SECOND_SET) {
       await applyMood(page, mood.id);
       await expect.poll(() => cssVar('--accent'), { timeout: 30_000 }).toBe(mood.accent);
-      await expect.poll(() => page.evaluate(() => document.documentElement.dataset.surfaceStyle)).toBe('glass');
+      await expect
+        .poll(() => page.evaluate(() => document.documentElement.dataset.surfaceStyle))
+        .toBe('glass');
       await expect.poll(() => cssVar('--background-type')).toBe('image');
       await expect(page.getByTestId('mood-background-image')).toBeVisible();
       await expect
-        .poll(() => page.evaluate(() => document.documentElement.dataset.theme ?? document.documentElement.className))
+        .poll(() =>
+          page.evaluate(
+            () => document.documentElement.dataset.theme ?? document.documentElement.className,
+          ),
+        )
         .toMatch(mood.light ? /light/i : /dark/i);
       // the intro veil names the Mood for a moment; the shot is of the workspace under it
-      await expect(page.getByTestId('mood-intro')).toHaveCount(0, { timeout: 20_000 });
       await page.mouse.move(800, 900);
       await page.waitForTimeout(400);
       await page.screenshot({ path: join(evidence, `${mood.id}.png`) });

@@ -130,7 +130,7 @@ describe('token coverage', () => {
     /^(bloom\d|bloom(Opacity|Blur|Speed)|star[A-Z]\w*|drift[A-Z]\w*|flow(Speed|Color|Bg))$/;
   // Per-pane tokens are rebound by pattern in globals.css and read in TopBar via template strings.
   const paneRe =
-    /^pane(Collaboration|Artifacts|Workshop|Details|History|Export|Sync|Publish|Store)([A-Z].*)$/;
+    /^pane(Collaboration|Artifacts|Workshop|Details|History|Export|Sync|Publish|Store|Tasks)([A-Z].*)$/;
 
   // Font-face slots are read by key: lib/moods/assets.ts maps them to the
   // @font-face family it registers (FONT_FACE_FAMILIES), not to a CSS variable.

@@ -86,6 +86,9 @@ export function isMoqira(crux: { meta?: Record<string, unknown> } | null | undef
 export function isEmbeddedApp(
   crux: { kind?: string; meta?: Record<string, unknown> } | null | undefined,
 ) {
+  // A Crux Tool's Template Crux (ADR 0050) is a package, not a project: it
+  // publishes whole — runtime and all — for other gardens to install from.
+  if (crux?.kind === 'tool') return false;
   return (
     !!nativeAppType(crux) ||
     crux?.kind === 'notes' ||
@@ -138,7 +141,12 @@ export function samplerType(
   return TYPES.includes(type) ? type : null;
 }
 /** Apps whose Crux stays on this machine: no public edition, so no Share. A form publishes its viewer edition. */
-export function isLocalCreationTool(crux: { meta?: Record<string, unknown> } | null | undefined) {
+export function isLocalCreationTool(
+  crux: { kind?: string; meta?: Record<string, unknown> } | null | undefined,
+) {
+  // A Tool template publishes whatever its tool's share rule says: the
+  // package is the thing being shared, not a creation made with it.
+  if (crux?.kind === 'tool') return false;
   const manifest = manifestFor(crux);
   if (manifest) return !manifest.share;
   return (

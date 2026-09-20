@@ -1,6 +1,13 @@
+import { installedTool } from './crux-tools/installed';
+import { toolManifest } from './crux-tools/registry';
 import type { Crux, CruxKind, ChatMessage } from '@/api/types';
 import { getServices } from './index';
-import { loadTemplate, applyTemplateMeta, type TemplateLayout } from '@/templates';
+import {
+  loadTemplate,
+  applyTemplateMeta,
+  templateFromManifest,
+  type TemplateLayout,
+} from '@/templates';
 import { syncAgentsMd } from './agents-md';
 
 /**
@@ -25,8 +32,34 @@ export async function applyTemplateToCrux(
   templateId: string,
   kind: CruxKind,
 ): Promise<TemplateApplyResult> {
-  const def = await loadTemplate(templateId);
+  let def = await loadTemplate(templateId);
   const services = getServices();
+  // A tool installed into this garden rather than built in: its files are
+  // the Template Crux's Artifacts, cloned here by fingerprint — no bytes
+  // move — and its meta comes from the manifest as for a bundled tool.
+  const installed = !def ? installedTool(templateId) : null;
+  const manifest = installed ? toolManifest(templateId) : null;
+  if (installed && manifest) {
+    const source = await services.artifact.findByResource('crux', installed.cruxId);
+    await services.artifact.registerMany(
+      source
+        .filter((a) => a.fingerprint)
+        .map((a) => {
+          const path = a.meta?.path || a.filename;
+          return {
+            resourceId: crux.id,
+            path,
+            fingerprint: a.fingerprint!,
+            size: a.size,
+            mimeType: a.mimeType,
+            encoding: a.encoding,
+            meta: { path },
+          };
+        }),
+    );
+    // The seeded document is among the cloned files already.
+    def = templateFromManifest({ ...manifest, document: undefined }, []);
+  }
   if (!def) {
     const updated = await services.crux.update(crux.id, { kind });
     await syncAgentsMd(updated, null);

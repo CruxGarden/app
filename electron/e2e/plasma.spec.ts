@@ -17,7 +17,7 @@ import { enterGarden, createCrux } from './multi-crux-helpers';
  * The renderer handle is dev-only (`__plasmaRenderer`), so shape assertions
  * are skipped against a production build; the style assertions always run.
  */
-type Rec = { el: HTMLElement };
+type Rec = { el: HTMLElement; removing?: boolean };
 type Win = Window & { __plasmaRenderer?: { recs: Map<number, Rec> } };
 
 test('plasma: overlays paint a plate, pages wear a dock, controls keep their paint', async () => {
@@ -34,7 +34,11 @@ test('plasma: overlays paint a plate, pages wear a dock, controls keep their pai
     page.evaluate(() => {
       const r = (window as unknown as Win).__plasmaRenderer;
       if (!r) return null;
-      return [...r.recs.values()].map((rec) => rec.el.className.toString());
+      // A removed surface forms out for a quarter second before it leaves the
+      // renderer; it is not a surface the page has.
+      return [...r.recs.values()]
+        .filter((rec) => !rec.removing)
+        .map((rec) => rec.el.className.toString());
     });
   const transparent = 'rgba(0, 0, 0, 0)';
   try {
@@ -42,12 +46,16 @@ test('plasma: overlays paint a plate, pages wear a dock, controls keep their pai
     await enterGarden(page);
     await expect(page.locator('html')).toHaveAttribute('data-surface-style', 'plasma');
 
-    // Home Garden: the panels are the material's, the TopBar is a dock.
-    expect(await bg('header.bg-toolbar')).toMatchObject({ bg: transparent });
+    // Home Garden: the panels are the material's. The TopBar is a dock when
+    // the Mood's chrome is material, and a plain translucent strip the ground
+    // never registers when the chrome is flat (the Plasma Mood, after Tigrana).
+    const barOn = (await page.getAttribute('html', 'data-plasma-chrome')) !== 'flat';
+    if (barOn) expect(await bg('header.bg-toolbar')).toMatchObject({ bg: transparent });
+    else expect((await bg('header.bg-toolbar'))?.bg).not.toBe(transparent);
     const home = await shapes();
     if (home) {
       expect(home.some((c) => c.includes('bg-panel'))).toBe(true);
-      expect(home.some((c) => c.includes('bg-toolbar'))).toBe(true);
+      expect(home.some((c) => c.includes('bg-toolbar'))).toBe(barOn);
     }
 
     // A dialog: drawn by its own overlay canvas above the scrim where the
@@ -84,13 +92,28 @@ test('plasma: overlays paint a plate, pages wear a dock, controls keep their pai
     await page.keyboard.press('Escape');
     await expect(dialog).toHaveCount(0);
 
-    // A menu: plate, and not registered.
+    // A menu: grown out of the top bar on its own overlay canvas where the
+    // material can run (the plate steps aside, the ground hands the bar over),
+    // a painted plate where it cannot; never a shape on the ground canvas.
     await page.getByRole('button', { name: 'Account menu' }).click();
-    const menu = await bg('.bg-dropdown');
-    expect(menu?.bg).not.toBe(transparent);
+    const menuOverlay = page.locator('header [data-plasma-host][data-plasma-overlay]');
+    if (await menuOverlay.count()) {
+      await expect(menuOverlay.locator('canvas')).toHaveCount(1);
+      expect((await bg('.bg-dropdown'))?.bg).toBe(transparent);
+      await expect(page.locator('header.bg-toolbar[data-plasma-claimed]')).toHaveCount(1);
+    } else {
+      expect((await bg('.bg-dropdown'))?.bg).not.toBe(transparent);
+    }
     const withMenu = await shapes();
-    if (withMenu) expect(withMenu.some((c) => c.includes('bg-dropdown'))).toBe(false);
-    await page.keyboard.press('Escape');
+    if (withMenu) {
+      expect(withMenu.some((c) => c.includes('bg-dropdown'))).toBe(false);
+      if (await menuOverlay.count())
+        expect(withMenu.some((c) => c.includes('bg-toolbar'))).toBe(false);
+    }
+    // Closed, the ground takes the bar back.
+    await page.getByRole('button', { name: 'Account menu' }).click();
+    await expect(page.locator('.bg-dropdown')).toHaveCount(0);
+    await expect(page.locator('header.bg-toolbar[data-plasma-claimed]')).toHaveCount(0);
 
     // A page outside the Shell: the same dock, the same height.
     await page.evaluate(() => {
@@ -123,8 +146,12 @@ test('plasma: overlays paint a plate, pages wear a dock, controls keep their pai
     });
     await createCrux(page, 'Plasma gate');
     await page.getByTestId('model-selector').click();
+    // The picker: raised on the pane by its own overlay canvas where the
+    // material can run (plate gone), a painted plate where it cannot.
+    const pickerOverlay = page.locator('[data-plasma-host][data-plasma-overlay]');
     const picker = await bg('.bg-model-selector-dropdown');
-    expect(picker?.bg).not.toBe(transparent);
+    if (await pickerOverlay.count()) expect(picker?.bg).toBe(transparent);
+    else expect(picker?.bg).not.toBe(transparent);
     const inBuilder = await shapes();
     if (inBuilder) {
       expect(inBuilder.some((c) => c.includes('mosaic-window'))).toBe(true);

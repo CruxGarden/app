@@ -662,6 +662,75 @@ function setupIpc() {
       return null;
     }
   };
+  // ── Native tools (MAKING-THE-AD-PARITY gap 13, step 1) ──────────────
+  // Run a bundled binary inside a crux's Project Folder. Only ffmpeg for now.
+  // The working directory is the folder; every path-like argument must stay
+  // inside it; only the `file` protocol is allowed; no shell is involved.
+  ipcMain.handle(
+    'native:run',
+    async (e: any, opts: { cruxId: string; tool: string; args: unknown[]; timeoutMs?: number }) => {
+      if (opts.tool !== 'ffmpeg') throw new Error(`Unknown native tool: ${opts.tool}`);
+      if (!ffmpegPath || !fs.existsSync(ffmpegPath)) throw new Error('FFmpeg not available');
+      const crux = lookupCrux(opts.cruxId);
+      if (!crux) throw new Error('This crux has no Project Folder');
+      const folder = path.resolve(crux.folder);
+      const args = (opts.args ?? []).map((a) => String(a));
+      for (const a of args) {
+        if (a.startsWith('-')) continue;
+        if (/^[a-z][a-z0-9+.-]*:/i.test(a) && !/^[a-z]:[\\/]/i.test(a))
+          throw new Error(`Protocols are not allowed: ${a}`);
+        if (path.isAbsolute(a)) throw new Error(`Use paths relative to the crux folder: ${a}`);
+        if (a.includes('/') || a.includes('\\') || /\.[a-z0-9]{1,5}$/i.test(a)) {
+          const resolved = path.resolve(folder, a);
+          if (resolved !== folder && !resolved.startsWith(folder + path.sep))
+            throw new Error(`Path outside the crux folder: ${a}`);
+        }
+      }
+      // ffmpeg does not create directories; its output is its last argument.
+      // A folder under the crux (exports/, x-frames/) is made for it.
+      const last = args.at(-1);
+      if (last && !last.startsWith('-'))
+        fs.mkdirSync(path.dirname(path.resolve(folder, last)), { recursive: true });
+      const full = ['-nostdin', '-hide_banner', '-protocol_whitelist', 'file,pipe', ...args];
+      const started = Date.now();
+      return new Promise<{ code: number; ms: number; stderrTail: string }>((resolve, reject) => {
+        const proc = execFile(ffmpegPath, full, {
+          cwd: folder,
+          maxBuffer: 50 * 1024 * 1024,
+          timeout: Math.min(opts.timeoutMs ?? 10 * 60_000, 30 * 60_000),
+        });
+        let stderr = '';
+        let duration = 0;
+        proc.stderr?.on('data', (chunk: string) => {
+          stderr += chunk;
+          if (stderr.length > 200_000) stderr = stderr.slice(-100_000);
+          const durMatch = stderr.match(/Duration:\s+(\d+):(\d+):(\d+\.\d+)/);
+          if (durMatch && !duration)
+            duration =
+              parseInt(durMatch[1]!) * 3600 +
+              parseInt(durMatch[2]!) * 60 +
+              parseFloat(durMatch[3]!);
+          const timeMatch = chunk.toString().match(/time=(\d+):(\d+):(\d+\.\d+)/);
+          if (timeMatch && duration > 0) {
+            const current =
+              parseInt(timeMatch[1]!) * 3600 +
+              parseInt(timeMatch[2]!) * 60 +
+              parseFloat(timeMatch[3]!);
+            e.sender.send('native:progress', {
+              cruxId: opts.cruxId,
+              tool: opts.tool,
+              progress: Math.min(current / duration, 1),
+            });
+          }
+        });
+        proc.on('close', (code: number) =>
+          resolve({ code: code ?? -1, ms: Date.now() - started, stderrTail: stderr.slice(-2000) }),
+        );
+        proc.on('error', reject);
+      });
+    },
+  );
+
   agentHost = new AgentHost({
     lookupCrux,
     resolveKnownFolder: (folder: string) => projects.resolveKnownFolder(folder),

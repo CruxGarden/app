@@ -32,9 +32,15 @@ test.describe('motion roles', () => {
       const dialog = page.locator('[data-motion-role="dialog"]').first();
       const choice = () => dialog.getAttribute('data-motion-choice');
 
-      // Fractal Garden (the Default Mood) drifts dialogs in
-      expect(await cssVar('--motion-enter-dialog')).toBe('drift');
-      expect(await choice()).toBe('drift');
+      // Plasma, the Default Mood, moves nothing but the material; Fractal
+      // Garden, a HyperMood, drifts dialogs in.
+      expect(await cssVar('--motion-enter-dialog')).toBe('none');
+      await built
+        .getByTestId('bundled-digital-fractal-garden')
+        .getByRole('button', { name: 'Apply' })
+        .click();
+      await expect.poll(() => cssVar('--motion-enter-dialog')).toBe('drift');
+      await expect.poll(choice).toBe('drift');
       // The enter settled at the rest state Motion wrote inline
       await expect(dialog).toHaveCSS('opacity', '1');
 
@@ -124,12 +130,20 @@ test.describe('motion roles', () => {
       await page.getByRole('button', { name: 'Welcome' }).click();
       await expect(page.getByRole('region', { name: 'Mood Bar' })).toBeVisible({ timeout: 30_000 });
 
+      // Plasma, the Default Mood, sets every role to none; the roles are
+      // exercised under Fractal Garden, a HyperMood that carries them.
+      await page.getByRole('button', { name: 'Mood', exact: true }).click();
+      await page
+        .getByTestId('bundled-moods')
+        .getByTestId('bundled-digital-fractal-garden')
+        .getByRole('button', { name: 'Apply' })
+        .click();
+      await expect.poll(() => root('--motion-enter-dialog')).toBe('drift');
       // System, no OS preference: the Mood's default (normal)
       expect(await level()).toBe('normal');
       expect(await root('--motion-intensity-scale')).toBe('1');
       expect(await probe('motion-attention', 'animationName')).toBe('motion-pulse');
 
-      await page.getByRole('button', { name: 'Mood', exact: true }).click();
       const control = page.getByRole('combobox', { name: 'Motion intensity' });
       await expect(control).toHaveValue('system');
 
@@ -200,8 +214,16 @@ test.describe('motion roles', () => {
       await page.getByPlaceholder('My Crux').fill('Moving picture');
       await page.getByRole('button', { name: 'Create', exact: true }).click();
       await expect(page.locator('[data-workspace-id]')).toBeVisible();
-      // Fractal Garden fades panes: the new screen fades in
-      expect(await pane()).toBe('fade');
+      // Plasma, the Default Mood, moves nothing; Fractal Garden fades panes.
+      expect(await pane()).toBe('none');
+      await page.getByRole('button', { name: 'Mood', exact: true }).click();
+      await page
+        .getByTestId('bundled-moods')
+        .getByTestId('bundled-digital-fractal-garden')
+        .getByRole('button', { name: 'Apply' })
+        .click();
+      await expect.poll(pane).toBe('fade');
+      await page.keyboard.press('Escape');
 
       await page.evaluate(() => {
         const w = window as unknown as { __vt: number };
@@ -236,41 +258,6 @@ test.describe('motion roles', () => {
         .getByRole('button', { name: 'Apply' })
         .click();
       await expect.poll(pane).toBe('none');
-    } finally {
-      await app.close();
-    }
-  });
-
-  /**
-   * Set pieces (ADR 0041): wearing a Mood plays its intro — a GSAP timeline on
-   * the Mood's durations — and nothing plays under an intensity below normal.
-   */
-  test('wearing a Mood plays its intro; off and subtle keep it quiet', async () => {
-    const { app, page } = await launchApp();
-    try {
-      await page.getByRole('button', { name: /enter/i }).click();
-      await page.getByText('Plant a new garden').click();
-      await page.getByRole('button', { name: 'Welcome' }).click();
-      await expect(page.getByRole('region', { name: 'Mood Bar' })).toBeVisible({ timeout: 30_000 });
-      await page.getByRole('button', { name: 'Mood', exact: true }).click();
-      const built = page.getByTestId('bundled-moods');
-      const intro = page.getByTestId('mood-intro');
-
-      await built
-        .getByTestId('bundled-coral-castle')
-        .getByRole('button', { name: 'Apply' })
-        .click();
-      await expect(intro).toBeVisible();
-      await expect(intro).toContainText('Coral Castle');
-      // It never takes the pointer: the modal underneath stays usable while it plays
-      await expect(intro).toHaveCSS('pointer-events', 'none');
-      await expect(intro).toHaveCount(0, { timeout: 20_000 });
-
-      await page.getByRole('combobox', { name: 'Motion intensity' }).selectOption('subtle');
-      await built.getByTestId('bundled-raster-bars').getByRole('button', { name: 'Apply' }).click();
-      await expect(page.getByText('Now wearing "Raster Bars".')).toBeVisible();
-      await page.waitForTimeout(600);
-      await expect(intro).toHaveCount(0);
     } finally {
       await app.close();
     }

@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import PlasmaOverlay from '@/components/plasma/PlasmaOverlay';
 import { useWorkspaceUIStore as useUIStore } from '@/stores/uiStore';
 import { useDismiss } from '@/hooks/useDismiss';
 import { AnimatePresence, motion } from 'motion/react';
@@ -47,6 +48,7 @@ export default function ContextMenu({
 
   // Close on click outside
   useDismiss(ref, hideContextMenu, contextMenu.visible);
+  const panelRef = useRef<HTMLDivElement>(null);
 
   // Close on Escape
   useEffect(() => {
@@ -172,9 +174,18 @@ export default function ContextMenu({
           exit={role.exit}
           className="fixed z-50 min-w-[140px]"
           style={{ left: x, top: y }}
+          data-plasma-host
         >
+          <PlasmaOverlay
+            surfaces={[{ ref: panelRef, radius: 12, elevation: 0.6 }]}
+            zIndex={45}
+            portal
+          />
           <GlassSurface role="dropdown">
-            <div className="w-full bg-dropdown border border-dropdown-border rounded-dropdown shadow-dropdown py-1 overflow-hidden">
+            <div
+              ref={panelRef}
+              className="w-full bg-dropdown border border-dropdown-border rounded-dropdown shadow-dropdown py-1 overflow-hidden"
+            >
               {items.map((item) => (
                 <button
                   key={item.label}

@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback, lazy, Suspense } from 'react';
+import PlasmaOverlay from '@/components/plasma/PlasmaOverlay';
 import { Link } from 'react-router-dom';
 import { useMoodNavigate } from '@/hooks/useMoodNavigate';
 import { cn } from '@/lib/cn';
@@ -69,6 +70,7 @@ export default function CruxCard({
 
   const closeMenu = useCallback(() => setMenuOpen(false), []);
   useDismiss(menuRef, closeMenu, menuOpen);
+  const actionsRef = useRef<HTMLDivElement>(null);
 
   return (
     <div
@@ -149,7 +151,7 @@ export default function CruxCard({
 
       {/* Three-dot menu */}
       {!hideMenu && (
-        <div ref={menuRef} className="absolute top-2 right-2 z-10">
+        <div ref={menuRef} className="absolute top-2 right-2 z-10" data-plasma-host>
           <button
             onClick={(e) => {
               e.stopPropagation();
@@ -166,7 +168,15 @@ export default function CruxCard({
             <MoreVerticalIcon size={14} />
           </button>
           {menuOpen && (
+            <PlasmaOverlay
+              surfaces={[{ ref: actionsRef, radius: 12, elevation: 0.6 }]}
+              zIndex={-1}
+              canvasStyle={{ position: 'fixed' }}
+            />
+          )}
+          {menuOpen && (
             <div
+              ref={actionsRef}
               role="menu"
               className="absolute right-0 top-full mt-1 w-32 bg-dropdown border border-dropdown-border rounded-dropdown shadow-dropdown py-1 z-50"
             >

@@ -60,7 +60,8 @@ test.describe('publish (mocked API)', () => {
       // backed up at the shared snapshot: the pane has nothing to say about the backup
       await expect(page.getByTestId('backup-standing')).toHaveCount(0);
       await expect(page.getByText('v1', { exact: true })).toBeVisible();
-      await expect(page.getByText(/crux\.garden\/tester\//)).toBeVisible();
+      // the address: crux.garden on dist, the dev server's origin under CRUX_DEV_SERVER
+      await expect(page.getByText(/\/tester\/[a-z0-9-]+$/)).toBeVisible();
       expect(api.log.some((l) => l.startsWith('POST /cruxes ->'))).toBe(true);
       expect(
         api.log.some((l) => l.startsWith(`POST /cruxes/${api.state.crux!.id as string}/publish`)),

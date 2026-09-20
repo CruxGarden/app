@@ -43,6 +43,12 @@ export const TOKEN_CHOICES: Record<string, readonly string[]> = {
   cardBorderStyle: ['solid', 'double', 'dashed', 'none'],
   // ── glass (glass.css) ──
   surfaceStyle: ['solid', 'glass', 'plasma'],
+  plasmaFormIn: ['on', 'off'],
+  plasmaFormOut: ['on', 'off'],
+  plasmaAmbientDrops: ['on', 'off'],
+  plasmaPointerDrop: ['on', 'off'],
+  plasmaPointerPull: ['on', 'off'],
+  plasmaPointerLight: ['on', 'off'],
   // ── icons (ui/icons) ──
   iconSet: ICON_SETS,
 };
@@ -71,6 +77,7 @@ const PANES: { id: string; label: string }[] = [
   { id: 'Sync', label: 'Sync' },
   { id: 'Publish', label: 'Share' },
   { id: 'Store', label: 'Store' },
+  { id: 'Tasks', label: 'Tasks' },
 ];
 
 const LAYOUT_KEYS = new Set([
@@ -106,11 +113,36 @@ const LAYOUT_KEYS = new Set([
   'plasmaRim',
   'plasmaRimWidth',
   'plasmaElevation',
+  'plasmaFlow',
+  'plasmaStretch',
+  'plasmaViscosity',
+  'plasmaAmbientDrops',
+  'plasmaFormIn',
+  'plasmaFormSpeed',
+  'plasmaFormOut',
+  'plasmaPointerDrop',
+  'plasmaPointerPull',
+  'plasmaPointerLight',
+  'plasmaChrome',
+  'plasmaBackground',
+  'plasmaTextShadow',
+  'plasmaRimColor',
+  'plasmaSmoothness',
+  'plasmaBlend',
+  'plasmaEdgeLine',
+  'plasmaWash',
+  'plasmaShimmer',
+  'plasmaGlow',
+  'plasmaGrain',
+  'plasmaChromePlate',
+  'plasmaChromeDialog',
+  'plasmaChromeFrost',
   'paneRadius',
   'paneBorderWidth',
   'paneHeaderHeight',
   'paneHeaderRadius',
   'paneHeaderPadding',
+  'paneBodyPadding',
   'workspacePadding',
   'density',
 ]);
@@ -118,6 +150,7 @@ const TYPE_KEYS = new Set([
   'fontDisplay',
   'fontBody',
   'fontMono',
+  'fontReading',
   'fontScale',
   'lineHeightBody',
   'fontWeightBody',
@@ -171,7 +204,12 @@ const TEXTURE_KEYS = new Set([
   'workspaceTextureOpacity',
   'grainOpacity',
 ]);
-const FONT_ASSET_KEYS = new Set(['fontFaceDisplay', 'fontFaceBody', 'fontFaceMono']);
+const FONT_ASSET_KEYS = new Set([
+  'fontFaceDisplay',
+  'fontFaceBody',
+  'fontFaceMono',
+  'fontFaceReading',
+]);
 const GRID_KEYS = new Set([
   'gardenCardMinWidth',
   'gardenCardAspect',
@@ -402,7 +440,7 @@ export function tokenKind(key: string): TokenKind {
   if (/^motionEase|^motionSpring/.test(key)) return 'text';
   if (/^glass(Opacity|Saturation)$/.test(key)) return 'text';
   if (
-    /^(glassRefraction|plasmaRefraction|plasmaDispersion|plasmaOpacity|plasmaFrost|plasmaRim|plasmaRimWidth|plasmaElevation)$/.test(
+    /^(glassRefraction|plasmaRefraction|plasmaDispersion|plasmaOpacity|plasmaFrost|plasmaRim|plasmaRimWidth|plasmaElevation|plasmaFormSpeed|plasmaFlow|plasmaStretch|plasmaViscosity)$/.test(
       key,
     )
   )
@@ -422,7 +460,7 @@ export function tokenKind(key: string): TokenKind {
   )
     return 'number';
   if (/Weight$/.test(key)) return 'number';
-  if (/^font(Display|Body|Mono)$|LabelFont$/.test(key)) return 'font';
+  if (/^font(Display|Body|Mono)$|LabelFont$|TitleFont$/.test(key)) return 'font';
   if (LAYOUT_KEYS.has(key)) return 'length';
   if (
     /(Radius|RadiusSm|Height|Padding|Width|Gap|Size|Blur|Tracking|Spacing)$|^letterSpacing|^gardenGridGap|Aspect$/.test(

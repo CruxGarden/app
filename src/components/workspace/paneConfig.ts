@@ -1,5 +1,6 @@
 import type { PaneType } from '@/stores/uiStore';
 import {
+  ActivityIcon,
   ChatIcon,
   FolderIcon,
   CodeIcon,
@@ -14,6 +15,7 @@ import {
 
 /** CSS variable prefixes for each pane (used for pane-specific theming) */
 export const PANE_VAR_PREFIX: Record<PaneType, string> = {
+  tasks: '--pane-tasks',
   collaboration: '--pane-collaboration',
   artifacts: '--pane-artifacts',
   workshop: '--pane-workshop',
@@ -28,6 +30,7 @@ export const PANE_VAR_PREFIX: Record<PaneType, string> = {
 
 /** Button config for pane toggle buttons in the TopBar */
 export const PANE_BUTTONS: { type: PaneType; icon: React.FC; label: string }[] = [
+  { type: 'tasks', icon: ActivityIcon, label: 'Tasks' },
   { type: 'collaboration', icon: ChatIcon, label: 'Collaboration' },
   { type: 'artifacts', icon: FolderIcon, label: 'Artifacts' },
   { type: 'workshop', icon: CodeIcon, label: 'Workshop' },

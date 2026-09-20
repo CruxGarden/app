@@ -10,7 +10,7 @@ const auth = vi.hoisted(() => ({
   refreshToken: null as string | null,
 }));
 vi.mock('./client', () => ({
-  API_BASE_URL: 'https://api.example.test',
+  apiBaseUrl: () => 'https://api.example.test',
   getStoredTokens: () => auth,
   default: {
     get: vi.fn(async () => {

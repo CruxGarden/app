@@ -16,6 +16,7 @@ export const EXPLORE_KINDS: readonly string[] = [
   'document',
   'image',
   'mood',
+  'tool',
 ];
 
 export type ExploreResultType = 'cruxes' | 'authors';

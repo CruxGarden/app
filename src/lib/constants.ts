@@ -26,6 +26,10 @@ export enum SettingsKey {
   LocalAuthorIdLegacy = 'cruxgarden:local:authorId',
   LocalHomeId = 'cruxgarden:local:homeId',
   Backend = 'cruxgarden:backend',
+  /** The garden's API address — which garden this one meets (ADR 0049); empty = the build's default */
+  ApiUrl = 'cruxgarden:apiUrl',
+  /** Crux Tools installed into this garden: tool id → its Template Crux (JSON; ADR 0050) */
+  InstalledTools = 'cruxgarden:installedTools',
 
   // Auth tokens (localStorage only, not in SQLite)
   AccessToken = 'cruxgarden:accessToken',

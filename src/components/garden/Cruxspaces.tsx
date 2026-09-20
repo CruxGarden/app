@@ -1,5 +1,5 @@
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Button, Modal } from '@/components/ui';
 import { getServices } from '@/services';
 import type { Crux } from '@/api/types';
@@ -85,6 +85,10 @@ export default function Cruxspaces({
   const [story, setStory] = useState(false);
   const [moment, setMoment] = useState(getCruxspaceMoment);
   const packageInput = useRef<HTMLInputElement>(null);
+  // Arriving from the breadcrumb (`/home?space=<id>`): show that Cruxspace.
+  const [params] = useSearchParams();
+  const wanted = targetId ? null : params.get('space');
+  const section = useRef<HTMLElement>(null);
   useEffect(() => {
     startCruxspaceWalk(); // background workspaces follow the walk even when none is on screen
     const update = () => setMoment(getCruxspaceMoment());
@@ -103,8 +107,15 @@ export default function Cruxspaces({
       : all;
     setSpaces(visible);
     setCruxes(live);
-    setSelected((id) => (visible.some((s) => s.id === id) ? id : (visible[0]?.id ?? '')));
-  }, [targetId]);
+    setSelected((id) => {
+      if (wanted && visible.some((s) => s.id === wanted)) return wanted;
+      return visible.some((s) => s.id === id) ? id : (visible[0]?.id ?? '');
+    });
+  }, [targetId, wanted]);
+  useEffect(() => {
+    if (wanted && spaces.some((s) => s.id === wanted))
+      section.current?.scrollIntoView({ block: 'start' });
+  }, [wanted, spaces]);
   useEffect(() => {
     const reload = () => void load().catch((e) => setError(e.message));
     reload();
@@ -188,6 +199,7 @@ export default function Cruxspaces({
   };
   return (
     <section
+      ref={section}
       aria-label="Cruxspaces"
       className="bg-panel border border-border rounded-[var(--radius)] p-4 mb-6 text-text"
     >
@@ -299,8 +311,8 @@ export default function Cruxspaces({
           <h3 className="text-sm font-medium mb-2">Available outputs</h3>
           {assets.length === 0 ? (
             <p className="text-sm text-text-muted">
-              No outputs yet. Save an image, sound or bundle to the Cruxspace from a member
-              app, for example “Save sheet to Cruxspace” in Piskel.
+              No outputs yet. Save an image, sound or bundle to the Cruxspace from a member app, for
+              example “Save sheet to Cruxspace” in Piskel.
             </p>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 max-h-96 overflow-y-auto">

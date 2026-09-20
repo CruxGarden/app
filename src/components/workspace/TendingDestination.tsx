@@ -21,7 +21,11 @@ export default function TendingDestination() {
       const request = target.attentionId?.startsWith('permission:')
         ? target.attentionId.split(':').at(-1)
         : undefined;
-      const frame = requestAnimationFrame(() => {
+      // The pane's contents mount once its surface has formed (Plasma), so the
+      // target may be a few frames away: look every frame for up to two seconds.
+      let frame = 0;
+      const until = performance.now() + 2000;
+      const look = () => {
         const root = document.querySelector(`[data-workspace-id="${CSS.escape(target.copyId)}"]`);
         const el = root?.querySelector<HTMLElement>(
           request ? `[data-tending-request="${CSS.escape(request)}"]` : '[data-testid="turn-job"]',
@@ -30,8 +34,11 @@ export default function TendingDestination() {
           el.tabIndex = -1;
           el.focus();
           el.scrollIntoView({ block: 'nearest' });
+          return;
         }
-      });
+        if (performance.now() < until) frame = requestAnimationFrame(look);
+      };
+      frame = requestAnimationFrame(look);
       return () => cancelAnimationFrame(frame);
     } catch (e) {
       setError((e as Error).message);

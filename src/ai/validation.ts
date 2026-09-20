@@ -59,6 +59,8 @@ export function validateToolInput(
       const parsed = validateDelegateInput(input);
       return parsed.valid ? { valid: true } : { valid: false, error: parsed.error };
     }
+    case 'run_ffmpeg':
+      return validateRunFfmpeg(input);
     default:
       return { valid: false, error: `Unknown tool: ${toolName}` };
   }
@@ -307,5 +309,21 @@ function validateLoadSkill(input: Record<string, unknown>): ValidationResult {
       error: `Unknown skill "${input.name}". Available: ${skillNames().join(', ')}.`,
     };
   }
+  return { valid: true };
+}
+
+/** run_ffmpeg (MAKING-THE-AD-PARITY gap 13, step 1): a list of plain argument strings. The shell confines the paths. */
+function validateRunFfmpeg(input: Record<string, unknown>): ValidationResult {
+  const args = input.args;
+  if (!Array.isArray(args) || args.length === 0)
+    return { valid: false, error: 'args must be a non-empty array of strings' };
+  if (args.length > 200) return { valid: false, error: 'too many arguments (max 200)' };
+  for (const a of args) {
+    if (typeof a !== 'string') return { valid: false, error: 'every argument must be a string' };
+    if (a.length > 4000 || a.includes('\0'))
+      return { valid: false, error: 'an argument is too long or contains a NUL byte' };
+  }
+  if (input.description !== undefined && typeof input.description !== 'string')
+    return { valid: false, error: 'description must be a string' };
   return { valid: true };
 }

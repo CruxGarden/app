@@ -12,9 +12,14 @@ import {
   StoreIcon,
   SearchIcon,
   UploadIcon,
+  ActivityIcon,
 } from '@/components/ui/icons';
 
 const PANE_ICONS: Record<PaneType, { label: string; icon: React.ReactNode }> = {
+  tasks: {
+    label: 'Tasks',
+    icon: <ActivityIcon size={16} />,
+  },
   history: {
     label: 'History',
     icon: <StackIcon size={16} />,

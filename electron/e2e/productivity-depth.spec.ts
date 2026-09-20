@@ -156,7 +156,6 @@ for (const kind of ['Notes', 'Spreadsheet'] as const) {
       }
       await ready();
       await verifySaved();
-      await expect(page.getByTestId('mood-intro')).toHaveCount(0);
       await page.screenshot({ path: join(evidence, `${kind.toLowerCase()}-edited.png`) });
       await instance.app.close();
       instance = await launchApp({ dir });

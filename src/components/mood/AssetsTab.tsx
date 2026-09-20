@@ -226,6 +226,7 @@ export default function AssetsTab() {
                         ['Display', 'fontFaceDisplay', 'fontDisplay', 'MoodFontDisplay'],
                         ['Body', 'fontFaceBody', 'fontBody', 'MoodFontBody'],
                         ['Code', 'fontFaceMono', 'fontMono', 'MoodFontMono'],
+                        ['Reading', 'fontFaceReading', 'fontReading', 'MoodFontReading'],
                       ] as const
                     ).map(([label, faceKey, fontKey, family]) => (
                       <Button
@@ -237,7 +238,7 @@ export default function AssetsTab() {
                           setThemeOverrides(section, {
                             ...getThemeOverrides(section),
                             [faceKey]: assetRef(a.fingerprint),
-                            [fontKey]: `'${family}', ${fontKey === 'fontMono' ? 'monospace' : 'sans-serif'}`,
+                            [fontKey]: `'${family}', ${fontKey === 'fontMono' ? 'monospace' : fontKey === 'fontReading' ? 'serif' : 'sans-serif'}`,
                           });
                           applyActiveMood(section);
                           say(`"${a.name}" is now the ${label.toLowerCase()} face.`);

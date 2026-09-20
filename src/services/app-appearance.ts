@@ -23,6 +23,7 @@ export const APPEARANCE_TOKENS = {
   fontBody: '--font-body',
   fontDisplay: '--font-display',
   fontMono: '--font-mono',
+  fontReading: '--font-reading',
   weight: '--font-weight-body',
   displayWeight: '--font-weight-display',
   motion: '--motion-scale',
@@ -55,6 +56,7 @@ export async function appAppearanceSnapshot(id: string) {
     ['fontBody', '--font-face-body'],
     ['fontDisplay', '--font-face-display'],
     ['fontMono', '--font-face-mono'],
+    ['fontReading', '--font-face-reading'],
   ]) {
     const face = css.getPropertyValue(cssName!).trim();
     if (face && face !== 'none') tokens[role!] = face;

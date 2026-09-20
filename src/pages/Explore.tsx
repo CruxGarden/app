@@ -2,7 +2,7 @@ import { openGardenPage, publishBaseUrlFor, hasRemotePublishOrigin } from '@/lib
 import { SearchIcon, CloseIcon } from '@/components/ui/icons';
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { publicApi, API_BASE_URL } from '@/api';
+import { publicApi, apiBaseUrl } from '@/api';
 import type {
   ExploreCrux,
   ExploreAuthor,
@@ -14,6 +14,7 @@ import { parseExploreParams } from './explore-params';
 import { useAppStore } from '@/stores/appStore';
 import { useUIStore } from '@/stores/uiStore';
 import MoodResultCard from '@/components/explore/MoodResultCard';
+import ToolResultCard from '@/components/explore/ToolResultCard';
 import { Button } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import { formatDate } from '@/lib/format';
@@ -31,6 +32,7 @@ const KINDS: { id: string; label: string }[] = [
   { id: 'document', label: 'Documents' },
   { id: 'image', label: 'Images' },
   { id: 'mood', label: 'Moods' },
+  { id: 'tool', label: 'Tools' },
 ];
 const KIND_LABEL: Record<string, string> = {
   webapp: 'Site',
@@ -45,7 +47,7 @@ function resolveAvatarUrl(meta?: Record<string, unknown>): string | null {
   const url = meta?.avatarUrl || meta?.avatar_url;
   if (!url || typeof url !== 'string') return null;
   if (url.startsWith('data:')) return url;
-  return `${API_BASE_URL}${url}`;
+  return `${apiBaseUrl()}${url}`;
 }
 
 function Avatar({ url, size = 'sm' }: { url: string | null; size?: 'sm' | 'md' }) {
@@ -607,9 +609,33 @@ export default function Explore({
               ))}
             </div>
           )}
+          {resultType === 'cruxes' && kind === 'tool' && (
+            <div className="grid gap-3 grid-cols-[repeat(auto-fill,minmax(240px,1fr))] p-3">
+              {(results as ExploreCrux[]).map((crux) => (
+                <ToolResultCard
+                  key={crux.id}
+                  crux={crux}
+                  canInstall={appReady}
+                  onOpen={() => handleNavigate(`/${crux.author_username}/${crux.slug}`)}
+                  onInstall={async (report) => {
+                    const [{ installToolFromPublished }, { putBlob }] = await Promise.all([
+                      import('@/services/crux-tools/installed'),
+                      import('@/services/blobs'),
+                    ]);
+                    await installToolFromPublished(crux, {
+                      apiArtifacts: publicApi.getArtifacts,
+                      apiDownload: publicApi.downloadArtifact,
+                      putBlob,
+                      onProgress: report,
+                    });
+                  }}
+                />
+              ))}
+            </div>
+          )}
           <div className="flex flex-col">
             {resultType === 'cruxes'
-              ? kind === 'mood'
+              ? kind === 'mood' || kind === 'tool'
                 ? null
                 : (results as ExploreCrux[]).map((crux) => <CruxCard key={crux.id} crux={crux} />)
               : (results as ExploreAuthor[]).map((author) => (

@@ -68,6 +68,8 @@ export enum Capability {
   Updates = 'updates',
   /** Hosts an MCP server per crux for external agents (ADR 0013). Desktop Mode only. */
   AgentHost = 'agentHost',
+  /** Bundled binaries (ffmpeg) run inside a crux folder (MAKING-THE-AD-PARITY gap 13). */
+  NativeTools = 'nativeTools',
 }
 
 function bridge(): Partial<ElectronBridge> | null {
@@ -108,6 +110,8 @@ export function can(capability: Capability): boolean {
       return !!api.updates;
     case Capability.AgentHost:
       return !!api.agentHost;
+    case Capability.NativeTools:
+      return !!api.native;
   }
 }
 

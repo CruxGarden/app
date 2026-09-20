@@ -11,6 +11,8 @@
 import { parseManifest, type CruxToolManifest } from './manifest';
 import type { ToolInfo } from '@/lib/tool-info';
 import { bundled } from 'virtual:crux-tools';
+import { SettingsKey } from '@/lib/constants';
+import { getSetting } from '@/services/settings';
 
 const raw = import.meta.glob('../../../*-crux/crux-tool.json', {
   eager: true,
@@ -66,7 +68,7 @@ export function toolRoutes(): {
 }[] {
   const out: ReturnType<typeof toolRoutes> = [];
   for (const m of toolManifests())
-    for (const r of available.has(m.id) ? m.routes : []) {
+    for (const r of available.has(m.id) || isToolInstalled(m.id) ? m.routes : []) {
       const alts = r.extensions.map((e) => e.slice(1).replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
       out.push({
         test: new RegExp(`\\.(${alts.join('|')})$`, 'i'),
@@ -83,5 +85,24 @@ export function toolRoutes(): {
  * (CRUX-TOOLS-DISTRIBUTION-PLAN §3).
  */
 export function isToolAvailable(id: string): boolean {
-  return !toolManifest(id) || available.has(id);
+  return !toolManifest(id) || available.has(id) || isToolInstalled(id);
+}
+
+/** In the build itself, as opposed to installed into this garden. */
+export function isToolBundled(id: string): boolean {
+  return available.has(id);
+}
+
+/**
+ * Installed into this garden as a Template Crux (services/crux-tools/installed.ts
+ * keeps the record; read here without importing it, so the registry stays a leaf).
+ */
+export function isToolInstalled(id: string): boolean {
+  const raw = getSetting(SettingsKey.InstalledTools);
+  if (!raw) return false;
+  try {
+    return !!(JSON.parse(raw) as Record<string, unknown>)[id];
+  } catch {
+    return false;
+  }
 }

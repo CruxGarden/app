@@ -6,6 +6,7 @@ import Panel from './Panel';
 import { useMotionRole } from '@/hooks/useMotionRole';
 import PlasmaOverlay from '@/components/plasma/PlasmaOverlay';
 import { usePlasmaOn } from '@/components/plasma/usePlasmaOn';
+import { useFlatChrome } from '@/components/plasma/useFlatChrome';
 import { FORMING_ATTR } from '@cruxgarden/plasma-ui';
 
 type ModalSize = 'sm' | 'md' | 'lg' | 'xl' | 'screen' | 'full';
@@ -83,7 +84,9 @@ export default function Modal({
   const role = useMotionRole('dialog');
   // Under the Plasma theme the panel is drawn by a second canvas above the scrim (PlasmaOverlay).
   const panelRef = useRef<HTMLDivElement>(null);
-  const plasma = usePlasmaOn();
+  // Flat chrome: a plain plate, so the contents need not wait for any material.
+  const flat = useFlatChrome();
+  const plasma = usePlasmaOn() && !flat;
 
   // Rendered at <body>: a dialog inside a glass surface would otherwise be trapped by the
   // panel's backdrop-filter, which makes that panel the containing block of `fixed` children
@@ -126,9 +129,17 @@ export default function Modal({
               )}
             >
               {title && (
-                <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center justify-between mb-5">
                   <div>
-                    <h2 className="font-display text-sm font-medium text-accent">{title}</h2>
+                    <h2
+                      className="font-medium text-accent leading-tight"
+                      style={{
+                        fontFamily: 'var(--dialog-title-font)',
+                        fontSize: 'var(--dialog-title-size)',
+                      }}
+                    >
+                      {title}
+                    </h2>
                     {subtitle && <p className="text-xs text-text-muted mt-0.5">{subtitle}</p>}
                   </div>
                   <button

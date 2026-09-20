@@ -1,3 +1,4 @@
+import { apiBaseUrl } from '@/api/client';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { Artifact } from '@/api/types';
 import { publicApi } from '@/api';
@@ -124,7 +125,7 @@ function HtmlRenderer({
   useEffect(() => {
     function buildSession() {
       const author = useAppStore.getState().author;
-      const apiBase = import.meta.env.VITE_API_URL || '';
+      const apiBase = apiBaseUrl();
       // SECURITY: the published page is someone else's code running on its own
       // origin. The visitor's crux.garden access token must never cross into
       // it — a malicious crux could read it from the message and act as the

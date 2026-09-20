@@ -9,7 +9,8 @@ export * as sync from './sync';
 export type * from './types';
 export {
   default as client,
-  API_BASE_URL,
+  apiBaseUrl,
+  DEFAULT_API_URL,
   getStoredTokens,
   storeTokens,
   clearTokens,
