@@ -464,11 +464,7 @@ test('Bloom & Ink: brief, wireframe, budget, board, brand mark, calendar and sit
           .click();
         await expect(page.locator('[data-workspace-id]')).toBeVisible({ timeout: 60000 });
         await page.keyboard.press('Escape');
-        // The milestone opens in the member's Whole Crux Growth (by design); the
-        // walkthrough banner sits beneath that dialog, so close it first.
-        const explorer = page.getByRole('dialog').filter({ hasText: /WHOLE CRUX/i });
-        if (await explorer.isVisible({ timeout: 5000 }).catch(() => false))
-          await explorer.getByRole('button', { name: 'Close Growth graph' }).click();
+        // (the Whole Crux Growth dialog the milestone opens is closed just before Back to now)
         await expect(page.getByRole('status', { name: 'Walkthrough' })).toContainText(
           'Walking through Bloom & Ink',
         );
@@ -476,8 +472,16 @@ test('Bloom & Ink: brief, wireframe, budget, board, brand mark, calendar and sit
           timeout: 120000,
         });
         await shot('11-walkthrough-brand');
-        // Under Plasma the snapshot view's surfaces keep re-forming and the banner
-        // never reads as "stable" (2026-09-20, MAKING-IT-POSSIBLE-STEPS): force the click.
+        // The milestone opens in the member's Whole Crux Growth (by design), a beat
+        // after the snapshot view mounts; the walkthrough banner sits beneath that
+        // dialog, so wait for it and close it first. Then the forced click: under
+        // Plasma the snapshot view's surfaces keep re-forming and the banner never
+        // reads as "stable" (2026-09-20, MAKING-IT-POSSIBLE-STEPS).
+        const explorer = page.getByRole('dialog', { name: 'Whole Crux Growth' });
+        if (await explorer.isVisible({ timeout: 15000 }).catch(() => false)) {
+          await explorer.getByRole('button', { name: 'Close Growth graph' }).click();
+          await expect(explorer).toHaveCount(0);
+        }
         await page
           .getByRole('status', { name: 'Walkthrough' })
           .getByRole('button', { name: 'Back to now' })
