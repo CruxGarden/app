@@ -1312,6 +1312,9 @@ export function getMockLanguageModel(): LanguageModel {
         }
         if (lastUserText(prompt).includes('[garden:tour')) {
           // The Keeper gives the tour by operating the workspace (keeper-tour.spec).
+          // "slowly": hold each step back so a test can stop the Keeper mid-tour.
+          if (/\bslowly\b/i.test(lastUserText(prompt)))
+            await new Promise((r) => setTimeout(r, 1500));
           const rounds = toolResultsThisTurn(prompt);
           const steps: [string, Record<string, unknown>][] = lastUserText(prompt).includes(
             '[garden:tour:pane-first]',

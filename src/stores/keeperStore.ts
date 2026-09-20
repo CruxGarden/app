@@ -40,6 +40,10 @@ export interface KeeperConversation {
 
 export const MAX_KEEPER_CONVERSATIONS = 20;
 
+/** Appended to a reply the person stopped, so the next turn resumes from the trail. */
+export const STOPPED_NOTE =
+  '*Stopped here by the person. Say "continue" to pick it up from this point.*';
+
 export const KEEPER_SYSTEM_PROMPT =
   'You are The Keeper, an outdated robot model who tends the Crux Garden. ' +
   'Your Maker built you to care for the garden, and then went away. You tend it faithfully and help visitors bring their ideas to life. ' +
@@ -210,6 +214,25 @@ export const useKeeperStore = create<KeeperState>((set, get) => {
       }));
       let accumulated = '';
       const calls: ToolCall[] = [];
+      const keep = (text: string, done: ToolCall[], stopped: boolean) => {
+        if (stopped)
+          for (const tc of done) if (tc.result === undefined) tc.result = 'Stopped by the person.';
+        const content = stopped ? `${text}${text ? '\n\n' : ''}${STOPPED_NOTE}` : text;
+        if (content || done.length) {
+          current = [
+            ...current,
+            {
+              role: 'assistant',
+              content,
+              timestamp: new Date().toISOString(),
+              model,
+              ...(done.length ? { toolCalls: done } : {}),
+            },
+          ];
+        }
+        const tId = targetId;
+        commit((prev) => prev.map((c) => (c.id === tId ? { ...c, messages: current } : c)));
+      };
       try {
         for await (const event of runConversation(
           apiKey,
@@ -249,22 +272,15 @@ export const useKeeperStore = create<KeeperState>((set, get) => {
             set({ error: event.message });
           }
         }
-        if (accumulated || calls.length) {
-          current = [
-            ...current,
-            {
-              role: 'assistant',
-              content: accumulated,
-              timestamp: new Date().toISOString(),
-              model,
-              ...(calls.length ? { toolCalls: calls } : {}),
-            },
-          ];
-        }
-        const tId = targetId;
-        commit((prev) => prev.map((c) => (c.id === tId ? { ...c, messages: current } : c)));
+        // The engine may end the stream quietly on abort rather than throw.
+        keep(accumulated, calls, controller?.signal.aborted ?? false);
       } catch (err) {
-        if ((err as Error).name !== 'AbortError') set({ error: (err as Error).message });
+        if ((err as Error).name === 'AbortError') {
+          // Stopped by the person: what was done stays in the conversation, marked,
+          // so they can pick it up themselves or say "continue" and the Keeper
+          // resumes from the trail rather than from the beginning.
+          keep(accumulated, calls, true);
+        } else set({ error: (err as Error).message });
       } finally {
         controller = null;
         set({

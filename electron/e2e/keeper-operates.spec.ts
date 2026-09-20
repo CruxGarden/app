@@ -74,8 +74,13 @@ test('the Keeper looks, searches, reads, chooses a collaborator and exports', as
     await composer.press('Enter');
     const chip = page.getByTestId('keeper-activity');
     await expect(chip).toBeVisible({ timeout: 30_000 });
-    await expect(chip.getByRole('button', { name: 'Stop' })).toBeVisible();
     await page.screenshot({ path: 'e2e/.results/keeper-operates.png' });
+    // Stop: what was done stays in the conversation, marked, for the person to pick up.
+    await chip.getByRole('button', { name: 'Stop' }).click();
+    await expect(chip).toBeHidden({ timeout: 10_000 });
+    await page.keyboard.press('Escape');
+    await expect(console_).toBeVisible({ timeout: 10_000 });
+    await expect(console_.getByText('Stopped here by the person')).toBeVisible({ timeout: 10_000 });
   } finally {
     console.log(trail.join('\n'));
     await app.close();
