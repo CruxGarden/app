@@ -1,0 +1,257 @@
+:root {
+  --ink: #1b2420;
+  --muted: #6b7a72;
+  --line: #d9e2dc;
+  --paper: #fbfdfb;
+  --accent: #2f7d5b;
+  --warn: #9a4a2f;
+  --up: #2f7d5b;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ink: #e6ece8;
+    --muted: #9aa8a1;
+    --line: #2b3733;
+    --paper: #141a18;
+    --accent: #6fd3a3;
+    --warn: #e39b7b;
+    --up: #6fd3a3;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  padding: 1.25rem;
+  background: var(--paper);
+  color: var(--ink);
+  font:
+    14px/1.5 ui-sans-serif,
+    system-ui,
+    -apple-system,
+    sans-serif;
+}
+
+main {
+  max-width: 54rem;
+  margin: 0 auto;
+}
+
+h1 {
+  margin: 0;
+  font-size: 1.3rem;
+}
+
+h2 {
+  margin: 1.5rem 0 0.5rem;
+  font-size: 0.95rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+}
+
+h3 {
+  margin: 0 0 0.25rem;
+  font-size: 1rem;
+}
+
+.about {
+  margin: 0.25rem 0 0;
+  color: var(--muted);
+}
+
+.runner {
+  margin-top: 0.6rem;
+  padding: 0.35rem 0.6rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  display: inline-block;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.runner.ok {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.runner.missing {
+  border-style: dashed;
+  border-radius: 0.5rem;
+  display: block;
+}
+
+.runner a {
+  color: inherit;
+}
+
+.refusals {
+  margin-top: 1rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--warn);
+  border-radius: 0.5rem;
+  color: var(--warn);
+}
+
+.refusals ul {
+  margin: 0.5rem 0;
+  padding-left: 1.1rem;
+}
+
+.refusals p {
+  margin: 0.5rem 0 0;
+}
+
+.controls {
+  margin-top: 1rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+button {
+  padding: 0.35rem 0.8rem;
+  font: inherit;
+  color: var(--ink);
+  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+button:hover:not(:disabled) {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+button.primary {
+  color: var(--paper);
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+button.primary:hover:not(:disabled) {
+  color: var(--paper);
+  opacity: 0.9;
+}
+
+.services {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
+}
+
+.service {
+  padding: 0.75rem 0.9rem;
+  border: 1px solid var(--line);
+  border-left-width: 3px;
+  border-radius: 0.5rem;
+}
+
+.service.up {
+  border-left-color: var(--up);
+}
+
+.service.exited {
+  border-left-color: var(--muted);
+}
+
+.service .status {
+  font-size: 0.75rem;
+  font-weight: normal;
+  color: var(--muted);
+}
+
+.service .about {
+  margin: 0 0 0.35rem;
+  font-size: 0.85rem;
+}
+
+.service .facts {
+  margin: 0 0 0.6rem;
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+.service .facts a {
+  color: var(--accent);
+}
+
+.service .actions {
+  margin: 0;
+  display: flex;
+  gap: 0.35rem;
+}
+
+.service .actions button {
+  padding: 0.15rem 0.55rem;
+  font-size: 0.78rem;
+}
+
+.empty {
+  color: var(--muted);
+}
+
+.output {
+  margin: 0;
+  padding: 0.7rem 0.85rem;
+  max-height: 16rem;
+  overflow: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font:
+    12px/1.5 ui-monospace,
+    SFMono-Regular,
+    Menlo,
+    monospace;
+  background: rgba(127, 127, 127, 0.08);
+  border: 1px solid var(--line);
+  border-radius: 0.5rem;
+}
+
+.output.warn {
+  color: var(--warn);
+  border-color: var(--warn);
+}
+
+.logs-controls {
+  margin-top: 0.5rem;
+  display: flex;
+  gap: 0.5rem;
+}
+
+select {
+  padding: 0.3rem 0.5rem;
+  font: inherit;
+  color: var(--ink);
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 0.4rem;
+}
+
+details summary {
+  margin-top: 0.6rem;
+  cursor: pointer;
+  color: var(--muted);
+}
+
+footer {
+  margin-top: 2rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--line);
+  font-size: 0.82rem;
+  color: var(--muted);
+}
+
+code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}

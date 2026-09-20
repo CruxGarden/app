@@ -70,6 +70,12 @@ export enum Capability {
   AgentHost = 'agentHost',
   /** Bundled binaries (ffmpeg) run inside a crux folder (MAKING-THE-AD-PARITY gap 13). */
   NativeTools = 'nativeTools',
+  /**
+   * The shell can run a Crux's stack with Docker Compose. Present when the
+   * bridge is there; whether Docker itself is installed is a separate question
+   * the Stack bench asks at the moment it matters.
+   */
+  Containers = 'containers',
   /** The v2 features — gardens with people (GARDEN-MEMBERS-PLAN) — shown; a v1 release never has it. */
   V2 = 'v2',
 }
@@ -116,6 +122,8 @@ export function can(capability: Capability): boolean {
       return !!api.agentHost;
     case Capability.NativeTools:
       return !!api.native;
+    case Capability.Containers:
+      return !!api.containers;
   }
 }
 

@@ -1,0 +1,111 @@
+# The Crux Garden nursery: a Postgres, a Redis and the Crux Garden API, with
+# sample data. Edit this file — it is an ordinary Artifact of this Crux, so
+# every change is kept in Growth, and publishing the Crux shares the stack
+# with whoever installs it.
+
+# The project name is set by Crux Garden to this Crux, so a stop can only
+# reach the containers this Crux started.
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-cruxgarden}
+      POSTGRES_USER: ${POSTGRES_USER:-cruxgarden}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-cruxgarden_nursery_password}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data_nursery:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-cruxgarden}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    command: redis-server --appendonly yes
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis_data_nursery:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # Database Migrations (runs once before API starts)
+  migrations:
+    image: ghcr.io/cruxgarden/api:latest
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      NODE_ENV: ${NODE_ENV:-production}
+      DATABASE_URL: ${DATABASE_URL:-postgresql://cruxgarden:cruxgarden_nursery_password@postgres:5432/cruxgarden}
+    command: ["npm", "run", "migrate:nursery"]
+    restart: "no"
+
+  # Crux Garden API - Nursery Configuration
+  api:
+    image: ghcr.io/cruxgarden/api:latest
+    restart: unless-stopped
+    depends_on:
+      migrations:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+    ports:
+      - "${API_PORT:-3000}:3000"
+    environment:
+      # Application
+      NODE_ENV: ${NODE_ENV:-production}
+      PORT: 3000
+      HOSTNAME: ${HOSTNAME:-0.0.0.0}
+      BASE_URL: ${BASE_URL:-http://localhost:3000}
+
+      # Bundled Services (can override to use external services)
+      DATABASE_URL: ${DATABASE_URL:-postgresql://cruxgarden:cruxgarden_nursery_password@postgres:5432/cruxgarden}
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379}
+
+      # Security
+      JWT_SECRET: ${JWT_SECRET:-your-super-secret-jwt-key-min-32-chars-for-development-only}
+      NURSERY_MODE: ${NURSERY_MODE:-true}
+
+      # AWS SES (optional for nursery)
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-dummy}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-dummy}
+      AWS_REGION: ${AWS_REGION:-us-east-1}
+      AWS_SES_FROM_EMAIL: ${AWS_SES_FROM_EMAIL:-noreply@example.com}
+      AWS_S3_ARTIFACTS_BUCKET: ${AWS_S3_ARTIFACTS_BUCKET:-artifacts.crux.garden}
+      AWS_S3_SYNC_BUCKET: ${AWS_S3_SYNC_BUCKET:-sync.crux.garden}
+
+      # Optional Configuration
+      CORS_ORIGIN: ${CORS_ORIGIN:-*}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      DB_POOL_MIN: ${DB_POOL_MIN:-2}
+      DB_POOL_MAX: ${DB_POOL_MAX:-10}
+      DB_POOL_IDLE_TIMEOUT: ${DB_POOL_IDLE_TIMEOUT:-30000}
+      DB_POOL_ACQUIRE_TIMEOUT: ${DB_POOL_ACQUIRE_TIMEOUT:-60000}
+      RATE_LIMIT_TTL: ${RATE_LIMIT_TTL:-60000}
+      RATE_LIMIT_MAX: ${RATE_LIMIT_MAX:-100}
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "require('http').get('http://localhost:3000/', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+volumes:
+  postgres_data_nursery:
+  redis_data_nursery:
