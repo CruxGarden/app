@@ -54,8 +54,10 @@ describe('Media Tools', () => {
     const outs = [...block.matchAll(/out: '([^']+)'/g)].map((m) => m[1]!);
     expect(outs.length).toBe(ids.length);
     for (const out of outs) expect(out.startsWith('exports/')).toBe(true);
+    // `pdf` is the app itself: Pandoc writes a page and Crux Garden prints it,
+    // or Typst typesets it when the machine has Typst.
     for (const tool of [...block.matchAll(/tool: '([a-z]+)'/g)].map((m) => m[1]))
-      expect(['ffmpeg', 'magick', 'pandoc']).toContain(tool);
+      expect(['ffmpeg', 'magick', 'pandoc', 'pdf']).toContain(tool);
     // ffmpeg overwrites deliberately; a recipe that forgets -y stalls on a prompt.
     for (const args of [...block.matchAll(/tool: 'ffmpeg'[^}]*args: \[([^\]]+)\]/g)].map(
       (m) => m[1]!,

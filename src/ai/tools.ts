@@ -375,10 +375,101 @@ export const NATIVE_TOOL_DEFINITIONS: ToolDefinition[] = [
     },
   },
   {
+    name: 'make_pdf',
+    description:
+      'Turn a document in this Crux into a PDF: Markdown, Word, HTML, EPUB or plain text. ' +
+      'Pandoc writes a page and the app prints it with its own browser, so this needs no LaTeX. ' +
+      'USE WHEN: the person asks for a PDF of something written. The result lands in exports/ unless you say otherwise.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        path: { type: 'string', description: 'The document, relative to the crux folder.' },
+        out: { type: 'string', description: 'Where to put it. Default exports/<name>.pdf.' },
+        pageSize: { type: 'string', description: 'A4 (the default), Letter, Legal…' },
+        landscape: { type: 'boolean', description: 'Sideways, for a wide table or a slide.' },
+      },
+      required: ['path'],
+      additionalProperties: false,
+    },
+  },
+  {
     name: 'media_tools',
     description:
-      'Which media binaries this machine has (ffmpeg, ffprobe, ImageMagick, Pandoc), where each came from and its version. Call it when a run fails with "not available", or before promising a conversion.',
+      'Which media binaries this machine has (ffmpeg, ffprobe, ImageMagick, Pandoc), where each came from and its version, and whether a missing one can be installed. Call it when a run fails with "not available", or before promising a conversion.',
     input_schema: { type: 'object', properties: {}, required: [], additionalProperties: false },
+  },
+  {
+    name: 'install_media_tool',
+    description:
+      "Install a media tool this machine does not have, at the person's request. Only ImageMagick can be installed: Linux and Windows have an official download, and on macOS this runs Homebrew when it is there. " +
+      'ASK FIRST — it downloads and can take minutes. If it cannot be done, the answer says what the person can run themselves. Pictures convert through ffmpeg either way, so never make this sound required.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        tool: { type: 'string', enum: ['magick'], description: 'The tool to install.' },
+      },
+      required: ['tool'],
+      additionalProperties: false,
+    },
+  },
+];
+
+/**
+ * A Crux's own stack, through Docker Compose. The compose file is an ordinary
+ * Artifact — read and edit it with read_file and write_file — and these run it.
+ */
+export const CONTAINER_TOOL_DEFINITIONS: ToolDefinition[] = [
+  {
+    name: 'compose_ps',
+    description:
+      "What this Crux's stack is running right now: each service, its state and its published ports. " +
+      'USE WHEN: asked what is running, before starting something that may already be up, or to check a start worked.',
+    input_schema: { type: 'object', properties: {}, required: [], additionalProperties: false },
+  },
+  {
+    name: 'compose_up',
+    description:
+      "Start this Crux's stack (or one service of it) in the background. The first run downloads images and can take minutes. " +
+      'The file is checked first: a stack that asks for privileged mode, the host network, the Docker socket or a mount outside the Crux is refused, and the reason is returned — fix compose.yaml rather than working around it.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        service: { type: 'string', description: 'One service by name. Omit to start them all.' },
+      },
+      required: [],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'compose_down',
+    description:
+      "Stop this Crux's stack. By default the containers are stopped and removed; pass keep: true to stop them where they are. " +
+      'Only ever touches the containers this Crux started. ASK FIRST when someone may be using it.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        keep: {
+          type: 'boolean',
+          description: 'Stop but do not remove the containers.',
+        },
+      },
+      required: [],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'compose_logs',
+    description:
+      'The last lines a service wrote. USE WHEN: something did not start, or the person asks why a service is unhealthy — read the logs before guessing.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        service: { type: 'string', description: 'One service by name. Omit for all of them.' },
+        tail: { type: 'number', description: 'How many lines, up to 2000. Default 200.' },
+      },
+      required: [],
+      additionalProperties: false,
+    },
   },
 ];
 
@@ -453,6 +544,7 @@ export const GUESTBOOK_TOOL_DEFINITION: ToolDefinition = {
 };
 
 import { WORKSPACE_TOOL_DEFINITIONS, runWorkspaceTool } from './workspace-tools';
+import { isStackCrux } from '@/services/containers';
 
 /** The tool set to offer a workspace conversation on this platform. */
 export function defaultToolDefinitions(cruxId?: string): ToolDefinition[] {
@@ -460,11 +552,15 @@ export function defaultToolDefinitions(cruxId?: string): ToolDefinition[] {
   const native = can(Capability.NativeTools)
     ? [...NATIVE_TOOL_DEFINITIONS, ...CAPTURE_TOOL_DEFINITIONS]
     : [];
+  // The compose tools only appear for a Crux that actually carries a stack.
+  const containers =
+    can(Capability.Containers) && isStackCrux(cruxId) ? CONTAINER_TOOL_DEFINITIONS : [];
   return [
     ...TOOL_DEFINITIONS,
     ...appToolDefinitions(cruxId),
     ...site,
     ...native,
+    ...containers,
     GUESTBOOK_TOOL_DEFINITION,
     ...GROWTH_TOOL_DEFINITIONS,
     ...THEME_TOOL_DEFINITIONS,
@@ -726,6 +822,67 @@ export function createToolExecutor(
               : `Could not read ${path} — is it a media file, and does it exist?`;
             break;
           }
+          case 'install_media_tool': {
+            const { installMediaTool } = await import('@/services/native-tools');
+            const answer = await installMediaTool((input as { tool?: 'magick' }).tool ?? 'magick');
+            result = answer.command
+              ? `${answer.message}\nThe command: ${answer.command}`
+              : answer.message;
+            break;
+          }
+          case 'compose_ps': {
+            const { runningServices } = await import('@/services/containers');
+            const running = await runningServices(cruxId);
+            result = running.length
+              ? running
+                  .map(
+                    (r) =>
+                      `- ${r.service}: ${r.state}${r.health ? ` (${r.health})` : ''}${r.ports ? ` — ${r.ports}` : ''}`,
+                  )
+                  .join('\n')
+              : 'Nothing from this stack is running.';
+            break;
+          }
+          case 'compose_up':
+          case 'compose_down':
+          case 'compose_logs': {
+            const { compose } = await import('@/services/containers');
+            const args = input as { service?: string; tail?: number; keep?: boolean };
+            const verb =
+              toolName === 'compose_up'
+                ? 'up'
+                : toolName === 'compose_logs'
+                  ? 'logs'
+                  : args.keep
+                    ? 'stop'
+                    : 'down';
+            const run = await compose(cruxId, verb, {
+              service: args.service,
+              tail: args.tail,
+            });
+            const tail = run.output.trim().split('\n').slice(-40).join('\n');
+            result =
+              toolName === 'compose_logs'
+                ? tail || 'Nothing in the logs yet.'
+                : `${verb} finished with code ${run.code}.${tail ? `\n${tail}` : ''}`;
+            break;
+          }
+          case 'make_pdf': {
+            const { makePdf } = await import('@/services/native-tools');
+            const args = input as {
+              path: string;
+              out?: string;
+              pageSize?: string;
+              landscape?: boolean;
+            };
+            const made = await makePdf(cruxId, args.path, {
+              out: args.out,
+              pageSize: args.pageSize,
+              landscape: args.landscape,
+            });
+            result = `Wrote ${made.path} (${Math.round(made.bytes / 1024)} KB).`;
+            break;
+          }
           case 'media_tools': {
             const { mediaTools } = await import('@/services/native-tools');
             const tools = await mediaTools();
@@ -734,7 +891,7 @@ export function createToolExecutor(
                   .map((t) =>
                     t.path
                       ? `- ${t.tool}: ${t.source}${t.version ? ` — ${t.version}` : ''}`
-                      : `- ${t.tool}: not on this machine`,
+                      : `- ${t.tool}: not on this machine${t.installable ? ' (install_media_tool can fetch it)' : ''}`,
                   )
                   .join('\n')
               : 'Native tools are not available here (desktop only).';

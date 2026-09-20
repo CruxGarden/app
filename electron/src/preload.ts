@@ -213,7 +213,7 @@ const api: ElectronBridge = {
       ipcRenderer.invoke('preview:record', opts) as Promise<{ frames: number; seconds: number }>,
     run: (opts: {
       cruxId: string;
-      tool: 'ffmpeg' | 'ffprobe' | 'magick' | 'pandoc';
+      tool: 'ffmpeg' | 'ffprobe' | 'magick' | 'pandoc' | 'typst';
       args: string[];
       timeoutMs?: number;
     }) =>
@@ -226,17 +226,82 @@ const api: ElectronBridge = {
     tools: (opts?: { refresh?: boolean }) =>
       ipcRenderer.invoke('native:tools', opts) as Promise<
         {
-          tool: 'ffmpeg' | 'ffprobe' | 'magick' | 'pandoc';
+          tool: 'ffmpeg' | 'ffprobe' | 'magick' | 'pandoc' | 'typst';
           path: string | null;
-          source: 'bundled' | 'resources' | 'system' | 'missing';
+          source: 'bundled' | 'resources' | 'installed' | 'system' | 'missing';
           version: string | null;
+          installable?: boolean;
         }[]
       >,
+    install: (opts: { tool: 'ffmpeg' | 'ffprobe' | 'magick' | 'pandoc' | 'typst' }) =>
+      ipcRenderer.invoke('native:install', opts) as Promise<{
+        tool: 'ffmpeg' | 'ffprobe' | 'magick' | 'pandoc' | 'typst';
+        ok: boolean;
+        path?: string;
+        message: string;
+        command?: string;
+      }>,
+    pdf: (opts: {
+      cruxId: string;
+      path: string;
+      out?: string;
+      pageSize?: string;
+      landscape?: boolean;
+    }) =>
+      ipcRenderer.invoke('native:pdf', opts) as Promise<{
+        path: string;
+        bytes: number;
+        engine?: string;
+      }>,
+    onInstallProgress: (
+      callback: (event: {
+        tool: 'ffmpeg' | 'ffprobe' | 'magick' | 'pandoc' | 'typst';
+        fraction?: number;
+        line?: string;
+      }) => void,
+    ) => {
+      const handler = (
+        _e: unknown,
+        event: {
+          tool: 'ffmpeg' | 'ffprobe' | 'magick' | 'pandoc' | 'typst';
+          fraction?: number;
+          line?: string;
+        },
+      ) => callback(event);
+      ipcRenderer.on('native:install-progress', handler);
+      return () => ipcRenderer.removeListener('native:install-progress', handler);
+    },
     onProgress: (callback: (event: { cruxId: string; tool: string; progress: number }) => void) => {
       const handler = (_e: unknown, event: { cruxId: string; tool: string; progress: number }) =>
         callback(event);
       ipcRenderer.on('native:progress', handler);
       return () => ipcRenderer.removeListener('native:progress', handler);
+    },
+  },
+  containers: {
+    runner: (opts?: { refresh?: boolean }) =>
+      ipcRenderer.invoke('containers:runner', opts) as Promise<{
+        program: string;
+        version: string;
+      } | null>,
+    inspect: (opts: { cruxId: string; file?: string }) =>
+      ipcRenderer.invoke('containers:inspect', opts) as Promise<{
+        services: { name: string; image?: string; ports: number[] }[];
+        refusals: string[];
+      }>,
+    compose: (opts: {
+      cruxId: string;
+      verb: 'up' | 'down' | 'ps' | 'logs' | 'pull' | 'config' | 'stop' | 'start';
+      service?: string;
+      tail?: number;
+      timeoutMs?: number;
+    }) =>
+      ipcRenderer.invoke('containers:compose', opts) as Promise<{ code: number; output: string }>,
+    onOutput: (callback: (event: { cruxId: string; verb: string; line: string }) => void) => {
+      const handler = (_e: unknown, event: { cruxId: string; verb: string; line: string }) =>
+        callback(event);
+      ipcRenderer.on('containers:output', handler);
+      return () => ipcRenderer.removeListener('containers:output', handler);
     },
   },
   media: {

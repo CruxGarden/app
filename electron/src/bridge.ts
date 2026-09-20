@@ -217,11 +217,13 @@ export interface MediaBridge {
 }
 /** Native tools (MAKING-THE-AD-PARITY gap 13): a bundled binary run inside a crux folder. */
 /** The media binaries a garden can run inside a crux folder. */
-export type MediaToolName = 'ffmpeg' | 'ffprobe' | 'magick' | 'pandoc';
+export type MediaToolName = 'ffmpeg' | 'ffprobe' | 'magick' | 'pandoc' | 'typst';
 export interface MediaToolInfo {
   tool: MediaToolName;
   path: string | null;
-  source: 'bundled' | 'resources' | 'system' | 'missing';
+  source: 'bundled' | 'resources' | 'installed' | 'system' | 'missing';
+  /** Whether the app knows a way to install this one for the person. */
+  installable?: boolean;
   version: string | null;
 }
 
@@ -244,10 +246,67 @@ export interface NativeToolsBridge {
   }): Promise<{ code: number; ms: number; stderrTail: string; stdout: string }>;
   /** Which media binaries this machine has, and where each came from (platform-aware). */
   tools(opts?: { refresh?: boolean }): Promise<MediaToolInfo[]>;
+  /**
+   * Install a tool the app does not carry, at the person's request. The answer
+   * says what happened, or what they can run themselves when the app cannot do
+   * it (macOS has no ImageMagick download, so that route is Homebrew).
+   */
+  install(opts: { tool: MediaToolName }): Promise<{
+    tool: MediaToolName;
+    ok: boolean;
+    path?: string;
+    message: string;
+    command?: string;
+  }>;
+  /**
+   * A document to PDF. Pandoc has no PDF engine of its own — LaTeX is its
+   * default and it is gigabytes — so the app writes a page and prints it with
+   * the browser it already ships. Markdown, Word and the rest go through
+   * Pandoc first; an HTML file is printed as it is.
+   */
+  pdf(opts: {
+    cruxId: string;
+    path: string;
+    out?: string;
+    pageSize?: string;
+    landscape?: boolean;
+  }): Promise<{ path: string; bytes: number; engine?: string }>;
+  /** Lines and progress from an install in flight. */
+  onInstallProgress(
+    callback: (event: { tool: MediaToolName; fraction?: number; line?: string }) => void,
+  ): () => void;
   onProgress(
     callback: (event: { cruxId: string; tool: string; progress: number; frames?: number }) => void,
   ): () => void;
 }
+/** Containers: a Crux's own stack through Docker Compose (`electron/src/containers.ts`). */
+export interface ComposeService {
+  name: string;
+  image?: string;
+  ports: number[];
+}
+export interface ComposeReading {
+  services: ComposeService[];
+  /** Why the stack must not start, if so — empty means it may run. */
+  refusals: string[];
+}
+export interface ContainersBridge {
+  /** What this machine can run a stack with (docker or podman), or null. */
+  runner(opts?: { refresh?: boolean }): Promise<{ program: string; version: string } | null>;
+  /** Read the Crux's compose file: its services, and anything that forbids a start. */
+  inspect(opts: { cruxId: string; file?: string }): Promise<ComposeReading>;
+  /** One compose verb, for this Crux only. */
+  compose(opts: {
+    cruxId: string;
+    verb: 'up' | 'down' | 'ps' | 'logs' | 'pull' | 'config' | 'stop' | 'start';
+    service?: string;
+    tail?: number;
+    timeoutMs?: number;
+  }): Promise<{ code: number; output: string }>;
+  /** Lines from a compose run in flight — pulling images is slow. */
+  onOutput(callback: (event: { cruxId: string; verb: string; line: string }) => void): () => void;
+}
+
 export interface FfmpegBridge {
   available(): Promise<boolean>;
   transcode(opts: {
@@ -409,6 +468,7 @@ export interface ElectronBridge {
   secrets: SecretsBridge;
   ffmpeg: FfmpegBridge;
   native: NativeToolsBridge;
+  containers: ContainersBridge;
   media: MediaBridge;
   localai: LocalAiBridge;
   updates: UpdatesBridge;

@@ -2,11 +2,14 @@
  * The media binaries, resolved per platform (MAKING-THE-AD-PARITY gap 13):
  * ffmpeg, ffprobe and ImageMagick, found in this order —
  *
- *   1. bundled with the app (`ffmpeg-static`, `ffprobe-static`, or a binary
- *      dropped at `resources/bin/<platform>-<arch>/<name>` by packaging),
- *   2. the platform's usual install directories (Homebrew on macOS, the
+ *   1. bundled with the app — `ffmpeg-static` and `ffprobe-static` as npm
+ *      packages, or a binary staged at `resources/bin/<platform>-<arch>/`
+ *      by `scripts/stage-binaries.mjs` (pandoc today),
+ *   2. installed by the app at the person's request, under
+ *      `<userData>/tools/<platform>-<arch>/` (see `installMediaTool`),
+ *   3. the platform's usual install directories (Homebrew on macOS, the
  *      distribution's bin on Linux, Program Files on Windows),
- *   3. whatever `PATH` holds.
+ *   4. whatever `PATH` holds.
  *
  * Every candidate is checked for existence and executability before it is
  * used, the answer is cached, and a missing tool is reported rather than
@@ -17,15 +20,15 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
 
-export type MediaTool = 'ffmpeg' | 'ffprobe' | 'magick' | 'pandoc';
-export const MEDIA_TOOLS: MediaTool[] = ['ffmpeg', 'ffprobe', 'magick', 'pandoc'];
+export type MediaTool = 'ffmpeg' | 'ffprobe' | 'magick' | 'pandoc' | 'typst';
+export const MEDIA_TOOLS: MediaTool[] = ['ffmpeg', 'ffprobe', 'magick', 'pandoc', 'typst'];
 
 export interface ToolInfo {
   tool: MediaTool;
   /** The absolute path, or null when the tool is not on this machine. */
   path: string | null;
   /** Where it came from, for the interface to say so honestly. */
-  source: 'bundled' | 'resources' | 'system' | 'missing';
+  source: 'bundled' | 'resources' | 'installed' | 'system' | 'missing';
   /** First line of `--version`, when it answered. */
   version: string | null;
 }
@@ -54,7 +57,12 @@ function searchDirs(): string[] {
       dirs.push(base);
       try {
         for (const entry of fs.readdirSync(base)) {
-          if (/^ImageMagick/i.test(entry) || /^ffmpeg/i.test(entry) || /^Pandoc/i.test(entry)) {
+          if (
+            /^ImageMagick/i.test(entry) ||
+            /^ffmpeg/i.test(entry) ||
+            /^Pandoc/i.test(entry) ||
+            /^Typst/i.test(entry)
+          ) {
             dirs.push(path.join(base, entry));
             dirs.push(path.join(base, entry, 'bin'));
           }
@@ -95,6 +103,17 @@ function fromResources(tool: MediaTool, resourcesPath: string | null): string | 
   return null;
 }
 
+/** A binary the app installed for this person, at their request. */
+function fromInstalled(tool: MediaTool, userDataPath: string | null): string | null {
+  if (!userDataPath) return null;
+  const dir = path.join(userDataPath, 'tools', `${process.platform}-${process.arch}`);
+  for (const name of candidateNames(tool)) {
+    const candidate = path.join(dir, name);
+    if (usable(candidate)) return candidate;
+  }
+  return null;
+}
+
 /** The npm packages that carry a per-platform binary, when they are installed. */
 function fromBundle(tool: MediaTool): string | null {
   const load = (id: string): string | null => {
@@ -124,8 +143,8 @@ function fromSystem(tool: MediaTool): string | null {
 
 function versionOf(binary: string, tool: MediaTool): Promise<string | null> {
   return new Promise((resolve) => {
-    // pandoc has no -version; every other tool here does.
-    const flag = tool === 'pandoc' ? '--version' : '-version';
+    // pandoc and typst want --version; the ffmpeg family wants -version.
+    const flag = tool === 'pandoc' || tool === 'typst' ? '--version' : '-version';
     execFile(binary, [flag], { timeout: 5000 }, (error, stdout, stderr) => {
       if (error && !stdout && !stderr) return resolve(null);
       const first = String(stdout || stderr)
@@ -137,12 +156,16 @@ function versionOf(binary: string, tool: MediaTool): Promise<string | null> {
 }
 
 let cache: Map<MediaTool, ToolInfo> | null = null;
+/** Remembered so a later lookup finds what an install just put there. */
+let lastUserData: string | null = null;
 
 /** Resolve every media tool once; `refresh` re-runs the search (after an install). */
 export async function mediaTools(
   resourcesPath: string | null,
   refresh = false,
+  userDataPath: string | null = null,
 ): Promise<ToolInfo[]> {
+  if (userDataPath) lastUserData = userDataPath;
   if (cache && !refresh) return [...cache.values()];
   const found = new Map<MediaTool, ToolInfo>();
   for (const tool of MEDIA_TOOLS) {
@@ -151,6 +174,10 @@ export async function mediaTools(
     if (!binary) {
       binary = fromResources(tool, resourcesPath);
       if (binary) source = 'resources';
+    }
+    if (!binary) {
+      binary = fromInstalled(tool, userDataPath ?? lastUserData);
+      if (binary) source = 'installed';
     }
     if (!binary) {
       binary = fromSystem(tool);
@@ -171,8 +198,9 @@ export async function mediaTools(
 export async function mediaToolPath(
   tool: MediaTool,
   resourcesPath: string | null,
+  userDataPath: string | null = null,
 ): Promise<string | null> {
-  const all = await mediaTools(resourcesPath);
+  const all = await mediaTools(resourcesPath, false, userDataPath);
   return all.find((t) => t.tool === tool)?.path ?? null;
 }
 

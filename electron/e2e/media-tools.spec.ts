@@ -121,7 +121,7 @@ test('the media bench converts with the real tools, and refuses what is outside 
 
     // The tools this machine has, named with where each came from.
     const chips = bench.locator('.tool-chip');
-    await expect(chips).toHaveCount(4, { timeout: 30_000 });
+    await expect(chips).toHaveCount(5, { timeout: 30_000 });
     await expect(chips.filter({ hasText: 'ffmpeg' }).first()).toHaveClass(/ok/);
 
     // The files arrive through the watcher, grouped by kind.

@@ -43,12 +43,15 @@ describe('native tools, step 1', () => {
       'run_magick',
       'run_pandoc',
       'probe_media',
+      'make_pdf',
       'media_tools',
+      'install_media_tool',
     ]);
     const names = defaultToolDefinitions().map((t) => t.name);
     expect(names).toContain('run_ffmpeg');
     expect(names).toContain('run_pandoc');
     expect(names).toContain('media_tools');
+    expect(names).toContain('make_pdf');
     expect(names).toContain('capture_preview');
     expect(names).toContain('render_video');
     expect(names).not.toContain('check_site');

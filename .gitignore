@@ -28,3 +28,6 @@ jupyterlite-crux/.cache/
 
 # JupyterLite incremental build bookkeeping
 jupyterlite-crux/.jupyterlite.doit.db*
+
+# Staged native binaries (built by electron/scripts/stage-binaries.mjs, never committed)
+electron/resources/bin/

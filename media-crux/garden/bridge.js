@@ -4,7 +4,8 @@
 // needs from the app goes over postMessage and the app answers as the person:
 //   garden.files()                     what is in this crux (path, bytes, kind)
 //   garden.probe(path)                 what a media file is
-//   garden.run(tool, args)             ffmpeg | ffprobe | magick, inside the folder
+//   garden.run(tool, args)             ffmpeg | ffprobe | magick | pandoc, in the folder
+//   garden.pdf(path, out)              a document to PDF (Pandoc writes, the app prints)
 //   garden.tools()                     which binaries this machine has
 //   garden.read(path) / write(path, t) the crux's own files (recipes, the log)
 //   garden.onProgress(cb)              a running conversion's progress, 0..1
@@ -50,7 +51,9 @@
   function ask(type, payload, timeoutMs) {
     return new Promise(function (resolve, reject) {
       if (!framed)
-        return reject(new Error('Open this bench in Crux Garden — it runs the tools for the page.'));
+        return reject(
+          new Error('Open this bench in Crux Garden — it runs the tools for the page.'),
+        );
       var id = 'm' + ++seq + '-' + Math.random().toString(36).slice(2);
       var timer = setTimeout(function () {
         pending.delete(id);
@@ -72,6 +75,10 @@
     run: function (tool, args) {
       // A conversion may be long; the host bounds it too.
       return ask('crux:media:run', { tool: tool, args: args }, 15 * 60 * 1000);
+    },
+    pdf: function (path, out) {
+      // Pandoc lays out the page, the app prints it — minutes at the outside.
+      return ask('crux:media:pdf', { path: path, out: out }, 5 * 60 * 1000);
     },
     tools: function (refresh) {
       return askRetrying('crux:media:tools', { refresh: !!refresh }, 8000, 3);

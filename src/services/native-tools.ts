@@ -17,13 +17,24 @@ export interface NativeRunResult {
 
 /** The media binaries, as this machine has them (platform-aware, electron/src/media-binaries.ts). */
 /** The programs the shell will run. One list, so nothing drifts out of it. */
-export const MEDIA_TOOL_NAMES = ['ffmpeg', 'ffprobe', 'magick', 'pandoc'] as const;
+export const MEDIA_TOOL_NAMES = ['ffmpeg', 'ffprobe', 'magick', 'pandoc', 'typst'] as const;
 export type MediaToolName = (typeof MEDIA_TOOL_NAMES)[number];
 export interface MediaToolInfo {
   tool: MediaToolName;
   path: string | null;
-  source: 'bundled' | 'resources' | 'system' | 'missing';
+  source: 'bundled' | 'resources' | 'installed' | 'system' | 'missing';
   version: string | null;
+  /** Whether the app knows a way to fetch this one for the person. */
+  installable?: boolean;
+}
+
+export interface MediaInstallResult {
+  tool: MediaToolName;
+  ok: boolean;
+  path?: string;
+  message: string;
+  /** What the person can run themselves, when the app cannot do it. */
+  command?: string;
 }
 
 export function nativeToolsAvailable(): boolean {
@@ -41,6 +52,48 @@ export async function mediaTools(refresh = false): Promise<MediaToolInfo[]> {
   const api = typeof window !== 'undefined' ? window.electronAPI?.native : undefined;
   if (!api?.tools) return [];
   return api.tools({ refresh });
+}
+
+/**
+ * Install a tool the app does not carry, at the person's request.
+ *
+ * ImageMagick is the only one: Linux and Windows have an official download,
+ * macOS has none, so there the app drives Homebrew when it is present and
+ * otherwise says what to run. The answer is a sentence to show either way.
+ */
+export async function installMediaTool(tool: MediaToolName): Promise<MediaInstallResult> {
+  const api = typeof window !== 'undefined' ? window.electronAPI?.native : undefined;
+  if (!api?.install) return { tool, ok: false, message: 'Installing tools needs the desktop app.' };
+  return api.install({ tool });
+}
+
+/** Lines and progress from an install in flight. */
+export function onMediaInstallProgress(
+  callback: (event: { tool: MediaToolName; fraction?: number; line?: string }) => void,
+): () => void {
+  const api = typeof window !== 'undefined' ? window.electronAPI?.native : undefined;
+  return api?.onInstallProgress ? api.onInstallProgress(callback) : () => {};
+}
+
+/**
+ * A document to PDF.
+ *
+ * Pandoc converts between document formats itself, but it has no PDF engine —
+ * a PDF is a laid-out page, not a document, and Pandoc's default engine is a
+ * LaTeX install of several gigabytes. Two better ones are used instead:
+ * **Typst** when the machine has it, which really typesets (page breaks, page
+ * numbers, a table of contents), and otherwise **the browser Crux Garden
+ * already ships**, which prints a page Pandoc wrote. The answer says which one
+ * made it.
+ */
+export async function makePdf(
+  cruxId: string,
+  path: string,
+  opts: { out?: string; pageSize?: string; landscape?: boolean } = {},
+): Promise<{ path: string; bytes: number; engine?: string }> {
+  const api = typeof window !== 'undefined' ? window.electronAPI?.native : undefined;
+  if (!api?.pdf) throw new Error('Making a PDF needs the desktop app.');
+  return api.pdf({ cruxId, path, ...opts });
 }
 
 /** Run one media binary inside the crux's folder. */

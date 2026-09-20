@@ -75,6 +75,21 @@ export function useMediaProxy(cruxId: string | null) {
           case 'crux:media:tools':
             answer(await native.mediaTools(e.data.refresh === true));
             break;
+          case 'crux:media:install': {
+            const tool = String(e.data.tool ?? '') as MediaToolName;
+            if (!(MEDIA_TOOL_NAMES as readonly string[]).includes(tool))
+              return answer(null, `Unknown tool: ${tool}`);
+            answer(await native.installMediaTool(tool));
+            break;
+          }
+          case 'crux:media:pdf': {
+            const path = String(e.data.path ?? '');
+            const out = e.data.out ? String(e.data.out) : undefined;
+            const made = await track(native.makePdf(cruxId!, path, { out }));
+            await untilIngested(cruxId!, made.path);
+            answer(made);
+            break;
+          }
           case 'crux:media:probe':
             answer(await track(native.probeMedia(cruxId!, String(e.data.path ?? ''))));
             break;

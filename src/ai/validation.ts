@@ -70,6 +70,27 @@ export function validateToolInput(
         : { valid: false, error: 'path is required' };
     case 'media_tools':
       return { valid: true };
+    case 'make_pdf':
+      return typeof input.path === 'string' && input.path.trim()
+        ? { valid: true }
+        : { valid: false, error: 'path is required' };
+    case 'compose_ps':
+      return { valid: true };
+    case 'compose_up':
+    case 'compose_down':
+    case 'compose_logs': {
+      // Only a service name and a line count; the shell checks them again.
+      if (input.service !== undefined && !/^[\w.-]{1,64}$/.test(String(input.service)))
+        return { valid: false, error: 'service must be a service name' };
+      if (input.tail !== undefined && (typeof input.tail !== 'number' || input.tail < 1))
+        return { valid: false, error: 'tail must be a positive number' };
+      return { valid: true };
+    }
+    case 'install_media_tool':
+      // Only ImageMagick has an install route; anything else is a mistake.
+      return input.tool === undefined || input.tool === 'magick'
+        ? { valid: true }
+        : { valid: false, error: 'only magick can be installed' };
     case 'capture_preview':
     case 'render_video':
       return validateCapture(input);

@@ -670,8 +670,151 @@ function setupIpc() {
   ipcMain.handle('native:tools', async (_e: any, opts?: { refresh?: boolean }) => {
     const { mediaTools, clearMediaToolCache } =
       require('./media-binaries') as typeof import('./media-binaries');
+    const { canInstall } = require('./media-install') as typeof import('./media-install');
     if (opts?.refresh) clearMediaToolCache();
-    return mediaTools(app.isPackaged ? process.resourcesPath : null);
+    const found = await mediaTools(
+      app.isPackaged ? process.resourcesPath : null,
+      false,
+      app.getPath('userData'),
+    );
+    return found.map((info) => ({ ...info, installable: !info.path && canInstall(info.tool) }));
+  });
+
+  /**
+   * A document to PDF. Pandoc cannot make one without a PDF engine (LaTeX,
+   * gigabytes), so it writes a standalone page and the app prints it in a
+   * locked-down hidden window — see print-pdf.ts. An HTML source skips the
+   * first step.
+   */
+  ipcMain.handle(
+    'native:pdf',
+    async (
+      _e: any,
+      opts: { cruxId: string; path: string; out?: string; pageSize?: string; landscape?: boolean },
+    ) => {
+      const { mediaToolPath } = require('./media-binaries') as typeof import('./media-binaries');
+      const { printHtmlToPdf } = require('./print-pdf') as typeof import('./print-pdf');
+      const crux = lookupCrux(opts.cruxId);
+      if (!crux) throw new Error('This crux has no Project Folder');
+      const folder = path.resolve(crux.folder);
+      const source = String(opts.path ?? '');
+      if (!source || source.startsWith('/') || source.includes('..'))
+        throw new Error(`Use paths relative to the crux folder: ${source}`);
+      const base =
+        source
+          .replace(/\.[^./]+$/, '')
+          .split('/')
+          .pop() || 'document';
+      const out = String(opts.out ?? `exports/${base}.pdf`);
+      if (out.startsWith('/') || out.includes('..'))
+        throw new Error(`Use paths relative to the crux folder: ${out}`);
+
+      const resources = app.isPackaged ? process.resourcesPath : null;
+      const userData = app.getPath('userData');
+      const pandoc = await mediaToolPath('pandoc', resources, userData);
+      const isHtml = /\.html?$/i.test(source);
+
+      // Typst really typesets — page breaks, page numbers, a table of
+      // contents — so it is the engine when the machine has it. Its template
+      // insists on a font that exists, and if anything about that fails the
+      // browser route below still makes a PDF.
+      const typst = await mediaToolPath('typst', resources, userData);
+      if (!isHtml && pandoc && typst) {
+        const { typstFont } = require('./print-pdf') as typeof import('./print-pdf');
+        const font = await typstFont(typst);
+        const viaTypst = await new Promise<string | null>((resolve) => {
+          execFile(
+            pandoc,
+            [source, '--pdf-engine', typst, ...(font ? ['-V', `mainfont=${font}`] : []), '-o', out],
+            { cwd: folder, timeout: 5 * 60_000 },
+            (error: Error | null, _stdout: string, stderr: string) =>
+              resolve(error ? String(stderr || error.message).slice(0, 500) : null),
+          );
+        });
+        if (!viaTypst) {
+          const at = path.join(folder, out);
+          return {
+            path: out,
+            bytes: fs.existsSync(at) ? fs.statSync(at).size : 0,
+            engine: 'typst',
+          };
+        }
+        appLog.info(`[pdf] typst declined, printing instead: ${viaTypst}`);
+      }
+
+      let page = source;
+      let temporary: string | null = null;
+      if (!isHtml) {
+        if (!pandoc)
+          throw new Error('Pandoc is needed to turn this into a page first, and it is missing.');
+        temporary = `.crux/print/${base}.html`;
+        fs.mkdirSync(path.join(folder, '.crux', 'print'), { recursive: true });
+        await new Promise<void>((resolve, reject) => {
+          execFile(
+            pandoc,
+            [source, '--standalone', '--embed-resources', '-o', temporary!],
+            { cwd: folder, timeout: 5 * 60_000 },
+            (error: Error | null, _stdout: string, stderr: string) =>
+              error ? reject(new Error(String(stderr || error.message).slice(0, 2000))) : resolve(),
+          );
+        });
+        page = temporary;
+      }
+      try {
+        const { bytes } = await printHtmlToPdf(folder, page, out, {
+          pageSize: opts.pageSize,
+          landscape: opts.landscape,
+        });
+        return { path: out, bytes, engine: 'browser' };
+      } finally {
+        // The intermediate page is scaffolding, and .crux/ is never ingested.
+        if (temporary) fs.rmSync(path.join(folder, temporary), { force: true });
+      }
+    },
+  );
+
+  // Containers: a Crux's own stack, through Docker Compose (see containers.ts).
+  ipcMain.handle('containers:runner', async (_e: any, opts?: { refresh?: boolean }) => {
+    const { composeRunner, clearComposeRunnerCache } =
+      require('./containers') as typeof import('./containers');
+    if (opts?.refresh) clearComposeRunnerCache();
+    return composeRunner(opts?.refresh);
+  });
+
+  ipcMain.handle('containers:inspect', async (_e: any, opts: { cruxId: string; file?: string }) => {
+    const { inspectCompose } = require('./containers') as typeof import('./containers');
+    const crux = lookupCrux(opts.cruxId);
+    if (!crux) throw new Error('This crux has no Project Folder');
+    return inspectCompose(path.resolve(crux.folder), opts.file);
+  });
+
+  ipcMain.handle(
+    'containers:compose',
+    async (
+      e: any,
+      opts: { cruxId: string; verb: string; service?: string; tail?: number; timeoutMs?: number },
+    ) => {
+      const { runCompose, COMPOSE_VERBS } =
+        require('./containers') as typeof import('./containers');
+      const verb = opts?.verb as (typeof COMPOSE_VERBS)[number];
+      if (!COMPOSE_VERBS.includes(verb)) throw new Error(`Not allowed: ${opts?.verb}`);
+      const crux = lookupCrux(opts.cruxId);
+      if (!crux) throw new Error('This crux has no Project Folder');
+      return runCompose({ ...opts, verb, folder: path.resolve(crux.folder) }, (line) => {
+        if (!e.sender.isDestroyed())
+          e.sender.send('containers:output', { cruxId: opts.cruxId, verb, line });
+      });
+    },
+  );
+
+  ipcMain.handle('native:install', async (e: any, opts: { tool: string }) => {
+    const { MEDIA_TOOLS } = require('./media-binaries') as typeof import('./media-binaries');
+    const { installMediaTool } = require('./media-install') as typeof import('./media-install');
+    const tool = opts?.tool as (typeof MEDIA_TOOLS)[number];
+    if (!MEDIA_TOOLS.includes(tool)) throw new Error(`Unknown native tool: ${opts?.tool}`);
+    return installMediaTool(tool, app.getPath('userData'), (progress) => {
+      if (!e.sender.isDestroyed()) e.sender.send('native:install-progress', progress);
+    });
   });
 
   ipcMain.handle(
@@ -681,14 +824,20 @@ function setupIpc() {
         require('./media-binaries') as typeof import('./media-binaries');
       const tool = opts.tool as (typeof MEDIA_TOOLS)[number];
       if (!MEDIA_TOOLS.includes(tool)) throw new Error(`Unknown native tool: ${opts.tool}`);
-      const binary = await mediaToolPath(tool, app.isPackaged ? process.resourcesPath : null);
+      const binary = await mediaToolPath(
+        tool,
+        app.isPackaged ? process.resourcesPath : null,
+        app.getPath('userData'),
+      );
       if (!binary)
         throw new Error(
           tool === 'magick'
             ? 'ImageMagick is not on this machine. Install it (brew install imagemagick, apt install imagemagick, or imagemagick.org) and look again.'
             : tool === 'pandoc'
               ? 'Pandoc is not on this machine. Install it (brew install pandoc, apt install pandoc, or pandoc.org) and look again.'
-              : `${tool} is not available on this machine`,
+              : tool === 'typst'
+                ? 'Typst is not on this machine. Install it (brew install typst, or typst.app) and look again.'
+                : `${tool} is not available on this machine`,
         );
       const crux = lookupCrux(opts.cruxId);
       if (!crux) throw new Error('This crux has no Project Folder');
@@ -743,7 +892,7 @@ function setupIpc() {
           ? magickCommands.has(args[0] ?? '')
             ? [args[0]!, ...magickLimits, ...args.slice(1)]
             : [...magickLimits, ...args]
-          : tool === 'pandoc'
+          : tool === 'pandoc' || tool === 'typst'
             ? args
             : tool === 'ffprobe'
               ? ['-hide_banner', '-protocol_whitelist', 'file,pipe', ...args]

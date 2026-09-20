@@ -334,6 +334,7 @@ const TOOL_NAMES: Record<MediaToolName, string> = {
   ffprobe: 'ffprobe',
   magick: 'ImageMagick',
   pandoc: 'Pandoc',
+  typst: 'Typst',
 };
 const INSTALL: Partial<Record<MediaToolName, string>> = {
   magick: 'brew install imagemagick',
