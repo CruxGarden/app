@@ -7,6 +7,9 @@ import {
   updateCruxspace,
 } from '@/services/cruxspaces';
 import { toolManifest } from '@/services/crux-tools/registry';
+import { DEFAULT_PANE_LABELS } from '@/lib/pane-labels';
+import type { PaneType } from '@/stores/uiStore';
+import { pathOf } from '@/lib/artifact-path';
 
 /**
  * The Keeper's tools (GARDENS-ALL-THE-WAY-OUT, step zero; MAKING-IT-POSSIBLE
@@ -15,6 +18,9 @@ import { toolManifest } from '@/services/crux-tools/registry';
  * wait for it, and install a tool. The same operations the person has in the
  * hub, the picker, the Collaboration and Explore — as tools.
  */
+const SHOW_WHAT = ['home', 'crux', 'pane', 'file', 'settings', 'explore'] as const;
+const PANES = Object.keys(DEFAULT_PANE_LABELS) as PaneType[];
+
 export const GARDEN_TOOL_DEFINITIONS: ToolDefinition[] = [
   {
     name: 'list_cruxes',
@@ -105,6 +111,102 @@ export const GARDEN_TOOL_DEFINITIONS: ToolDefinition[] = [
       additionalProperties: false,
     },
   },
+  {
+    name: 'show',
+    description:
+      'Bring something into view so the person watches you work: the home garden, a crux (its workspace opens), a pane in the open crux (opened or closed), a file (opens in the Workshop), Settings, or Explore. The console closes so they can see. Name a crux by id or title.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        what: {
+          type: 'string',
+          enum: ['home', 'crux', 'pane', 'file', 'settings', 'explore'],
+        },
+        cruxId: { type: 'string' },
+        title: { type: 'string', description: 'A crux by title, when you have no id.' },
+        pane: {
+          type: 'string',
+          enum: [
+            'tasks',
+            'history',
+            'collaboration',
+            'artifacts',
+            'workshop',
+            'details',
+            'sync',
+            'publish',
+            'export',
+            'store',
+            'media',
+          ],
+        },
+        visible: { type: 'boolean', description: 'For a pane: open (default) or close.' },
+        path: { type: 'string', description: 'For a file: its path in the crux.' },
+      },
+      required: ['what'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'read_crux',
+    description:
+      'What a crux holds: title, template, files, the entry file, whether it is shared, its brief, and the last replies in its Collaboration. Use it before run_turn to know what exists, or to explain a crux to the person.',
+    input_schema: {
+      type: 'object',
+      properties: { cruxId: { type: 'string' }, title: { type: 'string' } },
+      required: [],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'snapshot_crux',
+    description:
+      'Record a Growth snapshot of a crux with a label — a moment the person can come back to. Take one before a run_turn that changes a lot, and when something is done.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        cruxId: { type: 'string' },
+        title: { type: 'string' },
+        label: { type: 'string', description: 'What this moment is.' },
+      },
+      required: ['label'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'set_names',
+    description:
+      "Name the garden and its panes — the metaphor the person works inside (a title like 'Floyd County Police Department'; Collaboration as 'Interview room', Artifacts as 'Case files'). An empty string clears a name. Only when asked, or as part of building the garden they described.",
+    input_schema: {
+      type: 'object',
+      properties: {
+        title: { type: 'string' },
+        panes: {
+          type: 'object',
+          description: 'pane type → name; empty string clears.',
+          additionalProperties: { type: 'string' },
+        },
+      },
+      required: [],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'list_moods',
+    description: 'The bundled Moods the garden can wear: id, name, one line each.',
+    input_schema: { type: 'object', properties: {}, required: [], additionalProperties: false },
+  },
+  {
+    name: 'wear_mood',
+    description:
+      'Wear a bundled Mood by id (from list_moods): the look, sound and persona of the whole garden change at once. Only when asked, or as part of the garden they described.',
+    input_schema: {
+      type: 'object',
+      properties: { id: { type: 'string' } },
+      required: ['id'],
+      additionalProperties: false,
+    },
+  },
 ];
 
 export const GARDEN_TOOL_NAMES = new Set(GARDEN_TOOL_DEFINITIONS.map((t) => t.name));
@@ -145,6 +247,48 @@ export function validateGardenTool(
       if (!str(input.cruxId, 80) && !(str(input.username, 80) && str(input.slug, 200)))
         return { valid: false, error: 'give a cruxId, or a username and slug' };
       return { valid: true };
+    case 'show': {
+      const what = str(input.what, 20);
+      if (!what || !SHOW_WHAT.includes(what as (typeof SHOW_WHAT)[number]))
+        return { valid: false, error: `what must be one of ${SHOW_WHAT.join(', ')}` };
+      if ((what === 'crux' || what === 'file') && !str(input.cruxId, 80) && !str(input.title, 200))
+        return { valid: false, error: 'give a cruxId or a title' };
+      if (what === 'pane' && !PANES.includes(input.pane as PaneType))
+        return { valid: false, error: `pane must be one of ${PANES.join(', ')}` };
+      if (what === 'file' && !str(input.path, 400))
+        return { valid: false, error: 'path is required for a file' };
+      return { valid: true };
+    }
+    case 'read_crux':
+      if (!str(input.cruxId, 80) && !str(input.title, 200))
+        return { valid: false, error: 'give a cruxId or a title' };
+      return { valid: true };
+    case 'snapshot_crux':
+      if (!str(input.cruxId, 80) && !str(input.title, 200))
+        return { valid: false, error: 'give a cruxId or a title' };
+      if (!str(input.label, 200)) return { valid: false, error: 'label is required (≤200 chars)' };
+      return { valid: true };
+    case 'set_names': {
+      if (input.title !== undefined && (typeof input.title !== 'string' || input.title.length > 80))
+        return { valid: false, error: 'title must be a string (≤80 chars)' };
+      if (input.panes !== undefined) {
+        if (!input.panes || typeof input.panes !== 'object' || Array.isArray(input.panes))
+          return { valid: false, error: 'panes must be an object of pane → name' };
+        for (const [k, v] of Object.entries(input.panes as Record<string, unknown>)) {
+          if (!PANES.includes(k as PaneType)) return { valid: false, error: `unknown pane ${k}` };
+          if (typeof v !== 'string' || v.length > 40)
+            return { valid: false, error: `name for ${k} must be a string (≤40 chars)` };
+        }
+      }
+      if (input.title === undefined && input.panes === undefined)
+        return { valid: false, error: 'give a title, panes, or both' };
+      return { valid: true };
+    }
+    case 'list_moods':
+      return { valid: true };
+    case 'wear_mood':
+      if (!str(input.id, 80)) return { valid: false, error: 'id is required' };
+      return { valid: true };
     default:
       return { valid: false, error: `Unknown tool: ${name}` };
   }
@@ -156,7 +300,10 @@ export async function runGardenTool(name: string, input: Record<string, unknown>
   const v = validateGardenTool(name, input);
   if (!v.valid) return `Error: ${v.error}`;
   try {
-    return await runGardenToolInner(name, input);
+    const result = await runGardenToolInner(name, input);
+    // The Keeper's actions leave a trail in the console (journeys read it too).
+    console.info('[garden-tool]', name, result.slice(0, 200).replace(/\n/g, ' '));
+    return result;
   } finally {
     // The garden changed under the person: the Home lists follow.
     if (name === 'plant_crux' || name === 'create_cruxspace' || name === 'install_tool') {
@@ -164,6 +311,27 @@ export async function runGardenTool(name: string, input: Record<string, unknown>
       void useGardenStore.getState().refresh();
     }
   }
+}
+
+/** A crux by id, or by title (exact, then case-insensitive, then prefix). */
+async function resolveCrux(input: Record<string, unknown>) {
+  const services = getServices();
+  const id = typeof input.cruxId === 'string' ? input.cruxId.trim() : '';
+  if (id) {
+    const crux = await services.crux.findById(id).catch(() => null);
+    if (crux) return crux;
+  }
+  const title = typeof input.title === 'string' ? input.title.trim() : '';
+  if (title) {
+    const all = (await services.crux.listAll()).filter((c) => c.kind !== 'snapshot');
+    const lower = title.toLowerCase();
+    const found =
+      all.find((c) => c.title === title) ??
+      all.find((c) => (c.title ?? '').toLowerCase() === lower) ??
+      all.find((c) => (c.title ?? '').toLowerCase().startsWith(lower));
+    if (found) return found;
+  }
+  throw new Error(`No crux ${id ? `with id ${id}` : `titled "${title}"`}. list_cruxes names them.`);
 }
 
 async function runGardenToolInner(name: string, input: Record<string, unknown>): Promise<string> {
@@ -277,6 +445,123 @@ async function runGardenToolInner(name: string, input: Record<string, unknown>):
         .filter(Boolean)
         .join('\n');
     }
+    case 'show': {
+      const { navigateTo } = await import('@/lib/navigate');
+      const { useUIStore } = await import('@/stores/uiStore');
+      const ui = useUIStore.getState();
+      const what = input.what as (typeof SHOW_WHAT)[number];
+      // The console closes so the person sees what you bring into view.
+      ui.setConsoleOpen(false);
+      if (what === 'home') {
+        navigateTo('/');
+        return 'Showing the home garden.';
+      }
+      if (what === 'explore') {
+        navigateTo('/explore');
+        return 'Showing Explore.';
+      }
+      if (what === 'settings') {
+        ui.setSettingsOpen(true);
+        return 'Showing Settings.';
+      }
+      if (what === 'pane') {
+        // Every open workspace has its own layout store (ADR 0018); the pane
+        // change goes to the workspace the person is looking at.
+        const { useWorkspaceRegistry, openWorkspace } = await import('@/stores/workspaceRegistry');
+        const active = useWorkspaceRegistry.getState().mru[0];
+        if (!active || !/\/c\//.test(location.pathname))
+          return 'No crux is open. show a crux first.';
+        const pane = input.pane as PaneType;
+        const visible = input.visible !== false;
+        (await openWorkspace(active)).ui.getState().setPaneVisible(pane, visible);
+        return `${visible ? 'Opened' : 'Closed'} the ${DEFAULT_PANE_LABELS[pane]} pane.`;
+      }
+      const crux = await resolveCrux(input);
+      const { activateWorkspace, openWorkspace } = await import('@/stores/workspaceRegistry');
+      const w = (await activateWorkspace(crux.id)) ?? (await openWorkspace(crux.id));
+      navigateTo(`/c/${crux.id}`);
+      if (what === 'crux') return `Showing "${crux.title}" (${crux.id}).`;
+      const path = (input.path as string).replace(/^\//, '');
+      const file = w.data.getState().artifacts.find((a) => pathOf(a) === path);
+      if (!file) return `No file "${path}" in "${crux.title}".`;
+      w.ui.getState().setPaneVisible('workshop', true);
+      w.ui.getState().openFile(file.id, path);
+      return `Showing ${path} in "${crux.title}".`;
+    }
+    case 'read_crux': {
+      const crux = await resolveCrux(input);
+      const { openWorkspace } = await import('@/stores/workspaceRegistry');
+      const w = await openWorkspace(crux.id);
+      const st = w.data.getState();
+      const meta = (crux.meta ?? {}) as Record<string, unknown>;
+      const settings = (meta.settings ?? {}) as Record<string, unknown>;
+      const files = st.artifacts.filter((a) => a.type === 'artifact').map((a) => pathOf(a));
+      const briefFile = st.artifacts.find((a) => pathOf(a) === 'BRIEF.md');
+      const briefText = briefFile
+        ? await services.artifact
+            .downloadBlob(briefFile.id)
+            .then((b) => b.text())
+            .catch(() => '')
+        : '';
+      const replies = st.messages.filter((m) => m.role === 'assistant').slice(-2);
+      return [
+        `"${crux.title}" (${crux.id})`,
+        `kind: ${crux.kind ?? 'webapp'}; template: ${String(meta.template ?? 'blank')}`,
+        `entry: ${String(settings.entryFile ?? 'index.html')}; shared: ${meta.publishedAt ? 'yes' : 'no'}`,
+        `files (${files.length}): ${files.slice(0, 60).join(', ')}${files.length > 60 ? ', …' : ''}`,
+        briefText ? `brief: ${brief(briefText)}` : '',
+        replies.length
+          ? `last replies:\n${replies.map((m) => `- ${brief(m.content).slice(0, 600)}`).join('\n')}`
+          : 'no conversation yet',
+      ]
+        .filter(Boolean)
+        .join('\n');
+    }
+    case 'snapshot_crux': {
+      const crux = await resolveCrux(input);
+      const { runGrowthTool } = await import('@/ai/growth-tools');
+      const out = await runGrowthTool(
+        'snapshot',
+        { label: input.label },
+        { cruxId: crux.id, requestedBy: 'The Keeper' },
+      );
+      return `"${crux.title}": ${out}`;
+    }
+    case 'set_names': {
+      const { applyActiveMood, getThemeOverrides, setThemeOverrides } =
+        await import('@/lib/moods/active');
+      const changes: Record<string, string> = {};
+      if (typeof input.title === 'string') changes.gardenTitle = input.title.trim();
+      for (const [pane, name] of Object.entries((input.panes ?? {}) as Record<string, string>))
+        changes[`paneLabel${pane[0]!.toUpperCase()}${pane.slice(1)}`] = name.trim();
+      for (const section of ['Dark', 'Light'] as const) {
+        const next = { ...getThemeOverrides(section) };
+        for (const [k, v] of Object.entries(changes)) {
+          if (v) next[k] = v;
+          else delete next[k];
+        }
+        setThemeOverrides(section, next);
+      }
+      applyActiveMood();
+      const said = Object.entries(changes).map(([k, v]) =>
+        k === 'gardenTitle'
+          ? `title ${v ? `"${v}"` : 'cleared'}`
+          : `${k.replace(/^paneLabel/, '')} ${v ? `→ "${v}"` : 'back to its usual word'}`,
+      );
+      return `Named: ${said.join('; ')}.`;
+    }
+    case 'list_moods': {
+      const { BUNDLED_MOODS } = await import('@/lib/moods/bundled-moods');
+      return BUNDLED_MOODS.map((m) => `- ${m.id} — ${m.name}`).join('\n');
+    }
+    case 'wear_mood': {
+      const { bundledMood } = await import('@/lib/moods/bundled-moods');
+      const { applyMood } = await import('@/lib/moods/packages');
+      const pkg = bundledMood(input.id as string);
+      if (!pkg) return `No bundled Mood "${String(input.id)}". list_moods names them.`;
+      await applyMood(pkg);
+      return `Now wearing "${pkg.name}".`;
+    }
     case 'publish_crux': {
       const { openWorkspace } = await import('@/stores/workspaceRegistry');
       const { publicCruxUrl } = await import('@/lib/public-url');
@@ -329,4 +614,6 @@ export const GARDEN_TOOL_GUIDANCE =
   'For an undertaking that needs several cruxes, create_cruxspace, then plant each member into it. ' +
   'To have the work done, run_turn in a crux with a clear message; it waits and reports the reply. ' +
   'Say what you planted and where, by title, so the person can open it. ' +
-  'When asked to build or make something, first load_skill("build-something") and follow it: ask, plan, plant, build, finish.';
+  'When asked to build or make something, first load_skill("build-something") and follow it: ask, plan, plant, build, finish. ' +
+  'You can operate the workspace in front of the person: show brings a crux, a pane, a file, the home garden, Settings or Explore into view (the console closes so they see it); read_crux tells you what a crux holds; snapshot_crux records a moment in its Growth; set_names and wear_mood shape the garden they described. ' +
+  'When asked to explain Crux Garden or show how it works, load_skill("tour") and do it by using it, one step at a time.';

@@ -1281,6 +1281,39 @@ export function getMockLanguageModel(): LanguageModel {
             return toolCallStream('save_font', { format: 'otf', name: 'Moss Sans' });
           return textStream('Named the font Moss Sans, drew an A from SVG and saved the OTF.');
         }
+        if (lastUserText(prompt).includes('[garden:tour')) {
+          // The Keeper gives the tour by operating the workspace (keeper-tour.spec).
+          const rounds = toolResultsThisTurn(prompt);
+          const steps: [string, Record<string, unknown>][] = lastUserText(prompt).includes(
+            '[garden:tour:pane-first]',
+          )
+            ? [
+                ['show', { what: 'crux', title: 'Tour stop' }],
+                ['show', { what: 'pane', pane: 'artifacts' }],
+                ['show', { what: 'pane', pane: 'history' }],
+                ['show', { what: 'file', title: 'Tour stop', path: 'index.html' }],
+                ['snapshot_crux', { title: 'Tour stop', label: "The tour's first moment" }],
+                ['set_names', { title: 'The Tour Garden', panes: { collaboration: 'The porch' } }],
+              ]
+            : lastUserText(prompt).includes('[garden:tour:pane-only]')
+              ? [['show', { what: 'pane', pane: 'history' }]]
+              : [
+                  ['show', { what: 'crux', title: 'Tour stop' }],
+                  ['show', { what: 'pane', pane: 'artifacts' }],
+                  ['show', { what: 'file', title: 'Tour stop', path: 'index.html' }],
+                  ['snapshot_crux', { title: 'Tour stop', label: "The tour's first moment" }],
+                  ['show', { what: 'pane', pane: 'history' }],
+                  [
+                    'set_names',
+                    { title: 'The Tour Garden', panes: { collaboration: 'The porch' } },
+                  ],
+                ];
+          const step = steps[rounds.length];
+          if (step) return toolCallStream(step[0], step[1]);
+          return textStream(
+            'That was the tour: the crux, its files, a moment kept in Growth, and the garden named. Tell the collaborator what to make next.',
+          );
+        }
         if (lastUserText(prompt).includes('[garden:plant]')) {
           // The Keeper plants a crux with a brief (garden-tools, step 6).
           const rounds = toolResultsThisTurn(prompt);

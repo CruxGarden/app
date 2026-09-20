@@ -96,6 +96,24 @@ export function getToolLabel(tc: ToolCall): string {
       return 'Published a crux';
     case 'install_tool':
       return `Installed ${String(tc.input?.slug ?? tc.input?.cruxId ?? 'a tool')}`;
+    case 'show': {
+      const what = String(tc.input?.what ?? '');
+      if (what === 'pane') return `Showed the ${String(tc.input?.pane ?? '')} pane`;
+      if (what === 'file') return `Showed ${String(tc.input?.path ?? 'a file')}`;
+      if (what === 'crux')
+        return `Showed ${String(tc.input?.title ?? tc.input?.cruxId ?? 'a crux')}`;
+      return `Showed ${what || 'the garden'}`;
+    }
+    case 'read_crux':
+      return `Read ${String(tc.input?.title ?? tc.input?.cruxId ?? 'a crux')}`;
+    case 'snapshot_crux':
+      return `Snapshot: ${String(tc.input?.label ?? '')}`;
+    case 'set_names':
+      return 'Named the garden';
+    case 'list_moods':
+      return 'Looked over the Moods';
+    case 'wear_mood':
+      return `Wore the ${String(tc.input?.id ?? '')} Mood`;
     case 'ToolSearch':
       return 'Looked up a tool';
     case 'ListMcpResourcesTool':
