@@ -414,6 +414,242 @@ export function projectName(cruxId: string): string {
     .toLowerCase()}`;
 }
 
+/** One service as Compose itself resolves it, after every file and `.env`. */
+export interface ResolvedService {
+  name: string;
+  image?: string;
+  /** Published ports: what the machine answers on, and what it reaches. */
+  ports: { host: string; container: number; protocol?: string }[];
+  /** The environment it will actually get, resolved. */
+  environment: Record<string, string>;
+  profiles: string[];
+}
+
+export interface ComposeResolution {
+  services: ResolvedService[];
+  /** Why Compose could not resolve the stack, if it could not. */
+  error?: string;
+}
+
+/**
+ * Ask Compose what the stack actually comes to.
+ *
+ * Our own reader describes the file — including the comments, which Compose
+ * throws away — but only Compose knows what the ports and environment are
+ * after `.env`, the override file and the active profiles have all been
+ * applied. So the page shows what Compose says, and describes it with what the
+ * file says.
+ *
+ * The Crux's secrets are deliberately **not** passed here: a secret is for the
+ * run, not for a panel, and this way a `${PASSWORD}` shows as empty rather
+ * than being printed on screen.
+ */
+export async function composeConfig(
+  folder: string,
+  profiles: string[] = [],
+): Promise<ComposeResolution> {
+  const runner = await composeRunner();
+  if (!runner) return { services: [], error: 'No container runner on this machine.' };
+  const args = ['compose'];
+  for (const profile of profiles) {
+    if (!/^[\w.-]{1,64}$/.test(profile)) throw new Error(`Not a profile name: ${profile}`);
+    args.push('--profile', profile);
+  }
+  args.push('config', '--format', 'json');
+  const answer = await new Promise<{ code: number; out: string; err: string }>((resolve) => {
+    const proc = spawn(runner.program, args, { cwd: folder });
+    let out = '';
+    let err = '';
+    proc.stdout?.on('data', (c: Buffer) => (out += String(c)));
+    proc.stderr?.on('data', (c: Buffer) => (err += String(c)));
+    proc.on('close', (code) => resolve({ code: code ?? -1, out, err }));
+    proc.on('error', (error) => resolve({ code: -1, out: '', err: String(error) }));
+  });
+  if (answer.code !== 0)
+    return { services: [], error: answer.err.trim().slice(0, 600) || 'Compose refused the file.' };
+  try {
+    const parsed = JSON.parse(answer.out) as {
+      services?: Record<
+        string,
+        {
+          image?: string;
+          profiles?: string[];
+          environment?: Record<string, string | null>;
+          ports?: { target?: number; published?: string | number; protocol?: string }[];
+        }
+      >;
+    };
+    return {
+      services: Object.entries(parsed.services ?? {}).map(([name, service]) => ({
+        name,
+        image: service.image,
+        profiles: service.profiles ?? [],
+        ports: (service.ports ?? [])
+          .filter((port) => port.published !== undefined)
+          .map((port) => ({
+            host: String(port.published),
+            container: Number(port.target ?? 0),
+            protocol: port.protocol,
+          })),
+        environment: Object.fromEntries(
+          Object.entries(service.environment ?? {}).map(([key, value]) => [key, value ?? '']),
+        ),
+      })),
+    };
+  } catch (error) {
+    return { services: [], error: `Could not read Compose's answer — ${(error as Error).message}` };
+  }
+}
+
+/**
+ * Which of these host ports something is already listening on.
+ *
+ * A stack that will not start because port 5432 is taken is the commonest
+ * disappointment there is, and it is answerable before anything runs.
+ */
+export async function portsInUse(ports: number[]): Promise<number[]> {
+  const net = await import('net');
+  const checks = [...new Set(ports)].map(
+    (port) =>
+      new Promise<number | null>((resolve) => {
+        const server = net.createServer();
+        server.once('error', () => resolve(port));
+        server.once('listening', () => server.close(() => resolve(null)));
+        server.listen(port, '127.0.0.1');
+      }),
+  );
+  return (await Promise.all(checks)).filter((port): port is number => port !== null);
+}
+
+/** A free host port at or after `from`, for offering a way out of a collision. */
+export async function freePort(from = 8000): Promise<number> {
+  for (let port = from; port < from + 400; port++) {
+    if (!(await portsInUse([port])).length) return port;
+  }
+  return 0;
+}
+
+/**
+ * The stack, as something else can connect to.
+ *
+ * A running stack is only useful to the code beside it if that code knows
+ * where it is. This turns the resolved services into the environment a
+ * neighbour needs — `DATABASE_URL`, `REDIS_URL`, a base URL per service — so
+ * an API you are working on locally can point at the database this Crux runs
+ * without anyone copying port numbers by hand.
+ *
+ * Everything here comes from what Compose resolved, so it stays right when a
+ * port is overridden.
+ */
+export function connectionsFor(services: ResolvedService[]): Record<string, string> {
+  const out: Record<string, string> = {};
+  const upper = (name: string) => name.replace(/[^A-Za-z0-9]+/g, '_').toUpperCase();
+  for (const service of services) {
+    const first = service.ports[0];
+    if (!first) continue;
+    const port = first.host.includes(':')
+      ? (first.host.split(':').pop() ?? first.host)
+      : first.host;
+    const image = (service.image ?? '').toLowerCase();
+    out[`${upper(service.name)}_PORT`] = port;
+    out[`${upper(service.name)}_HOST`] = '127.0.0.1';
+
+    // The shapes a neighbour actually asks for, for the services people run.
+    const env = service.environment ?? {};
+    if (/postgres/.test(image)) {
+      const user = env.POSTGRES_USER || 'postgres';
+      const password = env.POSTGRES_PASSWORD || '';
+      const database = env.POSTGRES_DB || user;
+      out.DATABASE_URL = `postgresql://${user}${password ? `:${password}` : ''}@127.0.0.1:${port}/${database}`;
+    } else if (/redis|valkey/.test(image)) {
+      out.REDIS_URL = `redis://127.0.0.1:${port}`;
+    } else if (/mongo/.test(image)) {
+      out.MONGO_URL = `mongodb://127.0.0.1:${port}`;
+    } else if (/minio/.test(image)) {
+      out.S3_ENDPOINT = `http://127.0.0.1:${port}`;
+    } else {
+      out[`${upper(service.name)}_URL`] = `http://127.0.0.1:${port}`;
+    }
+  }
+  return out;
+}
+
+/** The line that marks an override file as this app's to rewrite. */
+export const OVERRIDE_HEADER = '# Written by Crux Garden. Yours to edit — once you do, it keeps';
+
+export interface OverrideWish {
+  service: string;
+  /** Host port per container port: { "5432": "55432" }. */
+  ports?: Record<string, string>;
+  /** Environment to set for this service. */
+  environment?: Record<string, string>;
+}
+
+/**
+ * Write the machine's own overrides, as a file Compose merges over the stack.
+ *
+ * Changing a port or a setting must never touch `compose.yaml` — that file is
+ * the one everyone shares, and rewriting someone's YAML by hand loses their
+ * comments and their formatting. So the app owns a second file and writes it
+ * whole, from what the panel says.
+ *
+ * If that file was written by hand, the app will not touch it: it hands back
+ * the snippet instead, and the person pastes it where they want. Silently
+ * reformatting someone's file is worse than asking.
+ */
+export function writeOverride(
+  folder: string,
+  wishes: OverrideWish[],
+  file = 'compose.override.yaml',
+): { written: boolean; snippet: string } {
+  const lines: string[] = [];
+  for (const wish of wishes) {
+    const ports = Object.entries(wish.ports ?? {}).filter(([, host]) => host);
+    const env = Object.entries(wish.environment ?? {});
+    if (!ports.length && !env.length) continue;
+    lines.push(`  ${wish.service}:`);
+    if (ports.length) {
+      lines.push('    ports:');
+      for (const [container, host] of ports) lines.push(`      - "${host}:${container}"`);
+    }
+    if (env.length) {
+      lines.push('    environment:');
+      for (const [key, value] of env) lines.push(`      ${key}: ${JSON.stringify(value)}`);
+    }
+  }
+  const snippet = lines.length ? `services:\n${lines.join('\n')}\n` : '';
+  const at = path.join(folder, file);
+  const body = [
+    OVERRIDE_HEADER,
+    '# what you wrote and stops managing this file. Compose merges it over',
+    '# compose.yaml, so the stack everyone shares is untouched.',
+    '',
+    snippet || '# Nothing overridden.',
+  ].join('\n');
+
+  if (fs.existsSync(at)) {
+    const existing = fs.readFileSync(at, 'utf8');
+    if (!existing.startsWith(OVERRIDE_HEADER)) return { written: false, snippet };
+  }
+  fs.writeFileSync(at, body.endsWith('\n') ? body : `${body}\n`);
+  return { written: true, snippet };
+}
+
+/** What the app previously wrote there, so the panel opens with it filled in. */
+export function readOverride(folder: string, file = 'compose.override.yaml'): OverrideWish[] {
+  const at = path.join(folder, file);
+  if (!fs.existsSync(at)) return [];
+  const text = fs.readFileSync(at, 'utf8');
+  if (!text.startsWith(OVERRIDE_HEADER)) return [];
+  const { services } = scanYaml(text);
+  return services.map((service) => ({
+    service: service.name,
+    ports: Object.fromEntries(
+      service.ports.map((port) => [String(port.container ?? port.host), String(port.host)]),
+    ),
+  }));
+}
+
 export interface ComposeRunOptions {
   cruxId: string;
   folder: string;

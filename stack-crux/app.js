@@ -15,6 +15,9 @@
     // Profiles the person has switched on for this machine, kept in the
     // browser: which optional parts you run is yours, not the stack's.
     on: [],
+    // What Compose resolves the stack to, and what the app has overridden.
+    resolved: null,
+    wishes: {},
   };
 
   function recallProfiles() {
@@ -235,6 +238,219 @@
     });
   }
 
+  // ── Ports and environment, as Compose actually resolves them ──────────
+  function wishFor(service) {
+    if (!state.wishes[service])
+      state.wishes[service] = { service: service, ports: {}, environment: {} };
+    return state.wishes[service];
+  }
+
+  function renderPorts() {
+    var box = $('ports');
+    var resolved = state.resolved;
+    if (!resolved || resolved.error || !resolved.services.length) {
+      box.innerHTML =
+        resolved && resolved.error ? '<p class="hint">' + esc(resolved.error) + '</p>' : '';
+      return;
+    }
+    var taken = resolved.taken || [];
+    var rows = [];
+    resolved.services.forEach(function (s) {
+      s.ports.forEach(function (p) {
+        var clash = taken.indexOf(Number(p.host)) >= 0;
+        rows.push(
+          '<tr' +
+            (clash ? ' class="clash"' : '') +
+            '><th>' +
+            esc(s.name) +
+            '</th><td class="inner">' +
+            esc(String(p.container)) +
+            '</td><td><input data-port-service="' +
+            esc(s.name) +
+            '" data-port-container="' +
+            esc(String(p.container)) +
+            '" value="' +
+            esc(p.host) +
+            '"></td><td class="where">' +
+            (clash
+              ? 'in use · <button type="button" data-free="' +
+                esc(s.name) +
+                ':' +
+                esc(String(p.container)) +
+                '">pick a free one</button>'
+              : 'free') +
+            '</td></tr>',
+        );
+      });
+    });
+    if (!rows.length) {
+      box.innerHTML = '<h3>Ports</h3><p class="hint">This stack publishes no ports.</p>';
+      return;
+    }
+    box.innerHTML =
+      '<h3>Ports</h3><table class="settings-table"><tbody>' +
+      rows.join('') +
+      '</tbody></table>' +
+      '<p class="hint">These are the ports Compose will really use. Changing one writes ' +
+      '<code>compose.override.yaml</code> — the stack everyone shares is untouched.</p>' +
+      '<p><button id="save-ports" type="button">Save ports</button></p>';
+
+    box.querySelectorAll('[data-port-service]').forEach(function (input) {
+      input.addEventListener('change', function () {
+        var wish = wishFor(input.getAttribute('data-port-service'));
+        wish.ports[input.getAttribute('data-port-container')] = input.value.trim();
+      });
+    });
+    box.querySelectorAll('[data-free]').forEach(function (button) {
+      button.addEventListener('click', function () {
+        var parts = button.getAttribute('data-free').split(':');
+        garden.freePort(8000).then(function (port) {
+          if (!port) return say('No free port nearby.', 'warn');
+          var input = box.querySelector(
+            '[data-port-service="' + parts[0] + '"][data-port-container="' + parts[1] + '"]',
+          );
+          if (input) {
+            input.value = String(port);
+            wishFor(parts[0]).ports[parts[1]] = String(port);
+          }
+        });
+      });
+    });
+    $('save-ports').addEventListener('click', saveOverrides);
+  }
+
+  function renderEnv() {
+    var box = $('env');
+    var resolved = state.resolved;
+    if (!resolved || !resolved.services.length) {
+      box.innerHTML = '';
+      return;
+    }
+    box.innerHTML =
+      '<details id="env-details"><summary>Environment (' +
+      resolved.services.reduce(function (n, s) {
+        return n + Object.keys(s.environment || {}).length;
+      }, 0) +
+      ' values)</summary>' +
+      resolved.services
+        .filter(function (s) {
+          return Object.keys(s.environment || {}).length;
+        })
+        .map(function (s) {
+          return (
+            '<h4>' +
+            esc(s.name) +
+            '</h4><table class="settings-table"><tbody>' +
+            Object.keys(s.environment)
+              .map(function (key) {
+                return (
+                  '<tr><th>' +
+                  esc(key) +
+                  '</th><td><input data-env-service="' +
+                  esc(s.name) +
+                  '" data-env-key="' +
+                  esc(key) +
+                  '" value="' +
+                  esc(s.environment[key]) +
+                  '"></td></tr>'
+                );
+              })
+              .join('') +
+            '</tbody></table>'
+          );
+        })
+        .join('') +
+      '<p class="hint">What each service will actually get. An empty value usually means a ' +
+      "secret the stack expects — put it in the Crux's secrets and it is supplied at start, " +
+      'never written down. Changes here go to the override file.</p>' +
+      '<p><button id="save-env" type="button">Save environment</button></p></details>';
+
+    box.querySelectorAll('[data-env-service]').forEach(function (input) {
+      input.addEventListener('change', function () {
+        wishFor(input.getAttribute('data-env-service')).environment[
+          input.getAttribute('data-env-key')
+        ] = input.value;
+      });
+    });
+    $('save-env').addEventListener('click', saveOverrides);
+  }
+
+  // ── Connecting other work to this stack ───────────────────────────────
+  function renderConnections() {
+    var box = $('connections');
+    var found = (state.resolved && state.resolved.connections) || {};
+    var keys = Object.keys(found);
+    if (!keys.length) {
+      box.innerHTML = '';
+      return;
+    }
+    var text = keys
+      .map(function (k) {
+        return k + '=' + found[k];
+      })
+      .join('\n');
+    box.innerHTML =
+      '<h3>Connecting to this stack</h3>' +
+      '<p class="hint">What code running beside this Crux needs in order to reach these ' +
+      'services. It follows the ports above, so it stays right when you change one.</p>' +
+      '<pre class="output" id="connections-text">' +
+      esc(text) +
+      '</pre>' +
+      '<p><button id="write-connections" type="button">Write connections.env</button> ' +
+      '<button id="copy-connections" type="button">Copy</button></p>';
+    $('write-connections').addEventListener('click', function () {
+      busy(true);
+      garden
+        .write('connections.env', text + '\n')
+        .then(function () {
+          say('Wrote connections.env. Point your code at it, or ask the collaborator to.', 'ok');
+        })
+        .catch(function (error) {
+          say(String((error && error.message) || error), 'warn');
+        })
+        .then(function () {
+          busy(false);
+        });
+    });
+    $('copy-connections').addEventListener('click', function () {
+      try {
+        navigator.clipboard.writeText(text);
+        say('Copied.', 'ok');
+      } catch (e) {
+        say('Select the block above and copy it.', 'warn');
+      }
+    });
+  }
+
+  function saveOverrides() {
+    var wishes = Object.keys(state.wishes).map(function (name) {
+      return state.wishes[name];
+    });
+    if (!wishes.length) return say('Nothing changed.');
+    busy(true);
+    say('Writing compose.override.yaml…');
+    garden
+      .override(wishes)
+      .then(function (answer) {
+        if (answer && answer.written) {
+          say('Saved. Start the stack again to use it.', 'ok');
+          state.wishes = {};
+          return refresh(false);
+        }
+        say(
+          'Your override file was written by hand, so it was left alone. Paste this into it:\n\n' +
+            ((answer && answer.snippet) || ''),
+          'warn',
+        );
+      })
+      .catch(function (error) {
+        say(String((error && error.message) || error), 'warn');
+      })
+      .then(function () {
+        busy(false);
+      });
+  }
+
   function renderSettings() {
     var vars = (state.reading && state.reading.variables) || [];
     var box = $('settings');
@@ -425,6 +641,20 @@
         renderProfiles();
         renderSettings();
         renderFiles();
+        // Compose has the last word on ports and environment; ask it, but do
+        // not let a missing runner stop the rest of the page.
+        if (state.runner)
+          garden
+            .resolve(state.on)
+            .then(function (resolved) {
+              state.resolved = resolved;
+              renderPorts();
+              renderEnv();
+              renderConnections();
+            })
+            .catch(function () {
+              /* the file still describes itself */
+            });
         // `ps` needs a runner; without one the file still describes itself.
         return state.runner
           ? garden.services().catch(function () {

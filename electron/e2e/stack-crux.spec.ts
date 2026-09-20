@@ -130,6 +130,27 @@ test('a stack crux describes its compose file, refuses what reaches outside, and
       )
       .toContain('CORE_PORT=8123');
 
+    // Ports: what Compose really resolves — the saved setting, not the default.
+    await expect(bench.locator('#ports')).toContainText('Ports', { timeout: 60_000 });
+    await expect(bench.locator('input[data-port-service="core"]')).toHaveValue('8123', {
+      timeout: 30_000,
+    });
+
+    // What a neighbour needs to reach it, derived from the resolved ports.
+    await expect(bench.locator('#connections')).toContainText('CORE_PORT=8123', {
+      timeout: 60_000,
+    });
+    await bench.getByRole('button', { name: 'Write connections.env' }).click();
+    await expect
+      .poll(
+        () =>
+          existsSync(join(folder, 'connections.env'))
+            ? readFileSync(join(folder, 'connections.env'), 'utf8')
+            : '',
+        { timeout: 30_000, intervals: [1000] },
+      )
+      .toContain('CORE_PORT=8123');
+
     // And an override file, which Compose merges over the shared stack.
     await bench.getByRole('button', { name: 'Add an override file' }).click();
     await expect

@@ -4,6 +4,8 @@
 // needs from the app goes over postMessage and the app answers as the person:
 //   garden.runner()             what this machine runs stacks with, or null
 //   garden.inspect()            the compose file: services, and any refusal
+//   garden.resolve(profiles)    what Compose resolves it to: real ports and env
+//   garden.override(wishes)     this machine's ports and settings, merged over
 //   garden.compose(verb, opts)  up | down | ps | logs | pull | stop | start
 //   garden.services()           what is running right now
 //   garden.read(path) / write   the Crux's own files (compose.yaml, stack.json)
@@ -72,6 +74,15 @@
     },
     services: function () {
       return askRetrying('crux:stack:services', {}, 30000, 2);
+    },
+    resolve: function (profiles) {
+      return askRetrying('crux:stack:resolve', { profiles: profiles || [] }, 30000, 2);
+    },
+    override: function (wishes) {
+      return ask('crux:stack:override', { wishes: wishes }, 15000);
+    },
+    freePort: function (from) {
+      return askRetrying('crux:stack:free-port', { from: from }, 15000, 2);
     },
     compose: function (verb, opts) {
       // Pulling images is slow; the host bounds it too.

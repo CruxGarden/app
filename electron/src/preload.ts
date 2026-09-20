@@ -303,6 +303,34 @@ const api: ElectronBridge = {
         profiles: string[];
         variables: { name: string; fallback?: string; fromEnv: boolean }[];
       }>,
+    resolve: (opts: { cruxId: string; profiles?: string[] }) =>
+      ipcRenderer.invoke('containers:resolve', opts) as Promise<{
+        services: {
+          name: string;
+          image?: string;
+          ports: { host: string; container: number; protocol?: string }[];
+          environment: Record<string, string>;
+          profiles: string[];
+        }[];
+        error?: string;
+        taken: number[];
+        overrides: { service: string; ports?: Record<string, string> }[];
+        connections: Record<string, string>;
+      }>,
+    override: (opts: {
+      cruxId: string;
+      wishes: {
+        service: string;
+        ports?: Record<string, string>;
+        environment?: Record<string, string>;
+      }[];
+    }) =>
+      ipcRenderer.invoke('containers:override', opts) as Promise<{
+        written: boolean;
+        snippet: string;
+      }>,
+    freePort: (opts?: { from?: number }) =>
+      ipcRenderer.invoke('containers:free-port', opts) as Promise<number>,
     compose: (opts: {
       cruxId: string;
       verb: 'up' | 'down' | 'ps' | 'logs' | 'pull' | 'config' | 'stop' | 'start';

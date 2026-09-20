@@ -315,6 +315,40 @@ export interface ContainersBridge {
   runner(opts?: { refresh?: boolean }): Promise<{ program: string; version: string } | null>;
   /** Read the Crux's compose file: its services, and anything that forbids a start. */
   inspect(opts: { cruxId: string; file?: string }): Promise<ComposeReading>;
+  /**
+   * What Compose itself resolves the stack to, after every file, `.env` and
+   * the active profiles — plus which of those host ports are already taken.
+   * The Crux's secrets are not applied here: a secret is for the run.
+   */
+  resolve(opts: { cruxId: string; profiles?: string[] }): Promise<{
+    services: {
+      name: string;
+      image?: string;
+      ports: { host: string; container: number; protocol?: string }[];
+      environment: Record<string, string>;
+      profiles: string[];
+    }[];
+    error?: string;
+    taken: number[];
+    overrides: { service: string; ports?: Record<string, string> }[];
+    /** What a neighbour needs to reach this stack: DATABASE_URL, ports, base URLs. */
+    connections: Record<string, string>;
+  }>;
+  /**
+   * Write this machine's ports and settings into `compose.override.yaml`,
+   * which Compose merges over the shared stack. Refuses (and hands back the
+   * snippet) when that file was written by hand.
+   */
+  override(opts: {
+    cruxId: string;
+    wishes: {
+      service: string;
+      ports?: Record<string, string>;
+      environment?: Record<string, string>;
+    }[];
+  }): Promise<{ written: boolean; snippet: string }>;
+  /** A free host port, for offering a way out of a collision. */
+  freePort(opts?: { from?: number }): Promise<number>;
   /** One compose verb, for this Crux only. */
   compose(opts: {
     cruxId: string;

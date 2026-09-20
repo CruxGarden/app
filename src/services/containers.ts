@@ -92,6 +92,63 @@ export async function compose(
   return api().compose({ cruxId, verb, env: localSecrets(cruxId), ...opts });
 }
 
+/** One service as Compose resolves it, after every file, `.env` and profiles. */
+export interface ResolvedService {
+  name: string;
+  image?: string;
+  ports: { host: string; container: number; protocol?: string }[];
+  environment: Record<string, string>;
+  profiles: string[];
+}
+
+export interface ComposeResolution {
+  services: ResolvedService[];
+  error?: string;
+  /** Host ports something else is already listening on. */
+  taken: number[];
+  /** What the app wrote into the override file last time. */
+  overrides: { service: string; ports?: Record<string, string> }[];
+  /**
+   * What a neighbour needs to reach this stack — DATABASE_URL, REDIS_URL, a
+   * port and a base URL per service — derived from what Compose resolved, so
+   * it stays right when a port is overridden.
+   */
+  connections: Record<string, string>;
+}
+
+export interface OverrideWish {
+  service: string;
+  ports?: Record<string, string>;
+  environment?: Record<string, string>;
+}
+
+/**
+ * What the stack actually comes to, asked of Compose itself.
+ *
+ * Our reader describes the file, comments included; only Compose knows the
+ * ports and environment after `.env`, the override file and the active
+ * profiles. The panel shows what Compose says.
+ */
+export async function resolveCompose(
+  cruxId: string,
+  profiles: string[] = [],
+): Promise<ComposeResolution> {
+  return api().resolve({ cruxId, profiles });
+}
+
+/** Write this machine's ports and settings into the override file. */
+export async function writeOverride(
+  cruxId: string,
+  wishes: OverrideWish[],
+): Promise<{ written: boolean; snippet: string }> {
+  return api().override({ cruxId, wishes });
+}
+
+/** A free host port, for offering a way out of a collision. */
+export async function freePort(from = 8000): Promise<number> {
+  return api().freePort({ from });
+}
+
 /** Lines from a run in flight; pulling images takes minutes. */
 export function onComposeOutput(
   callback: (event: { cruxId: string; verb: string; line: string }) => void,

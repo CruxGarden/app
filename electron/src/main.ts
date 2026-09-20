@@ -789,6 +789,49 @@ function setupIpc() {
   });
 
   ipcMain.handle(
+    'containers:resolve',
+    async (_e: any, opts: { cruxId: string; profiles?: string[] }) => {
+      const { composeConfig, portsInUse, readOverride } =
+        require('./containers') as typeof import('./containers');
+      const crux = lookupCrux(opts.cruxId);
+      if (!crux) throw new Error('This crux has no Project Folder');
+      const folder = path.resolve(crux.folder);
+      const resolution = await composeConfig(folder, opts.profiles ?? []);
+      const wanted = resolution.services.flatMap((service) =>
+        service.ports.map((port) => Number(port.host)).filter(Boolean),
+      );
+      const { connectionsFor } = require('./containers') as typeof import('./containers');
+      return {
+        ...resolution,
+        taken: await portsInUse(wanted),
+        overrides: readOverride(folder),
+        // What a neighbour needs to reach this stack, from what Compose resolved.
+        connections: connectionsFor(resolution.services),
+      };
+    },
+  );
+
+  ipcMain.handle(
+    'containers:override',
+    async (_e: any, opts: { cruxId: string; wishes: unknown }) => {
+      const { writeOverride } = require('./containers') as typeof import('./containers');
+      const crux = lookupCrux(opts.cruxId);
+      if (!crux) throw new Error('This crux has no Project Folder');
+      const wishes = Array.isArray(opts.wishes)
+        ? (opts.wishes as { service?: unknown }[]).filter(
+            (wish) => typeof wish?.service === 'string' && /^[\w.-]{1,64}$/.test(wish.service),
+          )
+        : [];
+      return writeOverride(path.resolve(crux.folder), wishes as never);
+    },
+  );
+
+  ipcMain.handle('containers:free-port', async (_e: any, opts?: { from?: number }) => {
+    const { freePort } = require('./containers') as typeof import('./containers');
+    return freePort(typeof opts?.from === 'number' ? opts.from : 8000);
+  });
+
+  ipcMain.handle(
     'containers:compose',
     async (
       e: any,

@@ -49,6 +49,33 @@ export function useStackProxy(cruxId: string | null) {
           case 'crux:stack:inspect':
             answer(await track(containers.inspectCompose(cruxId!)));
             break;
+          case 'crux:stack:resolve':
+            answer(
+              await track(
+                containers.resolveCompose(
+                  cruxId!,
+                  Array.isArray(e.data.profiles) ? e.data.profiles.map(String) : [],
+                ),
+              ),
+            );
+            break;
+          case 'crux:stack:override':
+            answer(
+              await track(
+                containers.writeOverride(
+                  cruxId!,
+                  Array.isArray(e.data.wishes) ? e.data.wishes : [],
+                ),
+              ),
+            );
+            break;
+          case 'crux:stack:free-port':
+            answer(
+              await track(
+                containers.freePort(typeof e.data.from === 'number' ? e.data.from : 8000),
+              ),
+            );
+            break;
           case 'crux:stack:services':
             answer(await track(containers.runningServices(cruxId!)));
             break;
