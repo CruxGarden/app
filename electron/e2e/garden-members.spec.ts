@@ -55,7 +55,7 @@ async function secondPerson(
 
 test('a garden with people: plant, share, invite from the directory, accept, share onto the shelf', async () => {
   test.setTimeout(300_000);
-  const { app, page } = await launchApp();
+  const { app, page } = await launchApp({ env: { CRUX_V2: '1' } });
   try {
     await enterGarden(page);
     await useLocalApi(page);

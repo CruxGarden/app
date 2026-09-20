@@ -70,6 +70,8 @@ export enum Capability {
   AgentHost = 'agentHost',
   /** Bundled binaries (ffmpeg) run inside a crux folder (MAKING-THE-AD-PARITY gap 13). */
   NativeTools = 'nativeTools',
+  /** The v2 features — gardens with people (GARDEN-MEMBERS-PLAN) — shown; a v1 release never has it. */
+  V2 = 'v2',
 }
 
 function bridge(): Partial<ElectronBridge> | null {
@@ -108,6 +110,8 @@ export function can(capability: Capability): boolean {
       return !!api.localai;
     case Capability.Updates:
       return !!api.updates;
+    case Capability.V2:
+      return !!api.config?.v2 || import.meta.env.VITE_V2 === '1';
     case Capability.AgentHost:
       return !!api.agentHost;
     case Capability.NativeTools:

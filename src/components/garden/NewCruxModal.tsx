@@ -36,6 +36,8 @@ interface Template {
   defaultTitle: string;
   /** Requires the desktop app (Build capability) — real toolchain projects */
   desktopOnly?: boolean;
+  /** A v2 feature (Capability.V2): not in the single-user v1 release */
+  v2?: boolean;
 }
 
 // ── Thumbnails ──────────────────────────────────────────
@@ -330,6 +332,7 @@ const OWN_TEMPLATES: Template[] = [
     thumb: <BlankThumb />,
     kind: 'garden',
     defaultTitle: 'Our garden',
+    v2: true,
   },
   {
     order: 47,
@@ -769,7 +772,9 @@ export default function NewCruxModal({ open, onClose }: NewCruxModalProps) {
           </label>
           <div className="overflow-y-auto flex-1 min-h-0 pr-0.5">
             <div className="flex flex-col">
-              {TEMPLATES.filter((t) => !t.desktopOnly || can(Capability.Build)).map((t) => (
+              {TEMPLATES.filter(
+                (t) => (!t.desktopOnly || can(Capability.Build)) && (!t.v2 || can(Capability.V2)),
+              ).map((t) => (
                 <button
                   key={t.id}
                   data-template-id={t.id}

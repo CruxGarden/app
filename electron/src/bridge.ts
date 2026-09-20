@@ -407,6 +407,8 @@ export interface ElectronBridge {
   config: {
     /** CRUX_API_URL — pins the API address for this launch; null lets the garden's setting decide. */
     apiUrl: string | null;
+    /** CRUX_V2=1 — shows the v2 features (gardens with people) in a v1 build; never set for a release. */
+    v2: boolean;
   };
   /** Test-only overrides, read from the environment the shell was launched with. */
   test: {

@@ -298,6 +298,7 @@ const api: ElectronBridge = {
   // otherwise the garden's own setting decides (api/client.ts).
   config: {
     apiUrl: process.env.CRUX_API_URL ?? null,
+    v2: process.env.CRUX_V2 === '1',
   },
   // CRUX_AI_MOCK=1 swaps the language model for a scripted mock (e2e).
   // CRUX_AUTOBACKUP_QUIET_MS shortens automatic backup's quiet window (e2e).

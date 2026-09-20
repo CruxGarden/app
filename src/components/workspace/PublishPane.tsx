@@ -484,7 +484,7 @@ export default function PublishPane() {
             </>
           )}
 
-          {isPublished && isAuthenticated && publicUrl && (
+          {isPublished && isAuthenticated && publicUrl && can(Capability.V2) && (
             <GardenShelfSection cruxId={crux.id} title={crux.title ?? 'A crux'} url={publicUrl} />
           )}
           {!isEmbeddedApp(crux) && <GuestbookSection cruxId={crux.id} artifacts={artifacts} />}

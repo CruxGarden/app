@@ -929,6 +929,8 @@ async function runGardenToolInner(name: string, input: Record<string, unknown>):
       return `Exported the Cruxspace as ${result.filename} to the person's downloads (${result.manifest.members?.length ?? 0} members${result.failed.length ? `; could not include: ${result.failed.join(', ')}` : ''}).`;
     }
     case 'list_gardens': {
+      const { can, Capability } = await import('@/lib/platform');
+      if (!can(Capability.V2)) return 'Gardens with people are a v2 feature; not in this build.';
       const { myGardens } = await import('@/api/gardens');
       const list = await myGardens();
       if (!list.length)

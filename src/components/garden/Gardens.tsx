@@ -5,6 +5,7 @@ import { useAppStore } from '@/stores/appStore';
 import { myGardens, acceptInvitation, type MyGarden } from '@/api/gardens';
 import { Button } from '@/components/ui';
 import { cn } from '@/lib/cn';
+import { Capability, can } from '@/lib/platform';
 
 /**
  * Home → Gardens (GARDEN-MEMBERS-PLAN): the gardens I own or belong to, and
@@ -23,12 +24,13 @@ export default function Gardens() {
     myGardens()
       .then(setGardens)
       .catch(() => setGardens([]));
+  const v2 = can(Capability.V2);
   useEffect(() => {
-    if (!authenticated) return;
+    if (!authenticated || !v2) return;
     void load();
-  }, [authenticated]);
+  }, [authenticated, v2]);
 
-  if (!authenticated || !gardens || gardens.length === 0) return null;
+  if (!v2 || !authenticated || !gardens || gardens.length === 0) return null;
 
   const open = (g: MyGarden) => navigate(`/@${g.authorUsername}/${g.slug}`);
   const accept = async (g: MyGarden) => {
