@@ -1,5 +1,6 @@
 import { lazy, Suspense, useSyncExternalStore } from 'react';
 import { createBrowserRouter, RouterProvider, Navigate } from 'react-router-dom';
+import { registerNavigator } from '@/lib/navigate';
 import PlasmaStage from '@/components/plasma/PlasmaStage';
 import PlasmaSurfaces from '@/components/plasma/PlasmaSurfaces';
 import { isPublicSite } from '@/lib/site';
@@ -143,7 +144,8 @@ const router = createBrowserRouter(
     { path: '*', element: <NotFound /> },
   ],
   { basename },
-);
+); // Services (the Keeper's run_turn) navigate through here, without importing the router.
+registerNavigator((path) => router.navigate(path));
 
 const subscribeRoute = (changed: () => void) => router.subscribe(changed);
 const onPublicHomepage = () => publicSite && router.state.location.pathname === '/';

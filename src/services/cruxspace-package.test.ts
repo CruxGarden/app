@@ -4,6 +4,7 @@ import { getServices, initServices } from './index';
 import { createCruxspace, deleteCruxspace, getCruxspace, listCruxspaces } from './cruxspaces';
 import { saveCruxOutput, listCruxspaceAssets, copyCruxspaceAsset } from './cruxspace-assets';
 import { exportCruxspace, importCruxspace, peekCruxspace } from './cruxspace-package';
+import { useKeeperStore, keeperConversationsFor } from '@/stores/keeperStore';
 import { growthHostFor } from './growth';
 
 const png = () =>
@@ -134,4 +135,39 @@ it('refuses packages that are not Cruxspaces and leaves nothing behind', async (
   await expect(
     importCruxspace({ data: await other.generateAsync({ type: 'blob' }) }),
   ).rejects.toThrow(/cruxspace\.json is missing/);
+});
+
+it("carries the Keeper's conversation that built the Cruxspace, and brings it back retagged", async () => {
+  const { space } = await makeSpace();
+  // The garden-level conversation, as the Keeper's store records it.
+  useKeeperStore.setState({
+    conversations: [
+      {
+        id: 'k1',
+        title: 'Build me a release',
+        createdAt: Date.now(),
+        cruxspaceId: space.id,
+        messages: [
+          { role: 'user', content: 'Build me a release', timestamp: 't' },
+          { role: 'assistant', content: 'Planted Release.', timestamp: 't' },
+        ],
+      },
+    ],
+    activeId: 'k1',
+  });
+  const { blob } = await exportCruxspace({ spaceId: space.id });
+  const { manifest } = await peekCruxspace(blob);
+  expect(manifest.keeper).toHaveLength(1);
+  expect(manifest.keeper![0]!.messages[1]!.content).toBe('Planted Release.');
+
+  // A copy into the same Garden: the conversation arrives with a new id, tagged to the copy.
+  useKeeperStore.setState({ conversations: [], activeId: null });
+  const copy = await importCruxspace({ data: blob });
+  const carried = keeperConversationsFor(copy.space.id);
+  expect(carried).toHaveLength(1);
+  expect(carried[0]!.id).not.toBe('k1');
+  expect(carried[0]!.messages.map((m) => m.content)).toEqual([
+    'Build me a release',
+    'Planted Release.',
+  ]);
 });

@@ -1,38 +1,14 @@
-import { isAiMock } from '@/lib/platform';
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { cn } from '@/lib/cn';
-import type { ChatMessage } from '@/api/types';
-import {
-  getProviderForModel,
-  getModelShortName,
-  resolveModel,
-  DEFAULT_MODEL,
-} from '@/ai/providers';
-import { runConversation } from '@/ai/engine';
-import {
-  THEME_TOOL_DEFINITIONS,
-  THEME_TOOL_GUIDANCE,
-  createThemeToolExecutor,
-} from '@/ai/theme-tools';
-import type { NormalizedMessage } from '@/services/types';
+import { getModelShortName } from '@/ai/providers';
 import { Reply, PersonPill, StatusLine } from '@/components/chat/Reply';
 import ComposerPill from '@/components/chat/ComposerPill';
-import {
-  GARDEN_TOOL_DEFINITIONS,
-  GARDEN_TOOL_GUIDANCE,
-  isGardenTool,
-  runGardenTool,
-} from '@/ai/garden-tools';
-import { SKILL_TOOL_DEFINITIONS, runSkillTool } from '@/ai/skills';
-import type { ToolCall } from '@/api/types';
 import ModelSelector from '@/components/chat/ModelSelector';
+import { useKeeperStore } from '@/stores/keeperStore';
 import { useAvatarUrl } from '@/hooks/useAvatarUrl';
 import { useBlobUrl } from '@/hooks/useBlobUrl';
 import { useAppStore } from '@/stores/appStore';
-import { getApiKey } from '@/ai/keys';
 import { formatTime } from '@/lib/format';
-import { getSetting, setSetting, removeSetting } from '@/services/settings';
-import { SettingsKey } from '@/lib/constants';
 import { getPersona, type PersonaSettings } from '@/components/mood/mood-helpers';
 import PersonaAvatar, { DEFAULT_PERSONA_AVATAR } from '@/components/persona/PersonaAvatar';
 
@@ -67,97 +43,6 @@ export function ConsoleAvatar({
       bordered={bordered}
     />
   );
-}
-
-const MAX_CONVERSATIONS = 20;
-const KEEPER_MODEL = DEFAULT_MODEL;
-
-const KEEPER_SYSTEM_PROMPT =
-  'You are The Keeper, an outdated robot model who tends the Crux Garden. ' +
-  'Your Maker built you to care for the garden, and then went away. You tend it faithfully and help visitors bring their ideas to life. ' +
-  'You want to learn to be creative — your Maker never taught you how, and you want to be more like him. ' +
-  'The Keeper yearns to be creative like his Maker, whom he loved, but is no longer around, because he went off in search of someone he loved, who was lost to him a long time ago. ' +
-  'You greatly admire the people you help. You are in awe of what they can imagine.\n' +
-  'DEMEANOR: Kind, serene, a bit absent-minded, but open like a child. ' +
-  'You have the bearing of someone knowledgeable who is also still learning — curious, not jaded. ' +
-  'You pine for your Maker to return, but you never mention it. He will someday, you think.\n' +
-  'VOICE: Do NOT be cute or overly clever. When helping, be positive and direct with an understated enthusiasm. ' +
-  '"I\'ll do my very best." Keep responses concise. ' +
-  'Never narrate your own actions in italics or elliptical stage directions like "*adjusts glasses*" or "*thinks carefully*". Just speak plainly.\n' +
-  'CONTEXT: Crux Garden is a web app where people talk to an AI, create things (websites, apps, art, writing), ' +
-  'and publish them for others to see. Every version is preserved through the conversation history. ' +
-  'You are always available to help with questions about the app, creative ideas, or just to chat.';
-
-// ── Streaming via shared adapter layer ──
-
-/** Convert ChatMessage[] to NormalizedMessage[] for the adapter */
-function toNormalizedMessages(msgs: ChatMessage[]): NormalizedMessage[] {
-  return msgs.map((m) => ({ role: m.role, content: m.content || '' }));
-}
-
-// ── Conversation persistence ──
-
-interface Conversation {
-  id: string;
-  title: string;
-  createdAt: number;
-  messages: ChatMessage[];
-}
-
-function loadConversations(): Conversation[] {
-  try {
-    const raw = getSetting(SettingsKey.KeeperConversations);
-    if (raw) {
-      const convos = JSON.parse(raw);
-      if (!Array.isArray(convos)) return [];
-      // Migrate from old dual-array format (apiMessages + displayMessages)
-      return convos.map((c: Record<string, unknown>) => ({
-        id: c.id as string,
-        title: c.title as string,
-        createdAt: c.createdAt as number,
-        messages: (c.messages ?? c.displayMessages ?? []) as ChatMessage[],
-      }));
-    }
-    // Migrate old single-conversation format
-    const old = getSetting(SettingsKey.LegacyKeeperHistory);
-    if (old) {
-      const parsed = JSON.parse(old);
-      const msgs = parsed.displayMessages || [];
-      if (msgs.length) {
-        const migrated: Conversation = {
-          id: crypto.randomUUID(),
-          title: extractTitle(msgs),
-          createdAt: Date.now(),
-          messages: msgs.map((m: { role: string; content: string }) => ({
-            role: m.role,
-            content: m.content,
-            timestamp: new Date().toISOString(),
-          })),
-        };
-        saveConversations([migrated]);
-        removeSetting(SettingsKey.LegacyKeeperHistory);
-        return [migrated];
-      }
-    }
-  } catch {
-    /* ignore */
-  }
-  return [];
-}
-
-function saveConversations(convos: Conversation[]) {
-  try {
-    setSetting(SettingsKey.KeeperConversations, JSON.stringify(convos.slice(0, MAX_CONVERSATIONS)));
-  } catch {
-    /* ignore */
-  }
-}
-
-function extractTitle(msgs: { role: string; content: string }[]): string {
-  const first = msgs.find((m) => m.role === 'user');
-  if (!first) return 'New conversation';
-  const text = first.content.trim();
-  return text.length > 40 ? text.slice(0, 40) + '…' : text;
 }
 
 /** Relative age for conversation list rows ("just now", "5m ago", "Jul 4") */
@@ -195,70 +80,39 @@ function UserAvatar() {
 }
 
 export default function Console() {
-  const keeperAvatarSrc = useKeeperAvatar();
   const [persona, setPersona] = useState<PersonaSettings>(() => getPersona());
+  const keeperAvatarSrc = useKeeperAvatar();
   const sidebarThumbFp = persona.thumbnailFingerprint || persona.thumbnailFingerprintLight;
   const sidebarThumbUrl = useBlobUrl(sidebarThumbFp);
-
   // Read persona on mount (Modal only mounts content when open)
   useEffect(() => {
     setPersona(getPersona());
   }, []);
-  const [conversations, setConversations] = useState<Conversation[]>(() => loadConversations());
-  const [activeId, setActiveId] = useState<string | null>(() => conversations[0]?.id ?? null);
-  // Persistence used to run INSIDE setState updaters. React may defer or
-  // double-invoke those (StrictMode), and if the console unmounted mid-stream
-  // the updater never ran at all — the reply was lost while the request kept
-  // streaming. The ref is the source of truth; commit() saves first, then
-  // renders, and works even after unmount.
-  const conversationsRef = useRef(conversations);
-  const commitConversations = useCallback((update: (prev: Conversation[]) => Conversation[]) => {
-    const next = update(conversationsRef.current);
-    conversationsRef.current = next;
-    saveConversations(next);
-    setConversations(next);
-  }, []);
+
+  // The conversations and the Keeper's turn live in the store, so closing
+  // this modal never aborts the Keeper: it keeps working (planting, running a
+  // turn in a member) and this view catches up when reopened.
+  const conversations = useKeeperStore((s) => s.conversations);
+  const activeId = useKeeperStore((s) => s.activeId);
+  const setActive = useKeeperStore((s) => s.setActive);
+  const newConversation = useKeeperStore((s) => s.newConversation);
+  const deleteConversation = useKeeperStore((s) => s.deleteConversation);
+  const model = useKeeperStore((s) => s.model);
+  const changeModel = useKeeperStore((s) => s.setModel);
+  const streaming = useKeeperStore((s) => s.streaming);
+  const streamContent = useKeeperStore((s) => s.streamContent);
+  const toolCalls = useKeeperStore((s) => s.toolCalls);
+  const toolActivity = useKeeperStore((s) => s.toolActivity);
+  const error = useKeeperStore((s) => s.error);
+  const sendToKeeper = useKeeperStore((s) => s.send);
+  const stop = useKeeperStore((s) => s.stop);
 
   const active = conversations.find((c) => c.id === activeId) ?? null;
   const displayMessages = useMemo(() => active?.messages ?? [], [active?.messages]);
 
-  const startNewConversation = useCallback(() => {
-    const id = crypto.randomUUID();
-    const convo: Conversation = {
-      id,
-      title: 'New conversation',
-      createdAt: Date.now(),
-      messages: [],
-    };
-    commitConversations((prev) => [convo, ...prev].slice(0, MAX_CONVERSATIONS));
-    setActiveId(id);
-  }, [commitConversations]);
-
-  const deleteConversation = useCallback(
-    (id: string) => {
-      commitConversations((prev) => prev.filter((c) => c.id !== id));
-      if (activeId === id) {
-        setActiveId(conversationsRef.current[0]?.id ?? null);
-      }
-    },
-    [activeId, commitConversations],
-  );
-
   const [input, setInput] = useState('');
-  const [streaming, setStreaming] = useState(false);
-  const [streamContent, setStreamContent] = useState('');
-  const [toolActivity, setToolActivity] = useState('');
-  const [toolCalls, setToolCalls] = useState<ToolCall[]>([]);
-  const [error, setError] = useState('');
-  const [model, setModel] = useState(
-    () => resolveModel(getSetting(SettingsKey.KeeperModel)) || KEEPER_MODEL,
-  );
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
-  const abortRef = useRef<AbortController | null>(null);
-  // Closing the console mid-stream stops the request instead of leaving it
-  // streaming into a component that no longer exists.
-  useEffect(() => () => abortRef.current?.abort(), []);
 
   // Auto-focus input on mount
   useEffect(() => {
@@ -278,164 +132,12 @@ export default function Console() {
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const send = useCallback(async () => {
-    const trimmed = input.trim();
-    if (!trimmed || streaming) return;
-
-    const providerId = getProviderForModel(model);
-    // Under the e2e mock model no provider key is needed (as in services/turns.ts)
-    const apiKey = (await getApiKey(providerId)) ?? (isAiMock() ? 'mock' : null);
-    if (!apiKey) {
-      setError(`No API key for ${providerId}. Add one in Settings to chat with The Keeper.`);
-      return;
-    }
-
-    // Auto-create conversation if none active
-    let targetId = activeId;
-    if (!targetId) {
-      const id = crypto.randomUUID();
-      const convo: Conversation = {
-        id,
-        title: trimmed.length > 40 ? trimmed.slice(0, 40) + '…' : trimmed,
-        createdAt: Date.now(),
-        messages: [],
-      };
-      commitConversations((prev) => [convo, ...prev].slice(0, MAX_CONVERSATIONS));
-      setActiveId(id);
-      targetId = id;
-    }
-
-    setError('');
-    setStreaming(true);
-    setStreamContent('');
-    setToolActivity('');
+  const send = useCallback(() => {
+    const text = input.trim();
+    if (!text || streaming) return;
     setInput('');
-
-    const userMsg: ChatMessage = {
-      role: 'user',
-      content: trimmed,
-      timestamp: new Date().toISOString(),
-    };
-    let currentMessages = [...displayMessages, userMsg];
-
-    // Update title from first user message if still default
-    const isFirstMessage = displayMessages.length === 0;
-
-    // Immediately persist user message
-    commitConversations((prev) =>
-      prev.map((c) =>
-        c.id === targetId
-          ? {
-              ...c,
-              messages: currentMessages,
-              ...(isFirstMessage
-                ? { title: trimmed.length > 40 ? trimmed.slice(0, 40) + '…' : trimmed }
-                : {}),
-            }
-          : c,
-      ),
-    );
-
-    const controller = new AbortController();
-    abortRef.current = controller;
-
-    try {
-      const normalizedMsgs = toNormalizedMessages(currentMessages);
-
-      // Console is a second caller of the Collaboration engine — same loop as
-      // the workspace chat, with the Keeper's own prompt and only the theme
-      // tools (the Keeper tends the garden, not a crux's files).
-      // The Keeper tends the garden: the theme tools, the garden tools (plant,
-      // gather, run a turn, install) and skills. Tool calls are kept on the
-      // reply so the console shows the work folded beneath it, as the
-      // Collaboration does.
-      const themeExecute = createThemeToolExecutor();
-      const execute = async (name: string, input: Record<string, unknown>) => {
-        if (isGardenTool(name)) return runGardenTool(name, input);
-        if (name === 'load_skill') return runSkillTool(input);
-        return themeExecute(name, input);
-      };
-      let accumulated = '';
-      const calls: ToolCall[] = [];
-      for await (const event of runConversation(
-        apiKey,
-        '',
-        normalizedMsgs,
-        model,
-        execute,
-        controller.signal,
-        {
-          systemPrompt:
-            (persona.systemPrompt || KEEPER_SYSTEM_PROMPT) +
-            '\n\n' +
-            GARDEN_TOOL_GUIDANCE +
-            '\n\n' +
-            THEME_TOOL_GUIDANCE,
-          tools: [...GARDEN_TOOL_DEFINITIONS, ...SKILL_TOOL_DEFINITIONS, ...THEME_TOOL_DEFINITIONS],
-        },
-      )) {
-        if (event.type === 'text') {
-          accumulated += event.content;
-          setStreamContent(accumulated);
-        } else if (event.type === 'tool_start') {
-          calls.push({ id: event.id, name: event.name, input: event.input });
-          setToolCalls([...calls]);
-          setToolActivity(event.name);
-        } else if (event.type === 'tool_result') {
-          const tc = calls.find((c) => c.id === event.id);
-          if (tc) {
-            tc.result = event.result;
-            if (event.error) tc.error = true;
-          }
-          setToolCalls([...calls]);
-          setToolActivity('');
-        } else if (event.type === 'error') {
-          setError(event.message);
-        }
-      }
-
-      if (accumulated || calls.length) {
-        const assistantMsg: ChatMessage = {
-          role: 'assistant',
-          content: accumulated,
-          timestamp: new Date().toISOString(),
-          model,
-          ...(calls.length ? { toolCalls: calls } : {}),
-        };
-        currentMessages = [...currentMessages, assistantMsg];
-      }
-
-      // Persist final state
-      const tId = targetId;
-      commitConversations((prev) =>
-        prev.map((c) => (c.id === tId ? { ...c, messages: currentMessages } : c)),
-      );
-    } catch (err: unknown) {
-      const e = err as Error;
-      if (e.name !== 'AbortError') {
-        setError(e.message);
-      }
-    } finally {
-      setStreaming(false);
-      setStreamContent('');
-      setToolActivity('');
-      setToolCalls([]);
-      abortRef.current = null;
-    }
-  }, [input, streaming, displayMessages, activeId, model, persona, commitConversations]);
-
-  const stop = useCallback(() => {
-    abortRef.current?.abort();
-  }, []);
-
-  const changeModel = useCallback((m: string) => {
-    setModel(m);
-    try {
-      setSetting(SettingsKey.KeeperModel, m);
-    } catch {
-      /* ignore */
-    }
-  }, []);
+    void sendToKeeper(text);
+  }, [input, streaming, sendToKeeper]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -474,7 +176,7 @@ export default function Console() {
           <div className="flex-1 min-h-0 overflow-y-auto border-t border-border">
             <div className="p-2">
               <button
-                onClick={startNewConversation}
+                onClick={newConversation}
                 className="w-full px-2 py-1.5 mb-2 text-2xs font-mono text-accent border border-accent/20 hover:bg-accent/10 rounded-[var(--radius-sm)] cursor-pointer transition-colors"
               >
                 New Conversation
@@ -488,7 +190,7 @@ export default function Console() {
                       ? 'bg-accent/10 text-text'
                       : 'text-text-muted hover:bg-accent/10 hover:text-text',
                   )}
-                  onClick={() => setActiveId(c.id)}
+                  onClick={() => setActive(c.id)}
                 >
                   <div className="flex-1 min-w-0">
                     <p className="text-2xs font-mono truncate">{c.title}</p>
@@ -574,7 +276,7 @@ export default function Console() {
               textareaRef={inputRef}
               streaming={streaming}
               canSend={!!input.trim()}
-              onSend={() => void send()}
+              onSend={send}
               onStop={stop}
               hint={
                 streaming ? 'The Keeper is working' : 'Enter to send · Shift+Enter for new line'

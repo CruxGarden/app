@@ -242,7 +242,17 @@ async function runGardenToolInner(name: string, input: Record<string, unknown>):
       const { openWorkspace } = await import('@/stores/workspaceRegistry');
       const { turnsFor } = await import('@/services/turns');
       const { isJobActive } = await import('@/services/turn-jobs');
-      const w = await openWorkspace(input.cruxId as string);
+      const { activateWorkspace } = await import('@/stores/workspaceRegistry');
+      const { navigateTo } = await import('@/lib/navigate');
+      const { useUIStore } = await import('@/stores/uiStore');
+      // The person watches the work where it happens: the member's own
+      // Collaboration, with its job card (Stop, the plan) and composer — they
+      // can stop the turn and take over; the Keeper reports what happened.
+      const w =
+        (await activateWorkspace(input.cruxId as string)) ??
+        (await openWorkspace(input.cruxId as string));
+      useUIStore.getState().setConsoleOpen(false);
+      navigateTo(`/c/${input.cruxId as string}`);
       const turns = turnsFor(w.data);
       const before = w.data.getState().messages.length;
       await turns.submitTurn(input.message as string);
@@ -251,7 +261,11 @@ async function runGardenToolInner(name: string, input: Record<string, unknown>):
       const replies = s.messages.slice(before).filter((m) => m.role === 'assistant');
       const last = replies.at(-1);
       const files = s.artifacts.length;
-      const status = isJobActive(s.turnJob) ? 'still running' : (s.turnJob?.status ?? 'done');
+      const status = isJobActive(s.turnJob)
+        ? 'still running'
+        : s.turnJob?.status === 'interrupted'
+          ? 'stopped by the person — they may be taking it from here; ask before continuing'
+          : (s.turnJob?.status ?? 'done');
       return [
         `Turn in "${s.crux?.title ?? input.cruxId}" ${status}.`,
         last ? `Reply: ${brief(last.content)}` : 'No reply text.',

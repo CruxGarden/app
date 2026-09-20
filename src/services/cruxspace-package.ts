@@ -1,4 +1,5 @@
 import JSZip from 'jszip';
+import type { KeeperConversation } from '@/stores/keeperStore';
 import { getServices } from './index';
 import { getSqliteClient } from './sqlite/client';
 import { exportCrux, importCrux, type ImportMode } from './crux-io';
@@ -47,6 +48,8 @@ export interface PackageManifest {
   transfers: PackageTransfer[];
   /** Member ids the exporting Garden no longer had. */
   unavailable: string[];
+  /** The Keeper conversations that built or tended this Cruxspace (garden-level history). */
+  keeper?: KeeperConversation[];
 }
 
 export interface ExportCruxspaceOptions {
@@ -151,6 +154,9 @@ export async function exportCruxspace(
       created: space.created,
       updated: space.updated,
     },
+    // Loaded on demand: the Keeper's store pulls the engine and every tool into
+    // the module graph, and this service is imported early.
+    keeper: (await import('@/stores/keeperStore')).keeperConversationsFor(space.id),
     members,
     transfers: transfers.sort((a, b) => a.imported.localeCompare(b.imported)),
     unavailable,
@@ -237,6 +243,9 @@ export async function importCruxspace(
       created: manifest.space.created,
       origin,
     });
+    // The garden-level history comes back with it, retagged to the space it now is.
+    if (manifest.keeper?.length)
+      (await import('@/stores/keeperStore')).adoptKeeperConversations(manifest.keeper, space.id);
     return { space, members: imported, failedArtifacts, unavailable: manifest.unavailable };
   } catch (err) {
     for (const member of imported) await crux.delete(member.id).catch(() => undefined);
